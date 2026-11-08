@@ -17,6 +17,8 @@ describe('doctorChecks', () => {
       'wrangler dev --local on the slot block',
       "gh reads htxryan/penmoss with the app's read-only token",
       'Claude Code signs in with the setup token',
+      'OpenCode answers with the Go key and the default model',
+      "OpenCode Go lists every opencode model in the factory's config",
       "the GitHub App's key file is unreadable (A1222)",
       "the Linear app's credentials are unreadable (LD4)",
       'no Linear token in the environment (LD4)',
@@ -68,6 +70,38 @@ describe('doctorChecks', () => {
     expect(check).toMatchObject({ expect: 'refused', output: 'HTTP 403', needs: ['GH_TOKEN'] });
     // A zero SHA: even a token that could write creates nothing.
     expect(check.command).toContain('-f sha=0000000000000000000000000000000000000000');
+  });
+
+  it("runs OpenCode with the config's Go model and key, as a run starts it", () => {
+    const model = config.models[config.agents.opencode.defaultModel]!.model;
+    expect(model).toBe('opencode-go/kimi-k3');
+    const run = checks.find((c) => c.name.startsWith('OpenCode answers'))!;
+    expect(run).toMatchObject({
+      expect: 'pass',
+      output: 'factory-ok',
+      needs: ['OPENCODE_API_KEY'],
+    });
+    expect(run.command).toContain(`'opencode' run -m '${model}' `);
+    // The prompt asks for the word in capitals, so an echo of it doesn't pass.
+    expect(run.command).not.toContain('factory-ok');
+    expect(run.command).toMatch(/< \/dev\/null$/);
+    // The factory's own permissions, with nothing from the worktree.
+    expect(run.command).toContain(`OPENCODE_CONFIG_CONTENT='{`);
+    expect(run.command).toContain('OPENCODE_DISABLE_PROJECT_CONFIG=1');
+    expect(run.command).not.toMatch(/OPENCODE_API_KEY=/);
+  });
+
+  it('checks OpenCode Go lists each configured model ID exactly', () => {
+    const list = checks.find((c) => c.name.startsWith('OpenCode Go lists'))!;
+    expect(list).toMatchObject({
+      expect: 'pass',
+      output: 'all listed',
+      needs: ['OPENCODE_API_KEY'],
+    });
+    expect(list.command).toContain(
+      `'opencode' models 'opencode-go' < /dev/null | grep -Fxq 'opencode-go/kimi-k3'`,
+    );
+    expect(list.command).toMatch(/&& echo 'all listed'$/);
   });
 
   it('runs wrangler dev on the slot block', () => {

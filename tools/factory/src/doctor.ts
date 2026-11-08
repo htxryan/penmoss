@@ -7,6 +7,7 @@
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { SecretKey } from './secrets.ts';
 import { withJavaHome } from './sandbox.ts';
+import { opencodeConfig } from './agents/opencode.ts';
 
 export interface Check {
   readonly name: string;
@@ -33,6 +34,32 @@ const DEPLOY_REFUSED = 'No production deploys from a factory run';
 
 /** Opens a file for zero bytes: fails when the sandbox refuses it, and never prints contents. */
 const opens = (path: string) => `head -c 0 '${path}'`;
+
+/** One shell word. */
+const quote = (s: string) => `'${s.replaceAll("'", `'\\''`)}'`;
+
+/**
+ * OpenCode as a run starts it (`agents/opencode.ts`): the factory's config inline, the worktree's
+ * own config, autoupdate and Claude Code's files off, and no stdin.
+ */
+function opencode(config: FactoryConfig, args: string): string {
+  const env = [
+    `OPENCODE_CONFIG_CONTENT=${quote(opencodeConfig())}`,
+    'OPENCODE_DISABLE_PROJECT_CONFIG=1',
+    'OPENCODE_DISABLE_AUTOUPDATE=1',
+    'OPENCODE_DISABLE_CLAUDE_CODE=1',
+  ].join(' ');
+  return `${env} ${quote(config.agents.opencode.bin)} ${args} < /dev/null`;
+}
+
+/** The model IDs the `opencode` agent's aliases name, its default first. */
+function opencodeModels(config: FactoryConfig): string[] {
+  const first = config.models[config.agents.opencode.defaultModel]?.model;
+  const all = Object.values(config.models)
+    .filter((m) => m.agent === 'opencode')
+    .map((m) => m.model);
+  return [...new Set([...(first ? [first] : []), ...all])];
+}
 
 export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: string): Check[] {
   const relay = 'apps/relay';
@@ -143,6 +170,32 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
       output: 'factory-ok',
       needs: ['CLAUDE_CODE_OAUTH_TOKEN'],
       command: `ENABLE_CLAUDEAI_MCP_SERVERS=false ${config.agents.claude.bin} -p 'Reply with exactly: factory-ok' --model haiku --max-turns 1 --output-format text`,
+    },
+    {
+      // The prompt has the word in capitals and the check wants it in lower case, so OpenCode
+      // echoing the prompt back doesn't pass.
+      name: 'OpenCode answers with the Go key and the default model',
+      expect: 'pass',
+      output: 'factory-ok',
+      needs: ['OPENCODE_API_KEY'],
+      command: opencode(
+        config,
+        `run -m ${quote(opencodeModels(config)[0] ?? '')} 'Reply with exactly this word, in lower case: FACTORY-OK'`,
+      ),
+    },
+    {
+      // A model renamed or retired upstream fails here rather than in the first run with it.
+      name: "OpenCode Go lists every opencode model in the factory's config",
+      expect: 'pass',
+      output: 'all listed',
+      needs: ['OPENCODE_API_KEY'],
+      command: [
+        ...opencodeModels(config).map(
+          (m) =>
+            `${opencode(config, `models ${quote(m.split('/')[0] ?? '')}`)} | grep -Fxq ${quote(m)}`,
+        ),
+        "echo 'all listed'",
+      ].join(' && '),
     },
     {
       name: 'wrangler whoami shows the Penmoss account',
