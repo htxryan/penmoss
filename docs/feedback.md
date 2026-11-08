@@ -3,8 +3,8 @@
 **How to send feedback, and what a report holds, is in the user docs: [Send feedback](https://penmoss.app/docs/help/feedback/).** This page keeps how the pipeline works.
 
 **Send feedback**, in every client, files a bug report or a feature request as an issue in
-`htxryan/penmoss`, labelled `in-app feedback`, and the issue lands on the
-[Penmoss board](https://github.com/users/htxryan/projects/8) in **Triage** (D41). The form attaches
+`htxryan/penmoss`, labelled `in-app feedback`, and Linear's GitHub sync copies it into the
+Penmoss team's **Triage** (D41, D66). The form attaches
 where you are in the app and the metadata of what's on screen, never a note's content. Decisions
 A790–A804 in [`decisions.md`](decisions.md) hold the details.
 
@@ -109,12 +109,13 @@ the image's own `Content-Type` (it must match the name's extension; `application
 gets a 422). Each answers `{ url: "https://github.com/user-attachments/assets/<uuid>" }`. The
 assets are private: only people with access to the repository see them.
 
-## The board (A795)
+## Triage (A795, D66)
 
-Penmoss never calls the Projects API. A fine-grained token cannot reach a user's project
-(`addProjectV2ItemById` answers FORBIDDEN, checked on 27 Oct 2026), so the board's built-in
-workflows do it: **Auto-add to project** (`label:"in-app feedback"`) and **Item added to project →
-Status: Triage**, both enabled by Ryan. An issue shows in Triage within about 20 seconds.
+Penmoss never calls the tracker. It files a GitHub issue and stops there. Linear's GitHub Issues
+sync, set up by Ryan for `htxryan/penmoss`, copies each new issue into the Penmoss team's Triage,
+with the `in-app feedback` label. Until 8 Nov 2026 the Project 8 board's own workflows did this
+(**Auto-add to project** on `label:"in-app feedback"`, then **Status: Triage**), because a
+fine-grained token cannot reach a user's project.
 
 ## Offline (A796)
 

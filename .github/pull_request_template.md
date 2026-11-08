@@ -1,6 +1,6 @@
 ## What and why
 
-<!-- What changes for someone using Penmoss, and why. Link the issue: Closes #… -->
+<!-- What changes for someone using Penmoss, and why. Link the issue: Fixes PEN-… -->
 
 ## How it was checked
 
