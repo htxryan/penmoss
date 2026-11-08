@@ -8,3 +8,8 @@ self-hosted-runner:
     - penmoss-mac-general
     # The Tart VM's runner for the Electron suite (#252, W10).
     - penmoss-mac-vm
+# The `desktop` job is off (`if: false`) until the VM's runner exists (A1218, #252).
+paths:
+  .github/workflows/ci.yml:
+    ignore:
+      - 'constant expression "false" in condition'
