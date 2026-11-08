@@ -4,7 +4,7 @@ Thanks for helping. Penmoss is a small project with one maintainer, so a short i
 
 ## Reporting bugs and ideas
 
-- **Bugs and feature requests:** open an [issue](https://github.com/htxryan/penmoss/issues/new/choose), or use **Send feedback** in the app, which attaches the version and where you were.
+- **Bugs and feature requests:** open an [issue](https://github.com/htxryan/penmoss/issues/new/choose), or use **Send feedback** in the app, which attaches the version and where you were. Each new issue is copied into the maintainer's tracker (Linear) for triage, so you don't need an account there; the conversation stays on GitHub.
 - **Security issues:** report them privately, as [SECURITY.md](SECURITY.md) describes, never in a public issue.
 
 ## Building from source

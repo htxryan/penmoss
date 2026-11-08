@@ -2,14 +2,14 @@
 
 How work on Penmoss is planned, built and checked. Setup and commands are in the [README](../README.md) and `task --list`; how the code fits together is in [`architecture.md`](architecture.md).
 
-## Planning: GitHub issues
+## Planning: Linear
 
-The roadmap is the open issues in [htxryan/penmoss](https://github.com/htxryan/penmoss/issues). The plan itself (spec, decisions, diagrams, a clickable prototype for UI work, and the tasks) is a Claude artifact, linked from the parent issue. Issues track progress. No planning or roadmap file of any kind lives in the repository. `task lint` fails on files such as `tasks/`, `plan.md`, `plan.html`, `SPEC.md` or `todo.md` (`scripts/no-plan-files.sh`, W13).
+The roadmap is the open issues in Linear's **Penmoss** team (`PEN`), which agents reach through the Linear MCP (W14). Work that spans several pull requests is a Linear project (Software factory, Public release, Search by meaning). GitHub issues on [htxryan/penmoss](https://github.com/htxryan/penmoss/issues) are where anyone outside reports bugs and ideas, and Send feedback files there too. A workflow (`.github/workflows/linear-intake.yml`) copies each new one into PEN Triage, one way only, with a link back; it needs the `LINEAR_API_KEY` repository secret. Linear's own GitHub issue sync stays off: it is two-way, and would copy PEN issues into this public repository. The plan itself (spec, decisions, diagrams, a clickable prototype for UI work, and the tasks) is a Claude artifact, linked from the parent issue. Issues track progress. No planning or roadmap file of any kind lives in the repository. `task lint` fails on files such as `tasks/`, `plan.md`, `plan.html`, `SPEC.md` or `todo.md` (`scripts/no-plan-files.sh`, W13).
 
-- **One issue per task.** Use the **Task** issue template: goal, acceptance criteria, automated checks, manual checks, evidence. A large piece of work is a parent issue with sub-issues, each one a pull request.
+- **One issue per task.** Use the Penmoss team's **Task** template in Linear: goal, acceptance criteria, automated checks, manual checks, evidence. A large piece of work is a parent issue with sub-issues, each one a pull request.
 - **One sub-issue per branch (W11).** Each sub-issue gets its own worktree, branch and pull request. Open the pull request as a draft once the first slice is committed, so CI runs while the work goes on. Don't build several sub-issues on one branch: it delays every review and piles up merge conflicts.
 - **Flaky tests get their own issue (W11).** A test that fails at random and passes alone isn't retried into green, and isn't fixed inside an unrelated feature's branch. File an issue with the failure and fix it in its own pull request. A feature's pull request may still merge on a rerun if the flake is filed and unrelated to its change.
-- **The issue owns status.** Open means not done. A pull request that delivers a task says `Closes #<n>`.
+- **The issue owns status:** Triage (not yet weighed), Backlog, Todo, In Progress, In Review, Done, Canceled. A pull request that delivers a task says `Fixes PEN-<n>`, and Linear marks the issue Done when it merges.
 - **Evidence** (test output, before and after screenshots, measurements) goes in the pull request or the issue. Screenshots that need to stay with the code go in `docs/evidence/<issue number>/`.
 - **Decisions** go in [`decisions.md`](decisions.md), in the same pull request as the change they explain.
 

@@ -63,9 +63,9 @@ tasks:
       - node .github/scripts/release-tag.mjs {{.CLI_ARGS}}
 
   workflows:test:
-    desc: 'The fork guard (P10, A1183): no self-hosted job runs for a pull request from a fork'
+    desc: 'The fork guard (P10, A1183): no self-hosted job runs for a pull request from a fork; and GitHub intake into Linear (D66) against a fake Linear API'
     cmds:
-      - node --test .github/scripts/workflow-guard.test.mjs
+      - node --test .github/scripts/workflow-guard.test.mjs .github/scripts/linear-intake.test.mjs
 
   audit:secrets:
     desc: 'gitleaks over the tree, or every commit with `-- --history` (T80.1, A1185; docs/qa/public-release-audit.md)'
