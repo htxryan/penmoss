@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { Board } from '../src/board.ts';
+import type { Gh } from '../src/github.ts';
+import { openOrReusePr } from '../src/host.ts';
 import { parseIssueSpec } from '../src/labels.ts';
 import type { CheckRun } from '../src/checks.ts';
+import type { RebaseOutcome } from '../src/rebase.ts';
 import type { AgentResult } from '../src/result.ts';
+import { VmUnavailable, type VmCheck } from '../src/proof/mac.ts';
 import {
   branchName,
   gateCommand,
@@ -20,9 +24,6 @@ const spec = (() => {
   return r.spec;
 })();
 const board: Board = {
-  projectId: 'P',
-  status: { id: 'S', options: {} },
-  blocked: { id: 'B', options: {} },
   items: [card],
 };
 
@@ -64,6 +65,12 @@ interface Fake {
   comments: string[];
   prompts: string[];
   events: string[];
+  /** What the run said it waits for, in order (`null`: it went on). */
+  waits: (string | null)[];
+  /** The signal each proof was given. */
+  signals: (AbortSignal | undefined)[];
+  /** Seconds slept, in order. */
+  slept: number[];
 }
 
 function fake(overrides: {
@@ -82,6 +89,14 @@ function fake(overrides: {
   limited?: number;
   /** The branch's diff adds a test.skip in the first gate round. */
   weakened?: boolean;
+  /** Whether main has moved past the branch, each time it is asked (default: no). */
+  behind?: boolean[];
+  /** What each rebase onto main does, in order (default: a clean rebase). */
+  rebases?: RebaseOutcome[];
+  /** The test VM's host checks before a Mac proof, in order; then it is ready (F10). */
+  vmChecks?: VmCheck[];
+  /** The first Mac proofs find the VM won't boot (the VM script's exit 75). */
+  vmBootFails?: number;
 }): Fake {
   const calls: string[] = [];
   const comments: string[] = [];
@@ -92,12 +107,6 @@ function fake(overrides: {
       worktreePath: `/wt/${n}`,
       exec: (command) => {
         calls.push(`exec ${n}: ${command}`);
-        if (command.startsWith('git rebase'))
-          return Promise.resolve({
-            exitCode: overrides.conflict && opened <= 2 ? 1 : 0,
-            stdout: 'CONFLICT (content): docs/cli.md',
-            stderr: '',
-          });
         if (command.startsWith('git diff'))
           return Promise.resolve({
             exitCode: 0,
@@ -132,6 +141,13 @@ function fake(overrides: {
   const rounds = [...(overrides.agentRounds ?? [])];
   const prompts: string[] = [];
   const ciRounds = [...(overrides.ci ?? [])];
+  const behind = [...(overrides.behind ?? [])];
+  const rebases = [...(overrides.rebases ?? [])];
+  const vmChecks = [...(overrides.vmChecks ?? [])];
+  let bootFails = overrides.vmBootFails ?? 0;
+  const waits: (string | null)[] = [];
+  const signals: (AbortSignal | undefined)[] = [];
+  const slept: number[] = [];
   let clock = Date.parse('2026-11-07T12:00:00Z');
   const deps: RunDeps = {
     config,
@@ -182,8 +198,16 @@ function fake(overrides: {
     },
     readReview: () => Promise.resolve(reviews.shift() ?? null),
     collectFidelity: (_sandbox, rows) => Promise.resolve([...rows]),
-    recordProof: (_sandbox, platform, specs) => {
+    macVmCheck: () => {
+      calls.push('vm check');
+      return Promise.resolve(vmChecks.shift() ?? { ok: true });
+    },
+    waitingFor: (reason) => void waits.push(reason),
+    recordProof: (_sandbox, platform, specs, signal) => {
       calls.push(`proof ${platform}: ${specs.join(' ')}`);
+      signals.push(signal);
+      if (platform === 'mac' && bootFails-- > 0)
+        return Promise.reject(new VmUnavailable('penmoss-test did not answer in 3 minutes'));
       return Promise.resolve(
         (overrides.proofPassed ?? true)
           ? [
@@ -212,6 +236,23 @@ function fake(overrides: {
         })),
       }),
     fetchMain: () => Promise.resolve(),
+    behindMain: (branch) => {
+      calls.push(`behind? ${branch}`);
+      return Promise.resolve(behind.shift() ?? false);
+    },
+    rebase: (work) => {
+      calls.push(`rebase ${work.worktreePath}`);
+      return Promise.resolve(
+        rebases.shift() ??
+          (overrides.conflict && opened <= 2
+            ? {
+                kind: 'conflict',
+                files: ['docs/cli.md'],
+                output: 'CONFLICT (content): docs/cli.md',
+              }
+            : { kind: 'rebased', resolved: [], renumbered: {} }),
+      );
+    },
     numberDecisions: () => Promise.resolve({}),
     push: (branch) => {
       calls.push(`push ${branch}`);
@@ -226,7 +267,10 @@ function fake(overrides: {
       calls.push(`notify ${title}`);
       return Promise.resolve();
     },
-    sleep: () => Promise.resolve(),
+    sleep: (seconds) => {
+      slept.push(seconds);
+      return Promise.resolve();
+    },
     now: () => new Date((clock += 30 * 60_000)),
     openPr: ({ body }) => {
       calls.push('pr');
@@ -235,7 +279,7 @@ function fake(overrides: {
     },
     log: (event) => void events.push(event),
   };
-  return { deps, calls, comments, prompts, events };
+  return { deps, calls, comments, prompts, events, waits, signals, slept };
 }
 
 describe('runImplement', () => {
@@ -255,13 +299,15 @@ describe('runImplement', () => {
       'close 1',
       'open factory/42-fix-the-typo-in-docs-cli',
       'exec 2: git status --porcelain --untracked-files=no',
-      'exec 2: git rebase origin/main',
+      'rebase /wt/2',
       'exec 2: git diff origin/main...HEAD',
       'exec 2: task lint',
       'close 2',
       'push factory/42-fix-the-typo-in-docs-cli',
       'pr',
       'checks',
+      // main hasn't moved while CI ran, so there is nothing to rebase before review.
+      'behind? factory/42-fix-the-typo-in-docs-cli',
       'comment #42',
       'status In review',
       'notify Penmoss #42 is ready for review',
@@ -272,6 +318,13 @@ describe('runImplement', () => {
     );
     expect(f.comments[1]).toMatch(/^Part of #42\./);
     expect(f.comments[1]).not.toMatch(/Closes|Fixes|Resolves/);
+  });
+
+  it('says on the issue why a run restarts after the daemon stopped mid-run (R12)', async () => {
+    const f = fake({});
+    await runImplement(f.deps, { item: card, spec, prompt: 'p', recovered: true });
+    expect(f.comments[0]).toMatch(/^Restarted: this run stopped before it finished/);
+    expect(f.comments[0]).toContain('event=claim');
   });
 
   const webDone: AgentResult = {
@@ -289,7 +342,7 @@ describe('runImplement', () => {
     expect(outcome.kind).toBe('in-review');
     expect(f.calls).toContain('exec 2: task check');
     expect(f.calls).toContain('proof web: comments.spec.ts');
-    expect(f.comments[1]).toContain('![](./web-1.mp4)');
+    expect(f.comments[1]).toContain('[▶ Watch the recording (MP4)](./web-1.mp4)');
     expect(f.calls).toContain('proof mac: app.spec.ts');
     expect(f.calls).toContain('proof android: app.penmoss.EditorScreenTest');
     expect(f.comments[1]).not.toContain('No recorded proof yet');
@@ -355,6 +408,19 @@ describe('runImplement', () => {
     expect(f.comments[1]).toContain('Not fixed in the rounds allowed: Still red');
   });
 
+  it("gives the reviewer the builder's reasons for what it couldn't do (F19)", async () => {
+    const f = fake({
+      paths: ['apps/web/src/a.ts'],
+      result: { ...webDone, risks: ['AC1: Safari has no :has(), so the badge stays flat'] },
+      reviews: [review('deviation', 'Flat badge: Safari has no :has()')],
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p', plan: 'AC1 …' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.prompts[2]).toMatch(/^You are an independent reviewer/);
+    expect(f.prompts[2]).toContain('- AC1: Safari has no :has(), so the badge stays flat');
+    expect(f.comments[1]).toContain('- **AC1 the badge uses the accent colour**: Flat badge');
+  });
+
   it('skips validation without an agreed plan (plan:skip)', async () => {
     const f = fake({ paths: ['apps/web/src/a.ts'], result: webDone });
     await runImplement(f.deps, { item: card, spec, prompt: 'p' });
@@ -403,13 +469,106 @@ describe('runImplement', () => {
   });
 });
 
+describe('the Mac proof waits for the test VM (F7, F10)', () => {
+  const macDone: AgentResult = {
+    ...done,
+    platforms: { mac: { inScope: true, proofSpecs: ['test/e2e/app.spec.ts'] } },
+  };
+  const mac = { paths: ['apps/desktop/src/main.ts'], result: macDone };
+  const count = (calls: string[], prefix: string) =>
+    calls.filter((c) => c.startsWith(prefix)).length;
+
+  it("waits a poll at a time while the VM can't take it, then records, with no round used", async () => {
+    const f = fake({
+      ...mac,
+      vmChecks: [
+        { ok: false, reason: 'penmoss-test is busy with another run' },
+        { ok: false, reason: 'penmoss-test is busy with another run' },
+        { ok: false, reason: 'tart is not installed: see docs/ci.md' },
+      ],
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(count(f.calls, 'vm check')).toBe(4);
+    expect(count(f.calls, 'proof mac')).toBe(1);
+    expect(count(f.calls, 'agent')).toBe(1);
+    expect(f.calls).not.toContain('blocked');
+    expect(f.waits).toEqual([
+      'the Mac proof waits for the test VM: penmoss-test is busy with another run',
+      'the Mac proof waits for the test VM: penmoss-test is busy with another run',
+      'the Mac proof waits for the test VM: tart is not installed: see docs/ci.md',
+      null,
+    ]);
+    // A poll between checks; the ledger says so once per reason.
+    expect(f.slept.slice(0, 3)).toEqual([60, 60, 60]);
+    expect(f.events.filter((e) => e === 'proof-waiting')).toHaveLength(2);
+    // The check comes right before the proof: a VM found free is used at once.
+    expect(f.calls.indexOf('proof mac: test/e2e/app.spec.ts') - 1).toBe(
+      f.calls.lastIndexOf('vm check'),
+    );
+  });
+
+  it("treats a VM that doesn't boot (the script's exit 75) as a wait, not a failure", async () => {
+    const f = fake({ ...mac, vmBootFails: 2 });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(count(f.calls, 'proof mac')).toBe(3);
+    expect(count(f.calls, 'agent')).toBe(1);
+    expect(f.waits[0]).toBe(
+      'the Mac proof waits for the test VM: penmoss-test did not answer in 3 minutes',
+    );
+    expect(f.waits.at(-1)).toBeNull();
+  });
+
+  it('stops Blocked with the reason only after macProof.waitHours', async () => {
+    const reason = "penmoss-test isn't made yet: run task desktop:test:vm once (docs/ci.md §8)";
+    // The fake clock moves 30 minutes on every reading.
+    const f = fake({
+      ...mac,
+      vmChecks: Array.from({ length: 100 }, () => ({ ok: false as const, reason })),
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome).toEqual({ kind: 'blocked', reason: 'mac-vm' });
+    expect(count(f.calls, 'proof mac')).toBe(0);
+    // Not the agent's to fix: no gate round, straight to Blocked.
+    expect(count(f.calls, 'agent')).toBe(1);
+    expect(f.events).not.toContain('gate-failed');
+    expect(count(f.calls, 'vm check')).toBeGreaterThan(10);
+    expect(count(f.calls, 'vm check')).toBeLessThan(30);
+    expect(f.calls.at(-1)).toBe('blocked');
+    expect(f.comments.at(-1)).toContain(
+      `The Mac proof waited 12 h for the test VM (penmoss-test), which still can't take it: ${reason}.`,
+    );
+    expect(f.waits.at(-1)).toBeNull();
+  });
+
+  it('gives every proof a signal that aborts at its timeout', async () => {
+    const f = fake({
+      paths: ['apps/web/src/a.ts'],
+      result: {
+        ...done,
+        platforms: {
+          web: { inScope: true, proofSpecs: ['a.spec.ts'] },
+          mac: { inScope: true, proofSpecs: ['app.spec.ts'] },
+          android: { inScope: true, proofSpecs: ['app.penmoss.EditorScreenTest'] },
+        },
+      },
+    });
+    await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(f.signals).toHaveLength(3);
+    for (const signal of f.signals) {
+      expect(signal).toBeInstanceOf(AbortSignal);
+      expect(signal?.aborted).toBe(false);
+    }
+  });
+});
+
 describe('CI after the PR opens (F6)', () => {
   it('hands a rebase conflict back to the agent, then goes on', async () => {
     const f = fake({ conflict: true });
     const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
     expect(outcome.kind).toBe('in-review');
-    expect(f.calls).toContain('exec 2: git rebase --abort');
-    expect(f.prompts[1]).toContain('stopped on conflicts');
+    expect(f.prompts[1]).toContain('stopped on conflicts in `docs/cli.md`');
     expect(f.prompts[1]).toContain('CONFLICT (content): docs/cli.md');
   });
 
@@ -470,6 +629,108 @@ describe('CI after the PR opens (F6)', () => {
   });
 });
 
+describe('main moves while the PR waits for CI (F6)', () => {
+  const BR = 'factory/42-fix-the-typo-in-docs-cli';
+  const conflict: RebaseOutcome = {
+    kind: 'conflict',
+    files: ['apps/web/src/a.ts', 'docs/cli.md'],
+    output: 'CONFLICT (content): Merge conflict in apps/web/src/a.ts',
+  };
+  const clean: RebaseOutcome = { kind: 'rebased', resolved: [], renumbered: {} };
+
+  it('rebases once more before In review, gates again, pushes with the lease and waits for CI', async () => {
+    const f = fake({
+      behind: [true],
+      rebases: [
+        clean,
+        { kind: 'rebased', resolved: ['docs/decisions.md'], renumbered: { A1225: 'A1226' } },
+      ],
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.calls.slice(f.calls.indexOf('pr'))).toEqual([
+      'pr',
+      'checks',
+      `behind? ${BR}`,
+      `open ${BR}`,
+      'rebase /wt/3',
+      'exec 3: git diff origin/main...HEAD',
+      'exec 3: task lint',
+      'close 3',
+      `push ${BR}`,
+      'checks',
+      'comment #42',
+      'status In review',
+      'notify Penmoss #42 is ready for review',
+    ]);
+    // The decisions conflict was the harness's to resolve: no agent round for it.
+    expect(f.calls.filter((c) => c === 'agent')).toHaveLength(1);
+    expect(f.events).toContain('rebased');
+  });
+
+  it("hands a conflict it can't resolve to one agent round, then goes on to review", async () => {
+    const f = fake({ behind: [true], rebases: [clean, conflict, clean] });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.prompts).toHaveLength(2);
+    expect(f.prompts[1]).toContain('## main moved: rebase onto it');
+    expect(f.prompts[1]).toContain('stopped on conflicts in `apps/web/src/a.ts`, `docs/cli.md`');
+    expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(2);
+    expect(f.calls.at(-2)).toBe('status In review');
+  });
+
+  it('sets Blocked naming the conflicting files when the fix round leaves them', async () => {
+    const f = fake({ behind: [true], rebases: [clean, conflict, conflict] });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome).toEqual({ kind: 'blocked', reason: 'rebase-conflict' });
+    const last = f.comments.at(-1)!;
+    expect(last).toContain(
+      'no longer rebases onto main: `apps/web/src/a.ts`, `docs/cli.md` conflict',
+    );
+    expect(last).toContain('event=blocked');
+    expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(1);
+    expect(f.calls).not.toContain('status In review');
+    expect(f.calls.at(-1)).toBe('blocked');
+  });
+
+  it('sets Blocked when the agent stops in its fix round, without pushing', async () => {
+    const f = fake({
+      behind: [true],
+      rebases: [clean, conflict],
+      agentRounds: [done, { ...done, status: 'failed', summary: 'both sides rename the route' }],
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome).toEqual({ kind: 'blocked', reason: 'rebase-conflict' });
+    expect(f.comments.at(-1)).toContain(
+      "the agent's fix round stopped: both sides rename the route",
+    );
+    expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(1);
+  });
+
+  it('gives a gate the rebase broke to the agent with the failure', async () => {
+    const f = fake({ behind: [true] });
+    let gates = 0;
+    const base = f.deps;
+    f.deps = {
+      ...base,
+      openSandbox: async (branch) => {
+        const box = await base.openSandbox(branch);
+        return {
+          ...box,
+          exec: (command) =>
+            command === 'task lint' && ++gates === 2
+              ? Promise.resolve({ exitCode: 1, stdout: 'main renamed lint:md', stderr: '' })
+              : box.exec(command),
+        };
+      },
+    };
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.prompts[1]).toContain('## The gate after rebasing onto main');
+    expect(f.prompts[1]).toContain('main renamed lint:md');
+  });
+});
+
 describe('helpers', () => {
   it('names the branch from the issue', () => {
     expect(
@@ -480,5 +741,49 @@ describe('helpers', () => {
   it('gates docs with lint and everything else with task check', () => {
     expect(gateCommand({ kind: 'docs-only', platforms: [] })).toBe('task lint');
     expect(gateCommand({ kind: 'ci-only', platforms: [] })).toBe('task check');
+  });
+});
+
+describe('openOrReusePr (R12)', () => {
+  const fakeGh = (open: { number: number; url: string }[]) => {
+    const calls: string[][] = [];
+    const gh: Gh = {
+      run: (args) => {
+        calls.push([...args]);
+        return Promise.resolve('https://github.com/htxryan/penmoss/pull/901\n');
+      },
+      json: <T>(args: readonly string[]) => {
+        calls.push([...args]);
+        return Promise.resolve(open as T);
+      },
+      graphql: () => Promise.reject(new Error('unused')),
+    };
+    return { gh, calls };
+  };
+  const pr = {
+    repo: config.repo,
+    branch: 'factory/42-x',
+    title: 'T',
+    bodyFile: '/tmp/body.md',
+    reviewer: config.owner,
+  };
+
+  it('opens a PR for a new branch, asking Ryan to review', async () => {
+    const f = fakeGh([]);
+    expect(await openOrReusePr(f.gh, pr)).toBe('https://github.com/htxryan/penmoss/pull/901');
+    expect(f.calls.at(-1)?.slice(0, 2)).toEqual(['pr', 'create']);
+    expect(f.calls.at(-1)).toContain('--reviewer');
+  });
+
+  it("updates the branch's open PR when a restarted run publishes again, instead of failing", async () => {
+    const f = fakeGh([{ number: 900, url: 'https://github.com/htxryan/penmoss/pull/900' }]);
+    expect(await openOrReusePr(f.gh, pr)).toBe('https://github.com/htxryan/penmoss/pull/900');
+    expect(f.calls.at(-1)?.slice(0, 4)).toEqual([
+      'api',
+      '-X',
+      'PATCH',
+      'repos/htxryan/penmoss/pulls/900',
+    ]);
+    expect(f.calls.some((c) => c[1] === 'create')).toBe(false);
   });
 });

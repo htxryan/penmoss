@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { loadSecrets, missingSecrets, parseSecrets } from '../src/secrets.ts';
 
 describe('parseSecrets', () => {
-  it('keeps only the allowed keys and names the rest', () => {
+  it('keeps only the allowed keys and names the rest, a GitHub token included (A1222)', () => {
     const result = parseSecrets(
       [
         '# tokens',
@@ -18,8 +18,8 @@ describe('parseSecrets', () => {
     );
     expect(result).toEqual({
       ok: true,
-      secrets: { GH_TOKEN: 'abc', CLAUDE_CODE_OAUTH_TOKEN: 'q r', OPENCODE_API_KEY: 'k' },
-      ignored: ['AWS_SECRET'],
+      secrets: { CLAUDE_CODE_OAUTH_TOKEN: 'q r', OPENCODE_API_KEY: 'k' },
+      ignored: ['GH_TOKEN', 'AWS_SECRET'],
     });
   });
 
@@ -34,7 +34,7 @@ describe('loadSecrets', () => {
 
   it('refuses a file other users can read', () => {
     const path = join(dir, 'open.env');
-    writeFileSync(path, 'GH_TOKEN=x\n');
+    writeFileSync(path, 'OPENCODE_API_KEY=x\n');
     chmodSync(path, 0o644);
     expect(loadSecrets(path)).toEqual({
       ok: false,
@@ -44,9 +44,9 @@ describe('loadSecrets', () => {
 
   it('reads a mode-600 file', () => {
     const path = join(dir, 'ok.env');
-    writeFileSync(path, 'GH_TOKEN=x\n');
+    writeFileSync(path, 'OPENCODE_API_KEY=x\n');
     chmodSync(path, 0o600);
-    expect(loadSecrets(path)).toMatchObject({ ok: true, secrets: { GH_TOKEN: 'x' } });
+    expect(loadSecrets(path)).toMatchObject({ ok: true, secrets: { OPENCODE_API_KEY: 'x' } });
   });
 
   it('says when the file is missing', () => {
@@ -54,8 +54,8 @@ describe('loadSecrets', () => {
   });
 
   it('lists missing keys', () => {
-    expect(missingSecrets({ GH_TOKEN: 'x' }, ['GH_TOKEN', 'CLOUDFLARE_API_TOKEN'])).toEqual([
-      'CLOUDFLARE_API_TOKEN',
-    ]);
+    expect(
+      missingSecrets({ OPENCODE_API_KEY: 'x' }, ['OPENCODE_API_KEY', 'CLOUDFLARE_API_TOKEN']),
+    ).toEqual(['CLOUDFLARE_API_TOKEN']);
   });
 });

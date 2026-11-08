@@ -5,16 +5,24 @@
 import type { Gh } from './github.ts';
 
 export interface IssueComment {
+  /** Who wrote it, as the tracker identifies people: a GitHub login or a Linear user ID. */
   readonly author: string;
+  /** The name to show, when `author` is an ID. */
+  readonly authorName?: string;
   readonly body: string;
   readonly createdAt: string;
 }
 
 export interface Issue {
   readonly number: number;
+  /** `#36` or `PEN-36`; `#<number>` when absent. */
+  readonly key?: string;
   readonly title: string;
   readonly body: string;
   readonly author: string;
+  readonly authorName?: string;
+  /** The body came from outside whoever filed it, such as the GitHub intake into Linear: fenced. */
+  readonly external?: boolean;
   readonly url: string;
   readonly labels: readonly string[];
   readonly comments: readonly IssueComment[];
@@ -46,6 +54,7 @@ export async function readIssue(gh: Gh, repo: string, number: number): Promise<I
   ]);
   return {
     number: raw.number,
+    key: `#${raw.number}`,
     title: raw.title,
     body: raw.body,
     url: raw.url,
@@ -69,8 +78,10 @@ export function fence(author: string, text: string): string {
 export function issueText(issue: Issue, owner: string, ownMarker: string): string {
   const trusted = (author: string) => author === owner;
   const parts = [
-    `# #${issue.number} ${issue.title}`,
-    trusted(issue.author) ? issue.body : fence(issue.author, issue.body),
+    `# ${issue.key ?? `#${issue.number}`} ${issue.title}`,
+    trusted(issue.author) && !issue.external
+      ? issue.body
+      : fence(issue.authorName ?? issue.author, issue.body),
   ];
   // The factory's own comments (with its marker) are its status notes, not instructions.
   const comments = issue.comments.filter((c) => !c.body.includes(ownMarker));
@@ -79,8 +90,8 @@ export function issueText(issue: Issue, owner: string, ownMarker: string): strin
     for (const c of comments) {
       parts.push(
         trusted(c.author)
-          ? `**${c.author}** (${c.createdAt}):\n${c.body}`
-          : fence(c.author, c.body),
+          ? `**${c.authorName ?? c.author}** (${c.createdAt}):\n${c.body}`
+          : fence(c.authorName ?? c.author, c.body),
       );
     }
   }

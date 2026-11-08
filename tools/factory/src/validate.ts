@@ -26,12 +26,22 @@ export async function validate(
   sandbox: RunSandbox,
   branch: string,
   plan: string,
+  /** What the builder says it couldn't do, and why (`result.json`'s `risks`). */
+  builder: readonly string[] = [],
 ): Promise<{ ok: true; rows: FidelityRow[] } | { ok: false; error: string }> {
   return deps.heavy(`factory validation ${branch}`, async () => {
     await deps.stageMockups(sandbox);
     await runAgentPatiently(deps, sandbox, fill(promptTemplate('validate'), { branch, plan }));
-    // A fresh session: the reviewer hasn't seen the build or the walkthrough, only their results.
-    await runAgentPatiently(deps, sandbox, fill(promptTemplate('review'), { plan }));
+    // A fresh session: the reviewer hasn't seen the build or the walkthrough, only their results,
+    // and the builder's reasons for what it left undone, so a reason that holds is a deviation.
+    await runAgentPatiently(
+      deps,
+      sandbox,
+      fill(promptTemplate('review'), {
+        plan,
+        builder: builder.length ? builder.map((r) => `- ${r}`).join('\n') : 'Nothing.',
+      }),
+    );
     const text = await deps.readReview(sandbox);
     if (text === null) return { ok: false, error: 'the reviewer wrote no review.json' };
     const parsed = parseReview(text);

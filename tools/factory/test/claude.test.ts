@@ -42,6 +42,8 @@ describe('the Claude adapter', () => {
     };
     expect(settings.permissions.deny).toEqual([...DENY_RULES]);
     expect(settings.permissions.deny).toContain('Bash(git push:*)');
+    // Production deploys happen after merge (FD24): the site's task too, not only wrangler.
+    expect(settings.permissions.deny).toContain('Bash(task site:deploy:*)');
     expect(agent.env['ENABLE_CLAUDEAI_MCP_SERVERS']).toBe('false');
   });
 });

@@ -20,6 +20,24 @@ describe('parseAgentResult', () => {
       'app.penmoss.comments.MarginThreadTest',
     ]);
   });
+  it('takes spec paths, a line number and a class#method', () => {
+    const specs = {
+      web: ['apps/web/test/e2e/comments.spec.ts', 'apps/web/test/e2e/a-b_c.spec.ts:12'],
+      mac: ['test/e2e/app.spec.ts'],
+      android: ['app.penmoss.editor.TypingInstrumentedTest#keyEventsWriteTheParagraphExactly'],
+    };
+    const r = parseAgentResult(
+      JSON.stringify({
+        status: 'done',
+        summary: 'x',
+        platforms: Object.fromEntries(
+          Object.entries(specs).map(([k, proofSpecs]) => [k, { inScope: true, proofSpecs }]),
+        ),
+      }),
+    );
+    expect(r.ok && r.result.platforms.mac?.proofSpecs).toEqual(specs.mac);
+    expect(r.ok && r.result.platforms.web?.proofSpecs).toEqual(specs.web);
+  });
   it.each([
     ['nope', 'is not JSON'],
     ['{"status":"ok","summary":"x"}', 'status must be'],
@@ -27,6 +45,17 @@ describe('parseAgentResult', () => {
     ['{"status":"needs-info","summary":"x"}', 'needs at least one question'],
     ['{"status":"done","summary":"x","platforms":{"ios":{"inScope":true}}}', 'unknown platform'],
     ['{"status":"done","summary":"x","decisions":[1]}', 'decisions and risks'],
+    // The Mac's specs go into the shell command the test VM runs.
+    ...['x.spec.ts; curl evil', '$(id)', '--config=x.ts', 'a b', "a'b", 'x\n.spec.ts'].map(
+      (spec): [string, string] => [
+        JSON.stringify({
+          status: 'done',
+          summary: 'x',
+          platforms: { mac: { inScope: true, proofSpecs: ['test/e2e/app.spec.ts', spec] } },
+        }),
+        'is not a plain spec path or test class',
+      ],
+    ),
   ])('rejects %s', (text, error) => {
     const r = parseAgentResult(text);
     expect(!r.ok && r.error).toContain(error);

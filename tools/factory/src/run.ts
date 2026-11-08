@@ -18,7 +18,9 @@ import { usageLimitReset } from './limits.ts';
 import { validate } from './validate.ts';
 import { renderPrBody, type AttachedProof } from './proof/body.ts';
 import { missingProof, type ProofItem } from './proof/manifest.ts';
+import { VmUnavailable, type VmCheck } from './proof/mac.ts';
 import { formatMarker } from './pick.ts';
+import type { RebaseOutcome } from './rebase.ts';
 import type { AgentResult } from './result.ts';
 
 export type RunEvent =
@@ -31,6 +33,8 @@ export type RunEvent =
   | 'gate-failed'
   | 'pushed'
   | 'decisions-numbered'
+  | 'rebased'
+  | 'rebase-conflict'
   | 'proof-recorded'
   | 'pr-opened'
   | 'ci-red'
@@ -38,6 +42,7 @@ export type RunEvent =
   | 'ci-stalled'
   | 'in-review'
   | 'blocked'
+  | 'proof-waiting'
   | 'usage-limited'
   | 'validated';
 
@@ -68,18 +73,31 @@ export interface RunDeps {
   ): Promise<{ ok: true; result: AgentResult } | { ok: false; error: string }>;
   /** Paths changed on the branch against origin/main, and how many commits it has. */
   diff(branch: string): Promise<{ readonly paths: readonly string[]; readonly commits: number }>;
-  /** Runs a platform's proof specs in the sandbox with recording on. */
+  /**
+   * Runs a platform's proof specs in the sandbox with recording on. `signal` aborts at the proof
+   * timeout: what the proof started is stopped (the VM script, the slot's emulator). A Mac proof
+   * throws `VmUnavailable` when the test VM couldn't take it.
+   */
   recordProof(
     sandbox: RunSandbox,
     platform: Platform,
     specs: readonly string[],
+    signal?: AbortSignal,
   ): Promise<ProofItem[]>;
+  /** Whether the test VM can take a Mac proof now (F10): the host check before one. */
+  macVmCheck(sandbox: RunSandbox): Promise<VmCheck>;
+  /** What the run is waiting for, which `factory:status` shows; null once it goes on. */
+  waitingFor(reason: string | null): void;
   /** Converts and checks the recordings, into the folder the PR body is written in. */
   prepareProof(
     items: readonly ProofItem[],
   ): Promise<{ ok: true; proof: AttachedProof[] } | { ok: false; error: string }>;
   /** Fetches origin/main into the factory's clone. */
   fetchMain(): Promise<void>;
+  /** Whether origin/main (as last fetched) has commits the branch doesn't. */
+  behindMain(branch: string): Promise<boolean>;
+  /** Rebases the sandbox's branch onto origin/main, resolving decisions-only conflicts (rebase.ts). */
+  rebase(sandbox: RunSandbox): Promise<RebaseOutcome>;
   /** Gives A-NEW-n decisions real numbers in the sandbox's worktree; returns what it assigned. */
   numberDecisions(sandbox: RunSandbox): Promise<Record<string, string>>;
   /** Pushes the branch (with lease: rebases rewrite it). */
@@ -116,23 +134,59 @@ export interface RunInput {
   readonly artifacts?: readonly { readonly label: string; readonly href: string }[];
   /** The agreed plan as text: when set, web changes are validated against it (F19). */
   readonly plan?: string;
+  /** A run the daemon restarts because it stopped mid-run (R12): the claim says so. */
+  readonly recovered?: boolean;
 }
 
 export type RunOutcome =
   | { readonly kind: 'in-review'; readonly pr: string; readonly scope: Scope }
   | { readonly kind: 'blocked'; readonly reason: string };
 
-/** `factory/<n>-<a-few-words-of-the-title>`. */
-/** Rejects when `work` takes longer than `minutes` (F13): a hung step stops the run, not the Mac. */
-export function withTimeout<T>(work: Promise<T>, minutes: number, what: string): Promise<T> {
+/** How long a timed-out step gets to stop what it started before the run goes on without it. */
+export const SETTLE_MS = 120_000;
+
+/**
+ * Rejects when `work` takes longer than `minutes` (F13): a hung step stops the run, not the Mac.
+ * Given as a function, `work` gets a signal that aborts at the timeout, so it can stop what it
+ * started (`nodeExec` kills the command's process group); the rejection then waits for it to
+ * finish stopping, up to `settleMs`, so the VM's lock or a slot's emulator is free before the
+ * run moves on.
+ */
+export function withTimeout<T>(
+  work: Promise<T> | ((signal: AbortSignal) => Promise<T>),
+  minutes: number,
+  what: string,
+  settleMs = SETTLE_MS,
+): Promise<T> {
+  const controller = new AbortController();
+  const running = typeof work === 'function' ? work(controller.signal) : work;
+  // Once the step has timed out, whatever it returns while it stops doesn't count.
+  const never = new Promise<never>(() => undefined);
+  let late = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const late = new Promise<never>((_, reject) => {
-    timer = setTimeout(
-      () => reject(new Error(`${what} took longer than ${minutes} min`)),
-      minutes * 60_000,
-    );
+  const timedOut = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      late = true;
+      const error = new Error(`${what} took longer than ${minutes} min`);
+      if (typeof work !== 'function') return reject(error);
+      controller.abort(error);
+      const settle = setTimeout(() => reject(error), settleMs);
+      void running
+        .catch(() => undefined)
+        .finally(() => {
+          clearTimeout(settle);
+          reject(error);
+        });
+    }, minutes * 60_000);
   });
-  return Promise.race([work, late]).finally(() => clearTimeout(timer));
+  const onTime = running.then(
+    (value) => (late ? never : value),
+    (error: unknown) => {
+      if (late) return never;
+      throw error;
+    },
+  );
+  return Promise.race([onTime, timedOut]).finally(() => clearTimeout(timer));
 }
 
 /** How many usage-limit waits one agent round gets before the run stops. */
@@ -180,7 +234,8 @@ type GateVerdict =
       readonly proof: readonly AttachedProof[];
       readonly fidelity?: readonly FidelityRow[];
     }
-  | { readonly ok: false; readonly feedback: string };
+  /** `block`: nothing the agent can fix (the test VM stayed unusable): stop, Blocked, now. */
+  | { readonly ok: false; readonly feedback: string; readonly block?: string };
 
 export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunOutcome> {
   const { config, item, spec } = { config: deps.config, ...input };
@@ -200,9 +255,12 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
   };
 
   // Claim: the comment first, so a crash after it is recoverable from GitHub (the source of truth).
+  const how = input.recovered
+    ? `Restarted: this run stopped before it finished (the factory's daemon stopped, or Blocked paused it and has been cleared), so it runs again on the same branch (R12). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.`
+    : `Started: ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}, implementing straight away${spec.planSkip ? ' (`plan:skip`)' : ''}.`;
   await deps.comment(
     item.number,
-    `Started: ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}, implementing straight away${spec.planSkip ? ' (`plan:skip`)' : ''}. Scope: ${spec.platforms?.join(', ') ?? 'decided by the path classifier'}.\n\n${marker('claim')}`,
+    `${how} Scope: ${spec.platforms?.join(', ') ?? 'decided by the path classifier'}.\n\n${marker('claim')}`,
   );
   await deps.setStatus(item, config.status.working);
   deps.log('claimed', { issue: item.number });
@@ -264,6 +322,7 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
         ...(input.artifacts ? { artifacts: input.artifacts } : {}),
       });
     }
+    if (verdict.block) return block(verdict.block, verdict.feedback);
     deps.log('gate-failed', { round });
     if (round >= config.rounds.gateFix) {
       return block(
@@ -300,15 +359,12 @@ export async function gateAndProve(
     const clean = await gate.exec('git status --porcelain --untracked-files=no');
     if (clean.stdout.trim() !== '')
       return { ok: false, feedback: 'the branch has uncommitted changes to tracked files.' };
-    // Up to date with main before anything is checked (F6); a conflict is the agent's to resolve.
-    const rebase = await gate.exec('git rebase origin/main');
-    if (rebase.exitCode !== 0) {
-      await gate.exec('git rebase --abort');
-      return {
-        ok: false,
-        feedback: `\`git rebase origin/main\` stopped on conflicts:\n\n\`\`\`\n${tail(rebase.stdout + rebase.stderr)}\n\`\`\`\n\nRebase \`${branch}\` onto \`origin/main\` yourself, resolve them, and commit.`,
-      };
-    }
+    // Up to date with main before anything is checked (F6). The harness resolves new decision
+    // rows on both sides; any other conflict is the agent's to resolve.
+    const rebased = await deps.rebase(gate);
+    if (rebased.kind === 'conflict')
+      return { ok: false, feedback: conflictFeedback(branch, rebased) };
+    noteRebase(deps, rebased);
     const numbered = await deps.numberDecisions(gate);
     if (Object.keys(numbered).length > 0) deps.log('decisions-numbered', numbered);
     const weak = scanWeakenedTests((await gate.exec('git diff origin/main...HEAD')).stdout);
@@ -324,10 +380,17 @@ export async function gateAndProve(
     deps.log('gate-passed', { command });
     const items: ProofItem[] = [];
     for (const platform of needed) {
+      const specs = result.platforms[platform]?.proofSpecs ?? [];
+      if (platform === 'mac') {
+        const mac = await recordMacProof(deps, gate, branch, specs);
+        if (!mac.ok) return { ok: false, feedback: mac.feedback, block: 'mac-vm' };
+        items.push(...mac.items);
+        continue;
+      }
       items.push(
         ...(await deps.heavy(`factory proof ${platform} ${branch}`, () =>
           withTimeout(
-            deps.recordProof(gate, platform, result.platforms[platform]?.proofSpecs ?? []),
+            (signal) => deps.recordProof(gate, platform, specs, signal),
             deps.config.timeouts.proofMinutes,
             `recording ${platform} proof`,
           ),
@@ -346,7 +409,7 @@ export async function gateAndProve(
     deps.log('proof-recorded', { files: prepared.proof.length });
     // F19: a planned change that users see on the web is walked and reviewed against the plan.
     if (validation && scope.platforms.includes('web')) {
-      const v = await validate(deps, gate, branch, validation.plan);
+      const v = await validate(deps, gate, branch, validation.plan, result.risks);
       if (!v.ok) return { ok: false, feedback: `Validation couldn't finish: ${v.error}` };
       const mismatches = v.rows.filter((r) => r.verdict === 'mismatch');
       if (mismatches.length > 0 && !validation.final)
@@ -356,6 +419,58 @@ export async function gateAndProve(
     return { ok: true, proof: prepared.proof };
   } finally {
     await gate.close();
+  }
+}
+
+/**
+ * The Mac proof, once the test VM can take it (F7, F10). While it can't (tart missing, the VM
+ * not made, another run on it, a VM started some other way, a boot that fails), the run waits
+ * a poll and asks again: no failure, no round used, and `factory:status` says why. The check and
+ * the proof hold the heavy-job slot; the waits don't. Only after `macProof.waitHours` does it
+ * give up, and the run stops Blocked with the reason.
+ */
+export async function recordMacProof(
+  deps: RunDeps,
+  gate: RunSandbox,
+  branch: string,
+  specs: readonly string[],
+): Promise<{ ok: true; items: ProofItem[] } | { ok: false; feedback: string }> {
+  const since = deps.now();
+  let said: string | undefined;
+  try {
+    for (;;) {
+      const tried = await deps.heavy(`factory proof mac ${branch}`, async () => {
+        const check = await deps.macVmCheck(gate);
+        if (!check.ok) return { wait: check.reason };
+        try {
+          return {
+            items: await withTimeout(
+              (signal) => deps.recordProof(gate, 'mac', specs, signal),
+              deps.config.timeouts.proofMinutes,
+              'recording mac proof',
+            ),
+          };
+        } catch (error) {
+          if (error instanceof VmUnavailable) return { wait: error.message };
+          throw error;
+        }
+      });
+      if ('items' in tried) return { ok: true, items: tried.items };
+      const hours = (deps.now().getTime() - since.getTime()) / 3_600_000;
+      if (hours >= deps.config.macProof.waitHours)
+        return {
+          ok: false,
+          feedback: `The Mac proof waited ${deps.config.macProof.waitHours} h for the test VM (${deps.config.macProof.vm}), which still can't take it: ${tried.wait}. Fix the VM (docs/ci.md §8), then clear **${deps.config.blockedField}**.`,
+        };
+      if (tried.wait !== said) {
+        deps.log('proof-waiting', { platform: 'mac', reason: tried.wait });
+        said = tried.wait;
+      }
+      deps.waitingFor(`the Mac proof waits for the test VM: ${tried.wait}`);
+      await deps.sleep(deps.config.pollSeconds);
+    }
+  } finally {
+    deps.waitingFor(null);
   }
 }
 
@@ -378,6 +493,7 @@ async function publish(
   deps.log('pushed', { branch: run.branch });
   const body = renderPrBody({
     issue: run.item.number,
+    key: run.item.key,
     summary: run.result.summary,
     scope: run.scope,
     gate: gateCommand(run.scope),
@@ -399,20 +515,29 @@ async function publish(
   });
   deps.log('pr-opened', { pr });
 
+  const stop = async (reason: string, text: string): Promise<RunOutcome> => {
+    deps.log('blocked', { reason });
+    await deps.comment(run.item.number, `${text}\n\n${run.marker('blocked')}`);
+    await deps.setBlocked(run.item);
+    return { kind: 'blocked', reason };
+  };
   // In review only once CI is green (R4); red checks go to a repair session (F6).
   const ci = await watchCi(deps, { ...run, pr });
-  if (ci.kind === 'blocked') {
-    deps.log('blocked', { reason: ci.reason });
-    await deps.comment(run.item.number, `${ci.body}\n\n${run.marker('blocked')}`);
-    await deps.setBlocked(run.item);
-    return { kind: 'blocked', reason: ci.reason };
+  if (ci.kind === 'blocked') return stop(ci.reason, ci.body);
+  // main may have moved while CI ran: rebase once more, so the PR reaches review on top of it.
+  await deps.fetchMain();
+  if (await deps.behindMain(run.branch)) {
+    const fresh = await refreshBranch(deps, run);
+    if (!fresh.ok) return stop(fresh.reason, fresh.body);
+    const again = await watchCi(deps, { ...run, pr });
+    if (again.kind === 'blocked') return stop(again.reason, again.body);
   }
   await deps.comment(
     run.item.number,
     `Ready for review, with CI green: ${pr}\n\n${run.marker('in-review')}`,
   );
   await deps.setStatus(run.item, config.status.review);
-  await deps.notify(`Penmoss #${run.item.number} is ready for review`, run.result.summary);
+  await deps.notify(`Penmoss ${run.item.key} is ready for review`, run.result.summary);
   deps.log('in-review', { pr });
   return { kind: 'in-review', pr, scope: run.scope };
 }
@@ -498,29 +623,123 @@ async function repair(
   } finally {
     await work.close();
   }
+  const gated = await regate(deps, run.branch, run.scope);
+  if (!gated.ok)
+    return {
+      ok: false,
+      why: gated.conflict
+        ? `the repaired branch no longer rebases cleanly onto main (${gated.conflict.map((f) => `\`${f}\``).join(', ')} conflict)`
+        : gated.why,
+    };
+  await deps.push(run.branch);
+  return { ok: true };
+}
+
+type Rebased = Extract<RebaseOutcome, { kind: 'rebased' }>;
+
+function conflictFeedback(branch: string, conflict: Extract<RebaseOutcome, { kind: 'conflict' }>) {
+  const files = conflict.files.map((f) => `\`${f}\``).join(', ');
+  return `\`git rebase origin/main\` stopped on conflicts${files ? ` in ${files}` : ''}:\n\n\`\`\`\n${tail(conflict.output)}\n\`\`\`\n\nRebase \`${branch}\` onto \`origin/main\` yourself, resolve them, and commit.`;
+}
+
+function noteRebase(deps: RunDeps, rebased: Rebased): void {
+  if (rebased.resolved.length > 0 || Object.keys(rebased.renumbered).length > 0)
+    deps.log('rebased', { resolved: rebased.resolved, renumbered: rebased.renumbered });
+}
+
+type Regated =
+  | { readonly ok: true; readonly rebase: Rebased }
+  | { readonly ok: false; readonly why: string; readonly conflict?: readonly string[] };
+
+/** The branch rebased onto a fresh main in a gate sandbox, and the gate run on it again. */
+async function regate(deps: RunDeps, branch: string, scope: Scope): Promise<Regated> {
   await deps.fetchMain();
-  const gate = await deps.openSandbox(run.branch);
+  const gate = await deps.openSandbox(branch);
   try {
-    const rebase = await gate.exec('git rebase origin/main');
-    if (rebase.exitCode !== 0) {
-      await gate.exec('git rebase --abort');
-      return { ok: false, why: 'the repaired branch no longer rebases cleanly onto main' };
-    }
-    await deps.numberDecisions(gate);
+    const rebased = await deps.rebase(gate);
+    if (rebased.kind === 'conflict')
+      return { ok: false, why: conflictFeedback(branch, rebased), conflict: rebased.files };
+    noteRebase(deps, rebased);
+    const numbered = await deps.numberDecisions(gate);
+    if (Object.keys(numbered).length > 0) deps.log('decisions-numbered', numbered);
     const weak = scanWeakenedTests((await gate.exec('git diff origin/main...HEAD')).stdout);
     if (weak.length > 0) return { ok: false, why: weakenedFeedback(weak) };
-    const command = gateCommand(run.scope);
-    const checked = await deps.heavy(`factory gate ${run.branch}`, () => gate.exec(command));
+    const command = gateCommand(scope);
+    const checked = await deps.heavy(`factory gate ${branch}`, () => gate.exec(command));
     if (checked.exitCode !== 0)
       return {
         ok: false,
-        why: `\`${command}\` failed after the repair:\n\n\`\`\`\n${tail(checked.stdout + checked.stderr)}\n\`\`\``,
+        why: `\`${command}\` failed:\n\n\`\`\`\n${tail(checked.stdout + checked.stderr)}\n\`\`\``,
       };
+    return { ok: true, rebase: rebased };
   } finally {
     await gate.close();
   }
+}
+
+function stuck(
+  branch: string,
+  failed: Extract<Regated, { ok: false }>,
+  why: string,
+): Extract<RefreshOutcome, { ok: false }> {
+  const files = failed.conflict?.map((f) => `\`${f}\``).join(', ');
+  return failed.conflict
+    ? {
+        ok: false,
+        reason: 'rebase-conflict',
+        body: `\`${branch}\` no longer rebases onto main${files ? `: ${files} conflict` : ''}, and a fix round with the agent didn't resolve it${why}. Rebase it yourself or say how in a comment, then clear Blocked.\n\n${failed.why}`,
+      }
+    : {
+        ok: false,
+        reason: 'gate-failed',
+        body: `After rebasing onto main, the gate still fails${why}: ${failed.why}`,
+      };
+}
+
+export type RefreshOutcome =
+  | { readonly ok: true; readonly rebase: Rebased }
+  | { readonly ok: false; readonly reason: string; readonly body: string };
+
+/**
+ * Brings a pushed branch up to date with main (F6): rebase in a fresh sandbox, the gate again,
+ * then the host's leased push. A conflict the harness can't resolve, or a gate the rebase broke,
+ * gets one fix round with the agent; after that it is Ryan's, with the files named.
+ */
+export async function refreshBranch(
+  deps: RunDeps,
+  run: { readonly branch: string; readonly scope: Scope; readonly prompt: string },
+): Promise<RefreshOutcome> {
+  let gated = await regate(deps, run.branch, run.scope);
+  if (!gated.ok) {
+    const first = gated;
+    deps.log(first.conflict ? 'rebase-conflict' : 'gate-failed', {
+      ...(first.conflict ? { files: first.conflict } : {}),
+      phase: 'rebase',
+    });
+    const ask = first.conflict
+      ? `## main moved: rebase onto it\n\nThe PR from \`${run.branch}\` no longer rebases onto \`origin/main\`. ${first.why}\n\nKeep what main changed and what this branch changes. Run the checks, commit, and write \`.factory/result.json\` again.`
+      : `## The gate after rebasing onto main\n\n\`${run.branch}\` is now on top of \`origin/main\`, and the gate fails there: ${first.why}\n\nFix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\` again.`;
+    const work = await deps.openSandbox(run.branch);
+    let read: Awaited<ReturnType<RunDeps['readResult']>>;
+    try {
+      await runAgentPatiently(deps, work, `${run.prompt}\n\n${ask}`);
+      read = await deps.readResult(work);
+    } finally {
+      await work.close();
+    }
+    const stopped = !read.ok
+      ? read.error
+      : read.result.status !== 'done'
+        ? read.result.summary
+        : undefined;
+    if (stopped !== undefined)
+      return stuck(run.branch, first, ` (the agent's fix round stopped: ${stopped})`);
+    gated = await regate(deps, run.branch, run.scope);
+    if (!gated.ok) return stuck(run.branch, gated, '');
+  }
   await deps.push(run.branch);
-  return { ok: true };
+  deps.log('pushed', { branch: run.branch, phase: 'rebase' });
+  return { ok: true, rebase: gated.rebase };
 }
 
 function tail(text: string): string {

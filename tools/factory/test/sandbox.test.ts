@@ -82,6 +82,13 @@ describe('sandboxSpec', () => {
     expect(spec.ownDirs).toContain(spec.env['PENMOSS_HEAVY_DIR']);
   });
 
+  it('gives Claude Code a temp folder inside the sandbox', () => {
+    const dir = spec.env['CLAUDE_CODE_TMPDIR'];
+    expect(dir).toMatch(/penmoss-factory\/claude-tmp\/slot1$/);
+    expect(spec.ownDirs).toContain(dir);
+    expect(spec.mounts).toContainEqual({ hostPath: dir, sandboxPath: dir, readonly: false });
+  });
+
   it('passes the scoped tokens and marks the run', () => {
     expect(spec.env['GH_TOKEN']).toBe('bot-token');
     expect(spec.env['PENMOSS_FACTORY_RUN']).toBe('1');

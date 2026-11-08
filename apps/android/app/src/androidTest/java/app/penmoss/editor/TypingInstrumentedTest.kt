@@ -187,6 +187,14 @@ class TypingInstrumentedTest {
     @Test
     fun keyEventsWriteTheParagraphExactly() {
         focusBody()
+        // Injected key events go to whichever window has the input focus, not to this view. A
+        // system dialog in front ("System UI isn't responding" on a loaded emulator) takes the
+        // first keys and drops them, so type only once the editor's window has the focus.
+        waitUntil("the editor's window focused", 10_000) {
+            var focused = false
+            instrumentation.runOnMainSync { focused = webView.hasWindowFocus() }
+            focused
+        }
         instrumentation.sendStringSync(PARAGRAPH)
         waitForBody(PARAGRAPH)
     }

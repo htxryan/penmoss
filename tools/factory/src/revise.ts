@@ -13,7 +13,7 @@ import { classify } from './platforms.ts';
 import { formatMarker } from './pick.ts';
 import type { AttachedProof } from './proof/body.ts';
 import type { RoundItem } from './review.ts';
-import { gateAndProve, runAgentPatiently, watchCi, type RunDeps } from './run.ts';
+import { gateAndProve, refreshBranch, runAgentPatiently, watchCi, type RunDeps } from './run.ts';
 
 export interface ReviseDeps extends RunDeps {
   prComment(pr: string, body: string, proof?: readonly AttachedProof[]): Promise<void>;
@@ -119,6 +119,7 @@ export async function runRevise(deps: ReviseDeps, input: ReviseInput): Promise<R
       deps.log('in-review', { pr, round: 'addressed' });
       return { kind: 'addressed', sha };
     }
+    if (verdict.block) return block(verdict.block, verdict.feedback);
     if (round >= deps.config.rounds.gateFix)
       return block(
         'gate-failed',
@@ -126,4 +127,49 @@ export async function runRevise(deps: ReviseDeps, input: ReviseInput): Promise<R
       );
     prompt = `${input.prompt}\n\n## The gate's feedback (round ${round + 1})\n\n${verdict.feedback}`;
   }
+}
+
+/**
+ * main moved and GitHub says the PR can't merge as it is (F6): rebase it onto main in a fresh
+ * sandbox (new decision rows on both sides kept, renumbered if main took a number), gate it
+ * again, push with the lease, and watch CI. A conflict the harness can't resolve gets one fix
+ * round with the agent, then Blocked with the files named. The card stays In review.
+ */
+export async function runRebase(deps: ReviseDeps, input: ReviseInput): Promise<ReviseOutcome> {
+  const { item, spec, pr, branch } = input;
+  const marker = (event: string) =>
+    formatMarker({
+      run: deps.runId,
+      agent: spec.agent,
+      model: spec.modelAlias,
+      phase: 'rebase',
+      event,
+    });
+  const block = async (reason: string, body: string): Promise<ReviseOutcome> => {
+    deps.log('blocked', { reason });
+    await deps.comment(item.number, `${body}\n\n${marker('blocked')}`);
+    await deps.setBlocked(item);
+    return { kind: 'blocked', reason };
+  };
+  deps.log('claimed', { issue: item.number, phase: 'rebase' });
+  const scope = classify((await deps.diff(branch)).paths);
+  const fresh = await refreshBranch(deps, { branch, scope, prompt: input.prompt });
+  if (!fresh.ok) return block(fresh.reason, fresh.body);
+  const sha = (await deps.headSha(branch)).slice(0, 10);
+  const kept = fresh.rebase.resolved.length
+    ? ' Both sides added decisions, so `docs/decisions.md` keeps all the new rows, main’s first.'
+    : '';
+  const moved = Object.entries(fresh.rebase.renumbered);
+  const renumbered = moved.length
+    ? ` main already had ${moved.map(([from, to]) => `${from}, so this PR’s is now ${to}`).join('; ')}.`
+    : '';
+  // No marker in a PR comment: it would hide what Ryan said before it from the next round.
+  await deps.prComment(
+    pr,
+    `main moved on, so this branch is rebased onto it as ${sha}, gated again and pushed.${kept}${renumbered}`,
+  );
+  const ci = await watchCi(deps, { item, branch, scope, pr, prompt: input.prompt });
+  if (ci.kind === 'blocked') return block(ci.reason, ci.body);
+  deps.log('in-review', { pr, round: 'rebased' });
+  return { kind: 'addressed', sha };
 }

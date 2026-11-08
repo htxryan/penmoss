@@ -1,5 +1,7 @@
 import { parseMarkdown, schema as coreSchema, serializeMarkdown } from '@penmoss/core';
 import type { JSONContent } from '@tiptap/core';
+// Imported with the file, not inside the test: loading it took 7 s under load, past the test's 5 s.
+import { GapCursor } from '@tiptap/pm/gapcursor';
 import { describe, expect, it, vi } from 'vitest';
 import { memoryFoldState } from '../src/extensions/callout';
 import { openEditor, paragraph, press, select, startOf, type } from './support/editor';
@@ -329,8 +331,7 @@ describe('codec round trip through the editor', () => {
 });
 
 describe('table arrow keys', () => {
-  it('never puts a gap cursor between two cells', async () => {
-    const { GapCursor } = await import('@tiptap/pm/gapcursor');
+  it('never puts a gap cursor between two cells', () => {
     const collab = openEditor();
     type(collab.editor.view, '| a | b |\n');
     const { doc } = collab.editor.state;

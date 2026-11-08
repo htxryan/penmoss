@@ -330,8 +330,8 @@
           box.append(a);
         }
         const text = el('textarea');
-        text.placeholder = `Reply on #${c.number}`;
-        text.setAttribute('aria-label', `Reply on #${c.number}`);
+        text.placeholder = `Reply on ${c.key}`;
+        text.setAttribute('aria-label', `Reply on ${c.key}`);
         const unblock = el('input');
         unblock.type = 'checkbox';
         unblock.checked = c.blocked;
@@ -367,7 +367,7 @@
         const box = el('article', 'card');
         box.id = `issue-${c.number}`;
         const title = el('div', 'title');
-        title.append(el('span', 'num', `#${c.number} `), document.createTextNode(c.title));
+        title.append(el('span', 'num', `${c.key} `), document.createTextNode(c.title));
         box.append(title, el('div', 'step', c.step));
         if (c.since) {
           const t = el('div', 'since', ago(c.since));

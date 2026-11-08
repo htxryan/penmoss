@@ -5,15 +5,7 @@
  * own: git talks to the notebook's host, and nothing else is reached.
  */
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  symlinkSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -1311,6 +1303,25 @@ describe('penmoss mcp --notebook', () => {
   });
 });
 
+/**
+ * Puts a tool on a test's PATH as a script that runs it by its own path. A symlink isn't enough:
+ * the Command Line Tools' git (first on PATH in the factory's sandbox, where Apple's /usr/bin/git
+ * shim can't run) finds `git-upload-pack` and its templates relative to the path it was started
+ * from, so behind a symlink it can't clone.
+ */
+function alive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function onPath(tool: string, at: string): void {
+  writeFileSync(at, `#!/bin/sh\nexec '${tool.replaceAll("'", "'\\''")}' "$@"\n`, { mode: 0o755 });
+}
+
 describe('the built CLI', () => {
   it('runs a git notebook from the bundle, with credentials in ~/.penmoss and no keychain', () => {
     const bundleDir = join(root, 'bundle');
@@ -1322,7 +1333,7 @@ describe('the built CLI', () => {
       const found = spawnSync('sh', ['-c', `command -v ${tool}`], {
         encoding: 'utf8',
       }).stdout.trim();
-      if (found) symlinkSync(found, join(bin, tool));
+      if (found) onPath(found, join(bin, tool));
     }
     const remote = bare('bundle');
     const penmoss = (args: string[]) =>
@@ -1357,7 +1368,7 @@ describe('the built CLI', () => {
       const found = spawnSync('sh', ['-c', `command -v ${tool}`], {
         encoding: 'utf8',
       }).stdout.trim();
-      if (found) symlinkSync(found, join(bin, tool));
+      if (found) onPath(found, join(bin, tool));
     }
     const remote = bare('piped');
     const home = join(root, 'h', '.penmoss');
@@ -1419,10 +1430,10 @@ describe('the built CLI', () => {
     );
     expect(git(remote, ['ls-tree', '-r', '--name-only', 'main'])).toContain('Piped.md');
     // The detached sync has gone before its folder is removed (#172): it may still be writing.
-    await vi.waitFor(
-      () => expect(spawnSync('pgrep', ['-f', join(bundleDir, 'penmoss.js')]).status).toBe(1),
-      { timeout: 30_000, interval: 200 },
-    );
+    // By its pid from the log, since a sandbox (the factory's) can't list processes for pgrep.
+    const pid = Number(/^--- pid (\d+)$/m.exec(readFileSync(log, 'utf8'))?.[1]);
+    expect(pid).toBeGreaterThan(0);
+    await vi.waitFor(() => expect(alive(pid)).toBe(false), { timeout: 30_000, interval: 200 });
   }, 120_000);
 
   it('keeps an edit when the command is killed during the sync after it (B1 of #165)', async () => {
@@ -1435,7 +1446,7 @@ describe('the built CLI', () => {
       const found = spawnSync('sh', ['-c', `command -v ${tool}`], {
         encoding: 'utf8',
       }).stdout.trim();
-      if (found) symlinkSync(found, join(bin, tool));
+      if (found) onPath(found, join(bin, tool));
     }
     const sleep = spawnSync('sh', ['-c', 'command -v sleep'], { encoding: 'utf8' }).stdout.trim();
     const remote = bare('killed');

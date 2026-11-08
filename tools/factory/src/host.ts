@@ -1,40 +1,61 @@
 /**
- * The real `RunDeps`: the factory's own clone, Sandcastle sandboxes, gh as penmoss-bot, and the
- * run ledger. Kept apart from run.ts so the run's sequence is tested with fakes.
+ * The real `RunDeps`: the factory's own clone, Sandcastle sandboxes, gh as the GitHub App
+ * (A1222), and the run ledger. Kept apart from run.ts so the run's sequence is tested with fakes.
  *
- * The factory works in its own clone (`<stateDir>/repo`), never in Ryan's checkout. Its push
- * URL is a dead end, so a plain `git push` from a worktree goes nowhere; the harness pushes to
- * an explicit URL with the bot's credentials, which the sandbox never sees (R18).
+ * The runs work in the factory's own clone (`<stateDir>/repo`), never in Ryan's checkout. Its
+ * push URL is a dead end, so a plain `git push` from a worktree goes nowhere. The host never runs
+ * git in that clone or its worktrees (A1230): it fetches a run's branch from it into the
+ * publish repo (`<stateDir>/publish`, publish.ts), which no sandbox mounts, reads it there, and
+ * pushes from there to an explicit URL with the app's write token, which the sandbox never sees
+ * (R18): a sandbox holds only the app's read-only token.
  */
 import {
   appendFileSync,
   copyFileSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { extname, join } from 'node:path';
+import { dirname, extname, join } from 'node:path';
 import type { AgentProvider, Sandbox } from '@ai-hero/sandcastle';
-import { setBlocked, setStatus, type Board } from './board.ts';
-import { ensureAvd } from './avd.ts';
+import type { Board } from './board.ts';
+import { ensureAvd, stopSlotEmulator } from './avd.ts';
 import { withHeavySlot } from './heavy.ts';
 import { usageLimitReset } from './limits.ts';
 import { cardLink } from './ui/link.ts';
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { Exec } from './exec.ts';
+import { mustGit } from './git.ts';
 import { runIdOf, type CheckRun } from './checks.ts';
-import { assignDecisionNumbers, maxDecision } from './decisions.ts';
+import { reserveDecisionNumbers } from './decisions.ts';
 import { GhError, type Gh } from './github.ts';
-import { attachArgs, type AttachedProof } from './proof/body.ts';
+import { proofFiles, type AttachedProof } from './proof/body.ts';
+import { publishRefs, type ProofStore } from './proof/store.ts';
 import { fromPlaywrightReport, type ProofItem } from './proof/manifest.ts';
-import { checkMedia, framesToMp4, toMp4 } from './proof/media.ts';
+import { checkMedia, framesToMp4, framesWithin, toMp4, within } from './proof/media.ts';
+import { rebaseOntoMain } from './rebase.ts';
+import { checkMacVm, runMacProof } from './proof/mac.ts';
+import {
+  descendsFrom,
+  ensurePublishRepo,
+  fetchMainInto,
+  fetchRunBranch,
+  githubUrl,
+  MAIN,
+  publishDir,
+  publishRun,
+  pushedHead,
+  runRef,
+} from './publish.ts';
 import { parseAgentResult, RESULT_PATH } from './result.ts';
 import type { RunDeps, RunEvent, RunSandbox } from './run.ts';
 import { makeOwnDirs, sandboxSpec, seatbeltProvider, withJavaHome } from './sandbox.ts';
 import type { Secrets } from './secrets.ts';
+import type { Tracker } from './tracker/port.ts';
 
 export const DEAD_END_PUSH_URL = 'no-push://the-factory-harness-pushes';
 
@@ -42,49 +63,104 @@ export function repoDir(config: FactoryConfig): string {
   return join(expandHome(config.stateDir), 'repo');
 }
 
-/** The publisher's environment for gh and git: the bot's login and nothing of Ryan's. */
+/**
+ * The publisher's environment for gh: nothing of Ryan's (git's is `gitEnv`, git.ts). `gh` gets the app's token per
+ * call (`GH_TOKEN`), and its config folder is the factory's own, empty one, so it can never fall
+ * back to Ryan's login in ~/.config/gh.
+ */
 export function publisherEnv(config: FactoryConfig): Record<string, string> {
   return {
     PATH: process.env['PATH'] ?? '/usr/bin:/bin',
     HOME: process.env['HOME'] ?? '',
-    GH_CONFIG_DIR: expandHome(config.publisher.ghConfigDir),
+    GH_CONFIG_DIR: join(expandHome(config.stateDir), 'gh'),
     GIT_CONFIG_NOSYSTEM: '1',
     GIT_TERMINAL_PROMPT: '0',
   };
 }
 
-async function git(
-  exec: Exec,
-  args: readonly string[],
-  env: Record<string, string>,
-  cwd?: string,
+export { TOKEN_HELPER } from './git.ts';
+
+/**
+ * Opens the branch's PR, or, when one is already open, gives it the new title and body and
+ * returns it. A run restarted after the daemon stopped (R12), say while it waited on CI, comes
+ * back here with its PR open, and `gh pr create` refuses a second one for the same branch. The
+ * edit goes through the REST API, which needs only the app's Pull requests permission.
+ */
+export async function openOrReusePr(
+  gh: Gh,
+  pr: {
+    readonly repo: string;
+    readonly branch: string;
+    readonly title: string;
+    readonly bodyFile: string;
+    readonly reviewer: string;
+  },
 ): Promise<string> {
-  const result = await exec('git', args, { env, ...(cwd ? { cwd } : {}) });
-  if (result.code !== 0)
-    throw new Error(
-      `git ${args.slice(0, 2).join(' ')} failed: ${result.stderr.trim().split('\n').slice(-1)[0] ?? ''}`,
-    );
-  return result.stdout;
+  const open = await gh.json<{ number: number; url: string }[]>([
+    ...['pr', 'list', '--repo', pr.repo, '--head', pr.branch],
+    ...['--state', 'open', '--json', 'number,url'],
+  ]);
+  const existing = open[0];
+  if (existing) {
+    await gh.run([
+      ...['api', '-X', 'PATCH', `repos/${pr.repo}/pulls/${existing.number}`],
+      ...['-f', `title=${pr.title}`, '-F', `body=@${pr.bodyFile}`],
+    ]);
+    return existing.url;
+  }
+  const out = await gh.run([
+    ...['pr', 'create', '--repo', pr.repo, '--base', 'main', '--head', pr.branch],
+    ...['--title', pr.title, '--reviewer', pr.reviewer, '--body-file', pr.bodyFile],
+  ]);
+  return out.trim().split('\n').slice(-1)[0] ?? '';
 }
 
-/** Clones the repository once, with a dead-end push URL, and fetches main. */
-export async function ensureClone(config: FactoryConfig, exec: Exec): Promise<string> {
+/**
+ * Clones the runs' clone once, gives it a dead-end push URL and, when given, the app's identity
+ * for the commits made in it (`openFactory` sets it once; the worktrees share it), then makes the
+ * publish repo and fetches main there (A1230). git never runs in the clone after its `clone`:
+ * its config is written as a file (sandboxes see that file read-only), and its main is fetched
+ * by the gate sandbox before each rebase.
+ */
+export async function ensureClone(
+  config: FactoryConfig,
+  exec: Exec,
+  identity?: { readonly name: string; readonly email: string },
+): Promise<string> {
   const dir = repoDir(config);
-  const env = publisherEnv(config);
-  const helper = ['-c', 'credential.helper=', '-c', 'credential.helper=!gh auth git-credential'];
-  if (!existsSync(join(dir, '.git'))) {
-    mkdirSync(dir, { recursive: true });
-    await git(exec, [...helper, 'clone', `https://github.com/${config.repo}.git`, dir], env);
+  const parent = dirname(dir);
+  mkdirSync(parent, { recursive: true });
+  if (!existsSync(join(dir, '.git')))
+    await mustGit(exec, parent, ['clone', '--quiet', githubUrl(config), dir]);
+  const dotGit = lstatSync(join(dir, '.git'));
+  const file = join(dir, '.git', 'config');
+  if (!dotGit.isDirectory() || !lstatSync(file).isFile())
+    throw new Error(
+      `${dir} isn't a clone the factory made (its .git isn't a folder with a config)`,
+    );
+  const set = (key: string, value: string) =>
+    mustGit(exec, parent, ['config', '--file', file, '--replace-all', key, value]);
+  await set('remote.origin.pushurl', DEAD_END_PUSH_URL);
+  if (identity) {
+    await set('user.name', identity.name);
+    await set('user.email', identity.email);
   }
-  await git(exec, ['-C', dir, 'remote', 'set-url', '--push', 'origin', DEAD_END_PUSH_URL], env);
-  await git(exec, ['-C', dir, 'config', 'user.name', config.publisher.login], env);
-  await git(
-    exec,
-    ['-C', dir, 'config', 'user.email', `${config.publisher.login}@users.noreply.github.com`],
-    env,
-  );
-  await git(exec, ['-C', dir, ...helper, 'fetch', '--quiet', 'origin', 'main'], env);
+  await ensurePublishRepo(config, exec, identity);
   return dir;
+}
+
+/**
+ * The gate sandbox's fetch of main into the runs' clone, with the sandbox's read-only token, and
+ * main put at `base`: the commit the host fetched into the publish repo, which the push then
+ * checks the branch descends from. The host never fetches into the clone itself.
+ */
+export function sandboxMainCommand(base: string): string {
+  if (!/^[0-9a-f]{40,64}$/.test(base)) throw new Error(`not a commit: ${base}`);
+  return [
+    `git -c credential.helper= -c 'credential.helper=!f() { test "$1" = get || exit 0; echo username=x-access-token; echo "password=$GH_TOKEN"; }; f'`,
+    'fetch --quiet --no-tags origin main',
+    `&& git update-ref refs/remotes/origin/main ${base}`,
+  ].join(' ');
 }
 
 export interface HostOptions {
@@ -93,16 +169,33 @@ export interface HostOptions {
   readonly runId: string;
   readonly board: Board;
   readonly gh: Gh;
+  readonly tracker: Tracker;
   readonly exec: Exec;
   readonly secrets: Secrets;
+  /** The app's installation token, for pushes. */
+  readonly pushToken: () => Promise<string>;
+  /** A read-only token for the sandbox (A1222). */
+  readonly sandboxToken: () => Promise<string>;
+  /** Where the PR's proof is uploaded (A1223). */
+  readonly proofStore: ProofStore;
   readonly agent: AgentProvider;
   readonly log: (line: string) => void;
+  /** What the run waits for (the test VM), for the daemon's status.json (F10). */
+  readonly waitingFor?: (reason: string | null) => void;
 }
 
-export function hostDeps(options: HostOptions): RunDeps {
+/** The host's RunDeps, plus the commit last pushed to a branch (a review round replies with it). */
+export type HostDeps = RunDeps & { headSha(branch: string): Promise<string> };
+
+export function hostDeps(options: HostOptions): HostDeps {
   const { config, slot, gh, exec } = options;
   const dir = repoDir(config);
-  const env = publisherEnv(config);
+  const publish = publishDir(config);
+  const ref = runRef(options.runId);
+  // main as last fetched into the publish repo: the base the gate's rebase goes onto, and that a
+  // push checks the branch descends from.
+  let base: string | undefined;
+  const fetchRun = (branch: string) => fetchRunBranch(exec, publish, dir, branch, ref);
   const state = expandHome(config.stateDir);
   const runDir = join(state, 'runs', options.runId);
   mkdirSync(runDir, { recursive: true });
@@ -114,16 +207,14 @@ export function hostDeps(options: HostOptions): RunDeps {
     slot,
     runId: options.runId,
     board: options.board,
-    comment: async (issue, body) => {
-      await gh.run(
-        ['issue', 'comment', String(issue), '--repo', config.repo, '--body-file', '-'],
-        body,
-      );
-    },
-    setStatus: (item, status) => setStatus(gh, options.board, item, status),
-    setBlocked: (item) => setBlocked(gh, options.board, item),
+    comment: (issue, body) => options.tracker.comment(issue, body),
+    setStatus: (item, status) => options.tracker.setStatus(item, status),
+    setBlocked: (item) => options.tracker.setBlocked(item),
     openSandbox: async (branch) => {
-      const spec = sandboxSpec(config, slot, options.secrets);
+      const spec = sandboxSpec(config, slot, {
+        ...options.secrets,
+        GH_TOKEN: await options.sandboxToken(),
+      });
       makeOwnDirs(spec);
       const { createSandbox } = await import('@ai-hero/sandcastle');
       const sandbox = await createSandbox({
@@ -212,19 +303,19 @@ export function hostDeps(options: HostOptions): RunDeps {
       return Promise.resolve(parseAgentResult(readFileSync(path, 'utf8')));
     },
     diff: async (branch) => {
-      const paths = await git(
-        exec,
-        ['-C', dir, 'diff', '--name-only', `origin/main...${branch}`],
-        env,
-      );
-      const count = await git(
-        exec,
-        ['-C', dir, 'rev-list', '--count', `origin/main..${branch}`],
-        env,
-      );
+      const commit = await fetchRun(branch);
+      const paths = await mustGit(exec, publish, [
+        'diff',
+        '--name-only',
+        '--no-ext-diff',
+        `${MAIN}...${commit}`,
+      ]);
+      const count = await mustGit(exec, publish, ['rev-list', '--count', `${MAIN}..${commit}`]);
       return { paths: paths.split('\n').filter(Boolean), commits: Number(count.trim()) };
     },
-    recordProof: async (handle, platform, specs) => {
+    macVmCheck: (handle) => checkMacVm(exec, config, handle.worktreePath),
+    waitingFor: (reason) => options.waitingFor?.(reason),
+    recordProof: async (handle, platform, specs, signal) => {
       const quoted = specs.map((spec) => `'${spec.replaceAll("'", '')}'`).join(' ');
       let items: ProofItem[];
       if (platform === 'web') {
@@ -238,9 +329,19 @@ export function hostDeps(options: HostOptions): RunDeps {
           'after',
         );
       } else if (platform === 'android') {
-        // The slot's own emulator, inside its sandbox (FD25); the AVD is made on the host first.
+        // The slot's own emulator, inside its sandbox (FD25); the AVD is made on the host first,
+        // and an emulator a stopped run left up is stopped. At the proof timeout the host stops
+        // the emulator: `am instrument -w` waits as long as a hung test does, and ends when the
+        // device goes; closing the gate's sandbox then kills what is left of proof.sh.
         await ensureAvd(config, slot, exec);
-        await handle.exec(withJavaHome(`task proof:android -- ${quoted}`));
+        await stopSlotEmulator(config, slot, exec);
+        const stop = () => void stopSlotEmulator(config, slot, exec).catch(() => undefined);
+        signal?.addEventListener('abort', stop, { once: true });
+        try {
+          await handle.exec(withJavaHome(`task proof:android -- ${quoted}`));
+        } finally {
+          signal?.removeEventListener('abort', stop);
+        }
         const out = join(handle.worktreePath, 'apps/android/build/proof');
         const report = join(out, 'report.json');
         if (!existsSync(report)) return [];
@@ -262,16 +363,10 @@ export function hostDeps(options: HostOptions): RunDeps {
         }));
       } else {
         // The Mac app runs in the test VM (W10), which only the host can start: the VM script
-        // copies this worktree in read-only and queues on the VM's lock (F7).
+        // copies this worktree in read-only and queues on the VM's lock (F7). At the proof
+        // timeout it is stopped with its `tart run`, and stops the VM, freeing the lock.
         const out = join(handle.worktreePath, 'test-results', 'vm');
-        await exec('sh', [join(handle.worktreePath, 'scripts/vm/desktop-test.sh'), ...specs], {
-          cwd: handle.worktreePath,
-          env: {
-            PATH: process.env['PATH'] ?? '/usr/bin:/bin',
-            HOME: process.env['HOME'] ?? '',
-            PENMOSS_PROOF: '1',
-          },
-        });
+        await runMacProof(exec, config, handle.worktreePath, specs, signal);
         const report = join(out, 'test-results', 'proof', 'report.json');
         if (!existsSync(report)) return [];
         items = fromPlaywrightReport(
@@ -289,7 +384,12 @@ export function hostDeps(options: HostOptions): RunDeps {
         items = await Promise.all(
           items.map(async (item) => {
             const dirs = (item.frames ?? []).map((f) => fromVm(f.dir, out));
-            if (!item.frames || !dirs.every((d) => existsSync(d))) return item;
+            if (
+              !item.frames ||
+              !dirs.every((d) => existsSync(d)) ||
+              !framesWithin(item.frames, dirs, handle.worktreePath)
+            )
+              return item;
             const video = join(dirs[0] ?? out, 'video.mp4');
             await framesToMp4(exec, item.frames, dirs, video);
             return { ...item, video };
@@ -299,8 +399,9 @@ export function hostDeps(options: HostOptions): RunDeps {
       const raw = join(runDir, 'raw');
       mkdirSync(raw, { recursive: true });
       return items.map((item, i) => {
+        // Only the run's own files: the agent's tests write the report that names them.
         const keep = (path: string | undefined, name: string) => {
-          if (!path || !existsSync(path)) return undefined;
+          if (!path || !within(path, handle.worktreePath)) return undefined;
           const to = join(raw, `${platform}-${i + 1}-${name}`);
           copyFileSync(path, to);
           return to;
@@ -350,22 +451,16 @@ export function hostDeps(options: HostOptions): RunDeps {
       return { ok: true, proof };
     },
     fetchMain: async () => {
-      await git(
-        exec,
-        [
-          '-C',
-          dir,
-          '-c',
-          'credential.helper=',
-          '-c',
-          'credential.helper=!gh auth git-credential',
-          'fetch',
-          '--quiet',
-          'origin',
-          'main',
-        ],
-        env,
-      );
+      base = await fetchMainInto(exec, publish);
+    },
+    behindMain: async (branch) =>
+      !(await descendsFrom(exec, publish, MAIN, await fetchRun(branch))),
+    rebase: async (handle) => {
+      base ??= await fetchMainInto(exec, publish);
+      const fetched = await handle.exec(sandboxMainCommand(base));
+      if (fetched.exitCode !== 0)
+        throw new Error(`the sandbox couldn't fetch main: ${fetched.stderr.trim()}`);
+      return rebaseOntoMain(handle, join(state, 'decision-numbers'));
     },
     numberDecisions: async (handle) => {
       const listed = await handle.exec(
@@ -373,11 +468,12 @@ export function hostDeps(options: HostOptions): RunDeps {
       );
       const files = listed.stdout.split('\n').filter(Boolean);
       if (files.length === 0) return {};
-      const main = await git(exec, ['-C', dir, 'show', 'origin/main:docs/decisions.md'], env);
+      const main = await mustGit(exec, publish, ['show', `${MAIN}:docs/decisions.md`]);
       const paths = files.map((f) => join(handle.worktreePath, f));
-      const { texts, assigned } = assignDecisionNumbers(
+      const { texts, assigned } = reserveDecisionNumbers(
         paths.map((p) => readFileSync(p, 'utf8')),
-        maxDecision(main),
+        main,
+        join(state, 'decision-numbers'),
       );
       paths.forEach((p, i) => writeFileSync(p, texts[i] ?? ''));
       const message = `Number the new decisions: ${Object.entries(assigned)
@@ -440,36 +536,37 @@ export function hostDeps(options: HostOptions): RunDeps {
           options.log(`waits for a heavy-job slot (held by ${holders.join('; ')})`),
       }),
     push: async (branch) => {
-      await git(
-        exec,
-        [
-          '-C',
-          dir,
-          '-c',
-          'credential.helper=',
-          '-c',
-          'credential.helper=!gh auth git-credential',
-          'push',
-          `https://github.com/${config.repo}.git`,
-          '--force-with-lease',
-          `${branch}:refs/heads/${branch}`,
-        ],
-        env,
-      );
+      await publishRun(exec, {
+        dir: publish,
+        runClone: dir,
+        url: githubUrl(config),
+        branch,
+        ref,
+        base,
+        token: await options.pushToken(),
+      });
     },
+    headSha: (branch) => pushedHead(exec, publish, branch),
     openPr: async ({ branch, title, body, proof, files = [] }) => {
       // The body sits beside the proof files: its ./references are relative to it.
       const dir = join(runDir, 'proof');
       mkdirSync(dir, { recursive: true });
       const bodyFile = join(dir, 'body.md');
-      writeFileSync(bodyFile, body);
-      const out = await gh.run([
-        ...['pr', 'create', '--repo', config.repo, '--base', 'main', '--head', branch],
-        ...['--title', title, '--reviewer', config.owner, '--body-file', bodyFile],
-        ...attachArgs(proof, dir),
-        ...files.flatMap((f) => ['--attach', join(dir, f)]),
-      ]);
-      return out.trim().split('\n').slice(-1)[0] ?? '';
+      const linked = await publishRefs(
+        body,
+        dir,
+        [...proofFiles(proof), ...files],
+        options.proofStore,
+        `runs/${options.runId}`,
+      );
+      writeFileSync(bodyFile, linked);
+      return openOrReusePr(gh, {
+        repo: config.repo,
+        branch,
+        title,
+        bodyFile,
+        reviewer: config.owner,
+      });
     },
     log: (event: RunEvent, detail = {}) => {
       appendFileSync(
@@ -481,7 +578,6 @@ export function hostDeps(options: HostOptions): RunDeps {
   };
 }
 
-/** The newest proof report under the web app's test results (its folder is named by port). */
 /** A path in the VM's `apps/desktop/test-results/…` as the copy under `<out>/test-results/…`. */
 export function fromVm(path: string, out: string): string {
   const i = path.indexOf('/apps/desktop/test-results/');
@@ -490,6 +586,7 @@ export function fromVm(path: string, out: string): string {
     : join(out, 'test-results', path.slice(i + '/apps/desktop/test-results/'.length));
 }
 
+/** The newest proof report under the web app's test results (its folder is named by port). */
 function newestReport(results: string): string | undefined {
   if (!existsSync(results)) return undefined;
   return readdirSync(results)

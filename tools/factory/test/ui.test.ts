@@ -5,14 +5,11 @@ import type { Board } from '../src/board.ts';
 import { buildView, desktopLink, type FactoryView } from '../src/ui/model.ts';
 import { createUiServer, listen } from '../src/ui/server.ts';
 import { pageHtml } from '../src/ui/page.ts';
-import { item, testConfig } from './helpers.ts';
+import { item, linearConfig, testConfig } from './helpers.ts';
 
 const config = testConfig();
 const NOW = new Date('2026-11-07T18:00:00Z');
 const board = (items: Board['items']): Board => ({
-  projectId: 'P',
-  status: { id: 'S', options: {} },
-  blocked: { id: 'B', options: {} },
   items,
 });
 const line = (run: string, event: string, at: string, extra: object = {}) =>
@@ -152,6 +149,51 @@ describe('the view (F20)', () => {
       now: NOW,
     });
     expect(late.daemon?.stale).toBe(true);
+  });
+});
+
+describe('the view on Linear (F20, A1221)', () => {
+  const lc = linearConfig();
+  const pen = (n: number, o: Partial<Board['items'][number]> = {}) =>
+    item(n, {
+      itemId: `uuid-${n}`,
+      key: `PEN-${n}`,
+      url: `https://linear.app/redhale/issue/PEN-${n}/issue-${n}`,
+      ...o,
+    });
+  const view = buildView({
+    config: lc,
+    board: board([
+      pen(30, { status: 'In Progress' }),
+      pen(31, { status: 'Todo', blocked: true, blockedBy: ['PEN-9'], blockedSet: false }),
+      pen(32, {
+        status: 'In Review',
+        labels: ['Blocked'],
+        blocked: true,
+        blockedBy: ['PEN-9', 'PEN-10'],
+        blockedSet: true,
+      }),
+    ]),
+    ledger: line('30-a', 'claimed', '2026-11-07T17:00:00Z', { issue: 30 }),
+    plans: {},
+    busySessions: new Set(),
+    daemon: null,
+    now: NOW,
+  });
+
+  it('links each card to its Linear issue, named PEN-n', () => {
+    const card = view.columns.find((c) => c.name === 'In Progress')?.cards[0];
+    expect(card?.links[0]).toEqual({
+      label: 'PEN-30',
+      href: 'https://linear.app/redhale/issue/PEN-30/issue-30',
+    });
+  });
+  it('says which unfinished issue holds a card, and offers no Blocked to clear (LD8)', () => {
+    expect(view.waiting.map((c) => [c.key, c.reason, c.blocked])).toEqual([
+      ['PEN-31', 'Blocked by PEN-9 until it finishes', false],
+      ['PEN-32', 'You set Blocked; also blocked by PEN-9, PEN-10 until they finish', true],
+    ]);
+    expect(view.waiting[0]?.step).toBe('Paused: Waiting for a slot');
   });
 });
 

@@ -1,7 +1,7 @@
 /**
- * A thin wrapper over the `gh` CLI. The factory talks to GitHub only through
- * `gh`, so it uses the same login (the bot's `GH_CONFIG_DIR`) as everything
- * else the publisher does, and needs no token handling of its own.
+ * A thin wrapper over the `gh` CLI. The factory talks to GitHub only through `gh`. As the
+ * publisher it runs with the GitHub App's installation token (A1222), fetched for every call so
+ * an hour-long token never goes stale mid-run; `factory next` and the UI use Ryan's own login.
  */
 import type { Exec } from './exec.ts';
 
@@ -37,15 +37,18 @@ export interface Gh {
 
 export interface GhOptions {
   readonly exec: Exec;
-  /** The environment `gh` runs with; the publisher passes the bot's `GH_CONFIG_DIR` here. */
+  /** The environment `gh` runs with. */
   readonly env?: Readonly<Record<string, string>>;
+  /** A token for every call, as `GH_TOKEN`: the publisher's installation token. */
+  readonly token?: () => Promise<string>;
   readonly bin?: string;
 }
 
-export function createGh({ exec, env, bin = 'gh' }: GhOptions): Gh {
+export function createGh({ exec, env, token, bin = 'gh' }: GhOptions): Gh {
   const run = async (args: readonly string[], input?: string): Promise<string> => {
+    const withToken = token ? { ...env, GH_TOKEN: await token() } : env;
     const result = await exec(bin, args, {
-      ...(env ? { env } : {}),
+      ...(withToken ? { env: withToken } : {}),
       ...(input === undefined ? {} : { input }),
     });
     if (result.code !== 0) throw new GhError(args, result.code, result.stderr);

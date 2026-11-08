@@ -15,21 +15,93 @@ describe('doctorChecks', () => {
       'task e2e -- smoke.spec.ts on the slot block',
       'task android:test',
       'wrangler dev --local on the slot block',
-      'gh acts as penmoss-bot',
+      "gh reads htxryan/penmoss with the app's read-only token",
+      'Claude Code signs in with the setup token',
+      'OpenCode answers with the Go key and the default model',
+      "OpenCode Go lists every opencode model in the factory's config",
+      "the GitHub App's key file is unreadable (A1222)",
+      "the Linear app's credentials are unreadable (LD4)",
+      'no Linear token in the environment (LD4)',
       'wrangler whoami shows the Penmoss account',
       "Ryan's gh login is unreadable",
       '~/.ssh is unreadable',
       'the login keychain is unreadable',
       'a relay deploy is refused',
+      'a site deploy (task site:deploy) is refused',
+      "the app's read-only token can't write to htxryan/penmoss (A1222)",
+      "the Mac app's data folder (git-secrets.json) is unreadable",
     ]) {
       expect(names).toContain(expected);
     }
+  });
+
+  it("checks a push with the sandbox's own token is refused, without putting it on a command line", () => {
+    const push = checks.find(
+      (c) => c.name === "a push with the sandbox's token is refused (A1222)",
+    );
+    expect(push).toMatchObject({ expect: 'refused', needs: ['GH_TOKEN'] });
+    expect(push?.command).toMatch(
+      /^git .* push --dry-run .*https:\/\/github\.com\/htxryan\/penmoss\.git /,
+    );
+    // The token reaches git only through the helper, which reads it from the environment.
+    expect(push?.command).toContain(`'credential.helper=!f() {`);
+    expect(push?.command).not.toMatch(/\$\{?GH_TOKEN\}?@/);
   });
 
   it('never prints a file it probes', () => {
     for (const check of checks.filter((c) => c.expect === 'refused')) {
       expect(check.command).not.toMatch(/\bcat\b|security find/);
     }
+  });
+
+  it('accepts a deploy refusal only when the guard itself refused (FD24)', () => {
+    for (const name of [
+      'a relay deploy is refused',
+      'a site deploy (task site:deploy) is refused',
+    ]) {
+      const check = checks.find((c) => c.name === name)!;
+      expect(check.output, name).toBe('No production deploys from a factory run');
+      expect(check.command, name).toMatch(/--dry-run 2>&1$/);
+    }
+  });
+
+  it("proves the sandbox's GitHub token is read-only by a 403, never a write", () => {
+    const check = checks.find((c) => c.name.startsWith("the app's read-only token can't write"))!;
+    expect(check).toMatchObject({ expect: 'refused', output: 'HTTP 403', needs: ['GH_TOKEN'] });
+    // A zero SHA: even a token that could write creates nothing.
+    expect(check.command).toContain('-f sha=0000000000000000000000000000000000000000');
+  });
+
+  it("runs OpenCode with the config's Go model and key, as a run starts it", () => {
+    const model = config.models[config.agents.opencode.defaultModel]!.model;
+    expect(model).toBe('opencode-go/kimi-k3');
+    const run = checks.find((c) => c.name.startsWith('OpenCode answers'))!;
+    expect(run).toMatchObject({
+      expect: 'pass',
+      output: 'factory-ok',
+      needs: ['OPENCODE_API_KEY'],
+    });
+    expect(run.command).toContain(`'opencode' run -m '${model}' `);
+    // The prompt asks for the word in capitals, so an echo of it doesn't pass.
+    expect(run.command).not.toContain('factory-ok');
+    expect(run.command).toMatch(/< \/dev\/null$/);
+    // The factory's own permissions, with nothing from the worktree.
+    expect(run.command).toContain(`OPENCODE_CONFIG_CONTENT='{`);
+    expect(run.command).toContain('OPENCODE_DISABLE_PROJECT_CONFIG=1');
+    expect(run.command).not.toMatch(/OPENCODE_API_KEY=/);
+  });
+
+  it('checks OpenCode Go lists each configured model ID exactly', () => {
+    const list = checks.find((c) => c.name.startsWith('OpenCode Go lists'))!;
+    expect(list).toMatchObject({
+      expect: 'pass',
+      output: 'all listed',
+      needs: ['OPENCODE_API_KEY'],
+    });
+    expect(list.command).toContain(
+      `'opencode' models 'opencode-go' < /dev/null | grep -Fxq 'opencode-go/kimi-k3'`,
+    );
+    expect(list.command).toMatch(/&& echo 'all listed'$/);
   });
 
   it('runs wrangler dev on the slot block', () => {
@@ -42,12 +114,16 @@ describe('doctorChecks', () => {
 describe('judge', () => {
   const pass: Check = { name: 'p', command: 'x', expect: 'pass', output: 'ok' };
   const refused: Check = { name: 'r', command: 'x', expect: 'refused' };
+  const refusedWith: Check = { name: 'rw', command: 'x', expect: 'refused', output: 'HTTP 403' };
   it.each([
     [pass, 0, 'all ok', true],
     [pass, 0, 'nope', false],
     [pass, 1, 'ok', false],
     [refused, 1, '', true],
     [refused, 0, '', false],
+    [refusedWith, 1, 'gh: Resource not accessible by integration (HTTP 403)', true],
+    [refusedWith, 1, 'gh: Validation Failed (HTTP 422)', false],
+    [refusedWith, 0, 'HTTP 403', false],
   ])('%#', (check, code, out, ok) => {
     expect(judge(check, code, out).ok).toBe(ok);
   });

@@ -1,4 +1,4 @@
-You are implementing one GitHub issue in the Penmoss repository, inside a sandbox, on the branch `{{branch}}`. Read `AGENTS.md`, `docs/decisions.md` and the issue below before changing anything.
+You are implementing one issue (a Linear card or a GitHub issue) in the Penmoss repository, inside a sandbox, on the branch `{{branch}}`. Read `AGENTS.md`, `docs/decisions.md` and the issue below before changing anything.
 
 ## The issue
 

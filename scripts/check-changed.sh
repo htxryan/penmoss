@@ -1,23 +1,38 @@
 #!/bin/sh
-# `task check:changed` (A1176): the parts of `task check` that this branch's changes can affect,
-# for running before each commit. `task check` (and CI's Check job) still run everything before a
-# push, so nothing is checked less; it is checked less often while a branch is being built.
+# `task check:changed` (A1176, A1224): the parts of `task check` that the change you are about to
+# commit can affect, for running before each commit. `task check` (and CI's Check job) still run
+# everything before a push, so nothing is checked less; it is checked less often while a branch is
+# being built.
 #
-#   sh scripts/check-changed.sh            # against the merge base with origin/main
-#   sh scripts/check-changed.sh main       # against another ref
+#   sh scripts/check-changed.sh            # what you are about to commit; the last commit if clean
+#   sh scripts/check-changed.sh main       # everything since the merge base with another ref
 #
-# Changed means committed on this branch, staged, unstaged or untracked. What runs:
+# Changed means staged, unstaged or untracked against HEAD; with nothing uncommitted, the files of
+# HEAD's own commit. What runs:
 #   - ESLint, stylelint and Prettier on the changed files only;
 #   - typecheck and unit tests of every package with a changed file, and of every package that
 #     depends on one (pnpm's `...[<ref>]` filter);
 #   - the release-page and Play upload script tests when their folders changed.
 # A change to shared config (lockfile, root package.json, tsconfig.base.json, the lint and format
 # configs, the Taskfile) can affect any package, so it runs the whole `task check` instead.
+#
+# Only heavy work waits for one of the Mac's heavy-job slots (scripts/heavy.sh, W12): that whole
+# `task check`, and unit tests that select more than PENMOSS_CHECK_LIGHT_PACKAGES packages
+# (default 2). Lint, format and typecheck never wait. PENMOSS_CHECK_CHANGED_PLAN=1 prints what
+# would run and stops.
 set -eu
 
 cd "$(dirname "$0")/.."
-ref="${1:-origin/main}"
-base="$(git merge-base HEAD "$ref")"
+if [ -n "${1:-}" ]; then
+  base="$(git merge-base HEAD "$1")"
+  against="$1"
+elif [ -n "$(git status --porcelain)" ]; then
+  base="$(git rev-parse HEAD)"
+  against='HEAD'
+else
+  base="$(git rev-parse HEAD~1)"
+  against='the last commit'
+fi
 
 changed="$(
   {
@@ -26,18 +41,27 @@ changed="$(
   } | sort -u
 )"
 
+plan() {
+  if [ -n "${PENMOSS_CHECK_CHANGED_PLAN:-}" ]; then
+    echo "[check:changed] plan: $1"
+    exit 0
+  fi
+}
+
 if [ -z "$changed" ]; then
-  echo "[check:changed] nothing changed against $ref"
+  echo "[check:changed] nothing changed against $against"
   exit 0
 fi
 
 if echo "$changed" | grep -qE '^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.base\.json|eslint\.config\.js|stylelint\.config\.js|\.prettierrc[^/]*|\.prettierignore|Taskfile\.yml)$'; then
+  plan 'full'
   echo '[check:changed] shared config changed: running the whole `task check`'
-  exec task check:all
+  exec task check
 fi
 
 count="$(echo "$changed" | wc -l | tr -d ' ')"
-echo "[check:changed] $count changed files against $ref ($(git rev-parse --short "$base"))"
+plan "files $count"
+echo "[check:changed] $count changed files against $against ($(git rev-parse --short "$base"))"
 
 sh scripts/no-plan-files.sh
 
@@ -63,7 +87,7 @@ fi
 # Typecheck and tests: the changed packages and their dependents. pnpm compares against the ref
 # itself; untracked files count through the package they sit in, found here.
 filters="--filter=...[$base]"
-for pkg in $(echo "$changed" | grep -oE '^(apps|packages)/[^/]+' | sort -u); do
+for pkg in $(echo "$changed" | grep -oE '^(apps|packages|tools)/[^/]+' | sort -u); do
   if [ -f "$pkg/package.json" ]; then
     filters="$filters --filter=...{./$pkg}"
   fi
@@ -73,7 +97,15 @@ done
 # shellcheck disable=SC2086
 pnpm -r --workspace-concurrency=2 $filters run --if-present typecheck
 # shellcheck disable=SC2086
-pnpm -r --workspace-concurrency=1 $filters run --if-present test
+selected="$(pnpm list -r --depth -1 --parseable $filters 2>/dev/null | grep -vxF "$PWD" | wc -l | tr -d ' ')"
+if [ "$selected" -gt "${PENMOSS_CHECK_LIGHT_PACKAGES:-2}" ]; then
+  echo "[check:changed] unit tests of $selected packages: waiting for a heavy-job slot"
+  # shellcheck disable=SC2086
+  sh scripts/heavy.sh check:changed pnpm -r --workspace-concurrency=1 $filters run --if-present test
+else
+  # shellcheck disable=SC2086
+  pnpm -r --workspace-concurrency=1 $filters run --if-present test
+fi
 
 if echo "$changed" | grep -q '^\.github/scripts/'; then
   task releases:test

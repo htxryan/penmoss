@@ -10,7 +10,9 @@ import { join } from 'node:path';
 import type { FactoryConfig, SlotConfig } from './config.ts';
 import { doctorChecks, judge, type CheckOutcome } from './doctor.ts';
 import type { Exec } from './exec.ts';
-import { loadSecrets, missingSecrets, type Secrets } from './secrets.ts';
+import { hostGit } from './git.ts';
+import { loadSecrets, type Secrets } from './secrets.ts';
+import { createAppTokens, loadAppCredentials } from './github-app.ts';
 import { makeOwnDirs, sandboxSpec, seatbeltProvider } from './sandbox.ts';
 import { expandHome } from './config.ts';
 
@@ -32,7 +34,19 @@ export async function runDoctor(config: FactoryConfig, slot: SlotConfig, options
   else if (loaded.ignored.length > 0)
     options.log(`env file: ignored unknown keys ${loaded.ignored.join(', ')}`);
 
-  const spec = sandboxSpec(config, slot, secrets);
+  // The sandbox's read-only GitHub token comes from the app, as in a real run (A1222).
+  const creds = loadAppCredentials(expandHome(config.publisher.envFile));
+  let ghToken: string | undefined;
+  if (!creds.ok) options.log(`GitHub App: ${creds.error}; the GitHub check is skipped`);
+  else
+    ghToken = await createAppTokens({ ...creds, repo: config.repo })
+      .read()
+      .catch((error: unknown) => {
+        options.log(`GitHub App: ${error instanceof Error ? error.message : String(error)}`);
+        return undefined;
+      });
+  const tokens = { ...secrets, ...(ghToken ? { GH_TOKEN: ghToken } : {}) };
+  const spec = sandboxSpec(config, slot, tokens);
   makeOwnDirs(spec);
   const { createSandbox } = await import('@ai-hero/sandcastle');
   const branch = `factory/doctor-slot${slot.id}-${Date.now().toString(36)}`;
@@ -54,12 +68,12 @@ export async function runDoctor(config: FactoryConfig, slot: SlotConfig, options
         outcomes.push({ check, status: 'skipped', detail: 'slow: run with --full', seconds: 0 });
         continue;
       }
-      const missing = missingSecrets(secrets, check.needs ?? []);
+      const missing = (check.needs ?? []).filter((key) => !tokens[key]);
       if (missing.length > 0) {
         outcomes.push({
           check,
           status: 'skipped',
-          detail: `needs ${missing.join(', ')} in the env file`,
+          detail: `needs ${missing.join(', ')} (${missing.includes('GH_TOKEN') ? 'the GitHub App' : 'the env file'})`,
           seconds: 0,
         });
         continue;
@@ -100,7 +114,7 @@ export async function runDoctor(config: FactoryConfig, slot: SlotConfig, options
     }
   } finally {
     await sandbox.close();
-    await options.exec('git', ['-C', options.repo, 'branch', '-D', branch]);
+    await hostGit(options.exec, options.repo, ['branch', '-D', branch]);
   }
   return outcomes;
 }

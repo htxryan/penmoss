@@ -1,12 +1,18 @@
+import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { attachArgs, renderPrBody } from '../src/proof/body.ts';
+import { fromVm } from '../src/host.ts';
+import { proofFiles, renderPrBody } from '../src/proof/body.ts';
 import { fromPlaywrightReport, missingProof } from '../src/proof/manifest.ts';
 import {
   checkMedia,
   framesList,
+  framesWithin,
   MAX_IMAGE_BYTES,
   MAX_VIDEO_BYTES,
   mp4Args,
+  within,
 } from '../src/proof/media.ts';
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -222,21 +228,68 @@ describe('the PR body', () => {
     expect(body.startsWith('Part of #12.')).toBe(true);
     expect(body).not.toMatch(/\b(Closes|Fixes|Resolves) #/);
   });
-  it('references images inline and each video alone on its line', () => {
+  it('references images inline and links each video (A1223)', () => {
     expect(body).toContain('![web: a  thread  opens](./web-before-1.png)');
-    expect(body).toContain('\n\n![](./web-1.mp4)');
+    expect(body).toContain('\n\n[▶ Watch the recording (MP4)](./web-1.mp4)');
     expect(body).toContain('### Before (the new test on the base commit)');
     expect(body).toContain('### After');
   });
   it("labels the agent's own stills and keeps them out of the proof", () => {
     expect(body).toContain('![agent-captured: by hand](./extra-1.png)');
   });
-  it('attaches every referenced file', () => {
+  it('lists every referenced file for the upload', () => {
     expect(
-      attachArgs(
-        [{ label: 'x', phase: 'after', source: 'harness', image: 'web-1.png', video: 'web-1.mp4' }],
-        '/p',
-      ),
-    ).toEqual(['--attach', '/p/web-1.png', '--attach', '/p/web-1.mp4']);
+      proofFiles([
+        { label: 'x', phase: 'after', source: 'harness', image: 'web-1.png', video: 'web-1.mp4' },
+      ]),
+    ).toEqual(['web-1.png', 'web-1.mp4']);
+  });
+});
+
+// The agent writes the tests the harness runs, so it writes the report that names the files
+// too. The host publishes only what is inside the run's worktree, after symlinks.
+describe("proof files come only from the run's own worktree", () => {
+  const root = mkdtempSync(join(tmpdir(), 'proof-root-'));
+  const outside = mkdtempSync(join(tmpdir(), 'proof-outside-'));
+  writeFileSync(join(outside, 'secret.png'), PNG);
+  writeFileSync(join(outside, '00000.jpg'), 'jpeg');
+  const results = join(root, 'test-results');
+  mkdirSync(join(results, 'frames-1'), { recursive: true });
+  writeFileSync(join(results, 'shot.png'), PNG);
+  writeFileSync(join(results, 'frames-1', '00000.jpg'), 'jpeg');
+  symlinkSync(join(outside, 'secret.png'), join(results, 'link.png'));
+  mkdirSync(join(results, 'frames-2'));
+  symlinkSync(join(outside, '00000.jpg'), join(results, 'frames-2', '00000.jpg'));
+  const quoted = join(results, "frames', 'x");
+  mkdirSync(quoted);
+  writeFileSync(join(quoted, '00000.jpg'), 'jpeg');
+  const windows = [{ dir: '/vm/frames-1', frames: [{ file: '00000.jpg', at: 1 }] }];
+
+  it('takes a file inside it', () => {
+    expect(within(join(results, 'shot.png'), root)).toBe(true);
+  });
+
+  it('refuses a path outside it, a way out with .., a link that points out, a missing file', () => {
+    expect(within(join(outside, 'secret.png'), root)).toBe(false);
+    expect(within(join(results, '..', '..', basename(outside), 'secret.png'), root)).toBe(false);
+    expect(within(join(results, 'link.png'), root)).toBe(false);
+    expect(within(join(results, 'missing.png'), root)).toBe(false);
+  });
+
+  it('takes frames only when every one is inside it and its path is plain', () => {
+    expect(framesWithin(windows, [join(results, 'frames-1')], root)).toBe(true);
+    expect(framesWithin(windows, [join(results, 'frames-2')], root)).toBe(false);
+    expect(framesWithin(windows, [outside], root)).toBe(false);
+    // A quote or a line break would end ffmpeg's `file '…'` line and let it name another file.
+    expect(framesWithin(windows, [quoted], root)).toBe(false);
+  });
+
+  it("maps the VM's test-results paths to the copy, and leaves any other path as it is", () => {
+    expect(
+      fromVm('/Users/admin/penmoss/apps/desktop/test-results/proof/t/a.png', '/w/test-results/vm'),
+    ).toBe('/w/test-results/vm/test-results/proof/t/a.png');
+    expect(fromVm('/Users/someone/secret.png', '/w/test-results/vm')).toBe(
+      '/Users/someone/secret.png',
+    );
   });
 });

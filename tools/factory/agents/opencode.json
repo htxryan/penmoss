@@ -20,6 +20,7 @@
       "wrangler deploy*": "deny",
       "pnpm exec wrangler deploy*": "deny",
       "corepack pnpm exec wrangler deploy*": "deny",
+      "task site:deploy*": "deny",
       "security*": "deny"
     },
     "external_directory": "deny",

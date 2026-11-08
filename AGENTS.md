@@ -12,7 +12,7 @@ Read these before doing any work in this repository:
 - A user-facing change (a menu, a setting, a shortcut, a CLI command or flag, an MCP tool, what a screen says or does) updates its page in the user docs, `site/src/content/docs/docs/`, in the same pull request. User docs live only there; `docs/` is for contributors (A1215).
 - Plan new work as Linear issues in the Penmoss team (`PEN`, the **Task** template), never as files in the repository. A large piece of work is a parent issue with sub-issues, and work that spans several pull requests also gets a Linear project. The plan itself (spec, decisions, diagrams, prototype, tasks) is a Claude artifact linked from the parent issue. Each task is a sub-issue that tracks progress. No planning or roadmap file of any kind goes in the repository: no `tasks/`, `plans/`, `docs/ideas/`, `docs/notes/`, `plan.md`, `plan.html`, `SPEC.md`, `todo.md` or roadmap. `task lint` fails on such files (W13).
 - Mark a task done only when its acceptance criteria and the Definition of Done (`docs/development.md`) are met. Then record evidence in the pull request or the issue. A pull request that says `Fixes PEN-<n>` marks the issue Done when it merges.
-- Use Taskfile commands (`task --list`) and pnpm via corepack. Run `task check:changed` before each commit and `task check` before pushing; both wait for a free heavy-job slot, since several sessions share this Mac (W12).
+- Use Taskfile commands (`task --list`) and pnpm via corepack. Run `task check:changed` before each commit and `task check` before pushing. `task check` waits for a free heavy-job slot, since several sessions share this Mac (W12); `task check:changed` waits only when it has heavy work (A1224).
 
 ## Tests never open windows on this Mac
 

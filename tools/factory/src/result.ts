@@ -23,6 +23,13 @@ export interface AgentResult {
 
 export const RESULT_PATH = '.factory/result.json';
 
+/**
+ * A proof spec is a path (`apps/web/test/e2e/x.spec.ts`, `test/e2e/x.spec.ts:12`) or a test
+ * class (`app.penmoss.editor.TypingInstrumentedTest#method`), never a flag or shell text: the
+ * Mac's specs go into the command the test VM runs (`scripts/vm/desktop-test.sh`).
+ */
+const PLAIN_SPEC = /^[A-Za-z0-9_.][A-Za-z0-9_./#:@-]*$/;
+
 export type AgentResultParse =
   | { readonly ok: true; readonly result: AgentResult }
   | { readonly ok: false; readonly error: string };
@@ -64,6 +71,12 @@ export function parseAgentResult(text: string): AgentResultParse {
     const specs = p['proofSpecs'] ?? [];
     if (!strings(specs))
       return { ok: false, error: `platforms.${name}.proofSpecs must be a list of strings` };
+    const unsafe = specs.find((spec) => !PLAIN_SPEC.test(spec));
+    if (unsafe !== undefined)
+      return {
+        ok: false,
+        error: `platforms.${name}.proofSpecs: "${unsafe}" is not a plain spec path or test class`,
+      };
     platforms[name as Platform] = { inScope: p['inScope'], proofSpecs: specs };
   }
   const tests = r['tests'] ?? [];

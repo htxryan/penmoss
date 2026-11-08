@@ -9,7 +9,10 @@ import { join } from 'node:path';
 import { expandHome, type FactoryConfig } from './config.ts';
 import type { Exec } from './exec.ts';
 import { parsePlanState, type PlanState } from './planning.ts';
-import { repoDir } from './host.ts';
+import { mustGit } from './git.ts';
+import { MAIN, publishDir } from './publish.ts';
+import { issueKey } from './tracker/port.ts';
+import { desktopLink } from './ui/model.ts';
 
 export interface PlanFiles {
   readonly root: string;
@@ -43,7 +46,15 @@ export interface PlanMeta {
   readonly contractFixes?: number | undefined;
 }
 
-export const sessionName = (issue: number) => `Penmoss #${issue} plan`;
+/** The session's name in `claude agents` and the Claude app: the card as people know it. */
+export const sessionName = (config: FactoryConfig, issue: number) =>
+  `Penmoss ${issueKey(config, issue)} plan`;
+
+/** The card a session name belongs to, or `undefined` for any other session. */
+export function sessionIssue(config: FactoryConfig, name: string | undefined): number | undefined {
+  const n = Number(/^Penmoss (?:#|[A-Z][A-Z0-9]*-)(\d+) plan$/.exec(name ?? '')?.[1]);
+  return Number.isInteger(n) && name === sessionName(config, n) ? n : undefined;
+}
 
 export function planFiles(config: FactoryConfig, issue: number): PlanFiles {
   const root = join(expandHome(config.stateDir), 'plans', String(issue));
@@ -93,29 +104,32 @@ export function planningFlags(files: PlanFiles): string[] {
   ];
 }
 
-/** A fresh read-only snapshot of main for the session to explore. */
+/**
+ * A fresh snapshot of main for the session to explore: main's files, exported from the publish
+ * repo (`git archive`), with no `.git`. git never runs in the runs' clone (A1230); a snapshot
+ * an older factory made as a worktree of that clone is deleted, and the janitor drops its record.
+ */
 export async function prepareSnapshot(
   config: FactoryConfig,
   files: PlanFiles,
   exec: Exec,
 ): Promise<void> {
   mkdirSync(files.out, { recursive: true });
-  const clone = repoDir(config);
-  if (existsSync(files.repo)) {
-    await exec('git', ['-C', clone, 'worktree', 'remove', '--force', files.repo]);
-    rmSync(files.repo, { recursive: true, force: true });
+  rmSync(files.repo, { recursive: true, force: true });
+  mkdirSync(files.repo, { recursive: true });
+  const tar = join(files.root, 'main.tar');
+  try {
+    await mustGit(exec, publishDir(config), ['archive', '--format=tar', `--output=${tar}`, MAIN]);
+    const unpacked = await exec('tar', ['-x', '-f', tar, '-C', files.repo]);
+    if (unpacked.code !== 0) throw new Error(unpacked.stderr.trim());
+  } catch (error) {
+    throw new Error(
+      `couldn't make the planning snapshot: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
+  } finally {
+    rmSync(tar, { force: true });
   }
-  const added = await exec('git', [
-    '-C',
-    clone,
-    'worktree',
-    'add',
-    '--detach',
-    files.repo,
-    'origin/main',
-  ]);
-  if (added.code !== 0)
-    throw new Error(`couldn't make the planning snapshot: ${added.stderr.trim()}`);
 }
 
 const CHAT_URL = /https:\/\/claude\.ai\/code\/session_[A-Za-z0-9_-]+/;
@@ -140,7 +154,7 @@ export async function findSession(
     status: string;
     kind: string;
   }[];
-  return sessions.find((s) => s.name === sessionName(issue) && s.kind !== 'interactive');
+  return sessions.find((s) => s.name === sessionName(config, issue) && s.kind !== 'interactive');
 }
 
 /** Starts (or resumes) the session in the background; returns its chat link when it prints one. */
@@ -158,7 +172,7 @@ export async function launchSession(
     ...(resume ? ['--resume', resume] : []),
     '--bg',
     '--remote-control',
-    sessionName(issue),
+    sessionName(config, issue),
     ...planningFlags(files),
     '--',
     message,
@@ -179,6 +193,24 @@ export async function stopSession(
   env: Record<string, string>,
 ): Promise<void> {
   await exec(config.agents.claude.bin, ['stop', id], { env });
+}
+
+/**
+ * `factory chat <n>` (F15): the card's planning chat, the link the issue and the Factory UI give,
+ * and the same session in the Claude app.
+ */
+export function planningChat(
+  config: FactoryConfig,
+  issue: number,
+): { readonly chatUrl: string; readonly desktop: string | null } | { readonly error: string } {
+  const meta = readMeta(planFiles(config, issue));
+  if (!meta.chatUrl)
+    return {
+      error: meta.sessionId
+        ? `${issueKey(config, issue)}'s planning session printed no chat link`
+        : `${issueKey(config, issue)} has no planning session yet`,
+    };
+  return { chatUrl: meta.chatUrl, desktop: desktopLink(meta.chatUrl) };
 }
 
 /** The agreed plan as text for the implementation prompt: the page's words without its markup. */

@@ -1,7 +1,8 @@
 /**
- * The PR body. Files are referenced relative to the body file, and `gh pr create --attach`
- * swaps each reference for the uploaded asset: an image renders inline with its alt text, and a
- * video on a line of its own renders as a player (checked on #256).
+ * The PR body. Files are referenced relative to the body file (`./web-1.png`), and the host
+ * uploads each one to the proof bucket and points the reference at it (A1223): an image renders
+ * inline with its alt text, and a video is a link to its MP4, since GitHub plays inline only
+ * the videos people attach themselves.
  */
 import type { Scope } from '../platforms.ts';
 
@@ -16,6 +17,8 @@ export interface AttachedProof {
 
 export interface PrBodyInput {
   readonly issue: number;
+  /** The card's name, `#36` or `PEN-36`; `#<issue>` when absent. */
+  readonly key?: string;
   readonly summary: string;
   readonly scope: Scope;
   readonly gate: string;
@@ -34,8 +37,9 @@ const alt = (s: string) => s.replaceAll(/[[\]\n]/g, ' ').trim();
 
 export function renderPrBody(input: PrBodyInput): string {
   const lines = [
-    // `Part of`, not `Closes`: the issue stays open until main is verified (R20).
-    `Part of #${input.issue}.`,
+    // `Part of`, not `Closes` or `Fixes`: the issue stays open until main is verified (R20), and
+    // Linear's GitHub integration links the PR without moving the card (LD6).
+    `Part of ${input.key ?? `#${input.issue}`}.`,
     '',
     ...(input.artifacts?.length
       ? [
@@ -62,7 +66,7 @@ export function renderPrBody(input: PrBodyInput): string {
       for (const p of items) {
         lines.push('', `**${p.label}**`);
         if (p.image) lines.push('', `![${alt(p.label)}](./${p.image})`);
-        if (p.video) lines.push('', `![](./${p.video})`);
+        if (p.video) lines.push('', `[▶ Watch the recording (MP4)](./${p.video})`);
       }
     }
     const extra = input.proof.filter((p) => p.source === 'agent');
@@ -85,11 +89,7 @@ export function renderPrBody(input: PrBodyInput): string {
   return lines.join('\n');
 }
 
-/** `--attach` arguments for every file the body references. */
-export function attachArgs(proof: readonly AttachedProof[], dir: string): string[] {
-  return proof.flatMap((p) =>
-    [p.image, p.video]
-      .filter((f): f is string => Boolean(f))
-      .flatMap((f) => ['--attach', `${dir}/${f}`]),
-  );
+/** Every proof file the body references, for the upload. */
+export function proofFiles(proof: readonly AttachedProof[]): string[] {
+  return proof.flatMap((p) => [p.image, p.video].filter((f): f is string => Boolean(f)));
 }

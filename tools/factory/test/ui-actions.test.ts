@@ -1,13 +1,15 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { request } from 'node:http';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Gh } from '../src/github.ts';
 import { createWriter, parseAction, type Writer } from '../src/ui/actions.ts';
+import type { LinearClient } from '../src/tracker/linear-client.ts';
+import { githubOwner, linearOwner } from '../src/ui/owner.ts';
 import { pageHtml } from '../src/ui/page.ts';
 import { createUiServer, listen } from '../src/ui/server.ts';
-import { testConfig } from './helpers.ts';
+import { linearConfig, RYAN_LINEAR, testConfig } from './helpers.ts';
 
 const config = testConfig();
 
@@ -69,7 +71,7 @@ function fakeGh(blocked: boolean) {
 describe("the UI's writes, as Ryan (F21)", () => {
   it('posts a reply, then clears Blocked when asked', async () => {
     const { gh, calls } = fakeGh(true);
-    const done = await createWriter(config, gh).perform({
+    const done = await createWriter(config, githubOwner(config, gh)).perform({
       kind: 'reply',
       issue: 5,
       text: 'A sheet',
@@ -80,7 +82,7 @@ describe("the UI's writes, as Ryan (F21)", () => {
   });
   it('posts a reply and leaves Blocked alone without unblock', async () => {
     const { gh, calls } = fakeGh(true);
-    await createWriter(config, gh).perform({
+    await createWriter(config, githubOwner(config, gh)).perform({
       kind: 'reply',
       issue: 5,
       text: 'Thinking',
@@ -90,7 +92,7 @@ describe("the UI's writes, as Ryan (F21)", () => {
   });
   it('posts a picked answer in the form the session reads, and unblocks', async () => {
     const { gh, calls } = fakeGh(true);
-    await createWriter(config, gh).perform({
+    await createWriter(config, githubOwner(config, gh)).perform({
       kind: 'answer',
       issue: 5,
       question: 'Sheet or full screen?',
@@ -100,22 +102,30 @@ describe("the UI's writes, as Ryan (F21)", () => {
   });
   it('says Complete on the issue: the normal agreement path', async () => {
     const { gh, calls } = fakeGh(false);
-    await createWriter(config, gh).perform({ kind: 'complete', issue: 5 });
+    await createWriter(config, githubOwner(config, gh)).perform({ kind: 'complete', issue: 5 });
     expect(calls).toEqual(['issue comment 5: Complete']);
   });
   it('sets and clears Blocked', async () => {
     const off = fakeGh(false);
-    await createWriter(config, off.gh).perform({ kind: 'block', issue: 5, on: true });
+    await createWriter(config, githubOwner(config, off.gh)).perform({
+      kind: 'block',
+      issue: 5,
+      on: true,
+    });
     expect(off.calls).toEqual(['set Blocked']);
     const on = fakeGh(true);
-    await createWriter(config, on.gh).perform({ kind: 'block', issue: 5, on: false });
+    await createWriter(config, githubOwner(config, on.gh)).perform({
+      kind: 'block',
+      issue: 5,
+      on: false,
+    });
     expect(on.calls).toEqual(['clear Blocked']);
   });
   it('refuses an issue that is not on the board', async () => {
     const { gh } = fakeGh(false);
-    await expect(createWriter(config, gh).perform({ kind: 'complete', issue: 9 })).rejects.toThrow(
-      "isn't on the board",
-    );
+    await expect(
+      createWriter(config, githubOwner(config, gh)).perform({ kind: 'complete', issue: 9 }),
+    ).rejects.toThrow("isn't on the board");
   });
   it('validates request bodies', () => {
     expect(parseAction({ kind: 'reply', issue: 5, text: '' }).ok).toBe(false);
@@ -126,6 +136,104 @@ describe("the UI's writes, as Ryan (F21)", () => {
       ok: true,
       action: { kind: 'reply', issue: 5, text: 'ok', unblock: false },
     });
+  });
+});
+
+/**
+ * A fake Linear with PEN-5 (Planning, the Blocked label set) and PEN-6 (Planning, held only by
+ * PEN-9, unfinished); it records the writes Ryan's key makes.
+ */
+function fakeLinear() {
+  const writes: string[] = [];
+  const card = (n: number, o: object) => ({
+    id: `uuid-${n}`,
+    identifier: `PEN-${n}`,
+    number: n,
+    title: `Issue ${n}`,
+    url: `https://linear.app/redhale/issue/PEN-${n}`,
+    priority: 0,
+    sortOrder: n,
+    state: { name: 'Planning', type: 'started' },
+    creator: { id: RYAN_LINEAR },
+    labels: { nodes: [] },
+    inverseRelations: { nodes: [] },
+    ...o,
+  });
+  const client: LinearClient = {
+    request: <T>(q: string, v: Readonly<Record<string, unknown>> = {}) => {
+      const answer = (x: unknown) => Promise.resolve(x as T);
+      if (q.includes('commentCreate(')) {
+        writes.push(`comment ${String(v['issue'])}: ${String(v['body'])}`);
+        return answer({ commentCreate: { success: true } });
+      }
+      for (const [field, what] of [
+        ['issueAddLabel', 'add'],
+        ['issueRemoveLabel', 'remove'],
+      ] as const) {
+        if (q.includes(`${field}(`)) {
+          writes.push(`${what} ${String(v['label'])} on ${String(v['id'])}`);
+          return answer({ [field]: { success: true } });
+        }
+      }
+      if (q.includes('query Team'))
+        return answer({
+          teams: { nodes: [{ id: 'team-pen', states: { nodes: [] } }] },
+          issueLabels: { nodes: [{ id: 'label-blocked', team: null }] },
+        });
+      if (q.includes('query Board'))
+        return answer({
+          issues: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [
+              card(5, { labels: { nodes: [{ name: 'Blocked', parent: null }] } }),
+              card(6, {
+                inverseRelations: {
+                  nodes: [
+                    { type: 'blocks', issue: { identifier: 'PEN-9', state: { type: 'started' } } },
+                  ],
+                },
+              }),
+            ],
+          },
+        });
+      return Promise.reject(new Error(`unexpected request: ${q}`));
+    },
+  };
+  const lc = linearConfig();
+  return { writer: createWriter(lc, linearOwner(lc, client)), writes };
+}
+
+describe("the UI's writes on Linear, with Ryan's key (F21, A1221)", () => {
+  it('posts a reply on the card, then removes the Blocked label', async () => {
+    const { writer, writes } = fakeLinear();
+    expect(await writer.perform({ kind: 'reply', issue: 5, text: 'A sheet', unblock: true })).toBe(
+      'Posted, and Blocked cleared',
+    );
+    expect(writes).toEqual(['comment uuid-5: A sheet', 'remove label-blocked on uuid-5']);
+  });
+  it('posts a picked answer and Complete in the form the planning session reads', async () => {
+    const { writer, writes } = fakeLinear();
+    await writer.perform({ kind: 'answer', issue: 5, question: 'Sheet?', option: 'Yes' });
+    await writer.perform({ kind: 'complete', issue: 5 });
+    expect(writes.filter((w) => w.startsWith('comment'))).toEqual([
+      'comment uuid-5: On "Sheet?": Yes',
+      'comment uuid-5: Complete',
+    ]);
+  });
+  it('leaves a card held only by an unfinished blocker alone: there is no label to remove (LD8)', async () => {
+    const { writer, writes } = fakeLinear();
+    expect(await writer.perform({ kind: 'reply', issue: 6, text: 'Noted', unblock: true })).toBe(
+      'Posted',
+    );
+    expect(await writer.perform({ kind: 'block', issue: 6, on: false })).toBe(
+      "Blocked isn't set; PEN-9 holds it until it finishes",
+    );
+    expect(writes).toEqual(['comment uuid-6: Noted']);
+  });
+  it('sets the Blocked label on a held card when Ryan asks, so it stays paused after PEN-9', async () => {
+    const { writer, writes } = fakeLinear();
+    expect(await writer.perform({ kind: 'block', issue: 6, on: true })).toBe('Blocked');
+    expect(writes).toEqual(['add label-blocked on uuid-6']);
   });
 });
 
@@ -236,11 +344,41 @@ describe('the import boundary (F21)', () => {
     ]) {
       const modules = [...reachable(join(src, entry))].map((p) => p.slice(src.length + 1));
       expect(modules, entry).not.toContain('ui/actions.ts');
+      expect(modules, entry).not.toContain('ui/owner.ts');
     }
   });
-  it("leaves clearing Blocked out of board.ts, which the factory's runs use", () => {
-    expect(readFileSync(join(src, 'board.ts'), 'utf8')).not.toContain(
-      'clearProjectV2ItemFieldValue',
-    );
+  it("leaves clearing Blocked out of the trackers, which the factory's runs use", () => {
+    for (const file of ['board.ts', 'tracker/github.ts', 'tracker/linear.ts', 'tracker/port.ts']) {
+      const text = readFileSync(join(src, file), 'utf8');
+      expect(text, file).not.toContain('clearProjectV2ItemFieldValue');
+      expect(text, file).not.toContain('issueRemoveLabel');
+      // port.ts declares OwnerTracker, which only ui/owner.ts implements.
+      if (file !== 'tracker/port.ts') expect(text, file).not.toContain('clearBlocked');
+    }
+  });
+  it('talks to the tracker only through src/tracker/ and board.ts (L1)', () => {
+    const allowed = new Set([
+      'board.ts',
+      'issue.ts',
+      'tracker/github.ts',
+      'tracker/linear.ts',
+      'tracker/linear-client.ts',
+      'ui/owner.ts',
+    ]);
+    const files = (dir: string): string[] =>
+      readdirSync(join(src, dir), { withFileTypes: true }).flatMap((e) =>
+        e.isDirectory()
+          ? files(join(dir, e.name))
+          : e.name.endsWith('.ts')
+            ? [join(dir, e.name)]
+            : [],
+      );
+    for (const file of files('.')) {
+      if (allowed.has(file)) continue;
+      const text = readFileSync(join(src, file), 'utf8');
+      expect(text, file).not.toMatch(/\['issue',\s*'(?:comment|close|view|edit)'/);
+      expect(text, file).not.toMatch(/ProjectV2|projectV2/);
+      expect(text, file).not.toMatch(/api\.linear\.app|commentCreate|issueUpdate|issueAddLabel/);
+    }
   });
 });

@@ -26,20 +26,49 @@ export interface ModelAlias {
   readonly model: string;
 }
 
-export interface FactoryConfig {
-  /** `owner/name` of the repository whose issues the factory works on. */
-  readonly repo: string;
-  readonly project: { readonly owner: string; readonly number: number };
-  /** The only login whose comments count as instructions (R14). */
+export type TrackerName = 'github' | 'linear';
+
+export interface StatusNames {
+  readonly pick: string;
+  readonly planning: string;
+  readonly working: string;
+  readonly review: string;
+  readonly done: string;
+}
+
+export interface LinearConfig {
+  /** The team's issue key, `PEN`: issue PEN-36 is number 36. */
+  readonly team: string;
+  /** Ryan's Linear user ID: the only user whose words count as instructions (R14). */
   readonly owner: string;
-  readonly status: {
-    readonly pick: string;
-    readonly planning: string;
-    readonly working: string;
-    readonly review: string;
-    readonly done: string;
+  /** The host-only file with the factory app's credentials; never in a sandbox (LD4). */
+  readonly envFile: string;
+  /** The keychain item holding Ryan's own Linear key, for the Factory UI's writes. */
+  readonly keychainItem: string;
+  readonly status: StatusNames;
+  /** The label that means "waiting on Ryan" (R23, LD3). */
+  readonly blockedLabel: string;
+}
+
+export interface FactoryConfig {
+  /** `owner/name` of the repository the factory's pull requests go to. */
+  readonly repo: string;
+  /** Where the cards live (LD1): GitHub's Project 8 or Linear's Penmoss team. */
+  readonly tracker: TrackerName;
+  readonly github: {
+    readonly project: { readonly owner: string; readonly number: number };
+    readonly status: StatusNames;
+    /** The project's single-select field that means "waiting on Ryan" (R23). */
+    readonly blockedField: string;
   };
-  /** The project's single-select field that means "waiting on Ryan" (R23). */
+  readonly linear: LinearConfig;
+  /** Project 8, from `github`. */
+  readonly project: { readonly owner: string; readonly number: number };
+  /** The GitHub login whose PR comments and reviews count as instructions (R14). */
+  readonly owner: string;
+  /** The active tracker's status names (resolved from `github` or `linear`). */
+  readonly status: StatusNames;
+  /** The active tracker's Blocked: Project 8's field, or Linear's label (R23). */
   readonly blockedField: string;
   readonly planning: {
     readonly default: boolean;
@@ -48,7 +77,13 @@ export interface FactoryConfig {
     readonly designWhenUx: boolean;
   };
   readonly review: { readonly commentQuietMinutes: number; readonly validationRounds: number };
-  readonly publisher: { readonly login: string; readonly ghConfigDir: string };
+  /**
+   * The GitHub App the factory pushes and opens PRs as (A1222): its slug, and the host-only file
+   * with its ID and private key's path.
+   */
+  readonly publisher: { readonly login: string; readonly envFile: string };
+  /** The R2 bucket proof is uploaded to, its public domain, and the host-only key file (A1223). */
+  readonly proof: { readonly bucket: string; readonly publicUrl: string; readonly envFile: string };
   readonly envFile: string;
   readonly stateDir: string;
   readonly pollSeconds: number;
@@ -63,7 +98,12 @@ export interface FactoryConfig {
   };
   readonly slots: readonly SlotConfig[];
   readonly sharedDir: string;
-  readonly macProof: { readonly task: string; readonly vm: string; readonly lock: string };
+  /**
+   * The Mac proof's test VM (F7, F10): its Tart name, and how many hours a run waits for it to
+   * take the proof (tart missing, the VM not made or busy, a boot that fails) before it stops,
+   * Blocked, with the reason. Until then the run waits without failing or using a round.
+   */
+  readonly macProof: { readonly vm: string; readonly waitHours: number };
   readonly agents: Readonly<
     Record<AgentName, { readonly bin: string; readonly defaultModel: string }>
   >;
@@ -127,14 +167,33 @@ export function parseConfig(raw: unknown): ConfigResult {
   if (typeof root['repo'] === 'string' && !/^[\w.-]+\/[\w.-]+$/.test(root['repo'])) {
     problems.push('config.repo must look like owner/name');
   }
-  const project = obj(root['project'], 'config.project');
-  str(project, 'owner', 'config.project');
-  int(project, 'number', 'config.project', 1);
+  if (root['tracker'] !== 'github' && root['tracker'] !== 'linear')
+    problems.push('config.tracker must be github or linear');
+  const statuses = (o: Record<string, unknown>, at: string): void => {
+    const status = obj(o['status'], `${at}.status`);
+    for (const key of ['pick', 'planning', 'working', 'review', 'done'])
+      str(status, key, `${at}.status`);
+  };
+  const github = obj(root['github'], 'config.github');
+  const project = obj(github['project'], 'config.github.project');
+  str(project, 'owner', 'config.github.project');
+  int(project, 'number', 'config.github.project', 1);
+  statuses(github, 'config.github');
+  str(github, 'blockedField', 'config.github');
+  const linear = obj(root['linear'], 'config.linear');
+  str(linear, 'team', 'config.linear');
+  if (typeof linear['team'] === 'string' && !/^[A-Z][A-Z0-9]{0,6}$/.test(linear['team']))
+    problems.push('config.linear.team must be a team key such as PEN');
+  // Empty until `task factory:linear:check` prints Ryan's ID; the factory won't start on Linear without it.
+  if (
+    typeof linear['owner'] !== 'string' ||
+    (linear['owner'] !== '' &&
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(linear['owner']))
+  )
+    problems.push("config.linear.owner must be Ryan's Linear user ID, or empty until it's known");
+  for (const key of ['envFile', 'keychainItem', 'blockedLabel']) str(linear, key, 'config.linear');
+  statuses(linear, 'config.linear');
   str(root, 'owner', 'config');
-  const status = obj(root['status'], 'config.status');
-  for (const key of ['pick', 'planning', 'working', 'review', 'done'])
-    str(status, key, 'config.status');
-  str(root, 'blockedField', 'config');
   const planning = obj(root['planning'], 'config.planning');
   for (const key of ['default', 'agentMaySkipTrivial', 'designWhenUx'])
     bool(planning, key, 'config.planning');
@@ -144,7 +203,11 @@ export function parseConfig(raw: unknown): ConfigResult {
   int(review, 'validationRounds', 'config.review');
   const publisher = obj(root['publisher'], 'config.publisher');
   str(publisher, 'login', 'config.publisher');
-  str(publisher, 'ghConfigDir', 'config.publisher');
+  str(publisher, 'envFile', 'config.publisher');
+  const proof = obj(root['proof'], 'config.proof');
+  for (const key of ['bucket', 'publicUrl', 'envFile']) str(proof, key, 'config.proof');
+  if (typeof proof['publicUrl'] === 'string' && !proof['publicUrl'].startsWith('https://'))
+    problems.push('config.proof.publicUrl must be an https:// URL');
   for (const key of ['envFile', 'stateDir', 'worktreeRoot', 'branchPrefix', 'sharedDir'])
     str(root, key, 'config');
   int(root, 'pollSeconds', 'config', 10);
@@ -166,7 +229,11 @@ export function parseConfig(raw: unknown): ConfigResult {
     });
   }
   const macProof = obj(root['macProof'], 'config.macProof');
-  for (const key of ['task', 'vm', 'lock']) str(macProof, key, 'config.macProof');
+  str(macProof, 'vm', 'config.macProof');
+  // It names files in /tmp and goes into the VM script's environment.
+  if (typeof macProof['vm'] === 'string' && !/^[A-Za-z0-9._-]+$/.test(macProof['vm']))
+    problems.push('config.macProof.vm must be a Tart VM name (letters, digits, . _ -)');
+  int(macProof, 'waitHours', 'config.macProof', 1);
   const agents = obj(root['agents'], 'config.agents');
   for (const name of ['claude', 'opencode']) {
     const agent = obj(agents[name], `config.agents.${name}`);
@@ -199,7 +266,18 @@ export function parseConfig(raw: unknown): ConfigResult {
     str(toolchain, key, 'config.toolchain');
 
   const [first] = problems;
-  return first === undefined
-    ? { ok: true, config: raw as FactoryConfig }
-    : { ok: false, error: first };
+  if (first !== undefined) return { ok: false, error: first };
+  const parsed = raw as Omit<FactoryConfig, 'project' | 'status' | 'blockedField'>;
+  const active =
+    parsed.tracker === 'linear'
+      ? { status: parsed.linear.status, blockedField: parsed.linear.blockedLabel }
+      : { status: parsed.github.status, blockedField: parsed.github.blockedField };
+  return { ok: true, config: { ...parsed, project: parsed.github.project, ...active } };
+}
+
+/** The same config on another tracker (tests, and the shadow run's read-only Linear view). */
+export function withTracker(config: FactoryConfig, tracker: TrackerName): FactoryConfig {
+  const resolved = parseConfig({ ...config, tracker });
+  if (!resolved.ok) throw new Error(resolved.error);
+  return resolved.config;
 }

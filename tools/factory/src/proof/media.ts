@@ -2,8 +2,8 @@
  * Proof media (F5): every video becomes an H.264 MP4 GitHub plays inline (yuv420p, +faststart,
  * at most 1280 px wide, 25 MB or less), and screenshots must be PNGs under 10 MB.
  */
-import { readFileSync, statSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
+import { join, sep } from 'node:path';
 import type { Exec } from '../exec.ts';
 import type { Frames } from './manifest.ts';
 
@@ -121,6 +121,39 @@ export function framesList(windows: readonly Frames[], dirs: readonly string[]):
   const last = all.at(-1);
   if (last) lines.push(`file '${last.path}'`);
   return `${lines.join('\n')}\n`;
+}
+
+/**
+ * Whether `path` is inside `root` once symlinks are followed. The agent writes the tests the
+ * harness runs, and so the report naming the files: the host publishes only files from the
+ * run's own worktree, never one a report or a link points elsewhere on this Mac.
+ */
+export function within(path: string, root: string): boolean {
+  try {
+    const real = realpathSync(path);
+    const base = realpathSync(root);
+    return real === base || real.startsWith(base + sep);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether every screencast frame is a file inside `root` (`dirs` are where each window's
+ * frames are now) whose path ffmpeg's concat list can quote: a `'` or a line break would end
+ * its `file '…'` line and let the next line name any file.
+ */
+export function framesWithin(
+  windows: readonly Frames[],
+  dirs: readonly string[],
+  root: string,
+): boolean {
+  return windows.every((w, i) =>
+    w.frames.every((f) => {
+      const path = join(dirs[i] ?? w.dir, f.file);
+      return !/['\r\n]/.test(path) && within(path, root);
+    }),
+  );
 }
 
 /** Makes the windows' screencast frames into one MP4 at `output`, the list written beside it. */

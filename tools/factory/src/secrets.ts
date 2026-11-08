@@ -8,7 +8,6 @@ import { readFileSync, statSync } from 'node:fs';
 
 /** The names a sandbox may receive, and what each is for. */
 export const SECRET_KEYS = {
-  GH_TOKEN: "penmoss-bot's GitHub token",
   CLAUDE_CODE_OAUTH_TOKEN: "Claude Code's token from `claude setup-token`",
   OPENCODE_API_KEY: 'the OpenCode Go key',
   CLOUDFLARE_API_TOKEN: 'a Penmoss-only Cloudflare API token',
@@ -25,7 +24,28 @@ export type SecretsResult =
 
 /** Parses `KEY=value` lines (`#` comments, blank lines, optional quotes and `export`). */
 export function parseSecrets(text: string): SecretsResult {
-  const secrets: Partial<Record<SecretKey, string>> = {};
+  return parseEnvKeys(text, SECRET_KEYS);
+}
+
+/** Reads the env file, refusing one that other users can read. */
+export function loadSecrets(path: string): SecretsResult {
+  return loadEnvFile(path, SECRET_KEYS);
+}
+
+export type EnvResult<K extends string> =
+  | {
+      readonly ok: true;
+      readonly secrets: Readonly<Partial<Record<K, string>>>;
+      readonly ignored: readonly string[];
+    }
+  | { readonly ok: false; readonly error: string };
+
+/** `KEY=value` lines, keeping only the names in `allowed`: others are listed, never kept. */
+export function parseEnvKeys<K extends string>(
+  text: string,
+  allowed: Readonly<Record<K, string>>,
+): EnvResult<K> {
+  const secrets: Partial<Record<K, string>> = {};
   const ignored: string[] = [];
   const lines = text.split(/\r?\n/);
   for (const [index, raw] of lines.entries()) {
@@ -35,14 +55,17 @@ export function parseSecrets(text: string): SecretsResult {
     if (!match) return { ok: false, error: `line ${index + 1} is not KEY=value` };
     const [, key = '', rawValue = ''] = match;
     const value = /^(['"])(.*)\1$/.exec(rawValue)?.[2] ?? rawValue;
-    if (Object.hasOwn(SECRET_KEYS, key)) secrets[key as SecretKey] = value;
+    if (Object.hasOwn(allowed, key)) secrets[key as K] = value;
     else ignored.push(key);
   }
   return { ok: true, secrets, ignored };
 }
 
-/** Reads the env file, refusing one that other users can read. */
-export function loadSecrets(path: string): SecretsResult {
+/** An env file of `allowed` names, refused when other users can read it. */
+export function loadEnvFile<K extends string>(
+  path: string,
+  allowed: Readonly<Record<K, string>>,
+): EnvResult<K> {
   let mode: number;
   try {
     mode = statSync(path).mode;
@@ -52,7 +75,7 @@ export function loadSecrets(path: string): SecretsResult {
   if ((mode & 0o077) !== 0) {
     return { ok: false, error: `${path} must be readable by you alone: chmod 600 it` };
   }
-  return parseSecrets(readFileSync(path, 'utf8'));
+  return parseEnvKeys(readFileSync(path, 'utf8'), allowed);
 }
 
 /** The keys that are missing, for the doctor's report. */

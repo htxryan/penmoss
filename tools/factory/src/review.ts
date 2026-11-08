@@ -96,14 +96,21 @@ export function reviewState(
     items.push({ kind: 'comment', author: x.author, body: x.body, trusted: x.author === owner });
   }
   const reviews = c.reviews.filter((r) => r.author === owner && after(r.submittedAt, c.since));
-  const approval = reviews.filter((r) => r.state === 'APPROVED').at(-1);
+  // His latest verdict counts: an approval he followed with "request changes" is withdrawn.
+  const verdict = reviews
+    .filter((r) => r.state === 'APPROVED' || r.state === 'CHANGES_REQUESTED')
+    .at(-1);
+  const approval = verdict?.state === 'APPROVED' ? verdict : undefined;
   for (const r of reviews)
     if (r.body.trim())
       items.push({ kind: 'review', author: r.author, body: r.body, trusted: true });
 
-  // Approval with nothing left to address merges (F9); anything else Ryan said comes first.
+  // Approval with nothing left to address merges (F9); anything else Ryan said comes first,
+  // including a review summary he wrote after approving.
   const ownerItems = items.filter((i) => i.trusted);
-  if (approval && ownerItems.every((i) => i.kind === 'review'))
+  const saidSince =
+    approval && reviews.some((r) => r.body.trim() && after(r.submittedAt, approval.submittedAt));
+  if (approval && !saidSince && ownerItems.every((i) => i.kind === 'review'))
     return { kind: 'approved', at: approval.submittedAt };
   if (ownerItems.length === 0)
     return {
@@ -143,12 +150,20 @@ interface RawComment {
   readonly author: { readonly login: string } | null;
 }
 
-/** The PR's threads, reviews and comments, with `since` = the factory's last marker comment. */
+/** `penmoss-factory[bot]` → `penmoss-factory`; people's logins are unchanged. */
+export const botless = (login: string) => login.replace(/\[bot\]$/, '');
+
+/**
+ * The PR's threads, reviews and comments, with `since` = the factory's last marker comment.
+ * Only a comment by `factory` (its login, without `[bot]`) counts as a marker: anyone can write
+ * the marker's text on a public PR, and it must never hide what Ryan said before it (R14).
+ */
 export async function readConversation(
   gh: Gh,
   repo: string,
   number: number,
   marker: string,
+  factory: string,
 ): Promise<PrConversation> {
   const [owner = '', name = ''] = repo.split('/');
   const data = await gh.graphql<{
@@ -179,15 +194,17 @@ export async function readConversation(
   const pr = data.repository.pullRequest;
   const plain = (x: RawComment): ThreadComment => ({
     id: x.id,
-    author: x.author?.login ?? '',
+    // An app's comments show its slug in GraphQL and `slug[bot]` in REST: one name either way.
+    author: botless(x.author?.login ?? ''),
     body: x.body,
     createdAt: x.createdAt,
   });
   const comments = pr.comments.nodes.map(plain);
-  const since = comments.filter((x) => x.body.includes(marker)).at(-1)?.createdAt ?? pr.createdAt;
+  const isMarker = (x: ThreadComment) => x.author === factory && x.body.includes(marker);
+  const since = comments.filter(isMarker).at(-1)?.createdAt ?? pr.createdAt;
   return {
     since,
-    comments: comments.filter((x) => !x.body.includes(marker)),
+    comments: comments.filter((x) => !isMarker(x)),
     threads: pr.reviewThreads.nodes.map((t) => ({
       id: t.id,
       isResolved: t.isResolved,
@@ -198,7 +215,7 @@ export async function readConversation(
     reviews: pr.reviews.nodes
       .filter((r) => r.submittedAt)
       .map((r) => ({
-        author: r.author?.login ?? '',
+        author: botless(r.author?.login ?? ''),
         state: r.state,
         body: r.body,
         submittedAt: r.submittedAt ?? '',

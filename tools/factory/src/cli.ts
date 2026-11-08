@@ -3,33 +3,49 @@
  * Taskfile tasks wrap each command (`task factory:next`).
  */
 import { fileURLToPath } from 'node:url';
-import { readBoard } from './board.ts';
 import { loadConfig, type FactoryConfig } from './config.ts';
 import { report } from './doctor.ts';
 import { runDoctor } from './doctor-run.ts';
 import { nodeExec } from './exec.ts';
 import { createGh } from './github.ts';
 import { pickNext, type Pick } from './pick.ts';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { expandHome } from './config.ts';
+import { codeDir, installAgents, updateFactory, type AgentDeps } from './code.ts';
 import { runDaemon } from './daemon.ts';
-import { LABEL, plistPath, renderPlist, UI_LABEL } from './launchd.ts';
+import { formatStatus, readStatus } from './status.ts';
 import { buildReport, formatReport, parseRange } from './report.ts';
+import { planningChat } from './planning-host.ts';
 import { startRun } from './start.ts';
 import { runUi } from './ui/run.ts';
+import { appClient, openTracker } from './tracker/index.ts';
+import { fix, snapshot, teamNeeds } from './tracker/linear-check.ts';
+import { createLinearClient, type LinearClient } from './tracker/linear-client.ts';
+import { ownerKey } from './ui/owner.ts';
 
 const USAGE = `Usage: factory <command>
 
 Commands:
-  next [--json]             Print the Ready card the factory would start next, and why (read-only)
-  install                   Install and start the LaunchAgents that run the daemon and the UI at login
-  status                    What the daemon is running, waiting on and passing over
-  daemon                    Poll the board and run Ready cards in free slots (the LaunchAgent runs this)
+  next [--json]             Print the Todo card (Ready on Project 8) it would start next, and why (read-only)
+  install                   Clone the factory's own code under the state folder (once) and install
+                            and start the LaunchAgents that run the daemon and the UI from it
+  update [--wait]           Move that code to origin/main, reinstall and restart the LaunchAgents;
+                            refuses while a run or merge is active (--wait: hold new work and wait)
+  status                    What the daemon is running (and at which commit), waiting on and
+                            passing over
+  daemon                    Poll the board, plan cards and run them in free slots (the LaunchAgent runs this)
   ui                        Serve the Factory UI on 127.0.0.1 (its LaunchAgent runs this)
-  report [--from d] [--to d] Throughput, rounds, time to In review and the share Blocked (default: 7 days)
-  run <issue> [--slot n]    Run one Ready issue now, in the foreground (plan:skip issues until planning lands)
+  report [--from d] [--to d] Throughput, rounds, time to In review and the share Blocked, from the
+                            run ledger (default: the last 7 days; --to is exclusive)
+  run <n> [--slot n]        Implement card n (36 for PEN-36) now, in the foreground: plan:skip or
+                            an agreed plan
+  chat <n> [--print]        Open card n's planning session in the Claude app (--print: only print
+                            its links)
+  linear-check [--me] [--fix]
+                            Check Linear's team has the factory's states and labels (--me: print
+                            Ryan's user ID with his key; --fix: create what's missing, as Ryan)
   doctor [--slot n] [--full] [--base ref] [--only name]
                             Check a slot's sandbox: toolchain, tokens, and what must stay out`;
 
@@ -39,7 +55,7 @@ function describe(pick: Pick, config: FactoryConfig): string[] {
     ? `${spec.platforms.join(', ')} (from platform:* labels)`
     : 'decided by the path classifier once the diff exists';
   return [
-    `#${item.number} ${item.title}`,
+    `${item.key} ${item.title}`,
     `  ${item.url}`,
     `  why:      ${pick.why}`,
     `  agent:    ${spec.agent} (${config.agents[spec.agent].bin}), model ${spec.modelAlias} = ${spec.model}`,
@@ -49,8 +65,13 @@ function describe(pick: Pick, config: FactoryConfig): string[] {
 }
 
 async function next(config: FactoryConfig, json: boolean): Promise<number> {
-  const gh = createGh({ exec: nodeExec });
-  const board = await readBoard(gh, config);
+  // Read-only: GitHub through your own gh, Linear as the factory app.
+  const opened = await openTracker(config, createGh({ exec: nodeExec }));
+  if (!opened.ok) {
+    console.error(`Can't read the board: ${opened.error}.`);
+    return 2;
+  }
+  const board = await opened.tracker.readBoard();
   const result = pickNext(board.items, config);
   if (json) {
     console.log(
@@ -58,6 +79,7 @@ async function next(config: FactoryConfig, json: boolean): Promise<number> {
         {
           next: result.next && {
             number: result.next.item.number,
+            key: result.next.item.key,
             mode: result.next.mode,
             why: result.next.why,
             spec: result.next.spec,
@@ -78,11 +100,11 @@ async function next(config: FactoryConfig, json: boolean): Promise<number> {
   }
   const rest = result.queue.slice(1);
   if (rest.length > 0) {
-    console.log(`\nThen: ${rest.map((p) => `#${p.item.number} (P${p.spec.priority})`).join(', ')}`);
+    console.log(`\nThen: ${rest.map((p) => `${p.item.key} (P${p.spec.priority})`).join(', ')}`);
   }
   if (result.skipped.length > 0) {
     console.log(
-      `\nPassed over:\n${result.skipped.map((s) => `  #${s.item.number} ${s.item.title}: ${s.reason}`).join('\n')}`,
+      `\nPassed over:\n${result.skipped.map((s) => `  ${s.item.key} ${s.item.title}: ${s.reason}`).join('\n')}`,
     );
   }
   return 0;
@@ -117,79 +139,111 @@ async function doctor(config: FactoryConfig, args: readonly string[]): Promise<n
   return outcomes.some((o) => o.status === 'failed') ? 1 : 0;
 }
 
-async function install(config: FactoryConfig): Promise<number> {
-  const state = expandHome(config.stateDir);
-  mkdirSync(state, { recursive: true });
-  const cli = fileURLToPath(import.meta.url);
-  const uid = String(process.getuid?.() ?? 501);
-  for (const [label, command, logName] of [
-    [LABEL, 'daemon', 'daemon.log'],
-    [UI_LABEL, 'ui', 'ui.log'],
-  ] as const) {
-    const plist = plistPath(homedir(), label);
-    mkdirSync(dirname(plist), { recursive: true });
-    writeFileSync(
-      plist,
-      renderPlist({
-        label,
-        command,
-        node: process.execPath,
-        cli,
-        repo: fileURLToPath(new URL('../../..', import.meta.url)),
-        path: [
-          dirname(process.execPath),
-          '/opt/homebrew/bin',
-          '/usr/local/bin',
-          '/usr/bin',
-          '/bin',
-          '/usr/sbin',
-          '/sbin',
-        ].join(':'),
-        log: join(state, logName),
-      }),
-    );
-    await nodeExec('launchctl', ['bootout', `gui/${uid}/${label}`]);
-    const loaded = await nodeExec('launchctl', ['bootstrap', `gui/${uid}`, plist]);
-    if (loaded.code !== 0) {
-      console.error(`launchctl bootstrap ${label} failed: ${loaded.stderr.trim()}`);
-      return 1;
-    }
-    console.log(`Installed ${plist}`);
+function agentDeps(): AgentDeps {
+  return {
+    exec: nodeExec,
+    home: homedir(),
+    uid: String(process.getuid?.() ?? 501),
+    node: process.execPath,
+    log: (line) => console.log(line),
+  };
+}
+
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
   }
-  console.log(
-    'The daemon and the UI start now and at every login. Logs: task factory:logs; the UI: task factory:ui:open',
+}
+
+function update(config: FactoryConfig, args: readonly string[]): Promise<number> {
+  return updateFactory(
+    config,
+    {
+      ...agentDeps(),
+      pid: process.pid,
+      alive: isAlive,
+      now: () => new Date(),
+      sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    },
+    { wait: args.includes('--wait') },
   );
-  return 0;
 }
 
 function status(config: FactoryConfig): number {
-  const file = join(expandHome(config.stateDir), 'status.json');
-  if (!existsSync(file)) {
+  const s = readStatus(config);
+  if (!s) {
     console.log('The daemon has not run yet (task factory:install).');
     return 1;
   }
-  const s = JSON.parse(readFileSync(file, 'utf8')) as {
-    updatedAt: string;
-    pid: number;
-    running: { issue: number; slot: number; startedAt: string; why: string }[];
-    waiting: number[];
-    skipped: { issue: number; reason: string }[];
-  };
-  const age = Math.round((Date.now() - Date.parse(s.updatedAt)) / 1000);
-  console.log(
-    `Daemon ${s.pid}, last poll ${age} s ago${age > config.pollSeconds * 3 ? ' (stale: is it running? task factory:logs)' : ''}.`,
-  );
-  console.log(
-    s.running.length
-      ? s.running
-          .map((r) => `  running #${r.issue} on slot ${r.slot} since ${r.startedAt} (${r.why})`)
-          .join('\n')
-      : '  nothing running',
-  );
-  if (s.waiting.length)
-    console.log(`  waiting for a slot: ${s.waiting.map((n) => `#${n}`).join(', ')}`);
-  for (const k of s.skipped) console.log(`  passed over #${k.issue}: ${k.reason}`);
+  console.log(formatStatus(s, config, codeDir(config), new Date()).join('\n'));
   return 0;
+}
+
+async function linearCheck(config: FactoryConfig, args: readonly string[]): Promise<number> {
+  const asRyan = args.includes('--me') || args.includes('--fix');
+  let client: LinearClient;
+  if (asRyan) {
+    const key = await ownerKey(config);
+    if (!key) {
+      console.error(
+        `No Linear key in the keychain item ${config.linear.keychainItem}. Make one in Linear (Settings, Security & access, Personal API keys), then: security add-generic-password -s ${config.linear.keychainItem} -a "$USER" -w`,
+      );
+      return 2;
+    }
+    client = createLinearClient({ token: () => Promise.resolve(key) });
+  } else {
+    const app = appClient(config);
+    if (!app.ok) {
+      console.error(`${app.error}. Use --me to check with your own key instead.`);
+      return 2;
+    }
+    client = app.client;
+  }
+  if (args.includes('--me')) {
+    const { viewer } = await client.request<{ viewer: { id: string; displayName: string } }>(
+      'query { viewer { id displayName } }',
+    );
+    console.log(`You are ${viewer.displayName}: ${viewer.id}`);
+    console.log(
+      viewer.id === config.linear.owner
+        ? 'config.linear.owner matches.'
+        : `Set config.linear.owner in tools/factory/factory.config.json to "${viewer.id}".`,
+    );
+  }
+  if (args.includes('--fix')) await fix(client, config, (line) => console.log(line));
+  const needs = teamNeeds(await snapshot(client, config), config);
+  if (needs.length === 0) {
+    console.log(`Linear's ${config.linear.team} team is ready for the factory.`);
+    return 0;
+  }
+  console.log(`Linear's ${config.linear.team} team still needs:`);
+  for (const n of needs) console.log(`  - ${n.text}`);
+  return 1;
+}
+
+/** `factory chat <issue>`: the planning session's chat, the same one Remote Control serves (F15). */
+async function chat(config: FactoryConfig, args: readonly string[]): Promise<number> {
+  const number = Number(args[0]);
+  if (!Number.isInteger(number) || number < 1) {
+    console.error('Usage: factory chat <issue> [--print]');
+    return 2;
+  }
+  const found = planningChat(config, number);
+  if ('error' in found) {
+    console.error(`${found.error}.`);
+    return 1;
+  }
+  console.log(`Chat: ${found.chatUrl}`);
+  if (found.desktop) console.log(`In the Claude app: ${found.desktop}`);
+  console.log(
+    'While the card is Blocked the session is stopped; clearing Blocked resumes it with a new link.',
+  );
+  if (args.includes('--print')) return 0;
+  const opened = await nodeExec('open', [found.desktop ?? found.chatUrl]);
+  return opened.code === 0 ? 0 : 1;
 }
 
 async function main(argv: readonly string[]): Promise<number> {
@@ -203,7 +257,9 @@ async function main(argv: readonly string[]): Promise<number> {
     case 'next':
       return next(loaded.config, rest.includes('--json'));
     case 'install':
-      return install(loaded.config);
+      return installAgents(loaded.config, agentDeps());
+    case 'update':
+      return update(loaded.config, rest);
     case 'status':
       return status(loaded.config);
     case 'daemon':
@@ -228,6 +284,10 @@ async function main(argv: readonly string[]): Promise<number> {
       return startRun(loaded.config, rest, (line) => console.log(line));
     case 'doctor':
       return doctor(loaded.config, rest);
+    case 'linear-check':
+      return linearCheck(loaded.config, rest);
+    case 'chat':
+      return chat(loaded.config, rest);
     case undefined:
     case 'help':
     case '--help':

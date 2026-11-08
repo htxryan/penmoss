@@ -16,7 +16,6 @@ import {
   writeSync,
 } from 'node:fs';
 import { join } from 'node:path';
-import { readBoard, setBlocked } from './board.ts';
 import { nodeExec } from './exec.ts';
 import { sweep } from './janitor.ts';
 import { expandHome, type FactoryConfig } from './config.ts';
@@ -25,6 +24,8 @@ import { formatMarker } from './pick.ts';
 import { parseIssueSpec } from './labels.ts';
 import { executePlanning, executeRun, openFactory, planAgreed, runnable } from './start.ts';
 import { executeMerge, executeRevise, findPr, nextReviewAction } from './watch.ts';
+import { codeDir, commitOf, ownCheckout, updatePending } from './code.ts';
+import type { DaemonStatus } from './status.ts';
 
 export interface Lock {
   release(): void;
@@ -60,10 +61,14 @@ function isAlive(pid: number): boolean {
   }
 }
 
-/** Issues whose last ledger event says a run claimed them and never finished. */
+/**
+ * Issues whose last ledger event says a run claimed them and never reached In review. A run
+ * that stopped Blocked (Ryan paused it, or it asked him something) stays claimed: orphans()
+ * passes over a Blocked card, and once he clears Blocked the run restarts on its branch (R23).
+ */
 export function unfinishedClaims(ledger: string): Set<number> {
   const open = new Set<number>();
-  const terminal = new Set(['blocked', 'failed', 'in-review']);
+  const terminal = new Set(['in-review']);
   for (const line of ledger.split('\n')) {
     if (!line.trim()) continue;
     try {
@@ -77,6 +82,17 @@ export function unfinishedClaims(ledger: string): Set<number> {
     }
   }
   return open;
+}
+
+/** `status.json`, which the daemon writes every poll for `factory:status` and the UI. */
+/** A run's entry with what it now waits for (F10); `since` stays when the wait began. */
+export function withWait(run: Running, reason: string | null, now: Date): Running {
+  if (reason === null) {
+    const rest = { ...run };
+    delete rest.waitingFor;
+    return rest;
+  }
+  return { ...run, waitingFor: { reason, since: run.waitingFor?.since ?? now.toISOString() } };
 }
 
 export async function runDaemon(
@@ -106,9 +122,20 @@ export async function runDaemon(
   };
   process.on('SIGTERM', stop);
   process.on('SIGINT', stop);
+  // The code it runs, so the log and factory:status say which commit is live (A1226).
+  const commit = await commitOf(nodeExec, ownCheckout());
+  const code = { dir: ownCheckout(), ...(commit ? { commit } : {}) };
+  // A run says what it waits for (the test VM); status.json carries it to factory:status.
+  const waitingFor = (issue: number) => (reason: string | null) => {
+    const r = running.get(issue);
+    if (r) running.set(issue, withWait(r, reason, new Date()));
+  };
   log(
-    `Factory daemon ${process.pid}: ${config.slots.length} slot(s), at most ${config.maxConcurrent} at once, every ${config.pollSeconds} s.`,
+    `Factory daemon ${process.pid} at ${commit ? `${commit.sha.slice(0, 7)} (${commit.subject})` : 'an unknown commit'} from ${code.dir}: ${config.slots.length} slot(s), at most ${config.maxConcurrent} at once, every ${config.pollSeconds} s.`,
   );
+  if (code.dir !== codeDir(config))
+    log(`Not the factory's own code checkout (${codeDir(config)}): run task factory:install.`);
+  let held = false;
 
   let swept = 0;
   while (!stopping) {
@@ -120,7 +147,12 @@ export async function runDaemon(
           log(`janitor: ${error instanceof Error ? error.message : String(error)}`),
         );
       }
-      const board = await readBoard(factory.gh, config);
+      // factory:update is waiting for the runs to finish: start nothing new until it restarts us.
+      const hold = updatePending(config, isAlive);
+      if (hold !== held)
+        log(hold ? 'Holding new work for task factory:update.' : 'No longer held.');
+      held = hold;
+      const board = await factory.tracker.readBoard();
       const ledgerPath = join(state, 'runs.jsonl');
       const claimed = existsSync(ledgerPath)
         ? unfinishedClaims(readFileSync(ledgerPath, 'utf8'))
@@ -131,31 +163,29 @@ export async function runDaemon(
           .map((i) => i.number),
       );
       for (const { item, error } of labelProblems(board, config)) {
-        log(`#${item.number}: can't start: ${error}; Blocked`);
-        await factory.gh
-          .run(
-            ['issue', 'comment', String(item.number), '--repo', config.repo, '--body-file', '-'],
+        log(`${item.key}: can't start: ${error}; Blocked`);
+        await factory.tracker
+          .comment(
+            item.number,
             `The factory can't start this issue: ${error}. Fix the labels, then clear Blocked.\n\n${formatMarker({ issue: String(item.number), event: 'labels' })}`,
           )
-          .then(() => setBlocked(factory.gh, board, item))
-          .catch((e: unknown) =>
-            log(`#${item.number}: ${e instanceof Error ? e.message : String(e)}`),
-          );
+          .then(() => factory.tracker.setBlocked(item))
+          .catch((e: unknown) => log(`${item.key}: ${e instanceof Error ? e.message : String(e)}`));
       }
       const t = tick(board, config, [...running.values()], claimed, agreed);
       // Planning steps are short CLI calls: one card after another, in this loop.
-      for (const item of t.plan) {
-        await executePlanning(factory, board, item, (line) => log(`#${item.number}: ${line}`))
+      for (const item of hold ? [] : t.plan) {
+        await executePlanning(factory, item, (line) => log(`${item.key}: ${line}`))
           .then((action) => {
-            if (action.kind !== 'wait') log(`#${item.number}: planning ${action.kind}`);
+            if (action.kind !== 'wait') log(`${item.key}: planning ${action.kind}`);
           })
           .catch((error: unknown) =>
             log(
-              `#${item.number}: planning failed: ${error instanceof Error ? error.message : String(error)}`,
+              `${item.key}: planning failed: ${error instanceof Error ? error.message : String(error)}`,
             ),
           );
       }
-      for (const { item, slot, why } of t.start) {
+      for (const { item, slot, why } of hold ? [] : t.start) {
         const ok = runnable(
           config,
           item,
@@ -173,19 +203,26 @@ export async function runDaemon(
           startedAt: new Date().toISOString(),
           why,
         });
-        log(`#${item.number} on slot ${slot.id} (${why})`);
-        void executeRun(factory, board, item, ok.spec, slot, (line) =>
-          log(`#${item.number}: ${line}`),
+        log(`${item.key} on slot ${slot.id} (${why})`);
+        void executeRun(
+          factory,
+          board,
+          item,
+          ok.spec,
+          slot,
+          (line) => log(`${item.key}: ${line}`),
+          why === 'recovered',
+          waitingFor(item.number),
         )
-          .then((outcome) => log(`#${item.number}: ${outcome.kind}`))
+          .then((outcome) => log(`${item.key}: ${outcome.kind}`))
           .catch((error: unknown) =>
-            log(`#${item.number}: ${error instanceof Error ? error.message : String(error)}`),
+            log(`${item.key}: ${error instanceof Error ? error.message : String(error)}`),
           )
           .finally(() => running.delete(item.number));
       }
       // In review cards: a review round or CI repair in a free slot, or a merge on approval.
       const busySlots = new Set([...running.values()].map((r) => r.slot));
-      for (const item of board.items) {
+      for (const item of hold ? [] : board.items) {
         if (
           item.status !== config.status.review ||
           item.blocked ||
@@ -202,12 +239,14 @@ export async function runDaemon(
         if (action.kind === 'none') continue;
         if (action.kind === 'merge') {
           merging.add(item.number);
-          log(`#${item.number}: approved, merging ${pr.url}`);
-          void executeMerge(factory, board, item, pr, (line) => log(`#${item.number}: ${line}`))
-            .then((kind) => log(`#${item.number}: ${kind}`))
+          log(
+            `${item.key}: ${pr.state === 'MERGED' ? 'merged; verifying main for' : 'approved, merging'} ${pr.url}`,
+          );
+          void executeMerge(factory, item, pr, (line) => log(`${item.key}: ${line}`))
+            .then((kind) => log(`${item.key}: ${kind}`))
             .catch((error: unknown) =>
               log(
-                `#${item.number}: merge failed: ${error instanceof Error ? error.message : String(error)}`,
+                `${item.key}: merge failed: ${error instanceof Error ? error.message : String(error)}`,
               ),
             )
             .finally(() => merging.delete(item.number));
@@ -223,14 +262,22 @@ export async function runDaemon(
           why: 'picked',
         });
         log(
-          `#${item.number} on slot ${slot.id}: ${action.kind === 'round' ? `review round (${action.state.trigger})` : 'CI repair'}`,
+          `${item.key} on slot ${slot.id}: ${action.kind === 'round' ? `review round (${action.state.trigger})` : action.kind === 'rebase' ? 'rebase onto main' : 'CI repair'}`,
         );
-        void executeRevise(factory, board, item, parsed.spec, slot, pr, action, (line) =>
-          log(`#${item.number}: ${line}`),
+        void executeRevise(
+          factory,
+          board,
+          item,
+          parsed.spec,
+          slot,
+          pr,
+          action,
+          (line) => log(`${item.key}: ${line}`),
+          waitingFor(item.number),
         )
-          .then((kind) => log(`#${item.number}: ${kind}`))
+          .then((kind) => log(`${item.key}: ${kind}`))
           .catch((error: unknown) =>
-            log(`#${item.number}: ${error instanceof Error ? error.message : String(error)}`),
+            log(`${item.key}: ${error instanceof Error ? error.message : String(error)}`),
           )
           .finally(() => running.delete(item.number));
       }
@@ -241,21 +288,18 @@ export async function runDaemon(
         caffeinate.kill();
         caffeinate = undefined;
       }
-      writeFileSync(
-        join(state, 'status.json'),
-        JSON.stringify(
-          {
-            updatedAt: new Date().toISOString(),
-            pid: process.pid,
-            running: [...running.values()],
-            waiting: t.waiting,
-            planning: t.plan.map((i) => i.number),
-            skipped: t.skipped,
-          },
-          null,
-          2,
-        ),
-      );
+      const status: DaemonStatus = {
+        updatedAt: new Date().toISOString(),
+        pid: process.pid,
+        running: [...running.values()],
+        merging: [...merging],
+        waiting: t.waiting,
+        planning: t.plan.map((i) => i.number),
+        skipped: t.skipped,
+        paused: hold,
+        code,
+      };
+      writeFileSync(join(state, 'status.json'), JSON.stringify(status, null, 2));
     } catch (error) {
       log(`Poll failed: ${error instanceof Error ? error.message : String(error)}`);
     }

@@ -62,7 +62,7 @@ export function dailyNotePath(date: PlainDate): string {
 **Always:**
 
 - Run `task check:changed` before each commit and `task check` before pushing (A1176). CI runs `task check` on every push, too.
-- Run heavy commands (`task check`, `task check:changed`, `task e2e`) through the Taskfile, which waits for a free heavy-job slot on this Mac (W12, A1175). Don't call Playwright or the whole Vitest run directly to skip the wait.
+- Run heavy commands (`task check`, `task check:changed`, `task e2e`) through the Taskfile, which waits for a free heavy-job slot on this Mac when the work is heavy (W12, A1175, A1224). Don't call Playwright or the whole Vitest run directly to skip the wait.
 - Run the Mac app's Electron tests with `task desktop:test`. On a Mac they run in the test VM, never on Ryan's screen, one run at a time (W10, [`AGENTS.md`](../AGENTS.md)).
 - Add codec fixtures for any new block.
 - Route actions through commands and colours through tokens.

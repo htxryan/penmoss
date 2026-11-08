@@ -1,18 +1,35 @@
 {
   "repo": "htxryan/penmoss",
-  "project": {
-    "owner": "htxryan",
-    "number": 8
+  "tracker": "linear",
+  "github": {
+    "project": {
+      "owner": "htxryan",
+      "number": 8
+    },
+    "status": {
+      "pick": "Ready",
+      "planning": "Planning",
+      "working": "In progress",
+      "review": "In review",
+      "done": "Done"
+    },
+    "blockedField": "Blocked"
+  },
+  "linear": {
+    "team": "PEN",
+    "owner": "0e3e5023-dc54-4e93-a477-74c799f96ebb",
+    "envFile": "~/.config/penmoss-factory/linear.env",
+    "keychainItem": "penmoss-factory-linear",
+    "status": {
+      "pick": "Todo",
+      "planning": "Planning",
+      "working": "In Progress",
+      "review": "In Review",
+      "done": "Done"
+    },
+    "blockedLabel": "Blocked"
   },
   "owner": "htxryan",
-  "status": {
-    "pick": "Ready",
-    "planning": "Planning",
-    "working": "In progress",
-    "review": "In review",
-    "done": "Done"
-  },
-  "blockedField": "Blocked",
   "planning": {
     "default": true,
     "skipLabel": "plan:skip",
@@ -24,8 +41,13 @@
     "validationRounds": 2
   },
   "publisher": {
-    "login": "penmoss-bot",
-    "ghConfigDir": "~/.config/penmoss-factory/gh"
+    "login": "penmoss-factory",
+    "envFile": "~/.config/penmoss-factory/github-app.env"
+  },
+  "proof": {
+    "bucket": "penmoss-factory-proof",
+    "publicUrl": "https://proof.penmoss.app",
+    "envFile": "~/.config/penmoss-factory/proof.env"
   },
   "envFile": "~/.config/penmoss-factory/factory.env",
   "stateDir": "~/Library/Application Support/penmoss-factory",
@@ -60,9 +82,8 @@
   ],
   "sharedDir": "/Users/Shared/penmoss-factory",
   "macProof": {
-    "task": "proof:mac",
     "vm": "penmoss-test",
-    "lock": "vm"
+    "waitHours": 12
   },
   "agents": {
     "claude": {

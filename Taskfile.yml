@@ -34,18 +34,29 @@ tasks:
       - task: audit:secrets
       - task: audit:test
       - task: ports:test
+      - task: check-changed:test
+      - task: vm:test
       - task: ci:lint
       - task: android:publish:test
 
   check:changed:
-    desc: 'The checks for what this branch changed against origin/main (before each commit): lint and format of the changed files, typecheck and unit tests of the changed packages and the packages that use them. Falls back to `task check` when shared config changed'
+    desc: 'The checks for what you are about to commit (before each commit; the last commit when nothing is uncommitted; `-- <ref>` for everything since that ref): lint and format of the changed files, typecheck and unit tests of the changed packages and the packages that use them. Falls back to `task check` when shared config changed. Only that fallback, and tests of more than two packages, wait for a heavy-job slot'
     cmds:
-      - sh scripts/heavy.sh check:changed sh scripts/check-changed.sh {{.CLI_ARGS}}
+      - sh scripts/check-changed.sh {{.CLI_ARGS}}
 
   ports:test:
     desc: 'Port blocks (#260): scripts/ports.mjs, which PENMOSS_PORT_BLOCK=n moves every dev and test port with'
     cmds:
       - node --test scripts/ports.test.mjs
+  check-changed:test:
+    desc: 'What `task check:changed` checks (A1224): the change about to be committed, or the last commit, never the whole branch'
+    cmds:
+      - node --test scripts/check-changed.test.mjs
+
+  vm:test:
+    desc: "Sharing the test VM (A1174): scripts/vm/desktop-test.sh against a fake tart; a VM it didn't start is waited for, never stopped"
+    cmds:
+      - node --test scripts/vm/desktop-test.test.mjs
   ci:lint:
     desc: 'No GitHub-hosted runners (A702, F9): every runs-on names self-hosted Mac labels, never an expression'
     cmds:
@@ -63,9 +74,9 @@ tasks:
       - node .github/scripts/release-tag.mjs {{.CLI_ARGS}}
 
   workflows:test:
-    desc: 'The fork guard (P10, A1183): no self-hosted job runs for a pull request from a fork; and GitHub intake into Linear (D66) against a fake Linear API'
+    desc: "The fork guard (P10, A1183): no self-hosted job runs for a pull request from a fork; GitHub intake into Linear (D66) against a fake Linear API; and CI's Android emulator (A1227) against a stub adb and emulator"
     cmds:
-      - node --test .github/scripts/workflow-guard.test.mjs .github/scripts/linear-intake.test.mjs
+      - node --test .github/scripts/workflow-guard.test.mjs .github/scripts/linear-intake.test.mjs .github/scripts/android-emulator.test.mjs
 
   audit:secrets:
     desc: 'gitleaks over the tree, or every commit with `-- --history` (T80.1, A1185; docs/qa/public-release-audit.md)'
@@ -155,31 +166,49 @@ tasks:
       - node scripts/social-image.mjs
 
   site:deploy:
-    desc: 'penmoss.app: build it, then wrangler deploy of site/dist'
-    deps: [site:build]
+    desc: 'penmoss.app: build it, then wrangler deploy of site/dist (refused inside a factory run, FD24)'
     dir: site
     cmds:
-      - pnpm exec wrangler deploy
+      # First, before the build: deps would run ahead of it.
+      - test -z "$PENMOSS_FACTORY_RUN" || { echo 'No production deploys from a factory run; they happen after merge (FD24).' >&2; exit 1; }
+      - task: site:build
+      - pnpm exec wrangler deploy {{.CLI_ARGS}}
 
   factory:next:
     desc: 'The software factory (#253): print the Ready card it would start next, and why (read-only)'
     cmds:
       - node tools/factory/src/cli.ts next {{.CLI_ARGS}}
 
+  factory:linear:check:
+    desc: "The software factory (L2): check Linear's Penmoss team has its states and labels. `-- --me` prints your Linear user ID; `-- --fix` creates what's missing, as you"
+    cmds:
+      - node tools/factory/src/cli.ts linear-check {{.CLI_ARGS}}
+
   factory:run:
     desc: 'The software factory (F4): run one Ready issue now, in the foreground: `task factory:run -- 123`'
     cmds:
       - node tools/factory/src/cli.ts run {{.CLI_ARGS}}
 
+  factory:chat:
+    desc: "The software factory (F15): open a card's planning session in the Claude app, the same one Remote Control serves: `task factory:chat -- 41` (`-- 41 --print` only prints its links)"
+    cmds:
+      - node tools/factory/src/cli.ts chat {{.CLI_ARGS}}
+
   factory:install:
-    desc: 'The software factory (F10): install and start its LaunchAgent (starts at login, restarts if it exits)'
+    desc: 'The software factory (F10): clone its own code under the state folder (once), then install and start the LaunchAgents that run it (start at login, restart if they exit; A1226)'
     cmds:
       - node tools/factory/src/cli.ts install
 
-  factory:start:
-    desc: 'The software factory: start the daemon now'
+  factory:update:
+    desc: 'The software factory (A1226): move its code to origin/main, reinstall and restart the LaunchAgents. Refuses while a run or merge is active; `-- --wait` holds new work and waits'
     cmds:
-      - launchctl kickstart gui/$(id -u)/app.penmoss.factory
+      - node tools/factory/src/cli.ts update {{.CLI_ARGS}}
+
+  factory:start:
+    desc: 'The software factory: start the daemon now (after `factory:stop`, or if it is loaded but not running)'
+    cmds:
+      # factory:stop boots the service out, so kickstart alone can't find it: load it again first.
+      - launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/app.penmoss.factory.plist" 2>/dev/null || launchctl kickstart gui/$(id -u)/app.penmoss.factory
 
   factory:stop:
     desc: 'The software factory: stop the daemon (runs in progress restart next time, R12)'
@@ -187,7 +216,7 @@ tasks:
       - launchctl bootout gui/$(id -u)/app.penmoss.factory || true
 
   factory:status:
-    desc: 'The software factory: what the daemon is running and waiting on'
+    desc: 'The software factory: what the daemon is running (and at which commit) and waiting on'
     cmds:
       - node tools/factory/src/cli.ts status
 

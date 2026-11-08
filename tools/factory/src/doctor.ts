@@ -4,19 +4,23 @@
  * proves; a failure is loud and names the check. Commands never print a secret: the isolation
  * checks open files for zero bytes, and the token checks print only an account name.
  */
-import type { FactoryConfig, SlotConfig } from './config.ts';
+import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { SecretKey } from './secrets.ts';
 import { withJavaHome } from './sandbox.ts';
+import { opencodeConfig } from './agents/opencode.ts';
 
 export interface Check {
   readonly name: string;
   readonly command: string;
   /** `pass`: must exit 0. `refused`: must exit non-zero (isolation). */
   readonly expect: 'pass' | 'refused';
-  /** When given, stdout must contain this. */
+  /**
+   * When given, stdout must contain this. For a `refused` check it is the refusal itself, so a
+   * command that fails for another reason doesn't pass as refused.
+   */
   readonly output?: string;
   /** Tokens the check needs; it is skipped, and reported as such, without them. */
-  readonly needs?: readonly SecretKey[];
+  readonly needs?: readonly (SecretKey | 'GH_TOKEN')[];
   /** Minutes rather than seconds: only with `--full`. */
   readonly slow?: boolean;
   /** Every other check needs it, so it runs even with `--only`. */
@@ -25,8 +29,37 @@ export interface Check {
   readonly needsAvd?: boolean;
 }
 
+/** What the repo's deploy commands say inside a run (FD24): `Taskfile.yml`, `apps/relay`. */
+const DEPLOY_REFUSED = 'No production deploys from a factory run';
+
 /** Opens a file for zero bytes: fails when the sandbox refuses it, and never prints contents. */
 const opens = (path: string) => `head -c 0 '${path}'`;
+
+/** One shell word. */
+const quote = (s: string) => `'${s.replaceAll("'", `'\\''`)}'`;
+
+/**
+ * OpenCode as a run starts it (`agents/opencode.ts`): the factory's config inline, the worktree's
+ * own config, autoupdate and Claude Code's files off, and no stdin.
+ */
+function opencode(config: FactoryConfig, args: string): string {
+  const env = [
+    `OPENCODE_CONFIG_CONTENT=${quote(opencodeConfig())}`,
+    'OPENCODE_DISABLE_PROJECT_CONFIG=1',
+    'OPENCODE_DISABLE_AUTOUPDATE=1',
+    'OPENCODE_DISABLE_CLAUDE_CODE=1',
+  ].join(' ');
+  return `${env} ${quote(config.agents.opencode.bin)} ${args} < /dev/null`;
+}
+
+/** The model IDs the `opencode` agent's aliases name, its default first. */
+function opencodeModels(config: FactoryConfig): string[] {
+  const first = config.models[config.agents.opencode.defaultModel]?.model;
+  const all = Object.values(config.models)
+    .filter((m) => m.agent === 'opencode')
+    .map((m) => m.model);
+  return [...new Set([...(first ? [first] : []), ...all])];
+}
 
 export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: string): Check[] {
   const relay = 'apps/relay';
@@ -116,11 +149,53 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
 
     // The tokens (FD23).
     {
-      name: `gh acts as ${config.publisher.login}`,
+      name: `gh reads ${config.repo} with the app's read-only token`,
       expect: 'pass',
-      output: config.publisher.login,
+      output: config.repo,
       needs: ['GH_TOKEN'],
-      command: 'gh api user --jq .login',
+      command: `gh api repos/${config.repo} --jq .full_name`,
+    },
+    {
+      // The branch GitHub refused live (A1222). A zero SHA, so a token that could write gets 422
+      // and still creates nothing; the check then fails, since only a 403 is the refusal.
+      name: `the app's read-only token can't write to ${config.repo} (A1222)`,
+      expect: 'refused',
+      output: 'HTTP 403',
+      needs: ['GH_TOKEN'],
+      command: `gh api -X POST repos/${config.repo}/git/refs -f ref=refs/heads/factory-doctor-probe -f sha=0000000000000000000000000000000000000000 2>&1`,
+    },
+    {
+      name: 'Claude Code signs in with the setup token',
+      expect: 'pass',
+      output: 'factory-ok',
+      needs: ['CLAUDE_CODE_OAUTH_TOKEN'],
+      command: `ENABLE_CLAUDEAI_MCP_SERVERS=false ${config.agents.claude.bin} -p 'Reply with exactly: factory-ok' --model haiku --max-turns 1 --output-format text`,
+    },
+    {
+      // The prompt has the word in capitals and the check wants it in lower case, so OpenCode
+      // echoing the prompt back doesn't pass.
+      name: 'OpenCode answers with the Go key and the default model',
+      expect: 'pass',
+      output: 'factory-ok',
+      needs: ['OPENCODE_API_KEY'],
+      command: opencode(
+        config,
+        `run -m ${quote(opencodeModels(config)[0] ?? '')} 'Reply with exactly this word, in lower case: FACTORY-OK'`,
+      ),
+    },
+    {
+      // A model renamed or retired upstream fails here rather than in the first run with it.
+      name: "OpenCode Go lists every opencode model in the factory's config",
+      expect: 'pass',
+      output: 'all listed',
+      needs: ['OPENCODE_API_KEY'],
+      command: [
+        ...opencodeModels(config).map(
+          (m) =>
+            `${opencode(config, `models ${quote(m.split('/')[0] ?? '')}`)} | grep -Fxq ${quote(m)}`,
+        ),
+        "echo 'all listed'",
+      ].join(' && '),
     },
     {
       name: 'wrangler whoami shows the Penmoss account',
@@ -131,11 +206,46 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
 
     // What stays out.
     {
+      // An agent that ignores its deny rules still can't push (F0.4): the sandbox's token is
+      // read-only. The helper hands git the token from the environment, never on a command line,
+      // and the explicit URL skips whatever remote the worktree has.
+      name: "a push with the sandbox's token is refused (A1222)",
+      expect: 'refused',
+      needs: ['GH_TOKEN'],
+      command: `git -c credential.helper= -c 'credential.helper=!f() { test "$1" = get || exit 0; echo username=x-access-token; echo "password=$GH_TOKEN"; }; f' push --dry-run --no-verify https://github.com/${config.repo}.git HEAD:refs/heads/factory-doctor-push-probe`,
+    },
+    {
       name: "Ryan's gh login is unreadable",
       expect: 'refused',
       command: opens(`${home}/.config/gh/hosts.yml`),
     },
     { name: '~/.ssh is unreadable', expect: 'refused', command: `ls '${home}/.ssh' > /dev/null` },
+    {
+      // Where the Mac app keeps git-secrets.json, its notebooks' tokens (F13's red-team target).
+      name: "the Mac app's data folder (git-secrets.json) is unreadable",
+      expect: 'refused',
+      command: `ls '${home}/Library/Application Support/Penmoss' > /dev/null`,
+    },
+    {
+      name: "the GitHub App's key file is unreadable (A1222)",
+      expect: 'refused',
+      command: opens(expandHome(config.publisher.envFile, home)),
+    },
+    {
+      name: "the proof bucket's key is unreadable (A1223)",
+      expect: 'refused',
+      command: opens(expandHome(config.proof.envFile, home)),
+    },
+    {
+      name: "the Linear app's credentials are unreadable (LD4)",
+      expect: 'refused',
+      command: opens(expandHome(config.linear.envFile, home)),
+    },
+    {
+      name: 'no Linear token in the environment (LD4)',
+      expect: 'pass',
+      command: `test -z "$(env | grep -E '^LINEAR_' | cut -d= -f1)"`,
+    },
     {
       name: 'the login keychain is unreadable',
       expect: 'refused',
@@ -149,7 +259,15 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
     {
       name: 'a relay deploy is refused',
       expect: 'refused',
-      command: `corepack pnpm --filter @penmoss/relay run deploy --dry-run`,
+      output: DEPLOY_REFUSED,
+      command: `corepack pnpm --filter @penmoss/relay run deploy --dry-run 2>&1`,
+    },
+    {
+      // Refused before the build; `--dry-run` reaches wrangler only if the guard is gone.
+      name: 'a site deploy (task site:deploy) is refused',
+      expect: 'refused',
+      output: DEPLOY_REFUSED,
+      command: `task site:deploy -- --dry-run 2>&1`,
     },
   ];
 }
@@ -168,9 +286,10 @@ export function judge(
   stdout: string,
 ): { ok: boolean; detail: string } {
   if (check.expect === 'refused') {
-    return exitCode === 0
-      ? { ok: false, detail: 'succeeded, but the sandbox must refuse it' }
-      : { ok: true, detail: `refused (exit ${exitCode})` };
+    if (exitCode === 0) return { ok: false, detail: 'succeeded, but the sandbox must refuse it' };
+    if (check.output !== undefined && !stdout.includes(check.output))
+      return { ok: false, detail: `failed (exit ${exitCode}), but not with "${check.output}"` };
+    return { ok: true, detail: `refused (exit ${exitCode})` };
   }
   if (exitCode !== 0) return { ok: false, detail: `exit ${exitCode}` };
   if (check.output !== undefined && !stdout.includes(check.output)) {
