@@ -64,6 +64,8 @@ export function sandboxSpec(
     corepack: join(state, 'corepack'),
     // This slot's own heavy-job folder: the Mac's shared one stays outside (see heavy.ts).
     heavy: join(state, 'heavy', `slot${slot.id}`),
+    // Claude Code's temp folder: its default, /tmp/claude-<uid>, is outside the sandbox.
+    claudeTmp: join(state, 'claude-tmp', `slot${slot.id}`),
   };
   const jdk = paths.realpath(expandHome(config.toolchain.jdk, paths.home));
   const sdk = paths.realpath(expandHome(config.toolchain.androidSdk, paths.home));
@@ -100,6 +102,7 @@ export function sandboxSpec(
     PENMOSS_FACTORY_RUN: '1',
     PENMOSS_HEAVY_DIR: own.heavy,
     PENMOSS_HEAVY_SLOTS: '1',
+    CLAUDE_CODE_TMPDIR: own.claudeTmp,
   };
   for (const [key, value] of Object.entries(secrets)) if (value) env[key] = value;
 
@@ -111,12 +114,21 @@ export function sandboxSpec(
       at(own.avd),
       at(own.corepack),
       at(own.heavy),
+      at(own.claudeTmp),
       ...pnpmLocks.map((dir) => at(dir)),
       at(jdk, true),
       at(sdk, true),
       at(browsers, true),
     ],
-    ownDirs: [own.pnpmStore, own.gradle, own.avd, own.corepack, own.heavy, ...pnpmLocks],
+    ownDirs: [
+      own.pnpmStore,
+      own.gradle,
+      own.avd,
+      own.corepack,
+      own.heavy,
+      own.claudeTmp,
+      ...pnpmLocks,
+    ],
   };
 }
 

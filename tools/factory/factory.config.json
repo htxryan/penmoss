@@ -17,7 +17,7 @@
   },
   "linear": {
     "team": "PEN",
-    "owner": "",
+    "owner": "0e3e5023-dc54-4e93-a477-74c799f96ebb",
     "envFile": "~/.config/penmoss-factory/linear.env",
     "keychainItem": "penmoss-factory-linear",
     "status": {

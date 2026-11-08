@@ -16,6 +16,7 @@ describe('doctorChecks', () => {
       'task android:test',
       'wrangler dev --local on the slot block',
       "gh reads htxryan/penmoss with the app's read-only token",
+      'Claude Code signs in with the setup token',
       "the GitHub App's key file is unreadable (A1222)",
       "the Linear app's credentials are unreadable (LD4)",
       'no Linear token in the environment (LD4)',

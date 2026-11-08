@@ -17,7 +17,7 @@ import {
 } from '../src/tracker/linear-client.ts';
 import { issueKey, partOfLine } from '../src/tracker/port.ts';
 import { ensureTrackerState } from '../src/tracker/state.ts';
-import { teamNeeds, type Snapshot } from '../src/tracker/linear-check.ts';
+import { snapshot, teamNeeds, type Snapshot } from '../src/tracker/linear-check.ts';
 import { linearOwner } from '../src/ui/owner.ts';
 import { linearConfig, RYAN_LINEAR } from './helpers.ts';
 
@@ -60,6 +60,9 @@ const TEAM = {
   issueLabels: { nodes: [{ id: 'label-blocked', team: null }] },
 };
 
+/** Every query a fake Linear was sent in this file, for the complexity check at the end. */
+const sentQueries = new Set<string>();
+
 /** A fake Linear: answers by operation, records every request. */
 function fake(answers: Record<string, (v: Readonly<Record<string, unknown>>) => unknown>) {
   const calls: { op: string; variables: Readonly<Record<string, unknown>> }[] = [];
@@ -70,6 +73,7 @@ function fake(answers: Record<string, (v: Readonly<Record<string, unknown>>) => 
         /\{\s*(\w+)/.exec(query.replace(/^[^{]*/, ''))?.[1] ??
         '?';
       calls.push({ op, variables });
+      sentQueries.add(query);
       const answer = answers[op];
       if (!answer) return Promise.reject(new Error(`unexpected ${op}`));
       return Promise.resolve(answer(variables) as T);
@@ -485,5 +489,78 @@ describe('factory:linear:check (L2)', () => {
     ]);
     const unset = { ...config, linear: { ...config.linear, owner: '' } };
     expect(teamNeeds(ready(), unset).map((n) => n.kind)).toEqual(['owner']);
+  });
+});
+
+/**
+ * Linear's cost for a query, roughly as Linear counts it: every object costs one, times the
+ * page sizes of the connections around it (50 when a connection names none). Linear refuses
+ * a query over 10,000.
+ */
+function linearCost(query: string): number {
+  let i = query.indexOf('{');
+  const skipArgs = () => {
+    let depth = 0;
+    const start = i;
+    do {
+      if (query[i] === '(') depth++;
+      if (query[i] === ')') depth--;
+      i++;
+    } while (depth > 0 && i < query.length);
+    return query.slice(start, i);
+  };
+  // Parses the selection set at `i` (just past its `{`); returns its cost and whether it pages.
+  const selection = (scale: number): { cost: number; pages: boolean } => {
+    let cost = 0;
+    let pages = false;
+    while (i < query.length) {
+      const c = query[i] ?? '';
+      if (c === '}') {
+        i++;
+        return { cost, pages };
+      }
+      const name = /^[A-Za-z_]\w*/.exec(query.slice(i))?.[0];
+      if (!name) {
+        i++;
+        continue;
+      }
+      i += name.length;
+      if (name === 'nodes') pages = true;
+      while (/\s/.test(query[i] ?? '')) i++;
+      const args = query[i] === '(' ? skipArgs() : '';
+      while (/\s/.test(query[i] ?? '')) i++;
+      if (query[i] !== '{') continue;
+      i++;
+      const start = i;
+      const size = Number(/\b(?:first|last):\s*(\d+)/.exec(args)?.[1] ?? 0);
+      // A first pass at scale 1 finds whether this field is a connection.
+      const probe = selection(1);
+      const page = size || (probe.pages ? 50 : 1);
+      i = start;
+      cost += scale * page + selection(scale * page).cost;
+    }
+    return { cost, pages };
+  };
+  i++;
+  return selection(1).cost;
+}
+
+describe("Linear's complexity limit", () => {
+  it('counts page sizes as Linear does', () => {
+    const before =
+      'query { teams(filter: { key: { eq: "PEN" } }) { nodes { labels(first: 250) { nodes { id } } } } }';
+    expect(linearCost(before)).toBeGreaterThan(10_000);
+    expect(linearCost(before.replace('teams(', 'teams(first: 1, '))).toBeLessThan(10_000);
+  });
+
+  it('keeps every query the factory sends under 10,000', async () => {
+    const { client } = fake({
+      Check: () => ({ teams: { nodes: [] }, organization: { labels: { nodes: [] } } }),
+      Owner: () => ({ user: null }),
+    });
+    await snapshot(client, config);
+    expect(sentQueries.size).toBeGreaterThan(5);
+    const over = [...sentQueries].filter((q) => linearCost(q) > 10_000);
+    expect(over).toEqual([]);
   });
 });

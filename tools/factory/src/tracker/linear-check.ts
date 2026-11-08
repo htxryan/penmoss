@@ -92,7 +92,7 @@ export function teamNeeds(s: Snapshot, config: FactoryConfig): Need[] {
 
 const SNAPSHOT = `
 query Check($team: String!) {
-  teams(filter: { key: { eq: $team } }) {
+  teams(first: 1, filter: { key: { eq: $team } }) {
     nodes {
       id
       states(first: 50) { nodes { name type } }

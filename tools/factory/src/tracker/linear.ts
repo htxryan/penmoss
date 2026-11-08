@@ -66,7 +66,7 @@ query Issue($id: String!) {
 
 const TEAM = `
 query Team($team: String!, $label: String!) {
-  teams(filter: { key: { eq: $team } }) {
+  teams(first: 1, filter: { key: { eq: $team } }) {
     nodes { id key states(first: 50) { nodes { id name type } } }
   }
   issueLabels(first: 25, filter: { name: { eq: $label } }) { nodes { id team { key } } }

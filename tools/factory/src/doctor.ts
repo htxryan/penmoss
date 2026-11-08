@@ -123,6 +123,13 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
       command: `gh api repos/${config.repo} --jq .full_name`,
     },
     {
+      name: 'Claude Code signs in with the setup token',
+      expect: 'pass',
+      output: 'factory-ok',
+      needs: ['CLAUDE_CODE_OAUTH_TOKEN'],
+      command: `ENABLE_CLAUDEAI_MCP_SERVERS=false ${config.agents.claude.bin} -p 'Reply with exactly: factory-ok' --model haiku --max-turns 1 --output-format text`,
+    },
+    {
       name: 'wrangler whoami shows the Penmoss account',
       expect: 'pass',
       needs: ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'],
