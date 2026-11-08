@@ -163,6 +163,8 @@ function detach(args: readonly string[], log?: string): boolean {
     });
     child.on('error', () => undefined);
     child.unref();
+    // Which process the lines below came from, for anyone (or any test) waiting on it.
+    if (fd !== null && child.pid !== undefined) writeSync(fd, `--- pid ${child.pid}\n`);
     return child.pid !== undefined;
   } catch {
     return false;
