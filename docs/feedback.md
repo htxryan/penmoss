@@ -3,8 +3,8 @@
 **How to send feedback, and what a report holds, is in the user docs: [Send feedback](https://penmoss.app/docs/help/feedback/).** This page keeps how the pipeline works.
 
 **Send feedback**, in every client, files a bug report or a feature request as an issue in
-`htxryan/penmoss`, labelled `in-app feedback`, and Linear's GitHub sync copies it into the
-Penmoss team's **Triage** (D41, D66). The form attaches
+`htxryan/penmoss`, labelled `in-app feedback`, and the `Linear intake` workflow copies it into
+the Penmoss team's **Triage** in Linear (D41, D66). The form attaches
 where you are in the app and the metadata of what's on screen, never a note's content. Decisions
 A790–A804 in [`decisions.md`](decisions.md) hold the details.
 
@@ -111,9 +111,12 @@ assets are private: only people with access to the repository see them.
 
 ## Triage (A795, D66)
 
-Penmoss never calls the tracker. It files a GitHub issue and stops there. Linear's GitHub Issues
-sync, set up by Ryan for `htxryan/penmoss`, copies each new issue into the Penmoss team's Triage,
-with the `in-app feedback` label. Until 8 Nov 2026 the Project 8 board's own workflows did this
+Penmoss never calls the tracker. It files a GitHub issue and stops there. The repository's
+`Linear intake` workflow (`.github/workflows/linear-intake.yml`, `.github/scripts/linear-intake.mjs`)
+runs on every new issue and creates one in the Penmoss team's Triage through Linear's API: the
+title, the body under a link back to GitHub, `in-app feedback`, `bug` or `feature request` as
+Linear labels, and `P1`–`P4` as Linear's priority. It is one way only; replies stay on GitHub.
+Without the `LINEAR_API_KEY` secret it warns and files nothing. Until 8 Nov 2026 the Project 8 board's own workflows did this
 (**Auto-add to project** on `label:"in-app feedback"`, then **Status: Triage**), because a
 fine-grained token cannot reach a user's project.
 

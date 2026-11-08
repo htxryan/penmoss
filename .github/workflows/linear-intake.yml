@@ -1,0 +1,51 @@
+# GitHub intake into Linear (D66, W14). A new issue here, from anyone or from Send feedback,
+# becomes an issue in the Penmoss team's Triage, linking back. One way only: Linear's own GitHub
+# issue sync is two-way and would copy the roadmap into this repository, so it stays off.
+# The script is .github/scripts/linear-intake.mjs (tested by `task workflows:test`).
+name: Linear intake
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linear-intake-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  intake:
+    name: File in Linear Triage
+    # P10, A1183: the fork guard every self-hosted job starts with (an issue event always passes it).
+    if: >-
+      (github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository)
+    # A702: Ryan's Mac runners only.
+    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
+    timeout-minutes: 5
+    steps:
+      # The workflow and the script come from main; only the issue's text comes from outside, and
+      # the script passes it to Linear as GraphQL variables, never through the shell.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/linear-intake.mjs
+            .node-version
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+
+      - name: File the issue in PEN Triage
+        env:
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+        run: |
+          if [ -z "$LINEAR_API_KEY" ]; then
+            echo "::warning::LINEAR_API_KEY is not set: this issue was not copied into Linear (docs/development.md, Planning)."
+            exit 0
+          fi
+          node .github/scripts/linear-intake.mjs

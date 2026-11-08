@@ -9,27 +9,27 @@ The roadmap is the set of open issues in Linear's **Penmoss** team (key `PEN`, R
 
 ## Where things live
 
-| What                                                 | Where                                                                                                                                                                                                                                    |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Open work, ideas, bugs                               | Issues in the PEN team.                                                                                                                                                                                                                  |
-| Work across several pull requests                    | A Linear project in PEN: Software factory, Public release, Search by meaning. Its description links the plan.                                                                                                                            |
-| A plan (spec, decisions, diagrams, prototype, tasks) | A Claude artifact. The parent issue or project links to it, each task is a sub-issue, and each sub-issue links to its task's anchor (`…/artifact/<id>#t3`) as a link attachment.                                                         |
-| Public intake                                        | GitHub issues on `htxryan/penmoss`, from people outside and from Send feedback (label `in-app feedback`). Linear's GitHub sync copies each one into PEN Triage. Don't file roadmap items on GitHub.                                      |
-| Evidence                                             | In the pull request, or as a comment on the issue.                                                                                                                                                                                       |
-| Old history                                          | Closed GitHub issues and pull requests in `htxryan/penmoss-private`. PEN-9 to PEN-60 were GitHub `htxryan/penmoss` #1–#52 (PEN-(n+8)), labelled `Migrated`. A bare `#n` in an older decision or doc means penmoss-private's issue or PR. |
+| What                                                 | Where                                                                                                                                                                                                                                                              |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Open work, ideas, bugs                               | Issues in the PEN team.                                                                                                                                                                                                                                            |
+| Work across several pull requests                    | A Linear project in PEN: Software factory, Public release, Search by meaning. Its description links the plan.                                                                                                                                                      |
+| A plan (spec, decisions, diagrams, prototype, tasks) | A Claude artifact. The parent issue or project links to it, each task is a sub-issue, and each sub-issue links to its task's anchor (`…/artifact/<id>#t3`) as a link attachment.                                                                                   |
+| Public intake                                        | GitHub issues on `htxryan/penmoss`, from people outside and from Send feedback (label `in-app feedback`). The `Linear intake` workflow copies each new one into PEN Triage, one way, with a link back; replies stay on GitHub. Don't file roadmap items on GitHub. |
+| Evidence                                             | In the pull request, or as a comment on the issue.                                                                                                                                                                                                                 |
+| Old history                                          | Closed GitHub issues and pull requests in `htxryan/penmoss-private`. PEN-9 to PEN-60 were GitHub `htxryan/penmoss` #1–#52 (PEN-(n+8)), labelled `Migrated`. A bare `#n` in an older decision or doc means penmoss-private's issue or PR.                           |
 
 ## Statuses and labels
 
-| Status      | Meaning                                                     | Who moves an issue here                       |
-| ----------- | ----------------------------------------------------------- | --------------------------------------------- |
-| Triage      | An idea or report, not yet weighed.                         | Agents file new items here; the GitHub sync.  |
-| Backlog     | Accepted, to do one day, not started.                       | Ryan, or an agent when he asks.               |
-| Todo        | Next up.                                                    | Ryan only.                                    |
-| In Progress | Being built on a branch.                                    | The session building it.                      |
-| In Review   | The pull request is open.                                   | The session building it, or Linear's PR link. |
-| Done        | Merged. A merged pull request with `Fixes PEN-<n>` does it. | Automatic.                                    |
-| Canceled    | Dropped.                                                    | Ryan, or an agent when he asks.               |
-| Duplicate   | Same as another issue.                                      | Ryan, or an agent when he asks.               |
+| Status      | Meaning                                                     | Who moves an issue here                          |
+| ----------- | ----------------------------------------------------------- | ------------------------------------------------ |
+| Triage      | An idea or report, not yet weighed.                         | Agents file new items here; the intake workflow. |
+| Backlog     | Accepted, to do one day, not started.                       | Ryan, or an agent when he asks.                  |
+| Todo        | Next up.                                                    | Ryan only.                                       |
+| In Progress | Being built on a branch.                                    | The session building it.                         |
+| In Review   | The pull request is open.                                   | The session building it, or Linear's PR link.    |
+| Done        | Merged. A merged pull request with `Fixes PEN-<n>` does it. | Automatic.                                       |
+| Canceled    | Dropped.                                                    | Ryan, or an agent when he asks.                  |
+| Duplicate   | Same as another issue.                                      | Ryan, or an agent when he asks.                  |
 
 - **Kind** (workspace labels): `Feature`, `Bug`, `Improvement`, `Chore`.
 - **`Blocked`:** waiting on Ryan or on something outside the issue, with a comment saying what. Only Ryan removes it.

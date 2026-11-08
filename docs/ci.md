@@ -64,6 +64,7 @@ Until A702, a `pick` job sent jobs to GitHub's hosted runners when no Mac was id
 - **A run waits while the Mac sleeps or is off.** GitHub keeps a job waiting for a self-hosted runner for at most 24 hours, then fails it. A pull request's next push starts a new run anyway. Optional, on the Mac: a sleep hook (for example `sleepwatcher` running a script as root) that stops the runner services before sleep and starts them on wake, so GitHub sees the runners go offline at once.
 - **GitHub removes a self-hosted runner that has been offline for 14 days.** After a long trip, re-register it (section 4); until then the jobs wait.
 - **A pull request from a fork runs nothing** (the fork guard, section 9).
+- **A new issue waits too.** `Linear intake` (`.github/workflows/linear-intake.yml`, D66) copies each new issue into Linear's Penmoss Triage on a Mac runner, using the `LINEAR_API_KEY` repository secret (a Linear personal API key). Without the secret it warns and files nothing.
 - `PENMOSS_RUNNER_STATUS_TOKEN` is no longer used by CI; it can be deleted from the repository's secrets.
 
 ## 4. Adding or removing a Mac runner
