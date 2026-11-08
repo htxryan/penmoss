@@ -22,6 +22,8 @@ export default defineConfig(
     'prototype/',
     'docs/',
     'spikes/',
+    // Worktrees Claude Code sessions make inside the checkout (EnterWorktree).
+    '.claude/worktrees/',
     // The web bundle copied in for deploys (task web:bundle).
     // The Android app's Gradle output and the editor bundle built into its assets (T32).
     'apps/android/**/build/',

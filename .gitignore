@@ -34,3 +34,6 @@ __pycache__/
 
 # The latest release, written by site/build.mjs (T80.12)
 site/src/data/release.json
+
+# Worktrees Claude Code sessions make inside the checkout.
+.claude/worktrees/
