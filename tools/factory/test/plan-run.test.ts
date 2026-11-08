@@ -6,6 +6,7 @@ import type { BoardItem } from '../src/board.ts';
 import type { Issue } from '../src/issue.ts';
 import { advancePlanning, type PlanDeps } from '../src/plan-run.ts';
 import { readMeta, writeMeta, type PlanFiles } from '../src/planning-host.ts';
+import { desktopLink } from '../src/ui/model.ts';
 import { item, testConfig } from './helpers.ts';
 
 const config = testConfig();
@@ -130,6 +131,28 @@ describe('advancePlanning', () => {
     // The old state isn't asked about again; the comment isn't delivered twice.
     t.at(min(10));
     expect((await advancePlanning(t.deps, input(t.files, card, answered))).kind).toBe('wait');
+  });
+
+  it('keeps the new ID and chat link of a resumed session, so Open in Claude follows it (F20)', async () => {
+    const t = setup();
+    const card = item(5, { status: 'Planning' });
+    await advancePlanning(t.deps, input(t.files, card));
+    t.state('waiting', min(3));
+    t.at(min(4));
+    await advancePlanning(t.deps, input(t.files, card));
+    const resumed: PlanDeps = {
+      ...t.deps,
+      launch: () =>
+        Promise.resolve({ sessionId: 'S2', chatUrl: 'https://claude.ai/code/session_2' }),
+    };
+    t.at(min(9));
+    const answered = issue([
+      { author: 'htxryan', body: 'A sheet', createdAt: min(8).toISOString() },
+    ]);
+    expect((await advancePlanning(resumed, input(t.files, card, answered))).kind).toBe('resume');
+    const meta = readMeta(t.files);
+    expect(meta).toMatchObject({ sessionId: 'S2', chatUrl: 'https://claude.ai/code/session_2' });
+    expect(desktopLink(meta.chatUrl ?? '')).toBe('claude://claude.ai/code/session_2');
   });
 
   it('ignores comments from anyone but Ryan, and the factory’s own', async () => {
