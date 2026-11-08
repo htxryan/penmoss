@@ -378,6 +378,7 @@ async function publish(
   deps.log('pushed', { branch: run.branch });
   const body = renderPrBody({
     issue: run.item.number,
+    key: run.item.key,
     summary: run.result.summary,
     scope: run.scope,
     gate: gateCommand(run.scope),
@@ -412,7 +413,7 @@ async function publish(
     `Ready for review, with CI green: ${pr}\n\n${run.marker('in-review')}`,
   );
   await deps.setStatus(run.item, config.status.review);
-  await deps.notify(`Penmoss #${run.item.number} is ready for review`, run.result.summary);
+  await deps.notify(`Penmoss ${run.item.key} is ready for review`, run.result.summary);
   deps.log('in-review', { pr });
   return { kind: 'in-review', pr, scope: run.scope };
 }

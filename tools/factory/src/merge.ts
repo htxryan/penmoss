@@ -88,7 +88,7 @@ export async function mergeApproved(
     );
     await deps.setStatus(item, deps.config.status.done);
     await deps.notify(
-      `Penmoss #${item.number} is done`,
+      `Penmoss ${item.key} is done`,
       `Merged and verified on main (${sha.slice(0, 10)}).`,
     );
     deps.log('done', { sha });

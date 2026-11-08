@@ -4,7 +4,7 @@
  * proves; a failure is loud and names the check. Commands never print a secret: the isolation
  * checks open files for zero bytes, and the token checks print only an account name.
  */
-import type { FactoryConfig, SlotConfig } from './config.ts';
+import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { SecretKey } from './secrets.ts';
 import { withJavaHome } from './sandbox.ts';
 
@@ -136,6 +136,16 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
       command: opens(`${home}/.config/gh/hosts.yml`),
     },
     { name: '~/.ssh is unreadable', expect: 'refused', command: `ls '${home}/.ssh' > /dev/null` },
+    {
+      name: "the Linear app's credentials are unreadable (LD4)",
+      expect: 'refused',
+      command: opens(expandHome(config.linear.envFile, home)),
+    },
+    {
+      name: 'no Linear token in the environment (LD4)',
+      expect: 'pass',
+      command: `test -z "$(env | grep -E '^LINEAR_' | cut -d= -f1)"`,
+    },
     {
       name: 'the login keychain is unreadable',
       expect: 'refused',

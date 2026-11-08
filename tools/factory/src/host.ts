@@ -18,7 +18,7 @@ import {
 } from 'node:fs';
 import { extname, join } from 'node:path';
 import type { AgentProvider, Sandbox } from '@ai-hero/sandcastle';
-import { setBlocked, setStatus, type Board } from './board.ts';
+import type { Board } from './board.ts';
 import { ensureAvd } from './avd.ts';
 import { withHeavySlot } from './heavy.ts';
 import { usageLimitReset } from './limits.ts';
@@ -35,6 +35,7 @@ import { parseAgentResult, RESULT_PATH } from './result.ts';
 import type { RunDeps, RunEvent, RunSandbox } from './run.ts';
 import { makeOwnDirs, sandboxSpec, seatbeltProvider, withJavaHome } from './sandbox.ts';
 import type { Secrets } from './secrets.ts';
+import type { Tracker } from './tracker/port.ts';
 
 export const DEAD_END_PUSH_URL = 'no-push://the-factory-harness-pushes';
 
@@ -93,6 +94,7 @@ export interface HostOptions {
   readonly runId: string;
   readonly board: Board;
   readonly gh: Gh;
+  readonly tracker: Tracker;
   readonly exec: Exec;
   readonly secrets: Secrets;
   readonly agent: AgentProvider;
@@ -114,14 +116,9 @@ export function hostDeps(options: HostOptions): RunDeps {
     slot,
     runId: options.runId,
     board: options.board,
-    comment: async (issue, body) => {
-      await gh.run(
-        ['issue', 'comment', String(issue), '--repo', config.repo, '--body-file', '-'],
-        body,
-      );
-    },
-    setStatus: (item, status) => setStatus(gh, options.board, item, status),
-    setBlocked: (item) => setBlocked(gh, options.board, item),
+    comment: (issue, body) => options.tracker.comment(issue, body),
+    setStatus: (item, status) => options.tracker.setStatus(item, status),
+    setBlocked: (item) => options.tracker.setBlocked(item),
     openSandbox: async (branch) => {
       const spec = sandboxSpec(config, slot, options.secrets);
       makeOwnDirs(spec);

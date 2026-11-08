@@ -20,9 +20,6 @@ const spec = (() => {
   return r.spec;
 })();
 const board: Board = {
-  projectId: 'P',
-  status: { id: 'S', options: {} },
-  blocked: { id: 'B', options: {} },
   items: [card],
 };
 

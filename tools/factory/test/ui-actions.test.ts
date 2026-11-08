@@ -1,10 +1,11 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { request } from 'node:http';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Gh } from '../src/github.ts';
 import { createWriter, parseAction, type Writer } from '../src/ui/actions.ts';
+import { githubOwner } from '../src/ui/owner.ts';
 import { pageHtml } from '../src/ui/page.ts';
 import { createUiServer, listen } from '../src/ui/server.ts';
 import { testConfig } from './helpers.ts';
@@ -69,7 +70,7 @@ function fakeGh(blocked: boolean) {
 describe("the UI's writes, as Ryan (F21)", () => {
   it('posts a reply, then clears Blocked when asked', async () => {
     const { gh, calls } = fakeGh(true);
-    const done = await createWriter(config, gh).perform({
+    const done = await createWriter(config, githubOwner(config, gh)).perform({
       kind: 'reply',
       issue: 5,
       text: 'A sheet',
@@ -80,7 +81,7 @@ describe("the UI's writes, as Ryan (F21)", () => {
   });
   it('posts a reply and leaves Blocked alone without unblock', async () => {
     const { gh, calls } = fakeGh(true);
-    await createWriter(config, gh).perform({
+    await createWriter(config, githubOwner(config, gh)).perform({
       kind: 'reply',
       issue: 5,
       text: 'Thinking',
@@ -90,7 +91,7 @@ describe("the UI's writes, as Ryan (F21)", () => {
   });
   it('posts a picked answer in the form the session reads, and unblocks', async () => {
     const { gh, calls } = fakeGh(true);
-    await createWriter(config, gh).perform({
+    await createWriter(config, githubOwner(config, gh)).perform({
       kind: 'answer',
       issue: 5,
       question: 'Sheet or full screen?',
@@ -100,22 +101,30 @@ describe("the UI's writes, as Ryan (F21)", () => {
   });
   it('says Complete on the issue: the normal agreement path', async () => {
     const { gh, calls } = fakeGh(false);
-    await createWriter(config, gh).perform({ kind: 'complete', issue: 5 });
+    await createWriter(config, githubOwner(config, gh)).perform({ kind: 'complete', issue: 5 });
     expect(calls).toEqual(['issue comment 5: Complete']);
   });
   it('sets and clears Blocked', async () => {
     const off = fakeGh(false);
-    await createWriter(config, off.gh).perform({ kind: 'block', issue: 5, on: true });
+    await createWriter(config, githubOwner(config, off.gh)).perform({
+      kind: 'block',
+      issue: 5,
+      on: true,
+    });
     expect(off.calls).toEqual(['set Blocked']);
     const on = fakeGh(true);
-    await createWriter(config, on.gh).perform({ kind: 'block', issue: 5, on: false });
+    await createWriter(config, githubOwner(config, on.gh)).perform({
+      kind: 'block',
+      issue: 5,
+      on: false,
+    });
     expect(on.calls).toEqual(['clear Blocked']);
   });
   it('refuses an issue that is not on the board', async () => {
     const { gh } = fakeGh(false);
-    await expect(createWriter(config, gh).perform({ kind: 'complete', issue: 9 })).rejects.toThrow(
-      "isn't on the board",
-    );
+    await expect(
+      createWriter(config, githubOwner(config, gh)).perform({ kind: 'complete', issue: 9 }),
+    ).rejects.toThrow("isn't on the board");
   });
   it('validates request bodies', () => {
     expect(parseAction({ kind: 'reply', issue: 5, text: '' }).ok).toBe(false);
@@ -236,11 +245,41 @@ describe('the import boundary (F21)', () => {
     ]) {
       const modules = [...reachable(join(src, entry))].map((p) => p.slice(src.length + 1));
       expect(modules, entry).not.toContain('ui/actions.ts');
+      expect(modules, entry).not.toContain('ui/owner.ts');
     }
   });
-  it("leaves clearing Blocked out of board.ts, which the factory's runs use", () => {
-    expect(readFileSync(join(src, 'board.ts'), 'utf8')).not.toContain(
-      'clearProjectV2ItemFieldValue',
-    );
+  it("leaves clearing Blocked out of the trackers, which the factory's runs use", () => {
+    for (const file of ['board.ts', 'tracker/github.ts', 'tracker/linear.ts', 'tracker/port.ts']) {
+      const text = readFileSync(join(src, file), 'utf8');
+      expect(text, file).not.toContain('clearProjectV2ItemFieldValue');
+      expect(text, file).not.toContain('issueRemoveLabel');
+      // port.ts declares OwnerTracker, which only ui/owner.ts implements.
+      if (file !== 'tracker/port.ts') expect(text, file).not.toContain('clearBlocked');
+    }
+  });
+  it('talks to the tracker only through src/tracker/ and board.ts (L1)', () => {
+    const allowed = new Set([
+      'board.ts',
+      'issue.ts',
+      'tracker/github.ts',
+      'tracker/linear.ts',
+      'tracker/linear-client.ts',
+      'ui/owner.ts',
+    ]);
+    const files = (dir: string): string[] =>
+      readdirSync(join(src, dir), { withFileTypes: true }).flatMap((e) =>
+        e.isDirectory()
+          ? files(join(dir, e.name))
+          : e.name.endsWith('.ts')
+            ? [join(dir, e.name)]
+            : [],
+      );
+    for (const file of files('.')) {
+      if (allowed.has(file)) continue;
+      const text = readFileSync(join(src, file), 'utf8');
+      expect(text, file).not.toMatch(/\['issue',\s*'(?:comment|close|view|edit)'/);
+      expect(text, file).not.toMatch(/ProjectV2|projectV2/);
+      expect(text, file).not.toMatch(/api\.linear\.app|commentCreate|issueUpdate|issueAddLabel/);
+    }
   });
 });

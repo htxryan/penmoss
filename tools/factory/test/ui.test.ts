@@ -10,9 +10,6 @@ import { item, testConfig } from './helpers.ts';
 const config = testConfig();
 const NOW = new Date('2026-11-07T18:00:00Z');
 const board = (items: Board['items']): Board => ({
-  projectId: 'P',
-  status: { id: 'S', options: {} },
-  blocked: { id: 'B', options: {} },
   items,
 });
 const line = (run: string, event: string, at: string, extra: object = {}) =>

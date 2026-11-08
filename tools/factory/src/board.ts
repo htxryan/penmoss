@@ -1,34 +1,22 @@
 /**
- * Project 8 as the factory sees it: every issue card with its Status, its
+ * GitHub's tracker (LD1): Project 8 as the factory sees it: every issue card with its Status, its
  * Blocked field and its labels, in board order. Writes are limited to moving a
  * card and setting Blocked. There is deliberately no way to clear Blocked here:
  * only Ryan clears it (R23), and the Factory UI does that as him (F21).
  */
 import type { FactoryConfig } from './config.ts';
 import type { Gh } from './github.ts';
+import type { Board, BoardItem } from './tracker/port.ts';
 
-export interface BoardItem {
-  /** The project item's node ID, used for field updates. */
-  readonly itemId: string;
-  readonly number: number;
-  readonly title: string;
-  readonly url: string;
-  readonly repo: string;
-  readonly state: 'OPEN' | 'CLOSED';
-  readonly author: string;
-  readonly labels: readonly string[];
-  readonly status: string | null;
-  readonly blocked: boolean;
-  /** Position on the board, 0 first. */
-  readonly position: number;
-}
+export type { Board, BoardItem } from './tracker/port.ts';
 
 export interface SingleSelectField {
   readonly id: string;
   readonly options: Readonly<Record<string, string>>;
 }
 
-export interface Board {
+/** Project 8 with the field IDs that writes need. */
+export interface ProjectBoard extends Board {
   readonly projectId: string;
   readonly status: SingleSelectField;
   readonly blocked: SingleSelectField;
@@ -115,7 +103,7 @@ function selectField(fields: readonly RawField[], name: string): SingleSelectFie
 }
 
 /** Reads the whole board (issues only; draft items and pull requests are skipped). */
-export async function readBoard(gh: Gh, config: FactoryConfig): Promise<Board> {
+export async function readBoard(gh: Gh, config: FactoryConfig): Promise<ProjectBoard> {
   const items: BoardItem[] = [];
   let cursor: string | undefined;
   let projectId: string | undefined;
@@ -142,6 +130,7 @@ export async function readBoard(gh: Gh, config: FactoryConfig): Promise<Board> {
       items.push({
         itemId: node.id,
         number: c.number,
+        key: `#${c.number}`,
         title: c.title,
         url: c.url,
         repo: c.repository.nameWithOwner,
@@ -170,7 +159,7 @@ mutation($project: ID!, $item: ID!, $field: ID!, $option: String!) {
 /** Moves a card to another status, by the status's name. */
 export async function setStatus(
   gh: Gh,
-  board: Board,
+  board: ProjectBoard,
   item: BoardItem,
   statusName: string,
 ): Promise<void> {
@@ -185,7 +174,7 @@ export async function setStatus(
 }
 
 /** Sets the Blocked field. The factory can only set it, never clear it (R23). */
-export async function setBlocked(gh: Gh, board: Board, item: BoardItem): Promise<void> {
+export async function setBlocked(gh: Gh, board: ProjectBoard, item: BoardItem): Promise<void> {
   const option = Object.values(board.blocked.options)[0];
   if (!option) throw new Error('The Blocked field has no option to set');
   await gh.graphql(SET_SINGLE_SELECT, {

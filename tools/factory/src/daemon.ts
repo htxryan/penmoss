@@ -16,7 +16,6 @@ import {
   writeSync,
 } from 'node:fs';
 import { join } from 'node:path';
-import { readBoard, setBlocked } from './board.ts';
 import { nodeExec } from './exec.ts';
 import { sweep } from './janitor.ts';
 import { expandHome, type FactoryConfig } from './config.ts';
@@ -120,7 +119,7 @@ export async function runDaemon(
           log(`janitor: ${error instanceof Error ? error.message : String(error)}`),
         );
       }
-      const board = await readBoard(factory.gh, config);
+      const board = await factory.tracker.readBoard();
       const ledgerPath = join(state, 'runs.jsonl');
       const claimed = existsSync(ledgerPath)
         ? unfinishedClaims(readFileSync(ledgerPath, 'utf8'))
@@ -131,27 +130,25 @@ export async function runDaemon(
           .map((i) => i.number),
       );
       for (const { item, error } of labelProblems(board, config)) {
-        log(`#${item.number}: can't start: ${error}; Blocked`);
-        await factory.gh
-          .run(
-            ['issue', 'comment', String(item.number), '--repo', config.repo, '--body-file', '-'],
+        log(`${item.key}: can't start: ${error}; Blocked`);
+        await factory.tracker
+          .comment(
+            item.number,
             `The factory can't start this issue: ${error}. Fix the labels, then clear Blocked.\n\n${formatMarker({ issue: String(item.number), event: 'labels' })}`,
           )
-          .then(() => setBlocked(factory.gh, board, item))
-          .catch((e: unknown) =>
-            log(`#${item.number}: ${e instanceof Error ? e.message : String(e)}`),
-          );
+          .then(() => factory.tracker.setBlocked(item))
+          .catch((e: unknown) => log(`${item.key}: ${e instanceof Error ? e.message : String(e)}`));
       }
       const t = tick(board, config, [...running.values()], claimed, agreed);
       // Planning steps are short CLI calls: one card after another, in this loop.
       for (const item of t.plan) {
-        await executePlanning(factory, board, item, (line) => log(`#${item.number}: ${line}`))
+        await executePlanning(factory, item, (line) => log(`${item.key}: ${line}`))
           .then((action) => {
-            if (action.kind !== 'wait') log(`#${item.number}: planning ${action.kind}`);
+            if (action.kind !== 'wait') log(`${item.key}: planning ${action.kind}`);
           })
           .catch((error: unknown) =>
             log(
-              `#${item.number}: planning failed: ${error instanceof Error ? error.message : String(error)}`,
+              `${item.key}: planning failed: ${error instanceof Error ? error.message : String(error)}`,
             ),
           );
       }
@@ -173,13 +170,11 @@ export async function runDaemon(
           startedAt: new Date().toISOString(),
           why,
         });
-        log(`#${item.number} on slot ${slot.id} (${why})`);
-        void executeRun(factory, board, item, ok.spec, slot, (line) =>
-          log(`#${item.number}: ${line}`),
-        )
-          .then((outcome) => log(`#${item.number}: ${outcome.kind}`))
+        log(`${item.key} on slot ${slot.id} (${why})`);
+        void executeRun(factory, board, item, ok.spec, slot, (line) => log(`${item.key}: ${line}`))
+          .then((outcome) => log(`${item.key}: ${outcome.kind}`))
           .catch((error: unknown) =>
-            log(`#${item.number}: ${error instanceof Error ? error.message : String(error)}`),
+            log(`${item.key}: ${error instanceof Error ? error.message : String(error)}`),
           )
           .finally(() => running.delete(item.number));
       }
@@ -202,12 +197,12 @@ export async function runDaemon(
         if (action.kind === 'none') continue;
         if (action.kind === 'merge') {
           merging.add(item.number);
-          log(`#${item.number}: approved, merging ${pr.url}`);
-          void executeMerge(factory, board, item, pr, (line) => log(`#${item.number}: ${line}`))
-            .then((kind) => log(`#${item.number}: ${kind}`))
+          log(`${item.key}: approved, merging ${pr.url}`);
+          void executeMerge(factory, item, pr, (line) => log(`${item.key}: ${line}`))
+            .then((kind) => log(`${item.key}: ${kind}`))
             .catch((error: unknown) =>
               log(
-                `#${item.number}: merge failed: ${error instanceof Error ? error.message : String(error)}`,
+                `${item.key}: merge failed: ${error instanceof Error ? error.message : String(error)}`,
               ),
             )
             .finally(() => merging.delete(item.number));
@@ -223,14 +218,14 @@ export async function runDaemon(
           why: 'picked',
         });
         log(
-          `#${item.number} on slot ${slot.id}: ${action.kind === 'round' ? `review round (${action.state.trigger})` : 'CI repair'}`,
+          `${item.key} on slot ${slot.id}: ${action.kind === 'round' ? `review round (${action.state.trigger})` : 'CI repair'}`,
         );
         void executeRevise(factory, board, item, parsed.spec, slot, pr, action, (line) =>
-          log(`#${item.number}: ${line}`),
+          log(`${item.key}: ${line}`),
         )
-          .then((kind) => log(`#${item.number}: ${kind}`))
+          .then((kind) => log(`${item.key}: ${kind}`))
           .catch((error: unknown) =>
-            log(`#${item.number}: ${error instanceof Error ? error.message : String(error)}`),
+            log(`${item.key}: ${error instanceof Error ? error.message : String(error)}`),
           )
           .finally(() => running.delete(item.number));
       }

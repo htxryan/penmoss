@@ -3,7 +3,6 @@
  * Taskfile tasks wrap each command (`task factory:next`).
  */
 import { fileURLToPath } from 'node:url';
-import { readBoard } from './board.ts';
 import { loadConfig, type FactoryConfig } from './config.ts';
 import { report } from './doctor.ts';
 import { runDoctor } from './doctor-run.ts';
@@ -19,6 +18,11 @@ import { LABEL, plistPath, renderPlist, UI_LABEL } from './launchd.ts';
 import { buildReport, formatReport, parseRange } from './report.ts';
 import { startRun } from './start.ts';
 import { runUi } from './ui/run.ts';
+import { appClient, openTracker } from './tracker/index.ts';
+import { fix, snapshot, teamNeeds } from './tracker/linear-check.ts';
+import { createLinearClient, type LinearClient } from './tracker/linear-client.ts';
+import { ownerKey } from './ui/owner.ts';
+import { issueKey } from './tracker/port.ts';
 
 const USAGE = `Usage: factory <command>
 
@@ -30,6 +34,9 @@ Commands:
   ui                        Serve the Factory UI on 127.0.0.1 (its LaunchAgent runs this)
   report [--from d] [--to d] Throughput, rounds, time to In review and the share Blocked (default: 7 days)
   run <issue> [--slot n]    Run one Ready issue now, in the foreground (plan:skip issues until planning lands)
+  linear-check [--me] [--fix]
+                            Check Linear's team has the factory's states and labels (--me: print
+                            Ryan's user ID with his key; --fix: create what's missing, as Ryan)
   doctor [--slot n] [--full] [--base ref] [--only name]
                             Check a slot's sandbox: toolchain, tokens, and what must stay out`;
 
@@ -39,7 +46,7 @@ function describe(pick: Pick, config: FactoryConfig): string[] {
     ? `${spec.platforms.join(', ')} (from platform:* labels)`
     : 'decided by the path classifier once the diff exists';
   return [
-    `#${item.number} ${item.title}`,
+    `${item.key} ${item.title}`,
     `  ${item.url}`,
     `  why:      ${pick.why}`,
     `  agent:    ${spec.agent} (${config.agents[spec.agent].bin}), model ${spec.modelAlias} = ${spec.model}`,
@@ -49,8 +56,13 @@ function describe(pick: Pick, config: FactoryConfig): string[] {
 }
 
 async function next(config: FactoryConfig, json: boolean): Promise<number> {
-  const gh = createGh({ exec: nodeExec });
-  const board = await readBoard(gh, config);
+  // Read-only: GitHub through your own gh, Linear as the factory app.
+  const opened = await openTracker(config, createGh({ exec: nodeExec }));
+  if (!opened.ok) {
+    console.error(`Can't read the board: ${opened.error}.`);
+    return 2;
+  }
+  const board = await opened.tracker.readBoard();
   const result = pickNext(board.items, config);
   if (json) {
     console.log(
@@ -58,6 +70,7 @@ async function next(config: FactoryConfig, json: boolean): Promise<number> {
         {
           next: result.next && {
             number: result.next.item.number,
+            key: result.next.item.key,
             mode: result.next.mode,
             why: result.next.why,
             spec: result.next.spec,
@@ -78,11 +91,11 @@ async function next(config: FactoryConfig, json: boolean): Promise<number> {
   }
   const rest = result.queue.slice(1);
   if (rest.length > 0) {
-    console.log(`\nThen: ${rest.map((p) => `#${p.item.number} (P${p.spec.priority})`).join(', ')}`);
+    console.log(`\nThen: ${rest.map((p) => `${p.item.key} (P${p.spec.priority})`).join(', ')}`);
   }
   if (result.skipped.length > 0) {
     console.log(
-      `\nPassed over:\n${result.skipped.map((s) => `  #${s.item.number} ${s.item.title}: ${s.reason}`).join('\n')}`,
+      `\nPassed over:\n${result.skipped.map((s) => `  ${s.item.key} ${s.item.title}: ${s.reason}`).join('\n')}`,
     );
   }
   return 0;
@@ -182,14 +195,59 @@ function status(config: FactoryConfig): number {
   console.log(
     s.running.length
       ? s.running
-          .map((r) => `  running #${r.issue} on slot ${r.slot} since ${r.startedAt} (${r.why})`)
+          .map(
+            (r) =>
+              `  running ${issueKey(config, r.issue)} on slot ${r.slot} since ${r.startedAt} (${r.why})`,
+          )
           .join('\n')
       : '  nothing running',
   );
   if (s.waiting.length)
-    console.log(`  waiting for a slot: ${s.waiting.map((n) => `#${n}`).join(', ')}`);
-  for (const k of s.skipped) console.log(`  passed over #${k.issue}: ${k.reason}`);
+    console.log(`  waiting for a slot: ${s.waiting.map((n) => issueKey(config, n)).join(', ')}`);
+  for (const k of s.skipped) console.log(`  passed over ${issueKey(config, k.issue)}: ${k.reason}`);
   return 0;
+}
+
+async function linearCheck(config: FactoryConfig, args: readonly string[]): Promise<number> {
+  const asRyan = args.includes('--me') || args.includes('--fix');
+  let client: LinearClient;
+  if (asRyan) {
+    const key = await ownerKey(config);
+    if (!key) {
+      console.error(
+        `No Linear key in the keychain item ${config.linear.keychainItem}. Make one in Linear (Settings, Security & access, Personal API keys), then: security add-generic-password -s ${config.linear.keychainItem} -a "$USER" -w`,
+      );
+      return 2;
+    }
+    client = createLinearClient({ token: () => Promise.resolve(key) });
+  } else {
+    const app = appClient(config);
+    if (!app.ok) {
+      console.error(`${app.error}. Use --me to check with your own key instead.`);
+      return 2;
+    }
+    client = app.client;
+  }
+  if (args.includes('--me')) {
+    const { viewer } = await client.request<{ viewer: { id: string; displayName: string } }>(
+      'query { viewer { id displayName } }',
+    );
+    console.log(`You are ${viewer.displayName}: ${viewer.id}`);
+    console.log(
+      viewer.id === config.linear.owner
+        ? 'config.linear.owner matches.'
+        : `Set config.linear.owner in tools/factory/factory.config.json to "${viewer.id}".`,
+    );
+  }
+  if (args.includes('--fix')) await fix(client, config, (line) => console.log(line));
+  const needs = teamNeeds(await snapshot(client, config), config);
+  if (needs.length === 0) {
+    console.log(`Linear's ${config.linear.team} team is ready for the factory.`);
+    return 0;
+  }
+  console.log(`Linear's ${config.linear.team} team still needs:`);
+  for (const n of needs) console.log(`  - ${n.text}`);
+  return 1;
 }
 
 async function main(argv: readonly string[]): Promise<number> {
@@ -228,6 +286,8 @@ async function main(argv: readonly string[]): Promise<number> {
       return startRun(loaded.config, rest, (line) => console.log(line));
     case 'doctor':
       return doctor(loaded.config, rest);
+    case 'linear-check':
+      return linearCheck(loaded.config, rest);
     case undefined:
     case 'help':
     case '--help':

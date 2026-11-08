@@ -8,9 +8,6 @@ const config = testConfig();
 /** A card that skips planning, so it takes a slot straight from Ready. */
 const item: typeof anyItem = (n, o = {}) => anyItem(n, { labels: ['plan:skip'], ...o });
 const board = (items: Board['items']): Board => ({
-  projectId: 'P',
-  status: { id: 'S', options: {} },
-  blocked: { id: 'B', options: {} },
   items,
 });
 const run = (issue: number, slot: number): Running => ({

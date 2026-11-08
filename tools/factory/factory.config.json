@@ -1,18 +1,35 @@
 {
   "repo": "htxryan/penmoss",
-  "project": {
-    "owner": "htxryan",
-    "number": 8
+  "tracker": "linear",
+  "github": {
+    "project": {
+      "owner": "htxryan",
+      "number": 8
+    },
+    "status": {
+      "pick": "Ready",
+      "planning": "Planning",
+      "working": "In progress",
+      "review": "In review",
+      "done": "Done"
+    },
+    "blockedField": "Blocked"
+  },
+  "linear": {
+    "team": "PEN",
+    "owner": "",
+    "envFile": "~/.config/penmoss-factory/linear.env",
+    "keychainItem": "penmoss-factory-linear",
+    "status": {
+      "pick": "Todo",
+      "planning": "Planning",
+      "working": "In Progress",
+      "review": "In Review",
+      "done": "Done"
+    },
+    "blockedLabel": "Blocked"
   },
   "owner": "htxryan",
-  "status": {
-    "pick": "Ready",
-    "planning": "Planning",
-    "working": "In progress",
-    "review": "In review",
-    "done": "Done"
-  },
-  "blockedField": "Blocked",
   "planning": {
     "default": true,
     "skipLabel": "plan:skip",

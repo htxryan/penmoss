@@ -2,13 +2,13 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { agentFor } from './agents/index.ts';
-import { readBoard, setBlocked, setStatus, type Board, type BoardItem } from './board.ts';
+import type { Board, BoardItem } from './board.ts';
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import { nodeExec } from './exec.ts';
 import { createGh, type Gh } from './github.ts';
 import { BlockedByRyan, guardEffects } from './guard.ts';
 import { ensureClone, hostDeps, publisherEnv } from './host.ts';
-import { issueText, readIssue } from './issue.ts';
+import { issueText } from './issue.ts';
 import { parseIssueSpec, type IssueSpec } from './labels.ts';
 import { formatMarker } from './pick.ts';
 import { advancePlanning, type PlanDeps } from './plan-run.ts';
@@ -26,14 +26,19 @@ import type { PlanningAction } from './planning.ts';
 import { fill, promptTemplate } from './prompt.ts';
 import { branchName, runImplement, type RunOutcome } from './run.ts';
 import { loadSecrets, type Secrets } from './secrets.ts';
+import { openTracker } from './tracker/index.ts';
+import { ensureTrackerState } from './tracker/state.ts';
+import { issueKey, type Tracker } from './tracker/port.ts';
 
 export interface Factory {
   readonly config: FactoryConfig;
   readonly gh: Gh;
+  /** Where the cards live (LD1): Project 8 through the bot's gh, or Linear as the factory app. */
+  readonly tracker: Tracker;
   readonly secrets: Secrets;
 }
 
-/** The bot's gh and the env file, checked. */
+/** The bot's gh, the env file and the tracker, checked. */
 export async function openFactory(
   config: FactoryConfig,
 ): Promise<{ ok: true; factory: Factory } | { ok: false; error: string }> {
@@ -47,7 +52,10 @@ export async function openFactory(
       error: `gh in ${config.publisher.ghConfigDir} is signed in as "${login || 'nobody'}", not ${config.publisher.login}`,
     };
   }
-  return { ok: true, factory: { config, gh, secrets: secrets.secrets } };
+  const tracker = await openTracker(config, gh);
+  if (!tracker.ok) return tracker;
+  ensureTrackerState(config);
+  return { ok: true, factory: { config, gh, tracker: tracker.tracker, secrets: secrets.secrets } };
 }
 
 /** Why a card can't run now, or its spec. */
@@ -59,12 +67,12 @@ export function runnable(
   if (item.blocked)
     return {
       ok: false,
-      error: `#${item.number} has ${config.blockedField} set; the factory never acts on it`,
+      error: `${item.key} has ${config.blockedField} set; the factory never acts on it`,
     };
   if (!statuses.includes(item.status ?? ''))
-    return { ok: false, error: `#${item.number} is in ${item.status ?? 'no status'}` };
+    return { ok: false, error: `${item.key} is in ${item.status ?? 'no status'}` };
   const parsed = parseIssueSpec(item.labels, config);
-  if (!parsed.ok) return { ok: false, error: `#${item.number}'s labels: ${parsed.error}` };
+  if (!parsed.ok) return { ok: false, error: `${item.key}'s labels: ${parsed.error}` };
   return { ok: true, spec: parsed.spec };
 }
 
@@ -76,7 +84,8 @@ export function planFor(config: FactoryConfig, issue: number, spec: IssueSpec): 
   const agreed = readMeta(files).agreed;
   if (agreed?.trivial) return `None: planning judged the issue trivial (${agreed.quote}).`;
   const path = agreedPlanPath(files);
-  if (!agreed || !existsSync(path)) throw new Error(`#${issue} has no agreed plan`);
+  if (!agreed || !existsSync(path))
+    throw new Error(`${issueKey(config, issue)} has no agreed plan`);
   return `Ryan agreed this plan ("${agreed.quote}"). Build what it specifies and meet every acceptance criterion; where it and the issue differ, the plan wins.\n\n${planText(readFileSync(path, 'utf8'))}`;
 }
 
@@ -116,14 +125,13 @@ export function planAgreed(config: FactoryConfig, issue: number): boolean {
 /** One step of a card's planning on this Mac (no slot), every effect guarded by Blocked. */
 export async function executePlanning(
   factory: Factory,
-  board: Board,
   item: BoardItem,
   log: (line: string) => void,
 ): Promise<PlanningAction | { kind: 'stopped' }> {
-  const { config, gh, secrets } = factory;
+  const { config, tracker, secrets } = factory;
   await ensureClone(config, nodeExec);
   const files = planFiles(config, item.number);
-  const issue = await readIssue(gh, config.repo, item.number);
+  const issue = await tracker.readIssue(item.number);
   const env: Record<string, string> = {
     PATH: process.env['PATH'] ?? '/usr/bin:/bin',
     HOME: process.env['HOME'] ?? '',
@@ -133,14 +141,9 @@ export async function executePlanning(
       : {}),
   };
   const deps: PlanDeps = {
-    comment: async (n, body) => {
-      await gh.run(
-        ['issue', 'comment', String(n), '--repo', config.repo, '--body-file', '-'],
-        body,
-      );
-    },
-    setStatus: (i, status) => setStatus(gh, board, i, status),
-    setBlocked: (i) => setBlocked(gh, board, i),
+    comment: (n, body) => tracker.comment(n, body),
+    setStatus: (i, status) => tracker.setStatus(i, status),
+    setBlocked: (i) => tracker.setBlocked(i),
     snapshot: () => prepareSnapshot(config, files, nodeExec),
     launch: async (message, resume) => {
       const { chatUrl } = await launchSession(
@@ -165,8 +168,7 @@ export async function executePlanning(
     },
     now: () => new Date(),
   };
-  const isBlocked = async () =>
-    (await readBoard(gh, config)).items.find((i) => i.number === item.number)?.blocked ?? false;
+  const isBlocked = () => tracker.isBlocked(item.number);
   const guarded = guardEffects(
     deps,
     ['comment', 'setStatus', 'setBlocked', 'snapshot', 'launch'],
@@ -174,12 +176,19 @@ export async function executePlanning(
     isBlocked,
   );
   const prompt = fill(promptTemplate('planning'), {
-    issue: issueText(issue, config.owner, 'penmoss-factory'),
+    issue: issueText(issue, tracker.owner, 'penmoss-factory'),
     repo: files.repo,
     out: files.out,
   });
   try {
-    return await advancePlanning(guarded, { config, item, issue, files, prompt });
+    return await advancePlanning(guarded, {
+      config,
+      owner: tracker.owner,
+      item,
+      issue,
+      files,
+      prompt,
+    });
   } catch (error) {
     if (error instanceof BlockedByRyan) return { kind: 'stopped' };
     const message = error instanceof Error ? error.message : String(error);
@@ -190,7 +199,7 @@ export async function executePlanning(
           `Planning stopped on an error: ${message}\n\n${formatMarker({ issue: String(item.number), event: 'blocked' })}`,
         )
         .catch(() => undefined);
-      await setBlocked(gh, board, item).catch(() => undefined);
+      await tracker.setBlocked(item).catch(() => undefined);
     }
     throw error;
   }
@@ -205,13 +214,13 @@ export async function executeRun(
   slot: SlotConfig,
   log: (line: string) => void,
 ): Promise<RunOutcome | { kind: 'stopped' }> {
-  const { config, gh } = factory;
+  const { config, gh, tracker } = factory;
   const runId = `${item.number}-${Date.now().toString(36)}-${randomBytes(2).toString('hex')}`;
   await ensureClone(config, nodeExec);
-  const issue = await readIssue(gh, config.repo, item.number);
+  const issue = await tracker.readIssue(item.number);
   const prompt = fill(promptTemplate('implement'), {
     branch: branchName(config, item),
-    issue: issueText(issue, config.owner, 'penmoss-factory'),
+    issue: issueText(issue, tracker.owner, 'penmoss-factory'),
     plan: planFor(config, item.number, spec),
     scope: spec.platforms
       ? `The issue is labelled for ${spec.platforms.join(', ')}. Prove the change there.`
@@ -224,13 +233,13 @@ export async function executeRun(
     runId,
     board,
     gh,
+    tracker,
     exec: nodeExec,
     secrets: factory.secrets,
     agent,
     log,
   });
-  const isBlocked = async () =>
-    (await readBoard(gh, config)).items.find((i) => i.number === item.number)?.blocked ?? false;
+  const isBlocked = () => tracker.isBlocked(item.number);
   const guarded = guardEffects(
     deps,
     ['comment', 'setStatus', 'setBlocked', 'push', 'openPr', 'runAgent'],
@@ -262,7 +271,7 @@ export async function executeRun(
           `The run stopped on an error: ${message}\n\n${formatMarker({ run: runId, event: 'blocked' })}`,
         )
         .catch(() => undefined);
-      await setBlocked(gh, board, item).catch(() => undefined);
+      await tracker.setBlocked(item).catch(() => undefined);
     }
     return { kind: 'blocked', reason: message };
   }
@@ -292,10 +301,10 @@ export async function startRun(
     log(`Can't run: ${opened.error}.`);
     return 2;
   }
-  const board = await readBoard(opened.factory.gh, config);
+  const board = await opened.factory.tracker.readBoard();
   const item = board.items.find((i) => i.number === number && i.repo === config.repo);
   if (!item) {
-    log(`#${number} isn't on the board.`);
+    log(`${issueKey(config, number)} isn't on the board.`);
     return 1;
   }
   const ok = runnable(config, item, [config.status.pick, config.status.planning]);
@@ -305,7 +314,7 @@ export async function startRun(
   }
   if (!ok.spec.planSkip && !planAgreed(config, number)) {
     log(
-      `#${number} needs a plan first: the daemon runs planning (factory:start), or label it ${config.planning.skipLabel}.`,
+      `${issueKey(config, number)} needs a plan first: the daemon runs planning (factory:start), or label it ${config.planning.skipLabel}.`,
     );
     return 1;
   }

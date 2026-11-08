@@ -7,13 +7,13 @@ import { randomBytes } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { agentFor } from './agents/index.ts';
-import { readBoard, setBlocked, setStatus, type Board, type BoardItem } from './board.ts';
+import type { Board, BoardItem } from './board.ts';
 import { summarizeChecks, type CheckRun } from './checks.ts';
 import { expandHome, type SlotConfig } from './config.ts';
 import { nodeExec } from './exec.ts';
 import { BlockedByRyan, guardEffects } from './guard.ts';
 import { hostDeps } from './host.ts';
-import { fence, issueText, readIssue } from './issue.ts';
+import { fence, issueText } from './issue.ts';
 import type { IssueSpec } from './labels.ts';
 import { mergeApproved, type MainRun, type MergeDeps } from './merge.ts';
 import { fill, promptTemplate } from './prompt.ts';
@@ -99,12 +99,12 @@ export async function executeRevise(
   action: Extract<ReviewAction, { kind: 'round' | 'repair' }>,
   log: (line: string) => void,
 ): Promise<string> {
-  const { config, gh } = factory;
+  const { config, gh, tracker } = factory;
   const runId = `${item.number}-${Date.now().toString(36)}-${randomBytes(2).toString('hex')}`;
-  const issue = await readIssue(gh, config.repo, item.number);
+  const issue = await tracker.readIssue(item.number);
   const base = fill(promptTemplate('implement'), {
     branch: branchName(config, item),
-    issue: issueText(issue, config.owner, 'penmoss-factory'),
+    issue: issueText(issue, tracker.owner, 'penmoss-factory'),
     scope: spec.platforms
       ? `The issue is labelled for ${spec.platforms.join(', ')}.`
       : 'The path classifier decides the platforms from your diff.',
@@ -121,6 +121,7 @@ export async function executeRevise(
     runId,
     board,
     gh,
+    tracker,
     exec: nodeExec,
     secrets: factory.secrets,
     agent,
@@ -160,8 +161,7 @@ export async function executeRevise(
         ])
       ).stdout.trim(),
   };
-  const isBlocked = async () =>
-    (await readBoard(gh, config)).items.find((i) => i.number === item.number)?.blocked ?? false;
+  const isBlocked = () => tracker.isBlocked(item.number);
   const guarded = guardEffects(
     revise,
     ['comment', 'prComment', 'replyToThread', 'setStatus', 'setBlocked', 'push', 'runAgent'],
@@ -185,7 +185,7 @@ export async function executeRevise(
       await deps
         .comment(item.number, `A review round stopped on an error: ${message}`)
         .catch(() => undefined);
-      await setBlocked(gh, board, item).catch(() => undefined);
+      await tracker.setBlocked(item).catch(() => undefined);
     }
     return `blocked: ${message}`;
   }
@@ -194,12 +194,11 @@ export async function executeRevise(
 /** Merge an approved PR and see main through (F18). Needs no slot: it only waits on GitHub. */
 export async function executeMerge(
   factory: Factory,
-  board: Board,
   item: BoardItem,
   pr: FactoryPr,
   log: (line: string) => void,
 ): Promise<string> {
-  const { config, gh } = factory;
+  const { config, gh, tracker } = factory;
   const runId = `${item.number}-merge-${Date.now().toString(36)}`;
   const deps: MergeDeps = {
     config,
@@ -242,17 +241,10 @@ export async function executeMerge(
         '--json',
         'status,conclusion,url',
       ]),
-    comment: async (n, body) => {
-      await gh.run(
-        ['issue', 'comment', String(n), '--repo', config.repo, '--body-file', '-'],
-        body,
-      );
-    },
-    closeIssue: async (n, body) => {
-      await gh.run(['issue', 'close', String(n), '--repo', config.repo, '--comment', body]);
-    },
-    setStatus: (i, s) => setStatus(gh, board, i, s),
-    setBlocked: (i) => setBlocked(gh, board, i),
+    comment: (n, body) => tracker.comment(n, body),
+    closeIssue: (n, body) => tracker.closeIssue(n, body),
+    setStatus: (i, s) => tracker.setStatus(i, s),
+    setBlocked: (i) => tracker.setBlocked(i),
     notify: async (title, message) => {
       await nodeExec('osascript', [
         '-e',
@@ -263,8 +255,7 @@ export async function executeMerge(
     now: () => new Date(),
     log: (event, detail = {}) => log(`${event} ${JSON.stringify(detail)}`),
   };
-  const isBlocked = async () =>
-    (await readBoard(gh, config)).items.find((i) => i.number === item.number)?.blocked ?? false;
+  const isBlocked = () => tracker.isBlocked(item.number);
   const guarded = guardEffects(
     deps,
     ['merge', 'comment', 'closeIssue', 'setStatus', 'setBlocked'],

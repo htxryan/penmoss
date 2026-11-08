@@ -16,6 +16,8 @@ export interface AttachedProof {
 
 export interface PrBodyInput {
   readonly issue: number;
+  /** The card's name, `#36` or `PEN-36`; `#<issue>` when absent. */
+  readonly key?: string;
   readonly summary: string;
   readonly scope: Scope;
   readonly gate: string;
@@ -34,8 +36,9 @@ const alt = (s: string) => s.replaceAll(/[[\]\n]/g, ' ').trim();
 
 export function renderPrBody(input: PrBodyInput): string {
   const lines = [
-    // `Part of`, not `Closes`: the issue stays open until main is verified (R20).
-    `Part of #${input.issue}.`,
+    // `Part of`, not `Closes` or `Fixes`: the issue stays open until main is verified (R20), and
+    // Linear's GitHub integration links the PR without moving the card (LD6).
+    `Part of ${input.key ?? `#${input.issue}`}.`,
     '',
     ...(input.artifacts?.length
       ? [

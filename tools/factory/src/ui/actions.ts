@@ -1,13 +1,12 @@
 /**
- * The Factory UI's writes (F21, #277), made with Ryan's own `gh` login, never the bot's: a reply
- * on the issue (optionally clearing Blocked), a picked answer to a planning question, "Complete",
- * and Blocked on or off. Only the UI imports this module: the dispatcher can set Blocked but never
- * clear it (R23), and a test holds that boundary.
+ * The Factory UI's writes (F21, #277), made as Ryan, never as the bot or the factory's app: a
+ * reply on the issue (optionally clearing Blocked), a picked answer to a planning question,
+ * "Complete", and Blocked on or off. Only the UI imports this module: the dispatcher can set
+ * Blocked but never clear it (R23), and a test holds that boundary.
  */
-import { readBoard, setBlocked, type Board, type BoardItem } from '../board.ts';
 import type { FactoryConfig } from '../config.ts';
-import type { Gh } from '../github.ts';
 import { answerText } from '../planning.ts';
+import { issueKey, type OwnerTracker } from '../tracker/port.ts';
 
 export type UiAction =
   | {
@@ -65,39 +64,22 @@ export function parseAction(
   }
 }
 
-const CLEAR_FIELD = `
-mutation($project: ID!, $item: ID!, $field: ID!) {
-  clearProjectV2ItemFieldValue(input: { projectId: $project, itemId: $item, fieldId: $field }) {
-    projectV2Item { id }
-  }
-}`;
-
-/** Clears Blocked: Ryan's move only (R23), so it lives here and not in board.ts. */
-async function clearBlocked(gh: Gh, board: Board, item: BoardItem): Promise<void> {
-  await gh.graphql(CLEAR_FIELD, {
-    project: board.projectId,
-    item: item.itemId,
-    field: board.blocked.id,
-  });
-}
-
 export interface Writer {
   perform(action: UiAction): Promise<string>;
 }
 
-/** `gh` must be Ryan's own login; `runUi` checks it before serving. */
-export function createWriter(config: FactoryConfig, gh: Gh): Writer {
-  const comment = (issue: number, body: string) =>
-    gh.run(['issue', 'comment', String(issue), '--repo', config.repo, '--body-file', '-'], body);
+/** `tracker` must act as Ryan (his gh, his Linear key); `runUi` checks it before serving. */
+export function createWriter(config: FactoryConfig, tracker: OwnerTracker): Writer {
+  const comment = (issue: number, body: string) => tracker.comment(issue, body);
   return {
     async perform(action) {
-      const board = await readBoard(gh, config);
+      const board = await tracker.readBoard();
       const item = board.items.find((i) => i.number === action.issue && i.repo === config.repo);
-      if (!item) throw new Error(`#${action.issue} isn't on the board`);
+      if (!item) throw new Error(`${issueKey(config, action.issue)} isn't on the board`);
       // Comment first, then clear Blocked: the daemon must see the words when it resumes.
       const reply = async (body: string, unblock: boolean) => {
         await comment(item.number, body);
-        if (unblock && item.blocked) await clearBlocked(gh, board, item);
+        if (unblock && item.blocked) await tracker.clearBlocked(item);
         return unblock && item.blocked ? 'Posted, and Blocked cleared' : 'Posted';
       };
       switch (action.kind) {
@@ -110,8 +92,8 @@ export function createWriter(config: FactoryConfig, gh: Gh): Writer {
           return reply('Complete', true);
         case 'block':
           if (action.on === item.blocked) return action.on ? 'Already Blocked' : 'Not Blocked';
-          if (action.on) await setBlocked(gh, board, item);
-          else await clearBlocked(gh, board, item);
+          if (action.on) await tracker.setBlocked(item);
+          else await tracker.clearBlocked(item);
           return action.on ? 'Blocked' : 'Blocked cleared';
       }
     },

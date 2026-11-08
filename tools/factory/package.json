@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "The software factory: Project 8 issues become planned, validated, reviewed PRs on this Mac (#253)",
+  "description": "The software factory: Linear issues become planned, validated, reviewed PRs on this Mac (#253, A1221)",
   "engines": {
     "node": ">=24"
   },

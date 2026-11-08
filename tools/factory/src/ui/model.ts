@@ -15,6 +15,8 @@ export interface Link {
 
 export interface CardView {
   readonly number: number;
+  /** `#36` or `PEN-36`. */
+  readonly key: string;
   readonly title: string;
   readonly status: string;
   /** What the factory is doing (or did last) on the card. */
@@ -218,7 +220,7 @@ function card(
   const { config } = input;
   const plan = input.plans[item.number];
   const pr = events.findLast((e) => str(e['pr']))?.['pr'] as string | undefined;
-  const links: Link[] = [{ label: `#${item.number}`, href: item.url }];
+  const links: Link[] = [{ label: `${item.key}`, href: item.url }];
   if (pr) links.push({ label: 'Pull request', href: pr }, { label: 'CI', href: `${pr}/checks` });
   if (plan?.state?.planUrl) links.push({ label: 'Plan', href: plan.state.planUrl });
   if (plan?.state?.designUrl) links.push({ label: 'Design', href: plan.state.designUrl });
@@ -257,6 +259,7 @@ function card(
   const canComplete = planning && !!plan?.state?.planUrl && !plan.meta.agreed;
   return {
     number: item.number,
+    key: item.key,
     title: item.title,
     status: item.status ?? '',
     step,

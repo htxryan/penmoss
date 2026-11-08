@@ -38,6 +38,8 @@ export interface PlanInput {
   readonly config: FactoryConfig;
   readonly item: BoardItem;
   readonly issue: Issue;
+  /** Who counts as Ryan on the tracker (R14); `config.owner` when absent (GitHub). */
+  readonly owner?: string;
   readonly files: PlanFiles;
   /** The filled planning prompt, for a session's first message. */
   readonly prompt: string;
@@ -71,7 +73,7 @@ export async function advancePlanning(deps: PlanDeps, input: PlanInput): Promise
   const fresh = !!read && (!meta.messagedAt || read.writtenAt.toISOString() > meta.messagedAt);
   const asked = !!meta.askedAt && (!meta.messagedAt || meta.askedAt >= meta.messagedAt);
   const now = deps.now();
-  const comments = commentsSince(issue, config.owner, meta.deliveredAt);
+  const comments = commentsSince(issue, input.owner ?? config.owner, meta.deliveredAt);
   const session = meta.sessionId ? await deps.session() : undefined;
   const action = planningAction({
     blocked: item.blocked,

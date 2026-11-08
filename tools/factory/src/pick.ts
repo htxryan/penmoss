@@ -19,12 +19,13 @@ export interface Marker {
   readonly fields: Readonly<Record<string, string>>;
 }
 
-const MARKER = /<!--\s*penmoss-factory\s+([^>]*?)\s*-->/g;
+/** The hidden form, and the visible code line Linear's comments carry instead (LD5). */
+const MARKER = /<!--\s*penmoss-factory\s+([^>]*?)\s*-->|`penmoss-factory\s+([^`\n]*?)\s*`/g;
 
 export function parseMarkers(body: string): Marker[] {
   return [...body.matchAll(MARKER)].map((m) => ({
     fields: Object.fromEntries(
-      (m[1] ?? '')
+      (m[1] ?? m[2] ?? '')
         .split(/\s+/)
         .map((pair) => pair.split('='))
         .filter(
@@ -101,7 +102,12 @@ export function pickNext(
     } else if (item.state !== 'OPEN') {
       skipped.push({ item, reason: 'the issue is closed' });
     } else if (item.blocked) {
-      skipped.push({ item, reason: `${config.blockedField} is set` });
+      skipped.push({
+        item,
+        reason: item.blockedBy?.length
+          ? `blocked by ${item.blockedBy.join(', ')}`
+          : `${config.blockedField} is set`,
+      });
     } else if (running.has(item.number)) {
       skipped.push({ item, reason: 'already running' });
     } else {
@@ -110,7 +116,9 @@ export function pickNext(
         skipped.push({ item, reason: parsed.error });
       } else {
         const mode = parsed.spec.planSkip ? 'implement' : 'plan';
-        queue.push({ item, spec: parsed.spec, mode, why: '' });
+        // Linear's own priority field wins over P labels (LD11).
+        const spec = item.priority ? { ...parsed.spec, priority: item.priority } : parsed.spec;
+        queue.push({ item, spec, mode, why: '' });
       }
     }
   }

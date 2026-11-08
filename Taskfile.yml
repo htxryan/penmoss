@@ -166,6 +166,11 @@ tasks:
     cmds:
       - node tools/factory/src/cli.ts next {{.CLI_ARGS}}
 
+  factory:linear:check:
+    desc: "The software factory (L2): check Linear's Penmoss team has its states and labels. `-- --me` prints your Linear user ID; `-- --fix` creates what's missing, as you"
+    cmds:
+      - node tools/factory/src/cli.ts linear-check {{.CLI_ARGS}}
+
   factory:run:
     desc: 'The software factory (F4): run one Ready issue now, in the foreground: `task factory:run -- 123`'
     cmds:
