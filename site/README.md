@@ -1,6 +1,6 @@
 # penmoss.app
 
-penmoss.app is one Astro project (P9, P13; A1200): the brochure pages, written by hand, and the user docs at `/docs`, built with Starlight. It builds to static files in `dist/`, served by Cloudflare Workers static assets with no Worker code, on the `penmoss.app` custom domain.
+penmoss.app is one Astro project (P9, P13; A1200): the brochure pages, written by hand, and the user docs at `/docs`, built with Starlight. Both follow the "Penmoss public release UX" design canvas exactly (A1220): the brochure is light only, and the docs restyle Starlight through the overrides in `src/components/docs/`. It builds to static files in `dist/`, served by Cloudflare Workers static assets with no Worker code, on the `penmoss.app` custom domain.
 
 | Path                      | What it is                                                                       |
 | ------------------------- | -------------------------------------------------------------------------------- |
@@ -8,7 +8,7 @@ penmoss.app is one Astro project (P9, P13; A1200): the brochure pages, written b
 | `src/pages/privacy.astro` | The privacy policy (`/privacy`), linked from the Play listing. No script.        |
 | `src/pages/404.astro`     | The 404 page. No script.                                                         |
 | `src/content/docs/docs/`  | The user docs, Markdown and MDX, served under `/docs/`.                          |
-| `src/styles/tokens.css`   | The app's colour tokens, shared by the brochure and the docs.                    |
+| `src/styles/tokens.css`   | The design canvas's palette, shared by the brochure and the docs (A1220).        |
 | `public/_headers`         | The site-wide headers. `build.mjs` adds the docs' own policy to `dist/_headers`. |
 | `build.mjs`               | `astro build`, then the CSP hashes of the docs' inline scripts (P14).            |
 | `test/site.spec.ts`       | Playwright checks of the built site under `wrangler dev`.                        |

@@ -1,0 +1,81 @@
+---
+/**
+ * The docs' theme menu (Docs.dc.html): drawn as the canvas's half-filled circle, with Starlight's
+ * Dark, Light and Auto choices in a native select laid over it. Light is the default (see
+ * ThemeProvider.astro); the rest is Starlight's own ThemeSelect logic.
+ */
+---
+
+<starlight-theme-select>
+  <label class="pm-theme">
+    <span class="sr-only">{Astro.locals.t('themeSelect.accessibleLabel')}</span>
+    <svg
+      width="19"
+      height="19"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      aria-hidden="true"
+      ><circle cx="12" cy="12" r="8"></circle><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"
+      ></path></svg
+    >
+    <select autocomplete="off">
+      <option value="dark">{Astro.locals.t('themeSelect.dark')}</option>
+      <option value="light" selected>{Astro.locals.t('themeSelect.light')}</option>
+      <option value="auto">{Astro.locals.t('themeSelect.auto')}</option>
+    </select>
+  </label>
+</starlight-theme-select>
+
+<script is:inline>
+  StarlightThemeProvider.updatePickers();
+</script>
+
+<script>
+  type Theme = 'auto' | 'dark' | 'light';
+
+  const storageKey = 'starlight-theme';
+
+  /** No choice yet means Light; '' is Auto, as Starlight stores it. */
+  const loadTheme = (): Theme => {
+    const stored = typeof localStorage !== 'undefined' ? localStorage.getItem(storageKey) : null;
+    if (stored === null) return 'light';
+    return stored === 'dark' || stored === 'light' ? stored : 'auto';
+  };
+
+  function storeTheme(theme: Theme): void {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(storageKey, theme === 'light' || theme === 'dark' ? theme : '');
+    }
+  }
+
+  const systemScheme = (): 'dark' | 'light' =>
+    matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+
+  function applyTheme(theme: Theme): void {
+    StarlightThemeProvider.updatePickers(theme);
+    document.documentElement.dataset.theme = theme === 'auto' ? systemScheme() : theme;
+  }
+
+  matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+    if (loadTheme() === 'auto') applyTheme('auto');
+  });
+
+  class PenmossThemeSelect extends HTMLElement {
+    constructor() {
+      super();
+      applyTheme(loadTheme());
+      this.querySelector('select')?.addEventListener('change', (event) => {
+        if (!(event.currentTarget instanceof HTMLSelectElement)) return;
+        const value = event.currentTarget.value;
+        const theme: Theme = value === 'dark' || value === 'light' ? value : 'auto';
+        applyTheme(theme);
+        storeTheme(theme);
+      });
+    }
+  }
+  if (!customElements.get('starlight-theme-select')) {
+    customElements.define('starlight-theme-select', PenmossThemeSelect);
+  }
+</script>

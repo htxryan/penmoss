@@ -1,11 +1,10 @@
 ---
 /**
- * The brochure pages' frame (T80.10, T80.11, P9): head metadata, header and footer. No script:
- * the styles are inlined because the site-wide policy allows inline styles only, and the mark
- * switches with the visitor's light or dark setting through <picture>.
+ * The brochure pages' frame (T80.10, T80.11, P9): head metadata, header and footer, as drawn on
+ * the "Penmoss public release UX" design canvas. Light only, whatever the visitor's setting. No
+ * script: the styles are inlined because the site-wide policy allows inline styles only.
  */
-import markDark from '../assets/moss-pen-dark.svg';
-import markLight from '../assets/moss-pen-light.svg';
+import Mark from './Mark.astro';
 import siteCss from '../styles/site.css?raw';
 import tokensCss from '../styles/tokens.css?raw';
 import { REPOSITORY } from '../site';
@@ -30,7 +29,7 @@ const year = 2026;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="light dark" />
+    <meta name="color-scheme" content="light" />
     <title>{title}</title>
     <meta name="description" content={description} />
     {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
@@ -58,24 +57,34 @@ const year = 2026;
     <a class="skip" href="#content">Skip to content</a>
     <header class="site-header">
       <div class="wrap">
-        <a class="brand" href="/">
-          <picture>
-            <source srcset={markDark.src} media="(prefers-color-scheme: dark)" />
-            <img src={markLight.src} alt="" width="32" height="32" />
-          </picture>
-          Penmoss
+        <a class="brand" href={current === 'home' ? '#top' : '/'}>
+          <Mark size={32} />
+          <span>Penmoss</span>
         </a>
-        <nav aria-label="Main">
-          <ul class="nav">
-            <li>
-              <a href="/features" aria-current={current === 'features' ? 'page' : undefined}
-                >Features</a
-              >
-            </li>
-            <li><a href="/docs/">Docs</a></li>
-            <li><a href={REPOSITORY}>GitHub</a></li>
-            <li><a href="/#download">Download</a></li>
-          </ul>
+        <nav class="site-nav" aria-label="Site">
+          <a
+            class="navlink"
+            href="/features"
+            aria-current={current === 'features' ? 'page' : undefined}>Features</a
+          >
+          <a class="navlink" href="/docs/">Docs</a>
+          <a class="navlink github" href={REPOSITORY}
+            ><svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              ><path
+                d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"
+              ></path></svg
+            >GitHub</a
+          >
+          <a class="btn-primary" href={current === 'home' ? '#download' : '/#download'}>Download</a>
         </nav>
       </div>
     </header>
@@ -84,16 +93,14 @@ const year = 2026;
     </main>
     <footer class="site-footer">
       <div class="wrap">
-        <nav aria-label="Footer">
-          <ul class="nav">
-            <li><a href="/features">Features</a></li>
-            <li><a href="/docs/">Docs</a></li>
-            <li><a href="/privacy">Privacy</a></li>
-            <li><a href={REPOSITORY}>GitHub</a></li>
-            <li><a href={`${REPOSITORY}/blob/main/LICENSE`}>MIT Licensed</a></li>
-          </ul>
+        <div class="footer-brand"><Mark size={24} ground="paper" />© {year} Ryan Henderson</div>
+        <nav class="footer-nav" aria-label="Footer">
+          <a class="navlink" href="/features">Features</a>
+          <a class="navlink" href="/docs/">Docs</a>
+          <a class="navlink" href="/privacy">Privacy</a>
+          <a class="navlink" href={REPOSITORY}>GitHub</a>
+          <a class="navlink" href={`${REPOSITORY}/blob/main/LICENSE`}>MIT Licensed</a>
         </nav>
-        <p>© {year} Ryan Henderson</p>
       </div>
     </footer>
   </body>

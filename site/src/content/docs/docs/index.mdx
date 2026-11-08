@@ -1,46 +1,44 @@
 ---
 title: Penmoss Docs
-description: How to install and use Penmoss, the notes app for your git repository and your AI agents.
+description: How to install Penmoss, keep your notes in your own git repository, and let your AI agents work with them.
 ---
 
-import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+import StartCard from '../../../components/docs/StartCard.astro';
 
-These pages show you how to install Penmoss, keep your notes in it, and let your AI agents read and write them.
-
-Penmoss is a free, open source notes app for Mac and Android. Your notes are markdown files in a git repository you choose, and AI agents such as Claude Code can read and edit them through a local MCP server or the `penmoss` CLI. There is no Penmoss server, no account and no subscription.
-
-These pages describe the latest stable release. Anything that is only in the Alpha channel says so.
+<div class="lede">
+  How to install Penmoss, keep your notes in your own git repository, and let your AI agents work
+  with them.
+</div>
 
 ## Start here
 
-<CardGrid>
-  <LinkCard
-    title="Install on Mac"
-    description="Download Penmoss.dmg, open it and drag Penmoss to Applications."
+<div class="pm-start-cards not-content">
+  <StartCard
     href="/docs/install/mac/"
+    title="Install on Mac"
+    icon="download"
+    description="Download the app, open it, and you are writing in a minute."
   />
-  <LinkCard
-    title="Install on Android"
-    description="Sideload Penmoss.apk and check its signature."
-    href="/docs/install/android/"
-  />
-  <LinkCard
-    title="Your first notebook"
-    description="Make a private repository and keep your notes in it."
+  <StartCard
     href="/docs/first-notebook/"
+    title="Your First Notebook"
+    icon="git"
+    description="Make a private repository on GitHub and point Penmoss at it."
   />
-  <LinkCard
-    title="Connect an agent"
-    description="Give Claude Code, Codex or OpenCode your notes."
-    href="/docs/agents/"
+  <StartCard
+    href="/docs/agents/claude-code/"
+    title="Connect Claude Code"
+    icon="sparkle"
+    description="Give Claude Code your notebook through the local MCP server."
   />
-</CardGrid>
+  <StartCard
+    href="/docs/reference/cli/"
+    title="The penmoss CLI"
+    icon="terminal"
+    description="Every command, for you and for agents in a shell."
+  />
+</div>
 
-## Find your way around
+## How Penmoss fits together
 
-- **Write and organise:** [the editor](/docs/editor/), [folders and tags](/docs/organise/), [daily notes](/docs/journal/), [quick capture](/docs/quick-capture/), [links](/docs/links/), [search](/docs/search/), [history](/docs/history/), [comments](/docs/comments/), [themes](/docs/themes/) and [shortcuts](/docs/shortcuts/).
-- **Apps:** what is special about [the Mac app](/docs/mac/) and [the Android app](/docs/android/).
-- **Reference:** [the CLI](/docs/reference/cli/), [the MCP tools](/docs/reference/mcp/), [what Penmoss writes in your repository](/docs/reference/notebook-format/) and [every setting](/docs/reference/settings/).
-- **Help:** [updates](/docs/help/updates/), [sync and offline](/docs/help/sync/), [privacy](/docs/help/privacy/), the [FAQ](/docs/help/faq/) and [sending feedback](/docs/help/feedback/).
-
-Something wrong or missing? Every page has an **Edit page** link at the foot, so you can propose a fix on [GitHub](https://github.com/htxryan/penmoss).
+Penmoss is an app on your Mac and your Android phone. Each notebook is a private git repository you choose, and the apps sync through it. Your agents reach the same notebooks through the local MCP server or the `penmoss` CLI. There is no Penmoss server and no account.

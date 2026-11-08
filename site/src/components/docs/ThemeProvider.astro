@@ -1,0 +1,25 @@
+---
+/**
+ * Sets the docs' theme before the first paint (replaces Starlight's ThemeProvider). The design is
+ * light, so a first visit is light whatever the system says; a visitor who picks Dark, or Auto,
+ * keeps that choice (Starlight's `starlight-theme` key: 'light', 'dark', or '' for Auto).
+ */
+---
+
+<script is:inline>
+  window.StarlightThemeProvider = (() => {
+    const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('starlight-theme') : null;
+    const choice = stored === null ? 'light' : stored || 'auto';
+    const dark =
+      choice === 'dark' ||
+      (choice === 'auto' && !window.matchMedia('(prefers-color-scheme: light)').matches);
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    return {
+      updatePickers(theme = choice) {
+        document.querySelectorAll('starlight-theme-select select').forEach((select) => {
+          select.value = theme;
+        });
+      },
+    };
+  })();
+</script>

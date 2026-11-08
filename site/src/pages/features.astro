@@ -1,271 +1,350 @@
 ---
 /**
- * All Features (T80.10): every shipped feature, in groups, each linking to the docs page that
- * explains it. Every claim is checked against the shipped app (the checklist in the pull
- * request); search by meaning is claimed for the Mac only, where it shipped (D59).
+ * All Features (T80.10), drawn as on the "Penmoss public release UX" design canvas
+ * (Features.dc.html): every shipped feature, in groups, each linking to the docs page or heading
+ * that explains it. Every claim is checked against the shipped app; search by meaning is claimed
+ * for the Mac only, where it shipped (D59, #192). The lede and bodies are trusted HTML written
+ * here (a few hold <code>); the icons are the canvas's 24×24 strokes.
  */
+import Arrow from '../components/Arrow.astro';
 import SiteLayout from '../components/SiteLayout.astro';
-import { REPOSITORY } from '../site';
 
-interface Feature {
+interface Group {
+  id: string;
   title: string;
-  body: string;
-  href: string;
+  lede: string;
+  icon: string;
+  items: { title: string; href: string; body: string }[];
 }
 
-const groups: { title: string; id: string; items: Feature[] }[] = [
+const groups: Group[] = [
   {
-    title: 'Agents',
     id: 'agents',
+    title: "Agents",
+    lede: "Your AI agents work in your notes through a local MCP server or the <code>penmoss</code> CLI.",
+    icon: "<path d=\"M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z\"></path><path d=\"M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z\"></path>",
     items: [
       {
-        title: 'A local MCP server',
-        body: 'Claude Code, Codex, OpenCode and any MCP client can search, read and write your notes, and open your daily note.',
+        title: "Any MCP agent",
         href: '/docs/agents/',
+        body: "Claude Code, Codex, OpenCode, or any client that speaks MCP. The CLI works from any shell.",
       },
       {
-        title: 'The penmoss CLI',
-        body: 'Every note command from the terminal, for agents and scripts alike.',
-        href: '/docs/reference/cli/',
+        title: "Search, read and write",
+        href: '/docs/reference/mcp/',
+        body: "Agents search your notes, read them, edit sections, append to today's journal and manage tags and folders.",
       },
       {
-        title: 'Comments to agents',
-        body: 'Comment on a passage and send it to an agent session; its reply lands in the thread.',
+        title: "Comments your agent answers",
         href: '/docs/agents/comments/',
+        body: "Comment on any part of a note and send it to an agent session. Its reply lands in the same thread.",
       },
       {
-        title: 'Agent activity and undo',
-        body: 'Each agent writes under its own name. See what it changed and revert just that edit.',
+        title: "Agents never overwrite you",
+        href: '/docs/agents/#safe-edits',
+        body: "Edits are made against the version the agent read. If you changed that part since, the edit is refused.",
+      },
+      {
+        title: "Agent activity, one click to undo",
         href: '/docs/agents/activity/',
+        body: "Everything an agent changed in a notebook, in one list, each with Undo.",
       },
       {
-        title: 'Safe edits',
-        body: 'Agent edits merge with your typing as they happen, so nobody overwrites anybody.',
-        href: '/docs/agents/',
+        title: "Every edit attributed",
+        href: '/docs/history/#version-history',
+        body: "History marks agents' changes apart from yours, and each agent can commit as its own writer.",
       },
     ],
   },
   {
-    title: 'Your notes in git',
     id: 'git',
+    title: "Your notes, your git repo",
+    lede: "No Penmoss server and no account. Notes live in a private git repository you choose.",
+    icon: "<circle cx=\"6\" cy=\"5\" r=\"2\"></circle><circle cx=\"6\" cy=\"19\" r=\"2\"></circle><circle cx=\"18\" cy=\"9\" r=\"2\"></circle><path d=\"M6 7v10M18 11c0 4-6 3-11.5 6.5\"></path>",
     items: [
       {
-        title: 'A repository you own',
-        body: 'Pick a private GitHub repository, or create one, when you add a notebook.',
-        href: '/docs/first-notebook/',
-      },
-      {
-        title: 'Plain markdown',
-        body: 'Every note is a markdown file, readable in any editor and compatible with Obsidian.',
+        title: "Plain markdown files",
         href: '/docs/reference/notebook-format/',
+        body: "Every note is a markdown file with frontmatter, readable and editable without Penmoss.",
       },
       {
-        title: 'No sync conflicts',
-        body: 'Edits from every device and agent merge, offline or online, with no conflict copies.',
-        href: '/docs/help/sync/',
+        title: "Any git host",
+        href: '/docs/first-notebook/#before-you-start',
+        body: "GitHub, GitLab, Bitbucket or your own server, over HTTPS or SSH. Your git identity and signing settings are used.",
       },
       {
-        title: 'Several notebooks',
-        body: 'Keep work and personal notes in separate repositories, side by side.',
-        href: '/docs/organise/',
-      },
-    ],
-  },
-  {
-    title: 'Writing',
-    id: 'writing',
-    items: [
-      {
-        title: 'A slash menu and markdown shortcuts',
-        body: 'Type / for any block, or write markdown and watch it format.',
-        href: '/docs/editor/',
+        title: "Offline first",
+        href: '/docs/help/sync/#offline',
+        body: "Write with no connection on any device. Changes sync through git when you are back online.",
       },
       {
-        title: 'Tables, checklists, callouts and toggles',
-        body: 'Structure without leaving the keyboard.',
-        href: '/docs/editor/',
+        title: "No sync conflicts",
+        href: '/docs/help/sync/#merging',
+        body: "Edit the same note on two devices offline; Penmoss merges both sets of changes, with no conflict copies.",
       },
       {
-        title: 'Mermaid diagrams and math',
-        body: 'Diagrams and formulas render as you type.',
-        href: '/docs/editor/',
-      },
-      {
-        title: 'Code with highlighting',
-        body: 'Code blocks highlight in dozens of languages.',
-        href: '/docs/editor/',
-      },
-      {
-        title: 'Images, files and embedded notes',
-        body: 'Paste or drop images and attachments, or embed one note in another.',
-        href: '/docs/editor/',
-      },
-      {
-        title: 'Copy and paste that works',
-        body: 'Copy as markdown or rich text, paste and match style, paste images.',
-        href: '/docs/editor/',
-      },
-    ],
-  },
-  {
-    title: 'Organising',
-    id: 'organising',
-    items: [
-      {
-        title: 'Nested folders',
-        body: 'Sort by hand, A to Z, or by last change.',
-        href: '/docs/organise/',
-      },
-      {
-        title: 'Tags',
-        body: 'Nested tags, and a list of everything tagged.',
-        href: '/docs/organise/',
-      },
-      {
-        title: 'Trash',
-        body: 'Deleted notes go to Trash, where you can restore them or delete them for good.',
+        title: "History for every note",
         href: '/docs/history/',
+        body: "Every version and who made it: you, another device or an agent. Restore a version or revert one change.",
+      },
+      {
+        title: "Trash",
+        href: '/docs/history/#trash',
+        body: "Deleted notes and folders go to Trash and can be restored to where they were.",
       },
     ],
   },
   {
-    title: 'Finding and connecting',
-    id: 'finding',
+    id: 'editor',
+    title: "Writing",
+    lede: "A block editor with markdown underneath.",
+    icon: "<path d=\"M4 20h13\" stroke=\"#6E9A47\"></path><path d=\"M16 3.5l3.5 3.5-8.5 8.5H7.5V12z\"></path>",
     items: [
       {
-        title: 'Search by words',
-        body: 'Full-text search on every device.',
-        href: '/docs/search/',
+        title: "Slash menu and markdown shortcuts",
+        href: '/docs/editor/#the-slash-menu',
+        body: "Type / for any block, or write markdown and watch it format. A drag handle and selection toolbar.",
       },
       {
-        title: 'Search by meaning, on the Mac',
-        body: 'An on-device model finds notes by what they mean; your notes never leave the Mac.',
-        href: '/docs/search/',
+        title: "Tables, checklists, callouts, toggles",
+        href: '/docs/editor/#blocks',
+        body: "Plus headings, quotes, outline lists and code blocks with syntax highlighting.",
       },
       {
-        title: 'Wikilinks and backlinks',
-        body: 'Link notes with [[double brackets]] and see what links back.',
-        href: '/docs/links/',
+        title: "Mermaid diagrams and math",
+        href: '/docs/editor/#diagrams',
+        body: "Diagrams and equations written as text, rendered in place.",
       },
       {
-        title: 'The graph',
-        body: "A note's neighbourhood of links, at a glance.",
-        href: '/docs/links/',
+        title: "Inline images and embedded files",
+        href: '/docs/editor/#pictures-and-files',
+        body: "Paste or drop images; attach PDFs and other files, with a PDF preview.",
       },
       {
-        title: 'The recent-notes switcher and the command palette',
-        body: 'Jump to any note or action from the keyboard.',
-        href: '/docs/shortcuts/',
+        title: "Embedded notes",
+        href: '/docs/editor/#embedded-notes',
+        body: "Show another note, or one of its sections, inside a note. It updates when the source changes.",
+      },
+      {
+        title: "Line symbols",
+        href: '/docs/editor/#line-symbols',
+        body: "Mark any line as important, a question, a follow-up, an idea or next, with one key.",
+      },
+      {
+        title: "Markdown source",
+        href: '/docs/editor/#the-markdown-source',
+        body: "Switch a note to its markdown source and edit it directly.",
+      },
+      {
+        title: "Copy and paste that keeps formatting",
+        href: '/docs/editor/#copy-and-paste',
+        body: "Between notes, and to and from other apps.",
       },
     ],
   },
   {
-    title: 'Journal and capture',
+    id: 'organise',
+    title: "Organising",
+    lede: "Several notebooks, folders and tags, kept the way you like.",
+    icon: "<path d=\"M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"></path>",
+    items: [
+      {
+        title: "Many notebooks",
+        href: '/docs/organise/#notebooks',
+        body: "Each notebook is its own repository, all open side by side. Choose a primary notebook for your journal.",
+      },
+      {
+        title: "Nested folders",
+        href: '/docs/organise/#folders',
+        body: "Folders inside folders, each sorted by hand, by name or by date edited.",
+      },
+      {
+        title: "Nested tags",
+        href: '/docs/organise/#tags',
+        body: "Tags like <code>work/clients</code>, with a tag list in the sidebar.",
+      },
+      {
+        title: "Quick Access",
+        href: '/docs/organise/#quick-access',
+        body: "Pin the notes you open most to the top of the sidebar.",
+      },
+      {
+        title: "Move, copy and duplicate",
+        href: '/docs/organise/#moving-notes',
+        body: "Move or copy notes and folders, even between notebooks, or duplicate a note.",
+      },
+      {
+        title: "Note details",
+        href: '/docs/mac/#the-window',
+        body: "Folder, dates, word and character counts, reading time, token count, tags and frontmatter.",
+      },
+    ],
+  },
+  {
+    id: 'find',
+    title: "Finding and connecting",
+    lede: "Get back to anything, and see how it fits together.",
+    icon: "<circle cx=\"10\" cy=\"10\" r=\"5.5\"></circle><path d=\"M14.2 14.2L19 19\"></path>",
+    items: [
+      {
+        title: "Full-text search",
+        href: '/docs/search/',
+        body: "Phrases, prefixes, exclusions and title-only search, filtered by notebook, folder, tag or date.",
+      },
+      {
+        title: "Search by meaning",
+        href: '/docs/search/#search-by-meaning',
+        body: "Find notes about something even when they use other words. Runs on your Mac with an on-device model.",
+      },
+      {
+        title: "Wikilinks",
+        href: '/docs/links/',
+        body: "Link notes with [[ and autocomplete.",
+      },
+      {
+        title: "Backlinks and mentions",
+        href: '/docs/links/#backlinks',
+        body: "See which notes link to this one, and which mention its title without a link.",
+      },
+      {
+        title: "Graph view",
+        href: '/docs/links/#the-graph',
+        body: "Each note's links as a graph you can explore.",
+      },
+      {
+        title: "Command palette",
+        href: '/docs/shortcuts/#the-command-palette',
+        body: "Every action from the keyboard, plus a switcher for recent notes.",
+      },
+    ],
+  },
+  {
     id: 'journal',
+    title: "Journal and capture",
+    lede: "A place for each day and week, and a fast way to get things down.",
+    icon: "<rect x=\"4\" y=\"5\" width=\"16\" height=\"15\" rx=\"2\"></rect><path d=\"M4 10h16M9 3v4M15 3v4\"></path>",
     items: [
       {
-        title: 'Daily and weekly notes',
-        body: "Today's note in one keystroke, from your own templates.",
+        title: "Daily and weekly notes",
         href: '/docs/journal/',
+        body: "Created from your templates, in your notebook's time zone.",
       },
       {
-        title: 'The calendar',
-        body: 'Every day you wrote about, one click away.',
-        href: '/docs/journal/',
+        title: "Calendar",
+        href: '/docs/journal/#the-calendar',
+        body: "Jump to any day or week from the sidebar calendar.",
       },
       {
-        title: 'Quick capture',
-        body: 'Jot a thought into your journal without opening a note.',
-        href: '/docs/quick-capture/',
+        title: "Quick capture on the Mac",
+        href: '/docs/quick-capture/#on-the-mac',
+        body: "Add a thought to today's note, or a new note, from the menu bar.",
       },
       {
-        title: 'History for every note',
-        body: 'Every version, who made it, and Restore.',
-        href: '/docs/history/',
+        title: "Quick capture on Android",
+        href: '/docs/quick-capture/#on-android',
+        body: "A Quick Settings tile, a home-screen widget, and Share to Penmoss from any app.",
       },
     ],
   },
   {
-    title: 'Mac app',
     id: 'mac',
+    title: "Mac app",
+    lede: "A native-feeling app for Apple Silicon and Intel Macs.",
+    icon: "<rect x=\"2\" y=\"5\" width=\"20\" height=\"13\" rx=\"1.6\"></rect><path d=\"M8 21h8\"></path>",
     items: [
       {
-        title: 'Note windows',
-        body: 'Open a note in its own window, and keep it on top of other apps.',
-        href: '/docs/mac/',
+        title: "Notes in their own windows",
+        href: '/docs/mac/#note-windows',
+        body: "Open a note in a separate window to keep it beside your work.",
       },
       {
-        title: 'Native menus and shortcuts',
-        body: 'Every action in the menus, every shortcut yours to change.',
+        title: "Keep on top and compact title bar",
+        href: '/docs/mac/#keep-on-top',
+        body: "Pin a window above others, and give the note more room.",
+      },
+      {
+        title: "Keyboard shortcuts you can change",
         href: '/docs/shortcuts/',
+        body: "Rebind any shortcut, also reachable from the Mac's menus.",
       },
       {
-        title: 'Updates',
-        body: 'Signed, notarised, and it keeps itself up to date. Choose Stable or Alpha.',
+        title: "Resizable panes",
+        href: '/docs/mac/#the-window',
+        body: "Size the sidebar and side panels to fit.",
+      },
+      {
+        title: "Updates itself",
         href: '/docs/help/updates/',
+        body: "Stable releases by default, or every main build on the Alpha channel.",
       },
     ],
   },
   {
-    title: 'Android app',
     id: 'android',
+    title: "Android app",
+    lede: "Everything the Mac app does, on your phone.",
+    icon: "<rect x=\"6\" y=\"2.5\" width=\"12\" height=\"19\" rx=\"2.2\"></rect><path d=\"M11 18.5h2\"></path>",
     items: [
       {
-        title: 'The same editor',
-        body: 'Everything the Mac editor does, on your phone.',
-        href: '/docs/android/',
+        title: "A full editor",
+        href: '/docs/android/#the-editor',
+        body: "The same blocks as on the Mac, built for long-form writing on a phone.",
       },
       {
-        title: 'Quick Settings tile and widget',
-        body: 'Capture a thought from anywhere on the phone.',
-        href: '/docs/quick-capture/',
+        title: "Background sync",
+        href: '/docs/android/#syncing-in-the-background',
+        body: "Notes stay up to date without opening the app.",
       },
       {
-        title: 'Background sync',
-        body: 'Your notes are up to date when you open the app.',
-        href: '/docs/android/',
+        title: "Widget, tile and share target",
+        href: '/docs/quick-capture/#on-android',
+        body: "Capture from the home screen, Quick Settings or any app's Share menu.",
       },
     ],
   },
   {
-    title: 'Make it yours',
     id: 'yours',
+    title: "Make it yours",
+    lede: "Look and feel, your way.",
+    icon: "<circle cx=\"12\" cy=\"12\" r=\"8\"></circle><path d=\"M12 4a8 8 0 0 0 0 16z\" fill=\"#2E5A3A\"></path>",
     items: [
       {
-        title: 'Eight themes, light and dark',
-        body: 'Penmoss, Paper, Slate, Nord, Solarized, Gruvbox, Rosé Pine and High Contrast.',
+        title: "Eight themes",
         href: '/docs/themes/',
+        body: "Each in light and dark, following your system or chosen by hand.",
       },
       {
-        title: 'A theme editor',
-        body: 'Make your own, with contrast checked for you.',
-        href: '/docs/themes/',
+        title: "Theme editor",
+        href: '/docs/themes/#your-own-theme',
+        body: "Change any colour, or start your own theme from one of ours.",
       },
       {
-        title: 'Customisable shortcuts',
-        body: 'Rebind any action.',
-        href: '/docs/shortcuts/',
+        title: "Fonts",
+        href: '/docs/themes/#fonts',
+        body: "Choose the fonts and sizes for reading and writing.",
       },
     ],
   },
   {
-    title: 'Open and private',
     id: 'open',
+    title: "Open and private",
+    lede: "Nothing to sign up for, nothing sent to us.",
+    icon: "<rect x=\"5\" y=\"10.5\" width=\"14\" height=\"10\" rx=\"2\"></rect><path d=\"M8 10.5V8a4 4 0 0 1 8 0v2.5\"></path>",
     items: [
       {
-        title: 'Open source',
-        body: 'MIT licensed, on GitHub.',
-        href: '/docs/',
+        title: "Free and MIT Licensed",
+        href: '/docs/help/faq/#is-penmoss-free',
+        body: "The whole app is open source on GitHub. Build it yourself in three commands.",
       },
       {
-        title: 'No telemetry',
-        body: 'Penmoss collects nothing. Your notes go only to your own repository.',
+        title: "No telemetry",
         href: '/docs/help/privacy/',
+        body: "No analytics and no tracking. Update checks go to GitHub.",
       },
       {
-        title: 'No account',
-        body: 'Sign in to GitHub, not to us.',
-        href: '/docs/help/privacy/',
+        title: "Feedback to GitHub",
+        href: '/docs/help/feedback/',
+        body: "Send a bug or idea from the app as a GitHub issue, using your own GitHub account.",
       },
     ],
   },
@@ -274,31 +353,63 @@ const groups: { title: string; id: string; items: Feature[] }[] = [
 
 <SiteLayout
   title="All Features · Penmoss"
-  description="Everything Penmoss does: agents through MCP and a CLI, notes in your own git repository, a real editor, search, journal, history, and apps for Mac and Android."
+  description="Everything in Penmoss today: agents over MCP and the CLI, your notes in your own git repository, a block editor, search, history, a journal, and the Mac and Android apps."
   current="features"
 >
-  <div class="wrap">
-    <section class="section" aria-labelledby="features-title">
-      <h1 id="features-title" class="page-title">All Features</h1>
+  <section class="page-head" aria-labelledby="page-title">
+    <div class="wrap">
+      <h1 id="page-title">All Features</h1>
       <p class="lede">
-        Everything Penmoss does today. Each title links to the page in the docs that shows you how.
-        Something missing? <a href={`${REPOSITORY}/issues/new/choose`}>Ask for it on GitHub</a>.
+        Everything in Penmoss today, on Mac and Android unless it says otherwise. Each feature links
+        to its page in the <a href="/docs/">docs</a>.
       </p>
-      {
-        groups.map((group) => (
-          <section class="feature-group" aria-labelledby={`group-${group.id}`}>
-            <h2 id={`group-${group.id}`}>{group.title}</h2>
-            <ul class="feature-list">
-              {group.items.map((item) => (
-                <li>
-                  <a href={item.href}>{item.title}</a>
-                  <p>{item.body}</p>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))
-      }
-    </section>
-  </div>
+      <nav class="chips" aria-label="Feature groups">
+        {groups.map((group) => <a href={`#${group.id}`}>{group.title}</a>)}
+      </nav>
+    </div>
+  </section>
+
+  {
+    groups.map((group, index) => (
+      <section id={group.id} class:list={['group', { alt: index % 2 === 1 }]}>
+        <div class="wrap">
+          <div class="group-head">
+            <div class="group-icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#2E5A3A"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                set:html={group.icon}
+              />
+            </div>
+            <h2>{group.title}</h2>
+          </div>
+          <p class="group-lede" set:html={group.lede} />
+          <div class="group-items">
+            {group.items.map((item) => (
+              <div class="group-item">
+                <h3>
+                  <a class="flink" href={item.href}>{item.title}<span class="arrow"><Arrow /></span></a>
+                </h3>
+                <p set:html={item.body} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    ))
+  }
+
+  <section class="try" aria-labelledby="try-title">
+    <div class="wrap">
+      <h2 id="try-title">Try Penmoss</h2>
+      <a class="btn-primary" href="/#download">Download</a>
+    </div>
+  </section>
 </SiteLayout>
