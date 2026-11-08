@@ -43,15 +43,77 @@ export function reserveDecisionNumbers(
   main: string,
   reservedFile: string,
 ): { texts: string[]; assigned: Record<string, string> } {
-  let reserved = 0;
-  try {
-    reserved = Number(readFileSync(reservedFile, 'utf8').trim()) || 0;
-  } catch {
-    // None given out yet.
-  }
+  const reserved = readReserved(reservedFile);
   const result = assignDecisionNumbers(texts, Math.max(maxDecision(main), reserved));
-  const given = Object.values(result.assigned).map((a) => Number(a.slice(1)));
+  writeReserved(reservedFile, reserved, result.assigned);
+  return result;
+}
+
+function readReserved(reservedFile: string): number {
+  try {
+    return Number(readFileSync(reservedFile, 'utf8').trim()) || 0;
+  } catch {
+    return 0; // None given out yet.
+  }
+}
+
+function writeReserved(
+  reservedFile: string,
+  reserved: number,
+  assigned: Readonly<Record<string, string>>,
+): void {
+  const given = Object.values(assigned).map((a) => Number(a.slice(1)));
   const highest = Math.max(reserved, ...given);
   if (highest > reserved) writeFileSync(reservedFile, `${highest}\n`);
-  return result;
+}
+
+const ROW_ID = /^\|\s*A(\d{1,5})\s*\|/;
+
+/**
+ * After a rebase, the decision rows the branch added whose number main has since given to a
+ * row of its own (a PR merged by hand, or one numbered before the factory's reservation file
+ * knew of it), each with a new number after main's, the branch's and the reserved highest.
+ * `added` holds the 1-based lines of `current` (the rebased docs/decisions.md) that the branch
+ * added. A row the branch only edited keeps its number: main's copy of it is gone.
+ */
+export function takenDecisions(
+  current: string,
+  added: ReadonlySet<number>,
+  main: string,
+  reservedFile: string,
+): Record<string, string> {
+  const ids = new Map<string, number[]>();
+  current.split('\n').forEach((line, i) => {
+    const m = ROW_ID.exec(line);
+    if (m) ids.set(`A${m[1]}`, [...(ids.get(`A${m[1]}`) ?? []), i + 1]);
+  });
+  const onMain = new Set(
+    main
+      .split('\n')
+      .map((l) => ROW_ID.exec(l)?.[1])
+      .filter(Boolean)
+      .map((n) => `A${n}`),
+  );
+  const reserved = readReserved(reservedFile);
+  let next = Math.max(maxDecision(main), maxDecision(current), reserved);
+  const renumbered: Record<string, string> = {};
+  for (const [id, lines] of ids)
+    if (lines.length > 1 && onMain.has(id) && lines.some((l) => added.has(l)))
+      renumbered[id] = `A${++next}`;
+  writeReserved(reservedFile, reserved, renumbered);
+  return renumbered;
+}
+
+/** `text` with each `A<n>` in `renumbered` replaced, on the given 1-based lines only. */
+export function renumberLines(
+  text: string,
+  lines: ReadonlySet<number>,
+  renumbered: Readonly<Record<string, string>>,
+): string {
+  return text
+    .split('\n')
+    .map((line, i) =>
+      lines.has(i + 1) ? line.replaceAll(/\bA\d{1,5}\b/g, (id) => renumbered[id] ?? id) : line,
+    )
+    .join('\n');
 }
