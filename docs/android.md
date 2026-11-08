@@ -122,6 +122,14 @@ This runs two tests:
 
 Unlock the phone and keep the screen on while they run.
 
+## The software factory's proof on a slot's emulator (F8)
+
+`task proof:android -- app.penmoss.editor.TypingInstrumentedTest[#method] …` is the factory's Android proof ([`factory.md`](factory.md)). It runs only inside a factory slot's sandbox, which sets the slot's AVD (`penmoss37-slot1` or `-slot2`, which the factory makes once in its own AVD folder from the API 37 image), its emulator port (5560 or 5562) and its own adb server port (5040 or 5041). So the two slots record at the same time without touching each other, or your own emulator.
+
+It builds the debug and test APKs first, since a Gradle build beside a software-rendered emulator stops System UI responding. Then it boots the emulator headless (`-no-window -no-snapshot -gpu swiftshader_indirect -feature -Vulkan -crash-report-mode disabled`, F0.4) and waits up to 240 s for `sys.boot_completed` (`PENMOSS_EMULATOR_BOOT_SECONDS`). It removes the last run's app, which another sandbox's debug key signed, and runs each named test under `screenrecord` (up to 170 s, `PENMOSS_PROOF_TEST_SECONDS`), with a screenshot after it. `apps/android/build/proof/` gets `report.json` and each test's `android-<n>.mp4`, `.png` and `.log`. The emulator shuts down when the script ends, fails or is stopped. A proof that runs past `timeouts.proofMinutes` (40) is stopped by the factory, which closes the sandbox and everything in it.
+
+To try it on slot 1: `task factory:doctor -- --full --only proof:android`. `tools/factory/test/android-proof.test.ts` checks the script against a stub adb and emulator.
+
 ## Test the writing screen on the Pixel (T33)
 
 1. **T2 protocol.** Re-run the T2 writing protocol in a note: Gboard typing, swipe typing, voice input, autocorrect and suggestions, the caret moved by long-press and by the space-bar drag, selection handles, and a paste. Note anything the editor got wrong.
