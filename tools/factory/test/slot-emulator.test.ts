@@ -3,7 +3,7 @@
  * `am instrument -w` never times out by itself, and before each proof, so a run that stopped
  * mid-proof doesn't leave the next one an emulator on its port or a locked AVD.
  */
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -41,7 +41,11 @@ function fakeEmulator(avd: string, port: number, ignoreTerm = false) {
 }
 
 // Real stand-in processes and their grace periods, which a loaded Mac (W12) can stretch past vitest's 5 s default.
-describe('stopSlotEmulator', { timeout: 30_000 }, () => {
+// stopSlotEmulator runs only on the host, with pgrep and pkill. The factory's sandbox can't list
+// processes (pgrep exits 3), so these run on the host and in CI and are skipped there (A1231).
+const listsProcesses = spawnSync('pgrep', ['-x', 'launchd']).status !== 3;
+
+describe.skipIf(!listsProcesses)('stopSlotEmulator', { timeout: 30_000 }, () => {
   it("matches the slot's AVD and console port as proof.sh starts the emulator", () => {
     const { slot } = setUp();
     expect(emulatorPattern(slot)).toBe(` -avd ${slot.avd} -port 59990( |$)`);
