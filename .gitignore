@@ -37,3 +37,4 @@ site/src/data/release.json
 
 # Worktrees Claude Code sessions make inside the checkout.
 .claude/worktrees/
+.sandcastle/
