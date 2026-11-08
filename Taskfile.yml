@@ -34,18 +34,23 @@ tasks:
       - task: audit:secrets
       - task: audit:test
       - task: ports:test
+      - task: check-changed:test
       - task: ci:lint
       - task: android:publish:test
 
   check:changed:
-    desc: 'The checks for what this branch changed against origin/main (before each commit): lint and format of the changed files, typecheck and unit tests of the changed packages and the packages that use them. Falls back to `task check` when shared config changed'
+    desc: 'The checks for what you are about to commit (before each commit; the last commit when nothing is uncommitted; `-- <ref>` for everything since that ref): lint and format of the changed files, typecheck and unit tests of the changed packages and the packages that use them. Falls back to `task check` when shared config changed. Only that fallback, and tests of more than two packages, wait for a heavy-job slot'
     cmds:
-      - sh scripts/heavy.sh check:changed sh scripts/check-changed.sh {{.CLI_ARGS}}
+      - sh scripts/check-changed.sh {{.CLI_ARGS}}
 
   ports:test:
     desc: 'Port blocks (#260): scripts/ports.mjs, which PENMOSS_PORT_BLOCK=n moves every dev and test port with'
     cmds:
       - node --test scripts/ports.test.mjs
+  check-changed:test:
+    desc: 'What `task check:changed` checks (A1224): the change about to be committed, or the last commit, never the whole branch'
+    cmds:
+      - node --test scripts/check-changed.test.mjs
   ci:lint:
     desc: 'No GitHub-hosted runners (A702, F9): every runs-on names self-hosted Mac labels, never an expression'
     cmds:
