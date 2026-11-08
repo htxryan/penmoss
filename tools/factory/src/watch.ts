@@ -15,7 +15,7 @@ import { BlockedByRyan, guardEffects } from './guard.ts';
 import { hostDeps } from './host.ts';
 import { fence, issueText } from './issue.ts';
 import type { IssueSpec } from './labels.ts';
-import { mergeApproved, type MainRun, type MergeDeps } from './merge.ts';
+import { ciRunsFor, mergeApproved, type MainRun, type MergeDeps } from './merge.ts';
 import { fill, promptTemplate } from './prompt.ts';
 import { proofFiles } from './proof/body.ts';
 import { publishRefs } from './proof/store.ts';
@@ -58,6 +58,9 @@ export async function nextReviewAction(
   pr: FactoryPr,
   now: Date,
 ): Promise<ReviewAction> {
+  // Merged while the daemon was away (it stopped while main's CI ran, or Ryan merged it):
+  // verify main and finish the card, so it never stays In review (R12, R20).
+  if (pr.state === 'MERGED') return { kind: 'merge' };
   if (pr.state !== 'OPEN') return { kind: 'none', reason: `the PR is ${pr.state.toLowerCase()}` };
   const { config, gh } = factory;
   const conversation = await readConversation(
@@ -226,6 +229,40 @@ export async function executeMerge(
           'name,state,bucket,link,startedAt',
         ])
         .catch(() => []),
+    mergedSha: async (url) => {
+      const view = await gh.json<{ state: string; mergeCommit: { oid: string } | null }>([
+        ...['pr', 'view', url, '--repo', config.repo, '--json', 'state,mergeCommit'],
+      ]);
+      return view.state === 'MERGED' && view.mergeCommit?.oid ? view.mergeCommit.oid : undefined;
+    },
+    mainRunsCi: async (url, sha) => {
+      try {
+        const { files } = await gh.json<{ files: { path: string }[] }>([
+          ...['pr', 'view', url, '--repo', config.repo, '--json', 'files'],
+        ]);
+        // gh lists at most 100 files: a longer list may hide code, so CI is assumed to run.
+        if (files.length >= 100) return true;
+        const ci = await gh.run([
+          ...['api', `repos/${config.repo}/contents/.github/workflows/ci.yml?ref=${sha}`],
+          ...['-H', 'Accept: application/vnd.github.raw'],
+        ]);
+        return ciRunsFor(
+          ci,
+          files.map((f) => f.path),
+        );
+      } catch {
+        return true;
+      }
+    },
+    failedJobs: async (run) => {
+      if (!run.databaseId) return [];
+      const { jobs } = await gh.json<{ jobs: { name: string; conclusion: string | null }[] }>([
+        ...['run', 'view', String(run.databaseId), '--repo', config.repo, '--json', 'jobs'],
+      ]);
+      return jobs
+        .filter((j) => j.conclusion && !['success', 'skipped', 'neutral'].includes(j.conclusion))
+        .map((j) => j.name);
+    },
     merge: async (url) => {
       await gh.run(['pr', 'merge', url, '--repo', config.repo, '--squash', '--delete-branch']);
       const view = await gh.json<{ mergeCommit: { oid: string } | null }>([
@@ -250,7 +287,7 @@ export async function executeMerge(
         '--commit',
         sha,
         '--json',
-        'status,conclusion,url',
+        'status,conclusion,url,databaseId',
       ]),
     comment: (n, body) => tracker.comment(n, body),
     closeIssue: (n, body) => tracker.closeIssue(n, body),

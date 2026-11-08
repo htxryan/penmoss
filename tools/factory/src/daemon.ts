@@ -197,7 +197,9 @@ export async function runDaemon(
         if (action.kind === 'none') continue;
         if (action.kind === 'merge') {
           merging.add(item.number);
-          log(`${item.key}: approved, merging ${pr.url}`);
+          log(
+            `${item.key}: ${pr.state === 'MERGED' ? 'merged; verifying main for' : 'approved, merging'} ${pr.url}`,
+          );
           void executeMerge(factory, item, pr, (line) => log(`${item.key}: ${line}`))
             .then((kind) => log(`${item.key}: ${kind}`))
             .catch((error: unknown) =>
