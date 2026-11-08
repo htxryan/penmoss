@@ -5,7 +5,7 @@
  * same replica.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -92,10 +92,9 @@ export async function launch(
   refuseOnMacHost('Launching the Mac app for a test');
   const userData = options.userData ?? dataDir();
   const authDir = dataDir();
-  // Proof mode (the software factory's F7, `task proof:mac`): every window is recorded.
+  // Proof mode (the software factory's F7, `task proof:mac`): the main window is recorded.
   const proof = process.env['PENMOSS_PROOF'] === '1';
   const app = await _electron.launch({
-    ...(proof ? { recordVideo: { dir: test.info().outputPath('video') } } : {}),
     args: [DESKTOP, ...(options.offline ? OFFLINE_ARGS : []), ...(options.args ?? [])],
     env: {
       ...process.env,
@@ -114,30 +113,55 @@ export async function launch(
     },
   });
   const page = await mainPage(app);
-  if (proof) recordOnClose(app, page);
+  if (proof) await recordWindow(app, page);
   const errors = collectErrors(page, options.offline ?? false);
   return { app, page, userData, errors, authDir };
 }
 
 /**
- * Proof mode: when the test closes the app, attach a last screenshot of its window and, once the
- * app has gone, the window's video, under the names the factory reads from Playwright's report.
+ * Proof mode: records the main window through Chromium's screencast, frames as JPEGs, and when
+ * the app closes or quits attaches a last screenshot and the frames, under the names the factory
+ * reads from Playwright's report (it makes the frames into the video). Not `recordVideo`: in the
+ * test VM that keeps the window from ever loading (F7).
  */
-function recordOnClose(app: ElectronApplication, page: Page): void {
+async function recordWindow(app: ElectronApplication, page: Page): Promise<void> {
   const info = test.info();
+  const dir = info.outputPath(`frames-${Date.now().toString(36)}`);
+  mkdirSync(dir, { recursive: true });
+  const frames: { file: string; at: number }[] = [];
+  const cdp = await page.context().newCDPSession(page);
+  cdp.on('Page.screencastFrame', ({ data, metadata, sessionId }) => {
+    const file = `${String(frames.length).padStart(5, '0')}.jpg`;
+    writeFileSync(join(dir, file), Buffer.from(data, 'base64'));
+    frames.push({ file, at: metadata.timestamp ?? Date.now() / 1000 });
+    void cdp.send('Page.screencastFrameAck', { sessionId }).catch(() => undefined);
+  });
+  await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 80 });
+  let attached = false;
+  const attach = async () => {
+    if (attached || frames.length === 0) return;
+    attached = true;
+    await info
+      .attach('video-frames', {
+        body: JSON.stringify({ dir, frames }),
+        contentType: 'application/json',
+      })
+      .catch(() => undefined);
+  };
+  // A test that quits with ⌘Q closes the window without app.close.
+  page.on('close', () => void attach());
   const close = app.close.bind(app);
   app.close = async () => {
-    const shot = info.outputPath('screenshot.png');
     if (!page.isClosed()) {
+      const shot = info.outputPath('screenshot.png');
       await page.screenshot({ path: shot }).catch(() => undefined);
       await info
         .attach('screenshot', { path: shot, contentType: 'image/png' })
         .catch(() => undefined);
+      await cdp.send('Page.stopScreencast').catch(() => undefined);
     }
-    const video = page.video();
+    await attach();
     await close();
-    const path = await video?.path().catch(() => undefined);
-    if (path) await info.attach('video', { path, contentType: 'video/webm' });
   };
 }
 

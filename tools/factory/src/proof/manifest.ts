@@ -15,12 +15,40 @@ export interface ProofItem {
   /** Source recordings, before conversion. */
   readonly video?: string;
   readonly screenshot?: string;
+  /**
+   * The screencast frames of each window the test opened, in order (the Mac app, F7), which
+   * the host makes into one `video`.
+   */
+  readonly frames?: readonly Frames[];
+}
+
+/** Screencast frames: JPEGs in `dir`, each shown from `at` (seconds) until the next. */
+export interface Frames {
+  readonly dir: string;
+  readonly frames: readonly { readonly file: string; readonly at: number }[];
+}
+
+function parseFrames(body: string | undefined): Frames | undefined {
+  if (!body) return undefined;
+  try {
+    const value = JSON.parse(Buffer.from(body, 'base64').toString('utf8')) as Partial<Frames>;
+    const frames = (value.frames ?? []).filter(
+      (f) => typeof f.file === 'string' && /^\d+\.jpg$/.test(f.file) && Number.isFinite(f.at),
+    );
+    return typeof value.dir === 'string' && frames.length > 0
+      ? { dir: value.dir, frames }
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 interface PwAttachment {
   readonly name: string;
   readonly path?: string;
   readonly contentType?: string;
+  /** Base64, for an attachment given as a body. */
+  readonly body?: string;
 }
 interface PwResult {
   readonly status?: string;
@@ -55,6 +83,10 @@ export function fromPlaywrightReport(
             .at(-1)?.path;
         const video = attachment('video', 'video/');
         const screenshot = attachment('screenshot', 'image/');
+        const frames = (last.attachments ?? [])
+          .filter((a) => a.name === 'video-frames')
+          .map((a) => parseFrames(a.body))
+          .filter((f): f is Frames => f !== undefined);
         items.push({
           platform,
           title: [...here, spec.title].join(' › '),
@@ -68,6 +100,7 @@ export function fromPlaywrightReport(
           source: 'harness',
           ...(video ? { video } : {}),
           ...(screenshot ? { screenshot } : {}),
+          ...(frames.length > 0 ? { frames } : {}),
         });
       }
     }
