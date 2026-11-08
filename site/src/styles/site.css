@@ -436,7 +436,6 @@ a:focus-visible {
   max-width: 1080px;
   height: auto;
   margin-top: 40px;
-  border-radius: 12px;
   filter: var(--pm-shot-shadow);
 }
 
