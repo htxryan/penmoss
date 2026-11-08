@@ -31,7 +31,7 @@ export type VmCheck = { readonly ok: true } | { readonly ok: false; readonly rea
 
 /**
  * The VM script the host runs: the factory's own (its code checkout, A1226), never the run's
- * worktree's, which the agent can edit (A-NEW-1). The worktree is only what it copies into the VM.
+ * worktree's, which the agent can edit (A1230). The worktree is only what it copies into the VM.
  */
 export function vmScript(checkout: string = ownCheckout()): string {
   return join(checkout, 'scripts', 'vm', 'desktop-test.sh');

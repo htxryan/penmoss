@@ -1,5 +1,5 @@
 /**
- * The publish repo (A-NEW-1): a bare repository under the state folder (`<stateDir>/publish`)
+ * The publish repo (A1230): a bare repository under the state folder (`<stateDir>/publish`)
  * that no sandbox ever mounts, with config the host alone writes (origin, identity). The runs'
  * clone is the agents' (Sandcastle mounts its `.git` into every sandbox), so the host never runs
  * git in it: to read or publish a run, it fetches the run's branch *from* the clone into here

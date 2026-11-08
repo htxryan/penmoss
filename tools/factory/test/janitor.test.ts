@@ -59,7 +59,7 @@ describe('the janitor (F13)', () => {
     expect(issueOfWorktree('factory-doctor-slot1-x', 'factory/')).toBeNull();
   });
 
-  it('never deletes a path that `git worktree list` names outside its folder (A-NEW-1)', async () => {
+  it('never deletes a path that `git worktree list` names outside its folder (A1230)', async () => {
     const root = mkdtempSync(join(tmpdir(), 'factory-janitor-'));
     const config = { ...testConfig(), stateDir: join(root, 'state') };
     const clone = repoDir(config);

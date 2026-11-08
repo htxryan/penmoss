@@ -4,7 +4,7 @@
  * keep. It never touches a worktree of a run that is in progress, or anything in Ryan's own
  * checkouts.
  *
- * It runs no git (A-NEW-1). `git worktree list` reads paths from the clone's
+ * It runs no git (A1230). `git worktree list` reads paths from the clone's
  * `.git/worktrees/*\/gitdir`, which any sandbox can write, so a path it names could be anywhere
  * (Ryan's checkout), and `git worktree remove` would delete it. The janitor lists the factory's
  * own worktrees folder instead, deletes only real folders directly in it, and then drops the

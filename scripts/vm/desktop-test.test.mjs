@@ -126,7 +126,7 @@ test('stops a VM its own interrupted run left running, without waiting', async (
   assert.ok(calls().includes('stop running'));
 });
 
-test('PENMOSS_VM_ROOT names the checkout to test, not the script’s own (the factory, A-NEW-1)', () => {
+test('PENMOSS_VM_ROOT names the checkout to test, not the script’s own (the factory, A1230)', () => {
   // The factory runs its own copy of the script and names a run's worktree here.
   const { root, fake, run } = setUp(0);
   const worktree = mkdtempSync(join(tmpdir(), 'penmoss-vm-root-'));

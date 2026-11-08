@@ -1,5 +1,5 @@
 /**
- * The host's git never reads what a sandbox can write (A-NEW-1). Structurally, with a fake
+ * The host's git never reads what a sandbox can write (A1230). Structurally, with a fake
  * `exec`: every host git command is hardened (no global or system config, no hooks, fsmonitor or
  * credential helper of the repo's), and none runs in the runs' clone or a worktree. With real git
  * in temp repositories: settings planted in the runs' clone, directly or through a top-level
@@ -102,7 +102,7 @@ function expectHardened(calls: readonly Call[], clone: string) {
   }
 }
 
-describe("the host's git, structurally (A-NEW-1)", () => {
+describe("the host's git, structurally (A1230)", () => {
   let config: FactoryConfig;
   let clone: string;
   let worktree: string;
@@ -228,7 +228,7 @@ async function git(dir: string, ...args: string[]): Promise<string> {
   return r.stdout.trim();
 }
 
-describe("the host's publish path, with real git (A-NEW-1)", () => {
+describe("the host's publish path, with real git (A1230)", () => {
   let root: string;
   let config: FactoryConfig;
   let github: string;

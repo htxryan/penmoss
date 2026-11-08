@@ -106,7 +106,7 @@ export function planningFlags(files: PlanFiles): string[] {
 
 /**
  * A fresh snapshot of main for the session to explore: main's files, exported from the publish
- * repo (`git archive`), with no `.git`. git never runs in the runs' clone (A-NEW-1); a snapshot
+ * repo (`git archive`), with no `.git`. git never runs in the runs' clone (A1230); a snapshot
  * an older factory made as a worktree of that clone is deleted, and the janitor drops its record.
  */
 export async function prepareSnapshot(

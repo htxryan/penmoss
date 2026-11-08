@@ -64,7 +64,7 @@ function setup(withCheckout: boolean) {
 }
 
 /**
- * A call as a command line, git's hardening (git.ts, A-NEW-1) checked and left out: every git
+ * A call as a command line, git's hardening (git.ts, A1230) checked and left out: every git
  * command here runs with it, and none of Ryan's config.
  */
 function show(c: Call): string {

@@ -4,7 +4,7 @@
  *
  * The runs work in the factory's own clone (`<stateDir>/repo`), never in Ryan's checkout. Its
  * push URL is a dead end, so a plain `git push` from a worktree goes nowhere. The host never runs
- * git in that clone or its worktrees (A-NEW-1): it fetches a run's branch from it into the
+ * git in that clone or its worktrees (A1230): it fetches a run's branch from it into the
  * publish repo (`<stateDir>/publish`, publish.ts), which no sandbox mounts, reads it there, and
  * pushes from there to an explicit URL with the app's write token, which the sandbox never sees
  * (R18): a sandbox holds only the app's read-only token.
@@ -118,7 +118,7 @@ export async function openOrReusePr(
 /**
  * Clones the runs' clone once, gives it a dead-end push URL and, when given, the app's identity
  * for the commits made in it (`openFactory` sets it once; the worktrees share it), then makes the
- * publish repo and fetches main there (A-NEW-1). git never runs in the clone after its `clone`:
+ * publish repo and fetches main there (A1230). git never runs in the clone after its `clone`:
  * its config is written as a file (sandboxes see that file read-only), and its main is fetched
  * by the gate sandbox before each rebase.
  */

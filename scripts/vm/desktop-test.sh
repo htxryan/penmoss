@@ -31,7 +31,7 @@ SCREEN_W="${DISPLAY_SIZE%%x*}"
 SCREEN_H="${DISPLAY_SIZE#*x}"
 # The checkout to test: this script's own, or PENMOSS_VM_ROOT's. The software factory runs its
 # own copy of this script on the host, never a run's (an agent can edit that one), and names the
-# run's worktree here (A-NEW-1).
+# run's worktree here (A1230).
 ROOT="${PENMOSS_VM_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 # Only ever 1 or empty: it goes into the VM's shell command below.
 PROOF=''

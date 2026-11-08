@@ -1,5 +1,5 @@
 /**
- * Every git command the factory runs on the host goes through here (A-NEW-1). Its environment
+ * Every git command the factory runs on the host goes through here (A1230). Its environment
  * has nothing of Ryan's (no ~/.gitconfig, no system config, no prompts), and its flags turn off
  * what a repository's own config could make git run: hooks, an fsmonitor, a credential helper
  * (the app's token comes back only where a command needs it), the file transport when a
