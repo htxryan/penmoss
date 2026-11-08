@@ -108,7 +108,7 @@ Once, on this Mac:
 3. **Implementation** starts when a slot is free. The card moves to In Progress. The run builds on its own branch, runs the gate (`task lint` or `task check`), records proof, validates against the plan, and opens a pull request whose body shows the proof from the R2 bucket. The PR says `Part of PEN-<n>`, so Linear shows it on the issue without moving the card: the factory moves cards itself. CI goes green in the same PR, then the card moves to **In Review** and you get a notification.
 4. **Review.** Comment on the PR or request changes: the factory answers each comment in a new round on the same branch. **Approve** to merge. The factory then squash-merges, watches `main`'s CI, says so on the issue and moves the card to Done.
 
-Whenever the factory needs you, it says why on the issue and adds **Blocked**. It never acts on a Blocked card. Add Blocked yourself to pause a card at any point: a run stops before its next step.
+Whenever the factory needs you, it says why on the issue and adds **Blocked**. It never acts on a Blocked card. Add Blocked yourself to pause a card at any point: a run stops before its next step. When you clear Blocked on an In Progress card, its run starts again on the same branch, says so on the issue, and updates its PR if it had opened one (R12).
 
 `task factory:status` shows what the daemon is running and waiting on. `task factory:chat -- 41` opens PEN-41's planning session in the Claude app (`-- 41 --print` only prints its links). `task factory:logs` follows its log. `task factory:run -- 36` runs PEN-36 now in the foreground on slot 1 (`-- 36 --slot 2` for the other), when it is in Todo or Planning, not Blocked, and labelled `plan:skip` or has an agreed plan.
 

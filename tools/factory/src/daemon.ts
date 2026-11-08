@@ -59,10 +59,14 @@ function isAlive(pid: number): boolean {
   }
 }
 
-/** Issues whose last ledger event says a run claimed them and never finished. */
+/**
+ * Issues whose last ledger event says a run claimed them and never reached In review. A run
+ * that stopped Blocked (Ryan paused it, or it asked him something) stays claimed: orphans()
+ * passes over a Blocked card, and once he clears Blocked the run restarts on its branch (R23).
+ */
 export function unfinishedClaims(ledger: string): Set<number> {
   const open = new Set<number>();
-  const terminal = new Set(['blocked', 'failed', 'in-review']);
+  const terminal = new Set(['in-review']);
   for (const line of ledger.split('\n')) {
     if (!line.trim()) continue;
     try {

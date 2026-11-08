@@ -203,7 +203,7 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
 
   // Claim: the comment first, so a crash after it is recoverable from GitHub (the source of truth).
   const how = input.recovered
-    ? `Restarted: the factory's daemon stopped while this run was in progress, so it runs again on the same branch (R12). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.`
+    ? `Restarted: this run stopped before it finished (the factory's daemon stopped, or Blocked paused it and has been cleared), so it runs again on the same branch (R12). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.`
     : `Started: ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}, implementing straight away${spec.planSkip ? ' (`plan:skip`)' : ''}.`;
   await deps.comment(
     item.number,
