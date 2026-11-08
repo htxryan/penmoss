@@ -143,6 +143,9 @@ interface RawComment {
   readonly author: { readonly login: string } | null;
 }
 
+/** `penmoss-factory[bot]` → `penmoss-factory`; people's logins are unchanged. */
+export const botless = (login: string) => login.replace(/\[bot\]$/, '');
+
 /** The PR's threads, reviews and comments, with `since` = the factory's last marker comment. */
 export async function readConversation(
   gh: Gh,
@@ -179,7 +182,8 @@ export async function readConversation(
   const pr = data.repository.pullRequest;
   const plain = (x: RawComment): ThreadComment => ({
     id: x.id,
-    author: x.author?.login ?? '',
+    // An app's comments show its slug in GraphQL and `slug[bot]` in REST: one name either way.
+    author: botless(x.author?.login ?? ''),
     body: x.body,
     createdAt: x.createdAt,
   });
@@ -198,7 +202,7 @@ export async function readConversation(
     reviews: pr.reviews.nodes
       .filter((r) => r.submittedAt)
       .map((r) => ({
-        author: r.author?.login ?? '',
+        author: botless(r.author?.login ?? ''),
         state: r.state,
         body: r.body,
         submittedAt: r.submittedAt ?? '',

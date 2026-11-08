@@ -124,6 +124,8 @@ export async function executeRevise(
     tracker,
     exec: nodeExec,
     secrets: factory.secrets,
+    pushToken: () => factory.app.write(),
+    sandboxToken: () => factory.app.read(),
     agent,
     log,
   });

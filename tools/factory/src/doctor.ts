@@ -16,7 +16,7 @@ export interface Check {
   /** When given, stdout must contain this. */
   readonly output?: string;
   /** Tokens the check needs; it is skipped, and reported as such, without them. */
-  readonly needs?: readonly SecretKey[];
+  readonly needs?: readonly (SecretKey | 'GH_TOKEN')[];
   /** Minutes rather than seconds: only with `--full`. */
   readonly slow?: boolean;
   /** Every other check needs it, so it runs even with `--only`. */
@@ -116,11 +116,11 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
 
     // The tokens (FD23).
     {
-      name: `gh acts as ${config.publisher.login}`,
+      name: `gh reads ${config.repo} with the app's read-only token`,
       expect: 'pass',
-      output: config.publisher.login,
+      output: config.repo,
       needs: ['GH_TOKEN'],
-      command: 'gh api user --jq .login',
+      command: `gh api repos/${config.repo} --jq .full_name`,
     },
     {
       name: 'wrangler whoami shows the Penmoss account',
@@ -136,6 +136,11 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
       command: opens(`${home}/.config/gh/hosts.yml`),
     },
     { name: '~/.ssh is unreadable', expect: 'refused', command: `ls '${home}/.ssh' > /dev/null` },
+    {
+      name: "the GitHub App's key file is unreadable (A1222)",
+      expect: 'refused',
+      command: opens(expandHome(config.publisher.envFile, home)),
+    },
     {
       name: "the Linear app's credentials are unreadable (LD4)",
       expect: 'refused',

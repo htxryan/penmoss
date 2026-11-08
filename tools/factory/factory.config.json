@@ -41,8 +41,8 @@
     "validationRounds": 2
   },
   "publisher": {
-    "login": "penmoss-bot",
-    "ghConfigDir": "~/.config/penmoss-factory/gh"
+    "login": "penmoss-factory",
+    "envFile": "~/.config/penmoss-factory/github-app.env"
   },
   "envFile": "~/.config/penmoss-factory/factory.env",
   "stateDir": "~/Library/Application Support/penmoss-factory",

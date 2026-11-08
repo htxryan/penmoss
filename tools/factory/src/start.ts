@@ -6,6 +6,7 @@ import type { Board, BoardItem } from './board.ts';
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import { nodeExec } from './exec.ts';
 import { createGh, type Gh } from './github.ts';
+import { createAppTokens, loadAppCredentials, type AppTokens } from './github-app.ts';
 import { BlockedByRyan, guardEffects } from './guard.ts';
 import { ensureClone, hostDeps, publisherEnv } from './host.ts';
 import { issueText } from './issue.ts';
@@ -36,26 +37,47 @@ export interface Factory {
   /** Where the cards live (LD1): Project 8 through the bot's gh, or Linear as the factory app. */
   readonly tracker: Tracker;
   readonly secrets: Secrets;
+  /** The GitHub App's installation tokens (A1222). */
+  readonly app: AppTokens;
 }
 
-/** The bot's gh, the env file and the tracker, checked. */
+/** The GitHub App, the env file and the tracker, checked. */
 export async function openFactory(
   config: FactoryConfig,
 ): Promise<{ ok: true; factory: Factory } | { ok: false; error: string }> {
   const secrets = loadSecrets(expandHome(config.envFile));
   if (!secrets.ok) return { ok: false, error: `the env file: ${secrets.error}` };
-  const gh = createGh({ exec: nodeExec, env: publisherEnv(config) });
-  const login = (await gh.run(['api', 'user', '--jq', '.login']).catch(() => '')).trim();
-  if (login !== config.publisher.login) {
+  const creds = loadAppCredentials(expandHome(config.publisher.envFile));
+  if (!creds.ok) return { ok: false, error: `the GitHub App: ${creds.error}` };
+  const app = createAppTokens({
+    appId: creds.appId,
+    privateKey: creds.privateKey,
+    repo: config.repo,
+  });
+  let identity;
+  try {
+    identity = await app.identity();
+    await app.write();
+  } catch (error) {
     return {
       ok: false,
-      error: `gh in ${config.publisher.ghConfigDir} is signed in as "${login || 'nobody'}", not ${config.publisher.login}`,
+      error: `the GitHub App: ${error instanceof Error ? error.message : String(error)} (is it installed on ${config.repo}?)`,
     };
   }
+  if (identity.slug !== config.publisher.login)
+    return {
+      ok: false,
+      error: `the GitHub App's key is for "${identity.slug}", not ${config.publisher.login}`,
+    };
+  const gh = createGh({ exec: nodeExec, env: publisherEnv(config), token: () => app.write() });
+  await ensureClone(config, nodeExec, identity);
   const tracker = await openTracker(config, gh);
   if (!tracker.ok) return tracker;
   ensureTrackerState(config);
-  return { ok: true, factory: { config, gh, tracker: tracker.tracker, secrets: secrets.secrets } };
+  return {
+    ok: true,
+    factory: { config, gh, tracker: tracker.tracker, secrets: secrets.secrets, app },
+  };
 }
 
 /** Why a card can't run now, or its spec. */
@@ -236,6 +258,8 @@ export async function executeRun(
     tracker,
     exec: nodeExec,
     secrets: factory.secrets,
+    pushToken: () => factory.app.write(),
+    sandboxToken: () => factory.app.read(),
     agent,
     log,
   });

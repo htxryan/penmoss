@@ -8,7 +8,6 @@ import { readFileSync, statSync } from 'node:fs';
 
 /** The names a sandbox may receive, and what each is for. */
 export const SECRET_KEYS = {
-  GH_TOKEN: "penmoss-bot's GitHub token",
   CLAUDE_CODE_OAUTH_TOKEN: "Claude Code's token from `claude setup-token`",
   OPENCODE_API_KEY: 'the OpenCode Go key',
   CLOUDFLARE_API_TOKEN: 'a Penmoss-only Cloudflare API token',

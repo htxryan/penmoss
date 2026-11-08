@@ -2,7 +2,7 @@
 
 The factory (#253, `tools/factory`) takes issues from Linear's **Penmoss** team (`PEN`) through planning, implementation and review on this Mac. Branches, pull requests, CI and merges stay on GitHub, and every CI job it waits on runs on the self-hosted Mac runners (A702).
 
-The tracker is one line of `tools/factory/factory.config.json`: `"tracker": "linear"` (the default, A1221) or `"tracker": "github"`, which drives it from Project 8 as before.
+The tracker is one line of `tools/factory/factory.config.json`: `"tracker": "linear"` (the default, A1221) or `"tracker": "github"`, which drives it from Project 8 as before. A GitHub App can't reach a project that belongs to a user, so switching back to Project 8 also needs a user's token for the board.
 
 ## Board
 
@@ -22,7 +22,7 @@ On Project 8 (`"tracker": "github"`) the same steps are called Ready, Planning, 
 
 **Blocked** is a label. While it is on a card, the factory does nothing with it: no picking, no replies, no pushes. The factory adds it when it is waiting on you; you can add it yourself to pause a card. Only you remove it; the factory has no code path that does. A card that Linear shows as **blocked by** an unfinished issue is held the same way, until that issue is done or canceled (LD8). On Project 8, Blocked is a single-select field instead.
 
-The factory comments and moves cards as its own Linear app, the way `penmoss-bot` opens its pull requests on GitHub. Only your comments count as instructions; everyone else's, and the text of an issue that came in from GitHub, reach the agent fenced as untrusted (R14).
+The factory comments and moves cards as its own Linear app, the way its GitHub App opens its pull requests. Only your comments count as instructions; everyone else's, and the text of an issue that came in from GitHub, reach the agent fenced as untrusted (R14).
 
 `task factory:next` prints the card the factory would start next and why, without changing anything.
 
@@ -48,8 +48,20 @@ File factory work with the team's **Task** template, which asks for acceptance c
 
 Once, on this Mac:
 
-1. **The bot.** Create the free GitHub account `penmoss-bot`, invite it with Write to `htxryan/penmoss`, and sign it in where only the factory looks:
-   `GH_CONFIG_DIR=~/.config/penmoss-factory/gh gh auth login`. It pushes branches, opens and merges pull requests, and comments on them.
+1. **The factory's GitHub App** (A1222). It pushes branches, opens and merges pull requests, and comments on them, as `penmoss-factory[bot]`. On GitHub, Settings, Developer settings, GitHub Apps, make a new app:
+   - **Name** `penmoss-factory`. **Homepage** the repository's URL. **Webhook** off.
+   - **Repository permissions:** Contents, Pull requests and Issues: Read and write. Actions, Checks, Commit statuses and Metadata: Read. Leave **Workflows** unset: GitHub then refuses any push from the factory that changes `.github/workflows`, so an agent can't change what runs on the Mac runners. A change there is yours to make. Nothing at the account level.
+   - **Where can it be installed:** only on this account.
+
+   Then **Install App** on `htxryan/penmoss` alone, and **Generate a private key**. Move the downloaded `.pem` to `~/.config/penmoss-factory/github-app.pem` and `chmod 600` it. Put the app's ID (on its settings page) and the key's path in `~/.config/penmoss-factory/github-app.env`, mode 600:
+
+   ```
+   GITHUB_APP_ID=123456
+   GITHUB_APP_PRIVATE_KEY=~/.config/penmoss-factory/github-app.pem
+   ```
+
+   The key stays on the host. The factory makes an hour-long token from it for its own pushes and PRs, and a read-only one for each sandbox.
+
 2. **The factory's Linear app.** In Linear, Settings, API, make an OAuth application named **Penmoss Factory** with client credentials turned on. Put its client ID and secret in `~/.config/penmoss-factory/linear.env`, mode 600:
 
    ```
@@ -63,17 +75,16 @@ Once, on this Mac:
 4. **The team.** `task factory:linear:check -- --me` prints your Linear user ID: put it in `tools/factory/factory.config.json` as `linear.owner`. Then `task factory:linear:check -- --fix` adds what the factory needs to the Penmoss team (the **Planning** state, the `plan:skip` and `platform:*` labels, the Agent and Model groups), and `task factory:linear:check` should then pass.
 5. **The env file.** `~/.config/penmoss-factory/factory.env`, mode 600 (`chmod 600`), with `KEY=value` lines. Only these names reach a sandbox; any other line is ignored and named (never its value) by `task factory:doctor`:
 
-   | Name                                            | What                                                  |
-   | ----------------------------------------------- | ----------------------------------------------------- |
-   | `GH_TOKEN`                                      | penmoss-bot's token (`GH_CONFIG_DIR=… gh auth token`) |
-   | `CLAUDE_CODE_OAUTH_TOKEN`                       | from `claude setup-token`                             |
-   | `OPENCODE_API_KEY`                              | the OpenCode Go key                                   |
-   | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | a token limited to the Penmoss account                |
-   | `PLAY_SERVICE_ACCOUNT_JSON`                     | the path of the Play service account key              |
+   | Name                                            | What                                     |
+   | ----------------------------------------------- | ---------------------------------------- |
+   | `CLAUDE_CODE_OAUTH_TOKEN`                       | from `claude setup-token`                |
+   | `OPENCODE_API_KEY`                              | the OpenCode Go key                      |
+   | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | a token limited to the Penmoss account   |
+   | `PLAY_SERVICE_ACCOUNT_JSON`                     | the path of the Play service account key |
 
 6. **Trust the planning folder.** Planning sessions run from `~/Library/Application Support/penmoss-factory/plans`. Run `claude` there once and accept the trust prompt, or `claude --bg` refuses to start.
 7. **Toolchain.** The JDK, Android SDK and Playwright's browsers at the paths in `tools/factory/factory.config.json` (`toolchain`). Optional: `brew install terminal-notifier`, so a notification opens its card in the Factory UI.
-8. **Check it.** `task factory:doctor` starts slot 1's sandbox on a throwaway branch of `origin/main` and checks the toolchain there (pnpm, Chromium, the JDK, `wrangler dev` on the slot's port block), the tokens, and that your gh login, `~/.ssh`, the keychain, the Linear app's credentials and your home stay out of reach, and that a relay deploy is refused. `-- --full` adds `task check`, the e2e smoke spec, `task android:test` and `task desktop:build`; `-- --slot 2` checks the other slot.
+8. **Check it.** `task factory:doctor` starts slot 1's sandbox on a throwaway branch of `origin/main` and checks the toolchain there (pnpm, Chromium, the JDK, `wrangler dev` on the slot's port block), the tokens (the GitHub check uses the app's read-only token, as a run does), and that your gh login, `~/.ssh`, the keychain, the GitHub App's key, the Linear app's credentials and your home stay out of reach, and that a relay deploy is refused. `-- --full` adds `task check`, the e2e smoke spec, `task android:test` and `task desktop:build`; `-- --slot 2` checks the other slot.
 9. **Start it.** `task factory:install` installs the daemon and the UI as LaunchAgents. Both start now and at every login.
 
 ## Daily use
@@ -89,24 +100,24 @@ Whenever the factory needs you, it says why on the issue and adds **Blocked**. I
 
 ## Troubleshooting
 
-| What you see                                        | Do this                                                                                                                                                       |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A card stays in Todo                                | `task factory:next` says why it isn't picked: labels, Blocked, blocked by another issue, closed, or no free slot.                                             |
-| "Can't start" on startup                            | `gh` in `~/.config/penmoss-factory/gh` isn't signed in as `penmoss-bot`, an env file is missing or not mode 600, or `task factory:linear:check` finds a gap.  |
-| "Linear's rate limit"                               | The poll is skipped until Linear's reset time; cards aren't Blocked for it.                                                                                   |
-| Old plans or runs went missing                      | Changing `tracker` moves the state kept by card number into `archive/` in the state folder, since GitHub #36 and PEN-36 are different cards.                  |
-| A run Blocked on a usage limit                      | It waits for the reset by itself. Blocked after four limits in a row means the plan's quota is spent.                                                         |
-| A run Blocked on "CI stayed red"                    | Read the failed job's log from the PR's checks, fix or comment, then clear Blocked.                                                                           |
-| "CI waiting for a runner"                           | The Mac runners are busy or offline (A702). They catch up on their own.                                                                                       |
-| A planning session "idle without writing its state" | Open its chat link and nudge it, or clear Blocked to resume it.                                                                                               |
-| A sandbox check fails                               | `task factory:doctor -- --full --only "<check>"`; the full log is in `~/Library/Application Support/penmoss-factory/doctor/`.                                 |
-| Disk filling up                                     | The janitor removes old sandbox worktrees and run folders every six hours. To clean now, restart the daemon (`task factory:stop`, then `task factory:start`). |
+| What you see                                        | Do this                                                                                                                                                                        |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A card stays in Todo                                | `task factory:next` says why it isn't picked: labels, Blocked, blocked by another issue, closed, or no free slot.                                                              |
+| "Can't start" on startup                            | The GitHub App isn't installed on the repository or its key is for another app, an env file or the key is missing or not mode 600, or `task factory:linear:check` finds a gap. |
+| "Linear's rate limit"                               | The poll is skipped until Linear's reset time; cards aren't Blocked for it.                                                                                                    |
+| Old plans or runs went missing                      | Changing `tracker` moves the state kept by card number into `archive/` in the state folder, since GitHub #36 and PEN-36 are different cards.                                   |
+| A run Blocked on a usage limit                      | It waits for the reset by itself. Blocked after four limits in a row means the plan's quota is spent.                                                                          |
+| A run Blocked on "CI stayed red"                    | Read the failed job's log from the PR's checks, fix or comment, then clear Blocked.                                                                                            |
+| "CI waiting for a runner"                           | The Mac runners are busy or offline (A702). They catch up on their own.                                                                                                        |
+| A planning session "idle without writing its state" | Open its chat link and nudge it, or clear Blocked to resume it.                                                                                                                |
+| A sandbox check fails                               | `task factory:doctor -- --full --only "<check>"`; the full log is in `~/Library/Application Support/penmoss-factory/doctor/`.                                                  |
+| Disk filling up                                     | The janitor removes old sandbox worktrees and run folders every six hours. To clean now, restart the daemon (`task factory:stop`, then `task factory:start`).                  |
 
 ## Turning it off
 
 - **Pause one card:** add Blocked.
 - **Pause everything:** `task factory:stop`. Runs in progress stop. They restart on the same branch when the daemon starts again (R12).
-- **Remove it:** `task factory:stop`, then `launchctl bootout gui/$(id -u)/app.penmoss.factory-ui`, and delete `~/Library/LaunchAgents/app.penmoss.factory*.plist`. Then delete `~/Library/Application Support/penmoss-factory` and `~/.config/penmoss-factory`. Also revoke the bot's token and remove `penmoss-bot` from the repository, and delete the Penmoss Factory app in Linear's settings.
+- **Remove it:** `task factory:stop`, then `launchctl bootout gui/$(id -u)/app.penmoss.factory-ui`, and delete `~/Library/LaunchAgents/app.penmoss.factory*.plist`. Then delete `~/Library/Application Support/penmoss-factory` and `~/.config/penmoss-factory`. Also delete the `penmoss-factory` GitHub App (or uninstall it from the repository), and the Penmoss Factory app in Linear's settings.
 
 ## Sandbox
 

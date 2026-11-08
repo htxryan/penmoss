@@ -77,7 +77,11 @@ export interface FactoryConfig {
     readonly designWhenUx: boolean;
   };
   readonly review: { readonly commentQuietMinutes: number; readonly validationRounds: number };
-  readonly publisher: { readonly login: string; readonly ghConfigDir: string };
+  /**
+   * The GitHub App the factory pushes and opens PRs as (A1222): its slug, and the host-only file
+   * with its ID and private key's path.
+   */
+  readonly publisher: { readonly login: string; readonly envFile: string };
   readonly envFile: string;
   readonly stateDir: string;
   readonly pollSeconds: number;
@@ -192,7 +196,7 @@ export function parseConfig(raw: unknown): ConfigResult {
   int(review, 'validationRounds', 'config.review');
   const publisher = obj(root['publisher'], 'config.publisher');
   str(publisher, 'login', 'config.publisher');
-  str(publisher, 'ghConfigDir', 'config.publisher');
+  str(publisher, 'envFile', 'config.publisher');
   for (const key of ['envFile', 'stateDir', 'worktreeRoot', 'branchPrefix', 'sharedDir'])
     str(root, key, 'config');
   int(root, 'pollSeconds', 'config', 10);

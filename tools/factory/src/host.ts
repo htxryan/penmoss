@@ -43,12 +43,16 @@ export function repoDir(config: FactoryConfig): string {
   return join(expandHome(config.stateDir), 'repo');
 }
 
-/** The publisher's environment for gh and git: the bot's login and nothing of Ryan's. */
+/**
+ * The publisher's environment for gh and git: nothing of Ryan's. `gh` gets the app's token per
+ * call (`GH_TOKEN`), and its config folder is the factory's own, empty one, so it can never fall
+ * back to Ryan's login in ~/.config/gh.
+ */
 export function publisherEnv(config: FactoryConfig): Record<string, string> {
   return {
     PATH: process.env['PATH'] ?? '/usr/bin:/bin',
     HOME: process.env['HOME'] ?? '',
-    GH_CONFIG_DIR: expandHome(config.publisher.ghConfigDir),
+    GH_CONFIG_DIR: join(expandHome(config.stateDir), 'gh'),
     GIT_CONFIG_NOSYSTEM: '1',
     GIT_TERMINAL_PROMPT: '0',
   };
@@ -68,23 +72,35 @@ async function git(
   return result.stdout;
 }
 
-/** Clones the repository once, with a dead-end push URL, and fetches main. */
-export async function ensureClone(config: FactoryConfig, exec: Exec): Promise<string> {
+/** git's credentials from `GH_TOKEN` in its environment (the app's token), nothing stored. */
+export const TOKEN_HELPER = [
+  '-c',
+  'credential.helper=',
+  '-c',
+  'credential.helper=!f() { test "$1" = get && printf "username=x-access-token\\npassword=%s\\n" "$GH_TOKEN"; }; f',
+];
+
+/**
+ * Clones the repository once, with a dead-end push URL, and fetches main. Commits made in it
+ * carry the app's identity, when given (`openFactory` sets it once; the worktrees share it).
+ */
+export async function ensureClone(
+  config: FactoryConfig,
+  exec: Exec,
+  identity?: { readonly name: string; readonly email: string },
+): Promise<string> {
   const dir = repoDir(config);
   const env = publisherEnv(config);
-  const helper = ['-c', 'credential.helper=', '-c', 'credential.helper=!gh auth git-credential'];
   if (!existsSync(join(dir, '.git'))) {
     mkdirSync(dir, { recursive: true });
-    await git(exec, [...helper, 'clone', `https://github.com/${config.repo}.git`, dir], env);
+    await git(exec, ['clone', `https://github.com/${config.repo}.git`, dir], env);
   }
   await git(exec, ['-C', dir, 'remote', 'set-url', '--push', 'origin', DEAD_END_PUSH_URL], env);
-  await git(exec, ['-C', dir, 'config', 'user.name', config.publisher.login], env);
-  await git(
-    exec,
-    ['-C', dir, 'config', 'user.email', `${config.publisher.login}@users.noreply.github.com`],
-    env,
-  );
-  await git(exec, ['-C', dir, ...helper, 'fetch', '--quiet', 'origin', 'main'], env);
+  if (identity) {
+    await git(exec, ['-C', dir, 'config', 'user.name', identity.name], env);
+    await git(exec, ['-C', dir, 'config', 'user.email', identity.email], env);
+  }
+  await git(exec, ['-C', dir, 'fetch', '--quiet', 'origin', 'main'], env);
   return dir;
 }
 
@@ -97,6 +113,10 @@ export interface HostOptions {
   readonly tracker: Tracker;
   readonly exec: Exec;
   readonly secrets: Secrets;
+  /** The app's installation token, for pushes. */
+  readonly pushToken: () => Promise<string>;
+  /** A read-only token for the sandbox (A1222). */
+  readonly sandboxToken: () => Promise<string>;
   readonly agent: AgentProvider;
   readonly log: (line: string) => void;
 }
@@ -120,7 +140,10 @@ export function hostDeps(options: HostOptions): RunDeps {
     setStatus: (item, status) => options.tracker.setStatus(item, status),
     setBlocked: (item) => options.tracker.setBlocked(item),
     openSandbox: async (branch) => {
-      const spec = sandboxSpec(config, slot, options.secrets);
+      const spec = sandboxSpec(config, slot, {
+        ...options.secrets,
+        GH_TOKEN: await options.sandboxToken(),
+      });
       makeOwnDirs(spec);
       const { createSandbox } = await import('@ai-hero/sandcastle');
       const sandbox = await createSandbox({
@@ -347,22 +370,7 @@ export function hostDeps(options: HostOptions): RunDeps {
       return { ok: true, proof };
     },
     fetchMain: async () => {
-      await git(
-        exec,
-        [
-          '-C',
-          dir,
-          '-c',
-          'credential.helper=',
-          '-c',
-          'credential.helper=!gh auth git-credential',
-          'fetch',
-          '--quiet',
-          'origin',
-          'main',
-        ],
-        env,
-      );
+      await git(exec, ['-C', dir, 'fetch', '--quiet', 'origin', 'main'], env);
     },
     numberDecisions: async (handle) => {
       const listed = await handle.exec(
@@ -442,16 +450,13 @@ export function hostDeps(options: HostOptions): RunDeps {
         [
           '-C',
           dir,
-          '-c',
-          'credential.helper=',
-          '-c',
-          'credential.helper=!gh auth git-credential',
+          ...TOKEN_HELPER,
           'push',
           `https://github.com/${config.repo}.git`,
           '--force-with-lease',
           `${branch}:refs/heads/${branch}`,
         ],
-        env,
+        { ...env, GH_TOKEN: await options.pushToken() },
       );
     },
     openPr: async ({ branch, title, body, proof, files = [] }) => {

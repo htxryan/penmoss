@@ -52,7 +52,8 @@ export const hostPaths = (): SandboxPaths => ({
 export function sandboxSpec(
   config: FactoryConfig,
   slot: SlotConfig,
-  secrets: Secrets,
+  /** factory.env's tokens, plus the run's read-only `GH_TOKEN` (A1222). */
+  secrets: Secrets & { readonly GH_TOKEN?: string },
   paths: SandboxPaths = hostPaths(),
 ): SandboxSpec {
   const state = expandHome(config.stateDir, paths.home);
