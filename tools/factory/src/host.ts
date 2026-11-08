@@ -32,7 +32,7 @@ import { GhError, type Gh } from './github.ts';
 import { proofFiles, type AttachedProof } from './proof/body.ts';
 import { publishRefs, type ProofStore } from './proof/store.ts';
 import { fromPlaywrightReport, type ProofItem } from './proof/manifest.ts';
-import { checkMedia, framesToMp4, toMp4 } from './proof/media.ts';
+import { checkMedia, framesToMp4, framesWithin, toMp4, within } from './proof/media.ts';
 import { parseAgentResult, RESULT_PATH } from './result.ts';
 import type { RunDeps, RunEvent, RunSandbox } from './run.ts';
 import { makeOwnDirs, sandboxSpec, seatbeltProvider, withJavaHome } from './sandbox.ts';
@@ -395,7 +395,12 @@ export function hostDeps(options: HostOptions): RunDeps {
         items = await Promise.all(
           items.map(async (item) => {
             const dirs = (item.frames ?? []).map((f) => fromVm(f.dir, out));
-            if (!item.frames || !dirs.every((d) => existsSync(d))) return item;
+            if (
+              !item.frames ||
+              !dirs.every((d) => existsSync(d)) ||
+              !framesWithin(item.frames, dirs, handle.worktreePath)
+            )
+              return item;
             const video = join(dirs[0] ?? out, 'video.mp4');
             await framesToMp4(exec, item.frames, dirs, video);
             return { ...item, video };
@@ -405,8 +410,9 @@ export function hostDeps(options: HostOptions): RunDeps {
       const raw = join(runDir, 'raw');
       mkdirSync(raw, { recursive: true });
       return items.map((item, i) => {
+        // Only the run's own files: the agent's tests write the report that names them.
         const keep = (path: string | undefined, name: string) => {
-          if (!path || !existsSync(path)) return undefined;
+          if (!path || !within(path, handle.worktreePath)) return undefined;
           const to = join(raw, `${platform}-${i + 1}-${name}`);
           copyFileSync(path, to);
           return to;
@@ -568,7 +574,6 @@ export function hostDeps(options: HostOptions): RunDeps {
   };
 }
 
-/** The newest proof report under the web app's test results (its folder is named by port). */
 /** A path in the VM's `apps/desktop/test-results/…` as the copy under `<out>/test-results/…`. */
 export function fromVm(path: string, out: string): string {
   const i = path.indexOf('/apps/desktop/test-results/');
@@ -577,6 +582,7 @@ export function fromVm(path: string, out: string): string {
     : join(out, 'test-results', path.slice(i + '/apps/desktop/test-results/'.length));
 }
 
+/** The newest proof report under the web app's test results (its folder is named by port). */
 function newestReport(results: string): string | undefined {
   if (!existsSync(results)) return undefined;
   return readdirSync(results)
