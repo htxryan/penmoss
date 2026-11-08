@@ -27,7 +27,7 @@ import { cardLink } from './ui/link.ts';
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { Exec } from './exec.ts';
 import { runIdOf, type CheckRun } from './checks.ts';
-import { assignDecisionNumbers, maxDecision } from './decisions.ts';
+import { reserveDecisionNumbers } from './decisions.ts';
 import { GhError, type Gh } from './github.ts';
 import { proofFiles, type AttachedProof } from './proof/body.ts';
 import { publishRefs, type ProofStore } from './proof/store.ts';
@@ -466,9 +466,10 @@ export function hostDeps(options: HostOptions): RunDeps {
       if (files.length === 0) return {};
       const main = await git(exec, ['-C', dir, 'show', 'origin/main:docs/decisions.md'], env);
       const paths = files.map((f) => join(handle.worktreePath, f));
-      const { texts, assigned } = assignDecisionNumbers(
+      const { texts, assigned } = reserveDecisionNumbers(
         paths.map((p) => readFileSync(p, 'utf8')),
-        maxDecision(main),
+        main,
+        join(state, 'decision-numbers'),
       );
       paths.forEach((p, i) => writeFileSync(p, texts[i] ?? ''));
       const message = `Number the new decisions: ${Object.entries(assigned)

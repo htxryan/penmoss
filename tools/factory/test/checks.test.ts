@@ -1,6 +1,9 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { runIdOf, summarizeChecks, type CheckRun } from '../src/checks.ts';
-import { assignDecisionNumbers, maxDecision } from '../src/decisions.ts';
+import { assignDecisionNumbers, maxDecision, reserveDecisionNumbers } from '../src/decisions.ts';
 
 // Recorded from `gh pr checks 283 --json name,state,bucket,link,startedAt` (trimmed).
 const pass: CheckRun = {
@@ -74,5 +77,16 @@ describe('decision numbers', () => {
     const first = assignDecisionNumbers(['| A-NEW-1 | one |'], 1173).texts[0]!;
     const second = assignDecisionNumbers(['| A-NEW-1 | two |'], maxDecision(first)).texts[0]!;
     expect([first, second]).toEqual(['| A1174 | one |', '| A1175 | two |']);
+  });
+  it('gives two slots different numbers while both PRs are open on the same main', () => {
+    const reserved = join(mkdtempSync(join(tmpdir(), 'factory-decisions-')), 'decision-numbers');
+    const main = '| A1172 | x |\n| A1173 | y |';
+    const one = reserveDecisionNumbers(['| A-NEW-1 | one |\n| A-NEW-2 | more |'], main, reserved);
+    const two = reserveDecisionNumbers(['| A-NEW-1 | two |'], main, reserved);
+    expect(one.texts).toEqual(['| A1174 | one |\n| A1175 | more |']);
+    expect(two.texts).toEqual(['| A1176 | two |']);
+    // Once main has gone past what was given out, main's own numbers lead again.
+    const three = reserveDecisionNumbers(['| A-NEW-1 | three |'], '| A1180 | z |', reserved);
+    expect(three.assigned).toEqual({ 'A-NEW-1': 'A1181' });
   });
 });

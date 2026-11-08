@@ -3,6 +3,7 @@
  * two slots never claim the same one (F6). One A-NEW-k becomes the same A-number in every
  * file it appears in.
  */
+import { readFileSync, writeFileSync } from 'node:fs';
 
 /** The highest `A<n>` decision number in a text. */
 export function maxDecision(text: string): number {
@@ -28,4 +29,29 @@ export function assignDecisionNumbers(
     texts: texts.map((t) => t.replaceAll(/\bA-NEW-(\d+)\b/g, (key) => assigned[key] ?? key)),
     assigned,
   };
+}
+
+/**
+ * Numbers the texts after both main's highest decision and the highest one the factory has
+ * already given out (kept in `reservedFile`), then records the new highest. Two slots running
+ * at once both rebase onto the same main, so main alone would give them the same number; the
+ * file makes the second slot's numbers follow the first's. Reading, numbering and writing the
+ * file happen with no `await` between them, so the daemon's runs can't interleave here.
+ */
+export function reserveDecisionNumbers(
+  texts: readonly string[],
+  main: string,
+  reservedFile: string,
+): { texts: string[]; assigned: Record<string, string> } {
+  let reserved = 0;
+  try {
+    reserved = Number(readFileSync(reservedFile, 'utf8').trim()) || 0;
+  } catch {
+    // None given out yet.
+  }
+  const result = assignDecisionNumbers(texts, Math.max(maxDecision(main), reserved));
+  const given = Object.values(result.assigned).map((a) => Number(a.slice(1)));
+  const highest = Math.max(reserved, ...given);
+  if (highest > reserved) writeFileSync(reservedFile, `${highest}\n`);
+  return result;
 }
