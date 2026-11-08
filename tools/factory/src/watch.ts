@@ -60,7 +60,13 @@ export async function nextReviewAction(
 ): Promise<ReviewAction> {
   if (pr.state !== 'OPEN') return { kind: 'none', reason: `the PR is ${pr.state.toLowerCase()}` };
   const { config, gh } = factory;
-  const conversation = await readConversation(gh, config.repo, pr.number, 'penmoss-factory');
+  const conversation = await readConversation(
+    gh,
+    config.repo,
+    pr.number,
+    'penmoss-factory',
+    config.publisher.login,
+  );
   const state = reviewState(
     conversation,
     config.owner,
