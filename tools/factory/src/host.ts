@@ -2,22 +2,25 @@
  * The real `RunDeps`: the factory's own clone, Sandcastle sandboxes, gh as the GitHub App
  * (A1222), and the run ledger. Kept apart from run.ts so the run's sequence is tested with fakes.
  *
- * The factory works in its own clone (`<stateDir>/repo`), never in Ryan's checkout. Its push
- * URL is a dead end, so a plain `git push` from a worktree goes nowhere; the harness pushes to
- * an explicit URL with the app's write token, which the sandbox never sees (R18): a sandbox
- * holds only the app's read-only token.
+ * The runs work in the factory's own clone (`<stateDir>/repo`), never in Ryan's checkout. Its
+ * push URL is a dead end, so a plain `git push` from a worktree goes nowhere. The host never runs
+ * git in that clone or its worktrees (A-NEW-1): it fetches a run's branch from it into the
+ * publish repo (`<stateDir>/publish`, publish.ts), which no sandbox mounts, reads it there, and
+ * pushes from there to an explicit URL with the app's write token, which the sandbox never sees
+ * (R18): a sandbox holds only the app's read-only token.
  */
 import {
   appendFileSync,
   copyFileSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { extname, join } from 'node:path';
+import { dirname, extname, join } from 'node:path';
 import type { AgentProvider, Sandbox } from '@ai-hero/sandcastle';
 import type { Board } from './board.ts';
 import { ensureAvd, stopSlotEmulator } from './avd.ts';
@@ -26,6 +29,7 @@ import { usageLimitReset } from './limits.ts';
 import { cardLink } from './ui/link.ts';
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { Exec } from './exec.ts';
+import { mustGit } from './git.ts';
 import { runIdOf, type CheckRun } from './checks.ts';
 import { reserveDecisionNumbers } from './decisions.ts';
 import { GhError, type Gh } from './github.ts';
@@ -35,6 +39,18 @@ import { fromPlaywrightReport, type ProofItem } from './proof/manifest.ts';
 import { checkMedia, framesToMp4, framesWithin, toMp4, within } from './proof/media.ts';
 import { rebaseOntoMain } from './rebase.ts';
 import { checkMacVm, runMacProof } from './proof/mac.ts';
+import {
+  descendsFrom,
+  ensurePublishRepo,
+  fetchMainInto,
+  fetchRunBranch,
+  githubUrl,
+  MAIN,
+  publishDir,
+  publishRun,
+  pushedHead,
+  runRef,
+} from './publish.ts';
 import { parseAgentResult, RESULT_PATH } from './result.ts';
 import type { RunDeps, RunEvent, RunSandbox } from './run.ts';
 import { makeOwnDirs, sandboxSpec, seatbeltProvider, withJavaHome } from './sandbox.ts';
@@ -48,7 +64,7 @@ export function repoDir(config: FactoryConfig): string {
 }
 
 /**
- * The publisher's environment for gh and git: nothing of Ryan's. `gh` gets the app's token per
+ * The publisher's environment for gh: nothing of Ryan's (git's is `gitEnv`, git.ts). `gh` gets the app's token per
  * call (`GH_TOKEN`), and its config folder is the factory's own, empty one, so it can never fall
  * back to Ryan's login in ~/.config/gh.
  */
@@ -62,74 +78,7 @@ export function publisherEnv(config: FactoryConfig): Record<string, string> {
   };
 }
 
-async function git(
-  exec: Exec,
-  args: readonly string[],
-  env: Record<string, string>,
-  cwd?: string,
-): Promise<string> {
-  const result = await exec('git', args, { env, ...(cwd ? { cwd } : {}) });
-  if (result.code !== 0) {
-    // The subcommand past `-C <dir>` and `-c <setting>`, and the lines that say why (a push's
-    // `! [rejected] … (stale info)` comes before its last line).
-    const command = args.find(
-      (a, i) => !a.startsWith('-') && args[i - 1] !== '-C' && args[i - 1] !== '-c',
-    );
-    const why = result.stderr.trim().split('\n').slice(-3).join(' / ');
-    throw new Error(`git ${command ?? args[0] ?? ''} failed: ${why}`);
-  }
-  return result.stdout;
-}
-
-/** git's credentials from `GH_TOKEN` in its environment (the app's token), nothing stored. */
-export const TOKEN_HELPER = [
-  '-c',
-  'credential.helper=',
-  '-c',
-  'credential.helper=!f() { test "$1" = get && printf "username=x-access-token\\npassword=%s\\n" "$GH_TOKEN"; }; f',
-];
-
-/**
- * Pushes `branch` from the clone to `url`, leased on what the factory last pushed there. A push
- * to a URL has no remote-tracking ref, so a bare `--force-with-lease` expects the branch not to
- * exist and refuses every later push of it ("stale info"): a CI repair, a review round, a
- * restarted run. So the lease is explicit: none when GitHub has no such branch, otherwise the
- * commit kept in `refs/remotes/origin/<branch>` (written after each push; a fresh clone fills it
- * from GitHub). A push someone else made to the branch is still never overwritten.
- */
-export async function pushBranch(
-  exec: Exec,
-  dir: string,
-  url: string,
-  branch: string,
-  env: Record<string, string>,
-): Promise<void> {
-  const ref = `refs/heads/${branch}`;
-  const tracking = `refs/remotes/origin/${branch}`;
-  const remote = await git(exec, ['-C', dir, ...TOKEN_HELPER, 'ls-remote', url, ref], env);
-  let expect = '';
-  if (remote.trim() !== '') {
-    const last = await exec('git', ['-C', dir, 'rev-parse', '--verify', '--quiet', tracking], {
-      env,
-    });
-    expect = last.code === 0 ? last.stdout.trim() : '';
-  }
-  const head = (await git(exec, ['-C', dir, 'rev-parse', '--verify', ref], env)).trim();
-  await git(
-    exec,
-    [
-      '-C',
-      dir,
-      ...TOKEN_HELPER,
-      'push',
-      url,
-      `--force-with-lease=${ref}:${expect}`,
-      `${head}:${ref}`,
-    ],
-    env,
-  );
-  await git(exec, ['-C', dir, 'update-ref', tracking, head], env);
-}
+export { TOKEN_HELPER } from './git.ts';
 
 /**
  * Opens the branch's PR, or, when one is already open, gives it the new title and body and
@@ -167,8 +116,11 @@ export async function openOrReusePr(
 }
 
 /**
- * Clones the repository once, with a dead-end push URL, and fetches main. Commits made in it
- * carry the app's identity, when given (`openFactory` sets it once; the worktrees share it).
+ * Clones the runs' clone once, gives it a dead-end push URL and, when given, the app's identity
+ * for the commits made in it (`openFactory` sets it once; the worktrees share it), then makes the
+ * publish repo and fetches main there (A-NEW-1). git never runs in the clone after its `clone`:
+ * its config is written as a file (sandboxes see that file read-only), and its main is fetched
+ * by the gate sandbox before each rebase.
  */
 export async function ensureClone(
   config: FactoryConfig,
@@ -176,18 +128,39 @@ export async function ensureClone(
   identity?: { readonly name: string; readonly email: string },
 ): Promise<string> {
   const dir = repoDir(config);
-  const env = publisherEnv(config);
-  if (!existsSync(join(dir, '.git'))) {
-    mkdirSync(dir, { recursive: true });
-    await git(exec, ['clone', `https://github.com/${config.repo}.git`, dir], env);
-  }
-  await git(exec, ['-C', dir, 'remote', 'set-url', '--push', 'origin', DEAD_END_PUSH_URL], env);
+  const parent = dirname(dir);
+  mkdirSync(parent, { recursive: true });
+  if (!existsSync(join(dir, '.git')))
+    await mustGit(exec, parent, ['clone', '--quiet', githubUrl(config), dir]);
+  const dotGit = lstatSync(join(dir, '.git'));
+  const file = join(dir, '.git', 'config');
+  if (!dotGit.isDirectory() || !lstatSync(file).isFile())
+    throw new Error(
+      `${dir} isn't a clone the factory made (its .git isn't a folder with a config)`,
+    );
+  const set = (key: string, value: string) =>
+    mustGit(exec, parent, ['config', '--file', file, '--replace-all', key, value]);
+  await set('remote.origin.pushurl', DEAD_END_PUSH_URL);
   if (identity) {
-    await git(exec, ['-C', dir, 'config', 'user.name', identity.name], env);
-    await git(exec, ['-C', dir, 'config', 'user.email', identity.email], env);
+    await set('user.name', identity.name);
+    await set('user.email', identity.email);
   }
-  await git(exec, ['-C', dir, 'fetch', '--quiet', 'origin', 'main'], env);
+  await ensurePublishRepo(config, exec, identity);
   return dir;
+}
+
+/**
+ * The gate sandbox's fetch of main into the runs' clone, with the sandbox's read-only token, and
+ * main put at `base`: the commit the host fetched into the publish repo, which the push then
+ * checks the branch descends from. The host never fetches into the clone itself.
+ */
+export function sandboxMainCommand(base: string): string {
+  if (!/^[0-9a-f]{40,64}$/.test(base)) throw new Error(`not a commit: ${base}`);
+  return [
+    `git -c credential.helper= -c 'credential.helper=!f() { test "$1" = get || exit 0; echo username=x-access-token; echo "password=$GH_TOKEN"; }; f'`,
+    'fetch --quiet --no-tags origin main',
+    `&& git update-ref refs/remotes/origin/main ${base}`,
+  ].join(' ');
 }
 
 export interface HostOptions {
@@ -211,10 +184,18 @@ export interface HostOptions {
   readonly waitingFor?: (reason: string | null) => void;
 }
 
-export function hostDeps(options: HostOptions): RunDeps {
+/** The host's RunDeps, plus the commit last pushed to a branch (a review round replies with it). */
+export type HostDeps = RunDeps & { headSha(branch: string): Promise<string> };
+
+export function hostDeps(options: HostOptions): HostDeps {
   const { config, slot, gh, exec } = options;
   const dir = repoDir(config);
-  const env = publisherEnv(config);
+  const publish = publishDir(config);
+  const ref = runRef(options.runId);
+  // main as last fetched into the publish repo: the base the gate's rebase goes onto, and that a
+  // push checks the branch descends from.
+  let base: string | undefined;
+  const fetchRun = (branch: string) => fetchRunBranch(exec, publish, dir, branch, ref);
   const state = expandHome(config.stateDir);
   const runDir = join(state, 'runs', options.runId);
   mkdirSync(runDir, { recursive: true });
@@ -322,16 +303,14 @@ export function hostDeps(options: HostOptions): RunDeps {
       return Promise.resolve(parseAgentResult(readFileSync(path, 'utf8')));
     },
     diff: async (branch) => {
-      const paths = await git(
-        exec,
-        ['-C', dir, 'diff', '--name-only', `origin/main...${branch}`],
-        env,
-      );
-      const count = await git(
-        exec,
-        ['-C', dir, 'rev-list', '--count', `origin/main..${branch}`],
-        env,
-      );
+      const commit = await fetchRun(branch);
+      const paths = await mustGit(exec, publish, [
+        'diff',
+        '--name-only',
+        '--no-ext-diff',
+        `${MAIN}...${commit}`,
+      ]);
+      const count = await mustGit(exec, publish, ['rev-list', '--count', `${MAIN}..${commit}`]);
       return { paths: paths.split('\n').filter(Boolean), commits: Number(count.trim()) };
     },
     macVmCheck: (handle) => checkMacVm(exec, config, handle.worktreePath),
@@ -472,22 +451,24 @@ export function hostDeps(options: HostOptions): RunDeps {
       return { ok: true, proof };
     },
     fetchMain: async () => {
-      await git(exec, ['-C', dir, 'fetch', '--quiet', 'origin', 'main'], env);
+      base = await fetchMainInto(exec, publish);
     },
-    behindMain: async (branch) => {
-      const args = ['-C', dir, 'merge-base', '--is-ancestor', 'origin/main', branch];
-      const r = await exec('git', args, { env });
-      if (r.code > 1) throw new Error(`git merge-base failed: ${r.stderr.trim()}`);
-      return r.code === 1;
+    behindMain: async (branch) =>
+      !(await descendsFrom(exec, publish, MAIN, await fetchRun(branch))),
+    rebase: async (handle) => {
+      base ??= await fetchMainInto(exec, publish);
+      const fetched = await handle.exec(sandboxMainCommand(base));
+      if (fetched.exitCode !== 0)
+        throw new Error(`the sandbox couldn't fetch main: ${fetched.stderr.trim()}`);
+      return rebaseOntoMain(handle, join(state, 'decision-numbers'));
     },
-    rebase: (handle) => rebaseOntoMain(handle, join(state, 'decision-numbers')),
     numberDecisions: async (handle) => {
       const listed = await handle.exec(
         "git grep -l -E 'A-NEW-[0-9]+' -- . ':!tools/factory' || true",
       );
       const files = listed.stdout.split('\n').filter(Boolean);
       if (files.length === 0) return {};
-      const main = await git(exec, ['-C', dir, 'show', 'origin/main:docs/decisions.md'], env);
+      const main = await mustGit(exec, publish, ['show', `${MAIN}:docs/decisions.md`]);
       const paths = files.map((f) => join(handle.worktreePath, f));
       const { texts, assigned } = reserveDecisionNumbers(
         paths.map((p) => readFileSync(p, 'utf8')),
@@ -555,11 +536,17 @@ export function hostDeps(options: HostOptions): RunDeps {
           options.log(`waits for a heavy-job slot (held by ${holders.join('; ')})`),
       }),
     push: async (branch) => {
-      await pushBranch(exec, dir, `https://github.com/${config.repo}.git`, branch, {
-        ...env,
-        GH_TOKEN: await options.pushToken(),
+      await publishRun(exec, {
+        dir: publish,
+        runClone: dir,
+        url: githubUrl(config),
+        branch,
+        ref,
+        base,
+        token: await options.pushToken(),
       });
     },
+    headSha: (branch) => pushedHead(exec, publish, branch),
     openPr: async ({ branch, title, body, proof, files = [] }) => {
       // The body sits beside the proof files: its ./references are relative to it.
       const dir = join(runDir, 'proof');

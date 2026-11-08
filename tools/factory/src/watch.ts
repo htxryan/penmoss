@@ -186,15 +186,6 @@ export async function executeRevise(
         { thread: threadId, body },
       );
     },
-    headSha: async (branch) =>
-      (
-        await nodeExec('git', [
-          '-C',
-          join(expandHome(config.stateDir), 'repo'),
-          'rev-parse',
-          branch,
-        ])
-      ).stdout.trim(),
   };
   const isBlocked = () => tracker.isBlocked(item.number);
   const guarded = guardEffects(

@@ -9,7 +9,8 @@ import { join } from 'node:path';
 import { expandHome, type FactoryConfig } from './config.ts';
 import type { Exec } from './exec.ts';
 import { parsePlanState, type PlanState } from './planning.ts';
-import { repoDir } from './host.ts';
+import { mustGit } from './git.ts';
+import { MAIN, publishDir } from './publish.ts';
 import { issueKey } from './tracker/port.ts';
 import { desktopLink } from './ui/model.ts';
 
@@ -103,29 +104,32 @@ export function planningFlags(files: PlanFiles): string[] {
   ];
 }
 
-/** A fresh read-only snapshot of main for the session to explore. */
+/**
+ * A fresh snapshot of main for the session to explore: main's files, exported from the publish
+ * repo (`git archive`), with no `.git`. git never runs in the runs' clone (A-NEW-1); a snapshot
+ * an older factory made as a worktree of that clone is deleted, and the janitor drops its record.
+ */
 export async function prepareSnapshot(
   config: FactoryConfig,
   files: PlanFiles,
   exec: Exec,
 ): Promise<void> {
   mkdirSync(files.out, { recursive: true });
-  const clone = repoDir(config);
-  if (existsSync(files.repo)) {
-    await exec('git', ['-C', clone, 'worktree', 'remove', '--force', files.repo]);
-    rmSync(files.repo, { recursive: true, force: true });
+  rmSync(files.repo, { recursive: true, force: true });
+  mkdirSync(files.repo, { recursive: true });
+  const tar = join(files.root, 'main.tar');
+  try {
+    await mustGit(exec, publishDir(config), ['archive', '--format=tar', `--output=${tar}`, MAIN]);
+    const unpacked = await exec('tar', ['-x', '-f', tar, '-C', files.repo]);
+    if (unpacked.code !== 0) throw new Error(unpacked.stderr.trim());
+  } catch (error) {
+    throw new Error(
+      `couldn't make the planning snapshot: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
+  } finally {
+    rmSync(tar, { force: true });
   }
-  const added = await exec('git', [
-    '-C',
-    clone,
-    'worktree',
-    'add',
-    '--detach',
-    files.repo,
-    'origin/main',
-  ]);
-  if (added.code !== 0)
-    throw new Error(`couldn't make the planning snapshot: ${added.stderr.trim()}`);
 }
 
 const CHAT_URL = /https:\/\/claude\.ai\/code\/session_[A-Za-z0-9_-]+/;

@@ -13,6 +13,7 @@ import {
   type UpdateDeps,
 } from '../src/code.ts';
 import type { Exec, ExecOptions } from '../src/exec.ts';
+import { GIT_HARDENING, subcommand } from '../src/git.ts';
 import { formatStatus, type DaemonStatus } from '../src/status.ts';
 import { testConfig } from './helpers.ts';
 
@@ -39,7 +40,7 @@ function fakeExec(options: { at?: typeof OLD; pnpmFails?: number; onCall?: (c: C
       return at
         ? ok(`${at.sha}\t${at.subject}\n`)
         : Promise.resolve({ code: 128, stdout: '', stderr: 'no' });
-    if (cmd === 'git' && args[0] === 'clone') at = OLD;
+    if (cmd === 'git' && subcommand(args) === 'clone') at = OLD;
     if (cmd === 'git' && args.includes('checkout')) {
       const target = args.at(-1);
       at = target === 'origin/main' ? NEW : target === OLD.sha ? OLD : at;
@@ -62,6 +63,17 @@ function setup(withCheckout: boolean) {
   return { config, home, lines: [] as string[] };
 }
 
+/**
+ * A call as a command line, git's hardening (git.ts, A-NEW-1) checked and left out: every git
+ * command here runs with it, and none of Ryan's config.
+ */
+function show(c: Call): string {
+  if (c.cmd !== 'git') return [c.cmd, ...c.args].join(' ');
+  expect(c.args[0]).toBe('-C');
+  expect(c.args.slice(2, 2 + GIT_HARDENING.length)).toEqual([...GIT_HARDENING]);
+  return ['git', '-C', c.args[1], ...c.args.slice(2 + GIT_HARDENING.length)].join(' ');
+}
+
 const plistArgs = (plist: string) =>
   [...readFileSync(plist, 'utf8').matchAll(/<string>([^<]*)<\/string>/g)].map((m) => m[1]);
 
@@ -78,8 +90,8 @@ describe('factory:install (A1226)', () => {
     });
     expect(code).toBe(0);
     const dir = join(config.stateDir, 'code');
-    expect(calls.map((c) => [c.cmd, ...c.args].join(' '))).toEqual([
-      `git clone --quiet https://github.com/${config.repo}.git ${dir}`,
+    expect(calls.map(show)).toEqual([
+      `git -C ${config.stateDir} clone --quiet https://github.com/${config.repo}.git ${dir}`,
       `git -C ${dir} remote set-url --push origin no-push://the-factory-harness-pushes`,
       `git -C ${dir} fetch --quiet origin main`,
       `git -C ${dir} checkout --quiet --force --detach origin/main`,
@@ -117,7 +129,7 @@ describe('factory:install (A1226)', () => {
         log: (l) => lines.push(l),
       }),
     ).toBe(0);
-    expect(calls.filter((c) => c.cmd === 'git').map((c) => c.args[2])).toEqual(['log']);
+    expect(calls.filter((c) => c.cmd === 'git').map((c) => subcommand(c.args))).toEqual(['log']);
     expect(calls.some((c) => c.cmd === 'corepack')).toBe(false);
     expect(lines[0]).toContain(`stays at ${OLD.sha.slice(0, 7)}`);
   });
@@ -223,7 +235,7 @@ describe('factory:update (A1226)', () => {
     expect(d.slept.length).toBeGreaterThanOrEqual(2);
     const steps = calls.map(
       (c) =>
-        `${c.cmd} ${c.args.find((a, i) => i > 0 && !a.startsWith('-') && c.args[i - 1] !== '-C') ?? c.args[0]}`,
+        `${c.cmd} ${c.args.find((a, i) => i > 0 && !a.startsWith('-') && c.args[i - 1] !== '-C' && c.args[i - 1] !== '-c') ?? c.args[0]}`,
     );
     const first = (s: string) => steps.indexOf(s);
     expect(first('launchctl gui/501/app.penmoss.factory')).toBeLessThan(first('git fetch'));

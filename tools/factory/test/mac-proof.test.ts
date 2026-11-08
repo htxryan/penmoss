@@ -3,7 +3,9 @@
  * before a proof, why it says the VM can't take one, a boot that fails as a wait, and the proof
  * run stoppable at its timeout.
  */
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { ownCheckout } from '../src/code.ts';
 import type { Exec, ExecOptions } from '../src/exec.ts';
 import {
   checkMacVm,
@@ -15,6 +17,8 @@ import {
 import { testConfig } from './helpers.ts';
 
 const config = testConfig();
+// The factory's own copy of the VM script, never the worktree's, which the agent can edit.
+const script = join(ownCheckout(), 'scripts/vm/desktop-test.sh');
 
 function fakeExec(result: { code: number; stdout?: string; stderr?: string; aborted?: boolean }) {
   const calls: { cmd: string; args: readonly string[]; options: ExecOptions | undefined }[] = [];
@@ -26,14 +30,15 @@ function fakeExec(result: { code: number; stdout?: string; stderr?: string; abor
 }
 
 describe('checkMacVm', () => {
-  it("asks the worktree's VM script whether a run can start now, for the configured VM", async () => {
+  it("asks the factory's VM script whether a run can start now, for the configured VM", async () => {
     const f = fakeExec({ code: 0, stdout: '[vm] penmoss-test is ready\n' });
     expect(await checkMacVm(f.exec, config, '/wt/2')).toEqual({ ok: true });
     expect(f.calls).toHaveLength(1);
     expect(f.calls[0]?.cmd).toBe('sh');
-    expect(f.calls[0]?.args).toEqual(['/wt/2/scripts/vm/desktop-test.sh', '--check']);
-    expect(f.calls[0]?.options?.cwd).toBe('/wt/2');
+    expect(f.calls[0]?.args).toEqual([script, '--check']);
+    expect(f.calls[0]?.options?.cwd).toBe(ownCheckout());
     expect(f.calls[0]?.options?.env?.['PENMOSS_VM']).toBe('penmoss-test');
+    expect(f.calls[0]?.options?.env?.['PENMOSS_VM_ROOT']).toBe('/wt/2');
     // Only a proof records.
     expect(f.calls[0]?.options?.env?.['PENMOSS_PROOF']).toBeUndefined();
   });
@@ -70,8 +75,13 @@ describe('runMacProof', () => {
     const controller = new AbortController();
     await runMacProof(f.exec, config, '/wt/2', ['test/e2e/a.spec.ts'], controller.signal);
     const call = f.calls[0];
-    expect(call?.args).toEqual(['/wt/2/scripts/vm/desktop-test.sh', 'test/e2e/a.spec.ts']);
-    expect(call?.options?.env).toMatchObject({ PENMOSS_PROOF: '1', PENMOSS_VM: 'penmoss-test' });
+    expect(call?.args).toEqual([script, 'test/e2e/a.spec.ts']);
+    expect(call?.options?.cwd).toBe(ownCheckout());
+    expect(call?.options?.env).toMatchObject({
+      PENMOSS_PROOF: '1',
+      PENMOSS_VM: 'penmoss-test',
+      PENMOSS_VM_ROOT: '/wt/2',
+    });
     // The stop reaches the script's whole group, with time for it to stop the VM.
     expect(call?.options?.signal).toBe(controller.signal);
     expect(call?.options?.killGraceMs).toBe(MAC_KILL_GRACE_MS);

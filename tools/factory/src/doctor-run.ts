@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import type { FactoryConfig, SlotConfig } from './config.ts';
 import { doctorChecks, judge, type CheckOutcome } from './doctor.ts';
 import type { Exec } from './exec.ts';
+import { hostGit } from './git.ts';
 import { loadSecrets, type Secrets } from './secrets.ts';
 import { createAppTokens, loadAppCredentials } from './github-app.ts';
 import { makeOwnDirs, sandboxSpec, seatbeltProvider } from './sandbox.ts';
@@ -113,7 +114,7 @@ export async function runDoctor(config: FactoryConfig, slot: SlotConfig, options
     }
   } finally {
     await sandbox.close();
-    await options.exec('git', ['-C', options.repo, 'branch', '-D', branch]);
+    await hostGit(options.exec, options.repo, ['branch', '-D', branch]);
   }
   return outcomes;
 }

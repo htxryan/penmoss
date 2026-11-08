@@ -30,6 +30,7 @@ afterEach(() => {
 const FAKE_TART = `#!/bin/sh
 state() { [ "$(cat "$FAKE/polls")" -gt 0 ] && echo running || echo stopped; }
 echo "$1 $(state)" >>"$FAKE/calls"
+[ "$1" = run ] && printf '%s\\n' "$@" >"$FAKE/run-args"
 case "$1" in
   list)
     if [ "\${2:-}" = --quiet ]; then [ -n "\${FAKE_NO_VM:-}" ] || echo "$PENMOSS_VM"; exit 0; fi
@@ -123,6 +124,20 @@ test('stops a VM its own interrupted run left running, without waiting', async (
   assert.equal(r.status, 0, r.stderr);
   assert.doesNotMatch(r.stdout, /waiting for it to stop/);
   assert.ok(calls().includes('stop running'));
+});
+
+test('PENMOSS_VM_ROOT names the checkout to test, not the script’s own (the factory, A-NEW-1)', () => {
+  // The factory runs its own copy of the script and names a run's worktree here.
+  const { root, fake, run } = setUp(0);
+  const worktree = mkdtempSync(join(tmpdir(), 'penmoss-vm-root-'));
+  cleanups.push(() => rmSync(worktree, { recursive: true, force: true }));
+  const r = run({ PENMOSS_VM_ROOT: worktree });
+  assert.equal(r.status, 0, r.stderr);
+  const args = readFileSync(join(fake, 'run-args'), 'utf8').trim().split('\n');
+  assert.ok(args.includes(`--dir=src:${worktree}:ro`), args.join(' '));
+  assert.ok(args.includes(`--dir=out:${worktree}/test-results/vm`), args.join(' '));
+  assert.match(r.stdout, new RegExp(`log: ${worktree}/test-results/vm/desktop-test\\.log`));
+  assert.throws(() => readFileSync(join(root, 'test-results/vm/tart-run.log')), /ENOENT/);
 });
 
 test('a run removes its pid file when it ends', () => {

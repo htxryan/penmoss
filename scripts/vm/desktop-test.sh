@@ -29,7 +29,10 @@ MEMORY_MB="${PENMOSS_VM_MEMORY_MB:-16384}"
 DISPLAY_SIZE="${PENMOSS_VM_DISPLAY:-1920x1200}"
 SCREEN_W="${DISPLAY_SIZE%%x*}"
 SCREEN_H="${DISPLAY_SIZE#*x}"
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+# The checkout to test: this script's own, or PENMOSS_VM_ROOT's. The software factory runs its
+# own copy of this script on the host, never a run's (an agent can edit that one), and names the
+# run's worktree here (A-NEW-1).
+ROOT="${PENMOSS_VM_ROOT:-$(cd "$(dirname "$0")/../.." && pwd)}"
 # Only ever 1 or empty: it goes into the VM's shell command below.
 PROOF=''
 [ "${PENMOSS_PROOF:-}" = 1 ] && PROOF=1

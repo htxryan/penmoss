@@ -4,9 +4,11 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nodeExec } from '../src/exec.ts';
 import type { Gh } from '../src/github.ts';
-import { openOrReusePr, pushBranch } from '../src/host.ts';
+import { openOrReusePr } from '../src/host.ts';
+import { pushBranch } from '../src/publish.ts';
 
-// Real git against a bare repository standing in for GitHub, pushed to by URL as the host does.
+// Real git against a bare repository standing in for GitHub, pushed to by URL as the host does
+// from its publish repo (here a plain clone holding the commit).
 const env: Record<string, string> = {
   PATH: process.env['PATH'] ?? '/usr/bin:/bin',
   HOME: tmpdir(),
@@ -55,24 +57,26 @@ describe("the harness's push", () => {
   });
 
   const remoteHead = () => git(remote, 'rev-parse', `refs/heads/${BRANCH}`);
+  const push = async () =>
+    pushBranch(nodeExec, clone, url, BRANCH, await git(clone, 'rev-parse', BRANCH), 'a-token');
 
   it('pushes the same branch again after a repair commit and after a rebase rewrites it', async () => {
-    await pushBranch(nodeExec, clone, url, BRANCH, env);
+    await push();
     expect(await remoteHead()).toBe(await git(clone, 'rev-parse', BRANCH));
 
     // A CI repair or review round: one more commit on top.
     await git(clone, 'commit', '-q', '--allow-empty', '-m', 'the repair');
-    await pushBranch(nodeExec, clone, url, BRANCH, env);
+    await push();
     expect(await remoteHead()).toBe(await git(clone, 'rev-parse', BRANCH));
 
     // The gate's rebase onto main rewrites the branch.
     await git(clone, 'commit', '-q', '--amend', '--allow-empty', '-m', 'the repair, rebased');
-    await pushBranch(nodeExec, clone, url, BRANCH, env);
+    await push();
     expect(await remoteHead()).toBe(await git(clone, 'rev-parse', BRANCH));
   });
 
   it('never overwrites a commit someone else pushed to the branch', async () => {
-    await pushBranch(nodeExec, clone, url, BRANCH, env);
+    await push();
     const other = mkdtempSync(join(tmpdir(), 'factory-push-ryan-'));
     await git(other, 'clone', '-q', '-b', BRANCH, url, 'ryan');
     await git(join(other, 'ryan'), 'commit', '-q', '--allow-empty', '-m', "Ryan's fix");
@@ -80,17 +84,15 @@ describe("the harness's push", () => {
     const ryans = await remoteHead();
 
     await git(clone, 'commit', '-q', '--amend', '--allow-empty', '-m', 'the agent, rewritten');
-    await expect(pushBranch(nodeExec, clone, url, BRANCH, env)).rejects.toThrow(
-      /push failed: .*\[rejected\].*stale info/,
-    );
+    await expect(push()).rejects.toThrow(/push failed: .*\[rejected\].*stale info/);
     expect(await remoteHead()).toBe(ryans);
   });
 
   it('pushes the branch afresh when GitHub no longer has it (deleted after a merge)', async () => {
-    await pushBranch(nodeExec, clone, url, BRANCH, env);
+    await push();
     await git(remote, 'update-ref', '-d', `refs/heads/${BRANCH}`);
     await git(clone, 'commit', '-q', '--amend', '--allow-empty', '-m', 'a new run');
-    await pushBranch(nodeExec, clone, url, BRANCH, env);
+    await push();
     expect(await remoteHead()).toBe(await git(clone, 'rev-parse', BRANCH));
   });
 });

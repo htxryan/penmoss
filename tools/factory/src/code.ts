@@ -5,15 +5,18 @@
  * checks out, nor a worktree deleted from under it, changes what runs.
  *
  * It is a clone of its own, not a worktree of the runs' clone (`<stateDir>/repo`): Sandcastle
- * mounts that clone's `.git` read-write into every sandbox, so its hooks and refs are an agent's
- * to write. Nothing a sandbox sees is in this one.
+ * mounts that clone's `.git` into every sandbox, so its refs, and through a planted `commondir` its
+ * config, are an agent's to write. Nothing a sandbox sees is in this one. Its git goes through
+ * git.ts, so nothing of Ryan's git config applies either.
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expandHome, type FactoryConfig } from './config.ts';
 import type { Exec } from './exec.ts';
-import { DEAD_END_PUSH_URL, publisherEnv } from './host.ts';
+import { hostGit, mustGit } from './git.ts';
+import { DEAD_END_PUSH_URL } from './host.ts';
+import { githubUrl } from './publish.ts';
 import { LABEL, plistPath, renderPlist, UI_LABEL } from './launchd.ts';
 import { readStatus, type Commit, type DaemonStatus } from './status.ts';
 import { issueKey } from './tracker/port.ts';
@@ -32,7 +35,7 @@ export function ownCheckout(): string {
 }
 
 export async function commitOf(exec: Exec, dir: string): Promise<Commit | undefined> {
-  const r = await exec('git', ['-C', dir, 'log', '-1', '--format=%H%x09%s']);
+  const r = await hostGit(exec, dir, ['log', '-1', '--format=%H%x09%s']);
   if (r.code !== 0) return undefined;
   const [sha = '', ...subject] = r.stdout.trim().split('\t');
   return sha ? { sha, subject: subject.join('\t') } : undefined;
@@ -84,37 +87,23 @@ export async function syncCode(
   log: (line: string) => void,
 ): Promise<{ from?: Commit; to: Commit }> {
   const dir = codeDir(config);
-  const env = publisherEnv(config);
   const fresh = !existsSync(join(dir, '.git'));
   if (fresh) {
     mkdirSync(dirname(dir), { recursive: true });
     log(`Cloning ${config.repo} into ${dir}`);
-    await must(exec, 'git', ['clone', '--quiet', `https://github.com/${config.repo}.git`, dir], {
-      env,
-    });
+    await mustGit(exec, dirname(dir), ['clone', '--quiet', githubUrl(config), dir]);
   }
   const from = fresh ? undefined : await commitOf(exec, dir);
   // Nothing is ever pushed from here.
-  await must(exec, 'git', ['-C', dir, 'remote', 'set-url', '--push', 'origin', DEAD_END_PUSH_URL], {
-    env,
-  });
-  await must(exec, 'git', ['-C', dir, 'fetch', '--quiet', 'origin', 'main'], { env });
-  await must(
-    exec,
-    'git',
-    ['-C', dir, 'checkout', '--quiet', '--force', '--detach', 'origin/main'],
-    {
-      env,
-    },
-  );
+  await mustGit(exec, dir, ['remote', 'set-url', '--push', 'origin', DEAD_END_PUSH_URL]);
+  await mustGit(exec, dir, ['fetch', '--quiet', 'origin', 'main']);
+  await mustGit(exec, dir, ['checkout', '--quiet', '--force', '--detach', 'origin/main']);
   try {
     await pnpmInstall(exec, dir);
   } catch (error) {
     if (from) {
       log(`The install failed; going back to ${from.sha.slice(0, 7)}`);
-      await must(exec, 'git', ['-C', dir, 'checkout', '--quiet', '--force', '--detach', from.sha], {
-        env,
-      });
+      await mustGit(exec, dir, ['checkout', '--quiet', '--force', '--detach', from.sha]);
       await pnpmInstall(exec, dir);
     }
     throw error;

@@ -6,6 +6,7 @@
  * run then waits and asks again (run.ts), rather than failing or using a round.
  */
 import { join } from 'node:path';
+import { ownCheckout } from '../code.ts';
 import type { FactoryConfig } from '../config.ts';
 import type { Exec, ExecResult } from '../exec.ts';
 
@@ -28,17 +29,28 @@ export class VmUnavailable extends Error {
 
 export type VmCheck = { readonly ok: true } | { readonly ok: false; readonly reason: string };
 
-/** The VM script in the run's worktree. */
-export function vmScript(worktree: string): string {
-  return join(worktree, 'scripts', 'vm', 'desktop-test.sh');
+/**
+ * The VM script the host runs: the factory's own (its code checkout, A1226), never the run's
+ * worktree's, which the agent can edit (A-NEW-1). The worktree is only what it copies into the VM.
+ */
+export function vmScript(checkout: string = ownCheckout()): string {
+  return join(checkout, 'scripts', 'vm', 'desktop-test.sh');
 }
 
-/** The script's environment: nothing of the run's sandbox, and the configured VM. */
-export function vmEnv(config: FactoryConfig, proof = false): Record<string, string> {
+/**
+ * The script's environment: nothing of the run's sandbox, the configured VM, and the worktree to
+ * test (`PENMOSS_VM_ROOT`).
+ */
+export function vmEnv(
+  config: FactoryConfig,
+  worktree: string,
+  proof = false,
+): Record<string, string> {
   return {
     PATH: process.env['PATH'] ?? '/usr/bin:/bin',
     HOME: process.env['HOME'] ?? '',
     PENMOSS_VM: config.macProof.vm,
+    PENMOSS_VM_ROOT: worktree,
     ...(proof ? { PENMOSS_PROOF: '1' } : {}),
   };
 }
@@ -59,9 +71,9 @@ export async function checkMacVm(
   config: FactoryConfig,
   worktree: string,
 ): Promise<VmCheck> {
-  const result = await exec('sh', [vmScript(worktree), '--check'], {
-    cwd: worktree,
-    env: vmEnv(config),
+  const result = await exec('sh', [vmScript(), '--check'], {
+    cwd: ownCheckout(),
+    env: vmEnv(config, worktree),
   });
   return result.code === 0 ? { ok: true } : { ok: false, reason: vmReason(result) };
 }
@@ -79,9 +91,9 @@ export async function runMacProof(
   specs: readonly string[],
   signal?: AbortSignal,
 ): Promise<void> {
-  const result = await exec('sh', [vmScript(worktree), ...specs], {
-    cwd: worktree,
-    env: vmEnv(config, true),
+  const result = await exec('sh', [vmScript(), ...specs], {
+    cwd: ownCheckout(),
+    env: vmEnv(config, worktree, true),
     ...(signal ? { signal, killGraceMs: MAC_KILL_GRACE_MS } : {}),
   });
   // Its exit code is otherwise not the verdict: the report says which tests passed.
