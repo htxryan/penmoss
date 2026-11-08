@@ -58,18 +58,53 @@ if ! tart list --quiet 2>/dev/null | grep -qx "$VM"; then
   tart set "$VM" --cpu "$CPUS" --memory "$MEMORY_MB"
 fi
 
+# The `tart run` this script started, while it runs: a VM still running from it after an
+# interrupted run is ours to stop. A running VM without it was started some other way (by hand,
+# or a tool that doesn't take the lock), so this run waits for it rather than stopping it.
+PIDFILE="/tmp/penmoss-vm-$VM.pid"
+WAIT_MINUTES="${PENMOSS_VM_WAIT_MINUTES:-60}"
+case "$WAIT_MINUTES" in
+  '' | *[!0-9]*)
+    echo "PENMOSS_VM_WAIT_MINUTES must be a whole number, not \"$WAIT_MINUTES\"" >&2
+    exit 2
+    ;;
+esac
+vm_running() {
+  tart list 2>/dev/null | awk -v vm="$VM" '$1 == "local" && $2 == vm { print $NF }' | grep -qx running
+}
+ours_left_running() {
+  [ -f "$PIDFILE" ] || return 1
+  pid="$(cat "$PIDFILE")"
+  case "$pid" in '' | *[!0-9]*) return 1 ;; esac
+  ps -p "$pid" -o comm= 2>/dev/null | grep -q 'tart$'
+}
+if vm_running && ! ours_left_running; then
+  echo "[vm] $VM is running, started outside this script; waiting for it to stop"
+  waited=0
+  while vm_running; do
+    if [ "$waited" -ge $((WAIT_MINUTES * 60)) ]; then
+      echo "[vm] $VM is still running after $WAIT_MINUTES minutes; stop it (tart stop $VM) and run again" >&2
+      exit 1
+    fi
+    sleep 10
+    waited=$((waited + 10))
+  done
+fi
+
 mkdir -p "$OUT"
 rm -rf "$OUT"/*
 
-# A VM left running by an interrupted run is stopped first.
+# A VM left running by an interrupted run of this script is stopped first.
 tart stop "$VM" >/dev/null 2>&1 || true
 # Every run, so a VM made before this setting gets it too.
 tart set "$VM" --display "$DISPLAY_SIZE"
 tart run "$VM" --no-graphics --dir="src:$ROOT:ro" --dir="out:$OUT" >"$OUT/tart-run.log" 2>&1 &
 RUN_PID=$!
+echo "$RUN_PID" >"$PIDFILE"
 cleanup() {
   tart stop "$VM" >/dev/null 2>&1 || true
   wait "$RUN_PID" 2>/dev/null || true
+  rm -f "$PIDFILE"
 }
 trap cleanup EXIT INT TERM
 

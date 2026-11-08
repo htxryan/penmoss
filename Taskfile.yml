@@ -35,6 +35,7 @@ tasks:
       - task: audit:test
       - task: ports:test
       - task: check-changed:test
+      - task: vm:test
       - task: ci:lint
       - task: android:publish:test
 
@@ -51,6 +52,11 @@ tasks:
     desc: 'What `task check:changed` checks (A1224): the change about to be committed, or the last commit, never the whole branch'
     cmds:
       - node --test scripts/check-changed.test.mjs
+
+  vm:test:
+    desc: "Sharing the test VM (A1174): scripts/vm/desktop-test.sh against a fake tart; a VM it didn't start is waited for, never stopped"
+    cmds:
+      - node --test scripts/vm/desktop-test.test.mjs
   ci:lint:
     desc: 'No GitHub-hosted runners (A702, F9): every runs-on names self-hosted Mac labels, never an expression'
     cmds:
