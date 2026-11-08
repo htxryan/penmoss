@@ -16,6 +16,7 @@ import { expandHome } from './config.ts';
 import { runDaemon } from './daemon.ts';
 import { LABEL, plistPath, renderPlist, UI_LABEL } from './launchd.ts';
 import { buildReport, formatReport, parseRange } from './report.ts';
+import { planningChat } from './planning-host.ts';
 import { startRun } from './start.ts';
 import { runUi } from './ui/run.ts';
 import { appClient, openTracker } from './tracker/index.ts';
@@ -36,6 +37,8 @@ Commands:
                             run ledger (default: the last 7 days; --to is exclusive)
   run <n> [--slot n]        Implement card n (36 for PEN-36) now, in the foreground: plan:skip or
                             an agreed plan
+  chat <n> [--print]        Open card n's planning session in the Claude app (--print: only print
+                            its links)
   linear-check [--me] [--fix]
                             Check Linear's team has the factory's states and labels (--me: print
                             Ryan's user ID with his key; --fix: create what's missing, as Ryan)
@@ -252,6 +255,28 @@ async function linearCheck(config: FactoryConfig, args: readonly string[]): Prom
   return 1;
 }
 
+/** `factory chat <issue>`: the planning session's chat, the same one Remote Control serves (F15). */
+async function chat(config: FactoryConfig, args: readonly string[]): Promise<number> {
+  const number = Number(args[0]);
+  if (!Number.isInteger(number) || number < 1) {
+    console.error('Usage: factory chat <issue> [--print]');
+    return 2;
+  }
+  const found = planningChat(config, number);
+  if ('error' in found) {
+    console.error(`${found.error}.`);
+    return 1;
+  }
+  console.log(`Chat: ${found.chatUrl}`);
+  if (found.desktop) console.log(`In the Claude app: ${found.desktop}`);
+  console.log(
+    'While the card is Blocked the session is stopped; clearing Blocked resumes it with a new link.',
+  );
+  if (args.includes('--print')) return 0;
+  const opened = await nodeExec('open', [found.desktop ?? found.chatUrl]);
+  return opened.code === 0 ? 0 : 1;
+}
+
 async function main(argv: readonly string[]): Promise<number> {
   const [command, ...rest] = argv;
   const loaded = loadConfig();
@@ -290,6 +315,8 @@ async function main(argv: readonly string[]): Promise<number> {
       return doctor(loaded.config, rest);
     case 'linear-check':
       return linearCheck(loaded.config, rest);
+    case 'chat':
+      return chat(loaded.config, rest);
     case undefined:
     case 'help':
     case '--help':

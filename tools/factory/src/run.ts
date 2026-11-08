@@ -346,7 +346,7 @@ export async function gateAndProve(
     deps.log('proof-recorded', { files: prepared.proof.length });
     // F19: a planned change that users see on the web is walked and reviewed against the plan.
     if (validation && scope.platforms.includes('web')) {
-      const v = await validate(deps, gate, branch, validation.plan);
+      const v = await validate(deps, gate, branch, validation.plan, result.risks);
       if (!v.ok) return { ok: false, feedback: `Validation couldn't finish: ${v.error}` };
       const mismatches = v.rows.filter((r) => r.verdict === 'mismatch');
       if (mismatches.length > 0 && !validation.final)

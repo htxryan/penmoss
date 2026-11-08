@@ -6,7 +6,7 @@ import type { Board } from '../board.ts';
 import { expandHome, type FactoryConfig } from '../config.ts';
 import { nodeExec } from '../exec.ts';
 import { createGh } from '../github.ts';
-import { planFiles, readMeta, readState, sessionName } from '../planning-host.ts';
+import { planFiles, readMeta, readState, sessionIssue } from '../planning-host.ts';
 import { openFactory } from '../start.ts';
 import { createWriter, type Writer } from './actions.ts';
 import { githubOwner, linearOwner, ownerKey } from './owner.ts';
@@ -37,8 +37,8 @@ async function busySessions(config: FactoryConfig): Promise<Set<number>> {
   if (r.code !== 0) return busy;
   try {
     for (const s of JSON.parse(r.stdout || '[]') as { name?: string; status?: string }[]) {
-      const n = Number(/^Penmoss #(\d+) plan$/.exec(s.name ?? '')?.[1]);
-      if (Number.isInteger(n) && s.name === sessionName(n) && s.status === 'busy') busy.add(n);
+      const n = sessionIssue(config, s.name);
+      if (n !== undefined && s.status === 'busy') busy.add(n);
     }
   } catch {
     // An older CLI without --json: no busy markers.

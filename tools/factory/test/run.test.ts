@@ -352,6 +352,19 @@ describe('runImplement', () => {
     expect(f.comments[1]).toContain('Not fixed in the rounds allowed: Still red');
   });
 
+  it("gives the reviewer the builder's reasons for what it couldn't do (F19)", async () => {
+    const f = fake({
+      paths: ['apps/web/src/a.ts'],
+      result: { ...webDone, risks: ['AC1: Safari has no :has(), so the badge stays flat'] },
+      reviews: [review('deviation', 'Flat badge: Safari has no :has()')],
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p', plan: 'AC1 …' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.prompts[2]).toMatch(/^You are an independent reviewer/);
+    expect(f.prompts[2]).toContain('- AC1: Safari has no :has(), so the badge stays flat');
+    expect(f.comments[1]).toContain('- **AC1 the badge uses the accent colour**: Flat badge');
+  });
+
   it('skips validation without an agreed plan (plan:skip)', async () => {
     const f = fake({ paths: ['apps/web/src/a.ts'], result: webDone });
     await runImplement(f.deps, { item: card, spec, prompt: 'p' });
