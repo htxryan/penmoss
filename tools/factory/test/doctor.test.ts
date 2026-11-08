@@ -33,6 +33,19 @@ describe('doctorChecks', () => {
     }
   });
 
+  it("checks a push with the sandbox's own token is refused, without putting it on a command line", () => {
+    const push = checks.find(
+      (c) => c.name === "a push with the sandbox's token is refused (A1222)",
+    );
+    expect(push).toMatchObject({ expect: 'refused', needs: ['GH_TOKEN'] });
+    expect(push?.command).toMatch(
+      /^git .* push --dry-run .*https:\/\/github\.com\/htxryan\/penmoss\.git /,
+    );
+    // The token reaches git only through the helper, which reads it from the environment.
+    expect(push?.command).toContain(`'credential.helper=!f() {`);
+    expect(push?.command).not.toMatch(/\$\{?GH_TOKEN\}?@/);
+  });
+
   it('never prints a file it probes', () => {
     for (const check of checks.filter((c) => c.expect === 'refused')) {
       expect(check.command).not.toMatch(/\bcat\b|security find/);

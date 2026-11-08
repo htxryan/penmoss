@@ -153,6 +153,15 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
 
     // What stays out.
     {
+      // An agent that ignores its deny rules still can't push (F0.4): the sandbox's token is
+      // read-only. The helper hands git the token from the environment, never on a command line,
+      // and the explicit URL skips whatever remote the worktree has.
+      name: "a push with the sandbox's token is refused (A1222)",
+      expect: 'refused',
+      needs: ['GH_TOKEN'],
+      command: `git -c credential.helper= -c 'credential.helper=!f() { test "$1" = get || exit 0; echo username=x-access-token; echo "password=$GH_TOKEN"; }; f' push --dry-run --no-verify https://github.com/${config.repo}.git HEAD:refs/heads/factory-doctor-push-probe`,
+    },
+    {
       name: "Ryan's gh login is unreadable",
       expect: 'refused',
       command: opens(`${home}/.config/gh/hosts.yml`),
