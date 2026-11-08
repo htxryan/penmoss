@@ -1,10 +1,11 @@
 /**
- * The real `RunDeps`: the factory's own clone, Sandcastle sandboxes, gh as penmoss-bot, and the
- * run ledger. Kept apart from run.ts so the run's sequence is tested with fakes.
+ * The real `RunDeps`: the factory's own clone, Sandcastle sandboxes, gh as the GitHub App
+ * (A1222), and the run ledger. Kept apart from run.ts so the run's sequence is tested with fakes.
  *
  * The factory works in its own clone (`<stateDir>/repo`), never in Ryan's checkout. Its push
  * URL is a dead end, so a plain `git push` from a worktree goes nowhere; the harness pushes to
- * an explicit URL with the bot's credentials, which the sandbox never sees (R18).
+ * an explicit URL with the app's write token, which the sandbox never sees (R18): a sandbox
+ * holds only the app's read-only token.
  */
 import {
   appendFileSync,
@@ -66,10 +67,15 @@ async function git(
   cwd?: string,
 ): Promise<string> {
   const result = await exec('git', args, { env, ...(cwd ? { cwd } : {}) });
-  if (result.code !== 0)
-    throw new Error(
-      `git ${args.slice(0, 2).join(' ')} failed: ${result.stderr.trim().split('\n').slice(-1)[0] ?? ''}`,
+  if (result.code !== 0) {
+    // The subcommand past `-C <dir>` and `-c <setting>`, and the lines that say why (a push's
+    // `! [rejected] … (stale info)` comes before its last line).
+    const command = args.find(
+      (a, i) => !a.startsWith('-') && args[i - 1] !== '-C' && args[i - 1] !== '-c',
     );
+    const why = result.stderr.trim().split('\n').slice(-3).join(' / ');
+    throw new Error(`git ${command ?? args[0] ?? ''} failed: ${why}`);
+  }
   return result.stdout;
 }
 
@@ -80,6 +86,83 @@ export const TOKEN_HELPER = [
   '-c',
   'credential.helper=!f() { test "$1" = get && printf "username=x-access-token\\npassword=%s\\n" "$GH_TOKEN"; }; f',
 ];
+
+/**
+ * Pushes `branch` from the clone to `url`, leased on what the factory last pushed there. A push
+ * to a URL has no remote-tracking ref, so a bare `--force-with-lease` expects the branch not to
+ * exist and refuses every later push of it ("stale info"): a CI repair, a review round, a
+ * restarted run. So the lease is explicit: none when GitHub has no such branch, otherwise the
+ * commit kept in `refs/remotes/origin/<branch>` (written after each push; a fresh clone fills it
+ * from GitHub). A push someone else made to the branch is still never overwritten.
+ */
+export async function pushBranch(
+  exec: Exec,
+  dir: string,
+  url: string,
+  branch: string,
+  env: Record<string, string>,
+): Promise<void> {
+  const ref = `refs/heads/${branch}`;
+  const tracking = `refs/remotes/origin/${branch}`;
+  const remote = await git(exec, ['-C', dir, ...TOKEN_HELPER, 'ls-remote', url, ref], env);
+  let expect = '';
+  if (remote.trim() !== '') {
+    const last = await exec('git', ['-C', dir, 'rev-parse', '--verify', '--quiet', tracking], {
+      env,
+    });
+    expect = last.code === 0 ? last.stdout.trim() : '';
+  }
+  const head = (await git(exec, ['-C', dir, 'rev-parse', '--verify', ref], env)).trim();
+  await git(
+    exec,
+    [
+      '-C',
+      dir,
+      ...TOKEN_HELPER,
+      'push',
+      url,
+      `--force-with-lease=${ref}:${expect}`,
+      `${head}:${ref}`,
+    ],
+    env,
+  );
+  await git(exec, ['-C', dir, 'update-ref', tracking, head], env);
+}
+
+/**
+ * Opens the branch's PR, or, when one is already open, gives it the new title and body and
+ * returns it. A run restarted after the daemon stopped (R12), say while it waited on CI, comes
+ * back here with its PR open, and `gh pr create` refuses a second one for the same branch. The
+ * edit goes through the REST API, which needs only the app's Pull requests permission.
+ */
+export async function openOrReusePr(
+  gh: Gh,
+  pr: {
+    readonly repo: string;
+    readonly branch: string;
+    readonly title: string;
+    readonly bodyFile: string;
+    readonly reviewer: string;
+  },
+): Promise<string> {
+  const open = await gh.json<{ number: number; url: string }[]>([
+    ...['pr', 'list', '--repo', pr.repo, '--head', pr.branch],
+    ...['--state', 'open', '--json', 'number,url'],
+  ]);
+  const existing = open[0];
+  if (existing) {
+    await gh.run([
+      ...['api', '-X', 'PATCH', `repos/${pr.repo}/pulls/${existing.number}`],
+      ...['-f', `title=${pr.title}`, '-F', `body=@${pr.bodyFile}`],
+    ]);
+    return existing.url;
+  }
+  const out = await gh.run([
+    ...['pr', 'create', '--repo', pr.repo, '--base', 'main', '--head', pr.branch],
+    ...['--title', pr.title, '--reviewer', pr.reviewer, '--body-file', pr.bodyFile],
+  ]);
+  return out.trim().split('\n').slice(-1)[0] ?? '';
+}
 
 /**
  * Clones the repository once, with a dead-end push URL, and fetches main. Commits made in it
@@ -448,19 +531,10 @@ export function hostDeps(options: HostOptions): RunDeps {
           options.log(`waits for a heavy-job slot (held by ${holders.join('; ')})`),
       }),
     push: async (branch) => {
-      await git(
-        exec,
-        [
-          '-C',
-          dir,
-          ...TOKEN_HELPER,
-          'push',
-          `https://github.com/${config.repo}.git`,
-          '--force-with-lease',
-          `${branch}:refs/heads/${branch}`,
-        ],
-        { ...env, GH_TOKEN: await options.pushToken() },
-      );
+      await pushBranch(exec, dir, `https://github.com/${config.repo}.git`, branch, {
+        ...env,
+        GH_TOKEN: await options.pushToken(),
+      });
     },
     openPr: async ({ branch, title, body, proof, files = [] }) => {
       // The body sits beside the proof files: its ./references are relative to it.
@@ -475,11 +549,13 @@ export function hostDeps(options: HostOptions): RunDeps {
         `runs/${options.runId}`,
       );
       writeFileSync(bodyFile, linked);
-      const out = await gh.run([
-        ...['pr', 'create', '--repo', config.repo, '--base', 'main', '--head', branch],
-        ...['--title', title, '--reviewer', config.owner, '--body-file', bodyFile],
-      ]);
-      return out.trim().split('\n').slice(-1)[0] ?? '';
+      return openOrReusePr(gh, {
+        repo: config.repo,
+        branch,
+        title,
+        bodyFile,
+        reviewer: config.owner,
+      });
     },
     log: (event: RunEvent, detail = {}) => {
       appendFileSync(
