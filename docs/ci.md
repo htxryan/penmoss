@@ -13,6 +13,7 @@ CI is `.github/workflows/ci.yml`; stable releases are `.github/workflows/release
 | `e2e` (Playwright smoke)                | `penmoss-mac` (any)              | Each job picks free ports of its own (A1140), so any Mac runner takes it.                                                                    |
 | `budgets` (T22 and T31 performance)     | `penmoss-mac` (any)              | The same; the thresholds are the same everywhere (section 6).                                                                                |
 | `android` (JVM, Robolectric, debug APK) | `penmoss-mac-general`            | No fixed ports. A push also builds the public APK, the release build signed with the sideload key (A1187), checked by `apk-check.sh`.        |
+| `android-emulator` (instrumented tests) | `penmoss-mac-general`            | A headless API 37 emulator on `emulator-5580`, adb on 5050; one at a time on the Mac (A1227, below). Not a required check yet.               |
 | `site` (penmoss.app, A1201)             | `penmoss-mac-general`            | Builds the site and runs `site/test` under `wrangler dev` on a free port. Only when `site/` or a shared file changed.                        |
 | `desktop` (Electron)                    | `penmoss-mac-vm`, off until #252 | Electron needs a window server; the Tart VM's runner (#252, W10) will have one. Until then, run `task desktop:test` (it runs in the VM, §8). |
 | `mac` (the Mac app's dmg, A403)         | `penmoss-mac-general`            | Packaging and signing need macOS. Main pushes and dispatches only. Universal (P7).                                                           |
@@ -22,18 +23,27 @@ Each job's log names its machine under "Set up job" (`Runner name`).
 
 **Only what a change touches runs (A1095).** A change that touches only `docs/`, `site/`, `prototype/`, `spikes/`, `.claude/` or markdown outside `test/` directories starts no run on main. On a pull request it runs only `pick`; the test jobs report as skipped, so the required checks report (A1181). Otherwise `pick` lists the changed files and writes, in the run summary, which parts changed; each job then runs only for its part:
 
-| Changed                                                          | `check` | `e2e`, `budgets` | `android` | `mac` (main) |
-| ---------------------------------------------------------------- | ------- | ---------------- | --------- | ------------ |
-| `.github/`, the lockfile, `Taskfile.yml`, root configs           | yes     | yes              | yes       | yes          |
-| `apps/web`, `packages/{core,editor,git-notebook,sync-client,ui}` | yes     | yes              | yes       | yes          |
-| `packages/cli`, `apps/desktop`                                   | yes     | no               | on main   | yes          |
-| `apps/android/editor`, `apps/android/play`                       | yes     | no               | yes       | no           |
-| the rest of `apps/android` (Kotlin, Gradle)                      | no      | no               | yes       | no           |
-| anything else (`apps/relay`, `scripts/`, …)                      | yes     | no               | no        | no           |
+| Changed                                                          | `check` | `e2e`, `budgets` | `android`, `android-emulator` | `mac` (main) |
+| ---------------------------------------------------------------- | ------- | ---------------- | ----------------------------- | ------------ |
+| `.github/`, the lockfile, `Taskfile.yml`, root configs           | yes     | yes              | yes                           | yes          |
+| `apps/web`, `packages/{core,editor,git-notebook,sync-client,ui}` | yes     | yes              | yes                           | yes          |
+| `packages/cli`, `apps/desktop`                                   | yes     | no               | on main                       | yes          |
+| `apps/android/editor`, `apps/android/play`                       | yes     | no               | yes                           | no           |
+| the rest of `apps/android` (Kotlin, Gradle)                      | no      | no               | yes                           | no           |
+| anything else (`apps/relay`, `scripts/`, …)                      | yes     | no               | no                            | no           |
 
 A change under `site/`, or to a shared file, also runs the `site` job on a pull request (A1201).
 
-On main, a Mac build brings the Android job with it, so the build's release has its APK (A400, A403). A dispatch, a new branch or a file list GitHub can't give runs everything.
+On main, a Mac build brings the Android jobs with it, so the build's release has its APK (A400, A403). A dispatch, a new branch or a file list GitHub can't give runs everything.
+
+**The emulator job (`android-emulator`, A1227).** The `android` job compiles the instrumented tests (`apps/android/app/src/androidTest`); this job runs them, with `:app:connectedDebugAndroidTest`, on a headless emulator. `.github/scripts/android-emulator.sh` does the work:
+
+- **The AVD** is `penmoss37-ci`, made once from `system-images;android-37.0;google_apis;arm64-v8a` (the factory slots' image) in the runner's tool cache, `_work/_tool/penmoss/android-avd`. The image, the emulator and adb come from `.github/actions/android-sdk`, the same step the `android` job uses, into `_work/_tool/android-sdk`. The first run on a runner downloads the image (about 1.5 GB).
+- **Its ports are fixed:** console 5580 (`emulator-5580`) and adb's server on 5050, clear of the factory's slots (emulators 5560 and 5562, adb 5040 and 5041) and of adb's default 5037. `ANDROID_SERIAL=emulator-5580` keeps every adb and Gradle call on it, even while a slot's emulator runs. The server starts with `ADB_EMU=0`, so it doesn't scan for other emulators; if this one doesn't announce itself within 60 s, the script restarts the server with scanning and says so in a warning.
+- **One at a time.** Both general runners are on one Mac and the ports are fixed, so the script waits for `/tmp/penmoss-ci-emulator-5580.lock` (up to 25 minutes) before it starts anything.
+- **The run:** the APKs are built before the boot (a Gradle build beside a software-rendered emulator stops System UI responding, F0.4); then `-no-window -no-audio -no-boot-anim -no-snapshot` with software rendering, at most 300 s for `sys.boot_completed`, animations off, the last run's app removed, and the tests. `NoteListJankTest` is left out: it measures 60 fps on the Pixel (A285), not on software rendering.
+- **Always stopped.** The script kills the emulator and its adb server when it ends, passed or failed, and the job's last step (`stop`) kills whatever is left of that runner's own emulator and adb, matched by its tool-cache path, so a cancelled job leaves nothing running and never touches another runner's. On a failure the job uploads `android-emulator-reports`: Gradle's report, the JUnit results and the emulator's log.
+- `task workflows:test` checks the script against a stub adb, emulator and Gradle, and the job's place in `ci.yml`.
 
 ## 2. The runners
 
@@ -51,7 +61,7 @@ Three self-hosted runners on Ryan's MacBook Pro (Apple Silicon, 18 CPUs, 64 GB),
 - A runner runs one job at a time. Three runners give three jobs at once; a fourth waits in GitHub's queue.
 - `.github/actionlint.yaml` lists the custom labels, so actionlint accepts them.
 
-**How a job is set up on a Mac** (`.github/actions/setup`, used by every job, branching on `runner.os`): Node from `.node-version` (actions/setup-node), pnpm through Corepack, and every cache in that runner's own tool cache, `_work/_tool/penmoss` (`COREPACK_HOME`, the pnpm store, `XDG_CACHE_HOME`, Electron's downloads, Playwright's browsers, `GRADLE_USER_HOME`). Each runner has its own `_work/_tool` and runs one job at a time, so no two jobs ever write one cache, and nothing goes in the account's home folder. The Android job installs Java 21 (actions/setup-java) and the Android command-line tools (checked against the archive's SHA-256), platform 37 and build tools 37.0.0 into `_work/_tool/android-sdk`, and points Java's `user.home` at the tool cache, so Robolectric's downloads and the debug key stay there too. Playwright installs Chromium only (no `--with-deps`). Nothing needs sudo or installs anything system-wide.
+**How a job is set up on a Mac** (`.github/actions/setup`, used by every job, branching on `runner.os`): Node from `.node-version` (actions/setup-node), pnpm through Corepack, and every cache in that runner's own tool cache, `_work/_tool/penmoss` (`COREPACK_HOME`, the pnpm store, `XDG_CACHE_HOME`, Electron's downloads, Playwright's browsers, `GRADLE_USER_HOME`). Each runner has its own `_work/_tool` and runs one job at a time, so no two jobs ever write one cache, and nothing goes in the account's home folder. The Android jobs install Java 21 (actions/setup-java) and, through `.github/actions/android-sdk`, the Android command-line tools (checked against the archive's SHA-256), platform 37 and build tools 37.0.0 into `_work/_tool/android-sdk` (the emulator job adds the emulator, adb and the API 37 system image), and points Java's `user.home` at the tool cache, so Robolectric's downloads and the debug key stay there too. Playwright installs Chromium only (no `--with-deps`). Nothing needs sudo or installs anything system-wide.
 
 **Housekeeping** (`.github/scripts/mac-runner.sh`): unlike GitHub's throwaway machines, a Mac keeps processes, ports and files between jobs. The port jobs (`e2e`, `budgets`) stop any CI server still on :4173, :5173, :8787 or :8791 before they start and again when they end. Every Mac job ends, even when it fails or is cancelled, by stopping the runner's Gradle daemons and emptying its checkout (`git clean -ffdx`). Only processes started from that runner's `_work` folder are stopped; anything else on a port is reported and left alone. The runner also kills a job's leftover processes itself, and checkout cleans the workspace first.
 
@@ -139,6 +149,8 @@ The Mac app's Electron suite opens real windows, and has no headless mode on mac
 A job that `pick` turns off for a change it doesn't touch reports as skipped, which GitHub counts as passing. If `pick` itself fails, its own check fails, so the skipped jobs behind it can't pass a pull request.
 
 A pull request merges, and GitHub's auto-merge (`gh pr merge --auto --squash`) arms, only once all five are green. Repository admins can bypass the rule, for an emergency only.
+
+`Site (penmoss.app and its docs)` (A1201) and `Android app on an emulator (instrumented tests)` (A1227) run on pull requests but are not required. The emulator job is new, and an emulator on a shared Mac may be flaky: it joins the ruleset once it has passed steadily for a while (add it there under that name).
 
 These five replace A1178's single `CI result` job. That job only summed the others, but it needed a Mac runner of its own. So a pull request whose tests had passed queued again for it, behind every other run's tests.
 

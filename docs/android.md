@@ -104,7 +104,7 @@ An APK built on another machine (or on a pull request's CI run) is signed with t
 
 ## Run the device tests on the Pixel
 
-The worker has no emulator. With the phone on adb:
+CI runs all but the jank test on an emulator ([below](#the-instrumented-tests-in-ci-emulator-5580)). With the phone on adb:
 
 ```sh
 cd apps/android && ./gradlew :app:connectedDebugAndroidTest
@@ -129,6 +129,15 @@ Unlock the phone and keep the screen on while they run.
 It builds the debug and test APKs first, since a Gradle build beside a software-rendered emulator stops System UI responding. Then it boots the emulator headless (`-no-window -no-snapshot -gpu swiftshader_indirect -feature -Vulkan -crash-report-mode disabled`, F0.4) and waits up to 240 s for `sys.boot_completed` (`PENMOSS_EMULATOR_BOOT_SECONDS`). It removes the last run's app, which another sandbox's debug key signed, and runs each named test under `screenrecord` (up to 170 s, `PENMOSS_PROOF_TEST_SECONDS`), with a screenshot after it. `apps/android/build/proof/` gets `report.json` and each test's `android-<n>.mp4`, `.png` and `.log`. The emulator shuts down when the script ends, fails or is stopped. A proof that runs past `timeouts.proofMinutes` (40) is stopped by the factory, which closes the sandbox and everything in it.
 
 To try it on slot 1: `task factory:doctor -- --full --only proof:android`. `tools/factory/test/android-proof.test.ts` checks the script against a stub adb and emulator.
+
+## The instrumented tests in CI (emulator-5580)
+
+CI's `android-emulator` job (A1227, [`ci.md`](ci.md) §1) runs the instrumented tests on every change `pick` counts as Android's, on a Mac runner: `:app:connectedDebugAndroidTest` on a headless emulator, with `.github/scripts/android-emulator.sh`. It is not a required check yet.
+
+- **The emulator** is the AVD `penmoss37-ci`, made once from the slots' API 37 image (`system-images;android-37.0;google_apis;arm64-v8a`) in the runner's tool cache. It boots with the proof's settings (`-no-window -no-audio -no-boot-anim -no-snapshot`, software rendering) after the APKs are built, and has 300 s to boot.
+- **Its own ports:** console 5580 (`emulator-5580`) and adb's server on 5050, so it never uses a slot's emulator (5560, 5562) or adb server (5040, 5041), or your own adb on 5037. One CI emulator runs on the Mac at a time; the second runner's job waits for the first.
+- **What runs:** every test in `app/src/androidTest` except `NoteListJankTest`, whose 60 fps check (A285) means something only on the Pixel. Run that one there, as above.
+- **A failure** uploads `android-emulator-reports`: Gradle's HTML report, the JUnit XML and the emulator's log.
 
 ## Test the writing screen on the Pixel (T33)
 

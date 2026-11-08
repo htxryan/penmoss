@@ -414,33 +414,10 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # The Mac has no SDK of its own for CI: the command-line tools (checked against the
-      # SHA-256 of Google's archive) and the same packages go in this runner's tool cache. Java
-      # tools there also see it as their home, so Robolectric's downloads (~/.m2) and the debug
-      # key (~/.android) stay with the runner, out of the account's home folder.
-      - name: Android SDK platform 37 and build tools (Mac, into the runner's tool cache)
-        if: runner.os == 'macOS'
-        env:
-          TOOLS_ZIP: commandlinetools-mac_arm64-16111833_latest.zip
-          TOOLS_SHA256: 58da8f215781cc0208743e88b65ae259780c55e7eb40e50373d377cf369232d6
-        run: |
-          sdk="$RUNNER_TOOL_CACHE/android-sdk"
-          tools="$sdk/cmdline-tools/16111833"
-          if [ ! -x "$tools/bin/sdkmanager" ]; then
-            curl -fsSL --retry 3 -o "$RUNNER_TEMP/$TOOLS_ZIP" "https://dl.google.com/android/repository/$TOOLS_ZIP"
-            echo "$TOOLS_SHA256  $RUNNER_TEMP/$TOOLS_ZIP" | shasum -a 256 -c -
-            rm -rf "$RUNNER_TEMP/cmdline-tools" "$tools"
-            unzip -q "$RUNNER_TEMP/$TOOLS_ZIP" -d "$RUNNER_TEMP"
-            mkdir -p "$sdk/cmdline-tools"
-            mv "$RUNNER_TEMP/cmdline-tools" "$tools"
-          fi
-          yes | "$tools/bin/sdkmanager" --sdk_root="$sdk" "platforms;android-37.0" "build-tools;37.0.0" > /dev/null
-          {
-            echo "ANDROID_HOME=$sdk"
-            echo "ANDROID_SDK_ROOT=$sdk"
-            echo "ANDROID_USER_HOME=$PENMOSS_CACHE/android-user-home"
-            echo "JAVA_TOOL_OPTIONS=-Duser.home=$PENMOSS_CACHE/java-home"
-          } >> "$GITHUB_ENV"
+      # The Mac has no SDK of its own for CI: the command-line tools, platform 37 and build tools
+      # go in this runner's tool cache (.github/actions/android-sdk), shared with the
+      # android-emulator job's.
+      - uses: ./.github/actions/android-sdk
 
       - name: Android tests
         run: task android:test
@@ -507,6 +484,78 @@ jobs:
         # Guarded: a failed checkout leaves no script, and nothing to clean.
         run: |
           rm -f "$RUNNER_TEMP/sideload.jks"
+          if [ -f .github/scripts/mac-runner.sh ]; then bash .github/scripts/mac-runner.sh clean; fi
+
+  android-emulator:
+    name: Android app on an emulator (instrumented tests)
+    # F9 (A1227): the instrumented tests (apps/android/app/src/androidTest) on a headless API 37
+    # emulator, which the android job only compiles. Every instrumented test but NoteListJankTest,
+    # a frame-rate measurement for the Pixel (A285). Not a required check (A1181): it is new, and
+    # an emulator on a shared Mac may be flaky; it joins the ruleset once it has proved steady.
+    # Always emulator-5580 with adb's server on 5050 (.github/scripts/android-emulator.sh), never
+    # the factory's slots (5560, 5562), so one job runs at a time on the Mac: the script waits for
+    # the other runner's to finish. The AVD stays in this runner's tool cache between runs.
+    needs: pick
+    if: >-
+      (github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository) &&
+      needs.pick.outputs.android-app == 'true'
+    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
+    timeout-minutes: 50
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      # The committed gradle-wrapper.jar must be one Gradle published.
+      - uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # The android job's SDK, with the emulator, adb and the API 37 image the factory's slots
+      # use (tools/factory/src/avd.ts). The first run downloads the image (about 1.5 GB) into the
+      # tool cache; later runs find it there.
+      - uses: ./.github/actions/android-sdk
+        with:
+          packages: platform-tools emulator system-images;android-37.0;google_apis;arm64-v8a
+
+      - name: The CI AVD (made once, in the runner's tool cache)
+        run: bash .github/scripts/android-emulator.sh avd
+
+      # Before the boot: a Gradle build beside a software-rendered emulator stops System UI
+      # responding (F0.4).
+      - name: Build the debug and test APKs
+        run: task android:build -- :app:assembleDebugAndroidTest
+
+      - name: Instrumented tests on emulator-5580
+        # Up to 25 minutes waiting for the other runner's emulator, 5 to boot, then the tests.
+        timeout-minutes: 40
+        run: bash .github/scripts/android-emulator.sh test
+
+      - name: Upload the instrumented test reports and the emulator's log
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-emulator-reports
+          path: |
+            apps/android/app/build/reports/androidTests/connected/
+            apps/android/app/build/outputs/androidTest-results/connected/
+            ${{ runner.temp }}/emulator.log
+          retention-days: 7
+
+      - name: Stop the emulator, stop Gradle and empty the checkout (Mac)
+        if: always()
+        # Guarded: a failed checkout leaves no script, and nothing to clean. `stop` kills only
+        # this runner's own emulator and adb, even when the job was cancelled mid-run.
+        run: |
+          if [ -f .github/scripts/android-emulator.sh ]; then bash .github/scripts/android-emulator.sh stop; fi
           if [ -f .github/scripts/mac-runner.sh ]; then bash .github/scripts/mac-runner.sh clean; fi
 
   android-release:
