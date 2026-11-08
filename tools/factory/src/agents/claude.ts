@@ -21,6 +21,7 @@ export const DENY_RULES = [
   'Bash(wrangler deploy:*)',
   'Bash(pnpm exec wrangler deploy:*)',
   'Bash(corepack pnpm exec wrangler deploy:*)',
+  'Bash(task site:deploy:*)',
   'Bash(security:*)',
 ] as const;
 

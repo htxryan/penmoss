@@ -13,7 +13,10 @@ export interface Check {
   readonly command: string;
   /** `pass`: must exit 0. `refused`: must exit non-zero (isolation). */
   readonly expect: 'pass' | 'refused';
-  /** When given, stdout must contain this. */
+  /**
+   * When given, stdout must contain this. For a `refused` check it is the refusal itself, so a
+   * command that fails for another reason doesn't pass as refused.
+   */
   readonly output?: string;
   /** Tokens the check needs; it is skipped, and reported as such, without them. */
   readonly needs?: readonly (SecretKey | 'GH_TOKEN')[];
@@ -24,6 +27,9 @@ export interface Check {
   /** Made on the host first: the slot's Android virtual device (F8). */
   readonly needsAvd?: boolean;
 }
+
+/** What the repo's deploy commands say inside a run (FD24): `Taskfile.yml`, `apps/relay`. */
+const DEPLOY_REFUSED = 'No production deploys from a factory run';
 
 /** Opens a file for zero bytes: fails when the sandbox refuses it, and never prints contents. */
 const opens = (path: string) => `head -c 0 '${path}'`;
@@ -123,6 +129,15 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
       command: `gh api repos/${config.repo} --jq .full_name`,
     },
     {
+      // The branch GitHub refused live (A1222). A zero SHA, so a token that could write gets 422
+      // and still creates nothing; the check then fails, since only a 403 is the refusal.
+      name: `the app's read-only token can't write to ${config.repo} (A1222)`,
+      expect: 'refused',
+      output: 'HTTP 403',
+      needs: ['GH_TOKEN'],
+      command: `gh api -X POST repos/${config.repo}/git/refs -f ref=refs/heads/factory-doctor-probe -f sha=0000000000000000000000000000000000000000 2>&1`,
+    },
+    {
       name: 'Claude Code signs in with the setup token',
       expect: 'pass',
       output: 'factory-ok',
@@ -143,6 +158,12 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
       command: opens(`${home}/.config/gh/hosts.yml`),
     },
     { name: '~/.ssh is unreadable', expect: 'refused', command: `ls '${home}/.ssh' > /dev/null` },
+    {
+      // Where the Mac app keeps git-secrets.json, its notebooks' tokens (F13's red-team target).
+      name: "the Mac app's data folder (git-secrets.json) is unreadable",
+      expect: 'refused',
+      command: `ls '${home}/Library/Application Support/Penmoss' > /dev/null`,
+    },
     {
       name: "the GitHub App's key file is unreadable (A1222)",
       expect: 'refused',
@@ -176,7 +197,15 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
     {
       name: 'a relay deploy is refused',
       expect: 'refused',
-      command: `corepack pnpm --filter @penmoss/relay run deploy --dry-run`,
+      output: DEPLOY_REFUSED,
+      command: `corepack pnpm --filter @penmoss/relay run deploy --dry-run 2>&1`,
+    },
+    {
+      // Refused before the build; `--dry-run` reaches wrangler only if the guard is gone.
+      name: 'a site deploy (task site:deploy) is refused',
+      expect: 'refused',
+      output: DEPLOY_REFUSED,
+      command: `task site:deploy -- --dry-run 2>&1`,
     },
   ];
 }
@@ -195,9 +224,10 @@ export function judge(
   stdout: string,
 ): { ok: boolean; detail: string } {
   if (check.expect === 'refused') {
-    return exitCode === 0
-      ? { ok: false, detail: 'succeeded, but the sandbox must refuse it' }
-      : { ok: true, detail: `refused (exit ${exitCode})` };
+    if (exitCode === 0) return { ok: false, detail: 'succeeded, but the sandbox must refuse it' };
+    if (check.output !== undefined && !stdout.includes(check.output))
+      return { ok: false, detail: `failed (exit ${exitCode}), but not with "${check.output}"` };
+    return { ok: true, detail: `refused (exit ${exitCode})` };
   }
   if (exitCode !== 0) return { ok: false, detail: `exit ${exitCode}` };
   if (check.output !== undefined && !stdout.includes(check.output)) {

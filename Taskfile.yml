@@ -160,11 +160,13 @@ tasks:
       - node scripts/social-image.mjs
 
   site:deploy:
-    desc: 'penmoss.app: build it, then wrangler deploy of site/dist'
-    deps: [site:build]
+    desc: 'penmoss.app: build it, then wrangler deploy of site/dist (refused inside a factory run, FD24)'
     dir: site
     cmds:
-      - pnpm exec wrangler deploy
+      # First, before the build: deps would run ahead of it.
+      - test -z "$PENMOSS_FACTORY_RUN" || { echo 'No production deploys from a factory run; they happen after merge (FD24).' >&2; exit 1; }
+      - task: site:build
+      - pnpm exec wrangler deploy {{.CLI_ARGS}}
 
   factory:next:
     desc: 'The software factory (#253): print the Ready card it would start next, and why (read-only)'

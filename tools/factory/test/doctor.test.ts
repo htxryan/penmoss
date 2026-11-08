@@ -25,6 +25,9 @@ describe('doctorChecks', () => {
       '~/.ssh is unreadable',
       'the login keychain is unreadable',
       'a relay deploy is refused',
+      'a site deploy (task site:deploy) is refused',
+      "the app's read-only token can't write to htxryan/penmoss (A1222)",
+      "the Mac app's data folder (git-secrets.json) is unreadable",
     ]) {
       expect(names).toContain(expected);
     }
@@ -34,6 +37,24 @@ describe('doctorChecks', () => {
     for (const check of checks.filter((c) => c.expect === 'refused')) {
       expect(check.command).not.toMatch(/\bcat\b|security find/);
     }
+  });
+
+  it('accepts a deploy refusal only when the guard itself refused (FD24)', () => {
+    for (const name of [
+      'a relay deploy is refused',
+      'a site deploy (task site:deploy) is refused',
+    ]) {
+      const check = checks.find((c) => c.name === name)!;
+      expect(check.output, name).toBe('No production deploys from a factory run');
+      expect(check.command, name).toMatch(/--dry-run 2>&1$/);
+    }
+  });
+
+  it("proves the sandbox's GitHub token is read-only by a 403, never a write", () => {
+    const check = checks.find((c) => c.name.startsWith("the app's read-only token can't write"))!;
+    expect(check).toMatchObject({ expect: 'refused', output: 'HTTP 403', needs: ['GH_TOKEN'] });
+    // A zero SHA: even a token that could write creates nothing.
+    expect(check.command).toContain('-f sha=0000000000000000000000000000000000000000');
   });
 
   it('runs wrangler dev on the slot block', () => {
@@ -46,12 +67,16 @@ describe('doctorChecks', () => {
 describe('judge', () => {
   const pass: Check = { name: 'p', command: 'x', expect: 'pass', output: 'ok' };
   const refused: Check = { name: 'r', command: 'x', expect: 'refused' };
+  const refusedWith: Check = { name: 'rw', command: 'x', expect: 'refused', output: 'HTTP 403' };
   it.each([
     [pass, 0, 'all ok', true],
     [pass, 0, 'nope', false],
     [pass, 1, 'ok', false],
     [refused, 1, '', true],
     [refused, 0, '', false],
+    [refusedWith, 1, 'gh: Resource not accessible by integration (HTTP 403)', true],
+    [refusedWith, 1, 'gh: Validation Failed (HTTP 422)', false],
+    [refusedWith, 0, 'HTTP 403', false],
   ])('%#', (check, code, out, ok) => {
     expect(judge(check, code, out).ok).toBe(ok);
   });
