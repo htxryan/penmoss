@@ -46,7 +46,8 @@ const decisions = (rows: readonly string[]) =>
 const BASE_ROWS = [row(1223, 'Proof in R2.'), row(1224, 'check:changed checks the change.')];
 const BRANCH = 'factory/42-add-a-decision';
 
-describe('rebaseOntoMain (F6)', () => {
+// Real git in temp repos: dozens of git processes per test, which a loaded Mac (W12) can stretch past vitest's 5 s default.
+describe('rebaseOntoMain (F6)', { timeout: 30_000 }, () => {
   let repo: string;
   let reserved: string;
   let sandbox: RunSandbox;

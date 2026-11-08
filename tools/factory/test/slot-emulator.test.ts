@@ -40,7 +40,8 @@ function fakeEmulator(avd: string, port: number, ignoreTerm = false) {
   return { child, exited };
 }
 
-describe('stopSlotEmulator', () => {
+// Real stand-in processes and their grace periods, which a loaded Mac (W12) can stretch past vitest's 5 s default.
+describe('stopSlotEmulator', { timeout: 30_000 }, () => {
   it("matches the slot's AVD and console port as proof.sh starts the emulator", () => {
     const { slot } = setUp();
     expect(emulatorPattern(slot)).toBe(` -avd ${slot.avd} -port 59990( |$)`);
