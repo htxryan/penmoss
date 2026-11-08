@@ -1,0 +1,27 @@
+{
+  "name": "@penmoss/relay",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "The relay (T55, D48): a stateless Worker serving a git notebook's MCP tools to claude.ai over HTTP, through GitHub's API",
+  "scripts": {
+    "dev": "wrangler dev --local --port $(node ../../scripts/ports.mjs worker) --inspector-port $(node ../../scripts/ports.mjs inspector)",
+    "types": "wrangler types",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run && vitest run --config vitest.workers.config.ts",
+    "deploy": "test -z \"$PENMOSS_FACTORY_RUN\" || { echo 'No production deploys from a factory run: they happen after merge (FD24).' >&2; exit 1; }; wrangler deploy"
+  },
+  "dependencies": {
+    "@cloudflare/workers-oauth-provider": "1.2.4",
+    "@penmoss/core": "workspace:*",
+    "@penmoss/git-notebook": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.4.6",
+    "@penmoss/sync-client": "workspace:*",
+    "@types/node": "24.19.2",
+    "vitest": "5.0.5",
+    "wrangler": "4.151.3"
+  }
+}

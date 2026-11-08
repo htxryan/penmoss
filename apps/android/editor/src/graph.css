@@ -1,0 +1,57 @@
+/* The graph page (T40 P7, A478): the canvas fills the WebView; the chip sits above the
+   bottom edge, clear of the gesture bar, at the theme's colours. */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--pm-graph-bg, var(--pm-bg));
+  color: var(--pm-fg);
+  font-family: var(--pm-font, system-ui, sans-serif);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.android-graph {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.android-graph canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* The page handles every touch: no browser panning or zoom. */
+  touch-action: none;
+}
+
+.android-graph-empty {
+  margin: 30vh 1rem 0;
+  color: var(--pm-muted);
+  text-align: center;
+}
+
+.android-graph-chip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  max-width: calc(100% - 2rem);
+  min-height: 48px;
+  padding: 0 1.25rem;
+  overflow: hidden;
+  border: 1px solid var(--pm-border);
+  border-radius: 24px;
+  background: var(--pm-raised, var(--pm-bg));
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: 1rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  box-shadow: 0 2px 8px color-mix(in oklab, var(--pm-shadow-color) 18%, transparent);
+}
+
+.android-graph-chip:focus-visible {
+  outline: 3px solid var(--pm-graph-focus, var(--pm-accent));
+  outline-offset: 2px;
+}

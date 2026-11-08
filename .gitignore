@@ -1,0 +1,36 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.local
+.DS_Store
+coverage/
+test-results/
+playwright-report/
+blob-report/
+apps/relay/worker-configuration.d.ts
+.task/
+
+# The web build, copied in by `task deploy`
+
+# Packaged Mac app builds (task desktop:package)
+apps/desktop/release/
+
+# The Android app (T32): Gradle output, the editor bundle built into its assets, the
+# machine's SDK path, and never a signing key.
+apps/android/**/build/
+apps/android/.gradle/
+apps/android/.kotlin/
+apps/android/local.properties
+apps/android/app/src/main/assets/editor/
+*.jks
+*.keystore
+
+# Python (the Play upload script, apps/android/play).
+__pycache__/
+
+# Astro's generated types (site/, task site:build)
+.astro/
+
+# The latest release, written by site/build.mjs (T80.12)
+site/src/data/release.json

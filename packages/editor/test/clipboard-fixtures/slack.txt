@@ -1,0 +1,7 @@
+*Deploy* is done :tada:
+Checklist:
+• Run `task check`
+• Tag the release
+```git tag v1.2.0
+git push --tags```
+See the PR _before lunch_. Thanks @toni

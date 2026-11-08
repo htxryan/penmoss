@@ -1,0 +1,273 @@
+name: Release
+
+# P3 (A1189): a stable release, from the tag `task release -- X.Y.Z` pushes. It builds a signed,
+# notarised universal dmg and the release-signed APK on Ryan's Mac runners (A702: never
+# GitHub's), then creates a draft release vX.Y.Z with Penmoss.dmg, Penmoss.apk,
+# penmoss-mac-X.Y.Z.zip, SHA256SUMS.txt and latest-mac.yml, and notes generated since the
+# previous stable tag. Ryan edits the notes and publishes it, which makes it Latest. A tag with
+# an -rc.N suffix makes a draft prerelease, for rehearsals (R5). Pull requests never run this
+# workflow, so its self-hosted jobs need no fork guard (A1183; workflow-guard.test.mjs).
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  # One run per tag; a second push of the same tag waits rather than racing the first.
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+  # D65: build numbers are CI's run number plus this (ci.yml); see the info job.
+  PENMOSS_RUN_OFFSET: '1000'
+
+jobs:
+  info:
+    name: Version, build number and the previous stable tag
+    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      # The number of ci.yml's newest run (below).
+      actions: read
+    outputs:
+      version: ${{ steps.info.outputs.version }}
+      prerelease: ${{ steps.info.outputs.prerelease }}
+      previous: ${{ steps.info.outputs.previous }}
+      build: ${{ steps.info.outputs.build }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+
+      - name: The GitHub CLI is installed for the runner account (A702)
+        run: command -v gh > /dev/null || { echo "::error::Install gh for the penmoss-ci account (brew install gh)"; exit 1; }
+
+      # The version is the tag's; the build number (CFBundleVersion, Android's versionCode) is
+      # the newest ci.yml run's plus the offset, so a stable APK installs over every alpha APK
+      # published so far and the next alpha installs over it (P5, P8). A tag that is not
+      # vX.Y.Z or vX.Y.Z-rc.N fails here.
+      - name: Read the tag
+        id: info
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          node .github/scripts/releases.mjs release-info --tag "$TAG" >> "$GITHUB_OUTPUT"
+          ci_run="$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?per_page=1" --jq '.workflow_runs[0].run_number')"
+          echo "build=$((ci_run + PENMOSS_RUN_OFFSET))" >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
+  mac:
+    name: Signed, notarised universal dmg
+    needs: info
+    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    # The Developer ID and the notary key (A406). Ryan lets this environment deploy from tags
+    # matching v* as well as main (docs/ci.md §10).
+    environment: mac-signing
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      - name: Signing and notarisation credentials (required)
+        env:
+          HAS_CERTIFICATE: ${{ secrets.PENMOSS_MAC_CSC_LINK != '' }}
+          NOTARY_KEY: ${{ secrets.PENMOSS_MAC_APPLE_API_KEY }}
+        run: |
+          if [ "$HAS_CERTIFICATE" != true ] || [ -z "$NOTARY_KEY" ]; then
+            echo "::error::A stable release must be signed and notarised: the mac-signing environment gave no certificate or notary key (is v* allowed? docs/ci.md §10)."
+            exit 1
+          fi
+          umask 077
+          printf '%s\n' "$NOTARY_KEY" > "$RUNNER_TEMP/penmoss-notary.p8"
+          echo "APPLE_API_KEY=$RUNNER_TEMP/penmoss-notary.p8" >> "$GITHUB_ENV"
+
+      - name: Package the app (universal, P7)
+        env:
+          CSC_LINK: ${{ secrets.PENMOSS_MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.PENMOSS_MAC_CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_ID: ${{ secrets.PENMOSS_MAC_APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.PENMOSS_MAC_APPLE_API_ISSUER }}
+          PENMOSS_BUILD_NUMBER: ${{ needs.info.outputs.build }}
+          PENMOSS_APP_VERSION: ${{ needs.info.outputs.version }}
+          PENMOSS_MAC_ARCH: universal
+        run: |
+          unset CSC_NAME
+          rm -rf apps/desktop/dist apps/desktop/release
+          task desktop:package
+
+      # mac-check.sh's checks, and with NOTARISED=true it fails unless spctl calls the app and
+      # the dmg's copy "Notarized Developer ID" and the ticket is stapled.
+      - name: Check the signature, notarisation, architectures, feed and dmg
+        env:
+          HAS_CERTIFICATE: 'true'
+          NOTARISED: 'true'
+          RUN: ${{ needs.info.outputs.build }}
+          VERSION: ${{ needs.info.outputs.version }}
+        run: bash .github/scripts/mac-check.sh
+
+      - name: Search by meaning in the packaged app
+        run: |
+          shopt -s nullglob
+          apps=(apps/desktop/release/mac*/Penmoss.app)
+          bash .github/scripts/meaning-check.sh "${apps[0]}"
+
+      - name: Upload the dmg, the zip and latest-mac.yml
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: penmoss-mac-release
+          path: |
+            apps/desktop/release/penmoss-mac-${{ needs.info.outputs.build }}.dmg
+            apps/desktop/release/penmoss-mac-${{ needs.info.outputs.version }}.zip
+            apps/desktop/release/latest-mac.yml
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Remove the notarisation key and empty the checkout
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/penmoss-notary.p8"
+          if [ -f .github/scripts/mac-runner.sh ]; then bash .github/scripts/mac-runner.sh clean; fi
+
+  android:
+    name: Release-signed APK
+    needs: info
+    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    # The sideload key (A400, A405). Ryan lets this environment deploy from tags matching v* as
+    # well as main (docs/ci.md §10).
+    environment: android-sideload
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      - uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # As in ci.yml's android job: the command-line tools (checked against Google's SHA-256),
+      # platform 37 and build tools 37.0.0 in this runner's tool cache.
+      - name: Android SDK platform 37 and build tools (into the runner's tool cache)
+        env:
+          TOOLS_ZIP: commandlinetools-mac_arm64-16111833_latest.zip
+          TOOLS_SHA256: 58da8f215781cc0208743e88b65ae259780c55e7eb40e50373d377cf369232d6
+        run: |
+          sdk="$RUNNER_TOOL_CACHE/android-sdk"
+          tools="$sdk/cmdline-tools/16111833"
+          if [ ! -x "$tools/bin/sdkmanager" ]; then
+            curl -fsSL --retry 3 -o "$RUNNER_TEMP/$TOOLS_ZIP" "https://dl.google.com/android/repository/$TOOLS_ZIP"
+            echo "$TOOLS_SHA256  $RUNNER_TEMP/$TOOLS_ZIP" | shasum -a 256 -c -
+            rm -rf "$RUNNER_TEMP/cmdline-tools" "$tools"
+            unzip -q "$RUNNER_TEMP/$TOOLS_ZIP" -d "$RUNNER_TEMP"
+            mkdir -p "$sdk/cmdline-tools"
+            mv "$RUNNER_TEMP/cmdline-tools" "$tools"
+          fi
+          yes | "$tools/bin/sdkmanager" --sdk_root="$sdk" "platforms;android-37.0" "build-tools;37.0.0" > /dev/null
+          {
+            echo "ANDROID_HOME=$sdk"
+            echo "ANDROID_SDK_ROOT=$sdk"
+            echo "ANDROID_USER_HOME=$PENMOSS_CACHE/android-user-home"
+            echo "JAVA_TOOL_OPTIONS=-Duser.home=$PENMOSS_CACHE/java-home"
+          } >> "$GITHUB_ENV"
+
+      - name: The public APK, release-signed with the sideload key (P8)
+        env:
+          KEYSTORE_B64: ${{ secrets.PENMOSS_SIDELOAD_KEYSTORE_B64 }}
+          PENMOSS_SIDELOAD_PASSWORD: ${{ secrets.PENMOSS_SIDELOAD_PASSWORD }}
+          PENMOSS_VERSION_CODE: ${{ needs.info.outputs.build }}
+          PENMOSS_VERSION_NAME: ${{ needs.info.outputs.version }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$PENMOSS_SIDELOAD_PASSWORD" ]; then
+            echo "::error::The android-sideload environment gave no key (is v* allowed? docs/ci.md §10)."
+            exit 1
+          fi
+          umask 077
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/sideload.jks"
+          export PENMOSS_SIDELOAD_KEYSTORE="$RUNNER_TEMP/sideload.jks"
+          task android:apk:sideload
+          rm -f "$RUNNER_TEMP/sideload.jks"
+          bash .github/scripts/apk-check.sh apps/android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Upload the APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: penmoss-android-release
+          path: apps/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Remove the sideload key, stop Gradle and empty the checkout
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/sideload.jks"
+          if [ -f .github/scripts/mac-runner.sh ]; then bash .github/scripts/mac-runner.sh clean; fi
+
+  draft:
+    name: Create the draft release
+    needs: [info, mac, android]
+    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+
+      - name: The GitHub CLI is installed for the runner account (A702)
+        run: command -v gh > /dev/null || { echo "::error::Install gh for the penmoss-ci account (brew install gh)"; exit 1; }
+
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: penmoss-mac-release
+          path: mac
+
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: penmoss-android-release
+          path: apk
+
+      # Penmoss.dmg, Penmoss.apk, the zip, SHA256SUMS.txt, latest-mac.yml last; it refuses to
+      # touch a release that is already published.
+      - name: Create the draft (a prerelease for -rc.N)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          BUILD: ${{ needs.info.outputs.build }}
+          VERSION: ${{ needs.info.outputs.version }}
+          PREVIOUS: ${{ needs.info.outputs.previous }}
+        run: |
+          node .github/scripts/releases.mjs draft-stable --tag "$TAG" --previous "$PREVIOUS" \
+            --dmg "mac/penmoss-mac-$BUILD.dmg" --zip "mac/penmoss-mac-$VERSION.zip" \
+            --feed mac/latest-mac.yml --apk apk/app-release.apk
+          echo "Draft ready: https://github.com/$REPO/releases (edit the notes, then Publish release)." >> "$GITHUB_STEP_SUMMARY"

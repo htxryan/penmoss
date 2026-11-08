@@ -1,0 +1,10 @@
+## Weekly review
+
+Wins: **shipped the editor** and fixed `sync` twice.
+
+- Inbox zero
+- Plan *Q4*
+1. Draft
+2. Review
+- [x] Write report
+- [ ] Call Toni

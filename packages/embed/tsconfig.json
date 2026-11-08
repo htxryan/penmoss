@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Node only: the Mac app's embedding service, the CLI and the local MCP (A1152).
+    "lib": ["ES2024"],
+    "types": ["node"]
+  },
+  "include": ["src", "test", "vitest.config.ts"]
+}

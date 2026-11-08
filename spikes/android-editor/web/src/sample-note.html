@@ -1,0 +1,325 @@
+<h1>Home lab rebuild: notes, decisions and runbook</h1>
+<p>Started this note on a Saturday morning with coffee and a half-dead UPS beeping at me from the closet. It is the long version: what I have, what I want, what I tried, what broke, and what I would do differently. The short version lives in the task tracker. If you are future me reading this at two in the morning because Home Assistant will not boot, skip to <a href="#">the recovery section</a> and stop reading the backstory.</p>
+<p>The lab grew the way these things always grow. One Raspberry Pi ran Pi-hole. Then a second Pi ran Home Assistant. Then an old desktop became a Plex box, and a USB drive taped to its side became "the backup". Every one of those decisions made sense on the day I made it, and together they add up to a system nobody would design on purpose. Nothing is documented, three machines have different passwords for the same user, and the only thing that knows which IP address belongs to what is the router's DHCP lease table.</p>
+<p>The goal of the rebuild is not to make it fancy. The goal is to make it <strong>boring</strong>: one hypervisor, a handful of containers and virtual machines with names that mean something, backups that I have actually restored from, and a written runbook so that the next outage costs me twenty minutes instead of an entire weekend. I want to be able to hand this note to a friend who knows Linux and have them recover the house without calling me.</p>
+
+<h2>Why now</h2>
+<p>Three things pushed this over the edge. First, the Pi running Home Assistant corrupted its SD card for the second time this year. The first time I restored from a snapshot that turned out to be four months old, which meant re-pairing a dozen Zigbee devices by hand while standing on a chair. Second, the Plex box is a ten-year-old desktop that draws about ninety watts at idle, which is silly for a machine that mostly sits there waiting for someone to watch a movie. Third, I keep wanting to try things, like a local language model or a small Git server, and there is nowhere sensible to put them.</p>
+<p>There is also a softer reason. I like knowing how the things in my house work. When the internet goes down I want to know whether it is the ISP, the router, the DNS server or the Wi-Fi, and right now I mostly guess. A single place with logs and graphs would turn guessing into looking, and that alone is worth a weekend or two.</p>
+<blockquote><p>Make it work, make it boring, then write down how it works. Fancy can come later, if ever.</p></blockquote>
+<p>That sentence is taped to the inside of the closet door now. It is mostly there to stop me from spending a week on a Kubernetes cluster for six services.</p>
+
+<h2>Goals and non-goals</h2>
+<p>I wrote these before buying anything, which is a first for me. The point of writing them down is to have something to say no with.</p>
+<ul>
+  <li><p><strong>Goals</strong></p>
+    <ul>
+      <li><p>One Proxmox host that runs everything that matters, sized so it idles under thirty watts.</p></li>
+      <li><p>Home Assistant as a virtual machine with automatic nightly backups that leave the box.</p></li>
+      <li><p>Media served by Plex, with Jellyfin as a fallback that does not need an account.</p>
+        <ul>
+          <li><p>Hardware transcoding on the integrated GPU, not the CPU.</p></li>
+          <li><p>Library on a mirrored pair of disks, not a single USB drive.</p></li>
+        </ul>
+      </li>
+      <li><p>Network-wide ad blocking that survives the host rebooting.</p></li>
+      <li><p>A runbook that covers power loss, disk failure and "I forgot the password".</p></li>
+    </ul>
+  </li>
+  <li><p><strong>Non-goals</strong></p>
+    <ul>
+      <li><p>High availability. One host is fine; the house can live without Plex for a day.</p></li>
+      <li><p>Exposing anything to the internet directly. Remote access goes through a tunnel or not at all.</p></li>
+      <li><p>Running my own email. Not now, not ever, no matter how tempting it looks on a forum.</p></li>
+    </ul>
+  </li>
+</ul>
+<p>The non-goals list turned out to be the more useful one. Every time I found myself reading about clustering or Ceph I reread it and closed the tab.</p>
+
+<h2>Hardware inventory</h2>
+<p>Here is everything currently in the closet, plus the new box. The power numbers are from a cheap plug-in meter, measured at idle over an hour, so treat them as rough but honest.</p>
+<table>
+  <tbody>
+    <tr><th><p>Device</p></th><th><p>Role today</p></th><th><p>Idle watts</p></th><th><p>Plan</p></th></tr>
+    <tr><td><p>Mini PC (N305, 32 GB)</p></td><td><p>New</p></td><td><p>9</p></td><td><p>Proxmox host</p></td></tr>
+    <tr><td><p>Raspberry Pi 4</p></td><td><p>Home Assistant</p></td><td><p>4</p></td><td><p>Retire after migration</p></td></tr>
+    <tr><td><p>Raspberry Pi 3</p></td><td><p>Pi-hole</p></td><td><p>3</p></td><td><p>Keep as secondary DNS</p></td></tr>
+    <tr><td><p>Old desktop (i5-4590)</p></td><td><p>Plex</p></td><td><p>88</p></td><td><p>Sell or recycle</p></td></tr>
+    <tr><td><p>Two 8 TB drives</p></td><td><p>New</p></td><td><p>6</p></td><td><p>Mirrored media pool</p></td></tr>
+    <tr><td><p>UPS (900 VA)</p></td><td><p>Everything</p></td><td><p>n/a</p></td><td><p>New battery, add monitoring</p></td></tr>
+  </tbody>
+</table>
+<p>The mini PC was the only real purchase. I went back and forth between it and a used small-form-factor business desktop. The business desktop would have had more expansion room and ECC support on some models, but it idled at about twenty-five watts and the fan was noticeably louder in a closet that shares a wall with the bedroom. The mini PC has two drive bays through an external enclosure, which is not elegant, but it works.</p>
+<img src="{{img:rack}}" alt="Sketch of the closet shelf: router, switch, mini PC, drive enclosure and UPS">
+<p>The sketch above is roughly how the shelf looks after the rebuild. The switch sits above the router so the patch cables do not cross the drive enclosure, and the UPS sits on the floor because it weighs as much as a small dog.</p>
+
+<h2>Network layout</h2>
+<p>The network is flat for now. I thought about VLANs for the smart home devices, and I still think it is a good idea, but the router I have does not do it well and I do not want to change two things at once. The plan is to rebuild the services first, live with them for a month, and only then split the network.</p>
+<p>Addresses are reserved on the router so every service has a stable IP. I picked a block at the top of the range so it never collides with ordinary DHCP clients:</p>
+<pre><code class="language-yaml"># Static reservations (router DHCP), 192.168.1.0/24
+reservations:
+  - name: proxmox
+    mac: "a8:a1:59:12:34:56"
+    ip: 192.168.1.200
+  - name: home-assistant
+    mac: "bc:24:11:aa:bb:01"
+    ip: 192.168.1.201
+  - name: plex
+    mac: "bc:24:11:aa:bb:02"
+    ip: 192.168.1.202
+  - name: adguard
+    mac: "bc:24:11:aa:bb:03"
+    ip: 192.168.1.203
+  - name: pihole-secondary
+    mac: "b8:27:eb:44:55:66"
+    ip: 192.168.1.204
+dns_servers: [192.168.1.203, 192.168.1.204]</code></pre>
+<p>The DNS servers are handed out by DHCP in that order. Clients do not really treat the list as primary and secondary, they spread queries around, so both servers need the same block lists. That turned out to matter more than I expected, because a family member's phone kept "randomly" showing ads, and the reason was that the old Pi-hole had a shorter list than the new server.</p>
+<img src="{{img:network}}" alt="Diagram: internet to router, router to switch, switch to Proxmox host and access points">
+<p>Wi-Fi is two access points in a mesh. They are fine and I am not touching them during this project, which is another thing the non-goals list is for.</p>
+
+<h2>Proxmox install log</h2>
+<p>I kept a running log while installing, because the last time I set up a server I could not remember a week later which settings I had changed. This is lightly cleaned up but otherwise as it happened.</p>
+<ul data-type="taskList">
+  <li data-type="taskItem" data-checked="true"><p>Update the mini PC BIOS and turn on virtualization and IOMMU</p></li>
+  <li data-type="taskItem" data-checked="true"><p>Write the Proxmox installer to a USB stick and install to the internal NVMe drive</p></li>
+  <li data-type="taskItem" data-checked="true"><p>Switch to the no-subscription repository and run a full upgrade</p></li>
+  <li data-type="taskItem" data-checked="true"><p>Create the mirrored media pool on the two 8 TB drives</p></li>
+  <li data-type="taskItem" data-checked="false"><p>Set up email notifications for failed backups and disk errors</p></li>
+  <li data-type="taskItem" data-checked="false"><p>Enable the integrated GPU for the Plex container</p></li>
+</ul>
+<p>The repository switch is the first thing everyone does and the first thing every guide explains slightly differently. This is what I ended up with on the current release:</p>
+<pre><code class="language-bash">#!/usr/bin/env bash
+set -euo pipefail
+
+# Disable the enterprise repositories (no subscription)
+sed -i 's/^Enabled: true/Enabled: false/' /etc/apt/sources.list.d/pve-enterprise.sources
+sed -i 's/^Enabled: true/Enabled: false/' /etc/apt/sources.list.d/ceph.sources
+
+# Add the no-subscription repository
+cat &gt; /etc/apt/sources.list.d/proxmox.sources &lt;&lt;'SRC'
+Types: deb
+URIs: http://download.proxmox.com/debian/pve
+Suites: trixie
+Components: pve-no-subscription
+Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+SRC
+
+apt update &amp;&amp; apt full-upgrade -y
+echo "Upgrade finished at $(date --iso-8601=seconds)"</code></pre>
+<p>Creating the pool took three tries. The first time I used the device names <code>/dev/sda</code> and <code>/dev/sdb</code>, which is exactly what every guide tells you not to do, because the names can swap after a reboot when the USB enclosure is slow to wake up. The second time I typed one of the disk IDs wrong. The third time I copied the IDs from <code>/dev/disk/by-id</code> with the mouse like a sensible person.</p>
+<pre><code class="language-bash">zpool create -o ashift=12 media mirror \
+  /dev/disk/by-id/ata-WDC_WD80EFPX-68C4ZN0_WD-RD1A2B3C \
+  /dev/disk/by-id/ata-WDC_WD80EFPX-68C4ZN0_WD-RD4D5E6F
+zfs set compression=lz4 atime=off media
+zfs create media/movies
+zfs create media/tv
+zpool status media</code></pre>
+<p>Compression barely helps for video files, which are already compressed, but it costs almost nothing and helps a lot for everything else that ends up on the pool, like metadata, subtitles and the occasional folder of documents.</p>
+
+<h2>Storage and backups</h2>
+<p>Backups are the part of the lab I have historically been worst at, so this section is longer than it probably needs to be. The rule I am adopting is the usual three-two-one: three copies of anything I care about, on two different kinds of storage, with one copy somewhere other than the house. The media library is the exception. Movies and shows can be ripped again from the discs on the shelf, so they get a mirror for convenience and nothing more.</p>
+<p>What I actually care about is small. Home Assistant's configuration and history, the AdGuard settings, the Plex database with its watch history, and the Proxmox host configuration. All of that together is under twenty gigabytes, which means there is no excuse for not backing it up properly.</p>
+<ol>
+  <li><p>Proxmox backs up every virtual machine and container nightly to a local directory on the media pool.</p></li>
+  <li><p>A small script copies the newest backup of each guest to cloud storage, encrypted before it leaves the house.</p>
+    <ol>
+      <li><p>It keeps seven daily and four weekly copies, and deletes older ones.</p></li>
+      <li><p>It writes a heartbeat file so monitoring can tell when it silently stops running.</p></li>
+    </ol>
+  </li>
+  <li><p>Once a month, I restore one guest at random into a scratch container and check that it starts.</p></li>
+</ol>
+<p>The third item is the one that matters and the one that is easiest to skip. A backup that has never been restored is a hope, not a backup. I put a recurring task in my to-do list for the first Sunday of the month and gave it a deliberately annoying name.</p>
+<pre><code class="language-python">#!/usr/bin/env python3
+"""Copy the newest Proxmox backup of each guest offsite, then prune."""
+from __future__ import annotations
+
+import datetime as dt
+import pathlib
+import subprocess
+
+DUMP_DIR = pathlib.Path("/media/backups/dump")
+REMOTE = "offsite:homelab-backups"
+KEEP_DAILY, KEEP_WEEKLY = 7, 4
+
+
+def newest_per_guest(directory: pathlib.Path) -&gt; dict[str, pathlib.Path]:
+    newest: dict[str, pathlib.Path] = {}
+    for path in sorted(directory.glob("vzdump-*.zst")):
+        guest_id = path.name.split("-")[2]
+        newest[guest_id] = path  # sorted, so the last one wins
+    return newest
+
+
+def main() -&gt; None:
+    for guest_id, path in newest_per_guest(DUMP_DIR).items():
+        subprocess.run(["rclone", "copy", str(path), f"{REMOTE}/{guest_id}/"], check=True)
+    stamp = dt.datetime.now(dt.timezone.utc).isoformat()
+    pathlib.Path("/var/lib/offsite-heartbeat").write_text(stamp)
+
+
+if __name__ == "__main__":
+    main()</code></pre>
+<p>Encryption happens in the rclone remote configuration, not in the script, so the script never sees a key. The key itself lives in my password manager and on a printed sheet in the fire safe, because the most common way to lose encrypted backups is to lose the key along with the machine that held it.</p>
+<blockquote><p>Test restore, March: picked the AdGuard container. Restore took four minutes, it came up with the right block lists, and I felt unreasonably proud of myself.</p></blockquote>
+
+<h2>Home Assistant migration</h2>
+<p>This was the part I was most nervous about, because Home Assistant runs the lights, the thermostat schedule and the garage door, and the household has opinions about all three. The plan was to take a full backup on the Pi, restore it into a fresh Home Assistant OS virtual machine on Proxmox, move the Zigbee USB dongle across, and then shut the Pi down. In practice it went mostly like that, with one detour.</p>
+<p>The detour was the Zigbee dongle. Passing a USB device through to a virtual machine is easy, but the dongle's path changed, and Zigbee integration could not find it. The fix was to point the integration at the stable path under <code>/dev/serial/by-id</code> instead of the generic <code>/dev/ttyUSB0</code>, which is the same lesson as the disk IDs, learned again on the same weekend. Apparently I needed to learn it twice.</p>
+<ul data-type="taskList">
+  <li data-type="taskItem" data-checked="true"><p>Full backup on the Pi, downloaded to the laptop as well</p></li>
+  <li data-type="taskItem" data-checked="true"><p>Create the virtual machine from the official image with 4 GB of memory and 2 cores</p></li>
+  <li data-type="taskItem" data-checked="true"><p>Pass through the Zigbee dongle by vendor and product ID</p></li>
+  <li data-type="taskItem" data-checked="true"><p>Restore the backup and fix the serial path</p></li>
+  <li data-type="taskItem" data-checked="false"><p>Move the energy dashboard to the new long-term statistics settings</p>
+    <ul data-type="taskList">
+      <li data-type="taskItem" data-checked="false"><p>Check that the solar sensor keeps its history</p></li>
+      <li data-type="taskItem" data-checked="false"><p>Delete the duplicated grid sensor from the old integration</p></li>
+    </ul>
+  </li>
+</ul>
+<p>Automations survived the move without changes, which says something good about Home Assistant's backups. The one automation I rewrote anyway was the garage door reminder, because it used a template I no longer understood:</p>
+<pre><code class="language-yaml">automation:
+  - alias: "Garage door left open"
+    triggers:
+      - trigger: state
+        entity_id: cover.garage_door
+        to: "open"
+        for: "00:15:00"
+    conditions:
+      - condition: time
+        after: "20:00:00"
+        before: "06:00:00"
+    actions:
+      - action: notify.family_phones
+        data:
+          title: "Garage is open"
+          message: "The garage door has been open for 15 minutes."</code></pre>
+<p>I left the old Pi powered off but plugged in for two weeks, in case I needed to roll back. I did not. It is now in a drawer with a label that says "HA Pi, wiped, fine", which is the kind of label future me will thank present me for.</p>
+
+<h2>Media server</h2>
+<p>Plex runs in an unprivileged container with the integrated GPU passed through for hardware transcoding. Getting the GPU into an unprivileged container is fiddly because of user ID mapping, and the guides disagree with each other in small but important ways. What finally worked was adding the render device to the container configuration and making sure the group ID inside the container matched the one that owns the device on the host.</p>
+<p>The improvement in power draw is the headline. The old desktop idled at almost ninety watts and climbed past a hundred and twenty while transcoding. The mini PC idles at nine watts and stays under twenty-five with two transcodes running at once. Over a year that is roughly the cost of the mini PC itself, which makes the purchase feel less like an indulgence and more like an investment, at least on paper.</p>
+<img src="{{img:power}}" alt="Bar chart: idle power before and after the rebuild">
+<p>Jellyfin runs next to Plex, pointed at the same library, as a fallback for the day Plex changes its terms again or decides that my account needs to be online to watch a file that lives two meters away. I mostly do not use it, but it is nice to know it is there, and it costs nothing when idle.</p>
+<p>The library itself needed a cleanup. Years of downloads from different sources meant inconsistent folder names, missing years, and a handful of films that Plex matched to the wrong movie entirely. I renamed everything to the <em>Title (Year)</em> convention, which fixed most of the matching problems in one pass. The remaining ones needed manual matching, which took an evening with a podcast on.</p>
+
+<h2>DNS and ad blocking</h2>
+<p>AdGuard Home replaced Pi-hole as the primary DNS server, mainly because it handles encrypted upstream DNS without extra software and the interface is easier for the rest of the household to understand when something gets blocked that should not be. Pi-hole stays on the old Pi as the secondary, with the same block lists, so that DNS keeps working when the Proxmox host restarts for updates.</p>
+<p>Keeping two different products in sync is slightly awkward. I settled on a short list of block lists that both support, and a small allow list that I copy across by hand when it changes, which so far has been twice. If it starts changing more often I will script it, but not before.</p>
+<pre><code class="language-json">{
+  "upstream_dns": [
+    "https://dns.quad9.net/dns-query",
+    "https://cloudflare-dns.com/dns-query"
+  ],
+  "bootstrap_dns": ["9.9.9.9", "1.1.1.1"],
+  "filters": [
+    { "name": "AdGuard DNS filter", "enabled": true },
+    { "name": "OISD small", "enabled": true }
+  ],
+  "user_rules": [
+    "@@||s.youtube.com^",
+    "@@||clients4.google.com^"
+  ],
+  "cache_size_bytes": 4194304
+}</code></pre>
+<p>The allow list entries are both things a family member noticed were broken. The first broke YouTube watch history, and the second broke a shopping app's login page. Both took longer to diagnose than to fix, which seems to be the rule for DNS problems.</p>
+
+<h2>Monitoring</h2>
+<p>I wanted monitoring that answers three questions without me having to remember where to look: is everything up, is anything about to run out of space, and did last night's backup actually run. Anything more is a hobby, which is fine, but those three are the requirements.</p>
+<p>The setup is deliberately small. A lightweight metrics collector runs on the host, a single dashboard shows the essentials, and alerts go to my phone through the same notification service Home Assistant already uses. There is one alert per question, and each one has a short description of what to do when it fires, written while I still remember the answer.</p>
+<img src="{{img:dashboard}}" alt="Mock-up of the monitoring dashboard: uptime, disk usage and backup age tiles">
+<p>The backup alert reads the heartbeat file that the offsite copy script writes. If the file is more than thirty hours old, the alert fires. This catches the failure mode I worry about most, which is a backup job that stops quietly and nobody notices for months.</p>
+<pre><code class="language-typescript">type Check = { name: string; ok: boolean; detail: string };
+
+export function backupAgeCheck(heartbeatIso: string, now = new Date()): Check {
+  const ageHours = (now.getTime() - new Date(heartbeatIso).getTime()) / 3_600_000;
+  return {
+    name: "offsite-backup",
+    ok: ageHours &lt; 30,
+    detail: `last offsite copy ${ageHours.toFixed(1)} h ago`,
+  };
+}</code></pre>
+<p>Disk alerts fire at eighty percent on the root disk and the media pool. Uptime alerts fire if any of the core services stops answering for five minutes. Five minutes is long enough to ignore a reboot for updates and short enough that I notice before anyone else in the house does.</p>
+
+<h2>Things that went wrong</h2>
+<p>Writing these down is the most useful part of this note, so I am being honest about the dumb ones too.</p>
+<p>The UPS battery was dead and had been for a while. I only found out because I tested the shutdown script by pulling the plug, and the whole closet went dark in about four seconds. The battery was six years old and the UPS had been reporting that it needed replacing, but nothing was listening. A new battery fixed it, and the monitoring now reads the UPS status so the next dead battery shows up as an alert rather than a surprise.</p>
+<p>A Proxmox kernel update broke the integrated GPU passthrough for a week. The fix was to pin the previous kernel until a newer one came out, which is a thing I did not know you could do until I needed it. The lesson is that updates on the host should happen on a weekend morning, not on a weeknight right before bed, because that is when things break in ways that need an hour to understand.</p>
+<p>I locked myself out of the host by changing the firewall rules from the web interface and forgetting to allow the web interface itself. Recovery meant plugging a keyboard and monitor into the mini PC and editing a file by hand. It was a good reminder that the console is the real admin interface and everything else is a convenience. The runbook now has a section on how to get to the console and what to type, and the monitor and keyboard live on the shelf instead of in another room.</p>
+<p>Home Assistant's database grew to almost five gigabytes because one sensor was reporting every second. I excluded it from the recorder, purged the old data, and the database is now under one gigabyte. Long-term statistics for that sensor still work, because they are stored separately, so nothing useful was lost.</p>
+<p>Finally, the drive enclosure goes to sleep after twenty minutes and takes about ten seconds to wake up, which made Plex time out on the first request after a quiet period. I turned off the enclosure's sleep timer, which costs about a watt, and the problem went away. One watt for no more spinning wheels on a Friday night is a good trade.</p>
+
+<h2>Recovery runbook</h2>
+<p>This is the part to read at two in the morning. Each step is written for someone who has never seen this setup before.</p>
+<ol>
+  <li><p><strong>Power loss.</strong> Everything starts by itself when power returns. The host waits two minutes before starting guests so the drive enclosure has time to wake up.</p></li>
+  <li><p><strong>No internet.</strong> Check the router lights first. If the router is fine, check that the AdGuard container is running; if it is not, the secondary DNS on the old Pi should still answer.</p>
+    <ul>
+      <li><p>From a laptop, run a lookup against each DNS server by IP address to see which one is failing.</p></li>
+      <li><p>If both fail, set the laptop's DNS to a public server and check whether the internet itself works.</p></li>
+    </ul>
+  </li>
+  <li><p><strong>Home Assistant down.</strong> Open the Proxmox web interface, select the Home Assistant virtual machine and start it. If it will not start, restore last night's backup from the backups tab. It takes about five minutes.</p></li>
+  <li><p><strong>A disk failed.</strong> The pool keeps working on one disk. Order a replacement of the same size or bigger, then follow the replace steps in the storage section.</p></li>
+  <li><p><strong>Forgot a password.</strong> All of them are in the password manager under the "Home lab" folder. The printed recovery sheet is in the fire safe.</p></li>
+</ol>
+<pre><code class="language-sql">-- Home Assistant: find the sensors that write the most rows
+SELECT states_meta.entity_id, COUNT(*) AS row_count
+FROM states
+JOIN states_meta ON states.metadata_id = states_meta.metadata_id
+WHERE states.last_updated_ts &gt; strftime('%s', 'now', '-1 day')
+GROUP BY states_meta.entity_id
+ORDER BY row_count DESC
+LIMIT 10;</code></pre>
+<p>That query is how I found the noisy sensor. It is in the runbook because the database will grow again one day, and I will not remember how I found the culprit last time.</p>
+
+<h2>Open questions and next steps</h2>
+<p>Things I have not decided yet, roughly in the order I expect to get to them. None of them are urgent, which is the point: the lab is boring now, and I would like to keep it that way while I think.</p>
+<ul data-type="taskList">
+  <li data-type="taskItem" data-checked="false"><p>Split the smart home devices onto their own VLAN</p>
+    <ul data-type="taskList">
+      <li data-type="taskItem" data-checked="false"><p>Check whether the router supports it properly or needs replacing</p></li>
+      <li data-type="taskItem" data-checked="false"><p>List the devices that need to reach the internet and the ones that should not</p></li>
+    </ul>
+  </li>
+  <li data-type="taskItem" data-checked="false"><p>Try a small local language model in a container and see whether it is useful for anything</p></li>
+  <li data-type="taskItem" data-checked="false"><p>Set up a private Git server for the configuration files, or decide that a private repository is enough</p></li>
+  <li data-type="taskItem" data-checked="true"><p>Sell the old Plex desktop</p></li>
+  <li data-type="taskItem" data-checked="false"><p>Write a one-page version of the runbook for the fridge door</p></li>
+</ul>
+<p>The VLAN question is the biggest. The smart plugs and the robot vacuum talk to servers in other countries for reasons I do not fully understand, and I would rather they could not talk to my laptop at the same time. On the other hand, splitting the network is the kind of change that breaks something subtle, like casting to the television or the printer disappearing, and then I spend an evening on it. I will probably do it during a long weekend when nobody is home.</p>
+<p>The language model question is mostly curiosity. The mini PC has no real GPU, so anything bigger than a small model will be slow. That might be fine for summarizing logs or tagging photos overnight. It might also be a toy I play with for a week and then delete. Both outcomes are acceptable, and the non-goals list does not forbid it, which I checked.</p>
+<p>The Git question is really a question about where the configuration lives. Right now the important files are scattered across the guests, backed up but not versioned. Putting them in a repository would make changes reviewable and reversible. A self-hosted Git server is overkill for one person, and a private repository on a hosted service is simpler, so that is probably where it ends up.</p>
+
+<h2>What I would do differently</h2>
+<p>If I started again tomorrow, I would write the goals and non-goals first, exactly as I did this time, because it saved me from at least three expensive distractions. I would buy the drives and the new UPS battery at the same time as the host, instead of discovering the battery problem halfway through. And I would set up the monitoring before migrating anything, not after, so that I had a baseline to compare against and could see whether the new setup was actually better.</p>
+<p>I would also be less precious about the old hardware. I spent an evening trying to make the old desktop useful as a backup target before admitting that a ninety-watt machine running all day to hold twenty gigabytes of backups makes no sense. Selling it paid for the new drives.</p>
+<p>The thing I would keep exactly the same is this note. Writing as I went, including the mistakes, turned a weekend of fiddling into something I can come back to. Most of what is here I would have forgotten within a month, and the parts I remembered I would have remembered wrong.</p>
+
+<h2>Reading list</h2>
+<p>The handful of pages that were actually useful, as opposed to the dozens I skimmed:</p>
+<ul>
+  <li><p><a href="https://pve.proxmox.com/wiki/Package_Repositories">Proxmox package repositories</a>, for the no-subscription setup.</p></li>
+  <li><p><a href="https://openzfs.github.io/openzfs-docs/">OpenZFS documentation</a>, mostly the pages on pool creation and replacing disks.</p></li>
+  <li><p><a href="https://www.home-assistant.io/common-tasks/os/#backups">Home Assistant backups</a>, read before migrating, not after.</p></li>
+  <li><p><a href="https://github.com/AdguardTeam/AdGuardHome/wiki">AdGuard Home wiki</a>, for the configuration file reference.</p></li>
+  <li><p><a href="https://rclone.org/crypt/">rclone crypt remote</a>, for encrypting backups before they leave the house.</p></li>
+</ul>
+<p>That is the whole story so far. The lab has been boring for six weeks, which is the longest it has ever gone without me touching it, and I consider that a success. Next update when the VLAN work happens, or when something breaks, whichever comes first.</p>
+
+<h2>Household guide</h2>
+<p>The runbook is written for someone technical. This section is written for everyone else in the house, and it is the part I printed and stuck inside the closet door under the sentence about boring.</p>
+<p>If the internet is not working, first look at the router, which is the black box with the blue lights on the top shelf. If the lights are orange or off, unplug it, count to thirty, and plug it back in. It takes about three minutes to come back. If the lights are blue and the internet still does not work, the problem is probably the ad blocker, and you can switch your phone to mobile data until I am home to look at it. Nothing in the closet will be damaged by waiting.</p>
+<p>If the lights in the house stop responding to the switches on the wall, they will still work as ordinary lights if you flip the switch off and on again. The smart part might be down, but the light bulbs do not need it to turn on. The thermostat keeps its own schedule as well, so the house will not get cold if the server is off.</p>
+<p>If the television says the movie server is unavailable, check whether the small grey box on the middle shelf has a white light. If it does not, press its power button once and wait five minutes. If it does have a light, the problem is probably the television app, and restarting the television usually fixes it.</p>
+<p>Please do not unplug the big heavy box on the floor. That is the battery that keeps everything running during a power cut, and unplugging it is the one thing in the closet that will turn everything off at once. If it beeps, it is telling me something, and you can press the button on the front to silence it until I am home.</p>
+
+<h2>Appendix: notes from the first month</h2>
+<p>I kept adding short entries to the bottom of this note during the first month, mostly to have a record of what the new setup was like to live with. They are in the order I wrote them, with only the typos fixed.</p>
+<p><em>Week one.</em> Everything works, and I keep checking the dashboard anyway, the way you keep looking at a new car in the driveway. The backup alert fired once on the second night because I had set the threshold in minutes instead of hours. Fixed the threshold, then realized I had just tested the alert by accident, which counts.</p>
+<p><em>Week two.</em> The household has stopped noticing anything changed, which is the highest compliment a home lab can receive. The only complaint was that a smart plug in the living room took a few seconds longer to respond, which turned out to be a weak Zigbee signal now that the dongle is in the closet instead of the hallway. A USB extension cable moved the dongle away from the metal shelf and the delay disappeared.</p>
+<p><em>Week three.</em> Did the first monthly restore test a little early, because I wanted to know it worked before relying on it. Picked the Home Assistant virtual machine, since it is the most important and the most complicated. The restore took six minutes into a scratch slot, it booted, and every automation was there. I shut it down without connecting the Zigbee dongle, because two coordinators on the same network would have caused a mess, and that detail is now written into the restore checklist.</p>
+<p><em>Week four.</em> Power cut for about forty minutes during a storm. The UPS held the closet for roughly twenty-five minutes, then the shutdown script ran and the host turned itself off cleanly. When power came back, everything started in the right order without me doing anything. I found out about the whole episode from the alert on my phone, which is exactly how it should work. This is the moment I decided the project was done, at least for now.</p>
+<p>One more thing worth recording: the total cost. The mini PC, two drives, the enclosure and the UPS battery came to a little under eight hundred dollars, and selling the old desktop brought back about a hundred and fifty. At the power savings I measured, the whole project pays for itself in a bit under three years, before counting the weekends I will not spend restoring corrupted SD cards. I am choosing not to count the weekends I spent building it.</p>

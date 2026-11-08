@@ -1,0 +1,18 @@
+pnpm-lock.yaml
+prototype/
+docs/evidence/
+**/worker-configuration.d.ts
+spikes/
+# Markdown codec fixtures are byte-exact test inputs and outputs.
+packages/core/test/fixtures/
+# Clipboard payloads as apps write them, and the notes they must become.
+packages/editor/test/clipboard-fixtures/
+# The web bundle copied in for deploys (task web:bundle).
+apps/desktop/release/
+# The Android app's Gradle output and the editor bundle built into its assets (T32).
+apps/android/**/build/
+apps/android/.gradle/
+apps/android/app/src/main/assets/editor/
+# Room writes its schema on every build (T32).
+apps/android/app/schemas/
+docs/brand/source/

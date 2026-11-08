@@ -1,0 +1,354 @@
+/* Send feedback (T49): the form over the page, filling the screen on a phone. */
+.feedback-dlg {
+  width: min(44rem, 100%);
+  max-height: 86vh;
+}
+
+.feedback-overlay {
+  padding-top: 6vh;
+}
+
+.feedback-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.feedback-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.9rem 1rem 1rem;
+}
+
+.feedback-intro {
+  margin: 0;
+  font-size: var(--pm-text-sm);
+}
+
+.feedback-choice {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* A legend without the browser's 2px padding, its text on the labels' edge (A988). */
+.feedback-choice legend,
+.feedback-field > label,
+.feedback-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  padding: 0;
+  font-weight: 600;
+  font-size: var(--pm-text-sm);
+}
+
+/* A segmented control from real radio buttons: arrows move, Space picks, the reader says which. */
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.segment {
+  position: relative;
+  display: inline-flex;
+}
+
+.segment input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/*
+ * A column, its name over a hidden bold copy of it (`data-label`): as wide as when it is chosen
+ * and bold, so picking one moves nothing beside it (A988).
+ */
+.segment span {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--pm-control-sm);
+  padding: 0 0.75rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font-size: var(--pm-text-sm);
+}
+
+.segment span::after {
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  content: attr(data-label);
+  font-weight: 600;
+}
+
+.segment input:checked + span {
+  border-color: var(--pm-accent);
+  background: var(--pm-accent-soft);
+  font-weight: 600;
+}
+
+.segment input:focus-visible + span {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 1px;
+}
+
+.segment input[aria-invalid='true'] + span {
+  border-color: var(--pm-danger);
+}
+
+.field-error {
+  margin: 0.3rem 0 0;
+  color: var(--pm-danger);
+  font-size: var(--pm-text-sm);
+}
+
+.feedback-field {
+  position: relative;
+}
+
+.feedback-title,
+.feedback-link input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--pm-control);
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font: inherit;
+}
+
+.feedback-title:focus,
+.feedback-link input:focus {
+  border-color: var(--pm-accent);
+  outline: none;
+  box-shadow: var(--pm-ring);
+}
+
+.feedback-title[aria-invalid='true'] {
+  border-color: var(--pm-danger);
+}
+
+.feedback-count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: var(--pm-text-xs);
+}
+
+.feedback-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+  padding: 0.2rem;
+  border: 1px solid var(--pm-border);
+  border-bottom: 0;
+  border-radius: 0;
+  background: var(--pm-raised);
+}
+
+.feedback-format[aria-pressed='true'] {
+  background: var(--pm-accent-soft);
+  color: var(--pm-fg);
+}
+
+.feedback-format-glyph {
+  font: 600 0.8rem/1 var(--pm-mono);
+}
+
+.feedback-link {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.35rem;
+  border: 1px solid var(--pm-border);
+  border-bottom: 0;
+}
+
+.feedback-link input {
+  flex: 1 1 12rem;
+  width: auto;
+}
+
+.feedback-editor {
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-bg);
+}
+
+.feedback-editor:focus-within {
+  border-color: var(--pm-accent);
+  box-shadow: var(--pm-ring);
+}
+
+.feedback-description-editor {
+  min-height: 7rem;
+  max-height: 40vh;
+  overflow: auto;
+  padding: 0.5rem 0.7rem;
+  outline: none;
+  line-height: 1.5;
+}
+
+.feedback-description-editor p {
+  margin: 0 0 0.5rem;
+}
+
+.feedback-description-editor :is(ul, ol) {
+  margin: 0 0 0.5rem;
+  padding-left: 1.4rem;
+}
+
+.feedback-description-editor blockquote {
+  margin: 0 0 0.5rem;
+  padding-left: 0.7rem;
+  border-left: 3px solid var(--pm-border-strong);
+  color: var(--pm-muted);
+}
+
+.feedback-description-editor :is(code, pre) {
+  border-radius: 0;
+  background: var(--pm-hover);
+  font-family: var(--pm-mono);
+  font-size: 0.9em;
+}
+
+.feedback-description-editor pre {
+  padding: 0.5rem 0.6rem;
+  overflow: auto;
+}
+
+.feedback-description-editor a {
+  color: var(--pm-link);
+}
+
+.feedback-hint {
+  margin: 0.3rem 0 0;
+  font-size: var(--pm-text-xs);
+}
+
+.feedback-shots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.6rem;
+  margin: 0.5rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feedback-shot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.4rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+}
+
+.feedback-shot img {
+  width: 100%;
+  height: 6rem;
+  border-radius: 0;
+  background: var(--pm-hover);
+  object-fit: contain;
+}
+
+.feedback-shot-include {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  font-size: var(--pm-text-xs);
+}
+
+.feedback-shot-actions {
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+
+.feedback-context summary {
+  font-weight: 600;
+  font-size: var(--pm-text-sm);
+  cursor: pointer;
+}
+
+.feedback-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 1rem;
+  margin: 0.5rem 0;
+  padding: 0;
+  border: 0;
+  font-size: var(--pm-text-sm);
+}
+
+.feedback-groups label {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  min-height: var(--pm-control-sm);
+}
+
+.feedback-preview {
+  max-height: 16rem;
+  margin: 0;
+  overflow: auto;
+  padding: 0.6rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-bg);
+  font: 0.75rem/1.45 var(--pm-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.feedback-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  padding: 0.7rem 1rem;
+  border-top: 1px solid var(--pm-border);
+}
+
+.feedback-outcome {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 1rem;
+}
+
+.feedback-outcome p {
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  .feedback-overlay {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
+
+  .feedback-dlg {
+    max-height: calc(100dvh - 1rem);
+  }
+
+  .segment span {
+    min-height: var(--pm-hit);
+  }
+
+  .feedback-shots {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

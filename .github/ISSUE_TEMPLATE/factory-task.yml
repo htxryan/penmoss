@@ -1,0 +1,46 @@
+name: Factory task
+description: A change for the software factory to plan, build, prove and open as a PR (docs/factory.md)
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Drag the card to **Ready** on Project 8 when it is ready to start. The factory plans it with you first unless it has `plan:skip`.
+        Routing labels (set after filing): `agent:claude` (default) or `agent:opencode`, `model:opus`, `model:sonnet` or `model:go`, `platform:web`, `platform:mac`, `platform:android`, `plan:skip`, and P1–P4 for pickup order (none means P3).
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What changes for Ryan, and why now.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: |
+        In EARS form, one per line, so each can be proved by a test and a recording:
+        "When <trigger>, the <client> shall <response>." · "While <state>, …" · "If <unwanted condition>, then …" · "The <client> shall …"
+      value: |
+        - [ ] When …, the … shall …
+    validations:
+      required: true
+  - type: checkboxes
+    id: platforms
+    attributes:
+      label: Platforms
+      description: Where you expect this to show. The path classifier still decides which platforms CI tests; `platform:*` labels narrow which need proof.
+      options:
+        - label: Web
+        - label: Mac
+        - label: Android
+  - type: textarea
+    id: manual
+    attributes:
+      label: Manual checks
+      description: What to try in the running app, on which client.
+  - type: textarea
+    id: depends
+    attributes:
+      label: Depends on
+      description: Issues that must be done first, as `#n`.

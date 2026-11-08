@@ -1,0 +1,5 @@
+.build/
+.runs/
+jgit/**/build/
+jgit/.gradle/
+jgit/local.properties

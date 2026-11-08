@@ -1,0 +1,7 @@
+# Standalone workspace root so this spike stays out of the main Penmoss pnpm workspace.
+packages: []
+
+savePrefix: ''
+
+allowBuilds:
+  esbuild: true

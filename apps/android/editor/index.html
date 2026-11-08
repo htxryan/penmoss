@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <!--
+      The page loads only from the APK and talks only to the app (T32, A293): no
+      network, no frames, no plug-ins. Notes come from other devices and agents, so
+      a script injected through one could otherwise send what it reads elsewhere.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Penmoss editor</title>
+    <script type="module" src="./src/main.ts"></script>
+  </head>
+  <body>
+    <main class="android-note" id="note" hidden>
+      <!-- A textarea, so a long title wraps on a phone instead of scrolling out of sight (T39). -->
+      <textarea
+        class="doc-title"
+        id="title"
+        rows="1"
+        placeholder="Untitled"
+        aria-label="Title"
+        aria-multiline="false"
+        autocomplete="off"
+      ></textarea>
+      <div class="note-body" id="body"></div>
+      <pre class="android-unsupported" id="unsupported" hidden></pre>
+    </main>
+  </body>
+</html>

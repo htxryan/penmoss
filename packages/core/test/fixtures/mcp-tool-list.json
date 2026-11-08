@@ -1,0 +1,1023 @@
+[
+  {
+    "name": "search_notes",
+    "title": "Search notes",
+    "description": "Search the notes. mode \"hybrid\" (default) combines keyword and meaning search and suits questions in plain language; \"full-text\" matches words exactly (\"a phrase\", prefix*, -excluded, title:word); \"semantic\" finds notes by meaning only. Filter by folderId (with its subfolders), tag (with nested tags) and updated time. Results give each note id, title, a snippet with matches in **bold**, tags and when it was last updated; call read_note for the full text.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "What to look for."
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "full-text",
+            "semantic",
+            "hybrid"
+          ],
+          "description": "hybrid (default), full-text or semantic."
+        },
+        "folderId": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Only notes in this folder."
+        },
+        "tag": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Only notes with this tag."
+        },
+        "updatedAfter": {
+          "type": "string",
+          "description": "Only notes edited after this ISO 8601 date or time, e.g. 2026-10-01."
+        },
+        "updatedBefore": {
+          "type": "string",
+          "description": "Only notes edited before this ISO 8601 date or time."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "description": "At most this many (10)."
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false,
+      "title": "Search notes"
+    }
+  },
+  {
+    "name": "read_note",
+    "title": "Read a note",
+    "description": "Read a note: its title, tags, headings and markdown body, and its baseVersion. Keep the baseVersion: every edit tool takes it, and update_section and replace_text require it, so an edit only goes ahead if the part you change is still as you read it. Read again before editing if some time has passed. A long body comes in parts of about 60 KB: when truncated is true, call again with offset set to nextOffset, or read just one section with heading. A line may start with symbols, each a glyph and a space after any list marker, checkbox or heading hashes (★ important, ? question, ! follow-up, 💡 idea, → next): plain text the apps draw in the margin; write one the same way to mark a line.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+        },
+        "heading": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Read only the section under this heading (e.g. \"Plans\" or \"## Plans\")."
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Start here: the nextOffset of the previous part of a long note."
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false,
+      "title": "Read a note"
+    }
+  },
+  {
+    "name": "list_folder",
+    "title": "List a folder",
+    "description": "List the folders and notes in a folder, in the order the app shows them. Give folderId, or path (folder names from the top, e.g. \"Journal/2026\"), or neither for the top level. Folder ids are what create_note, move_note and search_notes take. Every folder and note names its notebook (a top-level folder whose notes Ryan mirrors to a git repository of its own; \"default\" is the rest). At the top level, notebooks have isNotebook: true. You may work inside a notebook, but not create, rename or delete one, or move notes or folders between notebooks: those are Ryan's.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "folderId": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The folder id."
+        },
+        "path": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "The folder path, e.g. \"Projects/Garden\"."
+        }
+      },
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false,
+      "title": "List a folder"
+    }
+  },
+  {
+    "name": "list_tags",
+    "title": "List tags",
+    "description": "Without tag: every tag with how many notes have it. With tag: the notes that have it or a tag nested under it (newest first, at most 200; truncated: true when there are more).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "tag": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "A tag, without #."
+        }
+      },
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false,
+      "title": "List tags"
+    }
+  },
+  {
+    "name": "get_backlinks",
+    "title": "Get backlinks",
+    "description": "The notes that link to a note ([[its title]]), with the heading of each link, and the notes that mention its title without linking.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false,
+      "title": "Get backlinks"
+    }
+  },
+  {
+    "name": "list_recent",
+    "title": "List recent notes",
+    "description": "The most recently edited notes, newest first, with their tags and a short excerpt. Daily and weekly journal notes have kind \"daily\" or \"weekly\".",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "At most this many (20)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false,
+      "title": "List recent notes"
+    }
+  },
+  {
+    "name": "get_history",
+    "title": "Get note history",
+    "description": "A note’s saved versions, newest first: when, by whom (devices and agents by name) and what changed. With versionId: that version’s markdown and the lines it added (+) and removed (−). Ryan can restore or revert versions in the app.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+        },
+        "versionId": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "A version id from the list."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "At most this many (20)."
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false,
+      "title": "Get note history"
+    }
+  },
+  {
+    "name": "get_daily_note",
+    "title": "Get the daily note",
+    "description": "Get today’s daily note, creating it from Ryan’s template if no device has yet (with a write token), exactly as the apps do: “today” is in Ryan’s time zone setting, and the note is filed under Journal. date (YYYY-MM-DD) picks another day; period \"weekly\" gives the weekly note of the week holding that day. Returns the note like read_note (with its baseVersion and headings); add to it with append_to_note, optionally under one of its headings.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "maxLength": 10,
+          "description": "A day as YYYY-MM-DD; today (in Ryan’s time zone) if omitted."
+        },
+        "period": {
+          "type": "string",
+          "enum": [
+            "daily",
+            "weekly"
+          ],
+          "description": "daily (default) or weekly."
+        }
+      },
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false,
+      "idempotentHint": true,
+      "title": "Get the daily note"
+    }
+  },
+  {
+    "name": "create_note",
+    "title": "Create a note",
+    "description": "Create a note with a title, a markdown body and tags, at the top level or in folderId. Returns its id and baseVersion. For today’s journal use get_daily_note instead. A call identical to one that made a note less than 10 minutes ago returns that note (created: false) rather than a copy, and leaves it where it is, so retrying after an error is safe; pass a different idempotencyKey to make a deliberate duplicate.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "The title."
+        },
+        "markdown": {
+          "type": "string",
+          "description": "The body. Markdown (CommonMark plus GFM tables and task lists). [[Note title]] links to another note."
+        },
+        "tags": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "description": "Tag names without #, e.g. [\"homelab\", \"projects/garden\"] (nested with /)."
+        },
+        "folderId": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "A folder id from list_folder."
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Any unique text; a retry with the same key returns the same note."
+        }
+      },
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false,
+      "title": "Create a note"
+    }
+  },
+  {
+    "name": "append_to_note",
+    "title": "Append to a note",
+    "description": "Add markdown at the end of a note, or at the end of the section under heading (e.g. \"Notes\" or \"## Notes\"). Nothing already there is changed, so baseVersion is optional; pass it when you have it. Returns the new baseVersion.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+        },
+        "markdown": {
+          "type": "string",
+          "description": "Markdown (CommonMark plus GFM tables and task lists). [[Note title]] links to another note."
+        },
+        "heading": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Add at the end of this heading’s section instead of the end of the note."
+        },
+        "baseVersion": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The baseVersion your last read_note (or last edit of this note) returned: the version your edit is based on."
+        }
+      },
+      "required": [
+        "id",
+        "markdown"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false,
+      "title": "Append to a note"
+    }
+  },
+  {
+    "name": "update_section",
+    "title": "Update a section",
+    "description": "Replace the content under a heading (the heading itself stays; subsections are part of the section), or insert at its start (mode \"prepend\") or end (mode \"append\"). Requires baseVersion from read_note: if a person changed that section since, the edit is refused with a conflict and the current text; then call read_note again and redo the edit on the current text. Edits elsewhere in the note never conflict. Returns the new baseVersion.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+        },
+        "heading": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "The heading as read_note lists it, e.g. \"Plans\" or \"## Plans\"; its leading symbols (★, ?, …) may be left out."
+        },
+        "markdown": {
+          "type": "string",
+          "description": "Markdown (CommonMark plus GFM tables and task lists). [[Note title]] links to another note."
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "replace",
+            "prepend",
+            "append"
+          ],
+          "description": "replace (default), prepend or append."
+        },
+        "baseVersion": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The baseVersion your last read_note (or last edit of this note) returned: the version your edit is based on."
+        }
+      },
+      "required": [
+        "id",
+        "heading",
+        "markdown",
+        "baseVersion"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false,
+      "title": "Update a section"
+    }
+  },
+  {
+    "name": "replace_text",
+    "title": "Find and replace",
+    "description": "Replace text in a note’s body. find must occur exactly once unless all is true. scope \"text\" (default) matches prose only, never link targets; \"markdown\" matches the raw markdown. Requires baseVersion from read_note: if the lines around a match changed since, the edit is refused with a conflict; then call read_note again and retry. Returns the new baseVersion.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+        },
+        "find": {
+          "type": "string",
+          "description": "The exact text to find."
+        },
+        "replace": {
+          "type": "string",
+          "description": "What to put in its place (markdown)."
+        },
+        "all": {
+          "type": "boolean",
+          "description": "Replace every occurrence (default false)."
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "text",
+            "markdown"
+          ],
+          "description": "text (default: prose only) or markdown."
+        },
+        "baseVersion": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The baseVersion your last read_note (or last edit of this note) returned: the version your edit is based on."
+        }
+      },
+      "required": [
+        "id",
+        "find",
+        "replace",
+        "baseVersion"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false,
+      "title": "Find and replace"
+    }
+  },
+  {
+    "name": "set_properties",
+    "title": "Set title or tags",
+    "description": "Set a note’s title, or replace its tag list (the tags in its properties; #tags written in the text stay). Use tag_note to add or remove single tags. baseVersion is optional: with it, the change is refused if the title or tags changed since you read them.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "The new title."
+        },
+        "tags": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "description": "The complete new tag list. Tag names without #, e.g. [\"homelab\", \"projects/garden\"] (nested with /)."
+        },
+        "baseVersion": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The baseVersion your last read_note (or last edit of this note) returned: the version your edit is based on."
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false,
+      "title": "Set title or tags"
+    }
+  },
+  {
+    "name": "move_note",
+    "title": "Move a note",
+    "description": "Move a note into a folder (folderId from list_folder), or to the top level with folderId null. The note keeps its id and links.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+        },
+        "folderId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The folder to move it to; null for the top level."
+        }
+      },
+      "required": [
+        "id",
+        "folderId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false,
+      "idempotentHint": true,
+      "title": "Move a note"
+    }
+  },
+  {
+    "name": "trash_note",
+    "title": "Move a note to Trash",
+    "description": "Move a note to Trash, as deleting it in the app does. The note keeps its content and history and leaves the folder tree; Ryan can restore it in the app, or you can with restore_note, for 30 days, after which it is deleted for good. History shows the change under your name. Calling it for a note already in Trash changes nothing (alreadyInTrash: true). An agent moves at most 100 notes to Trash a day. You cannot delete a note for good: only Ryan can, in the app.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false,
+      "idempotentHint": true,
+      "title": "Move a note to Trash"
+    }
+  },
+  {
+    "name": "restore_note",
+    "title": "Restore a note from Trash",
+    "description": "Take a note out of Trash, back into the folder it was deleted from (the top level if that folder is gone). A folder-scoped token restores only notes deleted from a folder inside its own, into that folder. Calling it for a note not in Trash changes nothing (restored: false). Returns where the note is now.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false,
+      "idempotentHint": true,
+      "title": "Restore a note from Trash"
+    }
+  },
+  {
+    "name": "create_folder",
+    "title": "Create a folder",
+    "description": "Create a folder named name, inside parentId or parentPath (e.g. \"Projects/Garden\"; from list_folder), or at the top level if neither is given. If a folder of that name (ignoring case) is already there, returns it (created: false) instead of making a second, so retrying is safe. Make nested folders one level at a time. Returns its id.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "The folder’s name; no /."
+        },
+        "parentId": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The parent folder’s id."
+        },
+        "parentPath": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "The parent folder’s path, e.g. \"Projects/Garden\" (instead of parentId)."
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false,
+      "idempotentHint": true,
+      "title": "Create a folder"
+    }
+  },
+  {
+    "name": "rename_folder",
+    "title": "Rename a folder",
+    "description": "Rename a folder. Pass expectedName (the name you saw in list_folder) to be refused with folder_changed if someone renamed it since. Its notes and subfolders stay in it.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "folderId": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The folder id, from list_folder."
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "The new name."
+        },
+        "expectedName": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "The name you saw."
+        }
+      },
+      "required": [
+        "folderId",
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false,
+      "idempotentHint": true,
+      "title": "Rename a folder"
+    }
+  },
+  {
+    "name": "move_folder",
+    "title": "Move or reorder a folder",
+    "description": "Move a folder (with everything in it) into parentId, or to the top level with parentId null; or reorder it among its siblings with before or after (a sibling folder’s id). Pass expectedParentId (where you saw it) to be refused with folder_moved if it moved since. A folder cannot move into itself or one of its subfolders.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "folderId": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The folder id, from list_folder."
+        },
+        "parentId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The new parent; null for the top level."
+        },
+        "expectedParentId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The parent you saw it in; null for the top level."
+        },
+        "before": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Put it just before this sibling folder."
+        },
+        "after": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "Put it just after this sibling folder."
+        }
+      },
+      "required": [
+        "folderId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false,
+      "idempotentHint": true,
+      "title": "Move or reorder a folder"
+    }
+  },
+  {
+    "name": "set_folder_sort",
+    "title": "Set a folder’s sort order",
+    "description": "How a folder lists its notes and subfolders in the apps: manual (your order), alpha (A–Z) or modified (latest first). folderId null is the top level.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "folderId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The folder; null for the top level."
+        },
+        "sortMode": {
+          "type": "string",
+          "enum": [
+            "manual",
+            "alpha",
+            "modified"
+          ],
+          "description": "The order."
+        }
+      },
+      "required": [
+        "folderId",
+        "sortMode"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false,
+      "idempotentHint": true,
+      "title": "Set a folder’s sort order"
+    }
+  },
+  {
+    "name": "delete_folder",
+    "title": "Delete a folder",
+    "description": "Delete a folder and its subfolders. No note is deleted: their notes move up to the folder’s parent. The folder goes to Trash, where Ryan can restore it with its subfolders and notes for 30 days, and the change is listed under your name in the app’s Agent activity, with an Undo. Deleting a folder that is already gone changes nothing (deleted: false). An agent deletes at most 25 folders a day.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "folderId": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The folder id, from list_folder."
+        }
+      },
+      "required": [
+        "folderId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false,
+      "idempotentHint": true,
+      "title": "Delete a folder"
+    }
+  },
+  {
+    "name": "save_version",
+    "title": "Save a version",
+    "description": "Save the note as it is now as a version in its History. Versions are also saved automatically (after 5 minutes at rest, every 30 minutes of editing, and after each of your edits); with no change since the latest version, that one is returned (saved: false).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false,
+      "idempotentHint": true,
+      "title": "Save a version"
+    }
+  },
+  {
+    "name": "restore_version",
+    "title": "Restore a version",
+    "description": "Bring back a version’s content (versionId from get_history) as a new change; the versions after it stay in History, so this can be undone too. If the note already matches it, nothing changes (changed: false).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+        },
+        "versionId": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "A version id from get_history."
+        }
+      },
+      "required": [
+        "id",
+        "versionId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false,
+      "idempotentHint": true,
+      "title": "Restore a version"
+    }
+  },
+  {
+    "name": "revert_edit",
+    "title": "Revert an edit",
+    "description": "Undo what one version changed (versionId from get_history), keeping every later edit: a three-way merge. Parts changed again since are listed in conflicts and left as they are. Reverting again changes nothing (changed: false).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+        },
+        "versionId": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "A version id from get_history."
+        }
+      },
+      "required": [
+        "id",
+        "versionId"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false,
+      "idempotentHint": true,
+      "title": "Revert an edit"
+    }
+  },
+  {
+    "name": "attach_file",
+    "title": "Attach a file or picture",
+    "description": "Store a file in Penmoss and add it at the end of a note (or of the section under heading): a picture (PNG, JPEG, GIF, WebP, AVIF) shows in the note, any other file is a link. Send the file in base64 as data, at most 700 KB (file_too_large), and at most 50 MB of new files a day. Attaching the same file to a note that already has it changes nothing (added: false).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "The file’s name, e.g. \"plan.pdf\"."
+        },
+        "data": {
+          "type": "string",
+          "description": "The file’s bytes in base64."
+        },
+        "alt": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Words for a picture (its alt text)."
+        },
+        "heading": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Add it under this heading."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false,
+      "idempotentHint": true,
+      "title": "Attach a file or picture"
+    }
+  },
+  {
+    "name": "get_settings",
+    "title": "Get settings",
+    "description": "Ryan’s synced settings: theme.id, theme.mode, timeZone, template.daily, template.weekly, capture.destination, note.fullWidth, and his custom themes (theme.custom.<id>). A setting not listed has its default.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false,
+      "title": "Get settings"
+    }
+  },
+  {
+    "name": "set_settings",
+    "title": "Change settings",
+    "description": "Change settings as the apps do: set maps each key to its new value (null brings back the default). Pass base, the values get_settings gave you (null for unset), to be refused with setting_changed if one changed since; without base, the current values are used. Each value is checked with the apps’ rules (invalid_setting names the key). Setting a value it already has changes nothing. You may change theme.id, theme.mode, timeZone, template.daily, template.weekly, note.fullWidth and custom themes; where quick captures go is Ryan’s (setting_not_allowed). Ryan can undo each change in the app’s Agent activity.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "set": {
+          "type": "object",
+          "description": "Keys and their new values, e.g. {\"theme.mode\": \"dark\"}."
+        },
+        "base": {
+          "type": "object",
+          "description": "The values you saw, for the same keys."
+        }
+      },
+      "required": [
+        "set"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false,
+      "idempotentHint": true,
+      "title": "Change settings"
+    }
+  },
+  {
+    "name": "rename_tag",
+    "title": "Rename or merge a tag",
+    "description": "Rename a tag in every note that has it, nested tags included (projects/garden follows projects). Renaming to a tag that exists merges the two, so it needs merge: true (else tag_exists). Runs in the background, one version per note; Ryan can undo the whole rename in the app’s Agent activity (notes that had both tags keep the new one). Limits: at most 2,000 notes per rename, 10 renames a day per agent, 1,000 renamed notes a day for all agents together, and 2 agent renames waiting at a time (too_many_renames). Returns the notes it covers.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "The tag now, without #."
+        },
+        "to": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Its new name, without #."
+        },
+        "merge": {
+          "type": "boolean",
+          "description": "Merge into a tag that exists already (required when it does)."
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": true,
+      "openWorldHint": false,
+      "title": "Rename or merge a tag"
+    }
+  },
+  {
+    "name": "tag_note",
+    "title": "Tag a note",
+    "description": "Add and/or remove tags on a note (in its properties). Tags nest with /, e.g. \"projects/garden\". Returns the new baseVersion.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+        },
+        "add": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "description": "Tags to add. Tag names without #, e.g. [\"homelab\", \"projects/garden\"] (nested with /)."
+        },
+        "remove": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "description": "Tags to remove."
+        },
+        "baseVersion": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The baseVersion your last read_note (or last edit of this note) returned: the version your edit is based on."
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "openWorldHint": false,
+      "idempotentHint": true,
+      "title": "Tag a note"
+    }
+  }
+]

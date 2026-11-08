@@ -1,0 +1,114 @@
+{
+  "$comment": "Tag names (T18 rules, packages/core/src/tags.ts) as the Android app checks them before the editor page sets them (T38, A361): each raw text with its canonical tag, or null when it is not a tag; and the longest tag either side sends. Checked by apps/android/editor/test/contract.test.ts with the shared normaliseTag, and by the Kotlin TagsTest.",
+  "maxChars": 1000,
+  "normalise": [
+    {
+      "raw": "soup",
+      "tag": "soup"
+    },
+    {
+      "raw": "  Inbox ",
+      "tag": "inbox"
+    },
+    {
+      "raw": "#Area//Cooking",
+      "tag": "area/cooking"
+    },
+    {
+      "raw": "##x",
+      "tag": "x"
+    },
+    {
+      "raw": "/a/",
+      "tag": "a"
+    },
+    {
+      "raw": "log/2026",
+      "tag": "log/2026"
+    },
+    {
+      "raw": "2026",
+      "tag": null
+    },
+    {
+      "raw": "2026/log",
+      "tag": null
+    },
+    {
+      "raw": "two words",
+      "tag": null
+    },
+    {
+      "raw": "",
+      "tag": null
+    },
+    {
+      "raw": "#",
+      "tag": null
+    },
+    {
+      "raw": "c#",
+      "tag": null
+    },
+    {
+      "raw": "-",
+      "tag": "-"
+    },
+    {
+      "raw": "snake_case",
+      "tag": "snake_case"
+    },
+    {
+      "raw": "Café",
+      "tag": "café"
+    },
+    {
+      "raw": "日本語",
+      "tag": "日本語"
+    },
+    {
+      "raw": "\u00a0soup\u00a0",
+      "tag": "soup"
+    },
+    {
+      "raw": "\ufeffsoup",
+      "tag": "soup"
+    },
+    {
+      "raw": "\u001csoup",
+      "tag": null
+    },
+    {
+      "raw": "soup\u001f",
+      "tag": null
+    },
+    {
+      "raw": "\u2028soup\u2029",
+      "tag": "soup"
+    },
+    {
+      "raw": "\tsoup\n",
+      "tag": "soup"
+    },
+    {
+      "raw": "ΟΔΟΣ",
+      "tag": "οδος"
+    },
+    {
+      "raw": "İstanbul",
+      "tag": "i̇stanbul"
+    },
+    {
+      "raw": "a/b/c",
+      "tag": "a/b/c"
+    },
+    {
+      "raw": "emoji😀",
+      "tag": null
+    },
+    {
+      "raw": "dot.ted",
+      "tag": null
+    }
+  ]
+}

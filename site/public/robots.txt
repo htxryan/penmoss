@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://penmoss.app/sitemap-index.xml

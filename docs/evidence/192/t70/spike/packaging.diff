@@ -1,0 +1,55 @@
+diff --git a/apps/desktop/build.mjs b/apps/desktop/build.mjs
+index 467d4121..92bb42f0 100644
+--- a/apps/desktop/build.mjs
++++ b/apps/desktop/build.mjs
+@@ -10,7 +10,7 @@ await build({
+   absWorkingDir: root,
+   // boot.cjs, the package's main, starts the app (main.ts) or, with --penmoss-cli, the CLI
+   // (cli-mode.ts, A992); both are inlined into it.
+-  entryPoints: { boot: 'src/boot.ts', preload: 'src/preload.ts' },
++  entryPoints: { boot: 'src/boot.ts', preload: 'src/preload.ts', 'embed-utility': 'src/spike/embed-utility.ts' },
+   outdir: 'dist',
+   outExtension: { '.js': '.cjs' },
+   bundle: true,
+@@ -18,11 +18,16 @@ await build({
+   format: 'cjs',
+   target: 'node22',
+   external: ['electron'],
++  define: { 'import.meta.url': '__penmossImportMetaUrl' },
++  banner: { js: "const __penmossImportMetaUrl = require('node:url').pathToFileURL(__filename).href;" },
+   sourcemap: 'linked',
+   legalComments: 'none',
+   logLevel: 'warning',
+ });
+ 
++// T70 spike: onnxruntime-web's threaded WASM build beside boot.cjs.
++for (const f of ['ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm']) cpSync(new URL(`node_modules/onnxruntime-web/dist/${f}`, import.meta.url), new URL(`dist/ort/${f}`, import.meta.url));
++
+ // The menu bar icon's template image, 1x and 2x (T51, A945), beside boot.cjs: main loads
+ // dist/tray/trayTemplate.png and macOS picks the @2x file itself.
+ cpSync(new URL('resources/tray', import.meta.url), new URL('dist/tray', import.meta.url), {
+diff --git a/apps/desktop/electron-builder.config.cjs b/apps/desktop/electron-builder.config.cjs
+index c51de5cb..2ad6390a 100644
+--- a/apps/desktop/electron-builder.config.cjs
++++ b/apps/desktop/electron-builder.config.cjs
+@@ -80,7 +80,7 @@ const config = {
+   directories: { output: 'release', buildResources: 'build' },
+   // Everything is bundled into dist/ (build.mjs and the web build): no node_modules.
+   // dist/tray: the menu bar icon (T51, A945).
+-  files: ['package.json', 'dist/boot.cjs', 'dist/preload.cjs', 'dist/tray/*.png', 'dist/web/**/*'],
++  files: ['package.json', 'dist/boot.cjs', 'dist/preload.cjs', 'dist/embed-utility.cjs', 'dist/ort/*', 'dist/tray/*.png', 'dist/web/**/*'],
+   asar: true,
+   npmRebuild: false,
+   nodeGypRebuild: false,
+diff --git a/apps/desktop/src/boot.ts b/apps/desktop/src/boot.ts
+index 9cefca17..8e540788 100644
+--- a/apps/desktop/src/boot.ts
++++ b/apps/desktop/src/boot.ts
+@@ -4,5 +4,6 @@
+  */
+ import { CLI_FLAG } from './local-agents';
+ 
+-if (process.argv.includes(CLI_FLAG)) void import('./cli-mode');
++if (process.argv.includes('--t70-spike')) void import('./spike/spike-main');
++else if (process.argv.includes(CLI_FLAG)) void import('./cli-mode');
+ else void import('./main');

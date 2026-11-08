@@ -1,0 +1,47 @@
+/*
+ * penmoss.app's colours (P9, P13): the app's forest and moss on warm paper, light and dark. The
+ * only file in site/ with literal colours (stylelint.config.js); everything else uses these.
+ * Starlight marks the theme with data-theme on <html> (dark is its default). The brochure pages
+ * run no script and set no data-theme, so they follow the visitor's setting through the media
+ * query below.
+ */
+:root {
+  --pm-paper: #17191c;
+  --pm-ink: #e6e4df;
+  --pm-muted: #a5a9ae;
+  --pm-rule: #33373c;
+  --pm-surface: #1f2226;
+  --pm-accent: #86c6a2;
+  --pm-accent-ink: #10231a;
+  --pm-accent-low: #1d3326;
+  --pm-accent-high: #c8e2c4;
+  --pm-forest: #9cc870;
+}
+
+:root[data-theme='light'] {
+  --pm-paper: #fbfaf7;
+  --pm-ink: #23262b;
+  --pm-muted: #5d636b;
+  --pm-rule: #dedad2;
+  --pm-surface: #f3eee6;
+  --pm-accent: #2f6b4f;
+  --pm-accent-ink: #fff;
+  --pm-accent-low: #dcebd6;
+  --pm-accent-high: #1d3326;
+  --pm-forest: #2e5a3a;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --pm-paper: #fbfaf7;
+    --pm-ink: #23262b;
+    --pm-muted: #5d636b;
+    --pm-rule: #dedad2;
+    --pm-surface: #f3eee6;
+    --pm-accent: #2f6b4f;
+    --pm-accent-ink: #fff;
+    --pm-accent-low: #dcebd6;
+    --pm-accent-high: #1d3326;
+    --pm-forest: #2e5a3a;
+  }
+}

@@ -1,0 +1,630 @@
+{
+  "folders": {
+    "01JBF000000000000000000000": "Projects",
+    "01JBF000000000000000000001": "Projects/Q3 launch",
+    "01JBF000000000000000000002": "Work",
+    "01JBF000000000000000000003": "work (0000003)",
+    "01JBF000000000000000000004": "attachments (0000004)",
+    "01JBF000000000000000000005": "Ideas.md_",
+    "01JBF000000000000000000006": "Archive",
+    "01JBF000000000000000000007": "Archive/A folder name that is much too long to fit in a W~kvrcjp",
+    "01JBF000000000000000000008": "Archive/A folder name that is much too long to fit in a W~kvrcjp/Another folder~l5qy8o",
+    "01JBF000000000000000000009": "Deep~lfqjxn",
+    "01JBF00000000000000000000A": "Projects/dots",
+    "01JBF00000000000000000000B": "nul_"
+  },
+  "notes": [
+    {
+      "id": "01JBN000000000000000000000",
+      "path": "Meeting.md",
+      "sha": "039d646666ff05e95531f115423d4a818d05af69",
+      "markdown": "---\nid: 01JBN000000000000000000000\ntitle: Meeting\ncreated: 2026-10-01T09:15:00-05:00\nupdated: 2026-10-01T09:15:00-05:00\ntags: [fixture-0, projects/garden]\n---\n\nGeneric types such as List<`T` and Map<`K`, `V`> stay as written.\n\nComparisons a<*x* and x<$y$ need no escape either.\n"
+    },
+    {
+      "id": "01JBN000000000000000000001",
+      "path": "Projects/meeting (0000001).md",
+      "sha": "ff54a5a246642bc31166ffffa47309f9de7042f7",
+      "markdown": "---\nid: 01JBN000000000000000000001\ntitle: meeting\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:01:01Z\n---\n\nThe report: [report.pdf](../attachments/5d41402abc4b2a76.pdf).\n\n[budget.xlsx](attachments/7d793037a0760186.xlsx)\n"
+    },
+    {
+      "id": "01JBN000000000000000000002",
+      "path": "Projects/Q3 launch/MEETING (0000002).md",
+      "sha": "8a1be248ca2b3e1cf17f422bdfab6c4a26b51df4",
+      "markdown": "---\nid: 01JBN000000000000000000002\ntitle: MEETING\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:02:02Z\n---\n\nBare URLs stay text: https://example.com/path_with_underscores?a=1&b=2 and www.example.com.\n"
+    },
+    {
+      "id": "01JBN000000000000000000003",
+      "path": "Work/Q3 plans draft final v2.md",
+      "sha": "8eb6e639887ebfaa7784fe4bee79584f1297f77c",
+      "markdown": "---\nid: 01JBN000000000000000000003\ntitle: 'Q3: plans? <draft> \"final\" | v2'\ncreated: 2026-10-04T09:15:00-05:00\nupdated: 2026-10-20T07:03:03-05:00\n---\n\nFirst paragraph.\n\nSecond after many blank lines.\n\n- list right after a paragraph\n"
+    },
+    {
+      "id": "01JBN000000000000000000004",
+      "path": "work (0000003)/con_.md",
+      "sha": "be19bf13669052f77d0ff302e87206c5bca57a41",
+      "markdown": "---\nid: 01JBN000000000000000000004\ntitle: con\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:04:04Z\ntags: [fixture-1, projects/garden]\n---\n\nFirst paragraph.\n\nSecond after many blank lines.\n\n- list right after a paragraph\n"
+    },
+    {
+      "id": "01JBN000000000000000000005",
+      "path": "attachments (0000004)/CON_.txt.md",
+      "sha": "a1393c01d08c3b0e3b46008c7e19ca54eba6736e",
+      "markdown": "---\nid: 01JBN000000000000000000005\ntitle: CON.txt\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-02T23:59:59Z\ntype: daily\n---\n\n> A simple quote.\n\n> A quote with two paragraphs.\n>\n> Second paragraph.\n\n> Outer quote\n>\n> > Nested quote\n\n> - A list in a quote\n> - Second item\n"
+    },
+    {
+      "id": "01JBN000000000000000000006",
+      "path": "Ideas.md_/aux_.md",
+      "sha": "7800ec10d6d4eb723f0a54be8db70d02d5785ced",
+      "markdown": "---\nid: 01JBN000000000000000000006\ntitle: aux\ncreated: 2026-10-07T09:15:00-05:00\nupdated: 2026-10-20T07:06:06-05:00\n---\n\n> [!note]\n> Every Obsidian type.\n\n> [!abstract] Abstract\n> Body.\n\n> [!info] Info\n> Body.\n\n> [!todo] Todo\n> - [ ] Inside a callout\n\n> [!tip] Tip\n> Body.\n\n> [!success] Success\n> Body.\n\n> [!question] Question\n> Body.\n\n> [!warning] Warning\n> Body.\n\n> [!failure] Failure\n> Body.\n\n> [!danger] Danger\n> Body.\n\n> [!bug] Bug\n> Body.\n\n> [!example] Example\n> ```ts\n> const inside = true;\n> ```\n\n> [!quote] Quote\n> Body.\n\n> [!recipe] An unknown type keeps its name\n> Body.\n"
+    },
+    {
+      "id": "01JBN000000000000000000007",
+      "path": "Archive/hidden.md",
+      "sha": "d7dcb804e5bf9818479030126aafe1c8143bd864",
+      "markdown": "---\nid: 01JBN000000000000000000007\ntitle: .hidden\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:07:07Z\ntype: weekly\n---\n\n- [ ] Open task\n- [x] Done task\n- [ ] Task with a nested list\n  - [x] Nested done\n  - [ ] Nested open\n\nBullets before a task list:\n\n- a\n- b\n\n* [ ] Split from the bullets\n* [x] Second\n\n- c\n\nA quoted task:\n\n> - [ ] A task in a quote\n"
+    },
+    {
+      "id": "01JBN000000000000000000008",
+      "path": "Archive/A folder name that is much too long to fit in a W~kvrcjp/trailing dot.md",
+      "sha": "c62a1f5598f9553d29528bb05a2ed8d7ec76d2e1",
+      "markdown": "---\nid: 01JBN000000000000000000008\ntitle: trailing dot.\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:08:08Z\ntags: [fixture-2, projects/garden]\n---\n\n```ts\nexport const answer: number = 42;\n```\n\n```c++\nint main() { return 0; }\n```\n\n```c#\nConsole.WriteLine(\"hi\");\n```\n\n```klingon\nUnknown languages stay plain.\n```\n\n```\nNo language.\n```\n\n```python\ndef indented():\n    if True:\n        return \"four spaces\"\n```\n"
+    },
+    {
+      "id": "01JBN000000000000000000009",
+      "path": "Archive/A folder name that is much too long to fit in a W~kvrcjp/Another folder~l5qy8o/spaced out.md",
+      "sha": "b5b1310ad0710be3f55ed4b54e1046ca18a2a132",
+      "markdown": "---\nid: 01JBN000000000000000000009\ntitle: \"   spaced   out   \"\ncreated: 2026-10-10T09:15:00-05:00\nupdated: 2026-10-20T07:09:09-05:00\n---\n\nInline $a^2 + b^2 = c^2$ and $\\frac{1}{2}$ in a sentence.\n\n$$\n\\int_0^1 x^2 \\, dx = \\frac{1}{3}\n$$\n\n$$\n\\begin{aligned}\na &= b + c \\\\\nd &= e\n\\end{aligned}\n$$\n\n```mermaid\nsequenceDiagram\n  Alice->>Bob: Hello\n  Bob-->>Alice: Hi\n```\n\n```mermaid\ngraph TD\n  A -->\n```\n\n> [!example] A diagram in a callout\n> ```mermaid\n> graph LR\n>   Mac --> Worker\n> ```\n"
+    },
+    {
+      "id": "01JBN00000000000000000000A",
+      "path": "Deep~lfqjxn/A very long title that goes on and on, well past the eighty characters a note na.md",
+      "sha": "aebb4225ed7d47915c38424046fdbe5e4a253614",
+      "markdown": "---\nid: 01JBN00000000000000000000A\ntitle: A very long title that goes on and on, well past the eighty characters a note name keeps, and then some more\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-02T23:59:59Z\n---\n\n| Name | Status |\n| - | - |\n| Ada | done |\n\n| Header only |\n| - |\n\n| Left | Centre | Right | None |\n| :- | :-: | -: | - |\n| a | | `c` | **d** |\n| | b | | |\n\n> | Quoted | table |\n> | - | - |\n> | in | a quote |\n\n| Formula | Meaning |\n| - | - |\n| $\\|x\\|$ | absolute value |\n| $\\\\\\|v\\\\\\|$ | norm |\n| $a \\mid b$ and `c\\|d` | no pipes, and code |\n"
+    },
+    {
+      "id": "01JBN00000000000000000000B",
+      "path": "Projects/dots/Résumé.md",
+      "sha": "8aef8b3bf78e9446cfcfdd90385545d0d9f2e919",
+      "markdown": "---\nid: 01JBN00000000000000000000B\ntitle: Résumé\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:11:11Z\n---\n\n> [!note]- Folded by default\n> Hidden until opened.\n\n> [!faq]+ Open by default\n> Shown.\n\n> [!todo]- Packing\n> - [ ] Tent\n> - [x] Stove\n>\n> > [!tip]- A toggle in a toggle\n> > Nested.\n\n> [!warning]-\n> A toggle without a title.\n"
+    },
+    {
+      "id": "01JBN00000000000000000000C",
+      "path": "nul_/Résumé (000000C).md",
+      "sha": "f5aac254f018e37fa2fb6a00d50decaebc755d56",
+      "markdown": "---\nid: 01JBN00000000000000000000C\ntitle: Résumé\ncreated: 2026-10-13T09:15:00-05:00\nupdated: 2026-10-20T07:12:12-05:00\ntags: [fixture-0, projects/garden]\n---\n\n- First item\n- Second item\n  - Nested item\n    - Deeper item\n- Third item with **bold**\n"
+    },
+    {
+      "id": "01JBN00000000000000000000D",
+      "path": "Ελληνικά ΣΣ ς.md",
+      "sha": "c33156713fcd573a96f5497ba14a2f288064789d",
+      "markdown": "---\nid: 01JBN00000000000000000000D\ntitle: Ελληνικά ΣΣ ς\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:13:13Z\n---\n\n- Star item\n- Another star\n\n* Plus item\n* Another plus\n"
+    },
+    {
+      "id": "01JBN00000000000000000000E",
+      "path": "Projects/tag block link.md",
+      "sha": "2e0e0d79d385ebdb8ee7fce901014e54c40d617d",
+      "markdown": "---\nid: 01JBN00000000000000000000E\ntitle: \"#tag ^block [link]\"\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:14:14Z\n---\n\n- Star item\n- Another star\n\n* Plus item\n* Another plus\n"
+    },
+    {
+      "id": "01JBN00000000000000000000F",
+      "path": "Projects/Q3 launch/a b c.md",
+      "sha": "6a3be32e78bb7a75ab0ed3fac23c6ed81e1eca0b",
+      "markdown": "---\nid: 01JBN00000000000000000000F\ntitle: a/b\\c\ncreated: 2026-10-16T09:15:00-05:00\nupdated: 2026-10-16T09:15:00-05:00\n---\n\n> [!example] Lists, code and a nested callout\n> - Item one\n>   - Nested item\n> - Item two\n>\n> ```js\n> console.log('code in a callout');\n> ```\n>\n> > [!quote] Nested callout\n> > Inner text.\n"
+    },
+    {
+      "id": "01JBN00000000000000000000G",
+      "path": "Work/Untitled.md",
+      "sha": "a17c7fad45c99cccc13121a77c7388cd92ec4e97",
+      "markdown": "---\nid: 01JBN00000000000000000000G\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:16:16Z\ntags: [fixture-1, projects/garden]\n---\n\n> [!faq]- Collapsed by default\n> Hidden until opened.\n\n> [!todo]+ Expanded by default\n> - [ ] A task in a toggle\n> - [x] Done\n"
+    },
+    {
+      "id": "01JBN00000000000000000000H",
+      "path": "work (0000003)/….md",
+      "sha": "9af61a75f2000f1d38eb9c374670ba6b285886fa",
+      "markdown": "---\nid: 01JBN00000000000000000000H\ntitle: …\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:17:17Z\n---\n\n> [!note] Source of truth\n> D1 is an index. It can always be rebuilt.\n\n> [!warning]\n> A callout without a title.\n\n> [!tip] Title only\n\n> [!info] Multi-paragraph callout\n> First paragraph.\n>\n> Second paragraph.\n"
+    },
+    {
+      "id": "01JBN00000000000000000000J",
+      "path": "attachments (0000004)/Penmoss — product brief.md",
+      "sha": "40f2a286d25870a69c7393d4b859595f5d51a210",
+      "markdown": "---\nid: 01JBN00000000000000000000J\ntitle: Penmoss — product brief\ncreated: 2026-10-19T09:15:00-05:00\nupdated: 2026-10-20T07:18:18-05:00\n---\n\n- [ ] A task\n\n* A plain item in the same list\n\n- [x] Another task\n"
+    },
+    {
+      "id": "01JBN00000000000000000000K",
+      "path": "Ideas.md_/Penmoss — sync design.md",
+      "sha": "88362e15cb6fca4b6a7bc10dced457094c288990",
+      "markdown": "---\nid: 01JBN00000000000000000000K\ntitle: Penmoss — sync design\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:19:19Z\n---\n\n- [ ] A task\n\n* A plain item in the same list\n\n- [x] Another task\n"
+    },
+    {
+      "id": "01JBN00000000000000000000M",
+      "path": "Archive/Penmoss — MCP tools.md",
+      "sha": "cb1168ae9d8b1e4d5be2cefd757fc70c51ba7aee",
+      "markdown": "---\nid: 01JBN00000000000000000000M\ntitle: Penmoss — MCP tools\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-02T23:59:59Z\ntags: [fixture-2, projects/garden]\n---\n\n- [ ] Benchmark snapshot compaction #perf\n- [x] Write the plan\n- [ ] Parent task\n  - [x] Nested done\n  - [ ] Nested open\n    - [ ] Deeply nested\n"
+    },
+    {
+      "id": "01JBN00000000000000000000N",
+      "path": "Archive/A folder name that is much too long to fit in a W~kvrcjp/Sync design.md",
+      "sha": "82986449534af3c69b6b216ff9c87ebbfea5bc24",
+      "markdown": "---\nid: 01JBN00000000000000000000N\ntitle: Sync design\ncreated: 2026-10-22T09:15:00-05:00\nupdated: 2026-10-20T07:21:21-05:00\n---\n\n```ts\nexport function add(a: number, b: number): number {\n  return a + b;\n}\n```\n\n```\nNo language\n```\n\n````md\nA fence containing ``` backticks\n````\n\n```python title=\"example.py\"\nprint(\"meta is kept\")\n```\n"
+    },
+    {
+      "id": "01JBN00000000000000000000P",
+      "path": "Archive/A folder name that is much too long to fit in a W~kvrcjp/Another folder~l5qy8o/attachments.md",
+      "sha": "e5f2b3c98bb694d6c1a8ced604db0ed2dd61423d",
+      "markdown": "---\nid: 01JBN00000000000000000000P\ntitle: attachments\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:22:22Z\ntype: daily\n---\n\n- Step one:\n  ```sh\n  task check\n  ```\n- Step two\n  1. Sub-step with code:\n     ```json\n     { \"ok\": true }\n     ```\n"
+    },
+    {
+      "id": "01JBN00000000000000000000Q",
+      "path": "Deep~lfqjxn/Notes.md.md",
+      "sha": "84836f1b6a25e2396c7236cd25e368f70e7e1edd",
+      "markdown": "---\nid: 01JBN00000000000000000000Q\ntitle: Notes.md\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:23:23Z\n---\n\nParagraph before.\n\n```\nindented code\nsecond line\n```\n"
+    },
+    {
+      "id": "01JBN00000000000000000000R",
+      "path": "Projects/dots/Meeting (000000R).md",
+      "sha": "b1ead5f29cb650dd856a294ed9b783a6a7f76e85",
+      "markdown": "---\nid: 01JBN00000000000000000000R\ntitle: Meeting\ncreated: 2026-10-25T09:15:00-05:00\nupdated: 2026-10-20T07:24:24-05:00\ntags: [fixture-0, projects/garden]\n---\n\nParagraph before.\n\n```\nindented code\nsecond line\n```\n"
+    },
+    {
+      "id": "01JBN00000000000000000000S",
+      "path": "nul_/meeting (000000S).md",
+      "sha": "0234634c44bd2e3ebce670711cad971092e525dd",
+      "markdown": "---\nid: 01JBN00000000000000000000S\ntitle: meeting\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-02T23:59:59Z\n---\n\n```js\nconst tilde = true;\n```\n"
+    },
+    {
+      "id": "01JBN00000000000000000000T",
+      "path": "MEETING (000000T).md",
+      "sha": "223c8fd24c8d1c76a02e09c17ac208f09b122f36",
+      "markdown": "---\nid: 01JBN00000000000000000000T\ntitle: MEETING\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:26:26Z\n---\n\n```js\nconst tilde = true;\n```\n"
+    },
+    {
+      "id": "01JBN00000000000000000000V",
+      "path": "Projects/Q3 plans draft final v2 (000000V).md",
+      "sha": "4f11f3fc83b5b08cc07b67c9001355c23a594e27",
+      "markdown": "---\nid: 01JBN00000000000000000000V\ntitle: 'Q3: plans? <draft> \"final\" | v2'\ncreated: 2026-10-28T09:15:00-05:00\nupdated: 2026-10-20T07:27:27-05:00\n---\n\n## Plan\n\n- [x] Review [[Penmoss — sync design]]\n- [ ] Write T3 fixtures\n  - [ ] Tables with `code` and [links](https://example.com)\n\n## Log\n\n09:12 — Started on the codec. Notes:\n\n1. Parse with micromark\n2. Map to ProseMirror\n3. Serialise back\n\n> [!tip]- Remember\n> Keep commits small.\n\n| Time | Task |\n| - | - |\n| 09:00 | Stand-up |\n| 10:30 | **Deep work** |\n"
+    },
+    {
+      "id": "01JBN00000000000000000000W",
+      "path": "Projects/Q3 launch/con_ (000000W).md",
+      "sha": "e4671fdb17f79c87e2e24ee6da3985db84ca6b5e",
+      "markdown": "---\nid: 01JBN00000000000000000000W\ntitle: con\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:28:28Z\ntags: [fixture-1, projects/garden]\n---\n\n![[Penmoss — product brief#Milestones]]\n\n![[Penmoss — sync design]]\n\nAn inline embed ![[Penmoss — sync design]] stays raw.\n"
+    },
+    {
+      "id": "01JBN00000000000000000000X",
+      "path": "Work/CON_.txt (000000X).md",
+      "sha": "8665eedb651819f84d2f7c4b3374e264a56a2cc2",
+      "markdown": "---\nid: 01JBN00000000000000000000X\ntitle: CON.txt\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:29:29Z\n---\n"
+    },
+    {
+      "id": "01JBN00000000000000000000Y",
+      "path": "work (0000003)/aux_ (000000Y).md",
+      "sha": "d7d3478763926ca3ceebd942d0f7662d475dc5cb",
+      "markdown": "---\nid: 01JBN00000000000000000000Y\ntitle: aux\ncreated: 2026-10-03T09:15:00-05:00\nupdated: 2026-10-03T09:15:00-05:00\ntype: weekly\n---\n\nEscaped characters: \\*not emphasis\\*, \\_not\\_, \\[not a link], \\`not code\\`.\n\nA literal backslash \\\\ and # at the start.\n\n\\# Not a heading\n\n1\\. Not a list\n\n\\- Not a bullet\n\n\\> Not a quote\n"
+    },
+    {
+      "id": "01JBN00000000000000000000Z",
+      "path": "attachments (0000004)/hidden (000000Z).md",
+      "sha": "38fa1624b59939b95147dc5bf7903df88316c6b8",
+      "markdown": "---\nid: 01JBN00000000000000000000Z\ntitle: .hidden\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:31:31Z\n---\n\nEscaped characters: \\*not emphasis\\*, \\_not\\_, \\[not a link], \\`not code\\`.\n\nA literal backslash \\\\ and # at the start.\n\n\\# Not a heading\n\n1\\. Not a list\n\n\\- Not a bullet\n\n\\> Not a quote\n"
+    },
+    {
+      "id": "01JBN000000000000000000010",
+      "path": "Ideas.md_/trailing dot (0000010).md",
+      "sha": "cbf89e1f5caeb4423105ea1799fda78f88812c79",
+      "markdown": "---\nid: 01JBN000000000000000000010\ntitle: trailing dot.\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:32:32Z\ntags: [fixture-2, projects/garden]\n---\n\nA claim with a footnote[^1] and another[^note].\n\n[^1]: The first footnote.\n\n[^note]: A named footnote.\n"
+    },
+    {
+      "id": "01JBN000000000000000000011",
+      "path": "Archive/spaced out (0000011).md",
+      "sha": "32338967b3226fd356d51e15a00280476c9cf70c",
+      "markdown": "---\nid: 01JBN000000000000000000011\ntitle: \"   spaced   out   \"\ncreated: 2026-10-06T09:15:00-05:00\nupdated: 2026-10-20T07:33:33-05:00\n---\n\nEach note is a Yjs document in its own Durable Object.\n"
+    },
+    {
+      "id": "01JBN000000000000000000012",
+      "path": "Archive/A folder name that is much too long to fit in a W~kvrcjp/A very long title that goes on and on, well past the eighty characters a note na (0000012).md",
+      "sha": "a29528a4bab1771112261dec5104123869933333",
+      "markdown": "---\nid: 01JBN000000000000000000012\ntitle: A very long title that goes on and on, well past the eighty characters a note name keeps, and then some more\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:34:34Z\n---\n"
+    },
+    {
+      "id": "01JBN000000000000000000013",
+      "path": "Archive/A folder name that is much too long to fit in a W~kvrcjp/Another folder~l5qy8o/Résumé (0000013).md",
+      "sha": "a218c9a1ded01b85571c9fe9a6c6cf580f0f00ed",
+      "markdown": "---\nid: 01JBN000000000000000000013\ntitle: Résumé\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-02T23:59:59Z\n---\n\nBody.\n"
+    },
+    {
+      "id": "01JBN000000000000000000014",
+      "path": "Deep~lfqjxn/Résumé (0000014).md",
+      "sha": "82b7595a828d912d087aca93e51d625fc9e07710",
+      "markdown": "---\nid: 01JBN000000000000000000014\ntitle: Résumé\ncreated: 2026-10-09T09:15:00-05:00\nupdated: 2026-10-20T07:36:36-05:00\ntags: [fixture-0, projects/garden]\n---\n\nLine with two trailing spaces\\\nnext line.\n\nLine with a backslash\\\nnext line.\n"
+    },
+    {
+      "id": "01JBN000000000000000000015",
+      "path": "Projects/dots/Ελληνικά ΣΣ ς (0000015).md",
+      "sha": "8aaec60257b56f7392b20a2a75349433dcbd723e",
+      "markdown": "---\nid: 01JBN000000000000000000015\ntitle: Ελληνικά ΣΣ ς\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:37:37Z\n---\n\nLine with two trailing spaces\\\nnext line.\n\nLine with a backslash\\\nnext line.\n"
+    },
+    {
+      "id": "01JBN000000000000000000016",
+      "path": "nul_/tag block link (0000016).md",
+      "sha": "43cbf97fca91c75daacfdff39bdac281dc71c814",
+      "markdown": "---\nid: 01JBN000000000000000000016\ntitle: \"#tag ^block [link]\"\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:38:38Z\n---\n\n# Setext heading 1\n\n## Setext heading 2\n\n## ATX with closing hashes\n"
+    },
+    {
+      "id": "01JBN000000000000000000017",
+      "path": "a b c (0000017).md",
+      "sha": "4da445ea3fe1d939394f610dcc33316560f8f877",
+      "markdown": "---\nid: 01JBN000000000000000000017\ntitle: a/b\\c\ncreated: 2026-10-12T09:15:00-05:00\nupdated: 2026-10-20T07:39:39-05:00\ntype: daily\n---\n\n# Setext heading 1\n\n## Setext heading 2\n\n## ATX with closing hashes\n"
+    },
+    {
+      "id": "01JBN000000000000000000018",
+      "path": "Projects/Untitled (0000018).md",
+      "sha": "41ddfb32df9c5bbfbe8e30982775fd42c14901e0",
+      "markdown": "---\nid: 01JBN000000000000000000018\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-02T23:59:59Z\ntags: [fixture-1, projects/garden]\n---\n\n# Heading 1\n\n## Heading 2\n\n### Heading 3\n\n#### Heading 4\n\n##### Heading 5\n\n###### Heading 6\n\n## Heading with **bold**, *italic*, `code` and a [[Sync design|link]]\n"
+    },
+    {
+      "id": "01JBN000000000000000000019",
+      "path": "Projects/Q3 launch/… (0000019).md",
+      "sha": "c014f7aaf5f4b22f7157f6649a3134c21add0792",
+      "markdown": "---\nid: 01JBN000000000000000000019\ntitle: …\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:41:41Z\n---\n\nAbove.\n\n---\n\nMiddle.\n\n---\n\nBelow.\n\n---\n"
+    },
+    {
+      "id": "01JBN00000000000000000001A",
+      "path": "Work/Penmoss — product brief (000001A).md",
+      "sha": "6d10b606ab5ee334cb2f5213cccd7d2951e6f1fc",
+      "markdown": "---\nid: 01JBN00000000000000000001A\ntitle: Penmoss — product brief\ncreated: 2026-10-15T09:15:00-05:00\nupdated: 2026-10-20T07:42:42-05:00\n---\n\nAbove.\n\n---\n\nMiddle.\n\n---\n\nBelow.\n\n---\n"
+    },
+    {
+      "id": "01JBN00000000000000000001B",
+      "path": "work (0000003)/Penmoss — sync design (000001B).md",
+      "sha": "64e48107516607ea3c1371cba7b0edcc85f08e1e",
+      "markdown": "---\nid: 01JBN00000000000000000001B\ntitle: Penmoss — sync design\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:43:43Z\n---\n\nComparisons like a < b and c > d, and 5 <= 6.\n\n<div class=\"note\">\nRaw HTML block kept verbatim.\n</div>\n\nInline <kbd>Ctrl</kbd> + <kbd>K</kbd> and a\\\ntag.\n\n<!-- an HTML comment -->\n"
+    },
+    {
+      "id": "01JBN00000000000000000001C",
+      "path": "attachments (0000004)/Penmoss — MCP tools (000001C).md",
+      "sha": "3e104956d31dba643bbd00bc9359a990ffb9457f",
+      "markdown": "---\nid: 01JBN00000000000000000001C\ntitle: Penmoss — MCP tools\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:44:44Z\ntags: [fixture-2, projects/garden]\n---\n\nComparisons like a < b and c > d, and 5 <= 6.\n\n<div class=\"note\">\nRaw HTML block kept verbatim.\n</div>\n\nInline <kbd>Ctrl</kbd> + <kbd>K</kbd> and a\\\ntag.\n\n<!-- an HTML comment -->\n"
+    },
+    {
+      "id": "01JBN00000000000000000001D",
+      "path": "Ideas.md_/Sync design (000001D).md",
+      "sha": "c9c40bd3f2a5a2f2a4bc17153cb8a8a08e3582fd",
+      "markdown": "---\nid: 01JBN00000000000000000001D\ntitle: Sync design\ncreated: 2026-10-18T09:15:00-05:00\nupdated: 2026-10-18T09:15:00-05:00\n---\n\n![Sync diagram|480](../../attachments/9f2c1e.png)\n\n![Sized both ways|300x200](attachments/a1.png \"With a title\")\n\nInline ![icon](attachments/icon.svg) in text.\n\n![](attachments/no-alt.png)\n"
+    },
+    {
+      "id": "01JBN00000000000000000001E",
+      "path": "Archive/attachments (000001E).md",
+      "sha": "4c49e598aa0bf0fd85ac07bfce20d440d3574621",
+      "markdown": "---\nid: 01JBN00000000000000000001E\ntitle: attachments\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:46:46Z\n---\n\nEach note is a Yjs document in its own Durable Object. See [[Penmoss — MCP tools]].\n\n> [!note] Source of truth\n> D1 is an index. It can always be rebuilt.\n\n- [ ] Benchmark snapshot compaction #perf\n\n![Sync diagram|480](../../attachments/9f2c1e.png)\n\n![[Penmoss — product brief#Milestones]]\n"
+    },
+    {
+      "id": "01JBN00000000000000000001F",
+      "path": "Archive/A folder name that is much too long to fit in a W~kvrcjp/Notes.md (000001F).md",
+      "sha": "953a02b1801500ae7b6d31a6098b0da3bf3544e0",
+      "markdown": "---\nid: 01JBN00000000000000000001F\ntitle: Notes.md\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:47:47Z\n---\n\n[`x`\\]`:a`](https://example.com/a)[a.pdf](../attachments/f00d.pdf)\n\n- [\\]`:a`](https://example.com/a) in a list item.\n\n> [$a$\\]$:b$](https://example.com/b) in a quote.\n\n[`]x`](https://example.com/c): code whose first `]` is not followed by a colon stays one span.\n"
+    },
+    {
+      "id": "01JBN00000000000000000001G",
+      "path": "Archive/A folder name that is much too long to fit in a W~kvrcjp/Another folder~l5qy8o/Meeting (000001G).md",
+      "sha": "a5dec7d610ab962a9bb05aff8384613bf4d2b0ed",
+      "markdown": "---\nid: 01JBN00000000000000000001G\ntitle: Meeting\ncreated: 2026-10-21T09:15:00-05:00\nupdated: 2026-10-20T07:48:48-05:00\ntags: [fixture-0, projects/garden]\n---\n\nA link with parentheses [wiki](https://en.wikipedia.org/wiki/Markdown_\\(disambiguation\\)) and spaces [file](<My Notes/file name.md>).\n\nLink text with brackets [a \\[b\\] c](https://example.com) and an empty-text link [](https://example.com/empty).\n"
+    },
+    {
+      "id": "01JBN00000000000000000001H",
+      "path": "Deep~lfqjxn/meeting (000001H).md",
+      "sha": "2b5ed62e099ba2037f4ba3235d432f216d3697d4",
+      "markdown": "---\nid: 01JBN00000000000000000001H\ntitle: meeting\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:49:49Z\n---\n\nA link with parentheses [wiki](https://en.wikipedia.org/wiki/Markdown_\\(disambiguation\\)) and spaces [file](<My Notes/file name.md>).\n\nLink text with brackets [a \\[b\\] c](https://example.com) and an empty-text link [](https://example.com/empty).\n"
+    },
+    {
+      "id": "01JBN00000000000000000001J",
+      "path": "Projects/dots/MEETING (000001J).md",
+      "sha": "03d25f815d9fb903ef0fc96ab3fa55021d529ac0",
+      "markdown": "---\nid: 01JBN00000000000000000001J\ntitle: MEETING\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-02T23:59:59Z\n---\n\nAn [inline link](https://example.com) and one [with a title](https://example.com/path \"The title\").\n\nAn autolink <https://example.com/docs> and an email <ryan@example.com>.\n\nA link with **bold [inside](https://example.com/a)** and a [*styled* link](https://example.com/b).\n\nA relative link to [another note](../Projects/Other.md).\n"
+    },
+    {
+      "id": "01JBN00000000000000000001K",
+      "path": "nul_/Q3 plans draft final v2 (000001K).md",
+      "sha": "c8cdaed4c48f76cc843b0ff48b0beaf481f42c58",
+      "markdown": "---\nid: 01JBN00000000000000000001K\ntitle: 'Q3: plans? <draft> \"final\" | v2'\ncreated: 2026-10-24T09:15:00-05:00\nupdated: 2026-10-20T07:51:51-05:00\n---\n\n- A loose list\n\n- With blank lines between items\n\n  And a second paragraph in an item.\n\n- Last item\n"
+    },
+    {
+      "id": "01JBN00000000000000000001M",
+      "path": "con_ (000001M).md",
+      "sha": "5b65a479189283c0b01428befed5ba04dd0ceddc",
+      "markdown": "---\nid: 01JBN00000000000000000001M\ntitle: con\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:52:52Z\ntags: [fixture-1, projects/garden]\n---\n\nUnderscore *emphasis* and **strong** and ***both***.\n"
+    },
+    {
+      "id": "01JBN00000000000000000001N",
+      "path": "Projects/CON_.txt (000001N).md",
+      "sha": "5d242bda82c08a1818017e8dfddf9ce7f689356b",
+      "markdown": "---\nid: 01JBN00000000000000000001N\ntitle: CON.txt\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:53:53Z\ntype: weekly\n---\n\nUnderscore *emphasis* and **strong** and ***both***.\n"
+    },
+    {
+      "id": "01JBN00000000000000000001P",
+      "path": "Projects/Q3 launch/aux_ (000001P).md",
+      "sha": "5f34fa6df77de18a1240e73e37b8519f2a764216",
+      "markdown": "---\nid: 01JBN00000000000000000001P\ntitle: aux\ncreated: 2026-10-27T09:15:00-05:00\nupdated: 2026-10-20T07:54:54-05:00\n---\n\nPlain **bold** *italic* ~~struck~~ ==highlighted== `code` text.\n\nNested ***bold italic*** and **bold with *italic* inside** and *italic with **bold** inside*.\n\nA ==highlight with **bold** and `code`== and ~~strike with *italic*~~.\n\nIntra*word*emphasis and snake_case_names stay as written.\n"
+    },
+    {
+      "id": "01JBN00000000000000000001Q",
+      "path": "Work/hidden (000001Q).md",
+      "sha": "506a4bb5cd5d3ee07952fcaaf4f06de65dbd1f56",
+      "markdown": "---\nid: 01JBN00000000000000000001Q\ntitle: .hidden\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-02T23:59:59Z\n---\n\nInline math $e^{i\\pi} + 1 = 0$ in a sentence.\n\n$$\n\\int_0^1 x^2 \\, dx = \\frac{1}{3}\n$$\n\nPrices like \\$5 stay text.\n"
+    },
+    {
+      "id": "01JBN00000000000000000001R",
+      "path": "work (0000003)/trailing dot (000001R).md",
+      "sha": "8fea200af762a84bb72905fab3f2564fcb1bf38f",
+      "markdown": "---\nid: 01JBN00000000000000000001R\ntitle: trailing dot.\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:56:56Z\ntags: [fixture-2, projects/garden]\ntype: daily\n---\n\n```mermaid\ngraph TD\n  A[Client] -->|sync| B(Durable Object)\n  B --> C{D1}\n```\n"
+    },
+    {
+      "id": "01JBN00000000000000000001S",
+      "path": "attachments (0000004)/spaced out (000001S).md",
+      "sha": "17edbc838e3333a70639fd7b6f33d52d11cc5a98",
+      "markdown": "---\nid: 01JBN00000000000000000001S\ntitle: \"   spaced   out   \"\ncreated: 2026-10-02T09:15:00-05:00\nupdated: 2026-10-20T07:57:57-05:00\n---\n\n- Item with a quote:\n  > Quoted inside a list.\n- Item with a callout:\n  > [!note] Inside a list\n  > Callout body.\n- Item with a fenced block:\n  ```text\n  plain\n  ```\n"
+    },
+    {
+      "id": "01JBN00000000000000000001T",
+      "path": "Ideas.md_/A very long title that goes on and on, well past the eighty characters a note na (000001T).md",
+      "sha": "9c9192efebc8c4322ec23a60f04764deb59e1b27",
+      "markdown": "---\nid: 01JBN00000000000000000001T\ntitle: A very long title that goes on and on, well past the eighty characters a note name keeps, and then some more\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:58:58Z\n---\n\n- Item with math:\n\n  $$\n  a^2 + b^2 = c^2\n  $$\n\n- Item with a table:\n\n  | a | b |\n  | - | - |\n  | 1 | 2 |\n"
+    },
+    {
+      "id": "01JBN00000000000000000001V",
+      "path": "Archive/Résumé (000001V).md",
+      "sha": "a961ad8794fea4d5fa9f46ecbfbac8524295156f",
+      "markdown": "---\nid: 01JBN00000000000000000001V\ntitle: Résumé\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T12:59:59Z\n---\n\n%% An Obsidian comment %%\n\nA paragraph with a block ID ^block-1\n\nText with a ==highlight== and a [[Penmoss — sync design#^block-1]] block reference.\n"
+    },
+    {
+      "id": "01JBN00000000000000000001W",
+      "path": "Archive/A folder name that is much too long to fit in a W~kvrcjp/Résumé (000001W).md",
+      "sha": "4d06623f925703a73f4cfdd4df2a794eb508069b",
+      "markdown": "---\nid: 01JBN00000000000000000001W\ntitle: Résumé\ncreated: 2026-10-05T09:15:00-05:00\nupdated: 2026-10-05T09:15:00-05:00\ntags: [fixture-0, projects/garden]\n---\n\n1. One\n2. Two\n   1. Nested one\n   2. Nested two\n3. Three\n\nA paragraph ends the list.\n\n7. Starts at seven\n8. Eight\n"
+    },
+    {
+      "id": "01JBN00000000000000000001X",
+      "path": "Archive/A folder name that is much too long to fit in a W~kvrcjp/Another folder~l5qy8o/Ελληνικά ΣΣ ς (000001X).md",
+      "sha": "a866bb5d9f0cc9e2ec384593957211e07163f48d",
+      "markdown": "---\nid: 01JBN00000000000000000001X\ntitle: Ελληνικά ΣΣ ς\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T13:02:01Z\n---\n\n1. Parenthesis delimiter\n2. Second\n"
+    },
+    {
+      "id": "01JBN00000000000000000001Y",
+      "path": "Deep~lfqjxn/tag block link (000001Y).md",
+      "sha": "203dbd0a7ca9836ff4459e6cd49d0c282c0f73bc",
+      "markdown": "---\nid: 01JBN00000000000000000001Y\ntitle: \"#tag ^block [link]\"\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T13:03:02Z\n---\n\n1. Parenthesis delimiter\n2. Second\n"
+    },
+    {
+      "id": "01JBN00000000000000000001Z",
+      "path": "Projects/dots/a b c (000001Z).md",
+      "sha": "60fe6352e705457e9a8d9c5990644c36e9fc5e0c",
+      "markdown": "---\nid: 01JBN00000000000000000001Z\ntitle: a/b\\c\ncreated: 2026-10-08T09:15:00-05:00\nupdated: 2026-10-20T08:04:03-05:00\n---\n\nFirst paragraph with a soft\nline break that Obsidian shows as a new line.\n\nSecond paragraph.\n\nThird paragraph with trailing punctuation!\n"
+    },
+    {
+      "id": "01JBN000000000000000000020",
+      "path": "nul_/Untitled (0000020).md",
+      "sha": "30dc03361e390acccd0dd99b257460f4ffd6a145",
+      "markdown": "---\nid: 01JBN000000000000000000020\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T13:05:04Z\ntags: [fixture-1, projects/garden]\n---\n\nA [reference link][docs] and a [collapsed][] one.\n\n[docs]: https://example.com/docs \"Docs\"\n\n[collapsed]: https://example.com/c\n"
+    },
+    {
+      "id": "01JBN000000000000000000021",
+      "path": "… (0000021).md",
+      "sha": "766aaf830735050837f56322e648b93b20da11a5",
+      "markdown": "---\nid: 01JBN000000000000000000021\ntitle: …\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-02T23:59:59Z\n---\n\nA [reference link][docs] and a [collapsed][] one.\n\n[docs]: https://example.com/docs \"Docs\"\n\n[collapsed]: https://example.com/c\n"
+    },
+    {
+      "id": "01JBN000000000000000000022",
+      "path": "Projects/Penmoss — product brief (0000022).md",
+      "sha": "8d786c96b187adc770eb9f76b731f3c0798b33f1",
+      "markdown": "---\nid: 01JBN000000000000000000022\ntitle: Penmoss — product brief\ncreated: 2026-10-11T09:15:00-05:00\nupdated: 2026-10-20T08:07:06-05:00\n---\n\n| Column A | Column B |\n| - | :- |\n| value | other |\n| short | x |\n"
+    },
+    {
+      "id": "01JBN000000000000000000023",
+      "path": "Projects/Q3 launch/Penmoss — sync design (0000023).md",
+      "sha": "7da798ef229f4dec21a3181075fe65f848dc5296",
+      "markdown": "---\nid: 01JBN000000000000000000023\ntitle: Penmoss — sync design\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T13:08:07Z\n---\n\n| Column A | Column B |\n| - | :- |\n| value | other |\n| short | x |\n"
+    },
+    {
+      "id": "01JBN000000000000000000024",
+      "path": "Work/Penmoss — MCP tools (0000024).md",
+      "sha": "e6343d839ba7e67fe7f1720b9976a2d89c78b0f4",
+      "markdown": "---\nid: 01JBN000000000000000000024\ntitle: Penmoss — MCP tools\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T13:09:08Z\ntags: [fixture-2, projects/garden]\n---\n\n| A | B | C |\n| - | - | - |\n| only one | | |\n| one | two | three |\n"
+    },
+    {
+      "id": "01JBN000000000000000000025",
+      "path": "work (0000003)/Sync design (0000025).md",
+      "sha": "ec300be86d2285e6a59ab48487da6be118c53776",
+      "markdown": "---\nid: 01JBN000000000000000000025\ntitle: Sync design\ncreated: 2026-10-14T09:15:00-05:00\nupdated: 2026-10-20T08:10:09-05:00\n---\n\n| A | B | C |\n| - | - | - |\n| only one | | |\n| one | two | three |\n"
+    },
+    {
+      "id": "01JBN000000000000000000026",
+      "path": "attachments (0000004)/attachments (0000026).md",
+      "sha": "e1dcf41cb2a487084a814a0509682287735ae841",
+      "markdown": "---\nid: 01JBN000000000000000000026\ntitle: attachments\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-02T23:59:59Z\n---\n\n| Feature | Status | Notes |\n| :- | :-: | -: |\n| **Sync** | ==done== | See [[Penmoss — sync design]] |\n| Links | `wip` | [[Penmoss — MCP tools\\|MCP]] and [docs](https://example.com) |\n| Breaks | two<br>lines | ~~old~~ new |\n"
+    },
+    {
+      "id": "01JBN000000000000000000027",
+      "path": "Ideas.md_/Notes.md (0000027).md",
+      "sha": "85f4acdd60cb2bcc0c1a154663da7e1b6a434609",
+      "markdown": "---\nid: 01JBN000000000000000000027\ntitle: Notes.md\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T13:12:11Z\n---\n\n#inbox at the start of a line.\n\nInline #tags and #nested/tags stay text, as do #2026 and C# and issue #12.\n"
+    },
+    {
+      "id": "01JBN000000000000000000028",
+      "path": "Archive/Meeting (0000028).md",
+      "sha": "991ff35a73b10111a886c224ae09eab59f04ca5a",
+      "markdown": "---\nid: 01JBN000000000000000000028\ntitle: Meeting\ncreated: 2026-10-17T09:15:00-05:00\nupdated: 2026-10-20T08:13:12-05:00\ntags: [fixture-0, projects/garden]\n---\n\nNo trailing newline at the end\n"
+    },
+    {
+      "id": "01JBN000000000000000000029",
+      "path": "Archive/A folder name that is much too long to fit in a W~kvrcjp/meeting (0000029).md",
+      "sha": "285482e10ce52252bca25cba44bcca1a00b13a26",
+      "markdown": "---\nid: 01JBN000000000000000000029\ntitle: meeting\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T13:14:13Z\ntype: daily\n---\n\nNo trailing newline at the end\n"
+    },
+    {
+      "id": "01JBN00000000000000000002A",
+      "path": "Archive/A folder name that is much too long to fit in a W~kvrcjp/Another folder~l5qy8o/MEETING (000002A).md",
+      "sha": "809c50bdbd1ad188111aee5662b39a78d0f041e7",
+      "markdown": "---\nid: 01JBN00000000000000000002A\ntitle: MEETING\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T13:15:14Z\n---\n\nUnicode: café, naïve, 中文字符, 日本語, 한국어, العربية, עברית.\n\nEmoji 🙂🚀 and combined 👩‍💻 and flags 🇺🇸.\n\nTypography — “quotes”, ‘apostrophes’, ellipsis…\n"
+    },
+    {
+      "id": "01JBN00000000000000000002B",
+      "path": "Deep~lfqjxn/Q3 plans draft final v2 (000002B).md",
+      "sha": "a4eb7350babf5519ed9262638f1cec8db9808651",
+      "markdown": "---\nid: 01JBN00000000000000000002B\ntitle: 'Q3: plans? <draft> \"final\" | v2'\ncreated: 2026-10-20T09:15:00-05:00\nupdated: 2026-10-20T09:15:00-05:00\n---\n\nTitles with markup characters are escaped with a backslash: [[C\\# notes]], [[a\\|b]], [[Q3 \\[draft\\]]] and [[trailing\\\\]].\n\nAn alias with brackets: [[Penmoss — product brief|x\\]\\]y]]. A heading keeps its hashes: [[Penmoss — MCP tools#Tools#Write \\[beta\\]|write \\| tools]].\n\nA backslash before an ordinary character stays as written: [[C:\\Users\\notes]].\n\n| Link | Note |\n| - | - |\n| [[a\\\\\\|b\\|alias]] | pipe in the title, then the alias |\n| [[trailing\\\\\\\\\\|t]] | backslash at the end of the title |\n| [[C\\# notes\\|C#]] | hash in the title, not in the alias |\n"
+    },
+    {
+      "id": "01JBN00000000000000000002C",
+      "path": "Projects/dots/con_ (000002C).md",
+      "sha": "35d09577d6f4f5e92f4b1b417a20732f5b543fd1",
+      "markdown": "---\nid: 01JBN00000000000000000002C\ntitle: con\ncreated: 2026-10-02T23:59:59Z\nupdated: 2026-10-20T13:17:16Z\ntags: [fixture-1, projects/garden]\ntype: weekly\n---\n\nSee [[Penmoss — sync design]] and [[Penmoss — MCP tools#Write tools]].\n\nAn alias: [[Penmoss — product brief|the brief]] and both: [[Penmoss — product brief#Milestones|milestones]].\n\nUnresolved links keep their text: [[Not a note yet]].\n\nSame-note heading link: [[#Wikilinks]].\n"
+    }
+  ],
+  "names": {
+    "Meeting": {
+      "sanitized": "Meeting",
+      "note": "Meeting",
+      "unique": "Meeting (0000000000000)"
+    },
+    "meeting": {
+      "sanitized": "meeting",
+      "note": "meeting",
+      "unique": "meeting (0000000000001)"
+    },
+    "MEETING": {
+      "sanitized": "MEETING",
+      "note": "MEETING",
+      "unique": "MEETING (0000000000002)"
+    },
+    "Q3: plans? <draft> \"final\" | v2": {
+      "sanitized": "Q3 plans draft final v2",
+      "note": "Q3 plans draft final v2",
+      "unique": "Q3 plans draft final v2 (0000000000003)"
+    },
+    "con": {
+      "sanitized": "con_",
+      "note": "con_",
+      "unique": "con_ (0000000000004)"
+    },
+    "CON.txt": {
+      "sanitized": "CON_.txt",
+      "note": "CON_.txt",
+      "unique": "CON_.txt (0000000000005)"
+    },
+    "aux": {
+      "sanitized": "aux_",
+      "note": "aux_",
+      "unique": "aux_ (0000000000006)"
+    },
+    ".hidden": {
+      "sanitized": "hidden",
+      "note": "hidden",
+      "unique": "hidden (0000000000007)"
+    },
+    "trailing dot.": {
+      "sanitized": "trailing dot",
+      "note": "trailing dot",
+      "unique": "trailing dot (0000000000008)"
+    },
+    "   spaced   out   ": {
+      "sanitized": "spaced out",
+      "note": "spaced out",
+      "unique": "spaced out (0000000000009)"
+    },
+    "A very long title that goes on and on, well past the eighty characters a note name keeps, and then some more": {
+      "sanitized": "A very long title that goes on and on, well past the eighty characters a note name keeps, and then some more",
+      "note": "A very long title that goes on and on, well past the eighty characters a note na",
+      "unique": "A very long title that goes on and on, well past the eighty characters a note na (000000000000A)"
+    },
+    "Résumé": {
+      "sanitized": "Résumé",
+      "note": "Résumé",
+      "unique": "Résumé (000000000000B)"
+    },
+    "Résumé": {
+      "sanitized": "Résumé",
+      "note": "Résumé",
+      "unique": "Résumé (000000000000C)"
+    },
+    "Ελληνικά ΣΣ ς": {
+      "sanitized": "Ελληνικά ΣΣ ς",
+      "note": "Ελληνικά ΣΣ ς",
+      "unique": "Ελληνικά ΣΣ ς (000000000000D)"
+    },
+    "#tag ^block [link]": {
+      "sanitized": "tag block link",
+      "note": "tag block link",
+      "unique": "tag block link (000000000000E)"
+    },
+    "a/b\\c": {
+      "sanitized": "a b c",
+      "note": "a b c",
+      "unique": "a b c (000000000000F)"
+    },
+    "(empty)": {
+      "sanitized": "Untitled",
+      "note": "Untitled",
+      "unique": "Untitled (000000000000G)"
+    },
+    "…": {
+      "sanitized": "…",
+      "note": "…",
+      "unique": "… (000000000000H)"
+    },
+    "Penmoss — product brief": {
+      "sanitized": "Penmoss — product brief",
+      "note": "Penmoss — product brief",
+      "unique": "Penmoss — product brief (000000000000J)"
+    },
+    "Penmoss — sync design": {
+      "sanitized": "Penmoss — sync design",
+      "note": "Penmoss — sync design",
+      "unique": "Penmoss — sync design (000000000000K)"
+    },
+    "Penmoss — MCP tools": {
+      "sanitized": "Penmoss — MCP tools",
+      "note": "Penmoss — MCP tools",
+      "unique": "Penmoss — MCP tools (000000000000M)"
+    },
+    "Sync design": {
+      "sanitized": "Sync design",
+      "note": "Sync design",
+      "unique": "Sync design (000000000000N)"
+    },
+    "attachments": {
+      "sanitized": "attachments",
+      "note": "attachments",
+      "unique": "attachments (000000000000P)"
+    },
+    "Notes.md": {
+      "sanitized": "Notes.md",
+      "note": "Notes.md",
+      "unique": "Notes.md (000000000000Q)"
+    }
+  },
+  "periodic": {
+    "daily:2026-01-01": "01KDVDNA00KMF7R66GDXCGTYYR",
+    "daily:2026-10-22": "01M5GEGM00EP8A1EKW84X1VKCH",
+    "daily:2026-12-31": "01MB4PAY00MWGGQ5GEETMRSC39",
+    "daily:2027-02-28": "01MFWKSB00JKDJ90M7MCA0K5ZX",
+    "weekly:2026-W01": "01KDKPF500PP9S7R6KGA5X140C",
+    "weekly:2026-W43": "01M58QAF00MXJF9JWXTQFQQAPJ",
+    "weekly:2026-W53": "01MAWZ4S00XNFF0GYXB2CF62RT",
+    "folder:Journal": "0000000000S8E1TX8VKMHGWYHE",
+    "folder:Journal/2026": "00000000000NN99SQYYY5PFX9R",
+    "folder:Journal/2026/10": "0000000000W0FMBFGYJBDC9DN6",
+    "folder:Journal/2026/Weekly": "0000000000PGJ9DG6HC2SXV6YM"
+  },
+  "periodicUpdates": {
+    "daily:2026-10-22:0": "01M5GEGM00EP8A1EKW84X1VKCH 9651294eef0cdc5d8345d8c928d3f1e95b701b36853b33af35e5b6906839a9be",
+    "weekly:2026-W43:0": "01M58QAF00MXJF9JWXTQFQQAPJ a77e34388f09d5c23eb872f3bd5d39cfd404678c5ef2415a148c88d1cfe66073",
+    "daily:2026-10-22:1": "01M5GEGM00EP8A1EKW84X1VKCH dd88af427e12e54b71ee327fb16bb899c0c57b9552dc3e47b03b4b2c42d434e6",
+    "weekly:2026-W43:1": "01M58QAF00MXJF9JWXTQFQQAPJ 2358aa0cfbdfdc9e8c8c040001da6cf3e862c640f5d3f438920c1164ba58b321"
+  },
+  "stamps": {
+    "2026-10-22T09:15:00-05:00": "2026-10-29T09:03:07-05:00",
+    "2026-10-22T09:15:00+05:30": "2026-10-29T19:33:07+05:30",
+    "2026-10-22T09:15:00Z": "2026-10-29T14:03:07Z",
+    "null": "2026-10-29T14:03:07Z",
+    "2026-10-22": "2026-10-29T14:03:07Z"
+  },
+  "files": {},
+  "treeHash": "14ad6a83b44de9"
+}

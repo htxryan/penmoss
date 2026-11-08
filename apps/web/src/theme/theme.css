@@ -1,0 +1,592 @@
+/*
+ * Settings → Appearance and the theme editor (T28), in T36's controls: the
+ * mode as a segmented control, themes as cards with a miniature of each
+ * variant, and the editor's token rows. Swatches and the preview take their
+ * colours from the theme being shown (custom properties set from its JSON),
+ * never from literals.
+ */
+.appearance-group {
+  min-width: 0;
+  margin: 1.5rem 0;
+  padding: 0;
+  border: 0;
+}
+
+.appearance-group > legend,
+.token-group > legend {
+  padding: 0;
+  /* As far over its control as every Settings field's label (styles.css, A988). */
+  margin-bottom: 0.35rem;
+  color: var(--pm-fg);
+  font-size: var(--pm-text-md);
+  font-weight: 600;
+}
+
+/* A hint, as `.settings-help` is under the other Settings controls (A988). */
+.appearance-note {
+  margin: 0.5rem 0 0;
+  font-size: var(--pm-text-sm);
+  line-height: 1.5;
+}
+
+/* Settings → Appearance → Fonts (T51 item 16, A944). */
+/* Its fields' own labels sit a little further under Fonts than a control would (A988). */
+.font-fields {
+  display: grid;
+  gap: 1rem;
+  max-width: 32rem;
+  padding-top: 0.25rem;
+}
+
+.font-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.font-field > label {
+  font-size: var(--pm-text-sm);
+  font-weight: 600;
+}
+
+.font-custom {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.font-problem {
+  color: var(--pm-danger);
+  font-size: var(--pm-text-xs);
+}
+
+/* Each choice as it will look, a line of it. */
+.font-sample {
+  margin: 0;
+  overflow: hidden;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-md);
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.font-size-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.font-size-range {
+  flex: 1;
+  min-width: 8rem;
+  accent-color: var(--pm-accent);
+}
+
+.font-size-value {
+  min-width: 3.2rem;
+  font-size: var(--pm-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A segmented control of native radios: arrow keys move between them. */
+.seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-sidebar);
+}
+
+.seg-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: var(--pm-control-sm);
+  padding: 0 0.75rem;
+  border-radius: 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  cursor: pointer;
+  transition:
+    background var(--pm-fast),
+    color var(--pm-fast);
+}
+
+.seg-option:hover {
+  color: var(--pm-fg);
+}
+
+.seg-option input,
+.theme-card input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Bold when chosen; its name is a `.bold-steady`, so the segments beside it keep still (A988). */
+.seg-option:has(input:checked) {
+  background: var(--pm-raised);
+  box-shadow: var(--pm-shadow-1);
+  color: var(--pm-fg);
+  font-weight: 600;
+}
+
+.seg-option:has(input:focus-visible),
+.theme-card:has(input:focus-visible) {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 2px;
+}
+
+fieldset:disabled .seg-option,
+fieldset:disabled .theme-card {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+  gap: 0.75rem;
+}
+
+/* Names line up across a row whatever the length of the line beneath them (T39 pass 2). */
+.theme-card {
+  position: relative;
+  display: grid;
+  align-content: start;
+  overflow: hidden;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  cursor: pointer;
+  transition:
+    border-color var(--pm-fast),
+    box-shadow var(--pm-fast);
+}
+
+.theme-card:hover {
+  border-color: var(--pm-border-strong);
+}
+
+.theme-card:has(input:checked) {
+  border-color: var(--pm-accent);
+  box-shadow: 0 0 0 2px var(--pm-accent-soft);
+}
+
+.theme-card-foot {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem 0.55rem;
+  color: var(--pm-fg);
+  font-size: var(--pm-text-sm);
+  font-weight: 600;
+}
+
+.theme-card-foot .i {
+  flex: none;
+  color: var(--pm-accent);
+}
+
+.theme-card-note {
+  display: block;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  font-weight: 400;
+}
+
+/* A theme's two variants in miniature: sidebar, title, text, code and a button. */
+.theme-swatch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 5.25rem;
+  border-bottom: 1px solid var(--pm-border-soft);
+}
+
+.sw-half {
+  display: grid;
+  grid-template-columns: 26% 1fr;
+  background: var(--sw-bg);
+}
+
+.sw-side {
+  border-right: 1px solid var(--sw-border);
+  background: var(--sw-sidebar);
+}
+
+.sw-main {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 0.5rem 0.45rem;
+}
+
+.sw-line,
+.sw-code > span,
+.sw-button {
+  display: block;
+  height: 4px;
+  border-radius: 0;
+}
+
+.sw-title {
+  width: 70%;
+  height: 6px;
+  background: var(--sw-fg);
+}
+
+.sw-text {
+  width: 90%;
+  background: var(--sw-muted);
+}
+
+.sw-text.short {
+  width: 55%;
+}
+
+.sw-code {
+  display: flex;
+  gap: 3px;
+}
+
+.sw-k {
+  width: 22%;
+  background: var(--sw-k);
+}
+
+.sw-s {
+  width: 34%;
+  background: var(--sw-s);
+}
+
+.sw-f {
+  width: 18%;
+  background: var(--sw-f);
+}
+
+.sw-button {
+  width: 40%;
+  height: 7px;
+  margin-top: 2px;
+  background: var(--sw-accent);
+}
+
+/* The theme editor. */
+.theme-editor {
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--pm-border-soft);
+}
+
+.theme-editor h3 {
+  margin: 0 0 0.6rem;
+  font-size: var(--pm-text-lg);
+}
+
+.theme-editor-empty {
+  display: grid;
+  justify-items: start;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px dashed var(--pm-border-strong);
+  border-radius: 0;
+  background: var(--pm-accent-softer);
+}
+
+.theme-editor-empty p {
+  margin: 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-md);
+  line-height: 1.55;
+}
+
+.theme-editor-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 1rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.theme-name {
+  flex: 1 1 14rem;
+  margin: 0;
+}
+
+/* The preview sets the edited variant's tokens on itself: everything inside reads them. */
+.theme-preview {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  overflow: hidden;
+  margin: 1rem 0 0.75rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font-family: var(--pm-font);
+}
+
+.tp-side {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: 0.6rem 0.4rem;
+  border-right: 1px solid var(--pm-border);
+  background: var(--pm-sidebar);
+  font-size: var(--pm-text-sm);
+}
+
+.tp-item {
+  padding: 0.25rem 0.45rem;
+  border-radius: 0;
+}
+
+.tp-current {
+  background: color-mix(in oklab, var(--pm-fg) 9%, transparent);
+  font-weight: 600;
+}
+
+.tp-main {
+  min-width: 0;
+  padding: 0.85rem 1rem;
+}
+
+.tp-main p {
+  margin: 0 0 0.5rem;
+}
+
+.tp-title {
+  font: 700 1.15rem/1.25 var(--pm-font-body);
+}
+
+.tp-text {
+  font-family: var(--pm-font-body);
+  line-height: 1.6;
+}
+
+.tp-link {
+  color: var(--pm-link);
+  text-decoration: underline;
+}
+
+.tp-text mark {
+  padding: 0 0.1em;
+  border-radius: 0;
+  background: var(--pm-highlight-bg);
+  color: inherit;
+}
+
+.tp-text code,
+.tp-code {
+  background: color-mix(in oklab, var(--pm-bg), var(--pm-fg) 6%);
+  font-family: var(--pm-mono);
+  font-size: 0.85em;
+}
+
+.tp-text code {
+  padding: 0.1em 0.3em;
+  border-radius: 0;
+}
+
+.tp-main .tp-muted,
+.tp-side .tp-muted {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+}
+
+.tp-callout {
+  margin: 0.25rem 0 0.6rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid color-mix(in oklab, var(--pm-callout-tip) 28%, transparent);
+  border-radius: 0;
+  background: color-mix(in oklab, var(--pm-callout-tip) 7%, var(--pm-bg));
+  font-size: var(--pm-text-md);
+}
+
+.tp-callout b {
+  margin-right: 0.35rem;
+  color: var(--pm-callout-tip);
+}
+
+.tp-code {
+  margin: 0 0 0.6rem;
+  padding: 0.5rem 0.65rem;
+  overflow-x: auto;
+  border-radius: 0;
+  color: var(--pm-fg);
+  white-space: pre;
+}
+
+.tp-k {
+  color: var(--pm-code-keyword);
+}
+
+.tp-f {
+  color: var(--pm-code-function);
+}
+
+.tp-n {
+  color: var(--pm-code-number);
+}
+
+.tp-s {
+  color: var(--pm-code-string);
+}
+
+.tp-c {
+  color: var(--pm-code-comment);
+}
+
+.tp-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: var(--pm-text-sm);
+}
+
+.tp-button {
+  padding: 0.25rem 0.7rem;
+  border-radius: 0;
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
+  font-weight: 600;
+}
+
+.tp-danger {
+  color: var(--pm-danger);
+}
+
+.theme-contrast {
+  margin: 0 0 1rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  line-height: 1.5;
+}
+
+.theme-contrast.warn {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0;
+  background: var(--pm-warn-bg);
+  color: var(--pm-fg);
+}
+
+.token-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  column-gap: 1.5rem;
+  min-width: 0;
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.85rem 0.75rem;
+  border: 1px solid var(--pm-border-soft);
+  border-radius: 0;
+}
+
+.token-group > legend {
+  margin: 0;
+  padding: 0 0.3rem;
+}
+
+.token-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 6.25rem;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--pm-control);
+  color: var(--pm-fg);
+  font-size: var(--pm-text-sm);
+}
+
+.token-row > select {
+  grid-column: span 2;
+}
+
+.token-row input[type='color'] {
+  width: 2.25rem;
+  height: var(--pm-control-sm);
+  padding: 2px;
+  border: 1px solid var(--pm-border-strong);
+  border-radius: 0;
+  background: var(--pm-raised);
+  cursor: pointer;
+}
+
+.token-row input[type='range'] {
+  width: 8rem;
+  accent-color: var(--pm-accent);
+}
+
+.token-row output {
+  color: var(--pm-muted);
+}
+
+.token-hex {
+  height: var(--pm-control-sm);
+  font-family: var(--pm-mono);
+}
+
+.token-hex[aria-invalid='true'] {
+  border-color: var(--pm-danger);
+}
+
+.theme-editor-actions {
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  font-size: var(--pm-text-sm);
+}
+
+@media (max-width: 700px) {
+  .theme-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .theme-swatch {
+    height: 4.25rem;
+  }
+
+  .seg {
+    display: flex;
+  }
+
+  .seg-option {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .theme-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .tp-side {
+    display: none;
+  }
+
+  .token-group {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 700px), (pointer: coarse) {
+  .seg-option,
+  .token-row {
+    min-height: var(--pm-hit);
+  }
+
+  .token-row input[type='color'] {
+    width: var(--pm-hit);
+    height: var(--pm-hit);
+  }
+
+  .token-hex {
+    height: var(--pm-hit);
+  }
+}

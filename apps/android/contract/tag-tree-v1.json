@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "notes": [
+    ["area/cooking", "soup"],
+    ["area/cooking/italian", "area/garden"],
+    ["area"],
+    ["soup"],
+    ["log/2026", "log/2026/10"],
+    [],
+    ["café", "zebra", "éclair"],
+    ["a-b", "a_b", "a/b"],
+    ["日本語"]
+  ],
+  "tree": [
+    {
+      "tag": "a",
+      "name": "a",
+      "count": 1,
+      "children": [
+        {
+          "tag": "a/b",
+          "name": "b",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "tag": "a-b",
+      "name": "a-b",
+      "count": 1,
+      "children": []
+    },
+    {
+      "tag": "a_b",
+      "name": "a_b",
+      "count": 1,
+      "children": []
+    },
+    {
+      "tag": "area",
+      "name": "area",
+      "count": 3,
+      "children": [
+        {
+          "tag": "area/cooking",
+          "name": "cooking",
+          "count": 2,
+          "children": [
+            {
+              "tag": "area/cooking/italian",
+              "name": "italian",
+              "count": 1,
+              "children": []
+            }
+          ]
+        },
+        {
+          "tag": "area/garden",
+          "name": "garden",
+          "count": 1,
+          "children": []
+        }
+      ]
+    },
+    {
+      "tag": "café",
+      "name": "café",
+      "count": 1,
+      "children": []
+    },
+    {
+      "tag": "log",
+      "name": "log",
+      "count": 1,
+      "children": [
+        {
+          "tag": "log/2026",
+          "name": "2026",
+          "count": 1,
+          "children": [
+            {
+              "tag": "log/2026/10",
+              "name": "10",
+              "count": 1,
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tag": "soup",
+      "name": "soup",
+      "count": 2,
+      "children": []
+    },
+    {
+      "tag": "zebra",
+      "name": "zebra",
+      "count": 1,
+      "children": []
+    },
+    {
+      "tag": "éclair",
+      "name": "éclair",
+      "count": 1,
+      "children": []
+    },
+    {
+      "tag": "日本語",
+      "name": "日本語",
+      "count": 1,
+      "children": []
+    }
+  ],
+  "tagged": [
+    {
+      "tag": "area",
+      "notes": [0, 1, 2]
+    },
+    {
+      "tag": "area/cooking",
+      "notes": [0, 1]
+    },
+    {
+      "tag": "soup",
+      "notes": [0, 3]
+    },
+    {
+      "tag": "log",
+      "notes": [4]
+    },
+    {
+      "tag": "a",
+      "notes": [7]
+    },
+    {
+      "tag": "a-b",
+      "notes": [7]
+    },
+    {
+      "tag": "missing",
+      "notes": []
+    }
+  ]
+}

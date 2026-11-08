@@ -1,0 +1,3 @@
+- [ ] A task
+- A plain item in the same list
+- [x] Another task

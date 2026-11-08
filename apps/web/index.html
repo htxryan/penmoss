@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="theme-color" content="#fbfaf7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#161a17" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Penmoss</title>
+    <script src="/theme-boot.js"></script>
+    <style>
+      /* Until the app has loaded (T39): on a slow network the page was blank. Shown only
+         after a moment, so a fast load never flashes it; the app replaces it. Fixed over the
+         window, so the body's default margin adds no scroll. */
+      .boot {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        margin: 0;
+        color: var(--pm-muted, GrayText);
+        font:
+          14px system-ui,
+          sans-serif;
+        animation: boot-in 0.2s 0.8s both;
+      }
+      @keyframes boot-in {
+        from {
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"><p class="boot" role="status">Opening Penmoss…</p></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

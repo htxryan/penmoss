@@ -1,0 +1,37 @@
+{
+  "name": "@penmoss/web",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "The Mac app's page (React): git notebooks, served from the app's own files",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@penmoss/core": "workspace:*",
+    "@penmoss/editor": "workspace:*",
+    "@penmoss/git-notebook": "workspace:*",
+    "@penmoss/sync-client": "workspace:*",
+    "@penmoss/ui": "workspace:*",
+    "gpt-tokenizer": "4.1.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.64.1",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "happy-dom": "21.0.4",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  }
+}

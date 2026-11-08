@@ -1,0 +1,183 @@
+// Temporary evidence capture for T42 (not committed). PHASE=before|after, OUT=dir.
+import { expect, test, type Page } from '@playwright/test';
+import { mkdirSync } from 'node:fs';
+import { NEW_NOTE } from './keys';
+
+const PHASE = process.env['PHASE'] ?? 'before';
+const OUT = process.env['OUT'] ?? '/tmp/t42-evidence';
+mkdirSync(OUT, { recursive: true });
+const RUN = Date.now().toString(36).slice(-4);
+const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
+
+const shot = (scheme: string, name: string) => `${OUT}/${PHASE}-web-${scheme}-${name}.png`;
+
+async function newNote(page: Page, title: string, text: string): Promise<string> {
+  await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();
+  await page.keyboard.press(NEW_NOTE);
+  await expect(page).toHaveURL(ULID);
+  await page.keyboard.type(title);
+  await page.keyboard.press('Enter');
+  await page.keyboard.type(text);
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+  return ULID.exec(new URL(page.url()).pathname)![1]!;
+}
+
+async function openInfo(page: Page) {
+  const toggle = page.getByTestId('toggle-info');
+  if ((await toggle.getAttribute('aria-pressed')) !== 'true') await toggle.click();
+  await expect(page.getByRole('complementary', { name: 'Info' })).toBeVisible();
+}
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`evidence ${PHASE} ${scheme}`, async ({ page }) => {
+    test.setTimeout(240_000);
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await newNote(page, `Garden plan ${RUN}`, 'Tomatoes and basil by the fence. #garden');
+    await newNote(page, `Garden shed ${RUN}`, 'Paint the shed. #gardening');
+    await newNote(page, `Reading list ${RUN}`, 'Books for winter.');
+    await page.waitForTimeout(800);
+
+    // 4: the sidebar's hover text.
+    await page.locator('.sidebar .sb-graph').hover();
+    await page.waitForTimeout(900);
+    await page.screenshot({ path: shot(scheme, 'sidebar-hover'), clip: { x: 0, y: 0, width: 420, height: 380 } });
+    await page.mouse.move(900, 600);
+
+    // 6: the note's top bar.
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: shot(scheme, 'note-top'), clip: { x: 260, y: 0, width: 1180, height: 140 } });
+    await page.screenshot({ path: shot(scheme, 'note') });
+
+    // 3: Kind in the Info panel, an ordinary note and today's.
+    await openInfo(page);
+    await page.screenshot({ path: shot(scheme, 'info-note') });
+    // 8: Add a tag.
+    const panel = page.getByRole('complementary', { name: 'Info' });
+    await panel.getByRole('button', { name: 'Add a tag', exact: true }).click();
+    await panel.getByRole('combobox', { name: 'Add a tag' }).pressSequentially('gard');
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: shot(scheme, 'tag-autocomplete') });
+    await page.keyboard.press('Escape');
+    await page.locator('button[data-command="journal.today"]').first().click();
+    await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+    await openInfo(page);
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: shot(scheme, 'info-daily') });
+
+    // 5: version history.
+    await page.getByText(`Garden plan ${RUN}`).first().click();
+    await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+    await page.evaluate(() => {
+      const button = document.querySelector<HTMLElement>('[data-testid="toggle-history"]');
+      if (button) button.click();
+    });
+    if (PHASE === 'after') {
+      await page.getByTestId('note-menu').click();
+      // Once its opening transition has ended (review S4).
+      await expect(page.getByRole('menu', { name: 'Note actions' })).toBeVisible();
+      await page.waitForTimeout(500);
+      await page.screenshot({ path: shot(scheme, 'note-menu') });
+      await page.getByRole('menuitemcheckbox', { name: 'Version history' }).click();
+    }
+    await expect(page.getByTestId('history-panel')).toBeVisible();
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: shot(scheme, 'history') });
+    await page.keyboard.press('Escape');
+
+    // 2: search.
+    await page.keyboard.press('ControlOrMeta+Shift+KeyF');
+    await page.keyboard.type('garden');
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: shot(scheme, 'search') });
+    await page.keyboard.press('Escape');
+
+    // 1: right-click a selection of notes. Before: a Shift range. After (A570): each note
+    // added with Ctrl (⌘ on a Mac), so other runs' notes in the shared workspace stay out.
+    const rowA = page.getByRole('treeitem', { name: `Garden plan ${RUN}` }).last();
+    const rowS = page.getByRole('treeitem', { name: `Garden shed ${RUN}` }).last();
+    const rowB = page.getByRole('treeitem', { name: `Reading list ${RUN}` }).last();
+    const toggle = process.platform === 'darwin' ? 'Meta' : 'Control';
+    await rowA.click();
+    if (PHASE === 'after') {
+      await rowS.click({ modifiers: [toggle] });
+      await rowB.click({ modifiers: [toggle] });
+    } else {
+      await rowB.click({ modifiers: ['Shift'] });
+    }
+    await rowB.click({ button: 'right' });
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: shot(scheme, 'context-menu') });
+    if (PHASE === 'after') {
+      await page.getByRole('menuitem', { name: 'Move 3 notes…' }).click();
+      await page.waitForTimeout(300);
+      await page.screenshot({ path: shot(scheme, 'move-dialog') });
+    }
+    await page.keyboard.press('Escape');
+
+    // 7: Settings.
+    await page.goto(PHASE === 'after' ? '/settings/display' : '/settings/appearance');
+    await page.waitForTimeout(800);
+    await page.screenshot({ path: shot(scheme, 'settings-display') });
+
+  });
+}
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`sync ${PHASE} ${scheme}`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.routeWebSocket(/\/sync\/workspace/, (ws) => {
+      ws.close({ code: 4409, reason: 'Sync refused by the server' });
+    });
+    await page.route(/\/sync\/workspace$/, (route) =>
+      route.fulfill({ status: 409, contentType: 'application/json', body: '{"error":{"code":"refused","message":"Sync refused by the server"}}' }),
+    );
+    await page.goto('/');
+    await expect(page.getByTestId('sync-status')).toHaveAttribute('data-state', 'stopped', {
+      timeout: 20_000,
+    });
+    await page.screenshot({ path: shot(scheme, 'sync-stopped'), clip: { x: 0, y: 0, width: 420, height: 200 } });
+    if (PHASE === 'after') {
+      await page.getByTestId('sync-status').click();
+      await page.waitForTimeout(800);
+      await page.screenshot({ path: shot(scheme, 'settings-sync') });
+    }
+  });
+}
+
+// Additions (A574): Trash names who moved a note there, from the server's own deletedBy
+// (#113): an agent token moves one note, this device the other.
+for (const scheme of PHASE === 'after' ? (['light', 'dark'] as const) : []) {
+  test(`trash ${PHASE} ${scheme}`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    const agentId = await newNote(page, `Old garden plan ${RUN} ${scheme}`, 'Done with this.');
+    const session = await page.evaluate(
+      () => (JSON.parse(localStorage.getItem('penmoss.session') ?? '{}') as { token?: string }).token ?? '',
+    );
+    const call = (token: string, path: string, method = 'GET', data?: unknown) =>
+      page.request.fetch(path, {
+        method,
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        ...(data === undefined ? {} : { data: JSON.stringify(data) }),
+      });
+    await expect.poll(async () => (await call(session, `/api/notes/${agentId}/markdown`)).status(), { timeout: 15_000 }).toBe(200);
+    const issued = await call(session, '/api/tokens', 'POST', { label: 'Claude Code', scopes: ['read', 'write'] });
+    const agent = ((await issued.json()) as { token: string }).token;
+    expect((await call(agent, `/api/notes/${agentId}/trash`, 'POST')).ok()).toBe(true);
+    await newNote(page, `Shopping list ${RUN} ${scheme}`, 'Done with this.');
+    await page.getByTestId('note-menu').click();
+    await page.getByTestId('delete-note').click();
+    await page.getByRole('link', { name: 'Trash', exact: true }).click();
+    const row = page.getByTestId('trash').locator(`[data-note-id="${agentId}"]`);
+    await expect(async () => {
+      await page.reload();
+      await expect(row.getByTestId('trash-by')).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 30_000 });
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: shot(scheme, 'trash') });
+  });
+}

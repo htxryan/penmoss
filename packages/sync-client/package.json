@@ -1,0 +1,41 @@
+{
+  "name": "@penmoss/sync-client",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "The IndexedDB replica store, its keeper, records, attachments and the local index",
+  "exports": {
+    ".": "./src/index.ts",
+    "./protocol": "./src/protocol.ts",
+    "./replica": "./src/replica.ts",
+    "./yjs14": "./src/yjs14.ts",
+    "./note": "./src/note.ts",
+    "./workspace": "./src/workspace.ts",
+    "./records": "./src/records.ts",
+    "./tags": "./src/tags.ts",
+    "./history": "./src/history.ts",
+    "./comments": "./src/comments.ts",
+    "./agent-sessions": "./src/agent-sessions.ts",
+    "./comment-delivery": "./src/comment-delivery.ts",
+    "./local-index": "./src/local-index.ts",
+    "./keeper": "./src/keeper.ts",
+    "./attachments": "./src/attachments.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run",
+    "perf": "vitest run --config vitest.perf.config.ts"
+  },
+  "devDependencies": {
+    "@y/protocols": "1.0.6-rc.1",
+    "fake-indexeddb": "6.2.6",
+    "vitest": "5.0.5"
+  },
+  "dependencies": {
+    "@penmoss/core": "workspace:*",
+    "@y/y": "14.0.0-rc.29",
+    "lib0": "1.0.0-rc.36",
+    "minisearch": "7.2.0"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "electron": "45.0.0",
+  "node": "24.22.0",
+  "packaged": true,
+  "dirname": "/Users/redhale/src/penmoss-wt/t70-spike/apps/desktop/release/mac-arm64/Penmoss.app/Contents/Resources/app.asar/dist",
+  "results": [
+    {
+      "where": "main (as --penmoss-cli)",
+      "threads": 4,
+      "loadMs": 2612,
+      "msPerChunk": 572.1,
+      "msPerQuery": 784.6,
+      "rssMb": 973,
+      "dims": 768,
+      "wasmPaths": "/Users/redhale/src/penmoss-wt/t70-spike/apps/desktop/release/mac-arm64/Penmoss.app/Contents/Resources/app.asar/dist/ort"
+    },
+    {
+      "where": "utilityProcess",
+      "threads": 1,
+      "loadMs": 2554,
+      "msPerChunk": 410.9,
+      "msPerQuery": 369.5,
+      "rssMb": 685,
+      "dims": 768,
+      "wasmPaths": "/Users/redhale/src/penmoss-wt/t70-spike/apps/desktop/release/mac-arm64/Penmoss.app/Contents/Resources/app.asar/dist/ort"
+    },
+    {
+      "where": "utilityProcess",
+      "threads": 4,
+      "loadMs": 1514,
+      "msPerChunk": 474,
+      "msPerQuery": 580.1,
+      "rssMb": 702,
+      "dims": 768,
+      "wasmPaths": "/Users/redhale/src/penmoss-wt/t70-spike/apps/desktop/release/mac-arm64/Penmoss.app/Contents/Resources/app.asar/dist/ort"
+    }
+  ]
+}

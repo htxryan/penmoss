@@ -1,0 +1,27 @@
+{
+  "name": "penmoss-android-editor-spike-web",
+  "private": true,
+  "type": "module",
+  "description": "T2 spike: bare TipTap editor bundled into the Android spike app's assets. Throwaway, not shipped.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tiptap/core": "3.32.0",
+    "@tiptap/extension-code-block-lowlight": "3.32.0",
+    "@tiptap/extension-highlight": "3.32.0",
+    "@tiptap/extension-image": "3.32.0",
+    "@tiptap/extension-list": "3.32.0",
+    "@tiptap/extension-table": "3.32.0",
+    "@tiptap/pm": "3.32.0",
+    "@tiptap/starter-kit": "3.32.0",
+    "lowlight": "3.3.0"
+  },
+  "devDependencies": {
+    "playwright-core": "1.64.1",
+    "typescript": "6.0.3",
+    "vite": "8.3.5"
+  }
+}

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Installs beside a Play build (app.penmoss.debug), so it is told apart in the launcher. -->
+    <string name="app_name">Penmoss (debug)</string>
+</resources>

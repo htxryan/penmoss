@@ -1,0 +1,11 @@
+{
+  "sidebarListHeight": 192,
+  "calendarTabStops": 1,
+  "syncPillRole": null,
+  "calendarFocusAfterTab": "Saturday 24 October 2026, has a note",
+  "calendarFocusAfterTwoTabs": "#books, 1 note",
+  "bodyAfterTwoUndosOneRedo": "First words",
+  "focusAfterEscapeInTagField": "BUTTON Add a tag",
+  "focusAfterMoveToTrash": "BUTTON Undo",
+  "restoreStatus": 200
+}

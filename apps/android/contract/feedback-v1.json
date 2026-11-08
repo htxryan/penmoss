@@ -1,0 +1,412 @@
+{
+  "limits": {
+    "titleMax": 256,
+    "descriptionMax": 20000,
+    "versionMax": 80,
+    "screenshots": 6,
+    "screenshotBytes": 10485760,
+    "requestBytes": 41943040,
+    "perHour": 20,
+    "longSide": 2560,
+    "jpegQuality": 0.85,
+    "groupRows": 40,
+    "columns": 6,
+    "cell": 400,
+    "recent": 10
+  },
+  "types": {
+    "bug": "Bug report",
+    "feature": "Feature request"
+  },
+  "priorities": {
+    "1": "P1 Highest",
+    "2": "P2 High",
+    "3": "P3 Normal",
+    "4": "P4 Lowest"
+  },
+  "labels": [
+    {
+      "type": "bug",
+      "priority": 1,
+      "labels": ["in-app feedback", "bug", "P1"]
+    },
+    {
+      "type": "bug",
+      "priority": 2,
+      "labels": ["in-app feedback", "bug", "P2"]
+    },
+    {
+      "type": "bug",
+      "priority": 3,
+      "labels": ["in-app feedback", "bug", "P3"]
+    },
+    {
+      "type": "bug",
+      "priority": 4,
+      "labels": ["in-app feedback", "bug", "P4"]
+    },
+    {
+      "type": "feature",
+      "priority": 1,
+      "labels": ["in-app feedback", "feature request", "P1"]
+    },
+    {
+      "type": "feature",
+      "priority": 2,
+      "labels": ["in-app feedback", "feature request", "P2"]
+    },
+    {
+      "type": "feature",
+      "priority": 3,
+      "labels": ["in-app feedback", "feature request", "P3"]
+    },
+    {
+      "type": "feature",
+      "priority": 4,
+      "labels": ["in-app feedback", "feature request", "P4"]
+    }
+  ],
+  "contexts": [
+    {
+      "name": "every group",
+      "context": {
+        "groups": [
+          {
+            "id": "app",
+            "columns": ["Field", "Value"],
+            "rows": [
+              ["Client", "Android"],
+              ["Version", "0.31 (build 431425)"],
+              ["OS", "Android 16 (API 36)"],
+              ["WebView", "142.0.7444.0"],
+              ["Window", "main"],
+              ["Screen", "412×915 dp at 2.625×"],
+              ["Theme", "Moss (dark)"],
+              ["Appearance", "system"],
+              ["Locale", "en-US"],
+              ["Time zone", "America/Chicago"]
+            ]
+          },
+          {
+            "id": "where",
+            "columns": ["Field", "Value"],
+            "rows": [
+              ["Route", "/notes/01JBXYZ0000000000000000000"],
+              ["Screen", "note"],
+              ["Open panel", "Info"],
+              ["Sidebar", "drawer closed"],
+              ["Selected folder", "Projects / Penmoss"]
+            ]
+          },
+          {
+            "id": "sync",
+            "columns": ["Field", "Value"],
+            "rows": [
+              ["Online", "yes"],
+              ["Sync", "synced"],
+              ["Note socket", "synced"],
+              ["Last synced", "2026-10-27T15:04:05.000Z"],
+              ["Unsynced notes", "0"],
+              ["Outbox", "1"],
+              ["Last sync error", "none"]
+            ]
+          },
+          {
+            "id": "note",
+            "columns": ["Field", "Value"],
+            "rows": [
+              ["Id", "01JBXYZ0000000000000000000"],
+              ["Title", "Shopping | list <b>"],
+              ["Folder", "Projects / Penmoss"],
+              ["Tags", "#home, #todo"],
+              ["Words", "120"],
+              ["Unsynced", "no"]
+            ]
+          },
+          {
+            "id": "edits",
+            "columns": ["Time", "Actor", "Kind", "Change"],
+            "rows": [
+              ["2026-10-27T15:00:00.000Z", "Pixel 9", "typed", "+3 −1 lines"],
+              ["2026-10-27T14:00:00.000Z", "Claude Code ✦", "agent edit", "Tags changed"]
+            ]
+          },
+          {
+            "id": "errors",
+            "columns": ["Time", "Message", "Stack"],
+            "rows": [
+              ["2026-10-27T15:01:00.000Z", "IOException: timeout", "at a.b.C.d(C.kt:10)\nat x"]
+            ]
+          }
+        ]
+      },
+      "markdown": "<details><summary>Captured context</summary>\n\n#### App\n\n| Field | Value |\n| --- | --- |\n| Client | Android |\n| Version | 0.31 (build 431425) |\n| OS | Android 16 (API 36) |\n| WebView | 142.0.7444.0 |\n| Window | main |\n| Screen | 412×915 dp at 2.625× |\n| Theme | Moss (dark) |\n| Appearance | system |\n| Locale | en-US |\n| Time zone | America/Chicago |\n\n#### Where you are\n\n| Field | Value |\n| --- | --- |\n| Route | /notes/01JBXYZ0000000000000000000 |\n| Screen | note |\n| Open panel | Info |\n| Sidebar | drawer closed |\n| Selected folder | Projects / Penmoss |\n\n#### Sync\n\n| Field | Value |\n| --- | --- |\n| Online | yes |\n| Sync | synced |\n| Note socket | synced |\n| Last synced | 2026-10-27T15:04:05.000Z |\n| Unsynced notes | 0 |\n| Outbox | 1 |\n| Last sync error | none |\n\n#### This note\n\n| Field | Value |\n| --- | --- |\n| Id | 01JBXYZ0000000000000000000 |\n| Title | Shopping \\| list &lt;b> |\n| Folder | Projects / Penmoss |\n| Tags | #home, #todo |\n| Words | 120 |\n| Unsynced | no |\n\n#### Recent edits to this note\n\n| Time | Actor | Kind | Change |\n| --- | --- | --- | --- |\n| 2026-10-27T15:00:00.000Z | Pixel 9 | typed | +3 −1 lines |\n| 2026-10-27T14:00:00.000Z | Claude Code ✦ | agent edit | Tags changed |\n\n#### Recent errors\n\n| Time | Message | Stack |\n| --- | --- | --- |\n| 2026-10-27T15:01:00.000Z | IOException: timeout | at a.b.C.d(C.kt:10) at x |\n\n```json\n{\n  \"app\": {\n    \"Client\": \"Android\",\n    \"Version\": \"0.31 (build 431425)\",\n    \"OS\": \"Android 16 (API 36)\",\n    \"WebView\": \"142.0.7444.0\",\n    \"Window\": \"main\",\n    \"Screen\": \"412×915 dp at 2.625×\",\n    \"Theme\": \"Moss (dark)\",\n    \"Appearance\": \"system\",\n    \"Locale\": \"en-US\",\n    \"Time zone\": \"America/Chicago\"\n  },\n  \"where\": {\n    \"Route\": \"/notes/01JBXYZ0000000000000000000\",\n    \"Screen\": \"note\",\n    \"Open panel\": \"Info\",\n    \"Sidebar\": \"drawer closed\",\n    \"Selected folder\": \"Projects / Penmoss\"\n  },\n  \"sync\": {\n    \"Online\": \"yes\",\n    \"Sync\": \"synced\",\n    \"Note socket\": \"synced\",\n    \"Last synced\": \"2026-10-27T15:04:05.000Z\",\n    \"Unsynced notes\": \"0\",\n    \"Outbox\": \"1\",\n    \"Last sync error\": \"none\"\n  },\n  \"note\": {\n    \"Id\": \"01JBXYZ0000000000000000000\",\n    \"Title\": \"Shopping | list <b>\",\n    \"Folder\": \"Projects / Penmoss\",\n    \"Tags\": \"#home, #todo\",\n    \"Words\": \"120\",\n    \"Unsynced\": \"no\"\n  },\n  \"edits\": [\n    {\n      \"Time\": \"2026-10-27T15:00:00.000Z\",\n      \"Actor\": \"Pixel 9\",\n      \"Kind\": \"typed\",\n      \"Change\": \"+3 −1 lines\"\n    },\n    {\n      \"Time\": \"2026-10-27T14:00:00.000Z\",\n      \"Actor\": \"Claude Code ✦\",\n      \"Kind\": \"agent edit\",\n      \"Change\": \"Tags changed\"\n    }\n  ],\n  \"errors\": [\n    {\n      \"Time\": \"2026-10-27T15:01:00.000Z\",\n      \"Message\": \"IOException: timeout\",\n      \"Stack\": \"at a.b.C.d(C.kt:10)\\nat x\"\n    }\n  ]\n}\n```\n\n</details>"
+    },
+    {
+      "name": "no groups",
+      "context": {
+        "groups": []
+      },
+      "markdown": ""
+    },
+    {
+      "name": "empty tables and awkward cells",
+      "context": {
+        "groups": [
+          {
+            "id": "note",
+            "columns": ["Field", "Value"],
+            "rows": [
+              ["Title", "  spaced\tout\n\nlines  "],
+              ["Path", "back\\slash"],
+              ["Code", "a ```` b"],
+              ["Empty", ""],
+              ["References", "#100, #home, @ryan, GH-7, a@b.c"]
+            ]
+          },
+          {
+            "id": "edits",
+            "columns": ["Time", "Actor", "Kind", "Change"],
+            "rows": []
+          },
+          {
+            "id": "errors",
+            "columns": ["Time", "Message", "Stack"],
+            "rows": []
+          }
+        ]
+      },
+      "markdown": "<details><summary>Captured context</summary>\n\n#### This note\n\n| Field | Value |\n| --- | --- |\n| Title | spaced out lines |\n| Path | back\\\\slash |\n| Code | a ```` b |\n| Empty | — |\n| References | #‍100, #home, @‍ryan, GH‍-7, a@‍b.c |\n\n#### Recent edits to this note\n\n_None_\n\n#### Recent errors\n\n_None_\n\n`````json\n{\n  \"note\": {\n    \"Title\": \"  spaced\\tout\\n\\nlines  \",\n    \"Path\": \"back\\\\slash\",\n    \"Code\": \"a ```` b\",\n    \"Empty\": \"\",\n    \"References\": \"#100, #home, @ryan, GH-7, a@b.c\"\n  },\n  \"edits\": [],\n  \"errors\": []\n}\n`````\n\n</details>"
+    }
+  ],
+  "bodies": [
+    {
+      "name": "a bug with screenshots",
+      "input": {
+        "description": "It **broke**:\n\n- one\n- two\n\n1. first\n2. second\n",
+        "screenshots": [
+          {
+            "name": "screenshot-1.png",
+            "url": "https://github.com/user-attachments/assets/aaaa"
+          },
+          {
+            "name": "screenshot-2.jpg",
+            "url": "https://github.com/user-attachments/assets/bbbb"
+          }
+        ],
+        "context": {
+          "groups": [
+            {
+              "id": "app",
+              "columns": ["Field", "Value"],
+              "rows": [
+                ["Client", "Android"],
+                ["Version", "0.31 (build 431425)"],
+                ["OS", "Android 16 (API 36)"],
+                ["WebView", "142.0.7444.0"],
+                ["Window", "main"],
+                ["Screen", "412×915 dp at 2.625×"],
+                ["Theme", "Moss (dark)"],
+                ["Appearance", "system"],
+                ["Locale", "en-US"],
+                ["Time zone", "America/Chicago"]
+              ]
+            },
+            {
+              "id": "where",
+              "columns": ["Field", "Value"],
+              "rows": [
+                ["Route", "/notes/01JBXYZ0000000000000000000"],
+                ["Screen", "note"],
+                ["Open panel", "Info"],
+                ["Sidebar", "drawer closed"],
+                ["Selected folder", "Projects / Penmoss"]
+              ]
+            },
+            {
+              "id": "sync",
+              "columns": ["Field", "Value"],
+              "rows": [
+                ["Online", "yes"],
+                ["Sync", "synced"],
+                ["Note socket", "synced"],
+                ["Last synced", "2026-10-27T15:04:05.000Z"],
+                ["Unsynced notes", "0"],
+                ["Outbox", "1"],
+                ["Last sync error", "none"]
+              ]
+            },
+            {
+              "id": "note",
+              "columns": ["Field", "Value"],
+              "rows": [
+                ["Id", "01JBXYZ0000000000000000000"],
+                ["Title", "Shopping | list <b>"],
+                ["Folder", "Projects / Penmoss"],
+                ["Tags", "#home, #todo"],
+                ["Words", "120"],
+                ["Unsynced", "no"]
+              ]
+            },
+            {
+              "id": "edits",
+              "columns": ["Time", "Actor", "Kind", "Change"],
+              "rows": [
+                ["2026-10-27T15:00:00.000Z", "Pixel 9", "typed", "+3 −1 lines"],
+                ["2026-10-27T14:00:00.000Z", "Claude Code ✦", "agent edit", "Tags changed"]
+              ]
+            },
+            {
+              "id": "errors",
+              "columns": ["Time", "Message", "Stack"],
+              "rows": [
+                ["2026-10-27T15:01:00.000Z", "IOException: timeout", "at a.b.C.d(C.kt:10)\nat x"]
+              ]
+            }
+          ]
+        },
+        "client": "android",
+        "version": "0.31 (build 431425)",
+        "submissionId": "01JBXYZ0000000000000000001"
+      },
+      "body": "It **broke**:\n\n- one\n- two\n\n1. first\n2. second\n\n![screenshot-1.png](https://github.com/user-attachments/assets/aaaa)\n\n![screenshot-2.jpg](https://github.com/user-attachments/assets/bbbb)\n\n<details><summary>Captured context</summary>\n\n#### App\n\n| Field | Value |\n| --- | --- |\n| Client | Android |\n| Version | 0.31 (build 431425) |\n| OS | Android 16 (API 36) |\n| WebView | 142.0.7444.0 |\n| Window | main |\n| Screen | 412×915 dp at 2.625× |\n| Theme | Moss (dark) |\n| Appearance | system |\n| Locale | en-US |\n| Time zone | America/Chicago |\n\n#### Where you are\n\n| Field | Value |\n| --- | --- |\n| Route | /notes/01JBXYZ0000000000000000000 |\n| Screen | note |\n| Open panel | Info |\n| Sidebar | drawer closed |\n| Selected folder | Projects / Penmoss |\n\n#### Sync\n\n| Field | Value |\n| --- | --- |\n| Online | yes |\n| Sync | synced |\n| Note socket | synced |\n| Last synced | 2026-10-27T15:04:05.000Z |\n| Unsynced notes | 0 |\n| Outbox | 1 |\n| Last sync error | none |\n\n#### This note\n\n| Field | Value |\n| --- | --- |\n| Id | 01JBXYZ0000000000000000000 |\n| Title | Shopping \\| list &lt;b> |\n| Folder | Projects / Penmoss |\n| Tags | #home, #todo |\n| Words | 120 |\n| Unsynced | no |\n\n#### Recent edits to this note\n\n| Time | Actor | Kind | Change |\n| --- | --- | --- | --- |\n| 2026-10-27T15:00:00.000Z | Pixel 9 | typed | +3 −1 lines |\n| 2026-10-27T14:00:00.000Z | Claude Code ✦ | agent edit | Tags changed |\n\n#### Recent errors\n\n| Time | Message | Stack |\n| --- | --- | --- |\n| 2026-10-27T15:01:00.000Z | IOException: timeout | at a.b.C.d(C.kt:10) at x |\n\n```json\n{\n  \"app\": {\n    \"Client\": \"Android\",\n    \"Version\": \"0.31 (build 431425)\",\n    \"OS\": \"Android 16 (API 36)\",\n    \"WebView\": \"142.0.7444.0\",\n    \"Window\": \"main\",\n    \"Screen\": \"412×915 dp at 2.625×\",\n    \"Theme\": \"Moss (dark)\",\n    \"Appearance\": \"system\",\n    \"Locale\": \"en-US\",\n    \"Time zone\": \"America/Chicago\"\n  },\n  \"where\": {\n    \"Route\": \"/notes/01JBXYZ0000000000000000000\",\n    \"Screen\": \"note\",\n    \"Open panel\": \"Info\",\n    \"Sidebar\": \"drawer closed\",\n    \"Selected folder\": \"Projects / Penmoss\"\n  },\n  \"sync\": {\n    \"Online\": \"yes\",\n    \"Sync\": \"synced\",\n    \"Note socket\": \"synced\",\n    \"Last synced\": \"2026-10-27T15:04:05.000Z\",\n    \"Unsynced notes\": \"0\",\n    \"Outbox\": \"1\",\n    \"Last sync error\": \"none\"\n  },\n  \"note\": {\n    \"Id\": \"01JBXYZ0000000000000000000\",\n    \"Title\": \"Shopping | list <b>\",\n    \"Folder\": \"Projects / Penmoss\",\n    \"Tags\": \"#home, #todo\",\n    \"Words\": \"120\",\n    \"Unsynced\": \"no\"\n  },\n  \"edits\": [\n    {\n      \"Time\": \"2026-10-27T15:00:00.000Z\",\n      \"Actor\": \"Pixel 9\",\n      \"Kind\": \"typed\",\n      \"Change\": \"+3 −1 lines\"\n    },\n    {\n      \"Time\": \"2026-10-27T14:00:00.000Z\",\n      \"Actor\": \"Claude Code ✦\",\n      \"Kind\": \"agent edit\",\n      \"Change\": \"Tags changed\"\n    }\n  ],\n  \"errors\": [\n    {\n      \"Time\": \"2026-10-27T15:01:00.000Z\",\n      \"Message\": \"IOException: timeout\",\n      \"Stack\": \"at a.b.C.d(C.kt:10)\\nat x\"\n    }\n  ]\n}\n```\n\n</details>\n\nSent from Penmoss Android 0.31 (build 431425) · submission 01JBXYZ0000000000000000001\n"
+    },
+    {
+      "name": "no description, no context",
+      "input": {
+        "description": "",
+        "screenshots": [],
+        "context": {
+          "groups": []
+        },
+        "client": "web",
+        "version": "production",
+        "submissionId": "01JBXYZ0000000000000000002"
+      },
+      "body": "Sent from Penmoss web production · submission 01JBXYZ0000000000000000002\n"
+    },
+    {
+      "name": "a version that tries to format",
+      "input": {
+        "description": "x",
+        "screenshots": [],
+        "context": {
+          "groups": []
+        },
+        "client": "mac",
+        "version": "1.2 @ryan #5 [link](http://e) <b>\n",
+        "submissionId": "01JBXYZ0000000000000000003"
+      },
+      "body": "x\n\nSent from Penmoss Mac 1.2 ryan 5 link(http:e) b · submission 01JBXYZ0000000000000000003\n"
+    }
+  ],
+  "fieldGroups": [
+    {
+      "name": "a long value",
+      "fields": [
+        [
+          "Tags",
+          "#tag0, #tag1, #tag2, #tag3, #tag4, #tag5, #tag6, #tag7, #tag8, #tag9, #tag10, #tag11, #tag12, #tag13, #tag14, #tag15, #tag16, #tag17, #tag18, #tag19, #tag20, #tag21, #tag22, #tag23, #tag24, #tag25, #tag26, #tag27, #tag28, #tag29, #tag30, #tag31, #tag32, #tag33, #tag34, #tag35, #tag36, #tag37, #tag38, #tag39, #tag40, #tag41, #tag42, #tag43, #tag44, #tag45, #tag46, #tag47, #tag48, #tag49, #tag50, #tag51, #tag52, #tag53, #tag54, #tag55, #tag56, #tag57, #tag58, #tag59"
+        ]
+      ],
+      "rows": [
+        [
+          "Tags",
+          "#tag0, #tag1, #tag2, #tag3, #tag4, #tag5, #tag6, #tag7, #tag8, #tag9, #tag10, #tag11, #tag12, #tag13, #tag14, #tag15, #tag16, #tag17, #tag18, #tag19, #tag20, #tag21, #tag22, #tag23, #tag24, #tag25, #tag26, #tag27, #tag28, #tag29, #tag30, #tag31, #tag32, #tag33, #tag34, #tag35, #tag36, #tag37, #tag38, #tag39, #tag40, #tag41, #tag42, #tag43, #tag44, #tag45, #tag46, #tag47, #tag48, #tag49, #tag50, #…"
+        ]
+      ]
+    },
+    {
+      "name": "many rows",
+      "fields": [
+        ["F0", "0"],
+        ["F1", "1"],
+        ["F2", "2"],
+        ["F3", "3"],
+        ["F4", "4"],
+        ["F5", "5"],
+        ["F6", "6"],
+        ["F7", "7"],
+        ["F8", "8"],
+        ["F9", "9"],
+        ["F10", "10"],
+        ["F11", "11"],
+        ["F12", "12"],
+        ["F13", "13"],
+        ["F14", "14"],
+        ["F15", "15"],
+        ["F16", "16"],
+        ["F17", "17"],
+        ["F18", "18"],
+        ["F19", "19"],
+        ["F20", "20"],
+        ["F21", "21"],
+        ["F22", "22"],
+        ["F23", "23"],
+        ["F24", "24"],
+        ["F25", "25"],
+        ["F26", "26"],
+        ["F27", "27"],
+        ["F28", "28"],
+        ["F29", "29"],
+        ["F30", "30"],
+        ["F31", "31"],
+        ["F32", "32"],
+        ["F33", "33"],
+        ["F34", "34"],
+        ["F35", "35"],
+        ["F36", "36"],
+        ["F37", "37"],
+        ["F38", "38"],
+        ["F39", "39"],
+        ["F40", "40"],
+        ["F41", "41"],
+        ["F42", "42"],
+        ["F43", "43"],
+        ["F44", "44"]
+      ],
+      "rows": [
+        ["F0", "0"],
+        ["F1", "1"],
+        ["F2", "2"],
+        ["F3", "3"],
+        ["F4", "4"],
+        ["F5", "5"],
+        ["F6", "6"],
+        ["F7", "7"],
+        ["F8", "8"],
+        ["F9", "9"],
+        ["F10", "10"],
+        ["F11", "11"],
+        ["F12", "12"],
+        ["F13", "13"],
+        ["F14", "14"],
+        ["F15", "15"],
+        ["F16", "16"],
+        ["F17", "17"],
+        ["F18", "18"],
+        ["F19", "19"],
+        ["F20", "20"],
+        ["F21", "21"],
+        ["F22", "22"],
+        ["F23", "23"],
+        ["F24", "24"],
+        ["F25", "25"],
+        ["F26", "26"],
+        ["F27", "27"],
+        ["F28", "28"],
+        ["F29", "29"],
+        ["F30", "30"],
+        ["F31", "31"],
+        ["F32", "32"],
+        ["F33", "33"],
+        ["F34", "34"],
+        ["F35", "35"],
+        ["F36", "36"],
+        ["F37", "37"],
+        ["F38", "38"],
+        ["F39", "39"]
+      ]
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+// Evidence capture for T43 in the Mac app under xvfb (kept as
+// docs/evidence/t43/capture/mac-evidence.spec.ts.txt; not a suite spec). OUT=dir. The window
+// keeps Linux's frame here (A725); the page is the Mac app's.
+import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { mkdirSync } from 'node:fs';
+import { launch, mainBounds, removeDataDirs, signIn, ULID } from './support';
+
+const OUT = process.env['OUT'] ?? '/tmp/t43-evidence';
+mkdirSync(OUT, { recursive: true });
+const RUN = Date.now().toString(36).slice(-4);
+const mac = process.platform === 'darwin';
+const NEW_NOTE = mac ? 'Meta+Alt+KeyN' : 'Alt+KeyN';
+
+test.afterAll(() => removeDataDirs());
+
+const chooseMenu = (app: ElectronApplication, id: string) =>
+  app.evaluate(({ Menu }, itemId) => {
+    (Menu.getApplicationMenu()?.getMenuItemById(itemId) as unknown as { click(): void }).click();
+  }, id);
+
+async function scheme(app: ElectronApplication, page: Page, value: 'light' | 'dark') {
+  await app.evaluate(({ nativeTheme }, s) => {
+    nativeTheme.themeSource = s;
+  }, value);
+  await page.emulateMedia({ colorScheme: value });
+  await expect(page.locator('html')).toHaveAttribute('data-mode', value);
+  await page.mouse.move(1270, 790);
+}
+
+test('T43 mac evidence', async () => {
+  test.setTimeout(300_000);
+  const launched = await launch();
+  const { app, page } = launched;
+  try {
+    await mainBounds(app, { x: 0, y: 0, width: 1280, height: 800 });
+    await signIn(launched);
+    await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();
+    await chooseMenu(app, 'notebook.new');
+    const input = page.getByRole('textbox', { name: 'New notebook name' });
+    await input.fill(`Work ${RUN}`);
+    await input.press('Enter');
+    await page.keyboard.press(NEW_NOTE);
+    await expect(page).toHaveURL(ULID);
+    await page.keyboard.type(`Roadmap ${RUN}`);
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('What ships this quarter, and why.');
+    await expect(page.getByTestId('note-notebook')).toContainText(`Work ${RUN}`);
+    for (const value of ['light', 'dark'] as const) {
+      await scheme(app, page, value);
+      await page.waitForTimeout(500);
+      await page.screenshot({ path: `${OUT}/mac-${value}-sidebar.png` });
+    }
+    await chooseMenu(app, 'app.gitMirror');
+    await expect(page.getByTestId('git-mirror-settings')).toContainText(`Work ${RUN}`);
+    for (const value of ['light', 'dark'] as const) {
+      await scheme(app, page, value);
+      await page.waitForTimeout(500);
+      await page.screenshot({ path: `${OUT}/mac-${value}-git-mirror.png` });
+    }
+  } finally {
+    await app.close().catch(() => undefined);
+  }
+});

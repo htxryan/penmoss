@@ -1,0 +1,10 @@
+{
+  "sidebarListHeight": 120,
+  "calendarTabStops": 48,
+  "syncPillRole": "status",
+  "calendarFocusAfterTab": "Week 2026-W40",
+  "calendarFocusAfterTwoTabs": "Monday 28 September 2026",
+  "bodyAfterTwoUndosOneRedo": "First words\n\n\n",
+  "focusAfterEscapeInTagField": "BODY",
+  "focusAfterMoveToTrash": "BODY PenmossSyncingNew no"
+}

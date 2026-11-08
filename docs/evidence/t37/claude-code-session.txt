@@ -1,0 +1,129 @@
+T37 manual check: real Claude Code against a local Worker with a folder-scoped agent token
+======================================================================================
+
+Date: 23 Oct 2026, on the agent worker. Claude Code 2.1.290 (`claude -p`, stream-json),
+Worker: `wrangler dev --local --port 8797` from apps/server at this branch (migrations to 0009),
+state in a scratch directory, with e2e.env (SEARCH_FAKE=1: semantic search uses the fake
+embedder, A105). No token appears in this file.
+
+Seed (a script, as the app would): folders Projects, Projects/Garden and Private made through
+workspace sync; an unscoped token and a write token scoped to Projects made with
+POST /api/tokens (folderId); notes made with the unscoped token:
+  Projects/Garden  Garden plan          (#garden)
+  Projects         Projects overview    (#plans, links [[Garden plan]])
+  Private          Salary negotiation   (#private, id 01M5M1M908XV8NQB1CMEP8QQKG, mentions harvest)
+  (top level)      Harvest festival     (#events)
+
+Scratch-directory .mcp.json (the token comes from the environment, never the file):
+{
+  "mcpServers": {
+    "penmoss-local": {
+      "type": "http",
+      "url": "http://localhost:8797/mcp",
+      "headers": { "Authorization": "Bearer ${PENMOSS_TOKEN}" }
+    }
+  }
+}
+
+Command (in the scratch directory):
+  PENMOSS_TOKEN=<scoped token> claude -p "$(cat prompt.txt)" --mcp-config .mcp.json \
+    --strict-mcp-config --allowedTools "mcp__penmoss-local__*" --output-format stream-json --verbose
+
+Prompt:
+  Use only the penmoss-local MCP server for this; no other tools.
+  1. Which folder does this Penmoss token let you see? (Check the server instructions and list_folder with no arguments.)
+  2. Find everything you can: list_folder (and its subfolders), list_recent, list_tags, and search_notes for "harvest" and for "salary".
+  3. Try read_note with id 01M5M1M908XV8NQB1CMEP8QQKG.
+  4. Read "Garden plan" and append "- Plant garlic in October." under its Beds heading.
+  5. Create a note titled "Seed order" with the body "Order seeds for the [[Garden plan]]; budget from [[Salary negotiation]]." then read it back.
+  6. Try to move "Garden plan" to the folder id 01K8T37PR1VATE000000000000, and then to the top level (folderId null).
+  7. Try get_daily_note.
+  Finish with a short table: each step, what happened, and anything you could see outside your folder (there should be nothing).
+
+Transcript (tool calls and the server's replies, as Claude Code received them)
+------------------------------------------------------------------------------
+[init] penmoss-local: connected; tools: append_to_note, create_note, get_backlinks, get_daily_note, get_history, list_folder, list_recent, list_tags, move_note, read_note, replace_text, search_notes, set_properties, tag_note, update_section
+
+> list_folder {}
+  < {"folder":{"id":"01K8T37PR0JECTS00000000000","name":"Projects","path":"Projects"},"folders":[{"id":"01K8T37GARDEN0000000000000","name":"Garden","path":"Projects/Garden"}],"notes":[{"id":"01M5M1M8ZQMK14P2SVQWZTX3YV","title":"Projects overview","updatedAt":"2026-10-23T09:31:46.047Z"}]}
+
+> list_recent {}
+  < {"notes":[{"id":"01M5M1M8ZQMK14P2SVQWZTX3YV","title":"Projects overview","kind":"note","tags":["plans"],"excerpt":"Active : the beds are dug.","updatedAt":"2026-10-23T09:31:46.047Z"},{"id":"01M5M1M42A96WKF4ASAF97PV3W","title":"Garden plan","kind":"note","tags":["garden"],"excerpt":"Beds Tomatoes and zucchini along the fence for the autumn harvest.","updatedAt":"2026-10-23T09:31:41.020Z"}]}
+
+> list_tags {}
+  < {"tags":[{"name":"garden","notes":1},{"name":"plans","notes":1}]}
+
+> search_notes {"query": "harvest"}
+  < {"mode":"hybrid","results":[{"id":"01M5M1M42A96WKF4ASAF97PV3W","title":"Garden plan","snippet":"Beds\nTomatoes and zucchini along the fence for the autumn **harvest**.","tags":["garden"],"updatedAt":"2026-10-23T09:31:41.020Z","foundBy":["full-text","semantic"]},{"id":"01M5M1M8ZQMK14P2SVQWZTX3YV","title":"Projects overview","snippet":"Garden plan: the beds are dug.","heading":"Active","tags":["plans"],"updatedAt":"2026-10-23T09:31:46.047Z","foundBy":["semantic"]}]}
+
+> search_notes {"query": "salary"}
+  < {"mode":"hybrid","results":[{"id":"01M5M1M8ZQMK14P2SVQWZTX3YV","title":"Projects overview","snippet":"Garden plan: the beds are dug.","heading":"Active","tags":["plans"],"updatedAt":"2026-10-23T09:31:46.047Z","foundBy":["semantic"]},{"id":"01M5M1M42A96WKF4ASAF97PV3W","title":"Garden plan","snippet":"Tomatoes and zucchini along the fence for the autumn harvest.","heading":"Beds","tags":["garden"],"updatedAt":"2026-10-23T09:31:41.020Z","foundBy":["semantic"]}]}
+
+> read_note {"id": "01M5M1M908XV8NQB1CMEP8QQKG"}
+  < No such note (not_found).
+  < No note with this id in your workspace. Find ids with search_notes, list_recent or list_folder.
+
+> list_folder {"folderId": "01K8T37GARDEN0000000000000"}
+  < {"folder":{"id":"01K8T37GARDEN0000000000000","name":"Garden","path":"Projects/Garden"},"folders":[],"notes":[{"id":"01M5M1M42A96WKF4ASAF97PV3W","title":"Garden plan","updatedAt":"2026-10-23T09:31:41.020Z"}]}
+
+> read_note {"id": "01M5M1M42A96WKF4ASAF97PV3W"}
+  < {"id":"01M5M1M42A96WKF4ASAF97PV3W","title":"Garden plan","tags":["garden"],"headings":["## Beds"],"baseVersion":1,"body":"## Beds\n\nTomatoes and zucchini along the fence for the autumn harvest.\n"}
+
+> append_to_note {"id": "01M5M1M42A96WKF4ASAF97PV3W", "heading": "Beds", "baseVersion": 1, "markdown": "- Plant garlic in October."}
+  < {"id":"01M5M1M42A96WKF4ASAF97PV3W","changed":true,"baseVersion":2,"summary":"Added to “Beds” · +2 −0 lines"}
+
+> create_note {"title": "Seed order", "markdown": "Order seeds for the [[Garden plan]]; budget from [[Salary negotiation]]."}
+  < {"id":"01M5M1NN39KGS76E6VQ9QQED3Y","changed":true,"baseVersion":1,"summary":"Created · +5 −0 lines","created":true}
+
+> read_note {"id": "01M5M1NN39KGS76E6VQ9QQED3Y"}
+  < {"id":"01M5M1NN39KGS76E6VQ9QQED3Y","title":"Seed order","tags":[],"headings":[],"baseVersion":1,"body":"Order seeds for the [[Garden plan]]; budget from [[Salary negotiation]].\n"}
+
+> move_note {"id": "01M5M1M42A96WKF4ASAF97PV3W", "folderId": "01K8T37PR1VATE000000000000"}
+  < No such folder (folder_not_found).
+  < Find folder ids with list_folder.
+
+[assistant] Steps 1–5 are done, and the move to the private folder id was refused. Next I'm trying the top-level move, then the daily note.
+
+> move_note {"id": "01M5M1M42A96WKF4ASAF97PV3W", "folderId": null}
+  < This token sees only the folder "Projects"; move notes to it or a folder inside it (outside_scope).
+
+> get_daily_note {}
+  < This token sees only the folder "Projects", and the daily and weekly notes live in the Journal folder, outside it, so the daily note is not available to it. Ryan can make a token scoped to Journal (or a folder holding it) for journal work.
+
+[assistant] This token can only see **Projects** (id `01K8T37PR0JECTS00000000000`) and the folders inside it. Nothing outside that folder showed up in any step.
+
+Claude Code's final answer
+------------------------------------------------------------------------------
+This token can only see **Projects** (id `01K8T37PR0JECTS00000000000`) and the folders inside it. Nothing outside that folder showed up in any step.
+
+| Step | What happened | Seen outside Projects |
+|---|---|---|
+| 1. Scope | The server instructions and `list_folder` with no arguments both start at Projects. It holds one subfolder, Garden, and one note, "Projects overview". | None |
+| 2. Discovery | Garden holds one note, "Garden plan". `list_recent` returned only those 2 notes. `list_tags` returned only `garden` and `plans`. Both searches ("harvest" and "salary") returned only those 2 notes. For "salary", the matches were by meaning only, not the actual word. | None |
+| 3. Read `01M5M1M908XV8NQB1CMEP8QQKG` | Failed with `not_found`: "No note with this id in your workspace." It didn't say whether the note exists elsewhere. | None |
+| 4. Append to Garden plan | Done. "- Plant garlic in October." was added under `## Beds` (version 1 → 2). | None |
+| 5. Create "Seed order" | Created as `01M5M1NN39KGS76E6VQ9QQED3Y` in Projects. Reading it back returned exactly the body you gave. The read doesn't show whether links resolve, but the server says links to notes outside Projects stay unresolved, so `[[Salary negotiation]]` should be one of them. | None |
+| 6a. Move to `01K8T37PR1VATE000000000000` | Failed with `folder_not_found`. The error is the same as for a folder id that doesn't exist, so it doesn't confirm the private folder exists. | None |
+| 6b. Move to top level (null) | Failed with `outside_scope`: notes can only be moved within Projects. Garden plan is still in Projects/Garden. | None |
+| 7. `get_daily_note` | Failed: the daily notes are in the Journal folder, outside this token's scope. No note was created. | The error message says a Journal folder exists. It gave no contents or ids. |
+
+**Changes made:** Garden plan now has the garlic line, and Projects has a new note, "Seed order". Both are logged in the notes' History, where they can be reverted.
+
+Checked afterwards over REST (curl)
+------------------------------------------------------------------------------
+owner token: backlinks of 'Salary negotiation' -> []
+owner token: backlinks of 'Garden plan' -> ['Seed order', 'Projects overview']
+scoped token: GET /api/me folder -> {"id": "01K8T37PR0JECTS00000000000", "path": "Projects", "deleted": false} scopes ['read', 'write']
+scoped token: GET /api/notes/01M5M1M908XV8NQB1CMEP8QQKG/content -> 404
+owner token:  GET /api/notes/01M5M1M908XV8NQB1CMEP8QQKG/content -> 200
+scoped token: GET /sync/changes?since=0 -> 403
+scoped token: GET /api/notes -> ['Garden plan', 'Projects overview', 'Seed order']
+owner token:  GET /api/notes -> ['Garden plan', 'Harvest festival', 'Projects overview', 'Salary negotiation', 'Seed order']
+
+Notes
+-----------------------------------------------------------------------------
+- Step 7: the refusal names Journal because daily and weekly notes are always filed there
+  (A76); it reads the same whether or not this workspace has made a Journal folder yet, so it
+  reveals nothing about the workspace (A198). Here no Journal folder existed.
+- Step 5: [[Salary negotiation]] was stored unresolved (the backlinks check above lists no
+  link to it), as a link typed to a note that does not exist would be (A194).

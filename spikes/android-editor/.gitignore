@@ -1,0 +1,11 @@
+# Throwaway spike: never commit build outputs or the copied web bundle.
+web/dist/
+web/node_modules/
+app/build/
+app/src/main/assets/editor/
+.gradle/
+.kotlin/
+build/
+local.properties
+*.apk
+*.aab

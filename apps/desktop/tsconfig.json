@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "lib": ["ES2024", "DOM"],
+    // test/e2e/fake-github.ts runs under Node 24, which needs the .ts extension on imports.
+    "allowImportingTsExtensions": true
+  },
+  "include": ["src", "test", "vitest.config.ts", "playwright.config.ts"]
+}

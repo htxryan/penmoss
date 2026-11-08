@@ -1,0 +1,34 @@
+diff --git a/dist/chunk-G2R53CVZ.js b/dist/chunk-G2R53CVZ.js
+index f0364bc719336a66a05d72ab0290d2bd1907ed40..38cdaa2c96edcc83658168c11ac4d4a9a32b75e5 100644
+--- a/dist/chunk-G2R53CVZ.js
++++ b/dist/chunk-G2R53CVZ.js
+@@ -575,7 +575,8 @@ var hostGitOutput = (args, cwd, options) => Effect_exports.gen(function* () {
+ var hostGit = (args, cwd, options) => hostGitOutput(args, cwd, options).pipe(Effect_exports.map((o) => o.stdout));
+ 
+ // src/WorktreeManager.ts
+-var WORKTREE_TIMEOUT_MS = 3e4;
++// Penmoss factory (F17, #262): 30 s is too short for this repository on a busy Mac (18 s measured).
++var WORKTREE_TIMEOUT_MS = 18e4;
+ var NO_CONFIG_LOCK_FLAGS = [
+   "-c",
+   "branch.autoSetupMerge=false",
+diff --git a/dist/sandboxes/seatbelt.js b/dist/sandboxes/seatbelt.js
+index d1cf27767ecb0bf43e2082578de4a29a46badc9b..a9cf406fa3c3dd1ce1c954e074bb058449d70d0c 100644
+--- a/dist/sandboxes/seatbelt.js
++++ b/dist/sandboxes/seatbelt.js
+@@ -100,6 +100,15 @@ var BASE = String.raw`(version 1)
+ 
+ (allow iokit-open (iokit-registry-entry-class "RootDomainUserClient"))
+ (allow ipc-posix-sem)
++; Penmoss factory (F17, #262): Chromium's Mach rendezvous service (Playwright's headless shell),
++; and the hw.* and machdep.cpu.* sysctls the Android emulator reads before it boots.
++(allow mach-register mach-lookup (global-name-prefix "org.chromium.Chromium.MachPortRendezvousServer"))
++(allow sysctl-read (sysctl-name-prefix "hw.") (sysctl-name-prefix "machdep.cpu."))
++; Node's os.uptime() (libuv's uv_uptime), which the penmoss CLI calls.
++(allow sysctl-read (sysctl-name "kern.boottime"))
++; The sysctl command (git-notebook's lock reads kern.boottime with it) looks names and
++; formats up first: metadata only, as Apple's container profile allows.
++(allow sysctl-read (sysctl-name-prefix "sysctl.name") (sysctl-name-prefix "sysctl.oidfmt."))
+ (allow ipc-posix-shm-read* (ipc-posix-name "apple.shm.notification_center"))
+ (allow system-mac-syscall (mac-policy-name "vnguard"))
+ (allow system-mac-syscall

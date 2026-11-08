@@ -1,0 +1,32 @@
+{
+  "name": "@penmoss/cli",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "penmoss: the command line for Penmoss git notebooks (T26, T50, T59)",
+  "bin": {
+    "penmoss": "./dist/penmoss.js"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node build.js",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@penmoss/core": "workspace:*",
+    "@penmoss/git-notebook": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "esbuild": "0.28.2",
+    "vitest": "5.0.5"
+  }
+}

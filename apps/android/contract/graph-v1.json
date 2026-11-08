@@ -1,0 +1,65 @@
+{
+  "$comment": "Every message of the Android graph page's bridge, version 1 (T40 P7, LK7, LK8; A478). The page is apps/android/editor/graph.html on the same penmossNative listener as the editor page. Checked by apps/android/editor/test/graph.test.ts and the Kotlin GraphProtocolTest; invalidToGraph holds messages the page refuses, invalidFromGraph messages the app refuses. The graph carries titles, top-level folders and links only: no note content.",
+  "depths": [1, 2, 3],
+  "toGraph": [
+    {
+      "v": 1,
+      "type": "graph",
+      "notes": [
+        {
+          "id": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+          "title": "Garden",
+          "group": "01JD2Z7Q8R4T6Y8W0E2R4T6YF1",
+          "links": ["01JD2Z7Q8R4T6Y8W0E2R4T6YB2"]
+        },
+        {
+          "id": "01JD2Z7Q8R4T6Y8W0E2R4T6YB2",
+          "title": "Beds",
+          "group": null,
+          "links": []
+        }
+      ],
+      "groups": [
+        { "id": "01JD2Z7Q8R4T6Y8W0E2R4T6YF1", "name": "Projects" },
+        { "id": null, "name": "Top level" }
+      ]
+    },
+    { "v": 1, "type": "graph", "notes": [], "groups": [{ "id": null, "name": "Top level" }] },
+    { "v": 1, "type": "scope", "scope": { "kind": "global" } },
+    {
+      "v": 1,
+      "type": "scope",
+      "scope": { "kind": "local", "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1", "depth": 2 }
+    },
+    { "v": 1, "type": "focus", "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB2" },
+    { "v": 1, "type": "theme", "theme": { "id": "penmoss" }, "variant": "dark" }
+  ],
+  "fromGraph": [
+    { "v": 1, "type": "ready" },
+    { "v": 1, "type": "shown", "notes": 2, "links": 1 },
+    { "v": 1, "type": "open", "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1" }
+  ],
+  "invalidToGraph": [
+    "not json",
+    "{\"v\":2,\"type\":\"scope\",\"scope\":{\"kind\":\"global\"}}",
+    "{\"v\":1,\"type\":\"scope\",\"scope\":{\"kind\":\"local\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"depth\":4}}",
+    "{\"v\":1,\"type\":\"scope\",\"scope\":{\"kind\":\"local\",\"noteId\":\"a/b\",\"depth\":1}}",
+    "{\"v\":1,\"type\":\"scope\",\"scope\":{\"kind\":\"everything\"}}",
+    "{\"v\":1,\"type\":\"graph\",\"notes\":[{\"id\":\"n1\",\"title\":\"A\",\"group\":null}],\"groups\":[]}",
+    "{\"v\":1,\"type\":\"graph\",\"notes\":[{\"id\":\"n1\",\"title\":\"A\",\"group\":null,\"links\":[\"../x\"]}],\"groups\":[]}",
+    "{\"v\":1,\"type\":\"graph\",\"notes\":[{\"id\":\"n1\",\"title\":7,\"group\":null,\"links\":[]}],\"groups\":[]}",
+    "{\"v\":1,\"type\":\"graph\",\"notes\":[],\"groups\":[{\"id\":\"f1\"}]}",
+    "{\"v\":1,\"type\":\"focus\",\"noteId\":\"<b>\"}",
+    "{\"v\":1,\"type\":\"theme\",\"theme\":{\"id\":\"penmoss\"},\"variant\":\"sepia\"}",
+    "{\"v\":1,\"type\":\"open\",\"noteId\":\"n1\"}"
+  ],
+  "invalidFromGraph": [
+    "not json",
+    "{\"v\":2,\"type\":\"ready\"}",
+    "{\"v\":1,\"type\":\"open\",\"noteId\":\"a b\"}",
+    "{\"v\":1,\"type\":\"open\"}",
+    "{\"v\":1,\"type\":\"shown\",\"notes\":-1,\"links\":0}",
+    "{\"v\":1,\"type\":\"shown\",\"notes\":\"2\",\"links\":0}",
+    "{\"v\":1,\"type\":\"graph\",\"notes\":[],\"groups\":[]}"
+  ]
+}

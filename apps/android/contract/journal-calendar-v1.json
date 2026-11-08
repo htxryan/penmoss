@@ -1,0 +1,1485 @@
+{
+  "version": 1,
+  "months": [
+    {
+      "year": 2026,
+      "month": 10,
+      "weeks": [
+        {
+          "period": "2026-W40",
+          "days": [
+            {
+              "date": "2026-09-28",
+              "longDate": "Monday 28 September 2026"
+            },
+            {
+              "date": "2026-09-29",
+              "longDate": "Tuesday 29 September 2026"
+            },
+            {
+              "date": "2026-09-30",
+              "longDate": "Wednesday 30 September 2026"
+            },
+            {
+              "date": "2026-10-01",
+              "longDate": "Thursday 1 October 2026"
+            },
+            {
+              "date": "2026-10-02",
+              "longDate": "Friday 2 October 2026"
+            },
+            {
+              "date": "2026-10-03",
+              "longDate": "Saturday 3 October 2026"
+            },
+            {
+              "date": "2026-10-04",
+              "longDate": "Sunday 4 October 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W41",
+          "days": [
+            {
+              "date": "2026-10-05",
+              "longDate": "Monday 5 October 2026"
+            },
+            {
+              "date": "2026-10-06",
+              "longDate": "Tuesday 6 October 2026"
+            },
+            {
+              "date": "2026-10-07",
+              "longDate": "Wednesday 7 October 2026"
+            },
+            {
+              "date": "2026-10-08",
+              "longDate": "Thursday 8 October 2026"
+            },
+            {
+              "date": "2026-10-09",
+              "longDate": "Friday 9 October 2026"
+            },
+            {
+              "date": "2026-10-10",
+              "longDate": "Saturday 10 October 2026"
+            },
+            {
+              "date": "2026-10-11",
+              "longDate": "Sunday 11 October 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W42",
+          "days": [
+            {
+              "date": "2026-10-12",
+              "longDate": "Monday 12 October 2026"
+            },
+            {
+              "date": "2026-10-13",
+              "longDate": "Tuesday 13 October 2026"
+            },
+            {
+              "date": "2026-10-14",
+              "longDate": "Wednesday 14 October 2026"
+            },
+            {
+              "date": "2026-10-15",
+              "longDate": "Thursday 15 October 2026"
+            },
+            {
+              "date": "2026-10-16",
+              "longDate": "Friday 16 October 2026"
+            },
+            {
+              "date": "2026-10-17",
+              "longDate": "Saturday 17 October 2026"
+            },
+            {
+              "date": "2026-10-18",
+              "longDate": "Sunday 18 October 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W43",
+          "days": [
+            {
+              "date": "2026-10-19",
+              "longDate": "Monday 19 October 2026"
+            },
+            {
+              "date": "2026-10-20",
+              "longDate": "Tuesday 20 October 2026"
+            },
+            {
+              "date": "2026-10-21",
+              "longDate": "Wednesday 21 October 2026"
+            },
+            {
+              "date": "2026-10-22",
+              "longDate": "Thursday 22 October 2026"
+            },
+            {
+              "date": "2026-10-23",
+              "longDate": "Friday 23 October 2026"
+            },
+            {
+              "date": "2026-10-24",
+              "longDate": "Saturday 24 October 2026"
+            },
+            {
+              "date": "2026-10-25",
+              "longDate": "Sunday 25 October 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W44",
+          "days": [
+            {
+              "date": "2026-10-26",
+              "longDate": "Monday 26 October 2026"
+            },
+            {
+              "date": "2026-10-27",
+              "longDate": "Tuesday 27 October 2026"
+            },
+            {
+              "date": "2026-10-28",
+              "longDate": "Wednesday 28 October 2026"
+            },
+            {
+              "date": "2026-10-29",
+              "longDate": "Thursday 29 October 2026"
+            },
+            {
+              "date": "2026-10-30",
+              "longDate": "Friday 30 October 2026"
+            },
+            {
+              "date": "2026-10-31",
+              "longDate": "Saturday 31 October 2026"
+            },
+            {
+              "date": "2026-11-01",
+              "longDate": "Sunday 1 November 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W45",
+          "days": [
+            {
+              "date": "2026-11-02",
+              "longDate": "Monday 2 November 2026"
+            },
+            {
+              "date": "2026-11-03",
+              "longDate": "Tuesday 3 November 2026"
+            },
+            {
+              "date": "2026-11-04",
+              "longDate": "Wednesday 4 November 2026"
+            },
+            {
+              "date": "2026-11-05",
+              "longDate": "Thursday 5 November 2026"
+            },
+            {
+              "date": "2026-11-06",
+              "longDate": "Friday 6 November 2026"
+            },
+            {
+              "date": "2026-11-07",
+              "longDate": "Saturday 7 November 2026"
+            },
+            {
+              "date": "2026-11-08",
+              "longDate": "Sunday 8 November 2026"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 3,
+      "weeks": [
+        {
+          "period": "2026-W09",
+          "days": [
+            {
+              "date": "2026-02-23",
+              "longDate": "Monday 23 February 2026"
+            },
+            {
+              "date": "2026-02-24",
+              "longDate": "Tuesday 24 February 2026"
+            },
+            {
+              "date": "2026-02-25",
+              "longDate": "Wednesday 25 February 2026"
+            },
+            {
+              "date": "2026-02-26",
+              "longDate": "Thursday 26 February 2026"
+            },
+            {
+              "date": "2026-02-27",
+              "longDate": "Friday 27 February 2026"
+            },
+            {
+              "date": "2026-02-28",
+              "longDate": "Saturday 28 February 2026"
+            },
+            {
+              "date": "2026-03-01",
+              "longDate": "Sunday 1 March 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W10",
+          "days": [
+            {
+              "date": "2026-03-02",
+              "longDate": "Monday 2 March 2026"
+            },
+            {
+              "date": "2026-03-03",
+              "longDate": "Tuesday 3 March 2026"
+            },
+            {
+              "date": "2026-03-04",
+              "longDate": "Wednesday 4 March 2026"
+            },
+            {
+              "date": "2026-03-05",
+              "longDate": "Thursday 5 March 2026"
+            },
+            {
+              "date": "2026-03-06",
+              "longDate": "Friday 6 March 2026"
+            },
+            {
+              "date": "2026-03-07",
+              "longDate": "Saturday 7 March 2026"
+            },
+            {
+              "date": "2026-03-08",
+              "longDate": "Sunday 8 March 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W11",
+          "days": [
+            {
+              "date": "2026-03-09",
+              "longDate": "Monday 9 March 2026"
+            },
+            {
+              "date": "2026-03-10",
+              "longDate": "Tuesday 10 March 2026"
+            },
+            {
+              "date": "2026-03-11",
+              "longDate": "Wednesday 11 March 2026"
+            },
+            {
+              "date": "2026-03-12",
+              "longDate": "Thursday 12 March 2026"
+            },
+            {
+              "date": "2026-03-13",
+              "longDate": "Friday 13 March 2026"
+            },
+            {
+              "date": "2026-03-14",
+              "longDate": "Saturday 14 March 2026"
+            },
+            {
+              "date": "2026-03-15",
+              "longDate": "Sunday 15 March 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W12",
+          "days": [
+            {
+              "date": "2026-03-16",
+              "longDate": "Monday 16 March 2026"
+            },
+            {
+              "date": "2026-03-17",
+              "longDate": "Tuesday 17 March 2026"
+            },
+            {
+              "date": "2026-03-18",
+              "longDate": "Wednesday 18 March 2026"
+            },
+            {
+              "date": "2026-03-19",
+              "longDate": "Thursday 19 March 2026"
+            },
+            {
+              "date": "2026-03-20",
+              "longDate": "Friday 20 March 2026"
+            },
+            {
+              "date": "2026-03-21",
+              "longDate": "Saturday 21 March 2026"
+            },
+            {
+              "date": "2026-03-22",
+              "longDate": "Sunday 22 March 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W13",
+          "days": [
+            {
+              "date": "2026-03-23",
+              "longDate": "Monday 23 March 2026"
+            },
+            {
+              "date": "2026-03-24",
+              "longDate": "Tuesday 24 March 2026"
+            },
+            {
+              "date": "2026-03-25",
+              "longDate": "Wednesday 25 March 2026"
+            },
+            {
+              "date": "2026-03-26",
+              "longDate": "Thursday 26 March 2026"
+            },
+            {
+              "date": "2026-03-27",
+              "longDate": "Friday 27 March 2026"
+            },
+            {
+              "date": "2026-03-28",
+              "longDate": "Saturday 28 March 2026"
+            },
+            {
+              "date": "2026-03-29",
+              "longDate": "Sunday 29 March 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W14",
+          "days": [
+            {
+              "date": "2026-03-30",
+              "longDate": "Monday 30 March 2026"
+            },
+            {
+              "date": "2026-03-31",
+              "longDate": "Tuesday 31 March 2026"
+            },
+            {
+              "date": "2026-04-01",
+              "longDate": "Wednesday 1 April 2026"
+            },
+            {
+              "date": "2026-04-02",
+              "longDate": "Thursday 2 April 2026"
+            },
+            {
+              "date": "2026-04-03",
+              "longDate": "Friday 3 April 2026"
+            },
+            {
+              "date": "2026-04-04",
+              "longDate": "Saturday 4 April 2026"
+            },
+            {
+              "date": "2026-04-05",
+              "longDate": "Sunday 5 April 2026"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 11,
+      "weeks": [
+        {
+          "period": "2026-W44",
+          "days": [
+            {
+              "date": "2026-10-26",
+              "longDate": "Monday 26 October 2026"
+            },
+            {
+              "date": "2026-10-27",
+              "longDate": "Tuesday 27 October 2026"
+            },
+            {
+              "date": "2026-10-28",
+              "longDate": "Wednesday 28 October 2026"
+            },
+            {
+              "date": "2026-10-29",
+              "longDate": "Thursday 29 October 2026"
+            },
+            {
+              "date": "2026-10-30",
+              "longDate": "Friday 30 October 2026"
+            },
+            {
+              "date": "2026-10-31",
+              "longDate": "Saturday 31 October 2026"
+            },
+            {
+              "date": "2026-11-01",
+              "longDate": "Sunday 1 November 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W45",
+          "days": [
+            {
+              "date": "2026-11-02",
+              "longDate": "Monday 2 November 2026"
+            },
+            {
+              "date": "2026-11-03",
+              "longDate": "Tuesday 3 November 2026"
+            },
+            {
+              "date": "2026-11-04",
+              "longDate": "Wednesday 4 November 2026"
+            },
+            {
+              "date": "2026-11-05",
+              "longDate": "Thursday 5 November 2026"
+            },
+            {
+              "date": "2026-11-06",
+              "longDate": "Friday 6 November 2026"
+            },
+            {
+              "date": "2026-11-07",
+              "longDate": "Saturday 7 November 2026"
+            },
+            {
+              "date": "2026-11-08",
+              "longDate": "Sunday 8 November 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W46",
+          "days": [
+            {
+              "date": "2026-11-09",
+              "longDate": "Monday 9 November 2026"
+            },
+            {
+              "date": "2026-11-10",
+              "longDate": "Tuesday 10 November 2026"
+            },
+            {
+              "date": "2026-11-11",
+              "longDate": "Wednesday 11 November 2026"
+            },
+            {
+              "date": "2026-11-12",
+              "longDate": "Thursday 12 November 2026"
+            },
+            {
+              "date": "2026-11-13",
+              "longDate": "Friday 13 November 2026"
+            },
+            {
+              "date": "2026-11-14",
+              "longDate": "Saturday 14 November 2026"
+            },
+            {
+              "date": "2026-11-15",
+              "longDate": "Sunday 15 November 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W47",
+          "days": [
+            {
+              "date": "2026-11-16",
+              "longDate": "Monday 16 November 2026"
+            },
+            {
+              "date": "2026-11-17",
+              "longDate": "Tuesday 17 November 2026"
+            },
+            {
+              "date": "2026-11-18",
+              "longDate": "Wednesday 18 November 2026"
+            },
+            {
+              "date": "2026-11-19",
+              "longDate": "Thursday 19 November 2026"
+            },
+            {
+              "date": "2026-11-20",
+              "longDate": "Friday 20 November 2026"
+            },
+            {
+              "date": "2026-11-21",
+              "longDate": "Saturday 21 November 2026"
+            },
+            {
+              "date": "2026-11-22",
+              "longDate": "Sunday 22 November 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W48",
+          "days": [
+            {
+              "date": "2026-11-23",
+              "longDate": "Monday 23 November 2026"
+            },
+            {
+              "date": "2026-11-24",
+              "longDate": "Tuesday 24 November 2026"
+            },
+            {
+              "date": "2026-11-25",
+              "longDate": "Wednesday 25 November 2026"
+            },
+            {
+              "date": "2026-11-26",
+              "longDate": "Thursday 26 November 2026"
+            },
+            {
+              "date": "2026-11-27",
+              "longDate": "Friday 27 November 2026"
+            },
+            {
+              "date": "2026-11-28",
+              "longDate": "Saturday 28 November 2026"
+            },
+            {
+              "date": "2026-11-29",
+              "longDate": "Sunday 29 November 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W49",
+          "days": [
+            {
+              "date": "2026-11-30",
+              "longDate": "Monday 30 November 2026"
+            },
+            {
+              "date": "2026-12-01",
+              "longDate": "Tuesday 1 December 2026"
+            },
+            {
+              "date": "2026-12-02",
+              "longDate": "Wednesday 2 December 2026"
+            },
+            {
+              "date": "2026-12-03",
+              "longDate": "Thursday 3 December 2026"
+            },
+            {
+              "date": "2026-12-04",
+              "longDate": "Friday 4 December 2026"
+            },
+            {
+              "date": "2026-12-05",
+              "longDate": "Saturday 5 December 2026"
+            },
+            {
+              "date": "2026-12-06",
+              "longDate": "Sunday 6 December 2026"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "year": 2021,
+      "month": 1,
+      "weeks": [
+        {
+          "period": "2020-W53",
+          "days": [
+            {
+              "date": "2020-12-28",
+              "longDate": "Monday 28 December 2020"
+            },
+            {
+              "date": "2020-12-29",
+              "longDate": "Tuesday 29 December 2020"
+            },
+            {
+              "date": "2020-12-30",
+              "longDate": "Wednesday 30 December 2020"
+            },
+            {
+              "date": "2020-12-31",
+              "longDate": "Thursday 31 December 2020"
+            },
+            {
+              "date": "2021-01-01",
+              "longDate": "Friday 1 January 2021"
+            },
+            {
+              "date": "2021-01-02",
+              "longDate": "Saturday 2 January 2021"
+            },
+            {
+              "date": "2021-01-03",
+              "longDate": "Sunday 3 January 2021"
+            }
+          ]
+        },
+        {
+          "period": "2021-W01",
+          "days": [
+            {
+              "date": "2021-01-04",
+              "longDate": "Monday 4 January 2021"
+            },
+            {
+              "date": "2021-01-05",
+              "longDate": "Tuesday 5 January 2021"
+            },
+            {
+              "date": "2021-01-06",
+              "longDate": "Wednesday 6 January 2021"
+            },
+            {
+              "date": "2021-01-07",
+              "longDate": "Thursday 7 January 2021"
+            },
+            {
+              "date": "2021-01-08",
+              "longDate": "Friday 8 January 2021"
+            },
+            {
+              "date": "2021-01-09",
+              "longDate": "Saturday 9 January 2021"
+            },
+            {
+              "date": "2021-01-10",
+              "longDate": "Sunday 10 January 2021"
+            }
+          ]
+        },
+        {
+          "period": "2021-W02",
+          "days": [
+            {
+              "date": "2021-01-11",
+              "longDate": "Monday 11 January 2021"
+            },
+            {
+              "date": "2021-01-12",
+              "longDate": "Tuesday 12 January 2021"
+            },
+            {
+              "date": "2021-01-13",
+              "longDate": "Wednesday 13 January 2021"
+            },
+            {
+              "date": "2021-01-14",
+              "longDate": "Thursday 14 January 2021"
+            },
+            {
+              "date": "2021-01-15",
+              "longDate": "Friday 15 January 2021"
+            },
+            {
+              "date": "2021-01-16",
+              "longDate": "Saturday 16 January 2021"
+            },
+            {
+              "date": "2021-01-17",
+              "longDate": "Sunday 17 January 2021"
+            }
+          ]
+        },
+        {
+          "period": "2021-W03",
+          "days": [
+            {
+              "date": "2021-01-18",
+              "longDate": "Monday 18 January 2021"
+            },
+            {
+              "date": "2021-01-19",
+              "longDate": "Tuesday 19 January 2021"
+            },
+            {
+              "date": "2021-01-20",
+              "longDate": "Wednesday 20 January 2021"
+            },
+            {
+              "date": "2021-01-21",
+              "longDate": "Thursday 21 January 2021"
+            },
+            {
+              "date": "2021-01-22",
+              "longDate": "Friday 22 January 2021"
+            },
+            {
+              "date": "2021-01-23",
+              "longDate": "Saturday 23 January 2021"
+            },
+            {
+              "date": "2021-01-24",
+              "longDate": "Sunday 24 January 2021"
+            }
+          ]
+        },
+        {
+          "period": "2021-W04",
+          "days": [
+            {
+              "date": "2021-01-25",
+              "longDate": "Monday 25 January 2021"
+            },
+            {
+              "date": "2021-01-26",
+              "longDate": "Tuesday 26 January 2021"
+            },
+            {
+              "date": "2021-01-27",
+              "longDate": "Wednesday 27 January 2021"
+            },
+            {
+              "date": "2021-01-28",
+              "longDate": "Thursday 28 January 2021"
+            },
+            {
+              "date": "2021-01-29",
+              "longDate": "Friday 29 January 2021"
+            },
+            {
+              "date": "2021-01-30",
+              "longDate": "Saturday 30 January 2021"
+            },
+            {
+              "date": "2021-01-31",
+              "longDate": "Sunday 31 January 2021"
+            }
+          ]
+        },
+        {
+          "period": "2021-W05",
+          "days": [
+            {
+              "date": "2021-02-01",
+              "longDate": "Monday 1 February 2021"
+            },
+            {
+              "date": "2021-02-02",
+              "longDate": "Tuesday 2 February 2021"
+            },
+            {
+              "date": "2021-02-03",
+              "longDate": "Wednesday 3 February 2021"
+            },
+            {
+              "date": "2021-02-04",
+              "longDate": "Thursday 4 February 2021"
+            },
+            {
+              "date": "2021-02-05",
+              "longDate": "Friday 5 February 2021"
+            },
+            {
+              "date": "2021-02-06",
+              "longDate": "Saturday 6 February 2021"
+            },
+            {
+              "date": "2021-02-07",
+              "longDate": "Sunday 7 February 2021"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "year": 2026,
+      "month": 12,
+      "weeks": [
+        {
+          "period": "2026-W49",
+          "days": [
+            {
+              "date": "2026-11-30",
+              "longDate": "Monday 30 November 2026"
+            },
+            {
+              "date": "2026-12-01",
+              "longDate": "Tuesday 1 December 2026"
+            },
+            {
+              "date": "2026-12-02",
+              "longDate": "Wednesday 2 December 2026"
+            },
+            {
+              "date": "2026-12-03",
+              "longDate": "Thursday 3 December 2026"
+            },
+            {
+              "date": "2026-12-04",
+              "longDate": "Friday 4 December 2026"
+            },
+            {
+              "date": "2026-12-05",
+              "longDate": "Saturday 5 December 2026"
+            },
+            {
+              "date": "2026-12-06",
+              "longDate": "Sunday 6 December 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W50",
+          "days": [
+            {
+              "date": "2026-12-07",
+              "longDate": "Monday 7 December 2026"
+            },
+            {
+              "date": "2026-12-08",
+              "longDate": "Tuesday 8 December 2026"
+            },
+            {
+              "date": "2026-12-09",
+              "longDate": "Wednesday 9 December 2026"
+            },
+            {
+              "date": "2026-12-10",
+              "longDate": "Thursday 10 December 2026"
+            },
+            {
+              "date": "2026-12-11",
+              "longDate": "Friday 11 December 2026"
+            },
+            {
+              "date": "2026-12-12",
+              "longDate": "Saturday 12 December 2026"
+            },
+            {
+              "date": "2026-12-13",
+              "longDate": "Sunday 13 December 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W51",
+          "days": [
+            {
+              "date": "2026-12-14",
+              "longDate": "Monday 14 December 2026"
+            },
+            {
+              "date": "2026-12-15",
+              "longDate": "Tuesday 15 December 2026"
+            },
+            {
+              "date": "2026-12-16",
+              "longDate": "Wednesday 16 December 2026"
+            },
+            {
+              "date": "2026-12-17",
+              "longDate": "Thursday 17 December 2026"
+            },
+            {
+              "date": "2026-12-18",
+              "longDate": "Friday 18 December 2026"
+            },
+            {
+              "date": "2026-12-19",
+              "longDate": "Saturday 19 December 2026"
+            },
+            {
+              "date": "2026-12-20",
+              "longDate": "Sunday 20 December 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W52",
+          "days": [
+            {
+              "date": "2026-12-21",
+              "longDate": "Monday 21 December 2026"
+            },
+            {
+              "date": "2026-12-22",
+              "longDate": "Tuesday 22 December 2026"
+            },
+            {
+              "date": "2026-12-23",
+              "longDate": "Wednesday 23 December 2026"
+            },
+            {
+              "date": "2026-12-24",
+              "longDate": "Thursday 24 December 2026"
+            },
+            {
+              "date": "2026-12-25",
+              "longDate": "Friday 25 December 2026"
+            },
+            {
+              "date": "2026-12-26",
+              "longDate": "Saturday 26 December 2026"
+            },
+            {
+              "date": "2026-12-27",
+              "longDate": "Sunday 27 December 2026"
+            }
+          ]
+        },
+        {
+          "period": "2026-W53",
+          "days": [
+            {
+              "date": "2026-12-28",
+              "longDate": "Monday 28 December 2026"
+            },
+            {
+              "date": "2026-12-29",
+              "longDate": "Tuesday 29 December 2026"
+            },
+            {
+              "date": "2026-12-30",
+              "longDate": "Wednesday 30 December 2026"
+            },
+            {
+              "date": "2026-12-31",
+              "longDate": "Thursday 31 December 2026"
+            },
+            {
+              "date": "2027-01-01",
+              "longDate": "Friday 1 January 2027"
+            },
+            {
+              "date": "2027-01-02",
+              "longDate": "Saturday 2 January 2027"
+            },
+            {
+              "date": "2027-01-03",
+              "longDate": "Sunday 3 January 2027"
+            }
+          ]
+        },
+        {
+          "period": "2027-W01",
+          "days": [
+            {
+              "date": "2027-01-04",
+              "longDate": "Monday 4 January 2027"
+            },
+            {
+              "date": "2027-01-05",
+              "longDate": "Tuesday 5 January 2027"
+            },
+            {
+              "date": "2027-01-06",
+              "longDate": "Wednesday 6 January 2027"
+            },
+            {
+              "date": "2027-01-07",
+              "longDate": "Thursday 7 January 2027"
+            },
+            {
+              "date": "2027-01-08",
+              "longDate": "Friday 8 January 2027"
+            },
+            {
+              "date": "2027-01-09",
+              "longDate": "Saturday 9 January 2027"
+            },
+            {
+              "date": "2027-01-10",
+              "longDate": "Sunday 10 January 2027"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "year": 2027,
+      "month": 1,
+      "weeks": [
+        {
+          "period": "2026-W53",
+          "days": [
+            {
+              "date": "2026-12-28",
+              "longDate": "Monday 28 December 2026"
+            },
+            {
+              "date": "2026-12-29",
+              "longDate": "Tuesday 29 December 2026"
+            },
+            {
+              "date": "2026-12-30",
+              "longDate": "Wednesday 30 December 2026"
+            },
+            {
+              "date": "2026-12-31",
+              "longDate": "Thursday 31 December 2026"
+            },
+            {
+              "date": "2027-01-01",
+              "longDate": "Friday 1 January 2027"
+            },
+            {
+              "date": "2027-01-02",
+              "longDate": "Saturday 2 January 2027"
+            },
+            {
+              "date": "2027-01-03",
+              "longDate": "Sunday 3 January 2027"
+            }
+          ]
+        },
+        {
+          "period": "2027-W01",
+          "days": [
+            {
+              "date": "2027-01-04",
+              "longDate": "Monday 4 January 2027"
+            },
+            {
+              "date": "2027-01-05",
+              "longDate": "Tuesday 5 January 2027"
+            },
+            {
+              "date": "2027-01-06",
+              "longDate": "Wednesday 6 January 2027"
+            },
+            {
+              "date": "2027-01-07",
+              "longDate": "Thursday 7 January 2027"
+            },
+            {
+              "date": "2027-01-08",
+              "longDate": "Friday 8 January 2027"
+            },
+            {
+              "date": "2027-01-09",
+              "longDate": "Saturday 9 January 2027"
+            },
+            {
+              "date": "2027-01-10",
+              "longDate": "Sunday 10 January 2027"
+            }
+          ]
+        },
+        {
+          "period": "2027-W02",
+          "days": [
+            {
+              "date": "2027-01-11",
+              "longDate": "Monday 11 January 2027"
+            },
+            {
+              "date": "2027-01-12",
+              "longDate": "Tuesday 12 January 2027"
+            },
+            {
+              "date": "2027-01-13",
+              "longDate": "Wednesday 13 January 2027"
+            },
+            {
+              "date": "2027-01-14",
+              "longDate": "Thursday 14 January 2027"
+            },
+            {
+              "date": "2027-01-15",
+              "longDate": "Friday 15 January 2027"
+            },
+            {
+              "date": "2027-01-16",
+              "longDate": "Saturday 16 January 2027"
+            },
+            {
+              "date": "2027-01-17",
+              "longDate": "Sunday 17 January 2027"
+            }
+          ]
+        },
+        {
+          "period": "2027-W03",
+          "days": [
+            {
+              "date": "2027-01-18",
+              "longDate": "Monday 18 January 2027"
+            },
+            {
+              "date": "2027-01-19",
+              "longDate": "Tuesday 19 January 2027"
+            },
+            {
+              "date": "2027-01-20",
+              "longDate": "Wednesday 20 January 2027"
+            },
+            {
+              "date": "2027-01-21",
+              "longDate": "Thursday 21 January 2027"
+            },
+            {
+              "date": "2027-01-22",
+              "longDate": "Friday 22 January 2027"
+            },
+            {
+              "date": "2027-01-23",
+              "longDate": "Saturday 23 January 2027"
+            },
+            {
+              "date": "2027-01-24",
+              "longDate": "Sunday 24 January 2027"
+            }
+          ]
+        },
+        {
+          "period": "2027-W04",
+          "days": [
+            {
+              "date": "2027-01-25",
+              "longDate": "Monday 25 January 2027"
+            },
+            {
+              "date": "2027-01-26",
+              "longDate": "Tuesday 26 January 2027"
+            },
+            {
+              "date": "2027-01-27",
+              "longDate": "Wednesday 27 January 2027"
+            },
+            {
+              "date": "2027-01-28",
+              "longDate": "Thursday 28 January 2027"
+            },
+            {
+              "date": "2027-01-29",
+              "longDate": "Friday 29 January 2027"
+            },
+            {
+              "date": "2027-01-30",
+              "longDate": "Saturday 30 January 2027"
+            },
+            {
+              "date": "2027-01-31",
+              "longDate": "Sunday 31 January 2027"
+            }
+          ]
+        },
+        {
+          "period": "2027-W05",
+          "days": [
+            {
+              "date": "2027-02-01",
+              "longDate": "Monday 1 February 2027"
+            },
+            {
+              "date": "2027-02-02",
+              "longDate": "Tuesday 2 February 2027"
+            },
+            {
+              "date": "2027-02-03",
+              "longDate": "Wednesday 3 February 2027"
+            },
+            {
+              "date": "2027-02-04",
+              "longDate": "Thursday 4 February 2027"
+            },
+            {
+              "date": "2027-02-05",
+              "longDate": "Friday 5 February 2027"
+            },
+            {
+              "date": "2027-02-06",
+              "longDate": "Saturday 6 February 2027"
+            },
+            {
+              "date": "2027-02-07",
+              "longDate": "Sunday 7 February 2027"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "year": 2024,
+      "month": 12,
+      "weeks": [
+        {
+          "period": "2024-W48",
+          "days": [
+            {
+              "date": "2024-11-25",
+              "longDate": "Monday 25 November 2024"
+            },
+            {
+              "date": "2024-11-26",
+              "longDate": "Tuesday 26 November 2024"
+            },
+            {
+              "date": "2024-11-27",
+              "longDate": "Wednesday 27 November 2024"
+            },
+            {
+              "date": "2024-11-28",
+              "longDate": "Thursday 28 November 2024"
+            },
+            {
+              "date": "2024-11-29",
+              "longDate": "Friday 29 November 2024"
+            },
+            {
+              "date": "2024-11-30",
+              "longDate": "Saturday 30 November 2024"
+            },
+            {
+              "date": "2024-12-01",
+              "longDate": "Sunday 1 December 2024"
+            }
+          ]
+        },
+        {
+          "period": "2024-W49",
+          "days": [
+            {
+              "date": "2024-12-02",
+              "longDate": "Monday 2 December 2024"
+            },
+            {
+              "date": "2024-12-03",
+              "longDate": "Tuesday 3 December 2024"
+            },
+            {
+              "date": "2024-12-04",
+              "longDate": "Wednesday 4 December 2024"
+            },
+            {
+              "date": "2024-12-05",
+              "longDate": "Thursday 5 December 2024"
+            },
+            {
+              "date": "2024-12-06",
+              "longDate": "Friday 6 December 2024"
+            },
+            {
+              "date": "2024-12-07",
+              "longDate": "Saturday 7 December 2024"
+            },
+            {
+              "date": "2024-12-08",
+              "longDate": "Sunday 8 December 2024"
+            }
+          ]
+        },
+        {
+          "period": "2024-W50",
+          "days": [
+            {
+              "date": "2024-12-09",
+              "longDate": "Monday 9 December 2024"
+            },
+            {
+              "date": "2024-12-10",
+              "longDate": "Tuesday 10 December 2024"
+            },
+            {
+              "date": "2024-12-11",
+              "longDate": "Wednesday 11 December 2024"
+            },
+            {
+              "date": "2024-12-12",
+              "longDate": "Thursday 12 December 2024"
+            },
+            {
+              "date": "2024-12-13",
+              "longDate": "Friday 13 December 2024"
+            },
+            {
+              "date": "2024-12-14",
+              "longDate": "Saturday 14 December 2024"
+            },
+            {
+              "date": "2024-12-15",
+              "longDate": "Sunday 15 December 2024"
+            }
+          ]
+        },
+        {
+          "period": "2024-W51",
+          "days": [
+            {
+              "date": "2024-12-16",
+              "longDate": "Monday 16 December 2024"
+            },
+            {
+              "date": "2024-12-17",
+              "longDate": "Tuesday 17 December 2024"
+            },
+            {
+              "date": "2024-12-18",
+              "longDate": "Wednesday 18 December 2024"
+            },
+            {
+              "date": "2024-12-19",
+              "longDate": "Thursday 19 December 2024"
+            },
+            {
+              "date": "2024-12-20",
+              "longDate": "Friday 20 December 2024"
+            },
+            {
+              "date": "2024-12-21",
+              "longDate": "Saturday 21 December 2024"
+            },
+            {
+              "date": "2024-12-22",
+              "longDate": "Sunday 22 December 2024"
+            }
+          ]
+        },
+        {
+          "period": "2024-W52",
+          "days": [
+            {
+              "date": "2024-12-23",
+              "longDate": "Monday 23 December 2024"
+            },
+            {
+              "date": "2024-12-24",
+              "longDate": "Tuesday 24 December 2024"
+            },
+            {
+              "date": "2024-12-25",
+              "longDate": "Wednesday 25 December 2024"
+            },
+            {
+              "date": "2024-12-26",
+              "longDate": "Thursday 26 December 2024"
+            },
+            {
+              "date": "2024-12-27",
+              "longDate": "Friday 27 December 2024"
+            },
+            {
+              "date": "2024-12-28",
+              "longDate": "Saturday 28 December 2024"
+            },
+            {
+              "date": "2024-12-29",
+              "longDate": "Sunday 29 December 2024"
+            }
+          ]
+        },
+        {
+          "period": "2025-W01",
+          "days": [
+            {
+              "date": "2024-12-30",
+              "longDate": "Monday 30 December 2024"
+            },
+            {
+              "date": "2024-12-31",
+              "longDate": "Tuesday 31 December 2024"
+            },
+            {
+              "date": "2025-01-01",
+              "longDate": "Wednesday 1 January 2025"
+            },
+            {
+              "date": "2025-01-02",
+              "longDate": "Thursday 2 January 2025"
+            },
+            {
+              "date": "2025-01-03",
+              "longDate": "Friday 3 January 2025"
+            },
+            {
+              "date": "2025-01-04",
+              "longDate": "Saturday 4 January 2025"
+            },
+            {
+              "date": "2025-01-05",
+              "longDate": "Sunday 5 January 2025"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "today": [
+    {
+      "zone": "America/Chicago",
+      "at": "2026-03-08T05:59:00Z",
+      "date": "2026-03-07"
+    },
+    {
+      "zone": "America/Chicago",
+      "at": "2026-03-08T06:00:00Z",
+      "date": "2026-03-08"
+    },
+    {
+      "zone": "America/Chicago",
+      "at": "2026-03-09T04:59:00Z",
+      "date": "2026-03-08"
+    },
+    {
+      "zone": "America/Chicago",
+      "at": "2026-03-09T05:00:00Z",
+      "date": "2026-03-09"
+    },
+    {
+      "zone": "America/Chicago",
+      "at": "2026-11-01T04:59:00Z",
+      "date": "2026-10-31"
+    },
+    {
+      "zone": "America/Chicago",
+      "at": "2026-11-01T05:00:00Z",
+      "date": "2026-11-01"
+    },
+    {
+      "zone": "America/Chicago",
+      "at": "2026-11-02T05:59:00Z",
+      "date": "2026-11-01"
+    },
+    {
+      "zone": "America/Chicago",
+      "at": "2026-11-02T06:00:00Z",
+      "date": "2026-11-02"
+    },
+    {
+      "zone": "Asia/Tokyo",
+      "at": "2026-10-21T14:59:00Z",
+      "date": "2026-10-21"
+    },
+    {
+      "zone": "Asia/Tokyo",
+      "at": "2026-10-21T15:00:00Z",
+      "date": "2026-10-22"
+    }
+  ]
+}

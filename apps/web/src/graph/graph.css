@@ -1,0 +1,188 @@
+/*
+ * The graph page (T17). Loaded with the page; the canvas reads the --pm-graph-* tokens.
+ * The group and focus colours (`--pm-graph-1`…`-8`, `-focus`, `-ungrouped`) come from the
+ * theme (T28); the rest are derived here.
+ */
+:root {
+  --pm-graph-bg: var(--pm-bg);
+  --pm-graph-edge: color-mix(in oklab, var(--pm-fg) 22%, var(--pm-bg));
+  --pm-graph-edge-highlight: var(--pm-accent);
+  --pm-graph-label: var(--pm-fg);
+  --pm-graph-label-halo: var(--pm-bg);
+  --pm-graph-tag: var(--pm-muted);
+}
+
+:root[data-mode='dark'] {
+  --pm-graph-edge: color-mix(in oklab, var(--pm-fg) 20%, var(--pm-bg));
+}
+
+.graph-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 24rem;
+}
+
+.graph-loading {
+  margin: 18vh auto 0;
+  color: var(--pm-muted);
+  text-align: center;
+}
+
+.pm-graph {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.pm-graph-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--pm-border);
+  font-size: 0.82rem;
+  color: var(--pm-muted);
+}
+
+.pm-graph-scope {
+  display: inline-flex;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.pm-graph-scope button {
+  height: 1.8rem;
+  padding: 0 0.7rem;
+  border: 0;
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.pm-graph-scope button + button {
+  border-left: 1px solid var(--pm-border);
+}
+
+.pm-graph-scope button[aria-pressed='true'] {
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
+}
+
+.pm-graph-scope button:disabled {
+  color: var(--pm-muted);
+  cursor: not-allowed;
+}
+
+.pm-graph-field,
+.pm-graph-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* The shared small select (T51 item 13, A941), its look in styles.css. */
+.pm-graph-field .pm-select {
+  max-width: 12rem;
+}
+
+.pm-graph-check input {
+  accent-color: var(--pm-accent);
+}
+
+.pm-graph-count {
+  margin: 0 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-graph-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+  margin: 0;
+  padding: 0.45rem 1rem;
+  border-bottom: 1px solid var(--pm-border);
+  list-style: none;
+  font-size: 0.78rem;
+  color: var(--pm-muted);
+}
+
+.pm-graph-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pm-graph-swatch {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--pm-graph-ungrouped);
+}
+
+.pm-graph-swatch[data-group='0'] {
+  background: var(--pm-graph-1);
+}
+.pm-graph-swatch[data-group='1'] {
+  background: var(--pm-graph-2);
+}
+.pm-graph-swatch[data-group='2'] {
+  background: var(--pm-graph-3);
+}
+.pm-graph-swatch[data-group='3'] {
+  background: var(--pm-graph-4);
+}
+.pm-graph-swatch[data-group='4'] {
+  background: var(--pm-graph-5);
+}
+.pm-graph-swatch[data-group='5'] {
+  background: var(--pm-graph-6);
+}
+.pm-graph-swatch[data-group='6'] {
+  background: var(--pm-graph-7);
+}
+.pm-graph-swatch[data-group='7'] {
+  background: var(--pm-graph-8);
+}
+
+.pm-graph-canvas {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pm-graph-canvas canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+
+.pm-graph-canvas canvas:active {
+  cursor: grabbing;
+}
+
+.pm-graph-canvas canvas:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: -2px;
+}
+
+.pm-graph-empty {
+  margin: 18vh auto 0;
+  color: var(--pm-muted);
+}
+
+.pm-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

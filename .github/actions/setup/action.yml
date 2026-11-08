@@ -1,0 +1,79 @@
+name: Set up Penmoss
+description: >-
+  Node from .node-version, pnpm through Corepack, the workspace's dependencies and Task, on a
+  GitHub-hosted Ubuntu runner or one of Ryan's self-hosted Macs (docs/ci.md). On a Mac every
+  cache lives in that runner's own tool cache, so jobs running at once on the other Mac runners
+  never share one.
+inputs:
+  electron-cache:
+    description: On Ubuntu, also cache Electron's download (a Mac keeps it in its tool cache)
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    # Each runner has its own _work/_tool, and runs one job at a time, so nothing here is written
+    # by two jobs at once. Nothing goes in the home folder of the account the runner runs as.
+    - name: Keep caches in this runner's tool cache (_work/_tool/penmoss)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        cache="$RUNNER_TOOL_CACHE/penmoss"
+        mkdir -p "$cache"
+        {
+          echo "PENMOSS_CACHE=$cache"
+          echo "COREPACK_HOME=$cache/corepack"
+          echo "PNPM_STORE=$cache/pnpm-store"
+          echo "XDG_CACHE_HOME=$cache/xdg-cache"
+          echo "ELECTRON_CACHE=$cache/electron"
+          echo "ELECTRON_BUILDER_CACHE=$cache/electron-builder"
+          echo "PLAYWRIGHT_BROWSERS_PATH=$cache/ms-playwright"
+          echo "GRADLE_USER_HOME=$cache/gradle"
+        } >> "$GITHUB_ENV"
+        echo "Runner $RUNNER_NAME, caches in $cache ($(sysctl -n hw.ncpu) CPUs, $(($(sysctl -n hw.memsize) / 1073741824)) GB)"
+
+    # A623: on 26 Oct 2026 the Azure Ubuntu mirror stalled for whole jobs: apt waited 120 s per
+    # silent connection (its default) and three main runs' E2E and a PR's Electron job ran out
+    # of time installing Chromium's libraries. A stall now fails after 15 s and is tried again,
+    # and the runner's mirror list moves on to archive.ubuntu.com.
+    - name: Let apt give up on a stalled mirror sooner (Ubuntu)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        printf '%s\n' 'Acquire::Retries "5";' 'Acquire::http::Timeout "15";' 'Acquire::https::Timeout "15";' |
+          sudo tee /etc/apt/apt.conf.d/99penmoss-timeouts >/dev/null
+
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version-file: .node-version
+
+    - name: Enable pnpm through Corepack
+      shell: bash
+      run: |
+        corepack enable pnpm
+        pnpm --version
+        if [ -z "${PNPM_STORE:-}" ]; then
+          echo "PNPM_STORE=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+        fi
+
+    - name: Cache pnpm store
+      if: runner.os == 'Linux'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ env.PNPM_STORE }}
+        key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: pnpm-store-${{ runner.os }}-
+
+    - name: Cache the Electron download
+      if: runner.os == 'Linux' && inputs.electron-cache == 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/electron
+        key: electron-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile --store-dir "$PNPM_STORE"
+
+    - uses: go-task/setup-task@a00fbb05ce67b35648be3c78cbc9fd85354c757e # v2.2.0
+      with:
+        version: 3.54.0

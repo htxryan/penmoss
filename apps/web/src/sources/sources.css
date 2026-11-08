@@ -1,0 +1,897 @@
+/* Git notebooks in the Mac app (T50 G3–G5, A862): the sidebar's sections, their sync state, and
+   Settings → Git Notebooks' cards. Tokens only (styles.css :root). */
+
+/*
+ * A notebook's name is in the accent (T52), a quarter of the way to the text colour: plain accent
+ * text is under 4.5:1 on some themes' sidebars (Nord and Solarized light). theme/contrast.ts
+ * checks the same mix.
+ */
+.sidebar {
+  --pm-notebook-name: color-mix(in oklab, var(--pm-accent), var(--pm-fg) 25%);
+}
+
+.sb-section + .sb-section {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--pm-border-soft);
+}
+
+.sb-section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.15rem calc(var(--sb-gutter, 0rem) + 0.5rem) 0.15rem 0;
+}
+
+/* A section's title (A988): a heading holding its toggle, taking the row. */
+.sb-section-title {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font: inherit;
+}
+
+.sb-section-toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--sb-name-gap, 0.425rem);
+  min-width: 0;
+  padding: 0.2rem 0.3rem 0.2rem var(--sb-chevron-inset, 0.375rem);
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--pm-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.sb-section-toggle:hover {
+  color: var(--pm-fg);
+}
+
+/* A notebook's own toggle keeps its colour; a hover shades the row instead (T52). */
+.sb-section-toggle.sb-notebook-name,
+.sb-section-toggle.sb-notebook-name:hover {
+  color: var(--pm-notebook-name);
+}
+
+/*
+ * The whole row shades, its buttons and sync dot included, not the name alone (T62 item 3). A
+ * button under the pointer shades twice as deep, so it still stands out on the shaded row.
+ */
+.sb-source > .sb-section-head:hover {
+  background: var(--pm-hover);
+}
+
+/*
+ * A notebook's buttons and sync dot sit flush with its row's end, each as tall as the row and
+ * square, with no margin (feedback of 6 Nov 2026). The row keeps its height: the dot's 1.5rem
+ * target and the 0.15rem it had above and below.
+ */
+:is(.sb-source > .sb-section-head, .sb-heading) {
+  --sb-head-height: 1.8rem;
+  align-items: stretch;
+  min-height: var(--sb-head-height);
+  padding-block: 0;
+  padding-inline-end: 0;
+}
+
+:is(.sb-source > .sb-section-head, .sb-heading) .tree-actions {
+  align-items: stretch;
+}
+
+:is(.sb-source > .sb-section-head, .sb-heading) :is(.tree-actions .icon-btn, .sync-dot) {
+  width: var(--sb-head-height);
+  height: auto;
+}
+
+.sb-heading > .sb-section-name {
+  align-self: center;
+}
+
+@media (max-width: 700px), (pointer: coarse) {
+  :is(.sb-source > .sb-section-head, .sb-heading) {
+    --sb-head-height: var(--pm-hit);
+  }
+}
+
+.sb-source > .sb-section-head :is(.icon-btn, .sync-dot):hover {
+  background: color-mix(in oklab, var(--pm-fg) 13%, transparent);
+}
+
+.sb-section-toggle:focus-visible {
+  outline: 2px solid var(--pm-accent);
+  outline-offset: 1px;
+}
+
+.sb-section-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * A source's sync state on its header (T51, A933): a dot alone, in the state's colour, with the
+ * words as its tooltip and name. The link around it is a 24 px target (WCAG 2.2 target size).
+ * Each kind of state has its own shape too (T52), so it never rests on colour alone, nor reads as
+ * part of the name in the accent beside it: a solid dot when all is well or syncing, a ring when
+ * offline, and a dot ringed with a gap when sync needs you.
+ */
+.sync-dot {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0;
+  text-decoration: none;
+}
+
+.sync-dot:hover {
+  background: var(--pm-hover);
+}
+
+.sync-dot:focus-visible {
+  outline: 2px solid var(--pm-accent);
+  outline-offset: -2px;
+}
+
+.sync-dot .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pm-accent);
+}
+
+.sync-dot:is([data-state='starting'], [data-state='syncing']) .dot {
+  animation: pm-pulse 1s ease-in-out infinite;
+}
+
+.sync-dot[data-state='offline'] .dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--pm-muted);
+}
+
+.sync-dot[data-state='stopped'] .dot {
+  width: 6px;
+  height: 6px;
+  background: var(--pm-danger);
+  outline: 1.5px solid var(--pm-danger);
+  outline-offset: 1.5px;
+}
+
+/*
+ * A header without a tree of its own (T51, A933): the personal notes' when they are the only
+ * source, and the source in use's above a tag's notes. It reads as a section toggle's name.
+ */
+.sb-heading {
+  flex: none;
+  padding: 0.15rem calc(var(--sb-gutter, 0rem) + 0.5rem) 0.15rem 0;
+}
+
+.sb-heading > .sb-section-name {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0.2rem 0.3rem 0.2rem var(--sb-icon-inset, 1.55rem);
+  color: var(--pm-notebook-name);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sb-section {
+  flex: none;
+  min-width: 0;
+}
+
+/* Settings → Git Notebooks. */
+.settings-card {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--pm-border-soft);
+  border-radius: 0;
+  background: var(--pm-raised);
+}
+
+.settings-card > :is(h2, h3):first-child,
+.settings-card > header:first-child {
+  margin-top: 0;
+}
+
+.settings-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.35rem 1.25rem;
+  margin: 0 0 0.85rem;
+  font-size: var(--pm-text-md);
+}
+
+.settings-facts dt {
+  color: var(--pm-muted);
+}
+
+.settings-facts dd {
+  margin: 0;
+  color: var(--pm-fg);
+  overflow-wrap: anywhere;
+}
+
+.git-notebook [data-testid='git-error'] {
+  color: var(--pm-danger);
+}
+
+.settings-card .settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem 1rem;
+  margin: 0.6rem 0 0;
+}
+
+.settings-card .settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.6rem 0 0;
+}
+
+/* Remove with changes not pushed: what would be lost, and the way to keep it. */
+.git-remove-confirm {
+  margin: 0.75rem 0 0;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--pm-danger);
+  border-radius: 0;
+}
+
+.git-remove-confirm p {
+  margin: 0;
+}
+
+/* Delete for good to confirm again: the notes it takes, named before Touch ID. */
+.git-reconfirm {
+  margin: 0.5rem 0 0;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--pm-danger);
+  border-radius: 0;
+  color: var(--pm-fg);
+}
+
+.git-reconfirm p,
+.git-reconfirm ul {
+  margin: 0 0 0.4rem;
+}
+
+/*
+ * Settings → Git Notebooks lists the notebooks, and each opens a page of its own (Ryan's
+ * feedback, 5 Nov 2026; A1098): a row with the name, the repository under it and the sync state.
+ */
+.git-notebook-list {
+  margin: 0.25rem 0 1rem;
+  padding: 0;
+  border: 1px solid var(--pm-border-soft);
+  background: var(--pm-raised);
+  list-style: none;
+}
+
+.git-notebook-list > li + li {
+  border-top: 1px solid var(--pm-border-soft);
+}
+
+.git-notebook-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  color: var(--pm-fg);
+  text-decoration: none;
+}
+
+.git-notebook-row:hover {
+  background: var(--pm-hover);
+}
+
+.git-notebook-row:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: -2px;
+}
+
+.git-notebook-row > .i {
+  flex: none;
+  color: var(--pm-muted);
+}
+
+.git-notebook-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.git-notebook-row-name {
+  font-weight: 600;
+}
+
+.git-notebook-row-repo {
+  overflow: hidden;
+  font-size: var(--pm-text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-notebook-row-state {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+}
+
+.git-notebook-row-state .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pm-accent);
+}
+
+.git-notebook-row-state[data-phase='offline'] .dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--pm-muted);
+}
+
+.git-notebook-row-state[data-phase='stopped'] {
+  color: var(--pm-danger);
+}
+
+.git-notebook-row-state[data-phase='stopped'] .dot {
+  background: var(--pm-danger);
+}
+
+.git-notebook-back {
+  margin-bottom: 0.5rem;
+}
+
+/*
+ * A notebook's page (T62 item 1): on the settings' own background, not a raised card, with its
+ * name, state and actions on top, then groups (About, Primary Notebook, Sync, Commits, Access,
+ * Agent Activity), each under a quiet heading and a line, its fields one under another at one
+ * width.
+ */
+.git-notebook-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  margin: 0.25rem 0 0;
+}
+
+.git-notebook-head > h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.git-notebook-page > .settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.85rem 0 0;
+}
+
+.git-message:empty {
+  display: none;
+}
+
+.git-message {
+  margin: 0.5rem 0 0;
+  font-size: var(--pm-text-sm);
+}
+
+.git-notebook-group {
+  margin: 1.75rem 0 0;
+  padding: 1rem 0 0;
+  border-top: 1px solid var(--pm-border);
+}
+
+.git-notebook .settings-subhead {
+  margin: 0 0 0.75rem;
+  color: var(--pm-fg);
+  font-size: var(--pm-text-md);
+  font-weight: 650;
+}
+
+.git-notebook-group .settings-facts {
+  margin: 0;
+}
+
+.git-notebook-note {
+  max-width: 40rem;
+  margin: 0 0 0.6rem;
+  font-size: var(--pm-text-md);
+  line-height: 1.5;
+}
+
+/* Sync's two numbers side by side, each a field its size. */
+.git-notebook-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.5rem;
+}
+
+.git-notebook-fields > .settings-field {
+  width: 11rem;
+  margin: 0 0 0.75rem;
+}
+
+/* Commits and Access: each field a line of its own, one width, its buttons under it. */
+.git-notebook-form {
+  display: grid;
+  max-width: 30rem;
+}
+
+.git-notebook-form > .settings-field {
+  margin: 0 0 0.75rem;
+}
+
+.git-notebook-group :is(.git-notebook-form, .agent-activity) .settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.git-notebook-form > [data-testid='git-author-now'] {
+  margin: 0.6rem 0 0;
+  font-size: var(--pm-text-sm);
+}
+
+.git-notebook-row-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/*
+ * Settings → Agents (A1098): the command, then the notebooks as a list, each opening a page of
+ * its own on the settings' background, as a git notebook's does (Quanta feedback 2, item 5;
+ * A1125).
+ */
+.agents-list-heading {
+  margin: 1.5rem 0 0.4rem;
+}
+
+.notebook-agents > h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.25rem 0 0.25rem;
+}
+
+.notebook-agents .local-agents {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+}
+
+/* Agents on This Mac and the penmoss command (T54, A992, A993). */
+.local-agents {
+  margin: 1rem 0 0;
+  padding: 0.75rem 0 0;
+  border-top: 1px solid var(--pm-border);
+}
+
+.local-agents > h4 {
+  margin: 0 0 0.4rem;
+}
+
+.local-agents > p {
+  margin: 0 0 0.5rem;
+}
+
+.local-agent-list {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.local-agent-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+}
+
+.local-agent-head .btn {
+  margin-left: auto;
+}
+
+/* T60 (A1073): the switch that shows the Claude Code command with its channel. */
+.local-agent-channel {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.45rem 0 0;
+  font-size: var(--pm-text-sm);
+}
+
+.local-agent-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.25rem 0.5rem;
+  align-items: start;
+  margin: 0.45rem 0 0;
+}
+
+.local-agent-copy > span {
+  grid-column: 1 / -1;
+  font-size: var(--pm-text-sm);
+}
+
+.local-agent-copy > span:empty {
+  display: none;
+}
+
+.local-agent-copy pre {
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+  overflow-x: auto;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-raised);
+  font-family: var(--pm-mono);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.local-agent-direct {
+  margin: 0.6rem 0 0;
+}
+
+.local-agent-direct summary {
+  color: var(--pm-muted);
+  cursor: default;
+}
+
+/*
+ * The first run (T59, A1030): no git notebook yet. The Add form of Settings → Git Notebooks
+ * stands alone in the window, with the brand above it; the wait before the list is read is a
+ * quiet line in the same place.
+ */
+.first-run .settings-section {
+  margin-top: 1.5rem;
+}
+
+.first-run .settings-section > p {
+  max-width: 34rem;
+  color: var(--pm-fg);
+  line-height: 1.5;
+}
+
+.first-run .settings-section > .muted {
+  color: var(--pm-muted);
+}
+
+/*
+ * The first run's guide (T69, A1146): a welcome with two ways on, each a wide button with an
+ * icon, a title and a line; then that way's steps and its form, with Back above.
+ */
+.first-run h2:focus {
+  outline: none;
+}
+
+.first-run-choices {
+  display: grid;
+  gap: 0.6rem;
+  max-width: 34rem;
+  margin: 1.2rem 0;
+}
+
+.first-run-choice {
+  display: flex;
+  gap: 0.8rem;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.first-run-choice:hover {
+  border-color: var(--pm-accent);
+  background: var(--pm-hover);
+}
+
+.first-run-choice:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 2px;
+}
+
+.first-run-choice > .i {
+  flex: none;
+  margin-top: 0.15rem;
+  color: var(--pm-accent);
+}
+
+.first-run-choice-text {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.first-run-choice-text > span {
+  color: var(--pm-muted);
+  font-size: 0.9em;
+}
+
+.first-run-back {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+  margin-bottom: 0.8rem;
+}
+
+.first-run-steps {
+  max-width: 34rem;
+  margin: 0 0 1rem;
+  padding-left: 1.3rem;
+  line-height: 1.6;
+}
+
+.first-run-more {
+  max-width: 34rem;
+  margin: 0.8rem 0;
+}
+
+.first-run-more > summary {
+  color: var(--pm-muted);
+  cursor: pointer;
+}
+
+.first-run-more > p {
+  margin: 0.5rem 0 0;
+  line-height: 1.5;
+}
+
+.first-run-more .settings-row {
+  margin-top: 0.6rem;
+}
+
+.boot {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: max(3rem, env(safe-area-inset-top)) 1rem 3rem;
+  color: var(--pm-muted);
+}
+
+/* Search: which notebook a hit is in. */
+.search-notebook {
+  padding: 0 0.4rem;
+  border-radius: 0;
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .settings-facts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1rem;
+  }
+
+  .settings-facts dd {
+    margin-bottom: 0.4rem;
+  }
+}
+
+/* Copying settings between notebooks (A1137). */
+.git-settings-copy {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* Add a Git Notebook: picking a GitHub repository and folder (T81, A1166, A1167, B10). */
+.repo-way {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.8rem;
+}
+
+.repo-way .btn[aria-pressed='true'] {
+  border-color: var(--pm-accent);
+  background: var(--pm-accent-softer);
+}
+
+.repo-picker,
+.repo-folders {
+  display: grid;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.repo-signed-in {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.repo-inline {
+  padding-block: 0.1rem;
+  font-size: var(--pm-text-sm);
+}
+
+.repo-list {
+  display: grid;
+  max-height: 18rem;
+  overflow-y: auto;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-raised);
+}
+
+.repo-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+  min-width: 0;
+  padding: 0.45rem 0.6rem;
+  border: 0;
+  border-bottom: 1px solid var(--pm-border-soft);
+  background: transparent;
+  color: var(--pm-fg);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.repo-row:last-child {
+  border-bottom: 0;
+}
+
+.repo-row:hover {
+  background: var(--pm-hover);
+}
+
+.repo-row:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: -2px;
+}
+
+.repo-row[aria-selected='true'] {
+  background: var(--pm-accent-soft);
+}
+
+.repo-row[aria-disabled='true'] {
+  color: var(--pm-muted);
+  cursor: not-allowed;
+}
+
+.repo-row-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.repo-row-facts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: var(--pm-text-sm);
+}
+
+.repo-public,
+.repo-internal,
+.repo-readonly {
+  background: var(--pm-warn-bg);
+}
+
+.repo-notebook {
+  background: var(--pm-accent-soft);
+}
+
+.repo-none,
+.repo-list-note {
+  margin: 0;
+  padding: 0.5rem 0.6rem;
+}
+
+.repo-list-note {
+  padding: 0;
+  font-size: var(--pm-text-sm);
+}
+
+.repo-create {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--pm-border);
+}
+
+.repo-create > legend {
+  padding: 0 0.3rem;
+  font-weight: 600;
+}
+
+.repo-create > p {
+  margin: 0;
+}
+
+.repo-picked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  margin-bottom: 0.6rem;
+  overflow-wrap: anywhere;
+}
+
+.repo-new-folder {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.repo-new-folder .settings-field {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.repo-new-folder [role='status'] {
+  flex-basis: 100%;
+}
+
+/* Sign in with GitHub (T82, A1170): the code to enter, large enough to read across a desk. */
+.repo-sign-in {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  margin-block: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--pm-border);
+}
+
+.repo-sign-in > p {
+  margin: 0;
+}
+
+.repo-sign-in-code {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.repo-sign-in-code code {
+  font-size: 1.6em;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  user-select: all;
+}

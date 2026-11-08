@@ -1,0 +1,24 @@
+packages:
+  - apps/*
+  # The Android app's editor page (T32); the Gradle project around it is not a package.
+  - apps/android/editor
+  - packages/*
+  # Repo tooling run by Node directly, such as the software factory (#253).
+  - tools/*
+  # penmoss.app: the brochure and the user docs (D64, P9).
+  - site
+
+# Pin exact versions on every `pnpm add`.
+savePrefix: ''
+
+# Dependencies allowed to run install scripts (pnpm blocks all others).
+allowBuilds:
+  esbuild: true
+  workerd: true
+  # electron-builder's Windows installer helper; the Mac app never needs it (T29).
+  electron-winstaller: false
+  # onnxruntime-web's dependency (A1152); its postinstall only prints a notice about its CLI.
+  protobufjs: false
+
+patchedDependencies:
+  '@ai-hero/sandcastle@0.14.0': tools/factory/patches/@ai-hero__sandcastle@0.14.0.patch

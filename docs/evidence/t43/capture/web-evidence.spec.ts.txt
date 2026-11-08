@@ -1,0 +1,72 @@
+// Evidence capture for T43 (kept as docs/evidence/t43/capture/web-evidence.spec.ts.txt; not a
+// suite spec). OUT=dir. Run from apps/web: `OUT=… pnpm exec playwright test zz-t43-evidence`.
+import { expect, test, type Page } from '@playwright/test';
+import { mkdirSync } from 'node:fs';
+import { NEW_NOTE } from './keys';
+
+const OUT = process.env['OUT'] ?? '/tmp/t43-evidence';
+mkdirSync(OUT, { recursive: true });
+const STAMP = Date.now().toString(36).slice(-4);
+const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
+
+async function note(page: Page, title: string, text: string) {
+  await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();
+  await page.keyboard.press(NEW_NOTE);
+  await expect(page).toHaveURL(ULID);
+  await page.keyboard.type(title);
+  await page.keyboard.press('Enter');
+  await page.keyboard.type(text);
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+}
+
+async function notebook(page: Page, name: string) {
+  await page.keyboard.press('ControlOrMeta+KeyK');
+  await page.getByRole('combobox', { name: 'Command palette' }).fill('New notebook');
+  await page.keyboard.press('Enter');
+  const input = page.getByRole('textbox', { name: 'New notebook name' });
+  await input.fill(name);
+  await input.press('Enter');
+}
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`T43 evidence ${scheme}`, async ({ browser }) => {
+    test.setTimeout(120_000);
+    const context = await browser.newContext({
+      colorScheme: scheme,
+      viewport: { width: 1280, height: 800 },
+    });
+    const page = await context.newPage();
+    await page.goto('http://localhost:5173/');
+    await expect(page.getByRole('tree', { name: 'Folders and notes' })).toBeVisible();
+    await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();
+    const name = `QDK ${STAMP}${scheme[0]}`;
+    await notebook(page, name);
+    await note(page, `Parser design ${STAMP}`, 'How the parser reads a file, step by step.');
+    await note(page, `Release checklist ${STAMP}`, 'Tag, build, publish.');
+    await page.mouse.move(1270, 790);
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `${OUT}/web-${scheme}-sidebar.png` });
+
+    const row = page.getByRole('treeitem', { name: `${name} (notebook)`, exact: true });
+    await row.click({ button: 'right' });
+    await expect(page.getByRole('menu')).toBeVisible();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${OUT}/web-${scheme}-menu.png` });
+    await page.getByRole('menuitem', { name: 'Delete notebook…' }).click();
+    await expect(page.getByTestId('confirm-notebook')).toBeVisible();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${OUT}/web-${scheme}-delete.png` });
+    await page.getByRole('button', { name: 'Cancel' }).click();
+
+    await page.goto('http://localhost:5173/settings/notebooks');
+    await expect(page.getByTestId('notebooks-settings')).toBeVisible();
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `${OUT}/web-${scheme}-settings-notebooks.png` });
+
+    await page.goto('http://localhost:5173/settings/git-mirror');
+    await expect(page.getByTestId('git-mirror-settings')).toContainText(name);
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `${OUT}/web-${scheme}-git-mirror.png`, fullPage: true });
+    await context.close();
+  });
+}

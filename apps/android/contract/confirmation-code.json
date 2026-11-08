@@ -1,0 +1,17 @@
+{
+  "$comment": "The sign-in confirmation code (T32, A292): six digits from SHA-256 of the PKCE challenge (ASCII), first four bytes big-endian, modulo 1,000,000, shown as `123 456`. Checked by the Kotlin NativeSignInTest and apps/web/test/unit/confirmation.test.ts.",
+  "examples": [
+    {
+      "challenge": "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+      "code": "830 494"
+    },
+    {
+      "challenge": "7w_YNF9DSfIdPf_pRjSq646_kPr-2-o9NAl16JGghdM",
+      "code": "079 679"
+    },
+    {
+      "challenge": "fxDVlwU5XnRAmWz06rz2sQ0sh9FADV3ujPqdR0WisPU",
+      "code": "733 108"
+    }
+  ]
+}

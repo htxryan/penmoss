@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  // Run directly by Node 24 (type stripping, no build), so imports name their .ts files.
+  "compilerOptions": {
+    "types": ["node"],
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true
+  },
+  "include": ["src", "test", "vitest.config.ts"]
+}

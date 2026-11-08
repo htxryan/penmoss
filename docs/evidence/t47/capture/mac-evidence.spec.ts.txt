@@ -1,0 +1,131 @@
+// Temporary evidence capture for T46 and T47 in the Mac app under xvfb (not committed). OUT=dir.
+// The window keeps Linux's frame here (A725): a dashed box marks where macOS draws the lights.
+import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { mkdirSync } from 'node:fs';
+import { TRAFFIC_LIGHTS } from '../../src/mac-window';
+import { launch, mainBounds, removeDataDirs, signIn, ULID } from './support';
+
+const OUT = process.env['OUT'] ?? '/tmp/t46-t47-evidence';
+mkdirSync(`${OUT}/t46`, { recursive: true });
+mkdirSync(`${OUT}/t47`, { recursive: true });
+const RUN = Date.now().toString(36).slice(-4);
+const NEW_NOTE = process.platform === 'darwin' ? 'Meta+Alt+KeyN' : 'Alt+KeyN';
+
+test.afterAll(() => removeDataDirs());
+
+async function newNote(page: Page, title: string, text: string) {
+  await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();
+  await page.keyboard.press(NEW_NOTE);
+  await expect(page).toHaveURL(ULID);
+  await page.keyboard.type(title);
+  await page.keyboard.press('Enter');
+  await page.keyboard.type(text);
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+}
+
+const chooseMenu = (app: ElectronApplication, id: string) =>
+  app.evaluate(({ Menu }, itemId) => {
+    (Menu.getApplicationMenu()?.getMenuItemById(itemId) as unknown as { click(): void }).click();
+  }, id);
+
+/** Marks where macOS draws the three buttons (only in a compact window). */
+async function markLights(view: Page) {
+  await view.evaluate((lights) => {
+    document.getElementById('evidence-lights')?.remove();
+    if (document.documentElement.dataset['titlebar'] !== 'compact') return;
+    const box = document.createElement('div');
+    box.id = 'evidence-lights';
+    Object.assign(box.style, {
+      position: 'fixed',
+      left: `${lights.x}px`,
+      top: `${lights.y}px`,
+      width: `${lights.width}px`,
+      height: `${lights.height}px`,
+      outline: '1.5px dashed #d33',
+      borderRadius: '8px',
+      zIndex: '9999',
+      pointerEvents: 'none',
+    });
+    for (const [i, colour] of ['#ff5f57', '#febc2e', '#28c840'].entries()) {
+      const dot = document.createElement('span');
+      Object.assign(dot.style, {
+        position: 'absolute',
+        left: `${1 + i * 20}px`,
+        top: '2px',
+        width: '12px',
+        height: '12px',
+        borderRadius: '50%',
+        background: colour,
+        opacity: '0.85',
+      });
+      box.append(dot);
+    }
+    document.body.append(box);
+  }, TRAFFIC_LIGHTS);
+}
+
+async function scheme(app: ElectronApplication, views: Page[], value: 'light' | 'dark') {
+  await app.evaluate(({ nativeTheme }, s) => {
+    nativeTheme.themeSource = s;
+  }, value);
+  for (const view of views) {
+    await view.emulateMedia({ colorScheme: value });
+    await expect(view.locator('html')).toHaveAttribute('data-mode', value);
+    await view.mouse.move(600, 500);
+  }
+}
+
+async function shot(view: Page, path: string) {
+  await markLights(view);
+  await view.waitForTimeout(400);
+  await view.screenshot({ path });
+}
+
+test('mac window evidence', async () => {
+  test.setTimeout(300_000);
+  const launched = await launch({ macWindow: true });
+  const { app, page } = launched;
+  try {
+    await mainBounds(app, { x: 0, y: 0, width: 1280, height: 800 });
+    await signIn(launched);
+    await newNote(page, `Pinned reference ${RUN}`, 'Keep this beside the browser while I work.');
+    const [window] = await Promise.all([
+      app.waitForEvent('window'),
+      chooseMenu(app, 'note.openInNewWindow'),
+    ]);
+    await expect(window.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+    // T46: both pinned.
+    await page.locator('.sb-head').getByTestId('keep-on-top').click();
+    await window.getByTestId('keep-on-top').click();
+    await expect(window.getByTestId('keep-on-top')).toHaveAttribute('aria-pressed', 'true');
+    for (const value of ['light', 'dark'] as const) {
+      await scheme(app, [page, window], value);
+      await shot(page, `${OUT}/t46/mac-${value}-main-pinned.png`);
+      await shot(window, `${OUT}/t46/mac-${value}-window-pinned.png`);
+    }
+    await page.locator('.sb-head').getByTestId('keep-on-top').click();
+    await window.getByTestId('keep-on-top').click();
+
+    // T47: every layout, compact.
+    for (const value of ['light', 'dark'] as const) {
+      await scheme(app, [page, window], value);
+      await shot(page, `${OUT}/t47/mac-${value}-sidebar.png`);
+      await page.getByTestId('toggle-sidebar').click();
+      await shot(page, `${OUT}/t47/mac-${value}-rail.png`);
+      await page.getByTestId('toggle-sidebar').click();
+      await shot(window, `${OUT}/t47/mac-${value}-note-window.png`);
+      await chooseMenu(app, 'app.appearance');
+      await expect(page.getByTestId('compact-title-bar')).toBeVisible();
+      await shot(page, `${OUT}/t47/mac-${value}-settings.png`);
+      await mainBounds(app, { x: 0, y: 0, width: 640, height: 800 });
+      await page.getByRole('link', { name: 'Notes', exact: true }).click();
+      await expect(page.getByTestId('app-bar')).toBeVisible();
+      await shot(page, `${OUT}/t47/mac-${value}-narrow.png`);
+      await mainBounds(app, { x: 0, y: 0, width: 1280, height: 800 });
+      await expect(page.locator('.note-top')).toBeVisible();
+    }
+    expect(launched.errors).toEqual([]);
+  } finally {
+    await app.close();
+  }
+});

@@ -1,0 +1,156 @@
+{
+ "light-note": {
+  "viewport": [
+   1440,
+   900
+  ],
+  "title": {
+   "scrollWidth": 736,
+   "clientWidth": 736,
+   "scrollLeft": 0,
+   "height": 40
+  },
+  "doc": 832,
+  "text": 736
+ },
+ "light-empty": {
+  "viewport": [
+   1440,
+   900
+  ],
+  "title": {
+   "scrollWidth": 736,
+   "clientWidth": 736,
+   "scrollLeft": 0,
+   "height": 40
+  },
+  "doc": 832,
+  "text": 736
+ },
+ "light-empty-narrow": {
+  "viewport": [
+   1100,
+   760
+  ],
+  "title": {
+   "scrollWidth": 732,
+   "clientWidth": 732,
+   "scrollLeft": 0,
+   "height": 40
+  },
+  "doc": 828,
+  "text": 732
+ },
+ "light-pictures": [
+  {
+   "left": 691.921875,
+   "top": 205.234375,
+   "bottom": 301.90625,
+   "textRects": [
+    [
+     360,
+     277,
+     692
+    ]
+   ]
+  },
+  {
+   "left": 336,
+   "top": 374.65625,
+   "bottom": 620.859375,
+   "textRects": [
+    [
+     336,
+     349,
+     540
+    ],
+    [
+     336,
+     623,
+     686
+    ]
+   ]
+  }
+ ],
+ "light-tag-filter": {
+  "calendarTopBefore": 715,
+  "calendarTopAfter": 480
+ },
+ "dark-note": {
+  "viewport": [
+   1440,
+   900
+  ],
+  "title": {
+   "scrollWidth": 736,
+   "clientWidth": 736,
+   "scrollLeft": 0,
+   "height": 40
+  },
+  "doc": 832,
+  "text": 736
+ },
+ "dark-empty": {
+  "viewport": [
+   1440,
+   900
+  ],
+  "title": {
+   "scrollWidth": 736,
+   "clientWidth": 736,
+   "scrollLeft": 0,
+   "height": 40
+  },
+  "doc": 832,
+  "text": 736
+ },
+ "dark-empty-narrow": {
+  "viewport": [
+   1100,
+   760
+  ],
+  "title": {
+   "scrollWidth": 732,
+   "clientWidth": 732,
+   "scrollLeft": 0,
+   "height": 40
+  },
+  "doc": 828,
+  "text": 732
+ },
+ "dark-pictures": [
+  {
+   "left": 691.921875,
+   "top": 205.234375,
+   "bottom": 301.90625,
+   "textRects": [
+    [
+     360,
+     277,
+     692
+    ]
+   ]
+  },
+  {
+   "left": 336,
+   "top": 374.65625,
+   "bottom": 620.859375,
+   "textRects": [
+    [
+     336,
+     349,
+     540
+    ],
+    [
+     336,
+     623,
+     686
+    ]
+   ]
+  }
+ ],
+ "dark-tag-filter": {
+  "calendarTopBefore": 715,
+  "calendarTopAfter": 480
+ }
+}

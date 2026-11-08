@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "kind": "daily",
+      "period": "2026-10-21",
+      "template": "## Plan\n\n## Notes\n",
+      "id": "01M5DW3X00VN8989KS18X4ENCJ",
+      "body": "## Plan\n\n## Notes\n",
+      "update": "AgavnZ7iBQAHAQtwcm9zZW1pcnJvcgMHaGVhZGluZwQAr52e4gUABFBsYW4oAK+dnuIFAAVsZXZlbAF9AoevnZ7iBQADB2hlYWRpbmcEAK+dnuIFBgVOb3RlcygAr52e4gUGBWxldmVsAX0CBZ+0vNUFACgBBG1ldGECaWQBdxowMU01RFczWDAwVk44OTg5S1MxOFg0RU5DSigBBG1ldGEHY3JlYXRlZAF3CjIwMjYtMTAtMjEoAQRtZXRhBGtpbmQBdwVkYWlseSgBBG1ldGEGcGVyaW9kAXcKMjAyNi0xMC0yMQQBBXRpdGxlCjIwMjYtMTAtMjEA"
+    },
+    {
+      "kind": "daily",
+      "period": "2026-03-08",
+      "template": "# {{date}}\n\n{{longDate}}\n\n{{weekday}} of {{week}}, {{month}} {{year}}\n",
+      "id": "01KK5BWR00PK6JDNXR46BFVW8J",
+      "body": "# 2026-03-08\n\nSunday 8 March 2026\n\nSunday of 2026-W10, 03 2026\n",
+      "update": "Agfehfi0BAAHAQtwcm9zZW1pcnJvcgMHaGVhZGluZwQA3oX4tAQACjIwMjYtMDMtMDgoAN6F+LQEAAVsZXZlbAF9AYfehfi0BAADCXBhcmFncmFwaAQA3oX4tAQME1N1bmRheSA4IE1hcmNoIDIwMjaH3oX4tAQMAwlwYXJhZ3JhcGgEAN6F+LQEIBtTdW5kYXkgb2YgMjAyNi1XMTAsIDAzIDIwMjYF3+CIkgEAKAEEbWV0YQJpZAF3GjAxS0s1QldSMDBQSzZKRE5YUjQ2QkZWVzhKKAEEbWV0YQdjcmVhdGVkAXcKMjAyNi0wMy0wOCgBBG1ldGEEa2luZAF3BWRhaWx5KAEEbWV0YQZwZXJpb2QBdwoyMDI2LTAzLTA4BAEFdGl0bGUKMjAyNi0wMy0wOAA="
+    },
+    {
+      "kind": "daily",
+      "period": "2021-01-01",
+      "template": "# {{date}} (week {{week}})\n\n{{longDate}}\n",
+      "id": "01ETXKWW002QFB5V8T01VYBMGR",
+      "body": "# 2021-01-01 (week 2020-W53)\n\nFriday 1 January 2021\n",
+      "update": "AgXdgrfYBAAHAQtwcm9zZW1pcnJvcgMHaGVhZGluZwQA3YK32AQAGjIwMjEtMDEtMDEgKHdlZWsgMjAyMC1XNTMpKADdgrfYBAAFbGV2ZWwBfQGH3YK32AQAAwlwYXJhZ3JhcGgEAN2Ct9gEHBVGcmlkYXkgMSBKYW51YXJ5IDIwMjEF1uv39AEAKAEEbWV0YQJpZAF3GjAxRVRYS1dXMDAyUUZCNVY4VDAxVllCTUdSKAEEbWV0YQdjcmVhdGVkAXcKMjAyMS0wMS0wMSgBBG1ldGEEa2luZAF3BWRhaWx5KAEEbWV0YQZwZXJpb2QBdwoyMDIxLTAxLTAxBAEFdGl0bGUKMjAyMS0wMS0wMQA="
+    },
+    {
+      "kind": "weekly",
+      "period": "2026-W43",
+      "template": "## Goals\n\n## Review\n",
+      "id": "01M58QAF00MXJF9JWXTQFQQAPJ",
+      "body": "## Goals\n\n## Review\n",
+      "update": "AgXmtNj0BwAoAQRtZXRhAmlkAXcaMDFNNThRQUYwME1YSkY5SldYVFFGUVFBUEooAQRtZXRhB2NyZWF0ZWQBdwoyMDI2LTEwLTE5KAEEbWV0YQRraW5kAXcGd2Vla2x5KAEEbWV0YQZwZXJpb2QBdwgyMDI2LVc0MwQBBXRpdGxlCDIwMjYtVzQzBorFvfQFAAcBC3Byb3NlbWlycm9yAwdoZWFkaW5nBACKxb30BQAFR29hbHMoAIrFvfQFAAVsZXZlbAF9AoeKxb30BQADB2hlYWRpbmcEAIrFvfQFBwZSZXZpZXcoAIrFvfQFBwVsZXZlbAF9AgA="
+    },
+    {
+      "kind": "weekly",
+      "period": "2020-W53",
+      "template": "# Week {{week}}\n\n{{longDate}}\n\n{{month}}/{{year}} {{unknown}} {{ date }}\n",
+      "id": "01ETKAA00036JHACRY5Y0N424B",
+      "body": "# Week 2020-W53\n\nMonday 28 December 2020\n\n12/2020 {{unknown}} 2020-12-28\n",
+      "update": "Agex2JSbAwAHAQtwcm9zZW1pcnJvcgMHaGVhZGluZwQAsdiUmwMADVdlZWsgMjAyMC1XNTMoALHYlJsDAAVsZXZlbAF9AYex2JSbAwADCXBhcmFncmFwaAQAsdiUmwMPF01vbmRheSAyOCBEZWNlbWJlciAyMDIwh7HYlJsDDwMJcGFyYWdyYXBoBACx2JSbAyceMTIvMjAyMCB7e3Vua25vd259fSAyMDIwLTEyLTI4BcCKpcwCACgBBG1ldGECaWQBdxowMUVUS0FBMDAwMzZKSEFDUlk1WTBONDI0QigBBG1ldGEHY3JlYXRlZAF3CjIwMjAtMTItMjgoAQRtZXRhBGtpbmQBdwZ3ZWVrbHkoAQRtZXRhBnBlcmlvZAF3CDIwMjAtVzUzBAEFdGl0bGUIMjAyMC1XNTMA"
+    }
+  ]
+}

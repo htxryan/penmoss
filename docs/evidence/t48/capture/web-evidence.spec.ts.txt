@@ -1,0 +1,147 @@
+// Evidence capture for T48 (kept as docs/evidence/t48/capture/web-evidence.spec.ts.txt; not a
+// suite spec). OUT=dir. Run from apps/web: `OUT=… pnpm exec playwright test zz-t48-evidence`.
+import { expect, test, type Page } from '@playwright/test';
+import { mkdirSync } from 'node:fs';
+import { NEW_NOTE } from './keys';
+
+const OUT = process.env['OUT'] ?? '/tmp/t48-evidence';
+mkdirSync(OUT, { recursive: true });
+const STAMP = Date.now().toString(36).slice(-4);
+const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
+const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
+
+async function newNote(page: Page, title: string, lines: string[]) {
+  await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();
+  await page.keyboard.press(NEW_NOTE);
+  await expect(page).toHaveURL(ULID);
+  await page.keyboard.type(title);
+  await page.keyboard.press('Enter');
+  for (const [i, line] of lines.entries()) {
+    if (i > 0) await page.keyboard.press('Enter');
+    await page.keyboard.type(line);
+  }
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+  return ULID.exec(new URL(page.url()).pathname)![1]!;
+}
+
+async function selectText(page: Page, text: string): Promise<void> {
+  await body(page).evaluate((root, wanted) => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const at = node.textContent?.indexOf(wanted) ?? -1;
+      if (at < 0) continue;
+      const range = document.createRange();
+      range.setStart(node, at);
+      range.setEnd(node, at + wanted.length);
+      window.getSelection()!.removeAllRanges();
+      window.getSelection()!.addRange(range);
+      (root as HTMLElement).focus();
+      return;
+    }
+  }, text);
+}
+
+const token = (page: Page) =>
+  page.evaluate(
+    () => (JSON.parse(localStorage.getItem('penmoss.session') ?? '{}') as { token: string }).token,
+  );
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`T48 evidence ${scheme}`, async ({ browser }) => {
+    test.setTimeout(120_000);
+    const context = await browser.newContext({
+      colorScheme: scheme,
+      viewport: { width: 1360, height: 820 },
+    });
+    const page = await context.newPage();
+    await page.goto('http://localhost:5173/');
+    const id = await newNote(page, `Garden plan ${STAMP}${scheme[0]}`, [
+      'Tomatoes and basil go by the south fence, where they get the afternoon sun.',
+      'Water the seedlings every morning until they are established.',
+      'Compost the beds in early spring, before planting.',
+    ]);
+    const session = await token(page);
+    const issued = await page.request.post('/api/tokens', {
+      headers: { Authorization: `Bearer ${session}`, 'Content-Type': 'application/json' },
+      data: JSON.stringify({ label: 'Claude Code', scopes: ['read', 'write'] }),
+    });
+    const claude = ((await issued.json()) as { token: string }).token;
+    // A channel session, as `penmoss channel` opens it.
+    const name = scheme === 'light' ? 'laptop:~/src/garden' : 'mac-mini:~/src/garden';
+    const hub = new WebSocket(
+      `ws://localhost:8787/api/agent-hub?name=${encodeURIComponent(name)}`,
+      ['penmoss.v1', `penmoss.token.${claude}`],
+    );
+    const delivered: number[] = [];
+    let option = '';
+    hub.addEventListener('message', (event) => {
+      const message = JSON.parse(String(event.data)) as {
+        type: string;
+        id?: number;
+        token?: string;
+        session?: string;
+      };
+      if (message.type === 'hello') option = `${message.token} ${message.session}`;
+      if (message.type === 'deliver' && message.id !== undefined) {
+        delivered.push(message.id);
+        hub.send(JSON.stringify({ type: 'sent', id: message.id }));
+      }
+    });
+    await expect.poll(() => hub.readyState).toBe(WebSocket.OPEN);
+
+    // The selection toolbar's Comment.
+    await selectText(page, 'every morning');
+    await expect(page.getByTestId('selection-toolbar')).toBeVisible();
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `${OUT}/web-${scheme}-toolbar.png` });
+    await page.getByTestId('selection-toolbar').getByRole('button', { name: 'Comment' }).click();
+    await page
+      .getByTestId('comment-new')
+      .fill('Is every morning too much once they are established?');
+    const sendTo = page.getByTestId('comment-new-send-to');
+    await sendTo.focus();
+    await expect.poll(() => option).not.toBe('');
+    await expect(sendTo.locator(`option[value="${option}"]`)).toHaveCount(1);
+    await sendTo.selectOption(option);
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${OUT}/web-${scheme}-new-thread.png` });
+    await page.getByTestId('comment-new-send').click();
+    await expect.poll(() => delivered.length, { timeout: 10_000 }).toBe(1);
+
+    // The agent reads the thread and replies; a second thread of Ryan's, then one resolved.
+    const threads = (await (
+      await page.request.get(`/api/notes/${id}/comments`, {
+        headers: { Authorization: `Bearer ${claude}` },
+      })
+    ).json()) as { threads: Array<{ id: string }> };
+    const thread = threads.threads[0]!.id;
+    await page.request.get(`/api/notes/${id}/comments/${thread}`, {
+      headers: { Authorization: `Bearer ${claude}` },
+    });
+    await page.request.post(`/api/notes/${id}/comments/${thread}/replies`, {
+      headers: { Authorization: `Bearer ${claude}`, 'Content-Type': 'application/json' },
+      data: JSON.stringify({
+        body: 'Every other day is enough once they have four true leaves. I changed the line to say so.',
+      }),
+    });
+    await expect(page.getByTestId('comment-delivery')).toContainText('replied');
+    await selectText(page, 'south fence');
+    await page.getByTestId('selection-toolbar').getByRole('button', { name: 'Comment' }).click();
+    await page.getByTestId('comment-new').fill('Check the shade from the new shed.');
+    await page.getByTestId('comment-new-send').click();
+    await body(page).getByText('Compost').click();
+    await page.mouse.move(10, 790);
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `${OUT}/web-${scheme}-panel.png` });
+
+    // Resolved, behind its filter.
+    const shed = page.getByTestId('comment-thread').filter({ hasText: 'new shed' });
+    await shed.getByTestId('comment-resolve').click();
+    await page.getByTestId('comments-filter-resolved').click();
+    await page.mouse.move(10, 790);
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `${OUT}/web-${scheme}-resolved.png` });
+    hub.close();
+    await context.close();
+  });
+}

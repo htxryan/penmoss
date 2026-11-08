@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- The phone's own check before a git notebook's token is shown or changed (T40 P2a, A421, A857): BiometricPrompt, or the screen lock. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+
+    <!-- A note's web links open in a Custom Tab (T32): the browser apps that offer one. -->
+    <queries>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".PenmossApp"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:enableOnBackInvokedCallback="true"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Penmoss">
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!--
+                Note links from other apps (T40 P7, PL5, A476): penmoss://note/<id> opens the
+                note in the git notebook that holds it (A1040), as on the Mac. The app reads the
+                id (a ULID, or the link is ignored); a link only ever opens. There is no sign-in
+                callback and no App Link since T59 (A1042).
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="note"
+                    android:scheme="penmoss" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            One git notebook's screens (T50 G7, A880): the app's own screens over the notebook's
+            graph, one task per notebook. Not exported: only the app opens it (the notebooks
+            home, Settings → Git notebooks, a note link or a launcher shortcut).
+        -->
+        <activity
+            android:name=".git.GitNotebookActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density"
+            android:documentLaunchMode="intoExisting"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!--
+            Launcher shortcuts (T40 P9, PL3, A496): New note, Today, Search and recent notes come
+            to MainActivity through this alias. It is not exported, so only the launcher (which
+            starts a shortcut as Penmoss itself) reaches it, never another app.
+        -->
+        <activity-alias
+            android:name=".ui.LauncherShortcut"
+            android:exported="false"
+            android:targetActivity=".ui.MainActivity" />
+
+        <!--
+            Quick capture (T34, A339): the share sheet's target for text, links and pictures,
+            and the sheet the tile and the widget open. Its own task, so sharing from another
+            app returns to that app.
+        -->
+        <activity
+            android:name=".capture.CaptureActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="@string/capture_share_label"
+            android:taskAffinity="${applicationId}.capture"
+            android:theme="@style/Theme.Penmoss.Capture"
+            android:windowSoftInputMode="adjustResize|stateVisible">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <!--
+                penmoss://capture (T40 P7, PL5, A476), as the Mac's capture window: the sheet,
+                empty, in its own task, so Shortcuts or a launcher returns where it was. Nothing
+                in the link is read into it, and nothing is saved until Save.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="capture"
+                    android:scheme="penmoss" />
+            </intent-filter>
+        </activity>
+
+        <!-- The Quick Settings tile (T34, A341). -->
+        <service
+            android:name=".capture.CaptureTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_capture"
+            android:label="@string/capture_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="false" />
+        </service>
+
+        <!-- The home-screen widget (T34, A341). -->
+        <receiver
+            android:name=".capture.CaptureWidget"
+            android:exported="false"
+            android:label="@string/capture_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/capture_widget" />
+        </receiver>
+
+        <!--
+            A note's file opened in another app (T40 P8, ED12): a copy in the cache's shared
+            folder, read once through a granted content URI.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- WorkManager starts on demand with PenmossApp's worker factory (T35, A321; the git notebooks' runs, A881). -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+    </application>
+</manifest>

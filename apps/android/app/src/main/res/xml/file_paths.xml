@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    What the FileProvider shares (T40 P8, ED12): the copies of a note's files made for a chip's
+    Open, and nothing else (never the files kept for upload, nor the pictures' caches).
+-->
+<paths>
+    <cache-path
+        name="shared"
+        path="shared/" />
+</paths>

@@ -1,0 +1,39 @@
+=== Session 1: read, search, append, create, backlinks ===
+[init] MCP servers: penmoss-scratch (connected); 25 MCP tools
+[tool call] ToolSearch {"query": "select:mcp__penmoss-scratch__list_recent,mcp__penmoss-scratch__search_notes,mcp__penmoss-scratch__read_note,mcp__penmoss-scratch__append_to_note,mcp__penmoss-scratch__create_note,mcp__penmoss-scratch__get_backlinks", "max_results": 10}
+[tool result] 
+[tool call] mcp__penmoss-scratch__list_recent {}
+[tool result] {"notes":[{"id":"01M63NWH5SMPED56GGCQMNZS3S","title":"G2 manual check","kind":"note","tags":["t50"],"excerpt":"Log Made from the bundled CLI on the worker, 2026-10-29T11:14:24Z.","updatedAt":"2026-10-29T11:14:24.577Z"}]}
+[tool call] mcp__penmoss-scratch__search_notes {"query": "bundled"}
+[tool result] {"mode":"full-text","results":[{"id":"01M63NWH5SMPED56GGCQMNZS3S","title":"G2 manual check","snippet":"…the **bundled** CLI on the worker, 2026-10-29T11:14:24Z","tags":["t50"],"updatedAt":"2026-10-29T11:14:24.577Z","foundBy":["full-text"]}],"notice":"A git notebook searches words only: these are keyword results."}
+[tool call] mcp__penmoss-scratch__read_note {"id": "01M63NWH5SMPED56GGCQMNZS3S"}
+[tool result] {"id":"01M63NWH5SMPED56GGCQMNZS3S","title":"G2 manual check","tags":["t50"],"headings":["## Log"],"baseVersion":2,"body":"## Log\n\nMade from the bundled CLI on the worker, 2026-10-29T11:14:24Z.\n"}
+[tool call] mcp__penmoss-scratch__append_to_note {"id": "01M63NWH5SMPED56GGCQMNZS3S", "heading": "Log", "markdown": "- Checked by Claude Code through the local MCP server.", "baseVersion": 2}
+[tool result] {"id":"01M63NWH5SMPED56GGCQMNZS3S","changed":true,"baseVersion":3,"summary":"Added to “Log” · +1 −0 line"}
+[tool call] mcp__penmoss-scratch__create_note {"title": "Claude Code MCP check", "markdown": "Created through the local MCP server to test linking. See [[G2 manual check]]."}
+[tool result] {"id":"01M63NXRN1PHFJ5A9CSYV6QQXH","changed":true,"baseVersion":3,"summary":"Created · +1 −0 line","created":true}
+[tool call] mcp__penmoss-scratch__get_backlinks {"id": "01M63NWH5SMPED56GGCQMNZS3S"}
+[tool result] {"id":"01M63NWH5SMPED56GGCQMNZS3S","title":"G2 manual check","linked":[{"id":"01M63NXRN1PHFJ5A9CSYV6QQXH","title":"Claude Code MCP check","updatedAt":"2026-10-29T11:15:04.996Z","heading":null,"embed":false,"count":1}],"unlinked":[]}
+[assistant] All six steps worked. I found "G2 manual check" by searching "bundled" and added the Log line to it, which took it to version 3.
+I created "Claude Code MCP check", and `get_backlinks` for "G2 manual check" shows it as the only linking note, with no unlinked mentions.
+[result] success, 8 turns, 17382 ms
+
+=== Session 2: create and tag, then the client stops the server ===
+[init] MCP servers: penmoss-scratch (connected); 25 MCP tools
+[tool call] ToolSearch {"query": "select:mcp__penmoss-scratch__get_backlinks,mcp__penmoss-scratch__create_note,mcp__penmoss-scratch__tag_note", "max_results": 3}
+[tool result] 
+[tool call] ToolSearch {"query": "select:mcp__penmoss-scratch__search_notes", "max_results": 1}
+[tool result] 
+[tool call] mcp__penmoss-scratch__search_notes {"query": "title:\"G2 manual check\"", "limit": 5}
+[tool result] {"mode":"full-text","results":[{"id":"01M63NWH5SMPED56GGCQMNZS3S","title":"G2 manual check","snippet":"Log\nMade from the bundled CLI on the worker, 2026-10-29T11:14:24Z.\nChecked by…","tags":["t50"],"updatedAt":"2026-10-29T11:15:04.785Z","foundBy":["full-text"]}],"notice":"A git notebook searches words only: these are keyword results."}
+[tool call] mcp__penmoss-scratch__get_backlinks {"id": "01M63NWH5SMPED56GGCQMNZS3S"}
+[tool result] {"id":"01M63NWH5SMPED56GGCQMNZS3S","title":"G2 manual check","linked":[{"id":"01M63NXRN1PHFJ5A9CSYV6QQXH","title":"Claude Code MCP check","updatedAt":"2026-10-29T11:15:04.996Z","heading":null,"embed":false,"count":1}],"unlinked":[]}
+[tool call] mcp__penmoss-scratch__create_note {"title": "Signal stop check", "markdown": "Written just before Claude Code stops the server. Links [[Claude Code MCP check]]."}
+[tool result] {"id":"01M63P9JDJ67RW6PME5H5GBES1","changed":true,"baseVersion":3,"summary":"Created · +1 −0 line","created":true}
+[tool call] mcp__penmoss-scratch__tag_note {"id": "01M63P9JDJ67RW6PME5H5GBES1", "add": ["t50"], "baseVersion": 3}
+[tool result] {"id":"01M63P9JDJ67RW6PME5H5GBES1","changed":true,"baseVersion":4,"summary":"Tagged · Tags changed"}
+[assistant] Finished all three steps; one line to report.
+
+Got backlinks for "G2 manual check" (one: "Claude Code MCP check"), created "Signal stop check" with the given body, and tagged it t50.
+[result] success, 7 turns, 20505 ms
+

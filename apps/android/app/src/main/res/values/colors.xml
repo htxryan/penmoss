@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The default Penmoss theme's background (packages/ui/src/theme/builtins.ts). -->
+    <color name="background">#FBFAF7</color>
+    <!-- The capture widget (T34): Penmoss's raised surface and text. Its icon is the logo (brand_colors.xml). -->
+    <color name="widget_background">#FFFFFF</color>
+    <color name="widget_text">#1F2421</color>
+</resources>

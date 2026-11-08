@@ -1,0 +1,63 @@
+// Temporary evidence capture for T45 in the Mac app (not committed). OUT=dir.
+import { expect, test, type Page } from '@playwright/test';
+import { mkdirSync } from 'node:fs';
+import { launch, mainBounds, removeDataDirs, signIn, ULID } from './support';
+
+const OUT = process.env['OUT'] ?? '/tmp/t45-evidence';
+mkdirSync(OUT, { recursive: true });
+const RUN = Date.now().toString(36).slice(-4);
+const NEW_NOTE = process.platform === 'darwin' ? 'Meta+Alt+KeyN' : 'Alt+KeyN';
+
+test.afterAll(() => removeDataDirs());
+
+async function newNote(page: Page, title: string, text: string) {
+  await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();
+  await page.keyboard.press(NEW_NOTE);
+  await expect(page).toHaveURL(ULID);
+  await page.keyboard.type(title);
+  await page.keyboard.press('Enter');
+  await page.keyboard.type(text);
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+}
+
+test('mac evidence', async () => {
+  test.setTimeout(300_000);
+  const launched = await launch();
+  const { app, page } = launched;
+  try {
+    await mainBounds(app, { x: 0, y: 0, width: 1280, height: 800 });
+    await signIn(launched);
+    await newNote(page, `Mac garden ${RUN}`, 'Tomatoes and basil by the fence.');
+    await newNote(page, `Mac reading ${RUN}`, 'Books for winter.');
+    const [window] = await Promise.all([
+      app.waitForEvent('window'),
+      app.evaluate(({ Menu }) => {
+        (
+          Menu.getApplicationMenu()?.getMenuItemById('note.openInNewWindow') as unknown as {
+            click(): void;
+          }
+        ).click();
+      }),
+    ]);
+    await expect(window.getByTestId('note-window')).toBeVisible();
+    await expect(window.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+    await page.getByRole('treeitem', { name: `Mac garden ${RUN}` }).click();
+    await expect(page.getByTestId('note-title')).toHaveValue(`Mac garden ${RUN}`);
+    for (const scheme of ['light', 'dark'] as const) {
+      await app.evaluate(({ nativeTheme }, s) => {
+        nativeTheme.themeSource = s;
+      }, scheme);
+      for (const view of [page, window]) {
+        await view.emulateMedia({ colorScheme: scheme });
+        await expect(view.locator('html')).toHaveAttribute('data-mode', scheme);
+        await view.mouse.move(600, 500);
+      }
+      await page.waitForTimeout(600);
+      await page.screenshot({ path: `${OUT}/mac-${scheme}-main.png` });
+      await window.screenshot({ path: `${OUT}/mac-${scheme}-window.png` });
+    }
+    expect(launched.errors).toEqual([]);
+  } finally {
+    await app.close();
+  }
+});

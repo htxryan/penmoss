@@ -1,0 +1,20 @@
+{
+ "light-empty": {
+  "viewport": [
+   1200,
+   772
+  ],
+  "scrollWidth": 817,
+  "clientWidth": 817,
+  "doc": 913
+ },
+ "dark-empty": {
+  "viewport": [
+   1200,
+   772
+  ],
+  "scrollWidth": 817,
+  "clientWidth": 817,
+  "doc": 913
+ }
+}

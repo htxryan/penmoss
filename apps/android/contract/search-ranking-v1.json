@@ -1,0 +1,943 @@
+{
+  "version": 1,
+  "notes": [
+    {
+      "id": "n01",
+      "title": "Garden plan",
+      "body": "Tomatoes along the fence.\nBasil by the door.",
+      "tags": ["garden"],
+      "headings": ""
+    },
+    {
+      "id": "n02",
+      "title": "Groceries",
+      "body": "Oat milk, lemons, and basil",
+      "tags": ["shopping"],
+      "headings": ""
+    },
+    {
+      "id": "n03",
+      "title": "Lemon tart",
+      "body": "Desserts\nA recipe with lemons and butter",
+      "tags": ["baking", "area/kitchen"],
+      "headings": "Desserts"
+    },
+    {
+      "id": "n04",
+      "title": "Weekly review",
+      "body": "lemon tart and other things; the garden is growing",
+      "tags": [],
+      "headings": ""
+    },
+    {
+      "id": "n05",
+      "title": "Ryan’s notes",
+      "body": "Ryan’s garden — the agents’ “memory” is here…next time",
+      "tags": ["memory"],
+      "headings": ""
+    },
+    {
+      "id": "n06",
+      "title": "Café Éclair",
+      "body": "Pastry list: éclair, croissant, tart",
+      "tags": ["baking"],
+      "headings": ""
+    },
+    {
+      "id": "n07",
+      "title": "Trip to Lisbon",
+      "body": "Train to Lisbon then the coast road",
+      "tags": ["travel"],
+      "headings": "Day one\nDay two"
+    },
+    {
+      "id": "n08",
+      "title": "Notes",
+      "body": "the coast and then a train",
+      "tags": [],
+      "headings": ""
+    },
+    {
+      "id": "n09",
+      "title": "Lisbon guide",
+      "body": "Where to eat in Lisbon: pastéis de nata",
+      "tags": ["travel", "food"],
+      "headings": "Eating"
+    },
+    {
+      "id": "n10",
+      "title": "Planting",
+      "body": "Planting the gardens in spring; planted garlic",
+      "tags": ["garden"],
+      "headings": "Spring"
+    },
+    {
+      "id": "n11",
+      "title": "Kitchen",
+      "body": "Kitchen\nThe kitchen tap drips",
+      "tags": ["area/kitchen", "home"],
+      "headings": "Kitchen"
+    },
+    {
+      "id": "n12",
+      "title": "Home lab",
+      "body": "Proxmox node, backups, UPS",
+      "tags": ["home", "home-lab"],
+      "headings": "Hardware\nBackups"
+    },
+    {
+      "id": "n13",
+      "title": "Backups",
+      "body": "Backups run nightly; restore drill monthly",
+      "tags": ["home-lab"],
+      "headings": ""
+    },
+    {
+      "id": "n14",
+      "title": "Meeting notes",
+      "body": "Agenda\nBudget review and the memory project",
+      "tags": ["work"],
+      "headings": "Agenda"
+    },
+    {
+      "id": "n15",
+      "title": "Budget",
+      "body": "Shared budget, ToniSplit, weekly true-up",
+      "tags": ["money"],
+      "headings": ""
+    },
+    {
+      "id": "n16",
+      "title": "Reading list",
+      "body": "Books: the garden of forking paths; a memory of light",
+      "tags": ["books"],
+      "headings": ""
+    },
+    {
+      "id": "n17",
+      "title": "Recipes",
+      "body": "Soups\nTomato soup with basil\nStews\nBeef stew",
+      "tags": ["food", "soup"],
+      "headings": "Soups\nStews"
+    },
+    {
+      "id": "n18",
+      "title": "Soup",
+      "body": "soup soup soup",
+      "tags": ["soup"],
+      "headings": ""
+    },
+    {
+      "id": "n19",
+      "title": "Naïve ideas",
+      "body": "A naive façade; coöperate",
+      "tags": [],
+      "headings": ""
+    },
+    {
+      "id": "n20",
+      "title": "Привет",
+      "body": "Привет мир, garden",
+      "tags": [],
+      "headings": ""
+    },
+    {
+      "id": "n21",
+      "title": "Long note",
+      "body": "garden garden garden filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler filler ",
+      "tags": [],
+      "headings": ""
+    },
+    {
+      "id": "n22",
+      "title": "Train times",
+      "body": "The 7:15 train; trains run hourly",
+      "tags": ["travel"],
+      "headings": ""
+    },
+    {
+      "id": "n23",
+      "title": "Coast walk",
+      "body": "Coast path, road closed",
+      "tags": ["travel", "walks"],
+      "headings": "Route"
+    },
+    {
+      "id": "n24",
+      "title": "Basil",
+      "body": "Basil basil",
+      "tags": ["garden", "herbs"],
+      "headings": "Basil care"
+    },
+    {
+      "id": "n25",
+      "title": "Empty",
+      "body": "",
+      "tags": [],
+      "headings": ""
+    },
+    {
+      "id": "n26",
+      "title": "Tags only",
+      "body": "nothing here",
+      "tags": ["lemon", "garden"],
+      "headings": ""
+    },
+    {
+      "id": "n27",
+      "title": "Headings",
+      "body": "Lemons\nBasil\nnotes",
+      "tags": [],
+      "headings": "Lemons\nBasil"
+    },
+    {
+      "id": "n28",
+      "title": "Memory",
+      "body": "Penmoss holds the agents’ memory",
+      "tags": ["memory", "penmoss"],
+      "headings": ""
+    },
+    {
+      "id": "n29",
+      "title": "Dashes",
+      "body": "one—two three–four five-six",
+      "tags": [],
+      "headings": ""
+    },
+    {
+      "id": "n30",
+      "title": "Same score a",
+      "body": "unique tie word",
+      "tags": [],
+      "headings": ""
+    },
+    {
+      "id": "n31",
+      "title": "Same score b",
+      "body": "unique tie word",
+      "tags": [],
+      "headings": ""
+    },
+    {
+      "id": "n32",
+      "title": "Call back",
+      "body": "Phone 5551234567 after lunch",
+      "tags": [],
+      "headings": ""
+    },
+    {
+      "id": "n33",
+      "title": "Release",
+      "body": "Fixed in commit 07f7c6f, ticket rh12345",
+      "tags": [],
+      "headings": ""
+    },
+    {
+      "id": "n34",
+      "title": "History",
+      "body": "The counterrevolutionaries regrouped",
+      "tags": [],
+      "headings": ""
+    },
+    {
+      "id": "n35",
+      "title": "日记",
+      "body": "我们今天去公园散步",
+      "tags": [],
+      "headings": ""
+    },
+    {
+      "id": "n36",
+      "title": "Москва",
+      "body": "Достопримечательности города",
+      "tags": [],
+      "headings": ""
+    },
+    {
+      "id": "n37",
+      "title": "Numbers",
+      "body": "Phone 5559991234 and commit 07fc6f00",
+      "tags": [],
+      "headings": ""
+    },
+    {
+      "id": "n38",
+      "title": "Happiness",
+      "body": "Notes on happiness, and on being happy",
+      "tags": [],
+      "headings": ""
+    },
+    {
+      "id": "n39",
+      "title": "Training",
+      "body": "Conditioning work for three generations of runners",
+      "tags": ["fitness"],
+      "headings": "Conditioning"
+    },
+    {
+      "id": "n40",
+      "title": "Family tree",
+      "body": "Four generations, and the ties that bind them; generally happy",
+      "tags": ["family"],
+      "headings": ""
+    }
+  ],
+  "queries": [
+    {
+      "query": "garden",
+      "hits": [
+        {
+          "id": "n01",
+          "score": 2.444509805
+        },
+        {
+          "id": "n26",
+          "score": 2.28083303
+        },
+        {
+          "id": "n24",
+          "score": 2.249632669
+        },
+        {
+          "id": "n10",
+          "score": 2.228001993
+        },
+        {
+          "id": "n20",
+          "score": 1.627142585
+        },
+        {
+          "id": "n04",
+          "score": 1.208606368
+        },
+        {
+          "id": "n16",
+          "score": 1.125864466
+        },
+        {
+          "id": "n05",
+          "score": 1.088601323
+        },
+        {
+          "id": "n21",
+          "score": 0.593847063
+        }
+      ]
+    },
+    {
+      "query": "basil",
+      "hits": [
+        {
+          "id": "n24",
+          "score": 3.892975248
+        },
+        {
+          "id": "n27",
+          "score": 3.548241769
+        },
+        {
+          "id": "n02",
+          "score": 2.204181204
+        },
+        {
+          "id": "n01",
+          "score": 1.88020234
+        },
+        {
+          "id": "n17",
+          "score": 1.751482583
+        }
+      ]
+    },
+    {
+      "query": "lemon",
+      "hits": [
+        {
+          "id": "n03",
+          "score": 3.656346708
+        },
+        {
+          "id": "n26",
+          "score": 3.548241769
+        },
+        {
+          "id": "n27",
+          "score": 3.548241769
+        },
+        {
+          "id": "n02",
+          "score": 2.204181204
+        },
+        {
+          "id": "n04",
+          "score": 1.88020234
+        }
+      ]
+    },
+    {
+      "query": "lemon tart",
+      "hits": [
+        {
+          "id": "n03",
+          "score": 8.256352036
+        },
+        {
+          "id": "n04",
+          "score": 4.271388124
+        }
+      ]
+    },
+    {
+      "query": "\"lemon tart\"",
+      "hits": [
+        {
+          "id": "n03",
+          "score": 5.303686111
+        },
+        {
+          "id": "n04",
+          "score": 2.756974815
+        }
+      ]
+    },
+    {
+      "query": "title:lemon",
+      "hits": [
+        {
+          "id": "n03",
+          "score": 6.344240521
+        }
+      ]
+    },
+    {
+      "query": "lisbon train",
+      "hits": [
+        {
+          "id": "n07",
+          "score": 7.132683452
+        }
+      ]
+    },
+    {
+      "query": "\"coast road\"",
+      "hits": [
+        {
+          "id": "n07",
+          "score": 2.87526152
+        }
+      ]
+    },
+    {
+      "query": "lisb*",
+      "hits": [
+        {
+          "id": "n09",
+          "score": 5.361367538
+        },
+        {
+          "id": "n07",
+          "score": 5.292603895
+        }
+      ]
+    },
+    {
+      "query": "garden -planting",
+      "hits": [
+        {
+          "id": "n01",
+          "score": 2.444509805
+        },
+        {
+          "id": "n26",
+          "score": 2.28083303
+        },
+        {
+          "id": "n24",
+          "score": 2.249632669
+        },
+        {
+          "id": "n20",
+          "score": 1.627142585
+        },
+        {
+          "id": "n04",
+          "score": 1.208606368
+        },
+        {
+          "id": "n16",
+          "score": 1.125864466
+        },
+        {
+          "id": "n05",
+          "score": 1.088601323
+        },
+        {
+          "id": "n21",
+          "score": 0.593847063
+        }
+      ]
+    },
+    {
+      "query": "ryan",
+      "hits": [
+        {
+          "id": "n05",
+          "score": 6.371845935
+        }
+      ]
+    },
+    {
+      "query": "éclair",
+      "hits": [
+        {
+          "id": "n06",
+          "score": 6.628540401
+        }
+      ]
+    },
+    {
+      "query": "ECLAIR",
+      "hits": [
+        {
+          "id": "n06",
+          "score": 6.628540401
+        }
+      ]
+    },
+    {
+      "query": "memory",
+      "hits": [
+        {
+          "id": "n28",
+          "score": 4.34921298
+        },
+        {
+          "id": "n05",
+          "score": 3.722562604
+        },
+        {
+          "id": "n14",
+          "score": 2.110541389
+        },
+        {
+          "id": "n16",
+          "score": 1.966052485
+        }
+      ]
+    },
+    {
+      "query": "kitchen",
+      "hits": [
+        {
+          "id": "n11",
+          "score": 5.715728281
+        },
+        {
+          "id": "n03",
+          "score": 4.742438153
+        }
+      ]
+    },
+    {
+      "query": "desserts",
+      "hits": [
+        {
+          "id": "n03",
+          "score": 5.672878762
+        }
+      ]
+    },
+    {
+      "query": "soup",
+      "hits": [
+        {
+          "id": "n18",
+          "score": 5.790149471
+        },
+        {
+          "id": "n17",
+          "score": 5.361367538
+        }
+      ]
+    },
+    {
+      "query": "backups",
+      "hits": [
+        {
+          "id": "n13",
+          "score": 5.504398259
+        },
+        {
+          "id": "n12",
+          "score": 4.865454166
+        }
+      ]
+    },
+    {
+      "query": "naive",
+      "hits": [
+        {
+          "id": "n19",
+          "score": 6.718763837
+        }
+      ]
+    },
+    {
+      "query": "привет",
+      "hits": [
+        {
+          "id": "n20",
+          "score": 6.811477293
+        }
+      ]
+    },
+    {
+      "query": "two",
+      "hits": [
+        {
+          "id": "n07",
+          "score": 4.372863117
+        },
+        {
+          "id": "n29",
+          "score": 3.232030903
+        }
+      ]
+    },
+    {
+      "query": "tie",
+      "hits": [
+        {
+          "id": "n30",
+          "score": 3.377526855
+        },
+        {
+          "id": "n31",
+          "score": 3.377526855
+        }
+      ]
+    },
+    {
+      "query": "travel",
+      "hits": [
+        {
+          "id": "n23",
+          "score": 3.823829194
+        },
+        {
+          "id": "n22",
+          "score": 3.773583601
+        },
+        {
+          "id": "n09",
+          "score": 3.630469148
+        },
+        {
+          "id": "n07",
+          "score": 3.540941532
+        }
+      ]
+    },
+    {
+      "query": "home",
+      "hits": [
+        {
+          "id": "n12",
+          "score": 4.926334998
+        },
+        {
+          "id": "n13",
+          "score": 4.332294103
+        },
+        {
+          "id": "n11",
+          "score": 4.275367218
+        }
+      ]
+    },
+    {
+      "query": "gardening",
+      "hits": [
+        {
+          "id": "n01",
+          "score": 2.444509805
+        },
+        {
+          "id": "n26",
+          "score": 2.28083303
+        },
+        {
+          "id": "n24",
+          "score": 2.249632669
+        },
+        {
+          "id": "n10",
+          "score": 2.228001993
+        },
+        {
+          "id": "n20",
+          "score": 1.627142585
+        },
+        {
+          "id": "n04",
+          "score": 1.208606368
+        },
+        {
+          "id": "n16",
+          "score": 1.125864466
+        },
+        {
+          "id": "n05",
+          "score": 1.088601323
+        },
+        {
+          "id": "n21",
+          "score": 0.593847063
+        }
+      ]
+    },
+    {
+      "query": "555123*",
+      "hits": [
+        {
+          "id": "n32",
+          "score": 4.04017928
+        }
+      ]
+    },
+    {
+      "query": "07f7c*",
+      "hits": [
+        {
+          "id": "n33",
+          "score": 3.866137813
+        }
+      ]
+    },
+    {
+      "query": "rh123*",
+      "hits": [
+        {
+          "id": "n33",
+          "score": 3.866137813
+        }
+      ]
+    },
+    {
+      "query": "counterrevolution*",
+      "hits": [
+        {
+          "id": "n34",
+          "score": 4.439922179
+        }
+      ]
+    },
+    {
+      "query": "counterrevolutionaries",
+      "hits": [
+        {
+          "id": "n34",
+          "score": 4.439922179
+        }
+      ]
+    },
+    {
+      "query": "我们今天*",
+      "hits": [
+        {
+          "id": "n35",
+          "score": 4.927453668
+        }
+      ]
+    },
+    {
+      "query": "достопримечательн*",
+      "hits": [
+        {
+          "id": "n36",
+          "score": 4.671000969
+        }
+      ]
+    },
+    {
+      "query": "555999567",
+      "hits": []
+    },
+    {
+      "query": "07fc6f",
+      "hits": []
+    },
+    {
+      "query": "5551234567",
+      "hits": [
+        {
+          "id": "n32",
+          "score": 4.04017928
+        }
+      ]
+    },
+    {
+      "query": "happin*",
+      "hits": [
+        {
+          "id": "n38",
+          "score": 5.578002428
+        },
+        {
+          "id": "n40",
+          "score": 2.568230699
+        }
+      ]
+    },
+    {
+      "query": "conditio*",
+      "hits": [
+        {
+          "id": "n39",
+          "score": 5.896505767
+        }
+      ]
+    },
+    {
+      "query": "generati*",
+      "hits": [
+        {
+          "id": "n40",
+          "score": 3.599664458
+        },
+        {
+          "id": "n39",
+          "score": 2.862147108
+        }
+      ]
+    },
+    {
+      "query": "title:happin*",
+      "hits": [
+        {
+          "id": "n38",
+          "score": 6.576691778
+        }
+      ]
+    },
+    {
+      "query": "tie*",
+      "hits": [
+        {
+          "id": "n30",
+          "score": 3.377526855
+        },
+        {
+          "id": "n31",
+          "score": 3.377526855
+        },
+        {
+          "id": "n40",
+          "score": 3.072103613
+        }
+      ]
+    },
+    {
+      "query": "plantin*",
+      "hits": [
+        {
+          "id": "n10",
+          "score": 6.590711143
+        }
+      ]
+    },
+    {
+      "query": "happin* tie* generati*",
+      "hits": []
+    },
+    {
+      "query": "gener* tie* happin*",
+      "hits": [
+        {
+          "id": "n40",
+          "score": 9.239998769
+        }
+      ]
+    },
+    {
+      "query": "happin",
+      "prefixLast": true,
+      "hits": [
+        {
+          "id": "n38",
+          "score": 5.578002428
+        },
+        {
+          "id": "n40",
+          "score": 2.568230699
+        }
+      ]
+    },
+    {
+      "query": "runners conditio",
+      "prefixLast": true,
+      "hits": [
+        {
+          "id": "n39",
+          "score": 9.320190593
+        }
+      ]
+    },
+    {
+      "query": "-happy generati",
+      "prefixLast": true,
+      "hits": [
+        {
+          "id": "n39",
+          "score": 2.862147108
+        }
+      ]
+    },
+    {
+      "query": "lemon ta",
+      "prefixLast": true,
+      "hits": [
+        {
+          "id": "n26",
+          "score": 7.353547267
+        },
+        {
+          "id": "n03",
+          "score": 7.273355823
+        },
+        {
+          "id": "n04",
+          "score": 3.760404679
+        }
+      ]
+    },
+    {
+      "query": "gardeni",
+      "prefixLast": true,
+      "hits": []
+    },
+    {
+      "query": "title:conditio",
+      "prefixLast": true,
+      "hits": []
+    },
+    {
+      "query": "ha",
+      "prefixLast": true,
+      "hits": [
+        {
+          "id": "n38",
+          "score": 4.837925992
+        },
+        {
+          "id": "n12",
+          "score": 4.027411722
+        },
+        {
+          "id": "n40",
+          "score": 2.227483801
+        }
+      ]
+    }
+  ]
+}

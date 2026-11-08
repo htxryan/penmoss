@@ -1,0 +1,374 @@
+# Penmoss commands (README.md#development). Run `task --list` for descriptions.
+# pnpm comes from Corepack (`corepack enable pnpm`); the version is pinned in package.json.
+version: '3'
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+
+tasks:
+  default:
+    cmds:
+      - task --list
+    silent: true
+
+  setup:
+    desc: Install dependencies
+    preconditions:
+      - sh: command -v pnpm
+        msg: 'pnpm not found. Run `corepack enable pnpm` (Node 24 ships Corepack), then retry.'
+    cmds:
+      - pnpm install
+
+  check:
+    desc: 'Lint, typecheck and unit-test every package (before pushing; CI runs it too). Waits for a free heavy-job slot (scripts/heavy.sh)'
+    cmds:
+      - sh scripts/heavy.sh check {{.TASK_EXE}} check:all
+
+  check:all:
+    cmds:
+      - task: lint
+      - task: typecheck
+      - task: test
+      - task: releases:test
+      - task: workflows:test
+      - task: audit:secrets
+      - task: audit:test
+      - task: ports:test
+      - task: ci:lint
+      - task: android:publish:test
+
+  check:changed:
+    desc: 'The checks for what this branch changed against origin/main (before each commit): lint and format of the changed files, typecheck and unit tests of the changed packages and the packages that use them. Falls back to `task check` when shared config changed'
+    cmds:
+      - sh scripts/heavy.sh check:changed sh scripts/check-changed.sh {{.CLI_ARGS}}
+
+  ports:test:
+    desc: 'Port blocks (#260): scripts/ports.mjs, which PENMOSS_PORT_BLOCK=n moves every dev and test port with'
+    cmds:
+      - node --test scripts/ports.test.mjs
+  ci:lint:
+    desc: 'No GitHub-hosted runners (A702, F9): every runs-on names self-hosted Mac labels, never an expression'
+    cmds:
+      - node --test .github/scripts/no-hosted-runners.test.mjs
+      - node .github/scripts/no-hosted-runners.mjs
+
+  releases:test:
+    desc: 'The Releases page rules CI follows (A403, A1188, A1189): .github/scripts/releases.mjs against an in-memory page, and the checks of `task release` against a fake git'
+    cmds:
+      - node --test .github/scripts/releases.test.mjs .github/scripts/release-tag.test.mjs
+
+  release:
+    desc: 'Tag a stable release (P3, A1189; Ryan only): `task release -- X.Y.Z` (or X.Y.Z-rc.N for a rehearsal) checks main is clean and matches origin/main, the tag is new and the version newer than the newest stable one, then pushes the annotated tag vX.Y.Z; release.yml builds the draft. `-- X.Y.Z --dry-run` checks and pushes nothing'
+    cmds:
+      - node .github/scripts/release-tag.mjs {{.CLI_ARGS}}
+
+  workflows:test:
+    desc: 'The fork guard (P10, A1183): no self-hosted job runs for a pull request from a fork'
+    cmds:
+      - node --test .github/scripts/workflow-guard.test.mjs
+
+  audit:secrets:
+    desc: 'gitleaks over the tree, or every commit with `-- --history` (T80.1, A1185; docs/qa/public-release-audit.md)'
+    cmds:
+      - |
+        if [ "{{.CLI_ARGS}}" = "--history" ]; then
+          scripts/gitleaks.sh git --no-banner --redact --config .gitleaks.toml --log-opts=--all .
+        else
+          # The files git tracks or would add, not node_modules or build output.
+          tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+          git ls-files -z --cached --others --exclude-standard |
+            perl -0 -ne 'print if -e substr($_, 0, -1)' |
+            tar --null -T - -cf - | tar -xf - -C "$tmp"
+          scripts/gitleaks.sh dir --no-banner --redact --config .gitleaks.toml "$tmp"
+        fi
+
+  audit:test:
+    desc: 'The secret scan catches a planted token and passes the reviewed false positives'
+    cmds:
+      - node --test scripts/audit-secrets.test.mjs
+
+  lint:
+    desc: ESLint, stylelint (no literal colours, T28) and Prettier check across the repo
+    cmds:
+      # Type-aware linting of the whole repo outgrew Node's default heap on an 11 GB machine
+      # (about 2 GB there; T39 pass 3): it ran out of memory on the agent worker.
+      # The site's content config imports astro:content, whose types `astro sync` generates
+      # (site/.astro, git-ignored): without them a clean checkout fails type-aware linting.
+      - pnpm --filter @penmoss/site exec astro sync > /dev/null
+      - NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=4096" pnpm exec eslint .
+      - pnpm exec stylelint "**/*.css"
+      - pnpm exec prettier --check .
+      # No planning or roadmap files in the repository: they live in GitHub issues (W13).
+      - sh scripts/no-plan-files.sh
+
+  format:
+    desc: Format the repo with Prettier
+    cmds:
+      - pnpm exec prettier --write .
+
+  typecheck:
+    desc: Type-check every package with tsc
+    cmds:
+      - pnpm -r --workspace-concurrency=2 typecheck
+
+  test:
+    desc: 'Unit tests: every package, or one with `task test -- core` (package name without @penmoss/)'
+    cmds:
+      - '{{if .CLI_ARGS}}pnpm --filter "@penmoss/{{.CLI_ARGS}}" test{{else}}pnpm -r --workspace-concurrency=1 test{{end}}'
+
+  site:dev:
+    desc: 'penmoss.app: astro dev, the brochure and the docs at /docs with live reload'
+    dir: site
+    cmds:
+      - pnpm exec astro dev {{.CLI_ARGS}}
+
+  site:build:
+    desc: 'penmoss.app: astro build into site/dist, then the CSP hashes of the docs into dist/_headers (P14)'
+    dir: site
+    cmds:
+      - node build.mjs
+
+  site:preview:
+    desc: 'penmoss.app: wrangler dev over site/dist with the real headers, on http://localhost:8788'
+    deps: [site:build]
+    dir: site
+    cmds:
+      - pnpm exec wrangler dev --local --port 8788
+
+  site:test:
+    desc: 'penmoss.app: build it, check the screenshots are there and within budget (A1210), then Playwright checks of the built site under wrangler dev (site/test)'
+    deps: [site:build]
+    dir: site
+    cmds:
+      - node --test scripts/images.test.mjs
+      - pnpm exec playwright test {{.CLI_ARGS}}
+
+  site:screenshots:
+    desc: 'penmoss.app: regenerate site/public/img from the demo notebook, headless (A1210); `-- --check` regenerates into a temp folder and fails unless the images are identical. Waits for a heavy-job slot'
+    cmds:
+      - sh scripts/heavy.sh site:screenshots node site/scripts/screenshots.mjs {{.CLI_ARGS}}
+
+  site:social:
+    desc: 'penmoss.app: redraw the 1200×630 social card, site/public/img/social.png, with headless Chromium (T80.11)'
+    dir: site
+    cmds:
+      - node scripts/social-image.mjs
+
+  site:deploy:
+    desc: 'penmoss.app: build it, then wrangler deploy of site/dist'
+    deps: [site:build]
+    dir: site
+    cmds:
+      - pnpm exec wrangler deploy
+
+  factory:next:
+    desc: 'The software factory (#253): print the Ready card it would start next, and why (read-only)'
+    cmds:
+      - node tools/factory/src/cli.ts next {{.CLI_ARGS}}
+
+  factory:run:
+    desc: 'The software factory (F4): run one Ready issue now, in the foreground: `task factory:run -- 123`'
+    cmds:
+      - node tools/factory/src/cli.ts run {{.CLI_ARGS}}
+
+  factory:install:
+    desc: 'The software factory (F10): install and start its LaunchAgent (starts at login, restarts if it exits)'
+    cmds:
+      - node tools/factory/src/cli.ts install
+
+  factory:start:
+    desc: 'The software factory: start the daemon now'
+    cmds:
+      - launchctl kickstart gui/$(id -u)/app.penmoss.factory
+
+  factory:stop:
+    desc: 'The software factory: stop the daemon (runs in progress restart next time, R12)'
+    cmds:
+      - launchctl bootout gui/$(id -u)/app.penmoss.factory || true
+
+  factory:status:
+    desc: 'The software factory: what the daemon is running and waiting on'
+    cmds:
+      - node tools/factory/src/cli.ts status
+
+  factory:logs:
+    desc: 'The software factory: follow the daemon log'
+    cmds:
+      - tail -n 100 -f "$HOME/Library/Application Support/penmoss-factory/daemon.log"
+
+  factory:report:
+    desc: 'The software factory (F14): throughput, rounds, time to In review and the share Blocked: `task factory:report -- --from 2026-11-01 --to 2026-11-08`'
+    cmds:
+      - node tools/factory/src/cli.ts report {{.CLI_ARGS}}
+
+  factory:ui:
+    desc: 'The Factory UI (F20) in the foreground on 127.0.0.1:7878, if its LaunchAgent is not running it already'
+    cmds:
+      - node tools/factory/src/cli.ts ui
+
+  factory:ui:open:
+    desc: 'Open the Factory UI in the browser (the link, with its token, that the running UI wrote)'
+    cmds:
+      - open "$(cat "$HOME/Library/Application Support/penmoss-factory/ui.url")"
+
+  factory:doctor:
+    desc: "The software factory (F17): check a slot's sandbox (`-- --slot 2`, `-- --full` for task check, e2e and Android)"
+    cmds:
+      - node tools/factory/src/cli.ts doctor {{.CLI_ARGS}}
+
+  dev:
+    desc: 'Run the Mac app from this checkout (the web app runs only inside it, D48)'
+    cmds:
+      - task: desktop:dev
+
+  e2e:
+    desc: 'Playwright web suite on git notebooks behind a stand-in for the Mac app; one spec with `task e2e -- smoke.spec.ts`. Waits for a free heavy-job slot'
+    cmds:
+      - sh scripts/heavy.sh e2e {{.TASK_EXE}} e2e:run -- {{.CLI_ARGS}}
+
+  e2e:run:
+    # Two passes (A1139): every spec but the timed ones, several at once, then the timed ones
+    # (@perf, @budget) alone, so the others' load never skews their numbers. A pass with
+    # nothing to run passes.
+    cmds:
+      - pnpm --filter @penmoss/web exec playwright test --project=chromium --pass-with-no-tests {{.CLI_ARGS}}
+      - pnpm --filter @penmoss/web exec playwright test --project=timed --pass-with-no-tests {{.CLI_ARGS}}
+
+  proof:web:
+    desc: "The software factory's web proof (F5): the given specs recorded on video with a final screenshot, `task proof:web -- comments.spec.ts`"
+    cmds:
+      - PENMOSS_PROOF=1 pnpm --filter @penmoss/web exec playwright test --project=chromium --project=timed {{.CLI_ARGS}}
+
+  e2e:install:
+    desc: Install the Chromium build Playwright needs (add `-- --with-deps` on a fresh Linux machine)
+    cmds:
+      - pnpm --filter @penmoss/web exec playwright install chromium {{.CLI_ARGS}}
+
+  cli:build:
+    desc: Build the penmoss CLI into packages/cli/dist/penmoss.js (docs/cli.md)
+    cmds:
+      - pnpm --silent --filter @penmoss/cli build
+    sources:
+      - packages/cli/src/**/*.ts
+      - packages/cli/build.js
+      - packages/cli/package.json
+    generates:
+      - packages/cli/dist/penmoss.js
+      - packages/cli/dist/penmoss-cli.js
+
+  cli:
+    desc: 'Run the penmoss CLI from this checkout, built first: `task cli -- search "garden plan"`'
+    deps: [cli:build]
+    silent: true
+    cmds:
+      - node packages/cli/dist/penmoss.js {{.CLI_ARGS}}
+
+  desktop:build:
+    desc: 'Mac app (T29): the web bundle into apps/desktop/dist/web, then the main process and preload'
+    cmds:
+      - PENMOSS_BUILD=desktop pnpm --filter @penmoss/web exec vite build --outDir ../desktop/dist/web --emptyOutDir --logLevel warn
+      - pnpm --filter @penmoss/desktop build
+
+  desktop:dev:
+    desc: 'Run the Mac app from this checkout; rebuilds first'
+    deps: [desktop:build]
+    cmds:
+      - pnpm --filter @penmoss/desktop exec electron . {{.CLI_ARGS}}
+
+  desktop:test:
+    desc: 'Mac app: unit tests, then Playwright for Electron. On a Mac it runs in the test VM, never on this screen (W10); xvfb on Linux'
+    vars:
+      IN_VM:
+        sh: sysctl -n kern.hv_vmm_present 2>/dev/null || echo 0
+    cmds:
+      - '{{if and (eq OS "darwin") (ne .IN_VM "1")}}sh scripts/vm/desktop-test.sh {{.CLI_ARGS}}{{else}}task desktop:test:here -- {{.CLI_ARGS}}{{end}}'
+
+  proof:mac:
+    desc: 'Mac app proof for the software factory (F7): the named specs in the test VM with every window recorded; the report lands in test-results/vm/test-results/proof'
+    cmds:
+      - PENMOSS_PROOF=1 sh scripts/vm/desktop-test.sh {{.CLI_ARGS}}
+
+  desktop:test:vm:
+    desc: 'Mac app tests in the macOS test VM (Tart), the same as `task desktop:test` on a Mac; log in test-results/vm (docs/ci.md §8)'
+    cmds:
+      - sh scripts/vm/desktop-test.sh {{.CLI_ARGS}}
+
+  # Where the windows can open: inside the test VM, or Linux under xvfb. The suite refuses to
+  # start on a Mac's own screen (apps/desktop/test/e2e/host-guard.ts).
+  desktop:test:here:
+    deps: [desktop:build]
+    cmds:
+      - pnpm --filter @penmoss/desktop test
+      - '{{if eq OS "linux"}}xvfb-run -a {{end}}pnpm --filter @penmoss/desktop exec playwright test {{.CLI_ARGS}}'
+
+  desktop:package:
+    desc: 'Mac app .dmg and .zip in apps/desktop/release (signed and notarised only with CSC_LINK and APPLE_* set; docs/desktop.md)'
+    deps: [desktop:build]
+    cmds:
+      - pnpm --filter @penmoss/desktop exec electron-builder --config electron-builder.config.cjs --publish never {{.CLI_ARGS}}
+
+  brand:
+    desc: "Logo files (A402, docs/brand.md): write every icon from scripts/brand-assets.mjs, then render the Mac icon's and menu bar icon's PNGs"
+    cmds:
+      - node scripts/brand-assets.mjs
+      - '{{if eq OS "linux"}}xvfb-run -a {{end}}pnpm --filter @penmoss/desktop exec electron scripts/render-icon.mjs'
+      - '{{if eq OS "linux"}}xvfb-run -a {{end}}pnpm --filter @penmoss/desktop exec electron scripts/render-tray-icon.mjs'
+
+  android:editor:
+    desc: 'Android: build the editor page (Vite) into the app assets (apps/android/app/src/main/assets/editor)'
+    cmds:
+      - pnpm --filter @penmoss/android-editor build
+
+  android:build:
+    desc: 'Android: the debug APK, app.penmoss.debug, for local and pull-request builds (apps/android/app/build/outputs/apk/debug/app-debug.apk; docs/android.md)'
+    deps: [android:editor]
+    dir: apps/android
+    env: &android-env # The agent worker's toolchain (W5); CI and other machines set their own.
+      ANDROID_HOME: '{{.ANDROID_HOME | default (print .HOME "/Android/sdk")}}'
+      JAVA_HOME: '{{.JAVA_HOME | default (print .HOME "/opt/jdk-21")}}'
+    cmds:
+      - ./gradlew --console=plain :app:assembleDebug {{.CLI_ARGS}}
+
+  android:apk:sideload:
+    desc: 'Android: the public APK (P8): the release build of app.penmoss signed with the sideload key (PENMOSS_SIDELOAD_KEYSTORE, PENMOSS_SIDELOAD_PASSWORD; PENMOSS_VERSION_CODE, PENMOSS_VERSION_NAME) in apps/android/app/build/outputs/apk/release/app-release.apk; docs/android.md'
+    deps: [android:editor]
+    dir: apps/android
+    env: *android-env
+    cmds:
+      - PENMOSS_RELEASE_SIGNING=sideload ./gradlew --console=plain :app:assembleRelease {{.CLI_ARGS}}
+
+  proof:android:
+    desc: "Android proof for the software factory (F8): in a slot's sandbox, the named instrumented tests on the slot's own headless emulator, recorded; apps/android/build/proof"
+    deps: [android:editor]
+    dir: apps/android
+    env: *android-env
+    cmds:
+      - sh scripts/proof.sh {{.CLI_ARGS}}
+
+  android:test:
+    desc: 'Android: JVM tests of the sync engine and bridge, and Robolectric tests of the app (Room, Compose UI)'
+    deps: [android:editor]
+    dir: apps/android
+    env: *android-env
+    cmds:
+      - ./gradlew --console=plain :engine-bridge:test :app:testDebugUnitTest :app:assembleDebugAndroidTest {{.CLI_ARGS}}
+
+  android:release:
+    desc: 'Android: the signed App Bundle for Play internal testing (needs the PENMOSS_KEY* signing settings; docs/android.md)'
+    deps: [android:editor]
+    dir: apps/android
+    env: *android-env
+    cmds:
+      # versionCode (A595): PENMOSS_VERSION_CODE if set, else minutes since 2026-01-01 UTC, which
+      # rises with every build and stays far above the sideload builds' CI run numbers (A400).
+      - PENMOSS_VERSION_CODE="${PENMOSS_VERSION_CODE:-$(( ($(date -u +%s) - 1767225600) / 60 ))}" ./gradlew --console=plain :app:bundleRelease {{.CLI_ARGS}}
+
+  android:publish-internal:
+    desc: 'Android: upload the release bundle to Play internal testing (needs ~/.config/penmoss/play-service-account.json; `-- --dry-run` validates, then deletes the edit; docs/android.md)'
+    cmds:
+      - uv run --script apps/android/play/publish_internal.py {{.CLI_ARGS}}
+
+  android:publish:test:
+    desc: 'Unit tests of the Play upload script: arguments, refusals, the API calls in order (a fake client; no network)'
+    cmds:
+      - python3 -B -m unittest discover -s apps/android/play

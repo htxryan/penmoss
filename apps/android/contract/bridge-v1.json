@@ -1,0 +1,1696 @@
+{
+  "$comment": "Every message of the Android editor bridge, version 1 (T32, A282; T33 added messages, A300, A309, A311; T38 added create, setTag, created and tags; T43 added the notebook of open, create and copyConflicts (A766); T40 P1 added width, P1b preview; T40 P4 added focusTitle; T40 P5 added createPeriodic, createdPeriodic and periodicNav; T40 P8 added copy, clipboard, insertPlain, source, blocks, insert, turnInto, block, folds and counts, the table and heading 4–6 commands, and the state's table, code and block fields; the P8 reviews added captureSelection, undoDelete, and source and blockDeleted from the page; part two added file, fileStored, insertFiles, fileInfo, openFile and webPictures; T40 P7 added noteContent both ways, noteChanged, showHeading, watchNote, noteInfo, and openNote's heading; T40 P9 added keys and command, a createPeriodic request tag its error echoes, and each period target's period; T44 added symbols, symbol, and the state's symbols and canSymbol; T48 added commentDraft both ways, commentCreate, commentReply, commentEdit, commentDelete, commentDeleteThread, commentStatus, commentTarget and commentActive, and comments and commentOpen from the page; its review added commentAuthor, who the phone writes as, a removed first comment's removed, A784, and the failed delivery state with its reason; T51 added fonts, A944, and lightbox and closeLightbox, A948; T60 put the agent writer in place of the token in a thread's target, added the gone reason, A1062, commentSessions, A1077, and commentSent, A1078). Checked by apps/android/editor/test/contract.test.ts and the Kotlin BridgeProtocolTest; invalidFromEditor holds messages the page must never send, which the app refuses. Updates are base64 Yjs bytes that Kotlin never reads. A real `theme` carries the whole theme /sync/tree resolved (A305); the example names a built-in only.",
+  "formatCommands": [
+    "bold",
+    "italic",
+    "strike",
+    "code",
+    "highlight",
+    "paragraph",
+    "heading1",
+    "heading2",
+    "heading3",
+    "bulletList",
+    "orderedList",
+    "taskList",
+    "blockquote",
+    "codeBlock",
+    "indent",
+    "outdent",
+    "undo",
+    "redo",
+    "link",
+    "heading4",
+    "heading5",
+    "heading6",
+    "nextCell",
+    "previousCell",
+    "addRow",
+    "addColumn"
+  ],
+  "toEditor": [
+    {
+      "v": 1,
+      "type": "open",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "synced": [
+        {
+          "id": "11",
+          "update": "AAA="
+        },
+        {
+          "id": "12",
+          "update": "AAA="
+        }
+      ],
+      "pending": [
+        {
+          "id": "13",
+          "update": "AAA="
+        },
+        {
+          "id": "14",
+          "update": "AAA="
+        }
+      ],
+      "editable": true
+    },
+    {
+      "v": 1,
+      "type": "remote",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "update": "AAA="
+    },
+    {
+      "v": 1,
+      "type": "flush",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
+    },
+    {
+      "v": 1,
+      "type": "close",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
+    },
+    {
+      "v": 1,
+      "type": "compact",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "updates": [
+        {
+          "id": "21",
+          "update": "AAA="
+        },
+        {
+          "id": "22",
+          "update": "AAA="
+        }
+      ]
+    },
+    {
+      "v": 1,
+      "type": "format",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "command": "bold"
+    },
+    {
+      "v": 1,
+      "type": "format",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "command": "heading2"
+    },
+    {
+      "v": 1,
+      "type": "format",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "command": "indent"
+    },
+    {
+      "v": 1,
+      "type": "format",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "command": "link",
+      "href": "https://penmoss.app"
+    },
+    {
+      "v": 1,
+      "type": "dismiss",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
+    },
+    {
+      "v": 1,
+      "type": "focus",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
+    },
+    {
+      "v": 1,
+      "type": "focusTitle",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
+    },
+    {
+      "v": 1,
+      "type": "insertImages",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "paths": ["attachments/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08.jpg"]
+    },
+    {
+      "v": 1,
+      "type": "copyConflicts",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "base": [
+        {
+          "id": "31",
+          "update": "AAA="
+        }
+      ],
+      "edits": [
+        {
+          "id": "32",
+          "update": "AAA="
+        }
+      ]
+    },
+    {
+      "v": 1,
+      "type": "copyConflicts",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "base": [
+        {
+          "id": "31",
+          "update": "AAA="
+        },
+        {
+          "id": "32",
+          "update": "AAA="
+        }
+      ],
+      "edits": [
+        {
+          "id": "33",
+          "update": "AAA="
+        }
+      ],
+      "into": {
+        "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB3",
+        "updates": [
+          {
+            "id": "40",
+            "update": "AAA="
+          }
+        ]
+      }
+    },
+    {
+      "v": 1,
+      "type": "attachmentStored",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "path": "attachments/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08.png",
+      "ok": true
+    },
+    {
+      "v": 1,
+      "type": "attachmentStored",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "path": "attachments/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08.png",
+      "ok": false
+    },
+    {
+      "v": 1,
+      "type": "theme",
+      "theme": {
+        "id": "nord",
+        "name": "Nord"
+      },
+      "variant": "dark"
+    },
+    {
+      "v": 1,
+      "type": "width",
+      "full": true
+    },
+    {
+      "v": 1,
+      "type": "ime",
+      "visible": false
+    },
+    {
+      "v": 1,
+      "type": "width",
+      "full": false
+    },
+    {
+      "v": 1,
+      "type": "fonts",
+      "interface": "serif",
+      "note": "custom:Charter",
+      "noteSize": 18
+    },
+    {
+      "v": 1,
+      "type": "fonts",
+      "interface": "theme",
+      "note": "theme",
+      "noteSize": 16
+    },
+    {
+      "v": 1,
+      "type": "closeLightbox"
+    },
+    {
+      "v": 1,
+      "type": "preview"
+    },
+    {
+      "v": 1,
+      "type": "directory",
+      "notes": [
+        {
+          "id": "01JD2Z7Q8R4T6Y8W0E2R4T6YB2",
+          "title": "Garden plan",
+          "folder": "Home"
+        },
+        {
+          "id": "01JD2Z7Q8R4T6Y8W0E2R4T6YB3",
+          "title": ""
+        }
+      ]
+    },
+    {
+      "v": 1,
+      "type": "create",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB4"
+    },
+    {
+      "v": 1,
+      "type": "create",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB5",
+      "notebook": "01JD2Z7Q8R4T6Y8W0E2R4T6YW1"
+    },
+    {
+      "v": 1,
+      "type": "open",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB2",
+      "synced": [],
+      "pending": [],
+      "editable": true,
+      "notebook": "default"
+    },
+    {
+      "v": 1,
+      "type": "copyConflicts",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB2",
+      "base": [
+        {
+          "id": "51",
+          "update": "AAA="
+        }
+      ],
+      "edits": [
+        {
+          "id": "52",
+          "update": "AAA="
+        }
+      ],
+      "notebook": "01JD2Z7Q8R4T6Y8W0E2R4T6YW1"
+    },
+    {
+      "v": 1,
+      "type": "setTag",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "tag": "area/cooking",
+      "on": true
+    },
+    {
+      "v": 1,
+      "type": "setTag",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "tag": "inbox",
+      "on": false
+    },
+    {
+      "v": 1,
+      "type": "createPeriodic",
+      "kind": "daily",
+      "day": "2026-10-21",
+      "at": 1761019200000,
+      "timeZone": "America/Chicago",
+      "template": "## Plan\n\n## Notes\n"
+    },
+    {
+      "v": 1,
+      "type": "createPeriodic",
+      "kind": "weekly",
+      "day": null,
+      "at": 1761019200000,
+      "timeZone": "America/Chicago",
+      "template": "## Goals\n\n## Review\n"
+    },
+    {
+      "v": 1,
+      "type": "periodicNav",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
+    },
+    {
+      "v": 1,
+      "type": "format",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "command": "heading5"
+    },
+    {
+      "v": 1,
+      "type": "format",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "command": "nextCell"
+    },
+    {
+      "v": 1,
+      "type": "copy",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "format": "markdown",
+      "scope": "note"
+    },
+    {
+      "v": 1,
+      "type": "copy",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "format": "rich",
+      "scope": "selection"
+    },
+    {
+      "v": 1,
+      "type": "insertPlain",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "text": "# not a heading\n- not a list"
+    },
+    {
+      "v": 1,
+      "type": "source",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "on": true
+    },
+    {
+      "v": 1,
+      "type": "source",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "on": false
+    },
+    {
+      "v": 1,
+      "type": "blocks",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "purpose": "insert",
+      "query": "tab"
+    },
+    {
+      "v": 1,
+      "type": "blocks",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "purpose": "turnInto",
+      "query": ""
+    },
+    {
+      "v": 1,
+      "type": "insert",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "item": "table"
+    },
+    {
+      "v": 1,
+      "type": "turnInto",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "item": "heading2"
+    },
+    {
+      "v": 1,
+      "type": "block",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "action": "duplicate"
+    },
+    {
+      "v": 1,
+      "type": "block",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "action": "moveUp"
+    },
+    {
+      "v": 1,
+      "type": "folds",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "folds": {
+        "note|Details|0": true,
+        "tip||0": false
+      }
+    },
+    {
+      "v": 1,
+      "type": "folds",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "folds": {}
+    },
+    {
+      "v": 1,
+      "type": "captureSelection",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
+    },
+    {
+      "v": 1,
+      "type": "undoDelete",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
+    },
+    {
+      "v": 1,
+      "type": "fileStored",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "path": "attachments/dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd.csv",
+      "ok": true
+    },
+    {
+      "v": 1,
+      "type": "fileStored",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "path": "attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf",
+      "ok": false
+    },
+    {
+      "v": 1,
+      "type": "insertFiles",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "files": [
+        {
+          "path": "attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf",
+          "name": "Lease.pdf"
+        },
+        {
+          "path": "attachments/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee.png",
+          "name": "photo.png"
+        }
+      ]
+    },
+    {
+      "v": 1,
+      "type": "fileInfo",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "path": "attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf",
+      "info": {
+        "size": 1536,
+        "type": "application/pdf"
+      }
+    },
+    {
+      "v": 1,
+      "type": "fileInfo",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "path": "attachments/dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd.csv",
+      "info": null
+    },
+    {
+      "v": 1,
+      "type": "webPictures",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "mode": "on"
+    },
+    {
+      "v": 1,
+      "type": "webPictures",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "mode": "wait"
+    },
+    {
+      "v": 1,
+      "type": "webPictures",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "mode": "off"
+    },
+    {
+      "v": 1,
+      "type": "noteContent",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB2",
+      "state": "ok",
+      "updates": [
+        {
+          "id": "21",
+          "update": "AAA="
+        },
+        {
+          "id": "22",
+          "update": "AAA="
+        }
+      ]
+    },
+    {
+      "v": 1,
+      "type": "noteContent",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB2",
+      "state": "missing",
+      "updates": []
+    },
+    {
+      "v": 1,
+      "type": "noteContent",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB2",
+      "state": "tooLarge",
+      "updates": []
+    },
+    {
+      "v": 1,
+      "type": "noteChanged",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB2"
+    },
+    {
+      "v": 1,
+      "type": "showHeading",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "heading": "Beds"
+    },
+    {
+      "v": 1,
+      "type": "createPeriodic",
+      "kind": "daily",
+      "day": null,
+      "at": 1761019200000,
+      "timeZone": "America/Chicago",
+      "template": "## Plan\n\n## Notes\n",
+      "request": "p-01JD2Z7Q8R4T6Y8W0E2R4T6YB9"
+    },
+    {
+      "v": 1,
+      "type": "keys",
+      "bindings": {
+        "app.search": ["Mod+J"],
+        "editor.bold": [],
+        "note.new": ["Mod+Alt+N"]
+      },
+      "app": ["app.search", "app.settings", "journal.today", "note.history"]
+    },
+    {
+      "v": 1,
+      "type": "keys",
+      "bindings": {},
+      "app": []
+    },
+    {
+      "v": 1,
+      "type": "symbols",
+      "symbols": [
+        {
+          "glyph": "★",
+          "name": "Important",
+          "colour": "calloutWarning"
+        },
+        {
+          "glyph": "?",
+          "name": "Question",
+          "colour": "calloutQuestion"
+        },
+        {
+          "glyph": "!",
+          "name": "Follow-up",
+          "colour": "danger"
+        },
+        {
+          "glyph": "💡",
+          "name": "Idea",
+          "colour": "calloutTip"
+        },
+        {
+          "glyph": "→",
+          "name": "Next",
+          "colour": "accent"
+        }
+      ]
+    },
+    {
+      "v": 1,
+      "type": "symbols",
+      "symbols": []
+    },
+    {
+      "v": 1,
+      "type": "symbol",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "index": 0
+    },
+    {
+      "v": 1,
+      "type": "symbol",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "index": 8
+    },
+    {
+      "v": 1,
+      "type": "commentDraft",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "from": "selection"
+    },
+    {
+      "v": 1,
+      "type": "commentDraft",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "from": "caret"
+    },
+    {
+      "v": 1,
+      "type": "commentCreate",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "body": "Is this still the plan?",
+      "target": null
+    },
+    {
+      "v": 1,
+      "type": "commentCreate",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "body": "Can you check the dates?",
+      "target": {
+        "writer": "01JD2Z7Q8R4T6Y8W0E2R4T6YW1",
+        "session": "0123456789abcdef01234567",
+        "label": "Codex · garden"
+      }
+    },
+    {
+      "v": 1,
+      "type": "commentReply",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "threadId": "01JD3A0C0MM3NT0THREAD00001",
+      "body": "Thanks, done."
+    },
+    {
+      "v": 1,
+      "type": "commentEdit",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "threadId": "01JD3A0C0MM3NT0THREAD00001",
+      "commentId": "01JD3A0C0MM3NT0C0MMENT0001",
+      "body": "Is this still the plan for May?"
+    },
+    {
+      "v": 1,
+      "type": "commentDelete",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "threadId": "01JD3A0C0MM3NT0THREAD00001",
+      "commentId": "01JD3A0C0MM3NT0C0MMENT0002"
+    },
+    {
+      "v": 1,
+      "type": "commentStatus",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "threadId": "01JD3A0C0MM3NT0THREAD00001",
+      "status": "resolved"
+    },
+    {
+      "v": 1,
+      "type": "commentStatus",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "threadId": "01JD3A0C0MM3NT0THREAD00001",
+      "status": "open"
+    },
+    {
+      "v": 1,
+      "type": "commentTarget",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "threadId": "01JD3A0C0MM3NT0THREAD00001",
+      "target": {
+        "writer": "01JD2Z7Q8R4T6Y8W0E2R4T6YW1",
+        "session": "0123456789abcdef01234567",
+        "label": "Codex · garden"
+      }
+    },
+    {
+      "v": 1,
+      "type": "commentTarget",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "threadId": "01JD3A0C0MM3NT0THREAD00001",
+      "target": null
+    },
+    {
+      "v": 1,
+      "type": "commentActive",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "threadId": "01JD3A0C0MM3NT0THREAD00001",
+      "reveal": true
+    },
+    {
+      "v": 1,
+      "type": "commentActive",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "threadId": null,
+      "reveal": false
+    },
+    {
+      "v": 1,
+      "type": "commentDeleteThread",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "threadId": "01JD3A0C0MM3NT0THREAD00001"
+    },
+    {
+      "v": 1,
+      "type": "commentAuthor",
+      "id": "device:01JD2Z7Q8R4T6Y8W0E2R4T6YD1",
+      "label": "Android app (Pixel 9)"
+    },
+    {
+      "v": 1,
+      "type": "commentSessions",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "sessions": [
+        {
+          "key": "0123456789abcdef01234567",
+          "lastSeen": 1761680000000
+        },
+        {
+          "key": "89abcdef0123456789abcdef",
+          "lastSeen": 0
+        }
+      ]
+    },
+    {
+      "v": 1,
+      "type": "commentSessions",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "sessions": []
+    }
+  ],
+  "fromEditor": [
+    {
+      "v": 1,
+      "type": "ready"
+    },
+    {
+      "v": 1,
+      "type": "lightbox",
+      "open": true
+    },
+    {
+      "v": 1,
+      "type": "lightbox",
+      "open": false
+    },
+    {
+      "v": 1,
+      "type": "opened",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "title": "Groceries",
+      "compacted": {
+        "replaces": ["11", "12"],
+        "update": "AAA="
+      },
+      "compactedPending": {
+        "replaces": ["13", "14"],
+        "update": "AAA="
+      }
+    },
+    {
+      "v": 1,
+      "type": "opened",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "title": "",
+      "compacted": null,
+      "compactedPending": null
+    },
+    {
+      "v": 1,
+      "type": "update",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "update": "AAA="
+    },
+    {
+      "v": 1,
+      "type": "title",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "title": "Groceries"
+    },
+    {
+      "v": 1,
+      "type": "unsupported",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "nodeTypes": ["kanban"]
+    },
+    {
+      "v": 1,
+      "type": "openNote",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB2"
+    },
+    {
+      "v": 1,
+      "type": "closed",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
+    },
+    {
+      "v": 1,
+      "type": "compacted",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "compacted": {
+        "replaces": ["21", "22"],
+        "update": "AAA="
+      }
+    },
+    {
+      "v": 1,
+      "type": "error",
+      "noteId": null,
+      "message": "The app sent a message this editor cannot read"
+    },
+    {
+      "v": 1,
+      "type": "state",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "active": ["bold", "bulletList"],
+      "canUndo": true,
+      "canRedo": false,
+      "canIndent": true,
+      "canOutdent": false,
+      "href": null,
+      "menu": false,
+      "inTable": false,
+      "inCode": false,
+      "canMoveUp": true,
+      "canMoveDown": true,
+      "canTurnInto": true,
+      "inTitle": false,
+      "symbols": [0, 2],
+      "canSymbol": true
+    },
+    {
+      "v": 1,
+      "type": "state",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "active": ["link"],
+      "canUndo": false,
+      "canRedo": false,
+      "canIndent": false,
+      "canOutdent": false,
+      "href": "https://penmoss.app",
+      "menu": true,
+      "inTable": true,
+      "inCode": false,
+      "canMoveUp": false,
+      "canMoveDown": true,
+      "canTurnInto": false,
+      "inTitle": true,
+      "symbols": [],
+      "canSymbol": false
+    },
+    {
+      "v": 1,
+      "type": "attachment",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "path": "attachments/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08.png",
+      "size": 48213
+    },
+    {
+      "v": 1,
+      "type": "newNote",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "note": {
+        "id": "01JD2Z7Q8R4T6Y8W0E2R4T6YB2",
+        "title": "Holiday ideas",
+        "update": "AAA="
+      }
+    },
+    {
+      "v": 1,
+      "type": "conflictCopy",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "note": {
+        "id": "01JD2Z7Q8R4T6Y8W0E2R4T6YB3",
+        "title": "Groceries (conflict copy)",
+        "update": "AAA="
+      },
+      "replaces": ["32"]
+    },
+    {
+      "v": 1,
+      "type": "conflictCopy",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "note": {
+        "id": "01JD2Z7Q8R4T6Y8W0E2R4T6YB3",
+        "title": "Groceries (conflict copy)",
+        "update": "AAA="
+      },
+      "replaces": ["33"],
+      "merged": true
+    },
+    {
+      "v": 1,
+      "type": "copyFailed",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "reason": "incomplete",
+      "replaces": ["33"]
+    },
+    {
+      "v": 1,
+      "type": "copyFailed",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "reason": "empty",
+      "replaces": ["34", "35"]
+    },
+    {
+      "v": 1,
+      "type": "notice",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "message": "Only PNG, JPEG, GIF, WebP and AVIF pictures can be added"
+    },
+    {
+      "v": 1,
+      "type": "created",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB4",
+      "note": {
+        "id": "01JD2Z7Q8R4T6Y8W0E2R4T6YB4",
+        "title": "",
+        "update": "AAA="
+      }
+    },
+    {
+      "v": 1,
+      "type": "tags",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "tags": ["area/cooking", "project"]
+    },
+    {
+      "v": 1,
+      "type": "tags",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "tags": []
+    },
+    {
+      "v": 1,
+      "type": "text",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "text": "Groceries\nOat milk and lemons",
+      "headings": "Groceries",
+      "tags": ["area/kitchen", "shopping"]
+    },
+    {
+      "v": 1,
+      "type": "openTag",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "tag": "area/cooking"
+    },
+    {
+      "v": 1,
+      "type": "createdPeriodic",
+      "note": {
+        "id": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+        "title": "2026-10-21",
+        "update": "AAA="
+      },
+      "kind": "daily",
+      "period": "2026-10-21",
+      "date": "2026-10-21"
+    },
+    {
+      "v": 1,
+      "type": "periodicNav",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "nav": {
+        "kind": "daily",
+        "period": "2026-10-21",
+        "label": "Wednesday 21 October 2026",
+        "prev": {
+          "date": "2026-10-20",
+          "label": "2026-10-20",
+          "full": "Tuesday 20 October 2026",
+          "period": "2026-10-20"
+        },
+        "next": {
+          "date": "2026-10-22",
+          "label": "2026-10-22",
+          "full": "Thursday 22 October 2026",
+          "period": "2026-10-22"
+        },
+        "week": {
+          "date": "2026-10-19",
+          "label": "Week 2026-W43",
+          "full": "Week of Monday 19 October 2026",
+          "period": "2026-W43"
+        },
+        "days": null
+      }
+    },
+    {
+      "v": 1,
+      "type": "periodicNav",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "nav": null
+    },
+    {
+      "v": 1,
+      "type": "clipboard",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "format": "markdown",
+      "text": "---\nid: 01JD2Z7Q8R4T6Y8W0E2R4T6YB1\n---\n\n**Bold**\n"
+    },
+    {
+      "v": 1,
+      "type": "clipboard",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "format": "rich",
+      "text": "Bold",
+      "html": "<p><strong>Bold</strong></p>"
+    },
+    {
+      "v": 1,
+      "type": "clipboard",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "format": "text",
+      "text": "echo hi"
+    },
+    {
+      "v": 1,
+      "type": "blocks",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "purpose": "insert",
+      "query": "tab",
+      "items": [
+        {
+          "id": "table",
+          "label": "Table",
+          "icon": "▦",
+          "hint": "| a | b |"
+        }
+      ]
+    },
+    {
+      "v": 1,
+      "type": "blocks",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "purpose": "turnInto",
+      "query": "",
+      "items": [
+        {
+          "id": "paragraph",
+          "label": "Text",
+          "icon": "T",
+          "active": true
+        },
+        {
+          "id": "heading1",
+          "label": "Heading 1",
+          "icon": "H1",
+          "hint": "# ",
+          "active": false
+        }
+      ]
+    },
+    {
+      "v": 1,
+      "type": "folds",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "folds": {
+        "note|Details|0": true
+      }
+    },
+    {
+      "v": 1,
+      "type": "counts",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "words": 1204,
+      "characters": 6780,
+      "minutes": 5,
+      "selection": null
+    },
+    {
+      "v": 1,
+      "type": "counts",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "words": 3,
+      "characters": 15,
+      "minutes": 1,
+      "selection": {
+        "words": 2,
+        "characters": 9
+      }
+    },
+    {
+      "v": 1,
+      "type": "source",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "on": true
+    },
+    {
+      "v": 1,
+      "type": "source",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "on": false
+    },
+    {
+      "v": 1,
+      "type": "blockDeleted",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "label": "List"
+    },
+    {
+      "v": 1,
+      "type": "file",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "path": "attachments/dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd.csv",
+      "name": "Budget.csv",
+      "size": 2048
+    },
+    {
+      "v": 1,
+      "type": "fileInfo",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "path": "attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf"
+    },
+    {
+      "v": 1,
+      "type": "openFile",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "path": "attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf",
+      "name": "Lease.pdf",
+      "action": "open"
+    },
+    {
+      "v": 1,
+      "type": "openFile",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "path": "attachments/dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd.csv",
+      "name": "Budget.csv",
+      "action": "save"
+    },
+    {
+      "v": 1,
+      "type": "openNote",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB2",
+      "heading": "Beds"
+    },
+    {
+      "v": 1,
+      "type": "noteContent",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB2"
+    },
+    {
+      "v": 1,
+      "type": "watchNote",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB2",
+      "on": true
+    },
+    {
+      "v": 1,
+      "type": "watchNote",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB2",
+      "on": false
+    },
+    {
+      "v": 1,
+      "type": "noteInfo",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "created": "2026-10-23T10:00:00-05:00",
+      "kind": "daily",
+      "period": "2026-10-23",
+      "fields": [
+        {
+          "key": "id",
+          "value": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
+        },
+        {
+          "key": "title",
+          "value": "2026-10-23"
+        },
+        {
+          "key": "created",
+          "value": "2026-10-23T10:00:00-05:00"
+        },
+        {
+          "key": "tags",
+          "value": "[garden, plans/2026]"
+        },
+        {
+          "key": "type",
+          "value": "daily"
+        }
+      ],
+      "links": ["01JD2Z7Q8R4T6Y8W0E2R4T6YB2"]
+    },
+    {
+      "v": 1,
+      "type": "noteInfo",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "created": null,
+      "kind": "note",
+      "period": null,
+      "fields": [
+        {
+          "key": "id",
+          "value": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
+        }
+      ],
+      "links": []
+    },
+    {
+      "v": 1,
+      "type": "error",
+      "noteId": null,
+      "message": "The daily note could not be made: RangeError: Not a day: 2026-02-30",
+      "request": "p-01JD2Z7Q8R4T6Y8W0E2R4T6YB9"
+    },
+    {
+      "v": 1,
+      "type": "command",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "id": "note.history"
+    },
+    {
+      "v": 1,
+      "type": "command",
+      "noteId": null,
+      "id": "app.settings"
+    },
+    {
+      "v": 1,
+      "type": "comments",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "open": 0,
+      "active": null,
+      "threads": []
+    },
+    {
+      "v": 1,
+      "type": "comments",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "open": 1,
+      "active": "01JD3A0C0MM3NT0THREAD00001",
+      "threads": [
+        {
+          "id": "01JD3A0C0MM3NT0THREAD00001",
+          "status": "open",
+          "quote": "Raised beds by the fence",
+          "orphaned": false,
+          "kind": "range",
+          "created": 1761660000000,
+          "author": {
+            "kind": "device",
+            "label": "Pixel 9"
+          },
+          "comments": [
+            {
+              "id": "01JD3A0C0MM3NT0C0MMENT0001",
+              "author": {
+                "kind": "device",
+                "label": "Pixel 9"
+              },
+              "body": "Is this still the plan?",
+              "at": 1761660000000,
+              "edited": 1761660060000
+            },
+            {
+              "id": "01JD3A0C0MM3NT0C0MMENT0002",
+              "author": {
+                "kind": "agent",
+                "label": "Codex"
+              },
+              "body": "Yes: **May**.",
+              "at": 1761660120000
+            }
+          ],
+          "target": {
+            "writer": "01JD2Z7Q8R4T6Y8W0E2R4T6YW1",
+            "session": "0123456789abcdef01234567",
+            "label": "Codex · garden"
+          },
+          "delivery": {
+            "state": "replied",
+            "at": 1761660120000
+          }
+        },
+        {
+          "id": "01JD3A0C0MM3NT0THREAD00002",
+          "status": "resolved",
+          "quote": "",
+          "orphaned": true,
+          "kind": "point",
+          "created": 1761650000000,
+          "author": {
+            "kind": "agent",
+            "label": "Codex"
+          },
+          "comments": [
+            {
+              "id": "01JD3A0C0MM3NT0C0MMENT0003",
+              "author": {
+                "kind": "agent",
+                "label": "Codex"
+              },
+              "body": "A note to start with.",
+              "at": 1761650000000
+            }
+          ],
+          "resolvedAt": 1761650100000,
+          "resolvedBy": {
+            "kind": "device",
+            "label": "MacBook"
+          }
+        }
+      ]
+    },
+    {
+      "v": 1,
+      "type": "comments",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "open": 1,
+      "active": null,
+      "threads": [
+        {
+          "id": "01JD3A0C0MM3NT0THREAD00003",
+          "status": "open",
+          "quote": "Water in the morning.",
+          "orphaned": false,
+          "kind": "point",
+          "created": 1761670000000,
+          "author": {
+            "kind": "device",
+            "label": "Android app (Pixel 9)"
+          },
+          "comments": [
+            {
+              "id": "01JD3A0C0MM3NT0C0MMENT0004",
+              "author": {
+                "kind": "device",
+                "label": "Android app (Pixel 9)"
+              },
+              "body": "",
+              "at": 1761670000000,
+              "removed": true
+            },
+            {
+              "id": "01JD3A0C0MM3NT0C0MMENT0005",
+              "author": {
+                "kind": "agent",
+                "label": "Codex"
+              },
+              "body": "Before nine, then.",
+              "at": 1761670060000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "v": 1,
+      "type": "comments",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "open": 3,
+      "active": null,
+      "threads": [
+        {
+          "id": "01JD3A0C0MM3NT0THREAD00004",
+          "status": "open",
+          "quote": "Raised beds",
+          "orphaned": false,
+          "kind": "range",
+          "created": 1761680000000,
+          "author": {
+            "kind": "device",
+            "label": "Pixel 9"
+          },
+          "comments": [
+            {
+              "id": "01JD3A0C0MM3NT0C0MMENT0004",
+              "author": {
+                "kind": "device",
+                "label": "Pixel 9"
+              },
+              "body": "Can you check?",
+              "at": 1761680000000
+            }
+          ],
+          "target": {
+            "writer": "01JD2Z7Q8R4T6Y8W0E2R4T6YW1",
+            "session": "0123456789abcdef01234567",
+            "label": "Codex · garden"
+          },
+          "delivery": {
+            "state": "failed",
+            "at": 1761680060000,
+            "reason": "scope"
+          }
+        },
+        {
+          "id": "01JD3A0C0MM3NT0THREAD00005",
+          "status": "open",
+          "quote": "Raised beds",
+          "orphaned": false,
+          "kind": "range",
+          "created": 1761680000000,
+          "author": {
+            "kind": "device",
+            "label": "Pixel 9"
+          },
+          "comments": [
+            {
+              "id": "01JD3A0C0MM3NT0C0MMENT0005",
+              "author": {
+                "kind": "device",
+                "label": "Pixel 9"
+              },
+              "body": "Can you check?",
+              "at": 1761680000000
+            }
+          ],
+          "target": {
+            "writer": "01JD2Z7Q8R4T6Y8W0E2R4T6YW1",
+            "session": "0123456789abcdef01234567",
+            "label": "Codex · garden"
+          },
+          "delivery": {
+            "state": "failed",
+            "at": 1761680060000,
+            "reason": "revoked"
+          }
+        },
+        {
+          "id": "01JD3A0C0MM3NT0THREAD00006",
+          "status": "open",
+          "quote": "Raised beds",
+          "orphaned": false,
+          "kind": "range",
+          "created": 1761680000000,
+          "author": {
+            "kind": "device",
+            "label": "Pixel 9"
+          },
+          "comments": [
+            {
+              "id": "01JD3A0C0MM3NT0C0MMENT0006",
+              "author": {
+                "kind": "device",
+                "label": "Pixel 9"
+              },
+              "body": "Can you check?",
+              "at": 1761680000000
+            }
+          ],
+          "target": {
+            "writer": "01JD2Z7Q8R4T6Y8W0E2R4T6YW1",
+            "session": "0123456789abcdef01234567",
+            "label": "Codex · garden"
+          },
+          "delivery": {
+            "state": "failed",
+            "at": 1761680060000
+          }
+        }
+      ]
+    },
+    {
+      "v": 1,
+      "type": "commentOpen",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "threadId": "01JD3A0C0MM3NT0THREAD00001"
+    },
+    {
+      "v": 1,
+      "type": "commentDraft",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "quote": "Raised beds by the fence",
+      "kind": "range"
+    },
+    {
+      "v": 1,
+      "type": "commentDraft",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "quote": "",
+      "kind": "point"
+    },
+    {
+      "v": 1,
+      "type": "commentSent",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "threadId": "01JD3A0C0MM3NT0THREAD00001"
+    },
+    {
+      "v": 1,
+      "type": "comments",
+      "noteId": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "open": 1,
+      "active": null,
+      "threads": [
+        {
+          "id": "01JD3A0C0MM3NT0THREAD00007",
+          "status": "open",
+          "quote": "Raised beds",
+          "orphaned": false,
+          "kind": "range",
+          "created": 1761680000000,
+          "author": {
+            "kind": "device",
+            "label": "Pixel 9"
+          },
+          "comments": [
+            {
+              "id": "01JD3A0C0MM3NT0C0MMENT0007",
+              "author": {
+                "kind": "device",
+                "label": "Pixel 9"
+              },
+              "body": "Can you check?",
+              "at": 1761680000000
+            }
+          ],
+          "target": {
+            "writer": "01JD2Z7Q8R4T6Y8W0E2R4T6YW1",
+            "session": "0123456789abcdef01234567",
+            "label": "Claude Code · garden"
+          },
+          "delivery": {
+            "state": "failed",
+            "at": 1762300000000,
+            "reason": "gone"
+          }
+        }
+      ]
+    }
+  ],
+  "invalidToEditor": [
+    "not json",
+    "{\"v\":1,\"type\":\"create\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB4\",\"notebook\":\"../x\"}",
+    "{\"v\":1,\"type\":\"open\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"synced\":[],\"pending\":[],\"editable\":true,\"notebook\":7}",
+    "{\"v\":2,\"type\":\"close\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\"}",
+    "{\"v\":1,\"type\":\"open\",\"noteId\":\"../x\",\"synced\":[],\"pending\":[],\"editable\":true}",
+    "{\"v\":1,\"type\":\"remote\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"update\":\"%%%\"}",
+    "{\"v\":1,\"type\":\"open\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"synced\":[{\"id\":\"1\"}],\"pending\":[],\"editable\":true}",
+    "{\"v\":1,\"type\":\"launch\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\"}",
+    "{\"v\":1,\"type\":\"compact\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"updates\":[{\"id\":\"1\",\"update\":\"%%%\"}]}",
+    "{\"v\":1,\"type\":\"format\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"command\":\"script\"}",
+    "{\"v\":1,\"type\":\"format\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"command\":\"link\"}",
+    "{\"v\":1,\"type\":\"format\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"command\":\"bold\",\"href\":\"https://x.test\"}",
+    "{\"v\":1,\"type\":\"insertImages\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"paths\":[\"https://evil.test/a.png\"]}",
+    "{\"v\":1,\"type\":\"insertImages\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"paths\":[]}",
+    "{\"v\":1,\"type\":\"copyConflicts\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"base\":[],\"edits\":[]}",
+    "{\"v\":1,\"type\":\"theme\",\"theme\":{\"id\":\"nord\"},\"variant\":\"sepia\"}",
+    "{\"v\":1,\"type\":\"theme\",\"theme\":\"nord\",\"variant\":\"dark\"}",
+    "{\"v\":1,\"type\":\"directory\",\"notes\":[{\"id\":\"../x\",\"title\":\"x\"}]}",
+    "{\"v\":1,\"type\":\"copyConflicts\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"base\":[],\"edits\":[{\"id\":\"1\",\"update\":\"AAA=\"}],\"into\":{\"noteId\":\"../x\",\"updates\":[]}}",
+    "{\"v\":1,\"type\":\"copyConflicts\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"base\":[],\"edits\":[{\"id\":\"1\",\"update\":\"AAA=\"}],\"into\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB3\"}",
+    "{\"v\":1,\"type\":\"attachmentStored\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"path\":\"https://evil.test/a.png\",\"ok\":true}",
+    "{\"v\":1,\"type\":\"attachmentStored\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"path\":\"attachments/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08.png\",\"ok\":\"yes\"}",
+    "{\"v\":1,\"type\":\"create\",\"noteId\":\"../x\"}",
+    "{\"v\":1,\"type\":\"setTag\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"tag\":\"\",\"on\":true}",
+    "{\"v\":1,\"type\":\"setTag\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"tag\":\"inbox\"}",
+    "{\"v\":1,\"type\":\"setTag\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"tag\":\"inbox\",\"on\":\"yes\"}",
+    "{\"v\":1,\"type\":\"setTag\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"tag\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"on\":true}",
+    "{\"v\":1,\"type\":\"width\",\"full\":\"true\"}",
+    "{\"v\":1,\"type\":\"width\"}",
+    "{\"v\":1,\"type\":\"fonts\",\"interface\":\"theme\",\"note\":\"Serif\",\"noteSize\":16}",
+    "{\"v\":1,\"type\":\"fonts\",\"interface\":\"theme\",\"note\":\"theme\",\"noteSize\":30}",
+    "{\"v\":1,\"type\":\"fonts\",\"interface\":\"custom:x;}body{\",\"note\":\"theme\",\"noteSize\":16}",
+    "{\"v\":1,\"type\":\"createPeriodic\",\"kind\":\"monthly\",\"day\":null,\"at\":1761019200000,\"timeZone\":\"America/Chicago\",\"template\":\"x\"}",
+    "{\"v\":1,\"type\":\"createPeriodic\",\"kind\":\"daily\",\"day\":\"21/10/2026\",\"at\":1761019200000,\"timeZone\":\"America/Chicago\",\"template\":\"x\"}",
+    "{\"v\":1,\"type\":\"createPeriodic\",\"kind\":\"daily\",\"day\":null,\"at\":\"soon\",\"timeZone\":\"America/Chicago\",\"template\":\"x\"}",
+    "{\"v\":1,\"type\":\"createPeriodic\",\"kind\":\"daily\",\"day\":null,\"at\":1761019200000,\"timeZone\":\"America/Chicago\"}",
+    "{\"v\":1,\"type\":\"periodicNav\",\"noteId\":\"../etc\"}",
+    "{\"v\":1,\"type\":\"copy\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"format\":\"html\",\"scope\":\"note\"}",
+    "{\"v\":1,\"type\":\"copy\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"format\":\"markdown\"}",
+    "{\"v\":1,\"type\":\"insertPlain\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"text\":\"\"}",
+    "{\"v\":1,\"type\":\"insertPlain\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"text\":42}",
+    "{\"v\":1,\"type\":\"source\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"on\":\"yes\"}",
+    "{\"v\":1,\"type\":\"blocks\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"purpose\":\"delete\",\"query\":\"\"}",
+    "{\"v\":1,\"type\":\"blocks\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"purpose\":\"insert\",\"query\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+    "{\"v\":1,\"type\":\"insert\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"item\":\"<script>\"}",
+    "{\"v\":1,\"type\":\"turnInto\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\"}",
+    "{\"v\":1,\"type\":\"block\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"action\":\"explode\"}",
+    "{\"v\":1,\"type\":\"folds\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"folds\":{\"note||0\":\"open\"}}",
+    "{\"v\":1,\"type\":\"folds\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"folds\":[true]}",
+    "{\"v\":1,\"type\":\"folds\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"folds\":{\"note|0|0\":true,\"note|1|0\":true,\"note|2|0\":true,\"note|3|0\":true,\"note|4|0\":true,\"note|5|0\":true,\"note|6|0\":true,\"note|7|0\":true,\"note|8|0\":true,\"note|9|0\":true,\"note|10|0\":true,\"note|11|0\":true,\"note|12|0\":true,\"note|13|0\":true,\"note|14|0\":true,\"note|15|0\":true,\"note|16|0\":true,\"note|17|0\":true,\"note|18|0\":true,\"note|19|0\":true,\"note|20|0\":true,\"note|21|0\":true,\"note|22|0\":true,\"note|23|0\":true,\"note|24|0\":true,\"note|25|0\":true,\"note|26|0\":true,\"note|27|0\":true,\"note|28|0\":true,\"note|29|0\":true,\"note|30|0\":true,\"note|31|0\":true,\"note|32|0\":true,\"note|33|0\":true,\"note|34|0\":true,\"note|35|0\":true,\"note|36|0\":true,\"note|37|0\":true,\"note|38|0\":true,\"note|39|0\":true,\"note|40|0\":true,\"note|41|0\":true,\"note|42|0\":true,\"note|43|0\":true,\"note|44|0\":true,\"note|45|0\":true,\"note|46|0\":true,\"note|47|0\":true,\"note|48|0\":true,\"note|49|0\":true,\"note|50|0\":true,\"note|51|0\":true,\"note|52|0\":true,\"note|53|0\":true,\"note|54|0\":true,\"note|55|0\":true,\"note|56|0\":true,\"note|57|0\":true,\"note|58|0\":true,\"note|59|0\":true,\"note|60|0\":true,\"note|61|0\":true,\"note|62|0\":true,\"note|63|0\":true,\"note|64|0\":true,\"note|65|0\":true,\"note|66|0\":true,\"note|67|0\":true,\"note|68|0\":true,\"note|69|0\":true,\"note|70|0\":true,\"note|71|0\":true,\"note|72|0\":true,\"note|73|0\":true,\"note|74|0\":true,\"note|75|0\":true,\"note|76|0\":true,\"note|77|0\":true,\"note|78|0\":true,\"note|79|0\":true,\"note|80|0\":true,\"note|81|0\":true,\"note|82|0\":true,\"note|83|0\":true,\"note|84|0\":true,\"note|85|0\":true,\"note|86|0\":true,\"note|87|0\":true,\"note|88|0\":true,\"note|89|0\":true,\"note|90|0\":true,\"note|91|0\":true,\"note|92|0\":true,\"note|93|0\":true,\"note|94|0\":true,\"note|95|0\":true,\"note|96|0\":true,\"note|97|0\":true,\"note|98|0\":true,\"note|99|0\":true,\"note|100|0\":true,\"note|101|0\":true,\"note|102|0\":true,\"note|103|0\":true,\"note|104|0\":true,\"note|105|0\":true,\"note|106|0\":true,\"note|107|0\":true,\"note|108|0\":true,\"note|109|0\":true,\"note|110|0\":true,\"note|111|0\":true,\"note|112|0\":true,\"note|113|0\":true,\"note|114|0\":true,\"note|115|0\":true,\"note|116|0\":true,\"note|117|0\":true,\"note|118|0\":true,\"note|119|0\":true,\"note|120|0\":true,\"note|121|0\":true,\"note|122|0\":true,\"note|123|0\":true,\"note|124|0\":true,\"note|125|0\":true,\"note|126|0\":true,\"note|127|0\":true,\"note|128|0\":true,\"note|129|0\":true,\"note|130|0\":true,\"note|131|0\":true,\"note|132|0\":true,\"note|133|0\":true,\"note|134|0\":true,\"note|135|0\":true,\"note|136|0\":true,\"note|137|0\":true,\"note|138|0\":true,\"note|139|0\":true,\"note|140|0\":true,\"note|141|0\":true,\"note|142|0\":true,\"note|143|0\":true,\"note|144|0\":true,\"note|145|0\":true,\"note|146|0\":true,\"note|147|0\":true,\"note|148|0\":true,\"note|149|0\":true,\"note|150|0\":true,\"note|151|0\":true,\"note|152|0\":true,\"note|153|0\":true,\"note|154|0\":true,\"note|155|0\":true,\"note|156|0\":true,\"note|157|0\":true,\"note|158|0\":true,\"note|159|0\":true,\"note|160|0\":true,\"note|161|0\":true,\"note|162|0\":true,\"note|163|0\":true,\"note|164|0\":true,\"note|165|0\":true,\"note|166|0\":true,\"note|167|0\":true,\"note|168|0\":true,\"note|169|0\":true,\"note|170|0\":true,\"note|171|0\":true,\"note|172|0\":true,\"note|173|0\":true,\"note|174|0\":true,\"note|175|0\":true,\"note|176|0\":true,\"note|177|0\":true,\"note|178|0\":true,\"note|179|0\":true,\"note|180|0\":true,\"note|181|0\":true,\"note|182|0\":true,\"note|183|0\":true,\"note|184|0\":true,\"note|185|0\":true,\"note|186|0\":true,\"note|187|0\":true,\"note|188|0\":true,\"note|189|0\":true,\"note|190|0\":true,\"note|191|0\":true,\"note|192|0\":true,\"note|193|0\":true,\"note|194|0\":true,\"note|195|0\":true,\"note|196|0\":true,\"note|197|0\":true,\"note|198|0\":true,\"note|199|0\":true,\"note|200|0\":true}}",
+    "{\"v\":1,\"type\":\"captureSelection\"}",
+    "{\"v\":1,\"type\":\"undoDelete\"}",
+    "{\"v\":1,\"type\":\"fileStored\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"path\":\"attachments/../secret.pdf\",\"ok\":true}",
+    "{\"v\":1,\"type\":\"insertFiles\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"files\":[]}",
+    "{\"v\":1,\"type\":\"insertFiles\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"files\":[{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}]}",
+    "{\"v\":1,\"type\":\"insertFiles\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"files\":[{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"},{\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\"}]}",
+    "{\"v\":1,\"type\":\"fileInfo\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"info\":{\"size\":-1,\"type\":\"application/pdf\"}}",
+    "{\"v\":1,\"type\":\"fileInfo\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"info\":{\"size\":1,\"type\":\"text/html; charset=utf-8\"}}",
+    "{\"v\":1,\"type\":\"fileInfo\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\"}",
+    "{\"v\":1,\"type\":\"webPictures\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"mode\":\"sometimes\"}",
+    "{\"v\":1,\"type\":\"noteContent\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB2\",\"state\":\"partial\",\"updates\":[]}",
+    "{\"v\":1,\"type\":\"noteContent\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB2\",\"state\":\"missing\",\"updates\":[{\"id\":\"21\",\"update\":\"AAA=\"}]}",
+    "{\"v\":1,\"type\":\"noteContent\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB2\",\"state\":\"ok\"}",
+    "{\"v\":1,\"type\":\"showHeading\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"heading\":\" \"}",
+    "{\"v\":1,\"type\":\"showHeading\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"heading\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+    "{\"v\":1,\"type\":\"noteChanged\",\"noteId\":\"../etc\"}",
+    "{\"v\":1,\"type\":\"keys\",\"bindings\":{\"app.search\":\"Mod+J\"},\"app\":[]}",
+    "{\"v\":1,\"type\":\"keys\",\"bindings\":{\"../x\":[\"Mod+J\"]},\"app\":[]}",
+    "{\"v\":1,\"type\":\"keys\",\"bindings\":{},\"app\":[\"app search\"]}",
+    "{\"v\":1,\"type\":\"keys\",\"bindings\":{}}",
+    "{\"v\":1,\"type\":\"createPeriodic\",\"kind\":\"daily\",\"day\":null,\"at\":1761019200000,\"timeZone\":\"America/Chicago\",\"template\":\"x\",\"request\":\"../x\"}",
+    "{\"v\":1,\"type\":\"symbols\",\"symbols\":[{\"glyph\":\"A\",\"name\":\"Letter\",\"colour\":\"accent\"}]}",
+    "{\"v\":1,\"type\":\"symbols\",\"symbols\":\"★\"}",
+    "{\"v\":1,\"type\":\"symbols\"}",
+    "{\"v\":1,\"type\":\"symbol\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"index\":9}",
+    "{\"v\":1,\"type\":\"symbol\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"index\":-1}",
+    "{\"v\":1,\"type\":\"symbol\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"index\":1.5}",
+    "{\"v\":1,\"type\":\"symbol\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"index\":\"1\"}",
+    "{\"v\":1,\"type\":\"symbol\",\"noteId\":\"../etc\",\"index\":0}",
+    "{\"v\":1,\"type\":\"commentDraft\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"from\":\"everywhere\"}",
+    "{\"v\":1,\"type\":\"commentCreate\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"body\":\"   \",\"target\":null}",
+    "{\"v\":1,\"type\":\"commentCreate\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"body\":\"x\"}",
+    "{\"v\":1,\"type\":\"commentCreate\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"body\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"target\":null}",
+    "{\"v\":1,\"type\":\"commentCreate\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"body\":\"x\",\"target\":{\"writer\":\"t1\",\"session\":\"not-a-key\",\"label\":\"Codex · garden\"}}",
+    "{\"v\":1,\"type\":\"commentTarget\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"threadId\":\"01JD3A0C0MM3NT0THREAD00001\",\"target\":{\"token\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YT1\",\"session\":\"0123456789abcdef01234567\",\"label\":\"Codex · garden\"}}",
+    "{\"v\":1,\"type\":\"commentTarget\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"threadId\":\"01JD3A0C0MM3NT0THREAD00001\",\"target\":{\"writer\":\"../x\",\"session\":\"0123456789abcdef01234567\",\"label\":\"Codex · garden\"}}",
+    "{\"v\":1,\"type\":\"commentSessions\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\"}",
+    "{\"v\":1,\"type\":\"commentSessions\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"sessions\":[{\"key\":\"not-a-key\",\"lastSeen\":1}]}",
+    "{\"v\":1,\"type\":\"commentSessions\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"sessions\":[{\"key\":\"0123456789abcdef01234567\",\"lastSeen\":\"yesterday\"}]}",
+    "{\"v\":1,\"type\":\"commentSessions\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"sessions\":[{\"key\":\"0123456789abcdef01234567\",\"lastSeen\":-1}]}",
+    "{\"v\":1,\"type\":\"commentReply\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"threadId\":\"../x\",\"body\":\"x\"}",
+    "{\"v\":1,\"type\":\"commentEdit\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"threadId\":\"01JD3A0C0MM3NT0THREAD00001\",\"body\":\"x\"}",
+    "{\"v\":1,\"type\":\"commentDelete\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"threadId\":\"01JD3A0C0MM3NT0THREAD00001\"}",
+    "{\"v\":1,\"type\":\"commentStatus\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"threadId\":\"01JD3A0C0MM3NT0THREAD00001\",\"status\":\"closed\"}",
+    "{\"v\":1,\"type\":\"commentTarget\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"threadId\":\"01JD3A0C0MM3NT0THREAD00001\"}",
+    "{\"v\":1,\"type\":\"commentActive\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"threadId\":\"01JD3A0C0MM3NT0THREAD00001\"}",
+    "{\"v\":1,\"type\":\"commentDeleteThread\",\"noteId\":\"../etc\",\"threadId\":\"01JD3A0C0MM3NT0THREAD00001\"}",
+    "{\"v\":1,\"type\":\"commentAuthor\",\"id\":\"agent:01JD2Z7Q8R4T6Y8W0E2R4T6YT1\",\"label\":\"Codex\"}",
+    "{\"v\":1,\"type\":\"commentAuthor\",\"id\":\"device:\",\"label\":\"Android app (Pixel 9)\"}",
+    "{\"v\":1,\"type\":\"commentAuthor\",\"id\":\"device:01JD2Z7Q8R4T6Y8W0E2R4T6YD1\",\"label\":\"  \"}",
+    "{\"v\":1,\"type\":\"commentAuthor\",\"id\":\"device:01JD2Z7Q8R4T6Y8W0E2R4T6YD1\"}",
+    "{\"v\":1,\"type\":\"commentAuthor\",\"id\":\"device:01JD2Z7Q8R4T6Y8W0E2R4T6YD1\",\"label\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}"
+  ],
+  "invalidFromEditor": [
+    "{\"v\":1,\"type\":\"lightbox\",\"open\":\"true\"}",
+    "{\"v\":1,\"type\":\"created\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB4\",\"note\":{\"id\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"title\":\"\",\"update\":\"AAA=\"}}",
+    "{\"v\":1,\"type\":\"created\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB4\"}",
+    "{\"v\":1,\"type\":\"tags\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"tags\":[1]}",
+    "{\"v\":1,\"type\":\"tags\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\"}",
+    "{\"v\":1,\"type\":\"tags\",\"noteId\":\"../etc\",\"tags\":[]}",
+    "{\"v\":1,\"type\":\"openTag\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"tag\":\"Area/Cooking\"}",
+    "{\"v\":1,\"type\":\"openTag\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"tag\":\"2026\"}",
+    "{\"v\":1,\"type\":\"openTag\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\"}",
+    "{\"v\":2,\"type\":\"ready\"}",
+    "{\"v\":1,\"type\":\"createdPeriodic\",\"kind\":\"daily\",\"period\":\"2026-10-21\"}",
+    "{\"v\":2,\"type\":\"periodicNav\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"nav\":null}",
+    "{\"v\":1,\"type\":\"clipboard\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"format\":\"rich\",\"html\":\"<p>x</p>\"}",
+    "{\"v\":1,\"type\":\"clipboard\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"format\":\"pdf\",\"text\":\"x\"}",
+    "{\"v\":1,\"type\":\"blocks\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"purpose\":\"insert\",\"query\":\"\",\"items\":[{\"id\":\"table\"}]}",
+    "{\"v\":1,\"type\":\"folds\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"folds\":{\"x\":1}}",
+    "{\"v\":1,\"type\":\"counts\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"words\":-1,\"characters\":0,\"minutes\":0,\"selection\":null}",
+    "{\"v\":1,\"type\":\"counts\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"words\":1,\"characters\":1,\"minutes\":1}",
+    "{\"v\":1,\"type\":\"source\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"on\":\"yes\"}",
+    "{\"v\":1,\"type\":\"blockDeleted\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"label\":\"\"}",
+    "{\"v\":1,\"type\":\"file\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.PDF\",\"name\":\"a\",\"size\":1}",
+    "{\"v\":1,\"type\":\"file\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"path\":\"attachments/dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd.csv\",\"name\":\"a\",\"size\":-1}",
+    "{\"v\":1,\"type\":\"file\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"path\":\"attachments/dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd.csv\",\"name\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"size\":1}",
+    "{\"v\":1,\"type\":\"fileInfo\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"path\":\"https://example.com/a.pdf\"}",
+    "{\"v\":1,\"type\":\"openFile\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"path\":\"attachments/cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.pdf\",\"name\":\"a\",\"action\":\"print\"}",
+    "{\"v\":1,\"type\":\"watchNote\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB2\"}",
+    "{\"v\":1,\"type\":\"noteContent\",\"noteId\":\"../etc\"}",
+    "{\"v\":1,\"type\":\"openNote\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB2\",\"heading\":7}",
+    "{\"v\":1,\"type\":\"noteInfo\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"created\":null,\"kind\":\"note\",\"period\":null,\"fields\":[],\"links\":[\"../etc\"]}",
+    "{\"v\":1,\"type\":\"noteInfo\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"created\":null,\"kind\":\"note\",\"period\":null,\"fields\":[{\"key\":\"id\"}],\"links\":[]}",
+    "{\"v\":1,\"type\":\"command\",\"noteId\":null,\"id\":\"../x\"}",
+    "{\"v\":1,\"type\":\"command\",\"noteId\":null}",
+    "{\"v\":1,\"type\":\"command\",\"noteId\":\"../etc\",\"id\":\"app.settings\"}",
+    "{\"v\":1,\"type\":\"state\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"active\":[],\"canUndo\":false,\"canRedo\":false,\"canIndent\":false,\"canOutdent\":false,\"href\":null,\"menu\":false,\"inTable\":false,\"inCode\":false,\"canMoveUp\":false,\"canMoveDown\":false,\"canTurnInto\":true,\"inTitle\":false,\"symbols\":[9],\"canSymbol\":true}",
+    "{\"v\":1,\"type\":\"comments\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"open\":-1,\"active\":null,\"threads\":[]}",
+    "{\"v\":1,\"type\":\"comments\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"open\":0,\"active\":null}",
+    "{\"v\":1,\"type\":\"comments\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"open\":1,\"active\":null,\"threads\":[{\"id\":\"../x\",\"status\":\"open\",\"quote\":\"\",\"orphaned\":false,\"kind\":\"point\",\"created\":0,\"author\":{\"kind\":\"device\",\"label\":\"You\"},\"comments\":[]}]}",
+    "{\"v\":1,\"type\":\"comments\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"open\":1,\"active\":null,\"threads\":[{\"id\":\"01JD3A0C0MM3NT0THREAD00001\",\"status\":\"open\",\"quote\":\"\",\"orphaned\":false,\"kind\":\"point\",\"created\":0,\"author\":{\"kind\":\"robot\",\"label\":\"You\"},\"comments\":[]}]}",
+    "{\"v\":1,\"type\":\"comments\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"open\":1,\"active\":null,\"threads\":[{\"id\":\"01JD3A0C0MM3NT0THREAD00001\",\"status\":\"open\",\"quote\":\"\",\"orphaned\":false,\"kind\":\"point\",\"created\":0,\"author\":{\"kind\":\"device\",\"label\":\"You\"},\"comments\":[],\"delivery\":{\"state\":\"lost\",\"at\":0}}]}",
+    "{\"v\":1,\"type\":\"commentOpen\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\"}",
+    "{\"v\":1,\"type\":\"commentDraft\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"quote\":\"x\",\"kind\":\"line\"}",
+    "{\"v\":1,\"type\":\"comments\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"open\":1,\"active\":null,\"threads\":[{\"id\":\"01JD3A0C0MM3NT0THREAD00001\",\"status\":\"open\",\"quote\":\"\",\"orphaned\":false,\"kind\":\"point\",\"created\":0,\"author\":{\"kind\":\"device\",\"label\":\"You\"},\"comments\":[{\"id\":\"01JD3A0C0MM3NT0C0MMENT0001\",\"author\":{\"kind\":\"device\",\"label\":\"You\"},\"body\":\"\",\"at\":0,\"removed\":\"yes\"}]}]}",
+    "{\"v\":1,\"type\":\"comments\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"open\":1,\"active\":null,\"threads\":[{\"id\":\"01JD3A0C0MM3NT0THREAD00001\",\"status\":\"open\",\"quote\":\"\",\"orphaned\":false,\"kind\":\"point\",\"created\":0,\"author\":{\"kind\":\"device\",\"label\":\"You\"},\"comments\":[{\"id\":\"01JD3A0C0MM3NT0C0MMENT0001\",\"author\":{\"kind\":\"device\",\"label\":\"You\"},\"body\":\"\",\"at\":0,\"removed\":false}]}]}",
+    "{\"v\":1,\"type\":\"comments\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"open\":1,\"active\":null,\"threads\":[{\"id\":\"01JD3A0C0MM3NT0THREAD00004\",\"status\":\"open\",\"quote\":\"Raised beds\",\"orphaned\":false,\"kind\":\"range\",\"created\":1761680000000,\"author\":{\"kind\":\"device\",\"label\":\"Pixel 9\"},\"comments\":[{\"id\":\"01JD3A0C0MM3NT0C0MMENT0004\",\"author\":{\"kind\":\"device\",\"label\":\"Pixel 9\"},\"body\":\"Can you check?\",\"at\":1761680000000}],\"target\":{\"writer\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YW1\",\"session\":\"0123456789abcdef01234567\",\"label\":\"Codex · garden\"},\"delivery\":{\"state\":\"failed\",\"at\":0,\"reason\":\"lost\"}}]}",
+    "{\"v\":1,\"type\":\"comments\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"open\":1,\"active\":null,\"threads\":[{\"id\":\"01JD3A0C0MM3NT0THREAD00004\",\"status\":\"open\",\"quote\":\"Raised beds\",\"orphaned\":false,\"kind\":\"range\",\"created\":1761680000000,\"author\":{\"kind\":\"device\",\"label\":\"Pixel 9\"},\"comments\":[{\"id\":\"01JD3A0C0MM3NT0C0MMENT0004\",\"author\":{\"kind\":\"device\",\"label\":\"Pixel 9\"},\"body\":\"Can you check?\",\"at\":1761680000000}],\"target\":{\"writer\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YW1\",\"session\":\"0123456789abcdef01234567\",\"label\":\"Codex · garden\"},\"delivery\":{\"state\":\"sent\",\"at\":0,\"reason\":\"scope\"}}]}",
+    "{\"v\":1,\"type\":\"commentSent\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"threadId\":\"../x\"}",
+    "{\"v\":1,\"type\":\"commentSent\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\"}",
+    "{\"v\":1,\"type\":\"comments\",\"noteId\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YB1\",\"open\":1,\"active\":null,\"threads\":[{\"id\":\"01JD3A0C0MM3NT0THREAD00004\",\"status\":\"open\",\"quote\":\"Raised beds\",\"orphaned\":false,\"kind\":\"range\",\"created\":1761680000000,\"author\":{\"kind\":\"device\",\"label\":\"Pixel 9\"},\"comments\":[{\"id\":\"01JD3A0C0MM3NT0C0MMENT0004\",\"author\":{\"kind\":\"device\",\"label\":\"Pixel 9\"},\"body\":\"Can you check?\",\"at\":1761680000000}],\"target\":{\"token\":\"01JD2Z7Q8R4T6Y8W0E2R4T6YT1\",\"session\":\"0123456789abcdef01234567\",\"label\":\"Codex · garden\"}}]}"
+  ]
+}

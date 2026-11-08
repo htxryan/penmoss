@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="color-scheme" content="light dark" />
+    <title>Penmoss Spike Editor</title>
+  </head>
+  <body>
+    <nav id="debug-bar" hidden aria-label="Formatting (browser only)">
+      <button type="button" data-cmd="bold"><b>B</b></button>
+      <button type="button" data-cmd="italic"><i>I</i></button>
+      <button type="button" data-cmd="bulletList">&bull; List</button>
+      <button type="button" data-cmd="taskList">&#9745;</button>
+      <button type="button" data-cmd="codeBlock">Code</button>
+      <button type="button" data-cmd="link">Link</button>
+      <button type="button" data-cmd="undo">Undo</button>
+      <button type="button" data-cmd="redo">Redo</button>
+      <button type="button" data-action="start">Start test</button>
+      <button type="button" data-action="check">Check test</button>
+      <button type="button" data-action="copy">Copy log</button>
+    </nav>
+    <main id="editor"></main>
+    <section id="result" hidden aria-live="polite"></section>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

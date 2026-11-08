@@ -1,0 +1,65 @@
+# pnpm --filter @penmoss/server eval:search, 2026-10-23T02:32Z, real Workers AI embeddings
+Search eval: 50 labelled queries, 79 notes, 127 chunks
+Embeddings: @cf/baai/bge-m3 (Workers AI)
+ FT SEM HYB  (rank of the labelled note; — not in the top 50)
+-- concept queries
+  —   2   2  backup strategy for my notes → git-mirror
+  —   2   2  keep the computers running during a blackout → ups-shutdown
+  —   1   1  stop ads on every device in the house → adguard-dns
+  —   1   1  lamps that switch on when it gets dark → home-assistant
+  —   2   2  keep smart gadgets away from my laptop traffic → network-vlans
+  —   1   1  encrypted cloud copy of family pictures → offsite-backup
+  —   1   1  reach my servers while away from home → tailscale
+  —   1   1  how much electricity the servers use → homelab-power
+  —   1   1  when to move seedlings outside → tomatoes
+  —   2   2  turning food waste into soil → compost
+  —   1   1  bugs eating my vegetables → pests
+  —   1   1  looking after the bread culture → sourdough
+  —   3   3  dough for a wood-fired oven → pizza-dough
+  —   1   1  cooking lunches for the whole week ahead → meal-prep
+  —   3   3  brewing a good cup in the morning → coffee
+  —   1   1  preparing for a 21 km race → running-plan
+  —   1   1  trouble falling asleep → sleep
+  —   1   1  rehab exercises after a leg injury → physio
+  —   1   1  savings in case I lose my job → emergency-fund
+  —   1   1  paperwork for the IRS → taxes-2026
+  —   1   1  stop paying for services I never use → subscriptions
+  —   1   1  saving for old age with the company match → retirement
+  —   2   2  shrines and trains in Kyoto → japan-trip
+  —   1   1  what to take on a flight with only hand luggage → packing-list
+  —   1   1  equipment for sleeping outdoors → camping
+  —   1   1  why the production server stopped accepting writes → incident-review
+  —   1   1  concentrating without distractions → deep-work
+  —   1   1  building small routines that stick → atomic-habits
+  —   3   3  when the vehicle needs servicing → car-maintenance
+  —   1   1  what to buy for birthdays → gift-ideas
+-- keyword queries
+  1   2   1  restore notes from the git repository → git-mirror
+  1   1   1  hourly snapshots kept for two days → zfs-snapshots
+  1   1   1  neapolitan pizza dough hydration → pizza-dough
+  1   1   1  feed the sourdough starter flour and water → sourdough
+  1   1   1  pour-over coffee ratio → coffee
+  —   2   2  long run on saturday before race day → running-plan
+  1   1   1  high-yield savings account for a lost job → emergency-fund
+  2   2   2  kyoto temples and the rail pass → japan-trip
+  1   1   1  sleeping bag and tent for two → camping
+  1   1   1  primary database ran out of disk → incident-review
+  1   1   1  replace the furnace filter → hvac
+  1   1   1  dog vaccines due → dog-care
+  1   1   1  iot devices firewall rules vlan → network-vlans
+  1   1   1  gather forms before filing the tax return → taxes-2026
+  1   1   1  sow tomato seeds indoors under the grow light → tomatoes
+  1   1   1  guests shut down in order when the power fails → ups-shutdown
+  2   1   2  lamps turn on at sunset → home-assistant
+  1   1   1  cal newport shutdown ritual → deep-work
+  1   1   1  tyre pressure and oil changed → car-maintenance
+  —   1   1  interview loop with a coding exercise and system design → hiring
+concept  full-text top-5: 0/30 (0.0%), MRR 0.000
+concept  semantic  top-5: 30/30 (100.0%), MRR 0.850
+concept  hybrid    top-5: 30/30 (100.0%), MRR 0.850
+keyword  full-text top-5: 18/20 (90.0%), MRR 0.850
+keyword  semantic  top-5: 20/20 (100.0%), MRR 0.925
+keyword  hybrid    top-5: 20/20 (100.0%), MRR 0.925
+all      full-text top-5: 18/50 (36.0%), MRR 0.340
+all      semantic  top-5: 50/50 (100.0%), MRR 0.880
+all      hybrid    top-5: 50/50 (100.0%), MRR 0.880

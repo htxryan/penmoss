@@ -1,0 +1,11 @@
+{
+  "$comment": "The screenshot scripts (A1210): they drive the web app through apps/web's E2E harness, so they are checked with the web app's settings, not the site's.",
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "allowJs": true,
+    "checkJs": true
+  },
+  "include": ["*.ts", "*.mjs"]
+}

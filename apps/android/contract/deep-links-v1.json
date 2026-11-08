@@ -1,0 +1,36 @@
+{
+  "$comment": "Deep links (T29 on the Mac, T40 P7 PL5 on Android, A476): penmoss://note/<ULID> opens the note and penmoss://capture the capture window; anything else is ignored, since a link is data from whatever app sent it, and a link never creates, moves or deletes. Checked by apps/desktop/test/unit/deep-links-contract.test.ts and the Kotlin DeepLinksTest.",
+  "notes": [
+    {
+      "link": "penmoss://note/01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "id": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
+    },
+    {
+      "link": "penmoss://note/01jd2z7q8r4t6y8w0e2r4t6yb1/",
+      "id": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
+    },
+    {
+      "link": "penmoss://note/01JD2Z7Q8R4T6Y8W0E2R4T6YB1?from=shortcuts",
+      "id": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
+    }
+  ],
+  "capture": ["penmoss://capture", "penmoss://capture/"],
+  "ignored": [
+    "penmoss://note/../../settings",
+    "penmoss://note/not-an-id",
+    "penmoss://note/01JD2Z7Q8R4T6Y8W0E2R4T6YB1/extra",
+    "penmoss://note/01JD2Z7Q8R4T6Y8W0E2R4T6YBU",
+    "penmoss://note/01JD2Z7Q8R4T6Y8W0E2R4T6YB",
+    "penmoss://note/",
+    "penmoss://note",
+    "penmoss://capture/now",
+    "https://app.penmoss.app/notes/01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+    "penmoss://settings/devices",
+    "penmoss://note/%E0",
+    "penmoss://note/01JD2Z7Q8R4T6Y8W0E2R4T6YB1%2Fx",
+    "penmoss://new?title=x",
+    "penmoss:note/01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+    "not a url",
+    ""
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "$comment": "Copy Agent Reference (T52 item 4): each case is the input (id, title, notebook: the notebook’s name, the default one’s included; folders: below the notebook, outermost first; gitNotebook: only for a git notebook’s note) and the exact text every client copies (two lines joined by \\n, no final line break). Written from core’s agentReference by apps/web/test/unit/agent-reference-contract.test.ts; read by the Android app’s contract test.",
+  "version": 1,
+  "cases": [
+    {
+      "name": "a note in a folder of the default notebook",
+      "input": {
+        "id": "01JBXYZ0000000000000000000",
+        "title": "Plans",
+        "notebook": "Personal",
+        "folders": ["Penmoss"]
+      },
+      "expected": "Penmoss note \"Plans\" (Personal › Penmoss)\nRead it with the Penmoss MCP tool read_note {\"id\":\"01JBXYZ0000000000000000000\"}"
+    },
+    {
+      "name": "at the top level of the default notebook: the notebook alone",
+      "input": {
+        "id": "01JBXYZ0000000000000000000",
+        "title": "Plans",
+        "notebook": "Personal",
+        "folders": []
+      },
+      "expected": "Penmoss note \"Plans\" (Personal)\nRead it with the Penmoss MCP tool read_note {\"id\":\"01JBXYZ0000000000000000000\"}"
+    },
+    {
+      "name": "the default notebook renamed",
+      "input": {
+        "id": "01JBXYZ0000000000000000000",
+        "title": "Plans",
+        "notebook": "Home",
+        "folders": ["Projects"]
+      },
+      "expected": "Penmoss note \"Plans\" (Home › Projects)\nRead it with the Penmoss MCP tool read_note {\"id\":\"01JBXYZ0000000000000000000\"}"
+    },
+    {
+      "name": "nested folders in a notebook, outermost first (the notebook is not a folder here)",
+      "input": {
+        "id": "01JBXYZ0000000000000000000",
+        "title": "Q3 review",
+        "notebook": "Work",
+        "folders": ["Projects", "Penmoss"]
+      },
+      "expected": "Penmoss note \"Q3 review\" (Work › Projects › Penmoss)\nRead it with the Penmoss MCP tool read_note {\"id\":\"01JBXYZ0000000000000000000\"}"
+    },
+    {
+      "name": "an untitled note",
+      "input": {
+        "id": "01JBXYZ0000000000000000000",
+        "title": "",
+        "notebook": "Personal",
+        "folders": ["Inbox"]
+      },
+      "expected": "Penmoss note \"Untitled\" (Personal › Inbox)\nRead it with the Penmoss MCP tool read_note {\"id\":\"01JBXYZ0000000000000000000\"}"
+    },
+    {
+      "name": "a title of spaces only reads as Untitled",
+      "input": {
+        "id": "01JBXYZ0000000000000000000",
+        "title": "   ",
+        "notebook": "Personal",
+        "folders": []
+      },
+      "expected": "Penmoss note \"Untitled\" (Personal)\nRead it with the Penmoss MCP tool read_note {\"id\":\"01JBXYZ0000000000000000000\"}"
+    },
+    {
+      "name": "double quotes and backslashes in a title are escaped",
+      "input": {
+        "id": "01JBXYZ0000000000000000000",
+        "title": "The \"big\" C:\\ plan",
+        "notebook": "Personal",
+        "folders": []
+      },
+      "expected": "Penmoss note \"The \\\"big\\\" C:\\\\ plan\" (Personal)\nRead it with the Penmoss MCP tool read_note {\"id\":\"01JBXYZ0000000000000000000\"}"
+    },
+    {
+      "name": "line breaks, tabs and runs of spaces in a title are one space",
+      "input": {
+        "id": "01JBXYZ0000000000000000000",
+        "title": "  Two\nlines\tand   more ",
+        "notebook": "Personal",
+        "folders": []
+      },
+      "expected": "Penmoss note \"Two lines and more\" (Personal)\nRead it with the Penmoss MCP tool read_note {\"id\":\"01JBXYZ0000000000000000000\"}"
+    },
+    {
+      "name": "symbols and other scripts are kept as written",
+      "input": {
+        "id": "01JBXYZ0000000000000000000",
+        "title": "★ Café › ideas 💡",
+        "notebook": "Personal",
+        "folders": ["Ünïcode"]
+      },
+      "expected": "Penmoss note \"★ Café › ideas 💡\" (Personal › Ünïcode)\nRead it with the Penmoss MCP tool read_note {\"id\":\"01JBXYZ0000000000000000000\"}"
+    },
+    {
+      "name": "a git notebook’s note is read through its local MCP server",
+      "input": {
+        "id": "01JBXYZ0000000000000000000",
+        "title": "Spec",
+        "notebook": "Work",
+        "folders": ["Docs"],
+        "gitNotebook": "Work"
+      },
+      "expected": "Penmoss note \"Spec\" (Work › Docs)\nRead it with the git notebook’s local Penmoss MCP (penmoss mcp --notebook \"Work\") tool read_note {\"id\":\"01JBXYZ0000000000000000000\"}"
+    }
+  ]
+}

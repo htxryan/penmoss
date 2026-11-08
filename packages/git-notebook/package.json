@@ -1,0 +1,37 @@
+{
+  "name": "@penmoss/git-notebook",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Git notebooks (T50): the layout, writer logs, render and sync engine over a GitTransport; system git for Node",
+  "exports": {
+    ".": "./src/index.ts",
+    "./local": "./src/local/index.ts",
+    "./personal": "./src/personal.ts",
+    "./node": "./src/node/index.ts",
+    "./system-git": "./src/node/system-git.ts",
+    "./purge-check": "./src/purge-check.ts",
+    "./identity": "./src/identity.ts",
+    "./github": "./src/github.ts",
+    "./github-browse": "./src/github-browse.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run",
+    "eval:search": "vitest run --config vitest.eval.config.ts --silent=false"
+  },
+  "dependencies": {
+    "@penmoss/core": "workspace:*",
+    "@penmoss/editor": "workspace:*",
+    "@penmoss/sync-client": "workspace:*",
+    "@y/prosemirror": "2.0.0-15",
+    "@y/y": "14.0.0-rc.29"
+  },
+  "devDependencies": {
+    "@penmoss/embed": "workspace:*",
+    "@types/node": "24.19.2",
+    "fast-check": "4.10.2",
+    "vitest": "5.0.5"
+  }
+}

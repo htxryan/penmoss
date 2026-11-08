@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Graph perf harness</title>
+    <style>
+      html,
+      body,
+      #root {
+        height: 100%;
+        margin: 0;
+      }
+      #root {
+        display: flex;
+        flex-direction: column;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- T17 perf harness (dev server only, never built): graph.spec.ts measures frame rate here. -->
+    <div id="root"></div>
+    <script type="module" src="./graph-perf.tsx"></script>
+  </body>
+</html>

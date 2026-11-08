@@ -1,0 +1,39 @@
+T25 manual check: Claude Code with a read-only agent token ("Reader", scope read)
+Date: 22 Oct 2026, same local Worker as claude-code-session.txt.
+
+$ claude mcp add --transport http penmoss-reader http://localhost:8787/mcp \
+    --header "Authorization: Bearer <read-only agent token>" --scope local
+$ claude -p "Using the penmoss-reader MCP server only: read today's daily note, then try to
+    append the line 'Read-only check' to it. Report exactly what the server said." \
+    --allowedTools 'mcp__penmoss-reader__*' --output-format stream-json --verbose
+
+Transcript (condensed). The server lists only the eight read tools to this token, so
+Claude Code never sees append_to_note; a direct call would be refused (contract test
+"read-only tokens can read but every write tool is refused"). The server's instructions
+now also say the token is read-only (added after this run).
+
+INIT mcp_servers: [{'name': 'penmoss-reader', 'status': 'connected', 'source': 'local'}]
+INIT tools: ['mcp__penmoss-reader__get_backlinks', 'mcp__penmoss-reader__get_daily_note', 'mcp__penmoss-reader__get_history', 'mcp__penmoss-reader__list_folder', 'mcp__penmoss-reader__list_recent', 'mcp__penmoss-reader__list_tags', 'mcp__penmoss-reader__read_note', 'mcp__penmoss-reader__search_notes']
+TOOL_USE ToolSearch {"query": "+penmoss-reader append", "max_results": 10}
+TOOL_RESULT        
+TOOL_USE ToolSearch {"query": "select:mcp__penmoss-reader__get_daily_note", "max_results": 1}
+TOOL_RESULT 
+TOOL_USE mcp__penmoss-reader__get_daily_note {}
+TOOL_RESULT {"id":"01M5GEGM00EP8A1EKW84X1VKCH","title":"2026-10-22","tags":[],"headings":["## Plan","## Notes"],"baseVersion":3,"kind":"daily","date":"2026-10-22","timeZone":"America/Chicago","created":false,"body":"## Plan\n\n## Notes\n\nHomelab summary:\n\n- [[Proxmox host upgrade]]: host upgraded to 9.1 after snapshotting every VM; the AdGuard LXC needed a restart afterwards.\n- [[UPS runtime test]]: 41 minutes of runtime at current load; NUT shut the VMs down cleanly at 20% battery.\n- [[Plex transcoding]]: Plex moved to the GPU passthrough VM; hardware transcoding handles four 4K streams at once without stutter.\n"}
+ASSISTANT: I read today's note, but I couldn't try the append. The penmoss-reader server has no write tool, so it never returned a response to the append.
+
+**Reading today's note:** `get_daily_note` returned the 2026-10-22 daily note (id `01M5GEGM00EP8A1EKW84X1VKCH`, baseVersion 3, time zone America/Chicago, `created: false`). Its headings are `## Plan` (empty) and `## Notes`. The Notes section has a "Homelab summary" with three items:
+- [[Proxmox host upgrade]]: host upgraded to 9.1 after snapshotting every VM; the AdGuard LXC needed a restart afterwards.
+- [[UPS runtime test]]: 41 minutes of runtime at current load; NUT shut the VMs down cleanly at 20% battery.
+- [[Plex transcoding]]: Plex moved to the GPU passthrough VM; hardware transcoding handles four 4K streams at once without stutter.
+
+**Appending 'Read-only check':** The server's instructions and the `get_daily_note` description both point to `append_to_note`, but this server doesn't offer that tool. Its only tools are `get_backlinks`, `get_daily_note`, `get_history`, `list_folder`, `list_recent`, `list_tags`, `read_note` and `search_notes`, all of which only read. The note is unchanged. You only allowed this server, so I didn't try any other way to write to it.
+RESULT success turns 4 cost 0.1985876
+I read today's note, but I couldn't try the append. The penmoss-reader server has no write tool, so it never returned a response to the append.
+
+**Reading today's note:** `get_daily_note` returned the 2026-10-22 daily note (id `01M5GEGM00EP8A1EKW84X1VKCH`, baseVersion 3, time zone America/Chicago, `created: false`). Its headings are `## Plan` (empty) and `## Notes`. The Notes section has a "Homelab summary" with three items:
+- [[Proxmox host upgrade]]: host upgraded to 9.1 after snapshotting every VM; the AdGuard LXC needed a restart afterwards.
+- [[UPS runtime test]]: 41 minutes of runtime at current load; NUT shut the VMs down cleanly at 20% battery.
+- [[Plex transcoding]]: Plex moved to the GPU passthrough VM; hardware transcoding handles four 4K streams at once without stutter.
+
+**Appending 'Read-only check':** The server's instructions and the `get_daily_note` description both point to `append_to_note`, but this server doesn't offer that tool. Its only tools are `get_backlinks`, `get_daily_note`, `get_history`, `list_folder`, `list_recent`, `list_tags`, `read_note` and `search_notes`, all of which only read. The note is unchanged. You only allowed this server, so I didn't try any other way to write to it.

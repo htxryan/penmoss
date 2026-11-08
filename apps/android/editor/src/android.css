@@ -1,0 +1,132 @@
+/*
+ * The Android editor page (T32): the note fills the WebView under the app's
+ * native top bar, and pads for the system bars it is drawn behind. Colours
+ * come from the theme tokens only (A244).
+ */
+html,
+body {
+  margin: 0;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+}
+
+/* The theme's note width, as on the web (A500), which only a tablet or an unfolded phone reaches;
+   full width lifts it (A501, A413). The gutters are inside the cap, as the web's are. */
+.android-note {
+  box-sizing: border-box;
+  max-width: calc(var(--pm-editor-width, 52rem) + 2rem);
+  margin: 0 auto;
+  padding: 0.75rem 1rem calc(4rem + env(safe-area-inset-bottom));
+}
+
+.android-note[data-width='full'] {
+  max-width: none;
+}
+
+.android-note .doc-title {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--pm-fg);
+  font: inherit;
+  /* The note's font, as the web's title (T51, A944): the page's own is the interface font. */
+  font-family: var(--pm-font-body, var(--pm-font));
+  /*
+   * A step above a first heading (1.6em of the note's text), as on the web (T39 pass 3, A554),
+   * scaling with Note Font Size (T51, A944); 1.85rem where the variable is not read.
+   */
+  font-size: 1.85rem;
+  font-size: calc(var(--pm-note-size, 16px) * 1.85);
+  font-weight: 700;
+  line-height: 1.25;
+  /* A long title wraps and the field grows with it (T39; host.ts sizes it where this is missing). */
+  resize: none;
+  field-sizing: content;
+}
+
+.android-unsupported {
+  white-space: pre-wrap;
+  color: var(--pm-muted);
+}
+
+/*
+ * The selection toolbar (T14) is the web's: on the phone the native bar above
+ * the keyboard formats (T33, A301), and Android's own selection menu sits
+ * where the toolbar would.
+ */
+.pm-toolbar {
+  display: none !important;
+}
+
+/*
+ * A picture from a web address held back on mobile data (T40 P8, ED13): its
+ * alt text and a Tap to load button, in place of the picture.
+ */
+.note-body .pm-image[data-state='waiting'] img {
+  display: none;
+}
+
+.note-body .pm-image[data-state='waiting'] .pm-image-fallback {
+  display: inline-block;
+}
+
+.note-body .pm-image-load {
+  margin: 0.25rem 0 0 0.5rem;
+  min-height: 48px;
+  padding: 0 1rem;
+  border: 1px solid var(--pm-border);
+  border-radius: var(--pm-radius);
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.note-body .pm-image-load[hidden] {
+  display: none;
+}
+
+/* A chip's Open and Save a copy are tapped: a phone's touch size (ED12). */
+.note-body .pm-attachment button {
+  min-height: 40px;
+}
+
+/*
+ * Line symbols (T44, A747): the phone's note has a 1rem gutter, too narrow for the web's margin
+ * glyphs at any width (a tablet's too), so they sit before the line's text, as on a narrow
+ * browser window, still outside the caret's path. Relative, so a line with more than three shows
+ * its "+N" chip's popover below them (T52 item 3); in a table cell blocks.css keeps them static.
+ */
+.android-note .pm-symbols {
+  position: relative;
+  z-index: auto; /* no layer of its own, or a table's toolbar below the line sits under it */
+  margin-inline-end: 0.3em;
+  transform: none;
+}
+
+.android-note .pm-symbols:is(.is-open, .is-overflowing:hover) {
+  z-index: 6;
+}
+
+/*
+ * The image lightbox (T51, A948) on the phone: the app gives it the whole screen (its bars step
+ * aside while it is open), so the page's own Full Screen, which a WebView cannot give, is not
+ * offered. Its buttons are a phone's touch size; a pinch on the picture zooms it, not the page.
+ */
+.pm-lightbox .pm-lightbox-full {
+  display: none;
+}
+
+.pm-lightbox .pm-lightbox-btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.pm-lightbox-stage {
+  touch-action: none;
+}

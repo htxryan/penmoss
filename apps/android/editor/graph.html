@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!--
+      The graph page (T40 P7, A478) loads only from the APK and talks only to the
+      app, as the editor page does (A293): no network, no frames, no plug-ins.
+      Titles come from other devices and agents and are drawn on a canvas or set
+      as text, never as markup.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Penmoss graph</title>
+    <script type="module" src="./src/graph-main.ts"></script>
+  </head>
+  <body>
+    <main class="android-graph" id="graph">
+      <canvas id="canvas" role="img" aria-label="Graph"></canvas>
+      <p class="android-graph-empty" id="empty" hidden>No notes yet.</p>
+      <button class="android-graph-chip" id="chip" type="button" hidden></button>
+    </main>
+  </body>
+</html>

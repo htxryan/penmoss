@@ -1,0 +1,9 @@
+# Gradle and IDE output; see also the repository's .gitignore.
+.gradle/
+.kotlin/
+build/
+local.properties
+.idea/
+*.iml
+*.apk
+*.aab

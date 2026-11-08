@@ -1,0 +1,29 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "autoupdate": false,
+  "share": "disabled",
+  "mcp": {},
+  "permission": {
+    "*": "allow",
+    "bash": {
+      "*": "allow",
+      "git push*": "deny",
+      "git remote*": "deny",
+      "git config --global*": "deny",
+      "gh pr create*": "deny",
+      "gh pr merge*": "deny",
+      "gh pr review*": "deny",
+      "gh pr edit*": "deny",
+      "gh project*": "deny",
+      "gh api graphql*": "deny",
+      "gh auth*": "deny",
+      "wrangler deploy*": "deny",
+      "pnpm exec wrangler deploy*": "deny",
+      "corepack pnpm exec wrangler deploy*": "deny",
+      "security*": "deny"
+    },
+    "external_directory": "deny",
+    "question": "deny",
+    "doom_loop": "deny"
+  }
+}

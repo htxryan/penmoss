@@ -1,0 +1,21 @@
+name: Feature request
+description: An idea for Penmoss
+labels: [feature request]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you want to do
+      description: The problem or the workflow, in your own words. What do you do today instead?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: An idea for how
+      description: Optional. How Penmoss could help, on which app (Mac, Android, the CLI, AI agents).
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Other apps that do it well, screenshots, links.

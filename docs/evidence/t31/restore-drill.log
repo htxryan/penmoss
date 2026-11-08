@@ -1,0 +1,52 @@
+== T31 restore drill, 2026-10-23T22:25:58Z, local Worker on :8799, state in a scratch folder
+signed in locally (DEV_AUTH); workspace 01M5NDY09RGBMHCS38HCJEH8M0
+-- seed
+notes: A=01M5NDY0D37CN9DJ0P9ZHXRXR7 (Garden plan), B=01M5NDY69PP7VA6MZZ86TRQS4P (Seeds), plus the daily note 2026-10-22 under Journal/2026/10
+notes: 2026-10-22 | Garden plan | Seeds
+folders Journal/2026/10: 2026-10-22
+search compost: Seeds
+tag garden: Garden plan
+backlinks of A: Seeds
+A body sha: c6a6a25f914c0bb7
+-- backup (Back up now)
+{"workspace":true,"auth":true,"pruned":0}
+status: {"workspaceAt":1792794376524,"authAt":1792794376524,"copies":["latest","2026-10-23T222616Z","2026-10-23"]}
+a device holds A at epoch 0e597d1b-1cca-41ed-9eea-83d28529f416
+== disaster 1: A's NoteDoc and the WorkspaceDoc lose their storage (sqlite files deleted, Worker stopped)
+deleted the NoteDoc file of A
+deleted 2 WorkspaceDoc file(s)
+A's content now: HTTP 404; Journal folder: {"error":{"code":"folder_not_found","message":"No such folder"}}
+the device syncing A in the gap is told: Unavailable (it keeps its copy, A268)
+-- restore A from R2
+{"id":"01M5NDY0D37CN9DJ0P9ZHXRXR7","epoch":"88d84b11-c2d7-41d1-8d8c-51683cea9d6e","title":"Garden plan","kind":"note","inTrash":false}
+the device asks with epoch 0e597d1b-1cca-41ed-9eea-83d28529f416: Epoch mismatch, new epoch 88d84b11-c2d7-41d1-8d8c-51683cea9d6e
+adopted copy: title "Garden plan", "Raised beds by the fence." appears 1 time(s)
+-- restore the WorkspaceDoc from R2
+{"name":"latest","epoch":"3bb6eb69-4a97-4b08-aa44-07c5c896ed2f","folders":3,"notes":3,"filed":0,"removed":0,"scopedTokens":[]}
+notes: 2026-10-22 | Garden plan | Seeds
+folders Journal/2026/10: 2026-10-22
+search compost: Seeds
+tag garden: Garden plan
+backlinks of A: Seeds
+A body sha: c6a6a25f914c0bb7
+MATCH: notes, folders, search, tags and backlinks equal the state before
+MATCH: A's body is byte-identical to before
+== disaster 2: D1 is lost (database file deleted) and recreated empty by the migrations
+the old session token now: HTTP 401
+-- restore the auth tables from the nightly export
+Export of workspace 01M5NDY09RGBMHCS38HCJEH8M0 from 2026-10-23T22:26:16.524Z: workspaces 1, users 1, memberships 1, devices 1, tokens 1, token_folders 0, recovery_codes 0.
+Applied. Rows D1 already had were left as they were. Then run rebuild-index.ts (runbook).
+Browser sessions, agent tokens and unused recovery codes came back revoked: sign in again, issue new agent tokens, and make a new recovery code.
+the old session token now: HTTP 401 (sessions come back revoked, A275)
+signed in again: the restored account, workspace 01M5NDY09RGBMHCS38HCJEH8M0; HTTP 200
+-- rebuild the index from the Durable Objects and R2
+page 1: 3 notes queued
+Queued 3 notes in 1 messages (1 pages). The queue writes D1 within minutes; Settings → Status and /api/admin/search-index show progress.
+notes: 2026-10-22 | Garden plan | Seeds
+folders Journal/2026/10: 2026-10-22
+search compost: Seeds
+tag garden: Garden plan
+backlinks of A: Seeds
+A body sha: c6a6a25f914c0bb7
+MATCH: the rebuilt index answers exactly as before
+== done (log: /home/agent/src/penmoss-wt/t31-hardening/docs/evidence/t31/restore-drill.log)

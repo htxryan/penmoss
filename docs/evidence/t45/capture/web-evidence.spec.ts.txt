@@ -1,0 +1,76 @@
+// Evidence capture for T45 (kept as docs/evidence/t45/capture/web-evidence.spec.ts.txt; not a
+// suite spec). OUT=dir. Run from apps/web: `OUT=… pnpm exec playwright test zz-t45-evidence`.
+import { expect, test, type Page } from '@playwright/test';
+import { mkdirSync } from 'node:fs';
+import { NEW_NOTE } from './keys';
+import { noteAction } from './note-menu';
+
+const OUT = process.env['OUT'] ?? '/tmp/t45-evidence';
+mkdirSync(OUT, { recursive: true });
+const STAMP = Date.now().toString(36).slice(-4);
+const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
+const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
+
+async function newNote(page: Page, title: string, text: string) {
+  await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();
+  await page.keyboard.press(NEW_NOTE);
+  await expect(page).toHaveURL(ULID);
+  await page.keyboard.type(title);
+  await page.keyboard.press('Enter');
+  await page.keyboard.type(text);
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+}
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`T45 evidence ${scheme}`, async ({ browser }) => {
+    const RUN = `${STAMP}${scheme[0]}`;
+    test.setTimeout(120_000);
+    const context = await browser.newContext({
+      colorScheme: scheme,
+      viewport: { width: 1280, height: 800 },
+    });
+    const page = await context.newPage();
+    await page.goto('http://localhost:5173/');
+    await newNote(page, `Garden plan ${RUN}`, 'Tomatoes and basil by the fence. Compost in spring.');
+    await newNote(page, `Reading list ${RUN}`, 'Books for winter: ');
+    await page.keyboard.type(`[[Garden plan ${RUN}]]`);
+    await page.keyboard.type(' has the seed list.');
+    const windows: Page[] = [];
+    for (const title of [`Reading list ${RUN}`, `Garden plan ${RUN}`]) {
+      await page.getByTestId('note-list').getByRole('link', { name: title, exact: true }).click();
+      await expect(page.getByTestId('note-title')).toHaveValue(title);
+      const [popup] = await Promise.all([
+        context.waitForEvent('page'),
+        noteAction(page, 'open-in-window'),
+      ]);
+      await popup.setViewportSize({ width: 720, height: 800 });
+      await expect(popup.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+      windows.push(popup);
+    }
+    await page.getByTestId('note-list').getByRole('link', { name: `Reading list ${RUN}`, exact: true }).click();
+    await page.waitForTimeout(800);
+    await page.screenshot({ path: `${OUT}/web-${scheme}-main.png` });
+    for (const [i, popup] of windows.entries()) {
+      await popup.mouse.move(700, 790);
+      await popup.waitForTimeout(300);
+      await popup.screenshot({ path: `${OUT}/web-${scheme}-window-${i + 1}.png` });
+    }
+    // Back and Forward: the first window follows its link, then goes back.
+    const first = windows[0]!;
+    await body(first).locator('a.pm-wikilink').click();
+    await expect(first.getByTestId('note-title')).toHaveValue(`Garden plan ${RUN}`);
+    await first.mouse.move(700, 790);
+    await first.waitForTimeout(400);
+    await first.screenshot({ path: `${OUT}/web-${scheme}-followed.png` });
+    await first.getByTestId('window-back').click();
+    await expect(first.getByTestId('note-title')).toHaveValue(`Reading list ${RUN}`);
+    await first.getByTestId('window-forward').hover();
+    await first.waitForTimeout(900);
+    await first.screenshot({ path: `${OUT}/web-${scheme}-back.png` });
+    // The ⋯ menu in a note window.
+    await first.getByTestId('note-menu').click();
+    await first.waitForTimeout(400);
+    await first.screenshot({ path: `${OUT}/web-${scheme}-window-menu.png` });
+    await context.close();
+  });
+}

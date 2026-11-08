@@ -1,0 +1,93 @@
+// Temporary evidence capture for T42 in the Mac app (not committed). PHASE=before|after, OUT=dir.
+import { expect, test, type Page } from '@playwright/test';
+import { mkdirSync } from 'node:fs';
+import { launch, mainBounds, removeDataDirs, signIn, ULID } from './support';
+
+const PHASE = process.env['PHASE'] ?? 'before';
+const OUT = process.env['OUT'] ?? '/tmp/t42-evidence';
+mkdirSync(OUT, { recursive: true });
+const RUN = Date.now().toString(36).slice(-4);
+const NEW_NOTE = process.platform === 'darwin' ? 'Meta+Alt+KeyN' : 'Alt+KeyN';
+
+test.afterAll(() => removeDataDirs());
+
+async function newNote(page: Page, title: string, text: string) {
+  await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();
+  await page.keyboard.press(NEW_NOTE);
+  await expect(page).toHaveURL(ULID);
+  await page.keyboard.type(title);
+  await page.keyboard.press('Enter');
+  await page.keyboard.type(text);
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+}
+
+test(`mac evidence ${PHASE}`, async () => {
+  test.setTimeout(300_000);
+  const launched = await launch();
+  const { app, page } = launched;
+  try {
+    await mainBounds(app, { x: 0, y: 0, width: 1280, height: 860 });
+    await signIn(launched);
+    await newNote(page, `Mac garden ${RUN}`, 'Seeds to order. #garden');
+    await newNote(page, `Mac shed ${RUN}`, 'Shelves. #gardening');
+    for (const scheme of ['light', 'dark'] as const) {
+      await app.evaluate(({ nativeTheme }, s) => {
+        nativeTheme.themeSource = s;
+      }, scheme);
+      // The page sends its theme mode (System) back to the main process, so the scheme is
+      // emulated on the page as well; Appearance is a synced setting and stays untouched.
+      await page.emulateMedia({ colorScheme: scheme });
+      await expect(page.locator('html')).toHaveAttribute('data-mode', scheme);
+      await page.waitForTimeout(600);
+      const shot = (name: string) => `${OUT}/${PHASE}-mac-${scheme}-${name}.png`;
+      await page.getByText(`Mac garden ${RUN}`).first().click();
+      await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+      await page.mouse.move(800, 500);
+      await page.waitForTimeout(300);
+      await page.screenshot({ path: shot('note') });
+      await page.locator('.sidebar .sb-graph').hover();
+      await page.waitForTimeout(900);
+      await page.screenshot({ path: shot('sidebar-hover'), clip: { x: 0, y: 0, width: 420, height: 380 } });
+      await page.mouse.move(800, 500);
+      const rowA = page.getByRole('treeitem', { name: `Mac garden ${RUN}` });
+      const rowB = page.getByRole('treeitem', { name: `Mac shed ${RUN}` });
+      await rowA.click();
+      // After (A570): ⌘ adds a note on a Mac (Ctrl elsewhere); a Shift range would take in other
+      // runs' notes in the shared workspace.
+      if (PHASE === 'after') {
+        await rowB.click({ modifiers: [process.platform === 'darwin' ? 'Meta' : 'Control'] });
+      } else {
+        await rowB.click({ modifiers: ['Shift'] });
+      }
+      await rowB.click({ button: 'right' });
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: shot('context-menu') });
+      await page.keyboard.press('Escape');
+      if (PHASE === 'after') {
+        await page.getByTestId('note-menu').click();
+        await page.waitForTimeout(300);
+        await page.screenshot({ path: shot('note-menu') });
+        await page.keyboard.press('Escape');
+      }
+      await page.keyboard.press('ControlOrMeta+Shift+KeyF');
+      await page.keyboard.type('garden');
+      await page.waitForTimeout(1500);
+      await page.screenshot({ path: shot('search') });
+      await page.keyboard.press('Escape');
+      if (PHASE === 'after') {
+        await page.evaluate(() => {
+          window.history.pushState(null, '', '/settings/display');
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        });
+        await page.waitForTimeout(800);
+        await page.screenshot({ path: shot('settings-display') });
+        await page.evaluate(() => {
+          window.history.pushState(null, '', '/');
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        });
+      }
+    }
+  } finally {
+    await app.close().catch(() => undefined);
+  }
+});

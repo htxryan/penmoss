@@ -1,0 +1,54 @@
+name: Bug report
+description: Something in Penmoss does not work as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. In the app, **Send feedback** (the Help menu on the Mac) files an issue like this one and attaches the app's version for you. For a security issue, use [private vulnerability reporting](https://github.com/htxryan/penmoss/security/advisories/new) instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a note
+        2. …
+    validations:
+      required: true
+  - type: dropdown
+    id: client
+    attributes:
+      label: Where
+      multiple: true
+      options:
+        - Mac app
+        - Android app
+        - penmoss CLI
+        - Local MCP server (an AI agent)
+        - claude.ai through the relay
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Settings → About on the Mac; the app's info on Android; `penmoss --version` for the CLI.
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System
+      placeholder: macOS 15.4 on Apple Silicon, Android 17 on a Pixel 9, …
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Screenshots, logs, the git host your notebook is on. Leave out note content and tokens you would not want public.

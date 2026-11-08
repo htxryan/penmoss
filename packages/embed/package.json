@@ -1,0 +1,24 @@
+{
+  "name": "@penmoss/embed",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Search by meaning on the Mac (D59): the pinned model's store, the ONNX embedder and the file vector cache",
+  "exports": {
+    ".": "./src/index.ts",
+    "./eval": "./src/eval-embedder.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@huggingface/tokenizers": "0.2.0",
+    "@penmoss/core": "workspace:*",
+    "onnxruntime-web": "1.31.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "vitest": "5.0.5"
+  }
+}

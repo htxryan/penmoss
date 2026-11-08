@@ -1,0 +1,6554 @@
+/*
+ * Tokens (plan #style). The theme (T28: packages/ui/src/theme) sets every
+ * colour, the fonts and the editor width on <html> (`--pm-bg`, `--pm-fg`,
+ * `--pm-accent`…, see COLOUR_TOKENS) along with `data-mode` (light or dark).
+ * Everything here is derived from those with color-mix, so each theme gets
+ * the same hover, pressed, focus, soft and shadow states. Stylesheets never
+ * write a colour literally (stylelint, A244).
+ */
+:root {
+  color-scheme: light dark;
+  /* The note's status bar (A505): toasts float above it. */
+  --status-bar-height: 1.8rem;
+  --pm-hover: color-mix(in oklab, var(--pm-fg) 6%, transparent);
+  --pm-code-bg: color-mix(in oklab, var(--pm-bg), var(--pm-fg) 6%);
+  --pm-focus: color-mix(in oklab, var(--pm-accent) 70%, var(--pm-fg));
+  --pm-active: color-mix(in oklab, var(--pm-fg) 9%, transparent);
+  --pm-drop: color-mix(in oklab, var(--pm-accent) 14%, transparent);
+  --pm-radius: 0;
+  --pm-scrim: color-mix(in oklab, var(--pm-shadow-color) 28%, transparent);
+  --pm-shadow: 0 12px 40px color-mix(in oklab, var(--pm-shadow-color) 22%, transparent);
+  --pm-accent-soft: color-mix(in oklab, var(--pm-accent) 14%, transparent);
+  --pm-accent-line: color-mix(in oklab, var(--pm-accent) 45%, transparent);
+  /* Agent edits (T24): a colour of their own, apart from the accent and the user's selection. */
+  --pm-agent-soft: color-mix(in oklab, var(--pm-agent) 22%, transparent);
+  /* T36: the fidelity pass (A182). Derived colours, after the prototype's. */
+  --pm-border-strong: color-mix(in oklab, var(--pm-border), var(--pm-fg) 15%);
+  --pm-border-soft: color-mix(in oklab, var(--pm-border), var(--pm-bg) 45%);
+  --pm-danger-soft: color-mix(in oklab, var(--pm-danger) 12%, transparent);
+  --pm-accent-softer: color-mix(in oklab, var(--pm-accent) 8%, transparent);
+  --pm-ring: 0 0 0 3px color-mix(in oklab, var(--pm-accent) 18%, transparent);
+  --pm-shadow-1: 0 1px 2px color-mix(in oklab, var(--pm-shadow-color) 8%, transparent);
+  /* Shape. */
+  --pm-radius-sm: 0;
+  --pm-radius-lg: 0;
+  --pm-radius-xl: 0;
+  --pm-radius-sheet: 0;
+  /* Type scale (the prototype's 11.5 / 13 / 14 / 16 px). */
+  --pm-text-xs: 0.72rem;
+  --pm-text-sm: 0.8125rem;
+  --pm-text-md: 0.875rem;
+  --pm-text-lg: 1rem;
+  /* Controls: buttons and fields, and the touch size on phones (44 px, A183). */
+  --pm-control: 2rem;
+  --pm-control-sm: 1.75rem;
+  --pm-hit: 2.75rem;
+  --pm-bar: 3.5rem;
+  --pm-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --pm-fast: 120ms;
+  --pm-medium: 200ms;
+}
+
+/* Shadows read heavier on dark surfaces. */
+:root[data-mode='dark'] {
+  --pm-shadow-1: 0 1px 2px color-mix(in oklab, var(--pm-shadow-color) 30%, transparent);
+}
+
+body {
+  margin: 0;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font-family: var(--pm-font);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: var(--pm-link, var(--pm-accent));
+}
+
+.app-shell {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: max(3rem, env(safe-area-inset-top)) 1rem 3rem;
+}
+
+.app-shell h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
+}
+
+.app-shell p {
+  color: var(--pm-muted);
+  margin: 0;
+}
+
+.banner {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: var(--pm-warn-bg);
+  color: var(--pm-fg);
+  border-bottom: 1px solid var(--pm-border);
+}
+
+/* A section's sub-headings, one step below its title in every section (T39 pass 2). */
+.settings h3,
+.settings-section h3 {
+  margin: 2rem 0 0.5rem;
+  font-size: var(--pm-text-lg);
+}
+
+/*
+ * Devices' too, past its empty status line: its first sub-heading sat 32px under the title,
+ * Status's 20px (A988).
+ */
+.settings h2 + h3,
+.settings h2 + p:empty + h3,
+.settings-section h2 + h3 {
+  margin-top: 1.25rem;
+}
+
+.settings p {
+  margin: 0.25rem 0 0.75rem;
+}
+
+.list {
+  margin: 0 0 1rem;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  list-style: none;
+}
+
+.list:empty {
+  display: none;
+}
+
+.list li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--pm-border-soft);
+  font-size: var(--pm-text-sm);
+}
+
+.list li:last-child {
+  border-bottom: 0;
+}
+
+.list small {
+  color: var(--pm-muted);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.secret {
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--pm-accent-line);
+  border-radius: 0;
+  background: var(--pm-accent-softer);
+}
+
+.secret code {
+  display: block;
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-sm);
+  overflow-wrap: anywhere;
+}
+
+.error {
+  color: var(--pm-danger);
+}
+
+/* Notes shell (T6): sidebar with the note list, and the open note. Loosely after prototype/. */
+.notes-app {
+  display: grid;
+  /* The sidebar's width, dragged by its edge (A1122): set on the element, 17rem until then. */
+  grid-template-columns: var(--pm-sidebar-width, 17rem) minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+}
+
+/*
+ * The page is a column the window's height (the T39 review, T41): whatever sits above the
+ * notes (the "Sign in again" banner) takes its own height and the notes take the rest, so the
+ * page never scrolls as a whole. Other screens (Settings pages, sign-in approval) keep their
+ * own height and the page scrolls past it as before.
+ */
+#root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+}
+
+#root > .notes-app {
+  flex: 1 1 0;
+  min-height: 0;
+  height: auto;
+}
+
+#root > .app-shell,
+#root > .settings-shell {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.sidebar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--pm-sidebar);
+  border-right: 1px solid var(--pm-border);
+}
+
+.sb-head {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem 0.5rem 0.4rem 0.875rem;
+}
+
+.brand {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0;
+  color: var(--pm-fg);
+  font-size: var(--pm-text-md);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+/* The logo (A402): its light tile, or its dark one in dark mode (data-mode, else the system's). */
+.brand-mark {
+  display: flex;
+  flex: none;
+}
+
+.brand-mark > img {
+  display: block;
+}
+
+.brand-mark > .brand-mark-dark,
+:root[data-mode='dark'] .brand-mark > .brand-mark-light {
+  display: none;
+}
+
+:root[data-mode='dark'] .brand-mark > .brand-mark-dark {
+  display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode]) .brand-mark > .brand-mark-light {
+    display: none;
+  }
+
+  :root:not([data-mode]) .brand-mark > .brand-mark-dark {
+    display: block;
+  }
+}
+
+/* Only in the phone's drawer (below); the specificity outranks .icon-btn's display. */
+.sb-head .drawer-close {
+  display: none;
+}
+
+.sb-actions {
+  display: grid;
+  gap: 1px;
+  padding: 0.25rem 0.5rem 0.5rem;
+}
+
+/*
+ * New Note, then Search, Today, This Week, Graph, Notebooks and Commands, and ⋯ at the end: one
+ * row of icons (T51, A932; T52; T53). The icons give up a little width rather than wrap: with
+ * no `min-width` the row, a grid item, kept its icons' full widths and ran past the sidebar's
+ * edge, cutting ⋯ off (T53 pass).
+ */
+.sb-shortcuts {
+  display: flex;
+  min-width: 0;
+  gap: 2px;
+}
+
+.sb-shortcuts .sb-shortcut:not(.new-note) {
+  flex: 0 1 var(--pm-control);
+  min-width: 1.5rem;
+}
+
+/* New Note leads the row in the accent's fill, as the primary button did (T52). */
+.sb-shortcut.new-note {
+  margin-inline-end: 0.3rem;
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
+}
+
+.sb-shortcut.new-note:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--pm-accent), var(--pm-fg) 12%);
+  color: var(--pm-on-accent);
+}
+
+.sb-shortcut.new-note:active:not(:disabled) {
+  background: color-mix(in oklab, var(--pm-accent), var(--pm-fg) 20%);
+  color: var(--pm-on-accent);
+}
+
+.sb-shortcut[aria-current='page'],
+.sb-foot .icon-btn[aria-current='page'] {
+  background: var(--pm-active);
+  color: var(--pm-fg);
+}
+
+/* Back and Forward at the start of the sidebar's head, the window's first row (T51, A943). */
+.history-nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+/*
+ * Back and Forward as one compact pair (T52): two half-width buttons on one quiet chip, a hairline
+ * between them, each still 28 px tall with its own hover, focus ring and disabled state.
+ */
+.history-pair {
+  display: inline-flex;
+  flex: none;
+  height: var(--pm-control-sm);
+  border-radius: 0;
+  background: color-mix(in oklab, var(--pm-fg) 5%, transparent);
+}
+
+.history-pair .history-half {
+  position: relative;
+  width: 1.375rem;
+  height: 100%;
+  border-radius: 0;
+}
+
+.history-pair .history-half:first-child {
+  border-radius: 0;
+}
+
+.history-pair .history-half:last-child {
+  border-radius: 0;
+}
+
+.history-pair .history-half + .history-half::before {
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  left: 0;
+  width: 1px;
+  background: var(--pm-border);
+  content: '';
+}
+
+/* The ring above the other half. */
+.history-pair .history-half:focus-visible {
+  z-index: 1;
+}
+
+@media (max-width: 700px), (pointer: coarse) {
+  .history-pair {
+    height: var(--pm-hit);
+  }
+
+  .history-pair .history-half {
+    width: 2.25rem;
+    height: 100%;
+  }
+}
+
+/*
+ * Buttons (T36): one height, radius and set of states, light and dark. Border-box, so a link
+ * drawn as a button is the height of a real one, not 2px taller (A988).
+ */
+.btn {
+  display: inline-flex;
+  flex: none;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: var(--pm-control);
+  padding: 0 0.75rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-shadow-1);
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: var(--pm-text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--pm-fast),
+    border-color var(--pm-fast),
+    color var(--pm-fast);
+}
+
+.btn:hover {
+  border-color: var(--pm-border-strong);
+}
+
+.btn:active {
+  background: color-mix(in oklab, var(--pm-raised), var(--pm-fg) 6%);
+}
+
+.btn:disabled,
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn.primary {
+  border-color: var(--pm-accent);
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
+}
+
+.btn.primary:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--pm-accent), var(--pm-fg) 12%);
+}
+
+.btn.danger {
+  color: var(--pm-danger);
+}
+
+.btn.danger:hover:not(:disabled) {
+  border-color: color-mix(in oklab, var(--pm-danger) 45%, transparent);
+  background: var(--pm-danger-soft);
+}
+
+.btn kbd {
+  font: 500 0.7rem/1 var(--pm-font);
+  opacity: 0.8;
+}
+
+/* On the accent, a key is outlined in the button's own text colour (4.5:1, not faded). */
+.btn.primary .keys kbd {
+  border-color: color-mix(in oklab, var(--pm-on-accent) 45%, transparent);
+  background: transparent;
+  color: var(--pm-on-accent);
+  opacity: 1;
+}
+
+.btn .i,
+.icon-btn .i,
+.sb-item .i,
+.menu-item .i {
+  flex: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 1px;
+}
+
+/* Sidebar rows (T36, after the prototype): an icon, a label, and keys on hover or focus. */
+.sb-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: var(--pm-control-sm);
+  padding: 0 0.5rem;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--pm-muted);
+  font: inherit;
+  font-size: var(--pm-text-sm);
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sb-item:hover {
+  background: var(--pm-hover);
+  color: var(--pm-fg);
+}
+
+.sb-item:focus-visible {
+  outline-offset: -2px;
+}
+
+.sb-item[aria-current='page'] {
+  background: var(--pm-active);
+  color: var(--pm-fg);
+  font-weight: 500;
+}
+
+.sb-item .label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sb-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.list-empty {
+  margin: 0.5rem;
+  color: var(--pm-muted);
+  font-size: 0.85rem;
+}
+
+.note-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.note-item {
+  position: relative;
+  display: block;
+  padding: 0.5rem 0.6rem 0.5rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.note-item:hover {
+  background: var(--pm-hover);
+}
+
+.note-item[aria-current='page'] {
+  background: var(--pm-raised);
+  border-color: var(--pm-border);
+}
+
+.note-item[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.6rem;
+  bottom: 0.6rem;
+  width: 2px;
+  border-radius: 0;
+  background: var(--pm-accent);
+}
+
+.note-item-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.note-item[data-untitled] .note-item-title {
+  color: var(--pm-muted);
+  font-weight: 500;
+}
+
+.note-item-excerpt {
+  display: -webkit-box;
+  margin-top: 0.15rem;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  color: var(--pm-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+/* Folder tree (T7): after the prototype's sidebar tree. */
+/* Grows to fill the sidebar (a large drop target for the top level), above the calendar and tags. */
+.folders {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+}
+
+/*
+ * A notebook's actions on its name's row (T53 item 4): hidden until the pointer is over the row,
+ * focus is in it or the sort menu is open, then before the sync dot (which stays at the far
+ * right), the name giving up the room it needs. Each is as tall as the dot's target, so the row
+ * keeps its height. Touch has no hover: they show there always.
+ */
+.tree-actions {
+  display: none;
+  flex: none;
+  align-items: center;
+  gap: 1px;
+}
+
+.sb-section-head:hover .tree-actions,
+.sb-section-head:focus-within .tree-actions,
+.tree-actions[data-open] {
+  display: flex;
+}
+
+@media (hover: none) {
+  .tree-actions {
+    display: flex;
+  }
+}
+
+.icon-btn {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--pm-control);
+  height: var(--pm-control);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--pm-muted);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--pm-fast),
+    color var(--pm-fast);
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: var(--pm-hover);
+  color: var(--pm-fg);
+}
+
+.icon-btn:active:not(:disabled),
+.icon-btn[aria-pressed='true'],
+.icon-btn[aria-expanded='true'] {
+  background: var(--pm-active);
+  color: var(--pm-fg);
+}
+
+.icon-btn.danger:hover:not(:disabled) {
+  background: var(--pm-danger-soft);
+  color: var(--pm-danger);
+}
+
+.tree-actions .icon-btn {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.tree-actions .icon-btn[aria-current='page'] {
+  background: var(--pm-active);
+  color: var(--pm-fg);
+}
+
+.tree {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  border-radius: 0;
+}
+
+.tree-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: var(--pm-control-sm);
+  padding: 0 0.3rem 0 calc(0.25rem + var(--depth, 0) * var(--tree-indent, 0.9rem));
+  border-radius: 0;
+  color: var(--pm-fg);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tree-row:hover {
+  background: var(--pm-hover);
+}
+
+.tree-row:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: -2px;
+}
+
+.folder-row[aria-selected='true'] {
+  background: var(--pm-active);
+  font-weight: 600;
+}
+
+.folder-row[aria-selected='true'] .tree-icon {
+  color: var(--pm-accent);
+}
+
+/* T43: a notebook's folder, its own icon in the accent, its name in the normal weight. */
+.notebook-row .tree-icon {
+  color: var(--pm-accent);
+}
+
+.notebook-row .tree-label {
+  color: var(--pm-fg);
+}
+
+/* The default notebook's folders start below the notebooks, after a quiet rule. */
+.folder-row[data-section-start] {
+  margin-top: 0.35rem;
+  box-shadow: inset 0 1px 0 var(--pm-border-soft);
+}
+
+.twisty {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  color: var(--pm-muted);
+  transition: transform 120ms ease;
+}
+
+.twisty[data-open='true'] {
+  transform: rotate(90deg);
+}
+
+.twisty[data-empty] {
+  visibility: hidden;
+}
+
+/* An open folder with nothing in it (#231): a quiet line where its first row would be. */
+.tree-empty-row {
+  color: var(--pm-muted);
+  font-style: italic;
+  cursor: default;
+}
+
+.tree-empty-row:hover {
+  background: transparent;
+}
+
+.chevron {
+  width: 12px;
+  height: 12px;
+}
+
+.tree-icon {
+  flex: none;
+  color: var(--pm-muted);
+}
+
+.tree-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-link {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.tree-link[aria-current='page'] {
+  font-weight: 600;
+}
+
+.note-row:has([aria-current='page']) {
+  background: var(--pm-raised);
+  box-shadow: inset 2px 0 0 var(--pm-accent);
+}
+
+.tree-link[data-untitled] {
+  color: var(--pm-muted);
+}
+
+.sort-badge {
+  flex: none;
+  padding: 0 0.35rem;
+  border-radius: 0;
+  background: var(--pm-hover);
+  color: var(--pm-muted);
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+
+.row-actions {
+  display: none;
+  flex: none;
+}
+
+.folder-row:hover .row-actions,
+.folder-row:focus-visible .row-actions {
+  display: flex;
+}
+
+.row-actions .icon-btn {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+/*
+ * With a pointer, a folder's actions lie over its row's end, on the row's colour, and show by
+ * visibility (A989): shown in the row's flow, each row the tree scrolled under a resting pointer
+ * laid out the whole tree again, and a long tree's scrolling stuttered. Touch keeps them in the
+ * flow, always shown (below).
+ */
+@media (hover: hover) {
+  .row-actions {
+    position: absolute;
+    /* Inside the focus ring (2px, drawn within the row). */
+    inset-block: 2px;
+    inset-inline-end: 0.3rem;
+    display: flex;
+    align-items: center;
+    padding-inline-start: 0.25rem;
+    visibility: hidden;
+    background: var(--pm-sidebar);
+  }
+
+  .folder-row:hover .row-actions,
+  .folder-row:focus-visible .row-actions {
+    visibility: visible;
+  }
+
+  .folder-row:hover .row-actions {
+    background: linear-gradient(var(--pm-hover), var(--pm-hover)), var(--pm-sidebar);
+  }
+
+  .folder-row[aria-selected='true'] .row-actions {
+    background: linear-gradient(var(--pm-active), var(--pm-active)), var(--pm-sidebar);
+  }
+}
+
+.tree-input {
+  flex: 1;
+  min-width: 0;
+  height: 1.4rem;
+  padding: 0 0.3rem;
+  border: 1px solid var(--pm-accent);
+  border-radius: 0;
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+  font: inherit;
+}
+
+.tree-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--pm-accent) 30%, transparent);
+}
+
+.tree-row[data-drop='before']::before,
+.tree-row[data-drop='after']::after {
+  content: '';
+  position: absolute;
+  left: calc(0.25rem + var(--depth, 0) * 0.9rem);
+  right: 0.25rem;
+  height: 2px;
+  border-radius: 0;
+  background: var(--pm-accent);
+  pointer-events: none;
+}
+
+.tree-row[data-drop='before']::before {
+  top: -1px;
+}
+
+.tree-row[data-drop='after']::after {
+  bottom: -1px;
+}
+
+.tree-row[data-drop='inside'],
+.tree[data-drop] .tree-end {
+  background: var(--pm-drop);
+  box-shadow: inset 0 0 0 1px var(--pm-accent);
+}
+
+.tree-end {
+  flex: 1;
+  min-height: 2.5rem;
+  border-radius: 0;
+}
+
+/*
+ * With two or more notebooks each tree ends in a sliver, not 2.5rem: that dead space sat between
+ * one notebook's last row and the next notebook's name (T62 item 8). It opens to its full height
+ * while something dragged is over the tree, to take a drop at the top level.
+ */
+.sb-section .tree-end {
+  flex: none;
+  min-height: 0.25rem;
+}
+
+/* Nor does an empty notice add its margin there. */
+.sb-section .tree-message:empty {
+  margin: 0;
+}
+
+.sb-section .tree[data-drop] .tree-end {
+  min-height: 2.5rem;
+}
+
+.tree-message {
+  /* Never shrunk by the scrolling tree above it: the whole notice shows (B7). */
+  flex: none;
+  margin: 0.25rem 0.25rem 0;
+  overflow-wrap: anywhere;
+  color: var(--pm-fg);
+  font-size: 0.8rem;
+  /* A status line with no controls: a drop or tap on the rows under it reaches them (A558). */
+  pointer-events: none;
+}
+
+/* Sticks to the bottom of the scrolling sidebar so a refusal is always in view. */
+.tree-message:not(:empty) {
+  position: sticky;
+  bottom: 0.25rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-warn-bg);
+  box-shadow: 0 4px 14px color-mix(in oklab, var(--pm-shadow-color) 12%, transparent);
+}
+
+.confirm {
+  max-width: 24rem;
+  padding: 1.1rem 1.25rem 1rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+  box-shadow: 0 18px 48px color-mix(in oklab, var(--pm-shadow-color) 20%, transparent);
+}
+
+.confirm::backdrop {
+  background: color-mix(in oklab, var(--pm-shadow-color) 30%, transparent);
+}
+
+.confirm h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.confirm p {
+  margin: 0 0 1rem;
+  color: var(--pm-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.btn.danger-fill {
+  border-color: var(--pm-danger);
+  background: var(--pm-danger);
+  color: var(--pm-on-accent);
+}
+
+/*
+ * Settings and Feedback as icons (T51, A935), flush with the row's start and as tall as the row,
+ * square, with no margin or gap, as a notebook's buttons and a section's tools are (T63; Quanta
+ * feedback 2, A1121).
+ */
+.sb-foot {
+  --sb-foot-height: 2.25rem;
+  display: flex;
+  padding: 0 0 env(safe-area-inset-bottom);
+  border-top: 1px solid var(--pm-border);
+}
+
+.sb-foot .icon-btn {
+  flex: none;
+  width: var(--sb-foot-height);
+  height: var(--sb-foot-height);
+}
+
+@media (max-width: 700px), (pointer: coarse) {
+  .sb-foot {
+    --sb-foot-height: var(--pm-hit);
+  }
+}
+
+.back {
+  margin: 0 0 1rem;
+}
+
+/* "← Notes": the way back from Settings and the sign-in pages. */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: var(--pm-control);
+  margin-left: -0.5rem;
+  padding: 0 0.5rem;
+  border-radius: 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  background: var(--pm-hover);
+  color: var(--pm-fg);
+}
+
+.note-main {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.empty-state {
+  max-width: 28rem;
+  margin: 16vh auto 0;
+  padding: 0 1.5rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  line-height: 1.55;
+  text-align: center;
+}
+
+.empty-state h2,
+.empty-state h3 {
+  margin: 0.25rem 0 0.4rem;
+  color: var(--pm-fg);
+  font-size: var(--pm-text-lg);
+}
+
+.empty-state p {
+  margin: 0;
+}
+
+.empty-state.compact {
+  margin: 2.5rem auto;
+}
+
+.empty-art {
+  width: 72px;
+  height: 72px;
+}
+
+.empty-art .art-page {
+  fill: var(--pm-raised);
+  stroke: var(--pm-border-strong);
+}
+
+.empty-art .art-lines {
+  fill: none;
+  stroke: var(--pm-border-strong);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.empty-art .art-moss {
+  fill: var(--pm-accent-soft);
+}
+
+.empty-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 0;
+  background: var(--pm-hover);
+  color: var(--pm-muted);
+}
+
+/*
+ * The note's header (T36): the note's folders, then its actions, after the prototype's editor bar.
+ * Its end padding is the tab strip's (links.css), so the last action sits over the strip's icons,
+ * on one column (A988).
+ */
+.note-top {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 3rem;
+  padding: 0 0.3rem 0 1rem;
+  border-bottom: 1px solid var(--pm-border-soft);
+  background: var(--pm-bg);
+}
+
+.crumbs {
+  flex: 1;
+  min-width: 0;
+}
+
+.crumbs ol {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  white-space: nowrap;
+}
+
+.crumbs li {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.3rem;
+  margin-right: 0.3rem;
+}
+
+.crumbs li .i {
+  opacity: 0.6;
+}
+
+.crumbs li.crumb-notebook .i:first-child {
+  opacity: 1;
+  color: var(--pm-accent);
+}
+
+.crumbs li[aria-current='page'] {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: block;
+  overflow: hidden;
+  color: var(--pm-fg);
+  text-overflow: ellipsis;
+}
+
+.note-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.note-top .sep {
+  width: 1px;
+  height: 1.1rem;
+  margin: 0 0.3rem;
+  background: var(--pm-border-strong);
+}
+
+/* Pressed is the accent's tint, so an open panel or the source view reads at a glance. */
+.note-actions .icon-btn[aria-pressed='true'] {
+  background: var(--pm-accent-soft);
+  color: var(--pm-accent);
+}
+
+/* Settings → Sync (A578): the state now, and when it stopped, why and the fix. */
+.sync-now {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+}
+
+.btn.quiet {
+  height: var(--pm-control-sm);
+  padding: 0 0.6rem;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+}
+
+.btn.quiet:hover:not(:disabled) {
+  background: var(--pm-hover);
+  color: var(--pm-fg);
+}
+
+/* A quiet destructive action (Delete for good) is red too, without a fill. */
+.btn.quiet.danger,
+.btn.quiet.danger:hover:not(:disabled) {
+  color: var(--pm-danger);
+}
+
+/*
+ * Beside a full button (Cancel by Save, Delete for Good by Restore) a quiet one is as tall, so
+ * its hover box is not 4px shorter than its neighbour; as are a symbol's icon buttons, in a row
+ * of full-height controls (A988). A minimum, so touch keeps its 44px.
+ */
+:is(.capture, .feedback-dlg, .trash, .settings-content)
+  .btn.quiet:is(.btn:not(.quiet) ~ *, :has(~ .btn:not(.quiet))),
+.symbol-actions .btn.quiet {
+  min-height: var(--pm-control);
+}
+
+/* The note header's Copy menu (T15). */
+.menu-anchor {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 14rem;
+  padding: 0.25rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-popover-shadow);
+  animation: pm-rise var(--pm-medium) var(--pm-ease);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: var(--pm-control);
+  padding: 0 0.6rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: var(--pm-text-sm);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.menu-item .i {
+  color: var(--pm-muted);
+}
+
+.menu-item:hover,
+.menu-item:focus {
+  outline: none;
+  background: var(--pm-hover);
+}
+
+.menu-item:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--pm-focus);
+}
+
+.menu-item.danger,
+.menu-item.danger .i {
+  color: var(--pm-danger);
+}
+
+/* The tree's context menu (A570): fixed at the pointer, not under a button. */
+.menu.context-menu {
+  position: fixed;
+  right: auto;
+  z-index: 60;
+}
+
+/* The notes a context menu acts on (review S1): named above its items. */
+.menu-caption {
+  max-width: 18rem;
+  margin: 0;
+  padding: 0.3rem 0.6rem 0.4rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  overflow-wrap: anywhere;
+}
+
+/* Selected notes in the tree (A570), and folders picked with them (T68, #230). */
+.tree-row.note-row[aria-selected='true'],
+.tree-row.folder-row[data-picked] {
+  background: var(--pm-accent-soft);
+}
+
+/* The note's actions menu (A575): label, then the command's keys, then On for a toggle. */
+.menu-item .menu-label {
+  flex: 1;
+}
+
+.menu-keys {
+  display: inline-flex;
+  margin-left: 1rem;
+  color: var(--pm-muted);
+}
+
+.menu[data-sheet] .menu-keys {
+  display: none;
+}
+
+.menu-item[aria-checked='true']::after {
+  margin-left: auto;
+  padding-left: 1rem;
+  color: var(--pm-accent);
+  content: 'On';
+  font-size: var(--pm-text-xs);
+  font-weight: 600;
+}
+
+/*
+ * A menu with toggles keeps a column for On at the end of every item, empty when off, so the
+ * keys line up whether an item is on or not; On used to push its row's keys left (A988).
+ */
+.menu:has(> .menu-item[role='menuitemcheckbox']) > .menu-item::after {
+  flex: none;
+  box-sizing: border-box;
+  width: 2.25rem;
+  margin-left: 0;
+  padding-left: 1rem;
+  text-align: right;
+}
+
+.menu:has(> .menu-item[role='menuitemcheckbox']) > .menu-item:not([aria-checked='true'])::after {
+  content: '';
+}
+
+/* A choice (the sort order, T52): a check before the one in use, not On after it. */
+.menu-item[role='menuitemradio'][aria-checked='true']::after {
+  content: none;
+}
+
+.menu-check {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1rem;
+}
+
+.menu-check .i {
+  color: var(--pm-accent);
+}
+
+.menu-sep {
+  height: 1px;
+  margin: 0.3rem 0.5rem;
+  background: var(--pm-border);
+}
+
+.menu-scrim {
+  display: none;
+}
+
+/* Brief confirmations (copy): bottom centre, after the prototype's toasts. */
+.toast {
+  position: fixed;
+  z-index: 80;
+  bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: calc(100vw - 2rem);
+  margin: 0;
+  padding: 0.55rem 0.9rem;
+  border-radius: 0;
+  background: var(--pm-fg);
+  box-shadow: var(--pm-popover-shadow);
+  color: var(--pm-bg);
+  font-size: var(--pm-text-sm);
+  translate: -50% 0;
+  animation: pm-rise var(--pm-medium) var(--pm-ease);
+}
+
+.toast .i {
+  color: color-mix(in oklab, var(--pm-accent), var(--pm-bg) 40%);
+}
+
+/* The toasts' live region (T39 review): always in the page, so what is put in it is read out. */
+.toast-live {
+  position: fixed;
+  z-index: 80;
+}
+
+/* A toast with an action (A524): Undo after Move to Trash. */
+.toast-with-action {
+  padding-right: 0.4rem;
+}
+
+.toast-action,
+.toast-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.9rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.toast-action {
+  padding: 0 0.6rem;
+  color: color-mix(in oklab, var(--pm-accent), var(--pm-bg) 40%);
+  font-weight: 600;
+}
+
+.toast-close {
+  width: 1.9rem;
+  opacity: 0.75;
+}
+
+.toast-action:hover,
+.toast-close:hover {
+  background: color-mix(in oklab, var(--pm-bg) 14%, transparent);
+}
+
+.toast-action:focus-visible,
+.toast-close:focus-visible {
+  outline: 2px solid var(--pm-bg);
+  outline-offset: 1px;
+}
+
+.note-main:focus {
+  outline: none;
+}
+
+/* Tooltips (T36, A189): one layer, after a control's data-tip (shell/Tooltip.tsx). */
+.tooltip {
+  position: fixed;
+  z-index: 120;
+  max-width: min(18rem, calc(100vw - 1rem));
+  padding: 0.3rem 0.55rem;
+  border-radius: 0;
+  background: var(--pm-fg);
+  box-shadow: var(--pm-popover-shadow);
+  color: var(--pm-bg);
+  font: 500 var(--pm-text-xs) / 1.35 var(--pm-font);
+  pointer-events: none;
+  animation: pm-fade var(--pm-fast) var(--pm-ease);
+}
+
+/* Touch screens have no hover: a control's label is in its sheet, drawer or app bar instead. */
+@media (hover: none) {
+  .tooltip {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tooltip,
+  .toast {
+    animation: none;
+  }
+}
+
+@keyframes pm-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes pm-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* The note's gutters (T39, A500): the text column and the Info panel below it share them. */
+.note {
+  --doc-gutter: 3rem;
+}
+
+.doc {
+  /* The theme's note width (T28, A500): Penmoss 52rem of text. The full width up to it, also as a
+     grid item beside the Info panel, where auto margins would shrink it to its content
+     (T39); its padding is inside that width, so it never overflows a narrow pane. Full width
+     (A501) lifts only the cap; the gutters stay. */
+  box-sizing: border-box;
+  width: 100%;
+  max-width: calc(var(--pm-editor-width, 52rem) + 2 * var(--doc-gutter, 3rem));
+  margin: 0 auto;
+  /* T52 item 7: 2.5rem below the last line, not 10rem, so the status bar follows the text. */
+  padding: 1.5rem var(--doc-gutter, 3rem) 2.5rem;
+}
+
+.doc-title {
+  display: block;
+  width: 100%;
+  /* Room below the last line for the system font's descenders, which overflow a 1.2 line
+     height by about 2 px and would be clipped (T39); the gap below stays the same. */
+  margin: 0 0 calc(0.75rem - 0.1em);
+  padding: 0 0 0.1em;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--pm-fg);
+  font: 700 1.9rem/1.2 var(--pm-font-body, var(--pm-font));
+  /* 1.9rem at the default note size; the Note Font Size setting scales it with the text and
+     its headings (T51 item 16, A944). */
+  font-size: calc(var(--pm-note-size, 16px) * 1.9);
+  letter-spacing: -0.02em;
+  /* A long title wraps and the field grows with it (T39; JS sizes it where this is missing). */
+  field-sizing: content;
+  overflow-wrap: anywhere;
+  resize: none;
+}
+
+.doc-title::placeholder {
+  color: var(--pm-muted);
+  opacity: 0.7;
+}
+
+.doc-title:focus {
+  outline: none;
+}
+
+/*
+ * The fields pinned under the title (T62 item 4): one muted row of short labels, then the tags'
+ * chips and +, wrapping as one line of text would. The title's gap below moves under the row.
+ */
+.doc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 1rem;
+  margin: calc(-0.75rem + 0.1em + 0.15rem) 0 0.75rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.doc-meta-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+}
+
+.doc-meta-field {
+  white-space: nowrap;
+}
+
+.doc-meta .note-tags {
+  margin: 0;
+}
+
+.note-body .ProseMirror {
+  min-height: 12rem;
+  outline: none;
+  /* The theme's note font (T28), or the Note Font setting's (A944); headings and text inherit
+     it, code keeps the mono font. Headings are sized in em, so the Note Font Size scales them. */
+  font-family: var(--pm-font-body, var(--pm-font));
+  font-size: var(--pm-note-size, 16px);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  caret-color: var(--pm-accent);
+}
+
+.note-body .ProseMirror > * {
+  margin: 0 0 0.85em;
+}
+
+.note-body .ProseMirror > :first-child {
+  margin-top: 0;
+}
+
+/*
+ * A long note lays out its first screen first (T31): until the editor takes focus, text
+ * blocks off screen skip style, layout and paint, keeping their last rendered height. Not
+ * while it has focus: a block just made (Enter, a shortcut) counts as off screen until the
+ * next frame, and keys typed into it meanwhile land in the wrong place. Only blocks that
+ * draw nothing outside their own box: the containment clips overflow, and a table's
+ * toolbar or an image's tools float outside theirs, as a line's symbols do in the margin (T44).
+ * A list or quote holding a symbol line is never contained, nor are its items: an item's
+ * containment would clip its own outside bullet or number (T44 review).
+ */
+.note-body
+  .ProseMirror:not(.ProseMirror-focused)
+  > :is(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote):not(:has(.pm-symbols)) {
+  content-visibility: auto;
+}
+
+/*
+ * Each block's height is remembered while the editor has focus too (T53 item 11), so the first
+ * frame after it loses focus lays a block out at the height it had, not at the 1.7em guess: the
+ * guess shrank a list or a wrapped paragraph for a frame and the text below jumped.
+ */
+.note-body .ProseMirror > :is(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote) {
+  contain-intrinsic-block-size: auto 1.7em;
+}
+
+/*
+ * The containment above stops margins collapsing through a list or quote, so the margins at its
+ * edges (a quote's paragraph, an item's) stayed inside it once the editor lost focus and the
+ * text moved down (T53 item 11). None there: the margins between blocks are the blocks' own,
+ * the same with focus and without.
+ */
+.note-body .ProseMirror > :is(ul, ol, blockquote) > :first-child,
+.note-body .ProseMirror > :is(ul, ol, blockquote) > :first-child > :first-child,
+.note-body .ProseMirror > :is(ul, ol, blockquote) > :first-child > :first-child > :first-child,
+.note-body
+  .ProseMirror
+  > :is(ul, ol, blockquote)
+  > :first-child
+  > :first-child
+  > :first-child
+  > :first-child {
+  margin-top: 0;
+}
+
+.note-body .ProseMirror > :is(ul, ol, blockquote) > :last-child,
+.note-body .ProseMirror > :is(ul, ol, blockquote) > :last-child > :last-child,
+.note-body .ProseMirror > :is(ul, ol, blockquote) > :last-child > :last-child > :last-child,
+.note-body
+  .ProseMirror
+  > :is(ul, ol, blockquote)
+  > :last-child
+  > :last-child
+  > :last-child
+  > :last-child {
+  margin-bottom: 0;
+}
+
+.note-body h1,
+.note-body h2,
+.note-body h3 {
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+
+/* Headings open a section: more space above than below, as in the prototype (T36). */
+.note-body .ProseMirror > h1 {
+  margin-top: 1.4em;
+}
+
+.note-body .ProseMirror > h2 {
+  margin: 1.6em 0 0.5em;
+}
+
+.note-body .ProseMirror > h3 {
+  margin: 1.3em 0 0.35em;
+}
+
+.note-body .ProseMirror > :is(h1, h2, h3):first-child {
+  margin-top: 0;
+}
+
+.note-body h1 {
+  font-size: 1.6em;
+}
+
+.note-body h2 {
+  font-size: 1.28em;
+}
+
+.note-body h3 {
+  font-size: 1.07em;
+}
+
+.note-body a {
+  color: var(--pm-accent);
+}
+
+.note-body code {
+  padding: 0.12em 0.36em;
+  border-radius: 0;
+  background: var(--pm-code-bg);
+  font-family: var(--pm-mono);
+  font-size: 0.86em;
+}
+
+/* A note a newer version wrote, shown read-only as text (A158). */
+.note-unsupported-text {
+  white-space: pre-wrap;
+  color: var(--pm-fg);
+}
+
+.note-body pre {
+  padding: 0.75rem 1rem;
+  border-radius: 0;
+  background: var(--pm-code-bg);
+  overflow-x: auto;
+}
+
+.note-body pre code {
+  padding: 0;
+  background: none;
+}
+
+.note-body blockquote {
+  margin-left: 0;
+  padding-left: 1em;
+  border-left: 2px solid var(--pm-border-strong);
+  color: var(--pm-muted);
+}
+
+.note-body ul,
+.note-body ol {
+  padding-left: 1.5em;
+}
+
+/* A numbered list's levels read as an outline (T64 item 4): 1, A, i, a, then 1 again. */
+.note-body ol {
+  list-style-type: decimal;
+}
+
+.note-body ol ol {
+  list-style-type: upper-alpha;
+}
+
+.note-body ol ol ol {
+  list-style-type: lower-roman;
+}
+
+.note-body ol ol ol ol {
+  list-style-type: lower-alpha;
+}
+
+.note-body ol ol ol ol ol {
+  list-style-type: decimal;
+}
+
+.note-body ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0.1em;
+}
+
+.note-body ul[data-type='taskList'] li {
+  display: flex;
+  gap: 0.55em;
+  align-items: flex-start;
+}
+
+.note-body ul[data-type='taskList'] li > label {
+  display: flex;
+  margin-top: 0.3em;
+}
+
+/*
+ * The checkbox is drawn here, in theme colours, so that it can look 16 px yet take clicks
+ * across 24 px (WCAG 2.5.8): a transparent border widens the box, negative margins keep the
+ * layout, and the inset shadow and fill paint only inside the border.
+ */
+.note-body ul[data-type='taskList'] li > label > input[type='checkbox'] {
+  display: grid;
+  place-content: center;
+  box-sizing: border-box;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: -0.25rem;
+  border: 0.25rem solid transparent;
+  border-radius: 0;
+  background: var(--pm-bg) padding-box;
+  box-shadow: inset 0 0 0 1.5px var(--pm-muted);
+  appearance: none;
+  cursor: pointer;
+}
+
+.note-body ul[data-type='taskList'] li > label > input[type='checkbox']::before {
+  width: 0.6rem;
+  height: 0.6rem;
+  box-shadow: inset 1rem 1rem var(--pm-on-accent);
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  content: '';
+  transform: scale(0);
+}
+
+.note-body ul[data-type='taskList'] li > label > input[type='checkbox']:checked {
+  background-color: var(--pm-accent);
+  box-shadow: none;
+}
+
+.note-body ul[data-type='taskList'] li > label > input[type='checkbox']:checked::before {
+  transform: scale(1);
+}
+
+.note-body ul[data-type='taskList'] li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.note-body li p {
+  margin: 0.15em 0;
+}
+
+.note-body hr {
+  height: 1px;
+  margin: 2em 0;
+  border: 0;
+  background: var(--pm-border);
+}
+
+/* Inline images (T10): shown from local bytes; resize handle and fields while selected. */
+.note-body .pm-image {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: bottom;
+  border-radius: 0;
+  line-height: 0;
+}
+
+.note-body .pm-image img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0;
+}
+
+.note-body .pm-image[data-state='loading'] img,
+.note-body .pm-image[data-state='missing'] img {
+  display: none;
+}
+
+.note-body .pm-image-fallback {
+  display: none;
+  padding: 0.75rem 1rem;
+  border: 1px dashed var(--pm-border);
+  border-radius: 0;
+  color: var(--pm-muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.note-body .pm-image[data-state='loading'] .pm-image-fallback,
+.note-body .pm-image[data-state='missing'] .pm-image-fallback {
+  display: inline-block;
+}
+
+.note-body .pm-image.ProseMirror-selectednode {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 2px;
+}
+
+.note-body .pm-image-resize {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--pm-bg);
+  border-radius: 50%;
+  background: var(--pm-accent);
+  cursor: nwse-resize;
+  opacity: 0;
+  touch-action: none;
+}
+
+.note-body .pm-image:hover .pm-image-resize,
+.note-body .pm-image.ProseMirror-selectednode .pm-image-resize {
+  opacity: 1;
+}
+
+.note-body .pm-image-tools {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 8px);
+  left: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: 0 4px 16px color-mix(in oklab, var(--pm-fg) 12%, transparent);
+  font-size: 0.85rem;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.note-body .pm-image-tools[hidden] {
+  display: none;
+}
+
+.note-body .pm-image-tools label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--pm-muted);
+}
+
+.note-body .pm-image-tools input {
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font: inherit;
+}
+
+.note-body .pm-image-alt {
+  width: 14rem;
+}
+
+.note-body .pm-image-width {
+  width: 5rem;
+}
+
+/* A read-only note's picture shows Open in Lightbox alone (T51, A948). */
+.pm-image-tools [hidden] {
+  display: none !important;
+}
+
+.pm-image-tools .pm-image-lightbox {
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.pm-image-tools .pm-image-lightbox:hover {
+  background: var(--pm-hover);
+}
+
+/*
+ * The image lightbox (T51 item 20, A948; packages/editor/src/lightbox.ts): the picture over
+ * a dark backdrop, fitted to the window, its controls in a floating bar at the top.
+ */
+.pm-lightbox {
+  position: fixed;
+  z-index: 110;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: color-mix(in oklab, var(--pm-shadow-color) 86%, transparent);
+  color: var(--pm-fg);
+  outline: none;
+  animation: pm-fade var(--pm-fast) var(--pm-ease);
+  overscroll-behavior: contain;
+}
+
+.pm-lightbox-bar {
+  display: flex;
+  align-items: center;
+  justify-self: center;
+  gap: 0.25rem;
+  margin: max(0.75rem, env(safe-area-inset-top)) 0.75rem 0.5rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 0;
+  background: color-mix(in oklab, var(--pm-raised) 92%, transparent);
+  box-shadow: var(--pm-popover-shadow);
+  font: 500 var(--pm-text-xs) / 1 var(--pm-font);
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-lightbox-count,
+.pm-lightbox-level {
+  min-width: 3.25rem;
+  padding: 0 0.35rem;
+  color: var(--pm-muted);
+  text-align: center;
+}
+
+.pm-lightbox-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--pm-fg);
+  cursor: pointer;
+}
+
+.pm-lightbox-btn:hover:not(:disabled) {
+  background: var(--pm-hover);
+}
+
+.pm-lightbox-btn:disabled {
+  color: var(--pm-muted);
+  cursor: default;
+  opacity: 0.5;
+}
+
+.pm-lightbox-btn:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 1px;
+}
+
+.pm-lightbox-btn[hidden],
+.pm-lightbox-count[hidden],
+.pm-lightbox-caption[hidden] {
+  display: none;
+}
+
+.pm-lightbox-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 0 3.5rem;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+
+.pm-lightbox-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 0;
+  box-shadow: var(--pm-popover-shadow);
+  transform-origin: center;
+  cursor: zoom-in;
+  will-change: transform;
+}
+
+.pm-lightbox[data-zoomed='true'] .pm-lightbox-img {
+  cursor: grab;
+}
+
+.pm-lightbox[data-zoomed='true'] .pm-lightbox-img:active {
+  cursor: grabbing;
+}
+
+.pm-lightbox-prev,
+.pm-lightbox-next {
+  position: absolute;
+  top: 50%;
+  background: color-mix(in oklab, var(--pm-raised) 92%, transparent);
+  box-shadow: var(--pm-popover-shadow);
+  transform: translateY(-50%);
+}
+
+.pm-lightbox-prev {
+  left: max(0.75rem, env(safe-area-inset-left));
+}
+
+.pm-lightbox-next {
+  right: max(0.75rem, env(safe-area-inset-right));
+}
+
+.pm-lightbox .pm-lightbox-prev:hover,
+.pm-lightbox .pm-lightbox-next:hover {
+  background: var(--pm-raised);
+}
+
+.pm-lightbox-caption {
+  justify-self: center;
+  max-width: min(40rem, calc(100vw - 2rem));
+  margin: 0.5rem 1rem max(1rem, env(safe-area-inset-bottom));
+  padding: 0.35rem 0.75rem;
+  border-radius: 0;
+  background: color-mix(in oklab, var(--pm-raised) 92%, transparent);
+  font-size: var(--pm-text-sm);
+  text-align: center;
+}
+
+.pm-lightbox:fullscreen {
+  background: var(--pm-shadow-color);
+}
+
+@media (max-width: 40rem) {
+  .pm-lightbox-stage {
+    padding: 0 0.5rem;
+  }
+
+  .pm-lightbox-level {
+    display: none;
+  }
+}
+
+.notice {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0;
+  background: var(--pm-warn-bg);
+}
+
+/* Commands (T20): palette, quick open, recent-notes switcher, cheat sheet and shortcut editor. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--pm-muted);
+}
+
+/*
+ * A name that turns bold when it is the chosen one (a Settings section, a segment) keeps its bold
+ * width all the time, from a hidden bold copy under it (`data-label`), so choosing it moves
+ * nothing beside it (A988). The phone's row of Settings tabs moved by up to 3px.
+ */
+.bold-steady {
+  display: inline-grid;
+}
+
+.bold-steady::after {
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  content: attr(data-label);
+  font-weight: 600;
+}
+
+.keys {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.keys kbd,
+.dlg-foot kbd {
+  min-width: 1.35em;
+  padding: 0.1em 0.35em;
+  border: 1px solid var(--pm-border);
+  border-bottom-width: 2px;
+  border-radius: 0;
+  background: var(--pm-raised);
+  color: var(--pm-muted);
+  font: 500 0.72rem/1.2 var(--pm-font);
+  text-align: center;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  justify-items: center;
+  align-items: start;
+  padding: 12vh 1rem 1rem;
+  background: var(--pm-scrim);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(40rem, 100%);
+  max-height: 76vh;
+  overflow: hidden;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+  box-shadow: var(--pm-shadow);
+}
+
+.dlg-search {
+  display: flex;
+  align-items: center;
+  flex: none;
+  height: 3.1rem;
+  padding: 0 0.9rem;
+  border-bottom: 1px solid var(--pm-border);
+}
+
+.dlg-search .dlg-close {
+  flex: none;
+  margin-right: -0.45rem;
+}
+
+.dlg-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+.dlg-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex: none;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--pm-border);
+}
+
+.dlg-title h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.dlg-title .muted {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  font-size: 0.78rem;
+}
+
+.dlg-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.35rem;
+  outline: none;
+}
+
+.dlg-empty {
+  margin: 0;
+  padding: 1.2rem;
+  color: var(--pm-muted);
+  text-align: center;
+}
+
+.dlg-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: none;
+  height: 2.2rem;
+  padding: 0 0.9rem;
+  border-top: 1px solid var(--pm-border);
+  color: var(--pm-muted);
+  font-size: 0.72rem;
+}
+
+.dlg-foot .grow {
+  flex: 1;
+}
+
+/* Move to folder… (T39): indented by depth as in the tree, up to twelve levels. */
+.folder-picker .folder-opt[style] {
+  padding-inline-start: calc(0.6rem + min(var(--depth), 12) * 0.9rem);
+}
+
+.grp-h {
+  padding: 0.55rem 0.6rem 0.25rem;
+  color: var(--pm-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.opt {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.2rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.opt[aria-selected='true'] {
+  background: var(--pm-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--pm-accent-line);
+}
+
+.opt:hover:not([aria-selected='true']) {
+  background: var(--pm-hover);
+}
+
+.opt .oic {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  color: var(--pm-muted);
+}
+
+.opt .ot {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opt .ot b {
+  color: var(--pm-accent);
+  font-weight: 650;
+}
+
+/* On the selected option's accent tint, matched letters stay text-coloured for contrast (T28). */
+.opt[aria-selected='true'] .ot b {
+  color: var(--pm-fg);
+}
+
+.opt .ot .p {
+  margin-left: 0.4rem;
+  color: var(--pm-muted);
+  font-size: 0.75rem;
+}
+
+.opt .os {
+  color: var(--pm-muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.mru {
+  width: min(32rem, 100%);
+}
+
+.mru .opt {
+  min-height: 2.8rem;
+}
+
+.mru-num {
+  width: 1.2rem;
+  color: var(--pm-muted);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.mru .two {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mru .two .t {
+  overflow: hidden;
+  font-weight: 550;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mru .two .s {
+  color: var(--pm-muted);
+  font-size: 0.72rem;
+}
+
+.cheat-dlg {
+  width: min(54rem, 100%);
+}
+
+.cheat {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.25rem 1.75rem;
+  overflow-y: auto;
+  padding: 0.4rem 1.25rem 1.25rem;
+}
+
+.cheat h3 {
+  margin: 1rem 0 0.35rem;
+  color: var(--pm-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cheat .cheat-note {
+  margin: 0 0 0.3rem;
+  color: var(--pm-muted);
+  font-size: 0.75rem;
+}
+
+.cheat .cr {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--pm-border);
+  font-size: 0.82rem;
+}
+
+/* Settings (T36 layout): back to the notes, the sections beside the open one. */
+.settings-shell {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: max(1rem, env(safe-area-inset-top)) 1.5rem 4rem;
+}
+
+.settings-bar {
+  display: flex;
+  align-items: center;
+  min-height: var(--pm-bar);
+}
+
+.settings-page h1 {
+  margin: 0.5rem 0 1.25rem;
+  color: var(--pm-fg);
+  font-size: 1.5rem;
+  letter-spacing: -0.015em;
+}
+
+.settings-layout {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: start;
+}
+
+.settings-nav {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  gap: 2px;
+}
+
+.settings-nav a {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: var(--pm-control);
+  padding: 0 0.6rem;
+  border-radius: 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  text-decoration: none;
+}
+
+.settings-nav a:hover {
+  background: var(--pm-hover);
+  color: var(--pm-fg);
+}
+
+.settings-nav a[aria-current='page'] {
+  background: var(--pm-active);
+  color: var(--pm-fg);
+  font-weight: 600;
+}
+
+.settings-nav a[aria-current='page'] .i {
+  color: var(--pm-accent);
+}
+
+.settings-content {
+  min-width: 0;
+}
+
+/* Back and Forward before "← Notes" (T51, A943). */
+.settings-bar {
+  gap: 0.75rem;
+}
+
+/*
+ * Settings scrolls only its content (T51, A942): the bar, the heading and the sections' list
+ * stay put, and the list scrolls on its own only in a short window. The page fills the window
+ * under anything above it (#root is a column the window's height); the content column scrolls,
+ * its scrollbar at the window's edge, and the 64rem column stays centred by its gutters. A phone
+ * keeps its sticky bar and its row of tabs over a page that scrolls (below).
+ */
+@media (min-width: 701px) {
+  .settings-shell {
+    --settings-gutter: max(1.5rem, calc((100vw - 64rem) / 2 + 1.5rem));
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-height: 0;
+    max-width: none;
+    margin: 0;
+    padding: max(1rem, env(safe-area-inset-top)) 0 0;
+  }
+
+  .settings-bar,
+  .settings-page > h1 {
+    flex: none;
+    padding-inline: var(--settings-gutter);
+  }
+
+  .settings-page {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .settings-layout {
+    flex: 1 1 0;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+    min-height: 0;
+    padding-left: var(--settings-gutter);
+  }
+
+  .settings-nav {
+    position: static;
+    align-self: start;
+    max-height: 100%;
+    box-sizing: border-box;
+    overflow-y: auto;
+    padding: 2px 2px 1rem;
+  }
+
+  .settings-content {
+    min-height: 0;
+    overflow-y: auto;
+    /* Room for focus rings at its left edge, which the scroll box would clip. */
+    margin-left: -4px;
+    padding: 0 var(--settings-gutter) 4rem 4px;
+  }
+}
+
+.settings-section h2,
+.settings > h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+}
+
+.settings-section > p {
+  margin: 0 0 0.8rem;
+}
+
+/* A section's explanations read the same in every section (T36). */
+.settings-content :is(.settings, .settings-section) > p {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-md);
+  line-height: 1.55;
+}
+
+/*
+ * One rhythm for a section's controls (A988): each field, list of toggles or group of choices
+ * starts 1.5rem under what is above it, and a hint sits 0.5rem under its control, in the
+ * hint's size on every page. They were 13, 16 or 24px apart by kind, and a hint was 13 or 14px
+ * and 0 to 16px under its control.
+ */
+.settings-content
+  :is(.settings, .settings-section)
+  > :is(.settings-field, .display-toggles, .display-toggle, .appearance-group) {
+  margin: 1.5rem 0 0;
+}
+
+.settings-content :is(.settings, .settings-section) > p.settings-help {
+  margin: 0.5rem 0 0;
+  font-size: var(--pm-text-sm);
+  line-height: 1.5;
+}
+
+/* Sections stacked on one page (Status, Devices) stand as far apart; one touched the next. */
+.settings-content > section + section {
+  margin-top: 2rem;
+}
+
+.input,
+.app-shell input:not([type]) {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--pm-control);
+  padding: 0 0.65rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: var(--pm-text-sm);
+  font-weight: 400;
+  transition:
+    border-color var(--pm-fast),
+    box-shadow var(--pm-fast);
+}
+
+.input:focus,
+.app-shell input:not([type]):focus {
+  border-color: var(--pm-accent-line);
+  outline: none;
+  box-shadow: var(--pm-ring);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 0;
+}
+
+/*
+ * The one select (T51 item 13, A941; packages/ui/src/controls/Select.tsx): a native select
+ * with a text field's box and a chevron of its own, drawn as two strokes in the muted colour
+ * so it follows the theme. `.pm-select-sm` for toolbars and filters; `.pm-select-quiet` shows
+ * its frame only on hover and focus, inside something already framed.
+ */
+.pm-select {
+  --pm-select-chevron: var(--pm-muted);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: var(--pm-control);
+  margin: 0;
+  padding: 0 1.75rem 0 0.65rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background-color: var(--pm-raised);
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent calc(50% - 0.75px),
+      var(--pm-select-chevron) calc(50% - 0.75px) calc(50% + 0.75px),
+      transparent calc(50% + 0.75px)
+    ),
+    linear-gradient(
+      135deg,
+      transparent calc(50% - 0.75px),
+      var(--pm-select-chevron) calc(50% - 0.75px) calc(50% + 0.75px),
+      transparent calc(50% + 0.75px)
+    );
+  background-position:
+    right 15px center,
+    right 10px center;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: var(--pm-text-sm);
+  font-weight: 400;
+  line-height: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition:
+    background-color var(--pm-fast),
+    border-color var(--pm-fast),
+    box-shadow var(--pm-fast);
+}
+
+.pm-select:hover:not(:disabled) {
+  --pm-select-chevron: var(--pm-fg);
+  border-color: var(--pm-border-strong);
+}
+
+.pm-select:focus {
+  border-color: var(--pm-accent-line);
+  outline: none;
+  box-shadow: var(--pm-ring);
+}
+
+.pm-select:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 0;
+}
+
+.pm-select:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pm-select option,
+.pm-select optgroup {
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+}
+
+.pm-select-sm {
+  width: auto;
+  height: var(--pm-control-sm);
+  padding: 0 1.5rem 0 0.5rem;
+  background-position:
+    right 12px center,
+    right 7px center;
+}
+
+.pm-select-quiet {
+  border-color: transparent;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.pm-select-quiet:hover:not(:disabled),
+.pm-select-quiet:focus {
+  border-color: var(--pm-border);
+  background-color: var(--pm-raised);
+}
+
+.kb-table {
+  width: 100%;
+  margin-top: 0.75rem;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.kb-table th,
+.kb-table td {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--pm-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.kb-table thead th {
+  color: var(--pm-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.kb-table tbody th {
+  font-weight: 500;
+}
+
+.kb-table .area {
+  color: var(--pm-muted);
+  white-space: nowrap;
+}
+
+.kb-table .kb-keys {
+  white-space: nowrap;
+}
+
+.kb-table .kb-keys .keys + .keys {
+  margin-left: 0.4rem;
+}
+
+.kb-table .act {
+  /* Change always starts the cell, so it lines up whether Remove and Reset show or not. */
+  width: 6.5rem;
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+  white-space: nowrap;
+}
+
+.kb-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.kb-table tbody th,
+.kb-table tbody td {
+  vertical-align: middle;
+}
+
+.kb-table tr.capturing {
+  background: var(--pm-accent-soft);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: var(--pm-accent-softer);
+  color: var(--pm-fg);
+  font-size: var(--pm-text-xs);
+  font-weight: 500;
+}
+
+.kb-conflict,
+.kb-error,
+.kb-done {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.kb-conflict,
+.kb-error {
+  color: var(--pm-danger);
+}
+
+.kb-done {
+  color: var(--pm-muted);
+}
+
+.kb-conflict .btn {
+  height: 1.6rem;
+}
+
+/* Tags (T18): the tag pane, the filtered list, chips under a note's title, inline #tags. */
+.tag-pane {
+  margin: 0;
+}
+
+.tag-tree {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: var(--pm-control-sm);
+  padding-left: calc(var(--depth, 0) * 0.9rem);
+  border-radius: 0;
+}
+
+.tag-row:hover {
+  background: var(--pm-hover);
+}
+
+/* A 24 px target (WCAG 2.2 target size, A266): it sits right beside the tag's own button. */
+.tag-row .twisty {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.tag-name {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  height: 100%;
+  padding: 0 0.25rem 0 0.05rem;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* The tag filtering the notes: its whole row, as a tree's chosen folder is (A988). */
+.tag-row:has(> .tag-name[aria-pressed='true']) {
+  background: var(--pm-active);
+}
+
+.tag-name[aria-pressed='true'] {
+  font-weight: 600;
+}
+
+.tag-hash {
+  flex: none;
+  width: 1rem;
+  color: var(--pm-muted);
+  text-align: center;
+}
+
+.tag-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag-name .count {
+  color: var(--pm-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.tag-edit {
+  display: inline-grid;
+  place-items: center;
+  width: var(--pm-control-sm);
+  height: var(--pm-control-sm);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--pm-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.tag-row:hover .tag-edit,
+.tag-edit:focus-visible {
+  opacity: 1;
+}
+
+.tag-edit:hover {
+  background: var(--pm-hover);
+  color: var(--pm-fg);
+}
+
+@media (hover: none) {
+  .tag-edit {
+    opacity: 1;
+  }
+}
+
+.tag-rename {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.25rem 0 0.5rem 1.2rem;
+  font-size: 0.8rem;
+}
+
+.tag-rename p {
+  margin: 0;
+}
+
+.tag-rename-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.tag-empty,
+.tag-status {
+  margin: 0.25rem 0.35rem;
+  font-size: 0.8rem;
+}
+
+.tag-status:empty {
+  display: none;
+}
+
+/*
+ * A tag's notes in place of the tree: the tag and its count on one row, ✕ at its end, and the
+ * notes under it, all starting on the sidebar's icon column (A988). A long tag gives way.
+ */
+.tagged-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: var(--pm-control-sm);
+  padding: 0 0.3rem 0.25rem var(--sb-icon-inset, 0.25rem);
+}
+
+.tagged-title {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.tagged-title .chip {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tagged-title .muted {
+  flex: none;
+  white-space: nowrap;
+}
+
+.tagged-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tagged-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.35rem 0.3rem 0.35rem var(--sb-icon-inset, 0.45rem);
+  border-radius: 0;
+  color: var(--pm-fg);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.tagged-link:hover {
+  background: var(--pm-hover);
+}
+
+.tagged-link[aria-current='page'] {
+  background: var(--pm-raised);
+  box-shadow: inset 2px 0 0 var(--pm-accent);
+  font-weight: 600;
+}
+
+.tagged-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.tag-mini {
+  color: var(--pm-muted);
+  font-size: 0.72rem;
+  font-weight: 400;
+}
+
+.note-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  /* Room before the body, so a first heading does not sit on the chips (T39). */
+  margin: -0.35rem 0 1.5rem;
+}
+
+.note-tag-list {
+  display: contents;
+  list-style: none;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--pm-accent-line);
+  border-radius: 0;
+  background: var(--pm-accent-soft);
+  font-size: 0.78rem;
+}
+
+.tag-chip-name,
+.tag-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.5rem;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--pm-fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tag-chip-remove {
+  padding: 0.1rem 0.45rem 0.1rem 0.1rem;
+  color: var(--pm-muted);
+}
+
+.tag-chip-remove:hover {
+  color: var(--pm-danger);
+}
+
+.tag-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.1rem 0.55rem 0.1rem 0.4rem;
+  border: 1px dashed var(--pm-border);
+  border-radius: 0;
+  background: none;
+  color: var(--pm-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.tag-add:hover {
+  border-color: var(--pm-accent-line);
+  color: var(--pm-fg);
+}
+
+.tag-add-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tag-input {
+  width: 12rem;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+/* Tag suggestions under Add a tag (A577): every tag on any note, matched to what is typed. */
+.tag-combo {
+  position: relative;
+  display: inline-block;
+}
+
+.tag-suggestions {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 100%;
+  max-height: 16rem;
+  padding: 0.25rem;
+  overflow-y: auto;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-popover-shadow);
+}
+
+.tag-suggestion {
+  padding: 0.3rem 0.5rem;
+  border-radius: 0;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tag-suggestion[aria-selected='true'] {
+  background: var(--pm-accent-soft);
+}
+
+.ProseMirror .pm-tag {
+  padding: 0 0.15em;
+  border-radius: 0;
+  background: var(--pm-accent-soft);
+  color: color-mix(in oklab, var(--pm-accent) 75%, var(--pm-fg));
+}
+
+/* Comment threads (T48): the passage a thread is on, and a point's marker. The open one is
+   picked out. Decorations only: nothing is written to the note. */
+.ProseMirror .pm-comment {
+  border-bottom: 2px solid var(--pm-accent-line);
+  background: var(--pm-accent-softer);
+  cursor: pointer;
+}
+
+.ProseMirror .pm-comment.pm-comment-active {
+  border-bottom-color: var(--pm-accent);
+  background: var(--pm-accent-soft);
+}
+
+.ProseMirror .pm-comment-marker {
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  margin: 0 0.1em;
+  border: 2px solid var(--pm-accent);
+  border-radius: 50% 50% 50% 0;
+  background: var(--pm-bg);
+  vertical-align: 0.05em;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ProseMirror .pm-comment-marker.pm-comment-active {
+  background: var(--pm-accent);
+}
+
+/*
+ * A new thread's passage while its composer floats (T52): a thread's mark, lighter, so it still
+ * shows what is being commented on once the selection is no longer drawn.
+ */
+.ProseMirror .pm-comment-pending {
+  border-bottom: 2px dashed var(--pm-accent-line);
+  background: color-mix(in oklab, var(--pm-accent-softer) 60%, transparent);
+}
+
+.ProseMirror .pm-comment-marker.pm-comment-pending {
+  border-style: dashed;
+  border-color: var(--pm-accent-line);
+  background: transparent;
+  cursor: default;
+}
+
+/* Agent edits (T24): what an agent just changed glows briefly, with a chip naming it. */
+.ProseMirror .pm-agent-edit {
+  border-radius: 0;
+  animation: pm-agent-fade 4s ease-out forwards;
+}
+
+.ProseMirror .pm-agent-label {
+  display: inline-block;
+  margin-right: 0.3em;
+  padding: 0 0.4em;
+  border-radius: 0;
+  background: var(--pm-agent);
+  color: var(--pm-bg);
+  font-size: 0.7em;
+  font-weight: 600;
+  line-height: 1.5;
+  vertical-align: 0.15em;
+  user-select: none;
+  pointer-events: none;
+  animation: pm-agent-label-fade 4s ease-in forwards;
+}
+
+@keyframes pm-agent-fade {
+  0%,
+  40% {
+    background-color: var(--pm-agent-soft);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes pm-agent-label-fade {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ProseMirror .pm-agent-edit {
+    animation: none;
+    background-color: var(--pm-agent-soft);
+  }
+  .ProseMirror .pm-agent-label {
+    animation: none;
+  }
+}
+
+/* Daily and weekly notes (T19): the sidebar calendar, the period bar above a note, settings. */
+.calendar {
+  margin: 0;
+}
+
+/*
+ * The month and its buttons, under the section's title row (A988): the month's name where the
+ * notes under the other sections' titles start, Previous, Today and Next at the row's end.
+ */
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0 0 0 var(--sb-icon-inset);
+}
+
+.calendar-month {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--pm-fg);
+  font-size: var(--pm-text-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-nav .icon-btn {
+  width: var(--pm-control-sm);
+  height: var(--pm-control-sm);
+}
+
+.calendar-today {
+  padding: 0.1rem 0.45rem;
+  font-size: 0.75rem;
+}
+
+.calendar-grid {
+  width: 100%;
+  margin-top: 0.2rem;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  table-layout: fixed;
+}
+
+.calendar-grid th {
+  padding: 0.15rem 0;
+  color: var(--pm-muted);
+  font-weight: 500;
+  text-align: center;
+}
+
+.calendar-grid abbr {
+  text-decoration: none;
+}
+
+.calendar-grid td {
+  padding: 1px;
+  text-align: center;
+}
+
+.calendar-day,
+.calendar-week {
+  position: relative;
+  width: 100%;
+  height: 1.6rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--pm-fg);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.calendar-week {
+  color: var(--pm-muted);
+  font-size: 0.68rem;
+}
+
+.calendar-day:hover,
+.calendar-week:hover {
+  background: var(--pm-hover);
+}
+
+/* Days of the months either side: muted, never faded below 4.5:1. */
+.calendar-day[data-outside='true'] {
+  color: var(--pm-muted);
+  font-weight: 400;
+}
+
+.calendar-day[aria-current='date'] {
+  box-shadow: inset 0 0 0 1px var(--pm-accent-line);
+  font-weight: 700;
+}
+
+.calendar-day[aria-pressed='true'],
+.calendar-week[aria-pressed='true'] {
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
+}
+
+/* A dot under days and weeks that have a note. */
+.calendar-day[data-has-note='true']::after,
+.calendar-week[data-has-note='true']::after {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--pm-accent);
+  content: '';
+}
+
+.calendar-day[aria-pressed='true']::after,
+.calendar-week[aria-pressed='true']::after {
+  background: var(--pm-on-accent);
+}
+
+/* A container, so the bar can change its layout by its own width (A988, below). */
+.period-nav {
+  container-type: inline-size;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.4rem;
+  color: var(--pm-muted);
+  font-size: 0.8rem;
+}
+
+/*
+ * A note narrower than the bar (the panel open beside it, a note window): it wrapped item by item,
+ * a week's next week alone on a third line under the days, a day's under its date (A988). Now a
+ * day's date gives way, ending in an ellipsis, so its bar stays one line; a week's previous and
+ * next weeks share the first line, at its ends, and the days take the second. A phone has its
+ * own grid (below).
+ */
+@container (max-width: 38.5rem) {
+  .period-nav > .period-label {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .period-nav > [data-command='journal.next'] {
+    order: 1;
+    margin-left: auto;
+  }
+
+  .period-nav > .period-days {
+    order: 2;
+    flex-basis: 100%;
+  }
+}
+
+.period-nav .btn {
+  gap: 0.25rem;
+  padding: 0 0.45rem;
+  font-size: var(--pm-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.period-label {
+  margin: 0 0.25rem;
+}
+
+.period-nav [data-has-note='true'] {
+  color: var(--pm-fg);
+  font-weight: 600;
+}
+
+.period-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.period-day {
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: none;
+  color: var(--pm-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.period-day:hover {
+  border-color: var(--pm-accent-line);
+  color: var(--pm-fg);
+}
+
+/* Settings → Display (A576): one row per sidebar shortcut. */
+.display-toggles {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  border: 0;
+}
+
+/*
+ * A group's label is a field's label (A988): one size and gap over its control on every Settings
+ * page, where it was 13, 14 or 14.4px and 6 or 10px over it.
+ */
+.display-toggles legend {
+  margin-bottom: 0.35rem;
+  padding: 0;
+  font-size: var(--pm-text-md);
+  font-weight: 600;
+}
+
+/* A toggle's help under it, as a section's help reads (Settings → Updates, the menu bar icon). */
+.display-toggles > .settings-help {
+  margin: 0;
+  font-size: var(--pm-text-sm);
+  line-height: 1.5;
+}
+
+.display-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: var(--pm-control);
+  font-size: var(--pm-text-md);
+  cursor: pointer;
+}
+
+.display-toggle input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--pm-accent);
+}
+
+.display-toggle .i {
+  color: var(--pm-muted);
+}
+
+.display-toggle[data-locked] {
+  cursor: default;
+}
+
+.display-toggle .muted {
+  font-size: var(--pm-text-xs);
+}
+
+.settings-field {
+  display: grid;
+  gap: 0.35rem;
+  margin: 1rem 0;
+  font-size: var(--pm-text-md);
+}
+
+.settings-field > span,
+.settings-field > label {
+  font-weight: 600;
+}
+
+/* A small number (Notes in Recent Notes): a field its size, not the column's width (T53 pass). */
+.settings-field > .settings-count {
+  width: 6rem;
+}
+
+.template-input {
+  width: 100%;
+  height: auto;
+  min-height: 7.5rem;
+  padding: 0.5rem 0.6rem;
+  font-family: var(--pm-mono);
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.settings-actions .btn {
+  width: auto;
+  flex: none;
+}
+
+.settings-help code {
+  font-family: var(--pm-mono);
+  font-size: 0.85em;
+}
+
+/* Version history (T21): the History tab of the note's side panel since T51 (A936). */
+.history-panel {
+  font-size: var(--pm-text-sm);
+}
+
+.history-panel > .info-heading {
+  margin-bottom: 0.25rem;
+}
+
+/* Versions are automatic (A79, A574): the note says so; saving now is secondary. */
+.history-auto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  padding: 0.25rem 0 0.6rem;
+  border-bottom: 1px solid var(--pm-border-soft);
+  font-size: var(--pm-text-xs);
+}
+
+.history-auto p {
+  flex: 1 1 14rem;
+  margin: 0;
+}
+
+.history-save {
+  font-size: var(--pm-text-xs);
+}
+
+.history-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-empty {
+  padding: 1rem 0;
+}
+
+.history-empty p {
+  margin: 0 0 0.75rem;
+}
+
+.history-list {
+  margin: 0;
+  padding: 0.5rem 0;
+  list-style: none;
+}
+
+/* Border-box: the current version's entry is a `div`, not a button, and its padding and dashed
+ * border ran past the panel's edge under the tab strip (T53 pass). Every entry has a border, clear
+ * but for the current one's dashes, so the entries are one height and their text starts where a
+ * backlink's and a comment's does (A988). */
+.history-entry {
+  display: grid;
+  box-sizing: border-box;
+  width: 100%;
+  gap: 0.15rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--pm-fg);
+  font: inherit;
+  text-align: left;
+}
+
+button.history-entry {
+  cursor: pointer;
+}
+
+button.history-entry:hover {
+  background: var(--pm-hover);
+}
+
+.history-entry[aria-pressed='true'] {
+  background: color-mix(in oklab, var(--pm-accent) 14%, transparent);
+  box-shadow: inset 2px 0 0 var(--pm-accent);
+}
+
+.history-item[data-current='true'] .history-entry {
+  border: 1px dashed var(--pm-border);
+}
+
+/* The panel's text size, as a backlink's title and a comment's author have it (A988). */
+.history-time {
+  font-weight: 600;
+  font-size: inherit;
+}
+
+.history-authors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.history-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 0.4rem;
+  border-radius: 0;
+  background: var(--pm-hover);
+  font-size: 0.75rem;
+}
+
+.history-author[data-kind='agent'] {
+  background: color-mix(in oklab, var(--pm-accent) 18%, transparent);
+}
+
+.history-kind {
+  width: 0.8rem;
+  height: 0.8rem;
+  fill: currentColor;
+}
+
+.history-summary {
+  font-size: 0.78rem;
+}
+
+.history-detail {
+  padding: 0.75rem 0 1.5rem;
+  border-top: 1px solid var(--pm-border);
+}
+
+.history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.history-status {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+}
+
+.history-conflicts {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+}
+
+.history-conflicts code {
+  white-space: pre-wrap;
+}
+
+.history-diff-caption {
+  margin: 0.9rem 0 0.35rem;
+  font-size: 0.78rem;
+}
+
+.history-diff pre {
+  margin: 0;
+  padding: 0.35rem 0;
+  overflow-x: auto;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-bg);
+  font: 0.78rem/1.55 var(--pm-mono);
+}
+
+.history-diff pre > span {
+  display: block;
+  padding: 0 0.6rem;
+  white-space: pre-wrap;
+}
+
+.diff-sign {
+  display: inline-block;
+  width: 1.1rem;
+  color: var(--pm-muted);
+}
+
+.diff-add {
+  background: color-mix(in oklab, var(--pm-success) 16%, transparent);
+}
+
+.diff-del {
+  background: color-mix(in oklab, var(--pm-danger) 14%, transparent);
+}
+
+.diff-add ins,
+.diff-del del {
+  text-decoration: none;
+}
+
+.diff-del del {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in oklab, var(--pm-danger) 60%, transparent);
+}
+
+.diff-fold {
+  color: var(--pm-muted);
+  font-style: italic;
+}
+
+/* Trash (T21). */
+.trash {
+  box-sizing: border-box;
+  width: min(44rem, 100%);
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+
+.trash h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+  letter-spacing: -0.015em;
+}
+
+.trash-lede {
+  margin: 0;
+  font-size: var(--pm-text-sm);
+}
+
+.trash-status:empty {
+  display: none;
+}
+
+.trash-list {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trash-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  padding: 0.75rem 0.75rem 0.75rem 1rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-shadow-1);
+}
+
+/*
+ * A row's icon in a column of its own (A988): every title and line under it on one edge, a
+ * note's as a folder's. A folder's icon sat in its title, 20px right of its line and of notes.
+ */
+.trash-info {
+  display: grid;
+  flex: 1 1 18rem;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  gap: 0.15rem 0.6rem;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+
+.trash-info > .i {
+  align-self: center;
+  color: var(--pm-muted);
+}
+
+.trash-info > :not(.i) {
+  grid-column: 2;
+}
+
+.trash-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* Who moved it to Trash (T42, A574): an agent's name carries ✦ on the accent tint, as in History. */
+.trash-by {
+  color: var(--pm-fg);
+}
+
+.trash-by[data-kind='agent'] {
+  padding: 0 0.35rem;
+  border-radius: 0;
+  background: color-mix(in oklab, var(--pm-accent) 18%, transparent);
+}
+
+.trash-agent {
+  margin-inline-start: 0.2rem;
+}
+
+.trash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.trash-warning {
+  color: var(--pm-danger);
+  font-size: 0.8rem;
+}
+
+.app-shell .row .btn {
+  margin-top: 0.5rem;
+}
+
+/* Loading (T36): a small ring beside the words. */
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.graph-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.spinner {
+  flex: none;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid var(--pm-border);
+  border-top-color: var(--pm-accent);
+  border-radius: 50%;
+  animation: pm-spin 0.8s linear infinite;
+}
+
+@keyframes pm-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+/* The phone layout (T36, A181): hidden on wider screens. */
+.app-bar,
+.drawer-scrim {
+  display: none;
+}
+
+/* A block formatting context: the empty state's top margin stays inside, so the screen never scrolls. */
+.home {
+  display: flow-root;
+  min-height: 100%;
+}
+
+@keyframes pm-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pm-sheet {
+  from {
+    transform: translateY(1.5rem);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  /* A day's or week's neighbours on one line, either side of the date; the week (or days) below. */
+  .period-nav {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    row-gap: 0.25rem;
+  }
+
+  .period-nav > [data-command='journal.previous'] {
+    grid-area: 1 / 1;
+  }
+
+  .period-nav > .period-label {
+    grid-area: 1 / 2;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .period-nav > [data-command='journal.next'] {
+    grid-area: 1 / 3;
+  }
+
+  .period-nav > [data-command='journal.week'],
+  .period-nav > .period-days {
+    grid-area: 2 / 1 / 3 / 4;
+    justify-self: center;
+    justify-content: center;
+  }
+
+  .notes-app {
+    display: block;
+  }
+
+  .note-main {
+    position: relative;
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* The sidebar as a drawer: off screen until the app bar's menu button opens it. */
+  .sidebar {
+    position: fixed;
+    z-index: 50;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(22rem, calc(100vw - 3rem));
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition:
+      transform var(--pm-medium) var(--pm-ease),
+      visibility 0s linear var(--pm-medium);
+  }
+
+  .notes-app[data-drawer='open'] .sidebar {
+    transform: none;
+    visibility: visible;
+    box-shadow: var(--pm-shadow);
+    transition: transform var(--pm-medium) var(--pm-ease);
+  }
+
+  .drawer-scrim {
+    position: fixed;
+    z-index: 45;
+    inset: 0;
+    display: block;
+    background: var(--pm-scrim);
+    animation: pm-fade var(--pm-medium) var(--pm-ease);
+  }
+
+  .sb-head .drawer-close {
+    display: inline-grid;
+  }
+
+  /* The brand ends short of the drawer's ✕. */
+  .sb-head .brand {
+    margin-inline-end: calc(var(--pm-hit) + 0.25rem);
+  }
+
+  .sidebar .keys {
+    display: none;
+  }
+
+  /* The top app bar: menu, title, search and the screen's actions. */
+  /* Above the formatting bar, so the sheet it opens is too. */
+  .app-bar {
+    position: sticky;
+    z-index: 25;
+    top: 0;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: calc(var(--pm-bar) + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) max(0.25rem, env(safe-area-inset-right)) 0
+      max(0.25rem, env(safe-area-inset-left));
+    border-bottom: 1px solid var(--pm-border-soft);
+    background: color-mix(in oklab, var(--pm-raised) 55%, var(--pm-bg));
+  }
+
+  .app-bar .icon-btn {
+    width: var(--pm-hit);
+    height: var(--pm-hit);
+    border-radius: 0;
+  }
+
+  .app-bar .icon-btn .i {
+    width: 20px;
+    height: 20px;
+  }
+
+  .app-bar .brand-mark {
+    margin: 0 0.15rem 0 0.35rem;
+  }
+
+  .app-bar-title {
+    flex: 1;
+    min-width: 0;
+    margin: 0 0 0 0.25rem;
+    overflow: hidden;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-bar-title[data-untitled] {
+    color: var(--pm-muted);
+  }
+
+  /* A note's place, cut from its start as Android's is (A907): an rtl box overflows at the left. */
+  .app-bar-path {
+    direction: rtl;
+    color: var(--pm-muted);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: left;
+  }
+
+  .app-bar-path > span {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  /* A note: its actions move into the app bar's sheet; formatting sits above the keyboard. */
+  .note-top {
+    display: none;
+  }
+
+  .note {
+    --doc-gutter: 1.25rem;
+  }
+
+  /* Clear of the formatting bar fixed at the bottom (3.25rem), then the same 2.5rem (T52 item 7). */
+  .doc {
+    padding: 1.25rem var(--doc-gutter) calc(5.75rem + env(safe-area-inset-bottom));
+  }
+
+  /* A step above a first heading (1.6rem), so the two never look alike (T39 pass 3, A554). */
+  .doc-title {
+    font-size: 1.85rem;
+    font-size: calc(var(--pm-note-size, 16px) * 1.85);
+  }
+
+  .menu[data-sheet] {
+    position: fixed;
+    z-index: 70;
+    top: auto;
+    right: max(0.5rem, env(safe-area-inset-right));
+    bottom: calc(0.5rem + env(safe-area-inset-bottom));
+    left: max(0.5rem, env(safe-area-inset-left));
+    min-width: 0;
+    max-height: calc(100dvh - 5rem);
+    padding: 0.5rem;
+    overflow-y: auto;
+    border-radius: 0;
+    animation: pm-sheet var(--pm-medium) var(--pm-ease);
+  }
+
+  .menu[data-sheet] .menu-item {
+    gap: 0.9rem;
+    min-height: 3rem;
+    padding: 0 0.9rem;
+    font-size: var(--pm-text-md);
+  }
+
+  .menu[data-sheet] .menu-item .i {
+    width: 20px;
+    height: 20px;
+  }
+
+  .menu-scrim {
+    position: fixed;
+    z-index: 65;
+    inset: 0;
+    display: block;
+    background: var(--pm-scrim);
+    animation: pm-fade var(--pm-medium) var(--pm-ease);
+  }
+
+  .toast {
+    bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  }
+
+  .phone-format {
+    position: fixed;
+    z-index: 15;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    height: calc(3.25rem + env(safe-area-inset-bottom));
+    padding: 0 max(0.25rem, env(safe-area-inset-right)) env(safe-area-inset-bottom)
+      max(0.25rem, env(safe-area-inset-left));
+    border-top: 1px solid var(--pm-border);
+    background: var(--pm-raised);
+  }
+
+  .phone-format .icon-btn {
+    width: var(--pm-hit);
+    height: var(--pm-hit);
+    border-radius: 0;
+    color: var(--pm-fg);
+  }
+
+  .phone-format .icon-btn .i {
+    width: 20px;
+    height: 20px;
+  }
+
+  .fab {
+    position: fixed;
+    z-index: 20;
+    right: calc(1rem + env(safe-area-inset-right));
+    bottom: calc(1.25rem + env(safe-area-inset-bottom));
+    display: grid;
+    place-items: center;
+    width: 3.5rem;
+    height: 3.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: var(--pm-accent);
+    box-shadow: var(--pm-popover-shadow);
+    color: var(--pm-on-accent);
+    cursor: pointer;
+  }
+
+  .fab:active {
+    background: color-mix(in oklab, var(--pm-accent), var(--pm-fg) 12%);
+  }
+
+  /* Home: the prototype's phone home screen. */
+  .home .empty-state {
+    display: none;
+  }
+
+  .phone-home {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    padding: 1rem max(1rem, env(safe-area-inset-right)) calc(6.5rem + env(safe-area-inset-bottom))
+      max(1rem, env(safe-area-inset-left));
+  }
+
+  .ph-search {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    height: 3rem;
+    padding: 0 1rem;
+    border: 1px solid var(--pm-border-soft);
+    border-radius: 0;
+    background: var(--pm-hover);
+    color: var(--pm-muted);
+    font: inherit;
+    font-size: 1rem;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .ph-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .ph-card {
+    display: grid;
+    gap: 0.3rem;
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--pm-border);
+    border-radius: 0;
+    background: var(--pm-raised);
+    color: var(--pm-fg);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .ph-card:active,
+  .ph-li:active {
+    background: var(--pm-hover);
+  }
+
+  .ph-kicker {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--pm-accent);
+    font-size: var(--pm-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .ph-head {
+    font-size: 1.0625rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+
+  .ph-section h2 {
+    margin: 0.5rem 0 0.4rem 0.25rem;
+    color: var(--pm-muted);
+    font-size: var(--pm-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .ph-list {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--pm-border);
+    border-radius: 0;
+    background: var(--pm-raised);
+    list-style: none;
+  }
+
+  .ph-list li + li {
+    border-top: 1px solid var(--pm-border-soft);
+  }
+
+  .ph-li {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    min-height: 3.5rem;
+    padding: 0.5rem 1rem;
+    color: var(--pm-fg);
+    text-decoration: none;
+  }
+
+  .ph-li > .i {
+    color: var(--pm-muted);
+  }
+
+  .ph-li:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .ph-two {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ph-two > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ph-two > span:first-child {
+    font-size: 0.9375rem;
+    font-weight: 500;
+  }
+
+  .ph-two > span[data-untitled] {
+    color: var(--pm-muted);
+  }
+
+  .ph-two .muted {
+    font-size: var(--pm-text-sm);
+  }
+
+  /* Trash and the graph under the app bar. */
+  .trash {
+    padding: 1rem max(1rem, env(safe-area-inset-right)) calc(3rem + env(safe-area-inset-bottom))
+      max(1rem, env(safe-area-inset-left));
+  }
+
+  .trash h2 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .trash-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .trash-info {
+    flex-basis: auto;
+  }
+
+  .trash-actions .btn {
+    flex: 1;
+  }
+
+  .graph-page {
+    height: calc(100% - var(--pm-bar) - env(safe-area-inset-top));
+  }
+
+  /* Settings: sections as a row of tabs. */
+  .settings-shell {
+    padding: env(safe-area-inset-top) max(1rem, env(safe-area-inset-right))
+      calc(3rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  }
+
+  .settings-bar {
+    position: sticky;
+    z-index: 5;
+    top: 0;
+    margin: 0 -1rem;
+    padding: 0 0.5rem;
+    border-bottom: 1px solid var(--pm-border-soft);
+    background: var(--pm-bg);
+  }
+
+  .settings-page h1 {
+    margin: 1rem 0 0.75rem;
+    font-size: 1.375rem;
+  }
+
+  .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+
+  .settings-nav {
+    position: static;
+    display: flex;
+    gap: 0.4rem;
+    margin: 0 -1rem;
+    padding: 0 1rem 0.25rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .settings-nav a {
+    flex: none;
+    padding: 0 0.9rem;
+    border: 1px solid var(--pm-border);
+    border-radius: 0;
+  }
+
+  .settings-nav a[aria-current='page'] {
+    border-color: transparent;
+    background: var(--pm-accent-soft);
+  }
+
+  /* Each shortcut is one compact row: the command over its keys, the icon buttons beside them. */
+  .kb-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .kb-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'name actions'
+      'keys actions';
+    align-items: center;
+    column-gap: 0.5rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--pm-border);
+  }
+
+  .kb-table tbody th,
+  .kb-table tbody td {
+    padding: 0;
+    border: 0;
+  }
+
+  .kb-table tbody th {
+    grid-area: name;
+    overflow-wrap: anywhere;
+  }
+
+  .kb-table .area {
+    display: none;
+  }
+
+  .kb-table .kb-keys {
+    grid-area: keys;
+    padding-top: 0.2rem;
+    white-space: normal;
+  }
+
+  .kb-table .kb-keys .keys {
+    flex-wrap: wrap;
+  }
+
+  .kb-table .act {
+    grid-area: actions;
+    width: auto;
+  }
+
+  .list li {
+    flex-wrap: wrap;
+  }
+
+  .list li .btn {
+    margin-left: auto;
+  }
+
+  /* Overlays fill the screen, inside its safe area. */
+  .overlay {
+    padding: max(0.5rem, env(safe-area-inset-top)) 0.5rem max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  .dialog {
+    max-height: calc(100dvh - 1rem);
+    border-radius: 0;
+  }
+}
+
+/* Touch (T36, A183): 44 px targets on phones and wherever the pointer is a finger. */
+@media (max-width: 700px), (pointer: coarse) {
+  /* No keyboard hints where there is no keyboard; deep folders keep room for their names,
+     indented up to six levels as on Android (A363) (T39 review). */
+  .folder-picker .dlg-foot {
+    display: none;
+  }
+
+  .folder-picker .folder-opt[style] {
+    padding-inline-start: calc(0.6rem + min(var(--depth), 6) * 0.9rem);
+  }
+
+  .btn,
+  .btn.quiet {
+    height: var(--pm-hit);
+  }
+
+  .icon-btn,
+  .tree-actions .icon-btn,
+  .calendar-nav .icon-btn,
+  .tag-edit,
+  .sidebar .sync-dot {
+    width: var(--pm-hit);
+    height: var(--pm-hit);
+  }
+
+  /* The section and panel toggles (T51: Tags, Quick Access). */
+  .sb-section-toggle {
+    min-height: var(--pm-hit);
+  }
+
+  /* On touch the shortcuts keep their full size and wrap, rather than narrowing (T53). */
+  .sb-shortcuts {
+    flex-wrap: wrap;
+  }
+
+  .sb-shortcuts .sb-shortcut:not(.new-note) {
+    flex: none;
+  }
+
+  .row-actions .icon-btn {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  /* A Settings toggle's row too, as tall as the controls around it on touch (A988). */
+  .sb-item,
+  .settings-nav a,
+  .display-toggle,
+  .menu-item,
+  .back-link,
+  .tagged-link,
+  .history-entry {
+    min-height: var(--pm-hit);
+  }
+
+  .sb-item,
+  .tree-row,
+  .tag-name {
+    font-size: var(--pm-text-md);
+  }
+
+  .tree-row,
+  .tag-row {
+    height: var(--pm-hit);
+  }
+
+  .tagged-link {
+    justify-content: center;
+  }
+
+  /* Dense controls stay a little smaller: a calendar cell, a chip in a line of tags (A183). */
+  .calendar-day,
+  .calendar-week {
+    height: 2.5rem;
+  }
+
+  .period-nav .btn,
+  .period-day {
+    min-height: 2.5rem;
+  }
+
+  /* A tag chip keeps its size; its touch area reaches 44 px above and below it. */
+  .tag-chip-name,
+  .tag-chip-remove,
+  .tag-add {
+    position: relative;
+    min-height: 2rem;
+  }
+
+  .tag-chip-name::after,
+  .tag-chip-remove::after,
+  .tag-add::after {
+    position: absolute;
+    inset: -0.375rem 0;
+    content: '';
+  }
+
+  /* 16 px text keeps mobile browsers from zooming into a field. */
+  .input,
+  .pm-select:not(.pm-select-sm),
+  .app-shell input:not([type]),
+  .tree-input,
+  .tag-input {
+    height: var(--pm-hit);
+    font-size: 1rem;
+  }
+
+  .pm-select-sm {
+    font-size: 1rem;
+  }
+
+  .template-input {
+    height: auto;
+  }
+}
+
+/* Nothing only on hover: without one, a folder’s New Note always shows. */
+@media (hover: none) {
+  .row-actions {
+    display: flex;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .notes-app[data-drawer='open'] .sidebar,
+  .drawer-scrim,
+  .menu,
+  .menu-scrim,
+  .toast {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Quick capture (T30): the app's Capture dialog, the /capture page and the Mac capture window. */
+.capture {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem 1rem;
+}
+
+.capture-title {
+  margin: 0;
+  font-size: var(--pm-text-md, 0.95rem);
+}
+
+.capture-text {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 6.5rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font: inherit;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.capture-text:focus {
+  border-color: var(--pm-accent);
+  outline: none;
+  box-shadow: var(--pm-ring);
+}
+
+.capture-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.capture-dest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm, 0.85rem);
+}
+
+.capture-dest label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.capture-dest input {
+  accent-color: var(--pm-accent);
+}
+
+/* Which notebook a capture goes into, when there is more than one (A888, A914). */
+.capture-into {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm, 0.85rem);
+}
+
+.capture-into .pm-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.capture-error {
+  margin: 0;
+  color: var(--pm-danger);
+  font-size: var(--pm-text-sm, 0.85rem);
+}
+
+.capture-dlg {
+  width: min(34rem, 100%);
+}
+
+/*
+ * The Mac capture window is the form alone, filling a small frameless window exactly: the
+ * text takes the room the title and the buttons leave, so nothing scrolls and no scrollbar
+ * shows (T39: the 100vh minimum plus the form's own height overflowed the 300 px window).
+ */
+.capture-window {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--pm-raised);
+  -webkit-app-region: drag;
+}
+
+.capture-window .capture {
+  flex: 1;
+  min-height: 0;
+  -webkit-app-region: no-drag;
+}
+
+.capture-window .capture-text {
+  flex: 1;
+  min-height: 4.5rem;
+  resize: none;
+}
+
+/*
+ * T41: Mac app feedback round 1.
+ */
+
+/* Full width (A501): the note column fills the window, gutters kept. */
+.note[data-width='full'] .doc {
+  max-width: none;
+}
+
+.note[data-width='full'] .note-side {
+  max-width: none;
+}
+
+/*
+ * The status bar (A505) sits at the bottom of the note's pane, under a short note too. The note
+ * is the pane's height: its bar, then the columns, each scrolling on its own (A1132), then the
+ * status bar, so the pane itself never scrolls.
+ */
+.note {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.note > .note-columns {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.status-bar {
+  position: sticky;
+  z-index: 2;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  box-sizing: border-box;
+  min-height: var(--status-bar-height);
+  padding: 0 1rem;
+  border-top: 1px solid var(--pm-border-soft);
+  background: var(--pm-bg);
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.status-counts {
+  display: flex;
+  gap: 0.9rem;
+  white-space: nowrap;
+}
+
+.save-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* A still dot: no animation runs while typing (the T31 budget). */
+.save-status .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pm-success);
+}
+
+.save-status[data-state='saving'] .dot,
+.save-status[data-state='saved'] .dot,
+.save-status[data-state='syncing'] .dot {
+  background: var(--pm-accent);
+}
+
+.save-status[data-state='offline'] .dot,
+.save-status[data-state='signed-out'] .dot {
+  background: var(--pm-muted);
+}
+
+.save-status[data-state='conflict'] .dot,
+.save-status[data-state='gone'] .dot,
+.save-status[data-state='error'] .dot {
+  background: var(--pm-danger);
+}
+
+.save-status[data-state='conflict'],
+.save-status[data-state='error'] {
+  color: var(--pm-fg);
+}
+
+/*
+ * The open threads' count on the Comments tab's icon (T51, A936): a square for one digit, its
+ * padding inside the minimum (A988). Outside it, a single digit's badge was 21 px wide and
+ * covered most of the icon.
+ */
+.note-tab-count {
+  position: absolute;
+  top: 0.05rem;
+  right: 0.05rem;
+  box-sizing: border-box;
+  min-width: 0.9rem;
+  padding: 0 0.2rem;
+  border-radius: 0;
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
+  font: 600 0.6rem / 0.9rem var(--pm-font);
+  text-align: center;
+}
+
+.note-tabpanel > :is(.note-info, .comments-panel, .history-panel, .note-graph) {
+  border: 0;
+  padding: 0;
+}
+
+/* The Local Graph tab (T51): the neighbourhood, its depth, and Open Full Graph. */
+.note-graph {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  font-size: var(--pm-text-sm);
+}
+
+.note-graph .info-heading {
+  margin: 0;
+}
+
+.note-graph-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  color: var(--pm-muted);
+}
+
+.note-graph-count {
+  margin-left: auto;
+  font-size: var(--pm-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.note-graph-canvas {
+  display: flex;
+  height: min(26rem, 55dvh);
+  overflow: hidden;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-graph-bg, var(--pm-bg));
+}
+
+.note-graph-empty {
+  margin: 0.5rem 0;
+}
+
+.note-graph-open {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/*
+ * The Info panel (A502): details, tags, frontmatter, then backlinks, in the panel's text size as
+ * every other tab has it (A988; it was 13.6 px to their 13).
+ */
+.note-info {
+  border-top: 1px solid var(--pm-border);
+  padding-top: 1rem;
+  font-size: var(--pm-text-sm);
+}
+
+/* Backlinks is a heading like Tags and Frontmatter, the same space above it and no line (A988). */
+.note-info .backlinks {
+  margin-top: 1.1rem;
+  padding: 0;
+  border: 0;
+}
+
+.info-heading,
+.info-subheading {
+  margin: 0 0 0.5rem;
+  color: var(--pm-muted);
+  font-size: 0.8rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.info-subheading {
+  margin-top: 1.1rem;
+}
+
+/* A periodic note's kind, as a label (A572); ordinary notes have none. */
+.info-kind {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.6rem;
+}
+
+/*
+ * The details' and the frontmatter's values start on one column (A988, A1138): the two lists are
+ * separate grids, so their names' columns are one width, as wide as the longest usual name
+ * (Reading Time, Token Count), not each list's own widest name, which differed once the
+ * monospace font had loaded. A longer name wraps.
+ */
+.info-list,
+.info-frontmatter {
+  display: grid;
+  grid-template-columns: 6.75rem minmax(0, 1fr);
+  gap: 0.3rem 0.9rem;
+  margin: 0;
+}
+
+.info-list dt {
+  color: var(--pm-muted);
+}
+
+.info-list dt,
+.info-frontmatter dt {
+  overflow-wrap: anywhere;
+}
+
+.info-list dd,
+.info-frontmatter dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.info-frontmatter > div {
+  display: contents;
+}
+
+.info-frontmatter dt,
+.info-frontmatter dd {
+  font-family: var(--pm-mono);
+  font-size: 0.78rem;
+}
+
+.info-frontmatter dt {
+  color: var(--pm-muted);
+}
+
+.info-frontmatter dt::after {
+  content: ':';
+}
+
+.note-info .note-tags {
+  margin: 0;
+}
+
+.info-inline-tags {
+  margin: 0.4rem 0 0;
+}
+
+@media (min-width: 78rem) {
+  .note-info {
+    border-top: 0;
+    border-left: 1px solid var(--pm-border);
+    padding: 0 0 0 1rem;
+  }
+}
+
+/*
+ * The sidebar keeps its layout (A507): the note list (the folder tree or a tag's notes) takes
+ * the room left and scrolls inside it, so choosing a tag never moves the calendar or the tags.
+ * The list keeps room for six or so rows; the tags give way first (A521).
+ *
+ * The sections are parts of the list in the person's order (T53 item 8, A983), a line between
+ * each two running the sidebar's full width; each part has its own side padding. Notebooks takes
+ * the room left; Recent Notes and Tags give way to it.
+ */
+.sb-part {
+  padding: 0 0 0.35rem;
+}
+
+/*
+ * A section's title row is boxed (Ryan's feedback, 5 Nov 2026; A1097): a line above and below it,
+ * the sidebar's full width, in place of the line between two parts. It steps up 1 px, so a
+ * collapsed section's line below and the next one's line above are one line.
+ */
+.sb-part-head {
+  margin-top: -1px;
+  border-block: 1px solid var(--pm-border);
+  /* Shaded, its name in the text colour, so Notebooks stands apart from the notebooks' own
+     rows under it (T62 item 2). */
+  background: var(--pm-active);
+}
+
+.sb-part-head .sb-section-toggle {
+  color: var(--pm-fg);
+}
+
+/* A collapsed section is its title row alone. */
+.sb-part:has(> [data-collapsed]) {
+  padding-bottom: 0;
+}
+
+/* Above the parts' own display (Notebooks is a flex column). */
+.sb-part:empty,
+.sb-list > .sb-part[hidden],
+.sb-notebooks > .sb-notebooks-body[hidden] {
+  display: none;
+}
+
+/* The tree itself keeps its 12rem (six or so rows), under however many headings sit above it. */
+.sb-part[data-section='notebooks'] {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+}
+
+.sb-part[data-section='notebooks']:has(.sb-notebooks[data-collapsed]) {
+  flex: none;
+  min-height: 0;
+}
+
+.sb-notebooks {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.sb-notebooks-body {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+}
+
+.sb-notebooks-body > .folders,
+.sb-notebooks-body > .tagged {
+  flex: 1 1 0;
+  min-height: 12rem;
+  overflow-y: auto;
+}
+
+.sb-part[data-section='quickAccess'],
+.sb-part[data-section='calendar'] {
+  flex: none;
+}
+
+.sb-part[data-section='recent'],
+.sb-part[data-section='tags'] {
+  flex: 0 1 auto;
+  min-height: 4rem;
+  max-height: 30%;
+  overflow-y: auto;
+}
+
+/*
+ * Recent Notes keeps its title and up to three notes before it gives way, so it never shrinks to a
+ * row and a half while Tags keeps its 30% (T53 pass). A shorter list asks only its own height.
+ */
+.sb-part[data-section='recent'] {
+  --recent-rows: 1;
+  min-height: calc(0.7rem + 1.55rem + var(--recent-rows) * var(--pm-control-sm));
+}
+
+.sb-part[data-section='recent']:has(.sb-quick-list > li:nth-child(2)) {
+  --recent-rows: 2;
+}
+
+.sb-part[data-section='recent']:has(.sb-quick-list > li:nth-child(3)) {
+  --recent-rows: 3;
+}
+
+.sb-part:is([data-section='recent'], [data-section='tags']):has([data-collapsed]) {
+  min-height: 0;
+}
+
+/*
+ * The sidebar's columns (A988): every section's chevron where a tree row's twisty is, and its
+ * name where the rows' icons are, and the rows' labels after a 16 px icon. Quick Access, Recent
+ * Notes, the notebooks' tree, Tags and the calendar's month all start on them.
+ */
+.sidebar {
+  /*
+   * Rows run the sidebar's full width, edge to edge (Ryan's feedback, 5 Nov 2026; A1097): the
+   * parts have no side padding, and each row keeps this much inside its own ends instead, so
+   * the text stays where it was.
+   */
+  --sb-gutter: 0.5rem;
+  /* The rows' icons, and a section's name: where they have always started. */
+  --sb-icon-inset: calc(var(--sb-gutter) + 1.55rem);
+  /*
+   * A 12 px chevron as far from the window's edge as from the name or icon after it (Quanta
+   * feedback 3, item 11; A1130): a section's and a tree row's alike, in one column.
+   */
+  --sb-chevron-inset: calc((var(--sb-icon-inset) - 12px) / 2);
+  --sb-name-gap: calc(var(--sb-icon-inset) - var(--sb-chevron-inset) - 12px);
+  /*
+   * One level of the notebooks' tree (#231, A1143): a subfolder's chevron sits under its
+   * parent's folder icon, and a note's icon one step in from its folder's, so what is inside
+   * a folder reads at a glance.
+   */
+  --tree-indent: calc(var(--sb-icon-inset) - var(--sb-chevron-inset) + 2px);
+}
+
+/* The twisty (16 px, its chevron centred) starts 2 px before the chevron. */
+.sidebar .tree-row {
+  padding-inline: calc(var(--sb-chevron-inset) - 2px + var(--depth, 0) * var(--tree-indent))
+    calc(var(--sb-gutter) + 0.3rem);
+}
+
+/* And the icon after it stays on the rows' icon column. */
+.sidebar .tree-row > .twisty {
+  margin-inline-end: calc(var(--sb-icon-inset) - var(--sb-chevron-inset) + 2px - 1rem - 0.3rem);
+}
+
+.sidebar .tag-row {
+  padding-inline: calc(var(--sb-gutter) + var(--depth, 0) * 0.9rem) var(--sb-gutter);
+}
+
+.sidebar :is(.tagged-head, .tagged-link, .calendar-nav) {
+  padding-right: calc(var(--sb-gutter) + 0.3rem);
+}
+
+.sidebar .calendar-grid {
+  width: calc(100% - 2 * var(--sb-gutter));
+  margin-inline: var(--sb-gutter);
+}
+
+/* Quick Access (T51, A946) and Recent Notes (T53): notes under the title, icons on its name. */
+.sb-quick-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sb-quick-list .sb-item {
+  gap: 0.3rem;
+  min-height: var(--pm-control-sm);
+  padding: 0 calc(var(--sb-gutter) + 0.3rem) 0 var(--sb-icon-inset);
+  color: var(--pm-fg);
+  font-size: 0.85rem;
+}
+
+/* Notes look the same in every section: the title in the text's colour, the icon muted. */
+.sb-quick-list .sb-item .i {
+  color: var(--pm-muted);
+}
+
+/* Open, empty Quick Access: subdued words centred in its panel (feedback of 6 Nov 2026). */
+/* Empty Tags reads as empty Quick Access does (T64 item 3). */
+.sb-quick-empty,
+.sb-part .tag-empty {
+  margin: 0;
+  padding: 0.5rem var(--sb-gutter);
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  text-align: center;
+}
+
+/* An empty section's words start where its rows would. */
+.sb-part :is(.list-empty, .tag-status) {
+  margin: 0.25rem calc(var(--sb-gutter) + 0.3rem) 0.25rem var(--sb-icon-inset);
+}
+
+/*
+ * Empty Quick Access asks for a note quietly, at its title row's end: smaller than the other
+ * sections' words, in their muted colour (a dimmer one falls under 4.5:1 in some themes).
+ */
+.sb-section-hint {
+  flex: none;
+  padding-inline-end: 0.3rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  white-space: nowrap;
+}
+
+/* Gives way to the section's tools, which lie over the same end of the row (touch: always). */
+.sb-section-head:is(:hover, :focus-within) > .sb-section-hint {
+  visibility: hidden;
+}
+
+@media (hover: none) {
+  .sb-section-hint {
+    visibility: hidden;
+  }
+}
+
+/* `.sb-item` is 100% wide plus its padding: auto, inside the list's indent. */
+.sb-part .sb-item {
+  width: auto;
+}
+
+/* A Quick Access note's notebook, in subtle text under its title (T53 item 10). */
+.sb-item .label:has(.sb-item-notebook) {
+  display: flex;
+  flex-direction: column;
+  padding: 0.2rem 0;
+  line-height: 1.25;
+}
+
+.sb-item-title,
+.sb-item-notebook {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sb-item-notebook {
+  color: color-mix(in oklab, var(--pm-muted) 80%, transparent);
+  font-size: var(--pm-text-xs);
+}
+
+/* A Quick Access note being dragged, and where it would land (T53 item 10). */
+.sb-quick-list > li[data-dragging] {
+  opacity: 0.5;
+}
+
+.sb-quick-list > li[data-drop='before'] {
+  box-shadow: inset 0 2px var(--pm-accent);
+}
+
+.sb-quick-list > li[data-drop='after'] {
+  box-shadow: inset 0 -2px var(--pm-accent);
+}
+
+/* A note from Notebooks or Recent Notes over Quick Access, not over a pin: it goes last. */
+.sb-quick[data-receiving]:not(:has(li[data-drop])) {
+  background: var(--pm-drop);
+  box-shadow: inset 0 0 0 1px var(--pm-accent);
+}
+
+/*
+ * A section's tools (T53 item 8): a drag handle and ✕ at the end of its title row, while the
+ * pointer is over the row or focus is in it; on touch, always. They lie over the row's end, on
+ * the row's own shade, so the row never changes height or moves as they come and go (A988).
+ * Flush with the row's end and as tall as the row, square, with no margin (feedback of 6 Nov
+ * 2026); a button under the pointer is a step darker than the row in a light theme (the text's
+ * colour mixed in), not the sidebar's lighter shade.
+ */
+.sb-section-head:has(> .sb-part-tools) {
+  position: relative;
+}
+
+.sb-part-tools {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  display: none;
+  align-items: stretch;
+  /* The row's shade exactly, opaque: `--pm-active` is translucent, so on its own it would stack
+     a second layer over the row's (a strip darker than the row, by theme). */
+  background: linear-gradient(var(--pm-active), var(--pm-active)) var(--pm-sidebar);
+}
+
+.sb-section-head:is(:hover, :focus-within) > .sb-part-tools {
+  display: flex;
+}
+
+@media (hover: none) {
+  .sb-part-tools {
+    display: flex;
+  }
+}
+
+.sb-part-tools .icon-btn {
+  width: auto;
+  height: 100%;
+  aspect-ratio: 1;
+}
+
+.sb-part-tools .icon-btn:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--pm-fg) 10%, transparent);
+}
+
+/* On a phone or touch screen, a full touch target each (T36): the row is that tall there. */
+@media (max-width: 700px), (pointer: coarse) {
+  .sb-part-tools .icon-btn {
+    width: var(--pm-hit);
+    height: 100%;
+  }
+}
+
+.sb-part-grip {
+  cursor: grab;
+}
+
+.sb-part[data-dragging] {
+  opacity: 0.5;
+}
+
+.sb-part[data-drop='before'] {
+  box-shadow: inset 0 2px var(--pm-accent);
+}
+
+.sb-part[data-drop='after'] {
+  box-shadow: inset 0 -2px var(--pm-accent);
+}
+
+/*
+ * A short window has no room for the list's own share beside the calendar and the tags (the
+ * list would be a few rows in a box that itself scrolls). There the sidebar scrolls as one, as
+ * before T41, and the list still fills at least the room left, so a short tag filter leaves the
+ * calendar and the tags where they were. Below 54rem the list's 12rem would not fit (A521).
+ */
+@media (max-height: 54rem) {
+  .sb-part[data-section='notebooks'] {
+    flex: 1 0 auto;
+    min-height: 0;
+  }
+
+  .sb-notebooks-body,
+  .sb-notebooks-body > .folders,
+  .sb-notebooks-body > .tagged {
+    flex: 1 0 auto;
+    min-height: 0;
+    overflow-y: visible;
+  }
+
+  .sb-part:is([data-section='recent'], [data-section='tags']) {
+    flex: none;
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+/*
+ * The collapsed sidebar (A508): an icon rail exactly one button wide, plus its border (T52). Its
+ * buttons are 2 px bigger than the sidebar's, with no margin around them; on touch, 44 px.
+ */
+.notes-app {
+  --pm-rail: calc(var(--pm-control) + 2px);
+}
+
+@media (pointer: coarse) {
+  .notes-app {
+    --pm-rail: var(--pm-hit);
+  }
+}
+
+.notes-app[data-sidebar='collapsed'] {
+  grid-template-columns: calc(var(--pm-rail) + 1px) minmax(0, 1fr);
+}
+
+/* The rail starts at the window's top: Back and Forward first, no gap above them (T53 item 1). */
+.notes-app[data-sidebar='collapsed'] .sb-head {
+  justify-content: center;
+  gap: 2px;
+  padding: 0 0 2px;
+}
+
+.notes-app[data-sidebar='collapsed'] .brand,
+.notes-app[data-sidebar='collapsed'] .sb-list,
+.notes-app[data-sidebar='collapsed'] .sb-foot {
+  display: none;
+}
+
+.notes-app[data-sidebar='collapsed'] .sb-actions {
+  justify-items: center;
+  padding: 0 0 0.5rem;
+}
+
+.notes-app[data-sidebar='collapsed'] :is(.sb-head, .sb-shortcuts) .icon-btn {
+  width: var(--pm-rail);
+  height: var(--pm-rail);
+}
+
+/* Back and Forward fill the rail's width, each half of it. */
+.notes-app[data-sidebar='collapsed'] .history-pair .history-half {
+  width: calc(var(--pm-rail) / 2);
+  height: 100%;
+}
+
+/* The rail keeps New Note and the shortcuts as a column (A508, A932, T52). */
+.notes-app[data-sidebar='collapsed'] .sb-shortcuts {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.notes-app[data-sidebar='collapsed'] .sb-shortcuts .sb-shortcut {
+  flex: none;
+  margin-inline-start: 0;
+}
+
+.notes-app[data-sidebar='collapsed'] .sb-shortcut.new-note {
+  margin: 0 0 0.3rem;
+}
+
+.notes-app[data-sidebar='collapsed'] .sb-item {
+  position: relative;
+  justify-content: center;
+  width: 2.5rem;
+  padding: 0;
+}
+
+/* Hidden but still read out: each item keeps its name. */
+.notes-app[data-sidebar='collapsed'] .sb-item .label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .sb-head .sb-collapse {
+    display: none;
+  }
+}
+
+/*
+ * Pictures never sit beside text (A506): each takes its own line, text above and below,
+ * in a paragraph or a list item alike. Only the rendering: the markdown keeps the picture
+ * inline where it was written.
+ */
+.note-body .pm-image {
+  display: block;
+  width: fit-content;
+  margin: 0.4em 0;
+}
+
+/*
+ * A picture alone in its paragraph (T62 item 12) sits on the line with the editor's cursor helpers
+ * (a separator before and after it, and a line break): as a block it pushed them onto lines of
+ * their own, a tall gap above and below it that could not be deleted. Inline, the paragraph is as
+ * tall as the picture and the cursor still stands before or after it. A picture with text beside
+ * it keeps its own line (A506).
+ */
+.note-body
+  p:has(
+    > .ProseMirror-separator:first-child
+      + .pm-image
+      + .ProseMirror-separator
+      + .ProseMirror-trailingBreak:last-child
+  )
+  > .pm-image {
+  display: inline-block;
+  margin: 0;
+  vertical-align: bottom;
+}
+
+/* Confirmations (copy, moved) float above the status bar while it shows (the T39 review). */
+body:has(.status-bar) .toast {
+  bottom: calc(1.25rem + var(--status-bar-height) + env(safe-area-inset-bottom));
+}
+
+/* Settings → Devices and Agent Tokens → Agent activity (T42, A561). */
+.agent-activity {
+  margin-top: 2rem;
+}
+
+/*
+ * A note in a window of its own (T45, A710): the note's pane fills the window, with no
+ * sidebar; Back and Forward sit where the breadcrumbs do in the main window.
+ */
+#root > .note-window {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.note-window > .note-main {
+  flex: 1 1 0;
+}
+
+.window-nav {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.note-window-trashed .window-nav,
+.empty-state .window-nav {
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+/* The blocked window's toast offers a link (T45). */
+a.toast-action {
+  text-decoration: none;
+}
+
+/*
+ * The Mac app's compact title bar (T47, D39, A722, A723): the traffic lights sit in the app's
+ * own first row, which drags the window, and every control in it still clicks (`no-drag`).
+ * `data-titlebar` is set only in a compact window out of full screen, so full screen (the
+ * lights hidden) and the native title bar keep the layout as it was. The rows keep their
+ * height: the note starts higher by the native title bar's 28 px.
+ */
+:root {
+  /* The room for the lights: 16 px, three buttons (60 px on macOS 26), and 12 px after them. */
+  --pm-titlebar-inset: 88px;
+  /* The first row, where the lights are centred (TITLE_BAR_ROW in apps/desktop). */
+  --pm-titlebar-row: 48px;
+}
+
+/*
+ * The rows drag the window (A723). Nothing else does: no strip behind the page, since on a Mac
+ * a drag region wins over whatever is painted on it unless that is `no-drag`. So every control
+ * anywhere, and every surface that can float over a row (a panel, a menu, a dialog, a scrim),
+ * is `no-drag`. The same lists are in apps/web/src/desktop/no-drag.ts, and a test checks they
+ * match.
+ */
+:root[data-titlebar='compact']
+  :is(.sb-head, .note-top, .pm-graph-bar, .settings-bar, .app-bar, #root > .banner) {
+  -webkit-app-region: drag;
+}
+
+:root[data-titlebar='compact']
+  :is(
+    .menu,
+    .menu-scrim,
+    .overlay,
+    .drawer-scrim,
+    .sidebar,
+    .settings-nav,
+    .toast,
+    [role='dialog'],
+    [role='menu'],
+    [role='listbox'],
+    [role='toolbar'],
+    .pm-slash-menu
+  ) {
+  -webkit-app-region: no-drag;
+}
+
+:root[data-titlebar='compact']
+  :is(
+    button,
+    a[href],
+    input,
+    textarea,
+    select,
+    label,
+    summary,
+    [contenteditable='true'],
+    [tabindex]:not([tabindex='-1']),
+    [role='button'],
+    [role='link'],
+    [role='menuitem'],
+    [role='menuitemcheckbox'],
+    [role='menuitemradio'],
+    [role='option'],
+    [role='tab'],
+    [role='switch'],
+    [role='checkbox'],
+    [role='radio'],
+    [role='combobox'],
+    [role='slider'],
+    [role='spinbutton'],
+    [role='textbox'],
+    [role='searchbox'],
+    [role='treeitem']
+  ) {
+  -webkit-app-region: no-drag;
+}
+
+/*
+ * What scrolls under a row sets no region of its own (A1123; UNDER_ROWS in no-drag.ts): a note's
+ * title and text go up under its top bar as it scrolls, and their controls' `no-drag`, later in
+ * the DOM, took the bar's empty part from it. None of them is ever in a row. `unset`, not
+ * `none`: Chromium computes an explicit `none` as `no-drag`, while `unset` takes the parent's
+ * region, as the property is inherited, so a control in a floating surface (a menu, the selection
+ * toolbar) is still `no-drag` from it, and one in the text has none.
+ */
+:root[data-titlebar='compact']
+  .note-columns
+  :is(
+    button,
+    a[href],
+    input,
+    textarea,
+    select,
+    label,
+    summary,
+    [contenteditable='true'],
+    [tabindex]:not([tabindex='-1']),
+    [role='button'],
+    [role='link'],
+    [role='menuitem'],
+    [role='menuitemcheckbox'],
+    [role='menuitemradio'],
+    [role='option'],
+    [role='tab'],
+    [role='switch'],
+    [role='checkbox'],
+    [role='radio'],
+    [role='combobox'],
+    [role='slider'],
+    [role='spinbutton'],
+    [role='textbox'],
+    [role='searchbox'],
+    [role='treeitem']
+  ):not(
+    .menu,
+    .menu-scrim,
+    .overlay,
+    .drawer-scrim,
+    .sidebar,
+    .settings-nav,
+    .toast,
+    [role='dialog'],
+    [role='menu'],
+    [role='listbox'],
+    [role='toolbar'],
+    .pm-slash-menu
+  ) {
+  -webkit-app-region: unset;
+}
+
+/*
+ * A surface earlier in the DOM than a row it opens over: the narrow window's drawer over the app
+ * bar, a sidebar menu over a note's top bar. Electron applies later drag regions over earlier
+ * ones, so while one is open those rows stop dragging rather than rely on regions being taken
+ * in paint order. (`#root` outweighs the rows' rule, whose `#root > .banner` makes it an id's.)
+ */
+:root[data-titlebar='compact'] #root .notes-app[data-drawer='open'] .app-bar,
+:root[data-titlebar='compact']:has(
+    #root .sidebar :is(.menu, [role='menu'], [role='dialog'], [role='listbox'])
+  )
+  :is(.note-top, .pm-graph-bar, .settings-bar, .app-bar) {
+  -webkit-app-region: no-drag;
+}
+
+/* The sidebar's header is the first row: as tall as the note's top bar, the lights before the brand. */
+:root[data-titlebar='compact'] .notes-app:not([data-sidebar='collapsed']) .sb-head {
+  box-sizing: border-box;
+  height: var(--pm-titlebar-row);
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: var(--pm-titlebar-inset);
+}
+
+/* The rail: a column of buttons. */
+.notes-app[data-sidebar='collapsed'] .sb-head {
+  flex-direction: column;
+}
+
+/*
+ * With the rail, the lights sit in the note's title row (T52, superseding A949): the row runs the
+ * window's width, over the rail's column too, so the rail is painted from below it (its border
+ * and the row's line drawn as backgrounds) and its buttons start there. Whatever the row holds
+ * beside the rail (the note's crumbs, the graph's bar) starts after the lights' inset.
+ */
+:root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed'] .sidebar {
+  padding-right: 1px;
+  border-right: 0;
+  background:
+    linear-gradient(var(--pm-border), var(--pm-border)) right bottom / 1px
+      calc(100% - var(--pm-titlebar-row)) no-repeat,
+    linear-gradient(
+      var(--pm-bg) var(--pm-titlebar-row),
+      var(--pm-border-soft) 0 calc(var(--pm-titlebar-row) + 1px),
+      var(--pm-sidebar) 0
+    );
+}
+
+:root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed'] .sb-head {
+  padding-top: calc(var(--pm-titlebar-row) + 1px);
+}
+
+:root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed'] .note-top {
+  padding-left: calc(var(--pm-titlebar-inset) - var(--pm-rail) - 1px);
+}
+
+:root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed'] .pm-graph-bar {
+  box-sizing: border-box;
+  min-height: calc(var(--pm-titlebar-row) + 1px);
+  padding-left: calc(var(--pm-titlebar-inset) - var(--pm-rail) - 1px);
+}
+
+/*
+ * The sidebar's head with the lights before Back and Forward: no room left for the name beside
+ * the mark, which stays for screen readers.
+ */
+:root[data-titlebar='compact'] .notes-app:not([data-sidebar='collapsed']) .brand > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* A note window's top bar (T45): the lights before Back and Forward. */
+:root[data-titlebar='compact'] .note-window .note-top {
+  padding-left: var(--pm-titlebar-inset);
+}
+
+/* Above the notes, the "Sign in again" banner is the first row. */
+:root[data-titlebar='compact'] #root > .banner {
+  box-sizing: border-box;
+  min-height: var(--pm-titlebar-row);
+  padding-left: var(--pm-titlebar-inset);
+}
+
+/*
+ * Settings: its bar is the first row, and Back starts after the lights. The bar spans the window
+ * with the centred column's gutter as its padding (T51, A942), and only the content scrolls, so
+ * no page scrollbar is counted in 100vw.
+ */
+:root[data-titlebar='compact'] .settings-shell {
+  padding-top: 0;
+}
+
+:root[data-titlebar='compact'] .settings-bar {
+  box-sizing: border-box;
+  /* The lights' row's height, so Back and Forward sit centred beside them (T52 item 12). */
+  min-height: var(--pm-titlebar-row);
+  padding-left: max(var(--settings-gutter, 0px), var(--pm-titlebar-inset));
+}
+
+@media (max-width: 700px) {
+  /* A narrow window: the app bar is the first row, and Settings' bar spans the window. */
+  :root[data-titlebar='compact'] .app-bar {
+    padding-left: var(--pm-titlebar-inset);
+  }
+
+  /* "← Notes" reaches 0.5rem into its bar. */
+  :root[data-titlebar='compact'] .settings-bar {
+    padding-left: calc(var(--pm-titlebar-inset) + 0.5rem);
+  }
+}
+
+/*
+ * Settings → Symbols (T44, A743): one row per shortcut slot, the slot's keys, the glyph and
+ * colour pickers and the row's actions, all one control high (T51 items 9–11, A939). The
+ * list keeps a gap below it so a focused control's ring never reaches the buttons under it.
+ */
+.symbol-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.75rem 0 1.25rem;
+  padding: 0;
+  list-style: none;
+}
+
+.symbol-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  min-height: var(--pm-control);
+}
+
+.symbol-keys {
+  flex: none;
+  min-width: 3.2rem;
+  color: var(--pm-muted);
+  font: 0.75rem var(--pm-mono);
+}
+
+.symbol-actions {
+  display: flex;
+  flex: none;
+  gap: 0.15rem;
+}
+
+/* The pickers' buttons and popovers (T51 items 9 and 10, A939). */
+.glyph-anchor,
+.colour-anchor {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.glyph-trigger {
+  width: 3rem;
+  padding: 0;
+  font-size: 1.15rem;
+}
+
+.colour-trigger {
+  min-width: 8.5rem;
+  justify-content: flex-start;
+  padding: 0 0.6rem;
+}
+
+.colour-trigger-label {
+  flex: 1;
+  text-align: start;
+}
+
+.colour-trigger .i {
+  color: var(--pm-muted);
+}
+
+.colour-dot {
+  flex: none;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 1px solid var(--pm-border-strong);
+  border-radius: 50%;
+}
+
+.glyph-popover,
+.colour-popover {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  z-index: 40;
+  display: grid;
+  gap: 0.6rem;
+  box-sizing: border-box;
+  max-width: calc(100vw - 2rem);
+  padding: 0.6rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-popover-shadow);
+  animation: pm-rise var(--pm-medium) var(--pm-ease);
+}
+
+.glyph-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 2.1rem);
+  gap: 0.2rem;
+}
+
+.glyph-option {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--pm-fg);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.glyph-option:hover {
+  background: var(--pm-hover);
+}
+
+.glyph-option:focus-visible,
+.colour-swatch:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 1px;
+}
+
+.glyph-option[aria-pressed='true'] {
+  border-color: var(--pm-accent-line);
+  background: var(--pm-active);
+}
+
+/* Another symbol has it: shown, faded, and refused. */
+.glyph-option[aria-disabled='true'] {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.glyph-custom {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.glyph-custom .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.glyph-problem,
+.colour-problem {
+  max-width: 16rem;
+  color: var(--pm-danger);
+  font-size: 0.8rem;
+}
+
+.colour-popover {
+  width: 19rem;
+}
+
+.colour-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 1.75rem);
+  gap: 0.4rem;
+}
+
+.colour-swatch {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid var(--pm-border-strong);
+  border-radius: 50%;
+  color: var(--pm-bg);
+  cursor: pointer;
+}
+
+.colour-swatch[aria-checked='true'] {
+  box-shadow:
+    0 0 0 2px var(--pm-raised),
+    0 0 0 4px var(--pm-accent);
+}
+
+.colour-custom {
+  display: grid;
+  gap: 0.4rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--pm-border);
+}
+
+.colour-custom-title {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  font-weight: 600;
+}
+
+.colour-custom-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+/*
+ * The wheel: hue around (red at the top, clockwise), saturation out from a white centre, and
+ * the brightness as a black veil over it. Its colours are the colour space's own, the same in
+ * every theme.
+ */
+.colour-wheel {
+  position: relative;
+  flex: none;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle closest-side, var(--cp-white), transparent),
+    conic-gradient(var(--cp-hues));
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.colour-wheel::after {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--cp-black);
+  opacity: var(--cp-dim, 0);
+  content: '';
+  pointer-events: none;
+}
+
+.colour-wheel:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 2px;
+}
+
+.colour-wheel-thumb {
+  position: absolute;
+  z-index: 1;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid var(--cp-white);
+  border-radius: 50%;
+  background: var(--cp-solid);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--cp-black) 45%, transparent);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.colour-sliders {
+  display: grid;
+  flex: 1;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.colour-preview {
+  height: 1.5rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background:
+    linear-gradient(var(--cp-colour), var(--cp-colour)),
+    repeating-conic-gradient(var(--cp-check) 0 25%, var(--cp-white) 0 50%) 0 0 / 0.6rem 0.6rem;
+}
+
+.colour-slider {
+  display: grid;
+  gap: 0.1rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+}
+
+.colour-range {
+  width: 100%;
+  height: 0.75rem;
+  margin: 0.2rem 0;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.colour-range-value {
+  background: linear-gradient(to right, var(--cp-black), var(--cp-bright));
+}
+
+.colour-range-alpha {
+  background:
+    linear-gradient(to right, transparent, var(--cp-solid)),
+    repeating-conic-gradient(var(--cp-check) 0 25%, var(--cp-white) 0 50%) 0 0 / 0.5rem 0.5rem;
+}
+
+.colour-range::-webkit-slider-thumb {
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid var(--cp-white);
+  border-radius: 50%;
+  background: var(--cp-solid);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--cp-black) 45%, transparent);
+  -webkit-appearance: none;
+}
+
+.colour-range::-moz-range-thumb {
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid var(--cp-white);
+  border-radius: 50%;
+  background: var(--cp-solid);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--cp-black) 45%, transparent);
+}
+
+.colour-range:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 2px;
+}
+
+.colour-hex .input {
+  height: var(--pm-control-sm);
+  font-family: var(--pm-mono);
+  text-transform: uppercase;
+}
+
+/* On a phone the pickers sit along the bottom of the screen, where they always fit. */
+@media (max-width: 700px) {
+  .glyph-popover,
+  .colour-popover {
+    position: fixed;
+    top: auto;
+    right: max(0.5rem, env(safe-area-inset-right));
+    bottom: max(0.5rem, env(safe-area-inset-bottom));
+    left: max(0.5rem, env(safe-area-inset-left));
+    z-index: 70;
+    width: auto;
+    max-width: none;
+  }
+
+  .glyph-grid {
+    grid-template-columns: repeat(7, minmax(2.1rem, 1fr));
+  }
+
+  .glyph-option {
+    width: auto;
+    height: var(--pm-hit);
+  }
+}
+
+/* The Comments panel (T48): a note's threads beside it, where Info goes. */
+.comments-panel {
+  border-top: 1px solid var(--pm-border);
+  padding-top: 1rem;
+  font-size: var(--pm-text-sm);
+}
+
+@media (min-width: 78rem) {
+  .comments-panel {
+    border-top: 0;
+    border-left: 1px solid var(--pm-border);
+    padding: 0 0 0 1rem;
+  }
+}
+
+.comments-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.comments-header .info-heading {
+  margin: 0;
+}
+
+.comments-filter {
+  display: inline-flex;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  gap: 0.15rem;
+}
+
+.comments-filter .btn[aria-pressed='true'] {
+  background: var(--pm-active);
+  color: var(--pm-fg);
+}
+
+.comments-empty {
+  margin: 0.5rem 0;
+}
+
+.comment-threads,
+.comment-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Its text starts where a backlink's and a version's does, 0.55 rem inside the border (A988). */
+.comment-thread {
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 0.55rem;
+  border: 1px solid var(--pm-border-soft);
+  border-radius: 0;
+  background: var(--pm-bg);
+}
+
+.comment-thread[data-active='true'] {
+  border-color: var(--pm-accent-line);
+  box-shadow: var(--pm-shadow-1);
+}
+
+.comment-thread[data-status='resolved'] {
+  opacity: 0.85;
+}
+
+.comment-quote {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 0.5rem;
+  padding: 0.1rem 0 0.1rem 0.6rem;
+  border: 0;
+  border-left: 3px solid var(--pm-accent-line);
+  background: none;
+  color: var(--pm-muted);
+  font: inherit;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+button.comment-quote {
+  cursor: pointer;
+}
+
+button.comment-quote:hover {
+  color: var(--pm-fg);
+}
+
+.comment-quote.orphaned {
+  border-left-color: var(--pm-border-strong);
+}
+
+.comment-quote-note {
+  display: block;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  font-style: italic;
+}
+
+.comment {
+  position: relative;
+}
+
+.comment + .comment {
+  margin-top: 0.55rem;
+}
+
+.comment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.4rem;
+  margin: 0;
+}
+
+.comment-author {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.comment[data-author='agent'] .comment-author {
+  color: var(--pm-agent);
+}
+
+.comment-when {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  white-space: nowrap;
+}
+
+.comment-tools {
+  position: absolute;
+  top: -0.25rem;
+  right: 0;
+  display: inline-flex;
+  border-radius: 0;
+  background: var(--pm-bg);
+  opacity: 0;
+}
+
+.comment:hover .comment-tools,
+.comment:focus-within .comment-tools {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .comment-tools {
+    opacity: 1;
+  }
+}
+
+.comment-tools .icon-btn {
+  width: var(--pm-control-sm);
+  height: var(--pm-control-sm);
+}
+
+.comment-body {
+  margin: 0.15rem 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comment-removed {
+  color: var(--pm-muted);
+  font-style: italic;
+}
+
+.comment-confirm {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-danger-soft);
+}
+
+.comment-confirm p {
+  margin: 0;
+  font-size: var(--pm-text-sm);
+}
+
+.comment-state {
+  margin: 0.5rem 0 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+}
+
+.comment-state[data-state='replied'],
+.comment-state[data-state='seen'] {
+  color: var(--pm-agent);
+}
+
+.comment-state[data-state='failed'] {
+  color: var(--pm-danger);
+}
+
+.comment-composer {
+  margin-top: 0.6rem;
+}
+
+.comment-composer textarea.input {
+  height: auto;
+  min-height: 3.5rem;
+  padding: 0.4rem 0.6rem;
+  resize: vertical;
+}
+
+/* Centred: Cancel (a quiet button, 28 px) sat 2 px higher than Comment (32 px) beside it (A988). */
+.comment-composer-actions,
+.comment-thread-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+
+.comment-send {
+  display: grid;
+  gap: 0.2rem;
+  margin-top: 0.5rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+}
+
+.comment-send-error {
+  color: var(--pm-muted);
+}
+
+/* A session not running now (A1065): offered, greyed, with when it was last seen. */
+.comment-send option.comment-send-idle {
+  color: var(--pm-muted);
+}
+
+.comment-send-again {
+  padding-inline: 0.3rem;
+  font-size: inherit;
+}
+
+/* T52 item 5: a comment floating over the note at its passage (CommentPopover.tsx), placed in
+   viewport pixels below the passage, or above it, by placePopover. */
+.comment-popover {
+  position: fixed;
+  z-index: 45;
+  box-sizing: border-box;
+  width: min(22rem, calc(100vw - 1rem));
+  max-height: min(70vh, 34rem);
+  overflow: auto;
+  padding: 0.25rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-popover-shadow);
+  font-size: var(--pm-text-sm);
+  animation: pm-rise var(--pm-medium) var(--pm-ease);
+}
+
+.comment-popover > .comment-thread {
+  margin: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.comment-popover-close {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  z-index: 1;
+}
+
+.comment-popover .comment-quote {
+  padding-right: 1.75rem;
+}
+
+/* The Comments tab's Add Note Comment, and a thread on the note as a whole. */
+.comments-add-note {
+  margin: 0 0 0.75rem;
+}
+
+.comment-quote-whole {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--pm-muted);
+  font-style: italic;
+}
+
+/* The top bar's Comments button carries the open threads' count. */
+.comments-toggle {
+  position: relative;
+}
+
+.comments-count {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.2rem;
+  box-sizing: border-box;
+  border-radius: 0;
+  background: var(--pm-accent);
+  color: var(--pm-bg);
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1rem;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Settings → Updates (T64 item 2): what the last check found, apart from the switch's help. */
+.settings-section > .updates-status {
+  margin: 1.25rem 0 0.75rem;
+}
+
+/*
+ * The edges the sidebar and the note's panel are resized by (Quanta feedback 2, item 4; A1122):
+ * a strip 7 px wide over the pane's border, the resize cursor on it, the accent while it is
+ * hovered, focused or dragged. While one is dragged, the whole page has that cursor and nothing
+ * is selected.
+ */
+.pane-resizer {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.sidebar > .pane-resizer {
+  right: -4px;
+}
+
+/*
+ * With the compact title bar the strip starts below the first row: its 4 px over the note's top
+ * bar would be no-drag earlier in the DOM than that row, which drags over it (A1147).
+ */
+:root[data-titlebar='compact'] .sidebar > .pane-resizer {
+  top: var(--pm-titlebar-row);
+}
+
+/* Out of the grid's flow, on the panel's column: its containing block is that grid area. */
+.note-columns:has(> .pane-resizer) {
+  position: relative;
+}
+
+.note-columns > .pane-resizer {
+  grid-row: 1;
+  grid-column: 2;
+  left: -4px;
+}
+
+.pane-resizer::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 3px;
+  width: 1px;
+  background: transparent;
+  transition: background var(--pm-fast, 120ms) ease;
+}
+
+.pane-resizer:is(:hover, :focus-visible)::after,
+:root[data-resizing] .pane-resizer::after {
+  left: 2px;
+  width: 3px;
+  background: var(--pm-accent);
+}
+
+.pane-resizer:focus-visible {
+  outline: none;
+}
+
+:root[data-resizing],
+:root[data-resizing] * {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
+/*
+ * The title bars and the status bar take the arrow, not the text cursor, over their words as
+ * over their empty parts (Quanta feedback 3, item 6; A1129): they are the window's chrome, not
+ * text to select. Their controls keep their own cursors.
+ */
+:is(.note-top, .status-bar, .sb-head, .pm-graph-bar, .settings-bar, .app-bar) {
+  cursor: default;
+  user-select: none;
+}
+
+/*
+ * Flush rows (Quanta feedback 3, item 8; A1135), as the sidebar's bottom row is (A1121): the
+ * sidebar's head and its row of shortcuts, the note's title bar's buttons and the panel's tab
+ * strip go edge to edge, their buttons as tall as the row with no margin or gap. Back and
+ * Forward have a hairline either side, the one on their left ending the traffic lights' room in
+ * the Mac app, since the lights cannot be made square.
+ */
+.notes-app:not([data-sidebar='collapsed']) .sb-head {
+  --sb-row: 2.25rem;
+  box-sizing: border-box;
+  height: var(--sb-row);
+  gap: 0;
+  padding: 0 0 0 0.875rem;
+  border-bottom: 1px solid var(--pm-border-soft);
+}
+
+:root[data-titlebar='compact'] .notes-app:not([data-sidebar='collapsed']) .sb-head {
+  --sb-row: var(--pm-titlebar-row);
+  padding-left: var(--pm-titlebar-inset);
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-head > .icon-btn {
+  width: 2.25rem;
+  height: 100%;
+  border-left: 1px solid var(--pm-border-soft);
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-head .history-nav {
+  align-self: stretch;
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-head .history-pair {
+  height: 100%;
+  border-inline: 1px solid var(--pm-border-soft);
+  background: none;
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-head .history-pair .history-half {
+  width: 2rem;
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-head .history-half + .history-half::before {
+  top: 0;
+  bottom: 0;
+  background: var(--pm-border-soft);
+}
+
+/* With Back and Forward first, the logo keeps the room a button's padding gave it. */
+.notes-app:not([data-sidebar='collapsed']) .sb-head .history-nav + .brand {
+  padding-inline-start: 0.5rem;
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-actions {
+  padding: 0;
+  border-bottom: 1px solid var(--pm-border-soft);
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-shortcuts {
+  gap: 0;
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-shortcuts .sb-shortcut {
+  flex: 1 1 0;
+  height: 2.25rem;
+  margin: 0;
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-shortcuts .sb-shortcut.new-note {
+  flex: 0 0 2.5rem;
+}
+
+.note-top {
+  padding-right: 0;
+}
+
+.note-top > .note-actions {
+  align-self: stretch;
+  gap: 0;
+  border-left: 1px solid var(--pm-border-soft);
+}
+
+.note-top > .note-actions .icon-btn {
+  width: 2.5rem;
+  height: 100%;
+}
+
+.note-top > .note-actions > .menu-anchor {
+  display: flex;
+  align-self: stretch;
+}
+
+.note-top > .note-actions > .menu-anchor > button {
+  width: 2.5rem;
+  height: 100%;
+}
+
+.note-columns .note-rail-icons {
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+}
+
+.note-columns .note-rail-icons .note-rail-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+@media (max-width: 700px), (pointer: coarse) {
+  .notes-app:not([data-sidebar='collapsed']) .sb-shortcuts .sb-shortcut,
+  .note-columns .note-rail-icons .note-rail-btn {
+    height: var(--pm-hit);
+  }
+
+  /* Touch: every shortcut at least a finger wide, wrapping rather than narrowing (T53). */
+  .notes-app:not([data-sidebar='collapsed']) .sb-shortcuts .sb-shortcut,
+  .notes-app:not([data-sidebar='collapsed']) .sb-shortcuts .sb-shortcut.new-note {
+    flex: 1 0 var(--pm-hit);
+    min-width: var(--pm-hit);
+  }
+
+  .note-columns .note-rail-icons .note-rail-btn {
+    width: var(--pm-hit);
+  }
+}
+
+/* Settings' heading, and where they are kept beside it (A1136). */
+.settings-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+}
+
+.settings-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: var(--pm-text-sm, 0.86rem);
+}

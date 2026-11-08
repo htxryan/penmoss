@@ -1,0 +1,100 @@
+---
+/**
+ * The brochure pages' frame (T80.10, T80.11, P9): head metadata, header and footer. No script:
+ * the styles are inlined because the site-wide policy allows inline styles only, and the mark
+ * switches with the visitor's light or dark setting through <picture>.
+ */
+import markDark from '../assets/moss-pen-dark.svg';
+import markLight from '../assets/moss-pen-light.svg';
+import siteCss from '../styles/site.css?raw';
+import tokensCss from '../styles/tokens.css?raw';
+import { REPOSITORY } from '../site';
+
+interface Props {
+  title: string;
+  description: string;
+  /** The header link to mark as the current page. */
+  current?: 'home' | 'features';
+  /** Leave the page out of search engines (the 404 page). */
+  noindex?: boolean;
+}
+
+const { title, description, current, noindex = false } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const socialImage = new URL('/img/social.png', Astro.site).href;
+const year = 2026;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Penmoss" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Penmoss: Your Git. Your Agents. Your Notes. A free, open source notes app for Mac and Android."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage} />
+    <style is:inline set:html={tokensCss + siteCss}></style>
+  </head>
+  <body>
+    <a class="skip" href="#content">Skip to content</a>
+    <header class="site-header">
+      <div class="wrap">
+        <a class="brand" href="/">
+          <picture>
+            <source srcset={markDark.src} media="(prefers-color-scheme: dark)" />
+            <img src={markLight.src} alt="" width="32" height="32" />
+          </picture>
+          Penmoss
+        </a>
+        <nav aria-label="Main">
+          <ul class="nav">
+            <li>
+              <a href="/features" aria-current={current === 'features' ? 'page' : undefined}
+                >Features</a
+              >
+            </li>
+            <li><a href="/docs/">Docs</a></li>
+            <li><a href={REPOSITORY}>GitHub</a></li>
+            <li><a href="/#download">Download</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+    <main id="content">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="wrap">
+        <nav aria-label="Footer">
+          <ul class="nav">
+            <li><a href="/features">Features</a></li>
+            <li><a href="/docs/">Docs</a></li>
+            <li><a href="/privacy">Privacy</a></li>
+            <li><a href={REPOSITORY}>GitHub</a></li>
+            <li><a href={`${REPOSITORY}/blob/main/LICENSE`}>MIT Licensed</a></li>
+          </ul>
+        </nav>
+        <p>© {year} Ryan Henderson</p>
+      </div>
+    </footer>
+  </body>
+</html>

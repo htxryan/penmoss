@@ -1,0 +1,304 @@
+---
+/**
+ * All Features (T80.10): every shipped feature, in groups, each linking to the docs page that
+ * explains it. Every claim is checked against the shipped app (the checklist in the pull
+ * request); search by meaning is claimed for the Mac only, where it shipped (D59).
+ */
+import SiteLayout from '../components/SiteLayout.astro';
+import { REPOSITORY } from '../site';
+
+interface Feature {
+  title: string;
+  body: string;
+  href: string;
+}
+
+const groups: { title: string; id: string; items: Feature[] }[] = [
+  {
+    title: 'Agents',
+    id: 'agents',
+    items: [
+      {
+        title: 'A local MCP server',
+        body: 'Claude Code, Codex, OpenCode and any MCP client can search, read and write your notes, and open your daily note.',
+        href: '/docs/agents/',
+      },
+      {
+        title: 'The penmoss CLI',
+        body: 'Every note command from the terminal, for agents and scripts alike.',
+        href: '/docs/reference/cli/',
+      },
+      {
+        title: 'Comments to agents',
+        body: 'Comment on a passage and send it to an agent session; its reply lands in the thread.',
+        href: '/docs/agents/comments/',
+      },
+      {
+        title: 'Agent activity and undo',
+        body: 'Each agent writes under its own name. See what it changed and revert just that edit.',
+        href: '/docs/agents/activity/',
+      },
+      {
+        title: 'Safe edits',
+        body: 'Agent edits merge with your typing as they happen, so nobody overwrites anybody.',
+        href: '/docs/agents/',
+      },
+    ],
+  },
+  {
+    title: 'Your notes in git',
+    id: 'git',
+    items: [
+      {
+        title: 'A repository you own',
+        body: 'Pick a private GitHub repository, or create one, when you add a notebook.',
+        href: '/docs/first-notebook/',
+      },
+      {
+        title: 'Plain markdown',
+        body: 'Every note is a markdown file, readable in any editor and compatible with Obsidian.',
+        href: '/docs/reference/notebook-format/',
+      },
+      {
+        title: 'No sync conflicts',
+        body: 'Edits from every device and agent merge, offline or online, with no conflict copies.',
+        href: '/docs/help/sync/',
+      },
+      {
+        title: 'Several notebooks',
+        body: 'Keep work and personal notes in separate repositories, side by side.',
+        href: '/docs/organise/',
+      },
+    ],
+  },
+  {
+    title: 'Writing',
+    id: 'writing',
+    items: [
+      {
+        title: 'A slash menu and markdown shortcuts',
+        body: 'Type / for any block, or write markdown and watch it format.',
+        href: '/docs/editor/',
+      },
+      {
+        title: 'Tables, checklists, callouts and toggles',
+        body: 'Structure without leaving the keyboard.',
+        href: '/docs/editor/',
+      },
+      {
+        title: 'Mermaid diagrams and math',
+        body: 'Diagrams and formulas render as you type.',
+        href: '/docs/editor/',
+      },
+      {
+        title: 'Code with highlighting',
+        body: 'Code blocks highlight in dozens of languages.',
+        href: '/docs/editor/',
+      },
+      {
+        title: 'Images, files and embedded notes',
+        body: 'Paste or drop images and attachments, or embed one note in another.',
+        href: '/docs/editor/',
+      },
+      {
+        title: 'Copy and paste that works',
+        body: 'Copy as markdown or rich text, paste and match style, paste images.',
+        href: '/docs/editor/',
+      },
+    ],
+  },
+  {
+    title: 'Organising',
+    id: 'organising',
+    items: [
+      {
+        title: 'Nested folders',
+        body: 'Sort by hand, A to Z, or by last change.',
+        href: '/docs/organise/',
+      },
+      {
+        title: 'Tags',
+        body: 'Nested tags, and a list of everything tagged.',
+        href: '/docs/organise/',
+      },
+      {
+        title: 'Trash',
+        body: 'Deleted notes go to Trash, where you can restore them or delete them for good.',
+        href: '/docs/history/',
+      },
+    ],
+  },
+  {
+    title: 'Finding and connecting',
+    id: 'finding',
+    items: [
+      {
+        title: 'Search by words',
+        body: 'Full-text search on every device.',
+        href: '/docs/search/',
+      },
+      {
+        title: 'Search by meaning, on the Mac',
+        body: 'An on-device model finds notes by what they mean; your notes never leave the Mac.',
+        href: '/docs/search/',
+      },
+      {
+        title: 'Wikilinks and backlinks',
+        body: 'Link notes with [[double brackets]] and see what links back.',
+        href: '/docs/links/',
+      },
+      {
+        title: 'The graph',
+        body: "A note's neighbourhood of links, at a glance.",
+        href: '/docs/links/',
+      },
+      {
+        title: 'The recent-notes switcher and the command palette',
+        body: 'Jump to any note or action from the keyboard.',
+        href: '/docs/shortcuts/',
+      },
+    ],
+  },
+  {
+    title: 'Journal and capture',
+    id: 'journal',
+    items: [
+      {
+        title: 'Daily and weekly notes',
+        body: "Today's note in one keystroke, from your own templates.",
+        href: '/docs/journal/',
+      },
+      {
+        title: 'The calendar',
+        body: 'Every day you wrote about, one click away.',
+        href: '/docs/journal/',
+      },
+      {
+        title: 'Quick capture',
+        body: 'Jot a thought into your journal without opening a note.',
+        href: '/docs/quick-capture/',
+      },
+      {
+        title: 'History for every note',
+        body: 'Every version, who made it, and Restore.',
+        href: '/docs/history/',
+      },
+    ],
+  },
+  {
+    title: 'Mac app',
+    id: 'mac',
+    items: [
+      {
+        title: 'Note windows',
+        body: 'Open a note in its own window, and keep it on top of other apps.',
+        href: '/docs/mac/',
+      },
+      {
+        title: 'Native menus and shortcuts',
+        body: 'Every action in the menus, every shortcut yours to change.',
+        href: '/docs/shortcuts/',
+      },
+      {
+        title: 'Updates',
+        body: 'Signed, notarised, and it keeps itself up to date. Choose Stable or Alpha.',
+        href: '/docs/help/updates/',
+      },
+    ],
+  },
+  {
+    title: 'Android app',
+    id: 'android',
+    items: [
+      {
+        title: 'The same editor',
+        body: 'Everything the Mac editor does, on your phone.',
+        href: '/docs/android/',
+      },
+      {
+        title: 'Quick Settings tile and widget',
+        body: 'Capture a thought from anywhere on the phone.',
+        href: '/docs/quick-capture/',
+      },
+      {
+        title: 'Background sync',
+        body: 'Your notes are up to date when you open the app.',
+        href: '/docs/android/',
+      },
+    ],
+  },
+  {
+    title: 'Make it yours',
+    id: 'yours',
+    items: [
+      {
+        title: 'Eight themes, light and dark',
+        body: 'Penmoss, Paper, Slate, Nord, Solarized, Gruvbox, Rosé Pine and High Contrast.',
+        href: '/docs/themes/',
+      },
+      {
+        title: 'A theme editor',
+        body: 'Make your own, with contrast checked for you.',
+        href: '/docs/themes/',
+      },
+      {
+        title: 'Customisable shortcuts',
+        body: 'Rebind any action.',
+        href: '/docs/shortcuts/',
+      },
+    ],
+  },
+  {
+    title: 'Open and private',
+    id: 'open',
+    items: [
+      {
+        title: 'Open source',
+        body: 'MIT licensed, on GitHub.',
+        href: '/docs/',
+      },
+      {
+        title: 'No telemetry',
+        body: 'Penmoss collects nothing. Your notes go only to your own repository.',
+        href: '/docs/help/privacy/',
+      },
+      {
+        title: 'No account',
+        body: 'Sign in to GitHub, not to us.',
+        href: '/docs/help/privacy/',
+      },
+    ],
+  },
+];
+---
+
+<SiteLayout
+  title="All Features · Penmoss"
+  description="Everything Penmoss does: agents through MCP and a CLI, notes in your own git repository, a real editor, search, journal, history, and apps for Mac and Android."
+  current="features"
+>
+  <div class="wrap">
+    <section class="section" aria-labelledby="features-title">
+      <h1 id="features-title" class="page-title">All Features</h1>
+      <p class="lede">
+        Everything Penmoss does today. Each title links to the page in the docs that shows you how.
+        Something missing? <a href={`${REPOSITORY}/issues/new/choose`}>Ask for it on GitHub</a>.
+      </p>
+      {
+        groups.map((group) => (
+          <section class="feature-group" aria-labelledby={`group-${group.id}`}>
+            <h2 id={`group-${group.id}`}>{group.title}</h2>
+            <ul class="feature-list">
+              {group.items.map((item) => (
+                <li>
+                  <a href={item.href}>{item.title}</a>
+                  <p>{item.body}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))
+      }
+    </section>
+  </div>
+</SiteLayout>

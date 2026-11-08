@@ -1,0 +1,1317 @@
+{
+  "$comment": "Every command of apps/web/src/commands/definitions.ts and how the Android app reaches it (T40 P6, FD6, A466): {\"search\": true} is an action in Search, {\"elsewhere\": …} another screen or menu, {\"na\": …} why it does not apply. Checked and written by apps/web/test/unit/android-commands-contract.test.ts; read by the Kotlin SearchActionsTest. `fuzzy`: the Search actions each query finds, best first, as the palette ranks them.",
+  "version": 1,
+  "commands": [
+    {
+      "id": "app.palette",
+      "title": "Command Palette",
+      "area": "General",
+      "scope": "global",
+      "android": {
+        "elsewhere": "Search: its Actions section is the palette; Ctrl+K opens it with the actions listed (FD6)"
+      }
+    },
+    {
+      "id": "app.quickOpen",
+      "title": "Quick Open Note…",
+      "area": "Navigation",
+      "scope": "global",
+      "android": {
+        "elsewhere": "Search: notes are found by title as you type (FD1)"
+      }
+    },
+    {
+      "id": "app.search",
+      "title": "Search Notes…",
+      "area": "Navigation",
+      "scope": "global",
+      "android": {
+        "elsewhere": "Search, from Home's top bar (FD1)"
+      }
+    },
+    {
+      "id": "app.recent",
+      "title": "Switch to a Recent Note",
+      "area": "Navigation",
+      "scope": "global",
+      "android": {
+        "elsewhere": "Home's Recent, and Ctrl+E's recent-notes switcher (FD7)"
+      }
+    },
+    {
+      "id": "app.cheatsheet",
+      "title": "Keyboard Shortcuts",
+      "area": "General",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "app.settings",
+      "title": "Settings",
+      "area": "General",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "app.shortcuts",
+      "title": "Customise Keyboard Shortcuts",
+      "area": "General",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "app.gitNotebooks",
+      "title": "Git Notebooks",
+      "area": "General",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "app.status",
+      "title": "Feedback Status and GitHub Token",
+      "area": "General",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "app.checkForUpdates",
+      "title": "Check for Updates…",
+      "area": "General",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app updates itself from GitHub Releases; the phone updates from where it was installed."
+      }
+    },
+    {
+      "id": "app.sendFeedback",
+      "title": "Send Feedback",
+      "area": "General",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "app.home",
+      "title": "Close the Note",
+      "area": "Navigation",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "app.toggleSidebar",
+      "title": "Collapse or Expand the Sidebar",
+      "area": "Navigation",
+      "scope": "global",
+      "android": {
+        "na": "No sidebar on a phone (PL18)"
+      }
+    },
+    {
+      "id": "app.graph",
+      "title": "Graph",
+      "area": "Navigation",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "note.new",
+      "title": "New Note",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "app.capture",
+      "title": "Quick Capture…",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "note.toggleSource",
+      "title": "Toggle Markdown Source",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A note's ⋮ menu: View Markdown source, or the command's keys on a hardware keyboard (ED17)"
+      }
+    },
+    {
+      "id": "note.delete",
+      "title": "Move to Trash",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A note's ⋮ menu and a note's long press: Move to Trash (NT12)"
+      }
+    },
+    {
+      "id": "note.move",
+      "title": "Move to Folder…",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A note's ⋮ menu and a note's long press: Move to folder… (NT8)"
+      }
+    },
+    {
+      "id": "note.history",
+      "title": "Version History",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A note's ⋮ menu: Version history (NT16)"
+      }
+    },
+    {
+      "id": "note.saveVersion",
+      "title": "Save a Version of This Note Now",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "elsewhere": "Version history's top bar: Save version (NT20)"
+      }
+    },
+    {
+      "id": "note.togglePanel",
+      "title": "Show or Hide the Note Panel",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "elsewhere": "The phone's note bar opens the note panel on a tab: Info or Comments, or the ⋮ menu's items (T51, A936)"
+      }
+    },
+    {
+      "id": "note.backlinks",
+      "title": "Show or Hide the Note’s Metadata",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A note's Info button: its Info sheet with the backlinks, or the command's keys (NT23, LK5)"
+      }
+    },
+    {
+      "id": "note.comments",
+      "title": "Show or Hide Comments",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "elsewhere": "The note's ⋮ menu: Comments opens the note's Comments sheet; tapping a highlighted passage opens it on that thread"
+      }
+    },
+    {
+      "id": "note.addNoteComment",
+      "title": "Add Note Comment",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "elsewhere": "The note panel's Comments tab: Add Note Comment, or the command's keys (T52 item 5)"
+      }
+    },
+    {
+      "id": "note.localGraph",
+      "title": "Show or Hide the Note’s Local Graph",
+      "area": "Navigation",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A note's ⋮ menu: Local graph, or the command's keys (LK8)"
+      }
+    },
+    {
+      "id": "app.trash",
+      "title": "Trash",
+      "area": "Navigation",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "note.openInNewWindow",
+      "title": "Open in New Window",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "na": "A phone shows one screen at a time (PL7): Android's split screen and Recents already put Penmoss beside another app, and a note opened from a link opens on its own screen with Back (T45, D37)."
+      }
+    },
+    {
+      "id": "note.pinQuickAccess",
+      "title": "Pin or Unpin from Quick Access",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A note's ⋮ menu: Pin to Quick Access or Unpin from Quick Access, its pins on Home (T51, A946, A950)"
+      }
+    },
+    {
+      "id": "window.back",
+      "title": "Back",
+      "area": "Navigation",
+      "scope": "global",
+      "android": {
+        "na": "A note window's (T45): the phone's own Back goes back from a note to the one before it."
+      }
+    },
+    {
+      "id": "window.forward",
+      "title": "Forward",
+      "area": "Navigation",
+      "scope": "global",
+      "android": {
+        "na": "A note window's (T45): a phone's screens have no Forward; Switch to a recent note (Ctrl+E) returns to a note left behind."
+      }
+    },
+    {
+      "id": "window.keepOnTop",
+      "title": "Keep on Top",
+      "area": "General",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app's (T46, D38): a phone shows one app at a time, full screen, and Android's split screen already keeps a note beside another app (PL20)."
+      }
+    },
+    {
+      "id": "note.focusTitle",
+      "title": "Edit the Note Title",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A note's long press: Rename puts the caret in the title (NT10)"
+      }
+    },
+    {
+      "id": "note.copyMarkdown",
+      "title": "Copy Note as Markdown",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A note's ⋮ menu: Copy note as Markdown, or the command's keys (ED9)"
+      }
+    },
+    {
+      "id": "note.copyRich",
+      "title": "Copy Note as Rich Text",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A note's ⋮ menu: Copy note as rich text, or the command's keys (ED9)"
+      }
+    },
+    {
+      "id": "note.copyAgentReference",
+      "title": "Copy Agent Reference",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A note's ⋮ menu, Home's long press (the selection bar's ⋮ for one note) and a search result's sheet: Copy Agent Reference, or the command's keys (T52 item 4)"
+      }
+    },
+    {
+      "id": "journal.today",
+      "title": "Today's Note",
+      "area": "Daily notes",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "journal.thisWeek",
+      "title": "This Week's Note",
+      "area": "Daily notes",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "journal.previous",
+      "title": "Previous Day or Week",
+      "area": "Daily notes",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A periodic note's row under the top bar: the previous day or week (JR4)"
+      }
+    },
+    {
+      "id": "journal.next",
+      "title": "Next Day or Week",
+      "area": "Daily notes",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A periodic note's row under the top bar: the next day or week (JR4)"
+      }
+    },
+    {
+      "id": "journal.week",
+      "title": "The Week of This Daily Note",
+      "area": "Daily notes",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A daily note's row under the top bar: its week (JR4)"
+      }
+    },
+    {
+      "id": "journal.calendar",
+      "title": "Show the Calendar",
+      "area": "Daily notes",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "journal.settings",
+      "title": "Time Zone and Templates",
+      "area": "Daily notes",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "note.addTag",
+      "title": "Add a Tag to This Note",
+      "area": "Tags",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A note's ⋮ menu: Tags… (T38)"
+      }
+    },
+    {
+      "id": "tags.clearFilter",
+      "title": "Show All Notes (Clear the Tag Filter)",
+      "area": "Tags",
+      "scope": "global",
+      "android": {
+        "elsewhere": "Back from a tag's notes (TG2)"
+      }
+    },
+    {
+      "id": "folder.new",
+      "title": "New Folder",
+      "area": "Folders",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "folder.topLevel",
+      "title": "File New Notes at the Top Level",
+      "area": "Folders",
+      "scope": "global",
+      "android": {
+        "na": "A phone asks which folder for each new note, the top level first (NT9, T38)"
+      }
+    },
+    {
+      "id": "folder.sortManual",
+      "title": "Sort the Current Folder: Manual",
+      "area": "Folders",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A folder's Sort icon, and Home's for the top level: Manual (NT6)"
+      }
+    },
+    {
+      "id": "folder.sortAlpha",
+      "title": "Sort the Current Folder: A–Z",
+      "area": "Folders",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A folder's Sort icon, and Home's for the top level: A–Z (NT6)"
+      }
+    },
+    {
+      "id": "folder.sortModified",
+      "title": "Sort the Current Folder: Last Modified",
+      "area": "Folders",
+      "scope": "global",
+      "android": {
+        "elsewhere": "A folder's Sort icon, and Home's for the top level: Last modified (NT6)"
+      }
+    },
+    {
+      "id": "folder.moveUp",
+      "title": "Move the Focused Row Up",
+      "area": "Folders",
+      "scope": "tree",
+      "android": {
+        "elsewhere": "Reorder in a folder's ⋮ menu, or Home's for the top level: drag the handle (NT7)"
+      }
+    },
+    {
+      "id": "folder.moveDown",
+      "title": "Move the Focused Row Down",
+      "area": "Folders",
+      "scope": "tree",
+      "android": {
+        "elsewhere": "Reorder in a folder's ⋮ menu, or Home's for the top level: drag the handle (NT7)"
+      }
+    },
+    {
+      "id": "folder.rename",
+      "title": "Rename the Focused Folder",
+      "area": "Folders",
+      "scope": "tree",
+      "android": {
+        "elsewhere": "A folder's long press, or its ⋮ menu: Rename folder (NT3)"
+      }
+    },
+    {
+      "id": "folder.delete",
+      "title": "Delete the Focused Folder",
+      "area": "Folders",
+      "scope": "tree",
+      "android": {
+        "elsewhere": "A folder's long press, or its ⋮ menu: Delete folder (NT4)"
+      }
+    },
+    {
+      "id": "git.syncNow",
+      "title": "Sync This Git Notebook Now",
+      "area": "Sync",
+      "scope": "global",
+      "android": {
+        "elsewhere": "Settings → Git notebooks → the notebook's Sync now, and Sync now on its Sync screen"
+      }
+    },
+    {
+      "id": "git.signCommits",
+      "title": "Sign This Git Notebook’s Commits, or Stop",
+      "area": "Sync",
+      "scope": "global",
+      "android": {
+        "elsewhere": "Settings → Git notebooks → the notebook's Sign commits (Android signs with its own key, A921)"
+      }
+    },
+    {
+      "id": "git.pushAfter",
+      "title": "Set When This Git Notebook Pushes…",
+      "area": "Sync",
+      "scope": "global",
+      "android": {
+        "elsewhere": "Settings → Git notebooks: Android syncs on its own cadence and in the background (A880)"
+      }
+    },
+    {
+      "id": "git.pullEvery",
+      "title": "Set How Often This Git Notebook Pulls…",
+      "area": "Sync",
+      "scope": "global",
+      "android": {
+        "elsewhere": "Settings → Git notebooks: Android syncs on its own cadence and in the background (A880)"
+      }
+    },
+    {
+      "id": "git.useToken",
+      "title": "Use a Token for This Git Notebook…",
+      "area": "Sync",
+      "scope": "global",
+      "android": {
+        "elsewhere": "Settings → Git notebooks → the notebook's token"
+      }
+    },
+    {
+      "id": "git.forgetToken",
+      "title": "Forget This Git Notebook’s Token",
+      "area": "Sync",
+      "scope": "global",
+      "android": {
+        "elsewhere": "Settings → Git notebooks → the notebook's token"
+      }
+    },
+    {
+      "id": "git.identity",
+      "title": "Set This Git Notebook’s Commit Name and Email…",
+      "area": "Sync",
+      "scope": "global",
+      "android": {
+        "elsewhere": "Settings → Git notebooks → the notebook's commit name and email"
+      }
+    },
+    {
+      "id": "git.reconfirmPurges",
+      "title": "Confirm Delete for Good Again…",
+      "area": "Sync",
+      "scope": "global",
+      "android": {
+        "elsewhere": "Settings → Git notebooks → Delete for good, waiting"
+      }
+    },
+    {
+      "id": "git.remove",
+      "title": "Remove This Git Notebook from This Mac…",
+      "area": "Sync",
+      "scope": "global",
+      "android": {
+        "elsewhere": "Settings → Git notebooks → the notebook's Remove"
+      }
+    },
+    {
+      "id": "app.appearance",
+      "title": "Appearance and Themes",
+      "area": "Appearance",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "app.display",
+      "title": "Sidebar Display Settings",
+      "area": "Appearance",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "app.symbols",
+      "title": "Edit Line Symbols",
+      "area": "Symbols",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "theme.switch",
+      "title": "Switch Theme…",
+      "area": "Appearance",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "theme.toggleDark",
+      "title": "Toggle Dark Mode",
+      "area": "Appearance",
+      "scope": "global",
+      "android": {
+        "search": true
+      }
+    },
+    {
+      "id": "note.fullWidth",
+      "title": "Toggle Full-Width Notes",
+      "area": "Note",
+      "scope": "global",
+      "android": {
+        "elsewhere": "Settings → Appearance: Note width, Full window width (ST11)"
+      }
+    },
+    {
+      "id": "editor.bold",
+      "title": "Bold",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar above the keyboard, or the command's keys on a hardware keyboard (ED1)"
+      }
+    },
+    {
+      "id": "editor.italic",
+      "title": "Italic",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar above the keyboard, or the command's keys on a hardware keyboard (ED1)"
+      }
+    },
+    {
+      "id": "editor.strike",
+      "title": "Strikethrough",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Style menu, or the command's keys on a hardware keyboard (ED1)"
+      }
+    },
+    {
+      "id": "editor.code",
+      "title": "Inline Code",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar above the keyboard, or the command's keys on a hardware keyboard (ED1)"
+      }
+    },
+    {
+      "id": "editor.highlight",
+      "title": "Highlight",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Style menu, or the command's keys on a hardware keyboard (ED1)"
+      }
+    },
+    {
+      "id": "editor.link",
+      "title": "Link Selected Text",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar above the keyboard, or the command's keys on a hardware keyboard (ED1)"
+      }
+    },
+    {
+      "id": "editor.toolbar",
+      "title": "Focus the Formatting Toolbar",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "na": "A phone's format bar is always above the keyboard; there is no toolbar to focus"
+      }
+    },
+    {
+      "id": "editor.comment",
+      "title": "Comment",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "The selection menu's Comment: the Comments sheet with a new comment on the selection (or at the caret)"
+      }
+    },
+    {
+      "id": "editor.paragraph",
+      "title": "Turn into Text",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Style menu, or the command's keys on a hardware keyboard (ED1)"
+      }
+    },
+    {
+      "id": "editor.heading1",
+      "title": "Heading 1",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Style menu, or the command's keys on a hardware keyboard (ED1)"
+      }
+    },
+    {
+      "id": "editor.heading2",
+      "title": "Heading 2",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Style menu, or the command's keys on a hardware keyboard (ED1)"
+      }
+    },
+    {
+      "id": "editor.heading3",
+      "title": "Heading 3",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Style menu, or the command's keys on a hardware keyboard (ED1)"
+      }
+    },
+    {
+      "id": "editor.heading4",
+      "title": "Heading 4",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "The command's keys on a hardware keyboard, or Markdown typed in a note (#### and on) (ED1)"
+      }
+    },
+    {
+      "id": "editor.heading5",
+      "title": "Heading 5",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "The command's keys on a hardware keyboard, or Markdown typed in a note (#### and on) (ED1)"
+      }
+    },
+    {
+      "id": "editor.heading6",
+      "title": "Heading 6",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "The command's keys on a hardware keyboard, or Markdown typed in a note (#### and on) (ED1)"
+      }
+    },
+    {
+      "id": "editor.bulletList",
+      "title": "Bulleted List",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar above the keyboard, or the command's keys on a hardware keyboard (ED1)"
+      }
+    },
+    {
+      "id": "editor.orderedList",
+      "title": "Numbered List",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar above the keyboard, or the command's keys on a hardware keyboard (ED1)"
+      }
+    },
+    {
+      "id": "editor.taskList",
+      "title": "Checklist",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar above the keyboard, or the command's keys on a hardware keyboard (ED1)"
+      }
+    },
+    {
+      "id": "editor.blockquote",
+      "title": "Quote",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Style menu, or the command's keys on a hardware keyboard (ED1)"
+      }
+    },
+    {
+      "id": "editor.codeBlock",
+      "title": "Code Block",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Style menu, or the command's keys on a hardware keyboard (ED1)"
+      }
+    },
+    {
+      "id": "editor.undo",
+      "title": "Undo",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar above the keyboard, or the command's keys on a hardware keyboard (ED1)"
+      }
+    },
+    {
+      "id": "editor.redo",
+      "title": "Redo",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar above the keyboard, or the command's keys on a hardware keyboard (ED1)"
+      }
+    },
+    {
+      "id": "editor.moveBlockUp",
+      "title": "Move Block Up",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "The command's keys on a hardware keyboard (ED5; touch with T40 P8)"
+      }
+    },
+    {
+      "id": "editor.moveBlockDown",
+      "title": "Move Block Down",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "The command's keys on a hardware keyboard (ED5; touch with T40 P8)"
+      }
+    },
+    {
+      "id": "editor.duplicateBlock",
+      "title": "Duplicate Block",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's Block menu: Duplicate block (ED5, T40 P8)"
+      }
+    },
+    {
+      "id": "editor.deleteBlock",
+      "title": "Delete Block",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's Block menu: Delete block, with Undo (ED5, T40 P8)"
+      }
+    },
+    {
+      "id": "editor.symbol1",
+      "title": "Toggle Symbol 1",
+      "area": "Symbols",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Symbol button, or the command's keys on a hardware keyboard (ED23)"
+      }
+    },
+    {
+      "id": "editor.symbol2",
+      "title": "Toggle Symbol 2",
+      "area": "Symbols",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Symbol button, or the command's keys on a hardware keyboard (ED23)"
+      }
+    },
+    {
+      "id": "editor.symbol3",
+      "title": "Toggle Symbol 3",
+      "area": "Symbols",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Symbol button, or the command's keys on a hardware keyboard (ED23)"
+      }
+    },
+    {
+      "id": "editor.symbol4",
+      "title": "Toggle Symbol 4",
+      "area": "Symbols",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Symbol button, or the command's keys on a hardware keyboard (ED23)"
+      }
+    },
+    {
+      "id": "editor.symbol5",
+      "title": "Toggle Symbol 5",
+      "area": "Symbols",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Symbol button, or the command's keys on a hardware keyboard (ED23)"
+      }
+    },
+    {
+      "id": "editor.symbol6",
+      "title": "Toggle Symbol 6",
+      "area": "Symbols",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Symbol button, or the command's keys on a hardware keyboard (ED23)"
+      }
+    },
+    {
+      "id": "editor.symbol7",
+      "title": "Toggle Symbol 7",
+      "area": "Symbols",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Symbol button, or the command's keys on a hardware keyboard (ED23)"
+      }
+    },
+    {
+      "id": "editor.symbol8",
+      "title": "Toggle Symbol 8",
+      "area": "Symbols",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Symbol button, or the command's keys on a hardware keyboard (ED23)"
+      }
+    },
+    {
+      "id": "editor.symbol9",
+      "title": "Toggle Symbol 9",
+      "area": "Symbols",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Symbol button, or the command's keys on a hardware keyboard (ED23)"
+      }
+    },
+    {
+      "id": "editor.symbolPicker",
+      "title": "Symbols…",
+      "area": "Symbols",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's format bar: its Symbol button, which lists every symbol; or the command's keys on a hardware keyboard (ED23)"
+      }
+    },
+    {
+      "id": "copy-markdown",
+      "title": "Copy as Markdown",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "The selection's menu: Copy as Markdown (ED9)"
+      }
+    },
+    {
+      "id": "copy-rich-text",
+      "title": "Copy as Rich Text",
+      "area": "Editor",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "The selection's menu: Copy as rich text (ED9)"
+      }
+    },
+    {
+      "id": "editor.insert.paragraph",
+      "title": "Insert: Text",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.heading1",
+      "title": "Insert: Heading 1",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.heading2",
+      "title": "Insert: Heading 2",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.heading3",
+      "title": "Insert: Heading 3",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.bulletList",
+      "title": "Insert: Bulleted List",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.orderedList",
+      "title": "Insert: Numbered List",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.taskList",
+      "title": "Insert: Checklist",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.blockquote",
+      "title": "Insert: Quote",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.horizontalRule",
+      "title": "Insert: Divider",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.codeBlock",
+      "title": "Insert: Code Block",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.table",
+      "title": "Insert: Table",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.callout",
+      "title": "Insert: Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.callout-note",
+      "title": "Insert: Note Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.callout-abstract",
+      "title": "Insert: Abstract Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.callout-info",
+      "title": "Insert: Info Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.callout-todo",
+      "title": "Insert: Todo Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.callout-tip",
+      "title": "Insert: Tip Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.callout-success",
+      "title": "Insert: Success Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.callout-question",
+      "title": "Insert: Question Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.callout-warning",
+      "title": "Insert: Warning Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.callout-failure",
+      "title": "Insert: Failure Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.callout-danger",
+      "title": "Insert: Danger Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.callout-bug",
+      "title": "Insert: Bug Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.callout-example",
+      "title": "Insert: Example Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.callout-quote",
+      "title": "Insert: Quote Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.toggle",
+      "title": "Insert: Toggle",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.mermaid",
+      "title": "Insert: Mermaid Diagram",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.blockMath",
+      "title": "Insert: Math Block",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.inlineMath",
+      "title": "Insert: Inline Math",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.wikilink",
+      "title": "Insert: Link to Note",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.embed",
+      "title": "Insert: Embed Note",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu: Embed note; its embeds render with T40 P7 (ED3, LK4)"
+      }
+    },
+    {
+      "id": "editor.insert.image",
+      "title": "Insert: Image",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.file",
+      "title": "Insert: File",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "The format bar's Attach a file (ED12)"
+      }
+    },
+    {
+      "id": "editor.insert.symbol",
+      "title": "Insert: Symbol",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "elsewhere": "The format bar's Symbol button, or Symbol in the slash menu (ED23)"
+      }
+    }
+  ],
+  "fuzzy": [
+    {
+      "query": "dark",
+      "ids": ["theme.toggleDark"]
+    },
+    {
+      "query": "week",
+      "ids": ["journal.thisWeek"]
+    },
+    {
+      "query": "folder",
+      "ids": ["folder.new"]
+    },
+    {
+      "query": "today",
+      "ids": ["journal.today"]
+    },
+    {
+      "query": "set",
+      "ids": ["app.settings", "app.display", "app.home", "journal.thisWeek"]
+    },
+    {
+      "query": "tr",
+      "ids": ["app.trash", "theme.toggleDark", "app.capture"]
+    },
+    {
+      "query": "new",
+      "ids": ["note.new", "folder.new"]
+    },
+    {
+      "query": "theme",
+      "ids": ["app.appearance", "theme.switch"]
+    },
+    {
+      "query": "nw",
+      "ids": ["note.new", "folder.new"]
+    },
+    {
+      "query": "zzz",
+      "ids": []
+    }
+  ]
+}

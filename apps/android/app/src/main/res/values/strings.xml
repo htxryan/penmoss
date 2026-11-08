@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Penmoss</string>
+    <string name="capture_label">Capture</string>
+    <string name="capture_share_label">Penmoss</string>
+    <string name="capture_widget_description">Capture a thought to today’s note or the Inbox</string>
+</resources>

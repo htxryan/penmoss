@@ -1,0 +1,194 @@
+{
+ "light-note": {
+  "viewport": [
+   1440,
+   900
+  ],
+  "title": {
+   "scrollWidth": 768,
+   "clientWidth": 768,
+   "scrollLeft": 0,
+   "height": 40
+  },
+  "doc": 864,
+  "text": 768
+ },
+ "light-empty": {
+  "viewport": [
+   1440,
+   900
+  ],
+  "title": {
+   "scrollWidth": 768,
+   "clientWidth": 768,
+   "scrollLeft": 0,
+   "height": 40
+  },
+  "doc": 864,
+  "text": 768
+ },
+ "light-empty-narrow": {
+  "viewport": [
+   1100,
+   760
+  ],
+  "title": {
+   "scrollWidth": 732,
+   "clientWidth": 732,
+   "scrollLeft": 0,
+   "height": 40
+  },
+  "doc": 828,
+  "text": 732
+ },
+ "light-pictures": [
+  {
+   "left": 344,
+   "top": 198.21875,
+   "bottom": 294.890625,
+   "textRects": [
+    [
+     344,
+     167,
+     676
+    ]
+   ]
+  },
+  {
+   "left": 320,
+   "top": 407.609375,
+   "bottom": 664.515625,
+   "textRects": [
+    [
+     320,
+     376,
+     524
+    ],
+    [
+     320,
+     673,
+     324
+    ],
+    [
+     324,
+     673,
+     670
+    ]
+   ]
+  }
+ ],
+ "light-tag-filter": {
+  "calendarTopBefore": 480,
+  "calendarTopAfter": 480
+ },
+ "light-full-width": {
+  "viewport": [
+   1440,
+   900
+  ],
+  "title": {
+   "scrollWidth": 768,
+   "clientWidth": 768,
+   "scrollLeft": 0,
+   "height": 40
+  },
+  "doc": 864,
+  "text": 768
+ },
+ "dark-note": {
+  "viewport": [
+   1440,
+   900
+  ],
+  "title": {
+   "scrollWidth": 768,
+   "clientWidth": 768,
+   "scrollLeft": 0,
+   "height": 40
+  },
+  "doc": 864,
+  "text": 768
+ },
+ "dark-empty": {
+  "viewport": [
+   1440,
+   900
+  ],
+  "title": {
+   "scrollWidth": 768,
+   "clientWidth": 768,
+   "scrollLeft": 0,
+   "height": 40
+  },
+  "doc": 864,
+  "text": 768
+ },
+ "dark-empty-narrow": {
+  "viewport": [
+   1100,
+   760
+  ],
+  "title": {
+   "scrollWidth": 732,
+   "clientWidth": 732,
+   "scrollLeft": 0,
+   "height": 40
+  },
+  "doc": 828,
+  "text": 732
+ },
+ "dark-pictures": [
+  {
+   "left": 344,
+   "top": 198.21875,
+   "bottom": 294.890625,
+   "textRects": [
+    [
+     344,
+     167,
+     676
+    ]
+   ]
+  },
+  {
+   "left": 320,
+   "top": 407.609375,
+   "bottom": 664.515625,
+   "textRects": [
+    [
+     320,
+     376,
+     524
+    ],
+    [
+     320,
+     673,
+     324
+    ],
+    [
+     324,
+     673,
+     670
+    ]
+   ]
+  }
+ ],
+ "dark-tag-filter": {
+  "calendarTopBefore": 480,
+  "calendarTopAfter": 480
+ },
+ "dark-full-width": {
+  "viewport": [
+   1440,
+   900
+  ],
+  "title": {
+   "scrollWidth": 768,
+   "clientWidth": 768,
+   "scrollLeft": 0,
+   "height": 40
+  },
+  "doc": 864,
+  "text": 768
+ }
+}

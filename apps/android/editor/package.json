@@ -1,0 +1,29 @@
+{
+  "name": "@penmoss/android-editor",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "The shared editor bundled into the Android app's WebView (T32), and its bridge to Kotlin",
+  "scripts": {
+    "build": "vite build && vite build --config vite.runner.config.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@penmoss/core": "workspace:*",
+    "@penmoss/editor": "workspace:*",
+    "@penmoss/git-notebook": "workspace:*",
+    "@penmoss/sync-client": "workspace:*",
+    "@penmoss/ui": "workspace:*",
+    "@tiptap/core": "3.32.0",
+    "@y/prosemirror": "2.0.0-15",
+    "@y/y": "14.0.0-rc.29",
+    "lib0": "1.0.0-rc.36"
+  },
+  "devDependencies": {
+    "happy-dom": "21.0.4",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  }
+}

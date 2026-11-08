@@ -1,0 +1,66 @@
+// Evidence capture for T48 in the Mac app (kept as docs/evidence/t48/capture/mac-evidence.spec.ts.txt;
+// not a suite spec). OUT=dir.
+import { expect, test, type Page } from '@playwright/test';
+import { mkdirSync } from 'node:fs';
+import { body, launch, mainBounds, removeDataDirs, signIn, ULID } from './support';
+
+const OUT = process.env['OUT'] ?? '/tmp/t48-evidence';
+mkdirSync(OUT, { recursive: true });
+const RUN = Date.now().toString(36).slice(-4);
+const NEW_NOTE = process.platform === 'darwin' ? 'Meta+Alt+KeyN' : 'Alt+KeyN';
+
+test.afterAll(() => removeDataDirs());
+
+async function comment(page: Page, text: string, said: string) {
+  await body(page).evaluate((root, wanted) => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const at = node.textContent?.indexOf(wanted) ?? -1;
+      if (at < 0) continue;
+      const range = document.createRange();
+      range.setStart(node, at);
+      range.setEnd(node, at + wanted.length);
+      window.getSelection()!.removeAllRanges();
+      window.getSelection()!.addRange(range);
+      (root as HTMLElement).focus();
+      return;
+    }
+  }, text);
+  await page.getByTestId('selection-toolbar').getByRole('button', { name: 'Comment' }).click();
+  await page.getByTestId('comment-new').fill(said);
+  await page.getByTestId('comment-new-send').click();
+}
+
+test('mac evidence', async () => {
+  test.setTimeout(300_000);
+  const launched = await launch();
+  const { app, page } = launched;
+  try {
+    await mainBounds(app, { x: 0, y: 0, width: 1360, height: 820 });
+    await signIn(launched);
+    await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();
+    await page.keyboard.press(NEW_NOTE);
+    await expect(page).toHaveURL(ULID);
+    await page.keyboard.type(`Trip notes ${RUN}`);
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Fly to Lisbon on the 12th and take the train to Porto.');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Book the river cruise before the weekend.');
+    await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+    await comment(page, 'train to Porto', 'Is the morning train faster than the bus?');
+    await comment(page, 'river cruise', 'Ask about the sunset one.');
+    for (const scheme of ['light', 'dark'] as const) {
+      await app.evaluate(({ nativeTheme }, s) => {
+        nativeTheme.themeSource = s;
+      }, scheme);
+      await page.emulateMedia({ colorScheme: scheme });
+      await expect(page.locator('html')).toHaveAttribute('data-mode', scheme);
+      await page.mouse.move(600, 600);
+      await page.waitForTimeout(600);
+      await page.screenshot({ path: `${OUT}/mac-${scheme}-panel.png` });
+    }
+    expect(launched.errors).toEqual([]);
+  } finally {
+    await app.close();
+  }
+});

@@ -1,0 +1,27 @@
+# gitleaks (T80.1, A1185): `task audit:secrets` scans the tree, `-- --history` every published
+# commit. gitleaks' default rules, with the false positives reviewed in docs/qa/public-release-audit.md
+# allowed by their shape, never by file: a real secret in any of these files still fails.
+title = "Penmoss"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Reviewed false positives (docs/qa/public-release-audit.md)"
+regexTarget = "secret"
+regexes = [
+  # ULIDs: note, comment and submission ids in tests (26 Crockford base-32 characters).
+  '''^0[0-9A-HJKMNP-TV-Z]{25}$''',
+  # The fake 12-byte comment anchor keys in the bridge contract and its tests.
+  '''^(0123456789abcdef01234567|89abcdef0123456789abcdef)$''',
+  # Keyboard shortcuts (aria-keyshortcuts, Playwright key names).
+  '''^(Alt|Shift|Control|Ctrl|Meta|Mod)(\+[A-Za-z]+)+$''',
+  # The repository's own name, passed as a token-check argument in a test.
+  '''^htxryan/penmoss$''',
+]
+
+[[allowlists]]
+description = "The relay's PEM parser matches the header text; no key is in the file"
+paths = ['''^apps/relay/src/github-auth\.ts$''']
+regexTarget = "match"
+regexes = ['''-----BEGIN RSA PRIVATE KEY-----/\.test\(''']

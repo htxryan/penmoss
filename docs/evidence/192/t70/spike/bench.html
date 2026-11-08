@@ -1,0 +1,24 @@
+<!doctype html><meta charset=utf-8><script type=module>
+import * as ort from 'file:///Users/redhale/src/penmoss-wt/t70-spike/apps/desktop/node_modules/onnxruntime-web/dist/ort.wasm.min.mjs';
+import { Tokenizer } from 'file:///Users/redhale/src/penmoss-wt/t70-spike/apps/desktop/node_modules/@huggingface/tokenizers/dist/tokenizers.min.mjs';
+const M = 'file:///private/tmp/claude-501/-Users-redhale-src-penmoss/8a4aebc4-18de-51ea-afe7-2d23f7783bbf/scratchpad/models/onnx-community/embeddinggemma-300m-ONNX';
+window.run = async (device) => {
+  try {
+  ort.env.wasm.wasmPaths = 'file:///Users/redhale/src/penmoss-wt/t70-spike/apps/desktop/node_modules/onnxruntime-web/dist/';
+  ort.env.wasm.numThreads = 1;
+  const tok = new Tokenizer(await (await fetch(M + '/tokenizer.json')).json(), await (await fetch(M + '/tokenizer_config.json')).json());
+  let t = performance.now();
+  const model = new Uint8Array(await (await fetch(M + '/onnx/model_q4.onnx')).arrayBuffer());
+  const data = new Uint8Array(await (await fetch(M + '/onnx/model_q4.onnx_data')).arrayBuffer());
+  const s = await ort.InferenceSession.create(model, { executionProviders: [device], externalData: [{ path: 'model_q4.onnx_data', data }] });
+  const load = performance.now() - t;
+  const embed = async (texts) => { const enc = texts.map((x) => tok.encode(x).ids); const w = Math.max(...enc.map((r) => r.length)); const ids = new BigInt64Array(texts.length * w), mask = new BigInt64Array(texts.length * w); enc.forEach((r, i) => r.forEach((id, c) => { ids[i*w+c] = BigInt(id); mask[i*w+c] = 1n; })); return (await s.run({ input_ids: new ort.Tensor('int64', ids, [texts.length, w]), attention_mask: new ort.Tensor('int64', mask, [texts.length, w]) })).sentence_embedding; };
+  const text = 'title: none | text: ' + 'Home lab power use and the UPS shutdown plan for long outages. '.repeat(3);
+  await embed([text]);
+  t = performance.now(); for (let k = 0; k < 4; k++) await embed(Array(8).fill(text)); const per = (performance.now() - t) / 32;
+  t = performance.now(); for (let k = 0; k < 10; k++) await embed(['task: search result | query: keep the computers running during a blackout']); const q = (performance.now() - t) / 10;
+  return { device, isolated: crossOriginIsolated, loadMs: Math.round(load), msPerChunk: +per.toFixed(1), msPerQuery: +q.toFixed(1) };
+  } catch (e) { return { device, error: String(e).slice(0, 300) }; }
+};
+window.ready = true;
+</script>

@@ -1,0 +1,122 @@
+Search eval: 99 notes, 147 chunks, indexed 99/99 in 37.1 s
+Embedder: embeddinggemma-300m-q4@5090578d/768/p1, 768 dimensions, floor 0.28
+-- concept queries (words, meaning, hybrid rank; — not in the top 50)
+  —   1   1  backup strategy for my notes → git-mirror
+  —   1   1  keep the computers running during a blackout → ups-shutdown
+  —   1   1  stop ads on every device in the house → adguard-dns
+  —   1   1  lamps that switch on when it gets dark → home-assistant
+  —   2   2  keep smart gadgets away from my laptop traffic → network-vlans
+  —   1   1  encrypted cloud copy of family pictures → offsite-backup
+  —   1   1  reach my servers while away from home → tailscale
+  —   1   1  how much electricity the servers use → homelab-power
+  —   1   1  when to move seedlings outside → tomatoes
+  —   1   1  turning food waste into soil → compost
+  —   1   1  bugs eating my vegetables → pests
+  —   1   1  looking after the bread culture → sourdough
+  —   1   1  dough for a wood-fired oven → pizza-dough
+  —   1   1  cooking lunches for the whole week ahead → meal-prep
+  —   1   1  brewing a good cup in the morning → coffee
+  —   2   2  preparing for a 21 km race → running-plan
+  —   1   1  trouble falling asleep → sleep
+  —   1   1  rehab exercises after a leg injury → physio
+  —   1   1  savings in case I lose my job → emergency-fund
+  —   1   1  paperwork for the IRS → taxes-2026
+  —   1   1  stop paying for services I never use → subscriptions
+  —   1   1  saving for old age with the company match → retirement
+  —   2   2  shrines and trains in Kyoto → japan-trip
+  —   1   1  what to take on a flight with only hand luggage → packing-list
+  —   1   1  equipment for sleeping outdoors → camping
+  —   1   1  why the production server stopped accepting writes → incident-review
+  —   2   2  concentrating without distractions → deep-work
+  —   1   1  building small routines that stick → atomic-habits
+  —   3   3  when the vehicle needs servicing → car-maintenance
+  —   1   1  what to buy for birthdays → gift-ideas
+-- keyword queries (words, meaning, hybrid rank; — not in the top 50)
+  1   1   1  restore notes from the git repository → git-mirror
+  1   1   1  hourly snapshots kept for two days → zfs-snapshots
+  1   1   1  neapolitan pizza dough hydration → pizza-dough
+  1   1   1  feed the sourdough starter flour and water → sourdough
+  1   1   1  pour-over coffee ratio → coffee
+  —   2   2  long run on saturday before race day → running-plan
+  1   1   1  high-yield savings account for a lost job → emergency-fund
+  2   2   2  kyoto temples and the rail pass → japan-trip
+  1   1   1  sleeping bag and tent for two → camping
+  1   1   1  primary database ran out of disk → incident-review
+  1   1   1  replace the furnace filter → hvac
+  1   1   1  dog vaccines due → dog-care
+  1   1   1  iot devices firewall rules vlan → network-vlans
+  1   1   1  gather forms before filing the tax return → taxes-2026
+  1   1   1  sow tomato seeds indoors under the grow light → tomatoes
+  1   1   1  guests shut down in order when the power fails → ups-shutdown
+  2   1   2  lamps turn on at sunset → home-assistant
+  1   2   1  cal newport shutdown ritual → deep-work
+  1   1   1  tyre pressure and oil changed → car-maintenance
+  —   1   1  interview loop with a coding exercise and system design → hiring
+-- held-out queries (words, meaning, hybrid rank; — not in the top 50)
+  —   1   1  the box that runs all my virtual machines → proxmox-host
+  —   1   1  naming television episodes so the media server recognises them → plex-library
+  —   1   1  copying films off physical discs onto the server → disc-ripping
+  —   2   2  what soil goes into the wooden vegetable boxes → raised-beds
+  —   1   1  how often the irrigation runs in a heat wave → watering
+  —   1   1  fast things to cook after work → weeknight-meals
+  —   1   1  a spicy stew made from leftover barbecue → chili
+  —   1   1  results from my yearly physical → doctor-visits
+  —   1   1  which lifts I do on which days → strength
+  —   1   1  where my pay goes each month → budget
+  —   1   1  renewing the cover on the house → insurance
+  —   1   1  a long weekend driving around central Texas → road-trip
+  —   1   1  replacing my travel document before it expires → passport
+  —   1   1  questions for my regular chat with a direct report → one-on-one
+  —   2   2  measurable goals for the team this quarter → okrs
+  —   2   2  how quickly to look at a colleague’s pull request → code-review
+  —   1   1  chores before relocating to a new address → move-checklist
+  —   1   1  my end-of-week reflection and planning → weekly-review
+  —   2   2  software I might build one day → app-ideas
+  —   1   1  looking after the heating and cooling system → hvac
+concept   words    top 5: 0/30 (0.0%), MRR 0.000
+concept   meaning  top 5: 30/30 (100.0%), MRR 0.911
+concept   hybrid   top 5: 30/30 (100.0%), MRR 0.911
+keyword   words    top 5: 18/20 (90.0%), MRR 0.850
+keyword   meaning  top 5: 20/20 (100.0%), MRR 0.925
+keyword   hybrid   top 5: 20/20 (100.0%), MRR 0.925
+tuning    words    top 5: 18/50 (36.0%), MRR 0.340
+tuning    meaning  top 5: 50/50 (100.0%), MRR 0.917
+tuning    hybrid   top 5: 50/50 (100.0%), MRR 0.917
+held-out  words    top 5: 0/20 (0.0%), MRR 0.000
+held-out  meaning  top 5: 20/20 (100.0%), MRR 0.900
+held-out  hybrid   top 5: 20/20 (100.0%), MRR 0.900
+-- unrelated queries (tuning) (best similarity; meaning-only hits at the floor 0.28)
+  0.243  zqxjkv wplmorth  (0)
+  0.129  quantum chromodynamics lattice gauge theory  (0)
+  0.174  medieval tapestry weaving looms  (0)
+  0.197  saxophone reed strength for jazz  (0)
+  0.152  volcanic rock formations in Iceland  (0)
+  0.220  cricket bowling technique for spin  (0)
+  0.176  knitting a cable sweater pattern  (0)
+  0.230  xyzzy plugh  (0)
+  0.097  the history of the Byzantine empire  (0)
+  0.209  how to tune a ukulele  (0)
+-- unrelated queries (held out) (best similarity; meaning-only hits at the floor 0.28)
+  0.152  bioluminescent fish in the deep ocean  (0)
+  0.235  origami crane folding steps  (0)
+  0.197  baroque harpsichord tuning temperaments  (0)
+  0.151  ancient Egyptian hieroglyph grammar  (0)
+  0.152  rook and pawn chess endgames  (0)
+  0.188  glacier calving in Antarctica  (0)
+  0.248  competitive yo-yo tricks  (0)
+  0.190  Puccini opera arias  (0)
+  0.269  curling stone sweeping technique  (0)
+  0.275  qwvbnz trelk  (0)
+-- the floor (A1155; this embedder's: 0.28)
+  labelled note's similarity: min 0.287, 5th 0.388, median 0.502
+  unrelated best: max 0.243; a floor separates them when it is in (0.243, 0.287]
+  floor 0.00: hybrid top 5 50/50, MRR 0.917; unrelated leaks 478, held-out leaks 500
+  floor 0.15: hybrid top 5 50/50, MRR 0.917; unrelated leaks 115, held-out leaks 147
+  floor 0.20: hybrid top 5 50/50, MRR 0.917; unrelated leaks 9, held-out leaks 60
+  floor 0.25: hybrid top 5 50/50, MRR 0.917; unrelated leaks 0, held-out leaks 4
+  floor 0.28: hybrid top 5 50/50, MRR 0.917; unrelated leaks 0, held-out leaks 0
+  floor 0.30: hybrid top 5 49/50, MRR 0.910; unrelated leaks 0, held-out leaks 0
+  floor 0.35: hybrid top 5 49/50, MRR 0.910; unrelated leaks 0, held-out leaks 0
+  floor 0.40: hybrid top 5 45/50, MRR 0.850; unrelated leaks 0, held-out leaks 0
+  floor 0.45: hybrid top 5 37/50, MRR 0.710; unrelated leaks 0, held-out leaks 0
+  floor 0.50: hybrid top 5 28/50, MRR 0.540; unrelated leaks 0, held-out leaks 0

@@ -1,0 +1,46 @@
+run mac-lane-mvtrfowp
+penmoss-git-notebook-scratch: without a token: github.com/htxryan/penmoss-git-notebook-scratch is not public, but only a signed-in check shows it is private: Penmoss needs a GitHub token that can read the repository. Penmoss syncs only with private repositories. If this one is private, confirm it with Touch ID; it is kept for this notebook and this remote only.
+
+Confirm private with Touch ID and add
+penmoss-git-notebook-scratch: privacy with the token: Yes. github.com/htxryan/penmoss-git-notebook-scratch is private.
+penmoss-git-notebook-scratch: made /notes/01M6480FT1M2FA4H9R3NZE0XXZ; in its section: 1; sections: 1
+penmoss-git-notebook-scratch: branch mac-lane-mvtrfowp files:
+.penmoss
+.penmoss/actors
+.penmoss/actors/01M6480C76KKNPSS45YRDW8SXQ.json
+.penmoss/notebook.json
+.penmoss/notes
+.penmoss/notes/01M6480FT1M2FA4H9R3NZE0XXZ
+.penmoss/notes/01M6480FT1M2FA4H9R3NZE0XXZ/01M6480C76KKNPSS45YRDW8SXQ.yjs
+.penmoss/workspace
+.penmoss/workspace/01M6480C76KKNPSS45YRDW8SXQ.yjs
+From the Mac mac-lane-mvtrfowp.md
+
+penmoss-git-notebook-scratch: CLI ls:
+01M6480FT1M2FA4H9R3NZE0XXZ  From the Mac mac-lane-mvtrfowp  2026-10-29 11:31
+
+penmoss-git-notebook-scratch: the CLI's note reached the Mac
+penmoss-git-notebook-code-scratch: without a token: github.com/htxryan/penmoss-git-notebook-code-scratch is not public, but only a signed-in check shows it is private: Penmoss needs a GitHub token that can read the repository. Penmoss syncs only with private repositories. If this one is private, confirm it with Touch ID; it is kept for this notebook and this remote only.
+
+Confirm private with Touch ID and add
+penmoss-git-notebook-code-scratch: privacy with the token: Yes. github.com/htxryan/penmoss-git-notebook-code-scratch is private.
+penmoss-git-notebook-code-scratch: made /notes/01M64811KH91R35JE0MJQSKRHA; in its section: 1; sections: 2
+penmoss-git-notebook-code-scratch: branch mac-lane-mvtrfowp files:
+docs
+docs/notes
+docs/notes/.penmoss
+docs/notes/.penmoss/actors
+docs/notes/.penmoss/actors/01M6480XZ5ND3NSDWGVVWBK0RY.json
+docs/notes/.penmoss/notebook.json
+docs/notes/.penmoss/notes
+docs/notes/.penmoss/notes/01M64811KH91R35JE0MJQSKRHA
+docs/notes/.penmoss/notes/01M64811KH91R35JE0MJQSKRHA/01M6480XZ5ND3NSDWGVVWBK0RY.yjs
+docs/notes/.penmoss/workspace
+docs/notes/.penmoss/workspace/01M6480XZ5ND3NSDWGVVWBK0RY.yjs
+docs/notes/From the Mac mac-lane-mvtrfowp.md
+
+penmoss-git-notebook-code-scratch: CLI ls:
+01M64811KH91R35JE0MJQSKRHA  From the Mac mac-lane-mvtrfowp  2026-10-29 11:31
+
+penmoss-git-notebook-code-scratch: the CLI's note reached the Mac
+removed both from the Mac

@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Penmoss Factory</title>
+    <style>
+      :root {
+        --bg: #f6f5f1;
+        --panel: #ffffff;
+        --ink: #1d1c1a;
+        --muted: #6b6860;
+        --line: #e4e1d8;
+        --accent: #2f6f4f;
+        --warn-bg: #fff4e0;
+        --warn-line: #e8b765;
+        --warn-ink: #6b4300;
+        --bad: #b3261e;
+        --chip: #efede6;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #161614;
+          --panel: #201f1d;
+          --ink: #ecebe6;
+          --muted: #a29f96;
+          --line: #34322e;
+          --accent: #7cc39b;
+          --warn-bg: #2e2412;
+          --warn-line: #8a6623;
+          --warn-ink: #f2cf8c;
+          --bad: #f2a29c;
+          --chip: #2b2a27;
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          14px/1.45 -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+      }
+      header {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      h1 {
+        font-size: 17px;
+        margin: 0;
+      }
+      #daemon {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      #daemon.bad {
+        color: var(--bad);
+      }
+      main {
+        padding: 16px;
+        display: grid;
+        gap: 16px;
+      }
+      h2 {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+        margin: 0 0 8px;
+        display: flex;
+        gap: 6px;
+      }
+      h2 .count {
+        color: var(--ink);
+      }
+      #waiting {
+        background: var(--warn-bg);
+        border: 1px solid var(--warn-line);
+        border-radius: 10px;
+        padding: 12px;
+      }
+      #waiting h2 {
+        color: var(--warn-ink);
+      }
+      #waiting:not(:has(.card)) {
+        display: none;
+      }
+      #board {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+        align-items: start;
+      }
+      .column {
+        min-width: 0;
+      }
+      .cards {
+        display: grid;
+        gap: 8px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 12px;
+        min-width: 0;
+      }
+      .card:target {
+        outline: 2px solid var(--accent);
+      }
+      .title {
+        font-weight: 600;
+        overflow-wrap: anywhere;
+      }
+      .num {
+        color: var(--muted);
+        font-weight: 400;
+      }
+      .step {
+        margin-top: 4px;
+      }
+      .since {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .reason {
+        margin-top: 6px;
+        color: var(--warn-ink);
+        font-weight: 500;
+        overflow-wrap: anywhere;
+      }
+      .open {
+        margin: 4px 0 0;
+        padding-left: 18px;
+      }
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .links a {
+        background: var(--chip);
+        color: var(--ink);
+        text-decoration: none;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+      }
+      .links a:hover {
+        color: var(--accent);
+      }
+      .links a.desktop {
+        background: var(--accent);
+        color: var(--bg);
+      }
+      .empty {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      #problem {
+        color: var(--bad);
+      }
+      @media (max-width: 900px) {
+        #board {
+          grid-template-columns: 1fr;
+        }
+      }
+      .actions {
+        margin-top: 10px;
+        display: grid;
+        gap: 8px;
+      }
+      .answers {
+        display: grid;
+        gap: 4px;
+      }
+      .answers .q {
+        font-weight: 500;
+      }
+      .choices,
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      button {
+        font: inherit;
+        font-size: 12px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--ink);
+        border-radius: 6px;
+        padding: 3px 10px;
+        cursor: pointer;
+      }
+      button:hover {
+        border-color: var(--accent);
+      }
+      button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--bg);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      textarea {
+        width: 100%;
+        min-height: 56px;
+        font: inherit;
+        color: var(--ink);
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 6px 8px;
+        resize: vertical;
+      }
+      .row label {
+        font-size: 12px;
+        color: var(--muted);
+        display: flex;
+        gap: 4px;
+        align-items: center;
+      }
+      .note {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .note:empty {
+        display: none;
+      }
+      .card.quiet .actions {
+        display: none;
+      }
+      .card.quiet:hover .actions,
+      .card.quiet:focus-within .actions {
+        display: grid;
+      }
+      @media (hover: none) {
+        .card.quiet .actions {
+          display: grid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Penmoss Factory</h1>
+      <span id="daemon">Connecting…</span>
+      <span id="problem"></span>
+    </header>
+    <main>
+      <section id="waiting">
+        <h2>Waiting on you <span class="count"></span></h2>
+        <div class="cards"></div>
+      </section>
+      <section id="board"></section>
+    </main>
+    <script>
+      const SAFE = /^(https:\/\/|claude:\/\/)/;
+      function el(tag, cls, text) {
+        const e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text !== undefined) e.textContent = text;
+        return e;
+      }
+      function ago(iso) {
+        if (!iso) return '';
+        const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
+        if (s < 60) return 'just now';
+        if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+        if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+        return `${Math.floor(s / 86400)} d ago`;
+      }
+      let writable = true;
+      async function act(body, box) {
+        const note = box.querySelector('.note');
+        for (const b of box.querySelectorAll('button, textarea')) b.disabled = true;
+        note.textContent = 'Sending…';
+        try {
+          const r = await fetch('/action', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          const j = await r.json().catch(() => ({}));
+          note.textContent = r.ok ? j.done : `Failed: ${j.error || r.status}`;
+          if (r.ok)
+            box.querySelector('textarea')?.value && (box.querySelector('textarea').value = '');
+        } catch (e) {
+          note.textContent = `Failed: ${e}`;
+        } finally {
+          for (const b of box.querySelectorAll('button, textarea')) b.disabled = false;
+        }
+      }
+      function button(label, cls, onClick) {
+        const b = el('button', cls, label);
+        b.type = 'button';
+        b.addEventListener('click', onClick);
+        return b;
+      }
+      function actions(c) {
+        const box = el('div', 'actions');
+        for (const q of c.questions) {
+          const a = el('div', 'answers');
+          a.append(el('div', 'q', q.text));
+          const choices = el('div', 'choices');
+          q.options.forEach((o, i) =>
+            choices.append(
+              button(o, i === 0 ? 'primary' : '', () =>
+                act({ kind: 'answer', issue: c.number, question: q.text, option: o }, box),
+              ),
+            ),
+          );
+          a.append(choices);
+          box.append(a);
+        }
+        const text = el('textarea');
+        text.placeholder = `Reply on #${c.number}`;
+        text.setAttribute('aria-label', `Reply on #${c.number}`);
+        const unblock = el('input');
+        unblock.type = 'checkbox';
+        unblock.checked = c.blocked;
+        const label = el('label');
+        label.append(unblock, document.createTextNode('and clear Blocked'));
+        const row = el('div', 'row');
+        row.append(
+          button(
+            'Send',
+            '',
+            () =>
+              text.value.trim() &&
+              act(
+                { kind: 'reply', issue: c.number, text: text.value, unblock: unblock.checked },
+                box,
+              ),
+          ),
+        );
+        if (c.blocked) row.append(label);
+        if (c.canComplete)
+          row.append(
+            button('Complete', 'primary', () => act({ kind: 'complete', issue: c.number }, box)),
+          );
+        row.append(
+          button(c.blocked ? 'Clear Blocked' : 'Set Blocked', '', () =>
+            act({ kind: 'block', issue: c.number, on: !c.blocked }, box),
+          ),
+        );
+        box.append(text, row, el('div', 'note'));
+        return box;
+      }
+      function card(c) {
+        const box = el('article', 'card');
+        box.id = `issue-${c.number}`;
+        const title = el('div', 'title');
+        title.append(el('span', 'num', `#${c.number} `), document.createTextNode(c.title));
+        box.append(title, el('div', 'step', c.step));
+        if (c.since) {
+          const t = el('div', 'since', ago(c.since));
+          t.dataset.since = c.since;
+          box.append(t);
+        }
+        if (c.reason) box.append(el('div', 'reason', c.reason));
+        if (c.open.length) {
+          const ul = el('ul', 'open');
+          for (const o of c.open) ul.append(el('li', '', o));
+          box.append(ul);
+        }
+        const links = el('div', 'links');
+        for (const l of c.links) {
+          if (!SAFE.test(l.href)) continue;
+          const a = el('a', l.href.startsWith('claude:') ? 'desktop' : '', l.label);
+          a.href = l.href;
+          if (l.href.startsWith('https:')) {
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+          }
+          links.append(a);
+        }
+        box.append(links);
+        if (writable && c.status !== 'Done') {
+          if (!c.blocked && !c.canComplete) box.classList.add('quiet');
+          box.append(actions(c));
+        }
+        return box;
+      }
+      function render(v) {
+        writable = v.writable;
+        // Keep a reply being typed: skip a redraw while a text box has focus and text.
+        const typing =
+          document.activeElement?.tagName === 'TEXTAREA' && document.activeElement.value;
+        if (typing) {
+          pending = v;
+          return;
+        }
+        const d = document.getElementById('daemon');
+        d.textContent = v.daemon
+          ? v.daemon.stale
+            ? `Daemon silent since ${ago(v.daemon.updatedAt)}`
+            : `Daemon running · updated ${ago(v.daemon.updatedAt)}`
+          : 'Daemon not running (task factory:start)';
+        d.className = !v.daemon || v.daemon.stale ? 'bad' : '';
+        const w = document.querySelector('#waiting .cards');
+        w.replaceChildren(...v.waiting.map(card));
+        document.querySelector('#waiting .count').textContent = v.waiting.length || '';
+        const board = document.getElementById('board');
+        board.replaceChildren(
+          ...v.columns.map((col) => {
+            const s = el('section', 'column');
+            const h = el('h2', '', col.name);
+            h.append(el('span', 'count', col.cards.length ? String(col.cards.length) : ''));
+            const list = el('div', 'cards');
+            list.append(
+              ...(col.cards.length ? col.cards.map(card) : [el('div', 'empty', 'Nothing here')]),
+            );
+            s.append(h, list);
+            return s;
+          }),
+        );
+        if (location.hash)
+          document.querySelector(location.hash)?.scrollIntoView({ block: 'center' });
+      }
+      let pending = null;
+      document.addEventListener('focusout', () =>
+        setTimeout(() => {
+          if (pending && document.activeElement?.tagName !== 'TEXTAREA') {
+            const v = pending;
+            pending = null;
+            render(v);
+          }
+        }, 0),
+      );
+      const events = new EventSource('/events');
+      events.onmessage = (m) => {
+        document.getElementById('problem').textContent = '';
+        render(JSON.parse(m.data));
+      };
+      events.addEventListener('problem', (m) => {
+        document.getElementById('problem').textContent = JSON.parse(m.data);
+      });
+      events.onerror = () => {
+        document.getElementById('problem').textContent = 'Reconnecting…';
+      };
+      setInterval(() => {
+        for (const t of document.querySelectorAll('[data-since]'))
+          t.textContent = ago(t.dataset.since);
+      }, 30000);
+    </script>
+  </body>
+</html>

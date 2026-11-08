@@ -1,0 +1,101 @@
+T27 git mirror: manual end-to-end check after the review fixes, 2026-10-23 (agent worker)
+
+Setup (no GitHub, no real credentials):
+- Fake GitHub: apps/server/scripts/fake-github-server.ts on 127.0.0.1:8791, backed by a real
+  bare repository (git hash-object / write-tree / commit-tree / update-ref), token
+  'fake-local-token'. It now answers GET /repos/{owner}/{repo}, lists folders as GitHub does,
+  and answers 404 for any other repository (a token that cannot see it).
+- Worker: wrangler dev --local --test-scheduled on :8798 with a fresh --persist-to state,
+  GIT_MIRROR_API=http://127.0.0.1:8791, GITHUB_MIRROR_TOKEN=fake-local-token (a made-up value for
+  the fake), DEV_AUTH=1. Cron fired with /__scheduled; signed in through /auth/session (a
+  session token, as the web app).
+- Web app: vite dev on :5181 proxied to :8798 (a throwaway config), headless Chromium for the
+  Settings screenshots.
+- The repository started with files added by hand (real git push): README.md, notes.md and a
+  plain file named Journal.
+- Over REST: /api/daily (folders Journal/2026/10), notes README, Notes, 'Q3: plans?', Photo
+  (an uploaded PNG), 'Big file' (a 12 MB PDF through PUT /api/attachments), 'Pending photo' (an
+  image never uploaded), Meeting (in Journal), Index (links).
+
+== Runs 1-3: first commit into a repository with hand-made files (A217, A213, A214) ==
+[mirror] {"outcome":"deferred","pending":9,"subrequests":21,"error":"2 note(s) have the name of a file added by hand; they get a suffix"}
+[mirror] {"outcome":"committed","commit":"e5c31b0…","rendered":9,"uploaded":1,"files":10,"pending":0,"subrequests":23}
+[mirror] {"outcome":"unchanged","subrequests":2}
+Status: mirrored 9, awaitingUpload 1, skipped [attachments/1ec26531….pdf: "12 MB is over the
+mirror's 10 MB limit"], failures 0.
+Files: README.md, notes.md, Journal (all Ryan's, untouched); 'README (WTWM6HQ).md',
+'Notes (7JTSST4).md' (notes.md is the same file on macOS), 'Journal (MHGWYHE)/2026/10/…' and
+'Journal (MHGWYHE)/Meeting.md' (the folder took a suffix: a file named Journal is there).
+
+Index.md kept its links as typed ([[README]] …): the driver created it before its targets were
+indexed, so Penmoss itself holds them unresolved (A124: an agent's [[target]] resolves by
+title when written). Not a mirror matter; a note created afterwards (Contents) resolves:
+  See [[README (WTWM6HQ)|README]], [[Notes (7JTSST4)|Notes]], [[Q3 plans|Q3: plans?]], …
+
+== Runs 4-5: the image arrives; a hand edit (A214, A206) ==
+'Pending photo''s image uploaded through PUT /api/attachments, the note edited (so it looks at
+once, before the 5-minute backoff); and Q3 plans.md edited by hand and pushed.
+[mirror] {"outcome":"committed","commit":"6dd3f72…","rendered":2,"uploaded":1,"files":3,"pending":1,"subrequests":15}
+[mirror] {"outcome":"committed","commit":"7a1557a…","rendered":1,"uploaded":0,"files":1,"subrequests":8}
+The hand edit of the mirror's own file was written over on the next run (Penmoss wins on its
+files):
+  -# Q3 plans (kept by hand)
+  +id: 01M5M9NKV62WQ0V7FZ0BT9MA3M …
+
+== Runs 6-8: Meeting.md added by hand at the top; Q3 moved into Journal (A217, A215) ==
+[mirror] {"outcome":"deferred","pending":2,"subrequests":6,"error":"1 note(s) have the name of a file added by hand; they get a suffix"}
+[mirror] {"outcome":"committed","commit":"e0e2261…","rendered":2,"uploaded":0,"files":5,"subrequests":12}
+  Mirror: 1 updated, 2 moved
+   Contents.md                                            | 2 +-
+   Journal (MHGWYHE)/{Meeting.md => Meeting (K894RRM).md} | 0
+   Q3 plans.md => Journal (MHGWYHE)/Q3 plans.md           | 0
+Contents.md now links [[Meeting (K894RRM)|Meeting]]. History of the hand-made files before the
+next step: README.md, notes.md, Journal and Meeting.md have only Ryan's commits.
+
+== Runs 9-13: the repository deleted and created again (empty) while a move waited (A216) ==
+'Notes' moved into Journal, then the bare repository removed and `git init --bare` again.
+[mirror] {"outcome":"deferred","pending":1,"subrequests":7,"error":"The repository no longer holds the files of 1 moved note(s); they are written again"}
+[mirror] {"outcome":"committed","commit":"b45ae75…","rendered":1,"files":2,"pending":11,"subrequests":10}
+[mirror] {"outcome":"committed","commit":"65c3f8a…","rendered":9,"uploaded":2,"files":11,"pending":0,"subrequests":22}
+[mirror] {"outcome":"idle","subrequests":2}
+GitHub calls of the deferred run: GET ref (409, empty), PUT contents/.penmoss/README.md,
+GET ref, GET commit, GET tree?recursive=1; no create tree.
+
+== git clone of the refilled repository ==
+65c3f8a Penmoss Mirror: 2 added, 9 updated
+b45ae75 Penmoss Mirror: 1 moved
+c85b091 Penmoss Start the Penmoss mirror
+./.penmoss/README.md
+./Big file.md
+./Contents.md
+./Index.md
+./Journal (MHGWYHE)/2026/10/2026-10-23.md
+./Journal (MHGWYHE)/Meeting (K894RRM).md
+./Journal (MHGWYHE)/Notes (7JTSST4).md
+./Journal (MHGWYHE)/Q3 plans.md
+./Pending photo.md
+./Photo.md
+./README (WTWM6HQ).md
+./attachments/419b19bf….png
+./attachments/72b17bae….png
+git fsck --strict: ok
+Obsidian check (node apps/server/scripts/obsidian-check-cli.ts <clone> README Notes
+'Q3: plans?' Meeting Photo, the last five being Index's unresolved links):
+  10 notes, 2 attachments, 9 links checked; 1 problems
+  - Big file.md: link attachments/1ec26531….pdf points at no file   <- the 12 MB file, left out
+    on purpose and listed in Settings
+
+== Settings → Git mirror (screenshots) ==
+- settings-git-mirror-ok.png: a note 'Sketch' with an image no device uploaded; the panel shows
+  "1 file not uploaded from a device yet" and the 12 MB PDF under "Left out of the repository".
+- settings-git-mirror-failing.png: the fake restarted to answer only for another repository (a
+  token that cannot see htxryan/penmoss-notes). One run:
+  [mirror] {"outcome":"failed","pending":1,"subrequests":7,"error":"htxryan/penmoss-notes was not found, or the token cannot see it (404): give the token access to that repository"}
+  GitHub calls: GET git/ref/heads/main 404, then GET /repos/htxryan/penmoss-notes 404.
+- settings-git-mirror-off.png: the e2e (no token).
+
+== Upload memory at the cap (A213) ==
+node --expose-gc apps/server/scripts/mirror-upload-memory.ts 10 20 (three runs, identical):
+node v24.22.1; peak heapUsed + arrayBuffers above a collected heap
+10 MB file: before A213 live 60.0 MB (6.00x), allocated 71.7 MB; now live 23.3 MB (2.33x), allocated 27.0 MB
+20 MB file: before A213 live 120.0 MB (6.00x), allocated 143.0 MB; now live 46.7 MB (2.33x), allocated 54.0 MB

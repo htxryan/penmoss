@@ -1,0 +1,1379 @@
+{
+  "version": 1,
+  "platform": "other",
+  "limits": {
+    "combosPerCommand": 4,
+    "comboChars": 40
+  },
+  "commands": [
+    {
+      "id": "app.palette",
+      "title": "Command Palette",
+      "area": "General",
+      "scope": "global",
+      "keys": ["Mod+K"],
+      "hidden": true
+    },
+    {
+      "id": "app.quickOpen",
+      "title": "Quick Open Note…",
+      "area": "Navigation",
+      "scope": "global",
+      "keys": ["Mod+P"]
+    },
+    {
+      "id": "app.search",
+      "title": "Search Notes…",
+      "area": "Navigation",
+      "scope": "global",
+      "keys": ["Mod+Shift+F"]
+    },
+    {
+      "id": "app.recent",
+      "title": "Switch to a Recent Note",
+      "area": "Navigation",
+      "scope": "global",
+      "keys": ["Mod+E"]
+    },
+    {
+      "id": "app.cheatsheet",
+      "title": "Keyboard Shortcuts",
+      "area": "General",
+      "scope": "global",
+      "keys": ["Mod+/"]
+    },
+    {
+      "id": "app.settings",
+      "title": "Settings",
+      "area": "General",
+      "scope": "global",
+      "keys": ["Mod+,"]
+    },
+    {
+      "id": "app.shortcuts",
+      "title": "Customise Keyboard Shortcuts",
+      "area": "General",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "app.gitNotebooks",
+      "title": "Git Notebooks",
+      "area": "General",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "app.status",
+      "title": "Feedback Status and GitHub Token",
+      "area": "General",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "app.checkForUpdates",
+      "title": "Check for Updates…",
+      "area": "General",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "app.sendFeedback",
+      "title": "Send Feedback",
+      "area": "General",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "app.home",
+      "title": "Close the Note",
+      "area": "Navigation",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "app.toggleSidebar",
+      "title": "Collapse or Expand the Sidebar",
+      "area": "Navigation",
+      "scope": "global",
+      "keys": ["Mod+\\"]
+    },
+    {
+      "id": "app.graph",
+      "title": "Graph",
+      "area": "Navigation",
+      "scope": "global",
+      "keys": ["Mod+Shift+G"]
+    },
+    {
+      "id": "note.new",
+      "title": "New Note",
+      "area": "Note",
+      "scope": "global",
+      "keys": ["Alt+N"]
+    },
+    {
+      "id": "app.capture",
+      "title": "Quick Capture…",
+      "area": "Note",
+      "scope": "global",
+      "keys": ["Mod+Shift+K"]
+    },
+    {
+      "id": "note.toggleSource",
+      "title": "Toggle Markdown Source",
+      "area": "Note",
+      "scope": "global",
+      "keys": ["Mod+Shift+M"]
+    },
+    {
+      "id": "note.delete",
+      "title": "Move to Trash",
+      "area": "Note",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "note.move",
+      "title": "Move to Folder…",
+      "area": "Note",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "note.history",
+      "title": "Version History",
+      "area": "Note",
+      "scope": "global",
+      "keys": ["Alt+Shift+H"]
+    },
+    {
+      "id": "note.saveVersion",
+      "title": "Save a Version of This Note Now",
+      "area": "Note",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "note.togglePanel",
+      "title": "Show or Hide the Note Panel",
+      "area": "Note",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "note.backlinks",
+      "title": "Show or Hide the Note’s Metadata",
+      "area": "Note",
+      "scope": "global",
+      "keys": ["Alt+Shift+I"]
+    },
+    {
+      "id": "note.comments",
+      "title": "Show or Hide Comments",
+      "area": "Note",
+      "scope": "global",
+      "keys": ["Alt+Shift+C"]
+    },
+    {
+      "id": "note.addNoteComment",
+      "title": "Add Note Comment",
+      "area": "Note",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "note.localGraph",
+      "title": "Show or Hide the Note’s Local Graph",
+      "area": "Navigation",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "app.trash",
+      "title": "Trash",
+      "area": "Navigation",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "note.openInNewWindow",
+      "title": "Open in New Window",
+      "area": "Note",
+      "scope": "global",
+      "keys": ["Alt+O"]
+    },
+    {
+      "id": "note.pinQuickAccess",
+      "title": "Pin or Unpin from Quick Access",
+      "area": "Note",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "window.back",
+      "title": "Back",
+      "area": "Navigation",
+      "scope": "global",
+      "keys": ["Alt+Left"]
+    },
+    {
+      "id": "window.forward",
+      "title": "Forward",
+      "area": "Navigation",
+      "scope": "global",
+      "keys": ["Alt+Right"]
+    },
+    {
+      "id": "window.keepOnTop",
+      "title": "Keep on Top",
+      "area": "General",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "note.focusTitle",
+      "title": "Edit the Note Title",
+      "area": "Note",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "note.copyMarkdown",
+      "title": "Copy Note as Markdown",
+      "area": "Note",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "note.copyRich",
+      "title": "Copy Note as Rich Text",
+      "area": "Note",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "note.copyAgentReference",
+      "title": "Copy Agent Reference",
+      "area": "Note",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "journal.today",
+      "title": "Today's Note",
+      "area": "Daily notes",
+      "scope": "global",
+      "keys": ["Mod+D"]
+    },
+    {
+      "id": "journal.thisWeek",
+      "title": "This Week's Note",
+      "area": "Daily notes",
+      "scope": "global",
+      "keys": ["Mod+Shift+W", "Alt+W"]
+    },
+    {
+      "id": "journal.previous",
+      "title": "Previous Day or Week",
+      "area": "Daily notes",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "journal.next",
+      "title": "Next Day or Week",
+      "area": "Daily notes",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "journal.week",
+      "title": "The Week of This Daily Note",
+      "area": "Daily notes",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "journal.calendar",
+      "title": "Show the Calendar",
+      "area": "Daily notes",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "journal.settings",
+      "title": "Time Zone and Templates",
+      "area": "Daily notes",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "note.addTag",
+      "title": "Add a Tag to This Note",
+      "area": "Tags",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "tags.clearFilter",
+      "title": "Show All Notes (Clear the Tag Filter)",
+      "area": "Tags",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "folder.new",
+      "title": "New Folder",
+      "area": "Folders",
+      "scope": "global",
+      "keys": ["Alt+Shift+N"]
+    },
+    {
+      "id": "folder.topLevel",
+      "title": "File New Notes at the Top Level",
+      "area": "Folders",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "folder.sortManual",
+      "title": "Sort the Current Folder: Manual",
+      "area": "Folders",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "folder.sortAlpha",
+      "title": "Sort the Current Folder: A–Z",
+      "area": "Folders",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "folder.sortModified",
+      "title": "Sort the Current Folder: Last Modified",
+      "area": "Folders",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "folder.moveUp",
+      "title": "Move the Focused Row Up",
+      "area": "Folders",
+      "scope": "tree",
+      "keys": ["Alt+Up"],
+      "hidden": true
+    },
+    {
+      "id": "folder.moveDown",
+      "title": "Move the Focused Row Down",
+      "area": "Folders",
+      "scope": "tree",
+      "keys": ["Alt+Down"],
+      "hidden": true
+    },
+    {
+      "id": "folder.rename",
+      "title": "Rename the Focused Folder",
+      "area": "Folders",
+      "scope": "tree",
+      "keys": ["F2"],
+      "hidden": true
+    },
+    {
+      "id": "folder.delete",
+      "title": "Delete the Focused Folder",
+      "area": "Folders",
+      "scope": "tree",
+      "keys": ["Delete", "Backspace"],
+      "hidden": true
+    },
+    {
+      "id": "git.syncNow",
+      "title": "Sync This Git Notebook Now",
+      "area": "Sync",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "git.signCommits",
+      "title": "Sign This Git Notebook’s Commits, or Stop",
+      "area": "Sync",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "git.pushAfter",
+      "title": "Set When This Git Notebook Pushes…",
+      "area": "Sync",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "git.pullEvery",
+      "title": "Set How Often This Git Notebook Pulls…",
+      "area": "Sync",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "git.useToken",
+      "title": "Use a Token for This Git Notebook…",
+      "area": "Sync",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "git.forgetToken",
+      "title": "Forget This Git Notebook’s Token",
+      "area": "Sync",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "git.identity",
+      "title": "Set This Git Notebook’s Commit Name and Email…",
+      "area": "Sync",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "git.reconfirmPurges",
+      "title": "Confirm Delete for Good Again…",
+      "area": "Sync",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "git.remove",
+      "title": "Remove This Git Notebook from This Mac…",
+      "area": "Sync",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "app.appearance",
+      "title": "Appearance and Themes",
+      "area": "Appearance",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "app.display",
+      "title": "Sidebar Display Settings",
+      "area": "Appearance",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "app.symbols",
+      "title": "Edit Line Symbols",
+      "area": "Symbols",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "theme.switch",
+      "title": "Switch Theme…",
+      "area": "Appearance",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "theme.toggleDark",
+      "title": "Toggle Dark Mode",
+      "area": "Appearance",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "note.fullWidth",
+      "title": "Toggle Full-Width Notes",
+      "area": "Note",
+      "scope": "global",
+      "keys": ["Alt+Shift+W"]
+    },
+    {
+      "id": "editor.bold",
+      "title": "Bold",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+B"]
+    },
+    {
+      "id": "editor.italic",
+      "title": "Italic",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+I"]
+    },
+    {
+      "id": "editor.strike",
+      "title": "Strikethrough",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+Shift+S"]
+    },
+    {
+      "id": "editor.code",
+      "title": "Inline Code",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+Shift+E"]
+    },
+    {
+      "id": "editor.highlight",
+      "title": "Highlight",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+Shift+H"]
+    },
+    {
+      "id": "editor.link",
+      "title": "Link Selected Text",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+K"],
+      "yields": true
+    },
+    {
+      "id": "editor.toolbar",
+      "title": "Focus the Formatting Toolbar",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Alt+F10"],
+      "yields": true
+    },
+    {
+      "id": "editor.comment",
+      "title": "Comment",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Alt+Shift+M"]
+    },
+    {
+      "id": "editor.paragraph",
+      "title": "Turn into Text",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+Shift+0"]
+    },
+    {
+      "id": "editor.heading1",
+      "title": "Heading 1",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+Shift+1"]
+    },
+    {
+      "id": "editor.heading2",
+      "title": "Heading 2",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+Shift+2"]
+    },
+    {
+      "id": "editor.heading3",
+      "title": "Heading 3",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+Shift+3"]
+    },
+    {
+      "id": "editor.heading4",
+      "title": "Heading 4",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+Shift+4"]
+    },
+    {
+      "id": "editor.heading5",
+      "title": "Heading 5",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+Shift+5"]
+    },
+    {
+      "id": "editor.heading6",
+      "title": "Heading 6",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+Shift+6"]
+    },
+    {
+      "id": "editor.bulletList",
+      "title": "Bulleted List",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+Shift+8"]
+    },
+    {
+      "id": "editor.orderedList",
+      "title": "Numbered List",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+Shift+7"]
+    },
+    {
+      "id": "editor.taskList",
+      "title": "Checklist",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+Shift+9"]
+    },
+    {
+      "id": "editor.blockquote",
+      "title": "Quote",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+Shift+B"]
+    },
+    {
+      "id": "editor.codeBlock",
+      "title": "Code Block",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Alt+C"]
+    },
+    {
+      "id": "editor.undo",
+      "title": "Undo",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+Z"]
+    },
+    {
+      "id": "editor.redo",
+      "title": "Redo",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+Shift+Z", "Mod+Y"]
+    },
+    {
+      "id": "editor.moveBlockUp",
+      "title": "Move Block Up",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Alt+Shift+Up"],
+      "yields": true
+    },
+    {
+      "id": "editor.moveBlockDown",
+      "title": "Move Block Down",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Alt+Shift+Down"],
+      "yields": true
+    },
+    {
+      "id": "editor.duplicateBlock",
+      "title": "Duplicate Block",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.deleteBlock",
+      "title": "Delete Block",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.symbol1",
+      "title": "Toggle Symbol 1",
+      "area": "Symbols",
+      "scope": "editor",
+      "keys": ["Alt+Shift+1"]
+    },
+    {
+      "id": "editor.symbol2",
+      "title": "Toggle Symbol 2",
+      "area": "Symbols",
+      "scope": "editor",
+      "keys": ["Alt+Shift+2"]
+    },
+    {
+      "id": "editor.symbol3",
+      "title": "Toggle Symbol 3",
+      "area": "Symbols",
+      "scope": "editor",
+      "keys": ["Alt+Shift+3"]
+    },
+    {
+      "id": "editor.symbol4",
+      "title": "Toggle Symbol 4",
+      "area": "Symbols",
+      "scope": "editor",
+      "keys": ["Alt+Shift+4"]
+    },
+    {
+      "id": "editor.symbol5",
+      "title": "Toggle Symbol 5",
+      "area": "Symbols",
+      "scope": "editor",
+      "keys": ["Alt+Shift+5"]
+    },
+    {
+      "id": "editor.symbol6",
+      "title": "Toggle Symbol 6",
+      "area": "Symbols",
+      "scope": "editor",
+      "keys": ["Alt+Shift+6"]
+    },
+    {
+      "id": "editor.symbol7",
+      "title": "Toggle Symbol 7",
+      "area": "Symbols",
+      "scope": "editor",
+      "keys": ["Alt+Shift+7"]
+    },
+    {
+      "id": "editor.symbol8",
+      "title": "Toggle Symbol 8",
+      "area": "Symbols",
+      "scope": "editor",
+      "keys": ["Alt+Shift+8"]
+    },
+    {
+      "id": "editor.symbol9",
+      "title": "Toggle Symbol 9",
+      "area": "Symbols",
+      "scope": "editor",
+      "keys": ["Alt+Shift+9"]
+    },
+    {
+      "id": "editor.symbolPicker",
+      "title": "Symbols…",
+      "area": "Symbols",
+      "scope": "editor",
+      "keys": ["Alt+Shift+0"]
+    },
+    {
+      "id": "copy-markdown",
+      "title": "Copy as Markdown",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": ["Mod+Shift+C"]
+    },
+    {
+      "id": "copy-rich-text",
+      "title": "Copy as Rich Text",
+      "area": "Editor",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.paragraph",
+      "title": "Insert: Text",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.heading1",
+      "title": "Insert: Heading 1",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.heading2",
+      "title": "Insert: Heading 2",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.heading3",
+      "title": "Insert: Heading 3",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.bulletList",
+      "title": "Insert: Bulleted List",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.orderedList",
+      "title": "Insert: Numbered List",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.taskList",
+      "title": "Insert: Checklist",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.blockquote",
+      "title": "Insert: Quote",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.horizontalRule",
+      "title": "Insert: Divider",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.codeBlock",
+      "title": "Insert: Code Block",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.table",
+      "title": "Insert: Table",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.callout",
+      "title": "Insert: Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.callout-note",
+      "title": "Insert: Note Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.callout-abstract",
+      "title": "Insert: Abstract Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.callout-info",
+      "title": "Insert: Info Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.callout-todo",
+      "title": "Insert: Todo Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.callout-tip",
+      "title": "Insert: Tip Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.callout-success",
+      "title": "Insert: Success Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.callout-question",
+      "title": "Insert: Question Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.callout-warning",
+      "title": "Insert: Warning Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.callout-failure",
+      "title": "Insert: Failure Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.callout-danger",
+      "title": "Insert: Danger Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.callout-bug",
+      "title": "Insert: Bug Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.callout-example",
+      "title": "Insert: Example Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.callout-quote",
+      "title": "Insert: Quote Callout",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.toggle",
+      "title": "Insert: Toggle",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.mermaid",
+      "title": "Insert: Mermaid Diagram",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.blockMath",
+      "title": "Insert: Math Block",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.inlineMath",
+      "title": "Insert: Inline Math",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.wikilink",
+      "title": "Insert: Link to Note",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.embed",
+      "title": "Insert: Embed Note",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.image",
+      "title": "Insert: Image",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.file",
+      "title": "Insert: File",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.symbol",
+      "title": "Insert: Symbol",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    }
+  ],
+  "reserved": [
+    "Mod+C",
+    "Mod+V",
+    "Mod+X",
+    "Mod+A",
+    "Mod+Z",
+    "Mod+Shift+Z",
+    "Mod+Y",
+    "Mod+F",
+    "Mod+R",
+    "Ctrl+A",
+    "Ctrl+E",
+    "Ctrl+K",
+    "Ctrl+D",
+    "Ctrl+H",
+    "Ctrl+N",
+    "Ctrl+P",
+    "Ctrl+B",
+    "Ctrl+F"
+  ],
+  "events": [
+    {
+      "key": "k",
+      "code": "KeyK",
+      "ctrl": true,
+      "alt": false,
+      "shift": false,
+      "meta": false,
+      "combo": "Mod+K"
+    },
+    {
+      "key": "K",
+      "code": "KeyK",
+      "ctrl": true,
+      "alt": false,
+      "shift": true,
+      "meta": false,
+      "combo": "Mod+Shift+K"
+    },
+    {
+      "key": "n",
+      "code": "KeyN",
+      "ctrl": false,
+      "alt": true,
+      "shift": false,
+      "meta": false,
+      "combo": "Alt+N"
+    },
+    {
+      "key": "N",
+      "code": "KeyN",
+      "ctrl": false,
+      "alt": true,
+      "shift": true,
+      "meta": false,
+      "combo": "Alt+Shift+N"
+    },
+    {
+      "key": "/",
+      "code": "Slash",
+      "ctrl": true,
+      "alt": false,
+      "shift": false,
+      "meta": false,
+      "combo": "Mod+/"
+    },
+    {
+      "key": ",",
+      "code": "Comma",
+      "ctrl": true,
+      "alt": false,
+      "shift": false,
+      "meta": false,
+      "combo": "Mod+,"
+    },
+    {
+      "key": "\\",
+      "code": "Backslash",
+      "ctrl": true,
+      "alt": false,
+      "shift": false,
+      "meta": false,
+      "combo": "Mod+\\"
+    },
+    {
+      "key": "ArrowUp",
+      "code": "ArrowUp",
+      "ctrl": false,
+      "alt": true,
+      "shift": false,
+      "meta": false,
+      "combo": "Alt+Up"
+    },
+    {
+      "key": "ArrowDown",
+      "code": "ArrowDown",
+      "ctrl": false,
+      "alt": true,
+      "shift": true,
+      "meta": false,
+      "combo": "Alt+Shift+Down"
+    },
+    {
+      "key": "F2",
+      "code": "F2",
+      "ctrl": false,
+      "alt": false,
+      "shift": false,
+      "meta": false,
+      "combo": "F2"
+    },
+    {
+      "key": "F10",
+      "code": "F10",
+      "ctrl": false,
+      "alt": true,
+      "shift": false,
+      "meta": false,
+      "combo": "Alt+F10"
+    },
+    {
+      "key": ")",
+      "code": "Digit0",
+      "ctrl": true,
+      "alt": false,
+      "shift": true,
+      "meta": false,
+      "combo": "Mod+Shift+0"
+    },
+    {
+      "key": "1",
+      "code": "Digit1",
+      "ctrl": true,
+      "alt": false,
+      "shift": true,
+      "meta": false,
+      "combo": "Mod+Shift+1"
+    },
+    {
+      "key": "*",
+      "code": "Digit8",
+      "ctrl": true,
+      "alt": false,
+      "shift": true,
+      "meta": false,
+      "combo": "Mod+Shift+8"
+    },
+    {
+      "key": "!",
+      "code": "Digit1",
+      "ctrl": false,
+      "alt": true,
+      "shift": true,
+      "meta": false,
+      "combo": "Alt+Shift+1"
+    },
+    {
+      "key": "Delete",
+      "code": "Delete",
+      "ctrl": false,
+      "alt": false,
+      "shift": false,
+      "meta": false,
+      "combo": "Delete"
+    },
+    {
+      "key": "Enter",
+      "code": "Enter",
+      "ctrl": true,
+      "alt": false,
+      "shift": false,
+      "meta": false,
+      "combo": "Mod+Enter"
+    },
+    {
+      "key": " ",
+      "code": "Space",
+      "ctrl": true,
+      "alt": false,
+      "shift": false,
+      "meta": false,
+      "combo": "Mod+Space"
+    },
+    {
+      "key": "k",
+      "code": "KeyK",
+      "ctrl": false,
+      "alt": false,
+      "shift": false,
+      "meta": true,
+      "combo": "Meta+K"
+    },
+    {
+      "key": "Control",
+      "code": "ControlLeft",
+      "ctrl": true,
+      "alt": false,
+      "shift": false,
+      "meta": false,
+      "combo": null
+    }
+  ],
+  "problems": [
+    {
+      "combo": "Mod+K",
+      "problem": null
+    },
+    {
+      "combo": "Mod+Shift+K",
+      "problem": null
+    },
+    {
+      "combo": "Alt+N",
+      "problem": null
+    },
+    {
+      "combo": "Alt+Shift+N",
+      "problem": null
+    },
+    {
+      "combo": "Mod+Alt+N",
+      "problem": "altgr"
+    },
+    {
+      "combo": "Mod+Alt+Shift+N",
+      "problem": "altgr"
+    },
+    {
+      "combo": "Mod+Alt+Up",
+      "problem": null
+    },
+    {
+      "combo": "Shift+K",
+      "problem": "types"
+    },
+    {
+      "combo": "K",
+      "problem": "types"
+    },
+    {
+      "combo": "F2",
+      "problem": null
+    },
+    {
+      "combo": "Shift+F5",
+      "problem": null
+    },
+    {
+      "combo": "Delete",
+      "problem": "types"
+    },
+    {
+      "combo": "Mod+C",
+      "problem": "reserved"
+    },
+    {
+      "combo": "Mod+V",
+      "problem": "reserved"
+    },
+    {
+      "combo": "Mod+Shift+Z",
+      "problem": "reserved"
+    },
+    {
+      "combo": "Mod+F",
+      "problem": "reserved"
+    },
+    {
+      "combo": "Ctrl+A",
+      "problem": "reserved"
+    },
+    {
+      "combo": "Mod+/",
+      "problem": null
+    },
+    {
+      "combo": "Alt+Up",
+      "problem": null
+    }
+  ],
+  "format": [
+    {
+      "combo": "Mod+Shift+E",
+      "text": "Ctrl+Shift+E"
+    },
+    {
+      "combo": "Alt+Shift+H",
+      "text": "Alt+Shift+H"
+    },
+    {
+      "combo": "Mod+/",
+      "text": "Ctrl+/"
+    },
+    {
+      "combo": "Alt+Up",
+      "text": "Alt+↑"
+    },
+    {
+      "combo": "Mod+,",
+      "text": "Ctrl+,"
+    },
+    {
+      "combo": "F2",
+      "text": "F2"
+    },
+    {
+      "combo": "Escape",
+      "text": "Esc"
+    },
+    {
+      "combo": "Mod+\\",
+      "text": "Ctrl+\\"
+    }
+  ],
+  "stored": {
+    "valid": [[], ["Mod+Shift+E"], ["Alt+Up", "F2"], ["Mod+Alt+N"], ["Mod++"]],
+    "invalid": [
+      "Mod+K",
+      ["mod+k"],
+      ["Shift+Mod+K"],
+      ["Meta+K"],
+      ["Mod+K", "Mod+K"],
+      ["Mod+A", "Mod+B", "Mod+D", "Mod+E", "Mod+G"],
+      [42],
+      [""]
+    ]
+  },
+  "usable": [
+    {
+      "raw": {
+        "note.new": ["alt+shift+n", "Mod+Alt+N"]
+      },
+      "usable": {
+        "note.new": ["Alt+Shift+N"]
+      }
+    },
+    {
+      "raw": {
+        "editor.undo": ["Mod+Z", "Mod+U"]
+      },
+      "usable": {
+        "editor.undo": ["Mod+Z", "Mod+U"]
+      }
+    },
+    {
+      "raw": {
+        "app.search": ["Mod+C"]
+      },
+      "usable": {}
+    },
+    {
+      "raw": {
+        "app.palette": []
+      },
+      "usable": {
+        "app.palette": []
+      }
+    },
+    {
+      "raw": {
+        "app.recent": "Mod+E"
+      },
+      "usable": {}
+    },
+    {
+      "raw": {
+        "app.graph": ["Shift+G", "Mod+Shift+G"]
+      },
+      "usable": {
+        "app.graph": ["Mod+Shift+G"]
+      }
+    }
+  ]
+}

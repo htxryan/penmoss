@@ -1,0 +1,1253 @@
+/*
+ * Editor blocks (T9 code, T11 tables, checklists and callouts, T12 diagrams
+ * and math) and editing UI (T14 slash menu, selection toolbar, drag handle,
+ * highlight). Every colour is a token set by the theme (T28).
+ */
+/*
+ * The code palette, callout colours and highlight come from the theme (T28):
+ * `--pm-code-keyword`… `--pm-callout-note`… `--pm-highlight-bg`. Derived here.
+ */
+:root {
+  /* Syntax highlighting (highlight.js classes, see code-highlight.ts). */
+  --pm-code-fg: var(--pm-fg);
+  --pm-code-addition-bg: color-mix(in oklab, var(--pm-code-addition) 16%, transparent);
+  --pm-code-deletion-bg: color-mix(in oklab, var(--pm-code-deletion) 16%, transparent);
+  --pm-table-header-bg: color-mix(in oklab, var(--pm-bg), var(--pm-fg) 5%);
+  /* Floating editor UI (T14) and menus. */
+  --pm-popover-shadow:
+    0 6px 24px color-mix(in oklab, var(--pm-shadow-color) 14%, transparent),
+    0 1px 3px color-mix(in oklab, var(--pm-shadow-color) 10%, transparent);
+  --pm-option-active: color-mix(in oklab, var(--pm-accent) 16%, transparent);
+}
+
+:root[data-mode='dark'] {
+  --pm-popover-shadow:
+    0 6px 24px color-mix(in oklab, var(--pm-shadow-color) 45%, transparent),
+    0 1px 3px color-mix(in oklab, var(--pm-shadow-color) 35%, transparent);
+  --pm-option-active: color-mix(in oklab, var(--pm-accent) 24%, transparent);
+}
+
+/*
+ * Markdown kept as written (A157): raw blocks edit like code under a label,
+ * raw spans are dashed chips. Both show the markdown, never its HTML.
+ */
+.note-body pre.pm-raw-markdown {
+  border: 1px dashed var(--pm-border);
+  white-space: pre-wrap;
+}
+
+.note-body pre.pm-raw-markdown::before {
+  content: 'Markdown kept as written';
+  display: block;
+  margin-bottom: 0.3rem;
+  color: var(--pm-muted);
+  font-family: var(--pm-font);
+  font-size: 0.75rem;
+  user-select: none;
+}
+
+.note-body code.pm-raw-inline {
+  border: 1px dashed var(--pm-border);
+  color: var(--pm-muted);
+}
+
+/* Code blocks: a header (language, Copy) above <pre><code>, in a frame like a table's (T36). */
+.note-body .pm-code-block {
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-code-bg);
+}
+
+.pm-code-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2rem;
+  padding: 0.15rem 0.3rem 0.15rem 0.4rem;
+  border-bottom: 1px solid var(--pm-border-soft);
+  font-family: var(--pm-font);
+  font-size: var(--pm-text-xs);
+  line-height: 1.4;
+  user-select: none;
+}
+
+.pm-code-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: 1.6rem;
+  padding: 0 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--pm-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.pm-code-toolbar button:hover,
+.pm-code-toolbar button:focus-visible {
+  border-color: var(--pm-border);
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+}
+
+/* The prototype's copy icon beside the label (the label itself changes to Copied). */
+.pm-code-copy::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='8.5' y='8.5' width='12' height='12' rx='2'/%3E%3Cpath d='M15.5 8.5v-2a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+.pm-code-toolbar .pm-code-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.note-body .pm-code-block pre {
+  margin: 0;
+  line-height: 1.55;
+  padding: 0.7rem 0.9rem 0.8rem;
+  background: none;
+  tab-size: 2;
+}
+
+.note-body .pm-code-block code {
+  color: var(--pm-code-fg);
+  white-space: pre;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-doctag,
+.hljs-meta.hljs-keyword {
+  color: var(--pm-code-keyword);
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-char,
+.hljs-meta.hljs-string,
+.hljs-template-tag {
+  color: var(--pm-code-string);
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--pm-code-comment);
+  font-style: italic;
+}
+
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet {
+  color: var(--pm-code-number);
+}
+
+.hljs-title,
+.hljs-section {
+  color: var(--pm-code-function);
+}
+
+.hljs-type,
+.hljs-built_in,
+.hljs-title.class_,
+.hljs-selector-class,
+.hljs-selector-id,
+.hljs-selector-pseudo {
+  color: var(--pm-code-type);
+}
+
+.hljs-variable,
+.hljs-template-variable,
+.hljs-attr,
+.hljs-attribute,
+.hljs-property,
+.hljs-selector-attr {
+  color: var(--pm-code-variable);
+}
+
+.hljs-meta {
+  color: var(--pm-code-meta);
+}
+
+.hljs-tag,
+.hljs-name {
+  color: var(--pm-code-tag);
+}
+
+.hljs-addition {
+  background: var(--pm-code-addition-bg);
+}
+
+.hljs-deletion {
+  background: var(--pm-code-deletion-bg);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 600;
+}
+
+/*
+ * Tables: a scrolling grid, and a toolbar that floats above it while the
+ * selection is in the table. The toolbar takes no space in the flow, so a
+ * table sits in the note's rhythm like any other block (T36, A187); before,
+ * a hidden toolbar kept its space and left a gap above every table (about
+ * 100 px on a phone, where its nine buttons wrapped).
+ */
+.note-body .pm-table {
+  position: relative;
+}
+
+.pm-table-toolbar {
+  position: absolute;
+  bottom: calc(100% + 0.25rem);
+  left: 0;
+  z-index: 3;
+  display: none;
+  align-items: center;
+  gap: 0.15rem;
+  max-width: 100%;
+  padding: 0.15rem;
+  overflow-x: auto;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-popover-shadow);
+  font-family: var(--pm-font);
+  font-size: var(--pm-text-xs);
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+  scrollbar-width: none;
+}
+
+.pm-table.pm-table-active > .pm-table-toolbar {
+  display: flex;
+}
+
+/* A table that opens the note has its toolbar below it, not over the tags and title (T39). */
+.note-body .ProseMirror > .pm-table:first-child > .pm-table-toolbar {
+  top: calc(100% + 0.25rem);
+  bottom: auto;
+}
+
+.pm-table-toolbar button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--pm-fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.pm-table-toolbar button:hover {
+  background: var(--pm-hover);
+}
+
+.pm-table-toolbar button:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: -2px;
+}
+
+.pm-table-separator {
+  flex: none;
+  width: 1px;
+  height: 1rem;
+  margin: 0 0.2rem;
+  background: var(--pm-border);
+}
+
+/* The grid fills the column inside a rounded frame, after the prototype's table. */
+.pm-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+}
+
+.note-body .pm-table table {
+  border-collapse: collapse;
+  /* The frame draws the outside edge; cells draw only the lines between them. */
+  border-style: hidden;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.note-body .pm-table th,
+.note-body .pm-table td {
+  min-width: 4rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--pm-border);
+  vertical-align: top;
+  text-align: left;
+}
+
+.note-body .pm-table th {
+  background: var(--pm-table-header-bg);
+  font-weight: 600;
+}
+
+.note-body .pm-table .selectedCell {
+  background: var(--pm-drop);
+}
+
+/* Callouts and toggles: a header (fold button, type, title) above the body. */
+.note-body .pm-callout {
+  --pm-callout-accent: var(--pm-callout-note);
+  padding: 0.6rem 0.9rem 0.65rem;
+  border: 1px solid color-mix(in oklab, var(--pm-callout-accent) 28%, transparent);
+  border-radius: 0;
+  background: color-mix(in oklab, var(--pm-callout-accent) 7%, var(--pm-bg));
+}
+
+.pm-callout[data-callout-type='abstract'] {
+  --pm-callout-accent: var(--pm-callout-abstract);
+}
+.pm-callout[data-callout-type='info'] {
+  --pm-callout-accent: var(--pm-callout-info);
+}
+.pm-callout[data-callout-type='todo'] {
+  --pm-callout-accent: var(--pm-callout-todo);
+}
+.pm-callout[data-callout-type='tip'] {
+  --pm-callout-accent: var(--pm-callout-tip);
+}
+.pm-callout[data-callout-type='success'] {
+  --pm-callout-accent: var(--pm-callout-success);
+}
+.pm-callout[data-callout-type='question'] {
+  --pm-callout-accent: var(--pm-callout-question);
+}
+.pm-callout[data-callout-type='warning'] {
+  --pm-callout-accent: var(--pm-callout-warning);
+}
+.pm-callout[data-callout-type='failure'] {
+  --pm-callout-accent: var(--pm-callout-failure);
+}
+.pm-callout[data-callout-type='danger'] {
+  --pm-callout-accent: var(--pm-callout-danger);
+}
+.pm-callout[data-callout-type='bug'] {
+  --pm-callout-accent: var(--pm-callout-bug);
+}
+.pm-callout[data-callout-type='example'] {
+  --pm-callout-accent: var(--pm-callout-example);
+}
+.pm-callout[data-callout-type='quote'] {
+  --pm-callout-accent: var(--pm-callout-quote);
+}
+
+.pm-callout-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--pm-font);
+  font-size: 0.92rem;
+  user-select: none;
+}
+
+.pm-callout-icon {
+  flex: none;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--pm-callout-accent);
+}
+
+.pm-callout-fold {
+  display: inline-grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--pm-callout-accent);
+  cursor: pointer;
+}
+
+.pm-callout-fold[hidden] {
+  display: none;
+}
+
+.pm-callout-fold::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-top: 0.3rem solid transparent;
+  border-bottom: 0.3rem solid transparent;
+  border-left: 0.42rem solid currentColor;
+  transition: transform 120ms ease;
+}
+
+.pm-callout-fold[aria-expanded='true']::before {
+  transform: rotate(90deg);
+}
+
+.pm-callout-fold:hover {
+  background: var(--pm-hover);
+}
+
+/* Both controls are at least 24 px tall (WCAG 2.2 target size, A266): with a smaller fallback
+   font they were shorter, and side by side neither had room around it. */
+/* The select is the shared small, quiet one (T51 item 13, A941; styles.css `.pm-select`). */
+.pm-callout-type {
+  --pm-select-chevron: var(--pm-callout-accent);
+  min-height: 1.5rem;
+  color: var(--pm-callout-accent);
+  font: 600 0.92rem var(--pm-font);
+}
+
+.pm-code-language {
+  height: 1.6rem;
+  color: var(--pm-muted);
+  font-family: var(--pm-font);
+  font-size: var(--pm-text-xs);
+}
+
+.pm-callout-title {
+  flex: 1;
+  min-width: 4rem;
+  min-height: 1.5rem;
+  padding: 0.1rem 0.25rem;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--pm-fg);
+  font: 600 0.95rem var(--pm-font);
+}
+
+.pm-callout-title:hover,
+.pm-callout-title:focus {
+  border-color: var(--pm-border);
+  outline: none;
+}
+
+.pm-callout-title::placeholder {
+  color: color-mix(in oklab, var(--pm-callout-accent) 75%, var(--pm-bg));
+}
+
+.pm-callout-body {
+  margin-top: 0.3rem;
+}
+
+.pm-callout-body > :first-child {
+  margin-top: 0;
+}
+
+.pm-callout-body > :last-child {
+  margin-bottom: 0;
+}
+
+.pm-callout[data-open='false'] > .pm-callout-body {
+  display: none;
+}
+
+/* The markdown source view (⌘⇧M). */
+.doc[hidden] {
+  display: none;
+}
+
+.note-source-hint {
+  margin: 0 0 0.5rem;
+  color: var(--pm-muted);
+  font-size: 0.86rem;
+}
+
+.note-markdown {
+  border: 1px solid var(--pm-border);
+  background: var(--pm-code-bg);
+}
+
+.note-markdown-frontmatter {
+  color: var(--pm-muted);
+  border-bottom: 1px dashed var(--pm-border);
+  user-select: text;
+}
+
+.note-markdown-body {
+  min-height: 12rem;
+  outline: none;
+  caret-color: var(--pm-fg);
+}
+
+.note-markdown-body:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--pm-focus, var(--pm-accent));
+}
+
+.note-source pre {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border-radius: 0;
+  color: var(--pm-fg);
+  font: 0.86rem/1.6 var(--pm-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.note-top .btn[aria-pressed='true'] {
+  background: var(--pm-active);
+  color: var(--pm-fg);
+}
+
+/* Math (KaTeX): click a formula, or press Enter on a selected one, to edit its LaTeX. */
+.pm-math {
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.pm-math-inline {
+  padding: 0 0.1em;
+}
+
+.pm-math.ProseMirror-selectednode,
+.pm-math-inline:hover,
+.pm-math-block:hover {
+  background: var(--pm-hover);
+}
+
+.pm-math.ProseMirror-selectednode {
+  outline: 2px solid var(--pm-focus);
+}
+
+.note-body .pm-math-block {
+  padding: 0.4rem 0.75rem;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.pm-math-output[data-state='empty'] {
+  color: var(--pm-muted);
+  font-style: italic;
+}
+
+.pm-math-source {
+  font-family: var(--pm-mono);
+  white-space: pre-wrap;
+}
+
+.pm-math-error {
+  margin-left: 0.4em;
+  color: var(--pm-danger);
+  font: 0.78rem var(--pm-font);
+}
+
+.pm-math-block .pm-math-error {
+  display: block;
+  margin: 0.25rem 0 0;
+}
+
+.pm-math-field {
+  padding: 0.15rem 0.35rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+  font: 0.88rem var(--pm-mono);
+}
+
+.pm-math-block .pm-math-field {
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+  text-align: left;
+}
+
+.pm-math-preview {
+  margin-top: 0.5rem;
+}
+
+/* A peer changed the formula while it was being edited: theirs stands, ours is offered. */
+.pm-math-conflict {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  margin-left: 0.4em;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+  font: 0.78rem var(--pm-font);
+  cursor: default;
+}
+
+.pm-math-block .pm-math-conflict {
+  display: flex;
+  margin: 0.35rem 0 0;
+}
+
+.pm-math-conflict code {
+  font-family: var(--pm-mono);
+}
+
+.pm-math-conflict button {
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Mermaid diagrams: preview shows the diagram only, edit the source above it. */
+.pm-code-block[data-mode='preview'] pre {
+  display: none;
+}
+
+/* An invalid diagram always shows its source, with Mermaid's message. */
+.pm-code-block[data-diagram='error'] pre {
+  display: block;
+}
+
+.pm-diagram {
+  padding: 0.25rem 1rem 0.75rem;
+}
+
+.pm-code-block[data-mode='edit'] .pm-diagram {
+  border-top: 1px dashed var(--pm-border);
+}
+
+.pm-diagram-output {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  color: var(--pm-muted);
+  font: italic 0.85rem var(--pm-font);
+  cursor: pointer;
+}
+
+.pm-diagram-output svg {
+  max-width: 100%;
+  height: auto;
+  font-style: normal;
+}
+
+.pm-diagram-error {
+  color: var(--pm-danger);
+  font: 0.78rem/1.5 var(--pm-mono);
+  white-space: pre-wrap;
+}
+
+.pm-diagram-error:empty {
+  display: none;
+}
+
+/* Highlight (T14): ==text==. */
+.note-body mark {
+  padding: 0 0.1em;
+  border-radius: 0;
+  background: var(--pm-highlight-bg);
+  color: inherit;
+}
+
+/* The typed /query while the slash menu is open. */
+.note-body .pm-slash-query {
+  border-radius: 0;
+  background: var(--pm-option-active);
+}
+
+/* Slash menu (T14): a listbox under the caret; the editor keeps focus. */
+.pm-slash-menu {
+  z-index: 40;
+  box-sizing: border-box;
+  width: 16rem;
+  /* The placement sets width: max-content: a long note title must not widen it past the window (T39). */
+  max-width: calc(100vw - 1rem);
+  max-height: min(22rem, 60vh);
+  padding: 0.25rem;
+  overflow-y: auto;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-popover-shadow);
+  color: var(--pm-fg);
+  font: 0.85rem/1.3 var(--pm-font);
+}
+
+.pm-slash-heading {
+  padding: 0.35rem 0.5rem 0.25rem;
+  color: var(--pm-muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pm-slash-option {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0 0.5rem;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.pm-slash-option:hover {
+  background: var(--pm-hover);
+}
+
+.pm-slash-option[aria-selected='true'] {
+  background: var(--pm-option-active);
+}
+
+.pm-slash-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-bg);
+  color: var(--pm-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.pm-slash-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pm-slash-hint {
+  color: var(--pm-muted);
+  font: 0.72rem var(--pm-mono);
+}
+
+.pm-slash-empty {
+  margin: 0;
+  padding: 0.5rem;
+  color: var(--pm-muted);
+}
+
+/* Selection toolbar (T14). */
+.pm-toolbar {
+  z-index: 30;
+  display: flex;
+  gap: 0.15rem;
+  align-items: center;
+  padding: 0.2rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-popover-shadow);
+  color: var(--pm-fg);
+  font: 0.82rem/1 var(--pm-font);
+}
+
+.pm-toolbar-buttons {
+  display: flex;
+  gap: 0.15rem;
+}
+
+.pm-toolbar[data-mode='link'] .pm-toolbar-buttons,
+.pm-toolbar[data-mode='link'] .pm-toolbar-turn,
+.pm-toolbar[data-mode='link'] .pm-toolbar-copy,
+.pm-toolbar[data-mode='link'] .pm-toolbar-comment,
+.pm-toolbar[data-mode='link'] .pm-toolbar-separator {
+  display: none;
+}
+
+.pm-toolbar-button {
+  min-width: 1.9rem;
+  height: 1.8rem;
+  padding: 0 0.45rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.pm-toolbar-button:hover {
+  background: var(--pm-hover);
+}
+
+.pm-toolbar-button:focus-visible,
+.pm-toolbar-menuitem:focus-visible,
+.pm-toolbar-link-input:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: -2px;
+}
+
+.pm-toolbar-button[aria-pressed='true'] {
+  background: var(--pm-option-active);
+  color: var(--pm-accent);
+}
+
+/*
+ * Every button an icon (Quanta feedback 3, item 7; A1131): the marks', Link's, Comment's and
+ * Copy As's line icons, and Turn Into's block glyph, a menu's with a small chevron after it.
+ */
+.pm-toolbar-buttons > .pm-toolbar-button,
+.pm-toolbar > .pm-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+}
+
+.pm-toolbar-bold .i {
+  stroke-width: 2;
+}
+
+.pm-toolbar-glyph {
+  min-width: 1rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+  text-align: center;
+}
+
+.pm-toolbar-separator {
+  align-self: stretch;
+  width: 1px;
+  margin: 0.2rem 0.15rem;
+  background: var(--pm-border);
+}
+
+.pm-toolbar-separator[hidden] {
+  display: none;
+}
+
+.pm-toolbar-turn,
+.pm-toolbar-copy {
+  white-space: nowrap;
+}
+
+/* Shortcut hints in the Copy as menu (T15). */
+.pm-toolbar-keys {
+  margin-left: auto;
+  padding-left: 1rem;
+  color: var(--pm-muted);
+  font: inherit;
+  font-size: 0.8em;
+}
+
+.pm-toolbar-menu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  max-height: min(18rem, 45vh);
+  padding: 0.25rem;
+  overflow-y: auto;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-popover-shadow);
+}
+
+.pm-toolbar-menu[data-placement='top'] {
+  top: auto;
+  bottom: calc(100% + 0.35rem);
+}
+
+.pm-toolbar-menu[hidden] {
+  display: none;
+}
+
+.pm-toolbar-menuitem {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0 0.5rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pm-toolbar-menuitem:hover,
+.pm-toolbar-menuitem:focus {
+  background: var(--pm-hover);
+}
+
+.pm-toolbar-menuitem[aria-checked='true'] {
+  color: var(--pm-accent);
+  font-weight: 600;
+}
+
+.pm-toolbar-link-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 18rem;
+  max-width: calc(100vw - 2rem);
+}
+
+.pm-toolbar-link-form[hidden] {
+  display: none;
+}
+
+/*
+ * The link form (T64 item 1; #225, A1142): icon-and-text buttons above the Text and Link rows,
+ * every row inside the toolbar's one padding. The buttons' icons, the rows' labels and the
+ * fields' left edges line up, and the fields end at the same inset as the toolbar's left.
+ */
+.pm-toolbar-link-actions {
+  display: flex;
+  gap: 0.15rem;
+}
+
+.pm-toolbar-link-action {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+/* Apply and Remove look alike at rest: a pointer left where Link was is not a hover. */
+.pm-toolbar-link-form:not([data-pointer]) .pm-toolbar-link-action:hover {
+  background: transparent;
+}
+
+.pm-toolbar-link-field {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  gap: 0.25rem;
+  align-items: center;
+  padding-inline-start: 0.45rem;
+  color: var(--pm-muted);
+}
+
+.pm-toolbar-link-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 1.8rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font: inherit;
+}
+
+.pm-toolbar-link-error {
+  flex-basis: 100%;
+  padding: 0 0.45rem;
+  color: var(--pm-danger);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.pm-toolbar-link-error:empty {
+  display: none;
+}
+
+/*
+ * Drag handle and drop line (T14), positioned against the note body. The editor's own
+ * element holds them: it moves between note views with the editor (T31).
+ */
+.note-body,
+.note-editor {
+  position: relative;
+}
+
+.pm-drag-handle {
+  position: absolute;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--pm-muted);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: grab;
+  touch-action: none;
+}
+
+.pm-drag-handle[hidden] {
+  display: none;
+}
+
+.pm-drag-handle:hover,
+.pm-drag-handle.is-dragging {
+  background: var(--pm-hover);
+  color: var(--pm-fg);
+}
+
+.pm-drag-handle.is-dragging {
+  cursor: grabbing;
+}
+
+.pm-drop-indicator {
+  position: absolute;
+  z-index: 5;
+  height: 2px;
+  border-radius: 0;
+  background: var(--pm-accent);
+  pointer-events: none;
+}
+
+.pm-drop-indicator[hidden] {
+  display: none;
+}
+
+.note-body .pm-block-dragging {
+  opacity: 0.45;
+}
+
+/* No hover on touch screens: the keyboard shortcut and the menu cover moving blocks there. */
+@media (hover: none) {
+  .pm-drag-handle {
+    display: none;
+  }
+}
+
+/*
+ * Line symbols (T44, A745): a line's leading glyphs are text, hidden in the line and drawn by a
+ * widget in the left margin, beside the drag handle, coloured, taking no room in the text
+ * column. The widget sits against the note's text column (the editor's element holds it),
+ * whatever the nesting, at the line's own height. A phone has no margin to draw in: there they
+ * sit before the text instead (still outside the caret's path).
+ */
+.pm-symbol-run {
+  display: none;
+}
+
+.pm-symbols {
+  position: absolute;
+  left: 0;
+  z-index: 4;
+  display: inline-flex;
+  gap: 0.05em;
+  padding: 0 0.1em;
+  border-radius: 0;
+  font-size: 0.9em;
+  font-weight: 400;
+  font-style: normal;
+  text-decoration: none;
+  white-space: nowrap;
+  transform: translateX(calc(-100% - 0.3rem));
+  cursor: pointer;
+  user-select: none;
+}
+
+.pm-symbols:hover {
+  background: var(--pm-hover);
+}
+
+.pm-symbol {
+  display: inline-block;
+  min-width: 1.1em;
+  text-align: center;
+}
+
+/* Their glyphs, read once before the line by screen readers; never shown. */
+.pm-symbols-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/*
+ * More symbols than the gutter holds (T52 item 3): the editor draws as many as fit, at least one,
+ * then a "+N" chip, or with room for one only, a count badge on its corner; the margin never
+ * spills past the gutter. Hovering it, or tapping the chip, shows them all in a popover below.
+ */
+.pm-symbol[hidden] {
+  display: none;
+}
+
+.pm-symbols-more {
+  align-self: center;
+  min-width: 1.6em;
+  padding: 0 0.3em;
+  box-sizing: border-box;
+  border-radius: 0;
+  background: var(--pm-hover);
+  color: var(--pm-muted);
+  font-size: 0.7em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* On the glyph's top corner, clear of its stroke (T52: the one slot left beside the drag handle). */
+.pm-symbols.is-badge > .pm-symbols-more {
+  position: absolute;
+  top: -0.75em;
+  right: -0.45em;
+  min-width: 0;
+  padding: 0 0.35em;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-raised);
+  font-size: 0.6em;
+  line-height: 1.4;
+}
+
+.pm-symbols-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 6;
+  display: none;
+  gap: 0.15em;
+  padding: 0.15em 0.35em;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-popover-shadow);
+  white-space: nowrap;
+}
+
+.pm-symbols.is-overflowing:hover > .pm-symbols-popover,
+.pm-symbols.is-open > .pm-symbols-popover {
+  display: inline-flex;
+}
+
+/* Above the next line's symbols while it shows. */
+.pm-symbols.is-overflowing:hover,
+.pm-symbols.is-open {
+  z-index: 6;
+}
+
+.pm-symbols-popover-glyph {
+  display: inline-block;
+  min-width: 1.1em;
+  text-align: center;
+}
+
+/* Before the text where there is no margin: the widget holds its popover (and its badge). */
+@media (max-width: 700px) {
+  /* No layer of its own here (auto), or a table's toolbar below the line would sit under it;
+     its popover still layers over the next lines. */
+  .pm-symbols {
+    position: relative;
+    z-index: auto;
+    margin-inline-end: 0.3em;
+    transform: none;
+  }
+}
+
+/*
+ * In a table cell (T52 item 2) the page's margin is out of reach: the symbols sit at the start
+ * of the cell's text, at any width. The widget stays in the flow (static), so its popover is
+ * placed against the table's frame and is not clipped by the grid's sideways scrolling.
+ */
+.note-body .pm-table .pm-symbols {
+  position: static;
+  margin-inline-end: 0.3em;
+  transform: none;
+}
+
+.note-body .pm-table .pm-symbols-popover {
+  top: auto;
+  left: auto;
+  margin-top: 1.7em;
+}
+
+/* The picker (A746): the slash menu's look, ticks for the symbols the line has. */
+.pm-symbol-picker {
+  z-index: 40;
+  box-sizing: border-box;
+  min-width: 13rem;
+  max-width: calc(100vw - 1rem);
+  padding: 0.25rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-popover-shadow);
+  color: var(--pm-fg);
+  font: 0.85rem/1.3 var(--pm-font);
+}
+
+.pm-symbol-picker[hidden] {
+  display: none;
+}
+
+.pm-symbol-item {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0 0.5rem;
+  border-radius: 0;
+  outline: none;
+  cursor: pointer;
+}
+
+.pm-symbol-item:hover {
+  background: var(--pm-hover);
+}
+
+.pm-symbol-item:focus-visible,
+.pm-symbol-item:focus {
+  background: var(--pm-option-active);
+}
+
+.pm-symbol-item-tick {
+  flex: none;
+  width: 1rem;
+  color: var(--pm-accent);
+  text-align: center;
+}
+
+/* The glyph names the item (T51 item 12, A940); the shortcut sits at the end. */
+.pm-symbol-item-glyph {
+  flex: 1;
+  min-width: 1.4rem;
+  font-size: 1rem;
+}
+
+.pm-symbol-item-keys {
+  color: var(--pm-muted);
+  font: 0.72rem var(--pm-mono);
+}
+
+.pm-symbol-separator {
+  height: 1px;
+  margin: 0.25rem 0.25rem;
+  background: var(--pm-border);
+}
+
+.pm-symbol-edit {
+  padding-left: 2rem;
+  color: var(--pm-muted);
+}
+
+.pm-symbol-empty {
+  margin: 0;
+  padding: 0.5rem;
+  color: var(--pm-muted);
+}

@@ -1,0 +1,20 @@
+---
+/** The 404 page (T80.11): served with status 404 for any path the site doesn't have. No script. */
+import SiteLayout from '../components/SiteLayout.astro';
+---
+
+<SiteLayout
+  title="Not found · Penmoss"
+  description="This page isn't on penmoss.app."
+  noindex
+>
+  <article class="wrap prose">
+    <h1>Not found</h1>
+    <p class="meta">There is no page at this address.</p>
+    <p>
+      Try <a href="/">the home page</a>, <a href="/features">all features</a> or <a href="/docs/"
+        >the docs</a
+      >, which you can search.
+    </p>
+  </article>
+</SiteLayout>

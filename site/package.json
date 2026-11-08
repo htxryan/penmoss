@@ -1,0 +1,24 @@
+{
+  "name": "@penmoss/site",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "penmoss.app (D64, P9, P13): the brochure pages and the user docs at /docs (Starlight), built to static files",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "node build.mjs",
+    "preview": "wrangler dev --local --port 8788",
+    "typecheck": "astro sync && tsc --noEmit -p . && tsc --noEmit -p scripts",
+    "test": "node --test build.test.mjs scripts/images.test.mjs",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@astrojs/starlight": "0.42.8",
+    "@playwright/test": "1.64.1",
+    "astro": "7.4.5",
+    "starlight-links-validator": "0.27.0",
+    "typescript": "6.0.3",
+    "wrangler": "4.151.3"
+  }
+}

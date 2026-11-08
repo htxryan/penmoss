@@ -1,0 +1,6 @@
+- [ ] Benchmark snapshot compaction #perf
+- [x] Write the plan
+- [ ] Parent task
+  - [x] Nested done
+  - [ ] Nested open
+    - [ ] Deeply nested

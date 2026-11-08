@@ -1,0 +1,79 @@
+// Evidence capture for T44 (kept as docs/evidence/t44/capture/web-evidence.spec.ts.txt; not a
+// suite spec). OUT=dir. Run from apps/web: `OUT=… pnpm exec playwright test zz-t44-evidence`.
+import { expect, test, type Page } from '@playwright/test';
+import { mkdirSync } from 'node:fs';
+import { NEW_NOTE, SYMBOL, SYMBOL_PICKER } from './keys';
+
+const OUT = process.env['OUT'] ?? '/tmp/t44-evidence';
+mkdirSync(OUT, { recursive: true });
+const STAMP = Date.now().toString(36).slice(-4);
+const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
+const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
+
+/** A note with symbols on a paragraph, a heading, list and checklist items, typed as text. */
+export async function symbolNote(page: Page, title: string) {
+  await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();
+  await page.keyboard.press(NEW_NOTE);
+  await expect(page).toHaveURL(ULID);
+  await page.keyboard.type(title);
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+  await page.keyboard.type('★ Call the bank about the mortgage before Friday');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('→ Book the plumber for the kitchen tap');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('## ? Open questions');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('- Which week suits the builders?');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Do we need a permit for the shed?');
+  await page.keyboard.press(SYMBOL(2));
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('[ ] Send the form to the council');
+  await page.keyboard.press(SYMBOL(3));
+  await page.keyboard.press(SYMBOL(1));
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Water the beds');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('💡 A rain barrel by the shed would save the hose.');
+  await expect(body(page).locator('.pm-symbol')).toHaveCount(7);
+}
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`T44 evidence ${scheme}`, async ({ browser }) => {
+    test.setTimeout(120_000);
+    const context = await browser.newContext({
+      colorScheme: scheme,
+      viewport: { width: 1280, height: 800 },
+    });
+    const page = await context.newPage();
+    await page.goto('http://localhost:5173/');
+    await symbolNote(page, `Week plan ${STAMP}${scheme[0]}`);
+    await page.mouse.move(1270, 790);
+    await page.waitForTimeout(600);
+    await page.screenshot({ path: `${OUT}/web-${scheme}-gutter.png` });
+
+    // The picker, at the checklist item.
+    await body(page).locator('li', { hasText: 'Send the form' }).locator('p').first().click();
+    await page.keyboard.press(SYMBOL_PICKER);
+    await expect(page.getByTestId('symbol-picker')).toBeVisible();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${OUT}/web-${scheme}-picker.png` });
+    await page.keyboard.press('Escape');
+
+    await page.goto('http://localhost:5173/settings/symbols');
+    await expect(page.getByTestId('symbols-settings')).toBeVisible();
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `${OUT}/web-${scheme}-settings.png` });
+
+    // A narrow window: the symbols sit before the text.
+    await page.goBack();
+    await page.setViewportSize({ width: 420, height: 800 });
+    await expect(body(page).locator('.pm-symbol').first()).toBeVisible();
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `${OUT}/web-${scheme}-narrow.png` });
+    await context.close();
+  });
+}

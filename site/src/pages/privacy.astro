@@ -1,0 +1,162 @@
+---
+/**
+ * The privacy policy (T80.11), linked from the Play listing, rewritten for the public apps (D64):
+ * no telemetry; updates, downloads and Sign in with GitHub go to github.com; search by meaning
+ * downloads its model from Hugging Face once; Send feedback uses the visitor's own GitHub token.
+ * Keep docs/android.md's Play Data safety answers in step, and change the date with the text.
+ */
+import SiteLayout from '../components/SiteLayout.astro';
+import { REPOSITORY } from '../site';
+---
+
+<SiteLayout
+  title="Privacy policy · Penmoss"
+  description="Penmoss has no server, no account and no analytics. Your notes stay on your devices and in a git repository you choose."
+>
+  <article class="wrap prose">
+    <h1>Privacy policy</h1>
+    <p class="meta">Effective 7 November 2026</p>
+
+    <p>
+      Penmoss is a free, open source notes app for the Mac, Android and the command line. It is made
+      by Ryan Henderson, an individual developer, not a company (&ldquo;the developer&rdquo; below).
+      &ldquo;You&rdquo; means anyone who uses the apps or this website.
+    </p>
+
+    <p>
+      <strong>In short.</strong> Penmoss has no server and no account. Your notes stay on your devices
+      and in a git repository that you choose and control. The developer does not receive your
+      notes. There are no ads, no analytics and no tracking, in the apps or on this website, and
+      nothing is sold or shared for anyone else&rsquo;s use.
+    </p>
+
+    <h2>Where your notes are</h2>
+    <ul>
+      <li>
+        <strong>On your devices.</strong> Each app keeps a copy of your notebooks: notes, folders, tags,
+        daily and weekly notes, attached files, version history, comments and settings. It keeps them
+        in its own private storage, so they open offline.
+      </li>
+      <li>
+        <strong>In your git repository.</strong> Each notebook is a git repository (or a folder in one)
+        that you add yourself. The apps sync with it using your git host&rsquo;s own sign-in: a token
+        you give, your Mac&rsquo;s git credentials, or Sign in with GitHub. Your git host stores the
+        notes under its own terms and privacy policy. Penmoss does not check whether the repository
+        is private: if you choose a public repository, anyone can read your notes there.
+      </li>
+      <li>
+        <strong>Version history</strong> is the repository&rsquo;s commit history. Each change records
+        which device or agent made it, with the commit name and email you set.
+      </li>
+    </ul>
+    <p>
+      Penmoss is not end-to-end encrypted: your notes are stored in your repository as files your git
+      host can read.
+    </p>
+
+    <h2>What leaves your device</h2>
+    <ul>
+      <li><strong>Sync</strong> goes only to the git repositories you added, over HTTPS or SSH.</li>
+      <li>
+        <strong>GitHub.</strong> When you add a notebook on the Mac, the app asks GitHub which repositories
+        you can reach, and can create one for you. Sign in with GitHub talks to github.com directly.
+      </li>
+      <li>
+        <strong>Updates and downloads.</strong> The Mac app checks for updates on GitHub Releases, and
+        the download links on this website go to GitHub. GitHub sees your IP address, under its own
+        terms.
+      </li>
+      <li>
+        <strong>Search by meaning</strong> on the Mac downloads its model once from Hugging Face. After
+        that it runs on your Mac: no note text leaves it to search.
+      </li>
+      <li>
+        <strong>Send feedback</strong>, when you choose to use it, files an issue in <a
+          href={REPOSITORY}>Penmoss&rsquo;s public GitHub repository</a
+        > with your own GitHub token. The issue holds what you write, the screenshots you attach and
+        a short description of the screen and app version, but never note text unless you put it
+        there. It is public, under your GitHub account, and GitHub stores it under its own terms.
+      </li>
+      <li>
+        <strong>AI agents you connect</strong>, such as Claude Code through Penmoss&rsquo;s command-line
+        tool and local MCP server, can read and change the notebook you connect them to. They run on
+        your Mac, and their providers handle what they read under their own terms. Penmoss never
+        does this on its own.
+      </li>
+      <li>
+        <strong>Pictures from other websites.</strong> When a note shows a picture by its web address,
+        your device downloads it from that website, which sees your IP address. On Android you can turn
+        this off in Settings.
+      </li>
+    </ul>
+    <p>
+      Penmoss sends no analytics, no crash reports and no usage data to the developer or anyone else.
+      This website sets no cookies and loads nothing from any other site.
+    </p>
+
+    <h2>The developer&rsquo;s own relay</h2>
+    <p>
+      The developer runs one small service on Cloudflare, the relay, so that Claude on the web and on
+      mobile can reach the developer&rsquo;s own notebook. It signs in only the developer&rsquo;s
+      GitHub account and serves only that one repository. It never handles anyone else&rsquo;s
+      notes.
+    </p>
+
+    <h2>What the apps keep on your devices</h2>
+    <ul>
+      <li>
+        <strong>Mac:</strong> your notebooks in the app&rsquo;s storage; the tokens you give, encrypted
+        with a key in the macOS Keychain; and the search-by-meaning model and its index, in
+        <code>~/.penmoss</code>.
+      </li>
+      <li>
+        <strong>Android:</strong> your notebooks, attached files and downloaded web pictures in the
+        app&rsquo;s private storage, and your tokens encrypted with a key held in the Android Keystore.
+        None of it goes into Android&rsquo;s cloud backup or device-to-device transfer. When the app
+        asks for your fingerprint, face or screen lock before a change, Android checks it on the phone;
+        Penmoss never receives it.
+      </li>
+      <li>
+        <strong>Command line:</strong> its notebooks under <code>~/.penmoss</code>, and its tokens in the
+        system keychain or a private settings file.
+      </li>
+    </ul>
+    <p>Removing an app removes these copies from that device. Your repository keeps the notes.</p>
+
+    <h2>Deleting your data</h2>
+    <p>
+      Deleting a note moves it to Trash. Delete for good removes it from your notebook. Earlier
+      versions stay in the repository&rsquo;s history until you rewrite or delete the repository.
+      Because the repository is yours, you can delete it, or anything in it, at any time with your git
+      host.
+    </p>
+
+    <h2>Security</h2>
+    <p>
+      Every connection uses HTTPS or SSH. On the Mac and Android, deleting for good and other
+      sensitive changes need Touch ID, a fingerprint or the device&rsquo;s password first. Your git
+      host decides how your repository is protected at rest. To report a security problem, see <a
+        href={`${REPOSITORY}/security/policy`}>the security policy</a
+      >.
+    </p>
+
+    <h2>Children</h2>
+    <p>
+      Penmoss is not meant for anyone under 18 and does not knowingly collect data from children.
+    </p>
+
+    <h2>Changes to this policy</h2>
+    <p>
+      If the way Penmoss handles data changes, this page is updated first and its effective date
+      changes with it. Its history is in <a href={`${REPOSITORY}/commits/main/site/src/pages/privacy.astro`}
+        >the repository</a
+      >.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+      For questions, open an issue on <a href={`${REPOSITORY}/issues`}>GitHub</a>, or use the developer
+      contact email on Penmoss&rsquo;s Google Play listing.
+    </p>
+  </article>
+</SiteLayout>

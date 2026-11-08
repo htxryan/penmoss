@@ -1,0 +1,10 @@
+# actionlint (https://github.com/rhysd/actionlint): the labels of Ryan's self-hosted Mac runners
+# (A403, A404, docs/ci.md). penmoss-mac is on every one; penmoss-mac-ports marks the one runner
+# that may run jobs binding fixed ports, and penmoss-mac-general the others.
+self-hosted-runner:
+  labels:
+    - penmoss-mac
+    - penmoss-mac-ports
+    - penmoss-mac-general
+    # The Tart VM's runner for the Electron suite (#252, W10).
+    - penmoss-mac-vm

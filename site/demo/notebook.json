@@ -1,0 +1,76 @@
+{
+  "$comment": "The demo notebook for penmoss.app's screenshots (A1210): invented, with no personal content. Each step is one writer's sync at that time; site/scripts/screenshots.spec.ts plays them into a git repository, then opens it in the web app as the Mac app's page.",
+  "name": "Work",
+  "timeZone": "America/Chicago",
+  "now": "2026-11-06T10:24:00-06:00",
+  "writers": {
+    "mac": { "kind": "device", "label": "Penmoss for Mac" },
+    "pixel": { "kind": "device", "label": "Pixel 9" },
+    "agent": { "kind": "agent", "label": "Claude Code" }
+  },
+  "steps": [
+    {
+      "at": "2026-10-26T09:12:00-05:00",
+      "writer": "mac",
+      "folders": ["Projects/Driftwood", "Reading"],
+      "notes": [
+        {
+          "title": "Driftwood 0.4",
+          "folder": "Projects/Driftwood",
+          "file": "notes/driftwood-0.4.md"
+        },
+        {
+          "title": "Feed parser design",
+          "folder": "Projects/Driftwood",
+          "file": "notes/feed-parser.md"
+        },
+        {
+          "title": "Offline-first, in practice",
+          "folder": "Reading",
+          "file": "notes/offline-first.md"
+        }
+      ]
+    },
+    {
+      "at": "2026-11-02T08:50:00-06:00",
+      "writer": "mac",
+      "notes": [
+        { "title": "Bug triage", "folder": "Projects/Driftwood", "file": "notes/bug-triage.md" },
+        { "title": "Ideas for 0.5", "folder": "Projects/Driftwood", "file": "notes/ideas-0.5.md" }
+      ]
+    },
+    { "at": "2026-11-04T08:31:00-06:00", "writer": "mac", "daily": "2026-11-04" },
+    {
+      "at": "2026-11-04T16:40:00-06:00",
+      "writer": "mac",
+      "notes": [
+        {
+          "title": "Release notes 0.4",
+          "folder": "Projects/Driftwood",
+          "file": "notes/release-notes-0.4.md"
+        }
+      ]
+    },
+    { "at": "2026-11-05T08:17:00-06:00", "writer": "mac", "daily": "2026-11-05" },
+    {
+      "at": "2026-11-05T18:06:00-06:00",
+      "writer": "pixel",
+      "edit": {
+        "note": "Release notes 0.4",
+        "op": "replace",
+        "find": "even with no connection.",
+        "replace": "even with no connection, on your desktop and on your phone."
+      }
+    },
+    { "at": "2026-11-06T08:44:00-06:00", "writer": "mac", "daily": "2026-11-06" },
+    {
+      "at": "2026-11-06T09:52:00-06:00",
+      "writer": "agent",
+      "edit": {
+        "note": "Release notes 0.4",
+        "op": "append",
+        "file": "edits/release-notes-agent.md"
+      }
+    }
+  ]
+}

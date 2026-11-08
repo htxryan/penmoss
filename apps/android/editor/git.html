@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!--
+      The git engine page (T50 G7, A872): no screen, loaded only from the APK into a WebView the
+      app never shows, and it talks only to the app, over binary frames (A873). No network, no
+      frames, no plug-ins: git goes through the app's JGit, behind the app's own checks.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; worker-src 'none'; manifest-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Penmoss git engine</title>
+    <script type="module" src="./src/git-main.ts"></script>
+  </head>
+  <body></body>
+</html>

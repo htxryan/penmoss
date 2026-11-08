@@ -1,0 +1,80 @@
+T25 manual check: real Claude Code (2.1.290) against the local Worker's /mcp
+Date: 22 Oct 2026, 22:37 America/Chicago (23 Oct, 03:37 UTC)
+Worker: `task dev` from the phase-4-mcp worktree (wrangler dev --local on :8787), seeded with
+four notes by a browser session: three tagged #homelab (one as #homelab/media), one untagged.
+Token: an agent token "Claude Code" (scopes read, write) from POST /api/tokens, the endpoint
+Settings → Devices calls. The token itself is not reproduced here.
+
+$ cd <scratch dir outside the repo>
+$ claude mcp add --transport http penmoss-local http://localhost:8787/mcp \
+    --header "Authorization: Bearer <agent token>" --scope local
+Added HTTP MCP server penmoss-local with URL: http://localhost:8787/mcp to local config
+$ claude mcp list
+penmoss-local: http://localhost:8787/mcp (HTTP) - ✔ Connected
+
+$ claude -p "Using the penmoss-local MCP server only: search my notes for homelab, read the notes
+    tagged #homelab, then summarise my notes tagged #homelab into today's daily note (append the
+    summary under its Notes heading, as a short bulleted list with [[links]] to each note).
+    Finally tell me today's daily note id, its date and time zone, and what you appended." \
+    --allowedTools 'mcp__penmoss-local__*' --output-format stream-json --verbose
+
+Transcript (stream-json, condensed: tool calls, tool results cut at 900 characters, answer):
+
+INIT mcp_servers: [{'name': 'penmoss-local', 'status': 'connected', 'source': 'local'}]
+INIT tools: ['mcp__penmoss-local__append_to_note', 'mcp__penmoss-local__create_note', 'mcp__penmoss-local__get_backlinks', 'mcp__penmoss-local__get_daily_note', 'mcp__penmoss-local__get_history', 'mcp__penmoss-local__list_folder', 'mcp__penmoss-local__list_recent', 'mcp__penmoss-local__list_tags', 'mcp__penmoss-local__move_note', 'mcp__penmoss-local__read_note', 'mcp__penmoss-local__replace_text', 'mcp__penmoss-local__search_notes', 'mcp__penmoss-local__set_properties', 'mcp__penmoss-local__tag_note', 'mcp__penmoss-local__update_section']
+TOOL_USE ToolSearch {"query": "select:mcp__penmoss-local__search_notes,mcp__penmoss-local__read_note,mcp__penmoss-local__get_daily_note,mcp__penmoss-local__append_to_note,mcp__penmoss-local__list_tags", "max_results": 5}
+TOOL_RESULT     
+TOOL_USE mcp__penmoss-local__search_notes {"query": "homelab", "limit": 50}
+TOOL_RESULT {"mode":"hybrid","results":[{"id":"01M5KDB9P1YD1DGW4K6TCK6YB6","title":"Plex transcoding","snippet":"…Hardware transcoding works; four 4K streams at once without stutter. #**homelab**/media","tags":["homelab/media"],"updatedAt":"2026-10-23T03:37:20.333Z","foundBy":["full-text","semantic"]},{"id":"01M5KDB9J8Z3S31JAG35AN6Y6H","title":"Proxmox host upgrade","snippet":"Upgraded the Proxmox host to 9.1. Took a snapshot of every VM first; the AdGuard…","tags":["homelab"],"updatedAt":"2026-10-23T03:37:20.238Z","foundBy":["full-text","semantic"]},{"id":"01M5KDB9MN5T1CWVE8JQ4J7VNN","title":"UPS runtime test","snippet":"Pulled the plug on the UPS: 41 minutes of runtime at the current load. NUT shut…","tags":["homelab"],"updatedAt":"2026-10-23T03:37:20.290Z","foundBy":["full-text","semantic"]},{"id":"01M5KDB9QEMA95PBNAJVW65RC4","title":"Groceries","snippet":"Eggs Coffee","tags":[],"updatedAt":"2026
+TOOL_USE mcp__penmoss-local__list_tags {"tag": "homelab"}
+TOOL_RESULT {"tag":"homelab","notes":[{"id":"01M5KDB9P1YD1DGW4K6TCK6YB6","title":"Plex transcoding","updatedAt":"2026-10-23T03:37:20.333Z"},{"id":"01M5KDB9MN5T1CWVE8JQ4J7VNN","title":"UPS runtime test","updatedAt":"2026-10-23T03:37:20.290Z"},{"id":"01M5KDB9J8Z3S31JAG35AN6Y6H","title":"Proxmox host upgrade","updatedAt":"2026-10-23T03:37:20.238Z"}]}
+TOOL_USE mcp__penmoss-local__read_note {"id": "01M5KDB9P1YD1DGW4K6TCK6YB6"}
+TOOL_RESULT {"id":"01M5KDB9P1YD1DGW4K6TCK6YB6","title":"Plex transcoding","tags":["homelab/media"],"headings":[],"baseVersion":1,"body":"Moved Plex to the GPU passthrough VM. Hardware transcoding works; four 4K streams at once without stutter. #homelab/media\n"}
+TOOL_USE mcp__penmoss-local__read_note {"id": "01M5KDB9MN5T1CWVE8JQ4J7VNN"}
+TOOL_RESULT {"id":"01M5KDB9MN5T1CWVE8JQ4J7VNN","title":"UPS runtime test","tags":["homelab"],"headings":[],"baseVersion":1,"body":"Pulled the plug on the UPS: 41 minutes of runtime at the current load. NUT shut the VMs down cleanly at 20% battery.\n"}
+TOOL_USE mcp__penmoss-local__read_note {"id": "01M5KDB9J8Z3S31JAG35AN6Y6H"}
+TOOL_RESULT {"id":"01M5KDB9J8Z3S31JAG35AN6Y6H","title":"Proxmox host upgrade","tags":["homelab"],"headings":[],"baseVersion":1,"body":"Upgraded the Proxmox host to 9.1. Took a snapshot of every VM first; the AdGuard LXC needed a restart afterwards.\n"}
+TOOL_USE mcp__penmoss-local__get_daily_note {}
+TOOL_RESULT {"id":"01M5GEGM00EP8A1EKW84X1VKCH","title":"2026-10-22","tags":[],"headings":["## Plan","## Notes"],"baseVersion":1,"kind":"daily","date":"2026-10-22","timeZone":"America/Chicago","created":true,"body":"## Plan\n\n## Notes\n"}
+TOOL_USE mcp__penmoss-local__append_to_note {"id": "01M5GEGM00EP8A1EKW84X1VKCH", "heading": "## Notes", "baseVersion": 1, "markdown": "Homelab summary:\n- [[Proxmox host upgrade]]: host upgraded to 9.1 after snapshotting every VM; the AdGuard LXC needed a restart afterwards.\n- [[UPS runtime test]]: 41 minutes of runtime at current load; NUT shut the VMs down cleanly at 20% battery.\n- [[Plex transcoding]]: Plex moved to the GPU passthrough VM; hardware transcoding handles four 4K streams at once without stutter.\n"}
+TOOL_RESULT {"id":"01M5GEGM00EP8A1EKW84X1VKCH","changed":true,"baseVersion":3,"summary":"Added to “Notes” · +6 −0 lines"}
+TOOL_USE mcp__penmoss-local__read_note {"id": "01M5GEGM00EP8A1EKW84X1VKCH"}
+TOOL_RESULT {"id":"01M5GEGM00EP8A1EKW84X1VKCH","title":"2026-10-22","tags":[],"headings":["## Plan","## Notes"],"baseVersion":3,"body":"## Plan\n\n## Notes\n\nHomelab summary:\n\n- [[Proxmox host upgrade]]: host upgraded to 9.1 after snapshotting every VM; the AdGuard LXC needed a restart afterwards.\n- [[UPS runtime test]]: 41 minutes of runtime at current load; NUT shut the VMs down cleanly at 20% battery.\n- [[Plex transcoding]]: Plex moved to the GPU passthrough VM; hardware transcoding handles four 4K streams at once without stutter.\n"}
+ASSISTANT: I added a three-item homelab summary under **Notes** in today's daily note, and reading the note back shows it's there.
+
+- **Daily note id:** `01M5GEGM00EP8A1EKW84X1VKCH`
+- **Date:** 2026-10-22
+- **Time zone:** America/Chicago
+- Today's note didn't exist yet, so the `get_daily_note` call created it from your template.
+
+**Appended text:**
+```
+Homelab summary:
+- [[Proxmox host upgrade]]: host upgraded to 9.1 after snapshotting every VM; the AdGuard LXC needed a restart afterwards.
+- [[UPS runtime test]]: 41 minutes of runtime at current load; NUT shut the VMs down cleanly at 20% battery.
+- [[Plex transcoding]]: Plex moved to the GPU passthrough VM; hardware transcoding handles four 4K streams at once without stutter.
+```
+
+Three notes carry the #homelab tag. "Plex transcoding" is tagged with the nested `#homelab/media`, so I included it. Searching for "homelab" also turned up "Groceries", but that note has no tags, so I left it out.
+RESULT success turns 10 cost 0.2478756
+I added a three-item homelab summary under **Notes** in today's daily note, and reading the note back shows it's there.
+
+- **Daily note id:** `01M5GEGM00EP8A1EKW84X1VKCH`
+- **Date:** 2026-10-22
+- **Time zone:** America/Chicago
+- Today's note didn't exist yet, so the `get_daily_note` call created it from your template.
+
+**Appended text:**
+```
+Homelab summary:
+- [[Proxmox host upgrade]]: host upgraded to 9.1 after snapshotting every VM; the AdGuard LXC needed a restart afterwards.
+- [[UPS runtime test]]: 41 minutes of runtime at current load; NUT shut the VMs down cleanly at 20% battery.
+- [[Plex transcoding]]: Plex moved to the GPU passthrough VM; hardware transcoding handles four 4K streams at once without stutter.
+```
+
+Three notes carry the #homelab tag. "Plex transcoding" is tagged with the nested `#homelab/media`, so I included it. Searching for "homelab" also turned up "Groceries", but that note has no tags, so I left it out.
+
+Note: "today" is 2026-10-22 because the time zone setting (default America/Chicago) says so,
+while UTC had already reached 23 October; the id 01M5GEGM00EP8A1EKW84X1VKCH is
+periodicNoteId('daily', '2026-10-22'), the id the apps derive.
+After the run: claude mcp remove penmoss-local --scope local

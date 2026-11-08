@@ -1,0 +1,22 @@
+{
+  "name": "@penmoss/factory",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "The software factory: Project 8 issues become planned, validated, reviewed PRs on this Mac (#253)",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "vitest": "5.0.5"
+  },
+  "dependencies": {
+    "@ai-hero/sandcastle": "0.14.0"
+  }
+}

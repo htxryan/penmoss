@@ -1,0 +1,115 @@
+/*
+ * Penmoss's variables (T28, A251) for the first paint of a first visit, before
+ * public/theme-boot.js or the app has set the theme's on <html> (inline
+ * styles, which win). Generated from packages/ui/src/theme/builtins.ts and
+ * kept equal to it by test/unit/theme-boot.test.ts: the one stylesheet with
+ * literal colours (stylelint.config.js).
+ */
+:root {
+  color-scheme: light dark;
+  --pm-bg: #fbfaf7;
+  --pm-sidebar: #f1f0ea;
+  --pm-raised: #ffffff;
+  --pm-border: #dedbd2;
+  --pm-fg: #1f2421;
+  --pm-muted: #57635b;
+  --pm-link: #3c7a4b;
+  --pm-accent: #3c7a4b;
+  --pm-on-accent: #fbfaf6;
+  --pm-danger: #b3261e;
+  --pm-success: #4e7a3c;
+  --pm-warn-bg: #fbefc9;
+  --pm-agent: #6a55c9;
+  --pm-highlight-bg: #fbe58b;
+  --pm-search-match: #f2c230;
+  --pm-shadow-color: #000000;
+  --pm-code-keyword: #8a3ea8;
+  --pm-code-string: #2c7139;
+  --pm-code-comment: #616c65;
+  --pm-code-number: #9a5418;
+  --pm-code-function: #2a5ca3;
+  --pm-code-type: #82601a;
+  --pm-code-variable: #a2364b;
+  --pm-code-meta: #56658a;
+  --pm-code-tag: #2a5ca3;
+  --pm-code-addition: #3f9d55;
+  --pm-code-deletion: #c94a4a;
+  --pm-callout-note: #376bc0;
+  --pm-callout-info: #376bc0;
+  --pm-callout-todo: #376bc0;
+  --pm-callout-abstract: #007979;
+  --pm-callout-tip: #007975;
+  --pm-callout-success: #1d7c38;
+  --pm-callout-question: #a15b00;
+  --pm-callout-warning: #b24f00;
+  --pm-callout-failure: #c23b3b;
+  --pm-callout-danger: #c23b3b;
+  --pm-callout-bug: #c23b3b;
+  --pm-callout-example: #7a4dc4;
+  --pm-callout-quote: #656c7a;
+  --pm-graph-focus: #2f6fd0;
+  --pm-graph-ungrouped: #7d857f;
+  --pm-graph-1: #3f7d4e;
+  --pm-graph-2: #2f6fb0;
+  --pm-graph-3: #b0582f;
+  --pm-graph-4: #7a4fb0;
+  --pm-graph-5: #9a7410;
+  --pm-graph-6: #1f8a8a;
+  --pm-graph-7: #b03f6f;
+  --pm-graph-8: #5f6b2a;
+  --pm-font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --pm-font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --pm-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --pm-editor-width: 52rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --pm-bg: #161a17;
+    --pm-sidebar: #121512;
+    --pm-raised: #202620;
+    --pm-border: #2c332e;
+    --pm-fg: #e6ebe7;
+    --pm-muted: #9aa69e;
+    --pm-link: #7fbf8e;
+    --pm-accent: #7fbf8e;
+    --pm-on-accent: #111510;
+    --pm-danger: #f2b8b5;
+    --pm-success: #8db974;
+    --pm-warn-bg: #4a3d14;
+    --pm-agent: #b4a6f2;
+    --pm-highlight-bg: #6b5a17;
+    --pm-code-keyword: #d4a8f0;
+    --pm-code-string: #9fd49a;
+    --pm-code-comment: #8f9a93;
+    --pm-code-number: #f0b37e;
+    --pm-code-function: #8cb8f0;
+    --pm-code-type: #e8cc85;
+    --pm-code-variable: #f39fac;
+    --pm-code-meta: #a9b4d0;
+    --pm-code-tag: #8cb8f0;
+    --pm-callout-note: #7fa8ee;
+    --pm-callout-info: #7fa8ee;
+    --pm-callout-todo: #7fa8ee;
+    --pm-callout-abstract: #5cc6c6;
+    --pm-callout-tip: #4fc4bd;
+    --pm-callout-success: #6fcf86;
+    --pm-callout-question: #f0b44f;
+    --pm-callout-warning: #f59e4f;
+    --pm-callout-failure: #f08080;
+    --pm-callout-danger: #f08080;
+    --pm-callout-bug: #f08080;
+    --pm-callout-example: #b49af0;
+    --pm-callout-quote: #a3a9b4;
+    --pm-graph-focus: #8ab4ff;
+    --pm-graph-ungrouped: #9aa69e;
+    --pm-graph-1: #7fbf8e;
+    --pm-graph-2: #79aef0;
+    --pm-graph-3: #f09a6e;
+    --pm-graph-4: #b99af0;
+    --pm-graph-5: #e2c25a;
+    --pm-graph-6: #5fd0cf;
+    --pm-graph-7: #f08ab4;
+    --pm-graph-8: #b8c46a;
+  }
+}

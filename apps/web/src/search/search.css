@@ -1,0 +1,126 @@
+/* Search (T22, T23): the overlay, its filters, and highlighted results (no mode switch, A571). */
+.dialog.search {
+  width: min(46rem, 100%);
+}
+
+.search-icon {
+  margin-right: 0.5rem;
+  color: var(--pm-muted);
+  font-size: 1.1rem;
+}
+
+/* The dialog has its own close button (T39); the browser's clear button was off-theme. */
+.dlg-search input[type='search']::-webkit-search-cancel-button {
+  display: none;
+  appearance: none;
+}
+
+.search-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  flex: none;
+  /* The dialog's left edge, the search icon's and the keys' below (A988); it was 2px in. */
+  padding: 0.5rem 0.9rem;
+  border-bottom: 1px solid var(--pm-border);
+}
+
+/* The filters are the shared small select (T51 item 13, A941). */
+.search-filter .pm-select {
+  max-width: 11rem;
+}
+
+.search-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  flex: none;
+  /* On the results' text edge, as a palette row's (A988). */
+  padding: 0.4rem 0.95rem 0;
+  color: var(--pm-muted);
+  font-size: 0.75rem;
+}
+
+/* Searching (T53 item 2): a spinner, and the last results faded until the answer replaces them. */
+.search-status .spinner {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.search-results[aria-busy='true'] {
+  opacity: 0.55;
+  transition: opacity 120ms ease 150ms;
+}
+
+.search-notice {
+  color: var(--pm-fg);
+  font-weight: 500;
+}
+
+/* Hybrid answered by words alone (A571): said quietly, the reason on hover and to readers. */
+.search-words-only {
+  padding: 0 0.45rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  color: var(--pm-muted);
+}
+
+.opt.search-hit {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.15rem;
+  /* The text on a palette row's edge, as in every list in a dialog (A988); it was 1px in. */
+  padding: 0.5rem 0.6rem;
+}
+
+.search-hit-title {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-hit-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem 0.55rem;
+  color: var(--pm-muted);
+  font-size: 0.72rem;
+}
+
+.search-heading {
+  color: var(--pm-link, var(--pm-accent));
+}
+
+.search-source {
+  color: var(--pm-accent);
+  font-weight: 700;
+}
+
+.search-snippet {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--pm-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.search-hit mark {
+  padding: 0 0.1em;
+  border-radius: 0;
+  /*
+   * The theme's search colour at 38% over the dialog's own background, as contrast.ts checks it
+   * (mixing opaque colours in sRGB is laying one over the other). Opaque, so a selected or
+   * hovered hit's tint does not show through: over the accent tint it fell below 4.5:1 in
+   * Penmoss dark.
+   */
+  background: color-mix(in srgb, var(--pm-search-match) 38%, var(--pm-raised));
+  color: var(--pm-fg);
+  font-weight: 600;
+}

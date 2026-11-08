@@ -1,0 +1,39 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // The relay (T55, D48): claude.ai's custom connector for a Penmoss git notebook.
+  "name": "penmoss-relay",
+  "main": "src/index.ts",
+  // Latest date supported by the workerd bundled with the pinned Wrangler.
+  "compatibility_date": "2026-10-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "mcp.penmoss.app", "custom_domain": true }],
+  "durable_objects": {
+    "bindings": [{ "name": "NOTEBOOK", "class_name": "RelayNotebook" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RelayNotebook"] }],
+  // OAuth grants and clients (workers-oauth-provider), and sign-ins in progress.
+  "kv_namespaces": [{ "binding": "OAUTH_KV", "id": "2b8ea1718e3c4cd5ba7e83f25da4c2d5" }],
+  "vars": {
+    // The relay's public origin: its OAuth resource is <origin>/mcp.
+    "RELAY_ORIGIN": "https://mcp.penmoss.app",
+    // owner/name of the notes repository, its branch and the notebook's directory ('' for the top).
+    "NOTES_REPOSITORY": "htxryan/penmoss-notebook",
+    "NOTES_BRANCH": "main",
+    "NOTES_DIR": "",
+    // The one GitHub account that may sign in.
+    "ALLOWED_GITHUB_LOGIN": "htxryan",
+    // The writer's name in History and agent activity.
+    "AGENT_LABEL": "claude.ai",
+    // Hosts a grant may be sent to: claude.ai's connectors.
+    "ALLOWED_REDIRECT_HOSTS": "claude.ai,claude.com",
+    // The GitHub App: its id, its installation on the notes repository, and its client id (sign-in).
+    "GITHUB_APP_ID": "5605232",
+    "GITHUB_APP_INSTALLATION_ID": "178410398",
+    "GITHUB_CLIENT_ID": "Iv23liW1KcPuAWXdNO53",
+    // Secrets (wrangler secret put): GITHUB_APP_PRIVATE_KEY and GITHUB_CLIENT_SECRET,
+    // or GITHUB_TOKEN (a fine-grained token limited to the notes repository) instead of the App's key.
+  },
+}

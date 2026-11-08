@@ -1,0 +1,63 @@
+{
+  "name": "@penmoss/editor",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "TipTap extensions, clipboard, slash menu, platform adapters",
+  "exports": {
+    ".": "./src/index.ts",
+    "./collab": "./src/collab/index.ts",
+    "./extensions": "./src/extensions.ts",
+    "./schema": "./src/schema.ts",
+    "./spike/schema": "./src/spike/schema.ts",
+    "./keys": "./src/keys.ts",
+    "./commands": "./src/commands.ts",
+    "./periodic": "./src/periodic.ts",
+    "./capture": "./src/capture.ts",
+    "./title": "./src/title.ts",
+    "./stats": "./src/stats.ts",
+    "./note-fields": "./src/note-fields.ts",
+    "./feedback": "./src/feedback.ts",
+    "./markdown": "./src/markdown.ts",
+    "./edit-engine": "./src/edit-engine.ts",
+    "./revert": "./src/revert.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "fast-check": "4.10.2",
+    "happy-dom": "21.0.4",
+    "vitest": "5.0.5"
+  },
+  "dependencies": {
+    "@floating-ui/dom": "1.8.0",
+    "@penmoss/core": "workspace:*",
+    "@penmoss/sync-client": "workspace:*",
+    "@tiptap/core": "3.32.0",
+    "@tiptap/extension-bold": "3.32.0",
+    "@tiptap/extension-bubble-menu": "3.32.0",
+    "@tiptap/extension-code": "3.32.0",
+    "@tiptap/extension-code-block": "3.32.0",
+    "@tiptap/extension-heading": "3.32.0",
+    "@tiptap/extension-highlight": "3.32.0",
+    "@tiptap/extension-italic": "3.32.0",
+    "@tiptap/extension-link": "3.32.0",
+    "@tiptap/extension-list": "3.32.0",
+    "@tiptap/extension-paragraph": "3.32.0",
+    "@tiptap/extension-strike": "3.32.0",
+    "@tiptap/extension-table": "3.32.0",
+    "@tiptap/pm": "3.32.0",
+    "@tiptap/starter-kit": "3.32.0",
+    "@tiptap/suggestion": "3.32.0",
+    "@y/prosemirror": "2.0.0-15",
+    "@y/protocols": "1.0.6-rc.1",
+    "@y/y": "14.0.0-rc.29",
+    "highlight.js": "11.11.2",
+    "katex": "0.18.9",
+    "lowlight": "3.3.0",
+    "mermaid": "12.2.0"
+  }
+}

@@ -1,0 +1,17 @@
+// The static site at penmoss.app (D48, D49, D64): the brochure pages, the privacy policy the Play
+// listing links to, and the user docs at /docs, built into ./dist by `task site:build` (P9).
+// Static assets only: no Worker code, no bindings, nothing that reads a cookie, a token or a
+// database. Deploy with `task site:deploy`.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "penmoss-site",
+  "compatibility_date": "2026-10-19",
+  "assets": {
+    "directory": "./dist",
+    // `/privacy` serves privacy/index.html, as the Play listing's URL expects.
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page",
+  },
+  "routes": [{ "pattern": "penmoss.app", "custom_domain": true }],
+  "workers_dev": false,
+}

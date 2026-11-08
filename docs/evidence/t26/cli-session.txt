@@ -1,0 +1,207 @@
+# 2026-10-23T04:12:46Z on worker; node v24.22.1; secret-tool: none
+
+$ penmoss --version
+penmoss 0.1.0
+[exit 0]
+
+$ penmoss login < token.txt         # token on stdin
+Signed in to http://127.0.0.1:8797 as ryan@example.invalid with token “Codex CLI” (agent; read, write).
+Token saved in $XDG_CONFIG_HOME/penmoss/config.json.
+[exit 0]
+
+$ stat -c '%a %U %n' config.json && penmoss whoami
+600 $XDG_CONFIG_HOME/penmoss/config.json
+700 $XDG_CONFIG_HOME/penmoss
+Signed in to http://127.0.0.1:8797 as ryan@example.invalid with token “Codex CLI” (agent; read, write).
+Token from the config file.
+[exit 0]
+
+$ penmoss login pma_…               # a token on argv is refused
+penmoss: the token is read from stdin or a prompt, never from the command line: run `penmoss login` and paste it
+Run `penmoss login --help` for usage.
+[exit 2]
+
+$ printf '## Plans\n\nFly to Denver.\n\n## Packing\n\nSocks, socks.\n' | penmoss new 'Denver trip' - --tag travel
+Created “Denver trip” (01M5KFC64YYJ1F0EE830NS9YMZ) · Created · +12 −0 lines · version 1
+[exit 0]
+
+$ penmoss new 'Homelab log' --text 'Proxmox hypervisor upgrade planned.' --tag homelab --json
+{
+  "id": "01M5KFC696QJKNK6MQG5VKENRY",
+  "title": "Homelab log",
+  "created": true,
+  "changed": true,
+  "baseVersion": 1,
+  "summary": "Created · +6 −0 lines"
+}
+[exit 0]
+
+$ penmoss search hypervisor
+01M5KFC696QJKNK6MQG5VKENRY  Homelab log  2026-10-22 23:12  #homelab
+    Proxmox hypervisor upgrade planned.
+01M5KFC64YYJ1F0EE830NS9YMZ  Denver trip  2026-10-22 23:12  #travel
+    § Packing
+    Socks, socks.
+[exit 0]
+
+$ penmoss search denver --mode full-text --json
+{
+  "mode": "full-text",
+  "results": [
+    {
+      "id": "01M5KFC64YYJ1F0EE830NS9YMZ",
+      "title": "Denver trip",
+      "snippet": "Plans\nFly to **Denver**.\nPacking\nSocks, socks.",
+      "tags": [
+        "travel"
+      ],
+      "updatedAt": "2026-10-23T04:12:46.645Z",
+      "foundBy": [
+        "full-text"
+      ]
+    }
+  ]
+}
+[exit 0]
+
+$ penmoss cat 'denver trip'
+---
+id: 01M5KFC64YYJ1F0EE830NS9YMZ
+title: Denver trip
+created: 2026-10-22T23:12:46-05:00
+updated: 2026-10-23T04:12:53.005Z
+tags: [travel]
+---
+
+## Plans
+
+Fly to Denver.
+
+## Packing
+
+Socks, socks.
+[exit 0]
+
+$ echo 'Drive instead: 14 hours.' | penmoss edit 'Denver trip' --section Plans
+Edited “Denver trip” (01M5KFC64YYJ1F0EE830NS9YMZ) · Created, Replaced section “Plans” · +12 −0 lines · version 2
+[exit 0]
+
+$ penmoss edit 'Denver trip' --replace socks --with boots --all
+Edited “Denver trip” (01M5KFC64YYJ1F0EE830NS9YMZ) · Created, Replaced section “Plans”, Replaced text · +12 −0 lines · version 3
+[exit 0]
+
+$ penmoss edit 'Denver trip' --section Plans --text 'Train.' --base 1    # stale base: conflict
+penmoss: Conflict: The section “Plans” changed since the base version; read the note again (conflict).
+Nothing was changed.
+--- in version 1, which your edit is based on:
+## Plans
+
+Fly to Denver.
+--- now:
+## Plans
+
+Drive instead: 14 hours.
+Read the note again (penmoss cat 01M5KFC64YYJ1F0EE830NS9YMZ) and redo the edit on the current text.
+[exit 5]
+
+$ penmoss cat 'Denver trip' --body
+## Plans
+
+Drive instead: 14 hours.
+
+## Packing
+
+Socks, boots.
+[exit 0]
+
+$ echo '- Wrote the penmoss CLI (T26)' | penmoss daily --append -
+Appended to daily note 2026-10-22 (01M5GEGM00EP8A1EKW84X1VKCH) · Appended · +2 −0 lines · version 3 · created from your template
+[exit 0]
+
+$ echo '- And tested it by hand' | penmoss daily --append - --json
+{
+  "id": "01M5GEGM00EP8A1EKW84X1VKCH",
+  "changed": true,
+  "baseVersion": 4,
+  "summary": "Appended · +4 −0 lines",
+  "kind": "daily",
+  "date": "2026-10-22",
+  "created": false
+}
+[exit 0]
+
+$ penmoss daily --body
+## Plan
+
+## Notes
+
+- Wrote the penmoss CLI (T26)
+
+* And tested it by hand
+[exit 0]
+
+$ penmoss ls
+0000000000S8E1TX8VKMHGWYHE  Journal/
+01M5KFC64YYJ1F0EE830NS9YMZ  Denver trip  2026-10-22 23:12
+01M5KFC696QJKNK6MQG5VKENRY  Homelab log  2026-10-22 23:12
+[exit 0]
+
+$ penmoss ls Journal
+00000000000NN99SQYYY5PFX9R  2026/
+[exit 0]
+
+$ penmoss tag 'Denver trip' road-trip --remove travel
+Tagged “Denver trip” (01M5KFC64YYJ1F0EE830NS9YMZ): +#road-trip -#travel · Created, Replaced section “Plans”, Replaced text and 1 more · +12 −0 lines · version 4
+[exit 0]
+
+$ penmoss open 'Denver trip' --print
+http://localhost:5173/notes/01M5KFC64YYJ1F0EE830NS9YMZ
+[exit 0]
+
+$ penmoss history 'Denver trip'
+Versions of “Denver trip” (01M5KFC64YYJ1F0EE830NS9YMZ), newest first:
+       4  2026-10-22 23:12  ✦ Codex CLI  Created, Replaced section “Plans”, Replaced text and 1 more · +12 −0 lines
+[exit 0]
+
+$ penmoss history 'Denver trip' --json
+{
+  "id": "01M5KFC64YYJ1F0EE830NS9YMZ",
+  "versions": [
+    {
+      "id": 4,
+      "createdAt": "2026-10-23T04:12:53.792Z",
+      "reason": "edit",
+      "summary": "Created, Replaced section “Plans”, Replaced text and 1 more · +12 −0 lines",
+      "authors": [
+        "Codex CLI"
+      ]
+    }
+  ],
+  "unversioned": null
+}
+[exit 0]
+
+$ penmoss cat 'No such note'
+penmoss: No note titled “No such note”.
+Titles match exactly (ignoring case). Find notes with: penmoss search "No such note"
+A note made in the last few seconds may not be indexed yet: use its id.
+[exit 4]
+
+$ chmod 644 config.json && penmoss whoami   # unsafe file mode is refused
+penmoss: $XDG_CONFIG_HOME/penmoss/config.json is readable by other users (mode 644), so its token is not used. Fix it with: chmod 600 $XDG_CONFIG_HOME/penmoss/config.json
+[exit 3]
+
+$ penmoss logout
+Forgot the token for http://127.0.0.1:8797 (removed from the config file). Revoke it in Settings → Devices if it is no longer needed.
+[exit 0]
+
+$ penmoss whoami
+penmoss: Not signed in. Run `penmoss login` (or set PENMOSS_TOKEN).
+[exit 3]
+
+$ penmoss login            # on a terminal (a pty): the prompt hides what is typed
+Paste a Penmoss token (Settings → Devices → Agent tokens): 
+Signed in to http://127.0.0.1:8797 as ryan@example.invalid with token “Codex CLI” (agent; read, write).
+Token saved in $XDG_CONFIG_HOME/penmoss/config.json.
+
+[exit 0]

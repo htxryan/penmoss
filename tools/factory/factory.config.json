@@ -1,0 +1,100 @@
+{
+  "repo": "htxryan/penmoss",
+  "project": {
+    "owner": "htxryan",
+    "number": 8
+  },
+  "owner": "htxryan",
+  "status": {
+    "pick": "Ready",
+    "planning": "Planning",
+    "working": "In progress",
+    "review": "In review",
+    "done": "Done"
+  },
+  "blockedField": "Blocked",
+  "planning": {
+    "default": true,
+    "skipLabel": "plan:skip",
+    "agentMaySkipTrivial": true,
+    "designWhenUx": true
+  },
+  "review": {
+    "commentQuietMinutes": 3,
+    "validationRounds": 2
+  },
+  "publisher": {
+    "login": "penmoss-bot",
+    "ghConfigDir": "~/.config/penmoss-factory/gh"
+  },
+  "envFile": "~/.config/penmoss-factory/factory.env",
+  "stateDir": "~/Library/Application Support/penmoss-factory",
+  "pollSeconds": 60,
+  "maxConcurrent": 2,
+  "worktreeRoot": "~/src/penmoss-wt",
+  "branchPrefix": "factory/",
+  "rounds": {
+    "gateFix": 2,
+    "ciRepair": 2
+  },
+  "timeouts": {
+    "agentMinutes": 90,
+    "proofMinutes": 40,
+    "ciMinutes": 60
+  },
+  "slots": [
+    {
+      "id": 1,
+      "portBlock": 1,
+      "avd": "penmoss37-slot1",
+      "emulatorPort": 5560,
+      "adbServerPort": 5040
+    },
+    {
+      "id": 2,
+      "portBlock": 2,
+      "avd": "penmoss37-slot2",
+      "emulatorPort": 5562,
+      "adbServerPort": 5041
+    }
+  ],
+  "sharedDir": "/Users/Shared/penmoss-factory",
+  "macProof": {
+    "task": "proof:mac",
+    "vm": "penmoss-test",
+    "lock": "vm"
+  },
+  "agents": {
+    "claude": {
+      "bin": "claude",
+      "defaultModel": "opus"
+    },
+    "opencode": {
+      "bin": "opencode",
+      "defaultModel": "go"
+    }
+  },
+  "models": {
+    "opus": {
+      "agent": "claude",
+      "model": "opus"
+    },
+    "sonnet": {
+      "agent": "claude",
+      "model": "sonnet"
+    },
+    "go": {
+      "agent": "opencode",
+      "model": "opencode-go/kimi-k3"
+    }
+  },
+  "ui": {
+    "port": 7878,
+    "doneDays": 7
+  },
+  "toolchain": {
+    "jdk": "/opt/homebrew/opt/openjdk@21",
+    "androidSdk": "~/Library/Android/sdk",
+    "playwrightBrowsers": "~/Library/Caches/ms-playwright"
+  }
+}

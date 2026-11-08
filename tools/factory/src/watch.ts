@@ -1,0 +1,280 @@
+/**
+ * What the daemon does for each In review card (F11, F18): find the factory's PR for it, read
+ * what Ryan has said, then start a review round in a free slot, repair a red check, or merge
+ * on approval. Blocked cards are never looked at (R23).
+ */
+import { randomBytes } from 'node:crypto';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { agentFor } from './agents/index.ts';
+import { readBoard, setBlocked, setStatus, type Board, type BoardItem } from './board.ts';
+import { summarizeChecks, type CheckRun } from './checks.ts';
+import { expandHome, type SlotConfig } from './config.ts';
+import { nodeExec } from './exec.ts';
+import { BlockedByRyan, guardEffects } from './guard.ts';
+import { hostDeps } from './host.ts';
+import { fence, issueText, readIssue } from './issue.ts';
+import type { IssueSpec } from './labels.ts';
+import { mergeApproved, type MainRun, type MergeDeps } from './merge.ts';
+import { fill, promptTemplate } from './prompt.ts';
+import { attachArgs } from './proof/body.ts';
+import { readConversation, reviewState, roundText, type ReviewState } from './review.ts';
+import { runRevise, type ReviseDeps } from './revise.ts';
+import { branchName } from './run.ts';
+import type { Factory } from './start.ts';
+
+export interface FactoryPr {
+  readonly number: number;
+  readonly url: string;
+  readonly state: 'OPEN' | 'MERGED' | 'CLOSED';
+}
+
+export async function findPr(factory: Factory, item: BoardItem): Promise<FactoryPr | undefined> {
+  const prs = await factory.gh.json<FactoryPr[]>([
+    'pr',
+    'list',
+    '--repo',
+    factory.config.repo,
+    '--head',
+    branchName(factory.config, item),
+    '--state',
+    'all',
+    '--json',
+    'number,url,state',
+  ]);
+  return prs[0];
+}
+
+export type ReviewAction =
+  | { readonly kind: 'none'; readonly reason: string }
+  | { readonly kind: 'round'; readonly state: Extract<ReviewState, { kind: 'round' }> }
+  | { readonly kind: 'repair'; readonly failed: readonly CheckRun[] }
+  | { readonly kind: 'merge' };
+
+/** The next thing to do for an In review card's PR. */
+export async function nextReviewAction(
+  factory: Factory,
+  pr: FactoryPr,
+  now: Date,
+): Promise<ReviewAction> {
+  if (pr.state !== 'OPEN') return { kind: 'none', reason: `the PR is ${pr.state.toLowerCase()}` };
+  const { config, gh } = factory;
+  const conversation = await readConversation(gh, config.repo, pr.number, 'penmoss-factory');
+  const state = reviewState(
+    conversation,
+    config.owner,
+    config.publisher.login,
+    now,
+    config.review.commentQuietMinutes,
+  );
+  if (state.kind === 'round') return { kind: 'round', state };
+  const checks = await gh
+    .json<CheckRun[]>([
+      'pr',
+      'checks',
+      pr.url,
+      '--repo',
+      config.repo,
+      '--json',
+      'name,state,bucket,link,startedAt',
+    ])
+    .catch(() => []);
+  const ci = summarizeChecks(checks, now, config.timeouts.ciMinutes, new Date(0));
+  if (ci.kind === 'red') return { kind: 'repair', failed: ci.failed };
+  if (state.kind === 'approved')
+    return ci.kind === 'green'
+      ? { kind: 'merge' }
+      : { kind: 'none', reason: `approved; CI is ${ci.kind}` };
+  return { kind: 'none', reason: state.reason };
+}
+
+/** A review round (or a CI repair) on a slot, guarded by the card's Blocked field. */
+export async function executeRevise(
+  factory: Factory,
+  board: Board,
+  item: BoardItem,
+  spec: IssueSpec,
+  slot: SlotConfig,
+  pr: FactoryPr,
+  action: Extract<ReviewAction, { kind: 'round' | 'repair' }>,
+  log: (line: string) => void,
+): Promise<string> {
+  const { config, gh } = factory;
+  const runId = `${item.number}-${Date.now().toString(36)}-${randomBytes(2).toString('hex')}`;
+  const issue = await readIssue(gh, config.repo, item.number);
+  const base = fill(promptTemplate('implement'), {
+    branch: branchName(config, item),
+    issue: issueText(issue, config.owner, 'penmoss-factory'),
+    scope: spec.platforms
+      ? `The issue is labelled for ${spec.platforms.join(', ')}.`
+      : 'The path classifier decides the platforms from your diff.',
+  });
+  const items = action.kind === 'round' ? action.state.items : [];
+  const prompt =
+    action.kind === 'round'
+      ? `${base}\n\n## Ryan's review of ${pr.url}\n\nThe PR is open and in review. Address every item below in the same branch, then write \`.factory/result.json\` with a \`replies\` object: for each review thread ID, one or two sentences saying what you changed (or why not).\n\n${roundText(items, fence)}`
+      : `${base}\n\n## CI failed on ${pr.url}\n\nThe PR is in review and these checks failed: ${action.failed.map((c) => `${c.name} (${c.link})`).join(', ')}. Fix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\`.`;
+  const agent = await agentFor(config, spec);
+  const deps = hostDeps({
+    config,
+    slot,
+    runId,
+    board,
+    gh,
+    exec: nodeExec,
+    secrets: factory.secrets,
+    agent,
+    log,
+  });
+  const dir = join(expandHome(config.stateDir), 'runs', runId, 'proof');
+  const revise: ReviseDeps = {
+    ...deps,
+    prComment: async (url, body, proof = []) => {
+      mkdirSync(dir, { recursive: true });
+      const file = join(dir, `comment-${Date.now()}.md`);
+      writeFileSync(file, body);
+      await gh.run([
+        'pr',
+        'comment',
+        url,
+        '--repo',
+        config.repo,
+        '--body-file',
+        file,
+        ...attachArgs(proof, dir),
+      ]);
+    },
+    replyToThread: async (threadId, body) => {
+      await gh.graphql(
+        'mutation($thread: ID!, $body: String!) { addPullRequestReviewThreadReply(input: { pullRequestReviewThreadId: $thread, body: $body }) { comment { id } } }',
+        { thread: threadId, body },
+      );
+    },
+    headSha: async (branch) =>
+      (
+        await nodeExec('git', [
+          '-C',
+          join(expandHome(config.stateDir), 'repo'),
+          'rev-parse',
+          branch,
+        ])
+      ).stdout.trim(),
+  };
+  const isBlocked = async () =>
+    (await readBoard(gh, config)).items.find((i) => i.number === item.number)?.blocked ?? false;
+  const guarded = guardEffects(
+    revise,
+    ['comment', 'prComment', 'replyToThread', 'setStatus', 'setBlocked', 'push', 'runAgent'],
+    item.number,
+    isBlocked,
+  );
+  try {
+    const outcome = await runRevise(guarded, {
+      item,
+      spec,
+      pr: pr.url,
+      branch: branchName(config, item),
+      items,
+      prompt,
+    });
+    return outcome.kind;
+  } catch (error) {
+    if (error instanceof BlockedByRyan) return 'stopped';
+    const message = error instanceof Error ? error.message : String(error);
+    if (!(await isBlocked())) {
+      await deps
+        .comment(item.number, `A review round stopped on an error: ${message}`)
+        .catch(() => undefined);
+      await setBlocked(gh, board, item).catch(() => undefined);
+    }
+    return `blocked: ${message}`;
+  }
+}
+
+/** Merge an approved PR and see main through (F18). Needs no slot: it only waits on GitHub. */
+export async function executeMerge(
+  factory: Factory,
+  board: Board,
+  item: BoardItem,
+  pr: FactoryPr,
+  log: (line: string) => void,
+): Promise<string> {
+  const { config, gh } = factory;
+  const runId = `${item.number}-merge-${Date.now().toString(36)}`;
+  const deps: MergeDeps = {
+    config,
+    runId,
+    checks: (url) =>
+      gh
+        .json<CheckRun[]>([
+          'pr',
+          'checks',
+          url,
+          '--repo',
+          config.repo,
+          '--json',
+          'name,state,bucket,link,startedAt',
+        ])
+        .catch(() => []),
+    merge: async (url) => {
+      await gh.run(['pr', 'merge', url, '--repo', config.repo, '--squash', '--delete-branch']);
+      const view = await gh.json<{ mergeCommit: { oid: string } | null }>([
+        'pr',
+        'view',
+        url,
+        '--repo',
+        config.repo,
+        '--json',
+        'mergeCommit',
+      ]);
+      return view.mergeCommit?.oid ?? '';
+    },
+    mainRuns: (sha) =>
+      gh.json<MainRun[]>([
+        'run',
+        'list',
+        '--repo',
+        config.repo,
+        '--branch',
+        'main',
+        '--commit',
+        sha,
+        '--json',
+        'status,conclusion,url',
+      ]),
+    comment: async (n, body) => {
+      await gh.run(
+        ['issue', 'comment', String(n), '--repo', config.repo, '--body-file', '-'],
+        body,
+      );
+    },
+    closeIssue: async (n, body) => {
+      await gh.run(['issue', 'close', String(n), '--repo', config.repo, '--comment', body]);
+    },
+    setStatus: (i, s) => setStatus(gh, board, i, s),
+    setBlocked: (i) => setBlocked(gh, board, i),
+    notify: async (title, message) => {
+      await nodeExec('osascript', [
+        '-e',
+        `display notification ${JSON.stringify(message)} with title ${JSON.stringify(title)}`,
+      ]);
+    },
+    sleep: (s) => new Promise((resolve) => setTimeout(resolve, s * 1000)),
+    now: () => new Date(),
+    log: (event, detail = {}) => log(`${event} ${JSON.stringify(detail)}`),
+  };
+  const isBlocked = async () =>
+    (await readBoard(gh, config)).items.find((i) => i.number === item.number)?.blocked ?? false;
+  const guarded = guardEffects(
+    deps,
+    ['merge', 'comment', 'closeIssue', 'setStatus', 'setBlocked'],
+    item.number,
+    isBlocked,
+  );
+  try {
+    return (await mergeApproved(guarded, item, pr.url)).kind;
+  } catch (error) {
+    if (error instanceof BlockedByRyan) return 'stopped';
+    throw error;
+  }
+}

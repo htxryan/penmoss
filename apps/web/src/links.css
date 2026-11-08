@@ -1,0 +1,483 @@
+/*
+ * Links between notes (T16 wikilinks, completion and backlinks; T17 graph;
+ * T13 embeds and attachments), after the prototype. Every colour is a token.
+ */
+:root {
+  --pm-link: color-mix(in oklab, var(--pm-accent) 82%, var(--pm-fg));
+  --pm-link-line: color-mix(in oklab, var(--pm-accent) 45%, transparent);
+  --pm-link-soft: color-mix(in oklab, var(--pm-accent) 10%, transparent);
+  --pm-mark: color-mix(in oklab, var(--pm-highlight-bg) 70%, transparent);
+}
+
+/* Wikilinks in the editor. */
+.note-body a.pm-wikilink {
+  color: var(--pm-link);
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px solid var(--pm-link-line);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+/* Link text on the accent tint falls below 4.5:1 in some light themes: the line darkens instead. */
+.note-body a.pm-wikilink:hover {
+  border-bottom-color: currentcolor;
+}
+
+.note-body a.pm-wikilink[data-state='unresolved'] {
+  color: var(--pm-muted);
+  border-bottom-style: dashed;
+  border-bottom-color: var(--pm-border);
+}
+
+.note-body a.pm-wikilink[data-state='broken'] {
+  color: var(--pm-muted);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in oklab, var(--pm-danger) 60%, transparent);
+  border-bottom-style: dashed;
+  border-bottom-color: var(--pm-danger);
+}
+
+.note-body a.pm-wikilink.ProseMirror-selectednode {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 1px;
+}
+
+.note-body .pm-link-query {
+  border-radius: 0;
+  background: var(--pm-link-soft);
+}
+
+.pm-link-menu .pm-link-detail {
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-body .pm-heading-target {
+  animation: pm-heading-target 2s ease-out;
+}
+
+@keyframes pm-heading-target {
+  from {
+    background: var(--pm-link-soft);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+/*
+ * The note and its panel (T53 item 9, A985): the four tabs' icons always run down the note's right
+ * edge as vertical tabs; the open tab's panel sits between the note and them on a wide pane, or
+ * over the end of the note's text in a narrow one. Nothing goes below the note.
+ */
+.note-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  /* One row, the pane's height under the note's bar: each column scrolls on its own. */
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+/*
+ * The note's text scrolls by itself (Quanta feedback 3, item 1; A1132): its scrollbar is at the
+ * text's right edge, left of the panel and the strip of tabs, which stay put.
+ */
+.note-scroll {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/*
+ * One width for every tab (T51), so the tabs stay put: History's diffs and the Local Graph need
+ * it. Dragged by its edge (A1122), set on the element; 26rem until then.
+ */
+.note-columns[data-panel='open']:not([data-over]) {
+  grid-template-columns: minmax(0, 1fr) var(--pm-panel-width, 26rem) auto;
+}
+
+/* The panel scrolls on its own, between the note's bar and the status bar (A505, A1132). */
+.note-side {
+  box-sizing: border-box;
+  min-height: 0;
+  margin: 0;
+  padding: 0.75rem 1rem 1.25rem;
+  overflow-y: auto;
+  border-left: 1px solid var(--pm-border);
+}
+
+/* A narrow pane: the panel lies over the end of the text, the strip still beside it. */
+.note-columns[data-over] > * {
+  grid-row: 1;
+  grid-column: 1;
+}
+
+.note-columns[data-over] > .note-rail {
+  grid-column: 2;
+}
+
+.note-columns[data-over] > .note-side {
+  z-index: 3;
+  justify-self: end;
+  width: min(var(--pm-panel-width, 26rem), 100%);
+  background: var(--pm-bg);
+  box-shadow: var(--pm-shadow);
+}
+
+/* The open tab's name and Close, over its content. */
+.note-side-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+}
+
+.note-side-head h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: var(--pm-muted);
+  font-size: 0.8rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/*
+ * The head names the tab, so the tab's own heading would say it twice: it stays for screen
+ * readers only, still naming its section.
+ */
+.note-side
+  .note-tabpanel
+  > :is(.note-info, .history-panel, .note-graph)
+  > .info-heading:first-child,
+.note-side .comments-header > .info-heading {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/*
+ * Every tab's content starts the same distance under the head (A988). With its heading hidden,
+ * Comments kept the gap above its filter row (5.6 px) and History the room under its heading
+ * (4 px), so their first lines sat lower than Metadata's and the Local Graph's.
+ */
+.note-side .comments-header {
+  row-gap: 0;
+}
+
+.note-side .history-auto {
+  padding-top: 0;
+}
+
+.note-rail {
+  border-left: 1px solid var(--pm-border-soft);
+}
+
+.note-rail-icons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem 0.3rem;
+}
+
+.note-rail-btn {
+  position: relative;
+}
+
+/* The open tab: shaded, with the accent on the side it opens towards. */
+.note-rail-btn[aria-selected='true'] {
+  background: var(--pm-active);
+  color: var(--pm-fg);
+  box-shadow: inset 2px 0 0 var(--pm-accent);
+}
+
+/*
+ * A phone: no strip while the panel is closed (every tab is in the ⋯ sheet); the open panel covers
+ * the note below its app bar, with its name and Close, the strip beside it to change tabs, as the
+ * Android app has it.
+ */
+@media (max-width: 700px) {
+  .note-columns:not([data-panel='open']) > .note-rail {
+    display: none;
+  }
+
+  .note-columns[data-over] > .note-side {
+    width: 100%;
+    box-shadow: none;
+    border-left: 0;
+  }
+}
+
+/* The panel's text size, as in every other tab (A988). */
+.backlinks {
+  border-top: 1px solid var(--pm-border);
+  padding-top: 1rem;
+  font-size: var(--pm-text-sm);
+}
+
+@media (min-width: 78rem) {
+  .backlinks {
+    border-top: 0;
+    border-left: 1px solid var(--pm-border);
+    padding: 0 0 0 1rem;
+  }
+}
+
+.bl-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pm-muted);
+}
+
+.bl-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 1rem 0 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--pm-fg);
+}
+
+.bl-count {
+  padding: 0 0.4rem;
+  border-radius: 0;
+  background: var(--pm-hover);
+  color: var(--pm-muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.bl-note {
+  margin: 0 0 0.5rem;
+  color: var(--pm-muted);
+  font-size: 0.75rem;
+}
+
+.bl-empty {
+  margin: 0;
+  color: var(--pm-muted);
+}
+
+.bl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bl-item {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+}
+
+.bl-title {
+  display: block;
+  overflow: hidden;
+  color: var(--pm-fg);
+  font-weight: 600;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bl-title:hover {
+  color: var(--pm-link);
+  text-decoration: underline;
+}
+
+.bl-context {
+  margin: 0.25rem 0 0;
+  color: var(--pm-muted);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.bl-context mark {
+  padding: 0 0.1em;
+  border-radius: 0;
+  background: var(--pm-mark);
+  color: var(--pm-fg);
+}
+
+.bl-link {
+  color: var(--pm-link);
+}
+
+.bl-kind {
+  font-style: italic;
+}
+
+/* Note embeds (T13): the source's section, read-only, set off from the note's own text. */
+.note-body .pm-embed {
+  margin: 0.75rem 0;
+  padding: 0.5rem 0.9rem 0.6rem;
+  border: 1px solid var(--pm-border);
+  border-left: 3px solid var(--pm-link-line);
+  border-radius: 0;
+  background: color-mix(in oklab, var(--pm-raised) 60%, var(--pm-bg));
+}
+
+.note-body .pm-embed.ProseMirror-selectednode {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 1px;
+}
+
+.note-body .pm-embed-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--pm-muted);
+}
+
+.note-body .pm-embed-mark {
+  color: var(--pm-link);
+}
+
+.note-body .pm-embed-title {
+  color: var(--pm-link);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.note-body .pm-embed-title:hover {
+  text-decoration: underline;
+}
+
+.note-body .pm-embed-body > .pm-embed-content > :first-child {
+  margin-top: 0.25rem;
+}
+
+.note-body .pm-embed-body > .pm-embed-content > :last-child {
+  margin-bottom: 0.1rem;
+}
+
+.note-body .pm-embed-content img {
+  max-width: 100%;
+}
+
+.note-body .pm-embed-nested {
+  margin: 0.5rem 0;
+  background: transparent;
+}
+
+.note-body .pm-embed-notice {
+  margin: 0.25rem 0;
+  color: var(--pm-muted);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.note-body .pm-embed[data-state='cycle'],
+.note-body .pm-embed-nested[data-state='cycle'],
+.note-body .pm-embed[data-state='missing'],
+.note-body .pm-embed[data-state='unresolved'] {
+  border-left-color: var(--pm-border);
+  border-style: dashed;
+}
+
+/* Attached files (T13): a chip with a type badge, the name, the size and actions. */
+.note-body .pm-attachment {
+  display: inline;
+}
+
+.note-body .pm-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+  padding: 0.1rem 0.25rem 0.1rem 0.15rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  vertical-align: baseline;
+}
+
+.note-body .pm-attachment.ProseMirror-selectednode .pm-attachment-chip {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 1px;
+}
+
+.note-body .pm-attachment-badge {
+  padding: 0 0.3rem;
+  border-radius: 0;
+  background: var(--pm-link-soft);
+  color: var(--pm-fg);
+  font: 600 0.68rem/1.5 var(--pm-mono);
+  letter-spacing: 0.02em;
+}
+
+.note-body .pm-attachment-name {
+  overflow: hidden;
+  max-width: 22rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-body .pm-attachment-size {
+  color: var(--pm-muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.note-body .pm-attachment-size:empty {
+  display: none;
+}
+
+.note-body .pm-attachment-chip button {
+  padding: 0 0.4rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--pm-link);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.note-body .pm-attachment-chip button[hidden] {
+  display: none;
+}
+
+.note-body .pm-attachment-chip button:hover {
+  text-decoration: underline;
+}
+
+.note-body .pm-attachment[data-state='missing'] .pm-attachment-chip {
+  border-style: dashed;
+}
+
+.note-body .pm-attachment-frame {
+  display: block;
+  width: 100%;
+  height: min(70vh, 40rem);
+  margin: 0.5rem 0;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+}

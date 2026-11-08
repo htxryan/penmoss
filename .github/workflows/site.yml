@@ -1,0 +1,75 @@
+# penmoss.app's deploy (T80.12, R8, P9; A1205). Publishing a stable release rebuilds the site so
+# its download cards show that release's version, date and sizes, and deploys it to Cloudflare.
+# A dispatch deploys the chosen branch, optionally describing a given release (a rehearsal).
+name: Site
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'A release tag for the download cards to describe (empty: the latest stable release)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy penmoss.app
+    # A prerelease (an Alpha build, or a vX.Y.Z-rc.N rehearsal) never moves the site.
+    if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
+    # A702: Ryan's Mac runners only.
+    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
+    timeout-minutes: 15
+    # The Cloudflare token lives in this environment, limited to main and v* tags (docs/ci.md, "Deploying penmoss.app").
+    environment: site-deploy
+    permissions:
+      contents: read
+    steps:
+      - name: Without the token, warn and stop (never fail a release)
+        id: token
+        env:
+          TOKEN: ${{ secrets.PENMOSS_SITE_CLOUDFLARE_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::PENMOSS_SITE_CLOUDFLARE_TOKEN is not set in the site-deploy environment: penmoss.app was not deployed (docs/ci.md, Deploying penmoss.app)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.token.outputs.ready == 'true'
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        if: steps.token.outputs.ready == 'true'
+
+      - name: Build the site with the release's version
+        if: steps.token.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PENMOSS_SITE_REPO: ${{ github.repository }}
+          PENMOSS_SITE_RELEASE: ${{ inputs.release || github.event.release.tag_name }}
+        run: task site:build
+
+      - name: Deploy to Cloudflare (the penmoss-site Worker's static assets)
+        if: steps.token.outputs.ready == 'true'
+        working-directory: site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.PENMOSS_SITE_CLOUDFLARE_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 6e32c58c0c71b7228ddca35c4c466b6c
+        run: pnpm exec wrangler deploy
+
+      - name: Empty the checkout (Mac)
+        if: always() && runner.os == 'macOS'
+        # Guarded: a failed checkout leaves no script, and nothing to clean.
+        run: if [ -f .github/scripts/mac-runner.sh ]; then bash .github/scripts/mac-runner.sh clean; fi

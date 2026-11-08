@@ -1,0 +1,115 @@
+import { describe, expect, it } from 'vitest';
+import { parseIssueSpec, type IssueSpec } from '../src/labels.ts';
+import { formatMarker, modeFor, parseMarkers, pickNext } from '../src/pick.ts';
+import { item, testConfig } from './helpers.ts';
+
+const config = testConfig();
+
+function spec(labels: string[] = []): IssueSpec {
+  const result = parseIssueSpec(labels, config);
+  if (!result.ok) throw new Error(result.error);
+  return result.spec;
+}
+
+describe('pickNext', () => {
+  it('orders Ready cards by priority, then board position', () => {
+    const items = [
+      item(10, { position: 0 }),
+      item(11, { position: 1, labels: ['P1'] }),
+      item(12, { position: 2, labels: ['P1'] }),
+      item(13, { position: 3, labels: ['P4'] }),
+    ];
+    const result = pickNext(items, config);
+    expect(result.queue.map((p) => p.item.number)).toEqual([11, 12, 10, 13]);
+    expect(result.next?.item.number).toBe(11);
+    expect(result.next?.why).toBe(
+      'P1, ahead of 2 lower-priority cards, above 1 other P1 card on the board',
+    );
+  });
+
+  it('never picks a blocked card', () => {
+    const result = pickNext([item(1, { blocked: true, labels: ['P1'] }), item(2)], config);
+    expect(result.next?.item.number).toBe(2);
+    expect(result.skipped.map((s) => [s.item.number, s.reason])).toEqual([[1, 'Blocked is set']]);
+  });
+
+  it('passes over closed issues, other repos, running cards and bad labels', () => {
+    const result = pickNext(
+      [
+        item(1, { state: 'CLOSED' }),
+        item(2, { repo: 'htxryan/other' }),
+        item(3),
+        item(4, { labels: ['agent:claude', 'agent:opencode'] }),
+      ],
+      config,
+      new Set([3]),
+    );
+    expect(result.next).toBeNull();
+    expect(result.skipped.map((s) => [s.item.number, s.reason])).toEqual([
+      [1, 'the issue is closed'],
+      [2, 'in htxryan/other, not htxryan/penmoss'],
+      [3, 'already running'],
+      [4, 'conflicting labels agent:claude and agent:opencode'],
+    ]);
+  });
+
+  it('ignores cards outside Ready', () => {
+    const result = pickNext(
+      [item(1, { status: 'Backlog' }), item(2, { status: 'In progress' })],
+      config,
+    );
+    expect(result).toEqual({ next: null, skipped: [], queue: [] });
+  });
+
+  it('plans first unless plan:skip', () => {
+    expect(pickNext([item(1)], config).next?.mode).toBe('plan');
+    expect(pickNext([item(1, { labels: ['plan:skip'] })], config).next?.mode).toBe('implement');
+  });
+
+  it('explains a lone card', () => {
+    expect(pickNext([item(1)], config).next?.why).toBe('P3, the only card in Ready that can start');
+  });
+});
+
+describe('modeFor', () => {
+  const base = { spec: spec(), markers: [], hasOpenPr: false };
+  it.each([
+    ['Ready', 'plan'],
+    ['Planning', 'plan'],
+    ['In progress', 'implement'],
+    ['In review', 'implement'],
+    ['Done', null],
+    ['Backlog', null],
+    [null, null],
+  ])('%s → %s', (status, mode) => {
+    expect(modeFor({ ...base, status }, config)).toBe(mode);
+  });
+
+  it('implements once the plan is approved', () => {
+    const markers = parseMarkers(formatMarker({ run: 'r1', event: 'plan-approved' }));
+    expect(modeFor({ ...base, status: 'Planning', markers }, config)).toBe('implement');
+  });
+
+  it('revises an open PR in review', () => {
+    expect(modeFor({ ...base, status: 'In review', hasOpenPr: true }, config)).toBe('revise');
+  });
+
+  it('skips planning with plan:skip', () => {
+    expect(modeFor({ ...base, spec: spec(['plan:skip']), status: 'Ready' }, config)).toBe(
+      'implement',
+    );
+  });
+});
+
+describe('markers', () => {
+  it('round-trips and finds several in one body', () => {
+    const body = `Claimed.\n${formatMarker({ run: 'a1', agent: 'claude' })}\ntext\n<!--penmoss-factory run=a2 event=plan-approved-->`;
+    expect(parseMarkers(body).map((m) => m.fields)).toEqual([
+      { run: 'a1', agent: 'claude' },
+      { run: 'a2', event: 'plan-approved' },
+    ]);
+  });
+  it('ignores other comments', () => {
+    expect(parseMarkers('<!-- something else -->')).toEqual([]);
+  });
+});
