@@ -16,7 +16,7 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { extname, join } from 'node:path';
 import type { AgentProvider, Sandbox } from '@ai-hero/sandcastle';
 import { setBlocked, setStatus, type Board } from './board.ts';
 import { ensureAvd } from './avd.ts';
@@ -30,7 +30,7 @@ import { assignDecisionNumbers, maxDecision } from './decisions.ts';
 import { GhError, type Gh } from './github.ts';
 import { attachArgs, type AttachedProof } from './proof/body.ts';
 import { fromPlaywrightReport, type ProofItem } from './proof/manifest.ts';
-import { checkMedia, toMp4 } from './proof/media.ts';
+import { checkMedia, framesToMp4, toMp4 } from './proof/media.ts';
 import { parseAgentResult, RESULT_PATH } from './result.ts';
 import type { RunDeps, RunEvent, RunSandbox } from './run.ts';
 import { makeOwnDirs, sandboxSpec, seatbeltProvider, withJavaHome } from './sandbox.ts';
@@ -284,6 +284,17 @@ export function hostDeps(options: HostOptions): RunDeps {
           ...(item.video ? { video: fromVm(item.video, out) } : {}),
           ...(item.screenshot ? { screenshot: fromVm(item.screenshot, out) } : {}),
         }));
+        // The window's screencast frames become its video (Playwright's own recording stops
+        // Electron's window loading in the VM, so the tests record through CDP instead).
+        items = await Promise.all(
+          items.map(async (item) => {
+            const dirs = (item.frames ?? []).map((f) => fromVm(f.dir, out));
+            if (!item.frames || !dirs.every((d) => existsSync(d))) return item;
+            const video = join(dirs[0] ?? out, 'video.mp4');
+            await framesToMp4(exec, item.frames, dirs, video);
+            return { ...item, video };
+          }),
+        );
       }
       const raw = join(runDir, 'raw');
       mkdirSync(raw, { recursive: true });
@@ -294,7 +305,7 @@ export function hostDeps(options: HostOptions): RunDeps {
           copyFileSync(path, to);
           return to;
         };
-        const video = keep(item.video, 'video.webm');
+        const video = keep(item.video, `video${extname(item.video ?? '') || '.webm'}`);
         const screenshot = keep(item.screenshot, 'screenshot.png');
         return {
           ...item,
