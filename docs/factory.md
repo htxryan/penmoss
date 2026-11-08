@@ -62,6 +62,19 @@ Once, on this Mac:
 
    The key stays on the host. The factory makes an hour-long token from it for its own pushes and PRs, and a read-only one for each sandbox.
 
+   GitHub takes PR attachments only from people, not apps, so the proof goes to Cloudflare R2 instead (A1223):
+
+   - In the Penmoss Cloudflare account, create the R2 bucket `penmoss-factory-proof`. In its settings, under Public access, connect the custom domain `proof.penmoss.app`.
+   - Under R2, Manage API tokens, create a token with **Object Read & Write** on that bucket only. Put its access key ID and secret, and the account ID, in `~/.config/penmoss-factory/proof.env`, mode 600:
+
+     ```
+     R2_ACCOUNT_ID=…
+     R2_ACCESS_KEY_ID=…
+     R2_SECRET_ACCESS_KEY=…
+     ```
+
+   The host uploads each run's screenshots and videos there and links them in the PR. Screenshots show inline; a video is a link to its MP4. Like the app's key, this file never reaches a sandbox.
+
 2. **The factory's Linear app.** In Linear, Settings, API, make an OAuth application named **Penmoss Factory** with client credentials turned on. Put its client ID and secret in `~/.config/penmoss-factory/linear.env`, mode 600:
 
    ```
@@ -84,7 +97,7 @@ Once, on this Mac:
 
 6. **Trust the planning folder.** Planning sessions run from `~/Library/Application Support/penmoss-factory/plans`. Run `claude` there once and accept the trust prompt, or `claude --bg` refuses to start.
 7. **Toolchain.** The JDK, Android SDK and Playwright's browsers at the paths in `tools/factory/factory.config.json` (`toolchain`). Optional: `brew install terminal-notifier`, so a notification opens its card in the Factory UI.
-8. **Check it.** `task factory:doctor` starts slot 1's sandbox on a throwaway branch of `origin/main` and checks the toolchain there (pnpm, Chromium, the JDK, `wrangler dev` on the slot's port block), the tokens (the GitHub check uses the app's read-only token, as a run does), and that your gh login, `~/.ssh`, the keychain, the GitHub App's key, the Linear app's credentials and your home stay out of reach, and that a relay deploy is refused. `-- --full` adds `task check`, the e2e smoke spec, `task android:test` and `task desktop:build`; `-- --slot 2` checks the other slot.
+8. **Check it.** `task factory:doctor` starts slot 1's sandbox on a throwaway branch of `origin/main` and checks the toolchain there (pnpm, Chromium, the JDK, `wrangler dev` on the slot's port block), the tokens (the GitHub check uses the app's read-only token, as a run does), and that your gh login, `~/.ssh`, the keychain, the GitHub App's key, the proof bucket's key, the Linear app's credentials and your home stay out of reach, and that a relay deploy is refused. `-- --full` adds `task check`, the e2e smoke spec, `task android:test` and `task desktop:build`; `-- --slot 2` checks the other slot.
 9. **Start it.** `task factory:install` installs the daemon and the UI as LaunchAgents. Both start now and at every login.
 
 ## Daily use

@@ -286,7 +286,7 @@ describe('runImplement', () => {
     expect(outcome.kind).toBe('in-review');
     expect(f.calls).toContain('exec 2: task check');
     expect(f.calls).toContain('proof web: comments.spec.ts');
-    expect(f.comments[1]).toContain('![](./web-1.mp4)');
+    expect(f.comments[1]).toContain('[▶ Watch the recording (MP4)](./web-1.mp4)');
     expect(f.calls).toContain('proof mac: app.spec.ts');
     expect(f.calls).toContain('proof android: app.penmoss.EditorScreenTest');
     expect(f.comments[1]).not.toContain('No recorded proof yet');

@@ -44,6 +44,11 @@
     "login": "penmoss-factory",
     "envFile": "~/.config/penmoss-factory/github-app.env"
   },
+  "proof": {
+    "bucket": "penmoss-factory-proof",
+    "publicUrl": "https://proof.penmoss.app",
+    "envFile": "~/.config/penmoss-factory/proof.env"
+  },
   "envFile": "~/.config/penmoss-factory/factory.env",
   "stateDir": "~/Library/Application Support/penmoss-factory",
   "pollSeconds": 60,

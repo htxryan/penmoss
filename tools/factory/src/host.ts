@@ -28,7 +28,8 @@ import type { Exec } from './exec.ts';
 import { runIdOf, type CheckRun } from './checks.ts';
 import { assignDecisionNumbers, maxDecision } from './decisions.ts';
 import { GhError, type Gh } from './github.ts';
-import { attachArgs, type AttachedProof } from './proof/body.ts';
+import { proofFiles, type AttachedProof } from './proof/body.ts';
+import { publishRefs, type ProofStore } from './proof/store.ts';
 import { fromPlaywrightReport, type ProofItem } from './proof/manifest.ts';
 import { checkMedia, framesToMp4, toMp4 } from './proof/media.ts';
 import { parseAgentResult, RESULT_PATH } from './result.ts';
@@ -117,6 +118,8 @@ export interface HostOptions {
   readonly pushToken: () => Promise<string>;
   /** A read-only token for the sandbox (A1222). */
   readonly sandboxToken: () => Promise<string>;
+  /** Where the PR's proof is uploaded (A1223). */
+  readonly proofStore: ProofStore;
   readonly agent: AgentProvider;
   readonly log: (line: string) => void;
 }
@@ -464,12 +467,17 @@ export function hostDeps(options: HostOptions): RunDeps {
       const dir = join(runDir, 'proof');
       mkdirSync(dir, { recursive: true });
       const bodyFile = join(dir, 'body.md');
-      writeFileSync(bodyFile, body);
+      const linked = await publishRefs(
+        body,
+        dir,
+        [...proofFiles(proof), ...files],
+        options.proofStore,
+        `runs/${options.runId}`,
+      );
+      writeFileSync(bodyFile, linked);
       const out = await gh.run([
         ...['pr', 'create', '--repo', config.repo, '--base', 'main', '--head', branch],
         ...['--title', title, '--reviewer', config.owner, '--body-file', bodyFile],
-        ...attachArgs(proof, dir),
-        ...files.flatMap((f) => ['--attach', join(dir, f)]),
       ]);
       return out.trim().split('\n').slice(-1)[0] ?? '';
     },

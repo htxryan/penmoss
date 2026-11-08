@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { attachArgs, renderPrBody } from '../src/proof/body.ts';
+import { proofFiles, renderPrBody } from '../src/proof/body.ts';
 import { fromPlaywrightReport, missingProof } from '../src/proof/manifest.ts';
 import {
   checkMedia,
@@ -222,21 +222,20 @@ describe('the PR body', () => {
     expect(body.startsWith('Part of #12.')).toBe(true);
     expect(body).not.toMatch(/\b(Closes|Fixes|Resolves) #/);
   });
-  it('references images inline and each video alone on its line', () => {
+  it('references images inline and links each video (A1223)', () => {
     expect(body).toContain('![web: a  thread  opens](./web-before-1.png)');
-    expect(body).toContain('\n\n![](./web-1.mp4)');
+    expect(body).toContain('\n\n[▶ Watch the recording (MP4)](./web-1.mp4)');
     expect(body).toContain('### Before (the new test on the base commit)');
     expect(body).toContain('### After');
   });
   it("labels the agent's own stills and keeps them out of the proof", () => {
     expect(body).toContain('![agent-captured: by hand](./extra-1.png)');
   });
-  it('attaches every referenced file', () => {
+  it('lists every referenced file for the upload', () => {
     expect(
-      attachArgs(
-        [{ label: 'x', phase: 'after', source: 'harness', image: 'web-1.png', video: 'web-1.mp4' }],
-        '/p',
-      ),
-    ).toEqual(['--attach', '/p/web-1.png', '--attach', '/p/web-1.mp4']);
+      proofFiles([
+        { label: 'x', phase: 'after', source: 'harness', image: 'web-1.png', video: 'web-1.mp4' },
+      ]),
+    ).toEqual(['web-1.png', 'web-1.mp4']);
   });
 });

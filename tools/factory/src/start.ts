@@ -7,6 +7,7 @@ import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import { nodeExec } from './exec.ts';
 import { createGh, type Gh } from './github.ts';
 import { createAppTokens, loadAppCredentials, type AppTokens } from './github-app.ts';
+import { loadProofStore, type ProofStore } from './proof/store.ts';
 import { BlockedByRyan, guardEffects } from './guard.ts';
 import { ensureClone, hostDeps, publisherEnv } from './host.ts';
 import { issueText } from './issue.ts';
@@ -39,6 +40,8 @@ export interface Factory {
   readonly secrets: Secrets;
   /** The GitHub App's installation tokens (A1222). */
   readonly app: AppTokens;
+  /** The R2 bucket proof goes to (A1223). */
+  readonly proof: ProofStore;
 }
 
 /** The GitHub App, the env file and the tracker, checked. */
@@ -47,6 +50,8 @@ export async function openFactory(
 ): Promise<{ ok: true; factory: Factory } | { ok: false; error: string }> {
   const secrets = loadSecrets(expandHome(config.envFile));
   if (!secrets.ok) return { ok: false, error: `the env file: ${secrets.error}` };
+  const proof = loadProofStore(config);
+  if (!proof.ok) return { ok: false, error: `the proof bucket: ${proof.error}` };
   const creds = loadAppCredentials(expandHome(config.publisher.envFile));
   if (!creds.ok) return { ok: false, error: `the GitHub App: ${creds.error}` };
   const app = createAppTokens({
@@ -76,7 +81,14 @@ export async function openFactory(
   ensureTrackerState(config);
   return {
     ok: true,
-    factory: { config, gh, tracker: tracker.tracker, secrets: secrets.secrets, app },
+    factory: {
+      config,
+      gh,
+      tracker: tracker.tracker,
+      secrets: secrets.secrets,
+      app,
+      proof: proof.store,
+    },
   };
 }
 
@@ -260,6 +272,7 @@ export async function executeRun(
     secrets: factory.secrets,
     pushToken: () => factory.app.write(),
     sandboxToken: () => factory.app.read(),
+    proofStore: factory.proof,
     agent,
     log,
   });

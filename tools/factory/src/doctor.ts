@@ -142,6 +142,11 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
       command: opens(expandHome(config.publisher.envFile, home)),
     },
     {
+      name: "the proof bucket's key is unreadable (A1223)",
+      expect: 'refused',
+      command: opens(expandHome(config.proof.envFile, home)),
+    },
+    {
       name: "the Linear app's credentials are unreadable (LD4)",
       expect: 'refused',
       command: opens(expandHome(config.linear.envFile, home)),

@@ -17,7 +17,8 @@ import { fence, issueText } from './issue.ts';
 import type { IssueSpec } from './labels.ts';
 import { mergeApproved, type MainRun, type MergeDeps } from './merge.ts';
 import { fill, promptTemplate } from './prompt.ts';
-import { attachArgs } from './proof/body.ts';
+import { proofFiles } from './proof/body.ts';
+import { publishRefs } from './proof/store.ts';
 import { readConversation, reviewState, roundText, type ReviewState } from './review.ts';
 import { runRevise, type ReviseDeps } from './revise.ts';
 import { branchName } from './run.ts';
@@ -126,6 +127,7 @@ export async function executeRevise(
     secrets: factory.secrets,
     pushToken: () => factory.app.write(),
     sandboxToken: () => factory.app.read(),
+    proofStore: factory.proof,
     agent,
     log,
   });
@@ -135,17 +137,18 @@ export async function executeRevise(
     prComment: async (url, body, proof = []) => {
       mkdirSync(dir, { recursive: true });
       const file = join(dir, `comment-${Date.now()}.md`);
-      writeFileSync(file, body);
-      await gh.run([
-        'pr',
-        'comment',
-        url,
-        '--repo',
-        config.repo,
-        '--body-file',
+      const refs = proof
+        .map((p) => [p.label, p.image, p.video] as const)
+        .flatMap(([label, image, video]) => [
+          ...(image ? [`![${label.replaceAll(/[[\]\n]/g, ' ')}](./${image})`] : []),
+          ...(video ? [`[▶ Watch the recording (MP4)](./${video})`] : []),
+        ]);
+      const text = refs.length ? `${body}\n\n${refs.join('\n\n')}` : body;
+      writeFileSync(
         file,
-        ...attachArgs(proof, dir),
-      ]);
+        await publishRefs(text, dir, proofFiles(proof), factory.proof, `runs/${runId}`),
+      );
+      await gh.run(['pr', 'comment', url, '--repo', config.repo, '--body-file', file]);
     },
     replyToThread: async (threadId, body) => {
       await gh.graphql(

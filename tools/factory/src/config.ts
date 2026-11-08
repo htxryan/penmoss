@@ -82,6 +82,8 @@ export interface FactoryConfig {
    * with its ID and private key's path.
    */
   readonly publisher: { readonly login: string; readonly envFile: string };
+  /** The R2 bucket proof is uploaded to, its public domain, and the host-only key file (A1223). */
+  readonly proof: { readonly bucket: string; readonly publicUrl: string; readonly envFile: string };
   readonly envFile: string;
   readonly stateDir: string;
   readonly pollSeconds: number;
@@ -197,6 +199,10 @@ export function parseConfig(raw: unknown): ConfigResult {
   const publisher = obj(root['publisher'], 'config.publisher');
   str(publisher, 'login', 'config.publisher');
   str(publisher, 'envFile', 'config.publisher');
+  const proof = obj(root['proof'], 'config.proof');
+  for (const key of ['bucket', 'publicUrl', 'envFile']) str(proof, key, 'config.proof');
+  if (typeof proof['publicUrl'] === 'string' && !proof['publicUrl'].startsWith('https://'))
+    problems.push('config.proof.publicUrl must be an https:// URL');
   for (const key of ['envFile', 'stateDir', 'worktreeRoot', 'branchPrefix', 'sharedDir'])
     str(root, key, 'config');
   int(root, 'pollSeconds', 'config', 10);
