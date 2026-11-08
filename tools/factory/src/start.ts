@@ -249,6 +249,8 @@ export async function executeRun(
   log: (line: string) => void,
   /** The daemon restarts this run after it stopped mid-run (R12). */
   recovered = false,
+  /** What the run waits for, for the daemon's status.json (F10). */
+  waitingFor?: (reason: string | null) => void,
 ): Promise<RunOutcome | { kind: 'stopped' }> {
   const { config, gh, tracker } = factory;
   const runId = `${item.number}-${Date.now().toString(36)}-${randomBytes(2).toString('hex')}`;
@@ -277,11 +279,13 @@ export async function executeRun(
     proofStore: factory.proof,
     agent,
     log,
+    ...(waitingFor ? { waitingFor } : {}),
   });
   const isBlocked = () => tracker.isBlocked(item.number);
+  // macVmCheck too: a run waiting for the test VM stops at its next check once Blocked is set.
   const guarded = guardEffects(
     deps,
-    ['comment', 'setStatus', 'setBlocked', 'push', 'openPr', 'runAgent'],
+    ['comment', 'setStatus', 'setBlocked', 'push', 'openPr', 'runAgent', 'macVmCheck'],
     item.number,
     isBlocked,
   );

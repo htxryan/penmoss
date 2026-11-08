@@ -119,6 +119,7 @@ export async function runRevise(deps: ReviseDeps, input: ReviseInput): Promise<R
       deps.log('in-review', { pr, round: 'addressed' });
       return { kind: 'addressed', sha };
     }
+    if (verdict.block) return block(verdict.block, verdict.feedback);
     if (round >= deps.config.rounds.gateFix)
       return block(
         'gate-failed',

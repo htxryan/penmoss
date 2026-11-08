@@ -63,16 +63,13 @@ export function formatStatus(
       `  runs from ${s.code.dir}, not the factory's own checkout ${codeDir}: run task factory:install`,
     );
   if (s.paused) lines.push('  paused: task factory:update is waiting for runs to finish');
-  lines.push(
-    s.running.length
-      ? s.running
-          .map(
-            (r) =>
-              `  running ${issueKey(config, r.issue)} on slot ${r.slot} since ${r.startedAt} (${r.why})`,
-          )
-          .join('\n')
-      : '  nothing running',
-  );
+  if (s.running.length === 0) lines.push('  nothing running');
+  for (const r of s.running) {
+    lines.push(
+      `  running ${issueKey(config, r.issue)} on slot ${r.slot} since ${r.startedAt} (${r.why})`,
+    );
+    if (r.waitingFor) lines.push(`    waiting since ${r.waitingFor.since}: ${r.waitingFor.reason}`);
+  }
   if (s.merging?.length)
     lines.push(`  merging: ${s.merging.map((n) => issueKey(config, n)).join(', ')}`);
   if (s.waiting.length)

@@ -10,7 +10,15 @@
 # boots it with no window, shares this checkout read-only, copies it into the VM (no node_modules,
 # no build output), installs, runs the tests, copies the log and Playwright's report back to
 # `test-results/vm/`, and stops the VM. Nothing in the VM can write to this checkout.
+#
+#   sh scripts/vm/desktop-test.sh --check     # can a run start now? (the software factory, F10)
+#
+# Exit 75 (EX_TEMPFAIL) means the VM can't take a run now: tart is missing, the VM isn't made,
+# another run has it (`--check` only; a run waits its turn), a VM started some other way stays
+# up, or the VM didn't boot. The factory waits on 75 and asks again later; any other non-zero
+# exit is the tests'.
 set -eu
+TEMPFAIL=75
 
 VM="${PENMOSS_VM:-penmoss-test}"
 IMAGE="${PENMOSS_VM_IMAGE:-ghcr.io/cirruslabs/macos-tahoe-base:latest}"
@@ -39,12 +47,45 @@ esac
 
 command -v tart >/dev/null || {
   echo "tart is not installed: see docs/ci.md (Tests in a macOS VM)." >&2
-  exit 1
+  exit "$TEMPFAIL"
 }
+
+LOCK="/tmp/penmoss-vm-$VM.lock"
+# The `tart run` this script started, while it runs: a VM still running from it after an
+# interrupted run is ours to stop. A running VM without it was started some other way (by hand,
+# or a tool that doesn't take the lock), so this run waits for it rather than stopping it.
+PIDFILE="/tmp/penmoss-vm-$VM.pid"
+vm_running() {
+  tart list 2>/dev/null | awk -v vm="$VM" '$1 == "local" && $2 == vm { print $NF }' | grep -qx running
+}
+ours_left_running() {
+  [ -f "$PIDFILE" ] || return 1
+  pid="$(cat "$PIDFILE")"
+  case "$pid" in '' | *[!0-9]*) return 1 ;; esac
+  ps -p "$pid" -o comm= 2>/dev/null | grep -q 'tart$'
+}
+
+# Whether a run could start now, without starting one or making the VM: what the factory asks
+# before a Mac proof, so it waits (and says why) instead of failing.
+if [ "${1:-}" = --check ]; then
+  if ! tart list --quiet 2>/dev/null | grep -qx "$VM"; then
+    echo "[vm] $VM isn't made yet: run task desktop:test:vm once (docs/ci.md §8)" >&2
+    exit "$TEMPFAIL"
+  fi
+  if ! lockf -s -t 0 "$LOCK" true 2>/dev/null; then
+    echo "[vm] $VM is busy with another run" >&2
+    exit "$TEMPFAIL"
+  fi
+  if vm_running && ! ours_left_running; then
+    echo "[vm] $VM is running, started outside this script; stop it (tart stop $VM)" >&2
+    exit "$TEMPFAIL"
+  fi
+  echo "[vm] $VM is ready"
+  exit 0
+fi
 
 # One run at a time: every agent and worktree shares the one VM, and a run starts by stopping it.
 # Others wait here for the lock (lockf, held until this run ends) instead of stopping a run.
-LOCK="/tmp/penmoss-vm-$VM.lock"
 if [ -z "${PENMOSS_VM_LOCKED:-}" ]; then
   if ! lockf -s -t 0 "$LOCK" true 2>/dev/null; then
     echo "[vm] $VM is busy with another run; waiting for it to finish"
@@ -58,10 +99,6 @@ if ! tart list --quiet 2>/dev/null | grep -qx "$VM"; then
   tart set "$VM" --cpu "$CPUS" --memory "$MEMORY_MB"
 fi
 
-# The `tart run` this script started, while it runs: a VM still running from it after an
-# interrupted run is ours to stop. A running VM without it was started some other way (by hand,
-# or a tool that doesn't take the lock), so this run waits for it rather than stopping it.
-PIDFILE="/tmp/penmoss-vm-$VM.pid"
 WAIT_MINUTES="${PENMOSS_VM_WAIT_MINUTES:-60}"
 case "$WAIT_MINUTES" in
   '' | *[!0-9]*)
@@ -69,22 +106,13 @@ case "$WAIT_MINUTES" in
     exit 2
     ;;
 esac
-vm_running() {
-  tart list 2>/dev/null | awk -v vm="$VM" '$1 == "local" && $2 == vm { print $NF }' | grep -qx running
-}
-ours_left_running() {
-  [ -f "$PIDFILE" ] || return 1
-  pid="$(cat "$PIDFILE")"
-  case "$pid" in '' | *[!0-9]*) return 1 ;; esac
-  ps -p "$pid" -o comm= 2>/dev/null | grep -q 'tart$'
-}
 if vm_running && ! ours_left_running; then
   echo "[vm] $VM is running, started outside this script; waiting for it to stop"
   waited=0
   while vm_running; do
     if [ "$waited" -ge $((WAIT_MINUTES * 60)) ]; then
       echo "[vm] $VM is still running after $WAIT_MINUTES minutes; stop it (tart stop $VM) and run again" >&2
-      exit 1
+      exit "$TEMPFAIL"
     fi
     sleep 10
     waited=$((waited + 10))
@@ -106,7 +134,10 @@ cleanup() {
   wait "$RUN_PID" 2>/dev/null || true
   rm -f "$PIDFILE"
 }
-trap cleanup EXIT INT TERM
+# A stopped run (the factory's proof timeout sends SIGTERM to the whole group) still stops the
+# VM before it ends, so the next run finds it stopped.
+trap cleanup EXIT
+trap 'exit 143' INT TERM
 
 echo "[vm] booting $VM"
 tries=0
@@ -114,7 +145,8 @@ until tart exec "$VM" true >/dev/null 2>&1; do
   tries=$((tries + 1))
   if [ "$tries" -gt 90 ]; then
     echo "[vm] $VM did not answer in 3 minutes; see $OUT/tart-run.log" >&2
-    exit 1
+    tail -n 3 "$OUT/tart-run.log" >&2 2>/dev/null || true
+    exit "$TEMPFAIL"
   fi
   sleep 2
 done

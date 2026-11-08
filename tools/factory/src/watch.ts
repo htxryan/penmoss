@@ -124,6 +124,8 @@ export async function executeRevise(
   pr: FactoryPr,
   action: Extract<ReviewAction, { kind: 'round' | 'rebase' | 'repair' }>,
   log: (line: string) => void,
+  /** What the round waits for, for the daemon's status.json (F10). */
+  waitingFor?: (reason: string | null) => void,
 ): Promise<string> {
   const { config, gh, tracker } = factory;
   const runId = `${item.number}-${Date.now().toString(36)}-${randomBytes(2).toString('hex')}`;
@@ -157,6 +159,7 @@ export async function executeRevise(
     proofStore: factory.proof,
     agent,
     log,
+    ...(waitingFor ? { waitingFor } : {}),
   });
   const dir = join(expandHome(config.stateDir), 'runs', runId, 'proof');
   const revise: ReviseDeps = {
@@ -196,7 +199,16 @@ export async function executeRevise(
   const isBlocked = () => tracker.isBlocked(item.number);
   const guarded = guardEffects(
     revise,
-    ['comment', 'prComment', 'replyToThread', 'setStatus', 'setBlocked', 'push', 'runAgent'],
+    [
+      'comment',
+      'prComment',
+      'replyToThread',
+      'setStatus',
+      'setBlocked',
+      'push',
+      'runAgent',
+      'macVmCheck',
+    ],
     item.number,
     isBlocked,
   );

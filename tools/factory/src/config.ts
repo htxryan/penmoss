@@ -98,7 +98,12 @@ export interface FactoryConfig {
   };
   readonly slots: readonly SlotConfig[];
   readonly sharedDir: string;
-  readonly macProof: { readonly task: string; readonly vm: string; readonly lock: string };
+  /**
+   * The Mac proof's test VM (F7, F10): its Tart name, and how many hours a run waits for it to
+   * take the proof (tart missing, the VM not made or busy, a boot that fails) before it stops,
+   * Blocked, with the reason. Until then the run waits without failing or using a round.
+   */
+  readonly macProof: { readonly vm: string; readonly waitHours: number };
   readonly agents: Readonly<
     Record<AgentName, { readonly bin: string; readonly defaultModel: string }>
   >;
@@ -224,7 +229,11 @@ export function parseConfig(raw: unknown): ConfigResult {
     });
   }
   const macProof = obj(root['macProof'], 'config.macProof');
-  for (const key of ['task', 'vm', 'lock']) str(macProof, key, 'config.macProof');
+  str(macProof, 'vm', 'config.macProof');
+  // It names files in /tmp and goes into the VM script's environment.
+  if (typeof macProof['vm'] === 'string' && !/^[A-Za-z0-9._-]+$/.test(macProof['vm']))
+    problems.push('config.macProof.vm must be a Tart VM name (letters, digits, . _ -)');
+  int(macProof, 'waitHours', 'config.macProof', 1);
   const agents = obj(root['agents'], 'config.agents');
   for (const name of ['claude', 'opencode']) {
     const agent = obj(agents[name], `config.agents.${name}`);

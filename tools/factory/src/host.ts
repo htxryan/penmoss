@@ -20,7 +20,7 @@ import {
 import { extname, join } from 'node:path';
 import type { AgentProvider, Sandbox } from '@ai-hero/sandcastle';
 import type { Board } from './board.ts';
-import { ensureAvd } from './avd.ts';
+import { ensureAvd, stopSlotEmulator } from './avd.ts';
 import { withHeavySlot } from './heavy.ts';
 import { usageLimitReset } from './limits.ts';
 import { cardLink } from './ui/link.ts';
@@ -34,6 +34,7 @@ import { publishRefs, type ProofStore } from './proof/store.ts';
 import { fromPlaywrightReport, type ProofItem } from './proof/manifest.ts';
 import { checkMedia, framesToMp4, framesWithin, toMp4, within } from './proof/media.ts';
 import { rebaseOntoMain } from './rebase.ts';
+import { checkMacVm, runMacProof } from './proof/mac.ts';
 import { parseAgentResult, RESULT_PATH } from './result.ts';
 import type { RunDeps, RunEvent, RunSandbox } from './run.ts';
 import { makeOwnDirs, sandboxSpec, seatbeltProvider, withJavaHome } from './sandbox.ts';
@@ -206,6 +207,8 @@ export interface HostOptions {
   readonly proofStore: ProofStore;
   readonly agent: AgentProvider;
   readonly log: (line: string) => void;
+  /** What the run waits for (the test VM), for the daemon's status.json (F10). */
+  readonly waitingFor?: (reason: string | null) => void;
 }
 
 export function hostDeps(options: HostOptions): RunDeps {
@@ -331,7 +334,9 @@ export function hostDeps(options: HostOptions): RunDeps {
       );
       return { paths: paths.split('\n').filter(Boolean), commits: Number(count.trim()) };
     },
-    recordProof: async (handle, platform, specs) => {
+    macVmCheck: (handle) => checkMacVm(exec, config, handle.worktreePath),
+    waitingFor: (reason) => options.waitingFor?.(reason),
+    recordProof: async (handle, platform, specs, signal) => {
       const quoted = specs.map((spec) => `'${spec.replaceAll("'", '')}'`).join(' ');
       let items: ProofItem[];
       if (platform === 'web') {
@@ -345,9 +350,19 @@ export function hostDeps(options: HostOptions): RunDeps {
           'after',
         );
       } else if (platform === 'android') {
-        // The slot's own emulator, inside its sandbox (FD25); the AVD is made on the host first.
+        // The slot's own emulator, inside its sandbox (FD25); the AVD is made on the host first,
+        // and an emulator a stopped run left up is stopped. At the proof timeout the host stops
+        // the emulator: `am instrument -w` waits as long as a hung test does, and ends when the
+        // device goes; closing the gate's sandbox then kills what is left of proof.sh.
         await ensureAvd(config, slot, exec);
-        await handle.exec(withJavaHome(`task proof:android -- ${quoted}`));
+        await stopSlotEmulator(config, slot, exec);
+        const stop = () => void stopSlotEmulator(config, slot, exec).catch(() => undefined);
+        signal?.addEventListener('abort', stop, { once: true });
+        try {
+          await handle.exec(withJavaHome(`task proof:android -- ${quoted}`));
+        } finally {
+          signal?.removeEventListener('abort', stop);
+        }
         const out = join(handle.worktreePath, 'apps/android/build/proof');
         const report = join(out, 'report.json');
         if (!existsSync(report)) return [];
@@ -369,16 +384,10 @@ export function hostDeps(options: HostOptions): RunDeps {
         }));
       } else {
         // The Mac app runs in the test VM (W10), which only the host can start: the VM script
-        // copies this worktree in read-only and queues on the VM's lock (F7).
+        // copies this worktree in read-only and queues on the VM's lock (F7). At the proof
+        // timeout it is stopped with its `tart run`, and stops the VM, freeing the lock.
         const out = join(handle.worktreePath, 'test-results', 'vm');
-        await exec('sh', [join(handle.worktreePath, 'scripts/vm/desktop-test.sh'), ...specs], {
-          cwd: handle.worktreePath,
-          env: {
-            PATH: process.env['PATH'] ?? '/usr/bin:/bin',
-            HOME: process.env['HOME'] ?? '',
-            PENMOSS_PROOF: '1',
-          },
-        });
+        await runMacProof(exec, config, handle.worktreePath, specs, signal);
         const report = join(out, 'test-results', 'proof', 'report.json');
         if (!existsSync(report)) return [];
         items = fromPlaywrightReport(

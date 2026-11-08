@@ -1,5 +1,7 @@
 // scripts/vm/desktop-test.sh against a fake `tart`: a VM this script didn't start is waited for,
-// never stopped; one its own interrupted run left behind is stopped (F0.2, A1174).
+// never stopped; one its own interrupted run left behind is stopped (F0.2, A1174). `--check` says
+// whether a run could start now, and every "the VM can't take a run now" exits 75, which the
+// software factory waits on instead of failing (F10).
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import {
@@ -30,7 +32,7 @@ state() { [ "$(cat "$FAKE/polls")" -gt 0 ] && echo running || echo stopped; }
 echo "$1 $(state)" >>"$FAKE/calls"
 case "$1" in
   list)
-    if [ "\${2:-}" = --quiet ]; then echo "$PENMOSS_VM"; exit 0; fi
+    if [ "\${2:-}" = --quiet ]; then [ -n "\${FAKE_NO_VM:-}" ] || echo "$PENMOSS_VM"; exit 0; fi
     s="$(state)"
     n="$(cat "$FAKE/polls")"
     [ "$n" -gt 0 ] && [ "$n" -lt 1000 ] && echo $((n - 1)) >"$FAKE/polls"
@@ -38,6 +40,10 @@ case "$1" in
     echo "local $PENMOSS_VM 50 GB 35 GB now $s"
     ;;
   stop) echo 0 >"$FAKE/polls" ;;
+  exec)
+    [ -n "\${FAKE_SLOW_EXEC:-}" ] && /bin/sleep 0.3
+    [ -n "\${FAKE_NO_BOOT:-}" ] && exit 1
+    ;;
 esac
 exit 0
 `;
@@ -61,19 +67,20 @@ function setUp(polls) {
     rmSync(pidFile, { force: true });
     rmSync(`/tmp/penmoss-vm-${vm}.lock`, { force: true });
   });
-  const run = (env = {}) =>
-    spawnSync('sh', [join(root, 'scripts/vm/desktop-test.sh')], {
+  const env = (more = {}) => ({
+    ...process.env,
+    PATH: `${fake}:${process.env.PATH}`,
+    FAKE: fake,
+    PENMOSS_VM: vm,
+    ...more,
+  });
+  const run = (more = {}, args = []) =>
+    spawnSync('sh', [join(root, 'scripts/vm/desktop-test.sh'), ...args], {
       encoding: 'utf8',
-      env: {
-        ...process.env,
-        PATH: `${fake}:${process.env.PATH}`,
-        FAKE: fake,
-        PENMOSS_VM: vm,
-        ...env,
-      },
+      env: env(more),
     });
   const calls = () => readFileSync(join(fake, 'calls'), 'utf8').trim().split('\n');
-  return { root, fake, vm, pidFile, run, calls };
+  return { root, fake, vm, pidFile, run, env, calls };
 }
 
 test('waits for a VM started outside the script, then runs, and never stops it', () => {
@@ -94,7 +101,7 @@ test('waits for a VM started outside the script, then runs, and never stops it',
 test('gives up on a VM that stays up, without stopping it', () => {
   const { run, calls } = setUp(1000);
   const r = run({ PENMOSS_VM_WAIT_MINUTES: '0' });
-  assert.equal(r.status, 1);
+  assert.equal(r.status, 75, 'the factory waits on 75 and asks again later');
   assert.match(r.stderr, /still running after 0 minutes; stop it \(tart stop /);
   assert.deepEqual(
     calls().filter((c) => /^(stop|run) /.test(c)),
@@ -122,4 +129,96 @@ test('a run removes its pid file when it ends', () => {
   const { pidFile, run } = setUp(0);
   assert.equal(run().status, 0);
   assert.throws(() => readFileSync(pidFile), /ENOENT/);
+});
+
+test('--check: ready when the VM is made, free and stopped, and starts nothing', () => {
+  const { run, calls } = setUp(0);
+  const r = run({}, ['--check']);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /is ready/);
+  assert.deepEqual(
+    calls().filter((c) => /^(stop|run|clone|set|exec) /.test(c)),
+    [],
+  );
+});
+
+test("--check: 75 for a VM that isn't made, which it never makes", () => {
+  const { run, calls } = setUp(0);
+  const r = run({ FAKE_NO_VM: '1' }, ['--check']);
+  assert.equal(r.status, 75);
+  assert.match(r.stderr, /isn't made yet: run task desktop:test:vm once/);
+  assert.deepEqual(
+    calls().filter((c) => /^(clone|run) /.test(c)),
+    [],
+  );
+});
+
+test('--check: 75 while another run holds the VM, without waiting for it', async (t) => {
+  const { vm, run } = setUp(0);
+  const holder = spawn('lockf', ['-k', `/tmp/penmoss-vm-${vm}.lock`, 'sleep', '30'], {
+    stdio: 'ignore',
+  });
+  t.after(() => holder.kill());
+  // The lock is taken once lockf runs its command.
+  for (let i = 0; i < 100; i++) {
+    const free = spawnSync('lockf', ['-s', '-t', '0', `/tmp/penmoss-vm-${vm}.lock`, 'true']);
+    if (free.status !== 0) break;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  const r = run({}, ['--check']);
+  assert.equal(r.status, 75);
+  assert.match(r.stderr, /is busy with another run/);
+});
+
+test('--check: 75 for a VM started outside the script, which it never stops', () => {
+  const { run, calls } = setUp(1000);
+  const r = run({}, ['--check']);
+  assert.equal(r.status, 75);
+  assert.match(r.stderr, /started outside this script; stop it \(tart stop /);
+  assert.deepEqual(
+    calls().filter((c) => c.startsWith('stop ')),
+    [],
+  );
+});
+
+test('75 when tart is not installed', () => {
+  const { root } = setUp(0);
+  const r = spawnSync('sh', [join(root, 'scripts/vm/desktop-test.sh'), '--check'], {
+    encoding: 'utf8',
+    env: { PATH: '/usr/bin:/bin' },
+  });
+  assert.equal(r.status, 75);
+  assert.match(r.stderr, /tart is not installed/);
+});
+
+test("75 when the VM doesn't boot, and the VM is stopped again", () => {
+  const { run, calls } = setUp(0);
+  const r = run({ FAKE_NO_BOOT: '1' });
+  assert.equal(r.status, 75, r.stderr);
+  assert.match(r.stderr, /did not answer in 3 minutes/);
+  assert.ok(calls().filter((c) => c.startsWith('stop ')).length >= 2, 'stopped after the boot');
+});
+
+test('a run stopped with SIGTERM stops the VM and ends at once (the proof timeout)', async () => {
+  // Boot checks that take a while, so SIGTERM lands in one, and a run that went on looping after
+  // it would take half a minute.
+  const { root, env, calls } = setUp(0);
+  const child = spawn('sh', [join(root, 'scripts/vm/desktop-test.sh')], {
+    env: env({ FAKE_NO_BOOT: '1', FAKE_SLOW_EXEC: '1' }),
+    stdio: ['ignore', 'pipe', 'pipe'],
+    detached: true,
+  });
+  child.stdout.resume();
+  child.stderr.resume();
+  // lockf, the group's leader, dies on SIGTERM at once; the script under it holds the output
+  // open until its cleanup has run.
+  const ended = new Promise((resolve) => child.once('close', resolve));
+  for (let i = 0; i < 200 && !calls().some((c) => c.startsWith('exec ')); i++)
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  const stopsBefore = calls().filter((c) => c.startsWith('stop ')).length;
+  const t0 = Date.now();
+  process.kill(-child.pid, 'SIGTERM');
+  await ended;
+  assert.ok(Date.now() - t0 < 3000, `took ${Date.now() - t0} ms to stop`);
+  assert.ok(calls().filter((c) => c.startsWith('stop ')).length > stopsBefore, 'stopped the VM');
 });

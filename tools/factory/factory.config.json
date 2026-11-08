@@ -82,9 +82,8 @@
   ],
   "sharedDir": "/Users/Shared/penmoss-factory",
   "macProof": {
-    "task": "proof:mac",
     "vm": "penmoss-test",
-    "lock": "vm"
+    "waitHours": 12
   },
   "agents": {
     "claude": {

@@ -13,6 +13,8 @@ export interface Running {
   readonly slot: number;
   readonly startedAt: string;
   readonly why: 'picked' | 'recovered';
+  /** What the run is waiting for (the test VM, F10), and since when; `factory:status` says. */
+  readonly waitingFor?: { readonly reason: string; readonly since: string };
 }
 
 export interface Tick {

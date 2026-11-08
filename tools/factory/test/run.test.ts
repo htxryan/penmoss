@@ -6,6 +6,7 @@ import { parseIssueSpec } from '../src/labels.ts';
 import type { CheckRun } from '../src/checks.ts';
 import type { RebaseOutcome } from '../src/rebase.ts';
 import type { AgentResult } from '../src/result.ts';
+import { VmUnavailable, type VmCheck } from '../src/proof/mac.ts';
 import {
   branchName,
   gateCommand,
@@ -64,6 +65,12 @@ interface Fake {
   comments: string[];
   prompts: string[];
   events: string[];
+  /** What the run said it waits for, in order (`null`: it went on). */
+  waits: (string | null)[];
+  /** The signal each proof was given. */
+  signals: (AbortSignal | undefined)[];
+  /** Seconds slept, in order. */
+  slept: number[];
 }
 
 function fake(overrides: {
@@ -86,6 +93,10 @@ function fake(overrides: {
   behind?: boolean[];
   /** What each rebase onto main does, in order (default: a clean rebase). */
   rebases?: RebaseOutcome[];
+  /** The test VM's host checks before a Mac proof, in order; then it is ready (F10). */
+  vmChecks?: VmCheck[];
+  /** The first Mac proofs find the VM won't boot (the VM script's exit 75). */
+  vmBootFails?: number;
 }): Fake {
   const calls: string[] = [];
   const comments: string[] = [];
@@ -132,6 +143,11 @@ function fake(overrides: {
   const ciRounds = [...(overrides.ci ?? [])];
   const behind = [...(overrides.behind ?? [])];
   const rebases = [...(overrides.rebases ?? [])];
+  const vmChecks = [...(overrides.vmChecks ?? [])];
+  let bootFails = overrides.vmBootFails ?? 0;
+  const waits: (string | null)[] = [];
+  const signals: (AbortSignal | undefined)[] = [];
+  const slept: number[] = [];
   let clock = Date.parse('2026-11-07T12:00:00Z');
   const deps: RunDeps = {
     config,
@@ -182,8 +198,16 @@ function fake(overrides: {
     },
     readReview: () => Promise.resolve(reviews.shift() ?? null),
     collectFidelity: (_sandbox, rows) => Promise.resolve([...rows]),
-    recordProof: (_sandbox, platform, specs) => {
+    macVmCheck: () => {
+      calls.push('vm check');
+      return Promise.resolve(vmChecks.shift() ?? { ok: true });
+    },
+    waitingFor: (reason) => void waits.push(reason),
+    recordProof: (_sandbox, platform, specs, signal) => {
       calls.push(`proof ${platform}: ${specs.join(' ')}`);
+      signals.push(signal);
+      if (platform === 'mac' && bootFails-- > 0)
+        return Promise.reject(new VmUnavailable('penmoss-test did not answer in 3 minutes'));
       return Promise.resolve(
         (overrides.proofPassed ?? true)
           ? [
@@ -243,7 +267,10 @@ function fake(overrides: {
       calls.push(`notify ${title}`);
       return Promise.resolve();
     },
-    sleep: () => Promise.resolve(),
+    sleep: (seconds) => {
+      slept.push(seconds);
+      return Promise.resolve();
+    },
     now: () => new Date((clock += 30 * 60_000)),
     openPr: ({ body }) => {
       calls.push('pr');
@@ -252,7 +279,7 @@ function fake(overrides: {
     },
     log: (event) => void events.push(event),
   };
-  return { deps, calls, comments, prompts, events };
+  return { deps, calls, comments, prompts, events, waits, signals, slept };
 }
 
 describe('runImplement', () => {
@@ -439,6 +466,100 @@ describe('runImplement', () => {
       reason: 'the agent wrote no .factory/result.json',
     });
     expect(f.calls).toContain('close 1');
+  });
+});
+
+describe('the Mac proof waits for the test VM (F7, F10)', () => {
+  const macDone: AgentResult = {
+    ...done,
+    platforms: { mac: { inScope: true, proofSpecs: ['test/e2e/app.spec.ts'] } },
+  };
+  const mac = { paths: ['apps/desktop/src/main.ts'], result: macDone };
+  const count = (calls: string[], prefix: string) =>
+    calls.filter((c) => c.startsWith(prefix)).length;
+
+  it("waits a poll at a time while the VM can't take it, then records, with no round used", async () => {
+    const f = fake({
+      ...mac,
+      vmChecks: [
+        { ok: false, reason: 'penmoss-test is busy with another run' },
+        { ok: false, reason: 'penmoss-test is busy with another run' },
+        { ok: false, reason: 'tart is not installed: see docs/ci.md' },
+      ],
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(count(f.calls, 'vm check')).toBe(4);
+    expect(count(f.calls, 'proof mac')).toBe(1);
+    expect(count(f.calls, 'agent')).toBe(1);
+    expect(f.calls).not.toContain('blocked');
+    expect(f.waits).toEqual([
+      'the Mac proof waits for the test VM: penmoss-test is busy with another run',
+      'the Mac proof waits for the test VM: penmoss-test is busy with another run',
+      'the Mac proof waits for the test VM: tart is not installed: see docs/ci.md',
+      null,
+    ]);
+    // A poll between checks; the ledger says so once per reason.
+    expect(f.slept.slice(0, 3)).toEqual([60, 60, 60]);
+    expect(f.events.filter((e) => e === 'proof-waiting')).toHaveLength(2);
+    // The check comes right before the proof: a VM found free is used at once.
+    expect(f.calls.indexOf('proof mac: test/e2e/app.spec.ts') - 1).toBe(
+      f.calls.lastIndexOf('vm check'),
+    );
+  });
+
+  it("treats a VM that doesn't boot (the script's exit 75) as a wait, not a failure", async () => {
+    const f = fake({ ...mac, vmBootFails: 2 });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(count(f.calls, 'proof mac')).toBe(3);
+    expect(count(f.calls, 'agent')).toBe(1);
+    expect(f.waits[0]).toBe(
+      'the Mac proof waits for the test VM: penmoss-test did not answer in 3 minutes',
+    );
+    expect(f.waits.at(-1)).toBeNull();
+  });
+
+  it('stops Blocked with the reason only after macProof.waitHours', async () => {
+    const reason = "penmoss-test isn't made yet: run task desktop:test:vm once (docs/ci.md §8)";
+    // The fake clock moves 30 minutes on every reading.
+    const f = fake({
+      ...mac,
+      vmChecks: Array.from({ length: 100 }, () => ({ ok: false as const, reason })),
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome).toEqual({ kind: 'blocked', reason: 'mac-vm' });
+    expect(count(f.calls, 'proof mac')).toBe(0);
+    // Not the agent's to fix: no gate round, straight to Blocked.
+    expect(count(f.calls, 'agent')).toBe(1);
+    expect(f.events).not.toContain('gate-failed');
+    expect(count(f.calls, 'vm check')).toBeGreaterThan(10);
+    expect(count(f.calls, 'vm check')).toBeLessThan(30);
+    expect(f.calls.at(-1)).toBe('blocked');
+    expect(f.comments.at(-1)).toContain(
+      `The Mac proof waited 12 h for the test VM (penmoss-test), which still can't take it: ${reason}.`,
+    );
+    expect(f.waits.at(-1)).toBeNull();
+  });
+
+  it('gives every proof a signal that aborts at its timeout', async () => {
+    const f = fake({
+      paths: ['apps/web/src/a.ts'],
+      result: {
+        ...done,
+        platforms: {
+          web: { inScope: true, proofSpecs: ['a.spec.ts'] },
+          mac: { inScope: true, proofSpecs: ['app.spec.ts'] },
+          android: { inScope: true, proofSpecs: ['app.penmoss.EditorScreenTest'] },
+        },
+      },
+    });
+    await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(f.signals).toHaveLength(3);
+    for (const signal of f.signals) {
+      expect(signal).toBeInstanceOf(AbortSignal);
+      expect(signal?.aborted).toBe(false);
+    }
   });
 });
 

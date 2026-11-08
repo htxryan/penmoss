@@ -84,6 +84,17 @@ export function unfinishedClaims(ledger: string): Set<number> {
   return open;
 }
 
+/** `status.json`, which the daemon writes every poll for `factory:status` and the UI. */
+/** A run's entry with what it now waits for (F10); `since` stays when the wait began. */
+export function withWait(run: Running, reason: string | null, now: Date): Running {
+  if (reason === null) {
+    const rest = { ...run };
+    delete rest.waitingFor;
+    return rest;
+  }
+  return { ...run, waitingFor: { reason, since: run.waitingFor?.since ?? now.toISOString() } };
+}
+
 export async function runDaemon(
   config: FactoryConfig,
   log: (line: string) => void,
@@ -114,6 +125,11 @@ export async function runDaemon(
   // The code it runs, so the log and factory:status say which commit is live (A1226).
   const commit = await commitOf(nodeExec, ownCheckout());
   const code = { dir: ownCheckout(), ...(commit ? { commit } : {}) };
+  // A run says what it waits for (the test VM); status.json carries it to factory:status.
+  const waitingFor = (issue: number) => (reason: string | null) => {
+    const r = running.get(issue);
+    if (r) running.set(issue, withWait(r, reason, new Date()));
+  };
   log(
     `Factory daemon ${process.pid} at ${commit ? `${commit.sha.slice(0, 7)} (${commit.subject})` : 'an unknown commit'} from ${code.dir}: ${config.slots.length} slot(s), at most ${config.maxConcurrent} at once, every ${config.pollSeconds} s.`,
   );
@@ -196,6 +212,7 @@ export async function runDaemon(
           slot,
           (line) => log(`${item.key}: ${line}`),
           why === 'recovered',
+          waitingFor(item.number),
         )
           .then((outcome) => log(`${item.key}: ${outcome.kind}`))
           .catch((error: unknown) =>
@@ -247,8 +264,16 @@ export async function runDaemon(
         log(
           `${item.key} on slot ${slot.id}: ${action.kind === 'round' ? `review round (${action.state.trigger})` : action.kind === 'rebase' ? 'rebase onto main' : 'CI repair'}`,
         );
-        void executeRevise(factory, board, item, parsed.spec, slot, pr, action, (line) =>
-          log(`${item.key}: ${line}`),
+        void executeRevise(
+          factory,
+          board,
+          item,
+          parsed.spec,
+          slot,
+          pr,
+          action,
+          (line) => log(`${item.key}: ${line}`),
+          waitingFor(item.number),
         )
           .then((kind) => log(`${item.key}: ${kind}`))
           .catch((error: unknown) =>

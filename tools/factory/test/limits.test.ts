@@ -34,4 +34,31 @@ describe('timeouts (F13)', async () => {
     ).rejects.toThrow('recording web proof took longer than 0.0001 min');
     await expect(withTimeout(Promise.resolve(7), 1, 'x')).resolves.toBe(7);
   });
+  it('aborts the signal at the timeout, and rejects once the stopped step has wound down', async () => {
+    let seen: AbortSignal | undefined;
+    let stopped = false;
+    const step = (signal: AbortSignal) => {
+      seen = signal;
+      // Stopping takes a moment (the VM script stops the VM), then resolves with what it had.
+      return new Promise<string[]>((resolve) =>
+        signal.addEventListener('abort', () =>
+          setTimeout(() => {
+            stopped = true;
+            resolve([]);
+          }, 30),
+        ),
+      );
+    };
+    await expect(withTimeout(step, 0.0001, 'recording mac proof')).rejects.toThrow(
+      'recording mac proof took longer than 0.0001 min',
+    );
+    expect(seen?.aborted).toBe(true);
+    expect(stopped).toBe(true);
+    // A step that ignores the signal still times out, after the settle time.
+    await expect(withTimeout(() => new Promise(() => undefined), 0.0001, 'x', 20)).rejects.toThrow(
+      'x took longer than 0.0001 min',
+    );
+    // In time, the step's own result.
+    await expect(withTimeout(() => Promise.resolve(7), 1, 'x')).resolves.toBe(7);
+  });
 });

@@ -57,6 +57,8 @@ function fake(rebases: RebaseOutcome[]) {
     slot: config.slots[0]!,
     runId: 'r9',
     board: { items: [card] },
+    macVmCheck: () => Promise.resolve({ ok: true }),
+    waitingFor: () => undefined,
     comment: (_issue, body) => {
       issueComments.push(body);
       calls.push('issue comment');

@@ -25,6 +25,22 @@ describe('config', () => {
     });
   });
 
+  it("checks the Mac proof's VM and how long a run waits for it (F10)", () => {
+    const loaded = loadConfig();
+    if (!loaded.ok) throw new Error(loaded.error);
+    expect(loaded.config.macProof).toEqual({ vm: 'penmoss-test', waitHours: 12 });
+    expect(parseConfig({ ...loaded.config, macProof: { vm: 'penmoss-test' } })).toEqual({
+      ok: false,
+      error: 'config.macProof.waitHours must be an integer of at least 1',
+    });
+    expect(
+      parseConfig({ ...loaded.config, macProof: { vm: 'a vm; rm -rf ~', waitHours: 12 } }),
+    ).toEqual({
+      ok: false,
+      error: 'config.macProof.vm must be a Tart VM name (letters, digits, . _ -)',
+    });
+  });
+
   it('rejects a non-object', () => {
     expect(parseConfig([]).ok).toBe(false);
   });

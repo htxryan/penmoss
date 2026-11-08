@@ -18,6 +18,7 @@ import { usageLimitReset } from './limits.ts';
 import { validate } from './validate.ts';
 import { renderPrBody, type AttachedProof } from './proof/body.ts';
 import { missingProof, type ProofItem } from './proof/manifest.ts';
+import { VmUnavailable, type VmCheck } from './proof/mac.ts';
 import { formatMarker } from './pick.ts';
 import type { RebaseOutcome } from './rebase.ts';
 import type { AgentResult } from './result.ts';
@@ -41,6 +42,7 @@ export type RunEvent =
   | 'ci-stalled'
   | 'in-review'
   | 'blocked'
+  | 'proof-waiting'
   | 'usage-limited'
   | 'validated';
 
@@ -71,12 +73,21 @@ export interface RunDeps {
   ): Promise<{ ok: true; result: AgentResult } | { ok: false; error: string }>;
   /** Paths changed on the branch against origin/main, and how many commits it has. */
   diff(branch: string): Promise<{ readonly paths: readonly string[]; readonly commits: number }>;
-  /** Runs a platform's proof specs in the sandbox with recording on. */
+  /**
+   * Runs a platform's proof specs in the sandbox with recording on. `signal` aborts at the proof
+   * timeout: what the proof started is stopped (the VM script, the slot's emulator). A Mac proof
+   * throws `VmUnavailable` when the test VM couldn't take it.
+   */
   recordProof(
     sandbox: RunSandbox,
     platform: Platform,
     specs: readonly string[],
+    signal?: AbortSignal,
   ): Promise<ProofItem[]>;
+  /** Whether the test VM can take a Mac proof now (F10): the host check before one. */
+  macVmCheck(sandbox: RunSandbox): Promise<VmCheck>;
+  /** What the run is waiting for, which `factory:status` shows; null once it goes on. */
+  waitingFor(reason: string | null): void;
   /** Converts and checks the recordings, into the folder the PR body is written in. */
   prepareProof(
     items: readonly ProofItem[],
@@ -131,17 +142,51 @@ export type RunOutcome =
   | { readonly kind: 'in-review'; readonly pr: string; readonly scope: Scope }
   | { readonly kind: 'blocked'; readonly reason: string };
 
-/** `factory/<n>-<a-few-words-of-the-title>`. */
-/** Rejects when `work` takes longer than `minutes` (F13): a hung step stops the run, not the Mac. */
-export function withTimeout<T>(work: Promise<T>, minutes: number, what: string): Promise<T> {
+/** How long a timed-out step gets to stop what it started before the run goes on without it. */
+export const SETTLE_MS = 120_000;
+
+/**
+ * Rejects when `work` takes longer than `minutes` (F13): a hung step stops the run, not the Mac.
+ * Given as a function, `work` gets a signal that aborts at the timeout, so it can stop what it
+ * started (`nodeExec` kills the command's process group); the rejection then waits for it to
+ * finish stopping, up to `settleMs`, so the VM's lock or a slot's emulator is free before the
+ * run moves on.
+ */
+export function withTimeout<T>(
+  work: Promise<T> | ((signal: AbortSignal) => Promise<T>),
+  minutes: number,
+  what: string,
+  settleMs = SETTLE_MS,
+): Promise<T> {
+  const controller = new AbortController();
+  const running = typeof work === 'function' ? work(controller.signal) : work;
+  // Once the step has timed out, whatever it returns while it stops doesn't count.
+  const never = new Promise<never>(() => undefined);
+  let late = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const late = new Promise<never>((_, reject) => {
-    timer = setTimeout(
-      () => reject(new Error(`${what} took longer than ${minutes} min`)),
-      minutes * 60_000,
-    );
+  const timedOut = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      late = true;
+      const error = new Error(`${what} took longer than ${minutes} min`);
+      if (typeof work !== 'function') return reject(error);
+      controller.abort(error);
+      const settle = setTimeout(() => reject(error), settleMs);
+      void running
+        .catch(() => undefined)
+        .finally(() => {
+          clearTimeout(settle);
+          reject(error);
+        });
+    }, minutes * 60_000);
   });
-  return Promise.race([work, late]).finally(() => clearTimeout(timer));
+  const onTime = running.then(
+    (value) => (late ? never : value),
+    (error: unknown) => {
+      if (late) return never;
+      throw error;
+    },
+  );
+  return Promise.race([onTime, timedOut]).finally(() => clearTimeout(timer));
 }
 
 /** How many usage-limit waits one agent round gets before the run stops. */
@@ -189,7 +234,8 @@ type GateVerdict =
       readonly proof: readonly AttachedProof[];
       readonly fidelity?: readonly FidelityRow[];
     }
-  | { readonly ok: false; readonly feedback: string };
+  /** `block`: nothing the agent can fix (the test VM stayed unusable): stop, Blocked, now. */
+  | { readonly ok: false; readonly feedback: string; readonly block?: string };
 
 export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunOutcome> {
   const { config, item, spec } = { config: deps.config, ...input };
@@ -276,6 +322,7 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
         ...(input.artifacts ? { artifacts: input.artifacts } : {}),
       });
     }
+    if (verdict.block) return block(verdict.block, verdict.feedback);
     deps.log('gate-failed', { round });
     if (round >= config.rounds.gateFix) {
       return block(
@@ -333,10 +380,17 @@ export async function gateAndProve(
     deps.log('gate-passed', { command });
     const items: ProofItem[] = [];
     for (const platform of needed) {
+      const specs = result.platforms[platform]?.proofSpecs ?? [];
+      if (platform === 'mac') {
+        const mac = await recordMacProof(deps, gate, branch, specs);
+        if (!mac.ok) return { ok: false, feedback: mac.feedback, block: 'mac-vm' };
+        items.push(...mac.items);
+        continue;
+      }
       items.push(
         ...(await deps.heavy(`factory proof ${platform} ${branch}`, () =>
           withTimeout(
-            deps.recordProof(gate, platform, result.platforms[platform]?.proofSpecs ?? []),
+            (signal) => deps.recordProof(gate, platform, specs, signal),
             deps.config.timeouts.proofMinutes,
             `recording ${platform} proof`,
           ),
@@ -365,6 +419,58 @@ export async function gateAndProve(
     return { ok: true, proof: prepared.proof };
   } finally {
     await gate.close();
+  }
+}
+
+/**
+ * The Mac proof, once the test VM can take it (F7, F10). While it can't (tart missing, the VM
+ * not made, another run on it, a VM started some other way, a boot that fails), the run waits
+ * a poll and asks again: no failure, no round used, and `factory:status` says why. The check and
+ * the proof hold the heavy-job slot; the waits don't. Only after `macProof.waitHours` does it
+ * give up, and the run stops Blocked with the reason.
+ */
+export async function recordMacProof(
+  deps: RunDeps,
+  gate: RunSandbox,
+  branch: string,
+  specs: readonly string[],
+): Promise<{ ok: true; items: ProofItem[] } | { ok: false; feedback: string }> {
+  const since = deps.now();
+  let said: string | undefined;
+  try {
+    for (;;) {
+      const tried = await deps.heavy(`factory proof mac ${branch}`, async () => {
+        const check = await deps.macVmCheck(gate);
+        if (!check.ok) return { wait: check.reason };
+        try {
+          return {
+            items: await withTimeout(
+              (signal) => deps.recordProof(gate, 'mac', specs, signal),
+              deps.config.timeouts.proofMinutes,
+              'recording mac proof',
+            ),
+          };
+        } catch (error) {
+          if (error instanceof VmUnavailable) return { wait: error.message };
+          throw error;
+        }
+      });
+      if ('items' in tried) return { ok: true, items: tried.items };
+      const hours = (deps.now().getTime() - since.getTime()) / 3_600_000;
+      if (hours >= deps.config.macProof.waitHours)
+        return {
+          ok: false,
+          feedback: `The Mac proof waited ${deps.config.macProof.waitHours} h for the test VM (${deps.config.macProof.vm}), which still can't take it: ${tried.wait}. Fix the VM (docs/ci.md §8), then clear **${deps.config.blockedField}**.`,
+        };
+      if (tried.wait !== said) {
+        deps.log('proof-waiting', { platform: 'mac', reason: tried.wait });
+        said = tried.wait;
+      }
+      deps.waitingFor(`the Mac proof waits for the test VM: ${tried.wait}`);
+      await deps.sleep(deps.config.pollSeconds);
+    }
+  } finally {
+    deps.waitingFor(null);
   }
 }
 
