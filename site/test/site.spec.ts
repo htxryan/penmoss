@@ -62,15 +62,15 @@ test.describe('the brochure pages', () => {
       'href',
       mac,
     );
-    await expect(downloads.getByRole('link', { name: 'Get the Android APK' })).toHaveAttribute(
+    await expect(downloads.getByRole('link', { name: 'Download for Android' })).toHaveAttribute(
       'href',
       apk,
     );
-    await expect(downloads.getByRole('link', { name: /Alpha builds/ })).toHaveAttribute(
+    await expect(downloads.getByRole('link', { name: 'Alpha Builds' })).toHaveAttribute(
       'href',
       'https://github.com/htxryan/penmoss/releases/tag/alpha',
     );
-    await expect(downloads.getByRole('link', { name: 'All releases' })).toHaveAttribute(
+    await expect(downloads.getByRole('link', { name: 'All Releases' })).toHaveAttribute(
       'href',
       'https://github.com/htxryan/penmoss/releases',
     );
@@ -115,7 +115,7 @@ test.describe('the brochure pages', () => {
       await expect(page.getByRole('banner'), route).toHaveCount(1);
       await expect(page.getByRole('main'), route).toHaveCount(1);
       await expect(page.getByRole('contentinfo'), route).toHaveCount(1);
-      await expect(page.getByRole('navigation', { name: 'Main' }), route).toHaveCount(1);
+      await expect(page.getByRole('navigation', { name: 'Site' }), route).toHaveCount(1);
       await expect(page.locator('h1'), route).toHaveCount(1);
       for (const img of await page.locator('img').all()) {
         expect(await img.getAttribute('alt'), route).not.toBeNull();
@@ -175,6 +175,29 @@ test.describe('the brochure pages', () => {
     expect(checked.size).toBeGreaterThan(10);
   });
 
+  test('the brochure pages stay light on a dark system, as drawn (A1220)', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    for (const route of [...BROCHURE, '/no-such-page']) {
+      await page.goto(route);
+      const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+      expect(background, route).toBe('rgb(251, 250, 246)');
+    }
+  });
+
+  test('the hero shows the release line and the agents, and the home page keeps its six features', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await expect(page.locator('.hero .pill')).toHaveText('Free and open source · Mac and Android');
+    await expect(page.locator('.arch img')).toHaveCount(3);
+    await expect(page.locator('#features .feature-card')).toHaveCount(6);
+    await expect(page.locator('#download')).toContainText('Install Guide');
+    await expect(page.getByRole('link', { name: 'All Features' })).toHaveAttribute(
+      'href',
+      '/features',
+    );
+  });
+
   test('a missing page answers 404 with the site 404 page', async ({ page }) => {
     const response = await page.goto('/no-such-page');
     expect(response?.status()).toBe(404);
@@ -197,18 +220,22 @@ test.describe('the docs', () => {
     expect(errors).toEqual([]);
   });
 
-  test('the header has the mark, a link home and GitHub; every page links to its source', async ({
+  test('the header has the mark, the docs home, penmoss.app and GitHub; every page links to its source', async ({
     page,
   }) => {
     for (const route of ['/docs/', '/docs/install/mac/']) {
       await page.goto(route);
-      const home = page.locator('header a.site-title');
-      await expect(home).toHaveAttribute('href', '/');
-      await expect(home.locator('img').first()).toHaveAttribute('alt', 'Penmoss');
+      const title = page.locator('header a.site-title');
+      await expect(title).toHaveAttribute('href', '/docs/');
+      await expect(title).toHaveText(/Penmoss\s*Docs/);
+      await expect(title.locator('svg')).toHaveCount(1);
+      await expect(
+        page.locator('header').getByRole('link', { name: 'penmoss.app' }),
+      ).toHaveAttribute('href', '/');
       await expect(
         page.locator('header a[href="https://github.com/htxryan/penmoss"]').first(),
       ).toBeAttached();
-      await expect(page.getByRole('link', { name: 'Edit page' })).toHaveAttribute(
+      await expect(page.getByRole('link', { name: 'Edit This Page on GitHub' })).toHaveAttribute(
         'href',
         /^https:\/\/github\.com\/htxryan\/penmoss\/edit\/main\/site\/src\/content\/docs\/docs\/.+\.mdx?$/,
       );
@@ -276,12 +303,18 @@ test.describe('the docs', () => {
     });
   }
 
-  test('the theme switch changes the theme', async ({ page }) => {
+  test('the docs start light, even on a dark system, and the theme switch changes the theme', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
     await page.goto('/docs/');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
     const select = page.locator('starlight-theme-select select').first();
     await select.selectOption('light');
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
     await select.selectOption('dark');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   });
 

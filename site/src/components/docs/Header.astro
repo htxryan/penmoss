@@ -1,0 +1,27 @@
+---
+/**
+ * The docs' header (Docs.dc.html): the site title, search in the middle, then penmoss.app,
+ * Features, GitHub and the theme menu. Starlight's own Search and ThemeSelect do the work, so
+ * search and the theme switch behave as before; on a phone the nav moves into the menu.
+ */
+import config from 'virtual:starlight/user-config';
+import Search from 'virtual:starlight/components/Search';
+import SiteTitle from 'virtual:starlight/components/SiteTitle';
+import ThemeSelect from 'virtual:starlight/components/ThemeSelect';
+import GitHubMark from '../GitHubMark.astro';
+import { REPOSITORY } from '../../site';
+
+const shouldRenderSearch =
+  config.pagefind || config.components.Search !== '@astrojs/starlight/components/Search.astro';
+---
+
+<div class="pm-header">
+  <SiteTitle />
+  <div class="pm-search print:hidden">{shouldRenderSearch && <Search />}</div>
+  <nav class="pm-header-nav sl-hidden md:sl-flex print:hidden" aria-label="Site">
+    <a href="/">penmoss.app</a>
+    <a href="/features">Features</a>
+    <a class="pm-github" href={REPOSITORY} aria-label="GitHub"><GitHubMark size={20} /></a>
+    <ThemeSelect />
+  </nav>
+</div>

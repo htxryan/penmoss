@@ -1,0 +1,49 @@
+---
+/**
+ * The foot of each docs page (Docs.dc.html): "Edit This Page on GitHub" on the left, the previous
+ * and next pages on the right, above a rule.
+ */
+const { editUrl, pagination } = Astro.locals.starlightRoute;
+const { prev, next } = pagination;
+---
+
+<footer class="pm-doc-footer print:hidden">
+  {
+    editUrl && (
+      <a class="pm-edit" href={editUrl}>
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M16 3.5l3.5 3.5-11 11H5v-3.5z" />
+        </svg>
+        Edit This Page on GitHub
+      </a>
+    )
+  }
+  <div class="pm-pages">
+    {
+      prev && (
+        <a class="pm-prev" href={prev.href} rel="prev">
+          <span>{Astro.locals.t('page.previousLink')}</span>
+          <b>← {prev.label}</b>
+        </a>
+      )
+    }
+    {
+      next && (
+        <a class="pm-next" href={next.href} rel="next">
+          <span>{Astro.locals.t('page.nextLink')}</span>
+          <b>{next.label} →</b>
+        </a>
+      )
+    }
+  </div>
+</footer>

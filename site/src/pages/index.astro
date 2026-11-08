@@ -1,286 +1,510 @@
 ---
 /**
- * penmoss.app's home page (T80.10, D64, P1, P9): written by hand, no script. Every feature claim
- * here is checked against the shipped app (the checklist is in the pull request). The download
- * links are GitHub's /releases/latest/download/ URLs (src/site.ts).
+ * penmoss.app's home page (T80.10, D64, P1, P9), drawn as on the "Penmoss public release UX"
+ * design canvas (Main.dc.html): written by hand, no script. Every feature claim here is checked
+ * against the shipped app. The download links are GitHub's /releases/latest/download/ URLs
+ * (src/site.ts); the version and date under them come from the latest stable release at build
+ * time (src/data/release.json, A1205).
  */
-import Icon from '../components/Icon.astro';
+import Arrow from '../components/Arrow.astro';
+import GitHubMark from '../components/GitHubMark.astro';
 import SiteLayout from '../components/SiteLayout.astro';
 import { DOWNLOADS, REPOSITORY, latestRelease } from '../site';
 
 const release = latestRelease();
-/** "v0.2.0 · 7 November 2026 · 140 MB", or nothing before a stable release exists (R3). */
-const versionLine = (size: number | null) =>
-  release
-    ? [`v${release.version}`, release.date, size === null ? null : `${size} MB`]
-        .filter(Boolean)
-        .join(' · ')
-    : null;
+/** "Version 0.2.0 · 7 November 2026", or nothing before a stable release exists (R3). */
+const releaseLine = release
+  ? [`Version ${release.version}`, release.date].filter(Boolean).join(' · ')
+  : null;
 
-const features = [
-  {
-    title: 'Search by words or meaning',
-    body: 'Full-text search everywhere. On the Mac, search by meaning runs on an on-device model, so your notes never leave it, and your agents get it too.',
-    href: '/docs/search/',
-  },
-  {
-    title: 'No sync conflicts',
-    body: 'Edit the same note offline on your Mac and your phone. Penmoss merges both, with no conflict copies.',
-    href: '/docs/help/sync/',
-  },
-  {
-    title: 'Comments your agent answers',
-    body: 'Comment on a passage and send it to an agent. It replies in the thread, and you resolve it when you are happy.',
-    href: '/docs/agents/comments/',
-  },
-  {
-    title: 'History for every note',
-    body: 'See who changed what: you, another device or an agent. Restore any version, or revert one edit.',
-    href: '/docs/history/',
-  },
-  {
-    title: 'A real editor',
-    body: 'A slash menu, tables, checklists, callouts, toggles, Mermaid diagrams, math, images and embedded notes. Markdown underneath.',
-    href: '/docs/editor/',
-  },
-  {
-    title: 'Mac and Android, offline first',
-    body: 'Every device keeps a full copy and works without a connection. Sync is git, whenever you are back online.',
-    href: '/docs/mac/',
-  },
-];
+/** The canvas's download arrow. */
+const download =
+  '<path d="M12 4v12M6 11l6 6 6-6M5 20h14"></path>';
 ---
 
 <SiteLayout
-  title="Penmoss · Your Git. Your Agents. Your Notes."
-  description="A free, open source notes app for Mac and Android. Markdown files in a private git repository you choose, and any AI agent can read and edit them through MCP or a CLI."
+  title="Penmoss: notes in your own git repo, open to your AI agents"
+  description="Free, open-source notes app for Mac and Android. Markdown files in a private git repo you choose. Any agent can read and edit via MCP or CLI. No Penmoss server, no account, no subscription."
   current="home"
 >
-  <section class="hero" aria-labelledby="hero-title">
+  <section id="top" class="hero" aria-labelledby="hero-title">
     <div class="wrap">
-      <h1 id="hero-title">Your Git. Your Agents. <span class="notes">Your Notes.</span></h1>
+      <p class="pill">Free and open source · Mac and Android</p>
+      <h1 id="hero-title">
+        <span class="nowrap">Your Git.</span>{' '}
+        <span class="nowrap">Your Agents.</span>{' '}
+        <span class="nowrap green">Your Notes.</span>
+      </h1>
       <p class="lede">
         Free, open-source notes app for Mac and Android. Markdown files in a private git repo you
         choose. Any agent can read and edit via MCP or CLI. No Penmoss server, no account, no
         subscription.
       </p>
-      <div class="cta">
-        <a class="button primary" href={DOWNLOADS.mac}><Icon name="laptop" /> Download for Mac</a>
-        <a class="button secondary" href={DOWNLOADS.android}
-          ><Icon name="phone" /> Get the Android APK</a
-        >
+      <div class="hero-cta">
+        <a class="btn-primary" href={DOWNLOADS.mac}>
+          <span class="label"
+            ><svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              set:html={download}
+            />Download for Mac</span
+          >
+          <span class="sub">Universal · macOS 12 or Later</span>
+        </a>
+        <a class="btn-secondary" href={DOWNLOADS.android}>
+          <span class="label"
+            ><svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              set:html={download}
+            />Get the Android APK</span
+          >
+          <span class="sub">Android 17 or Later</span>
+        </a>
       </div>
       <p class="oss-line">
-        <a href={REPOSITORY}><Icon name="github" /> GitHub</a> · MIT
+        <a href={REPOSITORY}><GitHubMark size={16} />GitHub</a><span aria-hidden="true">·</span
+        ><span>MIT Licensed</span>
       </p>
 
-      <ol class="strip" aria-label="How Penmoss connects">
-        <li><strong>Penmoss</strong><span>Mac and Android</span></li>
-        <li><strong>Your git repo</strong><span>Markdown files, yours</span></li>
-        <li>
-          <strong>Your agents</strong><span>Claude Code, Codex, OpenCode or any MCP agent</span>
-        </li>
-      </ol>
+      <div
+        class="arch"
+        role="img"
+        aria-label="Penmoss on Mac and Android syncs with your git repository using git. Your AI agents, such as Claude, Codex, OpenCode or any MCP agent, reach the same notes through Penmoss's MCP server or CLI. No Penmoss server, no account."
+      >
+        <div class="arch-node">
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#2E5A3A"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            ><rect x="2" y="6" width="11" height="8" rx="1.3"></rect><path d="M1 17.5h13"
+            ></path><rect x="17" y="7" width="5" height="11" rx="1.2"></rect></svg
+          ><b>Penmoss</b><span class="sub">Mac · Android</span>
+        </div>
+        <div class="arch-link">
+          <span class="how">git sync</span><span class="arch-line"></span>
+        </div>
+        <div class="arch-node arch-repo">
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#C9E3AE"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            ><circle cx="6" cy="5" r="2"></circle><circle cx="6" cy="19" r="2"></circle><circle
+              cx="18"
+              cy="9"
+              r="2"></circle><path d="M6 7v10M18 11c0 4-6 3-11.5 6.5"></path></svg
+          ><b>Your git repo</b>
+        </div>
+        <div class="arch-link">
+          <span class="how">MCP · CLI</span><span class="arch-line"></span>
+        </div>
+        <div class="arch-agents">
+          <span class="title">Your AI agents</span>
+          <div class="agent-grid">
+            <div class="agent">
+              <img src="/img/agents/claude.svg" alt="Claude logo" width="20" height="20" />Claude
+            </div>
+            <div class="agent">
+              <img
+                src="/img/agents/codex.svg"
+                alt="OpenAI (Codex) logo"
+                width="20"
+                height="20"
+              />Codex
+            </div>
+            <div class="agent">
+              <img
+                class="rounded"
+                src="/img/agents/opencode.svg"
+                alt="OpenCode logo"
+                width="20"
+                height="20"
+              />OpenCode
+            </div>
+            <div class="agent any">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#2E5A3A"
+                stroke-width="2"
+                stroke-linecap="round"
+                aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg
+              >Any MCP agent
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <picture class="shot">
-        <source
-          srcset="/img/hero-dark.webp"
-          media="(prefers-color-scheme: dark)"
-          width="2880"
-          height="1800"
-        />
-        <img
-          src="/img/hero-light.webp"
-          width="2880"
-          height="1800"
-          alt="Penmoss on the Mac: a project note with a table of milestones, a Mermaid diagram and a checklist, beside the notebook's folders and the calendar."
-        />
-      </picture>
+      <img
+        class="hero-shot"
+        src="/img/hero-light.webp"
+        width="2880"
+        height="1800"
+        alt="The Penmoss Mac app: the Personal notebook in the sidebar, and the note Garden plan 2027 open with a checklist, a table of beds and links to other notes"
+      />
     </div>
   </section>
 
-  <section class="section" aria-labelledby="pillars-title">
+  <section id="agents" class="why" aria-labelledby="why-title">
     <div class="wrap">
-      <h2 id="pillars-title">Your notes, and your agents, as equals</h2>
-      <p class="lede">
-        Penmoss is built on two ideas. Your notes belong to you, in a format any tool can read. And
-        the AI agents you already use should be able to work with them, safely.
+      <h2 id="why-title" class="section-title">Why Penmoss</h2>
+      <p class="section-lede">
+        Your notes stay in a git repository you control, and the AI agents you already use can read
+        and edit them.
       </p>
       <div class="pillars">
-        <article class="card pillar">
-          <p class="eyebrow">Yours</p>
-          <h3>Markdown in a git repository you own</h3>
-          <ul>
-            <li>Every note is a markdown file in a private repository you pick, on GitHub.</li>
-            <li>Works offline on every device, and syncs through git when you are back.</li>
-            <li>Readable without Penmoss: clone the repository and open the files.</li>
-            <li>No account, no subscription, and no Penmoss server between you and your notes.</li>
-          </ul>
-          <a class="more" href="/docs/first-notebook/">How Notebooks Work</a>
+        <article class="pillar">
+          <div class="pillar-icon">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              ><circle cx="6" cy="5" r="2"></circle><circle cx="6" cy="19" r="2"></circle><circle
+                cx="18"
+                cy="9"
+                r="2"></circle><path d="M6 7v10M18 11c0 4-6 3-11.5 6.5"></path></svg
+            >
+          </div>
+          <h3>Just Markdown in Your Git Repo</h3>
+          <p>
+            Each notebook is a private git repo you choose. Every note is a plain markdown file,
+            readable without Penmoss and synced by git.
+          </p>
+          <div class="terminal" aria-label="A notebook in a terminal" role="group">
+            <div><span class="prompt">$</span> git clone git@github.com:you/notes.git</div>
+            <div><span class="prompt">$</span> ls notes</div>
+            <div class="out">.penmoss/ Projects/ Reading list.md attachments/</div>
+            <div><span class="prompt">$</span> git log --oneline -2</div>
+            <div class="out"><span class="hash">a41c9e2</span> Garden plan</div>
+            <div class="out"><span class="hash">7d02b18</span> Reading list</div>
+          </div>
+          <a class="doclink" href="/docs/first-notebook/">How Notebooks Work<Arrow /></a>
         </article>
-        <article class="card pillar">
-          <p class="eyebrow">Agent-ready</p>
-          <h3>Any agent can read and write, safely</h3>
-          <ul>
-            <li>
-              A local MCP server and the <code>penmoss</code> CLI let agents search, read, write and
-              keep your journal.
-            </li>
-            <li>Send a comment to an agent; it replies in the thread.</li>
-            <li>
-              Every agent edit is attributed in History, and one click reverts it without touching
-              your own changes.
-            </li>
-            <li>Edits merge with your typing, so an agent never overwrites what you just wrote.</li>
-          </ul>
-          <a class="more" href="/docs/agents/">Connect Your Agent</a>
+
+        <article class="pillar">
+          <div class="pillar-icon">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              ><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"></path><path
+                d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"></path></svg
+            >
+          </div>
+          <h3>Open to Agents via MCP and CLI</h3>
+          <p>
+            Agents search, read and write your notes through MCP or the CLI. Every edit shows who
+            made it and undoes in one click. Comment on a note to ask your agent; it replies in the
+            thread.
+          </p>
+          <div class="chat" aria-label="An agent editing a note" role="group">
+            <div class="ask">Add watering beds 1–3 to the garden plan</div>
+            <div class="tools">
+              <div>⏺ penmoss · search_notes "garden plan"</div>
+              <div>⏺ penmoss · update_section "This weekend"</div>
+            </div>
+            <div class="reply">
+              Added "Water beds 1–3" to <strong>This weekend</strong> in Garden plan.
+            </div>
+          </div>
+          <a class="doclink" href="/docs/agents/">Connect Your Agent<Arrow /></a>
         </article>
       </div>
     </div>
   </section>
 
-  <section class="section" aria-labelledby="features-title">
+  <section id="features" class="features" aria-labelledby="features-title">
     <div class="wrap">
-      <h2 id="features-title">Everything a notes app should do, done well</h2>
-      <p class="lede">
-        A few of the things that make Penmoss different. <a href="/features">All Features</a> lists
-        the rest.
-      </p>
-      <div class="grid">
-        {
-          features.map((feature) => (
-            <article class="card">
-              <h3>{feature.title}</h3>
-              <p>{feature.body}</p>
-              <a class="more" href={feature.href} aria-label={`Read the Docs: ${feature.title}`}>
-                Read the Docs
-              </a>
-            </article>
-          ))
-        }
-      </div>
-      <p><a class="button secondary" href="/features">All Features</a></p>
-    </div>
-  </section>
-
-  <section class="section" aria-labelledby="how-title">
-    <div class="wrap">
-      <h2 id="how-title">How it works</h2>
-      <p class="lede">
-        Your git repository is the only shared place. Each device keeps a full copy and writes its
-        own changes; each agent works through Penmoss on your Mac, so its edits merge and show in
-        History like everyone else's.
-      </p>
-      <div class="how-wrap" role="region" aria-label="Diagram, scrolls sideways on small screens" tabindex="0">
-      <svg
-        class="how"
-        viewBox="0 0 900 300"
-        role="img"
-        aria-labelledby="how-svg-title how-svg-desc"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <title id="how-svg-title">How Penmoss fits together</title>
-        <desc id="how-svg-desc">
-          The Mac app and the Android app each sync with your notebook's git repository on GitHub.
-          On the Mac, Claude Code, Codex, OpenCode and other MCP agents reach your notes through the
-          penmoss CLI and its local MCP server, which sync with the same repository.
-        </desc>
-        <rect class="box" x="20" y="40" width="220" height="80" rx="14"></rect>
-        <text x="130" y="76" text-anchor="middle" font-weight="600" font-size="17">Mac app</text>
-        <text class="small" x="130" y="100" text-anchor="middle" font-size="13">
-          offline, full copy
-        </text>
-        <rect class="box" x="20" y="180" width="220" height="80" rx="14"></rect>
-        <text x="130" y="216" text-anchor="middle" font-weight="600" font-size="17">Android app</text>
-        <text class="small" x="130" y="240" text-anchor="middle" font-size="13">
-          offline, full copy
-        </text>
-        <rect class="repo" x="340" y="100" width="220" height="100" rx="16"></rect>
-        <text x="450" y="142" text-anchor="middle" font-weight="700" font-size="17">
-          Your git repository
-        </text>
-        <text class="small" x="450" y="168" text-anchor="middle" font-size="13">
-          markdown, history, on GitHub
-        </text>
-        <rect class="box" x="660" y="40" width="220" height="80" rx="14"></rect>
-        <text x="770" y="72" text-anchor="middle" font-weight="600" font-size="17">
-          penmoss CLI and MCP
-        </text>
-        <text class="small" x="770" y="98" text-anchor="middle" font-size="13">on your Mac</text>
-        <rect class="box" x="660" y="180" width="220" height="80" rx="14"></rect>
-        <text x="770" y="212" text-anchor="middle" font-weight="600" font-size="17">Your agents</text>
-        <text class="small" x="770" y="238" text-anchor="middle" font-size="13">
-          Claude Code, Codex, OpenCode
-        </text>
-        <path class="edge" d="M240 80C290 80 290 130 338 130"></path>
-        <path class="edge" d="M240 220C290 220 290 170 338 170"></path>
-        <path class="edge" d="M660 80C610 80 610 130 562 130"></path>
-        <path class="edge" d="M770 180V122"></path>
-        <text class="small" x="282" y="66" font-size="12">git</text>
-        <text class="small" x="282" y="246" font-size="12">git</text>
-        <text class="small" x="598" y="66" font-size="12">git</text>
-        <text class="small" x="780" y="156" font-size="12">MCP or CLI</text>
-      </svg>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" aria-labelledby="oss-title">
-    <div class="wrap">
-      <h2 id="oss-title">Open source, MIT licensed</h2>
-      <p class="lede">
-        All of Penmoss is on GitHub under the MIT licence: the Mac app, the Android app, the editor,
-        the CLI and the MCP server. Read it, build it, change it.
-      </p>
-      <pre><code>git clone https://github.com/htxryan/penmoss
-cd penmoss
-task setup
-task dev</code></pre>
-      <p class="small-links">
-        <a href={REPOSITORY}><Icon name="github" /> The repository</a>
-        <a href={`${REPOSITORY}/blob/main/CONTRIBUTING.md`}>How to contribute</a>
-        <a href="/docs/">Read the Docs</a>
-      </p>
-    </div>
-  </section>
-
-  <section class="section" id="download" aria-labelledby="download-title">
-    <div class="wrap">
-      <h2 id="download-title">Download</h2>
-      <p class="lede">Both come straight from the latest stable release on GitHub.</p>
-      <div class="downloads">
-        <article class="card">
-          <h3>Mac</h3>
-          {versionLine(release?.mac ?? null) && <p class="version">{versionLine(release?.mac ?? null)}</p>}
-          <ul class="facts">
-            <li>Apple Silicon and Intel (universal)</li>
-            <li>macOS 12 or later</li>
-            <li>Signed and notarised by Apple</li>
-          </ul>
-          <a class="button primary" href={DOWNLOADS.mac}><Icon name="laptop" /> Download for Mac</a>
-          <a href="/docs/install/mac/">Install Guide</a>
-        </article>
-        <article class="card">
-          <h3>Android</h3>
-          {
-            versionLine(release?.android ?? null) && (
-              <p class="version">{versionLine(release?.android ?? null)}</p>
-            )
-          }
-          <ul class="facts">
-            <li>Android 17 or later</li>
-            <li>An APK you install yourself (sideload)</li>
-            <li>The signing certificate's fingerprint is in the install guide</li>
-          </ul>
-          <a class="button primary" href={DOWNLOADS.android}
-            ><Icon name="phone" /> Get the Android APK</a
+      <h2 id="features-title" class="section-title">Everything a notes app should do</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg
+              class="ani"
+              width="30"
+              height="30"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#2E5A3A"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              ><g class="a-scan"><circle cx="10" cy="10" r="5.5"></circle><path d="M14.2 14.2L19 19"
+                ></path></g
+              ><path class="a-twinkle" d="M19 3v4M17 5h4" stroke="#6E9A47"></path></svg
+            >
+          </div>
+          <h3>Search by words or by meaning</h3>
+          <p>
+            Find the exact words, or the note about the thing when you used different words. Search
+            by meaning runs on your Mac, so your notes never leave it.
+          </p>
+          <a
+            class="doclink"
+            href="/docs/search/"
+            aria-label="Read the Docs: Search by words or by meaning">Read the Docs<Arrow /></a
           >
-          <a href="/docs/install/android/">Install Guide</a>
-        </article>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg
+              class="ani"
+              width="30"
+              height="30"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#2E5A3A"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              ><circle class="a-merge-l" cx="7" cy="12" r="4"></circle><circle
+                class="a-merge-r"
+                cx="17"
+                cy="12"
+                r="4"
+                fill="#86AE5E"
+                fill-opacity="0.55"></circle></svg
+            >
+          </div>
+          <h3>No sync conflicts</h3>
+          <p>
+            Edit the same note offline on your Mac and your phone. When they sync, Penmoss keeps both
+            sets of changes. No conflict copies.
+          </p>
+          <a
+            class="doclink"
+            href="/docs/help/sync/#merging"
+            aria-label="Read the Docs: No sync conflicts">Read the Docs<Arrow /></a
+          >
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg
+              class="ani"
+              width="30"
+              height="30"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#2E5A3A"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              ><path
+                d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-9l-4.5 3.5V17H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"
+              ></path><circle class="a-type" cx="8" cy="11" r="1.1" fill="#6E9A47" stroke="none"
+              ></circle><circle class="a-type a-t2" cx="12" cy="11" r="1.1" fill="#6E9A47" stroke="none"
+              ></circle><circle class="a-type a-t3" cx="16" cy="11" r="1.1" fill="#6E9A47" stroke="none"
+              ></circle></svg
+            >
+          </div>
+          <h3>Comments your agent answers</h3>
+          <p>
+            Comment on any part of a note and send it to your agent. Its reply lands in the same
+            thread.
+          </p>
+          <a
+            class="doclink"
+            href="/docs/agents/comments/"
+            aria-label="Read the Docs: Comments your agent answers">Read the Docs<Arrow /></a
+          >
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg
+              class="ani"
+              width="30"
+              height="30"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#2E5A3A"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              ><path d="M4.95 10.43A7.5 7.5 0 1 1 4.95 15.57"></path><path d="M2.6 8.2l2.35 2.23L7.4 8.5"
+              ></path><path class="a-rewind" d="M12 13V8.5"></path><circle
+                cx="12"
+                cy="13"
+                r="0.9"
+                fill="#2E5A3A"></circle></svg
+            >
+          </div>
+          <h3>History for every note</h3>
+          <p>
+            Every version, and who made it: you, another of your devices, or an agent. Restore any of
+            them.
+          </p>
+          <a class="doclink" href="/docs/history/" aria-label="Read the Docs: History for every note"
+            >Read the Docs<Arrow /></a
+          >
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg
+              class="ani"
+              width="30"
+              height="30"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#2E5A3A"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              ><path class="a-write" d="M4 20h13" stroke="#6E9A47"></path><g class="a-pen"
+                ><path d="M16 3.5l3.5 3.5-8.5 8.5H7.5V12z"></path></g
+              ></svg
+            >
+          </div>
+          <h3>A real editor</h3>
+          <p>
+            A slash menu, tables, checklists, callouts, toggles, inline images, embedded files,
+            Mermaid diagrams and math. Markdown underneath.
+          </p>
+          <a class="doclink" href="/docs/editor/" aria-label="Read the Docs: A real editor"
+            >Read the Docs<Arrow /></a
+          >
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg
+              class="ani"
+              width="30"
+              height="30"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#2E5A3A"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              ><rect x="2" y="6" width="11" height="8" rx="1.3"></rect><path d="M1 17.5h13"
+              ></path><rect x="18" y="7" width="4.5" height="11" rx="1.2"></rect><circle
+                class="a-dot"
+                cx="14.5"
+                cy="11"
+                r="0.9"
+                fill="#6E9A47"
+                stroke="none"></circle><circle
+                class="a-dot a-dot2"
+                cx="14.5"
+                cy="11"
+                r="0.9"
+                fill="#6E9A47"
+                stroke="none"></circle></svg
+            >
+          </div>
+          <h3>Mac and Android, offline first</h3>
+          <p>
+            Write anywhere, with or without a connection; Penmoss syncs through git when it can. A
+            command palette and keyboard shortcuts on the Mac.
+          </p>
+          <a
+            class="doclink"
+            href="/docs/help/sync/#offline"
+            aria-label="Read the Docs: Mac and Android, offline first">Read the Docs<Arrow /></a
+          >
+        </div>
       </div>
-      <p class="small-links">
-        <a href={DOWNLOADS.alpha}>Alpha builds (every build from main)</a>
-        <a href={DOWNLOADS.all}>All releases</a>
+      <div class="all-features-row">
+        <a class="all-features" href="/features">All Features<Arrow size={16} strokeWidth={2} /></a>
+      </div>
+    </div>
+  </section>
+
+  <section id="download" class="download" aria-labelledby="download-title">
+    <div class="wrap">
+      <h2 id="download-title" class="section-title">Download Penmoss</h2>
+      <div class="download-options">
+        <div class="download-option">
+          <a class="btn-primary" href={DOWNLOADS.mac}
+            ><svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              set:html={download}
+            />Download for Mac</a
+          ><span class="facts"
+            >Universal · macOS 12 or later · <a href="/docs/install/mac/">Install Guide</a></span
+          >
+        </div>
+        <div class="download-option">
+          <a class="btn-primary" href={DOWNLOADS.android}
+            ><svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              set:html={download}
+            />Download for Android</a
+          ><span class="facts"
+            >APK · Android 17 or later · <a href="/docs/install/android/">Install Guide</a></span
+          >
+        </div>
+      </div>
+      <p class="release-line">
+        {releaseLine && <>{releaseLine} · </>}<a href={DOWNLOADS.alpha}>Alpha Builds</a> · <a
+          href={DOWNLOADS.all}>All Releases</a
+        >
       </p>
     </div>
   </section>
