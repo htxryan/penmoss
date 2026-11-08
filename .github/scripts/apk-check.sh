@@ -11,7 +11,7 @@
 set -euo pipefail
 
 apk="${1:?usage: apk-check.sh <apk> [<certificate SHA-256>]}"
-expected="${2:-D8:DF:91:2B:2D:00:26:73:EF:78:33:72:AF:F7:CD:6C:CB:E9:31:6B:BB:5F:24:C4:58:42:72:9F:56:2B:2D:A0}"
+expected="${2:-3D:B5:DA:CC:2F:A1:F5:DA:70:28:FA:78:A3:35:C8:3F:50:62:63:A5:15:88:15:B3:3C:EC:73:24:81:C3:DE:07}"
 sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/sdk}}"
 tools="$(find "$sdk/build-tools" -mindepth 1 -maxdepth 1 -type d 2> /dev/null | sort -V | tail -n 1)"
 if [ -z "$tools" ] || [ ! -x "$tools/apksigner" ] || [ ! -x "$tools/aapt2" ]; then

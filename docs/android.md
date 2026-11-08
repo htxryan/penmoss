@@ -75,17 +75,17 @@ Every APK on the Releases page is the **release build of `app.penmoss`** (P8, A1
 **The signing certificate.** Every public APK is signed by this certificate alone, and CI fails a build signed by any other (`.github/scripts/apk-check.sh`). Its SHA-256 fingerprint, which penmoss.app shows beside the download:
 
 ```text
-D8:DF:91:2B:2D:00:26:73:EF:78:33:72:AF:F7:CD:6C:CB:E9:31:6B:BB:5F:24:C4:58:42:72:9F:56:2B:2D:A0
+3D:B5:DA:CC:2F:A1:F5:DA:70:28:FA:78:A3:35:C8:3F:50:62:63:A5:15:88:15:B3:3C:EC:73:24:81:C3:DE:07
 ```
 
-Check a downloaded APK with the Android build tools: `apksigner verify --print-certs Penmoss.apk` prints a line ending in `certificate SHA-256 digest: d8df912b…2b2da0`: the same digits, in lower case, without colons.
+Check a downloaded APK with the Android build tools: `apksigner verify --print-certs Penmoss.apk` prints a line ending in `certificate SHA-256 digest: 3db5dacc…c3de07`: the same digits, in lower case, without colons.
 
 **Before the first install:**
 
 - **Penmoss from Google Play** (internal testing) is the same app id signed with Play's key, so Android refuses the APK over it ("App not installed"). Remove the Play install first; its notebooks need adding again.
 - **The older debug builds** (`app.penmoss.debug`, "Penmoss (debug)", published before A1187) are a different app and stay installed beside it. Add your notebooks in the new app, then remove the debug one.
 
-The key lives in the `android-sideload` environment as `PENMOSS_SIDELOAD_KEYSTORE_B64` and `PENMOSS_SIDELOAD_PASSWORD` (A405), and in Ryan's password manager. Losing it means every phone must uninstall before the next APK installs.
+The key lives in the `android-sideload` environment as `PENMOSS_SIDELOAD_KEYSTORE_B64` and `PENMOSS_SIDELOAD_PASSWORD` (A405), and in Ryan's password manager. Losing it means every phone must uninstall before the next APK installs. That happened once: the first key was lost at the move to the public repository (D65), so the key changed on 8 Nov 2026 (A1219), and a phone with an APK from before then uninstalls Penmoss once and adds its notebooks again.
 
 ## Install a debug build on the Pixel
 
