@@ -64,9 +64,9 @@ const ZIP = /^penmoss-mac-(\d+)\.zip$/;
 /** electron-updater's feed for the Mac (A1015): one per build release, the one of its dmg's build. */
 export const FEED = 'latest-mac.yml';
 export const MAC_MARKER = '<!-- penmoss-mac -->';
-/** The sideload key's certificate (A400, P8): every public APK is signed with it alone. */
+/** The sideload key's certificate (A400, P8, A1219): every public APK is signed with it alone. */
 export const SIDELOAD_CERT =
-  'D8:DF:91:2B:2D:00:26:73:EF:78:33:72:AF:F7:CD:6C:CB:E9:31:6B:BB:5F:24:C4:58:42:72:9F:56:2B:2D:A0';
+  '3D:B5:DA:CC:2F:A1:F5:DA:70:28:FA:78:A3:35:C8:3F:50:62:63:A5:15:88:15:B3:3C:EC:73:24:81:C3:DE:07';
 
 /** The rolling Alpha release (P4) and its fixed file names (P2). */
 export const ALPHA = 'alpha';
