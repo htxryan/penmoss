@@ -195,9 +195,14 @@ tasks:
       - node tools/factory/src/cli.ts chat {{.CLI_ARGS}}
 
   factory:install:
-    desc: 'The software factory (F10): install and start its LaunchAgent (starts at login, restarts if it exits)'
+    desc: 'The software factory (F10): clone its own code under the state folder (once), then install and start the LaunchAgents that run it (start at login, restart if they exit; A1226)'
     cmds:
       - node tools/factory/src/cli.ts install
+
+  factory:update:
+    desc: 'The software factory (A1226): move its code to origin/main, reinstall and restart the LaunchAgents. Refuses while a run or merge is active; `-- --wait` holds new work and waits'
+    cmds:
+      - node tools/factory/src/cli.ts update {{.CLI_ARGS}}
 
   factory:start:
     desc: 'The software factory: start the daemon now (after `factory:stop`, or if it is loaded but not running)'
@@ -211,7 +216,7 @@ tasks:
       - launchctl bootout gui/$(id -u)/app.penmoss.factory || true
 
   factory:status:
-    desc: 'The software factory: what the daemon is running and waiting on'
+    desc: 'The software factory: what the daemon is running (and at which commit) and waiting on'
     cmds:
       - node tools/factory/src/cli.ts status
 

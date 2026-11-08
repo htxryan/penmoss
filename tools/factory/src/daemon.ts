@@ -24,6 +24,8 @@ import { formatMarker } from './pick.ts';
 import { parseIssueSpec } from './labels.ts';
 import { executePlanning, executeRun, openFactory, planAgreed, runnable } from './start.ts';
 import { executeMerge, executeRevise, findPr, nextReviewAction } from './watch.ts';
+import { codeDir, commitOf, ownCheckout, updatePending } from './code.ts';
+import type { DaemonStatus } from './status.ts';
 
 export interface Lock {
   release(): void;
@@ -109,9 +111,15 @@ export async function runDaemon(
   };
   process.on('SIGTERM', stop);
   process.on('SIGINT', stop);
+  // The code it runs, so the log and factory:status say which commit is live (A1226).
+  const commit = await commitOf(nodeExec, ownCheckout());
+  const code = { dir: ownCheckout(), ...(commit ? { commit } : {}) };
   log(
-    `Factory daemon ${process.pid}: ${config.slots.length} slot(s), at most ${config.maxConcurrent} at once, every ${config.pollSeconds} s.`,
+    `Factory daemon ${process.pid} at ${commit ? `${commit.sha.slice(0, 7)} (${commit.subject})` : 'an unknown commit'} from ${code.dir}: ${config.slots.length} slot(s), at most ${config.maxConcurrent} at once, every ${config.pollSeconds} s.`,
   );
+  if (code.dir !== codeDir(config))
+    log(`Not the factory's own code checkout (${codeDir(config)}): run task factory:install.`);
+  let held = false;
 
   let swept = 0;
   while (!stopping) {
@@ -123,6 +131,11 @@ export async function runDaemon(
           log(`janitor: ${error instanceof Error ? error.message : String(error)}`),
         );
       }
+      // factory:update is waiting for the runs to finish: start nothing new until it restarts us.
+      const hold = updatePending(config, isAlive);
+      if (hold !== held)
+        log(hold ? 'Holding new work for task factory:update.' : 'No longer held.');
+      held = hold;
       const board = await factory.tracker.readBoard();
       const ledgerPath = join(state, 'runs.jsonl');
       const claimed = existsSync(ledgerPath)
@@ -145,7 +158,7 @@ export async function runDaemon(
       }
       const t = tick(board, config, [...running.values()], claimed, agreed);
       // Planning steps are short CLI calls: one card after another, in this loop.
-      for (const item of t.plan) {
+      for (const item of hold ? [] : t.plan) {
         await executePlanning(factory, item, (line) => log(`${item.key}: ${line}`))
           .then((action) => {
             if (action.kind !== 'wait') log(`${item.key}: planning ${action.kind}`);
@@ -156,7 +169,7 @@ export async function runDaemon(
             ),
           );
       }
-      for (const { item, slot, why } of t.start) {
+      for (const { item, slot, why } of hold ? [] : t.start) {
         const ok = runnable(
           config,
           item,
@@ -192,7 +205,7 @@ export async function runDaemon(
       }
       // In review cards: a review round or CI repair in a free slot, or a merge on approval.
       const busySlots = new Set([...running.values()].map((r) => r.slot));
-      for (const item of board.items) {
+      for (const item of hold ? [] : board.items) {
         if (
           item.status !== config.status.review ||
           item.blocked ||
@@ -250,21 +263,18 @@ export async function runDaemon(
         caffeinate.kill();
         caffeinate = undefined;
       }
-      writeFileSync(
-        join(state, 'status.json'),
-        JSON.stringify(
-          {
-            updatedAt: new Date().toISOString(),
-            pid: process.pid,
-            running: [...running.values()],
-            waiting: t.waiting,
-            planning: t.plan.map((i) => i.number),
-            skipped: t.skipped,
-          },
-          null,
-          2,
-        ),
-      );
+      const status: DaemonStatus = {
+        updatedAt: new Date().toISOString(),
+        pid: process.pid,
+        running: [...running.values()],
+        merging: [...merging],
+        waiting: t.waiting,
+        planning: t.plan.map((i) => i.number),
+        skipped: t.skipped,
+        paused: hold,
+        code,
+      };
+      writeFileSync(join(state, 'status.json'), JSON.stringify(status, null, 2));
     } catch (error) {
       log(`Poll failed: ${error instanceof Error ? error.message : String(error)}`);
     }

@@ -9,12 +9,13 @@ import { runDoctor } from './doctor-run.ts';
 import { nodeExec } from './exec.ts';
 import { createGh } from './github.ts';
 import { pickNext, type Pick } from './pick.ts';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { expandHome } from './config.ts';
+import { codeDir, installAgents, updateFactory, type AgentDeps } from './code.ts';
 import { runDaemon } from './daemon.ts';
-import { LABEL, plistPath, renderPlist, UI_LABEL } from './launchd.ts';
+import { formatStatus, readStatus } from './status.ts';
 import { buildReport, formatReport, parseRange } from './report.ts';
 import { planningChat } from './planning-host.ts';
 import { startRun } from './start.ts';
@@ -23,14 +24,17 @@ import { appClient, openTracker } from './tracker/index.ts';
 import { fix, snapshot, teamNeeds } from './tracker/linear-check.ts';
 import { createLinearClient, type LinearClient } from './tracker/linear-client.ts';
 import { ownerKey } from './ui/owner.ts';
-import { issueKey } from './tracker/port.ts';
 
 const USAGE = `Usage: factory <command>
 
 Commands:
   next [--json]             Print the Todo card (Ready on Project 8) it would start next, and why (read-only)
-  install                   Install and start the LaunchAgents that run the daemon and the UI at login
-  status                    What the daemon is running, waiting on and passing over
+  install                   Clone the factory's own code under the state folder (once) and install
+                            and start the LaunchAgents that run the daemon and the UI from it
+  update [--wait]           Move that code to origin/main, reinstall and restart the LaunchAgents;
+                            refuses while a run or merge is active (--wait: hold new work and wait)
+  status                    What the daemon is running (and at which commit), waiting on and
+                            passing over
   daemon                    Poll the board, plan cards and run them in free slots (the LaunchAgent runs this)
   ui                        Serve the Factory UI on 127.0.0.1 (its LaunchAgent runs this)
   report [--from d] [--to d] Throughput, rounds, time to In review and the share Blocked, from the
@@ -135,81 +139,46 @@ async function doctor(config: FactoryConfig, args: readonly string[]): Promise<n
   return outcomes.some((o) => o.status === 'failed') ? 1 : 0;
 }
 
-async function install(config: FactoryConfig): Promise<number> {
-  const state = expandHome(config.stateDir);
-  mkdirSync(state, { recursive: true });
-  const cli = fileURLToPath(import.meta.url);
-  const uid = String(process.getuid?.() ?? 501);
-  for (const [label, command, logName] of [
-    [LABEL, 'daemon', 'daemon.log'],
-    [UI_LABEL, 'ui', 'ui.log'],
-  ] as const) {
-    const plist = plistPath(homedir(), label);
-    mkdirSync(dirname(plist), { recursive: true });
-    writeFileSync(
-      plist,
-      renderPlist({
-        label,
-        command,
-        node: process.execPath,
-        cli,
-        repo: fileURLToPath(new URL('../../..', import.meta.url)),
-        path: [
-          dirname(process.execPath),
-          '/opt/homebrew/bin',
-          '/usr/local/bin',
-          '/usr/bin',
-          '/bin',
-          '/usr/sbin',
-          '/sbin',
-        ].join(':'),
-        log: join(state, logName),
-      }),
-    );
-    await nodeExec('launchctl', ['bootout', `gui/${uid}/${label}`]);
-    const loaded = await nodeExec('launchctl', ['bootstrap', `gui/${uid}`, plist]);
-    if (loaded.code !== 0) {
-      console.error(`launchctl bootstrap ${label} failed: ${loaded.stderr.trim()}`);
-      return 1;
-    }
-    console.log(`Installed ${plist}`);
+function agentDeps(): AgentDeps {
+  return {
+    exec: nodeExec,
+    home: homedir(),
+    uid: String(process.getuid?.() ?? 501),
+    node: process.execPath,
+    log: (line) => console.log(line),
+  };
+}
+
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
   }
-  console.log(
-    'The daemon and the UI start now and at every login. Logs: task factory:logs; the UI: task factory:ui:open',
+}
+
+function update(config: FactoryConfig, args: readonly string[]): Promise<number> {
+  return updateFactory(
+    config,
+    {
+      ...agentDeps(),
+      pid: process.pid,
+      alive: isAlive,
+      now: () => new Date(),
+      sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    },
+    { wait: args.includes('--wait') },
   );
-  return 0;
 }
 
 function status(config: FactoryConfig): number {
-  const file = join(expandHome(config.stateDir), 'status.json');
-  if (!existsSync(file)) {
+  const s = readStatus(config);
+  if (!s) {
     console.log('The daemon has not run yet (task factory:install).');
     return 1;
   }
-  const s = JSON.parse(readFileSync(file, 'utf8')) as {
-    updatedAt: string;
-    pid: number;
-    running: { issue: number; slot: number; startedAt: string; why: string }[];
-    waiting: number[];
-    skipped: { issue: number; reason: string }[];
-  };
-  const age = Math.round((Date.now() - Date.parse(s.updatedAt)) / 1000);
-  console.log(
-    `Daemon ${s.pid}, last poll ${age} s ago${age > config.pollSeconds * 3 ? ' (stale: is it running? task factory:logs)' : ''}.`,
-  );
-  console.log(
-    s.running.length
-      ? s.running
-          .map(
-            (r) =>
-              `  running ${issueKey(config, r.issue)} on slot ${r.slot} since ${r.startedAt} (${r.why})`,
-          )
-          .join('\n')
-      : '  nothing running',
-  );
-  if (s.waiting.length)
-    console.log(`  waiting for a slot: ${s.waiting.map((n) => issueKey(config, n)).join(', ')}`);
-  for (const k of s.skipped) console.log(`  passed over ${issueKey(config, k.issue)}: ${k.reason}`);
+  console.log(formatStatus(s, config, codeDir(config), new Date()).join('\n'));
   return 0;
 }
 
@@ -288,7 +257,9 @@ async function main(argv: readonly string[]): Promise<number> {
     case 'next':
       return next(loaded.config, rest.includes('--json'));
     case 'install':
-      return install(loaded.config);
+      return installAgents(loaded.config, agentDeps());
+    case 'update':
+      return update(loaded.config, rest);
     case 'status':
       return status(loaded.config);
     case 'daemon':
