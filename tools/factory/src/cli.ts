@@ -27,13 +27,15 @@ import { issueKey } from './tracker/port.ts';
 const USAGE = `Usage: factory <command>
 
 Commands:
-  next [--json]             Print the Ready card the factory would start next, and why (read-only)
+  next [--json]             Print the Todo card (Ready on Project 8) it would start next, and why (read-only)
   install                   Install and start the LaunchAgents that run the daemon and the UI at login
   status                    What the daemon is running, waiting on and passing over
-  daemon                    Poll the board and run Ready cards in free slots (the LaunchAgent runs this)
+  daemon                    Poll the board, plan cards and run them in free slots (the LaunchAgent runs this)
   ui                        Serve the Factory UI on 127.0.0.1 (its LaunchAgent runs this)
-  report [--from d] [--to d] Throughput, rounds, time to In review and the share Blocked (default: 7 days)
-  run <issue> [--slot n]    Run one Ready issue now, in the foreground (plan:skip issues until planning lands)
+  report [--from d] [--to d] Throughput, rounds, time to In review and the share Blocked, from the
+                            run ledger (default: the last 7 days; --to is exclusive)
+  run <n> [--slot n]        Implement card n (36 for PEN-36) now, in the foreground: plan:skip or
+                            an agreed plan
   linear-check [--me] [--fix]
                             Check Linear's team has the factory's states and labels (--me: print
                             Ryan's user ID with his key; --fix: create what's missing, as Ryan)

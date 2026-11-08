@@ -187,9 +187,10 @@ tasks:
       - node tools/factory/src/cli.ts install
 
   factory:start:
-    desc: 'The software factory: start the daemon now'
+    desc: 'The software factory: start the daemon now (after `factory:stop`, or if it is loaded but not running)'
     cmds:
-      - launchctl kickstart gui/$(id -u)/app.penmoss.factory
+      # factory:stop boots the service out, so kickstart alone can't find it: load it again first.
+      - launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/app.penmoss.factory.plist" 2>/dev/null || launchctl kickstart gui/$(id -u)/app.penmoss.factory
 
   factory:stop:
     desc: 'The software factory: stop the daemon (runs in progress restart next time, R12)'
