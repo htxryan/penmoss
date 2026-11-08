@@ -116,6 +116,8 @@ export interface RunInput {
   readonly artifacts?: readonly { readonly label: string; readonly href: string }[];
   /** The agreed plan as text: when set, web changes are validated against it (F19). */
   readonly plan?: string;
+  /** A run the daemon restarts because it stopped mid-run (R12): the claim says so. */
+  readonly recovered?: boolean;
 }
 
 export type RunOutcome =
@@ -200,9 +202,12 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
   };
 
   // Claim: the comment first, so a crash after it is recoverable from GitHub (the source of truth).
+  const how = input.recovered
+    ? `Restarted: the factory's daemon stopped while this run was in progress, so it runs again on the same branch (R12). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.`
+    : `Started: ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}, implementing straight away${spec.planSkip ? ' (`plan:skip`)' : ''}.`;
   await deps.comment(
     item.number,
-    `Started: ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}, implementing straight away${spec.planSkip ? ' (`plan:skip`)' : ''}. Scope: ${spec.platforms?.join(', ') ?? 'decided by the path classifier'}.\n\n${marker('claim')}`,
+    `${how} Scope: ${spec.platforms?.join(', ') ?? 'decided by the path classifier'}.\n\n${marker('claim')}`,
   );
   await deps.setStatus(item, config.status.working);
   deps.log('claimed', { issue: item.number });

@@ -247,6 +247,8 @@ export async function executeRun(
   spec: IssueSpec,
   slot: SlotConfig,
   log: (line: string) => void,
+  /** The daemon restarts this run after it stopped mid-run (R12). */
+  recovered = false,
 ): Promise<RunOutcome | { kind: 'stopped' }> {
   const { config, gh, tracker } = factory;
   const runId = `${item.number}-${Date.now().toString(36)}-${randomBytes(2).toString('hex')}`;
@@ -292,6 +294,7 @@ export async function executeRun(
       prompt,
       ...(artifacts.length ? { artifacts } : {}),
       ...(plan ? { plan } : {}),
+      ...(recovered ? { recovered } : {}),
     });
   } catch (error) {
     if (error instanceof BlockedByRyan) {

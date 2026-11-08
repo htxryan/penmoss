@@ -271,6 +271,13 @@ describe('runImplement', () => {
     expect(f.comments[1]).not.toMatch(/Closes|Fixes|Resolves/);
   });
 
+  it('says on the issue why a run restarts after the daemon stopped mid-run (R12)', async () => {
+    const f = fake({});
+    await runImplement(f.deps, { item: card, spec, prompt: 'p', recovered: true });
+    expect(f.comments[0]).toMatch(/^Restarted: the factory's daemon stopped while this run/);
+    expect(f.comments[0]).toContain('event=claim');
+  });
+
   const webDone: AgentResult = {
     ...done,
     platforms: {

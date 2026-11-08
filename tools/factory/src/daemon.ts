@@ -171,7 +171,15 @@ export async function runDaemon(
           why,
         });
         log(`${item.key} on slot ${slot.id} (${why})`);
-        void executeRun(factory, board, item, ok.spec, slot, (line) => log(`${item.key}: ${line}`))
+        void executeRun(
+          factory,
+          board,
+          item,
+          ok.spec,
+          slot,
+          (line) => log(`${item.key}: ${line}`),
+          why === 'recovered',
+        )
           .then((outcome) => log(`${item.key}: ${outcome.kind}`))
           .catch((error: unknown) =>
             log(`${item.key}: ${error instanceof Error ? error.message : String(error)}`),
