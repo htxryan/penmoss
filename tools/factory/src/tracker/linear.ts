@@ -111,6 +111,7 @@ function blockers(card: RawCard): string[] {
 
 export function toItem(card: RawCard, config: FactoryConfig, position: number): BoardItem {
   const blockedBy = blockers(card);
+  const set = card.labels.nodes.some((l) => l.name === config.linear.blockedLabel);
   return {
     itemId: card.id,
     number: card.number,
@@ -122,9 +123,8 @@ export function toItem(card: RawCard, config: FactoryConfig, position: number): 
     author: card.creator?.id ?? '',
     labels: card.labels.nodes.map(labelName),
     status: card.state.name,
-    blocked:
-      card.labels.nodes.some((l) => l.name === config.linear.blockedLabel) || blockedBy.length > 0,
-    ...(blockedBy.length ? { blockedBy } : {}),
+    blocked: set || blockedBy.length > 0,
+    ...(blockedBy.length ? { blockedBy, blockedSet: set } : {}),
     priority: priorityOf(card.priority),
     position,
   };

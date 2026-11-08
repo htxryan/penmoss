@@ -7,6 +7,7 @@ import type { Board, BoardItem } from '../board.ts';
 import type { FactoryConfig } from '../config.ts';
 import type { PlanMeta } from '../planning-host.ts';
 import type { PlanQuestion, PlanState } from '../planning.ts';
+import { hasBlockedSet } from '../tracker/port.ts';
 
 export interface Link {
   readonly label: string;
@@ -30,13 +31,14 @@ export interface CardView {
   readonly questions: readonly PlanQuestion[];
   /** Whether "Complete" applies: a plan exists and isn't agreed yet. */
   readonly canComplete: boolean;
+  /** Whether Blocked itself is set, which the page can clear; not an unfinished blocker. */
   readonly blocked: boolean;
   readonly links: readonly Link[];
 }
 
 export interface FactoryView {
   readonly updatedAt: string;
-  /** Whether the page may write (F21): the UI found Ryan's own gh login. */
+  /** Whether the page may write (F21): the UI found Ryan's own Linear key (or gh login). */
   readonly writable: boolean;
   readonly daemon: {
     readonly pid: number;
@@ -244,7 +246,10 @@ function card(
   let reason: string | null = null;
   let open: readonly string[] = [];
   let questions: readonly PlanQuestion[] = [];
-  if (item.blocked) {
+  const set = hasBlockedSet(item);
+  const held = item.blockedBy ?? [];
+  const heldBy = `blocked by ${held.join(', ')} until ${held.length > 1 ? 'they finish' : 'it finishes'}`;
+  if (set) {
     // Planning's open points, or the run's last word; otherwise Ryan set it himself.
     if (planning && plan?.meta.askedAt) {
       reason = 'The plan has open points';
@@ -254,8 +259,12 @@ function card(
     } else {
       reason = reasonOf(last) ?? 'You set Blocked';
     }
-    step = `Paused: ${step}`;
+    if (held.length) reason = `${reason}; also ${heldBy}`;
+  } else if (item.blocked) {
+    // Only an unfinished blocker holds it (LD8): there's no Blocked to clear.
+    reason = heldBy.charAt(0).toUpperCase() + heldBy.slice(1);
   }
+  if (item.blocked) step = `Paused: ${step}`;
   const canComplete = planning && !!plan?.state?.planUrl && !plan.meta.agreed;
   return {
     number: item.number,
@@ -268,7 +277,7 @@ function card(
     open,
     questions,
     canComplete,
-    blocked: item.blocked,
+    blocked: set,
     links,
   };
 }

@@ -5,10 +5,11 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Gh } from '../src/github.ts';
 import { createWriter, parseAction, type Writer } from '../src/ui/actions.ts';
-import { githubOwner } from '../src/ui/owner.ts';
+import type { LinearClient } from '../src/tracker/linear-client.ts';
+import { githubOwner, linearOwner } from '../src/ui/owner.ts';
 import { pageHtml } from '../src/ui/page.ts';
 import { createUiServer, listen } from '../src/ui/server.ts';
-import { testConfig } from './helpers.ts';
+import { linearConfig, RYAN_LINEAR, testConfig } from './helpers.ts';
 
 const config = testConfig();
 
@@ -135,6 +136,104 @@ describe("the UI's writes, as Ryan (F21)", () => {
       ok: true,
       action: { kind: 'reply', issue: 5, text: 'ok', unblock: false },
     });
+  });
+});
+
+/**
+ * A fake Linear with PEN-5 (Planning, the Blocked label set) and PEN-6 (Planning, held only by
+ * PEN-9, unfinished); it records the writes Ryan's key makes.
+ */
+function fakeLinear() {
+  const writes: string[] = [];
+  const card = (n: number, o: object) => ({
+    id: `uuid-${n}`,
+    identifier: `PEN-${n}`,
+    number: n,
+    title: `Issue ${n}`,
+    url: `https://linear.app/redhale/issue/PEN-${n}`,
+    priority: 0,
+    sortOrder: n,
+    state: { name: 'Planning', type: 'started' },
+    creator: { id: RYAN_LINEAR },
+    labels: { nodes: [] },
+    inverseRelations: { nodes: [] },
+    ...o,
+  });
+  const client: LinearClient = {
+    request: <T>(q: string, v: Readonly<Record<string, unknown>> = {}) => {
+      const answer = (x: unknown) => Promise.resolve(x as T);
+      if (q.includes('commentCreate(')) {
+        writes.push(`comment ${String(v['issue'])}: ${String(v['body'])}`);
+        return answer({ commentCreate: { success: true } });
+      }
+      for (const [field, what] of [
+        ['issueAddLabel', 'add'],
+        ['issueRemoveLabel', 'remove'],
+      ] as const) {
+        if (q.includes(`${field}(`)) {
+          writes.push(`${what} ${String(v['label'])} on ${String(v['id'])}`);
+          return answer({ [field]: { success: true } });
+        }
+      }
+      if (q.includes('query Team'))
+        return answer({
+          teams: { nodes: [{ id: 'team-pen', states: { nodes: [] } }] },
+          issueLabels: { nodes: [{ id: 'label-blocked', team: null }] },
+        });
+      if (q.includes('query Board'))
+        return answer({
+          issues: {
+            pageInfo: { hasNextPage: false, endCursor: null },
+            nodes: [
+              card(5, { labels: { nodes: [{ name: 'Blocked', parent: null }] } }),
+              card(6, {
+                inverseRelations: {
+                  nodes: [
+                    { type: 'blocks', issue: { identifier: 'PEN-9', state: { type: 'started' } } },
+                  ],
+                },
+              }),
+            ],
+          },
+        });
+      return Promise.reject(new Error(`unexpected request: ${q}`));
+    },
+  };
+  const lc = linearConfig();
+  return { writer: createWriter(lc, linearOwner(lc, client)), writes };
+}
+
+describe("the UI's writes on Linear, with Ryan's key (F21, A1221)", () => {
+  it('posts a reply on the card, then removes the Blocked label', async () => {
+    const { writer, writes } = fakeLinear();
+    expect(await writer.perform({ kind: 'reply', issue: 5, text: 'A sheet', unblock: true })).toBe(
+      'Posted, and Blocked cleared',
+    );
+    expect(writes).toEqual(['comment uuid-5: A sheet', 'remove label-blocked on uuid-5']);
+  });
+  it('posts a picked answer and Complete in the form the planning session reads', async () => {
+    const { writer, writes } = fakeLinear();
+    await writer.perform({ kind: 'answer', issue: 5, question: 'Sheet?', option: 'Yes' });
+    await writer.perform({ kind: 'complete', issue: 5 });
+    expect(writes.filter((w) => w.startsWith('comment'))).toEqual([
+      'comment uuid-5: On "Sheet?": Yes',
+      'comment uuid-5: Complete',
+    ]);
+  });
+  it('leaves a card held only by an unfinished blocker alone: there is no label to remove (LD8)', async () => {
+    const { writer, writes } = fakeLinear();
+    expect(await writer.perform({ kind: 'reply', issue: 6, text: 'Noted', unblock: true })).toBe(
+      'Posted',
+    );
+    expect(await writer.perform({ kind: 'block', issue: 6, on: false })).toBe(
+      "Blocked isn't set; PEN-9 holds it until it finishes",
+    );
+    expect(writes).toEqual(['comment uuid-6: Noted']);
+  });
+  it('sets the Blocked label on a held card when Ryan asks, so it stays paused after PEN-9', async () => {
+    const { writer, writes } = fakeLinear();
+    expect(await writer.perform({ kind: 'block', issue: 6, on: true })).toBe('Blocked');
+    expect(writes).toEqual(['add label-blocked on uuid-6']);
   });
 });
 

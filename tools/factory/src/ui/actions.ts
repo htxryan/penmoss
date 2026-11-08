@@ -6,7 +6,7 @@
  */
 import type { FactoryConfig } from '../config.ts';
 import { answerText } from '../planning.ts';
-import { issueKey, type OwnerTracker } from '../tracker/port.ts';
+import { hasBlockedSet, issueKey, type OwnerTracker } from '../tracker/port.ts';
 
 export type UiAction =
   | {
@@ -68,7 +68,7 @@ export interface Writer {
   perform(action: UiAction): Promise<string>;
 }
 
-/** `tracker` must act as Ryan (his gh, his Linear key); `runUi` checks it before serving. */
+/** `tracker` must act as Ryan (his Linear key, or his gh); `runUi` checks it before serving. */
 export function createWriter(config: FactoryConfig, tracker: OwnerTracker): Writer {
   const comment = (issue: number, body: string) => tracker.comment(issue, body);
   return {
@@ -76,11 +76,14 @@ export function createWriter(config: FactoryConfig, tracker: OwnerTracker): Writ
       const board = await tracker.readBoard();
       const item = board.items.find((i) => i.number === action.issue && i.repo === config.repo);
       if (!item) throw new Error(`${issueKey(config, action.issue)} isn't on the board`);
+      // Only Blocked itself can be cleared; an unfinished blocker holds the card on its own (LD8).
+      const set = hasBlockedSet(item);
+      const held = item.blockedBy?.join(', ');
       // Comment first, then clear Blocked: the daemon must see the words when it resumes.
       const reply = async (body: string, unblock: boolean) => {
         await comment(item.number, body);
-        if (unblock && item.blocked) await tracker.clearBlocked(item);
-        return unblock && item.blocked ? 'Posted, and Blocked cleared' : 'Posted';
+        if (unblock && set) await tracker.clearBlocked(item);
+        return unblock && set ? 'Posted, and Blocked cleared' : 'Posted';
       };
       switch (action.kind) {
         case 'reply':
@@ -91,7 +94,10 @@ export function createWriter(config: FactoryConfig, tracker: OwnerTracker): Writ
           // The normal agreement path: an explicit yes on the issue (R17).
           return reply('Complete', true);
         case 'block':
-          if (action.on === item.blocked) return action.on ? 'Already Blocked' : 'Not Blocked';
+          if (action.on === set) {
+            if (action.on) return 'Already Blocked';
+            return held ? `Blocked isn't set; ${held} holds it until it finishes` : 'Not Blocked';
+          }
           if (action.on) await tracker.setBlocked(item);
           else await tracker.clearBlocked(item);
           return action.on ? 'Blocked' : 'Blocked cleared';

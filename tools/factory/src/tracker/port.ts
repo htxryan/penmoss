@@ -28,6 +28,11 @@ export interface BoardItem {
   readonly blocked: boolean;
   /** Unfinished issues this one is blocked by (Linear relations, LD8); they keep it Blocked too. */
   readonly blockedBy?: readonly string[];
+  /**
+   * Whether Blocked itself (the label, or Project 8's field) is set, which only Ryan clears; false
+   * when `blockedBy` alone holds the card. Absent means the same as `blocked`.
+   */
+  readonly blockedSet?: boolean;
   /** The tracker's own priority (Linear, LD11); GitHub's comes from P1–P4 labels instead. */
   readonly priority?: Priority;
   /** Position on the board, 0 first. */
@@ -57,6 +62,11 @@ export interface Tracker {
 /** Ryan's own tracker access, for the Factory UI alone (F21): it may also clear Blocked. */
 export interface OwnerTracker extends Tracker {
   clearBlocked(item: BoardItem): Promise<void>;
+}
+
+/** Whether Blocked itself is set on the card, not only an unfinished blocker (LD8). */
+export function hasBlockedSet(item: BoardItem): boolean {
+  return item.blocked && (item.blockedSet ?? true);
 }
 
 /** The card's name: `#36` on GitHub, `PEN-36` on Linear. */
