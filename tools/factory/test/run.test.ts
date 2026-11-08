@@ -4,6 +4,7 @@ import type { Gh } from '../src/github.ts';
 import { openOrReusePr } from '../src/host.ts';
 import { parseIssueSpec } from '../src/labels.ts';
 import type { CheckRun } from '../src/checks.ts';
+import type { RebaseOutcome } from '../src/rebase.ts';
 import type { AgentResult } from '../src/result.ts';
 import {
   branchName,
@@ -81,6 +82,10 @@ function fake(overrides: {
   limited?: number;
   /** The branch's diff adds a test.skip in the first gate round. */
   weakened?: boolean;
+  /** Whether main has moved past the branch, each time it is asked (default: no). */
+  behind?: boolean[];
+  /** What each rebase onto main does, in order (default: a clean rebase). */
+  rebases?: RebaseOutcome[];
 }): Fake {
   const calls: string[] = [];
   const comments: string[] = [];
@@ -91,12 +96,6 @@ function fake(overrides: {
       worktreePath: `/wt/${n}`,
       exec: (command) => {
         calls.push(`exec ${n}: ${command}`);
-        if (command.startsWith('git rebase'))
-          return Promise.resolve({
-            exitCode: overrides.conflict && opened <= 2 ? 1 : 0,
-            stdout: 'CONFLICT (content): docs/cli.md',
-            stderr: '',
-          });
         if (command.startsWith('git diff'))
           return Promise.resolve({
             exitCode: 0,
@@ -131,6 +130,8 @@ function fake(overrides: {
   const rounds = [...(overrides.agentRounds ?? [])];
   const prompts: string[] = [];
   const ciRounds = [...(overrides.ci ?? [])];
+  const behind = [...(overrides.behind ?? [])];
+  const rebases = [...(overrides.rebases ?? [])];
   let clock = Date.parse('2026-11-07T12:00:00Z');
   const deps: RunDeps = {
     config,
@@ -211,6 +212,23 @@ function fake(overrides: {
         })),
       }),
     fetchMain: () => Promise.resolve(),
+    behindMain: (branch) => {
+      calls.push(`behind? ${branch}`);
+      return Promise.resolve(behind.shift() ?? false);
+    },
+    rebase: (work) => {
+      calls.push(`rebase ${work.worktreePath}`);
+      return Promise.resolve(
+        rebases.shift() ??
+          (overrides.conflict && opened <= 2
+            ? {
+                kind: 'conflict',
+                files: ['docs/cli.md'],
+                output: 'CONFLICT (content): docs/cli.md',
+              }
+            : { kind: 'rebased', resolved: [], renumbered: {} }),
+      );
+    },
     numberDecisions: () => Promise.resolve({}),
     push: (branch) => {
       calls.push(`push ${branch}`);
@@ -254,13 +272,15 @@ describe('runImplement', () => {
       'close 1',
       'open factory/42-fix-the-typo-in-docs-cli',
       'exec 2: git status --porcelain --untracked-files=no',
-      'exec 2: git rebase origin/main',
+      'rebase /wt/2',
       'exec 2: git diff origin/main...HEAD',
       'exec 2: task lint',
       'close 2',
       'push factory/42-fix-the-typo-in-docs-cli',
       'pr',
       'checks',
+      // main hasn't moved while CI ran, so there is nothing to rebase before review.
+      'behind? factory/42-fix-the-typo-in-docs-cli',
       'comment #42',
       'status In review',
       'notify Penmoss #42 is ready for review',
@@ -427,8 +447,7 @@ describe('CI after the PR opens (F6)', () => {
     const f = fake({ conflict: true });
     const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
     expect(outcome.kind).toBe('in-review');
-    expect(f.calls).toContain('exec 2: git rebase --abort');
-    expect(f.prompts[1]).toContain('stopped on conflicts');
+    expect(f.prompts[1]).toContain('stopped on conflicts in `docs/cli.md`');
     expect(f.prompts[1]).toContain('CONFLICT (content): docs/cli.md');
   });
 
@@ -486,6 +505,108 @@ describe('CI after the PR opens (F6)', () => {
     expect(
       f.comments.filter((c) => c.startsWith('CI is waiting for a free Mac runner')),
     ).toHaveLength(1);
+  });
+});
+
+describe('main moves while the PR waits for CI (F6)', () => {
+  const BR = 'factory/42-fix-the-typo-in-docs-cli';
+  const conflict: RebaseOutcome = {
+    kind: 'conflict',
+    files: ['apps/web/src/a.ts', 'docs/cli.md'],
+    output: 'CONFLICT (content): Merge conflict in apps/web/src/a.ts',
+  };
+  const clean: RebaseOutcome = { kind: 'rebased', resolved: [], renumbered: {} };
+
+  it('rebases once more before In review, gates again, pushes with the lease and waits for CI', async () => {
+    const f = fake({
+      behind: [true],
+      rebases: [
+        clean,
+        { kind: 'rebased', resolved: ['docs/decisions.md'], renumbered: { A1225: 'A1226' } },
+      ],
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.calls.slice(f.calls.indexOf('pr'))).toEqual([
+      'pr',
+      'checks',
+      `behind? ${BR}`,
+      `open ${BR}`,
+      'rebase /wt/3',
+      'exec 3: git diff origin/main...HEAD',
+      'exec 3: task lint',
+      'close 3',
+      `push ${BR}`,
+      'checks',
+      'comment #42',
+      'status In review',
+      'notify Penmoss #42 is ready for review',
+    ]);
+    // The decisions conflict was the harness's to resolve: no agent round for it.
+    expect(f.calls.filter((c) => c === 'agent')).toHaveLength(1);
+    expect(f.events).toContain('rebased');
+  });
+
+  it("hands a conflict it can't resolve to one agent round, then goes on to review", async () => {
+    const f = fake({ behind: [true], rebases: [clean, conflict, clean] });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.prompts).toHaveLength(2);
+    expect(f.prompts[1]).toContain('## main moved: rebase onto it');
+    expect(f.prompts[1]).toContain('stopped on conflicts in `apps/web/src/a.ts`, `docs/cli.md`');
+    expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(2);
+    expect(f.calls.at(-2)).toBe('status In review');
+  });
+
+  it('sets Blocked naming the conflicting files when the fix round leaves them', async () => {
+    const f = fake({ behind: [true], rebases: [clean, conflict, conflict] });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome).toEqual({ kind: 'blocked', reason: 'rebase-conflict' });
+    const last = f.comments.at(-1)!;
+    expect(last).toContain(
+      'no longer rebases onto main: `apps/web/src/a.ts`, `docs/cli.md` conflict',
+    );
+    expect(last).toContain('event=blocked');
+    expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(1);
+    expect(f.calls).not.toContain('status In review');
+    expect(f.calls.at(-1)).toBe('blocked');
+  });
+
+  it('sets Blocked when the agent stops in its fix round, without pushing', async () => {
+    const f = fake({
+      behind: [true],
+      rebases: [clean, conflict],
+      agentRounds: [done, { ...done, status: 'failed', summary: 'both sides rename the route' }],
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome).toEqual({ kind: 'blocked', reason: 'rebase-conflict' });
+    expect(f.comments.at(-1)).toContain(
+      "the agent's fix round stopped: both sides rename the route",
+    );
+    expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(1);
+  });
+
+  it('gives a gate the rebase broke to the agent with the failure', async () => {
+    const f = fake({ behind: [true] });
+    let gates = 0;
+    const base = f.deps;
+    f.deps = {
+      ...base,
+      openSandbox: async (branch) => {
+        const box = await base.openSandbox(branch);
+        return {
+          ...box,
+          exec: (command) =>
+            command === 'task lint' && ++gates === 2
+              ? Promise.resolve({ exitCode: 1, stdout: 'main renamed lint:md', stderr: '' })
+              : box.exec(command),
+        };
+      },
+    };
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.prompts[1]).toContain('## The gate after rebasing onto main');
+    expect(f.prompts[1]).toContain('main renamed lint:md');
   });
 });
 

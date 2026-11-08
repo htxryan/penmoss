@@ -4,7 +4,7 @@ import type { CheckRun } from '../src/checks.ts';
 import { ciRunsFor, mergeApproved, type MainRun, type MergeDeps } from '../src/merge.ts';
 import type { Gh } from '../src/github.ts';
 import type { Factory } from '../src/start.ts';
-import { nextReviewAction } from '../src/watch.ts';
+import { findPr, nextReviewAction } from '../src/watch.ts';
 import { item, testConfig } from './helpers.ts';
 
 const config = testConfig();
@@ -135,6 +135,71 @@ describe('nextReviewAction', () => {
     expect((await nextReviewAction(factory, { ...merged, state: 'CLOSED' }, new Date())).kind).toBe(
       'none',
     );
+  });
+
+  it('rebases an approved, green PR that main has moved past, instead of merging it (F6)', async () => {
+    const conversation = {
+      repository: {
+        pullRequest: {
+          createdAt: '2026-11-08T10:00:00Z',
+          reviewThreads: { nodes: [] },
+          reviews: {
+            nodes: [
+              {
+                state: 'APPROVED',
+                body: '',
+                submittedAt: '2026-11-08T11:00:00Z',
+                author: { login: config.owner },
+              },
+            ],
+          },
+          comments: { nodes: [] },
+        },
+      },
+    };
+    const gh: Gh = {
+      run: () => Promise.reject(new Error('unused')),
+      json: <T>() => Promise.resolve([green] as T),
+      graphql: <T>() => Promise.resolve(conversation as T),
+    };
+    const factory = { config, gh } as unknown as Factory;
+    const open = {
+      number: 9,
+      url: 'https://github.com/htxryan/penmoss/pull/9',
+      state: 'OPEN',
+    } as const;
+    const now = new Date('2026-11-08T12:00:00Z');
+    expect(await nextReviewAction(factory, { ...open, mergeable: 'CONFLICTING' }, now)).toEqual({
+      kind: 'rebase',
+    });
+    expect(await nextReviewAction(factory, { ...open, mergeStateStatus: 'BEHIND' }, now)).toEqual({
+      kind: 'rebase',
+    });
+    // Still being worked out by GitHub, or clean: merge as before.
+    expect(await nextReviewAction(factory, { ...open, mergeable: 'UNKNOWN' }, now)).toEqual({
+      kind: 'merge',
+    });
+    expect(
+      await nextReviewAction(
+        factory,
+        { ...open, mergeable: 'MERGEABLE', mergeStateStatus: 'CLEAN' },
+        now,
+      ),
+    ).toEqual({ kind: 'merge' });
+  });
+
+  it("asks GitHub whether the factory's PR still merges into main", async () => {
+    const asked: string[][] = [];
+    const gh: Gh = {
+      run: () => Promise.reject(new Error('unused')),
+      json: <T>(args: readonly string[]) => {
+        asked.push([...args]);
+        return Promise.resolve([] as T);
+      },
+      graphql: () => Promise.reject(new Error('unused')),
+    };
+    await findPr({ config, gh } as unknown as Factory, card);
+    expect(asked[0]?.at(-1)).toBe('number,url,state,mergeable,mergeStateStatus');
   });
 });
 

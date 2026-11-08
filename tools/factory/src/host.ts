@@ -33,6 +33,7 @@ import { proofFiles, type AttachedProof } from './proof/body.ts';
 import { publishRefs, type ProofStore } from './proof/store.ts';
 import { fromPlaywrightReport, type ProofItem } from './proof/manifest.ts';
 import { checkMedia, framesToMp4, framesWithin, toMp4, within } from './proof/media.ts';
+import { rebaseOntoMain } from './rebase.ts';
 import { parseAgentResult, RESULT_PATH } from './result.ts';
 import type { RunDeps, RunEvent, RunSandbox } from './run.ts';
 import { makeOwnDirs, sandboxSpec, seatbeltProvider, withJavaHome } from './sandbox.ts';
@@ -464,6 +465,13 @@ export function hostDeps(options: HostOptions): RunDeps {
     fetchMain: async () => {
       await git(exec, ['-C', dir, 'fetch', '--quiet', 'origin', 'main'], env);
     },
+    behindMain: async (branch) => {
+      const args = ['-C', dir, 'merge-base', '--is-ancestor', 'origin/main', branch];
+      const r = await exec('git', args, { env });
+      if (r.code > 1) throw new Error(`git merge-base failed: ${r.stderr.trim()}`);
+      return r.code === 1;
+    },
+    rebase: (handle) => rebaseOntoMain(handle, join(state, 'decision-numbers')),
     numberDecisions: async (handle) => {
       const listed = await handle.exec(
         "git grep -l -E 'A-NEW-[0-9]+' -- . ':!tools/factory' || true",

@@ -245,7 +245,7 @@ export async function runDaemon(
           why: 'picked',
         });
         log(
-          `${item.key} on slot ${slot.id}: ${action.kind === 'round' ? `review round (${action.state.trigger})` : 'CI repair'}`,
+          `${item.key} on slot ${slot.id}: ${action.kind === 'round' ? `review round (${action.state.trigger})` : action.kind === 'rebase' ? 'rebase onto main' : 'CI repair'}`,
         );
         void executeRevise(factory, board, item, parsed.spec, slot, pr, action, (line) =>
           log(`${item.key}: ${line}`),

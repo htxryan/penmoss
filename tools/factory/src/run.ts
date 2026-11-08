@@ -19,6 +19,7 @@ import { validate } from './validate.ts';
 import { renderPrBody, type AttachedProof } from './proof/body.ts';
 import { missingProof, type ProofItem } from './proof/manifest.ts';
 import { formatMarker } from './pick.ts';
+import type { RebaseOutcome } from './rebase.ts';
 import type { AgentResult } from './result.ts';
 
 export type RunEvent =
@@ -31,6 +32,8 @@ export type RunEvent =
   | 'gate-failed'
   | 'pushed'
   | 'decisions-numbered'
+  | 'rebased'
+  | 'rebase-conflict'
   | 'proof-recorded'
   | 'pr-opened'
   | 'ci-red'
@@ -80,6 +83,10 @@ export interface RunDeps {
   ): Promise<{ ok: true; proof: AttachedProof[] } | { ok: false; error: string }>;
   /** Fetches origin/main into the factory's clone. */
   fetchMain(): Promise<void>;
+  /** Whether origin/main (as last fetched) has commits the branch doesn't. */
+  behindMain(branch: string): Promise<boolean>;
+  /** Rebases the sandbox's branch onto origin/main, resolving decisions-only conflicts (rebase.ts). */
+  rebase(sandbox: RunSandbox): Promise<RebaseOutcome>;
   /** Gives A-NEW-n decisions real numbers in the sandbox's worktree; returns what it assigned. */
   numberDecisions(sandbox: RunSandbox): Promise<Record<string, string>>;
   /** Pushes the branch (with lease: rebases rewrite it). */
@@ -305,15 +312,12 @@ export async function gateAndProve(
     const clean = await gate.exec('git status --porcelain --untracked-files=no');
     if (clean.stdout.trim() !== '')
       return { ok: false, feedback: 'the branch has uncommitted changes to tracked files.' };
-    // Up to date with main before anything is checked (F6); a conflict is the agent's to resolve.
-    const rebase = await gate.exec('git rebase origin/main');
-    if (rebase.exitCode !== 0) {
-      await gate.exec('git rebase --abort');
-      return {
-        ok: false,
-        feedback: `\`git rebase origin/main\` stopped on conflicts:\n\n\`\`\`\n${tail(rebase.stdout + rebase.stderr)}\n\`\`\`\n\nRebase \`${branch}\` onto \`origin/main\` yourself, resolve them, and commit.`,
-      };
-    }
+    // Up to date with main before anything is checked (F6). The harness resolves new decision
+    // rows on both sides; any other conflict is the agent's to resolve.
+    const rebased = await deps.rebase(gate);
+    if (rebased.kind === 'conflict')
+      return { ok: false, feedback: conflictFeedback(branch, rebased) };
+    noteRebase(deps, rebased);
     const numbered = await deps.numberDecisions(gate);
     if (Object.keys(numbered).length > 0) deps.log('decisions-numbered', numbered);
     const weak = scanWeakenedTests((await gate.exec('git diff origin/main...HEAD')).stdout);
@@ -405,13 +409,22 @@ async function publish(
   });
   deps.log('pr-opened', { pr });
 
+  const stop = async (reason: string, text: string): Promise<RunOutcome> => {
+    deps.log('blocked', { reason });
+    await deps.comment(run.item.number, `${text}\n\n${run.marker('blocked')}`);
+    await deps.setBlocked(run.item);
+    return { kind: 'blocked', reason };
+  };
   // In review only once CI is green (R4); red checks go to a repair session (F6).
   const ci = await watchCi(deps, { ...run, pr });
-  if (ci.kind === 'blocked') {
-    deps.log('blocked', { reason: ci.reason });
-    await deps.comment(run.item.number, `${ci.body}\n\n${run.marker('blocked')}`);
-    await deps.setBlocked(run.item);
-    return { kind: 'blocked', reason: ci.reason };
+  if (ci.kind === 'blocked') return stop(ci.reason, ci.body);
+  // main may have moved while CI ran: rebase once more, so the PR reaches review on top of it.
+  await deps.fetchMain();
+  if (await deps.behindMain(run.branch)) {
+    const fresh = await refreshBranch(deps, run);
+    if (!fresh.ok) return stop(fresh.reason, fresh.body);
+    const again = await watchCi(deps, { ...run, pr });
+    if (again.kind === 'blocked') return stop(again.reason, again.body);
   }
   await deps.comment(
     run.item.number,
@@ -504,29 +517,123 @@ async function repair(
   } finally {
     await work.close();
   }
+  const gated = await regate(deps, run.branch, run.scope);
+  if (!gated.ok)
+    return {
+      ok: false,
+      why: gated.conflict
+        ? `the repaired branch no longer rebases cleanly onto main (${gated.conflict.map((f) => `\`${f}\``).join(', ')} conflict)`
+        : gated.why,
+    };
+  await deps.push(run.branch);
+  return { ok: true };
+}
+
+type Rebased = Extract<RebaseOutcome, { kind: 'rebased' }>;
+
+function conflictFeedback(branch: string, conflict: Extract<RebaseOutcome, { kind: 'conflict' }>) {
+  const files = conflict.files.map((f) => `\`${f}\``).join(', ');
+  return `\`git rebase origin/main\` stopped on conflicts${files ? ` in ${files}` : ''}:\n\n\`\`\`\n${tail(conflict.output)}\n\`\`\`\n\nRebase \`${branch}\` onto \`origin/main\` yourself, resolve them, and commit.`;
+}
+
+function noteRebase(deps: RunDeps, rebased: Rebased): void {
+  if (rebased.resolved.length > 0 || Object.keys(rebased.renumbered).length > 0)
+    deps.log('rebased', { resolved: rebased.resolved, renumbered: rebased.renumbered });
+}
+
+type Regated =
+  | { readonly ok: true; readonly rebase: Rebased }
+  | { readonly ok: false; readonly why: string; readonly conflict?: readonly string[] };
+
+/** The branch rebased onto a fresh main in a gate sandbox, and the gate run on it again. */
+async function regate(deps: RunDeps, branch: string, scope: Scope): Promise<Regated> {
   await deps.fetchMain();
-  const gate = await deps.openSandbox(run.branch);
+  const gate = await deps.openSandbox(branch);
   try {
-    const rebase = await gate.exec('git rebase origin/main');
-    if (rebase.exitCode !== 0) {
-      await gate.exec('git rebase --abort');
-      return { ok: false, why: 'the repaired branch no longer rebases cleanly onto main' };
-    }
-    await deps.numberDecisions(gate);
+    const rebased = await deps.rebase(gate);
+    if (rebased.kind === 'conflict')
+      return { ok: false, why: conflictFeedback(branch, rebased), conflict: rebased.files };
+    noteRebase(deps, rebased);
+    const numbered = await deps.numberDecisions(gate);
+    if (Object.keys(numbered).length > 0) deps.log('decisions-numbered', numbered);
     const weak = scanWeakenedTests((await gate.exec('git diff origin/main...HEAD')).stdout);
     if (weak.length > 0) return { ok: false, why: weakenedFeedback(weak) };
-    const command = gateCommand(run.scope);
-    const checked = await deps.heavy(`factory gate ${run.branch}`, () => gate.exec(command));
+    const command = gateCommand(scope);
+    const checked = await deps.heavy(`factory gate ${branch}`, () => gate.exec(command));
     if (checked.exitCode !== 0)
       return {
         ok: false,
-        why: `\`${command}\` failed after the repair:\n\n\`\`\`\n${tail(checked.stdout + checked.stderr)}\n\`\`\``,
+        why: `\`${command}\` failed:\n\n\`\`\`\n${tail(checked.stdout + checked.stderr)}\n\`\`\``,
       };
+    return { ok: true, rebase: rebased };
   } finally {
     await gate.close();
   }
+}
+
+function stuck(
+  branch: string,
+  failed: Extract<Regated, { ok: false }>,
+  why: string,
+): Extract<RefreshOutcome, { ok: false }> {
+  const files = failed.conflict?.map((f) => `\`${f}\``).join(', ');
+  return failed.conflict
+    ? {
+        ok: false,
+        reason: 'rebase-conflict',
+        body: `\`${branch}\` no longer rebases onto main${files ? `: ${files} conflict` : ''}, and a fix round with the agent didn't resolve it${why}. Rebase it yourself or say how in a comment, then clear Blocked.\n\n${failed.why}`,
+      }
+    : {
+        ok: false,
+        reason: 'gate-failed',
+        body: `After rebasing onto main, the gate still fails${why}: ${failed.why}`,
+      };
+}
+
+export type RefreshOutcome =
+  | { readonly ok: true; readonly rebase: Rebased }
+  | { readonly ok: false; readonly reason: string; readonly body: string };
+
+/**
+ * Brings a pushed branch up to date with main (F6): rebase in a fresh sandbox, the gate again,
+ * then the host's leased push. A conflict the harness can't resolve, or a gate the rebase broke,
+ * gets one fix round with the agent; after that it is Ryan's, with the files named.
+ */
+export async function refreshBranch(
+  deps: RunDeps,
+  run: { readonly branch: string; readonly scope: Scope; readonly prompt: string },
+): Promise<RefreshOutcome> {
+  let gated = await regate(deps, run.branch, run.scope);
+  if (!gated.ok) {
+    const first = gated;
+    deps.log(first.conflict ? 'rebase-conflict' : 'gate-failed', {
+      ...(first.conflict ? { files: first.conflict } : {}),
+      phase: 'rebase',
+    });
+    const ask = first.conflict
+      ? `## main moved: rebase onto it\n\nThe PR from \`${run.branch}\` no longer rebases onto \`origin/main\`. ${first.why}\n\nKeep what main changed and what this branch changes. Run the checks, commit, and write \`.factory/result.json\` again.`
+      : `## The gate after rebasing onto main\n\n\`${run.branch}\` is now on top of \`origin/main\`, and the gate fails there: ${first.why}\n\nFix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\` again.`;
+    const work = await deps.openSandbox(run.branch);
+    let read: Awaited<ReturnType<RunDeps['readResult']>>;
+    try {
+      await runAgentPatiently(deps, work, `${run.prompt}\n\n${ask}`);
+      read = await deps.readResult(work);
+    } finally {
+      await work.close();
+    }
+    const stopped = !read.ok
+      ? read.error
+      : read.result.status !== 'done'
+        ? read.result.summary
+        : undefined;
+    if (stopped !== undefined)
+      return stuck(run.branch, first, ` (the agent's fix round stopped: ${stopped})`);
+    gated = await regate(deps, run.branch, run.scope);
+    if (!gated.ok) return stuck(run.branch, gated, '');
+  }
   await deps.push(run.branch);
-  return { ok: true };
+  deps.log('pushed', { branch: run.branch, phase: 'rebase' });
+  return { ok: true, rebase: gated.rebase };
 }
 
 function tail(text: string): string {

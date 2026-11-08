@@ -1,7 +1,7 @@
 /**
  * What the daemon does for each In review card (F11, F18): find the factory's PR for it, read
- * what Ryan has said, then start a review round in a free slot, repair a red check, or merge
- * on approval. Blocked cards are never looked at (R23).
+ * what Ryan has said, then start a review round in a free slot, rebase a PR main has moved past
+ * (F6), repair a red check, or merge on approval. Blocked cards are never looked at (R23).
  */
 import { randomBytes } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -20,7 +20,7 @@ import { fill, promptTemplate } from './prompt.ts';
 import { proofFiles } from './proof/body.ts';
 import { publishRefs } from './proof/store.ts';
 import { readConversation, reviewState, roundText, type ReviewState } from './review.ts';
-import { runRevise, type ReviseDeps } from './revise.ts';
+import { runRebase, runRevise, type ReviseDeps } from './revise.ts';
 import { branchName } from './run.ts';
 import type { Factory } from './start.ts';
 
@@ -28,6 +28,19 @@ export interface FactoryPr {
   readonly number: number;
   readonly url: string;
   readonly state: 'OPEN' | 'MERGED' | 'CLOSED';
+  /** GitHub's MERGEABLE, CONFLICTING or UNKNOWN (still being worked out). */
+  readonly mergeable?: string;
+  /** DIRTY (conflicts), BEHIND (main must be merged in first), CLEAN, BLOCKED… */
+  readonly mergeStateStatus?: string;
+}
+
+/** Whether main has moved past the PR so it can't merge as it is: it needs a rebase (F6). */
+export function mainMovedPast(pr: FactoryPr): boolean {
+  return (
+    pr.mergeable === 'CONFLICTING' ||
+    pr.mergeStateStatus === 'DIRTY' ||
+    pr.mergeStateStatus === 'BEHIND'
+  );
 }
 
 export async function findPr(factory: Factory, item: BoardItem): Promise<FactoryPr | undefined> {
@@ -41,7 +54,7 @@ export async function findPr(factory: Factory, item: BoardItem): Promise<Factory
     '--state',
     'all',
     '--json',
-    'number,url,state',
+    'number,url,state,mergeable,mergeStateStatus',
   ]);
   return prs[0];
 }
@@ -49,6 +62,7 @@ export async function findPr(factory: Factory, item: BoardItem): Promise<Factory
 export type ReviewAction =
   | { readonly kind: 'none'; readonly reason: string }
   | { readonly kind: 'round'; readonly state: Extract<ReviewState, { kind: 'round' }> }
+  | { readonly kind: 'rebase' }
   | { readonly kind: 'repair'; readonly failed: readonly CheckRun[] }
   | { readonly kind: 'merge' };
 
@@ -78,6 +92,8 @@ export async function nextReviewAction(
     config.review.commentQuietMinutes,
   );
   if (state.kind === 'round') return { kind: 'round', state };
+  // Before checks or a merge: a PR that conflicts with main gets no new CI and can't merge.
+  if (mainMovedPast(pr)) return { kind: 'rebase' };
   const checks = await gh
     .json<CheckRun[]>([
       'pr',
@@ -98,7 +114,7 @@ export async function nextReviewAction(
   return { kind: 'none', reason: state.reason };
 }
 
-/** A review round (or a CI repair) on a slot, guarded by the card's Blocked field. */
+/** A review round, a rebase or a CI repair on a slot, guarded by the card's Blocked field. */
 export async function executeRevise(
   factory: Factory,
   board: Board,
@@ -106,7 +122,7 @@ export async function executeRevise(
   spec: IssueSpec,
   slot: SlotConfig,
   pr: FactoryPr,
-  action: Extract<ReviewAction, { kind: 'round' | 'repair' }>,
+  action: Extract<ReviewAction, { kind: 'round' | 'rebase' | 'repair' }>,
   log: (line: string) => void,
 ): Promise<string> {
   const { config, gh, tracker } = factory;
@@ -123,7 +139,9 @@ export async function executeRevise(
   const prompt =
     action.kind === 'round'
       ? `${base}\n\n## Ryan's review of ${pr.url}\n\nThe PR is open and in review. Address every item below in the same branch, then write \`.factory/result.json\` with a \`replies\` object: for each review thread ID, one or two sentences saying what you changed (or why not).\n\n${roundText(items, fence)}`
-      : `${base}\n\n## CI failed on ${pr.url}\n\nThe PR is in review and these checks failed: ${action.failed.map((c) => `${c.name} (${c.link})`).join(', ')}. Fix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\`.`;
+      : action.kind === 'rebase'
+        ? base
+        : `${base}\n\n## CI failed on ${pr.url}\n\nThe PR is in review and these checks failed: ${action.failed.map((c) => `${c.name} (${c.link})`).join(', ')}. Fix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\`.`;
   const agent = await agentFor(config, spec);
   const deps = hostDeps({
     config,
@@ -183,14 +201,9 @@ export async function executeRevise(
     isBlocked,
   );
   try {
-    const outcome = await runRevise(guarded, {
-      item,
-      spec,
-      pr: pr.url,
-      branch: branchName(config, item),
-      items,
-      prompt,
-    });
+    const input = { item, spec, pr: pr.url, branch: branchName(config, item), items, prompt };
+    const outcome =
+      action.kind === 'rebase' ? await runRebase(guarded, input) : await runRevise(guarded, input);
     return outcome.kind;
   } catch (error) {
     if (error instanceof BlockedByRyan) return 'stopped';
