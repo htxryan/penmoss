@@ -21,6 +21,8 @@ OUT="$ROOT/build/proof"
 ADB="$ANDROID_HOME/platform-tools/adb"
 BOOT_SECONDS="${PENMOSS_EMULATOR_BOOT_SECONDS:-240}"
 TEST_SECONDS="${PENMOSS_PROOF_TEST_SECONDS:-170}"
+SETTLE_SECONDS="${PENMOSS_EMULATOR_SETTLE_SECONDS:-240}"
+QUIET_SECONDS="${PENMOSS_EMULATOR_QUIET_SECONDS:-10}"
 APP=app.penmoss.debug
 RUNNER="$APP.test/androidx.test.runner.AndroidJUnitRunner"
 
@@ -71,6 +73,41 @@ echo "[proof] booted in ${waited}s"
 "$ADB" -s "$ANDROID_SERIAL" shell settings put global transition_animation_scale 0
 "$ADB" -s "$ANDROID_SERIAL" shell settings put global animator_duration_scale 0
 
+# Let the device settle before any test. Booted is not idle: the boot's broadcasts keep a
+# software-rendered emulator on a loaded Mac busy for a minute or more, System UI can stop
+# responding meanwhile, and its "isn't responding" dialog takes the input focus from the app
+# under test (a test's typed keys land in the dialog). Android closes that dialog itself once
+# System UI responds again. So: wait for the broadcasts to drain, then for the launcher to
+# hold the focus, with no dialog in front, for QUIET_SECONDS in a row. Hiding error dialogs
+# instead is worse: Android then restarts System UI, whose theme overlays change the
+# configuration and recreate the activity under test.
+"$ADB" -s "$ANDROID_SERIAL" shell am wait-for-broadcast-idle >/dev/null 2>&1 &
+idle=$!
+waited=0
+while kill -0 "$idle" 2>/dev/null && [ "$waited" -lt "$SETTLE_SECONDS" ]; do
+  sleep 1
+  waited=$((waited + 1))
+done
+kill "$idle" 2>/dev/null || true
+quiet=0
+focus=''
+while [ "$quiet" -lt "$QUIET_SECONDS" ]; do
+  if [ "$waited" -ge "$SETTLE_SECONDS" ]; then
+    echo "[proof] the emulator didn't settle in ${SETTLE_SECONDS}s; the focus is on: ${focus:-nothing}" >&2
+    break
+  fi
+  focus="$("$ADB" -s "$ANDROID_SERIAL" shell dumpsys window displays 2>/dev/null |
+    sed -n 's/.*mCurrentFocus=//p' | head -n 1 | tr -d '\r')"
+  case "$focus" in
+    *'Not Responding'* | *'Application Error'*) quiet=0 ;;
+    *Launcher*) quiet=$((quiet + 1)) ;;
+    *) quiet=0 ;;
+  esac
+  sleep 1
+  waited=$((waited + 1))
+done
+echo "[proof] settled in ${waited}s"
+
 # The AVD keeps the last run's app, signed with that sandbox's own debug key: remove it first.
 "$ADB" -s "$ANDROID_SERIAL" uninstall "$APP.test" >/dev/null 2>&1 || true
 "$ADB" -s "$ANDROID_SERIAL" uninstall "$APP" >/dev/null 2>&1 || true
@@ -91,6 +128,13 @@ for spec in "$@"; do
   result="$("$ADB" -s "$ANDROID_SERIAL" shell am instrument -w -e class "$spec" "$RUNNER" 2>&1 || true)"
   printf '%s\n' "$result" >"$OUT/android-$n.log"
   "$ADB" -s "$ANDROID_SERIAL" exec-out screencap -p >"$OUT/$shot" || true
+  # The device's log since the last test (since the boot, for the first), to diagnose a failure.
+  # Through exec-out and shell, which fail at once without the device: `adb logcat` would wait
+  # for an emulator that crashed forever.
+  "$ADB" -s "$ANDROID_SERIAL" exec-out logcat -d -v threadtime >"$OUT/android-$n.logcat" 2>&1 || true
+  "$ADB" -s "$ANDROID_SERIAL" shell logcat -c >/dev/null 2>&1 || true
+  kill -0 "$emulator_pid" 2>/dev/null ||
+    echo "[proof] the emulator exited during $spec; see $OUT/emulator.log" >&2
   # screenrecord finishes its file on SIGINT.
   "$ADB" -s "$ANDROID_SERIAL" shell pkill -INT screenrecord >/dev/null 2>&1 || true
   wait "$rec" 2>/dev/null || true

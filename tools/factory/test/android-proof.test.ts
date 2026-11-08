@@ -25,14 +25,33 @@ echo "env ANDROID_SERIAL=$ANDROID_SERIAL ANDROID_TMP=$ANDROID_TMP" >>"$STUB_LOG"
 [ "$1" = -s ] && shift 2
 case "$1 $2" in
   'shell getprop') if [ -n "\${STUB_NEVER_BOOTS:-}" ]; then echo 0; else echo 1; fi ;;
-  'shell am') case "$*" in *Passing*) echo 'OK (1 test)' ;; *) echo 'FAILURES!!!' ;; esac ;;
+  'shell am')
+    case "$3" in
+      wait-for-broadcast-idle) ;;
+      instrument)
+        # The emulator crashing as the test ends (its GL backend, on a loaded Mac).
+        [ -n "\${STUB_CRASH_IN_TEST:-}" ] && kill "$(cat "$STUB_LOG.emulator")"
+        case "$*" in *Passing*) echo 'OK (1 test)' ;; *) echo 'FAILURES!!!' ;; esac ;;
+    esac ;;
+  'shell dumpsys')
+    # System UI's ANR dialog in front for the first STUB_DIALOG_POLLS looks, then the launcher.
+    n=$(( $(cat "$STUB_LOG.polls" 2>/dev/null || echo 0) + 1 ))
+    echo "$n" >"$STUB_LOG.polls"
+    if [ "$n" -le "\${STUB_DIALOG_POLLS:-0}" ]; then
+      echo '  mCurrentFocus=Window{9f u0 Application Not Responding: com.android.systemui}'
+    else
+      echo '  mCurrentFocus=Window{7a u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}'
+    fi ;;
   'exec-out screencap') printf 'png' ;;
   pull*) echo mp4 >"$3" ;;
+  'exec-out logcat') echo 'I ActivityManager: logcat' ;;
+  logcat*) echo 'adb logcat waits for a device forever' >&2; exec sleep 60 ;;
 esac
 exit 0
 `;
 const EMULATOR = `#!/bin/sh
 echo "emulator $*" >>"$STUB_LOG"
+echo $$ >"$STUB_LOG.emulator"
 [ -n "\${STUB_EMULATOR_DIES:-}" ] && exit 1
 exec sleep 30
 `;
@@ -70,6 +89,7 @@ function fixture() {
             ANDROID_HOME: sdk,
             PENMOSS_AVD: 'penmoss37-slot1',
             PENMOSS_EMULATOR_PORT: '5560',
+            PENMOSS_EMULATOR_QUIET_SECONDS: '2',
             ...env,
           },
         });
@@ -153,6 +173,15 @@ describe.concurrent("proof.sh on the slot's emulator (F8, adb stubbed)", () => {
     );
     expect(at('uninstall app.penmoss.debug')).toBeLessThan(at('install -r -t'));
     expect(at('screenrecord')).toBeLessThan(at('-e class app.penmoss.PassingTest'));
+    // The device settles before any test: the boot's broadcasts drain, then the launcher has
+    // the focus for a while.
+    expect(at('am wait-for-broadcast-idle')).toBeGreaterThan(at('getprop sys.boot_completed'));
+    expect(at('dumpsys window displays')).toBeGreaterThan(at('am wait-for-broadcast-idle'));
+    expect(at('dumpsys window displays')).toBeLessThan(at('am instrument'));
+    expect(adb.filter((c) => c.includes('dumpsys window')).length).toBe(2);
+    expect(r.stdout).toContain('[proof] settled in');
+    // Error dialogs stay on: hiding them restarts a stalled System UI, which recreates the app.
+    expect(adb.some((c) => c.includes('hide_error_dialogs'))).toBe(false);
     expect(adb.at(-1)).toBe('adb -s emulator-5560 emu kill');
 
     const out = join(f.root, 'build', 'proof');
@@ -172,8 +201,48 @@ describe.concurrent("proof.sh on the slot's emulator (F8, adb stubbed)", () => {
     ]);
     expect(readFileSync(join(out, 'android-1.mp4'), 'utf8')).toBe('mp4\n');
     expect(readFileSync(join(out, 'android-1.png'), 'utf8')).toBe('png');
+    // Each test's device log is kept beside its video, and cleared before the next test.
+    expect(readFileSync(join(out, 'android-1.logcat'), 'utf8')).toContain('ActivityManager');
+    expect(existsSync(join(out, 'android-2.logcat'))).toBe(true);
+    expect(at('exec-out logcat -d')).toBeGreaterThan(at('-e class app.penmoss.PassingTest'));
+    expect(at('shell logcat -c')).toBeLessThan(at('-e class app.penmoss.OtherTest#fails'));
     // A failure's own words are in the log.
     expect(r.stdout).toContain('FAILURES!!!');
+  }, 30_000);
+
+  it("waits while System UI's ANR dialog has the focus, then runs the tests", async () => {
+    const r = await fixture().run(['app.penmoss.PassingTest'], { STUB_DIALOG_POLLS: '3' });
+    expect(r.status, r.stderr).toBe(0);
+    const adb = r.calls.filter((c) => c.startsWith('adb '));
+    const polls = adb.filter((c) => c.includes('dumpsys window'));
+    // Three looks at the dialog, then two quiet ones with the launcher in front.
+    expect(polls.length).toBe(5);
+    const lastPoll = adb.lastIndexOf(polls.at(-1) ?? '');
+    expect(adb.findIndex((c) => c.includes('am instrument'))).toBeGreaterThan(lastPoll);
+    expect(r.stderr).not.toContain("didn't settle");
+  }, 30_000);
+
+  it("runs the tests anyway, and says so, when the device doesn't settle in time", async () => {
+    const r = await fixture().run(['app.penmoss.PassingTest'], {
+      STUB_DIALOG_POLLS: '1000',
+      PENMOSS_EMULATOR_SETTLE_SECONDS: '3',
+    });
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stderr).toContain(
+      "the emulator didn't settle in 3s; the focus is on: Window{9f u0 Application Not Responding: com.android.systemui}",
+    );
+    expect(r.calls.some((c) => c.includes('am instrument'))).toBe(true);
+  }, 30_000);
+
+  it('finishes, and says so, when the emulator crashes during a test', async () => {
+    const f = fixture();
+    const r = await f.run(['app.penmoss.PassingTest'], { STUB_CRASH_IN_TEST: '1' });
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stderr).toContain('the emulator exited during app.penmoss.PassingTest');
+    // Never `adb logcat`, which would wait for the crashed emulator forever.
+    expect(r.calls.some((c) => /^adb -s \S+ logcat/.test(c))).toBe(false);
+    const report = readFileSync(join(f.root, 'build', 'proof', 'report.json'), 'utf8');
+    expect(JSON.parse(report)).toHaveLength(1);
   }, 30_000);
 
   it('stops when the emulator exits, and still tells it to shut down', async () => {
