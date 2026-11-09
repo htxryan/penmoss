@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { copyFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { BASE_PORTS, MAX_BLOCK, parseBlock, ports, portsFor } from './ports.mjs';
@@ -64,6 +67,19 @@ test('the command line prints one port or all of them', () => {
     /^vite=20373\npreview=20374\n/,
   );
   assert.throws(() => execFileSync('node', [script, 'nope'], { env, stdio: 'pipe' }));
+});
+
+test('the command line works from a checkout whose path has a space', () => {
+  // The factory's worktrees are under "~/Library/Application Support" (A1231).
+  const dir = mkdtempSync(join(tmpdir(), 'penmoss ports '));
+  try {
+    const copy = join(dir, 'ports.mjs');
+    copyFileSync(script, copy);
+    const env = { ...process.env, PENMOSS_PORT_BLOCK: '3' };
+    assert.equal(execFileSync('node', [copy, 'vite'], { env, encoding: 'utf8' }).trim(), '20373');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("no block lands on cloudflared's metrics ports (20241–20245)", () => {

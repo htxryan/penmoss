@@ -86,7 +86,9 @@ tasks:
           scripts/gitleaks.sh git --no-banner --redact --config .gitleaks.toml --log-opts=--all .
         else
           # The files git tracks or would add, not node_modules or build output.
-          tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+          # In $TMPDIR, which macOS's mktemp ignores without a template: the factory's sandbox
+          # can write only its own (A1231).
+          tmp="$(mktemp -d "${TMPDIR:-/tmp}/penmoss-audit.XXXXXX")"; trap 'rm -rf "$tmp"' EXIT
           git ls-files -z --cached --others --exclude-standard |
             perl -0 -ne 'print if -e substr($_, 0, -1)' |
             tar --null -T - -cf - | tar -xf - -C "$tmp"

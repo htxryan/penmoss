@@ -6,6 +6,8 @@
 //
 //   node scripts/ports.mjs           every port for this block, as NAME=port lines
 //   node scripts/ports.mjs vite      one port
+import { realpathSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 /** Today's ports (block 0). */
 export const BASE_PORTS = Object.freeze({
@@ -78,7 +80,9 @@ export function ports(env = process.env) {
   return portsFor(parseBlock(env['PENMOSS_PORT_BLOCK']));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Run as a script, not imported. As URLs, so a checkout whose path has a space or a symlink in
+// it still matches (the factory's worktrees are under "Application Support").
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   const all = ports();
   const [name] = process.argv.slice(2);
   if (name === undefined) {

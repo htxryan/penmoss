@@ -4,8 +4,9 @@
 // as an expression, which could turn into one at run time. Part of `task check`.
 //
 //   node .github/scripts/no-hosted-runners.mjs [workflow.yml …]   (default: .github/workflows/*)
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const HOSTED = /^(ubuntu|windows|macos)-[\w.-]+$/i;
 
@@ -61,7 +62,9 @@ export function problems(text) {
   return found;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Run as a script, not imported. As URLs, so a checkout whose path has a space or a symlink in
+// it still runs the check (the factory's worktrees are under "Application Support").
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   const dir = '.github/workflows';
   const files =
     process.argv.length > 2
