@@ -69,6 +69,8 @@ export interface RunDeps {
   runAgent(sandbox: RunSandbox, prompt: string): Promise<{ readonly output: string } | void>;
   /** Keeps a file in the run's folder (`runs/<run>/<name>`), such as the gate's whole output. */
   keep?(name: string, text: string): void;
+  /** The last proof run's output for a platform (`runs/<run>/proof-<platform>.log`), if kept. */
+  proofLog?(platform: Platform): string | undefined;
   /** `.factory/result.json` from the worktree, parsed (or why it couldn't be). */
   readResult(
     sandbox: RunSandbox,
@@ -502,7 +504,7 @@ export async function gateAndProve(
     if (missing.length > 0) {
       return {
         ok: false,
-        feedback: `the proof specs for ${missing.join(', ')} didn't pass when the harness ran them with recording on.`,
+        feedback: `the proof specs for ${missing.join(', ')} didn't pass when the harness ran them with recording on.${proofOutput(deps, missing)}`,
       };
     }
     const prepared = await deps.prepareProof(items);
@@ -862,6 +864,15 @@ const ERROR_LINE = /\berror\b|✖|✘|×|\bFAIL\b|\bfailed\b/i;
  * stopped before ESLint's errors in PEN-70's gate, so neither the agent nor the log said what
  * failed; the whole output is kept in the run folder too (`gate.log`, A1250).
  */
+/** What each missing platform's proof printed, for the agent: the harness's run, not its own. */
+function proofOutput(deps: RunDeps, platforms: readonly Platform[]): string {
+  return platforms
+    .map((p) => [p, deps.proofLog?.(p)] as const)
+    .filter((e): e is readonly [Platform, string] => Boolean(e[1]?.trim()))
+    .map(([p, log]) => `\n\nThe ${p} proof's output:\n\n\`\`\`\n${excerpt(log)}\n\`\`\``)
+    .join('');
+}
+
 export function excerpt(text: string): string {
   const last = tail(text);
   const shown = new Set(last.split('\n'));
