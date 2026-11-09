@@ -159,7 +159,9 @@ describe.concurrent(
         '-crash-report-mode disabled',
       ])
         expect(boot).toContain(flag);
-      expect(r.calls.indexOf(boot ?? '')).toBe(1);
+      // After the build. Not "second": proof.sh starts the emulator in the background and polls
+      // adb at once, so on a loaded Mac the stub's line can land after the first polls (A1253).
+      expect(r.calls.indexOf(boot ?? '')).toBeGreaterThan(0);
 
       // Every adb call names this slot's emulator, never another slot's or CI's.
       const adb = r.calls.filter((c) => c.startsWith('adb '));
