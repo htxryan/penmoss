@@ -196,3 +196,5 @@ From the page you can also reply on an issue (and clear Blocked in the same clic
 Each launch makes a new token. The link carries it once, then a cookie does. Requests without it, from another `Origin` or for another `Host` get 403. The UI listens on no other interface. With [`terminal-notifier`](https://github.com/julienXX/terminal-notifier) installed (`brew install terminal-notifier`), clicking a factory notification opens its card.
 
 There is no pause button for the whole factory yet: pause one card with Blocked, or stop the daemon (Turning it off). The page shows a run's folder as a path to copy rather than revealing it in Finder.
+
+The page's own check runs headless Chromium against a fake state folder: `pnpm --filter @penmoss/factory e2e` (A-NEW-2). It never opens a window on the Mac.
