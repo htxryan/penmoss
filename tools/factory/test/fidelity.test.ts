@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { fidelityFeedback, parseReview, renderFidelity, settle } from '../src/fidelity.ts';
+import {
+  fidelityFeedback,
+  parseReview,
+  renderFidelity,
+  settle,
+  standIn,
+} from '../src/fidelity.ts';
 
 const review = {
   rows: [
@@ -70,5 +76,38 @@ describe('fidelity (F19)', () => {
     );
     expect(md).toContain('### Deviations');
     expect(renderFidelity([])).toBe('');
+    // No other app's row: no stand-in note.
+    expect(md).not.toContain('standing in');
+  });
+
+  it('labels a Mac row as the web build standing in for the Mac app (A1256)', () => {
+    const rows = [
+      {
+        criterion: 'AC3 the row sits under Buttons',
+        verdict: 'match' as const,
+        note: '',
+        mockup: 'fidelity-ac3-mac-mockup.png',
+        screenshot: 'fidelity-ac3-mac.png',
+      },
+      {
+        criterion: 'AC4 on macOS the field is a native select',
+        verdict: 'deviation' as const,
+        note: 'Headless Chromium draws no native popup',
+        screenshot: 'fidelity-ac4.png',
+      },
+      { criterion: 'AC5 the web row', verdict: 'match' as const, note: '', screenshot: 'ac5.png' },
+    ];
+    expect(standIn(rows[0]!)).toBe('the Mac app');
+    expect(standIn(rows[1]!)).toBe('the Mac app');
+    expect(standIn(rows[2]!)).toBeUndefined();
+    expect(standIn({ ...rows[2]!, screenshot: 'ac6-android.png' })).toBe('the Android app');
+    // A word that only contains "mac" isn't the Mac.
+    expect(standIn({ ...rows[2]!, screenshot: 'machine.png' })).toBeUndefined();
+    const md = renderFidelity(rows);
+    expect(md).toContain('Every screenshot is the web build in headless Chromium');
+    expect(md).toContain(
+      '| Web build, standing in for the Mac app<br>![web build, standing in for the Mac app](./fidelity-ac3-mac.png) |',
+    );
+    expect(md).toContain('| — | ![screenshot](./ac5.png) |');
   });
 });

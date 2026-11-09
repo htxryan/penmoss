@@ -22,6 +22,8 @@ For each criterion decide:
 
 A screenshot that doesn't show the criterion at all is a `mismatch`.
 
+Every screenshot is the web build in headless Chromium: there is no Mac or Android walkthrough yet. A Mac mockup is compared with the web build standing in for the Mac app, which bundles it. Judge what's on the page; a difference only the native app makes (its window's title bar, a native menu or select popup) is a `deviation` whose note says "web build, standing in for the Mac app". Never write that a screenshot shows the Mac app. A criterion only the Android app can show has no screenshot: it is a `deviation` noting that Android isn't walked yet and its proof recording covers it.
+
 ## Your answer
 
 Write `.factory/validation/review.json`, and nothing else:

@@ -86,20 +86,48 @@ const MARK: Record<Verdict, string> = {
   deviation: '⚠️ Deviation',
 };
 
+const MAC = /(?:^|[-_.])mac(?:os)?(?:[-_.]|$)/i;
+const ANDROID = /(?:^|[-_.])android(?:[-_.]|$)/i;
+
+/**
+ * The app a row's mockup or criterion is about, when it isn't the web app. Validation walks only
+ * the web build in headless Chromium (no Mac or Android walkthrough yet, F7 and F8), so such a
+ * row's screenshot is the web build standing in for that app, and the table says so (A1256).
+ */
+export function standIn(row: FidelityRow): 'the Mac app' | 'the Android app' | undefined {
+  const files = [row.mockup, row.screenshot].filter((f): f is string => Boolean(f));
+  if (files.some((f) => MAC.test(f)) || /\b(?:Mac|macOS)\b/.test(row.criterion))
+    return 'the Mac app';
+  if (files.some((f) => ANDROID.test(f)) || /\bAndroid\b/.test(row.criterion))
+    return 'the Android app';
+  return undefined;
+}
+
 /** The PR's fidelity table: mockup and screenshot side by side, files beside the body. */
 export function renderFidelity(rows: readonly FidelityRow[]): string {
   if (rows.length === 0) return '';
   const img = (alt: string, f?: string) => (f ? `![${alt}](./${f})` : '—');
+  const shot = (r: FidelityRow) => {
+    const app = standIn(r);
+    if (!r.screenshot || !app) return img('screenshot', r.screenshot);
+    return `Web build, standing in for ${app}<br>${img(`web build, standing in for ${app}`, r.screenshot)}`;
+  };
   const lines = [
     '## Fidelity',
     '',
     'An independent reviewer walked each acceptance criterion and compared it with the agreed mockup.',
+    ...(rows.some((r) => standIn(r))
+      ? [
+          '',
+          "Every screenshot is the web build in headless Chromium: there is no Mac or Android walkthrough yet. A row for another app shows the web build standing in for it (the Mac app bundles it); that app's own proof recording, above, shows the real thing.",
+        ]
+      : []),
     '',
     '| Criterion | Verdict | Mockup | Screenshot |',
     '| --- | --- | --- | --- |',
     ...rows.map(
       (r) =>
-        `| ${cell(r.criterion)}${r.note ? `<br>${cell(r.note)}` : ''} | ${MARK[r.verdict]} | ${img('mockup', r.mockup)} | ${img('screenshot', r.screenshot)} |`,
+        `| ${cell(r.criterion)}${r.note ? `<br>${cell(r.note)}` : ''} | ${MARK[r.verdict]} | ${img('mockup', r.mockup)} | ${shot(r)} |`,
     ),
   ];
   const deviations = rows.filter((r) => r.verdict === 'deviation');
