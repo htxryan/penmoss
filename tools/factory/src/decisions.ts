@@ -1,7 +1,9 @@
 /**
  * Decisions an agent records as `A-NEW-1`, `A-NEW-2`… get real numbers after the rebase, so
- * two slots never claim the same one (F6). One A-NEW-k becomes the same A-number in every
- * file it appears in.
+ * two slots never claim the same one (F6). Only placeholders the branch added are numbered: a
+ * `| A-NEW-k |` row it added to docs/decisions.md defines one, and its other added lines that
+ * name a defined key get the same number. A placeholder in text the branch didn't add (AGENTS.md's
+ * own instructions, say) or one it never defined is left alone.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -12,41 +14,59 @@ export function maxDecision(text: string): number {
   return max;
 }
 
-/** A-NEW-k → A<max + order of first appearance>, across all the given texts in order. */
-export function assignDecisionNumbers(
-  texts: readonly string[],
-  max: number,
-): { texts: string[]; assigned: Record<string, string> } {
-  const assigned: Record<string, string> = {};
-  let next = max;
-  for (const text of texts) {
-    for (const m of text.matchAll(/\bA-NEW-(\d+)\b/g)) {
-      const key = `A-NEW-${m[1]}`;
-      assigned[key] ??= `A${++next}`;
-    }
-  }
-  return {
-    texts: texts.map((t) => t.replaceAll(/\bA-NEW-(\d+)\b/g, (key) => assigned[key] ?? key)),
-    assigned,
-  };
+const NEW_ROW = /^\|\s*(A-NEW-\d+)\s*\|/;
+const PLACEHOLDER = /\bA-NEW-\d+\b/g;
+
+/**
+ * The A-NEW-k keys a branch defines, in order of their rows: the decision rows among `added`,
+ * the 1-based lines of docs/decisions.md that the branch added.
+ */
+export function definedPlaceholders(decisions: string, added: ReadonlySet<number>): string[] {
+  const keys: string[] = [];
+  decisions.split('\n').forEach((line, i) => {
+    const key = added.has(i + 1) ? NEW_ROW.exec(line)?.[1] : undefined;
+    if (key && !keys.includes(key)) keys.push(key);
+  });
+  return keys;
 }
 
 /**
- * Numbers the texts after both main's highest decision and the highest one the factory has
- * already given out (kept in `reservedFile`), then records the new highest. Two slots running
- * at once both rebase onto the same main, so main alone would give them the same number; the
- * file makes the second slot's numbers follow the first's. Reading, numbering and writing the
- * file happen with no `await` between them, so the daemon's runs can't interleave here.
+ * Real numbers for `keys`, in order, after both main's highest decision and the highest one the
+ * factory has already given out (kept in `reservedFile`), then records the new highest. Two
+ * slots running at once both rebase onto the same main, so main alone would give them the same
+ * number; the file makes the second slot's numbers follow the first's. Reading, numbering and
+ * writing the file happen with no `await` between them, so the daemon's runs can't interleave
+ * here. No keys: nothing is reserved and the file isn't touched.
  */
 export function reserveDecisionNumbers(
-  texts: readonly string[],
+  keys: readonly string[],
   main: string,
   reservedFile: string,
-): { texts: string[]; assigned: Record<string, string> } {
+): Record<string, string> {
+  if (keys.length === 0) return {};
   const reserved = readReserved(reservedFile);
-  const result = assignDecisionNumbers(texts, Math.max(maxDecision(main), reserved));
-  writeReserved(reservedFile, reserved, result.assigned);
-  return result;
+  let next = Math.max(maxDecision(main), reserved);
+  const assigned: Record<string, string> = {};
+  for (const key of keys) assigned[key] ??= `A${++next}`;
+  writeReserved(reservedFile, reserved, assigned);
+  return assigned;
+}
+
+/**
+ * `text` with each assigned A-NEW-k replaced on the given 1-based lines only. Lines the branch
+ * didn't add, and placeholders it didn't define, stay as they are.
+ */
+export function numberLines(
+  text: string,
+  lines: ReadonlySet<number>,
+  assigned: Readonly<Record<string, string>>,
+): string {
+  return text
+    .split('\n')
+    .map((line, i) =>
+      lines.has(i + 1) ? line.replaceAll(PLACEHOLDER, (key) => assigned[key] ?? key) : line,
+    )
+    .join('\n');
 }
 
 function readReserved(reservedFile: string): number {

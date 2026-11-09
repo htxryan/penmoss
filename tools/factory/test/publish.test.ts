@@ -139,7 +139,7 @@ describe("the host's git, structurally (A1230)", () => {
     await deps.fetchMain();
     await deps.diff(BRANCH);
     await deps.rebase(sandbox(commands));
-    await deps.numberDecisions(sandbox(commands));
+    await deps.numberDecisions(sandbox(commands), BRANCH);
     await deps.behindMain(BRANCH);
     await deps.push(BRANCH);
     await deps.headSha(BRANCH);
