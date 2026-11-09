@@ -141,13 +141,15 @@ class TypingInstrumentedTest {
         onImeThread(ic) { it.deleteSurroundingText(2, 0) }
         repeat(2) { key(ic, KeyEvent.KEYCODE_DEL) }
         onImeThread(ic) { it.commitText("thing", 1) }
-        waitForBody("first item\nsecond thing")
+        // getText puts a separator before every block, so each item's paragraph has two (the
+        // item's and its own), and the paragraph after the list one.
+        waitForBody("first item\n\nsecond thing")
         enter(ic) // a new, empty item
         waitUntil("a third, empty item", 10_000) { items() == 3 }
         enter(ic) // an empty item: out of the list
         waitUntil("out of the list", 10_000) { items() == 2 }
         onImeThread(ic) { it.commitText("after list", 1) }
-        waitForBody("first item\nsecond thing\nafter list")
+        waitForBody("first item\n\nsecond thing\nafter list")
         val json = decode(js("JSON.stringify(penmossEditor.editor.editor.getJSON())"))!!
         assertEquals("one bulletList", 1, Regex("\"type\":\"bulletList\"").findAll(json).count())
         assertEquals("two list items", 2, Regex("\"type\":\"listItem\"").findAll(json).count())
