@@ -191,6 +191,27 @@ test.describe('a healthy factory', () => {
   });
 });
 
+test.describe('the link opened from another app or site (A1249)', () => {
+  let s: Served;
+  test.beforeAll(async () => {
+    s = await serve({ alive: true, writable: true });
+  });
+  test.afterAll(() => s.close());
+
+  test('a cross-site link keeps the cookie and opens the page', async ({ page }) => {
+    // A link tapped in a chat app: the navigation starts on another site.
+    await page.route('https://elsewhere.example/', (route) =>
+      route.fulfill({ contentType: 'text/html', body: `<a id="go" href="${s.url}">Factory</a>` }),
+    );
+    await page.clock.setFixedTime(NOW);
+    await page.goto('https://elsewhere.example/');
+    await page.click('#go');
+    await expect(page.locator('.health')).toBeVisible();
+    expect(page.url()).not.toContain('token=');
+    await expect(page.locator('body')).not.toContainText('Forbidden');
+  });
+});
+
 test.describe('a dead daemon, read-only', () => {
   let s: Served;
   test.beforeAll(async () => {
