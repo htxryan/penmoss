@@ -24,6 +24,8 @@ export default defineConfig(
     'spikes/',
     // Worktrees Claude Code sessions make inside the checkout (EnterWorktree).
     '.claude/worktrees/',
+    // Skills' operator scripts, run by hand against the live factory (factory-foreman).
+    '.claude/skills/*/scripts/',
     '.sandcastle/',
     // The web bundle copied in for deploys (task web:bundle).
     // The Android app's Gradle output and the editor bundle built into its assets (T32).
