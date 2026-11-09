@@ -37,8 +37,58 @@ export class LinearRateLimited extends LinearError {
   }
 }
 
+/** A file the host downloaded, such as an image attached to an issue. */
+export interface Downloaded {
+  readonly contentType: string;
+  readonly bytes: Uint8Array;
+}
+
 export interface LinearClient {
   request<T>(query: string, variables?: Readonly<Record<string, unknown>>): Promise<T>;
+  /**
+   * A file uploaded to Linear (`https://uploads.linear.app/…`), which needs the app's token: the
+   * host downloads it, and an agent gets the file, never the token. Refuses any other address,
+   * and a file over `maxBytes`.
+   */
+  download?(url: string, maxBytes: number): Promise<Downloaded>;
+}
+
+/** Where Linear keeps the files and images attached to issues and comments. */
+export const LINEAR_UPLOADS = 'uploads.linear.app';
+
+const isUpload = (url: URL) => url.protocol === 'https:' && url.hostname === LINEAR_UPLOADS;
+
+/** The body, read up to `maxBytes`; past that it stops reading and refuses. */
+async function readCapped(res: Response, maxBytes: number): Promise<Uint8Array> {
+  const limit =
+    maxBytes >= 1_048_576 ? `${Math.round(maxBytes / 1_048_576)} MB` : `${maxBytes} bytes`;
+  const tooBig = () => new LinearError(`the file is over ${limit}`);
+  const length = Number(res.headers.get('content-length'));
+  if (Number.isFinite(length) && length > maxBytes) {
+    await res.body?.cancel().catch(() => undefined);
+    throw tooBig();
+  }
+  if (!res.body) return new Uint8Array(await res.arrayBuffer());
+  const reader = res.body.getReader() as ReadableStreamDefaultReader<Uint8Array>;
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      throw tooBig();
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let at = 0;
+  for (const c of chunks) {
+    bytes.set(c, at);
+    at += c.byteLength;
+  }
+  return bytes;
 }
 
 export type Fetcher = (url: string, init: RequestInit) => Promise<Response>;
@@ -116,6 +166,35 @@ export function createLinearClient(options: ClientOptions): LinearClient {
         if ('data' in result) return result.data;
         limitedUntil = result.limited;
         if (attempt >= 1) throw new LinearRateLimited(limitedUntil);
+      }
+    },
+    async download(url: string, maxBytes: number): Promise<Downloaded> {
+      let at = new URL(url);
+      if (!isUpload(at)) throw new LinearError(`not a Linear upload: ${at.hostname}`);
+      // Redirects are followed by hand, so the token goes to Linear's uploads and nowhere else
+      // (a signed storage URL it redirects to gets no Authorization header).
+      for (let hops = 0; ; hops++) {
+        const res = await fetcher(at.toString(), {
+          method: 'GET',
+          redirect: 'manual',
+          headers: isUpload(at) ? { Authorization: authorization(await options.token()) } : {},
+        });
+        const location = res.headers.get('location');
+        if (res.status >= 300 && res.status < 400 && location) {
+          await res.body?.cancel().catch(() => undefined);
+          if (hops >= 3) throw new LinearError('Linear redirected the download too many times');
+          at = new URL(location, at);
+          if (at.protocol !== 'https:') throw new LinearError('Linear redirected off HTTPS');
+          continue;
+        }
+        if (!res.ok) {
+          await res.body?.cancel().catch(() => undefined);
+          throw new LinearError(`Linear refused the download: HTTP ${res.status}`);
+        }
+        return {
+          contentType: res.headers.get('content-type') ?? '',
+          bytes: await readCapped(res, maxBytes),
+        };
       }
     },
   };

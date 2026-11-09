@@ -10,6 +10,7 @@
 import type { FactoryConfig, TrackerName } from '../config.ts';
 import type { Issue } from '../issue.ts';
 import type { Priority } from '../labels.ts';
+import type { Downloaded } from './linear-client.ts';
 
 export interface BoardItem {
   /** The tracker's own ID for the card: Project 8's item node ID, or the Linear issue's UUID. */
@@ -59,6 +60,11 @@ export interface Tracker {
   setBlocked(item: BoardItem): Promise<void>;
   /** After main is verified (R20): GitHub closes the issue with this comment; Linear comments. */
   closeIssue(issue: number, body: string): Promise<void>;
+  /**
+   * A file attached to an issue, downloaded on the host with the tracker's own credentials, so
+   * an agent can read the issue's images without a token (attachments.ts). Linear only.
+   */
+  download?(url: string, maxBytes: number): Promise<Downloaded>;
 }
 
 /** Ryan's own tracker access, for the Factory UI alone (F21): it may also clear Blocked. */

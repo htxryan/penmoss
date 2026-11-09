@@ -6,6 +6,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { ATTACHMENTS } from './attachments.ts';
 import { expandHome, type FactoryConfig } from './config.ts';
 import type { Exec } from './exec.ts';
 import { parsePlanState, type PlanState } from './planning.ts';
@@ -19,6 +20,8 @@ export interface PlanFiles {
   readonly repo: string;
   readonly out: string;
   readonly meta: string;
+  /** The issue's images, which the host downloads (attachments.ts): the session only reads them. */
+  readonly attachments: string;
 }
 
 export interface PlanMeta {
@@ -58,7 +61,13 @@ export function sessionIssue(config: FactoryConfig, name: string | undefined): n
 
 export function planFiles(config: FactoryConfig, issue: number): PlanFiles {
   const root = join(expandHome(config.stateDir), 'plans', String(issue));
-  return { root, repo: join(root, 'repo'), out: join(root, 'out'), meta: join(root, 'meta.json') };
+  return {
+    root,
+    repo: join(root, 'repo'),
+    out: join(root, 'out'),
+    meta: join(root, 'meta.json'),
+    attachments: join(root, ATTACHMENTS),
+  };
 }
 
 export function readMeta(files: PlanFiles): PlanMeta {
@@ -99,6 +108,7 @@ export function planningFlags(files: PlanFiles): string[] {
     'ArtifactComments',
     under('Read', files.repo),
     under('Read', files.out),
+    under('Read', files.attachments),
     under('Edit', files.out),
   ];
 }

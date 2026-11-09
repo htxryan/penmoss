@@ -310,5 +310,8 @@ export function createLinearTracker(
       // The move to Done is the caller's setStatus; on Linear, closing is only the comment.
       await comment(n, body);
     },
+    ...(client.download
+      ? { download: (url: string, maxBytes: number) => client.download!(url, maxBytes) }
+      : {}),
   };
 }

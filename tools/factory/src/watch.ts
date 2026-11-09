@@ -14,7 +14,7 @@ import { scopeText } from './platforms.ts';
 import { nodeExec } from './exec.ts';
 import { BlockedByRyan, guardEffects, RUN_GUARDED, RUN_STEPS } from './guard.ts';
 import { appendLedger, hostDeps } from './host.ts';
-import { fence, issueText } from './issue.ts';
+import { fence } from './issue.ts';
 import type { IssueSpec } from './labels.ts';
 import { ciRunsFor, mergeApproved, type MainRun, type MergeDeps, type RunJob } from './merge.ts';
 import { fill, promptTemplate } from './prompt.ts';
@@ -23,7 +23,7 @@ import { publishRefs } from './proof/store.ts';
 import { readConversation, reviewState, roundText, type ReviewState } from './review.ts';
 import { runRebase, runRevise, type ReviseDeps } from './revise.ts';
 import { branchName } from './run.ts';
-import { planFor, type Factory } from './start.ts';
+import { issueForAgent, planFor, runImages, type Factory } from './start.ts';
 
 export interface FactoryPr {
   readonly number: number;
@@ -155,8 +155,12 @@ export async function executeRevise(
 ): Promise<string> {
   const { config, gh, tracker } = factory;
   const runId = `${item.number}-${Date.now().toString(36)}-${randomBytes(2).toString('hex')}`;
-  const issue = await tracker.readIssue(item.number);
-  const base = roundPrompt(config, item, spec, issueText(issue, tracker.owner, 'penmoss-factory'));
+  const { text } = await issueForAgent(
+    tracker,
+    await tracker.readIssue(item.number),
+    runImages(config, runId),
+  );
+  const base = roundPrompt(config, item, spec, text);
   const items = action.kind === 'round' ? action.state.items : [];
   const prompt =
     action.kind === 'round'
