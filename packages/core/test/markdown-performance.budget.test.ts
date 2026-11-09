@@ -3,8 +3,9 @@ import { parseMarkdown } from '../src/markdown/parse';
 import { serializeMarkdown } from '../src/markdown/serialize';
 import { fixtureLinks, fixtures } from './support/fixtures';
 
-// Node only (excluded from the workerd project): workerd freezes timers during
-// synchronous work, so CPU time can only be measured here. Durable Objects get
+// A wall-clock budget (A1244): it runs in `task budgets`,
+// never in `task check`, where a loaded Mac measured 3.6 s for it. Node only: workerd freezes
+// timers during synchronous work, so CPU time can only be measured here. Durable Objects get
 // 30 s of CPU per invocation and the codec runs there (D20), so the bound is loose;
 // it guards against accidental quadratic behaviour, not micro-regressions.
 const context = { links: fixtureLinks };

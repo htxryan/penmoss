@@ -1,6 +1,7 @@
 /** Starting one run: shared by `factory run <issue>` (foreground) and the daemon. */
 import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { agentFor } from './agents/index.ts';
 import type { Board, BoardItem } from './board.ts';
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
@@ -8,8 +9,8 @@ import { nodeExec } from './exec.ts';
 import { createGh, type Gh } from './github.ts';
 import { createAppTokens, loadAppCredentials, type AppTokens } from './github-app.ts';
 import { loadProofStore, type ProofStore } from './proof/store.ts';
-import { BlockedByRyan, guardEffects } from './guard.ts';
-import { ensureClone, hostDeps, publisherEnv } from './host.ts';
+import { BlockedByRyan, guardEffects, RUN_GUARDED, RUN_STEPS } from './guard.ts';
+import { AgentNotInstalled, ensureClone, hostDeps, publisherEnv } from './host.ts';
 import { issueText } from './issue.ts';
 import { parseIssueSpec, type IssueSpec } from './labels.ts';
 import { formatMarker } from './pick.ts';
@@ -27,6 +28,7 @@ import {
 import type { PlanningAction } from './planning.ts';
 import { fill, promptTemplate } from './prompt.ts';
 import { branchName, runImplement, type RunOutcome } from './run.ts';
+import { parseAgentResult, type AgentResult } from './result.ts';
 import { loadSecrets, type Secrets } from './secrets.ts';
 import { openTracker } from './tracker/index.ts';
 import { ensureTrackerState } from './tracker/state.ts';
@@ -44,9 +46,20 @@ export interface Factory {
   readonly proof: ProofStore;
 }
 
+export interface OpenOptions {
+  /**
+   * Whether to prepare the runs' clone and the publish repo (`ensureClone`). Only what runs
+   * cards needs them: the daemon and `factory run`. The UI reads the tracker and the state
+   * folder only, and `factory:update` starts it with the daemon: both writing the clone's
+   * config at once made one of them lose `config.lock` and exit.
+   */
+  readonly clone?: boolean;
+}
+
 /** The GitHub App, the env file and the tracker, checked. */
 export async function openFactory(
   config: FactoryConfig,
+  options: OpenOptions = {},
 ): Promise<{ ok: true; factory: Factory } | { ok: false; error: string }> {
   const secrets = loadSecrets(expandHome(config.envFile));
   if (!secrets.ok) return { ok: false, error: `the env file: ${secrets.error}` };
@@ -75,7 +88,7 @@ export async function openFactory(
       error: `the GitHub App's key is for "${identity.slug}", not ${config.publisher.login}`,
     };
   const gh = createGh({ exec: nodeExec, env: publisherEnv(config), token: () => app.write() });
-  await ensureClone(config, nodeExec, identity);
+  if (options.clone ?? true) await ensureClone(config, nodeExec, identity);
   const tracker = await openTracker(config, gh);
   if (!tracker.ok) return tracker;
   ensureTrackerState(config);
@@ -239,6 +252,64 @@ export async function executePlanning(
   }
 }
 
+/**
+ * The run whose agent last finished its work on `issue` ("agent-finished" done) with nothing
+ * started since: no later agent round, no In review or merge. A recovered run (R12) goes on from
+ * that run's result at the gate rather than running the agent again. A run that resumed this way
+ * names the run it took the result from (`from`), which is where the result still is.
+ */
+export function finishedRound(ledger: string, issue: number): string | undefined {
+  let finished: string | undefined;
+  for (const line of ledger.split('\n')) {
+    if (!line.trim()) continue;
+    let e: { event?: string; issue?: number; run?: string; status?: string; from?: string };
+    try {
+      e = JSON.parse(line) as typeof e;
+    } catch {
+      continue; // A torn last line from a crash.
+    }
+    if ((e.issue ?? Number(String(e.run ?? '').split('-')[0])) !== issue) continue;
+    if (e.event === 'agent-finished')
+      finished = e.status === 'done' ? (e.from ?? e.run) : undefined;
+    else if (['agent-started', 'in-review', 'merged', 'done'].includes(e.event ?? ''))
+      finished = undefined;
+  }
+  return finished;
+}
+
+/**
+ * For a recovered run (R12): the run whose agent last finished its work on the card, from the
+ * ledger, with the result the host kept in its folder (`runs/<run>/result.json`). Nothing when
+ * there is none, or the result no longer reads: the run then starts the agent again.
+ */
+export function resumeFrom(
+  config: FactoryConfig,
+  issue: number,
+): { resume?: { run: string; result: AgentResult } } {
+  const state = expandHome(config.stateDir);
+  const ledger = join(state, 'runs.jsonl');
+  if (!existsSync(ledger)) return {};
+  const run = finishedRound(readFileSync(ledger, 'utf8'), issue);
+  if (!run || !/^[\w-]+$/.test(run)) return {};
+  const file = join(state, 'runs', run, 'result.json');
+  if (!existsSync(file)) return {};
+  const parsed = parseAgentResult(readFileSync(file, 'utf8'));
+  return parsed.ok && parsed.result.status === 'done'
+    ? { resume: { run, result: parsed.result } }
+    : {};
+}
+
+/**
+ * What the card's comment says when a run stops on an error. An agent the factory can't find is
+ * its installation's problem (PEN-75's first run: `claude` missing from the LaunchAgent's PATH),
+ * and says so, rather than reading as if the card had failed.
+ */
+export function stoppedText(error: unknown, message: string): string {
+  if (error instanceof AgentNotInstalled)
+    return `The run couldn't start the agent: ${message}. Nothing is wrong with this card: once the factory can find \`${error.command}\`, clear Blocked and the run starts again.`;
+  return `The run stopped on an error: ${message}`;
+}
+
 /** One implementation run on a slot, with every side effect guarded by the card's Blocked field. */
 export async function executeRun(
   factory: Factory,
@@ -282,13 +353,11 @@ export async function executeRun(
     ...(waitingFor ? { waitingFor } : {}),
   });
   const isBlocked = () => tracker.isBlocked(item.number);
-  // macVmCheck too: a run waiting for the test VM stops at its next check once Blocked is set.
-  const guarded = guardEffects(
-    deps,
-    ['comment', 'setStatus', 'setBlocked', 'push', 'openPr', 'runAgent', 'macVmCheck'],
-    item.number,
-    isBlocked,
-  );
+  // Every effect, and every step that starts work: Blocked set mid-run stops the run before its
+  // next sandbox, gate, proof, numbering, push or PR, not only before the next effect (PEN-75's
+  // gate ran on after Ryan set Blocked). macVmCheck too: a run waiting for the test VM stops at
+  // its next check.
+  const guarded = guardEffects(deps, RUN_GUARDED, item.number, isBlocked, RUN_STEPS);
   try {
     const artifacts = spec.planSkip ? [] : agreedArtifacts(config, item.number);
     const plan = agreedPlanText(config, item.number, spec);
@@ -299,20 +368,27 @@ export async function executeRun(
       ...(artifacts.length ? { artifacts } : {}),
       ...(plan ? { plan } : {}),
       ...(recovered ? { recovered } : {}),
+      ...(recovered ? resumeFrom(config, item.number) : {}),
     });
   } catch (error) {
     if (error instanceof BlockedByRyan) {
-      deps.log('failed', { stopped: 'Blocked set by Ryan' });
+      // The claim stays open in the ledger: clearing Blocked restarts the run (R12).
+      deps.log('failed', { stopped: `Blocked set by Ryan: stopped before ${error.step}` });
       return { kind: 'stopped' };
     }
     // Anything unexpected: say so on the issue and set Blocked, so the card is never left stuck.
     const message = error instanceof Error ? error.message : String(error);
-    deps.log('failed', { error: message });
+    deps.log(
+      'failed',
+      error instanceof AgentNotInstalled
+        ? { error: message, installation: error.command }
+        : { error: message },
+    );
     if (!(await isBlocked())) {
       await deps
         .comment(
           item.number,
-          `The run stopped on an error: ${message}\n\n${formatMarker({ run: runId, event: 'blocked' })}`,
+          `${stoppedText(error, message)}\n\n${formatMarker({ run: runId, event: 'blocked' })}`,
         )
         .catch(() => undefined);
       await tracker.setBlocked(item).catch(() => undefined);

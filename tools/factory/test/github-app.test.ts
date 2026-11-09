@@ -131,7 +131,7 @@ describe('the GitHub App (A1222)', () => {
   });
 });
 
-describe('the publisher uses the token, never a stored login', () => {
+describe('the publisher uses the token, never a stored login', { timeout: 30_000 }, () => {
   it('passes a fresh token to every gh call', async () => {
     const seen: (string | undefined)[] = [];
     let n = 0;

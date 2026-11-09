@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "budgets": "PENMOSS_BUDGETS=1 vitest run"
   },
   "dependencies": {
     "@penmoss/core": "workspace:*",

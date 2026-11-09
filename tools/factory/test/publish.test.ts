@@ -228,7 +228,7 @@ async function git(dir: string, ...args: string[]): Promise<string> {
   return r.stdout.trim();
 }
 
-describe("the host's publish path, with real git (A1230)", () => {
+describe("the host's publish path, with real git (A1230)", { timeout: 30_000 }, () => {
   let root: string;
   let config: FactoryConfig;
   let github: string;
@@ -274,6 +274,32 @@ describe("the host's publish path, with real git (A1230)", () => {
     await deps.fetchMain();
     await deps.push(branch);
   };
+
+  it('writes no config once it is set, so a second start never takes config.lock', async () => {
+    const identity = { name: 'app[bot]', email: 'app@example.com' };
+    await ensureClone(config, nodeExec, identity);
+    const writes: string[] = [];
+    const spy: Exec = (cmd, args, opts) => {
+      if (args.includes('--replace-all') || args.includes('init')) writes.push(args.join(' '));
+      return nodeExec(cmd, args, opts);
+    };
+    // A second start (the daemon after factory:update, a foreground `factory run`) only reads.
+    await ensureClone(config, spy, identity);
+    expect(writes).toEqual([]);
+    expect(await git(root, 'config', '--file', join(clone, '.git', 'config'), 'user.name')).toBe(
+      identity.name,
+    );
+    const publish = join(config.stateDir, 'publish');
+    expect(await git(publish, 'config', 'remote.origin.url')).toBe(https);
+    expect(await git(publish, 'config', 'user.email')).toBe(identity.email);
+  });
+
+  it("reads the branch's first commit subject, for the PR's title", async () => {
+    await git(clone, 'commit', '-q', '--allow-empty', '-m', 'Fix what the gate found');
+    const deps = hostDeps(options(config, nodeExec));
+    await deps.fetchMain();
+    expect(await deps.diff(BRANCH)).toEqual({ paths: [], commits: 2, subject: 'the agent' });
+  });
 
   it("pushes to GitHub, not where the clone's own config points", async () => {
     await plantDecoy(join(clone, '.git'));

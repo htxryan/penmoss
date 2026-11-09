@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { parseIssueSpec, type IssueSpec } from '../src/labels.ts';
-import { formatMarker, modeFor, parseMarkers, pickNext } from '../src/pick.ts';
-import { item, testConfig } from './helpers.ts';
+import type { BoardItem } from '../src/board.ts';
+import { formatMarker, modeFor, parseMarkers, pickNext, priorityName } from '../src/pick.ts';
+import { item, linearConfig, testConfig } from './helpers.ts';
 
 const config = testConfig();
 
@@ -66,8 +67,38 @@ describe('pickNext', () => {
     expect(pickNext([item(1, { labels: ['plan:skip'] })], config).next?.mode).toBe('implement');
   });
 
-  it('explains a lone card', () => {
-    expect(pickNext([item(1)], config).next?.why).toBe('P3, the only card in Ready that can start');
+  it('explains a lone card, saying when its priority is only the default', () => {
+    expect(pickNext([item(1)], config).next?.why).toBe(
+      'no P label (P3), the only card in Ready that can start',
+    );
+    expect(pickNext([item(1, { labels: ['P3'] })], config).next?.why).toBe(
+      'P3, the only card in Ready that can start',
+    );
+  });
+
+  it("names Linear's status and priorities, and a card with none as no priority (Medium)", () => {
+    // PEN-75's factory:next said "P3, the only card in Ready" for a Todo card with no priority.
+    const linear = linearConfig();
+    const todo = (n: number, o: Partial<BoardItem>) => item(n, { status: 'Todo', ...o });
+    expect(pickNext([todo(75, { priority: 3, noPriority: true })], linear).next?.why).toBe(
+      'no priority (Medium), the only card in Todo that can start',
+    );
+    const result = pickNext(
+      [
+        todo(1, { priority: 3, noPriority: true, position: 0 }),
+        todo(2, { priority: 1, position: 1 }),
+        todo(3, { priority: 3, position: 2 }),
+      ],
+      linear,
+    );
+    expect(result.queue.map((p) => [p.item.number, priorityName(p, linear)])).toEqual([
+      [2, 'Urgent'],
+      [1, 'no priority (Medium)'],
+      [3, 'Medium'],
+    ]);
+    expect(result.queue[1]?.why).toBe(
+      'no priority (Medium), above 1 other Medium card on the board',
+    );
   });
 });
 

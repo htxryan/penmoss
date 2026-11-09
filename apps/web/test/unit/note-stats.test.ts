@@ -59,11 +59,9 @@ describe('word and character counts', () => {
     expect(calls[1]).toEqual([2, 4, '\n']);
   });
 
-  it('counts a 10,000-word note quickly', () => {
+  it('counts a 10,000-word note (how fast is a budget: note-stats.budget.test.ts)', () => {
     const text = 'garden river morning window '.repeat(2500);
-    const start = performance.now();
     expect(textStats(text).words).toBe(10_000);
-    expect(performance.now() - start).toBeLessThan(50);
   });
 });
 

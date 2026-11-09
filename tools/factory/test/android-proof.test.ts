@@ -109,7 +109,7 @@ function fixture() {
   return { root, tmp, run };
 }
 
-describe.concurrent("proof.sh's arguments (F8)", () => {
+describe.concurrent("proof.sh's arguments (F8)", { timeout: 30_000 }, () => {
   it('needs at least one test class', async () => {
     const r = await fixture().run([]);
     expect(r.status).toBe(2);
@@ -134,136 +134,140 @@ describe.concurrent("proof.sh's arguments (F8)", () => {
   });
 });
 
-describe.concurrent("proof.sh on the slot's emulator (F8, adb stubbed)", () => {
-  it('builds, boots headless on the slot port, records each test and shuts down', async () => {
-    const f = fixture();
-    const r = await f.run(['app.penmoss.PassingTest', 'app.penmoss.OtherTest#fails']);
-    expect(r.status, r.stderr).toBe(0);
+describe.concurrent(
+  "proof.sh on the slot's emulator (F8, adb stubbed)",
+  { timeout: 30_000 },
+  () => {
+    it('builds, boots headless on the slot port, records each test and shuts down', async () => {
+      const f = fixture();
+      const r = await f.run(['app.penmoss.PassingTest', 'app.penmoss.OtherTest#fails']);
+      expect(r.status, r.stderr).toBe(0);
 
-    // The build comes before the boot: a Gradle build beside software rendering stalls System UI.
-    expect(r.calls[0]).toBe(
-      'gradlew --console=plain -q :app:assembleDebug :app:assembleDebugAndroidTest',
-    );
-    const boot = r.calls.find((c) => c.startsWith('emulator '));
-    expect(boot).toBeDefined();
-    for (const flag of [
-      '-avd penmoss37-slot1',
-      '-port 5560',
-      '-no-window',
-      '-no-snapshot',
-      '-gpu swiftshader_indirect',
-      '-feature -Vulkan',
-      '-crash-report-mode disabled',
-    ])
-      expect(boot).toContain(flag);
-    expect(r.calls.indexOf(boot ?? '')).toBe(1);
+      // The build comes before the boot: a Gradle build beside software rendering stalls System UI.
+      expect(r.calls[0]).toBe(
+        'gradlew --console=plain -q :app:assembleDebug :app:assembleDebugAndroidTest',
+      );
+      const boot = r.calls.find((c) => c.startsWith('emulator '));
+      expect(boot).toBeDefined();
+      for (const flag of [
+        '-avd penmoss37-slot1',
+        '-port 5560',
+        '-no-window',
+        '-no-snapshot',
+        '-gpu swiftshader_indirect',
+        '-feature -Vulkan',
+        '-crash-report-mode disabled',
+      ])
+        expect(boot).toContain(flag);
+      expect(r.calls.indexOf(boot ?? '')).toBe(1);
 
-    // Every adb call names this slot's emulator, never another slot's or CI's.
-    const adb = r.calls.filter((c) => c.startsWith('adb '));
-    expect(adb.length).toBeGreaterThan(0);
-    for (const call of adb) expect(call.startsWith('adb -s emulator-5560 ')).toBe(true);
-    const env = r.calls.filter((c) => c.startsWith('env '));
-    for (const line of env)
-      expect(line).toBe(`env ANDROID_SERIAL=emulator-5560 ANDROID_TMP=${f.tmp}`);
+      // Every adb call names this slot's emulator, never another slot's or CI's.
+      const adb = r.calls.filter((c) => c.startsWith('adb '));
+      expect(adb.length).toBeGreaterThan(0);
+      for (const call of adb) expect(call.startsWith('adb -s emulator-5560 ')).toBe(true);
+      const env = r.calls.filter((c) => c.startsWith('env '));
+      for (const line of env)
+        expect(line).toBe(`env ANDROID_SERIAL=emulator-5560 ANDROID_TMP=${f.tmp}`);
 
-    // The last run's app is removed before this one installs (another sandbox's debug key).
-    const at = (text: string) => adb.findIndex((c) => c.includes(text));
-    expect(at('uninstall app.penmoss.debug.test')).toBeGreaterThan(
-      at('getprop sys.boot_completed'),
-    );
-    expect(at('uninstall app.penmoss.debug')).toBeLessThan(at('install -r -t'));
-    expect(at('screenrecord')).toBeLessThan(at('-e class app.penmoss.PassingTest'));
-    // The device settles before any test: the boot's broadcasts drain, then the launcher has
-    // the focus for a while.
-    expect(at('am wait-for-broadcast-idle')).toBeGreaterThan(at('getprop sys.boot_completed'));
-    expect(at('dumpsys window displays')).toBeGreaterThan(at('am wait-for-broadcast-idle'));
-    expect(at('dumpsys window displays')).toBeLessThan(at('am instrument'));
-    expect(adb.filter((c) => c.includes('dumpsys window')).length).toBe(2);
-    expect(r.stdout).toContain('[proof] settled in');
-    // Error dialogs stay on: hiding them restarts a stalled System UI, which recreates the app.
-    expect(adb.some((c) => c.includes('hide_error_dialogs'))).toBe(false);
-    expect(adb.at(-1)).toBe('adb -s emulator-5560 emu kill');
+      // The last run's app is removed before this one installs (another sandbox's debug key).
+      const at = (text: string) => adb.findIndex((c) => c.includes(text));
+      expect(at('uninstall app.penmoss.debug.test')).toBeGreaterThan(
+        at('getprop sys.boot_completed'),
+      );
+      expect(at('uninstall app.penmoss.debug')).toBeLessThan(at('install -r -t'));
+      expect(at('screenrecord')).toBeLessThan(at('-e class app.penmoss.PassingTest'));
+      // The device settles before any test: the boot's broadcasts drain, then the launcher has
+      // the focus for a while.
+      expect(at('am wait-for-broadcast-idle')).toBeGreaterThan(at('getprop sys.boot_completed'));
+      expect(at('dumpsys window displays')).toBeGreaterThan(at('am wait-for-broadcast-idle'));
+      expect(at('dumpsys window displays')).toBeLessThan(at('am instrument'));
+      expect(adb.filter((c) => c.includes('dumpsys window')).length).toBe(2);
+      expect(r.stdout).toContain('[proof] settled in');
+      // Error dialogs stay on: hiding them restarts a stalled System UI, which recreates the app.
+      expect(adb.some((c) => c.includes('hide_error_dialogs'))).toBe(false);
+      expect(adb.at(-1)).toBe('adb -s emulator-5560 emu kill');
 
-    const out = join(f.root, 'build', 'proof');
-    expect(JSON.parse(readFileSync(join(out, 'report.json'), 'utf8'))).toEqual([
-      {
-        title: 'app.penmoss.PassingTest',
-        status: 'passed',
-        video: 'android-1.mp4',
-        screenshot: 'android-1.png',
-      },
-      {
-        title: 'app.penmoss.OtherTest#fails',
-        status: 'failed',
-        video: 'android-2.mp4',
-        screenshot: 'android-2.png',
-      },
-    ]);
-    expect(readFileSync(join(out, 'android-1.mp4'), 'utf8')).toBe('mp4\n');
-    expect(readFileSync(join(out, 'android-1.png'), 'utf8')).toBe('png');
-    // Each test's device log is kept beside its video, and cleared before the next test.
-    expect(readFileSync(join(out, 'android-1.logcat'), 'utf8')).toContain('ActivityManager');
-    expect(existsSync(join(out, 'android-2.logcat'))).toBe(true);
-    expect(at('exec-out logcat -d')).toBeGreaterThan(at('-e class app.penmoss.PassingTest'));
-    expect(at('shell logcat -c')).toBeLessThan(at('-e class app.penmoss.OtherTest#fails'));
-    // A failure's own words are in the log.
-    expect(r.stdout).toContain('FAILURES!!!');
-  }, 30_000);
+      const out = join(f.root, 'build', 'proof');
+      expect(JSON.parse(readFileSync(join(out, 'report.json'), 'utf8'))).toEqual([
+        {
+          title: 'app.penmoss.PassingTest',
+          status: 'passed',
+          video: 'android-1.mp4',
+          screenshot: 'android-1.png',
+        },
+        {
+          title: 'app.penmoss.OtherTest#fails',
+          status: 'failed',
+          video: 'android-2.mp4',
+          screenshot: 'android-2.png',
+        },
+      ]);
+      expect(readFileSync(join(out, 'android-1.mp4'), 'utf8')).toBe('mp4\n');
+      expect(readFileSync(join(out, 'android-1.png'), 'utf8')).toBe('png');
+      // Each test's device log is kept beside its video, and cleared before the next test.
+      expect(readFileSync(join(out, 'android-1.logcat'), 'utf8')).toContain('ActivityManager');
+      expect(existsSync(join(out, 'android-2.logcat'))).toBe(true);
+      expect(at('exec-out logcat -d')).toBeGreaterThan(at('-e class app.penmoss.PassingTest'));
+      expect(at('shell logcat -c')).toBeLessThan(at('-e class app.penmoss.OtherTest#fails'));
+      // A failure's own words are in the log.
+      expect(r.stdout).toContain('FAILURES!!!');
+    }, 30_000);
 
-  it("waits while System UI's ANR dialog has the focus, then runs the tests", async () => {
-    const r = await fixture().run(['app.penmoss.PassingTest'], { STUB_DIALOG_POLLS: '3' });
-    expect(r.status, r.stderr).toBe(0);
-    const adb = r.calls.filter((c) => c.startsWith('adb '));
-    const polls = adb.filter((c) => c.includes('dumpsys window'));
-    // Three looks at the dialog, then two quiet ones with the launcher in front.
-    expect(polls.length).toBe(5);
-    const lastPoll = adb.lastIndexOf(polls.at(-1) ?? '');
-    expect(adb.findIndex((c) => c.includes('am instrument'))).toBeGreaterThan(lastPoll);
-    expect(r.stderr).not.toContain("didn't settle");
-  }, 30_000);
+    it("waits while System UI's ANR dialog has the focus, then runs the tests", async () => {
+      const r = await fixture().run(['app.penmoss.PassingTest'], { STUB_DIALOG_POLLS: '3' });
+      expect(r.status, r.stderr).toBe(0);
+      const adb = r.calls.filter((c) => c.startsWith('adb '));
+      const polls = adb.filter((c) => c.includes('dumpsys window'));
+      // Three looks at the dialog, then two quiet ones with the launcher in front.
+      expect(polls.length).toBe(5);
+      const lastPoll = adb.lastIndexOf(polls.at(-1) ?? '');
+      expect(adb.findIndex((c) => c.includes('am instrument'))).toBeGreaterThan(lastPoll);
+      expect(r.stderr).not.toContain("didn't settle");
+    }, 30_000);
 
-  it("runs the tests anyway, and says so, when the device doesn't settle in time", async () => {
-    const r = await fixture().run(['app.penmoss.PassingTest'], {
-      STUB_DIALOG_POLLS: '1000',
-      PENMOSS_EMULATOR_SETTLE_SECONDS: '3',
-    });
-    expect(r.status, r.stderr).toBe(0);
-    expect(r.stderr).toContain(
-      "the emulator didn't settle in 3s; the focus is on: Window{9f u0 Application Not Responding: com.android.systemui}",
-    );
-    expect(r.calls.some((c) => c.includes('am instrument'))).toBe(true);
-  }, 30_000);
+    it("runs the tests anyway, and says so, when the device doesn't settle in time", async () => {
+      const r = await fixture().run(['app.penmoss.PassingTest'], {
+        STUB_DIALOG_POLLS: '1000',
+        PENMOSS_EMULATOR_SETTLE_SECONDS: '3',
+      });
+      expect(r.status, r.stderr).toBe(0);
+      expect(r.stderr).toContain(
+        "the emulator didn't settle in 3s; the focus is on: Window{9f u0 Application Not Responding: com.android.systemui}",
+      );
+      expect(r.calls.some((c) => c.includes('am instrument'))).toBe(true);
+    }, 30_000);
 
-  it('finishes, and says so, when the emulator crashes during a test', async () => {
-    const f = fixture();
-    const r = await f.run(['app.penmoss.PassingTest'], { STUB_CRASH_IN_TEST: '1' });
-    expect(r.status, r.stderr).toBe(0);
-    expect(r.stderr).toContain('the emulator exited during app.penmoss.PassingTest');
-    // Never `adb logcat`, which would wait for the crashed emulator forever.
-    expect(r.calls.some((c) => /^adb -s \S+ logcat/.test(c))).toBe(false);
-    const report = readFileSync(join(f.root, 'build', 'proof', 'report.json'), 'utf8');
-    expect(JSON.parse(report)).toHaveLength(1);
-  }, 30_000);
+    it('finishes, and says so, when the emulator crashes during a test', async () => {
+      const f = fixture();
+      const r = await f.run(['app.penmoss.PassingTest'], { STUB_CRASH_IN_TEST: '1' });
+      expect(r.status, r.stderr).toBe(0);
+      expect(r.stderr).toContain('the emulator exited during app.penmoss.PassingTest');
+      // Never `adb logcat`, which would wait for the crashed emulator forever.
+      expect(r.calls.some((c) => /^adb -s \S+ logcat/.test(c))).toBe(false);
+      const report = readFileSync(join(f.root, 'build', 'proof', 'report.json'), 'utf8');
+      expect(JSON.parse(report)).toHaveLength(1);
+    }, 30_000);
 
-  it('stops when the emulator exits, and still tells it to shut down', async () => {
-    const r = await fixture().run(['app.penmoss.PassingTest'], {
-      STUB_EMULATOR_DIES: '1',
-      STUB_NEVER_BOOTS: '1',
-    });
-    expect(r.status).toBe(1);
-    expect(r.stderr).toContain('the emulator exited');
-    expect(r.calls.some((c) => c.includes('am instrument'))).toBe(false);
-    expect(r.calls.at(-2)).toBe('adb -s emulator-5560 emu kill');
-  }, 30_000);
+    it('stops when the emulator exits, and still tells it to shut down', async () => {
+      const r = await fixture().run(['app.penmoss.PassingTest'], {
+        STUB_EMULATOR_DIES: '1',
+        STUB_NEVER_BOOTS: '1',
+      });
+      expect(r.status).toBe(1);
+      expect(r.stderr).toContain('the emulator exited');
+      expect(r.calls.some((c) => c.includes('am instrument'))).toBe(false);
+      expect(r.calls.at(-2)).toBe('adb -s emulator-5560 emu kill');
+    }, 30_000);
 
-  it('gives up on an emulator that never boots, and shuts it down', async () => {
-    const r = await fixture().run(['app.penmoss.PassingTest'], {
-      STUB_NEVER_BOOTS: '1',
-      PENMOSS_EMULATOR_BOOT_SECONDS: '1',
-    });
-    expect(r.status).toBe(1);
-    expect(r.stderr).toContain("the emulator didn't boot in 1s");
-    expect(r.calls.some((c) => c.includes('am instrument'))).toBe(false);
-    expect(r.calls.at(-2)).toBe('adb -s emulator-5560 emu kill');
-  }, 30_000);
-});
+    it('gives up on an emulator that never boots, and shuts it down', async () => {
+      const r = await fixture().run(['app.penmoss.PassingTest'], {
+        STUB_NEVER_BOOTS: '1',
+        PENMOSS_EMULATOR_BOOT_SECONDS: '1',
+      });
+      expect(r.status).toBe(1);
+      expect(r.stderr).toContain("the emulator didn't boot in 1s");
+      expect(r.calls.some((c) => c.includes('am instrument'))).toBe(false);
+      expect(r.calls.at(-2)).toBe('adb -s emulator-5560 emu kill');
+    }, 30_000);
+  },
+);

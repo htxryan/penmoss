@@ -2,16 +2,26 @@
  * A run's sandbox starts from the main the host just fetched into the publish repo, not from
  * wherever the last gate left the runs' clone (A1232). With a fake Sandcastle: the first
  * command in a sandbox the host opens fetches main and puts the branch on that base. With real
- * git: that command moves a new branch made from a stale main onto the base, and leaves a branch
- * with commits of its own where it is. Nothing planted here runs a command.
+ * git: that command moves a new branch made from a stale main onto the base, rebases a branch
+ * with commits of its own onto it when that goes cleanly, and otherwise leaves it where it is.
+ * Nothing planted here runs a command.
  */
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FactoryConfig } from '../src/config.ts';
 import { nodeExec, type Exec } from '../src/exec.ts';
-import { hostDeps, repoDir, sandboxStartCommand, type HostOptions } from '../src/host.ts';
+import {
+  AGENT_STREAM,
+  AgentNotInstalled,
+  agentMissing,
+  hostDeps,
+  repoDir,
+  sandboxStartCommand,
+  type HostOptions,
+} from '../src/host.ts';
+import { stoppedText } from '../src/start.ts';
 import { testConfig } from './helpers.ts';
 
 const MAIN_SHA = 'b'.repeat(40);
@@ -23,7 +33,16 @@ const sandcastle = vi.hoisted(() => ({
   exitCode: 0,
   closed: 0,
   created: [] as Record<string, unknown>[],
+  /** What the agent's run does: it gets Sandcastle's options (the log file, the stream hook). */
+  run: (opts: SandcastleRun): Promise<unknown> => Promise.resolve({ log: opts.logging.path }),
 }));
+
+interface SandcastleRun {
+  readonly logging: {
+    readonly path: string;
+    readonly onAgentStreamEvent?: (e: { type: string; line?: string }) => void;
+  };
+}
 
 vi.mock('@ai-hero/sandcastle', () => ({
   createSandbox: (opts: Record<string, unknown>) => {
@@ -42,6 +61,7 @@ vi.mock('@ai-hero/sandcastle', () => ({
         sandcastle.closed++;
         return Promise.resolve();
       },
+      run: (opts: SandcastleRun) => sandcastle.run(opts),
     });
   },
 }));
@@ -138,6 +158,98 @@ describe("a run's sandbox starts from the host's main (A1232)", () => {
   });
 });
 
+describe("the agent's round in its sandbox", () => {
+  let config: FactoryConfig;
+  const runDir = () => join(config.stateDir, 'runs', '75-test');
+  const INIT = '{"type":"system","subtype":"init","mcp_servers":[],"tools":["Bash"]}';
+
+  beforeEach(() => {
+    sandcastle.exitCode = 0;
+    config = { ...testConfig(), stateDir: mkdtempSync(join(tmpdir(), 'factory-agent-')) };
+  });
+
+  it("keeps the agent's raw stream, init event first, beside Sandcastle's log", async () => {
+    // PEN-38 asks that the init event lists no MCP servers; agent.log has no init event.
+    sandcastle.run = (opts) => {
+      for (const line of [INIT, '{"type":"result","result":"done"}'])
+        opts.logging.onAgentStreamEvent?.({ type: 'raw', line });
+      opts.logging.onAgentStreamEvent?.({ type: 'text', line: 'ignored' });
+      writeFileSync(
+        opts.logging.path,
+        'Agent started\nRun complete: reached 1 iteration(s) without completion signal.\n',
+      );
+      return Promise.resolve({});
+    };
+    const deps = hostDeps(options(config, fakeExec().exec));
+    await deps.runAgent(await deps.openSandbox(BRANCH), 'p');
+    expect(readFileSync(join(runDir(), AGENT_STREAM), 'utf8')).toBe(
+      `${INIT}\n{"type":"result","result":"done"}\n`,
+    );
+    // Sandcastle's closing line is explained where it is read.
+    expect(readFileSync(join(runDir(), 'agent.log'), 'utf8')).toMatch(
+      /without completion signal\.\n\(The factory: that is expected\. .*result\.json/,
+    );
+  });
+
+  it("stops with an installation problem, naming the command and PATH, when the agent isn't found", async () => {
+    // PEN-75's first run: the LaunchAgent's PATH had no ~/.local/bin.
+    sandcastle.run = () =>
+      Promise.reject(
+        new Error('claude-code exited with code 127:\n/bin/sh: claude: command not found'),
+      );
+    const deps = hostDeps(options(config, fakeExec().exec));
+    const ran = deps.runAgent(await deps.openSandbox(BRANCH), 'p');
+    await expect(ran).rejects.toBeInstanceOf(AgentNotInstalled);
+    await expect(ran).rejects.toThrow(
+      `the factory can't find \`claude\` on its PATH (${process.env['PATH'] ?? ''})`,
+    );
+  });
+
+  it('keeps the result the agent wrote in the run folder, for a run restarted after it', async () => {
+    const worktree = mkdtempSync(join(tmpdir(), 'factory-wt-'));
+    mkdirSync(join(worktree, '.factory'));
+    const text = JSON.stringify({ status: 'done', summary: 'Linked the footer' });
+    writeFileSync(join(worktree, '.factory', 'result.json'), text);
+    const deps = hostDeps(options(config, fakeExec().exec));
+    const handle = {
+      worktreePath: worktree,
+      exec: () => Promise.reject(new Error('no commands here')),
+      close: () => Promise.resolve(),
+    };
+    expect((await deps.readResult(handle)).ok).toBe(true);
+    expect(readFileSync(join(runDir(), 'result.json'), 'utf8')).toBe(text);
+  });
+
+  it('leaves any other agent failure as it is', async () => {
+    sandcastle.run = () => Promise.reject(new Error('claude-code exited with code 1:\nboom'));
+    const deps = hostDeps(options(config, fakeExec().exec));
+    const ran = deps.runAgent(await deps.openSandbox(BRANCH), 'p');
+    await expect(ran).rejects.toThrow('boom');
+    await expect(ran).rejects.not.toBeInstanceOf(AgentNotInstalled);
+  });
+});
+
+describe('agentMissing', () => {
+  it.each([
+    ['claude-code exited with code 127:\n/bin/sh: claude: command not found', 'claude'],
+    ['opencode exited with code 1: zsh: command not found: opencode', 'opencode'],
+    ['claude-code exited with code 127:\nsh: 1: claude: not found', 'claude'],
+    ['claude-code exited with code 127:\n', "the agent's command"],
+    ['claude-code exited with code 1:\nError: not found', undefined],
+    ['claude-code exited with code 2: ENOENT', undefined],
+  ])('reads %j as %j', (message, command) => {
+    expect(agentMissing(message)).toBe(command);
+  });
+
+  it("says on the card that it is the factory's installation, not the card", () => {
+    const error = new AgentNotInstalled('claude', '/usr/bin:/bin');
+    expect(stoppedText(error, error.message)).toMatch(
+      /^The run couldn't start the agent: the factory can't find `claude` on its PATH \(\/usr\/bin:\/bin\)\. .*Nothing is wrong with this card/,
+    );
+    expect(stoppedText(new Error('x'), 'x')).toBe('The run stopped on an error: x');
+  });
+});
+
 // Real git: a bare repository stands in for GitHub; the runs' clone is cloned from it and then
 // falls behind, as it does between gates.
 const env: Record<string, string> = {
@@ -207,14 +319,44 @@ describe('the start command, with real git (A1232)', { timeout: 30_000 }, () => 
     expect(await git(worktree, 'status', '--porcelain')).toBe('');
   });
 
-  it("keeps a restarted run's branch commits where they are (R12)", async () => {
+  /** A restarted run's branch (R12): Sandcastle's worktree of it, on the stale main, with work. */
+  const restarted = async (file = 'site/footer.md', text = 'The footer link.\n') => {
     await git(clone, 'worktree', 'add', '-q', '-b', BRANCH, worktree, 'origin/main');
-    await git(worktree, 'commit', '-q', '--allow-empty', '-m', "the agent's work");
-    const work = await git(worktree, 'rev-parse', 'HEAD');
+    mkdirSync(join(worktree, dirname(file)), { recursive: true });
+    writeFileSync(join(worktree, file), text);
+    await git(worktree, 'add', '-A');
+    await git(worktree, 'commit', '-q', '-m', "the agent's work");
+    return git(worktree, 'rev-parse', 'HEAD');
+  };
+
+  it("rebases a restarted run's branch onto the base, keeping its commits (R12)", async () => {
+    // PEN-75's restarted agent judged a base main had already fixed, and re-reported it.
+    await restarted();
+    await start(sandboxStartCommand(base));
+    expect(await git(worktree, 'log', '--format=%s', `${base}..HEAD`)).toBe("the agent's work");
+    expect(await git(worktree, 'merge-base', '--is-ancestor', base, 'HEAD')).toBe('');
+    expect(readFileSync(join(worktree, 'docs', 'fix.md'), 'utf8')).toBe('The fix.\n');
+    expect(await git(worktree, 'status', '--porcelain')).toBe('');
+    // main is put at the base too, for the gate's rebase.
+    expect(await git(clone, 'rev-parse', 'origin/main')).toBe(base);
+  });
+
+  it('leaves the branch where it is when the rebase conflicts, for the gate', async () => {
+    const work = await restarted('docs/fix.md', 'Not the fix.\n');
     await start(sandboxStartCommand(base));
     expect(await git(worktree, 'rev-parse', 'HEAD')).toBe(work);
-    expect(await git(worktree, 'log', '-1', '--format=%s')).toBe("the agent's work");
-    // main is still put at the base, for the gate's rebase.
+    expect(await git(worktree, 'status', '--porcelain')).toBe('');
+    expect(existsSync(join(clone, '.git', 'worktrees', basename(worktree), 'rebase-merge'))).toBe(
+      false,
+    );
     expect(await git(clone, 'rev-parse', 'origin/main')).toBe(base);
+  });
+
+  it('leaves the branch where it is when its tracked files have changes', async () => {
+    const work = await restarted();
+    writeFileSync(join(worktree, 'site', 'footer.md'), 'Half-done.\n');
+    await start(sandboxStartCommand(base));
+    expect(await git(worktree, 'rev-parse', 'HEAD')).toBe(work);
+    expect(readFileSync(join(worktree, 'site', 'footer.md'), 'utf8')).toBe('Half-done.\n');
   });
 });

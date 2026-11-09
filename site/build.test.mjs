@@ -1,10 +1,12 @@
 // The docs' Content-Security-Policy step of site/build.mjs (P14): `pnpm --filter @penmoss/site test`.
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import {
   docsPolicy,
   hashOf,
@@ -148,5 +150,21 @@ describe('the download cards (R3, T80.12)', () => {
     assert.deepEqual(JSON.parse(readFileSync(path.join(root, 'src/data/release.json'), 'utf8')), {
       release: null,
     });
+  });
+
+  // A1245: `task site:deploy` (and every build) rewrites it, so a tracked copy left the
+  // checkout modified after each deploy. It is ignored, and src/site.ts reads a missing one as
+  // no release.
+  it('leaves src/data/release.json out of git, so a build never dirties the checkout', () => {
+    const repo = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+    const tracked = execFileSync('git', ['ls-files', '--', 'site/src/data/release.json'], {
+      cwd: repo,
+      encoding: 'utf8',
+    });
+    assert.equal(tracked, '');
+    assert.match(
+      readFileSync(path.join(repo, '.gitignore'), 'utf8'),
+      /^site\/src\/data\/release\.json$/m,
+    );
   });
 });

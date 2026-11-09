@@ -169,7 +169,8 @@ export function viewFromState(
 }
 
 export async function runUi(config: FactoryConfig, log: (line: string) => void): Promise<number> {
-  const opened = await openFactory(config);
+  // The UI never touches the runs' clone: the daemon, restarted with it, prepares that.
+  const opened = await openFactory(config, { clone: false });
   if (!opened.ok) {
     log(`Can't start the UI: ${opened.error}.`);
     return 2;

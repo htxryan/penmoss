@@ -62,18 +62,16 @@ describe('a fuzzy matcher (`[[` completion over a large workspace)', () => {
     }
   });
 
-  it('folds each title once, so a keystroke over 5,000 notes stays well under a frame', () => {
+  it('folds each title once, then only the queries', () => {
     const matcher = new FuzzyMatcher();
     const text = (title: string) => title;
     matcher.filter(titles, 'm', text, 8); // Every title folded here, once.
     const normalize = vi.spyOn(String.prototype, 'normalize');
     const queries = ['me', 'mee', 'meet', 'meeti', 'meetin', 'meeting', 'meeting r'];
-    const started = performance.now();
     for (const query of queries) matcher.filter(titles, query, text, 8);
-    const perKeystroke = (performance.now() - started) / queries.length;
-    // Only the queries are folded now, not the titles.
+    // Only the queries are folded now, not the titles. The keystroke's cost over 5,000 notes is
+    // a budget: fuzzy.budget.test.ts (A1244).
     expect(normalize).toHaveBeenCalledTimes(queries.length);
     normalize.mockRestore();
-    expect(perKeystroke).toBeLessThan(16);
   });
 });

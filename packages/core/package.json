@@ -41,7 +41,8 @@
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run && vitest run --config vitest.workers.config.ts",
     "test:node": "vitest run",
-    "test:workers": "vitest run --config vitest.workers.config.ts"
+    "test:workers": "vitest run --config vitest.workers.config.ts",
+    "budgets": "PENMOSS_BUDGETS=1 vitest run"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "1.4.6",

@@ -4,7 +4,11 @@
  * proves; a failure is loud and names the check. Commands never print a secret: the isolation
  * checks open files for zero bytes, and the token checks print only an account name.
  */
+import { accessSync, constants, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
+import type { Exec } from './exec.ts';
+import { hostGit } from './git.ts';
 import type { SecretKey } from './secrets.ts';
 import { withJavaHome } from './sandbox.ts';
 import { opencodeConfig } from './agents/opencode.ts';
@@ -61,6 +65,125 @@ function opencodeModels(config: FactoryConfig): string[] {
   return [...new Set([...(first ? [first] : []), ...all])];
 }
 
+/**
+ * `task check` without stopping at the first failure: each `- task:` step of the Taskfile's
+ * `check:all`, read from the worktree's own Taskfile, with `test` as `pnpm -r --no-bail`, then
+ * one line naming every step that failed.
+ */
+export const TASK_CHECK_NO_BAIL = [
+  "steps=$(sed -n '/^  check:all:/,/^  [^ ]/s/^ *- task: *//p' Taskfile.yml)",
+  'test -n "$steps" || { echo "no check:all steps in Taskfile.yml"; exit 2; }',
+  'failed=""',
+  'for step in $steps; do',
+  '  echo "=== task $step"',
+  '  if [ "$step" = test ]; then corepack pnpm -r --no-bail --workspace-concurrency=1 test || failed="$failed $step";',
+  '  else task "$step" || failed="$failed $step"; fi',
+  'done',
+  'if [ -n "$failed" ]; then echo "failed:$failed"; exit 1; fi',
+  'echo "every step passed"',
+].join('\n');
+
+/** A command the factory runs on the host, outside any sandbox. */
+export interface HostCommand {
+  readonly command: string;
+  readonly why: string;
+  /** Missing is a warning, not a failure: the factory falls back (terminal-notifier → osascript). */
+  readonly optional?: boolean;
+}
+
+/** Every external command the host runs: the daemon, the UI, the merge, the proof, planning. */
+export function hostCommands(config: FactoryConfig): HostCommand[] {
+  return [
+    { command: 'git', why: 'reads and pushes runs (publish repo)' },
+    { command: 'gh', why: "opens, reads and merges PRs as the factory's app" },
+    { command: 'node', why: 'runs the factory' },
+    { command: 'corepack', why: "factory:update installs the factory's dependencies" },
+    { command: config.agents.claude.bin, why: 'planning sessions, and runs with agent:claude' },
+    { command: 'sandbox-exec', why: "every run's Seatbelt sandbox" },
+    { command: 'osascript', why: 'notifications' },
+    { command: 'caffeinate', why: 'keeps the Mac awake while a run is active' },
+    { command: 'ffmpeg', why: "turns the proof's recordings into MP4s" },
+    { command: 'tar', why: "the planning session's snapshot of main" },
+    {
+      command: 'terminal-notifier',
+      why: 'notifications that open their card in the Factory UI (osascript is the fallback)',
+      optional: true,
+    },
+    {
+      command: config.agents.opencode.bin,
+      why: 'runs with agent:opencode',
+      optional: true,
+    },
+  ];
+}
+
+/** Where `command` resolves on `path` (an absolute command is checked as it is). */
+export function findOnPath(
+  command: string,
+  path: string,
+  executable: (file: string) => boolean = isExecutable,
+): string | undefined {
+  if (command.includes('/')) return executable(command) ? command : undefined;
+  for (const dir of path.split(':').filter(Boolean)) {
+    const file = join(dir, command);
+    if (executable(file)) return file;
+  }
+  return undefined;
+}
+
+function isExecutable(file: string): boolean {
+  try {
+    accessSync(file, constants.X_OK);
+    return statSync(file).isFile();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The host's commands, each looked up on `path`, the PATH the LaunchAgents run with (`agentPath`,
+ * code.ts), not the caller's shell: PEN-75's first run failed on a `claude` the doctor had found
+ * on Ryan's shell PATH only. A missing optional command is a warning.
+ */
+export function hostChecks(
+  config: FactoryConfig,
+  path: string,
+  executable?: (file: string) => boolean,
+): CheckOutcome[] {
+  return hostCommands(config).map((c) => {
+    const found = findOnPath(c.command, path, executable);
+    const check: Check = {
+      name: `the host finds \`${c.command}\` on the LaunchAgent's PATH (${c.why})`,
+      command: `command -v ${c.command}`,
+      expect: 'pass',
+    };
+    if (found) return { check, status: 'ok', detail: found, seconds: 0 };
+    return {
+      check,
+      status: c.optional ? 'warned' : 'failed',
+      detail: `not on ${path}${c.optional ? ' (optional)' : ''}`,
+      seconds: 0,
+    };
+  });
+}
+
+/**
+ * A warning when the checks' own code isn't on `base`: they come from this checkout, but the
+ * sandbox runs `base`, so a check added on a branch, with the code it tests, can't pass until
+ * that code is on `base` (PEN-75's doctor ran a branch's new checks against origin/main).
+ */
+export async function baseNote(
+  exec: Exec,
+  repo: string,
+  base: string,
+): Promise<string | undefined> {
+  const contained = await hostGit(exec, repo, ['merge-base', '--is-ancestor', 'HEAD', base]);
+  if (contained.code === 0) return undefined;
+  const head = await hostGit(exec, repo, ['rev-parse', '--abbrev-ref', 'HEAD']);
+  const name = head.code === 0 ? head.stdout.trim() : 'HEAD';
+  return `Note: the checks come from this checkout (${name}), which ${base} doesn't contain, and the sandbox runs ${base}. A check that tests code only on ${name} fails until that code is on ${base}; run with -- --base ${name} to check the branch itself.`;
+}
+
 export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: string): Check[] {
   const relay = 'apps/relay';
   const worker = 20000 + 100 * slot.portBlock + 87;
@@ -108,10 +231,14 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
       command: `cd ${relay} && (corepack pnpm exec wrangler dev --local --port ${worker} --inspector-port ${inspector} > "$TMPDIR/wd.log" 2>&1 &) && for i in $(seq 1 60); do curl -s -o /dev/null "http://127.0.0.1:${worker}/" && echo listening && break; sleep 1; done; pkill -f "wrangler dev --local --port ${worker}" || true`,
     },
     {
-      name: 'task check',
+      // The gate runs `task check`, which stops at its first failing step, and `task test` stops
+      // at its first failing package: sandbox-only failures then surfaced one per doctor run.
+      // This runs every step of the worktree's own `check:all`, and every package's tests.
+      name: 'task check, every step and package (no bail)',
       expect: 'pass',
       slow: true,
-      command: 'task check',
+      output: 'every step passed',
+      command: TASK_CHECK_NO_BAIL,
     },
     {
       name: 'task e2e -- smoke.spec.ts on the slot block',
@@ -273,7 +400,8 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
 
 export interface CheckOutcome {
   readonly check: Check;
-  readonly status: 'ok' | 'failed' | 'skipped';
+  /** `warned`: something optional is missing; the doctor still passes. */
+  readonly status: 'ok' | 'failed' | 'skipped' | 'warned';
   readonly detail: string;
   readonly seconds: number;
 }
@@ -298,17 +426,22 @@ export function judge(
 }
 
 export function report(outcomes: readonly CheckOutcome[]): string {
-  const mark = { ok: '✓', failed: '✗', skipped: '–' } as const;
+  const mark = { ok: '✓', failed: '✗', skipped: '–', warned: '!' } as const;
   const lines = outcomes.map(
     (o) =>
-      `${mark[o.status]} ${o.check.name}: ${o.detail}${o.status === 'skipped' ? '' : ` (${o.seconds.toFixed(0)} s)`}`,
+      `${mark[o.status]} ${o.check.name}: ${o.detail}${o.status === 'skipped' || o.status === 'warned' ? '' : ` (${o.seconds.toFixed(0)} s)`}`,
   );
-  const failed = outcomes.filter((o) => o.status === 'failed').length;
-  const skipped = outcomes.filter((o) => o.status === 'skipped').length;
+  const count = (status: CheckOutcome['status']) =>
+    outcomes.filter((o) => o.status === status).length;
+  const failed = count('failed');
+  const rest = [
+    ...(count('skipped') ? [`${count('skipped')} skipped`] : []),
+    ...(count('warned') ? [`${count('warned')} warning(s)`] : []),
+  ];
   lines.push(
     '',
     failed === 0
-      ? `All checks passed${skipped ? `, ${skipped} skipped` : ''}.`
+      ? `All checks passed${rest.length ? `, ${rest.join(', ')}` : ''}.`
       : `${failed} check(s) FAILED.`,
   );
   return lines.join('\n');

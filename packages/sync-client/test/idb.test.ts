@@ -540,7 +540,7 @@ describe('NoteStore', () => {
     expect(await store.getMeta('missing')).toBeUndefined();
   });
 
-  it('opens a 5,000-note store and lists its metadata (indicative timing in Node)', async () => {
+  it('opens a 5,000-note store and lists its metadata (its time is a budget: idb.budget.test.ts)', async () => {
     const name = `penmoss-bench-${++dbCount}`;
     const seed = await NoteStore.open(name);
     await seed.putMany(
@@ -552,18 +552,9 @@ describe('NoteStore', () => {
     );
     seed.close();
 
-    const started = performance.now();
     const store = await NoteStore.open(name);
     stores.push(store);
-    const meta = await store.listMeta();
-    const elapsed = performance.now() - started;
-
-    expect(meta).toHaveLength(5000);
-    // fake-indexeddb is in-memory, so this is indicative; the real check runs in Chromium (Playwright).
-    console.info(
-      `[t4] fake-indexeddb: open + listMeta of 5,000 notes took ${elapsed.toFixed(0)} ms`,
-    );
-    expect(elapsed).toBeLessThan(1000);
+    expect(await store.listMeta()).toHaveLength(5000);
   });
 
   describe('changes kept as the page goes (A626, A640)', () => {

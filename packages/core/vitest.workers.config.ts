@@ -12,8 +12,9 @@ export default defineConfig({
   ],
   test: {
     include: ['test/**/*.test.ts'],
-    // Timing tests need real timers, which workerd freezes during synchronous work.
-    exclude: ['test/**/*.node.test.ts'],
+    // Node-only tests, and the wall-clock budgets: those run in Node, in `pnpm budgets`
+    // (A1244), since workerd freezes timers during synchronous work.
+    exclude: ['test/**/*.node.test.ts', 'test/**/*.budget.test.ts'],
     maxWorkers: 2,
     fsModuleCache: false,
   },

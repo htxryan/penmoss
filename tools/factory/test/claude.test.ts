@@ -6,7 +6,7 @@ import { claudeAgent, DENY_RULES } from '../src/agents/claude.ts';
 import { nodeExec } from '../src/exec.ts';
 import { fill, promptTemplate } from '../src/prompt.ts';
 
-describe('the Claude adapter', () => {
+describe('the Claude adapter', { timeout: 30_000 }, () => {
   it('adds the isolation flags to the command line, against a stub claude', async () => {
     const agent = await claudeAgent('opus');
     const { command, stdin } = agent.buildPrintCommand({

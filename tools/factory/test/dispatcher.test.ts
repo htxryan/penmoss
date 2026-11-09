@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Board } from '../src/board.ts';
 import { labelProblems, tick, type Running } from '../src/dispatcher.ts';
-import { BlockedByRyan, guardEffects } from '../src/guard.ts';
+import { BlockedByRyan, guardEffects, RUN_GUARDED, RUN_STEPS } from '../src/guard.ts';
 import { item as anyItem, testConfig } from './helpers.ts';
 
 const config = testConfig();
@@ -122,6 +122,37 @@ describe('guardEffects (R23)', () => {
     blocked = true;
     await expect(effects.comment('two')).rejects.toBeInstanceOf(BlockedByRyan);
     expect(done).toEqual(['one']);
+  });
+
+  it('says which step it stopped before, for the ledger', async () => {
+    const ran: string[] = [];
+    const run = {
+      heavy: (label: string) => Promise.resolve(void ran.push(label)),
+      step: (name: string) => Promise.resolve(void ran.push(name)),
+      push: (branch: string) => Promise.resolve(void ran.push(branch)),
+    };
+    const guarded = guardEffects(
+      run,
+      ['heavy', 'step', 'push'],
+      7,
+      () => Promise.resolve(true),
+      RUN_STEPS,
+    );
+    await expect(guarded.heavy('factory gate factory/7-x')).rejects.toThrow(
+      '#7 has Blocked set: stopped before the gate',
+    );
+    await expect(guarded.heavy('factory proof web factory/7-x')).rejects.toMatchObject({
+      step: 'the web proof',
+    });
+    await expect(guarded.step('gate-fix round 2')).rejects.toMatchObject({
+      step: 'gate-fix round 2',
+    });
+    await expect(guarded.push('factory/7-x')).rejects.toMatchObject({ step: 'the push' });
+    expect(ran).toEqual([]);
+    // Every effect and work step of a run is guarded.
+    expect(RUN_GUARDED).toEqual(
+      expect.arrayContaining(['step', 'openSandbox', 'heavy', 'push', 'openPr', 'runAgent']),
+    );
   });
 });
 

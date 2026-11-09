@@ -180,12 +180,11 @@ describe('the slice context ProseMirror reads from pasted HTML', () => {
 });
 
 describe('style rules in pasted HTML', () => {
-  it('reads long or broken <style> blocks in linear time', () => {
-    const started = performance.now();
-    clean(`<style>${'a'.repeat(200_000)}</style><p>x</p>`);
-    clean(`<style>${'/*'.repeat(100_000)}</style><p>x</p>`);
-    clean(`<style>${'p,'.repeat(100_000)}</style><p>x</p>`);
-    expect(performance.now() - started).toBeLessThan(1500);
+  it('reads long or broken <style> blocks to the end (their time is a budget)', () => {
+    // A backtracking reader would hang here, past the test's own timeout; that it is linear is
+    // a wall-clock budget, in clipboard-security.budget.test.ts (A1244).
+    for (const style of ['a'.repeat(200_000), '/*'.repeat(100_000), 'p,'.repeat(100_000)])
+      expect(clean(`<style>${style}</style><p>x</p>`).html).toContain('x</p>');
   });
 });
 

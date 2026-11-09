@@ -110,6 +110,7 @@ function fake(rebases: RebaseOutcome[]) {
     now: () => new Date('2026-11-08T12:30:00Z'),
     openPr: () => Promise.reject(new Error('a rebase never opens a PR')),
     log: () => undefined,
+    step: () => Promise.resolve(),
     prComment: (_pr, body) => {
       prComments.push(body);
       calls.push('pr comment');

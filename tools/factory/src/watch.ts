@@ -9,10 +9,10 @@ import { join } from 'node:path';
 import { agentFor } from './agents/index.ts';
 import type { Board, BoardItem } from './board.ts';
 import { summarizeChecks, type CheckRun } from './checks.ts';
-import { expandHome, type SlotConfig } from './config.ts';
+import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import { nodeExec } from './exec.ts';
-import { BlockedByRyan, guardEffects } from './guard.ts';
-import { hostDeps } from './host.ts';
+import { BlockedByRyan, guardEffects, RUN_GUARDED, RUN_STEPS } from './guard.ts';
+import { appendLedger, hostDeps } from './host.ts';
 import { fence, issueText } from './issue.ts';
 import type { IssueSpec } from './labels.ts';
 import { ciRunsFor, mergeApproved, type MainRun, type MergeDeps } from './merge.ts';
@@ -188,20 +188,13 @@ export async function executeRevise(
     },
   };
   const isBlocked = () => tracker.isBlocked(item.number);
+  // A run's steps, and the round's PR replies: Blocked stops it at the next one (R23).
   const guarded = guardEffects(
     revise,
-    [
-      'comment',
-      'prComment',
-      'replyToThread',
-      'setStatus',
-      'setBlocked',
-      'push',
-      'runAgent',
-      'macVmCheck',
-    ],
+    [...RUN_GUARDED, 'prComment', 'replyToThread'],
     item.number,
     isBlocked,
+    { ...RUN_STEPS, prComment: 'a PR comment', replyToThread: 'a reply on the PR' },
   );
   try {
     const input = { item, spec, pr: pr.url, branch: branchName(config, item), items, prompt };
@@ -209,7 +202,10 @@ export async function executeRevise(
       action.kind === 'rebase' ? await runRebase(guarded, input) : await runRevise(guarded, input);
     return outcome.kind;
   } catch (error) {
-    if (error instanceof BlockedByRyan) return 'stopped';
+    if (error instanceof BlockedByRyan) {
+      deps.log('failed', { stopped: `Blocked set by Ryan: stopped before ${error.step}` });
+      return 'stopped';
+    }
     const message = error instanceof Error ? error.message : String(error);
     if (!(await isBlocked())) {
       await deps
@@ -222,6 +218,24 @@ export async function executeRevise(
 }
 
 /** Merge an approved PR and see main through (F18). Needs no slot: it only waits on GitHub. */
+/**
+ * The merge's events (`resumed`, `merged`, `done`) in the run ledger as well as the daemon log,
+ * the same shape as a run's, under the merge's own run id and with the card: the report counts
+ * `merged`, and `unfinishedClaims` closes a claim on `merged` or `done` (a run that failed after
+ * In Review left its claim open, PEN-75).
+ */
+export function mergeLog(
+  config: FactoryConfig,
+  runId: string,
+  issue: number,
+  log: (line: string) => void,
+): MergeDeps['log'] {
+  return (event, detail = {}) => {
+    appendLedger(config, { run: runId, issue, event, ...detail });
+    log(`${event} ${JSON.stringify(detail)}`);
+  };
+}
+
 export async function executeMerge(
   factory: Factory,
   item: BoardItem,
@@ -317,7 +331,7 @@ export async function executeMerge(
     },
     sleep: (s) => new Promise((resolve) => setTimeout(resolve, s * 1000)),
     now: () => new Date(),
-    log: (event, detail = {}) => log(`${event} ${JSON.stringify(detail)}`),
+    log: mergeLog(config, runId, item.number, log),
   };
   const isBlocked = () => tracker.isBlocked(item.number);
   const guarded = guardEffects(
@@ -325,11 +339,21 @@ export async function executeMerge(
     ['merge', 'comment', 'closeIssue', 'setStatus', 'setBlocked'],
     item.number,
     isBlocked,
+    {
+      merge: 'the merge',
+      comment: 'a comment on the card',
+      closeIssue: 'closing the card',
+      setStatus: 'moving the card',
+      setBlocked: 'setting Blocked',
+    },
   );
   try {
     return (await mergeApproved(guarded, item, pr.url)).kind;
   } catch (error) {
-    if (error instanceof BlockedByRyan) return 'stopped';
+    if (error instanceof BlockedByRyan) {
+      log(`Blocked set by Ryan: stopped before ${error.step}`);
+      return 'stopped';
+    }
     throw error;
   }
 }

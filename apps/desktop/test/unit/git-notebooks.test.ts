@@ -1097,16 +1097,18 @@ describe('no git outlives the app (A853)', () => {
   });
 
   // probeProcess reads ps, which the software factory's sandbox refuses (A1231): there the
-  // test can't run, and the host and CI run it.
-  it.skipIf(spawnSync('ps', ['-p', String(process.pid)]).status !== 0)(
-    'reads a process’s group, start and command from ps',
-    () => {
-      const found = probeProcess(process.pid);
-      expect(found?.pgid).toBeGreaterThan(0);
-      expect(Math.abs(found!.started - (Date.now() - process.uptime() * 1000))).toBeLessThan(3_000);
-      expect(probeProcess(2 ** 22 + 12_345)).toBeNull();
-    },
-  );
+  // test can't run, and the host and CI run it. Whether ps lists this process (prints its pid),
+  // not its exit code: an agent's shell inside the sandbox fails ps another way.
+  it.skipIf(
+    (
+      spawnSync('ps', ['-p', String(process.pid), '-o', 'pid='], { encoding: 'utf8' }).stdout ?? ''
+    ).trim() !== String(process.pid),
+  )('reads a process’s group, start and command from ps', () => {
+    const found = probeProcess(process.pid);
+    expect(found?.pgid).toBeGreaterThan(0);
+    expect(Math.abs(found!.started - (Date.now() - process.uptime() * 1000))).toBeLessThan(3_000);
+    expect(probeProcess(2 ** 22 + 12_345)).toBeNull();
+  });
 
   it('knows git and its helpers by name', () => {
     expect(isGitCommand('git')).toBe(true);

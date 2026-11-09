@@ -123,22 +123,44 @@ export function pickNext(
     }
   }
   queue.sort((a, b) => a.spec.priority - b.spec.priority || a.item.position - b.item.position);
-  const withWhy = queue.map((p, i) => ({ ...p, why: explain(p, queue, i) }));
+  const withWhy = queue.map((p, i) => ({ ...p, why: explain(p, queue, i, config) }));
   return { next: withWhy[0] ?? null, skipped, queue: withWhy };
 }
 
-function explain(pick: Pick, queue: readonly Pick[], index: number): string {
+const LINEAR_PRIORITY = { 1: 'Urgent', 2: 'High', 3: 'Medium', 4: 'Low' } as const;
+
+/**
+ * A pick's priority as its tracker names it: Linear's (`Urgent` … `Low`, and `no priority
+ * (Medium)` for a card that has none), or Project 8's `P1`–`P4` label (`no P label (P3)`).
+ */
+export function priorityName(pick: Pick, config: FactoryConfig): string {
+  const p = pick.spec.priority;
+  if (config.tracker === 'linear')
+    return pick.item.noPriority ? 'no priority (Medium)' : LINEAR_PRIORITY[p];
+  return pick.item.labels.some((l) => /^P[1-4]$/.test(l)) ? `P${p}` : `no P label (P${p})`;
+}
+
+/** The bucket a priority names, for "above 2 other … cards": `Medium` for none on Linear. */
+function bucket(pick: Pick, config: FactoryConfig): string {
+  return config.tracker === 'linear'
+    ? LINEAR_PRIORITY[pick.spec.priority]
+    : `P${pick.spec.priority}`;
+}
+
+function explain(pick: Pick, queue: readonly Pick[], index: number, config: FactoryConfig): string {
   const ahead = queue.slice(index + 1);
   const lowerPriority = ahead.filter((p) => p.spec.priority > pick.spec.priority).length;
   const later = ahead.length - lowerPriority;
-  const parts = [`P${pick.spec.priority}`];
+  const parts = [priorityName(pick, config)];
   if (lowerPriority > 0)
     parts.push(`ahead of ${lowerPriority} lower-priority card${lowerPriority === 1 ? '' : 's'}`);
   if (later > 0)
     parts.push(
-      `above ${later} other P${pick.spec.priority} card${later === 1 ? '' : 's'} on the board`,
+      `above ${later} other ${bucket(pick, config)} card${later === 1 ? '' : 's'} on the board`,
     );
   if (ahead.length === 0)
-    parts.push(index === 0 ? 'the only card in Ready that can start' : 'last in the queue');
+    parts.push(
+      index === 0 ? `the only card in ${config.status.pick} that can start` : 'last in the queue',
+    );
   return parts.join(', ');
 }
