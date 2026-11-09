@@ -47,10 +47,28 @@ export interface Need {
   readonly kind: NeedKind;
   /** The gate, as a short verb phrase: "Answer the plan". */
   readonly label: string;
-  /** Exactly what to do, in the factory's words where it has them. */
+  /** The specific ask, one line: "Answer 4 questions on the plan", "Review PR #85". */
+  readonly brief: string;
+  /** What to do about it, after the brief (which it doesn't repeat). */
   readonly what: string;
   /** A command to run on the Mac, for a machine problem. */
   readonly command: string | null;
+}
+
+/** An open point of the plan as the page asks it: the question, its context, its options. */
+export interface Point {
+  readonly text: string;
+  /** The planner's proposal or context for it, when that isn't the question itself. */
+  readonly context: string | null;
+  readonly options: readonly PointOption[];
+}
+
+export interface PointOption {
+  /** What the answer posts, as the planner wrote it. */
+  readonly value: string;
+  /** What the button says: the value without its "(proposed)". */
+  readonly label: string;
+  readonly proposed: boolean;
 }
 
 export interface RunView {
@@ -98,6 +116,10 @@ export interface CardView {
   readonly open: readonly string[];
   /** Planning questions with one-click answers (F21). */
   readonly questions: readonly PlanQuestion[];
+  /** The plan's open points as the page asks them: each question with its context and options. */
+  readonly points: readonly Point[];
+  /** Open points that couldn't be paired with a question: shown once, as the planner's notes. */
+  readonly notes: readonly string[];
   /** Whether "Complete" applies: a plan exists and isn't agreed yet. */
   readonly canComplete: boolean;
   readonly runs: readonly RunView[];
@@ -124,7 +146,12 @@ export interface Health {
   readonly commit: { readonly sha: string; readonly subject: string } | null;
   readonly slots: { readonly total: number; readonly busy: number };
   /** Other things wrong with the setup: wrong checkout, a failing doctor check. */
-  readonly problems: readonly { readonly text: string; readonly fix: string | null }[];
+  readonly problems: readonly {
+    /** A few words for the header's pill: "wrong checkout", "doctor failing on slot 1". */
+    readonly label: string;
+    readonly text: string;
+    readonly fix: string | null;
+  }[];
   readonly doctor: string | null;
 }
 
@@ -551,8 +578,55 @@ const NEED_LABEL: Readonly<Record<NeedKind, string>> = {
   card: 'Fix the card',
 };
 
-function need(kind: NeedKind, what: string, command: string | null = null): Need {
-  return { kind, label: NEED_LABEL[kind], what, command };
+function need(kind: NeedKind, brief: string, what: string, command: string | null = null): Need {
+  return { kind, label: NEED_LABEL[kind], brief, what, command };
+}
+
+/** A stop's first clause is the brief; the rest, if any, leads into what to do. */
+function stopNeed(kind: 'unblock' | 'machine', text: string, then: string): Need {
+  const [brief = text, ...rest] = text.split(/;\s*/);
+  const more = rest.join('; ');
+  const lead = more ? `${more[0]!.toUpperCase()}${more.slice(1)}. ` : '';
+  return need(kind, brief, `${lead}${then}`, kind === 'machine' ? fixFor(text) : null);
+}
+
+const PROPOSED = /\s*\((?:proposed|recommended)\)\s*$/i;
+
+/**
+ * The plan's open points as the page asks them. The planner lists every point in `open`, and
+ * those with a few clear answers again in `questions` (prompts/planning.md), so the same count
+ * pairs them by position: the open point becomes its question's context. Otherwise a question
+ * that repeats its point word for word pairs with it and the other points are asked without
+ * buttons; when that doesn't account for every point, they're shown once, as notes.
+ */
+export function pointsOf(
+  open: readonly string[],
+  questions: readonly PlanQuestion[],
+): { points: Point[]; notes: string[] } {
+  const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+  const ask = (q: PlanQuestion, context: string | null): Point => {
+    const tagged = q.options.some((o) => PROPOSED.test(o));
+    return {
+      text: q.text,
+      context: context && !same(context, q.text) ? context : null,
+      // The proposal comes first (prompts/planning.md) when none is marked.
+      options: q.options.map((o, i) => ({
+        value: o,
+        label: o.replace(PROPOSED, ''),
+        proposed: tagged ? PROPOSED.test(o) : i === 0,
+      })),
+    };
+  };
+  if (questions.length && open.length === questions.length)
+    return { points: questions.map((q, i) => ask(q, open[i] ?? null)), notes: [] };
+  const rest = open.filter((o) => !questions.some((q) => same(o, q.text)));
+  const asked = questions.map((q) => ask(q, null));
+  if (rest.length + questions.length === open.length)
+    return {
+      points: [...asked, ...rest.map((o) => ({ text: o, context: null, options: [] }))],
+      notes: [],
+    };
+  return { points: asked, notes: rest };
 }
 
 /** A command that fixes a machine problem the factory names, when there is one. */
@@ -656,9 +730,10 @@ function health(input: ViewInput): Health {
   const { config, status, now } = input;
   const total = config.slots.length;
   const busy = status?.running.length ?? 0;
-  const problems: { text: string; fix: string | null }[] = [];
+  const problems: { label: string; text: string; fix: string | null }[] = [];
   if (status?.code && input.codeDir && status.code.dir !== input.codeDir)
     problems.push({
+      label: 'wrong checkout',
       text: `The daemon runs from ${status.code.dir}, not the factory's own clone`,
       fix: 'task factory:install',
     });
@@ -666,6 +741,7 @@ function health(input: ViewInput): Health {
   for (const d of doctor)
     if (d.failed.length)
       problems.push({
+        label: `doctor failing on slot ${d.slot}`,
         text: `Doctor on slot ${d.slot} (${time(d.at)}) failed: ${d.failed.join('; ')}`,
         fix: `task factory:doctor -- --slot ${d.slot}`,
       });
@@ -809,22 +885,24 @@ function card(
   let paused = false;
   let open: readonly string[] = [];
   let questions: readonly PlanQuestion[] = [];
+  let asked: { points: Point[]; notes: string[] } = { points: [], notes: [] };
 
   if (planning && set && plan?.meta.askedAt) {
     open = plan.state?.open ?? [];
     questions = plan.state?.questions ?? [];
+    asked = pointsOf(open, questions);
     const n = Math.max(open.length, questions.length);
     needed = need(
       'answer',
-      `The plan has ${n || 'open'} open point${n === 1 ? '' : 's'}. Answer ${n === 1 ? 'it' : 'them'} here, in the chat or on the issue, or say Complete to agree the plan.`,
+      n
+        ? `Answer ${n} question${n === 1 ? '' : 's'} on the plan`
+        : 'Answer the open points on the plan',
+      'Pick an answer for each (the planner’s proposal is marked), add anything else below and send, or agree the plan as it stands. The chat and the issue work too.',
     );
     step = 'Open points posted';
     since = plan.meta.askedAt;
   } else if (set && !spec.ok && (st === s.pick || planning)) {
-    needed = need(
-      'card',
-      `The factory won't start it: ${spec.error}. Fix the labels in Linear, then unblock.`,
-    );
+    needed = need('card', `Won't start: ${spec.error}`, 'Fix the labels in Linear, then unblock.');
     step = "Won't start: labels conflict";
   } else if (
     set &&
@@ -834,8 +912,8 @@ function card(
     (st !== s.planning || runs.length > 0)
   ) {
     needed = stop.machine
-      ? need('machine', `${stop.text}. Fix it on the Mac, then retry.`, fixFor(stop.text))
-      : need('unblock', `${stop.text}. Fix it or say how on the issue, then retry.`);
+      ? stopNeed('machine', stop.text, 'Fix it on the Mac, then retry.')
+      : stopNeed('unblock', stop.text, 'Fix it or say how on the issue, then retry.');
     step = stop.text;
     since = stop.at;
   } else if (set && planning) {
@@ -843,7 +921,8 @@ function card(
     // factory or Ryan.
     needed = need(
       'unblock',
-      'Planning is Blocked: the factory stopped it on an error (its comment on the issue says why), or you paused it. Clear Blocked to resume the session.',
+      'Planning is Blocked',
+      'The factory stopped it on an error (its comment on the issue says why), or you paused it. Clear Blocked to resume the session.',
     );
     step = 'Planning Blocked';
   } else if (set) {
@@ -851,7 +930,7 @@ function card(
     step = 'Paused by you';
     since = stop?.paused ? stop.at : null;
   } else if (!spec.ok && (st === s.pick || planning)) {
-    needed = need('card', `The factory won't start it: ${spec.error}. Fix the labels in Linear.`);
+    needed = need('card', `Won't start: ${spec.error}`, 'Fix the labels in Linear.');
     step = "Won't start: labels conflict";
   } else if (heldBy.length) {
     step = `Held: blocked by ${heldBy.join(', ')}`;
@@ -867,7 +946,8 @@ function card(
       if (!/busy|another run|queued/i.test(ctx.live.waitingFor.reason))
         needed = need(
           'machine',
-          `${ctx.live.waitingFor.reason}. The run carries on by itself once that's fixed; it stops Blocked after ${config.macProof.waitHours} h.`,
+          `Waiting: ${ctx.live.waitingFor.reason}`,
+          `The run carries on by itself once that's fixed; it stops Blocked after ${config.macProof.waitHours} h.`,
           fixFor(ctx.live.waitingFor.reason),
         );
     } else if (ctx.live || ctx.merging) {
@@ -883,7 +963,8 @@ function card(
       if (pr)
         needed = need(
           'review',
-          `Review PR #${pr.split('/').at(-1)} on GitHub: approve and the factory merges it and watches main; comment for another round.`,
+          `Review PR #${pr.split('/').at(-1)}`,
+          'Approve it on GitHub and the factory merges it and watches main; comment for another round.',
         );
     } else if (st === s.pick) {
       step =
@@ -939,6 +1020,8 @@ function card(
     pr,
     open,
     questions,
+    points: asked.points,
+    notes: asked.notes,
     canComplete,
     runs: views,
     runFolder: lastRun && input.runFolder ? input.runFolder(lastRun.id) : null,

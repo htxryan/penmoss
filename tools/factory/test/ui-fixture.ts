@@ -146,8 +146,19 @@ export function evening(stateDir = '~/nonexistent-factory-state') {
         status: 'waiting',
         planUrl: 'https://claude.ai/artifact/p78',
         designUrl: null,
-        open: ['Include attachments?', 'One zip or one per folder?'],
-        questions: [{ text: 'Include attachments?', options: ['Yes', 'No'] }],
+        // As the planner writes them: every point in `open`, the same ones with options in
+        // `questions`, in the same order (prompts/planning.md).
+        open: [
+          'Proposed: attachments go in the zip beside their notes. OK?',
+          'Proposed: one zip for the whole library, with its folders kept. OK?',
+        ],
+        questions: [
+          { text: 'Include attachments?', options: ['Yes, beside their notes (proposed)', 'No'] },
+          {
+            text: 'One zip or one per folder?',
+            options: ['One zip, folders kept (proposed)', 'One zip per folder'],
+          },
+        ],
         versions: null,
         agreed: null,
       },
