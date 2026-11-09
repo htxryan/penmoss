@@ -18,6 +18,7 @@ const waiting: PlanState = {
   designUrl: null,
   open: ['Sheet on phones?'],
   questions: [],
+  versions: null,
   agreed: null,
 };
 const view = (v: Partial<PlanningView>): PlanningView => ({
@@ -61,6 +62,17 @@ describe('isAgreement (R17)', () => {
 });
 
 describe('parsePlanState', () => {
+  it("reads the artifacts' current versions in any state, and none when absent (A1259)", () => {
+    expect(
+      parsePlanState(JSON.stringify({ ...waiting, planVersion: 3, designVersion: 8 }))?.versions,
+    ).toEqual({ plan: 3, design: 8 });
+    expect(parsePlanState(JSON.stringify({ ...waiting, planVersion: 2 }))?.versions).toEqual({
+      plan: 2,
+      design: null,
+    });
+    expect(parsePlanState(JSON.stringify(waiting))?.versions).toBeNull();
+  });
+
   it('reads a waiting state and drops non-artifact URLs', () => {
     expect(
       parsePlanState(JSON.stringify({ ...waiting, designUrl: 'https://evil.example/x' })),

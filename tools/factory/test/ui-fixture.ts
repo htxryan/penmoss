@@ -148,6 +148,7 @@ export function evening(stateDir = '~/nonexistent-factory-state') {
         designUrl: null,
         open: ['Include attachments?', 'One zip or one per folder?'],
         questions: [{ text: 'Include attachments?', options: ['Yes', 'No'] }],
+        versions: null,
         agreed: null,
       },
     },

@@ -10,6 +10,11 @@ export interface PlanState {
   readonly planUrl: string | null;
   readonly designUrl: string | null;
   readonly open: readonly string[];
+  /**
+   * The artifacts' current versions, in every state: what Ryan agrees to when his yes comes on
+   * the issue while the session waits (PEN-70's agreement recorded none, A1259).
+   */
+  readonly versions: { readonly plan: number; readonly design: number | null } | null;
   /** Open points with proposed answers Ryan can pick with one click (F21). */
   readonly questions: readonly PlanQuestion[];
   readonly agreed: {
@@ -70,11 +75,19 @@ export function parsePlanState(text: string): PlanState | null {
           }
         : null;
     if (r.status === 'agreed' && !agreed) return null;
+    const v = r as { planVersion?: unknown; designVersion?: unknown };
+    const versions = Number.isInteger(v.planVersion)
+      ? {
+          plan: v.planVersion as number,
+          design: Number.isInteger(v.designVersion) ? (v.designVersion as number) : null,
+        }
+      : null;
     return {
       status: r.status,
       planUrl: url(r.planUrl),
       designUrl: url(r.designUrl),
       open,
+      versions,
       questions: parseQuestions(r.questions),
       agreed,
     };
