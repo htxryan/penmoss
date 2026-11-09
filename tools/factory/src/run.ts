@@ -282,6 +282,18 @@ export function prTitle(input: {
 }
 
 /** What the gate runs for a scope (Platform scope in the plan). */
+/**
+ * The rebased branch's dependencies, before its check (A1251). The rebase can bring main's
+ * changed lockfile into a worktree the agent installed earlier; `task lint` then starts with a
+ * filtered `pnpm exec`, whose own install pruned every other package's modules, and ESLint
+ * failed on 100,000 unresolved types (PEN-70's gate, twice).
+ */
+export const GATE_INSTALL = 'pnpm install --frozen-lockfile --prefer-offline';
+
+function installFeedback(installed: { readonly stdout: string; readonly stderr: string }): string {
+  return `\`${GATE_INSTALL}\` failed after the rebase onto main:\n\n\`\`\`\n${excerpt(installed.stdout + installed.stderr)}\n\`\`\``;
+}
+
 export function gateCommand(scope: Scope): string {
   return scope.kind === 'docs-only' ? 'task lint' : 'task check';
 }
@@ -453,6 +465,8 @@ export async function gateAndProve(
     noteRebase(deps, rebased);
     const numbered = await deps.numberDecisions(gate, branch);
     if (Object.keys(numbered).length > 0) deps.log('decisions-numbered', numbered);
+    const installed = await gate.exec(GATE_INSTALL);
+    if (installed.exitCode !== 0) return { ok: false, feedback: installFeedback(installed) };
     const weak = scanWeakenedTests((await gate.exec('git diff origin/main...HEAD')).stdout);
     if (weak.length > 0) return { ok: false, feedback: weakenedFeedback(weak) };
     const command = gateCommand(scope);
@@ -753,6 +767,8 @@ async function regate(deps: RunDeps, branch: string, scope: Scope): Promise<Rega
     noteRebase(deps, rebased);
     const numbered = await deps.numberDecisions(gate, branch);
     if (Object.keys(numbered).length > 0) deps.log('decisions-numbered', numbered);
+    const installed = await gate.exec(GATE_INSTALL);
+    if (installed.exitCode !== 0) return { ok: false, why: installFeedback(installed) };
     const weak = scanWeakenedTests((await gate.exec('git diff origin/main...HEAD')).stdout);
     if (weak.length > 0) return { ok: false, why: weakenedFeedback(weak) };
     const command = gateCommand(scope);

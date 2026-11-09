@@ -133,6 +133,7 @@ describe('runRebase: a PR in review that main moved past (F6)', () => {
     expect(f.calls).toEqual([
       'fetch main',
       'rebase /wt/1',
+      'exec 1: pnpm install --frozen-lockfile --prefer-offline',
       'exec 1: git diff origin/main...HEAD',
       'exec 1: task lint',
       `push ${BRANCH}`,
