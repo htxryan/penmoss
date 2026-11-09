@@ -12,7 +12,8 @@ import { createAppTokens, loadAppCredentials, type AppTokens } from './github-ap
 import { loadProofStore, type ProofStore } from './proof/store.ts';
 import { BlockedByRyan, guardEffects, RUN_GUARDED, RUN_STEPS } from './guard.ts';
 import { AgentNotInstalled, ensureClone, hostDeps, publisherEnv } from './host.ts';
-import { issueText } from './issue.ts';
+import { issueText, type Issue } from './issue.ts';
+import { ATTACHMENTS, localizeImages, type LocalImageOptions } from './attachments.ts';
 import { parseIssueSpec, type IssueSpec } from './labels.ts';
 import { formatMarker } from './pick.ts';
 import { advancePlanning, type PlanDeps } from './plan-run.ts';
@@ -106,6 +107,44 @@ export async function openFactory(
   };
 }
 
+/**
+ * The issue for an agent: its images downloaded on the host, with the tracker's credentials, to
+ * where the agent reads them, and its text pointing there (attachments.ts). Nothing here stops
+ * the run: if the images can't be handled at all, the agent gets the issue as it is.
+ */
+export async function issueForAgent(
+  tracker: Tracker,
+  issue: Issue,
+  where: Omit<LocalImageOptions, 'download'>,
+): Promise<{ readonly issue: Issue; readonly text: string }> {
+  let local: { issue: Issue; note: string };
+  try {
+    local = await localizeImages(issue, tracker.owner, {
+      ...where,
+      download: tracker.download?.bind(tracker),
+    });
+  } catch (error) {
+    local = {
+      issue,
+      note: `## The issue's images\n\nThe factory couldn't download the issue's images: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+  const text = issueText(local.issue, tracker.owner, 'penmoss-factory');
+  return { issue: local.issue, text: local.note ? `${text}\n\n${local.note}` : text };
+}
+
+/** Where a run's agent reads the issue's images: its worktree's `.factory/attachments/`. */
+export function runImages(
+  config: FactoryConfig,
+  runId: string,
+): Omit<LocalImageOptions, 'download'> {
+  return {
+    dir: join(expandHome(config.stateDir), 'runs', runId, ATTACHMENTS),
+    shownAs: (file) => `.factory/${ATTACHMENTS}/${file}`,
+    relativeTo: 'the repository root, your working folder',
+  };
+}
+
 /** Why a card can't run now, or its spec. */
 export function runnable(
   config: FactoryConfig,
@@ -179,7 +218,11 @@ export async function executePlanning(
   const { config, tracker, secrets } = factory;
   await ensureClone(config, nodeExec);
   const files = planFiles(config, item.number);
-  const issue = await tracker.readIssue(item.number);
+  // The session reads the issue's images from the plan's own folder, which only the host writes.
+  const { issue, text } = await issueForAgent(tracker, await tracker.readIssue(item.number), {
+    dir: files.attachments,
+    shownAs: (file) => join(files.attachments, file),
+  });
   const env: Record<string, string> = {
     PATH: process.env['PATH'] ?? '/usr/bin:/bin',
     HOME: process.env['HOME'] ?? '',
@@ -228,7 +271,7 @@ export async function executePlanning(
     isBlocked,
   );
   const prompt = fill(promptTemplate('planning'), {
-    issue: issueText(issue, tracker.owner, 'penmoss-factory'),
+    issue: text,
     repo: files.repo,
     out: files.out,
   });
@@ -331,10 +374,14 @@ export async function executeRun(
   const { config, gh, tracker } = factory;
   const runId = `${item.number}-${Date.now().toString(36)}-${randomBytes(2).toString('hex')}`;
   await ensureClone(config, nodeExec);
-  const issue = await tracker.readIssue(item.number);
+  const { text } = await issueForAgent(
+    tracker,
+    await tracker.readIssue(item.number),
+    runImages(config, runId),
+  );
   const prompt = fill(promptTemplate('implement'), {
     branch: branchName(config, item),
-    issue: issueText(issue, tracker.owner, 'penmoss-factory'),
+    issue: text,
     plan: planFor(config, item.number, spec),
     scope: scopeText(spec.platforms),
   });

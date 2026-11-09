@@ -24,6 +24,7 @@ import { dirname, extname, join } from 'node:path';
 import type { AgentProvider, Sandbox } from '@ai-hero/sandcastle';
 import type { Board } from './board.ts';
 import { ensureAvd, stopSlotEmulator } from './avd.ts';
+import { ATTACHMENTS, stageAttachments } from './attachments.ts';
 import { withHeavySlot } from './heavy.ts';
 import { usageLimitReset } from './limits.ts';
 import { cardLink } from './ui/link.ts';
@@ -350,6 +351,13 @@ export function hostDeps(options: HostOptions): HostDeps {
         throw new Error(
           `the sandbox couldn't start from main's ${base.slice(0, 10)}: ${started.stderr.trim()}`,
         );
+      }
+      // The issue's images, which the host downloaded into the run folder (attachments.ts). A
+      // copy that fails leaves the agent without them; it never stops the run.
+      try {
+        stageAttachments(join(runDir, ATTACHMENTS), handle.worktreePath);
+      } catch {
+        // The agent then finds no file where the prompt says; the run goes on.
       }
       sandboxes.set(handle, sandbox);
       return handle;

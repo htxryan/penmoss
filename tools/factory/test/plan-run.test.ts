@@ -19,6 +19,7 @@ function setup() {
     repo: join(root, 'repo'),
     out: join(root, 'out'),
     meta: join(root, 'meta.json'),
+    attachments: join(root, 'attachments'),
   };
   mkdirSync(files.out, { recursive: true });
   const calls: string[] = [];
