@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nodeExec } from '../src/exec.ts';
-import { addedLines, rebaseOntoMain, resolveAppendConflicts } from '../src/rebase.ts';
+import { formatDecisions } from '../src/decisions.ts';
+import { addedLines, rebaseOntoMain, resolveAppendConflicts, unpadRow } from '../src/rebase.ts';
 import type { RunSandbox } from '../src/run.ts';
 
 // Real git in a temp repository: main and a factory branch that both add decisions (F6).
@@ -129,6 +130,49 @@ describe('rebaseOntoMain (F6)', { timeout: 30_000 }, () => {
     expect(await onMain()).toBe(true);
     expect(await git(repo, 'status', '--porcelain')).toBe('');
     expect(await git(repo, 'rev-list', '--count', `origin/main..${BRANCH}`)).toBe('2');
+  });
+
+  it('merges a table the branch re-padded for A-NEW-1, then formats it (PEN-70, A1250)', async () => {
+    const base = await formatDecisions(decisions(BASE_ROWS));
+    await mainMoves('formatted', { 'docs/decisions.md': base });
+    await git(repo, 'checkout', '-q', BRANCH);
+    await git(repo, 'reset', '-q', '--hard', 'main');
+    // The agent's Prettier pads every row to fit the placeholder.
+    const branch = await formatDecisions(decisions([...BASE_ROWS, '| A-NEW-1 | Tooltips wait. |']));
+    expect(branch.split('\n').filter((l) => l.startsWith('| A1223 '))[0]).toContain('| A1223   |');
+    await commit('the agent', { 'docs/decisions.md': branch });
+    await mainMoves('main decides', {
+      'docs/decisions.md': await formatDecisions(
+        decisions([...BASE_ROWS, row(1225, 'Main decided meanwhile.')]),
+      ),
+    });
+
+    const outcome = await rebaseOntoMain(sandbox, reserved);
+
+    expect(outcome).toMatchObject({ kind: 'rebased', resolved: ['docs/decisions.md'] });
+    expect(read('docs/decisions.md')).toBe(
+      await formatDecisions(
+        decisions([
+          ...BASE_ROWS,
+          row(1225, 'Main decided meanwhile.'),
+          '| A-NEW-1 | Tooltips wait. |',
+        ]),
+      ),
+    );
+    expect(await onMain()).toBe(true);
+    expect(await git(repo, 'status', '--porcelain')).toBe('');
+  });
+
+  it('still leaves an edit of the same row to the agent when the padding differs', async () => {
+    await commit('the agent edits A1224', {
+      'docs/decisions.md': decisions([row(1223, 'Proof in R2.'), row(1224, 'The branch says.')]),
+    });
+    await mainMoves('main edits A1224', {
+      'docs/decisions.md': decisions([row(1223, 'Proof in R2.'), row(1224, 'Main says.')]),
+    });
+    const outcome = await rebaseOntoMain(sandbox, reserved);
+    expect(outcome).toMatchObject({ kind: 'conflict', files: ['docs/decisions.md'] });
+    expect(await git(repo, 'status', '--porcelain')).toBe('');
   });
 
   it("renumbers the branch's row, and its references, when main gave that number away", async () => {
@@ -279,6 +323,15 @@ describe('resolveAppendConflicts', () => {
     ).toBeNull();
     expect(resolveAppendConflicts('| A1 | a |\n')).toBeNull();
     expect(resolveAppendConflicts(['<<<<<<< HEAD', '| A2 | x |'].join('\n'))).toBeNull();
+  });
+});
+
+describe('unpadRow', () => {
+  it('takes the padding out of cells and separators, and leaves other lines alone', () => {
+    expect(unpadRow('| A1223   | Proof in R2.      |')).toBe('| A1223 | Proof in R2. |');
+    expect(unpadRow('| ------- | :---------------: |')).toBe('| --- | :---: |');
+    expect(unpadRow('| A1 | a \\| b |')).toBe('| A1 | a \\| b |');
+    expect(unpadRow('Prose | with a pipe')).toBe('Prose | with a pipe');
   });
 });
 
