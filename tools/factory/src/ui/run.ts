@@ -1,5 +1,4 @@
 /** `factory ui`: serves the Factory UI on 127.0.0.1 (F20, #276). */
-import { randomBytes } from 'node:crypto';
 import {
   closeSync,
   existsSync,
@@ -24,7 +23,7 @@ import { codeDir } from '../code.ts';
 import { readStatus } from '../status.ts';
 import { readDoctorSummaries } from '../doctor-summary.ts';
 import { buildView, type FactoryView, type PlanInfo } from './model.ts';
-import { uiLinkPath } from './link.ts';
+import { uiLinkPath, uiToken } from './link.ts';
 import { tailnetHosts, tailnetLink } from './tailnet.ts';
 import { pageHtml } from './page.ts';
 import { createUiServer, listen } from './server.ts';
@@ -191,7 +190,7 @@ export async function runUi(config: FactoryConfig, log: (line: string) => void):
       readOnly,
     });
   };
-  const token = randomBytes(24).toString('hex');
+  const token = uiToken(expandHome(config.stateDir));
   // Ryan's other devices reach it through `tailscale serve`, if he set that up (A1246).
   const remote = await tailnetHosts(nodeExec, config.ui.port);
   const server = createUiServer({

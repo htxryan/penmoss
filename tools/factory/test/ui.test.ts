@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { request } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -11,6 +11,7 @@ import {
   type FactoryView,
   type ViewInput,
 } from '../src/ui/model.ts';
+import { uiToken, uiTokenPath } from '../src/ui/link.ts';
 import { tailFile, viewFromState } from '../src/ui/run.ts';
 import { createUiServer, listen } from '../src/ui/server.ts';
 import { pageHtml } from '../src/ui/page.ts';
@@ -385,6 +386,8 @@ describe('the server (F20)', () => {
     expect(first.body).toContain('location.replace("/" + location.hash)');
     expect(first.body).not.toContain(token);
     expect(String(first.headers['set-cookie'])).toContain('HttpOnly; SameSite=Strict');
+    // A year, so a device signs in once: the token survives restarts (A1264).
+    expect(String(first.headers['set-cookie'])).toContain('Max-Age=31536000');
     const next = await get('/view.json', { cookie: `penmoss-factory-ui=${token}` });
     expect(next.status).toBe(200);
     expect(JSON.parse(next.body)).toEqual(empty);
@@ -401,5 +404,30 @@ describe('the server (F20)', () => {
     const page = await get('/', { cookie: `penmoss-factory-ui=${token}` });
     expect(page.body).toContain('<title>Penmoss Factory</title>');
     expect(String(page.headers['content-security-policy'])).toContain("default-src 'none'");
+  });
+});
+
+describe("the UI's token (A1264)", () => {
+  it('is kept in the state folder, mode 600, so the link is the same after a restart', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ui-token-'));
+    try {
+      const first = uiToken(dir);
+      expect(first).toMatch(/^[0-9a-f]{48}$/);
+      expect(uiToken(dir)).toBe(first);
+      expect(statSync(uiTokenPath(dir)).mode & 0o777).toBe(0o600);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+  it('makes a new one when the kept one is missing or not a token', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ui-token-'));
+    try {
+      writeFileSync(uiTokenPath(dir), 'short\n');
+      const made = uiToken(dir);
+      expect(made).toMatch(/^[0-9a-f]{48}$/);
+      expect(readFileSync(uiTokenPath(dir), 'utf8').trim()).toBe(made);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
