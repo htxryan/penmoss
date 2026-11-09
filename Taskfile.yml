@@ -248,6 +248,13 @@ tasks:
     cmds:
       - open "$(cat "$HOME/Library/Application Support/penmoss-factory/ui.url")"
 
+  factory:ui:tailnet:
+    desc: 'Serve the Factory UI on your tailnet (https://<this Mac>.<tailnet>.ts.net:8443, never Funnel), then restart the UI so it accepts that name (A1246)'
+    cmds:
+      - tailscale serve --bg --https=8443 http://127.0.0.1:7878
+      - launchctl kickstart -k "gui/$(id -u)/app.penmoss.factory-ui"
+      - sleep 2 && grep 'on the tailnet' "$HOME/Library/Application Support/penmoss-factory/ui.log" | tail -1
+
   factory:doctor:
     desc: "The software factory (F17): check a slot's sandbox (`-- --slot 2`, `-- --full` for task check, e2e and Android)"
     cmds:

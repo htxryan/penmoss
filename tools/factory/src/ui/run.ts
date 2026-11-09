@@ -25,6 +25,7 @@ import { readStatus } from '../status.ts';
 import { readDoctorSummaries } from '../doctor-summary.ts';
 import { buildView, type FactoryView, type PlanInfo } from './model.ts';
 import { uiLinkPath } from './link.ts';
+import { tailnetHosts, tailnetLink } from './tailnet.ts';
 import { pageHtml } from './page.ts';
 import { createUiServer, listen } from './server.ts';
 
@@ -191,17 +192,21 @@ export async function runUi(config: FactoryConfig, log: (line: string) => void):
     });
   };
   const token = randomBytes(24).toString('hex');
+  // Ryan's other devices reach it through `tailscale serve`, if he set that up (A1246).
+  const remote = await tailnetHosts(nodeExec, config.ui.port);
   const server = createUiServer({
     port: config.ui.port,
     token,
     page: pageHtml,
     view,
+    remote,
     ...(writer ? { writer } : {}),
   });
   const port = await listen(server, config.ui.port);
   const link = `http://127.0.0.1:${port}/?token=${token}`;
   writeFileSync(uiLinkPath(config), `${link}\n`, { mode: 0o600 });
   log(`Factory UI: ${link}`);
+  for (const host of remote) log(`Factory UI on the tailnet: ${tailnetLink(host, token)}`);
   await new Promise<void>((resolve) => {
     const stop = () => server.close(() => resolve());
     process.once('SIGTERM', stop);
