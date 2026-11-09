@@ -17,6 +17,12 @@ export interface UiOptions {
   readonly writer?: Writer;
   /** How often the event stream checks for a changed view. */
   readonly refreshMs?: number;
+  /**
+   * Tailnet names Ryan serves this UI on over HTTPS with `tailscale serve`, as `host:port`
+   * (`tailnetHosts`). Their Host and `https://` Origin are accepted too; the token still is not
+   * optional.
+   */
+  readonly remote?: readonly string[];
 }
 
 const COOKIE = 'penmoss-factory-ui';
@@ -35,16 +41,24 @@ function cookie(req: IncomingMessage, name: string): string | undefined {
   return undefined;
 }
 
-/** Whether a request may be answered: a local Host, no foreign Origin, the token. */
+/** Whether a request may be answered: a local or served Host, no foreign Origin, the token. */
 export function allowed(
   req: IncomingMessage,
   port: number,
   token: string,
+  remote: readonly string[] = [],
 ): { ok: true; viaQuery: boolean } | { ok: false; why: string } {
   const hosts = [`127.0.0.1:${port}`, `localhost:${port}`];
-  if (!hosts.includes(req.headers.host ?? '')) return { ok: false, why: 'unexpected Host' };
+  // HTTPS on 443 arrives without its port in Host and Origin.
+  const served = remote.flatMap((r) => (r.endsWith(':443') ? [r, r.slice(0, -4)] : [r]));
+  if (![...hosts, ...served].includes(req.headers.host ?? ''))
+    return { ok: false, why: 'unexpected Host' };
   const origin = req.headers.origin;
-  if (origin !== undefined && !hosts.some((h) => origin === `http://${h}`))
+  if (
+    origin !== undefined &&
+    !hosts.some((h) => origin === `http://${h}`) &&
+    !served.some((h) => origin === `https://${h}`)
+  )
     return { ok: false, why: 'foreign Origin' };
   const url = new URL(req.url ?? '/', `http://${hosts[0]}`);
   const query = url.searchParams.get('token');
@@ -71,7 +85,12 @@ export function createUiServer(options: UiOptions): Server {
   const refresh = options.refreshMs ?? 5000;
   return createServer((req, res) => {
     // The port the request actually reached (options.port may be 0 in tests).
-    const check = allowed(req, req.socket.localPort ?? options.port, options.token);
+    const check = allowed(
+      req,
+      req.socket.localPort ?? options.port,
+      options.token,
+      options.remote ?? [],
+    );
     if (!check.ok) {
       send(
         res,
