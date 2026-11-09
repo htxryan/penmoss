@@ -132,10 +132,10 @@ To try it on slot 1: `task factory:doctor -- --full --only proof:android`. `tool
 
 ## The instrumented tests in CI (emulator-5580)
 
-CI's `android-emulator` job (A1227, [`ci.md`](ci.md) §1) runs the instrumented tests on every change `pick` counts as Android's, on a Mac runner: `:app:connectedDebugAndroidTest` on a headless emulator, with `.github/scripts/android-emulator.sh`. It is not a required check yet.
+CI's `android-emulator` job (A1227, [`ci.md`](ci.md) §1) runs the instrumented tests on every change `pick` counts as Android's, on a hosted Ubuntu runner with KVM (A1235): `:app:connectedDebugAndroidTest` on a headless emulator, with `.github/scripts/android-emulator.sh`. It is not a required check yet.
 
-- **The emulator** is the AVD `penmoss37-ci`, made once from the slots' API 37 image (`system-images;android-37.0;google_apis;arm64-v8a`) in the runner's tool cache. It boots with the proof's settings (`-no-window -no-audio -no-boot-anim -no-snapshot`, software rendering) after the APKs are built, and has 300 s to boot.
-- **Its own ports:** console 5580 (`emulator-5580`) and adb's server on 5050, so it never uses a slot's emulator (5560, 5562) or adb server (5040, 5041), or your own adb on 5037. One CI emulator runs on the Mac at a time; the second runner's job waits for the first.
+- **The emulator** is the AVD `penmoss37-ci`, made from the slots' API 37 image in its x86_64 build (`system-images;android-37.0;google_apis;x86_64`), which the runner's x86_64 CPU runs natively; the script takes the ABI from the machine, so on a Mac it uses the slots' own `arm64-v8a`. It boots with the proof's settings (`-no-window -no-audio -no-boot-anim -no-snapshot`, software rendering) after the APKs are built, and has 300 s to boot.
+- **Its own ports:** console 5580 (`emulator-5580`) and adb's server on 5050, so on a Mac it never uses a slot's emulator (5560, 5562) or adb server (5040, 5041), or your own adb on 5037. One CI emulator runs on a machine at a time; a second waits for the first.
 - **What runs:** every test in `app/src/androidTest` except `NoteListJankTest`, whose 60 fps check (A285) means something only on the Pixel. Run that one there, as above.
 - **A failure** uploads `android-emulator-reports`: Gradle's HTML report, the JUnit XML and the emulator's log.
 

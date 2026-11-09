@@ -1,8 +1,8 @@
 name: Release
 
 # P3 (A1189): a stable release, from the tag `task release -- X.Y.Z` pushes. It builds a signed,
-# notarised universal dmg and the release-signed APK on Ryan's Mac runners (A702: never
-# GitHub's), then creates a draft release vX.Y.Z with Penmoss.dmg, Penmoss.apk,
+# notarised universal dmg and the release-signed APK on Ryan's Mac runners (A406; signing stays
+# there under A1235), then creates a draft release vX.Y.Z with Penmoss.dmg, Penmoss.apk,
 # penmoss-mac-X.Y.Z.zip, SHA256SUMS.txt and latest-mac.yml, and notes generated since the
 # previous stable tag. Ryan edits the notes and publishes it, which makes it Latest. A tag with
 # an -rc.N suffix makes a draft prerelease, for rehearsals (R5). Pull requests never run this
@@ -48,7 +48,7 @@ jobs:
         with:
           node-version-file: .node-version
 
-      - name: The GitHub CLI is installed for the runner account (A702)
+      - name: The GitHub CLI is installed for the Mac runners' account
         run: command -v gh > /dev/null || { echo "::error::Install gh for the penmoss-ci account (brew install gh)"; exit 1; }
 
       # The version is the tag's; the build number (CFBundleVersion, Android's versionCode) is
@@ -243,7 +243,7 @@ jobs:
         with:
           node-version-file: .node-version
 
-      - name: The GitHub CLI is installed for the runner account (A702)
+      - name: The GitHub CLI is installed for the Mac runners' account
         run: command -v gh > /dev/null || { echo "::error::Install gh for the penmoss-ci account (brew install gh)"; exit 1; }
 
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0

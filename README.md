@@ -52,7 +52,7 @@ site/                  penmoss.app: the brochure and the user docs
 
 How the code fits together is in [`docs/architecture.md`](docs/architecture.md), the decisions in [`docs/decisions.md`](docs/decisions.md), and how work is planned and checked in [`docs/development.md`](docs/development.md). The roadmap is the open [GitHub issues](https://github.com/htxryan/penmoss/issues). To contribute, read [CONTRIBUTING.md](CONTRIBUTING.md), the [Code of Conduct](CODE_OF_CONDUCT.md) and the [Security policy](SECURITY.md).
 
-CI runs on the maintainer's self-hosted Mac runners only ([`docs/ci.md`](docs/ci.md)). A pull request from a fork runs no CI by itself; see [CONTRIBUTING](CONTRIBUTING.md).
+CI's tests run on GitHub's hosted runners; the performance budgets and the signed builds run on the maintainer's own Macs ([`docs/ci.md`](docs/ci.md)). A pull request from a fork runs the hosted jobs once a maintainer approves the run; see [CONTRIBUTING](CONTRIBUTING.md).
 
 ## License
 

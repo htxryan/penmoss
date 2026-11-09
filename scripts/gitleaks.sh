@@ -8,6 +8,8 @@ VERSION=8.30.1
 case "$(uname -s)-$(uname -m)" in
   Darwin-arm64) asset=darwin_arm64 sum=b40ab0ae55c505963e365f271a8d3846efbc170aa17f2607f13df610a9aeb6a5 ;;
   Darwin-x86_64) asset=darwin_x64 sum=dfe101a4db2255fc85120ac7f3d25e4342c3c20cf749f2c20a18081af1952709 ;;
+  # CI's Check job runs on a hosted Ubuntu runner (A1235).
+  Linux-x86_64) asset=linux_x64 sum=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb ;;
   *) echo "gitleaks.sh: no pinned gitleaks for $(uname -s)-$(uname -m)" >&2; exit 2 ;;
 esac
 

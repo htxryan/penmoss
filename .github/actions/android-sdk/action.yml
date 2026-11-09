@@ -1,11 +1,12 @@
 name: Android SDK
 description: >-
   The Android command-line tools (checked against the SHA-256 of Google's archive), platform 37,
-  build tools 37.0.0 and any more packages asked for, in this Mac runner's tool cache
-  (_work/_tool/android-sdk), for the android and android-emulator jobs (docs/ci.md). Java tools
-  also see the tool cache as their home, so Robolectric's downloads (~/.m2) and the debug key
-  (~/.android) stay with the runner, out of the account's home folder. Run it after
-  .github/actions/setup (PENMOSS_CACHE) and actions/setup-java.
+  build tools 37.0.0 and any more packages asked for, in the runner's tool cache
+  (_tool/android-sdk), for the android, android-sideload and android-emulator jobs (docs/ci.md).
+  On Ubuntu the base SDK comes from actions/cache. On a Mac, Java tools also see the tool cache as
+  their home, so Robolectric's downloads (~/.m2) and the debug key (~/.android) stay with the
+  runner, out of the account's home folder. Run it after .github/actions/setup and
+  actions/setup-java.
 inputs:
   packages:
     description: More sdkmanager packages, separated by spaces (the emulator job's system image)
@@ -13,20 +14,39 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Android SDK platform 37 and build tools (Mac, into the runner's tool cache)
+    # The base SDK (the tools, platform 37 and build tools) is cached on Ubuntu. Only the android
+    # job saves it; the emulator job restores it and adds its own packages, which stay out of the
+    # cache (the system image alone is about 1.5 GB).
+    - name: Restore the Android SDK (Ubuntu)
+      id: restore
+      if: runner.os == 'Linux'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.tool_cache }}/android-sdk
+        key: android-sdk-${{ runner.os }}-${{ hashFiles('.github/actions/android-sdk/action.yml') }}
+
+    - name: Android SDK platform 37 and build tools (into the runner's tool cache)
       shell: bash
       env:
-        TOOLS_ZIP: commandlinetools-mac_arm64-16111833_latest.zip
-        TOOLS_SHA256: 58da8f215781cc0208743e88b65ae259780c55e7eb40e50373d377cf369232d6
         PACKAGES: ${{ inputs.packages }}
       run: |
+        case "$RUNNER_OS" in
+          macOS)
+            zip=commandlinetools-mac_arm64-16111833_latest.zip
+            sum=58da8f215781cc0208743e88b65ae259780c55e7eb40e50373d377cf369232d6 ;;
+          Linux)
+            # SHA-1 e025545c62a8e64c7559119566a569fb1dec5f60 in Google's repository2-3.xml.
+            zip=commandlinetools-linux-16111833_latest.zip
+            sum=0877a1d048fe4a24efe2eff536ca4223f7adeb58648bb81909d33c446918cfa8 ;;
+          *) echo "::error::No Android command-line tools for $RUNNER_OS"; exit 1 ;;
+        esac
         sdk="$RUNNER_TOOL_CACHE/android-sdk"
         tools="$sdk/cmdline-tools/16111833"
         if [ ! -x "$tools/bin/sdkmanager" ]; then
-          curl -fsSL --retry 3 -o "$RUNNER_TEMP/$TOOLS_ZIP" "https://dl.google.com/android/repository/$TOOLS_ZIP"
-          echo "$TOOLS_SHA256  $RUNNER_TEMP/$TOOLS_ZIP" | shasum -a 256 -c -
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/$zip" "https://dl.google.com/android/repository/$zip"
+          echo "$sum  $RUNNER_TEMP/$zip" | shasum -a 256 -c -
           rm -rf "$RUNNER_TEMP/cmdline-tools" "$tools"
-          unzip -q "$RUNNER_TEMP/$TOOLS_ZIP" -d "$RUNNER_TEMP"
+          unzip -q "$RUNNER_TEMP/$zip" -d "$RUNNER_TEMP"
           mkdir -p "$sdk/cmdline-tools"
           mv "$RUNNER_TEMP/cmdline-tools" "$tools"
         fi
@@ -36,6 +56,18 @@ runs:
         {
           echo "ANDROID_HOME=$sdk"
           echo "ANDROID_SDK_ROOT=$sdk"
-          echo "ANDROID_USER_HOME=$PENMOSS_CACHE/android-user-home"
-          echo "JAVA_TOOL_OPTIONS=-Duser.home=$PENMOSS_CACHE/java-home"
         } >> "$GITHUB_ENV"
+        # A Mac runner's account keeps nothing in its home folder; a hosted runner is thrown away.
+        if [ "$RUNNER_OS" = macOS ]; then
+          {
+            echo "ANDROID_USER_HOME=$PENMOSS_CACHE/android-user-home"
+            echo "JAVA_TOOL_OPTIONS=-Duser.home=$PENMOSS_CACHE/java-home"
+          } >> "$GITHUB_ENV"
+        fi
+
+    - name: Save the Android SDK (Ubuntu, the base packages only)
+      if: runner.os == 'Linux' && inputs.packages == '' && steps.restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.tool_cache }}/android-sdk
+        key: android-sdk-${{ runner.os }}-${{ hashFiles('.github/actions/android-sdk/action.yml') }}

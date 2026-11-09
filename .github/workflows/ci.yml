@@ -19,12 +19,12 @@ on:
       - '!**/*.md'
       - '**/test/**'
       - '!.claude/**'
-  # Builds the Mac app on any branch (A403) and publishes nothing. With ci_on_mac it also runs
-  # the CI jobs, on the Mac runners whether or not they are online (A404, docs/ci.md).
+  # Builds the Mac app on any branch (A403) and publishes nothing. With `ci` it also runs the CI
+  # jobs (docs/ci.md §5).
   workflow_dispatch:
     inputs:
-      ci_on_mac:
-        description: Also run the CI jobs, forced onto the Mac runners (docs/ci.md)
+      ci:
+        description: Also run the CI jobs (docs/ci.md §5)
         type: boolean
         default: false
 
@@ -33,8 +33,8 @@ permissions:
 
 concurrency:
   # A pull request's new push cancels its older run. Main's runs never queue behind each other
-  # (A403): a run waiting hours for the Mac must not hold up the next merge's APK. The jobs that
-  # change releases share their own group instead.
+  # (A403): a run whose Mac jobs wait hours for the Mac must not hold up the next merge's APK.
+  # The jobs that change releases share their own group instead.
   group: ${{ github.event_name == 'pull_request' && format('ci-{0}', github.ref) || format('ci-run-{0}', github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
@@ -45,23 +45,21 @@ env:
   # Mac's update feed and Android's versionCode never go back.
   PENMOSS_RUN_OFFSET: '1000'
 
+# Where each job runs (A1235, docs/ci.md §1). The repository is public, so GitHub's standard
+# hosted runners cost nothing: `ubuntu-latest` runs pick and every test job, a fork's pull
+# request's included, once a maintainer approves its run (docs/ci.md §9). Ryan's self-hosted
+# Macs keep what signs, publishes or is calibrated there: the budgets (A1160), the public APK
+# (the sideload key), the dmg (Developer ID, A406) and the release jobs. Each of those starts its
+# if: with the fork guard (P10, A1183), so a fork's pull request never reaches a Mac. Every
+# runs-on is static, and .github/scripts/runner-policy.mjs (task ci:lint) holds all of this.
 jobs:
   pick:
     name: Pick runners (the Mac if one is idle)
     # Which parts a change touches, so the other jobs skip what it can't affect (A1095). It used
-    # to pick runners too (A404); since A702 every job names its self-hosted Mac runner itself,
-    # never an expression that could resolve to a hosted one (A1218:
-    # .github/scripts/no-hosted-runners.mjs). The name is what ruleset "main: CI checks" requires
-    # (A1181): rename the two together.
-    # P10, A1183: a pull request from a fork runs nothing on the Mac runners. Every self-hosted
-    # job starts its if: with this guard (.github/scripts/workflow-guard.test.mjs checks it); a
-    # maintainer runs a fork's change by pushing it to a branch here (docs/ci.md §9).
-    if: >-
-      (github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository) &&
-      (github.event_name != 'workflow_dispatch' || inputs.ci_on_mac)
-    # A702: Ryan, 27 Oct 2026: never use GitHub's billed runners. Every job queues for a Mac.
-    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
+    # to pick runners too (A404); now every job names its runner itself (A1218, A1235). The
+    # name is what ruleset "main: CI checks" requires (A1181): rename the two together.
+    if: github.event_name != 'workflow_dispatch' || inputs.ci
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
@@ -160,17 +158,13 @@ jobs:
 
   check:
     name: Check
-    if: >-
-      (github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository) &&
-      needs.pick.outputs.check == 'true'
+    if: needs.pick.outputs.check == 'true'
     # Lint, typecheck and unit tests. The Playwright smoke suite runs in its own job below, in
-    # parallel, so neither nears the 20-minute limit as the suites grow (A371). It binds no
-    # fixed port (workerd's tests take free ones), so it takes a penmoss-mac-general runner
-    # and leaves the ports runner to the jobs that need it (A404).
+    # parallel, so neither nears its time limit as the suites grow (A371). About 8 minutes on a
+    # hosted runner on 24 Oct 2026 (docs/ci.md §6), more since.
     needs: pick
-    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
-    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -183,23 +177,14 @@ jobs:
       - name: Lint, typecheck and unit tests
         run: task check
 
-      - name: Empty the checkout (Mac)
-        if: always() && runner.os == 'macOS'
-        # Guarded: a failed checkout leaves no script, and nothing to clean.
-        run: if [ -f .github/scripts/mac-runner.sh ]; then bash .github/scripts/mac-runner.sh clean; fi
-
   site:
     name: Site (penmoss.app and its docs)
-    if: >-
-      (github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository) &&
-      needs.pick.outputs.site == 'true'
+    if: needs.pick.outputs.site == 'true'
     # T80.15, R13: builds the site (Astro, Starlight, the links validator, the docs' CSP hashes)
-    # and runs site/test under wrangler dev with the real _headers. It takes a free port of its
-    # own, so any Mac runs it.
+    # and runs site/test under wrangler dev with the real _headers, on a free port.
     needs: pick
-    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
-    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
     permissions:
       contents: read
     steps:
@@ -208,9 +193,12 @@ jobs:
           persist-credentials: false
 
       - uses: ./.github/actions/setup
+        with:
+          playwright-cache: 'true'
 
-      - name: Install Chromium (Mac, into the runner's tool cache)
-        run: pnpm --filter @penmoss/site exec playwright install chromium
+      - name: Install Chromium and its system libraries
+        timeout-minutes: 15
+        run: pnpm --filter @penmoss/site exec playwright install --with-deps chromium
 
       - name: Build the site and check it as served
         run: |
@@ -218,25 +206,17 @@ jobs:
           export PENMOSS_SITE_PORT
           task site:test
 
-      - name: Empty the checkout (Mac)
-        if: always() && runner.os == 'macOS'
-        # Guarded: a failed checkout leaves no script, and nothing to clean.
-        run: if [ -f .github/scripts/mac-runner.sh ]; then bash .github/scripts/mac-runner.sh clean; fi
-
   e2e:
     name: E2E smoke
-    if: >-
-      (github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository) &&
-      needs.pick.outputs.web == 'true'
-    # Binds two ports of its own for Vite and vite preview (A1140), so any Mac runs it.
+    if: needs.pick.outputs.web == 'true'
+    # A fresh hosted machine each time (A1235), so the default ports are free.
     needs: pick
-    runs-on: [self-hosted, macOS, ARM64, penmoss-mac]
-    # A620: on Ubuntu the suite alone takes 14–16 minutes now (130–140 tests, one worker; 9 in
-    # T40 P7), and apt fetched Chromium's system packages at 20–40 kB/s on 26 Oct 2026, so the
-    # install took 9–15 minutes and three main runs were cancelled at 20. Ryan's Mac runs it in
-    # about 7. Each step has its own limit below, so a hang still fails fast.
-    timeout-minutes: 40
+    runs-on: ubuntu-latest
+    # A620: on Ubuntu the suite took 14–16 minutes on 26 Oct 2026 (130–140 tests, then on one
+    # worker), and apt fetched Chromium's system packages at 20–40 kB/s that day, so the install
+    # took 9–15 minutes and three main runs were cancelled at 20. Each step has its own limit
+    # below, so a hang still fails fast.
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
@@ -245,23 +225,17 @@ jobs:
           persist-credentials: false
 
       - uses: ./.github/actions/setup
+        with:
+          playwright-cache: 'true'
 
-      - name: Install Chromium (Mac, into the runner's tool cache)
-        if: runner.os == 'macOS'
-        run: task e2e:install
-
-      - name: Pick this job's e2e ports (Mac)
-        if: runner.os == 'macOS'
-        run: bash .github/scripts/mac-runner.sh pick-ports
-
-      - name: Free the e2e ports (Mac)
-        if: runner.os == 'macOS'
-        run: bash .github/scripts/mac-runner.sh free-ports
+      - name: Install Chromium and its system libraries
+        timeout-minutes: 15
+        run: task e2e:install -- --with-deps
 
       - name: Playwright E2E (smoke)
-        # 16 minutes on Ubuntu, 7 on the Mac; twice that leaves room for retries (A620).
-        timeout-minutes: 25
-        # Frame-rate budgets (@perf) are measured locally: a shared 2-CPU runner's fps says
+        # Twice the 16 minutes it took on Ubuntu (A620) leaves room for retries.
+        timeout-minutes: 30
+        # Frame-rate budgets (@perf) are measured locally: a shared 4-CPU runner's fps says
         # nothing about Ryan's machines, and the budget stays enforced by `task e2e`. The
         # T31 budgets (@budget) run in their own job below.
         run: task e2e -- --grep-invert "@perf|@budget"
@@ -274,11 +248,6 @@ jobs:
           path: apps/web/playwright-report/
           retention-days: 7
 
-      - name: Stop servers and empty the checkout (Mac)
-        if: always() && runner.os == 'macOS'
-        # Guarded: a failed checkout leaves no script, and nothing to clean.
-        run: if [ -f .github/scripts/mac-runner.sh ]; then bash .github/scripts/mac-runner.sh clean --ports; fi
-
   budgets:
     name: Performance budgets
     if: >-
@@ -290,7 +259,9 @@ jobs:
     # vault (the server's FTS and D1 budgets went with the server, T59). Typing
     # p95 under 16 ms in a 10,000-word note and a note switch under 150 ms, in Chromium on
     # the production build. Each measures after a warm-up and asserts a median over runs.
-    # Binds two ports of its own (A1140), so any Mac runs it.
+    # A1235: on Ryan's Mac, where the budgets are calibrated (A1160, docs/ci.md §6), so a fork's
+    # pull request skips it (the fork guard). Binds two ports of its own (A1140), so any Mac runs
+    # it.
     needs: pick
     runs-on: [self-hosted, macOS, ARM64, penmoss-mac]
     timeout-minutes: 20
@@ -307,15 +278,12 @@ jobs:
         run: pnpm --filter @penmoss/sync-client perf
 
       - name: Install Chromium (Mac, into the runner's tool cache)
-        if: runner.os == 'macOS'
         run: task e2e:install
 
       - name: Pick this job's e2e ports (Mac)
-        if: runner.os == 'macOS'
         run: bash .github/scripts/mac-runner.sh pick-ports
 
       - name: Free the e2e ports (Mac)
-        if: runner.os == 'macOS'
         run: bash .github/scripts/mac-runner.sh free-ports
 
       - name: Typing and note-switch budgets (T31)
@@ -330,23 +298,21 @@ jobs:
           retention-days: 7
 
       - name: Stop servers and empty the checkout (Mac)
-        if: always() && runner.os == 'macOS'
+        if: always()
         # Guarded: a failed checkout leaves no script, and nothing to clean.
         run: if [ -f .github/scripts/mac-runner.sh ]; then bash .github/scripts/mac-runner.sh clean --ports; fi
 
   desktop:
     name: Mac app (Electron under xvfb)
-    # Its own job, so the web E2E job is not slowed: Electron's Playwright suite (T29, T30)
-    # runs the bundled app against the local Worker on this Ubuntu runner. It stays on Ubuntu
-    # (A404): Electron needs a window server, which a Mac runner without a login session (the
-    # dedicated user docs/ci.md recommends) does not have, and the hotkey test drives xdotool.
-    # A702: never on GitHub's billed runners, and the Mac runners have no window server, so this
-    # job is off until a free Linux runner exists. Run `task desktop:test` locally before a PR.
-    # F9: it moves to the Tart VM's runner (#252, W10), which rewrites the Ubuntu steps below;
-    # off until that runner exists.
-    if: false
-    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-vm]
-    timeout-minutes: 20
+    # Its own job, so the web E2E job is not slowed: Electron's Playwright suite (T29, T30) runs
+    # the bundled app under xvfb, with xdotool for the global hotkey. Off from A702 (no free Linux
+    # runner) until A1235 put it back on a hosted runner. On a Mac the same suite runs only in
+    # the Tart VM (`task desktop:test`, W10). Not a required check (A1181) until it has passed
+    # steadily for a while.
+    needs: pick
+    if: needs.pick.outputs.desktop == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -358,7 +324,15 @@ jobs:
         with:
           electron-cache: 'true'
 
+      # meaning.spec.ts's pinned EmbeddingGemma (about 219 MB), downloaded once per pin.
+      - name: Cache the embedding model the meaning tests use
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/penmoss-ci/models
+          key: models-${{ hashFiles('packages/embed/src/manifest.ts') }}
+
       - name: Chromium's system libraries, xvfb and xdotool (presses the global hotkey)
+        timeout-minutes: 15
         run: |
           pnpm --filter @penmoss/web exec playwright install-deps chromium
           sudo apt-get install -y --no-install-recommends xvfb xdotool
@@ -367,7 +341,9 @@ jobs:
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       - name: Mac app tests
-        run: task desktop:test
+        run: |
+          export PENMOSS_TEST_MODELS="$HOME/.cache/penmoss-ci/models"
+          task desktop:test
 
       - name: Upload the Electron Playwright report
         if: failure()
@@ -380,22 +356,92 @@ jobs:
   android:
     name: Android app (JVM and Robolectric tests, debug APK)
     # T32: the sync engine's and bridge's JVM tests, Room and Compose UI tests on
-    # Robolectric (no emulator), the instrumentation tests compiled, and the debug APK.
-    # No fixed ports, so a penmoss-mac-general runner (A404). On pushes too (A702): main's public
-    # APK, the release build signed with the sideload key (P8, A1187), is built there, as the Mac
-    # app is signed with the Developer ID (A406).
+    # Robolectric (no emulator), the instrumentation tests compiled, and the debug APK, on a
+    # hosted runner (A1235). Main's public APK, signed with the sideload key, is built on the
+    # Mac by android-sideload, below.
     needs: pick
+    if: needs.pick.outputs.android-app == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      # The committed gradle-wrapper.jar must be one Gradle published.
+      - uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # Gradle's dependencies and wrapper, and Robolectric's Android jars (~/.m2).
+      - name: Cache Gradle and Robolectric's downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.m2/repository
+          key: gradle-${{ runner.os }}-${{ hashFiles('apps/android/**/*.gradle.kts', 'apps/android/gradle/libs.versions.toml', 'apps/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      # The command-line tools, platform 37 and build tools, cached (.github/actions/android-sdk).
+      - uses: ./.github/actions/android-sdk
+
+      - name: Android tests
+        run: task android:test
+
+      # Every run's debug APK (app.penmoss.debug), signed with the runner's own debug key: the
+      # run's artifact, never published (P8).
+      - name: Debug APK
+        run: task android:build
+
+      - name: Upload the debug APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: penmoss-android-debug
+          path: apps/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
+
+      - name: Upload the Android test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-test-reports
+          path: |
+            apps/android/engine-bridge/build/reports/tests/
+            apps/android/app/build/reports/tests/
+          retention-days: 7
+
+      # So the cache is saved without a daemon still writing to it.
+      - name: Stop Gradle
+        if: always()
+        run: if [ -x apps/android/gradlew ]; then apps/android/gradlew -p apps/android --stop; fi
+
+  android-sideload:
+    name: Public APK (release-signed with the sideload key, on Ryan's Mac)
+    # On main, the public APK (P8, A1187): the release build of app.penmoss, signed with the
+    # stable sideload key (A400) and numbered by build, so each published APK installs over the
+    # last. A1235: signing stays on the Mac, as the dmg's does (A406), until Ryan moves it; the
+    # key reaches no hosted runner. Only once the android job's tests have passed.
+    needs: [pick, android]
     if: >-
       (github.event_name != 'pull_request' ||
       github.event.pull_request.head.repo.full_name == github.repository) &&
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       needs.pick.outputs.android-app == 'true'
     runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
     timeout-minutes: 30
     permissions:
       contents: read
-    # The sideload key and password live in this environment, limited to main (A405): a pull
-    # request's job, on a Mac or not, never receives them.
-    environment: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'android-sideload' || '' }}
+    # The sideload key and password live in this environment, limited to main (A405).
+    environment: android-sideload
     steps:
       - name: Build number (run number + PENMOSS_RUN_OFFSET, D65)
         run: echo "PENMOSS_RUN=$((GITHUB_RUN_NUMBER + PENMOSS_RUN_OFFSET))" >> "$GITHUB_ENV"
@@ -415,30 +461,11 @@ jobs:
           java-version: '21'
 
       # The Mac has no SDK of its own for CI: the command-line tools, platform 37 and build tools
-      # go in this runner's tool cache (.github/actions/android-sdk), shared with the
-      # android-emulator job's.
+      # go in this runner's tool cache (.github/actions/android-sdk).
       - uses: ./.github/actions/android-sdk
 
-      - name: Android tests
-        run: task android:test
-
-      # Every run's debug APK (app.penmoss.debug), signed with the runner's own debug key: the
-      # run's artifact, never published (P8).
-      - name: Debug APK
-        run: task android:build
-
-      - name: Upload the debug APK
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: penmoss-android-debug
-          path: apps/android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 7
-
-      # On main, the public APK (P8, A1187): the release build of app.penmoss, signed with the
-      # stable sideload key (A400) and numbered by build, so each published APK installs over the
-      # last. The key exists only in this step's runner temp folder, and is removed at the end.
-      - name: The public APK, release-signed with the sideload key (main only)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      # The key exists only in this step's runner temp folder, and is removed at the end.
+      - name: The public APK, release-signed with the sideload key
         env:
           KEYSTORE_B64: ${{ secrets.PENMOSS_SIDELOAD_KEYSTORE_B64 }}
           PENMOSS_SIDELOAD_PASSWORD: ${{ secrets.PENMOSS_SIDELOAD_PASSWORD }}
@@ -458,8 +485,7 @@ jobs:
           # Not debuggable, app.penmoss, v2 or later, and the sideload key's certificate.
           bash .github/scripts/apk-check.sh apps/android/app/build/outputs/apk/release/app-release.apk
 
-      - name: Upload the public APK (main only)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Upload the public APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: penmoss-android-sideload
@@ -469,18 +495,8 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload the Android test reports
-        if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: android-test-reports
-          path: |
-            apps/android/engine-bridge/build/reports/tests/
-            apps/android/app/build/reports/tests/
-          retention-days: 7
-
       - name: Remove the sideload key, stop Gradle and empty the checkout (Mac)
-        if: always() && runner.os == 'macOS'
+        if: always()
         # Guarded: a failed checkout leaves no script, and nothing to clean.
         run: |
           rm -f "$RUNNER_TEMP/sideload.jks"
@@ -490,21 +506,25 @@ jobs:
     name: Android app on an emulator (instrumented tests)
     # F9 (A1227): the instrumented tests (apps/android/app/src/androidTest) on a headless API 37
     # emulator, which the android job only compiles. Every instrumented test but NoteListJankTest,
-    # a frame-rate measurement for the Pixel (A285). Not a required check (A1181): it is new, and
-    # an emulator on a shared Mac may be flaky; it joins the ruleset once it has proved steady.
-    # Always emulator-5580 with adb's server on 5050 (.github/scripts/android-emulator.sh), never
-    # the factory's slots (5560, 5562), so one job runs at a time on the Mac: the script waits for
-    # the other runner's to finish. The AVD stays in this runner's tool cache between runs.
+    # a frame-rate measurement for the Pixel (A285). Not a required check (A1181): it is new; it
+    # joins the ruleset once it has proved steady. A1235: on a hosted runner with KVM, so the
+    # x86_64 image of A1227's API 37 Google APIs image (the factory slots' is arm64-v8a, which an
+    # x86_64 machine can't run natively). .github/scripts/android-emulator.sh still uses
+    # emulator-5580 and adb's server on 5050.
     needs: pick
-    if: >-
-      (github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository) &&
-      needs.pick.outputs.android-app == 'true'
-    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
+    if: needs.pick.outputs.android-app == 'true'
+    runs-on: ubuntu-latest
     timeout-minutes: 50
     permissions:
       contents: read
     steps:
+      # As reactivecircus/android-emulator-runner documents: the runner's user may use /dev/kvm.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -519,14 +539,24 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # The android job's SDK, with the emulator, adb and the API 37 image the factory's slots
-      # use (tools/factory/src/avd.ts). The first run downloads the image (about 1.5 GB) into the
-      # tool cache; later runs find it there.
+      # The android job's cache; that job saves it.
+      - name: Restore Gradle's downloads
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.m2/repository
+          key: gradle-${{ runner.os }}-${{ hashFiles('apps/android/**/*.gradle.kts', 'apps/android/gradle/libs.versions.toml', 'apps/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      # The android job's SDK, with the emulator, adb and the API 37 image. The image (about
+      # 1.5 GB) is downloaded on every run and never cached.
       - uses: ./.github/actions/android-sdk
         with:
-          packages: platform-tools emulator system-images;android-37.0;google_apis;arm64-v8a
+          packages: platform-tools emulator system-images;android-37.0;google_apis;x86_64
 
-      - name: The CI AVD (made once, in the runner's tool cache)
+      - name: The CI AVD
         run: bash .github/scripts/android-emulator.sh avd
 
       # Before the boot: a Gradle build beside a software-rendered emulator stops System UI
@@ -535,7 +565,7 @@ jobs:
         run: task android:build -- :app:assembleDebugAndroidTest
 
       - name: Instrumented tests on emulator-5580
-        # Up to 25 minutes waiting for the other runner's emulator, 5 to boot, then the tests.
+        # 5 minutes at most to boot, then the tests.
         timeout-minutes: 40
         run: bash .github/scripts/android-emulator.sh test
 
@@ -550,13 +580,11 @@ jobs:
             ${{ runner.temp }}/emulator.log
           retention-days: 7
 
-      - name: Stop the emulator, stop Gradle and empty the checkout (Mac)
+      - name: Stop the emulator
         if: always()
-        # Guarded: a failed checkout leaves no script, and nothing to clean. `stop` kills only
-        # this runner's own emulator and adb, even when the job was cancelled mid-run.
-        run: |
-          if [ -f .github/scripts/android-emulator.sh ]; then bash .github/scripts/android-emulator.sh stop; fi
-          if [ -f .github/scripts/mac-runner.sh ]; then bash .github/scripts/mac-runner.sh clean; fi
+        # Guarded: a failed checkout leaves no script. `stop` kills only the emulator and adb of
+        # the SDK in this runner's tool cache, even when the job was cancelled mid-run.
+        run: if [ -f .github/scripts/android-emulator.sh ]; then bash .github/scripts/android-emulator.sh stop; fi
 
   android-release:
     name: Publish the build's release (APK now, Mac app when the Mac has built it)
@@ -568,7 +596,7 @@ jobs:
       (github.event_name != 'pull_request' ||
       github.event.pull_request.head.repo.full_name == github.repository) &&
       github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: android
+    needs: android-sideload
     runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
     timeout-minutes: 15
     permissions:
@@ -589,7 +617,7 @@ jobs:
         with:
           node-version-file: .node-version
 
-      - name: The GitHub CLI is installed for the runner account (A702)
+      - name: The GitHub CLI is installed for the Mac runners' account
         run: command -v gh > /dev/null || { echo "::error::Install gh for the penmoss-ci account (brew install gh)"; exit 1; }
 
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
@@ -611,19 +639,19 @@ jobs:
   mac:
     name: Mac app dmg (on Ryan's Mac)
     # A403: every merge to main, and workflow_dispatch on any branch, packages the Mac app on
-    # Ryan's Mac, a self-hosted runner (GitHub's macOS runners bill 10x). The Mac may be asleep
-    # for hours: nothing else waits for this job, and a newer build of the same branch cancels
-    # one still waiting or running. The runner is protected by who can push, not by the event:
-    # any branch's own workflow file can run code on it (docs/ci.md).
+    # Ryan's Mac, a self-hosted runner, where main's build is signed with the Developer ID (A406).
+    # The Mac may be asleep for hours: nothing else waits for this job, and a newer build of the
+    # same branch cancels one still waiting or running. The runner is protected by who can push,
+    # not by the event: any branch's own workflow file can run code on it (docs/ci.md §7).
     # A1095: on main, only when something the Mac app is built from changed. A dispatch always
-    # builds it, with or without the CI jobs (pick is skipped without ci_on_mac).
+    # builds it, with or without the CI jobs (pick is skipped without `ci`).
     needs: pick
     if: >-
       (github.event_name != 'pull_request' ||
       github.event.pull_request.head.repo.full_name == github.repository) &&
       !cancelled() && (github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' && needs.pick.outputs.desktop == 'true'))
-    # A general runner, so the ports runner stays free for the e2e and budgets jobs.
+    # A general runner, so the ports runner stays free for the budgets job.
     runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
     timeout-minutes: 30
     permissions:
@@ -766,7 +794,7 @@ jobs:
         with:
           node-version-file: .node-version
 
-      - name: The GitHub CLI is installed for the runner account (A702)
+      - name: The GitHub CLI is installed for the Mac runners' account
         run: command -v gh > /dev/null || { echo "::error::Install gh for the penmoss-ci account (brew install gh)"; exit 1; }
 
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
