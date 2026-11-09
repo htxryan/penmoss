@@ -10,7 +10,7 @@ interface Shown {
 /**
  * One tooltip for the whole app (T36, A189). A control with `data-tip` shows
  * it after the mouse rests on it as long as Settings → Display → Show Tooltips
- * After says (1 second unset, never on hover with Never; PEN-70, A-NEW-1), or
+ * After says (1 second unset, never on hover with Never; PEN-70, A1247), or
  * at once when it gets keyboard focus; it goes on pointer down, Escape, scroll
  * and blur. Moving on to the next control waits the full delay again. The control's name is its
  * `aria-label` (and shortcut, `aria-keyshortcuts`), so the tooltip is hidden

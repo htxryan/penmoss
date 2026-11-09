@@ -7,7 +7,7 @@ import {
   tooltipDelayChoice,
 } from '../src/tooltips';
 
-// PEN-70 (A-NEW-1): Settings → Display → Show Tooltips After, the synced `tooltip.delay`.
+// PEN-70 (A1247): Settings → Display → Show Tooltips After, the synced `tooltip.delay`.
 
 const delayOf = (value: unknown) => tooltipDelay({ [TOOLTIP_DELAY_SETTING]: value });
 

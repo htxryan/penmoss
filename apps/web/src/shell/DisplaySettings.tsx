@@ -240,7 +240,7 @@ function NoteBarSettings() {
 }
 
 /**
- * Show Tooltips After (PEN-70, A-NEW-1): how long the mouse rests on a control before its
+ * Show Tooltips After (PEN-70, A1247): how long the mouse rests on a control before its
  * tooltip shows, or Never. Keyboard focus shows a tooltip at once whatever it says. Synced like
  * the rest of Display.
  */

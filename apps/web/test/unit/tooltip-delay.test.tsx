@@ -7,7 +7,7 @@ import { TooltipLayer } from '../../src/shell/Tooltip';
 import { WorkspaceContext } from '../../src/workspace/hooks';
 import type { Workspace } from '../../src/workspace/service';
 
-// PEN-70 (A-NEW-1): tooltips wait as long as Settings → Display → Show Tooltips After says
+// PEN-70 (A1247): tooltips wait as long as Settings → Display → Show Tooltips After says
 // (1000 ms unset, never on hover with Never); keyboard focus still shows one at once.
 
 let root: Root | null = null;

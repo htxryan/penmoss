@@ -1,5 +1,5 @@
 /**
- * How long a tooltip waits (PEN-70, A-NEW-1, amends A189): the mouse pointer rests on a control
+ * How long a tooltip waits (PEN-70, A1247, amends A189): the mouse pointer rests on a control
  * this long before its tooltip shows, as Settings → Display → Show Tooltips After says. One
  * synced per-user setting, like the rest of Display (A576, A1134), so the choice follows the
  * user to every device:

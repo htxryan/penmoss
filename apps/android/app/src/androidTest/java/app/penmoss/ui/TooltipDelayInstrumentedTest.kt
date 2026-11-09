@@ -21,7 +21,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * PEN-70's Android proof (A-NEW-1): the web and Mac apps' synced "Show Tooltips After"
+ * PEN-70's Android proof (A1247): the web and Mac apps' synced "Show Tooltips After"
  * (`tooltip.delay`) has no row on the phone, and a synced value, Never included, changes
  * nothing on Settings → Display. Phones have no hover, and Android times a long press itself
  * (A657). Run in the factory's proof with

@@ -10,7 +10,7 @@ import { useWorkspace } from '../workspace/hooks';
 import type { Workspace } from '../workspace/service';
 
 /**
- * Show Tooltips After (PEN-70, A-NEW-1): how long the mouse rests on a control before its
+ * Show Tooltips After (PEN-70, A1247): how long the mouse rests on a control before its
  * tooltip shows, from the app's own settings (the Journal notebook's, A827, as the rest of
  * Display), and a way to change it. Synced, so a change here or on another device applies to
  * the next hover.

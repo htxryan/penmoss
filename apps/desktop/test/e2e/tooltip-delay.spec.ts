@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { collectErrors, gitNotebook, go, launch, removeDataDirs, type Launched } from './support';
 
-// PEN-70 (A-NEW-1) in the Mac app: tooltips wait 1 second by default; Settings → Display → Show
+// PEN-70 (A1247) in the Mac app: tooltips wait 1 second by default; Settings → Display → Show
 // Tooltips After chooses 0.5, 1, 1.5 or 2 seconds, or Never on hover, and the next hover uses
 // it with no reload. Keyboard focus still shows a tooltip at once.
 

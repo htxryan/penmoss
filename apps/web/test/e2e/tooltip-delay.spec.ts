@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from './fixtures';
 import { storedSetting } from './stored';
 
-// PEN-70 (A-NEW-1), in the web app (the Mac app runs the same page): tooltips wait 1 second by
+// PEN-70 (A1247), in the web app (the Mac app runs the same page): tooltips wait 1 second by
 // default, and Settings → Display → Show Tooltips After chooses 0.5, 1, 1.5 or 2 seconds, or
 // Never on hover. Keyboard focus still shows a tooltip at once. A change applies to the next
 // hover, with no reload, and is stored as the synced `tooltip.delay`.
