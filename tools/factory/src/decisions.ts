@@ -6,6 +6,8 @@
  * own instructions, say) or one it never defined is left alone.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { format, resolveConfig } from 'prettier';
 
 /** The highest `A<n>` decision number in a text. */
 export function maxDecision(text: string): number {
@@ -136,4 +138,19 @@ export function renumberLines(
       lines.has(i + 1) ? line.replaceAll(/\bA\d{1,5}\b/g, (id) => renumbered[id] ?? id) : line,
     )
     .join('\n');
+}
+
+/** The factory's own docs/decisions.md: where its Prettier settings are read, never the branch's. */
+const OWN_DECISIONS = fileURLToPath(new URL('../../../docs/decisions.md', import.meta.url));
+
+/**
+ * docs/decisions.md formatted as `task check` wants it, once its placeholders are numbered.
+ * `A-NEW-1` is wider than the table's ID column, so an agent's own Prettier run pads every row
+ * to fit it; the number that replaces it is narrower, and the gate's Prettier check failed on
+ * the table (PEN-70's run, 9 Nov 2026). The settings are the factory's own, with no plugins:
+ * a branch's Prettier config could load code on the host.
+ */
+export async function formatDecisions(text: string): Promise<string> {
+  const options = (await resolveConfig(OWN_DECISIONS, { editorconfig: false })) ?? {};
+  return format(text, { ...options, plugins: [], filepath: OWN_DECISIONS });
 }

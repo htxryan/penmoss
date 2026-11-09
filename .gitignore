@@ -38,3 +38,6 @@ site/src/data/release.json
 # Worktrees Claude Code sessions make inside the checkout.
 .claude/worktrees/
 .sandcastle/
+
+# The factory's working files in a run's worktree: result.json, mockups, validation (A1248).
+/.factory/

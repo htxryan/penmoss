@@ -19,6 +19,7 @@
     "vitest": "5.0.5"
   },
   "dependencies": {
-    "@ai-hero/sandcastle": "0.14.0"
+    "@ai-hero/sandcastle": "0.14.0",
+    "prettier": "3.9.10"
   }
 }
