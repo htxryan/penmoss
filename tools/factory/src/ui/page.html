@@ -6,32 +6,89 @@
     <title>Penmoss Factory</title>
     <style>
       :root {
-        --bg: #f6f5f1;
+        --bg: #fbfaf8;
         --panel: #ffffff;
-        --ink: #1d1c1a;
-        --muted: #6b6860;
-        --line: #e4e1d8;
-        --accent: #2f6f4f;
-        --warn-bg: #fff4e0;
-        --warn-line: #e8b765;
-        --warn-ink: #6b4300;
-        --bad: #b3261e;
-        --chip: #efede6;
+        --sunk: #f3f2ee;
+        --ink: #1c1b19;
+        --muted: #5e5c57;
+        --line: #e7e4dd;
+        --accent: #2448b8;
+        --accent-ink: #ffffff;
+        --sel: #e9eefb;
+        --live-bg: #e3eefc;
+        --live-line: #9dbeeb;
+        --live-ink: #0e3466;
+        --you-bg: #fff1d9;
+        --you-line: #e9b867;
+        --you-ink: #5a3700;
+        --stop-bg: #fde7e4;
+        --stop-line: #e59a90;
+        --stop-ink: #7a1b13;
+        --card-bg: #f3e9fb;
+        --card-line: #c9a6e8;
+        --card-ink: #4e2177;
+        --idle-bg: #f1f2f4;
+        --idle-line: #d9dde3;
+        --idle-ink: #3a4350;
+        --done-bg: #e5f4eb;
+        --done-line: #9cd3b4;
+        --done-ink: #174a2e;
+        --past: #9cd3b4;
+        --todo: #e4e2dc;
+        --ok: #2e8b57;
+        --bad: #c8372d;
+        --warn: #b86e00;
+        --code: #f4f1ea;
+        /* The step marker, by whose turn it is. */
+        --m-live: #2f62c9;
+        --m-you: #c98a12;
+        --m-stop: #c8372d;
+        --m-card: #8a4fc4;
+        --m-idle: #8b9099;
+        --m-done: #3e9b6a;
         color-scheme: light;
       }
       @media (prefers-color-scheme: dark) {
         :root {
-          --bg: #161614;
-          --panel: #201f1d;
+          --bg: #141413;
+          --panel: #1d1c1a;
+          --sunk: #262522;
           --ink: #ecebe6;
-          --muted: #a29f96;
+          --muted: #a8a59c;
           --line: #34322e;
-          --accent: #7cc39b;
-          --warn-bg: #2e2412;
-          --warn-line: #8a6623;
-          --warn-ink: #f2cf8c;
-          --bad: #f2a29c;
-          --chip: #2b2a27;
+          --accent: #8fb0ff;
+          --accent-ink: #0d1a3a;
+          --sel: #22304f;
+          --live-bg: #16283f;
+          --live-line: #34598a;
+          --live-ink: #cfe0fa;
+          --you-bg: #33260f;
+          --you-line: #8a6623;
+          --you-ink: #f6d9a0;
+          --stop-bg: #3a1a17;
+          --stop-line: #8a3a32;
+          --stop-ink: #ffc3bc;
+          --card-bg: #2c1f3a;
+          --card-line: #6a4a8c;
+          --card-ink: #e3cdfa;
+          --idle-bg: #262729;
+          --idle-line: #44474c;
+          --idle-ink: #cdd2d9;
+          --done-bg: #16301f;
+          --done-line: #2f6b45;
+          --done-ink: #bfe9cf;
+          --past: #2f6b45;
+          --todo: #3a3834;
+          --ok: #6bd49a;
+          --bad: #ff8a80;
+          --warn: #f2b85b;
+          --code: #262522;
+          --m-live: #6f9bff;
+          --m-you: #f2b85b;
+          --m-stop: #ff8a80;
+          --m-card: #c39bf0;
+          --m-idle: #8d939b;
+          --m-done: #6bd49a;
           color-scheme: dark;
         }
       }
@@ -48,247 +105,808 @@
           'Segoe UI',
           sans-serif;
       }
-      header {
-        display: flex;
-        align-items: baseline;
-        gap: 12px;
-        flex-wrap: wrap;
-        padding: 16px;
-        border-bottom: 1px solid var(--line);
-      }
-      h1 {
-        font-size: 17px;
-        margin: 0;
-      }
-      #daemon {
-        color: var(--muted);
-        font-size: 13px;
-      }
-      #daemon.bad {
-        color: var(--bad);
-      }
-      main {
-        padding: 16px;
-        display: grid;
-        gap: 16px;
-      }
-      h2 {
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--muted);
-        margin: 0 0 8px;
-        display: flex;
-        gap: 6px;
-      }
-      h2 .count {
-        color: var(--ink);
-      }
-      #waiting {
-        background: var(--warn-bg);
-        border: 1px solid var(--warn-line);
-        border-radius: 10px;
-        padding: 12px;
-      }
-      #waiting h2 {
-        color: var(--warn-ink);
-      }
-      #waiting:not(:has(.card)) {
-        display: none;
-      }
-      #board {
-        display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        gap: 12px;
-        align-items: start;
-      }
-      .column {
-        min-width: 0;
-      }
-      .cards {
-        display: grid;
-        gap: 8px;
-      }
-      .card {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 10px 12px;
-        min-width: 0;
-      }
-      .card:target {
-        outline: 2px solid var(--accent);
-      }
-      .title {
-        font-weight: 600;
-        overflow-wrap: anywhere;
-      }
-      .num {
-        color: var(--muted);
-        font-weight: 400;
-      }
-      .step {
-        margin-top: 4px;
-      }
-      .since {
-        color: var(--muted);
-        font-size: 12px;
-      }
-      .reason {
-        margin-top: 6px;
-        color: var(--warn-ink);
-        font-weight: 500;
-        overflow-wrap: anywhere;
-      }
-      .open {
-        margin: 4px 0 0;
-        padding-left: 18px;
-      }
-      .links {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 8px;
-      }
-      .links a {
-        background: var(--chip);
-        color: var(--ink);
-        text-decoration: none;
-        padding: 2px 8px;
-        border-radius: 999px;
-        font-size: 12px;
-      }
-      .links a:hover {
+      a {
         color: var(--accent);
       }
-      .links a.desktop {
-        background: var(--accent);
-        color: var(--bg);
+      code,
+      pre {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
       }
-      .empty {
+      button {
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        min-height: 36px;
+        padding: 0 14px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        color: var(--ink);
+        cursor: pointer;
+      }
+      button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-ink);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .top {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 18px;
+        padding: 10px 20px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+      }
+      .top .name {
+        font-size: 16px;
+        font-weight: 700;
+      }
+      .switch {
+        display: flex;
+        background: var(--sunk);
+        border-radius: 9px;
+        padding: 3px;
+        gap: 2px;
+      }
+      .switch a {
+        font-size: 13px;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 7px;
+        text-decoration: none;
+        color: var(--muted);
+        min-height: 32px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .switch a[aria-current='page'] {
+        background: var(--panel);
+        color: var(--ink);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+      }
+      .badge {
+        font-size: 12px;
+        font-weight: 700;
+        background: var(--bad);
+        color: #fff;
+        border-radius: 999px;
+        padding: 0 7px;
+      }
+      .health {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        padding: 4px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        border: 1px solid;
+      }
+      .health .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      .h-running {
+        background: var(--done-bg);
+        border-color: var(--done-line);
+        color: var(--done-ink);
+      }
+      .h-paused {
+        background: var(--you-bg);
+        border-color: var(--you-line);
+        color: var(--you-ink);
+      }
+      .h-stale,
+      .h-dead,
+      .h-missing {
+        background: var(--stop-bg);
+        border-color: var(--stop-line);
+        color: var(--stop-ink);
+      }
+      .facts {
+        margin: 0;
         color: var(--muted);
         font-size: 13px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px 14px;
+        flex: 1 1 360px;
+      }
+      .alert {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 14px;
+        padding: 10px 20px;
+        border-bottom: 1px solid var(--stop-line);
+        background: var(--stop-bg);
+        color: var(--stop-ink);
+      }
+      .alert.soft {
+        background: var(--you-bg);
+        color: var(--you-ink);
+        border-color: var(--you-line);
+      }
+      .alert.info {
+        background: var(--idle-bg);
+        color: var(--idle-ink);
+        border-color: var(--idle-line);
+      }
+      .cmd {
+        display: inline-flex;
+        flex-wrap: wrap;
+        max-width: 100%;
+        align-items: center;
+        gap: 8px;
+        background: var(--code);
+        border-radius: 8px;
+        padding: 3px 3px 3px 10px;
+        color: var(--ink);
+      }
+      .cmd code {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      .cmd button {
+        min-height: 30px;
+        padding: 0 10px;
+      }
+      body.stale #app {
+        opacity: 0.55;
+      }
+      #problem:empty {
+        display: none;
       }
       #problem {
+        padding: 8px 20px;
         color: var(--bad);
       }
-      @media (max-width: 900px) {
-        #board {
-          grid-template-columns: 1fr;
-        }
+      .pill {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        padding: 3px 7px;
+        border-radius: 5px;
+        white-space: nowrap;
+        text-transform: uppercase;
+        border: 1px solid;
       }
-      .actions {
-        margin-top: 10px;
-        display: grid;
-        gap: 8px;
+      .t-live {
+        background: var(--live-bg);
+        border-color: var(--live-line);
+        color: var(--live-ink);
       }
-      .answers {
-        display: grid;
+      .t-you {
+        background: var(--you-bg);
+        border-color: var(--you-line);
+        color: var(--you-ink);
+      }
+      .t-stop {
+        background: var(--stop-bg);
+        border-color: var(--stop-line);
+        color: var(--stop-ink);
+      }
+      .t-card {
+        background: var(--card-bg);
+        border-color: var(--card-line);
+        color: var(--card-ink);
+      }
+      .t-idle {
+        background: var(--idle-bg);
+        border-color: var(--idle-line);
+        color: var(--idle-ink);
+      }
+      .t-done {
+        background: var(--done-bg);
+        border-color: var(--done-line);
+        color: var(--done-ink);
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 0;
+      }
+      .chip {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: var(--sunk);
+        color: var(--muted);
+      }
+      .steps {
+        display: flex;
         gap: 4px;
       }
-      .answers .q {
-        font-weight: 500;
+      .steps .s {
+        flex: 1 1 0;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        font-size: 11px;
+        color: var(--muted);
+        min-width: 0;
+      }
+      .steps .bar {
+        height: 8px;
+        border-radius: 4px;
+        background: var(--todo);
+        border: 0;
+      }
+      .steps .past .bar {
+        background: var(--past);
+      }
+      .steps .now {
+        font-weight: 700;
+      }
+      .steps.mini .s span:last-child {
+        display: none;
+      }
+      .steps.mini .bar {
+        height: 5px;
+      }
+      .steps .s.now {
+        background: none;
+        border: 0;
+        color: var(--ink);
+      }
+      .steps .now.t-live .bar {
+        background: var(--m-live);
+      }
+      .steps .now.t-you .bar {
+        background: var(--m-you);
+      }
+      .steps .now.t-stop .bar {
+        background: var(--m-stop);
+      }
+      .steps .now.t-card .bar {
+        background: var(--m-card);
+      }
+      .steps .now.t-idle .bar {
+        background: var(--m-idle);
+      }
+      .steps .now.t-done .bar {
+        background: var(--m-done);
+      }
+      /* Inbox */
+      .inbox {
+        display: flex;
+        flex-wrap: wrap;
+        border-bottom: 1px solid var(--line);
+      }
+      .list {
+        flex: 1 1 340px;
+        max-width: 420px;
+        border-right: 1px solid var(--line);
+        padding: 14px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .list h2 {
+        margin: 10px 12px 4px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .item {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 10px 12px;
+        border-radius: 10px;
+        text-decoration: none;
+        color: var(--ink);
+      }
+      .item:hover {
+        background: var(--sunk);
+      }
+      .item[aria-current='true'] {
+        background: var(--sel);
+        outline: 2px solid var(--accent);
+      }
+      .item .body {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .item .head {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .item .line {
+        font-size: 12.5px;
+        color: var(--muted);
+      }
+      .item .age {
+        font-size: 12px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .pane {
+        flex: 999 1 560px;
+        min-width: 0;
+        padding: 6px 10px;
+      }
+      .quiet {
+        margin: 12px;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+      .empty {
+        padding: 40px 24px;
+        color: var(--muted);
+      }
+      /* Detail */
+      .detail {
+        padding: 18px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        background: var(--panel);
+      }
+      .detail .bar1 {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+      }
+      .detail .bar1 .when {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .close {
+        font-size: 20px;
+        line-height: 1;
+        color: var(--muted);
+        text-decoration: none;
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .detail h2 {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.25;
+      }
+      .detail h2 a {
+        color: var(--ink);
+        text-decoration: none;
+      }
+      .todo {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .todo h3,
+      .detail h3 {
+        margin: 0;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+      }
+      .todo p {
+        margin: 0;
+        font-size: 15px;
+      }
+      .answers {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
       }
       .choices,
       .row {
         display: flex;
         flex-wrap: wrap;
-        gap: 6px;
+        gap: 8px;
         align-items: center;
       }
-      button {
+      .reply {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .reply textarea {
         font: inherit;
-        font-size: 12px;
+        padding: 10px 12px;
         border: 1px solid var(--line);
+        border-radius: 8px;
+        resize: vertical;
+        min-height: 70px;
         background: var(--panel);
         color: var(--ink);
-        border-radius: 6px;
-        padding: 3px 10px;
-        cursor: pointer;
-      }
-      button:hover {
-        border-color: var(--accent);
-      }
-      button.primary {
-        background: var(--accent);
-        border-color: var(--accent);
-        color: var(--bg);
-      }
-      button:disabled {
-        opacity: 0.5;
-        cursor: default;
-      }
-      textarea {
-        width: 100%;
-        min-height: 56px;
-        font: inherit;
-        color: var(--ink);
-        background: var(--bg);
-        border: 1px solid var(--line);
-        border-radius: 6px;
-        padding: 6px 8px;
-        resize: vertical;
-      }
-      .row label {
-        font-size: 12px;
-        color: var(--muted);
-        display: flex;
-        gap: 4px;
-        align-items: center;
       }
       .note {
-        font-size: 12px;
+        margin: 0;
+        font-size: 12.5px;
         color: var(--muted);
       }
-      .note:empty {
+      .said:empty {
         display: none;
       }
-      .card.quiet .actions {
-        display: none;
+      .log {
+        margin: 0;
+        background: #141413;
+        color: #e9e3d6;
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 11.5px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 220px;
+        overflow: auto;
       }
-      .card.quiet:hover .actions,
-      .card.quiet:focus-within .actions {
+      .runs p {
+        margin: 0;
+        display: flex;
+        gap: 10px;
+        font-size: 13px;
+      }
+      .runs .at,
+      .out .at {
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 12px;
+        color: var(--muted);
+        flex: 0 0 44px;
+      }
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 16px;
+        font-size: 13.5px;
+      }
+      /* Today */
+      .today {
+        padding: 18px 20px 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .today h2 {
+        margin: 0;
+        font-size: 15px;
+      }
+      .tl {
+        overflow-x: auto;
+      }
+      .tl .inner {
+        min-width: 720px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .lane-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+      .lane-row .lname {
+        flex: 0 0 60px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .lane {
+        position: relative;
+        height: 30px;
+        flex: 1 1 auto;
+        background: var(--sunk);
+        border-radius: 6px;
+      }
+      .ticks {
+        position: relative;
+        height: 16px;
+        flex: 1 1 auto;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .ticks span {
+        position: absolute;
+      }
+      .barx {
+        position: absolute;
+        top: 4px;
+        height: 22px;
+        min-width: 4px;
+        border-radius: 5px;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 20px;
+        padding: 0 6px;
+        overflow: hidden;
+        white-space: nowrap;
+        text-decoration: none;
+        border: 1px solid;
+      }
+      .out {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .out p {
+        margin: 0;
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        font-size: 13.5px;
+      }
+      /* Pipeline */
+      .pipe {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+      .board {
+        flex: 999 1 640px;
+        min-width: 0;
+        overflow-x: auto;
+      }
+      .grid {
         display: grid;
+        grid-template-columns: minmax(200px, 260px) repeat(9, minmax(68px, 1fr));
+        min-width: 860px;
       }
-      @media (hover: none) {
-        .card.quiet .actions {
-          display: grid;
+      .hd {
+        font-size: 11.5px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding: 10px 8px;
+        border-left: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+      .hd:first-child {
+        border-left: 0;
+        padding-left: 14px;
+      }
+      .grp {
+        grid-column: 1 / -1;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--muted);
+        padding: 14px 14px 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        background: var(--bg);
+        border-bottom: 1px solid var(--line);
+      }
+      .prow {
+        display: contents;
+        color: var(--ink);
+        text-decoration: none;
+      }
+      .prow > div {
+        border-bottom: 1px solid var(--line);
+        min-height: 58px;
+      }
+      .prow:hover > div {
+        background: var(--sunk);
+      }
+      .prow[aria-current='true'] > div {
+        background: var(--sel);
+      }
+      .lbl {
+        padding: 8px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        justify-content: center;
+        min-width: 0;
+      }
+      .lbl .k {
+        font-size: 13.5px;
+        font-weight: 700;
+      }
+      .lbl .k span {
+        font-weight: 500;
+      }
+      .lbl .phone {
+        display: none;
+      }
+      .cell {
+        border-left: 1px solid var(--line);
+        padding: 8px 6px;
+        display: flex;
+        align-items: center;
+        min-width: 0;
+      }
+      .cell .past {
+        height: 4px;
+        width: 100%;
+        background: var(--past);
+        border-radius: 2px;
+      }
+      .mark {
+        width: 100%;
+        min-width: 0;
+        border-radius: 8px;
+        padding: 5px 6px;
+        font-size: 11.5px;
+        line-height: 1.35;
+        border: 1px solid;
+        overflow-wrap: break-word;
+        hyphens: auto;
+      }
+      .mark b {
+        display: block;
+      }
+      /* The detail has the whole story: a marker shows its first lines. */
+      .mark span {
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .side {
+        flex: 0 1 440px;
+        min-width: 0;
+        max-width: 520px;
+        border-left: 1px solid var(--line);
+        box-shadow: -8px 0 24px rgba(16, 24, 40, 0.06);
+      }
+      .legend {
+        padding: 14px 20px;
+        font-size: 12.5px;
+        color: var(--muted);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 24px;
+      }
+      @media (max-width: 760px) {
+        .top {
+          padding: 10px 16px;
+        }
+        .list {
+          max-width: none;
+          border-right: 0;
+        }
+        .inbox.has-sel .list {
+          display: none;
+        }
+        .inbox:not(.has-sel) .pane {
+          display: none;
+        }
+        .detail {
+          padding: 16px;
+        }
+        .grid {
+          display: block;
+          min-width: 0;
+        }
+        .hd,
+        .cell {
+          display: none;
+        }
+        .prow {
+          display: block;
+        }
+        .prow > div {
+          min-height: 0;
+        }
+        .lbl .phone {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          margin-top: 4px;
+        }
+        .pipe.has-sel .board {
+          display: none;
+        }
+        .side {
+          max-width: none;
+          border-left: 0;
+          box-shadow: none;
         }
       }
     </style>
   </head>
   <body>
-    <header>
-      <h1>Penmoss Factory</h1>
-      <span id="daemon">Connecting…</span>
-      <span id="problem"></span>
-    </header>
-    <main>
-      <section id="waiting">
-        <h2>Waiting on you <span class="count"></span></h2>
-        <div class="cards"></div>
-      </section>
-      <section id="board"></section>
-    </main>
+    <div id="top"></div>
+    <div id="problem" role="alert"></div>
+    <main id="app"></main>
     <script>
       const SAFE = /^(https:\/\/|claude:\/\/)/;
+      const NARROW = window.matchMedia('(max-width: 760px)');
+      let view = null;
+      const drafts = new Map();
+      const notes = new Map();
+
       function el(tag, cls, text) {
         const e = document.createElement(tag);
         if (cls) e.className = cls;
-        if (text !== undefined) e.textContent = text;
+        if (text !== undefined && text !== null) e.textContent = text;
         return e;
       }
       function ago(iso) {
         if (!iso) return '';
         const s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
-        if (s < 60) return 'just now';
-        if (s < 3600) return `${Math.floor(s / 60)} min ago`;
-        if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
-        return `${Math.floor(s / 86400)} d ago`;
+        if (s < 60) return `${Math.floor(s)} s`;
+        if (s < 3600) return `${Math.floor(s / 60)} min`;
+        if (s < 86400) return `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min`;
+        return `${Math.floor(s / 86400)} d`;
       }
-      let writable = true;
+      function hhmm(iso) {
+        return new Date(iso).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          hourCycle: 'h23',
+        });
+      }
+      function since(iso, prefix = '') {
+        const s = el('span', 'since', iso ? prefix + ago(iso) : '');
+        if (iso) {
+          s.dataset.since = iso;
+          s.dataset.prefix = prefix;
+        }
+        return s;
+      }
+      function link(l) {
+        if (!SAFE.test(l.href)) return null;
+        const a = el('a', '', l.label);
+        a.href = l.href;
+        if (l.href.startsWith('https:')) {
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+        }
+        return a;
+      }
+      function copyBox(text) {
+        const box = el('span', 'cmd');
+        box.append(el('code', '', text));
+        const b = el('button', '', 'Copy');
+        b.type = 'button';
+        b.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(text);
+            b.textContent = 'Copied';
+          } catch {
+            b.textContent = 'Select and copy';
+          }
+        });
+        box.append(b);
+        return box;
+      }
+
+      // Routing: #inbox, #pipeline, #inbox/issue-75; a notification's #issue-75 opens the card.
+      function route() {
+        const h = location.hash.replace(/^#/, '');
+        const m = /^(?:(inbox|pipeline)\/?)?(?:issue-(\d+))?$/.exec(h) || [];
+        let mode = m[1];
+        if (!mode) {
+          try {
+            mode = localStorage.getItem('factory-view') || 'inbox';
+          } catch {
+            mode = 'inbox';
+          }
+        }
+        if (mode !== 'pipeline') mode = 'inbox';
+        return { mode, issue: m[2] ? Number(m[2]) : null };
+      }
+      const href = (mode, issue) => `#${mode}${issue ? `/issue-${issue}` : ''}`;
+
       async function act(body, box) {
-        const note = box.querySelector('.note');
+        const note = box.querySelector('.said');
         for (const b of box.querySelectorAll('button, textarea')) b.disabled = true;
         note.textContent = 'Sending…';
         try {
@@ -298,167 +916,527 @@
             body: JSON.stringify(body),
           });
           const j = await r.json().catch(() => ({}));
-          note.textContent = r.ok ? j.done : `Failed: ${j.error || r.status}`;
-          if (r.ok)
-            box.querySelector('textarea')?.value && (box.querySelector('textarea').value = '');
+          const said = r.ok ? j.done : `Failed: ${j.error || r.status}`;
+          notes.set(body.issue, said);
+          note.textContent = said;
+          if (r.ok && body.kind === 'reply') drafts.delete(body.issue);
+          if (r.ok) {
+            const t = box.querySelector('textarea');
+            if (t && body.kind === 'reply') t.value = '';
+          }
         } catch (e) {
           note.textContent = `Failed: ${e}`;
         } finally {
-          for (const b of box.querySelectorAll('button, textarea')) b.disabled = false;
+          for (const b of box.querySelectorAll('button, textarea')) b.disabled = !view.writable;
         }
       }
       function button(label, cls, onClick) {
         const b = el('button', cls, label);
         b.type = 'button';
+        if (!view.writable) {
+          b.disabled = true;
+          b.title = view.readOnly || 'Read-only';
+        }
         b.addEventListener('click', onClick);
         return b;
       }
-      function actions(c) {
-        const box = el('div', 'actions');
+
+      // Shared pieces: the step marker, the chips, the detail.
+      function steps(c, mini) {
+        const row = el('div', mini ? 'steps mini' : 'steps');
+        row.setAttribute('role', 'img');
+        row.setAttribute('aria-label', `Step: ${view.stages[c.stage]}, ${c.step}`);
+        view.stages.forEach((name, i) => {
+          const s = el('div', i < c.stage ? 's past' : i === c.stage ? `s now t-${c.tone}` : 's');
+          s.append(el('span', 'bar'), el('span', '', name));
+          row.append(s);
+        });
+        return row;
+      }
+      function chips(c) {
+        const p = el('p', 'chips');
+        const add = (t) => t && p.append(el('span', 'chip', t));
+        add(c.status);
+        if (c.agent) add(`${c.agent} / ${c.model}`);
+        if (c.slot) add(`slot ${c.slot}`);
+        if (c.pr) add(`PR #${c.pr.split('/').at(-1)}`);
+        if (c.round) add(c.round);
+        if (c.priority) add(['', 'Urgent', 'High', 'Medium', 'Low'][c.priority]);
+        return p;
+      }
+      function pill(c) {
+        return el(
+          'span',
+          `pill t-${c.tone}`,
+          c.need ? c.need.label : c.paused ? 'Paused' : c.group === 'done' ? 'Done' : c.status,
+        );
+      }
+      function detail(c, mode) {
+        const box = el('article', 'detail');
+        box.id = `issue-${c.number}`;
+        const bar = el('div', 'bar1');
+        const left = el('div', 'row');
+        left.append(pill(c));
+        if (c.since) {
+          const t = since(c.since, c.need ? 'waiting ' : 'for ');
+          t.classList.add('when');
+          left.append(t);
+        }
+        const close = el('a', 'close', '×');
+        close.href = href(mode, null);
+        close.setAttribute('aria-label', 'Close');
+        bar.append(left, close);
+        const h = el('h2');
+        const k = el('a', '', c.key);
+        k.href = SAFE.test(c.url) ? c.url : '#';
+        k.target = '_blank';
+        k.rel = 'noopener noreferrer';
+        h.append(k, document.createTextNode(` ${c.title}`));
+        box.append(bar, h, chips(c), steps(c, false));
+
+        const todo = el('section', 'todo');
+        todo.append(el('h3', '', c.need ? 'What you need to do' : 'Where it is'));
+        todo.append(el('p', '', c.need ? c.need.what : c.step));
+        if (c.need?.command) todo.append(copyBox(c.need.command));
+        if (c.heldBy.length)
+          todo.append(
+            el(
+              'p',
+              '',
+              `Held until ${c.heldBy.join(', ')} ${c.heldBy.length > 1 ? 'finish' : 'finishes'}: there's no Blocked to clear for that.`,
+            ),
+          );
+        if (c.open.length) {
+          const ul = el('ul');
+          for (const o of c.open) ul.append(el('li', '', o));
+          todo.append(ul);
+        }
+        box.append(todo);
+
+        const actions = el('section', 'reply');
         for (const q of c.questions) {
           const a = el('div', 'answers');
-          a.append(el('div', 'q', q.text));
+          a.append(el('strong', '', q.text));
           const choices = el('div', 'choices');
-          q.options.forEach((o, i) =>
+          q.options.forEach((o) =>
             choices.append(
-              button(o, i === 0 ? 'primary' : '', () =>
-                act({ kind: 'answer', issue: c.number, question: q.text, option: o }, box),
+              button(o, '', () =>
+                act({ kind: 'answer', issue: c.number, question: q.text, option: o }, actions),
               ),
             ),
           );
           a.append(choices);
-          box.append(a);
+          actions.append(a);
         }
-        const text = el('textarea');
-        text.placeholder = `Reply on ${c.key}`;
-        text.setAttribute('aria-label', `Reply on ${c.key}`);
-        const unblock = el('input');
-        unblock.type = 'checkbox';
-        unblock.checked = c.blocked;
-        const label = el('label');
-        label.append(unblock, document.createTextNode('and clear Blocked'));
-        const row = el('div', 'row');
-        row.append(
-          button(
-            'Send',
-            '',
-            () =>
-              text.value.trim() &&
-              act(
-                { kind: 'reply', issue: c.number, text: text.value, unblock: unblock.checked },
-                box,
-              ),
-          ),
-        );
-        if (c.blocked) row.append(label);
-        if (c.canComplete)
-          row.append(
-            button('Complete', 'primary', () => act({ kind: 'complete', issue: c.number }, box)),
-          );
-        row.append(
-          button(c.blocked ? 'Clear Blocked' : 'Set Blocked', '', () =>
-            act({ kind: 'block', issue: c.number, on: !c.blocked }, box),
-          ),
-        );
-        box.append(text, row, el('div', 'note'));
-        return box;
-      }
-      function card(c) {
-        const box = el('article', 'card');
-        box.id = `issue-${c.number}`;
-        const title = el('div', 'title');
-        title.append(el('span', 'num', `${c.key} `), document.createTextNode(c.title));
-        box.append(title, el('div', 'step', c.step));
-        if (c.since) {
-          const t = el('div', 'since', ago(c.since));
-          t.dataset.since = c.since;
-          box.append(t);
-        }
-        if (c.reason) box.append(el('div', 'reason', c.reason));
-        if (c.open.length) {
-          const ul = el('ul', 'open');
-          for (const o of c.open) ul.append(el('li', '', o));
-          box.append(ul);
-        }
-        const links = el('div', 'links');
-        for (const l of c.links) {
-          if (!SAFE.test(l.href)) continue;
-          const a = el('a', l.href.startsWith('claude:') ? 'desktop' : '', l.label);
-          a.href = l.href;
-          if (l.href.startsWith('https:')) {
-            a.target = '_blank';
-            a.rel = 'noopener noreferrer';
+        if (c.group !== 'done') {
+          const id = `reply-${c.number}`;
+          const label = el('label', '', `Reply on ${c.key}, posted as you`);
+          label.htmlFor = id;
+          const text = el('textarea');
+          text.id = id;
+          text.rows = 3;
+          text.value = drafts.get(c.number) || '';
+          text.disabled = !view.writable;
+          text.addEventListener('input', () => drafts.set(c.number, text.value));
+          const row = el('div', 'row');
+          const retry = c.group === 'queue' || c.stage <= 1 ? 'Unblock' : 'Retry';
+          const reply = (unblock) =>
+            text.value.trim() &&
+            act({ kind: 'reply', issue: c.number, text: text.value, unblock }, actions);
+          if (c.blocked) {
+            row.append(
+              button(`Post and ${retry.toLowerCase()}`, 'primary', () => reply(true)),
+              button(retry, '', () => act({ kind: 'block', issue: c.number, on: false }, actions)),
+              button('Post only', '', () => reply(false)),
+            );
+          } else {
+            row.append(button('Post', '', () => reply(false)));
           }
-          links.append(a);
+          if (c.canComplete)
+            row.append(
+              button('Complete: agree the plan', 'primary', () =>
+                act({ kind: 'complete', issue: c.number }, actions),
+              ),
+            );
+          if (!c.blocked)
+            row.append(
+              button('Block', '', () => act({ kind: 'block', issue: c.number, on: true }, actions)),
+            );
+          actions.append(label, text, row);
+          if (c.blocked && retry === 'Retry')
+            actions.append(
+              el('p', 'note', 'Retry clears Blocked: the run starts again on its branch.'),
+            );
+        }
+        const said = el('p', 'note said', notes.get(c.number) || '');
+        said.setAttribute('role', 'status');
+        actions.append(said);
+        box.append(actions);
+
+        if (c.log.length) {
+          box.append(el('h3', '', 'Agent log'));
+          box.append(el('pre', 'log', c.log.join('\n')));
+        }
+        if (c.runFolder) {
+          const r = el('div', 'row');
+          r.append(el('span', 'note', 'Run folder'), copyBox(c.runFolder));
+          box.append(r);
+        }
+        if (c.runs.length) {
+          const runs = el('section', 'runs');
+          runs.append(el('h3', '', `Runs (${c.runs.length})`));
+          for (const r of c.runs) {
+            const p = el('p');
+            p.append(
+              el('span', 'at', hhmm(r.startedAt)),
+              el('span', '', `${r.slot ? `Slot ${r.slot}: ` : ''}${r.summary}`),
+            );
+            runs.append(p);
+          }
+          box.append(runs);
+        }
+        const links = el('p', 'links');
+        for (const l of c.links) {
+          const a = link(l);
+          if (a) links.append(a);
         }
         box.append(links);
-        if (writable && c.status !== 'Done') {
-          if (!c.blocked && !c.canComplete) box.classList.add('quiet');
-          box.append(actions(c));
-        }
         return box;
       }
-      function render(v) {
-        writable = v.writable;
-        // Keep a reply being typed: skip a redraw while a text box has focus and text.
-        const typing =
-          document.activeElement?.tagName === 'TEXTAREA' && document.activeElement.value;
-        if (typing) {
-          pending = v;
+
+      function header(v, mode) {
+        const top = el('header', 'top');
+        top.append(el('span', 'name', 'Factory'));
+        const nav = el('nav', 'switch');
+        nav.setAttribute('aria-label', 'View');
+        const tab = (m, label, count) => {
+          const a = el('a', '', label);
+          a.href = href(m, route().issue);
+          if (m === mode) a.setAttribute('aria-current', 'page');
+          if (count) a.append(el('span', 'badge', String(count)));
+          return a;
+        };
+        nav.append(tab('inbox', 'Inbox', v.needs.length), tab('pipeline', 'Pipeline'));
+        const h = v.health;
+        const status = el('div', `health h-${h.state}`);
+        status.setAttribute('role', 'status');
+        status.append(el('span', 'dot'), el('span', '', h.headline));
+        const facts = el('p', 'facts');
+        if (h.pid) facts.append(el('span', '', `pid ${h.pid}`));
+        if (h.commit)
+          facts.append(el('span', '', `${h.commit.sha.slice(0, 7)} ${h.commit.subject}`));
+        if (h.updatedAt) {
+          const p = el('span');
+          p.append(
+            document.createTextNode('polled '),
+            since(h.updatedAt),
+            document.createTextNode(' ago'),
+          );
+          facts.append(p);
+        }
+        facts.append(el('span', '', `slots ${h.slots.busy}/${h.slots.total}`));
+        if (h.doctor) facts.append(el('span', '', h.doctor));
+        top.append(nav, status, facts);
+        const out = [top];
+        if (!h.fresh || h.state === 'paused') {
+          const a = el('div', h.fresh ? 'alert soft' : 'alert');
+          a.setAttribute('role', 'alert');
+          a.append(el('strong', '', h.headline), el('span', '', h.detail));
+          if (h.fix) a.append(copyBox(h.fix));
+          out.push(a);
+        }
+        for (const p of h.problems) {
+          const a = el('div', 'alert soft');
+          a.append(el('span', '', p.text));
+          if (p.fix) a.append(copyBox(p.fix));
+          out.push(a);
+        }
+        if (!v.writable) {
+          const a = el('div', 'alert info');
+          a.append(
+            el(
+              'span',
+              '',
+              `Read-only: ${v.readOnly}. Buttons stay off until the UI can write as you.`,
+            ),
+          );
+          out.push(a);
+        }
+        return out;
+      }
+
+      function item(c, mode, selected) {
+        const a = el('a', 'item');
+        a.href = href(mode, c.number);
+        if (selected) a.setAttribute('aria-current', 'true');
+        const body = el('div', 'body');
+        const head = el('div', 'head');
+        head.append(pill(c), el('span', '', c.key));
+        body.append(
+          head,
+          el('span', '', c.title),
+          el('span', 'line', c.need ? c.need.what : c.step),
+        );
+        body.append(steps(c, true));
+        a.append(body);
+        if (c.since) {
+          const t = since(c.since);
+          t.classList.add('age');
+          a.append(t);
+        }
+        return a;
+      }
+
+      // A link to a card the factory isn't handling now: Done long ago, or never its card.
+      function missing(v, mode) {
+        const n = route().issue;
+        const p = el(
+          'p',
+          'empty',
+          n === null
+            ? 'Pick a card.'
+            : `Card ${n} isn't one the factory is handling now: it may be Done, or was never claimed. `,
+        );
+        if (n !== null) {
+          const a = el(
+            'a',
+            '',
+            `All cards (${v.needs.length} need${v.needs.length === 1 ? 's' : ''} you)`,
+          );
+          a.href = href(mode, null);
+          p.append(a);
+        }
+        return p;
+      }
+      function inbox(v, sel) {
+        const asked = route().issue !== null;
+        const wrap = el('div', sel || asked ? 'inbox has-sel' : 'inbox');
+        const list = el('nav', 'list');
+        list.setAttribute('aria-label', 'Cards');
+        list.append(el('h2', '', `Needs you · ${v.needs.length}`));
+        if (!v.needs.length) list.append(el('p', 'quiet', 'Nothing needs you.'));
+        for (const c of v.needs) list.append(item(c, 'inbox', sel?.number === c.number));
+        const working = v.cards.filter((c) => c.group === 'working');
+        list.append(el('h2', '', `Working · ${working.length}`));
+        for (const c of working) list.append(item(c, 'inbox', sel?.number === c.number));
+        const queue = v.cards.filter((c) => c.group === 'queue');
+        if (queue.length)
+          list.append(
+            el(
+              'p',
+              'quiet',
+              `Queue: ${queue.map((c) => `${c.key}${c.heldBy.length ? ' (held)' : c.paused ? ' (paused)' : ''}`).join(', ')}.`,
+            ),
+          );
+        if (v.outside.length)
+          list.append(
+            el(
+              'p',
+              'quiet',
+              `${v.outside.length} In Progress or In Review card${v.outside.length === 1 ? " isn't" : "s aren't"} the factory's (never claimed): ${v.outside.join(', ')}.`,
+            ),
+          );
+        const pane = el('section', 'pane');
+        pane.setAttribute('aria-label', 'Card detail');
+        pane.append(sel ? detail(sel, 'inbox') : missing(v, 'inbox'));
+        wrap.append(list, pane);
+        return [wrap, today(v)];
+      }
+
+      function today(v) {
+        const sec = el('section', 'today');
+        sec.setAttribute('aria-label', 'Today');
+        const head = el('div', 'row');
+        head.append(el('h2', '', 'Last 12 hours, by slot'));
+        const t = v.totals;
+        head.append(
+          el(
+            'span',
+            'note',
+            `${t.started} started · ${t.inReview} reached review${t.merged ? ` · ${t.merged} merged` : ''} · ${t.blocked} stopped`,
+          ),
+        );
+        sec.append(head);
+        const from = Date.parse(v.timeline.from);
+        const to = Date.parse(v.timeline.to);
+        const pct = (iso) => `${(((Date.parse(iso) - from) / (to - from)) * 100).toFixed(2)}%`;
+        const tl = el('div', 'tl');
+        const inner = el('div', 'inner');
+        const ticksRow = el('div', 'lane-row');
+        const ticks = el('div', 'ticks');
+        const first = new Date(from);
+        first.setMinutes(0, 0, 0);
+        for (let h = first.getTime() + 3600000; h < to; h += 3600000 * 2) {
+          const s = el('span', '', hhmm(new Date(h).toISOString()));
+          s.style.left = pct(new Date(h).toISOString());
+          ticks.append(s);
+        }
+        ticksRow.append(el('span', 'lname'), ticks);
+        inner.append(ticksRow);
+        for (const lane of v.timeline.lanes) {
+          const row = el('div', 'lane-row');
+          const l = el('div', 'lane');
+          for (const b of lane.bars) {
+            const a = el('a', `barx t-${b.tone}`, b.key);
+            a.href = href('inbox', b.issue);
+            const start = Math.max(from, Date.parse(b.start));
+            a.style.left = pct(new Date(start).toISOString());
+            a.style.width = `max(4px, ${(((Date.parse(b.end) - start) / (to - from)) * 100).toFixed(2)}%)`;
+            a.title = `${b.key} ${hhmm(b.start)}–${hhmm(b.end)}: ${b.label}`;
+            a.setAttribute('aria-label', a.title);
+            l.append(a);
+          }
+          row.append(el('span', 'lname', `Slot ${lane.slot}`), l);
+          inner.append(row);
+        }
+        tl.append(inner);
+        sec.append(tl);
+        const out = el('div', 'out');
+        for (const o of v.outcomes) {
+          const p = el('p');
+          const k = el('a', '', o.key);
+          k.href = href('inbox', o.issue);
+          const what = el('strong', '', o.what);
+          p.append(el('span', 'at', hhmm(o.at)), k, what, el('span', '', o.detail));
+          out.append(p);
+        }
+        if (!v.outcomes.length) out.append(el('p', 'note', 'Nothing yet.'));
+        sec.append(out);
+        return sec;
+      }
+
+      function pipeline(v, sel) {
+        const wrap = el('div', sel || route().issue !== null ? 'pipe has-sel' : 'pipe');
+        const board = el('section', 'board');
+        const grid = el('div', 'grid');
+        // Each row is a link to the card's detail; the step columns are drawn, not a data table.
+        board.setAttribute('aria-label', 'Pipeline');
+        const counts = v.stages.map((_, i) => v.cards.filter((c) => c.stage === i).length);
+        grid.append(el('div', 'hd', 'Card'));
+        v.stages.forEach((s, i) =>
+          grid.append(el('div', 'hd', counts[i] ? `${s} ${counts[i]}` : s)),
+        );
+        const groups = [
+          ['needs', 'Needs you'],
+          ['working', 'Working'],
+          ['queue', 'Queue'],
+          ['done', 'Done recently'],
+        ];
+        for (const [g, name] of groups) {
+          const cards = v.cards.filter((c) => c.group === g);
+          if (!cards.length) continue;
+          grid.append(el('div', 'grp', `${name} · ${cards.length}`));
+          for (const c of cards) {
+            const row = el('a', 'prow');
+            row.href = href('pipeline', c.number);
+            if (sel?.number === c.number) row.setAttribute('aria-current', 'true');
+            const lbl = el('div', 'lbl');
+            const k = el('span', 'k', `${c.key} `);
+            k.append(el('span', '', c.title));
+            lbl.append(k, chips(c));
+            const phone = el('div', 'phone');
+            phone.append(steps(c, true), el('span', 'line', c.need ? c.need.what : c.step));
+            lbl.append(phone);
+            row.append(lbl);
+            v.stages.forEach((_, i) => {
+              const cell = el('div', 'cell');
+              if (i < c.stage) cell.append(el('span', 'past'));
+              else if (i === c.stage) {
+                const m = el('div', `mark t-${c.tone}`);
+                m.title = c.need ? c.need.what : c.step;
+                m.append(
+                  el('b', '', c.need ? c.need.label : c.paused ? 'Paused' : ''),
+                  el('span', '', c.step),
+                );
+                if (!m.firstChild.textContent) m.firstChild.remove();
+                cell.append(m);
+              }
+              row.append(cell);
+            });
+            grid.append(row);
+          }
+        }
+        if (!v.cards.length) grid.append(el('div', 'grp', 'No cards'));
+        board.append(grid);
+        wrap.append(board);
+        if (sel || route().issue !== null) {
+          const side = el('aside', 'side');
+          side.setAttribute('aria-label', 'Card detail');
+          side.append(sel ? detail(sel, 'pipeline') : missing(v, 'pipeline'));
+          wrap.append(side);
+        }
+        const legend = el('p', 'legend');
+        legend.append(
+          el(
+            'span',
+            '',
+            'Blue: the factory is working · amber: your turn · red: stopped · purple: won’t start · grey: queued or paused.',
+          ),
+        );
+        if (v.outside.length)
+          legend.append(
+            el(
+              'span',
+              '',
+              `Not shown: ${v.outside.length} card${v.outside.length === 1 ? '' : 's'} the factory never claimed (${v.outside.join(', ')}).`,
+            ),
+          );
+        return [wrap, legend];
+      }
+
+      function render() {
+        const v = view;
+        if (!v) return;
+        // Keep a reply being typed: skip a redraw while a text box has focus.
+        if (document.activeElement?.tagName === 'TEXTAREA') {
+          pendingRender = true;
           return;
         }
-        const d = document.getElementById('daemon');
-        d.textContent = v.daemon
-          ? v.daemon.stale
-            ? `Daemon silent since ${ago(v.daemon.updatedAt)}`
-            : `Daemon running · updated ${ago(v.daemon.updatedAt)}`
-          : 'Daemon not running (task factory:start)';
-        d.className = !v.daemon || v.daemon.stale ? 'bad' : '';
-        const w = document.querySelector('#waiting .cards');
-        w.replaceChildren(...v.waiting.map(card));
-        document.querySelector('#waiting .count').textContent = v.waiting.length || '';
-        const board = document.getElementById('board');
-        board.replaceChildren(
-          ...v.columns.map((col) => {
-            const s = el('section', 'column');
-            const h = el('h2', '', col.name);
-            h.append(el('span', 'count', col.cards.length ? String(col.cards.length) : ''));
-            const list = el('div', 'cards');
-            list.append(
-              ...(col.cards.length ? col.cards.map(card) : [el('div', 'empty', 'Nothing here')]),
-            );
-            s.append(h, list);
-            return s;
-          }),
-        );
-        if (location.hash)
-          document.querySelector(location.hash)?.scrollIntoView({ block: 'center' });
+        const r = route();
+        try {
+          localStorage.setItem('factory-view', r.mode);
+        } catch {
+          // Storage off: the view just isn't remembered.
+        }
+        let issue = r.issue;
+        if (issue === null && r.mode === 'inbox' && !NARROW.matches)
+          issue = v.needs[0]?.number ?? null;
+        const sel = v.cards.find((c) => c.number === issue) || null;
+        document.body.classList.toggle('stale', !v.health.fresh);
+        document.title = v.needs.length ? `(${v.needs.length}) Penmoss Factory` : 'Penmoss Factory';
+        document.getElementById('top').replaceChildren(...header(v, r.mode));
+        const app = document.getElementById('app');
+        app.replaceChildren(...(r.mode === 'pipeline' ? pipeline(v, sel) : inbox(v, sel)));
+        if (r.issue !== null && NARROW.matches)
+          document.getElementById(`issue-${r.issue}`)?.scrollIntoView();
       }
-      let pending = null;
+      let pendingRender = false;
       document.addEventListener('focusout', () =>
         setTimeout(() => {
-          if (pending && document.activeElement?.tagName !== 'TEXTAREA') {
-            const v = pending;
-            pending = null;
-            render(v);
+          if (pendingRender && document.activeElement?.tagName !== 'TEXTAREA') {
+            pendingRender = false;
+            render();
           }
         }, 0),
       );
+      window.addEventListener('hashchange', render);
       const events = new EventSource('/events');
       events.onmessage = (m) => {
         document.getElementById('problem').textContent = '';
-        render(JSON.parse(m.data));
+        view = JSON.parse(m.data);
+        render();
       };
       events.addEventListener('problem', (m) => {
         document.getElementById('problem').textContent = JSON.parse(m.data);
       });
       events.onerror = () => {
-        document.getElementById('problem').textContent = 'Reconnecting…';
+        document.getElementById('problem').textContent =
+          'Lost the Factory UI; reconnecting… (task factory:ui:open)';
       };
       setInterval(() => {
         for (const t of document.querySelectorAll('[data-since]'))
-          t.textContent = ago(t.dataset.since);
-      }, 30000);
+          t.textContent = (t.dataset.prefix || '') + ago(t.dataset.since);
+      }, 1000);
     </script>
   </body>
 </html>

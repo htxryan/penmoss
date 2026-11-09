@@ -130,8 +130,8 @@ export function createUiServer(options: UiOptions): Server {
       const push = async () => {
         try {
           const json = JSON.stringify(await options.view());
-          // updatedAt changes every time; compare the rest.
-          const key = json.replace(/"updatedAt":"[^"]*",/, '');
+          // updatedAt and the status's age change every time; compare the rest.
+          const key = json.replace(/"updatedAt":"[^"]*",/, '').replace(/"ageSeconds":\d+/, '');
           if (!closed && key !== last) {
             last = key;
             res.write(`data: ${json}\n\n`);
