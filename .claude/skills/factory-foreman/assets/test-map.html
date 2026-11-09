@@ -1,0 +1,1297 @@
+<title>Factory Test Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+/>
+<style>
+  /* Layout: a header with the run's tallies, the system map in three bands (services, Ryan's Mac, sandboxes), then the run's steps and the bug log side by side. */
+  :root {
+    --bg: #f3f5f2;
+    --surface: #ffffff;
+    --ink: #18211d;
+    --muted: #5b6862;
+    --line: #c9d2cd;
+    --band: #e8ece8;
+    --ok: #1d8656;
+    --ok-soft: #dcefe4;
+    --run: #2a63cf;
+    --run-soft: #dde7fa;
+    --todo: #8e9a94;
+    --todo-soft: #eceeec;
+    --bug: #d3362a;
+    --bug-soft: #fbe2df;
+    --na: #b0a894;
+    --display: 'Familjen Grotesk', 'Helvetica Neue', Arial, sans-serif;
+    --body: 'Public Sans', system-ui, -apple-system, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --bg: #111613;
+      --surface: #19201c;
+      --ink: #e3eae6;
+      --muted: #93a29a;
+      --line: #33403a;
+      --band: #161d19;
+      --ok: #3cc386;
+      --ok-soft: #173327;
+      --run: #6f9dff;
+      --run-soft: #1b2843;
+      --todo: #6c7a73;
+      --todo-soft: #1e2622;
+      --bug: #ff5b4b;
+      --bug-soft: #3a1c19;
+      --na: #7f7867;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme='dark'] {
+    --bg: #111613;
+    --surface: #19201c;
+    --ink: #e3eae6;
+    --muted: #93a29a;
+    --line: #33403a;
+    --band: #161d19;
+    --ok: #3cc386;
+    --ok-soft: #173327;
+    --run: #6f9dff;
+    --run-soft: #1b2843;
+    --todo: #6c7a73;
+    --todo-soft: #1e2622;
+    --bug: #ff5b4b;
+    --bug-soft: #3a1c19;
+    --na: #7f7867;
+    color-scheme: dark;
+  }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 var(--body);
+  }
+  .wrap {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 28px 48px;
+    display: grid;
+    gap: 22px;
+  }
+  header {
+    display: grid;
+    gap: 10px;
+  }
+  .eyebrow {
+    font: 500 12px var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  h1 {
+    font: 700 clamp(26px, 4vw, 38px)/1.1 var(--display);
+    margin: 0;
+    text-wrap: balance;
+  }
+  h2 {
+    font: 600 19px/1.2 var(--display);
+    margin: 0 0 10px;
+  }
+  .now {
+    max-width: 75ch;
+    color: var(--muted);
+    margin: 0;
+  }
+  .now b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .tallies {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tally {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px 5px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    font: 500 13px var(--mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: none;
+  }
+  .d-ok {
+    background: var(--ok);
+  }
+  .d-run {
+    background: var(--run);
+  }
+  .d-todo {
+    background: var(--todo);
+  }
+  .d-bug {
+    background: var(--bug);
+  }
+  .d-fix {
+    background: transparent;
+    box-shadow: inset 0 0 0 2px var(--bug);
+  }
+  .d-na {
+    background: transparent;
+    box-shadow: inset 0 0 0 2px var(--na);
+  }
+  .map {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow-x: auto;
+  }
+  .map svg {
+    display: block;
+    width: 100%;
+    min-width: 980px;
+    height: auto;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 20px;
+    font-size: 13px;
+    color: var(--muted);
+    padding: 12px 16px;
+    border-top: 1px solid var(--line);
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    gap: 22px;
+    align-items: start;
+  }
+  @media (max-width: 860px) {
+    .cols {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px;
+    min-width: 0;
+  }
+  ol.steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 2px;
+  }
+  ol.steps li {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: baseline;
+    padding: 6px 4px;
+    border-bottom: 1px solid var(--band);
+  }
+  ol.steps li:last-child {
+    border-bottom: 0;
+  }
+  .n {
+    font: 500 12px var(--mono);
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .steps .what {
+    min-width: 0;
+  }
+  .steps .what small {
+    display: block;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .chip {
+    font: 500 11px var(--mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .c-ok {
+    background: var(--ok-soft);
+    color: var(--ok);
+  }
+  .c-run {
+    background: var(--run-soft);
+    color: var(--run);
+  }
+  .c-todo {
+    background: var(--todo-soft);
+    color: var(--muted);
+  }
+  .c-bug {
+    background: var(--bug-soft);
+    color: var(--bug);
+  }
+  .c-na {
+    background: transparent;
+    color: var(--na);
+    box-shadow: inset 0 0 0 1px var(--na);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .tbl {
+    overflow-x: auto;
+  }
+  th {
+    text-align: left;
+    font: 500 11px var(--mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--band);
+    vertical-align: top;
+  }
+  td.where {
+    font: 400 12px var(--mono);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  tr.sel td {
+    background: var(--band);
+  }
+  .detail {
+    display: grid;
+    gap: 6px;
+  }
+  .detail h3 {
+    font: 600 17px var(--display);
+    margin: 0;
+  }
+  .detail ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+  .detail li {
+    margin: 2px 0;
+  }
+  .updated {
+    font: 400 12px var(--mono);
+    color: var(--muted);
+  }
+
+  /* the map */
+  .band-bg {
+    fill: var(--band);
+  }
+  .band-label {
+    fill: var(--muted);
+    font: 500 11px var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .node rect.box {
+    fill: var(--surface);
+    stroke: var(--line);
+    stroke-width: 1.2;
+  }
+  .node .stripe {
+    stroke: none;
+  }
+  .node text.t {
+    fill: var(--ink);
+    font: 600 14px var(--display);
+  }
+  .node text.s {
+    fill: var(--muted);
+    font: 400 11px var(--mono);
+  }
+  .node {
+    cursor: pointer;
+  }
+  .node:focus {
+    outline: none;
+  }
+  .node:focus rect.box,
+  .node.sel rect.box {
+    stroke: var(--ink);
+    stroke-width: 2;
+  }
+  .st-ok .stripe {
+    fill: var(--ok);
+  }
+  .st-run .stripe {
+    fill: var(--run);
+  }
+  .st-todo .stripe {
+    fill: var(--todo);
+  }
+  .st-bug .stripe {
+    fill: var(--bug);
+  }
+  .st-na .stripe {
+    fill: var(--na);
+  }
+  .st-na rect.box {
+    stroke-dasharray: 4 4;
+  }
+  .halo {
+    fill: none;
+    stroke-width: 2;
+    opacity: 0;
+  }
+  .st-run .halo {
+    stroke: var(--run);
+    animation: halo 2.4s ease-in-out infinite;
+  }
+  .st-bug .halo {
+    stroke: var(--bug);
+    animation: halo 1.6s ease-in-out infinite;
+  }
+  @keyframes halo {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 0.9;
+    }
+  }
+  .edge {
+    fill: none;
+    stroke-width: 2;
+  }
+  .e-ok {
+    stroke: var(--ok);
+    stroke-dasharray: 2 9;
+    stroke-linecap: round;
+    stroke-width: 3;
+    animation: flow 1.8s linear infinite;
+  }
+  .e-run {
+    stroke: var(--run);
+    stroke-dasharray: 7 7;
+    animation: flow 0.9s linear infinite;
+  }
+  .e-todo {
+    stroke: var(--todo);
+    stroke-dasharray: 3 6;
+    opacity: 0.75;
+  }
+  .e-bug {
+    stroke: var(--bug);
+    stroke-dasharray: 7 7;
+    animation: flow 0.9s linear infinite;
+  }
+  .e-na {
+    stroke: var(--na);
+    stroke-dasharray: 1 6;
+    opacity: 0.6;
+  }
+  .edge-under {
+    fill: none;
+    stroke: var(--line);
+    stroke-width: 1;
+    opacity: 0.5;
+  }
+  @keyframes flow {
+    to {
+      stroke-dashoffset: -22;
+    }
+  }
+  .stepno circle {
+    stroke-width: 1.5;
+    fill: var(--surface);
+  }
+  .stepno text {
+    font: 600 10px var(--mono);
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+  .sn-ok circle {
+    stroke: var(--ok);
+  }
+  .sn-ok text {
+    fill: var(--ok);
+  }
+  .sn-run circle {
+    stroke: var(--run);
+  }
+  .sn-run text {
+    fill: var(--run);
+  }
+  .sn-todo circle {
+    stroke: var(--todo);
+  }
+  .sn-todo text {
+    fill: var(--muted);
+  }
+  .sn-bug circle {
+    stroke: var(--bug);
+  }
+  .sn-bug text {
+    fill: var(--bug);
+  }
+  .sn-na circle {
+    stroke: var(--na);
+  }
+  .sn-na text {
+    fill: var(--na);
+  }
+  .arrow-ok {
+    fill: var(--ok);
+  }
+  .arrow-run {
+    fill: var(--run);
+  }
+  .arrow-todo {
+    fill: var(--todo);
+  }
+  .arrow-bug {
+    fill: var(--bug);
+  }
+  .arrow-na {
+    fill: var(--na);
+  }
+  .bugdot {
+    fill: var(--bug);
+  }
+  .bugring {
+    fill: var(--surface);
+    stroke: var(--bug);
+    stroke-width: 2;
+  }
+  .bugpulse {
+    fill: var(--bug);
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: pulse 1.6s ease-out infinite;
+  }
+  .bugcount {
+    fill: #fff;
+    font: 600 9px var(--mono);
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+  .bugcount.ring {
+    fill: var(--bug);
+  }
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+      opacity: 0.55;
+    }
+    100% {
+      transform: scale(2.6);
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .e-ok,
+    .e-run,
+    .e-bug,
+    .halo,
+    .bugpulse {
+      animation: none !important;
+    }
+    .st-run .halo,
+    .st-bug .halo {
+      opacity: 0.6;
+    }
+    .bugpulse {
+      opacity: 0;
+    }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Software factory · first real run · PEN-75</div>
+    <h1>Factory test map</h1>
+    <p class="now" id="now"></p>
+    <div class="tallies" id="tallies"></div>
+    <div class="updated" id="updated"></div>
+  </header>
+
+  <section class="map" aria-label="Components and data flow">
+    <svg
+      id="svg"
+      viewBox="0 0 1260 760"
+      role="img"
+      aria-label="The factory's components in three bands, with numbered data-flow steps coloured by validation state"
+    ></svg>
+    <div class="legend">
+      <span><i class="dot d-ok"></i>Validated</span>
+      <span><i class="dot d-run"></i>In progress</span>
+      <span><i class="dot d-todo"></i>Left to validate</span>
+      <span><i class="dot d-bug"></i>Bug open / being fixed</span>
+      <span><i class="dot d-fix"></i>Bug fixed, retest pending</span>
+      <span><i class="dot d-na"></i>Not exercised by this card</span>
+      <span>Click a box for its evidence.</span>
+    </div>
+  </section>
+
+  <section class="panel detail" id="detail" aria-live="polite"></section>
+
+  <div class="cols">
+    <section class="panel">
+      <h2>The run, step by step</h2>
+      <ol class="steps" id="steps"></ol>
+    </section>
+    <section class="panel">
+      <h2>Bugs found</h2>
+      <div class="tbl">
+        <table>
+          <thead>
+            <tr>
+              <th>Bug</th>
+              <th>Where</th>
+              <th>State</th>
+            </tr>
+          </thead>
+          <tbody id="bugs"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+  /* ===== state: edited and republished as the run goes ===== */
+  const STATE = {
+    updated: '2026-11-09 03:20 UTC',
+    now: '<b>Fixing what PEN-75 found before the next test (PEN-70, with planning).</b> The Factory UI redesign (Inbox and Pipeline views) is in PR #65, CI running; it ships first and gets installed. The rest of the fixes are being built as one changeset. Once every bug here is green, PEN-70 runs.',
+    nodes: [
+      // services band
+      {
+        id: 'ryan',
+        x: 30,
+        y: 62,
+        title: 'Ryan',
+        sub: 'reviews · approves · deploys',
+        st: 'ok',
+        notes: [
+          "Approves the PR in GitHub (delegated to Claude with Ryan's gh for this run).",
+          'Deploys the site by hand (A1225): runs deploy nothing.',
+        ],
+      },
+      {
+        id: 'linear',
+        x: 235,
+        y: 62,
+        title: 'Linear · PEN',
+        sub: 'Todo → In Review → Done',
+        st: 'ok',
+        bugs: ['B2', 'B20'],
+        notes: [
+          'Validated: PEN-75 moved to Todo with plan:skip and Agent/claude; factory:next picked it (claude, opus, implement).',
+          "Validated: claim, In Progress, and the Blocked label with its reason when the agent couldn't start.",
+          "Validated: In Review when CI went green, Done only after main was verified, each comment worded plainly with the factory's marker.",
+        ],
+      },
+      {
+        id: 'github',
+        x: 440,
+        y: 62,
+        title: 'GitHub PR #63',
+        sub: 'penmoss-factory[bot]',
+        st: 'ok',
+        notes: [
+          "Validated: opened by app/penmoss-factory, commit by penmoss-factory[bot], body starts “Part of PEN-75.”, scope and gate line, risks, the factory's marker.",
+          "Open: the title is the agent's whole summary sentence (150 characters).",
+          'Validated: approved, merged by app/penmoss-factory as 8b16754.',
+        ],
+        bugs: ['B22'],
+      },
+      {
+        id: 'ci',
+        x: 645,
+        y: 62,
+        title: 'CI · self-hosted Mac',
+        sub: 'Check · E2E · Site · budgets',
+        st: 'ok',
+        notes: [
+          "Validated: #63's Site job passed; the pick job skipped the rest for a site-only change.",
+        ],
+      },
+      {
+        id: 'r2',
+        x: 850,
+        y: 62,
+        title: 'Proof store · R2',
+        sub: 'proof.penmoss.app',
+        st: 'na',
+        notes: [
+          'PEN-75 changes only site/, which is ci-only: the gate runs task check and no product proof, so nothing is uploaded on this run.',
+        ],
+      },
+      {
+        id: 'site',
+        x: 1055,
+        y: 62,
+        title: 'penmoss.app',
+        sub: 'task site:deploy',
+        st: 'ok',
+        notes: [
+          'Validated: deployed 02:36Z (version cc8c426d); the footer on /, /features and /download links Ryan Henderson to https://ryanhenderson.dev.',
+        ],
+      },
+      // host band
+      {
+        id: 'ui',
+        x: 30,
+        y: 322,
+        title: 'Factory UI',
+        sub: '127.0.0.1:7878',
+        st: 'ok',
+        notes: [
+          'Validated: view.json shows the card, its lane and reason; writable.',
+          'Validated: POST /action set and cleared Blocked as Ryan; refuses a request without Origin (the CSRF guard).',
+          'Ryan: the UI needs a full redesign. Five alternatives and a brief are being drawn up.',
+        ],
+        bugs: ['B13', 'B21'],
+      },
+      {
+        id: 'daemon',
+        x: 235,
+        y: 322,
+        title: 'Daemon',
+        sub: 'LaunchAgent · e47b20a',
+        st: 'bug',
+        notes: [
+          'Validated: runs from its own clone; factory:update moves it; recovered PEN-75 after Blocked was cleared (R12).',
+          "Open: on update the daemon and the UI both write the run clone's config; the daemon loses the lock and exits 1 (happened twice).",
+          "Open: launchd doesn't relaunch it (KeepAlive false).",
+          'Bug: the notification after In Review crashed the run (terminal-notifier missing); fix in #64.',
+        ],
+        bugs: ['B6', 'B9', 'B10', 'B11', 'B12', 'B14', 'B19', 'B24', 'B25'],
+      },
+      {
+        id: 'numbering',
+        x: 440,
+        y: 322,
+        title: 'Decision numbering',
+        sub: 'rows the branch added',
+        st: 'ok',
+        notes: [
+          'Bug: numbered the example placeholders in AGENTS.md and reserved A1232/A1233 for a run with no decision.',
+          'Fixed in #62 (A1232): numbers only rows the branch added. The bad commit was dropped from the branch and the counter reset to 1232.',
+          'Retest passed: the gate re-run numbered nothing.',
+        ],
+        bugs: ['B7'],
+      },
+      {
+        id: 'publish',
+        x: 645,
+        y: 322,
+        title: 'Publish repo',
+        sub: 'pushes with the App token',
+        st: 'ok',
+        notes: [
+          'Validated: fetches the run branch, checks it descends from the base, pushes with an explicit lease (A1230).',
+        ],
+      },
+      {
+        id: 'doctor',
+        x: 1055,
+        y: 322,
+        title: 'Doctor',
+        sub: 'preflight · both slots',
+        st: 'ok',
+        notes: [
+          'Validated: toolchain, sign-ins, isolation refusals, Android proof and task check in the sandbox on 2fc89bc.',
+          "Open: it runs with the shell's PATH, so it missed the LaunchAgent's PATH; its task check stops at the first failing package.",
+        ],
+        bugs: ['B15'],
+      },
+      // sandbox band
+      {
+        id: 'work',
+        x: 135,
+        y: 582,
+        title: 'Work sandbox',
+        sub: 'Claude Code · opus',
+        st: 'ok',
+        notes: [
+          'Validated: the agent linked the footer name, styled it, added a site test (27/27) in about 4 minutes, and reported honestly in result.json.',
+          "Open: process-listing test guards give false failures inside the agent's own shell.",
+        ],
+        bugs: ['B1', 'B5', 'B16', 'B18', 'B23'],
+      },
+      {
+        id: 'branch',
+        x: 340,
+        y: 582,
+        title: 'Run branch',
+        sub: 'factory/75-… · 576ae0c',
+        st: 'ok',
+        notes: [
+          'Validated: one commit, the footer change, on 2fc89bc.',
+          'Hardened in #62: each sandbox now starts from the main the host fetched.',
+        ],
+      },
+      {
+        id: 'gate',
+        x: 545,
+        y: 582,
+        title: 'Gate sandbox',
+        sub: 'rebase · task check',
+        st: 'ok',
+        notes: [
+          "Bug: task check failed in the sandbox (audit:secrets temp folder, vm:test lock in /tmp, and the space in “Application Support” broke ports, ci:lint and the CLI's build).",
+          "Fixed in #62: the full task check:all passed in slot 2's sandbox (618 s).",
+          'Retest passed: the PEN-75 gate passed task check at 02:17Z.',
+        ],
+        bugs: ['B3', 'B8', 'B17'],
+      },
+      {
+        id: 'proof',
+        x: 850,
+        y: 582,
+        title: 'Proof runners',
+        sub: 'web · Mac VM · Android',
+        st: 'na',
+        notes: [
+          'Not used by a site-only card. The doctor validated the Android proof and the e2e smoke earlier.',
+        ],
+        bugs: ['B4'],
+      },
+    ],
+    // step: [from, to, state, label, detail]
+    edges: [
+      {
+        n: 0,
+        from: 'doctor',
+        to: 'doctor',
+        st: 'ok',
+        label: 'Preflight',
+        detail: 'doctor --full on both slots, linear:check',
+      },
+      {
+        n: 1,
+        from: 'linear',
+        to: 'daemon',
+        st: 'ok',
+        label: 'Poll Todo, pick PEN-75',
+        detail: 'factory:next: claude, opus, planning skipped',
+        dx: -24,
+      },
+      {
+        n: 2,
+        from: 'daemon',
+        to: 'linear',
+        st: 'ok',
+        label: 'Claim, In Progress',
+        detail: 'claimed 00:04:55Z; recovered 00:34:03Z',
+        dx: 24,
+      },
+      {
+        n: 3,
+        from: 'daemon',
+        to: 'work',
+        st: 'ok',
+        label: 'Open the work sandbox, prompt',
+        detail: 'first try failed: claude not on PATH (fixed)',
+      },
+      {
+        n: 4,
+        from: 'work',
+        to: 'branch',
+        st: 'ok',
+        label: 'Agent commits, writes result.json',
+        detail: 'done at 00:38:18Z, decisions: []',
+      },
+      {
+        n: 5,
+        from: 'branch',
+        to: 'numbering',
+        st: 'ok',
+        label: 'Number new decisions',
+        detail: 'retest passed: nothing numbered for a run with no decision',
+      },
+      {
+        n: 6,
+        from: 'daemon',
+        to: 'gate',
+        st: 'ok',
+        label: 'Rebase and run task check',
+        detail: 'passed at 02:17Z after the rebase onto e47b20a',
+      },
+      {
+        n: 7,
+        from: 'gate',
+        to: 'proof',
+        st: 'na',
+        label: 'Run proof specs',
+        detail: 'ci-only change: none',
+      },
+      {
+        n: 8,
+        from: 'proof',
+        to: 'r2',
+        st: 'na',
+        label: 'Upload proof',
+        detail: 'none for this card',
+      },
+      {
+        n: 9,
+        from: 'gate',
+        to: 'publish',
+        st: 'ok',
+        label: 'Fetch the run branch',
+        detail: 'descends from the base; pushed 02:17:29Z',
+      },
+      {
+        n: 10,
+        from: 'publish',
+        to: 'github',
+        st: 'ok',
+        label: 'Push, open the PR',
+        detail: '#63 as penmoss-factory[bot], Part of PEN-75 (title too long)',
+      },
+      {
+        n: 11,
+        from: 'github',
+        to: 'ci',
+        st: 'ok',
+        label: 'CI runs',
+        detail: 'Site passed; the rest skipped for a site-only change',
+      },
+      {
+        n: 12,
+        from: 'ci',
+        to: 'daemon',
+        st: 'ok',
+        label: 'Green: In Review, notify Ryan',
+        detail: 'In Review at 02:18Z; the notification crash fixed in #64',
+      },
+      {
+        n: 13,
+        from: 'ryan',
+        to: 'github',
+        st: 'ok',
+        label: 'Review and approve',
+        detail: "approved 02:32Z with Ryan's gh",
+      },
+      {
+        n: 14,
+        from: 'daemon',
+        to: 'github',
+        st: 'ok',
+        label: 'Merge, verify main, Done',
+        detail: 'merged 02:33:14Z, main green, Done 02:34:16Z',
+        bend: -70,
+      },
+      {
+        n: 15,
+        from: 'ryan',
+        to: 'site',
+        st: 'ok',
+        label: 'Deploy the site',
+        detail: 'deployed 02:36Z; the footer link is live',
+        bend: -46,
+      },
+      {
+        n: 'UI',
+        from: 'ui',
+        to: 'daemon',
+        st: 'ok',
+        label: 'Status and actions',
+        detail: 'status.json in; Blocked on and off out',
+        nolist: true,
+      },
+    ],
+    bugs: [
+      {
+        id: 'B1',
+        where: 'work',
+        what: "Claude Code's temp folder outside the sandbox (EPERM)",
+        st: 'ok',
+        fix: '#59',
+      },
+      {
+        id: 'B2',
+        where: 'linear',
+        what: 'Linear refused queries as too complex',
+        st: 'ok',
+        fix: '#59',
+      },
+      {
+        id: 'B3',
+        where: 'gate',
+        what: 'ps and pgrep refused: process tests failed task check',
+        st: 'ok',
+        fix: '#61',
+      },
+      {
+        id: 'B4',
+        where: 'proof',
+        what: "Android “System UI isn't responding” dialog took the first keys",
+        st: 'ok',
+        fix: '#59',
+      },
+      {
+        id: 'B5',
+        where: 'work',
+        what: "OpenCode couldn't start its shared server",
+        st: 'ok',
+        fix: '#61',
+      },
+      {
+        id: 'B6',
+        where: 'daemon',
+        what: 'claude: command not found (LaunchAgent PATH)',
+        st: 'ok',
+        fix: '#62',
+      },
+      {
+        id: 'B25',
+        where: 'daemon',
+        what: 'factory:update: launchd bootstrap I/O error 5 left both agents down',
+        st: 'bug',
+        fix: 'follow-up',
+      },
+      {
+        id: 'B7',
+        where: 'numbering',
+        what: "Numbered AGENTS.md's examples, reserved two numbers",
+        st: 'ok',
+        fix: '#62',
+      },
+      {
+        id: 'B8',
+        where: 'gate',
+        what: 'task check in the sandbox: temp and lock folders, a space in the path',
+        st: 'ok',
+        fix: '#62',
+      },
+      {
+        id: 'B9',
+        where: 'daemon',
+        what: "Startup race on the run clone's config (twice)",
+        st: 'bug',
+        fix: 'follow-up',
+      },
+      {
+        id: 'B10',
+        where: 'daemon',
+        what: 'Not relaunched after it exits (KeepAlive false)',
+        st: 'bug',
+        fix: 'follow-up',
+      },
+      {
+        id: 'B11',
+        where: 'daemon',
+        what: "Blocked doesn't stop a gate that has started",
+        st: 'bug',
+        fix: 'follow-up',
+      },
+      {
+        id: 'B12',
+        where: 'daemon',
+        what: 'Status after an update shows the old daemon',
+        st: 'bug',
+        fix: 'UI part in #65; CLI in the changeset',
+      },
+      {
+        id: 'B13',
+        where: 'ui',
+        what: 'Waiting lane lists cards the factory never claimed; odd paused wording',
+        st: 'fix',
+        fix: '#65 in CI',
+      },
+      {
+        id: 'B14',
+        where: 'daemon',
+        what: 'factory:next says Ready and P3 on Linear',
+        st: 'bug',
+        fix: 'follow-up',
+      },
+      {
+        id: 'B15',
+        where: 'doctor',
+        what: "Uses the shell's PATH; its task check stops at the first failure",
+        st: 'bug',
+        fix: 'follow-up',
+      },
+      {
+        id: 'B16',
+        where: 'work',
+        what: "Process-test guards fail inside the agent's shell",
+        st: 'bug',
+        fix: 'follow-up',
+      },
+      {
+        id: 'B17',
+        where: 'gate',
+        what: 'Wall-clock tests fail when the Mac is loaded',
+        st: 'bug',
+        fix: 'follow-up',
+      },
+      {
+        id: 'B18',
+        where: 'work',
+        what: "The run folder lacks the agent's raw init event",
+        st: 'bug',
+        fix: 'follow-up',
+      },
+      {
+        id: 'B19',
+        where: 'daemon',
+        what: 'A missing agent binary reads as the card failing',
+        st: 'bug',
+        fix: 'follow-up',
+      },
+      {
+        id: 'B20',
+        where: 'linear',
+        what: "Linear's GitHub integration set PEN-75 Done when #62 merged (its title named the card)",
+        st: 'bug',
+        fix: "turn off the team's GitHub automations",
+      },
+      {
+        id: 'B22',
+        where: 'github',
+        what: "PR title is the agent's whole summary sentence",
+        st: 'bug',
+        fix: 'follow-up',
+      },
+      {
+        id: 'B23',
+        where: 'work',
+        what: "A restarted run's agent works on its old base and restarts at round 0",
+        st: 'bug',
+        fix: 'follow-up',
+      },
+      {
+        id: 'B24',
+        where: 'daemon',
+        what: 'A missing terminal-notifier crashed the run after In Review',
+        st: 'ok',
+        fix: '#64',
+      },
+      {
+        id: 'B21',
+        where: 'ui',
+        what: 'The whole UI: Ryan asked for a redesign',
+        st: 'fix',
+        fix: '#65 in CI (Inbox + Pipeline)',
+      },
+    ],
+  };
+
+  /* ===== rendering ===== */
+  const W = 170,
+    H = 76,
+    NS = 'http://www.w3.org/2000/svg';
+  const svg = document.getElementById('svg');
+  const byId = Object.fromEntries(STATE.nodes.map((n) => [n.id, n]));
+  const bugById = Object.fromEntries(STATE.bugs.map((b) => [b.id, b]));
+  const label = {
+    ok: 'Validated',
+    run: 'In progress',
+    todo: 'To validate',
+    bug: 'Bug',
+    fix: 'Fixed · retest',
+    na: 'Not in scope',
+  };
+  const el = (tag, attrs = {}, parent = svg) => {
+    const e = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    parent.appendChild(e);
+    return e;
+  };
+  let selected = 'gate';
+
+  function bands() {
+    [
+      ['Services', 20, 190],
+      ["Ryan's Mac · the host", 280, 190],
+      ['Sandboxes · Seatbelt', 540, 200],
+    ].forEach(([t, y, h]) => {
+      el('rect', { x: 10, y, width: 1240, height: h, rx: 8, class: 'band-bg' });
+      el('text', { x: 24, y: y + 22, class: 'band-label' }).textContent = t;
+    });
+  }
+
+  function anchor(n, toward) {
+    const cx = n.x + W / 2,
+      cy = n.y + H / 2,
+      tx = toward.x + W / 2,
+      ty = toward.y + H / 2;
+    if (Math.abs(ty - cy) > 60) return ty > cy ? [cx, n.y + H, 0, 1] : [cx, n.y, 0, -1];
+    return tx > cx ? [n.x + W, cy, 1, 0] : [n.x, cy, -1, 0];
+  }
+
+  function edges() {
+    const defs = el('defs');
+    for (const s of ['ok', 'run', 'todo', 'bug', 'na']) {
+      const m = el(
+        'marker',
+        {
+          id: 'a-' + s,
+          viewBox: '0 0 10 10',
+          refX: 9,
+          refY: 5,
+          markerWidth: 7,
+          markerHeight: 7,
+          orient: 'auto-start-reverse',
+        },
+        defs,
+      );
+      el('path', { d: 'M0,0 L10,5 L0,10 z', class: 'arrow-' + s }, m);
+    }
+    const g = el('g');
+    for (const e of STATE.edges) {
+      if (e.from === e.to) continue;
+      const a = byId[e.from],
+        b = byId[e.to];
+      let [x1, y1, dx1, dy1] = anchor(a, b),
+        [x2, y2, dx2, dy2] = anchor(b, a);
+      if (e.dx) {
+        x1 += e.dx;
+        x2 += e.dx;
+      }
+      const k = Math.max(50, Math.hypot(x2 - x1, y2 - y1) / 2.6);
+      let c1 = [x1 + dx1 * k, y1 + dy1 * k],
+        c2 = [x2 + dx2 * k, y2 + dy2 * k];
+      if (e.bend) {
+        c1[1] += e.bend;
+        c2[1] += e.bend;
+      }
+      const d = `M${x1},${y1} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${x2},${y2}`;
+      el('path', { d, class: 'edge-under' }, g);
+      const p = el('path', { d, class: 'edge e-' + e.st, 'marker-end': `url(#a-${e.st})` }, g);
+      const t = el('title', {}, p);
+      t.textContent = `${e.n}. ${e.label}: ${e.detail}`;
+      const L = p.getTotalLength(),
+        m = p.getPointAtLength(L * 0.5);
+      const s = el('g', { class: 'stepno sn-' + e.st }, g);
+      el('circle', { cx: m.x, cy: m.y, r: e.n === 'UI' ? 13 : 11 }, s);
+      el('text', { x: m.x, y: m.y }, s).textContent = e.n;
+      el('title', {}, s).textContent = `${e.n}. ${e.label}: ${e.detail}`;
+    }
+  }
+
+  function nodes() {
+    for (const n of STATE.nodes) {
+      const g = el('g', {
+        class: `node st-${n.st}`,
+        tabindex: 0,
+        role: 'button',
+        'data-id': n.id,
+        'aria-label': `${n.title}: ${label[n.st]}`,
+      });
+      el(
+        'rect',
+        { x: n.x - 5, y: n.y - 5, width: W + 10, height: H + 10, rx: 11, class: 'halo' },
+        g,
+      );
+      el('rect', { x: n.x, y: n.y, width: W, height: H, rx: 7, class: 'box' }, g);
+      el('rect', { x: n.x, y: n.y + 8, width: 4, height: H - 16, rx: 2, class: 'stripe' }, g);
+      el('text', { x: n.x + 16, y: n.y + 29, class: 't' }, g).textContent = n.title;
+      el('text', { x: n.x + 16, y: n.y + 50, class: 's' }, g).textContent = n.sub;
+      const open = (n.bugs || []).filter((b) => bugById[b].st === 'bug').length;
+      const fixed = (n.bugs || []).filter((b) => bugById[b].st === 'fix').length;
+      let bx = n.x + W - 4;
+      if (open) {
+        el('circle', { cx: bx, cy: n.y + 4, r: 9, class: 'bugpulse' }, g);
+        el('circle', { cx: bx, cy: n.y + 4, r: 9, class: 'bugdot' }, g);
+        el('text', { x: bx, y: n.y + 4.5, class: 'bugcount' }, g).textContent = open;
+        bx -= 24;
+      }
+      if (fixed) {
+        el('circle', { cx: bx, cy: n.y + 4, r: 8, class: 'bugring' }, g);
+        el('text', { x: bx, y: n.y + 4.5, class: 'bugcount ring' }, g).textContent = fixed;
+      }
+      g.addEventListener('click', () => select(n.id));
+      g.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          select(n.id);
+        }
+      });
+    }
+  }
+
+  function chip(st) {
+    const c = { ok: 'c-ok', run: 'c-run', todo: 'c-todo', bug: 'c-bug', fix: 'c-bug', na: 'c-na' }[
+      st
+    ];
+    return `<span class="chip ${c}">${label[st]}</span>`;
+  }
+
+  function select(id) {
+    selected = id;
+    document
+      .querySelectorAll('.node')
+      .forEach((g) => g.classList.toggle('sel', g.dataset.id === id));
+    const n = byId[id];
+    const bugs = (n.bugs || []).map((b) => bugById[b]);
+    document.getElementById('detail').innerHTML =
+      `<div class="eyebrow">Selected</div><h3>${n.title} ${chip(n.st)}</h3>
+    <ul>${n.notes.map((t) => `<li>${t}</li>`).join('')}</ul>
+    ${bugs.length ? `<div class="eyebrow" style="margin-top:6px">Bugs here</div><ul>${bugs.map((b) => `<li>${b.id} · ${b.what} ${chip(b.st)} <span class="updated">${b.fix}</span></li>`).join('')}</ul>` : ''}`;
+    document
+      .querySelectorAll('#bugs tr')
+      .forEach((tr) => tr.classList.toggle('sel', tr.dataset.where === id));
+  }
+
+  function lists() {
+    document.getElementById('steps').innerHTML = STATE.edges
+      .filter((e) => !e.nolist)
+      .map(
+        (e) =>
+          `<li><span class="n">${String(e.n).padStart(2, '0')}</span><span class="what">${e.label}<small>${e.detail}</small></span>${chip(e.st)}</li>`,
+      )
+      .join('');
+    document.getElementById('bugs').innerHTML = STATE.bugs
+      .map(
+        (b) =>
+          `<tr data-where="${b.where}"><td>${b.id} · ${b.what}</td><td class="where">${byId[b.where].title}</td><td>${chip(b.st)} <span class="updated">${b.fix}</span></td></tr>`,
+      )
+      .join('');
+    const steps = STATE.edges.filter((e) => !e.nolist);
+    const count = (st) => steps.filter((e) => e.st === st).length;
+    const bugs = (st) => STATE.bugs.filter((b) => b.st === st).length;
+    document.getElementById('tallies').innerHTML = [
+      ['d-ok', `${count('ok')} steps validated`],
+      ['d-run', `${count('run') + count('bug')} in progress`],
+      ['d-todo', `${count('todo')} left`],
+      ['d-bug', `${bugs('bug')} bugs open`],
+      ['d-fix', `${bugs('fix')} fixed, retest`],
+      ['d-ok', `${bugs('ok')} bugs verified fixed`],
+    ]
+      .map(([c, t]) => `<span class="tally"><i class="dot ${c}"></i>${t}</span>`)
+      .join('');
+    document.getElementById('now').innerHTML = STATE.now;
+    document.getElementById('updated').textContent = 'Updated ' + STATE.updated;
+  }
+
+  bands();
+  edges();
+  nodes();
+  lists();
+  select(selected);
+</script>
