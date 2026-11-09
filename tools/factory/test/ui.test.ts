@@ -380,8 +380,10 @@ describe('the server (F20)', () => {
   });
   it('swaps the link token for a cookie, then serves with the cookie', async () => {
     const first = await get(`/?token=${token}`);
-    expect(first.status).toBe(302);
-    expect(first.headers['location']).toBe('/');
+    // A page that moves on by itself, not a redirect: see the cross-site link check in e2e.
+    expect(first.status).toBe(200);
+    expect(first.body).toContain('location.replace("/" + location.hash)');
+    expect(first.body).not.toContain(token);
     expect(String(first.headers['set-cookie'])).toContain('HttpOnly; SameSite=Strict');
     const next = await get('/view.json', { cookie: `penmoss-factory-ui=${token}` });
     expect(next.status).toBe(200);

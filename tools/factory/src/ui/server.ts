@@ -110,14 +110,27 @@ export function createUiServer(options: UiOptions): Server {
     }
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
     if (check.viaQuery) {
-      // Swap the link's token for a cookie, so it leaves the address bar and history.
+      // Swap the link's token for a cookie, so it leaves the address bar and history. Not with a
+      // redirect: a link tapped in another app or site starts a cross-site navigation, and the
+      // browser keeps the strict cookie off every hop of it, so the redirect's target got 403
+      // "no token" (the tailnet link from Ryan's phone, A1249). The page's own navigation is
+      // same-site. The browser never sends the fragment (a notification's #issue-n); the page
+      // keeps it.
       url.searchParams.delete('token');
-      res.writeHead(302, {
-        location: url.pathname + url.search + url.hash,
+      const target = JSON.stringify(url.pathname + url.search).replaceAll('<', '\\u003c');
+      res.writeHead(200, {
+        'content-type': 'text/html; charset=utf-8',
         'set-cookie': `${COOKIE}=${options.token}; HttpOnly; SameSite=Strict; Path=/`,
         'cache-control': 'no-store',
+        'x-content-type-options': 'nosniff',
+        'x-frame-options': 'DENY',
+        'referrer-policy': 'no-referrer',
+        'content-security-policy':
+          "default-src 'none'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
       });
-      res.end();
+      res.end(
+        `<!doctype html><meta charset="utf-8"><title>Penmoss Factory</title><script>location.replace(${target} + location.hash)</script>\n`,
+      );
       return;
     }
     if (url.pathname === '/') {
