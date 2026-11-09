@@ -97,12 +97,20 @@ export function planningFlags(files: PlanFiles): string[] {
     '--allowedTools',
     'Artifact',
     'ArtifactComments',
-    `Read(${files.repo}/**)`,
-    `Read(${files.out}/**)`,
-    `Edit(${files.out}/**)`,
-    `Write(${files.out}/**)`,
+    under('Read', files.repo),
+    under('Read', files.out),
+    under('Edit', files.out),
   ];
 }
+
+/**
+ * A permission rule for everything under an absolute folder. Claude Code reads `/path` in a rule
+ * as relative to the settings file and `//path` as absolute, and matches file writes only against
+ * `Edit` rules, never `Write`. PEN-70's planning session ran with `Write(/Users/…/out/**)`,
+ * which matched nothing: every write of its state file was refused, and the factory saw it stuck.
+ */
+export const under = (tool: 'Read' | 'Edit', dir: string): string =>
+  `${tool}(/${dir.replace(/\/+$/, '')}/**)`;
 
 /**
  * A fresh snapshot of main for the session to explore: main's files, exported from the publish
