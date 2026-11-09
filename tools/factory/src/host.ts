@@ -31,7 +31,12 @@ import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { Exec } from './exec.ts';
 import { ensureConfig, mustGit } from './git.ts';
 import { runIdOf, type CheckRun } from './checks.ts';
-import { definedPlaceholders, numberLines, reserveDecisionNumbers } from './decisions.ts';
+import {
+  definedPlaceholders,
+  formatDecisions,
+  numberLines,
+  reserveDecisionNumbers,
+} from './decisions.ts';
 import { GhError, type Gh } from './github.ts';
 import { proofFiles, type AttachedProof } from './proof/body.ts';
 import { publishRefs, type ProofStore } from './proof/store.ts';
@@ -609,7 +614,8 @@ export function hostDeps(options: HostOptions): HostDeps {
         if (path.startsWith('tools/factory/')) continue;
         const found = file(path);
         if (!found) continue;
-        const after = numberLines(found.text, lines, assigned);
+        let after = numberLines(found.text, lines, assigned);
+        if (path === DECISIONS) after = await formatDecisions(after);
         if (after !== found.text) writeFileSync(found.at, after);
       }
       const message = `Number the new decisions: ${Object.entries(assigned)

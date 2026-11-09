@@ -38,9 +38,9 @@ const AGENTS = `# Agent instructions\n\n- ${INSTRUCTION}\n`;
 const DECISIONS = [
   '# Decisions',
   '',
-  '| ID    | Decision |',
-  '| ----- | -------- |',
-  '| A1230 | The publish repo. |',
+  '| ID    | Decision               |',
+  '| ----- | ---------------------- |',
+  '| A1230 | The publish repo.      |',
   '| A1231 | Process-listing tests. |',
   '',
 ].join('\n');
@@ -139,6 +139,29 @@ describe("numbering a branch's decisions", { timeout: 30_000 }, () => {
     expect(await git(clone, 'status', '--porcelain')).toBe('');
   });
 
+  it('formats the table again once the number is narrower than A-NEW-1 (PEN-70)', async () => {
+    // The agent's own Prettier run padded every row to fit the placeholder.
+    const widened = [
+      '# Decisions',
+      '',
+      '| ID      | Decision               |',
+      '| ------- | ---------------------- |',
+      '| A1230   | The publish repo.      |',
+      '| A1231   | Process-listing tests. |',
+      '| A-NEW-1 | The sidebar folds.     |',
+      '',
+    ].join('\n');
+    await commit('Record a decision', { 'docs/decisions.md': widened });
+    expect(await numberDecisions()).toEqual({ 'A-NEW-1': 'A1232' });
+    expect(read('docs/decisions.md')).toBe(
+      DECISIONS.replace(
+        '| A1231 | Process-listing tests. |\n',
+        '| A1231 | Process-listing tests. |\n| A1232 | The sidebar folds.     |\n',
+      ),
+    );
+    expect(await git(clone, 'status', '--porcelain')).toBe('');
+  });
+
   it('numbers the row the branch added and its references, and nothing else', async () => {
     await commit('Record a decision', {
       'docs/decisions.md': DECISIONS.replace(
@@ -149,7 +172,7 @@ describe("numbering a branch's decisions", { timeout: 30_000 }, () => {
       'tools/factory/test/x.test.ts': "const key = 'A-NEW-1';\n",
     });
     expect(await numberDecisions()).toEqual({ 'A-NEW-1': 'A1232' });
-    expect(read('docs/decisions.md')).toContain('| A1232 | The sidebar folds. |\n');
+    expect(read('docs/decisions.md')).toContain('| A1232 | The sidebar folds.     |\n');
     expect(read('docs/decisions.md')).not.toContain('A-NEW');
     expect(read('README.md')).toBe(
       'Penmoss\n\nThe sidebar folds, per A1232 (and A-NEW-2, never defined).\n',
