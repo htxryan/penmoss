@@ -1,5 +1,7 @@
 import type { SidebarItem } from '@penmoss/core/display';
+import { Select } from '@penmoss/ui/controls/Select';
 import { Icon, type IconName } from '@penmoss/ui/icons';
+import { TOOLTIP_DELAY_CHOICES } from '@penmoss/core/tooltips';
 import {
   RECENT_COUNT_MAX,
   RECENT_COUNT_MIN,
@@ -16,6 +18,7 @@ import { NOTE_BAR_BUTTON_INFO, NOTE_BAR_BUTTONS, useNoteBar } from '../notes/not
 import { MenuBarIconSetting } from '../desktop/MenuBarIconSetting';
 import { useSidebarDisplay } from './display';
 import { useSidebarLayout } from './sidebar-layout-state';
+import { useTooltipDelay } from './tooltip-state';
 
 const ITEMS: ReadonlyArray<{
   readonly item: SidebarItem;
@@ -77,6 +80,7 @@ export function DisplaySettings() {
       </p>
       <SectionSettings />
       <NoteBarSettings />
+      <TooltipSettings />
       <MetadataSettings />
       {/* The Mac app only (T51, A945): this Mac's own preference, not synced. */}
       <MenuBarIconSetting />
@@ -232,5 +236,39 @@ function NoteBarSettings() {
         Each is also in the note&rsquo;s &#x22EF; menu, which always shows.
       </p>
     </>
+  );
+}
+
+/**
+ * Show Tooltips After (PEN-70, A-NEW-1): how long the mouse rests on a control before its
+ * tooltip shows, or Never. Keyboard focus shows a tooltip at once whatever it says. Synced like
+ * the rest of Display.
+ */
+function TooltipSettings() {
+  const { choice, set, canChange } = useTooltipDelay();
+  const id = useId();
+  return (
+    <label className="settings-field" htmlFor={id}>
+      <span>Show Tooltips After</span>
+      <Select
+        id={id}
+        className="settings-choice"
+        value={String(choice)}
+        disabled={!canChange}
+        data-testid="tooltip-delay"
+        onChange={(event) => {
+          const picked = TOOLTIP_DELAY_CHOICES.find(
+            (each) => String(each.value) === event.target.value,
+          );
+          if (picked) set(picked.value);
+        }}
+      >
+        {TOOLTIP_DELAY_CHOICES.map(({ value, label }) => (
+          <option key={value} value={String(value)}>
+            {label}
+          </option>
+        ))}
+      </Select>
+    </label>
   );
 }

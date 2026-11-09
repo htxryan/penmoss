@@ -141,7 +141,7 @@ test('the sidebar: a row of shortcut icons, a sync dot, icons in the footer (A93
   await expect(async () => {
     await page.mouse.move(900, 600);
     await dot.hover();
-    await expect(tooltip).toHaveText('Synced', { timeout: 2_000 });
+    await expect(tooltip).toHaveText('Synced', { timeout: 4_000 });
   }).toPass();
   await page.mouse.move(900, 600);
   // It leads to the notebook's page in Settings → Git Notebooks, which says more (A860, A1098).
@@ -169,7 +169,7 @@ test('the sidebar: a row of shortcut icons, a sync dot, icons in the footer (A93
       await page.mouse.move(900, 600);
       if (name === 'Trash') await heading.hover();
       await item.hover();
-      await expect(tooltip).toHaveText(new RegExp(`^${name}( \\(.+\\))?$`), { timeout: 2_000 });
+      await expect(tooltip).toHaveText(new RegExp(`^${name}( \\(.+\\))?$`), { timeout: 4_000 });
     }).toPass();
     await page.mouse.move(900, 600);
   }
