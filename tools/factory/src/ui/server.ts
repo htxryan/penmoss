@@ -120,7 +120,8 @@ export function createUiServer(options: UiOptions): Server {
       const target = JSON.stringify(url.pathname + url.search).replaceAll('<', '\\u003c');
       res.writeHead(200, {
         'content-type': 'text/html; charset=utf-8',
-        'set-cookie': `${COOKIE}=${options.token}; HttpOnly; SameSite=Strict; Path=/`,
+        // A year: the token outlives restarts now (A1264), so a device signs in once.
+        'set-cookie': `${COOKIE}=${options.token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=31536000`,
         'cache-control': 'no-store',
         'x-content-type-options': 'nosniff',
         'x-frame-options': 'DENY',
