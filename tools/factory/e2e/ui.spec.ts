@@ -23,11 +23,17 @@ interface Served {
   close(): Promise<void>;
 }
 
-async function serve(options: { alive: boolean; writable: boolean }): Promise<Served> {
+async function serve(options: {
+  alive: boolean;
+  writable: boolean;
+  /** A new view on every push, as while a run writes its log. */
+  ticking?: boolean;
+}): Promise<Served> {
   const dir = mkdtempSync(join(tmpdir(), 'factory-ui-e2e-'));
   const e = evening(dir);
   writeEvening(dir, e);
   const actions: UiAction[] = [];
+  let tick = 0;
   const writer: Writer = {
     perform: (action) => {
       actions.push(action);
@@ -40,15 +46,16 @@ async function serve(options: { alive: boolean; writable: boolean }): Promise<Se
     page: pageHtml,
     refreshMs: 200,
     view: () =>
-      Promise.resolve(
-        viewFromState(e.config, e.board, {
+      Promise.resolve({
+        ...viewFromState(e.config, e.board, {
           busy: new Set([76]),
           alive: () => options.alive,
           now: NOW,
           writable: options.writable,
           readOnly: options.writable ? null : 'no Linear key in the keychain item',
         }),
-      ),
+        ...(options.ticking ? { tick: (tick += 1) } : {}),
+      }),
     ...(options.writable ? { writer } : {}),
   });
   const port = await listen(server, 0);
@@ -233,5 +240,34 @@ test.describe('a dead daemon, read-only', () => {
     ).toBeDisabled();
     // Nothing is shown as live: PEN-79's run is no longer running.
     await expect(page.locator('.list')).toContainText('Stopped mid-run');
+  });
+});
+
+test.describe('a factory whose view changes every push', () => {
+  let s: Served;
+  test.beforeAll(async () => {
+    s = await serve({ alive: true, writable: true, ticking: true });
+  });
+  test.afterAll(() => s.close());
+
+  // No DOM types here (tsconfig is Node's): reach the page through globalThis.
+  type Doc = { contains(n: unknown): boolean; querySelector(q: string): unknown };
+  type Win = { scrollY: number; scrollTo(x: number, y: number): void; document: Doc };
+  const redrawn = async (page: Page) => {
+    const card = await page.locator('#issue-77').elementHandle();
+    await page.waitForFunction((el) => !(globalThis as unknown as Win).document.contains(el), card);
+  };
+
+  test('keeps where Ryan scrolled while new views redraw the page', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 400 });
+    await open(page, `${s.url}#issue-77`);
+    await expect(page.locator('#issue-77')).toBeVisible();
+    await page.evaluate(() => (globalThis as unknown as Win).scrollTo(0, 120));
+    const at = await page.evaluate(() => (globalThis as unknown as Win).scrollY);
+    expect(at).toBeGreaterThan(0);
+    // Each push (every 200 ms here) builds the page again; twice, to be sure.
+    await redrawn(page);
+    await redrawn(page);
+    expect(await page.evaluate(() => (globalThis as unknown as Win).scrollY)).toBe(at);
   });
 });

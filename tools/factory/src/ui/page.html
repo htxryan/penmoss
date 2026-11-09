@@ -1404,11 +1404,46 @@
         const sel = v.cards.find((c) => c.number === issue) || null;
         document.body.classList.toggle('stale', !v.health.fresh);
         document.title = v.needs.length ? `(${v.needs.length}) Penmoss Factory` : 'Penmoss Factory';
+        // A new view every few seconds redraws the page: keep where Ryan had scrolled the page and
+        // each box in it, and jump to a card only when the address names a new one.
+        const kept = scrolls();
         document.getElementById('top').replaceChildren(...header(v, r.mode));
         const app = document.getElementById('app');
         app.replaceChildren(...(r.mode === 'pipeline' ? pipeline(v, sel) : inbox(v, sel)));
-        if (r.issue !== null && NARROW.matches)
+        restoreScrolls(kept);
+        if (r.issue !== null && NARROW.matches && scrolledTo !== r.issue)
           document.getElementById(`issue-${r.issue}`)?.scrollIntoView();
+        scrolledTo = r.issue;
+      }
+      let scrolledTo = null;
+      // Where an element sits under #app, as child indexes: the redraw builds the same shape.
+      function placeOf(el) {
+        const path = [];
+        for (let n = el; n && n.id !== 'app'; n = n.parentElement)
+          path.unshift(
+            `${n.tagName}:${Array.prototype.indexOf.call(n.parentElement?.children ?? [], n)}`,
+          );
+        return path.join('/');
+      }
+      function scrolls() {
+        const boxes = [];
+        for (const el of document.querySelectorAll('#app *'))
+          if (el.scrollTop || el.scrollLeft)
+            boxes.push({ place: placeOf(el), top: el.scrollTop, left: el.scrollLeft });
+        return { x: window.scrollX, y: window.scrollY, boxes };
+      }
+      function restoreScrolls(kept) {
+        if (kept.boxes.length) {
+          const byPlace = new Map(kept.boxes.map((b) => [b.place, b]));
+          for (const el of document.querySelectorAll('#app *')) {
+            const b = byPlace.get(placeOf(el));
+            if (b) {
+              el.scrollTop = b.top;
+              el.scrollLeft = b.left;
+            }
+          }
+        }
+        window.scrollTo(kept.x, kept.y);
       }
       let pendingRender = false;
       document.addEventListener('focusout', () =>
@@ -1419,7 +1454,10 @@
           }
         }, 0),
       );
-      window.addEventListener('hashchange', render);
+      window.addEventListener('hashchange', () => {
+        scrolledTo = null;
+        render();
+      });
       const events = new EventSource('/events');
       events.onmessage = (m) => {
         document.getElementById('problem').textContent = '';
