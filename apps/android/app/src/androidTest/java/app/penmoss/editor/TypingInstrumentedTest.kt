@@ -248,7 +248,9 @@ class TypingInstrumentedTest {
                 last == expected
             }
         } catch (e: AssertionError) {
-            throw AssertionError("Expected <$expected> but the editor has <$last>", e)
+            // The document too: blocks with no text read the same as one in getText.
+            val doc = runCatching { decode(js("JSON.stringify(penmossEditor.editor.editor.getJSON())")) }.getOrNull()
+            throw AssertionError("Expected <$expected> but the editor has <$last>, as $doc", e)
         }
     }
 
