@@ -714,6 +714,7 @@ export function hostDeps(options: HostOptions): HostDeps {
         reviewer: config.owner,
       });
     },
+    keep: (name, text) => writeFileSync(join(runDir, name), text),
     // A boundary only: guarded, it is where Blocked stops the run (start.ts, R23).
     step: () => Promise.resolve(),
     log: (event: RunEvent, detail = {}) => {

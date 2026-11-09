@@ -67,6 +67,8 @@ export interface RunDeps {
   openSandbox(branch: string): Promise<RunSandbox>;
   /** Runs the agent in the sandbox with the prompt; resolves when it exits, with its output's tail. */
   runAgent(sandbox: RunSandbox, prompt: string): Promise<{ readonly output: string } | void>;
+  /** Keeps a file in the run's folder (`runs/<run>/<name>`), such as the gate's whole output. */
+  keep?(name: string, text: string): void;
   /** `.factory/result.json` from the worktree, parsed (or why it couldn't be). */
   readResult(
     sandbox: RunSandbox,
@@ -456,9 +458,10 @@ export async function gateAndProve(
     const command = gateCommand(scope);
     const checked = await deps.heavy(`factory gate ${branch}`, () => gate.exec(command));
     if (checked.exitCode !== 0) {
+      deps.keep?.('gate.log', checked.stdout + checked.stderr);
       return {
         ok: false,
-        feedback: `\`${command}\` failed:\n\n\`\`\`\n${tail(checked.stdout + checked.stderr)}\n\`\`\``,
+        feedback: `\`${command}\` failed:\n\n\`\`\`\n${excerpt(checked.stdout + checked.stderr)}\n\`\`\``,
       };
     }
     deps.log('gate-passed', { command });
@@ -754,11 +757,13 @@ async function regate(deps: RunDeps, branch: string, scope: Scope): Promise<Rega
     if (weak.length > 0) return { ok: false, why: weakenedFeedback(weak) };
     const command = gateCommand(scope);
     const checked = await deps.heavy(`factory gate ${branch}`, () => gate.exec(command));
-    if (checked.exitCode !== 0)
+    if (checked.exitCode !== 0) {
+      deps.keep?.('gate.log', checked.stdout + checked.stderr);
       return {
         ok: false,
-        why: `\`${command}\` failed:\n\n\`\`\`\n${tail(checked.stdout + checked.stderr)}\n\`\`\``,
+        why: `\`${command}\` failed:\n\n\`\`\`\n${excerpt(checked.stdout + checked.stderr)}\n\`\`\``,
       };
+    }
     return { ok: true, rebase: rebased };
   } finally {
     await gate.close();
@@ -832,4 +837,22 @@ export async function refreshBranch(
 
 function tail(text: string): string {
   return text.trim().split('\n').slice(-30).join('\n');
+}
+
+const ERROR_LINE = /\berror\b|✖|✘|×|\bFAIL\b|\bfailed\b/i;
+
+/**
+ * A failed check's lines that name an error (up to 40), then its last lines. The tail alone
+ * stopped before ESLint's errors in PEN-70's gate, so neither the agent nor the log said what
+ * failed; the whole output is kept in the run folder too (`gate.log`, A1250).
+ */
+export function excerpt(text: string): string {
+  const last = tail(text);
+  const shown = new Set(last.split('\n'));
+  const errors = text
+    .trim()
+    .split('\n')
+    .filter((line) => ERROR_LINE.test(line) && !shown.has(line))
+    .slice(0, 40);
+  return errors.length ? `${errors.join('\n')}\n…\n${last}` : last;
 }

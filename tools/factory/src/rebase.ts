@@ -2,15 +2,17 @@
  * Keeping a factory branch on top of main (F6, PEN-40). Two factory PRs that each add a
  * decision append rows at the same place in docs/decisions.md, so the second conflicts once the
  * first merges. That conflict, and only that one, the harness resolves itself: main's rows,
- * then the branch's. A row whose number main has meanwhile given to another decision is
+ * then the branch's. A branch whose own Prettier run re-padded the table (an `A-NEW-1` is wider
+ * than the ID column) conflicts on every row; that is merged with the padding taken out, then
+ * formatted again (A1250). A row whose number main has meanwhile given to another decision is
  * renumbered after the rebase. Any other conflict aborts the rebase and goes to the agent.
  *
  * Runs in a gate sandbox's worktree (git through the sandbox, the files read on the host as
  * `numberDecisions` does); the push stays the host's (R18).
  */
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { renumberLines, takenDecisions } from './decisions.ts';
+import { formatDecisions, renumberLines, takenDecisions } from './decisions.ts';
 import type { RunSandbox } from './run.ts';
 
 export const DECISIONS = 'docs/decisions.md';
@@ -80,6 +82,45 @@ export function resolveAppendConflicts(text: string): string | null {
   return hunks > 0 ? out.join('\n') : null;
 }
 
+/** A table row with each cell's padding taken out, so rows Prettier padded differently compare equal. */
+export function unpadRow(line: string): string {
+  if (!isRow(line)) return line;
+  const cells = line
+    .trim()
+    .slice(1, -1)
+    .split(/(?<!\\)\|/)
+    .map((c) => c.trim())
+    .map((c) => (/^:?-+:?$/.test(c) ? c.replace(/-+/, '---') : c));
+  return `| ${cells.join(' | ')} |`;
+}
+
+export const unpad = (text: string): string => text.split('\n').map(unpadRow).join('\n');
+
+/**
+ * The stopped commit's docs/decisions.md merged with padding ignored: the merge base, main's side
+ * and the branch's side, each unpadded, merged by `git merge-file`; both sides adding rows at
+ * one place resolves as above; then Prettier pads the table again. Null when a real conflict
+ * remains, or a side is missing.
+ */
+async function mergeUnpadded(sandbox: RunSandbox): Promise<string | null> {
+  const dir = join(sandbox.worktreePath, '.factory', 'merge');
+  mkdirSync(dir, { recursive: true });
+  const files = ['base', 'ours', 'theirs'];
+  for (const [i, name] of files.entries()) {
+    const stage = await sandbox.exec(`git show :${i + 1}:${DECISIONS}`);
+    if (stage.exitCode !== 0) return null;
+    writeFileSync(join(dir, name), unpad(stage.stdout));
+  }
+  const merged = await sandbox.exec(
+    'git merge-file -p --diff3 .factory/merge/ours .factory/merge/base .factory/merge/theirs',
+  );
+  rmSync(dir, { recursive: true, force: true });
+  // The exit code is the number of conflicts (at most 127); above that, merge-file failed.
+  if (merged.exitCode > 127) return null;
+  const text = merged.exitCode === 0 ? merged.stdout : resolveAppendConflicts(merged.stdout);
+  return text === null ? null : formatDecisions(text);
+}
+
 /**
  * `git rebase origin/main` in the sandbox's worktree, resolving decisions-only conflicts as
  * above, then renumbering any row main has taken (one more commit). `reservedFile` is the
@@ -97,10 +138,11 @@ export async function rebaseOntoMain(
       .split('\n')
       .filter(Boolean);
     const path = join(sandbox.worktreePath, DECISIONS);
-    const text =
-      stops < MAX_STOPS && unmerged.length > 0 && unmerged.every((f) => f === DECISIONS)
-        ? resolveAppendConflicts(readFileSync(path, 'utf8'))
-        : null;
+    const decisionsOnly =
+      stops < MAX_STOPS && unmerged.length > 0 && unmerged.every((f) => f === DECISIONS);
+    const text = decisionsOnly
+      ? (resolveAppendConflicts(readFileSync(path, 'utf8')) ?? (await mergeUnpadded(sandbox)))
+      : null;
     if (text === null) {
       await sandbox.exec('git rebase --abort');
       return { kind: 'conflict', files: unmerged, output };
