@@ -1,6 +1,6 @@
 /**
  * `factory:doctor`'s last full result per slot, `doctor/summary-slot<n>.json` in the state folder:
- * the doctor writes it, and the Factory UI's health bar reads it (A-NEW-1).
+ * the doctor writes it, and the Factory UI's health bar reads it (A1233).
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

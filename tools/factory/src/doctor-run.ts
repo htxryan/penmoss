@@ -117,7 +117,7 @@ export async function runDoctor(config: FactoryConfig, slot: SlotConfig, options
     await sandbox.close();
     await hostGit(options.exec, options.repo, ['branch', '-D', branch]);
   }
-  // The Factory UI's health bar reads the last full result per slot (A-NEW-1).
+  // The Factory UI's health bar reads the last full result per slot (A1233).
   if (options.only === undefined)
     writeDoctorSummary(config, {
       slot: slot.id,

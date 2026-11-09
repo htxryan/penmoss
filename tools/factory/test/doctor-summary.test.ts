@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { readDoctorSummaries, writeDoctorSummary } from '../src/doctor-summary.ts';
 import { testConfig } from './helpers.ts';
 
-describe("the doctor's summary (A-NEW-1)", () => {
+describe("the doctor's summary (A1233)", () => {
   const dir = mkdtempSync(join(tmpdir(), 'factory-doctor-'));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
   const config = { ...testConfig(), stateDir: dir };

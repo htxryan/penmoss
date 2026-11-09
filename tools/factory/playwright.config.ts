@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * The Factory UI's page check (A-NEW-1): headless Chromium against a fake state folder, served by
+ * The Factory UI's page check (A1233): headless Chromium against a fake state folder, served by
  * the UI's own server on a free port. No daemon, no Linear, no window.
  *
  * Headless only on a Mac's own screen (W10, A1174), as in apps/web: a headed, UI or debug run

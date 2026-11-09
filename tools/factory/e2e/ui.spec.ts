@@ -1,5 +1,5 @@
 /**
- * The Factory UI's page against a fake state folder (A-NEW-1): the Inbox and Pipeline views, the
+ * The Factory UI's page against a fake state folder (A1233): the Inbox and Pipeline views, the
  * one detail both open, the health bar's stale and dead states, and a notification's link at
  * phone width. Headless Chromium only (playwright.config.ts); the server is the UI's own, on a
  * free port, with a stand-in writer, so nothing reaches Linear.

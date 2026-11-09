@@ -37,7 +37,7 @@ const card = (v: FactoryView, key: string) => {
 };
 const minutesAgo = (m: number) => new Date(NOW.getTime() - m * 60_000).toISOString();
 
-describe("Needs you: only the factory's own claims (A-NEW-1)", () => {
+describe("Needs you: only the factory's own claims (A1233)", () => {
   it('lists what the factory stopped on or handed back, oldest first', () => {
     expect(view.needs.map((c) => [c.key, c.need?.kind])).toEqual([
       ['PEN-73', 'unblock'],
@@ -95,7 +95,7 @@ describe("Needs you: only the factory's own claims (A-NEW-1)", () => {
   });
 });
 
-describe('a run that failed before the agent started (A-NEW-1)', () => {
+describe('a run that failed before the agent started (A1233)', () => {
   it('shows the failure, not "Paused: Agent working (round 0)"', () => {
     const c = card(view, 'PEN-75');
     expect(c.step).toBe('Failed before the agent started: claude: command not found (exit 127)');
@@ -145,7 +145,7 @@ describe('a run that failed before the agent started (A-NEW-1)', () => {
   });
 });
 
-describe("the daemon's health (A-NEW-1)", () => {
+describe("the daemon's health (A1233)", () => {
   it('is running while the pid is alive and polls are fresh', () => {
     expect(view.health).toMatchObject({
       state: 'running',
@@ -198,7 +198,7 @@ describe("the daemon's health (A-NEW-1)", () => {
   });
 });
 
-describe('the pipeline (A-NEW-1)', () => {
+describe('the pipeline (A1233)', () => {
   it("puts each card on its lifecycle step, with its marker's tone", () => {
     const at = (key: string) => [view.stages[card(view, key).stage], card(view, key).tone];
     expect(at('PEN-84')).toEqual(['Todo', 'card']);
@@ -275,7 +275,7 @@ describe('the pipeline (A-NEW-1)', () => {
   });
 });
 
-describe("today's slots (A-NEW-1)", () => {
+describe("today's slots (A1233)", () => {
   it('draws each run on its slot, coloured by how it ended', () => {
     const lane = (slot: number) =>
       view.timeline.lanes.find((l) => l.slot === slot)?.bars.map((b) => [b.key, b.tone]);
@@ -296,7 +296,7 @@ describe("today's slots (A-NEW-1)", () => {
   });
 });
 
-describe('the state folder (A-NEW-1)', () => {
+describe('the state folder (A1233)', () => {
   const dir = mkdtempSync(join(tmpdir(), 'factory-ui-'));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 

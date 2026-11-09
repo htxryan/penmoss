@@ -1,5 +1,5 @@
 /**
- * The Factory UI's view (F20, #276; redesigned in A-NEW-1): the factory's health, what needs
+ * The Factory UI's view (F20, #276; redesigned in A1233): the factory's health, what needs
  * Ryan and exactly what to do about it, each card on the lifecycle (Todo → Plan → Build → Gate →
  * Proof → PR + CI → Review → Merge → Done) with its runs, and the slots' runs over the last hours.
  * Built from the board, the run ledger, `status.json`, the planning folders and `claude agents`,
