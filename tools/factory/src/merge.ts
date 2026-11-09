@@ -1,8 +1,9 @@
 /**
  * Merge on approval (F18, #273): when Ryan approves and CI is green, the factory squash-merges,
  * watches main's CI for the merge commit, then closes the issue and moves the card to Done. A
- * red main sets Blocked with the failing jobs; the card keeps its status. Production deploys
- * happen in main's own workflow after merge (FD24), never from a branch.
+ * red main sets Blocked with the failing jobs; the card keeps its status. A run GitHub failed with
+ * no jobs is started again once first (A1260). Production deploys happen in main's own workflow
+ * after merge (FD24), never from a branch.
  *
  * A PR that is already merged (the daemon stopped while main's CI ran, R12) is picked up where
  * it was: main is verified for its merge commit without merging again. A change main runs no CI
@@ -23,6 +24,13 @@ export interface MainRun {
   readonly databaseId?: number;
 }
 
+export interface RunJob {
+  readonly name: string;
+  readonly conclusion: string | null;
+}
+
+const PASSED = ['success', 'skipped', 'neutral'];
+
 export interface MergeDeps {
   readonly config: FactoryConfig;
   readonly runId: string;
@@ -34,8 +42,10 @@ export interface MergeDeps {
   mainRuns(sha: string): Promise<MainRun[]>;
   /** Whether main's CI runs at all for the merge commit (ci.yml's push paths, A1095). */
   mainRunsCi(pr: string, sha: string): Promise<boolean>;
-  /** The names of a run's failed jobs. */
-  failedJobs(run: MainRun): Promise<string[]>;
+  /** A run's jobs. None at all means GitHub failed to start the run (0 jobs), not the code. */
+  runJobs(run: MainRun): Promise<RunJob[]>;
+  /** Starts a run again (`gh run rerun`). */
+  rerun(run: MainRun): Promise<void>;
   comment(issue: number, body: string): Promise<void>;
   closeIssue(issue: number, comment: string): Promise<void>;
   setStatus(item: BoardItem, status: string): Promise<void>;
@@ -97,6 +107,8 @@ export async function mergeApproved(
 
   const started = deps.now();
   let runsCi: boolean | undefined;
+  // Runs GitHub failed with no jobs, started again once each (they say nothing about the code).
+  const rerun = new Set<string>();
   for (;;) {
     await deps.sleep(deps.config.pollSeconds);
     const runs = await deps.mainRuns(merged);
@@ -111,13 +123,26 @@ export async function mergeApproved(
       if (minutes < deps.config.timeouts.ciMinutes) continue;
     }
     if (runs.some((r) => r.status !== 'completed')) continue;
-    const failed = runs.filter((r) => r.conclusion !== 'success' && r.conclusion !== 'skipped');
+    const failed: { run: MainRun; jobs: string[] }[] = [];
+    let restarted = false;
+    for (const r of runs.filter((r) => !PASSED.includes(r.conclusion ?? ''))) {
+      const jobs = await deps.runJobs(r).catch((): RunJob[] | undefined => undefined);
+      if (jobs?.length === 0 && !rerun.has(r.url)) {
+        rerun.add(r.url);
+        await deps.rerun(r);
+        deps.log('rerun', { run: r.url, why: 'no jobs' });
+        restarted = true;
+        continue;
+      }
+      const names = (jobs ?? [])
+        .filter((j) => j.conclusion && !PASSED.includes(j.conclusion))
+        .map((j) => j.name);
+      failed.push({ run: r, jobs: jobs?.length === 0 ? ['no jobs started, twice'] : names });
+    }
+    if (restarted) continue;
     if (runs.length === 0 || failed.length > 0) {
-      const named = await Promise.all(
-        failed.map(async (r) => {
-          const jobs = await deps.failedJobs(r).catch((): string[] => []);
-          return jobs.length ? `${r.url} (${jobs.join(', ')})` : r.url;
-        }),
+      const named = failed.map(({ run, jobs }) =>
+        jobs.length ? `${run.url} (${jobs.join(', ')})` : run.url,
       );
       const why =
         runs.length === 0
