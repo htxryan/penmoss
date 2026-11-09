@@ -86,3 +86,61 @@ export function proofPlatforms(
   if (scope.kind !== 'product') return [];
   return labelled ?? scope.platforms;
 }
+
+/**
+ * The classifier's rules as the build prompt states them, with an example path for each, so
+ * the agent plans a proof spec for every platform the gate will want before it starts (PEN-70's
+ * agent left Android out, as its plan said, and the gate refused it a round, A1254). The tests
+ * check each example against `classify`.
+ */
+export const SCOPE_RULES: readonly {
+  readonly paths: string;
+  readonly example: string;
+  readonly platforms: readonly Platform[];
+  readonly gate: string;
+}[] = [
+  {
+    paths:
+      '`packages/`, `apps/web/`, `apps/relay/`, root config (`package.json`, `pnpm-lock.yaml`, `Taskfile.yml`…) and any path no rule knows',
+    example: 'packages/core/src/settings.ts',
+    platforms: ['web', 'mac', 'android'],
+    gate: 'web, Mac and Android',
+  },
+  {
+    paths: '`apps/desktop/`',
+    example: 'apps/desktop/src/main.ts',
+    platforms: ['mac'],
+    gate: 'Mac',
+  },
+  {
+    paths: '`apps/android/`',
+    example: 'apps/android/app/src/main/java/app/penmoss/Main.kt',
+    platforms: ['android'],
+    gate: 'Android',
+  },
+  {
+    paths: '`site/`, `.github/`, `tools/factory/`',
+    example: 'tools/factory/src/run.ts',
+    platforms: [],
+    gate: 'no product proof (the gate runs `task check`)',
+  },
+  {
+    paths: 'Markdown outside test data, and `docs/`',
+    example: 'docs/factory.md',
+    platforms: [],
+    gate: 'no proof (the gate runs `task lint`)',
+  },
+];
+
+/** The build prompt's Scope section: which platforms the gate will want proof for, and why. */
+export function scopeText(labelled: readonly Platform[] | null): string {
+  if (labelled)
+    return `The issue is labelled for ${labelled.join(', ')}, so once your diff touches app code the gate wants a passing proof spec for each of them, and for no other platform.`;
+  return [
+    'There are no `platform:*` labels, so the path classifier decides the platforms from your diff, and the gate refuses your result unless `proofSpecs` names a committed spec, which passes, for every platform the classifier puts in scope. It errs wide:',
+    '',
+    ...SCOPE_RULES.map((r) => `- ${r.paths}: ${r.gate}.`),
+    '',
+    "This holds even when the plan says a platform doesn't change: then that platform's spec shows it unaffected (an Android instrumented test that the screen has no new row, say). Work out from the files you expect to touch which platforms will be in scope, and plan a proof spec for each before you start.",
+  ].join('\n');
+}

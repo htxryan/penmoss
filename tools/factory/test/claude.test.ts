@@ -61,6 +61,21 @@ describe('the implement prompt', () => {
     expect(text).toContain('<untrusted>');
     expect(text).toContain('.factory/result.json');
   });
+  it("names origin/main as main, since the sandbox's local main is stale (PEN-70)", () => {
+    const text = promptTemplate('implement');
+    expect(text).toContain('`git diff origin/main...HEAD`');
+    expect(text).toContain('The local `main` branch is stale');
+    // Every other `main` it names is origin's.
+    const bare = text.match(/(?<!origin\/)`main`/g) ?? [];
+    expect(bare).toEqual(['`main`', '`main`']);
+  });
+  it('asks for proof specs that bring the change on screen and end on it (PEN-70)', () => {
+    const text = promptTemplate('implement');
+    expect(text).toContain('scrollIntoViewIfNeeded()');
+    expect(text).toContain('end on it');
+    expect(text).toContain('ProofShot.take()');
+    expect(text).toMatch(/"android": \{ "inScope": true, "proofSpecs"/);
+  });
   it('refuses a missing value', () => {
     expect(() => fill('{{nope}}', {})).toThrow('{{nope}}');
   });

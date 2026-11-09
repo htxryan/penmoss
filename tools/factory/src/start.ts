@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { agentFor } from './agents/index.ts';
 import type { Board, BoardItem } from './board.ts';
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
+import { scopeText } from './platforms.ts';
 import { nodeExec } from './exec.ts';
 import { createGh, type Gh } from './github.ts';
 import { createAppTokens, loadAppCredentials, type AppTokens } from './github-app.ts';
@@ -335,9 +336,7 @@ export async function executeRun(
     branch: branchName(config, item),
     issue: issueText(issue, tracker.owner, 'penmoss-factory'),
     plan: planFor(config, item.number, spec),
-    scope: spec.platforms
-      ? `The issue is labelled for ${spec.platforms.join(', ')}. Prove the change there.`
-      : 'The path classifier decides the platforms from your diff: shared code means web, Mac and Android.',
+    scope: scopeText(spec.platforms),
   });
   const agent = await agentFor(config, spec);
   const deps = hostDeps({

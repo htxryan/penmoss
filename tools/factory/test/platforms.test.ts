@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classify, proofPlatforms, ruleFor } from '../src/platforms.ts';
+import { classify, proofPlatforms, ruleFor, SCOPE_RULES, scopeText } from '../src/platforms.ts';
 
 const ALL = ['web', 'mac', 'android'];
 
@@ -69,5 +69,22 @@ describe('proofPlatforms', () => {
   it('needs no proof for docs-only or ci-only changes', () => {
     expect(proofPlatforms({ kind: 'docs-only', platforms: [] }, ['web'])).toEqual([]);
     expect(proofPlatforms({ kind: 'ci-only', platforms: [] }, null)).toEqual([]);
+  });
+});
+
+describe("the build prompt's scope (A1254)", () => {
+  it('states each rule as the classifier applies it', () => {
+    for (const rule of SCOPE_RULES)
+      expect(classify([rule.example]).platforms, rule.example).toEqual(rule.platforms);
+  });
+  it('tells an unlabelled card that the classifier, not the plan, sets the proof platforms', () => {
+    const text = scopeText(null);
+    expect(text).toContain('`packages/`, `apps/web/`');
+    expect(text).toContain('web, Mac and Android');
+    expect(text).toContain("even when the plan says a platform doesn't change");
+    expect(text).toContain('before you start');
+  });
+  it('names the labelled platforms as the only ones', () => {
+    expect(scopeText(['web', 'mac'])).toContain('labelled for web, mac');
   });
 });

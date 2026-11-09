@@ -13,7 +13,14 @@ import { classify } from './platforms.ts';
 import { formatMarker } from './pick.ts';
 import type { AttachedProof } from './proof/body.ts';
 import type { RoundItem } from './review.ts';
-import { gateAndProve, refreshBranch, runAgentPatiently, watchCi, type RunDeps } from './run.ts';
+import {
+  gateAndProve,
+  refreshBranch,
+  runAgentPatiently,
+  STALE_MAIN,
+  watchCi,
+  type RunDeps,
+} from './run.ts';
 
 export interface ReviseDeps extends RunDeps {
   prComment(pr: string, body: string, proof?: readonly AttachedProof[]): Promise<void>;
@@ -125,7 +132,7 @@ export async function runRevise(deps: ReviseDeps, input: ReviseInput): Promise<R
         'gate-failed',
         `The review round's gate failed after ${round + 1} round(s): ${verdict.feedback}`,
       );
-    prompt = `${input.prompt}\n\n## The gate's feedback (round ${round + 1})\n\n${verdict.feedback}`;
+    prompt = `${input.prompt}\n\n## The gate's feedback (round ${round + 1})\n\n${verdict.feedback}\n\n${STALE_MAIN}`;
   }
 }
 
