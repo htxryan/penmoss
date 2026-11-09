@@ -136,25 +136,47 @@ const CHAT_URL = /https:\/\/claude\.ai\/code\/session_[A-Za-z0-9_-]+/;
 
 export interface SessionInfo {
   readonly sessionId: string;
+  /** The short id `claude --bg` prints, which `claude stop`, `logs` and `attach` take. */
+  readonly id: string;
   readonly status: string;
 }
 
-/** The background session for an issue, from `claude agents --json`. */
+/** The short id in `claude --bg`'s "backgrounded · <id> · <name>" line. */
+const BACKGROUNDED = /backgrounded\s*·\s*([0-9a-f]{6,})\b/;
+
+/**
+ * The background session for an issue, from `claude agents --json`: the one with the id or
+ * session id given, else the one with the card's name. Claude Code may retitle a session it
+ * names itself, so the factory finds its own by id (PEN-70's planning, 9 Nov 2026).
+ */
 export async function findSession(
   config: FactoryConfig,
   exec: Exec,
   issue: number,
   env: Record<string, string>,
+  known: { readonly id?: string | undefined; readonly sessionId?: string | undefined } = {},
 ): Promise<SessionInfo | undefined> {
   const r = await exec(config.agents.claude.bin, ['agents', '--json'], { env });
   if (r.code !== 0) return undefined;
-  const sessions = JSON.parse(r.stdout || '[]') as {
-    name?: string;
-    sessionId: string;
-    status: string;
-    kind: string;
-  }[];
-  return sessions.find((s) => s.name === sessionName(config, issue) && s.kind !== 'interactive');
+  const sessions = (
+    JSON.parse(r.stdout || '[]') as {
+      id?: string;
+      name?: string;
+      sessionId: string;
+      status: string;
+      kind: string;
+    }[]
+  ).filter((s) => s.kind !== 'interactive');
+  const found =
+    (known.id && sessions.find((s) => s.id === known.id)) ||
+    (known.sessionId && sessions.find((s) => s.sessionId === known.sessionId)) ||
+    sessions.find((s) => s.name === sessionName(config, issue));
+  if (!found) return undefined;
+  return {
+    sessionId: found.sessionId,
+    id: found.id ?? found.sessionId.slice(0, 8),
+    status: found.status,
+  };
 }
 
 /** Starts (or resumes) the session in the background; returns its chat link when it prints one. */
@@ -166,11 +188,14 @@ export async function launchSession(
   message: string,
   env: Record<string, string>,
   resume?: string,
-): Promise<{ chatUrl?: string }> {
+): Promise<{ chatUrl?: string; id?: string }> {
   const cwd = join(expandHome(config.stateDir), 'plans');
   const args = [
     ...(resume ? ['--resume', resume] : []),
     '--bg',
+    // The display name `claude agents` shows; without it Claude Code titles the session itself.
+    '--name',
+    sessionName(config, issue),
     '--remote-control',
     sessionName(config, issue),
     ...planningFlags(files),
@@ -183,16 +208,20 @@ export async function launchSession(
       `claude --bg failed: ${(r.stderr || r.stdout).trim().split('\n').slice(-2).join(' ')}`,
     );
   const chatUrl = CHAT_URL.exec(r.stdout + r.stderr)?.[0];
-  return chatUrl ? { chatUrl } : {};
+  const id = BACKGROUNDED.exec(r.stdout + r.stderr)?.[1];
+  return { ...(chatUrl ? { chatUrl } : {}), ...(id ? { id } : {}) };
 }
 
 export async function stopSession(
   config: FactoryConfig,
   exec: Exec,
-  id: string,
+  issue: number,
+  sessionId: string,
   env: Record<string, string>,
 ): Promise<void> {
-  await exec(config.agents.claude.bin, ['stop', id], { env });
+  // `claude stop` takes the short id, not the session id.
+  const found = await findSession(config, exec, issue, env, { sessionId });
+  await exec(config.agents.claude.bin, ['stop', found?.id ?? sessionId.slice(0, 8)], { env });
 }
 
 /**

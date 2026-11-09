@@ -193,7 +193,7 @@ export async function executePlanning(
     setBlocked: (i) => tracker.setBlocked(i),
     snapshot: () => prepareSnapshot(config, files, nodeExec),
     launch: async (message, resume) => {
-      const { chatUrl } = await launchSession(
+      const { chatUrl, id } = await launchSession(
         config,
         nodeExec,
         files,
@@ -202,15 +202,19 @@ export async function executePlanning(
         env,
         resume,
       );
-      const found = await findSession(config, nodeExec, item.number, env);
+      const found = await findSession(config, nodeExec, item.number, env, { id });
       if (!found)
-        throw new Error('the planning session started but `claude agents` does not list it');
+        throw new Error(
+          `the planning session started${id ? ` (${id})` : ''} but \`claude agents\` does not list it`,
+        );
       log(`planning session ${found.sessionId}${resume ? ' resumed' : ' started'}`);
       return { sessionId: found.sessionId, ...(chatUrl ? { chatUrl } : {}) };
     },
-    stop: (id) => stopSession(config, nodeExec, id, env),
+    stop: (sessionId) => stopSession(config, nodeExec, item.number, sessionId, env),
     session: async () => {
-      const found = await findSession(config, nodeExec, item.number, env);
+      const found = await findSession(config, nodeExec, item.number, env, {
+        sessionId: readMeta(files).sessionId,
+      });
       return found ? { busy: found.status === 'busy' } : undefined;
     },
     now: () => new Date(),
