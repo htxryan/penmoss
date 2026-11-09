@@ -4,7 +4,9 @@
  * inline (`OPENCODE_CONFIG_CONTENT`) with project config turned off, so nothing in the worktree
  * can loosen them. The bash deny list mirrors Claude's (`DENY_RULES`). Sandcastle's
  * `--dangerously-skip-permissions` is taken off: the config allows everything else, so nothing
- * prompts, and the deny rules hold.
+ * prompts, and the deny rules hold. Its session is not captured after the run: Sandcastle's
+ * `opencode export` is `opencode session export` since OpenCode 2, and the factory never resumes
+ * an OpenCode session; the transcript is in the run's `agent.stream.jsonl` (A1263).
  */
 import { readFileSync } from 'node:fs';
 import type { AgentProvider } from '@ai-hero/sandcastle';
@@ -34,7 +36,7 @@ export async function opencodeAgent(
       ...env,
     },
   });
-  return withoutSkipPermissions(base);
+  return { ...withoutSkipPermissions(base), captureSessions: false };
 }
 
 export function withoutSkipPermissions(base: AgentProvider): AgentProvider {
