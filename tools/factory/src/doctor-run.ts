@@ -9,6 +9,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { FactoryConfig, SlotConfig } from './config.ts';
 import { doctorChecks, judge, type CheckOutcome } from './doctor.ts';
+import { writeDoctorSummary } from './doctor-summary.ts';
 import type { Exec } from './exec.ts';
 import { hostGit } from './git.ts';
 import { loadSecrets, type Secrets } from './secrets.ts';
@@ -116,6 +117,13 @@ export async function runDoctor(config: FactoryConfig, slot: SlotConfig, options
     await sandbox.close();
     await hostGit(options.exec, options.repo, ['branch', '-D', branch]);
   }
+  // The Factory UI's health bar reads the last full result per slot (A1233).
+  if (options.only === undefined)
+    writeDoctorSummary(config, {
+      slot: slot.id,
+      at: new Date().toISOString(),
+      failed: outcomes.filter((o) => o.status === 'failed').map((o) => o.check.name),
+    });
   return outcomes;
 }
 
