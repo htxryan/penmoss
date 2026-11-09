@@ -100,6 +100,8 @@ function fake(overrides: {
   vmChecks?: VmCheck[];
   /** The first Mac proofs find the VM won't boot (the VM script's exit 75). */
   vmBootFails?: number;
+  /** The gate's `pnpm install` exits with this. */
+  installExit?: number;
 }): Fake {
   const calls: string[] = [];
   const comments: string[] = [];
@@ -119,6 +121,8 @@ function fake(overrides: {
                 : '',
             stderr: '',
           });
+        if (command.startsWith('pnpm install'))
+          return Promise.resolve({ exitCode: overrides.installExit ?? 0, stdout: '', stderr: '' });
         if (command.startsWith('git status'))
           return Promise.resolve({
             exitCode: 0,
@@ -304,6 +308,7 @@ describe('runImplement', () => {
       'open factory/42-fix-the-typo-in-docs-cli',
       'exec 2: git status --porcelain --untracked-files=no',
       'rebase /wt/2',
+      'exec 2: pnpm install --frozen-lockfile --prefer-offline',
       'exec 2: git diff origin/main...HEAD',
       'exec 2: task lint',
       'close 2',
@@ -562,6 +567,16 @@ describe('runImplement', () => {
     expect(f.calls.at(-1)).toBe('blocked');
   });
 
+  it('installs the rebased dependencies before the check, and a failed install goes to the agent (A1251)', async () => {
+    const f = fake({ paths: ['.github/x.yml'], installExit: 1 });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome).toEqual({ kind: 'blocked', reason: 'gate-failed' });
+    expect(f.comments.at(-1)).toContain('pnpm install --frozen-lockfile --prefer-offline');
+    expect(f.calls.some((c) => c.endsWith(': task check') || c.endsWith(': task lint'))).toBe(
+      false,
+    );
+  });
+
   it('blocks when the agent leaves uncommitted changes', async () => {
     const f = fake({ dirty: true });
     expect(await runImplement(f.deps, { item: card, spec, prompt: 'p' })).toEqual({
@@ -768,6 +783,7 @@ describe('main moves while the PR waits for CI (F6)', () => {
       `behind? ${BR}`,
       `open ${BR}`,
       'rebase /wt/3',
+      'exec 3: pnpm install --frozen-lockfile --prefer-offline',
       'exec 3: git diff origin/main...HEAD',
       'exec 3: task lint',
       'close 3',
