@@ -287,6 +287,14 @@ export function hostDeps(options: HostOptions): HostDeps {
   const runDir = join(state, 'runs', options.runId);
   mkdirSync(runDir, { recursive: true });
   const sandboxes = new WeakMap<RunSandbox, Sandbox>();
+  // A proof's whole output, kept in the run folder: the gate's worktree, with the proof's own
+  // logs, is gone once it closes (PEN-70's Android proof failed twice and left no reason, A1252).
+  const proofLogs = new Map<string, string>();
+  const keepProofLog = (platform: string, ran: { stdout: string; stderr: string }) => {
+    const text = ran.stdout + ran.stderr;
+    proofLogs.set(platform, text);
+    writeFileSync(join(runDir, `proof-${platform}.log`), text);
+  };
 
   return {
     config,
@@ -443,7 +451,7 @@ export function hostDeps(options: HostOptions): HostDeps {
       let items: ProofItem[];
       if (platform === 'web') {
         // Its exit code is not the verdict: the report says which tests passed.
-        await handle.exec(`task proof:web -- ${quoted}`);
+        keepProofLog('web', await handle.exec(`task proof:web -- ${quoted}`));
         const report = newestReport(join(handle.worktreePath, 'apps/web/test-results'));
         if (!report) return [];
         items = fromPlaywrightReport(
@@ -461,7 +469,10 @@ export function hostDeps(options: HostOptions): HostDeps {
         const stop = () => void stopSlotEmulator(config, slot, exec).catch(() => undefined);
         signal?.addEventListener('abort', stop, { once: true });
         try {
-          await handle.exec(withJavaHome(`task proof:android -- ${quoted}`));
+          keepProofLog(
+            'android',
+            await handle.exec(withJavaHome(`task proof:android -- ${quoted}`)),
+          );
         } finally {
           signal?.removeEventListener('abort', stop);
         }
@@ -715,6 +726,7 @@ export function hostDeps(options: HostOptions): HostDeps {
       });
     },
     keep: (name, text) => writeFileSync(join(runDir, name), text),
+    proofLog: (platform) => proofLogs.get(platform),
     // A boundary only: guarded, it is where Blocked stops the run (start.ts, R23).
     step: () => Promise.resolve(),
     log: (event: RunEvent, detail = {}) => {

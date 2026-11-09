@@ -483,6 +483,18 @@ describe('runImplement', () => {
     expect(f.comments.at(-1)).toContain("proof specs for web, mac, android didn't pass");
   });
 
+  it("gives the agent each failed proof's own output (A1252)", async () => {
+    const f = fake({ paths: ['apps/web/src/a.ts'], result: webDone, proofPassed: false });
+    const logs: Record<string, string> = {
+      android: 'BUILD FAILED\nerror: emulator-5582 did not come up\nexit 1',
+    };
+    const deps = { ...f.deps, proofLog: (p: string) => logs[p] };
+    await runImplement(deps, { item: card, spec, prompt: 'p' });
+    expect(f.prompts[1]).toContain("The android proof's output:");
+    expect(f.prompts[1]).toContain('emulator-5582 did not come up');
+    expect(f.prompts[1]).not.toContain("The web proof's output:");
+  });
+
   const review = (verdict: string, note = '') =>
     JSON.stringify({
       rows: [
