@@ -199,6 +199,7 @@ test.describe('the brochure pages', () => {
     page,
   }) => {
     await page.goto('/');
+    await expect(page).toHaveTitle('Penmoss: Your Git. Your Agents. Your Notes.');
     await expect(page.locator('.hero .pill')).toHaveText('Free and open source · Mac and Android');
     await expect(page.locator('.arch img')).toHaveCount(3);
     await expect(page.locator('#features .feature-card')).toHaveCount(6);
