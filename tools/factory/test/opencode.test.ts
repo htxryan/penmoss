@@ -29,6 +29,9 @@ describe('the OpenCode adapter (F12)', () => {
     );
     expect(command).not.toContain('--dangerously-skip-permissions');
   });
+  it("doesn't capture the session, whose export command OpenCode 2 renamed (A1263)", async () => {
+    expect((await opencodeAgent('m')).captureSessions).toBe(false);
+  });
   it('parses its JSON stream', async () => {
     const agent = await opencodeAgent('m');
     const line = JSON.stringify({ type: 'text', part: { type: 'text', text: 'hello' } });
