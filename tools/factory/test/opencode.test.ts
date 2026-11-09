@@ -24,7 +24,9 @@ describe('the OpenCode adapter (F12)', () => {
       prompt: 'do it',
       dangerouslySkipPermissions: true,
     });
-    expect(command).toMatch(/^opencode run --format json --model 'opencode-go\/kimi-k3'/);
+    expect(command).toMatch(
+      /^opencode run --standalone --format json --model 'opencode-go\/kimi-k3'/,
+    );
     expect(command).not.toContain('--dangerously-skip-permissions');
   });
   it('parses its JSON stream', async () => {

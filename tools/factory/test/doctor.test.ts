@@ -81,7 +81,7 @@ describe('doctorChecks', () => {
       output: 'factory-ok',
       needs: ['OPENCODE_API_KEY'],
     });
-    expect(run.command).toContain(`'opencode' run -m '${model}' `);
+    expect(run.command).toContain(`'opencode' run --standalone -m '${model}' `);
     // The prompt asks for the word in capitals, so an echo of it doesn't pass.
     expect(run.command).not.toContain('factory-ok');
     expect(run.command).toMatch(/< \/dev\/null$/);
@@ -99,7 +99,7 @@ describe('doctorChecks', () => {
       needs: ['OPENCODE_API_KEY'],
     });
     expect(list.command).toContain(
-      `'opencode' models 'opencode-go' < /dev/null | grep -Fxq 'opencode-go/kimi-k3'`,
+      `'opencode' models --standalone < /dev/null | grep -Fxq 'opencode-go/kimi-k3'`,
     );
     expect(list.command).toMatch(/&& echo 'all listed'$/);
   });

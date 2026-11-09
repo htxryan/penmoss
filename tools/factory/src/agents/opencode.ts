@@ -47,7 +47,11 @@ export function withoutSkipPermissions(base: AgentProvider): AgentProvider {
         throw new Error(`unexpected opencode command: ${command.command}`);
       return {
         ...command,
-        command: command.command.replace(' --dangerously-skip-permissions', ''),
+        // A private server: OpenCode's shared background service has one fixed port, which the
+        // Mac's own OpenCode (or the other slot) already holds, so a sandboxed run can't start it.
+        command: command.command
+          .replace(' --dangerously-skip-permissions', '')
+          .replace(/^opencode run\s/, 'opencode run --standalone '),
       };
     },
   };

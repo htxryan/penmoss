@@ -17,8 +17,10 @@ function alive(pid: number): boolean {
   } catch {
     return false;
   }
+  // A zombie still answers kill -0. The factory's sandbox refuses ps, so there kill -0 is all
+  // there is, and the stopped processes' new parent reaps them soon enough.
   const stat = spawnSync('ps', ['-o', 'stat=', '-p', String(pid)], { encoding: 'utf8' });
-  return !stat.stdout.trim().startsWith('Z');
+  return !(stat.stdout ?? '').trim().startsWith('Z');
 }
 
 async function until(test: () => boolean, ms = 5000): Promise<void> {

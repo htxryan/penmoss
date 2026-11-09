@@ -180,7 +180,7 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
       needs: ['OPENCODE_API_KEY'],
       command: opencode(
         config,
-        `run -m ${quote(opencodeModels(config)[0] ?? '')} 'Reply with exactly this word, in lower case: FACTORY-OK'`,
+        `run --standalone -m ${quote(opencodeModels(config)[0] ?? '')} 'Reply with exactly this word, in lower case: FACTORY-OK'`,
       ),
     },
     {
@@ -191,8 +191,7 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
       needs: ['OPENCODE_API_KEY'],
       command: [
         ...opencodeModels(config).map(
-          (m) =>
-            `${opencode(config, `models ${quote(m.split('/')[0] ?? '')}`)} | grep -Fxq ${quote(m)}`,
+          (m) => `${opencode(config, 'models --standalone')} | grep -Fxq ${quote(m)}`,
         ),
         "echo 'all listed'",
       ].join(' && '),
