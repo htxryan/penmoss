@@ -99,7 +99,7 @@ test('2 and 3: a folder’s row shows New Note alone on hover; a note’s row ha
   const note = tree(page).getByRole('treeitem', { name: 'Josh Onboarding', exact: true });
   await expect(note).not.toHaveAttribute('data-tip');
   await note.hover();
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(1500);
   await expect(page.getByTestId('tooltip')).toBeHidden();
   if (SHOTS) {
     const rows = await tree(page).boundingBox();

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { placeTip, TIP_DELAY_MS, type Box } from './tooltip-place';
+import { placeTip, type Box } from './tooltip-place';
+import { useTooltipDelay } from './tooltip-state';
 
 interface Shown {
   readonly text: string;
@@ -8,8 +9,10 @@ interface Shown {
 
 /**
  * One tooltip for the whole app (T36, A189). A control with `data-tip` shows
- * it after the mouse rests on it, or at once when it gets keyboard focus; it
- * goes on pointer down, Escape, scroll and blur. The control's name is its
+ * it after the mouse rests on it as long as Settings → Display → Show Tooltips
+ * After says (1 second unset, never on hover with Never; PEN-70, A1247), or
+ * at once when it gets keyboard focus; it goes on pointer down, Escape, scroll
+ * and blur. Moving on to the next control waits the full delay again. The control's name is its
  * `aria-label` (and shortcut, `aria-keyshortcuts`), so the tooltip is hidden
  * from assistive technology. It is drawn in a layer of its own, so a
  * scrolling sidebar or a sticky header never clips it, and unlike `title` it
@@ -21,6 +24,13 @@ export function TooltipLayer() {
   const [shown, setShown] = useState<Shown | null>(null);
   const tipRef = useRef<HTMLDivElement>(null);
   const [place, setPlace] = useState<ReturnType<typeof placeTip> | null>(null);
+  // Read by the listeners at each hover, so a change (here or by sync) applies to the next one
+  // without registering them again.
+  const { delay } = useTooltipDelay();
+  const delayRef = useRef(delay);
+  useEffect(() => {
+    delayRef.current = delay;
+  }, [delay]);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -50,7 +60,10 @@ export function TooltipLayer() {
       hide();
       if (!element) return;
       current = element;
-      timer = setTimeout(() => show(element), TIP_DELAY_MS);
+      const wait = delayRef.current;
+      // Never: no tooltip on hover (keyboard focus still shows one).
+      if (wait === null) return;
+      timer = setTimeout(() => show(element), wait);
     };
     const onFocusIn = (event: FocusEvent) => {
       const element = tipOf(event.target);

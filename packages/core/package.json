@@ -29,6 +29,7 @@
     "./quick-access": "./src/quick-access.ts",
     "./note-metadata": "./src/note-metadata.ts",
     "./sidebar-layout": "./src/sidebar-layout.ts",
+    "./tooltips": "./src/tooltips.ts",
     "./titles": "./src/titles.ts",
     "./invisible": "./src/invisible.ts",
     "./diff-apply": "./src/markdown/diff-apply.ts",

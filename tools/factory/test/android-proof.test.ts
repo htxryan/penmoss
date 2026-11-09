@@ -20,6 +20,11 @@ import { describe, expect, it } from 'vitest';
 const SCRIPT = join(import.meta.dirname, '../../../apps/android/scripts/proof.sh');
 
 const ADB = `#!/bin/sh
+# proof.sh starts the emulator in the background, so on a loaded Mac its stub could log after
+# the first adb poll. A real adb can't reach a device that hasn't started: wait (up to 5 s) for
+# the emulator stub to have logged, so the log's order is the order the script launched them.
+i=0
+while [ ! -s "$STUB_LOG.emulator" ] && [ "$i" -lt 50 ]; do sleep 0.1; i=$((i + 1)); done
 echo "adb $*" >>"$STUB_LOG"
 echo "env ANDROID_SERIAL=$ANDROID_SERIAL ANDROID_TMP=$ANDROID_TMP" >>"$STUB_LOG"
 [ "$1" = -s ] && shift 2

@@ -1,5 +1,3 @@
-/** How long the pointer rests on a control before its tooltip shows. */
-export const TIP_DELAY_MS = 400;
 /** The gap between a control and its tooltip, and the least space kept to the window's edge. */
 const GAP = 6;
 const EDGE = 8;

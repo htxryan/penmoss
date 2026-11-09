@@ -3477,6 +3477,11 @@ a {
   width: 6rem;
 }
 
+/* A short choice (Show Tooltips After, PEN-70): as wide as its longest option needs. */
+.settings-field > .settings-choice {
+  width: 13rem;
+}
+
 .template-input {
   width: 100%;
   height: auto;
