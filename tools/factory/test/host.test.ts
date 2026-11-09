@@ -1,10 +1,18 @@
-import { mkdtempSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nodeExec } from '../src/exec.ts';
 import type { Gh } from '../src/github.ts';
-import { openOrReusePr } from '../src/host.ts';
+import { keepFiles, openOrReusePr } from '../src/host.ts';
 import { pushBranch } from '../src/publish.ts';
 
 // Real git against a bare repository standing in for GitHub, pushed to by URL as the host does
@@ -142,5 +150,25 @@ describe("the harness's PR", () => {
       ...['api', '-X', 'PATCH', 'repos/htxryan/penmoss/pulls/5'],
       ...['-f', 'title=Fix the typo', '-F', `body=@${pr.bodyFile}`],
     ]);
+  });
+});
+
+describe("validation's files in the run folder (A1256)", () => {
+  it('keeps the review, captures and image pairs, never a link or a folder', () => {
+    const root = mkdtempSync(join(tmpdir(), 'factory-keep-'));
+    const from = join(root, 'worktree', '.factory', 'validation');
+    mkdirSync(join(from, 'sub'), { recursive: true });
+    writeFileSync(join(from, 'review.json'), '{"rows":[]}');
+    writeFileSync(join(from, 'ac1.png'), 'png');
+    writeFileSync(join(from, 'ac1-mockup.png'), 'png');
+    writeFileSync(join(root, 'outside.txt'), "not the agent's");
+    symlinkSync(join(root, 'outside.txt'), join(from, 'link.png'));
+    const to = join(root, 'runs', 'r1', 'validation', '1');
+    expect(keepFiles(from, to).sort()).toEqual(['ac1-mockup.png', 'ac1.png', 'review.json']);
+    expect(readdirSync(to).sort()).toEqual(['ac1-mockup.png', 'ac1.png', 'review.json']);
+    expect(readFileSync(join(to, 'review.json'), 'utf8')).toBe('{"rows":[]}');
+    // Nothing to keep: no folder made.
+    expect(keepFiles(join(root, 'none'), join(root, 'empty'))).toEqual([]);
+    expect(existsSync(join(root, 'empty'))).toBe(false);
   });
 });

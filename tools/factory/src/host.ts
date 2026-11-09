@@ -201,6 +201,20 @@ export function sandboxStartCommand(base: string): string {
 export const AGENT_STREAM = 'agent.stream.jsonl';
 
 /**
+ * Copies the plain files directly in `from` (validation's review.json, captures.json and each
+ * criterion's screenshot and mockup) into `to`, before the sandbox's worktree is gone (A1256).
+ * Never through a symlink or into a subfolder: the agent wrote `from`. Returns the names copied.
+ */
+export function keepFiles(from: string, to: string): string[] {
+  if (!existsSync(from) || !lstatSync(from).isDirectory()) return [];
+  const names = readdirSync(from).filter((n) => lstatSync(join(from, n)).isFile());
+  if (names.length === 0) return [];
+  mkdirSync(to, { recursive: true });
+  for (const n of names) copyFileSync(join(from, n), join(to, n));
+  return names;
+}
+
+/**
  * The command a shell couldn't find, from an agent's failure: `sh`'s "claude: command not found"
  * or exit 127, zsh's "command not found: claude". Undefined for any other failure.
  */
@@ -388,6 +402,13 @@ export function hostDeps(options: HostOptions): HostDeps {
       if (existsSync(from))
         for (const f of readdirSync(from).filter((n) => n.endsWith('.html')))
           copyFileSync(join(from, f), join(to, f));
+      return Promise.resolve();
+    },
+    keepValidation: (handle) => {
+      // One folder per validation in the run, so a later round doesn't overwrite an earlier one.
+      const root = join(runDir, 'validation');
+      const n = existsSync(root) ? readdirSync(root).length + 1 : 1;
+      keepFiles(join(handle.worktreePath, '.factory', 'validation'), join(root, String(n)));
       return Promise.resolve();
     },
     readReview: (handle) => {

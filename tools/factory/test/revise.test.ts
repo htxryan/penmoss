@@ -102,6 +102,7 @@ function fake(rebases: RebaseOutcome[]) {
     },
     failedLog: () => Promise.resolve(''),
     stageMockups: () => Promise.resolve(),
+    keepValidation: () => Promise.resolve(),
     readReview: () => Promise.resolve(null),
     collectFidelity: (_sandbox, rows) => Promise.resolve([...rows]),
     heavy: (_label, fn) => fn(),
@@ -157,7 +158,7 @@ describe('runRebase: a PR in review that main moved past (F6)', () => {
     const f = fake([conflict, conflict]);
     expect(await runRebase(f.deps, input)).toEqual({ kind: 'blocked', reason: 'rebase-conflict' });
     expect(f.prompts).toHaveLength(1);
-    expect(f.prompts[0]).toContain('## main moved: rebase onto it');
+    expect(f.prompts[0]).toContain('## `origin/main` moved: rebase onto it');
     expect(f.issueComments.at(-1)).toContain(
       'no longer rebases onto main: `apps/web/src/routes.ts` conflict',
     );

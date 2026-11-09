@@ -1,10 +1,13 @@
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { CheckRun } from '../src/checks.ts';
+import type { IssueSpec } from '../src/labels.ts';
 import { ciRunsFor, mergeApproved, type MainRun, type MergeDeps } from '../src/merge.ts';
 import type { Gh } from '../src/github.ts';
 import type { Factory } from '../src/start.ts';
-import { findPr, nextReviewAction } from '../src/watch.ts';
+import { findPr, nextReviewAction, roundPrompt } from '../src/watch.ts';
 import { item, testConfig } from './helpers.ts';
 
 const config = testConfig();
@@ -218,5 +221,25 @@ describe("ciRunsFor (ci.yml's push paths, A1095)", () => {
   it('assumes CI runs when it finds no push paths, or no files', () => {
     expect(ciRunsFor('on:\n  push:\n    branches: [main]\n', ['docs/a.md'])).toBe(true);
     expect(ciRunsFor(ci, [])).toBe(true);
+  });
+});
+
+describe('the prompt a review, rebase or CI round starts from', () => {
+  const spec = (planSkip: boolean): IssueSpec => ({
+    agent: 'claude',
+    modelAlias: 'opus',
+    model: 'opus',
+    planSkip,
+    platforms: null,
+    priority: 3,
+  });
+  it('fills the plan, which it lacked, so every round threw before the agent started', () => {
+    const c = { ...config, stateDir: mkdtempSync(join(tmpdir(), 'round-')) };
+    const skipped = roundPrompt(c, card, spec(true), '# PEN-5 Fix it');
+    expect(skipped).toContain('# PEN-5 Fix it');
+    expect(skipped).toContain('so the issue is the spec');
+    expect(skipped).toContain('There are no `platform:*` labels');
+    // A planned card whose plan copy has gone still gets its round.
+    expect(roundPrompt(c, card, spec(false), '# PEN-5')).toContain('None kept');
   });
 });

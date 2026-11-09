@@ -122,6 +122,7 @@ export interface RunDeps {
   failedLog(check: CheckRun): Promise<string>;
   /** F19's validation: mockups in, the reviewer's verdicts out (see validate.ts). */
   stageMockups(sandbox: RunSandbox): Promise<void>;
+  keepValidation(sandbox: RunSandbox): Promise<void>;
   readReview(sandbox: RunSandbox): Promise<string | null>;
   collectFidelity(sandbox: RunSandbox, rows: readonly FidelityRow[]): Promise<FidelityRow[]>;
   /** Runs `fn` holding one of the Mac's heavy-job slots (W12, A1216). */
