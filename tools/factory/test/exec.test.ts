@@ -8,7 +8,7 @@ import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { nodeExec } from '../src/exec.ts';
+import { WATCHDOG, nodeExec } from '../src/exec.ts';
 
 /** Running: not gone, and not a zombie its new parent has yet to reap. */
 function alive(pid: number): boolean {
@@ -122,4 +122,25 @@ describe('nodeExec', { timeout: 30_000 }, () => {
       daemon.kill('SIGKILL');
     }
   }, 60_000);
+});
+
+// The watchdog runs under /bin/sh, which is dash on Linux and bash on a Mac: both must read
+// `kill -TERM -<pgid>` as the group (dash refused `kill -TERM -- -<pgid>`, A1235).
+describe('the watchdog', { timeout: 30_000 }, () => {
+  const shells = ['/bin/sh', '/bin/dash', '/bin/bash'].filter((sh) => existsSync(sh));
+
+  it.each(shells)('stops the group under %s when its pipe closes without "done"', async (sh) => {
+    const command = spawn('sleep', ['30'], { detached: true, stdio: 'ignore' });
+    const pid = command.pid!;
+    try {
+      const watchdog = spawn(sh, ['-c', WATCHDOG, 'watchdog', String(pid), '1'], {
+        stdio: ['pipe', 'ignore', 'ignore'],
+      });
+      expect(alive(pid)).toBe(true);
+      watchdog.stdin.end();
+      await until(() => !alive(pid), 10_000);
+    } finally {
+      command.kill('SIGKILL');
+    }
+  });
 });

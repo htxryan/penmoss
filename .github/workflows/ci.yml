@@ -277,6 +277,9 @@ jobs:
       - name: Search budget (T22, the offline index)
         run: pnpm --filter @penmoss/sync-client perf
 
+      - name: Unit-level budgets (A1244)
+        run: pnpm -r --workspace-concurrency=1 --if-present budgets
+
       - name: Install Chromium (Mac, into the runner's tool cache)
         run: task e2e:install
 

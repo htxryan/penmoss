@@ -38,10 +38,12 @@ export const KILL_GRACE_MS = 30_000;
 
 /**
  * Stops the group `$1` if its reader goes away without saying "done": this process died (even by
- * SIGKILL), which closes the pipe. SIGTERM first, SIGKILL `$2` seconds later.
+ * SIGKILL), which closes the pipe. SIGTERM first, SIGKILL `$2` seconds later. No `--` before the
+ * group: dash, Linux's /bin/sh, reads it as a pid and refuses ("Illegal number: -"), and both it
+ * and bash take `-<pgid>` after a signal as the group.
  */
-const WATCHDOG =
-  'read -r reply || { kill -TERM -- "-$1"; /bin/sleep "$2"; kill -KILL -- "-$1"; } 2>/dev/null';
+export const WATCHDOG =
+  'read -r reply || { kill -TERM "-$1"; /bin/sleep "$2"; kill -KILL "-$1"; } 2>/dev/null';
 
 function killGroup(pid: number, signal: NodeJS.Signals): void {
   try {
