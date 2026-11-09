@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  fidelityFeedback,
-  parseReview,
-  renderFidelity,
-  settle,
-  standIn,
-} from '../src/fidelity.ts';
+import { fidelityFeedback, parseReview, renderFidelity, settle, standIn } from '../src/fidelity.ts';
 
 const review = {
   rows: [

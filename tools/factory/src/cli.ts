@@ -34,7 +34,6 @@ import { ownerKey } from './ui/owner.ts';
 import { decisionNumber } from './decision-number.ts';
 import { helpFor, usage } from './usage.ts';
 
-
 function describe(pick: Pick, config: FactoryConfig): string[] {
   const { item, spec } = pick;
   const scope = spec.platforms

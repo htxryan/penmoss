@@ -8,7 +8,7 @@ Read these before doing any work in this repository:
 
 ## Rules
 
-- When a decision changes, record it in `docs/decisions.md` in the same commit.
+- When a decision changes, record it in `docs/decisions.md` in the same commit. Take a new row's number from `task decision:next`, which reserves it from the factory's counter, so an open factory run never takes the same one (A1253). Keep the row inside the table's column widths, or Prettier re-pads the whole table.
 - A user-facing change (a menu, a setting, a shortcut, a CLI command or flag, an MCP tool, what a screen says or does) updates its page in the user docs, `site/src/content/docs/docs/`, in the same pull request. User docs live only there; `docs/` is for contributors (A1215).
 - Plan new work as Linear issues in the Penmoss team (`PEN`, the **Task** template), never as files in the repository. A large piece of work is a parent issue with sub-issues, and work that spans several pull requests also gets a Linear project. The plan itself (spec, decisions, diagrams, prototype, tasks) is a Claude artifact linked from the parent issue. Each task is a sub-issue that tracks progress. No planning or roadmap file of any kind goes in the repository: no `tasks/`, `plans/`, `docs/ideas/`, `docs/notes/`, `plan.md`, `plan.html`, `SPEC.md`, `todo.md` or roadmap. `task lint` fails on such files (W13).
 - Mark a task done only when its acceptance criteria and the Definition of Done (`docs/development.md`) are met. Then record evidence in the pull request or the issue. A pull request that says `Fixes PEN-<n>` marks the issue Done when it merges.
