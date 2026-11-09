@@ -51,9 +51,17 @@ class TooltipDelayInstrumentedTest {
                     }
                 }
             }
-            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            // Wait for Display's first frame: on a loaded emulator, Compose can compose after the
+            // main thread's first idle, so read the screen until its rows are there (up to 30 s).
+            val instrumentation = InstrumentationRegistry.getInstrumentation()
             var texts = emptyList<String>()
-            scenario.onActivity { activity -> texts = screenTexts(activity.window.decorView) }
+            val deadline = SystemClock.uptimeMillis() + 30_000
+            do {
+                instrumentation.waitForIdleSync()
+                scenario.onActivity { activity -> texts = screenTexts(activity.window.decorView) }
+                if ("Today" in texts && "Show Notebook Names in Quick Access" in texts) break
+                SystemClock.sleep(250)
+            } while (SystemClock.uptimeMillis() < deadline)
             // The whole screen, scrolled-off rows included: Display's own rows are there...
             assertTrue(texts.toString(), "Today" in texts)
             assertTrue(texts.toString(), "Notes in Recent Notes" in texts)
@@ -66,7 +74,8 @@ class TooltipDelayInstrumentedTest {
         }
     }
 
-    /** Every text in the Compose roots under [view], whether scrolled into view or not. */
+    /** Every text in the Compose roots under [view], whether scrolled into view or not;
+     * none before the first Compose root is attached. */
     private fun screenTexts(view: View): List<String> {
         val roots = mutableListOf<ViewRootForTest>()
         fun walk(v: View) {
@@ -74,7 +83,6 @@ class TooltipDelayInstrumentedTest {
             if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
         }
         walk(view)
-        assertTrue("no Compose root on screen", roots.isNotEmpty())
         return roots.flatMap { root ->
             root.semanticsOwner.getAllSemanticsNodes(mergingEnabled = false).flatMap { node ->
                 node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text }
