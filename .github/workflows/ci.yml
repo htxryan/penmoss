@@ -237,7 +237,11 @@ jobs:
         timeout-minutes: 30
         # Frame-rate budgets (@perf) are measured locally: a shared 4-CPU runner's fps says
         # nothing about Ryan's machines, and the budget stays enforced by `task e2e`. The
-        # T31 budgets (@budget) run in their own job below.
+        # T31 budgets (@budget) run in their own job below. Two workers, not the Mac's four
+        # (A1235): with both of the suite's servers on the hosted runner's few cores, four at once
+        # timed out pages ("Target page, context or browser has been closed") at random.
+        env:
+          PENMOSS_E2E_WORKERS: '2'
         run: task e2e -- --grep-invert "@perf|@budget"
 
       - name: Upload Playwright report
