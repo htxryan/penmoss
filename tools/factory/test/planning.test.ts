@@ -179,11 +179,16 @@ describe('planning sessions', async () => {
         '--strict-mcp-config',
         '{"mcpServers":{}}',
         'dontAsk',
-        'Read(/p/9/repo/**)',
-        'Edit(/p/9/out/**)',
+        // `//` is an absolute path in a Claude Code rule; `/` is relative to the settings file.
+        'Read(//p/9/repo/**)',
+        'Read(//p/9/out/**)',
+        'Edit(//p/9/out/**)',
       ]),
     );
     expect(flags.some((f) => f.startsWith('Bash'))).toBe(false);
+    // Claude Code never matches a file write against a Write rule, only against Edit.
+    expect(flags.some((f) => f.startsWith('Write('))).toBe(false);
+    expect(flags.some((f) => /^(Read|Edit)\(\/[^/]/.test(f))).toBe(false);
   });
   it('names each session after its card, as the active tracker numbers it', async () => {
     const { sessionIssue } = await import('../src/planning-host.ts');
