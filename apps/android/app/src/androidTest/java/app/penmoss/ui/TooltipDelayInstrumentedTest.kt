@@ -13,6 +13,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.penmoss.engine.settings.Settings
+import app.penmoss.proof.ProofShot
 import app.penmoss.ui.settings.DisplayScreen
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
@@ -69,6 +70,8 @@ class TooltipDelayInstrumentedTest {
             // ...and nothing names the web's tooltip field or its choices.
             assertTrue(texts.toString(), texts.none { it.contains("Tooltip", ignoreCase = true) })
             assertTrue(texts.toString(), texts.none { it == "Never" || it.endsWith("(Default)") || it.endsWith("Seconds") })
+            // The proof's screenshot, while Display is on screen (A1255).
+            ProofShot.take()
             // Held on screen a moment, so the proof's recording shows Display.
             SystemClock.sleep(2_000)
         }
