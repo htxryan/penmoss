@@ -34,6 +34,7 @@ tasks:
       - task: audit:secrets
       - task: audit:test
       - task: ports:test
+      - task: budgets:test
       - task: check-changed:test
       - task: vm:test
       - task: ci:lint
@@ -48,6 +49,10 @@ tasks:
     desc: 'Port blocks (#260): scripts/ports.mjs, which PENMOSS_PORT_BLOCK=n moves every dev and test port with'
     cmds:
       - node --test scripts/ports.test.mjs
+  budgets:test:
+    desc: 'Wall-clock budgets stay out of the unit run (A1244): only a *.budget.test.ts file times itself, and each package with one runs it in `budgets`'
+    cmds:
+      - node --test scripts/budgets.test.mjs
   check-changed:test:
     desc: 'What `task check:changed` checks (A1224): the change about to be committed, or the last commit, never the whole branch'
     cmds:
@@ -207,10 +212,11 @@ tasks:
       - node tools/factory/src/cli.ts update {{.CLI_ARGS}}
 
   factory:start:
-    desc: 'The software factory: start the daemon now (after `factory:stop`, or if it is loaded but not running)'
+    desc: 'The software factory: start the daemon and the UI now (after `factory:stop` or a failed update, or if they are loaded but not running)'
     cmds:
-      # factory:stop boots the service out, so kickstart alone can't find it: load it again first.
-      - launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/app.penmoss.factory.plist" 2>/dev/null || launchctl kickstart gui/$(id -u)/app.penmoss.factory
+      # Loads a LaunchAgent that was booted out (retrying launchd's I/O error 5), kickstarts one
+      # that is loaded but not running, and leaves a running one alone.
+      - node tools/factory/src/cli.ts start
 
   factory:stop:
     desc: 'The software factory: stop the daemon (runs in progress restart next time, R12)'
@@ -264,6 +270,16 @@ tasks:
     cmds:
       - pnpm --filter @penmoss/web exec playwright test --project=chromium --pass-with-no-tests {{.CLI_ARGS}}
       - pnpm --filter @penmoss/web exec playwright test --project=timed --pass-with-no-tests {{.CLI_ARGS}}
+
+  budgets:
+    desc: "Wall-clock budgets (A1244): every package's *.budget.test.ts, one package and one file at a time, then the offline search budget. Never part of `task check`; CI's budgets job doesn't run them yet. Waits for a free heavy-job slot"
+    cmds:
+      - sh scripts/heavy.sh budgets {{.TASK_EXE}} budgets:run
+
+  budgets:run:
+    cmds:
+      - pnpm -r --workspace-concurrency=1 --if-present budgets
+      - pnpm --filter @penmoss/sync-client perf
 
   proof:web:
     desc: "The software factory's web proof (F5): the given specs recorded on video with a final screenshot, `task proof:web -- comments.spec.ts`"

@@ -18,7 +18,7 @@ import { hostGit, mustGit } from './git.ts';
 import { DEAD_END_PUSH_URL } from './host.ts';
 import { githubUrl } from './publish.ts';
 import { LABEL, plistPath, renderPlist, UI_LABEL } from './launchd.ts';
-import { readStatus, type Commit, type DaemonStatus } from './status.ts';
+import { formatStatus, readStatus, type Commit, type DaemonStatus } from './status.ts';
 import { issueKey } from './tracker/port.ts';
 
 export function codeDir(config: FactoryConfig): string {
@@ -120,6 +120,8 @@ export interface AgentDeps {
   /** The Node that runs the LaunchAgents: the one running this command. */
   readonly node: string;
   readonly log: (line: string) => void;
+  /** Waits between launchctl's checks: bootout returns before launchd has removed the service. */
+  readonly sleep: (ms: number) => Promise<void>;
 }
 
 const AGENTS = [
@@ -133,6 +135,26 @@ function agentDirs(config: FactoryConfig): string[] {
     .map((a) => a.bin)
     .filter((bin) => bin.startsWith('/'))
     .map((bin) => dirname(bin));
+}
+
+/**
+ * The PATH both LaunchAgents run with, and so every run's sandbox and the host's own commands
+ * (git, gh, osascript): launchd's PATH has nothing from the user's shell. `task factory:doctor`
+ * checks the host's commands on this PATH, not the shell's.
+ */
+export function agentPath(config: FactoryConfig, home: string, node: string): string {
+  return [
+    dirname(node),
+    // Where Claude Code's installer puts `claude` (PEN-75's first run failed without it).
+    join(home, '.local', 'bin'),
+    ...agentDirs(config),
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+    '/usr/bin',
+    '/bin',
+    '/usr/sbin',
+    '/sbin',
+  ].join(':');
 }
 
 /** Writes both plists, pointing at the code checkout. */
@@ -150,19 +172,7 @@ export function writeAgents(config: FactoryConfig, deps: AgentDeps): string[] {
         node: deps.node,
         cli: codeCli(dir),
         repo: dir,
-        path: [
-          dirname(deps.node),
-          // Where Claude Code's installer puts `claude`: launchd's PATH has nothing from the
-          // user's shell, and each run's sandbox gets this PATH (PEN-75's first run failed on it).
-          join(deps.home, '.local', 'bin'),
-          ...agentDirs(config),
-          '/opt/homebrew/bin',
-          '/usr/local/bin',
-          '/usr/bin',
-          '/bin',
-          '/usr/sbin',
-          '/sbin',
-        ].join(':'),
+        path: agentPath(config, deps.home, deps.node),
         log: join(state, logName),
       }),
     );
@@ -170,22 +180,95 @@ export function writeAgents(config: FactoryConfig, deps: AgentDeps): string[] {
   });
 }
 
-async function stopAgents(deps: AgentDeps): Promise<void> {
-  for (const [label] of AGENTS)
-    await deps.exec('launchctl', ['bootout', `gui/${deps.uid}/${label}`]);
+const service = (deps: AgentDeps, label: string) => `gui/${deps.uid}/${label}`;
+
+/** Whether launchd has `label` loaded (running or not). */
+async function isLoaded(deps: AgentDeps, label: string): Promise<boolean> {
+  return (await deps.exec('launchctl', ['print', service(deps, label)])).code === 0;
 }
 
-/** Loads both LaunchAgents again (they start now); an error names the one that failed. */
-async function startAgents(deps: AgentDeps): Promise<string | undefined> {
-  for (const [label] of AGENTS) {
-    const loaded = await deps.exec('launchctl', [
+/** How long to wait for launchd to finish a bootout: it returns before the service is gone. */
+const GONE_TRIES = 40;
+const GONE_EVERY_MS = 250;
+
+/** Waits (at most 10 s) until launchd no longer has `label`; false if it still does. */
+async function untilGone(deps: AgentDeps, label: string): Promise<boolean> {
+  for (let i = 0; i < GONE_TRIES; i++) {
+    if (!(await isLoaded(deps, label))) return true;
+    await deps.sleep(GONE_EVERY_MS);
+  }
+  return false;
+}
+
+/** Stops both LaunchAgents, and waits until launchd has really removed them. */
+async function stopAgents(deps: AgentDeps): Promise<void> {
+  for (const [label] of AGENTS) await deps.exec('launchctl', ['bootout', service(deps, label)]);
+  for (const [label] of AGENTS)
+    if (!(await untilGone(deps, label)))
+      deps.log(`launchd still has ${label} 10 s after stopping it; starting it again anyway.`);
+}
+
+export const BOOTSTRAP_TRIES = 4;
+
+/**
+ * Loads one LaunchAgent (it starts now). `launchctl bootstrap` fails with "5: Input/output error"
+ * while launchd still holds the service it booted out a moment ago (PEN-75's third update), so a
+ * failure boots it out again, waits until it is gone and tries again, a few times.
+ */
+async function bootstrap(deps: AgentDeps, label: string): Promise<string | undefined> {
+  let why = '';
+  for (let attempt = 1; attempt <= BOOTSTRAP_TRIES; attempt++) {
+    const r = await deps.exec('launchctl', [
       'bootstrap',
       `gui/${deps.uid}`,
       plistPath(deps.home, label),
     ]);
-    if (loaded.code !== 0) return `launchctl bootstrap ${label} failed: ${loaded.stderr.trim()}`;
+    if (r.code === 0) return undefined;
+    why = r.stderr.trim() || `exit ${r.code}`;
+    if (attempt === BOOTSTRAP_TRIES) break;
+    deps.log(`launchctl bootstrap ${label} failed (${why}); trying again.`);
+    await deps.exec('launchctl', ['bootout', service(deps, label)]);
+    await untilGone(deps, label);
+    await deps.sleep(1000 * attempt);
   }
-  return undefined;
+  return `launchctl bootstrap ${label} failed ${BOOTSTRAP_TRIES} times: ${why}`;
+}
+
+/** Loads both LaunchAgents again, each even when the other failed; the errors name which. */
+async function startAgents(deps: AgentDeps): Promise<string[]> {
+  const failed: string[] = [];
+  for (const [label] of AGENTS) {
+    const why = await bootstrap(deps, label);
+    if (why) failed.push(why);
+  }
+  return failed;
+}
+
+/**
+ * `factory:start`: starts both LaunchAgents, the daemon and the UI. One that `factory:stop` (or a
+ * failed update) booted out is loaded again; one that is loaded but not running is kickstarted,
+ * and one already running is left alone.
+ */
+export async function startFactory(deps: AgentDeps): Promise<number> {
+  const failed: string[] = [];
+  for (const [label, command] of AGENTS) {
+    const name = command === 'ui' ? 'UI' : command;
+    if (!existsSync(plistPath(deps.home, label))) {
+      failed.push(`there is no ${plistPath(deps.home, label)}: run task factory:install`);
+      continue;
+    }
+    if (await isLoaded(deps, label)) {
+      const r = await deps.exec('launchctl', ['kickstart', service(deps, label)]);
+      if (r.code !== 0) failed.push(`launchctl kickstart ${label} failed: ${r.stderr.trim()}`);
+      else deps.log(`The ${name} is running.`);
+      continue;
+    }
+    const why = await bootstrap(deps, label);
+    if (why) failed.push(why);
+    else deps.log(`Started the ${name}.`);
+  }
+  for (const why of failed) deps.log(why);
+  return failed.length > 0 ? 1 : 0;
 }
 
 /**
@@ -212,8 +295,8 @@ export async function installAgents(config: FactoryConfig, deps: AgentDeps): Pro
   const plists = writeAgents(config, deps);
   await stopAgents(deps);
   const failed = await startAgents(deps);
-  if (failed) {
-    deps.log(failed);
+  if (failed.length > 0) {
+    for (const why of failed) deps.log(why);
     return 1;
   }
   for (const plist of plists) deps.log(`Installed ${plist}`);
@@ -242,7 +325,6 @@ export interface UpdateDeps extends AgentDeps {
   readonly pid: number;
   readonly alive: (pid: number) => boolean;
   readonly now: () => Date;
-  readonly sleep: (ms: number) => Promise<void>;
   /** The daemon's status, as `status.json` holds it. */
   readonly status?: () => DaemonStatus | undefined;
 }
@@ -342,16 +424,46 @@ export async function updateFactory(
     }
     writeAgents(config, deps);
     rmSync(pause, { force: true });
+    const restarted = deps.now();
     const failed = await startAgents(deps);
-    if (failed) {
-      deps.log(failed);
+    if (failed.length > 0) {
+      for (const why of failed) deps.log(why);
       return 1;
     }
     deps.log('The daemon and the UI restarted.');
-    return code;
+    return (await firstPoll(config, deps, status, restarted)) ? code : 1;
   } finally {
     rmSync(pause, { force: true });
   }
+}
+
+/**
+ * Waits (bounded) for the restarted daemon's first status.json and prints it, so the update ends
+ * with what is really running rather than the old daemon's last poll. False if none came: the
+ * daemon exited on startup (launchd starts it again within 30 s) or hasn't polled yet.
+ */
+async function firstPoll(
+  config: FactoryConfig,
+  deps: UpdateDeps,
+  status: () => DaemonStatus | undefined,
+  restarted: Date,
+): Promise<boolean> {
+  // Its first poll reads the board and runs the janitor, so allow two intervals and a minute.
+  const bound = (config.pollSeconds * 2 + 60) * 1000;
+  for (;;) {
+    const s = status();
+    if (s && Date.parse(s.updatedAt) >= restarted.getTime() && deps.alive(s.pid)) {
+      for (const line of formatStatus(s, config, codeDir(config), deps.now(), deps.alive))
+        deps.log(line);
+      return true;
+    }
+    if (deps.now().getTime() - restarted.getTime() >= bound) break;
+    await deps.sleep(2000);
+  }
+  deps.log(
+    `The new daemon hasn't reported within ${Math.round(bound / 1000)} s of its restart: see task factory:logs, and task factory:status.`,
+  );
+  return false;
 }
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));

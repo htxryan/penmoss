@@ -68,7 +68,9 @@ function isAlive(pid: number): boolean {
  */
 export function unfinishedClaims(ledger: string): Set<number> {
   const open = new Set<number>();
-  const terminal = new Set(['in-review']);
+  // A merge (merged, done) finishes a claim too: a run that failed after its card reached In
+  // Review wrote no in-review, and the card then merged through the review loop (PEN-75).
+  const terminal = new Set(['in-review', 'merged', 'done']);
   for (const line of ledger.split('\n')) {
     if (!line.trim()) continue;
     try {

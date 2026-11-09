@@ -347,6 +347,13 @@ describe('the import boundary (F21)', () => {
       expect(modules, entry).not.toContain('ui/owner.ts');
     }
   });
+  it("starts the UI without preparing the runs' clone, which the daemon restarted with it does", () => {
+    // Both wrote the clone's config at once after factory:update, and one lost config.lock.
+    const text = readFileSync(join(src, 'ui/run.ts'), 'utf8');
+    const opens = [...text.matchAll(/openFactory\(([^)]*)\)/g)].map((m) => m[1]);
+    expect(opens).toEqual(['config, { clone: false }']);
+    expect(text).not.toContain('ensureClone');
+  });
   it("leaves clearing Blocked out of the trackers, which the factory's runs use", () => {
     for (const file of ['board.ts', 'tracker/github.ts', 'tracker/linear.ts', 'tracker/port.ts']) {
       const text = readFileSync(join(src, file), 'utf8');

@@ -29,7 +29,7 @@ import { usageLimitReset } from './limits.ts';
 import { cardLink } from './ui/link.ts';
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { Exec } from './exec.ts';
-import { mustGit } from './git.ts';
+import { ensureConfig, mustGit } from './git.ts';
 import { runIdOf, type CheckRun } from './checks.ts';
 import { definedPlaceholders, numberLines, reserveDecisionNumbers } from './decisions.ts';
 import { GhError, type Gh } from './github.ts';
@@ -61,6 +61,20 @@ export const DEAD_END_PUSH_URL = 'no-push://the-factory-harness-pushes';
 
 export function repoDir(config: FactoryConfig): string {
   return join(expandHome(config.stateDir), 'repo');
+}
+
+/**
+ * Appends one event to the run ledger (`runs.jsonl`), which `factory:report`, the daemon's
+ * recovery (`unfinishedClaims`) and the UI read: `{ at, run, event, ...detail }`.
+ */
+export function appendLedger(
+  config: FactoryConfig,
+  entry: { readonly run: string; readonly event: string; readonly [key: string]: unknown },
+): void {
+  appendFileSync(
+    join(expandHome(config.stateDir), 'runs.jsonl'),
+    `${JSON.stringify({ at: new Date().toISOString(), ...entry })}\n`,
+  );
 }
 
 /**
@@ -138,8 +152,7 @@ export async function ensureClone(
     throw new Error(
       `${dir} isn't a clone the factory made (its .git isn't a folder with a config)`,
     );
-  const set = (key: string, value: string) =>
-    mustGit(exec, parent, ['config', '--file', file, '--replace-all', key, value]);
+  const set = (key: string, value: string) => ensureConfig(exec, parent, key, value, file);
   await set('remote.origin.pushurl', DEAD_END_PUSH_URL);
   if (identity) {
     await set('user.name', identity.name);
@@ -167,10 +180,69 @@ export function sandboxMainCommand(base: string): string {
  * The first command in every sandbox the host opens: main fetched and put at `base`, as for the
  * gate, then a branch with no commits of its own (one Sandcastle has just made from the clone's
  * main, which only the last gate moved) fast-forwarded onto `base`. A branch with commits of its
- * own, a restarted run's (R12) or a fix round's, is left where it is: the gate rebases it.
+ * own (a restarted run's, R12, or a fix or review round's) is rebased onto `base` when its
+ * tracked files are clean and the rebase goes through, so the agent works on today's main
+ * rather than re-reporting what main has fixed since (PEN-75's restarted run); otherwise it is
+ * left where it is, and the gate's rebase, which resolves decision rows, deals with it.
  */
 export function sandboxStartCommand(base: string): string {
-  return `${sandboxMainCommand(base)} && if git merge-base --is-ancestor HEAD ${base}; then git merge --ff-only --quiet ${base}; fi`;
+  return [
+    `${sandboxMainCommand(base)} && if git merge-base --is-ancestor HEAD ${base}; then git merge --ff-only --quiet ${base};`,
+    `elif test -z "$(git status --porcelain --untracked-files=no)"; then git rebase --quiet ${base} >/dev/null 2>&1 || git rebase --abort; fi`,
+  ].join(' ');
+}
+
+/** The agent's raw output stream in the run folder, beside Sandcastle's `agent.log`. */
+export const AGENT_STREAM = 'agent.stream.jsonl';
+
+/**
+ * The command a shell couldn't find, from an agent's failure: `sh`'s "claude: command not found"
+ * or exit 127, zsh's "command not found: claude". Undefined for any other failure.
+ */
+export function agentMissing(message: string): string | undefined {
+  const named =
+    /command not found: (\S+)/.exec(message)?.[1] ??
+    /([^\s:/]+): command not found/.exec(message)?.[1];
+  if (named) return named;
+  if (!/exited with code 127\b/.test(message)) return undefined;
+  // dash: "sh: 1: claude: not found", only with the shell's own exit code.
+  return /([^\s:/]+): not found/.exec(message)?.[1] ?? "the agent's command";
+}
+
+/**
+ * The agent CLI isn't where the factory looks: an installation problem, not the card's. The run
+ * says so plainly (start.ts), with the PATH the sandbox had (the LaunchAgent's, A1226).
+ */
+export class AgentNotInstalled extends Error {
+  readonly command: string;
+
+  constructor(command: string, path: string) {
+    super(
+      `the factory can't find \`${command}\` on its PATH (${path}). That is the factory's installation, not this card: install it on that PATH, or set its full path as the agent's \`bin\` in tools/factory/factory.config.json, then task factory:install (task factory:doctor checks it)`,
+    );
+    this.name = 'AgentNotInstalled';
+    this.command = command;
+  }
+}
+
+/**
+ * Sandcastle ends its log with "reached 1 iteration(s) without completion signal" after every
+ * run: the factory never gives the agent Sandcastle's completion signal (it reads
+ * `.factory/result.json` instead, and one iteration is all it asks for), so that line is
+ * expected. The log says so beneath it, so it doesn't read as a failure.
+ */
+export function explainCompletion(logFile: string): void {
+  let text: string;
+  try {
+    text = readFileSync(logFile, 'utf8');
+  } catch {
+    return;
+  }
+  if (!/without completion signal\.?\s*$/.test(text)) return;
+  appendFileSync(
+    logFile,
+    "(The factory: that is expected. It doesn't use Sandcastle's completion signal; the agent's .factory/result.json says how the round ended.)\n",
+  );
 }
 
 export interface HostOptions {
@@ -210,7 +282,6 @@ export function hostDeps(options: HostOptions): HostDeps {
   const runDir = join(state, 'runs', options.runId);
   mkdirSync(runDir, { recursive: true });
   const sandboxes = new WeakMap<RunSandbox, Sandbox>();
-  const ledger = join(state, 'runs.jsonl');
 
   return {
     config,
@@ -267,19 +338,32 @@ export function hostDeps(options: HostOptions): HostDeps {
           return '';
         }
       };
+      // agent.log is Sandcastle's rendering; the agent's own stream (Claude Code's stream-json,
+      // its init event first, which lists the MCP servers it loaded) is kept beside it, verbatim.
+      const streamFile = join(runDir, AGENT_STREAM);
       try {
         await sandbox.run({
           agent: options.agent,
           prompt,
           idleTimeoutSeconds: config.timeouts.agentMinutes * 60,
-          logging: { type: 'file', path: logFile },
+          logging: {
+            type: 'file',
+            path: logFile,
+            onAgentStreamEvent: (event) => {
+              if (event.type === 'raw') appendFileSync(streamFile, `${event.line}\n`);
+            },
+          },
         });
       } catch (error) {
         // An agent stopped by its usage limit exits non-zero: the run waits for the reset (R13).
-        const output = `${tail()}\n${error instanceof Error ? error.message : String(error)}`;
+        const message = error instanceof Error ? error.message : String(error);
+        const output = `${tail()}\n${message}`;
         if (usageLimitReset(output, new Date())) return { output };
+        const missing = agentMissing(message);
+        if (missing) throw new AgentNotInstalled(missing, process.env['PATH'] ?? '');
         throw error;
       }
+      explainCompletion(logFile);
       return { output: tail() };
     },
     stageMockups: (handle) => {
@@ -320,7 +404,11 @@ export function hostDeps(options: HostOptions): HostDeps {
       const path = join(handle.worktreePath, RESULT_PATH);
       if (!existsSync(path))
         return Promise.resolve({ ok: false, error: `the agent wrote no ${RESULT_PATH}` });
-      return Promise.resolve(parseAgentResult(readFileSync(path, 'utf8')));
+      const text = readFileSync(path, 'utf8');
+      const parsed = parseAgentResult(text);
+      // A copy the host keeps: a run restarted after this one resumes from it (resumeFrom).
+      if (parsed.ok) writeFileSync(join(runDir, 'result.json'), text);
+      return Promise.resolve(parsed);
     },
     diff: async (branch) => {
       const commit = await fetchRun(branch);
@@ -331,7 +419,17 @@ export function hostDeps(options: HostOptions): HostDeps {
         `${MAIN}...${commit}`,
       ]);
       const count = await mustGit(exec, publish, ['rev-list', '--count', `${MAIN}..${commit}`]);
-      return { paths: paths.split('\n').filter(Boolean), commits: Number(count.trim()) };
+      // The branch's first commit's subject: the PR's title (prTitle, run.ts).
+      const subjects = await mustGit(exec, publish, [
+        ...['log', '--reverse', '--no-merges', '--format=%s'],
+        `${MAIN}..${commit}`,
+      ]);
+      const subject = subjects.split('\n')[0]?.trim();
+      return {
+        paths: paths.split('\n').filter(Boolean),
+        commits: Number(count.trim()),
+        ...(subject ? { subject } : {}),
+      };
     },
     macVmCheck: (handle) => checkMacVm(exec, config, handle.worktreePath),
     waitingFor: (reason) => options.waitingFor?.(reason),
@@ -610,11 +708,10 @@ export function hostDeps(options: HostOptions): HostDeps {
         reviewer: config.owner,
       });
     },
+    // A boundary only: guarded, it is where Blocked stops the run (start.ts, R23).
+    step: () => Promise.resolve(),
     log: (event: RunEvent, detail = {}) => {
-      appendFileSync(
-        ledger,
-        `${JSON.stringify({ at: new Date().toISOString(), run: options.runId, slot: slot.id, event, ...detail })}\n`,
-      );
+      appendLedger(config, { run: options.runId, slot: slot.id, event, ...detail });
       options.log(`${event}${Object.keys(detail).length ? ` ${JSON.stringify(detail)}` : ''}`);
     },
   };

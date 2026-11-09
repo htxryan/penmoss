@@ -19,7 +19,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run",
-    "eval:search": "vitest run --config vitest.eval.config.ts --silent=false"
+    "eval:search": "vitest run --config vitest.eval.config.ts --silent=false",
+    "budgets": "PENMOSS_BUDGETS=1 vitest run"
   },
   "dependencies": {
     "@penmoss/core": "workspace:*",

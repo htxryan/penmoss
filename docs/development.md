@@ -63,6 +63,7 @@ export function dailyNotePath(date: PlainDate): string {
 
 - Run `task check:changed` before each commit and `task check` before pushing (A1176). CI runs `task check` on every push, too.
 - Run heavy commands (`task check`, `task check:changed`, `task e2e`) through the Taskfile, which waits for a free heavy-job slot on this Mac when the work is heavy (W12, A1175, A1224). Don't call Playwright or the whole Vitest run directly to skip the wait.
+- Put a wall-clock budget (a unit test that times itself with `performance.now()`) in a `*.budget.test.ts` file beside the unit test, which keeps the correctness checks. `task check` leaves budget files out; `task budgets` runs them alone, one file at a time (CI's `Performance budgets` job doesn't run them yet). A bound that only shows a call didn't hang stays a unit test and uses `Date.now()`. `task budgets:test` enforces this (A1244).
 - Run the Mac app's Electron tests with `task desktop:test`. On a Mac they run in the test VM, never on Ryan's screen, one run at a time (W10, [`AGENTS.md`](../AGENTS.md)).
 - Add codec fixtures for any new block.
 - Route actions through commands and colours through tokens.

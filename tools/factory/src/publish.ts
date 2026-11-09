@@ -11,7 +11,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { expandHome, type FactoryConfig } from './config.ts';
 import type { Exec } from './exec.ts';
-import { hostGit, mustGit } from './git.ts';
+import { ensureConfig, hostGit, mustGit } from './git.ts';
 
 export const MAIN = 'refs/remotes/origin/main';
 
@@ -44,16 +44,11 @@ export async function preparePublishRepo(
     mkdirSync(dir, { recursive: true });
     await mustGit(exec, dir, ['init', '--quiet', '--bare']);
   }
-  await mustGit(exec, dir, ['config', 'remote.origin.url', url]);
-  await mustGit(exec, dir, [
-    'config',
-    '--replace-all',
-    'remote.origin.fetch',
-    '+refs/heads/*:refs/remotes/origin/*',
-  ]);
+  await ensureConfig(exec, dir, 'remote.origin.url', url);
+  await ensureConfig(exec, dir, 'remote.origin.fetch', '+refs/heads/*:refs/remotes/origin/*');
   if (identity) {
-    await mustGit(exec, dir, ['config', 'user.name', identity.name]);
-    await mustGit(exec, dir, ['config', 'user.email', identity.email]);
+    await ensureConfig(exec, dir, 'user.name', identity.name);
+    await ensureConfig(exec, dir, 'user.email', identity.email);
   }
   const known = await hostGit(exec, dir, ['rev-parse', '--verify', '--quiet', MAIN]);
   await mustGit(exec, dir, [

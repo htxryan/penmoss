@@ -1,9 +1,22 @@
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { doctorChecks, judge, report, type Check } from '../src/doctor.ts';
+import {
+  baseNote,
+  doctorChecks,
+  findOnPath,
+  hostChecks,
+  hostCommands,
+  judge,
+  report,
+  TASK_CHECK_NO_BAIL,
+  type Check,
+} from '../src/doctor.ts';
+import { nodeExec, type Exec } from '../src/exec.ts';
 import { testConfig } from './helpers.ts';
 
 const config = testConfig();
 const slot = config.slots[0]!;
+const ROOT = fileURLToPath(new URL('../../..', import.meta.url));
 
 describe('doctorChecks', () => {
   const checks = doctorChecks(config, slot, '/Users/r');
@@ -11,7 +24,7 @@ describe('doctorChecks', () => {
   it("covers F17's acceptance criteria", () => {
     const names = checks.map((c) => c.name);
     for (const expected of [
-      'task check',
+      'task check, every step and package (no bail)',
       'task e2e -- smoke.spec.ts on the slot block',
       'task android:test',
       'wrangler dev --local on the slot block',
@@ -140,5 +153,81 @@ describe('judge', () => {
     ]);
     expect(text).toContain('✗ r: succeeded, but the sandbox must refuse it');
     expect(text).toContain('1 check(s) FAILED.');
+  });
+});
+
+describe(
+  'task check in the sandbox, without stopping at the first failure',
+  { timeout: 30_000 },
+  () => {
+    it("runs every step of the Taskfile's check:all, and every package's tests with --no-bail", async () => {
+      // Only the line that reads the steps runs here, against the repo's own Taskfile.
+      const read = TASK_CHECK_NO_BAIL.split('\n')[0] ?? '';
+      const r = await nodeExec('sh', ['-c', `${read} && echo $steps`], { cwd: ROOT });
+      expect(r.code).toBe(0);
+      const steps = r.stdout.trim().split(' ');
+      expect(steps.slice(0, 3)).toEqual(['lint', 'typecheck', 'test']);
+      expect(steps).toEqual(expect.arrayContaining(['audit:secrets', 'ports:test', 'vm:test']));
+      expect(TASK_CHECK_NO_BAIL).toContain('corepack pnpm -r --no-bail');
+      expect(TASK_CHECK_NO_BAIL).not.toMatch(/task check\b/);
+      // Each failing step is named at the end; only the last line says it all passed.
+      expect(TASK_CHECK_NO_BAIL).toContain('echo "failed:$failed"; exit 1');
+      const check = doctorChecks(config, slot, '/Users/r').find(
+        (c) => c.command === TASK_CHECK_NO_BAIL,
+      );
+      expect(check?.slow).toBe(true);
+      expect(judge(check!, 0, '=== task lint\nevery step passed').ok).toBe(true);
+    });
+  },
+);
+
+describe("the host's commands, on the LaunchAgent's PATH", () => {
+  const path = '/n/bin:/Users/r/.local/bin:/opt/homebrew/bin:/usr/bin:/bin';
+  const have = (files: string[]) => (file: string) => files.includes(file);
+  const everything = hostCommands(config).map((c) =>
+    c.command.startsWith('/') ? c.command : `/usr/bin/${c.command}`,
+  );
+
+  it('finds each one on the given PATH, not the shell running the doctor', () => {
+    const outcomes = hostChecks(config, path, have(everything));
+    expect(outcomes.every((o) => o.status === 'ok')).toBe(true);
+    const names = outcomes.map((o) => o.check.name).join('\n');
+    for (const c of ['git', 'gh', 'node', 'osascript', 'terminal-notifier'])
+      expect(names).toContain(`\`${c}\``);
+    expect(findOnPath('claude', path, have(['/Users/r/.local/bin/claude']))).toBe(
+      '/Users/r/.local/bin/claude',
+    );
+  });
+
+  it('fails a missing required command and only warns for an optional one', () => {
+    // PEN-75: claude lived only on the shell's PATH; terminal-notifier wasn't installed.
+    const missing = new Set(['/usr/bin/claude', '/usr/bin/terminal-notifier']);
+    const outcomes = hostChecks(config, path, have(everything.filter((f) => !missing.has(f))));
+    const by = (cmd: string) => outcomes.find((o) => o.check.name.includes(`\`${cmd}\``));
+    expect(by('claude')).toMatchObject({ status: 'failed', detail: `not on ${path}` });
+    expect(by('terminal-notifier')).toMatchObject({ status: 'warned' });
+    expect(by('git')?.status).toBe('ok');
+    const text = report(outcomes.filter((o) => o.status !== 'failed'));
+    expect(text).toContain('! the host finds `terminal-notifier`');
+    expect(text).toMatch(/All checks passed, 1 warning\(s\)\.$/);
+    expect(report(outcomes)).toContain('1 check(s) FAILED.');
+  });
+});
+
+describe('baseNote', () => {
+  const git =
+    (ancestor: boolean): Exec =>
+    (_cmd, args) =>
+      Promise.resolve(
+        args.includes('merge-base')
+          ? { code: ancestor ? 0 : 1, stdout: '', stderr: '' }
+          : { code: 0, stdout: 'factory-run-followups\n', stderr: '' },
+      );
+
+  it("says when the checks' code isn't on the base the sandbox runs", async () => {
+    expect(await baseNote(git(true), '/repo', 'origin/main')).toBeUndefined();
+    expect(await baseNote(git(false), '/repo', 'origin/main')).toBe(
+      "Note: the checks come from this checkout (factory-run-followups), which origin/main doesn't contain, and the sandbox runs origin/main. A check that tests code only on factory-run-followups fails until that code is on origin/main; run with -- --base factory-run-followups to check the branch itself.",
+    );
   });
 });

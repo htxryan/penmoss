@@ -71,8 +71,15 @@ export interface RunDeps {
   readResult(
     sandbox: RunSandbox,
   ): Promise<{ ok: true; result: AgentResult } | { ok: false; error: string }>;
-  /** Paths changed on the branch against origin/main, and how many commits it has. */
-  diff(branch: string): Promise<{ readonly paths: readonly string[]; readonly commits: number }>;
+  /**
+   * Paths changed on the branch against origin/main, how many commits it has, and the subject of
+   * its first one (the PR's title).
+   */
+  diff(branch: string): Promise<{
+    readonly paths: readonly string[];
+    readonly commits: number;
+    readonly subject?: string;
+  }>;
   /**
    * Runs a platform's proof specs in the sandbox with recording on. `signal` aborts at the proof
    * timeout: what the proof started is stopped (the VM script, the slot's emulator). A Mac proof
@@ -127,6 +134,11 @@ export interface RunDeps {
     files?: readonly string[];
   }): Promise<string>;
   log(event: RunEvent, detail?: Record<string, unknown>): void;
+  /**
+   * A step boundary: the run is about to start `name` (the gate, a fix round). It does nothing
+   * itself; guarded (start.ts), it stops the run there when Ryan has set Blocked (R23).
+   */
+  step(name: string): Promise<void>;
 }
 
 export interface RunInput {
@@ -139,6 +151,12 @@ export interface RunInput {
   readonly plan?: string;
   /** A run the daemon restarts because it stopped mid-run (R12): the claim says so. */
   readonly recovered?: boolean;
+  /**
+   * A recovered run whose last agent round had finished its work (R12): that round's run and its
+   * result. The run goes on from the gate with it, when the branch has the round's commits, rather
+   * than running the agent again.
+   */
+  readonly resume?: { readonly run: string; readonly result: AgentResult };
 }
 
 export type RunOutcome =
@@ -226,6 +244,41 @@ export function branchName(config: FactoryConfig, item: BoardItem): string {
   return `${config.branchPrefix}${item.number}-${slug || 'issue'}`;
 }
 
+/** GitHub shows about this much of a title in its lists; git's own advice for a subject. */
+export const TITLE_MAX = 72;
+
+/**
+ * The PR's title: the branch's first commit subject (the agent writes it as a change's title),
+ * else the first sentence of the agent's summary, cut to `TITLE_MAX` at a word. It never names
+ * the card: Linear's GitHub integration moves a card named in a PR's title (it closed PEN-75 when
+ * #62 merged), and the factory owns the card's status (A1221). The body's "Part of" links it.
+ */
+export function prTitle(input: {
+  readonly subject?: string | undefined;
+  readonly summary: string;
+  readonly key: string;
+}): string {
+  const team = /^([A-Za-z][A-Za-z0-9]*)-\d+$/.exec(input.key)?.[1];
+  const clean = (text: string) => {
+    let t = text.split('\n')[0] ?? '';
+    if (team) t = t.replaceAll(new RegExp(`[([]?\\b${team}-\\d+\\b[)\\]]?:?`, 'gi'), ' ');
+    return t
+      .replaceAll(/\(\s*\)|\[\s*\]/g, ' ')
+      .replaceAll(/\s+/g, ' ')
+      .replaceAll(/^[\s:;,–-]+|[\s:;,–-]+$/g, '');
+  };
+  const subject =
+    input.subject && !input.subject.startsWith('Number the new decisions')
+      ? clean(input.subject)
+      : '';
+  const sentence = clean(input.summary.split(/(?<=[.!?])\s/)[0] ?? '').replace(/\.$/, '');
+  const title = subject || sentence || 'The factory’s change';
+  if (title.length <= TITLE_MAX) return title;
+  const words = title.slice(0, TITLE_MAX).split(' ');
+  if (words.length > 1) words.pop();
+  return `${words.join(' ').replace(/[\s:;,–-]+$/, '')}…`;
+}
+
 /** What the gate runs for a scope (Platform scope in the plan). */
 export function gateCommand(scope: Scope): string {
   return scope.kind === 'docs-only' ? 'task lint' : 'task check';
@@ -257,10 +310,22 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
     return { kind: 'blocked', reason };
   };
 
+  const branch = branchName(config, item);
+  // A recovered run whose agent had finished goes on from the gate, if its commits are there.
+  const resumed =
+    input.recovered && input.resume?.result.status === 'done'
+      ? await deps.diff(branch).then(
+          (d) => (d.commits > 0 ? input.resume : undefined),
+          () => undefined,
+        )
+      : undefined;
+
   // Claim: the comment first, so a crash after it is recoverable from GitHub (the source of truth).
-  const how = input.recovered
-    ? `Restarted: this run stopped before it finished (the factory's daemon stopped, or Blocked paused it and has been cleared), so it runs again on the same branch (R12). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.`
-    : `Started: ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}, implementing straight away${spec.planSkip ? ' (`plan:skip`)' : ''}.`;
+  const how = resumed
+    ? `Restarted: this run stopped after its agent had finished (its work is committed on the branch), so it goes on from the gate rather than running the agent again (R12). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.`
+    : input.recovered
+      ? `Restarted: this run stopped before it finished (the factory's daemon stopped, or Blocked paused it and has been cleared), so it runs again on the same branch (R12). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.`
+      : `Started: ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}, implementing straight away${spec.planSkip ? ' (`plan:skip`)' : ''}.`;
   await deps.comment(
     item.number,
     `${how} Scope: ${spec.platforms?.join(', ') ?? 'decided by the path classifier'}.\n\n${marker('claim')}`,
@@ -268,24 +333,18 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
   await deps.setStatus(item, config.status.working);
   deps.log('claimed', { issue: item.number });
 
-  const branch = branchName(config, item);
   let prompt = input.prompt;
   for (let round = 0; ; round++) {
-    const work = await deps.openSandbox(branch);
     let result: AgentResult;
-    try {
-      deps.log('agent-started', { branch, round });
-      await runAgentPatiently(deps, work, prompt);
-      const read = await deps.readResult(work);
-      deps.log('agent-finished', read.ok ? { status: read.result.status } : { error: read.error });
-      if (!read.ok)
-        return await block(
-          read.error,
-          `The agent finished without a usable result: ${read.error}.`,
-        );
-      result = read.result;
-    } finally {
-      await work.close();
+    if (round === 0 && resumed) {
+      // The same event a finished round writes, naming where its result is, for a later restart.
+      deps.log('agent-finished', { status: 'done', from: resumed.run });
+      result = resumed.result;
+    } else {
+      const ran = await agentRound(deps, branch, prompt, round);
+      if (!ran.ok)
+        return block(ran.error, `The agent finished without a usable result: ${ran.error}.`);
+      result = ran.result;
     }
 
     if (result.status === 'needs-info') {
@@ -301,7 +360,7 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
       return block('failed', `The agent couldn't finish: ${result.summary}`);
     }
 
-    const { paths, commits } = await deps.diff(branch);
+    const { paths, commits, subject } = await deps.diff(branch);
     if (commits === 0) return block('no-commits', 'The agent reported done but committed nothing.');
     const scope = classify(paths);
     const verdict = await gateAndProve(
@@ -318,6 +377,7 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
         branch,
         scope,
         result,
+        ...(subject ? { subject } : {}),
         proof: verdict.proof,
         ...(verdict.fidelity ? { fidelity: verdict.fidelity } : {}),
         marker,
@@ -334,7 +394,27 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
       );
     }
     // Another round: the agent sees exactly what the gate saw.
+    await deps.step(`gate-fix round ${round + 1}`);
     prompt = `${input.prompt}\n\n## The gate's feedback (round ${round + 1})\n\nYour last attempt was committed on \`${branch}\`, but the gate refused it: ${verdict.feedback}\n\nFix that, commit, and write \`.factory/result.json\` again.`;
+  }
+}
+
+/** One agent round in a sandbox on the branch, and the result it wrote. */
+async function agentRound(
+  deps: RunDeps,
+  branch: string,
+  prompt: string,
+  round: number,
+): Promise<{ ok: true; result: AgentResult } | { ok: false; error: string }> {
+  const work = await deps.openSandbox(branch);
+  try {
+    deps.log('agent-started', { branch, round });
+    await runAgentPatiently(deps, work, prompt);
+    const read = await deps.readResult(work);
+    deps.log('agent-finished', read.ok ? { status: read.result.status } : { error: read.error });
+    return read;
+  } finally {
+    await work.close();
   }
 }
 
@@ -356,6 +436,7 @@ export async function gateAndProve(
       feedback: `\`result.json\` names no proof spec for ${unnamed.join(', ')}, which the change affects. Add a committed test that shows the change and list it under \`platforms.<name>.proofSpecs\`.`,
     };
   }
+  await deps.step('the gate');
   await deps.fetchMain();
   const gate = await deps.openSandbox(branch);
   try {
@@ -484,6 +565,8 @@ async function publish(
     branch: string;
     scope: Scope;
     result: AgentResult;
+    /** The branch's first commit subject, for the title. */
+    subject?: string;
     proof: readonly AttachedProof[];
     marker: (event: string) => string;
     prompt: string;
@@ -509,7 +592,7 @@ async function publish(
   });
   const pr = await deps.openPr({
     branch: run.branch,
-    title: run.result.summary,
+    title: prTitle({ subject: run.subject, summary: run.result.summary, key: run.item.key }),
     body,
     proof: run.proof,
     files: (run.fidelity ?? []).flatMap((r) =>
@@ -613,6 +696,7 @@ async function repair(
   logs: string,
   round: number,
 ): Promise<{ ok: true } | { ok: false; why: string }> {
+  await deps.step(`CI repair round ${round}`);
   const work = await deps.openSandbox(run.branch);
   try {
     await runAgentPatiently(
@@ -656,6 +740,7 @@ type Regated =
 
 /** The branch rebased onto a fresh main in a gate sandbox, and the gate run on it again. */
 async function regate(deps: RunDeps, branch: string, scope: Scope): Promise<Regated> {
+  await deps.step('the gate');
   await deps.fetchMain();
   const gate = await deps.openSandbox(branch);
   try {

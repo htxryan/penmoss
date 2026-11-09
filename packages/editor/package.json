@@ -25,7 +25,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "budgets": "PENMOSS_BUDGETS=1 vitest run"
   },
   "devDependencies": {
     "fast-check": "4.10.2",

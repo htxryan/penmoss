@@ -126,6 +126,7 @@ export function toItem(card: RawCard, config: FactoryConfig, position: number): 
     blocked: set || blockedBy.length > 0,
     ...(blockedBy.length ? { blockedBy, blockedSet: set } : {}),
     priority: priorityOf(card.priority),
+    ...(priorityOf(card.priority) === card.priority ? {} : { noPriority: true }),
     position,
   };
 }

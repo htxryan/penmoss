@@ -2,12 +2,12 @@
  * The cost of line symbols per keystroke (T44 review): the plugin's state update for one typed
  * character in a long note full of symbol lines. Only the changed line is redrawn, and nothing
  * decorates the blocks themselves, so the cost does not grow with the number of symbol lines.
- * Also: the repair guard holds a `selectionOnly` plugin to its word.
+ * A wall-clock budget (A1244): `task budgets` runs it, never
+ * `task check`. The repair guard's test that was here is line-symbols-repair.test.ts.
  */
 import type { JSONContent } from '@tiptap/core';
-import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';
-import { describe, expect, it, vi } from 'vitest';
-import { skipRepairsOfBindingChanges } from '../src/collab/yjs14';
+import type { EditorState } from '@tiptap/pm/state';
+import { describe, expect, it } from 'vitest';
 import { lineSymbolsKey } from '../src/extensions/line-symbols';
 import { openEditor, paragraph } from './support/editor';
 
@@ -68,24 +68,5 @@ describe('the cost of symbols per keystroke (T44 review)', () => {
     const cost = applyCost(state, lineStart(state, 1500) + 4);
     console.info(`[symbols] apply per keystroke, 3,000 paragraphs: ${cost.toFixed(3)} ms`);
     expect(cost).toBeLessThan(1);
-  });
-});
-
-describe('a selectionOnly plugin (T44 review)', () => {
-  it('may move the selection, and is refused a change to the document', () => {
-    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const plugin = skipRepairsOfBindingChanges(
-      new Plugin({
-        key: new PluginKey('writesAnyway'),
-        selectionOnly: true,
-        appendTransaction: (_transactions, _old, state) => state.tr.insertText('!', 1),
-      }),
-    );
-    const { editor } = openEditor([paragraph('Text')]);
-    const state = editor.state.reconfigure({ plugins: [...editor.state.plugins, plugin] });
-    const after = state.applyTransaction(state.tr.insertText('a', 1)).state;
-    expect(after.doc.textContent).toBe('aText');
-    expect(error).toHaveBeenCalledWith(expect.stringContaining('writesAnyway'));
-    error.mockRestore();
   });
 });

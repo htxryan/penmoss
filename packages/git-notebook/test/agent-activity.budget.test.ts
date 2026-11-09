@@ -3,7 +3,8 @@
  * snapshot of the workspace per list or undo, never a decode per part. 2,000 notes and 10 agent
  * commits of 100 moves each, all 10 marked undone by a client that skips the engine's check (so
  * every mark is checked and none believed): the list in under 300 ms, the first one too, and each undo in under
- * 500 ms, on the worker.
+ * 500 ms, on the worker. A wall-clock budget (A1244): `task budgets` runs
+ * it, never `task check`; agent-activity.test.ts covers what the list and undo do.
  */
 import { readNoteState } from '@penmoss/editor/markdown';
 import { readWorkspace } from '@penmoss/sync-client/workspace';

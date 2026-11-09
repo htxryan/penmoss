@@ -44,19 +44,26 @@ export function readStatus(config: FactoryConfig): DaemonStatus | undefined {
   }
 }
 
-/** `factory:status`'s lines. `codeDir` is where `factory:install` keeps the factory's code. */
+/**
+ * `factory:status`'s lines. `codeDir` is where `factory:install` keeps the factory's code, and
+ * `alive` says whether a pid is running: the status.json of a daemon that has exited (restarted
+ * by `factory:update`, or crashed) is only the last thing it wrote, and says so.
+ */
 export function formatStatus(
   s: DaemonStatus,
   config: FactoryConfig,
   codeDir: string,
   now: Date,
+  alive: (pid: number) => boolean = () => true,
 ): string[] {
   const age = Math.round((now.getTime() - Date.parse(s.updatedAt)) / 1000);
   const at = s.code?.commit
     ? ` at ${s.code.commit.sha.slice(0, 7)} (${s.code.commit.subject})`
     : ' (commit unknown: it predates task factory:update)';
   const lines = [
-    `Daemon ${s.pid}${at}, last poll ${age} s ago${age > config.pollSeconds * 3 ? ' (stale: is it running? task factory:logs)' : ''}.`,
+    alive(s.pid)
+      ? `Daemon ${s.pid}${at}, last poll ${age} s ago${age > config.pollSeconds * 3 ? ' (stale: is it running? task factory:logs)' : ''}.`
+      : `Daemon ${s.pid}${at} is not running: below is its last status, from ${age} s ago. task factory:start starts it; task factory:logs says why it stopped.`,
   ];
   if (s.code && s.code.dir !== codeDir)
     lines.push(

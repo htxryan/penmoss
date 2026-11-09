@@ -113,7 +113,12 @@ test('gives up on a VM that stays up, without stopping it', () => {
 
 // The script asks ps whether the pid file's process is still its `tart run`, and the software
 // factory's sandbox refuses ps (A1231): there this test can't run, and the host and CI run it.
-const psWorks = spawnSync('ps', ['-p', String(process.pid)]).status === 0;
+// Whether ps lists this very process (it prints its pid), not only whether it exits 0: an agent's
+// shell inside the sandbox fails ps differently from the plain sandbox.
+const psWorks =
+  (
+    spawnSync('ps', ['-p', String(process.pid), '-o', 'pid='], { encoding: 'utf8' }).stdout ?? ''
+  ).trim() === String(process.pid);
 
 test(
   'stops a VM its own interrupted run left running, without waiting',

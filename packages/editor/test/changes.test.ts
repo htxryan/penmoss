@@ -71,13 +71,11 @@ describe('changedRanges', () => {
     expect(found.size).toBe(500);
   });
 
-  it('stays linear in the number of steps', () => {
+  it('covers 20,000 steps in one transaction (its time is a budget: changes.budget.test.ts)', () => {
     const { transactions, doc } = run(paragraphs('start', 'end'), (tr) => {
       for (let i = 0; i < 20_000; i += 1) tr.insertText('x', 3 + i);
     });
-    const started = performance.now();
     const ranges = changedRanges(transactions);
-    expect(performance.now() - started).toBeLessThan(250);
     expect(covers(ranges, 3, 20_003)).toBe(true);
     expect(covers(ranges, 1, 3)).toBe(false);
     expect(doc.childCount).toBe(2);

@@ -24,7 +24,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "budgets": "PENMOSS_BUDGETS=1 vitest run"
   },
   "dependencies": {
     "@penmoss/core": "workspace:*",

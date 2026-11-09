@@ -35,6 +35,8 @@ export interface BoardItem {
   readonly blockedSet?: boolean;
   /** The tracker's own priority (Linear, LD11); GitHub's comes from P1–P4 labels instead. */
   readonly priority?: Priority;
+  /** Linear's "No priority", which `priority` counts as Medium; `factory:next` says which. */
+  readonly noPriority?: boolean;
   /** Position on the board, 0 first. */
   readonly position: number;
 }

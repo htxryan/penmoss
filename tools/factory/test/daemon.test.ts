@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -8,6 +8,9 @@ import { takeLock, unfinishedClaims, withWait } from '../src/daemon.ts';
 import { formatStatus } from '../src/status.ts';
 import { tick } from '../src/dispatcher.ts';
 import { renderPlist } from '../src/launchd.ts';
+import { buildReport } from '../src/report.ts';
+import { mergeLog } from '../src/watch.ts';
+import { finishedRound, resumeFrom } from '../src/start.ts';
 import { item, testConfig } from './helpers.ts';
 
 describe('the singleton lock', () => {
@@ -43,6 +46,96 @@ describe('unfinishedClaims (R12)', () => {
     expect([...unfinishedClaims(`${ledger}\n{"run":"8-d","ev`)]).toEqual([6, 7]);
   });
 
+  it("writes the merge's events to the ledger, which closes the claim and counts the merge", () => {
+    // PEN-75: the run failed after In Review (no in-review event), then merged through the
+    // review loop, which logged merged and done to the daemon log only.
+    const config = { ...testConfig(), stateDir: mkdtempSync(join(tmpdir(), 'factory-ledger-')) };
+    const ledger = join(config.stateDir, 'runs.jsonl');
+    writeFileSync(
+      ledger,
+      [
+        { at: '2026-11-08T00:04:00Z', run: '75-a', event: 'claimed', issue: 75 },
+        { at: '2026-11-08T02:18:34Z', run: '75-a', event: 'failed', error: 'spawn ENOENT' },
+      ]
+        .map((e) => `${JSON.stringify(e)}\n`)
+        .join(''),
+    );
+    expect([...unfinishedClaims(readFileSync(ledger, 'utf8'))]).toEqual([75]);
+    const lines: string[] = [];
+    const log = mergeLog(config, '75-merge-x', 75, (l) => lines.push(l));
+    log('merged', { pr: 'https://github.com/htxryan/penmoss/pull/63', sha: '8b16754' });
+    log('done', { sha: '8b16754' });
+    const events = readFileSync(ledger, 'utf8')
+      .trim()
+      .split('\n')
+      .map((l) => JSON.parse(l) as Record<string, unknown>);
+    expect(events.slice(2)).toEqual([
+      expect.objectContaining({ run: '75-merge-x', issue: 75, event: 'merged', sha: '8b16754' }),
+      expect.objectContaining({ run: '75-merge-x', issue: 75, event: 'done', sha: '8b16754' }),
+    ]);
+    expect(typeof events[2]?.['at']).toBe('string');
+    expect(lines).toEqual([
+      'merged {"pr":"https://github.com/htxryan/penmoss/pull/63","sha":"8b16754"}',
+      'done {"sha":"8b16754"}',
+    ]);
+    expect([...unfinishedClaims(readFileSync(ledger, 'utf8'))]).toEqual([]);
+    const counted = buildReport(
+      readFileSync(ledger, 'utf8'),
+      new Date('2026-11-01T00:00:00Z'),
+      new Date('2099-01-01T00:00:00Z'),
+    );
+    expect(counted.merged).toBe(1);
+  });
+
+  it('finds the run whose agent finished, and resumes from the result the host kept (R12)', () => {
+    const config = { ...testConfig(), stateDir: mkdtempSync(join(tmpdir(), 'factory-resume-')) };
+    const ledger = (events: object[]) =>
+      writeFileSync(
+        join(config.stateDir, 'runs.jsonl'),
+        events.map((e) => `${JSON.stringify(e)}\n`).join(''),
+      );
+    const result = {
+      status: 'done',
+      summary: 'Linked the footer',
+      questions: [],
+      platforms: {},
+      tests: [],
+      decisions: [],
+      risks: [],
+      replies: {},
+    };
+    mkdirSync(join(config.stateDir, 'runs', '75-a'), { recursive: true });
+    writeFileSync(join(config.stateDir, 'runs', '75-a', 'result.json'), JSON.stringify(result));
+    const finished = [
+      { run: '75-a', event: 'claimed', issue: 75 },
+      { run: '75-a', event: 'agent-started' },
+      { run: '75-a', event: 'agent-finished', status: 'done' },
+      { run: '76-z', event: 'agent-started' },
+      { run: '75-a', event: 'decisions-numbered' },
+    ];
+    ledger(finished);
+    expect(resumeFrom(config, 75).resume).toMatchObject({
+      run: '75-a',
+      result: { summary: 'Linked the footer' },
+    });
+    // A run that resumed from it, then stopped again, still points at 75-a's result.
+    const resumed = [
+      ...finished,
+      { run: '75-b', event: 'claimed', issue: 75 },
+      { run: '75-b', event: 'agent-finished', status: 'done', from: '75-a' },
+    ];
+    expect(finishedRound(resumed.map((e) => JSON.stringify(e)).join('\n'), 75)).toBe('75-a');
+    // A later agent round that never finished, or a round that asked questions: start the agent.
+    ledger([...finished, { run: '75-b', event: 'agent-started' }]);
+    expect(resumeFrom(config, 75)).toEqual({});
+    ledger([
+      ...finished.slice(0, 2),
+      { run: '75-a', event: 'agent-finished', status: 'needs-info' },
+    ]);
+    expect(resumeFrom(config, 75)).toEqual({});
+    expect(resumeFrom(config, 76)).toEqual({});
+  });
+
   it('keeps a run Ryan paused with Blocked claimed, so clearing Blocked resumes it (R23)', () => {
     const ledger = [
       { run: '9-a', event: 'claimed', issue: 9 },
@@ -60,7 +153,7 @@ describe('unfinishedClaims (R12)', () => {
   });
 });
 
-describe('the LaunchAgent', () => {
+describe('the LaunchAgent', { timeout: 30_000 }, () => {
   it('renders a plist macOS accepts, escaping paths', () => {
     const plist = renderPlist({
       node: '/n/node',

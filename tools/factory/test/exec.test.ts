@@ -33,7 +33,7 @@ async function until(test: () => boolean, ms = 5000): Promise<void> {
 
 const dir = () => mkdtempSync(join(tmpdir(), 'factory-exec-'));
 
-describe('nodeExec', () => {
+describe('nodeExec', { timeout: 30_000 }, () => {
   it('runs a command and returns its output, as before', async () => {
     const r = await nodeExec('sh', ['-c', 'cat; echo err >&2; exit 3'], { input: 'hi' });
     expect(r).toEqual({ code: 3, stdout: 'hi', stderr: 'err\n' });

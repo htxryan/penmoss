@@ -117,6 +117,9 @@ describe('the Linear tracker (L3)', () => {
     expect(by(4)).toMatchObject({ blocked: true, blockedBy: ['PEN-9'] });
     expect(by(5).labels).toEqual(['agent:claude']);
     expect(by(1)).toMatchObject({ status: 'Todo', state: 'OPEN', repo: config.repo, priority: 3 });
+    // Linear's "No priority" counts as Medium, and says so in factory:next.
+    expect(by(1).noPriority).toBe(true);
+    expect(by(2).noPriority).toBeUndefined();
 
     const picked = pickNext(board.items, config);
     // Urgent first, then High, then the rest in the team's order; Blocked cards passed over.

@@ -42,8 +42,12 @@ function fakeEmulator(avd: string, port: number, ignoreTerm = false) {
 
 // Real stand-in processes and their grace periods, which a loaded Mac (W12) can stretch past vitest's 5 s default.
 // stopSlotEmulator runs only on the host, with pgrep and pkill. The factory's sandbox can't list
-// processes (pgrep exits 3), so these run on the host and in CI and are skipped there (A1231).
-const listsProcesses = spawnSync('pgrep', ['-x', 'launchd']).status !== 3;
+// processes, so these run on the host and in CI and are skipped there (A1231). The test is of the
+// capability itself, pgrep printing launchd's pid, not of one exit code: the plain sandbox makes
+// pgrep exit 3, and an agent's shell inside it fails it another way.
+const listsProcesses = /^\d+$/m.test(
+  spawnSync('pgrep', ['-x', 'launchd'], { encoding: 'utf8' }).stdout ?? '',
+);
 
 describe.skipIf(!listsProcesses)('stopSlotEmulator', { timeout: 30_000 }, () => {
   it("matches the slot's AVD and console port as proof.sh starts the emulator", () => {

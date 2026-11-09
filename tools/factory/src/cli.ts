@@ -4,16 +4,23 @@
  */
 import { fileURLToPath } from 'node:url';
 import { loadConfig, type FactoryConfig } from './config.ts';
-import { report } from './doctor.ts';
+import { baseNote, hostChecks, report } from './doctor.ts';
 import { runDoctor } from './doctor-run.ts';
 import { nodeExec } from './exec.ts';
 import { createGh } from './github.ts';
-import { pickNext, type Pick } from './pick.ts';
+import { pickNext, priorityName, type Pick } from './pick.ts';
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { expandHome } from './config.ts';
-import { codeDir, installAgents, updateFactory, type AgentDeps } from './code.ts';
+import {
+  agentPath,
+  codeDir,
+  installAgents,
+  startFactory,
+  updateFactory,
+  type AgentDeps,
+} from './code.ts';
 import { runDaemon } from './daemon.ts';
 import { formatStatus, readStatus } from './status.ts';
 import { buildReport, formatReport, parseRange } from './report.ts';
@@ -33,7 +40,8 @@ Commands:
                             and start the LaunchAgents that run the daemon and the UI from it
   update [--wait]           Move that code to origin/main, reinstall and restart the LaunchAgents;
                             refuses while a run or merge is active (--wait: hold new work and wait)
-  status                    What the daemon is running (and at which commit), waiting on and
+  start                     Start both LaunchAgents (the daemon and the UI) if they aren't running
+  status                   What the daemon is running (and at which commit), waiting on and
                             passing over
   daemon                    Poll the board, plan cards and run them in free slots (the LaunchAgent runs this)
   ui                        Serve the Factory UI on 127.0.0.1 (its LaunchAgent runs this)
@@ -100,7 +108,9 @@ async function next(config: FactoryConfig, json: boolean): Promise<number> {
   }
   const rest = result.queue.slice(1);
   if (rest.length > 0) {
-    console.log(`\nThen: ${rest.map((p) => `${p.item.key} (P${p.spec.priority})`).join(', ')}`);
+    console.log(
+      `\nThen: ${rest.map((p) => `${p.item.key} (${priorityName(p, config)})`).join(', ')}`,
+    );
   }
   if (result.skipped.length > 0) {
     console.log(
@@ -124,18 +134,29 @@ async function doctor(config: FactoryConfig, args: readonly string[]): Promise<n
   const base = args.includes('--base')
     ? (args[args.indexOf('--base') + 1] ?? 'origin/main')
     : 'origin/main';
+  // Every check runs with the PATH the LaunchAgents run with, not this shell's: Sandcastle gives
+  // the sandbox this process's PATH, as it does a run's (PEN-75's `claude` was on the shell's only).
+  const path = agentPath(config, homedir(), process.execPath);
+  process.env['PATH'] = path;
   console.log(
-    `Doctor: slot ${slot.id} (port block ${slot.portBlock}, ${slot.avd}) on a throwaway branch of ${base}`,
+    `Doctor: slot ${slot.id} (port block ${slot.portBlock}, ${slot.avd}) on a throwaway branch of ${base}, with the LaunchAgent's PATH ${path}`,
   );
-  const outcomes = await runDoctor(config, slot, {
-    repo,
-    full: args.includes('--full') || args.includes('--only'),
-    base,
-    ...(args.includes('--only') ? { only: args[args.indexOf('--only') + 1] ?? '' } : {}),
-    exec: nodeExec,
-    log: (line) => console.log(`  ${line}`),
-  });
+  const note = await baseNote(nodeExec, repo, base);
+  if (note) console.log(`  ${note}`);
+  const host = hostChecks(config, path);
+  const outcomes = [
+    ...host,
+    ...(await runDoctor(config, slot, {
+      repo,
+      full: args.includes('--full') || args.includes('--only'),
+      base,
+      ...(args.includes('--only') ? { only: args[args.indexOf('--only') + 1] ?? '' } : {}),
+      exec: nodeExec,
+      log: (line) => console.log(`  ${line}`),
+    })),
+  ];
   console.log(`\n${report(outcomes)}`);
+  if (note) console.log(note);
   return outcomes.some((o) => o.status === 'failed') ? 1 : 0;
 }
 
@@ -146,6 +167,7 @@ function agentDeps(): AgentDeps {
     uid: String(process.getuid?.() ?? 501),
     node: process.execPath,
     log: (line) => console.log(line),
+    sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   };
 }
 
@@ -166,7 +188,6 @@ function update(config: FactoryConfig, args: readonly string[]): Promise<number>
       pid: process.pid,
       alive: isAlive,
       now: () => new Date(),
-      sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     },
     { wait: args.includes('--wait') },
   );
@@ -178,7 +199,7 @@ function status(config: FactoryConfig): number {
     console.log('The daemon has not run yet (task factory:install).');
     return 1;
   }
-  console.log(formatStatus(s, config, codeDir(config), new Date()).join('\n'));
+  console.log(formatStatus(s, config, codeDir(config), new Date(), isAlive).join('\n'));
   return 0;
 }
 
@@ -260,6 +281,8 @@ async function main(argv: readonly string[]): Promise<number> {
       return installAgents(loaded.config, agentDeps());
     case 'update':
       return update(loaded.config, rest);
+    case 'start':
+      return startFactory(agentDeps());
     case 'status':
       return status(loaded.config);
     case 'daemon':

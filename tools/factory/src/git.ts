@@ -91,3 +91,21 @@ export async function mustGit(
   }
   return result.stdout;
 }
+
+/**
+ * Sets `key` to `value` in `dir`'s config (or in `file`, read as a plain config file), unless it
+ * already holds exactly that. A read takes no lock, so two factory processes starting at once
+ * (the daemon and a foreground `factory run`) don't race for `config.lock` once it is set.
+ */
+export async function ensureConfig(
+  exec: Exec,
+  dir: string,
+  key: string,
+  value: string,
+  file?: string,
+): Promise<void> {
+  const where = file ? ['--file', file] : [];
+  const now = await hostGit(exec, dir, ['config', ...where, '--get-all', key]);
+  if (now.code === 0 && now.stdout.replace(/\n$/, '') === value) return;
+  await mustGit(exec, dir, ['config', ...where, '--replace-all', key, value]);
+}
