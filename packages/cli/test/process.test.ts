@@ -8,6 +8,7 @@ import { once } from 'node:events';
 import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, beforeEach, afterEach, describe, expect, it } from 'vitest';
 import type { Io } from '../src/io';
 import { run } from '../src/main';
@@ -29,7 +30,10 @@ beforeAll(async () => {
   bundleDir = await mkdtemp(join(tmpdir(), 'penmoss-bundle-'));
   bundle = join(bundleDir, 'penmoss.js');
   // The build the package ships (build.js), into a directory of its own.
-  execFileSync(process.execPath, [new URL('../build.js', import.meta.url).pathname, bundleDir]);
+  execFileSync(process.execPath, [
+    fileURLToPath(new URL('../build.js', import.meta.url)),
+    bundleDir,
+  ]);
 });
 
 afterAll(async () => {
