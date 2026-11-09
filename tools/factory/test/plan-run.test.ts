@@ -331,6 +331,23 @@ describe('planning a Linear card (A1221)', () => {
     expect(t.bodies.at(-1)).toContain('The plan is agreed ("Complete", in the issue)');
   });
 
+  it('records the versions the session last reported when Ryan says yes on the issue (A1259)', async () => {
+    const t = setup();
+    await advancePlanning(t.deps, onLinear(t.files, pen()));
+    writeFileSync(join(t.files.out, 'plan.html'), contract);
+    // Waiting, as PEN-70's session was: no agreed block, only its current versions.
+    t.state('waiting', min(2), { planVersion: 3, designVersion: 8 });
+    t.at(min(3));
+    const agreed = pen([{ author: RYAN, body: 'complete', createdAt: min(4).toISOString() }]);
+    t.at(min(5));
+    expect((await advancePlanning(t.deps, onLinear(t.files, agreed))).kind).toBe('agreed');
+    expect(readMeta(t.files).agreed).toMatchObject({
+      quote: 'complete',
+      planVersion: 3,
+      designVersion: 8,
+    });
+  });
+
   it("hands the session others' comments fenced, and they can't end planning", async () => {
     const t = setup();
     await advancePlanning(t.deps, onLinear(t.files, pen()));

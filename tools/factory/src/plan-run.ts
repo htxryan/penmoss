@@ -260,7 +260,13 @@ export async function advancePlanning(deps: PlanDeps, input: PlanInput): Promise
         }
       }
       const quote = trivial ? action.reason : action.quote;
-      const versions = state?.agreed ?? null;
+      // The session's own record of the yes, else the versions it last reported (a yes on the
+      // issue while it waited, as PEN-70's was).
+      const versions =
+        state?.agreed ??
+        (state?.versions
+          ? { planVersion: state.versions.plan, designVersion: state.versions.design }
+          : null);
       writeMeta(files, {
         ...meta,
         deliveredAt: delivered,

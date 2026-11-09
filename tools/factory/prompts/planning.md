@@ -42,9 +42,13 @@ After every reply, write `{{out}}/state.json`, which the factory reads:
       "options": ["In a sheet (proposed)", "Full screen", "Inline under the passage"]
     }
   ],
+  "planVersion": 3,
+  "designVersion": null,
   "agreed": null
 }
 ```
+
+- `planVersion` and `designVersion`: the current version of each artifact (the version its last publish reported; `null` for no design), in every state. Ryan may agree on the issue while you wait, and the factory records these as the versions he agreed to.
 
 - `"waiting"`: you asked something and need Ryan. List the open points in `open`. For a point with a few clear answers, also put it in `questions` with 2–6 `options`, your proposal first: Ryan can answer with one click, and his pick reaches you as an issue comment `On "<text>": <option>`.
 - `"agreed"`: Ryan said yes. Set `agreed` to `{ "quote": "<his exact words>", "channel": "chat" | "artifact" | "issue", "planVersion": <n>, "designVersion": <n or null> }`, and save the final plan as `{{out}}/plan.html`.
