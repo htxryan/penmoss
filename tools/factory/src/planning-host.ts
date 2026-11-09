@@ -187,7 +187,61 @@ export async function findSession(
   };
 }
 
-/** Starts (or resumes) the session in the background; returns its chat link when it prints one. */
+/**
+ * Claude Code's folder of background jobs, one `<short id>/state.json` each, under its config
+ * folder (`CLAUDE_CONFIG_DIR`, else `~/.claude`). Undefined without a home to find it in.
+ */
+export function claudeJobsDir(
+  env: Readonly<Record<string, string | undefined>>,
+): string | undefined {
+  if (env['CLAUDE_CONFIG_DIR']) return join(env['CLAUDE_CONFIG_DIR'], 'jobs');
+  return env['HOME'] ? join(env['HOME'], '.claude', 'jobs') : undefined;
+}
+
+const BRIDGE_ID = /^(?:cse|session)_([A-Za-z0-9_-]{1,128})$/;
+
+/**
+ * The chat link of a background session, from its job's state.json: `bridgeSessionId` is its
+ * Remote Control session (`cse_…`), which claude.ai serves as `code/session_…`, the same id
+ * with Claude Code's own `session_` prefix. `claude --bg` prints no link, and `claude agents
+ * --json` has no field for one, so meta.chatUrl stayed unset (PEN-70's run, A1257).
+ */
+export function chatUrlFromJob(stateJson: string): string | undefined {
+  try {
+    const id = (JSON.parse(stateJson) as { bridgeSessionId?: unknown }).bridgeSessionId;
+    const m = typeof id === 'string' ? BRIDGE_ID.exec(id) : null;
+    return m ? `https://claude.ai/code/session_${m[1]}` : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export interface JobOptions {
+  /** Claude Code's jobs folder; `claudeJobsDir(env)` when absent. */
+  readonly dir?: string | undefined;
+  /** How long to wait for the session's Remote Control link (default 20 s). */
+  readonly waitMs?: number;
+  readonly sleep?: (ms: number) => Promise<void>;
+}
+
+/** The job's chat link, once Claude Code has written it (a few seconds after `--bg` returns). */
+export async function waitForChatUrl(
+  dir: string,
+  id: string,
+  options: JobOptions = {},
+): Promise<string | undefined> {
+  if (!/^[0-9a-f]{6,}$/.test(id)) return undefined;
+  const file = join(dir, id, 'state.json');
+  const sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+  const step = 1_000;
+  for (let waited = 0; ; waited += step) {
+    const url = existsSync(file) ? chatUrlFromJob(readFileSync(file, 'utf8')) : undefined;
+    if (url || waited >= (options.waitMs ?? 20_000)) return url;
+    await sleep(step);
+  }
+}
+
+/** Starts (or resumes) the session in the background; returns its chat link when it has one. */
 export async function launchSession(
   config: FactoryConfig,
   exec: Exec,
@@ -196,6 +250,7 @@ export async function launchSession(
   message: string,
   env: Record<string, string>,
   resume?: string,
+  jobs: JobOptions = {},
 ): Promise<{ chatUrl?: string; id?: string }> {
   const cwd = join(expandHome(config.stateDir), 'plans');
   const args = [
@@ -215,8 +270,11 @@ export async function launchSession(
     throw new Error(
       `claude --bg failed: ${(r.stderr || r.stdout).trim().split('\n').slice(-2).join(' ')}`,
     );
-  const chatUrl = CHAT_URL.exec(r.stdout + r.stderr)?.[0];
   const id = BACKGROUNDED.exec(r.stdout + r.stderr)?.[1];
+  const dir = jobs.dir ?? claudeJobsDir(env);
+  const chatUrl =
+    CHAT_URL.exec(r.stdout + r.stderr)?.[0] ??
+    (id && dir ? await waitForChatUrl(dir, id, jobs) : undefined);
   return { ...(chatUrl ? { chatUrl } : {}), ...(id ? { id } : {}) };
 }
 
@@ -244,7 +302,7 @@ export function planningChat(
   if (!meta.chatUrl)
     return {
       error: meta.sessionId
-        ? `${issueKey(config, issue)}'s planning session printed no chat link`
+        ? `${issueKey(config, issue)}'s planning session has no chat link: Claude Code reported no Remote Control session for it (its job's state.json in ~/.claude/jobs has no bridgeSessionId), so there is no link to give`
         : `${issueKey(config, issue)} has no planning session yet`,
     };
   return { chatUrl: meta.chatUrl, desktop: desktopLink(meta.chatUrl) };

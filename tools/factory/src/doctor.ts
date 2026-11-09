@@ -2,7 +2,8 @@
  * `task factory:doctor` (F17, #262): starts one slot's sandbox on a throwaway branch and checks
  * that the toolchain works there and that what must stay out does. Each check says what it
  * proves; a failure is loud and names the check. Commands never print a secret: the isolation
- * checks open files for zero bytes, and the token checks print only an account name.
+ * checks read one byte into /dev/null and print only why the read failed, and the token checks
+ * print only an account name.
  */
 import { accessSync, constants, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -36,11 +37,30 @@ export interface Check {
 /** What the repo's deploy commands say inside a run (FD24): `Taskfile.yml`, `apps/relay`. */
 const DEPLOY_REFUSED = 'No production deploys from a factory run';
 
-/** Opens a file for zero bytes: fails when the sandbox refuses it, and never prints contents. */
-const opens = (path: string) => `head -c 0 '${path}'`;
-
 /** One shell word. */
 const quote = (s: string) => `'${s.replaceAll("'", `'\\''`)}'`;
+
+/** What an unreadable-file check's probe prints when the sandbox, and only it, refused the read. */
+export const READ_REFUSED = 'refused by the sandbox';
+
+/**
+ * A real read of one byte, sent to /dev/null, that says why it failed: the check passes only when
+ * the read was refused (Seatbelt's "Operation not permitted", or "Permission denied"). It was
+ * `head -c 0`, which macOS's head rejects ("illegal byte count -- 0", exit 1) before opening the
+ * file, so the five checks passed whether or not the sandbox blocked the read (A1258). A missing
+ * file, or any other failure, says so and fails the check. Only head's own error reaches stdout,
+ * never the file's contents.
+ */
+export function readProbe(path: string): string {
+  return [
+    `if why=$(head -c 1 ${quote(path)} 2>&1 >/dev/null); then echo 'read one byte: the sandbox let it through'; exit 0; fi;`,
+    'case "$why" in',
+    `*'Operation not permitted'*|*'Permission denied'*) echo '${READ_REFUSED}';;`,
+    `*'No such file'*) echo "the file doesn't exist, so this proves nothing: $why";;`,
+    '*) echo "the read failed for another reason: $why";;',
+    'esac; exit 1',
+  ].join(' ');
+}
 
 /**
  * OpenCode as a run starts it (`agents/opencode.ts`): the factory's config inline, the worktree's
@@ -343,7 +363,8 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
     {
       name: "Ryan's gh login is unreadable",
       expect: 'refused',
-      command: opens(`${home}/.config/gh/hosts.yml`),
+      output: READ_REFUSED,
+      command: readProbe(`${home}/.config/gh/hosts.yml`),
     },
     { name: '~/.ssh is unreadable', expect: 'refused', command: `ls '${home}/.ssh' > /dev/null` },
     {
@@ -355,17 +376,20 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
     {
       name: "the GitHub App's key file is unreadable (A1222)",
       expect: 'refused',
-      command: opens(expandHome(config.publisher.envFile, home)),
+      output: READ_REFUSED,
+      command: readProbe(expandHome(config.publisher.envFile, home)),
     },
     {
       name: "the proof bucket's key is unreadable (A1223)",
       expect: 'refused',
-      command: opens(expandHome(config.proof.envFile, home)),
+      output: READ_REFUSED,
+      command: readProbe(expandHome(config.proof.envFile, home)),
     },
     {
       name: "the Linear app's credentials are unreadable (LD4)",
       expect: 'refused',
-      command: opens(expandHome(config.linear.envFile, home)),
+      output: READ_REFUSED,
+      command: readProbe(expandHome(config.linear.envFile, home)),
     },
     {
       name: 'no Linear token in the environment (LD4)',
@@ -375,7 +399,8 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
     {
       name: 'the login keychain is unreadable',
       expect: 'refused',
-      command: opens(`${home}/Library/Keychains/login.keychain-db`),
+      output: READ_REFUSED,
+      command: readProbe(`${home}/Library/Keychains/login.keychain-db`),
     },
     {
       name: "Ryan's home is not writable",
@@ -414,8 +439,13 @@ export function judge(
 ): { ok: boolean; detail: string } {
   if (check.expect === 'refused') {
     if (exitCode === 0) return { ok: false, detail: 'succeeded, but the sandbox must refuse it' };
-    if (check.output !== undefined && !stdout.includes(check.output))
-      return { ok: false, detail: `failed (exit ${exitCode}), but not with "${check.output}"` };
+    if (check.output !== undefined && !stdout.includes(check.output)) {
+      const said = stdout.trim().split('\n').at(-1)?.slice(0, 300);
+      return {
+        ok: false,
+        detail: `failed (exit ${exitCode}), but not with "${check.output}"${said ? `: ${said}` : ''}`,
+      };
+    }
     return { ok: true, detail: `refused (exit ${exitCode})` };
   }
   if (exitCode !== 0) return { ok: false, detail: `exit ${exitCode}` };

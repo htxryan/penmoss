@@ -31,31 +31,8 @@ import { appClient, openTracker } from './tracker/index.ts';
 import { fix, snapshot, teamNeeds } from './tracker/linear-check.ts';
 import { createLinearClient, type LinearClient } from './tracker/linear-client.ts';
 import { ownerKey } from './ui/owner.ts';
-
-const USAGE = `Usage: factory <command>
-
-Commands:
-  next [--json]             Print the Todo card (Ready on Project 8) it would start next, and why (read-only)
-  install                   Clone the factory's own code under the state folder (once) and install
-                            and start the LaunchAgents that run the daemon and the UI from it
-  update [--wait]           Move that code to origin/main, reinstall and restart the LaunchAgents;
-                            refuses while a run or merge is active (--wait: hold new work and wait)
-  start                     Start both LaunchAgents (the daemon and the UI) if they aren't running
-  status                   What the daemon is running (and at which commit), waiting on and
-                            passing over
-  daemon                    Poll the board, plan cards and run them in free slots (the LaunchAgent runs this)
-  ui                        Serve the Factory UI on 127.0.0.1 (its LaunchAgent runs this)
-  report [--from d] [--to d] Throughput, rounds, time to In review and the share Blocked, from the
-                            run ledger (default: the last 7 days; --to is exclusive)
-  run <n> [--slot n]        Implement card n (36 for PEN-36) now, in the foreground: plan:skip or
-                            an agreed plan
-  chat <n> [--print]        Open card n's planning session in the Claude app (--print: only print
-                            its links)
-  linear-check [--me] [--fix]
-                            Check Linear's team has the factory's states and labels (--me: print
-                            Ryan's user ID with his key; --fix: create what's missing, as Ryan)
-  doctor [--slot n] [--full] [--base ref] [--only name]
-                            Check a slot's sandbox: toolchain, tokens, and what must stay out`;
+import { decisionNumber } from './decision-number.ts';
+import { helpFor, usage } from './usage.ts';
 
 function describe(pick: Pick, config: FactoryConfig): string[] {
   const { item, spec } = pick;
@@ -269,6 +246,12 @@ async function chat(config: FactoryConfig, args: readonly string[]): Promise<num
 
 async function main(argv: readonly string[]): Promise<number> {
   const [command, ...rest] = argv;
+  // Before anything else, the config included: `doctor --help` ran the doctor (PEN-70's run).
+  const help = helpFor(argv);
+  if (help !== undefined) {
+    console.log(help);
+    return 0;
+  }
   const loaded = loadConfig();
   if (!loaded.ok) {
     console.error(`factory: ${loaded.error}`);
@@ -311,13 +294,17 @@ async function main(argv: readonly string[]): Promise<number> {
       return linearCheck(loaded.config, rest);
     case 'chat':
       return chat(loaded.config, rest);
+    case 'decision-number':
+      return decisionNumber(loaded.config, rest, {
+        exec: nodeExec,
+        repo: process.cwd(),
+        log: (line) => console.log(line),
+      });
     case undefined:
-    case 'help':
-    case '--help':
-      console.log(USAGE);
-      return command === undefined ? 2 : 0;
+      console.log(usage());
+      return 2;
     default:
-      console.error(`factory: unknown command "${command}"\n\n${USAGE}`);
+      console.error(`factory: unknown command "${command}"\n\n${usage()}`);
       return 2;
   }
 }

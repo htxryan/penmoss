@@ -99,7 +99,7 @@ Run the `.ts` scripts from `tools/factory`, with Node from `~/.nvm/versions/node
   - Keep `decision-numbers` (the reservation high-water mark) consistent with `main`'s highest A-number.
 - **When Linear moved a card by itself:** `history.ts` shows who moved it. If Linear's GitHub automation did it, run `unlink.ts` on the PR, then `move.ts` the card back to where the factory left it. The daemon recovers on its next poll.
 - **Decision numbers in a fix PR:**
-  - Agents write `A-NEW-n`. Number from `main`'s highest when you open the PR, and only in lines the branch added. The factory's own code and tests use `A-NEW-n` as data, so never sed whole files: diff against `main` first.
+  - Agents write `A-NEW-n`. When you open the PR, take the numbers with `task decision:next` (`-- --count n`), which reserves them from the factory's counter, and number only lines the branch added. The factory's own code and tests use `A-NEW-n` as data, so never sed whole files: diff against `main` first.
   - Re-run prettier on `docs/decisions.md` after numbering.
   - zsh doesn't split `$FILES`; use an array.
 - **Write a test that fails without the fix.** Real git in temp repos where it fits, fakes for Sandcastle. Never plant anything that executes. Real-git suites get `{ timeout: 30_000 }`.
@@ -125,6 +125,23 @@ These are fixed in #61, #62, #64 and #65, or are in the follow-up. If one comes 
 - Recovery reruns the agent at round 0 even when its work is committed, and on its old base, so it reports failures that `main` has already fixed.
 - The PR title is the agent's whole summary sentence.
 - Blocked doesn't stop a step in flight.
+
+## Known failures from the second run (PEN-70, 9 Nov 2026)
+
+Fixed in #69–#78 and the follow-up, or still true. Look here first:
+
+- **Where a step's output is.** The run folder (`runs/<run>/`) keeps `gate.log` (the gate's whole check output), `proof-<platform>.log` (each web and Android proof's output), `raw/` (the proof videos and screenshots), `validation/<n>/` (each validation's `review.json`, `captures.json` and image pairs) and `result.json`. The gate's worktree is gone once it closes, so read these, not the worktree.
+- **A recovered run resumes at the gate.** When you clear Blocked on a run whose agent had finished (`agent-finished done`), the new run starts from that result at the gate, with no new agent round (R12). Expect `recovered` and `agent-finished done from <old run>` in the ledger, then `rebased` or `gate-passed`.
+- **`factory:update` while the daemon is busy** refuses ("Not updating: the daemon is busy"). Use `task factory:update -- --wait`, which holds new work and updates once the active step ends. A Blocked run doesn't count as busy.
+- **The gate fails on a test outside the card.** The agent fixes it in its round, as PEN-70's did with `android-proof.test.ts`'s race. Don't race it with a PR to main: the gate's rebase then conflicts on the same file. Close your PR if the agent's fix lands first.
+- **Don't merge decision-adding PRs to main while a run is in its gate rounds** if the branch's decisions table was re-padded; #74 resolves most of these conflicts now, but each one still costs a rebase. Take hand-made numbers with `task decision:next`, never by hand.
+- **Proof platforms.** Without `platform:*` labels, the classifier decides: `packages/` or `apps/web/` puts web, Mac and Android in scope, even when the plan says "no Android change". The agent then needs an Android spec that shows nothing changed. The build prompt says so now; if a round is refused with "names no proof spec for android", that's why.
+- **Validation and fidelity rows.** Validation walks only the web build in headless Chromium. A Mac row's screenshot is the web build standing in for the Mac app, and the table says so. Judge Mac fidelity from the Mac proof recording. Native-only details (a select's popup) are deviations, not mismatches.
+- **Check the proof videos, not just the screenshots.** PEN-70's web and Mac videos stayed at the top of Settings → Display, and the new row below the fold never appeared; its Android screenshot was the launcher. A good proof scrolls the change into view, holds it and ends on it; an Android spec calls `ProofShot.take()` at its last assertion. Download the MP4s from the PR and watch them.
+- **Main's CI after merge can fail on a hosted-runner flake** (PEN-70: `TypingInstrumentedTest` on the hosted emulator). The factory sets Blocked and names the job, which is right. Re-run the failed job (`gh run rerun <id> --failed`), wait for green, then clear Blocked through the UI's `/action` (`ui.sh block <n> off`), so the factory verifies main and sets Done.
+- **The planning chat link** comes from Claude Code's job file (`~/.claude/jobs/<id>/state.json`, `bridgeSessionId`), not from `claude --bg`'s output. If `factory:chat` says there is none, that file had no Remote Control id.
+- **`factory:doctor`'s "unreadable" checks** for the key files and the keychain used `head -c 0`, which macOS refuses for its own reason, so they passed whatever the sandbox did. They now read one byte and pass only on a refusal (A1258). Rerun the doctor after updating.
+- **In the sandbox, main is `origin/main`.** Its local `main` is stale; an agent's `git diff main...HEAD` shows every factory change since the run began.
 
 ## Asset
 

@@ -184,6 +184,11 @@ tasks:
       - task: site:build
       - pnpm exec wrangler deploy {{.CLI_ARGS}}
 
+  decision:next:
+    desc: 'The next decision number for a row you add to docs/decisions.md by hand, reserved from the factory counter so an open run never takes it too (A1253): `task decision:next` (`-- --count 2` for two)'
+    cmds:
+      - node tools/factory/src/cli.ts decision-number {{.CLI_ARGS}}
+
   factory:next:
     desc: 'The software factory (#253): print the Ready card it would start next, and why (read-only)'
     cmds:

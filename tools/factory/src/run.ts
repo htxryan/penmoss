@@ -122,6 +122,7 @@ export interface RunDeps {
   failedLog(check: CheckRun): Promise<string>;
   /** F19's validation: mockups in, the reviewer's verdicts out (see validate.ts). */
   stageMockups(sandbox: RunSandbox): Promise<void>;
+  keepValidation(sandbox: RunSandbox): Promise<void>;
   readReview(sandbox: RunSandbox): Promise<string | null>;
   collectFidelity(sandbox: RunSandbox, rows: readonly FidelityRow[]): Promise<FidelityRow[]>;
   /** Runs `fn` holding one of the Mac's heavy-job slots (W12, A1216). */
@@ -293,8 +294,15 @@ export function prTitle(input: {
 export const GATE_INSTALL = 'pnpm install --frozen-lockfile --prefer-offline';
 
 function installFeedback(installed: { readonly stdout: string; readonly stderr: string }): string {
-  return `\`${GATE_INSTALL}\` failed after the rebase onto main:\n\n\`\`\`\n${excerpt(installed.stdout + installed.stderr)}\n\`\`\``;
+  return `\`${GATE_INSTALL}\` failed after the rebase onto \`origin/main\`:\n\n\`\`\`\n${excerpt(installed.stdout + installed.stderr)}\n\`\`\``;
 }
+
+/**
+ * In a sandbox, main is `origin/main` (the host's fetch); the clone's local `main` is stale, and an
+ * agent that diffed against it saw every factory change since the run began (PEN-70's run).
+ */
+export const STALE_MAIN =
+  'Main is `origin/main` here; the local `main` branch is stale, so diff and rebase against `origin/main` (`git diff origin/main...HEAD`).';
 
 export function gateCommand(scope: Scope): string {
   return scope.kind === 'docs-only' ? 'task lint' : 'task check';
@@ -411,7 +419,7 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
     }
     // Another round: the agent sees exactly what the gate saw.
     await deps.step(`gate-fix round ${round + 1}`);
-    prompt = `${input.prompt}\n\n## The gate's feedback (round ${round + 1})\n\nYour last attempt was committed on \`${branch}\`, but the gate refused it: ${verdict.feedback}\n\nFix that, commit, and write \`.factory/result.json\` again.`;
+    prompt = `${input.prompt}\n\n## The gate's feedback (round ${round + 1})\n\nYour last attempt was committed on \`${branch}\`, but the gate refused it: ${verdict.feedback}\n\nFix that, commit, and write \`.factory/result.json\` again. ${STALE_MAIN}`;
   }
 }
 
@@ -721,7 +729,7 @@ async function repair(
     await runAgentPatiently(
       deps,
       work,
-      `${run.prompt}\n\n## CI failed (repair round ${round})\n\nThe PR from \`${run.branch}\` is open and its CI failed. The failed jobs' last log lines:\n\n${logs}\n\nFix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\` again.`,
+      `${run.prompt}\n\n## CI failed (repair round ${round})\n\nThe PR from \`${run.branch}\` is open and its CI failed. The failed jobs' last log lines:\n\n${logs}\n\nFix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\` again. ${STALE_MAIN}`,
     );
     const read = await deps.readResult(work);
     if (!read.ok) return { ok: false, why: read.error };
@@ -828,8 +836,8 @@ export async function refreshBranch(
       phase: 'rebase',
     });
     const ask = first.conflict
-      ? `## main moved: rebase onto it\n\nThe PR from \`${run.branch}\` no longer rebases onto \`origin/main\`. ${first.why}\n\nKeep what main changed and what this branch changes. Run the checks, commit, and write \`.factory/result.json\` again.`
-      : `## The gate after rebasing onto main\n\n\`${run.branch}\` is now on top of \`origin/main\`, and the gate fails there: ${first.why}\n\nFix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\` again.`;
+      ? `## \`origin/main\` moved: rebase onto it\n\nThe PR from \`${run.branch}\` no longer rebases onto \`origin/main\`. ${first.why}\n\nKeep what \`origin/main\` changed and what this branch changes. ${STALE_MAIN} Run the checks, commit, and write \`.factory/result.json\` again.`
+      : `## The gate after rebasing onto \`origin/main\`\n\n\`${run.branch}\` is now on top of \`origin/main\`, and the gate fails there: ${first.why}\n\nFix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\` again. ${STALE_MAIN}`;
     const work = await deps.openSandbox(run.branch);
     let read: Awaited<ReturnType<RunDeps['readResult']>>;
     try {

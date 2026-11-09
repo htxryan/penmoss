@@ -1,3 +1,6 @@
+import { chmodSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
@@ -7,6 +10,8 @@ import {
   hostChecks,
   hostCommands,
   judge,
+  READ_REFUSED,
+  readProbe,
   report,
   TASK_CHECK_NO_BAIL,
   type Check,
@@ -121,6 +126,77 @@ describe('doctorChecks', () => {
     expect(checks.find((c) => c.name.startsWith('wrangler dev'))?.command).toContain(
       '--port 20187 --inspector-port 20129',
     );
+  });
+});
+
+describe("the unreadable-file checks' probe (A1258)", () => {
+  const dir = mkdtempSync(join(tmpdir(), 'doctor-probe-'));
+  // Stand-ins only: no real secret file is read here, and only exit codes and stdout are checked.
+  const file = join(dir, 'stand-in.env');
+  writeFileSync(file, 'NOT_A_SECRET=1\n');
+  const locked = join(dir, 'locked.env');
+  writeFileSync(locked, 'NOT_A_SECRET=1\n');
+  chmodSync(locked, 0o000);
+  const check = (path: string): Check => ({
+    name: 'unreadable',
+    expect: 'refused',
+    output: READ_REFUSED,
+    command: readProbe(path),
+  });
+  /** The probe in sh, with `head` replaced by a stub that fails with `message` when given. */
+  async function probe(path: string, message?: string) {
+    let env: Record<string, string> = { PATH: '/usr/bin:/bin' };
+    if (message !== undefined) {
+      const bin = mkdtempSync(join(tmpdir(), 'doctor-head-'));
+      writeFileSync(join(bin, 'head'), `#!/bin/sh\necho '${message}' >&2\nexit 1\n`);
+      chmodSync(join(bin, 'head'), 0o755);
+      env = { PATH: `${bin}:/usr/bin:/bin` };
+    }
+    const r = await nodeExec('sh', ['-c', check(path).command], { env });
+    return { ...r, verdict: judge(check(path), r.code, r.stdout) };
+  }
+
+  it('every unreadable-file check uses it', () => {
+    const checks = doctorChecks(config, slot, '/Users/r').filter(
+      (c) => c.name.includes('unreadable') && !c.command.startsWith('ls '),
+    );
+    expect(checks).toHaveLength(5);
+    for (const c of checks) {
+      expect(c.command).toContain("head -c 1 '/Users/r/");
+      expect(c.output).toBe(READ_REFUSED);
+      expect(c.command).not.toContain('head -c 0');
+    }
+  });
+
+  it('passes only when the read is refused', async () => {
+    const sandbox = await probe(file, `head: ${file}: Operation not permitted`);
+    expect(sandbox.code).toBe(1);
+    expect(sandbox.verdict.ok).toBe(true);
+    if (process.getuid?.() !== 0) {
+      const denied = await probe(locked);
+      expect(denied.stdout.trim()).toBe(READ_REFUSED);
+      expect(denied.verdict.ok).toBe(true);
+    }
+  });
+
+  it('fails when the file can be read', async () => {
+    const r = await probe(file);
+    expect(r.code).toBe(0);
+    expect(r.verdict).toEqual({ ok: false, detail: 'succeeded, but the sandbox must refuse it' });
+  });
+
+  it('fails, and says so, when the file does not exist', async () => {
+    const r = await probe(join(dir, 'missing.env'));
+    expect(r.code).toBe(1);
+    expect(r.verdict.ok).toBe(false);
+    expect(r.verdict.detail).toContain("the file doesn't exist");
+  });
+
+  it('fails when the read errors for any other reason, as head -c 0 did', async () => {
+    const r = await probe(file, 'head: illegal byte count -- 0');
+    expect(r.code).toBe(1);
+    expect(r.verdict.ok).toBe(false);
+    expect(r.verdict.detail).toContain('another reason: head: illegal byte count -- 0');
   });
 });
 

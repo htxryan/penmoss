@@ -10,6 +10,7 @@ import { agentFor } from './agents/index.ts';
 import type { Board, BoardItem } from './board.ts';
 import { summarizeChecks, type CheckRun } from './checks.ts';
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
+import { scopeText } from './platforms.ts';
 import { nodeExec } from './exec.ts';
 import { BlockedByRyan, guardEffects, RUN_GUARDED, RUN_STEPS } from './guard.ts';
 import { appendLedger, hostDeps } from './host.ts';
@@ -22,7 +23,7 @@ import { publishRefs } from './proof/store.ts';
 import { readConversation, reviewState, roundText, type ReviewState } from './review.ts';
 import { runRebase, runRevise, type ReviseDeps } from './revise.ts';
 import { branchName } from './run.ts';
-import type { Factory } from './start.ts';
+import { planFor, type Factory } from './start.ts';
 
 export interface FactoryPr {
   readonly number: number;
@@ -114,6 +115,31 @@ export async function nextReviewAction(
   return { kind: 'none', reason: state.reason };
 }
 
+/**
+ * The build prompt a review, rebase or CI round starts from: the issue, the agreed plan and the
+ * scope, as the run's own. It had no plan, so `fill` refused it and no round could start.
+ */
+export function roundPrompt(
+  config: FactoryConfig,
+  item: BoardItem,
+  spec: IssueSpec,
+  issue: string,
+): string {
+  let plan: string;
+  try {
+    plan = planFor(config, item.number, spec);
+  } catch {
+    // The plan's copy is gone (a tracker change archives it): the round still has the issue.
+    plan = 'None kept: the issue below is the spec.';
+  }
+  return fill(promptTemplate('implement'), {
+    branch: branchName(config, item),
+    issue,
+    plan,
+    scope: scopeText(spec.platforms),
+  });
+}
+
 /** A review round, a rebase or a CI repair on a slot, guarded by the card's Blocked field. */
 export async function executeRevise(
   factory: Factory,
@@ -130,13 +156,7 @@ export async function executeRevise(
   const { config, gh, tracker } = factory;
   const runId = `${item.number}-${Date.now().toString(36)}-${randomBytes(2).toString('hex')}`;
   const issue = await tracker.readIssue(item.number);
-  const base = fill(promptTemplate('implement'), {
-    branch: branchName(config, item),
-    issue: issueText(issue, tracker.owner, 'penmoss-factory'),
-    scope: spec.platforms
-      ? `The issue is labelled for ${spec.platforms.join(', ')}.`
-      : 'The path classifier decides the platforms from your diff.',
-  });
+  const base = roundPrompt(config, item, spec, issueText(issue, tracker.owner, 'penmoss-factory'));
   const items = action.kind === 'round' ? action.state.items : [];
   const prompt =
     action.kind === 'round'

@@ -48,7 +48,14 @@ case "$1 $2" in
       echo '  mCurrentFocus=Window{7a u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}'
     fi ;;
   'exec-out screencap') printf 'png' ;;
-  pull*) echo mp4 >"$3" ;;
+  pull*)
+    case "$2" in
+      # The screenshot a test's ProofShot.take() leaves, when STUB_PROOF_SHOT says it took one.
+      /sdcard/penmoss-proof.png)
+        [ -n "\${STUB_PROOF_SHOT:-}" ] || { echo "adb: error: remote object '$2' does not exist" >&2; exit 1; }
+        echo shot >"$3" ;;
+      *) echo mp4 >"$3" ;;
+    esac ;;
   'exec-out logcat') echo 'I ActivityManager: logcat' ;;
   logcat*) echo 'adb logcat waits for a device forever' >&2; exec sleep 60 ;;
 esac
@@ -216,6 +223,32 @@ describe.concurrent(
       expect(at('shell logcat -c')).toBeLessThan(at('-e class app.penmoss.OtherTest#fails'));
       // A failure's own words are in the log.
       expect(r.stdout).toContain('FAILURES!!!');
+    }, 30_000);
+
+    it('keeps the screenshot the test took at its last assertion, not the screen after it (A1255)', async () => {
+      const f = fixture();
+      const r = await f.run(['app.penmoss.PassingTest'], { STUB_PROOF_SHOT: '1' });
+      expect(r.status, r.stderr).toBe(0);
+      const adb = r.calls.filter((c) => c.startsWith('adb '));
+      const at = (text: string) => adb.findIndex((c) => c.includes(text));
+      // The last spec's file is gone before this one runs, and fetched once it has.
+      expect(at('shell rm -f /sdcard/proof.mp4 /sdcard/penmoss-proof.png')).toBeLessThan(
+        at('am instrument'),
+      );
+      expect(at('pull /sdcard/penmoss-proof.png')).toBeGreaterThan(at('am instrument'));
+      expect(adb.some((c) => c.includes('screencap'))).toBe(false);
+      expect(readFileSync(join(f.root, 'build', 'proof', 'android-1.png'), 'utf8')).toBe('shot\n');
+      expect(r.stderr).not.toContain('took no screenshot');
+    }, 30_000);
+
+    it('falls back to a screenshot after the test, and says so, when the test took none', async () => {
+      const f = fixture();
+      const r = await f.run(['app.penmoss.PassingTest']);
+      expect(r.status, r.stderr).toBe(0);
+      expect(r.stderr).toContain(
+        'app.penmoss.PassingTest took no screenshot of its own (ProofShot.take() at its last assertion)',
+      );
+      expect(readFileSync(join(f.root, 'build', 'proof', 'android-1.png'), 'utf8')).toBe('png');
     }, 30_000);
 
     it("waits while System UI's ANR dialog has the focus, then runs the tests", async () => {

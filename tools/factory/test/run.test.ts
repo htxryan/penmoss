@@ -203,7 +203,14 @@ function fake(overrides: {
       calls.push('mockups');
       return Promise.resolve();
     },
-    readReview: () => Promise.resolve(reviews.shift() ?? null),
+    keepValidation: () => {
+      calls.push('keep validation');
+      return Promise.resolve();
+    },
+    readReview: () => {
+      calls.push('read review');
+      return Promise.resolve(reviews.shift() ?? null);
+    },
     collectFidelity: (_sandbox, rows) => Promise.resolve([...rows]),
     macVmCheck: () => {
       calls.push('vm check');
@@ -524,6 +531,9 @@ describe('runImplement', () => {
     expect(f.prompts).toHaveLength(6);
     expect(f.prompts[1]).toMatch(/^You are validating/);
     expect(f.prompts[2]).toMatch(/^You are an independent reviewer/);
+    // Each validation's files are kept in the run folder before the review is read (A1256).
+    const kept = f.calls.filter((c) => c === 'keep validation' || c === 'read review');
+    expect(kept).toEqual(['keep validation', 'read review', 'keep validation', 'read review']);
     expect(f.comments[1]).toContain('## Fidelity');
     expect(f.comments[1]).toContain(
       '| ✅ Match | ![mockup](./ac1-mockup.png) | ![screenshot](./ac1.png) |',
@@ -815,7 +825,8 @@ describe('main moves while the PR waits for CI (F6)', () => {
     const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
     expect(outcome.kind).toBe('in-review');
     expect(f.prompts).toHaveLength(2);
-    expect(f.prompts[1]).toContain('## main moved: rebase onto it');
+    expect(f.prompts[1]).toContain('## `origin/main` moved: rebase onto it');
+    expect(f.prompts[1]).toContain('the local `main` branch is stale');
     expect(f.prompts[1]).toContain('stopped on conflicts in `apps/web/src/a.ts`, `docs/cli.md`');
     expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(2);
     expect(f.calls.at(-2)).toBe('status In review');
@@ -868,7 +879,7 @@ describe('main moves while the PR waits for CI (F6)', () => {
     };
     const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
     expect(outcome.kind).toBe('in-review');
-    expect(f.prompts[1]).toContain('## The gate after rebasing onto main');
+    expect(f.prompts[1]).toContain('## The gate after rebasing onto `origin/main`');
     expect(f.prompts[1]).toContain('main renamed lint:md');
   });
 });

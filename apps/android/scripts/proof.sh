@@ -1,7 +1,8 @@
 #!/bin/sh
 # Android proof for the software factory (F8, FD25), inside a slot's sandbox: build, then boot
 # the slot's own headless emulator, run the named instrumented tests with screenrecord running,
-# take a screenshot, and shut the emulator down. Writes apps/android/build/proof/report.json.
+# keep the screenshot each test took with ProofShot.take() (or take one after it), and shut the
+# emulator down. Writes apps/android/build/proof/report.json.
 #
 #   task proof:android -- app.penmoss.editor.TypingInstrumentedTest[#method] …
 #
@@ -24,6 +25,8 @@ TEST_SECONDS="${PENMOSS_PROOF_TEST_SECONDS:-170}"
 SETTLE_SECONDS="${PENMOSS_EMULATOR_SETTLE_SECONDS:-240}"
 QUIET_SECONDS="${PENMOSS_EMULATOR_QUIET_SECONDS:-10}"
 APP=app.penmoss.debug
+# Where a test's ProofShot.take() leaves the screenshot (androidTest app.penmoss.proof, A1255).
+PROOF_SHOT=/sdcard/penmoss-proof.png
 RUNNER="$APP.test/androidx.test.runner.AndroidJUnitRunner"
 
 [ "$#" -gt 0 ] || { echo 'proof.sh: name at least one instrumented test class' >&2; exit 2; }
@@ -120,14 +123,19 @@ for spec in "$@"; do
   n=$((n + 1))
   video="android-$n.mp4"
   shot="android-$n.png"
-  "$ADB" -s "$ANDROID_SERIAL" shell rm -f /sdcard/proof.mp4
+  "$ADB" -s "$ANDROID_SERIAL" shell rm -f /sdcard/proof.mp4 "$PROOF_SHOT"
   "$ADB" -s "$ANDROID_SERIAL" shell screenrecord --time-limit "$TEST_SECONDS" /sdcard/proof.mp4 &
   rec=$!
   sleep 1
   echo "[proof] $spec"
   result="$("$ADB" -s "$ANDROID_SERIAL" shell am instrument -w -e class "$spec" "$RUNNER" 2>&1 || true)"
   printf '%s\n' "$result" >"$OUT/android-$n.log"
-  "$ADB" -s "$ANDROID_SERIAL" exec-out screencap -p >"$OUT/$shot" || true
+  # The screenshot the test took at its last assertion, with the change on screen (ProofShot).
+  # Without one, the screen now, after the test closed the app: likely the launcher.
+  if ! "$ADB" -s "$ANDROID_SERIAL" pull "$PROOF_SHOT" "$OUT/$shot" >/dev/null 2>&1; then
+    echo "[proof] $spec took no screenshot of its own (ProofShot.take() at its last assertion); this one is from after it closed the app" >&2
+    "$ADB" -s "$ANDROID_SERIAL" exec-out screencap -p >"$OUT/$shot" || true
+  fi
   # The device's log since the last test (since the boot, for the first), to diagnose a failure.
   # Through exec-out and shell, which fail at once without the device: `adb logcat` would wait
   # for an emulator that crashed forever.

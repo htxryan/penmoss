@@ -1,5 +1,6 @@
 package app.penmoss.editor
 
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -200,16 +201,34 @@ class TypingInstrumentedTest {
         // Injected key events go to whichever window has the input focus, not to this view. A
         // system dialog in front ("System UI isn't responding" on a loaded emulator) takes the
         // first keys and drops them, so type only once the editor's window has the focus.
-        waitUntil("the editor's window focused", 10_000) {
-            var focused = false
-            instrumentation.runOnMainSync { focused = webView.hasWindowFocus() }
-            focused
-        }
+        awaitWindowFocus()
         instrumentation.sendStringSync(PARAGRAPH)
         waitForBody(PARAGRAPH)
     }
 
     // ---- helpers ----------------------------------------------------------------
+
+    /**
+     * Waits (10 s, as before) until the editor's window has the input focus, asking for it again
+     * every 2 s. On main's CI (run 42660812067, the hosted emulator) the previous test's
+     * `scenario.close()` started androidx.test's EmptyActivity, whose "finish" broadcast went out
+     * before it had registered for it, so it came up a second late on top of this test's activity
+     * and kept the focus until the wait ran out. Its own finish broadcast, sent again, closes it,
+     * and the editor's view asks for the focus again. What the test types and checks is unchanged.
+     */
+    private fun awaitWindowFocus() {
+        var asked = SystemClock.uptimeMillis()
+        waitUntil("the editor's window focused", 10_000) {
+            var focused = false
+            instrumentation.runOnMainSync { focused = webView.hasWindowFocus() }
+            if (!focused && SystemClock.uptimeMillis() - asked >= 2_000) {
+                instrumentation.targetContext.sendBroadcast(Intent(FINISH_EMPTY_ACTIVITIES))
+                instrumentation.runOnMainSync { webView.requestFocus() }
+                asked = SystemClock.uptimeMillis()
+            }
+            focused
+        }
+    }
 
     private fun focusBody(): InputConnection {
         instrumentation.runOnMainSync { webView.requestFocus() }
@@ -294,6 +313,9 @@ class TypingInstrumentedTest {
 
     private companion object {
         const val NOTE = "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
+
+        /** androidx.test's own action that closes its EmptyActivity (InstrumentationActivityInvoker). */
+        const val FINISH_EMPTY_ACTIVITIES = "androidx.test.core.app.InstrumentationActivityInvoker.FINISH_EMPTY_ACTIVITIES"
 
         /** An update with nothing in it: what a note holds before its first edit. */
         const val EMPTY_NOTE = "AAA="
