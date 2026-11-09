@@ -63,6 +63,9 @@ test('Show Tooltips After in Settings → Display sets the hover delay; Never st
     'Never',
   ]);
   await expect(field).toHaveValue('1000');
+  await expect(page.getByTestId('tooltip-delay-help')).toHaveText(
+    'How long the pointer rests on a button before its name shows. Tabbing to a button shows it at once. Changes sync to your other devices.',
+  );
   if (SHOTS) {
     await field.scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${SHOTS}/mac-tooltip-delay-field.png` });

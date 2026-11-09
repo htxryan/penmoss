@@ -76,6 +76,9 @@ test('Show Tooltips After sets how long a hover waits, Never stops it, focus sho
       ].map((each) => each.getAttribute('data-testid')),
     );
   expect(order).toEqual(['note-bar-settings', 'tooltip-delay']);
+  await expect(page.getByTestId('tooltip-delay-help')).toHaveText(
+    'How long the pointer rests on a button before its name shows. Tabbing to a button shows it at once. Changes sync to your other devices.',
+  );
   if (SHOTS) {
     await field.scrollIntoViewIfNeeded();
     await page.screenshot({ path: `${SHOTS}/tooltip-delay-field.png` });

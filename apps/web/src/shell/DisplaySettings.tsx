@@ -248,27 +248,34 @@ function TooltipSettings() {
   const { choice, set, canChange } = useTooltipDelay();
   const id = useId();
   return (
-    <label className="settings-field" htmlFor={id}>
-      <span>Show Tooltips After</span>
-      <Select
-        id={id}
-        className="settings-choice"
-        value={String(choice)}
-        disabled={!canChange}
-        data-testid="tooltip-delay"
-        onChange={(event) => {
-          const picked = TOOLTIP_DELAY_CHOICES.find(
-            (each) => String(each.value) === event.target.value,
-          );
-          if (picked) set(picked.value);
-        }}
-      >
-        {TOOLTIP_DELAY_CHOICES.map(({ value, label }) => (
-          <option key={value} value={String(value)}>
-            {label}
-          </option>
-        ))}
-      </Select>
-    </label>
+    <>
+      <label className="settings-field" htmlFor={id}>
+        <span>Show Tooltips After</span>
+        <Select
+          id={id}
+          className="settings-choice"
+          value={String(choice)}
+          disabled={!canChange}
+          aria-describedby={`${id}-help`}
+          data-testid="tooltip-delay"
+          onChange={(event) => {
+            const picked = TOOLTIP_DELAY_CHOICES.find(
+              (each) => String(each.value) === event.target.value,
+            );
+            if (picked) set(picked.value);
+          }}
+        >
+          {TOOLTIP_DELAY_CHOICES.map(({ value, label }) => (
+            <option key={value} value={String(value)}>
+              {label}
+            </option>
+          ))}
+        </Select>
+      </label>
+      <p id={`${id}-help`} className="muted settings-help" data-testid="tooltip-delay-help">
+        How long the pointer rests on a button before its name shows. Tabbing to a button shows it
+        at once. Changes sync to your other devices.
+      </p>
+    </>
   );
 }
