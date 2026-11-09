@@ -175,6 +175,17 @@ test.describe('the brochure pages', () => {
     expect(checked.size).toBeGreaterThan(10);
   });
 
+  test('the footer links Ryan Henderson to ryanhenderson.dev on every brochure page', async ({
+    page,
+  }) => {
+    for (const route of BROCHURE) {
+      await page.goto(route);
+      const name = page.locator('.site-footer').getByRole('link', { name: 'Ryan Henderson' });
+      await expect(name, route).toHaveAttribute('href', 'https://ryanhenderson.dev');
+      await expect(page.locator('.footer-brand'), route).toHaveText(/^© \d{4} Ryan Henderson$/);
+    }
+  });
+
   test('the brochure pages stay light on a dark system, as drawn (A1220)', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'dark' });
     for (const route of [...BROCHURE, '/no-such-page']) {

@@ -201,6 +201,15 @@ a:focus-visible {
   gap: 10px;
 }
 
+.footer-brand a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.footer-brand a:hover {
+  color: var(--pm-accent);
+}
+
 .footer-nav {
   display: flex;
   gap: 24px;
