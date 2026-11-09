@@ -16,7 +16,7 @@ import { BlockedByRyan, guardEffects, RUN_GUARDED, RUN_STEPS } from './guard.ts'
 import { appendLedger, hostDeps } from './host.ts';
 import { fence, issueText } from './issue.ts';
 import type { IssueSpec } from './labels.ts';
-import { ciRunsFor, mergeApproved, type MainRun, type MergeDeps } from './merge.ts';
+import { ciRunsFor, mergeApproved, type MainRun, type MergeDeps, type RunJob } from './merge.ts';
 import { fill, promptTemplate } from './prompt.ts';
 import { proofFiles } from './proof/body.ts';
 import { publishRefs } from './proof/store.ts';
@@ -304,14 +304,16 @@ export async function executeMerge(
         return true;
       }
     },
-    failedJobs: async (run) => {
-      if (!run.databaseId) return [];
-      const { jobs } = await gh.json<{ jobs: { name: string; conclusion: string | null }[] }>([
+    runJobs: async (run) => {
+      if (!run.databaseId) return Promise.reject(new Error('no run id'));
+      const { jobs } = await gh.json<{ jobs: RunJob[] }>([
         ...['run', 'view', String(run.databaseId), '--repo', config.repo, '--json', 'jobs'],
       ]);
-      return jobs
-        .filter((j) => j.conclusion && !['success', 'skipped', 'neutral'].includes(j.conclusion))
-        .map((j) => j.name);
+      return jobs;
+    },
+    rerun: async (run) => {
+      if (run.databaseId)
+        await gh.run(['run', 'rerun', String(run.databaseId), '--repo', config.repo]);
     },
     merge: async (url) => {
       await gh.run(['pr', 'merge', url, '--repo', config.repo, '--squash', '--delete-branch']);

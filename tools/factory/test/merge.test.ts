@@ -4,7 +4,13 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { CheckRun } from '../src/checks.ts';
 import type { IssueSpec } from '../src/labels.ts';
-import { ciRunsFor, mergeApproved, type MainRun, type MergeDeps } from '../src/merge.ts';
+import {
+  ciRunsFor,
+  mergeApproved,
+  type MainRun,
+  type MergeDeps,
+  type RunJob,
+} from '../src/merge.ts';
 import type { Gh } from '../src/github.ts';
 import type { Factory } from '../src/start.ts';
 import { findPr, nextReviewAction, roundPrompt } from '../src/watch.ts';
@@ -23,7 +29,7 @@ const card = item(5, { status: 'In review' });
 function fake(
   checks: CheckRun[],
   mains: MainRun[][],
-  options: { merged?: string; runsCi?: boolean; failedJobs?: string[] } = {},
+  options: { merged?: string; runsCi?: boolean; jobs?: RunJob[][] } = {},
 ) {
   const calls: string[] = [];
   let clock = Date.parse('2026-11-07T12:00:00Z');
@@ -38,7 +44,12 @@ function fake(
     },
     mainRuns: () => Promise.resolve(mains.shift() ?? []),
     mainRunsCi: () => Promise.resolve(options.runsCi ?? true),
-    failedJobs: () => Promise.resolve(options.failedJobs ?? []),
+    runJobs: () =>
+      Promise.resolve(options.jobs?.shift() ?? [{ name: 'Check', conclusion: 'failure' }]),
+    rerun: (r) => {
+      calls.push(`rerun ${r.url}`);
+      return Promise.resolve();
+    },
     comment: (_n, body) => {
       calls.push(`comment ${body.split('\n')[0]}`);
       return Promise.resolve();
@@ -91,7 +102,13 @@ describe('mergeApproved', () => {
   });
   it('sets Blocked when main goes red after the merge, naming the failed jobs', async () => {
     const f = fake([green], [[{ status: 'completed', conclusion: 'failure', url: 'r9' }]], {
-      failedJobs: ['E2E smoke', 'Check'],
+      jobs: [
+        [
+          { name: 'E2E smoke', conclusion: 'failure' },
+          { name: 'Build', conclusion: 'success' },
+          { name: 'Check', conclusion: 'cancelled' },
+        ],
+      ],
     });
     expect(await mergeApproved(f.deps, card, 'pr')).toEqual({
       kind: 'blocked',
@@ -116,6 +133,30 @@ describe('mergeApproved', () => {
     expect((await mergeApproved(f.deps, card, 'pr')).kind).toBe('done');
     expect(f.calls).not.toContain('blocked');
     expect(f.calls.slice(-1)).toEqual(['status Done']);
+  });
+  it('starts a run GitHub failed with no jobs again once, instead of Blocking on it', async () => {
+    const failed: MainRun = { status: 'completed', conclusion: 'failure', url: 'r3' };
+    const f = fake(
+      [green],
+      [
+        [failed],
+        [{ status: 'in_progress', conclusion: null, url: 'r3' }],
+        [{ ...failed, conclusion: 'success' }],
+      ],
+      { jobs: [[]] },
+    );
+    expect((await mergeApproved(f.deps, card, 'pr')).kind).toBe('done');
+    expect(f.calls).toContain('rerun r3');
+    expect(f.calls).not.toContain('blocked');
+  });
+  it('Blocks when the restarted run fails with no jobs again', async () => {
+    const failed: MainRun = { status: 'completed', conclusion: 'failure', url: 'r3' };
+    const f = fake([green], [[failed], [failed]], { jobs: [[], []] });
+    expect(await mergeApproved(f.deps, card, 'pr')).toEqual({
+      kind: 'blocked',
+      reason: "main's CI failed after the merge: r3 (no jobs started, twice)",
+    });
+    expect(f.calls.filter((c) => c.startsWith('rerun'))).toEqual(['rerun r3']);
   });
   it('still Blocks when main should have run CI and none started', async () => {
     const f = fake([green], [], { runsCi: true });
