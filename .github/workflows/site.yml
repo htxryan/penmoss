@@ -25,8 +25,9 @@ jobs:
     name: Deploy penmoss.app
     # A prerelease (an Alpha build, or a vX.Y.Z-rc.N rehearsal) never moves the site.
     if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
-    # A702: Ryan's Mac runners only.
-    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
+    # A1235: a hosted runner. The Cloudflare token is an environment secret limited to main and
+    # v* tags, and this workflow never runs on a pull request, so no fork's code ever sees it.
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     # The Cloudflare token lives in this environment, limited to main and v* tags (docs/ci.md, "Deploying penmoss.app").
     environment: site-deploy
@@ -68,8 +69,3 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.PENMOSS_SITE_CLOUDFLARE_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: 6e32c58c0c71b7228ddca35c4c466b6c
         run: pnpm exec wrangler deploy
-
-      - name: Empty the checkout (Mac)
-        if: always() && runner.os == 'macOS'
-        # Guarded: a failed checkout leaves no script, and nothing to clean.
-        run: if [ -f .github/scripts/mac-runner.sh ]; then bash .github/scripts/mac-runner.sh clean; fi

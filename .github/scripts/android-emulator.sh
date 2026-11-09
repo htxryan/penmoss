@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# CI's Android emulator (F9, A1227): the `android-emulator` job runs the app's instrumented tests
-# (apps/android/app/src/androidTest) on a headless API 37 emulator on one of the Mac runners.
+# CI's Android emulator (F9, A1227, A1235): the `android-emulator` job runs the app's instrumented
+# tests (apps/android/app/src/androidTest) on a headless API 37 emulator, on a GitHub-hosted Ubuntu
+# runner with KVM (the x86_64 image). On a Mac (arm64) it uses the arm64-v8a image, the factory
+# slots' own.
 #
 #   bash .github/scripts/android-emulator.sh avd    make this runner's AVD, once, in its tool cache
 #   bash .github/scripts/android-emulator.sh test   boot it on emulator-5580, run the tests, kill it
@@ -8,8 +10,9 @@
 #
 # Always console port 5580 (emulator-5580) and adb server port 5050: never the factory's slots
 # (emulators 5560 and 5562, adb servers 5040 and 5041, docs/android.md) or the default 5037 that
-# Ryan's own adb uses. The ports are fixed, so the runners on this Mac take turns: `test` waits
-# for a lock (PENMOSS_EMULATOR_LOCK_SECONDS, 1500) before it starts anything. Every adb and
+# Ryan's own adb uses. The ports are fixed, so runners sharing a machine take turns: `test` waits
+# for a lock (PENMOSS_EMULATOR_LOCK_SECONDS, 1500) before it starts anything (a hosted runner gets
+# it at once). Every adb and
 # Gradle call names emulator-5580 (ANDROID_SERIAL), so a slot's emulator, which this adb server
 # can also see, is never touched. Settings from F0.4, as the factory's proof (proof.sh): software
 # rendering through ANGLE, and the build before the boot, since a Gradle build beside a
@@ -20,7 +23,16 @@ PORT=5580
 ADB_PORT=5050
 SERIAL="emulator-$PORT"
 AVD=penmoss37-ci
-IMAGE='system-images;android-37.0;google_apis;arm64-v8a'
+# The image's ABI is the machine's own, so the emulator runs it natively (with KVM on Linux).
+case "${PENMOSS_EMULATOR_ARCH:-$(uname -m)}" in
+  arm64 | aarch64) ABI=arm64-v8a ;;
+  x86_64 | amd64) ABI=x86_64 ;;
+  *)
+    echo "::error::no Android system image for $(uname -m)"
+    exit 1
+    ;;
+esac
+IMAGE="system-images;android-37.0;google_apis;$ABI"
 APP=app.penmoss.debug
 # NoteListJankTest measures 60 fps on the Pixel (A285). Software rendering on a shared Mac says
 # nothing about that, as the web e2e job leaves the @perf frame-rate budgets to local runs.
@@ -38,11 +50,18 @@ fail() {
   exit 1
 }
 
-# The AVD folder is in this runner's tool cache (.github/actions/setup), so each runner keeps
-# its own, made once.
+# On a Mac the AVD folder is in this runner's tool cache (.github/actions/setup), so each runner
+# keeps its own, made once. A hosted runner has no PENMOSS_CACHE, and is thrown away after the job.
 sdk_env() {
   : "${ANDROID_HOME:?the Android SDK (.github/actions/android-sdk)}"
-  export ANDROID_AVD_HOME="${ANDROID_AVD_HOME:-${PENMOSS_CACHE:?the runner tool cache (.github/actions/setup)}/android-avd}"
+  if [ -z "${ANDROID_AVD_HOME:-}" ]; then
+    if [ -n "${PENMOSS_CACHE:-}" ]; then
+      ANDROID_AVD_HOME="$PENMOSS_CACHE/android-avd"
+    else
+      ANDROID_AVD_HOME="${HOME:?}/.android/avd"
+    fi
+  fi
+  export ANDROID_AVD_HOME
   export ANDROID_SERIAL="$SERIAL" ANDROID_ADB_SERVER_PORT="$ADB_PORT"
   export ANDROID_TMP="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
   ADB="$ANDROID_HOME/platform-tools/adb"

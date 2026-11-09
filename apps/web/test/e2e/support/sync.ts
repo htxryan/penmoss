@@ -29,10 +29,18 @@ export function remoteBytes(host: GitHost, remote: string, path: string): Buffer
   return result.stdout;
 }
 
-/** Runs Sync Now from the palette, then waits for the notebook's dot to say Synced. */
+/**
+ * Runs Sync Now from the palette, then waits for the notebook's dot to say Synced. First the open
+ * note's last keys are stored on this device (its status bar no longer says Saving…): Sync Now
+ * pushes what is stored, so on a slower machine (a hosted runner, A1235) a push right after
+ * typing went without the last few characters, and the other Mac never saw them.
+ */
 export async function syncNow(page: Page): Promise<void> {
   const dot = page.getByTestId('section-sync').first();
   await expect(dot).not.toHaveAttribute('data-state', 'starting', { timeout: 30_000 });
+  await expect(page.locator('[data-testid="save-status"][data-state="saving"]')).toHaveCount(0, {
+    timeout: 30_000,
+  });
   await page.keyboard.press('ControlOrMeta+KeyK');
   const palette = page.getByRole('dialog', { name: 'Command Palette' });
   await expect(palette).toBeVisible();

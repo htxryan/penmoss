@@ -129,17 +129,27 @@ class TypingInstrumentedTest {
     fun enterAndBackspaceInAListMadeFromTheBar() {
         val ic = focusBody()
         instrumentation.runOnMainSync { controller.format(FormatCommand.BULLET_LIST) }
+        // The bar's command reaches the page as a message: a person types once the list shows,
+        // and so does this test. On a slow emulator (a hosted runner's, A1235) the first word
+        // otherwise came first, and the list started at the second line.
+        waitUntil("the list from the bar", 10_000) { items() == 1 }
         onImeThread(ic) { it.commitText("first item", 1) }
         enter(ic)
+        waitUntil("a second item", 10_000) { items() == 2 }
         onImeThread(ic) { it.commitText("second item", 1) }
         // Keyboards delete with both deleteSurroundingText and DEL key events.
         onImeThread(ic) { it.deleteSurroundingText(2, 0) }
         repeat(2) { key(ic, KeyEvent.KEYCODE_DEL) }
         onImeThread(ic) { it.commitText("thing", 1) }
+        // getText puts a separator before every block, so each item's paragraph has two (the
+        // item's and its own), and the paragraph after the list one.
+        waitForBody("first item\n\nsecond thing")
         enter(ic) // a new, empty item
+        waitUntil("a third, empty item", 10_000) { items() == 3 }
         enter(ic) // an empty item: out of the list
+        waitUntil("out of the list", 10_000) { items() == 2 }
         onImeThread(ic) { it.commitText("after list", 1) }
-        waitForBody("first item\nsecond thing\nafter list")
+        waitForBody("first item\n\nsecond thing\nafter list")
         val json = decode(js("JSON.stringify(penmossEditor.editor.editor.getJSON())"))!!
         assertEquals("one bulletList", 1, Regex("\"type\":\"bulletList\"").findAll(json).count())
         assertEquals("two list items", 2, Regex("\"type\":\"listItem\"").findAll(json).count())
@@ -239,6 +249,9 @@ class TypingInstrumentedTest {
 
     private fun enter(ic: InputConnection) = key(ic, KeyEvent.KEYCODE_ENTER)
 
+    /** How many list items the body has. */
+    private fun items(): Int? = js("penmossEditor.editor.editor.view.dom.querySelectorAll('li').length")?.toIntOrNull()
+
     /** The body's text as the editor holds it, one line per block. */
     private fun waitForBody(expected: String) {
         var last: String? = null
@@ -248,7 +261,9 @@ class TypingInstrumentedTest {
                 last == expected
             }
         } catch (e: AssertionError) {
-            throw AssertionError("Expected <$expected> but the editor has <$last>", e)
+            // The document too: blocks with no text read the same as one in getText.
+            val doc = runCatching { decode(js("JSON.stringify(penmossEditor.editor.editor.getJSON())")) }.getOrNull()
+            throw AssertionError("Expected <$expected> but the editor has <$last>, as $doc", e)
         }
     }
 

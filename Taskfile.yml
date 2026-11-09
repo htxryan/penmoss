@@ -61,12 +61,15 @@ tasks:
   vm:test:
     desc: "Sharing the test VM (A1174): scripts/vm/desktop-test.sh against a fake tart; a VM it didn't start is waited for, never stopped"
     cmds:
-      - node --test scripts/vm/desktop-test.test.mjs
+      # macOS only (A1235): desktop-test.sh drives Tart and takes its lock with lockf, which
+      # exist only there. CI's Check job runs on Linux, so these run in `task check` on a Mac.
+      - '{{if eq OS "darwin"}}node --test scripts/vm/desktop-test.test.mjs{{else}}echo "vm:test: skipped on {{OS}}: the test VM runs only on macOS"{{end}}'
   ci:lint:
-    desc: 'No GitHub-hosted runners (A702, F9): every runs-on names self-hosted Mac labels, never an expression'
+    desc: "Where CI's jobs run (A1235): every runs-on is ubuntu-latest, ubuntu-24.04 or the self-hosted Mac labels, never a larger runner or an expression, and no fork's pull request reaches a Mac job; then actionlint, pinned (scripts/actionlint.sh)"
     cmds:
-      - node --test .github/scripts/no-hosted-runners.test.mjs
-      - node .github/scripts/no-hosted-runners.mjs
+      - node --test .github/scripts/runner-policy.test.mjs
+      - node .github/scripts/runner-policy.mjs
+      - bash scripts/actionlint.sh
 
   releases:test:
     desc: 'The Releases page rules CI follows (A403, A1188, A1189): .github/scripts/releases.mjs against an in-memory page, and the checks of `task release` against a fake git'
@@ -353,7 +356,9 @@ tasks:
     deps: [desktop:build]
     cmds:
       - pnpm --filter @penmoss/desktop test
-      - '{{if eq OS "linux"}}xvfb-run -a {{end}}pnpm --filter @penmoss/desktop exec playwright test {{.CLI_ARGS}}'
+      # The VM's screen size (docs/ci.md §8), larger than the windows the suite asks for; xvfb-run's
+      # own default is 1280 × 1024.
+      - '{{if eq OS "linux"}}xvfb-run -a -s "-screen 0 1920x1200x24" {{end}}pnpm --filter @penmoss/desktop exec playwright test {{.CLI_ARGS}}'
 
   desktop:package:
     desc: 'Mac app .dmg and .zip in apps/desktop/release (signed and notarised only with CSC_LINK and APPLE_* set; docs/desktop.md)'

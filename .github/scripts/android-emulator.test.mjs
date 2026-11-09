@@ -16,7 +16,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { FORK_GUARD, parseWorkflow } from './workflow-guard.mjs';
+import { parseWorkflow } from './workflow-guard.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = path.join(here, 'android-emulator.sh');
@@ -135,7 +135,7 @@ function fixture() {
 describe('android-emulator.sh avd', () => {
   it("makes the API 37 AVD once, in the runner's tool cache", async () => {
     const f = fixture();
-    const first = await f.run(['avd']);
+    const first = await f.run(['avd'], { PENMOSS_EMULATOR_ARCH: 'arm64' });
     assert.equal(first.status, 0, first.stdout);
     assert.deepEqual(
       first.calls.filter((c) => c.startsWith('avdmanager ')),
@@ -151,6 +151,25 @@ describe('android-emulator.sh avd', () => {
     assert.equal(again.status, 0, again.stdout);
     assert.equal(again.calls.filter((c) => c.startsWith('avdmanager ')).length, 1);
     assert.match(again.stdout, /keeping penmoss37-ci/);
+  });
+
+  it('uses the x86_64 image on an x86_64 machine (a hosted Ubuntu runner, A1235)', async () => {
+    const f = fixture();
+    const r = await f.run(['avd'], { PENMOSS_EMULATOR_ARCH: 'x86_64' });
+    assert.equal(r.status, 0, r.stdout);
+    assert.ok(
+      r.calls.includes(
+        'avdmanager create avd --name penmoss37-ci --package system-images;android-37.0;google_apis;x86_64 --device pixel_7 --force',
+      ),
+      r.calls.join('\n'),
+    );
+  });
+
+  it("keeps the AVD in ~/.android/avd without a Mac runner's tool cache", async () => {
+    const f = fixture();
+    const r = await f.run(['avd'], { PENMOSS_CACHE: '', HOME: f.dir });
+    assert.equal(r.status, 0, r.stdout);
+    assert.ok(existsSync(path.join(f.dir, '.android', 'avd', 'penmoss37-ci.ini')), r.stdout);
   });
 });
 
@@ -340,20 +359,22 @@ describe("ci.yml's android-emulator job", () => {
   const body = text.slice(text.indexOf('\n  android-emulator:\n'));
   const own = body.slice(0, body.slice(1).search(/\n {2}[\w-]+:\n/) + 1);
 
-  it('runs on the general Mac runners, behind the fork guard, when pick says Android changed', () => {
+  it('runs on a hosted Ubuntu runner when pick says Android changed (A1235)', () => {
     assert.ok(job);
-    assert.equal(job.runsOn, '[self-hosted, macOS, ARM64, penmoss-mac-general]');
-    assert.equal(job.if, `(${FORK_GUARD}) && needs.pick.outputs.android-app == 'true'`);
+    assert.equal(job.runsOn, 'ubuntu-latest');
+    assert.equal(job.if, "needs.pick.outputs.android-app == 'true'");
     assert.match(own, /\n {4}needs: pick\n/);
   });
 
-  it('makes the AVD, builds before the boot, runs the tests, and always stops the emulator', () => {
+  it('enables KVM, makes the AVD, builds before the boot, runs the tests, and always stops the emulator', () => {
     const at = (/** @type {string} */ s) => {
       const i = own.indexOf(s);
       assert.ok(i >= 0, `the job has ${s}`);
       return i;
     };
-    const sdk = at('system-images;android-37.0;google_apis;arm64-v8a');
+    const kvm = at('udevadm trigger --name-match=kvm');
+    const sdk = at('system-images;android-37.0;google_apis;x86_64');
+    assert.ok(kvm < sdk);
     const avd = at('android-emulator.sh avd');
     const build = at('task android:build -- :app:assembleDebugAndroidTest');
     const tests = at('android-emulator.sh test');

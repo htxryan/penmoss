@@ -121,7 +121,11 @@ async function untilStarted(app: ElectronApplication, generation = 1): Promise<v
     .toBe(true);
 }
 
-async function untilReady(app: ElectronApplication, generation = 1): Promise<void> {
+async function untilReady(
+  app: ElectronApplication,
+  generation = 1,
+  notes = NOTES.length,
+): Promise<void> {
   await expect
     .poll(
       async () => {
@@ -130,7 +134,7 @@ async function untilReady(app: ElectronApplication, generation = 1): Promise<voi
       },
       { timeout: 60_000 },
     )
-    .toBe(NOTES.length);
+    .toBe(notes);
 }
 
 const pid = (app: ElectronApplication) =>
@@ -206,12 +210,15 @@ test('Settings → Search by Meaning: Off removes the model and the vectors, aft
   // Settings needs a notebook (with none, the app shows its first-run screen).
   await gitNotebook(launched);
   await send(app, NOTES);
-  await untilReady(app);
+  // A notebook made on the first run starts with the welcome note (T69), which the page feeds
+  // the service a few seconds after the notebook opens (T77): wait for it too, or a fast machine
+  // reads 3 and a slow one 4.
+  await untilReady(app, 1, NOTES.length + 1);
   // T78: the row says what meaning is doing; its switch turns it off.
   await go(page, '/settings/meaning');
   const row = page.getByTestId('meaning-settings');
   await expect(row.getByTestId('meaning-status')).toHaveText(
-    'Ready: EmbeddingGemma 300M (219 MB), on this Mac. All 3 notes are indexed.',
+    'Ready: EmbeddingGemma 300M (219 MB), on this Mac. All 4 notes are indexed.',
   );
   await row.getByTestId('meaning-enabled').click();
   await expect(row.getByTestId('meaning-status')).toHaveAttribute('data-state', 'off');

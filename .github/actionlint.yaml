@@ -1,15 +1,13 @@
-# actionlint (https://github.com/rhysd/actionlint): the labels of Ryan's self-hosted Mac runners
-# (A403, A404, docs/ci.md). penmoss-mac is on every one; penmoss-mac-ports marks the one runner
-# that may run jobs binding fixed ports, and penmoss-mac-general the others.
+# actionlint (https://github.com/rhysd/actionlint; `task ci:lint`): the labels of Ryan's
+# self-hosted Mac runners (A403, A404, A1235, docs/ci.md). penmoss-mac is on every one;
+# penmoss-mac-ports marks the one runner that may run jobs binding fixed ports, and
+# penmoss-mac-general the others. .github/scripts/runner-policy.mjs allows these and the standard
+# hosted ubuntu-latest and ubuntu-24.04, nothing else.
 self-hosted-runner:
   labels:
     - penmoss-mac
     - penmoss-mac-ports
     - penmoss-mac-general
-    # The Tart VM's runner for the Electron suite (#252, W10).
+    # The Tart VM's runner (#252, W10); no job uses it since the Electron suite moved to a hosted
+    # runner (A1235).
     - penmoss-mac-vm
-# The `desktop` job is off (`if: false`) until the VM's runner exists (A1218, #252).
-paths:
-  .github/workflows/ci.yml:
-    ignore:
-      - 'constant expression "false" in condition'

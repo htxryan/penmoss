@@ -18,18 +18,17 @@ concurrency:
 jobs:
   intake:
     name: File in Linear Triage
-    # P10, A1183: the fork guard every self-hosted job starts with (an issue event always passes it).
-    if: >-
-      (github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository)
-    # A702: Ryan's Mac runners only.
-    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
+    # A1235: a hosted runner. LINEAR_API_KEY is a repository secret, and an issue event runs
+    # main's copy of this workflow, never a fork's.
+    runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
       # The workflow and the script come from main; only the issue's text comes from outside, and
       # the script passes it to Linear as GraphQL variables, never through the shell.
-      # In a folder of its own: a non-cone sparse checkout in the runner's shared workspace hid
-      # files from every later job on that runner, until the workspace was deleted (8 Nov 2026).
+      # In a folder of its own: a non-cone sparse checkout in a self-hosted runner's shared
+      # workspace hid files from every later job on that runner (8 Nov 2026).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: .linear-intake

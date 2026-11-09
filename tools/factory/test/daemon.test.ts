@@ -154,15 +154,20 @@ describe('unfinishedClaims (R12)', () => {
 });
 
 describe('the LaunchAgent', { timeout: 30_000 }, () => {
-  it('renders a plist macOS accepts, escaping paths', () => {
-    const plist = renderPlist({
-      node: '/n/node',
-      cli: '/r/tools/factory/src/cli.ts',
-      repo: '/r',
-      path: '/usr/bin:/bin',
-      log: '/s/a & b.log',
-    });
+  const plist = renderPlist({
+    node: '/n/node',
+    cli: '/r/tools/factory/src/cli.ts',
+    repo: '/r',
+    path: '/usr/bin:/bin',
+    log: '/s/a & b.log',
+  });
+
+  it('renders a plist, escaping paths', () => {
     expect(plist).toContain('<string>/s/a &amp; b.log</string>');
+  });
+
+  // plutil, like launchd, exists only on macOS; CI's Check job runs on Linux (A1235).
+  it.runIf(process.platform === 'darwin')('renders a plist macOS accepts (plutil)', () => {
     const file = join(mkdtempSync(join(tmpdir(), 'factory-plist-')), 'x.plist');
     writeFileSync(file, plist);
     expect(execFileSync('plutil', ['-lint', file], { encoding: 'utf8' })).toContain('OK');

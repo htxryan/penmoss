@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   sandboxSpec,
@@ -104,10 +107,17 @@ describe('sandboxSpec', () => {
 
 describe('withDeveloperTools', () => {
   it("puts the Command Line Tools' git ahead of the xcrun shim, once", () => {
-    const path = withDeveloperTools('/opt/homebrew/bin:/usr/bin:/bin');
-    expect(path.split(':')[0]).toMatch(/\/usr\/bin$/);
-    expect(path).toContain('/usr/bin:/bin');
-    expect(withDeveloperTools(path)).toBe(path);
+    // A stand-in for xcode-select's link, so the test runs on any host (CI's Linux, A1235).
+    const dir = mkdtempSync(join(tmpdir(), 'developer-tools-'));
+    const tools = join(dir, 'CommandLineTools');
+    mkdirSync(join(tools, 'usr', 'bin'), { recursive: true });
+    writeFileSync(join(tools, 'usr', 'bin', 'git'), '');
+    const link = join(dir, 'xcode_select_link');
+    symlinkSync(tools, link);
+    const bin = join(realpathSync(tools), 'usr', 'bin');
+    const path = withDeveloperTools('/opt/homebrew/bin:/usr/bin:/bin', link);
+    expect(path).toBe(`${bin}:/opt/homebrew/bin:/usr/bin:/bin`);
+    expect(withDeveloperTools(path, link)).toBe(path);
   });
   it('leaves PATH alone without the tools', () => {
     expect(withDeveloperTools('/usr/bin', '/nonexistent/link')).toBe('/usr/bin');

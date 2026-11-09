@@ -273,7 +273,13 @@ test('2, 4: in every theme, light and dark, the tools and buttons sit flush and 
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme.id);
       await expect(page.locator('html')).toHaveAttribute('data-mode', mode.toLowerCase());
       await page.goto('/');
-      await expect(section(page, 'Quanta').getByTestId('section-sync')).toBeVisible();
+      // Synced before measuring: on a slower machine the sync ended mid-check, and the row
+      // redrawn then lost its hover (its tools hid) and its dot's shade.
+      await expect(section(page, 'Quanta').getByTestId('section-sync')).toHaveAttribute(
+        'data-state',
+        'synced',
+        { timeout: 40_000 },
+      );
       await checkSidebar(page, label, mode === 'Dark');
       if (SHOTS) {
         // The title row's handle, then a notebook's sync dot, under the pointer.

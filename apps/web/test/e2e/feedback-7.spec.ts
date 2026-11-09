@@ -203,7 +203,9 @@ test('6: Backspace at the start of the first line joins it to the title', async 
   await expect(page.locator('.note-body .ProseMirror')).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(body(page).locator('p')).toHaveCount(2);
-  await page.keyboard.press('ArrowUp');
+  // Onto the new empty first line by a click, as the first case: ArrowUp from the line below
+  // left the caret off it at times, on Linux CI and on a busy Mac (A1235).
+  await caretAtStart(page, 'p', 0);
   // The caret is on the new empty first line before Backspace.
   await expect
     .poll(() =>

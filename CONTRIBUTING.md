@@ -32,7 +32,7 @@ The code style is in [`docs/development.md`](docs/development.md#code-style): pu
 
 ## Pull requests from forks
 
-CI runs on the maintainer's own Macs (self-hosted runners), so a pull request from a fork does not run CI by itself. A maintainer reads the change, then pushes it to a branch in this repository, where CI runs as usual, and links that pull request from yours. Your commits and authorship are kept. The details are in [`docs/ci.md` §9](docs/ci.md#9-pull-requests-from-forks).
+CI's tests run on GitHub's hosted runners. A pull request from a fork runs them once a maintainer has read the change and approved the run; the jobs that run on the maintainer's own Macs (the performance budgets, and the signed builds on `main`) never run for a fork. A fork's pull request is merged through a branch in this repository: a maintainer pushes your change there, where every job runs, and links that pull request from yours. Your commits and authorship are kept. The details are in [`docs/ci.md` §9](docs/ci.md#9-pull-requests-from-forks).
 
 ## Code of Conduct
 
