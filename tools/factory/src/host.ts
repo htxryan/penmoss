@@ -547,24 +547,28 @@ export function hostDeps(options: HostOptions): HostDeps {
       return log.trim().split('\n').slice(-60).join('\n') || '(the log was empty)';
     },
     notify: async (title, message) => {
-      // terminal-notifier can open a link on click: the card in the Factory UI (F20).
+      // A notification is a courtesy: one that can't be shown never stops a run. terminal-notifier
+      // (optional, docs/factory.md) can open the card in the Factory UI (F20) on click; when it
+      // isn't installed, spawning it throws, and osascript shows a plain one instead.
+      const tried = (cmd: string, args: string[]) =>
+        exec(cmd, args).then(
+          (result) => result.code === 0,
+          () => false,
+        );
       const link = cardLink(config, Number(options.runId.split('-')[0]));
-      if (link) {
-        const sent = await exec('terminal-notifier', [
-          '-title',
-          title,
-          '-message',
-          message,
-          '-open',
-          link,
-        ]);
-        if (sent.code === 0) return;
-      }
+      if (
+        link &&
+        (await tried('terminal-notifier', ['-title', title, '-message', message, '-open', link]))
+      )
+        return;
       const esc = (t: string) => t.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
-      await exec('osascript', [
-        '-e',
-        `display notification "${esc(message)}" with title "${esc(title)}"`,
-      ]);
+      if (
+        !(await tried('osascript', [
+          '-e',
+          `display notification "${esc(message)}" with title "${esc(title)}"`,
+        ]))
+      )
+        options.log(`couldn't show the notification "${title}"`);
     },
     sleep: (seconds) => new Promise((resolve) => setTimeout(resolve, seconds * 1000)),
     now: () => new Date(),
