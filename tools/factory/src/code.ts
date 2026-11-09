@@ -127,6 +127,14 @@ const AGENTS = [
   [UI_LABEL, 'ui', 'ui.log'],
 ] as const;
 
+/** The folders of agents configured by absolute path, so the LaunchAgents find them. */
+function agentDirs(config: FactoryConfig): string[] {
+  return Object.values(config.agents)
+    .map((a) => a.bin)
+    .filter((bin) => bin.startsWith('/'))
+    .map((bin) => dirname(bin));
+}
+
 /** Writes both plists, pointing at the code checkout. */
 export function writeAgents(config: FactoryConfig, deps: AgentDeps): string[] {
   const state = expandHome(config.stateDir);
@@ -144,6 +152,10 @@ export function writeAgents(config: FactoryConfig, deps: AgentDeps): string[] {
         repo: dir,
         path: [
           dirname(deps.node),
+          // Where Claude Code's installer puts `claude`: launchd's PATH has nothing from the
+          // user's shell, and each run's sandbox gets this PATH (PEN-75's first run failed on it).
+          join(deps.home, '.local', 'bin'),
+          ...agentDirs(config),
           '/opt/homebrew/bin',
           '/usr/local/bin',
           '/usr/bin',
