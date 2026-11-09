@@ -53,11 +53,15 @@ command -v tart >/dev/null || {
   exit "$TEMPFAIL"
 }
 
-LOCK="/tmp/penmoss-vm-$VM.lock"
+# The lock and pid files are in /tmp, which every checkout, agent and the factory on this Mac
+# share. PENMOSS_VM_LOCK_DIR moves them for `task vm:test`, which also runs where /tmp isn't
+# writable (the factory's sandbox, A1231).
+LOCK_DIR="${PENMOSS_VM_LOCK_DIR:-/tmp}"
+LOCK="$LOCK_DIR/penmoss-vm-$VM.lock"
 # The `tart run` this script started, while it runs: a VM still running from it after an
 # interrupted run is ours to stop. A running VM without it was started some other way (by hand,
 # or a tool that doesn't take the lock), so this run waits for it rather than stopping it.
-PIDFILE="/tmp/penmoss-vm-$VM.pid"
+PIDFILE="$LOCK_DIR/penmoss-vm-$VM.pid"
 vm_running() {
   tart list 2>/dev/null | awk -v vm="$VM" '$1 == "local" && $2 == vm { print $NF }' | grep -qx running
 }

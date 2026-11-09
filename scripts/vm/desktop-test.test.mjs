@@ -61,18 +61,19 @@ function setUp(polls) {
   chmodSync(join(fake, 'sleep'), 0o755);
   writeFileSync(join(fake, 'polls'), String(polls));
   writeFileSync(join(fake, 'calls'), '');
+  // The lock and pid files go in the test's own folder, not the /tmp that real runs share.
+  const locks = join(root, 'locks');
+  mkdirSync(locks);
   const vm = `penmoss-vm-unit-${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
-  const pidFile = `/tmp/penmoss-vm-${vm}.pid`;
-  cleanups.push(() => {
-    rmSync(root, { recursive: true, force: true });
-    rmSync(pidFile, { force: true });
-    rmSync(`/tmp/penmoss-vm-${vm}.lock`, { force: true });
-  });
+  const pidFile = join(locks, `penmoss-vm-${vm}.pid`);
+  const lockFile = join(locks, `penmoss-vm-${vm}.lock`);
+  cleanups.push(() => rmSync(root, { recursive: true, force: true }));
   const env = (more = {}) => ({
     ...process.env,
     PATH: `${fake}:${process.env.PATH}`,
     FAKE: fake,
     PENMOSS_VM: vm,
+    PENMOSS_VM_LOCK_DIR: locks,
     ...more,
   });
   const run = (more = {}, args = []) =>
@@ -81,7 +82,7 @@ function setUp(polls) {
       env: env(more),
     });
   const calls = () => readFileSync(join(fake, 'calls'), 'utf8').trim().split('\n');
-  return { root, fake, vm, pidFile, run, env, calls };
+  return { root, fake, pidFile, lockFile, run, env, calls };
 }
 
 test('waits for a VM started outside the script, then runs, and never stops it', () => {
@@ -110,21 +111,29 @@ test('gives up on a VM that stays up, without stopping it', () => {
   );
 });
 
-test('stops a VM its own interrupted run left running, without waiting', async (t) => {
-  const { fake, pidFile, run, calls } = setUp(1000);
-  // A live process named tart, as the interrupted run's `tart run` would be.
-  const leftover = join(fake, 'left', 'tart');
-  mkdirSync(join(fake, 'left'));
-  symlinkSync('/bin/sleep', leftover);
-  const child = spawn(leftover, ['30'], { stdio: 'ignore' });
-  t.after(() => child.kill());
-  await new Promise((resolve) => child.once('spawn', resolve));
-  writeFileSync(pidFile, String(child.pid));
-  const r = run();
-  assert.equal(r.status, 0, r.stderr);
-  assert.doesNotMatch(r.stdout, /waiting for it to stop/);
-  assert.ok(calls().includes('stop running'));
-});
+// The script asks ps whether the pid file's process is still its `tart run`, and the software
+// factory's sandbox refuses ps (A1231): there this test can't run, and the host and CI run it.
+const psWorks = spawnSync('ps', ['-p', String(process.pid)]).status === 0;
+
+test(
+  'stops a VM its own interrupted run left running, without waiting',
+  { skip: !psWorks && 'ps is refused here (A1231)' },
+  async (t) => {
+    const { fake, pidFile, run, calls } = setUp(1000);
+    // A live process named tart, as the interrupted run's `tart run` would be.
+    const leftover = join(fake, 'left', 'tart');
+    mkdirSync(join(fake, 'left'));
+    symlinkSync('/bin/sleep', leftover);
+    const child = spawn(leftover, ['30'], { stdio: 'ignore' });
+    t.after(() => child.kill());
+    await new Promise((resolve) => child.once('spawn', resolve));
+    writeFileSync(pidFile, String(child.pid));
+    const r = run();
+    assert.equal(r.status, 0, r.stderr);
+    assert.doesNotMatch(r.stdout, /waiting for it to stop/);
+    assert.ok(calls().includes('stop running'));
+  },
+);
 
 test('PENMOSS_VM_ROOT names the checkout to test, not the script’s own (the factory, A1230)', () => {
   // The factory runs its own copy of the script and names a run's worktree here.
@@ -169,14 +178,12 @@ test("--check: 75 for a VM that isn't made, which it never makes", () => {
 });
 
 test('--check: 75 while another run holds the VM, without waiting for it', async (t) => {
-  const { vm, run } = setUp(0);
-  const holder = spawn('lockf', ['-k', `/tmp/penmoss-vm-${vm}.lock`, 'sleep', '30'], {
-    stdio: 'ignore',
-  });
+  const { lockFile, run } = setUp(0);
+  const holder = spawn('lockf', ['-k', lockFile, 'sleep', '30'], { stdio: 'ignore' });
   t.after(() => holder.kill());
   // The lock is taken once lockf runs its command.
   for (let i = 0; i < 100; i++) {
-    const free = spawnSync('lockf', ['-s', '-t', '0', `/tmp/penmoss-vm-${vm}.lock`, 'true']);
+    const free = spawnSync('lockf', ['-s', '-t', '0', lockFile, 'true']);
     if (free.status !== 0) break;
     await new Promise((resolve) => setTimeout(resolve, 20));
   }

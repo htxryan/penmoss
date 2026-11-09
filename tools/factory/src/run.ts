@@ -63,7 +63,7 @@ export interface RunDeps {
   comment(issue: number, body: string): Promise<void>;
   setStatus(item: BoardItem, status: string): Promise<void>;
   setBlocked(item: BoardItem): Promise<void>;
-  /** A sandbox on `branch` (made from origin/main when new). */
+  /** A sandbox on `branch`; a new branch starts on main as the host last fetched it. */
   openSandbox(branch: string): Promise<RunSandbox>;
   /** Runs the agent in the sandbox with the prompt; resolves when it exits, with its output's tail. */
   runAgent(sandbox: RunSandbox, prompt: string): Promise<{ readonly output: string } | void>;
@@ -98,8 +98,11 @@ export interface RunDeps {
   behindMain(branch: string): Promise<boolean>;
   /** Rebases the sandbox's branch onto origin/main, resolving decisions-only conflicts (rebase.ts). */
   rebase(sandbox: RunSandbox): Promise<RebaseOutcome>;
-  /** Gives A-NEW-n decisions real numbers in the sandbox's worktree; returns what it assigned. */
-  numberDecisions(sandbox: RunSandbox): Promise<Record<string, string>>;
+  /**
+   * Gives the A-NEW-n decisions `branch` added since the run's base real numbers in the
+   * sandbox's worktree (one more commit); returns what it assigned.
+   */
+  numberDecisions(sandbox: RunSandbox, branch: string): Promise<Record<string, string>>;
   /** Pushes the branch (with lease: rebases rewrite it). */
   push(branch: string): Promise<void>;
   /** The PR's checks, from `gh pr checks`. */
@@ -365,7 +368,7 @@ export async function gateAndProve(
     if (rebased.kind === 'conflict')
       return { ok: false, feedback: conflictFeedback(branch, rebased) };
     noteRebase(deps, rebased);
-    const numbered = await deps.numberDecisions(gate);
+    const numbered = await deps.numberDecisions(gate, branch);
     if (Object.keys(numbered).length > 0) deps.log('decisions-numbered', numbered);
     const weak = scanWeakenedTests((await gate.exec('git diff origin/main...HEAD')).stdout);
     if (weak.length > 0) return { ok: false, feedback: weakenedFeedback(weak) };
@@ -660,7 +663,7 @@ async function regate(deps: RunDeps, branch: string, scope: Scope): Promise<Rega
     if (rebased.kind === 'conflict')
       return { ok: false, why: conflictFeedback(branch, rebased), conflict: rebased.files };
     noteRebase(deps, rebased);
-    const numbered = await deps.numberDecisions(gate);
+    const numbered = await deps.numberDecisions(gate, branch);
     if (Object.keys(numbered).length > 0) deps.log('decisions-numbered', numbered);
     const weak = scanWeakenedTests((await gate.exec('git diff origin/main...HEAD')).stdout);
     if (weak.length > 0) return { ok: false, why: weakenedFeedback(weak) };

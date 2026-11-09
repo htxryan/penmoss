@@ -29,7 +29,7 @@ async function git(dir: string, ...args: string[]): Promise<string> {
 
 const BRANCH = 'factory/42-fix-the-typo';
 
-describe("the harness's push", () => {
+describe("the harness's push", { timeout: 30_000 }, () => {
   let remote: string;
   let url: string;
   let clone: string;

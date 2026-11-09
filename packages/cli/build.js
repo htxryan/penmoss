@@ -4,12 +4,13 @@
 // version it needs instead of a syntax error. `node build.js <dir>` builds elsewhere.
 import { chmod, mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
-const outdir = resolve(process.argv[2] ?? new URL('./dist', import.meta.url).pathname);
+const outdir = resolve(process.argv[2] ?? fileURLToPath(new URL('./dist', import.meta.url)));
 await mkdir(outdir, { recursive: true });
 await build({
-  entryPoints: [new URL('./src/bin.ts', import.meta.url).pathname],
+  entryPoints: [fileURLToPath(new URL('./src/bin.ts', import.meta.url))],
   outfile: join(outdir, 'penmoss-cli.js'),
   bundle: true,
   platform: 'node',

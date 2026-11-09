@@ -8,6 +8,7 @@ import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   GitNotebookEngine,
   MemorySecrets,
@@ -1325,7 +1326,10 @@ function onPath(tool: string, at: string): void {
 describe('the built CLI', () => {
   it('runs a git notebook from the bundle, with credentials in ~/.penmoss and no keychain', () => {
     const bundleDir = join(root, 'bundle');
-    execFileSync(process.execPath, [new URL('../build.js', import.meta.url).pathname, bundleDir]);
+    execFileSync(process.execPath, [
+      fileURLToPath(new URL('../build.js', import.meta.url)),
+      bundleDir,
+    ]);
     const bin = join(root, 'bin');
     mkdirSync(bin);
     // Only git (and on a Mac its tool check) on PATH: no keychain tool, so the file store is used.
@@ -1361,7 +1365,10 @@ describe('the built CLI', () => {
 
   it('serves requests piped in at once, and leaves the push to a logged detached sync', async () => {
     const bundleDir = join(root, 'bundle');
-    execFileSync(process.execPath, [new URL('../build.js', import.meta.url).pathname, bundleDir]);
+    execFileSync(process.execPath, [
+      fileURLToPath(new URL('../build.js', import.meta.url)),
+      bundleDir,
+    ]);
     const bin = join(root, 'bin');
     mkdirSync(bin);
     for (const tool of ['git', 'xcode-select']) {
@@ -1438,7 +1445,10 @@ describe('the built CLI', () => {
 
   it('keeps an edit when the command is killed during the sync after it (B1 of #165)', async () => {
     const bundleDir = join(root, 'bundle');
-    execFileSync(process.execPath, [new URL('../build.js', import.meta.url).pathname, bundleDir]);
+    execFileSync(process.execPath, [
+      fileURLToPath(new URL('../build.js', import.meta.url)),
+      bundleDir,
+    ]);
     const bin = join(root, 'bin');
     mkdirSync(bin);
     // Only git on PATH (no keychain tool, as above): the CI Macs' keychains stay untouched.

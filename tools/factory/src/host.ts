@@ -31,13 +31,13 @@ import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { Exec } from './exec.ts';
 import { mustGit } from './git.ts';
 import { runIdOf, type CheckRun } from './checks.ts';
-import { reserveDecisionNumbers } from './decisions.ts';
+import { definedPlaceholders, numberLines, reserveDecisionNumbers } from './decisions.ts';
 import { GhError, type Gh } from './github.ts';
 import { proofFiles, type AttachedProof } from './proof/body.ts';
 import { publishRefs, type ProofStore } from './proof/store.ts';
 import { fromPlaywrightReport, type ProofItem } from './proof/manifest.ts';
 import { checkMedia, framesToMp4, framesWithin, toMp4, within } from './proof/media.ts';
-import { rebaseOntoMain } from './rebase.ts';
+import { addedLines, DECISIONS, rebaseOntoMain } from './rebase.ts';
 import { checkMacVm, runMacProof } from './proof/mac.ts';
 import {
   descendsFrom,
@@ -120,7 +120,7 @@ export async function openOrReusePr(
  * for the commits made in it (`openFactory` sets it once; the worktrees share it), then makes the
  * publish repo and fetches main there (A1230). git never runs in the clone after its `clone`:
  * its config is written as a file (sandboxes see that file read-only), and its main is fetched
- * by the gate sandbox before each rebase.
+ * by each sandbox as it starts and again before each rebase (`sandboxStartCommand`).
  */
 export async function ensureClone(
   config: FactoryConfig,
@@ -161,6 +161,16 @@ export function sandboxMainCommand(base: string): string {
     'fetch --quiet --no-tags origin main',
     `&& git update-ref refs/remotes/origin/main ${base}`,
   ].join(' ');
+}
+
+/**
+ * The first command in every sandbox the host opens: main fetched and put at `base`, as for the
+ * gate, then a branch with no commits of its own (one Sandcastle has just made from the clone's
+ * main, which only the last gate moved) fast-forwarded onto `base`. A branch with commits of its
+ * own, a restarted run's (R12) or a fix round's, is left where it is: the gate rebases it.
+ */
+export function sandboxStartCommand(base: string): string {
+  return `${sandboxMainCommand(base)} && if git merge-base --is-ancestor HEAD ${base}; then git merge --ff-only --quiet ${base}; fi`;
 }
 
 export interface HostOptions {
@@ -233,6 +243,16 @@ export function hostDeps(options: HostOptions): HostDeps {
           await sandbox.close();
         },
       };
+      // Sandcastle makes a new branch from the clone's origin/main, which only the last gate
+      // moved: the sandbox starts from the main the host fetched instead (A1232).
+      base ??= await fetchMainInto(exec, publish);
+      const started = await handle.exec(sandboxStartCommand(base));
+      if (started.exitCode !== 0) {
+        await handle.close();
+        throw new Error(
+          `the sandbox couldn't start from main's ${base.slice(0, 10)}: ${started.stderr.trim()}`,
+        );
+      }
       sandboxes.set(handle, sandbox);
       return handle;
     },
@@ -462,20 +482,38 @@ export function hostDeps(options: HostOptions): HostDeps {
         throw new Error(`the sandbox couldn't fetch main: ${fetched.stderr.trim()}`);
       return rebaseOntoMain(handle, join(state, 'decision-numbers'));
     },
-    numberDecisions: async (handle) => {
-      const listed = await handle.exec(
-        "git grep -l -E 'A-NEW-[0-9]+' -- . ':!tools/factory' || true",
-      );
-      const files = listed.stdout.split('\n').filter(Boolean);
-      if (files.length === 0) return {};
-      const main = await mustGit(exec, publish, ['show', `${MAIN}:docs/decisions.md`]);
-      const paths = files.map((f) => join(handle.worktreePath, f));
-      const { texts, assigned } = reserveDecisionNumbers(
-        paths.map((p) => readFileSync(p, 'utf8')),
-        main,
-        join(state, 'decision-numbers'),
-      );
-      paths.forEach((p, i) => writeFileSync(p, texts[i] ?? ''));
+    numberDecisions: async (handle, branch) => {
+      // Only what the branch added since the run's base, read from the publish repo: a row it
+      // added defines an A-NEW-k, and its added lines elsewhere that name one get the number.
+      base ??= await fetchMainInto(exec, publish);
+      const commit = await fetchRun(branch);
+      const diff = await mustGit(exec, publish, [
+        ...['diff', '-U0', '--no-color', '--no-ext-diff', '--no-textconv', '--no-renames'],
+        `${base}...${commit}`,
+      ]);
+      const added = addedLines(diff);
+      const file = (path: string) => {
+        // A tracked file only: never through a symlink, never outside the worktree.
+        const at = join(handle.worktreePath, path);
+        if (!existsSync(at) || !lstatSync(at).isFile() || !within(at, handle.worktreePath))
+          return undefined;
+        return { at, text: readFileSync(at, 'utf8') };
+      };
+      const decisions = added.has(DECISIONS) ? file(DECISIONS) : undefined;
+      const keys = decisions
+        ? definedPlaceholders(decisions.text, added.get(DECISIONS) ?? new Set())
+        : [];
+      if (keys.length === 0) return {};
+      const main = await mustGit(exec, publish, ['show', `${base}:${DECISIONS}`]);
+      const assigned = reserveDecisionNumbers(keys, main, join(state, 'decision-numbers'));
+      // The factory's own code and tests name placeholders as data.
+      for (const [path, lines] of added) {
+        if (path.startsWith('tools/factory/')) continue;
+        const found = file(path);
+        if (!found) continue;
+        const after = numberLines(found.text, lines, assigned);
+        if (after !== found.text) writeFileSync(found.at, after);
+      }
       const message = `Number the new decisions: ${Object.entries(assigned)
         .map(([k, v]) => `${k} is ${v}`)
         .join(', ')}`;

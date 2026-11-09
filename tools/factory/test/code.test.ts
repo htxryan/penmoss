@@ -113,6 +113,9 @@ describe('factory:install (A1226)', () => {
       expect(strings).toContain(command);
       expect(strings).toContain(dir);
       expect(strings.some((s) => s?.startsWith(ownCheckout()))).toBe(false);
+      // launchd starts with no shell PATH: `claude` (in ~/.local/bin) must be on the agent's own.
+      const path = strings.find((s) => s?.includes('/usr/bin:'));
+      expect(path?.split(':')).toContain(join(home, '.local', 'bin'));
     }
     expect(lines.join('\n')).toContain(`at ${NEW.sha.slice(0, 7)} (${NEW.subject})`);
   });
