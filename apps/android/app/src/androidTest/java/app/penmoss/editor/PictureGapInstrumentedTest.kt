@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
 /**
- * PEN-66 (A-NEW-1) on the phone: a picture keeps its own line (A506) and leaves no empty line
+ * PEN-66 (A1283) on the phone: a picture keeps its own line (A506) and leaves no empty line
  * under it. The real editor WebView, page and bridge, with a note from an in-memory Room store
  * (as TypingInstrumentedTest), its pictures kept in memory: a paragraph of text ending in a 200×100 picture, a picture alone in
  * its paragraph, and a bulleted item ending in a picture, each pasted as a screenshot is, stored

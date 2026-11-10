@@ -3,7 +3,7 @@ import { deflateSync, crc32 } from 'node:zlib';
 import { expect, test, type Page } from './fixtures';
 import { COMMENT } from './keys';
 
-// PEN-66 (A-NEW-1): a picture keeps its own line (A506), and leaves no empty line under it. The
+// PEN-66 (A1283): a picture keeps its own line (A506), and leaves no empty line under it. The
 // block a picture ends is as tall as its text and the picture, so the next line or block starts at
 // its normal distance below the picture, as it would below a line of text. Measured in the page
 // with getBoundingClientRect, at the default 16 px note font, to ±1 px.

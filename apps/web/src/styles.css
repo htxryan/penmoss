@@ -5368,7 +5368,7 @@ button.history-entry:hover {
 }
 
 /*
- * Pictures never sit beside text (A506), and leave no empty line under them (PEN-66, A-NEW-1).
+ * Pictures never sit beside text (A506), and leave no empty line under them (PEN-66, A1283).
  * Each picture is an inline box as wide as its line, so text before and after it wraps to lines
  * of its own, while ProseMirror's cursor helpers after a picture that ends its block (a separator
  * and a line break, both zero-wide) stay on the picture's line instead of making a new one. It

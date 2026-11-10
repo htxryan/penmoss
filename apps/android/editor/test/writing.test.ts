@@ -957,7 +957,7 @@ describe('the title against a first heading (T39 pass 3, A554)', () => {
       expect(title).toBeGreaterThanOrEqual(heading * 1.15);
   });
 
-  it('gives a picture its own line with no empty line under it, as the web does (PEN-66, A-NEW-1)', () => {
+  it('gives a picture its own line with no empty line under it, as the web does (PEN-66, A1283)', () => {
     const web = css('../../../web/src/styles.css');
     const phone = css('../src/android.css');
     // The page loads the web's stylesheet (main.ts): the last rule for a picture there is the one

@@ -9,7 +9,7 @@ import {
   type Launched,
 } from './support';
 
-// PEN-66 (A-NEW-1) in the Mac app: a picture keeps its own line (A506) and leaves no empty line
+// PEN-66 (A1283) in the Mac app: a picture keeps its own line (A506) and leaves no empty line
 // under it. A paragraph of text ending in a pasted 200×100 picture, a picture alone in its
 // paragraph, and a bulleted item ending in one: each block ends at its picture's bottom edge, and
 // the next block starts the normal gap below it, as below a line of text, ±1 px. End then Enter
