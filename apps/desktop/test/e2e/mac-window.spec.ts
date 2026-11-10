@@ -933,6 +933,26 @@ const stallSaves = (app: ElectronApplication, which: Which, stalled: boolean) =>
     }, stalled),
   );
 
+test('Settings: the heading keeps the page gutter, in line with Back and the sections (PEN-64)', async () => {
+  const launched = await start();
+  const { app, page } = launched;
+  await gitNotebook(launched);
+  await mainBounds(app, { x: 0, y: 0, width: 1280, height: 720 });
+  await chooseMenu(app, 'app.shortcuts');
+  const heading = page.locator('.settings-title > h1');
+  await expect(heading).toBeVisible();
+  await expect(page.locator('.settings-nav a').first()).toBeVisible();
+  const leftOf = async (selector: string) =>
+    (await page.locator(selector).first().boundingBox())!.x;
+  // The heading starts at the sections' gutter, clear of the window's edge and the lights.
+  const headingLeft = await leftOf('.settings-title > h1');
+  expect(headingLeft).toBeGreaterThan(TITLE_BAR_INSET - 1);
+  expect(Math.abs(headingLeft - (await leftOf('.settings-nav')))).toBeLessThanOrEqual(1);
+  // Held on screen, so the proof's recording shows the heading in line.
+  await page.waitForTimeout(2_000);
+  await expect(heading).toBeInViewport();
+});
+
 test('reopening never loses what was just typed, and stops when a window cannot save', async () => {
   const launched = await start();
   const { app, page } = launched;

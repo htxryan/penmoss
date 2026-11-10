@@ -226,3 +226,34 @@ test('Settings: the bar, the heading and the sections stay put; the content scro
   expect(await page.evaluate(() => document.scrollingElement?.scrollTop ?? 0)).toBe(0);
   expect(errors).toEqual([]);
 });
+
+test('Settings: the heading keeps the page gutter, in line with the sections (PEN-64)', async ({
+  page,
+}) => {
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/settings/shortcuts');
+  const heading = page.locator('.settings-title > h1');
+  await expect(heading).toBeVisible();
+  await expect(page.locator('.settings-nav a').first()).toBeVisible();
+  const leftOf = async (selector: string) =>
+    (await page.locator(selector).first().boundingBox())!.x;
+  // The heading starts the page's gutter (--settings-gutter) in from the page's edge, not at the
+  // window's edge, and in line with the sections' list.
+  const gutter = await page.locator('.settings-page').evaluate((element) => {
+    const probe = document.createElement('div');
+    probe.style.width = 'var(--settings-gutter)';
+    element.append(probe);
+    const width = probe.getBoundingClientRect().width;
+    probe.remove();
+    return width;
+  });
+  expect(gutter).toBeGreaterThan(0);
+  const headingLeft = await leftOf('.settings-title > h1');
+  expect(Math.abs(headingLeft - (await leftOf('.settings-page')) - gutter)).toBeLessThanOrEqual(1);
+  expect(Math.abs(headingLeft - (await leftOf('.settings-nav')))).toBeLessThanOrEqual(1);
+  // Held on screen, so the proof's recording shows the heading in line.
+  await page.waitForTimeout(2_000);
+  await expect(heading).toBeInViewport();
+  expect(errors).toEqual([]);
+});
