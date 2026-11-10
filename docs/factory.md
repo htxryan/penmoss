@@ -196,7 +196,7 @@ When a planned change reaches the web, the gate and proof run first, then valida
 
 ## Factory UI
 
-`task factory:install` also starts the UI at login: a page on `127.0.0.1:7878` (`task factory:ui:open`; `task factory:ui` serves it in the foreground when its LaunchAgent isn't running). It updates itself every few seconds and has two views, switched in its header (A1233):
+`task factory:install` also starts the UI at login: a page on `127.0.0.1:7878` (`task factory:ui:open`; `task factory:ui` serves it in the foreground when its LaunchAgent isn't running). It updates itself every few seconds and has two views, switched in its header (A1233). The page is light by default.
 
 - **Inbox:** what needs you, oldest first, each with what to do (answer the plan, review the PR, unblock, fix the Mac, fix the card); then what the factory is working on, the queue in pickup order, and the slots' runs over the last 12 hours. The card you pick (the oldest, until you pick another) opens beside the list.
 - **Pipeline:** a row per card and a column per step (Todo, Plan, Build, Gate, Proof, PR + CI, Review, Merge, Done), with a coloured marker on the card's step: blue while the factory works, amber when it's your turn, red when it stopped, purple when it won't start, grey when queued or paused. Clicking a row opens the same detail as the Inbox.
