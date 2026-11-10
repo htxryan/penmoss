@@ -256,7 +256,7 @@ function TooltipSettings() {
           className="settings-choice"
           value={String(choice)}
           disabled={!canChange}
-          aria-describedby={`${id}-help`}
+          aria-describedby={`${id}-hint ${id}-help`}
           data-testid="tooltip-delay"
           onChange={(event) => {
             const picked = TOOLTIP_DELAY_CHOICES.find(
@@ -272,6 +272,9 @@ function TooltipSettings() {
           ))}
         </Select>
       </label>
+      <p id={`${id}-hint`} className="muted settings-help" data-testid="tooltip-delay-hint">
+        How long you hover before a tooltip shows.
+      </p>
       <p id={`${id}-help`} className="muted settings-help" data-testid="tooltip-delay-help">
         How long the pointer rests on a button before its name shows. Tabbing to a button shows it
         at once. Changes sync to your other devices.

@@ -187,13 +187,17 @@ describe('Settings → Display → Show Tooltips After (PEN-70)', () => {
     const noteBar = document.querySelector('[data-testid="note-bar-settings"]')!;
     const field = select().closest('.settings-field')!;
     expect(noteBar.nextElementSibling!.nextElementSibling).toBe(field);
-    // The help line under it, styled like the other Display help lines, describes the select.
-    const help = field.nextElementSibling!;
+    // Right under it a one-line hint (PEN-86), then the help line, both styled like the other
+    // Display help lines, and together they describe the select.
+    const hint = field.nextElementSibling!;
+    expect(hint.className).toBe('muted settings-help');
+    expect(hint.textContent.trim()).toBe('How long you hover before a tooltip shows.');
+    const help = hint.nextElementSibling!;
     expect(help.className).toBe('muted settings-help');
     expect(help.textContent).toMatch(
       /^How long the pointer rests on a button before its name shows\. Tabbing to a button shows it\s+at once\. Changes sync to your other devices\.$/,
     );
-    expect(select().getAttribute('aria-describedby')).toBe(help.id);
+    expect(select().getAttribute('aria-describedby')).toBe(`${hint.id} ${help.id}`);
   });
 
   it('shows 1 Second (Default) for a value it does not know (AC9)', () => {
