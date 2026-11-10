@@ -230,8 +230,10 @@ describe('the default cadence: 12 s after edits settle, every minute while shown
     // The last pull may still be running on a slow runner: a pull asked for during it only
     // follows it, and leaves lastPullAt as it was, so the focus below would pull again.
     // Let it finish first, so the shown window's pull is the one the focus is measured from.
-    const busy = () => (host as unknown as { syncing: Promise<void> | null }).syncing !== null;
-    while (busy()) await vi.advanceTimersByTimeAsync(100);
+    // idle() resolves once no sync runs; the fake clock moves on until it does.
+    let idle = false;
+    void host.idle().then(() => (idle = true));
+    while (!idle) await vi.advanceTimersByTimeAsync(100);
     expect(pulls()).toBe(2);
     doc.hidden = false;
     doc.dispatchEvent(new Event('visibilitychange'));
