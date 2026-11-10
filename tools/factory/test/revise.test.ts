@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckRun } from '../src/checks.ts';
+import type { Platform } from '../src/config.ts';
 import { parseIssueSpec } from '../src/labels.ts';
+import type { ProofItem } from '../src/proof/manifest.ts';
 import type { RebaseOutcome } from '../src/rebase.ts';
 import type { AgentResult } from '../src/result.ts';
-import { runRebase, type ReviseDeps } from '../src/revise.ts';
+import { runRebase, runRevise, type ReviseDeps } from '../src/revise.ts';
 import type { RunSandbox } from '../src/run.ts';
 import { item, testConfig } from './helpers.ts';
 
@@ -166,5 +168,83 @@ describe('runRebase: a PR in review that main moved past (F6)', () => {
     expect(f.issueComments.at(-1)).toContain('phase=rebase event=blocked');
     expect(f.calls.some((c) => c.startsWith('push'))).toBe(false);
     expect(f.calls.at(-1)).toBe('blocked');
+  });
+});
+
+describe('runRevise: a review round (F11)', () => {
+  const shot = (platform: Platform): ProofItem[] => [
+    {
+      platform,
+      title: 'shows it',
+      status: 'passed',
+      phase: 'after',
+      source: 'harness',
+      screenshot: '/s.png',
+    },
+  ];
+  const thread = {
+    kind: 'thread' as const,
+    threadId: 'T1',
+    trusted: true,
+    author: 'htxryan',
+    body: 'Use the gutter token',
+  };
+  const androidDone: AgentResult = {
+    ...done,
+    summary: 'Use the gutter token',
+    platforms: {
+      android: { inScope: true, proofSpecs: ['app.penmoss.ui.SettingsInstrumentedTest'] },
+    },
+    replies: { T1: 'The test reads --settings-gutter now.' },
+  };
+
+  it("gates with the round's own proof specs, then pushes and answers the thread", async () => {
+    const f = fake([]);
+    const specs: string[][] = [];
+    const replies: string[] = [];
+    const deps: ReviseDeps = {
+      ...f.deps,
+      readResult: () => Promise.resolve({ ok: true, result: androidDone }),
+      diff: () =>
+        Promise.resolve({
+          paths: ['apps/android/app/src/main/java/app/penmoss/Settings.kt'],
+          commits: 3,
+        }),
+      recordProof: (_gate, platform, s) => {
+        specs.push([...s]);
+        return Promise.resolve(shot(platform));
+      },
+      replyToThread: (id, body) => {
+        replies.push(`${id}: ${body}`);
+        return Promise.resolve();
+      },
+    };
+    expect(await runRevise(deps, { ...input, items: [thread] })).toEqual({
+      kind: 'addressed',
+      sha: '0123456789',
+    });
+    expect(specs).toEqual([['app.penmoss.ui.SettingsInstrumentedTest']]);
+    expect(f.prompts).toHaveLength(1);
+    expect(replies).toEqual(['T1: The test reads --settings-gutter now. (0123456789)']);
+    expect(f.calls).toContain(`push ${BRANCH}`);
+  });
+
+  it('asks the agent again when its round names no proof spec for an affected platform', async () => {
+    const f = fake([]);
+    const results = [done, androidDone];
+    const deps: ReviseDeps = {
+      ...f.deps,
+      readResult: () => Promise.resolve({ ok: true, result: results.shift() ?? androidDone }),
+      diff: () =>
+        Promise.resolve({
+          paths: ['apps/android/app/src/main/java/app/penmoss/Settings.kt'],
+          commits: 3,
+        }),
+      recordProof: (_gate, platform) => Promise.resolve(shot(platform)),
+      replyToThread: () => Promise.resolve(),
+    };
+    expect((await runRevise(deps, { ...input, items: [thread] })).kind).toBe('addressed');
+    expect(f.prompts).toHaveLength(2);
+    expect(f.prompts[1]).toContain('names no proof spec for android');
   });
 });
