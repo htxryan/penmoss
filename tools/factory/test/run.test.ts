@@ -4,6 +4,7 @@ import type { Gh } from '../src/github.ts';
 import { openOrReusePr } from '../src/host.ts';
 import { parseIssueSpec } from '../src/labels.ts';
 import type { CheckRun } from '../src/checks.ts';
+import type { WalkOutcome } from '../src/walk.ts';
 import type { RebaseOutcome } from '../src/rebase.ts';
 import type { AgentResult } from '../src/result.ts';
 import { VmUnavailable, type VmCheck } from '../src/proof/mac.ts';
@@ -100,6 +101,8 @@ function fake(overrides: {
   vmChecks?: VmCheck[];
   /** The first Mac proofs find the VM won't boot (the VM script's exit 75). */
   vmBootFails?: number;
+  /** What each walkthrough gives back (PEN-94), or the error it throws. */
+  walks?: Partial<Record<'mac' | 'android', WalkOutcome | Error>>;
   /** The gate's `pnpm install` exits with this. */
   installExit?: number;
 }): Fake {
@@ -217,6 +220,12 @@ function fake(overrides: {
       return Promise.resolve(vmChecks.shift() ?? { ok: true });
     },
     waitingFor: (reason) => void waits.push(reason),
+    walk: (_sandbox, platform, signal) => {
+      calls.push(`walk ${platform}`);
+      signals.push(signal);
+      const out = overrides.walks?.[platform] ?? { platform, captures: [] };
+      return out instanceof Error ? Promise.reject(out) : Promise.resolve(out);
+    },
     recordProof: (_sandbox, platform, specs, signal) => {
       calls.push(`proof ${platform}: ${specs.join(' ')}`);
       signals.push(signal);
@@ -605,6 +614,87 @@ describe('runImplement', () => {
     await runImplement(f.deps, { item: card, spec, prompt: 'p', plan: 'AC1 …' });
     expect(f.prompts[1]).toContain("## The issue's images\n\nThe issue has none.");
     expect(f.prompts[2]).toContain("## The issue's images\n\nThe issue has none.");
+  });
+
+  const androidDone: AgentResult = {
+    ...done,
+    platforms: { android: { inScope: true, proofSpecs: ['app.penmoss.EditorScreenTest'] } },
+  };
+  const macDone: AgentResult = {
+    ...done,
+    platforms: { mac: { inScope: true, proofSpecs: ['test/e2e/app.spec.ts'] } },
+  };
+
+  it('walks a Mac and Android change on each app, then tells the reviewer what each walk did (PEN-94)', async () => {
+    const f = fake({
+      paths: ['apps/web/src/a.ts', 'apps/desktop/src/b.ts', 'apps/android/app/src/c.kt'],
+      result: webDone,
+      reviews: [review('match')],
+      walks: {
+        mac: { platform: 'mac', captures: ['ac3-mac.png'] },
+        android: {
+          platform: 'android',
+          captures: [],
+          problem: 'The walkthrough failed. It printed nothing.',
+        },
+      },
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p', plan: 'AC1 …' });
+    expect(outcome.kind).toBe('in-review');
+    // After the capturing session and before the reviewer's: Android first, then the VM.
+    const walked = f.calls.filter((c) => c.startsWith('walk') || c === 'agent' || c === 'vm check');
+    expect(walked.slice(-5)).toEqual(['agent', 'walk android', 'vm check', 'walk mac', 'agent']);
+    expect(f.prompts.at(-2)).toContain('**web, mac, android**');
+    const reviewer = f.prompts.at(-1)!;
+    expect(reviewer).toMatch(/^You are an independent reviewer/);
+    expect(reviewer).toContain(
+      '- **Mac: the Electron app in the test VM**: captured `ac3-mac.png`.',
+    );
+    expect(reviewer).toContain(
+      "- **Android: the app on the factory's emulator**: captured nothing. The walkthrough failed. It printed nothing.",
+    );
+  });
+
+  it('validates a change only the Android app shows (PEN-94)', async () => {
+    const f = fake({
+      paths: ['apps/android/app/src/c.kt'],
+      result: androidDone,
+      reviews: [review('match')],
+    });
+    await runImplement(f.deps, { item: card, spec, prompt: 'p', plan: 'AC1 …' });
+    expect(f.calls).toContain('walk android');
+    expect(f.calls).not.toContain('walk mac');
+    expect(f.prompts.some((p) => p.includes('**android**'))).toBe(true);
+  });
+
+  it('makes the Mac walkthrough wait for the test VM, as the Mac proof does (PEN-94)', async () => {
+    const busy = { ok: false as const, reason: 'penmoss-test is busy with another run' };
+    const f = fake({
+      paths: ['apps/desktop/src/b.ts'],
+      result: macDone,
+      reviews: [review('match')],
+      // Free for the proof, then busy twice for the walkthrough.
+      vmChecks: [{ ok: true }, busy, busy],
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p', plan: 'AC1 …' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.waits).toContain(
+      'the Mac walkthrough waits for the test VM: penmoss-test is busy with another run',
+    );
+    expect(f.calls.filter((c) => c === 'walk mac')).toHaveLength(1);
+    expect(f.waits.at(-1)).toBeNull();
+  });
+
+  it('tells the reviewer why a walkthrough could not run, rather than failing validation', async () => {
+    const f = fake({
+      paths: ['apps/android/app/src/c.kt'],
+      result: androidDone,
+      reviews: [review('match')],
+      walks: { android: new Error('the emulator exited') },
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p', plan: 'AC1 …' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.prompts.at(-1)).toContain("captured nothing. It couldn't run: the emulator exited.");
   });
 
   it('skips validation without an agreed plan (plan:skip)', async () => {

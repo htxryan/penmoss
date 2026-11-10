@@ -99,3 +99,24 @@ export async function runMacProof(
   // Its exit code is otherwise not the verdict: the report says which tests passed.
   if (result.code === VM_TEMPFAIL && !result.aborted) throw new VmUnavailable(vmReason(result));
 }
+
+/**
+ * Runs validation's Mac walkthrough (PEN-94) in the test VM, without recording: its screenshots
+ * come back under the worktree's `test-results/vm`. Throws `VmUnavailable` as a proof does, and
+ * stops the same way at the timeout. Its exit code says whether the walkthrough passed.
+ */
+export async function runMacWalk(
+  exec: Exec,
+  config: FactoryConfig,
+  worktree: string,
+  spec: string,
+  signal?: AbortSignal,
+): Promise<ExecResult> {
+  const result = await exec('sh', [vmScript(), spec], {
+    cwd: ownCheckout(),
+    env: vmEnv(config, worktree),
+    ...(signal ? { signal, killGraceMs: MAC_KILL_GRACE_MS } : {}),
+  });
+  if (result.code === VM_TEMPFAIL && !result.aborted) throw new VmUnavailable(vmReason(result));
+  return result;
+}

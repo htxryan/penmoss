@@ -27,6 +27,8 @@ QUIET_SECONDS="${PENMOSS_EMULATOR_QUIET_SECONDS:-10}"
 APP=app.penmoss.debug
 # Where a test's ProofShot.take() leaves the screenshot (androidTest app.penmoss.proof, A1255).
 PROOF_SHOT=/sdcard/penmoss-proof.png
+# Where a validation walkthrough's ProofShot.capture(name) leaves its screenshots (PEN-94).
+WALK_SHOTS=/sdcard/penmoss-walk
 RUNNER="$APP.test/androidx.test.runner.AndroidJUnitRunner"
 # How long a video runs on after the test's ProofShot.take(), before the test closes the app.
 HOLD_SECONDS="${PENMOSS_PROOF_HOLD_SECONDS:-0.5}"
@@ -147,7 +149,8 @@ for spec in "$@"; do
   n=$((n + 1))
   video="android-$n.mp4"
   shot="android-$n.png"
-  "$ADB" -s "$ANDROID_SERIAL" shell rm -f /sdcard/proof.mp4 "$PROOF_SHOT"
+  "$ADB" -s "$ANDROID_SERIAL" shell rm -rf /sdcard/proof.mp4 "$PROOF_SHOT" "$WALK_SHOTS"
+  "$ADB" -s "$ANDROID_SERIAL" shell mkdir -p "$WALK_SHOTS"
   # The device's clock as the recording starts, against which ProofShot logs its moment.
   started="$("$ADB" -s "$ANDROID_SERIAL" shell cat /proc/uptime 2>/dev/null | awk '{ print $1 }')"
   "$ADB" -s "$ANDROID_SERIAL" shell screenrecord --time-limit "$TEST_SECONDS" /sdcard/proof.mp4 &
@@ -162,6 +165,13 @@ for spec in "$@"; do
     echo "[proof] $spec took no screenshot of its own (ProofShot.take() at its last assertion); this one is from after it closed the app" >&2
     "$ADB" -s "$ANDROID_SERIAL" exec-out screencap -p >"$OUT/$shot" || true
   fi
+  # A walkthrough's screenshots, one per criterion, by the names it gave them.
+  for name in $("$ADB" -s "$ANDROID_SERIAL" shell ls "$WALK_SHOTS" 2>/dev/null | tr -d '\r'); do
+    case "$name" in
+      *[!A-Za-z0-9_.-]*) continue ;;
+      *.png) mkdir -p "$OUT/walk" && "$ADB" -s "$ANDROID_SERIAL" pull "$WALK_SHOTS/$name" "$OUT/walk/$name" >/dev/null 2>&1 || true ;;
+    esac
+  done
   # The device's log since the last test (since the boot, for the first), to diagnose a failure.
   # Through exec-out and shell, which fail at once without the device: `adb logcat` would wait
   # for an emulator that crashed forever.

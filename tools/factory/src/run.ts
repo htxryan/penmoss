@@ -22,6 +22,7 @@ import { VmUnavailable, type VmCheck } from './proof/mac.ts';
 import { formatMarker } from './pick.ts';
 import type { RebaseOutcome } from './rebase.ts';
 import type { AgentResult } from './result.ts';
+import type { WalkOutcome, WalkPlatform } from './walk.ts';
 
 export type RunEvent =
   | 'claimed'
@@ -97,6 +98,12 @@ export interface RunDeps {
   ): Promise<ProofItem[]>;
   /** Whether the test VM can take a Mac proof now (F10): the host check before one. */
   macVmCheck(sandbox: RunSandbox): Promise<VmCheck>;
+  /**
+   * Runs validation's walkthrough of the Mac or Android app (PEN-94, walk.ts) and puts its
+   * screenshots in `.factory/validation/`. A Mac one throws `VmUnavailable` when the test VM
+   * can't take it, as a Mac proof does.
+   */
+  walk(sandbox: RunSandbox, platform: WalkPlatform, signal?: AbortSignal): Promise<WalkOutcome>;
   /** What the run is waiting for, which `factory:status` shows; null once it goes on. */
   waitingFor(reason: string | null): void;
   /** Converts and checks the recordings, into the folder the PR body is written in. */
@@ -544,16 +551,15 @@ export async function gateAndProve(
     const prepared = await deps.prepareProof(items);
     if (!prepared.ok) return { ok: false, feedback: prepared.error };
     deps.log('proof-recorded', { files: prepared.proof.length });
-    // F19: a planned change that users see on the web is walked and reviewed against the plan.
-    if (validation && scope.platforms.includes('web')) {
-      const v = await validate(
-        deps,
-        gate,
-        branch,
-        validation.plan,
-        result.risks,
-        validation.images,
-      );
+    // F19: a planned change that users see is walked on each app it affects and reviewed
+    // against the plan (PEN-94).
+    if (validation && scope.platforms.length > 0) {
+      const v = await validate(deps, gate, branch, {
+        plan: validation.plan,
+        builder: result.risks,
+        images: validation.images ?? '',
+        platforms: scope.platforms,
+      });
       if (!v.ok) return { ok: false, feedback: `Validation couldn't finish: ${v.error}` };
       const mismatches = v.rows.filter((r) => r.verdict === 'mismatch');
       if (mismatches.length > 0 && !validation.final)
@@ -567,55 +573,75 @@ export async function gateAndProve(
 }
 
 /**
- * The Mac proof, once the test VM can take it (F7, F10). While it can't (tart missing, the VM
- * not made, another run on it, a VM started some other way, a boot that fails), the run waits
- * a poll and asks again: no failure, no round used, and `factory:status` says why. The check and
- * the proof hold the heavy-job slot; the waits don't. Only after `macProof.waitHours` does it
- * give up, and the run stops Blocked with the reason.
+ * `work` in the test VM, once the VM can take it (F7, F10): a Mac proof, or validation's Mac
+ * walkthrough. While it can't (tart missing, the VM not made, another run on it, a VM started
+ * some other way, a boot that fails), the run waits a poll and asks again: no failure, no round
+ * used, and `factory:status` says why. The check and the work hold the heavy-job slot; the waits
+ * don't. Only after `macProof.waitHours` does it give up, with the reason.
  */
-export async function recordMacProof(
-  deps: RunDeps,
+export async function whenVmFree<T>(
+  deps: Pick<RunDeps, 'config' | 'heavy' | 'macVmCheck' | 'now' | 'log' | 'sleep' | 'waitingFor'>,
   gate: RunSandbox,
-  branch: string,
-  specs: readonly string[],
-): Promise<{ ok: true; items: ProofItem[] } | { ok: false; feedback: string }> {
+  /** What waits, as `factory:status` says it: "the Mac proof". */
+  what: string,
+  heavyLabel: string,
+  work: (signal: AbortSignal) => Promise<T>,
+): Promise<{ ok: true; value: T } | { ok: false; why: string }> {
   const since = deps.now();
   let said: string | undefined;
   try {
     for (;;) {
-      const tried = await deps.heavy(`factory proof mac ${branch}`, async () => {
+      const tried = await deps.heavy(heavyLabel, async () => {
         const check = await deps.macVmCheck(gate);
         if (!check.ok) return { wait: check.reason };
         try {
           return {
-            items: await withTimeout(
-              (signal) => deps.recordProof(gate, 'mac', specs, signal),
-              deps.config.timeouts.proofMinutes,
-              'recording mac proof',
-            ),
+            value: await withTimeout(work, deps.config.timeouts.proofMinutes, `running ${what}`),
           };
         } catch (error) {
           if (error instanceof VmUnavailable) return { wait: error.message };
           throw error;
         }
       });
-      if ('items' in tried) return { ok: true, items: tried.items };
+      if ('value' in tried) return { ok: true, value: tried.value };
       const hours = (deps.now().getTime() - since.getTime()) / 3_600_000;
       if (hours >= deps.config.macProof.waitHours)
         return {
           ok: false,
-          feedback: `The Mac proof waited ${deps.config.macProof.waitHours} h for the test VM (${deps.config.macProof.vm}), which still can't take it: ${tried.wait}. Fix the VM (docs/ci.md §8), then clear **${deps.config.blockedField}**.`,
+          why: `${what} waited ${deps.config.macProof.waitHours} h for the test VM (${deps.config.macProof.vm}), which still can't take it: ${tried.wait}.`,
         };
       if (tried.wait !== said) {
         deps.log('proof-waiting', { platform: 'mac', reason: tried.wait });
         said = tried.wait;
       }
-      deps.waitingFor(`the Mac proof waits for the test VM: ${tried.wait}`);
+      deps.waitingFor(`${what} waits for the test VM: ${tried.wait}`);
       await deps.sleep(deps.config.pollSeconds);
     }
   } finally {
     deps.waitingFor(null);
   }
+}
+
+/** The Mac proof, once the test VM can take it (whenVmFree). */
+export async function recordMacProof(
+  deps: RunDeps,
+  gate: RunSandbox,
+  branch: string,
+  specs: readonly string[],
+): Promise<{ ok: true; items: ProofItem[] } | { ok: false; feedback: string }> {
+  const ran = await whenVmFree(
+    deps,
+    gate,
+    'the Mac proof',
+    `factory proof mac ${branch}`,
+    (signal) => deps.recordProof(gate, 'mac', specs, signal),
+  );
+  if (ran.ok) return { ok: true, items: ran.value };
+  const why = ran.why.replace(/^the Mac proof/, 'The Mac proof');
+  return {
+    ok: false,
+    feedback: `${why} Fix the VM (docs/ci.md §8), then clear **${deps.config.blockedField}**.`,
+  };
 }
 
 async function publish(

@@ -58,6 +58,7 @@ function fake(rebases: RebaseOutcome[]) {
     runId: 'r9',
     board: { items: [card] },
     macVmCheck: () => Promise.resolve({ ok: true }),
+    walk: (_sandbox, platform) => Promise.resolve({ platform, captures: [] }),
     waitingFor: () => undefined,
     comment: (_issue, body) => {
       issueComments.push(body);

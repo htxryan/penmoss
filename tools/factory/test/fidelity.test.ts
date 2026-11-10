@@ -98,10 +98,60 @@ describe('fidelity (F19)', () => {
     // A word that only contains "mac" isn't the Mac.
     expect(standIn({ ...rows[2]!, screenshot: 'machine.png' })).toBeUndefined();
     const md = renderFidelity(rows);
-    expect(md).toContain('Every screenshot is the web build in headless Chromium');
+    expect(md).toContain("that its own walkthrough didn't capture shows the web build");
     expect(md).toContain(
       '| Web build, standing in for the Mac app<br>![web build, standing in for the Mac app](./fidelity-ac3-mac.png) |',
     );
     expect(md).toContain('| — | ![screenshot](./ac5.png) |');
+  });
+
+  it("labels a Mac or Android walkthrough's screenshot as that app's own (PEN-94)", () => {
+    const r = parseReview(
+      JSON.stringify({
+        rows: [
+          {
+            criterion: 'AC3 the Mac row',
+            verdict: 'match',
+            note: '',
+            screenshot: 'ac3-mac.png',
+            platform: 'mac',
+          },
+          {
+            criterion: 'AC4 the Android row',
+            verdict: 'match',
+            note: '',
+            screenshot: 'ac4-android.png',
+            platform: 'android',
+          },
+          {
+            criterion: 'AC5 the web row',
+            verdict: 'match',
+            note: '',
+            screenshot: 'ac5.png',
+            platform: 'web',
+          },
+          {
+            criterion: 'AC6 an unknown platform',
+            verdict: 'match',
+            note: '',
+            screenshot: 'ac6.png',
+            platform: 'ios',
+          },
+        ],
+      }),
+    );
+    if (!r.ok) throw new Error(r.error);
+    expect(r.rows.map((row) => row.platform)).toEqual(['mac', 'android', 'web', undefined]);
+    expect(r.rows.map(standIn)).toEqual([undefined, undefined, undefined, undefined]);
+    const md = renderFidelity(r.rows);
+    expect(md).toContain(
+      '| Mac app, in the test VM<br>![Mac app, in the test VM](./ac3-mac.png) |',
+    );
+    expect(md).toContain(
+      "| Android app, on the factory's emulator<br>![Android app, on the factory's emulator](./ac4-android.png) |",
+    );
+    expect(md).toContain('| — | ![screenshot](./ac5.png) |');
+    // Nothing stands in, so no stand-in note.
+    expect(md).not.toContain('standing in');
   });
 });
