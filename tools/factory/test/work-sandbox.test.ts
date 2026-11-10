@@ -272,6 +272,30 @@ describe("the agent's round in its sandbox", () => {
     expect(readFileSync(join(runDir(), 'agent.log'), 'utf8')).toMatch(/usage limit reached/);
   });
 
+  it("takes Claude Code's result event, not the agent's prose, as the word on a usage limit", async () => {
+    // PEN-93: the agent quoted "Claude AI usage limit reached|<epoch>" in its summary of a
+    // finished round, and the run waited 30 minutes for a limit it never hit.
+    const deps = hostDeps(options(config, fakeExec().exec));
+    const sandbox = await deps.openSandbox(BRANCH);
+    const session = (result: object, prose: string) => (opts: SandcastleRun) => {
+      appendFileSync(opts.logging.path, `${prose}\n`);
+      opts.logging.onAgentStreamEvent?.({ type: 'raw', line: JSON.stringify(result) });
+      return Promise.resolve({});
+    };
+    sandcastle.run = session(
+      { type: 'result', subtype: 'success', is_error: false, result: 'Done.' },
+      'I did not print a fake `Claude AI usage limit reached|<epoch>` line; rate limited work.',
+    );
+    expect((await deps.runAgent(sandbox, 'p'))?.output).toBe('');
+    sandcastle.run = session(
+      { type: 'result', is_error: true, result: 'Claude AI usage limit reached|1794067200' },
+      'Working on it',
+    );
+    expect((await deps.runAgent(sandbox, 'p'))?.output).toBe(
+      'Claude AI usage limit reached|1794067200',
+    );
+  });
+
   it('leaves any other agent failure as it is', async () => {
     sandcastle.run = () => Promise.reject(new Error('claude-code exited with code 1:\nboom'));
     const deps = hostDeps(options(config, fakeExec().exec));
