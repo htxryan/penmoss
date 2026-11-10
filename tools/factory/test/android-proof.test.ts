@@ -44,10 +44,18 @@ case "$1 $2" in
     echo "$n" >"$STUB_LOG.polls"
     if [ "$n" -le "\${STUB_DIALOG_POLLS:-0}" ]; then
       echo '  mCurrentFocus=Window{9f u0 Application Not Responding: com.android.systemui}'
+    elif [ -n "\${STUB_LAUNCHER_ANR:-}" ] && [ ! -e "$STUB_LOG.waited" ]; then
+      # The launcher's ANR dialog, which stays until it's answered (PEN-90).
+      echo '  mCurrentFocus=Window{4c u0 Application Not Responding: com.google.android.apps.nexuslauncher}'
     else
       echo '  mCurrentFocus=Window{7a u0 com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity}'
     fi ;;
   'exec-out screencap') printf 'png' ;;
+  'shell uiautomator') ;;
+  'exec-out cat')
+    echo '<hierarchy><node index="1" text="Close app" resource-id="android:id/aerr_close" bounds="[84,1200][996,1326]" /><node index="2" text="Wait" resource-id="android:id/aerr_wait" bounds="[84,1326][996,1452]" /></hierarchy>' ;;
+  'shell input') touch "$STUB_LOG.waited" ;;
+  'shell cat') echo '100.50 200.00' ;;
   pull*)
     case "$2" in
       # The screenshot a test's ProofShot.take() leaves, when STUB_PROOF_SHOT says it took one.
@@ -56,7 +64,10 @@ case "$1 $2" in
         echo shot >"$3" ;;
       *) echo mp4 >"$3" ;;
     esac ;;
-  'exec-out logcat') echo 'I ActivityManager: logcat' ;;
+  'exec-out logcat')
+    echo 'I ActivityManager: logcat'
+    # ProofShot.take()'s moment, on the device's clock (PEN-91).
+    [ -n "\${STUB_PROOF_SHOT:-}" ] && echo '11-10 15:00:03.250  1234  1250 I PenmossProof: shot at 103250' ;;
   logcat*) echo 'adb logcat waits for a device forever' >&2; exec sleep 60 ;;
 esac
 exit 0
@@ -66,6 +77,11 @@ echo "emulator $*" >>"$STUB_LOG"
 echo $$ >"$STUB_LOG.emulator"
 [ -n "\${STUB_EMULATOR_DIES:-}" ] && exit 1
 exec sleep 30
+`;
+const FFMPEG = `#!/bin/sh
+echo "ffmpeg $*" >>"$STUB_LOG"
+for last; do :; done
+echo cut >"$last"
 `;
 const GRADLEW = `#!/bin/sh
 echo "gradlew $*" >>"$STUB_LOG"
@@ -87,6 +103,11 @@ function fixture() {
   stub(join(root, 'gradlew'), GRADLEW);
   stub(join(sdk, 'platform-tools', 'adb'), ADB);
   stub(join(sdk, 'emulator', 'emulator'), EMULATOR);
+  // An ffmpeg on the PATH, for the tests that pass `PATH: withFfmpeg`.
+  const bin = join(dir, 'bin');
+  mkdirSync(bin);
+  stub(join(bin, 'ffmpeg'), FFMPEG);
+  const withFfmpeg = `${bin}:/usr/bin:/bin`;
   const log = join(dir, 'calls.log');
   // Async, so the tests run side by side: the script's own waits add up to seconds.
   const run = (args: string[], env: Record<string, string> = {}) =>
@@ -118,7 +139,7 @@ function fixture() {
         });
       },
     );
-  return { root, tmp, run };
+  return { root, tmp, run, withFfmpeg };
 }
 
 describe.concurrent("proof.sh's arguments (F8)", { timeout: 30_000 }, () => {
@@ -261,6 +282,61 @@ describe.concurrent(
       const lastPoll = adb.lastIndexOf(polls.at(-1) ?? '');
       expect(adb.findIndex((c) => c.includes('am instrument'))).toBeGreaterThan(lastPoll);
       expect(r.stderr).not.toContain("didn't settle");
+    }, 30_000);
+
+    it("answers the launcher's ANR dialog with Wait, then runs the tests (PEN-90)", async () => {
+      const r = await fixture().run(['app.penmoss.PassingTest'], { STUB_LAUNCHER_ANR: '1' });
+      expect(r.status, r.stderr).toBe(0);
+      const adb = r.calls.filter((c) => c.startsWith('adb '));
+      const at = (text: string) => adb.findIndex((c) => c.includes(text));
+      // The middle of the Wait button, not Close app's, found by its ID.
+      expect(adb).toContain('adb -s emulator-5560 shell input tap 540 1389');
+      expect(at('uiautomator dump')).toBeLessThan(at('input tap'));
+      expect(at('input tap')).toBeLessThan(at('am instrument'));
+      expect(r.stdout).toMatch(/\[proof\] the launcher wasn't responding after \d+s: pressed Wait/);
+      expect(r.stderr).not.toContain("didn't settle");
+    }, 30_000);
+
+    it("never presses anything on System UI's own ANR dialog", async () => {
+      const r = await fixture().run(['app.penmoss.PassingTest'], { STUB_DIALOG_POLLS: '3' });
+      expect(r.status, r.stderr).toBe(0);
+      expect(r.calls.some((c) => c.includes('uiautomator') || c.includes('input tap'))).toBe(false);
+    }, 30_000);
+
+    it("ends the video at the test's own screenshot, not on the launcher (PEN-91)", async () => {
+      const f = fixture();
+      const r = await f.run(['app.penmoss.PassingTest'], {
+        STUB_PROOF_SHOT: '1',
+        PATH: f.withFfmpeg,
+      });
+      expect(r.status, r.stderr).toBe(0);
+      const out = join(f.root, 'build', 'proof');
+      // Shot at 103.250 s on the device's clock, recording from 100.50 s, held 0.5 s.
+      expect(r.calls).toContain(
+        `ffmpeg -nostdin -loglevel error -y -i ${out}/android-1.mp4 -t 3.250 -c copy ${out}/cut-android-1.mp4`,
+      );
+      expect(readFileSync(join(out, 'android-1.mp4'), 'utf8')).toBe('cut\n');
+      expect(existsSync(join(out, 'cut-android-1.mp4'))).toBe(false);
+      expect(r.stdout).toContain('[proof] android-1.mp4 ends 3.250s in, at its screenshot');
+      const adb = r.calls.filter((c) => c.startsWith('adb '));
+      const at = (text: string) => adb.findIndex((c) => c.includes(text));
+      expect(at('shell cat /proc/uptime')).toBeLessThan(at('screenrecord'));
+    }, 30_000);
+
+    it("keeps the whole video, and says why, when there's no ffmpeg", async () => {
+      const f = fixture();
+      const r = await f.run(['app.penmoss.PassingTest'], { STUB_PROOF_SHOT: '1' });
+      expect(r.status, r.stderr).toBe(0);
+      expect(r.stderr).toContain('no ffmpeg to end android-1.mp4 at its screenshot');
+      expect(readFileSync(join(f.root, 'build', 'proof', 'android-1.mp4'), 'utf8')).toBe('mp4\n');
+    }, 30_000);
+
+    it("leaves the video alone when the test took no screenshot", async () => {
+      const f = fixture();
+      const r = await f.run(['app.penmoss.PassingTest'], { PATH: f.withFfmpeg });
+      expect(r.status, r.stderr).toBe(0);
+      expect(r.calls.some((c) => c.startsWith('ffmpeg'))).toBe(false);
+      expect(readFileSync(join(f.root, 'build', 'proof', 'android-1.mp4'), 'utf8')).toBe('mp4\n');
     }, 30_000);
 
     it("runs the tests anyway, and says so, when the device doesn't settle in time", async () => {
