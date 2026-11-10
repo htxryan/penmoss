@@ -644,6 +644,13 @@ describe('runImplement', () => {
     // After the capturing session and before the reviewer's: Android first, then the VM.
     const walked = f.calls.filter((c) => c.startsWith('walk') || c === 'agent' || c === 'vm check');
     expect(walked.slice(-5)).toEqual(['agent', 'walk android', 'vm check', 'walk mac', 'agent']);
+    // The walkthroughs are gone from the worktree once reviewed: a later round's gate would lint them.
+    const reviewed = f.calls.lastIndexOf('agent');
+    expect(f.calls.slice(reviewed)).toContainEqual(
+      expect.stringMatching(
+        /^exec \d+: rm -f apps\/android\/app\/src\/androidTest\/java\/app\/penmoss\/walk\/FactoryWalkInstrumentedTest\.kt apps\/desktop\/test\/e2e\/factory-walk\.spec\.ts$/,
+      ),
+    );
     expect(f.prompts.at(-2)).toContain('**web, mac, android**');
     const reviewer = f.prompts.at(-1)!;
     expect(reviewer).toMatch(/^You are an independent reviewer/);

@@ -16,7 +16,7 @@ import {
   type RunDeps,
   type RunSandbox,
 } from './run.ts';
-import { walksText, type WalkOutcome, type WalkPlatform } from './walk.ts';
+import { walkFile, walksText, type WalkOutcome, type WalkPlatform } from './walk.ts';
 
 export interface ValidateDeps extends Pick<
   RunDeps,
@@ -93,6 +93,9 @@ export async function validate(
   } finally {
     // Kept whatever happened, a session that failed half-way included.
     await deps.keepValidation(sandbox);
+    // The walkthroughs are validation's own files, never the change's: a later round in this
+    // worktree would lint them in its gate, or commit them.
+    await sandbox.exec(`rm -f ${WALKED.map(walkFile).join(' ')}`).catch(() => undefined);
   }
   const text = await deps.readReview(sandbox);
   if (text === null) return { ok: false, error: 'the reviewer wrote no review.json' };
