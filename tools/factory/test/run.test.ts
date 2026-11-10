@@ -433,6 +433,25 @@ describe('runImplement', () => {
     expect(f.events.slice(0, 2)).toEqual(['claimed', 'agent-finished']);
   });
 
+  it('keeps a finished result when a step after the agent fails, so a restart resumes (A1266)', async () => {
+    // PEN-72: OpenCode committed and wrote its result, then Sandcastle's session capture failed.
+    const f = fake({});
+    const deps: RunDeps = {
+      ...f.deps,
+      runAgent: () => Promise.reject(new Error('Session capture failed')),
+    };
+    await expect(runImplement(deps, { item: card, spec, prompt: 'p' })).rejects.toThrow(
+      'Session capture failed',
+    );
+    expect(f.events).toEqual(['claimed', 'agent-started', 'agent-finished']);
+  });
+  it('records no finished round when the agent fails without a done result', async () => {
+    const f = fake({ result: { error: 'no .factory/result.json' } });
+    const deps: RunDeps = { ...f.deps, runAgent: () => Promise.reject(new Error('crashed')) };
+    await expect(runImplement(deps, { item: card, spec, prompt: 'p' })).rejects.toThrow('crashed');
+    expect(f.events).not.toContain('agent-finished');
+  });
+
   it('runs the agent again when the branch has none of the finished round’s commits', async () => {
     const f = fake({ commits: 0 });
     await runImplement(f.deps, {

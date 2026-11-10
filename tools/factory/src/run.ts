@@ -433,7 +433,19 @@ async function agentRound(
   const work = await deps.openSandbox(branch);
   try {
     deps.log('agent-started', { branch, round });
-    await runAgentPatiently(deps, work, prompt);
+    try {
+      await runAgentPatiently(deps, work, prompt);
+    } catch (error) {
+      // The agent may have finished before a later step failed (PEN-72: Sandcastle's session
+      // capture). Keep its result, so a recovered run goes on from the gate (A1266).
+      const read = await deps.readResult(work).catch(() => undefined);
+      if (read?.ok && read.result.status === 'done')
+        deps.log('agent-finished', {
+          status: 'done',
+          after: error instanceof Error ? error.message : String(error),
+        });
+      throw error;
+    }
     const read = await deps.readResult(work);
     deps.log('agent-finished', read.ok ? { status: read.result.status } : { error: read.error });
     return read;
