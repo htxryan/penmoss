@@ -1,5 +1,5 @@
 import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
-import { NodeSelection, TextSelection } from '@tiptap/pm/state';
+import { NodeSelection } from '@tiptap/pm/state';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createCollabEditor, type CollabEditor } from '../src/collab';
 import { noteExtensions } from '../src/extensions';
@@ -103,27 +103,6 @@ describe('image node', () => {
     expect(collab.replica.plainText()).toBeDefined();
     // The image stays selected so the fields stay open.
     expect(view.state.selection).toBeInstanceOf(NodeSelection);
-  });
-
-  it('puts the caret after a picture on a click in the empty rest of its line (PEN-66)', () => {
-    const collab = open(services().images);
-    collab.editor.commands.setContent(imageDoc({ src: PATH, alt: '' }));
-    const { view } = collab.editor;
-    view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 1)));
-    const picture = view.dom.querySelector<HTMLElement>('.pm-image')!;
-
-    // The box itself, beside the picture: the caret goes after it, and the editor leaves it be.
-    const beside = new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 });
-    picture.dispatchEvent(beside);
-    expect(beside.defaultPrevented).toBe(true);
-    expect(view.state.selection).toBeInstanceOf(TextSelection);
-    expect(view.state.selection.from).toBe(6); // after "see " and the picture
-
-    // The picture itself is the editor's to select, as before.
-    const img = picture.querySelector('img')!;
-    const onPicture = new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 });
-    img.dispatchEvent(onPicture);
-    expect(onPicture.defaultPrevented).toBe(false);
   });
 
   it('stores a pasted screenshot and inserts it at the cursor', async () => {

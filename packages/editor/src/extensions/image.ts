@@ -13,7 +13,7 @@
 import { nodeSpecs } from '@penmoss/core/schema';
 import { InputRule, Node, type Attributes } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
-import { NodeSelection, Plugin, PluginKey, TextSelection } from '@tiptap/pm/state';
+import { NodeSelection, Plugin, PluginKey } from '@tiptap/pm/state';
 import type { EditorView, NodeView } from '@tiptap/pm/view';
 import { onDoubleActivate, openLightbox, type Lightbox, type LightboxImage } from '../lightbox';
 
@@ -251,13 +251,6 @@ class ImageView implements NodeView {
     this.dom.className = 'pm-image';
     this.dom.contentEditable = 'false';
     this.dom.dataset['testid'] = 'image';
-    // The picture's box fills its line (A506, PEN-66): a click in the empty rest of the line,
-    // right of the picture, puts the caret after it, as a click right of a line of text does.
-    this.dom.addEventListener('mousedown', (event) => {
-      if (event.target !== this.dom || event.button !== 0) return;
-      event.preventDefault();
-      this.caretAfter();
-    });
 
     this.img = doc.createElement('img');
     this.img.draggable = false;
@@ -305,7 +298,13 @@ class ImageView implements NodeView {
       }
     });
 
-    this.dom.append(this.img, this.fallback, this.loadButton, handle, this.tools);
+    // The picture's own box, inside the node's: the node's breaks the line before the picture
+    // and is as wide as the line there, so the handle and the fields sit on this one, which is
+    // the picture's size (A506, PEN-66).
+    const frame = doc.createElement('span');
+    frame.className = 'pm-image-frame';
+    frame.append(this.img, this.fallback, this.loadButton, handle, this.tools);
+    this.dom.append(frame);
     // A double click (a double tap on a touch screen) opens the lightbox, read-only notes too.
     this.offDouble = onDoubleActivate(this.img, (event) => {
       if (!this.showing()) return;
@@ -370,23 +369,9 @@ class ImageView implements NodeView {
     if (!this.tools.contains(this.dom.ownerDocument.activeElement)) this.tools.hidden = true;
   }
 
-  /** Puts the caret right after the picture. */
-  private caretAfter(): void {
-    const pos = this.getPos();
-    if (pos === undefined || !this.view.editable) return;
-    const { state } = this.view;
-    const selection = TextSelection.create(state.doc, pos + this.node.nodeSize);
-    this.view.dispatch(state.tr.setSelection(selection));
-    this.view.focus();
-  }
-
-  /**
-   * Events in the fields and on the resize handle are the view's, not the editor's, as are
-   * clicks in the empty part of the picture's line (the box itself, not the picture).
-   */
+  /** Events in the fields and on the resize handle are the view's, not the editor's. */
   stopEvent(event: Event): boolean {
     const target = event.target as globalThis.Node | null;
-    if (target === this.dom && event.type.startsWith('mouse')) return true;
     if (this.tools.contains(target) || this.loadButton.contains(target)) return true;
     return (target as Element | null)?.classList?.contains('pm-image-resize') ?? false;
   }

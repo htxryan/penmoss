@@ -187,6 +187,11 @@ test('a picture that ends a paragraph, stands alone or ends a list item leaves n
   // The text on its own line above; the lone picture's paragraph as tall as the picture.
   expect(measured.pictures[0]!.above).toBeGreaterThan(20);
   expect(Math.abs(measured.pictures[1]!.above)).toBeLessThanOrEqual(PX);
+  // The list item's picture as far below its line of text as the paragraph's: a line, 0.4 em.
+  expect(
+    Math.abs(measured.pictures[2]!.above - measured.pictures[0]!.above),
+    'the gap above the list item’s picture',
+  ).toBeLessThanOrEqual(PX);
 
   // The proof: the three pictures on screen, held.
   await body(page).evaluate((dom) => (dom as HTMLElement).blur());

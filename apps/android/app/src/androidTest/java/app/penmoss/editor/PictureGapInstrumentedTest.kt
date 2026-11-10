@@ -146,6 +146,13 @@ class PictureGapInstrumentedTest {
         val lone = pictures.getJSONObject(1)
         assertNear("the lone picture's paragraph as tall as it", 0.0, lone.getDouble("above"))
         assertTrue("the text above its own line", pictures.getJSONObject(0).getDouble("above") > 20)
+        // The list item's picture is as far below its line of text as the paragraph's: a line,
+        // then 0.4 em, in both.
+        assertNear(
+            "the gap above the list item's picture",
+            pictures.getJSONObject(0).getDouble("above"),
+            pictures.getJSONObject(2).getDouble("above"),
+        )
 
         // The proof's screenshot: the three pictures and the blocks after them, on screen.
         js("penmossEditor.editor.editor.commands.blur(), document.activeElement.blur(), window.scrollTo(0, 0), true")

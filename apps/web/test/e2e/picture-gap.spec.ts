@@ -235,6 +235,10 @@ const PX = 1.05;
 const BLOCK_GAP = 13.6;
 /** 0.15 em between list items. */
 const LIST_GAP = 2.4;
+/** A line of text at the 16 px note font (line-height 1.7). */
+const LINE = 27.2;
+/** From the top of a block whose text comes first to its picture: a line, then 0.4 em. */
+const TEXT_ABOVE = LINE + 6.4;
 
 function expectNoLineUnder(picture: Picture): void {
   // The block ends where the picture ends: no empty line under it.
@@ -249,6 +253,24 @@ function expectGapBelow(picture: Picture, gap: number): void {
 function expectAsTallAsPicture(picture: Picture, which = 'the picture'): void {
   expect(Math.abs(picture.block.top - picture.top), `above ${which}`).toBeLessThanOrEqual(PX);
   expect(Math.abs(picture.block.bottom - picture.bottom), `under ${which}`).toBeLessThanOrEqual(PX);
+}
+
+/** Text, then the picture on the next line: 0.4 em under the text's line, as in the mockups. */
+function expectTextLineAbove(picture: Picture): void {
+  expect(Math.abs(picture.top - picture.block.top - TEXT_ABOVE)).toBeLessThanOrEqual(PX);
+}
+
+/**
+ * The caret after a picture stands beside it, at its bottom right, one line of text tall: not at
+ * the far edge of the column, and not as tall as the picture.
+ */
+function expectCaretAfter(caret: Box, picture: Picture): void {
+  // (A text caret ends at the font's descent, a little above the line's bottom: its half-leading.)
+  expect(caret.bottom, 'at the picture’s bottom').toBeLessThanOrEqual(picture.bottom + PX);
+  expect(caret.bottom, 'at the picture’s bottom').toBeGreaterThanOrEqual(picture.bottom - 10);
+  expect(caret.left, 'right of the picture').toBeGreaterThanOrEqual(picture.right - PX);
+  expect(caret.left, 'beside the picture').toBeLessThanOrEqual(picture.right + 4);
+  expect(caret.bottom - caret.top, 'a line of text tall').toBeLessThanOrEqual(LINE + PX);
 }
 
 /**
@@ -285,6 +307,7 @@ test('AC1, AC5: a picture after text sits on its own line, the next block a norm
   await openNote(page, 'softBreak');
   let [picture] = await pictures(page);
   expect(picture!.top).toBeGreaterThan(picture!.block.top + 20); // Below the text, not beside it.
+  expectTextLineAbove(picture!);
   expectNoLineUnder(picture!);
   expectGapBelow(picture!, BLOCK_GAP);
 
@@ -298,15 +321,12 @@ test('AC1, AC5: a picture after text sits on its own line, the next block a norm
   expect(picture!.top).toBeGreaterThan(picture!.block.top + 20);
   expectNoLineUnder(picture!);
   expectGapBelow(picture!, BLOCK_GAP);
-  // About 0.4 em between the text's line and the picture, as before.
-  expect(picture!.top - picture!.block.top).toBeLessThan(1.7 * 16 + 0.4 * 16 + PX);
+  expectTextLineAbove(picture!);
 
-  // AC5: End puts the caret on the picture's line, at its bottom; Enter starts a block below.
+  // AC5: End puts the caret on the picture's line, at its bottom right; Enter starts a block below.
   await page.keyboard.press('End');
   let caret = await caretBox(page);
-  expect(caret.bottom).toBeLessThanOrEqual(picture!.bottom + PX);
-  expect(caret.bottom).toBeGreaterThan(picture!.top);
-  expect(caret.left).toBeGreaterThanOrEqual(picture!.right - PX);
+  expectCaretAfter(caret, picture!);
   await page.keyboard.press('Enter');
   await page.keyboard.type('Typed below');
   const typed = body(page).getByText('Typed below', { exact: true });
@@ -331,9 +351,7 @@ test('AC1, AC5: a picture after text sits on its own line, the next block a norm
   await page.mouse.click((picture!.right + picture!.block.right) / 2, picture!.bottom - 10);
   await expect(body(page).locator('.pm-image.ProseMirror-selectednode')).toHaveCount(0);
   caret = await caretBox(page);
-  expect(caret.bottom).toBeLessThanOrEqual(picture!.bottom + PX);
-  expect(caret.bottom).toBeGreaterThan(picture!.top);
-  expect(caret.left).toBeGreaterThanOrEqual(picture!.right - PX);
+  expectCaretAfter(caret, picture!);
   await page.keyboard.press('Enter');
   await page.keyboard.type('Clicked below');
   const clicked = body(page).getByText('Clicked below', { exact: true });
@@ -351,7 +369,7 @@ test('AC2: a bulleted, numbered or checklist item that ends with a picture keeps
   expect(all).toHaveLength(3);
   for (const picture of all) {
     expect(picture.blockText.trim()).toBe('two');
-    expect(picture.top).toBeGreaterThan(picture.block.top + 20);
+    expectTextLineAbove(picture);
     expectNoLineUnder(picture);
   }
   // The gap from item one to item two, a line of text, in each list.
@@ -402,6 +420,17 @@ test('AC3: a block that holds only a picture is exactly as tall as the picture',
   expectGapBelow(all[5]!, LIST_GAP);
   // The quote and the table end a normal gap below their picture's block's own edge.
   for (const i of [6, 7]) expectNoLineUnder(all[i]!);
+  // The highlight is the picture's own size: no strip of colour across the rest of its line.
+  const highlight = await body(page)
+    .locator('mark', { has: page.locator('.pm-image') })
+    .evaluate((mark) => [...mark.getClientRects()].map(({ left, right }) => ({ left, right })));
+  expect(highlight.length).toBeGreaterThan(0);
+  for (const rect of highlight) {
+    expect(rect.left).toBeGreaterThanOrEqual(all[4]!.left - PX);
+    expect(rect.right).toBeLessThanOrEqual(all[4]!.right + PX);
+  }
+  await body(page).locator('.pm-image').nth(4).scrollIntoViewIfNeeded();
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/pen-66-ac3-lone.png` });
 
   // A point comment at the picture adds no line of its own.
   await openNote(page, 'empty');
@@ -414,6 +443,17 @@ test('AC3: a block that holds only a picture is exactly as tall as the picture',
   await expect(body(page).locator('.pm-comment-marker')).toHaveCount(1);
   let [commented] = await pictures(page);
   expectAsTallAsPicture(commented!, 'the picture with a comment after it');
+  // Its marker beside the picture, at its bottom right, not at the far end of the line.
+  const marker = await body(page)
+    .locator('.pm-comment-marker')
+    .evaluate((element) => {
+      const { top, bottom, left, right } = element.getBoundingClientRect();
+      return { top, bottom, left, right };
+    });
+  expect(marker.left).toBeGreaterThanOrEqual(commented!.right - PX);
+  expect(marker.left).toBeLessThanOrEqual(commented!.right + 8);
+  expect(marker.bottom).toBeLessThanOrEqual(commented!.bottom + PX);
+  expect(marker.top).toBeGreaterThanOrEqual(commented!.top - PX);
   // And one before it.
   await body(page).locator('.pm-image img').click();
   await page.keyboard.press('ArrowLeft');
@@ -487,8 +527,7 @@ test('AC9: several pictures in one paragraph stack with no empty line between or
   let all = await pictures(page);
   expect(all).toHaveLength(2);
   // Each on a line of its own, the second right under the first.
-  expect(all[1]!.top).toBeGreaterThanOrEqual(all[0]!.bottom - PX);
-  expect(all[1]!.top - all[0]!.bottom).toBeLessThan(0.5 * 16);
+  expect(Math.abs(all[1]!.top - all[0]!.bottom), 'touching').toBeLessThanOrEqual(PX);
   expect(Math.abs(all[0]!.block.top - all[0]!.top)).toBeLessThanOrEqual(PX);
   expectNoLineUnder(all[1]!);
   expectGapBelow(all[1]!, BLOCK_GAP);
@@ -500,8 +539,7 @@ test('AC9: several pictures in one paragraph stack with no empty line between or
   all = await pictures(page);
   expect(all).toHaveLength(2);
   expect(all[0]!.block).toEqual(all[1]!.block);
-  expect(all[1]!.top).toBeGreaterThanOrEqual(all[0]!.bottom - PX);
-  expect(all[1]!.top - all[0]!.bottom).toBeLessThan(0.5 * 16);
+  expect(Math.abs(all[1]!.top - all[0]!.bottom), 'touching').toBeLessThanOrEqual(PX);
   expect(Math.abs(all[0]!.block.top - all[0]!.top)).toBeLessThanOrEqual(PX);
   expectNoLineUnder(all[1]!);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/pen-66-ac9.png` });
@@ -513,6 +551,7 @@ test('AC6: on a phone-sized page, a paragraph and a list item that end with a pi
   await openNote(page, 'softBreak');
   await page.setViewportSize({ width: 412, height: 915 });
   const [picture] = await pictures(page);
+  expectTextLineAbove(picture!);
   expectNoLineUnder(picture!);
   expectGapBelow(picture!, BLOCK_GAP);
 
@@ -520,6 +559,8 @@ test('AC6: on a phone-sized page, a paragraph and a list item that end with a pi
   await openNote(page, 'lists');
   await page.setViewportSize({ width: 412, height: 915 });
   const [item] = await pictures(page);
+  // The item's text, then the same 0.4 em gap above its picture as in a paragraph.
+  expectTextLineAbove(item!);
   expectNoLineUnder(item!);
   const gap = await body(page)
     .locator(':scope > ul')
@@ -531,4 +572,23 @@ test('AC6: on a phone-sized page, a paragraph and a list item that end with a pi
       );
     });
   expectGapBelow(item!, gap);
+
+  // As the Mac and Android proofs make it: a bulleted item typed, then a picture pasted after its
+  // text, at the phone's width.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await openNote(page, 'empty');
+  await body(page).click();
+  await page.keyboard.type('- Item with a picture');
+  await pastePictures(page);
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Item two');
+  await page.setViewportSize({ width: 412, height: 915 });
+  const [pasted] = await pictures(page);
+  expect(pasted!.blockText).toBe('Item with a picture');
+  expectTextLineAbove(pasted!);
+  expectNoLineUnder(pasted!);
+  expectGapBelow(pasted!, LIST_GAP);
+  await body(page).locator('.pm-image').first().scrollIntoViewIfNeeded();
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/pen-66-ac6.png` });
 });
