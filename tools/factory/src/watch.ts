@@ -22,7 +22,7 @@ import { proofFiles } from './proof/body.ts';
 import { publishRefs } from './proof/store.ts';
 import { readConversation, reviewState, roundText, type ReviewState } from './review.ts';
 import { runRebase, runRevise, type ReviseDeps } from './revise.ts';
-import { branchName } from './run.ts';
+import { branchName, failedLogs } from './run.ts';
 import { issueForAgent, planFor, runImages, type Factory } from './start.ts';
 
 export interface FactoryPr {
@@ -162,12 +162,6 @@ export async function executeRevise(
   );
   const base = roundPrompt(config, item, spec, text);
   const items = action.kind === 'round' ? action.state.items : [];
-  const prompt =
-    action.kind === 'round'
-      ? `${base}\n\n## Ryan's review of ${pr.url}\n\nThe PR is open and in review. Address every item below in the same branch, then write \`.factory/result.json\` with a \`replies\` object: for each review thread ID, one or two sentences saying what you changed (or why not), and under \`general\` your answer to the PR comments and review summaries, which goes on the PR in the round's comment. You can't edit the PR yourself.\n\n${roundText(items, fence)}`
-      : action.kind === 'rebase'
-        ? base
-        : `${base}\n\n## CI failed on ${pr.url}\n\nThe PR is in review and these checks failed: ${action.failed.map((c) => `${c.name} (${c.link})`).join(', ')}. Fix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\`.`;
   const agent = await agentFor(config, spec);
   const deps = hostDeps({
     config,
@@ -185,6 +179,12 @@ export async function executeRevise(
     log,
     ...(waitingFor ? { waitingFor } : {}),
   });
+  const prompt =
+    action.kind === 'round'
+      ? `${base}\n\n## Ryan's review of ${pr.url}\n\nThe PR is open and in review. Address every item below in the same branch, then write \`.factory/result.json\` with a \`replies\` object: for each review thread ID, one or two sentences saying what you changed (or why not), and under \`general\` your answer to the PR comments and review summaries, which goes on the PR in the round's comment. You can't edit the PR yourself.\n\n${roundText(items, fence)}`
+      : action.kind === 'rebase'
+        ? base
+        : ciRepairText(base, pr.url, action.failed, await failedLogs(deps, action.failed));
   const dir = join(expandHome(config.stateDir), 'runs', runId, 'proof');
   const revise: ReviseDeps = {
     ...deps,
@@ -239,6 +239,16 @@ export async function executeRevise(
     }
     return `blocked: ${message}`;
   }
+}
+
+/** A repair round in review (F11): the failed checks and their last log lines (A1278). */
+export function ciRepairText(
+  base: string,
+  pr: string,
+  failed: readonly CheckRun[],
+  logs: readonly string[],
+): string {
+  return `${base}\n\n## CI failed on ${pr}\n\nThe PR is in review and these checks failed: ${failed.map((c) => `${c.name} (${c.link})`).join(', ')}. Their last log lines:\n\n${logs.join('\n\n')}\n\nFix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\`.`;
 }
 
 /** Merge an approved PR and see main through (F18). Needs no slot: it only waits on GitHub. */
