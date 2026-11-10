@@ -754,11 +754,13 @@ export async function watchCi(
       ),
     );
     deps.log('ci-red', { failed: summary.failed.map((c) => c.name), repairs });
+    // Ryan's comment names the failing jobs and their last log lines, whichever way it stops.
+    const failure = `${run.pr}\n\n${summary.failed.map((c) => `- [${c.name}](${c.link})${runIdOf(c) ? ` (run ${runIdOf(c)})` : ''}`).join('\n')}\n\n${logs.join('\n\n')}`;
     if (repairs >= config.rounds.ciRepair) {
       return {
         kind: 'blocked',
         reason: 'ci-red',
-        body: `CI is still red after ${repairs} repair round(s): ${run.pr}\n\n${summary.failed.map((c) => `- [${c.name}](${c.link})${runIdOf(c) ? ` (run ${runIdOf(c)})` : ''}`).join('\n')}\n\n${logs.join('\n\n')}`,
+        body: `CI is still red after ${repairs} repair round(s): ${failure}`,
       };
     }
     repairs++;
@@ -767,7 +769,7 @@ export async function watchCi(
       return {
         kind: 'blocked',
         reason: 'ci-red',
-        body: `A CI repair round couldn't finish: ${repaired.why}`,
+        body: `A CI repair round couldn't finish: ${repaired.why}\n\nCI is red: ${failure}`,
       };
     deps.log('ci-repaired', { round: repairs });
     since = deps.now();
