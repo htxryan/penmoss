@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { parseIssueSpec, type IssueSpec } from '../src/labels.ts';
 import type { BoardItem } from '../src/board.ts';
-import { formatMarker, modeFor, parseMarkers, pickNext, priorityName } from '../src/pick.ts';
+import {
+  elsewhere,
+  formatMarker,
+  modeFor,
+  parseMarkers,
+  pickNext,
+  priorityName,
+} from '../src/pick.ts';
 import { item, linearConfig, testConfig } from './helpers.ts';
 
 const config = testConfig();
@@ -99,6 +106,27 @@ describe('pickNext', () => {
     expect(result.queue[1]?.why).toBe(
       'no priority (Medium), above 1 other Medium card on the board',
     );
+  });
+});
+
+describe('elsewhere', () => {
+  it('names the cards in Planning and the blocked ones further on, when Todo has none to start', () => {
+    const linear = linearConfig();
+    const pen = (n: number, o: Partial<BoardItem>) => item(n, { key: `PEN-${n}`, ...o });
+    const items = [
+      pen(41, { status: 'Planning', blocked: true }),
+      pen(42, { status: 'Planning' }),
+      pen(43, { status: 'In Progress', blocked: true }),
+      pen(44, { status: 'In Progress' }),
+      pen(45, { status: 'In Review', blocked: true }),
+      pen(46, { status: 'Planning', state: 'CLOSED' }),
+      pen(47, { status: 'Backlog', blocked: true }),
+      pen(48, { status: 'Todo', blocked: true }),
+    ];
+    expect(elsewhere(items, linear)).toBe(
+      'Elsewhere: 2 in Planning (PEN-41 blocked, PEN-42); 1 blocked in In Progress (PEN-43); 1 blocked in In Review (PEN-45).',
+    );
+    expect(elsewhere([pen(44, { status: 'In Progress' })], linear)).toBeUndefined();
   });
 });
 

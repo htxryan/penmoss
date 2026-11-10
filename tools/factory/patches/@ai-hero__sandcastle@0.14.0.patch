@@ -12,6 +12,21 @@ index f0364bc719336a66a05d72ab0290d2bd1907ed40..38cdaa2c96edcc83658168c11ac4d4a9
  var NO_CONFIG_LOCK_FLAGS = [
    "-c",
    "branch.autoSetupMerge=false",
+diff --git a/dist/index.js b/dist/index.js
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1045,8 +1045,9 @@ var printFileDisplayStartup = (options) => {
+   const name = options.agentName ?? "Agent";
+   const label = styleText("bold", `[${name}]`);
+   const branchPart = options.branch !== void 0 && options.branch !== "" ? ` on branch ${options.branch}` : "";
+-  const hostRepoDir = options.hostRepoDir ?? process.cwd();
+-  const displayLogPath = hostRepoDir === process.cwd() ? path.relative(process.cwd(), options.logPath) : options.logPath;
++  // Penmoss factory: the absolute path, since the daemon's log is read from outside its working
++  // folder (it printed `tail -f ../runs/<run>/agent.log`, relative to the factory's own clone).
++  const displayLogPath = path.resolve(options.logPath);
+   console.log(`${label} Started${branchPart}`);
+   console.log(styleText("dim", `  tail -f ${displayLogPath}`));
+ };
 diff --git a/dist/sandboxes/seatbelt.js b/dist/sandboxes/seatbelt.js
 index d1cf27767ecb0bf43e2082578de4a29a46badc9b..a9cf406fa3c3dd1ce1c954e074bb058449d70d0c 100644
 --- a/dist/sandboxes/seatbelt.js

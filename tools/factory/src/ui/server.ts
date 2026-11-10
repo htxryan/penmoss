@@ -1,7 +1,8 @@
 /**
- * The Factory UI's server (F20, #276): 127.0.0.1 only, a token made at each launch, and `Host`
- * and `Origin` checks so no other site (or a DNS-rebinding page) can read it. GET the page, the
- * view as JSON, or a stream of views over server-sent events; POST /action for Ryan's writes (F21).
+ * The Factory UI's server (F20, #276): 127.0.0.1 only, a token kept in the state folder across
+ * restarts (`ui-token`, A1264), and `Host` and `Origin` checks so no other site (or a
+ * DNS-rebinding page) can read it. GET the page, the view as JSON, or a stream of views over
+ * server-sent events; POST /action for Ryan's writes (F21).
  */
 import { timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
