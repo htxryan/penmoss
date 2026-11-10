@@ -27,6 +27,8 @@ export default defineConfig(
     // Skills' operator scripts, run by hand against the live factory (factory-foreman).
     '.claude/skills/*/scripts/',
     '.sandcastle/',
+    // A factory run's own files in its worktree (result.json, validation's scratch), never the change's.
+    '.factory/',
     // The web bundle copied in for deploys (task web:bundle).
     // The Android app's Gradle output and the editor bundle built into its assets (T32).
     'apps/android/**/build/',

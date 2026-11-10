@@ -6,6 +6,8 @@ spikes/
 # Worktrees Claude Code sessions make inside the checkout.
 .claude/worktrees/
 .sandcastle/
+# A factory run's own files in its worktree (result.json, validation's scratch).
+.factory/
 # Markdown codec fixtures are byte-exact test inputs and outputs.
 packages/core/test/fixtures/
 # Clipboard payloads as apps write them, and the notes they must become.
