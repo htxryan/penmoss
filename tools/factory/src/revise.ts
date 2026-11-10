@@ -12,6 +12,7 @@ import type { IssueSpec } from './labels.ts';
 import { classify } from './platforms.ts';
 import { formatMarker } from './pick.ts';
 import type { AttachedProof } from './proof/body.ts';
+import type { AgentResult } from './result.ts';
 import type { RoundItem } from './review.ts';
 import {
   gateAndProve,
@@ -68,8 +69,7 @@ export async function runRevise(deps: ReviseDeps, input: ReviseInput): Promise<R
   let prompt = input.prompt;
   for (let round = 0; ; round++) {
     const work = await deps.openSandbox(branch);
-    let replies: Readonly<Record<string, string>>;
-    let summary: string;
+    let result: AgentResult;
     try {
       await runAgentPatiently(deps, work, prompt);
       const read = await deps.readResult(work);
@@ -87,22 +87,14 @@ export async function runRevise(deps: ReviseDeps, input: ReviseInput): Promise<R
       }
       if (read.result.status === 'failed')
         return await block('failed', `The review round couldn't finish: ${read.result.summary}`);
-      replies = read.result.replies;
-      summary = read.result.summary;
+      result = read.result;
     } finally {
       await work.close();
     }
     const { paths } = await deps.diff(branch);
-    const verdict = await gateAndProve(deps, branch, classify(paths), spec, {
-      status: 'done',
-      summary,
-      questions: [],
-      platforms: {},
-      tests: [],
-      decisions: [],
-      risks: [],
-      replies,
-    });
+    // The round's own result, so the gate records the proof specs it names (R9).
+    const verdict = await gateAndProve(deps, branch, classify(paths), spec, result);
+    const { replies, summary } = result;
     if (verdict.ok) {
       await deps.push(branch);
       const sha = (await deps.headSha(branch)).slice(0, 10);
