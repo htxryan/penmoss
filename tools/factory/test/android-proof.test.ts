@@ -34,6 +34,13 @@ case "$1 $2" in
     case "$3" in
       wait-for-broadcast-idle) ;;
       instrument)
+        # The launcher's dialog coming back while the test runs (PEN-96), until it's answered.
+        if [ -n "\${STUB_ANR_IN_TEST:-}" ]; then
+          touch "$STUB_LOG.testing"
+          i=0
+          while [ ! -e "$STUB_LOG.waited" ] && [ "$i" -lt 80 ]; do sleep 0.1; i=$((i + 1)); done
+          rm -f "$STUB_LOG.testing"
+        fi
         # The emulator crashing as the test ends (its GL backend, on a loaded Mac).
         [ -n "\${STUB_CRASH_IN_TEST:-}" ] && kill "$(cat "$STUB_LOG.emulator")"
         case "$*" in *Passing*) echo 'OK (1 test)' ;; *) echo 'FAILURES!!!' ;; esac ;;
@@ -44,7 +51,7 @@ case "$1 $2" in
     echo "$n" >"$STUB_LOG.polls"
     if [ "$n" -le "\${STUB_DIALOG_POLLS:-0}" ]; then
       echo '  mCurrentFocus=Window{9f u0 Application Not Responding: com.android.systemui}'
-    elif [ -n "\${STUB_LAUNCHER_ANR:-}" ] && [ ! -e "$STUB_LOG.waited" ]; then
+    elif { [ -n "\${STUB_LAUNCHER_ANR:-}" ] || [ -e "$STUB_LOG.testing" ]; } && [ ! -e "$STUB_LOG.waited" ]; then
       # The launcher's ANR dialog, which stays until it's answered (PEN-90).
       echo '  mCurrentFocus=Window{4c u0 Application Not Responding: com.google.android.apps.nexuslauncher}'
     else
@@ -217,7 +224,12 @@ describe.concurrent(
       expect(at('am wait-for-broadcast-idle')).toBeGreaterThan(at('getprop sys.boot_completed'));
       expect(at('dumpsys window displays')).toBeGreaterThan(at('am wait-for-broadcast-idle'));
       expect(at('dumpsys window displays')).toBeLessThan(at('am instrument'));
-      expect(adb.filter((c) => c.includes('dumpsys window')).length).toBe(2);
+      // Two looks while settling; the watcher looks again while the test runs (PEN-96).
+      expect(
+        adb
+          .slice(0, at('uninstall app.penmoss.debug.test'))
+          .filter((c) => c.includes('dumpsys window')).length,
+      ).toBe(2);
       expect(r.stdout).toContain('[proof] settled in');
       // Error dialogs stay on: hiding them restarts a stalled System UI, which recreates the app.
       expect(adb.some((c) => c.includes('hide_error_dialogs'))).toBe(false);
@@ -279,8 +291,12 @@ describe.concurrent(
       const r = await fixture().run(['app.penmoss.PassingTest'], { STUB_DIALOG_POLLS: '3' });
       expect(r.status, r.stderr).toBe(0);
       const adb = r.calls.filter((c) => c.startsWith('adb '));
-      const polls = adb.filter((c) => c.includes('dumpsys window'));
-      // Three looks at the dialog, then two quiet ones with the launcher in front.
+      const settling = adb.slice(
+        0,
+        adb.findIndex((c) => c.includes('uninstall')),
+      );
+      const polls = settling.filter((c) => c.includes('dumpsys window'));
+      // Three looks at the dialog (one of them just before the tap), then two quiet ones.
       expect(polls.length).toBe(5);
       // Wait, never Close app or hiding the dialogs, which would restart System UI (PEN-90).
       expect(adb.filter((c) => c.includes('input tap'))).toEqual([
@@ -289,8 +305,8 @@ describe.concurrent(
       expect(r.stdout).toMatch(
         /\[proof\] com\.android\.systemui wasn't responding after \d+s: pressed Wait/,
       );
-      const lastPoll = adb.lastIndexOf(polls.at(-1) ?? '');
-      expect(adb.findIndex((c) => c.includes('am instrument'))).toBeGreaterThan(lastPoll);
+      // The test starts once settling is over (the watcher's looks during it come later).
+      expect(adb.findIndex((c) => c.includes('am instrument'))).toBeGreaterThan(settling.length);
       expect(r.stderr).not.toContain("didn't settle");
     }, 30_000);
 
@@ -307,6 +323,23 @@ describe.concurrent(
         /\[proof\] com\.google\.android\.apps\.nexuslauncher wasn't responding after \d+s: pressed Wait/,
       );
       expect(r.stderr).not.toContain("didn't settle");
+    }, 30_000);
+
+    it('answers a dialog that comes back while the test runs, then stops looking (PEN-96)', async () => {
+      const r = await fixture().run(['app.penmoss.PassingTest'], { STUB_ANR_IN_TEST: '1' });
+      expect(r.status, r.stderr).toBe(0);
+      const adb = r.calls.filter((c) => c.startsWith('adb '));
+      const at = (text: string) => adb.findIndex((c) => c.includes(text));
+      // The tap comes after the test started, at the Wait button, and only while the dialog
+      // still has the focus.
+      expect(at('input tap 540 1389')).toBeGreaterThan(at('am instrument'));
+      expect(r.stdout).toContain(
+        "[proof] com.google.android.apps.nexuslauncher wasn't responding during app.penmoss.PassingTest: pressed Wait",
+      );
+      expect(r.stdout).toContain('[proof] app.penmoss.PassingTest: passed');
+      // The watcher is gone once the test ends: no look after the device's log is taken.
+      const logcat = at('exec-out logcat -d');
+      expect(adb.slice(logcat).some((c) => c.includes('dumpsys window'))).toBe(false);
     }, 30_000);
 
     it("ends the video at the test's own screenshot, not on the launcher (PEN-91)", async () => {
