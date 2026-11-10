@@ -387,6 +387,7 @@ describe("today's slots (A1233)", () => {
     expect(lane(1)).toEqual([
       ['PEN-72', 'done'],
       ['PEN-75', 'stop'],
+      ['PEN-84', 'stop'],
       ['PEN-79', 'live'],
     ]);
     expect(lane(2)).toEqual([
@@ -397,7 +398,7 @@ describe("today's slots (A1233)", () => {
   });
 
   it('totals the window', () => {
-    expect(view.totals).toEqual({ started: 6, inReview: 2, merged: 0, blocked: 2 });
+    expect(view.totals).toEqual({ started: 7, inReview: 2, merged: 0, blocked: 3 });
   });
 });
 

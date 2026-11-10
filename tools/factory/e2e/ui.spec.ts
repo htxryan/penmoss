@@ -177,7 +177,7 @@ test.describe('a healthy factory', () => {
     await expect(side.getByRole('button', { name: 'Retry', exact: true })).toBeEnabled();
     // The activity sits under the board: the slots' runs over 12 hours, newest event first.
     await expect(page.locator('.today .lane-row')).toHaveCount(3);
-    await expect(page.locator('.today .barx.t-stop')).toHaveCount(2);
+    await expect(page.locator('.today .barx.t-stop')).toHaveCount(3);
     await expect(page.locator('.today .out p').first()).toContainText('PEN-74');
     await expect(page.locator('.today .out p').first()).toContainText('Reached review');
     // The view is remembered.
@@ -316,14 +316,130 @@ test.describe("the activity timeline's chips", () => {
   });
   test.afterAll(() => s.close());
 
-  // PEN-73 ran two hours, PEN-75 a few seconds (the fixture's ledger).
+  // The fixture's runs: PEN-73 ran two hours (slot 2); PEN-75 and PEN-84 failed in seconds four
+  // minutes apart (slot 1); PEN-79 started eight minutes before now (slot 1, at the right edge).
+  const KEYS = ['PEN-72', 'PEN-73', 'PEN-74', 'PEN-75', 'PEN-77', 'PEN-79', 'PEN-84'];
   const chip = (page: Page, key: string) =>
     page.locator('.today').getByRole('link', { name: new RegExp(`^${key} `) });
-  const fits = (page: Page, key: string) =>
-    chip(page, key).evaluate((a) => {
-      const box = a as unknown as { scrollWidth: number; clientWidth: number };
-      return box.scrollWidth <= box.clientWidth;
-    });
+
+  interface Box {
+    readonly x: number;
+    readonly y: number;
+    readonly w: number;
+    readonly h: number;
+  }
+  interface Run {
+    readonly key: string;
+    readonly slot: string;
+    readonly bar: Box;
+    readonly label: Box;
+    readonly lane: Box;
+    readonly bg: string;
+    readonly line: string;
+    readonly ink: string;
+    readonly laneBg: string;
+  }
+  // The few DOM shapes the page-side callbacks use (this package's types have no DOM library).
+  interface Rect {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  }
+  interface Node {
+    readonly textContent: string | null;
+    readonly previousElementSibling: Node | null;
+    getBoundingClientRect(): Rect;
+    querySelector(selector: string): Node | null;
+    querySelectorAll(selector: string): Iterable<Node>;
+  }
+  interface Window {
+    getComputedStyle(e: Node): { backgroundColor: string; borderTopColor: string; color: string };
+    readonly document: {
+      createRange(): { selectNodeContents(e: Node): void; getBoundingClientRect(): Rect };
+    };
+  }
+
+  /** Every run on the timeline: its bar, its key's text and its lane, as drawn. */
+  const runs = (page: Page): Promise<Run[]> =>
+    page.locator('.today .lane').evaluateAll((found) =>
+      (found as unknown as Node[]).flatMap((lane) => {
+        const win = globalThis as unknown as Window;
+        const getComputedStyle = (e: Node) => win.getComputedStyle(e);
+        const box = (e: { getBoundingClientRect(): Rect }) => {
+          const r = e.getBoundingClientRect();
+          return { x: r.x, y: r.y, w: r.width, h: r.height };
+        };
+        const slot = lane.previousElementSibling?.textContent ?? '';
+        return [...lane.querySelectorAll('a')].map((a) => {
+          const k = a.querySelector('.k') ?? a;
+          // The text itself, which a clipped box would hide.
+          const range = win.document.createRange();
+          range.selectNodeContents(k);
+          const style = getComputedStyle(a);
+          return {
+            key: k.textContent ?? '',
+            slot,
+            bar: box(a),
+            label: box(range),
+            lane: box(lane),
+            bg: style.backgroundColor,
+            line: style.borderTopColor,
+            ink: getComputedStyle(k).color,
+            laneBg: getComputedStyle(lane).backgroundColor,
+          };
+        });
+      }),
+    );
+  const byKey = (all: Run[], key: string): Run => {
+    const r = all.find((x) => x.key === key);
+    if (!r) throw new Error(`no run ${key} on the timeline`);
+    return r;
+  };
+  const extent = (r: Run) => {
+    const x0 = Math.min(r.bar.x, r.label.x);
+    const x1 = Math.max(r.bar.x + r.bar.w, r.label.x + r.label.w);
+    const y0 = Math.min(r.bar.y, r.label.y);
+    const y1 = Math.max(r.bar.y + r.bar.h, r.label.y + r.label.h);
+    return { x0, x1, y0, y1 };
+  };
+
+  /** Every key whole, inside its lane, and no run's bar or key on another's (AC1–AC5, AC8). */
+  async function noneCoveredOrCut(page: Page): Promise<Run[]> {
+    const all = await runs(page);
+    expect(all.map((r) => r.key).sort()).toEqual(KEYS);
+    for (const r of all) {
+      // The key's text lies within its lane, sideways and down.
+      expect(r.label.x, r.key).toBeGreaterThanOrEqual(r.lane.x - 0.5);
+      expect(r.label.x + r.label.w, r.key).toBeLessThanOrEqual(r.lane.x + r.lane.w + 0.5);
+      expect(r.bar.y + r.bar.h, r.key).toBeLessThanOrEqual(r.lane.y + r.lane.h + 0.5);
+      // A key inside its bar is not clipped by it.
+      if (r.label.x >= r.bar.x && r.label.x < r.bar.x + r.bar.w)
+        expect(r.label.x + r.label.w, r.key).toBeLessThanOrEqual(r.bar.x + r.bar.w - 1);
+    }
+    for (const a of all)
+      for (const b of all) {
+        if (a === b || a.slot !== b.slot) continue;
+        const p = extent(a);
+        const q = extent(b);
+        const apart = p.x1 <= q.x0 || q.x1 <= p.x0 || p.y1 <= q.y0 || q.y1 <= p.y0;
+        expect(apart, `${a.key} and ${b.key} overlap`).toBe(true);
+      }
+    return all;
+  }
+
+  /** WCAG's contrast ratio between two `rgb(…)` colours. */
+  function contrast(fg: string, bg: string): number {
+    const lum = (c: string) => {
+      const [r, g, b] = (c.match(/\d+(\.\d+)?/g) ?? []).slice(0, 3).map((n) => {
+        const v = Number(n) / 255;
+        return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * (r ?? 0) + 0.7152 * (g ?? 0) + 0.0722 * (b ?? 0);
+    };
+    const [hi, lo] = [lum(fg), lum(bg)].sort((x, y) => y - x);
+    return ((hi ?? 0) + 0.05) / ((lo ?? 0) + 0.05);
+  }
 
   async function pipeline(page: Page): Promise<void> {
     await open(page, s.url);
@@ -331,32 +447,107 @@ test.describe("the activity timeline's chips", () => {
     await expect(page.locator('.today .lane-row')).toHaveCount(3);
   }
 
-  test('a short run shows its number alone, a long one its full key', async ({ page }) => {
+  test('every run shows its full key, beside a short run, and none covers another', async ({
+    page,
+  }) => {
     await pipeline(page);
-    await expect(chip(page, 'PEN-73')).toHaveText('PEN-73');
-    await expect(chip(page, 'PEN-75')).toHaveText('75');
-    // Neither is cut: a run of seconds still gets a chip as wide as its number.
-    expect(await fits(page, 'PEN-73')).toBe(true);
-    expect(await fits(page, 'PEN-75')).toBe(true);
-    // The tooltip and the accessible name keep the full key, the times and the step.
+    for (const key of KEYS) await expect(chip(page, key)).toHaveText(key);
+    let all = await noneCoveredOrCut(page);
+
+    // AC1: a long run keeps its key inside its bar.
+    const long = byKey(all, 'PEN-73');
+    expect(long.label.x).toBeGreaterThan(long.bar.x);
+    expect(long.label.x + long.label.w).toBeLessThan(long.bar.x + long.bar.w);
+
+    // AC2: a run of seconds is a 6px marker in its chip's colours, its key 4px to the right in
+    // the chip's own ink.
+    const short = byKey(all, 'PEN-75');
+    expect(short.bar.w).toBeGreaterThanOrEqual(6);
+    expect(short.bar.w).toBeLessThan(8);
+    expect(short.label.x - (short.bar.x + short.bar.w)).toBeGreaterThanOrEqual(3.5);
+    expect(short.label.x - (short.bar.x + short.bar.w)).toBeLessThanOrEqual(5);
+    expect(short.bg).toBe('rgb(253, 231, 228)');
+    // The border is the ink, as every timeline chip's has been (.barx's `border: 1px solid`).
+    expect(short.line).toBe('rgb(122, 27, 19)');
+    expect(short.ink).toBe('rgb(122, 27, 19)');
+    // A long run's chip is drawn as before.
+    expect(long.bg).toBe('rgb(253, 231, 228)');
+    expect(long.ink).toBe('rgb(122, 27, 19)');
+
+    // AC3: the live run at the right edge has its key on the left of its marker.
+    const live = byKey(all, 'PEN-79');
+    expect(live.bar.x + live.bar.w).toBeLessThanOrEqual(live.lane.x + live.lane.w + 0.5);
+    expect(live.label.x + live.label.w).toBeLessThanOrEqual(live.bar.x - 3.5);
+
+    // AC4: PEN-84, four minutes after PEN-75, takes a second row, and slot 1's lane grows.
+    const clash = byKey(all, 'PEN-84');
+    expect(clash.bar.y).toBeGreaterThan(short.bar.y + short.bar.h);
+    expect(short.lane.h).toBe(50);
+    expect(long.lane.h).toBe(26);
+
+    // AC7: the key opens the card; the tooltip and accessible name keep key, times and summary.
     await expect(chip(page, 'PEN-75')).toHaveAttribute(
       'title',
       /^PEN-75 \d\d:\d\d–\d\d:\d\d: Failed before the agent started/,
     );
-    // In dark too, then held on screen for the proof's recording.
+    await chip(page, 'PEN-75').locator('.k').click();
+    await expect(page).toHaveURL(/#pipeline\/issue-75$/);
+    await expect(page.locator('.side #issue-75')).toBeVisible();
+    // The marker itself too.
+    await chip(page, 'PEN-84').click({ position: { x: 3, y: 10 } });
+    await expect(page).toHaveURL(/#pipeline\/issue-84$/);
+
+    // AC8: placed again at a new width, and back (the placing runs on the next frame).
+    const wide = byKey(all, 'PEN-73').lane.w;
+    await page.setViewportSize({ width: 800, height: 720 });
+    await expect(async () => {
+      expect(byKey(await runs(page), 'PEN-73').lane.w).toBeLessThan(wide - 300);
+      await noneCoveredOrCut(page);
+    }).toPass();
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await expect(async () => {
+      expect(byKey(await runs(page), 'PEN-73').lane.w).toBe(wide);
+      await noneCoveredOrCut(page);
+    }).toPass();
+
+    // AC6: in dark, the dark chips' colours, each key readable against its lane.
     await page.getByRole('button', { name: 'Dark', exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-    await chip(page, 'PEN-75').scrollIntoViewIfNeeded();
+    await expect(chip(page, 'PEN-75')).toHaveCSS('background-color', 'rgb(58, 26, 23)');
+    all = await noneCoveredOrCut(page);
+    const dark = byKey(all, 'PEN-75');
+    expect(dark.line).toBe('rgb(255, 195, 188)');
+    expect(dark.ink).toBe('rgb(255, 195, 188)');
+    for (const r of all)
+      if (r.label.x >= r.bar.x + r.bar.w || r.label.x + r.label.w <= r.bar.x)
+        expect(contrast(r.ink, r.laneBg), r.key).toBeGreaterThanOrEqual(4.5);
+    // Held on screen for the proof's recording.
+    await page.locator('.today .tl').scrollIntoViewIfNeeded();
     await page.waitForTimeout(2000);
-    await expect(chip(page, 'PEN-75')).toHaveText('75');
+    await expect(chip(page, 'PEN-84')).toHaveText('PEN-84');
   });
 
-  test('at phone width the chips still show their numbers in full', async ({ page }) => {
+  test('at phone width the timeline scrolls sideways and every key is whole', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await pipeline(page);
-    await expect(chip(page, 'PEN-75')).toHaveText('75');
-    expect(await fits(page, 'PEN-75')).toBe(true);
-    await expect(chip(page, 'PEN-73')).toHaveText('PEN-73');
+    // AC5: the 720px least width, scrolled sideways.
+    const tl = page.locator('.today .tl');
+    const sizes = await tl.evaluate((found) => {
+      const e = found as unknown as {
+        scrollWidth: number;
+        clientWidth: number;
+        firstElementChild: { getBoundingClientRect(): Rect } | null;
+      };
+      return {
+        scroll: e.scrollWidth,
+        client: e.clientWidth,
+        inner: e.firstElementChild?.getBoundingClientRect().width ?? 0,
+      };
+    });
+    expect(sizes.inner).toBeGreaterThanOrEqual(720);
+    expect(sizes.scroll).toBeGreaterThan(sizes.client);
+    for (const key of KEYS) await expect(chip(page, key)).toHaveText(key);
+    await noneCoveredOrCut(page);
   });
 });
 
