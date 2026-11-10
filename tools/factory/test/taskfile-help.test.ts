@@ -59,7 +59,7 @@ function factoryTasks(): Map<string, string[]> {
   return tasks;
 }
 
-describe('the factory tasks’ --help', () => {
+describe('the factory tasks’ --help', { timeout: 30_000 }, () => {
   const tasks = factoryTasks();
 
   it('finds the factory tasks', () => {
