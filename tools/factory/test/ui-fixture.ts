@@ -106,6 +106,10 @@ export function evening(stateDir = '~/nonexistent-factory-state') {
     line('75-mw8i1uya-7565', 'failed', ago(139.7), {
       error: 'claude-code exited with code 127:\n/bin/sh: claude: command not found\n',
     }),
+    // Four minutes later on the same slot, PEN-84's run failed in seconds too, so on the timeline
+    // its key would clash with PEN-75's (PEN-99).
+    line('84-f', 'claimed', ago(136), { issue: 84 }),
+    line('84-f', 'failed', ago(135.9), { error: 'gh: HTTP 502 while fetching the branch\n' }),
     line('73-a', 'claimed', ago(320), { issue: 73 }, 2),
     line('73-a', 'agent-started', ago(319), { round: 0 }, 2),
     line('73-a', 'agent-finished', ago(290), { status: 'done' }, 2),

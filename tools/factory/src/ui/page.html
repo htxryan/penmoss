@@ -1068,6 +1068,20 @@
         text-decoration: none;
         border: 1px solid;
       }
+      /* A run too short for its key: the chip at its true length, its key beside it (PEN-99). */
+      .barx.beside {
+        overflow: visible;
+        padding: 0;
+      }
+      .barx.beside .k {
+        position: absolute;
+        top: 0;
+        left: calc(100% + 5px);
+      }
+      .barx.beside.left .k {
+        left: auto;
+        right: calc(100% + 5px);
+      }
       .out {
         display: flex;
         flex-direction: column;
@@ -2045,22 +2059,62 @@
         flush();
         return rows;
       }
-      // A timeline chip shows its full key ("PEN-85") when that fits its width, else the number.
-      const chips = new ResizeObserver((entries) => {
+      // The timeline's runs are placed in pixels, so after the lanes are laid out, and again when
+      // they change width (PEN-99). Every run shows its full key: inside its chip when the chip
+      // holds it, else beside the chip drawn at its true length (6px at least), on its left at
+      // the lane's right edge. A run whose chip or key would overlap an earlier one on its slot,
+      // or come within 4px of a key outside a chip, takes a further row, and the lane grows to
+      // hold its rows.
+      const MIN_RUN = 6;
+      const GAP = 4;
+      const ROW = 24;
+      const placing = new ResizeObserver((entries) => {
         for (const { target } of entries) {
-          // A re-render drops the old chips; their last resize (to nothing) lets them go.
+          // A re-render drops the old timeline; its last resize (to nothing) lets it go.
           if (!target.isConnected) {
-            chips.unobserve(target);
+            placing.unobserve(target);
             continue;
           }
-          target.textContent = target.dataset.key;
-          if (target.scrollWidth > target.clientWidth) target.textContent = target.dataset.n;
+          placeRuns(target.closest('.tl'));
         }
       });
-      function fitChip(a, key, n) {
-        a.dataset.key = key;
-        a.dataset.n = n;
-        chips.observe(a);
+      function placeRuns(tl) {
+        if (!tl?.isConnected) return;
+        const from = Number(tl.dataset.from);
+        const span = Number(tl.dataset.to) - from;
+        for (const lane of tl.querySelectorAll('.lane')) {
+          const width = lane.clientWidth;
+          if (!width) continue;
+          const runs = [...lane.querySelectorAll('a.barx')];
+          // Measure every key first, unconstrained, then place: one layout, not one per run.
+          for (const a of runs) a.classList.add('beside');
+          const keyWidths = runs.map((a) => a.querySelector('.k').getBoundingClientRect().width);
+          const rows = [];
+          runs.forEach((a, i) => {
+            const start = Number(a.dataset.start);
+            const w = Math.min(
+              width,
+              Math.max(MIN_RUN, ((Number(a.dataset.end) - start) / span) * width),
+            );
+            const x = Math.min(((start - from) / span) * width, width - w);
+            const kw = keyWidths[i];
+            // Padding and border take 12px of a chip with its key inside.
+            const inside = kw <= w - 12;
+            const left = !inside && x + w + GAP + kw > width;
+            a.classList.toggle('beside', !inside);
+            a.classList.toggle('left', left);
+            // What the run takes, with 4px kept clear beyond a key outside its chip.
+            const lo = left ? x - 2 * GAP - kw : x;
+            const hi = inside || left ? x + w : x + w + 2 * GAP + kw;
+            let row = rows.findIndex((taken) => taken.every(([a0, a1]) => lo >= a1 || hi <= a0));
+            if (row < 0) row = rows.push([]) - 1;
+            rows[row].push([lo, hi]);
+            a.style.left = `${x.toFixed(1)}px`;
+            a.style.width = `${w.toFixed(1)}px`;
+            a.style.top = `${3 + row * ROW}px`;
+          });
+          lane.style.height = `${26 + Math.max(0, rows.length - 1) * ROW}px`;
+        }
       }
       function today(v) {
         const sec = el('section', 'today');
@@ -2096,24 +2150,23 @@
           const row = el('div', 'lane-row');
           const l = el('div', 'lane');
           for (const b of lane.bars) {
-            const a = el('a', `barx t-${b.tone}`, b.key);
+            const a = el('a', `barx t-${b.tone}`);
+            a.append(el('span', 'k', b.key));
             a.href = href('pipeline', b.issue);
-            const start = Math.max(from, Date.parse(b.start));
-            // Never narrower than the card's number (padding and border take 12px). A chip that
-            // starts near now moves left by what it would overflow, so it stays in the lane.
-            const n = String(b.issue);
-            const least = `calc(${n.length}ch + 12px)`;
-            a.style.left = `min(${pct(new Date(start).toISOString())}, calc(100% - ${least}))`;
-            a.style.width = `max(${least}, ${(((Date.parse(b.end) - start) / (to - from)) * 100).toFixed(2)}%)`;
+            // Placed by placeRuns once the lane has a width.
+            a.dataset.start = String(Math.max(from, Date.parse(b.start)));
+            a.dataset.end = String(Date.parse(b.end));
             a.title = `${b.key} ${hhmm(b.start)}–${hhmm(b.end)}: ${b.label}`;
             a.setAttribute('aria-label', a.title);
-            // The full key when it fits, else the number alone; checked again on every resize.
-            fitChip(a, b.key, n);
             l.append(a);
           }
           row.append(el('span', 'lname', `Slot ${lane.slot}`), l);
           inner.append(row);
         }
+        tl.dataset.from = String(from);
+        tl.dataset.to = String(to);
+        // The tick row is as wide as the lanes, and its height never changes as they grow.
+        placing.observe(ticks);
         tl.append(inner);
         sec.append(tl);
         const out = el('div', 'out');
@@ -2244,6 +2297,8 @@
         document.getElementById('top').replaceChildren(...header(v, r.mode));
         const app = document.getElementById('app');
         app.replaceChildren(...(r.mode === 'pipeline' ? pipeline(v, sel) : inbox(v, sel)));
+        // Grow the lanes before the scrolls come back, or a page scrolled to its end jumps.
+        placeRuns(app.querySelector('.tl'));
         restoreScrolls(kept);
         if (r.issue !== null && NARROW.matches && scrolledTo !== r.issue)
           document.getElementById(`issue-${r.issue}`)?.scrollIntoView();
