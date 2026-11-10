@@ -117,6 +117,8 @@ Whenever the factory needs you, it says why on the issue and adds **Blocked**. I
 
 `task factory:report` shows the last seven days' throughput (started, reached In Review, merged), gate and CI rounds per issue, time from claim to In Review, and the share of issues worked that a run left Blocked. `-- --from 2026-11-01 --to 2026-11-08` picks another range (local dates; `--to` is exclusive). It reads only the run ledger, `runs.jsonl` in the state folder (each run's events, and each merge's `merged` and `done`), never the tracker, so it counts the runs' own Blocked stops, not planning questions or a Blocked you set yourself, and after a change of `tracker` it covers only the runs since (the older ledger is in `archive/`).
 
+Test cards are canceled and their PRs closed unmerged once they have shown what they test.
+
 ## Troubleshooting
 
 | What you see                                              | Do this                                                                                                                                                                                                                                                                                                                                                        |
