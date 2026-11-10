@@ -386,6 +386,13 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
 
     const { paths, commits, subject } = await deps.diff(branch);
     if (commits === 0) return block('no-commits', 'The agent reported done but committed nothing.');
+    // Commits that cancel out (PEN-80: a skip, then the gate's round took it back out) leave
+    // nothing to review; a PR would be empty, titled after the undone commit (A1268).
+    if (paths.length === 0)
+      return block(
+        'no-changes',
+        `The agent reported done, but the branch's ${commits} commit(s) change nothing against main, so there is no PR to open: ${result.summary}`,
+      );
     const scope = classify(paths);
     const verdict = await gateAndProve(
       deps,

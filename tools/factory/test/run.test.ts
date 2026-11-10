@@ -452,6 +452,15 @@ describe('runImplement', () => {
     expect(f.events).not.toContain('agent-finished');
   });
 
+  it("opens no PR when the branch's commits change nothing against main (A1268)", async () => {
+    // PEN-80: the gate refused a skip, the agent took it back out, and an empty PR opened.
+    const f = fake({ paths: [], commits: 2 });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome).toMatchObject({ kind: 'blocked', reason: 'no-changes' });
+    expect(f.calls).not.toContain('pr');
+    expect(f.comments.at(-1)).toMatch(/change nothing against main, so there is no PR to open/);
+  });
+
   it('runs the agent again when the branch has none of the finished round’s commits', async () => {
     const f = fake({ commits: 0 });
     await runImplement(f.deps, {

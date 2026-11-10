@@ -233,6 +233,17 @@ describe('the Linear tracker (L3)', () => {
     expect(await createLinearTracker(config, client).isBlocked(3)).toBe(true);
   });
 
+  it('treats a canceled card as Blocked, so a run in flight leaves it alone (A1268)', async () => {
+    const canceled = fake({
+      Card: () => ({ issue: card(3, { state: { name: 'Canceled', type: 'canceled' } }) }),
+    });
+    expect(await createLinearTracker(config, canceled.client).isBlocked(3)).toBe(true);
+    const working = fake({
+      Card: () => ({ issue: card(3, { state: { name: 'In Review', type: 'started' } }) }),
+    });
+    expect(await createLinearTracker(config, working.client).isBlocked(3)).toBe(false);
+  });
+
   it('has no way to clear Blocked; only the UI, as Ryan, removes the label (R23)', async () => {
     const tracker = createLinearTracker(config, fake({}).client) as unknown as Record<
       string,
