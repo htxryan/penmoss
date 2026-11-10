@@ -226,3 +226,23 @@ test('Settings: the bar, the heading and the sections stay put; the content scro
   expect(await page.evaluate(() => document.scrollingElement?.scrollTop ?? 0)).toBe(0);
   expect(errors).toEqual([]);
 });
+
+test('Settings: the heading keeps the page gutter, in line with the sections (PEN-64)', async ({
+  page,
+}) => {
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/settings/shortcuts');
+  const heading = page.locator('.settings-title > h1');
+  await expect(heading).toBeVisible();
+  await expect(page.locator('.settings-nav a').first()).toBeVisible();
+  const left = async (selector: string) => (await page.locator(selector).first().boundingBox())!.x;
+  // The heading and the sections' list start at the same gutter, well clear of the window's edge.
+  const headingLeft = await left('.settings-title > h1');
+  expect(headingLeft).toBeGreaterThan(20);
+  expect(Math.abs(headingLeft - (await left('.settings-nav')))).toBeLessThanOrEqual(1);
+  // Held on screen, so the proof's recording shows the heading in line.
+  await page.waitForTimeout(2_000);
+  await expect(heading).toBeInViewport();
+  expect(errors).toEqual([]);
+});

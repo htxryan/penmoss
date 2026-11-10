@@ -2467,7 +2467,7 @@ a {
   }
 
   .settings-bar,
-  .settings-page > h1 {
+  .settings-page > .settings-title {
     flex: none;
     padding-inline: var(--settings-gutter);
   }
