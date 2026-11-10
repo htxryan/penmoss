@@ -279,7 +279,10 @@ export function createLinearTracker(
     async isBlocked(n) {
       const raw = await client.request<{ issue: RawCard | null }>(ONE, { id: key(n) });
       // A card that has gone (deleted, moved to another team) is treated as Blocked: hands off.
-      return raw.issue ? toItem(raw.issue, config, 0).blocked : true;
+      // So is a canceled one: PEN-80's run, still waiting on CI, moved its canceled card back to
+      // In Review and posted on its closed PR (A1268).
+      if (!raw.issue || raw.issue.state.type === 'canceled') return true;
+      return toItem(raw.issue, config, 0).blocked;
     },
     comment,
     async setStatus(item, status) {

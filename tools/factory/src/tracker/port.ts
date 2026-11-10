@@ -52,7 +52,7 @@ export interface Tracker {
   readonly owner: string;
   readBoard(): Promise<Board>;
   readIssue(issue: number): Promise<Issue>;
-  /** Whether the card is Blocked right now: checked before every side effect (R23). */
+  /** Whether the card is Blocked (or canceled, or gone) right now: checked before every side effect (R23). */
   isBlocked(issue: number): Promise<boolean>;
   comment(issue: number, body: string): Promise<void>;
   setStatus(item: BoardItem, status: string): Promise<void>;
