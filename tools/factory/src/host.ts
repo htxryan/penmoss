@@ -198,6 +198,25 @@ export function sandboxStartCommand(base: string): string {
   ].join(' ');
 }
 
+/**
+ * Both slots' sandboxes are worktrees of one clone, so two starting together both fetch main into
+ * its `refs/remotes/origin/main`, and one can lose the ref's lock ("cannot lock ref"): PEN-79 and
+ * PEN-80 were picked in the same second. A start that lost it goes again (A1267).
+ */
+export const REF_LOCK = /cannot lock ref|unable to update local ref|\.lock': File exists/;
+
+export async function execPastRefLocks(
+  handle: Pick<RunSandbox, 'exec'>,
+  command: string,
+  pause: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  for (let attempt = 1; ; attempt++) {
+    const ran = await handle.exec(command);
+    if (ran.exitCode === 0 || attempt >= 4 || !REF_LOCK.test(ran.stderr)) return ran;
+    await pause(500 * attempt + Math.floor(Math.random() * 500));
+  }
+}
+
 /** The agent's raw output stream in the run folder, beside Sandcastle's `agent.log`. */
 export const AGENT_STREAM = 'agent.stream.jsonl';
 
@@ -345,7 +364,7 @@ export function hostDeps(options: HostOptions): HostDeps {
       // Sandcastle makes a new branch from the clone's origin/main, which only the last gate
       // moved: the sandbox starts from the main the host fetched instead (A1232).
       base ??= await fetchMainInto(exec, publish);
-      const started = await handle.exec(sandboxStartCommand(base));
+      const started = await execPastRefLocks(handle, sandboxStartCommand(base));
       if (started.exitCode !== 0) {
         await handle.close();
         throw new Error(
@@ -620,7 +639,7 @@ export function hostDeps(options: HostOptions): HostDeps {
       !(await descendsFrom(exec, publish, MAIN, await fetchRun(branch))),
     rebase: async (handle) => {
       base ??= await fetchMainInto(exec, publish);
-      const fetched = await handle.exec(sandboxMainCommand(base));
+      const fetched = await execPastRefLocks(handle, sandboxMainCommand(base));
       if (fetched.exitCode !== 0)
         throw new Error(`the sandbox couldn't fetch main: ${fetched.stderr.trim()}`);
       return rebaseOntoMain(handle, join(state, 'decision-numbers'));
