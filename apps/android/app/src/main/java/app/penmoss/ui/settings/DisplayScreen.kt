@@ -62,7 +62,7 @@ fun DisplayScreen(
         }
         ListItem(
             headlineContent = { Text("Notes in Recent Notes") },
-            supportingContent = { Text("${layout.recentCount}") },
+            supportingContent = { Text("${layout.recentCount} notes") },
             trailingContent = {
                 Row {
                     TextButton(

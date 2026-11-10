@@ -115,7 +115,7 @@ class DisplayAndSyncStopTest {
         assertEquals(listOf("Today", "This Week", "Graph", "Commands"), displayChoices(Settings()).map { it.label })
     }
 
-    /** Recent Notes' − and + say what they change (T53 pass), and the notebook names switch is A984's. */
+    /** Recent Notes' − and + say what they change (T53 pass), its count says "notes" (PEN-87), and the notebook names switch is A984's. */
     @Test
     fun theRecentCountsButtonsAreNamedAndStepTheCount() {
         val counts = mutableListOf<Int>()
@@ -127,6 +127,8 @@ class DisplayAndSyncStopTest {
         compose.onNodeWithTag("recentFewer").performScrollTo().assertContentDescriptionEquals("Fewer Notes in Recent Notes").performClick()
         compose.onNodeWithTag("recentMore").assertContentDescriptionEquals("More Notes in Recent Notes").performClick()
         assertEquals(listOf(9, 11), counts)
+        // The count reads as a number of notes (PEN-87).
+        compose.onNodeWithText("10 notes").assertExists()
         // A984's and the web's words for Quick Access's notebook names.
         compose.onNodeWithTag("display-quickAccessNotebook").performScrollTo()
         compose.onNodeWithText("Show Notebook Names in Quick Access").assertExists()
