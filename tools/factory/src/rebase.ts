@@ -97,6 +97,18 @@ export function unpadRow(line: string): string {
 export const unpad = (text: string): string => text.split('\n').map(unpadRow).join('\n');
 
 /**
+ * Of `lines` (1-based lines of `text` a branch's diff shows as added), the ones main doesn't
+ * already have once the table's padding is taken out. An agent's Prettier run re-pads the whole
+ * table around its new row, so every row reads as added; the factory then numbered `A-NEW-1`
+ * where older decisions mention it as text (PEN-81 and PEN-82 rewrote A1248 and A1250, A1271).
+ */
+export function newRows(text: string, lines: ReadonlySet<number>, main: string): Set<number> {
+  const known = new Set(main.split('\n').map(unpadRow));
+  const all = text.split('\n');
+  return new Set([...lines].filter((n) => !known.has(unpadRow(all[n - 1] ?? ''))));
+}
+
+/**
  * The stopped commit's docs/decisions.md merged with padding ignored: the merge base, main's side
  * and the branch's side, each unpadded, merged by `git merge-file`; both sides adding rows at
  * one place resolves as above; then Prettier pads the table again. Null when a real conflict
