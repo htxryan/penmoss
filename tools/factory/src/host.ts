@@ -385,9 +385,12 @@ export function hostDeps(options: HostOptions): HostDeps {
       const sandbox = sandboxes.get(handle);
       if (!sandbox) throw new Error('not a sandbox this run opened');
       const logFile = join(runDir, 'agent.log');
+      // Sandcastle appends every session of the run to agent.log. Only this session's part is
+      // read, or a retry after a usage limit would find the old limit message and wait again.
+      const start = existsSync(logFile) ? statSync(logFile).size : 0;
       const tail = () => {
         try {
-          return readFileSync(logFile, 'utf8').slice(-8000);
+          return readFileSync(logFile).subarray(start).toString('utf8').slice(-8000);
         } catch {
           return '';
         }
