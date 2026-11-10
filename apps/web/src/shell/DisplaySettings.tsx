@@ -184,6 +184,9 @@ function MetadataSettings() {
       </fieldset>
       <fieldset className="display-toggles" data-testid="metadata-status-bar">
         <legend>Note Metadata in the Status Bar</legend>
+        <p className="muted settings-help" data-testid="metadata-status-bar-hint">
+          Pick what the status bar shows for the open note.
+        </p>
         {STATUS_BAR_FIELDS.map((field) => (
           <label key={field} className="display-toggle">
             <input
