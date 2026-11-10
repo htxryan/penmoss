@@ -748,11 +748,7 @@ export async function watchCi(
       }
       continue;
     }
-    const logs = await Promise.all(
-      summary.failed.map(
-        async (c) => `### ${c.name}\n\n\`\`\`\n${await deps.failedLog(c)}\n\`\`\``,
-      ),
-    );
+    const logs = await failedLogs(deps, summary.failed);
     deps.log('ci-red', { failed: summary.failed.map((c) => c.name), repairs });
     // Ryan's comment names the failing jobs and their last log lines, whichever way it stops.
     const failure = `${run.pr}\n\n${summary.failed.map((c) => `- [${c.name}](${c.link})${runIdOf(c) ? ` (run ${runIdOf(c)})` : ''}`).join('\n')}\n\n${logs.join('\n\n')}`;
@@ -775,6 +771,16 @@ export async function watchCi(
     since = deps.now();
     saidStalled = false;
   }
+}
+
+/** Each failed job's last log lines, as the repair prompt and Ryan's comment show them. */
+export function failedLogs(
+  deps: Pick<RunDeps, 'failedLog'>,
+  failed: readonly CheckRun[],
+): Promise<string[]> {
+  return Promise.all(
+    failed.map(async (c) => `### ${c.name}\n\n\`\`\`\n${await deps.failedLog(c)}\n\`\`\``),
+  );
 }
 
 /** One repair session: the failed logs to the agent, then the gate again, then a push. */
