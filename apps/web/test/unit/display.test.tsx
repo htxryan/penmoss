@@ -80,6 +80,10 @@ describe('Settings → Display (T42, A576)', () => {
     const html = render('/settings/display');
     expect(html).toContain('href="/settings/display"');
     expect(html).toContain('data-testid="display-settings"');
+    // PEN-85: a muted hint right under the heading.
+    expect(html).toMatch(
+      /Display<\/h2><p class="muted settings-help" data-testid="display-applies-hint">Changes apply at once\.<\/p>/,
+    );
     for (const item of ['today', 'thisWeek', 'graph', 'commands']) {
       expect(html, item).toContain(`data-testid="display-${item}"`);
     }

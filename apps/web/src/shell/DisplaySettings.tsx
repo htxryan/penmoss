@@ -46,6 +46,9 @@ export function DisplaySettings() {
       data-testid="display-settings"
     >
       <h2 id={`${id}-h`}>Display</h2>
+      <p className="muted settings-help" data-testid="display-applies-hint">
+        Changes apply at once.
+      </p>
       <p>
         Choose the shortcuts in the sidebar&rsquo;s row of icons under New Note, and in its column
         when the sidebar is collapsed. A hidden one still works from its keys and the command

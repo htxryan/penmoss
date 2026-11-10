@@ -22,6 +22,8 @@ Open Settings with ⌘, on the Mac, or from a notebook's menu on Android. Most s
 
 ### Display
 
+Changes here apply at once, with no reload or restart.
+
 | Setting                             | What it does                                                                                                                                                      |
 | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Show in the sidebar                 | Which of Today, This Week, Graph and Commands the sidebar's top row shows (Search always shows)                                                                   |
