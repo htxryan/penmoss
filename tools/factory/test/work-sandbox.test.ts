@@ -6,7 +6,14 @@
  * with commits of its own onto it when that goes cleanly, and otherwise leaves it where it is.
  * Nothing planted here runs a command.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -243,6 +250,26 @@ describe("the agent's round in its sandbox", () => {
     };
     expect((await deps.readResult(handle)).ok).toBe(true);
     expect(readFileSync(join(runDir(), 'result.json'), 'utf8')).toBe(text);
+  });
+
+  it("reads only this session's part of agent.log, which every session of the run appends to", async () => {
+    // A retry after a usage limit that wrote little would otherwise find the first session's
+    // limit message in the log's tail, and wait for the reset again.
+    const deps = hostDeps(options(config, fakeExec().exec));
+    const sandbox = await deps.openSandbox(BRANCH);
+    sandcastle.run = (opts) => {
+      appendFileSync(opts.logging.path, 'Claude AI usage limit reached|1794067200\n');
+      return Promise.reject(new Error('claude-code exited with code 1'));
+    };
+    expect((await deps.runAgent(sandbox, 'p'))?.output).toMatch(/usage limit reached/);
+    sandcastle.run = (opts) => {
+      appendFileSync(opts.logging.path, 'Wrote .factory/result.json\n');
+      return Promise.resolve({});
+    };
+    const output = (await deps.runAgent(sandbox, 'p'))?.output ?? '';
+    expect(output).toContain('Wrote .factory/result.json');
+    expect(output).not.toMatch(/usage limit reached/);
+    expect(readFileSync(join(runDir(), 'agent.log'), 'utf8')).toMatch(/usage limit reached/);
   });
 
   it('leaves any other agent failure as it is', async () => {
