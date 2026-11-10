@@ -957,6 +957,41 @@ describe('the title against a first heading (T39 pass 3, A554)', () => {
       expect(title).toBeGreaterThanOrEqual(heading * 1.15);
   });
 
+  it('gives a picture its own line with no empty line under it, as the web does (PEN-66, A1283)', () => {
+    const web = css('../../../web/src/styles.css');
+    const phone = css('../src/android.css');
+    // The page loads the web's stylesheet (main.ts), whose picture rules lay a picture out: the
+    // node inline, its frame (the picture) an inline grid its own size, so ProseMirror's cursor
+    // helpers after it share its line rather than making an empty one.
+    const main = css('../src/main.ts');
+    expect(main).toContain("import '../../../web/src/styles.css';");
+    expect(web).toMatch(/\n\.note-body \.pm-image-frame \{[^}]*display: inline-grid;/);
+    // Not positioned (only while its fields show): beside a positioned box in the node, Chromium
+    // and the WebView draw no caret after the picture (AC5).
+    expect(web).not.toMatch(/\n\.note-body \.pm-image-frame \{[^}]*position:/);
+    expect(web).not.toMatch(/\n\.note-body \.pm-image-resize \{[^}]*position:/);
+    // Text keeps off the picture's line: a block 0.4 em tall breaks the line before it, unless it
+    // starts its line; the frame's end margin, as wide as the line, wraps what follows, unless the
+    // picture ends its block.
+    expect(web).toMatch(
+      /\n\.note-body \.pm-image::before \{[^}]*display: block;[^}]*height: 0\.4em;/,
+    );
+    expect(web).toMatch(/\.ProseMirror-separator \+ \.pm-image::before \{\s*display: none;/);
+    expect(web).toMatch(/\.pm-image \+ \.pm-image::before \{\s*height: 0;/);
+    expect(web).toMatch(
+      /\n\.note-body \.pm-image-frame \{\s*width: max-content;\s*margin-inline-end: 100%;/,
+    );
+    expect(web).toMatch(
+      /\+ \.ProseMirror-separator \+ \.ProseMirror-trailingBreak\)[^{]*\{\s*margin-inline-end: 0;\s*padding-inline-end: 3px;/,
+    );
+    // No picture rule of its own on the phone undoes that, and the old lone-picture exception
+    // (a `:has()` on the paragraph's exact children, A1107) is gone.
+    expect(phone).not.toMatch(
+      /\.pm-image(-frame)?(::before)? \{[^}]*(display|width|margin[a-z-]*|height):/,
+    );
+    expect(web).not.toContain('.ProseMirror-trailingBreak:last-child');
+  });
+
   it('sets the title in the Note Font, as the web does, not the interface font (T51, A944)', () => {
     const web = css('../../../web/src/styles.css');
     const phone = css('../src/android.css');

@@ -1799,14 +1799,35 @@ a {
   background: var(--pm-border);
 }
 
-/* Inline images (T10): shown from local bytes; resize handle and fields while selected. */
-.note-body .pm-image {
-  position: relative;
-  display: inline-block;
+/*
+ * Inline images (T10): shown from local bytes; resize handle and fields while selected. The frame
+ * lays the picture (or its placeholder) and the handle over each other in one grid cell rather than
+ * positioning the handle: Chromium draws no caret beside a positioned box inside the node, so a
+ * caret after a picture that ends its block would not show (PEN-66, A1283). Only while the fields
+ * show is the frame positioned, for them to hang below the picture; the caret is elsewhere then.
+ */
+.note-body .pm-image-frame {
+  display: inline-grid;
+  box-sizing: border-box;
   max-width: 100%;
+  grid-template-columns: minmax(0, max-content);
   vertical-align: bottom;
   border-radius: 0;
   line-height: 0;
+}
+
+.note-body .pm-image-frame > * {
+  grid-area: 1 / 1;
+}
+
+/* A picture held back on mobile data has its Tap to Load button beside its alt text (T40 P8). */
+.note-body .pm-image-frame > .pm-image-load {
+  grid-area: 1 / 2;
+  align-self: start;
+}
+
+.note-body .pm-image-frame:has(> .pm-image-tools:not([hidden])) {
+  position: relative;
 }
 
 .note-body .pm-image img {
@@ -1836,16 +1857,15 @@ a {
   display: inline-block;
 }
 
-.note-body .pm-image.ProseMirror-selectednode {
+.note-body .pm-image.ProseMirror-selectednode > .pm-image-frame > :is(img, .pm-image-fallback) {
   outline: 2px solid var(--pm-focus);
   outline-offset: 2px;
 }
 
 .note-body .pm-image-resize {
-  position: absolute;
-  right: -5px;
-  bottom: -5px;
   width: 12px;
+  margin: 0 -5px -5px 0;
+  place-self: end;
   height: 12px;
   border: 2px solid var(--pm-bg);
   border-radius: 50%;
@@ -1855,7 +1875,7 @@ a {
   touch-action: none;
 }
 
-.note-body .pm-image:hover .pm-image-resize,
+.note-body .pm-image-frame:hover .pm-image-resize,
 .note-body .pm-image.ProseMirror-selectednode .pm-image-resize {
   opacity: 1;
 }
@@ -5368,34 +5388,64 @@ button.history-entry:hover {
 }
 
 /*
- * Pictures never sit beside text (A506): each takes its own line, text above and below,
- * in a paragraph or a list item alike. Only the rendering: the markdown keeps the picture
- * inline where it was written.
+ * Pictures never sit beside text (A506), and leave no empty line under them (PEN-66, A1283).
+ * The node is inline and its picture (the frame: the image or its placeholder, with the handle
+ * and the fields) an inline box its own size, so ProseMirror's cursor helpers after a picture that
+ * ends its block (a separator and a line break) share the picture's line instead of making a new
+ * one, and the caret after it stands at its right edge. Text keeps off that line: before the
+ * picture, a block 0.4 em tall breaks the line (none where the picture already starts its line,
+ * after a separator: first in its block, after a line break or after another picture; none tall
+ * under another picture); after it, the frame's end margin, as wide as the line, wraps what
+ * follows onto the next line (none when the picture ends its block, but 3 px of padding: Chromium
+ * draws the caret after a picture at the frame's edge, which would otherwise be over the picture's
+ * last column). Each rule looks only at the
+ * picture's own neighbours, so a lone, linked, bold or highlighted picture, one after text, in a
+ * list item, quote, table cell or heading, and several in a row all come out the same. Only the
+ * rendering: the markdown keeps the picture inline where it was written.
  */
-.note-body .pm-image {
+.note-body .pm-image::before {
   display: block;
-  width: fit-content;
-  margin: 0.4em 0;
+  height: 0.4em;
+  content: '';
+}
+
+.note-body .ProseMirror-separator + .pm-image::before {
+  display: none;
+}
+
+.note-body .pm-image + .pm-image::before {
+  height: 0;
+}
+
+.note-body .pm-image-frame {
+  width: max-content;
+  margin-inline-end: 100%;
+}
+
+.note-body
+  .pm-image:is(
+    :has(+ .ProseMirror-separator:last-child),
+    :has(+ .ProseMirror-separator + .ProseMirror-trailingBreak),
+    :has(+ .ProseMirror-trailingBreak),
+    :has(+ .pm-comment-marker + .ProseMirror-separator)
+  )
+  > .pm-image-frame {
+  margin-inline-end: 0;
+  padding-inline-end: 3px;
 }
 
 /*
- * A picture alone in its paragraph (T62 item 12) sits on the line with the editor's cursor helpers
- * (a separator before and after it, and a line break): as a block it pushed them onto lines of
- * their own, a tall gap above and below it that could not be deleted. Inline, the paragraph is as
- * tall as the picture and the cursor still stands before or after it. A picture with text beside
- * it keeps its own line (A506).
+ * The zero-wide separator before a picture that starts its block takes no place on the line:
+ * beside it, Chromium breaks the line before a picture whose end margin overflows the line, which
+ * would leave the separator on an empty line of its own.
  */
-.note-body
-  p:has(
-    > .ProseMirror-separator:first-child
-      + .pm-image
-      + .ProseMirror-separator
-      + .ProseMirror-trailingBreak:last-child
-  )
-  > .pm-image {
-  display: inline-block;
-  margin: 0;
-  vertical-align: bottom;
+.note-body img.ProseMirror-separator:has(+ .pm-image) {
+  position: absolute;
+}
+
+/* A highlight's padding beside a picture would show as a sliver of colour at its edges. */
+.note-body mark:has(> .pm-image) {
+  padding-inline: 0;
 }
 
 /* Confirmations (copy, moved) float above the status bar while it shows (the T39 review). */

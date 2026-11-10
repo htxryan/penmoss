@@ -298,7 +298,13 @@ class ImageView implements NodeView {
       }
     });
 
-    this.dom.append(this.img, this.fallback, this.loadButton, handle, this.tools);
+    // The picture's own box, inside the node's: the node's breaks the line before the picture
+    // and is as wide as the line there, so the handle and the fields sit on this one, which is
+    // the picture's size (A506, PEN-66).
+    const frame = doc.createElement('span');
+    frame.className = 'pm-image-frame';
+    frame.append(this.img, this.fallback, this.loadButton, handle, this.tools);
+    this.dom.append(frame);
     // A double click (a double tap on a touch screen) opens the lightbox, read-only notes too.
     this.offDouble = onDoubleActivate(this.img, (event) => {
       if (!this.showing()) return;
