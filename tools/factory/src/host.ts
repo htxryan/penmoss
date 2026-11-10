@@ -220,6 +220,29 @@ export async function execPastRefLocks(
 /** The agent's raw output stream in the run folder, beside Sandcastle's `agent.log`. */
 export const AGENT_STREAM = 'agent.stream.jsonl';
 
+/** The last `result` event a session added to the agent's stream after `from`, if any. */
+export function lastResultEvent(
+  streamFile: string,
+  from: number,
+): { readonly is_error?: unknown; readonly result?: unknown } | null {
+  let text: string;
+  try {
+    text = readFileSync(streamFile).subarray(from).toString('utf8');
+  } catch {
+    return null;
+  }
+  for (const line of text.split('\n').reverse()) {
+    if (!line.includes('"result"')) continue;
+    try {
+      const event = JSON.parse(line) as { type?: unknown; is_error?: unknown; result?: unknown };
+      if (event.type === 'result') return event;
+    } catch {
+      // A partial line: the stream is written as the agent goes.
+    }
+  }
+  return null;
+}
+
 /**
  * Copies the plain files directly in `from` (validation's review.json, captures.json and each
  * criterion's screenshot and mockup) into `to`, before the sandbox's worktree is gone (A1256).
@@ -398,6 +421,15 @@ export function hostDeps(options: HostOptions): HostDeps {
       // agent.log is Sandcastle's rendering; the agent's own stream (Claude Code's stream-json,
       // its init event first, which lists the MCP servers it loaded) is kept beside it, verbatim.
       const streamFile = join(runDir, AGENT_STREAM);
+      const streamStart = existsSync(streamFile) ? statSync(streamFile).size : 0;
+      // What can say the session hit a usage limit. Claude Code ends a session with a result
+      // event, which carries a limit as an error: when there is one, only it counts, so an agent
+      // that writes about limits (or works on rate limiting) isn't taken for one that hit its own.
+      const limitText = (fallback: string) => {
+        const result = lastResultEvent(streamFile, streamStart);
+        if (!result) return fallback;
+        return result.is_error === true && typeof result.result === 'string' ? result.result : '';
+      };
       try {
         await sandbox.run({
           agent: options.agent,
@@ -414,14 +446,14 @@ export function hostDeps(options: HostOptions): HostDeps {
       } catch (error) {
         // An agent stopped by its usage limit exits non-zero: the run waits for the reset (R13).
         const message = error instanceof Error ? error.message : String(error);
-        const output = `${tail()}\n${message}`;
+        const output = `${limitText(tail())}\n${message}`;
         if (usageLimitReset(output, new Date())) return { output };
         const missing = agentMissing(message);
         if (missing) throw new AgentNotInstalled(missing, process.env['PATH'] ?? '');
         throw error;
       }
       explainCompletion(logFile);
-      return { output: tail() };
+      return { output: limitText(tail()) };
     },
     stageMockups: (handle) => {
       // The mockups agreed with the plan (F16), never the session's later edits.
