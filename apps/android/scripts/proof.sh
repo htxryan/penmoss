@@ -46,7 +46,9 @@ echo "[proof] building the debug and test APKs"
 (cd "$ROOT" && ./gradlew --console=plain -q :app:assembleDebug :app:assembleDebugAndroidTest)
 
 emulator_pid=''
+watcher=''
 cleanup() {
+  [ -z "$watcher" ] || kill "$watcher" 2>/dev/null || true
   "$ADB" -s "$ANDROID_SERIAL" emu kill >/dev/null 2>&1 || true
   if [ -n "$emulator_pid" ]; then
     sleep 2
@@ -55,11 +57,16 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# The window that has the input focus now, as dumpsys names it.
+focus_now() {
+  "$ADB" -s "$ANDROID_SERIAL" shell dumpsys window displays 2>/dev/null |
+    sed -n 's/.*mCurrentFocus=//p' | head -n 1 | tr -d '\r'
+}
+
 # An "isn't responding" dialog after a slow boot, the launcher's or System UI's, can stay until
-# someone answers it (PEN-90): settling then waited out SETTLE_SECONDS. Answer it with Wait,
-# at most every 5 s and only before the app under test starts. Wait leaves the process running;
-# Close app, like hiding error dialogs, would restart it, and a restarted System UI recreates
-# the activity under test.
+# someone answers it (PEN-90): settling then waited out SETTLE_SECONDS. Answer it with Wait, at
+# most every 5 s. Wait leaves the process running; Close app, like hiding error dialogs, would
+# restart it, and a restarted System UI recreates the activity under test. $1 says when.
 pressed=-10
 press_wait() {
   [ $((waited - pressed)) -ge 5 ] || return 0
@@ -70,10 +77,25 @@ press_wait() {
     sed -n 's/.*resource-id="android:id\/aerr_wait".*bounds="\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\]".*/\1 \2 \3 \4/p' |
     head -n 1)"
   [ -n "$bounds" ] || return 0
+  # Still in front: a dialog that closed meanwhile mustn't turn the tap into one on the app.
+  case "$(focus_now)" in *'Not Responding'*) ;; *) return 0 ;; esac
   x="$(echo "$bounds" | awk '{ print int(($1 + $3) / 2) }')"
   y="$(echo "$bounds" | awk '{ print int(($2 + $4) / 2) }')"
   "$ADB" -s "$ANDROID_SERIAL" shell input tap "$x" "$y" >/dev/null 2>&1 || return 0
-  echo "[proof] $(echo "$focus" | sed 's/.*Not Responding: \([^}]*\).*/\1/') wasn't responding after ${waited}s: pressed Wait"
+  echo "[proof] $(echo "$focus" | sed 's/.*Not Responding: \([^}]*\).*/\1/') wasn't responding $1: pressed Wait"
+}
+
+# On a loaded Mac the launcher can stop responding again while a test runs, and its dialog then
+# covers the app and takes the test's keys (PEN-96). While a test runs, look every 3 s.
+watch_dialogs() {
+  waited=0
+  pressed=-10
+  while :; do
+    focus="$(focus_now)"
+    case "$focus" in *'Not Responding'*) press_wait "during $1" ;; esac
+    sleep 3
+    waited=$((waited + 3))
+  done
 }
 
 echo "[proof] booting $PENMOSS_AVD on $ANDROID_SERIAL"
@@ -124,10 +146,9 @@ while [ "$quiet" -lt "$QUIET_SECONDS" ]; do
     echo "[proof] the emulator didn't settle in ${SETTLE_SECONDS}s; the focus is on: ${focus:-nothing}" >&2
     break
   fi
-  focus="$("$ADB" -s "$ANDROID_SERIAL" shell dumpsys window displays 2>/dev/null |
-    sed -n 's/.*mCurrentFocus=//p' | head -n 1 | tr -d '\r')"
+  focus="$(focus_now)"
   case "$focus" in
-    *'Not Responding'*) quiet=0 && press_wait ;;
+    *'Not Responding'*) quiet=0 && press_wait "after ${waited}s" ;;
     *'Application Error'*) quiet=0 ;;
     *Launcher*) quiet=$((quiet + 1)) ;;
     *) quiet=0 ;;
@@ -157,7 +178,12 @@ for spec in "$@"; do
   rec=$!
   sleep 1
   echo "[proof] $spec"
+  watch_dialogs "$spec" &
+  watcher=$!
   result="$("$ADB" -s "$ANDROID_SERIAL" shell am instrument -w -e class "$spec" "$RUNNER" 2>&1 || true)"
+  kill "$watcher" 2>/dev/null || true
+  wait "$watcher" 2>/dev/null || true
+  watcher=''
   printf '%s\n' "$result" >"$OUT/android-$n.log"
   # The screenshot the test took at its last assertion, with the change on screen (ProofShot).
   # Without one, the screen now, after the test closed the app: likely the launcher.
