@@ -8,6 +8,7 @@ import {
   buildView,
   cleanError,
   desktopLink,
+  pointsOf,
   type FactoryView,
   type ViewInput,
 } from '../src/ui/model.ts';
@@ -195,7 +196,73 @@ describe("the daemon's health (A1233)", () => {
       'task factory:install',
       'task factory:doctor -- --slot 1',
     ]);
+    // A few words each, for the header's one pill.
+    expect(v.health.problems.map((p) => p.label)).toEqual([
+      'wrong checkout',
+      'doctor failing on slot 1',
+    ]);
     expect(v.health.doctor).toBe('doctor failing');
+  });
+});
+
+describe("the plan's open points, asked once each", () => {
+  const q = (text: string, ...options: string[]) => ({ text, options });
+
+  it('pairs each question with its open point when the planner wrote both lists', () => {
+    expect(card(view, 'PEN-78').points).toEqual([
+      {
+        text: 'Include attachments?',
+        context: 'Proposed: attachments go in the zip beside their notes. OK?',
+        options: [
+          {
+            value: 'Yes, beside their notes (proposed)',
+            label: 'Yes, beside their notes',
+            proposed: true,
+          },
+          { value: 'No', label: 'No', proposed: false },
+        ],
+      },
+      {
+        text: 'One zip or one per folder?',
+        context: 'Proposed: one zip for the whole library, with its folders kept. OK?',
+        options: [
+          {
+            value: 'One zip, folders kept (proposed)',
+            label: 'One zip, folders kept',
+            proposed: true,
+          },
+          { value: 'One zip per folder', label: 'One zip per folder', proposed: false },
+        ],
+      },
+    ]);
+    expect(card(view, 'PEN-78').notes).toEqual([]);
+  });
+
+  it('takes the first option as the proposal when none is marked', () => {
+    expect(
+      pointsOf(['A?'], [q('A?', 'Yes', 'No')]).points[0]?.options.map((o) => o.proposed),
+    ).toEqual([true, false]);
+  });
+
+  it('asks a point with no options as a question of its own, when the rest repeat their points', () => {
+    expect(
+      pointsOf(['Include attachments?', 'Zip name?'], [q('Include attachments?', 'Yes', 'No')]),
+    ).toEqual({
+      points: [
+        expect.objectContaining({ text: 'Include attachments?', context: null }),
+        { text: 'Zip name?', context: null, options: [] },
+      ],
+      notes: [],
+    });
+  });
+
+  it("shows points it can't pair once, as notes, rather than twice", () => {
+    const { points, notes } = pointsOf(
+      ['Proposed: attachments beside notes. OK?', 'Proposed: one zip. OK?'],
+      [q('Include attachments?', 'Yes', 'No')],
+    );
+    expect(points.map((p) => [p.text, p.context])).toEqual([['Include attachments?', null]]);
+    expect(notes).toEqual(['Proposed: attachments beside notes. OK?', 'Proposed: one zip. OK?']);
   });
 });
 
@@ -223,12 +290,50 @@ describe('the pipeline (A1233)', () => {
 
   it('says why CI stopped it, and what to do', () => {
     expect(card(view, 'PEN-73').step).toBe('CI stayed red after 2 repair rounds: android-emulator');
-    expect(card(view, 'PEN-74').need?.what).toContain('Review PR #65');
-    expect(card(view, 'PEN-78').questions).toHaveLength(1);
+    expect(card(view, 'PEN-74').need?.brief).toBe('Review PR #65');
+    expect(card(view, 'PEN-74').need?.what).toContain('Approve it on GitHub');
+    expect(card(view, 'PEN-78').questions).toHaveLength(2);
     expect(card(view, 'PEN-78').canComplete).toBe(true);
-    expect(card(view, 'PEN-84').need?.what).toContain(
+    expect(card(view, 'PEN-84').need?.brief).toContain(
       'conflicting labels agent:claude and agent:opencode',
     );
+  });
+
+  it('says in one line what each card needs, and what to do next without repeating it', () => {
+    expect(view.needs.map((c) => [c.key, c.need?.brief])).toEqual([
+      ['PEN-73', 'CI stayed red after 2 repair rounds: android-emulator'],
+      ['PEN-75', 'Failed before the agent started: claude: command not found (exit 127)'],
+      ['PEN-74', 'Review PR #65'],
+      ['PEN-78', 'Answer 2 questions on the plan'],
+      ['PEN-77', "Waiting: the VM penmoss-test isn't made"],
+      ['PEN-84', "Won't start: conflicting labels agent:claude and agent:opencode"],
+    ]);
+    expect(card(view, 'PEN-73').need?.what).toBe('Fix it or say how on the issue, then retry.');
+    expect(card(view, 'PEN-75').need?.what).toBe('Fix it on the Mac, then retry.');
+    // A stop of two clauses: the first is the brief, the second leads what to do.
+    const v = buildView(
+      input({
+        board: {
+          items: [
+            pen(22, {
+              status: 'In Progress',
+              labels: ['Blocked'],
+              blocked: true,
+              blockedSet: true,
+            }),
+          ],
+        },
+        ledger: [
+          line('22-a', 'claimed', minutesAgo(30), { issue: 22 }),
+          line('22-a', 'gate-failed', minutesAgo(20), { round: 0 }),
+          line('22-a', 'blocked', minutesAgo(10), { reason: 'gate-failed' }),
+        ].join('\n'),
+      }),
+    );
+    expect(card(v, 'PEN-22').need).toMatchObject({
+      brief: 'The gate still failed after 1 round',
+      what: 'The checks that failed are on the issue. Fix it or say how on the issue, then retry.',
+    });
   });
 
   it('links the issue, PR, CI, the plan, the chat and the desktop app', () => {
@@ -317,7 +422,7 @@ describe('the state folder (A1233)', () => {
       'Adding Retry-After to the 429 path',
     ]);
     expect(card(v, 'PEN-79').runFolder).toBe(join(dir, 'runs', '79-d'));
-    expect(card(v, 'PEN-78').questions).toHaveLength(1);
+    expect(card(v, 'PEN-78').questions).toHaveLength(2);
     expect(v.health.doctor).toMatch(/^doctor passed /);
     expect(v.readOnly).toBe('no Linear key');
   });

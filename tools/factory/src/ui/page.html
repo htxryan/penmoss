@@ -1,20 +1,36 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Penmoss Factory</title>
+    <script>
+      // The theme before first paint, so there's no flash: light unless this browser chose Dark or
+      // System (which follows the OS). Without storage it stays light.
+      (function () {
+        var t = 'light';
+        try {
+          t = localStorage.getItem('factory-theme') || 'light';
+        } catch (e) {
+          // Storage off: light.
+        }
+        if (t !== 'dark' && t !== 'system') t = 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      })();
+    </script>
     <style>
       :root {
-        --bg: #fbfaf8;
+        --bg: #f6f5f2;
         --panel: #ffffff;
-        --sunk: #f3f2ee;
+        --sunk: #efede8;
         --ink: #1c1b19;
-        --muted: #5e5c57;
-        --line: #e7e4dd;
+        --ink-2: #45433e;
+        --muted: #6b6860;
+        --line: #e6e3dc;
+        --line-2: #d4d0c6;
         --accent: #2448b8;
         --accent-ink: #ffffff;
-        --sel: #e9eefb;
+        --sel: #eaf0fd;
         --live-bg: #e3eefc;
         --live-line: #9dbeeb;
         --live-ink: #0e3466;
@@ -38,8 +54,12 @@
         --ok: #2e8b57;
         --bad: #c8372d;
         --warn: #b86e00;
-        --code: #f4f1ea;
-        /* The step marker, by whose turn it is. */
+        --code: #f1eee7;
+        --log-bg: #f4f2ec;
+        --log-ink: #2b2a27;
+        --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.06);
+        --pop-shadow: 0 8px 28px rgba(16, 24, 40, 0.16);
+        /* The step marker and a card's edge, by whose turn it is. */
         --m-live: #2f62c9;
         --m-you: #c98a12;
         --m-stop: #c8372d;
@@ -48,14 +68,64 @@
         --m-done: #3e9b6a;
         color-scheme: light;
       }
+      :root[data-theme='dark'] {
+        --bg: #141413;
+        --panel: #1d1c1a;
+        --sunk: #262522;
+        --ink: #ecebe6;
+        --ink-2: #cfccc3;
+        --muted: #a8a59c;
+        --line: #34322e;
+        --line-2: #45423d;
+        --accent: #8fb0ff;
+        --accent-ink: #0d1a3a;
+        --sel: #22304f;
+        --live-bg: #16283f;
+        --live-line: #34598a;
+        --live-ink: #cfe0fa;
+        --you-bg: #33260f;
+        --you-line: #8a6623;
+        --you-ink: #f6d9a0;
+        --stop-bg: #3a1a17;
+        --stop-line: #8a3a32;
+        --stop-ink: #ffc3bc;
+        --card-bg: #2c1f3a;
+        --card-line: #6a4a8c;
+        --card-ink: #e3cdfa;
+        --idle-bg: #262729;
+        --idle-line: #44474c;
+        --idle-ink: #cdd2d9;
+        --done-bg: #16301f;
+        --done-line: #2f6b45;
+        --done-ink: #bfe9cf;
+        --past: #2f6b45;
+        --todo: #3a3834;
+        --ok: #6bd49a;
+        --bad: #ff8a80;
+        --warn: #f2b85b;
+        --code: #262522;
+        --log-bg: #0f0f0e;
+        --log-ink: #e9e3d6;
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+        --pop-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+        --m-live: #6f9bff;
+        --m-you: #f2b85b;
+        --m-stop: #ff8a80;
+        --m-card: #c39bf0;
+        --m-idle: #8d939b;
+        --m-done: #6bd49a;
+        color-scheme: dark;
+      }
       @media (prefers-color-scheme: dark) {
-        :root {
+        :root[data-theme='system'] {
           --bg: #141413;
           --panel: #1d1c1a;
           --sunk: #262522;
           --ink: #ecebe6;
+          --ink-2: #cfccc3;
           --muted: #a8a59c;
           --line: #34322e;
+          --line-2: #45423d;
           --accent: #8fb0ff;
           --accent-ink: #0d1a3a;
           --sel: #22304f;
@@ -83,6 +153,10 @@
           --bad: #ff8a80;
           --warn: #f2b85b;
           --code: #262522;
+          --log-bg: #0f0f0e;
+          --log-ink: #e9e3d6;
+          --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+          --pop-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
           --m-live: #6f9bff;
           --m-you: #f2b85b;
           --m-stop: #ff8a80;
@@ -92,12 +166,17 @@
           color-scheme: dark;
         }
       }
-      * {
+      *,
+      *::before,
+      *::after {
         box-sizing: border-box;
+      }
+      html,
+      body {
+        background: var(--bg);
       }
       body {
         margin: 0;
-        background: var(--bg);
         color: var(--ink);
         font:
           14px/1.45 -apple-system,
@@ -119,7 +198,7 @@
         min-height: 36px;
         padding: 0 14px;
         border-radius: 8px;
-        border: 1px solid var(--line);
+        border: 1px solid var(--line-2);
         background: var(--panel);
         color: var(--ink);
         cursor: pointer;
@@ -129,22 +208,48 @@
         border-color: var(--accent);
         color: var(--accent-ink);
       }
+      button.secondary {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      button.quiet {
+        border-color: transparent;
+        background: none;
+        color: var(--muted);
+        font-weight: 500;
+        padding: 0 8px;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+        text-decoration-color: var(--line-2);
+      }
+      button.quiet:hover:not(:disabled) {
+        color: var(--ink);
+      }
       button:disabled {
         opacity: 0.5;
         cursor: not-allowed;
       }
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      summary {
+        cursor: pointer;
+      }
+      /* Header: name, the view switch, one health pill, the theme. */
       .top {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 10px 18px;
+        gap: 8px 14px;
         padding: 10px 20px;
         background: var(--panel);
         border-bottom: 1px solid var(--line);
       }
       .top .name {
-        font-size: 16px;
+        font-size: 15px;
         font-weight: 700;
+        white-space: nowrap;
       }
       .switch {
         display: flex;
@@ -156,11 +261,11 @@
       .switch a {
         font-size: 13px;
         font-weight: 600;
-        padding: 6px 14px;
+        padding: 4px 12px;
         border-radius: 7px;
         text-decoration: none;
         color: var(--muted);
-        min-height: 32px;
+        min-height: 30px;
         display: inline-flex;
         align-items: center;
         gap: 6px;
@@ -168,38 +273,60 @@
       .switch a[aria-current='page'] {
         background: var(--panel);
         color: var(--ink);
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+        box-shadow: var(--shadow);
       }
       .badge {
-        font-size: 12px;
+        font-size: 11.5px;
         font-weight: 700;
         background: var(--bad);
         color: #fff;
         border-radius: 999px;
-        padding: 0 7px;
+        padding: 0 6px;
+        line-height: 18px;
+      }
+      :root[data-theme='dark'] .badge {
+        color: #1d1c1a;
+      }
+      .hp {
+        position: relative;
+      }
+      .hp > summary {
+        list-style: none;
+      }
+      .hp > summary::-webkit-details-marker {
+        display: none;
       }
       .health {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
+        gap: 7px;
         border-radius: 999px;
-        padding: 4px 12px;
+        padding: 3px 10px 3px 10px;
+        min-height: 30px;
         font-size: 13px;
         font-weight: 600;
         border: 1px solid;
+        white-space: nowrap;
       }
       .health .dot {
         width: 8px;
         height: 8px;
         border-radius: 50%;
         background: currentColor;
+        flex: 0 0 auto;
+      }
+      .health::after {
+        content: '▾';
+        opacity: 0.6;
+        font-size: 10px;
       }
       .h-running {
         background: var(--done-bg);
         border-color: var(--done-line);
         color: var(--done-ink);
       }
-      .h-paused {
+      .h-paused,
+      .h-warn {
         background: var(--you-bg);
         border-color: var(--you-line);
         color: var(--you-ink);
@@ -211,14 +338,62 @@
         border-color: var(--stop-line);
         color: var(--stop-ink);
       }
+      .pop {
+        position: absolute;
+        z-index: 5;
+        top: calc(100% + 6px);
+        left: 0;
+        width: max-content;
+        max-width: min(460px, calc(100vw - 32px));
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        box-shadow: var(--pop-shadow);
+        padding: 10px 14px;
+      }
       .facts {
         margin: 0;
-        color: var(--muted);
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 4px 14px;
         font-size: 13px;
+      }
+      .facts dt {
+        color: var(--muted);
+      }
+      .facts dd {
+        margin: 0;
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      .theme {
+        margin-left: auto;
         display: flex;
-        flex-wrap: wrap;
-        gap: 2px 14px;
-        flex: 1 1 360px;
+        background: var(--sunk);
+        border-radius: 9px;
+        padding: 3px;
+        gap: 2px;
+      }
+      .theme button {
+        min-height: 28px;
+        width: 32px;
+        padding: 0;
+        border: 0;
+        border-radius: 7px;
+        background: none;
+        color: var(--muted);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .theme button[aria-pressed='true'] {
+        background: var(--panel);
+        color: var(--ink);
+        box-shadow: var(--shadow);
+      }
+      .theme svg {
+        width: 16px;
+        height: 16px;
       }
       .alert {
         display: flex;
@@ -247,6 +422,7 @@
         align-items: center;
         gap: 8px;
         background: var(--code);
+        border: 1px solid var(--line);
         border-radius: 8px;
         padding: 3px 3px 3px 10px;
         color: var(--ink);
@@ -273,7 +449,7 @@
         font-size: 11px;
         font-weight: 700;
         letter-spacing: 0.04em;
-        padding: 3px 7px;
+        padding: 2px 7px;
         border-radius: 5px;
         white-space: nowrap;
         text-transform: uppercase;
@@ -309,19 +485,32 @@
         border-color: var(--done-line);
         color: var(--done-ink);
       }
-      .chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin: 0;
+      /* A card's tone as a quiet edge or dot. */
+      .e-live {
+        --edge: var(--m-live);
       }
-      .chip {
-        font-size: 12px;
-        font-weight: 600;
-        padding: 2px 8px;
-        border-radius: 999px;
-        background: var(--sunk);
-        color: var(--muted);
+      .e-you {
+        --edge: var(--m-you);
+      }
+      .e-stop {
+        --edge: var(--m-stop);
+      }
+      .e-card {
+        --edge: var(--m-card);
+      }
+      .e-idle {
+        --edge: var(--m-idle);
+      }
+      .e-done {
+        --edge: var(--m-done);
+      }
+      .dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--edge, var(--m-idle));
+        flex: 0 0 auto;
       }
       .steps {
         display: flex;
@@ -331,14 +520,19 @@
         flex: 1 1 0;
         display: flex;
         flex-direction: column;
-        gap: 5px;
+        gap: 4px;
         font-size: 11px;
         color: var(--muted);
         min-width: 0;
       }
+      .steps .s span:last-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
       .steps .bar {
-        height: 8px;
-        border-radius: 4px;
+        height: 6px;
+        border-radius: 3px;
         background: var(--todo);
         border: 0;
       }
@@ -352,7 +546,7 @@
         display: none;
       }
       .steps.mini .bar {
-        height: 5px;
+        height: 4px;
       }
       .steps .s.now {
         background: none;
@@ -377,165 +571,6 @@
       .steps .now.t-done .bar {
         background: var(--m-done);
       }
-      /* Inbox */
-      .inbox {
-        display: flex;
-        flex-wrap: wrap;
-        border-bottom: 1px solid var(--line);
-      }
-      .list {
-        flex: 1 1 340px;
-        max-width: 420px;
-        border-right: 1px solid var(--line);
-        padding: 14px 10px;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-      .list h2 {
-        margin: 10px 12px 4px;
-        font-size: 13px;
-        color: var(--muted);
-      }
-      .item {
-        display: flex;
-        gap: 10px;
-        align-items: flex-start;
-        padding: 10px 12px;
-        border-radius: 10px;
-        text-decoration: none;
-        color: var(--ink);
-      }
-      .item:hover {
-        background: var(--sunk);
-      }
-      .item[aria-current='true'] {
-        background: var(--sel);
-        outline: 2px solid var(--accent);
-      }
-      .item .body {
-        flex: 1 1 auto;
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 3px;
-      }
-      .item .head {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        font-size: 13px;
-        font-weight: 700;
-      }
-      .item .line {
-        font-size: 12.5px;
-        color: var(--muted);
-      }
-      .item .age {
-        font-size: 12px;
-        color: var(--muted);
-        white-space: nowrap;
-      }
-      .pane {
-        flex: 999 1 560px;
-        min-width: 0;
-        padding: 6px 10px;
-      }
-      .quiet {
-        margin: 12px;
-        color: var(--muted);
-        font-size: 12.5px;
-      }
-      .empty {
-        padding: 40px 24px;
-        color: var(--muted);
-      }
-      /* Detail */
-      .detail {
-        padding: 18px 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        background: var(--panel);
-      }
-      .detail .bar1 {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 10px;
-      }
-      .detail .bar1 .when {
-        font-size: 13px;
-        color: var(--muted);
-      }
-      .close {
-        font-size: 20px;
-        line-height: 1;
-        color: var(--muted);
-        text-decoration: none;
-        min-width: 44px;
-        min-height: 44px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .detail h2 {
-        margin: 0;
-        font-size: 22px;
-        line-height: 1.25;
-      }
-      .detail h2 a {
-        color: var(--ink);
-        text-decoration: none;
-      }
-      .todo {
-        background: var(--bg);
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        padding: 14px 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-      .todo h3,
-      .detail h3 {
-        margin: 0;
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--muted);
-      }
-      .todo p {
-        margin: 0;
-        font-size: 15px;
-      }
-      .answers {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-      .choices,
-      .row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-      }
-      .reply {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-      .reply textarea {
-        font: inherit;
-        padding: 10px 12px;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        resize: vertical;
-        min-height: 70px;
-        background: var(--panel);
-        color: var(--ink);
-      }
       .note {
         margin: 0;
         font-size: 12.5px;
@@ -544,10 +579,403 @@
       .said:empty {
         display: none;
       }
+      .more > summary {
+        font-size: 12.5px;
+        color: var(--muted);
+        padding: 6px 12px;
+      }
+      .more > p {
+        margin: 0 12px 8px;
+        font-size: 12.5px;
+        color: var(--muted);
+      }
+      /* Inbox */
+      .inbox {
+        display: flex;
+        align-items: stretch;
+        min-height: calc(100vh - 52px);
+      }
+      .list {
+        flex: 0 0 360px;
+        min-width: 0;
+        border-right: 1px solid var(--line);
+        padding: 12px 10px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .list h2 {
+        margin: 12px 12px 6px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        display: flex;
+        gap: 6px;
+      }
+      .list h2:first-child {
+        margin-top: 4px;
+      }
+      .list h2 .n {
+        color: var(--ink);
+      }
+      .item {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        padding: 9px 12px 9px 18px;
+        border-radius: 10px;
+        text-decoration: none;
+        color: var(--ink);
+      }
+      .item::before {
+        content: '';
+        position: absolute;
+        left: 7px;
+        top: 11px;
+        bottom: 11px;
+        width: 3px;
+        border-radius: 2px;
+        background: var(--edge, var(--line-2));
+      }
+      .item:hover {
+        background: var(--sunk);
+      }
+      .item[aria-current='true'] {
+        background: var(--sel);
+        box-shadow: inset 0 0 0 1.5px var(--accent);
+      }
+      .item .head {
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.35;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .key {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+        margin-right: 6px;
+      }
+      .item .line {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        font-size: 12.5px;
+        color: var(--ink-2);
+      }
+      .item .brief {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+      }
+      .item .age {
+        flex: 0 0 auto;
+        font-size: 12px;
+        color: var(--muted);
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+      }
+      .pane {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 20px 24px 40px;
+      }
+      .quiet {
+        margin: 4px 12px;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+      .empty {
+        padding: 40px 24px;
+        color: var(--muted);
+      }
+      /* Detail: title, meta, links, steps, then Ryan's turn; history below, folded. */
+      .detail {
+        max-width: 880px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .dhead {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .close {
+        font-size: 20px;
+        line-height: 1;
+        color: var(--muted);
+        text-decoration: none;
+        min-width: 40px;
+        min-height: 40px;
+        margin: -8px -10px 0 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+      }
+      .close:hover {
+        background: var(--sunk);
+      }
+      .detail h2 {
+        margin: 0;
+        font-size: 21px;
+        line-height: 1.3;
+      }
+      .detail h2 .key {
+        font-size: 15px;
+        text-decoration: none;
+        vertical-align: 2px;
+      }
+      .meta {
+        margin: -6px 0 0;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .meta > * + *::before {
+        content: '·';
+        margin: 0 8px;
+        color: var(--line-2);
+      }
+      .meta .pill + *::before {
+        content: '';
+        margin: 0 4px;
+      }
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 0;
+      }
+      .links a {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 32px;
+        padding: 0 12px;
+        border: 1px solid var(--line-2);
+        border-radius: 8px;
+        background: var(--panel);
+        color: var(--ink);
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .links a::after {
+        content: '↗';
+        color: var(--muted);
+        font-weight: 400;
+      }
+      .links a.em {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .links a:hover {
+        background: var(--sunk);
+      }
+      .todo {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--edge, var(--line-2));
+        border-radius: 12px;
+        padding: 16px 20px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-shadow: var(--shadow);
+      }
+      .eyebrow,
+      .detail h3 {
+        margin: 0;
+        font-size: 11.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+      }
+      .ask {
+        margin: -6px 0 0;
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1.3;
+      }
+      .what {
+        margin: -4px 0 0;
+        color: var(--ink-2);
+      }
+      .qs {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        counter-reset: q;
+      }
+      .q {
+        counter-increment: q;
+        padding: 14px 0;
+        border-top: 1px solid var(--line);
+        display: grid;
+        grid-template-columns: 26px 1fr;
+        column-gap: 8px;
+        row-gap: 6px;
+      }
+      .q::before {
+        content: counter(q);
+        grid-row: 1;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: var(--sunk);
+        color: var(--ink-2);
+        font-size: 12px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .q > * {
+        grid-column: 2;
+      }
+      .q .qt {
+        grid-row: 1;
+        font-weight: 700;
+        font-size: 15px;
+        line-height: 1.35;
+      }
+      .q .ctx {
+        margin: 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .choices,
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .opt {
+        text-align: left;
+        white-space: normal;
+        font-weight: 500;
+        padding: 7px 12px;
+        line-height: 1.35;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .opt::before {
+        content: '';
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 1.5px solid var(--line-2);
+        flex: 0 0 auto;
+      }
+      .opt[aria-pressed='true'] {
+        background: var(--sel);
+        border-color: var(--accent);
+        font-weight: 600;
+      }
+      .opt[aria-pressed='true']::before {
+        border: 4px solid var(--accent);
+      }
+      .tag {
+        font-size: 10.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 1px 6px;
+        border-radius: 4px;
+        background: var(--done-bg);
+        color: var(--done-ink);
+        white-space: nowrap;
+      }
+      .notes > summary {
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .notes ul {
+        margin: 6px 0 0;
+        padding-left: 20px;
+        color: var(--ink-2);
+        font-size: 13px;
+      }
+      .reply {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .qs + .reply,
+      .notes + .reply {
+        border-top: 1px solid var(--line);
+        padding-top: 14px;
+      }
+      .reply label {
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .reply textarea {
+        font: inherit;
+        padding: 10px 12px;
+        border: 1px solid var(--line-2);
+        border-radius: 8px;
+        resize: vertical;
+        min-height: 64px;
+        background: var(--panel);
+        color: var(--ink);
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .actions .others {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px;
+        margin-left: auto;
+      }
+      .actions .count {
+        font-size: 12.5px;
+        color: var(--muted);
+        margin-right: 4px;
+      }
+      .hist {
+        border-top: 1px solid var(--line);
+        padding-top: 10px;
+      }
+      .hist > summary {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+      }
+      .hist[open] > summary {
+        margin-bottom: 8px;
+      }
       .log {
         margin: 0;
-        background: #141413;
-        color: #e9e3d6;
+        background: var(--log-bg);
+        color: var(--log-ink);
+        border: 1px solid var(--line);
         border-radius: 8px;
         padding: 10px 12px;
         font-size: 11.5px;
@@ -558,7 +986,7 @@
         overflow: auto;
       }
       .runs p {
-        margin: 0;
+        margin: 0 0 4px;
         display: flex;
         gap: 10px;
         font-size: 13px;
@@ -568,24 +996,25 @@
         font-family: ui-monospace, Menlo, monospace;
         font-size: 12px;
         color: var(--muted);
-        flex: 0 0 44px;
+        flex: 0 0 auto;
+        min-width: 44px;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
       }
-      .links {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px 16px;
-        font-size: 13.5px;
-      }
-      /* Today */
+      /* Activity, on the Pipeline: the slots' runs and what happened, newest first. */
       .today {
-        padding: 18px 20px 28px;
+        padding: 22px 20px 32px;
         display: flex;
         flex-direction: column;
         gap: 12px;
+        border-top: 1px solid var(--line);
       }
       .today h2 {
         margin: 0;
         font-size: 15px;
+      }
+      .today .row {
+        align-items: baseline;
       }
       .tl {
         overflow-x: auto;
@@ -594,7 +1023,7 @@
         min-width: 720px;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
       }
       .lane-row {
         display: flex;
@@ -602,13 +1031,14 @@
         align-items: center;
       }
       .lane-row .lname {
-        flex: 0 0 60px;
-        font-size: 13px;
+        flex: 0 0 52px;
+        font-size: 12.5px;
         font-weight: 600;
+        color: var(--muted);
       }
       .lane {
         position: relative;
-        height: 30px;
+        height: 26px;
         flex: 1 1 auto;
         background: var(--sunk);
         border-radius: 6px;
@@ -625,14 +1055,14 @@
       }
       .barx {
         position: absolute;
-        top: 4px;
-        height: 22px;
+        top: 3px;
+        height: 20px;
         min-width: 4px;
         border-radius: 5px;
         font-size: 11px;
         font-weight: 600;
-        line-height: 20px;
-        padding: 0 6px;
+        line-height: 18px;
+        padding: 0 5px;
         overflow: hidden;
         white-space: nowrap;
         text-decoration: none;
@@ -641,40 +1071,81 @@
       .out {
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        max-width: 980px;
       }
       .out p {
         margin: 0;
-        display: flex;
-        gap: 10px;
+        display: grid;
+        grid-template-columns: 96px 64px minmax(0, 1fr);
+        gap: 2px 12px;
         align-items: baseline;
-        font-size: 13.5px;
+        font-size: 13px;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .out p:last-child {
+        border-bottom: 0;
+      }
+      .out .ev {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px 8px;
+        align-items: baseline;
+      }
+      .out .ev strong {
+        white-space: nowrap;
+      }
+      .out .ev .x {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--muted);
+        background: var(--sunk);
+        border-radius: 4px;
+        padding: 0 5px;
+      }
+      .out .ev .d {
+        color: var(--muted);
       }
       /* Pipeline */
       .pipe {
         display: flex;
-        flex-wrap: wrap;
         align-items: flex-start;
       }
       .board {
-        flex: 999 1 640px;
+        flex: 1 1 auto;
         min-width: 0;
         overflow-x: auto;
       }
+      .legend {
+        margin: 0;
+        padding: 10px 14px;
+        font-size: 12px;
+        color: var(--muted);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
       .grid {
         display: grid;
-        grid-template-columns: minmax(200px, 260px) repeat(9, minmax(68px, 1fr));
+        grid-template-columns: minmax(260px, 3fr) repeat(9, minmax(64px, 1fr));
         min-width: 860px;
       }
       .hd {
-        font-size: 11.5px;
+        font-size: 11px;
         font-weight: 700;
         letter-spacing: 0.05em;
         text-transform: uppercase;
         color: var(--muted);
-        padding: 10px 8px;
+        padding: 8px 8px;
         border-left: 1px solid var(--line);
         border-bottom: 1px solid var(--line);
+        white-space: nowrap;
       }
       .hd:first-child {
         border-left: 0;
@@ -682,12 +1153,12 @@
       }
       .grp {
         grid-column: 1 / -1;
-        font-size: 12px;
+        font-size: 11.5px;
         font-weight: 700;
         color: var(--muted);
-        padding: 14px 14px 6px;
+        padding: 12px 14px 5px;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.05em;
         background: var(--bg);
         border-bottom: 1px solid var(--line);
       }
@@ -698,7 +1169,8 @@
       }
       .prow > div {
         border-bottom: 1px solid var(--line);
-        min-height: 58px;
+        min-height: 46px;
+        background: var(--panel);
       }
       .prow:hover > div {
         background: var(--sunk);
@@ -707,43 +1179,51 @@
         background: var(--sel);
       }
       .lbl {
-        padding: 8px 14px;
+        padding: 6px 14px;
         display: flex;
         flex-direction: column;
-        gap: 3px;
+        gap: 1px;
         justify-content: center;
         min-width: 0;
       }
       .lbl .k {
         font-size: 13.5px;
-        font-weight: 700;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
-      .lbl .k span {
-        font-weight: 500;
+      .lbl .sub {
+        font-size: 12px;
+        color: var(--muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       .lbl .phone {
         display: none;
       }
       .cell {
         border-left: 1px solid var(--line);
-        padding: 8px 6px;
+        padding: 5px 5px;
         display: flex;
         align-items: center;
         min-width: 0;
       }
       .cell .past {
-        height: 4px;
+        height: 2px;
         width: 100%;
         background: var(--past);
-        border-radius: 2px;
+        opacity: 0.7;
+        border-radius: 1px;
       }
       .mark {
         width: 100%;
         min-width: 0;
-        border-radius: 8px;
-        padding: 5px 6px;
-        font-size: 11.5px;
-        line-height: 1.35;
+        border-radius: 6px;
+        padding: 3px 6px;
+        font-size: 11px;
+        line-height: 1.3;
         border: 1px solid;
         overflow-wrap: break-word;
         hyphens: auto;
@@ -754,32 +1234,33 @@
       /* The detail has the whole story: a marker shows its first lines. */
       .mark span {
         display: -webkit-box;
-        -webkit-line-clamp: 4;
+        -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
       .side {
-        flex: 0 1 440px;
+        flex: 0 0 460px;
         min-width: 0;
-        max-width: 520px;
         border-left: 1px solid var(--line);
+        background: var(--bg);
+        padding: 18px 20px 28px;
         box-shadow: -8px 0 24px rgba(16, 24, 40, 0.06);
       }
-      .legend {
-        padding: 14px 20px;
-        font-size: 12.5px;
-        color: var(--muted);
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px 24px;
+      .board > .more {
+        padding: 6px 2px;
       }
       @media (max-width: 760px) {
         .top {
-          padding: 10px 16px;
+          padding: 8px 16px;
+          gap: 8px 10px;
+        }
+        .inbox {
+          display: block;
+          min-height: 0;
         }
         .list {
-          max-width: none;
           border-right: 0;
+          padding: 8px 6px 16px;
         }
         .inbox.has-sel .list {
           display: none;
@@ -787,8 +1268,23 @@
         .inbox:not(.has-sel) .pane {
           display: none;
         }
-        .detail {
-          padding: 16px;
+        .pane {
+          padding: 14px 16px 28px;
+        }
+        .todo {
+          padding: 14px 14px 16px;
+        }
+        .steps .s {
+          font-size: 10px;
+        }
+        .detail h2 {
+          font-size: 19px;
+        }
+        .out p {
+          grid-template-columns: 104px minmax(0, 1fr);
+        }
+        .out p .ev {
+          grid-column: 1 / -1;
         }
         .grid {
           display: block;
@@ -804,19 +1300,34 @@
         .prow > div {
           min-height: 0;
         }
+        .lbl {
+          padding: 10px 16px;
+        }
+        .lbl .k,
+        .lbl .sub {
+          white-space: normal;
+        }
         .lbl .phone {
           display: flex;
           flex-direction: column;
           gap: 4px;
-          margin-top: 4px;
+          margin-top: 6px;
+          font-size: 12.5px;
+          color: var(--ink-2);
+        }
+        .pipe {
+          display: block;
         }
         .pipe.has-sel .board {
           display: none;
         }
         .side {
-          max-width: none;
           border-left: 0;
           box-shadow: none;
+          padding: 14px 16px 28px;
+        }
+        .today {
+          padding: 18px 16px 28px;
         }
       }
     </style>
@@ -831,6 +1342,10 @@
       let view = null;
       const drafts = new Map();
       const notes = new Map();
+      // Answers picked on a plan's questions, per card: question → option. Kept across redraws.
+      const picks = new Map();
+      // Which folded sections Ryan opened, so a redraw every few seconds keeps them open.
+      const opened = new Set();
 
       function el(tag, cls, text) {
         const e = document.createElement(tag);
@@ -887,6 +1402,63 @@
         box.append(b);
         return box;
       }
+      // A folded section that stays open across redraws once Ryan opens it.
+      function disclosure(key, cls, summary) {
+        const d = el('details', cls);
+        const s = el('summary');
+        s.append(...[].concat(summary));
+        d.append(s);
+        d.open = opened.has(key);
+        d.addEventListener('toggle', () => (d.open ? opened.add(key) : opened.delete(key)));
+        return d;
+      }
+
+      // Theme: Light by default whatever the OS says; Dark; or System, which follows the OS.
+      const THEMES = [
+        [
+          'light',
+          'Light',
+          '<circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6 13 13M3 13l1.4-1.4M11.6 4.4 13 3"/>',
+        ],
+        ['dark', 'Dark', '<path d="M13 9.5A5.5 5.5 0 0 1 6.5 3a5.5 5.5 0 1 0 6.5 6.5z"/>'],
+        [
+          'system',
+          'System',
+          '<circle cx="8" cy="8" r="6"/><path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor"/>',
+        ],
+      ];
+      function theme() {
+        const t = document.documentElement.getAttribute('data-theme');
+        return t === 'dark' || t === 'system' ? t : 'light';
+      }
+      function setTheme(t) {
+        document.documentElement.setAttribute('data-theme', t);
+        try {
+          localStorage.setItem('factory-theme', t);
+        } catch {
+          // Storage off: this page keeps it until it's reloaded.
+        }
+        for (const b of document.querySelectorAll('.theme button'))
+          b.setAttribute('aria-pressed', String(b.dataset.theme === t));
+      }
+      function themes() {
+        const g = el('div', 'theme');
+        g.setAttribute('role', 'group');
+        g.setAttribute('aria-label', 'Theme');
+        for (const [t, name, path] of THEMES) {
+          const b = el('button');
+          b.type = 'button';
+          b.dataset.theme = t;
+          b.title = name;
+          b.setAttribute('aria-label', name);
+          b.setAttribute('aria-pressed', String(theme() === t));
+          // A fixed icon of the page's own, not data.
+          b.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">${path}</svg>`;
+          b.addEventListener('click', () => setTheme(t));
+          g.append(b);
+        }
+        return g;
+      }
 
       // Routing: #inbox, #pipeline, #inbox/issue-75; a notification's #issue-75 opens the card.
       function route() {
@@ -919,10 +1491,13 @@
           const said = r.ok ? j.done : `Failed: ${j.error || r.status}`;
           notes.set(body.issue, said);
           note.textContent = said;
-          if (r.ok && body.kind === 'reply') drafts.delete(body.issue);
-          if (r.ok) {
+          if (r.ok && body.kind === 'reply') {
+            drafts.delete(body.issue);
+            picks.delete(body.issue);
+            for (const o of (box.closest('.todo') || box).querySelectorAll('.opt'))
+              o.setAttribute('aria-pressed', 'false');
             const t = box.querySelector('textarea');
-            if (t && body.kind === 'reply') t.value = '';
+            if (t) t.value = '';
           }
         } catch (e) {
           note.textContent = `Failed: ${e}`;
@@ -941,7 +1516,7 @@
         return b;
       }
 
-      // Shared pieces: the step marker, the chips, the detail.
+      // Shared pieces: the step marker, the meta line, the detail.
       function steps(c, mini) {
         const row = el('div', mini ? 'steps mini' : 'steps');
         row.setAttribute('role', 'img');
@@ -953,16 +1528,14 @@
         });
         return row;
       }
-      function chips(c) {
-        const p = el('p', 'chips');
-        const add = (t) => t && p.append(el('span', 'chip', t));
-        add(c.status);
-        if (c.agent) add(`${c.agent} / ${c.model}`);
-        if (c.slot) add(`slot ${c.slot}`);
-        if (c.pr) add(`PR #${c.pr.split('/').at(-1)}`);
-        if (c.round) add(c.round);
-        if (c.priority) add(['', 'Urgent', 'High', 'Medium', 'Low'][c.priority]);
-        return p;
+      // The card's facts in muted words: status, agent and model, size, slot, round.
+      function facts(c) {
+        const out = [c.status];
+        if (c.agent) out.push(`${c.agent} / ${c.model}`);
+        if (c.priority) out.push(['', 'Urgent', 'High', 'Medium', 'Low'][c.priority]);
+        if (c.slot) out.push(`slot ${c.slot}`);
+        if (c.round) out.push(c.round);
+        return out.filter(Boolean);
       }
       function pill(c) {
         return el(
@@ -971,66 +1544,118 @@
           c.need ? c.need.label : c.paused ? 'Paused' : c.group === 'done' ? 'Done' : c.status,
         );
       }
+      function linkLabel(c, l) {
+        if (l.label !== c.key) return l.label;
+        return /linear\.app/.test(l.href) ? `${c.key} in Linear` : `${c.key} on GitHub`;
+      }
+
+      // The plan's questions: each its own block, its context once, its options as toggles.
+      function questions(c, box) {
+        const chosen = picks.get(c.number) || new Map();
+        const ol = el('ol', 'qs');
+        for (const p of c.points) {
+          const li = el('li', 'q');
+          li.append(el('div', 'qt', p.text));
+          if (p.context) li.append(el('p', 'ctx', p.context));
+          if (p.options.length) {
+            const choices = el('div', 'choices');
+            choices.setAttribute('role', 'group');
+            choices.setAttribute('aria-label', p.text);
+            for (const o of p.options) {
+              const b = button('', 'opt', () => {
+                const now = picks.get(c.number) || new Map();
+                if (now.get(p.text) === o.value) now.delete(p.text);
+                else now.set(p.text, o.value);
+                picks.set(c.number, now);
+                for (const x of choices.querySelectorAll('.opt'))
+                  x.setAttribute('aria-pressed', String(now.get(p.text) === x.dataset.value));
+                counted(c, box);
+              });
+              b.dataset.value = o.value;
+              b.setAttribute('aria-pressed', String(chosen.get(p.text) === o.value));
+              b.append(el('span', '', o.label));
+              if (o.proposed) b.append(el('span', 'tag', 'proposed'));
+              choices.append(b);
+            }
+            li.append(choices);
+          } else li.append(el('p', 'ctx', 'Answer it in your reply below.'));
+          ol.append(li);
+        }
+        return ol;
+      }
+      function counted(c, box) {
+        const n = box.querySelector('.count');
+        if (!n) return;
+        const asked = c.points.filter((p) => p.options.length).length;
+        n.textContent = `${(picks.get(c.number) || new Map()).size} of ${asked} picked`;
+      }
+
       function detail(c, mode) {
         const box = el('article', 'detail');
         box.id = `issue-${c.number}`;
-        const bar = el('div', 'bar1');
-        const left = el('div', 'row');
-        left.append(pill(c));
-        if (c.since) {
-          const t = since(c.since, c.need ? 'waiting ' : 'for ');
-          t.classList.add('when');
-          left.append(t);
-        }
-        const close = el('a', 'close', '×');
-        close.href = href(mode, null);
-        close.setAttribute('aria-label', 'Close');
-        bar.append(left, close);
+        const head = el('div', 'dhead');
         const h = el('h2');
-        const k = el('a', '', c.key);
+        const k = el('a', 'key', c.key);
         k.href = SAFE.test(c.url) ? c.url : '#';
         k.target = '_blank';
         k.rel = 'noopener noreferrer';
-        h.append(k, document.createTextNode(` ${c.title}`));
-        box.append(bar, h, chips(c), steps(c, false));
+        h.append(k, document.createTextNode(c.title));
+        const close = el('a', 'close', '×');
+        close.href = href(mode, null);
+        close.setAttribute('aria-label', 'Close');
+        head.append(h, close);
+        box.append(head);
 
-        const todo = el('section', 'todo');
-        todo.append(el('h3', '', c.need ? 'What you need to do' : 'Where it is'));
-        todo.append(el('p', '', c.need ? c.need.what : c.step));
+        const meta = el('p', 'meta');
+        meta.append(pill(c));
+        if (c.since) meta.append(since(c.since, c.need ? 'waiting ' : 'for '));
+        for (const f of facts(c)) meta.append(el('span', '', f));
+        box.append(meta);
+
+        const links = el('nav', 'links');
+        links.setAttribute('aria-label', 'Links');
+        for (const l of c.links) {
+          const a = link({ ...l, label: linkLabel(c, l) });
+          if (!a) continue;
+          if (c.need?.kind === 'answer' && (l.label === 'Plan' || l.label === 'Design'))
+            a.className = 'em';
+          links.append(a);
+        }
+        if (links.childElementCount) box.append(links);
+        box.append(steps(c, false));
+
+        // Ryan's turn: what's asked, the questions, the reply, one primary action.
+        const todo = el('section', `todo e-${c.tone}`);
+        todo.append(el('h3', 'eyebrow', c.need ? 'Your turn' : 'Where it is'));
+        todo.append(el('p', 'ask', c.need ? c.need.brief : c.step));
+        if (c.need?.what) todo.append(el('p', 'what', c.need.what));
         if (c.need?.command) todo.append(copyBox(c.need.command));
         if (c.heldBy.length)
           todo.append(
             el(
               'p',
-              '',
+              'what',
               `Held until ${c.heldBy.join(', ')} ${c.heldBy.length > 1 ? 'finish' : 'finishes'}: there's no Blocked to clear for that.`,
             ),
           );
-        if (c.open.length) {
-          const ul = el('ul');
-          for (const o of c.open) ul.append(el('li', '', o));
-          todo.append(ul);
-        }
-        box.append(todo);
-
         const actions = el('section', 'reply');
-        for (const q of c.questions) {
-          const a = el('div', 'answers');
-          a.append(el('strong', '', q.text));
-          const choices = el('div', 'choices');
-          q.options.forEach((o) =>
-            choices.append(
-              button(o, '', () =>
-                act({ kind: 'answer', issue: c.number, question: q.text, option: o }, actions),
-              ),
-            ),
-          );
-          a.append(choices);
-          actions.append(a);
+        if (c.points.length) todo.append(questions(c, actions));
+        if (c.notes.length) {
+          const d = disclosure(`notes-${c.number}`, 'notes', `Planner's notes (${c.notes.length})`);
+          const ul = el('ul');
+          for (const o of c.notes) ul.append(el('li', '', o));
+          d.append(ul);
+          todo.append(d);
         }
         if (c.group !== 'done') {
           const id = `reply-${c.number}`;
-          const label = el('label', '', `Reply on ${c.key}, posted as you`);
+          const label = el(
+            'label',
+            '',
+            c.points.length
+              ? `Anything else? Posted with your answers on ${c.key}, as you`
+              : `Reply on ${c.key}, posted as you`,
+          );
           label.htmlFor = id;
           const text = el('textarea');
           text.id = id;
@@ -1038,30 +1663,75 @@
           text.value = drafts.get(c.number) || '';
           text.disabled = !view.writable;
           text.addEventListener('input', () => drafts.set(c.number, text.value));
-          const row = el('div', 'row');
+          // The picked answers, each as the planner reads one (`On "<text>": <option>`), then
+          // whatever Ryan wrote.
+          const words = () => {
+            const chosen = picks.get(c.number) || new Map();
+            const lines = c.points
+              .filter((p) => chosen.has(p.text))
+              .map((p) => `On "${p.text}": ${chosen.get(p.text)}`);
+            return [lines.join('\n'), text.value.trim() ? text.value : '']
+              .filter(Boolean)
+              .join('\n\n');
+          };
+          const send = (unblock) => {
+            const body = words();
+            if (!body) {
+              actions.querySelector('.said').textContent = c.points.length
+                ? 'Pick an answer or write a reply first.'
+                : 'Write a reply first.';
+              return;
+            }
+            act({ kind: 'reply', issue: c.number, text: body, unblock }, actions);
+          };
           const retry = c.group === 'queue' || c.stage <= 1 ? 'Unblock' : 'Retry';
-          const reply = (unblock) =>
-            text.value.trim() &&
-            act({ kind: 'reply', issue: c.number, text: text.value, unblock }, actions);
-          if (c.blocked) {
-            row.append(
-              button(`Post and ${retry.toLowerCase()}`, 'primary', () => reply(true)),
-              button(retry, '', () => act({ kind: 'block', issue: c.number, on: false }, actions)),
-              button('Post only', '', () => reply(false)),
+          const complete = () =>
+            button('Agree the plan (Complete)', 'secondary', () =>
+              act({ kind: 'complete', issue: c.number }, actions),
             );
-          } else {
-            row.append(button('Post', '', () => reply(false)));
-          }
-          if (c.canComplete)
+          // One primary for what the card needs; the rest are quieter.
+          const row = el('div', 'actions');
+          const others = el('span', 'others');
+          if (c.need?.kind === 'answer') {
+            if (c.points.some((p) => p.options.length)) row.append(el('span', 'count'));
             row.append(
-              button('Complete: agree the plan', 'primary', () =>
-                act({ kind: 'complete', issue: c.number }, actions),
+              button(
+                c.blocked
+                  ? c.points.length
+                    ? 'Send answers and continue'
+                    : 'Post and continue'
+                  : 'Send answers',
+                'primary',
+                () => send(true),
               ),
             );
-          if (!c.blocked)
-            row.append(
-              button('Block', '', () => act({ kind: 'block', issue: c.number, on: true }, actions)),
+            if (c.canComplete) row.append(complete());
+            if (c.blocked)
+              others.append(
+                button('Post without unblocking', 'quiet', () => send(false)),
+                button('Just unblock', 'quiet', () =>
+                  act({ kind: 'block', issue: c.number, on: false }, actions),
+                ),
+              );
+          } else if (c.blocked) {
+            row.append(button(`Post and ${retry.toLowerCase()}`, 'primary', () => send(true)));
+            if (c.canComplete) row.append(complete());
+            others.append(
+              button(retry, 'quiet', () =>
+                act({ kind: 'block', issue: c.number, on: false }, actions),
+              ),
+              button('Post only', 'quiet', () => send(false)),
             );
+          } else {
+            row.append(button('Post', '', () => send(false)));
+            if (c.canComplete) row.append(complete());
+            others.append(
+              button('Block', 'quiet', () =>
+                act({ kind: 'block', issue: c.number, on: true }, actions),
+              ),
+            );
+          }
+          if (others.childElementCount) row.append(others);
           actions.append(label, text, row);
           if (c.blocked && retry === 'Retry')
             actions.append(
@@ -1071,42 +1741,39 @@
         const said = el('p', 'note said', notes.get(c.number) || '');
         said.setAttribute('role', 'status');
         actions.append(said);
-        box.append(actions);
+        todo.append(actions);
+        counted(c, actions);
+        box.append(todo);
 
+        // History, folded: the live run's log, then the runs and the run folder.
         if (c.log.length) {
-          box.append(el('h3', '', 'Agent log'));
-          box.append(el('pre', 'log', c.log.join('\n')));
+          const d = disclosure(`log-${c.number}`, 'hist', `Agent log (last ${c.log.length} lines)`);
+          d.append(el('pre', 'log', c.log.join('\n')));
+          box.append(d);
         }
-        if (c.runFolder) {
-          const r = el('div', 'row');
-          r.append(el('span', 'note', 'Run folder'), copyBox(c.runFolder));
-          box.append(r);
-        }
-        if (c.runs.length) {
-          const runs = el('section', 'runs');
-          runs.append(el('h3', '', `Runs (${c.runs.length})`));
+        if (c.runs.length || c.runFolder) {
+          const d = disclosure(`runs-${c.number}`, 'hist runs', `Runs (${c.runs.length})`);
           for (const r of c.runs) {
             const p = el('p');
             p.append(
               el('span', 'at', hhmm(r.startedAt)),
               el('span', '', `${r.slot ? `Slot ${r.slot}: ` : ''}${r.summary}`),
             );
-            runs.append(p);
+            d.append(p);
           }
-          box.append(runs);
+          if (c.runFolder) {
+            const r = el('div', 'row');
+            r.append(el('span', 'note', 'Run folder'), copyBox(c.runFolder));
+            d.append(r);
+          }
+          box.append(d);
         }
-        const links = el('p', 'links');
-        for (const l of c.links) {
-          const a = link(l);
-          if (a) links.append(a);
-        }
-        box.append(links);
         return box;
       }
 
       function header(v, mode) {
         const top = el('header', 'top');
-        top.append(el('span', 'name', 'Factory'));
+        top.append(el('span', 'name', 'Penmoss Factory'));
         const nav = el('nav', 'switch');
         nav.setAttribute('aria-label', 'View');
         const tab = (m, label, count) => {
@@ -1117,26 +1784,45 @@
           return a;
         };
         nav.append(tab('inbox', 'Inbox', v.needs.length), tab('pipeline', 'Pipeline'));
+
+        // One pill for the factory's health; the details fold behind it.
         const h = v.health;
-        const status = el('div', `health h-${h.state}`);
-        status.setAttribute('role', 'status');
-        status.append(el('span', 'dot'), el('span', '', h.headline));
-        const facts = el('p', 'facts');
-        if (h.pid) facts.append(el('span', '', `pid ${h.pid}`));
-        if (h.commit)
-          facts.append(el('span', '', `${h.commit.sha.slice(0, 7)} ${h.commit.subject}`));
-        if (h.updatedAt) {
-          const p = el('span');
-          p.append(
-            document.createTextNode('polled '),
+        const warn = h.fresh && h.state === 'running' && h.problems.length;
+        const said = !h.fresh
+          ? h.headline
+          : h.state === 'paused'
+            ? h.headline
+            : warn
+              ? `${h.headline} · ${h.problems.length === 1 ? h.problems[0].label : `${h.problems.length} problems`}`
+              : `${h.headline} · ${h.slots.busy} of ${h.slots.total} slots busy`;
+        const hp = disclosure('health', 'hp', []);
+        const status = hp.firstChild;
+        status.className = `health h-${warn ? 'warn' : h.state}`;
+        status.title = 'Factory details';
+        const words = el('span', '', said);
+        words.setAttribute('role', 'status');
+        status.append(el('span', 'dot'), words);
+        const pop = el('div', 'pop');
+        const dl = el('dl', 'facts');
+        const fact = (term, ...value) => {
+          const dd = el('dd');
+          dd.append(...value);
+          dl.append(el('dt', '', term), dd);
+        };
+        fact('Daemon', h.pid ? `pid ${h.pid}` : h.headline);
+        if (h.commit) fact('Commit', `${h.commit.sha.slice(0, 7)} ${h.commit.subject}`);
+        if (h.updatedAt)
+          fact(
+            'Last poll',
             since(h.updatedAt),
-            document.createTextNode(' ago'),
+            document.createTextNode(` ago (every ${h.pollSeconds} s)`),
           );
-          facts.append(p);
-        }
-        facts.append(el('span', '', `slots ${h.slots.busy}/${h.slots.total}`));
-        if (h.doctor) facts.append(el('span', '', h.doctor));
-        top.append(nav, status, facts);
+        fact('Slots', `${h.slots.busy} of ${h.slots.total} busy`);
+        if (h.doctor) fact('Doctor', h.doctor);
+        pop.append(dl);
+        hp.append(pop);
+        top.append(nav, hp, themes());
+
         const out = [top];
         if (!h.fresh || h.state === 'paused') {
           const a = el('div', h.fresh ? 'alert soft' : 'alert');
@@ -1166,24 +1852,22 @@
       }
 
       function item(c, mode, selected) {
-        const a = el('a', 'item');
+        const a = el('a', `item e-${c.tone}`);
         a.href = href(mode, c.number);
         if (selected) a.setAttribute('aria-current', 'true');
-        const body = el('div', 'body');
         const head = el('div', 'head');
-        head.append(pill(c), el('span', '', c.key));
-        body.append(
-          head,
-          el('span', '', c.title),
-          el('span', 'line', c.need ? c.need.what : c.step),
-        );
-        body.append(steps(c, true));
-        a.append(body);
+        head.append(el('span', 'key', c.key), el('span', 'title', c.title));
+        const line = el('div', 'line');
+        const brief = c.need ? c.need.brief : c.step;
+        const b = el('span', 'brief', brief);
+        b.title = brief;
+        line.append(b);
         if (c.since) {
           const t = since(c.since);
           t.classList.add('age');
-          a.append(t);
+          line.append(t);
         }
+        a.append(head, line);
         return a;
       }
 
@@ -1208,46 +1892,85 @@
         }
         return p;
       }
+      // The In Progress or In Review cards the factory never claimed: counted, folded.
+      function outside(v, key) {
+        const d = disclosure(key, 'more', `Not in the factory (${v.outside.length})`);
+        d.append(
+          el(
+            'p',
+            '',
+            `${v.outside.length} In Progress or In Review card${v.outside.length === 1 ? " isn't" : "s aren't"} the factory's (never claimed): ${v.outside.join(', ')}.`,
+          ),
+        );
+        return d;
+      }
+      function section(list, name, n) {
+        const h = el('h2', '', name);
+        h.append(el('span', 'n', String(n)));
+        list.append(h);
+      }
       function inbox(v, sel) {
         const asked = route().issue !== null;
         const wrap = el('div', sel || asked ? 'inbox has-sel' : 'inbox');
         const list = el('nav', 'list');
         list.setAttribute('aria-label', 'Cards');
-        list.append(el('h2', '', `Needs you · ${v.needs.length}`));
+        section(list, 'Needs you', v.needs.length);
         if (!v.needs.length) list.append(el('p', 'quiet', 'Nothing needs you.'));
         for (const c of v.needs) list.append(item(c, 'inbox', sel?.number === c.number));
         const working = v.cards.filter((c) => c.group === 'working');
-        list.append(el('h2', '', `Working · ${working.length}`));
-        for (const c of working) list.append(item(c, 'inbox', sel?.number === c.number));
+        if (working.length) {
+          section(list, 'Working', working.length);
+          for (const c of working) list.append(item(c, 'inbox', sel?.number === c.number));
+        }
         const queue = v.cards.filter((c) => c.group === 'queue');
         if (queue.length)
           list.append(
             el(
               'p',
               'quiet',
-              `Queue: ${queue.map((c) => `${c.key}${c.heldBy.length ? ' (held)' : c.paused ? ' (paused)' : ''}`).join(', ')}.`,
+              `Up next: ${queue.map((c) => `${c.key}${c.heldBy.length ? ' (held)' : c.paused ? ' (paused)' : ''}`).join(', ')}.`,
             ),
           );
-        if (v.outside.length)
-          list.append(
-            el(
-              'p',
-              'quiet',
-              `${v.outside.length} In Progress or In Review card${v.outside.length === 1 ? " isn't" : "s aren't"} the factory's (never claimed): ${v.outside.join(', ')}.`,
-            ),
-          );
+        if (v.outside.length) list.append(outside(v, 'outside-inbox'));
         const pane = el('section', 'pane');
         pane.setAttribute('aria-label', 'Card detail');
         pane.append(sel ? detail(sel, 'inbox') : missing(v, 'inbox'));
         wrap.append(list, pane);
-        return [wrap, today(v)];
+        return [wrap];
       }
 
+      // Consecutive lines for one card fold by what happened: "Blocked ×4, 08:12–10:08".
+      function grouped(outcomes) {
+        const rows = [];
+        let run = [];
+        const flush = () => {
+          const byWhat = new Map();
+          for (const o of run) {
+            const k = `${o.what}|${o.detail.replace(/\d+/g, '#')}`;
+            const g = byWhat.get(k);
+            if (g) {
+              g.n += 1;
+              g.first = o.at;
+            } else {
+              const row = { ...o, n: 1, first: o.at };
+              byWhat.set(k, row);
+              rows.push(row);
+            }
+          }
+          run = [];
+        };
+        for (const o of outcomes) {
+          if (run.length && run[0].issue !== o.issue) flush();
+          run.push(o);
+        }
+        flush();
+        return rows;
+      }
       function today(v) {
         const sec = el('section', 'today');
-        sec.setAttribute('aria-label', 'Today');
+        sec.setAttribute('aria-label', 'Activity');
         const head = el('div', 'row');
-        head.append(el('h2', '', 'Last 12 hours, by slot'));
+        head.append(el('h2', '', 'Activity, last 12 hours'));
         const t = v.totals;
         head.append(
           el(
@@ -1278,7 +2001,7 @@
           const l = el('div', 'lane');
           for (const b of lane.bars) {
             const a = el('a', `barx t-${b.tone}`, b.key);
-            a.href = href('inbox', b.issue);
+            a.href = href('pipeline', b.issue);
             const start = Math.max(from, Date.parse(b.start));
             a.style.left = pct(new Date(start).toISOString());
             a.style.width = `max(4px, ${(((Date.parse(b.end) - start) / (to - from)) * 100).toFixed(2)}%)`;
@@ -1292,12 +2015,16 @@
         tl.append(inner);
         sec.append(tl);
         const out = el('div', 'out');
-        for (const o of v.outcomes) {
+        for (const o of grouped(v.outcomes)) {
           const p = el('p');
+          const when = o.n > 1 ? `${hhmm(o.first)}–${hhmm(o.at)}` : hhmm(o.at);
           const k = el('a', '', o.key);
-          k.href = href('inbox', o.issue);
-          const what = el('strong', '', o.what);
-          p.append(el('span', 'at', hhmm(o.at)), k, what, el('span', '', o.detail));
+          k.href = href('pipeline', o.issue);
+          const ev = el('span', 'ev');
+          ev.append(el('strong', '', o.what));
+          if (o.n > 1) ev.append(el('span', 'x', `×${o.n}`));
+          if (o.detail) ev.append(el('span', 'd', o.detail));
+          p.append(el('span', 'at', when), k, ev);
           out.append(p);
         }
         if (!v.outcomes.length) out.append(el('p', 'note', 'Nothing yet.'));
@@ -1305,12 +2032,29 @@
         return sec;
       }
 
+      function legend() {
+        const p = el('p', 'legend');
+        for (const [tone, name] of [
+          ['live', 'Factory working'],
+          ['you', 'Your turn'],
+          ['stop', 'Stopped'],
+          ['card', 'Won’t start'],
+          ['idle', 'Queued or paused'],
+          ['done', 'Done'],
+        ]) {
+          const s = el('span', `e-${tone}`);
+          s.append(el('span', 'dot'), document.createTextNode(name));
+          p.append(s);
+        }
+        return p;
+      }
       function pipeline(v, sel) {
         const wrap = el('div', sel || route().issue !== null ? 'pipe has-sel' : 'pipe');
         const board = el('section', 'board');
         const grid = el('div', 'grid');
         // Each row is a link to the card's detail; the step columns are drawn, not a data table.
         board.setAttribute('aria-label', 'Pipeline');
+        board.append(legend());
         const counts = v.stages.map((_, i) => v.cards.filter((c) => c.stage === i).length);
         grid.append(el('div', 'hd', 'Card'));
         v.stages.forEach((s, i) =>
@@ -1331,11 +2075,14 @@
             row.href = href('pipeline', c.number);
             if (sel?.number === c.number) row.setAttribute('aria-current', 'true');
             const lbl = el('div', 'lbl');
-            const k = el('span', 'k', `${c.key} `);
-            k.append(el('span', '', c.title));
-            lbl.append(k, chips(c));
+            const k = el('span', 'k');
+            k.append(el('span', 'key', c.key), document.createTextNode(c.title));
+            k.title = `${c.key} ${c.title}`;
+            const sub = [...facts(c)];
+            if (c.pr) sub.push(`PR #${c.pr.split('/').at(-1)}`);
+            lbl.append(k, el('span', 'sub', sub.join(' · ')));
             const phone = el('div', 'phone');
-            phone.append(steps(c, true), el('span', 'line', c.need ? c.need.what : c.step));
+            phone.append(steps(c, true), el('span', '', c.need ? c.need.brief : c.step));
             lbl.append(phone);
             row.append(lbl);
             v.stages.forEach((_, i) => {
@@ -1343,7 +2090,7 @@
               if (i < c.stage) cell.append(el('span', 'past'));
               else if (i === c.stage) {
                 const m = el('div', `mark t-${c.tone}`);
-                m.title = c.need ? c.need.what : c.step;
+                m.title = c.need ? `${c.need.brief}. ${c.need.what}` : c.step;
                 m.append(
                   el('b', '', c.need ? c.need.label : c.paused ? 'Paused' : ''),
                   el('span', '', c.step),
@@ -1358,6 +2105,7 @@
         }
         if (!v.cards.length) grid.append(el('div', 'grp', 'No cards'));
         board.append(grid);
+        if (v.outside.length) board.append(outside(v, 'outside-pipeline'));
         wrap.append(board);
         if (sel || route().issue !== null) {
           const side = el('aside', 'side');
@@ -1365,23 +2113,7 @@
           side.append(sel ? detail(sel, 'pipeline') : missing(v, 'pipeline'));
           wrap.append(side);
         }
-        const legend = el('p', 'legend');
-        legend.append(
-          el(
-            'span',
-            '',
-            'Blue: the factory is working · amber: your turn · red: stopped · purple: won’t start · grey: queued or paused.',
-          ),
-        );
-        if (v.outside.length)
-          legend.append(
-            el(
-              'span',
-              '',
-              `Not shown: ${v.outside.length} card${v.outside.length === 1 ? '' : 's'} the factory never claimed (${v.outside.join(', ')}).`,
-            ),
-          );
-        return [wrap, legend];
+        return [wrap, today(v)];
       }
 
       function render() {
@@ -1454,6 +2186,14 @@
           }
         }, 0),
       );
+      // The health details close on a click elsewhere, as a menu does.
+      document.addEventListener('click', (e) => {
+        const hp = document.querySelector('.hp');
+        if (hp?.open && !hp.contains(e.target)) {
+          hp.open = false;
+          opened.delete('health');
+        }
+      });
       window.addEventListener('hashchange', () => {
         scrolledTo = null;
         render();

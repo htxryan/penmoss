@@ -87,8 +87,13 @@ test.describe('a healthy factory', () => {
 
   test('the Inbox lists only what needs Ryan, and opens the oldest', async ({ page }) => {
     await open(page, s.url);
-    await expect(page.locator('.health')).toHaveText('Running');
-    await expect(page.locator('.top .facts')).toContainText('pid 4242');
+    // One health pill; the daemon's facts fold behind it.
+    await expect(page.locator('.health')).toHaveText('Running · 2 of 2 slots busy');
+    await expect(page.locator('.hp .facts')).toBeHidden();
+    await page.locator('.health').click();
+    await expect(page.locator('.hp .facts')).toBeVisible();
+    await expect(page.locator('.hp .facts')).toContainText('pid 4242');
+    await expect(page.locator('.hp .facts')).toContainText('e47b20a Factory: fixes');
     await expect(page.locator('.switch [aria-current="page"]')).toContainText('Inbox');
     await expect(page.locator('.switch .badge')).toHaveText('6');
     await expect(page.locator('.list .item .head')).toContainText([
@@ -103,7 +108,19 @@ test.describe('a healthy factory', () => {
     ]);
     await expect(page.locator('.list .item')).toHaveCount(8);
     await expect(page.locator('.list .item', { hasText: 'PEN-36' })).toHaveCount(0);
-    await expect(page.locator('.list')).toContainText(
+    // Each item says in one line what it needs, not the generic instructions.
+    await expect(page.locator('.list .item', { hasText: 'PEN-74' }).locator('.brief')).toHaveText(
+      'Review PR #65',
+    );
+    await expect(page.locator('.list .item', { hasText: 'PEN-78' }).locator('.brief')).toHaveText(
+      'Answer 2 questions on the plan',
+    );
+    // The cards the factory never claimed are counted, folded.
+    const outside = page.locator('.list .more');
+    await expect(outside.locator('summary')).toHaveText('Not in the factory (2)');
+    await expect(outside.locator('p')).toBeHidden();
+    await outside.locator('summary').click();
+    await expect(outside.locator('p')).toHaveText(
       "2 In Progress or In Review cards aren't the factory's (never claimed): PEN-36, PEN-37.",
     );
     // The oldest is open beside the list.
@@ -111,9 +128,9 @@ test.describe('a healthy factory', () => {
     await expect(page.locator('.pane .todo')).toContainText(
       'CI stayed red after 2 repair rounds: android-emulator',
     );
-    // Today's slots.
-    await expect(page.locator('.today .lane-row')).toHaveCount(3);
-    await expect(page.locator('.today .barx.t-stop')).toHaveCount(2);
+    // The activity (the slots' runs and the event feed) is on the Pipeline, not here.
+    await expect(page.locator('.today')).toHaveCount(0);
+    await expect(page.locator('.out')).toHaveCount(0);
   });
 
   test('a run that failed before the agent started says so, with the fix', async ({ page }) => {
@@ -149,11 +166,18 @@ test.describe('a healthy factory', () => {
     await expect(page).toHaveURL(/#pipeline\/issue-73$/);
     const side = page.locator('.side #issue-73');
     await expect(side.locator('.todo')).toContainText('CI stayed red after 2 repair rounds');
-    // The same component as the Inbox's: the pill, the chips, the step marker, the reply box.
+    // The same component as the Inbox's: the pill, the links, the step marker, the reply box.
     await expect(side.locator('.pill')).toHaveText('Unblock');
-    await expect(side.locator('.chips')).toContainText('PR #64');
+    await expect(side.locator('.meta')).toContainText('CI repair 2 of 2');
+    await expect(side.locator('.links')).toContainText('PR #64');
     await expect(side.locator('.steps .now')).toContainText('PR + CI');
+    await expect(side.getByRole('button', { name: 'Post and retry' })).toHaveClass(/primary/);
     await expect(side.getByRole('button', { name: 'Retry', exact: true })).toBeEnabled();
+    // The activity sits under the board: the slots' runs over 12 hours, newest event first.
+    await expect(page.locator('.today .lane-row')).toHaveCount(3);
+    await expect(page.locator('.today .barx.t-stop')).toHaveCount(2);
+    await expect(page.locator('.today .out p').first()).toContainText('PEN-74');
+    await expect(page.locator('.today .out p').first()).toContainText('Reached review');
     // The view is remembered.
     await page.goto(s.url);
     await expect(page.locator('.switch [aria-current="page"]')).toContainText('Pipeline');
@@ -185,6 +209,9 @@ test.describe('a healthy factory', () => {
           .document.documentElement.scrollWidth,
     );
     expect(width).toBeLessThanOrEqual(390);
+    // The header takes two lines at most: name and switch, then health and theme.
+    const header = await page.locator('.top').boundingBox();
+    expect(header?.height).toBeLessThan(100);
     // Closing it goes back to the list.
     await page.locator('#issue-77 .close').click();
     await expect(page.locator('.list')).toBeVisible();
@@ -195,6 +222,123 @@ test.describe('a healthy factory', () => {
     await expect(page.locator('.pane .empty')).toContainText(
       "Card 36 isn't one the factory is handling now",
     );
+  });
+});
+
+test.describe("the plan's questions", () => {
+  let s: Served;
+  test.beforeAll(async () => {
+    s = await serve({ alive: true, writable: true });
+  });
+  test.afterAll(() => s.close());
+
+  test('each question is one block with its proposal once, and the answers go in one reply', async ({
+    page,
+  }) => {
+    await open(page, `${s.url}#inbox/issue-78`);
+    const detail = page.locator('#issue-78');
+    await expect(detail.locator('.ask')).toHaveText('Answer 2 questions on the plan');
+    // The plan, which Ryan reads before answering, is a link right under the title.
+    await expect(detail.locator('.links a.em')).toHaveText('Plan');
+    const q = detail.locator('.q');
+    await expect(q).toHaveCount(2);
+    await expect(q.nth(0).locator('.qt')).toHaveText('Include attachments?');
+    const context = 'Proposed: attachments go in the zip beside their notes. OK?';
+    await expect(q.nth(0).locator('.ctx')).toHaveText(context);
+    // Not twice: no separate list of the open points.
+    const text = (await detail.textContent()) ?? '';
+    expect(text.split(context)).toHaveLength(2);
+    // The proposal is tagged, once per question; nothing is picked yet.
+    await expect(q.nth(0).locator('.opt', { has: page.locator('.tag') })).toHaveText(
+      'Yes, beside their notesproposed',
+    );
+    await expect(q.nth(1).locator('.tag')).toHaveCount(1);
+    await expect(detail.locator('.opt[aria-pressed="true"]')).toHaveCount(0);
+    await expect(detail.locator('.count')).toHaveText('0 of 2 picked');
+
+    await q.nth(0).locator('.opt').first().click();
+    await q.nth(1).getByRole('button', { name: 'One zip per folder' }).click();
+    await expect(q.nth(0).locator('.opt').first()).toHaveAttribute('aria-pressed', 'true');
+    await expect(q.nth(1).locator('.opt[aria-pressed="true"]')).toHaveText('One zip per folder');
+    await expect(detail.locator('.count')).toHaveText('2 of 2 picked');
+    // Picking another option moves the choice.
+    await q.nth(1).locator('.opt').first().click();
+    await q.nth(1).getByRole('button', { name: 'One zip per folder' }).click();
+    await expect(q.nth(1).locator('.opt[aria-pressed="true"]')).toHaveCount(1);
+
+    await detail.locator('textarea').fill('Name it penmoss-export.zip.');
+    // One primary; Complete is the secondary; the rest are quiet.
+    await expect(detail.locator('button.primary')).toHaveText(['Send answers and continue']);
+    await expect(detail.locator('button.secondary')).toHaveText(['Agree the plan (Complete)']);
+    await expect(detail.locator('button.quiet')).toHaveText([
+      'Post without unblocking',
+      'Just unblock',
+    ]);
+    await detail.getByRole('button', { name: 'Send answers and continue' }).click();
+    await expect(detail.locator('.reply .said')).toHaveText('Posted');
+    expect(s.actions).toEqual([
+      {
+        kind: 'reply',
+        issue: 78,
+        text: 'On "Include attachments?": Yes, beside their notes (proposed)\nOn "One zip or one per folder?": One zip per folder\n\nName it penmoss-export.zip.',
+        unblock: true,
+      },
+    ]);
+  });
+});
+
+test.describe('the theme', () => {
+  let s: Served;
+  test.beforeAll(async () => {
+    s = await serve({ alive: true, writable: true });
+  });
+  test.afterAll(() => s.close());
+  const LIGHT = 'rgb(246, 245, 242)';
+  const DARK = 'rgb(20, 20, 19)';
+
+  test('is light by default, even when the OS is dark', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await open(page, s.url);
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await expect(page.locator('body')).toHaveCSS('background-color', LIGHT);
+    await expect(page.getByRole('button', { name: 'Light', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  test('Dark applies at once and survives a reload', async ({ page }) => {
+    await open(page, s.url);
+    await page.getByRole('button', { name: 'Dark', exact: true }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await expect(page.locator('body')).toHaveCSS('background-color', DARK);
+    await page.reload();
+    await expect(page.locator('.health')).toBeVisible();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await expect(page.locator('body')).toHaveCSS('background-color', DARK);
+    await expect(page.getByRole('button', { name: 'Dark', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  test('System follows the OS', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await open(page, s.url);
+    await page.getByRole('button', { name: 'System', exact: true }).click();
+    await expect(page.locator('body')).toHaveCSS('background-color', DARK);
+    await page.emulateMedia({ colorScheme: 'light' });
+    await expect(page.locator('body')).toHaveCSS('background-color', LIGHT);
+  });
+
+  test('the agent log is readable in both themes', async ({ page }) => {
+    await open(page, `${s.url}#inbox/issue-79`);
+    await page.locator('#issue-79 summary', { hasText: 'Agent log' }).click();
+    const log = page.locator('#issue-79 .log');
+    await expect(log).toContainText('Adding Retry-After to the 429 path');
+    await expect(log).toHaveCSS('background-color', 'rgb(244, 242, 236)');
+    await page.getByRole('button', { name: 'Dark', exact: true }).click();
+    await expect(log).toHaveCSS('background-color', 'rgb(15, 15, 14)');
   });
 });
 
