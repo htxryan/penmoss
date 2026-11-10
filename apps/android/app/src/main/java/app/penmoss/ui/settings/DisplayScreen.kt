@@ -82,6 +82,7 @@ fun DisplayScreen(
         )
         ListItem(
             headlineContent = { Text("Show Notebook Names in Quick Access") },
+            supportingContent = { Text("Shows each note’s notebook under its title.") },
             trailingContent = { Switch(checked = layout.quickAccessNotebook, onCheckedChange = null, enabled = enabled) },
             modifier = Modifier
                 .testTag("display-quickAccessNotebook")

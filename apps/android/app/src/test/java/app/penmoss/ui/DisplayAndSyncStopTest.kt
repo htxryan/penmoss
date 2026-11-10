@@ -130,6 +130,8 @@ class DisplayAndSyncStopTest {
         // A984's and the web's words for Quick Access's notebook names.
         compose.onNodeWithTag("display-quickAccessNotebook").performScrollTo()
         compose.onNodeWithText("Show Notebook Names in Quick Access").assertExists()
+        // PEN-88: the row says what the switch does.
+        compose.onNodeWithText("Shows each note’s notebook under its title.").assertIsDisplayed()
     }
 
     @Test

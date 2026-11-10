@@ -27,7 +27,7 @@ Open Settings with ⌘, on the Mac, or from a notebook's menu on Android. Most s
 | Show in the sidebar                 | Which of Today, This Week, Graph and Commands the sidebar's top row shows (Search always shows)                                                                   |
 | Sections                            | The order of Quick Access, Recent Notes, Notebooks, Calendar and Tags                                                                                             |
 | Notes in Recent Notes               | 1 to 50, 10 by default                                                                                                                                            |
-| Show Notebook Names in Quick Access | Labels each pinned note with its notebook                                                                                                                         |
+| Show Notebook Names in Quick Access | Shows each pinned note's notebook under its title                                                                                                                 |
 | Buttons in the note's title bar     | Which actions have a button beside the note's title: Full Width and Copy Agent Reference by default                                                               |
 | Show Tooltips After                 | How long the pointer rests on a control before its tooltip shows: 0.5, 1 (the default), 1.5 or 2 seconds, or Never. Keyboard focus always shows a tooltip at once |
 | Note Metadata Under the Title       | Which of notebook, folder, dates, tags, words, characters, reading time and token count show under the title                                                      |
