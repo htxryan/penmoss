@@ -5368,34 +5368,70 @@ button.history-entry:hover {
 }
 
 /*
- * Pictures never sit beside text (A506): each takes its own line, text above and below,
- * in a paragraph or a list item alike. Only the rendering: the markdown keeps the picture
- * inline where it was written.
+ * Pictures never sit beside text (A506), and leave no empty line under them (PEN-66, A-NEW-1).
+ * Each picture is an inline box as wide as its line, so text before and after it wraps to lines
+ * of its own, while ProseMirror's cursor helpers after a picture that ends its block (a separator
+ * and a line break, both zero-wide) stay on the picture's line instead of making a new one. It
+ * depends only on the picture's own line, so a lone, linked, bold or highlighted picture, one
+ * after text, in a list item, quote, table cell or heading, and several in a row all come out the
+ * same. The picture (or its placeholder) sits in the box's first column, with the selection
+ * outline and the resize handle on it; a click in the empty rest of the line puts the caret after
+ * the picture (packages/editor/src/extensions/image.ts). Only the rendering: the markdown keeps
+ * the picture inline where it was written.
  */
 .note-body .pm-image {
-  display: block;
-  width: fit-content;
-  margin: 0.4em 0;
+  display: inline-grid;
+  grid-template-columns: minmax(0, max-content) max-content;
+  align-items: center;
+  justify-content: start;
+  width: 100%;
+  margin: 0.4em 0 0;
+}
+
+/* At the start of its block a picture has no gap above it: the block is as tall as it (A1107). */
+.note-body
+  :is(.ProseMirror-separator:first-child, .pm-comment-marker:first-child + .ProseMirror-separator)
+  + .pm-image {
+  margin-top: 0;
+}
+
+/* A highlight's padding beside a picture would leave its line too short for it. */
+.note-body mark:has(> .pm-image) {
+  padding-inline: 0;
 }
 
 /*
- * A picture alone in its paragraph (T62 item 12) sits on the line with the editor's cursor helpers
- * (a separator before and after it, and a line break): as a block it pushed them onto lines of
- * their own, a tall gap above and below it that could not be deleted. Inline, the paragraph is as
- * tall as the picture and the cursor still stands before or after it. A picture with text beside
- * it keeps its own line (A506).
+ * A point comment's marker beside a picture takes no room on the picture's line, which the picture
+ * fills, so it never wraps to a line of its own: after a picture that ends its block it sits at the
+ * line's end, and before one, over the picture's corner.
  */
-.note-body
-  p:has(
-    > .ProseMirror-separator:first-child
-      + .pm-image
-      + .ProseMirror-separator
-      + .ProseMirror-trailingBreak:last-child
-  )
-  > .pm-image {
-  display: inline-block;
-  margin: 0;
-  vertical-align: bottom;
+.note-body .pm-image + .pm-comment-marker:has(+ .ProseMirror-separator) {
+  margin-inline-start: calc(-0.8em - 4px);
+}
+
+.note-body .pm-comment-marker:first-child:has(+ .ProseMirror-separator + .pm-image) {
+  position: relative;
+  z-index: 1;
+  margin-inline-end: calc(-0.8em - 4px);
+}
+
+/* The resize handle shows over the picture itself, not anywhere along its line. */
+.note-body .pm-image:not(.ProseMirror-selectednode, :has(> :hover)) .pm-image-resize {
+  opacity: 0;
+}
+
+.note-body .pm-image > .pm-image-resize,
+.note-body .pm-image > .pm-image-tools {
+  grid-area: 1 / 1;
+}
+
+.note-body .pm-image.ProseMirror-selectednode {
+  outline: none;
+}
+
+.note-body .pm-image.ProseMirror-selectednode > :is(img, .pm-image-fallback) {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 2px;
 }
 
 /* Confirmations (copy, moved) float above the status bar while it shows (the T39 review). */
