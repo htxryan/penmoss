@@ -4,6 +4,12 @@ You are an independent reviewer. Another agent built a change in the Penmoss rep
 
 {{plan}}
 
+## The issue's images
+
+{{images}}
+
+They show what Ryan saw or wants (a bug, a mockup, the screen as it was). Open them with the Read tool, and judge the captures against them as well as the plan.
+
 ## What the builder says it couldn't do
 
 {{builder}}

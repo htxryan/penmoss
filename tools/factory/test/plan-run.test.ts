@@ -145,6 +145,43 @@ describe('advancePlanning', () => {
     expect((await advancePlanning(t.deps, input(t.files, card, answered))).kind).toBe('wait');
   });
 
+  it("tells a resumed session where the issue's images are, which it may never have been told", async () => {
+    // PEN-64's session started before the host downloaded images (#83): it saw only the
+    // uploads.linear.app link, and asked Ryan what his screenshot showed.
+    const t = setup();
+    const card = item(5, { status: 'Planning' });
+    await advancePlanning(t.deps, input(t.files, card));
+    t.state('waiting', min(3));
+    t.at(min(4));
+    await advancePlanning(t.deps, input(t.files, card));
+    t.at(min(9));
+    const answered = issue([
+      { author: 'htxryan', body: 'Yes, that is it', createdAt: min(8).toISOString() },
+    ]);
+    const images = "## The issue's images\n\n1. `/plans/5/attachments/0a1b.png`";
+    await advancePlanning(t.deps, { ...input(t.files, card, answered), images });
+    const message = t.messages.at(-1)!;
+    expect(message).toMatch(/^Ryan commented on the issue:\n\n> Yes, that is it/);
+    expect(message).toContain(
+      `The issue's images are on disk for you, in place of any uploads.linear.app link you couldn't open.\n\n${images}`,
+    );
+  });
+
+  it('says nothing about images when the issue has none', async () => {
+    const t = setup();
+    const card = item(5, { status: 'Planning' });
+    await advancePlanning(t.deps, input(t.files, card));
+    t.state('waiting', min(3));
+    t.at(min(4));
+    await advancePlanning(t.deps, input(t.files, card));
+    t.at(min(9));
+    const answered = issue([
+      { author: 'htxryan', body: 'A sheet, yes', createdAt: min(8).toISOString() },
+    ]);
+    await advancePlanning(t.deps, { ...input(t.files, card, answered), images: '' });
+    expect(t.messages.at(-1)).not.toMatch(/images/);
+  });
+
   it('keeps the new ID and chat link of a resumed session, so Open in Claude follows it (F20)', async () => {
     const t = setup();
     const card = item(5, { status: 'Planning' });
@@ -265,6 +302,24 @@ describe('the plan contract at agreement (F16)', () => {
     expect((await advancePlanning(t.deps, input(t.files, card))).kind).toBe('ask');
     expect(t.calls).toContain('blocked');
     expect(readMeta(t.files).agreed).toBeUndefined();
+  });
+  it("tells a session fixing the plan contract where the issue's images are (A1277)", async () => {
+    const t = setup();
+    const card = item(5, { status: 'Planning' });
+    const images = "## The issue's images\n\n1. `/plans/5/attachments/0a1b.png`";
+    await advancePlanning(t.deps, { ...input(t.files, card), images });
+    writeFileSync(join(t.files.out, 'plan.html'), '<h1>Plan</h1>');
+    t.state('agreed', min(2), {
+      agreed: { quote: 'complete', channel: 'chat', planVersion: 2, designVersion: null },
+    });
+    t.at(min(3));
+    expect((await advancePlanning(t.deps, { ...input(t.files, card), images })).kind).toBe(
+      'resume',
+    );
+    expect(t.calls.at(-1)).toMatch(/^resume Ryan agreed/);
+    expect(t.messages.at(-1)).toContain(
+      `The issue's images are on disk for you, in place of any uploads.linear.app link you couldn't open.\n\n${images}`,
+    );
   });
   it('records the artifacts and versions Ryan agreed to', async () => {
     const t = setup();

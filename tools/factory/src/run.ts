@@ -154,6 +154,11 @@ export interface RunInput {
   readonly artifacts?: readonly { readonly label: string; readonly href: string }[];
   /** The agreed plan as text: when set, web changes are validated against it (F19). */
   readonly plan?: string;
+  /**
+   * Where the issue's images are in the sandbox (attachments.ts), as the prompt says it, or empty.
+   * The validation and review sessions get it too: they see the plan, not the issue (A1277).
+   */
+  readonly images?: string;
   /** A run the daemon restarts because it stopped mid-run (R12): the claim says so. */
   readonly recovered?: boolean;
   /**
@@ -400,7 +405,9 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
       scope,
       spec,
       result,
-      input.plan ? { plan: input.plan, final: round >= config.rounds.gateFix } : undefined,
+      input.plan
+        ? { plan: input.plan, final: round >= config.rounds.gateFix, images: input.images ?? '' }
+        : undefined,
     );
     if (verdict.ok) {
       return publish(deps, {
@@ -468,7 +475,7 @@ export async function gateAndProve(
   scope: Scope,
   spec: IssueSpec,
   result: AgentResult,
-  validation?: { readonly plan: string; readonly final: boolean },
+  validation?: { readonly plan: string; readonly final: boolean; readonly images?: string },
 ): Promise<GateVerdict> {
   const needed = proofPlatforms(scope, spec.platforms);
   // R9: an in-scope platform needs a named proof spec before anything runs.
@@ -539,7 +546,14 @@ export async function gateAndProve(
     deps.log('proof-recorded', { files: prepared.proof.length });
     // F19: a planned change that users see on the web is walked and reviewed against the plan.
     if (validation && scope.platforms.includes('web')) {
-      const v = await validate(deps, gate, branch, validation.plan, result.risks);
+      const v = await validate(
+        deps,
+        gate,
+        branch,
+        validation.plan,
+        result.risks,
+        validation.images,
+      );
       if (!v.ok) return { ok: false, feedback: `Validation couldn't finish: ${v.error}` };
       const mismatches = v.rows.filter((r) => r.verdict === 'mismatch');
       if (mismatches.length > 0 && !validation.final)

@@ -116,7 +116,7 @@ export async function issueForAgent(
   tracker: Tracker,
   issue: Issue,
   where: Omit<LocalImageOptions, 'download'>,
-): Promise<{ readonly issue: Issue; readonly text: string }> {
+): Promise<{ readonly issue: Issue; readonly text: string; readonly images: string }> {
   let local: { issue: Issue; note: string };
   try {
     local = await localizeImages(issue, tracker.owner, {
@@ -130,7 +130,11 @@ export async function issueForAgent(
     };
   }
   const text = issueText(local.issue, tracker.owner, 'penmoss-factory');
-  return { issue: local.issue, text: local.note ? `${text}\n\n${local.note}` : text };
+  return {
+    issue: local.issue,
+    text: local.note ? `${text}\n\n${local.note}` : text,
+    images: local.note,
+  };
 }
 
 /** Where a run's agent reads the issue's images: its worktree's `.factory/attachments/`. */
@@ -219,10 +223,14 @@ export async function executePlanning(
   await ensureClone(config, nodeExec);
   const files = planFiles(config, item.number);
   // The session reads the issue's images from the plan's own folder, which only the host writes.
-  const { issue, text } = await issueForAgent(tracker, await tracker.readIssue(item.number), {
-    dir: files.attachments,
-    shownAs: (file) => join(files.attachments, file),
-  });
+  const { issue, text, images } = await issueForAgent(
+    tracker,
+    await tracker.readIssue(item.number),
+    {
+      dir: files.attachments,
+      shownAs: (file) => join(files.attachments, file),
+    },
+  );
   const env: Record<string, string> = {
     PATH: process.env['PATH'] ?? '/usr/bin:/bin',
     HOME: process.env['HOME'] ?? '',
@@ -283,6 +291,7 @@ export async function executePlanning(
       issue,
       files,
       prompt,
+      images,
     });
   } catch (error) {
     if (error instanceof BlockedByRyan) return { kind: 'stopped' };
@@ -374,7 +383,7 @@ export async function executeRun(
   const { config, gh, tracker } = factory;
   const runId = `${item.number}-${Date.now().toString(36)}-${randomBytes(2).toString('hex')}`;
   await ensureClone(config, nodeExec);
-  const { text } = await issueForAgent(
+  const { text, images } = await issueForAgent(
     tracker,
     await tracker.readIssue(item.number),
     runImages(config, runId),
@@ -417,6 +426,7 @@ export async function executeRun(
       prompt,
       ...(artifacts.length ? { artifacts } : {}),
       ...(plan ? { plan } : {}),
+      ...(images ? { images } : {}),
       ...(recovered ? { recovered } : {}),
       ...(recovered ? resumeFrom(config, item.number) : {}),
     });

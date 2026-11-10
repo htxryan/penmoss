@@ -590,6 +590,23 @@ describe('runImplement', () => {
     expect(f.comments[1]).toContain('- **AC1 the badge uses the accent colour**: Flat badge');
   });
 
+  it("shows the validation and review sessions the issue's images (A1277)", async () => {
+    const f = fake({ paths: ['apps/web/src/a.ts'], result: webDone, reviews: [review('match')] });
+    const images = "## The issue's images\n\n1. `.factory/attachments/0a1b.png`";
+    await runImplement(f.deps, { item: card, spec, prompt: 'p', plan: 'AC1 …', images });
+    expect(f.prompts[1]).toMatch(/^You are validating/);
+    expect(f.prompts[1]).toContain('`.factory/attachments/0a1b.png`');
+    expect(f.prompts[2]).toMatch(/^You are an independent reviewer/);
+    expect(f.prompts[2]).toContain('`.factory/attachments/0a1b.png`');
+  });
+
+  it('tells the validation and review sessions when the issue has no images', async () => {
+    const f = fake({ paths: ['apps/web/src/a.ts'], result: webDone, reviews: [review('match')] });
+    await runImplement(f.deps, { item: card, spec, prompt: 'p', plan: 'AC1 …' });
+    expect(f.prompts[1]).toContain("## The issue's images\n\nThe issue has none.");
+    expect(f.prompts[2]).toContain("## The issue's images\n\nThe issue has none.");
+  });
+
   it('skips validation without an agreed plan (plan:skip)', async () => {
     const f = fake({ paths: ['apps/web/src/a.ts'], result: webDone });
     await runImplement(f.deps, { item: card, spec, prompt: 'p' });
