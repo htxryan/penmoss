@@ -10,8 +10,9 @@ import app.penmoss.engine.settings.SettingKeys
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -68,7 +69,9 @@ class JournalDeviceSettingsTest {
 
     @After
     fun close() {
-        scope.cancel()
+        // Wait for follow() to stop before the databases close: cancel() alone returns while its
+        // Room query may still run, which then throws on the closed pool into the next runTest.
+        runBlocking { scope.coroutineContext.job.cancelAndJoin() }
         deviceDb.close()
         journalDb.close()
     }
