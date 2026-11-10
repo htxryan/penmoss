@@ -2,6 +2,27 @@ import { describe, expect, it } from 'vitest';
 import { parseAgentResult } from '../src/result.ts';
 
 describe('parseAgentResult', () => {
+  it('reads questions written as { question, proposed } objects (A1267)', () => {
+    // PEN-80's agent wrote its question this way, and the run Blocked on the format instead.
+    const r = parseAgentResult(
+      JSON.stringify({
+        status: 'needs-info',
+        summary: 'A skip needs a decision',
+        questions: [
+          { question: 'Skip the test?', proposed: 'No: open a flake issue instead.' },
+          'Plain question?',
+        ],
+      }),
+    );
+    expect(r.ok && r.result.questions).toEqual([
+      'Skip the test? Proposed: No: open a flake issue instead.',
+      'Plain question?',
+    ]);
+    const bad = parseAgentResult(
+      JSON.stringify({ status: 'needs-info', summary: 's', questions: [{ proposed: 'x' }] }),
+    );
+    expect(bad.ok).toBe(false);
+  });
   it('reads the plan example', () => {
     const r = parseAgentResult(
       JSON.stringify({

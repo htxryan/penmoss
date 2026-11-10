@@ -54,4 +54,4 @@ Write `.factory/result.json` (it is not committed):
 
 For each platform in scope, name the committed tests that show the change under `proofSpecs` (Proof, above): the factory runs them again with recording on, and attaches the video and screenshots to the PR.
 
-If you can't proceed without an answer from Ryan, set `"status": "needs-info"` and put each question in `questions`, with your proposed answer. If the task can't be done, set `"status": "failed"` and say why in `summary`.
+If you can't proceed without an answer from Ryan, set `"status": "needs-info"` and put each question in `questions` as one string that ends with your proposed answer, e.g. `"Which colour should the link be? Proposed: the accent blue."`. If the task can't be done, set `"status": "failed"` and say why in `summary`.

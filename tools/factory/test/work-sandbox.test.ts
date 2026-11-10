@@ -18,6 +18,7 @@ import {
   agentMissing,
   hostDeps,
   repoDir,
+  execPastRefLocks,
   sandboxStartCommand,
   type HostOptions,
 } from '../src/host.ts';
@@ -151,6 +152,30 @@ describe("a run's sandbox starts from the host's main (A1232)", () => {
       /couldn't start from main's bbbbbbbbbb: fatal: could not read from remote/,
     );
     expect(sandcastle.closed).toBe(1);
+  });
+
+  it('goes again when the other slot held the ref lock, and not for other failures (A1267)', async () => {
+    const lock = {
+      exitCode: 1,
+      stdout: '',
+      stderr: "error: cannot lock ref 'refs/remotes/origin/main': is at a but expected b",
+    };
+    const ok = { exitCode: 0, stdout: '', stderr: '' };
+    const queue = [lock, lock, ok];
+    const calls: string[] = [];
+    const handle = {
+      exec: (c: string) => {
+        calls.push(c);
+        return Promise.resolve(queue.shift() ?? ok);
+      },
+    };
+    expect(await execPastRefLocks(handle, 'start', () => Promise.resolve())).toEqual(ok);
+    expect(calls).toHaveLength(3);
+    const other = { exitCode: 128, stdout: '', stderr: 'fatal: could not read from remote' };
+    const once = { exec: () => Promise.resolve(other) };
+    expect(await execPastRefLocks(once, 'start', () => Promise.resolve())).toEqual(other);
+    const always = { exec: () => Promise.resolve(lock) };
+    expect((await execPastRefLocks(always, 'start', () => Promise.resolve())).exitCode).toBe(1);
   });
 
   it('refuses a base that is not a commit', () => {

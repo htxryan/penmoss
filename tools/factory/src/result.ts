@@ -37,6 +37,31 @@ export type AgentResultParse =
 const strings = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((v) => typeof v === 'string');
 
+/**
+ * The questions as text. An agent asked to give "each question, with your proposed answer" may
+ * write `{ "question": …, "proposed": … }` objects (PEN-80's run, A1267): those are read too,
+ * as "<question> Proposed: <answer>".
+ */
+function questionTexts(raw: unknown): string[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: string[] = [];
+  for (const q of raw) {
+    if (typeof q === 'string') {
+      out.push(q);
+      continue;
+    }
+    if (typeof q !== 'object' || q === null) return undefined;
+    const o = q as Record<string, unknown>;
+    const text = [o['question'], o['text']].find((v): v is string => typeof v === 'string');
+    if (!text?.trim()) return undefined;
+    const proposed = [o['proposed'], o['proposal'], o['proposedAnswer']].find(
+      (v): v is string => typeof v === 'string' && v.trim() !== '',
+    );
+    out.push(proposed ? `${text.trim()} Proposed: ${proposed.trim()}` : text.trim());
+  }
+  return out;
+}
+
 export function parseAgentResult(text: string): AgentResultParse {
   let raw: unknown;
   try {
@@ -53,8 +78,12 @@ export function parseAgentResult(text: string): AgentResultParse {
   if (typeof r['summary'] !== 'string' || r['summary'].trim() === '') {
     return { ok: false, error: 'summary must be a non-empty string' };
   }
-  const questions = r['questions'] ?? [];
-  if (!strings(questions)) return { ok: false, error: 'questions must be a list of strings' };
+  const questions = questionTexts(r['questions'] ?? []);
+  if (!questions)
+    return {
+      ok: false,
+      error: 'questions must be a list of strings (or of { question, proposed } objects)',
+    };
   if (r['status'] === 'needs-info' && questions.length === 0) {
     return { ok: false, error: 'needs-info needs at least one question' };
   }
