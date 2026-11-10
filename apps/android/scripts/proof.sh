@@ -53,10 +53,11 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-# The launcher's "isn't responding" dialog after a slow boot (PEN-90) stays until someone
-# answers it, so settling waited out SETTLE_SECONDS. Answer it with Wait, which leaves the
-# launcher running (Close app would restart it and could bring the dialog back), and only
-# before the app under test starts: System UI's dialog still closes by itself.
+# An "isn't responding" dialog after a slow boot, the launcher's or System UI's, can stay until
+# someone answers it (PEN-90): settling then waited out SETTLE_SECONDS. Answer it with Wait,
+# at most every 5 s and only before the app under test starts. Wait leaves the process running;
+# Close app, like hiding error dialogs, would restart it, and a restarted System UI recreates
+# the activity under test.
 pressed=-10
 press_wait() {
   [ $((waited - pressed)) -ge 5 ] || return 0
@@ -70,7 +71,7 @@ press_wait() {
   x="$(echo "$bounds" | awk '{ print int(($1 + $3) / 2) }')"
   y="$(echo "$bounds" | awk '{ print int(($2 + $4) / 2) }')"
   "$ADB" -s "$ANDROID_SERIAL" shell input tap "$x" "$y" >/dev/null 2>&1 || return 0
-  echo "[proof] the launcher wasn't responding after ${waited}s: pressed Wait"
+  echo "[proof] $(echo "$focus" | sed 's/.*Not Responding: \([^}]*\).*/\1/') wasn't responding after ${waited}s: pressed Wait"
 }
 
 echo "[proof] booting $PENMOSS_AVD on $ANDROID_SERIAL"
@@ -101,11 +102,11 @@ echo "[proof] booted in ${waited}s"
 # Let the device settle before any test. Booted is not idle: the boot's broadcasts keep a
 # software-rendered emulator on a loaded Mac busy for a minute or more, System UI can stop
 # responding meanwhile, and its "isn't responding" dialog takes the input focus from the app
-# under test (a test's typed keys land in the dialog). Android closes that dialog itself once
-# System UI responds again. So: wait for the broadcasts to drain, then for the launcher to
-# hold the focus, with no dialog in front, for QUIET_SECONDS in a row. Hiding error dialogs
-# instead is worse: Android then restarts System UI, whose theme overlays change the
-# configuration and recreate the activity under test.
+# under test (a test's typed keys land in the dialog). So: wait for the broadcasts to drain,
+# then for the launcher to hold the focus, with no dialog in front, for QUIET_SECONDS in a row,
+# answering any "isn't responding" dialog with Wait (press_wait). Hiding error dialogs instead
+# is worse: Android then restarts System UI, whose theme overlays change the configuration and
+# recreate the activity under test.
 "$ADB" -s "$ANDROID_SERIAL" shell am wait-for-broadcast-idle >/dev/null 2>&1 &
 idle=$!
 waited=0
@@ -124,8 +125,8 @@ while [ "$quiet" -lt "$QUIET_SECONDS" ]; do
   focus="$("$ADB" -s "$ANDROID_SERIAL" shell dumpsys window displays 2>/dev/null |
     sed -n 's/.*mCurrentFocus=//p' | head -n 1 | tr -d '\r')"
   case "$focus" in
-    *'Not Responding'*[Ll]auncher*) quiet=0 && press_wait ;;
-    *'Not Responding'* | *'Application Error'*) quiet=0 ;;
+    *'Not Responding'*) quiet=0 && press_wait ;;
+    *'Application Error'*) quiet=0 ;;
     *Launcher*) quiet=$((quiet + 1)) ;;
     *) quiet=0 ;;
   esac

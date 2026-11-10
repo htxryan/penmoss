@@ -272,13 +272,20 @@ describe.concurrent(
       expect(readFileSync(join(f.root, 'build', 'proof', 'android-1.png'), 'utf8')).toBe('png');
     }, 30_000);
 
-    it("waits while System UI's ANR dialog has the focus, then runs the tests", async () => {
+    it("answers System UI's ANR dialog with Wait, once in 5 s, then runs the tests", async () => {
       const r = await fixture().run(['app.penmoss.PassingTest'], { STUB_DIALOG_POLLS: '3' });
       expect(r.status, r.stderr).toBe(0);
       const adb = r.calls.filter((c) => c.startsWith('adb '));
       const polls = adb.filter((c) => c.includes('dumpsys window'));
       // Three looks at the dialog, then two quiet ones with the launcher in front.
       expect(polls.length).toBe(5);
+      // Wait, never Close app or hiding the dialogs, which would restart System UI (PEN-90).
+      expect(adb.filter((c) => c.includes('input tap'))).toEqual([
+        'adb -s emulator-5560 shell input tap 540 1389',
+      ]);
+      expect(r.stdout).toMatch(
+        /\[proof\] com\.android\.systemui wasn't responding after \d+s: pressed Wait/,
+      );
       const lastPoll = adb.lastIndexOf(polls.at(-1) ?? '');
       expect(adb.findIndex((c) => c.includes('am instrument'))).toBeGreaterThan(lastPoll);
       expect(r.stderr).not.toContain("didn't settle");
@@ -293,14 +300,10 @@ describe.concurrent(
       expect(adb).toContain('adb -s emulator-5560 shell input tap 540 1389');
       expect(at('uiautomator dump')).toBeLessThan(at('input tap'));
       expect(at('input tap')).toBeLessThan(at('am instrument'));
-      expect(r.stdout).toMatch(/\[proof\] the launcher wasn't responding after \d+s: pressed Wait/);
+      expect(r.stdout).toMatch(
+        /\[proof\] com\.google\.android\.apps\.nexuslauncher wasn't responding after \d+s: pressed Wait/,
+      );
       expect(r.stderr).not.toContain("didn't settle");
-    }, 30_000);
-
-    it("never presses anything on System UI's own ANR dialog", async () => {
-      const r = await fixture().run(['app.penmoss.PassingTest'], { STUB_DIALOG_POLLS: '3' });
-      expect(r.status, r.stderr).toBe(0);
-      expect(r.calls.some((c) => c.includes('uiautomator') || c.includes('input tap'))).toBe(false);
     }, 30_000);
 
     it("ends the video at the test's own screenshot, not on the launcher (PEN-91)", async () => {
@@ -331,7 +334,7 @@ describe.concurrent(
       expect(readFileSync(join(f.root, 'build', 'proof', 'android-1.mp4'), 'utf8')).toBe('mp4\n');
     }, 30_000);
 
-    it("leaves the video alone when the test took no screenshot", async () => {
+    it('leaves the video alone when the test took no screenshot', async () => {
       const f = fixture();
       const r = await f.run(['app.penmoss.PassingTest'], { PATH: f.withFfmpeg });
       expect(r.status, r.stderr).toBe(0);
