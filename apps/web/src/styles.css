@@ -2466,6 +2466,8 @@ a {
     padding: max(1rem, env(safe-area-inset-top)) 0 0;
   }
 
+  /* The heading lives in .settings-title since A1136; this rule targeted the bare h1 and
+     stopped matching when it moved (PEN-64). Move it with the markup. */
   .settings-bar,
   .settings-page > .settings-title {
     flex: none;

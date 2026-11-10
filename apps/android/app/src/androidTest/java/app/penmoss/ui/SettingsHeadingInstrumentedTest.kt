@@ -59,10 +59,11 @@ class SettingsHeadingInstrumentedTest {
             for (heading in headings) {
                 assertTrue("heading at x=${heading.left}px, under ${16 * density}px", heading.left >= 16 * density - 1)
             }
+            // Held before the shot, not after it: proof.sh ends the video 0.5 s after ProofShot
+            // (A1279), so this is what keeps the heading in the recording for a moment.
+            SystemClock.sleep(2_000)
             // The proof's screenshot, while Settings is on screen (A1255).
             ProofShot.take()
-            // Held on screen a moment, so the proof's recording shows the heading.
-            SystemClock.sleep(2_000)
         }
     }
 

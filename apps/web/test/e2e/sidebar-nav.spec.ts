@@ -236,7 +236,8 @@ test('Settings: the heading keeps the page gutter, in line with the sections (PE
   const heading = page.locator('.settings-title > h1');
   await expect(heading).toBeVisible();
   await expect(page.locator('.settings-nav a').first()).toBeVisible();
-  const left = async (selector: string) => (await page.locator(selector).first().boundingBox())!.x;
+  const leftOf = async (selector: string) =>
+    (await page.locator(selector).first().boundingBox())!.x;
   // The heading starts the page's gutter (--settings-gutter) in from the page's edge, not at the
   // window's edge, and in line with the sections' list.
   const gutter = await page.locator('.settings-page').evaluate((element) => {
@@ -248,9 +249,9 @@ test('Settings: the heading keeps the page gutter, in line with the sections (PE
     return width;
   });
   expect(gutter).toBeGreaterThan(0);
-  const headingLeft = await left('.settings-title > h1');
-  expect(Math.abs(headingLeft - (await left('.settings-page')) - gutter)).toBeLessThanOrEqual(1);
-  expect(Math.abs(headingLeft - (await left('.settings-nav')))).toBeLessThanOrEqual(1);
+  const headingLeft = await leftOf('.settings-title > h1');
+  expect(Math.abs(headingLeft - (await leftOf('.settings-page')) - gutter)).toBeLessThanOrEqual(1);
+  expect(Math.abs(headingLeft - (await leftOf('.settings-nav')))).toBeLessThanOrEqual(1);
   // Held on screen, so the proof's recording shows the heading in line.
   await page.waitForTimeout(2_000);
   await expect(heading).toBeInViewport();
