@@ -37,7 +37,9 @@ async function serve(options: {
   const writer: Writer = {
     perform: (action) => {
       actions.push(action);
-      return Promise.resolve('Posted');
+      // As the real writer says it: the fixture's cards in question are Blocked.
+      const clears = action.kind === 'complete' || (action.kind === 'reply' && action.unblock);
+      return Promise.resolve(clears ? 'Posted, and Blocked cleared' : 'Posted');
     },
   };
   const server: Server = createUiServer({
@@ -188,7 +190,9 @@ test.describe('a healthy factory', () => {
     const detail = page.locator('#issue-73');
     await detail.locator('textarea').fill('Wait for the idle resource, not a sleep.');
     await detail.getByRole('button', { name: 'Post and retry' }).click();
-    await expect(detail.locator('.reply .said')).toHaveText('Posted');
+    await expect(detail.locator('.sent .ask')).toHaveText(
+      /^Posted, and Blocked cleared on PEN-73 at \d\d:\d\d$/,
+    );
     expect(s.actions).toEqual([
       { kind: 'reply', issue: 73, text: 'Wait for the idle resource, not a sleep.', unblock: true },
     ]);
@@ -275,7 +279,17 @@ test.describe("the plan's questions", () => {
       'Just unblock',
     ]);
     await detail.getByRole('button', { name: 'Send answers and continue' }).click();
-    await expect(detail.locator('.reply .said')).toHaveText('Posted');
+    // Sent: the card says so in place of the questions, rather than showing them again with
+    // the picks cleared while the board catches up.
+    const done = detail.locator('.sent');
+    await expect(done.locator('.ask')).toHaveText(
+      /^Posted, and Blocked cleared on PEN-78 at \d\d:\d\d$/,
+    );
+    await expect(done.locator('.what')).toHaveText(
+      'The factory hands it on at its next poll, within a minute or two. Any reply or new question shows here.',
+    );
+    await expect(detail.locator('.q')).toHaveCount(0);
+    await expect(detail.locator('textarea')).toHaveCount(0);
     expect(s.actions).toEqual([
       {
         kind: 'reply',
@@ -284,6 +298,10 @@ test.describe("the plan's questions", () => {
         unblock: true,
       },
     ]);
+    // Until Ryan asks for them back.
+    await detail.getByRole('button', { name: 'Show the questions again' }).click();
+    await expect(detail.locator('.q')).toHaveCount(2);
+    await expect(detail.locator('.opt[aria-pressed="true"]')).toHaveCount(0);
   });
 });
 
