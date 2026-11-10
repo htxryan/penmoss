@@ -1057,7 +1057,6 @@
         position: absolute;
         top: 3px;
         height: 20px;
-        min-width: 4px;
         border-radius: 5px;
         font-size: 11px;
         font-weight: 600;
@@ -1065,6 +1064,7 @@
         padding: 0 5px;
         overflow: hidden;
         white-space: nowrap;
+        font-variant-numeric: tabular-nums;
         text-decoration: none;
         border: 1px solid;
       }
@@ -1966,6 +1966,23 @@
         flush();
         return rows;
       }
+      // A timeline chip shows its full key ("PEN-85") when that fits its width, else the number.
+      const chips = new ResizeObserver((entries) => {
+        for (const { target } of entries) {
+          // A re-render drops the old chips; their last resize (to nothing) lets them go.
+          if (!target.isConnected) {
+            chips.unobserve(target);
+            continue;
+          }
+          target.textContent = target.dataset.key;
+          if (target.scrollWidth > target.clientWidth) target.textContent = target.dataset.n;
+        }
+      });
+      function fitChip(a, key, n) {
+        a.dataset.key = key;
+        a.dataset.n = n;
+        chips.observe(a);
+      }
       function today(v) {
         const sec = el('section', 'today');
         sec.setAttribute('aria-label', 'Activity');
@@ -2003,10 +2020,16 @@
             const a = el('a', `barx t-${b.tone}`, b.key);
             a.href = href('pipeline', b.issue);
             const start = Math.max(from, Date.parse(b.start));
-            a.style.left = pct(new Date(start).toISOString());
-            a.style.width = `max(4px, ${(((Date.parse(b.end) - start) / (to - from)) * 100).toFixed(2)}%)`;
+            // Never narrower than the card's number (padding and border take 12px). A chip that
+            // starts near now moves left by what it would overflow, so it stays in the lane.
+            const n = String(b.issue);
+            const least = `calc(${n.length}ch + 12px)`;
+            a.style.left = `min(${pct(new Date(start).toISOString())}, calc(100% - ${least}))`;
+            a.style.width = `max(${least}, ${(((Date.parse(b.end) - start) / (to - from)) * 100).toFixed(2)}%)`;
             a.title = `${b.key} ${hhmm(b.start)}–${hhmm(b.end)}: ${b.label}`;
             a.setAttribute('aria-label', a.title);
+            // The full key when it fits, else the number alone; checked again on every resize.
+            fitChip(a, b.key, n);
             l.append(a);
           }
           row.append(el('span', 'lname', `Slot ${lane.slot}`), l);

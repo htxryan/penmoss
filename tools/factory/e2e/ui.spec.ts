@@ -287,6 +287,57 @@ test.describe("the plan's questions", () => {
   });
 });
 
+test.describe("the activity timeline's chips", () => {
+  let s: Served;
+  test.beforeAll(async () => {
+    s = await serve({ alive: true, writable: true });
+  });
+  test.afterAll(() => s.close());
+
+  // PEN-73 ran two hours, PEN-75 a few seconds (the fixture's ledger).
+  const chip = (page: Page, key: string) =>
+    page.locator('.today').getByRole('link', { name: new RegExp(`^${key} `) });
+  const fits = (page: Page, key: string) =>
+    chip(page, key).evaluate((a) => {
+      const box = a as unknown as { scrollWidth: number; clientWidth: number };
+      return box.scrollWidth <= box.clientWidth;
+    });
+
+  async function pipeline(page: Page): Promise<void> {
+    await open(page, s.url);
+    await page.locator('.switch a', { hasText: 'Pipeline' }).click();
+    await expect(page.locator('.today .lane-row')).toHaveCount(3);
+  }
+
+  test('a short run shows its number alone, a long one its full key', async ({ page }) => {
+    await pipeline(page);
+    await expect(chip(page, 'PEN-73')).toHaveText('PEN-73');
+    await expect(chip(page, 'PEN-75')).toHaveText('75');
+    // Neither is cut: a run of seconds still gets a chip as wide as its number.
+    expect(await fits(page, 'PEN-73')).toBe(true);
+    expect(await fits(page, 'PEN-75')).toBe(true);
+    // The tooltip and the accessible name keep the full key, the times and the step.
+    await expect(chip(page, 'PEN-75')).toHaveAttribute(
+      'title',
+      /^PEN-75 \d\d:\d\d–\d\d:\d\d: Failed before the agent started/,
+    );
+    // In dark too, then held on screen for the proof's recording.
+    await page.getByRole('button', { name: 'Dark', exact: true }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await chip(page, 'PEN-75').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(2000);
+    await expect(chip(page, 'PEN-75')).toHaveText('75');
+  });
+
+  test('at phone width the chips still show their numbers in full', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await pipeline(page);
+    await expect(chip(page, 'PEN-75')).toHaveText('75');
+    expect(await fits(page, 'PEN-75')).toBe(true);
+    await expect(chip(page, 'PEN-73')).toHaveText('PEN-73');
+  });
+});
+
 test.describe('the theme', () => {
   let s: Served;
   test.beforeAll(async () => {
