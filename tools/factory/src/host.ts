@@ -31,7 +31,7 @@ import { cardLink } from './ui/link.ts';
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { Exec } from './exec.ts';
 import { ensureConfig, mustGit } from './git.ts';
-import { runIdOf, type CheckRun } from './checks.ts';
+import { failedLines, jobIdOf, runIdOf, type CheckRun } from './checks.ts';
 import {
   definedPlaceholders,
   formatDecisions,
@@ -740,12 +740,21 @@ export function hostDeps(options: HostOptions): HostDeps {
           throw error;
         }),
     failedLog: async (check) => {
+      // The job's own log: `gh run view --log-failed` has nothing while the run's other jobs
+      // are still going, which PEN-64's CI repair got as an empty log (A1278).
+      const job = jobIdOf(check);
+      if (job) {
+        const log = await gh
+          .run(['api', '--allow-escape-sequences', `repos/${config.repo}/actions/jobs/${job}/logs`])
+          .catch(() => '');
+        if (log.trim()) return failedLines(log);
+      }
       const id = runIdOf(check);
       if (!id) return '(no Actions run to read)';
       const log = await gh
         .run(['run', 'view', id, '--repo', config.repo, '--log-failed'])
         .catch(() => '');
-      return log.trim().split('\n').slice(-60).join('\n') || '(the log was empty)';
+      return failedLines(log) || '(the log was empty)';
     },
     notify: async (title, message) => {
       // A notification is a courtesy: one that can't be shown never stops a run. terminal-notifier

@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { runIdOf, summarizeChecks, type CheckRun } from '../src/checks.ts';
+import { failedLines, jobIdOf, runIdOf, summarizeChecks, type CheckRun } from '../src/checks.ts';
 import {
   definedPlaceholders,
   maxDecision,
@@ -63,6 +63,37 @@ describe('summarizeChecks', () => {
   });
   it('finds the run ID for the failed log', () => {
     expect(runIdOf(fail)).toBe('42411975662');
+  });
+  it("finds the job ID, for the job's own log (A1278)", () => {
+    const link = 'https://github.com/o/r/actions/runs/42831742031/job/129883329415';
+    expect(jobIdOf({ ...fail, link })).toBe('129883329415');
+    expect(jobIdOf({ ...fail, link: 'https://github.com/o/r/actions/runs/1' })).toBeUndefined();
+  });
+});
+
+describe("a failed job's log (A1278)", () => {
+  // As GitHub serves it: a timestamp and colour codes on each line, the runner's teardown last.
+  const at = (l: string) => `2026-11-10T13:57:22.9869581Z ${l}`;
+  const log = [
+    `\uFEFF${at('##[group]Run task check')}`,
+    ...Array.from({ length: 100 }, (_, i) => at(`build line ${i}`)),
+    at('\x1b[31m FAIL \x1b[39m test/unit/engine-host.test.ts > pulls every 60 s'),
+    at('AssertionError: expected 4 to be 3'),
+    at('##[error]Process completed with exit code 201.'),
+    at('Post job cleanup.'),
+    ...Array.from({ length: 80 }, (_, i) => at(`cleanup ${i}`)),
+  ].join('\n');
+  it('ends at the last error, not in the teardown', () => {
+    const lines = failedLines(log).split('\n');
+    expect(lines).toHaveLength(60);
+    expect(lines.at(-1)).toBe('##[error]Process completed with exit code 201.');
+    expect(lines).toContain(' FAIL  test/unit/engine-host.test.ts > pulls every 60 s');
+    expect(lines.join('\n')).not.toContain('\x1b');
+    expect(lines.join('\n')).not.toMatch(/cleanup|2026-11-10T/);
+  });
+  it('keeps the last lines of a log with no error line', () => {
+    expect(failedLines('a\nb\nc', 2)).toBe('b\nc');
+    expect(failedLines('')).toBe('');
   });
 });
 

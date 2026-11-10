@@ -42,6 +42,29 @@ export function summarizeChecks(
   return { kind: 'pending', waiting };
 }
 
+/** The job ID in a check's link, for the job's own log, which GitHub has once the job ends. */
+export function jobIdOf(check: CheckRun): string | undefined {
+  return /\/actions\/runs\/\d+\/job\/(\d+)/.exec(check.link)?.[1];
+}
+
+/**
+ * The lines of a failed job's log that say why (A1278): the 60 ending at its last `##[error]`
+ * (the runner's own teardown comes after), without colour codes or timestamps.
+ */
+export function failedLines(log: string, count = 60): string {
+  const lines = log
+    // eslint-disable-next-line no-control-regex
+    .replaceAll(/\u001b\[[0-9;?]*[A-Za-z]/g, '')
+    .split('\n')
+    .map((l) => l.replace(/^\uFEFF?\d{4}-\d\d-\d\dT[\d:.]+Z /, '').trimEnd());
+  const last = lines.findLastIndex((l) => l.includes('##[error]'));
+  const end = last === -1 ? lines.length : last + 1;
+  return lines
+    .slice(Math.max(0, end - count), end)
+    .join('\n')
+    .trim();
+}
+
 /** The Actions run ID in a check's link, for `gh run view <id> --log-failed`. */
 export function runIdOf(check: CheckRun): string | undefined {
   return /\/actions\/runs\/(\d+)/.exec(check.link)?.[1];
