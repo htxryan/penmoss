@@ -12,8 +12,9 @@ import {
 // PEN-66 (A1283) in the Mac app: a picture keeps its own line (A506) and leaves no empty line
 // under it. A paragraph of text ending in a pasted 200×100 picture, a picture alone in its
 // paragraph, and a bulleted item ending in one: each block ends at its picture's bottom edge, and
-// the next block starts the normal gap below it, as below a line of text, ±1 px. End then Enter
-// after a picture starts the next paragraph that gap below it. The web suite
+// the next block starts the normal gap below it, as below a line of text, ±1 px. End, or a click
+// right of a picture, draws the caret on the picture's line; Enter then starts the next paragraph
+// that gap below it. The web suite
 // (apps/web/test/e2e/picture-gap.spec.ts) covers every case of the plan.
 
 const mac = process.platform === 'darwin';
@@ -59,6 +60,79 @@ async function pastePicture(page: Page): Promise<void> {
         .evaluate((img: HTMLImageElement) => img.naturalWidth),
     )
     .toBe(200);
+}
+
+/**
+ * Where the caret is drawn, from the screen itself: the editor's caret turned pure red for a moment,
+ * the pixels of that colour over a few screenshots (it blinks). A collapsed selection between two
+ * elements, as after a picture that ends its block, has no rectangle of its own in Chromium
+ * (getClientRects() is empty there), so only the drawn caret shows where it is.
+ */
+async function drawnCaret(page: Page): Promise<Box> {
+  const editor = body(page);
+  await editor.evaluate((dom) =>
+    (dom as HTMLElement).style.setProperty('caret-color', '#ff0000', 'important'),
+  );
+  try {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const shot = (await page.screenshot({ caret: 'initial' })).toString('base64');
+      const found = await page.evaluate(async (png) => {
+        const image = new Image();
+        image.src = `data:image/png;base64,${png}`;
+        await image.decode();
+        const canvas = document.createElement('canvas');
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext('2d')!;
+        context.drawImage(image, 0, 0);
+        const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+        const scale = image.width / innerWidth;
+        let top = Infinity;
+        let bottom = -Infinity;
+        let left = Infinity;
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i]! < 240 || data[i + 1]! > 20 || data[i + 2]! > 20) continue;
+          const x = (i / 4) % canvas.width;
+          const y = Math.floor(i / 4 / canvas.width);
+          top = Math.min(top, y);
+          bottom = Math.max(bottom, y + 1);
+          left = Math.min(left, x);
+        }
+        if (top === Infinity) return null;
+        return { top: top / scale, bottom: bottom / scale, left: left / scale };
+      }, shot);
+      if (found) return found;
+      await page.waitForTimeout(150);
+    }
+    throw new Error('No caret drawn');
+  } finally {
+    await editor.evaluate((dom) => (dom as HTMLElement).style.removeProperty('caret-color'));
+  }
+}
+
+interface Box {
+  readonly top: number;
+  readonly bottom: number;
+  readonly left: number;
+}
+
+/**
+ * AC5: the caret after the nth picture is drawn on the picture's line, at its right edge, down to
+ * its bottom (Chromium draws it as tall as the picture beside it, A1283).
+ */
+async function expectCaretAfter(page: Page, nth: number): Promise<void> {
+  const picture = await body(page)
+    .locator('.pm-image img')
+    .nth(nth)
+    .evaluate((img) => {
+      const { top, bottom, right } = img.getBoundingClientRect();
+      return { top, bottom, right };
+    });
+  const caret = await drawnCaret(page);
+  expect(Math.abs(caret.bottom - picture.bottom), 'at the picture’s bottom').toBeLessThanOrEqual(2);
+  expect(caret.top, 'on the picture’s line').toBeGreaterThanOrEqual(picture.top - 2);
+  expect(caret.left, 'right of the picture').toBeGreaterThanOrEqual(picture.right);
+  expect(caret.left, 'beside the picture').toBeLessThanOrEqual(picture.right + 4);
 }
 
 interface Measured {
@@ -129,7 +203,9 @@ test('a picture that ends a paragraph, stands alone or ends a list item leaves n
   // Text, then a picture in the same paragraph; End, Enter, and the next paragraph.
   await page.keyboard.type('Text above the picture');
   await pastePicture(page);
+  // AC5: End puts the caret after the picture, drawn on the picture's line.
   await page.keyboard.press('End');
+  await expectCaretAfter(page, 0);
   await page.keyboard.press('Enter');
   await page.keyboard.type('Next');
   await page.keyboard.press('Enter');
@@ -193,10 +269,20 @@ test('a picture that ends a paragraph, stands alone or ends a list item leaves n
     'the gap above the list item’s picture',
   ).toBeLessThanOrEqual(PX);
 
-  // The proof: the three pictures on screen, held.
-  await body(page).evaluate((dom) => (dom as HTMLElement).blur());
-  await body(page).locator('.pm-image').first().scrollIntoViewIfNeeded();
+  // The proof: the pictures on screen, held, and a click right of the lone picture, which puts the
+  // caret on its line (AC5).
+  const lone = body(page).locator('.pm-image img').nth(1);
+  await lone.scrollIntoViewIfNeeded();
+  const box = (await lone.boundingBox())!;
+  const column = (await body(page).boundingBox())!;
+  await page.mouse.click(
+    (box.x + box.width + column.x + column.width) / 2,
+    box.y + box.height - 10,
+  );
+  await expect(body(page).locator('.pm-image.ProseMirror-selectednode')).toHaveCount(0);
+  await expectCaretAfter(page, 1);
   await page.waitForTimeout(2000);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/mac-picture-gap.png` });
-  await expect(body(page).locator('.pm-image').first()).toBeInViewport();
+  await expect(lone).toBeInViewport();
+  await expectCaretAfter(page, 1);
 });

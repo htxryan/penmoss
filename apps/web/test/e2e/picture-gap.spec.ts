@@ -261,37 +261,71 @@ function expectTextLineAbove(picture: Picture): void {
 }
 
 /**
- * The caret after a picture stands beside it, at its bottom right, one line of text tall: not at
- * the far edge of the column, and not as tall as the picture.
+ * The caret after a picture is drawn on the picture's line, at its right edge: not at the far edge
+ * of the column, and not on an empty line under it. Chromium draws a caret beside an inline picture
+ * as tall as the picture (A1283), so it spans the picture's line down to the picture's bottom.
  */
 function expectCaretAfter(caret: Box, picture: Picture): void {
-  // (A text caret ends at the font's descent, a little above the line's bottom: its half-leading.)
-  expect(caret.bottom, 'at the picture’s bottom').toBeLessThanOrEqual(picture.bottom + PX);
-  expect(caret.bottom, 'at the picture’s bottom').toBeGreaterThanOrEqual(picture.bottom - 10);
-  expect(caret.left, 'right of the picture').toBeGreaterThanOrEqual(picture.right - PX);
+  expect(Math.abs(caret.bottom - picture.bottom), 'at the picture’s bottom').toBeLessThanOrEqual(2);
+  expect(caret.top, 'on the picture’s line').toBeGreaterThanOrEqual(picture.top - 2);
+  expect(caret.left, 'right of the picture').toBeGreaterThanOrEqual(picture.right);
   expect(caret.left, 'beside the picture').toBeLessThanOrEqual(picture.right + 4);
-  expect(caret.bottom - caret.top, 'a line of text tall').toBeLessThanOrEqual(LINE + PX);
 }
 
 /**
- * Where the caret is drawn: the collapsed selection's own rectangle or, when Chromium gives none
- * for a collapsed range beside an element, the left edge of what follows it (ProseMirror's
- * separator or trailing break, on the caret's line).
+ * Where the caret is drawn, from the screen itself: the editor's caret turned pure red for a moment,
+ * the pixels of that colour over a few screenshots (it blinks). A collapsed selection between two
+ * elements, as after a picture that ends its block, has no rectangle of its own in Chromium
+ * (getClientRects() is empty there), so only the drawn caret shows where it is.
  */
 async function caretBox(page: Page): Promise<Box> {
-  return page.evaluate(() => {
-    const range = getSelection()!.getRangeAt(0);
-    const own = [...range.getClientRects()].find((rect) => rect.height > 0);
-    if (own) return { top: own.top, bottom: own.bottom, left: own.left, right: own.right };
-    const { startContainer, startOffset } = range;
-    const next =
-      startContainer.nodeType === Node.ELEMENT_NODE
-        ? startContainer.childNodes[startOffset]
-        : startContainer.nextSibling;
-    if (!(next instanceof Element)) throw new Error('No rectangle for the caret');
-    const { top, bottom, left } = next.getBoundingClientRect();
-    return { top, bottom, left, right: left };
-  });
+  await body(page).evaluate((editor) =>
+    (editor as HTMLElement).style.setProperty('caret-color', '#ff0000', 'important'),
+  );
+  try {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const shot = (await page.screenshot({ caret: 'initial' })).toString('base64');
+      const found = await page.evaluate(async (png) => {
+        const image = new Image();
+        image.src = `data:image/png;base64,${png}`;
+        await image.decode();
+        const canvas = document.createElement('canvas');
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext('2d')!;
+        context.drawImage(image, 0, 0);
+        const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+        const scale = image.width / innerWidth;
+        let top = Infinity,
+          bottom = -Infinity,
+          left = Infinity,
+          right = -Infinity;
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i]! < 240 || data[i + 1]! > 20 || data[i + 2]! > 20) continue;
+          const x = (i / 4) % canvas.width;
+          const y = Math.floor(i / 4 / canvas.width);
+          top = Math.min(top, y);
+          bottom = Math.max(bottom, y + 1);
+          left = Math.min(left, x);
+          right = Math.max(right, x + 1);
+        }
+        if (top === Infinity) return null;
+        return {
+          top: top / scale,
+          bottom: bottom / scale,
+          left: left / scale,
+          right: right / scale,
+        };
+      }, shot);
+      if (found) return found;
+      await page.waitForTimeout(150);
+    }
+    throw new Error('No caret drawn');
+  } finally {
+    await body(page).evaluate((editor) =>
+      (editor as HTMLElement).style.removeProperty('caret-color'),
+    );
+  }
 }
 
 test.beforeEach(async ({ page }) => {
@@ -345,9 +379,15 @@ test('AC1, AC5: a picture after text sits on its own line, the next block a norm
     );
   expect(lines).toEqual(['Line above[picture]', 'Typed below', 'Next']);
 
-  // A click in the empty part of the picture's line, right of it, puts the caret there too.
+  // From the line of text above, End twice: past the text's end, then past the picture.
   await openNote(page, 'softBreak');
   [picture] = await pictures(page);
+  await body(page).getByText('Line above').click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('End');
+  expectCaretAfter(await caretBox(page), picture!);
+
+  // A click in the empty part of the picture's line, right of it, puts the caret there too.
   await page.mouse.click((picture!.right + picture!.block.right) / 2, picture!.bottom - 10);
   await expect(body(page).locator('.pm-image.ProseMirror-selectednode')).toHaveCount(0);
   caret = await caretBox(page);
@@ -420,14 +460,16 @@ test('AC3: a block that holds only a picture is exactly as tall as the picture',
   expectGapBelow(all[5]!, LIST_GAP);
   // The quote and the table end a normal gap below their picture's block's own edge.
   for (const i of [6, 7]) expectNoLineUnder(all[i]!);
-  // The highlight is the picture's own size: no strip of colour across the rest of its line.
+  // The highlight is the picture's own size: no strip of colour across the rest of its line. (Only
+  // the 3 px after a picture that ends its block, where the caret stands clear of it, A1283.)
+  const CARET_ROOM = 3;
   const highlight = await body(page)
     .locator('mark', { has: page.locator('.pm-image') })
     .evaluate((mark) => [...mark.getClientRects()].map(({ left, right }) => ({ left, right })));
   expect(highlight.length).toBeGreaterThan(0);
   for (const rect of highlight) {
     expect(rect.left).toBeGreaterThanOrEqual(all[4]!.left - PX);
-    expect(rect.right).toBeLessThanOrEqual(all[4]!.right + PX);
+    expect(rect.right).toBeLessThanOrEqual(all[4]!.right + CARET_ROOM + PX);
   }
   await body(page).locator('.pm-image').nth(4).scrollIntoViewIfNeeded();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/pen-66-ac3-lone.png` });
