@@ -43,7 +43,7 @@ import { proofFiles, type AttachedProof } from './proof/body.ts';
 import { publishRefs, type ProofStore } from './proof/store.ts';
 import { fromPlaywrightReport, type ProofItem } from './proof/manifest.ts';
 import { checkMedia, framesToMp4, framesWithin, toMp4, within } from './proof/media.ts';
-import { addedLines, DECISIONS, rebaseOntoMain } from './rebase.ts';
+import { addedLines, DECISIONS, newRows, rebaseOntoMain } from './rebase.ts';
 import { checkMacVm, runMacProof } from './proof/mac.ts';
 import {
   descendsFrom,
@@ -662,11 +662,14 @@ export function hostDeps(options: HostOptions): HostDeps {
         return { at, text: readFileSync(at, 'utf8') };
       };
       const decisions = added.has(DECISIONS) ? file(DECISIONS) : undefined;
+      const main = decisions ? await mustGit(exec, publish, ['show', `${base}:${DECISIONS}`]) : '';
+      // Rows the agent's Prettier only re-padded are main's, not the branch's (A1269).
+      if (decisions)
+        added.set(DECISIONS, newRows(decisions.text, added.get(DECISIONS) ?? new Set(), main));
       const keys = decisions
         ? definedPlaceholders(decisions.text, added.get(DECISIONS) ?? new Set())
         : [];
       if (keys.length === 0) return {};
-      const main = await mustGit(exec, publish, ['show', `${base}:${DECISIONS}`]);
       const assigned = reserveDecisionNumbers(keys, main, join(state, 'decision-numbers'));
       // The factory's own code and tests name placeholders as data.
       for (const [path, lines] of added) {

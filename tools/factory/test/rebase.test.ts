@@ -4,7 +4,13 @@ import { dirname, join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nodeExec } from '../src/exec.ts';
 import { formatDecisions } from '../src/decisions.ts';
-import { addedLines, rebaseOntoMain, resolveAppendConflicts, unpadRow } from '../src/rebase.ts';
+import {
+  addedLines,
+  newRows,
+  rebaseOntoMain,
+  resolveAppendConflicts,
+  unpadRow,
+} from '../src/rebase.ts';
 import type { RunSandbox } from '../src/run.ts';
 
 // Real git in a temp repository: main and a factory branch that both add decisions (F6).
@@ -362,5 +368,24 @@ describe('addedLines', () => {
         ['a.ts', new Set([1])],
       ]),
     );
+  });
+});
+
+describe('newRows (A1271)', () => {
+  it("leaves out rows the agent's Prettier only re-padded, so their text isn't numbered", () => {
+    // PEN-81 and PEN-82: the new row widened the table, every row read as added, and the
+    // numbering rewrote `A-NEW-1` in A1248's text.
+    const main = [
+      '| ID    | Decision                         |',
+      '| ----- | -------------------------------- |',
+      '| A1248 | `A-NEW-1` is wider than the ID   |',
+    ].join('\n');
+    const branch = [
+      '| ID      | Decision                         |',
+      '| ------- | -------------------------------- |',
+      '| A1248   | `A-NEW-1` is wider than the ID   |',
+      '| A-NEW-1 | A new decision                   |',
+    ].join('\n');
+    expect([...newRows(branch, new Set([1, 2, 3, 4]), main)]).toEqual([4]);
   });
 });
