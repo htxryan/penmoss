@@ -127,6 +127,28 @@ export function pickNext(
   return { next: withWhy[0] ?? null, skipped, queue: withWhy };
 }
 
+/**
+ * One line for `factory:next` when nothing in the pick status can start: the cards in Planning
+ * (each marked when it is blocked) and the blocked cards further on, by status, so "Nothing in
+ * Todo can start" doesn't read as an empty board. `undefined` when there are none.
+ */
+export function elsewhere(items: readonly BoardItem[], config: FactoryConfig): string | undefined {
+  const { planning, working, review } = config.status;
+  const parts: string[] = [];
+  for (const status of [planning, working, review]) {
+    const here = items.filter(
+      (i) => i.status === status && i.repo === config.repo && i.state === 'OPEN',
+    );
+    const shown = status === planning ? here : here.filter((i) => i.blocked);
+    if (shown.length === 0) continue;
+    const keys = shown.map((i) => (status === planning && i.blocked ? `${i.key} blocked` : i.key));
+    parts.push(
+      `${shown.length} ${status === planning ? 'in' : 'blocked in'} ${status} (${keys.join(', ')})`,
+    );
+  }
+  return parts.length > 0 ? `Elsewhere: ${parts.join('; ')}.` : undefined;
+}
+
 const LINEAR_PRIORITY = { 1: 'Urgent', 2: 'High', 3: 'Medium', 4: 'Low' } as const;
 
 /**

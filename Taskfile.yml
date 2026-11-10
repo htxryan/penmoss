@@ -190,7 +190,7 @@ tasks:
       - node tools/factory/src/cli.ts decision-number {{.CLI_ARGS}}
 
   factory:next:
-    desc: 'The software factory (#253): print the Ready card it would start next, and why (read-only)'
+    desc: 'The software factory (#253): print the Todo card it would start next, and why (read-only)'
     cmds:
       - node tools/factory/src/cli.ts next {{.CLI_ARGS}}
 
@@ -200,7 +200,7 @@ tasks:
       - node tools/factory/src/cli.ts linear-check {{.CLI_ARGS}}
 
   factory:run:
-    desc: 'The software factory (F4): run one Ready issue now, in the foreground: `task factory:run -- 123`'
+    desc: 'The software factory (F4): run one Todo issue now, in the foreground: `task factory:run -- 123`'
     cmds:
       - node tools/factory/src/cli.ts run {{.CLI_ARGS}}
 
@@ -212,7 +212,7 @@ tasks:
   factory:install:
     desc: 'The software factory (F10): clone its own code under the state folder (once), then install and start the LaunchAgents that run it (start at login, restart if they exit; A1226)'
     cmds:
-      - node tools/factory/src/cli.ts install
+      - node tools/factory/src/cli.ts install {{.CLI_ARGS}}
 
   factory:update:
     desc: 'The software factory (A1226): move its code to origin/main, reinstall and restart the LaunchAgents. Refuses while a run or merge is active; `-- --wait` holds new work and waits'
@@ -224,22 +224,27 @@ tasks:
     cmds:
       # Loads a LaunchAgent that was booted out (retrying launchd's I/O error 5), kickstarts one
       # that is loaded but not running, and leaves a running one alone.
-      - node tools/factory/src/cli.ts start
+      - node tools/factory/src/cli.ts start {{.CLI_ARGS}}
 
   factory:stop:
     desc: 'The software factory: stop the daemon (runs in progress restart next time, R12)'
     cmds:
-      - launchctl bootout gui/$(id -u)/app.penmoss.factory || true
+      # `-- --help` prints the usage and stops here, as the CLI's commands do (A1272).
+      - |
+        for a in {{.CLI_ARGS}}; do case "$a" in --help|-h) echo 'Usage: task factory:stop'; echo '  Stop the daemon (runs in progress restart next time, R12)'; exit 0;; esac; done
+        launchctl bootout gui/$(id -u)/app.penmoss.factory || true
 
   factory:status:
     desc: 'The software factory: what the daemon is running (and at which commit) and waiting on'
     cmds:
-      - node tools/factory/src/cli.ts status
+      - node tools/factory/src/cli.ts status {{.CLI_ARGS}}
 
   factory:logs:
     desc: 'The software factory: follow the daemon log'
     cmds:
-      - tail -n 100 -f "$HOME/Library/Application Support/penmoss-factory/daemon.log"
+      - |
+        for a in {{.CLI_ARGS}}; do case "$a" in --help|-h) echo 'Usage: task factory:logs'; echo '  Follow the daemon log (daemon.log in the state folder)'; exit 0;; esac; done
+        tail -n 100 -f "$HOME/Library/Application Support/penmoss-factory/daemon.log"
 
   factory:report:
     desc: 'The software factory (F14): throughput, rounds, time to In review and the share Blocked: `task factory:report -- --from 2026-11-01 --to 2026-11-08`'
@@ -249,19 +254,24 @@ tasks:
   factory:ui:
     desc: 'The Factory UI (F20) in the foreground on 127.0.0.1:7878, if its LaunchAgent is not running it already'
     cmds:
-      - node tools/factory/src/cli.ts ui
+      - node tools/factory/src/cli.ts ui {{.CLI_ARGS}}
 
   factory:ui:open:
     desc: 'Open the Factory UI in the browser (the link, with its token, that the running UI wrote)'
     cmds:
-      - open "$(cat "$HOME/Library/Application Support/penmoss-factory/ui.url")"
+      - |
+        for a in {{.CLI_ARGS}}; do case "$a" in --help|-h) echo 'Usage: task factory:ui:open'; echo '  Open the Factory UI in the browser, with the link in ui.url'; exit 0;; esac; done
+        open "$(cat "$HOME/Library/Application Support/penmoss-factory/ui.url")"
 
   factory:ui:tailnet:
     desc: 'Serve the Factory UI on your tailnet (https://<this Mac>.<tailnet>.ts.net:8443, never Funnel), then restart the UI so it accepts that name (A1246)'
     cmds:
-      - tailscale serve --bg --https=8443 http://127.0.0.1:7878
-      - launchctl kickstart -k "gui/$(id -u)/app.penmoss.factory-ui"
-      - sleep 2 && grep 'on the tailnet' "$HOME/Library/Application Support/penmoss-factory/ui.log" | tail -1
+      - |
+        for a in {{.CLI_ARGS}}; do case "$a" in --help|-h) echo 'Usage: task factory:ui:tailnet'; echo '  Serve the Factory UI on your tailnet (port 8443, never Funnel) and restart the UI'; exit 0;; esac; done
+        set -e
+        tailscale serve --bg --https=8443 http://127.0.0.1:7878
+        launchctl kickstart -k "gui/$(id -u)/app.penmoss.factory-ui"
+        sleep 2 && grep 'on the tailnet' "$HOME/Library/Application Support/penmoss-factory/ui.log" | tail -1
 
   factory:doctor:
     desc: "The software factory (F17): check a slot's sandbox (`-- --slot 2`, `-- --full` for task check, e2e and Android)"

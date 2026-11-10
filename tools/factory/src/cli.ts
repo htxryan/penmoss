@@ -8,7 +8,7 @@ import { baseNote, hostChecks, report } from './doctor.ts';
 import { runDoctor } from './doctor-run.ts';
 import { nodeExec } from './exec.ts';
 import { createGh } from './github.ts';
-import { pickNext, priorityName, type Pick } from './pick.ts';
+import { elsewhere, pickNext, priorityName, type Pick } from './pick.ts';
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -82,6 +82,8 @@ async function next(config: FactoryConfig, json: boolean): Promise<number> {
     console.log(['Next:', ...describe(result.next, config)].join('\n'));
   } else {
     console.log(`Nothing in ${config.status.pick} can start.`);
+    const other = elsewhere(board.items, config);
+    if (other) console.log(other);
   }
   const rest = result.queue.slice(1);
   if (rest.length > 0) {

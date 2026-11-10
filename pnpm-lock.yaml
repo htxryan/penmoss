@@ -163,7 +163,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@ai-hero/sandcastle@0.14.0': cf129e995a4a09cb3c187df5dc8662e99974bdb0b2a95a4303705cdda20fbfed
+  '@ai-hero/sandcastle@0.14.0': bb4279880ea3cc6e326ae5d513831bdc04a0b645db0e4d00c90a1e2059f34c94
 
 importers:
 
@@ -691,7 +691,7 @@ importers:
     dependencies:
       '@ai-hero/sandcastle':
         specifier: 0.14.0
-        version: 0.14.0(patch_hash=cf129e995a4a09cb3c187df5dc8662e99974bdb0b2a95a4303705cdda20fbfed)
+        version: 0.14.0(patch_hash=bb4279880ea3cc6e326ae5d513831bdc04a0b645db0e4d00c90a1e2059f34c94)
       prettier:
         specifier: 3.9.10
         version: 3.9.10
@@ -5340,7 +5340,7 @@ packages:
 
 snapshots:
 
-  '@ai-hero/sandcastle@0.14.0(patch_hash=cf129e995a4a09cb3c187df5dc8662e99974bdb0b2a95a4303705cdda20fbfed)':
+  '@ai-hero/sandcastle@0.14.0(patch_hash=bb4279880ea3cc6e326ae5d513831bdc04a0b645db0e4d00c90a1e2059f34c94)':
     dependencies:
       '@clack/prompts': 1.8.1
 
