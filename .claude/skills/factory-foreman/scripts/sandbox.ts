@@ -2,7 +2,7 @@
 // factory run would, then closes it. For reproducing sandbox-only failures at the real path.
 //   cd tools/factory && node ../.claude/skills/factory-foreman/scripts/sandbox.ts <slot> <sha> '<command>'
 // The sandbox is made from the checkout this script lives in; the branch is left behind
-// (factory/probe-*): delete it afterwards.
+// (factory/probe-<slot>-*): delete it afterwards.
 import { fileURLToPath } from 'node:url';
 import { loadConfig } from '../../../../tools/factory/src/config.ts';
 import {
@@ -26,7 +26,7 @@ const { createSandbox } = await import(
   ).href
 );
 const sandbox = await createSandbox({
-  branch: `factory/probe-${Date.now().toString(36)}`,
+  branch: `factory/probe-${slotId}-${Date.now().toString(36)}`,
   baseBranch: sha,
   cwd: repo,
   sandbox: await seatbeltProvider(spec),
