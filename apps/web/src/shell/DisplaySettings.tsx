@@ -169,6 +169,9 @@ function MetadataSettings() {
     <>
       <fieldset className="display-toggles" data-testid="metadata-under-title">
         <legend>Note Metadata Under the Title</legend>
+        <p className="muted settings-help" data-testid="metadata-under-title-hint">
+          Pick what shows under each note&apos;s title.
+        </p>
         {METADATA_FIELDS.map((field) => (
           <label key={field} className="display-toggle">
             <input
