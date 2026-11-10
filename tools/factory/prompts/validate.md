@@ -4,6 +4,12 @@ You are validating a change in the Penmoss repository, inside a sandbox, on the 
 
 {{plan}}
 
+## The issue's images
+
+{{images}}
+
+They show what Ryan saw or wants (a bug, a mockup, the screen as it was). Open them with the Read tool before you walk the criteria.
+
 ## How
 
 1. Start the web app on this sandbox's port block: `pnpm --filter @penmoss/web exec vite --port $(node scripts/ports.mjs vite) --strictPort &`, and wait until it answers.

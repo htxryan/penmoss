@@ -27,6 +27,9 @@ export interface ValidateDeps extends Pick<
   collectFidelity(sandbox: RunSandbox, rows: readonly FidelityRow[]): Promise<FidelityRow[]>;
 }
 
+/** The images section when the issue has none. */
+const NO_IMAGES = 'The issue has none.';
+
 export async function validate(
   deps: ValidateDeps,
   sandbox: RunSandbox,
@@ -34,11 +37,17 @@ export async function validate(
   plan: string,
   /** What the builder says it couldn't do, and why (`result.json`'s `risks`). */
   builder: readonly string[] = [],
+  /** Where the issue's images are in the sandbox, or empty (A1277). */
+  images = '',
 ): Promise<{ ok: true; rows: FidelityRow[] } | { ok: false; error: string }> {
   return deps.heavy(`factory validation ${branch}`, async () => {
     await deps.stageMockups(sandbox);
     try {
-      await runAgentPatiently(deps, sandbox, fill(promptTemplate('validate'), { branch, plan }));
+      await runAgentPatiently(
+        deps,
+        sandbox,
+        fill(promptTemplate('validate'), { branch, plan, images: images || NO_IMAGES }),
+      );
       // A fresh session: the reviewer hasn't seen the build or the walkthrough, only their
       // results, and the builder's reasons for what it left undone, so a reason that holds is a
       // deviation.
@@ -47,6 +56,7 @@ export async function validate(
         sandbox,
         fill(promptTemplate('review'), {
           plan,
+          images: images || NO_IMAGES,
           builder: builder.length ? builder.map((r) => `- ${r}`).join('\n') : 'Nothing.',
         }),
       );

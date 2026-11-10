@@ -303,6 +303,24 @@ describe('the plan contract at agreement (F16)', () => {
     expect(t.calls).toContain('blocked');
     expect(readMeta(t.files).agreed).toBeUndefined();
   });
+  it("tells a session fixing the plan contract where the issue's images are (A1277)", async () => {
+    const t = setup();
+    const card = item(5, { status: 'Planning' });
+    const images = "## The issue's images\n\n1. `/plans/5/attachments/0a1b.png`";
+    await advancePlanning(t.deps, { ...input(t.files, card), images });
+    writeFileSync(join(t.files.out, 'plan.html'), '<h1>Plan</h1>');
+    t.state('agreed', min(2), {
+      agreed: { quote: 'complete', channel: 'chat', planVersion: 2, designVersion: null },
+    });
+    t.at(min(3));
+    expect((await advancePlanning(t.deps, { ...input(t.files, card), images })).kind).toBe(
+      'resume',
+    );
+    expect(t.calls.at(-1)).toMatch(/^resume Ryan agreed/);
+    expect(t.messages.at(-1)).toContain(
+      `The issue's images are on disk for you, in place of any uploads.linear.app link you couldn't open.\n\n${images}`,
+    );
+  });
   it('records the artifacts and versions Ryan agreed to', async () => {
     const t = setup();
     const card = item(5, { status: 'Planning' });

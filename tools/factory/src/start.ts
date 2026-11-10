@@ -383,7 +383,7 @@ export async function executeRun(
   const { config, gh, tracker } = factory;
   const runId = `${item.number}-${Date.now().toString(36)}-${randomBytes(2).toString('hex')}`;
   await ensureClone(config, nodeExec);
-  const { text } = await issueForAgent(
+  const { text, images } = await issueForAgent(
     tracker,
     await tracker.readIssue(item.number),
     runImages(config, runId),
@@ -426,6 +426,7 @@ export async function executeRun(
       prompt,
       ...(artifacts.length ? { artifacts } : {}),
       ...(plan ? { plan } : {}),
+      ...(images ? { images } : {}),
       ...(recovered ? { recovered } : {}),
       ...(recovered ? resumeFrom(config, item.number) : {}),
     });
