@@ -195,7 +195,10 @@ describe('runRevise: a review round (F11)', () => {
     platforms: {
       android: { inScope: true, proofSpecs: ['app.penmoss.ui.SettingsInstrumentedTest'] },
     },
-    replies: { T1: 'The test reads --settings-gutter now.' },
+    replies: {
+      T1: 'The test reads --settings-gutter now.',
+      general: 'engine-host.test.ts changed because CI flaked on this PR.',
+    },
   };
 
   it("gates with the round's own proof specs, then pushes and answers the thread", async () => {
@@ -227,6 +230,11 @@ describe('runRevise: a review round (F11)', () => {
     expect(f.prompts).toHaveLength(1);
     expect(replies).toEqual(['T1: The test reads --settings-gutter now. (0123456789)']);
     expect(f.calls).toContain(`push ${BRANCH}`);
+    // The answer to the general comments, which has no thread, goes in the round's comment.
+    expect(f.prComments.at(-1)).toContain(
+      'Addressed in 0123456789: Use the gutter token\n\nengine-host.test.ts changed because CI flaked on this PR.',
+    );
+    expect(f.prComments.at(-1)).not.toContain('--settings-gutter');
   });
 
   it('asks the agent again when its round names no proof spec for an affected platform', async () => {

@@ -102,9 +102,15 @@ export async function runRevise(deps: ReviseDeps, input: ReviseInput): Promise<R
         if (i.kind !== 'thread' || !i.threadId || !i.trusted) continue;
         await deps.replyToThread(i.threadId, `${replies[i.threadId] ?? 'Addressed'} (${sha})`);
       }
+      // Answers to PR comments and review summaries have no thread to go in: they go here.
+      const threads = new Set(input.items.map((i) => i.threadId));
+      const general = Object.entries(replies)
+        .filter(([id]) => !threads.has(id))
+        .map(([, text]) => `\n\n${text}`)
+        .join('');
       await deps.prComment(
         pr,
-        `Addressed in ${sha}: ${summary}${verdict.proof.length ? '\n\nNew proof, recorded by the factory:' : ''}`,
+        `Addressed in ${sha}: ${summary}${general}${verdict.proof.length ? '\n\nNew proof, recorded by the factory:' : ''}`,
         verdict.proof,
       );
       const ci = await watchCi(deps, {
