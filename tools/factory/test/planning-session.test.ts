@@ -4,22 +4,18 @@
  * looking it up by the card's name failed and the card was set Blocked while the session worked
  * on. And `claude stop` takes the short id, not the session id.
  */
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { FactoryConfig } from '../src/config.ts';
 import type { Exec } from '../src/exec.ts';
 import {
-  chatUrlFromJob,
-  claudeJobsDir,
   findSession,
   launchSession,
   planFiles,
-  planningChat,
   sessionName,
   stopSession,
-  writeMeta,
 } from '../src/planning-host.ts';
 import { testConfig } from './helpers.ts';
 
@@ -73,7 +69,9 @@ describe('the planning session', () => {
     const started = await launchSession(c, exec, planFiles(c, 70), 70, 'plan PEN-70', {});
     const args = calls[0] ?? [];
     expect(args[args.indexOf('--name') + 1]).toBe(sessionName(c, 70));
-    expect(started.id).toBe('0ff38e2e');
+    // No Remote Control: the setup token it runs on can't open one (A1281).
+    expect(args).not.toContain('--remote-control');
+    expect(started).toEqual({ id: '0ff38e2e' });
   });
 
   it('is found by that id even when Claude Code retitled it', async () => {
@@ -88,75 +86,6 @@ describe('the planning session', () => {
     await expect(findSession(c, exec, 70, {}, { sessionId: SESSION })).resolves.toMatchObject({
       id: '0ff38e2e',
     });
-  });
-
-  it("gets its chat link from Claude Code's job file, since --bg prints none (A1257)", async () => {
-    const c = config();
-    const { exec } = fakeClaude();
-    const jobs = mkdtempSync(join(tmpdir(), 'claude-jobs-'));
-    mkdirSync(join(jobs, '0ff38e2e'));
-    // As Claude Code 2.1.319 wrote it for a `--bg --remote-control` session.
-    const state = (bridge?: string) =>
-      writeFileSync(
-        join(jobs, '0ff38e2e', 'state.json'),
-        JSON.stringify({
-          state: 'working',
-          daemonShort: '0ff38e2e',
-          sessionId: SESSION,
-          ...(bridge ? { bridgeSessionId: bridge, bridgeOutboundOnly: false } : {}),
-        }),
-      );
-    state();
-    // The link comes a moment after --bg returns: the launch waits for it.
-    const slept: number[] = [];
-    const sleep = (ms: number) => {
-      slept.push(ms);
-      if (slept.length === 2) state('cse_01Ft4U3apUr33bjvQoKRcUFV');
-      return Promise.resolve();
-    };
-    const started = await launchSession(c, exec, planFiles(c, 70), 70, 'plan', {}, undefined, {
-      dir: jobs,
-      sleep,
-    });
-    expect(started).toEqual({
-      id: '0ff38e2e',
-      chatUrl: 'https://claude.ai/code/session_01Ft4U3apUr33bjvQoKRcUFV',
-    });
-    expect(slept).toHaveLength(2);
-  });
-
-  it('has no chat link, and says so, when Claude Code reports none in time', async () => {
-    const c = config();
-    const { exec } = fakeClaude();
-    const jobs = mkdtempSync(join(tmpdir(), 'claude-jobs-'));
-    const started = await launchSession(c, exec, planFiles(c, 70), 70, 'plan', {}, undefined, {
-      dir: jobs,
-      waitMs: 3_000,
-      sleep: () => Promise.resolve(),
-    });
-    expect(started).toEqual({ id: '0ff38e2e' });
-    const files = planFiles(c, 70);
-    mkdirSync(files.root, { recursive: true });
-    writeMeta(files, { sessionId: SESSION });
-    expect(planningChat(c, 70)).toEqual({
-      error: expect.stringContaining('reported no Remote Control session') as string,
-    });
-  });
-
-  it('reads only a Remote Control id from the job file', () => {
-    expect(chatUrlFromJob('{"bridgeSessionId":"session_01Ab"}')).toBe(
-      'https://claude.ai/code/session_01Ab',
-    );
-    for (const bad of [
-      '{}',
-      'not json',
-      '{"bridgeSessionId":"cse_../../x"}',
-      '{"bridgeSessionId":7}',
-    ])
-      expect(chatUrlFromJob(bad), bad).toBeUndefined();
-    expect(claudeJobsDir({ HOME: '/Users/r' })).toBe('/Users/r/.claude/jobs');
-    expect(claudeJobsDir({ HOME: '/Users/r', CLAUDE_CONFIG_DIR: '/c' })).toBe('/c/jobs');
-    expect(claudeJobsDir({})).toBeUndefined();
   });
 
   it('is stopped with the short id that claude stop takes', async () => {

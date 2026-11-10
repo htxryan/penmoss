@@ -9,11 +9,10 @@ import { join } from 'node:path';
 import { ATTACHMENTS } from './attachments.ts';
 import { expandHome, type FactoryConfig } from './config.ts';
 import type { Exec } from './exec.ts';
-import { parsePlanState, type PlanState } from './planning.ts';
+import { attachCommand, parsePlanState, type PlanState } from './planning.ts';
 import { mustGit } from './git.ts';
 import { MAIN, publishDir } from './publish.ts';
 import { issueKey } from './tracker/port.ts';
-import { desktopLink } from './ui/model.ts';
 
 export interface PlanFiles {
   readonly root: string;
@@ -26,7 +25,6 @@ export interface PlanFiles {
 
 export interface PlanMeta {
   readonly sessionId?: string | undefined;
-  readonly chatUrl?: string | undefined;
   /** When the newest issue comment the session has been given was posted. */
   readonly deliveredAt?: string | undefined;
   /** When the factory last started or resumed the session. */
@@ -150,8 +148,6 @@ export async function prepareSnapshot(
   }
 }
 
-const CHAT_URL = /https:\/\/claude\.ai\/code\/session_[A-Za-z0-9_-]+/;
-
 export interface SessionInfo {
   readonly sessionId: string;
   /** The short id `claude --bg` prints, which `claude stop`, `logs` and `attach` take. */
@@ -197,61 +193,7 @@ export async function findSession(
   };
 }
 
-/**
- * Claude Code's folder of background jobs, one `<short id>/state.json` each, under its config
- * folder (`CLAUDE_CONFIG_DIR`, else `~/.claude`). Undefined without a home to find it in.
- */
-export function claudeJobsDir(
-  env: Readonly<Record<string, string | undefined>>,
-): string | undefined {
-  if (env['CLAUDE_CONFIG_DIR']) return join(env['CLAUDE_CONFIG_DIR'], 'jobs');
-  return env['HOME'] ? join(env['HOME'], '.claude', 'jobs') : undefined;
-}
-
-const BRIDGE_ID = /^(?:cse|session)_([A-Za-z0-9_-]{1,128})$/;
-
-/**
- * The chat link of a background session, from its job's state.json: `bridgeSessionId` is its
- * Remote Control session (`cse_…`), which claude.ai serves as `code/session_…`, the same id
- * with Claude Code's own `session_` prefix. `claude --bg` prints no link, and `claude agents
- * --json` has no field for one, so meta.chatUrl stayed unset (PEN-70's run, A1257).
- */
-export function chatUrlFromJob(stateJson: string): string | undefined {
-  try {
-    const id = (JSON.parse(stateJson) as { bridgeSessionId?: unknown }).bridgeSessionId;
-    const m = typeof id === 'string' ? BRIDGE_ID.exec(id) : null;
-    return m ? `https://claude.ai/code/session_${m[1]}` : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-export interface JobOptions {
-  /** Claude Code's jobs folder; `claudeJobsDir(env)` when absent. */
-  readonly dir?: string | undefined;
-  /** How long to wait for the session's Remote Control link (default 20 s). */
-  readonly waitMs?: number;
-  readonly sleep?: (ms: number) => Promise<void>;
-}
-
-/** The job's chat link, once Claude Code has written it (a few seconds after `--bg` returns). */
-export async function waitForChatUrl(
-  dir: string,
-  id: string,
-  options: JobOptions = {},
-): Promise<string | undefined> {
-  if (!/^[0-9a-f]{6,}$/.test(id)) return undefined;
-  const file = join(dir, id, 'state.json');
-  const sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
-  const step = 1_000;
-  for (let waited = 0; ; waited += step) {
-    const url = existsSync(file) ? chatUrlFromJob(readFileSync(file, 'utf8')) : undefined;
-    if (url || waited >= (options.waitMs ?? 20_000)) return url;
-    await sleep(step);
-  }
-}
-
-/** Starts (or resumes) the session in the background; returns its chat link when it has one. */
+/** Starts (or resumes) the session in the background; returns its short id. */
 export async function launchSession(
   config: FactoryConfig,
   exec: Exec,
@@ -260,16 +202,13 @@ export async function launchSession(
   message: string,
   env: Record<string, string>,
   resume?: string,
-  jobs: JobOptions = {},
-): Promise<{ chatUrl?: string; id?: string }> {
+): Promise<{ id?: string }> {
   const cwd = join(expandHome(config.stateDir), 'plans');
   const args = [
     ...(resume ? ['--resume', resume] : []),
     '--bg',
     // The display name `claude agents` shows; without it Claude Code titles the session itself.
     '--name',
-    sessionName(config, issue),
-    '--remote-control',
     sessionName(config, issue),
     ...planningFlags(files),
     '--',
@@ -281,11 +220,7 @@ export async function launchSession(
       `claude --bg failed: ${(r.stderr || r.stdout).trim().split('\n').slice(-2).join(' ')}`,
     );
   const id = BACKGROUNDED.exec(r.stdout + r.stderr)?.[1];
-  const dir = jobs.dir ?? claudeJobsDir(env);
-  const chatUrl =
-    CHAT_URL.exec(r.stdout + r.stderr)?.[0] ??
-    (id && dir ? await waitForChatUrl(dir, id, jobs) : undefined);
-  return { ...(chatUrl ? { chatUrl } : {}), ...(id ? { id } : {}) };
+  return id ? { id } : {};
 }
 
 export async function stopSession(
@@ -301,21 +236,18 @@ export async function stopSession(
 }
 
 /**
- * `factory chat <n>` (F15): the card's planning chat, the link the issue and the Factory UI give,
- * and the same session in the Claude app.
+ * `factory chat <n>` (F15): the command that joins the card's planning session from a terminal
+ * on this Mac (attachCommand).
  */
 export function planningChat(
   config: FactoryConfig,
   issue: number,
-): { readonly chatUrl: string; readonly desktop: string | null } | { readonly error: string } {
+): { readonly command: string } | { readonly error: string } {
   const meta = readMeta(planFiles(config, issue));
-  if (!meta.chatUrl)
-    return {
-      error: meta.sessionId
-        ? `${issueKey(config, issue)}'s planning session has no chat link: Claude Code reported no Remote Control session for it (its job's state.json in ~/.claude/jobs has no bridgeSessionId), so there is no link to give`
-        : `${issueKey(config, issue)} has no planning session yet`,
-    };
-  return { chatUrl: meta.chatUrl, desktop: desktopLink(meta.chatUrl) };
+  if (!meta.sessionId) return { error: `${issueKey(config, issue)} has no planning session yet` };
+  if (meta.agreed)
+    return { error: `${issueKey(config, issue)}'s plan is agreed; its planning session has ended` };
+  return { command: attachCommand(meta.sessionId) };
 }
 
 /** The agreed plan as text for the implementation prompt: the page's words without its markup. */

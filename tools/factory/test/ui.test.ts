@@ -7,7 +7,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   buildView,
   cleanError,
-  desktopLink,
   pointsOf,
   type FactoryView,
   type ViewInput,
@@ -338,12 +337,12 @@ describe('the pipeline (A1233)', () => {
 
   it('links the issue, PR, CI, the plan, the chat and the desktop app', () => {
     expect(card(view, 'PEN-74').links.map((l) => l.label)).toEqual(['PEN-74', 'PR #65', 'CI']);
+    // A planning card's chat is a command, not a link (A1281).
     expect(card(view, 'PEN-76').links.map((l) => l.href)).toEqual([
       'https://linear.app/penmoss/issue/PEN-76/card-76',
-      'https://claude.ai/code/session_S76',
-      'claude://claude.ai/code/session_S76',
     ]);
-    expect(desktopLink('https://evil.example/code/session_x')).toBeNull();
+    expect(card(view, 'PEN-76').chat).toBe('claude attach S76abcde');
+    expect(card(view, 'PEN-74').chat).toBeNull();
   });
 
   it('keeps Done cards for doneDays only', () => {

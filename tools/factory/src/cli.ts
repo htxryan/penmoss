@@ -2,6 +2,7 @@
  * The factory's command line: `node tools/factory/src/cli.ts <command>`.
  * Taskfile tasks wrap each command (`task factory:next`).
  */
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { loadConfig, type FactoryConfig } from './config.ts';
 import { baseNote, hostChecks, report } from './doctor.ts';
@@ -224,8 +225,11 @@ async function linearCheck(config: FactoryConfig, args: readonly string[]): Prom
   return 1;
 }
 
-/** `factory chat <issue>`: the planning session's chat, the same one Remote Control serves (F15). */
-async function chat(config: FactoryConfig, args: readonly string[]): Promise<number> {
+/**
+ * `factory chat <issue>`: joins the card's planning session in this terminal, with Ryan's own
+ * Claude Code (`claude attach`, A1281); `--print` only prints the command.
+ */
+function chat(config: FactoryConfig, args: readonly string[]): number {
   const number = Number(args[0]);
   if (!Number.isInteger(number) || number < 1) {
     console.error('Usage: factory chat <issue> [--print]');
@@ -236,14 +240,14 @@ async function chat(config: FactoryConfig, args: readonly string[]): Promise<num
     console.error(`${found.error}.`);
     return 1;
   }
-  console.log(`Chat: ${found.chatUrl}`);
-  if (found.desktop) console.log(`In the Claude app: ${found.desktop}`);
-  console.log(
-    'While the card is Blocked the session is stopped; clearing Blocked resumes it with a new link.',
-  );
+  console.log(found.command);
   if (args.includes('--print')) return 0;
-  const opened = await nodeExec('open', [found.desktop ?? found.chatUrl]);
-  return opened.code === 0 ? 0 : 1;
+  console.log(
+    'Ctrl+Z returns to your shell; the session keeps running. Each resume starts a new session, with a new id.',
+  );
+  const [bin, ...rest] = found.command.split(' ');
+  const joined = spawnSync(bin ?? 'claude', rest, { stdio: 'inherit' });
+  return joined.status ?? 1;
 }
 
 async function main(argv: readonly string[]): Promise<number> {

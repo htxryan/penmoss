@@ -205,7 +205,7 @@ tasks:
       - node tools/factory/src/cli.ts run {{.CLI_ARGS}}
 
   factory:chat:
-    desc: "The software factory (F15): open a card's planning session in the Claude app, the same one Remote Control serves: `task factory:chat -- 41` (`-- 41 --print` only prints its links)"
+    desc: "The software factory (F15): join a card's planning session in this terminal (claude attach): `task factory:chat -- 41` (`-- 41 --print` only prints the command)"
     cmds:
       - node tools/factory/src/cli.ts chat {{.CLI_ARGS}}
 

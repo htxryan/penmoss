@@ -137,7 +137,7 @@ export function evening(stateDir = '~/nonexistent-factory-state') {
   ].join('\n');
   const plans: Record<number, PlanInfo> = {
     76: {
-      meta: { sessionId: 'S76', chatUrl: 'https://claude.ai/code/session_S76', messagedAt: ago(4) },
+      meta: { sessionId: 'S76abcdef01', messagedAt: ago(4) },
       state: null,
     },
     78: {
