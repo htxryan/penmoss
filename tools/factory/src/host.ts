@@ -44,7 +44,7 @@ import { publishRefs, type ProofStore } from './proof/store.ts';
 import { fromPlaywrightReport, type ProofItem } from './proof/manifest.ts';
 import { checkMedia, framesToMp4, framesWithin, toMp4, within } from './proof/media.ts';
 import { addedLines, DECISIONS, newRows, rebaseOntoMain } from './rebase.ts';
-import { checkMacVm, runMacProof } from './proof/mac.ts';
+import { checkMacVm, runMacProof, runMacWalk } from './proof/mac.ts';
 import {
   descendsFrom,
   ensurePublishRepo,
@@ -60,6 +60,7 @@ import {
 import { parseAgentResult, RESULT_PATH } from './result.ts';
 import type { RunDeps, RunEvent, RunSandbox } from './run.ts';
 import { makeOwnDirs, sandboxSpec, seatbeltProvider, withJavaHome } from './sandbox.ts';
+import { ANDROID_WALK_CLASS, MAC_WALK_SPEC, WALK_SHOT, walkFile, walkTail } from './walk.ts';
 import type { Secrets } from './secrets.ts';
 import type { Tracker } from './tracker/port.ts';
 
@@ -529,6 +530,64 @@ export function hostDeps(options: HostOptions): HostDeps {
     },
     macVmCheck: (handle) => checkMacVm(exec, config, handle.worktreePath),
     waitingFor: (reason) => options.waitingFor?.(reason),
+    walk: async (handle, platform, signal) => {
+      // The session wrote the walkthrough; the host runs it where the app runs (walk.ts).
+      const file = walkFile(platform);
+      if (!existsSync(join(handle.worktreePath, file)))
+        return {
+          platform,
+          captures: [],
+          problem: `The validating session wrote no walkthrough (\`${file}\`).`,
+        };
+      const into = join(handle.worktreePath, '.factory', 'validation');
+      mkdirSync(into, { recursive: true });
+      const bring = (from: string) =>
+        existsSync(from)
+          ? readdirSync(from)
+              .filter((f) => WALK_SHOT.test(f))
+              .map((f) => {
+                copyFileSync(join(from, f), join(into, f));
+                return f;
+              })
+          : [];
+      let ran: { readonly ok: boolean; readonly text: string };
+      let shots: string;
+      if (platform === 'android') {
+        // As the Android proof runs (recordProof): the slot's own emulator, stopped at the timeout.
+        await ensureAvd(config, slot, exec);
+        await stopSlotEmulator(config, slot, exec);
+        const stop = () => void stopSlotEmulator(config, slot, exec).catch(() => undefined);
+        signal?.addEventListener('abort', stop, { once: true });
+        try {
+          const done = await handle.exec(
+            withJavaHome(`task proof:android -- ${ANDROID_WALK_CLASS}`),
+          );
+          const out = join(handle.worktreePath, 'apps/android/build/proof');
+          const report = join(out, 'report.json');
+          const passed =
+            existsSync(report) &&
+            (JSON.parse(readFileSync(report, 'utf8')) as { status: string }[]).every(
+              (r) => r.status === 'passed',
+            );
+          ran = { ok: passed, text: done.stdout + done.stderr };
+          shots = join(out, 'walk');
+        } finally {
+          signal?.removeEventListener('abort', stop);
+        }
+      } else {
+        // In the test VM, which copies the worktree in; the VM's lock makes it wait (whenVmFree).
+        const done = await runMacWalk(exec, config, handle.worktreePath, MAC_WALK_SPEC, signal);
+        ran = { ok: done.code === 0, text: done.stdout + done.stderr };
+        shots = join(handle.worktreePath, 'test-results', 'vm', 'test-results', 'walk');
+      }
+      writeFileSync(join(runDir, `walk-${platform}.log`), ran.text);
+      const captures = bring(shots);
+      return {
+        platform,
+        captures,
+        ...(ran.ok ? {} : { problem: `The walkthrough failed. ${walkTail(ran.text)}` }),
+      };
+    },
     recordProof: async (handle, platform, specs, signal) => {
       const quoted = specs.map((spec) => `'${spec.replaceAll("'", '')}'`).join(' ');
       let items: ProofItem[];

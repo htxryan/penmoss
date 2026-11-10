@@ -56,6 +56,9 @@ case "$1 $2" in
     echo '<hierarchy><node index="1" text="Close app" resource-id="android:id/aerr_close" bounds="[84,1200][996,1326]" /><node index="2" text="Wait" resource-id="android:id/aerr_wait" bounds="[84,1326][996,1452]" /></hierarchy>' ;;
   'shell input') touch "$STUB_LOG.waited" ;;
   'shell cat') echo '100.50 200.00' ;;
+  # A validation walkthrough's screenshots (PEN-94), and a name that isn't a plain file.
+  'shell ls') [ -n "\${STUB_WALK:-}" ] && printf 'ac2-android.png\r\nbad;name.png\r\nnotes.txt\r\n' ;;
+  'shell mkdir') ;;
   pull*)
     case "$2" in
       # The screenshot a test's ProofShot.take() leaves, when STUB_PROOF_SHOT says it took one.
@@ -253,7 +256,7 @@ describe.concurrent(
       const adb = r.calls.filter((c) => c.startsWith('adb '));
       const at = (text: string) => adb.findIndex((c) => c.includes(text));
       // The last spec's file is gone before this one runs, and fetched once it has.
-      expect(at('shell rm -f /sdcard/proof.mp4 /sdcard/penmoss-proof.png')).toBeLessThan(
+      expect(at('shell rm -rf /sdcard/proof.mp4 /sdcard/penmoss-proof.png')).toBeLessThan(
         at('am instrument'),
       );
       expect(at('pull /sdcard/penmoss-proof.png')).toBeGreaterThan(at('am instrument'));
@@ -340,6 +343,32 @@ describe.concurrent(
       expect(r.status, r.stderr).toBe(0);
       expect(r.calls.some((c) => c.startsWith('ffmpeg'))).toBe(false);
       expect(readFileSync(join(f.root, 'build', 'proof', 'android-1.mp4'), 'utf8')).toBe('mp4\n');
+    }, 30_000);
+
+    it("brings back a walkthrough's screenshots, and only plain PNG names (PEN-94)", async () => {
+      const f = fixture();
+      const r = await f.run(['app.penmoss.walk.FactoryWalkInstrumentedTest'], { STUB_WALK: '1' });
+      expect(r.status, r.stderr).toBe(0);
+      const adb = r.calls.filter((c) => c.startsWith('adb '));
+      const at = (text: string) => adb.findIndex((c) => c.includes(text));
+      // The last spec's screenshots are gone, and the folder is there, before the test runs.
+      expect(
+        at('shell rm -rf /sdcard/proof.mp4 /sdcard/penmoss-proof.png /sdcard/penmoss-walk'),
+      ).toBeLessThan(at('am instrument'));
+      expect(at('shell mkdir -p /sdcard/penmoss-walk')).toBeLessThan(at('am instrument'));
+      const out = join(f.root, 'build', 'proof', 'walk');
+      expect(adb).toContain(
+        `adb -s emulator-5560 pull /sdcard/penmoss-walk/ac2-android.png ${out}/ac2-android.png`,
+      );
+      expect(adb.some((c) => c.includes('bad;name') || c.includes('notes.txt'))).toBe(false);
+      expect(existsSync(join(out, 'ac2-android.png'))).toBe(true);
+    }, 30_000);
+
+    it('makes no walk folder when the test saved no screenshots', async () => {
+      const f = fixture();
+      const r = await f.run(['app.penmoss.PassingTest']);
+      expect(r.status, r.stderr).toBe(0);
+      expect(existsSync(join(f.root, 'build', 'proof', 'walk'))).toBe(false);
     }, 30_000);
 
     it("runs the tests anyway, and says so, when the device doesn't settle in time", async () => {

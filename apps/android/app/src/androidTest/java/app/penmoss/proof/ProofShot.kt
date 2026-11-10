@@ -27,5 +27,19 @@ object ProofShot {
         Log.i(TAG, "shot at ${SystemClock.elapsedRealtime()}")
     }
 
+    /** Where proof.sh looks for a validation walkthrough's screenshots (PEN-94); it makes it. */
+    const val WALK_DIR = "/sdcard/penmoss-walk"
+
+    /**
+     * A validation walkthrough's screenshot of one acceptance criterion (PEN-94), named as the
+     * walkthrough's captures.json names it, without `.png`: `capture("ac3-android")`.
+     */
+    fun capture(name: String) {
+        require(Regex("[A-Za-z0-9_.-]+").matches(name)) { "a plain file name, not $name" }
+        val ui = InstrumentationRegistry.getInstrumentation().uiAutomation
+        ParcelFileDescriptor.AutoCloseInputStream(ui.executeShellCommand("screencap -p $WALK_DIR/$name.png"))
+            .use { it.readBytes() }
+    }
+
     private const val TAG = "PenmossProof"
 }

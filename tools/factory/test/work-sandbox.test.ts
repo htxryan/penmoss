@@ -41,6 +41,12 @@ const sandcastle = vi.hoisted(() => ({
   exitCode: 0,
   closed: 0,
   created: [] as Record<string, unknown>[],
+  /** The sandbox's worktree: a real folder for the tests that read files from it. */
+  worktree: '/state/repo/.sandcastle/worktrees/factory-75-fix-the-sidebar',
+  /** What a command in the sandbox does besides being recorded (writes the files it makes). */
+  onExec: function onExec(command: string): void {
+    void command;
+  },
   /** What the agent's run does: it gets Sandcastle's options (the log file, the stream hook). */
   run: (opts: SandcastleRun): Promise<unknown> => Promise.resolve({ log: opts.logging.path }),
 }));
@@ -56,9 +62,10 @@ vi.mock('@ai-hero/sandcastle', () => ({
   createSandbox: (opts: Record<string, unknown>) => {
     sandcastle.created.push(opts);
     return Promise.resolve({
-      worktreePath: '/state/repo/.sandcastle/worktrees/factory-75-fix-the-sidebar',
+      worktreePath: sandcastle.worktree,
       exec: (command: string) => {
         sandcastle.commands.push(command);
+        sandcastle.onExec(command);
         return Promise.resolve({
           exitCode: sandcastle.exitCode,
           stdout: '',
@@ -302,6 +309,92 @@ describe("the agent's round in its sandbox", () => {
     const ran = deps.runAgent(await deps.openSandbox(BRANCH), 'p');
     await expect(ran).rejects.toThrow('boom');
     await expect(ran).rejects.not.toBeInstanceOf(AgentNotInstalled);
+  });
+});
+
+describe("validation's walkthroughs on the host (PEN-94)", () => {
+  let config: FactoryConfig;
+  let worktree: string;
+  const runDir = () => join(config.stateDir, 'runs', '75-test');
+  const shot = (dir: string, name: string) => {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, name), 'png');
+  };
+  /** Host commands: the emulator is down, the VM script exits with `vm`. */
+  const hostExec = (vm = 0): { exec: Exec; ran: string[] } => {
+    const ran: string[] = [];
+    const exec: Exec = (cmd, args) => {
+      ran.push([cmd, ...args].join(' '));
+      if (cmd === 'git') return fakeExec().exec(cmd, args);
+      if (cmd === 'sh') return Promise.resolve({ code: vm, stdout: 'walk output', stderr: '' });
+      return Promise.resolve({ code: 1, stdout: '', stderr: '' });
+    };
+    return { exec, ran };
+  };
+
+  beforeEach(() => {
+    sandcastle.exitCode = 0;
+    sandcastle.commands.length = 0;
+    config = { ...testConfig(), stateDir: mkdtempSync(join(tmpdir(), 'factory-walk-')) };
+    worktree = mkdtempSync(join(tmpdir(), 'factory-walk-tree-'));
+    sandcastle.worktree = worktree;
+    // The slot's AVD is made, so nothing runs avdmanager.
+    mkdirSync(join(config.stateDir, 'avd'), { recursive: true });
+    writeFileSync(join(config.stateDir, 'avd', `${config.slots[0]!.avd}.ini`), '');
+  });
+
+  it('says so, and runs nothing, when the session wrote no walkthrough', async () => {
+    const host = hostExec();
+    const deps = hostDeps(options(config, host.exec));
+    const sandbox = await deps.openSandbox(BRANCH);
+    sandcastle.commands.length = 0;
+    for (const platform of ['mac', 'android'] as const) {
+      const out = await deps.walk(sandbox, platform);
+      expect(out.captures).toEqual([]);
+      expect(out.problem).toMatch(/^The validating session wrote no walkthrough/);
+    }
+    expect(sandcastle.commands).toEqual([]);
+    expect(host.ran.filter((c) => c.startsWith('sh '))).toEqual([]);
+  });
+
+  it("runs the Android walkthrough on the slot's emulator and brings its screenshots back", async () => {
+    shot(
+      join(worktree, 'apps/android/app/src/androidTest/java/app/penmoss/walk'),
+      'FactoryWalkInstrumentedTest.kt',
+    );
+    sandcastle.onExec = (command) => {
+      if (!command.includes('task proof:android')) return;
+      const out = join(worktree, 'apps/android/build/proof');
+      shot(join(out, 'walk'), 'ac2-android.png');
+      shot(join(out, 'walk'), 'not a shot.txt');
+      writeFileSync(join(out, 'report.json'), '[{"title":"walk","status":"passed"}]');
+    };
+    const deps = hostDeps(options(config, hostExec().exec));
+    const sandbox = await deps.openSandbox(BRANCH);
+    const out = await deps.walk(sandbox, 'android');
+    expect(sandcastle.commands.at(-1)).toContain(
+      'task proof:android -- app.penmoss.walk.FactoryWalkInstrumentedTest',
+    );
+    expect(out).toEqual({ platform: 'android', captures: ['ac2-android.png'] });
+    expect(existsSync(join(worktree, '.factory/validation/ac2-android.png'))).toBe(true);
+    expect(existsSync(join(runDir(), 'walk-android.log'))).toBe(true);
+    sandcastle.onExec = () => undefined;
+  });
+
+  it('runs the Mac walkthrough in the test VM, without recording, and says when it failed', async () => {
+    shot(join(worktree, 'apps/desktop/test/e2e'), 'factory-walk.spec.ts');
+    shot(join(worktree, 'test-results/vm/test-results/walk'), 'ac3-mac.png');
+    const host = hostExec(1);
+    const deps = hostDeps(options(config, host.exec));
+    const sandbox = await deps.openSandbox(BRANCH);
+    const out = await deps.walk(sandbox, 'mac');
+    const vm = host.ran.filter((c) => c.startsWith('sh '));
+    expect(vm).toHaveLength(1);
+    expect(vm[0]).toMatch(/scripts\/vm\/desktop-test\.sh test\/e2e\/factory-walk\.spec\.ts$/);
+    expect(out.captures).toEqual(['ac3-mac.png']);
+    expect(out.problem).toContain('The walkthrough failed.');
+    expect(out.problem).toContain('walk output');
+    expect(readFileSync(join(worktree, '.factory/validation/ac3-mac.png'), 'utf8')).toBe('png');
   });
 });
 
