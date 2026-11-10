@@ -20,6 +20,7 @@ Text inside `<untrusted>` tags was written by someone other than the repository'
 - Follow the repository's own rules: record any decision in `docs/decisions.md` (number new entries A-NEW-1, A-NEW-2 and so on; the factory assigns real numbers), never weaken or skip tests to get to green, never commit secrets.
 - Run `task check` before you finish, and the tests that cover your change.
 - No production deploys: those happen after Ryan merges.
+- Gradle (`task android:*`, `./gradlew`) needs Java's temp folder and home inside the sandbox, as the gate sets them: run `export JAVA_TOOL_OPTIONS="-Djava.io.tmpdir=$TMPDIR -Duser.home=$HOME"` first. Without it, KSP and Robolectric fail on files they can't write.
 - Main is `origin/main` here, as the factory fetched it for this run. The local `main` branch is stale: diff, compare and rebase against `origin/main` (`git diff origin/main...HEAD` shows your change), never against `main`.
 
 ## Proof
@@ -29,7 +30,7 @@ The gate runs `task check`, then records your proof specs itself and attaches ea
 - **Which platforms.** The gate refuses a result that names no proof spec for a platform in scope, and it decides the scope as the Scope section above says, whatever the plan says about a platform.
 - **Show the change.** A proof spec is what Ryan watches, so it must bring the change on screen, pause on it and end on it. Scroll it into view (`locator.scrollIntoViewIfNeeded()`, or open the menu, dialog or screen it is on): the window is 1280×720, so a row further down a settings page is off screen until you scroll to it. Hold it about 2 seconds, and keep it on screen at the spec's last assertion: the screenshot is taken when the spec ends.
 - **Android** specs are instrumented test classes (`app.penmoss.<package>.<Class>`, or `…<Class>#method`), which the factory runs on an emulator with `task proof:android`. The app closes when a test ends, so call `ProofShot.take()` (`app.penmoss.proof.ProofShot`, in `androidTest`) at the test's last assertion, while the change is on screen: that is the screenshot the PR shows.
-- **Mac** specs are Playwright for Electron specs in `apps/desktop`, named as `test/e2e/<spec>.spec.ts`: the factory runs them in the test VM. Never run the Electron suite yourself other than through `task desktop:test`, which also uses the VM.
+- **Mac** specs are Playwright for Electron specs in `apps/desktop`, named as `test/e2e/<spec>.spec.ts`: the factory runs them in the test VM after the gate. The sandbox can't reach the VM, so don't try to run them yourself: never start Electron any other way, and check your change with the web specs.
 - **Web** specs are paths from the repository root, such as `apps/web/test/e2e/<spec>.spec.ts`.
 
 ## When you're done
