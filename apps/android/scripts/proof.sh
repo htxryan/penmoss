@@ -28,6 +28,8 @@ APP=app.penmoss.debug
 # Where a test's ProofShot.take() leaves the screenshot (androidTest app.penmoss.proof, A1255).
 PROOF_SHOT=/sdcard/penmoss-proof.png
 RUNNER="$APP.test/androidx.test.runner.AndroidJUnitRunner"
+# How long a video runs on after the test's ProofShot.take(), before the test closes the app.
+HOLD_SECONDS="${PENMOSS_PROOF_HOLD_SECONDS:-0.5}"
 
 [ "$#" -gt 0 ] || { echo 'proof.sh: name at least one instrumented test class' >&2; exit 2; }
 for spec in "$@"; do
@@ -50,6 +52,27 @@ cleanup() {
   fi
 }
 trap cleanup EXIT INT TERM
+
+# An "isn't responding" dialog after a slow boot, the launcher's or System UI's, can stay until
+# someone answers it (PEN-90): settling then waited out SETTLE_SECONDS. Answer it with Wait,
+# at most every 5 s and only before the app under test starts. Wait leaves the process running;
+# Close app, like hiding error dialogs, would restart it, and a restarted System UI recreates
+# the activity under test.
+pressed=-10
+press_wait() {
+  [ $((waited - pressed)) -ge 5 ] || return 0
+  pressed=$waited
+  "$ADB" -s "$ANDROID_SERIAL" shell uiautomator dump /sdcard/proof-ui.xml >/dev/null 2>&1 || return 0
+  # The Wait button's bounds, as "x1 y1 x2 y2", whatever the device's language.
+  bounds="$("$ADB" -s "$ANDROID_SERIAL" exec-out cat /sdcard/proof-ui.xml 2>/dev/null | tr '>' '\n' |
+    sed -n 's/.*resource-id="android:id\/aerr_wait".*bounds="\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\]".*/\1 \2 \3 \4/p' |
+    head -n 1)"
+  [ -n "$bounds" ] || return 0
+  x="$(echo "$bounds" | awk '{ print int(($1 + $3) / 2) }')"
+  y="$(echo "$bounds" | awk '{ print int(($2 + $4) / 2) }')"
+  "$ADB" -s "$ANDROID_SERIAL" shell input tap "$x" "$y" >/dev/null 2>&1 || return 0
+  echo "[proof] $(echo "$focus" | sed 's/.*Not Responding: \([^}]*\).*/\1/') wasn't responding after ${waited}s: pressed Wait"
+}
 
 echo "[proof] booting $PENMOSS_AVD on $ANDROID_SERIAL"
 "$ANDROID_HOME/emulator/emulator" -avd "$PENMOSS_AVD" -port "$PENMOSS_EMULATOR_PORT" \
@@ -79,11 +102,11 @@ echo "[proof] booted in ${waited}s"
 # Let the device settle before any test. Booted is not idle: the boot's broadcasts keep a
 # software-rendered emulator on a loaded Mac busy for a minute or more, System UI can stop
 # responding meanwhile, and its "isn't responding" dialog takes the input focus from the app
-# under test (a test's typed keys land in the dialog). Android closes that dialog itself once
-# System UI responds again. So: wait for the broadcasts to drain, then for the launcher to
-# hold the focus, with no dialog in front, for QUIET_SECONDS in a row. Hiding error dialogs
-# instead is worse: Android then restarts System UI, whose theme overlays change the
-# configuration and recreate the activity under test.
+# under test (a test's typed keys land in the dialog). So: wait for the broadcasts to drain,
+# then for the launcher to hold the focus, with no dialog in front, for QUIET_SECONDS in a row,
+# answering any "isn't responding" dialog with Wait (press_wait). Hiding error dialogs instead
+# is worse: Android then restarts System UI, whose theme overlays change the configuration and
+# recreate the activity under test.
 "$ADB" -s "$ANDROID_SERIAL" shell am wait-for-broadcast-idle >/dev/null 2>&1 &
 idle=$!
 waited=0
@@ -102,7 +125,8 @@ while [ "$quiet" -lt "$QUIET_SECONDS" ]; do
   focus="$("$ADB" -s "$ANDROID_SERIAL" shell dumpsys window displays 2>/dev/null |
     sed -n 's/.*mCurrentFocus=//p' | head -n 1 | tr -d '\r')"
   case "$focus" in
-    *'Not Responding'* | *'Application Error'*) quiet=0 ;;
+    *'Not Responding'*) quiet=0 && press_wait ;;
+    *'Application Error'*) quiet=0 ;;
     *Launcher*) quiet=$((quiet + 1)) ;;
     *) quiet=0 ;;
   esac
@@ -124,6 +148,8 @@ for spec in "$@"; do
   video="android-$n.mp4"
   shot="android-$n.png"
   "$ADB" -s "$ANDROID_SERIAL" shell rm -f /sdcard/proof.mp4 "$PROOF_SHOT"
+  # The device's clock as the recording starts, against which ProofShot logs its moment.
+  started="$("$ADB" -s "$ANDROID_SERIAL" shell cat /proc/uptime 2>/dev/null | awk '{ print $1 }')"
   "$ADB" -s "$ANDROID_SERIAL" shell screenrecord --time-limit "$TEST_SECONDS" /sdcard/proof.mp4 &
   rec=$!
   sleep 1
@@ -148,6 +174,25 @@ for spec in "$@"; do
   wait "$rec" 2>/dev/null || true
   sleep 2
   "$ADB" -s "$ANDROID_SERIAL" pull /sdcard/proof.mp4 "$OUT/$video" >/dev/null 2>&1 || true
+  # A video that ran on after the test closed the app ends on the launcher (PEN-91): cut it
+  # HOLD_SECONDS after the test's last ProofShot.take(), which logs its device time.
+  shot_at="$(sed -n 's/.*PenmossProof: shot at \([0-9]*\).*/\1/p' "$OUT/android-$n.logcat" | tail -n 1)"
+  if [ -n "$shot_at" ] && [ -n "$started" ] && [ -s "$OUT/$video" ]; then
+    length="$(awk -v at="$shot_at" -v from="$started" -v hold="$HOLD_SECONDS" \
+      'BEGIN { t = at / 1000 - from + hold; if (t > 0) printf "%.3f", t }')"
+    if [ -z "$length" ]; then
+      :
+    elif ! command -v ffmpeg >/dev/null 2>&1; then
+      echo "[proof] no ffmpeg to end $video at its screenshot; it runs on after the test" >&2
+    elif ffmpeg -nostdin -loglevel error -y -i "$OUT/$video" -t "$length" -c copy "$OUT/cut-$video" &&
+      [ -s "$OUT/cut-$video" ]; then
+      mv "$OUT/cut-$video" "$OUT/$video"
+      echo "[proof] $video ends ${length}s in, at its screenshot"
+    else
+      rm -f "$OUT/cut-$video"
+      echo "[proof] ffmpeg couldn't cut $video; it runs on after the test" >&2
+    fi
+  fi
   status=failed
   case "$result" in *"OK ("*) status=passed ;; esac
   [ "$n" -gt 1 ] && printf ',' >>"$OUT/report.json"
