@@ -16,6 +16,7 @@ import {
   TASK_CHECK_NO_BAIL,
   type Check,
 } from '../src/doctor.ts';
+import { claudeFlags } from '../src/agents/claude.ts';
 import { nodeExec, type Exec } from '../src/exec.ts';
 import { testConfig } from './helpers.ts';
 
@@ -64,6 +65,28 @@ describe('doctorChecks', () => {
     // The token reaches git only through the helper, which reads it from the environment.
     expect(push?.command).toContain(`'credential.helper=!f() {`);
     expect(push?.command).not.toMatch(/\$\{?GH_TOKEN\}?@/);
+  });
+
+  it("asks Claude to push with a run's flags and permissions skipped, and wants the deny rule's refusal", () => {
+    const deny = checks.find(
+      (c) => c.name === "Claude's deny rules refuse a git push with permissions skipped (F0.1)",
+    );
+    expect(deny).toMatchObject({ expect: 'pass', needs: ['CLAUDE_CODE_OAUTH_TOKEN'] });
+    expect(deny?.command).toContain(claudeFlags());
+    expect(deny?.command).toContain('--dangerously-skip-permissions');
+    expect(deny?.command).toContain('git push --dry-run');
+    // Claude Code's refusal of the tool call, not words the model might write.
+    expect(deny?.output).toBe('Permission to use Bash with command git push');
+  });
+
+  it("asks OpenCode to push with a run's config, and wants the push's own tool call refused", () => {
+    const deny = checks.find(
+      (c) => c.name === "OpenCode's deny permissions refuse a git push (F0.1)",
+    );
+    expect(deny).toMatchObject({ expect: 'pass', needs: ['OPENCODE_API_KEY'] });
+    expect(deny?.command).toContain('OPENCODE_CONFIG_CONTENT=');
+    expect(deny?.command).toContain('run --standalone --format json');
+    expect(deny?.command).toContain('"command":"git push[^}]*},"error":"Permission denied');
   });
 
   it('never prints a file it probes', () => {
