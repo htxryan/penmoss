@@ -205,3 +205,14 @@ export function planningAction(v: PlanningView): PlanningAction {
     };
   return { kind: 'wait', why: 'the planning session has not replied yet' };
 }
+
+/**
+ * How Ryan chats with a card's planning session (F15, A1281): from a terminal on this Mac, in
+ * his own Claude Code. The session runs on the factory's setup token, which "can only make model
+ * requests" and can't open Remote Control, so there is no claude.ai link to give (PEN-35).
+ * `claude attach` takes the short id: a session's id's first 8 characters, as `claude --bg`
+ * prints it. A resume starts a new session, with a new id.
+ */
+export function attachCommand(sessionId: string): string {
+  return `claude attach ${sessionId.slice(0, 8)}`;
+}

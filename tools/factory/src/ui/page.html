@@ -1689,6 +1689,12 @@
           todo.append(el('p', 'ask', c.need ? c.need.brief : c.step));
           if (c.need?.what) todo.append(el('p', 'what', c.need.what));
           if (c.need?.command) todo.append(copyBox(c.need.command));
+          if (c.chat) {
+            // A planning session has no claude.ai link (A1281): Ryan joins it from a terminal.
+            const r = el('div', 'row chat');
+            r.append(el('span', 'note', 'Chat with the planner in a terminal'), copyBox(c.chat));
+            todo.append(r);
+          }
           if (c.heldBy.length)
             todo.append(
               el(

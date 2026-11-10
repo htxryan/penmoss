@@ -18,7 +18,12 @@ import {
   type PlanFiles,
   type PlanMeta,
 } from './planning-host.ts';
-import { planningAction, type PlanningAction, type PlanQuestion } from './planning.ts';
+import {
+  attachCommand,
+  planningAction,
+  type PlanningAction,
+  type PlanQuestion,
+} from './planning.ts';
 
 export interface PlanDeps {
   comment(issue: number, body: string): Promise<void>;
@@ -27,7 +32,7 @@ export interface PlanDeps {
   /** Prepares the read-only snapshot of main the session explores. */
   snapshot(): Promise<void>;
   /** Starts the session with a message, or resumes it by ID. */
-  launch(message: string, resume?: string): Promise<{ sessionId?: string; chatUrl?: string }>;
+  launch(message: string, resume?: string): Promise<{ sessionId?: string }>;
   stop(sessionId: string): Promise<void>;
   /** The session as `claude agents` lists it, or nothing once it has stopped. */
   session(): Promise<{ readonly busy: boolean } | undefined>;
@@ -88,7 +93,8 @@ function links(meta: PlanMeta, planUrl: string | null, designUrl: string | null)
   return [
     planUrl && `- Plan: ${planUrl}`,
     designUrl && `- Design: ${designUrl}`,
-    meta.chatUrl && `- Chat with the planning session: ${meta.chatUrl}`,
+    meta.sessionId &&
+      `- Chat with the planning session from a terminal on this Mac: \`${attachCommand(meta.sessionId)}\``,
   ]
     .filter(Boolean)
     .join('\n');
@@ -172,7 +178,6 @@ export async function advancePlanning(deps: PlanDeps, input: PlanInput): Promise
         askedAt: undefined,
       };
       writeMeta(files, next);
-      await postNewChat(deps, item.number, meta, next, marker('plan-resume'));
       return action;
     }
     case 'ask': {
@@ -258,7 +263,6 @@ export async function advancePlanning(deps: PlanDeps, input: PlanInput): Promise
           contractFixes: fixes + 1,
         };
         writeMeta(files, next);
-        await postNewChat(deps, item.number, meta, next, marker('plan-resume'));
         return { kind: 'resume', comments: [] };
       }
       if (!trivial) {
@@ -301,7 +305,7 @@ export async function advancePlanning(deps: PlanDeps, input: PlanInput): Promise
           trivial
             ? `No plan needed: ${quote}. Implementation starts when a slot is free.`
             : `The plan is agreed ("${quote}", in the ${action.channel})${versionsText(versions)}. Implementation starts when a slot is free, from this copy of the plan.`,
-          links(meta, state?.planUrl ?? null, state?.designUrl ?? null),
+          links({}, state?.planUrl ?? null, state?.designUrl ?? null),
           formatMarker({ issue: String(item.number), event: 'plan-approved' }),
         ]
           .filter(Boolean)
@@ -315,21 +319,6 @@ export async function advancePlanning(deps: PlanDeps, input: PlanInput): Promise
 /** Every message to a resumed session says where the issue's images are (A1277). */
 const imagesReminder = (images: string): string =>
   `The issue's images are on disk for you, in place of any uploads.linear.app link you couldn't open.\n\n${images}`;
-
-/** A resumed session has a new chat link (F0.5): the issue gets it, so Ryan's chat reaches it. */
-async function postNewChat(
-  deps: PlanDeps,
-  issue: number,
-  before: PlanMeta,
-  after: PlanMeta,
-  marker: string,
-): Promise<void> {
-  if (!after.chatUrl || after.chatUrl === before.chatUrl) return;
-  await deps.comment(
-    issue,
-    `Planning resumed. Chat with the planning session: ${after.chatUrl}\n\n${marker}`,
-  );
-}
 
 /** How many times the session gets to fix a plan that breaks the contract before Ryan hears. */
 export const MAX_CONTRACT_FIXES = 2;

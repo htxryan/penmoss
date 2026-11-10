@@ -244,6 +244,10 @@ test.describe("the plan's questions", () => {
     await expect(detail.locator('.ask')).toHaveText('Answer 2 questions on the plan');
     // The plan, which Ryan reads before answering, is a link right under the title.
     await expect(detail.locator('.links a.em')).toHaveText('Plan');
+    // No chat link: the planner is joined from a terminal, with a command to copy (A1281).
+    await expect(detail.locator('.links a', { hasText: 'Open in Claude' })).toHaveCount(0);
+    await expect(detail.locator('.chat .note')).toHaveText('Chat with the planner in a terminal');
+    await expect(detail.locator('.chat code')).toHaveText('claude attach S78');
     const q = detail.locator('.q');
     await expect(q).toHaveCount(2);
     await expect(q.nth(0).locator('.qt')).toHaveText('Include attachments?');

@@ -245,7 +245,7 @@ export async function executePlanning(
     setBlocked: (i) => tracker.setBlocked(i),
     snapshot: () => prepareSnapshot(config, files, nodeExec),
     launch: async (message, resume) => {
-      const { chatUrl, id } = await launchSession(
+      const { id } = await launchSession(
         config,
         nodeExec,
         files,
@@ -260,7 +260,7 @@ export async function executePlanning(
           `the planning session started${id ? ` (${id})` : ''} but \`claude agents\` does not list it`,
         );
       log(`planning session ${found.sessionId}${resume ? ' resumed' : ' started'}`);
-      return { sessionId: found.sessionId, ...(chatUrl ? { chatUrl } : {}) };
+      return { sessionId: found.sessionId };
     },
     stop: (sessionId) => stopSession(config, nodeExec, item.number, sessionId, env),
     session: async () => {

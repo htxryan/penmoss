@@ -14,7 +14,7 @@ import type { Running } from '../dispatcher.ts';
 import { parseIssueSpec } from '../labels.ts';
 import { pickNext } from '../pick.ts';
 import type { PlanMeta } from '../planning-host.ts';
-import type { PlanQuestion, PlanState } from '../planning.ts';
+import { attachCommand, type PlanQuestion, type PlanState } from '../planning.ts';
 import type { DoctorSummary } from '../doctor-summary.ts';
 import type { DaemonStatus } from '../status.ts';
 import { hasBlockedSet } from '../tracker/port.ts';
@@ -125,6 +125,8 @@ export interface CardView {
   readonly runs: readonly RunView[];
   /** The current run's folder, for its logs. */
   readonly runFolder: string | null;
+  /** The command that joins the card's planning session from a terminal on this Mac (A1281). */
+  readonly chat: string | null;
   /** The last lines of the current run's agent log, for a card in a slot. */
   readonly log: readonly string[];
   readonly links: readonly Link[];
@@ -269,12 +271,6 @@ export const issueOf = (e: LedgerEvent) => Number(e.run.split('-')[0]);
 
 const str = (v: unknown) => (typeof v === 'string' && v !== '' ? v : null);
 const num = (v: unknown) => (typeof v === 'number' ? v : null);
-
-/** The desktop app's link for a claude.ai session URL. */
-export function desktopLink(chatUrl: string): string | null {
-  const m = /^https:\/\/claude\.ai\/(code\/session_[A-Za-z0-9_-]+)$/.exec(chatUrl);
-  return m ? `claude://claude.ai/${m[1]}` : null;
-}
 
 /**
  * An agent CLI's error as one line: `claude-code exited with code 127:\n/bin/sh: claude:
@@ -854,11 +850,6 @@ function card(
     );
   if (plan?.state?.planUrl) links.push({ label: 'Plan', href: plan.state.planUrl });
   if (plan?.state?.designUrl) links.push({ label: 'Design', href: plan.state.designUrl });
-  if (plan?.meta.chatUrl) {
-    links.push({ label: 'Chat', href: plan.meta.chatUrl });
-    const desktop = desktopLink(plan.meta.chatUrl);
-    if (desktop) links.push({ label: 'Open in Claude', href: desktop });
-  }
 
   // Where the card is.
   const progress = lastRun?.events.findLast((e) => !STOPS.has(e.event));
@@ -1025,6 +1016,10 @@ function card(
     canComplete,
     runs: views,
     runFolder: lastRun && input.runFolder ? input.runFolder(lastRun.id) : null,
+    chat:
+      st === s.planning && plan?.meta.sessionId && !plan.meta.agreed
+        ? attachCommand(plan.meta.sessionId)
+        : null,
     log: liveRun && input.logTail ? input.logTail(liveRun) : [],
     links,
   };

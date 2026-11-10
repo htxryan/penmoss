@@ -218,18 +218,32 @@ describe('planning sessions', async () => {
     expect(sessionIssue(github, 'Penmoss PEN-41 plan')).toBeUndefined();
     expect(sessionIssue(linear, 'My own session')).toBeUndefined();
   });
-  it('gives factory:chat the latest chat link and the same session in the Claude app', async () => {
+  it('gives factory:chat the command that joins the planning session (A1281)', async () => {
     const { planFiles, planningChat, writeMeta } = await import('../src/planning-host.ts');
     const config = { ...linearConfig(), stateDir: mkdtempSync(join(tmpdir(), 'chat-')) };
     expect(planningChat(config, 41)).toEqual({ error: 'PEN-41 has no planning session yet' });
     const files = planFiles(config, 41);
     mkdirSync(files.root, { recursive: true });
-    writeMeta(files, { sessionId: 'S1', chatUrl: 'https://claude.ai/code/session_01Ab' });
+    writeMeta(files, { sessionId: '5be0ac96-5e8e-4b08' });
+    expect(planningChat(config, 41)).toEqual({ command: 'claude attach 5be0ac96' });
+    writeMeta(files, {
+      sessionId: '5be0ac96-5e8e-4b08',
+      agreed: {
+        quote: 'complete',
+        channel: 'issue',
+        at: 'x',
+        trivial: false,
+        planUrl: null,
+        designUrl: null,
+        planVersion: 1,
+        designVersion: null,
+      },
+    });
     expect(planningChat(config, 41)).toEqual({
-      chatUrl: 'https://claude.ai/code/session_01Ab',
-      desktop: 'claude://claude.ai/code/session_01Ab',
+      error: "PEN-41's plan is agreed; its planning session has ended",
     });
   });
+
   it("turns the plan page into text, without its styles, scripts or diagrams' markup", () => {
     const html =
       '<html><style>p{}</style><body><h1>Plan</h1><p>Do &amp; test</p><svg><text>x</text></svg><script>1</script><ul><li>AC1</li></ul></body></html>';
