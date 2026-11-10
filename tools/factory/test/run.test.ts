@@ -905,6 +905,22 @@ describe('CI after the PR opens (F6)', () => {
     expect(f.calls.at(-1)).toBe('blocked');
   });
 
+  it("sets Blocked with the failing job and its log when a repair round can't fix it", async () => {
+    const f = fake({
+      ci: [[red]],
+      agentRounds: [done, { ...done, status: 'failed', summary: 'The failure is CI-only' }],
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome).toEqual({ kind: 'blocked', reason: 'ci-red' });
+    const last = f.comments.at(-1)!;
+    expect(last).toContain("A CI repair round couldn't finish: The failure is CI-only");
+    expect(last).toContain(
+      '[Check](https://github.com/htxryan/penmoss/actions/runs/77/job/1) (run 77)',
+    );
+    expect(last).toContain('Error: lint failed at a.ts:1');
+    expect(f.calls.at(-1)).toBe('blocked');
+  });
+
   it('waits out a job no runner has taken, saying so once, without failing', async () => {
     const f = fake({ ci: [[queued], [queued], [queued], [green]] });
     const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
