@@ -1342,6 +1342,9 @@
       let view = null;
       const drafts = new Map();
       const notes = new Map();
+      // Replies sent from this page, by card: shown in place of the questions they answered until
+      // the board catches up (it refreshes each poll), so a sent form never looks like a reset.
+      const sent = new Map();
       // Answers picked on a plan's questions, per card: question → option. Kept across redraws.
       const picks = new Map();
       // Which folded sections Ryan opened, so a redraw every few seconds keeps them open.
@@ -1477,7 +1480,7 @@
       }
       const href = (mode, issue) => `#${mode}${issue ? `/issue-${issue}` : ''}`;
 
-      async function act(body, box) {
+      async function act(body, box, onSent) {
         const note = box.querySelector('.said');
         for (const b of box.querySelectorAll('button, textarea')) b.disabled = true;
         note.textContent = 'Sending…';
@@ -1491,6 +1494,13 @@
           const said = r.ok ? j.done : `Failed: ${j.error || r.status}`;
           notes.set(body.issue, said);
           note.textContent = said;
+          if (r.ok && onSent) {
+            onSent(said);
+            drafts.delete(body.issue);
+            picks.delete(body.issue);
+            render();
+            return;
+          }
           if (r.ok && body.kind === 'reply') {
             drafts.delete(body.issue);
             picks.delete(body.issue);
@@ -1590,6 +1600,52 @@
         n.textContent = `${(picks.get(c.number) || new Map()).size} of ${asked} picked`;
       }
 
+      // What this page sent for the card, while the board still shows what it answered. A new
+      // question (a different ask time), a finished card, or 15 minutes with nothing asked ends it.
+      function sentFor(c) {
+        const was = sent.get(c.number);
+        if (!was) return null;
+        const stale = !c.need && Date.now() - Date.parse(was.at) > 15 * 60000;
+        if (c.group === 'done' || (c.need && c.since !== was.since) || stale) {
+          sent.delete(c.number);
+          return null;
+        }
+        return was;
+      }
+      function sentNote(c, was) {
+        const box = el('section', 'todo e-live sent');
+        box.setAttribute('role', 'status');
+        box.append(el('h3', 'eyebrow', 'Sent'));
+        box.append(
+          el(
+            'p',
+            'ask',
+            was.complete
+              ? `"Complete" posted on ${c.key} at ${hhmm(was.at)}`
+              : `${was.said} on ${c.key} at ${hhmm(was.at)}`,
+          ),
+        );
+        box.append(
+          el(
+            'p',
+            'what',
+            was.complete
+              ? 'The planner confirms the plan, then implementation starts when a slot is free.'
+              : /cleared/.test(was.said)
+                ? 'The factory hands it on at its next poll, within a minute or two. Any reply or new question shows here.'
+                : 'Blocked is still set, so nothing reads it until you unblock.',
+          ),
+        );
+        const row = el('div', 'actions');
+        row.append(
+          button('Show the questions again', 'quiet', () => {
+            sent.delete(c.number);
+            render();
+          }),
+        );
+        box.append(row);
+        return box;
+      }
       function detail(c, mode) {
         const box = el('article', 'detail');
         box.id = `issue-${c.number}`;
@@ -1624,126 +1680,143 @@
         if (links.childElementCount) box.append(links);
         box.append(steps(c, false));
 
-        // Ryan's turn: what's asked, the questions, the reply, one primary action.
-        const todo = el('section', `todo e-${c.tone}`);
-        todo.append(el('h3', 'eyebrow', c.need ? 'Your turn' : 'Where it is'));
-        todo.append(el('p', 'ask', c.need ? c.need.brief : c.step));
-        if (c.need?.what) todo.append(el('p', 'what', c.need.what));
-        if (c.need?.command) todo.append(copyBox(c.need.command));
-        if (c.heldBy.length)
-          todo.append(
-            el(
-              'p',
-              'what',
-              `Held until ${c.heldBy.join(', ')} ${c.heldBy.length > 1 ? 'finish' : 'finishes'}: there's no Blocked to clear for that.`,
-            ),
-          );
-        const actions = el('section', 'reply');
-        if (c.points.length) todo.append(questions(c, actions));
-        if (c.notes.length) {
-          const d = disclosure(`notes-${c.number}`, 'notes', `Planner's notes (${c.notes.length})`);
-          const ul = el('ul');
-          for (const o of c.notes) ul.append(el('li', '', o));
-          d.append(ul);
-          todo.append(d);
-        }
-        if (c.group !== 'done') {
-          const id = `reply-${c.number}`;
-          const label = el(
-            'label',
-            '',
-            c.points.length
-              ? `Anything else? Posted with your answers on ${c.key}, as you`
-              : `Reply on ${c.key}, posted as you`,
-          );
-          label.htmlFor = id;
-          const text = el('textarea');
-          text.id = id;
-          text.rows = 3;
-          text.value = drafts.get(c.number) || '';
-          text.disabled = !view.writable;
-          text.addEventListener('input', () => drafts.set(c.number, text.value));
-          // The picked answers, each as the planner reads one (`On "<text>": <option>`), then
-          // whatever Ryan wrote.
-          const words = () => {
-            const chosen = picks.get(c.number) || new Map();
-            const lines = c.points
-              .filter((p) => chosen.has(p.text))
-              .map((p) => `On "${p.text}": ${chosen.get(p.text)}`);
-            return [lines.join('\n'), text.value.trim() ? text.value : '']
-              .filter(Boolean)
-              .join('\n\n');
-          };
-          const send = (unblock) => {
-            const body = words();
-            if (!body) {
-              actions.querySelector('.said').textContent = c.points.length
-                ? 'Pick an answer or write a reply first.'
-                : 'Write a reply first.';
-              return;
-            }
-            act({ kind: 'reply', issue: c.number, text: body, unblock }, actions);
-          };
-          const retry = c.group === 'queue' || c.stage <= 1 ? 'Unblock' : 'Retry';
-          const complete = () =>
-            button('Agree the plan (Complete)', 'secondary', () =>
-              act({ kind: 'complete', issue: c.number }, actions),
-            );
-          // One primary for what the card needs; the rest are quieter.
-          const row = el('div', 'actions');
-          const others = el('span', 'others');
-          if (c.need?.kind === 'answer') {
-            if (c.points.some((p) => p.options.length)) row.append(el('span', 'count'));
-            row.append(
-              button(
-                c.blocked
-                  ? c.points.length
-                    ? 'Send answers and continue'
-                    : 'Post and continue'
-                  : 'Send answers',
-                'primary',
-                () => send(true),
+        const was = sentFor(c);
+        if (was) box.append(sentNote(c, was));
+        else {
+          // Ryan's turn: what's asked, the questions, the reply, one primary action.
+          const todo = el('section', `todo e-${c.tone}`);
+          todo.append(el('h3', 'eyebrow', c.need ? 'Your turn' : 'Where it is'));
+          todo.append(el('p', 'ask', c.need ? c.need.brief : c.step));
+          if (c.need?.what) todo.append(el('p', 'what', c.need.what));
+          if (c.need?.command) todo.append(copyBox(c.need.command));
+          if (c.heldBy.length)
+            todo.append(
+              el(
+                'p',
+                'what',
+                `Held until ${c.heldBy.join(', ')} ${c.heldBy.length > 1 ? 'finish' : 'finishes'}: there's no Blocked to clear for that.`,
               ),
             );
-            if (c.canComplete) row.append(complete());
-            if (c.blocked)
-              others.append(
-                button('Post without unblocking', 'quiet', () => send(false)),
-                button('Just unblock', 'quiet', () =>
-                  act({ kind: 'block', issue: c.number, on: false }, actions),
+          const actions = el('section', 'reply');
+          if (c.points.length) todo.append(questions(c, actions));
+          if (c.notes.length) {
+            const d = disclosure(
+              `notes-${c.number}`,
+              'notes',
+              `Planner's notes (${c.notes.length})`,
+            );
+            const ul = el('ul');
+            for (const o of c.notes) ul.append(el('li', '', o));
+            d.append(ul);
+            todo.append(d);
+          }
+          if (c.group !== 'done') {
+            const id = `reply-${c.number}`;
+            const label = el(
+              'label',
+              '',
+              c.points.length
+                ? `Anything else? Posted with your answers on ${c.key}, as you`
+                : `Reply on ${c.key}, posted as you`,
+            );
+            label.htmlFor = id;
+            const text = el('textarea');
+            text.id = id;
+            text.rows = 3;
+            text.value = drafts.get(c.number) || '';
+            text.disabled = !view.writable;
+            text.addEventListener('input', () => drafts.set(c.number, text.value));
+            // The picked answers, each as the planner reads one (`On "<text>": <option>`), then
+            // whatever Ryan wrote.
+            const words = () => {
+              const chosen = picks.get(c.number) || new Map();
+              const lines = c.points
+                .filter((p) => chosen.has(p.text))
+                .map((p) => `On "${p.text}": ${chosen.get(p.text)}`);
+              return [lines.join('\n'), text.value.trim() ? text.value : '']
+                .filter(Boolean)
+                .join('\n\n');
+            };
+            const send = (unblock) => {
+              const body = words();
+              if (!body) {
+                actions.querySelector('.said').textContent = c.points.length
+                  ? 'Pick an answer or write a reply first.'
+                  : 'Write a reply first.';
+                return;
+              }
+              act({ kind: 'reply', issue: c.number, text: body, unblock }, actions, (said) =>
+                sent.set(c.number, { at: new Date().toISOString(), since: c.since, said }),
+              );
+            };
+            const retry = c.group === 'queue' || c.stage <= 1 ? 'Unblock' : 'Retry';
+            const complete = () =>
+              button('Agree the plan (Complete)', 'secondary', () =>
+                act({ kind: 'complete', issue: c.number }, actions, (said) =>
+                  sent.set(c.number, {
+                    at: new Date().toISOString(),
+                    since: c.since,
+                    said,
+                    complete: true,
+                  }),
                 ),
               );
-          } else if (c.blocked) {
-            row.append(button(`Post and ${retry.toLowerCase()}`, 'primary', () => send(true)));
-            if (c.canComplete) row.append(complete());
-            others.append(
-              button(retry, 'quiet', () =>
-                act({ kind: 'block', issue: c.number, on: false }, actions),
-              ),
-              button('Post only', 'quiet', () => send(false)),
-            );
-          } else {
-            row.append(button('Post', '', () => send(false)));
-            if (c.canComplete) row.append(complete());
-            others.append(
-              button('Block', 'quiet', () =>
-                act({ kind: 'block', issue: c.number, on: true }, actions),
-              ),
-            );
+            // One primary for what the card needs; the rest are quieter.
+            const row = el('div', 'actions');
+            const others = el('span', 'others');
+            if (c.need?.kind === 'answer') {
+              if (c.points.some((p) => p.options.length)) row.append(el('span', 'count'));
+              row.append(
+                button(
+                  c.blocked
+                    ? c.points.length
+                      ? 'Send answers and continue'
+                      : 'Post and continue'
+                    : 'Send answers',
+                  'primary',
+                  () => send(true),
+                ),
+              );
+              if (c.canComplete) row.append(complete());
+              if (c.blocked)
+                others.append(
+                  button('Post without unblocking', 'quiet', () => send(false)),
+                  button('Just unblock', 'quiet', () =>
+                    act({ kind: 'block', issue: c.number, on: false }, actions),
+                  ),
+                );
+            } else if (c.blocked) {
+              row.append(button(`Post and ${retry.toLowerCase()}`, 'primary', () => send(true)));
+              if (c.canComplete) row.append(complete());
+              others.append(
+                button(retry, 'quiet', () =>
+                  act({ kind: 'block', issue: c.number, on: false }, actions),
+                ),
+                button('Post only', 'quiet', () => send(false)),
+              );
+            } else {
+              row.append(button('Post', '', () => send(false)));
+              if (c.canComplete) row.append(complete());
+              others.append(
+                button('Block', 'quiet', () =>
+                  act({ kind: 'block', issue: c.number, on: true }, actions),
+                ),
+              );
+            }
+            if (others.childElementCount) row.append(others);
+            actions.append(label, text, row);
+            if (c.blocked && retry === 'Retry')
+              actions.append(
+                el('p', 'note', 'Retry clears Blocked: the run starts again on its branch.'),
+              );
           }
-          if (others.childElementCount) row.append(others);
-          actions.append(label, text, row);
-          if (c.blocked && retry === 'Retry')
-            actions.append(
-              el('p', 'note', 'Retry clears Blocked: the run starts again on its branch.'),
-            );
+          const said = el('p', 'note said', notes.get(c.number) || '');
+          said.setAttribute('role', 'status');
+          actions.append(said);
+          todo.append(actions);
+          counted(c, actions);
+          box.append(todo);
         }
-        const said = el('p', 'note said', notes.get(c.number) || '');
-        said.setAttribute('role', 'status');
-        actions.append(said);
-        todo.append(actions);
-        counted(c, actions);
-        box.append(todo);
 
         // History, folded: the live run's log, then the runs and the run folder.
         if (c.log.length) {
