@@ -164,7 +164,7 @@ export async function executeRevise(
   const items = action.kind === 'round' ? action.state.items : [];
   const prompt =
     action.kind === 'round'
-      ? `${base}\n\n## Ryan's review of ${pr.url}\n\nThe PR is open and in review. Address every item below in the same branch, then write \`.factory/result.json\` with a \`replies\` object: for each review thread ID, one or two sentences saying what you changed (or why not).\n\n${roundText(items, fence)}`
+      ? `${base}\n\n## Ryan's review of ${pr.url}\n\nThe PR is open and in review. Address every item below in the same branch, then write \`.factory/result.json\` with a \`replies\` object: for each review thread ID, one or two sentences saying what you changed (or why not), and under \`general\` your answer to the PR comments and review summaries, which goes on the PR in the round's comment. You can't edit the PR yourself.\n\n${roundText(items, fence)}`
       : action.kind === 'rebase'
         ? base
         : `${base}\n\n## CI failed on ${pr.url}\n\nThe PR is in review and these checks failed: ${action.failed.map((c) => `${c.name} (${c.link})`).join(', ')}. Fix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\`.`;
