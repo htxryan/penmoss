@@ -18,7 +18,15 @@ export function linearConfig(): FactoryConfig {
 
 export const RYAN_LINEAR = '0b5e8c3a-1d2f-4a6b-9c7d-112233445566';
 
-export function item(number: number, overrides: Partial<BoardItem> = {}): BoardItem {
+/**
+ * A card on the board. It carries the factory's opt-in label (A1296) besides any it is given;
+ * `optedOut` leaves it off.
+ */
+export function item(
+  number: number,
+  overrides: Partial<BoardItem> & { readonly optedOut?: boolean } = {},
+): BoardItem {
+  const { optedOut, ...rest } = overrides;
   return {
     itemId: `PVTI_${number}`,
     number,
@@ -28,10 +36,10 @@ export function item(number: number, overrides: Partial<BoardItem> = {}): BoardI
     repo: 'htxryan/penmoss',
     state: 'OPEN',
     author: 'htxryan',
-    labels: [],
     status: 'Ready',
     blocked: false,
     position: number,
-    ...overrides,
+    ...rest,
+    labels: [...(optedOut ? [] : ['factory']), ...(rest.labels ?? [])],
   };
 }

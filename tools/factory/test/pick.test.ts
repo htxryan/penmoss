@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { parseIssueSpec, type IssueSpec } from '../src/labels.ts';
+import { optedIn, optedInBoard, parseIssueSpec, type IssueSpec } from '../src/labels.ts';
+import { runnable } from '../src/start.ts';
 import type { BoardItem } from '../src/board.ts';
 import {
   elsewhere,
@@ -39,6 +40,27 @@ describe('pickNext', () => {
     const result = pickNext([item(1, { blocked: true, labels: ['P1'] }), item(2)], config);
     expect(result.next?.item.number).toBe(2);
     expect(result.skipped.map((s) => [s.item.number, s.reason])).toEqual([[1, 'Blocked is set']]);
+  });
+
+  it('never picks a card without the opt-in label (A1296)', () => {
+    const result = pickNext([item(1, { optedOut: true, labels: ['P1'] }), item(2)], config);
+    expect(result.next?.item.number).toBe(2);
+    expect(result.skipped.map((s) => [s.item.number, s.reason])).toEqual([[1, 'no factory label']]);
+  });
+
+  it('reads the opt-in label in any case, and keeps only those cards for the daemon', () => {
+    expect(optedIn(['Factory'], config)).toBe(true);
+    expect(optedIn(['agent:factory', 'plan:skip'], config)).toBe(false);
+    const board = { items: [item(1), item(2, { optedOut: true, status: 'In review' })] };
+    expect(optedInBoard(board, config).items.map((i) => i.number)).toEqual([1]);
+  });
+
+  it('runs nothing by hand without the opt-in label', () => {
+    expect(runnable(config, item(1, { optedOut: true }), ['Ready'])).toEqual({
+      ok: false,
+      error: '#1 has no factory label; the factory acts only on cards that do',
+    });
+    expect(runnable(config, item(1), ['Ready']).ok).toBe(true);
   });
 
   it('passes over closed issues, other repos, running cards and bad labels', () => {
