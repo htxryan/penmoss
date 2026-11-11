@@ -212,6 +212,27 @@ export function sandboxStartCommand(base: string): string {
 }
 
 /**
+ * Gets a new sandbox ready before its agent starts, so the agent goes straight to the work
+ * (A1289). Past runs lost their first minutes to these:
+ *
+ * - the workspace's dependencies, which a new worktree doesn't have (PEN-64, PEN-71, and two
+ *   more ran `task setup` or failed on missing modules first): installed from the factory's pnpm
+ *   store, offline and frozen, in seconds;
+ * - zsh's here-documents, which it writes to `/tmp` (TMPPREFIX), outside the sandbox: 17 of the
+ *   agents' heredocs failed, and each fell back to another way. The sandbox's own temp folder
+ *   instead;
+ * - Java's temp folder and home (KSP, Robolectric, the debug keystore in `~/.android`), which an
+ *   agent had to remember to export before Gradle: set for every shell.
+ *
+ * `$HOME/.zshenv` is read by every zsh, which is the shell Claude Code's and OpenCode's Bash
+ * tools run. A failed install doesn't stop the run: the agent sees it and can install itself.
+ */
+export const SANDBOX_READY = [
+  `printf '%s\\n' '# The factory writes this when the sandbox starts (A1289).' 'export TMPPREFIX="$TMPDIR/zsh"' 'export JAVA_TOOL_OPTIONS="-Djava.io.tmpdir=$TMPDIR -Duser.home=$HOME"' > "$HOME/.zshenv"`,
+  'corepack pnpm install --frozen-lockfile --prefer-offline --reporter=silent',
+].join(' && ');
+
+/**
  * Takes the commits someone pushed on top of the factory's last push to `branch` (PEN-101): the
  * sandbox fetches the branch, checks GitHub still has `to`, and fast-forwards onto it, or, when
  * the run's branch has commits GitHub doesn't (a rebase, a round that didn't push), cherry-picks
@@ -499,6 +520,11 @@ export function hostDeps(options: HostOptions): HostDeps {
           `the sandbox couldn't start from main's ${base.slice(0, 10)}: ${started.stderr.trim()}`,
         );
       }
+      const ready = await handle.exec(SANDBOX_READY);
+      if (ready.exitCode !== 0)
+        options.log(
+          `the sandbox's dependencies didn't install (exit ${ready.exitCode}); the agent starts without them: ${(ready.stderr || ready.stdout).trim().split('\n').slice(-3).join(' ')}`,
+        );
       // The issue's images, which the host downloaded into the run folder (attachments.ts). A
       // copy that fails leaves the agent without them; it never stops the run.
       try {

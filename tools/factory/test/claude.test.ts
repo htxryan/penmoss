@@ -117,6 +117,13 @@ describe('the implement prompt', () => {
     expect(text).toContain('ProofShot.take()');
     expect(text).toMatch(/"android": \{ "inScope": true, "proofSpecs"/);
   });
+  it('says the sandbox is ready and asks for the scoped check, not the whole one (A1289)', () => {
+    const text = promptTemplate('implement');
+    expect(text).toContain("the workspace's dependencies are installed");
+    expect(text).toContain('`/tmp`');
+    expect(text).toContain('task check:changed -- origin/main');
+    expect(text).not.toContain('Run `task check` before you finish');
+  });
   it('refuses a missing value', () => {
     expect(() => fill('{{nope}}', {})).toThrow('{{nope}}');
   });
