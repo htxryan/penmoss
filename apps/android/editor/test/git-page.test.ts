@@ -903,10 +903,17 @@ describe('bringing back Room’s old copies (A886)', () => {
     // A note git never had: a long one, more than 4 MB of base64 in Room.
     const scratch = await macOf(new MemoryRemote(), true);
     const lines = Array.from({ length: 100_000 }, (_, n) => `Line ${n + 1} of the long note, kept`);
-    const id = new NotebookOps(scratch, clock).createNote({
-      title: 'Long notes',
-      markdown: lines.join('\n'),
-    });
+    const id = new NotebookOps(scratch, clock).createNote({ title: 'Long notes', markdown: '' });
+    // The body parseMarkdown(lines.join('\n')) makes, one paragraph, built from the schema and
+    // put in place whole. Parsing 3.6 MB of markdown, and diffing it into the note, took 4–5 s
+    // of the test's 5 s on their own (PEN-113); the size is what the test is about.
+    const { schema } = parseMarkdown('').doc.type;
+    const body = schema.node('doc', null, [
+      schema.node('paragraph', null, [schema.text(lines.join('\n'))]),
+    ]);
+    const root = scratch.replica.note(id)!.get(NOTE_ROOT);
+    root.delete(0, root.length);
+    root.applyDelta(docToDelta(body));
     const encoded = toBase64(Y.encodeStateAsUpdate(scratch.replica.note(id)!));
     expect(encoded.length).toBeGreaterThan(4 * 1024 * 1024);
     const half = Math.floor(encoded.length / 2);
