@@ -42,6 +42,7 @@ import { CommentsPanel } from './CommentsPanel';
 import { CommentPopover, type FloatingComment } from './CommentPopover';
 import { floats, shownInNote, useGoneDeliveries, useThreads } from './comments';
 import { COPIED_AGENT_REFERENCE, useCopyAgentReference } from './agent-reference';
+import { showToast } from '../toasts/toasts';
 import { NoteStats } from './note-stats';
 import { HistoryPanel } from '../history/HistoryPanel';
 import { browserFoldStorage, localFoldState } from './folds';
@@ -93,6 +94,14 @@ import { trashedNote } from '../trash/trashed';
 import { openNoteWindow } from '../window/open';
 import { symbolSource } from './symbols';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
+
+/** "Copied as Markdown" after an explicit copy (T15), in the window's toast stack (PEN-63). */
+function showCopied(text: string, ok: boolean): void {
+  showToast({ text, tone: ok ? 'done' : 'error', testId: 'copy-status', ms: COPIED_MS });
+}
+
+/** How long a copy's toast shows. */
+const COPIED_MS = 2500;
 
 /** The whole note, copied from the actions menu or the palette (T15). */
 type CopyFormat = 'markdown' | 'rich';
@@ -274,8 +283,6 @@ export function NoteView({
   /** Why a pasted or dropped file was not added; cleared after a while. */
   const [notice, setNotice] = useState<string | null>(null);
   /** The conflict copy made when this note was restored on the server (A525), until dismissed. */
-  /** "Copied as Markdown" after an explicit copy (T15); cleared after a while. */
-  const [copied, setCopied] = useState<string | null>(null);
   /** Bumped when the server's copy replaced the local one (A5), to reopen the note. */
   const [generation, setGeneration] = useState(0);
   /** The read-only markdown source view (T11): null while the editor shows. */
@@ -310,7 +317,7 @@ export function NoteView({
   useEffect(() => {
     const host: EditorHost = {
       notice: setNotice,
-      copied: setCopied,
+      copied: showCopied,
       reopen: () => setGeneration((value) => value + 1),
     };
     const unmounted = viewMounted(notes);
@@ -481,6 +488,7 @@ export function NoteView({
                     ok
                       ? `Copied as ${format === 'markdown' ? 'Markdown' : 'rich text'}`
                       : "Copying wasn't allowed here",
+                    ok,
                   ),
               },
             }),
@@ -652,11 +660,6 @@ export function NoteView({
     return () => clearTimeout(timer);
   }, [notice]);
 
-  useEffect(() => {
-    if (!copied) return;
-    const timer = setTimeout(() => setCopied(null), 2500);
-    return () => clearTimeout(timer);
-  }, [copied]);
 
   const copyNote = (format: CopyFormat) => {
     editorRef.current?.editor.commands.copyNoteAs(format);
@@ -830,7 +833,7 @@ export function NoteView({
   // T52 item 4: what an agent needs to find this note through the Penmoss MCP server.
   useCommand('note.copyAgentReference', () => {
     void copyAgentReference(id, titleRef.current?.value ?? title).then((done) =>
-      setCopied(done ? COPIED_AGENT_REFERENCE : 'Could not copy the agent reference'),
+      showCopied(done ? COPIED_AGENT_REFERENCE : 'Could not copy the agent reference', done),
     );
   });
   // T52 item 5: a thread on the note as a whole, written at the top of the Comments tab.
@@ -1098,12 +1101,6 @@ export function NoteView({
           />
         </div>
       </header>
-      {copied ? (
-        <p className="toast" role="status" data-testid="copy-status">
-          <Icon name="check" />
-          {copied}
-        </p>
-      ) : null}
       {error ? (
         <p className="error" role="alert">
           {error}

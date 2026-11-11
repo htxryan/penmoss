@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import type { FiledIssue } from './outbox';
 import { issueLink } from './send';
 import { useFeedback } from './service';
+import { ToastSlot } from '../toasts/ToastSlot';
 
 /** How long the toast shows. */
 const SHOWN_MS = 10_000;
@@ -22,10 +23,11 @@ export function FeedbackToasts() {
     return () => clearTimeout(timer);
   }, [issue, held]);
   return (
-    <div role="status" className="toast-live">
+    <ToastSlot>
       {issue ? (
         <div
           className="toast toast-with-action"
+          data-tone="done"
           data-testid="feedback-sent-toast"
           onPointerEnter={() => setHeld(true)}
           onPointerLeave={() => setHeld(false)}
@@ -40,7 +42,7 @@ export function FeedbackToasts() {
             }
           }}
         >
-          <Icon name="check" />
+          <Icon name="check" className="toast-glyph" />
           <span>Sent as #{issue.number}</span>
           {issueLink(issue.url) ? (
             <a
@@ -64,6 +66,6 @@ export function FeedbackToasts() {
           </button>
         </div>
       ) : null}
-    </div>
+    </ToastSlot>
   );
 }

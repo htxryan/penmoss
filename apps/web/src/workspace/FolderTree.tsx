@@ -47,6 +47,7 @@ import { useExpanded } from './expanded';
 import { useWorkspace, useWorkspaceState } from './hooks';
 import { useFolderTree } from './tree';
 import { revealNotebooks } from '../shell/reveal-notebooks';
+import { showToast, type ToastTone } from '../toasts/toasts';
 import { NOTE_DRAG_TYPE } from '../notes/note-drag';
 import { useIsGitSource, useSource, useSourcesState } from '../sources/hooks';
 import type { Source } from '../sources/registry';
@@ -175,7 +176,6 @@ export function FolderTree({
   const [renamingNote, setRenamingNote] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<NotebookConfirm | null>(null);
-  const [message, setMessage] = useState<{ text: string; at: number } | null>(null);
   const [dropHint, setDropHint] = useState<DropHint>(null);
   /** Selected notes (A570), in the order chosen; `anchor` is where a Shift range starts. */
   const [selection, setSelection] = useState<readonly string[]>([]);
@@ -238,12 +238,6 @@ export function FolderTree({
     row.scrollIntoView?.({ block: 'nearest' });
   }, [rows, activeId, shown]);
 
-  useEffect(() => {
-    if (!message) return;
-    const timer = setTimeout(() => setMessage(null), MESSAGE_MS);
-    return () => clearTimeout(timer);
-  }, [message]);
-
   // Focus asked for before its row existed (a new folder, a reordered row) lands once it renders.
   useLayoutEffect(() => {
     const key = pendingFocus.current;
@@ -253,7 +247,12 @@ export function FolderTree({
     if (document.activeElement !== element) element.focus();
   });
 
-  const say = useCallback((text: string) => setMessage({ text, at: Date.now() }), []);
+  /** What a tree action did, as a toast at the bottom centre of the window (PEN-63). */
+  const say = useCallback(
+    (text: string, tone: ToastTone = 'done') =>
+      showToast({ text, tone, testId: 'tree-message', ms: MESSAGE_MS }),
+    [],
+  );
   const copyAgentReference = useCopyAgentReference();
   const quickAccess = useQuickAccess();
 
@@ -269,7 +268,7 @@ export function FolderTree({
   /** Applies a move; says why when it is refused. */
   const run = (plan: MovePlan): boolean => {
     if (plan.type === 'refused') {
-      say(plan.reason);
+      say(plan.reason, 'error');
       return false;
     }
     if (plan.type === 'noop') return false;
@@ -277,7 +276,7 @@ export function FolderTree({
       workspace.apply(plan);
     } catch (error) {
       if (!(error instanceof WorkspaceError)) throw error;
-      say(`${error.message}.`);
+      say(`${error.message}.`, 'error');
       return false;
     }
     if (plan.parentId !== null) {
@@ -308,7 +307,7 @@ export function FolderTree({
       workspace.setNotebook(id, on);
     } catch (error) {
       if (!(error instanceof WorkspaceError)) throw error;
-      say(`${error.message}.`);
+      say(`${error.message}.`, 'error');
       return;
     }
     say(
@@ -328,7 +327,7 @@ export function FolderTree({
       trashed = workspace.deleteFolder(id).trashed;
     } catch (error) {
       if (!(error instanceof WorkspaceError)) throw error;
-      say(`${error.message}.`);
+      say(`${error.message}.`, 'error');
       return;
     }
     if (activeId !== null && trashed.includes(activeId)) navigate('/');
@@ -439,7 +438,7 @@ export function FolderTree({
       }
     } catch (error) {
       if (!(error instanceof WorkspaceError)) throw error;
-      say(`${error.message}.`);
+      say(`${error.message}.`, 'error');
     }
   };
 
@@ -460,7 +459,7 @@ export function FolderTree({
       .editNote(id, (doc) => setTitle(doc, title))
       .catch((error: unknown) => {
         console.error('[tree] could not rename a note', id, error);
-        say('Could not rename the note.');
+        say('Could not rename the note.', 'error');
       });
   };
 
@@ -589,7 +588,7 @@ export function FolderTree({
     setMenu(null);
     void duplicateNote({ notes, workspace }, everything, id, allTitles()).then((copyId) => {
       if (copyId === null) {
-        say('That note has not loaded on this Mac yet, so it was not duplicated.');
+        say('That note has not loaded on this Mac yet, so it was not duplicated.', 'error');
         return;
       }
       setSelection([copyId]);
@@ -640,7 +639,7 @@ export function FolderTree({
         if (copy) navigate(notePath(copy));
       },
       (error: unknown) => {
-        say(error instanceof Error ? `${error.message}.` : 'Could not finish that.');
+        say(error instanceof Error ? `${error.message}.` : 'Could not finish that.', 'error');
       },
     );
   };
@@ -1128,7 +1127,10 @@ export function FolderTree({
                 closeMenu();
                 void copyAgentReference(id, titleOf(id)).then((done) =>
                   // The same words as the note's status, with no full stop (T52).
-                  say(done ? COPIED_AGENT_REFERENCE : 'Could not copy the agent reference'),
+                  say(
+                    done ? COPIED_AGENT_REFERENCE : 'Could not copy the agent reference',
+                    done ? 'done' : 'error',
+                  ),
                 );
               }}
               quickAccess={quickAccess.canChange ? quickAccess.pinned : null}
@@ -1137,6 +1139,7 @@ export function FolderTree({
                 if (!quickAccess.toggle(id))
                   say(
                     `Quick Access is full: it holds ${MAX_QUICK_ACCESS} notes. Unpin one to pin this note.`,
+                    'error',
                   );
               }}
               onRename={(id) => {
@@ -1209,9 +1212,6 @@ export function FolderTree({
           }}
         />
       ) : null}
-      <p className="tree-message" role="status" data-testid="tree-message">
-        {message?.text}
-      </p>
       {confirming && tree.byId.get(confirming.id) ? (
         <ConfirmNotebook
           kind={confirming.kind}
@@ -1244,7 +1244,7 @@ export function FolderTree({
               workspace.deleteFolder(deletingNode.id);
             } catch (error) {
               if (!(error instanceof WorkspaceError)) throw error;
-              say(`${error.message}.`);
+              say(`${error.message}.`, 'error');
               return;
             }
             const parent = deletingNode.effectiveParentId;

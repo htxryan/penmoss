@@ -2,6 +2,7 @@ import { Icon } from '@penmoss/ui/icons';
 import { useState } from 'react';
 import { useWorkspaceState } from './hooks';
 import { recoveredText } from './recovered';
+import { ToastSlot } from '../toasts/ToastSlot';
 
 /**
  * Says how many folder changes a closed window could not keep (#116, A676). It reports lost
@@ -13,9 +14,10 @@ export function RecoveredNotice() {
   const shown = recovered && recovered.at !== dismissed ? recovered : null;
 
   return (
-    <div role="status" className="toast-live">
+    <ToastSlot>
       {shown ? (
-        <div className="toast toast-with-action" data-testid="folders-recovered">
+        <div className="toast toast-with-action"
+          data-tone="info" data-testid="folders-recovered">
           <Icon name="folder" />
           <span>{recoveredText(shown)}</span>
           <button
@@ -29,6 +31,6 @@ export function RecoveredNotice() {
           </button>
         </div>
       ) : null}
-    </div>
+    </ToastSlot>
   );
 }
