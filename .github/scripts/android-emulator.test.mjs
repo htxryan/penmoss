@@ -21,6 +21,7 @@ import { parseWorkflow } from './workflow-guard.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = path.join(here, 'android-emulator.sh');
 const CI = path.join(here, '..', 'workflows', 'ci.yml');
+const SETTLE = path.join(here, '..', '..', 'apps', 'android', 'scripts', 'settle.sh');
 
 const ADB = `#!/bin/sh
 echo "adb $*" >>"$STUB_LOG"
@@ -39,6 +40,17 @@ esac
 [ "$1" = -s ] && shift 2
 case "$1 $2" in
   'shell getprop') if alive && [ -z "\${STUB_NEVER_BOOTS:-}" ]; then echo 1; else echo 0; fi ;;
+  'shell dumpsys')
+    # STUB_ANR_LOOKS: how many looks see System UI's "isn't responding" dialog first.
+    n="$(cat "$STUB_DIR/anr" 2>/dev/null || echo "\${STUB_ANR_LOOKS:-0}")"
+    if [ "$n" -gt 0 ]; then
+      echo $((n - 1)) >"$STUB_DIR/anr"
+      echo '  mCurrentFocus=Window{1 u0 Application Not Responding: com.android.systemui}'
+    else
+      echo 0 >"$STUB_DIR/anr"
+      echo '  mCurrentFocus=Window{2 u0 com.google.android.apps.nexuslauncher/.NexusLauncherActivity}'
+    fi ;;
+  'exec-out cat') echo '<node resource-id="android:id/aerr_wait" bounds="[100,200][300,400]" />' ;;
   'emu kill') kill "$(cat "$STUB_DIR/emulator.pid")" 2>/dev/null ;;
 esac
 exit 0
@@ -82,6 +94,8 @@ function fixture() {
     mkdirSync(d, { recursive: true });
   const script = path.join(repo, '.github', 'scripts', 'android-emulator.sh');
   copyFileSync(SCRIPT, script);
+  mkdirSync(path.join(repo, 'apps', 'android', 'scripts'), { recursive: true });
+  copyFileSync(SETTLE, path.join(repo, 'apps', 'android', 'scripts', 'settle.sh'));
   /** @param {string} file @param {string} text */
   const stub = (file, text) => {
     writeFileSync(file, text);
@@ -111,6 +125,8 @@ function fixture() {
           RUNNER_TOOL_CACHE: toolCache,
           RUNNER_TEMP: dir,
           PENMOSS_EMULATOR_LOCK: lock,
+          // One look at the launcher is enough here; CI waits for 10 s of it.
+          PENMOSS_EMULATOR_QUIET_SECONDS: '1',
           ...env,
         },
       });
@@ -236,6 +252,19 @@ describe(
       assert.ok(kill > r.calls.indexOf(gradle));
       assert.ok(r.calls.lastIndexOf('adb kill-server') > kill);
       assert.equal(f.emulatorRunning(), false);
+    });
+
+    it("lets the emulator settle before the tests, answering System UI's dialog with Wait (PEN-97)", async () => {
+      const f = fixture();
+      await f.makeAvd();
+      const r = await f.run(['test'], { STUB_ANR_LOOKS: '2' });
+      assert.equal(r.status, 0, r.stdout);
+      const idle = r.calls.indexOf('adb -s emulator-5580 shell am wait-for-broadcast-idle');
+      const tap = r.calls.indexOf('adb -s emulator-5580 shell input tap 200 300');
+      const gradle = r.calls.findIndex((c) => c.startsWith('gradlew '));
+      assert.ok(idle >= 0 && idle < tap && tap < gradle, r.calls.join('\n'));
+      assert.match(r.stdout, /com\.android\.systemui wasn't responding after \d+s: pressed Wait/);
+      assert.match(r.stdout, /\[emulator\] settled in \d+s/);
     });
 
     it("uses 5580 and adb's 5050 even when a slot's settings are in the environment", async () => {
