@@ -227,6 +227,26 @@ export async function unchangedSincePush(
   return head && last.code === 0 && last.stdout.trim() === head ? head : undefined;
 }
 
+/** An open PR as `gh pr list --json url,headRefOid,mergeable` lists it. */
+export interface OpenPr {
+  readonly url: string;
+  readonly headRefOid: string;
+  readonly mergeable?: string;
+}
+
+/**
+ * The PR a recovered run can go back to watching CI on (A1298): the open one whose head is the
+ * factory's last push, and only while GitHub can merge it into main (A1310). A PR that
+ * conflicts with main gets no new CI run, not even when it's closed and reopened, so watching
+ * it would only read its old checks; the run goes back through the gate, whose rebase resolves
+ * the conflict. `UNKNOWN` (GitHub hasn't worked it out yet) counts as not mergeable: the gate
+ * costs minutes, a repair round on stale checks costs more.
+ */
+export function resumablePr(open: readonly OpenPr[], head: string): string | undefined {
+  const pr = open.find((each) => each.headRefOid === head);
+  return pr && pr.mergeable === 'MERGEABLE' ? pr.url : undefined;
+}
+
 /** After a sandbox took the commits GitHub had on top (`ahead`), the next push is leased on them. */
 export async function adoptRemoteHead(
   exec: Exec,
