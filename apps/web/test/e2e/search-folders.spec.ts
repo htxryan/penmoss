@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from './fixtures';
 
-// PEN-71 (A-NEW-1, amending A1127): with two notebooks open and Notebook on All Notebooks, the
+// PEN-71 (A1290, amending A1127): with two notebooks open and Notebook on All Notebooks, the
 // search dialog's Folder list has every notebook's folders grouped under its name (AC1), picking
 // one sets Notebook to its notebook (AC2), and Tag lists every notebook's tags (AC3). One
 // notebook chosen lists its own alone (AC4); All Notebooks again groups them again (AC5).

@@ -10,7 +10,7 @@ import {
   type Launched,
 } from './support';
 
-// PEN-71 (A-NEW-1, amending A1127) in the Mac app: with two git notebooks open and Notebook on
+// PEN-71 (A1290, amending A1127) in the Mac app: with two git notebooks open and Notebook on
 // All Notebooks, the search dialog's Folder list has both notebooks' folders, each under its
 // notebook's name (AC1); picking one sets Notebook to that notebook (AC2); Tag lists both
 // notebooks' tags (AC3). The web suite's search-folders.spec.ts covers the rest.

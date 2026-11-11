@@ -1,5 +1,5 @@
 /**
- * The search dialog's Folder and Tag lists (PEN-71, A-NEW-1): under All Notebooks, every open
+ * The search dialog's Folder and Tag lists (PEN-71, A1290): under All Notebooks, every open
  * notebook's folders grouped by notebook, and every notebook's tags each once.
  */
 import { describe, expect, it } from 'vitest';

@@ -1,5 +1,5 @@
 /**
- * The search dialog's Folder and Tag lists (A1127; PEN-71, A-NEW-1). Under All Notebooks, Folder
+ * The search dialog's Folder and Tag lists (A1127; PEN-71, A1290). Under All Notebooks, Folder
  * lists every open notebook's folders grouped under the notebook's name, and Tag every open
  * notebook's tags, each once; with one notebook chosen, that notebook's alone.
  */

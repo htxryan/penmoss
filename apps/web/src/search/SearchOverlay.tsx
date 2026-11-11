@@ -135,7 +135,7 @@ export function SearchOverlay({ service, onOpenNote, onClose }: SearchOverlayPro
 
   // With several notebooks, a Notebook filter first (Quanta feedback 3, item 2; A1127). Under
   // All Notebooks, Folder lists every notebook's folders grouped by notebook and Tag every
-  // notebook's tags; with one chosen, that notebook's (PEN-71, A-NEW-1).
+  // notebook's tags; with one chosen, that notebook's (PEN-71, A1290).
   const sourcesState = useSourcesState();
   const sources = useMemo(() => sourcesState?.all ?? NO_SOURCES, [sourcesState]);
   const several = sources.length > 1;
