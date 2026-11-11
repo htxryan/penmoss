@@ -112,3 +112,40 @@ test('without a release-notes file, Settings → Updates links to GitHub', async
     'https://github.com/htxryan/penmoss/releases',
   );
 });
+
+// PEN-110: after Penmoss updates (a stored older version), a notice at the window's foot says
+// so once, and What's New opens Settings → Updates at "In this version". It never comes back.
+test("after an update, a notice says so once and What's New opens this version's notes", async () => {
+  const userData = dataDir();
+  mkdirSync(userData, { recursive: true });
+  writeFileSync(join(userData, 'release-notes.json'), JSON.stringify(FILE));
+  writeFileSync(join(userData, 'updates.json'), '{"auto":false,"lastSeenVersion":"0.2.0"}\n');
+  const env = { PENMOSS_TEST_APP_VERSION: '0.2.1' };
+  const first = await launch({ userData, offline: true, env });
+  opened.push(first);
+  await gitNotebook(first);
+  const notice = first.page.getByTestId('updated-notice');
+  await expect(notice).toContainText('Updated to 0.2.1.');
+  await test.info().attach('updated-notice.png', {
+    body: await first.page.screenshot(),
+    contentType: 'image/png',
+  });
+  await notice.getByRole('button', { name: "What's New" }).click();
+  await expect(first.page).toHaveURL(/\/settings\/updates\?whats-new$/);
+  await expect(notice).toBeHidden();
+  const heading = first.page
+    .getByTestId('release-notes-current')
+    .getByRole('heading', { level: 3 });
+  await expect(heading).toBeFocused();
+  await expect(heading).toBeInViewport();
+  expect(first.errors).toEqual([]);
+  opened.splice(opened.indexOf(first), 1);
+  await first.app.close();
+
+  const again = await launch({ userData, offline: true, env });
+  opened.push(again);
+  await gitNotebook(again);
+  await go(again.page, '/settings/updates');
+  await expect(again.page.getByTestId('release-notes-current')).toBeVisible();
+  await expect(again.page.getByTestId('updated-notice')).toHaveCount(0);
+});

@@ -47,6 +47,7 @@ export const CHANNELS = {
   updatesSetChannel: 'penmoss:updates:set-channel',
   updatesCheck: 'penmoss:updates:check',
   updatesInstall: 'penmoss:updates:install',
+  updatesAcknowledge: 'penmoss:updates:acknowledge',
   updatesChanged: 'penmoss:updates:changed',
   updatesNotes: 'penmoss:updates:notes',
   updatesNotesChanged: 'penmoss:updates:notes-changed',

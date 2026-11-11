@@ -1421,6 +1421,11 @@ function registerIpc(): void {
     if (!fromMainWindow(event)) return null;
     return gesture === true ? updates.install() : null;
   });
+  // The notice after an update (PEN-110): answered after a click, in the main window.
+  ipcMain.handle(CHANNELS.updatesAcknowledge, (event, gesture: unknown) => {
+    if (!fromMainWindow(event)) return null;
+    return gesture === true ? updates.acknowledge() : null;
+  });
   // Release notes (PEN-108): the cached file at once; a newer one follows as a change.
   ipcMain.handle(CHANNELS.updatesNotes, async (event) => {
     if (!fromAppWindow(event)) return null;

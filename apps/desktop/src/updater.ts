@@ -18,6 +18,10 @@
  * channel, which checks at once. A newer build is only offered: the app says so, and Install and
  * Restart downloads it and restarts into it. Nothing is downloaded before that.
  *
+ * After an update (PEN-110), `updates.json` remembers the last version Penmoss ran
+ * (`lastSeenVersion`): a launch of a newer one reports `updatedFrom` until the person answers the
+ * notice (`acknowledge`). A first launch with no record records its version silently.
+ *
  * Only a signed build has an update feed (`app-update.yml`, written by electron-builder when the
  * build is signed, electron-builder.config.cjs): Squirrel.Mac refuses unsigned updates, so an
  * unsigned build never checks.
@@ -88,6 +92,35 @@ export interface UpdateState {
   readonly message: string | null;
   /** When the last check finished (ms since the epoch). */
   readonly checkedAt: number | null;
+  /**
+   * The version Penmoss ran before this one, when this is a newer version whose notice has not
+   * been answered yet (PEN-110); null otherwise.
+   */
+  readonly updatedFrom: string | null;
+}
+
+/** `X.Y.Z` or `X.Y.Z-pre.N` as numbers; a prerelease sorts before its release. */
+function versionParts(version: string): number[] | null {
+  const match = /^(\d+)\.(\d+)\.(\d+)(?:-[a-z]+\.(\d+))?$/.exec(version);
+  if (!match) return null;
+  const [, major, minor, patch, pre] = match;
+  return [
+    Number(major),
+    Number(minor),
+    Number(patch),
+    pre === undefined ? Number.MAX_SAFE_INTEGER : Number(pre),
+  ];
+}
+
+/** `a` is a newer version than `b` (false when either doesn't read). */
+export function isNewer(a: string, b: string): boolean {
+  const x = versionParts(a);
+  const y = versionParts(b);
+  if (!x || !y) return false;
+  for (let i = 0; i < x.length; i++) {
+    if (x[i] !== y[i]) return (x[i] ?? 0) > (y[i] ?? 0);
+  }
+  return false;
 }
 
 /** What `Updates` uses of electron-updater's `autoUpdater`. */
@@ -133,6 +166,8 @@ export class Updates {
   private percent: number | null = null;
   private message: string | null = null;
   private checkedAt: number | null = null;
+  /** The last version the person was told about (PEN-110); null until read. */
+  private lastSeen: string | null = null;
   /** Install and Restart was asked for: restart as soon as the download is in. */
   private installing = false;
   private loaded: Promise<void> | null = null;
@@ -146,16 +181,18 @@ export class Updates {
   }
 
   state(): UpdateState {
+    const current = this.options.version?.() ?? '';
     return {
       supported: this.supported,
       auto: this.auto,
       channel: this.channel,
-      current: this.options.version?.() ?? '',
+      current,
       phase: this.phase,
       version: this.version,
       percent: this.percent,
       message: this.message,
       checkedAt: this.checkedAt,
+      updatedFrom: this.lastSeen !== null && isNewer(current, this.lastSeen) ? this.lastSeen : null,
     };
   }
 
@@ -204,6 +241,21 @@ export class Updates {
     }
     this.set({ phase: 'idle', version: null, percent: null, message: null });
     return this.check();
+  }
+
+  /**
+   * The person answered the notice after an update (What's new, or dismissed it): this version
+   * is seen, so the notice doesn't come back (PEN-110).
+   */
+  async acknowledge(): Promise<UpdateState> {
+    await this.read();
+    const current = this.options.version?.() ?? '';
+    if (current && this.lastSeen !== current) {
+      this.lastSeen = current;
+      await this.write();
+      this.changed();
+    }
+    return this.state();
   }
 
   /** Checks now (Check Now, Check for Updates…): unless a newer build is already in hand. */
@@ -271,13 +323,31 @@ export class Updates {
   private read(): Promise<void> {
     this.loaded ??= readFile(join(this.options.dir, PREFS), 'utf8')
       .then((text) => {
-        const value = JSON.parse(text) as { auto?: unknown; channel?: unknown };
+        const value = JSON.parse(text) as {
+          auto?: unknown;
+          channel?: unknown;
+          lastSeenVersion?: unknown;
+        };
         this.auto = value.auto === true;
         this.channel = value.channel === 'alpha' ? 'alpha' : 'stable';
+        this.lastSeen = typeof value.lastSeenVersion === 'string' ? value.lastSeenVersion : null;
       })
       .catch(() => {
         this.auto = false;
         this.channel = 'stable';
+        this.lastSeen = null;
+      })
+      .then(async () => {
+        // A first launch (or one from before PEN-110): this version is seen, and nothing shows.
+        const current = this.options.version?.() ?? '';
+        if (this.lastSeen === null && current) {
+          this.lastSeen = current;
+          await this.write().catch((error: unknown) =>
+            this.options.log(
+              `updates.json: ${error instanceof Error ? error.message : String(error)}`,
+            ),
+          );
+        }
       });
     return this.loaded;
   }
@@ -286,12 +356,15 @@ export class Updates {
     await mkdir(this.options.dir, { recursive: true });
     const path = join(this.options.dir, PREFS);
     const next = `${path}.${process.pid}.tmp`;
-    await writeFile(next, `${JSON.stringify({ auto: this.auto, channel: this.channel })}\n`);
+    await writeFile(
+      next,
+      `${JSON.stringify({ auto: this.auto, channel: this.channel, lastSeenVersion: this.lastSeen ?? undefined })}\n`,
+    );
     await rename(next, path);
   }
 
   private set(
-    patch: Partial<Omit<UpdateState, 'supported' | 'auto' | 'channel' | 'current'>>,
+    patch: Partial<Omit<UpdateState, 'supported' | 'auto' | 'channel' | 'current' | 'updatedFrom'>>,
   ): void {
     if (patch.phase !== undefined) this.phase = patch.phase;
     if (patch.version !== undefined) this.version = patch.version;

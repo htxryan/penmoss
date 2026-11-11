@@ -1,7 +1,13 @@
 // Which release notes Settings → Updates shows (PEN-108): apps/web/src/updates/notes.ts.
 import { describe, expect, it } from 'vitest';
 import type { DesktopReleaseNote, DesktopReleaseNotes } from '../../src/desktop/bridge';
-import { alphaBuildOf, buildFor, notesView, type NotesBlock } from '../../src/updates/notes';
+import {
+  alphaBuildOf,
+  buildFor,
+  notesView,
+  updatedNotice,
+  type NotesBlock,
+} from '../../src/updates/notes';
 
 const note = (
   build: number,
@@ -111,5 +117,17 @@ describe('builds', () => {
     expect(alphaBuildOf('0.2.1')).toBeNull();
     expect(buildFor(FILE, '0.2.1')).toBe(1180);
     expect(buildFor(FILE, '0.3.0')).toBeNull();
+  });
+});
+
+describe('updatedNotice (PEN-110)', () => {
+  it('names the new version only after an update that has notes', () => {
+    expect(updatedNotice(FILE, '0.2.1', '0.2.0')).toBe('0.2.1');
+    expect(updatedNotice(FILE, '0.2.2-alpha.1185', '0.2.1')).toBe('build 1185');
+    expect(updatedNotice(FILE, '0.2.1', null)).toBeNull();
+    expect(updatedNotice(FILE, '0.2.1', undefined)).toBeNull();
+    expect(updatedNotice(null, '0.2.1', '0.2.0')).toBeNull();
+    const quiet = { ...FILE, notes: FILE.notes.filter((n) => n.build < 1172 || n.build > 1180) };
+    expect(updatedNotice(quiet, '0.2.1', '0.2.0')).toBeNull();
   });
 });

@@ -174,6 +174,24 @@ export function notesView(
   return { status: 'ok', offered: offeredBlock, current: currentBlock, earlier };
 }
 
+/**
+ * The notice after an update (PEN-110): the version Penmoss now runs, as people read it, when it
+ * updated from an older one, the notice is unanswered, and this version has notes to show.
+ */
+export function updatedNotice(
+  file: DesktopReleaseNotes | null,
+  current: string,
+  updatedFrom: string | null | undefined,
+): string | null {
+  if (!updatedFrom) return null;
+  const view = notesView(file, current, null);
+  if (view.status !== 'ok' || !view.current || view.current.groups.length === 0) return null;
+  return versionLabel(current);
+}
+
+/** Settings → Updates opened from the notice scrolls to "In this version". */
+export const WHATS_NEW_PATH = '/settings/updates?whats-new';
+
 /** A note as a line: "Fixed: …" is its group, so only its text, and its build on Alpha. */
 export function noteText(note: DesktopReleaseNote, builds: boolean): string {
   return builds ? `${note.text} (build ${note.build})` : note.text;
