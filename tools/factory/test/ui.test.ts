@@ -286,6 +286,8 @@ describe('the pipeline (A1233)', () => {
     expect(group('done')).toEqual(['PEN-72']);
     expect(card(view, 'PEN-80').step).toBe('Next when a slot frees · plans first');
     expect(view.cards.some((c) => c.key === 'PEN-90')).toBe(false);
+    // Cards without the factory label aren't the factory's, wherever they wait.
+    expect(view.cards.some((c) => c.key === 'PEN-91' || c.key === 'PEN-92')).toBe(false);
   });
 
   it('says why CI stopped it, and what to do', () => {

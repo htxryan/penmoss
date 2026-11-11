@@ -15,7 +15,10 @@ export const NOW = new Date('2026-11-09T02:30:00Z');
 const ago = (minutes: number) => new Date(NOW.getTime() - minutes * 60_000).toISOString();
 const PR = (n: number) => `https://github.com/htxryan/penmoss/pull/${n}`;
 
-export const pen = (n: number, o: Partial<BoardItem> = {}): BoardItem =>
+export const pen = (
+  n: number,
+  o: Partial<BoardItem> & { readonly optedOut?: boolean } = {},
+): BoardItem =>
   item(n, {
     itemId: `uuid-${n}`,
     key: `PEN-${n}`,
@@ -95,6 +98,9 @@ export function evening(stateDir = '~/nonexistent-factory-state') {
       pen(72, { title: 'Site: Privacy page typo', status: 'Done', state: 'CLOSED' }),
       // Backlog: not the factory's.
       pen(90, { status: 'Backlog' }),
+      // Ryan's own: in Todo and Planning without the factory label (A1296).
+      pen(91, { status: 'Todo', optedOut: true }),
+      pen(92, { status: 'Planning', optedOut: true }),
     ],
   };
   const ledger = [

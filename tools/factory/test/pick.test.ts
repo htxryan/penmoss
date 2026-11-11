@@ -134,7 +134,8 @@ describe('pickNext', () => {
 describe('elsewhere', () => {
   it('names the cards in Planning and the blocked ones further on, when Todo has none to start', () => {
     const linear = linearConfig();
-    const pen = (n: number, o: Partial<BoardItem>) => item(n, { key: `PEN-${n}`, ...o });
+    const pen = (n: number, o: Partial<BoardItem> & { optedOut?: boolean }) =>
+      item(n, { key: `PEN-${n}`, ...o });
     const items = [
       pen(41, { status: 'Planning', blocked: true }),
       pen(42, { status: 'Planning' }),
@@ -144,6 +145,9 @@ describe('elsewhere', () => {
       pen(46, { status: 'Planning', state: 'CLOSED' }),
       pen(47, { status: 'Backlog', blocked: true }),
       pen(48, { status: 'Todo', blocked: true }),
+      // Not the factory's: no opt-in label (A1296).
+      pen(49, { status: 'Planning', optedOut: true }),
+      pen(50, { status: 'In Review', blocked: true, optedOut: true }),
     ];
     expect(elsewhere(items, linear)).toBe(
       'Elsewhere: 2 in Planning (PEN-41 blocked, PEN-42); 1 blocked in In Progress (PEN-43); 1 blocked in In Review (PEN-45).',
