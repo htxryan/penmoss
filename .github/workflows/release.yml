@@ -267,7 +267,7 @@ jobs:
           VERSION: ${{ needs.info.outputs.version }}
           PREVIOUS: ${{ needs.info.outputs.previous }}
         run: |
-          node .github/scripts/releases.mjs draft-stable --tag "$TAG" --previous "$PREVIOUS" \
+          node .github/scripts/releases.mjs draft-stable --tag "$TAG" --build "$BUILD" --previous "$PREVIOUS" \
             --dmg "mac/penmoss-mac-$BUILD.dmg" --zip "mac/penmoss-mac-$VERSION.zip" \
             --feed mac/latest-mac.yml --apk apk/app-release.apk
-          echo "Draft ready: https://github.com/$REPO/releases (edit the notes, then Publish release)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Draft ready: https://github.com/$REPO/releases (its text is the Release notes since the previous stable release; edits there stay on GitHub, as the apps read release-notes.json; then Publish release)." >> "$GITHUB_STEP_SUMMARY"

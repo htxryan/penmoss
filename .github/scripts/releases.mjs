@@ -18,8 +18,9 @@
 //                  (PEN-106; .github/scripts/release-notes.mjs).
 //   fix-note       re-reads one merged pull request's Release note and puts it in their place.
 //   draft-stable   creates the draft release of a vX.Y.Z tag: Penmoss.dmg, Penmoss.apk,
-//                  penmoss-mac-X.Y.Z.zip, SHA256SUMS.txt and latest-mac.yml, with notes since the
-//                  stable tag before it. Ryan publishes it, which makes it Latest.
+//                  penmoss-mac-X.Y.Z.zip, release-notes.json, SHA256SUMS.txt and latest-mac.yml,
+//                  with the Release notes since the stable tag before it (PEN-107). Ryan
+//                  publishes it, which makes it Latest.
 // A release with no Mac app of its own carries the newest one built at or before it. A dmg's
 // name says which build it came from, so the state needs no other record: every release
 // `build-k` holds the dmg with the highest number m <= k. A signed Mac app also has its update
@@ -37,7 +38,7 @@
 //   node .github/scripts/releases.mjs fix-note --pr 140
 //   node .github/scripts/releases.mjs version --run 123
 //   node .github/scripts/releases.mjs release-info --tag v0.2.0
-//   node .github/scripts/releases.mjs draft-stable --tag v0.2.0 [--previous v0.1.0] \
+//   node .github/scripts/releases.mjs draft-stable --tag v0.2.0 --build 1180 [--previous v0.1.0] \
 //     --dmg <dmg> --apk app-release.apk --zip penmoss-mac-0.2.0.zip --feed latest-mac.yml
 // Add --dry-run to print the changes instead of making them: it still reads the releases and
 // tags, but downloads no file. GH_TOKEN and REPO (or GITHUB_REPOSITORY) come from the environment. Renamed copies and downloaded files go in
@@ -60,7 +61,15 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
-import { fixNote, notesSectionOf, publishNotes, withNotesSection } from './release-notes.mjs';
+import {
+  NOTES_FILE,
+  fixNote,
+  loadNotes,
+  notesSectionOf,
+  publishNotes,
+  stableNotes,
+  withNotesSection,
+} from './release-notes.mjs';
 
 export const KEEP = 10;
 const BUILD = /^build-(\d+)$/;
@@ -102,7 +111,7 @@ export function updateFiles(release, build) {
 /**
  * @typedef {{ tag: string, target: string, body: string, prerelease: boolean, assets: { name: string }[] }} Release
  * @typedef {{ tag: string, sha: string, title: string, notes: string, files: string[] }} NewRelease
- * @typedef {{ tag: string, title: string, files: string[], prerelease: boolean, notesStartTag: string | null }} NewDraft
+ * @typedef {{ tag: string, title: string, files: string[], prerelease: boolean, notes: string }} NewDraft
  * @typedef {{
  *   list(): Promise<Release[]>,
  *   tags(): Promise<string[]>,
@@ -123,8 +132,8 @@ export function updateFiles(release, build) {
  *   log(message: string): void,
  * }} Gh
  * `create` makes a prerelease that is never Latest, with `files` uploaded in order. `findRelease`
- * sees drafts too. `createDraft` makes a draft of an existing tag, with notes GitHub generates
- * since `notesStartTag`, and `files` uploaded in order.
+ * sees drafts too. `createDraft` makes a draft of an existing tag, with `notes` (the Release
+ * notes, PEN-107) and `files` uploaded in order.
  * @typedef {{ dir(): string, remove(): void }} Scratch
  */
 
@@ -213,7 +222,7 @@ export function releaseInfo(tag, tags) {
  * @param {string} version
  */
 export function stableFiles(version) {
-  return [PUBLIC_DMG, PUBLIC_APK, `penmoss-mac-${version}.zip`, SUMS, FEED];
+  return [PUBLIC_DMG, PUBLIC_APK, `penmoss-mac-${version}.zip`, NOTES_FILE, SUMS, FEED];
 }
 
 /** The Mac app a release holds (the newest, if it somehow holds more than one). */
@@ -537,6 +546,18 @@ export function alphaState(body) {
   }
 }
 
+/** How to install a stable release, between its notes and its changelog link (PEN-107). */
+export function stableInstall() {
+  return [
+    '### Install',
+    '',
+    `- **Mac** (Apple Silicon and Intel): download \`${PUBLIC_DMG}\`, open it and drag **Penmoss** to **Applications**. Penmoss updates itself from here after that.`,
+    `- **Android**: download \`${PUBLIC_APK}\` on the phone and open it. It installs over any earlier Penmoss APK from GitHub. App id \`app.penmoss\`, signed with the sideload key (certificate SHA-256 \`${SIDELOAD_CERT}\`).`,
+    '',
+    `\`${SUMS}\` lists every file's SHA-256: \`shasum -a 256 -c ${SUMS} --ignore-missing\`.`,
+  ].join('\n');
+}
+
 /** @param {AlphaState} state */
 export function alphaNotes(state) {
   const { android, mac } = state;
@@ -709,13 +730,27 @@ export async function publishAlpha(gh, { run, sha, version, apk, dmg, zip, feed 
 
 /**
  * Creates the draft release of stable tag `tag` (P3, R5): `Penmoss.dmg`, `Penmoss.apk`,
- * `penmoss-mac-X.Y.Z.zip`, `SHA256SUMS.txt` listing them and the feed, and `latest-mac.yml`
- * last, with notes GitHub generates since `previous`. A -rc.N tag makes a draft prerelease. A
- * re-run replaces the files on its draft; a release already published is never touched.
+ * `penmoss-mac-X.Y.Z.zip`, `release-notes.json` (PEN-107), `SHA256SUMS.txt` listing the app
+ * files and the feed, and `latest-mac.yml` last. Its text is the Release notes since
+ * `previous`, up to its `build` (`stableNotes`). A -rc.N tag makes a draft prerelease. A re-run
+ * replaces the files and the text on its draft; a release already published is never touched.
  * @param {Gh} gh
- * @param {{ tag: string, previous?: string | null, dmg: string, apk: string, zip: string, feed: string }} release
+ * @param {{ tag: string, build: number, previous?: string | null, dmg: string, apk: string, zip: string, feed: string, repo?: string, date?: string }} release
  */
-export async function draftStable(gh, { tag, previous = null, dmg, apk, zip, feed }) {
+export async function draftStable(
+  gh,
+  {
+    tag,
+    build,
+    previous = null,
+    dmg,
+    apk,
+    zip,
+    feed,
+    repo = 'htxryan/penmoss',
+    date = new Date().toISOString().slice(0, 10),
+  },
+) {
   const parsed = parseReleaseTag(tag);
   if (parsed === null) throw new Error(`${tag} is not vX.Y.Z or vX.Y.Z-rc.N.`);
   const { version } = parsed;
@@ -739,17 +774,29 @@ export async function draftStable(gh, { tag, previous = null, dmg, apk, zip, fee
     for (const file of [...payload, feedFile]) sums.set(path.basename(file), sha256(file));
     const sumsFile = path.join(scratch.dir(), SUMS);
     writeFileSync(sumsFile, formatSums(sums));
-    const files = [...payload, sumsFile, feedFile];
+    const notes = stableNotes(await loadNotes(gh, await gh.list(), scratch.dir()), {
+      tag,
+      version,
+      build,
+      previous: previous || null,
+      date,
+      repo,
+      install: stableInstall(),
+    });
+    const notesFile = path.join(scratch.dir(), NOTES_FILE);
+    writeFileSync(notesFile, `${JSON.stringify(notes.file, null, 2)}\n`);
+    const files = [...payload, notesFile, sumsFile, feedFile];
     if (existing) {
       for (const file of files) await gh.upload(tag, file);
-      gh.log(`${tag}: the draft's files replaced`);
+      await gh.editNotes(tag, notes.body);
+      gh.log(`${tag}: the draft's files and text replaced`);
     } else {
       await gh.createDraft({
         tag,
         title: `Penmoss ${version}`,
         files,
         prerelease: parsed.prerelease,
-        notesStartTag: previous || null,
+        notes: notes.body,
       });
       gh.log(
         `${tag}: draft${parsed.prerelease ? ' prerelease' : ''} created; publish it on the Releases page`,
@@ -840,22 +887,25 @@ export function cliGh({ repo, dryRun = false }) {
         assets: found.assets.map(({ name }) => ({ name })),
       };
     },
-    createDraft: ({ tag, title, files, prerelease, notesStartTag }) =>
-      change([
-        'release',
-        'create',
-        tag,
-        ...files,
-        '--repo',
-        repo,
-        '--draft',
-        '--verify-tag',
-        '--title',
-        title,
-        '--generate-notes',
-        ...(notesStartTag ? ['--notes-start-tag', notesStartTag] : []),
-        ...(prerelease ? ['--prerelease'] : []),
-      ]),
+    createDraft: ({ tag, title, files, prerelease, notes }) =>
+      change(
+        [
+          'release',
+          'create',
+          tag,
+          ...files,
+          '--repo',
+          repo,
+          '--draft',
+          '--verify-tag',
+          '--title',
+          title,
+          '--notes-file',
+          '-',
+          ...(prerelease ? ['--prerelease'] : []),
+        ],
+        notes,
+      ),
     upload: (tag, file) => change(['release', 'upload', tag, file, '--repo', repo, '--clobber']),
     deleteAsset: (tag, name) =>
       change(['release', 'delete-asset', tag, name, '--repo', repo, '--yes']),
@@ -921,6 +971,7 @@ async function main() {
       version: { type: 'string' },
       tag: { type: 'string' },
       previous: { type: 'string' },
+      build: { type: 'string' },
       apk: { type: 'string' },
       dmg: { type: 'string' },
       zip: { type: 'string' },
@@ -974,6 +1025,7 @@ async function main() {
   } else if (
     command === 'draft-stable' &&
     values.tag &&
+    values.build &&
     values.dmg &&
     values.apk &&
     values.zip &&
@@ -981,6 +1033,8 @@ async function main() {
   ) {
     await draftStable(gh, {
       tag: values.tag,
+      build: Number(values.build),
+      repo,
       previous: values.previous || null,
       dmg: /** @type {string} */ (exists(values.dmg)),
       apk: /** @type {string} */ (exists(values.apk)),
@@ -989,7 +1043,7 @@ async function main() {
     });
   } else {
     throw new Error(
-      'Usage: releases.mjs publish-apk --run N --sha SHA --apk FILE | publish-mac --sha SHA --dmg FILE [--zip FILE --feed FILE] | publish-alpha --run N --sha SHA --version V [--apk FILE] [--dmg FILE --zip FILE --feed FILE] | publish-notes --run N --sha SHA | fix-note --pr N | version --run N | release-info --tag vX.Y.Z | draft-stable --tag vX.Y.Z [--previous TAG] --dmg FILE --apk FILE --zip FILE --feed FILE [--dry-run]',
+      'Usage: releases.mjs publish-apk --run N --sha SHA --apk FILE | publish-mac --sha SHA --dmg FILE [--zip FILE --feed FILE] | publish-alpha --run N --sha SHA --version V [--apk FILE] [--dmg FILE --zip FILE --feed FILE] | publish-notes --run N --sha SHA | fix-note --pr N | version --run N | release-info --tag vX.Y.Z | draft-stable --tag vX.Y.Z --build N [--previous TAG] --dmg FILE --apk FILE --zip FILE --feed FILE [--dry-run]',
     );
   }
 }

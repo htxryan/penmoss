@@ -14,6 +14,7 @@ import {
   publishNotes,
   readNotesFile,
   renderNotes,
+  stableNotes,
   withNotesSection,
 } from './release-notes.mjs';
 
@@ -301,6 +302,68 @@ describe('publish-notes', () => {
       gh.notes().notes.map((n) => n.text),
       ['Kept.', 'A thing.'],
     );
+  });
+});
+
+describe('stable releases (PEN-107)', () => {
+  const file = {
+    ...emptyNotes(),
+    releases: [{ version: '0.2.0', tag: 'v0.2.0', build: 1170, date: '2026-11-08' }],
+    notes: [
+      { build: 1170, pr: 1, kind: /** @type {const} */ ('new'), platform: null, text: 'Old.' },
+      { build: 1172, pr: 2, kind: /** @type {const} */ ('new'), platform: null, text: 'In it.' },
+      { build: 1180, pr: 3, kind: /** @type {const} */ ('new'), platform: null, text: 'Later.' },
+    ],
+  };
+  const release = { tag: 'v0.2.1', version: '0.2.1', build: 1175, date: '2026-11-20', repo: 'o/r' };
+
+  it('takes the notes after the stable release before it, up to its own build', () => {
+    const { body } = stableNotes(file, { ...release, previous: 'v0.2.0' });
+    assert.match(body, /- In it\. \(#2\)/);
+    assert.doesNotMatch(body, /Old\.|Later\./);
+    assert.match(body, /compare\/v0\.2\.0\.\.\.v0\.2\.1$/);
+  });
+
+  it('takes every note up to its build when the release before it is in no file', () => {
+    const { body } = stableNotes(file, { ...release, previous: 'v0.1.9' });
+    assert.match(body, /- Old\./);
+    assert.match(body, /- In it\./);
+  });
+
+  it('lists itself once, replacing an earlier draft of the same tag', () => {
+    const once = stableNotes(file, { ...release, previous: 'v0.2.0' }).file;
+    const again = stableNotes(once, { ...release, build: 1176, previous: 'v0.2.0' }).file;
+    assert.deepEqual(
+      again.releases.map((r) => [r.tag, r.build]),
+      [
+        ['v0.2.0', 1170],
+        ['v0.2.1', 1176],
+      ],
+    );
+  });
+
+  it("teaches alpha's file a stable release once it is published", async () => {
+    const gh = new FakeGh();
+    gh.build(1170, 'c0');
+    await publishNotes(gh, { run: 1170, sha: 'c0', dir: scratch(), now });
+    // v0.2.1 is published, carrying its own file, which lists it.
+    const theirs = stableNotes(gh.notes(), { ...release, previous: null }).file;
+    gh.releases.push({
+      tag: 'v0.2.1',
+      target: 'c0',
+      body: '',
+      prerelease: false,
+      assets: [{ name: NOTES_FILE }],
+    });
+    gh.files.set(`v0.2.1/${NOTES_FILE}`, JSON.stringify(theirs));
+    gh.merge('c1', 150, 'New: After it.');
+    gh.build(1176, 'c1');
+    await publishNotes(gh, { run: 1176, sha: 'c1', dir: scratch(), now });
+    assert.deepEqual(
+      gh.notes().releases.map((r) => r.tag),
+      ['v0.2.1'],
+    );
+    assert.match(gh.release('alpha').body, /### What's new since v0\.2\.1/);
   });
 });
 
