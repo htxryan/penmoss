@@ -442,7 +442,7 @@ describe('penmoss notebook', () => {
       0,
     );
     const sync = await cli(['notebook', 'sync', 'nb']);
-    expect(sync.code).toBe(7);
+    expect(sync.code, sync.stderr + sync.stdout).toBe(7);
     expect(sync.stderr).toMatch(/protected/i);
     // Removing it now would drop the edit.
     expect((await cli(['notebook', 'remove', 'nb'])).code).toBe(5);
