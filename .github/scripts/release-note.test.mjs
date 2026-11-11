@@ -104,6 +104,37 @@ describe('parseReleaseNote', () => {
     assert.equal(parseReleaseNote('Intro\n\n## release note\n\nnone').none, true);
   });
 
+  it('ends the section at a blank line, so trailers after it are not notes', () => {
+    const result = parseReleaseNote(
+      '## Release note\n\nFixed: A real one.\n\nFixes PEN-104\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n',
+    );
+    assert.deepEqual(result, {
+      ok: true,
+      none: false,
+      notes: [{ kind: 'fixed', platform: null, text: 'A real one.' }],
+      errors: [],
+    });
+    assert.equal(parseReleaseNote('## Release note\nnone\n\nFixes PEN-104').none, true);
+  });
+
+  it('skips a Release note shown as an example in fenced code', () => {
+    const example = '```markdown\n## Release note\n\nNew: Only an example.\n```';
+    assert.deepEqual(
+      parseReleaseNote(`Intro\n\n${example}\n\n${body('Fixed: The real one.')}`).notes,
+      [{ kind: 'fixed', platform: null, text: 'The real one.' }],
+    );
+    assert.equal(parseReleaseNote(`Intro\n\n${example}\n`).ok, false);
+  });
+
+  it('fails notes split by a blank line, rather than dropping the second block', () => {
+    const result = parseReleaseNote(body('New: A thing.\n\nFixed: Another.'));
+    assert.equal(result.ok, false);
+    assert.match(
+      result.errors[0],
+      /one block of lines.*"Fixed: Another\." comes after a blank line/,
+    );
+  });
+
   it('fails a body without the section, or no body at all', () => {
     for (const text of [body('').replace('## Release note', '## Notes'), '', null, undefined]) {
       const result = parseReleaseNote(text);

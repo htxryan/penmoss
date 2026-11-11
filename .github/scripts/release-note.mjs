@@ -39,18 +39,31 @@ const quote = (line, n) => `Line ${n} ("${line.length > 60 ? `${line.slice(0, 57
  * @returns {ReleaseNote}
  */
 export function parseReleaseNote(body) {
-  const text = (body ?? '').replace(/\r\n?/g, '\n');
+  // Fenced code is an example (a pull request about release notes shows one), never the section.
+  const text = (body ?? '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/^[ \t]*(`{3,}|~{3,})[^\n]*\n[\s\S]*?^[ \t]*\1[ \t]*$/gm, '');
   const heading = HEADING.exec(text);
   if (!heading) {
     return fail([`The pull request has no "## Release note" section. ${FORMAT}`]);
   }
   const rest = text.slice(heading.index + heading[0].length);
   const end = NEXT_HEADING.exec(rest);
-  const lines = (end ? rest.slice(0, end.index) : rest)
+  // The notes are the section's first block of lines: a blank line ends them, so a "Fixes PEN-1"
+  // or an attribution line after the section, with no heading between, is not read as a note.
+  const all = (end ? rest.slice(0, end.index) : rest)
     .replace(/<!--[\s\S]*?(?:-->|$)/g, '')
     .split('\n')
-    .map((line) => line.trim().replace(/^[-*+][ \t]+/, ''))
-    .filter(Boolean);
+    .map((line) => line.trim().replace(/^[-*+][ \t]+/, ''));
+  const start = all.findIndex(Boolean);
+  const stop = start === -1 ? -1 : all.indexOf('', start);
+  const lines = start === -1 ? [] : all.slice(start, stop === -1 ? undefined : stop);
+  const stray = stop === -1 ? [] : all.slice(stop).filter((line) => looksLikeNote(line));
+  if (stray.length) {
+    return fail([
+      `The notes are one block of lines, with no blank line between them: "${stray[0]}" comes after a blank line.`,
+    ]);
+  }
   if (lines.length === 0) {
     return fail([`The "## Release note" section is empty: write a note, or \`none\`. ${FORMAT}`]);
   }
@@ -98,6 +111,10 @@ function parseLine(line) {
 /** A workflow command's message, escaped as GitHub's toolkit does. @param {string} text */
 const escapeCommand = (text) =>
   text.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
+
+/** Whether a line is written as a note or as `none`, valid or not. @param {string} line */
+const looksLikeNote = (line) =>
+  NONE.test(line) || KINDS.includes(/** @type {Kind} */ (NOTE.exec(line)?.[1]?.toLowerCase()));
 
 /** @param {string[]} errors @returns {ReleaseNote} */
 const fail = (errors) => ({ ok: false, none: false, notes: [], errors });
