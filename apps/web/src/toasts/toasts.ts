@@ -102,7 +102,9 @@ export class Toasts {
         id,
         setTimeout(() => this.remove(id), LEAVE_MS),
       );
-      this.update(this.entries.map((each) => (each === entry ? { ...entry, leaving: true } : each)));
+      this.update(
+        this.entries.map((each) => (each === entry ? { ...entry, leaving: true } : each)),
+      );
       return;
     }
     this.remove(id);

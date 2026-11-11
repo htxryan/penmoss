@@ -660,7 +660,6 @@ export function NoteView({
     return () => clearTimeout(timer);
   }, [notice]);
 
-
   const copyNote = (format: CopyFormat) => {
     editorRef.current?.editor.commands.copyNoteAs(format);
   };

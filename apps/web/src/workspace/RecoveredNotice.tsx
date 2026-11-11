@@ -16,8 +16,7 @@ export function RecoveredNotice() {
   return (
     <ToastSlot>
       {shown ? (
-        <div className="toast toast-with-action"
-          data-tone="info" data-testid="folders-recovered">
+        <div className="toast toast-with-action" data-tone="info" data-testid="folders-recovered">
           <Icon name="folder" />
           <span>{recoveredText(shown)}</span>
           <button

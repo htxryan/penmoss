@@ -22,8 +22,7 @@ export function WindowBlockedToast() {
   return (
     <ToastSlot>
       {blocked ? (
-        <div className="toast toast-with-action"
-          data-tone="info" data-testid="window-blocked">
+        <div className="toast toast-with-action" data-tone="info" data-testid="window-blocked">
           <Icon name="info" />
           <span>The browser blocked the new window.</span>
           <a

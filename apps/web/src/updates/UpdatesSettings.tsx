@@ -161,8 +161,7 @@ export function UpdateNotice() {
   return (
     <ToastSlot>
       {shown && found ? (
-        <div className="toast toast-with-action"
-          data-tone="info" data-testid="update-notice">
+        <div className="toast toast-with-action" data-tone="info" data-testid="update-notice">
           <Icon name="refresh" />
           <span>{updateStatus(shown)}</span>
           {shown.phase === 'available' ? (
