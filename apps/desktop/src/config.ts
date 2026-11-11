@@ -80,6 +80,11 @@ export interface DesktopConfig {
    * (`PENMOSS_TEST_GITHUB_CLIENT_ID`, unpackaged builds only).
    */
   readonly githubClientId: string | null;
+  /**
+   * The version Settings → Updates places the release notes by (PEN-108): the suite's, such as
+   * `0.2.2-alpha.1185` (`PENMOSS_TEST_APP_VERSION`, unpackaged builds only); otherwise the app's.
+   */
+  readonly testVersion: string | null;
 }
 
 /**
@@ -135,6 +140,7 @@ export function desktopConfig(options: {
     githubClientId:
       dev('PENMOSS_TEST_GITHUB_CLIENT_ID') ??
       (dev('PENMOSS_TEST_GITHUB_API') ? null : GITHUB_CLIENT_ID),
+    testVersion: dev('PENMOSS_TEST_APP_VERSION') ?? null,
   };
 }
 

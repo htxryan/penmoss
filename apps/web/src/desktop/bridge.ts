@@ -505,6 +505,41 @@ export interface DesktopUpdates {
   /** After a key press or click only: downloads the newer build, then restarts into it. */
   install(): Promise<DesktopUpdateState | null>;
   onChange(listener: (state: DesktopUpdateState) => void): () => void;
+  /**
+   * The cached `release-notes.json` (PEN-108), null before main has one; asking also fetches a
+   * newer one, at most once an hour. Absent in a Mac app from before PEN-108.
+   */
+  notes?(): Promise<DesktopReleaseNotes | null>;
+  /** A newer `release-notes.json` came in. Absent in a Mac app from before PEN-108. */
+  onNotes?(listener: (file: DesktopReleaseNotes) => void): () => void;
+}
+
+/** One release note (apps/desktop/src/release-notes.ts `ReleaseNote`). */
+export interface DesktopReleaseNote {
+  /** The build that merged it. */
+  readonly build: number;
+  readonly pr: number;
+  readonly kind: 'new' | 'improved' | 'fixed';
+  /** Only on one platform; null for both. */
+  readonly platform: 'mac' | 'android' | null;
+  readonly text: string;
+}
+
+/** A published stable release, as the notes place it. */
+export interface DesktopReleaseNotesRelease {
+  readonly version: string;
+  readonly tag: string;
+  readonly build: number;
+  readonly date: string;
+}
+
+/** `release-notes.json` as main hands it over (apps/desktop/src/release-notes.ts). */
+export interface DesktopReleaseNotes {
+  /** 1; a newer schema comes with no notes, and the page links to GitHub. */
+  readonly schema: number;
+  readonly generated: string;
+  readonly notes: readonly DesktopReleaseNote[];
+  readonly releases: readonly DesktopReleaseNotesRelease[];
 }
 
 /** Where the embedding service is (T76, A1158): Settings → Search by Meaning shows it. */

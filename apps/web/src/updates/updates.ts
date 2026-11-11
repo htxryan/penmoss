@@ -3,7 +3,15 @@
  * reads. Main does the work (apps/desktop/src/updater.ts); UpdatesSettings.tsx shows it.
  */
 import { useEffect, useState } from 'react';
-import { desktop, type DesktopUpdates, type DesktopUpdateState } from '../desktop/bridge';
+import {
+  desktop,
+  type DesktopReleaseNotes,
+  type DesktopUpdates,
+  type DesktopUpdateState,
+} from '../desktop/bridge';
+
+/** Every release, stable and Alpha (apps/desktop/src/updater.ts has the same). */
+export const RELEASES_URL = 'https://github.com/htxryan/penmoss/releases';
 
 /** `0.1.436` as people read it: build 436. */
 export function buildOf(version: string): string {
@@ -45,6 +53,30 @@ export function useUpdates(): { updates: DesktopUpdates; state: DesktopUpdateSta
     };
   }, [updates]);
   return updates ? { updates, state } : null;
+}
+
+/** Main's cached `release-notes.json`, kept current; asking for it fetches a newer one. */
+export function useReleaseNotes(): DesktopReleaseNotes | null {
+  const updates = desktop()?.updates ?? null;
+  const [file, setFile] = useState<DesktopReleaseNotes | null>(null);
+  useEffect(() => {
+    if (!updates?.notes) return;
+    let live = true;
+    void updates
+      .notes()
+      .catch(() => null)
+      .then((next) => {
+        if (live && next) setFile(next);
+      });
+    const off = updates.onNotes?.((next) => {
+      if (live) setFile(next);
+    });
+    return () => {
+      live = false;
+      off?.();
+    };
+  }, [updates]);
+  return file;
 }
 
 /** What the last check found, in a sentence. */

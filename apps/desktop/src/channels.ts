@@ -48,6 +48,8 @@ export const CHANNELS = {
   updatesCheck: 'penmoss:updates:check',
   updatesInstall: 'penmoss:updates:install',
   updatesChanged: 'penmoss:updates:changed',
+  updatesNotes: 'penmoss:updates:notes',
+  updatesNotesChanged: 'penmoss:updates:notes-changed',
   // Search by meaning (T76, A1152, A1158): main relays to the embedding service. Main and note
   // windows; the switch is the main window's, after a gesture.
   meaningStatus: 'penmoss:meaning:status',

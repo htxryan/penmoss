@@ -21,6 +21,16 @@ Penmoss can check for a newer build and offer it. It never installs one until yo
 
 **About Penmoss** shows the version you have.
 
+### What's new
+
+**Settings → Updates** also shows what changed, below its buttons:
+
+- **What's new in …**, while a newer build is offered: what it brings, since the version you have.
+- **In this version**: what your version brought. On Alpha, that's everything since the last stable release, each change with its build.
+- **Earlier versions**, folded away: each stable release's changes, newest first.
+
+Changes are grouped as **New**, **Improved** and **Fixed**, and only the Mac's are shown. Penmoss fetches the notes from GitHub when it checks for updates and when you open Settings, at most once an hour, and keeps them, so they read offline. Until it has reached GitHub once, the page links to the [Releases page](https://github.com/htxryan/penmoss/releases) instead. Each release on that page carries the same notes.
+
 You can also update by hand at any time: download the newest [Penmoss.dmg](https://github.com/htxryan/penmoss/releases/latest/download/Penmoss.dmg) and replace the app, as in [Install on Mac](/docs/install/mac/). Your notebooks stay as they are.
 
 ## On Android

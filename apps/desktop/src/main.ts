@@ -101,6 +101,7 @@ import {
   type QuickAccessPin,
 } from './tray';
 import { CLI_FLAG, keptLoginPath, LocalAgents, loginShellPath } from './local-agents';
+import { ReleaseNotes } from './release-notes';
 import { Updates, updateMode } from './updater';
 import {
   fitToDisplays,
@@ -952,13 +953,26 @@ const gitNotebooks = new GitNotebooks({
     void localAgents.ensureAll();
   },
 });
+/**
+ * Release notes for Settings → Updates (PEN-108): fetched from beside the channel's update feed
+ * on every check and when Settings asks, at most once an hour, and kept in userData.
+ */
+const releaseNotes = new ReleaseNotes({
+  mode: () => updateMode(app.isPackaged, process.resourcesPath),
+  dir: app.getPath('userData'),
+  log,
+  onChange: (file) => broadcast(CHANNELS.updatesNotesChanged, file),
+});
 /** Auto-Update from GitHub Releases, Stable or Alpha (T64 item 2, A1112, A1196): no token. */
 const updates = new Updates({
   mode: () => updateMode(app.isPackaged, process.resourcesPath),
-  version: () => app.getVersion(),
+  version: () => config.testVersion ?? app.getVersion(),
   dir: app.getPath('userData'),
   log,
-  onChange: (state) => broadcast(CHANNELS.updatesChanged, state),
+  onChange: (state) => {
+    if (state.phase === 'checking') void releaseNotes.refresh(state.channel);
+    broadcast(CHANNELS.updatesChanged, state);
+  },
 });
 /** The CLI's `~/.penmoss` (A992): agents' clones, and search by meaning's model and vectors. */
 const penmossHome = process.env['PENMOSS_HOME'] || join(homedir(), '.penmoss');
@@ -1406,6 +1420,12 @@ function registerIpc(): void {
   ipcMain.handle(CHANNELS.updatesInstall, (event, gesture: unknown) => {
     if (!fromMainWindow(event)) return null;
     return gesture === true ? updates.install() : null;
+  });
+  // Release notes (PEN-108): the cached file at once; a newer one follows as a change.
+  ipcMain.handle(CHANNELS.updatesNotes, async (event) => {
+    if (!fromAppWindow(event)) return null;
+    void updates.current().then((state) => releaseNotes.refresh(state.channel));
+    return releaseNotes.current();
   });
   // The GitHub token (A1012): what it is is never sent back; saving and removing it are the
   // person's, after a click or key press in Settings (main window only).
