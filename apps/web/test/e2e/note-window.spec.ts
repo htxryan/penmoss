@@ -211,8 +211,13 @@ test('links navigate inside the window, with Back and Forward; ⌥-click opens a
 
   // ⌥-click on the link: another window, on the linked note, and no download. (A click in the
   // text first: ProseMirror takes a second click at the same place within 500 ms for a double
-  // click, and the plain click on the link was a moment ago.)
-  await body(popup).getByText('for more.').click();
+  // click, and the plain click on the link was a moment ago.) The click lands at the line's right
+  // end, past the text: `getByText` finds the whole paragraph, and its middle can fall on the link
+  // where the fonts are wider (Linux CI), which would follow it.
+  const line = body(popup).getByText('for more.');
+  const box = (await line.boundingBox())!;
+  await line.click({ position: { x: box.width - 4, y: box.height / 2 } });
+  await expect(popup.getByTestId('note-title')).toHaveValue(source);
   const downloads: string[] = [];
   popup.on('download', (download) => downloads.push(download.url()));
   const second = await windowFrom(
