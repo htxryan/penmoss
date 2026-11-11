@@ -103,3 +103,20 @@ export function parseIssueSpec(labels: readonly string[], config: FactoryConfig)
     },
   };
 }
+
+/**
+ * Whether the card carries the factory's opt-in label (A1296). The factory acts only on cards
+ * that do: it plans, starts, recovers, reviews and merges none other, and a run whose card loses
+ * the label stops at its next step, as it does for Blocked.
+ */
+export function optedIn(labels: readonly string[], config: FactoryConfig): boolean {
+  const want = config.optInLabel.toLowerCase();
+  return labels.some((label) => label.toLowerCase() === want);
+}
+
+/** The board with only the cards the factory may act on. */
+export function optedInBoard<
+  B extends { readonly items: readonly { readonly labels: readonly string[] }[] },
+>(board: B, config: FactoryConfig): B {
+  return { ...board, items: board.items.filter((item) => optedIn(item.labels, config)) };
+}

@@ -15,7 +15,7 @@ import { BlockedByRyan, guardEffects, RUN_GUARDED, RUN_STEPS } from './guard.ts'
 import { AgentNotInstalled, ensureClone, hostDeps, publisherEnv } from './host.ts';
 import { issueText, type Issue } from './issue.ts';
 import { ATTACHMENTS, localizeImages, type LocalImageOptions } from './attachments.ts';
-import { parseIssueSpec, type IssueSpec } from './labels.ts';
+import { optedIn, parseIssueSpec, type IssueSpec } from './labels.ts';
 import { formatMarker } from './pick.ts';
 import { advancePlanning, type PlanDeps } from './plan-run.ts';
 import {
@@ -161,6 +161,11 @@ export function runnable(
     return {
       ok: false,
       error: `${item.key} has ${config.blockedField} set; the factory never acts on it`,
+    };
+  if (!optedIn(item.labels, config))
+    return {
+      ok: false,
+      error: `${item.key} has no ${config.optInLabel} label; the factory acts only on cards that do`,
     };
   if (!statuses.includes(item.status ?? ''))
     return { ok: false, error: `${item.key} is in ${item.status ?? 'no status'}` };

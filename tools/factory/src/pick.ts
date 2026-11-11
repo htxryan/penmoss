@@ -5,7 +5,7 @@
  */
 import type { BoardItem } from './board.ts';
 import type { FactoryConfig } from './config.ts';
-import { parseIssueSpec, type IssueSpec } from './labels.ts';
+import { optedIn, parseIssueSpec, type IssueSpec } from './labels.ts';
 
 /**
  * - `plan`: run (or resume) the planning conversation.
@@ -86,7 +86,7 @@ export interface PickResult {
 /**
  * The Ready card to start next: P1 first, then board position. Blocked cards,
  * closed issues, other repositories' issues and cards already running are
- * passed over, and so are cards whose labels conflict.
+ * passed over, and so are cards without the opt-in label and cards whose labels conflict.
  */
 export function pickNext(
   items: readonly BoardItem[],
@@ -101,6 +101,8 @@ export function pickNext(
       skipped.push({ item, reason: `in ${item.repo}, not ${config.repo}` });
     } else if (item.state !== 'OPEN') {
       skipped.push({ item, reason: 'the issue is closed' });
+    } else if (!optedIn(item.labels, config)) {
+      skipped.push({ item, reason: `no ${config.optInLabel} label` });
     } else if (item.blocked) {
       skipped.push({
         item,

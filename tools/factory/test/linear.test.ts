@@ -24,6 +24,9 @@ import { linearConfig, RYAN_LINEAR } from './helpers.ts';
 const config = linearConfig();
 const APP = '9a9a9a9a-0000-4000-8000-000000000001';
 
+/** The factory's opt-in label (A1296), on every card unless a test gives others. */
+const FACTORY = { name: 'factory', parent: null };
+
 /** A card as Linear's API returns it. */
 function card(n: number, o: Record<string, unknown> = {}) {
   return {
@@ -36,7 +39,7 @@ function card(n: number, o: Record<string, unknown> = {}) {
     sortOrder: n,
     state: { name: 'Todo', type: 'unstarted' },
     creator: { id: RYAN_LINEAR },
-    labels: { nodes: [] },
+    labels: { nodes: [FACTORY] },
     inverseRelations: { nodes: [] },
     ...o,
   };
@@ -91,7 +94,10 @@ describe('the Linear tracker (L3)', () => {
           nodes: [
             card(1, { sortOrder: 30 }),
             card(2, { sortOrder: 10, priority: 2 }),
-            card(3, { sortOrder: 20, labels: { nodes: [{ name: 'Blocked', parent: null }] } }),
+            card(3, {
+              sortOrder: 20,
+              labels: { nodes: [FACTORY, { name: 'Blocked', parent: null }] },
+            }),
             card(4, {
               sortOrder: 5,
               inverseRelations: {
@@ -104,18 +110,26 @@ describe('the Linear tracker (L3)', () => {
             card(5, {
               sortOrder: 40,
               priority: 1,
-              labels: { nodes: [{ name: 'claude', parent: { name: 'Agent' } }] },
+              labels: { nodes: [FACTORY, { name: 'claude', parent: { name: 'Agent' } }] },
             }),
+            card(6, { sortOrder: 1, labels: { nodes: [] } }),
           ],
         },
       }),
     });
     const board = await createLinearTracker(config, client).readBoard();
-    expect(board.items.map((i) => i.key)).toEqual(['PEN-4', 'PEN-2', 'PEN-3', 'PEN-1', 'PEN-5']);
+    expect(board.items.map((i) => i.key)).toEqual([
+      'PEN-6',
+      'PEN-4',
+      'PEN-2',
+      'PEN-3',
+      'PEN-1',
+      'PEN-5',
+    ]);
     const by = (n: number) => board.items.find((i) => i.number === n)!;
     expect(by(3).blocked).toBe(true);
     expect(by(4)).toMatchObject({ blocked: true, blockedBy: ['PEN-9'] });
-    expect(by(5).labels).toEqual(['agent:claude']);
+    expect(by(5).labels).toEqual(['factory', 'agent:claude']);
     expect(by(1)).toMatchObject({ status: 'Todo', state: 'OPEN', repo: config.repo, priority: 3 });
     // Linear's "No priority" counts as Medium, and says so in factory:next.
     expect(by(1).noPriority).toBe(true);
@@ -125,6 +139,8 @@ describe('the Linear tracker (L3)', () => {
     // Urgent first, then High, then the rest in the team's order; Blocked cards passed over.
     expect(picked.queue.map((p) => p.item.key)).toEqual(['PEN-5', 'PEN-2', 'PEN-1']);
     expect(picked.skipped.map((s) => [s.item.key, s.reason])).toEqual([
+      // Without the opt-in label the factory leaves a card alone (A1296).
+      ['PEN-6', 'no factory label'],
       ['PEN-4', 'blocked by PEN-9'],
       ['PEN-3', 'Blocked is set'],
     ]);
@@ -242,6 +258,15 @@ describe('the Linear tracker (L3)', () => {
       Card: () => ({ issue: card(3, { state: { name: 'In Review', type: 'started' } }) }),
     });
     expect(await createLinearTracker(config, working.client).isBlocked(3)).toBe(false);
+  });
+
+  it('treats a card that lost the opt-in label as Blocked, so a run in flight stops (A1296)', async () => {
+    const unlabelled = fake({
+      Card: () => ({
+        issue: card(3, { state: { name: 'In Review', type: 'started' }, labels: { nodes: [] } }),
+      }),
+    });
+    expect(await createLinearTracker(config, unlabelled.client).isBlocked(3)).toBe(true);
   });
 
   it('has no way to clear Blocked; only the UI, as Ryan, removes the label (R23)', async () => {

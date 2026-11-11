@@ -21,7 +21,7 @@ import { sweep } from './janitor.ts';
 import { expandHome, type FactoryConfig } from './config.ts';
 import { labelProblems, tick, type Running } from './dispatcher.ts';
 import { formatMarker } from './pick.ts';
-import { parseIssueSpec } from './labels.ts';
+import { optedInBoard, parseIssueSpec } from './labels.ts';
 import { executePlanning, executeRun, openFactory, planAgreed, runnable } from './start.ts';
 import { executeMerge, executeRevise, findPr, nextReviewAction } from './watch.ts';
 import { codeDir, commitOf, ownCheckout, updatePending } from './code.ts';
@@ -154,7 +154,8 @@ export async function runDaemon(
       if (hold !== held)
         log(hold ? 'Holding new work for task factory:update.' : 'No longer held.');
       held = hold;
-      const board = await factory.tracker.readBoard();
+      // Only cards with the opt-in label exist for the daemon (A1296).
+      const board = optedInBoard(await factory.tracker.readBoard(), config);
       const ledgerPath = join(state, 'runs.jsonl');
       const claimed = existsSync(ledgerPath)
         ? unfinishedClaims(readFileSync(ledgerPath, 'utf8'))
