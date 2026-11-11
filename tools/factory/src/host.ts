@@ -983,6 +983,9 @@ export function hostDeps(options: HostOptions): HostDeps {
         throw new Error(`couldn't commit the decision numbers: ${committed.stderr.trim()}`);
       return assigned;
     },
+    conflicts: async (pr) =>
+      (await gh.json<{ mergeable?: string }>(['pr', 'view', pr, '--json', 'mergeable']))
+        .mergeable === 'CONFLICTING',
     checks: (pr) =>
       gh
         .json<CheckRun[]>([

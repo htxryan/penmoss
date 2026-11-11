@@ -39,6 +39,7 @@ export type RunEvent =
   | 'proof-recorded'
   | 'pr-opened'
   | 'ci-red'
+  | 'pr-conflicts'
   | 'ci-repaired'
   | 'ci-stalled'
   | 'in-review'
@@ -132,6 +133,11 @@ export interface RunDeps {
   push(branch: string): Promise<void>;
   /** The PR's checks, from `gh pr checks`. */
   checks(pr: string): Promise<CheckRun[]>;
+  /**
+   * Whether GitHub says the PR conflicts with main (`mergeable` is `CONFLICTING`). Such a PR gets
+   * no CI run at all, so the factory refreshes the branch instead of waiting for checks (A1311).
+   */
+  conflicts?(pr: string): Promise<boolean>;
   /** The last lines of a failed check's log. */
   failedLog(check: CheckRun): Promise<string>;
   /** F19's validation: mockups in, the reviewer's verdicts out (see validate.ts). */
@@ -744,8 +750,20 @@ async function awaitReview(
     await deps.setBlocked(run.item);
     return { kind: 'blocked', reason };
   };
-  // In review only once CI is green (R4); red checks go to a repair session (F6).
-  const ci = await watchCi(deps, { ...run, pr });
+  // In review only once CI is green (R4); red checks go to a repair session (F6). A PR that
+  // conflicts with main gets no CI: rebase it (gate, push) and watch again, a few times at most.
+  let ci = await watchCi(deps, { ...run, pr });
+  for (let refreshed = 0; ci.kind === 'conflict'; refreshed++) {
+    if (refreshed >= MAX_CONFLICT_REFRESHES)
+      return stop(
+        'rebase-conflict',
+        `${pr} still conflicts with main after ${refreshed} rebase(s), so GitHub runs no CI on it. Rebase it yourself, then clear Blocked.`,
+      );
+    deps.log('pr-conflicts', { pr });
+    const fresh = await refreshBranch(deps, run);
+    if (!fresh.ok) return stop(fresh.reason, fresh.body);
+    ci = await watchCi(deps, { ...run, pr });
+  }
   if (ci.kind === 'blocked') return stop(ci.reason, ci.body);
   // main may have moved while CI ran: rebase once more, so the PR reaches review on top of it.
   await deps.fetchMain();
@@ -754,6 +772,11 @@ async function awaitReview(
     if (!fresh.ok) return stop(fresh.reason, fresh.body);
     const again = await watchCi(deps, { ...run, pr });
     if (again.kind === 'blocked') return stop(again.reason, again.body);
+    if (again.kind === 'conflict')
+      return stop(
+        'rebase-conflict',
+        `${pr} conflicts with main again right after a rebase, so GitHub runs no CI on it. Rebase it yourself, then clear Blocked.`,
+      );
   }
   await deps.comment(
     run.item.number,
@@ -767,7 +790,11 @@ async function awaitReview(
 
 type CiOutcome =
   | { readonly kind: 'green' }
+  | { readonly kind: 'conflict' }
   | { readonly kind: 'blocked'; readonly reason: string; readonly body: string };
+
+/** How often a run rebases a PR that GitHub says conflicts with main before Ryan hears (A1311). */
+export const MAX_CONFLICT_REFRESHES = 2;
 
 export async function watchCi(
   deps: RunDeps,
@@ -777,15 +804,16 @@ export async function watchCi(
   let since = deps.now();
   let repairs = 0;
   let saidStalled = false;
+  let empty = 0;
   for (;;) {
     await deps.sleep(config.pollSeconds);
-    const summary = summarizeChecks(
-      await deps.checks(run.pr),
-      deps.now(),
-      config.timeouts.ciMinutes,
-      since,
-    );
+    const checks = await deps.checks(run.pr);
+    const summary = summarizeChecks(checks, deps.now(), config.timeouts.ciMinutes, since);
     if (summary.kind === 'green') return { kind: 'green' };
+    // No checks at all after a couple of polls: GitHub runs no CI on a PR that conflicts with main.
+    empty = checks.length === 0 ? empty + 1 : 0;
+    if (empty >= 2 && deps.conflicts && (await deps.conflicts(run.pr).catch(() => false)))
+      return { kind: 'conflict' };
     if (summary.kind === 'pending') continue;
     if (summary.kind === 'stalled') {
       // No runner has taken the jobs: a pause, not a failure. Say so once and keep waiting.

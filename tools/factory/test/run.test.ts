@@ -1011,6 +1011,41 @@ describe('main moves while the PR waits for CI (F6)', () => {
     expect(f.events).toContain('rebased');
   });
 
+  it('rebases a PR that GitHub says conflicts with main, since it gets no CI (A1311)', async () => {
+    // PEN-63: rebased at 16:25, pushed at 16:45, and PEN-73's decision row landed between, so
+    // #152 conflicted and GitHub ran no CI; the run would have waited on checks that never came.
+    const f = fake({ ci: [[], []] });
+    let asked = 0;
+    const outcome = await runImplement(
+      { ...f.deps, conflicts: () => Promise.resolve(++asked === 1) },
+      { item: card, spec, prompt: 'p' },
+    );
+    expect(outcome.kind).toBe('in-review');
+    expect(f.events).toContain('pr-conflicts');
+    expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(2);
+  });
+
+  it('sets Blocked when the PR still conflicts after the rebases allowed', async () => {
+    const f = fake({ ci: Array.from({ length: 12 }, () => []) });
+    const outcome = await runImplement(
+      { ...f.deps, conflicts: () => Promise.resolve(true) },
+      { item: card, spec, prompt: 'p' },
+    );
+    expect(outcome).toEqual({ kind: 'blocked', reason: 'rebase-conflict' });
+    expect(f.comments.at(-1)).toMatch(/still conflicts with main after 2 rebase/);
+    expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(3);
+  });
+
+  it('keeps waiting for CI that has not started when the PR merges cleanly', async () => {
+    const f = fake({ ci: [[], [], []] });
+    const outcome = await runImplement(
+      { ...f.deps, conflicts: () => Promise.resolve(false) },
+      { item: card, spec, prompt: 'p' },
+    );
+    expect(outcome.kind).toBe('in-review');
+    expect(f.events).not.toContain('pr-conflicts');
+  });
+
   it("hands a conflict it can't resolve to one agent round, then goes on to review", async () => {
     const f = fake({ behind: [true], rebases: [clean, conflict, clean] });
     const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });

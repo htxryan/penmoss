@@ -23,6 +23,9 @@ import {
   type RunDeps,
 } from './run.ts';
 
+/** A PR GitHub says conflicts with main: it gets no CI, so it waits for Ryan (A1311). */
+const CONFLICTS = (pr: string) =>
+  `${pr} conflicts with main, so GitHub runs no CI on it. Rebase it, then clear Blocked.`;
 export interface ReviseDeps extends RunDeps {
   prComment(pr: string, body: string, proof?: readonly AttachedProof[]): Promise<void>;
   replyToThread(threadId: string, body: string): Promise<void>;
@@ -121,6 +124,7 @@ export async function runRevise(deps: ReviseDeps, input: ReviseInput): Promise<R
         prompt: input.prompt,
       });
       if (ci.kind === 'blocked') return block(ci.reason, ci.body);
+      if (ci.kind === 'conflict') return block('rebase-conflict', CONFLICTS(pr));
       deps.log('in-review', { pr, round: 'addressed' });
       return { kind: 'addressed', sha };
     }
@@ -175,6 +179,7 @@ export async function runRebase(deps: ReviseDeps, input: ReviseInput): Promise<R
   );
   const ci = await watchCi(deps, { item, branch, scope, pr, prompt: input.prompt });
   if (ci.kind === 'blocked') return block(ci.reason, ci.body);
+  if (ci.kind === 'conflict') return block('rebase-conflict', CONFLICTS(pr));
   deps.log('in-review', { pr, round: 'rebased' });
   return { kind: 'addressed', sha };
 }
