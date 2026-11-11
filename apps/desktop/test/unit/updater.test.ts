@@ -7,6 +7,7 @@ import {
   CHECK_EVERY_MS,
   FEED_URLS,
   genericFeed,
+  isNewer,
   point,
   Updates,
   type UpdateChannel,
@@ -167,7 +168,7 @@ describe('Auto-Update (A1112, A1196)', () => {
     expect(updates.state()).toMatchObject({ phase: 'current', checkedAt: 1_000 });
     await vi.advanceTimersByTimeAsync(CHECK_EVERY_MS);
     expect(updater.checks).toBe(2);
-    expect(await prefs()).toEqual({ auto: true, channel: 'stable' });
+    expect(await prefs()).toEqual({ auto: true, channel: 'stable', lastSeenVersion: '0.2.0' });
 
     await updates.setAuto(false);
     await vi.advanceTimersByTimeAsync(CHECK_EVERY_MS * 3);
@@ -292,7 +293,7 @@ describe('the update channel (A1196)', () => {
     expect(updater.allowDowngrade).toBe(false);
     expect(updater.downloads + updater.installs).toBe(0);
     expect(states.map((each) => each.phase)).toContain('checking');
-    expect(await prefs()).toEqual({ auto: false, channel: 'alpha' });
+    expect(await prefs()).toEqual({ auto: false, channel: 'alpha', lastSeenVersion: '0.2.0' });
     // Choosing the same channel again does nothing.
     await updates.setChannel('alpha');
     expect(updater.checks).toBe(1);
@@ -385,5 +386,43 @@ describe("the channel in electron-updater's own updater (A1196)", () => {
     const old = new RealUpdater('0.1.440', dir);
     point(old, 'stable');
     expect(await old.offers('0.2.0')).toBe(true);
+  });
+});
+
+describe('the notice after an update (PEN-110)', () => {
+  it('records a first launch silently', async () => {
+    const { updates } = updatesWith(fakeUpdater(), 'enabled', '0.2.1');
+    expect((await updates.current()).updatedFrom).toBeNull();
+    expect(await prefs()).toEqual({ auto: false, channel: 'stable', lastSeenVersion: '0.2.1' });
+  });
+
+  it('says nothing on a launch of the same version, or an older one', async () => {
+    await writeFile(join(dir, 'updates.json'), '{"lastSeenVersion":"0.2.1"}\n');
+    expect(
+      (await updatesWith(fakeUpdater(), 'enabled', '0.2.1').updates.current()).updatedFrom,
+    ).toBeNull();
+    expect(
+      (await updatesWith(fakeUpdater(), 'enabled', '0.2.0').updates.current()).updatedFrom,
+    ).toBeNull();
+  });
+
+  it('reports a newer version until the notice is answered, then never again', async () => {
+    await writeFile(join(dir, 'updates.json'), '{"auto":true,"lastSeenVersion":"0.2.0"}\n');
+    const { updates, states } = updatesWith(fakeUpdater(), 'enabled', '0.2.1');
+    expect((await updates.current()).updatedFrom).toBe('0.2.0');
+    await updates.acknowledge();
+    expect(states.at(-1)?.updatedFrom).toBeNull();
+    expect(await prefs()).toEqual({ auto: true, channel: 'stable', lastSeenVersion: '0.2.1' });
+    const again = updatesWith(fakeUpdater(), 'enabled', '0.2.1').updates;
+    expect((await again.current()).updatedFrom).toBeNull();
+  });
+
+  it('places Alpha builds by their build, before their release', () => {
+    expect(isNewer('0.2.2-alpha.1185', '0.2.2-alpha.1183')).toBe(true);
+    expect(isNewer('0.2.2-alpha.1185', '0.2.1')).toBe(true);
+    expect(isNewer('0.2.2', '0.2.2-alpha.1190')).toBe(true);
+    expect(isNewer('0.2.2-alpha.1190', '0.2.2')).toBe(false);
+    expect(isNewer('0.2.1', '0.2.1')).toBe(false);
+    expect(isNewer('0.1.0', 'nonsense')).toBe(false);
   });
 });

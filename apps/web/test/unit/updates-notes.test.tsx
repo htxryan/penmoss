@@ -3,7 +3,7 @@
  * Settings → Updates' release notes (PEN-108): the offered update's, this version's and earlier
  * versions' (collapsed), each grouped by kind under headings; a link to GitHub without a file.
  */
-import { act } from 'react';
+import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type {
@@ -11,7 +11,8 @@ import type {
   DesktopUpdateState,
   PenmossDesktop,
 } from '../../src/desktop/bridge';
-import { UpdatesSettings } from '../../src/updates/UpdatesSettings';
+import { ToastStack } from '../../src/toasts/ToastStack';
+import { UpdateNotice, UpdatesSettings } from '../../src/updates/UpdatesSettings';
 
 const FILE: DesktopReleaseNotes = {
   schema: 1,
@@ -54,8 +55,19 @@ afterEach(() => {
   Reflect.deleteProperty(window, 'penmossDesktop');
 });
 
-async function show(update: DesktopUpdateState, file: DesktopReleaseNotes | null) {
+let acknowledged = 0;
+
+async function show(
+  update: DesktopUpdateState,
+  file: DesktopReleaseNotes | null,
+  view: ReactElement = <UpdatesSettings />,
+) {
+  acknowledged = 0;
   const updates = {
+    acknowledge: () => {
+      acknowledged += 1;
+      return Promise.resolve({ ...update, updatedFrom: null });
+    },
     state: () => Promise.resolve(update),
     check: () => Promise.resolve(update),
     setAuto: () => Promise.resolve(update),
@@ -68,7 +80,7 @@ async function show(update: DesktopUpdateState, file: DesktopReleaseNotes | null
   Object.assign(window, { penmossDesktop: { updates } as unknown as PenmossDesktop });
   act(() => {
     root = createRoot(host);
-    root.render(<UpdatesSettings />);
+    root.render(view);
   });
   await act(async () => {
     await Promise.resolve();
@@ -122,5 +134,65 @@ describe('Settings → Updates: release notes', () => {
     expect(missing?.querySelector('a')?.getAttribute('href')).toBe(
       'https://github.com/htxryan/penmoss/releases',
     );
+  });
+});
+
+describe('the notice after an update (PEN-110)', () => {
+  it('says so once, with What’s New, which opens This version and is remembered', async () => {
+    await show(
+      state({ current: '0.2.1', updatedFrom: '0.2.0' }),
+      FILE,
+      <>
+        {/* The notice is a toast: it shows in the window's stack (A1306). */}
+        <ToastStack />
+        <UpdateNotice />
+      </>,
+    );
+    const notice = block('updated-notice');
+    expect(notice?.textContent).toContain('Updated to 0.2.1.');
+    act(() => (block('updated-whats-new') as HTMLButtonElement).click());
+    expect(acknowledged).toBe(1);
+    expect(window.location.pathname + window.location.search).toBe('/settings/updates?whats-new');
+    expect(block('updated-notice')).toBeNull();
+  });
+
+  it('dismissing it is remembered too', async () => {
+    await show(
+      state({ current: '0.2.1', updatedFrom: '0.2.0' }),
+      FILE,
+      <>
+        {/* The notice is a toast: it shows in the window's stack (A1306). */}
+        <ToastStack />
+        <UpdateNotice />
+      </>,
+    );
+    act(() => (block('updated-dismiss') as HTMLButtonElement).click());
+    expect(acknowledged).toBe(1);
+    expect(block('updated-notice')).toBeNull();
+  });
+
+  it('says nothing without an update, or when the new version has no notes', async () => {
+    await show(
+      state({ current: '0.2.1', updatedFrom: null }),
+      FILE,
+      <>
+        {/* The notice is a toast: it shows in the window's stack (A1306). */}
+        <ToastStack />
+        <UpdateNotice />
+      </>,
+    );
+    expect(block('updated-notice')).toBeNull();
+    act(() => root?.unmount());
+    root = null;
+    await show(
+      state({ current: '0.2.1', updatedFrom: '0.2.0' }),
+      null,
+      <>
+        {/* The notice is a toast: it shows in the window's stack (A1306). */}
+        <ToastStack />
+        <UpdateNotice />
+      </>,
+    );
+    expect(block('updated-notice')).toBeNull();
   });
 });

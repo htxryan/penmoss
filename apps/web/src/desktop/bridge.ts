@@ -493,6 +493,11 @@ export interface DesktopUpdateState {
   readonly percent: number | null;
   readonly message: string | null;
   readonly checkedAt: number | null;
+  /**
+   * The version before this one, on the first launches of a newer version until the notice is
+   * answered (PEN-110). Absent in a Mac app from before PEN-110.
+   */
+  readonly updatedFrom?: string | null;
 }
 
 export interface DesktopUpdates {
@@ -504,6 +509,11 @@ export interface DesktopUpdates {
   setChannel(channel: DesktopUpdateChannel): Promise<DesktopUpdateState | null>;
   /** After a key press or click only: downloads the newer build, then restarts into it. */
   install(): Promise<DesktopUpdateState | null>;
+  /**
+   * After a click only: the notice after an update was answered, so it doesn't come back
+   * (PEN-110). Absent in a Mac app from before PEN-110.
+   */
+  acknowledge?(): Promise<DesktopUpdateState | null>;
   onChange(listener: (state: DesktopUpdateState) => void): () => void;
   /**
    * The cached `release-notes.json` (PEN-108), null before main has one; asking also fetches a

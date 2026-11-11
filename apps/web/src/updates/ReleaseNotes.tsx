@@ -3,12 +3,27 @@
  * version brought, and earlier versions, collapsed. Each block is a heading with its notes
  * grouped by kind, each group a heading and a list, so a screen reader announces them.
  */
-import { useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { RELEASES_URL, useReleaseNotes } from './updates';
-import { noteText, notesView, type NotesBlock } from './notes';
+import { noteText, notesView, WHATS_NEW_PATH, type NotesBlock } from './notes';
 
-function Block({ block, testId }: { block: NotesBlock; testId: string }) {
+function Block({
+  block,
+  testId,
+  scrollTo = false,
+}: {
+  block: NotesBlock;
+  testId: string;
+  scrollTo?: boolean;
+}) {
   const id = useId();
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    // Opened from the notice after an update (PEN-110): this block, its heading focused.
+    if (!scrollTo || !heading.current) return;
+    heading.current.scrollIntoView({ block: 'start' });
+    heading.current.focus({ preventScroll: true });
+  }, [scrollTo]);
   return (
     <div
       className="release-notes-block"
@@ -16,7 +31,9 @@ function Block({ block, testId }: { block: NotesBlock; testId: string }) {
       aria-labelledby={`${id}-h`}
       role="group"
     >
-      <h3 id={`${id}-h`}>{block.title}</h3>
+      <h3 id={`${id}-h`} ref={heading} tabIndex={scrollTo ? -1 : undefined}>
+        {block.title}
+      </h3>
       <Groups block={block} />
     </div>
   );
@@ -61,7 +78,13 @@ export function ReleaseNotes({ current, offered }: { current: string; offered: s
   return (
     <div className="release-notes" data-testid="release-notes">
       {view.offered ? <Block block={view.offered} testId="release-notes-offered" /> : null}
-      {view.current ? <Block block={view.current} testId="release-notes-current" /> : null}
+      {view.current ? (
+        <Block
+          block={view.current}
+          testId="release-notes-current"
+          scrollTo={window.location.search === WHATS_NEW_PATH.slice(WHATS_NEW_PATH.indexOf('?'))}
+        />
+      ) : null}
       {view.earlier.length > 0 ? (
         <details className="release-notes-earlier" data-testid="release-notes-earlier">
           <summary>Earlier versions</summary>

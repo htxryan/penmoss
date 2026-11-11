@@ -103,6 +103,8 @@ contextBridge.exposeInMainWorld('penmossDesktop', {
               gesture(),
             ),
           install: () => ipcRenderer.invoke(CHANNELS.updatesInstall, gesture()),
+          // The notice after an update was answered (PEN-110): after a click only.
+          acknowledge: () => ipcRenderer.invoke(CHANNELS.updatesAcknowledge, gesture()),
           onChange: (listener: (state: unknown) => void) =>
             on(CHANNELS.updatesChanged, (state) => listener(state)),
           // Release notes (PEN-108): main's cached file; asking fetches a newer one.

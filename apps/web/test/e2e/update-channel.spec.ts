@@ -66,6 +66,8 @@ test('Update Channel is Stable by default; Alpha is kept, checks at once and onl
   expect(JSON.parse(await readFile(join(host.root, 'userData', 'updates.json'), 'utf8'))).toEqual({
     auto: false,
     channel: 'alpha',
+    // The version Penmoss last said it updated to (PEN-110): a first launch records its own.
+    lastSeenVersion: '0.2.0',
   });
   if (SHOTS) {
     for (const scheme of ['light', 'dark'] as const) {

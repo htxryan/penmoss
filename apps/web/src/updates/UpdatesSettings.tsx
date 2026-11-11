@@ -5,8 +5,10 @@
 import { Icon } from '@penmoss/ui/icons';
 import { useId, useState } from 'react';
 import type { DesktopUpdateChannel } from '../desktop/bridge';
+import { navigate } from '../router';
+import { updatedNotice, WHATS_NEW_PATH } from './notes';
 import { ReleaseNotes } from './ReleaseNotes';
-import { nameOf, updateStatus, useUpdates } from './updates';
+import { nameOf, updateStatus, useReleaseNotes, useUpdates } from './updates';
 import { ToastSlot } from '../toasts/ToastSlot';
 
 const CHANNELS: ReadonlyArray<{ value: DesktopUpdateChannel; label: string }> = [
@@ -152,11 +154,15 @@ export function UpdatesSettings() {
 
 /**
  * The notice a newer build brings (T64 item 2): at the window's foot until dismissed, with
- * Install and Restart, and the download's progress after it.
+ * Install and Restart, and the download's progress after it. After an update, and only when the
+ * new version has notes, it says so once, with What's new (PEN-110).
  */
 export function UpdateNotice() {
   const found = useUpdates();
+  const file = useReleaseNotes();
   const [dismissed, setDismissed] = useState<string | null>(null);
+  /** The notice after an update was answered here, before main says so. */
+  const [answered, setAnswered] = useState(false);
   const state = found?.state ?? null;
   const shown =
     state &&
@@ -165,6 +171,13 @@ export function UpdateNotice() {
     (state.phase !== 'available' || dismissed !== state.version)
       ? state
       : null;
+  const updated =
+    !shown && !answered && state ? updatedNotice(file, state.current, state.updatedFrom) : null;
+  const answer = (whatsNew: boolean) => {
+    setAnswered(true);
+    void found?.updates.acknowledge?.().catch(() => null);
+    if (whatsNew) navigate(WHATS_NEW_PATH);
+  };
   return (
     <ToastSlot>
       {shown && found ? (
@@ -193,6 +206,30 @@ export function UpdateNotice() {
               </button>
             </>
           ) : null}
+        </div>
+      ) : updated ? (
+        <div className="toast toast-with-action" data-tone="info" data-testid="updated-notice">
+          <Icon name="refresh" />
+          <span>Updated to {updated}.</span>
+          <button
+            type="button"
+            className="btn primary"
+            data-ui="submit"
+            onClick={() => answer(true)}
+            data-testid="updated-whats-new"
+          >
+            What's New
+          </button>
+          <button
+            type="button"
+            className="toast-close"
+            data-ui="dismiss"
+            aria-label="Dismiss"
+            onClick={() => answer(false)}
+            data-testid="updated-dismiss"
+          >
+            <Icon name="close" size={14} />
+          </button>
         </div>
       ) : null}
     </ToastSlot>
