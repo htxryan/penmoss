@@ -10,6 +10,11 @@
 # (`playwright install-deps chromium`). Each `command:package` is a tool the job runs: its
 # package is installed only when the command isn't on PATH. The check is `ldd` on Playwright's
 # Chromium and on Electron, when they're installed: a library it can't find means apt runs.
+#
+# The tools' packages are kept in PENMOSS_DEB_CACHE (~/.cache/penmoss-ci/debs, which ci.yml
+# caches) and installed from there with dpkg, so a job whose image lacks a tool needs apt's
+# mirror only when the cache is empty or no longer installs (PEN-114: the Electron job's
+# xdotool failed every run while the mirror was down).
 set -eu
 
 filter=$1
@@ -45,9 +50,24 @@ else
   echo "The image has every library Chromium and Electron load: no apt for them."
 fi
 
-if [ -n "$packages" ]; then
-  echo "Installing$packages from apt."
-  sudo apt-get update
-  # shellcheck disable=SC2086 # one word per package
-  sudo apt-get install -y --no-install-recommends $packages
+[ -n "$packages" ] || exit 0
+
+debs=${PENMOSS_DEB_CACHE:-$HOME/.cache/penmoss-ci/debs}
+cached=$(find "$debs" -maxdepth 1 -name '*.deb' 2>/dev/null | sort | tr '\n' ' ')
+# shellcheck disable=SC2086 # one word per file
+if [ -n "$cached" ] && sudo dpkg -i $cached; then
+  echo "Installed$packages from the cache of their packages: no apt."
+  exit 0
 fi
+if [ -n "$cached" ]; then
+  echo "The cached packages don't install on this image: from apt instead."
+  rm -f "$debs"/*.deb
+  fix=-f
+else
+  fix=
+fi
+echo "Installing$packages from apt, and keeping their packages in $debs."
+mkdir -p "$debs/partial"
+sudo apt-get update
+# shellcheck disable=SC2086 # one word per package; $fix is empty or -f
+sudo apt-get install -y --no-install-recommends $fix -o Dir::Cache::Archives="$debs" $packages
