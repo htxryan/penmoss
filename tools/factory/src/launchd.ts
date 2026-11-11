@@ -5,6 +5,8 @@ import { join } from 'node:path';
 export const LABEL = 'app.penmoss.factory';
 /** The Factory UI's LaunchAgent (F20). */
 export const UI_LABEL = 'app.penmoss.factory-ui';
+/** The updater's LaunchAgent: moves the factory to main when main changes it (A1293). */
+export const UPDATER_LABEL = 'app.penmoss.factory-updater';
 
 const xml = (s: string) =>
   s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');

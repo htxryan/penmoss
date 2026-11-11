@@ -87,6 +87,8 @@ export interface FactoryConfig {
   readonly envFile: string;
   readonly stateDir: string;
   readonly pollSeconds: number;
+  /** How often the updater looks at main for factory changes; 0 turns it off (A1293). */
+  readonly autoUpdateMinutes: number;
   readonly maxConcurrent: number;
   readonly worktreeRoot: string;
   readonly branchPrefix: string;
@@ -223,6 +225,7 @@ export function parseConfig(raw: unknown): ConfigResult {
   for (const key of ['envFile', 'stateDir', 'worktreeRoot', 'branchPrefix', 'sharedDir'])
     str(root, key, 'config');
   int(root, 'pollSeconds', 'config', 10);
+  int(root, 'autoUpdateMinutes', 'config', 0);
   int(root, 'maxConcurrent', 'config', 1);
   const rounds = obj(root['rounds'], 'config.rounds');
   int(rounds, 'gateFix', 'config.rounds');

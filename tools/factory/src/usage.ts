@@ -18,7 +18,7 @@ export const COMMANDS: Readonly<Record<string, Command>> = {
   },
   install: {
     args: '',
-    text: "Clone the factory's own code under the state folder (once) and install\nand start the LaunchAgents that run the daemon and the UI from it",
+    text: "Clone the factory's own code under the state folder (once) and install\nand start the LaunchAgents that run the daemon, the UI and the updater from it",
   },
   update: {
     args: '[--wait]',
@@ -26,7 +26,7 @@ export const COMMANDS: Readonly<Record<string, Command>> = {
   },
   start: {
     args: '',
-    text: "Start both LaunchAgents (the daemon and the UI) if they aren't running",
+    text: "Start the LaunchAgents (the daemon, the UI, the updater) if they aren't running",
   },
   status: {
     args: '',
@@ -37,6 +37,10 @@ export const COMMANDS: Readonly<Record<string, Command>> = {
     text: 'Poll the board, plan cards and run them in free slots (the LaunchAgent runs this)',
   },
   ui: { args: '', text: 'Serve the Factory UI on 127.0.0.1 (its LaunchAgent runs this)' },
+  updater: {
+    args: '',
+    text: 'Update the factory when main changes it, every autoUpdateMinutes (its\nLaunchAgent runs this)',
+  },
   report: {
     args: '[--from d] [--to d]',
     text: 'Throughput, rounds, time to In review and the share Blocked, from the\nrun ledger (default: the last 7 days; --to is exclusive)',
