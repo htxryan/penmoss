@@ -6,6 +6,7 @@ import { nodeExec } from '../src/exec.ts';
 import { formatDecisions } from '../src/decisions.ts';
 import {
   addedLines,
+  numberingOf,
   newRows,
   rebaseOntoMain,
   resolveAppendConflicts,
@@ -167,6 +168,81 @@ describe('rebaseOntoMain (F6)', { timeout: 30_000 }, () => {
     );
     expect(await onMain()).toBe(true);
     expect(await git(repo, 'status', '--porcelain')).toBe('');
+  });
+
+  it("replays the factory's own numbering commit onto rows main added meanwhile (PEN-71)", async () => {
+    const base = await formatDecisions(decisions(BASE_ROWS));
+    await mainMoves('formatted', { 'docs/decisions.md': base });
+    await git(repo, 'checkout', '-q', BRANCH);
+    await git(repo, 'reset', '-q', '--hard', 'main');
+    // The agent's row, re-padded for the placeholder, and a line elsewhere that names it.
+    await commit('the agent', {
+      'docs/decisions.md': await formatDecisions(
+        decisions([...BASE_ROWS, '| A-NEW-1 | Tooltips wait (see A-NEW-1). |']),
+      ),
+    });
+    // The gate numbered it, and formatted the narrower table.
+    await commit('Number the new decisions: A-NEW-1 is A1226', {
+      'docs/decisions.md': await formatDecisions(
+        decisions([...BASE_ROWS, row(1226, 'Tooltips wait (see A1226).')]),
+      ),
+    });
+    // Meanwhile main took A1225, right where the branch's row is.
+    await mainMoves('main decides', {
+      'docs/decisions.md': await formatDecisions(
+        decisions([...BASE_ROWS, row(1225, 'Main decided meanwhile.')]),
+      ),
+    });
+
+    const outcome = await rebaseOntoMain(sandbox, reserved);
+
+    expect(outcome).toMatchObject({ kind: 'rebased', resolved: ['docs/decisions.md'] });
+    expect(read('docs/decisions.md')).toBe(
+      await formatDecisions(
+        decisions([
+          ...BASE_ROWS,
+          row(1225, 'Main decided meanwhile.'),
+          row(1226, 'Tooltips wait (see A1226).'),
+        ]),
+      ),
+    );
+    expect(await onMain()).toBe(true);
+    expect(await git(repo, 'status', '--porcelain')).toBe('');
+  });
+
+  it('renumbers a replayed row when main took its number meanwhile', async () => {
+    const base = await formatDecisions(decisions(BASE_ROWS));
+    await mainMoves('formatted', { 'docs/decisions.md': base });
+    await git(repo, 'checkout', '-q', BRANCH);
+    await git(repo, 'reset', '-q', '--hard', 'main');
+    await commit('the agent', {
+      'docs/decisions.md': await formatDecisions(
+        decisions([...BASE_ROWS, '| A-NEW-1 | Tooltips wait (see A-NEW-1). |']),
+      ),
+    });
+    await commit('Number the new decisions: A-NEW-1 is A1226', {
+      'docs/decisions.md': await formatDecisions(
+        decisions([...BASE_ROWS, row(1226, 'Tooltips wait (see A1226).')]),
+      ),
+    });
+    await mainMoves('main decides', {
+      'docs/decisions.md': await formatDecisions(
+        decisions([...BASE_ROWS, row(1226, 'Main took this number.')]),
+      ),
+    });
+
+    const outcome = await rebaseOntoMain(sandbox, reserved);
+
+    expect(outcome).toMatchObject({ kind: 'rebased', renumbered: { A1226: 'A1227' } });
+    expect(read('docs/decisions.md')).toBe(
+      await formatDecisions(
+        decisions([
+          ...BASE_ROWS,
+          row(1226, 'Main took this number.'),
+          row(1227, 'Tooltips wait (see A1227).'),
+        ]),
+      ),
+    );
   });
 
   it('still leaves an edit of the same row to the agent when the padding differs', async () => {
@@ -387,5 +463,16 @@ describe('newRows (A1271)', () => {
       '| A-NEW-1 | A new decision                   |',
     ].join('\n');
     expect([...newRows(branch, new Set([1, 2, 3, 4]), main)]).toEqual([4]);
+  });
+});
+
+describe("the factory's numbering commit", () => {
+  it('reads the numbers from its subject, and nothing from any other', () => {
+    expect(numberingOf('Number the new decisions: A-NEW-1 is A1290, A-NEW-2 is A1291')).toEqual({
+      'A-NEW-1': 'A1290',
+      'A-NEW-2': 'A1291',
+    });
+    expect(numberingOf('Search: Folder lists every notebook')).toBeNull();
+    expect(numberingOf('Number the new decisions: whatever')).toBeNull();
   });
 });
