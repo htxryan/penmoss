@@ -54,6 +54,8 @@ object SettingsIcons {
     val Terminal = icon("Git notebooks", rect(3f, 4.5f, 18f, 15f, 2f) + "M7 9.5l3 2.5-3 2.5M12.5 15h4.5")
     val Key = icon("Key", circle(8f, 15.5f, 3.6f) + "M10.6 13 19.5 4.5M16.5 7.5l2.2 2.2M14.3 9.7l1.7 1.7")
     /** The note's Info sheet (T40 P7, NT23), the web's Info panel button. */
+    /** Settings → What’s New (PEN-109): a speaker announcing. */
+    val WhatsNew = icon("What’s New", "M4 10v4h3l6 4V6l-6 4zM16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10")
     val Info = icon("Info", "M12 3.5a8.5 8.5 0 1 1 0 17 8.5 8.5 0 0 1 0-17zM12 11v5.2M12 7.8h.01")
 
     /** Keyboard shortcuts (T40 P9, ST8): the web's keyboard icon. */

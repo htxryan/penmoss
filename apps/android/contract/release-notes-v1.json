@@ -1,0 +1,354 @@
+{
+  "version": 1,
+  "notes": {
+    "schema": 1,
+    "generated": "2026-11-20T00:00:00Z",
+    "releases": [
+      {
+        "version": "0.2.0",
+        "tag": "v0.2.0",
+        "build": 1170,
+        "date": "2026-11-08"
+      },
+      {
+        "version": "0.2.1",
+        "tag": "v0.2.1",
+        "build": 1180,
+        "date": "2026-11-20"
+      }
+    ],
+    "notes": [
+      {
+        "build": 1165,
+        "pr": 165,
+        "kind": "new",
+        "platform": null,
+        "text": "Quick capture."
+      },
+      {
+        "build": 1168,
+        "pr": 168,
+        "kind": "fixed",
+        "platform": "mac",
+        "text": "Mac only, before 0.2.0."
+      },
+      {
+        "build": 1171,
+        "pr": 171,
+        "kind": "fixed",
+        "platform": "mac",
+        "text": "Mac only, after 0.2.0."
+      },
+      {
+        "build": 1172,
+        "pr": 172,
+        "kind": "fixed",
+        "platform": "android",
+        "text": "The keyboard stays down."
+      },
+      {
+        "build": 1174,
+        "pr": 174,
+        "kind": "new",
+        "platform": null,
+        "text": "Release notes in the app."
+      },
+      {
+        "build": 1176,
+        "pr": 176,
+        "kind": "improved",
+        "platform": "mac",
+        "text": "Mac only."
+      },
+      {
+        "build": 1178,
+        "pr": 178,
+        "kind": "improved",
+        "platform": null,
+        "text": "Search ranks titles."
+      },
+      {
+        "build": 1183,
+        "pr": 183,
+        "kind": "new",
+        "platform": "android",
+        "text": "A What’s new screen."
+      },
+      {
+        "build": 1185,
+        "pr": 185,
+        "kind": "fixed",
+        "platform": null,
+        "text": "Daily notes open right."
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "a stable version: its own range, Android and both",
+      "current": "0.2.1",
+      "updatedFrom": null,
+      "expected": {
+        "status": "ok",
+        "current": {
+          "title": "In this version",
+          "builds": false,
+          "groups": [
+            {
+              "kind": "new",
+              "notes": [[1174, "Release notes in the app."]]
+            },
+            {
+              "kind": "improved",
+              "notes": [[1178, "Search ranks titles."]]
+            },
+            {
+              "kind": "fixed",
+              "notes": [[1172, "The keyboard stays down."]]
+            }
+          ]
+        },
+        "earlier": [
+          {
+            "title": "0.2.0",
+            "builds": false,
+            "groups": [
+              {
+                "kind": "new",
+                "notes": [[1165, "Quick capture."]]
+              }
+            ]
+          }
+        ],
+        "notice": null
+      }
+    },
+    {
+      "name": "the first stable release: everything up to it",
+      "current": "0.2.0",
+      "updatedFrom": null,
+      "expected": {
+        "status": "ok",
+        "current": {
+          "title": "In this version",
+          "builds": false,
+          "groups": [
+            {
+              "kind": "new",
+              "notes": [[1165, "Quick capture."]]
+            }
+          ]
+        },
+        "earlier": [],
+        "notice": null
+      }
+    },
+    {
+      "name": "an Alpha build: everything since the last release, with builds",
+      "current": "0.2.2-alpha.1185",
+      "updatedFrom": "0.2.2-alpha.1183",
+      "expected": {
+        "status": "ok",
+        "current": {
+          "title": "In this version (since 0.2.1)",
+          "builds": true,
+          "groups": [
+            {
+              "kind": "new",
+              "notes": [[1183, "A What’s new screen."]]
+            },
+            {
+              "kind": "fixed",
+              "notes": [[1185, "Daily notes open right."]]
+            }
+          ]
+        },
+        "earlier": [
+          {
+            "title": "0.2.1",
+            "builds": false,
+            "groups": [
+              {
+                "kind": "new",
+                "notes": [[1174, "Release notes in the app."]]
+              },
+              {
+                "kind": "improved",
+                "notes": [[1178, "Search ranks titles."]]
+              },
+              {
+                "kind": "fixed",
+                "notes": [[1172, "The keyboard stays down."]]
+              }
+            ]
+          },
+          {
+            "title": "0.2.0",
+            "builds": false,
+            "groups": [
+              {
+                "kind": "new",
+                "notes": [[1165, "Quick capture."]]
+              }
+            ]
+          }
+        ],
+        "notice": "build 1185"
+      }
+    },
+    {
+      "name": "an Alpha build before any release",
+      "current": "0.2.0-alpha.1168",
+      "updatedFrom": "0.1.9",
+      "expected": {
+        "status": "ok",
+        "current": {
+          "title": "In this version",
+          "builds": true,
+          "groups": [
+            {
+              "kind": "new",
+              "notes": [[1165, "Quick capture."]]
+            }
+          ]
+        },
+        "earlier": [],
+        "notice": "build 1168"
+      }
+    },
+    {
+      "name": "updated to a stable version with notes",
+      "current": "0.2.1",
+      "updatedFrom": "0.2.0",
+      "expected": {
+        "status": "ok",
+        "current": {
+          "title": "In this version",
+          "builds": false,
+          "groups": [
+            {
+              "kind": "new",
+              "notes": [[1174, "Release notes in the app."]]
+            },
+            {
+              "kind": "improved",
+              "notes": [[1178, "Search ranks titles."]]
+            },
+            {
+              "kind": "fixed",
+              "notes": [[1172, "The keyboard stays down."]]
+            }
+          ]
+        },
+        "earlier": [
+          {
+            "title": "0.2.0",
+            "builds": false,
+            "groups": [
+              {
+                "kind": "new",
+                "notes": [[1165, "Quick capture."]]
+              }
+            ]
+          }
+        ],
+        "notice": "0.2.1"
+      }
+    },
+    {
+      "name": "updated to a build with only Mac notes: no notice",
+      "current": "0.2.1-alpha.1171",
+      "updatedFrom": "0.2.1-alpha.1170",
+      "expected": {
+        "status": "ok",
+        "current": {
+          "title": "In this version (since 0.2.0)",
+          "builds": true,
+          "groups": []
+        },
+        "earlier": [
+          {
+            "title": "0.2.0",
+            "builds": false,
+            "groups": [
+              {
+                "kind": "new",
+                "notes": [[1165, "Quick capture."]]
+              }
+            ]
+          }
+        ],
+        "notice": null
+      }
+    },
+    {
+      "name": "a version the file does not know",
+      "current": "0.1.9",
+      "updatedFrom": "0.1.8",
+      "expected": {
+        "status": "ok",
+        "current": null,
+        "earlier": [
+          {
+            "title": "0.2.1",
+            "builds": false,
+            "groups": [
+              {
+                "kind": "new",
+                "notes": [[1174, "Release notes in the app."]]
+              },
+              {
+                "kind": "improved",
+                "notes": [[1178, "Search ranks titles."]]
+              },
+              {
+                "kind": "fixed",
+                "notes": [[1172, "The keyboard stays down."]]
+              }
+            ]
+          },
+          {
+            "title": "0.2.0",
+            "builds": false,
+            "groups": [
+              {
+                "kind": "new",
+                "notes": [[1165, "Quick capture."]]
+              }
+            ]
+          }
+        ],
+        "notice": null
+      }
+    },
+    {
+      "name": "no file yet",
+      "current": "0.2.1",
+      "updatedFrom": "0.2.0",
+      "file": null,
+      "expected": {
+        "status": "none",
+        "current": null,
+        "earlier": [],
+        "notice": null
+      }
+    },
+    {
+      "name": "a newer schema",
+      "current": "0.2.1",
+      "updatedFrom": null,
+      "file": {
+        "schema": 2,
+        "generated": "2026-11-20T00:00:00Z",
+        "releases": [],
+        "notes": []
+      },
+      "expected": {
+        "status": "newer",
+        "current": null,
+        "earlier": [],
+        "notice": null
+      }
+    }
+  ]
+}

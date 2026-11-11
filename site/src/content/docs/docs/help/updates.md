@@ -37,7 +37,7 @@ You can also update by hand at any time: download the newest [Penmoss.dmg](https
 
 ## On Android
 
-The Android app does not update itself. Download the newest [Penmoss.apk](https://github.com/htxryan/penmoss/releases/latest/download/Penmoss.apk) and open it: it installs over the app you have, and keeps your notebooks. See [Install on Android](/docs/install/android/#updates).
+The Android app does not update itself. After you install a newer version, it says so once, and **Settings → What’s New** shows what changed ([The Android app](/docs/android/#whats-new)). Download the newest [Penmoss.apk](https://github.com/htxryan/penmoss/releases/latest/download/Penmoss.apk) and open it: it installs over the app you have, and keeps your notebooks. See [Install on Android](/docs/install/android/#updates).
 
 ## Trying Alpha
 

@@ -24,6 +24,7 @@ import {
   SUMS,
   alphaState,
   appVersion,
+  playVersion,
   draftStable,
   macAsset,
   newestStable,
@@ -556,6 +557,12 @@ describe('versions (P5)', () => {
     const tags = ['v0.9.9', 'v0.10.1', 'v0.2.0', 'v0.10.2-rc.1', 'v1.0', 'v01.2.3', 'alpha'];
     assert.deepEqual(newestStable(tags), [0, 10, 1]);
     assert.equal(appVersion(tags, 1600), '0.10.2-alpha.1600');
+    // A Play bundle takes the newest main build's (PEN-109, RN15).
+    assert.equal(
+      playVersion(['v0.2.0'], ['build-1180', 'v0.2.0', 'build-1179', 'alpha']),
+      '0.2.1-alpha.1180',
+    );
+    assert.throws(() => playVersion(['v0.2.0'], ['alpha', 'v0.2.0']), /No build-N release/);
     assert.equal(appVersion(['v0.2.0'], 1601), '0.2.1-alpha.1601');
     assert.equal(appVersion(['v1.4.9', 'v1.10.0'], 7), '1.10.1-alpha.7');
   });

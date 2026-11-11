@@ -440,7 +440,9 @@ tasks:
     cmds:
       # versionCode (A595): PENMOSS_VERSION_CODE if set, else minutes since 2026-01-01 UTC, which
       # rises with every build and stays far above the sideload builds' CI run numbers (A400).
-      - PENMOSS_VERSION_CODE="${PENMOSS_VERSION_CODE:-$(( ($(date -u +%s) - 1767225600) / 60 ))}" ./gradlew --console=plain :app:bundleRelease {{.CLI_ARGS}}
+      # versionName (PEN-109, RN15): PENMOSS_VERSION_NAME if set, else the newest main build's
+      # alpha-style version, so the app places itself in the release notes.
+      - PENMOSS_VERSION_NAME="${PENMOSS_VERSION_NAME:-$(REPO="${REPO:-htxryan/penmoss}" node ../../.github/scripts/releases.mjs play-version)}" PENMOSS_VERSION_CODE="${PENMOSS_VERSION_CODE:-$(( ($(date -u +%s) - 1767225600) / 60 ))}" ./gradlew --console=plain :app:bundleRelease {{.CLI_ARGS}}
 
   android:publish-internal:
     desc: 'Android: upload the release bundle to Play internal testing (needs ~/.config/penmoss/play-service-account.json; `-- --dry-run` validates, then deletes the edit; docs/android.md)'
