@@ -1,13 +1,12 @@
 import { Icon } from '@penmoss/ui/icons';
 import { DialogClose } from '../shell/DialogClose';
-import { tagTree, type TagNode } from '@penmoss/core/tags';
-import { buildTree, type FolderNode } from '@penmoss/core/workspace';
 import { Select } from '@penmoss/ui/controls/Select';
 import {
   useEffect,
   useId,
   useLayoutEffect,
   useMemo,
+  useReducer,
   useRef,
   useState,
   type KeyboardEvent,
@@ -25,6 +24,14 @@ import {
   type SearchOutcome,
 } from './service';
 import type { Searcher } from './sources';
+import {
+  folderGroups,
+  folderOptions,
+  notebookTags,
+  tagOptions,
+  type FilterNotebook,
+} from './filter-options';
+import type { Source } from '../sources/registry';
 
 /** This device's words answer each keystroke at once (A111); Enter answers without waiting. */
 const TYPING_MS = 60;
@@ -43,21 +50,40 @@ const DATE_RANGES: ReadonlyArray<{ readonly label: string; readonly days: number
   { label: 'Past Year', days: 365 },
 ];
 
-/** Folders in tree order, each with its depth, for the folder filter. */
-function folderOptions(
-  folders: readonly FolderNode[],
-  depth = 0,
-): Array<{ id: string; label: string }> {
-  return folders.flatMap((folder) => [
-    { id: folder.id, label: `${' '.repeat(depth)}${folder.name}` },
-    ...folderOptions(folder.folders, depth + 1),
-  ]);
-}
+const NO_SOURCES: readonly Source[] = [];
 
-function tagOptions(nodes: readonly TagNode[]): string[] {
-  return nodes.flatMap((node) => [node.tag, ...tagOptions(node.children)]);
-}
+/** A grouped folder's option value: its notebook and its id, so two notebooks' never meet. */
+const groupedValue = (notebookId: string, folderId: string) =>
+  JSON.stringify([notebookId, folderId]);
 
+/**
+ * Every open notebook's folders and tags, read again when any notebook's notes or folders
+ * change, so a folder made while the dialog is open shows (PEN-71).
+ */
+function useFilterNotebooks(sources: readonly Source[]): FilterNotebook[] {
+  const [revision, bump] = useReducer((count: number) => count + 1, 0);
+  useEffect(() => {
+    const offs = sources.flatMap((source) => [
+      source.notes.subscribe(bump),
+      source.workspace.subscribe(bump),
+    ]);
+    return () => {
+      for (const off of offs) off();
+    };
+  }, [sources]);
+  return useMemo(
+    () =>
+      sources.map((source) => ({
+        id: source.id,
+        name: source.name,
+        folders: source.workspace.getState().snapshot.folders,
+        tags: source.notes.list().map((note) => note.tags),
+      })),
+    // `revision` reads the notebooks again when one changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [sources, revision],
+  );
+}
 function Marked({ text }: { text: string }) {
   return (
     <>
@@ -107,18 +133,34 @@ export function SearchOverlay({ service, onOpenNote, onClose }: SearchOverlayPro
   const results = useRef<HTMLDivElement>(null);
   const id = useId();
 
-  // With several notebooks, a Notebook filter first (Quanta feedback 3, item 2; A1127): the
-  // folders are then that notebook's.
-  const sources = useSourcesState()?.all ?? [];
-  const notebook = sources.find((source) => source.id === filters.notebookId) ?? null;
-  const folderRecords = notebook
-    ? notebook.workspace.getState().snapshot.folders
-    : workspace.snapshot.folders;
-  const folders = useMemo(
-    () => folderOptions(buildTree(folderRecords, []).folders),
-    [folderRecords],
+  // With several notebooks, a Notebook filter first (Quanta feedback 3, item 2; A1127). Under
+  // All Notebooks, Folder lists every notebook's folders grouped by notebook and Tag every
+  // notebook's tags; with one chosen, that notebook's (PEN-71, A1290).
+  const sourcesState = useSourcesState();
+  const sources = useMemo(() => sourcesState?.all ?? NO_SOURCES, [sourcesState]);
+  const several = sources.length > 1;
+  const notebooks = useFilterNotebooks(several ? sources : NO_SOURCES);
+  const notebook = notebooks.find((each) => each.id === filters.notebookId) ?? null;
+  const grouped = several && !notebook;
+  const folderRecords = notebook ? notebook.folders : workspace.snapshot.folders;
+  const folders = useMemo(() => folderOptions(folderRecords), [folderRecords]);
+  const groups = useMemo(() => (grouped ? folderGroups(notebooks) : []), [grouped, notebooks]);
+  const ownTags = useMemo(() => tagOptions(list.map((note) => note.tags)), [list]);
+  /** Tag's list with this notebook chosen (null: All Notebooks). */
+  const tagsFor = (notebookId: string | null): string[] => {
+    if (!several) return ownTags;
+    const chosen = notebooks.find((each) => each.id === notebookId);
+    return notebookTags(chosen ? [chosen] : notebooks);
+  };
+  const tags = useMemo(
+    () => (several ? notebookTags(notebook ? [notebook] : notebooks) : ownTags),
+    [several, notebook, notebooks, ownTags],
   );
-  const tags = useMemo(() => tagOptions(tagTree(list.map((note) => note.tags))), [list]);
+  /** Notebook changed: Folder to All Folders (or the folder picked), Tag to Any Tag if gone. */
+  const chooseNotebook = (notebookId: string | null, folderId: string | null = null) => {
+    const tag = filters.tag && tagsFor(notebookId).includes(filters.tag) ? filters.tag : null;
+    setFilters({ ...filters, notebookId, folderId, tag });
+  };
 
   // Notes changed: the index catches up before its next search.
   useEffect(() => service.invalidate(), [service, list]);
@@ -277,9 +319,7 @@ export function SearchOverlay({ service, onOpenNote, onClose }: SearchOverlayPro
                 aria-label="Notebook"
                 data-testid="search-notebook"
                 value={filters.notebookId ?? ''}
-                onChange={(event) =>
-                  setFilters({ ...filters, notebookId: event.target.value || null, folderId: null })
-                }
+                onChange={(event) => chooseNotebook(event.target.value || null)}
               >
                 <option value="">All Notebooks</option>
                 {sources.map((source) => (
@@ -294,15 +334,35 @@ export function SearchOverlay({ service, onOpenNote, onClose }: SearchOverlayPro
             <Select
               size="small"
               aria-label="Folder"
+              data-testid="search-folder"
               value={filters.folderId ?? ''}
-              onChange={(event) => setFilters({ ...filters, folderId: event.target.value || null })}
+              onChange={(event) => {
+                const value = event.target.value;
+                if (grouped && value) {
+                  // A folder from a notebook's group: Notebook switches to its notebook.
+                  const [notebookId, folderId] = JSON.parse(value) as [string, string];
+                  chooseNotebook(notebookId, folderId);
+                } else {
+                  setFilters({ ...filters, folderId: value || null });
+                }
+              }}
             >
               <option value="">All Folders</option>
-              {folders.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folder.label}
-                </option>
-              ))}
+              {grouped
+                ? groups.map((group) => (
+                    <optgroup key={group.notebookId} label={group.name}>
+                      {group.folders.map((folder) => (
+                        <option key={folder.id} value={groupedValue(group.notebookId, folder.id)}>
+                          {folder.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))
+                : folders.map((folder) => (
+                    <option key={folder.id} value={folder.id}>
+                      {folder.label}
+                    </option>
+                  ))}
             </Select>
           </div>
           <div className="search-filter">

@@ -1,0 +1,148 @@
+import { expect, test, type Locator, type Page } from '@playwright/test';
+import {
+  body,
+  gitNotebook,
+  go,
+  launch,
+  mainBounds,
+  notebookSection,
+  removeDataDirs,
+  ULID,
+  type Launched,
+} from './support';
+
+// PEN-71 (A1290, amending A1127) in the Mac app: with two git notebooks open and Notebook on
+// All Notebooks, the search dialog's Folder list has both notebooks' folders, each under its
+// notebook's name (AC1); picking one sets Notebook to that notebook (AC2); Tag lists both
+// notebooks' tags (AC3). The web suite's search-folders.spec.ts covers the rest.
+
+const opened: Launched[] = [];
+
+test.afterEach(async () => {
+  for (const { app } of opened.splice(0)) await app.close().catch(() => undefined);
+});
+test.afterAll(() => removeDataDirs());
+
+/** A notebook's action on its name's row, shown while the pointer is over the row. */
+async function action(section: Locator, name: string): Promise<Locator> {
+  const head = section.locator('.sb-section-head:has(.tree-actions)').first();
+  await head.scrollIntoViewIfNeeded();
+  await head.hover();
+  return head.locator('.tree-actions').getByRole('button', { name, exact: true });
+}
+
+async function newFolder(page: Page, notebook: string, name: string): Promise<void> {
+  const section = notebookSection(page, notebook);
+  await (await action(section, 'New Folder')).click();
+  const input = page.getByRole('textbox', { name: 'New folder name' });
+  await expect(input).toBeFocused();
+  await input.fill(name);
+  await input.press('Enter');
+  await expect(section.getByRole('treeitem', { name, exact: true })).toBeVisible();
+}
+
+/** A note at the notebook's top level, or in one of its folders (from the folder's menu). */
+async function newNote(
+  page: Page,
+  notebook: string,
+  title: string,
+  text: string,
+  folder?: string,
+): Promise<void> {
+  const section = notebookSection(page, notebook);
+  if (folder) {
+    await section.getByRole('treeitem', { name: folder, exact: true }).click({ button: 'right' });
+    await page
+      .getByRole('menu', { name: `Folder ${folder}` })
+      .getByRole('menuitem', { name: 'New Note Here' })
+      .click();
+  } else await (await action(section, 'New Note in This Notebook')).click();
+  await expect(page).toHaveURL(ULID);
+  await expect(page.getByTestId('note-title')).toBeFocused();
+  await page.keyboard.type(title);
+  await page.keyboard.press('Enter');
+  await page.keyboard.type(text);
+  await expect(body(page)).toContainText(text.split(' #')[0]!);
+}
+
+/** The groups of a select, each as its label and its options' labels. */
+const groupsOf = (select: Locator) =>
+  select.evaluate((element) =>
+    [...element.querySelectorAll('optgroup')].map((group) => ({
+      label: group.label,
+      options: [...group.querySelectorAll('option')].map((option) => option.label),
+    })),
+  );
+
+const optionLabels = (select: Locator) =>
+  select.evaluate((element) =>
+    [...(element as HTMLSelectElement).options].map((option) => option.label),
+  );
+
+const shown = (select: Locator) =>
+  select.evaluate((element) => (element as HTMLSelectElement).selectedOptions[0]?.label ?? '');
+
+test('search: Folder lists both notebooks’ folders by notebook; a pick switches Notebook', async () => {
+  const launched = await launch();
+  opened.push(launched);
+  const { page, errors } = launched;
+  await mainBounds(launched.app, { x: 0, y: 0, width: 1280, height: 720 });
+  await gitNotebook(launched, 'Notes');
+  await gitNotebook(launched, 'Work');
+
+  await newFolder(page, 'Notes', 'Archive');
+  await newFolder(page, 'Work', 'Projects');
+  await newNote(page, 'Notes', 'Notes Moss', 'Moss at home #alpha ');
+  await newNote(page, 'Work', 'Work Moss', 'Moss at work #beta ', 'Projects');
+
+  // Leave the note, so the editor's last words are saved and indexed before the search.
+  await go(page, '/');
+  await expect(page.getByTestId('note-body')).toHaveCount(0);
+  await page.getByTestId('open-search').click();
+  const search = page.getByTestId('search');
+  const box = search.getByRole('combobox', { name: 'Search notes' });
+  await expect(box).toBeFocused();
+  const hits = search.locator('.search-hit');
+  // A note only just saved can miss a search already under way; typing again asks once more.
+  await expect(async () => {
+    await box.fill('');
+    await box.fill('moss');
+    await expect(hits.filter({ hasText: 'Notes Moss' })).toHaveCount(1, { timeout: 3_000 });
+    await expect(hits.filter({ hasText: 'Work Moss' })).toHaveCount(1, { timeout: 3_000 });
+  }).toPass({ timeout: 30_000 });
+  const notebook = search.getByRole('combobox', { name: 'Notebook' });
+  const folder = search.getByRole('combobox', { name: 'Folder' });
+  const tag = search.getByRole('combobox', { name: 'Tag' });
+  await expect.poll(() => shown(notebook)).toBe('All Notebooks');
+
+  // AC1: All Folders, then each notebook's folders under its name, in the Notebook picker's order.
+  // (Only the two notebooks made here have folders, so only they have groups.)
+  const folders: Record<string, string> = { Notes: 'Archive', Work: 'Projects' };
+  const order = (await optionLabels(notebook)).slice(1);
+  expect(order).toEqual(expect.arrayContaining(['Notes', 'Work']));
+  const expected = order
+    .filter((name) => name in folders)
+    .map((name) => ({ label: name, options: [folders[name]!] }));
+  await expect.poll(() => groupsOf(folder)).toEqual(expected);
+  expect((await optionLabels(folder))[0]).toBe('All Folders');
+  // AC3: both notebooks' tags.
+  await expect
+    .poll(() => optionLabels(tag))
+    .toEqual(expect.arrayContaining(['Any Tag', '#alpha', '#beta']));
+  await page.waitForTimeout(1000);
+
+  // AC2: a folder picked from Work's group sets Notebook to Work; Notes' note leaves the results.
+  await folder.selectOption({ label: 'Projects' });
+  await expect.poll(() => shown(notebook)).toBe('Work');
+  await expect.poll(() => shown(folder)).toBe('Projects');
+  await expect(hits.filter({ hasText: 'Notes Moss' })).toHaveCount(0);
+  await expect(hits).toHaveCount(1);
+  await expect(hits.first()).toContainText('Work Moss');
+  await expect.poll(() => groupsOf(folder)).toEqual([]);
+  await folder.focus();
+  // Held on the result for the recording.
+  await page.waitForTimeout(2000);
+  await expect.poll(() => shown(notebook)).toBe('Work');
+  await expect(hits.first()).toContainText('Work Moss');
+  expect(errors).toEqual([]);
+});
