@@ -693,6 +693,19 @@ describe('publish-alpha (P4)', () => {
     assert.equal(gh.tagTargets.get(ALPHA), sha(1512));
   });
 
+  it('keeps the notes section publish-notes wrote when it rewrites the text (PEN-106)', async () => {
+    const gh = new FakeGh();
+    await publishAlpha(gh, androidPart(alphaOf(1510)));
+    const section =
+      "<!-- penmoss-notes -->\n### What's new since notes began\n<!-- /penmoss-notes -->";
+    gh.find(ALPHA).body = `${section}\n\n${gh.find(ALPHA).body}`;
+    await publishAlpha(gh, macPart(alphaOf(1510)));
+    const body = gh.find(ALPHA).body;
+    assert.ok(body.startsWith(`${section}\n\n`), body);
+    assert.equal(body.split('<!-- penmoss-notes -->').length, 2, 'once, not twice');
+    assert.equal(alphaState(body).mac?.build, 1510, "alpha's own record is still read");
+  });
+
   it('an APK-only build moves the tag to its commit and keeps the older Mac app', async () => {
     const gh = new FakeGh();
     const first = alphaOf(1510);

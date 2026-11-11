@@ -611,6 +611,8 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: write
+      # publish-notes reads which pull requests each commit came from (PEN-106, A1301).
+      pull-requests: read
     concurrency:
       group: releases
       cancel-in-progress: false
@@ -645,6 +647,14 @@ jobs:
           node .github/scripts/releases.mjs publish-apk --run "$RUN" --sha "$SHA" --apk apk/app-release.apk
           node .github/scripts/releases.mjs publish-alpha --run "$RUN" --sha "$SHA" \
             --version "$(cat apk/version.txt)" --apk apk/app-release.apk
+
+      - name: Release notes from the pull requests merged since the last build (A1301)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN: ${{ env.PENMOSS_RUN }}
+          SHA: ${{ github.sha }}
+        run: node .github/scripts/releases.mjs publish-notes --run "$RUN" --sha "$SHA"
 
   mac:
     name: Mac app dmg (on Ryan's Mac)
