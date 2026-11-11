@@ -70,6 +70,7 @@ import { JournalScope } from './sources/JournalScope';
 import { NoteSourceScope } from './sources/NoteSourceScope';
 import { SourceHeading, SourceSection } from './sources/SourceSection';
 import { WindowBlockedToast } from './window/BlockedToast';
+import { ToastStack } from './toasts/ToastStack';
 import { NoteWindow } from './window/NoteWindow';
 import { listenForOpenInMain } from './window/open';
 
@@ -135,6 +136,8 @@ export function App({ location }: { location?: RouteLocation | undefined }) {
         <CommandOverlays currentNoteId={overlaysNote} />
       </OverlaysScope>
       <WindowBlockedToast />
+      {/* Every toast in this window, at its bottom centre (PEN-63); a note window has its own. */}
+      <ToastStack />
       <TooltipLayer />
     </CommandsProvider>
   );

@@ -6,6 +6,7 @@ import { Icon } from '@penmoss/ui/icons';
 import { useId, useState } from 'react';
 import type { DesktopUpdateChannel } from '../desktop/bridge';
 import { nameOf, updateStatus, useUpdates } from './updates';
+import { ToastSlot } from '../toasts/ToastSlot';
 
 const CHANNELS: ReadonlyArray<{ value: DesktopUpdateChannel; label: string }> = [
   { value: 'stable', label: 'Stable' },
@@ -158,9 +159,9 @@ export function UpdateNotice() {
       ? state
       : null;
   return (
-    <div role="status" className="toast-live">
+    <ToastSlot>
       {shown && found ? (
-        <div className="toast toast-with-action" data-testid="update-notice">
+        <div className="toast toast-with-action" data-tone="info" data-testid="update-notice">
           <Icon name="refresh" />
           <span>{updateStatus(shown)}</span>
           {shown.phase === 'available' ? (
@@ -187,6 +188,6 @@ export function UpdateNotice() {
           ) : null}
         </div>
       ) : null}
-    </div>
+    </ToastSlot>
   );
 }

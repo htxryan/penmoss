@@ -11,6 +11,7 @@ import {
   useTrashedNote,
   type Trashed,
 } from './trashed';
+import { ToastSlot } from '../toasts/ToastSlot';
 
 /**
  * "Moved “…” to Trash" with Undo (T39 pass 2, A524). A note moved to Trash by mistake (the
@@ -22,7 +23,8 @@ import {
 export function TrashedToast() {
   const trashed = useTrashedNote();
   const toast = useRef<HTMLDivElement>(null);
-  const undo = useRef<HTMLButtonElement>(null);
+  // In the window's stack (PEN-63), Undo exists once the stack has made room for it.
+  const [undo, setUndo] = useState<HTMLButtonElement | null>(null);
   const [held, setHeld] = useState(false);
   /** Why Undo failed, for what is still in Trash (the toast offers Undo for those again). */
   const [failed, setFailed] = useState<{ readonly for: Trashed; readonly message: string } | null>(
@@ -30,8 +32,8 @@ export function TrashedToast() {
   );
 
   useEffect(() => {
-    if (trashed) undo.current?.focus();
-  }, [trashed]);
+    if (trashed) undo?.focus();
+  }, [trashed, undo]);
 
   // Counted from when the toast is shown and neither pointed at nor focused; renders in
   // between do not restart it.
@@ -83,11 +85,12 @@ export function TrashedToast() {
   };
 
   return (
-    <div role="status" className="toast-live">
+    <ToastSlot>
       {trashed ? (
         <div
           ref={toast}
           className="toast toast-with-action"
+          data-tone="info"
           data-testid="trashed-toast"
           onPointerEnter={() => setHeld(true)}
           onPointerLeave={() => setHeld(false)}
@@ -117,7 +120,7 @@ export function TrashedToast() {
             )}
           </span>
           <button
-            ref={undo}
+            ref={setUndo}
             type="button"
             className="toast-action"
             data-ui="submit"
@@ -137,6 +140,6 @@ export function TrashedToast() {
           </button>
         </div>
       ) : null}
-    </div>
+    </ToastSlot>
   );
 }

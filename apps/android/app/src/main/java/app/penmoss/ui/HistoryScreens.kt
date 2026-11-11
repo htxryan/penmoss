@@ -85,7 +85,7 @@ fun HistoryScreen(
                 )
             }
         },
-        snackbarHost = { SnackbarHost(snackbar) },
+        snackbarHost = { SnackbarHost(snackbar) { PenmossSnackbar(it) } },
         contentWindowInsets = if (embedded) WindowInsets(0) else ScaffoldDefaults.contentWindowInsets,
     ) { padding ->
         PullToRefreshBox(isRefreshing = ui.loading, onRefresh = onRefresh, modifier = Modifier.fillMaxSize().padding(padding)) {

@@ -1,8 +1,8 @@
 import { buildTree } from '@penmoss/core/workspace';
 import { useSettingsInStep } from '../sources/settings-in-step';
 import { openLightboxNow, setLightboxHooks } from '@penmoss/editor';
-import { Icon } from '@penmoss/ui/icons';
 import { TrashedToast } from '../trash/TrashedToast';
+import { showToast } from '../toasts/toasts';
 import { chooseTheme, resolveThemeSettings, toggleDarkMode } from '@penmoss/ui/theme';
 import { WorkspaceError } from '@penmoss/sync-client/workspace';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -196,12 +196,14 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
   /** The switcher's notes, fixed while it is open (the list re-sorts as notes change). */
   const [recent, setRecent] = useState<ReturnType<typeof recentNotes>>([]);
   /** What the last "Move to folder…" did, shown for a moment (T39); `ok` when it moved. */
-  const [moved, setMoved] = useState<{ readonly text: string; readonly ok: boolean } | null>(null);
-  useEffect(() => {
-    if (!moved) return;
-    const timer = setTimeout(() => setMoved(null), MOVED_MS);
-    return () => clearTimeout(timer);
-  }, [moved]);
+  // In the window's toast stack (PEN-63): a check when it moved, a warning when it did not.
+  const setMoved = (moved: { readonly text: string; readonly ok: boolean }) =>
+    showToast({
+      text: moved.text,
+      tone: moved.ok ? 'done' : 'error',
+      testId: 'move-status',
+      ms: MOVED_MS,
+    });
 
   const mru = () =>
     recentNotes(openList, readOpened(browserStorage()), currentNoteId, RECENT_LIMIT);
@@ -393,15 +395,6 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
 
   return (
     <>
-      {/* Always in the page, so screen readers announce what is put in it (T39 review). */}
-      <div role="status" className="toast-live">
-        {moved ? (
-          <p className="toast" data-testid="move-status">
-            {moved.ok ? <Icon name="check" /> : null}
-            {moved.text}
-          </p>
-        ) : null}
-      </div>
       <TrashedToast />
       <FeedbackToasts />
       {renderOverlay()}

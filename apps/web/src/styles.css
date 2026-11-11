@@ -910,35 +910,8 @@ a {
   min-height: 0.25rem;
 }
 
-/* Nor does an empty notice add its margin there. */
-.sb-section .tree-message:empty {
-  margin: 0;
-}
-
 .sb-section .tree[data-drop] .tree-end {
   min-height: 2.5rem;
-}
-
-.tree-message {
-  /* Never shrunk by the scrolling tree above it: the whole notice shows (B7). */
-  flex: none;
-  margin: 0.25rem 0.25rem 0;
-  overflow-wrap: anywhere;
-  color: var(--pm-fg);
-  font-size: 0.8rem;
-  /* A status line with no controls: a drop or tap on the rows under it reaches them (A558). */
-  pointer-events: none;
-}
-
-/* Sticks to the bottom of the scrolling sidebar so a refusal is always in view. */
-.tree-message:not(:empty) {
-  position: sticky;
-  bottom: 0.25rem;
-  padding: 0.4rem 0.6rem;
-  border: 1px solid var(--pm-border);
-  border-radius: 0;
-  background: var(--pm-warn-bg);
-  box-shadow: 0 4px 14px color-mix(in oklab, var(--pm-shadow-color) 12%, transparent);
 }
 
 .confirm {
@@ -1357,48 +1330,83 @@ a {
   display: none;
 }
 
-/* Brief confirmations (copy): bottom centre, after the prototype's toasts. */
-.toast {
+/*
+ * The window's toasts (PEN-63): one stack at the bottom centre, newest at the bottom, 8 px
+ * apart, at most three. It never takes the pointer; only a toast with controls does (A558).
+ */
+.toast-stack {
   position: fixed;
   z-index: 80;
   bottom: calc(1.25rem + env(safe-area-inset-bottom));
   left: 50%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  max-width: calc(100vw - 2rem);
-  margin: 0;
-  padding: 0.55rem 0.9rem;
-  border-radius: 0;
-  background: var(--pm-fg);
-  box-shadow: var(--pm-popover-shadow);
-  color: var(--pm-bg);
-  font-size: var(--pm-text-sm);
+  width: max-content;
+  max-width: min(28rem, calc(100vw - 2rem));
   translate: -50% 0;
-  animation: pm-rise var(--pm-medium) var(--pm-ease);
+  pointer-events: none;
+}
+
+.toast-slot {
+  display: contents;
+}
+
+/* A raised card in the theme's own colours, square (A976). */
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: 2.5rem;
+  margin: 0;
+  padding: 0.5rem 1rem 0.5rem 0.875rem;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--pm-border-strong);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-popover-shadow);
+  color: var(--pm-fg);
+  font-size: var(--pm-text-sm);
+  line-height: 1.4;
+  animation: pm-toast-in var(--pm-medium) var(--pm-ease);
+}
+
+/* Only a toast with controls takes the pointer: a text toast lets a click or drop through. */
+.toast:has(button, a) {
+  pointer-events: auto;
 }
 
 .toast .i {
-  color: color-mix(in oklab, var(--pm-accent), var(--pm-bg) 40%);
+  flex: none;
+  color: var(--pm-muted);
 }
 
-/* The toasts' live region (T39 review): always in the page, so what is put in it is read out. */
-.toast-live {
-  position: fixed;
-  z-index: 80;
+/* A check for a success, in the accent; a warning for a refusal or failure, in danger. */
+.toast[data-tone='done'] .toast-glyph,
+.toast .toast-glyph[data-icon='check'] {
+  color: var(--pm-accent);
+}
+
+.toast[data-tone='error'] .toast-glyph,
+.toast .toast-glyph[data-icon='warning'] {
+  color: var(--pm-danger);
 }
 
 /* A toast with an action (A524): Undo after Move to Trash. */
 .toast-with-action {
-  padding-right: 0.4rem;
+  padding-right: 0.25rem;
 }
 
 .toast-action,
 .toast-close {
   display: inline-flex;
+  flex: none;
   align-items: center;
   justify-content: center;
-  min-height: 1.9rem;
+  min-height: 2rem;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -1409,24 +1417,45 @@ a {
 
 .toast-action {
   padding: 0 0.6rem;
-  color: color-mix(in oklab, var(--pm-accent), var(--pm-bg) 40%);
+  color: var(--pm-accent);
   font-weight: 600;
 }
 
 .toast-close {
-  width: 1.9rem;
-  opacity: 0.75;
+  width: 2rem;
+  color: var(--pm-muted);
+}
+
+.toast-close .i {
+  color: inherit;
 }
 
 .toast-action:hover,
 .toast-close:hover {
-  background: color-mix(in oklab, var(--pm-bg) 14%, transparent);
+  background: var(--pm-hover);
+}
+
+.toast-close:hover {
+  color: var(--pm-fg);
 }
 
 .toast-action:focus-visible,
 .toast-close:focus-visible {
-  outline: 2px solid var(--pm-bg);
-  outline-offset: 1px;
+  outline: none;
+  box-shadow: var(--pm-ring);
+}
+
+@keyframes pm-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Going: it fades. */
+.toast[data-leaving] {
+  opacity: 0;
+  transition: opacity var(--pm-fast) var(--pm-ease);
 }
 
 .note-main:focus {
@@ -1459,6 +1488,11 @@ a {
   .tooltip,
   .toast {
     animation: none;
+  }
+
+  .toast[data-leaving] {
+    opacity: 0;
+    transition: none;
   }
 }
 
@@ -4092,7 +4126,7 @@ button.history-entry:hover {
     animation: pm-fade var(--pm-medium) var(--pm-ease);
   }
 
-  .toast {
+  .toast-stack {
     bottom: calc(4.5rem + env(safe-area-inset-bottom));
   }
 
@@ -5448,9 +5482,14 @@ button.history-entry:hover {
   padding-inline: 0;
 }
 
-/* Confirmations (copy, moved) float above the status bar while it shows (the T39 review). */
-body:has(.status-bar) .toast {
-  bottom: calc(1.25rem + var(--status-bar-height) + env(safe-area-inset-bottom));
+/*
+ * Toasts float above the status bar while it shows (the T39 review); at a phone's width they
+ * keep clear of the format bar instead.
+ */
+@media (min-width: 701px) {
+  body:has(.status-bar) .toast-stack {
+    bottom: calc(1.25rem + var(--status-bar-height) + env(safe-area-inset-bottom));
+  }
 }
 
 /* Settings → Devices and Agent Tokens → Agent activity (T42, A561). */

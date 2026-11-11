@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.penmoss.engine.api.AgentActivityEntry
 import app.penmoss.ui.ACTIVITY_GROUPS
+import app.penmoss.ui.PenmossSnackbar
 import app.penmoss.ui.AgentActivityUi
 import app.penmoss.ui.activityAgents
 import app.penmoss.ui.activityDetail
@@ -79,7 +80,7 @@ fun AgentActivityScreen(
     }
     Scaffold(
         topBar = { TopAppBar(title = { Text("Agent Activity") }, navigationIcon = { BackButton(onBack) }) },
-        snackbarHost = { SnackbarHost(snackbar) },
+        snackbarHost = { SnackbarHost(snackbar) { PenmossSnackbar(it) } },
     ) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("agentActivity"), contentPadding = PaddingValues(bottom = 24.dp)) {
             item {

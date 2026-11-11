@@ -1,6 +1,7 @@
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect } from 'react';
 import { blockedWindow, useBlockedWindow } from './open';
+import { ToastSlot } from '../toasts/ToastSlot';
 
 /** How long the toast stays. */
 const BLOCKED_MS = 10_000;
@@ -19,9 +20,9 @@ export function WindowBlockedToast() {
     return () => clearTimeout(timer);
   }, [blocked]);
   return (
-    <div role="status" className="toast-live">
+    <ToastSlot>
       {blocked ? (
-        <div className="toast toast-with-action" data-testid="window-blocked">
+        <div className="toast toast-with-action" data-tone="info" data-testid="window-blocked">
           <Icon name="info" />
           <span>The browser blocked the new window.</span>
           <a
@@ -45,6 +46,6 @@ export function WindowBlockedToast() {
           </button>
         </div>
       ) : null}
-    </div>
+    </ToastSlot>
   );
 }

@@ -131,7 +131,11 @@ export function contrastChecks(c: ThemeColours): ContrastCheck[] {
   text('Danger text on a menu or dialog', c.danger, c.raised);
   text('Danger text on a hovered menu item', c.danger, s.hoverRaised);
   text('Text on the accent (primary button)', c.onAccent, c.accent);
-  text('A tooltip or toast', c.bg, c.fg);
+  text('A tooltip', c.bg, c.fg);
+  // A toast is a raised card in the theme's colours (PEN-63): its text, its action and its glyphs.
+  text('Toast text', c.fg, c.raised);
+  text('A toast’s action', c.accent, c.raised);
+  text('A toast’s action, hovered', c.accent, s.hoverRaised);
   text('An agent label', c.bg, c.agent);
   for (const [key, name] of CODE_TOKENS) text(`Code: ${name}`, c[key], s.codeBg);
   for (const [key, name] of CALLOUT_TOKENS) {
@@ -145,6 +149,8 @@ export function contrastChecks(c: ThemeColours): ContrastCheck[] {
   ui('Accent icon on a selected sidebar row', c.accent, s.activeSidebar);
   ui('Accent icon on a pressed toggle', c.accent, s.accentSoft);
   ui('Accent icon on the sidebar', c.accent, c.sidebar);
+  ui('A toast’s check', c.accent, c.raised);
+  ui('A toast’s warning', c.danger, c.raised);
   for (const [key, name] of GRAPH_TOKENS) ui(`Graph: ${name}`, c[key], c.bg);
   for (const [key, name] of CALLOUT_TOKENS) ui(`Callout marker: ${name}`, c[key], c.bg);
   edge('Borders on the page', c.border, c.bg);

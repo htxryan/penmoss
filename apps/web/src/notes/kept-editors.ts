@@ -6,7 +6,8 @@ import type { Notes, OpenNote } from './service';
 /** The note view showing an editor: where the editor's messages go. */
 export interface EditorHost {
   notice(message: string): void;
-  copied(message: string): void;
+  /** A copy's result, as a toast: `ok` when it was copied. */
+  copied(message: string, ok: boolean): void;
   /** Open the note again: the server's copy replaced it (A5), or it turned unsupported (A158). */
   reopen(): void;
 }
