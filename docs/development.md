@@ -12,6 +12,7 @@ The roadmap is the open issues in Linear's **Penmoss** team (`PEN`), which agent
 - **The issue owns status:** Triage (not yet weighed), Backlog, Todo, In Progress, In Review, Done, Canceled. A pull request that delivers a task says `Fixes PEN-<n>`, and Linear marks the issue Done when it merges.
 - **Evidence** (test output, before and after screenshots, measurements) goes in the pull request or the issue. Screenshots that need to stay with the code go in `docs/evidence/<issue number>/`.
 - **Decisions** go in [`decisions.md`](decisions.md), in the same pull request as the change they explain.
+- **Every pull request has a Release note (A1294).** The description's `## Release note` section (in the template) holds one line per user-facing change, `New`, `Improved` or `Fixed`, then `(Mac)` or `(Android)` if the change is only there, a colon and one sentence ending in a full stop: `Fixed (Android): The keyboard no longer hides the last line.` Write it for someone using Penmoss: what they can now do or no longer suffer, not how the code changed. Write `none` for a change nobody using Penmoss would notice: CI, tests, refactors, contributor docs, the factory. The **Release note** check (`.github/workflows/release-note.yml`) fails until the section reads right, and runs again when the description is edited. These lines become the release notes on GitHub and in the apps (PEN-76).
 
 ## Definition of Done
 

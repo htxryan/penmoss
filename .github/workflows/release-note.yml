@@ -1,0 +1,45 @@
+# The pull request's Release note (PEN-104, A1294): every pull request says what it changes for
+# someone using Penmoss, in a "## Release note" section, or `none`. The release jobs collect these
+# notes into the release pages and the apps (PEN-76). The script is
+# .github/scripts/release-note.mjs (tested by `task workflows:test`).
+#
+# A workflow of its own, not a job in ci.yml: it runs again when the description is edited,
+# which must not re-run the whole of CI.
+name: Release note
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-note-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  release-note:
+    name: Release note
+    # A1235: a hosted runner, so a fork's pull request runs it too. It reads only the event file:
+    # the description is never put into the shell.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: .release-note
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/release-note.mjs
+            .node-version
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .release-note/.node-version
+
+      - name: Check the description's Release note
+        run: node .release-note/.github/scripts/release-note.mjs
