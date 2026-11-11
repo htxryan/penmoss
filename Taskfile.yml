@@ -74,7 +74,12 @@ tasks:
   releases:test:
     desc: 'The Releases page rules CI follows (A403, A1188, A1189): .github/scripts/releases.mjs against an in-memory page, and the checks of `task release` against a fake git'
     cmds:
-      - node --test .github/scripts/releases.test.mjs .github/scripts/release-tag.test.mjs
+      - node --test .github/scripts/releases.test.mjs .github/scripts/release-tag.test.mjs .github/scripts/release-notes.test.mjs
+
+  release-notes:fix:
+    desc: "Re-read a merged pull request's Release note and put it in place of the one captured at merge, in release-notes.json on alpha and the release pages (A1301; needs gh signed in with write access): `task release-notes:fix -- 140`"
+    cmds:
+      - REPO="${REPO:-htxryan/penmoss}" node .github/scripts/releases.mjs fix-note --pr {{.CLI_ARGS}}
 
   release:
     desc: 'Tag a stable release (P3, A1189; Ryan only): `task release -- X.Y.Z` (or X.Y.Z-rc.N for a rehearsal) checks main is clean and matches origin/main, the tag is new and the version newer than the newest stable one, then pushes the annotated tag vX.Y.Z; release.yml builds the draft. `-- X.Y.Z --dry-run` checks and pushes nothing'

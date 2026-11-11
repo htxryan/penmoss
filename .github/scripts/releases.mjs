@@ -13,6 +13,10 @@
 //                  stable tag vX.Y.Z, or 0.2.0-alpha.<run> before the first.
 //   release-info   for release.yml (P3, A1189): a tag's version, whether it is a rehearsal
 //                  (-rc.N, a prerelease) and the stable tag before it, as GITHUB_OUTPUT lines.
+//   publish-notes  collects the Release notes of the pull requests merged since the last build
+//                  into release-notes.json on alpha, and into the build's and alpha's notes
+//                  (PEN-106; .github/scripts/release-notes.mjs).
+//   fix-note       re-reads one merged pull request's Release note and puts it in their place.
 //   draft-stable   creates the draft release of a vX.Y.Z tag: Penmoss.dmg, Penmoss.apk,
 //                  penmoss-mac-X.Y.Z.zip, SHA256SUMS.txt and latest-mac.yml, with notes since the
 //                  stable tag before it. Ryan publishes it, which makes it Latest.
@@ -29,6 +33,8 @@
 //     [--zip penmoss-mac-<run>.zip --feed alpha-mac.yml]
 //   node .github/scripts/releases.mjs publish-alpha --run 123 --sha <sha> --version <v> \
 //     [--apk app-release.apk] [--dmg Penmoss.dmg --zip penmoss-mac-<run>.zip --feed alpha-mac.yml]
+//   node .github/scripts/releases.mjs publish-notes --run 123 --sha <sha>
+//   node .github/scripts/releases.mjs fix-note --pr 140
 //   node .github/scripts/releases.mjs version --run 123
 //   node .github/scripts/releases.mjs release-info --tag v0.2.0
 //   node .github/scripts/releases.mjs draft-stable --tag v0.2.0 [--previous v0.1.0] \
@@ -54,6 +60,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
+import { fixNote, notesSectionOf, publishNotes, withNotesSection } from './release-notes.mjs';
 
 export const KEEP = 10;
 const BUILD = /^build-(\d+)$/;
@@ -110,6 +117,9 @@ export function updateFiles(release, build) {
  *   markPrerelease(tag: string): Promise<void>,
  *   moveTag(tag: string, sha: string): Promise<void>,
  *   remove(tag: string): Promise<void>,
+ *   compare(base: string, head: string): Promise<string[]>,
+ *   pullsOf(sha: string): Promise<import('./release-notes.mjs').PullRequest[]>,
+ *   pull(number: number): Promise<import('./release-notes.mjs').PullRequest>,
  *   log(message: string): void,
  * }} Gh
  * `create` makes a prerelease that is never Latest, with `files` uploaded in order. `findRelease`
@@ -686,7 +696,11 @@ export async function publishAlpha(gh, { run, sha, version, apk, dmg, zip, feed 
       .filter((p) => p !== undefined)
       .sort((a, b) => b.build - a.build)[0];
     if (alpha && newest) await gh.moveTag(ALPHA, newest.sha);
-    await gh.editNotes(ALPHA, alphaNotes(next));
+    // The notes section publish-notes writes (PEN-106) stays when the files change.
+    await gh.editNotes(
+      ALPHA,
+      withNotesSection(alphaNotes(next), notesSectionOf(alpha?.body ?? '')),
+    );
     gh.log(
       `${ALPHA}: ${[next.android === part ? 'APK' : '', next.mac === part ? 'Mac app' : ''].filter(Boolean).join(' and ')} from build ${run} (${version})${newest ? `, tag at ${newest.sha.slice(0, 7)}` : ''}`,
     );
@@ -870,6 +884,30 @@ export function cliGh({ repo, dryRun = false }) {
         'force=true',
       ]),
     remove: (tag) => change(['release', 'delete', tag, '--repo', repo, '--cleanup-tag', '--yes']),
+    async compare(base, head) {
+      const out = run(['api', `repos/${repo}/compare/${base}...${head}`, '--jq', '.commits[].sha']);
+      return out.split('\n').filter(Boolean);
+    },
+    async pullsOf(sha) {
+      return JSON.parse(
+        run([
+          'api',
+          `repos/${repo}/commits/${sha}/pulls`,
+          '--jq',
+          '[.[] | { number, body, mergedTo: (if .merged_at then .base.ref else null end) }]',
+        ]),
+      );
+    },
+    async pull(number) {
+      return JSON.parse(
+        run([
+          'api',
+          `repos/${repo}/pulls/${number}`,
+          '--jq',
+          '{ number, body, mergedTo: (if .merged_at then .base.ref else null end) }',
+        ]),
+      );
+    },
     log: (message) => console.log(message),
   };
 }
@@ -887,6 +925,7 @@ async function main() {
       dmg: { type: 'string' },
       zip: { type: 'string' },
       feed: { type: 'string' },
+      pr: { type: 'string' },
       'dry-run': { type: 'boolean', default: false },
     },
   });
@@ -918,6 +957,13 @@ async function main() {
       ...(values.zip ? { zip: exists(values.zip) } : {}),
       ...(values.feed ? { feed: exists(values.feed) } : {}),
     });
+  } else if (command === 'publish-notes' && values.run && values.sha) {
+    const run = Number(values.run);
+    const sha = values.sha;
+    await withScratch((scratch) => publishNotes(gh, { run, sha, dir: scratch.dir() }));
+  } else if (command === 'fix-note' && values.pr) {
+    const pr = Number(values.pr);
+    await withScratch((scratch) => fixNote(gh, { pr, dir: scratch.dir() }));
   } else if (command === 'version' && values.run) {
     console.log(appVersion(await gh.tags(), Number(values.run)));
   } else if (command === 'release-info' && values.tag) {
@@ -943,7 +989,7 @@ async function main() {
     });
   } else {
     throw new Error(
-      'Usage: releases.mjs publish-apk --run N --sha SHA --apk FILE | publish-mac --sha SHA --dmg FILE [--zip FILE --feed FILE] | publish-alpha --run N --sha SHA --version V [--apk FILE] [--dmg FILE --zip FILE --feed FILE] | version --run N | release-info --tag vX.Y.Z | draft-stable --tag vX.Y.Z [--previous TAG] --dmg FILE --apk FILE --zip FILE --feed FILE [--dry-run]',
+      'Usage: releases.mjs publish-apk --run N --sha SHA --apk FILE | publish-mac --sha SHA --dmg FILE [--zip FILE --feed FILE] | publish-alpha --run N --sha SHA --version V [--apk FILE] [--dmg FILE --zip FILE --feed FILE] | publish-notes --run N --sha SHA | fix-note --pr N | version --run N | release-info --tag vX.Y.Z | draft-stable --tag vX.Y.Z [--previous TAG] --dmg FILE --apk FILE --zip FILE --feed FILE [--dry-run]',
     );
   }
 }
