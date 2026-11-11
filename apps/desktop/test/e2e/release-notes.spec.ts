@@ -144,7 +144,7 @@ test("after an update, a notice says so once and What's New opens this version's
 
   const again = await launch({ userData, offline: true, env });
   opened.push(again);
-  await gitNotebook(again);
+  // The same data directory: its notebook is already there.
   await go(again.page, '/settings/updates');
   await expect(again.page.getByTestId('release-notes-current')).toBeVisible();
   await expect(again.page.getByTestId('updated-notice')).toHaveCount(0);
