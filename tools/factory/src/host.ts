@@ -75,6 +75,7 @@ import { makeOwnDirs, sandboxSpec, seatbeltProvider, withJavaHome } from './sand
 import { ANDROID_WALK_CLASS, MAC_WALK_SPEC, WALK_SHOT, walkFile, walkTail } from './walk.ts';
 import type { Secrets } from './secrets.ts';
 import type { Tracker } from './tracker/port.ts';
+import { signal, stopLeftovers } from './leftovers.ts';
 
 export const DEAD_END_PUSH_URL = 'no-push://the-factory-harness-pushes';
 
@@ -486,6 +487,17 @@ export function hostDeps(options: HostOptions): HostDeps {
         cwd: dir,
         sandbox: await seatbeltProvider(spec),
       });
+      // What an earlier session left running in this worktree goes first, and what this one
+      // leaves goes when it closes (A1297).
+      const leftovers = async (when: string) => {
+        const stopped = await stopLeftovers(exec, sandbox.worktreePath, {
+          kill: signal,
+          sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+        }).catch(() => []);
+        if (stopped.length > 0)
+          options.log(`stopped ${stopped.length} process(es) left in the worktree ${when}`);
+      };
+      await leftovers('by an earlier session');
       const handle: RunSandbox = {
         worktreePath: sandbox.worktreePath,
         exec: async (command) => {
@@ -494,6 +506,7 @@ export function hostDeps(options: HostOptions): HostDeps {
         },
         close: async () => {
           await sandbox.close();
+          await leftovers('when the sandbox closed');
         },
       };
       // Commits someone pushed to the PR's branch by hand come first, so the agent builds on
