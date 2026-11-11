@@ -105,6 +105,10 @@ contextBridge.exposeInMainWorld('penmossDesktop', {
           install: () => ipcRenderer.invoke(CHANNELS.updatesInstall, gesture()),
           onChange: (listener: (state: unknown) => void) =>
             on(CHANNELS.updatesChanged, (state) => listener(state)),
+          // Release notes (PEN-108): main's cached file; asking fetches a newer one.
+          notes: () => ipcRenderer.invoke(CHANNELS.updatesNotes),
+          onNotes: (listener: (file: unknown) => void) =>
+            on(CHANNELS.updatesNotesChanged, (file) => listener(file)),
         },
       }
     : {}),

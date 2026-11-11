@@ -1,10 +1,11 @@
 /**
- * Settings → Updates (the switch, the channel, Check Now and Install and Restart) and the notice a
- * newer build brings (T64 item 2, A1112, A1196). The Mac app only.
+ * Settings → Updates (the switch, the channel, Check Now and Install and Restart, then the release
+ * notes, PEN-108) and the notice a newer build brings (T64 item 2, A1112, A1196). The Mac app only.
  */
 import { Icon } from '@penmoss/ui/icons';
 import { useId, useState } from 'react';
 import type { DesktopUpdateChannel } from '../desktop/bridge';
+import { ReleaseNotes } from './ReleaseNotes';
 import { nameOf, updateStatus, useUpdates } from './updates';
 import { ToastSlot } from '../toasts/ToastSlot';
 
@@ -139,6 +140,12 @@ export function UpdatesSettings() {
           </button>
         ) : null}
       </div>
+      {state ? (
+        <ReleaseNotes
+          current={state.current}
+          offered={offered || state.phase === 'downloading' ? state.version : null}
+        />
+      ) : null}
     </section>
   );
 }

@@ -1,0 +1,126 @@
+// @vitest-environment happy-dom
+/**
+ * Settings → Updates' release notes (PEN-108): the offered update's, this version's and earlier
+ * versions' (collapsed), each grouped by kind under headings; a link to GitHub without a file.
+ */
+import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type {
+  DesktopReleaseNotes,
+  DesktopUpdateState,
+  PenmossDesktop,
+} from '../../src/desktop/bridge';
+import { UpdatesSettings } from '../../src/updates/UpdatesSettings';
+
+const FILE: DesktopReleaseNotes = {
+  schema: 1,
+  generated: '2026-11-20T00:00:00Z',
+  releases: [
+    { version: '0.2.0', tag: 'v0.2.0', build: 1170, date: '2026-11-08' },
+    { version: '0.2.1', tag: 'v0.2.1', build: 1180, date: '2026-11-20' },
+  ],
+  notes: [
+    { build: 1165, pr: 165, kind: 'new', platform: null, text: 'Before 0.2.0.' },
+    { build: 1174, pr: 174, kind: 'new', platform: null, text: 'Release notes in the app.' },
+    { build: 1176, pr: 176, kind: 'fixed', platform: 'android', text: 'Android only.' },
+    { build: 1178, pr: 178, kind: 'fixed', platform: 'mac', text: 'The window keeps its size.' },
+  ],
+};
+
+const state = (patch: Partial<DesktopUpdateState>): DesktopUpdateState => ({
+  supported: true,
+  auto: false,
+  channel: 'stable',
+  current: '0.2.0',
+  phase: 'current',
+  version: null,
+  percent: null,
+  message: null,
+  checkedAt: null,
+  ...patch,
+});
+
+let root: Root | null = null;
+let host: HTMLElement;
+beforeEach(() => {
+  host = document.createElement('div');
+  document.body.append(host);
+});
+afterEach(() => {
+  act(() => root?.unmount());
+  root = null;
+  host.remove();
+  Reflect.deleteProperty(window, 'penmossDesktop');
+});
+
+async function show(update: DesktopUpdateState, file: DesktopReleaseNotes | null) {
+  const updates = {
+    state: () => Promise.resolve(update),
+    check: () => Promise.resolve(update),
+    setAuto: () => Promise.resolve(update),
+    setChannel: () => Promise.resolve(update),
+    install: () => Promise.resolve(update),
+    onChange: () => () => undefined,
+    notes: () => Promise.resolve(file),
+    onNotes: () => () => undefined,
+  };
+  Object.assign(window, { penmossDesktop: { updates } as unknown as PenmossDesktop });
+  act(() => {
+    root = createRoot(host);
+    root.render(<UpdatesSettings />);
+  });
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
+
+const block = (id: string) => host.querySelector(`[data-testid="${id}"]`);
+const headings = (el: Element | null) =>
+  [...(el?.querySelectorAll('h3, h4') ?? [])].map((h) => h.textContent);
+const items = (el: Element | null) =>
+  [...(el?.querySelectorAll('li') ?? [])].map((li) => li.textContent);
+
+describe('Settings → Updates: release notes', () => {
+  it("shows the offered update's notes, this version's, and earlier versions collapsed", async () => {
+    await show(state({ current: '0.2.1', phase: 'current' }), FILE);
+    expect(block('release-notes-offered')).toBeNull();
+    expect(headings(block('release-notes-current'))).toEqual(['In this version', 'New', 'Fixed']);
+    expect(items(block('release-notes-current'))).toEqual([
+      'Release notes in the app.',
+      'The window keeps its size.',
+    ]);
+    const earlier = block('release-notes-earlier') as HTMLDetailsElement;
+    expect(earlier.open).toBe(false);
+    expect(earlier.querySelector('summary')?.textContent).toBe('Earlier versions');
+    expect(headings(earlier)).toEqual(['0.2.0', 'New']);
+  });
+
+  it('shows what an offered update brings above this version', async () => {
+    await show(state({ current: '0.2.0', phase: 'available', version: '0.2.1' }), FILE);
+    const offered = block('release-notes-offered');
+    expect(headings(offered)).toEqual(["What's new in 0.2.1", 'New', 'Fixed']);
+    expect(items(offered)).not.toContain('Android only.');
+    expect(items(block('release-notes-current'))).toEqual(['Before 0.2.0.']);
+    expect(offered?.compareDocumentPosition(block('release-notes-current')!)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
+  it('names each build on Alpha', async () => {
+    await show(state({ current: '0.2.1-alpha.1178', channel: 'alpha' }), FILE);
+    expect(headings(block('release-notes-current'))[0]).toBe('In this version (since 0.2.0)');
+    expect(items(block('release-notes-current'))).toContain(
+      'The window keeps its size. (build 1178)',
+    );
+  });
+
+  it('links to GitHub until there is a file', async () => {
+    await show(state({}), null);
+    const missing = block('release-notes-missing');
+    expect(missing?.textContent).toMatch(/Release notes show once Penmoss can reach GitHub/);
+    expect(missing?.querySelector('a')?.getAttribute('href')).toBe(
+      'https://github.com/htxryan/penmoss/releases',
+    );
+  });
+});

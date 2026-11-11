@@ -6433,6 +6433,48 @@ button.comment-quote:hover {
 }
 
 /*
+ * Settings → Updates' release notes (PEN-108): each block a sub-heading, its kinds a smaller one
+ * over a plain list; earlier versions collapsed under a summary.
+ */
+.release-notes {
+  margin-top: 0.5rem;
+}
+
+.release-notes-group h4 {
+  margin: 0.75rem 0 0.25rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  font-weight: 600;
+}
+
+.release-notes-group ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.release-notes-group li + li {
+  margin-top: 0.25rem;
+}
+
+.release-notes-earlier {
+  margin-top: 2rem;
+}
+
+.release-notes-earlier > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.release-notes-earlier .release-notes-block h3 {
+  margin-top: 1.25rem;
+  font-size: var(--pm-text-md);
+}
+
+.settings-section > .release-notes-missing {
+  margin-top: 1.5rem;
+}
+
+/*
  * The edges the sidebar and the note's panel are resized by (Quanta feedback 2, item 4; A1122):
  * a strip 7 px wide over the pane's border, the resize cursor on it, the accent while it is
  * hovered, focused or dragged. While one is dragged, the whole page has that cursor and nothing

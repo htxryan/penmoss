@@ -79,7 +79,7 @@ What search by meaning is doing, and the switch: on by default. Off removes the 
 
 ### Updates
 
-**Auto-Update** (off by default, this device), **Update Channel** (Stable or Alpha, this Mac), **Check Now** and **Install and Restart**. See [Updates](/docs/help/updates/).
+**Auto-Update** (off by default, this device), **Update Channel** (Stable or Alpha, this Mac), **Check Now** and **Install and Restart**. Below them, the release notes: what an offered update brings, what this version brought, and earlier versions. See [Updates](/docs/help/updates/#whats-new).
 
 ### Status
 
