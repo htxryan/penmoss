@@ -90,7 +90,7 @@ export async function runMacProof(
   worktree: string,
   specs: readonly string[],
   signal?: AbortSignal,
-): Promise<void> {
+): Promise<ExecResult> {
   const result = await exec('sh', [vmScript(), ...specs], {
     cwd: ownCheckout(),
     env: vmEnv(config, worktree, true),
@@ -98,6 +98,7 @@ export async function runMacProof(
   });
   // Its exit code is otherwise not the verdict: the report says which tests passed.
   if (result.code === VM_TEMPFAIL && !result.aborted) throw new VmUnavailable(vmReason(result));
+  return result;
 }
 
 /**

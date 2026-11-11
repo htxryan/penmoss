@@ -98,11 +98,12 @@ describe('runMacProof', () => {
   });
 
   it("leaves failing tests and a run stopped at its timeout to the report's verdict", async () => {
+    // It returns the script's output, which the host keeps for the agent (A1291).
     await expect(
       runMacProof(fakeExec({ code: 1 }).exec, config, '/wt/2', ['a.spec.ts']),
-    ).resolves.toBeUndefined();
+    ).resolves.toMatchObject({ code: 1 });
     await expect(
       runMacProof(fakeExec({ code: 75, aborted: true }).exec, config, '/wt/2', ['a.spec.ts']),
-    ).resolves.toBeUndefined();
+    ).resolves.toMatchObject({ code: 75, aborted: true });
   });
 });
