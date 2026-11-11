@@ -1,11 +1,14 @@
 package app.penmoss.git
 
 import app.penmoss.data.NoteStore
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * The device's settings in the Journal notebook's device map, with no account (A1014; A827):
@@ -27,18 +30,29 @@ class JournalDeviceSettings(
     private val write: suspend (JsonObject) -> JsonObject,
 ) {
     /** Changes being written: the map they will land in is not laid over them meanwhile. */
-    private val writing = AtomicInteger(0)
+    private var writing = 0
+
+    /**
+     * Guards [writing] and each lay of the map, so a lay that saw no change being written can't
+     * land after one starts, putting back the map from before it.
+     */
+    private val laying = Mutex()
+
+    /** Lays what the notebook holds now over the shown settings, unless a change is being written. */
+    private suspend fun lay() = laying.withLock {
+        // Not read from the notebook yet: nothing to show (the screens wait, as before a first sync).
+        val map = journal.deviceMapNow() ?: return@withLock
+        if (writing == 0 && map != device.syncedSettingsNow()) device.useDeviceSettings(map)
+    }
 
     /**
      * Lays the Journal's device map over the device's settings whenever either changes (a sign-out
      * clearing them, a pull bringing another device's change). Runs until cancelled.
      */
     suspend fun follow() {
-        combine(journal.observeDeviceMap(), device.observeSyncedSettings()) { map, shown -> map to shown }.collect { (map, shown) ->
-            // Not read from the notebook yet: nothing to show (the screens wait, as before a first sync).
-            map ?: return@collect
-            if (writing.get() == 0 && map != shown) device.useDeviceSettings(map)
-        }
+        // Each emission only says something changed: lay() reads the map as it is now, not as it
+        // was when the emission was made, which a change may since have passed.
+        combine(journal.observeDeviceMap(), device.observeSyncedSettings()) { map, shown -> map to shown }.collect { lay() }
     }
 
     /**
@@ -47,7 +61,7 @@ class JournalDeviceSettings(
      * the notebook would not take it; what it holds is shown again.
      */
     suspend fun change(changes: Map<String, JsonElement?>): Boolean {
-        writing.incrementAndGet()
+        laying.withLock { writing++ }
         try {
             device.showSettingChanges(changes)
             val answer = runCatching { write(JsonObject(changes.mapValues { (_, value) -> value ?: JsonNull })) }
@@ -55,9 +69,11 @@ class JournalDeviceSettings(
             answer.getOrNull()?.let { journal.putDeviceMap(it) }
             return answer.isSuccess
         } finally {
-            writing.decrementAndGet()
-            // What the notebook holds now, the change in it or not.
-            journal.deviceMapNow()?.let { map -> if (map != device.syncedSettingsNow()) device.useDeviceSettings(map) }
+            // What the notebook holds now, the change in it or not (shown once no other change is being written).
+            withContext(NonCancellable) {
+                laying.withLock { writing-- }
+                lay()
+            }
         }
     }
 }
