@@ -62,6 +62,7 @@ const done: AgentResult = {
   decisions: [],
   risks: [],
   replies: {},
+  releaseNote: 'none',
 };
 
 interface Fake {
@@ -931,6 +932,45 @@ describe('runImplement', () => {
     expect(f.calls.slice(-2)).toEqual(['comment #42', 'blocked']);
     expect(f.calls.some((c) => c.startsWith('push'))).toBe(false);
     expect(f.comments.at(-1)).toContain('1. Which file? Proposed: docs/cli.md');
+  });
+
+  it('sends a result without a Release note back once, then puts the note in the PR (PEN-105)', async () => {
+    const bare: AgentResult = { ...done };
+    delete (bare as { releaseNote?: string }).releaseNote;
+    const f = fake({
+      agentRounds: [bare, { ...done, releaseNote: 'fixed: the typo in the CLI docs is gone.' }],
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.calls.filter((c) => c === 'agent')).toHaveLength(2);
+    expect(f.events).toContain('release-note-refused');
+    expect(f.prompts[1]).toContain('## Your Release note');
+    expect(f.prompts[1]).toContain('`.factory/result.json` has no `releaseNote`.');
+    // The PR shows the note as the check reads it, its kind written out.
+    expect(f.comments[1]).toContain(
+      '## Release note\n\nFixed: the typo in the CLI docs is gone.\n',
+    );
+  });
+
+  it('blocks without pushing when the Release note is still wrong after one more try', async () => {
+    const bad = { ...done, releaseNote: 'Changed: something' };
+    const f = fake({ agentRounds: [bad, bad] });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome).toEqual({ kind: 'blocked', reason: 'release-note' });
+    expect(f.calls.filter((c) => c === 'agent')).toHaveLength(2);
+    expect(f.prompts[1]).toContain('start with New, Improved or Fixed');
+    expect(f.comments.at(-1)).toContain("still doesn't pass the check");
+    expect(f.calls.some((c) => c.startsWith('push'))).toBe(false);
+    expect(f.calls.at(-1)).toBe('blocked');
+  });
+
+  it('blocks when the agent stops instead of fixing its Release note', async () => {
+    const bare: AgentResult = { ...done };
+    delete (bare as { releaseNote?: string }).releaseNote;
+    const f = fake({ agentRounds: [bare, { ...done, status: 'failed', summary: 'gave up' }] });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome).toEqual({ kind: 'blocked', reason: 'release-note' });
+    expect(f.comments.at(-1)).toContain('the agent stopped instead: gave up');
   });
 
   it('gives the agent rounds.gateFix more tries, then blocks without pushing', async () => {

@@ -2,6 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { parseAgentResult } from '../src/result.ts';
 
 describe('parseAgentResult', () => {
+  it('reads the Release note as a string or a list of lines (PEN-105)', () => {
+    const base = { status: 'done', summary: 's' };
+    const list = parseAgentResult(
+      JSON.stringify({ ...base, releaseNote: ['New: A thing.', '  ', 'Fixed (Mac): Another. '] }),
+    );
+    expect(list.ok && list.result.releaseNote).toBe('New: A thing.\nFixed (Mac): Another.');
+    const text = parseAgentResult(JSON.stringify({ ...base, releaseNote: 'none' }));
+    expect(text.ok && text.result.releaseNote).toBe('none');
+    // Missing is not malformed: the run sends it back to the agent rather than failing.
+    const missing = parseAgentResult(JSON.stringify(base));
+    expect(missing.ok && 'releaseNote' in missing.result).toBe(false);
+    expect(parseAgentResult(JSON.stringify({ ...base, releaseNote: 3 })).ok).toBe(false);
+  });
+
   it('reads questions written as { question, proposed } objects (A1267)', () => {
     // PEN-80's agent wrote its question this way, and the run Blocked on the format instead.
     const r = parseAgentResult(

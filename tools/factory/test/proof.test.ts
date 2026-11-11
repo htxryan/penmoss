@@ -4,6 +4,7 @@ import { basename, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fromVm } from '../src/host.ts';
 import { proofFiles, renderPrBody } from '../src/proof/body.ts';
+import { parseReleaseNote } from '../../../.github/scripts/release-note.mjs';
 import { fromPlaywrightReport, missingProof } from '../src/proof/manifest.ts';
 import {
   checkMedia,
@@ -202,6 +203,8 @@ describe('the PR body', () => {
   const body = renderPrBody({
     issue: 12,
     summary: 'Threads open from the margin',
+    releaseNote:
+      'New: Comment threads open from the margin.\nFixed (Android): A reply no longer loses its first letter.',
     scope: { kind: 'product', platforms: ['web', 'mac', 'android'] },
     gate: 'task check',
     proof: [
@@ -233,6 +236,13 @@ describe('the PR body', () => {
     expect(body).toContain('\n\n[▶ Watch the recording (MP4)](./web-1.mp4)');
     expect(body).toContain('### Before (the new test on the base commit)');
     expect(body).toContain('### After');
+  });
+  it('carries the Release note the Release note check reads (PEN-105)', () => {
+    expect(body).toContain(
+      '## Release note\n\nNew: Comment threads open from the margin.\nFixed (Android): A reply no longer loses its first letter.\n\n## Proof',
+    );
+    expect(parseReleaseNote(body)).toMatchObject({ ok: true, none: false });
+    expect(parseReleaseNote(body).notes).toHaveLength(2);
   });
   it("labels the agent's own stills and keeps them out of the proof", () => {
     expect(body).toContain('![agent-captured: by hand](./extra-1.png)');
