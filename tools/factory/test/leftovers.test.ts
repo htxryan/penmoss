@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -12,6 +12,10 @@ import {
   signal,
   stopLeftovers,
 } from '../src/leftovers.ts';
+
+// A sandbox may refuse `ps`; stopLeftovers then logs without the arguments, which the
+// fake-exec test below covers. The live test expects what this machine can report.
+const psWorks = spawnSync('ps', ['-o', 'pid=', '-p', String(process.pid)]).status === 0;
 
 describe('processes left in a worktree (A1297)', () => {
   it("reads lsof's working folders, and only what is in the worktree", () => {
@@ -61,7 +65,7 @@ describe('processes left in a worktree (A1297)', () => {
         expect(stopped.map((p) => p.pid)).toEqual([left.pid]);
         expect(stopped[0]?.command).toBe('sleep');
         expect(leftoversLine(stopped, 'when the sandbox closed')).toBe(
-          `stopped 1 process left in the worktree when the sandbox closed: ${left.pid} sleep (300)`,
+          `stopped 1 process left in the worktree when the sandbox closed: ${left.pid} sleep${psWorks ? ' (300)' : ''}`,
         );
         await new Promise((r) => setTimeout(r, 200));
         expect(signal(left.pid!, 0)).toBe(false);
