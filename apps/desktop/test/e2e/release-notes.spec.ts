@@ -9,7 +9,6 @@ import { dataDir, gitNotebook, go, launch, removeDataDirs, type Launched } from 
 // writes the cache and launches offline; the offered update's block is the web component test's
 // (apps/web/test/unit/updates-notes.test.tsx), since an unsigned build is never offered one.
 
-const SHOTS = process.env['PENMOSS_EVIDENCE'];
 const opened: Launched[] = [];
 
 test.afterEach(async () => {
@@ -91,11 +90,11 @@ for (const mode of ['light', 'dark'] as const) {
     await expect(earlier.getByRole('heading', { level: 3 })).toHaveText('0.2.0');
     await expect(earlier.getByText('Quick capture from the menu bar.')).toBeVisible();
 
-    if (SHOTS) {
-      await page.getByTestId('updates-settings').screenshot({
-        path: join(SHOTS, `release-notes-${mode}.png`),
-      });
-    }
+    // Evidence for the pull request, in Playwright's report.
+    await test.info().attach(`release-notes-${mode}.png`, {
+      body: await page.getByTestId('updates-settings').screenshot(),
+      contentType: 'image/png',
+    });
     expect(errors).toEqual([]);
   });
 }
