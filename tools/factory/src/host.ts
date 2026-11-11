@@ -66,6 +66,8 @@ import {
   publishDir,
   publishRun,
   pushedHead,
+  resumablePr,
+  type OpenPr,
   unchangedSincePush,
   remoteBranch,
   runRef,
@@ -693,12 +695,11 @@ export function hostDeps(options: HostOptions): HostDeps {
       );
       // The run's branch must have nothing since, not even a commit it never pushed.
       if (!head || (await fetchRun(branch)) !== head) return undefined;
-      const open = await gh.json<{ url: string; headRefOid: string }[]>([
+      const open = await gh.json<OpenPr[]>([
         ...['pr', 'list', '--repo', config.repo, '--head', branch],
-        ...['--state', 'open', '--json', 'url,headRefOid'],
+        ...['--state', 'open', '--json', 'url,headRefOid,mergeable'],
       ]);
-      const pr = open[0];
-      return pr && pr.headRefOid === head ? pr.url : undefined;
+      return resumablePr(open, head);
     },
     diff: async (branch) => {
       const commit = await fetchRun(branch);

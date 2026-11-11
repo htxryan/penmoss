@@ -22,7 +22,7 @@ import {
   sandboxTakeCommand,
   type HostOptions,
 } from '../src/host.ts';
-import { adoptRemoteHead, remoteBranch, unchangedSincePush } from '../src/publish.ts';
+import { adoptRemoteHead, remoteBranch, resumablePr, unchangedSincePush } from '../src/publish.ts';
 import { sweep } from '../src/janitor.ts';
 import { prepareSnapshot, planFiles } from '../src/planning-host.ts';
 import { checkMacVm, runMacProof } from '../src/proof/mac.ts';
@@ -122,7 +122,7 @@ describe("the host's git, structurally (A1230)", () => {
     writeFileSync(join(clone, '.git', 'config'), '');
     worktree = join(clone, '.sandcastle', 'worktrees', 'factory-42-fix-the-typo');
     mkdirSync(join(worktree, 'docs'), { recursive: true });
-    writeFileSync(join(worktree, 'docs', 'decisions.md'), '| A-NEW-1 | A new decision. |\n');
+    writeFileSync(join(worktree, 'docs', 'decisions.md'), '| A1310 | A new decision. |\n');
   });
 
   const sandbox = (commands: string[]): RunSandbox => ({
@@ -415,5 +415,31 @@ describe("the host's publish path, with real git (A1230)", { timeout: 30_000 }, 
       await expect(publish(BRANCH)).rejects.toThrow(/stale info|rejected/);
       expect(await git(github, 'rev-parse', `refs/heads/${BRANCH}`)).toBe(head);
     });
+  });
+});
+
+describe('resumablePr (A1310)', () => {
+  const pr = (mergeable?: string) => ({
+    url: 'https://github.com/o/r/pull/1',
+    headRefOid: 'abc',
+    ...(mergeable ? { mergeable } : {}),
+  });
+
+  it('resumes at CI on the PR whose head is the last push while GitHub can merge it', () => {
+    expect(resumablePr([pr('MERGEABLE')], 'abc')).toBe('https://github.com/o/r/pull/1');
+  });
+
+  it('sends a PR that conflicts with main back through the gate: it gets no new CI', () => {
+    expect(resumablePr([pr('CONFLICTING')], 'abc')).toBeUndefined();
+  });
+
+  it("doesn't resume while GitHub hasn't worked out whether it merges", () => {
+    expect(resumablePr([pr('UNKNOWN')], 'abc')).toBeUndefined();
+    expect(resumablePr([pr()], 'abc')).toBeUndefined();
+  });
+
+  it('needs the head to be the last push, and an open PR at all', () => {
+    expect(resumablePr([pr('MERGEABLE')], 'def')).toBeUndefined();
+    expect(resumablePr([], 'abc')).toBeUndefined();
   });
 });
