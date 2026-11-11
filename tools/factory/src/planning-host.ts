@@ -51,14 +51,27 @@ export interface PlanMeta {
   readonly contractFixes?: number | undefined;
 }
 
+/**
+ * What every Claude Code session the factory starts is named with, first, so Ryan can tell them
+ * apart from his own Remote Control sessions in the Claude app (A1288).
+ */
+export const FACTORY_PREFIX = '[PF] ';
+
 /** The session's name in `claude agents` and the Claude app: the card as people know it. */
 export const sessionName = (config: FactoryConfig, issue: number) =>
-  `Penmoss ${issueKey(config, issue)} plan`;
+  `${FACTORY_PREFIX}Penmoss ${issueKey(config, issue)} plan`;
+
+/** The name sessions had before A1288; a session started then is still the card's. */
+const unprefixedName = (config: FactoryConfig, issue: number) =>
+  sessionName(config, issue).slice(FACTORY_PREFIX.length);
 
 /** The card a session name belongs to, or `undefined` for any other session. */
 export function sessionIssue(config: FactoryConfig, name: string | undefined): number | undefined {
-  const n = Number(/^Penmoss (?:#|[A-Z][A-Z0-9]*-)(\d+) plan$/.exec(name ?? '')?.[1]);
-  return Number.isInteger(n) && name === sessionName(config, n) ? n : undefined;
+  const n = Number(/^(?:\[PF\] )?Penmoss (?:#|[A-Z][A-Z0-9]*-)(\d+) plan$/.exec(name ?? '')?.[1]);
+  return Number.isInteger(n) &&
+    (name === sessionName(config, n) || name === unprefixedName(config, n))
+    ? n
+    : undefined;
 }
 
 export function planFiles(config: FactoryConfig, issue: number): PlanFiles {
@@ -190,7 +203,7 @@ export async function findSession(
   const found =
     (known.id && sessions.find((s) => s.id === known.id)) ||
     (known.sessionId && sessions.find((s) => s.sessionId === known.sessionId)) ||
-    sessions.find((s) => s.name === sessionName(config, issue));
+    sessions.find((s) => sessionIssue(config, s.name) === issue);
   if (!found) return undefined;
   return {
     sessionId: found.sessionId,

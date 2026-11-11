@@ -63,17 +63,17 @@ describe('a session with a chat in the Claude app (A1287)', () => {
     };
 
   it('runs the same command line under the in-sandbox runner, prompt on stdin', async () => {
-    const agent = await claudeAgent('opus', {}, 'Penmoss PEN-7 run');
+    const agent = await claudeAgent('opus', {}, '[PF] Penmoss PEN-7 run');
     const { command, stdin } = agent.buildPrintCommand({
       prompt: 'do it',
       dangerouslySkipPermissions: true,
     });
     expect(stdin).toBe('do it');
-    expect(command).toMatch(
-      new RegExp(
-        `^node '${REMOTE_RUNNER}' run --name 'Penmoss PEN-7 run' -- claude --strict-mcp-config `,
+    expect(
+      command.startsWith(
+        `node '${REMOTE_RUNNER}' run --name '[PF] Penmoss PEN-7 run' -- claude --strict-mcp-config `,
       ),
-    );
+    ).toBe(true);
     expect(command).toContain('--dangerously-skip-permissions');
     expect(settingsOf(command).hooks).toHaveProperty('Stop');
   });

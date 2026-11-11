@@ -213,9 +213,12 @@ describe('planning sessions', async () => {
     const { sessionIssue } = await import('../src/planning-host.ts');
     const github = testConfig();
     const linear = linearConfig();
-    expect(sessionName(github, 9)).toBe('Penmoss #9 plan');
-    expect(sessionName(linear, 41)).toBe('Penmoss PEN-41 plan');
+    expect(sessionName(github, 9)).toBe('[PF] Penmoss #9 plan');
+    expect(sessionName(linear, 41)).toBe('[PF] Penmoss PEN-41 plan');
+    expect(sessionIssue(linear, '[PF] Penmoss PEN-41 plan')).toBe(41);
+    // A session started before the prefix (A1288) is still the card's.
     expect(sessionIssue(linear, 'Penmoss PEN-41 plan')).toBe(41);
+    expect(sessionIssue(linear, '[PF] Penmoss PEN-41 run')).toBeUndefined();
     // Another tracker's session, or anyone else's, isn't this card's.
     expect(sessionIssue(linear, 'Penmoss #41 plan')).toBeUndefined();
     expect(sessionIssue(github, 'Penmoss PEN-41 plan')).toBeUndefined();
