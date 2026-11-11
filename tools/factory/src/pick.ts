@@ -139,7 +139,11 @@ export function elsewhere(items: readonly BoardItem[], config: FactoryConfig): s
   const parts: string[] = [];
   for (const status of [planning, working, review]) {
     const here = items.filter(
-      (i) => i.status === status && i.repo === config.repo && i.state === 'OPEN',
+      (i) =>
+        i.status === status &&
+        i.repo === config.repo &&
+        i.state === 'OPEN' &&
+        optedIn(i.labels, config),
     );
     const shown = status === planning ? here : here.filter((i) => i.blocked);
     if (shown.length === 0) continue;

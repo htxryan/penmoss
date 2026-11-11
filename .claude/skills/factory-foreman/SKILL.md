@@ -75,7 +75,7 @@ Run the `.ts` scripts from `tools/factory`, with Node from `~/.nvm/versions/node
 3. **Start notes and the map:**
    - Notes go in a scratchpad file, `<card>-run-notes.md`, with the legend `[BLOCKING]` fixed on the spot, `[FIX]` for the follow-up, `[OK]` verified and `[NOTE]` worth knowing. Every line gets a UTC timestamp.
    - Publish the live test map: copy `assets/test-map.html`, reset its `STATE`, and republish it to the same path on every change. It colour-codes each component and step as validated, in progress, left or bug.
-4. **Label and start:** `label.ts PEN-n Agent/claude` (add `plan:skip` only to skip planning), then `move.ts PEN-n Todo`. `task factory:next` should name the card, agent, model and phase.
+4. **Label and start:** `label.ts PEN-n factory Agent/claude` (add `plan:skip` only to skip planning), then `move.ts PEN-n Todo`. Without the `factory` label the factory never touches the card (A1296). `task factory:next` should name the card, agent, model and phase.
 5. **Watch:** start a Monitor on `scripts/watch.sh` (persistent) and re-arm it when it expires. Expect claimed → agent-started → agent-finished → (decisions-numbered only if the card added a decision) → gate-passed → proof-recorded → pushed → pr-opened → in-review. Then, after approval: "approved, merging" → merged → done.
 6. **Validate every step:**
    - **Linear:** each status move, each comment's wording and the factory's marker, the Blocked label with its reason.
@@ -142,6 +142,17 @@ Fixed in #69–#78 and the follow-up, or still true. Look here first:
 - **The planning chat link** comes from Claude Code's job file (`~/.claude/jobs/<id>/state.json`, `bridgeSessionId`), not from `claude --bg`'s output. If `factory:chat` says there is none, that file had no Remote Control id.
 - **`factory:doctor`'s "unreadable" checks** for the key files and the keychain used `head -c 0`, which macOS refuses for its own reason, so they passed whatever the sandbox did. They now read one byte and pass only on a refusal (A1258). Rerun the doctor after updating.
 - **In the sandbox, main is `origin/main`.** Its local `main` is stale; an agent's `git diff main...HEAD` shows every factory change since the run began.
+
+## Known failures from the third run (PEN-71, 11 Nov 2026)
+
+Fixed in #141 and its follow-up. Look here first:
+
+- **Only cards labelled `factory` exist for the factory** (A1296). A card in Todo without it is passed over ("no factory label"), and removing the label mid-run stops the run at its next step, as Blocked does. Before installing a factory change that adds such a gate, label every card the factory has in flight.
+- **The factory updates itself** (A1293). The updater LaunchAgent (`app.penmoss.factory-updater`, `updater.log`) installs main every 5 minutes when `tools/factory/` or `scripts/vm/` changed, after the active run step. You no longer run `task factory:update` after a merge; check `updater.log` and the daemon's `at <sha>` line instead. A stopped daemon stays stopped.
+- **Land several factory PRs that each add a decision as one PR.** They all append at the same place in `docs/decisions.md`, so merging them one by one costs a rebase and a CI run each. Cherry-pick them onto one branch, keep every row in number order, and close the originals with a link.
+- **A session that ends waiting on its own background command** used to end the round with its work uncommitted (PEN-71's CI repair). The runner now waits for the command's notification (A1295), and the host stops whatever a session leaves running in its worktree (A1297). If a round reports a port in its block "already in use", look for processes left there: `lsof -nP -iTCP:<port> -sTCP:LISTEN`.
+- **A CI failure on a test outside the card is not always a flake.** PEN-71's `note-window.spec.ts` failed twice the same way: a click meant for plain text landed on a link where Linux's fonts are wider. Re-run the job once; if it fails the same way again, let the repair round fix it.
+- **Clearing Blocked after `ci-red` recovers the run at the gate,** so the gate, proof and validation run again before the PR is pushed. That costs about 20 minutes but changes nothing on the PR unless the agent committed something.
 
 ## Asset
 

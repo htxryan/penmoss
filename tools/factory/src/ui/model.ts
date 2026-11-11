@@ -11,7 +11,7 @@
 import type { Board, BoardItem } from '../board.ts';
 import type { FactoryConfig } from '../config.ts';
 import type { Running } from '../dispatcher.ts';
-import { parseIssueSpec } from '../labels.ts';
+import { optedIn, parseIssueSpec } from '../labels.ts';
 import { pickNext } from '../pick.ts';
 import type { PlanMeta } from '../planning-host.ts';
 import { attachCommand, type PlanQuestion, type PlanState } from '../planning.ts';
@@ -685,6 +685,8 @@ export function buildView(input: ViewInput): FactoryView {
       const doneAt = (events.findLast((e) => e.event === 'done') ?? events.at(-1))?.at;
       if (!doneAt || Date.parse(doneAt) < doneSince) continue;
     } else if (st !== s.pick && st !== s.planning) continue;
+    // A card waiting in Todo or Planning is the factory's only with the opt-in label (A1296).
+    else if (!optedIn(item.labels, config)) continue;
     cards.push(
       card(input, item, events, {
         live: running.get(item.number),
