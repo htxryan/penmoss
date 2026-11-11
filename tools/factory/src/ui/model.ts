@@ -127,6 +127,8 @@ export interface CardView {
   readonly runFolder: string | null;
   /** The command that joins the card's planning session from a terminal on this Mac (A1281). */
   readonly chat: string | null;
+  /** The planning session's chat on claude.ai, which Remote Control serves (A1286). */
+  readonly chatUrl: string | null;
   /** The last lines of the current run's agent log, for a card in a slot. */
   readonly log: readonly string[];
   readonly links: readonly Link[];
@@ -271,6 +273,11 @@ export const issueOf = (e: LedgerEvent) => Number(e.run.split('-')[0]);
 
 const str = (v: unknown) => (typeof v === 'string' && v !== '' ? v : null);
 const num = (v: unknown) => (typeof v === 'number' ? v : null);
+
+/** A planning session's claude.ai chat link, or null for anything that isn't one. */
+export function chatLink(url: string | undefined): string | null {
+  return url && /^https:\/\/claude\.ai\/code\/session_[A-Za-z0-9_-]+$/.test(url) ? url : null;
+}
 
 /**
  * An agent CLI's error as one line: `claude-code exited with code 127:\n/bin/sh: claude:
@@ -832,6 +839,8 @@ function card(
   const s = config.status;
   const st = item.status ?? '';
   const plan = input.plans[item.number];
+  // A planning card's live session, which Ryan can chat with.
+  const chatting = st === s.planning && !!plan?.meta.sessionId && !plan.meta.agreed;
   const runs = runsOf(events);
   const lastRun = runs.at(-1);
   const views = runs.map((r, i) =>
@@ -1016,10 +1025,8 @@ function card(
     canComplete,
     runs: views,
     runFolder: lastRun && input.runFolder ? input.runFolder(lastRun.id) : null,
-    chat:
-      st === s.planning && plan?.meta.sessionId && !plan.meta.agreed
-        ? attachCommand(plan.meta.sessionId)
-        : null,
+    chat: chatting && plan.meta.sessionId ? attachCommand(plan.meta.sessionId) : null,
+    chatUrl: chatting ? chatLink(plan.meta.chatUrl) : null,
     log: liveRun && input.logTail ? input.logTail(liveRun) : [],
     links,
   };

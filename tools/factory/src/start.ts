@@ -22,6 +22,7 @@ import {
   findSession,
   launchSession,
   planFiles,
+  planningEnv,
   planText,
   prepareSnapshot,
   readMeta,
@@ -219,7 +220,7 @@ export async function executePlanning(
   item: BoardItem,
   log: (line: string) => void,
 ): Promise<PlanningAction | { kind: 'stopped' }> {
-  const { config, tracker, secrets } = factory;
+  const { config, tracker } = factory;
   await ensureClone(config, nodeExec);
   const files = planFiles(config, item.number);
   // The session reads the issue's images from the plan's own folder, which only the host writes.
@@ -231,21 +232,15 @@ export async function executePlanning(
       shownAs: (file) => join(files.attachments, file),
     },
   );
-  const env: Record<string, string> = {
-    PATH: process.env['PATH'] ?? '/usr/bin:/bin',
-    HOME: process.env['HOME'] ?? '',
-    ENABLE_CLAUDEAI_MCP_SERVERS: 'false',
-    ...(secrets.CLAUDE_CODE_OAUTH_TOKEN
-      ? { CLAUDE_CODE_OAUTH_TOKEN: secrets.CLAUDE_CODE_OAUTH_TOKEN }
-      : {}),
-  };
+  // Ryan's own Claude.ai login, not the factory's token, so Remote Control works (A1286).
+  const env = planningEnv(process.env);
   const deps: PlanDeps = {
     comment: (n, body) => tracker.comment(n, body),
     setStatus: (i, status) => tracker.setStatus(i, status),
     setBlocked: (i) => tracker.setBlocked(i),
     snapshot: () => prepareSnapshot(config, files, nodeExec),
     launch: async (message, resume) => {
-      const { id } = await launchSession(
+      const { id, chatUrl } = await launchSession(
         config,
         nodeExec,
         files,
@@ -260,7 +255,7 @@ export async function executePlanning(
           `the planning session started${id ? ` (${id})` : ''} but \`claude agents\` does not list it`,
         );
       log(`planning session ${found.sessionId}${resume ? ' resumed' : ' started'}`);
-      return { sessionId: found.sessionId };
+      return { sessionId: found.sessionId, ...(chatUrl ? { chatUrl } : {}) };
     },
     stop: (sessionId) => stopSession(config, nodeExec, item.number, sessionId, env),
     session: async () => {

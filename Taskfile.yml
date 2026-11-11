@@ -205,7 +205,7 @@ tasks:
       - node tools/factory/src/cli.ts run {{.CLI_ARGS}}
 
   factory:chat:
-    desc: "The software factory (F15): join a card's planning session in this terminal (claude attach): `task factory:chat -- 41` (`-- 41 --print` only prints the command)"
+    desc: "The software factory (F15): give a card's planning chat in the Claude app, then join the session in this terminal (claude attach): `task factory:chat -- 41` (`-- 41 --print` only prints the link and the command)"
     cmds:
       - node tools/factory/src/cli.ts chat {{.CLI_ARGS}}
 

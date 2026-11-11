@@ -226,8 +226,9 @@ async function linearCheck(config: FactoryConfig, args: readonly string[]): Prom
 }
 
 /**
- * `factory chat <issue>`: joins the card's planning session in this terminal, with Ryan's own
- * Claude Code (`claude attach`, A1281); `--print` only prints the command.
+ * `factory chat <issue>`: gives the card's planning session's chat in the Claude app (A1286), then
+ * joins the session in this terminal, with Ryan's own Claude Code (`claude attach`, A1281);
+ * `--print` only prints the link and the command.
  */
 function chat(config: FactoryConfig, args: readonly string[]): number {
   const number = Number(args[0]);
@@ -240,6 +241,8 @@ function chat(config: FactoryConfig, args: readonly string[]): number {
     console.error(`${found.error}.`);
     return 1;
   }
+  if (found.chatUrl)
+    console.log(`Chat with the planning session in the Claude app: ${found.chatUrl}`);
   console.log(found.command);
   if (args.includes('--print')) return 0;
   console.log(

@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   buildView,
+  chatLink,
   cleanError,
   pointsOf,
   type FactoryView,
@@ -337,12 +338,19 @@ describe('the pipeline (A1233)', () => {
 
   it('links the issue, PR, CI, the plan, the chat and the desktop app', () => {
     expect(card(view, 'PEN-74').links.map((l) => l.label)).toEqual(['PEN-74', 'PR #65', 'CI']);
-    // A planning card's chat is a command, not a link (A1281).
+    // A planning card's chat is beside the reply, not among the links (A1281).
     expect(card(view, 'PEN-76').links.map((l) => l.href)).toEqual([
       'https://linear.app/penmoss/issue/PEN-76/card-76',
     ]);
     expect(card(view, 'PEN-76').chat).toBe('claude attach S76abcde');
     expect(card(view, 'PEN-74').chat).toBeNull();
+    // Its Claude app chat, when Remote Control gave the session one (A1286).
+    expect(card(view, 'PEN-76').chatUrl).toBeNull();
+    expect(card(view, 'PEN-78').chatUrl).toBe('https://claude.ai/code/session_S78');
+    expect(card(view, 'PEN-74').chatUrl).toBeNull();
+    expect(chatLink('https://evil.example/code/session_x')).toBeNull();
+    expect(chatLink('https://claude.ai/code/session_x/../y')).toBeNull();
+    expect(chatLink(undefined)).toBeNull();
   });
 
   it('keeps Done cards for doneDays only', () => {

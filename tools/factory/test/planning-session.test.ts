@@ -4,18 +4,23 @@
  * looking it up by the card's name failed and the card was set Blocked while the session worked
  * on. And `claude stop` takes the short id, not the session id.
  */
-import { mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { FactoryConfig } from '../src/config.ts';
 import type { Exec } from '../src/exec.ts';
 import {
+  chatUrlFromJob,
+  claudeJobsDir,
   findSession,
   launchSession,
   planFiles,
+  planningChat,
+  planningEnv,
   sessionName,
   stopSession,
+  writeMeta,
 } from '../src/planning-host.ts';
 import { testConfig } from './helpers.ts';
 
@@ -63,15 +68,40 @@ const config = (): FactoryConfig => ({
 });
 
 describe('the planning session', () => {
-  it('is started with its display name, and launch returns the id --bg printed', async () => {
+  it('is started with its display name and Remote Control, and launch returns the id --bg printed', async () => {
     const c = config();
     const { exec, calls } = fakeClaude();
     const started = await launchSession(c, exec, planFiles(c, 70), 70, 'plan PEN-70', {});
     const args = calls[0] ?? [];
     expect(args[args.indexOf('--name') + 1]).toBe(sessionName(c, 70));
-    // No Remote Control: the setup token it runs on can't open one (A1281).
-    expect(args).not.toContain('--remote-control');
+    // Its chat in the Claude app, on Ryan's own login (A1286).
+    expect(args[args.indexOf('--remote-control') + 1]).toBe(sessionName(c, 70));
+    expect(args.indexOf('--remote-control')).toBeLessThan(args.indexOf('--'));
     expect(started).toEqual({ id: '0ff38e2e' });
+  });
+
+  it("runs on Ryan's own Claude.ai login: no setup token or API key in its environment (A1286)", () => {
+    const env = planningEnv({
+      PATH: '/opt/homebrew/bin:/usr/bin',
+      HOME: '/Users/r',
+      USER: 'r',
+      CLAUDE_CODE_OAUTH_TOKEN: 'sk-ant-oat01-factory',
+      ANTHROPIC_API_KEY: 'sk-ant-api03-key',
+      GH_TOKEN: 'ghs_x',
+    });
+    expect(env).toEqual({
+      PATH: '/opt/homebrew/bin:/usr/bin',
+      HOME: '/Users/r',
+      USER: 'r',
+      ENABLE_CLAUDEAI_MCP_SERVERS: 'false',
+    });
+    expect(env).not.toHaveProperty('CLAUDE_CODE_OAUTH_TOKEN');
+    expect(env).not.toHaveProperty('ANTHROPIC_API_KEY');
+    expect(planningEnv({})).toEqual({
+      PATH: '/usr/bin:/bin',
+      HOME: '',
+      ENABLE_CLAUDEAI_MCP_SERVERS: 'false',
+    });
   });
 
   it('is found by that id even when Claude Code retitled it', async () => {
@@ -86,6 +116,104 @@ describe('the planning session', () => {
     await expect(findSession(c, exec, 70, {}, { sessionId: SESSION })).resolves.toMatchObject({
       id: '0ff38e2e',
     });
+  });
+
+  it("gets its chat link from Claude Code's job file, since --bg prints none (A1257)", async () => {
+    const c = config();
+    const { exec } = fakeClaude();
+    const jobs = mkdtempSync(join(tmpdir(), 'claude-jobs-'));
+    mkdirSync(join(jobs, '0ff38e2e'));
+    // As Claude Code 2.1.319 wrote it for a `--bg --remote-control` session.
+    const state = (bridge?: string) =>
+      writeFileSync(
+        join(jobs, '0ff38e2e', 'state.json'),
+        JSON.stringify({
+          state: 'working',
+          daemonShort: '0ff38e2e',
+          sessionId: SESSION,
+          ...(bridge ? { bridgeSessionId: bridge, bridgeOutboundOnly: false } : {}),
+        }),
+      );
+    state();
+    // The link comes a moment after --bg returns: the launch waits for it.
+    const slept: number[] = [];
+    const sleep = (ms: number) => {
+      slept.push(ms);
+      if (slept.length === 2) state('cse_01Ft4U3apUr33bjvQoKRcUFV');
+      return Promise.resolve();
+    };
+    const started = await launchSession(c, exec, planFiles(c, 70), 70, 'plan', {}, undefined, {
+      dir: jobs,
+      sleep,
+    });
+    expect(started).toEqual({
+      id: '0ff38e2e',
+      chatUrl: 'https://claude.ai/code/session_01Ft4U3apUr33bjvQoKRcUFV',
+    });
+    expect(slept).toHaveLength(2);
+    // factory:chat gives the link and the terminal command.
+    const files = planFiles(c, 70);
+    mkdirSync(files.root, { recursive: true });
+    writeMeta(files, { sessionId: SESSION, ...started });
+    expect(planningChat(c, 70)).toEqual({
+      command: 'claude attach 0ff38e2e',
+      chatUrl: 'https://claude.ai/code/session_01Ft4U3apUr33bjvQoKRcUFV',
+    });
+  });
+
+  it('looks for the job file in the HOME it runs with', async () => {
+    const c = config();
+    const { exec } = fakeClaude();
+    const home = mkdtempSync(join(tmpdir(), 'claude-home-'));
+    mkdirSync(join(home, '.claude', 'jobs', '0ff38e2e'), { recursive: true });
+    writeFileSync(
+      join(home, '.claude', 'jobs', '0ff38e2e', 'state.json'),
+      JSON.stringify({ bridgeSessionId: 'cse_01Home' }),
+    );
+    const started = await launchSession(
+      c,
+      exec,
+      planFiles(c, 70),
+      70,
+      'plan',
+      planningEnv({ HOME: home }),
+    );
+    expect(started).toEqual({ id: '0ff38e2e', chatUrl: 'https://claude.ai/code/session_01Home' });
+  });
+
+  it('has no chat link when Claude Code reports none in time, and factory:chat still attaches', async () => {
+    const c = config();
+    const { exec } = fakeClaude();
+    const jobs = mkdtempSync(join(tmpdir(), 'claude-jobs-'));
+    const started = await launchSession(c, exec, planFiles(c, 70), 70, 'plan', {}, undefined, {
+      dir: jobs,
+      waitMs: 3_000,
+      sleep: () => Promise.resolve(),
+    });
+    expect(started).toEqual({ id: '0ff38e2e' });
+    const files = planFiles(c, 70);
+    mkdirSync(files.root, { recursive: true });
+    writeMeta(files, { sessionId: SESSION });
+    expect(planningChat(c, 70)).toEqual({ command: 'claude attach 0ff38e2e', chatUrl: null });
+  });
+
+  it('reads only a Remote Control id from the job file', () => {
+    expect(chatUrlFromJob('{"bridgeSessionId":"session_01Ab"}')).toBe(
+      'https://claude.ai/code/session_01Ab',
+    );
+    expect(chatUrlFromJob('{"bridgeSessionId":"cse_01Ab"}')).toBe(
+      'https://claude.ai/code/session_01Ab',
+    );
+    for (const bad of [
+      '{}',
+      'not json',
+      '{"bridgeSessionId":"cse_../../x"}',
+      '{"bridgeSessionId":7}',
+    ])
+      expect(chatUrlFromJob(bad), bad).toBeUndefined();
+    expect(claudeJobsDir({ HOME: '/Users/r' })).toBe('/Users/r/.claude/jobs');
+    expect(claudeJobsDir({ HOME: '/Users/r', CLAUDE_CONFIG_DIR: '/c' })).toBe('/c/jobs');
+    expect(claudeJobsDir({})).toBeUndefined();
   });
 
   it('is stopped with the short id that claude stop takes', async () => {

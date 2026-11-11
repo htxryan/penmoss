@@ -257,6 +257,16 @@ test.describe("the plan's questions", () => {
   });
   test.afterAll(() => s.close());
 
+  test('a planning session without a Claude app link is joined from a terminal only', async ({
+    page,
+  }) => {
+    await open(page, `${s.url}#inbox/issue-76`);
+    const detail = page.locator('#issue-76');
+    await expect(detail.locator('.chat .note')).toHaveText('Chat with the planner in a terminal');
+    await expect(detail.locator('.chat a')).toHaveCount(0);
+    await expect(detail.locator('.chat code')).toHaveText('claude attach S76abcde');
+  });
+
   test('each question is one block with its proposal once, and the answers go in one reply', async ({
     page,
   }) => {
@@ -265,9 +275,15 @@ test.describe("the plan's questions", () => {
     await expect(detail.locator('.ask')).toHaveText('Answer 2 questions on the plan');
     // The plan, which Ryan reads before answering, is a link right under the title.
     await expect(detail.locator('.links a.em')).toHaveText('Plan');
-    // No chat link: the planner is joined from a terminal, with a command to copy (A1281).
+    // The planner's chat: Open in Claude (Remote Control's link, A1286) beside the command that
+    // joins it from a terminal (A1281), not among the links.
     await expect(detail.locator('.links a', { hasText: 'Open in Claude' })).toHaveCount(0);
-    await expect(detail.locator('.chat .note')).toHaveText('Chat with the planner in a terminal');
+    await expect(detail.locator('.chat .note')).toHaveText(
+      'Chat with the planner in the Claude app or a terminal',
+    );
+    const inClaude = detail.locator('.chat a', { hasText: 'Open in Claude' });
+    await expect(inClaude).toHaveAttribute('href', 'https://claude.ai/code/session_S78');
+    await expect(inClaude).toHaveAttribute('target', '_blank');
     await expect(detail.locator('.chat code')).toHaveText('claude attach S78');
     const q = detail.locator('.q');
     await expect(q).toHaveCount(2);

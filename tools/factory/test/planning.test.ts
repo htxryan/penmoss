@@ -200,8 +200,9 @@ describe('planning sessions', async () => {
         'Edit(//p/9/out/**)',
       ]),
     );
-    // No Remote Control: the factory's token can't open it, so it only printed a rejection.
-    expect(flags.join(' ')).toContain('--settings {"remoteControlAtStartup":false}');
+    // Remote Control stays on: the session runs on Ryan's own login, which can open it (A1286).
+    expect(flags).not.toContain('--settings');
+    expect(flags.join(' ')).not.toContain('remoteControlAtStartup');
     expect(flags).not.toContain('Edit(//p/9/attachments/**)');
     expect(flags.some((f) => f.startsWith('Bash'))).toBe(false);
     // Claude Code never matches a file write against a Write rule, only against Edit.
@@ -220,14 +221,22 @@ describe('planning sessions', async () => {
     expect(sessionIssue(github, 'Penmoss PEN-41 plan')).toBeUndefined();
     expect(sessionIssue(linear, 'My own session')).toBeUndefined();
   });
-  it('gives factory:chat the command that joins the planning session (A1281)', async () => {
+  it('gives factory:chat the Claude app link and the command that join the planning session (A1281, A1286)', async () => {
     const { planFiles, planningChat, writeMeta } = await import('../src/planning-host.ts');
     const config = { ...linearConfig(), stateDir: mkdtempSync(join(tmpdir(), 'chat-')) };
     expect(planningChat(config, 41)).toEqual({ error: 'PEN-41 has no planning session yet' });
     const files = planFiles(config, 41);
     mkdirSync(files.root, { recursive: true });
     writeMeta(files, { sessionId: '5be0ac96-5e8e-4b08' });
-    expect(planningChat(config, 41)).toEqual({ command: 'claude attach 5be0ac96' });
+    expect(planningChat(config, 41)).toEqual({ command: 'claude attach 5be0ac96', chatUrl: null });
+    writeMeta(files, {
+      sessionId: '5be0ac96-5e8e-4b08',
+      chatUrl: 'https://claude.ai/code/session_01Ab',
+    });
+    expect(planningChat(config, 41)).toEqual({
+      command: 'claude attach 5be0ac96',
+      chatUrl: 'https://claude.ai/code/session_01Ab',
+    });
     writeMeta(files, {
       sessionId: '5be0ac96-5e8e-4b08',
       agreed: {
