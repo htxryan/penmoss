@@ -8,6 +8,7 @@ import {
   chatUrlFromDebug,
   interactiveArgs,
   lastAssistantText,
+  pendingBackground,
   resultEvent,
   seedConfig,
 } from '../sandbox/remote-claude.ts';
@@ -74,6 +75,44 @@ describe('the in-sandbox runner of a session with a chat', () => {
     ).toMatchObject({ result: 'said' });
   });
 
+  it('names the background commands whose notification has not come', () => {
+    const started = (id: string) =>
+      JSON.stringify({
+        type: 'user',
+        message: {
+          content: [
+            {
+              type: 'tool_result',
+              content: `Command running in background with ID: ${id}. Output is being written to: /t`,
+            },
+          ],
+        },
+      });
+    const done = (id: string, extra = '') =>
+      JSON.stringify({
+        type: 'user',
+        message: {
+          content: `<task-notification>\n<task-id>${id}</task-id>\n${extra}<status>completed</status>\n</task-notification>`,
+        },
+      });
+    expect(pendingBackground('')).toEqual([]);
+    expect(
+      pendingBackground(
+        [started('a1'), started('b2'), done('a1', '<output-file>/t/a1</output-file>\n')].join('\n'),
+      ),
+    ).toEqual(['b2']);
+    expect(pendingBackground([started('a1'), done('a1')].join('\n'))).toEqual([]);
+    // A monitor's event names its task too, without a status: not an end.
+    const event = JSON.stringify({
+      type: 'user',
+      message: {
+        content:
+          '<task-notification>\n<task-id>a1</task-id>\n<event>x</event>\n</task-notification>',
+      },
+    });
+    expect(pendingBackground([started('a1'), event].join('\n'))).toEqual(['a1']);
+  });
+
   it("drops claude -p's own flags and keeps the factory's", () => {
     expect(
       interactiveArgs([
@@ -120,14 +159,25 @@ const say = (text) => fs.appendFileSync(transcript, JSON.stringify({ type: 'assi
 fs.writeFileSync(transcript, JSON.stringify({ type: 'user', message: { content: argv.at(-1) } }) + '\n');
 hook({ hook_event_name: 'SessionStart', session_id: 's1', transcript_path: transcript });
 fs.writeFileSync(argv[argv.indexOf('--debug-file') + 1], '[remote-bridge] Created session cse_TEST123\n');
-setTimeout(() => {
+const user = (content) => fs.appendFileSync(transcript, JSON.stringify({ type: 'user', message: { content } }) + '\n');
+if (env.FAKE_BACKGROUND) setTimeout(() => {
+  // A turn that starts a command in the background and ends to wait for it.
+  user([{ type: 'tool_result', content: 'Command running in background with ID: b1. Output is being written to: /t/b1.output' }]);
+  say('Waiting for the test run.'); hook({ hook_event_name: 'Stop', session_id: 's1' });
+  if (env.FAKE_BACKGROUND === 'never') return;
+  setTimeout(() => {
+    user('<task-notification>\n<task-id>b1</task-id>\n<output-file>/t/b1.output</output-file>\n<status>completed</status>\n</task-notification>');
+    say('FINISHED'); hook({ hook_event_name: 'Stop', session_id: 's1' });
+  }, 2500);
+}, 1200);
+else setTimeout(() => {
   if (env.FAKE_FAIL) { say("You've hit your limit · resets 3pm"); hook({ hook_event_name: 'StopFailure', error: 'rate_limit' }); }
   else { say('FINISHED'); hook({ hook_event_name: 'Stop', session_id: 's1' }); }
 }, 1200);
 setInterval(() => {}, 1000);
 `;
 
-function runner(fail: boolean) {
+function runner(fail: boolean, extra: Record<string, string> = {}) {
   const root = mkdtempSync(join(tmpdir(), 'factory-rc-'));
   const bin = join(root, 'bin');
   const login = join(root, 'login');
@@ -172,6 +222,7 @@ function runner(fail: boolean) {
         CLAUDE_CODE_OAUTH_TOKEN: 'setup-token',
         FAKE_RECORD: record,
         ...(fail ? { FAKE_FAIL: '1' } : {}),
+        ...extra,
       },
     },
   );
@@ -218,6 +269,21 @@ describe.skipIf(process.platform !== 'darwin')(
         result: 'FINISHED',
         session_id: 's1',
       });
+    });
+
+    it('goes on past a turn that ended waiting on its background command (PEN-71)', () => {
+      const { r, lines } = runner(false, { FAKE_BACKGROUND: '1' });
+      expect(r.status).toBe(0);
+      expect(lines.at(-1)).toMatchObject({ type: 'result', is_error: false, result: 'FINISHED' });
+    });
+
+    it("ends after its bound when the background command's notification never comes", () => {
+      const { r, lines } = runner(false, {
+        FAKE_BACKGROUND: 'never',
+        FACTORY_RC_BACKGROUND_MS: '3000',
+      });
+      expect(r.status).toBe(0);
+      expect(lines.at(-1)).toMatchObject({ result: 'Waiting for the test run.' });
     });
 
     it('exits 1 with the error as its result when the turn fails', () => {

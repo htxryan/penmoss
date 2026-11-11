@@ -6,7 +6,10 @@
  * - stdin is the prompt; stdout is stream-json: an `init` line, the session's transcript lines
  *   as Claude Code writes them, a `factory_chat` line with the chat's link, and last a `result`;
  * - the session ends at the Stop or StopFailure hook (a turn ended), and the runner exits 0, or 1
- *   when the turn ended on an error (a usage limit), as `claude -p` does.
+ *   when the turn ended on an error (a usage limit), as `claude -p` does. A turn that ends while
+ *   a command it started in the background still runs isn't the end: the command's notification
+ *   starts the next turn, and the session ends at the Stop after that (PEN-71's CI repair ended
+ *   waiting on its test run, with nothing committed; A1295).
  *
  * Claude signs in with the factory's own claude.ai login, which the host staged for this slot as
  * an access token only (`FACTORY_CLAUDE_LOGIN`, read-only): no refresh token ever enters the
@@ -40,6 +43,8 @@ const TERMINAL_CODES = new RegExp(`${ESC}\\[[0-9;?]*[ -/]*[@-~]|${ESC}\\][^${BEL
 
 /** How long Claude Code may take to start its session before the runner gives up. */
 const START_MS = 120_000;
+/** How long a turn that ended on a background command waits for the next (a server never ends). */
+export const BACKGROUND_WAIT_MS = Number(process.env['FACTORY_RC_BACKGROUND_MS'] ?? 30 * 60_000);
 
 type Json = Record<string, unknown>;
 
@@ -106,6 +111,25 @@ export function lastAssistantText(transcript: string): string {
     if (text.trim()) return text;
   }
   return '';
+}
+
+/**
+ * The background commands the transcript started (Bash's `run_in_background`) whose
+ * notification hasn't come: each launch says "running in background with ID: <id>", and its
+ * end is a `<task-notification>` naming the id with a `<status>`.
+ */
+export function pendingBackground(transcript: string): string[] {
+  const started = new Set(
+    [...transcript.matchAll(/running in background with ID: ([A-Za-z0-9_-]+)/g)].map((m) => m[1]!),
+  );
+  const ended = new Set(
+    [
+      ...transcript.matchAll(
+        /<task-id>([A-Za-z0-9_-]+)<\/task-id>((?:(?!<\/task-notification>)[\s\S]){0,4000}?)<status>/g,
+      ),
+    ].map((m) => m[1]!),
+  );
+  return [...started].filter((id) => !ended.has(id));
 }
 
 /** The `result` line `claude -p` would end with, from the hook that ended the turn. */
@@ -253,6 +277,8 @@ async function run(name: string, command: readonly string[]): Promise<number> {
   let partial = '';
   let session: string | undefined;
   let chat: string | undefined;
+  /** The Stop of a turn left waiting on a background command, and until when it waits. */
+  let held: { readonly hook: Json; readonly until: number } | undefined;
   const pump = () => {
     if (!transcript) return;
     const size = sizeOf(transcript);
@@ -281,12 +307,25 @@ async function run(name: string, command: readonly string[]): Promise<number> {
       chat = chatUrlFromDebug(readFileSync(debug, 'utf8'));
       if (chat) out(JSON.stringify({ type: 'system', subtype: CHAT_SUBTYPE, url: chat }));
     }
-    const ended = readJson(join(dir, 'StopFailure.json')) ?? readJson(join(dir, 'Stop.json'));
+    const ended =
+      readJson(join(dir, 'StopFailure.json')) ??
+      readJson(join(dir, 'Stop.json')) ??
+      (held && Date.now() > held.until ? held.hook : null);
     if (ended) {
       // The transcript's last lines can land just after the hook.
       await new Promise((r) => setTimeout(r, 1000));
       pump();
       const text = transcript && existsSync(transcript) ? readFileSync(transcript, 'utf8') : '';
+      // A turn that waits on its own background command goes on when the command ends.
+      if (
+        ended !== held?.hook &&
+        ended['hook_event_name'] === 'Stop' &&
+        pendingBackground(text).length > 0
+      ) {
+        rmSync(join(dir, 'Stop.json'), { force: true });
+        held = { hook: ended, until: Date.now() + BACKGROUND_WAIT_MS };
+        continue;
+      }
       const result = resultEvent(ended, text, session);
       out(JSON.stringify(result));
       stop();
