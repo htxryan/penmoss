@@ -127,7 +127,7 @@ export function Home({ phone }: { readonly phone: boolean }) {
         <h2>No note open</h2>
         <p>
           Pick a note from the list, or create one with <strong>New Note</strong>
-          {newNoteKeys[0] ? ` (${formatCombo(newNoteKeys[0])})` : ''}. Every action is in the
+          {newNoteKeys[0] ? ` (${formatCombo(newNoteKeys[0])})` : ''}. Every command is in the
           command palette{paletteKeys[0] ? ` (${formatCombo(paletteKeys[0])})` : ''}.
         </p>
       </div>

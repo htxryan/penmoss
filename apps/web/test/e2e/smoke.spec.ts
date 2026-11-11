@@ -15,6 +15,11 @@ test('loads the notes shell inside a new git notebook', async ({ page }) => {
   await expect(
     page.getByTestId('sidebar-shortcuts').getByRole('button', { name: 'New Note', exact: true }),
   ).toBeVisible();
-  await expect(page.getByTestId('empty-state')).toBeVisible();
+  const emptyState = page.getByTestId('empty-state');
+  await expect(emptyState).toBeVisible();
+  await expect(emptyState).toContainText(/Every command is in the command palette \(.+\)\./);
+  // Hold on the hint so the proof video shows it (PEN-119).
+  await page.waitForTimeout(2000);
   expect(consoleErrors).toEqual([]);
+  await expect(emptyState).toBeVisible();
 });
