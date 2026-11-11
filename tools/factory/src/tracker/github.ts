@@ -7,6 +7,7 @@ import type { FactoryConfig } from '../config.ts';
 import type { Gh } from '../github.ts';
 import { readIssue } from '../issue.ts';
 import type { Tracker } from './port.ts';
+import { optedIn } from '../labels.ts';
 
 export function createGithubTracker(
   config: FactoryConfig,
@@ -25,7 +26,11 @@ export function createGithubTracker(
     project,
     readBoard: read,
     readIssue: (n) => readIssue(gh, config.repo, n),
-    isBlocked: async (n) => (await read()).items.find((i) => i.number === n)?.blocked ?? false,
+    isBlocked: async (n) => {
+      const item = (await read()).items.find((i) => i.number === n);
+      // A card that loses the opt-in label is hands off too (A1296).
+      return item ? item.blocked || !optedIn(item.labels, config) : false;
+    },
     comment,
     setStatus: async (item, status) => setStatus(gh, await project(), item, status),
     setBlocked: async (item) => setBlocked(gh, await project(), item),

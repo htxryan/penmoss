@@ -87,6 +87,10 @@ export interface FactoryConfig {
   readonly envFile: string;
   readonly stateDir: string;
   readonly pollSeconds: number;
+  /** How often the updater looks at main for factory changes; 0 turns it off (A1293). */
+  readonly autoUpdateMinutes: number;
+  /** The label that lets the factory act on a card at all; without it, hands off (A1296). */
+  readonly optInLabel: string;
   readonly maxConcurrent: number;
   readonly worktreeRoot: string;
   readonly branchPrefix: string;
@@ -220,9 +224,17 @@ export function parseConfig(raw: unknown): ConfigResult {
   for (const key of ['bucket', 'publicUrl', 'envFile']) str(proof, key, 'config.proof');
   if (typeof proof['publicUrl'] === 'string' && !proof['publicUrl'].startsWith('https://'))
     problems.push('config.proof.publicUrl must be an https:// URL');
-  for (const key of ['envFile', 'stateDir', 'worktreeRoot', 'branchPrefix', 'sharedDir'])
+  for (const key of [
+    'envFile',
+    'stateDir',
+    'worktreeRoot',
+    'branchPrefix',
+    'sharedDir',
+    'optInLabel',
+  ])
     str(root, key, 'config');
   int(root, 'pollSeconds', 'config', 10);
+  int(root, 'autoUpdateMinutes', 'config', 0);
   int(root, 'maxConcurrent', 'config', 1);
   const rounds = obj(root['rounds'], 'config.rounds');
   int(rounds, 'gateFix', 'config.rounds');

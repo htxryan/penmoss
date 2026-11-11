@@ -75,6 +75,7 @@ import { makeOwnDirs, sandboxSpec, seatbeltProvider, withJavaHome } from './sand
 import { ANDROID_WALK_CLASS, MAC_WALK_SPEC, WALK_SHOT, walkFile, walkTail } from './walk.ts';
 import type { Secrets } from './secrets.ts';
 import type { Tracker } from './tracker/port.ts';
+import { signal, stopLeftovers } from './leftovers.ts';
 
 export const DEAD_END_PUSH_URL = 'no-push://the-factory-harness-pushes';
 
@@ -275,6 +276,20 @@ export async function execPastRefLocks(
 /** The agent's raw output stream in the run folder, beside Sandcastle's `agent.log`. */
 export const AGENT_STREAM = 'agent.stream.jsonl';
 
+/** Where a run's sandbox finds the last proof's screenshots (`stageLastProof`). */
+export const LAST_PROOF = '.factory/last-proof';
+
+/** Copies the last proof's screenshots (`<platform>-<n>-screenshot.png`) into the worktree. */
+export function stageLastProof(raw: string, worktree: string): string[] {
+  if (!existsSync(raw)) return [];
+  const shots = readdirSync(raw).filter((f) => /^[a-z]+-\d+-screenshot\.png$/.test(f));
+  if (shots.length === 0) return [];
+  const to = join(worktree, LAST_PROOF);
+  mkdirSync(to, { recursive: true });
+  for (const f of shots) copyFileSync(join(raw, f), join(to, f));
+  return shots;
+}
+
 /** The current session's chat link, in the run folder while the session runs (the UI reads it). */
 export const CHAT_URL = 'chat-url';
 
@@ -472,6 +487,17 @@ export function hostDeps(options: HostOptions): HostDeps {
         cwd: dir,
         sandbox: await seatbeltProvider(spec),
       });
+      // What an earlier session left running in this worktree goes first, and what this one
+      // leaves goes when it closes (A1297).
+      const leftovers = async (when: string) => {
+        const stopped = await stopLeftovers(exec, sandbox.worktreePath, {
+          kill: signal,
+          sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+        }).catch(() => []);
+        if (stopped.length > 0)
+          options.log(`stopped ${stopped.length} process(es) left in the worktree ${when}`);
+      };
+      await leftovers('by an earlier session');
       const handle: RunSandbox = {
         worktreePath: sandbox.worktreePath,
         exec: async (command) => {
@@ -480,6 +506,7 @@ export function hostDeps(options: HostOptions): HostDeps {
         },
         close: async () => {
           await sandbox.close();
+          await leftovers('when the sandbox closed');
         },
       };
       // Commits someone pushed to the PR's branch by hand come first, so the agent builds on
@@ -525,6 +552,13 @@ export function hostDeps(options: HostOptions): HostDeps {
         options.log(
           `the sandbox's dependencies didn't install (exit ${ready.exitCode}); the agent starts without them: ${(ready.stderr || ready.stdout).trim().split('\n').slice(-3).join(' ')}`,
         );
+      // The last proof's screenshots, so an agent sent back by a failed proof can see where it
+      // stopped (A1291): the Mac proof runs in the VM, which the sandbox can't reach.
+      try {
+        stageLastProof(join(runDir, 'raw'), handle.worktreePath);
+      } catch {
+        // The agent then has the proof's output only.
+      }
       // The issue's images, which the host downloaded into the run folder (attachments.ts). A
       // copy that fails leaves the agent without them; it never stops the run.
       try {
@@ -783,7 +817,14 @@ export function hostDeps(options: HostOptions): HostDeps {
         // copies this worktree in read-only and queues on the VM's lock (F7). At the proof
         // timeout it is stopped with its `tart run`, and stops the VM, freeing the lock.
         const out = join(handle.worktreePath, 'test-results', 'vm');
-        await runMacProof(exec, config, handle.worktreePath, specs, signal);
+        const ran = await runMacProof(exec, config, handle.worktreePath, specs, signal);
+        // The VM script prints only the log's last lines; the whole log came back beside the
+        // report. Kept like the other platforms' output, so a failure reaches the agent (A1291).
+        const vmLog = join(out, 'desktop-test.log');
+        keepProofLog(
+          'mac',
+          existsSync(vmLog) ? { stdout: readFileSync(vmLog, 'utf8'), stderr: '' } : ran,
+        );
         const report = join(out, 'test-results', 'proof', 'report.json');
         if (!existsSync(report)) return [];
         items = fromPlaywrightReport(

@@ -545,7 +545,7 @@ export async function gateAndProve(
     if (missing.length > 0) {
       return {
         ok: false,
-        feedback: `the proof specs for ${missing.join(', ')} didn't pass when the harness ran them with recording on.${proofOutput(deps, missing)}`,
+        feedback: `the proof specs for ${missing.join(', ')} didn't pass when the harness ran them with recording on. Each proof's last screenshot is in \`.factory/last-proof/\` (\`<platform>-<n>-screenshot.png\`): look at it to see where the spec stopped.${proofOutput(deps, missing)}`,
       };
     }
     const prepared = await deps.prepareProof(items);

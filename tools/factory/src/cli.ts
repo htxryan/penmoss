@@ -21,8 +21,10 @@ import {
   installAgents,
   startFactory,
   updateFactory,
+  type UpdateDeps,
   type AgentDeps,
 } from './code.ts';
+import { runUpdater } from './updater.ts';
 import { runDaemon } from './daemon.ts';
 import { formatStatus, readStatus } from './status.ts';
 import { buildReport, formatReport, parseRange } from './report.ts';
@@ -163,15 +165,20 @@ function isAlive(pid: number): boolean {
   }
 }
 
+function updateDeps(): UpdateDeps {
+  return {
+    ...agentDeps(),
+    pid: process.pid,
+    alive: isAlive,
+    now: () => new Date(),
+    log: (line) => console.log(`${new Date().toISOString()} ${line}`),
+  };
+}
+
 function update(config: FactoryConfig, args: readonly string[]): Promise<number> {
   return updateFactory(
     config,
-    {
-      ...agentDeps(),
-      pid: process.pid,
-      alive: isAlive,
-      now: () => new Date(),
-    },
+    { ...updateDeps(), log: (line) => console.log(line) },
     { wait: args.includes('--wait') },
   );
 }
@@ -276,6 +283,8 @@ async function main(argv: readonly string[]): Promise<number> {
       return installAgents(loaded.config, agentDeps());
     case 'update':
       return update(loaded.config, rest);
+    case 'updater':
+      return runUpdater(loaded.config, updateDeps());
     case 'start':
       return startFactory(agentDeps());
     case 'status':

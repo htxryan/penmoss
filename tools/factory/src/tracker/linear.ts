@@ -6,7 +6,7 @@
  */
 import type { FactoryConfig } from '../config.ts';
 import type { Issue } from '../issue.ts';
-import type { Priority } from '../labels.ts';
+import { optedIn, type Priority } from '../labels.ts';
 import type { LinearClient } from './linear-client.ts';
 import type { Board, BoardItem, Tracker } from './port.ts';
 
@@ -282,7 +282,9 @@ export function createLinearTracker(
       // So is a canceled one: PEN-80's run, still waiting on CI, moved its canceled card back to
       // In Review and posted on its closed PR (A1268).
       if (!raw.issue || raw.issue.state.type === 'canceled') return true;
-      return toItem(raw.issue, config, 0).blocked;
+      // A card that loses the opt-in label is hands off too (A1296).
+      const item = toItem(raw.issue, config, 0);
+      return item.blocked || !optedIn(item.labels, config);
     },
     comment,
     async setStatus(item, status) {
