@@ -196,9 +196,11 @@ jobs:
         with:
           playwright-cache: 'true'
 
-      - name: Install Chromium and its system libraries
+      - name: Install Chromium, and its system libraries if the image lacks any
         timeout-minutes: 15
-        run: pnpm --filter @penmoss/site exec playwright install --with-deps chromium
+        run: |
+          pnpm --filter @penmoss/site exec playwright install chromium
+          sh .github/scripts/system-deps.sh @penmoss/site
 
       - name: Build the site and check it as served
         run: |
@@ -228,9 +230,11 @@ jobs:
         with:
           playwright-cache: 'true'
 
-      - name: Install Chromium and its system libraries
+      - name: Install Chromium, and its system libraries if the image lacks any
         timeout-minutes: 15
-        run: task e2e:install -- --with-deps
+        run: |
+          task e2e:install
+          sh .github/scripts/system-deps.sh @penmoss/web
 
       - name: Playwright E2E (smoke)
         # Twice the 16 minutes it took on Ubuntu (A620) leaves room for retries.
@@ -341,8 +345,7 @@ jobs:
       - name: Chromium's system libraries, xvfb and xdotool (presses the global hotkey)
         timeout-minutes: 15
         run: |
-          pnpm --filter @penmoss/web exec playwright install-deps chromium
-          sudo apt-get install -y --no-install-recommends xvfb xdotool
+          sh .github/scripts/system-deps.sh @penmoss/web Xvfb:xvfb xdotool:xdotool
           # Ubuntu 24.04 blocks the unprivileged user namespaces Chromium's sandbox uses;
           # allow them rather than running Electron with --no-sandbox.
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
