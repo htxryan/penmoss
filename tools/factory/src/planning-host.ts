@@ -93,6 +93,11 @@ export const agreedPlanPath = (files: PlanFiles) => join(files.root, 'agreed.htm
 /** The flags every planning session runs with (F0.5): no MCP, no Chrome, project settings, path-scoped tools. */
 export function planningFlags(files: PlanFiles): string[] {
   return [
+    // Ryan's own Claude Code turns Remote Control on at startup (`remoteControlAtStartup`, kept
+    // in ~/.claude.json too), and the factory's token can't open it: every session printed
+    // "Claude.ai login was rejected" into the chat Ryan attaches to (A1281).
+    '--settings',
+    '{"remoteControlAtStartup":false}',
     '--no-chrome',
     '--strict-mcp-config',
     '--mcp-config',

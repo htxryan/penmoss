@@ -200,6 +200,8 @@ describe('planning sessions', async () => {
         'Edit(//p/9/out/**)',
       ]),
     );
+    // No Remote Control: the factory's token can't open it, so it only printed a rejection.
+    expect(flags.join(' ')).toContain('--settings {"remoteControlAtStartup":false}');
     expect(flags).not.toContain('Edit(//p/9/attachments/**)');
     expect(flags.some((f) => f.startsWith('Bash'))).toBe(false);
     // Claude Code never matches a file write against a Write rule, only against Edit.
