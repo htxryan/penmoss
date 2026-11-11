@@ -106,6 +106,8 @@ function fixture() {
   for (const d of [join(root, 'scripts'), join(sdk, 'platform-tools'), join(sdk, 'emulator'), tmp])
     mkdirSync(d, { recursive: true });
   copyFileSync(SCRIPT, join(root, 'scripts', 'proof.sh'));
+  // What it sources: settling the emulator, and answering its dialogs (PEN-97).
+  copyFileSync(join(SCRIPT, '..', 'settle.sh'), join(root, 'scripts', 'settle.sh'));
   const stub = (path: string, text: string) => {
     writeFileSync(path, text);
     chmodSync(path, 0o755);

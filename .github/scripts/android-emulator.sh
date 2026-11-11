@@ -89,9 +89,12 @@ avd() {
 }
 
 emulator_pid=''
+watcher=''
 
-# Stops what `test` started: the emulator through its console, then by pid, then adb's server.
+# Stops what `test` started: the dialog watcher, the emulator through its console, then by pid,
+# then adb's server.
 stop_started() {
+  [ -z "$watcher" ] || kill "$watcher" 2> /dev/null || true
   if [ -n "$emulator_pid" ]; then
     "$ADB" -s "$SERIAL" emu kill > /dev/null 2>&1 || true
     local waited=0
@@ -166,12 +169,20 @@ run_tests() {
   done
   "$ADB" -s "$SERIAL" shell svc power stayon true || true
   "$ADB" -s "$SERIAL" shell wm dismiss-keyguard || true
+  # Booted isn't idle: wait for the launcher to hold the focus with no "isn't responding" dialog
+  # in front, as the factory's proof does (PEN-97: a test timed out waiting for window focus).
+  # shellcheck source=apps/android/scripts/settle.sh
+  . "$ROOT/apps/android/scripts/settle.sh"
+  settle_device
   # The AVD keeps the last run's app. This runner's debug key signed it, but a removed app
   # can't fail the install.
   "$ADB" -s "$SERIAL" uninstall "$APP.test" > /dev/null 2>&1 || true
   "$ADB" -s "$SERIAL" uninstall "$APP" > /dev/null 2>&1 || true
 
   say "instrumented tests on $SERIAL (all but $NOT_ON_CI)"
+  # A dialog that comes up while the tests run takes their focus too: answer it with Wait.
+  watch_dialogs 'the tests' &
+  watcher=$!
   (cd "$ROOT/apps/android" && ./gradlew --console=plain :app:connectedDebugAndroidTest \
     "-Pandroid.testInstrumentationRunnerArguments.notClass=$NOT_ON_CI")
 }
