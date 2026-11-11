@@ -5,14 +5,16 @@
  * then the branch's. A branch whose own Prettier run re-padded the table (an `A-NEW-1` is wider
  * than the ID column) conflicts on every row; that is merged with the padding taken out, then
  * formatted again (A1250). A row whose number main has meanwhile given to another decision is
- * renumbered after the rebase. Any other conflict aborts the rebase and goes to the agent.
+ * renumbered after the rebase. The factory's own numbering commit, which edits the branch's
+ * `A-NEW-n` row where main's new rows are, is replayed rather than merged (A1292). Any other
+ * conflict aborts the rebase and goes to the agent.
  *
  * Runs in a gate sandbox's worktree (git through the sandbox, the files read on the host as
  * `numberDecisions` does); the push stays the host's (R18).
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { formatDecisions, renumberLines, takenDecisions } from './decisions.ts';
+import { formatDecisions, numberLines, renumberLines, takenDecisions } from './decisions.ts';
 import type { RunSandbox } from './run.ts';
 
 export const DECISIONS = 'docs/decisions.md';
@@ -133,6 +135,38 @@ async function mergeUnpadded(sandbox: RunSandbox): Promise<string | null> {
   return text === null ? null : formatDecisions(text);
 }
 
+/** The subject of the factory's numbering commit (host.ts), and the numbers it gave. */
+const NUMBERING = /^Number the new decisions: (.+)$/;
+
+export function numberingOf(subject: string): Record<string, string> | null {
+  const match = NUMBERING.exec(subject.trim());
+  if (!match) return null;
+  const assigned: Record<string, string> = {};
+  for (const pair of match[1]!.split(', ')) {
+    const each = /^(A-NEW-\d+) is (A\d+)$/.exec(pair);
+    if (!each) return null;
+    assigned[each[1]!] = each[2]!;
+  }
+  return assigned;
+}
+
+/**
+ * The stopped commit, when it is the factory's numbering commit, done again on top of what the
+ * rebase has so far: the branch's rows main doesn't have get their numbers, and Prettier pads
+ * the table. Null for any other commit.
+ */
+async function replayNumbering(sandbox: RunSandbox): Promise<string | null> {
+  const subject = await sandbox.exec('git log -1 --format=%s REBASE_HEAD');
+  const assigned = subject.exitCode === 0 ? numberingOf(subject.stdout) : null;
+  if (!assigned) return null;
+  const ours = await sandbox.exec(`git show :2:${DECISIONS}`);
+  const main = await sandbox.exec(`git show origin/main:${DECISIONS}`);
+  if (ours.exitCode !== 0 || main.exitCode !== 0) return null;
+  const every = new Set(ours.stdout.split('\n').map((_, i) => i + 1));
+  const lines = newRows(ours.stdout, every, main.stdout);
+  return formatDecisions(numberLines(ours.stdout, lines, assigned));
+}
+
 /**
  * `git rebase origin/main` in the sandbox's worktree, resolving decisions-only conflicts as
  * above, then renumbering any row main has taken (one more commit). `reservedFile` is the
@@ -153,7 +187,9 @@ export async function rebaseOntoMain(
     const decisionsOnly =
       stops < MAX_STOPS && unmerged.length > 0 && unmerged.every((f) => f === DECISIONS);
     const text = decisionsOnly
-      ? (resolveAppendConflicts(readFileSync(path, 'utf8')) ?? (await mergeUnpadded(sandbox)))
+      ? (resolveAppendConflicts(readFileSync(path, 'utf8')) ??
+        (await mergeUnpadded(sandbox)) ??
+        (await replayNumbering(sandbox)))
       : null;
     if (text === null) {
       await sandbox.exec('git rebase --abort');
