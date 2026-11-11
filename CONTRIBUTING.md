@@ -26,7 +26,7 @@ task dev     # the Mac app from this checkout
 1. Fork the repository and make your change on a branch.
 2. Add a test that fails without the change. The kinds of test, and where they live, are in [`docs/development.md`](docs/development.md#testing).
 3. Run `task check` (lint, typecheck and unit tests) and, for anything in the web app, `task e2e`.
-4. Open a pull request that says what changes for someone using Penmoss and how you checked it. If it changes a decision in [`docs/decisions.md`](docs/decisions.md), update that row in the same pull request.
+4. Open a pull request that says what changes for someone using Penmoss and how you checked it. Fill in its **Release note**: one line per change people would notice, such as `Fixed: Search finds notes with accents.`, or `none`. The template shows the form, and a check says what to fix. If it changes a decision in [`docs/decisions.md`](docs/decisions.md), update that row in the same pull request.
 
 The code style is in [`docs/development.md`](docs/development.md#code-style): pure functions in `packages/core`, every user action through the command registry, every colour through a theme token, no default exports.
 
