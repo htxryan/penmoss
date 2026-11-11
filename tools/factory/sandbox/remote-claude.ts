@@ -323,7 +323,7 @@ async function main(argv: readonly string[]): Promise<number> {
   const nameAt = rest.indexOf('--name');
   if (mode !== 'run' || dash < 0 || nameAt < 0 || nameAt > dash)
     throw new Error('usage: remote-claude.ts run --name <name> -- claude <args...>  |  hook');
-  return run(rest[nameAt + 1] ?? 'Penmoss factory', rest.slice(dash + 1));
+  return run(rest[nameAt + 1] ?? '[PF] Penmoss factory', rest.slice(dash + 1));
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {

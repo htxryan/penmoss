@@ -3,6 +3,7 @@ import type { AgentProvider } from '@ai-hero/sandcastle';
 import { hasLogin, loginDir } from '../claude-login.ts';
 import type { FactoryConfig } from '../config.ts';
 import type { IssueSpec } from '../labels.ts';
+import { FACTORY_PREFIX } from '../planning-host.ts';
 import { issueKey } from '../tracker/port.ts';
 import { claudeAgent } from './claude.ts';
 import { opencodeAgent } from './opencode.ts';
@@ -15,9 +16,9 @@ export function agentFor(config: FactoryConfig, spec: IssueSpec): Promise<AgentP
   return spec.agent === 'opencode' ? opencodeAgent(model) : claudeAgent(model);
 }
 
-/** A run's sessions' name in the Claude app: the card as people know it. */
+/** A run's sessions' name in the Claude app: the card as people know it, marked as the factory's. */
 export const runSessionName = (config: FactoryConfig, issue: number) =>
-  `Penmoss ${issueKey(config, issue)} run`;
+  `${FACTORY_PREFIX}Penmoss ${issueKey(config, issue)} run`;
 
 /**
  * The same agent with a chat in the Claude app (A1287), when the issue runs on Claude Code and
