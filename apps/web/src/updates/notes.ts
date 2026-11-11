@@ -82,11 +82,19 @@ function before(file: DesktopReleaseNotes, build: number): DesktopReleaseNotesRe
   );
 }
 
-/** Notes for the Mac (no platform, or Mac) with `from < build <= to`. */
-function range(file: DesktopReleaseNotes, from: number | null, to: number): DesktopReleaseNote[] {
+/** Which app the notes are for: the Mac's page, or Android's (the shared cases, PEN-109). */
+export type NotesPlatform = 'mac' | 'android';
+
+/** Notes for `platform` (no platform, or that one) with `from < build <= to`. */
+function range(
+  file: DesktopReleaseNotes,
+  from: number | null,
+  to: number,
+  platform: NotesPlatform,
+): DesktopReleaseNote[] {
   return file.notes.filter(
     (note) =>
-      (note.platform === null || note.platform === 'mac') &&
+      (note.platform === null || note.platform === platform) &&
       note.build <= to &&
       (from === null || note.build > from),
   );
@@ -101,10 +109,16 @@ export function groupNotes(notes: readonly DesktopReleaseNote[]): NoteGroup[] {
 }
 
 /** A stable release's own notes: after the stable release before it, up to it. */
-function releaseBlock(file: DesktopReleaseNotes, release: DesktopReleaseNotesRelease): NotesBlock {
+function releaseBlock(
+  file: DesktopReleaseNotes,
+  release: DesktopReleaseNotesRelease,
+  platform: NotesPlatform,
+): NotesBlock {
   return {
     title: release.version,
-    groups: groupNotes(range(file, before(file, release.build)?.build ?? null, release.build)),
+    groups: groupNotes(
+      range(file, before(file, release.build)?.build ?? null, release.build, platform),
+    ),
     builds: false,
   };
 }
@@ -123,6 +137,7 @@ export function notesView(
   file: DesktopReleaseNotes | null,
   current: string,
   offered: string | null,
+  platform: NotesPlatform = 'mac',
 ): NotesView {
   if (!file) return { status: 'none' };
   if (file.schema > NOTES_SCHEMA) return { status: 'newer' };
@@ -135,11 +150,15 @@ export function notesView(
     currentBlock = alpha
       ? {
           title: base ? `In this version (since ${base.version})` : 'In this version',
-          groups: groupNotes(range(file, base?.build ?? null, here)),
+          groups: groupNotes(range(file, base?.build ?? null, here, platform)),
           builds: true,
         }
       : {
-          ...releaseBlock(file, { version: current, tag: `v${current}`, build: here, date: '' }),
+          ...releaseBlock(
+            file,
+            { version: current, tag: `v${current}`, build: here, date: '' },
+            platform,
+          ),
           title: 'In this version',
         };
   }
@@ -151,7 +170,7 @@ export function notesView(
     const from = here ?? before(file, there)?.build ?? null;
     offeredBlock = {
       title: `What's new in ${versionLabel(offered)}`,
-      groups: groupNotes(range(file, from, there)),
+      groups: groupNotes(range(file, from, there, platform)),
       builds: offeredAlpha,
     };
   }
@@ -163,13 +182,13 @@ export function notesView(
     here === null
       ? stable(file)
           .reverse()
-          .map((release) => releaseBlock(file, release))
+          .map((release) => releaseBlock(file, release, platform))
       : floor === null
         ? []
         : stable(file)
             .filter((release) => release.build <= floor)
             .reverse()
-            .map((release) => releaseBlock(file, release));
+            .map((release) => releaseBlock(file, release, platform));
 
   return { status: 'ok', offered: offeredBlock, current: currentBlock, earlier };
 }
@@ -182,9 +201,10 @@ export function updatedNotice(
   file: DesktopReleaseNotes | null,
   current: string,
   updatedFrom: string | null | undefined,
+  platform: NotesPlatform = 'mac',
 ): string | null {
   if (!updatedFrom) return null;
-  const view = notesView(file, current, null);
+  const view = notesView(file, current, null, platform);
   if (view.status !== 'ok' || !view.current || view.current.groups.length === 0) return null;
   return versionLabel(current);
 }

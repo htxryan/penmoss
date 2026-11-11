@@ -184,6 +184,21 @@ export function appVersion(tags, run) {
 }
 
 /**
+ * A Play bundle's version name (PEN-109, RN15): the alpha-style version of the newest main build
+ * (its `build-N` tag), so a Play build places itself in the release notes as a sideload build
+ * does. Its versionCode stays minute-based (A595).
+ * @param {string[]} tags the v* tags @param {string[]} releases every release's tag
+ */
+export function playVersion(tags, releases) {
+  const builds = releases.flatMap((tag) => {
+    const match = BUILD.exec(tag);
+    return match ? [Number(match[1])] : [];
+  });
+  if (builds.length === 0) throw new Error('No build-N release: set PENMOSS_VERSION_NAME.');
+  return appVersion(tags, Math.max(...builds));
+}
+
+/**
  * A release tag's version (P3): vX.Y.Z is stable, vX.Y.Z-rc.N a rehearsal (a draft prerelease).
  * @param {string} tag
  * @returns {{ version: string, core: [number, number, number], prerelease: boolean } | null}
@@ -1015,6 +1030,13 @@ async function main() {
   } else if (command === 'fix-note' && values.pr) {
     const pr = Number(values.pr);
     await withScratch((scratch) => fixNote(gh, { pr, dir: scratch.dir() }));
+  } else if (command === 'play-version') {
+    console.log(
+      playVersion(
+        await gh.tags(),
+        (await gh.list()).map((release) => release.tag),
+      ),
+    );
   } else if (command === 'version' && values.run) {
     console.log(appVersion(await gh.tags(), Number(values.run)));
   } else if (command === 'release-info' && values.tag) {

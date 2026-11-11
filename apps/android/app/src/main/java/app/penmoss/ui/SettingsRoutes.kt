@@ -55,6 +55,9 @@ internal object SettingsRoutes {
     const val CAPTURE = "settings/capture"
     const val SYNC = "settings/sync"
 
+    /** What changed in this version and earlier ones (PEN-109). */
+    const val WHATS_NEW = "settings/whatsnew"
+
     /** The theme editor for one custom theme (T40 P1b). */
     const val THEME = "settings/appearance/theme/{id}"
 
@@ -102,6 +105,8 @@ internal fun settingsSections(
             .joinToString(" · ").ifEmpty { "Not synced yet" },
         SettingsIcons.Refresh,
     ),
+    // What changed in this version and earlier ones (PEN-109), just above About.
+    SettingsSection("whatsnew", "What’s New", "Version ${BuildConfig.VERSION_NAME}", SettingsIcons.WhatsNew),
     // Last (T49): the version, and Send Feedback (Title Case as the action is named, A938).
     SettingsSection("about", "About", "Version $version · Send Feedback", Icons.Outlined.Info),
 )
@@ -297,3 +302,26 @@ internal val APP_VERSION: String get() = appVersion(BuildConfig.VERSION_NAME, Bu
 
 /** "0.4.0 (build 17)" (AC1): the build is Play's versionCode, so a report names the exact upload. */
 internal fun appVersion(name: String, code: Int) = "$name (build $code)"
+
+/** Settings → What's New (PEN-109): the cached notes at once, and a fetch at most hourly. */
+@Composable
+internal fun WhatsNewRoute(onBack: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val store = remember(context) { app.penmoss.updates.ReleaseNotesStore.get(context) }
+    val file by store.notes.collectAsStateWithLifecycle()
+    androidx.compose.runtime.LaunchedEffect(store) {
+        store.load()
+        store.refresh(BuildConfig.VERSION_NAME)
+    }
+    app.penmoss.ui.settings.WhatsNewScreen(
+        view = app.penmoss.updates.notesView(file, BuildConfig.VERSION_NAME),
+        onOpenReleases = {
+            context.startActivity(
+                android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(app.penmoss.updates.RELEASES_URL))
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        },
+        onBack = onBack,
+    )
+}
+

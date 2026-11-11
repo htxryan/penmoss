@@ -58,6 +58,12 @@ Removing a notebook, Delete for Good and restoring a version first ask for your 
 
 **Settings → Sync and Storage** chooses whether notes load pictures from web addresses, which lets those websites see your phone's IP address, and shows the space files and pictures take on the phone. Files over 10 MB upload on Wi-Fi only.
 
+## What's new
+
+**Settings → What’s New** shows what changed in the version you have, and in earlier versions, grouped as **New**, **Improved** and **Fixed**. Only changes that reach Android are listed. An Alpha build lists every change since the last stable release, each with its build. The phone fetches the notes from GitHub when you open the screen and after an update, at most once an hour, and keeps them for offline. Until it has them, the screen links to the [Releases page](https://github.com/htxryan/penmoss/releases).
+
+After you install a newer version, a message at the foot of the screen says **Updated to …** once, with **What’s New**, if that version has notes for Android.
+
 ## What the phone does not have
 
 Compared with the Mac: note windows, Keep on Top, the menu bar icon and hotkey, Sign in with GitHub and the repository picker, SSH remotes, search by meaning, and the sidebar's Calendar and Tags sections. Agents connect on a Mac, not on the phone.

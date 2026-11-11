@@ -151,6 +151,19 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
             rootSnackbar.say(trashRefusedMessage(notice.title), SnackbarTone.Error, duration = SnackbarDuration.Long)
         }
     }
+    // After the version changed (PEN-109): once, when this version has notes for Android, a
+    // snackbar says so, with What's New. A fresh install records its version and says nothing.
+    LaunchedEffect(Unit) {
+        val store = app.penmoss.updates.ReleaseNotesStore.get(context)
+        val version = app.penmoss.BuildConfig.VERSION_NAME
+        val from = store.updatedFrom(version) ?: return@LaunchedEffect
+        store.load()
+        store.refresh(version)
+        val label = app.penmoss.updates.updatedNotice(store.notes.value, version, from) ?: return@LaunchedEffect
+        val result = rootSnackbar.showSnackbar("Updated to $label", actionLabel = "What’s New", duration = SnackbarDuration.Long)
+        store.acknowledge(version)
+        if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) nav.open(SettingsRoutes.WHATS_NEW)
+    }
     /** Copy Agent Reference from a list (T52 item 4): read from Room, said over every screen. */
     val copyAgentReference: (String) -> Unit = { id ->
         graph.scope.launch {
@@ -646,6 +659,8 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
             }
             composable(SettingsRoutes.ZONE) { entry -> TimeZoneRoute(graph, onBack = { nav.leave(entry) }) }
             composable(SettingsRoutes.CAPTURE) { entry -> QuickCaptureRoute(graph.device, onBack = { nav.leave(entry) }) }
+            // What changed in this version and earlier ones (PEN-109).
+            composable(SettingsRoutes.WHATS_NEW) { entry -> WhatsNewRoute(onBack = { nav.leave(entry) }) }
             composable(SettingsRoutes.SYNC) { entry ->
                 // A git notebook's sync is its own: the repository, the page, what waits (A880).
                 app.penmoss.git.GitSyncRoute(graph, passText, onGitNotebooks = { nav.open(app.penmoss.ui.keys.CommandRoutes.GIT_NOTEBOOKS) }, onBack = { nav.leave(entry) }, onAgentActivity = { nav.open(AgentActivityRoutes.ACTIVITY) })
