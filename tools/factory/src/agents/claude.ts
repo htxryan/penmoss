@@ -5,6 +5,7 @@
  * can't edit them in its worktree.
  */
 import type { AgentProvider } from '@ai-hero/sandcastle';
+import { fileURLToPath } from 'node:url';
 
 /** What the agent may never do, even with permissions skipped: the harness owns these. */
 export const DENY_RULES = [
@@ -27,9 +28,35 @@ export const DENY_RULES = [
 
 const quote = (s: string) => `'${s.replaceAll("'", "'\\''")}'`;
 
-/** The flags the factory adds to every `claude` run. */
-export function claudeFlags(): string {
-  const settings = JSON.stringify({ permissions: { deny: DENY_RULES } });
+/**
+ * What an interactive session must not do on top (A1287): ask a question or wait on a plan's
+ * approval, which `claude -p` can't, and which would leave the run waiting on a keypress.
+ */
+export const INTERACTIVE_DENY = ['AskUserQuestion', 'EnterPlanMode', 'ExitPlanMode'] as const;
+
+/** The in-sandbox runner of a session with a chat in the Claude app (sandbox/remote-claude.ts). */
+export const REMOTE_RUNNER = fileURLToPath(
+  new URL('../../sandbox/remote-claude.ts', import.meta.url),
+);
+
+/**
+ * The hooks the runner ends a session by: each keeps its input where the runner looks
+ * (`$FACTORY_RC_DIR`), and the runner sets both variables for Claude Code.
+ */
+export const REMOTE_HOOKS = Object.fromEntries(
+  ['SessionStart', 'Stop', 'StopFailure'].map((event) => [
+    event,
+    [{ hooks: [{ type: 'command', command: 'node "$FACTORY_RC_SELF" hook' }] }],
+  ]),
+);
+
+/** The flags the factory adds to every `claude` run; `remote` adds the runner's hooks and denials. */
+export function claudeFlags(remote = false): string {
+  const settings = JSON.stringify({
+    permissions: { deny: remote ? [...DENY_RULES, ...INTERACTIVE_DENY] : DENY_RULES },
+    // An interactive session asks before it bypasses permissions; `-p` never does.
+    ...(remote ? { hooks: REMOTE_HOOKS, skipDangerousModePermissionPrompt: true } : {}),
+  });
   return [
     '--strict-mcp-config',
     `--mcp-config ${quote('{"mcpServers":{}}')}`,
@@ -41,11 +68,39 @@ export function claudeFlags(): string {
 export async function claudeAgent(
   model: string,
   env: Readonly<Record<string, string>> = {},
+  /** The session's name in the Claude app: given, the session gets a chat there (A1287). */
+  remote?: string,
 ): Promise<AgentProvider> {
   const { claudeCode } = await import('@ai-hero/sandcastle');
   // claude.ai connectors come with an account login; the factory's token must not bring them.
   const base = claudeCode(model, { env: { ENABLE_CLAUDEAI_MCP_SERVERS: 'false', ...env } });
-  return withFlags(base, claudeFlags());
+  const flagged = withFlags(base, claudeFlags(remote !== undefined));
+  return remote === undefined ? flagged : withRemoteControl(flagged, remote);
+}
+
+/**
+ * A provider whose session runs under the in-sandbox runner, as an interactive
+ * `claude --remote-control`: the same command line, which the runner turns into an interactive
+ * one, and the same stream-json out, so Sandcastle reads it as it reads `claude -p`.
+ */
+export function withRemoteControl(
+  base: AgentProvider,
+  name: string,
+  runner = REMOTE_RUNNER,
+): AgentProvider {
+  return {
+    ...base,
+    parseStreamLine: (line) => base.parseStreamLine(line),
+    buildPrintCommand: (options) => {
+      const command = base.buildPrintCommand(options);
+      if (!/^claude\s/.test(command.command))
+        throw new Error(`unexpected claude command: ${command.command}`);
+      return {
+        ...command,
+        command: `node ${quote(runner)} run --name ${quote(name)} -- ${command.command}`,
+      };
+    },
+  };
 }
 
 /** A provider whose print command carries extra flags after `claude`. */

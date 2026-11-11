@@ -2,7 +2,13 @@ import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { claudeAgent, DENY_RULES } from '../src/agents/claude.ts';
+import {
+  claudeAgent,
+  claudeFlags,
+  DENY_RULES,
+  INTERACTIVE_DENY,
+  REMOTE_RUNNER,
+} from '../src/agents/claude.ts';
 import { nodeExec } from '../src/exec.ts';
 import { fill, promptTemplate } from '../src/prompt.ts';
 
@@ -45,6 +51,41 @@ describe('the Claude adapter', { timeout: 30_000 }, () => {
     // Production deploys happen after merge (FD24): the site's task too, not only wrangler.
     expect(settings.permissions.deny).toContain('Bash(task site:deploy:*)');
     expect(agent.env['ENABLE_CLAUDEAI_MCP_SERVERS']).toBe('false');
+  });
+});
+
+describe('a session with a chat in the Claude app (A1287)', () => {
+  const settingsOf = (flags: string) =>
+    JSON.parse(/--settings '([^']*)'/.exec(flags)?.[1] ?? '{}') as {
+      permissions: { deny: string[] };
+      hooks?: Record<string, unknown>;
+      skipDangerousModePermissionPrompt?: boolean;
+    };
+
+  it('runs the same command line under the in-sandbox runner, prompt on stdin', async () => {
+    const agent = await claudeAgent('opus', {}, 'Penmoss PEN-7 run');
+    const { command, stdin } = agent.buildPrintCommand({
+      prompt: 'do it',
+      dangerouslySkipPermissions: true,
+    });
+    expect(stdin).toBe('do it');
+    expect(command).toMatch(
+      new RegExp(
+        `^node '${REMOTE_RUNNER}' run --name 'Penmoss PEN-7 run' -- claude --strict-mcp-config `,
+      ),
+    );
+    expect(command).toContain('--dangerously-skip-permissions');
+    expect(settingsOf(command).hooks).toHaveProperty('Stop');
+  });
+
+  it('adds the hooks that end a session, and denies what would wait on a keypress', () => {
+    const remote = settingsOf(claudeFlags(true));
+    expect(Object.keys(remote.hooks ?? {})).toEqual(['SessionStart', 'Stop', 'StopFailure']);
+    expect(remote.permissions.deny).toEqual([...DENY_RULES, ...INTERACTIVE_DENY]);
+    expect(remote.permissions.deny).toContain('AskUserQuestion');
+    expect(remote.skipDangerousModePermissionPrompt).toBe(true);
+    const plain = settingsOf(claudeFlags());
+    expect(plain).toEqual({ permissions: { deny: [...DENY_RULES] } });
   });
 });
 

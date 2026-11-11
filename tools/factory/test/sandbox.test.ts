@@ -8,6 +8,7 @@ import {
   withJavaHome,
   type SandboxPaths,
 } from '../src/sandbox.ts';
+import { stagingDir } from '../src/claude-login.ts';
 import { testConfig } from './helpers.ts';
 
 const config = testConfig();
@@ -121,5 +122,40 @@ describe('withDeveloperTools', () => {
   });
   it('leaves PATH alone without the tools', () => {
     expect(withDeveloperTools('/usr/bin', '/nonexistent/link')).toBe('/usr/bin');
+  });
+});
+
+describe("a slot's sandbox with the factory's login (A1287)", () => {
+  const runner =
+    '/Users/r/.local/share/penmoss-factory/code/tools/factory/sandbox/remote-claude.ts';
+  const withRunner = { ...paths, runner };
+  const spec = sandboxSpec(config, slot1, {}, withRunner);
+  const login = stagingDir(config, slot1.id, paths.home);
+
+  it("reads the slot's staged login and the runner, and writes neither", () => {
+    expect(spec.env['FACTORY_CLAUDE_LOGIN']).toBe(login);
+    expect(spec.mounts).toContainEqual({ hostPath: login, sandboxPath: login, readonly: true });
+    const dir = runner.slice(0, runner.lastIndexOf('/'));
+    expect(spec.mounts).toContainEqual({ hostPath: dir, sandboxPath: dir, readonly: true });
+    expect(spec.ownDirs).toContain(login);
+    // Never the other slot's.
+    expect(spec.mounts.map((m) => m.hostPath)).not.toContain(
+      stagingDir(config, slot2.id, paths.home),
+    );
+  });
+
+  it('has none of it without a login', () => {
+    const claude = {
+      bin: config.agents.claude.bin,
+      defaultModel: config.agents.claude.defaultModel,
+    };
+    const plain = sandboxSpec(
+      { ...config, agents: { ...config.agents, claude } },
+      slot1,
+      {},
+      withRunner,
+    );
+    expect(plain.env).not.toHaveProperty('FACTORY_CLAUDE_LOGIN');
+    expect(plain.mounts.map((m) => m.hostPath)).not.toContain(login);
   });
 });

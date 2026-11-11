@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nodeExec } from '../src/exec.ts';
 import type { Gh } from '../src/github.ts';
-import { keepFiles, openOrReusePr } from '../src/host.ts';
+import { chatUrlOf, keepFiles, openOrReusePr } from '../src/host.ts';
 import { pushBranch } from '../src/publish.ts';
 
 // Real git against a bare repository standing in for GitHub, pushed to by URL as the host does
@@ -170,5 +170,45 @@ describe("validation's files in the run folder (A1256)", () => {
     // Nothing to keep: no folder made.
     expect(keepFiles(join(root, 'none'), join(root, 'empty'))).toEqual([]);
     expect(existsSync(join(root, 'empty'))).toBe(false);
+  });
+});
+
+describe("a session's chat link, from the runner's stream (A1287)", () => {
+  it("takes only the runner's own line, with a claude.ai session link", () => {
+    const line = (o: object) => JSON.stringify(o);
+    expect(
+      chatUrlOf(
+        line({ type: 'system', subtype: 'factory_chat', url: 'https://claude.ai/code/session_A1' }),
+      ),
+    ).toBe('https://claude.ai/code/session_A1');
+    // The agent's own words can't post a link: only a system line of the runner's.
+    expect(
+      chatUrlOf(
+        line({
+          type: 'assistant',
+          subtype: 'factory_chat',
+          url: 'https://claude.ai/code/session_A1',
+        }),
+      ),
+    ).toBeUndefined();
+    expect(
+      chatUrlOf(line({ type: 'system', subtype: 'factory_chat', url: 'https://evil.example/x' })),
+    ).toBeUndefined();
+    expect(chatUrlOf('{"type":"system","subtype":"factory_chat"')).toBeUndefined();
+  });
+});
+
+describe("a session's chat link (A1287)", () => {
+  it("takes the runner's link, and only a claude.ai one", () => {
+    const line = (url: string) => JSON.stringify({ type: 'system', subtype: 'factory_chat', url });
+    expect(chatUrlOf(line('https://claude.ai/code/session_01Ab'))).toBe(
+      'https://claude.ai/code/session_01Ab',
+    );
+    expect(chatUrlOf(line('https://evil.example/code/session_01Ab'))).toBeUndefined();
+    // The agent's own words that mention it are an assistant message, not the runner's line.
+    expect(
+      chatUrlOf(JSON.stringify({ type: 'assistant', subtype: 'factory_chat', url: 'x' })),
+    ).toBeUndefined();
+    expect(chatUrlOf('{"factory_chat"')).toBeUndefined();
   });
 });

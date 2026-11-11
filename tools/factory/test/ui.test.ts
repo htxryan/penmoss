@@ -353,6 +353,15 @@ describe('the pipeline (A1233)', () => {
     expect(chatLink(undefined)).toBeNull();
   });
 
+  it("links a running card to its agent session's chat in the Claude app (A1287)", () => {
+    const v = buildView(input({ runChat: () => 'https://claude.ai/code/session_R79' }));
+    expect(card(v, 'PEN-79').chatUrl).toBe('https://claude.ai/code/session_R79');
+    // Only a card with a live run: the link goes when the session ends.
+    expect(card(v, 'PEN-74').chatUrl).toBeNull();
+    const bad = buildView(input({ runChat: () => 'https://evil.example/code/session_x' }));
+    expect(card(bad, 'PEN-79').chatUrl).toBeNull();
+  });
+
   it('keeps Done cards for doneDays only', () => {
     const v = buildView(
       input({

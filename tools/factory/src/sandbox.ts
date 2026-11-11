@@ -10,7 +10,9 @@
  * sysctls the emulator reads.
  */
 import { existsSync, mkdirSync, realpathSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { REMOTE_RUNNER } from './agents/claude.ts';
+import { stagingDir } from './claude-login.ts';
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { Secrets } from './secrets.ts';
 
@@ -40,6 +42,8 @@ export interface SandboxPaths {
   readonly home: string;
   /** Resolves symlinks (Homebrew's opt/ links), since a mount must be the real path. */
   readonly realpath: (path: string) => string;
+  /** The in-sandbox runner of sessions with a chat in the Claude app (agents/claude.ts). */
+  readonly runner?: string;
 }
 
 export const hostPaths = (): SandboxPaths => ({
@@ -66,7 +70,11 @@ export function sandboxSpec(
     heavy: join(state, 'heavy', `slot${slot.id}`),
     // Claude Code's temp folder: its default, /tmp/claude-<uid>, is outside the sandbox.
     claudeTmp: join(state, 'claude-tmp', `slot${slot.id}`),
+    // The factory login's access token for the slot's session, staged by the host (A1287).
+    login: stagingDir(config, slot.id, paths.home),
   };
+  const remote = config.agents.claude.login !== undefined;
+  const runnerDir = paths.realpath(dirname(paths.runner ?? REMOTE_RUNNER));
   const jdk = paths.realpath(expandHome(config.toolchain.jdk, paths.home));
   const sdk = paths.realpath(expandHome(config.toolchain.androidSdk, paths.home));
   const browsers = paths.realpath(expandHome(config.toolchain.playwrightBrowsers, paths.home));
@@ -103,6 +111,7 @@ export function sandboxSpec(
     PENMOSS_HEAVY_DIR: own.heavy,
     PENMOSS_HEAVY_SLOTS: '1',
     CLAUDE_CODE_TMPDIR: own.claudeTmp,
+    ...(remote ? { FACTORY_CLAUDE_LOGIN: own.login } : {}),
   };
   for (const [key, value] of Object.entries(secrets)) if (value) env[key] = value;
 
@@ -119,6 +128,7 @@ export function sandboxSpec(
       at(jdk, true),
       at(sdk, true),
       at(browsers, true),
+      ...(remote ? [at(own.login, true), at(runnerDir, true)] : []),
     ],
     ownDirs: [
       own.pnpmStore,
@@ -127,6 +137,7 @@ export function sandboxSpec(
       own.corepack,
       own.heavy,
       own.claudeTmp,
+      ...(remote ? [own.login] : []),
       ...pnpmLocks,
     ],
   };

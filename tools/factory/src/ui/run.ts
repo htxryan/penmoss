@@ -162,6 +162,13 @@ export function viewFromState(
     codeDir: codeDir(config),
     doctor: readDoctorSummaries(config),
     logTail: (run) => tailFile(join(runFolder(run), 'agent.log')),
+    runChat: (run) => {
+      try {
+        return readFileSync(join(runFolder(run), 'chat-url'), 'utf8').trim();
+      } catch {
+        return undefined;
+      }
+    },
     runFolder,
     writable: options.writable,
     readOnly: options.readOnly,
