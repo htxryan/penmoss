@@ -31,7 +31,7 @@ Penmoss can check for a newer build and offer it. It never installs one until yo
 
 After Penmoss restarts into a newer version, a notice at the foot of the window says **Updated to …** once, if that version has notes. **What's New** opens them in Settings → Updates; either button puts the notice away for good.
 
-Changes are grouped as **New**, **Improved** and **Fixed**, and only the Mac's are shown. Penmoss fetches the notes from GitHub when it checks for updates and when you open Settings, at most once an hour, and keeps them, so they read offline. Until it has reached GitHub once, the page links to the [Releases page](https://github.com/htxryan/penmoss/releases) instead. Each release on that page carries the same notes.
+Changes are grouped as **New**, **Improved** and **Fixed**, and only the Mac's are shown. Penmoss fetches the notes from GitHub when it checks for updates and when you open Settings, at most once an hour, and keeps them, so they read offline. Until it has reached GitHub once, the page links to the [Releases page](https://github.com/htxryan/penmoss/releases) instead. Each release on that page carries the same notes, and so does [Release notes](/docs/releases/) here.
 
 You can also update by hand at any time: download the newest [Penmoss.dmg](https://github.com/htxryan/penmoss/releases/latest/download/Penmoss.dmg) and replace the app, as in [Install on Mac](/docs/install/mac/). Your notebooks stay as they are.
 

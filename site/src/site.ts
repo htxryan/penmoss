@@ -36,3 +36,15 @@ export function latestRelease(): ReleaseInfo | null {
   });
   return Object.values(files)[0]?.release ?? null;
 }
+
+/**
+ * The latest stable release's `release-notes.json` as `site/build.mjs` saved it (PEN-111), or null
+ * when the build couldn't reach it or the file is missing (`astro dev` without a build).
+ */
+export function releaseNotes(): import('./releases.mjs').NotesFile | null {
+  const files = import.meta.glob<import('./releases.mjs').NotesFile | null>(
+    './data/release-notes.json',
+    { eager: true, import: 'default' },
+  );
+  return Object.values(files)[0] ?? null;
+}

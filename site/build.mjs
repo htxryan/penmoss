@@ -82,6 +82,60 @@ export function writeRelease(info, root = here) {
   writeFileSync(path.join(dir, 'release.json'), `${JSON.stringify({ release: info }, null, 2)}\n`);
 }
 
+/**
+ * Where a stable release's `release-notes.json` is (PEN-111): the latest's, or the one tagged
+ * `tag`. GitHub redirects both to the file.
+ * @param {string} [tag]
+ */
+export function notesUrl(tag) {
+  return tag
+    ? `https://github.com/${REPOSITORY}/releases/download/${encodeURIComponent(tag)}/release-notes.json`
+    : `https://github.com/${REPOSITORY}/releases/latest/download/release-notes.json`;
+}
+
+/**
+ * The release notes the docs' Release notes page lists (PEN-111, RN13): the latest stable
+ * release's `release-notes.json`, the file the apps read. Null when it can't be reached or doesn't
+ * read: the page then says when notes start.
+ * @param {{ tag?: string, fetchImpl?: typeof fetch }} [options]
+ */
+export async function latestNotes(options = {}) {
+  const { tag, fetchImpl = fetch } = options;
+  const url = notesUrl(tag);
+  try {
+    const response = await fetchImpl(url, {
+      headers: { 'user-agent': 'penmoss-site-build' },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!response.ok) {
+      console.warn(`site: ${url} answered ${response.status}; the Release notes page has none`);
+      return null;
+    }
+    const file = /** @type {{ schema?: unknown, notes?: unknown, releases?: unknown }} */ (
+      await response.json()
+    );
+    if (file?.schema !== 1 || !Array.isArray(file.notes) || !Array.isArray(file.releases)) {
+      console.warn(`site: ${url} is not a schema 1 notes file; the Release notes page has none`);
+      return null;
+    }
+    return { schema: 1, notes: file.notes, releases: file.releases };
+  } catch (error) {
+    console.warn(`site: ${url} failed (${String(error)}); the Release notes page has none`);
+    return null;
+  }
+}
+
+/** Writes src/data/release-notes.json (the file, or null). @param {unknown} notes */
+export function writeNotes(notes, root = here) {
+  const dir = path.join(root, 'src', 'data');
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(
+    path.join(dir, 'release-notes.json'),
+    `${JSON.stringify(notes ?? null, null, 2)}\n`,
+  );
+}
+
 /** The paths that serve the docs and their search, which get the docs' policy. */
 export const DOCS_PATHS = ['/docs', '/docs/*', '/pagefind/*'];
 
@@ -175,6 +229,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const info = wanted === 'none' ? null : await latestRelease({ tag: wanted || undefined });
   writeRelease(info);
   console.log(info ? `site: download cards show ${info.tag} (${info.date})` : 'site: no release');
+  const notes = wanted === 'none' ? null : await latestNotes({ tag: wanted || undefined });
+  writeNotes(notes);
+  console.log(
+    notes ? `site: release notes for ${notes.releases.length} releases` : 'site: no release notes',
+  );
   const built = spawnSync('pnpm', ['exec', 'astro', 'build'], { cwd: here, stdio: 'inherit' });
   if (built.status !== 0) process.exit(built.status ?? 1);
   const { pages, hashes } = writeHeaders(path.join(here, 'dist'));

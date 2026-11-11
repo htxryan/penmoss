@@ -11,12 +11,16 @@ import {
   docsPolicy,
   hashOf,
   inlineScripts,
+  latestNotes,
   latestRelease,
+  notesUrl,
   releaseInfo,
   withDocsHeaders,
   writeHeaders,
+  writeNotes,
   writeRelease,
 } from './build.mjs';
+import { longDate, stableReleases } from './src/releases.mjs';
 
 const dir = mkdtempSync(path.join(tmpdir(), 'penmoss-site-build-'));
 after(() => rmSync(dir, { recursive: true, force: true }));
@@ -166,5 +170,103 @@ describe('the download cards (R3, T80.12)', () => {
       readFileSync(path.join(repo, '.gitignore'), 'utf8'),
       /^site\/src\/data\/release\.json$/m,
     );
+  });
+});
+
+describe('the Release notes page (PEN-111, RN13)', () => {
+  const FILE = {
+    schema: 1,
+    generated: '2026-11-20T00:00:00Z',
+    head: 'abc',
+    prs: [],
+    releases: [
+      { version: '0.2.1', tag: 'v0.2.1', build: 1180, date: '2026-11-20' },
+      { version: '0.2.0', tag: 'v0.2.0', build: 1170, date: '2026-11-08' },
+    ],
+    notes: [
+      { build: 1165, pr: 1, kind: 'fixed', platform: null, text: 'Before 0.2.0.' },
+      { build: 1174, pr: 2, kind: 'new', platform: 'android', text: 'A What’s new screen.' },
+      { build: 1176, pr: 3, kind: 'improved', platform: null, text: 'Search ranks titles first.' },
+      { build: 1178, pr: 4, kind: 'new', platform: null, text: 'Release notes in the app.' },
+      { build: 1185, pr: 5, kind: 'new', platform: null, text: 'Only on Alpha so far.' },
+    ],
+  };
+
+  it("fetches the latest stable release's file, or a tagged one's, from beside its downloads", async () => {
+    assert.equal(
+      notesUrl(),
+      'https://github.com/htxryan/penmoss/releases/latest/download/release-notes.json',
+    );
+    /** @type {string[]} */
+    const asked = [];
+    /** @type {typeof fetch} */
+    const fetchImpl = async (url) => {
+      asked.push(String(url));
+      return new Response(JSON.stringify(FILE), { status: 200 });
+    };
+    const notes = await latestNotes({ fetchImpl });
+    assert.deepEqual(notes, { schema: 1, notes: FILE.notes, releases: FILE.releases });
+    await latestNotes({ fetchImpl, tag: 'v0.2.1' });
+    assert.deepEqual(asked, [
+      notesUrl(),
+      'https://github.com/htxryan/penmoss/releases/download/v0.2.1/release-notes.json',
+    ]);
+  });
+
+  it('has none when the file is missing, unreadable, of another schema or unreachable', async () => {
+    for (const fetchImpl of [
+      async () => new Response('Not Found', { status: 404 }),
+      async () => new Response(JSON.stringify({ ...FILE, schema: 2 }), { status: 200 }),
+      async () => new Response('{"schema":1}', { status: 200 }),
+      async () => {
+        throw new Error('offline');
+      },
+    ]) {
+      assert.equal(await latestNotes({ fetchImpl }), null);
+    }
+  });
+
+  it('writes the file, or null, to src/data/release-notes.json, which git ignores', () => {
+    const root = path.join(dir, 'notes');
+    writeNotes({ schema: 1, notes: [], releases: [] }, root);
+    const at = path.join(root, 'src/data/release-notes.json');
+    assert.deepEqual(JSON.parse(readFileSync(at, 'utf8')), { schema: 1, notes: [], releases: [] });
+    writeNotes(null, root);
+    assert.equal(JSON.parse(readFileSync(at, 'utf8')), null);
+    const repo = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+    const ignored = execFileSync('git', ['check-ignore', 'site/src/data/release-notes.json'], {
+      cwd: repo,
+      encoding: 'utf8',
+    });
+    assert.equal(ignored.trim(), 'site/src/data/release-notes.json');
+  });
+
+  it('lists each stable release, newest first, with its own notes grouped by kind', () => {
+    const releases = stableReleases(FILE);
+    assert.deepEqual(
+      releases?.map((r) => [
+        r.version,
+        r.groups.map((g) => [g.label, g.notes.map((n) => [n.platform, n.text])]),
+      ]),
+      [
+        [
+          '0.2.1',
+          [
+            [
+              'New',
+              [
+                ['android', 'A What’s new screen.'],
+                [null, 'Release notes in the app.'],
+              ],
+            ],
+            ['Improved', [[null, 'Search ranks titles first.']]],
+          ],
+        ],
+        ['0.2.0', [['Fixed', [[null, 'Before 0.2.0.']]]]],
+      ],
+    );
+    assert.equal(stableReleases(null), null);
+    assert.equal(stableReleases({ ...FILE, schema: 2 }), null);
+    assert.equal(longDate('2026-11-08'), '8 November 2026');
   });
 });

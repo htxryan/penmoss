@@ -93,6 +93,7 @@ export default defineConfig({
           label: 'Help',
           items: [
             { label: 'Updates and the Alpha Channel', slug: 'docs/help/updates' },
+            { label: 'Release Notes', slug: 'docs/releases' },
             { label: 'Sync', slug: 'docs/help/sync' },
             { label: 'Privacy and Security', slug: 'docs/help/privacy' },
             { label: 'FAQ', slug: 'docs/help/faq' },
