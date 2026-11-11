@@ -130,7 +130,7 @@ fun TrashScreen(
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
             )
         },
-        snackbarHost = { SnackbarHost(snackbar) },
+        snackbarHost = { SnackbarHost(snackbar) { PenmossSnackbar(it) } },
     ) { padding ->
         PullToRefreshBox(isRefreshing = ui.loading, onRefresh = onRefresh, modifier = Modifier.fillMaxSize().padding(padding)) {
             LazyColumn(Modifier.fillMaxSize().testTag("trashList"), contentPadding = PaddingValues(bottom = 24.dp)) {

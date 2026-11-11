@@ -563,7 +563,7 @@ fun NoteRoute(
                 },
             )
         },
-        snackbarHost = { SnackbarHost(snackbar) },
+        snackbarHost = { SnackbarHost(snackbar) { PenmossSnackbar(it) } },
     ) { padding ->
         // The keyboard pushes the bar up and shrinks the editor above it (the T2 spike's layout).
         Column(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding()) {

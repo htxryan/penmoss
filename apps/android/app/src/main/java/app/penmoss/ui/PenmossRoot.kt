@@ -702,7 +702,7 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
             )
         }
         // Above the lists' New note button, which it would otherwise cover for its 5 seconds.
-        SnackbarHost(rootSnackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().imePadding().padding(bottom = 72.dp))
+        SnackbarHost(rootSnackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().imePadding().padding(bottom = 72.dp)) { PenmossSnackbar(it) }
         // Ctrl+E on a hardware keyboard: the recent-notes switcher (T40 P6, FD7).
         val shown by nav.currentBackStackEntryAsState()
         RecentSwitcherHost(graph, shown?.takeIf { it.destination.route == NOTE_ROUTE }?.arguments?.getString("id"), openNote)

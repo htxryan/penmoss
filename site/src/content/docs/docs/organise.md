@@ -35,6 +35,8 @@ Each folder sorts its notes in its own way: **Manual** (the default: drag to reo
 - **Move to Folder…**, in the note's ⋯ menu, the File menu or the command palette, opens a picker: choose the folder and **Move here**.
 - **Several at once:** Shift-click selects a range, ⌘-click adds or removes one. Then right-click (or Ctrl-click, or Shift+F10) for **Move N Notes…** or **Move N Notes to Trash**, with one Undo.
 
+What a move or copy did, or why it could not be done, shows in a message at the bottom centre of the window, with a check when it worked and a warning sign when it did not. Up to three messages show at once, newest at the bottom. On Android the same messages show at the bottom of the screen.
+
 ## Tags
 
 A tag is a word after `#` in the note, such as `#ideas`, or an entry in the note's tags. Tags nest with `/`: `#work/plans` is inside `#work`. Tags ignore case. `#2026` and `C#` are not tags: a tag needs a letter, and must follow a space or an opening bracket.
