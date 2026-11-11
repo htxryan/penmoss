@@ -464,4 +464,28 @@ test.describe('the docs', () => {
     );
     expect(overflow).toBe(0);
   });
+
+  // PEN-111 (RN13): the stable releases' notes, from the latest release's release-notes.json at
+  // build time; before any release carries one, the page says when they start.
+  test('Release notes lists the stable releases, or says when notes start, from the sidebar', async ({
+    page,
+  }) => {
+    await page.goto('/docs/help/updates/');
+    await page
+      .getByRole('navigation', { name: 'Main' })
+      .getByRole('link', { name: 'Release Notes' })
+      .click();
+    await expect(page).toHaveURL(/\/docs\/releases\/$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Release notes');
+    const releases = page.locator('.pm-release');
+    if ((await releases.count()) === 0) {
+      await expect(page.locator('.pm-release-none')).toContainText(
+        'Release notes start with Penmoss 0.2.1',
+      );
+    } else {
+      await expect(releases.first().getByRole('heading', { level: 2 })).toHaveText(
+        /^\d+\.\d+\.\d+$/,
+      );
+    }
+  });
 });
