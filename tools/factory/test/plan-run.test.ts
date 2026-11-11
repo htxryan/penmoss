@@ -27,6 +27,7 @@ function setup() {
   let now = T0;
   let busy = false;
   let session = 'S1';
+  let chat: string | undefined;
   const messages: string[] = [];
   const did = (call: string) => {
     calls.push(call);
@@ -44,6 +45,7 @@ function setup() {
       messages.push(message);
       return did(resume ? `resume ${message.split('\n')[0]}` : 'start').then(() => ({
         sessionId: session,
+        ...(chat ? { chatUrl: chat } : {}),
       }));
     },
     stop: () => did('stop'),
@@ -75,6 +77,7 @@ function setup() {
     at: (d: Date) => (now = d),
     setBusy: (b: boolean) => (busy = b),
     setSession: (id: string) => (session = id),
+    setChat: (url: string | undefined) => (chat = url),
   };
 }
 
@@ -181,24 +184,49 @@ describe('advancePlanning', () => {
     expect(t.messages.at(-1)).not.toMatch(/images/);
   });
 
-  it('keeps the new ID of a resumed session, which the chat command follows (F20, A1281)', async () => {
+  it('keeps the new ID and chat link of a resumed session, which the chat follows (F20, A1281, A1286)', async () => {
     const t = setup();
+    t.setChat('https://claude.ai/code/session_1');
     const card = item(5, { status: 'Planning' });
     await advancePlanning(t.deps, input(t.files, card));
+    expect(readMeta(t.files)).toMatchObject({
+      sessionId: 'S1',
+      chatUrl: 'https://claude.ai/code/session_1',
+    });
     t.state('waiting', min(3));
     t.at(min(4));
     await advancePlanning(t.deps, input(t.files, card));
     const resumed: PlanDeps = {
       ...t.deps,
-      launch: () => Promise.resolve({ sessionId: '5be0ac96-5e8e' }),
+      launch: () =>
+        Promise.resolve({
+          sessionId: '5be0ac96-5e8e',
+          chatUrl: 'https://claude.ai/code/session_2',
+        }),
     };
     t.at(min(9));
     const answered = issue([
       { author: 'htxryan', body: 'A sheet', createdAt: min(8).toISOString() },
     ]);
     expect((await advancePlanning(resumed, input(t.files, card, answered))).kind).toBe('resume');
-    expect(readMeta(t.files)).toMatchObject({ sessionId: '5be0ac96-5e8e' });
+    expect(readMeta(t.files)).toMatchObject({
+      sessionId: '5be0ac96-5e8e',
+      chatUrl: 'https://claude.ai/code/session_2',
+    });
     expect(attachCommand('5be0ac96-5e8e')).toBe('claude attach 5be0ac96');
+    // A resume Remote Control gave no link drops the old one, which reached the stopped session.
+    t.state('waiting', min(10));
+    t.at(min(11));
+    await advancePlanning(t.deps, input(t.files, card, answered));
+    const again = issue([
+      ...answered.comments,
+      { author: 'htxryan', body: 'Phones too', createdAt: min(12).toISOString() },
+    ]);
+    t.at(min(13));
+    const noLink: PlanDeps = { ...t.deps, launch: () => Promise.resolve({ sessionId: 'S3' }) };
+    expect((await advancePlanning(noLink, input(t.files, card, again))).kind).toBe('resume');
+    expect(readMeta(t.files).sessionId).toBe('S3');
+    expect(readMeta(t.files).chatUrl).toBeUndefined();
   });
   it('ignores comments from anyone but Ryan, and the factory’s own', async () => {
     const t = setup();
@@ -472,16 +500,52 @@ describe('planning a Linear card (A1221)', () => {
     expect(t.bodies.at(-1)).toContain(
       'Chat with the planning session from a terminal on this Mac: `claude attach 0ff38e2e`',
     );
+    // No Remote Control link this time: only the terminal line.
+    expect(t.bodies.at(-1)).not.toContain('in the Claude app');
     t.setSession('5be0ac96-2222');
     const answered = pen([{ author: RYAN, body: 'A sheet', createdAt: min(2).toISOString() }]);
     t.at(min(3));
     await advancePlanning(t.deps, onLinear(t.files, answered));
-    // No comment of its own on a resume: the next open points carry the new command.
+    // No comment of its own on a resume without a link: the next open points carry the command.
     expect(t.calls.at(-1)).toBe('resume Ryan commented on the issue:');
     t.state('waiting', min(4));
     t.at(min(5));
     await advancePlanning(t.deps, onLinear(t.files, answered));
     expect(t.bodies.at(-1)).toContain('`claude attach 5be0ac96`');
+    expect(t.bodies.at(-1)).toContain('event=plan-asked');
+  });
+
+  it('gives the Claude app link beside the command, and posts the new one each time a resume changes it (A1286)', async () => {
+    const t = setup();
+    t.setSession('0ff38e2e-1111');
+    t.setChat('https://claude.ai/code/session_1');
+    await advancePlanning(t.deps, onLinear(t.files, pen()));
+    expect(t.bodies.at(-1)).toContain(
+      [
+        '- Chat with the planning session in the Claude app: https://claude.ai/code/session_1',
+        '- Chat with the planning session from a terminal on this Mac: `claude attach 0ff38e2e`',
+      ].join('\n'),
+    );
+    t.setSession('5be0ac96-2222');
+    t.setChat('https://claude.ai/code/session_2');
+    const answered = pen([{ author: RYAN, body: 'A sheet', createdAt: min(2).toISOString() }]);
+    t.at(min(3));
+    await advancePlanning(t.deps, onLinear(t.files, answered));
+    expect(t.calls.slice(-2)).toEqual([
+      'resume Ryan commented on the issue:',
+      'comment Planning resumed.',
+    ]);
+    expect(t.bodies.at(-1)).toContain(
+      'Chat with the planning session in the Claude app: https://claude.ai/code/session_2',
+    );
+    expect(t.bodies.at(-1)).toContain('`claude attach 5be0ac96`');
+    expect(t.bodies.at(-1)).toContain('event=plan-resume');
+    expect(readMeta(t.files).chatUrl).toBe('https://claude.ai/code/session_2');
+    // The open points carry the link too.
+    t.state('waiting', min(4));
+    t.at(min(5));
+    await advancePlanning(t.deps, onLinear(t.files, answered));
+    expect(t.bodies.at(-1)).toContain('in the Claude app: https://claude.ai/code/session_2');
     expect(t.bodies.at(-1)).toContain('event=plan-asked');
   });
   it('skips planning for a trivial card, says why, and needs no plan', async () => {

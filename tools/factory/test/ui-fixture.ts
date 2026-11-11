@@ -145,7 +145,12 @@ export function evening(stateDir = '~/nonexistent-factory-state') {
       state: null,
     },
     78: {
-      meta: { sessionId: 'S78', messagedAt: ago(30), askedAt: ago(17) },
+      meta: {
+        sessionId: 'S78',
+        chatUrl: 'https://claude.ai/code/session_S78',
+        messagedAt: ago(30),
+        askedAt: ago(17),
+      },
       state: {
         status: 'waiting',
         planUrl: 'https://claude.ai/artifact/p78',

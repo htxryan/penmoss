@@ -763,7 +763,8 @@
         gap: 8px;
         margin: 0;
       }
-      .links a {
+      .links a,
+      .chat a {
         display: inline-flex;
         align-items: center;
         gap: 6px;
@@ -777,7 +778,8 @@
         font-size: 13px;
         font-weight: 600;
       }
-      .links a::after {
+      .links a::after,
+      .chat a::after {
         content: '↗';
         color: var(--muted);
         font-weight: 400;
@@ -786,7 +788,8 @@
         border-color: var(--accent);
         color: var(--accent);
       }
-      .links a:hover {
+      .links a:hover,
+      .chat a:hover {
         background: var(--sunk);
       }
       .todo {
@@ -1704,9 +1707,21 @@
           if (c.need?.what) todo.append(el('p', 'what', c.need.what));
           if (c.need?.command) todo.append(copyBox(c.need.command));
           if (c.chat) {
-            // A planning session has no claude.ai link (A1281): Ryan joins it from a terminal.
+            // The planner's chat in the Claude app, when Remote Control gave it a link (A1286),
+            // and the command that joins it from a terminal (A1281).
             const r = el('div', 'row chat');
-            r.append(el('span', 'note', 'Chat with the planner in a terminal'), copyBox(c.chat));
+            const open = c.chatUrl && link({ label: 'Open in Claude', href: c.chatUrl });
+            r.append(
+              el(
+                'span',
+                'note',
+                open
+                  ? 'Chat with the planner in the Claude app or a terminal'
+                  : 'Chat with the planner in a terminal',
+              ),
+            );
+            if (open) r.append(open);
+            r.append(copyBox(c.chat));
             todo.append(r);
           }
           if (c.heldBy.length)
