@@ -1964,6 +1964,17 @@
         return a;
       }
 
+      // The team's Linear board, from any card's link (linear.app/<workspace>/issue/<KEY>-<n>/…).
+      function boardUrl(v) {
+        for (const c of [...v.needs, ...v.cards]) {
+          const m = /^https:\/\/linear\.app\/([\w-]+)\/issue\/([A-Z][A-Z0-9]*)-\d+/.exec(
+            c.url ?? '',
+          );
+          if (m) return `https://linear.app/${m[1]}/team/${m[2]}/active`;
+        }
+        return null;
+      }
+
       // A link to a card the factory isn't handling now: Done long ago, or never its card.
       function missing(v, mode) {
         const n = route().issue;
@@ -1971,9 +1982,19 @@
           'p',
           'empty',
           n === null
-            ? 'Pick a card.'
+            ? v.needs.length
+              ? 'Pick a card on the left to answer it.'
+              : 'Nothing needs you. To start work, set an issue to Todo in Linear: the factory picks it up within a minute, and anything it asks you shows up here. '
             : `Card ${n} isn't one the factory is handling now: it may be Done, or was never claimed. `,
         );
+        const board = n === null && !v.needs.length ? boardUrl(v) : null;
+        if (board) {
+          const a = el('a', '', 'Open the board in Linear');
+          a.href = board;
+          a.target = '_blank';
+          a.rel = 'noopener';
+          p.append(a);
+        }
         if (n !== null) {
           const a = el(
             'a',

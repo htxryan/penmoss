@@ -15,7 +15,14 @@ import { codeDir, commitOf, ownCheckout, syncCode } from '../src/code.ts';
 import type { FactoryConfig } from '../src/config.ts';
 import { nodeExec, type Exec, type ExecOptions } from '../src/exec.ts';
 import { GIT_HARDENING, TOKEN_HELPER } from '../src/git.ts';
-import { ensureClone, hostDeps, repoDir, type HostOptions } from '../src/host.ts';
+import {
+  ensureClone,
+  hostDeps,
+  repoDir,
+  sandboxTakeCommand,
+  type HostOptions,
+} from '../src/host.ts';
+import { adoptRemoteHead, remoteBranch } from '../src/publish.ts';
 import { sweep } from '../src/janitor.ts';
 import { prepareSnapshot, planFiles } from '../src/planning-host.ts';
 import { checkMacVm, runMacProof } from '../src/proof/mac.ts';
@@ -331,5 +338,72 @@ describe("the host's publish path, with real git (A1230)", { timeout: 30_000 }, 
     await expect(publish(other)).rejects.toThrow(/doesn't descend from main/);
     expect(await refs(github)).not.toContain(other);
     expect(await refs(decoy)).toBe('');
+  });
+
+  describe('commits someone else pushed to the branch (PEN-101)', () => {
+    const publishDirOf = () => join(config.stateDir, 'publish');
+    // Ryan's own clone of GitHub, where he commits on top of the factory's push.
+    const ryanPushes = async (subject: string) => {
+      const mine = join(root, 'ryan');
+      await git(root, 'clone', '-q', '-b', BRANCH, `file://${github}`, mine);
+      await git(mine, 'commit', '-q', '--allow-empty', '-m', subject);
+      await git(mine, 'push', '-q', 'origin', BRANCH);
+      return git(mine, 'rev-parse', 'HEAD');
+    };
+    const remote = () => remoteBranch(nodeExec, publishDirOf(), https, BRANCH, 'the-write-token');
+    const take = async (from: string, to: string) => {
+      const r = await nodeExec('sh', ['-c', sandboxTakeCommand(BRANCH, from, to)], {
+        cwd: clone,
+        env: testEnv,
+      });
+      if (r.code !== 0) throw new Error(`take: ${r.stderr}`);
+    };
+    const subjects = (repo: string, ref: string) => git(repo, 'log', '--format=%s', `main..${ref}`);
+
+    it('fast-forwards onto them, then pushes on top without losing them', async () => {
+      await publish(BRANCH);
+      const factory = await git(clone, 'rev-parse', BRANCH);
+      const ryan = await ryanPushes('Ryan fixes a typo');
+      expect(await remote()).toEqual({ kind: 'ahead', from: factory, to: ryan });
+      await take(factory, ryan);
+      await adoptRemoteHead(nodeExec, publishDirOf(), BRANCH, ryan);
+      await git(clone, 'commit', '-q', '--allow-empty', '-m', 'the review round');
+      await publish(BRANCH);
+      expect(await subjects(github, BRANCH)).toBe('the review round\nRyan fixes a typo\nthe agent');
+    });
+
+    it("cherry-picks them onto the run's own unpushed commits", async () => {
+      await publish(BRANCH);
+      const factory = await git(clone, 'rev-parse', BRANCH);
+      await git(clone, 'commit', '-q', '--allow-empty', '-m', 'a round that never pushed');
+      const ryan = await ryanPushes('Ryan fixes a typo');
+      expect(await remote()).toEqual({ kind: 'ahead', from: factory, to: ryan });
+      await take(factory, ryan);
+      await adoptRemoteHead(nodeExec, publishDirOf(), BRANCH, ryan);
+      await publish(BRANCH);
+      expect(await subjects(github, BRANCH)).toBe(
+        'Ryan fixes a typo\na round that never pushed\nthe agent',
+      );
+    });
+
+    it('finds nothing to take when GitHub has what the factory pushed', async () => {
+      await publish(BRANCH);
+      expect(await remote()).toEqual({ kind: 'ours' });
+    });
+
+    it('calls a force-pushed branch rewritten, and still never pushes over it', async () => {
+      await publish(BRANCH);
+      const factory = await git(clone, 'rev-parse', BRANCH);
+      const mine = join(root, 'ryan');
+      await git(root, 'clone', '-q', `file://${github}`, mine);
+      await git(mine, 'checkout', '-q', '-b', BRANCH, 'main');
+      await git(mine, 'commit', '-q', '--allow-empty', '-m', 'a different history');
+      await git(mine, 'push', '-q', '--force', 'origin', BRANCH);
+      const head = await git(mine, 'rev-parse', 'HEAD');
+      expect(await remote()).toEqual({ kind: 'rewritten', head, ours: factory });
+      await git(clone, 'commit', '-q', '--allow-empty', '-m', 'the next round');
+      await expect(publish(BRANCH)).rejects.toThrow(/stale info|rejected/);
+      expect(await git(github, 'rev-parse', `refs/heads/${BRANCH}`)).toBe(head);
+    });
   });
 });

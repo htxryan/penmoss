@@ -28,6 +28,8 @@ async function serve(options: {
   writable: boolean;
   /** A new view on every push, as while a run writes its log. */
   ticking?: boolean;
+  /** Nothing waits on Ryan. */
+  quiet?: boolean;
 }): Promise<Served> {
   const dir = mkdtempSync(join(tmpdir(), 'factory-ui-e2e-'));
   const e = evening(dir);
@@ -57,6 +59,7 @@ async function serve(options: {
           readOnly: options.writable ? null : 'no Linear key in the keychain item',
         }),
         ...(options.ticking ? { tick: (tick += 1) } : {}),
+        ...(options.quiet ? { needs: [] } : {}),
       }),
     ...(options.writable ? { writer } : {}),
   });
@@ -133,6 +136,24 @@ test.describe('a healthy factory', () => {
     // The activity (the slots' runs and the event feed) is on the Pipeline, not here.
     await expect(page.locator('.today')).toHaveCount(0);
     await expect(page.locator('.out')).toHaveCount(0);
+  });
+
+  test('with nothing waiting, the Inbox says how to start a card, with the board in Linear', async ({
+    page,
+  }) => {
+    const quiet = await serve({ alive: true, writable: true, quiet: true });
+    try {
+      await open(page, quiet.url);
+      const empty = page.locator('.empty');
+      await expect(empty).toContainText(
+        'Nothing needs you. To start work, set an issue to Todo in Linear',
+      );
+      const board = empty.getByRole('link', { name: 'Open the board in Linear' });
+      await expect(board).toHaveAttribute('href', 'https://linear.app/penmoss/team/PEN/active');
+      await expect(page.getByText('Pick a card.')).toHaveCount(0);
+    } finally {
+      await quiet.close();
+    }
   });
 
   test('a run that failed before the agent started says so, with the fix', async ({ page }) => {

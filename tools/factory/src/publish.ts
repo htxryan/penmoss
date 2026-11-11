@@ -153,6 +153,68 @@ export async function pushBranch(
   await mustGit(exec, dir, ['update-ref', tracking, commit]);
 }
 
+/**
+ * What GitHub has on a run's branch, against what the factory last pushed there (PEN-101).
+ * `ahead`: someone pushed commits on top of the factory's (Ryan fixing up a PR by hand); a
+ * sandbox takes them before it works, and the push's lease moves to their head.
+ * `rewritten`: the branch no longer holds the factory's last push (a force-push); the factory
+ * won't build on it or push over it.
+ */
+export type RemoteBranch =
+  | { readonly kind: 'ours' }
+  | { readonly kind: 'ahead'; readonly from: string; readonly to: string }
+  | { readonly kind: 'rewritten'; readonly head: string; readonly ours: string };
+
+export async function remoteBranch(
+  exec: Exec,
+  dir: string,
+  url: string,
+  branch: string,
+  token: string,
+): Promise<RemoteBranch> {
+  const ref = `refs/heads/${branch}`;
+  const listed = await mustGit(exec, dir, ['ls-remote', url, ref], { token });
+  const head = listed.trim().split(/\s+/)[0] ?? '';
+  if (!head) return { kind: 'ours' };
+  const last = await hostGit(exec, dir, [
+    'rev-parse',
+    '--verify',
+    '--quiet',
+    `refs/remotes/origin/${branch}`,
+  ]);
+  // No push of the factory's to compare with: as before, the push decides.
+  if (last.code !== 0) return { kind: 'ours' };
+  const ours = last.stdout.trim();
+  if (head === ours) return { kind: 'ours' };
+  // By URL, not by the remote's name, so git doesn't move the tracking ref (the lease) itself.
+  await mustGit(
+    exec,
+    dir,
+    [
+      'fetch',
+      '--quiet',
+      '--no-tags',
+      '--no-write-fetch-head',
+      url,
+      `+${ref}:refs/factory-remote/${branch}`,
+    ],
+    { token },
+  );
+  return (await descendsFrom(exec, dir, ours, head))
+    ? { kind: 'ahead', from: ours, to: head }
+    : { kind: 'rewritten', head, ours };
+}
+
+/** After a sandbox took the commits GitHub had on top (`ahead`), the next push is leased on them. */
+export async function adoptRemoteHead(
+  exec: Exec,
+  dir: string,
+  branch: string,
+  head: string,
+): Promise<void> {
+  await mustGit(exec, dir, ['update-ref', `refs/remotes/origin/${branch}`, head]);
+}
+
 export interface PublishRun {
   readonly dir: string;
   readonly runClone: string;
