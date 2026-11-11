@@ -64,6 +64,8 @@ exec sleep 60
 `;
 const AVDMANAGER = `#!/bin/sh
 echo "avdmanager $*" >>"$STUB_LOG"
+read -r answer || answer=''
+echo "avdmanager-answer $answer" >>"$STUB_LOG"
 mkdir -p "$ANDROID_AVD_HOME/penmoss37-ci.avd"
 echo 'avd.ini.encoding=UTF-8' >"$ANDROID_AVD_HOME/penmoss37-ci.ini"
 echo 'image.sysdir.1=system-images/android-37.0/google_apis/arm64-v8a/' >"$ANDROID_AVD_HOME/penmoss37-ci.avd/config.ini"
@@ -179,6 +181,16 @@ describe('android-emulator.sh avd', () => {
       ),
       r.calls.join('\n'),
     );
+  });
+
+  // PEN-118: `echo no | avdmanager` failed the step with 141 when avdmanager exited first.
+  it("answers avdmanager's question without a pipe that can die of SIGPIPE", async () => {
+    const f = fixture();
+    const r = await f.run(['avd'], { PENMOSS_EMULATOR_ARCH: 'x86_64' });
+    assert.equal(r.status, 0, r.stdout);
+    assert.ok(r.calls.includes('avdmanager-answer no'), r.calls.join('\n'));
+    const script = readFileSync(path.join(here, 'android-emulator.sh'), 'utf8');
+    assert.doesNotMatch(script, /\|\s*"\$avdmanager"/);
   });
 
   it("keeps the AVD in ~/.android/avd without a Mac runner's tool cache", async () => {
