@@ -26,6 +26,7 @@ import {
   hostDeps,
   repoDir,
   execPastRefLocks,
+  SANDBOX_READY,
   sandboxStartCommand,
   type HostOptions,
 } from '../src/host.ts';
@@ -143,7 +144,15 @@ describe("a run's sandbox starts from the host's main (A1232)", () => {
     expect(sandcastle.commands[0]).toContain(`merge --ff-only --quiet ${MAIN_SHA}`);
     expect(sandcastle.created[0]).toMatchObject({ branch: BRANCH, cwd: repoDir(config) });
     await work.exec('git status');
-    expect(sandcastle.commands).toEqual([sandboxStartCommand(MAIN_SHA), 'git status']);
+    // Then gets it ready, so the agent starts with dependencies and a working shell (A1289).
+    expect(SANDBOX_READY).toContain('pnpm install --frozen-lockfile --prefer-offline');
+    expect(SANDBOX_READY).toContain('export TMPPREFIX="$TMPDIR/zsh"');
+    expect(SANDBOX_READY).toContain('-Duser.home=$HOME');
+    expect(sandcastle.commands).toEqual([
+      sandboxStartCommand(MAIN_SHA),
+      SANDBOX_READY,
+      'git status',
+    ]);
   });
 
   it('starts from the main the run last fetched, as the gate does', async () => {
@@ -154,7 +163,9 @@ describe("a run's sandbox starts from the host's main (A1232)", () => {
     await deps.openSandbox(BRANCH);
     expect(sandcastle.commands).toEqual([
       sandboxStartCommand(MAIN_SHA),
+      SANDBOX_READY,
       sandboxStartCommand(MAIN_SHA),
+      SANDBOX_READY,
     ]);
   });
 
