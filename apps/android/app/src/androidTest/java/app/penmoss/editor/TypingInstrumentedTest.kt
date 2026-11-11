@@ -21,9 +21,10 @@ import app.penmoss.sync.NoteSync
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import org.json.JSONTokener
@@ -97,7 +98,9 @@ class TypingInstrumentedTest {
     @After
     fun close() {
         scenario.close()
-        scope.cancel()
+        // Wait for the editor's work to stop before the database closes: a query still running
+        // then (the pending-edits count after the last word) fails the test (PEN-116).
+        runBlocking { scope.coroutineContext.job.cancelAndJoin() }
         db.close()
     }
 
