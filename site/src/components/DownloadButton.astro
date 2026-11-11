@@ -1,0 +1,47 @@
+---
+/**
+ * One download button on penmoss.app's home page (PEN-73): an arrow and the label, with the
+ * platform's facts on a second line inside the button. The hero and "Download Penmoss" both draw
+ * it, so the two can't drift apart. Mac is always the forest primary and Android the white
+ * secondary. No style block and no script: the brochure CSS lives in site.css (A1203).
+ */
+import { DOWNLOADS } from '../site';
+
+interface Props {
+  platform: 'mac' | 'android';
+}
+
+const BUTTONS = {
+  mac: {
+    href: DOWNLOADS.mac,
+    label: 'Download for Mac',
+    facts: 'Universal · macOS 12 or Later',
+    variant: 'primary',
+  },
+  android: {
+    href: DOWNLOADS.android,
+    label: 'Get the Android APK',
+    facts: 'Android 17 or Later',
+    variant: 'secondary',
+  },
+} as const;
+
+const { href, label, facts, variant } = BUTTONS[Astro.props.platform];
+---
+
+<a class:list={['download-button', `btn-${variant}`]} href={href}>
+  <span class="label"
+    ><svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"><path d="M12 4v12M6 11l6 6 6-6M5 20h14"></path></svg
+    >{label}</span
+  >
+  <span class="sub">{facts}</span>
+</a>

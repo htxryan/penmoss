@@ -30,6 +30,24 @@ async function watch(page: Page, run: () => Promise<void>) {
 
 const BROCHURE = ['/', '/features', '/privacy'];
 
+/** What a download button looks like: the styles PEN-73 keeps equal in both sections. */
+function looks(link: ReturnType<Page['locator']>) {
+  return link.evaluate((el) => {
+    const s = getComputedStyle(el);
+    const label = getComputedStyle(el.querySelector('.label')!);
+    const sub = getComputedStyle(el.querySelector('.sub')!);
+    return {
+      background: s.backgroundColor,
+      border: `${s.borderTopWidth} ${s.borderTopStyle} ${s.borderTopColor}`,
+      padding: s.padding,
+      radius: s.borderRadius,
+      label: label.fontSize,
+      sub: sub.fontSize,
+      height: el.getBoundingClientRect().height,
+    };
+  });
+}
+
 test.describe('the brochure pages', () => {
   for (const route of BROCHURE) {
     test(`${route} runs no script and keeps the site-wide policy`, async ({ page }) => {
@@ -62,10 +80,17 @@ test.describe('the brochure pages', () => {
       'href',
       mac,
     );
-    await expect(downloads.getByRole('link', { name: 'Download for Android' })).toHaveAttribute(
+    await expect(downloads.getByRole('link', { name: 'Get the Android APK' })).toHaveAttribute(
       'href',
       apk,
     );
+    await expect(downloads.getByRole('link', { name: 'Install Guide for Mac' })).toHaveAttribute(
+      'href',
+      '/docs/install/mac/',
+    );
+    await expect(
+      downloads.getByRole('link', { name: 'Install Guide for Android' }),
+    ).toHaveAttribute('href', '/docs/install/android/');
     await expect(downloads.getByRole('link', { name: 'Alpha Builds' })).toHaveAttribute(
       'href',
       'https://github.com/htxryan/penmoss/releases/tag/alpha',
@@ -96,7 +121,99 @@ test.describe('the brochure pages', () => {
     });
   }
 
-  for (const width of [320, 768, 1440]) {
+  test('the hero and Download Penmoss draw the same download buttons (PEN-73)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await expect(page.locator('a.download-button')).toHaveCount(4);
+    const css = await page.evaluate(() =>
+      [...document.styleSheets]
+        .flatMap((sheet) => [...sheet.cssRules].map((r) => r.cssText))
+        .join('\n'),
+    );
+    expect(css).not.toMatch(/\.hero-cta|\.download-option|\.facts\b/);
+    for (const name of ['Download for Mac', 'Get the Android APK']) {
+      const hero = page.locator('.hero').getByRole('link', { name });
+      const bottom = page.locator('#download').getByRole('link', { name });
+      await expect(hero).toHaveClass(/download-button/);
+      await expect(bottom).toHaveClass(/download-button/);
+      expect(await bottom.innerText(), name).toBe(await hero.innerText());
+      expect(await looks(bottom), name).toEqual(await looks(hero));
+    }
+    await expect(page.locator('#download .install-line')).toHaveText(
+      'Install Guide for Mac · Install Guide for Android',
+    );
+    await expect(page.locator('#download .download-group + .release-line')).toHaveCount(1);
+    await page.screenshot({ path: test.info().outputPath('hero-1440.png') });
+    const bottom = page.locator('#download');
+    await bottom.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(2000);
+    await bottom.screenshot({ path: test.info().outputPath('download-1440.png') });
+    await expect(bottom.getByRole('link', { name: 'Get the Android APK' })).toBeInViewport();
+  });
+
+  test('Download Penmoss stacks like the hero on a phone (PEN-73)', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/');
+    const section = page.locator('#download');
+    await section.scrollIntoViewIfNeeded();
+    for (const scope of [page.locator('.hero'), section]) {
+      const mac = (await scope.getByRole('link', { name: 'Download for Mac' }).boundingBox())!;
+      const apk = (await scope.getByRole('link', { name: 'Get the Android APK' }).boundingBox())!;
+      expect(apk.y).toBeGreaterThanOrEqual(mac.y + mac.height);
+      for (const box of [mac, apk])
+        expect(Math.abs(box.x + box.width / 2 - 375 / 2)).toBeLessThanOrEqual(1);
+    }
+    await page.waitForTimeout(2000);
+    await section.screenshot({ path: test.info().outputPath('download-375.png') });
+    await expect(section.getByRole('link', { name: 'Get the Android APK' })).toBeInViewport();
+  });
+
+  test('download buttons hover and focus alike in both sections (PEN-73)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    const state = (link: ReturnType<Page['locator']>) =>
+      link.evaluate((el) => {
+        const s = getComputedStyle(el);
+        return {
+          background: s.backgroundColor,
+          border: s.borderColor,
+          outline: `${s.outlineStyle} ${s.outlineWidth} ${s.outlineColor}`,
+        };
+      });
+    const accent = await page.evaluate(() => {
+      const probe = document.createElement('div');
+      document.body.append(probe);
+      probe.style.color = 'var(--pm-accent)';
+      probe.style.backgroundColor = 'var(--pm-accent-hover)';
+      const s = getComputedStyle(probe);
+      const out = { accent: s.color, hover: s.backgroundColor };
+      probe.remove();
+      return out;
+    });
+    for (const name of ['Download for Mac', 'Get the Android APK']) {
+      const states: Record<string, unknown>[] = [];
+      for (const scope of ['.hero', '#download']) {
+        const link = page.locator(scope).getByRole('link', { name });
+        await link.hover();
+        const hovered = await state(link);
+        if (name === 'Download for Mac') expect(hovered.background).toBe(accent.hover);
+        else expect(hovered.border).toBe(accent.accent);
+        await page.mouse.move(0, 0);
+        await page.keyboard.press('Shift');
+        await link.focus();
+        const focused = await state(link);
+        expect(focused.outline, name).toBe(`solid 2px ${accent.accent}`);
+        states.push({ hovered, focused });
+      }
+      expect(states[1], name).toEqual(states[0]);
+    }
+    await page.locator('#download').getByRole('link', { name: 'Download for Mac' }).hover();
+    await page.waitForTimeout(2000);
+  });
+
+  for (const width of [320, 375, 768, 1440]) {
     test(`no page scrolls sideways at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       for (const route of [...BROCHURE, '/no-such-page']) {
