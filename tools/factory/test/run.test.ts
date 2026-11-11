@@ -442,6 +442,37 @@ describe('runImplement', () => {
     expect(f.events.slice(0, 2)).toEqual(['claimed', 'agent-finished']);
   });
 
+  it('goes back to waiting on CI when the PR is as the factory pushed it (A1298)', async () => {
+    // PEN-71: CI went red, Ryan re-ran the job green and cleared Blocked; the restart gated,
+    // proved and validated the same commit again, about 30 minutes for nothing.
+    const f = fake({});
+    const pr = 'https://github.com/htxryan/penmoss/pull/7';
+    const outcome = await runImplement(
+      { ...f.deps, pushedPr: () => Promise.resolve(pr) },
+      { item: card, spec, prompt: 'p', recovered: true, resume: { run: '42-old', result: done } },
+    );
+    expect(outcome).toMatchObject({ kind: 'in-review', pr });
+    for (const step of [
+      'agent',
+      'open factory/42-fix-the-typo-in-docs-cli',
+      'push factory/42-fix-the-typo-in-docs-cli',
+      'pr',
+    ])
+      expect(f.calls).not.toContain(step);
+    expect(f.comments[0]).toMatch(/^Restarted: .*pull\/7 is as the factory last pushed it/);
+    expect(f.events).toEqual(['claimed', 'agent-finished', 'resumed-at-ci', 'in-review']);
+  });
+
+  it('gates again when the PR is not as the factory pushed it', async () => {
+    const f = fake({});
+    await runImplement(
+      { ...f.deps, pushedPr: () => Promise.resolve(undefined) },
+      { item: card, spec, prompt: 'p', recovered: true, resume: { run: '42-old', result: done } },
+    );
+    expect(f.calls).toContain('push factory/42-fix-the-typo-in-docs-cli');
+    expect(f.comments[0]).toMatch(/^Restarted: this run stopped after its agent had finished/);
+  });
+
   it('keeps a finished result when a step after the agent fails, so a restart resumes (A1266)', async () => {
     // PEN-72: OpenCode committed and wrote its result, then Sandcastle's session capture failed.
     const f = fake({});

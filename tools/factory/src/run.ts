@@ -45,7 +45,8 @@ export type RunEvent =
   | 'blocked'
   | 'proof-waiting'
   | 'usage-limited'
-  | 'validated';
+  | 'validated'
+  | 'resumed-at-ci';
 
 export interface RunSandbox {
   readonly worktreePath: string;
@@ -80,6 +81,12 @@ export interface RunDeps {
    * Paths changed on the branch against origin/main, how many commits it has, and the subject of
    * its first one (the PR's title).
    */
+  /**
+   * The open PR from `branch` when it is exactly what the factory last pushed: GitHub's head is
+   * the factory's last push, and the run's branch has nothing since. A recovered run then waits
+   * on its CI again instead of gating it again (A1298). Undefined otherwise.
+   */
+  pushedPr?(branch: string): Promise<string | undefined>;
   diff(branch: string): Promise<{
     readonly paths: readonly string[];
     readonly commits: number;
@@ -355,6 +362,35 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
           () => undefined,
         )
       : undefined;
+
+  // Blocked after its PR was pushed (CI red, then a job re-run by hand): nothing changed since,
+  // so the gate, proof and validation would only repeat themselves. Back to waiting on CI.
+  const pr =
+    resumed && deps.pushedPr ? await deps.pushedPr(branch).catch(() => undefined) : undefined;
+  if (resumed && pr) {
+    await deps.comment(
+      item.number,
+      `Restarted: ${pr} is as the factory last pushed it, so the run goes back to waiting on its CI, without running the gate, proof and validation again (A1298). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.\n\n${marker('claim')}`,
+    );
+    await deps.setStatus(item, config.status.working);
+    deps.log('claimed', { issue: item.number });
+    // As a resumed round logs it, so a later restart still finds the result.
+    deps.log('agent-finished', { status: 'done', from: resumed.run });
+    deps.log('resumed-at-ci', { pr });
+    const { paths } = await deps.diff(branch);
+    return awaitReview(
+      deps,
+      {
+        item,
+        branch,
+        scope: classify(paths),
+        result: resumed.result,
+        marker,
+        prompt: input.prompt,
+      },
+      pr,
+    );
+  }
 
   // Claim: the comment first, so a crash after it is recoverable from GitHub (the source of truth).
   const how = resumed
@@ -660,7 +696,6 @@ async function publish(
     fidelity?: readonly FidelityRow[];
   },
 ): Promise<RunOutcome> {
-  const { config } = deps;
   await deps.push(run.branch);
   deps.log('pushed', { branch: run.branch });
   const body = renderPrBody({
@@ -686,7 +721,23 @@ async function publish(
     ),
   });
   deps.log('pr-opened', { pr });
+  return awaitReview(deps, run, pr);
+}
 
+/** A pushed PR to In review: CI green (repaired if red), on top of main. */
+async function awaitReview(
+  deps: RunDeps,
+  run: {
+    item: BoardItem;
+    branch: string;
+    scope: Scope;
+    result: AgentResult;
+    marker: (event: string) => string;
+    prompt: string;
+  },
+  pr: string,
+): Promise<RunOutcome> {
+  const { config } = deps;
   const stop = async (reason: string, text: string): Promise<RunOutcome> => {
     deps.log('blocked', { reason });
     await deps.comment(run.item.number, `${text}\n\n${run.marker('blocked')}`);
