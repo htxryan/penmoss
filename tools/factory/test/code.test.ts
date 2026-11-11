@@ -151,11 +151,15 @@ describe('factory:install (A1226)', () => {
       'launchctl print gui/501/app.penmoss.factory-ui',
       `launchctl bootstrap gui/501 ${home}/Library/LaunchAgents/app.penmoss.factory.plist`,
       `launchctl bootstrap gui/501 ${home}/Library/LaunchAgents/app.penmoss.factory-ui.plist`,
+      // The updater, loaded when launchd doesn't have it: never stopped, since it runs updates.
+      'launchctl print gui/501/app.penmoss.factory-updater',
+      `launchctl bootstrap gui/501 ${home}/Library/LaunchAgents/app.penmoss.factory-updater.plist`,
     ]);
     expect(calls.find((c) => c.cmd === 'corepack')?.cwd).toBe(dir);
     for (const [label, command] of [
       ['app.penmoss.factory', 'daemon'],
       ['app.penmoss.factory-ui', 'ui'],
+      ['app.penmoss.factory-updater', 'updater'],
     ] as const) {
       const strings = plistArgs(join(home, 'Library/LaunchAgents', `${label}.plist`));
       // ProgramArguments, then WorkingDirectory: the code checkout, never the installing one.
@@ -363,7 +367,8 @@ describe('factory:update (A1226)', () => {
     const { exec, calls } = fakeExec({ at: OLD, pnpmFails: 1 });
     const d = deps(config, home, lines, exec, [], false);
     expect(await updateFactory(config, d, { wait: false })).toBe(1);
-    expect(calls.filter((c) => c.args[0] === 'bootstrap')).toHaveLength(2);
+    // The daemon, the UI, and the updater, which this factory didn't have loaded yet.
+    expect(calls.filter((c) => c.args[0] === 'bootstrap')).toHaveLength(3);
     expect(lines.join('\n')).toContain('Restarting on the code it had');
   });
 
@@ -392,6 +397,7 @@ describe('factory:update (A1226)', () => {
       `${home}/Library/LaunchAgents/app.penmoss.factory.plist`,
       `${home}/Library/LaunchAgents/app.penmoss.factory.plist`,
       `${home}/Library/LaunchAgents/app.penmoss.factory-ui.plist`,
+      `${home}/Library/LaunchAgents/app.penmoss.factory-updater.plist`,
     ]);
     expect(lines.filter((l) => l.includes('trying again'))).toHaveLength(2);
     // It ends with the new daemon's own first poll, not the old one's status.
@@ -406,7 +412,7 @@ describe('factory:update (A1226)', () => {
     expect(await updateFactory(config, d, { wait: false })).toBe(1);
     const tried = calls.filter((c) => c.args[0] === 'bootstrap').map((c) => c.args[2]);
     expect(tried.filter((p) => p?.endsWith('factory.plist'))).toHaveLength(4);
-    expect(tried.at(-1)).toBe(`${home}/Library/LaunchAgents/app.penmoss.factory-ui.plist`);
+    expect(tried.at(-2)).toBe(`${home}/Library/LaunchAgents/app.penmoss.factory-ui.plist`);
     expect(lines).toContain(`launchctl bootstrap app.penmoss.factory failed 4 times: ${IO_ERROR}`);
   });
 
@@ -420,6 +426,17 @@ describe('factory:update (A1226)', () => {
     expect(lines.at(-1)).toBe(
       "The new daemon hasn't reported within 180 s of its restart: see task factory:logs, and task factory:status.",
     );
+  });
+
+  it('leaves a loaded updater alone: it is the one running the update', async () => {
+    const { config, home, lines } = setup(true);
+    const { exec, calls } = fakeExec({ at: OLD, loaded: ['app.penmoss.factory-updater'] });
+    expect(
+      await updateFactory(config, deps(config, home, lines, exec, [], false), { wait: false }),
+    ).toBe(0);
+    expect(
+      calls.some((c) => c.args.at(-1)?.includes('factory-updater') && c.args[0] !== 'print'),
+    ).toBe(false);
   });
 
   it('needs factory:install first', async () => {
@@ -458,9 +475,12 @@ describe('factory:start', () => {
       'print app.penmoss.factory-ui',
       // Without -k: a running UI is left alone, a loaded one that isn't running starts.
       'kickstart app.penmoss.factory-ui',
+      'print app.penmoss.factory-updater',
+      'bootstrap app.penmoss.factory-updater.plist',
     ]);
     expect(lines).toContain('Started the daemon.');
     expect(lines).toContain('The UI is running.');
+    expect(lines).toContain('Started the updater.');
   });
 
   it('says to install when there is no plist', async () => {

@@ -17,7 +17,7 @@ import type { Exec } from './exec.ts';
 import { hostGit, mustGit } from './git.ts';
 import { DEAD_END_PUSH_URL } from './host.ts';
 import { githubUrl } from './publish.ts';
-import { LABEL, plistPath, renderPlist, UI_LABEL } from './launchd.ts';
+import { LABEL, plistPath, renderPlist, UI_LABEL, UPDATER_LABEL } from './launchd.ts';
 import { formatStatus, readStatus, type Commit, type DaemonStatus } from './status.ts';
 import { issueKey } from './tracker/port.ts';
 
@@ -124,10 +124,14 @@ export interface AgentDeps {
   readonly sleep: (ms: number) => Promise<void>;
 }
 
+/** The daemon and the UI: what an update stops and starts again. */
 const AGENTS = [
   [LABEL, 'daemon', 'daemon.log'],
   [UI_LABEL, 'ui', 'ui.log'],
 ] as const;
+
+/** The updater too: it runs the updates, so an update never stops it (updater.ts). */
+const ALL_AGENTS = [...AGENTS, [UPDATER_LABEL, 'updater', 'updater.log']] as const;
 
 /** The folders of agents configured by absolute path, so the LaunchAgents find them. */
 function agentDirs(config: FactoryConfig): string[] {
@@ -157,11 +161,11 @@ export function agentPath(config: FactoryConfig, home: string, node: string): st
   ].join(':');
 }
 
-/** Writes both plists, pointing at the code checkout. */
+/** Writes the three plists, pointing at the code checkout. */
 export function writeAgents(config: FactoryConfig, deps: AgentDeps): string[] {
   const state = expandHome(config.stateDir);
   const dir = codeDir(config);
-  return AGENTS.map(([label, command, logName]) => {
+  return ALL_AGENTS.map(([label, command, logName]) => {
     const plist = plistPath(deps.home, label);
     mkdirSync(dirname(plist), { recursive: true });
     writeFileSync(
@@ -234,6 +238,11 @@ async function bootstrap(deps: AgentDeps, label: string): Promise<string | undef
   return `launchctl bootstrap ${label} failed ${BOOTSTRAP_TRIES} times: ${why}`;
 }
 
+/** Loads the updater when launchd doesn't have it (a factory installed before it). */
+async function ensureUpdater(deps: AgentDeps): Promise<string | undefined> {
+  return (await isLoaded(deps, UPDATER_LABEL)) ? undefined : bootstrap(deps, UPDATER_LABEL);
+}
+
 /** Loads both LaunchAgents again, each even when the other failed; the errors name which. */
 async function startAgents(deps: AgentDeps): Promise<string[]> {
   const failed: string[] = [];
@@ -251,7 +260,7 @@ async function startAgents(deps: AgentDeps): Promise<string[]> {
  */
 export async function startFactory(deps: AgentDeps): Promise<number> {
   const failed: string[] = [];
-  for (const [label, command] of AGENTS) {
+  for (const [label, command] of ALL_AGENTS) {
     const name = command === 'ui' ? 'UI' : command;
     if (!existsSync(plistPath(deps.home, label))) {
       failed.push(`there is no ${plistPath(deps.home, label)}: run task factory:install`);
@@ -295,6 +304,8 @@ export async function installAgents(config: FactoryConfig, deps: AgentDeps): Pro
   const plists = writeAgents(config, deps);
   await stopAgents(deps);
   const failed = await startAgents(deps);
+  const updater = await ensureUpdater(deps);
+  if (updater) failed.push(updater);
   if (failed.length > 0) {
     for (const why of failed) deps.log(why);
     return 1;
@@ -330,7 +341,10 @@ export interface UpdateDeps extends AgentDeps {
 }
 
 /** The daemon's pid from its lock, if it is alive. */
-function liveDaemon(config: FactoryConfig, alive: (pid: number) => boolean): number | undefined {
+export function liveDaemon(
+  config: FactoryConfig,
+  alive: (pid: number) => boolean,
+): number | undefined {
   try {
     const pid = Number(
       readFileSync(join(expandHome(config.stateDir), 'daemon.lock'), 'utf8').trim(),
@@ -426,6 +440,8 @@ export async function updateFactory(
     rmSync(pause, { force: true });
     const restarted = deps.now();
     const failed = await startAgents(deps);
+    const updater = await ensureUpdater(deps);
+    if (updater) failed.push(updater);
     if (failed.length > 0) {
       for (const why of failed) deps.log(why);
       return 1;

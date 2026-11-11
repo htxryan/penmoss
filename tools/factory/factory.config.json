@@ -52,6 +52,7 @@
   "envFile": "~/.config/penmoss-factory/factory.env",
   "stateDir": "~/Library/Application Support/penmoss-factory",
   "pollSeconds": 60,
+  "autoUpdateMinutes": 5,
   "maxConcurrent": 2,
   "worktreeRoot": "~/src/penmoss-wt",
   "branchPrefix": "factory/",
