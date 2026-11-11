@@ -1,0 +1,5 @@
+{
+  "//": "Node looks no further up for the runner's module type: the sandbox reads only this folder.",
+  "type": "module",
+  "private": true
+}

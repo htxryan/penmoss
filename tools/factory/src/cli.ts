@@ -5,6 +5,7 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { loadConfig, type FactoryConfig } from './config.ts';
+import { loginCheck } from './claude-login.ts';
 import { baseNote, hostChecks, report } from './doctor.ts';
 import { runDoctor } from './doctor-run.ts';
 import { nodeExec } from './exec.ts';
@@ -124,6 +125,8 @@ async function doctor(config: FactoryConfig, args: readonly string[]): Promise<n
   const note = await baseNote(nodeExec, repo, base);
   if (note) console.log(`  ${note}`);
   const host = hostChecks(config, path);
+  const login = await loginCheck(config, nodeExec);
+  if (login) host.push(login);
   const outcomes = [
     ...host,
     ...(await runDoctor(config, slot, {

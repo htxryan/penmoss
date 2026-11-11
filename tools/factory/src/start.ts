@@ -2,7 +2,8 @@
 import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { agentFor } from './agents/index.ts';
+import { agentFor, remoteAgentFor } from './agents/index.ts';
+import { postChat } from './chat.ts';
 import type { Board, BoardItem } from './board.ts';
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import { scopeText } from './platforms.ts';
@@ -390,6 +391,7 @@ export async function executeRun(
     scope: scopeText(spec.platforms),
   });
   const agent = await agentFor(config, spec);
+  const remoteAgent = await remoteAgentFor(config, spec, item.number);
   const deps = hostDeps({
     config,
     slot,
@@ -403,6 +405,8 @@ export async function executeRun(
     sandboxToken: () => factory.app.read(),
     proofStore: factory.proof,
     agent,
+    remoteAgent,
+    onChat: (url) => postChat(tracker, item.number, url, log),
     log,
     ...(waitingFor ? { waitingFor } : {}),
   });

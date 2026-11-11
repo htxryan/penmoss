@@ -127,7 +127,10 @@ export interface CardView {
   readonly runFolder: string | null;
   /** The command that joins the card's planning session from a terminal on this Mac (A1281). */
   readonly chat: string | null;
-  /** The planning session's chat on claude.ai, which Remote Control serves (A1286). */
+  /**
+   * The planning session's chat on claude.ai, which Remote Control serves (A1286), or the
+   * running agent session's (A1287).
+   */
   readonly chatUrl: string | null;
   /** The last lines of the current run's agent log, for a card in a slot. */
   readonly log: readonly string[];
@@ -246,6 +249,8 @@ export interface ViewInput {
   readonly doctor?: readonly DoctorSummary[];
   /** The last lines of a run's agent log. */
   readonly logTail?: (run: string) => readonly string[];
+  /** The running session's chat link, while it runs (host.ts's CHAT_URL file). */
+  readonly runChat?: (run: string) => string | undefined;
   /** Where a run's folder is. */
   readonly runFolder?: (run: string) => string;
   readonly writable?: boolean;
@@ -1026,7 +1031,11 @@ function card(
     runs: views,
     runFolder: lastRun && input.runFolder ? input.runFolder(lastRun.id) : null,
     chat: chatting && plan.meta.sessionId ? attachCommand(plan.meta.sessionId) : null,
-    chatUrl: chatting ? chatLink(plan.meta.chatUrl) : null,
+    chatUrl: chatting
+      ? chatLink(plan.meta.chatUrl)
+      : liveRun && input.runChat
+        ? chatLink(input.runChat(liveRun))
+        : null,
     log: liveRun && input.logTail ? input.logTail(liveRun) : [],
     links,
   };

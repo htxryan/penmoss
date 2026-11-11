@@ -1723,6 +1723,12 @@
             if (open) r.append(open);
             r.append(copyBox(c.chat));
             todo.append(r);
+          } else if (c.chatUrl) {
+            // The running agent session's chat in the Claude app (A1287).
+            const r = el('div', 'row chat');
+            r.append(el('span', 'note', 'Watch or steer the agent in the Claude app'));
+            r.append(link({ label: 'Open in Claude', href: c.chatUrl }));
+            todo.append(r);
           }
           if (c.heldBy.length)
             todo.append(

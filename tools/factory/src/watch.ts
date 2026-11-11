@@ -6,7 +6,8 @@
 import { randomBytes } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { agentFor } from './agents/index.ts';
+import { agentFor, remoteAgentFor } from './agents/index.ts';
+import { postChat } from './chat.ts';
 import type { Board, BoardItem } from './board.ts';
 import { summarizeChecks, type CheckRun } from './checks.ts';
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
@@ -163,6 +164,7 @@ export async function executeRevise(
   const base = roundPrompt(config, item, spec, text);
   const items = action.kind === 'round' ? action.state.items : [];
   const agent = await agentFor(config, spec);
+  const remoteAgent = await remoteAgentFor(config, spec, item.number);
   const deps = hostDeps({
     config,
     slot,
@@ -176,6 +178,8 @@ export async function executeRevise(
     sandboxToken: () => factory.app.read(),
     proofStore: factory.proof,
     agent,
+    remoteAgent,
+    onChat: (url) => postChat(tracker, item.number, url, log),
     log,
     ...(waitingFor ? { waitingFor } : {}),
   });

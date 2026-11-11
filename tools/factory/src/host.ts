@@ -17,6 +17,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
@@ -28,6 +29,15 @@ import { ATTACHMENTS, stageAttachments } from './attachments.ts';
 import { withHeavySlot } from './heavy.ts';
 import { usageLimitReset } from './limits.ts';
 import { cardLink } from './ui/link.ts';
+import { CHAT_SUBTYPE } from '../sandbox/remote-claude.ts';
+import {
+  account,
+  clearStaged,
+  freshLogin,
+  loginDir,
+  stageLogin,
+  stagingDir,
+} from './claude-login.ts';
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { Exec } from './exec.ts';
 import { ensureConfig, mustGit } from './git.ts';
@@ -244,6 +254,24 @@ export async function execPastRefLocks(
 /** The agent's raw output stream in the run folder, beside Sandcastle's `agent.log`. */
 export const AGENT_STREAM = 'agent.stream.jsonl';
 
+/** The current session's chat link, in the run folder while the session runs (the UI reads it). */
+export const CHAT_URL = 'chat-url';
+
+/** The chat link the in-sandbox runner reports (sandbox/remote-claude.ts), from a stream line. */
+export function chatUrlOf(line: string): string | undefined {
+  if (!line.includes(CHAT_SUBTYPE)) return undefined;
+  try {
+    const event = JSON.parse(line) as { type?: unknown; subtype?: unknown; url?: unknown };
+    if (event.type !== 'system' || event.subtype !== CHAT_SUBTYPE) return undefined;
+    return typeof event.url === 'string' &&
+      /^https:\/\/claude\.ai\/code\/session_[A-Za-z0-9]+$/.test(event.url)
+      ? event.url
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** The last `result` event a session added to the agent's stream after `from`, if any. */
 export function lastResultEvent(
   streamFile: string,
@@ -347,6 +375,13 @@ export interface HostOptions {
   /** Where the PR's proof is uploaded (A1223). */
   readonly proofStore: ProofStore;
   readonly agent: AgentProvider;
+  /**
+   * The same agent with a chat in the Claude app (A1287), when there is a factory login. A
+   * session uses it when the login is fresh or can be refreshed, otherwise `agent`.
+   */
+  readonly remoteAgent?: AgentProvider | undefined;
+  /** A session's chat link, as soon as its runner reports it: the card gets it (A1287). */
+  readonly onChat?: (url: string) => void;
   readonly log: (line: string) => void;
   /** What the run waits for (the test VM), for the daemon's status.json (F10). */
   readonly waitingFor?: (reason: string | null) => void;
@@ -368,6 +403,24 @@ export function hostDeps(options: HostOptions): HostDeps {
   const runDir = join(state, 'runs', options.runId);
   mkdirSync(runDir, { recursive: true });
   const sandboxes = new WeakMap<RunSandbox, Sandbox>();
+  // A session with a chat in the Claude app signs in with the factory's own login: the host
+  // refreshes it if it must, and stages its access token for this slot until the session ends.
+  // Without a login that works, the session runs on the setup token, with no chat (A1287).
+  const remoteSession = async () => {
+    const dir = loginDir(config);
+    if (!options.remoteAgent || !dir) return undefined;
+    const staging = stagingDir(config, slot.id);
+    clearStaged(staging);
+    try {
+      const login = await freshLogin(exec, config, dir);
+      return { agent: options.remoteAgent, unstage: stageLogin(staging, login, account(dir)) };
+    } catch (error) {
+      options.log(
+        `no chat in the Claude app for this session: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return undefined;
+    }
+  };
   // A proof's whole output, kept in the run folder: the gate's worktree, with the proof's own
   // logs, is gone once it closes (PEN-70's Android proof failed twice and left no reason, A1252).
   const proofLogs = new Map<string, string>();
@@ -482,16 +535,24 @@ export function hostDeps(options: HostOptions): HostDeps {
         if (!result) return fallback;
         return result.is_error === true && typeof result.result === 'string' ? result.result : '';
       };
+      const remote = await remoteSession();
       try {
         await sandbox.run({
-          agent: options.agent,
+          agent: remote ? remote.agent : options.agent,
           prompt,
           idleTimeoutSeconds: config.timeouts.agentMinutes * 60,
           logging: {
             type: 'file',
             path: logFile,
             onAgentStreamEvent: (event) => {
-              if (event.type === 'raw') appendFileSync(streamFile, `${event.line}\n`);
+              if (event.type !== 'raw') return;
+              appendFileSync(streamFile, `${event.line}\n`);
+              const url = remote ? chatUrlOf(event.line) : undefined;
+              if (url) {
+                writeFileSync(join(runDir, CHAT_URL), url);
+                options.log(`the session's chat in the Claude app: ${url}`);
+                options.onChat?.(url);
+              }
             },
           },
         });
@@ -503,6 +564,9 @@ export function hostDeps(options: HostOptions): HostDeps {
         const missing = agentMissing(message);
         if (missing) throw new AgentNotInstalled(missing, process.env['PATH'] ?? '');
         throw error;
+      } finally {
+        remote?.unstage();
+        rmSync(join(runDir, CHAT_URL), { force: true });
       }
       explainCompletion(logFile);
       return { output: limitText(tail()) };

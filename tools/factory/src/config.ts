@@ -105,7 +105,19 @@ export interface FactoryConfig {
    */
   readonly macProof: { readonly vm: string; readonly waitHours: number };
   readonly agents: Readonly<
-    Record<AgentName, { readonly bin: string; readonly defaultModel: string }>
+    Record<
+      AgentName,
+      {
+        readonly bin: string;
+        readonly defaultModel: string;
+        /**
+         * Claude only: the config folder of the factory's own claude.ai login, which gives each
+         * agent session a chat in the Claude app (A1287). Without one, sessions run on the
+         * setup token, with no chat.
+         */
+        readonly login?: string;
+      }
+    >
   >;
   readonly models: Readonly<Record<string, ModelAlias>>;
   readonly ui: { readonly port: number; readonly doneDays: number };
@@ -240,6 +252,9 @@ export function parseConfig(raw: unknown): ConfigResult {
     str(agent, 'bin', `config.agents.${name}`);
     str(agent, 'defaultModel', `config.agents.${name}`);
   }
+  const login = obj(agents['claude'], 'config.agents.claude')['login'];
+  if (login !== undefined && (typeof login !== 'string' || login === ''))
+    problems.push('config.agents.claude.login must be a folder path');
   const models = obj(root['models'], 'config.models');
   for (const [alias, value] of Object.entries(models)) {
     const m = obj(value, `config.models.${alias}`);
