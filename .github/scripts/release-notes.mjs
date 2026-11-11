@@ -195,6 +195,29 @@ export async function loadNotes(gh, releases, dir) {
   return readNotesFile(readFileSync(await gh.download(holder.tag, NOTES_FILE, dir), 'utf8'));
 }
 
+/**
+ * The file with the `releases` of the newest published stable release's own file added: a
+ * stable release lists itself when it is drafted (PEN-107), so alpha learns of it once it is
+ * published, never from a draft that might be deleted.
+ * @param {NotesGh} gh @param {Release[]} releases @param {NotesFile} file @param {string} dir
+ */
+async function withPublished(gh, releases, file, dir) {
+  const stable = releases
+    .filter((r) => STABLE.test(r.tag) && r.assets.some((a) => a.name === NOTES_FILE))
+    .sort((a, b) => b.tag.localeCompare(a.tag, 'en', { numeric: true }))[0];
+  if (!stable || file.releases.some((r) => r.tag === stable.tag)) return file;
+  const theirs = readNotesFile(
+    readFileSync(await gh.download(stable.tag, NOTES_FILE, path.join(dir)), 'utf8'),
+  );
+  const tags = new Set(file.releases.map((r) => r.tag));
+  return {
+    ...file,
+    releases: [...file.releases, ...theirs.releases.filter((r) => !tags.has(r.tag))].sort(
+      (a, b) => a.build - b.build,
+    ),
+  };
+}
+
 /** Writes and uploads the file to `tag`. @param {NotesGh} gh @param {string} tag @param {NotesFile} file @param {string} dir */
 export async function uploadNotes(gh, tag, file, dir) {
   const out = path.join(dir, NOTES_FILE);
@@ -215,7 +238,7 @@ export async function publishNotes(gh, { run, sha, dir, now = new Date() }) {
     gh.log(`::warning::No ${ALPHA} release yet: build ${run}'s notes wait for the next build.`);
     return;
   }
-  const file = await loadNotes(gh, releases, dir);
+  const file = await withPublished(gh, releases, await loadNotes(gh, releases, dir), dir);
   const before = releases
     .map((r) => ({ r, n: /^build-(\d+)$/.exec(r.tag)?.[1] }))
     .filter(({ n }) => n !== undefined && Number(n) < run)
@@ -243,6 +266,41 @@ export async function publishNotes(gh, { run, sha, dir, now = new Date() }) {
   gh.log(
     `Notes for build ${run}: ${notes.length} from ${prs.size} pull request(s) (${commits.length} commit(s) since ${base ? base.slice(0, 7) : 'the start'})`,
   );
+}
+
+/**
+ * A stable release's notes (PEN-107): the notes after the stable release before it (`previous`,
+ * found in the file's `releases`; all of them when it isn't there) up to its own `build`, as the
+ * draft's text, and the file it carries, which lists it among `releases` (a -rc.N rehearsal is
+ * never listed: the apps place themselves by stable releases only). `install`, when given, goes
+ * between the notes and the changelog link.
+ * @param {NotesFile} file
+ * @param {{ tag: string, version: string, build: number, previous: string | null, date: string, repo: string, install?: string }} release
+ * @returns {{ body: string, file: NotesFile }}
+ */
+export function stableNotes(file, { tag, version, build, previous, date, repo, install }) {
+  const from = previous ? file.releases.find((r) => r.tag === previous)?.build : undefined;
+  const notes = file.notes.filter(
+    (n) => n.build <= build && (from === undefined || n.build > from),
+  );
+  const body = [
+    `## What's new in ${version}`,
+    '',
+    notes.length
+      ? renderNotes(notes)
+      : 'A maintenance release: nothing that people using Penmoss would notice.',
+    '',
+    ...(install ? [install, ''] : []),
+    previous
+      ? `**Full changelog**: https://github.com/${repo}/compare/${previous}...${tag}`
+      : `**Full changelog**: https://github.com/${repo}/commits/${tag}`,
+  ].join('\n');
+  const listed = STABLE.test(tag)
+    ? [...file.releases.filter((r) => r.tag !== tag), { version, tag, build, date }].sort(
+        (a, b) => a.build - b.build,
+      )
+    : file.releases;
+  return { body, file: { ...file, releases: listed } };
 }
 
 /**

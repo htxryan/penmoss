@@ -34,6 +34,7 @@ import {
   publishMac,
   releaseInfo,
   stableFiles,
+  stableInstall,
   updateFiles,
 } from './releases.mjs';
 
@@ -83,7 +84,7 @@ class FakeGh {
     return [...this.tagNames];
   }
   /** Drafts (list() never returns them, as the real one filters them out). */
-  /** @type {(import('./releases.mjs').Release & { draft: boolean, title: string, notesStartTag: string | null })[]} */
+  /** @type {(import('./releases.mjs').Release & { draft: boolean, title: string })[]} */
   drafts = [];
   async findRelease(/** @type {string} */ tag) {
     return (
@@ -92,17 +93,16 @@ class FakeGh {
     );
   }
   /** @param {import('./releases.mjs').NewDraft} r */
-  async createDraft({ tag, title, files, prerelease, notesStartTag }) {
+  async createDraft({ tag, title, files, prerelease, notes }) {
     assert.ok(this.tagNames.includes(tag), `the tag ${tag} must exist (--verify-tag)`);
     this.calls.push(`create-draft ${tag} ${title}`);
     const draft = {
       tag,
       target: tag,
-      body: '',
+      body: notes,
       prerelease,
       draft: true,
       title,
-      notesStartTag,
       assets: /** @type {{ name: string }[]} */ ([]),
     };
     this.drafts.push(draft);
@@ -167,7 +167,7 @@ class FakeGh {
     return file;
   }
   async editNotes(/** @type {string} */ tag, /** @type {string} */ notes) {
-    this.find(tag).body = notes;
+    (this.drafts.find((r) => r.tag === tag) ?? this.find(tag)).body = notes;
   }
   /** GitHub drops Latest from a release that becomes a prerelease. */
   async markPrerelease(/** @type {string} */ tag) {
@@ -844,17 +844,66 @@ describe('stable releases (P3, R5)', () => {
     const gh = new FakeGh();
     gh.tagNames = ['v0.2.0', 'v0.2.1'];
     gh.latest = 'v0.2.0';
-    await draftStable(gh, { tag: 'v0.2.1', previous: 'v0.2.0', ...stableOf('0.2.1') });
+    // release-notes.json on alpha, as publish-notes leaves it (PEN-106): v0.2.0 at build 1170.
+    gh.releases.push({
+      tag: ALPHA,
+      target: sha(1175),
+      body: '',
+      prerelease: true,
+      assets: [{ name: 'release-notes.json' }],
+    });
+    gh.contents.set(
+      `${ALPHA}/release-notes.json`,
+      JSON.stringify({
+        schema: 1,
+        generated: '',
+        head: sha(1175),
+        prs: [],
+        releases: [{ version: '0.2.0', tag: 'v0.2.0', build: 1170, date: '2026-11-08' }],
+        notes: [
+          { build: 1170, pr: 1, kind: 'new', platform: null, text: 'In 0.2.0 already.' },
+          {
+            build: 1172,
+            pr: 2,
+            kind: 'fixed',
+            platform: 'mac',
+            text: 'The window keeps its size.',
+          },
+          { build: 1174, pr: 3, kind: 'new', platform: null, text: 'Release notes in the app.' },
+          { build: 1176, pr: 4, kind: 'new', platform: null, text: 'After this release.' },
+        ],
+      }),
+    );
+    await draftStable(gh, {
+      tag: 'v0.2.1',
+      build: 1175,
+      previous: 'v0.2.0',
+      date: '2026-11-20',
+      ...stableOf('0.2.1'),
+    });
     const [draft] = gh.drafts;
     assert.ok(draft);
     assert.equal(draft.draft, true);
     assert.equal(draft.prerelease, false);
     assert.equal(draft.title, 'Penmoss 0.2.1');
-    assert.equal(draft.notesStartTag, 'v0.2.0');
+    // Its text: the notes after v0.2.0's build, up to its own (PEN-107).
+    assert.equal(
+      draft.body,
+      `## What's new in 0.2.1\n\n**New**\n\n- Release notes in the app. (#3)\n\n**Fixed**\n\n- Mac: The window keeps its size. (#2)\n\n${stableInstall()}\n\n**Full changelog**: https://github.com/htxryan/penmoss/compare/v0.2.0...v0.2.1`,
+    );
+    const carried = JSON.parse(
+      /** @type {string} */ (gh.contents.get('v0.2.1/release-notes.json')),
+    );
+    assert.deepEqual(carried.releases, [
+      { version: '0.2.0', tag: 'v0.2.0', build: 1170, date: '2026-11-08' },
+      { version: '0.2.1', tag: 'v0.2.1', build: 1175, date: '2026-11-20' },
+    ]);
+    assert.equal(carried.notes.length, 4, 'the whole record travels, the apps pick by build');
     assert.deepEqual(stableFiles('0.2.1'), [
       PUBLIC_DMG,
       PUBLIC_APK,
       'penmoss-mac-0.2.1.zip',
+      'release-notes.json',
       SUMS,
       FEED,
     ]);
@@ -871,23 +920,34 @@ describe('stable releases (P3, R5)', () => {
     assert.equal(sums.size, 4);
     // Ryan publishes it; until then Latest is untouched.
     assert.equal(gh.latest, 'v0.2.0');
-    assert.deepEqual(gh.releases, []);
+    assert.deepEqual(
+      gh.releases.map((r) => r.tag),
+      [ALPHA],
+    );
   });
 
-  it('a -rc.N tag makes a draft prerelease; the first release has no start tag', async () => {
+  it('a -rc.N tag makes a draft prerelease, never listed as a release; the first has no notes yet', async () => {
     const gh = new FakeGh();
     gh.tagNames = ['v0.2.0-rc.1'];
-    await draftStable(gh, { tag: 'v0.2.0-rc.1', ...stableOf('0.2.0-rc.1') });
+    await draftStable(gh, { tag: 'v0.2.0-rc.1', build: 1180, ...stableOf('0.2.0-rc.1') });
     assert.equal(gh.drafts[0]?.prerelease, true);
-    assert.equal(gh.drafts[0]?.notesStartTag, null);
+    assert.match(
+      gh.drafts[0]?.body ?? '',
+      /A maintenance release: nothing that people using Penmoss would notice\./,
+    );
+    assert.match(gh.drafts[0]?.body ?? '', /commits\/v0\.2\.0-rc\.1$/);
+    const carried = JSON.parse(
+      /** @type {string} */ (gh.contents.get('v0.2.0-rc.1/release-notes.json')),
+    );
+    assert.deepEqual(carried.releases, []);
   });
 
   it('a re-run replaces the files on its draft, and never touches a published release', async () => {
     const gh = new FakeGh();
     gh.tagNames = ['v0.2.0'];
-    await draftStable(gh, { tag: 'v0.2.0', ...stableOf('0.2.0') });
+    await draftStable(gh, { tag: 'v0.2.0', build: 1180, ...stableOf('0.2.0') });
     gh.calls = [];
-    await draftStable(gh, { tag: 'v0.2.0', ...stableOf('0.2.0') });
+    await draftStable(gh, { tag: 'v0.2.0', build: 1180, ...stableOf('0.2.0') });
     assert.equal(gh.drafts.length, 1);
     assert.deepEqual(
       gh.calls.map((c) => c.split(' ').slice(0, 3).join(' ')),
@@ -896,7 +956,7 @@ describe('stable releases (P3, R5)', () => {
     gh.releases.push({ tag: 'v0.1.9', target: sha(1), body: '', prerelease: false, assets: [] });
     gh.tagNames.push('v0.1.9');
     await assert.rejects(
-      draftStable(gh, { tag: 'v0.1.9', ...stableOf('0.1.9') }),
+      draftStable(gh, { tag: 'v0.1.9', build: 1180, ...stableOf('0.1.9') }),
       /already published/,
     );
   });
@@ -906,14 +966,14 @@ describe('stable releases (P3, R5)', () => {
     gh.tagNames = ['v0.2.0'];
     const files = stableOf('0.2.0');
     await assert.rejects(
-      draftStable(gh, { tag: 'v0.2.0', ...files, zip: stableOf('0.1.9').zip }),
+      draftStable(gh, { tag: 'v0.2.0', build: 1180, ...files, zip: stableOf('0.1.9').zip }),
       /must be penmoss-mac-0\.2\.0\.zip/,
     );
     await assert.rejects(
-      draftStable(gh, { tag: 'v0.2.0', ...files, feed: stableOf('0.2.1').feed }),
+      draftStable(gh, { tag: 'v0.2.0', build: 1180, ...files, feed: stableOf('0.2.1').feed }),
       /does not name penmoss-mac-0\.2\.0\.zip/,
     );
-    await assert.rejects(draftStable(gh, { tag: 'v0.2', ...files }), /not vX\.Y\.Z/);
+    await assert.rejects(draftStable(gh, { tag: 'v0.2', build: 1180, ...files }), /not vX\.Y\.Z/);
     assert.deepEqual(gh.drafts, []);
   });
 });
