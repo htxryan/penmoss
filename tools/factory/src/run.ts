@@ -31,6 +31,7 @@ import { DECISIONS, sandboxNumbering, type RebaseOutcome } from './rebase.ts';
 import { numberText } from './decisions.ts';
 import { settleRisks } from './risks.ts';
 import type { AgentResult } from './result.ts';
+import { formatNote, parseReleaseNote } from '../../../.github/scripts/release-note.mjs';
 import type { WalkOutcome, WalkPlatform } from './walk.ts';
 
 export type RunEvent =
@@ -58,7 +59,8 @@ export type RunEvent =
   | 'proof-waiting'
   | 'usage-limited'
   | 'validated'
-  | 'resumed-at-ci';
+  | 'resumed-at-ci'
+  | 'release-note-refused';
 
 export interface RunSandbox {
   readonly worktreePath: string;
@@ -473,6 +475,34 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
       return block('failed', `The agent couldn't finish: ${result.summary}`);
     }
 
+    // Every PR carries a Release note (PEN-105, A1294). A missing or bad one goes back to the
+    // agent once, with the check's own words, and blocks the run if it is still wrong.
+    let note = releaseNoteOf(result);
+    if (!note.ok) {
+      deps.log('release-note-refused', { round, errors: note.errors.length });
+      await deps.step('release-note round');
+      const again = await agentRound(
+        deps,
+        branch,
+        releaseNotePrompt(input.prompt, note.errors),
+        round,
+      );
+      if (!again.ok)
+        return block(again.error, `The agent finished without a usable result: ${again.error}.`);
+      if (again.result.status !== 'done')
+        return block(
+          'release-note',
+          `Asked only for its Release note, the agent stopped instead: ${again.result.summary}`,
+        );
+      result = again.result;
+      note = releaseNoteOf(result);
+      if (!note.ok)
+        return block(
+          'release-note',
+          `The agent's Release note still doesn't pass the check, after one more try:\n\n${note.errors.map((e) => `- ${e}`).join('\n')}\n\nWrite it in \`.factory/result.json\` (\`releaseNote\`), or tell the agent what it is, then clear **${config.blockedField}**.`,
+        );
+    }
+
     const { paths, commits, subject } = await deps.diff(branch);
     if (commits === 0) return block('no-commits', 'The agent reported done but committed nothing.');
     // Commits that cancel out (PEN-80: a skip, then the gate's round took it back out) leave
@@ -499,6 +529,7 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
         branch,
         scope,
         result,
+        releaseNote: note.text,
         ...(subject ? { subject } : {}),
         proof: verdict.proof,
         ...(verdict.fidelity ? { fidelity: verdict.fidelity } : {}),
@@ -524,6 +555,29 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
     await deps.step(`gate-fix round ${round + 1}`);
     prompt = `${input.prompt}\n\n## The gate's feedback (round ${round + 1})\n\nYour last attempt was committed on \`${branch}\`, but the gate refused it: ${verdict.feedback}\n\nFix that, commit, and write \`.factory/result.json\` again. ${STALE_MAIN}`;
   }
+}
+
+/**
+ * The agent's Release note, checked as the PR's own Release note check will check it, and as
+ * the PR shows it: the notes one per line, or `none`.
+ */
+export function releaseNoteOf(
+  result: AgentResult,
+):
+  { readonly ok: true; readonly text: string } | { readonly ok: false; readonly errors: string[] } {
+  if (!result.releaseNote)
+    return {
+      ok: false,
+      errors: ['`.factory/result.json` has no `releaseNote`.'],
+    };
+  const parsed = parseReleaseNote(`## Release note\n\n${result.releaseNote}`);
+  if (!parsed.ok) return { ok: false, errors: parsed.errors };
+  return { ok: true, text: parsed.none ? 'none' : parsed.notes.map(formatNote).join('\n') };
+}
+
+/** The prompt for a round that only fixes the Release note. */
+export function releaseNotePrompt(prompt: string, errors: readonly string[]): string {
+  return `${prompt}\n\n## Your Release note\n\nYour work is committed and needs no change, but the PR's Release note isn't right:\n\n${errors.map((e) => `- ${e}`).join('\n')}\n\nWrite \`.factory/result.json\` again, the same as before, with \`releaseNote\` set as "When you're done" says above. Don't change or commit anything else.`;
 }
 
 /** One agent round in a sandbox on the branch, and the result it wrote. */
@@ -752,6 +806,8 @@ async function publish(
     branch: string;
     scope: Scope;
     result: AgentResult;
+    /** The checked Release note, as the PR shows it. */
+    releaseNote: string;
     /** The branch's first commit subject, for the title. */
     subject?: string;
     proof: readonly AttachedProof[];
@@ -782,6 +838,7 @@ async function publish(
     issue: run.item.number,
     key: run.item.key,
     summary: shown.result.summary,
+    releaseNote: run.releaseNote,
     scope: run.scope,
     gate: gateCommand(run.scope),
     proof: run.proof,

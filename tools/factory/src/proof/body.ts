@@ -20,6 +20,8 @@ export interface PrBodyInput {
   /** The card's name, `#36` or `PEN-36`; `#<issue>` when absent. */
   readonly key?: string;
   readonly summary: string;
+  /** The checked Release note (PEN-105): one note per line, or `none`. */
+  readonly releaseNote: string;
   readonly scope: Scope;
   readonly gate: string;
   readonly proof: readonly AttachedProof[];
@@ -50,6 +52,11 @@ export function renderPrBody(input: PrBodyInput): string {
     input.summary,
     '',
     `Scope: ${input.scope.kind}${input.scope.platforms.length ? ` (${input.scope.platforms.join(', ')})` : ''}. Gate: \`${input.gate}\` passed.`,
+    '',
+    // Read by the Release note check and the release jobs (A1294): the notes, then a blank line.
+    '## Release note',
+    '',
+    input.releaseNote,
   ];
   if (input.proof.length > 0) {
     lines.push(

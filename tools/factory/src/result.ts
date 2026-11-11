@@ -19,6 +19,12 @@ export interface AgentResult {
   readonly risks: readonly string[];
   /** In a review round: what to reply on each review thread, by thread ID. */
   readonly replies: Readonly<Record<string, string>>;
+  /**
+   * The PR's Release note (PEN-105, A1300): its lines, one per user-facing change, or `none`.
+   * Checked by the run with `.github/scripts/release-note.mjs`, not here, so a bad note goes back
+   * to the agent rather than failing the result.
+   */
+  readonly releaseNote?: string;
 }
 
 export const RESULT_PATH = '.factory/result.json';
@@ -128,6 +134,14 @@ export function parseAgentResult(text: string): AgentResultParse {
   ) {
     return { ok: false, error: 'replies must map thread IDs to text' };
   }
+  const note = r['releaseNote'];
+  if (note !== undefined && typeof note !== 'string' && !strings(note)) {
+    return { ok: false, error: 'releaseNote must be a string or a list of strings' };
+  }
+  const releaseNote = (typeof note === 'string' ? note.split('\n') : (note ?? []))
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n');
   return {
     ok: true,
     result: {
@@ -142,6 +156,7 @@ export function parseAgentResult(text: string): AgentResultParse {
       decisions,
       risks,
       replies: replies as Record<string, string>,
+      ...(releaseNote ? { releaseNote } : {}),
     },
   };
 }

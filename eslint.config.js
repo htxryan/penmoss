@@ -58,9 +58,9 @@ export default defineConfig(
     rules: { 'no-restricted-exports': 'off' },
   },
   {
-    // Plain JavaScript, and the type declarations beside the scripts (scripts/ports.d.mts),
-    // which no tsconfig includes.
-    files: ['**/*.js', '**/*.mjs', '**/*.cjs', 'scripts/*.d.mts'],
+    // Plain JavaScript, and the type declarations beside the scripts (scripts/ports.d.mts,
+    // .github/scripts/release-note.d.mts), which no tsconfig includes.
+    files: ['**/*.js', '**/*.mjs', '**/*.cjs', 'scripts/*.d.mts', '.github/scripts/*.d.mts'],
     extends: [tseslint.configs.disableTypeChecked],
     languageOptions: { globals: globals.node },
   },

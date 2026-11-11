@@ -52,9 +52,12 @@ Write `.factory/result.json` (it is not committed):
   },
   "tests": [{ "cmd": "task check:changed -- origin/main", "result": "pass" }],
   "decisions": [],
-  "risks": []
+  "risks": [],
+  "releaseNote": ["Fixed: Search finds notes with accents."]
 }
 ```
+
+`releaseNote` is the PR's Release note (A1294), which becomes the release notes in the apps and on GitHub: one line per change someone using Penmoss would notice, `New`, `Improved` or `Fixed`, then `(Mac)` or `(Android)` if the change is only there, a colon and one sentence ending in a full stop, such as `"New (Android): Settings → What's new lists this version's changes."`. Write it for that person, not about the code. Write `"releaseNote": "none"` for a change they wouldn't notice: CI, tests, refactors, contributor docs, the factory. A missing or malformed note sends you back once to fix it.
 
 For each platform in scope, name the committed tests that show the change under `proofSpecs` (Proof, above): the factory runs them again with recording on, and attaches the video and screenshots to the PR.
 

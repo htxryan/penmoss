@@ -615,6 +615,7 @@ describe('the agreed copies reach the build and the PR (F16)', () => {
       issue: 41,
       key: 'PEN-41',
       summary: 's',
+      releaseNote: 'none',
       scope: { kind: 'product', platforms: ['web'] },
       gate: 'task check',
       proof: [],
