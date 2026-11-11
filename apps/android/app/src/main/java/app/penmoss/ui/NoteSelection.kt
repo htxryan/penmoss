@@ -261,14 +261,14 @@ internal fun CoroutineScope.moveNotesToTrashWithUndo(
         // Said, not silent (#137, A658): each was gone from the phone already, so nothing to undo.
         requestSync()
         snackbar.currentSnackbarData?.dismiss()
-        snackbar.showSnackbar(noneToTrash(ids.size))
+        snackbar.say(noneToTrash(ids.size), SnackbarTone.Error)
         return@launch
     }
     val missed = ids.size - moved.size
     val said = if (missed == 0) "Moved ${pickedCount(moved.size)} to Trash" else "Moved ${moved.size} of ${ids.size} notes to Trash; $missed could not be: not on this phone any more"
     snackbar.currentSnackbarData?.dismiss()
     val undone = withTimeoutOrNull(undoFor) {
-        snackbar.showSnackbar(said, actionLabel = "Undo", duration = SnackbarDuration.Indefinite)
+        snackbar.say(said, SnackbarTone.Trash, actionLabel = "Undo", duration = SnackbarDuration.Indefinite)
     } == SnackbarResult.ActionPerformed
     var undoSaid: String? = null
     if (undone) {
@@ -282,7 +282,7 @@ internal fun CoroutineScope.moveNotesToTrashWithUndo(
     requestSync()
     onDone(TrashOutcome(said, undoSaid))
     // What Undo did, said for a while; never waited on past [sayFor], so the move always ends.
-    if (undoSaid != null) withTimeoutOrNull(sayFor) { snackbar.showSnackbar(undoSaid) }
+    if (undoSaid != null) withTimeoutOrNull(sayFor) { snackbar.say(undoSaid, SnackbarTone.Done) }
 }
 
 /** What Move to Trash says when none of [count] notes could go (#137, A658): each had gone already. */

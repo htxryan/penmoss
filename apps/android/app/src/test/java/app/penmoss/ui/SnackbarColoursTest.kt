@@ -41,6 +41,9 @@ class SnackbarColoursTest {
             assertTrue("text at $text:1 in $what", text >= READABLE)
             val action = contrast(colours.action, colours.container)
             assertTrue("action at $action:1 in $what", action >= READABLE)
+            // The error glyph reads in the danger colour (3:1 for a glyph, as the web's).
+            val danger = contrast(colours.danger, colours.container)
+            assertTrue("danger glyph at $danger:1 in $what", danger >= 3f)
             // The border shows against the surface (the web's EDGE_MIN).
             val edge = contrast(colours.border, colours.container)
             assertTrue("border at $edge:1 in $what", edge >= 1.1f)
@@ -54,5 +57,6 @@ class SnackbarColoursTest {
         assertEquals(scheme.onSurface, snackbarColours(scheme).content)
         val dark = penmossColours(emptyMap(), dark = true)
         assertEquals(dark.primary, snackbarColours(dark).action)
+        assertEquals(scheme.error, snackbarColours(scheme).danger)
     }
 }

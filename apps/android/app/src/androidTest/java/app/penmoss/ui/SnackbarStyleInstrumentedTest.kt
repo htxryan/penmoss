@@ -43,7 +43,7 @@ import kotlin.math.abs
 
 /**
  * PEN-63's Android proof: every snackbar is the web's toast, a square card on the theme's raised
- * surface with its border and text colour, centred at the bottom and only as wide as its text
+ * surface with its border and text colour, led by its tone's glyph, centred at the bottom and only as wide as its text
  * (up to 380 dp), light and dark, its action in the accent. Run in the factory's proof with
  * `task proof:android -- app.penmoss.ui.SnackbarStyleInstrumentedTest`.
  *
@@ -52,11 +52,11 @@ import kotlin.math.abs
  */
 @RunWith(AndroidJUnit4::class)
 class SnackbarStyleInstrumentedTest {
-    private class Shown(val message: String, val action: String?, val dark: Boolean)
+    private class Shown(val message: String, val tone: SnackbarTone, val action: String?, val dark: Boolean)
 
     @Test
     fun aSnackbarIsARaisedCardCentredAtTheBottomLightAndDark() {
-        var show by mutableStateOf(Shown("Moved 1 note to “Personal”", null, dark = false))
+        var show by mutableStateOf(Shown("Moved 1 note to “Personal”", SnackbarTone.Done, null, dark = false))
         ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
@@ -64,7 +64,7 @@ class SnackbarStyleInstrumentedTest {
                         val state = remember { SnackbarHostState() }
                         LaunchedEffect(show) {
                             state.currentSnackbarData?.dismiss()
-                            state.showSnackbar(show.message, actionLabel = show.action, duration = SnackbarDuration.Indefinite)
+                            state.say(show.message, show.tone, actionLabel = show.action, duration = SnackbarDuration.Indefinite)
                         }
                         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
                             Text("Penmoss", Modifier.padding(24.dp), color = MaterialTheme.colorScheme.onBackground)
@@ -76,22 +76,23 @@ class SnackbarStyleInstrumentedTest {
                     }
                 }
             }
-            check(scenario, dark = false, message = "Moved 1 note to “Personal”")
+            check(scenario, dark = false, message = "Moved 1 note to “Personal”", tone = SnackbarTone.Done)
             SystemClock.sleep(2_000)
 
             // Dark, with Trash's Undo: the dark theme's raised surface, the action in the accent.
-            scenario.onActivity { show = Shown("Moved “Garden plan” to Trash", "Undo", dark = true) }
-            check(scenario, dark = true, message = "Moved “Garden plan” to Trash", action = "Undo")
+            scenario.onActivity { show = Shown("Moved “Garden plan” to Trash", SnackbarTone.Trash, "Undo", dark = true) }
+            check(scenario, dark = true, message = "Moved “Garden plan” to Trash", tone = SnackbarTone.Trash, action = "Undo")
             // The proof's screenshot, while the snackbar is on screen (A1255).
             ProofShot.take()
             SystemClock.sleep(2_000)
         }
     }
 
-    private fun check(scenario: ActivityScenario<ComponentActivity>, dark: Boolean, message: String, action: String? = null) {
+    private fun check(scenario: ActivityScenario<ComponentActivity>, dark: Boolean, message: String, tone: SnackbarTone, action: String? = null) {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         var card: Rect? = null
         var texts = emptyList<String>()
+        var glyph: Rect? = null
         var root: View? = null
         val deadline = SystemClock.uptimeMillis() + 30_000
         do {
@@ -108,10 +109,16 @@ class SnackbarStyleInstrumentedTest {
         // Let it finish fading and scaling in before it is measured.
         SystemClock.sleep(800)
         instrumentation.waitForIdleSync()
-        scenario.onActivity { activity -> card = snackbarOn(activity.window.decorView)?.first }
+        scenario.onActivity { activity ->
+            card = snackbarOn(activity.window.decorView)?.first
+            glyph = tagged(activity.window.decorView, snackbarGlyphTag(tone))
+        }
         val bounds = card ?: error("no snackbar on screen: $texts")
         assertTrue(texts.toString(), message in texts)
         if (action != null) assertTrue(texts.toString(), action in texts)
+        // Led by its tone's glyph (the check, or Trash's bin), as the web toast is.
+        val lead = glyph ?: error("no ${tone.name} glyph in the snackbar")
+        assertTrue("glyph $lead in $bounds", lead.left >= bounds.left && lead.right <= bounds.right && lead.left - bounds.left < 24 * screenDensity(scenario))
 
         val screen = root!!
         val density = screen.resources.displayMetrics.density
@@ -141,15 +148,29 @@ class SnackbarStyleInstrumentedTest {
         assertTrue("$what: #%06x, not #%06x".format(pixel and 0xFFFFFF, want and 0xFFFFFF), channels.all { it <= tolerance })
     }
 
-    /** The snackbar's card in window coordinates, and every text on screen. */
-    private fun snackbarOn(view: View): Pair<Rect, List<String>>? {
+    private fun screenDensity(scenario: ActivityScenario<ComponentActivity>): Float {
+        var density = 1f
+        scenario.onActivity { density = it.resources.displayMetrics.density }
+        return density
+    }
+
+    private fun nodesOn(view: View): List<androidx.compose.ui.semantics.SemanticsNode> {
         val roots = mutableListOf<ViewRootForTest>()
         fun walk(v: View) {
             if (v is ViewRootForTest) roots += v
             if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
         }
         walk(view)
-        val nodes = roots.flatMap { it.semanticsOwner.getAllSemanticsNodes(mergingEnabled = false) }
+        return roots.flatMap { it.semanticsOwner.getAllSemanticsNodes(mergingEnabled = false) }
+    }
+
+    /** The bounds in the window of the node tagged [tag], if one is on screen. */
+    private fun tagged(view: View, tag: String): Rect? =
+        nodesOn(view).firstOrNull { it.config.getOrNull(SemanticsProperties.TestTag) == tag }?.boundsInWindow
+
+    /** The snackbar's card in window coordinates, and every text on screen. */
+    private fun snackbarOn(view: View): Pair<Rect, List<String>>? {
+        val nodes = nodesOn(view)
         val texts = nodes.flatMap { node -> node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text } }
         val card = nodes.firstOrNull { it.config.getOrNull(SemanticsProperties.TestTag) == SNACKBAR_TAG } ?: return null
         return card.boundsInWindow to texts

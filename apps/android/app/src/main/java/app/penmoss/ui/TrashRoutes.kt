@@ -475,14 +475,14 @@ internal fun CoroutineScope.moveToTrashWithUndo(
     if (!store.moveToTrash(noteId)) {
         // Said, not silent (#137, A658).
         snackbar.currentSnackbarData?.dismiss()
-        snackbar.showSnackbar(noneToTrash(1))
+        snackbar.say(noneToTrash(1), SnackbarTone.Error)
         return@launch
     }
     // A snackbar still showing (an earlier move's Undo) goes now, so this one gets its whole
     // time rather than waiting behind it; that earlier move simply stays in Trash.
     snackbar.currentSnackbarData?.dismiss()
     val undone = withTimeoutOrNull(undoFor) {
-        snackbar.showSnackbar("Moved “$title” to Trash", actionLabel = "Undo", duration = SnackbarDuration.Indefinite)
+        snackbar.say("Moved “$title” to Trash", SnackbarTone.Trash, actionLabel = "Undo", duration = SnackbarDuration.Indefinite)
     } == SnackbarResult.ActionPerformed
     if (undone) store.restoreFromTrash(noteId)
     requestSync()

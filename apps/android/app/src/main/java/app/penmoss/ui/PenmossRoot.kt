@@ -148,7 +148,7 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
         graph.store.observeTrashNotices().collect { notices ->
             val notice = notices.firstOrNull() ?: return@collect
             graph.store.trashNoticeShown(notice.id)
-            rootSnackbar.showSnackbar(trashRefusedMessage(notice.title), duration = SnackbarDuration.Long)
+            rootSnackbar.say(trashRefusedMessage(notice.title), SnackbarTone.Error, duration = SnackbarDuration.Long)
         }
     }
     /** Copy Agent Reference from a list (T52 item 4): read from Room, said over every screen. */
@@ -157,7 +157,7 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
             val said = agentReferenceOf(graph.store, id, (graph.source as? app.penmoss.git.GraphSource.Git)?.name)?.let { AgentReference.copy(context, it) }
                 ?: "This note isn't on this phone any more"
             rootSnackbar.currentSnackbarData?.dismiss()
-            rootSnackbar.showSnackbar(said)
+            rootSnackbar.say(said, if (said == AgentReference.COPIED) SnackbarTone.Done else SnackbarTone.Error)
         }
     }
     /** A long press on a search result (T40 P3a, NT10): Move to folder…, Rename, Move to Trash. */
@@ -207,7 +207,7 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
         graph.store.observeFolderNotices().collect { notices ->
             val notice = notices.firstOrNull() ?: return@collect
             graph.store.dismissFolderNotice(notice)
-            rootSnackbar.showSnackbar(notice, duration = SnackbarDuration.Long)
+            rootSnackbar.say(notice, SnackbarTone.Error, duration = SnackbarDuration.Long)
         }
     }
     /** Opens Today, a calendar day or a week's note: made by the editor page, offline too (T40 P5). */
