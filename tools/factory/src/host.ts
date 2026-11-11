@@ -46,6 +46,7 @@ import { checkMedia, framesToMp4, framesWithin, toMp4, within } from './proof/me
 import { addedLines, DECISIONS, newRows, rebaseOntoMain } from './rebase.ts';
 import { checkMacVm, runMacProof, runMacWalk } from './proof/mac.ts';
 import {
+  adoptRemoteHead,
   descendsFrom,
   ensurePublishRepo,
   fetchMainInto,
@@ -55,6 +56,7 @@ import {
   publishDir,
   publishRun,
   pushedHead,
+  remoteBranch,
   runRef,
 } from './publish.ts';
 import { parseAgentResult, RESULT_PATH } from './result.ts';
@@ -196,6 +198,27 @@ export function sandboxStartCommand(base: string): string {
   return [
     `${sandboxMainCommand(base)} && if git merge-base --is-ancestor HEAD ${base}; then git merge --ff-only --quiet ${base};`,
     `elif test -z "$(git status --porcelain --untracked-files=no)"; then git rebase --quiet ${base} >/dev/null 2>&1 || git rebase --abort; fi`,
+  ].join(' ');
+}
+
+/**
+ * Takes the commits someone pushed on top of the factory's last push to `branch` (PEN-101): the
+ * sandbox fetches the branch, checks GitHub still has `to`, and fast-forwards onto it, or, when
+ * the run's branch has commits GitHub doesn't (a rebase, a round that didn't push), cherry-picks
+ * `from..to` onto them. A pick that conflicts is undone, and the command fails (exit 3).
+ */
+export function sandboxTakeCommand(branch: string, from: string, to: string): string {
+  if (!/^[\w.][\w./-]*$/.test(branch) || branch.includes('..'))
+    throw new Error(`not a branch the factory makes: ${branch}`);
+  for (const sha of [from, to])
+    if (!/^[0-9a-f]{40,64}$/.test(sha)) throw new Error(`not a commit: ${sha}`);
+  return [
+    `git -c credential.helper= -c 'credential.helper=!f() { test "$1" = get || exit 0; echo username=x-access-token; echo "password=$GH_TOKEN"; }; f'`,
+    `fetch --quiet --no-tags origin refs/heads/${branch}`,
+    `&& test "$(git rev-parse FETCH_HEAD)" = ${to}`,
+    `&& if git merge-base --is-ancestor HEAD ${to}; then git merge --ff-only --quiet ${to};`,
+    `elif git cherry-pick --allow-empty ${from}..${to} >/dev/null 2>&1; then :;`,
+    'else git cherry-pick --abort >/dev/null 2>&1; exit 3; fi',
   ].join(' ');
 }
 
@@ -385,6 +408,34 @@ export function hostDeps(options: HostOptions): HostDeps {
           await sandbox.close();
         },
       };
+      // Commits someone pushed to the PR's branch by hand come first, so the agent builds on
+      // them and the push keeps them (PEN-101). A branch rewritten under the factory stops here.
+      const remote = await remoteBranch(
+        exec,
+        publish,
+        githubUrl(config),
+        branch,
+        await options.pushToken(),
+      );
+      if (remote.kind === 'rewritten') {
+        await handle.close();
+        throw new Error(
+          `the PR's branch \`${branch}\` was rewritten on GitHub (it is at ${remote.head.slice(0, 10)}, which no longer holds the factory's last push, ${remote.ours.slice(0, 10)}), so the factory won't build on it or push over it. Push your commits on top of ${remote.ours.slice(0, 10)} instead, or close the PR and clear Blocked to start the card again`,
+        );
+      }
+      if (remote.kind === 'ahead') {
+        const took = await handle.exec(sandboxTakeCommand(branch, remote.from, remote.to));
+        if (took.exitCode !== 0) {
+          await handle.close();
+          throw new Error(
+            `the commits pushed to \`${branch}\` on GitHub (${remote.from.slice(0, 10)}..${remote.to.slice(0, 10)}) don't apply to the run's branch: ${took.stderr.trim() || `exit ${took.exitCode}`}`,
+          );
+        }
+        await adoptRemoteHead(exec, publish, branch, remote.to);
+        options.log(
+          `took the commits pushed to ${branch} on GitHub, up to ${remote.to.slice(0, 10)}`,
+        );
+      }
       // Sandcastle makes a new branch from the clone's origin/main, which only the last gate
       // moved: the sandbox starts from the main the host fetched instead (A1232).
       base ??= await fetchMainInto(exec, publish);
