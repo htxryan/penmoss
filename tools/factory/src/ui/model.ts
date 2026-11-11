@@ -314,6 +314,7 @@ const STAGE_OF: Readonly<Record<string, number>> = {
   'rebase-conflict': 3,
   'gate-failed': 3,
   'gate-passed': 4,
+  'validation-mismatch': 4,
   'proof-waiting': 4,
   'proof-recorded': 4,
   validated: 4,
@@ -321,6 +322,7 @@ const STAGE_OF: Readonly<Record<string, number>> = {
   'pr-opened': 5,
   'ci-red': 5,
   'ci-repaired': 5,
+  'ci-rerun': 5,
   'ci-stalled': 5,
   'in-review': 6,
   resumed: 7,
@@ -416,8 +418,20 @@ function stopOf(run: Run, config: FactoryConfig): Stop | null {
         at,
       };
     }
+    case 'ci-infra': {
+      const signature = str(lastOf('ci-rerun')?.['signature']);
+      return {
+        text: `CI failed on the runners' infrastructure, not the branch${signature ? ` (${signature})` : ''}; re-run it once GitHub recovers`,
+        machine: false,
+        paused: false,
+        at,
+      };
+    }
     case 'gate-failed': {
-      const rounds = run.events.filter((e) => e.event === 'gate-failed').length;
+      // Every fix round counts, a validation mismatch's too.
+      const rounds = run.events.filter(
+        (e) => e.event === 'gate-failed' || e.event === 'validation-mismatch',
+      ).length;
       return {
         text: `The gate still failed after ${rounds} round${rounds === 1 ? '' : 's'}; the checks that failed are on the issue`,
         machine: false,
@@ -490,6 +504,11 @@ function progressOf(e: LedgerEvent, config: FactoryConfig): string {
       return `Gate failed; fix round ${(num(e['round']) ?? 0) + 2} of ${rounds}`;
     case 'gate-passed':
       return 'Gate passed; recording proof';
+    case 'validation-mismatch': {
+      const criteria = Array.isArray(e['criteria']) ? (e['criteria'] as string[]) : [];
+      const n = criteria.length;
+      return `Validation: ${n || 'some'} criteri${n === 1 ? 'on' : 'a'} not met${n ? ` (${criteria.join(', ')})` : ''}; fix round ${(num(e['round']) ?? 0) + 2} of ${rounds}`;
+    }
     case 'proof-waiting':
       return `Mac proof waits: ${str(e['reason']) ?? 'the test VM'}`;
     case 'proof-recorded':
@@ -506,6 +525,10 @@ function progressOf(e: LedgerEvent, config: FactoryConfig): string {
     }
     case 'ci-repaired':
       return 'CI repaired; waiting for green';
+    case 'ci-rerun': {
+      const signature = str(e['signature']);
+      return `CI re-run: the runners' infrastructure failed${signature ? ` (${signature})` : ''}`;
+    }
     case 'ci-stalled':
       return 'CI waiting for a Mac runner';
     case 'in-review':

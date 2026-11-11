@@ -11,16 +11,25 @@ import type { Board, BoardItem } from './board.ts';
 import type { FactoryConfig, Platform, SlotConfig } from './config.ts';
 import type { IssueSpec } from './labels.ts';
 import { runIdOf, summarizeChecks, type CheckRun } from './checks.ts';
+import { infraFailure, MAX_INFRA_RERUNS, type CiHistory, type InfraFailure } from './ci-failure.ts';
 import { classify, proofPlatforms, type Scope } from './platforms.ts';
-import { fidelityFeedback, renderFidelity, settle, type FidelityRow } from './fidelity.ts';
-import { scanWeakenedTests, weakenedFeedback } from './gate.ts';
+import {
+  criterionLabel,
+  fidelityFeedback,
+  renderFidelity,
+  settle,
+  type FidelityRow,
+} from './fidelity.ts';
+import { scanWeakenedTests, weakenedFeedback, workflowChanges, workflowFeedback } from './gate.ts';
 import { usageLimitReset } from './limits.ts';
 import { validate } from './validate.ts';
 import { renderPrBody, type AttachedProof } from './proof/body.ts';
 import { missingProof, type ProofItem } from './proof/manifest.ts';
 import { VmUnavailable, type VmCheck } from './proof/mac.ts';
 import { formatMarker } from './pick.ts';
-import type { RebaseOutcome } from './rebase.ts';
+import { DECISIONS, sandboxNumbering, type RebaseOutcome } from './rebase.ts';
+import { numberText } from './decisions.ts';
+import { settleRisks } from './risks.ts';
 import type { AgentResult } from './result.ts';
 import type { WalkOutcome, WalkPlatform } from './walk.ts';
 
@@ -32,6 +41,7 @@ export type RunEvent =
   | 'failed'
   | 'gate-passed'
   | 'gate-failed'
+  | 'validation-mismatch'
   | 'pushed'
   | 'decisions-numbered'
   | 'rebased'
@@ -41,6 +51,7 @@ export type RunEvent =
   | 'ci-red'
   | 'pr-conflicts'
   | 'ci-repaired'
+  | 'ci-rerun'
   | 'ci-stalled'
   | 'in-review'
   | 'blocked'
@@ -140,6 +151,10 @@ export interface RunDeps {
   conflicts?(pr: string): Promise<boolean>;
   /** The last lines of a failed check's log. */
   failedLog(check: CheckRun): Promise<string>;
+  /** Re-runs an Actions run's failed jobs (`gh run rerun <id> --failed`): an infrastructure failure. */
+  rerunFailed(run: string): Promise<void>;
+  /** What the run ledger says the factory already did about a PR's CI (ci-failure.ts). */
+  ciHistory?(issue: number, pr: string): CiHistory;
   /** F19's validation: mockups in, the reviewer's verdicts out (see validate.ts). */
   stageMockups(sandbox: RunSandbox): Promise<void>;
   keepValidation(sandbox: RunSandbox): Promise<void>;
@@ -329,6 +344,14 @@ function installFeedback(installed: { readonly stdout: string; readonly stderr: 
 export const STALE_MAIN =
   'Main is `origin/main` here; the local `main` branch is stale, so diff and rebase against `origin/main` (`git diff origin/main...HEAD`).';
 
+/**
+ * What a CI repair round can't change (A1314). Given only an apt log, PEN-73's repair round
+ * added a retry loop to `ci.yml`, a change unrelated to its PR that GitHub then refused to take
+ * from the factory's app.
+ */
+export const CI_REPAIR_LIMITS =
+  "The factory can't push changes under `.github/workflows/` (its GitHub App has no workflows permission, and the gate refuses them), so never edit those files. A failure in the runner's network or in a hosted service (a name that doesn't resolve, a registry's 5xx, a runner that shut down, an apt mirror that can't be reached) isn't this branch's to fix: change nothing, and write `.factory/result.json` with status `failed` and the log lines that show it in `summary`.";
+
 export function gateCommand(scope: Scope): string {
   return scope.kind === 'docs-only' ? 'task lint' : 'task check';
 }
@@ -338,9 +361,21 @@ type GateVerdict =
       readonly ok: true;
       readonly proof: readonly AttachedProof[];
       readonly fidelity?: readonly FidelityRow[];
+      /** The number each A-NEW-k on the branch has now (`branchNumbering`). */
+      readonly numbering: Readonly<Record<string, string>>;
+      /** The platforms whose proof the harness ran and saw pass. */
+      readonly proved: readonly Platform[];
     }
-  /** `block`: nothing the agent can fix (the test VM stayed unusable): stop, Blocked, now. */
-  | { readonly ok: false; readonly feedback: string; readonly block?: string };
+  /**
+   * `block`: nothing the agent can fix (the test VM stayed unusable): stop, Blocked, now.
+   * `mismatches`: the gate and proof passed, and validation found these criteria not met.
+   */
+  | {
+      readonly ok: false;
+      readonly feedback: string;
+      readonly block?: string;
+      readonly mismatches?: readonly string[];
+    };
 
 export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunOutcome> {
   const { config, item, spec } = { config: deps.config, ...input };
@@ -467,13 +502,18 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
         ...(subject ? { subject } : {}),
         proof: verdict.proof,
         ...(verdict.fidelity ? { fidelity: verdict.fidelity } : {}),
+        numbering: verdict.numbering,
+        proved: verdict.proved,
         marker,
         prompt: input.prompt,
         ...(input.artifacts ? { artifacts: input.artifacts } : {}),
       });
     }
     if (verdict.block) return block(verdict.block, verdict.feedback);
-    deps.log('gate-failed', { round });
+    // A validation mismatch isn't a failed check: the ledger and the Factory UI say which it was.
+    if (verdict.mismatches)
+      deps.log('validation-mismatch', { round, criteria: verdict.mismatches });
+    else deps.log('gate-failed', { round });
     if (round >= config.rounds.gateFix) {
       return block(
         'gate-failed',
@@ -552,8 +592,12 @@ export async function gateAndProve(
     if (Object.keys(numbered).length > 0) deps.log('decisions-numbered', numbered);
     const installed = await gate.exec(GATE_INSTALL);
     if (installed.exitCode !== 0) return { ok: false, feedback: installFeedback(installed) };
-    const weak = scanWeakenedTests((await gate.exec('git diff origin/main...HEAD')).stdout);
+    const patch = (await gate.exec('git diff origin/main...HEAD')).stdout;
+    const weak = scanWeakenedTests(patch);
     if (weak.length > 0) return { ok: false, feedback: weakenedFeedback(weak) };
+    // GitHub refuses the factory's push of a workflow change: refuse it here, before the push.
+    const workflows = workflowChanges(patch);
+    if (workflows.length > 0) return { ok: false, feedback: workflowFeedback(workflows) };
     const command = gateCommand(scope);
     const checked = await deps.heavy(`factory gate ${branch}`, () => gate.exec(command));
     if (checked.exitCode !== 0) {
@@ -605,10 +649,25 @@ export async function gateAndProve(
       if (!v.ok) return { ok: false, feedback: `Validation couldn't finish: ${v.error}` };
       const mismatches = v.rows.filter((r) => r.verdict === 'mismatch');
       if (mismatches.length > 0 && !validation.final)
-        return { ok: false, feedback: fidelityFeedback(mismatches) };
-      return { ok: true, proof: prepared.proof, fidelity: settle(v.rows) };
+        return {
+          ok: false,
+          feedback: fidelityFeedback(mismatches),
+          mismatches: mismatches.map((r) => criterionLabel(r.criterion)),
+        };
+      return {
+        ok: true,
+        proof: prepared.proof,
+        fidelity: settle(v.rows),
+        numbering: await sandboxNumbering(gate),
+        proved: needed,
+      };
     }
-    return { ok: true, proof: prepared.proof };
+    return {
+      ok: true,
+      proof: prepared.proof,
+      numbering: await sandboxNumbering(gate),
+      proved: needed,
+    };
   } finally {
     await gate.close();
   }
@@ -700,26 +759,41 @@ async function publish(
     prompt: string;
     artifacts?: RunInput['artifacts'];
     fidelity?: readonly FidelityRow[];
+    /** The number each A-NEW-k on the branch has now: the body says those, not the placeholders. */
+    numbering?: Readonly<Record<string, string>>;
+    /** The platforms whose proof the harness ran and saw pass. */
+    proved?: readonly Platform[];
   },
 ): Promise<RunOutcome> {
+  // main may have moved while proof and validation ran (PEN-63's: 20 minutes, and another PR's
+  // decision row merged meanwhile, so the PR it pushed conflicted and got no CI). Rebase once
+  // more first; the gate runs again only when that brought in more than docs/decisions.md.
+  let numbering = run.numbering ?? {};
+  await deps.fetchMain();
+  if (await deps.behindMain(run.branch)) {
+    const fresh = await bringUpToDate(deps, run, { beforePush: true });
+    if (!fresh.ok) return stopRun(deps, run, fresh.reason, fresh.body);
+    numbering = fresh.numbering ?? numbering;
+  }
   await deps.push(run.branch);
   deps.log('pushed', { branch: run.branch });
+  const shown = forTheBody(run.result, run.fidelity, numbering, run.proved ?? []);
   const body = renderPrBody({
     issue: run.item.number,
     key: run.item.key,
-    summary: run.result.summary,
+    summary: shown.result.summary,
     scope: run.scope,
     gate: gateCommand(run.scope),
     proof: run.proof,
-    decisions: run.result.decisions,
-    risks: run.result.risks,
+    decisions: shown.result.decisions,
+    risks: shown.result.risks,
     marker: run.marker('pr'),
     ...(run.artifacts ? { artifacts: run.artifacts } : {}),
-    ...(run.fidelity ? { fidelity: renderFidelity(run.fidelity) } : {}),
+    ...(shown.fidelity ? { fidelity: renderFidelity(shown.fidelity) } : {}),
   });
   const pr = await deps.openPr({
     branch: run.branch,
-    title: prTitle({ subject: run.subject, summary: run.result.summary, key: run.item.key }),
+    title: prTitle({ subject: run.subject, summary: shown.result.summary, key: run.item.key }),
     body,
     proof: run.proof,
     files: (run.fidelity ?? []).flatMap((r) =>
@@ -727,7 +801,45 @@ async function publish(
     ),
   });
   deps.log('pr-opened', { pr });
-  return awaitReview(deps, run, pr);
+  return awaitReview(deps, { ...run, result: shown.result }, pr);
+}
+
+/**
+ * The agent's and the reviewer's text as the PR shows it: each A-NEW-k the gate numbered says
+ * its number (in the summary, decisions, risks and the fidelity table's criteria and notes), and
+ * the risks are settled against what the factory has since done (risks.ts).
+ */
+export function forTheBody(
+  result: AgentResult,
+  fidelity: readonly FidelityRow[] | undefined,
+  numbering: Readonly<Record<string, string>>,
+  proved: readonly Platform[],
+): { result: AgentResult; fidelity?: FidelityRow[] } {
+  const n = (text: string) => numberText(text, numbering);
+  return {
+    result: {
+      ...result,
+      summary: n(result.summary),
+      decisions: result.decisions.map(n),
+      risks: settleRisks(result.risks.map(n), proved),
+    },
+    ...(fidelity
+      ? { fidelity: fidelity.map((r) => ({ ...r, criterion: n(r.criterion), note: n(r.note) })) }
+      : {}),
+  };
+}
+
+/** Stops the run: says why on the issue, with the marker, and sets Blocked. */
+async function stopRun(
+  deps: RunDeps,
+  run: { readonly item: BoardItem; readonly marker: (event: string) => string },
+  reason: string,
+  text: string,
+): Promise<RunOutcome> {
+  deps.log('blocked', { reason });
+  await deps.comment(run.item.number, `${text}\n\n${run.marker('blocked')}`);
+  await deps.setBlocked(run.item);
+  return { kind: 'blocked', reason };
 }
 
 /** A pushed PR to In review: CI green (repaired if red), on top of main. */
@@ -744,12 +856,7 @@ async function awaitReview(
   pr: string,
 ): Promise<RunOutcome> {
   const { config } = deps;
-  const stop = async (reason: string, text: string): Promise<RunOutcome> => {
-    deps.log('blocked', { reason });
-    await deps.comment(run.item.number, `${text}\n\n${run.marker('blocked')}`);
-    await deps.setBlocked(run.item);
-    return { kind: 'blocked', reason };
-  };
+  const stop = (reason: string, text: string) => stopRun(deps, run, reason, text);
   // In review only once CI is green (R4); red checks go to a repair session (F6). A PR that
   // conflicts with main gets no CI: rebase it (gate, push) and watch again, a few times at most.
   let ci = await watchCi(deps, { ...run, pr });
@@ -802,7 +909,11 @@ export async function watchCi(
 ): Promise<CiOutcome> {
   const { config } = deps;
   let since = deps.now();
-  let repairs = 0;
+  // Counted for the PR, not for this call: a restart (Ryan clearing Blocked) doesn't give the
+  // agent `rounds.ciRepair` more rounds (A1313).
+  const history = deps.ciHistory?.(run.item.number, run.pr);
+  let repairs = history?.repairs ?? 0;
+  const reruns = new Map(history?.reruns);
   let saidStalled = false;
   let empty = 0;
   for (;;) {
@@ -830,7 +941,16 @@ export async function watchCi(
     const logs = await failedLogs(deps, summary.failed);
     deps.log('ci-red', { failed: summary.failed.map((c) => c.name), repairs });
     // Ryan's comment names the failing jobs and their last log lines, whichever way it stops.
-    const failure = `${run.pr}\n\n${summary.failed.map((c) => `- [${c.name}](${c.link})${runIdOf(c) ? ` (run ${runIdOf(c)})` : ''}`).join('\n')}\n\n${logs.join('\n\n')}`;
+    const failure = ciFailureText(run.pr, summary.failed, logs);
+    // The runners' infrastructure, not the branch: re-run the failed jobs, no agent (A1312).
+    const infra = infraFailure(summary.failed, logs);
+    if (infra) {
+      const rerun = await rerunInfra(deps, run, infra, reruns, failure);
+      if (rerun.kind === 'blocked') return rerun;
+      since = deps.now();
+      saidStalled = false;
+      continue;
+    }
     if (repairs >= config.rounds.ciRepair) {
       return {
         kind: 'blocked',
@@ -846,10 +966,54 @@ export async function watchCi(
         reason: 'ci-red',
         body: `A CI repair round couldn't finish: ${repaired.why}\n\nCI is red: ${failure}`,
       };
-    deps.log('ci-repaired', { round: repairs });
+    deps.log('ci-repaired', { round: repairs, pr: run.pr });
     since = deps.now();
     saidStalled = false;
   }
+}
+
+/** The PR, its failed jobs (linked, with their Actions run) and their last log lines. */
+export function ciFailureText(
+  pr: string,
+  failed: readonly CheckRun[],
+  logs: readonly string[],
+): string {
+  return `${pr}\n\n${failed.map((c) => `- [${c.name}](${c.link})${runIdOf(c) ? ` (run ${runIdOf(c)})` : ''}`).join('\n')}\n\n${logs.join('\n\n')}`;
+}
+
+/**
+ * Re-runs the failed jobs of an infrastructure failure (A1312), each Actions run at most
+ * `MAX_INFRA_RERUNS` times (counted from the ledger too, so a restart doesn't reset it), and says
+ * so on the issue the first time. After that the failure is Ryan's: no agent can fix the runners.
+ * `reruns` is updated in place.
+ */
+export async function rerunInfra(
+  deps: Pick<RunDeps, 'rerunFailed' | 'comment' | 'log'>,
+  run: { readonly item: BoardItem; readonly pr: string },
+  infra: InfraFailure,
+  reruns: Map<string, number>,
+  failure: string,
+): Promise<{ readonly kind: 'rerun' } | Extract<CiOutcome, { kind: 'blocked' }>> {
+  if ([...infra.runs.keys()].some((id) => (reruns.get(id) ?? 0) >= MAX_INFRA_RERUNS))
+    return {
+      kind: 'blocked',
+      reason: 'ci-infra',
+      body: `CI failed on the runners' infrastructure, not on this branch (${infra.signature}), and again after ${MAX_INFRA_RERUNS} re-runs, so no agent was asked to change anything: ${failure}\n\nRe-run the failed jobs once GitHub has recovered. When they pass, clear Blocked: the run goes back to waiting on CI (A1298).`,
+    };
+  let first = false;
+  for (const [id, jobs] of infra.runs) {
+    const attempt = (reruns.get(id) ?? 0) + 1;
+    await deps.rerunFailed(id);
+    reruns.set(id, attempt);
+    deps.log('ci-rerun', { actionsRun: id, jobs, signature: infra.signature, attempt, pr: run.pr });
+    if (attempt === 1) first = true;
+  }
+  if (first)
+    await deps.comment(
+      run.item.number,
+      `CI failed on an infrastructure problem, not on this branch (${infra.signature}): ${[...infra.runs.values()].flat().join(', ')}. The factory is re-running the failed jobs, up to ${MAX_INFRA_RERUNS} times, rather than giving the agent a repair round. ${run.pr}`,
+    );
+  return { kind: 'rerun' };
 }
 
 /** Each failed job's last log lines, as the repair prompt and Ryan's comment show them. */
@@ -875,7 +1039,7 @@ async function repair(
     await runAgentPatiently(
       deps,
       work,
-      `${run.prompt}\n\n## CI failed (repair round ${round})\n\nThe PR from \`${run.branch}\` is open and its CI failed. The failed jobs' last log lines:\n\n${logs}\n\nFix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\` again. ${STALE_MAIN}`,
+      `${run.prompt}\n\n## CI failed (repair round ${round})\n\nThe PR from \`${run.branch}\` is open and its CI failed. The failed jobs' last log lines:\n\n${logs}\n\nFix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\` again. ${CI_REPAIR_LIMITS} ${STALE_MAIN}`,
     );
     const read = await deps.readResult(work);
     if (!read.ok) return { ok: false, why: read.error };
@@ -908,25 +1072,54 @@ function noteRebase(deps: RunDeps, rebased: Rebased): void {
 }
 
 type Regated =
-  | { readonly ok: true; readonly rebase: Rebased }
+  | {
+      readonly ok: true;
+      readonly rebase: Rebased;
+      /** The number each A-NEW-k on the branch has now (`branchNumbering`), when asked for. */
+      readonly numbering?: Readonly<Record<string, string>>;
+    }
   | { readonly ok: false; readonly why: string; readonly conflict?: readonly string[] };
 
-/** The branch rebased onto a fresh main in a gate sandbox, and the gate run on it again. */
-async function regate(deps: RunDeps, branch: string, scope: Scope): Promise<Regated> {
+/**
+ * The branch rebased onto a fresh main in a gate sandbox, and the gate run on it again. `light`:
+ * when the rebase changed nothing but docs/decisions.md (main's new decision rows, a number
+ * moved), the gate's check is skipped: the code it passed is the code that is there.
+ * `numbering`: also read the number each A-NEW-k has on the branch, for a PR body.
+ */
+async function regate(
+  deps: RunDeps,
+  branch: string,
+  scope: Scope,
+  options: { readonly light?: boolean; readonly numbering?: boolean } = {},
+): Promise<Regated> {
   await deps.step('the gate');
   await deps.fetchMain();
   const gate = await deps.openSandbox(branch);
+  const numbering = async () =>
+    options.numbering ? { numbering: await sandboxNumbering(gate) } : {};
   try {
+    const before = options.light ? await gate.exec('git rev-parse HEAD') : undefined;
     const rebased = await deps.rebase(gate);
     if (rebased.kind === 'conflict')
       return { ok: false, why: conflictFeedback(branch, rebased), conflict: rebased.files };
     noteRebase(deps, rebased);
     const numbered = await deps.numberDecisions(gate, branch);
     if (Object.keys(numbered).length > 0) deps.log('decisions-numbered', numbered);
+    if (before?.exitCode === 0 && /^[0-9a-f]{7,64}$/.test(before.stdout.trim())) {
+      const changed = await gate.exec(`git diff --name-only ${before.stdout.trim()} HEAD`);
+      const paths = changed.stdout.split('\n').filter(Boolean);
+      if (changed.exitCode === 0 && paths.every((path) => path === DECISIONS)) {
+        deps.log('rebased', { phase: 'push', gate: 'skipped', changed: paths });
+        return { ok: true, rebase: rebased, ...(await numbering()) };
+      }
+    }
     const installed = await gate.exec(GATE_INSTALL);
     if (installed.exitCode !== 0) return { ok: false, why: installFeedback(installed) };
-    const weak = scanWeakenedTests((await gate.exec('git diff origin/main...HEAD')).stdout);
+    const patch = (await gate.exec('git diff origin/main...HEAD')).stdout;
+    const weak = scanWeakenedTests(patch);
     if (weak.length > 0) return { ok: false, why: weakenedFeedback(weak) };
+    const workflows = workflowChanges(patch);
+    if (workflows.length > 0) return { ok: false, why: workflowFeedback(workflows) };
     const command = gateCommand(scope);
     const checked = await deps.heavy(`factory gate ${branch}`, () => gate.exec(command));
     if (checked.exitCode !== 0) {
@@ -936,7 +1129,7 @@ async function regate(deps: RunDeps, branch: string, scope: Scope): Promise<Rega
         why: `\`${command}\` failed:\n\n\`\`\`\n${excerpt(checked.stdout + checked.stderr)}\n\`\`\``,
       };
     }
-    return { ok: true, rebase: rebased };
+    return { ok: true, rebase: rebased, ...(await numbering()) };
   } finally {
     await gate.close();
   }
@@ -962,7 +1155,11 @@ function stuck(
 }
 
 export type RefreshOutcome =
-  | { readonly ok: true; readonly rebase: Rebased }
+  | {
+      readonly ok: true;
+      readonly rebase: Rebased;
+      readonly numbering?: Readonly<Record<string, string>>;
+    }
   | { readonly ok: false; readonly reason: string; readonly body: string };
 
 /**
@@ -974,7 +1171,26 @@ export async function refreshBranch(
   deps: RunDeps,
   run: { readonly branch: string; readonly scope: Scope; readonly prompt: string },
 ): Promise<RefreshOutcome> {
-  let gated = await regate(deps, run.branch, run.scope);
+  const fresh = await bringUpToDate(deps, run);
+  if (!fresh.ok) return fresh;
+  await deps.push(run.branch);
+  deps.log('pushed', { branch: run.branch, phase: 'rebase' });
+  return fresh;
+}
+
+/**
+ * `refreshBranch` without the push: the branch rebased onto main and gated again, with one fix
+ * round for the agent. `beforePush`, the first push's: the gate's check is skipped when the
+ * rebase brought in nothing but docs/decisions.md (`regate`'s `light`; after an agent's fix
+ * round it always runs), and the outcome has the branch's decision numbers for the PR body.
+ */
+async function bringUpToDate(
+  deps: RunDeps,
+  run: { readonly branch: string; readonly scope: Scope; readonly prompt: string },
+  options: { readonly beforePush?: boolean } = {},
+): Promise<RefreshOutcome> {
+  const numbering = options.beforePush ?? false;
+  let gated = await regate(deps, run.branch, run.scope, { light: numbering, numbering });
   if (!gated.ok) {
     const first = gated;
     deps.log(first.conflict ? 'rebase-conflict' : 'gate-failed', {
@@ -982,7 +1198,7 @@ export async function refreshBranch(
       phase: 'rebase',
     });
     const ask = first.conflict
-      ? `## \`origin/main\` moved: rebase onto it\n\nThe PR from \`${run.branch}\` no longer rebases onto \`origin/main\`. ${first.why}\n\nKeep what \`origin/main\` changed and what this branch changes. ${STALE_MAIN} Run the checks, commit, and write \`.factory/result.json\` again.`
+      ? `## \`origin/main\` moved: rebase onto it\n\n\`${run.branch}\` no longer rebases onto \`origin/main\`. ${first.why}\n\nKeep what \`origin/main\` changed and what this branch changes. ${STALE_MAIN} Run the checks, commit, and write \`.factory/result.json\` again.`
       : `## The gate after rebasing onto \`origin/main\`\n\n\`${run.branch}\` is now on top of \`origin/main\`, and the gate fails there: ${first.why}\n\nFix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\` again. ${STALE_MAIN}`;
     const work = await deps.openSandbox(run.branch);
     let read: Awaited<ReturnType<RunDeps['readResult']>>;
@@ -999,12 +1215,14 @@ export async function refreshBranch(
         : undefined;
     if (stopped !== undefined)
       return stuck(run.branch, first, ` (the agent's fix round stopped: ${stopped})`);
-    gated = await regate(deps, run.branch, run.scope);
+    gated = await regate(deps, run.branch, run.scope, { numbering });
     if (!gated.ok) return stuck(run.branch, gated, '');
   }
-  await deps.push(run.branch);
-  deps.log('pushed', { branch: run.branch, phase: 'rebase' });
-  return { ok: true, rebase: gated.rebase };
+  return {
+    ok: true,
+    rebase: gated.rebase,
+    ...(gated.numbering ? { numbering: gated.numbering } : {}),
+  };
 }
 
 function tail(text: string): string {

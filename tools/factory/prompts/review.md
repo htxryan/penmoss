@@ -30,6 +30,8 @@ For each criterion decide:
 - `mismatch`: it isn't met, or it visibly differs from the mockup in a way the builder should fix. Say exactly what differs ("the badge is #d33, the mockup's accent green").
 - `deviation`: it differs, but for a reason the builder can't or shouldn't fix (a platform limit, a decision recorded in the plan, or a reason the builder gave above that holds). Say the reason.
 
+Where the plan's words and its mockup disagree, the plan's words win. A screenshot that follows the words but not the mockup is a `deviation` whose note quotes the plan ("The plan says the Android snackbar has no leading glyph"), never a `mismatch`. One that follows the mockup against the words is a `mismatch`.
+
 A screenshot that doesn't show the criterion at all is a `mismatch`. A Mac or Android screenshot that is missing because its walkthrough couldn't run, or broke on its own code (its last lines above say which), is a `deviation` that says so and that the app's proof recording covers it. One missing because the app never got there is a `mismatch`.
 
 A `web` screenshot of a criterion about the Mac or Android app is the web build standing in for that app (the Mac app bundles it). Judge what's on the page; a difference only the native app makes (its window's title bar, a native menu or select popup) is a `deviation` whose note says "web build, standing in for the Mac app". Never write that a web screenshot shows the Mac or Android app.

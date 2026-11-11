@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { fidelityFeedback, parseReview, renderFidelity, settle, standIn } from '../src/fidelity.ts';
+import {
+  criterionLabel,
+  fidelityFeedback,
+  parseReview,
+  renderFidelity,
+  settle,
+  standIn,
+} from '../src/fidelity.ts';
 
 const review = {
   rows: [
@@ -27,6 +34,16 @@ const review = {
 };
 
 describe('fidelity (F19)', () => {
+  it('names a criterion in the ledger by its id, or else by its first words', () => {
+    expect(criterionLabel('AC1 nested tags start collapsed')).toBe('AC1');
+    expect(criterionLabel('AC-2: the badge')).toBe('AC-2');
+    expect(criterionLabel('**AC 3** pipes')).toBe('AC3');
+    expect(criterionLabel('2. The list scrolls')).toBe('2');
+    expect(criterionLabel('The badge uses the accent colour on every card')).toBe(
+      'The badge uses the accent colour…',
+    );
+    expect(criterionLabel('Short one')).toBe('Short one');
+  });
   it('parses verdicts and keeps only plain PNG names', () => {
     const r = parseReview(JSON.stringify(review));
     expect(r.ok && r.rows.map((x) => [x.verdict, x.screenshot])).toEqual([

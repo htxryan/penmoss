@@ -150,6 +150,45 @@ export function numberingOf(subject: string): Record<string, string> | null {
   return assigned;
 }
 
+/** The subject of the renumbering commit (`renumber` below), and the numbers it moved. */
+const RENUMBERING = /^Renumber the decisions main already has: (.+)$/;
+
+export function renumberingOf(subject: string): Record<string, string> | null {
+  const match = RENUMBERING.exec(subject.trim());
+  if (!match) return null;
+  const moved: Record<string, string> = {};
+  for (const pair of match[1]!.split(', ')) {
+    const each = /^(A\d+) is now (A\d+)$/.exec(pair);
+    if (!each) return null;
+    moved[each[1]!] = each[2]!;
+  }
+  return moved;
+}
+
+/**
+ * The number each A-NEW-k on a branch has now, from its commit subjects, oldest first: the
+ * factory's numbering commits, then any renumbering after a later rebase. It is read from the
+ * branch, not from what this run logged, so a recovered run, or a gate round after the one that
+ * numbered them, still knows.
+ */
+export function branchNumbering(subjects: readonly string[]): Record<string, string> {
+  const now: Record<string, string> = {};
+  for (const subject of subjects) {
+    const numbered = numberingOf(subject);
+    if (numbered) Object.assign(now, numbered);
+    const moved = renumberingOf(subject);
+    if (moved)
+      for (const [key, number] of Object.entries(now)) if (moved[number]) now[key] = moved[number];
+  }
+  return now;
+}
+
+/** `branchNumbering` for the branch checked out in a sandbox, against its `origin/main`. */
+export async function sandboxNumbering(sandbox: RunSandbox): Promise<Record<string, string>> {
+  const log = await sandbox.exec('git log --reverse --format=%s origin/main..HEAD');
+  return log.exitCode === 0 ? branchNumbering(log.stdout.split('\n')) : {};
+}
+
 /**
  * The stopped commit, when it is the factory's numbering commit, done again on top of what the
  * rebase has so far: the branch's rows main doesn't have get their numbers, and Prettier pads

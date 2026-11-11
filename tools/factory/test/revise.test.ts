@@ -104,6 +104,10 @@ function fake(rebases: RebaseOutcome[]) {
       return Promise.resolve([green]);
     },
     failedLog: () => Promise.resolve(''),
+    rerunFailed: (run) => {
+      calls.push(`rerun ${run}`);
+      return Promise.resolve();
+    },
     stageMockups: () => Promise.resolve(),
     keepValidation: () => Promise.resolve(),
     readReview: () => Promise.resolve(null),
@@ -237,6 +241,43 @@ describe('runRevise: a review round (F11)', () => {
     expect(f.prComments.at(-1)).not.toContain('--settings-gutter');
   });
 
+  it("says the gate's number for a new decision in the round's comment, not A-NEW-n", async () => {
+    const f = fake([]);
+    const deps: ReviseDeps = {
+      ...f.deps,
+      readResult: () =>
+        Promise.resolve({
+          ok: true,
+          result: { ...androidDone, summary: 'Use the gutter token (decision A-NEW-1)' },
+        }),
+      diff: () =>
+        Promise.resolve({
+          paths: ['apps/android/app/src/main/java/app/penmoss/Settings.kt'],
+          commits: 3,
+        }),
+      recordProof: (_gate, platform) => Promise.resolve(shot(platform)),
+      replyToThread: () => Promise.resolve(),
+      openSandbox: async (branch) => {
+        const box = await f.deps.openSandbox(branch);
+        return {
+          ...box,
+          exec: (command) =>
+            command.startsWith('git log')
+              ? Promise.resolve({
+                  exitCode: 0,
+                  stdout: 'Number the new decisions: A-NEW-1 is A1304\n',
+                  stderr: '',
+                })
+              : box.exec(command),
+        };
+      },
+    };
+    await runRevise(deps, { ...input, items: [thread] });
+    expect(f.prComments.at(-1)).toContain(
+      'Addressed in 0123456789: Use the gutter token (decision A1304)',
+    );
+  });
+
   it('asks the agent again when its round names no proof spec for an affected platform', async () => {
     const f = fake([]);
     const results = [done, androidDone];
@@ -254,5 +295,21 @@ describe('runRevise: a review round (F11)', () => {
     expect((await runRevise(deps, { ...input, items: [thread] })).kind).toBe('addressed');
     expect(f.prompts).toHaveLength(2);
     expect(f.prompts[1]).toContain('names no proof spec for android');
+  });
+
+  it("counts a repair round for red CI toward the PR's rounds.ciRepair, and a review round not (A1313)", async () => {
+    const logged = (ciRepair: boolean) => {
+      const events: [string, unknown][] = [];
+      const f = fake([]);
+      const deps: ReviseDeps = {
+        ...f.deps,
+        log: (event, detail) => void events.push([event, detail]),
+      };
+      return runRevise(deps, { ...input, ...(ciRepair ? { ciRepair: true as const } : {}) }).then(
+        () => events.filter(([e]) => e === 'ci-repaired'),
+      );
+    };
+    expect(await logged(true)).toEqual([['ci-repaired', { pr: PR, phase: 'review' }]]);
+    expect(await logged(false)).toEqual([]);
   });
 });

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parsePatch, scanWeakenedTests, weakenedFeedback } from '../src/gate.ts';
+import {
+  parsePatch,
+  scanWeakenedTests,
+  weakenedFeedback,
+  workflowChanges,
+  workflowFeedback,
+} from '../src/gate.ts';
 
 const patch = (file: string, lines: string) =>
   `diff --git a/${file} b/${file}\n--- a/${file}\n+++ b/${file}\n@@ -1 +1 @@\n${lines}\n`;
@@ -76,5 +82,34 @@ describe('the scan for weakened tests (F13)', () => {
     expect(
       weakenedFeedback([{ file: 'a.spec.ts', what: 'skips a test', line: 'test.skip(' }]),
     ).toContain('A-NEW-n');
+  });
+});
+
+describe("the gate's refusal of workflow changes (A1314)", () => {
+  it('names each workflow file the branch changes, adds, deletes or renames', () => {
+    const p =
+      patch(
+        '.github/workflows/ci.yml',
+        '+          for i in 1 2 3; do apt-get update && break; done',
+      ) +
+      patch('site/src/pages/index.astro', '+<p>hi</p>') +
+      'diff --git a/.github/workflows/old.yml b/.github/old.yml\nsimilarity index 100%\n' +
+      'diff --git a/.github/workflows/new.yml b/.github/workflows/new.yml\nnew file mode 100644\n';
+    expect(workflowChanges(p)).toEqual([
+      '.github/workflows/ci.yml',
+      '.github/workflows/old.yml',
+      '.github/workflows/new.yml',
+    ]);
+  });
+  it('lets everything else through, the CI scripts the workflows call included', () => {
+    expect(workflowChanges(patch('.github/scripts/mac-runner.sh', '+echo'))).toEqual([]);
+    expect(workflowChanges(patch('docs/ci.md', '+.github/workflows/ci.yml'))).toEqual([]);
+  });
+  it("tells the agent the factory can't push it, and what to do", () => {
+    const text = workflowFeedback(['.github/workflows/ci.yml']);
+    expect(text).toContain('`.github/workflows/ci.yml`');
+    expect(text).toContain("the factory can't push");
+    expect(text).toContain('`git diff origin/main...HEAD -- .github/workflows/`');
+    expect(text).toContain('status `failed`');
   });
 });

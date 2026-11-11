@@ -17,13 +17,29 @@ import { BlockedByRyan, guardEffects, RUN_GUARDED, RUN_STEPS } from './guard.ts'
 import { appendLedger, hostDeps } from './host.ts';
 import { fence } from './issue.ts';
 import type { IssueSpec } from './labels.ts';
-import { ciRunsFor, mergeApproved, type MainRun, type MergeDeps, type RunJob } from './merge.ts';
+import {
+  ciRunsFor,
+  mergeApproved,
+  newestDescendantRun,
+  type MainRun,
+  type MergeDeps,
+  type RunJob,
+} from './merge.ts';
+import { formatMarker } from './pick.ts';
 import { fill, promptTemplate } from './prompt.ts';
 import { proofFiles } from './proof/body.ts';
 import { publishRefs } from './proof/store.ts';
 import { readConversation, reviewState, roundText, type ReviewState } from './review.ts';
 import { runRebase, runRevise, type ReviseDeps } from './revise.ts';
-import { branchName, failedLogs } from './run.ts';
+import { infraFailure } from './ci-failure.ts';
+import {
+  branchName,
+  CI_REPAIR_LIMITS,
+  ciFailureText,
+  failedLogs,
+  rerunInfra,
+  type RunDeps,
+} from './run.ts';
 import { issueForAgent, planFor, runImages, type Factory } from './start.ts';
 
 export interface FactoryPr {
@@ -183,12 +199,13 @@ export async function executeRevise(
     log,
     ...(waitingFor ? { waitingFor } : {}),
   });
+  const logs = action.kind === 'repair' ? await failedLogs(deps, action.failed) : [];
   const prompt =
     action.kind === 'round'
       ? `${base}\n\n## Ryan's review of ${pr.url}\n\nThe PR is open and in review. Address every item below in the same branch, then write \`.factory/result.json\` with a \`replies\` object: for each review thread ID, one or two sentences saying what you changed (or why not), and under \`general\` your answer to the PR comments and review summaries, which goes on the PR in the round's comment. You can't edit the PR yourself.\n\n${roundText(items, fence)}`
       : action.kind === 'rebase'
         ? base
-        : ciRepairText(base, pr.url, action.failed, await failedLogs(deps, action.failed));
+        : ciRepairText(base, pr.url, action.failed, logs);
   const dir = join(expandHome(config.stateDir), 'runs', runId, 'proof');
   const revise: ReviseDeps = {
     ...deps,
@@ -225,7 +242,19 @@ export async function executeRevise(
     { ...RUN_STEPS, prComment: 'a PR comment', replyToThread: 'a reply on the PR' },
   );
   try {
-    const input = { item, spec, pr: pr.url, branch: branchName(config, item), items, prompt };
+    if (action.kind === 'repair') {
+      const before = await beforeRepairInReview(guarded, item, pr.url, action.failed, logs);
+      if (before) return before;
+    }
+    const input = {
+      item,
+      spec,
+      pr: pr.url,
+      branch: branchName(config, item),
+      items,
+      prompt,
+      ...(action.kind === 'repair' ? { ciRepair: true as const } : {}),
+    };
     const outcome =
       action.kind === 'rebase' ? await runRebase(guarded, input) : await runRevise(guarded, input);
     return outcome.kind;
@@ -245,6 +274,44 @@ export async function executeRevise(
   }
 }
 
+/**
+ * What a red check in review gets before a repair round. The runners' infrastructure, not the
+ * branch (A1312): its failed jobs are re-run, at most `MAX_INFRA_RERUNS` times per Actions run
+ * as the ledger counts them, then Blocked. A PR that has had `rounds.ciRepair` repair rounds
+ * already, in any run (A1313): Blocked. Undefined when the repair round goes ahead.
+ */
+export async function beforeRepairInReview(
+  deps: Pick<
+    RunDeps,
+    'config' | 'runId' | 'rerunFailed' | 'comment' | 'log' | 'setBlocked' | 'ciHistory'
+  >,
+  item: BoardItem,
+  pr: string,
+  failed: readonly CheckRun[],
+  logs: readonly string[],
+): Promise<'rerun' | 'blocked' | undefined> {
+  const history = deps.ciHistory?.(item.number, pr);
+  const failure = ciFailureText(pr, failed, logs);
+  const block = async (reason: string, body: string) => {
+    deps.log('blocked', { reason });
+    await deps.comment(
+      item.number,
+      `${body}\n\n${formatMarker({ run: deps.runId, phase: 'revise', event: 'blocked' })}`,
+    );
+    await deps.setBlocked(item);
+    return 'blocked' as const;
+  };
+  const infra = infraFailure(failed, logs);
+  if (infra) {
+    const rerun = await rerunInfra(deps, { item, pr }, infra, new Map(history?.reruns), failure);
+    return rerun.kind === 'rerun' ? 'rerun' : block(rerun.reason, rerun.body);
+  }
+  const repairs = history?.repairs ?? 0;
+  if (repairs >= deps.config.rounds.ciRepair)
+    return block('ci-red', `CI is still red after ${repairs} repair round(s): ${failure}`);
+  return undefined;
+}
+
 /** A repair round in review (F11): the failed checks and their last log lines (A1278). */
 export function ciRepairText(
   base: string,
@@ -252,7 +319,7 @@ export function ciRepairText(
   failed: readonly CheckRun[],
   logs: readonly string[],
 ): string {
-  return `${base}\n\n## CI failed on ${pr}\n\nThe PR is in review and these checks failed: ${failed.map((c) => `${c.name} (${c.link})`).join(', ')}. Their last log lines:\n\n${logs.join('\n\n')}\n\nFix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\`.`;
+  return `${base}\n\n## CI failed on ${pr}\n\nThe PR is in review and these checks failed: ${failed.map((c) => `${c.name} (${c.link})`).join(', ')}. Their last log lines:\n\n${logs.join('\n\n')}\n\nFix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\`. ${CI_REPAIR_LIMITS}`;
 }
 
 /** Merge an approved PR and see main through (F18). Needs no slot: it only waits on GitHub. */
@@ -357,8 +424,23 @@ export async function executeMerge(
         '--commit',
         sha,
         '--json',
-        'status,conclusion,url,databaseId',
+        'status,conclusion,url,databaseId,workflowName,createdAt',
       ]),
+    newerMainRun: async (sha, run) => {
+      const runs = await gh.json<MainRun[]>([
+        ...['run', 'list', '--repo', config.repo, '--branch', 'main', '--event', 'push'],
+        ...(run.workflowName ? ['--workflow', run.workflowName] : []),
+        ...['--limit', '30', '--json'],
+        'status,conclusion,url,databaseId,workflowName,createdAt,headSha',
+      ]);
+      // GitHub's compare says `ahead` when `head` has every commit of `base`, and more.
+      return newestDescendantRun(runs, sha, run, async (base, head) => {
+        const status = await gh.run([
+          ...['api', `repos/${config.repo}/compare/${base}...${head}`, '--jq', '.status'],
+        ]);
+        return status.trim() === 'ahead';
+      });
+    },
     comment: (n, body) => tracker.comment(n, body),
     closeIssue: (n, body) => tracker.closeIssue(n, body),
     setStatus: (i, s) => tracker.setStatus(i, s),

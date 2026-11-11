@@ -2,7 +2,8 @@
  * Merge on approval (F18, #273): when Ryan approves and CI is green, the factory squash-merges,
  * watches main's CI for the merge commit, then closes the issue and moves the card to Done. A
  * red main sets Blocked with the failing jobs; the card keeps its status. A run GitHub failed with
- * no jobs is started again once first (A1260). Production deploys happen in main's own workflow
+ * no jobs is started again once first (A1260), and one whose only non-passing jobs a newer
+ * merge's run cancelled is judged by that newer run (A1315). Production deploys happen in main's own workflow
  * after merge (FD24), never from a branch.
  *
  * A PR that is already merged (the daemon stopped while main's CI ran, R12) is picked up where
@@ -22,6 +23,36 @@ export interface MainRun {
   readonly url: string;
   /** The run's ID, to name its failed jobs. */
   readonly databaseId?: number;
+  /** The workflow's name ("CI"), to find its newer runs. */
+  readonly workflowName?: string;
+  /** When GitHub created the run, ISO. */
+  readonly createdAt?: string;
+  /** The commit it runs on. */
+  readonly headSha?: string;
+}
+
+/**
+ * Of main's `runs` (as `gh run list` gives them), the newest of `run`'s workflow created after
+ * it on a commit that descends from `sha` (`ahead`: GitHub's compare), if any (A1315).
+ */
+export async function newestDescendantRun(
+  runs: readonly MainRun[],
+  sha: string,
+  run: MainRun,
+  ahead: (base: string, head: string) => Promise<boolean>,
+): Promise<MainRun | undefined> {
+  const later = runs
+    .filter(
+      (r) =>
+        r.url !== run.url &&
+        r.headSha &&
+        r.headSha !== sha &&
+        (!run.workflowName || r.workflowName === run.workflowName) &&
+        (!run.createdAt || (r.createdAt ?? '') > run.createdAt),
+    )
+    .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
+  for (const r of later) if (await ahead(sha, r.headSha!).catch(() => false)) return r;
+  return undefined;
 }
 
 export interface RunJob {
@@ -46,6 +77,11 @@ export interface MergeDeps {
   runJobs(run: MainRun): Promise<RunJob[]>;
   /** Starts a run again (`gh run rerun`). */
   rerun(run: MainRun): Promise<void>;
+  /**
+   * main's newest run of `run`'s workflow on a commit that descends from `sha` (not `sha`
+   * itself): what a newer merge started, which a release job of `sha`'s run gave way to.
+   */
+  newerMainRun?(sha: string, run: MainRun): Promise<MainRun | undefined>;
   comment(issue: number, body: string): Promise<void>;
   closeIssue(issue: number, comment: string): Promise<void>;
   setStatus(item: BoardItem, status: string): Promise<void>;
@@ -109,6 +145,8 @@ export async function mergeApproved(
   let runsCi: boolean | undefined;
   // Runs GitHub failed with no jobs, started again once each (they say nothing about the code).
   const rerun = new Set<string>();
+  // Runs whose only non-passing jobs a newer merge's run cancelled, said once each.
+  const superseded = new Set<string>();
   for (;;) {
     await deps.sleep(deps.config.pollSeconds);
     const runs = await deps.mainRuns(merged);
@@ -125,6 +163,8 @@ export async function mergeApproved(
     if (runs.some((r) => r.status !== 'completed')) continue;
     const failed: { run: MainRun; jobs: string[] }[] = [];
     let restarted = false;
+    let waiting = false;
+    const judged: string[] = [];
     for (const r of runs.filter((r) => !PASSED.includes(r.conclusion ?? ''))) {
       const jobs = await deps.runJobs(r).catch((): RunJob[] | undefined => undefined);
       if (jobs?.length === 0 && !rerun.has(r.url)) {
@@ -134,12 +174,40 @@ export async function mergeApproved(
         restarted = true;
         continue;
       }
-      const names = (jobs ?? [])
-        .filter((j) => j.conclusion && !PASSED.includes(j.conclusion))
-        .map((j) => j.name);
+      const bad = (jobs ?? []).filter((j) => j.conclusion && !PASSED.includes(j.conclusion));
+      // Only cancelled: a newer merge's run took the release jobs' concurrency group (ci.yml's
+      // `mac-build-<ref>` cancels in progress, `releases` drops a pending job), and it builds on
+      // this commit. Judge by it instead, once it finishes (A1315).
+      const newer =
+        bad.length > 0 && bad.every((j) => j.conclusion === 'cancelled') && deps.newerMainRun
+          ? await deps.newerMainRun(merged, r).catch(() => undefined)
+          : undefined;
+      if (newer) {
+        if (!superseded.has(r.url)) {
+          superseded.add(r.url);
+          deps.log('superseded', { run: r.url, by: newer.url, cancelled: bad.map((j) => j.name) });
+        }
+        if (newer.status !== 'completed') {
+          waiting = true;
+          continue;
+        }
+        if (PASSED.includes(newer.conclusion ?? '')) {
+          judged.push(`${r.url} by ${newer.url}`);
+          continue;
+        }
+        const later = await deps.runJobs(newer).catch((): RunJob[] => []);
+        failed.push({
+          run: newer,
+          jobs: later
+            .filter((j) => j.conclusion && !PASSED.includes(j.conclusion))
+            .map((j) => j.name),
+        });
+        continue;
+      }
+      const names = bad.map((j) => j.name);
       failed.push({ run: r, jobs: jobs?.length === 0 ? ['no jobs started, twice'] : names });
     }
-    if (restarted) continue;
+    if (restarted || waiting) continue;
     if (runs.length === 0 || failed.length > 0) {
       const named = failed.map(({ run, jobs }) =>
         jobs.length ? `${run.url} (${jobs.join(', ')})` : run.url,
@@ -155,7 +223,12 @@ export async function mergeApproved(
       await deps.setBlocked(item);
       return { kind: 'blocked', reason: why };
     }
-    return done(`main is green with ${merged.slice(0, 10)} (${runs.map((r) => r.url).join(', ')})`);
+    const by = judged.length
+      ? `; a newer merge's run cancelled jobs of ${judged.join(', ')}, and passed`
+      : '';
+    return done(
+      `main is green with ${merged.slice(0, 10)} (${runs.map((r) => r.url).join(', ')}${by})`,
+    );
   }
 }
 

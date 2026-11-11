@@ -3,12 +3,14 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nodeExec } from '../src/exec.ts';
-import { formatDecisions } from '../src/decisions.ts';
+import { formatDecisions, numberText } from '../src/decisions.ts';
 import {
   addedLines,
+  branchNumbering,
   numberingOf,
   newRows,
   rebaseOntoMain,
+  renumberingOf,
   resolveAppendConflicts,
   unpadRow,
 } from '../src/rebase.ts';
@@ -474,5 +476,30 @@ describe("the factory's numbering commit", () => {
     });
     expect(numberingOf('Search: Folder lists every notebook')).toBeNull();
     expect(numberingOf('Number the new decisions: whatever')).toBeNull();
+  });
+});
+
+describe('what the PR body calls each new decision', () => {
+  it("follows the branch's numbering commits, then any renumbering after a later rebase", () => {
+    expect(renumberingOf('Renumber the decisions main already has: A1301 is now A1303')).toEqual({
+      A1301: 'A1303',
+    });
+    expect(renumberingOf('Number the new decisions: A-NEW-1 is A1301')).toBeNull();
+    expect(
+      branchNumbering([
+        'Site: one DownloadButton',
+        'Number the new decisions: A-NEW-1 is A1301, A-NEW-2 is A1302',
+        'Renumber the decisions main already has: A1301 is now A1303',
+        '',
+      ]),
+    ).toEqual({ 'A-NEW-1': 'A1303', 'A-NEW-2': 'A1302' });
+    expect(branchNumbering(['Fix the typo'])).toEqual({});
+  });
+
+  it('replaces whole placeholders only', () => {
+    const assigned = { 'A-NEW-1': 'A1303' };
+    expect(numberText('A-NEW-1 amends A1220; A-NEW-10 and A-NEW-2 stay (A-NEW-1).', assigned)).toBe(
+      'A1303 amends A1220; A-NEW-10 and A-NEW-2 stay (A1303).',
+    );
   });
 });

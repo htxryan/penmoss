@@ -42,6 +42,7 @@ import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { Exec } from './exec.ts';
 import { ensureConfig, mustGit } from './git.ts';
 import { failedLines, jobIdOf, runIdOf, type CheckRun } from './checks.ts';
+import { ciHistory } from './ci-failure.ts';
 import {
   definedPlaceholders,
   formatDecisions,
@@ -78,7 +79,7 @@ import { makeOwnDirs, sandboxSpec, seatbeltProvider, withJavaHome } from './sand
 import { ANDROID_WALK_CLASS, MAC_WALK_SPEC, WALK_SHOT, walkFile, walkTail } from './walk.ts';
 import type { Secrets } from './secrets.ts';
 import type { Tracker } from './tracker/port.ts';
-import { signal, stopLeftovers } from './leftovers.ts';
+import { leftoversLine, signal, stopLeftovers } from './leftovers.ts';
 
 export const DEAD_END_PUSH_URL = 'no-push://the-factory-harness-pushes';
 
@@ -497,8 +498,7 @@ export function hostDeps(options: HostOptions): HostDeps {
           kill: signal,
           sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
         }).catch(() => []);
-        if (stopped.length > 0)
-          options.log(`stopped ${stopped.length} process(es) left in the worktree ${when}`);
+        if (stopped.length > 0) options.log(leftoversLine(stopped, when));
       };
       await leftovers('by an earlier session');
       const handle: RunSandbox = {
@@ -1018,6 +1018,13 @@ export function hostDeps(options: HostOptions): HostDeps {
         .run(['run', 'view', id, '--repo', config.repo, '--log-failed'])
         .catch(() => '');
       return failedLines(log) || '(the log was empty)';
+    },
+    rerunFailed: async (run) => {
+      await gh.run(['run', 'rerun', run, '--failed', '--repo', config.repo]);
+    },
+    ciHistory: (issue, pr) => {
+      const ledger = join(state, 'runs.jsonl');
+      return ciHistory(existsSync(ledger) ? readFileSync(ledger, 'utf8') : '', issue, pr);
     },
     notify: async (title, message) => {
       // A notification is a courtesy: one that can't be shown never stops a run. terminal-notifier
