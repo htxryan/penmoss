@@ -22,7 +22,7 @@ import {
   sandboxTakeCommand,
   type HostOptions,
 } from '../src/host.ts';
-import { adoptRemoteHead, remoteBranch } from '../src/publish.ts';
+import { adoptRemoteHead, remoteBranch, unchangedSincePush } from '../src/publish.ts';
 import { sweep } from '../src/janitor.ts';
 import { prepareSnapshot, planFiles } from '../src/planning-host.ts';
 import { checkMacVm, runMacProof } from '../src/proof/mac.ts';
@@ -359,6 +359,16 @@ describe("the host's publish path, with real git (A1230)", { timeout: 30_000 }, 
       if (r.code !== 0) throw new Error(`take: ${r.stderr}`);
     };
     const subjects = (repo: string, ref: string) => git(repo, 'log', '--format=%s', `main..${ref}`);
+
+    it('knows the PR is as the factory pushed it, until someone else pushes (A1298)', async () => {
+      const pushed = () =>
+        unchangedSincePush(nodeExec, publishDirOf(), https, BRANCH, 'the-write-token');
+      expect(await pushed()).toBeUndefined();
+      await publish(BRANCH);
+      expect(await pushed()).toBe(await git(clone, 'rev-parse', BRANCH));
+      await ryanPushes('Ryan fixes a typo');
+      expect(await pushed()).toBeUndefined();
+    });
 
     it('fast-forwards onto them, then pushes on top without losing them', async () => {
       await publish(BRANCH);

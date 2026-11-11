@@ -66,6 +66,7 @@ import {
   publishDir,
   publishRun,
   pushedHead,
+  unchangedSincePush,
   remoteBranch,
   runRef,
 } from './publish.ts';
@@ -681,6 +682,23 @@ export function hostDeps(options: HostOptions): HostDeps {
       // A copy the host keeps: a run restarted after this one resumes from it (resumeFrom).
       if (parsed.ok) writeFileSync(join(runDir, 'result.json'), text);
       return Promise.resolve(parsed);
+    },
+    pushedPr: async (branch) => {
+      const head = await unchangedSincePush(
+        exec,
+        publish,
+        githubUrl(config),
+        branch,
+        await options.pushToken(),
+      );
+      // The run's branch must have nothing since, not even a commit it never pushed.
+      if (!head || (await fetchRun(branch)) !== head) return undefined;
+      const open = await gh.json<{ url: string; headRefOid: string }[]>([
+        ...['pr', 'list', '--repo', config.repo, '--head', branch],
+        ...['--state', 'open', '--json', 'url,headRefOid'],
+      ]);
+      const pr = open[0];
+      return pr && pr.headRefOid === head ? pr.url : undefined;
     },
     diff: async (branch) => {
       const commit = await fetchRun(branch);

@@ -152,7 +152,7 @@ Fixed in #141 and its follow-up. Look here first:
 - **Land several factory PRs that each add a decision as one PR.** They all append at the same place in `docs/decisions.md`, so merging them one by one costs a rebase and a CI run each. Cherry-pick them onto one branch, keep every row in number order, and close the originals with a link.
 - **A session that ends waiting on its own background command** used to end the round with its work uncommitted (PEN-71's CI repair). The runner now waits for the command's notification (A1295), and the host stops whatever a session leaves running in its worktree (A1297). If a round reports a port in its block "already in use", look for processes left there: `lsof -nP -iTCP:<port> -sTCP:LISTEN`.
 - **A CI failure on a test outside the card is not always a flake.** PEN-71's `note-window.spec.ts` failed twice the same way: a click meant for plain text landed on a link where Linux's fonts are wider. Re-run the job once; if it fails the same way again, let the repair round fix it.
-- **Clearing Blocked after `ci-red` recovers the run at the gate,** so the gate, proof and validation run again before the PR is pushed. That costs about 20 minutes but changes nothing on the PR unless the agent committed something.
+- **Clearing Blocked after `ci-red`** sends an unchanged PR straight back to waiting on CI (`resumed-at-ci`, A1298). Only a branch with new commits, or someone's push, goes through the gate, proof and validation again.
 
 ## Asset
 

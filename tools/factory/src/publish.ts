@@ -205,6 +205,28 @@ export async function remoteBranch(
     : { kind: 'rewritten', head, ours };
 }
 
+/**
+ * The commit GitHub has on a run's branch when it is the factory's last push there; undefined
+ * when GitHub has none, the factory never pushed, or someone else pushed since (A1298).
+ */
+export async function unchangedSincePush(
+  exec: Exec,
+  dir: string,
+  url: string,
+  branch: string,
+  token: string,
+): Promise<string | undefined> {
+  const listed = await mustGit(exec, dir, ['ls-remote', url, `refs/heads/${branch}`], { token });
+  const head = listed.trim().split(/\s+/)[0] ?? '';
+  const last = await hostGit(exec, dir, [
+    'rev-parse',
+    '--verify',
+    '--quiet',
+    `refs/remotes/origin/${branch}`,
+  ]);
+  return head && last.code === 0 && last.stdout.trim() === head ? head : undefined;
+}
+
 /** After a sandbox took the commits GitHub had on top (`ahead`), the next push is leased on them. */
 export async function adoptRemoteHead(
   exec: Exec,
