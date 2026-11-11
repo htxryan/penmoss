@@ -7,6 +7,7 @@ import type { IssueSpec } from '../src/labels.ts';
 import {
   ciRunsFor,
   mergeApproved,
+  newestDescendantRun,
   type MainRun,
   type MergeDeps,
   type RunJob,
@@ -29,7 +30,13 @@ const card = item(5, { status: 'In review' });
 function fake(
   checks: CheckRun[],
   mains: MainRun[][],
-  options: { merged?: string; runsCi?: boolean; jobs?: RunJob[][] } = {},
+  options: {
+    merged?: string;
+    runsCi?: boolean;
+    jobs?: RunJob[][];
+    /** What each look for a newer run on main finds, in order (A1315). */
+    newer?: (MainRun | undefined)[];
+  } = {},
 ) {
   const calls: string[] = [];
   let clock = Date.parse('2026-11-07T12:00:00Z');
@@ -50,6 +57,14 @@ function fake(
       calls.push(`rerun ${r.url}`);
       return Promise.resolve();
     },
+    ...(options.newer
+      ? {
+          newerMainRun: (sha: string, r: MainRun) => {
+            calls.push(`newer than ${r.url} on ${sha.slice(0, 6)}`);
+            return Promise.resolve(options.newer!.shift());
+          },
+        }
+      : {}),
     comment: (_n, body) => {
       calls.push(`comment ${body.split('\n')[0]}`);
       return Promise.resolve();
@@ -161,6 +176,88 @@ describe('mergeApproved', () => {
   it('still Blocks when main should have run CI and none started', async () => {
     const f = fake([green], [], { runsCi: true });
     expect((await mergeApproved(f.deps, card, 'pr')).kind).toBe('blocked');
+  });
+
+  describe('a job a newer merge cancelled (A1315)', () => {
+    // PEN-63's merge (d1085ac): two minutes later another merge's run took the release jobs'
+    // concurrency group and cancelled d1085ac's "Mac app dmg (on Ryan's Mac)".
+    const cancelled: MainRun = {
+      status: 'completed',
+      conclusion: 'cancelled',
+      url: 'r1',
+      workflowName: 'CI',
+    };
+    const jobs: RunJob[] = [
+      { name: 'Check', conclusion: 'success' },
+      { name: "Mac app dmg (on Ryan's Mac)", conclusion: 'cancelled' },
+      { name: 'Mac release', conclusion: 'skipped' },
+    ];
+    const newer = (o: Partial<MainRun>): MainRun => ({
+      status: 'completed',
+      conclusion: 'success',
+      url: 'r2',
+      ...o,
+    });
+
+    it('waits for the newer run on main and is Done when it passes', async () => {
+      const f = fake([green], [[cancelled], [cancelled]], {
+        jobs: [jobs, jobs],
+        newer: [newer({ status: 'in_progress', conclusion: null }), newer({})],
+      });
+      const outcome = await mergeApproved(f.deps, card, 'pr');
+      expect(outcome).toEqual({ kind: 'done', sha: 'abcdef1234567890' });
+      expect(f.calls).toContain('newer than r1 on abcdef');
+      expect(f.calls).not.toContain('blocked');
+      expect(f.calls.slice(-2)).toEqual(['close', 'status Done']);
+    });
+
+    it('Blocks naming the newer run when it fails', async () => {
+      const f = fake([green], [[cancelled]], {
+        jobs: [jobs, [{ name: 'E2E smoke', conclusion: 'failure' }]],
+        newer: [newer({ conclusion: 'failure' })],
+      });
+      expect(await mergeApproved(f.deps, card, 'pr')).toEqual({
+        kind: 'blocked',
+        reason: "main's CI failed after the merge: r2 (E2E smoke)",
+      });
+    });
+
+    it('still Blocks on a cancelled job when main has no newer run', async () => {
+      const f = fake([green], [[cancelled]], { jobs: [jobs], newer: [undefined] });
+      expect(await mergeApproved(f.deps, card, 'pr')).toEqual({
+        kind: 'blocked',
+        reason: "main's CI failed after the merge: r1 (Mac app dmg (on Ryan's Mac))",
+      });
+    });
+
+    it("doesn't look for a newer run when a job failed, not only cancelled", async () => {
+      const f = fake([green], [[cancelled]], {
+        jobs: [[...jobs, { name: 'E2E smoke', conclusion: 'failure' }]],
+        newer: [newer({})],
+      });
+      expect((await mergeApproved(f.deps, card, 'pr')).kind).toBe('blocked');
+      expect(f.calls.some((c) => c.startsWith('newer'))).toBe(false);
+    });
+
+    it("finds main's newest run of the workflow on a commit that descends from the merge", async () => {
+      const at = (min: number) => `2026-11-11T10:${String(min).padStart(2, '0')}:00Z`;
+      const ours: MainRun = { ...cancelled, headSha: 'd1085ac', createdAt: at(0) };
+      const runs: MainRun[] = [
+        newer({ url: 'r4', headSha: 'f00', createdAt: at(9), workflowName: 'Deploy' }),
+        newer({ url: 'r3', headSha: 'e33', createdAt: at(5), workflowName: 'CI' }),
+        newer({ url: 'r2', headSha: 'c22', createdAt: at(2), workflowName: 'CI' }),
+        ours,
+        // Started with ours, before it: never newer.
+        newer({ url: 'r0', headSha: 'b00', createdAt: at(0), workflowName: 'CI' }),
+      ];
+      // r3's commit is on another history (a force-push); r2's descends from d1085ac.
+      const ahead = (base: string, head: string) =>
+        Promise.resolve(base === 'd1085ac' && head === 'c22');
+      expect((await newestDescendantRun(runs, 'd1085ac', ours, ahead))?.url).toBe('r2');
+      expect(await newestDescendantRun(runs, 'd1085ac', ours, () => Promise.resolve(false))).toBe(
+        undefined,
+      );
+    });
   });
 });
 

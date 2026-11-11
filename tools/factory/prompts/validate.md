@@ -18,7 +18,8 @@ In scope: **{{platforms}}**. Capture each criterion on the app it is about: a Ma
 
 1. Start the web app on this sandbox's port block: `pnpm --filter @penmoss/web exec vite --port $(node scripts/ports.mjs vite) --strictPort &`, and wait until it answers.
 2. With Playwright (headless Chromium, `@playwright/test` from `apps/web`), set the app up as each criterion needs (the web suite's fixtures in `apps/web/test/e2e/fixtures.ts` show how to give it a notebook) and do what the criterion says.
-3. Save one screenshot per criterion to `.factory/validation/<id>.png` (`ac1.png`, `ac2.png`, …), at the size the mockup shows: 1280×800 for desktop, 390×844 for a phone, and in the theme the mockup uses.
+3. Put the walk in Playwright tests, one criterion per test, and run them with a short timeout (`--timeout=20000`): a step that hangs then costs seconds, not minutes.
+4. Save one screenshot per criterion to `.factory/validation/<id>.png` (`ac1.png`, `ac2.png`, …), at its mockup's size (below), and in the theme the mockup uses. With no mockup, use 1280×800 for desktop and 390×844 for a phone.
 
 ### Mac
 
@@ -38,7 +39,11 @@ The slot's emulator is the factory's to start, after your session. Write the wal
 
 ## Mockups and captures
 
-1. The agreed mockups, if there are any, are HTML files in `.factory/mockups/`. Render each one to `.factory/validation/<id>-mockup.png` at the same size as its screenshot, so the two can be compared.
+The agreed mockups, if there are any, are HTML files in `.factory/mockups/`. The factory has already rendered them to PNGs in `.factory/validation/`, so don't render them again:
+
+{{mockups}}
+
+1. Take each web screenshot at its mockup PNG's size, so the two can be compared.
 2. Write `.factory/validation/captures.json`, one entry per criterion. Name the screenshot the walkthrough will save for a Mac or Android criterion; it isn't there yet.
 
 ```json

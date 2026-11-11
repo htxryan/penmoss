@@ -8,6 +8,7 @@
  */
 import type { Platform } from './config.ts';
 import { parseReview, type FidelityRow } from './fidelity.ts';
+import { renderMockups } from './mockups.ts';
 import { fill, promptTemplate } from './prompt.ts';
 import {
   runAgentPatiently,
@@ -22,7 +23,7 @@ export interface ValidateDeps extends Pick<
   RunDeps,
   'config' | 'runAgent' | 'now' | 'sleep' | 'log' | 'heavy' | 'walk' | 'macVmCheck' | 'waitingFor'
 > {
-  /** Copies the agreed mockups into the worktree's `.factory/mockups/`. */
+  /** Copies the agreed mockups into the worktree's `.factory/mockups/`, for mockups.ts to render. */
   stageMockups(sandbox: RunSandbox): Promise<void>;
   /**
    * Copies what validation wrote (`.factory/validation/`: review.json, captures.json, the
@@ -60,6 +61,8 @@ export async function validate(
   try {
     await deps.heavy(`factory validation ${branch}`, async () => {
       await deps.stageMockups(sandbox);
+      // Rendered here, not by the session, which spent minutes on a renderer that hung (A1323).
+      const mockups = await renderMockups(sandbox);
       await runAgentPatiently(
         deps,
         sandbox,
@@ -68,6 +71,7 @@ export async function validate(
           plan,
           images: images || NO_IMAGES,
           platforms: platforms.join(', '),
+          mockups,
         }),
       );
     });

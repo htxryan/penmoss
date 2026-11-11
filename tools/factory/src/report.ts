@@ -55,7 +55,10 @@ export function buildReport(ledger: string, from: Date, to: Date): Report {
     const review = range.find((e) => e.event === 'in-review');
     if (review) {
       inReview++;
-      gateFixes += range.filter((e) => e.event === 'gate-failed').length;
+      // A fix round, whether the gate's checks failed or validation found a criterion not met.
+      gateFixes += range.filter(
+        (e) => e.event === 'gate-failed' || e.event === 'validation-mismatch',
+      ).length;
       ciRepairs += range.filter((e) => e.event === 'ci-red').length;
       // The claim may predate the range; take the issue's first.
       const first = events.find((e) => e.event === 'claimed');

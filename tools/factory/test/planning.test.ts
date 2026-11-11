@@ -295,6 +295,24 @@ describe('the planning prompt (F15)', async () => {
     expect(text).toContain('the test VM has no Android emulator');
     expect(text).toContain("don't ask Ryan about it");
   });
+  it('says the shell is read-only, one simple command per call (PEN-63, PEN-73)', () => {
+    expect(text).toContain('The shell is read-only, one simple command per call');
+    expect(text).toContain('No loops and no `sed`');
+    expect(text).toContain("Read a range of lines with Read's offset and limit");
+    expect(text).toContain('search with Grep and Glob');
+  });
+  it('keeps the design and mockups under the output folder, where Artifact publishes from (PEN-63, PEN-73)', () => {
+    expect(text).toContain(
+      "the design's files (the canvas's `project/` folder) go under `/plans/41/out/design/`",
+    );
+    expect(text).toContain('the mockups under `/plans/41/out/mockups/`');
+    expect(text).toContain('Nothing outside `/plans/41/out` can be published');
+    expect(text).toContain('keep its files under `/plans/41/out/design/`');
+    // The sizes the factory renders a mockup at for validation (A1323).
+    expect(text).toContain(
+      'a 1280×800 window or a 390×844 phone (the factory renders it at one of those)',
+    );
+  });
   it('writes the state file the factory reads, including the trivial skip', () => {
     for (const s of [
       '/plans/41/out/state.json',

@@ -72,6 +72,7 @@ export const RUN_STEPS = {
   macVmCheck: 'the Mac proof',
   push: 'the push',
   openPr: 'opening the PR',
+  rerunFailed: "re-running CI's failed jobs",
 } as const;
 
 /** The guarded steps of a run: every effect, and every step that starts work. */

@@ -124,6 +124,21 @@ describe('the implement prompt', () => {
     expect(text).toContain('task check:changed -- origin/main');
     expect(text).not.toContain('Run `task check` before you finish');
   });
+  it("says the factory can't push workflow changes, and infrastructure isn't the branch's (A1314)", () => {
+    const text = promptTemplate('implement');
+    expect(text).toContain('Never change anything under `.github/workflows/`');
+    expect(text).toContain("isn't this branch's to fix");
+    expect(text).toContain('"status": "failed"');
+  });
+
+  it('says how to add a decision row, so the agent neither pads it nor reads the factory (PEN-63, PEN-73)', () => {
+    const text = promptTemplate('implement');
+    expect(text).toContain(
+      'add it as `| A-NEW-1 | … |` (then `A-NEW-2`, …) after the last row of the A table, and run Prettier on that file',
+    );
+    expect(text).toContain('The factory numbers the rows and re-formats the table (A1248)');
+    expect(text).toContain("Don't pad the row by hand or read the factory's code.");
+  });
   it('refuses a missing value', () => {
     expect(() => fill('{{nope}}', {})).toThrow('{{nope}}');
   });

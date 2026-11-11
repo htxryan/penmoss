@@ -71,6 +71,15 @@ export function numberLines(
     .join('\n');
 }
 
+/**
+ * `text` with each assigned A-NEW-k replaced, whole words only (`A-NEW-1` is not inside
+ * `A-NEW-10`): the agent's and the reviewer's text in the PR body, written before the gate
+ * numbered the decisions.
+ */
+export function numberText(text: string, assigned: Readonly<Record<string, string>>): string {
+  return text.replaceAll(PLACEHOLDER, (key) => assigned[key] ?? key);
+}
+
 function readReserved(reservedFile: string): number {
   try {
     return Number(readFileSync(reservedFile, 'utf8').trim()) || 0;

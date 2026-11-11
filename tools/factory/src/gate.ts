@@ -110,6 +110,34 @@ export function scanWeakenedTests(patch: string): Finding[] {
   return findings.filter((f) => !justified(f.file));
 }
 
+/** GitHub Actions' workflows: the factory's GitHub App can't push a change to them (A1222). */
+const WORKFLOWS = '.github/workflows/';
+
+/**
+ * The files under `.github/workflows/` a branch's diff changes, adds, deletes or renames (either
+ * side of a rename). GitHub refuses the factory's push of any of them (`refusing to allow a GitHub
+ * App to create or update workflow`), so the gate refuses the branch first (A1314): PEN-73's CI
+ * repair added a retry loop to `ci.yml`, and the run failed late, at the push.
+ */
+export function workflowChanges(patch: string): string[] {
+  const files = new Set<string>();
+  for (const line of patch.split('\n')) {
+    const m = /^diff --git a\/(.+?) b\/(.+)$/.exec(line);
+    if (!m) continue;
+    for (const path of [m[1]!, m[2]!]) if (path.startsWith(WORKFLOWS)) files.add(path);
+  }
+  return [...files];
+}
+
+/** The gate's feedback to the agent for a branch that changes the workflows. */
+export function workflowFeedback(files: readonly string[]): string {
+  return [
+    `The branch changes GitHub Actions' workflows (${files.map((f) => `\`${f}\``).join(', ')}), which the factory can't push: its GitHub App has no workflows permission, so GitHub would refuse the push.`,
+    '',
+    `Put \`${WORKFLOWS}\` back as \`origin/main\` has it (\`git diff origin/main...HEAD -- ${WORKFLOWS}\` shows what to undo) and commit. Fix the cause in the code instead. A failure in the runner's network or a hosted service isn't this branch's to fix: change nothing, and write \`result.json\` with status \`failed\` and the log lines that show it. A workflow change is Ryan's to make.`,
+  ].join('\n');
+}
+
 /** The gate's feedback to the agent for its findings. */
 export function weakenedFeedback(findings: readonly Finding[]): string {
   return [

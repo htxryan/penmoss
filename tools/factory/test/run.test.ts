@@ -4,6 +4,7 @@ import type { Gh } from '../src/github.ts';
 import { openOrReusePr } from '../src/host.ts';
 import { parseIssueSpec } from '../src/labels.ts';
 import type { CheckRun } from '../src/checks.ts';
+import { ciHistory } from '../src/ci-failure.ts';
 import type { WalkOutcome } from '../src/walk.ts';
 import type { RebaseOutcome } from '../src/rebase.ts';
 import type { AgentResult } from '../src/result.ts';
@@ -69,6 +70,8 @@ interface Fake {
   comments: string[];
   prompts: string[];
   events: string[];
+  /** Each logged event with its detail. */
+  details: [string, Record<string, unknown> | undefined][];
   /** What the run said it waits for, in order (`null`: it went on). */
   waits: (string | null)[];
   /** The signal each proof was given. */
@@ -105,6 +108,14 @@ function fake(overrides: {
   walks?: Partial<Record<'mac' | 'android', WalkOutcome | Error>>;
   /** The gate's `pnpm install` exits with this. */
   installExit?: number;
+  /** A failed check's log, by its name (default: a lint error). */
+  logs?: Record<string, string>;
+  /** `runs.jsonl` as earlier runs left it, for `ciHistory`. */
+  ledger?: string;
+  /** Whether the branch's diff changes `.github/workflows/ci.yml`, by sandbox (1 is the first). */
+  workflowIn?: (sandbox: number) => boolean;
+  /** What the mockup renderer prints (A1323). */
+  rendered?: string;
 }): Fake {
   const calls: string[] = [];
   const comments: string[] = [];
@@ -115,6 +126,13 @@ function fake(overrides: {
       worktreePath: `/wt/${n}`,
       exec: (command) => {
         calls.push(`exec ${n}: ${command}`);
+        if (command.startsWith('git diff') && overrides.workflowIn?.(n))
+          return Promise.resolve({
+            exitCode: 0,
+            stdout:
+              'diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml\n+          for i in 1 2 3; do apt-get update && break; done\n',
+            stderr: '',
+          });
         if (command.startsWith('git diff'))
           return Promise.resolve({
             exitCode: 0,
@@ -124,6 +142,8 @@ function fake(overrides: {
                 : '',
             stderr: '',
           });
+        if (command.startsWith(`cd 'apps/web' && node - `))
+          return Promise.resolve({ exitCode: 0, stdout: overrides.rendered ?? '', stderr: '' });
         if (command.startsWith('pnpm install'))
           return Promise.resolve({ exitCode: overrides.installExit ?? 0, stdout: '', stderr: '' });
         if (command.startsWith('git status'))
@@ -148,6 +168,7 @@ function fake(overrides: {
   let limitedLeft = overrides.limited ?? 0;
   const reviews = [...(overrides.reviews ?? [])];
   const events: string[] = [];
+  const details: [string, Record<string, unknown> | undefined][] = [];
   const rounds = [...(overrides.agentRounds ?? [])];
   const prompts: string[] = [];
   const ciRounds = [...(overrides.ci ?? [])];
@@ -285,7 +306,15 @@ function fake(overrides: {
       calls.push('checks');
       return Promise.resolve(ciRounds.shift() ?? [green]);
     },
-    failedLog: () => Promise.resolve('Error: lint failed at a.ts:1'),
+    failedLog: (check) =>
+      Promise.resolve(overrides.logs?.[check.name] ?? 'Error: lint failed at a.ts:1'),
+    rerunFailed: (run) => {
+      calls.push(`rerun ${run}`);
+      return Promise.resolve();
+    },
+    ...(overrides.ledger !== undefined
+      ? { ciHistory: (issue: number, pr: string) => ciHistory(overrides.ledger!, issue, pr) }
+      : {}),
     notify: (title) => {
       calls.push(`notify ${title}`);
       return Promise.resolve();
@@ -300,10 +329,13 @@ function fake(overrides: {
       comments.push(body);
       return Promise.resolve('https://github.com/htxryan/penmoss/pull/900');
     },
-    log: (event) => void events.push(event),
+    log: (event, detail) => {
+      events.push(event);
+      details.push([event, detail]);
+    },
     step: () => Promise.resolve(),
   };
-  return { deps, calls, comments, prompts, events, waits, signals, slept };
+  return { deps, calls, comments, prompts, events, details, waits, signals, slept };
 }
 
 describe('runImplement', () => {
@@ -327,7 +359,11 @@ describe('runImplement', () => {
       'exec 2: pnpm install --frozen-lockfile --prefer-offline',
       'exec 2: git diff origin/main...HEAD',
       'exec 2: task lint',
+      // What the gate numbered on the branch, for the PR body.
+      'exec 2: git log --reverse --format=%s origin/main..HEAD',
       'close 2',
+      // main hasn't moved since the gate's rebase, so the first push goes as it is.
+      'behind? factory/42-fix-the-typo-in-docs-cli',
       'push factory/42-fix-the-typo-in-docs-cli',
       'pr',
       'checks',
@@ -463,6 +499,34 @@ describe('runImplement', () => {
     expect(f.events).toEqual(['claimed', 'agent-finished', 'resumed-at-ci', 'in-review']);
   });
 
+  it("counts the PR's earlier repair rounds, so clearing Blocked gives the agent none more (A1313)", async () => {
+    // Each time Ryan cleared Blocked on a ci-red card, its restarted watchCi began again at 0.
+    const pr = 'https://github.com/htxryan/penmoss/pull/7';
+    const repaired = (round: number) =>
+      JSON.stringify({ at: 'x', run: '42-old', event: 'ci-repaired', round, pr });
+    const f = fake({ ci: [[red]], ledger: [repaired(1), repaired(2)].join('\n') });
+    const outcome = await runImplement(
+      { ...f.deps, pushedPr: () => Promise.resolve(pr) },
+      { item: card, spec, prompt: 'p', recovered: true, resume: { run: '42-old', result: done } },
+    );
+    expect(outcome).toEqual({ kind: 'blocked', reason: 'ci-red' });
+    expect(f.prompts).toEqual([]);
+    expect(f.comments.at(-1)).toContain('CI is still red after 2 repair round(s)');
+  });
+
+  it('goes on counting from the ledger, one repair left', async () => {
+    const pr = 'https://github.com/htxryan/penmoss/pull/7';
+    const repaired = JSON.stringify({ at: 'x', run: '42-old', event: 'ci-repaired', round: 1, pr });
+    const f = fake({ ci: [[red], [red]], ledger: repaired });
+    const outcome = await runImplement(
+      { ...f.deps, pushedPr: () => Promise.resolve(pr) },
+      { item: card, spec, prompt: 'p', recovered: true, resume: { run: '42-old', result: done } },
+    );
+    expect(outcome).toEqual({ kind: 'blocked', reason: 'ci-red' });
+    expect(f.prompts).toHaveLength(1);
+    expect(f.prompts[0]).toContain('## CI failed (repair round 2)');
+  });
+
   it('gates again when the PR is not as the factory pushed it', async () => {
     const f = fake({});
     await runImplement(
@@ -596,6 +660,10 @@ describe('runImplement', () => {
     });
     const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p', plan: 'AC1 …' });
     expect(outcome.kind).toBe('in-review');
+    // The ledger says validation sent it back, naming the criterion, not that the gate failed.
+    expect(f.events).toContain('validation-mismatch');
+    expect(f.events).not.toContain('gate-failed');
+    expect(f.details).toContainEqual(['validation-mismatch', { round: 0, criteria: ['AC1'] }]);
     expect(f.prompts[3]).toContain('**AC1 the badge uses the accent colour**: The badge is red');
     // Build, walkthrough, review; then the fix, walkthrough, review.
     expect(f.prompts).toHaveLength(6);
@@ -617,6 +685,117 @@ describe('runImplement', () => {
     expect(outcome.kind).toBe('in-review');
     expect(f.comments[1]).toContain('⚠️ Deviation');
     expect(f.comments[1]).toContain('Not fixed in the rounds allowed: Still red');
+  });
+
+  it("writes the PR body with the gate's decision numbers and the factory's proof, not the agent's stale words", async () => {
+    // PEN-73's PR #148 said "decision A-NEW-1 amends A1220" after the gate made it A1303, and
+    // PEN-63's #152 kept risks about specs the factory's proof had since run, and passed.
+    const f = fake({
+      paths: ['apps/web/src/a.ts'],
+      result: {
+        ...webDone,
+        summary: 'Download buttons are one component; decision A-NEW-1 amends A1220.',
+        decisions: ['A-NEW-1: one DownloadButton draws every download button', 'A-NEW-10 stays'],
+        risks: [
+          'The Mac spec (test/e2e/download.spec.ts) and the Android instrumented test could not be run in the sandbox (no VM, no emulator).',
+          'Prettier re-padded the decisions table around A-NEW-1; the gate renumbers and reformats it.',
+          'A-NEW-2 may read oddly on a narrow phone.',
+        ],
+      },
+      reviews: [
+        JSON.stringify({
+          rows: [
+            {
+              criterion: 'AC1 the hero follows A-NEW-1',
+              verdict: 'deviation',
+              note: 'A-NEW-1 keeps the old label on Android',
+            },
+          ],
+        }),
+      ],
+    });
+    const base = f.deps;
+    f.deps = {
+      ...base,
+      openSandbox: async (branch) => {
+        const box = await base.openSandbox(branch);
+        return {
+          ...box,
+          exec: (command) =>
+            command.startsWith('git log')
+              ? Promise.resolve({
+                  exitCode: 0,
+                  stdout:
+                    'Site: one DownloadButton\nNumber the new decisions: A-NEW-1 is A1301, A-NEW-2 is A1302\nRenumber the decisions main already has: A1301 is now A1303\n',
+                  stderr: '',
+                })
+              : box.exec(command),
+        };
+      },
+    };
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p', plan: 'AC1 …' });
+    expect(outcome.kind).toBe('in-review');
+    const body = f.comments[1]!;
+    expect(body).toContain('Download buttons are one component; decision A1303 amends A1220.');
+    expect(body).toContain('- A1303: one DownloadButton draws every download button');
+    // Whole words only: the gate gave A-NEW-10 no number, so it stays as the agent wrote it.
+    expect(body).toContain('- A-NEW-10 stays');
+    expect(body).toContain('- A1302 may read oddly on a narrow phone.');
+    expect(body).toContain('AC1 the hero follows A1303<br>A1303 keeps the old label on Android');
+    expect(body).not.toMatch(/A-NEW-1\b/);
+    expect(body).toContain(
+      "could not be run in the sandbox (no VM, no emulator). (The factory's proof ran the Mac and Android specs: passed.)",
+    );
+    expect(body).not.toContain('Prettier re-padded');
+  });
+
+  it('renders the agreed mockups before the capture session, and tells it which PNGs are there (A1323)', async () => {
+    const rendered = [
+      JSON.stringify({ file: 'ac1.html', png: 'ac1-mockup.png', width: 390, height: 844 }),
+      JSON.stringify({ file: 'ac2.html', error: 'page.screenshot: Timeout 15000ms exceeded.' }),
+    ].join('\n');
+    const f = fake({
+      paths: ['apps/web/src/a.ts'],
+      result: webDone,
+      reviews: [review('match')],
+      rendered,
+    });
+    await runImplement(f.deps, { item: card, spec, prompt: 'p', plan: 'AC1 …' });
+    const staged = f.calls.indexOf('mockups');
+    const render = f.calls.findIndex((c) => /^exec \d+: cd 'apps\/web' && node - /.test(c));
+    expect(staged).toBeGreaterThan(-1);
+    expect(render).toBeGreaterThan(staged);
+    // Between staging and the capture session, the build's own agent round long done.
+    expect(f.calls.indexOf('agent', render)).toBeGreaterThan(render);
+    expect(f.calls.slice(staged, render)).not.toContain('agent');
+    const capture = f.prompts[1]!;
+    expect(capture).toMatch(/^You are validating/);
+    expect(capture).toContain("so don't render them again");
+    expect(capture).toContain('- `ac1-mockup.png`, 390×844, from `ac1.html`.');
+    expect(capture).toContain(
+      "- `ac2.html` couldn't be rendered (page.screenshot: Timeout 15000ms exceeded.). Render it yourself to `ac2-mockup.png`",
+    );
+    expect(capture).not.toContain('Render each one to');
+    // One criterion per test, with a short timeout, so a hang costs seconds.
+    expect(capture).toContain('one criterion per test');
+    expect(capture).toContain('`--timeout=20000`');
+  });
+
+  it("gives the reviewer the agreed plan's words, which win over its mockup (PEN-63)", async () => {
+    const plan = 'AC4 When a note is moved on Android, the snackbar shall show no leading glyph.';
+    const f = fake({ paths: ['apps/web/src/a.ts'], result: webDone, reviews: [review('match')] });
+    await runImplement(f.deps, { item: card, spec, prompt: 'p', plan });
+    const reviewer = f.prompts[2]!;
+    expect(reviewer).toMatch(/^You are an independent reviewer/);
+    expect(reviewer).toContain(`## The agreed plan\n\n${plan}`);
+    expect(reviewer).toContain(
+      "Where the plan's words and its mockup disagree, the plan's words win.",
+    );
+    expect(reviewer).toContain(
+      'A screenshot that follows the words but not the mockup is a `deviation` whose note quotes the plan',
+    );
+    expect(reviewer).toContain('never a `mismatch`');
+    expect(reviewer).toContain('One that follows the mockup against the words is a `mismatch`.');
   });
 
   it("gives the reviewer the builder's reasons for what it couldn't do (F19)", async () => {
@@ -921,6 +1100,29 @@ describe('CI after the PR opens (F6)', () => {
     expect(f.prompts[1]).toContain('`apps/web/test/e2e/x.spec.ts` skips a test');
   });
 
+  it('sends a branch that changes the workflows back to the agent before the push (A1314)', async () => {
+    const f = fake({ workflowIn: (n) => n <= 2 });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.prompts[1]).toContain(
+      "changes GitHub Actions' workflows (`.github/workflows/ci.yml`)",
+    );
+    // The refused round never reached `task lint` or the push; the fixed one did.
+    expect(f.calls.indexOf('exec 2: task lint')).toBe(-1);
+    expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(1);
+  });
+
+  it("stops a CI repair round that changed the workflows before it is pushed, and tells the agent it can't (A1314)", async () => {
+    // PEN-73: the repair round added a retry loop to ci.yml, and GitHub refused the factory's push.
+    const f = fake({ ci: [[red]], workflowIn: (n) => n >= 4 });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome).toEqual({ kind: 'blocked', reason: 'ci-red' });
+    expect(f.prompts.at(-1)).toContain("can't push changes under `.github/workflows/`");
+    expect(f.prompts.at(-1)).toContain("isn't this branch's to fix");
+    expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(1);
+    expect(f.comments.at(-1)).toContain("changes GitHub Actions' workflows");
+  });
+
   it('repairs a red check in the same PR, then moves to In review', async () => {
     const f = fake({ ci: [[red], [green]] });
     const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
@@ -961,6 +1163,69 @@ describe('CI after the PR opens (F6)', () => {
     expect(f.calls.at(-1)).toBe('blocked');
   });
 
+  // PR #148's Site job on 11 Nov 2026, while the hosted runners couldn't resolve their apt mirror.
+  const site: CheckRun = {
+    name: 'Site',
+    state: 'FAILURE',
+    bucket: 'fail',
+    link: 'https://github.com/htxryan/penmoss/actions/runs/88/job/5',
+  };
+  const aptLog = [
+    'Run pnpm exec playwright install --with-deps chromium',
+    'Installing dependencies...',
+    "Err:1 http://azure.archive.ubuntu.com/ubuntu noble InRelease\n  Temporary failure resolving 'azure.archive.ubuntu.com'",
+    'E: Failed to fetch http://azure.archive.ubuntu.com/ubuntu/dists/noble/InRelease',
+    '##[error]Process completed with exit code 100.',
+  ].join('\n');
+
+  it("re-runs an infrastructure failure's jobs instead of a repair round, and says so once (A1312)", async () => {
+    const f = fake({ ci: [[site], [site], [green]], logs: { Site: aptLog } });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.prompts).toEqual(['p']);
+    expect(f.calls.filter((c) => c.startsWith('rerun'))).toEqual(['rerun 88', 'rerun 88']);
+    expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(1);
+    expect(f.events.filter((e) => e === 'ci-rerun')).toHaveLength(2);
+    const said = f.comments.filter((c) => c.startsWith('CI failed on an infrastructure problem'));
+    expect(said).toHaveLength(1);
+    expect(said[0]).toContain('(Temporary failure resolving): Site');
+  });
+
+  it('sets Blocked, with no agent round, when the infrastructure still fails after two re-runs', async () => {
+    const f = fake({ ci: [[site], [site], [site]], logs: { Site: aptLog } });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome).toEqual({ kind: 'blocked', reason: 'ci-infra' });
+    expect(f.prompts).toEqual(['p']);
+    expect(f.calls.filter((c) => c.startsWith('rerun'))).toHaveLength(2);
+    expect(f.comments.at(-1)).toContain("CI failed on the runners' infrastructure");
+    expect(f.comments.at(-1)).toContain(
+      '[Site](https://github.com/htxryan/penmoss/actions/runs/88',
+    );
+    expect(f.calls.at(-1)).toBe('blocked');
+  });
+
+  it("counts a run's earlier re-runs from the ledger, so a restart doesn't re-run it again", async () => {
+    const pr = 'https://github.com/htxryan/penmoss/pull/900';
+    const rerun = (at: string) =>
+      JSON.stringify({ at, run: '42-old', event: 'ci-rerun', actionsRun: '88', pr });
+    const f = fake({
+      ci: [[site]],
+      logs: { Site: aptLog },
+      ledger: [rerun('2026-11-11T10:00:00Z'), rerun('2026-11-11T10:20:00Z')].join('\n'),
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome).toEqual({ kind: 'blocked', reason: 'ci-infra' });
+    expect(f.calls.filter((c) => c.startsWith('rerun'))).toEqual([]);
+  });
+
+  it('gives a repair round to a red run with one real failure beside an infrastructure one', async () => {
+    const f = fake({ ci: [[site, red], [green]], logs: { Site: aptLog } });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.calls.filter((c) => c.startsWith('rerun'))).toEqual([]);
+    expect(f.prompts.at(-1)).toContain('## CI failed (repair round 1)');
+  });
+
   it('waits out a job no runner has taken, saying so once, without failing', async () => {
     const f = fake({ ci: [[queued], [queued], [queued], [green]] });
     const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
@@ -972,6 +1237,7 @@ describe('CI after the PR opens (F6)', () => {
 });
 
 describe('main moves while the PR waits for CI (F6)', () => {
+  // `behind` starts with `false`: the check before the first push.
   const BR = 'factory/42-fix-the-typo-in-docs-cli';
   const conflict: RebaseOutcome = {
     kind: 'conflict',
@@ -982,7 +1248,7 @@ describe('main moves while the PR waits for CI (F6)', () => {
 
   it('rebases once more before In review, gates again, pushes with the lease and waits for CI', async () => {
     const f = fake({
-      behind: [true],
+      behind: [false, true],
       rebases: [
         clean,
         { kind: 'rebased', resolved: ['docs/decisions.md'], renumbered: { A1225: 'A1226' } },
@@ -1047,7 +1313,7 @@ describe('main moves while the PR waits for CI (F6)', () => {
   });
 
   it("hands a conflict it can't resolve to one agent round, then goes on to review", async () => {
-    const f = fake({ behind: [true], rebases: [clean, conflict, clean] });
+    const f = fake({ behind: [false, true], rebases: [clean, conflict, clean] });
     const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
     expect(outcome.kind).toBe('in-review');
     expect(f.prompts).toHaveLength(2);
@@ -1059,7 +1325,7 @@ describe('main moves while the PR waits for CI (F6)', () => {
   });
 
   it('sets Blocked naming the conflicting files when the fix round leaves them', async () => {
-    const f = fake({ behind: [true], rebases: [clean, conflict, conflict] });
+    const f = fake({ behind: [false, true], rebases: [clean, conflict, conflict] });
     const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
     expect(outcome).toEqual({ kind: 'blocked', reason: 'rebase-conflict' });
     const last = f.comments.at(-1)!;
@@ -1074,7 +1340,7 @@ describe('main moves while the PR waits for CI (F6)', () => {
 
   it('sets Blocked when the agent stops in its fix round, without pushing', async () => {
     const f = fake({
-      behind: [true],
+      behind: [false, true],
       rebases: [clean, conflict],
       agentRounds: [done, { ...done, status: 'failed', summary: 'both sides rename the route' }],
     });
@@ -1087,7 +1353,7 @@ describe('main moves while the PR waits for CI (F6)', () => {
   });
 
   it('gives a gate the rebase broke to the agent with the failure', async () => {
-    const f = fake({ behind: [true] });
+    const f = fake({ behind: [false, true] });
     let gates = 0;
     const base = f.deps;
     f.deps = {
@@ -1206,3 +1472,140 @@ describe('openOrReusePr (R12)', () => {
     expect(f.calls.some((c) => c[1] === 'create')).toBe(false);
   });
 });
+
+describe('main moves while proof and validation run, before the first push', () => {
+  // PEN-63: the gate rebased at 16:25, proof and validation took 20 minutes, another PR's
+  // decision row merged at 16:43, and the 16:45 push made a PR that conflicted with main.
+  const BR = 'factory/42-fix-the-typo-in-docs-cli';
+  /** The sandboxes' `git rev-parse` and `git diff --name-only` (what the rebase changed) and `git log`. */
+  function withGit(f: Fake, git: { changed: string[]; log?: string }): RunDeps {
+    const base = f.deps;
+    return {
+      ...base,
+      openSandbox: async (branch) => {
+        const box = await base.openSandbox(branch);
+        const ok = (stdout: string) => Promise.resolve({ exitCode: 0, stdout, stderr: '' });
+        return {
+          ...box,
+          exec: (command) => {
+            if (command === 'git rev-parse HEAD') {
+              f.calls.push(`exec: ${command}`);
+              return ok('0123456789abcdef0123456789abcdef01234567\n');
+            }
+            if (command.startsWith('git diff --name-only')) {
+              f.calls.push(`exec: ${command}`);
+              return ok(git.changed.join('\n'));
+            }
+            if (command.startsWith('git log') && git.log) return ok(git.log);
+            return box.exec(command);
+          },
+        };
+      },
+    };
+  }
+  const decisionsOnly: RebaseOutcome = {
+    kind: 'rebased',
+    resolved: ['docs/decisions.md'],
+    renumbered: { A1301: 'A1303' },
+  };
+
+  it('rebases again, and pushes without gating again when main brought only decision rows', async () => {
+    const f = fake({
+      behind: [true],
+      rebases: [{ kind: 'rebased', resolved: [], renumbered: {} }, decisionsOnly],
+      result: { ...done, decisions: ['A-NEW-1: one download button'] },
+    });
+    const deps = withGit(f, {
+      changed: ['docs/decisions.md'],
+      log: 'Docs: fix the typo\nNumber the new decisions: A-NEW-1 is A1301\nRenumber the decisions main already has: A1301 is now A1303\n',
+    });
+    const outcome = await runImplement(deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.calls.slice(f.calls.indexOf('close 2'), f.calls.indexOf('pr') + 1)).toEqual([
+      'close 2',
+      `behind? ${BR}`,
+      `open ${BR}`,
+      'exec: git rev-parse HEAD',
+      'rebase /wt/3',
+      'exec: git diff --name-only 0123456789abcdef0123456789abcdef01234567 HEAD',
+      'close 3',
+      `push ${BR}`,
+      'pr',
+    ]);
+    // One gate, one agent round: the decisions were the harness's to merge.
+    expect(f.calls.filter((c) => c.endsWith('task lint'))).toHaveLength(1);
+    expect(f.calls.filter((c) => c === 'agent')).toHaveLength(1);
+    expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(1);
+    // The PR body has the number the branch has after this rebase.
+    expect(f.comments[1]).toContain('- A1303: one download button');
+  });
+
+  it('gates again, but records no proof again, when main brought code', async () => {
+    const f = fake({ behind: [true], paths: ['apps/web/src/a.ts'], result: webDoneForPush });
+    const deps = withGit(f, { changed: ['docs/decisions.md', 'apps/web/src/b.ts'] });
+    const outcome = await runImplement(deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.calls.filter((c) => c.endsWith('task check'))).toHaveLength(2);
+    expect(f.calls.filter((c) => c.startsWith('proof web'))).toHaveLength(1);
+    const before = f.calls.slice(0, f.calls.indexOf('pr'));
+    expect(before.at(-2)).toBe('close 3');
+    expect(before.at(-1)).toBe(`push ${BR}`);
+    expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(1);
+  });
+
+  it("hands a conflict it can't resolve to the agent, gates again and pushes once", async () => {
+    const f = fake({
+      behind: [true],
+      rebases: [
+        { kind: 'rebased', resolved: [], renumbered: {} },
+        {
+          kind: 'conflict',
+          files: ['apps/web/src/a.ts'],
+          output: 'CONFLICT (content): Merge conflict in apps/web/src/a.ts',
+        },
+      ],
+    });
+    const deps = withGit(f, { changed: [] });
+    const outcome = await runImplement(deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.prompts[1]).toContain('## `origin/main` moved: rebase onto it');
+    expect(f.prompts[1]).toContain(`\`${BR}\` no longer rebases onto \`origin/main\``);
+    // The gate after the agent's fix always runs its check.
+    expect(f.calls.filter((c) => c.endsWith('task lint'))).toHaveLength(2);
+    expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(1);
+    expect(f.calls.indexOf(`push ${BR}`)).toBeLessThan(f.calls.indexOf('pr'));
+  });
+
+  it("sets Blocked with the files named, and pushes nothing, when the agent can't resolve it", async () => {
+    const conflict: RebaseOutcome = {
+      kind: 'conflict',
+      files: ['apps/web/src/a.ts'],
+      output: 'CONFLICT (content): Merge conflict in apps/web/src/a.ts',
+    };
+    const f = fake({
+      behind: [true],
+      rebases: [{ kind: 'rebased', resolved: [], renumbered: {} }, conflict, conflict],
+    });
+    const outcome = await runImplement(withGit(f, { changed: [] }), {
+      item: card,
+      spec,
+      prompt: 'p',
+    });
+    expect(outcome).toEqual({ kind: 'blocked', reason: 'rebase-conflict' });
+    expect(f.comments.at(-1)).toContain(
+      'no longer rebases onto main: `apps/web/src/a.ts` conflict',
+    );
+    expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(0);
+    expect(f.calls).not.toContain('pr');
+    expect(f.calls.at(-1)).toBe('blocked');
+  });
+});
+
+const webDoneForPush: AgentResult = {
+  ...done,
+  platforms: {
+    web: { inScope: true, proofSpecs: ['comments.spec.ts'] },
+    mac: { inScope: true, proofSpecs: ['app.spec.ts'] },
+    android: { inScope: true, proofSpecs: ['app.penmoss.EditorScreenTest'] },
+  },
+};

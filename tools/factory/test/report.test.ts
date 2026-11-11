@@ -11,8 +11,9 @@ const ledger = [
   e('10-a', 'ci-red', '2T11:30:00'),
   e('10-a', 'in-review', '2T12:00:00'),
   e('10-b', 'merged', '3T08:00:00'),
-  // #11: straight through in 1 h.
+  // #11: one fix round for a validation mismatch, 1 h to review.
   e('11-a', 'claimed', '4T10:00:00'),
+  e('11-a', 'validation-mismatch', '4T10:30:00', { round: 0, criteria: ['AC1'] }),
   e('11-a', 'in-review', '4T11:00:00'),
   // #12: blocked.
   e('12-a', 'claimed', '5T10:00:00'),
@@ -30,7 +31,7 @@ describe('factory:report (F14)', () => {
       merged: 1,
       blocked: 1,
       blockedShare: 0.33,
-      gateFixesPerIssue: 1,
+      gateFixesPerIssue: 1.5,
       ciRepairsPerIssue: 0.5,
       toReviewMinutes: { median: 120, mean: 120 },
     });

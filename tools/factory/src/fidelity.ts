@@ -77,6 +77,18 @@ export function fidelityFeedback(rows: readonly FidelityRow[]): string {
   ].join('\n');
 }
 
+/**
+ * A criterion as the ledger names it: its id when it starts with one (`AC1`, `AC-2`, `3.`), else
+ * its first six words.
+ */
+export function criterionLabel(criterion: string): string {
+  const text = criterion.trim();
+  const id = /^(?:\*\*)?((?:AC|R|F)[-\s]?\d+[a-z]?|\d+(?:\.\d+)*)\b/i.exec(text)?.[1];
+  if (id) return id.replace(/\s/, '');
+  const words = text.split(/\s+/);
+  return words.length > 6 ? `${words.slice(0, 6).join(' ')}…` : text;
+}
+
 /** On the last round, what's still a mismatch goes in the PR as a deviation. */
 export function settle(rows: readonly FidelityRow[]): FidelityRow[] {
   return rows.map((r) =>

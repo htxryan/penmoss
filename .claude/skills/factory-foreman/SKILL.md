@@ -154,6 +154,19 @@ Fixed in #141 and its follow-up. Look here first:
 - **A CI failure on a test outside the card is not always a flake.** PEN-71's `note-window.spec.ts` failed twice the same way: a click meant for plain text landed on a link where Linux's fonts are wider. Re-run the job once; if it fails the same way again, let the repair round fix it.
 - **Clearing Blocked after `ci-red`** sends an unchanged PR straight back to waiting on CI (`resumed-at-ci`, A1298). Only a branch with new commits, or someone's push, goes through the gate, proof and validation again.
 
+## Known failures from the fourth run (PEN-63 and PEN-73, 11 Nov 2026)
+
+Fixed in #151, #154, #156 and the follow-up (A1308, A1310–A1324). Look here first:
+
+- **A PR that conflicts with main gets no CI**, not even when closed and reopened. Two cards that both add a decision row conflict whenever one merges while the other is between its gate and its push. The factory now rebases before its first push when main moved (A1320), resumes at CI only on a `MERGEABLE` PR (A1310), and refreshes a PR that shows no checks and conflicts (A1311).
+- **Infrastructure failures are re-run, not repaired** (A1312): a log matching `INFRA_SIGNATURES` (DNS, registry 5xx, a runner shut down) gets `gh run rerun --failed`, twice at most, then Blocked `ci-infra`. On 11 Nov the hosted runners' apt mirror was down for hours; CI now asks apt only for what the image lacks (A1308, `.github/scripts/system-deps.sh`).
+- **The factory can't push `.github/workflows/`**: its App has no workflows permission. The gate refuses such a branch (A1314). Before, PEN-73's repair agent "fixed" the apt outage in ci.yml and the push failed late.
+- **Repair rounds are counted per PR across runs** (A1313), so clearing Blocked no longer buys more agent rounds.
+- **Approvals carry over new commits.** Approve a factory PR only once its CI is green, or a repair commit merges unreviewed.
+- **Don't merge to main while a factory merge is being verified.** A newer main run cancels the older one's release jobs; the factory now judges by the newer run (A1315), but before that it set Blocked.
+- **Validation can disagree with itself** on identical code (PEN-63: a deviation twice, a mismatch once). The reviewer now treats the plan's words as winning over its mockup (A1324).
+- **A flaky emulator test** (`TypingInstrumentedTest`, PEN-116) still sends a run into a repair round. Until it's fixed, pause a run in its CI watch (Blocked from the UI, then `task factory:stop`), re-run the job by hand, and clear Blocked once green: the run resumes at CI.
+
 ## Asset
 
 `assets/test-map.html` is the live test map from the PEN-75 run: an animated component and data-flow diagram with the run's steps and a bug table, all driven by its `STATE` object. Copy it to the scratchpad, rewrite `STATE` for the new run, and publish it with the Artifact tool. Republish the same path on every change.

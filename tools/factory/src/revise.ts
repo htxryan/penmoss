@@ -9,6 +9,7 @@
  */
 import type { BoardItem } from './board.ts';
 import type { IssueSpec } from './labels.ts';
+import { numberText } from './decisions.ts';
 import { classify } from './platforms.ts';
 import { formatMarker } from './pick.ts';
 import type { AttachedProof } from './proof/body.ts';
@@ -40,6 +41,8 @@ export interface ReviseInput {
   readonly items: readonly RoundItem[];
   /** The implement prompt, with the round's items (Ryan's words plain, others fenced) added. */
   readonly prompt: string;
+  /** A repair round for red CI in review: it counts toward the PR's `rounds.ciRepair` (A1313). */
+  readonly ciRepair?: true;
 }
 
 export type ReviseOutcome =
@@ -100,6 +103,7 @@ export async function runRevise(deps: ReviseDeps, input: ReviseInput): Promise<R
     const { replies, summary } = result;
     if (verdict.ok) {
       await deps.push(branch);
+      if (input.ciRepair) deps.log('ci-repaired', { pr, phase: 'review' });
       const sha = (await deps.headSha(branch)).slice(0, 10);
       for (const i of input.items) {
         if (i.kind !== 'thread' || !i.threadId || !i.trusted) continue;
@@ -113,7 +117,7 @@ export async function runRevise(deps: ReviseDeps, input: ReviseInput): Promise<R
         .join('');
       await deps.prComment(
         pr,
-        `Addressed in ${sha}: ${summary}${general}${verdict.proof.length ? '\n\nNew proof, recorded by the factory:' : ''}`,
+        `Addressed in ${sha}: ${numberText(summary, verdict.numbering)}${general}${verdict.proof.length ? '\n\nNew proof, recorded by the factory:' : ''}`,
         verdict.proof,
       );
       const ci = await watchCi(deps, {

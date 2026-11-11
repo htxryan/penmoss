@@ -290,6 +290,19 @@ describe('the pipeline (A1233)', () => {
     expect(view.cards.some((c) => c.key === 'PEN-91' || c.key === 'PEN-92')).toBe(false);
   });
 
+  it('says a validation mismatch sent the work back, not that the gate failed', () => {
+    const v = buildView(
+      input({
+        ledger: `${base.ledger}\n${line('79-d', 'validation-mismatch', minutesAgo(1), { round: 0, criteria: ['AC1', 'AC3'] })}`,
+      }),
+    );
+    expect(card(v, 'PEN-79').step).toBe(
+      'Validation: 2 criteria not met (AC1, AC3); fix round 2 of 3',
+    );
+    // On validation's step, where its `validated` puts a card, not back on the gate's.
+    expect(card(v, 'PEN-79').stage).toBe(4);
+  });
+
   it('says why CI stopped it, and what to do', () => {
     expect(card(view, 'PEN-73').step).toBe('CI stayed red after 2 repair rounds: android-emulator');
     expect(card(view, 'PEN-74').need?.brief).toBe('Review PR #65');
@@ -336,6 +349,48 @@ describe('the pipeline (A1233)', () => {
       brief: 'The gate still failed after 1 round',
       what: 'The checks that failed are on the issue. Fix it or say how on the issue, then retry.',
     });
+  });
+
+  it("says when CI is re-run, or stopped, on the runners' infrastructure (A1312)", () => {
+    const board = (blocked: boolean) => ({
+      items: [
+        pen(23, {
+          status: 'In Progress',
+          ...(blocked ? { labels: ['Blocked'], blocked: true, blockedSet: true } : {}),
+        }),
+      ],
+    });
+    const rerun = line('23-a', 'ci-rerun', minutesAgo(20), {
+      actionsRun: '88',
+      signature: 'Temporary failure resolving',
+    });
+    const claimed = line('23-a', 'claimed', minutesAgo(30), { issue: 23 });
+    const live = buildView(
+      input({
+        board: board(false),
+        ledger: [claimed, rerun].join('\n'),
+        status: {
+          ...base.status,
+          running: [{ issue: 23, slot: 1, startedAt: minutesAgo(30), why: 'picked' }],
+        },
+      }),
+    );
+    expect(card(live, 'PEN-23').step).toBe(
+      "CI re-run: the runners' infrastructure failed (Temporary failure resolving)",
+    );
+    const stopped = buildView(
+      input({
+        board: board(true),
+        ledger: [
+          claimed,
+          rerun,
+          line('23-a', 'blocked', minutesAgo(10), { reason: 'ci-infra' }),
+        ].join('\n'),
+      }),
+    );
+    expect(card(stopped, 'PEN-23').need?.brief).toBe(
+      "CI failed on the runners' infrastructure, not the branch (Temporary failure resolving)",
+    );
   });
 
   it('links the issue, PR, CI, the plan, the chat and the desktop app', () => {
