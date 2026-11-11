@@ -169,7 +169,7 @@ Every run is Sandcastle's Seatbelt sandbox (`tools/factory/src/sandbox.ts`). It 
 
 **Prompts and main.** In a sandbox, main is `origin/main`, put where the host fetched it; the clone's local `main` is stale. The build, gate-feedback and rebase prompts say so and name `origin/main`. The build prompt also states the path classifier's rules (Proof), so the agent plans a proof spec for every platform the gate will want before it starts (A1254).
 
-**Proof output.** Each web and Android proof's whole output is kept in the run folder as `proof-<platform>.log`, because the gate's worktree is gone once it closes. When a platform's proof specs don't pass, the agent's feedback includes that output's error lines and last lines (A1252).
+**Proof output.** Each proof's whole output (web, Android, and the Mac VM's `desktop-test.log`) is kept in the run folder as `proof-<platform>.log`, because the gate's worktree is gone once it closes. When a platform's proof specs don't pass, the agent's feedback includes that output's error lines and last lines (A1252, A1291), and its next sandbox has each proof's last screenshot in `.factory/last-proof/`.
 
 **The gate's dependencies.** After the rebase and the decision numbers, the gate runs `pnpm install --frozen-lockfile --prefer-offline` in its checkout, then the check. The rebase can bring in main's changed lockfile, and without the install the check ran on modules the agent installed for the old one (A1251). A failed install goes back to the agent like a failed check.
 

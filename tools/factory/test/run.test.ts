@@ -537,6 +537,8 @@ describe('runImplement', () => {
     expect(f.prompts[1]).toContain("The android proof's output:");
     expect(f.prompts[1]).toContain('emulator-5582 did not come up');
     expect(f.prompts[1]).not.toContain("The web proof's output:");
+    // And where to see the proof's last screenshot, which the Mac proof's VM is the only way to (A1291).
+    expect(f.prompts[1]).toContain('.factory/last-proof/');
   });
 
   const review = (verdict: string, note = '') =>

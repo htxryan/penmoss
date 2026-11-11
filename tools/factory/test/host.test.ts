@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { nodeExec } from '../src/exec.ts';
 import type { Gh } from '../src/github.ts';
-import { chatUrlOf, keepFiles, openOrReusePr } from '../src/host.ts';
+import { chatUrlOf, keepFiles, LAST_PROOF, openOrReusePr, stageLastProof } from '../src/host.ts';
 import { pushBranch } from '../src/publish.ts';
 
 // Real git against a bare repository standing in for GitHub, pushed to by URL as the host does
@@ -210,5 +210,23 @@ describe("a session's chat link (A1287)", () => {
       chatUrlOf(JSON.stringify({ type: 'assistant', subtype: 'factory_chat', url: 'x' })),
     ).toBeUndefined();
     expect(chatUrlOf('{"factory_chat"')).toBeUndefined();
+  });
+});
+
+describe("the last proof's screenshots, for the agent's next round (A1291)", () => {
+  it("copies each platform's screenshot into the worktree, and nothing else", () => {
+    const raw = mkdtempSync(join(tmpdir(), 'factory-raw-'));
+    const worktree = mkdtempSync(join(tmpdir(), 'factory-wt-'));
+    for (const f of ['mac-1-screenshot.png', 'web-1-screenshot.png', 'mac-1-video.mp4', 'x.png'])
+      writeFileSync(join(raw, f), f);
+    expect(stageLastProof(raw, worktree).sort()).toEqual([
+      'mac-1-screenshot.png',
+      'web-1-screenshot.png',
+    ]);
+    expect(readFileSync(join(worktree, LAST_PROOF, 'mac-1-screenshot.png'), 'utf8')).toBe(
+      'mac-1-screenshot.png',
+    );
+    expect(existsSync(join(worktree, LAST_PROOF, 'mac-1-video.mp4'))).toBe(false);
+    expect(stageLastProof(join(raw, 'none'), worktree)).toEqual([]);
   });
 });
