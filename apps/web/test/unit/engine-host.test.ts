@@ -21,7 +21,11 @@ import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { testNotebook } from '../../../../packages/git-notebook/test/support/notebooks';
 import { memoryEngineKv } from '../../src/sources/engine-store';
-import { describe as describeFailure, GitEngineHost } from '../../src/sources/engine-host';
+import {
+  describe as describeFailure,
+  FOCUS_PULL_GAP_MS,
+  GitEngineHost,
+} from '../../src/sources/engine-host';
 import { memoryNotes } from './support/memory-notes';
 
 const hosts: GitEngineHost[] = [];
@@ -209,7 +213,10 @@ describe('the default cadence: 12 s after edits settle, every minute while shown
     const doc = Object.assign(new EventTarget(), { hidden: false });
     vi.stubGlobal('window', win);
     vi.stubGlobal('document', doc);
-    const { host } = await setup({ pushDelayS: 12, pullEveryMin: 1 });
+    // Syncs on the fake clock get a limit they never reach (PEN-115): with the default 200 ms,
+    // a sync whose git outlasts the clock's jumps on a slow runner timed out, and its retry
+    // started a sync of its own that the focus below measured its gap from.
+    const { host } = await setup({ pushDelayS: 12, pullEveryMin: 1, syncLimitMs: 600_000 });
     await host.start();
     await vi.waitFor(() => expect(host.status.phase).toBe('synced'), { timeout: 3000 });
     vi.useFakeTimers();
@@ -234,6 +241,9 @@ describe('the default cadence: 12 s after edits settle, every minute while shown
     let idle = false;
     void host.idle().then(() => (idle = true));
     while (!idle) await vi.advanceTimersByTimeAsync(100);
+    // However long that took, the last sync began more than FOCUS_PULL_GAP_MS ago, as it would
+    // after three hidden minutes on a fast machine.
+    await vi.advanceTimersByTimeAsync(FOCUS_PULL_GAP_MS);
     expect(pulls()).toBe(2);
     doc.hidden = false;
     doc.dispatchEvent(new Event('visibilitychange'));
