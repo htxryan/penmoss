@@ -143,10 +143,14 @@ function quitAll(): void {
   spawnSync('/usr/bin/pkill', ['-KILL', '-f', APP]);
 }
 
-/** Quits the app as Penmoss → Quit Penmoss does (it handles SIGTERM the same way), and waits. */
+/**
+ * Quits the app as Penmoss → Quit Penmoss does (it handles SIGTERM the same way), and waits. With
+ * a git notebook, each window may take its whole closing time to store and push (main.ts: 3 s, and
+ * 11 s more to push, then 3 s for the capture window), so the wait is well past their sum.
+ */
 async function quitApp(pid: number): Promise<void> {
   process.kill(pid, 'SIGTERM');
-  await expect.poll(() => alive(pid), { timeout: 20_000 }).toBe(false);
+  await expect.poll(() => alive(pid), { timeout: 45_000 }).toBe(false);
 }
 
 const SWIFT_WINDOWS = `import CoreGraphics
