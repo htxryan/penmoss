@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { fromVm } from '../src/host.ts';
 import { proofFiles, renderPrBody } from '../src/proof/body.ts';
 import { parseReleaseNote } from '../../../.github/scripts/release-note.mjs';
-import { fromPlaywrightReport, missingProof } from '../src/proof/manifest.ts';
+import { failedProof, fromPlaywrightReport, missingProof } from '../src/proof/manifest.ts';
 import {
   checkMedia,
   framesList,
@@ -124,6 +124,13 @@ describe('the manifest', () => {
     expect(missingProof(items, ['web'])).toEqual([]);
     expect(missingProof(items, ['web', 'android'])).toEqual(['android']);
     expect(missingProof([{ ...items[0]!, source: 'agent' }], ['web'])).toEqual(['web']);
+  });
+  it('names each failing test in an in-scope proof spec, even when others pass (PEN-67)', () => {
+    const failed = { ...items[0]!, title: 'margin › times out', status: 'failed' as const };
+    const before = { ...failed, title: 'margin › the bug', phase: 'before' as const };
+    expect(failedProof([items[0]!, failed, before], ['web'])).toEqual(['web: margin › times out']);
+    expect(failedProof([items[0]!, failed], ['mac'])).toEqual([]);
+    expect(failedProof([{ ...failed, source: 'agent' }], ['web'])).toEqual([]);
   });
 });
 

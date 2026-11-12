@@ -34,7 +34,7 @@ import { scanWeakenedTests, weakenedFeedback, workflowChanges, workflowFeedback 
 import { usageLimitReset } from './limits.ts';
 import { validate } from './validate.ts';
 import { renderPrBody, type AttachedProof } from './proof/body.ts';
-import { missingProof, type ProofItem } from './proof/manifest.ts';
+import { failedProof, missingProof, type ProofItem } from './proof/manifest.ts';
 import { VmUnavailable, type VmCheck } from './proof/mac.ts';
 import { formatMarker } from './pick.ts';
 import { DECISIONS, sandboxNumbering, type RebaseOutcome } from './rebase.ts';
@@ -781,6 +781,14 @@ export async function gateAndProve(
       return {
         ok: false,
         feedback: `the proof specs for ${missing.join(', ')} didn't pass when the harness ran them with recording on. Each proof's last screenshot is in \`.factory/last-proof/\` (\`<platform>-<n>-screenshot.png\`): look at it to see where the spec stopped.${proofOutput(deps, missing)}`,
+      };
+    }
+    const failing = failedProof(items, needed);
+    if (failing.length > 0) {
+      const platforms = needed.filter((p) => failing.some((f) => f.startsWith(`${p}: `)));
+      return {
+        ok: false,
+        feedback: `these tests in your proof specs failed when the harness ran them with recording on:\n\n${failing.map((f) => `- ${f}`).join('\n')}\n\nEvery test in a proof spec has to pass: fix the code or the test. Each proof's last screenshot is in \`.factory/last-proof/\` (\`<platform>-<n>-screenshot.png\`): look at it to see where the spec stopped.${proofOutput(deps, platforms)}`,
       };
     }
     const prepared = await deps.prepareProof(items);
