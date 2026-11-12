@@ -22,7 +22,12 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, extname, join } from 'node:path';
-import type { AgentProvider, Sandbox } from '@ai-hero/sandcastle';
+import type {
+  AgentProvider,
+  AgentStreamEvent,
+  Sandbox,
+  SandboxRunResult,
+} from '@ai-hero/sandcastle';
 import type { Board } from './board.ts';
 import { ensureAvd, stopSlotEmulator } from './avd.ts';
 import { ATTACHMENTS, stageAttachments } from './attachments.ts';
@@ -510,6 +515,87 @@ export function hostDeps(options: HostOptions): HostDeps {
     writeFileSync(join(runDir, `proof-${platform}.log`), text);
   };
 
+  // The sandbox's last session, which `continueAgent` resumes when its agent keeps sessions.
+  const lastSessions = new WeakMap<RunSandbox, { resume?: SandboxRunResult['resume'] }>();
+  /**
+   * One agent session in the sandbox, or with `resume` the sandbox's last one continued
+   * (Sandcastle's resume: Claude Code's `--resume`). OpenCode's sessions aren't kept (A1263),
+   * so it never resumes.
+   */
+  const session = async (handle: RunSandbox, prompt: string, resume = false) => {
+    const sandbox = sandboxes.get(handle);
+    if (!sandbox) throw new Error('not a sandbox this run opened');
+    const last = lastSessions.get(handle)?.resume;
+    if (resume && !last) throw new Error('no session in this sandbox to continue');
+    const logFile = join(runDir, 'agent.log');
+    // Sandcastle appends every session of the run to agent.log. Only this session's part is
+    // read, or a retry after a usage limit would find the old limit message and wait again.
+    const start = existsSync(logFile) ? statSync(logFile).size : 0;
+    const tail = () => {
+      try {
+        return readFileSync(logFile).subarray(start).toString('utf8').slice(-8000);
+      } catch {
+        return '';
+      }
+    };
+    // agent.log is Sandcastle's rendering; the agent's own stream (Claude Code's stream-json,
+    // its init event first, which lists the MCP servers it loaded) is kept beside it, verbatim.
+    const streamFile = join(runDir, AGENT_STREAM);
+    const streamStart = existsSync(streamFile) ? statSync(streamFile).size : 0;
+    // What can say the session hit a usage limit. Claude Code ends a session with a result
+    // event, which carries a limit as an error: when there is one, only it counts, so an agent
+    // that writes about limits (or works on rate limiting) isn't taken for one that hit its own.
+    const limitText = (fallback: string) => {
+      const result = lastResultEvent(streamFile, streamStart);
+      if (!result) {
+        // OpenCode's provider error, which says how long its limit lasts.
+        const error = lastErrorEvent(streamFile, streamStart);
+        return error ? `${fallback}\n${error}` : fallback;
+      }
+      return result.is_error === true && typeof result.result === 'string' ? result.result : '';
+    };
+    // A resumed session keeps its agent; its login is staged again all the same.
+    const remote = await remoteSession();
+    const agent = remote ? remote.agent : options.agent;
+    try {
+      const run = {
+        idleTimeoutSeconds: config.timeouts.agentMinutes * 60,
+        logging: {
+          type: 'file' as const,
+          path: logFile,
+          onAgentStreamEvent: (event: AgentStreamEvent) => {
+            if (event.type !== 'raw') return;
+            appendFileSync(streamFile, `${event.line}\n`);
+            const url = remote ? chatUrlOf(event.line) : undefined;
+            if (url) {
+              writeFileSync(join(runDir, CHAT_URL), url);
+              options.log(`the session's chat in the Claude app: ${url}`);
+              options.onChat?.(url);
+            }
+          },
+        },
+      };
+      const ran =
+        resume && last ? await last(prompt, run) : await sandbox.run({ agent, prompt, ...run });
+      // Sandcastle offers a resume for any agent with session storage, but only a captured
+      // session can be resumed: the factory doesn't capture OpenCode's (A1263).
+      lastSessions.set(handle, agent.captureSessions && ran.resume ? { resume: ran.resume } : {});
+    } catch (error) {
+      // An agent stopped by its usage limit exits non-zero: the run waits for the reset (R13).
+      const message = error instanceof Error ? error.message : String(error);
+      const output = `${limitText(tail())}\n${message}`;
+      if (usageLimitReset(output, new Date())) return { output };
+      const missing = agentMissing(message);
+      if (missing) throw new AgentNotInstalled(missing, process.env['PATH'] ?? '');
+      throw error;
+    } finally {
+      remote?.unstage();
+      rmSync(join(runDir, CHAT_URL), { force: true });
+    }
+    explainCompletion(logFile);
+    return { output: limitText(tail()) };
+  };
+
   return {
     config,
     slot,
@@ -612,72 +698,9 @@ export function hostDeps(options: HostOptions): HostDeps {
       sandboxes.set(handle, sandbox);
       return handle;
     },
-    runAgent: async (handle, prompt) => {
-      const sandbox = sandboxes.get(handle);
-      if (!sandbox) throw new Error('not a sandbox this run opened');
-      const logFile = join(runDir, 'agent.log');
-      // Sandcastle appends every session of the run to agent.log. Only this session's part is
-      // read, or a retry after a usage limit would find the old limit message and wait again.
-      const start = existsSync(logFile) ? statSync(logFile).size : 0;
-      const tail = () => {
-        try {
-          return readFileSync(logFile).subarray(start).toString('utf8').slice(-8000);
-        } catch {
-          return '';
-        }
-      };
-      // agent.log is Sandcastle's rendering; the agent's own stream (Claude Code's stream-json,
-      // its init event first, which lists the MCP servers it loaded) is kept beside it, verbatim.
-      const streamFile = join(runDir, AGENT_STREAM);
-      const streamStart = existsSync(streamFile) ? statSync(streamFile).size : 0;
-      // What can say the session hit a usage limit. Claude Code ends a session with a result
-      // event, which carries a limit as an error: when there is one, only it counts, so an agent
-      // that writes about limits (or works on rate limiting) isn't taken for one that hit its own.
-      const limitText = (fallback: string) => {
-        const result = lastResultEvent(streamFile, streamStart);
-        if (!result) {
-          // OpenCode's provider error, which says how long its limit lasts.
-          const error = lastErrorEvent(streamFile, streamStart);
-          return error ? `${fallback}\n${error}` : fallback;
-        }
-        return result.is_error === true && typeof result.result === 'string' ? result.result : '';
-      };
-      const remote = await remoteSession();
-      try {
-        await sandbox.run({
-          agent: remote ? remote.agent : options.agent,
-          prompt,
-          idleTimeoutSeconds: config.timeouts.agentMinutes * 60,
-          logging: {
-            type: 'file',
-            path: logFile,
-            onAgentStreamEvent: (event) => {
-              if (event.type !== 'raw') return;
-              appendFileSync(streamFile, `${event.line}\n`);
-              const url = remote ? chatUrlOf(event.line) : undefined;
-              if (url) {
-                writeFileSync(join(runDir, CHAT_URL), url);
-                options.log(`the session's chat in the Claude app: ${url}`);
-                options.onChat?.(url);
-              }
-            },
-          },
-        });
-      } catch (error) {
-        // An agent stopped by its usage limit exits non-zero: the run waits for the reset (R13).
-        const message = error instanceof Error ? error.message : String(error);
-        const output = `${limitText(tail())}\n${message}`;
-        if (usageLimitReset(output, new Date())) return { output };
-        const missing = agentMissing(message);
-        if (missing) throw new AgentNotInstalled(missing, process.env['PATH'] ?? '');
-        throw error;
-      } finally {
-        remote?.unstage();
-        rmSync(join(runDir, CHAT_URL), { force: true });
-      }
-      explainCompletion(logFile);
-      return { output: limitText(tail()) };
-    },
+    runAgent: (handle, prompt) => session(handle, prompt),
+    canContinue: (handle) => lastSessions.get(handle)?.resume !== undefined,
+    continueAgent: (handle, message) => session(handle, message, true),
     stageMockups: (handle) => {
       // The mockups agreed with the plan (F16), never the session's later edits.
       const issue = options.runId.split('-')[0] ?? '';
@@ -722,7 +745,11 @@ export function hostDeps(options: HostOptions): HostDeps {
     readResult: (handle) => {
       const path = join(handle.worktreePath, RESULT_PATH);
       if (!existsSync(path))
-        return Promise.resolve({ ok: false, error: `the agent wrote no ${RESULT_PATH}` });
+        return Promise.resolve({
+          ok: false,
+          error: `the agent wrote no ${RESULT_PATH}`,
+          missing: true,
+        });
       const text = readFileSync(path, 'utf8');
       const parsed = parseAgentResult(text);
       // A copy the host keeps: a run restarted after this one resumes from it (resumeFrom).

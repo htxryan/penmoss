@@ -61,6 +61,7 @@ import type { WalkOutcome, WalkPlatform } from './walk.ts';
 export type RunEvent =
   | 'claimed'
   | 'agent-started'
+  | 'agent-continued'
   | 'agent-finished'
   | 'needs-info'
   | 'failed'
@@ -89,6 +90,11 @@ export type RunEvent =
   | 'resumed-at-ci'
   | 'release-note-refused';
 
+/** `.factory/result.json` as read: `missing` when the agent wrote none at all. */
+export type ResultRead =
+  | { readonly ok: true; readonly result: AgentResult }
+  | { readonly ok: false; readonly error: string; readonly missing?: boolean };
+
 export interface RunSandbox {
   readonly worktreePath: string;
   exec(
@@ -110,14 +116,19 @@ export interface RunDeps {
   openSandbox(branch: string): Promise<RunSandbox>;
   /** Runs the agent in the sandbox with the prompt; resolves when it exits, with its output's tail. */
   runAgent(sandbox: RunSandbox, prompt: string): Promise<{ readonly output: string } | void>;
+  /**
+   * Whether the sandbox's last agent session can be continued (`continueAgent`): its agent keeps
+   * its sessions for a resume (Claude Code does; the factory's OpenCode doesn't, A1263).
+   */
+  canContinue?(sandbox: RunSandbox): boolean;
+  /** Continues the sandbox's last agent session with `message`; resolves as `runAgent` does. */
+  continueAgent?(sandbox: RunSandbox, message: string): Promise<{ readonly output: string } | void>;
   /** Keeps a file in the run's folder (`runs/<run>/<name>`), such as the gate's whole output. */
   keep?(name: string, text: string): void;
   /** The last proof run's output for a platform (`runs/<run>/proof-<platform>.log`), if kept. */
   proofLog?(platform: Platform): string | undefined;
   /** `.factory/result.json` from the worktree, parsed (or why it couldn't be). */
-  readResult(
-    sandbox: RunSandbox,
-  ): Promise<{ ok: true; result: AgentResult } | { ok: false; error: string }>;
+  readResult(sandbox: RunSandbox): Promise<ResultRead>;
   /**
    * Paths changed on the branch against origin/main, how many commits it has, and the subject of
    * its first one (the PR's title).
@@ -312,9 +323,10 @@ export async function runAgentPatiently(
   deps: Pick<RunDeps, 'runAgent' | 'now' | 'sleep' | 'log'> & Partial<Pick<RunDeps, 'waitingFor'>>,
   sandbox: RunSandbox,
   prompt: string,
+  run: RunDeps['runAgent'] = (s, p) => deps.runAgent(s, p),
 ): Promise<void> {
   for (let waits = 0; ; waits++) {
-    const ran = await deps.runAgent(sandbox, prompt);
+    const ran = await run(sandbox, prompt);
     const reset = ran ? usageLimitReset(ran.output, deps.now()) : null;
     if (!reset) return;
     if (waits >= MAX_LIMIT_WAITS)
@@ -324,6 +336,52 @@ export async function runAgentPatiently(
     await deps.sleep(Math.ceil((reset.getTime() - deps.now().getTime()) / 1000) + 60);
     deps.waitingFor?.(null);
   }
+}
+
+/** What a session that ended without `result.json` is told when it is continued (A1346). */
+export const CONTINUE_MESSAGE =
+  'Your session ended before you wrote `.factory/result.json`, so the factory has nothing to check yet. Continue the task from where you stopped, and write `.factory/result.json` when you are done, as the prompt says.';
+
+/** What a new session is told when the last one, which wrote no `result.json`, can't be resumed. */
+export const CONTINUE_NOTE = `## The last session ended early\n\nA session on this task ended before it wrote \`.factory/result.json\` (its final message may have been a malformed tool call). What it did is in this worktree and on the branch: read \`git status\` and \`git log origin/main..HEAD\` first. Continue the task from there, and write \`.factory/result.json\` when you are done.`;
+
+/**
+ * One agent session and the result it wrote. A session that ends without writing
+ * `.factory/result.json` at all (PEN-117's OpenCode session took a malformed tool call for its
+ * final answer) is continued once, in the same sandbox, before the run gives up on it
+ * (A1346): the same session resumed with `CONTINUE_MESSAGE` when its agent can resume one,
+ * else a new session with the prompt and `CONTINUE_NOTE`. Only once per call, so it can't loop.
+ */
+export async function runAndRead(
+  deps: Pick<
+    RunDeps,
+    'runAgent' | 'canContinue' | 'continueAgent' | 'readResult' | 'now' | 'sleep' | 'log'
+  > &
+    Partial<Pick<RunDeps, 'waitingFor'>>,
+  sandbox: RunSandbox,
+  prompt: string,
+  at: Readonly<Record<string, unknown>> = {},
+): Promise<ResultRead> {
+  await runAgentPatiently(deps, sandbox, prompt);
+  const read = await deps.readResult(sandbox);
+  if (read.ok || !read.missing) return read;
+  const resume = deps.continueAgent && deps.canContinue?.(sandbox) === true;
+  if (resume) {
+    deps.log('agent-continued', { ...at, how: 'resume' });
+    try {
+      await runAgentPatiently(deps, sandbox, CONTINUE_MESSAGE, (s, m) => deps.continueAgent!(s, m));
+      return await deps.readResult(sandbox);
+    } catch (error) {
+      // A session that can't be resumed after all gets the new session instead.
+      deps.log('agent-continued', {
+        ...at,
+        how: 'new session',
+        after: error instanceof Error ? error.message : String(error),
+      });
+    }
+  } else deps.log('agent-continued', { ...at, how: 'new session' });
+  await runAgentPatiently(deps, sandbox, `${prompt}\n\n${CONTINUE_NOTE}`);
+  return deps.readResult(sandbox);
 }
 
 export function branchName(config: FactoryConfig, item: BoardItem): string {
@@ -739,12 +797,13 @@ async function agentRound(
   branch: string,
   prompt: string,
   round: number,
-): Promise<{ ok: true; result: AgentResult } | { ok: false; error: string }> {
+): Promise<ResultRead> {
   const work = await deps.openSandbox(branch);
   try {
     deps.log('agent-started', { branch, round });
+    let read: ResultRead;
     try {
-      await runAgentPatiently(deps, work, prompt);
+      read = await runAndRead(deps, work, prompt, { round });
     } catch (error) {
       // The agent may have finished before a later step failed (PEN-72: Sandcastle's session
       // capture). Keep its result, so a recovered run goes on from the gate (A1266).
@@ -756,7 +815,6 @@ async function agentRound(
         });
       throw error;
     }
-    const read = await deps.readResult(work);
     deps.log('agent-finished', read.ok ? { status: read.result.status } : { error: read.error });
     return read;
   } finally {
@@ -1445,12 +1503,12 @@ async function repair(
   await deps.step(`CI repair round ${round}`);
   const work = await deps.openSandbox(run.branch);
   try {
-    await runAgentPatiently(
+    const read = await runAndRead(
       deps,
       work,
       `${run.prompt}\n\n## CI failed (repair round ${round})\n\nThe PR from \`${run.branch}\` is open and its CI failed. The failed jobs' last log lines:\n\n${logs}\n\nFix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\` again. ${CI_REPAIR_LIMITS} ${STALE_MAIN}`,
+      { phase: 'ci-repair', round },
     );
-    const read = await deps.readResult(work);
     if (!read.ok) return { ok: false, why: read.error };
     if (read.result.status !== 'done') return { ok: false, why: read.result.summary };
   } finally {
@@ -1631,10 +1689,9 @@ async function bringUpToDate(
       ? `## \`origin/main\` moved: rebase onto it\n\n\`${run.branch}\` no longer rebases onto \`origin/main\`. ${first.why}\n\nKeep what \`origin/main\` changed and what this branch changes. ${STALE_MAIN} Run the checks, commit, and write \`.factory/result.json\` again.`
       : `## The gate after rebasing onto \`origin/main\`\n\n\`${run.branch}\` is now on top of \`origin/main\`, and the gate fails there: ${first.why}\n\nFix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\` again. ${STALE_MAIN}`;
     const work = await deps.openSandbox(run.branch);
-    let read: Awaited<ReturnType<RunDeps['readResult']>>;
+    let read: ResultRead;
     try {
-      await runAgentPatiently(deps, work, `${run.prompt}\n\n${ask}`);
-      read = await deps.readResult(work);
+      read = await runAndRead(deps, work, `${run.prompt}\n\n${ask}`, { phase: 'rebase' });
     } finally {
       await work.close();
     }

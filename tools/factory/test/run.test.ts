@@ -12,6 +12,8 @@ import type { AgentResult } from '../src/result.ts';
 import { VmUnavailable, type VmCheck } from '../src/proof/mac.ts';
 import {
   branchName,
+  CONTINUE_MESSAGE,
+  CONTINUE_NOTE,
   gateCommand,
   oneLine,
   proofReason,
@@ -87,13 +89,15 @@ interface Fake {
 }
 
 function fake(overrides: {
-  result?: AgentResult | { error: string };
+  result?: AgentResult | { error: string; missing?: boolean };
   paths?: string[];
   commits?: number;
   dirty?: boolean;
   gateExit?: number;
   proofPassed?: boolean;
-  agentRounds?: AgentResult[];
+  agentRounds?: (AgentResult | { error: string; missing?: boolean })[];
+  /** The agent can resume its last session (Claude Code; A1346). */
+  resumable?: boolean;
   ci?: CheckRun[][];
   conflict?: boolean;
   /** review.json per validation, in order (F19). */
@@ -223,10 +227,22 @@ function fake(overrides: {
           : { output: 'done' },
       );
     },
+    ...(overrides.resumable
+      ? {
+          canContinue: () => true,
+          continueAgent: (_sandbox: RunSandbox, message: string) => {
+            calls.push('agent continued');
+            prompts.push(message);
+            return Promise.resolve({ output: 'done' });
+          },
+        }
+      : {}),
     readResult: () => {
       const next = rounds.shift() ?? result;
       return Promise.resolve(
-        'error' in next ? { ok: false, error: next.error } : { ok: true, result: next },
+        'error' in next
+          ? { ok: false, error: next.error, ...(next.missing ? { missing: true } : {}) }
+          : { ok: true, result: next },
       );
     },
     diff: () =>
@@ -1072,12 +1088,68 @@ describe('runImplement', () => {
     expect(
       await runImplement(fake({ commits: 0 }).deps, { item: card, spec, prompt: 'p' }),
     ).toEqual({ kind: 'blocked', reason: 'no-commits' });
-    const f = fake({ result: { error: 'the agent wrote no .factory/result.json' } });
+    const f = fake({ result: { error: 'the agent wrote no .factory/result.json', missing: true } });
     expect(await runImplement(f.deps, { item: card, spec, prompt: 'p' })).toEqual({
       kind: 'blocked',
       reason: 'the agent wrote no .factory/result.json',
     });
+    // It was given one more session first, never more (A1346).
+    expect(f.calls.filter((c) => c === 'agent')).toHaveLength(2);
     expect(f.calls).toContain('close 1');
+    // A malformed result isn't a missing one: it goes straight to Blocked.
+    const bad = fake({ result: { error: 'status must be done, needs-info or failed' } });
+    expect(await runImplement(bad.deps, { item: card, spec, prompt: 'p' })).toMatchObject({
+      kind: 'blocked',
+    });
+    expect(bad.calls.filter((c) => c === 'agent')).toHaveLength(1);
+    expect(bad.events).not.toContain('agent-continued');
+  });
+
+  it('continues a session that ended without result.json once, in the same sandbox', async () => {
+    // PEN-117's OpenCode session ended on a malformed tool call, and the run Blocked at once.
+    const missing = { error: 'the agent wrote no .factory/result.json', missing: true };
+    const f = fake({ agentRounds: [missing], resumable: true });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.calls.slice(2, 6)).toEqual([
+      'open factory/42-fix-the-typo-in-docs-cli',
+      'agent',
+      'agent continued',
+      'close 1',
+    ]);
+    expect(f.prompts[1]).toBe(CONTINUE_MESSAGE);
+    expect(f.details).toContainEqual(['agent-continued', { round: 0, how: 'resume' }]);
+  });
+
+  it("starts a new session with the note when the agent can't resume one", async () => {
+    const missing = { error: 'the agent wrote no .factory/result.json', missing: true };
+    const f = fake({ agentRounds: [missing] });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.calls.slice(2, 6)).toEqual([
+      'open factory/42-fix-the-typo-in-docs-cli',
+      'agent',
+      'agent',
+      'close 1',
+    ]);
+    expect(f.prompts[1]).toBe(`p\n\n${CONTINUE_NOTE}`);
+    expect(f.details).toContainEqual(['agent-continued', { round: 0, how: 'new session' }]);
+  });
+
+  it('falls back to a new session when the resume fails', async () => {
+    const missing = { error: 'the agent wrote no .factory/result.json', missing: true };
+    const f = fake({ agentRounds: [missing], resumable: true });
+    const deps: RunDeps = {
+      ...f.deps,
+      continueAgent: () => Promise.reject(new Error('resumeSession "x" not found')),
+    };
+    const outcome = await runImplement(deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.prompts).toEqual(expect.arrayContaining([`p\n\n${CONTINUE_NOTE}`]));
+    expect(f.details).toContainEqual([
+      'agent-continued',
+      { round: 0, how: 'new session', after: 'resumeSession "x" not found' },
+    ]);
   });
 });
 

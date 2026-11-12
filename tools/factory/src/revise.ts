@@ -18,7 +18,7 @@ import type { RoundItem } from './review.ts';
 import {
   gateAndProve,
   refreshBranch,
-  runAgentPatiently,
+  runAndRead,
   STALE_MAIN,
   watchCi,
   type RunDeps,
@@ -77,8 +77,7 @@ export async function runRevise(deps: ReviseDeps, input: ReviseInput): Promise<R
     const work = await deps.openSandbox(branch);
     let result: AgentResult;
     try {
-      await runAgentPatiently(deps, work, prompt);
-      const read = await deps.readResult(work);
+      const read = await runAndRead(deps, work, prompt, { phase: 'review', round });
       if (!read.ok)
         return await block(
           read.error,
