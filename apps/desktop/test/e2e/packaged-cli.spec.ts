@@ -11,7 +11,7 @@
 import { execFileSync, spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { chromium, expect, test, type Browser, type Page } from '@playwright/test';
 import { checkoutPortBase } from '../../../../packages/core/test/support/checkout-ports';
 import { parseBlock } from '../../../../scripts/ports.mjs';
@@ -71,7 +71,18 @@ test.beforeEach(() => {
   });
 });
 
-test.afterEach(() => {
+/** This test's app log: main's console, from every launch `open` makes. */
+function appLog(): string {
+  const file = test.info().outputPath('app.log');
+  mkdirSync(dirname(file), { recursive: true });
+  return file;
+}
+
+test.afterEach(async () => {
+  const log = test.info().outputPath('app.log');
+  if (test.info().status !== test.info().expectedStatus && existsSync(log)) {
+    await test.info().attach('app.log', { path: log, contentType: 'text/plain' });
+  }
   for (const child of children.splice(0)) child.kill('SIGKILL');
   quitAll();
 });
@@ -156,6 +167,11 @@ function open(env: Readonly<Record<string, string>>, debugPort: number): void {
     [
       '-g',
       ...Object.entries(env).flatMap(([name, value]) => ['--env', `${name}=${value}`]),
+      // The app's log (main's console), attached when a test fails.
+      '--stdout',
+      appLog(),
+      '--stderr',
+      appLog(),
       APP,
       '--args',
       `--remote-debugging-port=${debugPort}`,
@@ -329,6 +345,16 @@ async function addNotebook(page: Page, name: string): Promise<void> {
   await form.locator('button[type="submit"]').click();
   await expect(page.locator('#app-sidebar').getByText(name, { exact: true }).first()).toBeVisible({
     timeout: 30_000,
+  });
+  // The remote is empty until the app's first push: sync now, so the app can make the agents'
+  // copy from it (D52), as local-agents.spec.ts does.
+  await go(page, '/settings/git-notebooks');
+  const settings = page.getByTestId('git-notebooks-settings');
+  await settings.getByTestId('git-notebook-row').filter({ hasText: name }).click();
+  const card = settings.getByTestId('git-notebook').filter({ hasText: name });
+  await card.getByTestId('git-sync-now').click();
+  await expect(card.getByTestId('git-status')).toHaveAttribute('data-phase', 'synced', {
+    timeout: 60_000,
   });
 }
 
