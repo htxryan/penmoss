@@ -101,7 +101,7 @@ import {
   trayMenuTemplate,
   type QuickAccessPin,
 } from './tray';
-import { CLI_FLAG, keptLoginPath, LocalAgents, loginShellPath } from './local-agents';
+import { cliCommand, keptLoginPath, LocalAgents, loginShellPath } from './local-agents';
 import { ReleaseNotes } from './release-notes';
 import { Updates, updateMode } from './updater';
 import {
@@ -1079,8 +1079,19 @@ const githubSignIn = new DeviceSignIn({
  */
 /** The terminal's PATH, asked of the login shell as the app starts and kept (A1124). */
 const loginPath = keptLoginPath(() => loginShellPath(process.env['SHELL'] || '/bin/zsh'));
+/**
+ * The command every agent and the `penmoss` script are given: a packaged Mac app's CLI bundle
+ * (PEN-121), so no MCP server checks in with LaunchServices as Penmoss itself.
+ */
+const cli = cliCommand({
+  exe: app.getPath('exe'),
+  appPath: app.getAppPath(),
+  packaged: app.isPackaged,
+  platform: process.platform,
+});
 const localAgents = new LocalAgents({
-  cli: [app.getPath('exe'), ...(app.isPackaged ? [] : [app.getAppPath()]), CLI_FLAG],
+  cli: cli.cli,
+  oldCli: cli.old,
   home: config.testHome ?? homedir(),
   shell: process.env['SHELL'] || '/bin/zsh',
   loginPath: loginPath.get,
@@ -1576,6 +1587,8 @@ if (!app.requestSingleInstanceLock()) {
     gitProcesses.cleanUp();
     // Every agent on this Mac reaches every notebook in the app (D52), after the launch settles.
     setTimeout(() => void localAgents.ensureAll(), 3_000).unref();
+    // The app's `penmoss` script, written before the CLI bundle, runs it from now on (PEN-121).
+    void localAgents.refreshCli();
     watchGitProcesses(gitProcesses);
     registerIpc();
     setMenus([]);

@@ -21,7 +21,7 @@ You need Penmoss on your Mac with the notebook added, and [OpenCode](https://ope
        "penmoss": {
          "type": "local",
          "command": [
-           "/Applications/Penmoss.app/Contents/MacOS/Penmoss",
+           "/Applications/Penmoss.app/Contents/Helpers/Penmoss CLI.app/Contents/MacOS/Penmoss",
            "--penmoss-cli",
            "mcp",
            "--notebook",
@@ -39,7 +39,7 @@ You need Penmoss on your Mac with the notebook added, and [OpenCode](https://ope
 
 Then ask OpenCode to use your notes, for example: "Append a summary of this session to today's note in Penmoss."
 
-Penmoss's settings show ready-made lines for Claude Code and Codex only. For OpenCode, the command is the same as Codex's: the app, `--penmoss-cli`, `mcp`, `--notebook` and the copy's name.
+Penmoss's settings show ready-made lines for Claude Code and Codex only. For OpenCode, the command is the same as Codex's: the app's CLI, `--penmoss-cli`, `mcp`, `--notebook` and the copy's name.
 
 ## If it does not work
 

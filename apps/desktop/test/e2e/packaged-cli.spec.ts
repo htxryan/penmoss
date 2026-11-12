@@ -1,0 +1,721 @@
+/**
+ * PEN-121: an agent's MCP server never stands in for the Penmoss app. The bug is in a packaged
+ * bundle only, so this spec packs one (arm64, ad hoc, `--dir`; once per run, reused while it is
+ * newer than the build) and opens it the way a person does, with `open -g`, in the test VM.
+ *
+ * The packaged app has Electron's inspect fuse off (A224), so Playwright's `_electron.launch`
+ * can't drive it: each launch is `open -g … --args --remote-debugging-port=<port>`, and Playwright
+ * connects over Chromium's DevTools protocol. LaunchServices is read with `lsappinfo list`, and a
+ * window on screen with CoreGraphics (a small Swift script), which needs no permission.
+ */
+import { execFileSync, spawn, spawnSync, type ChildProcess } from 'node:child_process';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { homedir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { chromium, expect, test, type Browser, type Page } from '@playwright/test';
+import { checkoutPortBase } from '../../../../packages/core/test/support/checkout-ports';
+import { parseBlock } from '../../../../scripts/ports.mjs';
+import { cliScript } from '../../src/local-agents';
+import { inVirtualMachine, refuseOnMacHost } from './host-guard';
+import { bareRepository, dataDir, DESKTOP, go, removeDataDirs } from './support';
+
+refuseOnMacHost('The packaged app’s spec');
+test.skip(process.platform !== 'darwin', 'Needs a packaged Mac app and LaunchServices');
+
+const APP = join(DESKTOP, 'release', 'mac-arm64', 'Penmoss.app');
+const MAIN_EXE = join(APP, 'Contents', 'MacOS', 'Penmoss');
+const CLI_EXE = join(APP, 'Contents', 'Helpers', 'Penmoss CLI.app', 'Contents', 'MacOS', 'Penmoss');
+const APP_ID = 'app.penmoss.mac';
+const CLI_ID = 'app.penmoss.mac.cli';
+/** The app's `penmoss` script: a packaged app writes it in the person's own home. */
+const SCRIPT = join(homedir(), '.local', 'bin', 'penmoss');
+
+/** Ports for the DevTools protocol, one per launch: this run's port block, or this checkout's. */
+const block = parseBlock(process.env['PENMOSS_PORT_BLOCK']);
+const PORT_BASE = block > 0 ? 20000 + 100 * block + 60 : checkoutPortBase() + 6;
+let nextPort = 0;
+const port = () => PORT_BASE + (nextPort++ % 4);
+
+const children: ChildProcess[] = [];
+/** Each MCP server's stderr, attached when a test fails. */
+const serverLogs: { name: string; text: () => string }[] = [];
+
+// --- packing ---
+
+test.beforeAll(() => {
+  test.setTimeout(900_000);
+  const asar = join(APP, 'Contents', 'Resources', 'app.asar');
+  // Packed again when the build, or the way the bundle is packed, is newer than the pack.
+  const built = Math.max(
+    ...['dist/boot.cjs', 'scripts/cli-bundle.mjs', 'electron-builder.config.cjs'].map(
+      (file) => statSync(join(DESKTOP, file)).mtimeMs,
+    ),
+  );
+  if (existsSync(CLI_EXE) && existsSync(asar) && statSync(asar).mtimeMs >= built) return;
+  const env: NodeJS.ProcessEnv = { ...process.env, PENMOSS_MAC_ARCH: 'arm64' };
+  // Ad hoc, whatever this machine has: no certificate, no notarisation.
+  for (const name of ['CSC_LINK', 'CSC_NAME', 'CSC_KEY_PASSWORD', 'APPLE_API_KEY', 'APPLE_ID'])
+    delete env[name];
+  const packed = spawnSync(
+    join(DESKTOP, 'node_modules', '.bin', 'electron-builder'),
+    ['--config', 'electron-builder.config.cjs', '--publish', 'never', '--dir', '--mac'],
+    { cwd: DESKTOP, env, encoding: 'utf8', timeout: 840_000 },
+  );
+  if (packed.status !== 0) {
+    throw new Error(`Packing failed (${packed.status}):\n${packed.stdout}\n${packed.stderr}`);
+  }
+});
+
+test.beforeEach(() => {
+  // The VM is the test machine, and this is the packaged app's own data: it starts fresh.
+  if (!inVirtualMachine()) throw new Error('Only in the test VM');
+  quitAll();
+  rmSync(join(homedir(), 'Library', 'Application Support', 'Penmoss'), {
+    recursive: true,
+    force: true,
+  });
+  // The VM's builds are ad hoc signed, so each has a new signature, and the Safe Storage key an
+  // earlier build left in the login keychain would ask this one for access in a prompt nobody
+  // sees: the app would hang on its first sync and never quit (PEN-127). Each build makes its own.
+  spawnSync('/usr/bin/security', ['delete-generic-password', '-s', 'Penmoss Safe Storage']);
+  rmSync(SCRIPT, { force: true });
+});
+
+/** This test's app log: main's console, from every launch `open` makes. */
+function appLog(): string {
+  const file = test.info().outputPath('app.log');
+  mkdirSync(dirname(file), { recursive: true });
+  return file;
+}
+
+test.afterEach(async () => {
+  const log = test.info().outputPath('app.log');
+  if (test.info().status !== test.info().expectedStatus && existsSync(log)) {
+    await test.info().attach('app.log', { path: log, contentType: 'text/plain' });
+  }
+  if (test.info().status !== test.info().expectedStatus) {
+    for (const each of serverLogs) {
+      await test.info().attach(each.name, { body: each.text(), contentType: 'text/plain' });
+    }
+  }
+  serverLogs.length = 0;
+  for (const child of children.splice(0)) child.kill('SIGKILL');
+  quitAll();
+  if (inVirtualMachine()) rmSync(SCRIPT, { force: true });
+});
+test.afterAll(() => removeDataDirs());
+
+// --- LaunchServices ---
+
+interface Registered {
+  readonly pid: number;
+  readonly bundleId: string | null;
+  readonly type: string | null;
+  readonly executable: string | null;
+  readonly text: string;
+}
+
+/** Every process LaunchServices knows, as `lsappinfo list` says. */
+function registered(): Registered[] {
+  const out = execFileSync('/usr/bin/lsappinfo', ['list'], { encoding: 'utf8' });
+  return out
+    .split(/^\s*\d+\) /m)
+    .slice(1)
+    .map((text) => ({
+      pid: Number(/\bpid = (\d+)/.exec(text)?.[1] ?? 0),
+      bundleId: /bundleID="([^"]*)"/.exec(text)?.[1] ?? null,
+      type: /\btype="([^"]*)"/.exec(text)?.[1] ?? null,
+      executable: /executable path="([^"]*)"/.exec(text)?.[1] ?? null,
+      text: text.trim(),
+    }));
+}
+
+const penmossApps = () => registered().filter((each) => each.bundleId === APP_ID);
+const registeredAs = (pid: number) => registered().find((each) => each.pid === pid) ?? null;
+
+const alive = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/** Quits every Penmoss of this bundle (the app, and old-path CLIs a test left). */
+function quitAll(): void {
+  spawnSync('/usr/bin/pkill', ['-TERM', '-f', APP]);
+  const until = Date.now() + 15_000;
+  while (Date.now() < until && spawnSync('/usr/bin/pgrep', ['-f', APP]).status === 0) {
+    spawnSync('/bin/sleep', ['0.5']);
+  }
+  spawnSync('/usr/bin/pkill', ['-KILL', '-f', APP]);
+}
+
+const SWIFT_QUIT = `import AppKit
+let pid = Int32(CommandLine.arguments[1])!
+print(NSRunningApplication(processIdentifier: pid)?.terminate() ?? false)
+`;
+/**
+ * Quits the app as Penmoss → Quit Penmoss and the Dock's Quit do: a quit Apple Event to that
+ * process (NSRunningApplication.terminate), so AppKit and Electron run their whole quit. A signal
+ * isn't the same: the packaged app didn't end in 45 s after SIGTERM in the VM. With a git
+ * notebook, each window may take its whole closing time to store and push (main.ts: 3 s, and 11 s
+ * more to push, then 3 s for the capture window), so the wait is well past their sum. Still
+ * running after it, the app is sampled, so the failure says where it waits.
+ */
+async function quitApp(pid: number): Promise<void> {
+  const script = join(dataDir(), 'quit.swift');
+  writeFileSync(script, SWIFT_QUIT);
+  const asked = spawnSync('swift', [script, String(pid)], { encoding: 'utf8', timeout: 60_000 });
+  await attachText(
+    'quit Apple Event',
+    `terminate: ${asked.stdout.trim()} (status ${asked.status})\n${asked.stderr}`,
+  );
+  // LaunchServices didn't know it: Electron's own signal handling, then, as before.
+  if (asked.stdout.trim() !== 'true') process.kill(pid, 'SIGTERM');
+  try {
+    await expect.poll(() => alive(pid), { timeout: 45_000 }).toBe(false);
+  } catch (error) {
+    const sampled = spawnSync('/usr/bin/sample', [String(pid), '2'], {
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    await attachText('sample of the app that would not quit', sampled.stdout || sampled.stderr);
+    throw new Error(`Penmoss (pid ${pid}) was still running 45 s after it was asked to quit`, {
+      cause: error,
+    });
+  }
+}
+
+const SWIFT_WINDOWS = `import CoreGraphics
+let pid = Int32(CommandLine.arguments[1])!
+let all = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []
+print(all.filter { ($0[kCGWindowOwnerPID as String] as? Int32) == pid && ($0[kCGWindowLayer as String] as? Int) == 0 }.count)
+`;
+let swiftFile: string | null = null;
+/** The windows `pid` has on screen (normal windows only), from CoreGraphics. */
+function windowsOnScreen(pid: number): number {
+  if (!swiftFile) {
+    swiftFile = join(dataDir(), 'windows.swift');
+    writeFileSync(swiftFile, SWIFT_WINDOWS);
+  }
+  const out = spawnSync('swift', [swiftFile, String(pid)], {
+    encoding: 'utf8',
+    timeout: 60_000,
+  });
+  return Number(out.stdout.trim()) || 0;
+}
+
+/** Opens Penmoss as the Dock and the Finder do: LaunchServices starts it or reopens it. */
+function open(env: Readonly<Record<string, string>>, debugPort: number): void {
+  const opened = spawnSync(
+    '/usr/bin/open',
+    [
+      '-g',
+      ...Object.entries(env).flatMap(([name, value]) => ['--env', `${name}=${value}`]),
+      // The app's log (main's console), attached when a test fails.
+      '--stdout',
+      appLog(),
+      '--stderr',
+      appLog(),
+      APP,
+      '--args',
+      `--remote-debugging-port=${debugPort}`,
+    ],
+    { encoding: 'utf8' },
+  );
+  expect(opened.status, opened.stderr).toBe(0);
+}
+
+/** The app's main window, over the DevTools protocol. */
+async function connect(debugPort: number): Promise<{ browser: Browser; page: Page }> {
+  await expect
+    .poll(
+      () =>
+        fetch(`http://127.0.0.1:${debugPort}/json/version`).then(
+          (response) => response.ok,
+          () => false,
+        ),
+      { timeout: 45_000 },
+    )
+    .toBe(true);
+  const browser = await chromium.connectOverCDP(`http://127.0.0.1:${debugPort}`);
+  const find = () =>
+    browser
+      .contexts()
+      .flatMap((context) => context.pages())
+      .find((page) => page.url().startsWith('app://penmoss/') && !page.url().endsWith('/capture'));
+  await expect.poll(() => find() !== undefined, { timeout: 30_000 }).toBe(true);
+  return { browser, page: find()! };
+}
+
+// --- recording (proof mode, the software factory's F7) ---
+
+const proof = process.env['PENMOSS_PROOF'] === '1';
+
+/** Frames of every window this test connects to, as support.ts's recordWindow attaches them. */
+function recorder() {
+  const info = test.info();
+  const dir = info.outputPath(`frames-${Date.now().toString(36)}`);
+  const frames: { file: string; at: number }[] = [];
+  let last: Page | null = null;
+  return {
+    async record(page: Page) {
+      last = page;
+      if (!proof) return;
+      mkdirSync(dir, { recursive: true });
+      const cdp = await page.context().newCDPSession(page);
+      cdp.on('Page.screencastFrame', ({ data, metadata, sessionId }) => {
+        const file = `${String(frames.length).padStart(5, '0')}.jpg`;
+        writeFileSync(join(dir, file), Buffer.from(data, 'base64'));
+        frames.push({ file, at: metadata.timestamp ?? Date.now() / 1000 });
+        void cdp.send('Page.screencastFrameAck', { sessionId }).catch(() => undefined);
+      });
+      await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 80 });
+    },
+    async finish() {
+      if (last && !last.isClosed()) {
+        const shot = info.outputPath('screenshot.png');
+        await last.screenshot({ path: shot }).catch(() => undefined);
+        await info
+          .attach('screenshot', { path: shot, contentType: 'image/png' })
+          .catch(() => undefined);
+      }
+      if (proof && frames.length > 0) {
+        await info.attach('video-frames', {
+          body: JSON.stringify({ dir, frames }),
+          contentType: 'application/json',
+        });
+      }
+    },
+  };
+}
+
+// --- the CLI and its MCP server ---
+
+/** A home for the CLI's notebooks and git's identity, shared by the app and the CLI. */
+function world() {
+  const root = dataDir();
+  const gitconfig = join(root, 'gitconfig');
+  writeFileSync(
+    gitconfig,
+    '[user]\n  name = Ryan on the Mac\n  email = ryan@example.invalid\n[commit]\n  gpgSign = false\n',
+  );
+  const app = { PENMOSS_HOME: join(root, 'penmoss'), GIT_CONFIG_GLOBAL: gitconfig };
+  const env = { ...process.env, ...app, GIT_CONFIG_NOSYSTEM: '1' };
+  const cli = (exe: string, args: readonly string[]) =>
+    spawnSync(exe, ['--penmoss-cli', ...args], { env, encoding: 'utf8', timeout: 90_000 });
+  return { app, env, cli };
+}
+
+/** Words of a shell command line as shellWord (local-agents.ts) writes them. */
+function shellWords(line: string): string[] {
+  const words: string[] = [];
+  for (const match of line.matchAll(/'((?:[^']|'\\'')*)'|(\S+)/g)) {
+    words.push(match[1] !== undefined ? match[1].replaceAll(`'\\''`, `'`) : match[2]!);
+  }
+  return words;
+}
+
+/** An MCP server an agent started: JSON-RPC over its stdin and stdout, kept running. */
+function mcpServer(words: readonly string[], env: NodeJS.ProcessEnv) {
+  const child = spawn(words[0]!, words.slice(1), { env, stdio: ['pipe', 'pipe', 'pipe'] });
+  children.push(child);
+  let out = '';
+  let err = '';
+  type Reply = { id?: number; result?: { tools?: unknown[] }; error?: unknown };
+  const replies = new Map<number, Reply>();
+  child.stdout.on('data', (chunk: Buffer) => {
+    out += chunk.toString('utf8');
+    let at;
+    while ((at = out.indexOf('\n')) !== -1) {
+      const line = out.slice(0, at).trim();
+      out = out.slice(at + 1);
+      if (!line) continue;
+      try {
+        const reply = JSON.parse(line) as Reply;
+        if (typeof reply.id === 'number') replies.set(reply.id, reply);
+      } catch {
+        // Not a reply.
+      }
+    }
+  });
+  child.stderr.on('data', (chunk: Buffer) => (err += chunk.toString('utf8')));
+  serverLogs.push({
+    name: `MCP server stderr (${words[0]!.includes('Penmoss CLI.app') ? 'CLI bundle' : 'old path'})`,
+    text: () => `exit ${child.exitCode ?? '-'}, signal ${child.signalCode ?? '-'}\n${err}`,
+  });
+  let id = 0;
+  const ask = async (method: string, params: unknown) => {
+    id += 1;
+    const asked = id;
+    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: asked, method, params })}\n`);
+    await expect
+      .poll(
+        // A crash ends it with a signal: exitCode stays null, signalCode says which.
+        () => replies.has(asked) || child.exitCode !== null || child.signalCode !== null,
+        { timeout: 60_000 },
+      )
+      .toBe(true);
+    const reply = replies.get(asked);
+    if (!reply) {
+      throw new Error(`The MCP server ended (${child.exitCode ?? child.signalCode}): ${err}`);
+    }
+    return reply;
+  };
+  return {
+    child,
+    stderr: () => err,
+    /** Why the server isn't running, for an assertion's message. */
+    ended: () => `exit ${child.exitCode}, signal ${child.signalCode}: ${err}`,
+    async start() {
+      const init = await ask('initialize', {
+        protocolVersion: '2025-06-18',
+        capabilities: {},
+        clientInfo: { name: 'packaged-cli.spec', version: '1' },
+      });
+      expect(init.error).toBeUndefined();
+      child.stdin.write(
+        `${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`,
+      );
+    },
+    async tools(): Promise<number> {
+      const listed = await ask('tools/list', {});
+      return listed.result?.tools?.length ?? 0;
+    },
+  };
+}
+
+/**
+ * A git notebook in the app, on a new bare repository the CLI bundle made the notebook in first,
+ * opened from the first-run screen's "Open a notebook you already have". The remote holds the
+ * notebook from the start, so the app makes the agents' copy from it (D52) without waiting for
+ * the app's own first push, which this spec isn't about.
+ */
+async function addNotebook(page: Page, w: ReturnType<typeof world>, name: string): Promise<void> {
+  const remote = bareRepository();
+  const seeded = w.cli(CLI_EXE, ['notebook', 'add', `file://${remote}`, '--name', name]);
+  expect(seeded.status, seeded.stderr).toBe(0);
+  await expect(page.getByTestId('first-run')).toBeVisible({ timeout: 30_000 });
+  await page.getByTestId('first-run-existing').click();
+  const form = page.getByTestId('git-add');
+  await form.getByTestId('git-add-remote').fill(`file://${remote}`);
+  await form.locator('button[type="submit"]').click();
+  await expect(page.locator('#app-sidebar').getByText(name, { exact: true }).first()).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
+const REPORTS = join(homedir(), 'Library', 'Logs', 'DiagnosticReports');
+/** The crash reports of Penmoss's helpers, by file name. */
+function helperCrashes(): string[] {
+  if (!existsSync(REPORTS)) return [];
+  return readdirSync(REPORTS).filter((name) => name.startsWith('Penmoss Helper'));
+}
+
+const attachText = (name: string, body: string) =>
+  test.info().attach(name, { body, contentType: 'text/plain' });
+
+/** Every Penmoss crash report (the app's and its helpers'), by file name. */
+function penmossCrashes(): string[] {
+  if (!existsSync(REPORTS)) return [];
+  return readdirSync(REPORTS).filter((name) => name.startsWith('Penmoss'));
+}
+
+/**
+ * Why the app at `pid` isn't serving its window, for a failure's message: whether it still runs,
+ * the crash reports since `before`, the head of the newest, and the end of the app's log.
+ */
+function whyGone(pid: number, before: ReadonlySet<string>): string {
+  const fresh = penmossCrashes().filter((name) => !before.has(name));
+  const newest = fresh
+    .map((name) => ({ name, at: statSync(join(REPORTS, name)).mtimeMs }))
+    .sort((a, b) => b.at - a.at)[0];
+  const head = newest ? readFileSync(join(REPORTS, newest.name), 'utf8').slice(0, 4_000) : '';
+  const log = test.info().outputPath('app.log');
+  const tail = existsSync(log) ? readFileSync(log, 'utf8').slice(-4_000) : '(no app log)';
+  return [
+    `Penmoss (pid ${pid}) ${alive(pid) ? 'still runs' : 'has ended'}.`,
+    `New crash reports: ${fresh.join(', ') || 'none'}`,
+    head,
+    `The app's log ends:\n${tail}`,
+  ].join('\n');
+}
+
+/**
+ * The app's main window showing `name` in its sidebar. A window the app makes again, or a
+ * connection that drops, is found again; an app that ends fails at once, saying why.
+ */
+async function mainWindowWith(
+  debugPort: number,
+  pid: number,
+  name: string,
+  before: ReadonlySet<string>,
+  current: { browser: Browser; page: Page },
+): Promise<{ browser: Browser; page: Page }> {
+  let found = current;
+  const closures: string[] = [];
+  const watch = (each: { browser: Browser; page: Page }) => {
+    const start = Date.now();
+    each.page.on('close', () => closures.push(`page closed after ${Date.now() - start} ms`));
+    each.browser.on('disconnected', () =>
+      closures.push(`DevTools disconnected after ${Date.now() - start} ms`),
+    );
+  };
+  watch(found);
+  try {
+    await expect(async () => {
+      if (!alive(pid)) throw new Error('the app ended');
+      if (found.page.isClosed() || !found.browser.isConnected()) {
+        await found.browser.close().catch(() => undefined);
+        found = await connect(debugPort);
+        watch(found);
+      }
+      await expect(
+        found.page.locator('#app-sidebar').getByText(name, { exact: true }).first(),
+      ).toBeVisible({ timeout: 5_000 });
+    }).toPass({ timeout: 60_000 });
+  } catch (error) {
+    const why = `${whyGone(pid, before)}\n${closures.join('\n')}`;
+    await attachText('why the reopened window went', why);
+    throw new Error(`The reopened app's window never showed ${name}:\n${why}`, { cause: error });
+  }
+  if (closures.length > 0) await attachText('windows found again', closures.join('\n'));
+  return found;
+}
+
+// --- the tests ---
+
+test('an MCP server added before this build still lets Penmoss open, and keeps serving', async () => {
+  test.setTimeout(300_000);
+  const w = world();
+  // An agent's clone, made by the CLI from the app's own binary, the old path.
+  const remote = bareRepository();
+  const added = w.cli(MAIN_EXE, [
+    'notebook',
+    'add',
+    `file://${remote}`,
+    '--name',
+    'old-agent',
+    '--agent',
+    'Old agent',
+  ]);
+  expect(added.status, added.stderr).toBe(0);
+  const server = mcpServer([MAIN_EXE, '--penmoss-cli', 'mcp', '--notebook', 'old-agent'], w.env);
+  await server.start();
+  expect(await server.tools()).toBeGreaterThan(20);
+  const cliPid = server.child.pid!;
+  await attachText(
+    'lsappinfo: the old-path MCP server',
+    registeredAs(cliPid)?.text ?? 'not registered',
+  );
+
+  // Penmoss → Quit Penmoss already happened: no app runs, only the server. Opening Penmoss
+  // starts the app, either at once or through the server's safety net (open -n).
+  expect(penmossApps().filter((each) => each.pid !== cliPid)).toEqual([]);
+  open(w.app, port());
+  let appPid = 0;
+  await expect
+    .poll(
+      () => {
+        appPid = penmossApps().find((each) => each.pid !== cliPid && alive(each.pid))?.pid ?? 0;
+        return appPid;
+      },
+      { timeout: 60_000 },
+    )
+    .toBeGreaterThan(0);
+  await expect.poll(() => windowsOnScreen(appPid), { timeout: 60_000 }).toBeGreaterThan(0);
+  await attachText(
+    'lsappinfo: after open -g',
+    registered()
+      .filter((each) => each.bundleId === APP_ID || each.bundleId === CLI_ID)
+      .map((each) => each.text)
+      .join('\n\n'),
+  );
+
+  // The server went on serving its agent throughout.
+  expect(server.child.exitCode, `The MCP server ended: ${server.ended()}`).toBe(null);
+  expect(await server.tools()).toBeGreaterThan(20);
+});
+
+test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while one runs', async () => {
+  test.setTimeout(480_000);
+  const w = world();
+  const shots = recorder();
+  const crashesBefore = new Set(helperCrashes());
+  const reportsBefore = new Set(penmossCrashes());
+
+  // AC8: the CLI bundle is signed with the app.
+  const verified = spawnSync('/usr/bin/codesign', ['--verify', '--deep', '--strict', APP], {
+    encoding: 'utf8',
+  });
+  expect(verified.status, verified.stderr).toBe(0);
+
+  // The CLI from its bundle: its version, its exit codes.
+  const version = w.cli(CLI_EXE, ['--version']);
+  expect(version.status, version.stderr).toBe(0);
+  expect(version.stdout).toMatch(/^penmoss \d+\.\d+\.\d+/);
+  expect(w.cli(CLI_EXE, ['notebook', 'status', 'nope']).status).toBe(4);
+
+  // AC5: the app's own script from before the CLI bundle, running this app's binary.
+  mkdirSync(dirname(SCRIPT), { recursive: true });
+  writeFileSync(SCRIPT, cliScript([MAIN_EXE, '--penmoss-cli']), { mode: 0o755 });
+
+  // Penmoss, opened as the Finder opens it, with a notebook.
+  const first = port();
+  open(w.app, first);
+  let { browser, page } = await connect(first);
+  await shots.record(page);
+  await addNotebook(page, w, 'Notes');
+
+  // Settings → Agents: as it started, the app rewrote its old script to run the CLI bundle
+  // (AC5), and the command without the script names the bundle too (AC4).
+  await go(page, '/settings/agents');
+  const cliCard = page.getByTestId('git-cli');
+  await expect(cliCard).toHaveAttribute('data-state', 'installed', { timeout: 30_000 });
+  expect(readFileSync(SCRIPT, 'utf8')).toBe(cliScript([CLI_EXE, '--penmoss-cli']));
+  await cliCard.locator('summary', { hasText: 'Without the command' }).click();
+  const direct = cliCard.getByTestId('git-cli-direct');
+  await direct.scrollIntoViewIfNeeded();
+  await expect(direct).toContainText(`'${CLI_EXE}' --penmoss-cli`);
+  await page.waitForTimeout(2_000);
+
+  // The notebook's automatic agent: claude mcp add and the Codex lines name the CLI bundle.
+  const row = page.getByTestId('agents-notebook-row').filter({ hasText: 'Notes' });
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  const href = (await row.getAttribute('href'))!;
+  const automatic = page.locator('[data-testid="git-local-agent"][data-name="notes-agent"]');
+  await expect(async () => {
+    // The list is read when the page opens: open it again until the app has made the copy.
+    await go(page, '/settings/git-notebooks');
+    await go(page, href);
+    await expect(automatic).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 90_000 });
+  const claude = automatic.getByTestId('git-local-agent-claude').locator('code');
+  await claude.scrollIntoViewIfNeeded();
+  const command = (await claude.textContent())!;
+  expect(command).toContain(`'${CLI_EXE}' --penmoss-cli mcp --notebook notes-agent`);
+  await expect(automatic.getByTestId('git-local-agent-codex')).toContainText(
+    `command = "${CLI_EXE}"`,
+  );
+  await page.waitForTimeout(2_000);
+
+  // The agent runs the command it was given: the MCP server answers, and LaunchServices knows it
+  // only as the CLI, never as Penmoss.
+  const server = mcpServer(shellWords(command.split(' -- ')[1]!), w.env);
+  await server.start();
+  expect(await server.tools()).toBeGreaterThan(20);
+  const cliPid = server.child.pid!;
+  await page.waitForTimeout(2_000);
+  const asCli = registeredAs(cliPid);
+  await attachText('lsappinfo: the MCP server', asCli?.text ?? 'not registered');
+  const plistId = execFileSync(
+    '/usr/bin/plutil',
+    [
+      '-extract',
+      'CFBundleIdentifier',
+      'raw',
+      '-o',
+      '-',
+      join(dirname(dirname(CLI_EXE)), 'Info.plist'),
+    ],
+    { encoding: 'utf8' },
+  ).trim();
+  expect(plistId, "the packed CLI bundle's Info.plist").toBe(CLI_ID);
+  expect(asCli?.bundleId ?? CLI_ID, `lsappinfo for the MCP server:\n${asCli?.text}`).toBe(CLI_ID);
+  const apps = penmossApps();
+  expect(apps.map((each) => each.pid)).not.toContain(cliPid);
+  expect(apps).toHaveLength(1);
+  const firstPid = apps[0]!.pid;
+
+  // Quit Penmoss; the server keeps running. Opening it again starts the app, to its window.
+  await browser.close().catch(() => undefined);
+  await quitApp(firstPid);
+  expect(server.child.exitCode, `The MCP server ended with the app: ${server.ended()}`).toBe(null);
+  // AC5: a script for another copy of Penmoss, which this launch must leave as it is.
+  const another = cliScript([
+    '/Applications/Other Penmoss.app/Contents/MacOS/Penmoss',
+    '--penmoss-cli',
+  ]);
+  writeFileSync(SCRIPT, another, { mode: 0o755 });
+  const again = port();
+  open(w.app, again);
+  ({ browser, page } = await connect(again));
+  const reopened = penmossApps();
+  expect(reopened).toHaveLength(1);
+  const appPid = reopened[0]!.pid;
+  expect(appPid).not.toBe(firstPid);
+  await expect.poll(() => windowsOnScreen(appPid), { timeout: 60_000 }).toBeGreaterThan(0);
+  ({ browser, page } = await mainWindowWith(again, appPid, 'Notes', reportsBefore, {
+    browser,
+    page,
+  }));
+  await shots.record(page);
+
+  // Opening it while it runs brings its window forward, and starts no second app.
+  open(w.app, port());
+  await page.waitForTimeout(3_000);
+  expect(alive(appPid), whyGone(appPid, reportsBefore)).toBe(true);
+  expect(penmossApps().map((each) => each.pid)).toEqual([appPid]);
+  expect(windowsOnScreen(appPid)).toBeGreaterThan(0);
+  const recorded = page;
+  ({ browser, page } = await mainWindowWith(again, appPid, 'Notes', reportsBefore, {
+    browser,
+    page,
+  }));
+  if (page !== recorded) await shots.record(page);
+  // AC3: the one app's main window, in front with its notebook.
+  await page.waitForTimeout(2_000);
+  await attachText(
+    'lsappinfo: at the end',
+    registered()
+      .filter((each) => each.bundleId === APP_ID || each.bundleId === CLI_ID)
+      .map((each) => each.text)
+      .join('\n\n'),
+  );
+
+  // The server still answers its agent.
+  expect(await server.tools()).toBeGreaterThan(20);
+
+  // AC5 after the relaunch: the other copy's script is unchanged, and shown as stale.
+  await go(page, '/settings/agents');
+  const card = page.getByTestId('git-cli');
+  await expect(card).toHaveAttribute('data-state', 'stale', { timeout: 30_000 });
+  await card.scrollIntoViewIfNeeded();
+  await expect(card.getByTestId('git-cli-state')).toContainText('runs another copy of Penmoss');
+  expect(readFileSync(SCRIPT, 'utf8')).toBe(another);
+  await page.waitForTimeout(2_000);
+  // Someone else's file is shown as theirs, and left as it is.
+  const theirs = '#!/bin/sh\necho someone else\n';
+  writeFileSync(SCRIPT, theirs, { mode: 0o755 });
+  await go(page, '/settings/git-notebooks');
+  await go(page, '/settings/agents');
+  await expect(card).toHaveAttribute('data-state', 'other', { timeout: 30_000 });
+  await card.scrollIntoViewIfNeeded();
+  expect(readFileSync(SCRIPT, 'utf8')).toBe(theirs);
+  await page.waitForTimeout(2_000);
+
+  // Running the CLI bundle crashed none of its helpers (they'd fill DiagnosticReports).
+  await page.waitForTimeout(3_000);
+  expect(helperCrashes().filter((name) => !crashesBefore.has(name))).toEqual([]);
+
+  // The command, on screen at the end.
+  await go(page, href);
+  // The app opened again: its page is a new one, so the locator is made again from it.
+  const shown = page.locator('[data-testid="git-local-agent"][data-name="notes-agent"]');
+  await expect(shown).toBeVisible({ timeout: 30_000 });
+  await shown.getByTestId('git-local-agent-claude').scrollIntoViewIfNeeded();
+  await expect(shown.getByTestId('git-local-agent-claude')).toContainText('Penmoss CLI.app');
+  await page.waitForTimeout(2_000);
+  await shots.finish();
+  await browser.close().catch(() => undefined);
+});

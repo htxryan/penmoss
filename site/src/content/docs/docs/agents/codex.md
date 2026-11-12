@@ -16,7 +16,7 @@ You need Penmoss on your Mac with the notebook added, and the [Codex CLI](https:
 
    ```toml
    [mcp_servers."penmoss-notes-codex"]
-   command = "/Applications/Penmoss.app/Contents/MacOS/Penmoss"
+   command = "/Applications/Penmoss.app/Contents/Helpers/Penmoss CLI.app/Contents/MacOS/Penmoss"
    args = ["--penmoss-cli", "mcp", "--notebook", "notes-codex"]
    ```
 
