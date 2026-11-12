@@ -65,7 +65,7 @@ tasks:
       # exist only there. CI's Check job runs on Linux, so these run in `task check` on a Mac.
       - '{{if eq OS "darwin"}}node --test scripts/vm/desktop-test.test.mjs{{else}}echo "vm:test: skipped on {{OS}}: the test VM runs only on macOS"{{end}}'
   ci:lint:
-    desc: "Where CI's jobs run (A1235): every runs-on is ubuntu-latest, ubuntu-24.04 or the self-hosted Mac labels, never a larger runner or an expression, and no fork's pull request reaches a Mac job; then actionlint, pinned (scripts/actionlint.sh)"
+    desc: "Where CI's jobs run (A1235, A1348): every runs-on is ubuntu-latest, ubuntu-24.04, macos-latest or the self-hosted Mac labels, never a larger runner or an expression, and no fork's pull request reaches a Mac job; then actionlint, pinned (scripts/actionlint.sh)"
     cmds:
       - node --test .github/scripts/runner-policy.test.mjs
       - node .github/scripts/runner-policy.mjs

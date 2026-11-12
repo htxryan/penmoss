@@ -1,12 +1,12 @@
 name: Release
 
 # P3 (A1189): a stable release, from the tag `task release -- X.Y.Z` pushes. It builds a signed,
-# notarised universal dmg and the release-signed APK on Ryan's Mac runners (A406; signing stays
-# there under A1235), then creates a draft release vX.Y.Z with Penmoss.dmg, Penmoss.apk,
+# notarised universal dmg on GitHub's hosted Mac and the release-signed APK on a hosted Linux
+# runner (A406, A1348), then creates a draft release vX.Y.Z with Penmoss.dmg, Penmoss.apk,
 # penmoss-mac-X.Y.Z.zip, SHA256SUMS.txt and latest-mac.yml, and notes generated since the
 # previous stable tag. Ryan edits the notes and publishes it, which makes it Latest. A tag with
 # an -rc.N suffix makes a draft prerelease, for rehearsals (R5). Pull requests never run this
-# workflow, so its self-hosted jobs need no fork guard (A1183; workflow-guard.test.mjs).
+# workflow, and none of its jobs runs on a self-hosted runner.
 on:
   push:
     tags: ['v*']
@@ -27,7 +27,7 @@ env:
 jobs:
   info:
     name: Version, build number and the previous stable tag
-    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
@@ -48,9 +48,6 @@ jobs:
         with:
           node-version-file: .node-version
 
-      - name: The GitHub CLI is installed for the Mac runners' account
-        run: command -v gh > /dev/null || { echo "::error::Install gh for the penmoss-ci account (brew install gh)"; exit 1; }
-
       # The version is the tag's; the build number (CFBundleVersion, Android's versionCode) is
       # the newest ci.yml run's plus the offset, so a stable APK installs over every alpha APK
       # published so far and the next alpha installs over it (P5, P8). A tag that is not
@@ -70,8 +67,8 @@ jobs:
   mac:
     name: Signed, notarised universal dmg
     needs: info
-    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
-    timeout-minutes: 45
+    runs-on: macos-latest
+    timeout-minutes: 60
     permissions:
       contents: read
     # The Developer ID and the notary key (A406). Ryan lets this environment deploy from tags
@@ -121,6 +118,12 @@ jobs:
           VERSION: ${{ needs.info.outputs.version }}
         run: bash .github/scripts/mac-check.sh
 
+      - name: Cache the pinned model
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/Library/Caches/penmoss-ci/models
+          key: penmoss-models-${{ hashFiles('packages/embed/src/manifest.ts') }}
+
       - name: Search by meaning in the packaged app
         run: |
           shopt -s nullglob
@@ -139,16 +142,14 @@ jobs:
           compression-level: 0
           retention-days: 7
 
-      - name: Remove the notarisation key and empty the checkout
+      - name: Remove the notarisation key
         if: always()
-        run: |
-          rm -f "$RUNNER_TEMP/penmoss-notary.p8"
-          if [ -f .github/scripts/mac-runner.sh ]; then bash .github/scripts/mac-runner.sh clean; fi
+        run: rm -f "$RUNNER_TEMP/penmoss-notary.p8"
 
   android:
     name: Release-signed APK
     needs: info
-    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
@@ -169,30 +170,8 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # As in ci.yml's android job: the command-line tools (checked against Google's SHA-256),
-      # platform 37 and build tools 37.0.0 in this runner's tool cache.
-      - name: Android SDK platform 37 and build tools (into the runner's tool cache)
-        env:
-          TOOLS_ZIP: commandlinetools-mac_arm64-16111833_latest.zip
-          TOOLS_SHA256: 58da8f215781cc0208743e88b65ae259780c55e7eb40e50373d377cf369232d6
-        run: |
-          sdk="$RUNNER_TOOL_CACHE/android-sdk"
-          tools="$sdk/cmdline-tools/16111833"
-          if [ ! -x "$tools/bin/sdkmanager" ]; then
-            curl -fsSL --retry 3 -o "$RUNNER_TEMP/$TOOLS_ZIP" "https://dl.google.com/android/repository/$TOOLS_ZIP"
-            echo "$TOOLS_SHA256  $RUNNER_TEMP/$TOOLS_ZIP" | shasum -a 256 -c -
-            rm -rf "$RUNNER_TEMP/cmdline-tools" "$tools"
-            unzip -q "$RUNNER_TEMP/$TOOLS_ZIP" -d "$RUNNER_TEMP"
-            mkdir -p "$sdk/cmdline-tools"
-            mv "$RUNNER_TEMP/cmdline-tools" "$tools"
-          fi
-          yes | "$tools/bin/sdkmanager" --sdk_root="$sdk" "platforms;android-37.0" "build-tools;37.0.0" > /dev/null
-          {
-            echo "ANDROID_HOME=$sdk"
-            echo "ANDROID_SDK_ROOT=$sdk"
-            echo "ANDROID_USER_HOME=$PENMOSS_CACHE/android-user-home"
-            echo "JAVA_TOOL_OPTIONS=-Duser.home=$PENMOSS_CACHE/java-home"
-          } >> "$GITHUB_ENV"
+      # The command-line tools, platform 37 and build tools, cached (.github/actions/android-sdk).
+      - uses: ./.github/actions/android-sdk
 
       - name: The public APK, release-signed with the sideload key (P8)
         env:
@@ -220,16 +199,16 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Remove the sideload key, stop Gradle and empty the checkout
+      - name: Remove the sideload key and stop Gradle
         if: always()
         run: |
           rm -f "$RUNNER_TEMP/sideload.jks"
-          if [ -f .github/scripts/mac-runner.sh ]; then bash .github/scripts/mac-runner.sh clean; fi
+          if [ -x apps/android/gradlew ]; then apps/android/gradlew -p apps/android --stop; fi
 
   draft:
     name: Create the draft release
     needs: [info, mac, android]
-    runs-on: [self-hosted, macOS, ARM64, penmoss-mac-general]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: write
@@ -242,9 +221,6 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .node-version
-
-      - name: The GitHub CLI is installed for the Mac runners' account
-        run: command -v gh > /dev/null || { echo "::error::Install gh for the penmoss-ci account (brew install gh)"; exit 1; }
 
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:

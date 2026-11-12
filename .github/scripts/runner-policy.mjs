@@ -1,12 +1,13 @@
 #!/usr/bin/env node
-// Where CI's jobs may run (A1235, which supersedes A702 and amends A1218). The repository is
-// public, so GitHub's standard hosted Linux runners cost nothing; its larger runners are billed
-// even for a public repository, and Ryan's self-hosted Macs must never run a fork's code. This
-// fails on:
+// Where CI's jobs may run (A1235 and A1348, which supersede A702 and amend A1218). The
+// repository is public, so GitHub's standard hosted Linux and Mac runners cost nothing; its larger
+// runners are billed even for a public repository, and Ryan's self-hosted Macs must never run a
+// fork's code. This fails on:
 //
-// - a `runs-on` that is neither a standard hosted label (ubuntu-latest, ubuntu-24.04) nor
-//   self-hosted Mac labels: a larger runner (`ubuntu-latest-4-cores`, any custom name), a runner
-//   group, macOS or Windows hosted runners, or an unknown self-hosted label;
+// - a `runs-on` that is neither a standard hosted label (ubuntu-latest, ubuntu-24.04,
+//   macos-latest) nor self-hosted Mac labels: a larger runner (`ubuntu-latest-4-cores`,
+//   `macos-latest-xlarge`, any custom name), a runner group, Windows or other hosted images, or
+//   an unknown self-hosted label;
 // - a `runs-on` given as an expression, which could turn into any of those at run time;
 // - a self-hosted job, in a workflow that runs on pull requests, whose `if:` doesn't start with
 //   the fork guard (P10, A1183), so a fork's pull request could reach a Mac.
@@ -19,8 +20,8 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { FORK_GUARD, parseWorkflow } from './workflow-guard.mjs';
 
-/** GitHub's standard hosted runners, free for a public repository. */
-export const STANDARD_HOSTED = ['ubuntu-latest', 'ubuntu-24.04'];
+/** GitHub's standard hosted runners, free for a public repository (macos-latest: Apple Silicon). */
+export const STANDARD_HOSTED = ['ubuntu-latest', 'ubuntu-24.04', 'macos-latest'];
 
 /** The labels of Ryan's self-hosted Macs (docs/ci.md §2, .github/actionlint.yaml). */
 export const MAC_LABELS = [
