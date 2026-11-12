@@ -1,14 +1,18 @@
 /**
  * The path classifier (Platform scope in the factory plan): which platforms a
- * set of changed paths can affect. The harness gate and CI's changes job both
- * use it, so they never disagree. It errs wide: a path no rule recognises
- * puts all three platforms in scope.
+ * set of changed paths can affect, and so which need product proof. The
+ * harness gate uses it; CI's `pick` job (ci.yml) has its own path rules, which
+ * still run a test-only change's tests. It errs wide: a path no rule
+ * recognises puts all three platforms in scope. A path only tests read, and
+ * the root `scripts/`, change nothing that ships, so they are CI's alone
+ * (A-NEW-2).
  */
 import { PLATFORMS, type Platform } from './config.ts';
 
 /**
  * - `product`: at least one platform needs proof.
- * - `ci-only`: factory and CI unit tests plus the full CI run, no product proof.
+ * - `ci-only`: the gate's `task check` plus the full CI run, no product proof: CI, the
+ *   factory, the site, the root `scripts/`, and tests alone.
  * - `docs-only`: lint only, no proof.
  */
 export type ScopeKind = 'product' | 'ci-only' | 'docs-only';
@@ -38,6 +42,15 @@ const ROOT_CONFIG = new Set([
 /** A directory whose files tests read. */
 const TEST_DATA = /(^|\/)(test|tests|e2e|fixtures|__fixtures__)\//;
 
+/**
+ * A path only tests read: anything in a test directory (its fixtures and helpers too), or a
+ * JavaScript or TypeScript test file wherever it is. Nothing in one ships (A-NEW-2).
+ */
+const TEST_ONLY = /(^|\/)(test|tests|e2e|androidTest|__tests__)\/|\.(test|spec)\.[cm]?[jt]sx?$/;
+
+/** The root `scripts/` a shipped app's build runs: the web app's Vite config reads the ports. */
+const BUILD_SCRIPTS = new Set(['scripts/ports.mjs', 'scripts/ports.d.mts']);
+
 function under(path: string, dir: string): boolean {
   return path.startsWith(`${dir}/`);
 }
@@ -47,6 +60,8 @@ export function ruleFor(path: string): Rule {
   const p = path.replace(/^\.\//, '');
   // Markdown is prose anywhere, except as test input: Penmoss's fixtures are .md files.
   if (p.endsWith('.md') && !TEST_DATA.test(p)) return 'docs';
+  // A test, a fixture or a spec ships in no app: CI and the gate run it, with no product proof.
+  if (TEST_ONLY.test(p)) return 'ci';
   if (ROOT_CONFIG.has(p) || under(p, 'packages')) return 'all';
   // The Mac app bundles the web build, and the Android editor imports the web app's styles.
   if (under(p, 'apps/web')) return 'all';
@@ -57,6 +72,9 @@ export function ruleFor(path: string): Rule {
   if (under(p, '.github') || under(p, 'tools/factory')) return 'ci';
   // The marketing site has its own CI job and no client in it.
   if (under(p, 'site')) return 'ci';
+  // The root scripts are dev and CI tooling (the gate's slots, the test VM, the brand generator,
+  // whose output is committed under the apps it changes), except what a build runs.
+  if (under(p, 'scripts')) return BUILD_SCRIPTS.has(p) ? 'all' : 'ci';
   if (under(p, 'docs') || under(p, 'tasks')) return 'docs';
   return 'all';
 }
@@ -101,7 +119,7 @@ export const SCOPE_RULES: readonly {
 }[] = [
   {
     paths:
-      '`packages/`, `apps/web/`, `apps/relay/`, root config (`package.json`, `pnpm-lock.yaml`, `Taskfile.yml`…) and any path no rule knows',
+      '`packages/`, `apps/web/`, `apps/relay/`, root config (`package.json`, `pnpm-lock.yaml`, `Taskfile.yml`…), `scripts/ports.mjs` (the web build reads it) and any path no rule knows',
     example: 'packages/core/src/settings.ts',
     platforms: ['web', 'mac', 'android'],
     gate: 'web, Mac and Android',
@@ -119,10 +137,17 @@ export const SCOPE_RULES: readonly {
     gate: 'Android',
   },
   {
-    paths: '`site/`, `.github/`, `tools/factory/`',
+    paths: '`site/`, `.github/`, `tools/factory/`, the rest of the root `scripts/`',
     example: 'tools/factory/src/run.ts',
     platforms: [],
     gate: 'no product proof (the gate runs `task check`)',
+  },
+  {
+    paths:
+      'Tests anywhere: files in a `test/`, `tests/`, `e2e/`, `androidTest/` or `__tests__/` directory (fixtures too), and `*.test.*` or `*.spec.*` files',
+    example: 'apps/web/test/e2e/notes.spec.ts',
+    platforms: [],
+    gate: 'no product proof of their own (the gate runs `task check`, and CI runs them)',
   },
   {
     paths: 'Markdown outside test data, and `docs/`',
