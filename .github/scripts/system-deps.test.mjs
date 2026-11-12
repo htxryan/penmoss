@@ -149,4 +149,17 @@ describe('ci.yml', () => {
     const deps = desktop.indexOf('sh .github/scripts/system-deps.sh');
     assert.ok(cache > 0 && electron > cache && deps > electron, 'cache, then Electron, then deps');
   });
+
+  it('keys that cache on the runner image, which an expression only sees through a step', () => {
+    // `env.ImageOS` is empty in an expression (the runner sets it, not the workflow), so the
+    // first run's key was `debs-desktop-Linux--`, the same for every image.
+    assert.doesNotMatch(ci, /env\.Image(OS|Version)/);
+    const desktop = ci.slice(ci.indexOf('\n  desktop:'), ci.indexOf('\n  android:'));
+    assert.match(desktop, /\$\{ImageOS:\?\}/);
+    assert.match(desktop, /\$\{ImageVersion:\?\}/);
+    assert.match(
+      desktop,
+      /key: debs-desktop-\$\{\{ runner\.os \}\}-\$\{\{ steps\.image\.outputs\.os \}\}-\$\{\{ steps\.image\.outputs\.version \}\}/,
+    );
+  });
 });

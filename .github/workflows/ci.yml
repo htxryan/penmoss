@@ -344,12 +344,17 @@ jobs:
 
       # xdotool's packages (the image has no xdotool), so the job needs no apt mirror once
       # they're here (PEN-114). A new image that can't take them goes to apt and keeps its own.
+      # ImageOS and ImageVersion are the runner's own variables, not the workflow's `env`, so an
+      # expression can't read them: a step passes them on.
+      - name: The runner image
+        id: image
+        run: echo "os=${ImageOS:?}" >> "$GITHUB_OUTPUT" && echo "version=${ImageVersion:?}" >> "$GITHUB_OUTPUT"
       - name: Cache the packages of the tools the job installs
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/penmoss-ci/debs
-          key: debs-desktop-${{ runner.os }}-${{ env.ImageOS }}-${{ env.ImageVersion }}
-          restore-keys: debs-desktop-${{ runner.os }}-${{ env.ImageOS }}-
+          key: debs-desktop-${{ runner.os }}-${{ steps.image.outputs.os }}-${{ steps.image.outputs.version }}
+          restore-keys: debs-desktop-${{ runner.os }}-${{ steps.image.outputs.os }}-
 
       # Electron downloads its binary when first run (pnpm runs no install scripts); fetched
       # now, from the cached download, so system-deps.sh can check the libraries it loads and
