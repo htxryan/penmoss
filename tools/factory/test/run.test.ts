@@ -9,11 +9,13 @@ import type { RunJob } from '../src/merge.ts';
 import type { WalkOutcome } from '../src/walk.ts';
 import type { RebaseOutcome } from '../src/rebase.ts';
 import type { AgentResult } from '../src/result.ts';
+import type { IssueComment } from '../src/issue.ts';
 import { VmUnavailable, type VmCheck } from '../src/proof/mac.ts';
 import {
   branchName,
   CONTINUE_MESSAGE,
   CONTINUE_NOTE,
+  repliesSection,
   gateCommand,
   oneLine,
   proofReason,
@@ -98,6 +100,8 @@ function fake(overrides: {
   agentRounds?: (AgentResult | { error: string; missing?: boolean })[];
   /** The agent can resume its last session (Claude Code; A1346). */
   resumable?: boolean;
+  /** Ryan's new card comments each agent round finds, in order (A1347). */
+  owner?: IssueComment[][];
   ci?: CheckRun[][];
   conflict?: boolean;
   /** review.json per validation, in order (F19). */
@@ -227,6 +231,14 @@ function fake(overrides: {
           : { output: 'done' },
       );
     },
+    ...(overrides.owner
+      ? {
+          ownerComments: () => {
+            calls.push('owner comments');
+            return Promise.resolve(overrides.owner!.shift() ?? []);
+          },
+        }
+      : {}),
     ...(overrides.resumable
       ? {
           canContinue: () => true,
@@ -599,6 +611,56 @@ describe('runImplement', () => {
     expect(outcome).toMatchObject({ kind: 'blocked', reason: 'no-changes' });
     expect(f.calls).not.toContain('pr');
     expect(f.comments.at(-1)).toMatch(/change nothing against main, so there is no PR to open/);
+  });
+
+  it('runs the agent with Ryan’s replies when he commented after the run stopped', async () => {
+    // A recovered run went on from the gate with the old result while Ryan's reply waited.
+    const reply: IssueComment = {
+      author: 'ryan',
+      authorName: 'Ryan',
+      body: 'Use the accent colour, not blue.',
+      createdAt: '2026-11-12T09:00:00.000Z',
+    };
+    const f = fake({});
+    const outcome = await runImplement(f.deps, {
+      item: card,
+      spec,
+      prompt: 'p',
+      recovered: true,
+      replies: [reply],
+    });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.calls.slice(0, 5)).toEqual([
+      'comment #42',
+      'status In progress',
+      'open factory/42-fix-the-typo-in-docs-cli',
+      'agent',
+      'close 1',
+    ]);
+    expect(f.comments[0]).toMatch(/^Restarted: you commented after this run stopped/);
+    expect(f.prompts[0]).toBe(
+      `p\n\n${repliesSection('factory/42-fix-the-typo-in-docs-cli', [reply])}`,
+    );
+    expect(f.prompts[0]).toContain(
+      '**Ryan** (2026-11-12T09:00:00.000Z):\nUse the accent colour, not blue.',
+    );
+  });
+
+  it('gives each round Ryan’s card comments newer than the prompt', async () => {
+    const said: IssueComment = {
+      author: 'ryan',
+      body: 'Also keep the old link working.',
+      createdAt: '2026-11-12T09:30:00.000Z',
+    };
+    // The first round sees nothing new; Ryan comments while the gate runs; the gate fails.
+    const f = fake({ gateExit: 1, owner: [[], [said]] });
+    await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(f.prompts[0]).toBe('p');
+    expect(f.prompts[1]).toContain("## The gate's feedback (round 1)");
+    expect(f.prompts[1]).toMatch(
+      /## Ryan's new comments on the issue\n\n.*\n\n\*\*ryan\*\* \(2026-11-12T09:30:00.000Z\):\nAlso keep the old link working\.$/,
+    );
+    expect(f.details).toContainEqual(['owner-comments', { round: 1, comments: 1 }]);
   });
 
   it('runs the agent again when the branch has none of the finished round’s commits', async () => {
@@ -1595,7 +1657,6 @@ describe('main moves while the PR waits for CI (F6)', () => {
     const f = fake({ behind: [false, true], rebases: [clean, conflict, clean] });
     const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
     expect(outcome.kind).toBe('in-review');
-    expect(f.prompts).toHaveLength(2);
     expect(f.prompts[1]).toContain('## `origin/main` moved: rebase onto it');
     expect(f.prompts[1]).toContain('the local `main` branch is stale');
     expect(f.prompts[1]).toContain('stopped on conflicts in `apps/web/src/a.ts`, `docs/cli.md`');

@@ -88,6 +88,7 @@ import {
 } from './publish.ts';
 import { parseAgentResult, RESULT_PATH } from './result.ts';
 import type { RunDeps, RunEvent, RunSandbox } from './run.ts';
+import type { IssueComment } from './issue.ts';
 import { makeOwnDirs, sandboxSpec, seatbeltProvider, withJavaHome } from './sandbox.ts';
 import { ANDROID_WALK_CLASS, MAC_WALK_SPEC, WALK_SHOT, walkFile, walkTail } from './walk.ts';
 import type { Secrets } from './secrets.ts';
@@ -470,6 +471,8 @@ export interface HostOptions {
   readonly log: (line: string) => void;
   /** What the run waits for (the test VM), for the daemon's status.json (F10). */
   readonly waitingFor?: (reason: string | null) => void;
+  /** Ryan's card comments the run's prompt doesn't hold yet (RunDeps.ownerComments). */
+  readonly ownerComments?: () => Promise<readonly IssueComment[]>;
 }
 
 /** The host's RunDeps, plus the commit last pushed to a branch (a review round replies with it). */
@@ -795,6 +798,7 @@ export function hostDeps(options: HostOptions): HostDeps {
     },
     macVmCheck: (handle) => checkMacVm(exec, config, handle.worktreePath),
     waitingFor: (reason) => options.waitingFor?.(reason),
+    ...(options.ownerComments ? { ownerComments: options.ownerComments } : {}),
     walk: async (handle, platform, signal) => {
       // The session wrote the walkthrough; the host runs it where the app runs (walk.ts).
       const file = walkFile(platform);

@@ -55,6 +55,7 @@ import {
   type Wanted,
 } from './carry.ts';
 import type { AgentResult } from './result.ts';
+import type { IssueComment } from './issue.ts';
 import { formatNote, parseReleaseNote } from '../../../.github/scripts/release-note.mjs';
 import type { WalkOutcome, WalkPlatform } from './walk.ts';
 
@@ -63,6 +64,7 @@ export type RunEvent =
   | 'agent-started'
   | 'agent-continued'
   | 'agent-finished'
+  | 'owner-comments'
   | 'needs-info'
   | 'failed'
   | 'gate-passed'
@@ -123,6 +125,12 @@ export interface RunDeps {
   canContinue?(sandbox: RunSandbox): boolean;
   /** Continues the sandbox's last agent session with `message`; resolves as `runAgent` does. */
   continueAgent?(sandbox: RunSandbox, message: string): Promise<{ readonly output: string } | void>;
+  /**
+   * Ryan's comments on the run's card that its prompt doesn't hold: newer than the issue the
+   * prompt was built from, oldest first, the factory's own left out (A1347). Each agent round
+   * gets them, so what he says mid-run lands on the next round.
+   */
+  ownerComments?(): Promise<readonly IssueComment[]>;
   /** Keeps a file in the run's folder (`runs/<run>/<name>`), such as the gate's whole output. */
   keep?(name: string, text: string): void;
   /** The last proof run's output for a platform (`runs/<run>/proof-<platform>.log`), if kept. */
@@ -259,6 +267,11 @@ export interface RunInput {
    * than running the agent again.
    */
   readonly resume?: { readonly run: string; readonly result: AgentResult };
+  /**
+   * A recovered run whose agent had finished, and Ryan's comments on the card since it did
+   * (A1347): the agent runs again with them, rather than the run going on from the gate.
+   */
+  readonly replies?: readonly IssueComment[];
 }
 
 export type RunOutcome =
@@ -338,6 +351,23 @@ export async function runAgentPatiently(
   }
 }
 
+/** Ryan's comments as the issue's text shows them: his words, as they are (R14). */
+function ownerCommentLines(comments: readonly IssueComment[]): string {
+  return comments
+    .map((c) => `**${c.authorName ?? c.author}** (${c.createdAt}):\n${c.body}`)
+    .join('\n\n');
+}
+
+/** Ryan's card comments that arrived while the run went on, for the next round (A1347). */
+export function ownerCommentsSection(comments: readonly IssueComment[]): string {
+  return `## Ryan's new comments on the issue\n\nRyan, the repository's owner, commented on the issue after this run read it. His comments are instructions, like the issue's; take them into account in this round:\n\n${ownerCommentLines(comments)}`;
+}
+
+/** Ryan's replies after a run whose agent had finished stopped (A1347), for its next round. */
+export function repliesSection(branch: string, comments: readonly IssueComment[]): string {
+  return `## Ryan's reply after the run stopped\n\nThis run stopped after its agent had finished, and Ryan, the repository's owner, commented on the issue since. His comments are instructions, like the issue's:\n\n${ownerCommentLines(comments)}\n\nThe earlier work is committed on \`${branch}\`: build on it, do what he asks, commit, and write \`.factory/result.json\` again. ${STALE_MAIN}`;
+}
+
 /** What a session that ended without `result.json` is told when it is continued (A1346). */
 export const CONTINUE_MESSAGE =
   'Your session ended before you wrote `.factory/result.json`, so the factory has nothing to check yet. Continue the task from where you stopped, and write `.factory/result.json` when you are done, as the prompt says.';
@@ -355,13 +385,26 @@ export const CONTINUE_NOTE = `## The last session ended early\n\nA session on th
 export async function runAndRead(
   deps: Pick<
     RunDeps,
-    'runAgent' | 'canContinue' | 'continueAgent' | 'readResult' | 'now' | 'sleep' | 'log'
+    | 'runAgent'
+    | 'canContinue'
+    | 'continueAgent'
+    | 'ownerComments'
+    | 'readResult'
+    | 'now'
+    | 'sleep'
+    | 'log'
   > &
     Partial<Pick<RunDeps, 'waitingFor'>>,
   sandbox: RunSandbox,
   prompt: string,
   at: Readonly<Record<string, unknown>> = {},
 ): Promise<ResultRead> {
+  // What Ryan said on the card since the prompt was built goes with every round (A1347).
+  const said = deps.ownerComments ? await deps.ownerComments().catch(() => []) : [];
+  if (said.length > 0) {
+    deps.log('owner-comments', { ...at, comments: said.length });
+    prompt = `${prompt}\n\n${ownerCommentsSection(said)}`;
+  }
   await runAgentPatiently(deps, sandbox, prompt);
   const read = await deps.readResult(sandbox);
   if (read.ok || !read.missing) return read;
@@ -647,9 +690,11 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
   // Claim: the comment first, so a crash after it is recoverable from GitHub (the source of truth).
   const how = resumed
     ? `Restarted: this run stopped after its agent had finished (its work is committed on the branch), so it goes on from the gate rather than running the agent again (R12). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.`
-    : input.recovered
-      ? `Restarted: this run stopped before it finished (the factory's daemon stopped, or Blocked paused it and has been cleared), so it runs again on the same branch (R12). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.`
-      : `Started: ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}, implementing straight away${spec.planSkip ? ' (`plan:skip`)' : ''}.`;
+    : input.recovered && input.replies?.length
+      ? `Restarted: you commented after this run stopped, so its agent runs again on the same branch with your ${input.replies.length === 1 ? 'comment' : `${input.replies.length} comments`}, before the gate (R12). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.`
+      : input.recovered
+        ? `Restarted: this run stopped before it finished (the factory's daemon stopped, or Blocked paused it and has been cleared), so it runs again on the same branch (R12). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.`
+        : `Started: ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}, implementing straight away${spec.planSkip ? ' (`plan:skip`)' : ''}.`;
   await deps.comment(
     item.number,
     `${how} Scope: ${spec.platforms?.join(', ') ?? 'decided by the path classifier'}.\n\n${marker('claim')}`,
@@ -657,7 +702,11 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
   await deps.setStatus(item, config.status.working);
   deps.log('claimed', { issue: item.number });
 
-  let prompt = input.prompt;
+  // Recovered with Ryan's replies since its agent finished: the agent's round comes first.
+  let prompt =
+    input.recovered && input.replies?.length
+      ? `${input.prompt}\n\n${repliesSection(branch, input.replies)}`
+      : input.prompt;
   for (let round = 0; ; round++) {
     let result: AgentResult;
     if (round === 0 && resumed) {
