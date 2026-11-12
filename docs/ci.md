@@ -148,25 +148,26 @@ The Mac app's Electron suite opens real windows, and has no headless mode on mac
 - **In CI.** CI's `desktop` job runs the suite on a hosted Ubuntu runner under xvfb (A1235), so the VM is for local runs and the factory's Mac proofs. A self-hosted runner in the VM (label `penmoss-mac-vm`, #252) would only be needed for macOS-only behaviour CI can't see on Linux.
 - **`task vm:test` runs only on macOS**, since `desktop-test.sh` drives Tart and `lockf`; on Linux (CI's Check job) it says it is skipped. It runs in every `task check` on a Mac.
 
-## Required checks and auto-merge (A1181)
+## Required checks and auto-merge (A1181, A1340)
 
-`main` requires five checks, set by the repository ruleset "main: CI checks":
+`main` requires six checks, set by the repository ruleset "main: CI checks":
 
 - `Pick runners (the Mac if one is idle)`
 - `Check`
 - `E2E smoke`
 - `Performance budgets`
 - `Android app (JVM and Robolectric tests, debug APK)`
+- `Release note`, from its own workflow, `release-note.yml` (A1294, A1340): the description's `## Release note` section
 
 A job that `pick` turns off for a change it doesn't touch reports as skipped, which GitHub counts as passing. If `pick` itself fails, its own check fails, so the skipped jobs behind it can't pass a pull request.
 
 `pick` no longer picks runners (A1218, A1235), but its check keeps the old name, which the ruleset names. To rename it, change the job's `name:` and the ruleset's required check in the same step, or every open pull request waits for a check that never reports.
 
-A pull request merges, and GitHub's auto-merge (`gh pr merge --auto --squash`) arms, only once all five are green. Four run on hosted runners; `Performance budgets` waits for the Mac (§3). Repository admins can bypass the rule, for an emergency only.
+A pull request merges, and GitHub's auto-merge (`gh pr merge --auto --squash`) arms, only once all six are green. Five run on hosted runners; `Performance budgets` waits for the Mac (§3). Repository admins can bypass the rule, for an emergency only.
 
 `Site (penmoss.app and its docs)` (A1201), `Android app on an emulator (instrumented tests)` (A1227) and `Mac app (Electron under xvfb)` (back on with A1235) run on pull requests but are not required. The emulator and Electron jobs are new on hosted runners: each joins the ruleset once it has passed steadily for a while (add it there under that name).
 
-These five replace A1178's single `CI result` job. That job only summed the others, but it needed a Mac runner of its own. So a pull request whose tests had passed queued again for it, behind every other run's tests.
+The first five replace A1178's single `CI result` job. That job only summed the others, but it needed a Mac runner of its own. So a pull request whose tests had passed queued again for it, behind every other run's tests.
 
 ## 9. Pull requests from forks
 
