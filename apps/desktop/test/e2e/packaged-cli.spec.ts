@@ -34,6 +34,8 @@ let nextPort = 0;
 const port = () => PORT_BASE + (nextPort++ % 4);
 
 const children: ChildProcess[] = [];
+/** Each MCP server's stderr, attached when a test fails. */
+const serverLogs: { name: string; text: () => string }[] = [];
 
 // --- packing ---
 
@@ -83,6 +85,12 @@ test.afterEach(async () => {
   if (test.info().status !== test.info().expectedStatus && existsSync(log)) {
     await test.info().attach('app.log', { path: log, contentType: 'text/plain' });
   }
+  if (test.info().status !== test.info().expectedStatus) {
+    for (const each of serverLogs) {
+      await test.info().attach(each.name, { body: each.text(), contentType: 'text/plain' });
+    }
+  }
+  serverLogs.length = 0;
   for (const child of children.splice(0)) child.kill('SIGKILL');
   quitAll();
 });
@@ -295,6 +303,10 @@ function mcpServer(words: readonly string[], env: NodeJS.ProcessEnv) {
     }
   });
   child.stderr.on('data', (chunk: Buffer) => (err += chunk.toString('utf8')));
+  serverLogs.push({
+    name: `MCP server stderr (${words[0]!.includes('Penmoss CLI.app') ? 'CLI bundle' : 'old path'})`,
+    text: () => `exit ${child.exitCode ?? '-'}, signal ${child.signalCode ?? '-'}\n${err}`,
+  });
   let id = 0;
   const ask = async (method: string, params: unknown) => {
     id += 1;
@@ -316,6 +328,8 @@ function mcpServer(words: readonly string[], env: NodeJS.ProcessEnv) {
   return {
     child,
     stderr: () => err,
+    /** Why the server isn't running, for an assertion's message. */
+    ended: () => `exit ${child.exitCode}, signal ${child.signalCode}: ${err}`,
     async start() {
       const init = await ask('initialize', {
         protocolVersion: '2025-06-18',
@@ -414,7 +428,7 @@ test('an MCP server added before this build still lets Penmoss open, and keeps s
   );
 
   // The server went on serving its agent throughout.
-  expect(server.child.exitCode).toBe(null);
+  expect(server.child.exitCode, `The MCP server ended: ${server.ended()}`).toBe(null);
   expect(await server.tools()).toBeGreaterThan(20);
 });
 
@@ -473,7 +487,20 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   await page.waitForTimeout(2_000);
   const asCli = registeredAs(cliPid);
   await attachText('lsappinfo: the MCP server', asCli?.text ?? 'not registered');
-  expect(asCli?.bundleId ?? CLI_ID).toBe(CLI_ID);
+  const plistId = execFileSync(
+    '/usr/bin/plutil',
+    [
+      '-extract',
+      'CFBundleIdentifier',
+      'raw',
+      '-o',
+      '-',
+      join(dirname(dirname(CLI_EXE)), 'Info.plist'),
+    ],
+    { encoding: 'utf8' },
+  ).trim();
+  expect(plistId, "the packed CLI bundle's Info.plist").toBe(CLI_ID);
+  expect(asCli?.bundleId ?? CLI_ID, `lsappinfo for the MCP server:\n${asCli?.text}`).toBe(CLI_ID);
   const apps = penmossApps();
   expect(apps.map((each) => each.pid)).not.toContain(cliPid);
   expect(apps).toHaveLength(1);
@@ -482,7 +509,7 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   // Quit Penmoss; the server keeps running. Opening it again starts the app, to its window.
   await browser.close().catch(() => undefined);
   await quitApp(firstPid);
-  expect(server.child.exitCode).toBe(null);
+  expect(server.child.exitCode, `The MCP server ended with the app: ${server.ended()}`).toBe(null);
   const again = port();
   open(w.app, again);
   ({ browser, page } = await connect(again));
