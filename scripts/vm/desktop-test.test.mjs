@@ -42,6 +42,7 @@ case "$1" in
     ;;
   stop) echo 0 >"$FAKE/polls" ;;
   exec)
+    printf '%s\\n' "$@" >>"$FAKE/exec-args"
     [ -n "\${FAKE_SLOW_EXEC:-}" ] && /bin/sleep 0.3
     [ -n "\${FAKE_NO_BOOT:-}" ] && exit 1
     ;;
@@ -152,6 +153,16 @@ test('PENMOSS_VM_ROOT names the checkout to test, not the script’s own (the fa
   assert.ok(args.includes(`--dir=out:${worktree}/test-results/vm`), args.join(' '));
   assert.match(r.stdout, new RegExp(`log: ${worktree}/test-results/vm/desktop-test\\.log`));
   assert.throws(() => readFileSync(join(root, 'test-results/vm/tart-run.log')), /ENOENT/);
+});
+
+test("clears the Safe Storage key an earlier ad hoc build left in the VM's keychain (PEN-127)", () => {
+  const { fake, run } = setUp(0);
+  const r = run();
+  assert.equal(r.status, 0, r.stderr);
+  const sent = readFileSync(join(fake, 'exec-args'), 'utf8');
+  const clear = sent.indexOf("security delete-generic-password -s 'Penmoss Safe Storage'");
+  assert.ok(clear > 0, 'the VM is not told to delete the key');
+  assert.ok(clear < sent.indexOf('task desktop:test'), 'it goes before the tests');
 });
 
 test('a run removes its pid file when it ends', () => {
