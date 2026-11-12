@@ -8,7 +8,7 @@
  * renumbered after the rebase. The factory's own numbering commit, which edits the branch's
  * `A-NEW-n` row where main's new rows are, is replayed rather than merged (A1292). Any other
  * commit whose decisions conflict remains has its row changes, compared without padding,
- * applied to the rebased table by row key (PEN-121, A-NEW-1). Any other conflict aborts the
+ * applied to the rebased table by row key (PEN-121, A1341). Any other conflict aborts the
  * rebase and goes to the agent.
  *
  * Runs in a gate sandbox's worktree (git through the sandbox, the files read on the host as
