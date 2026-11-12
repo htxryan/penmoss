@@ -23,6 +23,10 @@ A note window has the note, its ⋯ menu, the note panel and the status bar, but
 
 Closing the main window leaves note windows open; the Dock icon or **Window → Penmoss** brings it back. Note windows are not reopened after you quit.
 
+## Minimised windows
+
+When no Penmoss window is on screen, clicking Penmoss in the Dock brings back the window you minimised last, even if the main window is closed. Any other minimised windows stay minimised: right-click the Dock icon, or use the **Window** menu, to pick one. To have windows minimise into the Penmoss icon instead of the right-hand end of the Dock, turn on **System Settings → Desktop & Dock → Minimise windows into application icon**. It is a macOS setting, so it applies to every app.
+
 ## Keep on top
 
 **Keep on Top** pins a window above other apps' windows, on every Space, so a note stays in view while you work elsewhere. It never floats over a full-screen app. Turn it on or off with:

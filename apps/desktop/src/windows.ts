@@ -7,6 +7,8 @@
  * - **Main window:** the sidebar and every page; its size and place are kept between
  *   launches (window-state.ts). Closing it leaves the note windows open; the Dock icon,
  *   Window → Penmoss or any page a note window cannot show makes it again.
+ * - **Minimized windows:** with no window visible, the Dock icon restores the one minimized
+ *   last (PEN-67), even when the main window is closed; the others stay minimized.
  * - **Note windows:** `/window/notes/<id>`, one note with no sidebar. They open 720×800,
  *   cascading from the window in front, are never saved in `window-state.json`, and are not
  *   restored after a relaunch.
@@ -81,10 +83,14 @@ interface Entry {
  * The main and note windows, by their web contents. `W` is a BrowserWindow in the app and a
  * plain object in tests.
  */
-export class WindowRegistry<W extends { readonly webContents: object; isDestroyed?(): boolean }> {
+export class WindowRegistry<
+  W extends { readonly webContents: object; isDestroyed?(): boolean; isMinimized?(): boolean },
+> {
   private readonly entries = new Map<W, Entry>();
   /** Windows in the order they last came to the front, most recent last. */
   private order: W[] = [];
+  /** Minimized windows in the order they were minimized, most recent last (PEN-67). */
+  private minimizedOrder: W[] = [];
 
   add(window: W, kind: WindowKind): void {
     if (kind === 'main' && this.main && this.main !== window) {
@@ -97,6 +103,7 @@ export class WindowRegistry<W extends { readonly webContents: object; isDestroye
   remove(window: W): void {
     this.entries.delete(window);
     this.order = this.order.filter((other) => other !== window);
+    this.minimizedOrder = this.minimizedOrder.filter((other) => other !== window);
   }
 
   /** The window whose page sent an IPC message, or null (the capture window, anything else). */
@@ -133,6 +140,31 @@ export class WindowRegistry<W extends { readonly webContents: object; isDestroye
   focused(window: W): void {
     if (!this.entries.has(window)) return;
     this.order = [...this.order.filter((other) => other !== window), window];
+  }
+
+  /** `window` was minimized (its `minimize` event). */
+  minimized(window: W): void {
+    if (!this.entries.has(window)) return;
+    this.minimizedOrder = [...this.minimizedOrder.filter((other) => other !== window), window];
+  }
+
+  /** `window` is no longer minimized (its `restore` event). */
+  restored(window: W): void {
+    this.minimizedOrder = this.minimizedOrder.filter((other) => other !== window);
+  }
+
+  /**
+   * The window minimized last that is still minimized and not destroyed, or null (PEN-67):
+   * the one the Dock icon brings back when no window is visible.
+   */
+  lastMinimized(): W | null {
+    for (let i = this.minimizedOrder.length - 1; i >= 0; i--) {
+      const window = this.minimizedOrder[i]!;
+      if (window.isDestroyed?.() === true) continue;
+      if (window.isMinimized?.() === false) continue;
+      return window;
+    }
+    return null;
   }
 
   /**

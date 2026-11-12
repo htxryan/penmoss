@@ -372,6 +372,9 @@ function track(window: BrowserWindow, kind: WindowKind, titleBar: TitleBarStyle 
     const menus = windows.menusOf(window);
     if (menus) setMenus(menus);
   });
+  // The Dock icon brings back the window minimized last (PEN-67).
+  window.on('minimize', () => windows.minimized(window));
+  window.on('restore', () => windows.restored(window));
   window.on('closed', () => {
     windows.remove(window);
     // No window came to the front (the last one closed, or the rest are minimized): the menu
@@ -1609,8 +1612,16 @@ if (!app.requestSingleInstanceLock()) {
     loginPath.warm();
   });
 
-  // The Dock icon: the main window, made again when only note windows are open (A712).
-  app.on('activate', () => {
+  // The Dock icon (A712, PEN-67): with no window visible, the window minimized last comes
+  // back, and the others stay minimized; otherwise the main window, made again when only note
+  // windows are open. Electron tells macOS not to restore one itself when none is visible.
+  app.on('activate', (_event, hasVisibleWindows) => {
+    const minimized = hasVisibleWindows ? null : windows.lastMinimized();
+    if (minimized) {
+      minimized.restore();
+      minimized.focus();
+      return;
+    }
     if (!windows.main) createMainWindow();
   });
   app.on('before-quit', () => {
