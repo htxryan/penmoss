@@ -17,6 +17,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import {
   app,
+  autoUpdater,
   BrowserWindow,
   clipboard,
   ClipboardItem,
@@ -164,6 +165,11 @@ function startedOnItsOwn(): boolean {
   return app.getLoginItemSettings().wasOpenedAtLogin;
 }
 let quitting = false;
+/**
+ * Install and Restart asked to quit (PEN-120): the windows close once stored, and Electron's
+ * updater then quits and hands over to ShipIt itself.
+ */
+let updating = false;
 /** The windows are being stored, closed and opened again for a new title-bar style (A724). */
 let reopening = false;
 /** Input is held while they are (A724); for the suite. */
@@ -413,7 +419,7 @@ function storeBeforeClose(window: BrowserWindow, closing?: () => void): void {
         stored = true;
         if (window.isDestroyed()) return;
         // A prevented close also stops the quit it was part of: carry on with it.
-        if (wasQuitting) app.quit();
+        if (wasQuitting && !updating) app.quit();
         else window.close();
       });
   });
@@ -524,8 +530,11 @@ function createCaptureWindow(): BrowserWindow {
     event.preventDefault();
     void storeNow(window, SAVE_BEFORE_CLOSE_MS, 'close').then(() => {
       stored = true;
-      // A prevented close also stops the quit it was part of: carry on with it.
-      if (!window.isDestroyed()) app.quit();
+      // A prevented close also stops the quit it was part of: carry on with it (or, for an
+      // update, with the closing of every window that comes before it).
+      if (window.isDestroyed()) return;
+      if (updating) window.close();
+      else app.quit();
     });
   });
   void window.loadURL(`${PAGE_ORIGIN}/capture`);
@@ -1626,6 +1635,14 @@ if (!app.requestSingleInstanceLock()) {
   });
   app.on('before-quit', () => {
     quitting = true;
+  });
+  // Install and Restart (PEN-120, A1337): Electron's quitAndInstall closes every window before
+  // `before-quit`, so the quit starts here, or the capture window would only hide, the app would
+  // never quit, and ShipIt would wait for an exit that never comes. Each window stores its last
+  // keystrokes and closes; once none is left, the updater quits into the update.
+  autoUpdater.on('before-quit-for-update', () => {
+    quitting = true;
+    updating = true;
   });
   app.on('will-quit', () => {
     // No git outlives the app (A853): a sync still running is stopped, the notebook keeps it.
