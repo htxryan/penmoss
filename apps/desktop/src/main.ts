@@ -1636,7 +1636,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('before-quit', () => {
     quitting = true;
   });
-  // Install and Restart (PEN-120, A-NEW-1): Electron's quitAndInstall closes every window before
+  // Install and Restart (PEN-120, A1337): Electron's quitAndInstall closes every window before
   // `before-quit`, so the quit starts here, or the capture window would only hide, the app would
   // never quit, and ShipIt would wait for an exit that never comes. Each window stores its last
   // keystrokes and closes; once none is left, the updater quits into the update.
