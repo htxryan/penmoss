@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { codeDir, pausePath, type UpdateDeps } from '../src/code.ts';
 import { nodeExec } from '../src/exec.ts';
-import { checkOnce, pendingUpdate, RESTART, runUpdater } from '../src/updater.ts';
+import { changesRuntime, checkOnce, pendingUpdate, RESTART, runUpdater } from '../src/updater.ts';
 import { testConfig } from './helpers.ts';
 
 const git = (dir: string, ...args: string[]) =>
@@ -63,6 +63,51 @@ describe('the updater (A1293)', { timeout: 30_000 }, () => {
       'scripts/vm/desktop-test.sh',
       'tools/factory/src/a.ts',
     ]);
+  });
+
+  it("doesn't update for main's changes to the factory's tests or docs alone", async () => {
+    const { config, work } = repos();
+    const update = () => Promise.reject(new Error('should not update'));
+    commit(
+      work,
+      {
+        'tools/factory/test/doctor.test.ts': 'x\n',
+        'tools/factory/e2e/ui.spec.ts': 'x\n',
+        'tools/factory/vitest.config.ts': 'x\n',
+        'tools/factory/README.md': 'x\n',
+      },
+      'tests and docs',
+    );
+    expect((await pendingUpdate(nodeExec, codeDir(config))).files).toEqual([]);
+    expect(await checkOnce(config, deps([]), update)).toBeUndefined();
+    // A prompt is Markdown the runs read, so it updates; the tests before it aren't named.
+    commit(work, { 'tools/factory/prompts/implement.md': 'x\n' }, 'prompt');
+    expect((await pendingUpdate(nodeExec, codeDir(config))).files).toEqual([
+      'tools/factory/prompts/implement.md',
+    ]);
+  });
+
+  it('counts the source, prompts, package, configs and VM script as what the factory runs', () => {
+    for (const file of [
+      'tools/factory/src/run.ts',
+      'tools/factory/prompts/review.md',
+      'tools/factory/sandbox/remote-claude.ts',
+      'tools/factory/package.json',
+      'tools/factory/factory.config.json',
+      'tools/factory/tsconfig.json',
+      'tools/factory/agents/opencode.json',
+      'tools/factory/patches/x.patch',
+      'scripts/vm/desktop-test.sh',
+    ])
+      expect(changesRuntime(file), file).toBe(true);
+    for (const file of [
+      'tools/factory/test/doctor.test.ts',
+      'tools/factory/test/fixtures/a.json',
+      'tools/factory/e2e/ui.spec.ts',
+      'tools/factory/playwright.config.ts',
+      'tools/factory/NOTES.md',
+    ])
+      expect(changesRuntime(file), file).toBe(false);
   });
 
   it('updates when main changes the factory, then exits for launchd to restart it', async () => {
