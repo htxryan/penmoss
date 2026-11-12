@@ -54,7 +54,13 @@ import {
 import { GhError, type Gh } from './github.ts';
 import { proofFiles, type AttachedProof } from './proof/body.ts';
 import { publishRefs, type ProofStore } from './proof/store.ts';
-import { fromPlaywrightReport, type ProofItem } from './proof/manifest.ts';
+import { fromPlaywrightReport, type ProofItem, type PwReport } from './proof/manifest.ts';
+import {
+  androidFailures,
+  keepFailures,
+  playwrightFailures,
+  type FailedTest,
+} from './proof/evidence.ts';
 import { checkMedia, framesToMp4, framesWithin, toMp4, within } from './proof/media.ts';
 import { addedLines, DECISIONS, newRows, rebaseOntoMain } from './rebase.ts';
 import { checkMacVm, runMacProof, runMacWalk } from './proof/mac.ts';
@@ -282,18 +288,26 @@ export async function execPastRefLocks(
 /** The agent's raw output stream in the run folder, beside Sandcastle's `agent.log`. */
 export const AGENT_STREAM = 'agent.stream.jsonl';
 
-/** Where a run's sandbox finds the last proof's screenshots (`stageLastProof`). */
+/** Where a run's sandbox finds the last proof's screenshots and failures (`stageLastProof`). */
 export const LAST_PROOF = '.factory/last-proof';
 
-/** Copies the last proof's screenshots (`<platform>-<n>-screenshot.png`) into the worktree. */
+/**
+ * The last proof's files the agent gets: each test's screenshot (`<platform>-<n>-screenshot.png`,
+ * or `.jpg` for the Mac window's last frame), and a failing test's error context, attachments and
+ * logs with their index, `<platform>-failures.md` (proof/evidence.ts). Never a video.
+ */
+const STAGED = /^[a-z]+-(failures\.md|\d+-[a-z0-9-]+\.(png|jpg|md|txt|log|json|logcat))$/;
+
+/** Copies the last proof's screenshots and failures into the worktree, in place of older ones. */
 export function stageLastProof(raw: string, worktree: string): string[] {
-  if (!existsSync(raw)) return [];
-  const shots = readdirSync(raw).filter((f) => /^[a-z]+-\d+-screenshot\.png$/.test(f));
-  if (shots.length === 0) return [];
   const to = join(worktree, LAST_PROOF);
+  rmSync(to, { recursive: true, force: true });
+  if (!existsSync(raw)) return [];
+  const files = readdirSync(raw).filter((f) => STAGED.test(f));
+  if (files.length === 0) return [];
   mkdirSync(to, { recursive: true });
-  for (const f of shots) copyFileSync(join(raw, f), join(to, f));
-  return shots;
+  for (const f of files) copyFileSync(join(raw, f), join(to, f));
+  return files;
 }
 
 /** The current session's chat link, in the run folder while the session runs (the UI reads it). */
@@ -815,16 +829,18 @@ export function hostDeps(options: HostOptions): HostDeps {
     recordProof: async (handle, platform, specs, signal) => {
       const quoted = specs.map((spec) => `'${spec.replaceAll("'", '')}'`).join(' ');
       let items: ProofItem[];
+      // What each failing test left, for the agent's next round (proof/evidence.ts).
+      let failed: FailedTest[];
+      // An earlier round's files would show the agent a failure this round no longer has.
+      clearProofFiles(join(runDir, 'raw'), platform);
       if (platform === 'web') {
         // Its exit code is not the verdict: the report says which tests passed.
         keepProofLog('web', await handle.exec(`task proof:web -- ${quoted}`));
         const report = newestReport(join(handle.worktreePath, 'apps/web/test-results'));
         if (!report) return [];
-        items = fromPlaywrightReport(
-          JSON.parse(readFileSync(report, 'utf8')) as Parameters<typeof fromPlaywrightReport>[0],
-          'web',
-          'after',
-        );
+        const parsed = JSON.parse(readFileSync(report, 'utf8')) as PwReport;
+        failed = playwrightFailures(parsed);
+        items = fromPlaywrightReport(parsed, 'web', 'after');
       } else if (platform === 'android') {
         // The slot's own emulator, inside its sandbox (FD25); the AVD is made on the host first,
         // and an emulator a stopped run left up is stopped. At the proof timeout the host stops
@@ -845,14 +861,14 @@ export function hostDeps(options: HostOptions): HostDeps {
         const out = join(handle.worktreePath, 'apps/android/build/proof');
         const report = join(out, 'report.json');
         if (!existsSync(report)) return [];
-        items = (
-          JSON.parse(readFileSync(report, 'utf8')) as {
-            title: string;
-            status: string;
-            video: string;
-            screenshot: string;
-          }[]
-        ).map((r) => ({
+        const parsed = JSON.parse(readFileSync(report, 'utf8')) as {
+          title: string;
+          status: string;
+          video: string;
+          screenshot: string;
+        }[];
+        failed = androidFailures(parsed, out);
+        items = parsed.map((r) => ({
           platform: 'android',
           title: r.title,
           status: r.status === 'passed' ? 'passed' : 'failed',
@@ -876,11 +892,9 @@ export function hostDeps(options: HostOptions): HostDeps {
         );
         const report = join(out, 'test-results', 'proof', 'report.json');
         if (!existsSync(report)) return [];
-        items = fromPlaywrightReport(
-          JSON.parse(readFileSync(report, 'utf8')) as Parameters<typeof fromPlaywrightReport>[0],
-          'mac',
-          'after',
-        ).map((item) => ({
+        const parsed = JSON.parse(readFileSync(report, 'utf8')) as PwReport;
+        failed = macFailures(parsed, out);
+        items = fromPlaywrightReport(parsed, 'mac', 'after').map((item) => ({
           ...item,
           // The report names the VM's paths; the files came back under test-results/vm.
           ...(item.video ? { video: fromVm(item.video, out) } : {}),
@@ -903,24 +917,7 @@ export function hostDeps(options: HostOptions): HostDeps {
           }),
         );
       }
-      const raw = join(runDir, 'raw');
-      mkdirSync(raw, { recursive: true });
-      return items.map((item, i) => {
-        // Only the run's own files: the agent's tests write the report that names them.
-        const keep = (path: string | undefined, name: string) => {
-          if (!path || !within(path, handle.worktreePath)) return undefined;
-          const to = join(raw, `${platform}-${i + 1}-${name}`);
-          copyFileSync(path, to);
-          return to;
-        };
-        const video = keep(item.video, `video${extname(item.video ?? '') || '.webm'}`);
-        const screenshot = keep(item.screenshot, 'screenshot.png');
-        return {
-          ...item,
-          ...(video ? { video } : {}),
-          ...(screenshot ? { screenshot } : {}),
-        };
-      });
+      return keepProofFiles(items, failed, platform, join(runDir, 'raw'), handle.worktreePath);
     },
     prepareProof: async (items) => {
       const dir = join(runDir, 'proof');
@@ -1161,6 +1158,51 @@ export function hostDeps(options: HostOptions): HostDeps {
       options.log(`${event}${Object.keys(detail).length ? ` ${JSON.stringify(detail)}` : ''}`);
     },
   };
+}
+
+/** Removes a platform's files from an earlier round of the proof from the run folder's `raw/`. */
+export function clearProofFiles(raw: string, platform: string): void {
+  if (!existsSync(raw)) return;
+  for (const f of readdirSync(raw))
+    if (f.startsWith(`${platform}-`)) rmSync(join(raw, f), { force: true });
+}
+
+/**
+ * Copies a proof's recordings into the run folder's `raw/` as `<platform>-<n>-video…` and
+ * `<platform>-<n>-screenshot.png`, then what each failing test left (proof/evidence.ts), and
+ * returns the items with the copies' paths. Only the run's own files: the agent's tests write the
+ * report that names them.
+ */
+export function keepProofFiles(
+  items: readonly ProofItem[],
+  failed: readonly FailedTest[],
+  platform: string,
+  raw: string,
+  worktree: string,
+): ProofItem[] {
+  mkdirSync(raw, { recursive: true });
+  const kept = items.map((item, i) => {
+    const keep = (path: string | undefined, name: string) => {
+      if (!path || !within(path, worktree)) return undefined;
+      const to = join(raw, `${platform}-${i + 1}-${name}`);
+      copyFileSync(path, to);
+      return to;
+    };
+    const video = keep(item.video, `video${extname(item.video ?? '') || '.webm'}`);
+    const screenshot = keep(item.screenshot, 'screenshot.png');
+    return {
+      ...item,
+      ...(video ? { video } : {}),
+      ...(screenshot ? { screenshot } : {}),
+    };
+  });
+  keepFailures(failed, platform, raw, worktree);
+  return kept;
+}
+
+/** The Mac proof's failing tests, with the VM's paths as the copies under `out` (`fromVm`). */
+export function macFailures(report: PwReport, out: string): FailedTest[] {
+  return playwrightFailures(report, (path) => fromVm(path, out));
 }
 
 /** A path in the VM's `apps/desktop/test-results/…` as the copy under `<out>/test-results/…`. */

@@ -28,7 +28,7 @@ export interface Frames {
   readonly frames: readonly { readonly file: string; readonly at: number }[];
 }
 
-function parseFrames(body: string | undefined): Frames | undefined {
+export function parseFrames(body: string | undefined): Frames | undefined {
   if (!body) return undefined;
   try {
     const value = JSON.parse(Buffer.from(body, 'base64').toString('utf8')) as Partial<Frames>;
@@ -43,16 +43,18 @@ function parseFrames(body: string | undefined): Frames | undefined {
   }
 }
 
-interface PwAttachment {
+export interface PwAttachment {
   readonly name: string;
   readonly path?: string;
   readonly contentType?: string;
   /** Base64, for an attachment given as a body. */
   readonly body?: string;
 }
-interface PwResult {
+export interface PwResult {
   readonly status?: string;
   readonly attachments?: readonly PwAttachment[];
+  /** What failed: the error with its call log and code frame, as the list reporter prints it. */
+  readonly errors?: readonly { readonly message?: string }[];
 }
 interface PwSpec {
   readonly title: string;
@@ -63,51 +65,64 @@ interface PwSuite {
   readonly specs?: readonly PwSpec[];
   readonly suites?: readonly PwSuite[];
 }
+export interface PwReport {
+  readonly suites?: readonly PwSuite[];
+}
 
-/** Every test in a Playwright JSON report with its last run's video and final screenshot. */
-export function fromPlaywrightReport(
-  report: { readonly suites?: readonly PwSuite[] },
-  platform: Platform,
-  phase: ProofItem['phase'],
-): ProofItem[] {
-  const items: ProofItem[] = [];
+/**
+ * Each test in a Playwright JSON report that ran, in the report's order, with its title and its
+ * last run (the retry's, when it had one). `fromPlaywrightReport`'s items and a failing test's
+ * evidence (`evidence.ts`) are numbered in this order.
+ */
+export function lastResults(report: PwReport): { title: string; last: PwResult }[] {
+  const tests: { title: string; last: PwResult }[] = [];
   const walk = (suite: PwSuite, path: readonly string[]) => {
     const here = suite.title && !suite.title.endsWith('.ts') ? [...path, suite.title] : path;
     for (const spec of suite.specs ?? []) {
       for (const test of spec.tests ?? []) {
         const last = test.results?.at(-1);
-        if (!last) continue;
-        const attachment = (name: string, type: string) =>
-          last.attachments
-            ?.filter((a) => a.name === name && a.path && (a.contentType ?? '').startsWith(type))
-            .at(-1)?.path;
-        const video = attachment('video', 'video/');
-        const screenshot = attachment('screenshot', 'image/');
-        const frames = (last.attachments ?? [])
-          .filter((a) => a.name === 'video-frames')
-          .map((a) => parseFrames(a.body))
-          .filter((f): f is Frames => f !== undefined);
-        items.push({
-          platform,
-          title: [...here, spec.title].join(' › '),
-          status:
-            last.status === 'passed'
-              ? 'passed'
-              : last.status === 'failed' || last.status === 'timedOut'
-                ? 'failed'
-                : 'other',
-          phase,
-          source: 'harness',
-          ...(video ? { video } : {}),
-          ...(screenshot ? { screenshot } : {}),
-          ...(frames.length > 0 ? { frames } : {}),
-        });
+        if (last) tests.push({ title: [...here, spec.title].join(' › '), last });
       }
     }
     for (const child of suite.suites ?? []) walk(child, here);
   };
   for (const suite of report.suites ?? []) walk(suite, []);
-  return items;
+  return tests;
+}
+
+/** Whether a test's last run failed (a timeout is a failure too). */
+export function isFailed(last: PwResult): boolean {
+  return last.status === 'failed' || last.status === 'timedOut';
+}
+
+/** Every test in a Playwright JSON report with its last run's video and final screenshot. */
+export function fromPlaywrightReport(
+  report: PwReport,
+  platform: Platform,
+  phase: ProofItem['phase'],
+): ProofItem[] {
+  return lastResults(report).map(({ title, last }) => {
+    const attachment = (name: string, type: string) =>
+      last.attachments
+        ?.filter((a) => a.name === name && a.path && (a.contentType ?? '').startsWith(type))
+        .at(-1)?.path;
+    const video = attachment('video', 'video/');
+    const screenshot = attachment('screenshot', 'image/');
+    const frames = (last.attachments ?? [])
+      .filter((a) => a.name === 'video-frames')
+      .map((a) => parseFrames(a.body))
+      .filter((f): f is Frames => f !== undefined);
+    return {
+      platform,
+      title,
+      status: last.status === 'passed' ? 'passed' : isFailed(last) ? 'failed' : 'other',
+      phase,
+      source: 'harness',
+      ...(video ? { video } : {}),
+      ...(screenshot ? { screenshot } : {}),
+      ...(frames.length > 0 ? { frames } : {}),
+    };
+  });
 }
 
 /** R9: every in-scope platform has at least one passing harness recording. */

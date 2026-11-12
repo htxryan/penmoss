@@ -653,6 +653,9 @@ describe('runImplement', () => {
     expect(f.prompts[1]).not.toContain("The web proof's output:");
     // And where to see the proof's last screenshot, which the Mac proof's VM is the only way to (A1291).
     expect(f.prompts[1]).toContain('.factory/last-proof/');
+    // And what a failing test left there, by the names the host gives the files (A1342).
+    expect(f.prompts[1]).toContain('`<platform>-failures.md`');
+    expect(f.prompts[1]).toContain('`<platform>-<n>-error-context.md`');
   });
 
   const review = (verdict: string, note = '') =>

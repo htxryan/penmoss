@@ -847,7 +847,7 @@ export async function gateAndProve(
       return {
         ok: false,
         reason: missing.map((p) => `${p} proof: no passing recording`).join('; '),
-        feedback: `the proof specs for ${missing.join(', ')} didn't pass when the harness ran them with recording on. Each proof's last screenshot is in \`.factory/last-proof/\` (\`<platform>-<n>-screenshot.png\`): look at it to see where the spec stopped.${proofOutput(deps, missing)}`,
+        feedback: `the proof specs for ${missing.join(', ')} didn't pass when the harness ran them with recording on. ${LAST_PROOF_NOTE}${proofOutput(deps, missing)}`,
       };
     }
     const failing = failedProof(items, needed);
@@ -856,7 +856,7 @@ export async function gateAndProve(
       return {
         ok: false,
         reason: proofReason(failing),
-        feedback: `these tests in your proof specs failed when the harness ran them with recording on:\n\n${failing.map((f) => `- ${f}`).join('\n')}\n\nEvery test in a proof spec has to pass: fix the code or the test. Each proof's last screenshot is in \`.factory/last-proof/\` (\`<platform>-<n>-screenshot.png\`): look at it to see where the spec stopped.${proofOutput(deps, platforms)}`,
+        feedback: `these tests in your proof specs failed when the harness ran them with recording on:\n\n${failing.map((f) => `- ${f}`).join('\n')}\n\nEvery test in a proof spec has to pass: fix the code or the test. ${LAST_PROOF_NOTE}${proofOutput(deps, platforms)}`,
       };
     }
     const prepared = await deps.prepareProof(items);
@@ -1599,6 +1599,13 @@ const ERROR_LINE = /\berror\b|✖|✘|×|\bFAIL\b|\bfailed\b/i;
  * stopped before ESLint's errors in PEN-70's gate, so neither the agent nor the log said what
  * failed; the whole output is kept in the run folder too (`gate.log`, A1250).
  */
+/**
+ * What the agent's next sandbox has from the proof (`stageLastProof` in host.ts, and
+ * proof/evidence.ts for what a failing test leaves), named as the files are.
+ */
+export const LAST_PROOF_NOTE =
+  "The harness's files from this proof are in `.factory/last-proof/`: each test's last screenshot (`<platform>-<n>-screenshot.png`, or `.jpg` when it is the Mac window's last screencast frame), and for each failing test `<platform>-failures.md`, which gives its error and lists its files there: Playwright's `<platform>-<n>-error-context.md`, its text attachments and logs (`<platform>-<n>-<attachment>.txt` or `.log`, each cut to its last 200 KB; on Android its instrumentation output and logcat) and its PNG attachments. Read them before you change anything, to see where and why the spec stopped.";
+
 /** What each missing platform's proof printed, for the agent: the harness's run, not its own. */
 function proofOutput(deps: RunDeps, platforms: readonly Platform[]): string {
   return platforms
