@@ -6,6 +6,7 @@ import { nodeExec } from '../src/exec.ts';
 import { formatDecisions, numberText } from '../src/decisions.ts';
 import {
   addedLines,
+  applyRowChanges,
   branchNumbering,
   numberingOf,
   newRows,
@@ -212,6 +213,50 @@ describe('rebaseOntoMain (F6)', { timeout: 30_000 }, () => {
     expect(await git(repo, 'status', '--porcelain')).toBe('');
   });
 
+  it('applies a later edit of the numbered row, re-padded or not, row by row (PEN-121)', async () => {
+    const base = await formatDecisions(decisions(BASE_ROWS));
+    await mainMoves('formatted', { 'docs/decisions.md': base });
+    await git(repo, 'checkout', '-q', BRANCH);
+    await git(repo, 'reset', '-q', '--hard', 'main');
+    // The agent's row, with every row re-padded for the placeholder.
+    await commit('the agent', {
+      'docs/decisions.md': await formatDecisions(
+        decisions([...BASE_ROWS, '| A-NEW-1 | Tooltips wait. |']),
+      ),
+    });
+    await commit('Number the new decisions: A-NEW-1 is A1226', {
+      'docs/decisions.md': await formatDecisions(
+        decisions([...BASE_ROWS, row(1226, 'Tooltips wait.')]),
+      ),
+    });
+    // A later round edits the numbered row; its text is the widest, so every row is re-padded.
+    const edited = row(1226, 'Tooltips wait half a second, then show, and stay while hovered.');
+    await commit('the agent, round 2', {
+      'docs/decisions.md': await formatDecisions(decisions([...BASE_ROWS, edited])),
+    });
+    // And edits it once more, at the same width.
+    const again = row(1226, 'Tooltips wait half a second, then show, and stay while focused.');
+    await commit('the agent, round 3', {
+      'docs/decisions.md': await formatDecisions(decisions([...BASE_ROWS, again])),
+    });
+    // Meanwhile main took A1225, right where the branch's row is.
+    await mainMoves('main decides', {
+      'docs/decisions.md': await formatDecisions(
+        decisions([...BASE_ROWS, row(1225, 'Main decided meanwhile.')]),
+      ),
+    });
+
+    const outcome = await rebaseOntoMain(sandbox, reserved);
+
+    expect(outcome).toEqual({ kind: 'rebased', resolved: ['docs/decisions.md'], renumbered: {} });
+    expect(read('docs/decisions.md')).toBe(
+      await formatDecisions(decisions([...BASE_ROWS, row(1225, 'Main decided meanwhile.'), again])),
+    );
+    expect(await onMain()).toBe(true);
+    expect(await git(repo, 'status', '--porcelain')).toBe('');
+    expect(await git(repo, 'rev-list', '--count', `origin/main..${BRANCH}`)).toBe('4');
+  });
+
   it('renumbers a replayed row when main took its number meanwhile', async () => {
     const base = await formatDecisions(decisions(BASE_ROWS));
     await mainMoves('formatted', { 'docs/decisions.md': base });
@@ -407,6 +452,73 @@ describe('resolveAppendConflicts', () => {
     ).toBeNull();
     expect(resolveAppendConflicts('| A1 | a |\n')).toBeNull();
     expect(resolveAppendConflicts(['<<<<<<< HEAD', '| A2 | x |'].join('\n'))).toBeNull();
+  });
+});
+
+describe('applyRowChanges (PEN-121)', () => {
+  const table = (...rows: string[]) =>
+    [
+      '# D',
+      '',
+      '| ID | Decision |',
+      '| --- | --- |',
+      ...rows,
+      '',
+      '| ID | Agreement |',
+      '| --- | --- |',
+      '| W1 | w |',
+      '',
+    ].join('\n');
+  const parent = table('| A1 | one |', '| A2 | two |');
+
+  it("replaces an edited row by key, whatever either side's padding", () => {
+    expect(
+      applyRowChanges(
+        table('| A1    | one   |', '| A2    | two   |', '| A3    | main  |'),
+        parent,
+        table('| A1      | one         |', '| A2      | two, edited |'),
+      ),
+    ).toBe(table('| A1    | one   |', '| A2      | two, edited |', '| A3    | main  |'));
+  });
+
+  it("adds rows after the commit's row before them, behind main's rows there", () => {
+    const head = table('| A1 | one |', '| A2 | two |', '| A3 | main |');
+    expect(
+      applyRowChanges(
+        head,
+        parent,
+        table('| A1 | one |', '| A2 | two |', '| A-NEW-1 | x |', '| A-NEW-2 | y |'),
+      ),
+    ).toBe(
+      table('| A1 | one |', '| A2 | two |', '| A3 | main |', '| A-NEW-1 | x |', '| A-NEW-2 | y |'),
+    );
+    // A table's new first row goes before the row after it.
+    expect(
+      applyRowChanges(head, parent, table('| A0 | zero |', '| A1 | one |', '| A2 | two |')),
+    ).toBe(table('| A0 | zero |', '| A1 | one |', '| A2 | two |', '| A3 | main |'));
+  });
+
+  it('drops a row the commit removed, and renames one by key', () => {
+    const head = table('| A1 | one |', '| A-NEW-1 | x |', '| A2 | main |');
+    expect(
+      applyRowChanges(
+        head,
+        table('| A1 | one |', '| A-NEW-1 | x |'),
+        table('| A1 | one |', '| A3 | x |'),
+      ),
+    ).toBe(table('| A1 | one |', '| A2 | main |', '| A3 | x |'));
+  });
+
+  it('refuses a row both sides changed, prose the commit changed, or a key used twice', () => {
+    const head = table('| A1 | one |', '| A2 | main says |');
+    expect(applyRowChanges(head, parent, table('| A1 | one |', '| A2 | branch says |'))).toBeNull();
+    expect(applyRowChanges(head, parent, table('| A1 | one |'))).toBeNull();
+    expect(applyRowChanges(head, parent, `${parent}More prose.\n`)).toBeNull();
+    expect(applyRowChanges(head, parent, table('| A1 | one |', '| A1 | two |'))).toBeNull();
+    // main removed the row the commit edits
+    expect(
+      applyRowChanges(table('| A1 | one |'), parent, table('| A1 | one |', '| A2 | 2 |')),
+    ).toBeNull();
   });
 });
 
