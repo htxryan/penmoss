@@ -9,7 +9,7 @@
  * window on screen with CoreGraphics (a small Swift script), which needs no permission.
  */
 import { execFileSync, spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { existsSync, mkdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { chromium, expect, test, type Browser, type Page } from '@playwright/test';
@@ -285,10 +285,16 @@ function mcpServer(words: readonly string[], env: NodeJS.ProcessEnv) {
     const asked = id;
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: asked, method, params })}\n`);
     await expect
-      .poll(() => replies.has(asked) || child.exitCode !== null, { timeout: 60_000 })
+      .poll(
+        // A crash ends it with a signal: exitCode stays null, signalCode says which.
+        () => replies.has(asked) || child.exitCode !== null || child.signalCode !== null,
+        { timeout: 60_000 },
+      )
       .toBe(true);
     const reply = replies.get(asked);
-    if (!reply) throw new Error(`The MCP server ended (${child.exitCode}): ${err}`);
+    if (!reply) {
+      throw new Error(`The MCP server ended (${child.exitCode ?? child.signalCode}): ${err}`);
+    }
     return reply;
   };
   return {
@@ -324,6 +330,13 @@ async function addNotebook(page: Page, name: string): Promise<void> {
   await expect(page.locator('#app-sidebar').getByText(name, { exact: true }).first()).toBeVisible({
     timeout: 30_000,
   });
+}
+
+const REPORTS = join(homedir(), 'Library', 'Logs', 'DiagnosticReports');
+/** The crash reports of Penmoss's helpers, by file name. */
+function helperCrashes(): string[] {
+  if (!existsSync(REPORTS)) return [];
+  return readdirSync(REPORTS).filter((name) => name.startsWith('Penmoss Helper'));
 }
 
 const attachText = (name: string, body: string) =>
@@ -387,6 +400,7 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   test.setTimeout(420_000);
   const w = world();
   const shots = recorder();
+  const crashesBefore = new Set(helperCrashes());
 
   // AC8: the CLI bundle is signed with the app.
   const verified = spawnSync('/usr/bin/codesign', ['--verify', '--deep', '--strict', APP], {
@@ -477,6 +491,10 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
 
   // The server still answers its agent.
   expect(await server.tools()).toBeGreaterThan(20);
+
+  // Running the CLI bundle crashed none of its helpers (they'd fill DiagnosticReports).
+  await page.waitForTimeout(3_000);
+  expect(helperCrashes().filter((name) => !crashesBefore.has(name))).toEqual([]);
 
   // The command, on screen at the end.
   await go(page, href);

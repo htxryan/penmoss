@@ -18,6 +18,14 @@ app.dock?.hide();
 app.commandLine.appendSwitch('log-level', '3');
 app.commandLine.appendSwitch('disable-gpu');
 
+const bundle = resolve(process.execPath, '..', '..', '..');
+const inCliBundle = basename(bundle) === 'Penmoss CLI.app';
+// From the CLI bundle (A1339), Chromium's sandboxed helpers (GPU, network service) can't read the
+// frameworks the bundle links outside itself, and crash at once (the GPU's takes the CLI with
+// it). The CLI loads no web content, so their sandbox protects nothing it renders: they run
+// without it. The app itself keeps its sandbox.
+if (inCliBundle) app.commandLine.appendSwitch('no-sandbox');
+
 // `penmoss cat … | head` closes the pipe early: that is not an error.
 process.stdout.on('error', (error: NodeJS.ErrnoException) => {
   if (error.code === 'EPIPE') app.exit(typeof process.exitCode === 'number' ? process.exitCode : 0);
@@ -32,13 +40,7 @@ process.stdout.on('error', (error: NodeJS.ErrnoException) => {
  * starts the real app (`open -n`: a new instance, which becomes the app or hands off to the
  * running one through its single-instance lock), and goes on serving its agent.
  */
-const bundle = resolve(process.execPath, '..', '..', '..');
-if (
-  app.isPackaged &&
-  process.platform === 'darwin' &&
-  bundle.endsWith('.app') &&
-  basename(bundle) !== 'Penmoss CLI.app'
-) {
+if (app.isPackaged && process.platform === 'darwin' && bundle.endsWith('.app') && !inCliBundle) {
   let last = 0;
   app.on('activate', () => {
     const now = Date.now();
