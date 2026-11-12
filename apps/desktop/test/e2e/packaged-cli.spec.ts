@@ -143,14 +143,40 @@ function quitAll(): void {
   spawnSync('/usr/bin/pkill', ['-KILL', '-f', APP]);
 }
 
+const SWIFT_QUIT = `import AppKit
+let pid = Int32(CommandLine.arguments[1])!
+print(NSRunningApplication(processIdentifier: pid)?.terminate() ?? false)
+`;
 /**
- * Quits the app as Penmoss → Quit Penmoss does (it handles SIGTERM the same way), and waits. With
- * a git notebook, each window may take its whole closing time to store and push (main.ts: 3 s, and
- * 11 s more to push, then 3 s for the capture window), so the wait is well past their sum.
+ * Quits the app as Penmoss → Quit Penmoss and the Dock's Quit do: a quit Apple Event to that
+ * process (NSRunningApplication.terminate), so AppKit and Electron run their whole quit. A signal
+ * isn't the same: the packaged app didn't end in 45 s after SIGTERM in the VM. With a git
+ * notebook, each window may take its whole closing time to store and push (main.ts: 3 s, and 11 s
+ * more to push, then 3 s for the capture window), so the wait is well past their sum. Still
+ * running after it, the app is sampled, so the failure says where it waits.
  */
 async function quitApp(pid: number): Promise<void> {
-  process.kill(pid, 'SIGTERM');
-  await expect.poll(() => alive(pid), { timeout: 45_000 }).toBe(false);
+  const script = join(dataDir(), 'quit.swift');
+  writeFileSync(script, SWIFT_QUIT);
+  const asked = spawnSync('swift', [script, String(pid)], { encoding: 'utf8', timeout: 60_000 });
+  await attachText(
+    'quit Apple Event',
+    `terminate: ${asked.stdout.trim()} (status ${asked.status})\n${asked.stderr}`,
+  );
+  // LaunchServices didn't know it: Electron's own signal handling, then, as before.
+  if (asked.stdout.trim() !== 'true') process.kill(pid, 'SIGTERM');
+  try {
+    await expect.poll(() => alive(pid), { timeout: 45_000 }).toBe(false);
+  } catch (error) {
+    const sampled = spawnSync('/usr/bin/sample', [String(pid), '2'], {
+      encoding: 'utf8',
+      timeout: 30_000,
+    });
+    await attachText('sample of the app that would not quit', sampled.stdout || sampled.stderr);
+    throw new Error(`Penmoss (pid ${pid}) was still running 45 s after it was asked to quit`, {
+      cause: error,
+    });
+  }
 }
 
 const SWIFT_WINDOWS = `import CoreGraphics
