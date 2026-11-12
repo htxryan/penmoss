@@ -111,7 +111,9 @@ async function closeMain(app: ElectronApplication): Promise<void> {
 }
 
 test('AC1: the Dock icon brings back the minimized main window', async () => {
-  const { app, page, errors } = await start();
+  const launched = await start();
+  const { app, page, errors } = launched;
+  await gitNotebook(launched); // A fresh launch shows Welcome; open a notebook first.
   await expect(page.locator('button[data-command="note.new"]')).toBeVisible();
   await minimize(app, 'main');
   await page.waitForTimeout(1500); // Ryan sees the window gone into the Dock.
