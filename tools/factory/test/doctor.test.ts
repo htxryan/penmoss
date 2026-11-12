@@ -152,7 +152,8 @@ describe('doctorChecks', () => {
   });
 });
 
-describe("the unreadable-file checks' probe (A1258)", () => {
+describe("the unreadable-file checks' probe (A1258)", { timeout: 30_000 }, () => {
+  // Each probe spawns sh and a freshly written stub, which a loaded Mac (the gate's task check) can take over 5 s to start.
   const dir = mkdtempSync(join(tmpdir(), 'doctor-probe-'));
   // Stand-ins only: no real secret file is read here, and only exit codes and stdout are checked.
   const file = join(dir, 'stand-in.env');
