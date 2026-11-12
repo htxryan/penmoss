@@ -1,7 +1,7 @@
 import { expect, test, type ElectronApplication } from '@playwright/test';
 import { body, gitNotebook, launch, removeDataDirs, ULID, type Launched } from './support';
 
-// PEN-122 (A-NEW-1): with the app's output piped into something that exits early
+// PEN-122 (A1338): with the app's output piped into something that exits early
 // (`Penmoss | head -3`), the main process's next log line failed with `write EPIPE`, and Electron
 // showed "A JavaScript error occurred in the main process" until someone clicked OK. Now a closed
 // stdout or stderr is dropped: the app keeps logging into nothing and keeps working.

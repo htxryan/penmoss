@@ -3,7 +3,7 @@ import { Writable } from 'node:stream';
 import { describe, expect, it } from 'vitest';
 import { ignoreClosedOutput } from '../../src/stdio';
 
-// PEN-122 (A-NEW-1): a closed stdout or stderr never makes logging an uncaught exception.
+// PEN-122 (A1338): a closed stdout or stderr never makes logging an uncaught exception.
 
 const STDIO = new URL('../../src/stdio.ts', import.meta.url).href;
 
