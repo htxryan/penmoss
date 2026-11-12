@@ -1,10 +1,11 @@
 // The CLI's own bundle inside the Mac app (PEN-121, amending A992):
 //
 //   Penmoss.app/Contents/Helpers/Penmoss CLI.app/Contents/
-//     Info.plist          the app's, with its own bundle id (app.penmoss.mac.cli), background only
-//     MacOS/Penmoss       a copy of the app's executable
-//     Frameworks       -> ../../../Frameworks            (Electron Framework, the helper apps)
-//     Resources/app.asar -> ../../../../Resources/app.asar
+//     Info.plist       the app's, with its own bundle id (app.penmoss.mac.cli), background only
+//     MacOS/Penmoss    a copy of the app's executable
+//     Frameworks/      Penmoss Helper*.app: copies of the app's (a few hundred KB each)
+//                      *.framework -> ../../../../Frameworks/*.framework (Electron Framework…)
+//     Resources     -> ../../../Resources                  (app.asar, the owner check, icons)
 //
 // Every process starts by checking in with LaunchServices under its bundle's Info.plist, before
 // any of Penmoss's code runs. When agents ran Contents/MacOS/Penmoss --penmoss-cli, each MCP
@@ -12,12 +13,27 @@
 // this bundle the CLI checks in as another, background-only app, so it never stands in for
 // Penmoss.
 //
+// Two links that look simpler don't work. A symlink for app.asar itself (rather than for the
+// Resources folder) leaves Electron hung before it runs any of the app's code. And a symlink for
+// the whole Frameworks folder sends the helper processes to the app's own helpers: Chromium
+// resolves a process's executable path, so a helper reached through the link finds itself in
+// Penmoss.app, takes its bundle id (app.penmoss.mac) and looks for the CLI's Mach port
+// rendezvous under the wrong name. Copies of the helpers resolve to this bundle.
+//
 // The copy keeps the app's fuses: on a Mac they are in Electron Framework, which both
 // executables load. CFBundleName, CFBundleExecutable and ElectronAsarIntegrity stay as the app's,
 // so Electron finds its helpers ("Penmoss Helper") and checks the same app.asar. electron-builder
-// signs the bundle with the app (signIgnore skips the paths through its symlinks).
+// signs the bundle and its helpers with the app (signIgnore skips the paths through its links).
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, rmSync, symlinkSync } from 'node:fs';
+import {
+  cpSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+} from 'node:fs';
 import { join } from 'node:path';
 
 export const CLI_BUNDLE_ID = 'app.penmoss.mac.cli';
@@ -49,7 +65,7 @@ export function makeCliBundle(appPath) {
   rmSync(bundle, { recursive: true, force: true });
   const own = join(bundle, 'Contents');
   mkdirSync(join(own, 'MacOS'), { recursive: true });
-  mkdirSync(join(own, 'Resources'), { recursive: true });
+  mkdirSync(join(own, 'Frameworks'), { recursive: true });
 
   const ownPlist = join(own, 'Info.plist');
   copyFileSync(plist, ownPlist);
@@ -68,8 +84,13 @@ export function makeCliBundle(appPath) {
   execFileSync('/bin/chmod', ['755', join(own, 'MacOS', 'Penmoss')]);
   if (existsSync(join(contents, 'PkgInfo')))
     copyFileSync(join(contents, 'PkgInfo'), join(own, 'PkgInfo'));
-  symlinkSync('../../../Frameworks', join(own, 'Frameworks'));
-  symlinkSync('../../../../Resources/app.asar', join(own, 'Resources', 'app.asar'));
+  for (const name of readdirSync(join(contents, 'Frameworks'))) {
+    const from = join(contents, 'Frameworks', name);
+    if (name.endsWith('.app'))
+      cpSync(from, join(own, 'Frameworks', name), { recursive: true, verbatimSymlinks: true });
+    else symlinkSync(`../../../../Frameworks/${name}`, join(own, 'Frameworks', name));
+  }
+  symlinkSync('../../../Resources', join(own, 'Resources'));
   return bundle;
 }
 

@@ -6,6 +6,7 @@
 import { execFileSync } from 'node:child_process';
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -57,6 +58,9 @@ beforeEach(() => {
   const contents = join(app, 'Contents');
   mkdirSync(join(contents, 'MacOS'), { recursive: true });
   mkdirSync(join(contents, 'Frameworks', 'Electron Framework.framework'), { recursive: true });
+  const helper = join(contents, 'Frameworks', 'Penmoss Helper.app', 'Contents', 'MacOS');
+  mkdirSync(helper, { recursive: true });
+  writeFileSync(join(helper, 'Penmoss Helper'), 'the helper', { mode: 0o755 });
   mkdirSync(join(contents, 'Resources'), { recursive: true });
   writeFileSync(join(contents, 'Info.plist'), PLIST);
   writeFileSync(join(contents, 'PkgInfo'), 'APPL????');
@@ -66,7 +70,7 @@ beforeEach(() => {
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 describe.runIf(process.platform === 'darwin')('the CLI bundle (PEN-121)', () => {
-  it('has its own background-only bundle id, the app’s executable, Frameworks and asar', () => {
+  it('has its own background-only bundle id, the app’s executable, helpers, frameworks and asar', () => {
     const bundle = makeCliBundle(app);
     const own = join(bundle, 'Contents');
     expect(join(own, 'MacOS', 'Penmoss')).toBe(join(app, 'Contents', ...CLI_EXECUTABLE));
@@ -85,10 +89,30 @@ describe.runIf(process.platform === 'darwin')('the CLI bundle (PEN-121)', () => 
 
     expect(readFileSync(join(own, 'MacOS', 'Penmoss'), 'utf8')).toBe('the executable');
     expect(statSync(join(own, 'MacOS', 'Penmoss')).mode & 0o777).toBe(0o755);
-    expect(readlinkSync(join(own, 'Frameworks'))).toBe('../../../Frameworks');
-    expect(realpathSync(join(own, 'Frameworks'))).toBe(
-      realpathSync(join(app, 'Contents', 'Frameworks')),
+    // The frameworks are the app's, through links; the helpers are copies, so a helper's own
+    // (resolved) path is in this bundle and it takes this bundle's id.
+    const framework = join(own, 'Frameworks', 'Electron Framework.framework');
+    expect(lstatSync(framework).isSymbolicLink()).toBe(true);
+    expect(readlinkSync(framework)).toBe('../../../../Frameworks/Electron Framework.framework');
+    expect(realpathSync(framework)).toBe(
+      realpathSync(join(app, 'Contents', 'Frameworks', 'Electron Framework.framework')),
     );
+    const ownHelper = join(own, 'Frameworks', 'Penmoss Helper.app', 'Contents', 'MacOS');
+    expect(lstatSync(join(own, 'Frameworks', 'Penmoss Helper.app')).isSymbolicLink()).toBe(false);
+    expect(readFileSync(join(ownHelper, 'Penmoss Helper'), 'utf8')).toBe('the helper');
+    expect(realpathSync(join(ownHelper, 'Penmoss Helper'))).toBe(
+      join(
+        realpathSync(own),
+        'Frameworks',
+        'Penmoss Helper.app',
+        'Contents',
+        'MacOS',
+        'Penmoss Helper',
+      ),
+    );
+    // Resources is the app's folder, through a link (a link to app.asar alone hangs Electron).
+    expect(readlinkSync(join(own, 'Resources'))).toBe('../../../Resources');
+    expect(lstatSync(join(own, 'Resources', 'app.asar')).isSymbolicLink()).toBe(false);
     expect(readFileSync(join(own, 'Resources', 'app.asar'), 'utf8')).toBe('the asar');
 
     // Packing again replaces it.

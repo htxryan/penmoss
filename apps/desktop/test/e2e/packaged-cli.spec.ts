@@ -40,7 +40,12 @@ const children: ChildProcess[] = [];
 test.beforeAll(() => {
   test.setTimeout(900_000);
   const asar = join(APP, 'Contents', 'Resources', 'app.asar');
-  const built = statSync(join(DESKTOP, 'dist', 'boot.cjs')).mtimeMs;
+  // Packed again when the build, or the way the bundle is packed, is newer than the pack.
+  const built = Math.max(
+    ...['dist/boot.cjs', 'scripts/cli-bundle.mjs', 'electron-builder.config.cjs'].map(
+      (file) => statSync(join(DESKTOP, file)).mtimeMs,
+    ),
+  );
   if (existsSync(CLI_EXE) && existsSync(asar) && statSync(asar).mtimeMs >= built) return;
   const env: NodeJS.ProcessEnv = { ...process.env, PENMOSS_MAC_ARCH: 'arm64' };
   // Ad hoc, whatever this machine has: no certificate, no notarisation.

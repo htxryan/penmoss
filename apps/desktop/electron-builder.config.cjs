@@ -167,9 +167,10 @@ const config = {
     identity: signed ? (env.CSC_NAME ?? undefined) : '-',
     sign: signed ? undefined : signAdHoc,
     notarize,
-    // The CLI bundle (afterPack) is signed with the app, but not again through its symlinks to
-    // the app's Frameworks and app.asar: those are the app's own files, signed once.
-    signIgnore: ['/Penmoss CLI\\.app/Contents/(Frameworks|Resources)/'],
+    // The CLI bundle (afterPack) is signed with the app, its copies of the helpers too, but not
+    // again through its links to the app's frameworks and Resources: those are the app's own
+    // files, signed once.
+    signIgnore: ['/Penmoss CLI\\.app/Contents/(Frameworks/[^/]+\\.framework|Resources)(/|$)'],
     // The owner check, a plain Mach-O executable signed with the app (beforePack builds it).
     extraResources: [{ from: 'dist/native/Penmoss', to: 'auth/Penmoss' }],
   },
