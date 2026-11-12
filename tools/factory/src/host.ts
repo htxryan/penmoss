@@ -42,7 +42,7 @@ import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { Exec } from './exec.ts';
 import { ensureConfig, mustGit } from './git.ts';
 import { failedLines, jobIdOf, runIdOf, type CheckRun } from './checks.ts';
-import { ciHistory, MAIN_RUNS_READ } from './ci-failure.ts';
+import { ciHistory, MAIN_RUNS_READ, rerunWhenDone } from './ci-failure.ts';
 import type { MainRun, RunJob } from './merge.ts';
 import {
   definedPlaceholders,
@@ -1020,9 +1020,19 @@ export function hostDeps(options: HostOptions): HostDeps {
         .catch(() => '');
       return failedLines(log) || '(the log was empty)';
     },
-    rerunFailed: async (run) => {
-      await gh.run(['run', 'rerun', run, '--failed', '--repo', config.repo]);
-    },
+    rerunFailed: (run) =>
+      rerunWhenDone(run, {
+        status: async (id) =>
+          (
+            await gh.json<{ status: string }>([
+              ...['run', 'view', id, '--repo', config.repo, '--json', 'status'],
+            ])
+          ).status,
+        rerun: async (id) => {
+          await gh.run(['run', 'rerun', id, '--failed', '--repo', config.repo]);
+        },
+        sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+      }),
     mainRunJobs: async (workflow) => {
       // main's latest finished push runs of the workflow, newest first, and each one's jobs.
       const runs = await gh.json<MainRun[]>([

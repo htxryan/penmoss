@@ -241,3 +241,27 @@ export function ciHistory(ledger: string, issue: number, pr: string): CiHistory 
   }
   return { repairs, reruns, flakeReruns };
 }
+
+/** How long a re-run waits for its Actions run to finish before asking anyway. */
+export const RERUN_WAIT_MS = 45 * 60_000;
+
+/**
+ * Re-runs an Actions run's failed jobs once the run has finished. CI counts as red as soon as
+ * one job fails, but GitHub refuses `gh run rerun --failed` while the run's other jobs are still
+ * going, so an infra or flake re-run asked for then would fail and fall to a repair round.
+ */
+export async function rerunWhenDone(
+  run: string,
+  deps: {
+    readonly status: (run: string) => Promise<string>;
+    readonly rerun: (run: string) => Promise<void>;
+    readonly sleep: (ms: number) => Promise<void>;
+    readonly now?: () => number;
+  },
+  limitMs = RERUN_WAIT_MS,
+): Promise<void> {
+  const now = deps.now ?? Date.now;
+  const until = now() + limitMs;
+  while ((await deps.status(run)) !== 'completed' && now() < until) await deps.sleep(30_000);
+  await deps.rerun(run);
+}

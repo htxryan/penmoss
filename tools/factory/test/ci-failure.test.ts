@@ -9,6 +9,7 @@ import {
   INFRA_SIGNATURES,
   passedOnMain,
   touchedBy,
+  rerunWhenDone,
 } from '../src/ci-failure.ts';
 
 const check = (name: string, run: number): CheckRun => ({
@@ -236,5 +237,47 @@ describe('which red CI is a flaky test outside the branch (A-NEW-1)', () => {
     expect([...history.reruns]).toEqual([['91', 1]]);
     expect(history.repairs).toBe(0);
     expect(ciHistory('', 117, pr).flakeReruns).toBe(0);
+  });
+});
+
+describe('rerunWhenDone', () => {
+  it('waits for the Actions run to finish before re-running its failed jobs', async () => {
+    const said: string[] = [];
+    const statuses = ['in_progress', 'in_progress', 'completed'];
+    await rerunWhenDone('42', {
+      status: (run) => {
+        said.push(`status ${run}`);
+        return Promise.resolve(statuses.shift() ?? 'completed');
+      },
+      rerun: (run) => {
+        said.push(`rerun ${run}`);
+        return Promise.resolve();
+      },
+      sleep: () => Promise.resolve(),
+    });
+    expect(said).toEqual(['status 42', 'status 42', 'status 42', 'rerun 42']);
+  });
+
+  it('asks anyway once its time is up', async () => {
+    let t = 0;
+    const said: string[] = [];
+    await rerunWhenDone(
+      '7',
+      {
+        status: () => Promise.resolve('in_progress'),
+        rerun: (run) => {
+          said.push(`rerun ${run}`);
+          return Promise.resolve();
+        },
+        sleep: (ms) => {
+          t += ms;
+          return Promise.resolve();
+        },
+        now: () => t,
+      },
+      60_000,
+    );
+    expect(said).toEqual(['rerun 7']);
+    expect(t).toBe(60_000);
   });
 });
