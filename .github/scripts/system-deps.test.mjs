@@ -139,7 +139,8 @@ describe('ci.yml', () => {
   it("asks apt for Chromium's libraries only through system-deps.sh", () => {
     assert.doesNotMatch(ci, /--with-deps/);
     assert.doesNotMatch(ci, /playwright install-deps/);
-    assert.equal(ci.match(/sh \.github\/scripts\/system-deps\.sh /g)?.length, 3);
+    // site, e2e, budgets and desktop (A1348 put the budgets on Ubuntu).
+    assert.equal(ci.match(/sh \.github\/scripts\/system-deps\.sh /g)?.length, 4);
   });
 
   it("caches the Electron job's tool packages, and fetches Electron before checking its libraries", () => {
