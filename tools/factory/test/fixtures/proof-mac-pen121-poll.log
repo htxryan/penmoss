@@ -1,0 +1,135 @@
+[32mtask: [desktop:test] task desktop:test:here -- test/e2e/packaged-cli.spec.ts
+[0m[32mtask: [desktop:build] PENMOSS_BUILD=desktop pnpm --filter @penmoss/web exec vite build --outDir ../desktop/dist/web --emptyOutDir --logLevel warn
+[0m[33m(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - import "./csp" without a file extension (vite.config.ts:5:39). Add the file extension
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.[39m
+[33m[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[32mtask: [desktop:build] pnpm --filter @penmoss/desktop build
+[0m$ node build.mjs
+[2m Test Files [22m [1m[32m20 passed[39m[22m[90m (20)[39m
+[2m      Tests [22m [1m[32m224 passed[39m[22m[90m (224)[39m
+[2m   Start at [22m 05:57:04
+[2m   Duration [22m 15.62s[2m (tests 96%, import 2%, transform 1%)[22m
+
+[32mtask: [desktop:test:here] pnpm --filter @penmoss/desktop exec playwright test test/e2e/packaged-cli.spec.ts
+[0m
+Running 2 tests using 1 worker
+
+
+  ✓  1 test/e2e/packaged-cli.spec.ts:383:1 › an MCP server added before this build still lets Penmoss open, and keeps serving (17.9s)
+
+  ✘  2 test/e2e/packaged-cli.spec.ts:435:1 › agents run the CLI bundle; Penmoss opens from the Dock and Finder while one runs (29.0s)
+
+  ✘  3 test/e2e/packaged-cli.spec.ts:435:1 › agents run the CLI bundle; Penmoss opens from the Dock and Finder while one runs (retry #1) (27.3s)
+
+
+  1) test/e2e/packaged-cli.spec.ts:435:1 › agents run the CLI bundle; Penmoss opens from the Dock and Finder while one runs 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+    Call Log:
+    - Timeout 20000ms exceeded while waiting on the predicate
+
+      147 | async function quitApp(pid: number): Promise<void> {
+      148 |   process.kill(pid, 'SIGTERM');
+    > 149 |   await expect.poll(() => alive(pid), { timeout: 20_000 }).toBe(false);
+          |                                                            ^
+      150 | }
+      151 |
+      152 | const SWIFT_WINDOWS = `import CoreGraphics
+        at quitApp (/Users/admin/penmoss/apps/desktop/test/e2e/packaged-cli.spec.ts:149:60)
+        at /Users/admin/penmoss/apps/desktop/test/e2e/packaged-cli.spec.ts:511:9
+
+    attachment #1: lsappinfo: the MCP server (text/plain) ──────────────────────────────────────────
+    "Penmoss CLI" ASN:0x0-0x2e02e: 
+        bundleID="app.penmoss.mac.cli"
+        bundle path="/Users/admin/penmoss/apps/desktop/release/mac-arm64/Penmoss.app/Contents/Helpers/Penmoss CLI.app"
+        executable path="/Users/admin/penmoss/apps/desktop/release/mac-arm64/Penmoss.app/Contents/Helpers/Penmoss CLI.app/...
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: app.log (text/plain) ────────────────────────────────────────────────────────────
+    test-results/proof/packaged-cli-agents-run-th-b2756-k-and-Finder-while-one-runs/attachments/app-log-8be0f4b0bc1a5bf76963e5801430293e23e8af9c.log
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: MCP server stderr (CLI bundle) (text/plain) ─────────────────────────────────────
+    exit -, signal -
+    
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/proof/packaged-cli-agents-run-th-b2756-k-and-Finder-while-one-runs/error-context.md
+
+    Error Context: test-results/proof/packaged-cli-agents-run-th-b2756-k-and-Finder-while-one-runs/error-context.md
+
+    attachment #6: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/proof/packaged-cli-agents-run-th-b2756-k-and-Finder-while-one-runs/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/proof/packaged-cli-agents-run-th-b2756-k-and-Finder-while-one-runs/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+    Call Log:
+    - Timeout 20000ms exceeded while waiting on the predicate
+
+      147 | async function quitApp(pid: number): Promise<void> {
+      148 |   process.kill(pid, 'SIGTERM');
+    > 149 |   await expect.poll(() => alive(pid), { timeout: 20_000 }).toBe(false);
+          |                                                            ^
+      150 | }
+      151 |
+      152 | const SWIFT_WINDOWS = `import CoreGraphics
+        at quitApp (/Users/admin/penmoss/apps/desktop/test/e2e/packaged-cli.spec.ts:149:60)
+        at /Users/admin/penmoss/apps/desktop/test/e2e/packaged-cli.spec.ts:511:9
+
+    attachment #1: lsappinfo: the MCP server (text/plain) ──────────────────────────────────────────
+    "Penmoss CLI" ASN:0x0-0x33033: 
+        bundleID="app.penmoss.mac.cli"
+        bundle path="/Users/admin/penmoss/apps/desktop/release/mac-arm64/Penmoss.app/Contents/Helpers/Penmoss CLI.app"
+        executable path="/Users/admin/penmoss/apps/desktop/release/mac-arm64/Penmoss.app/Contents/Helpers/Penmoss CLI.app/...
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: app.log (text/plain) ────────────────────────────────────────────────────────────
+    test-results/proof/packaged-cli-agents-run-th-b2756-k-and-Finder-while-one-runs-retry1/attachments/app-log-006c5c4e9019ef869d5d34d1e528ddeddcca545e.log
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: MCP server stderr (CLI bundle) (text/plain) ─────────────────────────────────────
+    exit -, signal -
+    
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/proof/packaged-cli-agents-run-th-b2756-k-and-Finder-while-one-runs-retry1/error-context.md
+
+    Error Context: test-results/proof/packaged-cli-agents-run-th-b2756-k-and-Finder-while-one-runs-retry1/error-context.md
+
+    attachment #6: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/proof/packaged-cli-agents-run-th-b2756-k-and-Finder-while-one-runs-retry1/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/proof/packaged-cli-agents-run-th-b2756-k-and-Finder-while-one-runs-retry1/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    test/e2e/packaged-cli.spec.ts:435:1 › agents run the CLI bundle; Penmoss opens from the Dock and Finder while one runs 
+  1 passed (1.4m)
+Error: ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL
+
+  × "pnpm recursive exec" failed in /Users/admin/penmoss/apps/desktop
+
+[31mtask: Failed to run task "desktop:test:here": exit status 1
+[0m[31mtask: Failed to run task "desktop:test": exit status 201
+[0m
