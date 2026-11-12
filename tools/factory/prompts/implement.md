@@ -43,6 +43,7 @@ Write `.factory/result.json` (it is not committed):
 ```json
 {
   "status": "done",
+  "title": "Mac: the Dock icon brings back the window minimized last",
   "summary": "One line saying what the branch changes, as a whole: the PR shows it (not this round's steps)",
   "questions": [],
   "platforms": {
@@ -56,6 +57,8 @@ Write `.factory/result.json` (it is not committed):
   "releaseNote": ["Fixed: Search finds notes with accents."]
 }
 ```
+
+`title` is the PR's title: at most 60 characters, the area first (`Mac:`, `Web:`, `Android:`, `Factory:`, …), then a statement of what is now true, such as `"Web: search finds notes with accents"`. Don't name the card (no `PEN-…`) and don't end it with a full stop. A longer one isn't used.
 
 `releaseNote` is the PR's Release note (A1294), which becomes the release notes in the apps and on GitHub: one line per change someone using Penmoss would notice, `New`, `Improved` or `Fixed`, then `(Mac)` or `(Android)` if the change is only there, a colon and one sentence ending in a full stop, such as `"New (Android): Settings → What's new lists this version's changes."`. Write it for that person, not about the code. Write `"releaseNote": "none"` for a change they wouldn't notice: CI, tests, refactors, contributor docs, the factory. A missing or malformed note sends you back once to fix it.
 

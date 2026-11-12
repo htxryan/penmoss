@@ -1,8 +1,8 @@
 /**
  * The factory updates itself (A1293; amends A1226). A third LaunchAgent, the updater, looks at
  * `origin/main` every `autoUpdateMinutes` from the factory's own code checkout. When main has
- * changed what the factory runs (`tools/factory/`, or the VM script the Mac proof runs from the
- * checkout), it runs the same update as `task factory:update -- --wait`: new work is held, the
+ * changed what the factory runs (`tools/factory/` apart from its tests and docs, or the VM script
+ * the Mac proof runs from the checkout), it runs the same update as `task factory:update -- --wait`: new work is held, the
  * active run or merge finishes, then the daemon and the UI restart on the new main. A commit
  * whose update failed isn't tried again; the next one on main is.
  *
@@ -21,6 +21,22 @@ import { mustGit } from './git.ts';
 /** What main changes that the factory runs from its code checkout. */
 export const FACTORY_PATHS = ['tools/factory/', 'scripts/vm/'] as const;
 
+/**
+ * Whether a changed file under FACTORY_PATHS changes what the installed factory runs (A1344).
+ * The factory's own tests (`test/`, the UI's `e2e/` and their two configs) and its Markdown, apart
+ * from the prompts the runs read, don't: an update for them only holds new work until the active
+ * run ends. Everything else does: the source, the prompts, the sandbox runner, the agents' config,
+ * `package.json`, the patches, `factory.config.json`, `tsconfig.json`, and `scripts/vm/`.
+ */
+export function changesRuntime(file: string): boolean {
+  if (!file.startsWith('tools/factory/')) return true;
+  const path = file.slice('tools/factory/'.length);
+  if (path.startsWith('test/') || path.startsWith('e2e/')) return false;
+  if (path === 'vitest.config.ts' || path === 'playwright.config.ts') return false;
+  if (path.toLowerCase().endsWith('.md') && !path.startsWith('prompts/')) return false;
+  return true;
+}
+
 /** The updater's exit after an update: launchd starts it again, on the new code. */
 export const RESTART = 75;
 
@@ -31,7 +47,7 @@ const failedPath = (config: FactoryConfig) =>
 export interface Pending {
   /** origin/main's commit. */
   readonly sha: string;
-  /** The files under FACTORY_PATHS it changes from the checkout's commit. */
+  /** The files under FACTORY_PATHS it changes from the checkout's commit that the factory runs. */
   readonly files: readonly string[];
 }
 
@@ -43,7 +59,7 @@ export async function pendingUpdate(exec: Exec, dir: string): Promise<Pending> {
     await mustGit(exec, dir, ['diff', '--name-only', 'HEAD', 'origin/main', '--', ...FACTORY_PATHS])
   )
     .split('\n')
-    .filter(Boolean);
+    .filter((file) => file !== '' && changesRuntime(file));
   return { sha, files };
 }
 

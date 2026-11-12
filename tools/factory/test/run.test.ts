@@ -9,12 +9,19 @@ import type { RunJob } from '../src/merge.ts';
 import type { WalkOutcome } from '../src/walk.ts';
 import type { RebaseOutcome } from '../src/rebase.ts';
 import type { AgentResult } from '../src/result.ts';
+import type { IssueComment } from '../src/issue.ts';
 import { VmUnavailable, type VmCheck } from '../src/proof/mac.ts';
 import {
   branchName,
+  CONTINUE_MESSAGE,
+  CONTINUE_NOTE,
+  repliesSection,
   gateCommand,
+  oneLine,
+  proofReason,
   prTitle,
   runImplement,
+  shortenTitle,
   TITLE_MAX,
   type RunDeps,
   type RunSandbox,
@@ -84,13 +91,17 @@ interface Fake {
 }
 
 function fake(overrides: {
-  result?: AgentResult | { error: string };
+  result?: AgentResult | { error: string; missing?: boolean };
   paths?: string[];
   commits?: number;
   dirty?: boolean;
   gateExit?: number;
   proofPassed?: boolean;
-  agentRounds?: AgentResult[];
+  agentRounds?: (AgentResult | { error: string; missing?: boolean })[];
+  /** The agent can resume its last session (Claude Code; A1346). */
+  resumable?: boolean;
+  /** Ryan's new card comments each agent round finds, in order (A1347). */
+  owner?: IssueComment[][];
   ci?: CheckRun[][];
   conflict?: boolean;
   /** review.json per validation, in order (F19). */
@@ -220,10 +231,30 @@ function fake(overrides: {
           : { output: 'done' },
       );
     },
+    ...(overrides.owner
+      ? {
+          ownerComments: () => {
+            calls.push('owner comments');
+            return Promise.resolve(overrides.owner!.shift() ?? []);
+          },
+        }
+      : {}),
+    ...(overrides.resumable
+      ? {
+          canContinue: () => true,
+          continueAgent: (_sandbox: RunSandbox, message: string) => {
+            calls.push('agent continued');
+            prompts.push(message);
+            return Promise.resolve({ output: 'done' });
+          },
+        }
+      : {}),
     readResult: () => {
       const next = rounds.shift() ?? result;
       return Promise.resolve(
-        'error' in next ? { ok: false, error: next.error } : { ok: true, result: next },
+        'error' in next
+          ? { ok: false, error: next.error, ...(next.missing ? { missing: true } : {}) }
+          : { ok: true, result: next },
       );
     },
     diff: () =>
@@ -582,6 +613,56 @@ describe('runImplement', () => {
     expect(f.comments.at(-1)).toMatch(/change nothing against main, so there is no PR to open/);
   });
 
+  it('runs the agent with Ryan’s replies when he commented after the run stopped', async () => {
+    // A recovered run went on from the gate with the old result while Ryan's reply waited.
+    const reply: IssueComment = {
+      author: 'ryan',
+      authorName: 'Ryan',
+      body: 'Use the accent colour, not blue.',
+      createdAt: '2026-11-12T09:00:00.000Z',
+    };
+    const f = fake({});
+    const outcome = await runImplement(f.deps, {
+      item: card,
+      spec,
+      prompt: 'p',
+      recovered: true,
+      replies: [reply],
+    });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.calls.slice(0, 5)).toEqual([
+      'comment #42',
+      'status In progress',
+      'open factory/42-fix-the-typo-in-docs-cli',
+      'agent',
+      'close 1',
+    ]);
+    expect(f.comments[0]).toMatch(/^Restarted: you commented after this run stopped/);
+    expect(f.prompts[0]).toBe(
+      `p\n\n${repliesSection('factory/42-fix-the-typo-in-docs-cli', [reply])}`,
+    );
+    expect(f.prompts[0]).toContain(
+      '**Ryan** (2026-11-12T09:00:00.000Z):\nUse the accent colour, not blue.',
+    );
+  });
+
+  it('gives each round Ryan’s card comments newer than the prompt', async () => {
+    const said: IssueComment = {
+      author: 'ryan',
+      body: 'Also keep the old link working.',
+      createdAt: '2026-11-12T09:30:00.000Z',
+    };
+    // The first round sees nothing new; Ryan comments while the gate runs; the gate fails.
+    const f = fake({ gateExit: 1, owner: [[], [said]] });
+    await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(f.prompts[0]).toBe('p');
+    expect(f.prompts[1]).toContain("## The gate's feedback (round 1)");
+    expect(f.prompts[1]).toMatch(
+      /## Ryan's new comments on the issue\n\n.*\n\n\*\*ryan\*\* \(2026-11-12T09:30:00.000Z\):\nAlso keep the old link working\.$/,
+    );
+    expect(f.details).toContainEqual(['owner-comments', { round: 1, comments: 1 }]);
+  });
+
   it('runs the agent again when the branch has none of the finished round’s commits', async () => {
     const f = fake({ commits: 0 });
     await runImplement(f.deps, {
@@ -651,6 +732,9 @@ describe('runImplement', () => {
     expect(f.prompts[1]).not.toContain("The web proof's output:");
     // And where to see the proof's last screenshot, which the Mac proof's VM is the only way to (A1291).
     expect(f.prompts[1]).toContain('.factory/last-proof/');
+    // And what a failing test left there, by the names the host gives the files (A1342).
+    expect(f.prompts[1]).toContain('`<platform>-failures.md`');
+    expect(f.prompts[1]).toContain('`<platform>-<n>-error-context.md`');
   });
 
   const review = (verdict: string, note = '') =>
@@ -999,6 +1083,51 @@ describe('runImplement', () => {
     expect(f.calls.at(-1)).toBe('blocked');
   });
 
+  it("logs why the gate refused each round, in one line (gate-failed's reason)", async () => {
+    const reasons = (f: Fake) =>
+      f.details.filter(([e]) => e === 'gate-failed').map(([, d]) => d?.['reason']);
+    const failed = fake({ gateExit: 1 });
+    await runImplement(failed.deps, { item: card, spec, prompt: 'p' });
+    expect(reasons(failed)).toEqual(Array(config.rounds.gateFix + 1).fill('task lint failed'));
+    expect(failed.details).toContainEqual([
+      'gate-failed',
+      { round: 0, reason: 'task lint failed' },
+    ]);
+
+    const conflicted = fake({ conflict: true });
+    await runImplement(conflicted.deps, { item: card, spec, prompt: 'p' });
+    expect(reasons(conflicted)[0]).toBe('rebase conflict: docs/cli.md');
+
+    const unproved = fake({ paths: ['apps/web/src/a.ts'], result: webDone, proofPassed: false });
+    await runImplement(unproved.deps, { item: card, spec, prompt: 'p' });
+    expect(reasons(unproved)[0]).toBe(
+      'web proof: no passing recording; mac proof: no passing recording; android proof: no passing recording',
+    );
+
+    const unnamed = fake({ paths: ['apps/web/src/a.ts'], agentRounds: [done, webDone] });
+    await runImplement(unnamed.deps, { item: card, spec, prompt: 'p' });
+    expect(reasons(unnamed)).toEqual(['no proof spec named for web, mac, android']);
+
+    const weakened = fake({ weakened: true, agentRounds: [done, done] });
+    await runImplement(weakened.deps, { item: card, spec, prompt: 'p' });
+    expect(reasons(weakened)[0]).toBe('weakened tests: apps/web/test/e2e/x.spec.ts');
+  });
+
+  it('says which proof tests failed, by platform, and keeps a reason to one line', () => {
+    expect(
+      proofReason([
+        'mac: packaged-cli.spec.ts › the CLI opens the app',
+        'mac: packaged-cli.spec.ts › it reopens',
+        'web: comments.spec.ts › AC1',
+      ]),
+    ).toBe(
+      'mac proof: 2 failed (packaged-cli.spec.ts › the CLI opens the app, …); web proof: 1 failed (comments.spec.ts › AC1)',
+    );
+    expect(oneLine('`task check`\n  failed:\n\nerror')).toBe('`task check` failed: error');
+    expect(oneLine('x'.repeat(300))).toHaveLength(200);
+    expect(oneLine('x'.repeat(300)).endsWith('…')).toBe(true);
+  });
+
   it('installs the rebased dependencies before the check, and a failed install goes to the agent (A1251)', async () => {
     const f = fake({ paths: ['.github/x.yml'], installExit: 1 });
     const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
@@ -1021,12 +1150,68 @@ describe('runImplement', () => {
     expect(
       await runImplement(fake({ commits: 0 }).deps, { item: card, spec, prompt: 'p' }),
     ).toEqual({ kind: 'blocked', reason: 'no-commits' });
-    const f = fake({ result: { error: 'the agent wrote no .factory/result.json' } });
+    const f = fake({ result: { error: 'the agent wrote no .factory/result.json', missing: true } });
     expect(await runImplement(f.deps, { item: card, spec, prompt: 'p' })).toEqual({
       kind: 'blocked',
       reason: 'the agent wrote no .factory/result.json',
     });
+    // It was given one more session first, never more (A1346).
+    expect(f.calls.filter((c) => c === 'agent')).toHaveLength(2);
     expect(f.calls).toContain('close 1');
+    // A malformed result isn't a missing one: it goes straight to Blocked.
+    const bad = fake({ result: { error: 'status must be done, needs-info or failed' } });
+    expect(await runImplement(bad.deps, { item: card, spec, prompt: 'p' })).toMatchObject({
+      kind: 'blocked',
+    });
+    expect(bad.calls.filter((c) => c === 'agent')).toHaveLength(1);
+    expect(bad.events).not.toContain('agent-continued');
+  });
+
+  it('continues a session that ended without result.json once, in the same sandbox', async () => {
+    // PEN-117's OpenCode session ended on a malformed tool call, and the run Blocked at once.
+    const missing = { error: 'the agent wrote no .factory/result.json', missing: true };
+    const f = fake({ agentRounds: [missing], resumable: true });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.calls.slice(2, 6)).toEqual([
+      'open factory/42-fix-the-typo-in-docs-cli',
+      'agent',
+      'agent continued',
+      'close 1',
+    ]);
+    expect(f.prompts[1]).toBe(CONTINUE_MESSAGE);
+    expect(f.details).toContainEqual(['agent-continued', { round: 0, how: 'resume' }]);
+  });
+
+  it("starts a new session with the note when the agent can't resume one", async () => {
+    const missing = { error: 'the agent wrote no .factory/result.json', missing: true };
+    const f = fake({ agentRounds: [missing] });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.calls.slice(2, 6)).toEqual([
+      'open factory/42-fix-the-typo-in-docs-cli',
+      'agent',
+      'agent',
+      'close 1',
+    ]);
+    expect(f.prompts[1]).toBe(`p\n\n${CONTINUE_NOTE}`);
+    expect(f.details).toContainEqual(['agent-continued', { round: 0, how: 'new session' }]);
+  });
+
+  it('falls back to a new session when the resume fails', async () => {
+    const missing = { error: 'the agent wrote no .factory/result.json', missing: true };
+    const f = fake({ agentRounds: [missing], resumable: true });
+    const deps: RunDeps = {
+      ...f.deps,
+      continueAgent: () => Promise.reject(new Error('resumeSession "x" not found')),
+    };
+    const outcome = await runImplement(deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.prompts).toEqual(expect.arrayContaining([`p\n\n${CONTINUE_NOTE}`]));
+    expect(f.details).toContainEqual([
+      'agent-continued',
+      { round: 0, how: 'new session', after: 'resumeSession "x" not found' },
+    ]);
   });
 });
 
@@ -1472,12 +1657,31 @@ describe('main moves while the PR waits for CI (F6)', () => {
     const f = fake({ behind: [false, true], rebases: [clean, conflict, clean] });
     const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
     expect(outcome.kind).toBe('in-review');
-    expect(f.prompts).toHaveLength(2);
     expect(f.prompts[1]).toContain('## `origin/main` moved: rebase onto it');
     expect(f.prompts[1]).toContain('the local `main` branch is stale');
     expect(f.prompts[1]).toContain('stopped on conflicts in `apps/web/src/a.ts`, `docs/cli.md`');
     expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(2);
     expect(f.calls.at(-2)).toBe('status In review');
+  });
+
+  it("logs the refresh gate's reason, and its pass before the push", async () => {
+    // PEN-121's ledger read gate-failed, then pushed: the regate that passed logged nothing.
+    const f = fake({
+      behind: [false, true],
+      workflowIn: (sandbox) => sandbox === 3,
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.details).toContainEqual([
+      'gate-failed',
+      { phase: 'rebase', reason: 'workflow change: .github/workflows/ci.yml' },
+    ]);
+    const after = f.details.slice(f.events.lastIndexOf('gate-failed'));
+    expect(after.map(([e]) => e).filter((e) => e === 'gate-passed' || e === 'pushed')).toEqual([
+      'gate-passed',
+      'pushed',
+    ]);
+    expect(after).toContainEqual(['gate-passed', { command: 'task lint', phase: 'rebase' }]);
   });
 
   it('sets Blocked naming the conflicting files when the fix round leaves them', async () => {
@@ -1564,7 +1768,8 @@ describe('prTitle', () => {
   it("falls back to the summary's first sentence, cut at a word to 72 characters", () => {
     const title = prTitle({ summary, key: 'PEN-75' });
     expect(title.length).toBeLessThanOrEqual(TITLE_MAX);
-    expect(title).toBe('Linked "Ryan Henderson" in the brochure footer to…');
+    // No ellipsis, and no dangling "to".
+    expect(title).toBe('Linked "Ryan Henderson" in the brochure footer');
     expect(prTitle({ summary: 'Fix the typo. Also tidied PEN-9.', key: 'PEN-9' })).toBe(
       'Fix the typo',
     );
@@ -1578,10 +1783,54 @@ describe('prTitle', () => {
     const long = `Desktop: ${'make the sidebar remember its width '.repeat(3)}`;
     const title = prTitle({ subject: long, summary, key: 'PEN-1' });
     expect(title.length).toBeLessThanOrEqual(TITLE_MAX);
-    expect(title.endsWith('…')).toBe(true);
+    expect(title).toBe('Desktop: make the sidebar remember its width make the sidebar remember');
     expect(prTitle({ subject: 'Fix #12 and SPEC-3', summary, key: '#12' })).toBe(
       'Fix #12 and SPEC-3',
     );
+  });
+
+  it('cuts a long title before a clause, never mid-phrase with an ellipsis', () => {
+    // PEN-121's PR was "Mac: agents' MCP servers run from Penmoss CLI.app, so opening Penmoss…".
+    expect(
+      prTitle({
+        subject:
+          "Mac: agents' MCP servers run from Penmoss CLI.app, so opening Penmoss no longer steals focus",
+        summary,
+        key: 'PEN-121',
+      }),
+    ).toBe("Mac: agents' MCP servers run from Penmoss CLI.app");
+    const cuts: [string, string][] = [
+      [
+        'Factory: the updater ignores tests and docs; only runtime changes restart the daemon now',
+        'Factory: the updater ignores tests and docs',
+      ],
+      [
+        'Web: the search box keeps its query when you switch notebooks: it was cleared every time',
+        'Web: the search box keeps its query when you switch notebooks',
+      ],
+      [
+        'Android: the editor keeps the cursor at the line end after pasting, the toolbar too',
+        'Android: the editor keeps the cursor at the line end after pasting',
+      ],
+    ];
+    for (const [long, cut] of cuts) {
+      const title = shortenTitle(long);
+      expect(title).toBe(cut);
+      expect(title.length).toBeLessThanOrEqual(TITLE_MAX);
+    }
+    // The area prefix's colon is never the cut.
+    expect(shortenTitle(`Mac: ${'x'.repeat(10)} ${'word '.repeat(20)}`)).toMatch(/^Mac: x+ word/);
+  });
+
+  it("uses the agent's own title when it is short and names no card", () => {
+    const own = 'Mac: the Dock icon brings back the window minimized last';
+    expect(prTitle({ title: own, subject: 'Something else', summary, key: 'PEN-67' })).toBe(own);
+    expect(prTitle({ title: `${own}.`, summary, key: 'PEN-67' })).toBe(own);
+    // Too long, or naming the card: the commit subject instead.
+    for (const title of [`${own} and restores its size and its place`, `${own} (PEN-67)`])
+      expect(prTitle({ title, subject: 'Mac: the Dock restores', summary, key: 'PEN-67' })).toBe(
+        'Mac: the Dock restores',
+      );
   });
 });
 

@@ -16,6 +16,24 @@ describe('parseAgentResult', () => {
     expect(parseAgentResult(JSON.stringify({ ...base, releaseNote: 3 })).ok).toBe(false);
   });
 
+  it("reads the PR's title, which is optional", () => {
+    const base = { status: 'done', summary: 's' };
+    const titled = parseAgentResult(
+      JSON.stringify({
+        ...base,
+        title: ' Mac: the Dock icon brings back the window minimized last ',
+      }),
+    );
+    expect(titled.ok && titled.result.title).toBe(
+      'Mac: the Dock icon brings back the window minimized last',
+    );
+    const none = parseAgentResult(JSON.stringify(base));
+    expect(none.ok && 'title' in none.result).toBe(false);
+    const blank = parseAgentResult(JSON.stringify({ ...base, title: '  ' }));
+    expect(blank.ok && 'title' in blank.result).toBe(false);
+    expect(parseAgentResult(JSON.stringify({ ...base, title: ['a'] })).ok).toBe(false);
+  });
+
   it('reads questions written as { question, proposed } objects (A1267)', () => {
     // PEN-80's agent wrote its question this way, and the run Blocked on the format instead.
     const r = parseAgentResult(

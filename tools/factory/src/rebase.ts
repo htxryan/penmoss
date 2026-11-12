@@ -7,7 +7,9 @@
  * formatted again (A1250). A row whose number main has meanwhile given to another decision is
  * renumbered after the rebase. The factory's own numbering commit, which edits the branch's
  * `A-NEW-n` row where main's new rows are, is replayed rather than merged (A1292). Any other
- * conflict aborts the rebase and goes to the agent.
+ * commit whose decisions conflict remains has its row changes, compared without padding,
+ * applied to the rebased table by row key (PEN-121, A1341). Any other conflict aborts the
+ * rebase and goes to the agent.
  *
  * Runs in a gate sandbox's worktree (git through the sandbox, the files read on the host as
  * `numberDecisions` does); the push stays the host's (R18).
@@ -206,6 +208,100 @@ async function replayNumbering(sandbox: RunSandbox): Promise<string | null> {
   return formatDecisions(numberLines(ours.stdout, lines, assigned));
 }
 
+/** A row's key, its first cell: `A1339`, `D66`, `W14` or `A-NEW-1`. */
+const KEY = /^\|\s*([A-Z]+\d+|A-NEW-\d+)\s*\|/;
+
+export const rowKey = (line: string): string | undefined => KEY.exec(line)?.[1];
+
+/** Each keyed row of `lines`, unpadded, by key; null when a key is there twice. */
+function keyedRows(lines: readonly string[]): Map<string, string> | null {
+  const rows = new Map<string, string>();
+  for (const line of lines) {
+    const key = rowKey(line);
+    if (key === undefined) continue;
+    if (rows.has(key)) return null;
+    rows.set(key, unpadRow(line));
+  }
+  return rows;
+}
+
+/** Everything but the keyed rows, unpadded: headings, prose, table headers. */
+const skeleton = (lines: readonly string[]) =>
+  lines
+    .filter((l) => rowKey(l) === undefined)
+    .map(unpadRow)
+    .join('\n');
+
+/**
+ * A commit's changes to docs/decisions.md's rows, compared without padding, applied to `head`
+ * (what the rebase has so far, main's rows among them): a row it edited is replaced by key, a
+ * row it added goes after the row before it in the commit (and after any rows main added there),
+ * a row it removed goes (PEN-121: an agent's round edited its numbered row, its Prettier had
+ * re-padded the table, and main had added a row beside it). Null when the commit changed
+ * anything but rows, when main changed a row the commit changed too, or when a key is ambiguous.
+ * Not yet padded: Prettier does that.
+ */
+export function applyRowChanges(head: string, parent: string, commit: string): string | null {
+  const [h, p, c] = [head, parent, commit].map((t) => t.split('\n')) as [
+    string[],
+    string[],
+    string[],
+  ];
+  if (skeleton(p) !== skeleton(c)) return null;
+  const before = keyedRows(p);
+  const after = keyedRows(c);
+  const main = keyedRows(h);
+  if (!before || !after || !main) return null;
+  const out = h.filter((line) => {
+    const key = rowKey(line);
+    return key === undefined || after.has(key) || !before.has(key);
+  });
+  for (const [key, was] of before)
+    if (!after.has(key) && main.has(key) && main.get(key) !== was) return null;
+  const at = (key: string | undefined) =>
+    key === undefined ? -1 : out.findIndex((l) => rowKey(l) === key);
+  for (const [i, line] of c.entries()) {
+    const key = rowKey(line);
+    if (key === undefined || before.get(key) === after.get(key)) continue;
+    const mine = after.get(key)!;
+    if (main.has(key)) {
+      // Main changed it too, differently: the agent's to resolve.
+      if (main.get(key) !== before.get(key) && main.get(key) !== mine) return null;
+      out[at(key)] = line;
+      continue;
+    }
+    if (before.has(key)) return null; // main removed a row the commit edited
+    const previous = at(rowKey(c[i - 1] ?? ''));
+    if (previous >= 0) {
+      let pos = previous + 1;
+      // Rows only main has, right there, stay first.
+      const mainOnly = (k: string | undefined) =>
+        k !== undefined && !before.has(k) && !after.has(k);
+      while (pos < out.length && mainOnly(rowKey(out[pos]!))) pos++;
+      out.splice(pos, 0, line);
+      continue;
+    }
+    const next = at(rowKey(c[i + 1] ?? ''));
+    if (next < 0) return null;
+    out.splice(next, 0, line);
+  }
+  return out.join('\n');
+}
+
+/**
+ * The stopped commit's row changes against its parent, applied to what the rebase has so far
+ * (`applyRowChanges`), then padded by Prettier. Null when they don't apply.
+ */
+async function replayRows(sandbox: RunSandbox): Promise<string | null> {
+  const show = (rev: string) => sandbox.exec(`git show ${rev}:${DECISIONS}`);
+  const head = await show(':2');
+  const parent = await show('REBASE_HEAD~1');
+  const commit = await show('REBASE_HEAD');
+  if (head.exitCode !== 0 || parent.exitCode !== 0 || commit.exitCode !== 0) return null;
+  const text = applyRowChanges(head.stdout, parent.stdout, commit.stdout);
+  return text === null ? null : formatDecisions(text);
+}
+
 /**
  * `git rebase origin/main` in the sandbox's worktree, resolving decisions-only conflicts as
  * above, then renumbering any row main has taken (one more commit). `reservedFile` is the
@@ -228,7 +324,8 @@ export async function rebaseOntoMain(
     const text = decisionsOnly
       ? (resolveAppendConflicts(readFileSync(path, 'utf8')) ??
         (await mergeUnpadded(sandbox)) ??
-        (await replayNumbering(sandbox)))
+        (await replayNumbering(sandbox)) ??
+        (await replayRows(sandbox)))
       : null;
     if (text === null) {
       await sandbox.exec('git rebase --abort');

@@ -10,7 +10,8 @@ import { tick } from '../src/dispatcher.ts';
 import { renderPlist } from '../src/launchd.ts';
 import { buildReport } from '../src/report.ts';
 import { mergeLog } from '../src/watch.ts';
-import { finishedRound, resumeFrom } from '../src/start.ts';
+import { finishedRound, newestComment, recoveryInput, resumeFrom } from '../src/start.ts';
+import type { Issue } from '../src/issue.ts';
 import { item, testConfig } from './helpers.ts';
 
 describe('the singleton lock', () => {
@@ -134,6 +135,56 @@ describe('unfinishedClaims (R12)', () => {
     ]);
     expect(resumeFrom(config, 75)).toEqual({});
     expect(resumeFrom(config, 76)).toEqual({});
+  });
+
+  it('runs the agent again on recovery when Ryan commented after it finished (A1347)', () => {
+    const config = { ...testConfig(), stateDir: mkdtempSync(join(tmpdir(), 'factory-replies-')) };
+    const result = { status: 'done', summary: 'Linked the footer' };
+    mkdirSync(join(config.stateDir, 'runs', '75-a'), { recursive: true });
+    writeFileSync(join(config.stateDir, 'runs', '75-a', 'result.json'), JSON.stringify(result));
+    writeFileSync(
+      join(config.stateDir, 'runs.jsonl'),
+      [
+        { at: '2026-11-12T08:00:00.000Z', run: '75-a', event: 'claimed', issue: 75 },
+        { at: '2026-11-12T08:05:00.000Z', run: '75-a', event: 'agent-started' },
+        { at: '2026-11-12T08:40:00.000Z', run: '75-a', event: 'agent-finished', status: 'done' },
+        { at: '2026-11-12T09:10:00.000Z', run: '75-a', event: 'blocked', reason: 'gate-failed' },
+      ]
+        .map((e) => `${JSON.stringify(e)}\n`)
+        .join(''),
+    );
+    const found = resumeFrom(config, 75);
+    expect(found.resume?.finishedAt).toBe('2026-11-12T08:40:00.000Z');
+    const issue = (comments: Issue['comments']): Issue => ({
+      number: 75,
+      title: 't',
+      body: '',
+      author: 'ryan',
+      url: '',
+      labels: [],
+      comments,
+    });
+    const at = (createdAt: string, author: string, body: string) => ({ author, body, createdAt });
+    const blockedNote = at(
+      '2026-11-12T09:10:01.000Z',
+      'factory',
+      'The gate stopped this run.\n\n<!-- penmoss-factory run=75-a event=blocked -->',
+    );
+    const reply = at('2026-11-12T09:20:00.000Z', 'ryan', 'Keep the old link too.');
+    // Ryan's reply after the agent finished: the agent runs again with it, not the gate.
+    expect(recoveryInput(found, issue([blockedNote, reply]), 'ryan')).toEqual({
+      replies: [reply],
+    });
+    // Nothing from Ryan since (the factory's own note, someone else's comment, or Ryan's
+    // earlier words the agent already had): on from the gate as before.
+    const before = at('2026-11-12T07:00:00.000Z', 'ryan', 'Go.');
+    const other = at('2026-11-12T09:30:00.000Z', 'someone', 'Ship it!');
+    expect(recoveryInput(found, issue([before, blockedNote, other]), 'ryan')).toEqual({
+      resume: found.resume,
+    });
+    expect(recoveryInput({}, issue([reply]), 'ryan')).toEqual({});
+    expect(newestComment(issue([reply, before]))).toBe('2026-11-12T09:20:00.000Z');
+    expect(newestComment(issue([]))).toBeUndefined();
   });
 
   it('keeps a run Ryan paused with Blocked claimed, so clearing Blocked resumes it (R23)', () => {

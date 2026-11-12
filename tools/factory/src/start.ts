@@ -17,7 +17,7 @@ import { issueText, type Issue } from './issue.ts';
 import { ATTACHMENTS, localizeImages, type LocalImageOptions } from './attachments.ts';
 import { optedIn, parseIssueSpec, type IssueSpec } from './labels.ts';
 import { formatMarker } from './pick.ts';
-import { advancePlanning, type PlanDeps } from './plan-run.ts';
+import { advancePlanning, commentsSince, type PlanDeps } from './plan-run.ts';
 import {
   agreedPlanPath,
   findSession,
@@ -31,7 +31,7 @@ import {
 } from './planning-host.ts';
 import type { PlanningAction } from './planning.ts';
 import { fill, promptTemplate } from './prompt.ts';
-import { branchName, runImplement, type RunOutcome } from './run.ts';
+import { branchName, runImplement, type RunInput, type RunOutcome } from './run.ts';
 import { parseAgentResult, type AgentResult } from './result.ts';
 import { loadSecrets, type Secrets } from './secrets.ts';
 import { openTracker } from './tracker/index.ts';
@@ -317,19 +317,35 @@ export async function executePlanning(
  * names the run it took the result from (`from`), which is where the result still is.
  */
 export function finishedRound(ledger: string, issue: number): string | undefined {
-  let finished: string | undefined;
+  return lastFinished(ledger, issue)?.run;
+}
+
+/** `finishedRound`, with when that `agent-finished` was logged (its ledger `at`). */
+function lastFinished(
+  ledger: string,
+  issue: number,
+): { readonly run: string; readonly at?: string } | undefined {
+  let finished: { run: string; at?: string } | undefined;
   for (const line of ledger.split('\n')) {
     if (!line.trim()) continue;
-    let e: { event?: string; issue?: number; run?: string; status?: string; from?: string };
+    let e: {
+      event?: string;
+      issue?: number;
+      run?: string;
+      status?: string;
+      from?: string;
+      at?: string;
+    };
     try {
       e = JSON.parse(line) as typeof e;
     } catch {
       continue; // A torn last line from a crash.
     }
     if ((e.issue ?? Number(String(e.run ?? '').split('-')[0])) !== issue) continue;
-    if (e.event === 'agent-finished')
-      finished = e.status === 'done' ? (e.from ?? e.run) : undefined;
-    else if (['agent-started', 'in-review', 'merged', 'done'].includes(e.event ?? ''))
+    if (e.event === 'agent-finished') {
+      const run = e.from ?? e.run;
+      finished = e.status === 'done' && run ? { run, ...(e.at ? { at: e.at } : {}) } : undefined;
+    } else if (['agent-started', 'in-review', 'merged', 'done'].includes(e.event ?? ''))
       finished = undefined;
   }
   return finished;
@@ -337,24 +353,60 @@ export function finishedRound(ledger: string, issue: number): string | undefined
 
 /**
  * For a recovered run (R12): the run whose agent last finished its work on the card, from the
- * ledger, with the result the host kept in its folder (`runs/<run>/result.json`). Nothing when
- * there is none, or the result no longer reads: the run then starts the agent again.
+ * ledger, with the result the host kept in its folder (`runs/<run>/result.json`) and when the
+ * ledger says it finished. Nothing when there is none, or the result no longer reads: the run
+ * then starts the agent again.
  */
 export function resumeFrom(
   config: FactoryConfig,
   issue: number,
-): { resume?: { run: string; result: AgentResult } } {
+): { resume?: { run: string; result: AgentResult; finishedAt?: string } } {
   const state = expandHome(config.stateDir);
   const ledger = join(state, 'runs.jsonl');
   if (!existsSync(ledger)) return {};
-  const run = finishedRound(readFileSync(ledger, 'utf8'), issue);
+  const finished = lastFinished(readFileSync(ledger, 'utf8'), issue);
+  const run = finished?.run;
   if (!run || !/^[\w-]+$/.test(run)) return {};
   const file = join(state, 'runs', run, 'result.json');
   if (!existsSync(file)) return {};
   const parsed = parseAgentResult(readFileSync(file, 'utf8'));
   return parsed.ok && parsed.result.status === 'done'
-    ? { resume: { run, result: parsed.result } }
+    ? {
+        resume: {
+          run,
+          result: parsed.result,
+          ...(finished.at ? { finishedAt: finished.at } : {}),
+        },
+      }
     : {};
+}
+
+/**
+ * How a recovered run starts (R12, A1347): from the gate with the finished agent's result, as
+ * `resumeFrom` finds it, unless Ryan commented on the card after that agent finished (an answer
+ * to the block, say). Then the agent runs again, with his comments, instead of the gate and proof
+ * failing again on the old result while his reply waits.
+ */
+export function recoveryInput(
+  found: ReturnType<typeof resumeFrom>,
+  issue: Issue,
+  owner: string,
+): Pick<RunInput, 'resume' | 'replies'> {
+  const resume = found.resume;
+  if (!resume) return {};
+  const replies = resume.finishedAt ? commentsSince(issue, owner, resume.finishedAt) : [];
+  return replies.length > 0 ? { replies } : { resume };
+}
+
+/**
+ * The newest comment on the issue as the run read it: Ryan's comments after it are ones the
+ * run's prompt doesn't hold (A1347). Undefined when there were none, so every one is new.
+ */
+export function newestComment(issue: Issue): string | undefined {
+  return issue.comments
+    .map((c) => c.createdAt)
+    .sort()
+    .at(-1);
 }
 
 /**
@@ -384,11 +436,10 @@ export async function executeRun(
   const { config, gh, tracker } = factory;
   const runId = `${item.number}-${Date.now().toString(36)}-${randomBytes(2).toString('hex')}`;
   await ensureClone(config, nodeExec);
-  const { text, images } = await issueForAgent(
-    tracker,
-    await tracker.readIssue(item.number),
-    runImages(config, runId),
-  );
+  const issue = await tracker.readIssue(item.number);
+  const { text, images } = await issueForAgent(tracker, issue, runImages(config, runId));
+  // Ryan's comments after the issue the prompt holds reach each later round (A1347).
+  const seen = newestComment(issue);
   const prompt = fill(promptTemplate('implement'), {
     branch: branchName(config, item),
     issue: text,
@@ -414,6 +465,8 @@ export async function executeRun(
     onChat: (url) => postChat(tracker, item.number, url, log),
     log,
     ...(waitingFor ? { waitingFor } : {}),
+    ownerComments: async () =>
+      commentsSince(await tracker.readIssue(item.number), tracker.owner, seen),
   });
   const isBlocked = () => tracker.isBlocked(item.number);
   // Every effect, and every step that starts work: Blocked set mid-run stops the run before its
@@ -432,7 +485,7 @@ export async function executeRun(
       ...(plan ? { plan } : {}),
       ...(images ? { images } : {}),
       ...(recovered ? { recovered } : {}),
-      ...(recovered ? resumeFrom(config, item.number) : {}),
+      ...(recovered ? recoveryInput(resumeFrom(config, item.number), issue, tracker.owner) : {}),
     });
   } catch (error) {
     if (error instanceof BlockedByRyan) {

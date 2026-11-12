@@ -22,7 +22,12 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, extname, join } from 'node:path';
-import type { AgentProvider, Sandbox } from '@ai-hero/sandcastle';
+import type {
+  AgentProvider,
+  AgentStreamEvent,
+  Sandbox,
+  SandboxRunResult,
+} from '@ai-hero/sandcastle';
 import type { Board } from './board.ts';
 import { ensureAvd, stopSlotEmulator } from './avd.ts';
 import { ATTACHMENTS, stageAttachments } from './attachments.ts';
@@ -54,7 +59,13 @@ import {
 import { GhError, type Gh } from './github.ts';
 import { proofFiles, type AttachedProof } from './proof/body.ts';
 import { publishRefs, type ProofStore } from './proof/store.ts';
-import { fromPlaywrightReport, type ProofItem } from './proof/manifest.ts';
+import { fromPlaywrightReport, type ProofItem, type PwReport } from './proof/manifest.ts';
+import {
+  androidFailures,
+  keepFailures,
+  playwrightFailures,
+  type FailedTest,
+} from './proof/evidence.ts';
 import { checkMedia, framesToMp4, framesWithin, toMp4, within } from './proof/media.ts';
 import { addedLines, DECISIONS, newRows, rebaseOntoMain } from './rebase.ts';
 import { checkMacVm, runMacProof, runMacWalk } from './proof/mac.ts';
@@ -77,6 +88,7 @@ import {
 } from './publish.ts';
 import { parseAgentResult, RESULT_PATH } from './result.ts';
 import type { RunDeps, RunEvent, RunSandbox } from './run.ts';
+import type { IssueComment } from './issue.ts';
 import { makeOwnDirs, sandboxSpec, seatbeltProvider, withJavaHome } from './sandbox.ts';
 import { ANDROID_WALK_CLASS, MAC_WALK_SPEC, WALK_SHOT, walkFile, walkTail } from './walk.ts';
 import type { Secrets } from './secrets.ts';
@@ -282,18 +294,26 @@ export async function execPastRefLocks(
 /** The agent's raw output stream in the run folder, beside Sandcastle's `agent.log`. */
 export const AGENT_STREAM = 'agent.stream.jsonl';
 
-/** Where a run's sandbox finds the last proof's screenshots (`stageLastProof`). */
+/** Where a run's sandbox finds the last proof's screenshots and failures (`stageLastProof`). */
 export const LAST_PROOF = '.factory/last-proof';
 
-/** Copies the last proof's screenshots (`<platform>-<n>-screenshot.png`) into the worktree. */
+/**
+ * The last proof's files the agent gets: each test's screenshot (`<platform>-<n>-screenshot.png`,
+ * or `.jpg` for the Mac window's last frame), and a failing test's error context, attachments and
+ * logs with their index, `<platform>-failures.md` (proof/evidence.ts). Never a video.
+ */
+const STAGED = /^[a-z]+-(failures\.md|\d+-[a-z0-9-]+\.(png|jpg|md|txt|log|json|logcat))$/;
+
+/** Copies the last proof's screenshots and failures into the worktree, in place of older ones. */
 export function stageLastProof(raw: string, worktree: string): string[] {
-  if (!existsSync(raw)) return [];
-  const shots = readdirSync(raw).filter((f) => /^[a-z]+-\d+-screenshot\.png$/.test(f));
-  if (shots.length === 0) return [];
   const to = join(worktree, LAST_PROOF);
+  rmSync(to, { recursive: true, force: true });
+  if (!existsSync(raw)) return [];
+  const files = readdirSync(raw).filter((f) => STAGED.test(f));
+  if (files.length === 0) return [];
   mkdirSync(to, { recursive: true });
-  for (const f of shots) copyFileSync(join(raw, f), join(to, f));
-  return shots;
+  for (const f of files) copyFileSync(join(raw, f), join(to, f));
+  return files;
 }
 
 /** The current session's chat link, in the run folder while the session runs (the UI reads it). */
@@ -451,6 +471,8 @@ export interface HostOptions {
   readonly log: (line: string) => void;
   /** What the run waits for (the test VM), for the daemon's status.json (F10). */
   readonly waitingFor?: (reason: string | null) => void;
+  /** Ryan's card comments the run's prompt doesn't hold yet (RunDeps.ownerComments). */
+  readonly ownerComments?: () => Promise<readonly IssueComment[]>;
 }
 
 /** The host's RunDeps, plus the commit last pushed to a branch (a review round replies with it). */
@@ -494,6 +516,87 @@ export function hostDeps(options: HostOptions): HostDeps {
     const text = ran.stdout + ran.stderr;
     proofLogs.set(platform, text);
     writeFileSync(join(runDir, `proof-${platform}.log`), text);
+  };
+
+  // The sandbox's last session, which `continueAgent` resumes when its agent keeps sessions.
+  const lastSessions = new WeakMap<RunSandbox, { resume?: SandboxRunResult['resume'] }>();
+  /**
+   * One agent session in the sandbox, or with `resume` the sandbox's last one continued
+   * (Sandcastle's resume: Claude Code's `--resume`). OpenCode's sessions aren't kept (A1263),
+   * so it never resumes.
+   */
+  const session = async (handle: RunSandbox, prompt: string, resume = false) => {
+    const sandbox = sandboxes.get(handle);
+    if (!sandbox) throw new Error('not a sandbox this run opened');
+    const last = lastSessions.get(handle)?.resume;
+    if (resume && !last) throw new Error('no session in this sandbox to continue');
+    const logFile = join(runDir, 'agent.log');
+    // Sandcastle appends every session of the run to agent.log. Only this session's part is
+    // read, or a retry after a usage limit would find the old limit message and wait again.
+    const start = existsSync(logFile) ? statSync(logFile).size : 0;
+    const tail = () => {
+      try {
+        return readFileSync(logFile).subarray(start).toString('utf8').slice(-8000);
+      } catch {
+        return '';
+      }
+    };
+    // agent.log is Sandcastle's rendering; the agent's own stream (Claude Code's stream-json,
+    // its init event first, which lists the MCP servers it loaded) is kept beside it, verbatim.
+    const streamFile = join(runDir, AGENT_STREAM);
+    const streamStart = existsSync(streamFile) ? statSync(streamFile).size : 0;
+    // What can say the session hit a usage limit. Claude Code ends a session with a result
+    // event, which carries a limit as an error: when there is one, only it counts, so an agent
+    // that writes about limits (or works on rate limiting) isn't taken for one that hit its own.
+    const limitText = (fallback: string) => {
+      const result = lastResultEvent(streamFile, streamStart);
+      if (!result) {
+        // OpenCode's provider error, which says how long its limit lasts.
+        const error = lastErrorEvent(streamFile, streamStart);
+        return error ? `${fallback}\n${error}` : fallback;
+      }
+      return result.is_error === true && typeof result.result === 'string' ? result.result : '';
+    };
+    // A resumed session keeps its agent; its login is staged again all the same.
+    const remote = await remoteSession();
+    const agent = remote ? remote.agent : options.agent;
+    try {
+      const run = {
+        idleTimeoutSeconds: config.timeouts.agentMinutes * 60,
+        logging: {
+          type: 'file' as const,
+          path: logFile,
+          onAgentStreamEvent: (event: AgentStreamEvent) => {
+            if (event.type !== 'raw') return;
+            appendFileSync(streamFile, `${event.line}\n`);
+            const url = remote ? chatUrlOf(event.line) : undefined;
+            if (url) {
+              writeFileSync(join(runDir, CHAT_URL), url);
+              options.log(`the session's chat in the Claude app: ${url}`);
+              options.onChat?.(url);
+            }
+          },
+        },
+      };
+      const ran =
+        resume && last ? await last(prompt, run) : await sandbox.run({ agent, prompt, ...run });
+      // Sandcastle offers a resume for any agent with session storage, but only a captured
+      // session can be resumed: the factory doesn't capture OpenCode's (A1263).
+      lastSessions.set(handle, agent.captureSessions && ran.resume ? { resume: ran.resume } : {});
+    } catch (error) {
+      // An agent stopped by its usage limit exits non-zero: the run waits for the reset (R13).
+      const message = error instanceof Error ? error.message : String(error);
+      const output = `${limitText(tail())}\n${message}`;
+      if (usageLimitReset(output, new Date())) return { output };
+      const missing = agentMissing(message);
+      if (missing) throw new AgentNotInstalled(missing, process.env['PATH'] ?? '');
+      throw error;
+    } finally {
+      remote?.unstage();
+      rmSync(join(runDir, CHAT_URL), { force: true });
+    }
+    explainCompletion(logFile);
+    return { output: limitText(tail()) };
   };
 
   return {
@@ -598,72 +701,9 @@ export function hostDeps(options: HostOptions): HostDeps {
       sandboxes.set(handle, sandbox);
       return handle;
     },
-    runAgent: async (handle, prompt) => {
-      const sandbox = sandboxes.get(handle);
-      if (!sandbox) throw new Error('not a sandbox this run opened');
-      const logFile = join(runDir, 'agent.log');
-      // Sandcastle appends every session of the run to agent.log. Only this session's part is
-      // read, or a retry after a usage limit would find the old limit message and wait again.
-      const start = existsSync(logFile) ? statSync(logFile).size : 0;
-      const tail = () => {
-        try {
-          return readFileSync(logFile).subarray(start).toString('utf8').slice(-8000);
-        } catch {
-          return '';
-        }
-      };
-      // agent.log is Sandcastle's rendering; the agent's own stream (Claude Code's stream-json,
-      // its init event first, which lists the MCP servers it loaded) is kept beside it, verbatim.
-      const streamFile = join(runDir, AGENT_STREAM);
-      const streamStart = existsSync(streamFile) ? statSync(streamFile).size : 0;
-      // What can say the session hit a usage limit. Claude Code ends a session with a result
-      // event, which carries a limit as an error: when there is one, only it counts, so an agent
-      // that writes about limits (or works on rate limiting) isn't taken for one that hit its own.
-      const limitText = (fallback: string) => {
-        const result = lastResultEvent(streamFile, streamStart);
-        if (!result) {
-          // OpenCode's provider error, which says how long its limit lasts.
-          const error = lastErrorEvent(streamFile, streamStart);
-          return error ? `${fallback}\n${error}` : fallback;
-        }
-        return result.is_error === true && typeof result.result === 'string' ? result.result : '';
-      };
-      const remote = await remoteSession();
-      try {
-        await sandbox.run({
-          agent: remote ? remote.agent : options.agent,
-          prompt,
-          idleTimeoutSeconds: config.timeouts.agentMinutes * 60,
-          logging: {
-            type: 'file',
-            path: logFile,
-            onAgentStreamEvent: (event) => {
-              if (event.type !== 'raw') return;
-              appendFileSync(streamFile, `${event.line}\n`);
-              const url = remote ? chatUrlOf(event.line) : undefined;
-              if (url) {
-                writeFileSync(join(runDir, CHAT_URL), url);
-                options.log(`the session's chat in the Claude app: ${url}`);
-                options.onChat?.(url);
-              }
-            },
-          },
-        });
-      } catch (error) {
-        // An agent stopped by its usage limit exits non-zero: the run waits for the reset (R13).
-        const message = error instanceof Error ? error.message : String(error);
-        const output = `${limitText(tail())}\n${message}`;
-        if (usageLimitReset(output, new Date())) return { output };
-        const missing = agentMissing(message);
-        if (missing) throw new AgentNotInstalled(missing, process.env['PATH'] ?? '');
-        throw error;
-      } finally {
-        remote?.unstage();
-        rmSync(join(runDir, CHAT_URL), { force: true });
-      }
-      explainCompletion(logFile);
-      return { output: limitText(tail()) };
-    },
+    runAgent: (handle, prompt) => session(handle, prompt),
+    canContinue: (handle) => lastSessions.get(handle)?.resume !== undefined,
+    continueAgent: (handle, message) => session(handle, message, true),
     stageMockups: (handle) => {
       // The mockups agreed with the plan (F16), never the session's later edits.
       const issue = options.runId.split('-')[0] ?? '';
@@ -708,7 +748,11 @@ export function hostDeps(options: HostOptions): HostDeps {
     readResult: (handle) => {
       const path = join(handle.worktreePath, RESULT_PATH);
       if (!existsSync(path))
-        return Promise.resolve({ ok: false, error: `the agent wrote no ${RESULT_PATH}` });
+        return Promise.resolve({
+          ok: false,
+          error: `the agent wrote no ${RESULT_PATH}`,
+          missing: true,
+        });
       const text = readFileSync(path, 'utf8');
       const parsed = parseAgentResult(text);
       // A copy the host keeps: a run restarted after this one resumes from it (resumeFrom).
@@ -754,6 +798,7 @@ export function hostDeps(options: HostOptions): HostDeps {
     },
     macVmCheck: (handle) => checkMacVm(exec, config, handle.worktreePath),
     waitingFor: (reason) => options.waitingFor?.(reason),
+    ...(options.ownerComments ? { ownerComments: options.ownerComments } : {}),
     walk: async (handle, platform, signal) => {
       // The session wrote the walkthrough; the host runs it where the app runs (walk.ts).
       const file = walkFile(platform);
@@ -815,16 +860,18 @@ export function hostDeps(options: HostOptions): HostDeps {
     recordProof: async (handle, platform, specs, signal) => {
       const quoted = specs.map((spec) => `'${spec.replaceAll("'", '')}'`).join(' ');
       let items: ProofItem[];
+      // What each failing test left, for the agent's next round (proof/evidence.ts).
+      let failed: FailedTest[];
+      // An earlier round's files would show the agent a failure this round no longer has.
+      clearProofFiles(join(runDir, 'raw'), platform);
       if (platform === 'web') {
         // Its exit code is not the verdict: the report says which tests passed.
         keepProofLog('web', await handle.exec(`task proof:web -- ${quoted}`));
         const report = newestReport(join(handle.worktreePath, 'apps/web/test-results'));
         if (!report) return [];
-        items = fromPlaywrightReport(
-          JSON.parse(readFileSync(report, 'utf8')) as Parameters<typeof fromPlaywrightReport>[0],
-          'web',
-          'after',
-        );
+        const parsed = JSON.parse(readFileSync(report, 'utf8')) as PwReport;
+        failed = playwrightFailures(parsed);
+        items = fromPlaywrightReport(parsed, 'web', 'after');
       } else if (platform === 'android') {
         // The slot's own emulator, inside its sandbox (FD25); the AVD is made on the host first,
         // and an emulator a stopped run left up is stopped. At the proof timeout the host stops
@@ -845,14 +892,14 @@ export function hostDeps(options: HostOptions): HostDeps {
         const out = join(handle.worktreePath, 'apps/android/build/proof');
         const report = join(out, 'report.json');
         if (!existsSync(report)) return [];
-        items = (
-          JSON.parse(readFileSync(report, 'utf8')) as {
-            title: string;
-            status: string;
-            video: string;
-            screenshot: string;
-          }[]
-        ).map((r) => ({
+        const parsed = JSON.parse(readFileSync(report, 'utf8')) as {
+          title: string;
+          status: string;
+          video: string;
+          screenshot: string;
+        }[];
+        failed = androidFailures(parsed, out);
+        items = parsed.map((r) => ({
           platform: 'android',
           title: r.title,
           status: r.status === 'passed' ? 'passed' : 'failed',
@@ -876,11 +923,9 @@ export function hostDeps(options: HostOptions): HostDeps {
         );
         const report = join(out, 'test-results', 'proof', 'report.json');
         if (!existsSync(report)) return [];
-        items = fromPlaywrightReport(
-          JSON.parse(readFileSync(report, 'utf8')) as Parameters<typeof fromPlaywrightReport>[0],
-          'mac',
-          'after',
-        ).map((item) => ({
+        const parsed = JSON.parse(readFileSync(report, 'utf8')) as PwReport;
+        failed = macFailures(parsed, out);
+        items = fromPlaywrightReport(parsed, 'mac', 'after').map((item) => ({
           ...item,
           // The report names the VM's paths; the files came back under test-results/vm.
           ...(item.video ? { video: fromVm(item.video, out) } : {}),
@@ -903,24 +948,7 @@ export function hostDeps(options: HostOptions): HostDeps {
           }),
         );
       }
-      const raw = join(runDir, 'raw');
-      mkdirSync(raw, { recursive: true });
-      return items.map((item, i) => {
-        // Only the run's own files: the agent's tests write the report that names them.
-        const keep = (path: string | undefined, name: string) => {
-          if (!path || !within(path, handle.worktreePath)) return undefined;
-          const to = join(raw, `${platform}-${i + 1}-${name}`);
-          copyFileSync(path, to);
-          return to;
-        };
-        const video = keep(item.video, `video${extname(item.video ?? '') || '.webm'}`);
-        const screenshot = keep(item.screenshot, 'screenshot.png');
-        return {
-          ...item,
-          ...(video ? { video } : {}),
-          ...(screenshot ? { screenshot } : {}),
-        };
-      });
+      return keepProofFiles(items, failed, platform, join(runDir, 'raw'), handle.worktreePath);
     },
     prepareProof: async (items) => {
       const dir = join(runDir, 'proof');
@@ -1161,6 +1189,51 @@ export function hostDeps(options: HostOptions): HostDeps {
       options.log(`${event}${Object.keys(detail).length ? ` ${JSON.stringify(detail)}` : ''}`);
     },
   };
+}
+
+/** Removes a platform's files from an earlier round of the proof from the run folder's `raw/`. */
+export function clearProofFiles(raw: string, platform: string): void {
+  if (!existsSync(raw)) return;
+  for (const f of readdirSync(raw))
+    if (f.startsWith(`${platform}-`)) rmSync(join(raw, f), { force: true });
+}
+
+/**
+ * Copies a proof's recordings into the run folder's `raw/` as `<platform>-<n>-video…` and
+ * `<platform>-<n>-screenshot.png`, then what each failing test left (proof/evidence.ts), and
+ * returns the items with the copies' paths. Only the run's own files: the agent's tests write the
+ * report that names them.
+ */
+export function keepProofFiles(
+  items: readonly ProofItem[],
+  failed: readonly FailedTest[],
+  platform: string,
+  raw: string,
+  worktree: string,
+): ProofItem[] {
+  mkdirSync(raw, { recursive: true });
+  const kept = items.map((item, i) => {
+    const keep = (path: string | undefined, name: string) => {
+      if (!path || !within(path, worktree)) return undefined;
+      const to = join(raw, `${platform}-${i + 1}-${name}`);
+      copyFileSync(path, to);
+      return to;
+    };
+    const video = keep(item.video, `video${extname(item.video ?? '') || '.webm'}`);
+    const screenshot = keep(item.screenshot, 'screenshot.png');
+    return {
+      ...item,
+      ...(video ? { video } : {}),
+      ...(screenshot ? { screenshot } : {}),
+    };
+  });
+  keepFailures(failed, platform, raw, worktree);
+  return kept;
+}
+
+/** The Mac proof's failing tests, with the VM's paths as the copies under `out` (`fromVm`). */
+export function macFailures(report: PwReport, out: string): FailedTest[] {
+  return playwrightFailures(report, (path) => fromVm(path, out));
 }
 
 /** A path in the VM's `apps/desktop/test-results/…` as the copy under `<out>/test-results/…`. */

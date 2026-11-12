@@ -30,7 +30,13 @@ import {
   settle,
   type FidelityRow,
 } from './fidelity.ts';
-import { scanWeakenedTests, weakenedFeedback, workflowChanges, workflowFeedback } from './gate.ts';
+import {
+  scanWeakenedTests,
+  weakenedFeedback,
+  workflowChanges,
+  workflowFeedback,
+  type Finding,
+} from './gate.ts';
 import { USAGE_LIMIT_WAIT, usageLimitReset } from './limits.ts';
 import { validate } from './validate.ts';
 import { renderPrBody, type AttachedProof } from './proof/body.ts';
@@ -49,13 +55,16 @@ import {
   type Wanted,
 } from './carry.ts';
 import type { AgentResult } from './result.ts';
+import type { IssueComment } from './issue.ts';
 import { formatNote, parseReleaseNote } from '../../../.github/scripts/release-note.mjs';
 import type { WalkOutcome, WalkPlatform } from './walk.ts';
 
 export type RunEvent =
   | 'claimed'
   | 'agent-started'
+  | 'agent-continued'
   | 'agent-finished'
+  | 'owner-comments'
   | 'needs-info'
   | 'failed'
   | 'gate-passed'
@@ -83,6 +92,11 @@ export type RunEvent =
   | 'resumed-at-ci'
   | 'release-note-refused';
 
+/** `.factory/result.json` as read: `missing` when the agent wrote none at all. */
+export type ResultRead =
+  | { readonly ok: true; readonly result: AgentResult }
+  | { readonly ok: false; readonly error: string; readonly missing?: boolean };
+
 export interface RunSandbox {
   readonly worktreePath: string;
   exec(
@@ -104,14 +118,25 @@ export interface RunDeps {
   openSandbox(branch: string): Promise<RunSandbox>;
   /** Runs the agent in the sandbox with the prompt; resolves when it exits, with its output's tail. */
   runAgent(sandbox: RunSandbox, prompt: string): Promise<{ readonly output: string } | void>;
+  /**
+   * Whether the sandbox's last agent session can be continued (`continueAgent`): its agent keeps
+   * its sessions for a resume (Claude Code does; the factory's OpenCode doesn't, A1263).
+   */
+  canContinue?(sandbox: RunSandbox): boolean;
+  /** Continues the sandbox's last agent session with `message`; resolves as `runAgent` does. */
+  continueAgent?(sandbox: RunSandbox, message: string): Promise<{ readonly output: string } | void>;
+  /**
+   * Ryan's comments on the run's card that its prompt doesn't hold: newer than the issue the
+   * prompt was built from, oldest first, the factory's own left out (A1347). Each agent round
+   * gets them, so what he says mid-run lands on the next round.
+   */
+  ownerComments?(): Promise<readonly IssueComment[]>;
   /** Keeps a file in the run's folder (`runs/<run>/<name>`), such as the gate's whole output. */
   keep?(name: string, text: string): void;
   /** The last proof run's output for a platform (`runs/<run>/proof-<platform>.log`), if kept. */
   proofLog?(platform: Platform): string | undefined;
   /** `.factory/result.json` from the worktree, parsed (or why it couldn't be). */
-  readResult(
-    sandbox: RunSandbox,
-  ): Promise<{ ok: true; result: AgentResult } | { ok: false; error: string }>;
+  readResult(sandbox: RunSandbox): Promise<ResultRead>;
   /**
    * Paths changed on the branch against origin/main, how many commits it has, and the subject of
    * its first one (the PR's title).
@@ -242,6 +267,11 @@ export interface RunInput {
    * than running the agent again.
    */
   readonly resume?: { readonly run: string; readonly result: AgentResult };
+  /**
+   * A recovered run whose agent had finished, and Ryan's comments on the card since it did
+   * (A1347): the agent runs again with them, rather than the run going on from the gate.
+   */
+  readonly replies?: readonly IssueComment[];
 }
 
 export type RunOutcome =
@@ -306,9 +336,10 @@ export async function runAgentPatiently(
   deps: Pick<RunDeps, 'runAgent' | 'now' | 'sleep' | 'log'> & Partial<Pick<RunDeps, 'waitingFor'>>,
   sandbox: RunSandbox,
   prompt: string,
+  run: RunDeps['runAgent'] = (s, p) => deps.runAgent(s, p),
 ): Promise<void> {
   for (let waits = 0; ; waits++) {
-    const ran = await deps.runAgent(sandbox, prompt);
+    const ran = await run(sandbox, prompt);
     const reset = ran ? usageLimitReset(ran.output, deps.now()) : null;
     if (!reset) return;
     if (waits >= MAX_LIMIT_WAITS)
@@ -318,6 +349,82 @@ export async function runAgentPatiently(
     await deps.sleep(Math.ceil((reset.getTime() - deps.now().getTime()) / 1000) + 60);
     deps.waitingFor?.(null);
   }
+}
+
+/** Ryan's comments as the issue's text shows them: his words, as they are (R14). */
+function ownerCommentLines(comments: readonly IssueComment[]): string {
+  return comments
+    .map((c) => `**${c.authorName ?? c.author}** (${c.createdAt}):\n${c.body}`)
+    .join('\n\n');
+}
+
+/** Ryan's card comments that arrived while the run went on, for the next round (A1347). */
+export function ownerCommentsSection(comments: readonly IssueComment[]): string {
+  return `## Ryan's new comments on the issue\n\nRyan, the repository's owner, commented on the issue after this run read it. His comments are instructions, like the issue's; take them into account in this round:\n\n${ownerCommentLines(comments)}`;
+}
+
+/** Ryan's replies after a run whose agent had finished stopped (A1347), for its next round. */
+export function repliesSection(branch: string, comments: readonly IssueComment[]): string {
+  return `## Ryan's reply after the run stopped\n\nThis run stopped after its agent had finished, and Ryan, the repository's owner, commented on the issue since. His comments are instructions, like the issue's:\n\n${ownerCommentLines(comments)}\n\nThe earlier work is committed on \`${branch}\`: build on it, do what he asks, commit, and write \`.factory/result.json\` again. ${STALE_MAIN}`;
+}
+
+/** What a session that ended without `result.json` is told when it is continued (A1346). */
+export const CONTINUE_MESSAGE =
+  'Your session ended before you wrote `.factory/result.json`, so the factory has nothing to check yet. Continue the task from where you stopped, and write `.factory/result.json` when you are done, as the prompt says.';
+
+/** What a new session is told when the last one, which wrote no `result.json`, can't be resumed. */
+export const CONTINUE_NOTE = `## The last session ended early\n\nA session on this task ended before it wrote \`.factory/result.json\` (its final message may have been a malformed tool call). What it did is in this worktree and on the branch: read \`git status\` and \`git log origin/main..HEAD\` first. Continue the task from there, and write \`.factory/result.json\` when you are done.`;
+
+/**
+ * One agent session and the result it wrote. A session that ends without writing
+ * `.factory/result.json` at all (PEN-117's OpenCode session took a malformed tool call for its
+ * final answer) is continued once, in the same sandbox, before the run gives up on it
+ * (A1346): the same session resumed with `CONTINUE_MESSAGE` when its agent can resume one,
+ * else a new session with the prompt and `CONTINUE_NOTE`. Only once per call, so it can't loop.
+ */
+export async function runAndRead(
+  deps: Pick<
+    RunDeps,
+    | 'runAgent'
+    | 'canContinue'
+    | 'continueAgent'
+    | 'ownerComments'
+    | 'readResult'
+    | 'now'
+    | 'sleep'
+    | 'log'
+  > &
+    Partial<Pick<RunDeps, 'waitingFor'>>,
+  sandbox: RunSandbox,
+  prompt: string,
+  at: Readonly<Record<string, unknown>> = {},
+): Promise<ResultRead> {
+  // What Ryan said on the card since the prompt was built goes with every round (A1347).
+  const said = deps.ownerComments ? await deps.ownerComments().catch(() => []) : [];
+  if (said.length > 0) {
+    deps.log('owner-comments', { ...at, comments: said.length });
+    prompt = `${prompt}\n\n${ownerCommentsSection(said)}`;
+  }
+  await runAgentPatiently(deps, sandbox, prompt);
+  const read = await deps.readResult(sandbox);
+  if (read.ok || !read.missing) return read;
+  const resume = deps.continueAgent && deps.canContinue?.(sandbox) === true;
+  if (resume) {
+    deps.log('agent-continued', { ...at, how: 'resume' });
+    try {
+      await runAgentPatiently(deps, sandbox, CONTINUE_MESSAGE, (s, m) => deps.continueAgent!(s, m));
+      return await deps.readResult(sandbox);
+    } catch (error) {
+      // A session that can't be resumed after all gets the new session instead.
+      deps.log('agent-continued', {
+        ...at,
+        how: 'new session',
+        after: error instanceof Error ? error.message : String(error),
+      });
+    }
+  } else deps.log('agent-continued', { ...at, how: 'new session' });
+  await runAgentPatiently(deps, sandbox, `${prompt}\n\n${CONTINUE_NOTE}`);
+  return deps.readResult(sandbox);
 }
 
 export function branchName(config: FactoryConfig, item: BoardItem): string {
@@ -334,13 +441,72 @@ export function branchName(config: FactoryConfig, item: BoardItem): string {
 /** GitHub shows about this much of a title in its lists; git's own advice for a subject. */
 export const TITLE_MAX = 72;
 
+/** The longest title the agent may give in `result.json` (A1345). */
+export const AGENT_TITLE_MAX = 60;
+
 /**
- * The PR's title: the branch's first commit subject (the agent writes it as a change's title),
- * else the first sentence of the agent's summary, cut to `TITLE_MAX` at a word. It never names
- * the card: Linear's GitHub integration moves a card named in a PR's title (it closed PEN-75 when
- * #62 merged), and the factory owns the card's status (A1221). The body's "Part of" links it.
+ * Where a long title can end: before a clause that explains or adds to the change (", so …",
+ * "; …", ": …" after the area prefix, a dash), and failing that before a comma.
+ */
+const CLAUSE_BREAKS = [
+  /, so (?:that )?/g,
+  /, which /g,
+  /, because /g,
+  /, but /g,
+  /, and /g,
+  /; /g,
+  /: /g,
+  / [—–] /g,
+  / - /g,
+  / so that /g,
+  / because /g,
+];
+const COMMA_BREAK = /, /g;
+
+/** Words a title shouldn't end on once it is cut. */
+const DANGLING =
+  /(?:\s+(?:a|an|the|and|or|but|so|to|of|in|on|at|by|for|from|with|without|into|onto|as|that|which|when|while|its|their|his|her|this|these|those|is|are|was|were|be|it))+$/i;
+
+/**
+ * `title` cut to `TITLE_MAX` without an ellipsis (A1345): at the last clause break that fits
+ * after the area prefix (`Mac: `), else a comma, else at a word, with no dangling article,
+ * preposition or conjunction at the end. PEN-121's PR was `Mac: agents' MCP servers run from
+ * Penmoss CLI.app, so opening Penmoss…`; it is now `Mac: agents' MCP servers run from Penmoss
+ * CLI.app`.
+ */
+export function shortenTitle(title: string): string {
+  if (title.length <= TITLE_MAX) return title;
+  const prefix = /^[A-Z][\w ./+-]{0,24}: /.exec(title)?.[0].length ?? 0;
+  // A cut leaves at least the prefix and a few words.
+  const least = prefix + 16;
+  const lastBreak = (patterns: readonly RegExp[]) => {
+    let at = -1;
+    for (const pattern of patterns)
+      for (const m of title.matchAll(pattern))
+        if (m.index >= least && m.index <= TITLE_MAX && m.index > at) at = m.index;
+    return at;
+  };
+  const tidy = (text: string) => text.replace(/[\s:;,.–—-]+$/, '').replace(DANGLING, '');
+  for (const patterns of [CLAUSE_BREAKS, [COMMA_BREAK]]) {
+    const at = lastBreak(patterns);
+    if (at > 0) return tidy(title.slice(0, at));
+  }
+  const words = title.slice(0, TITLE_MAX + 1).split(' ');
+  if (words.length > 1) words.pop();
+  const cut = tidy(words.join(' '));
+  return cut.length >= least ? cut : tidy(title.slice(0, TITLE_MAX));
+}
+
+/**
+ * The PR's title: the agent's own `title` from `result.json` when it is a usable one (at most
+ * `AGENT_TITLE_MAX` characters, naming no card), else the branch's first commit subject (the
+ * agent writes it as a change's title), else the first sentence of the agent's summary, either
+ * cut to `TITLE_MAX` at a clause or a word (`shortenTitle`). It never names the card: Linear's
+ * GitHub integration moves a card named in a PR's title (it closed PEN-75 when #62 merged), and
+ * the factory owns the card's status (A1221). The body's "Part of" links it.
  */
 export function prTitle(input: {
+  readonly title?: string | undefined;
   readonly subject?: string | undefined;
   readonly summary: string;
   readonly key: string;
@@ -354,16 +520,19 @@ export function prTitle(input: {
       .replaceAll(/\s+/g, ' ')
       .replaceAll(/^[\s:;,–-]+|[\s:;,–-]+$/g, '');
   };
+  const own = input.title?.trim().replace(/\.$/, '') ?? '';
+  const usable =
+    own !== '' &&
+    !own.includes('\n') &&
+    own.length <= AGENT_TITLE_MAX &&
+    !(team && new RegExp(`\\b${team}-\\d+\\b`, 'i').test(own));
+  if (usable) return own;
   const subject =
     input.subject && !input.subject.startsWith('Number the new decisions')
       ? clean(input.subject)
       : '';
   const sentence = clean(input.summary.split(/(?<=[.!?])\s/)[0] ?? '').replace(/\.$/, '');
-  const title = subject || sentence || 'The factory’s change';
-  if (title.length <= TITLE_MAX) return title;
-  const words = title.slice(0, TITLE_MAX).split(' ');
-  if (words.length > 1) words.pop();
-  return `${words.join(' ').replace(/[\s:;,–-]+$/, '')}…`;
+  return shortenTitle(subject || sentence || 'The factory’s change');
 }
 
 /** What the gate runs for a scope (Platform scope in the plan). */
@@ -377,6 +546,39 @@ export const GATE_INSTALL = 'pnpm install --frozen-lockfile --prefer-offline';
 
 function installFeedback(installed: { readonly stdout: string; readonly stderr: string }): string {
   return `\`${GATE_INSTALL}\` failed after the rebase onto \`origin/main\`:\n\n\`\`\`\n${excerpt(installed.stdout + installed.stderr)}\n\`\`\``;
+}
+
+const INSTALL_REASON = 'pnpm install failed after the rebase';
+
+const conflictReason = (files: readonly string[]) =>
+  `rebase conflict${files.length ? `: ${files.join(', ')}` : ''}`;
+
+const weakenedReason = (findings: readonly Finding[]) =>
+  `weakened tests: ${[...new Set(findings.map((f) => f.file))].join(', ')}`;
+
+/**
+ * The failed proof tests (`platform: title`, `failedProof`) in one line, by platform:
+ * `mac: 1 failed (packaged-cli.spec.ts › reopens)`.
+ */
+export function proofReason(failing: readonly string[]): string {
+  const by = new Map<string, string[]>();
+  for (const f of failing) {
+    const at = f.indexOf(': ');
+    const platform = at < 0 ? 'proof' : f.slice(0, at);
+    by.set(platform, [...(by.get(platform) ?? []), at < 0 ? f : f.slice(at + 2)]);
+  }
+  return [...by]
+    .map(
+      ([platform, titles]) =>
+        `${platform} proof: ${titles.length} failed (${titles[0]}${titles.length > 1 ? ', …' : ''})`,
+    )
+    .join('; ');
+}
+
+/** A gate refusal's reason as one short line: whitespace collapsed, cut at `max` characters. */
+export function oneLine(text: string, max = 200): string {
+  const line = text.replaceAll(/\s+/g, ' ').trim();
+  return line.length > max ? `${line.slice(0, max - 1)}…` : line;
 }
 
 /**
@@ -417,6 +619,8 @@ type GateVerdict =
   | {
       readonly ok: false;
       readonly feedback: string;
+      /** The refusal in one short line, for the ledger and daemon.log (`gate-failed`). */
+      readonly reason: string;
       readonly block?: string;
       readonly mismatches?: readonly string[];
     };
@@ -486,9 +690,11 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
   // Claim: the comment first, so a crash after it is recoverable from GitHub (the source of truth).
   const how = resumed
     ? `Restarted: this run stopped after its agent had finished (its work is committed on the branch), so it goes on from the gate rather than running the agent again (R12). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.`
-    : input.recovered
-      ? `Restarted: this run stopped before it finished (the factory's daemon stopped, or Blocked paused it and has been cleared), so it runs again on the same branch (R12). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.`
-      : `Started: ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}, implementing straight away${spec.planSkip ? ' (`plan:skip`)' : ''}.`;
+    : input.recovered && input.replies?.length
+      ? `Restarted: you commented after this run stopped, so its agent runs again on the same branch with your ${input.replies.length === 1 ? 'comment' : `${input.replies.length} comments`}, before the gate (R12). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.`
+      : input.recovered
+        ? `Restarted: this run stopped before it finished (the factory's daemon stopped, or Blocked paused it and has been cleared), so it runs again on the same branch (R12). ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}.`
+        : `Started: ${spec.agent} (${spec.modelAlias}) on slot ${deps.slot.id}, implementing straight away${spec.planSkip ? ' (`plan:skip`)' : ''}.`;
   await deps.comment(
     item.number,
     `${how} Scope: ${spec.platforms?.join(', ') ?? 'decided by the path classifier'}.\n\n${marker('claim')}`,
@@ -496,7 +702,11 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
   await deps.setStatus(item, config.status.working);
   deps.log('claimed', { issue: item.number });
 
-  let prompt = input.prompt;
+  // Recovered with Ryan's replies since its agent finished: the agent's round comes first.
+  let prompt =
+    input.recovered && input.replies?.length
+      ? `${input.prompt}\n\n${repliesSection(branch, input.replies)}`
+      : input.prompt;
   for (let round = 0; ; round++) {
     let result: AgentResult;
     if (round === 0 && resumed) {
@@ -594,7 +804,7 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
     // A validation mismatch isn't a failed check: the ledger and the Factory UI say which it was.
     if (verdict.mismatches)
       deps.log('validation-mismatch', { round, criteria: verdict.mismatches });
-    else deps.log('gate-failed', { round });
+    else deps.log('gate-failed', { round, reason: oneLine(verdict.reason) });
     if (round >= config.rounds.gateFix) {
       return block(
         'gate-failed',
@@ -636,12 +846,13 @@ async function agentRound(
   branch: string,
   prompt: string,
   round: number,
-): Promise<{ ok: true; result: AgentResult } | { ok: false; error: string }> {
+): Promise<ResultRead> {
   const work = await deps.openSandbox(branch);
   try {
     deps.log('agent-started', { branch, round });
+    let read: ResultRead;
     try {
-      await runAgentPatiently(deps, work, prompt);
+      read = await runAndRead(deps, work, prompt, { round });
     } catch (error) {
       // The agent may have finished before a later step failed (PEN-72: Sandcastle's session
       // capture). Keep its result, so a recovered run goes on from the gate (A1266).
@@ -653,7 +864,6 @@ async function agentRound(
         });
       throw error;
     }
-    const read = await deps.readResult(work);
     deps.log('agent-finished', read.ok ? { status: read.result.status } : { error: read.error });
     return read;
   } finally {
@@ -681,6 +891,7 @@ export async function gateAndProve(
   if (unnamed.length > 0) {
     return {
       ok: false,
+      reason: `no proof spec named for ${unnamed.join(', ')}`,
       feedback: `\`result.json\` names no proof spec for ${unnamed.join(', ')}, which the change affects. Add a committed test that shows the change and list it under \`platforms.<name>.proofSpecs\`.`,
     };
   }
@@ -690,29 +901,45 @@ export async function gateAndProve(
   try {
     const clean = await gate.exec('git status --porcelain --untracked-files=no');
     if (clean.stdout.trim() !== '')
-      return { ok: false, feedback: 'the branch has uncommitted changes to tracked files.' };
+      return {
+        ok: false,
+        reason: 'uncommitted changes',
+        feedback: 'the branch has uncommitted changes to tracked files.',
+      };
     // Up to date with main before anything is checked (F6). The harness resolves new decision
     // rows on both sides; any other conflict is the agent's to resolve.
     const rebased = await deps.rebase(gate);
     if (rebased.kind === 'conflict')
-      return { ok: false, feedback: conflictFeedback(branch, rebased) };
+      return {
+        ok: false,
+        reason: conflictReason(rebased.files),
+        feedback: conflictFeedback(branch, rebased),
+      };
     noteRebase(deps, rebased);
     const numbered = await deps.numberDecisions(gate, branch);
     if (Object.keys(numbered).length > 0) deps.log('decisions-numbered', numbered);
     const installed = await gate.exec(GATE_INSTALL);
-    if (installed.exitCode !== 0) return { ok: false, feedback: installFeedback(installed) };
+    if (installed.exitCode !== 0)
+      return { ok: false, reason: INSTALL_REASON, feedback: installFeedback(installed) };
     const patch = (await gate.exec('git diff origin/main...HEAD')).stdout;
     const weak = scanWeakenedTests(patch);
-    if (weak.length > 0) return { ok: false, feedback: weakenedFeedback(weak) };
+    if (weak.length > 0)
+      return { ok: false, reason: weakenedReason(weak), feedback: weakenedFeedback(weak) };
     // GitHub refuses the factory's push of a workflow change: refuse it here, before the push.
     const workflows = workflowChanges(patch);
-    if (workflows.length > 0) return { ok: false, feedback: workflowFeedback(workflows) };
+    if (workflows.length > 0)
+      return {
+        ok: false,
+        reason: `workflow change: ${workflows.join(', ')}`,
+        feedback: workflowFeedback(workflows),
+      };
     const command = gateCommand(scope);
     const checked = await deps.heavy(`factory gate ${branch}`, () => gate.exec(command));
     if (checked.exitCode !== 0) {
       deps.keep?.('gate.log', checked.stdout + checked.stderr);
       return {
         ok: false,
+        reason: `${command} failed`,
         feedback: `\`${command}\` failed:\n\n\`\`\`\n${excerpt(checked.stdout + checked.stderr)}\n\`\`\``,
       };
     }
@@ -764,7 +991,13 @@ export async function gateAndProve(
       const specs = result.platforms[platform]?.proofSpecs ?? [];
       if (platform === 'mac') {
         const mac = await recordMacProof(deps, gate, branch, specs);
-        if (!mac.ok) return { ok: false, feedback: mac.feedback, block: 'mac-vm' };
+        if (!mac.ok)
+          return {
+            ok: false,
+            reason: `mac proof: ${mac.feedback}`,
+            feedback: mac.feedback,
+            block: 'mac-vm',
+          };
         items.push(...mac.items);
         continue;
       }
@@ -782,7 +1015,8 @@ export async function gateAndProve(
     if (missing.length > 0) {
       return {
         ok: false,
-        feedback: `the proof specs for ${missing.join(', ')} didn't pass when the harness ran them with recording on. Each proof's last screenshot is in \`.factory/last-proof/\` (\`<platform>-<n>-screenshot.png\`): look at it to see where the spec stopped.${proofOutput(deps, missing)}`,
+        reason: missing.map((p) => `${p} proof: no passing recording`).join('; '),
+        feedback: `the proof specs for ${missing.join(', ')} didn't pass when the harness ran them with recording on. ${LAST_PROOF_NOTE}${proofOutput(deps, missing)}`,
       };
     }
     const failing = failedProof(items, needed);
@@ -790,11 +1024,17 @@ export async function gateAndProve(
       const platforms = needed.filter((p) => failing.some((f) => f.startsWith(`${p}: `)));
       return {
         ok: false,
-        feedback: `these tests in your proof specs failed when the harness ran them with recording on:\n\n${failing.map((f) => `- ${f}`).join('\n')}\n\nEvery test in a proof spec has to pass: fix the code or the test. Each proof's last screenshot is in \`.factory/last-proof/\` (\`<platform>-<n>-screenshot.png\`): look at it to see where the spec stopped.${proofOutput(deps, platforms)}`,
+        reason: proofReason(failing),
+        feedback: `these tests in your proof specs failed when the harness ran them with recording on:\n\n${failing.map((f) => `- ${f}`).join('\n')}\n\nEvery test in a proof spec has to pass: fix the code or the test. ${LAST_PROOF_NOTE}${proofOutput(deps, platforms)}`,
       };
     }
     const prepared = await deps.prepareProof(items);
-    if (!prepared.ok) return { ok: false, feedback: prepared.error };
+    if (!prepared.ok)
+      return {
+        ok: false,
+        reason: `preparing the proof failed: ${prepared.error}`,
+        feedback: prepared.error,
+      };
     deps.log('proof-recorded', {
       files: prepared.proof.length,
       ...(wanted ? { diff: wanted.diff } : {}),
@@ -806,11 +1046,17 @@ export async function gateAndProve(
         images: validating.images ?? '',
         platforms: scope.platforms,
       });
-      if (!v.ok) return { ok: false, feedback: `Validation couldn't finish: ${v.error}` };
+      if (!v.ok)
+        return {
+          ok: false,
+          reason: `validation couldn't finish: ${v.error}`,
+          feedback: `Validation couldn't finish: ${v.error}`,
+        };
       const mismatches = v.rows.filter((r) => r.verdict === 'mismatch');
       if (mismatches.length > 0 && !validating.final)
         return {
           ok: false,
+          reason: `validation: ${mismatches.map((r) => criterionLabel(r.criterion)).join(', ')} not met`,
           feedback: fidelityFeedback(mismatches),
           mismatches: mismatches.map((r) => criterionLabel(r.criterion)),
         };
@@ -997,7 +1243,12 @@ async function publish(
   });
   const pr = await deps.openPr({
     branch: run.branch,
-    title: prTitle({ subject: run.subject, summary: shown.result.summary, key: run.item.key }),
+    title: prTitle({
+      title: shown.result.title,
+      subject: run.subject,
+      summary: shown.result.summary,
+      key: run.item.key,
+    }),
     body,
     proof: run.proof,
     files: (run.fidelity ?? []).flatMap((r) =>
@@ -1301,12 +1552,12 @@ async function repair(
   await deps.step(`CI repair round ${round}`);
   const work = await deps.openSandbox(run.branch);
   try {
-    await runAgentPatiently(
+    const read = await runAndRead(
       deps,
       work,
       `${run.prompt}\n\n## CI failed (repair round ${round})\n\nThe PR from \`${run.branch}\` is open and its CI failed. The failed jobs' last log lines:\n\n${logs}\n\nFix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\` again. ${CI_REPAIR_LIMITS} ${STALE_MAIN}`,
+      { phase: 'ci-repair', round },
     );
-    const read = await deps.readResult(work);
     if (!read.ok) return { ok: false, why: read.error };
     if (read.result.status !== 'done') return { ok: false, why: read.result.summary };
   } finally {
@@ -1343,7 +1594,13 @@ type Regated =
       /** The number each A-NEW-k on the branch has now (`branchNumbering`), when asked for. */
       readonly numbering?: Readonly<Record<string, string>>;
     }
-  | { readonly ok: false; readonly why: string; readonly conflict?: readonly string[] };
+  | {
+      readonly ok: false;
+      readonly why: string;
+      /** The refusal in one short line, for the ledger and daemon.log (`gate-failed`). */
+      readonly reason: string;
+      readonly conflict?: readonly string[];
+    };
 
 /**
  * The branch rebased onto a fresh main in a gate sandbox, and the gate run on it again. `light`:
@@ -1366,7 +1623,12 @@ async function regate(
     const before = options.light ? await gate.exec('git rev-parse HEAD') : undefined;
     const rebased = await deps.rebase(gate);
     if (rebased.kind === 'conflict')
-      return { ok: false, why: conflictFeedback(branch, rebased), conflict: rebased.files };
+      return {
+        ok: false,
+        why: conflictFeedback(branch, rebased),
+        reason: conflictReason(rebased.files),
+        conflict: rebased.files,
+      };
     noteRebase(deps, rebased);
     const numbered = await deps.numberDecisions(gate, branch);
     if (Object.keys(numbered).length > 0) deps.log('decisions-numbered', numbered);
@@ -1379,21 +1641,30 @@ async function regate(
       }
     }
     const installed = await gate.exec(GATE_INSTALL);
-    if (installed.exitCode !== 0) return { ok: false, why: installFeedback(installed) };
+    if (installed.exitCode !== 0)
+      return { ok: false, why: installFeedback(installed), reason: INSTALL_REASON };
     const patch = (await gate.exec('git diff origin/main...HEAD')).stdout;
     const weak = scanWeakenedTests(patch);
-    if (weak.length > 0) return { ok: false, why: weakenedFeedback(weak) };
+    if (weak.length > 0)
+      return { ok: false, why: weakenedFeedback(weak), reason: weakenedReason(weak) };
     const workflows = workflowChanges(patch);
-    if (workflows.length > 0) return { ok: false, why: workflowFeedback(workflows) };
+    if (workflows.length > 0)
+      return {
+        ok: false,
+        why: workflowFeedback(workflows),
+        reason: `workflow change: ${workflows.join(', ')}`,
+      };
     const command = gateCommand(scope);
     const checked = await deps.heavy(`factory gate ${branch}`, () => gate.exec(command));
     if (checked.exitCode !== 0) {
       deps.keep?.('gate.log', checked.stdout + checked.stderr);
       return {
         ok: false,
+        reason: `${command} failed`,
         why: `\`${command}\` failed:\n\n\`\`\`\n${excerpt(checked.stdout + checked.stderr)}\n\`\`\``,
       };
     }
+    deps.log('gate-passed', { command, phase: 'rebase' });
     return { ok: true, rebase: rebased, ...(await numbering()) };
   } finally {
     await gate.close();
@@ -1461,15 +1732,15 @@ async function bringUpToDate(
     deps.log(first.conflict ? 'rebase-conflict' : 'gate-failed', {
       ...(first.conflict ? { files: first.conflict } : {}),
       phase: 'rebase',
+      reason: oneLine(first.reason),
     });
     const ask = first.conflict
       ? `## \`origin/main\` moved: rebase onto it\n\n\`${run.branch}\` no longer rebases onto \`origin/main\`. ${first.why}\n\nKeep what \`origin/main\` changed and what this branch changes. ${STALE_MAIN} Run the checks, commit, and write \`.factory/result.json\` again.`
       : `## The gate after rebasing onto \`origin/main\`\n\n\`${run.branch}\` is now on top of \`origin/main\`, and the gate fails there: ${first.why}\n\nFix the cause (never by weakening or skipping tests), commit, and write \`.factory/result.json\` again. ${STALE_MAIN}`;
     const work = await deps.openSandbox(run.branch);
-    let read: Awaited<ReturnType<RunDeps['readResult']>>;
+    let read: ResultRead;
     try {
-      await runAgentPatiently(deps, work, `${run.prompt}\n\n${ask}`);
-      read = await deps.readResult(work);
+      read = await runAndRead(deps, work, `${run.prompt}\n\n${ask}`, { phase: 'rebase' });
     } finally {
       await work.close();
     }
@@ -1496,11 +1767,110 @@ function tail(text: string): string {
 
 const ERROR_LINE = /\berror\b|✖|✘|×|\bFAIL\b|\bfailed\b/i;
 
+/** A terminal colour code (ESC, then `[…m` and the like). */
+const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;?]*[A-Za-z]`, 'g');
+/** A failure's heading in Playwright's list reporter: `  1) [chromium] › a.spec.ts:12:3 › title`. */
+const PW_FAILURE = /^ {2}(\d+)\) (\S.*(›|:\d+:\d+).*)$/;
+/** The line that ends a failure's own block: its first attachment or its error context. */
+const PW_BLOCK_END = /^\s+(attachment #\d+:|Error Context:)/;
+/** The line after Playwright's failures: its summary, `  1 failed` and the like. */
+const PW_SUMMARY = /^ {2}\d+ (failed|flaky|passed|skipped|interrupted|did not run)\b/;
+/** A failing test's retry: the same failure again. */
+const PW_RETRY = /^\s+Retry #\d+\b/;
+/** A failure's block, and all of them, at most. */
+const BLOCK_LINES = 60;
+const BLOCKS_CHARS = 12_000;
+
+/** A line as the excerpt shows it: no colour codes, no box-drawing rule at its end. */
+function plain(line: string): string {
+  return line
+    .replaceAll(ANSI, '')
+    .replace(/\s*─+\s*$/, '')
+    .trimEnd();
+}
+
 /**
- * A failed check's lines that name an error (up to 40), then its last lines. The tail alone
- * stopped before ESLint's errors in PEN-70's gate, so neither the agent nor the log said what
- * failed; the whole output is kept in the run folder too (`gate.log`, A1250).
+ * Each Playwright failure in a test run's output: from its `  1) <title>` heading through its
+ * first `attachment #` or `Error Context:` line, so the error, its call log, the code frame with
+ * its `>` line and the `at file:line` lines, without colour codes. A failing test's retry is the
+ * same failure again and is left out, as is a heading seen before. `span` is the lines the
+ * failures take, from the first heading up to the summary.
  */
+export function playwrightFailures(text: string): {
+  blocks: string[];
+  span?: { from: number; to: number };
+} {
+  const lines = text.split('\n').map(plain);
+  const blocks: string[] = [];
+  const seen = new Set<string>();
+  let chars = 0;
+  let more = 0;
+  let from: number | undefined;
+  let to = lines.length;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    if (from !== undefined && PW_SUMMARY.test(line)) {
+      to = i;
+      break;
+    }
+    const heading = PW_FAILURE.exec(line);
+    if (!heading) continue;
+    from ??= i;
+    const block = [line];
+    let j = i + 1;
+    for (; j < lines.length && block.length < BLOCK_LINES; j++) {
+      const next = lines[j] ?? '';
+      if (PW_FAILURE.test(next) || PW_RETRY.test(next) || PW_SUMMARY.test(next)) break;
+      block.push(next);
+      if (PW_BLOCK_END.test(next)) break;
+    }
+    const title = (heading[2] ?? '').trim();
+    if (seen.has(title)) continue;
+    seen.add(title);
+    while (block.length > 1 && !block.at(-1)?.trim()) block.pop();
+    const shown = block.join('\n');
+    if (blocks.length > 0 && chars + shown.length > BLOCKS_CHARS) {
+      more++;
+      continue;
+    }
+    chars += shown.length;
+    blocks.push(shown);
+  }
+  if (more > 0) blocks.push(`… and ${more} more failures, in the whole output`);
+  return from === undefined ? { blocks } : { blocks, span: { from, to } };
+}
+
+/**
+ * A failed check's or proof's Playwright failures (each one's error, call log and code frame),
+ * then its other lines that name an error (up to 40), then its last lines. The tail alone stopped
+ * before ESLint's errors in PEN-70's gate, so neither the agent nor the log said what failed; the
+ * whole output is kept in the run folder too (`gate.log`, A1250). In a Playwright run the tail is
+ * retries and attachments, and its error lines alone lose the call log and the code frame:
+ * PEN-121's agent guessed the wrong assertion (A1343). The error lines leave out the failures'
+ * own span, which their blocks show.
+ */
+export function excerpt(text: string): string {
+  const last = tail(text);
+  const { blocks, span } = playwrightFailures(text);
+  const shown = new Set(last.split('\n'));
+  const errors = text
+    .split('\n')
+    .filter(
+      (line, i) =>
+        ERROR_LINE.test(line) && !shown.has(line) && !(span && i >= span.from && i < span.to),
+    )
+    .slice(0, 40);
+  const before = [...blocks, ...(errors.length ? [errors.join('\n')] : [])];
+  return before.length ? `${before.join('\n\n')}\n…\n${last}` : last;
+}
+
+/**
+ * What the agent's next sandbox has from the proof (`stageLastProof` in host.ts, and
+ * proof/evidence.ts for what a failing test leaves), named as the files are.
+ */
+export const LAST_PROOF_NOTE =
+  "The harness's files from this proof are in `.factory/last-proof/`: each test's last screenshot (`<platform>-<n>-screenshot.png`, or `.jpg` when it is the Mac window's last screencast frame), and for each failing test `<platform>-failures.md`, which gives its error and lists its files there: Playwright's `<platform>-<n>-error-context.md`, its text attachments and logs (`<platform>-<n>-<attachment>.txt` or `.log`, each cut to its last 200 KB; on Android its instrumentation output and logcat) and its PNG attachments. Read them before you change anything, to see where and why the spec stopped.";
+
 /** What each missing platform's proof printed, for the agent: the harness's run, not its own. */
 function proofOutput(deps: RunDeps, platforms: readonly Platform[]): string {
   return platforms
@@ -1508,15 +1878,4 @@ function proofOutput(deps: RunDeps, platforms: readonly Platform[]): string {
     .filter((e): e is readonly [Platform, string] => Boolean(e[1]?.trim()))
     .map(([p, log]) => `\n\nThe ${p} proof's output:\n\n\`\`\`\n${excerpt(log)}\n\`\`\``)
     .join('');
-}
-
-export function excerpt(text: string): string {
-  const last = tail(text);
-  const shown = new Set(last.split('\n'));
-  const errors = text
-    .trim()
-    .split('\n')
-    .filter((line) => ERROR_LINE.test(line) && !shown.has(line))
-    .slice(0, 40);
-  return errors.length ? `${errors.join('\n')}\n…\n${last}` : last;
 }
