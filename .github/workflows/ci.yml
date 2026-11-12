@@ -263,11 +263,11 @@ jobs:
     # vault (the server's FTS and D1 budgets went with the server, T59). Typing
     # p95 under 16 ms in a 10,000-word note and a note switch under 150 ms, in Chromium on
     # the production build. Each measures after a warm-up and asserts a median over runs.
-    # A1348: on GitHub's standard hosted Mac (Apple Silicon), the nearest to the Macs the
-    # budgets were calibrated on (A1160, docs/ci.md §6). The runner is the job's own, so the e2e
-    # ports are free.
+    # A1348: on GitHub's standard hosted Ubuntu runner, the job's own, so the e2e ports are free.
+    # The budgets were calibrated on Ryan's Mac (A1160); Ubuntu meets them with less headroom
+    # (docs/ci.md §6), and the hosted Mac (3 CPUs) is slower than both: typing p95 18 ms there.
     needs: pick
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
@@ -277,6 +277,8 @@ jobs:
           persist-credentials: false
 
       - uses: ./.github/actions/setup
+        with:
+          playwright-cache: 'true'
 
       - name: Search budget (T22, the offline index)
         run: pnpm --filter @penmoss/sync-client perf
@@ -284,8 +286,11 @@ jobs:
       - name: Unit-level budgets (A1244)
         run: pnpm -r --workspace-concurrency=1 --if-present budgets
 
-      - name: Install Chromium
-        run: task e2e:install
+      - name: Install Chromium, and its system libraries if the image lacks any
+        timeout-minutes: 15
+        run: |
+          task e2e:install
+          sh .github/scripts/system-deps.sh @penmoss/web
 
       - name: Typing and note-switch budgets (T31)
         run: task e2e -- --grep @budget
