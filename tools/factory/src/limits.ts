@@ -15,7 +15,7 @@ const LIMIT =
 /**
  * When the agent may run again, if its output says it hit a usage limit; `null` otherwise.
  * Understands Claude Code's `Claude AI usage limit reached|<epoch>` and `… resets 3pm`, and
- * falls back to a 30-minute wait for any other limit message (OpenCode's rate limits).
+ * OpenCode's `"retryAfterMs":…`, and falls back to a 30-minute wait for any other limit message.
  */
 export function usageLimitReset(output: string, now: Date): Date | null {
   const tail = output.slice(-8000);
@@ -24,6 +24,10 @@ export function usageLimitReset(output: string, now: Date): Date | null {
     new Date(Math.min(Math.max(at, now.getTime() + 60_000), now.getTime() + MAX_WAIT_MS));
   const epoch = /usage limit reached\|(\d{10})/i.exec(tail)?.[1];
   if (epoch) return clamp(Number(epoch) * 1000);
+  // OpenCode's provider errors carry the wait: `"retryAfterMs":16032000` (OpenCode Go's 5-hour
+  // limit, PEN-117), the last one in the output being the latest.
+  const after = [...tail.matchAll(/"retryAfterMs"\s*:\s*(\d+)/g)].at(-1)?.[1];
+  if (after) return clamp(now.getTime() + Number(after));
   const clock = /resets?\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i.exec(tail);
   if (clock) {
     let hour = Number(clock[1]) % 12;
