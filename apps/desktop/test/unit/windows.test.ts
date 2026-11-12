@@ -116,6 +116,61 @@ describe('the window registry (A712)', () => {
   });
 });
 
+describe('the window the Dock icon restores (PEN-67)', () => {
+  it('is the window minimized last that is still minimized', () => {
+    const windows = new WindowRegistry<ReturnType<typeof fakeWindow>>();
+    const main = fakeWindow('main');
+    const note = fakeWindow('note');
+    windows.add(main, 'main');
+    windows.add(note, 'note');
+    expect(windows.lastMinimized()).toBeNull();
+    windows.minimized(main);
+    windows.minimized(note);
+    expect(windows.lastMinimized()).toBe(note);
+    // Minimized again, it is the last one again.
+    windows.minimized(main);
+    expect(windows.lastMinimized()).toBe(main);
+  });
+
+  it('forgets a window once it is restored or closed', () => {
+    const windows = new WindowRegistry<ReturnType<typeof fakeWindow>>();
+    const main = fakeWindow('main');
+    const first = fakeWindow('first');
+    const second = fakeWindow('second');
+    windows.add(main, 'main');
+    windows.add(first, 'note');
+    windows.add(second, 'note');
+    windows.minimized(main);
+    windows.minimized(first);
+    windows.minimized(second);
+    windows.restored(second);
+    expect(windows.lastMinimized()).toBe(first);
+    windows.remove(first);
+    expect(windows.lastMinimized()).toBe(main);
+    // Destroyed but its `closed` still to come: not restored either.
+    main.destroy();
+    expect(windows.lastMinimized()).toBeNull();
+  });
+
+  it('skips a window that says it is no longer minimized, and ignores one not registered', () => {
+    const windows = new WindowRegistry<
+      ReturnType<typeof fakeWindow> & { isMinimized(): boolean }
+    >();
+    let noteMinimized = true;
+    const main = { ...fakeWindow('main'), isMinimized: () => true };
+    const note = { ...fakeWindow('note'), isMinimized: () => noteMinimized };
+    const stranger = { ...fakeWindow('capture'), isMinimized: () => true };
+    windows.add(main, 'main');
+    windows.add(note, 'note');
+    windows.minimized(main);
+    windows.minimized(note);
+    windows.minimized(stranger);
+    expect(windows.lastMinimized()).toBe(note);
+    noteMinimized = false;
+    expect(windows.lastMinimized()).toBe(main);
+  });
+});
+
 describe('opening a note window (A712)', () => {
   it('takes only an app page’s note window path, a ULID, with its query', () => {
     expect(noteWindowPath(`app://penmoss/window/notes/${ID}`)).toBe(`/window/notes/${ID}`);
