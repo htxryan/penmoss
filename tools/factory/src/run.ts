@@ -40,6 +40,14 @@ import { formatMarker } from './pick.ts';
 import { DECISIONS, sandboxNumbering, type RebaseOutcome } from './rebase.ts';
 import { numberText } from './decisions.ts';
 import { settleRisks } from './risks.ts';
+import {
+  carriedOver,
+  diffPrint,
+  PROVEN,
+  validationKey,
+  type Proven,
+  type Wanted,
+} from './carry.ts';
 import type { AgentResult } from './result.ts';
 import { formatNote, parseReleaseNote } from '../../../.github/scripts/release-note.mjs';
 import type { WalkOutcome, WalkPlatform } from './walk.ts';
@@ -58,6 +66,7 @@ export type RunEvent =
   | 'rebased'
   | 'rebase-conflict'
   | 'proof-recorded'
+  | 'proof-reused'
   | 'pr-opened'
   | 'ci-red'
   | 'pr-conflicts'
@@ -70,6 +79,7 @@ export type RunEvent =
   | 'proof-waiting'
   | 'usage-limited'
   | 'validated'
+  | 'validation-reused'
   | 'resumed-at-ci'
   | 'release-note-refused';
 
@@ -138,6 +148,12 @@ export interface RunDeps {
   walk(sandbox: RunSandbox, platform: WalkPlatform, signal?: AbortSignal): Promise<WalkOutcome>;
   /** What the run is waiting for, which `factory:status` shows; null once it goes on. */
   waitingFor(reason: string | null): void;
+  /**
+   * The card's latest earlier run whose proof (and validation, when one ran) passed with this
+   * print of the branch's own diff (carry.ts), when its `proven.json` and every file it names are
+   * still in its run folder. The gate then reuses them rather than proving again.
+   */
+  provenBefore?(diff: string): Proven | undefined;
   /** Converts and checks the recordings, into the folder the PR body is written in. */
   prepareProof(
     items: readonly ProofItem[],
@@ -191,6 +207,11 @@ export interface RunDeps {
     proof: readonly AttachedProof[];
     /** More files in the body's folder to attach: the fidelity images. */
     files?: readonly string[];
+    /**
+     * The earlier run whose proof folder holds `proof` and `files`, when they were carried over:
+     * they are linked from where that run uploads them (`runs/<run>/`), not this run's folder.
+     */
+    proofFrom?: string;
   }): Promise<string>;
   log(event: RunEvent, detail?: Record<string, unknown>): void;
   /**
@@ -384,6 +405,8 @@ type GateVerdict =
       readonly numbering: Readonly<Record<string, string>>;
       /** The platforms whose proof the harness ran and saw pass. */
       readonly proved: readonly Platform[];
+      /** The earlier run the proof (and validation) came from, when the gate reused them. */
+      readonly carried?: Carried;
     }
   /**
    * `block`: nothing the agent can fix (the test VM stayed unusable): stop, Blocked, now.
@@ -395,6 +418,12 @@ type GateVerdict =
       readonly block?: string;
       readonly mismatches?: readonly string[];
     };
+
+/** Proof carried over from an earlier run: which, and whether its validation came with it. */
+export interface Carried {
+  readonly run: string;
+  readonly validated: boolean;
+}
 
 export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunOutcome> {
   const { config, item, spec } = { config: deps.config, ...input };
@@ -539,6 +568,7 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
       input.plan
         ? { plan: input.plan, final: round >= config.rounds.gateFix, images: input.images ?? '' }
         : undefined,
+      { carry: true },
     );
     if (verdict.ok) {
       return publish(deps, {
@@ -552,6 +582,7 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
         ...(verdict.fidelity ? { fidelity: verdict.fidelity } : {}),
         numbering: verdict.numbering,
         proved: verdict.proved,
+        ...(verdict.carried ? { carried: verdict.carried } : {}),
         marker,
         prompt: input.prompt,
         ...(input.artifacts ? { artifacts: input.artifacts } : {}),
@@ -628,7 +659,11 @@ async function agentRound(
   }
 }
 
-/** The gate, in a fresh sandbox on the branch (FD25), then the proof the harness records itself. */
+/**
+ * The gate, in a fresh sandbox on the branch (FD25), then the proof the harness records itself.
+ * `carry`: keep what passed (`proven.json`, carry.ts), and reuse an earlier run's proof and
+ * validation when the branch's own diff outside docs/decisions.md is the one they passed on.
+ */
 export async function gateAndProve(
   deps: RunDeps,
   branch: string,
@@ -636,6 +671,7 @@ export async function gateAndProve(
   spec: IssueSpec,
   result: AgentResult,
   validation?: { readonly plan: string; readonly final: boolean; readonly images?: string },
+  options: { readonly carry?: boolean } = {},
 ): Promise<GateVerdict> {
   const needed = proofPlatforms(scope, spec.platforms);
   // R9: an in-scope platform needs a named proof spec before anything runs.
@@ -679,6 +715,48 @@ export async function gateAndProve(
       };
     }
     deps.log('gate-passed', { command });
+    // F19: a planned change that users see is walked on each app it affects and reviewed
+    // against the plan (PEN-94).
+    const validating = validation && scope.platforms.length > 0 ? validation : undefined;
+    const wanted =
+      options.carry && (needed.length > 0 || validating)
+        ? await wantedNow(gate, needed, result, scope, validating)
+        : undefined;
+    // Proved and validated before on exactly these changes (a recovered run, rebased onto a main
+    // that moved a decision row): the earlier run's proof and verdict stand.
+    const earlier = wanted && carriedOver(deps.provenBefore?.(wanted.diff), wanted);
+    if (wanted && earlier) {
+      deps.log('proof-reused', {
+        from: earlier.run,
+        files: earlier.proof.length,
+        diff: wanted.diff,
+      });
+      const rows = wanted.validation ? earlier.validation?.rows : undefined;
+      if (rows)
+        deps.log('validation-reused', {
+          from: earlier.run,
+          ...verdictCounts(rows),
+        });
+      return {
+        ok: true,
+        proof: earlier.proof,
+        ...(rows ? { fidelity: settle(rows) } : {}),
+        numbering: await sandboxNumbering(gate),
+        proved: needed,
+        carried: { run: earlier.run, validated: Boolean(rows) },
+      };
+    }
+    const proven = (proof: readonly AttachedProof[], rows?: readonly FidelityRow[]) => {
+      if (!wanted) return;
+      const record: Proven = {
+        run: deps.runId,
+        diff: wanted.diff,
+        specs: wanted.specs,
+        proof,
+        ...(rows && wanted.validation ? { validation: { key: wanted.validation.key, rows } } : {}),
+      };
+      deps.keep?.(PROVEN, `${JSON.stringify(record, null, 2)}\n`);
+    };
     const items: ProofItem[] = [];
     for (const platform of needed) {
       const specs = result.platforms[platform]?.proofSpecs ?? [];
@@ -707,24 +785,26 @@ export async function gateAndProve(
     }
     const prepared = await deps.prepareProof(items);
     if (!prepared.ok) return { ok: false, feedback: prepared.error };
-    deps.log('proof-recorded', { files: prepared.proof.length });
-    // F19: a planned change that users see is walked on each app it affects and reviewed
-    // against the plan (PEN-94).
-    if (validation && scope.platforms.length > 0) {
+    deps.log('proof-recorded', {
+      files: prepared.proof.length,
+      ...(wanted ? { diff: wanted.diff } : {}),
+    });
+    if (validating) {
       const v = await validate(deps, gate, branch, {
-        plan: validation.plan,
+        plan: validating.plan,
         builder: result.risks,
-        images: validation.images ?? '',
+        images: validating.images ?? '',
         platforms: scope.platforms,
       });
       if (!v.ok) return { ok: false, feedback: `Validation couldn't finish: ${v.error}` };
       const mismatches = v.rows.filter((r) => r.verdict === 'mismatch');
-      if (mismatches.length > 0 && !validation.final)
+      if (mismatches.length > 0 && !validating.final)
         return {
           ok: false,
           feedback: fidelityFeedback(mismatches),
           mismatches: mismatches.map((r) => criterionLabel(r.criterion)),
         };
+      proven(prepared.proof, v.rows);
       return {
         ok: true,
         proof: prepared.proof,
@@ -733,6 +813,7 @@ export async function gateAndProve(
         proved: needed,
       };
     }
+    proven(prepared.proof);
     return {
       ok: true,
       proof: prepared.proof,
@@ -742,6 +823,42 @@ export async function gateAndProve(
   } finally {
     await gate.close();
   }
+}
+
+/** What the gate would prove and validate now, for carriedOver; undefined without a diff print. */
+async function wantedNow(
+  gate: RunSandbox,
+  needed: readonly Platform[],
+  result: AgentResult,
+  scope: Scope,
+  validating: { readonly plan: string; readonly final: boolean } | undefined,
+): Promise<Wanted | undefined> {
+  const diff = await diffPrint(gate);
+  if (!diff) return undefined;
+  return {
+    diff,
+    specs: Object.fromEntries(needed.map((p) => [p, result.platforms[p]?.proofSpecs ?? []])),
+    ...(validating
+      ? {
+          validation: {
+            key: validationKey({
+              plan: validating.plan,
+              builder: result.risks,
+              platforms: scope.platforms,
+            }),
+            final: validating.final,
+          },
+        }
+      : {}),
+  };
+}
+
+function verdictCounts(rows: readonly FidelityRow[]): Record<string, number> {
+  return {
+    match: rows.filter((r) => r.verdict === 'match').length,
+    mismatch: rows.filter((r) => r.verdict === 'mismatch').length,
+    deviation: rows.filter((r) => r.verdict === 'deviation').length,
+  };
 }
 
 /**
@@ -836,6 +953,8 @@ async function publish(
     numbering?: Readonly<Record<string, string>>;
     /** The platforms whose proof the harness ran and saw pass. */
     proved?: readonly Platform[];
+    /** The earlier run the proof was carried over from, which the body says. */
+    carried?: Carried;
   },
 ): Promise<RunOutcome> {
   // main may have moved while proof and validation ran (PEN-63's: 20 minutes, and another PR's
@@ -864,6 +983,7 @@ async function publish(
     marker: run.marker('pr'),
     ...(run.artifacts ? { artifacts: run.artifacts } : {}),
     ...(shown.fidelity ? { fidelity: renderFidelity(shown.fidelity) } : {}),
+    ...(run.carried ? { carried: run.carried } : {}),
   });
   const pr = await deps.openPr({
     branch: run.branch,
@@ -873,6 +993,7 @@ async function publish(
     files: (run.fidelity ?? []).flatMap((r) =>
       [r.mockup, r.screenshot].filter((f): f is string => Boolean(f)),
     ),
+    ...(run.carried ? { proofFrom: run.carried.run } : {}),
   });
   deps.log('pr-opened', { pr });
   return awaitReview(deps, { ...run, result: shown.result }, pr);

@@ -43,6 +43,7 @@ import type { Exec } from './exec.ts';
 import { ensureConfig, mustGit } from './git.ts';
 import { failedLines, jobIdOf, runIdOf, type CheckRun } from './checks.ts';
 import { ciHistory, MAIN_RUNS_READ, rerunWhenDone } from './ci-failure.ts';
+import { findProven } from './carry.ts';
 import type { MainRun, RunJob } from './merge.ts';
 import {
   definedPlaceholders,
@@ -1050,6 +1051,8 @@ export function hostDeps(options: HostOptions): HostDeps {
       }
       return jobs;
     },
+    provenBefore: (diff) =>
+      findProven(state, Number(options.runId.split('-')[0]), diff, options.runId),
     ciHistory: (issue, pr) => {
       const ledger = join(state, 'runs.jsonl');
       return ciHistory(existsSync(ledger) ? readFileSync(ledger, 'utf8') : '', issue, pr);
@@ -1097,17 +1100,20 @@ export function hostDeps(options: HostOptions): HostDeps {
       });
     },
     headSha: (branch) => pushedHead(exec, publish, branch),
-    openPr: async ({ branch, title, body, proof, files = [] }) => {
+    openPr: async ({ branch, title, body, proof, files = [], proofFrom }) => {
       // The body sits beside the proof files: its ./references are relative to it.
       const dir = join(runDir, 'proof');
       mkdirSync(dir, { recursive: true });
       const bodyFile = join(dir, 'body.md');
+      // Proof carried over from an earlier run (carry.ts) is in that run's folder, and goes
+      // where that run put it in the bucket, so the links are the ones it had.
+      const from = proofFrom && /^[\w-]+$/.test(proofFrom) ? proofFrom : options.runId;
       const linked = await publishRefs(
         body,
-        dir,
+        join(state, 'runs', from, 'proof'),
         [...proofFiles(proof), ...files],
         options.proofStore,
-        `runs/${options.runId}`,
+        `runs/${from}`,
       );
       writeFileSync(bodyFile, linked);
       return openOrReusePr(gh, {

@@ -317,7 +317,9 @@ const STAGE_OF: Readonly<Record<string, number>> = {
   'validation-mismatch': 4,
   'proof-waiting': 4,
   'proof-recorded': 4,
+  'proof-reused': 4,
   validated: 4,
+  'validation-reused': 4,
   pushed: 5,
   'pr-opened': 5,
   'ci-red': 5,
@@ -514,8 +516,12 @@ function progressOf(e: LedgerEvent, config: FactoryConfig): string {
       return `Mac proof waits: ${str(e['reason']) ?? 'the test VM'}`;
     case 'proof-recorded':
       return 'Proof recorded';
+    case 'proof-reused':
+      return `Proof carried over from ${str(e['from']) ?? 'an earlier run'}`;
     case 'validated':
       return 'Validated against the plan';
+    case 'validation-reused':
+      return `Validation carried over from ${str(e['from']) ?? 'an earlier run'}`;
     case 'pushed':
       return 'Pushed; opening the pull request';
     case 'pr-opened':
