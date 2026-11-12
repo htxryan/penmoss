@@ -79,6 +79,10 @@ test.beforeEach(() => {
     recursive: true,
     force: true,
   });
+  // The VM's builds are ad hoc signed, so each has a new signature, and the Safe Storage key an
+  // earlier build left in the login keychain would ask this one for access in a prompt nobody
+  // sees: the app would hang on its first sync and never quit (PEN-127). Each build makes its own.
+  spawnSync('/usr/bin/security', ['delete-generic-password', '-s', 'Penmoss Safe Storage']);
 });
 
 /** This test's app log: main's console, from every launch `open` makes. */
@@ -660,9 +664,11 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
 
   // The command, on screen at the end.
   await go(page, href);
-  await expect(automatic).toBeVisible({ timeout: 30_000 });
-  await automatic.getByTestId('git-local-agent-claude').scrollIntoViewIfNeeded();
-  await expect(automatic.getByTestId('git-local-agent-claude')).toContainText('Penmoss CLI.app');
+  // The app opened again: its page is a new one, so the locator is made again from it.
+  const shown = page.locator('[data-testid="git-local-agent"][data-name="notes-agent"]');
+  await expect(shown).toBeVisible({ timeout: 30_000 });
+  await shown.getByTestId('git-local-agent-claude').scrollIntoViewIfNeeded();
+  await expect(shown.getByTestId('git-local-agent-claude')).toContainText('Penmoss CLI.app');
   await page.waitForTimeout(2_000);
   await shots.finish();
   await browser.close().catch(() => undefined);
