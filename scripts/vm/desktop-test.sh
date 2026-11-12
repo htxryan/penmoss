@@ -176,6 +176,11 @@ tart exec "$VM" /bin/zsh -lc "
   cd \"\$HOME/penmoss\"
   # The display has the size now (tart set); macOS in the VM still has to switch to it.
   swift scripts/vm/screen-size.swift $SCREEN_W $SCREEN_H
+  # Each build here is signed ad hoc, so each has a new signature, and the Safe Storage key an
+  # earlier build left in the login keychain would ask this one for access in a prompt nobody
+  # sees: the packaged app would hang on its first sync and never quit (PEN-127). Each run's
+  # builds make their own.
+  security delete-generic-password -s 'Penmoss Safe Storage' >/dev/null 2>&1 || true
   export CI=1 PENMOSS_PORT_BLOCK=$PORT_BLOCK
   # Proof mode (the software factory's F7): every window recorded, and a JSON report.
   export PENMOSS_PROOF='$PROOF'
