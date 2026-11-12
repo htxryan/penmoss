@@ -14,6 +14,7 @@ import {
   writeAgents,
   type UpdateDeps,
 } from '../src/code.ts';
+import { USAGE_LIMIT_WAIT } from '../src/limits.ts';
 import type { Exec, ExecOptions } from '../src/exec.ts';
 import { GIT_HARDENING, subcommand } from '../src/git.ts';
 import { formatStatus, type DaemonStatus } from '../src/status.ts';
@@ -329,6 +330,26 @@ describe('factory:update (A1226)', () => {
       `Updated ${OLD.sha.slice(0, 7)} to ${NEW.sha.slice(0, 7)} (${NEW.subject}).`,
     );
     expect(lines.filter((l) => l.startsWith('Waiting for'))).toHaveLength(1);
+  });
+
+  it("doesn't wait for a run asleep on a usage limit, which can take hours (PEN-117)", async () => {
+    const { config, home, lines } = setup(true);
+    const { exec, calls } = fakeExec({ at: OLD });
+    const asleep = status({
+      at: 5_000,
+      running: [
+        {
+          issue: 117,
+          slot: 1,
+          startedAt: '',
+          why: 'picked',
+          waitingFor: { reason: `${USAGE_LIMIT_WAIT} at 2026-11-12T06:18:00.000Z`, since: '' },
+        },
+      ],
+    });
+    const d = deps(config, home, lines, exec, [asleep]);
+    expect(await updateFactory(config, d, { wait: false })).toBe(0);
+    expect(calls.some((c) => c.args.includes('fetch'))).toBe(true);
   });
 
   it("waits for a poll that saw the hold: an idle status from before it isn't enough", async () => {

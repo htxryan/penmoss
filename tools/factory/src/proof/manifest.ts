@@ -127,3 +127,21 @@ export function missingProof(
       ),
   );
 }
+
+/**
+ * The harness recordings of in-scope platforms whose test failed, as `platform: title` (A1335).
+ * A proof spec is the agent's claim that its change works, so every test in it must pass: PEN-67's
+ * Mac proof had AC1 fail twice while AC2–AC4 passed, and the PR went out with AC1 left out.
+ * A `before` recording (the bug on the base commit) is meant to fail and doesn't count.
+ */
+export function failedProof(items: readonly ProofItem[], platforms: readonly Platform[]): string[] {
+  return items
+    .filter(
+      (i) =>
+        platforms.includes(i.platform) &&
+        i.source === 'harness' &&
+        i.phase === 'after' &&
+        i.status === 'failed',
+    )
+    .map((i) => `${i.platform}: ${i.title}`);
+}

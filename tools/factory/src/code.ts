@@ -20,6 +20,7 @@ import { githubUrl } from './publish.ts';
 import { LABEL, plistPath, renderPlist, UI_LABEL, UPDATER_LABEL } from './launchd.ts';
 import { formatStatus, readStatus, type Commit, type DaemonStatus } from './status.ts';
 import { issueKey } from './tracker/port.ts';
+import { USAGE_LIMIT_WAIT } from './limits.ts';
 
 export function codeDir(config: FactoryConfig): string {
   return join(expandHome(config.stateDir), 'code');
@@ -365,7 +366,10 @@ function readiness(
 ): Readiness {
   if (liveDaemon(config, deps.alive) === undefined) return { kind: 'idle' };
   const busy = [
-    ...(status?.running ?? []).map((r) => `${issueKey(config, r.issue)} on slot ${r.slot}`),
+    ...(status?.running ?? [])
+      // A run asleep on a usage limit can wait hours; the update stops it and recovery resumes it.
+      .filter((r) => !r.waitingFor?.reason.startsWith(USAGE_LIMIT_WAIT))
+      .map((r) => `${issueKey(config, r.issue)} on slot ${r.slot}`),
     ...(status?.merging ?? []).map((n) => `${issueKey(config, n)} merging`),
   ];
   if (busy.length > 0) return { kind: 'busy', what: busy.join(', ') };

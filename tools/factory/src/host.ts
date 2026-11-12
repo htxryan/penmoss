@@ -42,7 +42,9 @@ import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { Exec } from './exec.ts';
 import { ensureConfig, mustGit } from './git.ts';
 import { failedLines, jobIdOf, runIdOf, type CheckRun } from './checks.ts';
-import { ciHistory } from './ci-failure.ts';
+import { ciHistory, MAIN_RUNS_READ, rerunWhenDone } from './ci-failure.ts';
+import { findProven } from './carry.ts';
+import type { MainRun, RunJob } from './merge.ts';
 import {
   definedPlaceholders,
   formatDecisions,
@@ -1019,9 +1021,38 @@ export function hostDeps(options: HostOptions): HostDeps {
         .catch(() => '');
       return failedLines(log) || '(the log was empty)';
     },
-    rerunFailed: async (run) => {
-      await gh.run(['run', 'rerun', run, '--failed', '--repo', config.repo]);
+    rerunFailed: (run) =>
+      rerunWhenDone(run, {
+        status: async (id) =>
+          (
+            await gh.json<{ status: string }>([
+              ...['run', 'view', id, '--repo', config.repo, '--json', 'status'],
+            ])
+          ).status,
+        rerun: async (id) => {
+          await gh.run(['run', 'rerun', id, '--failed', '--repo', config.repo]);
+        },
+        sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+      }),
+    mainRunJobs: async (workflow) => {
+      // main's latest finished push runs of the workflow, newest first, and each one's jobs.
+      const runs = await gh.json<MainRun[]>([
+        ...['run', 'list', '--repo', config.repo, '--branch', 'main', '--event', 'push'],
+        ...['--workflow', workflow, '--status', 'completed', '--limit', String(MAIN_RUNS_READ)],
+        ...['--json', 'databaseId,status,conclusion,url'],
+      ]);
+      const jobs: RunJob[][] = [];
+      for (const run of runs) {
+        if (!run.databaseId) continue;
+        const view = await gh.json<{ jobs: RunJob[] }>([
+          ...['run', 'view', String(run.databaseId), '--repo', config.repo, '--json', 'jobs'],
+        ]);
+        jobs.push(view.jobs);
+      }
+      return jobs;
     },
+    provenBefore: (diff) =>
+      findProven(state, Number(options.runId.split('-')[0]), diff, options.runId),
     ciHistory: (issue, pr) => {
       const ledger = join(state, 'runs.jsonl');
       return ciHistory(existsSync(ledger) ? readFileSync(ledger, 'utf8') : '', issue, pr);
@@ -1069,17 +1100,20 @@ export function hostDeps(options: HostOptions): HostDeps {
       });
     },
     headSha: (branch) => pushedHead(exec, publish, branch),
-    openPr: async ({ branch, title, body, proof, files = [] }) => {
+    openPr: async ({ branch, title, body, proof, files = [], proofFrom }) => {
       // The body sits beside the proof files: its ./references are relative to it.
       const dir = join(runDir, 'proof');
       mkdirSync(dir, { recursive: true });
       const bodyFile = join(dir, 'body.md');
+      // Proof carried over from an earlier run (carry.ts) is in that run's folder, and goes
+      // where that run put it in the bucket, so the links are the ones it had.
+      const from = proofFrom && /^[\w-]+$/.test(proofFrom) ? proofFrom : options.runId;
       const linked = await publishRefs(
         body,
-        dir,
+        join(state, 'runs', from, 'proof'),
         [...proofFiles(proof), ...files],
         options.proofStore,
-        `runs/${options.runId}`,
+        `runs/${from}`,
       );
       writeFileSync(bodyFile, linked);
       return openOrReusePr(gh, {

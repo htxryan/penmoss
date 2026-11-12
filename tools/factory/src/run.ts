@@ -11,7 +11,17 @@ import type { Board, BoardItem } from './board.ts';
 import type { FactoryConfig, Platform, SlotConfig } from './config.ts';
 import type { IssueSpec } from './labels.ts';
 import { runIdOf, summarizeChecks, type CheckRun } from './checks.ts';
-import { infraFailure, MAX_INFRA_RERUNS, type CiHistory, type InfraFailure } from './ci-failure.ts';
+import {
+  flakeCandidate,
+  infraFailure,
+  MAX_FLAKE_RERUNS,
+  MAX_INFRA_RERUNS,
+  passedOnMain,
+  touchedBy,
+  type CiHistory,
+  type InfraFailure,
+} from './ci-failure.ts';
+import type { RunJob } from './merge.ts';
 import { classify, proofPlatforms, type Scope } from './platforms.ts';
 import {
   criterionLabel,
@@ -21,15 +31,23 @@ import {
   type FidelityRow,
 } from './fidelity.ts';
 import { scanWeakenedTests, weakenedFeedback, workflowChanges, workflowFeedback } from './gate.ts';
-import { usageLimitReset } from './limits.ts';
+import { USAGE_LIMIT_WAIT, usageLimitReset } from './limits.ts';
 import { validate } from './validate.ts';
 import { renderPrBody, type AttachedProof } from './proof/body.ts';
-import { missingProof, type ProofItem } from './proof/manifest.ts';
+import { failedProof, missingProof, type ProofItem } from './proof/manifest.ts';
 import { VmUnavailable, type VmCheck } from './proof/mac.ts';
 import { formatMarker } from './pick.ts';
 import { DECISIONS, sandboxNumbering, type RebaseOutcome } from './rebase.ts';
 import { numberText } from './decisions.ts';
 import { settleRisks } from './risks.ts';
+import {
+  carriedOver,
+  diffPrint,
+  PROVEN,
+  validationKey,
+  type Proven,
+  type Wanted,
+} from './carry.ts';
 import type { AgentResult } from './result.ts';
 import { formatNote, parseReleaseNote } from '../../../.github/scripts/release-note.mjs';
 import type { WalkOutcome, WalkPlatform } from './walk.ts';
@@ -48,17 +66,20 @@ export type RunEvent =
   | 'rebased'
   | 'rebase-conflict'
   | 'proof-recorded'
+  | 'proof-reused'
   | 'pr-opened'
   | 'ci-red'
   | 'pr-conflicts'
   | 'ci-repaired'
   | 'ci-rerun'
+  | 'ci-flake-rerun'
   | 'ci-stalled'
   | 'in-review'
   | 'blocked'
   | 'proof-waiting'
   | 'usage-limited'
   | 'validated'
+  | 'validation-reused'
   | 'resumed-at-ci'
   | 'release-note-refused';
 
@@ -127,6 +148,12 @@ export interface RunDeps {
   walk(sandbox: RunSandbox, platform: WalkPlatform, signal?: AbortSignal): Promise<WalkOutcome>;
   /** What the run is waiting for, which `factory:status` shows; null once it goes on. */
   waitingFor(reason: string | null): void;
+  /**
+   * The card's latest earlier run whose proof (and validation, when one ran) passed with this
+   * print of the branch's own diff (carry.ts), when its `proven.json` and every file it names are
+   * still in its run folder. The gate then reuses them rather than proving again.
+   */
+  provenBefore?(diff: string): Proven | undefined;
   /** Converts and checks the recordings, into the folder the PR body is written in. */
   prepareProof(
     items: readonly ProofItem[],
@@ -157,6 +184,12 @@ export interface RunDeps {
   rerunFailed(run: string): Promise<void>;
   /** What the run ledger says the factory already did about a PR's CI (ci-failure.ts). */
   ciHistory?(issue: number, pr: string): CiHistory;
+  /**
+   * The jobs of main's latest completed push runs of `workflow` (`MAIN_RUNS_READ` of them),
+   * newest first: whether a failing job passes on main (A1328). Without it, a failing test is
+   * always the branch's.
+   */
+  mainRunJobs?(workflow: string): Promise<readonly (readonly RunJob[])[]>;
   /** F19's validation: mockups in, the reviewer's verdicts out (see validate.ts). */
   stageMockups(sandbox: RunSandbox): Promise<void>;
   keepValidation(sandbox: RunSandbox): Promise<void>;
@@ -174,6 +207,11 @@ export interface RunDeps {
     proof: readonly AttachedProof[];
     /** More files in the body's folder to attach: the fidelity images. */
     files?: readonly string[];
+    /**
+     * The earlier run whose proof folder holds `proof` and `files`, when they were carried over:
+     * they are linked from where that run uploads them (`runs/<run>/`), not this run's folder.
+     */
+    proofFrom?: string;
   }): Promise<string>;
   log(event: RunEvent, detail?: Record<string, unknown>): void;
   /**
@@ -265,7 +303,7 @@ export const MAX_LIMIT_WAITS = 3;
  * prompt again in the same worktree (R13). A limit never counts as a round.
  */
 export async function runAgentPatiently(
-  deps: Pick<RunDeps, 'runAgent' | 'now' | 'sleep' | 'log'>,
+  deps: Pick<RunDeps, 'runAgent' | 'now' | 'sleep' | 'log'> & Partial<Pick<RunDeps, 'waitingFor'>>,
   sandbox: RunSandbox,
   prompt: string,
 ): Promise<void> {
@@ -276,7 +314,9 @@ export async function runAgentPatiently(
     if (waits >= MAX_LIMIT_WAITS)
       throw new Error(`the agent hit its usage limit ${waits + 1} times in a row`);
     deps.log('usage-limited', { until: reset.toISOString() });
+    deps.waitingFor?.(`${USAGE_LIMIT_WAIT} at ${reset.toISOString()}`);
     await deps.sleep(Math.ceil((reset.getTime() - deps.now().getTime()) / 1000) + 60);
+    deps.waitingFor?.(null);
   }
 }
 
@@ -367,6 +407,8 @@ type GateVerdict =
       readonly numbering: Readonly<Record<string, string>>;
       /** The platforms whose proof the harness ran and saw pass. */
       readonly proved: readonly Platform[];
+      /** The earlier run the proof (and validation) came from, when the gate reused them. */
+      readonly carried?: Carried;
     }
   /**
    * `block`: nothing the agent can fix (the test VM stayed unusable): stop, Blocked, now.
@@ -378,6 +420,12 @@ type GateVerdict =
       readonly block?: string;
       readonly mismatches?: readonly string[];
     };
+
+/** Proof carried over from an earlier run: which, and whether its validation came with it. */
+export interface Carried {
+  readonly run: string;
+  readonly validated: boolean;
+}
 
 export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunOutcome> {
   const { config, item, spec } = { config: deps.config, ...input };
@@ -522,6 +570,7 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
       input.plan
         ? { plan: input.plan, final: round >= config.rounds.gateFix, images: input.images ?? '' }
         : undefined,
+      { carry: true },
     );
     if (verdict.ok) {
       return publish(deps, {
@@ -535,6 +584,7 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
         ...(verdict.fidelity ? { fidelity: verdict.fidelity } : {}),
         numbering: verdict.numbering,
         proved: verdict.proved,
+        ...(verdict.carried ? { carried: verdict.carried } : {}),
         marker,
         prompt: input.prompt,
         ...(input.artifacts ? { artifacts: input.artifacts } : {}),
@@ -611,7 +661,11 @@ async function agentRound(
   }
 }
 
-/** The gate, in a fresh sandbox on the branch (FD25), then the proof the harness records itself. */
+/**
+ * The gate, in a fresh sandbox on the branch (FD25), then the proof the harness records itself.
+ * `carry`: keep what passed (`proven.json`, carry.ts), and reuse an earlier run's proof and
+ * validation when the branch's own diff outside docs/decisions.md is the one they passed on.
+ */
 export async function gateAndProve(
   deps: RunDeps,
   branch: string,
@@ -619,6 +673,7 @@ export async function gateAndProve(
   spec: IssueSpec,
   result: AgentResult,
   validation?: { readonly plan: string; readonly final: boolean; readonly images?: string },
+  options: { readonly carry?: boolean } = {},
 ): Promise<GateVerdict> {
   const needed = proofPlatforms(scope, spec.platforms);
   // R9: an in-scope platform needs a named proof spec before anything runs.
@@ -662,6 +717,48 @@ export async function gateAndProve(
       };
     }
     deps.log('gate-passed', { command });
+    // F19: a planned change that users see is walked on each app it affects and reviewed
+    // against the plan (PEN-94).
+    const validating = validation && scope.platforms.length > 0 ? validation : undefined;
+    const wanted =
+      options.carry && (needed.length > 0 || validating)
+        ? await wantedNow(gate, needed, result, scope, validating)
+        : undefined;
+    // Proved and validated before on exactly these changes (a recovered run, rebased onto a main
+    // that moved a decision row): the earlier run's proof and verdict stand.
+    const earlier = wanted && carriedOver(deps.provenBefore?.(wanted.diff), wanted);
+    if (wanted && earlier) {
+      deps.log('proof-reused', {
+        from: earlier.run,
+        files: earlier.proof.length,
+        diff: wanted.diff,
+      });
+      const rows = wanted.validation ? earlier.validation?.rows : undefined;
+      if (rows)
+        deps.log('validation-reused', {
+          from: earlier.run,
+          ...verdictCounts(rows),
+        });
+      return {
+        ok: true,
+        proof: earlier.proof,
+        ...(rows ? { fidelity: settle(rows) } : {}),
+        numbering: await sandboxNumbering(gate),
+        proved: needed,
+        carried: { run: earlier.run, validated: Boolean(rows) },
+      };
+    }
+    const proven = (proof: readonly AttachedProof[], rows?: readonly FidelityRow[]) => {
+      if (!wanted) return;
+      const record: Proven = {
+        run: deps.runId,
+        diff: wanted.diff,
+        specs: wanted.specs,
+        proof,
+        ...(rows && wanted.validation ? { validation: { key: wanted.validation.key, rows } } : {}),
+      };
+      deps.keep?.(PROVEN, `${JSON.stringify(record, null, 2)}\n`);
+    };
     const items: ProofItem[] = [];
     for (const platform of needed) {
       const specs = result.platforms[platform]?.proofSpecs ?? [];
@@ -688,26 +785,36 @@ export async function gateAndProve(
         feedback: `the proof specs for ${missing.join(', ')} didn't pass when the harness ran them with recording on. Each proof's last screenshot is in \`.factory/last-proof/\` (\`<platform>-<n>-screenshot.png\`): look at it to see where the spec stopped.${proofOutput(deps, missing)}`,
       };
     }
+    const failing = failedProof(items, needed);
+    if (failing.length > 0) {
+      const platforms = needed.filter((p) => failing.some((f) => f.startsWith(`${p}: `)));
+      return {
+        ok: false,
+        feedback: `these tests in your proof specs failed when the harness ran them with recording on:\n\n${failing.map((f) => `- ${f}`).join('\n')}\n\nEvery test in a proof spec has to pass: fix the code or the test. Each proof's last screenshot is in \`.factory/last-proof/\` (\`<platform>-<n>-screenshot.png\`): look at it to see where the spec stopped.${proofOutput(deps, platforms)}`,
+      };
+    }
     const prepared = await deps.prepareProof(items);
     if (!prepared.ok) return { ok: false, feedback: prepared.error };
-    deps.log('proof-recorded', { files: prepared.proof.length });
-    // F19: a planned change that users see is walked on each app it affects and reviewed
-    // against the plan (PEN-94).
-    if (validation && scope.platforms.length > 0) {
+    deps.log('proof-recorded', {
+      files: prepared.proof.length,
+      ...(wanted ? { diff: wanted.diff } : {}),
+    });
+    if (validating) {
       const v = await validate(deps, gate, branch, {
-        plan: validation.plan,
+        plan: validating.plan,
         builder: result.risks,
-        images: validation.images ?? '',
+        images: validating.images ?? '',
         platforms: scope.platforms,
       });
       if (!v.ok) return { ok: false, feedback: `Validation couldn't finish: ${v.error}` };
       const mismatches = v.rows.filter((r) => r.verdict === 'mismatch');
-      if (mismatches.length > 0 && !validation.final)
+      if (mismatches.length > 0 && !validating.final)
         return {
           ok: false,
           feedback: fidelityFeedback(mismatches),
           mismatches: mismatches.map((r) => criterionLabel(r.criterion)),
         };
+      proven(prepared.proof, v.rows);
       return {
         ok: true,
         proof: prepared.proof,
@@ -716,6 +823,7 @@ export async function gateAndProve(
         proved: needed,
       };
     }
+    proven(prepared.proof);
     return {
       ok: true,
       proof: prepared.proof,
@@ -725,6 +833,42 @@ export async function gateAndProve(
   } finally {
     await gate.close();
   }
+}
+
+/** What the gate would prove and validate now, for carriedOver; undefined without a diff print. */
+async function wantedNow(
+  gate: RunSandbox,
+  needed: readonly Platform[],
+  result: AgentResult,
+  scope: Scope,
+  validating: { readonly plan: string; readonly final: boolean } | undefined,
+): Promise<Wanted | undefined> {
+  const diff = await diffPrint(gate);
+  if (!diff) return undefined;
+  return {
+    diff,
+    specs: Object.fromEntries(needed.map((p) => [p, result.platforms[p]?.proofSpecs ?? []])),
+    ...(validating
+      ? {
+          validation: {
+            key: validationKey({
+              plan: validating.plan,
+              builder: result.risks,
+              platforms: scope.platforms,
+            }),
+            final: validating.final,
+          },
+        }
+      : {}),
+  };
+}
+
+function verdictCounts(rows: readonly FidelityRow[]): Record<string, number> {
+  return {
+    match: rows.filter((r) => r.verdict === 'match').length,
+    mismatch: rows.filter((r) => r.verdict === 'mismatch').length,
+    deviation: rows.filter((r) => r.verdict === 'deviation').length,
+  };
 }
 
 /**
@@ -819,6 +963,8 @@ async function publish(
     numbering?: Readonly<Record<string, string>>;
     /** The platforms whose proof the harness ran and saw pass. */
     proved?: readonly Platform[];
+    /** The earlier run the proof was carried over from, which the body says. */
+    carried?: Carried;
   },
 ): Promise<RunOutcome> {
   // main may have moved while proof and validation ran (PEN-63's: 20 minutes, and another PR's
@@ -847,6 +993,7 @@ async function publish(
     marker: run.marker('pr'),
     ...(run.artifacts ? { artifacts: run.artifacts } : {}),
     ...(shown.fidelity ? { fidelity: renderFidelity(shown.fidelity) } : {}),
+    ...(run.carried ? { carried: run.carried } : {}),
   });
   const pr = await deps.openPr({
     branch: run.branch,
@@ -856,6 +1003,7 @@ async function publish(
     files: (run.fidelity ?? []).flatMap((r) =>
       [r.mockup, r.screenshot].filter((f): f is string => Boolean(f)),
     ),
+    ...(run.carried ? { proofFrom: run.carried.run } : {}),
   });
   deps.log('pr-opened', { pr });
   return awaitReview(deps, { ...run, result: shown.result }, pr);
@@ -971,6 +1119,7 @@ export async function watchCi(
   const history = deps.ciHistory?.(run.item.number, run.pr);
   let repairs = history?.repairs ?? 0;
   const reruns = new Map(history?.reruns);
+  let flakeReruns = history?.flakeReruns ?? 0;
   let saidStalled = false;
   let empty = 0;
   for (;;) {
@@ -1004,6 +1153,13 @@ export async function watchCi(
     if (infra) {
       const rerun = await rerunInfra(deps, run, infra, reruns, failure);
       if (rerun.kind === 'blocked') return rerun;
+      since = deps.now();
+      saidStalled = false;
+      continue;
+    }
+    // Tests the branch doesn't touch, in jobs that pass on main: one re-run first (A1328).
+    if (flakeReruns < MAX_FLAKE_RERUNS && (await rerunFlake(deps, run, summary.failed, logs))) {
+      flakeReruns++;
       since = deps.now();
       saidStalled = false;
       continue;
@@ -1071,6 +1227,58 @@ export async function rerunInfra(
       `CI failed on an infrastructure problem, not on this branch (${infra.signature}): ${[...infra.runs.values()].flat().join(', ')}. The factory is re-running the failed jobs, up to ${MAX_INFRA_RERUNS} times, rather than giving the agent a repair round. ${run.pr}`,
     );
   return { kind: 'rerun' };
+}
+
+/**
+ * Re-runs the failed jobs, once per PR, when they look like a flaky test rather than the branch
+ * (A1328, amending A1312): every failed job's log names the tests that failed, the branch's diff
+ * against main touches none of them (nor a file with their stem), and each job passed the last
+ * time main's CI ran it. Logs `ci-flake-rerun` (the ledger counts it per PR, so clearing Blocked
+ * buys no more) and says so on the issue. False, with nothing done, when any of that doesn't hold
+ * or can't be read: the failure is the branch's and gets a repair round, as before.
+ */
+export async function rerunFlake(
+  deps: Pick<RunDeps, 'rerunFailed' | 'comment' | 'log'> &
+    Partial<Pick<RunDeps, 'diff' | 'mainRunJobs'>>,
+  run: { readonly item: BoardItem; readonly pr: string; readonly branch: string },
+  failed: readonly CheckRun[],
+  logs: readonly string[],
+): Promise<boolean> {
+  const { diff, mainRunJobs } = deps;
+  if (!diff || !mainRunJobs) return false;
+  const flake = flakeCandidate(failed, logs);
+  if (!flake) return false;
+  try {
+    const { paths } = await diff(run.branch);
+    if (flake.tests.some((t) => touchedBy(t, paths))) return false;
+    const onMain = new Map<string, readonly (readonly RunJob[])[]>();
+    for (const check of failed) {
+      if (!check.workflow) return false;
+      const runs = onMain.get(check.workflow) ?? (await mainRunJobs(check.workflow));
+      onMain.set(check.workflow, runs);
+      if (!passedOnMain(check.name, runs)) return false;
+    }
+  } catch {
+    return false;
+  }
+  try {
+    for (const id of flake.runs.keys()) await deps.rerunFailed(id);
+  } catch {
+    // GitHub refused the re-run (a run still going, say): the repair round goes ahead.
+    return false;
+  }
+  const jobs = [...flake.runs.values()].flat();
+  deps.log('ci-flake-rerun', {
+    pr: run.pr,
+    jobs,
+    tests: flake.tests,
+    actionsRuns: [...flake.runs.keys()],
+  });
+  await deps.comment(
+    run.item.number,
+    `CI failed in tests this branch doesn't change, in jobs that pass on main (${flake.tests.join(', ')}): ${jobs.join(', ')}. The factory is re-running the failed jobs once, in case the tests are flaky, before giving the agent a repair round. ${run.pr}`,
+  );
+  return true;
 }
 
 /** Each failed job's last log lines, as the repair prompt and Ryan's comment show them. */

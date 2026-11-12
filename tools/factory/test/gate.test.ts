@@ -59,6 +59,29 @@ describe('the scan for weakened tests (F13)', () => {
       { file: 'packages/core/test/b.test.ts', what: 'removes 1 assertion more than it adds' },
     ]);
   });
+  it('passes a skip on the platform alone in a spec the branch adds, and nowhere else (PEN-67)', () => {
+    const created = (file: string, lines: string) =>
+      `diff --git a/${file} b/${file}\nnew file mode 100644\n--- /dev/null\n+++ b/${file}\n@@ -0,0 +1 @@\n${lines}\n`;
+    const dock = 'apps/desktop/test/e2e/dock.spec.ts';
+    expect(scanWeakenedTests(created(dock, "+test.skip(!mac, 'Minimizing is macOS’s');"))).toEqual(
+      [],
+    );
+    expect(
+      scanWeakenedTests(
+        created(dock, "+it.skipIf(process.platform !== 'darwin')('restores', () => {"),
+      ),
+    ).toEqual([]);
+    // A skip on anything else, even in a new spec, still counts.
+    expect(
+      scanWeakenedTests(created(dock, "+test.skip('restores', async () => {")).map((f) => f.what),
+    ).toEqual(['skips a test']);
+    // An existing spec made one platform's only hides its failures elsewhere.
+    expect(
+      scanWeakenedTests(patch(dock, "+test.skip(!mac, 'Minimizing is macOS’s');")).map(
+        (f) => f.what,
+      ),
+    ).toEqual(['skips a test']);
+  });
   it('passes a skip that an added decision names', () => {
     const p =
       patch('apps/web/test/e2e/tags.spec.ts', "+test.skip('collapses', async () => {") +
@@ -75,7 +98,7 @@ describe('the scan for weakened tests (F13)', () => {
   });
   it('reads files, added and removed lines from a diff', () => {
     expect(parsePatch(patch('a.ts', '+x\n-y'))).toEqual([
-      { file: 'a.ts', added: ['x'], removed: ['y'] },
+      { file: 'a.ts', added: ['x'], removed: ['y'], created: false },
     ]);
   });
   it('tells the agent what to do', () => {

@@ -31,12 +31,13 @@ import { proofFiles } from './proof/body.ts';
 import { publishRefs } from './proof/store.ts';
 import { readConversation, reviewState, roundText, type ReviewState } from './review.ts';
 import { runRebase, runRevise, type ReviseDeps } from './revise.ts';
-import { infraFailure } from './ci-failure.ts';
+import { infraFailure, MAX_FLAKE_RERUNS } from './ci-failure.ts';
 import {
   branchName,
   CI_REPAIR_LIMITS,
   ciFailureText,
   failedLogs,
+  rerunFlake,
   rerunInfra,
   type RunDeps,
 } from './run.ts';
@@ -120,7 +121,8 @@ export async function nextReviewAction(
       '--repo',
       config.repo,
       '--json',
-      'name,state,bucket,link,startedAt',
+      // The workflow: whether a failed job passes on main (A1328).
+      'name,state,bucket,link,startedAt,workflow',
     ])
     .catch(() => []);
   const ci = summarizeChecks(checks, now, config.timeouts.ciMinutes, new Date(0));
@@ -277,14 +279,16 @@ export async function executeRevise(
 /**
  * What a red check in review gets before a repair round. The runners' infrastructure, not the
  * branch (A1312): its failed jobs are re-run, at most `MAX_INFRA_RERUNS` times per Actions run
- * as the ledger counts them, then Blocked. A PR that has had `rounds.ciRepair` repair rounds
- * already, in any run (A1313): Blocked. Undefined when the repair round goes ahead.
+ * as the ledger counts them, then Blocked. Tests the branch doesn't touch, in jobs that pass on
+ * main (A1328): one re-run per PR. A PR that has had `rounds.ciRepair` repair rounds already,
+ * in any run (A1313): Blocked. Undefined when the repair round goes ahead.
  */
 export async function beforeRepairInReview(
   deps: Pick<
     RunDeps,
     'config' | 'runId' | 'rerunFailed' | 'comment' | 'log' | 'setBlocked' | 'ciHistory'
-  >,
+  > &
+    Partial<Pick<RunDeps, 'diff' | 'mainRunJobs'>>,
   item: BoardItem,
   pr: string,
   failed: readonly CheckRun[],
@@ -306,6 +310,12 @@ export async function beforeRepairInReview(
     const rerun = await rerunInfra(deps, { item, pr }, infra, new Map(history?.reruns), failure);
     return rerun.kind === 'rerun' ? 'rerun' : block(rerun.reason, rerun.body);
   }
+  const branch = branchName(deps.config, item);
+  if (
+    (history?.flakeReruns ?? 0) < MAX_FLAKE_RERUNS &&
+    (await rerunFlake(deps, { item, pr, branch }, failed, logs))
+  )
+    return 'rerun';
   const repairs = history?.repairs ?? 0;
   if (repairs >= deps.config.rounds.ciRepair)
     return block('ci-red', `CI is still red after ${repairs} repair round(s): ${failure}`);

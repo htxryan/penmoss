@@ -317,12 +317,15 @@ const STAGE_OF: Readonly<Record<string, number>> = {
   'validation-mismatch': 4,
   'proof-waiting': 4,
   'proof-recorded': 4,
+  'proof-reused': 4,
   validated: 4,
+  'validation-reused': 4,
   pushed: 5,
   'pr-opened': 5,
   'ci-red': 5,
   'ci-repaired': 5,
   'ci-rerun': 5,
+  'ci-flake-rerun': 5,
   'ci-stalled': 5,
   'in-review': 6,
   resumed: 7,
@@ -513,8 +516,12 @@ function progressOf(e: LedgerEvent, config: FactoryConfig): string {
       return `Mac proof waits: ${str(e['reason']) ?? 'the test VM'}`;
     case 'proof-recorded':
       return 'Proof recorded';
+    case 'proof-reused':
+      return `Proof carried over from ${str(e['from']) ?? 'an earlier run'}`;
     case 'validated':
       return 'Validated against the plan';
+    case 'validation-reused':
+      return `Validation carried over from ${str(e['from']) ?? 'an earlier run'}`;
     case 'pushed':
       return 'Pushed; opening the pull request';
     case 'pr-opened':
@@ -528,6 +535,10 @@ function progressOf(e: LedgerEvent, config: FactoryConfig): string {
     case 'ci-rerun': {
       const signature = str(e['signature']);
       return `CI re-run: the runners' infrastructure failed${signature ? ` (${signature})` : ''}`;
+    }
+    case 'ci-flake-rerun': {
+      const tests = Array.isArray(e['tests']) ? (e['tests'] as string[]).join(', ') : '';
+      return `CI re-run once: tests the branch doesn't change failed${tests ? ` (${tests})` : ''}`;
     }
     case 'ci-stalled':
       return 'CI waiting for a Mac runner';

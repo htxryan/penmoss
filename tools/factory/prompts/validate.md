@@ -25,7 +25,7 @@ In scope: **{{platforms}}**. Capture each criterion on the app it is about: a Ma
 
 The Mac app runs only in the test VM, which the factory starts after your session; you can't run it here. Write the walkthrough instead, as a Playwright-for-Electron spec at `apps/desktop/test/e2e/factory-walk.spec.ts`:
 
-- Start the app with `launch` and the helpers in `apps/desktop/test/e2e/support.ts`, the way `mac-window.spec.ts` does, and close what you open.
+- Start the app with `launch` and the helpers in `apps/desktop/test/e2e/support.ts`, the way `mac-window.spec.ts` does, and close what you open. A fresh launch has no notebook and opens on the Welcome screen: give each test a notebook first (`gitNotebook(launched)`) unless the criterion is about the Welcome screen.
 - One `test` per criterion the Mac app shows. Set the app up, do what the criterion says, and end with `await page.screenshot({ path: 'test-results/walk/<id>-mac.png' })` (`ac3-mac.png`), the window as it is.
 - Don't run it and don't commit it. The factory runs it in the VM and puts its screenshots in `.factory/validation/`. A test that fails still keeps the screenshots taken before it failed.
 

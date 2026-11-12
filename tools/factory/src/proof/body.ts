@@ -32,6 +32,17 @@ export interface PrBodyInput {
   readonly fidelity?: string;
   /** The agreed plan and design artifacts (F16). */
   readonly artifacts?: readonly { readonly label: string; readonly href: string }[];
+  /** The earlier run the proof (and validation) was carried over from (carry.ts). */
+  readonly carried?: { readonly run: string; readonly validated: boolean };
+}
+
+/** The line that says the proof wasn't recorded again, and why. */
+export function carriedText(carried: {
+  readonly run: string;
+  readonly validated: boolean;
+}): string {
+  const what = carried.validated ? 'proof and validation' : 'proof';
+  return `Carried over from run \`${carried.run}\`: the branch's own changes outside \`docs/decisions.md\` are byte for byte the ones that run's ${what} passed on, so the factory didn't record ${carried.validated ? 'or validate them ' : 'them '}again.`;
 }
 
 /** Alt text can't hold `]` or a newline. */
@@ -64,6 +75,7 @@ export function renderPrBody(input: PrBodyInput): string {
       '## Proof',
       '',
       'Recorded by the factory running the committed tests, not supplied by the agent.',
+      ...(input.carried ? ['', carriedText(input.carried)] : []),
     );
     for (const phase of ['before', 'after'] as const) {
       const items = input.proof.filter((p) => p.phase === phase && p.source === 'harness');
@@ -88,6 +100,7 @@ export function renderPrBody(input: PrBodyInput): string {
         if (p.image) lines.push('', `![agent-captured: ${alt(p.label)}](./${p.image})`);
     }
   }
+  if (input.carried && input.proof.length === 0) lines.push('', carriedText(input.carried));
   if (input.fidelity) lines.push('', input.fidelity);
   if (input.decisions.length)
     lines.push('', '## Decisions', ...input.decisions.map((d) => `- ${d}`));
