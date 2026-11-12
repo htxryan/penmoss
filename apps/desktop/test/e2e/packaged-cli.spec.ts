@@ -334,27 +334,23 @@ function mcpServer(words: readonly string[], env: NodeJS.ProcessEnv) {
   };
 }
 
-/** Makes a git notebook in the app on a new bare repository, from its first-run screen. */
-async function addNotebook(page: Page, name: string): Promise<void> {
+/**
+ * A git notebook in the app, on a new bare repository the CLI bundle made the notebook in first,
+ * opened from the first-run screen's "Open a notebook you already have". The remote holds the
+ * notebook from the start, so the app makes the agents' copy from it (D52) without waiting for
+ * the app's own first push, which this spec isn't about.
+ */
+async function addNotebook(page: Page, w: ReturnType<typeof world>, name: string): Promise<void> {
   const remote = bareRepository();
+  const seeded = w.cli(CLI_EXE, ['notebook', 'add', `file://${remote}`, '--name', name]);
+  expect(seeded.status, seeded.stderr).toBe(0);
   await expect(page.getByTestId('first-run')).toBeVisible({ timeout: 30_000 });
-  await page.getByTestId('first-run-new').click();
+  await page.getByTestId('first-run-existing').click();
   const form = page.getByTestId('git-add');
   await form.getByTestId('git-add-remote').fill(`file://${remote}`);
-  await form.getByTestId('git-add-name').fill(name);
   await form.locator('button[type="submit"]').click();
   await expect(page.locator('#app-sidebar').getByText(name, { exact: true }).first()).toBeVisible({
     timeout: 30_000,
-  });
-  // The remote is empty until the app's first push: sync now, so the app can make the agents'
-  // copy from it (D52), as local-agents.spec.ts does.
-  await go(page, '/settings/git-notebooks');
-  const settings = page.getByTestId('git-notebooks-settings');
-  await settings.getByTestId('git-notebook-row').filter({ hasText: name }).click();
-  const card = settings.getByTestId('git-notebook').filter({ hasText: name });
-  await card.getByTestId('git-sync-now').click();
-  await expect(card.getByTestId('git-status')).toHaveAttribute('data-phase', 'synced', {
-    timeout: 60_000,
   });
 }
 
@@ -445,7 +441,7 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   open(w.app, first);
   let { browser, page } = await connect(first);
   await shots.record(page);
-  await addNotebook(page, 'Notes');
+  await addNotebook(page, w, 'Notes');
 
   // Settings → Agents: the notebook's automatic agent, and the command, name the CLI bundle.
   await go(page, '/settings/agents');
