@@ -151,8 +151,10 @@ describe('the publisher uses the token, never a stored login', { timeout: 30_000
   it("gives git the token as x-access-token's password, and only for get", () => {
     const helper = TOKEN_HELPER[3]!.replace(/^credential\.helper=!/, '');
     const out = (op: string) =>
-      // git runs a `!` helper through the shell with the operation appended.
-      execFileSync('sh', ['-c', `${helper} ${op}`], {
+      // git runs a `!` helper through the shell with the operation appended. git ignores a
+      // helper that doesn't read its input; here the shell drains it after the helper, keeping
+      // its status, or the write races the shell's exit and fails with EPIPE.
+      execFileSync('sh', ['-c', `${helper} ${op}; s=$?; cat >/dev/null; exit $s`], {
         env: { PATH: process.env['PATH'] ?? '', GH_TOKEN: 'ghs_x' },
         input: 'protocol=https\nhost=github.com\n\n',
       }).toString();
