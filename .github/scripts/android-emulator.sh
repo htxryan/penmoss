@@ -80,7 +80,9 @@ avd() {
   [ -n "$avdmanager" ] || fail "no avdmanager under $ANDROID_HOME/cmdline-tools"
   mkdir -p "$ANDROID_AVD_HOME"
   say "making $AVD from $IMAGE in $ANDROID_AVD_HOME"
-  echo no | "$avdmanager" create avd --name "$AVD" --package "$IMAGE" --device pixel_7 --force
+  # "no" to its custom hardware profile question. A here-string, not `echo no |`: under pipefail
+  # the pipe's echo died of SIGPIPE (141) whenever avdmanager exited before reading it (PEN-118).
+  "$avdmanager" create avd --name "$AVD" --package "$IMAGE" --device pixel_7 --force <<< no
   # The phone the factory's slots use (tools/factory/src/avd.ts): Pixel-sized, enough RAM for
   # software rendering.
   printf '%s\n' hw.lcd.width=1080 hw.lcd.height=2400 hw.lcd.density=420 hw.ramSize=3072 \

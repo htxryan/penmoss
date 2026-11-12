@@ -483,12 +483,32 @@ async function clicksThatDrag(page: Page): Promise<string[]> {
   }, probe);
 }
 
+/**
+ * Waits for the page's CSS transitions to end. The hit-test reads where things are drawn, so it
+ * must not run mid-slide: at 700 px and below the sidebar is a drawer, and the narrow window's
+ * check once caught it sliding away over the app bar (PEN-112).
+ */
+async function transitionsEnded(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          document
+            .getAnimations()
+            .filter((animation) => animation instanceof CSSTransition)
+            .filter((animation) => animation.playState === 'running').length,
+      ),
+    )
+    .toBe(0);
+}
+
 /** Nothing that clicks drags: at the top of the window, and in the rows anywhere. */
 async function clicksEverywhere(
   page: Page,
   where: string,
   { stopped = [] }: { stopped?: readonly string[] } = {},
 ): Promise<void> {
+  await transitionsEnded(page);
   expect(await draggable(page, true), where).toEqual([]);
   expect(await clicksThatDrag(page), where).toEqual([]);
   // The rows themselves drag, but for those a surface before them in the DOM is open over.
@@ -825,6 +845,9 @@ test('nothing that clicks drags the window: Version history, scrolled Settings a
   expect(await overLights(page)).toEqual([]);
   // In a narrower window still: nothing over the lights.
   await mainBounds(app, { x: 0, y: 0, width: 600, height: 760 });
+  // The page has the new size before anything is measured: setBounds returns before it does.
+  await expect.poll(() => page.evaluate(() => innerWidth)).toBe(600);
+  await expect(page.locator('.sidebar')).toBeHidden();
   await expect(panel).toBeAttached();
   expect(await overLights(page)).toEqual([]);
   await clicksEverywhere(page, 'version history, narrow');

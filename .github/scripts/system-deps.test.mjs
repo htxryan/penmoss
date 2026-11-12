@@ -26,6 +26,8 @@ function run({
   args = ['@penmoss/web'],
   onPath = [],
   sudoExit = 0,
+  dpkgExit = 0,
+  cached = [],
 } = {}) {
   const root = mkdtempSync(path.join(tmpdir(), 'system-deps-'));
   const bin = path.join(root, 'bin');
@@ -41,7 +43,14 @@ function run({
     `echo "\tlibc.so.6 => /lib/libc.so.6"\n${missing.map((l) => `echo "\t${l} => not found"`).join('\n')}`,
   );
   stub(bin, 'pnpm', `echo "pnpm $*" >>"${log}"`);
-  stub(bin, 'sudo', `echo "sudo $*" >>"${log}"; exit ${sudoExit}`);
+  stub(
+    bin,
+    'sudo',
+    `echo "sudo $*" >>"${log}"; [ "$1" = dpkg ] && exit ${dpkgExit}; exit ${sudoExit}`,
+  );
+  const debs = path.join(root, 'debs');
+  if (cached.length > 0) mkdirSync(debs);
+  for (const file of cached) writeFileSync(path.join(debs, file), '');
   for (const cmd of onPath) stub(bin, cmd, 'exit 0');
   const result = spawnSync('sh', [SCRIPT, ...args], {
     cwd: root,
@@ -50,9 +59,11 @@ function run({
       PATH: `${bin}:/usr/bin:/bin`,
       HOME: root,
       PLAYWRIGHT_BROWSERS_PATH: browsers,
+      PENMOSS_DEB_CACHE: debs,
     },
   });
-  return { ...result, calls: readFileSync(log, 'utf8').trim().split('\n').filter(Boolean) };
+  const calls = readFileSync(log, 'utf8').trim().split('\n').filter(Boolean);
+  return { ...result, debs, calls: calls.map((call) => call.replaceAll(debs, '<debs>')) };
 }
 
 describe('system-deps.sh', () => {
@@ -78,12 +89,40 @@ describe('system-deps.sh', () => {
     ]);
   });
 
-  it('installs only the named tools that are not on PATH', () => {
+  it('installs only the named tools that are not on PATH, keeping their packages', () => {
     const r = run({ args: ['@penmoss/web', 'Xvfb:xvfb', 'xdotool:xdotool'], onPath: ['Xvfb'] });
     assert.equal(r.status, 0, r.stderr);
     assert.deepEqual(r.calls, [
       'sudo apt-get update',
-      'sudo apt-get install -y --no-install-recommends xdotool',
+      'sudo apt-get install -y --no-install-recommends -o Dir::Cache::Archives=<debs> xdotool',
+    ]);
+  });
+
+  // PEN-114: the mirror was down for hours on 11 Nov 2026, and the Electron job's xdotool with it.
+  it('installs the tools from the cache of their packages, without apt', () => {
+    const r = run({
+      args: ['@penmoss/web', 'xdotool:xdotool'],
+      cached: ['libxdo3_1_amd64.deb', 'xdotool_1_amd64.deb'],
+      sudoExit: 100,
+    });
+    assert.equal(r.status, 0, r.stderr);
+    assert.deepEqual(r.calls, [
+      'sudo dpkg -i <debs>/libxdo3_1_amd64.deb <debs>/xdotool_1_amd64.deb',
+    ]);
+    assert.match(r.stdout, /from the cache/);
+  });
+
+  it("goes to apt, fixing what dpkg left, when the cached packages don't install", () => {
+    const r = run({
+      args: ['@penmoss/web', 'xdotool:xdotool'],
+      cached: ['xdotool_1_amd64.deb'],
+      dpkgExit: 1,
+    });
+    assert.equal(r.status, 0, r.stderr);
+    assert.deepEqual(r.calls, [
+      'sudo dpkg -i <debs>/xdotool_1_amd64.deb',
+      'sudo apt-get update',
+      'sudo apt-get install -y --no-install-recommends -f -o Dir::Cache::Archives=<debs> xdotool',
     ]);
   });
 
@@ -101,5 +140,26 @@ describe('ci.yml', () => {
     assert.doesNotMatch(ci, /--with-deps/);
     assert.doesNotMatch(ci, /playwright install-deps/);
     assert.equal(ci.match(/sh \.github\/scripts\/system-deps\.sh /g)?.length, 3);
+  });
+
+  it("caches the Electron job's tool packages, and fetches Electron before checking its libraries", () => {
+    const desktop = ci.slice(ci.indexOf('\n  desktop:'), ci.indexOf('\n  android:'));
+    const cache = desktop.indexOf('path: ~/.cache/penmoss-ci/debs');
+    const electron = desktop.indexOf(`exec node -e "require('electron')"`);
+    const deps = desktop.indexOf('sh .github/scripts/system-deps.sh');
+    assert.ok(cache > 0 && electron > cache && deps > electron, 'cache, then Electron, then deps');
+  });
+
+  it('keys that cache on the runner image, which an expression only sees through a step', () => {
+    // `env.ImageOS` is empty in an expression (the runner sets it, not the workflow), so the
+    // first run's key was `debs-desktop-Linux--`, the same for every image.
+    assert.doesNotMatch(ci, /env\.Image(OS|Version)/);
+    const desktop = ci.slice(ci.indexOf('\n  desktop:'), ci.indexOf('\n  android:'));
+    assert.match(desktop, /\$\{ImageOS:\?\}/);
+    assert.match(desktop, /\$\{ImageVersion:\?\}/);
+    assert.match(
+      desktop,
+      /key: debs-desktop-\$\{\{ runner\.os \}\}-\$\{\{ steps\.image\.outputs\.os \}\}-\$\{\{ steps\.image\.outputs\.version \}\}/,
+    );
   });
 });
