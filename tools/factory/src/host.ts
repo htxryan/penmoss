@@ -338,6 +338,30 @@ export function lastResultEvent(
 }
 
 /**
+ * The last `error` event in an OpenCode stream from `from`, as JSON, or null. OpenCode ends a
+ * session refused by its provider with one, and only it carries the wait: OpenCode Go's limit
+ * says `"retryAfterMs":11504000`, while agent.log says only "usage limit reached" (PEN-117).
+ */
+export function lastErrorEvent(streamFile: string, from: number): string | null {
+  let text: string;
+  try {
+    text = readFileSync(streamFile).subarray(from).toString('utf8');
+  } catch {
+    return null;
+  }
+  for (const line of text.split('\n').reverse()) {
+    if (!line.includes('"error"')) continue;
+    try {
+      const event = JSON.parse(line) as { type?: unknown; error?: unknown };
+      if (event.type === 'error' && event.error) return JSON.stringify(event.error);
+    } catch {
+      // A partial line: the stream is written as the agent goes.
+    }
+  }
+  return null;
+}
+
+/**
  * Copies the plain files directly in `from` (validation's review.json, captures.json and each
  * criterion's screenshot and mockup) into `to`, before the sandbox's worktree is gone (A1256).
  * Never through a symlink or into a subfolder: the agent wrote `from`. Returns the names copied.
@@ -597,7 +621,11 @@ export function hostDeps(options: HostOptions): HostDeps {
       // that writes about limits (or works on rate limiting) isn't taken for one that hit its own.
       const limitText = (fallback: string) => {
         const result = lastResultEvent(streamFile, streamStart);
-        if (!result) return fallback;
+        if (!result) {
+          // OpenCode's provider error, which says how long its limit lasts.
+          const error = lastErrorEvent(streamFile, streamStart);
+          return error ? `${fallback}\n${error}` : fallback;
+        }
         return result.is_error === true && typeof result.result === 'string' ? result.result : '';
       };
       const remote = await remoteSession();
