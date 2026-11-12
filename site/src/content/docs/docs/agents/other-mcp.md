@@ -12,7 +12,7 @@ Penmoss's MCP server is a local server over stdio: the client starts it as a pro
 1. In Penmoss, open **Settings → Agents**, choose the notebook, type the client's name and choose **Connect an Agent**. Note the copy's name, such as `notes-cursor`.
 2. Give the client this program and these arguments:
 
-   - **Command:** `/Applications/Penmoss.app/Contents/MacOS/Penmoss`
+   - **Command:** `/Applications/Penmoss.app/Contents/Helpers/Penmoss CLI.app/Contents/MacOS/Penmoss`
    - **Arguments:** `--penmoss-cli`, `mcp`, `--notebook`, `notes-cursor`
 
    If you have [installed the `penmoss` command](/docs/reference/cli/#install), the command can be `penmoss` and the arguments `mcp`, `--notebook`, `notes-cursor`.
@@ -23,7 +23,7 @@ Many clients, such as the Claude desktop app (`~/Library/Application Support/Cla
 {
   "mcpServers": {
     "penmoss": {
-      "command": "/Applications/Penmoss.app/Contents/MacOS/Penmoss",
+      "command": "/Applications/Penmoss.app/Contents/Helpers/Penmoss CLI.app/Contents/MacOS/Penmoss",
       "args": ["--penmoss-cli", "mcp", "--notebook", "notes-cursor"]
     }
   }

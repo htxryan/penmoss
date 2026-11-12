@@ -36,7 +36,11 @@ An agent reads your notes as text, and a note can contain anything, including te
 
 ## The penmoss command
 
-The setup commands Penmoss gives you name the app itself (`/Applications/Penmoss.app/Contents/MacOS/Penmoss --penmoss-cli`), so they work without anything else installed. To type `penmoss` in a terminal, install the command: **Settings → Agents → The penmoss Command → Install Command**. See [Install the CLI](/docs/reference/cli/#install).
+The setup commands Penmoss gives you run the CLI inside the app (`'/Applications/Penmoss.app/Contents/Helpers/Penmoss CLI.app/Contents/MacOS/Penmoss' --penmoss-cli`), so they work without anything else installed. It runs in the background, so a running agent never keeps Penmoss from opening from the Dock or the Finder.
+
+:::note[Agents connected before November 2026]
+Their commands name `/Applications/Penmoss.app/Contents/MacOS/Penmoss` instead. They still work, but while one runs, opening Penmoss can take a moment longer. Copy the new command from **Settings → Agents** once and add the server again (in Claude Code, `claude mcp remove` the old one first).
+::: To type `penmoss` in a terminal, install the command: **Settings → Agents → The penmoss Command → Install Command**. See [Install the CLI](/docs/reference/cli/#install).
 
 ## When agents sync
 

@@ -96,6 +96,17 @@ async function beforePack(context) {
   buildAuthHelper();
 }
 
+/**
+ * Makes the CLI's own bundle, Contents/Helpers/Penmoss CLI.app (PEN-121, amending A992), in each
+ * Mac app it packs: agents' MCP servers run from it with a bundle id of their own, so none of
+ * them stands in for Penmoss when it is opened from the Dock or the Finder.
+ * @param {import('electron-builder').AfterPackContext} context
+ */
+async function afterPack(context) {
+  const { afterPack: cliBundle } = await import('./scripts/cli-bundle.mjs');
+  await cliBundle(context);
+}
+
 /** @type {import('electron-builder').Configuration} */
 const config = {
   appId: 'app.penmoss.mac',
@@ -125,6 +136,7 @@ const config = {
   nodeGypRebuild: false,
   buildDependenciesFromSource: false,
   beforePack,
+  afterPack,
   protocols: [{ name: 'Penmoss link', schemes: ['penmoss'] }],
   // Electron's own switches, fixed in the binary (A224): no running as plain Node, no
   // NODE_OPTIONS or --inspect, only the integrity-checked app.asar, cookies encrypted.
@@ -155,6 +167,9 @@ const config = {
     identity: signed ? (env.CSC_NAME ?? undefined) : '-',
     sign: signed ? undefined : signAdHoc,
     notarize,
+    // The CLI bundle (afterPack) is signed with the app, but not again through its symlinks to
+    // the app's Frameworks and app.asar: those are the app's own files, signed once.
+    signIgnore: ['/Penmoss CLI\\.app/Contents/(Frameworks|Resources)/'],
     // The owner check, a plain Mach-O executable signed with the app (beforePack builds it).
     extraResources: [{ from: 'dist/native/Penmoss', to: 'auth/Penmoss' }],
   },

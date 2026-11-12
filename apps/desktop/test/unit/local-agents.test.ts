@@ -15,6 +15,7 @@ import { desktopConfig } from '../../src/config';
 import type { GitNotebookEntry } from '../../src/git-notebooks';
 import {
   agentCloneName,
+  cliCommand,
   keptLoginPath,
   LocalAgents,
   shellWord,
@@ -97,13 +98,17 @@ function agents(
     /** The app's notebooks with their tokens (D52's automatic clones). */
     all?: () => { entry: GitNotebookEntry; token: string | null }[];
     now?: () => number;
+    /** The command the app hands out, and the one it handed out before (PEN-121). */
+    cli?: readonly string[];
+    oldCli?: readonly string[] | null;
   } = {},
 ) {
   const asked: string[] = [];
   const home = join(dir, 'home');
   const secrets = memoryTokenStore();
   const service = new LocalAgents({
-    cli: [EXE, '--penmoss-cli'],
+    cli: options.cli ?? [EXE, '--penmoss-cli'],
+    ...(options.oldCli !== undefined ? { oldCli: options.oldCli } : {}),
     home,
     shell: '/bin/zsh',
     notebooks: () => cliNotebooks(join(home, '.penmoss'), secrets),
@@ -440,6 +445,101 @@ describe('the penmoss command (A992)', () => {
       loginPath: () => Promise.resolve(null),
     });
     expect(await moved.cliStatus()).toMatchObject({ state: 'stale', profile: '~/.bash_profile' });
+  });
+});
+
+describe('the CLI bundle (PEN-121)', () => {
+  const BUNDLED =
+    '/Applications/Penmoss.app/Contents/Helpers/Penmoss CLI.app/Contents/MacOS/Penmoss';
+  const script = (words: string) =>
+    `#!/bin/sh\n# Written by Penmoss for Mac: runs the penmoss CLI in the app (A992).\nexec ${words} "$@"\n`;
+
+  it('hands out the CLI bundle in a packaged Mac app, and the app as before elsewhere', () => {
+    const seen: string[] = [];
+    const there = (path: string) => (seen.push(path), true);
+    expect(
+      cliCommand({ exe: EXE, appPath: '/x', packaged: true, platform: 'darwin', exists: there }),
+    ).toEqual({ cli: [BUNDLED, '--penmoss-cli'], old: [EXE, '--penmoss-cli'] });
+    expect(seen).toEqual([BUNDLED]);
+    // A build without the bundle (made some other way) still works, from the app's binary.
+    expect(
+      cliCommand({
+        exe: EXE,
+        appPath: '/x',
+        packaged: true,
+        platform: 'darwin',
+        exists: () => false,
+      }),
+    ).toEqual({ cli: [EXE, '--penmoss-cli'], old: null });
+    expect(
+      cliCommand({ exe: '/opt/Penmoss/penmoss', appPath: '/x', packaged: true, platform: 'linux' }),
+    ).toEqual({ cli: ['/opt/Penmoss/penmoss', '--penmoss-cli'], old: null });
+    expect(
+      cliCommand({
+        exe: '/e/Electron',
+        appPath: '/src/apps/desktop',
+        packaged: false,
+        platform: 'darwin',
+      }),
+    ).toEqual({ cli: ['/e/Electron', '/src/apps/desktop', '--penmoss-cli'], old: null });
+  });
+
+  it('gives agents and the penmoss command the CLI bundle', { timeout: 60_000 }, async () => {
+    const remote = bare('bundle');
+    await seeded(remote);
+    const { service } = agents({ entry: appEntry(remote), cli: [BUNDLED, '--penmoss-cli'] });
+    const connected = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Codex');
+    if (!connected.ok) throw new Error(connected.error.message);
+    const quoted = `'${BUNDLED}' --penmoss-cli`;
+    expect(connected.value.claude).toBe(
+      `claude mcp add penmoss-notes-codex -- ${quoted} mcp --notebook notes-codex`,
+    );
+    expect(connected.value.codex).toContain(`command = "${BUNDLED}"`);
+    expect(connected.value.codex).toContain(
+      'args = ["--penmoss-cli", "mcp", "--notebook", "notes-codex"]',
+    );
+    expect((await service.cliStatus()).direct).toBe(quoted);
+    await service.installCli();
+    expect((await service.cliStatus()).state).toBe('installed');
+  });
+
+  it('rewrites only its own script for this same app’s old path', async () => {
+    const { service, home } = agents({
+      cli: [BUNDLED, '--penmoss-cli'],
+      oldCli: [EXE, '--penmoss-cli'],
+    });
+    const file = join(home, '.local', 'bin', 'penmoss');
+    mkdirSync(join(home, '.local', 'bin'), { recursive: true });
+
+    // Nothing there: nothing written.
+    expect(await service.refreshCli()).toBe(false);
+    expect(() => statSync(file)).toThrow();
+
+    // This app's old path: rewritten to the bundle.
+    writeFileSync(file, script(`${EXE} --penmoss-cli`), { mode: 0o755 });
+    expect((await service.cliStatus()).state).toBe('stale');
+    expect(await service.refreshCli()).toBe(true);
+    expect(readFileSync(file, 'utf8')).toBe(script(`'${BUNDLED}' --penmoss-cli`));
+    expect(statSync(file).mode & 0o777).toBe(0o755);
+    expect((await service.cliStatus()).state).toBe('installed');
+
+    // Another copy of Penmoss: left, and shown as stale.
+    const other = script('/Users/me/Apps/Penmoss.app/Contents/MacOS/Penmoss --penmoss-cli');
+    writeFileSync(file, other);
+    expect(await service.refreshCli()).toBe(false);
+    expect(readFileSync(file, 'utf8')).toBe(other);
+    expect((await service.cliStatus()).state).toBe('stale');
+
+    // Someone else's file, even one naming this app: never touched.
+    const theirs = `#!/bin/sh\nexec ${EXE} --penmoss-cli "$@"\n`;
+    writeFileSync(file, theirs);
+    expect(await service.refreshCli()).toBe(false);
+    expect(readFileSync(file, 'utf8')).toBe(theirs);
+    expect((await service.cliStatus()).state).toBe('other');
+
+    // An app with no old path (development, Linux) never rewrites.
+    writeFileSync(file, script(`${EXE} --penmoss-cli`));
+    expect(await agents({ cli: [BUNDLED, '--penmoss-cli'] }).service.refreshCli()).toBe(false);
   });
 });
 

@@ -8,13 +8,46 @@
  */
 import { spawn } from 'node:child_process';
 import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { CliError, type NotebookEntry, type NotebookIo } from '@penmoss/cli/node';
 import type { GitAnswer, GitNotebookEntry, GitRefusal } from './git-notebooks';
 import { fitWords, repositoryWords } from './git-notebooks';
 
 /** The switch that makes this binary the CLI (A992). */
 export const CLI_FLAG = '--penmoss-cli';
+/**
+ * The CLI's own bundle in the packaged Mac app (PEN-121, amending A992): its executable, from the
+ * app's `Contents` (scripts/cli-bundle.mjs makes it). Run from there, the CLI checks in with
+ * LaunchServices as `app.penmoss.mac.cli`, a background-only app, never as Penmoss itself.
+ */
+export const CLI_EXECUTABLE = ['Helpers', 'Penmoss CLI.app', 'Contents', 'MacOS', 'Penmoss'];
+
+/**
+ * The command that runs this app as the CLI. A packaged Mac app hands out its CLI bundle's
+ * executable (PEN-121), unless that bundle is missing, when the app's own binary still works;
+ * development (the app's folder after Electron) and Linux are as before (A992).
+ */
+export function cliCommand(options: {
+  /** `app.getPath('exe')`. */
+  readonly exe: string;
+  /** `app.getAppPath()`, used only unpackaged. */
+  readonly appPath: string;
+  readonly packaged: boolean;
+  readonly platform: NodeJS.Platform;
+  /** For the tests: whether a file is there. */
+  readonly exists?: (path: string) => boolean;
+}): { readonly cli: readonly string[]; readonly old: readonly string[] | null } {
+  const { exe, packaged, platform } = options;
+  if (!packaged) return { cli: [exe, options.appPath, CLI_FLAG], old: null };
+  const own = [exe, CLI_FLAG];
+  if (platform !== 'darwin') return { cli: own, old: null };
+  const bundled = join(dirname(dirname(exe)), ...CLI_EXECUTABLE);
+  return (options.exists ?? existsSync)(bundled)
+    ? { cli: [bundled, CLI_FLAG], old: own }
+    : { cli: own, old: null };
+}
+
 /** Marks the script the app writes, so it never overwrites someone else's `penmoss`. */
 const MARKER = '# Written by Penmoss for Mac: runs the penmoss CLI in the app (A992).';
 /** The CLI's rule for a notebook's name. */
@@ -76,6 +109,11 @@ export type OwnerCheck = (
 export interface LocalAgentsOptions {
   /** The command that runs this app as the CLI: its binary, the app path in development, the switch. */
   readonly cli: readonly string[];
+  /**
+   * The command this same app handed out before it had the CLI bundle (PEN-121): its own binary
+   * and the switch. A script of the app's running exactly that is rewritten (`refreshCli`).
+   */
+  readonly oldCli?: readonly string[] | null;
   /** The person's home folder. */
   readonly home: string;
   /** The person's login shell (`$SHELL`), asked for its PATH. */
@@ -170,8 +208,8 @@ export class LocalAgents {
   }
 
   /** The script's text: the app's binary with the switch, the person's arguments after it. */
-  private script(): string {
-    return `#!/bin/sh\n${MARKER}\nexec ${this.options.cli.map(shellWord).join(' ')} "$@"\n`;
+  private script(cli: readonly string[] = this.options.cli): string {
+    return `#!/bin/sh\n${MARKER}\nexec ${cli.map(shellWord).join(' ')} "$@"\n`;
   }
 
   /** The MCP server's command for `name`, as words (the app's binary first). */
@@ -254,6 +292,28 @@ export class LocalAgents {
     await writeFile(this.scriptPath, this.script(), { mode: 0o755 });
     await chmod(this.scriptPath, 0o755);
     return { ok: true, value: await this.cliStatus() };
+  }
+
+  /**
+   * As the app starts (PEN-121): when `~/.local/bin/penmoss` is the app's own script running this
+   * same app's binary (`oldCli`, before the CLI bundle), it is rewritten to run the CLI bundle. A
+   * script for another copy of Penmoss stays stale, and a file the app did not write is never
+   * touched. Never throws; true when it rewrote the script.
+   */
+  async refreshCli(): Promise<boolean> {
+    const old = this.options.oldCli;
+    if (!old) return false;
+    try {
+      const text = await readFile(this.scriptPath, 'utf8').catch(() => null);
+      if (text === null || text !== this.script(old)) return false;
+      await writeFile(this.scriptPath, this.script(), { mode: 0o755 });
+      await chmod(this.scriptPath, 0o755);
+      this.options.log?.(`agents: ${this.scriptPath} now runs the CLI bundle`);
+      return true;
+    } catch (error) {
+      this.options.log?.(`agents: could not rewrite ${this.scriptPath}: ${cliMessage(error)}`);
+      return false;
+    }
   }
 
   /** Removes the app's script; leaves anyone else's. */

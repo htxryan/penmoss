@@ -17,7 +17,7 @@ The Mac app is the CLI, so it needs nothing else installed. In **Settings → Ag
 - If you move or rename the app, the card says so, and **Update Command** rewrites the script.
 - It never overwrites a `penmoss` it did not write. **Remove Command** removes it.
 
-Without the script, run the app directly: `/Applications/Penmoss.app/Contents/MacOS/Penmoss --penmoss-cli <command> …`.
+Without the script, run the app's CLI directly: `'/Applications/Penmoss.app/Contents/Helpers/Penmoss CLI.app/Contents/MacOS/Penmoss' --penmoss-cli <command> …`. A script written by an older Penmoss, which ran `Contents/MacOS/Penmoss`, is rewritten to this when the app starts.
 
 The Mac app's notebooks are already there: `penmoss notebook ls` lists them.
 

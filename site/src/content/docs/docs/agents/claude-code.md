@@ -15,7 +15,7 @@ You need Penmoss on your Mac with the notebook added, and [Claude Code](https://
 4. Under **Claude Code: run in a terminal**, choose **Copy**, then paste the command into Terminal and run it. It looks like this:
 
    ```sh
-   claude mcp add penmoss-notes-claude-code -- /Applications/Penmoss.app/Contents/MacOS/Penmoss --penmoss-cli mcp --notebook notes-claude-code
+   claude mcp add penmoss-notes-claude-code -- '/Applications/Penmoss.app/Contents/Helpers/Penmoss CLI.app/Contents/MacOS/Penmoss' --penmoss-cli mcp --notebook notes-claude-code
    ```
 
    This adds the server for the folder you run it in. To have it in every project, add `--scope user` after `add`.
