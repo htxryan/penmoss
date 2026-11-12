@@ -167,6 +167,20 @@ Fixed in #151, #154, #156 and the follow-up (A1308, A1310–A1324). Look here fi
 - **Validation can disagree with itself** on identical code (PEN-63: a deviation twice, a mismatch once). The reviewer now treats the plan's words as winning over its mockup (A1324).
 - **A flaky emulator test** (`TypingInstrumentedTest`, PEN-116) still sends a run into a repair round. Until it's fixed, pause a run in its CI watch (Blocked from the UI, then `task factory:stop`), re-run the job by hand, and clear Blocked once green: the run resumes at CI.
 
+## Known failures from the fifth run (PEN-67, PEN-120–122 and PEN-117, 12 Nov 2026)
+
+Fixed in #161–#164, #169, #170 (A1328–A1347), or still open on PEN-30. Look here first:
+
+- **Electron in the VM hangs on a stale keychain item.** Each ad hoc build has a new signature, so the "Penmoss Safe Storage" item an earlier build left raises a hidden Keychain prompt. That blocks the main thread: the first sync sticks and the app won't quit. `scripts/vm/desktop-test.sh` now deletes the item before each run (#169). If a Mac proof hangs on sync or quit, check this first.
+- **A re-padded `docs/decisions.md` conflicts on every rebase.** `A-NEW-1` is wider than the ID column, so an agent's Prettier run re-pads the whole table. The gate now applies the conflicting rows by ID (A1341). If it still refuses, rebase the run's branch by hand: fetch it from `publish/`, resolve row by row in a scratch worktree, push with `--force-with-lease`, then clear Blocked.
+- **Agents fix Mac-only failures blind.** The sandbox can't reach the VM, so each guess costs a round. Rounds now get the failing test's screenshot, error context and attachments in `.factory/last-proof/` (A1342), and each Playwright failure whole (A1343). When a Mac proof fails twice for the same reason, run the spec in the VM yourself (`sh scripts/vm/desktop-test.sh test/e2e/<spec> -g <name> --retries=0` from a worktree) and reply on the card.
+- **Replies reach the agent.** A recovery with Ryan's replies runs the agent again rather than resuming at the gate, and comments posted mid-run go into every later round (A1347). Before this, a reply waited for a gate and proof run that was bound to fail again.
+- **A session can end without `result.json`.** OpenCode Go once emitted a malformed tool call as text and stopped. The factory now continues the session once (A1346).
+- **A usage limit holds the slot** until the limit lifts (PEN-117: about 3 h). Still open. To free the slot, set Blocked, then `task factory:stop` and `task factory:start`, and clear Blocked after the `until` time.
+- **The updater skips test-only and doc-only changes on main** (A1344). Before, they held every card's new work until the active step ended.
+- **The validation walk's own bugs** (a stale page after a reopen, DevTools on an app started with `open -n`) score as mismatches. Still open. Read `validation/<n>/review.json` before believing a mismatch.
+- **Mac proof videos are per-window screencasts**, so window management (minimize, a Dock restore) doesn't show. Still open. Judge it from the spec's assertions.
+
 ## Asset
 
 `assets/test-map.html` is the live test map from the PEN-75 run: an animated component and data-flow diagram with the run's steps and a bug table, all driven by its `STATE` object. Copy it to the scratchpad, rewrite `STATE` for the new run, and publish it with the Artifact tool. Republish the same path on every change.
