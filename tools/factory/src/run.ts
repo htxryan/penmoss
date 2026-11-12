@@ -31,7 +31,7 @@ import {
   type FidelityRow,
 } from './fidelity.ts';
 import { scanWeakenedTests, weakenedFeedback, workflowChanges, workflowFeedback } from './gate.ts';
-import { usageLimitReset } from './limits.ts';
+import { USAGE_LIMIT_WAIT, usageLimitReset } from './limits.ts';
 import { validate } from './validate.ts';
 import { renderPrBody, type AttachedProof } from './proof/body.ts';
 import { failedProof, missingProof, type ProofItem } from './proof/manifest.ts';
@@ -303,7 +303,7 @@ export const MAX_LIMIT_WAITS = 3;
  * prompt again in the same worktree (R13). A limit never counts as a round.
  */
 export async function runAgentPatiently(
-  deps: Pick<RunDeps, 'runAgent' | 'now' | 'sleep' | 'log'>,
+  deps: Pick<RunDeps, 'runAgent' | 'now' | 'sleep' | 'log'> & Partial<Pick<RunDeps, 'waitingFor'>>,
   sandbox: RunSandbox,
   prompt: string,
 ): Promise<void> {
@@ -314,7 +314,9 @@ export async function runAgentPatiently(
     if (waits >= MAX_LIMIT_WAITS)
       throw new Error(`the agent hit its usage limit ${waits + 1} times in a row`);
     deps.log('usage-limited', { until: reset.toISOString() });
+    deps.waitingFor?.(`${USAGE_LIMIT_WAIT} at ${reset.toISOString()}`);
     await deps.sleep(Math.ceil((reset.getTime() - deps.now().getTime()) / 1000) + 60);
+    deps.waitingFor?.(null);
   }
 }
 

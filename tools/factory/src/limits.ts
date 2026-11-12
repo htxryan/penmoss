@@ -4,6 +4,14 @@
  * never uses up a gate or CI round.
  */
 
+/**
+ * What a run waiting on a usage limit says it waits for (`waitingFor`). An update doesn't wait
+ * for such a run: it can sleep for hours (PEN-117: OpenCode Go's 5-hour limit), and the update
+ * holds every other card's new work meanwhile (A1336). The restart stops it, and recovery runs the same
+ * round again, which waits again until the reset.
+ */
+export const USAGE_LIMIT_WAIT = 'the usage limit to reset';
+
 /** The longest the factory waits on one limit; anything longer is a mistake in the parse. */
 const MAX_WAIT_MS = 6 * 3600_000;
 /** When the message names no reset time. */
