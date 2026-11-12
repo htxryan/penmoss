@@ -13,10 +13,10 @@ import {
 // Penmoss window is visible, even with the main window closed; with one visible and the main
 // window closed, it makes the main window as before. The Dock click is the app's `activate`
 // event, as macOS sends it. Mac only: xvfb on Linux has no window manager to minimize into and
-// no Dock (A1331).
+// no Dock (A1331, A-NEW-1).
 
 const mac = process.platform === 'darwin';
-test.skip(!mac, 'Minimizing and the Dock are macOS’s (A1331)');
+test.skip(!mac, 'Minimizing and the Dock are macOS’s (A1331, A-NEW-1)');
 
 const NEW_NOTE = 'Meta+Alt+KeyN';
 const RUN = `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
