@@ -115,7 +115,7 @@ function fake(overrides: {
   logs?: Record<string, string>;
   /** `runs.jsonl` as earlier runs left it, for `ciHistory`. */
   ledger?: string;
-  /** The jobs of main's latest completed runs, newest first, for `mainRunJobs` (A-NEW-1). */
+  /** The jobs of main's latest completed runs, newest first, for `mainRunJobs` (A1328). */
   mainJobs?: RunJob[][];
   /** Whether the branch's diff changes `.github/workflows/ci.yml`, by sandbox (1 is the first). */
   workflowIn?: (sandbox: number) => boolean;
@@ -1299,7 +1299,7 @@ describe('CI after the PR opens (F6)', () => {
   ].join('\n');
   const mainPassed: RunJob[][] = [[{ name: 'Check', conclusion: 'success' }]];
 
-  it('re-runs a failing test the branch never touched once, when main passes it, instead of a repair round (A-NEW-1)', async () => {
+  it('re-runs a failing test the branch never touched once, when main passes it, instead of a repair round (A1328)', async () => {
     const f = fake({ ci: [[cli], [green]], logs: { Check: notebookLog }, mainJobs: mainPassed });
     const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
     expect(outcome.kind).toBe('in-review');

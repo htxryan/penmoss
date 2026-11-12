@@ -5,7 +5,7 @@
  * still run a test-only change's tests. It errs wide: a path no rule
  * recognises puts all three platforms in scope. A path only tests read, and
  * the root `scripts/`, change nothing that ships, so they are CI's alone
- * (A-NEW-2).
+ * (A1329).
  */
 import { PLATFORMS, type Platform } from './config.ts';
 
@@ -44,7 +44,7 @@ const TEST_DATA = /(^|\/)(test|tests|e2e|fixtures|__fixtures__)\//;
 
 /**
  * A path only tests read: anything in a test directory (its fixtures and helpers too), or a
- * JavaScript or TypeScript test file wherever it is. Nothing in one ships (A-NEW-2).
+ * JavaScript or TypeScript test file wherever it is. Nothing in one ships (A1329).
  */
 const TEST_ONLY = /(^|\/)(test|tests|e2e|androidTest|__tests__)\/|\.(test|spec)\.[cm]?[jt]sx?$/;
 

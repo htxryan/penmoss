@@ -121,7 +121,7 @@ export async function nextReviewAction(
       '--repo',
       config.repo,
       '--json',
-      // The workflow: whether a failed job passes on main (A-NEW-1).
+      // The workflow: whether a failed job passes on main (A1328).
       'name,state,bucket,link,startedAt,workflow',
     ])
     .catch(() => []);
@@ -280,7 +280,7 @@ export async function executeRevise(
  * What a red check in review gets before a repair round. The runners' infrastructure, not the
  * branch (A1312): its failed jobs are re-run, at most `MAX_INFRA_RERUNS` times per Actions run
  * as the ledger counts them, then Blocked. Tests the branch doesn't touch, in jobs that pass on
- * main (A-NEW-1): one re-run per PR. A PR that has had `rounds.ciRepair` repair rounds already,
+ * main (A1328): one re-run per PR. A PR that has had `rounds.ciRepair` repair rounds already,
  * in any run (A1313): Blocked. Undefined when the repair round goes ahead.
  */
 export async function beforeRepairInReview(

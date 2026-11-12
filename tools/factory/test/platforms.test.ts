@@ -21,7 +21,7 @@ describe('classify (Platform scope table)', () => {
     [['apps/android/app/src/main/AndroidManifest.xml'], 'product', ['android']],
     // Row: docs/**, tasks/**, *.md only → docs-only
     [['docs/decisions.md', 'tasks/x.html', 'README.md', 'apps/web/NOTES.md'], 'docs-only', []],
-    // Markdown test input is not prose: it goes with its tests (A-NEW-2)
+    // Markdown test input is not prose: it goes with its tests (A1329)
     [['packages/core/test/fixtures/callouts.md'], 'ci-only', []],
     [['apps/web/test/e2e/data/note.md'], 'ci-only', []],
     // ... and a fixtures directory outside a test directory follows its own row
@@ -30,7 +30,7 @@ describe('classify (Platform scope table)', () => {
     [['.github/workflows/ci.yml'], 'ci-only', []],
     [['tools/factory/src/pick.ts', 'docs/factory.md'], 'ci-only', []],
     [['site/index.html'], 'ci-only', []],
-    // Tests alone ship in no app → ci-only, wherever they are (A-NEW-2)
+    // Tests alone ship in no app → ci-only, wherever they are (A1329)
     [['packages/cli/test/notebook.test.ts'], 'ci-only', []],
     [['packages/core/test/support/checkout-ports.ts'], 'ci-only', []],
     [['apps/web/e2e/foo.spec.ts'], 'ci-only', []],
@@ -51,7 +51,7 @@ describe('classify (Platform scope table)', () => {
     // A name that only looks like a test is code
     [['apps/web/src/testing.ts', 'packages/core/src/latest/a.ts'], 'product', ALL],
     [['packages/core/src/api.spec.json'], 'product', ALL],
-    // The root scripts are tooling → ci-only (A-NEW-2) ...
+    // The root scripts are tooling → ci-only (A1329) ...
     [['scripts/check-changed.sh'], 'ci-only', []],
     [['scripts/vm/desktop-test.sh', 'scripts/heavy.sh'], 'ci-only', []],
     [['scripts/brand-assets.mjs'], 'ci-only', []],
@@ -114,7 +114,7 @@ describe("the build prompt's scope (A1254)", () => {
     expect(text).toContain('`packages/`, `apps/web/`');
     expect(text).toContain('web, Mac and Android');
     expect(text).toContain("even when the plan says a platform doesn't change");
-    // A-NEW-2: a branch of tests alone needs no product proof.
+    // A1329: a branch of tests alone needs no product proof.
     expect(text).toContain('Tests anywhere: files in a `test/`');
     expect(text).toContain('`scripts/ports.mjs` (the web build reads it)');
     expect(text).toContain('before you start');

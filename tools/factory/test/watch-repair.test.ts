@@ -103,7 +103,7 @@ describe('a red check in review that is infrastructure (A1312)', () => {
   });
 });
 
-describe('a red check in review that is a flaky test outside the branch (A-NEW-1)', () => {
+describe('a red check in review that is a flaky test outside the branch (A1328)', () => {
   const card = item(117);
   const pr = 'https://github.com/htxryan/penmoss/pull/160';
   const check: CheckRun = { ...red, workflow: 'CI' };

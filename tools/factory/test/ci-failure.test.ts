@@ -124,7 +124,7 @@ describe("which red CI is the runners' infrastructure (A1312)", () => {
   });
 });
 
-describe('which red CI is a flaky test outside the branch (A-NEW-1)', () => {
+describe('which red CI is a flaky test outside the branch (A1328)', () => {
   it.each([
     [
       'vitest, behind pnpm -r (PEN-117)',

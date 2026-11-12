@@ -7,7 +7,7 @@
  * failed jobs re-run instead, and only a failure that matches none of these gets an agent.
  *
  * A failing test the branch doesn't touch, in a job that passed on main's latest CI, gets one
- * re-run before a repair round (A-NEW-1): PEN-84's `tooltip-delay.spec.ts` and PEN-117's
+ * re-run before a repair round (A1328): PEN-84's `tooltip-delay.spec.ts` and PEN-117's
  * `packages/cli/test/notebook.test.ts` failed at random on the hosted runners, and each sent a
  * run into a repair round on code its card never touched.
  *
@@ -210,7 +210,7 @@ export function passedOnMain(job: string, runs: readonly (readonly RunJob[])[]):
 /** How many of main's latest completed runs `passedOnMain` reads for a workflow. */
 export const MAIN_RUNS_READ = 5;
 
-/** The most re-runs a PR gets for failing tests outside its branch, across runs (A-NEW-1). */
+/** The most re-runs a PR gets for failing tests outside its branch, across runs (A1328). */
 export const MAX_FLAKE_RERUNS = 1;
 
 export interface CiHistory {

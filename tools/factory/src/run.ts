@@ -186,7 +186,7 @@ export interface RunDeps {
   ciHistory?(issue: number, pr: string): CiHistory;
   /**
    * The jobs of main's latest completed push runs of `workflow` (`MAIN_RUNS_READ` of them),
-   * newest first: whether a failing job passes on main (A-NEW-1). Without it, a failing test is
+   * newest first: whether a failing job passes on main (A1328). Without it, a failing test is
    * always the branch's.
    */
   mainRunJobs?(workflow: string): Promise<readonly (readonly RunJob[])[]>;
@@ -1147,7 +1147,7 @@ export async function watchCi(
       saidStalled = false;
       continue;
     }
-    // Tests the branch doesn't touch, in jobs that pass on main: one re-run first (A-NEW-1).
+    // Tests the branch doesn't touch, in jobs that pass on main: one re-run first (A1328).
     if (flakeReruns < MAX_FLAKE_RERUNS && (await rerunFlake(deps, run, summary.failed, logs))) {
       flakeReruns++;
       since = deps.now();
@@ -1221,7 +1221,7 @@ export async function rerunInfra(
 
 /**
  * Re-runs the failed jobs, once per PR, when they look like a flaky test rather than the branch
- * (A-NEW-1, amending A1312): every failed job's log names the tests that failed, the branch's diff
+ * (A1328, amending A1312): every failed job's log names the tests that failed, the branch's diff
  * against main touches none of them (nor a file with their stem), and each job passed the last
  * time main's CI ran it. Logs `ci-flake-rerun` (the ledger counts it per PR, so clearing Blocked
  * buys no more) and says so on the issue. False, with nothing done, when any of that doesn't hold
