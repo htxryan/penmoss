@@ -52,17 +52,29 @@ interface FilePatch {
   readonly file: string;
   readonly added: readonly string[];
   readonly removed: readonly string[];
+  /** The branch adds the file (`new file mode`): no test in it ran before. */
+  readonly created: boolean;
 }
+
+/**
+ * A skip on the operating system alone (`test.skip(!mac, …)`, `it.skipIf(process.platform !==
+ * 'darwin')`): a new spec for one platform's behaviour, which CI's other runners can't show.
+ * It weakens nothing in a file the branch adds; in an existing one it still counts (A1333).
+ */
+const PLATFORM_SKIP =
+  /\.skip(?:If)?\s*\(\s*!?\s*\(?\s*(?:process\.platform\b|os\.platform\(\)|(?:is|on)?(?:mac|darwin|linux|windows|win32)(?:os)?\b)/i;
 
 /** A unified diff, per file: its added and removed lines. */
 export function parsePatch(patch: string): FilePatch[] {
-  const files: { file: string; added: string[]; removed: string[] }[] = [];
+  const files: { file: string; added: string[]; removed: string[]; created: boolean }[] = [];
   let current: (typeof files)[number] | undefined;
   for (const line of patch.split('\n')) {
     if (line.startsWith('diff --git ')) {
       const file = /^diff --git a\/.+? b\/(.+)$/.exec(line)?.[1] ?? '';
-      current = { file, added: [], removed: [] };
+      current = { file, added: [], removed: [], created: false };
       files.push(current);
+    } else if (current && line.startsWith('new file mode ')) {
+      current.created = true;
     } else if (!current || line.startsWith('+++ ') || line.startsWith('--- ')) {
       continue;
     } else if (line.startsWith('+')) current.added.push(line.slice(1));
@@ -92,6 +104,7 @@ export function scanWeakenedTests(patch: string): Finding[] {
       // A comment that mentions .skip isn't a skip.
       if (/^(\/\/|\*|#)/.test(code)) continue;
       for (const m of isTest ? ADDED_MARKERS : []) {
+        if (m === ADDED_MARKERS[0] && f.created && PLATFORM_SKIP.test(code)) continue;
         if (m.re.test(code)) findings.push({ file: f.file, what: m.what, line: code });
       }
       for (const m of LOOSENED) {
