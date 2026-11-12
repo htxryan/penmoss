@@ -25,6 +25,11 @@ export interface AgentResult {
    * to the agent rather than failing the result.
    */
   readonly releaseNote?: string;
+  /**
+   * The PR's title, as the agent puts it (A1345): a statement of at most 60 characters naming
+   * no card. `prTitle` (run.ts) uses it when it is one, else the commit subject or the summary.
+   */
+  readonly title?: string;
 }
 
 export const RESULT_PATH = '.factory/result.json';
@@ -142,6 +147,10 @@ export function parseAgentResult(text: string): AgentResultParse {
     .map((line) => line.trim())
     .filter(Boolean)
     .join('\n');
+  const title = r['title'];
+  if (title !== undefined && title !== null && typeof title !== 'string') {
+    return { ok: false, error: 'title must be a string' };
+  }
   return {
     ok: true,
     result: {
@@ -157,6 +166,7 @@ export function parseAgentResult(text: string): AgentResultParse {
       risks,
       replies: replies as Record<string, string>,
       ...(releaseNote ? { releaseNote } : {}),
+      ...(typeof title === 'string' && title.trim() ? { title: title.trim() } : {}),
     },
   };
 }

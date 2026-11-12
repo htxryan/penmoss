@@ -17,6 +17,7 @@ import {
   proofReason,
   prTitle,
   runImplement,
+  shortenTitle,
   TITLE_MAX,
   type RunDeps,
   type RunSandbox,
@@ -1634,7 +1635,8 @@ describe('prTitle', () => {
   it("falls back to the summary's first sentence, cut at a word to 72 characters", () => {
     const title = prTitle({ summary, key: 'PEN-75' });
     expect(title.length).toBeLessThanOrEqual(TITLE_MAX);
-    expect(title).toBe('Linked "Ryan Henderson" in the brochure footer to…');
+    // No ellipsis, and no dangling "to".
+    expect(title).toBe('Linked "Ryan Henderson" in the brochure footer');
     expect(prTitle({ summary: 'Fix the typo. Also tidied PEN-9.', key: 'PEN-9' })).toBe(
       'Fix the typo',
     );
@@ -1648,10 +1650,54 @@ describe('prTitle', () => {
     const long = `Desktop: ${'make the sidebar remember its width '.repeat(3)}`;
     const title = prTitle({ subject: long, summary, key: 'PEN-1' });
     expect(title.length).toBeLessThanOrEqual(TITLE_MAX);
-    expect(title.endsWith('…')).toBe(true);
+    expect(title).toBe('Desktop: make the sidebar remember its width make the sidebar remember');
     expect(prTitle({ subject: 'Fix #12 and SPEC-3', summary, key: '#12' })).toBe(
       'Fix #12 and SPEC-3',
     );
+  });
+
+  it('cuts a long title before a clause, never mid-phrase with an ellipsis', () => {
+    // PEN-121's PR was "Mac: agents' MCP servers run from Penmoss CLI.app, so opening Penmoss…".
+    expect(
+      prTitle({
+        subject:
+          "Mac: agents' MCP servers run from Penmoss CLI.app, so opening Penmoss no longer steals focus",
+        summary,
+        key: 'PEN-121',
+      }),
+    ).toBe("Mac: agents' MCP servers run from Penmoss CLI.app");
+    const cuts: [string, string][] = [
+      [
+        'Factory: the updater ignores tests and docs; only runtime changes restart the daemon now',
+        'Factory: the updater ignores tests and docs',
+      ],
+      [
+        'Web: the search box keeps its query when you switch notebooks: it was cleared every time',
+        'Web: the search box keeps its query when you switch notebooks',
+      ],
+      [
+        'Android: the editor keeps the cursor at the line end after pasting, the toolbar too',
+        'Android: the editor keeps the cursor at the line end after pasting',
+      ],
+    ];
+    for (const [long, cut] of cuts) {
+      const title = shortenTitle(long);
+      expect(title).toBe(cut);
+      expect(title.length).toBeLessThanOrEqual(TITLE_MAX);
+    }
+    // The area prefix's colon is never the cut.
+    expect(shortenTitle(`Mac: ${'x'.repeat(10)} ${'word '.repeat(20)}`)).toMatch(/^Mac: x+ word/);
+  });
+
+  it("uses the agent's own title when it is short and names no card", () => {
+    const own = 'Mac: the Dock icon brings back the window minimized last';
+    expect(prTitle({ title: own, subject: 'Something else', summary, key: 'PEN-67' })).toBe(own);
+    expect(prTitle({ title: `${own}.`, summary, key: 'PEN-67' })).toBe(own);
+    // Too long, or naming the card: the commit subject instead.
+    for (const title of [`${own} and restores its size and its place`, `${own} (PEN-67)`])
+      expect(prTitle({ title, subject: 'Mac: the Dock restores', summary, key: 'PEN-67' })).toBe(
+        'Mac: the Dock restores',
+      );
   });
 });
 
