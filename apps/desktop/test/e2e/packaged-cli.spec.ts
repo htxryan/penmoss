@@ -137,7 +137,7 @@ function windowsOnScreen(pid: number): number {
     swiftFile = join(dataDir(), 'windows.swift');
     writeFileSync(swiftFile, SWIFT_WINDOWS);
   }
-  const out = spawnSync('/usr/bin/swift', [swiftFile, String(pid)], {
+  const out = spawnSync('swift', [swiftFile, String(pid)], {
     encoding: 'utf8',
     timeout: 60_000,
   });
