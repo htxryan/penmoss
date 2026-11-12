@@ -9,7 +9,15 @@
  * window on screen with CoreGraphics (a small Swift script), which needs no permission.
  */
 import { execFileSync, spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { chromium, expect, test, type Browser, type Page } from '@playwright/test';
@@ -408,6 +416,74 @@ function helperCrashes(): string[] {
 const attachText = (name: string, body: string) =>
   test.info().attach(name, { body, contentType: 'text/plain' });
 
+/** Every Penmoss crash report (the app's and its helpers'), by file name. */
+function penmossCrashes(): string[] {
+  if (!existsSync(REPORTS)) return [];
+  return readdirSync(REPORTS).filter((name) => name.startsWith('Penmoss'));
+}
+
+/**
+ * Why the app at `pid` isn't serving its window, for a failure's message: whether it still runs,
+ * the crash reports since `before`, the head of the newest, and the end of the app's log.
+ */
+function whyGone(pid: number, before: ReadonlySet<string>): string {
+  const fresh = penmossCrashes().filter((name) => !before.has(name));
+  const newest = fresh
+    .map((name) => ({ name, at: statSync(join(REPORTS, name)).mtimeMs }))
+    .sort((a, b) => b.at - a.at)[0];
+  const head = newest ? readFileSync(join(REPORTS, newest.name), 'utf8').slice(0, 4_000) : '';
+  const log = test.info().outputPath('app.log');
+  const tail = existsSync(log) ? readFileSync(log, 'utf8').slice(-4_000) : '(no app log)';
+  return [
+    `Penmoss (pid ${pid}) ${alive(pid) ? 'still runs' : 'has ended'}.`,
+    `New crash reports: ${fresh.join(', ') || 'none'}`,
+    head,
+    `The app's log ends:\n${tail}`,
+  ].join('\n');
+}
+
+/**
+ * The app's main window showing `name` in its sidebar. A window the app makes again, or a
+ * connection that drops, is found again; an app that ends fails at once, saying why.
+ */
+async function mainWindowWith(
+  debugPort: number,
+  pid: number,
+  name: string,
+  before: ReadonlySet<string>,
+  current: { browser: Browser; page: Page },
+): Promise<{ browser: Browser; page: Page }> {
+  let found = current;
+  const closures: string[] = [];
+  const watch = (each: { browser: Browser; page: Page }) => {
+    const start = Date.now();
+    each.page.on('close', () => closures.push(`page closed after ${Date.now() - start} ms`));
+    each.browser.on('disconnected', () =>
+      closures.push(`DevTools disconnected after ${Date.now() - start} ms`),
+    );
+  };
+  watch(found);
+  try {
+    await expect(async () => {
+      if (!alive(pid)) throw new Error('the app ended');
+      if (found.page.isClosed() || !found.browser.isConnected()) {
+        await found.browser.close().catch(() => undefined);
+        found = await connect(debugPort);
+        watch(found);
+      }
+      await expect(
+        found.page.locator('#app-sidebar').getByText(name, { exact: true }).first(),
+      ).toBeVisible({ timeout: 5_000 });
+    }).toPass({ timeout: 60_000 });
+  } catch (error) {
+    const why = `${whyGone(pid, before)}\n${closures.join('\n')}`;
+    await attachText('why the reopened window went', why);
+    throw new Error(`The reopened app's window never showed ${name}:\n${why}`, { cause: error });
+  }
+  if (closures.length > 0) await attachText('windows found again', closures.join('\n'));
+  return found;
+}
+
 // --- the tests ---
 
 test('an MCP server added before this build still lets Penmoss open, and keeps serving', async () => {
@@ -467,6 +543,7 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   const w = world();
   const shots = recorder();
   const crashesBefore = new Set(helperCrashes());
+  const reportsBefore = new Set(penmossCrashes());
 
   // AC8: the CLI bundle is signed with the app.
   const verified = spawnSync('/usr/bin/codesign', ['--verify', '--deep', '--strict', APP], {
@@ -543,23 +620,29 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   const again = port();
   open(w.app, again);
   ({ browser, page } = await connect(again));
-  await shots.record(page);
   const reopened = penmossApps();
   expect(reopened).toHaveLength(1);
   const appPid = reopened[0]!.pid;
   expect(appPid).not.toBe(firstPid);
   await expect.poll(() => windowsOnScreen(appPid), { timeout: 60_000 }).toBeGreaterThan(0);
-  await expect(
-    page.locator('#app-sidebar').getByText('Notes', { exact: true }).first(),
-  ).toBeVisible({
-    timeout: 30_000,
-  });
+  ({ browser, page } = await mainWindowWith(again, appPid, 'Notes', reportsBefore, {
+    browser,
+    page,
+  }));
+  await shots.record(page);
 
   // Opening it while it runs brings its window forward, and starts no second app.
   open(w.app, port());
   await page.waitForTimeout(3_000);
+  expect(alive(appPid), whyGone(appPid, reportsBefore)).toBe(true);
   expect(penmossApps().map((each) => each.pid)).toEqual([appPid]);
   expect(windowsOnScreen(appPid)).toBeGreaterThan(0);
+  const recorded = page;
+  ({ browser, page } = await mainWindowWith(again, appPid, 'Notes', reportsBefore, {
+    browser,
+    page,
+  }));
+  if (page !== recorded) await shots.record(page);
   await attachText(
     'lsappinfo: at the end',
     registered()

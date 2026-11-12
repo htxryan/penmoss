@@ -25,6 +25,10 @@ const inCliBundle = basename(bundle) === 'Penmoss CLI.app';
 // it). The CLI loads no web content, so their sandbox protects nothing it renders: they run
 // without it. The app itself keeps its sandbox.
 if (inCliBundle) app.commandLine.appendSwitch('no-sandbox');
+// None of the app's data: Chromium's own folder (Local State, the network service's databases,
+// GPU caches, Crashpad) is not the app's either, so an MCP server running while Penmoss starts
+// never holds the files the app's browser process opens.
+app.setPath('userData', join(app.getPath('temp'), 'Penmoss CLI'));
 
 // `penmoss cat … | head` closes the pipe early: that is not an error.
 process.stdout.on('error', (error: NodeJS.ErrnoException) => {
