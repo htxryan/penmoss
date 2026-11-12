@@ -39,6 +39,7 @@ test('passes the standard hosted runners, in every form', () => {
   for (const runsOn of [
     'ubuntu-latest',
     'ubuntu-24.04',
+    'macos-latest',
     "'ubuntu-latest'",
     '[ubuntu-latest]',
     '\n      - ubuntu-24.04',
@@ -62,9 +63,11 @@ test('fails larger runners, runner groups and other hosted images, even in a job
     'ubuntu-24.04-arm': /ubuntu-24\.04-arm isn't a standard hosted runner/,
     'ubuntu-22.04': /ubuntu-22\.04 isn't a standard hosted runner/,
     'macos-15': /macos-15 isn't a standard hosted runner/,
+    'macos-latest-xlarge': /macos-latest-xlarge isn't a standard hosted runner/,
     '[windows-2022]': /windows-2022 isn't a standard hosted runner/,
-    'penmoss-large': /neither ubuntu-latest nor ubuntu-24\.04 nor self-hosted/,
-    '[ubuntu-latest, gpu]': /neither ubuntu-latest nor ubuntu-24\.04 nor self-hosted/,
+    'penmoss-large': /neither ubuntu-latest nor ubuntu-24\.04 nor macos-latest nor self-hosted/,
+    '[ubuntu-latest, gpu]':
+      /neither ubuntu-latest nor ubuntu-24\.04 nor macos-latest nor self-hosted/,
     '\n      group: big-runners': /runner group/,
     '\n      group: big-runners\n      labels: [ubuntu-latest]': /runner group/,
     '{ group: big-runners }': /runner group/,

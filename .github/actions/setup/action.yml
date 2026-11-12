@@ -1,10 +1,9 @@
 name: Set up Penmoss
 description: >-
   Node from .node-version, pnpm through Corepack, the workspace's dependencies and Task, on a
-  GitHub-hosted Ubuntu runner or one of Ryan's self-hosted Macs (docs/ci.md). On Ubuntu the pnpm
-  store, and when asked Electron's download and Playwright's browsers, come from actions/cache.
-  On a Mac every cache lives in that runner's own tool cache, so jobs running at once on the
-  other Mac runners never share one.
+  GitHub-hosted Ubuntu or Mac runner (docs/ci.md). The pnpm store comes from actions/cache, and
+  on Ubuntu, when asked, Electron's download and Playwright's browsers too. On a self-hosted
+  runner (none runs CI now, A1348) every cache lives in that runner's own tool cache.
 inputs:
   electron-cache:
     description: On Ubuntu, also cache Electron's download (a Mac keeps it in its tool cache)
@@ -18,7 +17,7 @@ runs:
     # Each runner has its own _work/_tool, and runs one job at a time, so nothing here is written
     # by two jobs at once. Nothing goes in the home folder of the account the runner runs as.
     - name: Keep caches in this runner's tool cache (_work/_tool/penmoss)
-      if: runner.os == 'macOS'
+      if: runner.environment == 'self-hosted'
       shell: bash
       run: |
         cache="$RUNNER_TOOL_CACHE/penmoss"
@@ -60,7 +59,7 @@ runs:
         fi
 
     - name: Cache pnpm store
-      if: runner.os == 'Linux'
+      if: runner.environment == 'github-hosted'
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ env.PNPM_STORE }}
