@@ -69,14 +69,23 @@ jobs:
       android-app: ${{ steps.changes.outputs.android }}
       desktop: ${{ steps.changes.outputs.desktop }}
       site: ${{ steps.changes.outputs.site }}
+      ships: ${{ steps.changes.outputs.ships }}
     steps:
-      - name: Which parts of the repository changed (A1095)
+      # Only the classifier, .github/scripts/changed-parts.sh (A1349): the file list itself
+      # comes from GitHub's API.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - name: Which parts of the repository changed (A1095), and whether it ships (A1349)
         id: changes
         # Each job runs only when a file it builds or tests changed. The file list comes from
-        # GitHub's API (no checkout): the pull request's files, or the push's compare. Anything
-        # that can't be listed (a dispatch, a new branch, an API error, a list GitHub truncates)
-        # runs everything. Shared files (the lockfile, the Taskfile, root configs, this workflow
-        # and its actions) run everything too.
+        # GitHub's API: the pull request's files, or the push's compare. Anything that can't be
+        # listed (a dispatch, a new branch, an API error, a list GitHub truncates) runs
+        # everything. Shared files (the lockfile, the Taskfile, root configs, this workflow and
+        # its actions) run everything too. `ships` is true only when the Mac app or the APK is
+        # built from something that changed; main publishes a build only then (PEN-128).
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -87,6 +96,7 @@ jobs:
         run: |
           set -uo pipefail
           files="$RUNNER_TEMP/changed-files.txt"
+          : > "$files"
           all=false
           case "$EVENT" in
             pull_request)
@@ -102,44 +112,10 @@ jobs:
               else all=true; fi ;;
             *) all=true ;;
           esac
-          check=false web=false android=false desktop=false site=false
-          if [ "$all" = true ]; then check=true web=true android=true desktop=true site=true
-          else
-            while IFS= read -r f; do
-              # penmoss.app (T80.15, R13): the Astro site and its docs get the Site job.
-              case "$f" in
-                site/*) site=true ;;
-              esac
-              # Docs, the site, prototypes and spikes change no job; markdown neither,
-              # except the test fixtures.
-              case "$f" in
-                docs/* | site/* | prototype/* | spikes/* | .claude/*) continue ;;
-                */test/*) ;;
-                *.md) continue ;;
-              esac
-              case "$f" in
-                # Shared: everything builds from these.
-                .github/* | package.json | pnpm-lock.yaml | pnpm-workspace.yaml | Taskfile.yml | \
-                  tsconfig.base.json | .node-version | .npmrc | eslint.config.js | stylelint.config.js | \
-                  .prettierrc* | .prettierignore)
-                  check=true web=true android=true desktop=true site=true ;;
-                # Packages the web app, the Android editor and the Mac app all bundle.
-                packages/core/* | packages/editor/* | packages/git-notebook/* | packages/sync-client/* | packages/ui/*)
-                  check=true web=true android=true desktop=true ;;
-                # The web app's source is also the Android editor's and the Mac app's.
-                apps/web/*) check=true web=true android=true desktop=true ;;
-                # The CLI ships inside the Mac app, and so does search by meaning (D59).
-                packages/cli/* | packages/embed/*) check=true desktop=true ;;
-                apps/desktop/*) check=true desktop=true ;;
-                # The Android editor page and the Play script are JavaScript: Check lints and tests them.
-                apps/android/editor/* | apps/android/play/*) check=true android=true ;;
-                # Kotlin and Gradle: only the Android job.
-                apps/android/*) android=true ;;
-                # The relay, scripts and anything else: Check alone.
-                *) check=true ;;
-              esac
-            done < "$files"
-          fi
+          flag=""
+          [ "$all" = true ] && flag=--all
+          parts="$(bash .github/scripts/changed-parts.sh $flag < "$files")" || exit 1
+          eval "$parts"
           # On main every build's release carries its APK, and the Mac app joins that release
           # (A400, A403), so a build of the Mac app needs the Android job too.
           if [ "$EVENT" = push ] && [ "$desktop" = true ]; then android=true; fi
@@ -149,9 +125,10 @@ jobs:
             echo "android=$android"
             echo "desktop=$desktop"
             echo "site=$site"
+            echo "ships=$ships"
           } >> "$GITHUB_OUTPUT"
           {
-            echo "Changed parts (A1095): check=$check web=$web android=$android desktop=$desktop site=$site (all=$all)"
+            echo "Changed parts (A1095): check=$check web=$web android=$android desktop=$desktop site=$site ships=$ships (all=$all)"
             [ -s "$files" ] && { echo; echo '```'; head -50 "$files"; echo '```'; }
           } >> "$GITHUB_STEP_SUMMARY" || true
 
@@ -618,12 +595,15 @@ jobs:
     # Every merge to main gets a prerelease, build-<run>, with its public APK (P8, A1187), never
     # Latest (P3, A1188), and its APK replaces Penmoss.apk on the rolling alpha release (P4). It
     # never waits for the Mac: .github/scripts/releases.mjs carries the newest Mac app into it
-    # until the Mac adds this build's own, and keeps the last 10 builds.
+    # until the Mac adds this build's own, and keeps the last 10 builds. Only when the change
+    # ships (A1349, PEN-128): a merge of only CI, tests or docs builds and tests, and publishes
+    # nothing; its pull requests' notes go with the next build that ships.
     if: >-
       (github.event_name != 'pull_request' ||
       github.event.pull_request.head.repo.full_name == github.repository) &&
-      github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: android-sideload
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.pick.outputs.ships == 'true'
+    needs: [pick, android-sideload]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -804,11 +784,12 @@ jobs:
     # tests passed. A dispatch publishes nothing, even on main: its run number is not the
     # build's, so the dmg and the app inside would disagree. To redo a main build's Mac app,
     # re-run that push run's failed or cancelled jobs (docs/desktop.md §3).
-    needs: [mac, android-release]
+    needs: [pick, mac, android-release]
     if: >-
       (github.event_name != 'pull_request' ||
       github.event.pull_request.head.repo.full_name == github.repository) &&
       !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      needs.pick.outputs.ships == 'true' &&
       needs.mac.result == 'success' && needs.android-release.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
