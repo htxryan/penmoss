@@ -13,6 +13,8 @@ import { VmUnavailable, type VmCheck } from '../src/proof/mac.ts';
 import {
   branchName,
   gateCommand,
+  oneLine,
+  proofReason,
   prTitle,
   runImplement,
   TITLE_MAX,
@@ -999,6 +1001,51 @@ describe('runImplement', () => {
     expect(f.calls.at(-1)).toBe('blocked');
   });
 
+  it("logs why the gate refused each round, in one line (gate-failed's reason)", async () => {
+    const reasons = (f: Fake) =>
+      f.details.filter(([e]) => e === 'gate-failed').map(([, d]) => d?.['reason']);
+    const failed = fake({ gateExit: 1 });
+    await runImplement(failed.deps, { item: card, spec, prompt: 'p' });
+    expect(reasons(failed)).toEqual(Array(config.rounds.gateFix + 1).fill('task lint failed'));
+    expect(failed.details).toContainEqual([
+      'gate-failed',
+      { round: 0, reason: 'task lint failed' },
+    ]);
+
+    const conflicted = fake({ conflict: true });
+    await runImplement(conflicted.deps, { item: card, spec, prompt: 'p' });
+    expect(reasons(conflicted)[0]).toBe('rebase conflict: docs/cli.md');
+
+    const unproved = fake({ paths: ['apps/web/src/a.ts'], result: webDone, proofPassed: false });
+    await runImplement(unproved.deps, { item: card, spec, prompt: 'p' });
+    expect(reasons(unproved)[0]).toBe(
+      'web proof: no passing recording; mac proof: no passing recording; android proof: no passing recording',
+    );
+
+    const unnamed = fake({ paths: ['apps/web/src/a.ts'], agentRounds: [done, webDone] });
+    await runImplement(unnamed.deps, { item: card, spec, prompt: 'p' });
+    expect(reasons(unnamed)).toEqual(['no proof spec named for web, mac, android']);
+
+    const weakened = fake({ weakened: true, agentRounds: [done, done] });
+    await runImplement(weakened.deps, { item: card, spec, prompt: 'p' });
+    expect(reasons(weakened)[0]).toBe('weakened tests: apps/web/test/e2e/x.spec.ts');
+  });
+
+  it('says which proof tests failed, by platform, and keeps a reason to one line', () => {
+    expect(
+      proofReason([
+        'mac: packaged-cli.spec.ts › the CLI opens the app',
+        'mac: packaged-cli.spec.ts › it reopens',
+        'web: comments.spec.ts › AC1',
+      ]),
+    ).toBe(
+      'mac proof: 2 failed (packaged-cli.spec.ts › the CLI opens the app, …); web proof: 1 failed (comments.spec.ts › AC1)',
+    );
+    expect(oneLine('`task check`\n  failed:\n\nerror')).toBe('`task check` failed: error');
+    expect(oneLine('x'.repeat(300))).toHaveLength(200);
+    expect(oneLine('x'.repeat(300)).endsWith('…')).toBe(true);
+  });
+
   it('installs the rebased dependencies before the check, and a failed install goes to the agent (A1251)', async () => {
     const f = fake({ paths: ['.github/x.yml'], installExit: 1 });
     const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
@@ -1478,6 +1525,26 @@ describe('main moves while the PR waits for CI (F6)', () => {
     expect(f.prompts[1]).toContain('stopped on conflicts in `apps/web/src/a.ts`, `docs/cli.md`');
     expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(2);
     expect(f.calls.at(-2)).toBe('status In review');
+  });
+
+  it("logs the refresh gate's reason, and its pass before the push", async () => {
+    // PEN-121's ledger read gate-failed, then pushed: the regate that passed logged nothing.
+    const f = fake({
+      behind: [false, true],
+      workflowIn: (sandbox) => sandbox === 3,
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.details).toContainEqual([
+      'gate-failed',
+      { phase: 'rebase', reason: 'workflow change: .github/workflows/ci.yml' },
+    ]);
+    const after = f.details.slice(f.events.lastIndexOf('gate-failed'));
+    expect(after.map(([e]) => e).filter((e) => e === 'gate-passed' || e === 'pushed')).toEqual([
+      'gate-passed',
+      'pushed',
+    ]);
+    expect(after).toContainEqual(['gate-passed', { command: 'task lint', phase: 'rebase' }]);
   });
 
   it('sets Blocked naming the conflicting files when the fix round leaves them', async () => {

@@ -30,7 +30,13 @@ import {
   settle,
   type FidelityRow,
 } from './fidelity.ts';
-import { scanWeakenedTests, weakenedFeedback, workflowChanges, workflowFeedback } from './gate.ts';
+import {
+  scanWeakenedTests,
+  weakenedFeedback,
+  workflowChanges,
+  workflowFeedback,
+  type Finding,
+} from './gate.ts';
 import { USAGE_LIMIT_WAIT, usageLimitReset } from './limits.ts';
 import { validate } from './validate.ts';
 import { renderPrBody, type AttachedProof } from './proof/body.ts';
@@ -379,6 +385,39 @@ function installFeedback(installed: { readonly stdout: string; readonly stderr: 
   return `\`${GATE_INSTALL}\` failed after the rebase onto \`origin/main\`:\n\n\`\`\`\n${excerpt(installed.stdout + installed.stderr)}\n\`\`\``;
 }
 
+const INSTALL_REASON = 'pnpm install failed after the rebase';
+
+const conflictReason = (files: readonly string[]) =>
+  `rebase conflict${files.length ? `: ${files.join(', ')}` : ''}`;
+
+const weakenedReason = (findings: readonly Finding[]) =>
+  `weakened tests: ${[...new Set(findings.map((f) => f.file))].join(', ')}`;
+
+/**
+ * The failed proof tests (`platform: title`, `failedProof`) in one line, by platform:
+ * `mac: 1 failed (packaged-cli.spec.ts › reopens)`.
+ */
+export function proofReason(failing: readonly string[]): string {
+  const by = new Map<string, string[]>();
+  for (const f of failing) {
+    const at = f.indexOf(': ');
+    const platform = at < 0 ? 'proof' : f.slice(0, at);
+    by.set(platform, [...(by.get(platform) ?? []), at < 0 ? f : f.slice(at + 2)]);
+  }
+  return [...by]
+    .map(
+      ([platform, titles]) =>
+        `${platform} proof: ${titles.length} failed (${titles[0]}${titles.length > 1 ? ', …' : ''})`,
+    )
+    .join('; ');
+}
+
+/** A gate refusal's reason as one short line: whitespace collapsed, cut at `max` characters. */
+export function oneLine(text: string, max = 200): string {
+  const line = text.replaceAll(/\s+/g, ' ').trim();
+  return line.length > max ? `${line.slice(0, max - 1)}…` : line;
+}
+
 /**
  * In a sandbox, main is `origin/main` (the host's fetch); the clone's local `main` is stale, and an
  * agent that diffed against it saw every factory change since the run began (PEN-70's run).
@@ -417,6 +456,8 @@ type GateVerdict =
   | {
       readonly ok: false;
       readonly feedback: string;
+      /** The refusal in one short line, for the ledger and daemon.log (`gate-failed`). */
+      readonly reason: string;
       readonly block?: string;
       readonly mismatches?: readonly string[];
     };
@@ -594,7 +635,7 @@ export async function runImplement(deps: RunDeps, input: RunInput): Promise<RunO
     // A validation mismatch isn't a failed check: the ledger and the Factory UI say which it was.
     if (verdict.mismatches)
       deps.log('validation-mismatch', { round, criteria: verdict.mismatches });
-    else deps.log('gate-failed', { round });
+    else deps.log('gate-failed', { round, reason: oneLine(verdict.reason) });
     if (round >= config.rounds.gateFix) {
       return block(
         'gate-failed',
@@ -681,6 +722,7 @@ export async function gateAndProve(
   if (unnamed.length > 0) {
     return {
       ok: false,
+      reason: `no proof spec named for ${unnamed.join(', ')}`,
       feedback: `\`result.json\` names no proof spec for ${unnamed.join(', ')}, which the change affects. Add a committed test that shows the change and list it under \`platforms.<name>.proofSpecs\`.`,
     };
   }
@@ -690,29 +732,45 @@ export async function gateAndProve(
   try {
     const clean = await gate.exec('git status --porcelain --untracked-files=no');
     if (clean.stdout.trim() !== '')
-      return { ok: false, feedback: 'the branch has uncommitted changes to tracked files.' };
+      return {
+        ok: false,
+        reason: 'uncommitted changes',
+        feedback: 'the branch has uncommitted changes to tracked files.',
+      };
     // Up to date with main before anything is checked (F6). The harness resolves new decision
     // rows on both sides; any other conflict is the agent's to resolve.
     const rebased = await deps.rebase(gate);
     if (rebased.kind === 'conflict')
-      return { ok: false, feedback: conflictFeedback(branch, rebased) };
+      return {
+        ok: false,
+        reason: conflictReason(rebased.files),
+        feedback: conflictFeedback(branch, rebased),
+      };
     noteRebase(deps, rebased);
     const numbered = await deps.numberDecisions(gate, branch);
     if (Object.keys(numbered).length > 0) deps.log('decisions-numbered', numbered);
     const installed = await gate.exec(GATE_INSTALL);
-    if (installed.exitCode !== 0) return { ok: false, feedback: installFeedback(installed) };
+    if (installed.exitCode !== 0)
+      return { ok: false, reason: INSTALL_REASON, feedback: installFeedback(installed) };
     const patch = (await gate.exec('git diff origin/main...HEAD')).stdout;
     const weak = scanWeakenedTests(patch);
-    if (weak.length > 0) return { ok: false, feedback: weakenedFeedback(weak) };
+    if (weak.length > 0)
+      return { ok: false, reason: weakenedReason(weak), feedback: weakenedFeedback(weak) };
     // GitHub refuses the factory's push of a workflow change: refuse it here, before the push.
     const workflows = workflowChanges(patch);
-    if (workflows.length > 0) return { ok: false, feedback: workflowFeedback(workflows) };
+    if (workflows.length > 0)
+      return {
+        ok: false,
+        reason: `workflow change: ${workflows.join(', ')}`,
+        feedback: workflowFeedback(workflows),
+      };
     const command = gateCommand(scope);
     const checked = await deps.heavy(`factory gate ${branch}`, () => gate.exec(command));
     if (checked.exitCode !== 0) {
       deps.keep?.('gate.log', checked.stdout + checked.stderr);
       return {
         ok: false,
+        reason: `${command} failed`,
         feedback: `\`${command}\` failed:\n\n\`\`\`\n${excerpt(checked.stdout + checked.stderr)}\n\`\`\``,
       };
     }
@@ -764,7 +822,13 @@ export async function gateAndProve(
       const specs = result.platforms[platform]?.proofSpecs ?? [];
       if (platform === 'mac') {
         const mac = await recordMacProof(deps, gate, branch, specs);
-        if (!mac.ok) return { ok: false, feedback: mac.feedback, block: 'mac-vm' };
+        if (!mac.ok)
+          return {
+            ok: false,
+            reason: `mac proof: ${mac.feedback}`,
+            feedback: mac.feedback,
+            block: 'mac-vm',
+          };
         items.push(...mac.items);
         continue;
       }
@@ -782,6 +846,7 @@ export async function gateAndProve(
     if (missing.length > 0) {
       return {
         ok: false,
+        reason: missing.map((p) => `${p} proof: no passing recording`).join('; '),
         feedback: `the proof specs for ${missing.join(', ')} didn't pass when the harness ran them with recording on. Each proof's last screenshot is in \`.factory/last-proof/\` (\`<platform>-<n>-screenshot.png\`): look at it to see where the spec stopped.${proofOutput(deps, missing)}`,
       };
     }
@@ -790,11 +855,17 @@ export async function gateAndProve(
       const platforms = needed.filter((p) => failing.some((f) => f.startsWith(`${p}: `)));
       return {
         ok: false,
+        reason: proofReason(failing),
         feedback: `these tests in your proof specs failed when the harness ran them with recording on:\n\n${failing.map((f) => `- ${f}`).join('\n')}\n\nEvery test in a proof spec has to pass: fix the code or the test. Each proof's last screenshot is in \`.factory/last-proof/\` (\`<platform>-<n>-screenshot.png\`): look at it to see where the spec stopped.${proofOutput(deps, platforms)}`,
       };
     }
     const prepared = await deps.prepareProof(items);
-    if (!prepared.ok) return { ok: false, feedback: prepared.error };
+    if (!prepared.ok)
+      return {
+        ok: false,
+        reason: `preparing the proof failed: ${prepared.error}`,
+        feedback: prepared.error,
+      };
     deps.log('proof-recorded', {
       files: prepared.proof.length,
       ...(wanted ? { diff: wanted.diff } : {}),
@@ -806,11 +877,17 @@ export async function gateAndProve(
         images: validating.images ?? '',
         platforms: scope.platforms,
       });
-      if (!v.ok) return { ok: false, feedback: `Validation couldn't finish: ${v.error}` };
+      if (!v.ok)
+        return {
+          ok: false,
+          reason: `validation couldn't finish: ${v.error}`,
+          feedback: `Validation couldn't finish: ${v.error}`,
+        };
       const mismatches = v.rows.filter((r) => r.verdict === 'mismatch');
       if (mismatches.length > 0 && !validating.final)
         return {
           ok: false,
+          reason: `validation: ${mismatches.map((r) => criterionLabel(r.criterion)).join(', ')} not met`,
           feedback: fidelityFeedback(mismatches),
           mismatches: mismatches.map((r) => criterionLabel(r.criterion)),
         };
@@ -1343,7 +1420,13 @@ type Regated =
       /** The number each A-NEW-k on the branch has now (`branchNumbering`), when asked for. */
       readonly numbering?: Readonly<Record<string, string>>;
     }
-  | { readonly ok: false; readonly why: string; readonly conflict?: readonly string[] };
+  | {
+      readonly ok: false;
+      readonly why: string;
+      /** The refusal in one short line, for the ledger and daemon.log (`gate-failed`). */
+      readonly reason: string;
+      readonly conflict?: readonly string[];
+    };
 
 /**
  * The branch rebased onto a fresh main in a gate sandbox, and the gate run on it again. `light`:
@@ -1366,7 +1449,12 @@ async function regate(
     const before = options.light ? await gate.exec('git rev-parse HEAD') : undefined;
     const rebased = await deps.rebase(gate);
     if (rebased.kind === 'conflict')
-      return { ok: false, why: conflictFeedback(branch, rebased), conflict: rebased.files };
+      return {
+        ok: false,
+        why: conflictFeedback(branch, rebased),
+        reason: conflictReason(rebased.files),
+        conflict: rebased.files,
+      };
     noteRebase(deps, rebased);
     const numbered = await deps.numberDecisions(gate, branch);
     if (Object.keys(numbered).length > 0) deps.log('decisions-numbered', numbered);
@@ -1379,21 +1467,30 @@ async function regate(
       }
     }
     const installed = await gate.exec(GATE_INSTALL);
-    if (installed.exitCode !== 0) return { ok: false, why: installFeedback(installed) };
+    if (installed.exitCode !== 0)
+      return { ok: false, why: installFeedback(installed), reason: INSTALL_REASON };
     const patch = (await gate.exec('git diff origin/main...HEAD')).stdout;
     const weak = scanWeakenedTests(patch);
-    if (weak.length > 0) return { ok: false, why: weakenedFeedback(weak) };
+    if (weak.length > 0)
+      return { ok: false, why: weakenedFeedback(weak), reason: weakenedReason(weak) };
     const workflows = workflowChanges(patch);
-    if (workflows.length > 0) return { ok: false, why: workflowFeedback(workflows) };
+    if (workflows.length > 0)
+      return {
+        ok: false,
+        why: workflowFeedback(workflows),
+        reason: `workflow change: ${workflows.join(', ')}`,
+      };
     const command = gateCommand(scope);
     const checked = await deps.heavy(`factory gate ${branch}`, () => gate.exec(command));
     if (checked.exitCode !== 0) {
       deps.keep?.('gate.log', checked.stdout + checked.stderr);
       return {
         ok: false,
+        reason: `${command} failed`,
         why: `\`${command}\` failed:\n\n\`\`\`\n${excerpt(checked.stdout + checked.stderr)}\n\`\`\``,
       };
     }
+    deps.log('gate-passed', { command, phase: 'rebase' });
     return { ok: true, rebase: rebased, ...(await numbering()) };
   } finally {
     await gate.close();
@@ -1461,6 +1558,7 @@ async function bringUpToDate(
     deps.log(first.conflict ? 'rebase-conflict' : 'gate-failed', {
       ...(first.conflict ? { files: first.conflict } : {}),
       phase: 'rebase',
+      reason: oneLine(first.reason),
     });
     const ask = first.conflict
       ? `## \`origin/main\` moved: rebase onto it\n\n\`${run.branch}\` no longer rebases onto \`origin/main\`. ${first.why}\n\nKeep what \`origin/main\` changed and what this branch changes. ${STALE_MAIN} Run the checks, commit, and write \`.factory/result.json\` again.`
