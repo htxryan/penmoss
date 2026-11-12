@@ -323,6 +323,7 @@ const STAGE_OF: Readonly<Record<string, number>> = {
   'ci-red': 5,
   'ci-repaired': 5,
   'ci-rerun': 5,
+  'ci-flake-rerun': 5,
   'ci-stalled': 5,
   'in-review': 6,
   resumed: 7,
@@ -528,6 +529,10 @@ function progressOf(e: LedgerEvent, config: FactoryConfig): string {
     case 'ci-rerun': {
       const signature = str(e['signature']);
       return `CI re-run: the runners' infrastructure failed${signature ? ` (${signature})` : ''}`;
+    }
+    case 'ci-flake-rerun': {
+      const tests = Array.isArray(e['tests']) ? (e['tests'] as string[]).join(', ') : '';
+      return `CI re-run once: tests the branch doesn't change failed${tests ? ` (${tests})` : ''}`;
     }
     case 'ci-stalled':
       return 'CI waiting for a Mac runner';

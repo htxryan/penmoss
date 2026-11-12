@@ -102,3 +102,58 @@ describe('a red check in review that is infrastructure (A1312)', () => {
     expect(f.comments[0]).toContain('expected 4 to be 3');
   });
 });
+
+describe('a red check in review that is a flaky test outside the branch (A-NEW-1)', () => {
+  const card = item(117);
+  const pr = 'https://github.com/htxryan/penmoss/pull/160';
+  const check: CheckRun = { ...red, workflow: 'CI' };
+  const log = '### Check\n\n```\n FAIL  test/notebook.test.ts > notebook > lists a folder\n```';
+  const fakeDeps = (ledger = '', paths = ['apps/web/src/a.ts']) => {
+    const calls: string[] = [];
+    const comments: string[] = [];
+    const deps = {
+      config: testConfig(),
+      runId: '117-r',
+      rerunFailed: (run: string) => {
+        calls.push(`rerun ${run}`);
+        return Promise.resolve();
+      },
+      comment: (_n: number, body: string) => {
+        comments.push(body);
+        return Promise.resolve();
+      },
+      log: (event: string) => void calls.push(`log ${event}`),
+      setBlocked: () => {
+        calls.push('set blocked');
+        return Promise.resolve();
+      },
+      ciHistory: (issue: number, url: string) => ciHistory(ledger, issue, url),
+      diff: (branch: string) => {
+        calls.push(`diff ${branch}`);
+        return Promise.resolve({ paths, commits: 1 });
+      },
+      mainRunJobs: () => Promise.resolve([[{ name: 'Check', conclusion: 'success' }]]),
+    };
+    return { calls, comments, deps };
+  };
+
+  it('re-runs the failed jobs once instead of a repair round', async () => {
+    const f = fakeDeps();
+    expect(await beforeRepairInReview(f.deps, card, pr, [check], [log])).toBe('rerun');
+    expect(f.calls).toEqual(['diff factory/117-issue-117', 'rerun 77', 'log ci-flake-rerun']);
+    expect(f.comments[0]).toContain("CI failed in tests this branch doesn't change");
+  });
+
+  it('gives the repair round once the PR has had its re-run, in any run', async () => {
+    const e = JSON.stringify({ at: 'x', run: '117-a', event: 'ci-flake-rerun', pr });
+    const f = fakeDeps(e);
+    expect(await beforeRepairInReview(f.deps, card, pr, [check], [log])).toBeUndefined();
+    expect(f.calls).toEqual([]);
+  });
+
+  it('gives the repair round when the branch changed the test', async () => {
+    const f = fakeDeps('', ['packages/cli/test/notebook.test.ts']);
+    expect(await beforeRepairInReview(f.deps, card, pr, [check], [log])).toBeUndefined();
+    expect(f.calls).toEqual(['diff factory/117-issue-117']);
+  });
+});

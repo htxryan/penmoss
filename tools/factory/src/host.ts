@@ -42,7 +42,8 @@ import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { Exec } from './exec.ts';
 import { ensureConfig, mustGit } from './git.ts';
 import { failedLines, jobIdOf, runIdOf, type CheckRun } from './checks.ts';
-import { ciHistory } from './ci-failure.ts';
+import { ciHistory, MAIN_RUNS_READ } from './ci-failure.ts';
+import type { MainRun, RunJob } from './merge.ts';
 import {
   definedPlaceholders,
   formatDecisions,
@@ -1021,6 +1022,23 @@ export function hostDeps(options: HostOptions): HostDeps {
     },
     rerunFailed: async (run) => {
       await gh.run(['run', 'rerun', run, '--failed', '--repo', config.repo]);
+    },
+    mainRunJobs: async (workflow) => {
+      // main's latest finished push runs of the workflow, newest first, and each one's jobs.
+      const runs = await gh.json<MainRun[]>([
+        ...['run', 'list', '--repo', config.repo, '--branch', 'main', '--event', 'push'],
+        ...['--workflow', workflow, '--status', 'completed', '--limit', String(MAIN_RUNS_READ)],
+        ...['--json', 'databaseId,status,conclusion,url'],
+      ]);
+      const jobs: RunJob[][] = [];
+      for (const run of runs) {
+        if (!run.databaseId) continue;
+        const view = await gh.json<{ jobs: RunJob[] }>([
+          ...['run', 'view', String(run.databaseId), '--repo', config.repo, '--json', 'jobs'],
+        ]);
+        jobs.push(view.jobs);
+      }
+      return jobs;
     },
     ciHistory: (issue, pr) => {
       const ledger = join(state, 'runs.jsonl');

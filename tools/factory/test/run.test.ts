@@ -5,6 +5,7 @@ import { openOrReusePr } from '../src/host.ts';
 import { parseIssueSpec } from '../src/labels.ts';
 import type { CheckRun } from '../src/checks.ts';
 import { ciHistory } from '../src/ci-failure.ts';
+import type { RunJob } from '../src/merge.ts';
 import type { WalkOutcome } from '../src/walk.ts';
 import type { RebaseOutcome } from '../src/rebase.ts';
 import type { AgentResult } from '../src/result.ts';
@@ -113,6 +114,8 @@ function fake(overrides: {
   logs?: Record<string, string>;
   /** `runs.jsonl` as earlier runs left it, for `ciHistory`. */
   ledger?: string;
+  /** The jobs of main's latest completed runs, newest first, for `mainRunJobs` (A-NEW-1). */
+  mainJobs?: RunJob[][];
   /** Whether the branch's diff changes `.github/workflows/ci.yml`, by sandbox (1 is the first). */
   workflowIn?: (sandbox: number) => boolean;
   /** What the mockup renderer prints (A1323). */
@@ -315,6 +318,14 @@ function fake(overrides: {
     },
     ...(overrides.ledger !== undefined
       ? { ciHistory: (issue: number, pr: string) => ciHistory(overrides.ledger!, issue, pr) }
+      : {}),
+    ...(overrides.mainJobs
+      ? {
+          mainRunJobs: (workflow: string) => {
+            calls.push(`main jobs ${workflow}`);
+            return Promise.resolve(overrides.mainJobs!);
+          },
+        }
       : {}),
     notify: (title) => {
       calls.push(`notify ${title}`);
@@ -1260,6 +1271,106 @@ describe('CI after the PR opens (F6)', () => {
 
   it('gives a repair round to a red run with one real failure beside an infrastructure one', async () => {
     const f = fake({ ci: [[site, red], [green]], logs: { Site: aptLog } });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.calls.filter((c) => c.startsWith('rerun'))).toEqual([]);
+    expect(f.prompts.at(-1)).toContain('## CI failed (repair round 1)');
+  });
+
+  // PEN-117: the CLI's notebook test failed at random on the hosted runners, on a branch that
+  // never touched the CLI, and the run went into a repair round.
+  const cli: CheckRun = {
+    name: 'Check',
+    state: 'FAILURE',
+    bucket: 'fail',
+    link: 'https://github.com/htxryan/penmoss/actions/runs/91/job/7',
+    workflow: 'CI',
+  };
+  const notebookLog = [
+    'packages/cli test:  FAIL  test/notebook.test.ts > notebook > lists the notes in a folder',
+    'packages/cli test: AssertionError: expected [] to have a length of 2',
+    'packages/cli test:  Test Files  1 failed | 30 passed (31)',
+    '##[error]Process completed with exit code 1.',
+  ].join('\n');
+  const mainPassed: RunJob[][] = [[{ name: 'Check', conclusion: 'success' }]];
+
+  it('re-runs a failing test the branch never touched once, when main passes it, instead of a repair round (A-NEW-1)', async () => {
+    const f = fake({ ci: [[cli], [green]], logs: { Check: notebookLog }, mainJobs: mainPassed });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.prompts).toEqual(['p']);
+    expect(f.calls.filter((c) => c.startsWith('rerun'))).toEqual(['rerun 91']);
+    expect(f.calls).toContain('main jobs CI');
+    expect(f.calls.filter((c) => c.startsWith('push'))).toHaveLength(1);
+    expect(f.details.filter(([e]) => e === 'ci-flake-rerun')).toEqual([
+      [
+        'ci-flake-rerun',
+        {
+          pr: 'https://github.com/htxryan/penmoss/pull/900',
+          jobs: ['Check'],
+          tests: ['test/notebook.test.ts'],
+          actionsRuns: ['91'],
+        },
+      ],
+    ]);
+    const said = f.comments.filter((c) => c.startsWith("CI failed in tests this branch doesn't"));
+    expect(said).toHaveLength(1);
+    expect(said[0]).toContain('(test/notebook.test.ts): Check');
+    expect(said[0]).toContain('re-running the failed jobs once');
+  });
+
+  it('gives a repair round when the re-run fails again, and re-runs no more', async () => {
+    const f = fake({
+      ci: [[cli], [cli], [green]],
+      logs: { Check: notebookLog },
+      mainJobs: mainPassed,
+    });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.calls.filter((c) => c.startsWith('rerun'))).toEqual(['rerun 91']);
+    expect(f.prompts.at(-1)).toContain('## CI failed (repair round 1)');
+    expect(f.details.find(([e]) => e === 'ci-repaired')?.[1]).toMatchObject({ round: 1 });
+  });
+
+  it.each([
+    [
+      'the branch changes what the test tests',
+      // `docs/cli.md` is the fake branch's change: `cli.test.ts` shares its stem.
+      { logs: { Check: ' FAIL  test/cli.test.ts > help\n1 failed' }, mainJobs: mainPassed },
+    ],
+    [
+      'the job failed on main too',
+      {
+        logs: { Check: notebookLog },
+        mainJobs: [
+          [{ name: 'Check', conclusion: 'skipped' }],
+          [{ name: 'Check', conclusion: 'failure' }],
+        ],
+      },
+    ],
+    ["main's runs never ran the job", { logs: { Check: notebookLog }, mainJobs: [[]] }],
+    [
+      'the log names no test',
+      { logs: { Check: 'Error: lint failed at a.ts:1' }, mainJobs: mainPassed },
+    ],
+    ['the host reads no main runs', { logs: { Check: notebookLog } }],
+  ])('gives a repair round, with no re-run, when %s', async (_why, overrides) => {
+    const f = fake({ ci: [[cli], [green]], ...overrides });
+    const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
+    expect(outcome.kind).toBe('in-review');
+    expect(f.calls.filter((c) => c.startsWith('rerun'))).toEqual([]);
+    expect(f.events).not.toContain('ci-flake-rerun');
+    expect(f.prompts.at(-1)).toContain('## CI failed (repair round 1)');
+  });
+
+  it("re-runs a PR's flaky test only once across runs, counted from the ledger", async () => {
+    const pr = 'https://github.com/htxryan/penmoss/pull/900';
+    const f = fake({
+      ci: [[cli], [green]],
+      logs: { Check: notebookLog },
+      mainJobs: mainPassed,
+      ledger: JSON.stringify({ at: 'x', run: '42-old', event: 'ci-flake-rerun', pr }),
+    });
     const outcome = await runImplement(f.deps, { item: card, spec, prompt: 'p' });
     expect(outcome.kind).toBe('in-review');
     expect(f.calls.filter((c) => c.startsWith('rerun'))).toEqual([]);

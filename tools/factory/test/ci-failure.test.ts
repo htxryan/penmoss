@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckRun } from '../src/checks.ts';
-import { ciHistory, infraFailure, infraSignature, INFRA_SIGNATURES } from '../src/ci-failure.ts';
+import {
+  ciHistory,
+  failedTests,
+  flakeCandidate,
+  infraFailure,
+  infraSignature,
+  INFRA_SIGNATURES,
+  passedOnMain,
+  touchedBy,
+} from '../src/ci-failure.ts';
 
 const check = (name: string, run: number): CheckRun => ({
   name,
@@ -111,5 +120,121 @@ describe("which red CI is the runners' infrastructure (A1312)", () => {
       ['88', 2],
       ['91', 1],
     ]);
+  });
+});
+
+describe('which red CI is a flaky test outside the branch (A-NEW-1)', () => {
+  it.each([
+    [
+      'vitest, behind pnpm -r (PEN-117)',
+      'packages/cli test:  FAIL  test/notebook.test.ts > notebook > lists a folder\npackages/cli test: AssertionError: expected [] to have a length of 2',
+      ['test/notebook.test.ts'],
+    ],
+    [
+      "vitest's file line and a project's name",
+      ' ❯ test/sync.test.ts (12 tests | 1 failed) 340ms\n FAIL  |web| test/unit/a.test.tsx > b',
+      ['test/sync.test.ts', 'test/unit/a.test.tsx'],
+    ],
+    [
+      "Playwright's header and summary under xvfb (PEN-84)",
+      [
+        '  1) [electron] › tooltip-delay.spec.ts:20:3 › Tooltip › waits before it shows ──',
+        '    Error: expect(locator).toBeVisible() failed',
+        '  2 failed',
+        '    [electron] › tooltip-delay.spec.ts:20:3 › Tooltip › waits before it shows',
+        '    [electron] › menus/app-menu.spec.ts:8:1 › opens',
+        '  1 flaky',
+        '    [electron] › other.spec.ts:4:1 › passes on retry',
+        '  80 passed (3.1m)',
+      ].join('\n'),
+      ['tooltip-delay.spec.ts', 'menus/app-menu.spec.ts'],
+    ],
+    [
+      "Playwright's list reporter and GitHub annotation",
+      '  ✘  3 [chromium] › notes.spec.ts:12:5 › saves (5.1s)\n::error file=apps/web/test/e2e/notes.spec.ts,line=12::x',
+      ['notes.spec.ts', 'apps/web/test/e2e/notes.spec.ts'],
+    ],
+    [
+      "Gradle's instrumented test on the emulator",
+      'app.penmoss.TypingInstrumentedTest > typesIntoTheEditor[CI(AVD) - 15] FAILED\n\tjava.lang.AssertionError',
+      ['TypingInstrumentedTest'],
+    ],
+  ])('reads the failing tests from %s', (_what, log, tests) => {
+    expect(failedTests(log)).toEqual(tests);
+  });
+
+  it('reads none from a log that names no failing test', () => {
+    expect(
+      failedTests('Error: lint failed at a.ts:1\n##[error]Process completed with exit code 1.'),
+    ).toEqual([]);
+    expect(failedTests(' ✓ test/a.test.ts (3 tests)\n src/a.ts(4,1): error TS2322')).toEqual([]);
+    expect(failedTests('(the log was empty)')).toEqual([]);
+    expect(failedTests('> Task :app:testDebugUnitTest FAILED')).toEqual([]);
+  });
+
+  it("counts a test as the branch's when it changed the file, or a file with its stem", () => {
+    const paths = ['packages/cli/test/notebook.test.ts', 'apps/web/src/tooltip.ts'];
+    expect(touchedBy('test/notebook.test.ts', paths)).toBe(true);
+    expect(touchedBy('packages/cli/test/notebook.test.ts', paths)).toBe(true);
+    expect(touchedBy('tooltip.spec.ts', paths)).toBe(true);
+    expect(
+      touchedBy('TypingInstrumentedTest', [
+        'apps/android/app/src/androidTest/java/app/penmoss/TypingInstrumentedTest.kt',
+      ]),
+    ).toBe(true);
+    expect(touchedBy('tooltip-delay.spec.ts', paths)).toBe(false);
+    expect(touchedBy('TypingInstrumentedTest', paths)).toBe(false);
+    expect(touchedBy('test/notebook.test.ts', ['docs/factory.md', '.prettierrc'])).toBe(false);
+  });
+
+  it('is a candidate only when every failed job names its tests and has an Actions run', () => {
+    const vitest = ' FAIL  test/notebook.test.ts > lists';
+    const failed = [check('Check', 91), check('Mac app', 92)];
+    const candidate = flakeCandidate(failed, [
+      vitest,
+      '  1) [electron] › tooltip-delay.spec.ts:20:3 › waits',
+    ]);
+    expect(candidate?.tests).toEqual(['test/notebook.test.ts', 'tooltip-delay.spec.ts']);
+    expect([...(candidate?.runs ?? [])]).toEqual([
+      ['91', ['Check']],
+      ['92', ['Mac app']],
+    ]);
+    expect(flakeCandidate(failed, [vitest, 'error TS2322'])).toBeUndefined();
+    expect(
+      flakeCandidate([{ ...check('Check', 1), link: 'https://vercel.com/x' }], [vitest]),
+    ).toBeUndefined();
+    expect(flakeCandidate([], [])).toBeUndefined();
+  });
+
+  it("asks main's newest run that ran the job whether it passed", () => {
+    const run = (conclusion: string | null) => [
+      { name: 'Check', conclusion },
+      { name: 'Site', conclusion: 'failure' },
+    ];
+    expect(passedOnMain('Check', [run('success')])).toBe(true);
+    expect(
+      passedOnMain('Check', [run('skipped'), run('cancelled'), run(null), run('success')]),
+    ).toBe(true);
+    expect(passedOnMain('Check', [run('failure'), run('success')])).toBe(false);
+    expect(passedOnMain('Site', [run('success')])).toBe(false);
+    expect(passedOnMain('Android', [run('success')])).toBe(false);
+    expect(passedOnMain('Check', [])).toBe(false);
+  });
+
+  it("counts a PR's flaky-test re-runs from the ledger, apart from its infrastructure ones", () => {
+    const pr = 'https://github.com/htxryan/penmoss/pull/160';
+    const e = (run: string, event: string, extra: object) =>
+      JSON.stringify({ at: '2026-11-11T10:00:00Z', run, event, ...extra });
+    const ledger = [
+      e('117-a', 'ci-flake-rerun', { pr, jobs: ['Check'], tests: ['test/notebook.test.ts'] }),
+      e('117-a', 'ci-rerun', { actionsRun: '91', pr }),
+      e('117-b', 'ci-flake-rerun', { pr: 'https://github.com/htxryan/penmoss/pull/1' }),
+      e('84-c', 'ci-flake-rerun', { pr }),
+    ].join('\n');
+    const history = ciHistory(ledger, 117, pr);
+    expect(history.flakeReruns).toBe(1);
+    expect([...history.reruns]).toEqual([['91', 1]]);
+    expect(history.repairs).toBe(0);
+    expect(ciHistory('', 117, pr).flakeReruns).toBe(0);
   });
 });

@@ -11,7 +11,17 @@ import type { Board, BoardItem } from './board.ts';
 import type { FactoryConfig, Platform, SlotConfig } from './config.ts';
 import type { IssueSpec } from './labels.ts';
 import { runIdOf, summarizeChecks, type CheckRun } from './checks.ts';
-import { infraFailure, MAX_INFRA_RERUNS, type CiHistory, type InfraFailure } from './ci-failure.ts';
+import {
+  flakeCandidate,
+  infraFailure,
+  MAX_FLAKE_RERUNS,
+  MAX_INFRA_RERUNS,
+  passedOnMain,
+  touchedBy,
+  type CiHistory,
+  type InfraFailure,
+} from './ci-failure.ts';
+import type { RunJob } from './merge.ts';
 import { classify, proofPlatforms, type Scope } from './platforms.ts';
 import {
   criterionLabel,
@@ -53,6 +63,7 @@ export type RunEvent =
   | 'pr-conflicts'
   | 'ci-repaired'
   | 'ci-rerun'
+  | 'ci-flake-rerun'
   | 'ci-stalled'
   | 'in-review'
   | 'blocked'
@@ -157,6 +168,12 @@ export interface RunDeps {
   rerunFailed(run: string): Promise<void>;
   /** What the run ledger says the factory already did about a PR's CI (ci-failure.ts). */
   ciHistory?(issue: number, pr: string): CiHistory;
+  /**
+   * The jobs of main's latest completed push runs of `workflow` (`MAIN_RUNS_READ` of them),
+   * newest first: whether a failing job passes on main (A-NEW-1). Without it, a failing test is
+   * always the branch's.
+   */
+  mainRunJobs?(workflow: string): Promise<readonly (readonly RunJob[])[]>;
   /** F19's validation: mockups in, the reviewer's verdicts out (see validate.ts). */
   stageMockups(sandbox: RunSandbox): Promise<void>;
   keepValidation(sandbox: RunSandbox): Promise<void>;
@@ -971,6 +988,7 @@ export async function watchCi(
   const history = deps.ciHistory?.(run.item.number, run.pr);
   let repairs = history?.repairs ?? 0;
   const reruns = new Map(history?.reruns);
+  let flakeReruns = history?.flakeReruns ?? 0;
   let saidStalled = false;
   let empty = 0;
   for (;;) {
@@ -1004,6 +1022,13 @@ export async function watchCi(
     if (infra) {
       const rerun = await rerunInfra(deps, run, infra, reruns, failure);
       if (rerun.kind === 'blocked') return rerun;
+      since = deps.now();
+      saidStalled = false;
+      continue;
+    }
+    // Tests the branch doesn't touch, in jobs that pass on main: one re-run first (A-NEW-1).
+    if (flakeReruns < MAX_FLAKE_RERUNS && (await rerunFlake(deps, run, summary.failed, logs))) {
+      flakeReruns++;
       since = deps.now();
       saidStalled = false;
       continue;
@@ -1071,6 +1096,58 @@ export async function rerunInfra(
       `CI failed on an infrastructure problem, not on this branch (${infra.signature}): ${[...infra.runs.values()].flat().join(', ')}. The factory is re-running the failed jobs, up to ${MAX_INFRA_RERUNS} times, rather than giving the agent a repair round. ${run.pr}`,
     );
   return { kind: 'rerun' };
+}
+
+/**
+ * Re-runs the failed jobs, once per PR, when they look like a flaky test rather than the branch
+ * (A-NEW-1, amending A1312): every failed job's log names the tests that failed, the branch's diff
+ * against main touches none of them (nor a file with their stem), and each job passed the last
+ * time main's CI ran it. Logs `ci-flake-rerun` (the ledger counts it per PR, so clearing Blocked
+ * buys no more) and says so on the issue. False, with nothing done, when any of that doesn't hold
+ * or can't be read: the failure is the branch's and gets a repair round, as before.
+ */
+export async function rerunFlake(
+  deps: Pick<RunDeps, 'rerunFailed' | 'comment' | 'log'> &
+    Partial<Pick<RunDeps, 'diff' | 'mainRunJobs'>>,
+  run: { readonly item: BoardItem; readonly pr: string; readonly branch: string },
+  failed: readonly CheckRun[],
+  logs: readonly string[],
+): Promise<boolean> {
+  const { diff, mainRunJobs } = deps;
+  if (!diff || !mainRunJobs) return false;
+  const flake = flakeCandidate(failed, logs);
+  if (!flake) return false;
+  try {
+    const { paths } = await diff(run.branch);
+    if (flake.tests.some((t) => touchedBy(t, paths))) return false;
+    const onMain = new Map<string, readonly (readonly RunJob[])[]>();
+    for (const check of failed) {
+      if (!check.workflow) return false;
+      const runs = onMain.get(check.workflow) ?? (await mainRunJobs(check.workflow));
+      onMain.set(check.workflow, runs);
+      if (!passedOnMain(check.name, runs)) return false;
+    }
+  } catch {
+    return false;
+  }
+  try {
+    for (const id of flake.runs.keys()) await deps.rerunFailed(id);
+  } catch {
+    // GitHub refused the re-run (a run still going, say): the repair round goes ahead.
+    return false;
+  }
+  const jobs = [...flake.runs.values()].flat();
+  deps.log('ci-flake-rerun', {
+    pr: run.pr,
+    jobs,
+    tests: flake.tests,
+    actionsRuns: [...flake.runs.keys()],
+  });
+  await deps.comment(
+    run.item.number,
+    `CI failed in tests this branch doesn't change, in jobs that pass on main (${flake.tests.join(', ')}): ${jobs.join(', ')}. The factory is re-running the failed jobs once, in case the tests are flaky, before giving the agent a repair round. ${run.pr}`,
+  );
+  return true;
 }
 
 /** Each failed job's last log lines, as the repair prompt and Ryan's comment show them. */
