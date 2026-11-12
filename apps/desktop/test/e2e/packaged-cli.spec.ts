@@ -23,6 +23,7 @@ import { dirname, join } from 'node:path';
 import { chromium, expect, test, type Browser, type Page } from '@playwright/test';
 import { checkoutPortBase } from '../../../../packages/core/test/support/checkout-ports';
 import { parseBlock } from '../../../../scripts/ports.mjs';
+import { cliScript } from '../../src/local-agents';
 import { inVirtualMachine, refuseOnMacHost } from './host-guard';
 import { bareRepository, dataDir, DESKTOP, go, removeDataDirs } from './support';
 
@@ -34,6 +35,8 @@ const MAIN_EXE = join(APP, 'Contents', 'MacOS', 'Penmoss');
 const CLI_EXE = join(APP, 'Contents', 'Helpers', 'Penmoss CLI.app', 'Contents', 'MacOS', 'Penmoss');
 const APP_ID = 'app.penmoss.mac';
 const CLI_ID = 'app.penmoss.mac.cli';
+/** The app's `penmoss` script: a packaged app writes it in the person's own home. */
+const SCRIPT = join(homedir(), '.local', 'bin', 'penmoss');
 
 /** Ports for the DevTools protocol, one per launch: this run's port block, or this checkout's. */
 const block = parseBlock(process.env['PENMOSS_PORT_BLOCK']);
@@ -83,6 +86,7 @@ test.beforeEach(() => {
   // earlier build left in the login keychain would ask this one for access in a prompt nobody
   // sees: the app would hang on its first sync and never quit (PEN-127). Each build makes its own.
   spawnSync('/usr/bin/security', ['delete-generic-password', '-s', 'Penmoss Safe Storage']);
+  rmSync(SCRIPT, { force: true });
 });
 
 /** This test's app log: main's console, from every launch `open` makes. */
@@ -105,6 +109,7 @@ test.afterEach(async () => {
   serverLogs.length = 0;
   for (const child of children.splice(0)) child.kill('SIGKILL');
   quitAll();
+  if (inVirtualMachine()) rmSync(SCRIPT, { force: true });
 });
 test.afterAll(() => removeDataDirs());
 
@@ -543,7 +548,7 @@ test('an MCP server added before this build still lets Penmoss open, and keeps s
 });
 
 test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while one runs', async () => {
-  test.setTimeout(420_000);
+  test.setTimeout(480_000);
   const w = world();
   const shots = recorder();
   const crashesBefore = new Set(helperCrashes());
@@ -561,6 +566,10 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   expect(version.stdout).toMatch(/^penmoss \d+\.\d+\.\d+/);
   expect(w.cli(CLI_EXE, ['notebook', 'status', 'nope']).status).toBe(4);
 
+  // AC5: the app's own script from before the CLI bundle, running this app's binary.
+  mkdirSync(dirname(SCRIPT), { recursive: true });
+  writeFileSync(SCRIPT, cliScript([MAIN_EXE, '--penmoss-cli']), { mode: 0o755 });
+
   // Penmoss, opened as the Finder opens it, with a notebook.
   const first = port();
   open(w.app, first);
@@ -568,8 +577,19 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   await shots.record(page);
   await addNotebook(page, w, 'Notes');
 
-  // Settings → Agents: the notebook's automatic agent, and the command, name the CLI bundle.
+  // Settings → Agents: as it started, the app rewrote its old script to run the CLI bundle
+  // (AC5), and the command without the script names the bundle too (AC4).
   await go(page, '/settings/agents');
+  const cliCard = page.getByTestId('git-cli');
+  await expect(cliCard).toHaveAttribute('data-state', 'installed', { timeout: 30_000 });
+  expect(readFileSync(SCRIPT, 'utf8')).toBe(cliScript([CLI_EXE, '--penmoss-cli']));
+  await cliCard.locator('summary', { hasText: 'Without the command' }).click();
+  const direct = cliCard.getByTestId('git-cli-direct');
+  await direct.scrollIntoViewIfNeeded();
+  await expect(direct).toContainText(`'${CLI_EXE}' --penmoss-cli`);
+  await page.waitForTimeout(2_000);
+
+  // The notebook's automatic agent: claude mcp add and the Codex lines name the CLI bundle.
   const row = page.getByTestId('agents-notebook-row').filter({ hasText: 'Notes' });
   await expect(row).toBeVisible({ timeout: 30_000 });
   const href = (await row.getAttribute('href'))!;
@@ -621,6 +641,12 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   await browser.close().catch(() => undefined);
   await quitApp(firstPid);
   expect(server.child.exitCode, `The MCP server ended with the app: ${server.ended()}`).toBe(null);
+  // AC5: a script for another copy of Penmoss, which this launch must leave as it is.
+  const another = cliScript([
+    '/Applications/Other Penmoss.app/Contents/MacOS/Penmoss',
+    '--penmoss-cli',
+  ]);
+  writeFileSync(SCRIPT, another, { mode: 0o755 });
   const again = port();
   open(w.app, again);
   ({ browser, page } = await connect(again));
@@ -647,6 +673,8 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
     page,
   }));
   if (page !== recorded) await shots.record(page);
+  // AC3: the one app's main window, in front with its notebook.
+  await page.waitForTimeout(2_000);
   await attachText(
     'lsappinfo: at the end',
     registered()
@@ -657,6 +685,24 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
 
   // The server still answers its agent.
   expect(await server.tools()).toBeGreaterThan(20);
+
+  // AC5 after the relaunch: the other copy's script is unchanged, and shown as stale.
+  await go(page, '/settings/agents');
+  const card = page.getByTestId('git-cli');
+  await expect(card).toHaveAttribute('data-state', 'stale', { timeout: 30_000 });
+  await card.scrollIntoViewIfNeeded();
+  await expect(card.getByTestId('git-cli-state')).toContainText('runs another copy of Penmoss');
+  expect(readFileSync(SCRIPT, 'utf8')).toBe(another);
+  await page.waitForTimeout(2_000);
+  // Someone else's file is shown as theirs, and left as it is.
+  const theirs = '#!/bin/sh\necho someone else\n';
+  writeFileSync(SCRIPT, theirs, { mode: 0o755 });
+  await go(page, '/settings/git-notebooks');
+  await go(page, '/settings/agents');
+  await expect(card).toHaveAttribute('data-state', 'other', { timeout: 30_000 });
+  await card.scrollIntoViewIfNeeded();
+  expect(readFileSync(SCRIPT, 'utf8')).toBe(theirs);
+  await page.waitForTimeout(2_000);
 
   // Running the CLI bundle crashed none of its helpers (they'd fill DiagnosticReports).
   await page.waitForTimeout(3_000);

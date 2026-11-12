@@ -50,6 +50,10 @@ export function cliCommand(options: {
 
 /** Marks the script the app writes, so it never overwrites someone else's `penmoss`. */
 const MARKER = '# Written by Penmoss for Mac: runs the penmoss CLI in the app (A992).';
+/** The text of the app's `penmoss` script running `cli`, the person's arguments after it. */
+export function cliScript(cli: readonly string[]): string {
+  return `#!/bin/sh\n${MARKER}\nexec ${cli.map(shellWord).join(' ')} "$@"\n`;
+}
 /** The CLI's rule for a notebook's name. */
 const NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 const LABEL_MAX = 40;
@@ -209,7 +213,7 @@ export class LocalAgents {
 
   /** The script's text: the app's binary with the switch, the person's arguments after it. */
   private script(cli: readonly string[] = this.options.cli): string {
-    return `#!/bin/sh\n${MARKER}\nexec ${cli.map(shellWord).join(' ')} "$@"\n`;
+    return cliScript(cli);
   }
 
   /** The MCP server's command for `name`, as words (the app's binary first). */
