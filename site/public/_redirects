@@ -1,0 +1,15 @@
+# Docs pages that moved (A1351): each agent's page is now one Connect an agent page, and each
+# app's page is part of its install page. Permanent, so links and search results follow; a
+# fragment carries over, and the old headings keep their anchors on the new pages.
+/docs/agents/claude-code /docs/agents/connect/ 301
+/docs/agents/claude-code/ /docs/agents/connect/ 301
+/docs/agents/codex /docs/agents/connect/ 301
+/docs/agents/codex/ /docs/agents/connect/ 301
+/docs/agents/opencode /docs/agents/connect/ 301
+/docs/agents/opencode/ /docs/agents/connect/ 301
+/docs/agents/other-mcp /docs/agents/connect/ 301
+/docs/agents/other-mcp/ /docs/agents/connect/ 301
+/docs/mac /docs/install/mac/ 301
+/docs/mac/ /docs/install/mac/ 301
+/docs/android /docs/install/android/ 301
+/docs/android/ /docs/install/android/ 301

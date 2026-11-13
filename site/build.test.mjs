@@ -20,7 +20,7 @@ import {
   writeNotes,
   writeRelease,
 } from './build.mjs';
-import { longDate, stableReleases } from './src/releases.mjs';
+import { BEFORE_NOTES, longDate, stableReleases, withEarlierReleases } from './src/releases.mjs';
 
 const dir = mkdtempSync(path.join(tmpdir(), 'penmoss-site-build-'));
 after(() => rmSync(dir, { recursive: true, force: true }));
@@ -268,5 +268,36 @@ describe('the Release notes page (PEN-111, RN13)', () => {
     assert.equal(stableReleases(null), null);
     assert.equal(stableReleases({ ...FILE, schema: 2 }), null);
     assert.equal(longDate('2026-11-08'), '8 November 2026');
+  });
+
+  it('adds 0.2.0, from before notes began, unless the file lists it', () => {
+    const summary = (/** @type {ReturnType<typeof withEarlierReleases>} */ blocks) =>
+      blocks.map((r) => [r.version, r.groups.map((g) => g.label)]);
+    // No file (offline, or no release carries one yet): 0.2.0 alone, from BEFORE_NOTES.
+    assert.deepEqual(summary(withEarlierReleases(null)), [['0.2.0', ['New']]]);
+    const [first] = withEarlierReleases(null);
+    assert.equal(first?.tag, 'v0.2.0');
+    assert.equal(first?.date, '2026-11-08');
+    assert.deepEqual(
+      first?.groups[0]?.notes.map((n) => n.platform),
+      BEFORE_NOTES[0]?.notes.map((n) => n.platform),
+    );
+    // A file that starts at 0.2.1: 0.2.0 goes below it.
+    const later = { ...FILE, releases: FILE.releases.filter((r) => r.tag !== 'v0.2.0') };
+    assert.deepEqual(
+      withEarlierReleases(stableReleases(later)).map((r) => r.version),
+      ['0.2.1', '0.2.0'],
+    );
+    // A file that lists 0.2.0 itself wins: its notes, not BEFORE_NOTES'.
+    assert.deepEqual(summary(withEarlierReleases(stableReleases(FILE))), [
+      ['0.2.1', ['New', 'Improved']],
+      ['0.2.0', ['Fixed']],
+    ]);
+    // Versions sort as numbers, not text.
+    const tenth = { version: '0.10.0', tag: 'v0.10.0', date: '2027-01-01', groups: [] };
+    assert.deepEqual(
+      withEarlierReleases([tenth]).map((r) => r.version),
+      ['0.10.0', '0.2.0'],
+    );
   });
 });

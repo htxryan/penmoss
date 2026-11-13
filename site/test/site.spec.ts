@@ -377,7 +377,7 @@ test.describe('the docs', () => {
       await page.getByRole('button', { name: 'Search' }).click();
       const dialog = page.getByRole('dialog');
       await dialog.getByRole('textbox', { name: 'Search' }).fill('notarised');
-      const result = dialog.getByRole('link', { name: /Install on Mac/ }).first();
+      const result = dialog.getByRole('link', { name: /The Mac app/ }).first();
       await expect(result).toBeVisible();
       await result.click();
       await expect(page).toHaveURL(/\/docs\/install\/mac\//);
@@ -391,7 +391,7 @@ test.describe('the docs', () => {
     {
       section: 'Get started',
       query: 'apksigner',
-      title: /Install on Android/,
+      title: /The Android app/,
       path: '/docs/install/android/',
     },
     {
@@ -400,12 +400,11 @@ test.describe('the docs', () => {
       title: /The editor/,
       path: '/docs/editor/',
     },
-    { section: 'Apps', query: 'Doze', title: /The Android app/, path: '/docs/android/' },
     {
       section: 'Agents',
       query: 'opencode.json',
-      title: /OpenCode/,
-      path: '/docs/agents/opencode/',
+      title: /Connect an agent/,
+      path: '/docs/agents/connect/',
     },
     {
       section: 'Reference',
@@ -453,9 +452,7 @@ test.describe('the docs', () => {
       await page.goto('/docs/');
       await page.getByRole('button', { name: 'Menu' }).click();
       await expect(
-        page
-          .getByRole('navigation', { name: 'Main' })
-          .getByRole('link', { name: 'Install on Mac' }),
+        page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'The Mac App' }),
       ).toBeVisible();
     });
     expect(errors).toEqual([]);
@@ -466,26 +463,158 @@ test.describe('the docs', () => {
   });
 
   // PEN-111 (RN13): the stable releases' notes, from the latest release's release-notes.json at
-  // build time; before any release carries one, the page says when they start.
-  test('Release notes lists the stable releases, or says when notes start, from the sidebar', async ({
+  // build time, and 0.2.0, from before notes began (releases.mjs), whether or not GitHub answered.
+  test('Release notes lists the stable releases down to 0.2.0, from the page foot and Updates', async ({
     page,
   }) => {
     await page.goto('/docs/help/updates/');
     await page
-      .getByRole('navigation', { name: 'Main' })
+      .getByRole('main')
+      .getByRole('link', { name: 'Release notes', exact: true })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/docs\/releases\/$/);
+    await page.goto('/docs/help/updates/');
+    await page
+      .getByRole('navigation', { name: 'More' })
       .getByRole('link', { name: 'Release Notes' })
       .click();
     await expect(page).toHaveURL(/\/docs\/releases\/$/);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Release notes');
     const releases = page.locator('.pm-release');
-    if ((await releases.count()) === 0) {
-      await expect(page.locator('.pm-release-none')).toContainText(
-        'Release notes start with Penmoss 0.2.1',
-      );
-    } else {
-      await expect(releases.first().getByRole('heading', { level: 2 })).toHaveText(
-        /^\d+\.\d+\.\d+$/,
-      );
+    await expect(releases.first().getByRole('heading', { level: 2 })).toHaveText(/^\d+\.\d+\.\d+$/);
+    const first = page.locator('.pm-release[data-version="0.2.0"]');
+    await expect(first).toHaveCount(1);
+    await expect(releases.last()).toHaveAttribute('data-version', '0.2.0');
+    await expect(first.getByRole('heading', { level: 3 })).toHaveText(['New']);
+    await expect(first).toContainText('8 November 2026');
+    await expect(first).toContainText('The first public release of Penmoss');
+    await expect(first.getByRole('link', { name: 'on GitHub' })).toHaveAttribute(
+      'href',
+      'https://github.com/htxryan/penmoss/releases/tag/v0.2.0',
+    );
+  });
+
+  // A1351: a short sidebar. Only Get Started is open on the docs home; a folded section opens
+  // when it holds the page you are on. Release Notes, Privacy and Send Feedback are in the foot.
+  test('the sidebar starts short, and opens the section holding the page', async ({ page }) => {
+    await page.goto('/docs/');
+    const nav = page.getByRole('navigation', { name: 'Main' });
+    const groups = nav.locator('details');
+    await expect(groups).toHaveCount(5);
+    await expect(nav.locator('summary')).toHaveText([
+      'Get Started',
+      'Write and Organise',
+      'Agents',
+      'Reference',
+      'Help',
+    ]);
+    await expect(nav.locator('details[open]')).toHaveCount(1);
+    await expect(nav.locator('details[open] summary')).toHaveText('Get Started');
+    // 26 pages in all (34 before A1351), but what shows is five section rows and Get Started's
+    // five pages.
+    await expect(nav.locator('a[href^="/docs/"]')).toHaveCount(26);
+    await expect(nav.getByRole('link')).toHaveText([
+      'Introduction',
+      'The Mac App',
+      'The Android App',
+      'Your First Notebook',
+      'More Devices',
+    ]);
+    for (const name of ['Release Notes', 'Privacy and Security', 'Send Feedback']) {
+      await expect(nav.locator('a', { hasText: name })).toHaveCount(0);
     }
+    const foot = page.getByRole('navigation', { name: 'More' });
+    await expect(foot.getByRole('link')).toHaveText([
+      'Release Notes',
+      'Privacy and Security',
+      'Send Feedback',
+    ]);
+    await page.goto('/docs/agents/connect/');
+    await expect(nav.locator('details[open] summary')).toHaveText(['Get Started', 'Agents']);
+    await expect(nav.getByRole('link', { name: 'Connect an Agent' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
+  test('Connect an agent shows one agent at a time, and the choice holds for the page', async ({
+    page,
+  }) => {
+    const { errors } = await watch(page, async () => {
+      await page.goto('/docs/agents/connect/');
+      const tabs = page.getByRole('tablist').first();
+      await expect(tabs.getByRole('tab')).toHaveText([
+        'Claude Code',
+        'Codex',
+        'OpenCode',
+        'Other MCP clients',
+      ]);
+      await expect(page.getByText('claude mcp add penmoss-notes-claude-code')).toBeVisible();
+      await expect(page.getByText('[mcp_servers."penmoss-notes-codex"]')).toBeHidden();
+      await tabs.getByRole('tab', { name: 'Codex' }).click();
+      await expect(page.getByText('[mcp_servers."penmoss-notes-codex"]')).toBeVisible();
+      await expect(page.getByText('claude mcp add penmoss-notes-claude-code')).toBeHidden();
+      await page.reload();
+      await expect(page.getByText('[mcp_servers."penmoss-notes-codex"]')).toBeVisible();
+    });
+    expect(errors).toEqual([]);
+  });
+
+  // A1351: the pages that moved answer with a permanent redirect to where their text went.
+  for (const [from, to] of [
+    ['/docs/agents/claude-code/', '/docs/agents/connect/'],
+    ['/docs/agents/codex/', '/docs/agents/connect/'],
+    ['/docs/agents/opencode', '/docs/agents/connect/'],
+    ['/docs/agents/other-mcp/', '/docs/agents/connect/'],
+    ['/docs/mac/', '/docs/install/mac/'],
+    ['/docs/android', '/docs/install/android/'],
+  ]) {
+    test(`${from} moved to ${to}`, async ({ page, request }) => {
+      const response = await request.get(from, { maxRedirects: 0 });
+      expect(response.status()).toBe(301);
+      expect(new URL(response.headers()['location'] ?? '', 'http://x').pathname).toBe(to);
+      await page.goto(`${from}#receive-comments-from-your-notes`);
+      expect(new URL(page.url()).pathname).toBe(to);
+    });
+  }
+
+  test('a moved heading keeps its anchor on its new page', async ({ page }) => {
+    await page.goto('/docs/mac/#keep-on-top');
+    await expect(page).toHaveURL(/\/docs\/install\/mac\/#keep-on-top$/);
+    await expect(page.locator('#keep-on-top')).toBeInViewport();
+    await page.goto('/docs/agents/claude-code/#receive-comments-from-your-notes');
+    await expect(page.locator('#receive-comments-from-your-notes')).toBeInViewport();
+  });
+
+  test('docs pages share the social card, and the docs home names the site once', async ({
+    page,
+  }) => {
+    await page.goto('/docs/');
+    await expect(page).toHaveTitle('Penmoss Docs');
+    for (const route of [
+      '/docs/',
+      '/docs/install/mac/',
+      '/docs/agents/connect/',
+      '/docs/releases/',
+    ]) {
+      await page.goto(route);
+      await expect(page.locator('meta[property="og:image"]'), route).toHaveAttribute(
+        'content',
+        'https://penmoss.app/img/social.png',
+      );
+      await expect(page.locator('meta[name="twitter:image"]'), route).toHaveAttribute(
+        'content',
+        'https://penmoss.app/img/social.png',
+      );
+      await expect(page.locator('meta[name="twitter:card"]'), route).toHaveAttribute(
+        'content',
+        'summary_large_image',
+      );
+      await expect(page.locator('title'), route).toHaveCount(1);
+      expect(await page.title(), route).not.toMatch(/Penmoss Docs \| Penmoss Docs/);
+    }
+    await page.goto('/docs/install/mac/');
+    await expect(page).toHaveTitle('The Mac app | Penmoss Docs');
   });
 });

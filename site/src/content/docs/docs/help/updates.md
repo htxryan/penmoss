@@ -33,11 +33,11 @@ After Penmoss restarts into a newer version, a notice at the foot of the window 
 
 Changes are grouped as **New**, **Improved** and **Fixed**, and only the Mac's are shown. Penmoss fetches the notes from GitHub when it checks for updates and when you open Settings, at most once an hour, and keeps them, so they read offline. Until it has reached GitHub once, the page links to the [Releases page](https://github.com/htxryan/penmoss/releases) instead. Each release on that page carries the same notes, and so does [Release notes](/docs/releases/) here.
 
-You can also update by hand at any time: download the newest [Penmoss.dmg](https://github.com/htxryan/penmoss/releases/latest/download/Penmoss.dmg) and replace the app, as in [Install on Mac](/docs/install/mac/). Your notebooks stay as they are.
+You can also update by hand at any time: download the newest [Penmoss.dmg](https://github.com/htxryan/penmoss/releases/latest/download/Penmoss.dmg) and replace the app, as in [The Mac app](/docs/install/mac/#download-and-install). Your notebooks stay as they are.
 
 ## On Android
 
-The Android app does not update itself. After you install a newer version, it says so once, and **Settings → What’s New** shows what changed ([The Android app](/docs/android/#whats-new)). Download the newest [Penmoss.apk](https://github.com/htxryan/penmoss/releases/latest/download/Penmoss.apk) and open it: it installs over the app you have, and keeps your notebooks. See [Install on Android](/docs/install/android/#updates).
+The Android app does not update itself. After you install a newer version, it says so once, and **Settings → What’s New** shows what changed ([The Android app](/docs/install/android/#whats-new)). Download the newest [Penmoss.apk](https://github.com/htxryan/penmoss/releases/latest/download/Penmoss.apk) and open it: it installs over the app you have, and keeps your notebooks. See [The Android app](/docs/install/android/#updates).
 
 ## Trying Alpha
 

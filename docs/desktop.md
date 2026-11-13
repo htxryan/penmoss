@@ -1,6 +1,6 @@
 # Penmoss for Mac: for contributors
 
-**Installing and using the Mac app is in the user docs: [Install on Mac](https://penmoss.app/docs/install/mac/) and [The Mac app](https://penmoss.app/docs/mac/).** This page keeps how it is built, tested and released, and the manual checks.
+**Installing and using the Mac app is in the user docs: [The Mac app](https://penmoss.app/docs/install/mac/).** This page keeps how it is built, tested and released, and the manual checks.
 
 The Mac app is an Electron shell around the Penmoss web app, bundled inside it. Its notes live in git notebooks: git repositories you choose, which this Mac's own git syncs (D43, T50). Since D49 (T59) there is no Penmoss server, so the app has no sign-in, account or devices: it starts into your git notebooks, and opens and edits them offline.
 
@@ -87,7 +87,7 @@ Without a signing identity the build is **signed ad hoc** (A403): Apple Silicon 
 
 ## 4. Behaviour worth knowing
 
-**How the Mac app behaves for someone using it is in the user docs: [The Mac app](https://penmoss.app/docs/mac/)**, with [Quick capture](https://penmoss.app/docs/quick-capture/), [Updates](https://penmoss.app/docs/help/updates/), [Themes and fonts](https://penmoss.app/docs/themes/) and [Search](https://penmoss.app/docs/search/). What follows is how it is built.
+**How the Mac app behaves for someone using it is in the user docs: [The Mac app](https://penmoss.app/docs/install/mac/)**, with [Quick capture](https://penmoss.app/docs/quick-capture/), [Updates](https://penmoss.app/docs/help/updates/), [Themes and fonts](https://penmoss.app/docs/themes/) and [Search](https://penmoss.app/docs/search/). What follows is how it is built.
 
 - **Starting:** the app opens on your git notebooks (section 6), or the first run (`apps/web/src/sources/FirstRun.tsx`) with none. The page never talks to `api.penmoss.app` or `app.penmoss.app`, which are gone (D49).
 - **The owner check (T41, A504, A855):** removing a git notebook, connecting an agent or disconnecting one with unpushed changes, Restore and Revert in a git note's History, and Delete for good each first ask macOS to check it is you: Touch ID, or the Mac's password when Touch ID is locked out, the lid is closed or no finger is enrolled. It is never a plain Cancel/Allow confirmation. The check is a small signed helper in the app (`Contents/Resources/auth/Penmoss`, built from `native/penmoss-auth.swift` when the app is packaged). If it is missing or will not run, every such change is refused with “Reinstall Penmoss”. The main process asks it, in words from the main process, never the page's (`AdminCheck.confirmOwn`, A1051).

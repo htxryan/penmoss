@@ -21,7 +21,7 @@ Press **⌃⌥⌘N** in any app. A small capture window opens over it, even over
 - Type, paste or drop a picture, then **Save** (⌘Enter).
 - Escape cancels. Clicking elsewhere hides the window and keeps what you typed for next time.
 
-Inside Penmoss, **Quick Capture…** (⌘⇧K) opens the same form. The [menu bar icon](/docs/mac/#the-menu-bar-icon) has **Quick Capture** too.
+Inside Penmoss, **Quick Capture…** (⌘⇧K) opens the same form. The [menu bar icon](/docs/install/mac/#the-menu-bar-icon) has **Quick Capture** too.
 
 ### Change the hotkey
 

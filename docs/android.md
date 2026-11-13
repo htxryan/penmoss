@@ -1,6 +1,6 @@
 # Penmoss for Android: for contributors
 
-**Installing and using the Android app is in the user docs: [Install on Android](https://penmoss.app/docs/install/android/), [More devices](https://penmoss.app/docs/more-devices/#android) and [The Android app](https://penmoss.app/docs/android/).** This page keeps how it is built, tested on the Pixel and shipped.
+**Installing and using the Android app is in the user docs: [The Android app](https://penmoss.app/docs/install/android/) and [More devices](https://penmoss.app/docs/more-devices/#android).** This page keeps how it is built, tested on the Pixel and shipped.
 
 The Android app (T32–T35, Milestone 2) is a native Kotlin/Compose shell around the shared editor, which runs in a WebView. This page covers building it, installing it on the Pixel, and shipping it through a Google Play internal testing track (D21). Decisions: A280–A294 (T32), A300–A315 (T33), A320–A331 (T35), A335–A349 (T34) and A352–A357 (T38) A410–A415 (T40 P1a), A416–A419 (T40 P1b), A590–A595 (the App Link sign-in and Play releases), A691–A692 (native symbols, publishing from the worker) A870–A885 (git notebooks, T50 G7 and G8) and A1040–A1049 (git notebooks only, T59) in [`decisions.md`](decisions.md).
 
