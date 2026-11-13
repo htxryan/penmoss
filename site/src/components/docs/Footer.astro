@@ -1,10 +1,17 @@
 ---
 /**
  * The foot of each docs page (Docs.dc.html): "Edit This Page on GitHub" on the left, the previous
- * and next pages on the right, above a rule.
+ * and next pages on the right, above a rule. Below them, the pages people look for but rarely
+ * browse to, kept out of the sidebar to keep it short (A1351).
  */
 const { editUrl, pagination } = Astro.locals.starlightRoute;
 const { prev, next } = pagination;
+
+const FOOT_LINKS = [
+  { label: 'Release Notes', href: '/docs/releases/' },
+  { label: 'Privacy and Security', href: '/docs/help/privacy/' },
+  { label: 'Send Feedback', href: '/docs/help/feedback/' },
+];
 ---
 
 <footer class="pm-doc-footer print:hidden">
@@ -47,3 +54,12 @@ const { prev, next } = pagination;
     }
   </div>
 </footer>
+<nav class="pm-doc-links print:hidden" aria-label="More">
+  {
+    FOOT_LINKS.map(({ label, href }) => (
+      <a href={href} aria-current={Astro.url.pathname === href ? 'page' : undefined}>
+        {label}
+      </a>
+    ))
+  }
+</nav>

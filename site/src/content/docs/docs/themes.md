@@ -38,4 +38,4 @@ Under **Fonts**:
 
 ## On the Mac
 
-**Settings → Appearance → Compact Title Bar** (on by default) puts the window's buttons in Penmoss's own top row, so notes start higher. Turn it off for macOS's own title bar; Penmoss asks, then reopens its windows where they were. See [The Mac app](/docs/mac/#the-compact-title-bar).
+**Settings → Appearance → Compact Title Bar** (on by default) puts the window's buttons in Penmoss's own top row, so notes start higher. Turn it off for macOS's own title bar; Penmoss asks, then reopens its windows where they were. See [The Mac app](/docs/install/mac/#the-compact-title-bar).

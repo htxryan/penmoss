@@ -2,45 +2,46 @@
 /**
  * The stable releases' notes on /docs/releases/ (PEN-111, RN13), from the release-notes.json that
  * site/build.mjs saved beside release.json; the same file the apps read. Alpha notes never show.
+ * The releases from before notes began (0.2.0) come from releases.mjs's BEFORE_NOTES.
  */
 import { REPOSITORY, releaseNotes } from '../../site';
-import { longDate, PLATFORM_LABELS, stableReleases } from '../../releases.mjs';
+import {
+  longDate,
+  PLATFORM_LABELS,
+  stableReleases,
+  withEarlierReleases,
+} from '../../releases.mjs';
 
-const releases = stableReleases(releaseNotes());
+const releases = withEarlierReleases(stableReleases(releaseNotes()));
 ---
 
 {
-  releases && releases.length > 0 ? (
-    releases.map((release) => (
-      <section class="pm-release" data-version={release.version}>
-        <h2 id={`v${release.version}`}>{release.version}</h2>
-        <p class="pm-release-date">
-          {longDate(release.date)} ·{' '}
-          <a href={`${REPOSITORY}/releases/tag/${release.tag}`}>on GitHub</a>
-        </p>
-        {release.groups.length > 0 ? (
-          release.groups.map((group) => (
-            <>
-              <h3>{group.label}</h3>
-              <ul>
-                {group.notes.map((note) => (
-                  <li>
-                    {note.platform ? <strong>{PLATFORM_LABELS[note.platform] ?? note.platform}: </strong> : null}
-                    {note.text}
-                  </li>
-                ))}
-              </ul>
-            </>
-          ))
-        ) : (
-          <p>A maintenance release: nothing that people using Penmoss would notice.</p>
-        )}
-      </section>
-    ))
-  ) : (
-    <p class="pm-release-none">
-      Release notes start with Penmoss 0.2.1. Until then, see the{' '}
-      <a href={`${REPOSITORY}/releases`}>releases on GitHub</a>.
-    </p>
-  )
+  releases.map((release) => (
+    <section class="pm-release" data-version={release.version}>
+      <h2 id={`v${release.version}`}>{release.version}</h2>
+      <p class="pm-release-date">
+        {longDate(release.date)} ·{' '}
+        <a href={`${REPOSITORY}/releases/tag/${release.tag}`}>on GitHub</a>
+      </p>
+      {release.groups.length > 0 ? (
+        release.groups.map((group) => (
+          <>
+            <h3>{group.label}</h3>
+            <ul>
+              {group.notes.map((note) => (
+                <li>
+                  {note.platform ? (
+                    <strong>{PLATFORM_LABELS[note.platform] ?? note.platform}: </strong>
+                  ) : null}
+                  {note.text}
+                </li>
+              ))}
+            </ul>
+          </>
+        ))
+      ) : (
+        <p>A maintenance release: nothing that people using Penmoss would notice.</p>
+      )}
+    </section>
+  ))
 }
