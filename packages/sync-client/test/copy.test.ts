@@ -67,6 +67,16 @@ describe('copyNote (T68: Duplicate, #227; another notebook, #230)', () => {
     expect(record.title).toBe('Plan (copy)');
   });
 
+  it('leaves the frontmatter tags behind when told to, and the body as it is (A1353)', () => {
+    const state = original();
+    const doc = read(copyNote(state, { title: 'Plan', notebook: null, tags: false }).update);
+    expect(frontmatterTags(doc)).toEqual([]);
+    expect(bodyJson(doc)).toEqual(bodyJson(read(state)));
+    // tags: true is the default's behaviour.
+    const kept = read(copyNote(state, { title: 'Plan', tags: true }).update);
+    expect(frontmatterTags(kept)).toEqual(['work/plans']);
+  });
+
   it('points links to notes copied with it at their copies, and leaves the rest', () => {
     const record = copyNote(original(), {
       title: 'Plan',

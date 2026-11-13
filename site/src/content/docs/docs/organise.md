@@ -13,6 +13,7 @@ Each git notebook has its own section in the sidebar, with its folder tree, its 
 - **Links, embeds, tags, the graph and backlinks** stay inside one notebook.
 - **New notes** go where you last clicked: a notebook's **Top level**, or a folder.
 - **Move to Notebook…** and **Copy to Notebook…**, in a note's or folder's right-click menu, take it to another notebook.
+- **Copy Tags**, at the bottom of Copy to Notebook's picker, chooses whether the copies keep the tags you added to their notes. Turn it on or off by default in **Settings → Git Notebooks → Copy to Notebook**; it is on unless you change it. Tags typed in a note's text, like #idea, are part of the note and always go with it. Move to Notebook always keeps the tags.
 
 ### The Primary Notebook
 

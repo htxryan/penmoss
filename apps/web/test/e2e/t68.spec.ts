@@ -259,3 +259,94 @@ test('#230: a Shift-click selection of a folder and a note moves to another note
     .toEqual([true, true, true]);
   expect(errors).toEqual([]);
 });
+
+test('A1353: Copy to Notebook asks whether the tags go, starting from the synced setting', async ({
+  page,
+  host,
+  notebook,
+}) => {
+  test.setTimeout(120_000);
+  const errors = collectErrors(page);
+  await host.seed({ name: 'Work' });
+  await page.goto('/');
+  await synced(page, 'Personal');
+  await synced(page, 'Work');
+
+  // Plan and Loose each get a frontmatter tag, from the chips.
+  const chip = (name: string) =>
+    page.getByTestId('note-tags').getByRole('button', { name: `#${name}`, exact: true });
+  const tag = async (title: string, name: string) => {
+    await rowIn(page, 'Personal', title).click();
+    await expect(page.getByTestId('note-title')).toHaveValue(title);
+    await page.getByRole('button', { name: 'Add a Tag', exact: true }).click();
+    const field = page.getByRole('combobox', { name: 'Add a tag' });
+    await field.fill(`#${name}`);
+    await field.press('Enter');
+    await expect(chip(name)).toBeVisible();
+  };
+  await tag('Plan', 'weekly');
+  await tag('Loose', 'scraps');
+
+  // Settings → Git Notebooks → Copy to Notebook: on by default (a copy took its tags before);
+  // turned off, it syncs in the primary notebook.
+  await page.goto('/settings/git-notebooks');
+  const fallback = page.getByTestId('copy-tags-default');
+  await expect(fallback).toBeChecked();
+  await expect(fallback).toBeEnabled();
+  await fallback.uncheck();
+  await expect(fallback).not.toBeChecked();
+  if (SHOTS) {
+    await page.getByTestId('copy-to-notebook-settings').screenshot({
+      path: `${SHOTS}/copy-tags-setting.png`,
+    });
+  }
+  await page.getByRole('link', { name: 'Notes', exact: true }).click();
+  await expect(rowIn(page, 'Personal', 'Plan')).toBeVisible();
+
+  // Copy starts unticked now, and the copy is left without the tag.
+  await rowIn(page, 'Personal', 'Loose').click({ button: 'right' });
+  await page.getByTestId('menu-copy-to-notebook').click();
+  const picker = page.getByTestId('folder-picker');
+  const copyTags = picker.getByRole('checkbox', { name: 'Copy Tags' });
+  await expect(copyTags).not.toBeChecked();
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/copy-tags-picker.png` });
+  await pickIn(page, 'Work');
+  await expect(page.getByTestId('tree-message').first()).toContainText('Copied 1 note to “Work”.');
+  await rowIn(page, 'Work', 'Loose').click();
+  await expect(page.getByTestId('note-title')).toHaveValue('Loose');
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+  await expect(chip('scraps')).toHaveCount(0);
+
+  // Ticked for this copy, the tag goes; the search field keeps the focus, so Enter chooses.
+  await rowIn(page, 'Personal', 'Plan').click({ button: 'right' });
+  await page.getByTestId('menu-copy-to-notebook').click();
+  await expect(copyTags).not.toBeChecked();
+  await copyTags.click();
+  await expect(copyTags).toBeChecked();
+  await expect(picker.getByRole('combobox')).toBeFocused();
+  await pickIn(page, 'Work');
+  await rowIn(page, 'Work', 'Plan').click();
+  await expect(page.getByTestId('note-title')).toHaveValue('Plan');
+  await expect(chip('weekly')).toBeVisible();
+  // The originals keep theirs.
+  await rowIn(page, 'Personal', 'Loose').click();
+  await expect(chip('scraps')).toBeVisible();
+
+  // Move to Notebook never asks: a move keeps every tag.
+  await rowIn(page, 'Personal', 'Loose').click({ button: 'right' });
+  await page.getByTestId('menu-move-to-notebook').click();
+  await expect(picker).toBeVisible();
+  await expect(picker.getByRole('checkbox')).toHaveCount(0);
+  await picker.getByRole('combobox').press('Escape');
+  await expect(picker).toBeHidden();
+
+  // The setting reached the primary notebook's repository.
+  await synced(page, 'Personal');
+  await expect
+    .poll(async () => (await readRemote(host, notebook!.remote)).setting('copyToNotebook.tags'), {
+      timeout: 60_000,
+      intervals: [2_000],
+    })
+    .toBe(false);
+  expect(errors).toEqual([]);
+});

@@ -55,6 +55,12 @@ The [line symbols](/docs/editor/#line-symbols): each one's glyph and colour, the
 | Copy Settings to Other Notebooks     | Copies your app settings to your other notebooks; you can keep them in step on this Mac         |
 | Remove from This Mac                 | Removes this Mac's copy, after Touch ID; the repository keeps everything pushed                 |
 
+Under the list of notebooks:
+
+| Setting                                          | What it does                                                                                                  |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Copy Tags When Copying Notes to Another Notebook | Whether **Copy Tags** starts ticked in [Copy to Notebook…](/docs/organise/#notebooks)'s picker; on by default |
+
 ### Agents
 
 For each notebook, the agents connected to it, **Connect an Agent** and **Disconnect**, and the commands to give each agent ([How agents work](/docs/agents/)). **The penmoss Command** installs the CLI ([Install](/docs/reference/cli/#install)).
