@@ -31,6 +31,11 @@
   max-width: 11rem;
 }
 
+/* Folder's All Folders (This Notebook) and (All Notebooks) show whole (A1352). */
+.search-filter-folder .pm-select {
+  max-width: 14rem;
+}
+
 .search-status {
   display: flex;
   flex-wrap: wrap;

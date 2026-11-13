@@ -25,8 +25,10 @@ import {
 } from './service';
 import type { Searcher } from './sources';
 import {
+  ALL_NOTEBOOKS_FOLDERS,
   folderGroups,
   folderOptions,
+  folderScopes,
   notebookTags,
   tagOptions,
   type FilterNotebook,
@@ -145,6 +147,8 @@ export function SearchOverlay({ service, onOpenNote, onClose }: SearchOverlayPro
   const folderRecords = notebook ? notebook.folders : workspace.snapshot.folders;
   const folders = useMemo(() => folderOptions(folderRecords), [folderRecords]);
   const groups = useMemo(() => (grouped ? folderGroups(notebooks) : []), [grouped, notebooks]);
+  // One notebook chosen: All Folders of it, or of all notebooks.
+  const scopes = folderScopes(several, notebook !== null);
   const ownTags = useMemo(() => tagOptions(list.map((note) => note.tags)), [list]);
   /** Tag's list with this notebook chosen (null: All Notebooks). */
   const tagsFor = (notebookId: string | null): string[] => {
@@ -330,7 +334,7 @@ export function SearchOverlay({ service, onOpenNote, onClose }: SearchOverlayPro
               </Select>
             </div>
           ) : null}
-          <div className="search-filter">
+          <div className="search-filter search-filter-folder">
             <Select
               size="small"
               aria-label="Folder"
@@ -338,7 +342,10 @@ export function SearchOverlay({ service, onOpenNote, onClose }: SearchOverlayPro
               value={filters.folderId ?? ''}
               onChange={(event) => {
                 const value = event.target.value;
-                if (grouped && value) {
+                if (value === ALL_NOTEBOOKS_FOLDERS) {
+                  // All Folders (All Notebooks): Notebook back to All Notebooks.
+                  chooseNotebook(null);
+                } else if (grouped && value) {
                   // A folder from a notebook's group: Notebook switches to its notebook.
                   const [notebookId, folderId] = JSON.parse(value) as [string, string];
                   chooseNotebook(notebookId, folderId);
@@ -347,7 +354,11 @@ export function SearchOverlay({ service, onOpenNote, onClose }: SearchOverlayPro
                 }
               }}
             >
-              <option value="">All Folders</option>
+              {scopes.map((scope) => (
+                <option key={scope.value} value={scope.value}>
+                  {scope.label}
+                </option>
+              ))}
               {grouped
                 ? groups.map((group) => (
                     <optgroup key={group.notebookId} label={group.name}>

@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
 import { dataDir, gitNotebook, go, launch, removeDataDirs, type Launched } from './support';
 
 // PEN-108 in the Mac app: Settings → Updates shows the release notes main keeps in userData
@@ -22,6 +22,8 @@ const FILE = {
   head: 'abc',
   prs: [],
   releases: [
+    // No notes of its own: "Nothing that people using Penmoss would notice."
+    { version: '0.1.9', tag: 'v0.1.9', build: 1160, date: '2026-11-01' },
     { version: '0.2.0', tag: 'v0.2.0', build: 1170, date: '2026-11-08' },
     { version: '0.2.1', tag: 'v0.2.1', build: 1180, date: '2026-11-20' },
   ],
@@ -87,8 +89,32 @@ for (const mode of ['light', 'dark'] as const) {
     const earlier = page.getByTestId('release-notes-earlier');
     await expect(earlier.getByText('Quick capture from the menu bar.')).toBeHidden();
     await earlier.getByText('Earlier versions').click();
-    await expect(earlier.getByRole('heading', { level: 3 })).toHaveText('0.2.0');
+    await expect(earlier.getByRole('heading', { level: 3 })).toHaveText(['0.2.0', '0.1.9']);
     await expect(earlier.getByText('Quick capture from the menu bar.')).toBeVisible();
+
+    // The notes read in the section's type scale. Each note, and the line for a version
+    // with nothing to notice, is the section's explanation text (its size, colour and leading),
+    // and every version's heading is the same sub-heading, as in any section.
+    const settings = page.getByTestId('updates-settings');
+    const text = (locator: Locator) =>
+      locator.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return { size: style.fontSize, color: style.color, leading: style.lineHeight };
+      });
+    const intro = await text(settings.locator(':scope > p').first());
+    expect(intro.size).toBe('14px');
+    for (const note of await settings.getByRole('listitem').all()) {
+      expect(await text(note)).toEqual(intro);
+    }
+    const nothing = earlier.getByText('Nothing that people using Penmoss would notice.');
+    await expect(nothing).toBeVisible();
+    expect(await text(nothing)).toEqual(intro);
+    const size = (locator: Locator) =>
+      locator.evaluate((element) => getComputedStyle(element).fontSize);
+    const headings = settings.locator('.release-notes').getByRole('heading', { level: 3 });
+    await expect(headings).toHaveCount(3);
+    for (const heading of await headings.all()) expect(await size(heading)).toBe('16px');
+    expect(await size(earlier.locator('summary'))).toBe('16px');
 
     // Evidence for the pull request, in Playwright's report.
     await test.info().attach(`release-notes-${mode}.png`, {
