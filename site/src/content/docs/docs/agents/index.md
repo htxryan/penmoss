@@ -3,7 +3,7 @@ title: How agents work
 description: How AI agents such as Claude Code read and edit your notes through Penmoss's local MCP server and CLI, and what keeps your notes safe.
 ---
 
-This page explains how an AI agent on your Mac reads and edits your notes, and what keeps your notes safe while it does. To set one up, go to [Claude Code](/docs/agents/claude-code/), [Codex](/docs/agents/codex/), [OpenCode](/docs/agents/opencode/) or [another MCP client](/docs/agents/other-mcp/).
+This page explains how an AI agent on your Mac reads and edits your notes, and what keeps your notes safe while it does. To set one up, such as Claude Code, Codex, OpenCode or another MCP client, go to [Connect an agent](/docs/agents/connect/).
 
 ## Two ways in
 
@@ -52,4 +52,4 @@ In **Settings → Agents**, choose the notebook and **Disconnect** the agent. Pe
 
 ## Claude on the web and phone
 
-Agents need to run on your Mac. Claude on the web and on your phone cannot reach your notebooks through Penmoss. An app on your Mac that runs local MCP servers can: see [Other MCP clients](/docs/agents/other-mcp/).
+Agents need to run on your Mac. Claude on the web and on your phone cannot reach your notebooks through Penmoss. An app on your Mac that runs local MCP servers can: see [Other MCP clients](/docs/agents/connect/#connect-it) in Connect an agent.

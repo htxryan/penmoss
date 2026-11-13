@@ -9,12 +9,12 @@ This page explains how your notes get from one device to another, what happens o
 
 Each device keeps a full copy of its notebooks and works on that copy. Sync is a git pull and push to the notebook's repository, using that device's own sign-in. There is no Penmoss server in between.
 
-|                     | Pushes                                                                     | Pulls                                                                                |
-| ------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Mac app             | 12 seconds after your edits settle (within a minute while you keep typing) | Every minute while Penmoss is open, and when you come back to it                     |
-| Android, app open   | 12 seconds after your edits settle                                         | When you open the notebook, and every minute                                         |
-| Android, app closed | Soon after you leave the app                                               | About every 15 minutes ([The Android app](/docs/android/#syncing-in-the-background)) |
-| Agents (MCP server) | A minute after the agent's edits settle, and when it stops                 | Every two minutes                                                                    |
+|                     | Pushes                                                                     | Pulls                                                                                        |
+| ------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Mac app             | 12 seconds after your edits settle (within a minute while you keep typing) | Every minute while Penmoss is open, and when you come back to it                             |
+| Android, app open   | 12 seconds after your edits settle                                         | When you open the notebook, and every minute                                                 |
+| Android, app closed | Soon after you leave the app                                               | About every 15 minutes ([The Android app](/docs/install/android/#syncing-in-the-background)) |
+| Agents (MCP server) | A minute after the agent's edits settle, and when it stops                 | Every two minutes                                                                            |
 
 **Sync Now** syncs at once. Each notebook's timing can be changed in **Settings → Git Notebooks**.
 

@@ -9,7 +9,7 @@ You comment on a passage, send the thread to an agent's session, and the agent r
 
 ## Set it up
 
-Any connected agent can find and answer comments with its comment tools. For the comment to arrive in a running session by itself, use Claude Code with its channel: see [Receive comments from your notes](/docs/agents/claude-code/#receive-comments-from-your-notes).
+Any connected agent can find and answer comments with its comment tools. For the comment to arrive in a running session by itself, use Claude Code with its channel: see [Receive comments from your notes](/docs/agents/connect/#receive-comments-from-your-notes).
 
 While such a session runs, it appears in Penmoss's **Send to** menus. Each session is named after the agent and the folder it runs in, so starting Claude Code again in the same folder is the same session. A session is offered for seven days after it was last seen.
 
