@@ -11,6 +11,9 @@ import { COMMENT } from './keys';
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
 const URL_A = 'https://img.example/a.png';
 const URL_B = 'https://img.example/b.png';
+/** A phone screenshot, taller than the page, and a wide screen's, wider than the column. */
+const URL_TALL = 'https://img.example/tall.png';
+const URL_WIDE = 'https://img.example/wide.png';
 
 /** A 200×100 PNG of one colour, made here so the page needs no file. */
 function png(width: number, height: number, [r, g, b]: readonly number[]): Buffer {
@@ -74,6 +77,22 @@ const NOTES = {
   several: `![](${URL_A})\n![](${URL_B})\n\nNext\n`,
   // AC9 pasted, AC3 with a comment marker: filled in by the test.
   empty: '\n',
+  // A1354: Ryan's note as the Mac app saved it: a narrowed screenshot, a line break, more text.
+  ryan: `one\\\ntwo\n\n![|48](${URL_TALL})\\\nthree\n`,
+  // A1354: a picture, then a line break: of each size, in a mark, a list item, a table cell.
+  breaks: [
+    `![](${URL_TALL})\\\nafter tall`,
+    `![](${URL_WIDE})\\\nafter wide`,
+    `![](${URL_A})\\\nafter small`,
+    `**![](${URL_A})**\\\nafter bold`,
+    `[![](${URL_A})](https://example.com)\\\nafter linked`,
+    `==![](${URL_A})==\\\nafter highlighted`,
+    `- ![](${URL_A})\\\n  after in list`,
+    `| Head |\n| --- |\n| ![](${URL_A})<br>after in cell |`,
+    `![](${URL_A})\\\n![](${URL_B})\\\nafter two`,
+    'Next',
+    '',
+  ].join('\n\n'),
 } as const;
 
 test.use({
@@ -86,12 +105,16 @@ test.use({
 const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 
 async function serveImages(page: Page): Promise<void> {
-  const a = png(200, 100, [63, 125, 78]);
-  const b = png(200, 100, [63, 78, 125]);
+  const images: Record<string, Buffer> = {
+    'a.png': png(200, 100, [63, 125, 78]),
+    'b.png': png(200, 100, [63, 78, 125]),
+    'tall.png': png(1170, 2532, [125, 78, 63]),
+    'wide.png': png(3024, 800, [78, 63, 125]),
+  };
   await page.route('https://img.example/**', (route) =>
     route.fulfill({
       contentType: 'image/png',
-      body: route.request().url().endsWith('b.png') ? b : a,
+      body: images[new URL(route.request().url()).pathname.slice(1)]!,
     }),
   );
 }
@@ -122,27 +145,30 @@ async function settled(page: Page): Promise<void> {
 }
 
 /** Pastes PNG files where the caret is, as a screenshot or files from Finder arrive. */
-async function pastePictures(page: Page, count = 1): Promise<void> {
+async function pastePictures(page: Page, count = 1, [width, height] = [200, 100]): Promise<void> {
   const before = await body(page).locator('.pm-image').count();
-  await page.evaluate(async (count) => {
-    const transfer = new DataTransfer();
-    for (let i = 0; i < count; i++) {
-      const canvas = document.createElement('canvas');
-      canvas.width = 200;
-      canvas.height = 100;
-      const context = canvas.getContext('2d')!;
-      context.fillStyle = i === 0 ? '#3f7d4e' : '#3f4e7d';
-      context.fillRect(0, 0, 200, 100);
-      const blob = await new Promise<Blob>((resolve) =>
-        canvas.toBlob((made) => resolve(made!), 'image/png'),
+  await page.evaluate(
+    async ([count, width, height]) => {
+      const transfer = new DataTransfer();
+      for (let i = 0; i < count; i++) {
+        const canvas = document.createElement('canvas');
+        canvas.width = width!;
+        canvas.height = height!;
+        const context = canvas.getContext('2d')!;
+        context.fillStyle = i === 0 ? '#3f7d4e' : '#3f4e7d';
+        context.fillRect(0, 0, width, height);
+        const blob = await new Promise<Blob>((resolve) =>
+          canvas.toBlob((made) => resolve(made!), 'image/png'),
+        );
+        transfer.items.add(new File([blob], `Shot ${i}.png`, { type: 'image/png' }));
+      }
+      const editor = document.querySelector<HTMLElement>('[data-testid="note-body"] .ProseMirror')!;
+      editor.dispatchEvent(
+        new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }),
       );
-      transfer.items.add(new File([blob], `Shot ${i}.png`, { type: 'image/png' }));
-    }
-    const editor = document.querySelector<HTMLElement>('[data-testid="note-body"] .ProseMirror')!;
-    editor.dispatchEvent(
-      new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }),
-    );
-  }, count);
+    },
+    [count, width, height] as const,
+  );
   await expect(body(page).locator('.pm-image')).toHaveCount(before + count);
   await settled(page);
 }
@@ -633,4 +659,126 @@ test('AC6: on a phone-sized page, a paragraph and a list item that end with a pi
   expectGapBelow(pasted!, LIST_GAP);
   await body(page).locator('.pm-image').first().scrollIntoViewIfNeeded();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/pen-66-ac6.png` });
+});
+
+/**
+ * From a picture's bottom to the top of the text after it (the glyphs' box: the line's own
+ * half-leading below the line's top).
+ */
+async function textAfter(page: Page, nth: number, text: string): Promise<number> {
+  const picture = body(page).locator('.pm-image').nth(nth);
+  await picture.scrollIntoViewIfNeeded();
+  return picture.evaluate(async (element, text) => {
+    for (let i = 0; i < 2; i++) await new Promise(requestAnimationFrame);
+    const block = element.closest('p, td, th')!;
+    const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const at = node.textContent!.indexOf(text);
+      if (at < 0) continue;
+      const range = document.createRange();
+      range.setStart(node, at);
+      range.setEnd(node, at + text.length);
+      const picture = element.querySelector('img')!.getBoundingClientRect();
+      return range.getBoundingClientRect().top - picture.bottom;
+    }
+    throw new Error(`No “${text}” in the picture’s block`);
+  }, text);
+}
+
+/** A click just right of the end of some text in the note. */
+async function clickAfterText(page: Page, text: string): Promise<void> {
+  const { x, y } = await body(page).evaluate((editor, text) => {
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const at = node.textContent!.indexOf(text);
+      if (at < 0) continue;
+      const range = document.createRange();
+      range.setStart(node, at);
+      range.setEnd(node, at + text.length);
+      const { right, top, bottom } = range.getBoundingClientRect();
+      return { x: right + 10, y: (top + bottom) / 2 };
+    }
+    throw new Error(`No “${text}” in the note`);
+  }, text);
+  await page.mouse.click(x, y);
+}
+
+/**
+ * The line after a picture starts at the picture's bottom: its text there, under half a line
+ * below (as in AC4), not a whole empty line (27 px) further down.
+ */
+function expectNextLine(gap: number, which: string): void {
+  expect(gap, `the line after ${which} below it`).toBeGreaterThanOrEqual(-PX);
+  expect(gap, `no empty line after ${which}`).toBeLessThan(0.5 * 16);
+}
+
+test('A1354: a line break after a picture puts the next line right under it, at any size', async ({
+  page,
+}) => {
+  // Ryan's note: a tall screenshot narrowed to 48 px, a line break, then “three”.
+  await openNote(page, 'ryan');
+  const [narrowed] = await pictures(page);
+  expect(Math.round(narrowed!.right - narrowed!.left)).toBe(48);
+  expect(Math.abs(narrowed!.top - narrowed!.block.top), 'first in its block').toBeLessThanOrEqual(
+    PX,
+  );
+  expectNextLine(await textAfter(page, 0, 'three'), 'the narrowed screenshot');
+  expect(Math.abs(narrowed!.block.bottom - narrowed!.bottom - LINE)).toBeLessThanOrEqual(PX);
+  // The caret after the picture, before the line break, on the picture's line at its right edge.
+  await clickAfterText(page, 'three');
+  for (let i = 0; i <= 'three'.length; i++) await page.keyboard.press('ArrowLeft');
+  const [scrolled] = await pictures(page);
+  expectCaretAfter(await caretBox(page), scrolled!);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/pen-80-note.png` });
+
+  // Tall, wide and small, in a mark, a link, a list item and a table cell, and two in a row.
+  await openNote(page, 'breaks');
+  const all = await pictures(page);
+  expect(all).toHaveLength(10);
+  // The tall and wide ones as wide as the column, not cut off.
+  for (const i of [0, 1]) {
+    expect(all[i]!.right - all[i]!.left).toBeGreaterThan(400);
+    expect(all[i]!.right).toBeLessThanOrEqual(all[i]!.block.right + PX);
+  }
+  const after = ['tall', 'wide', 'small', 'bold', 'linked', 'highlighted', 'in list', 'in cell'];
+  for (const [i, which] of after.entries())
+    expectNextLine(await textAfter(page, i, `after ${which}`), `the ${which} picture`);
+  // Two pictures, each before a line break: the second right under the first, the text under it.
+  expect(Math.abs(all[9]!.top - all[8]!.bottom), 'touching').toBeLessThanOrEqual(PX);
+  expectNextLine(await textAfter(page, 9, 'after two'), 'the second picture');
+});
+
+test('A1354: a screenshot pasted, then Shift-Enter and typing: the typed line right under it', async ({
+  page,
+}) => {
+  await openNote(page, 'empty');
+  await body(page).click();
+  await page.keyboard.type('one');
+  await page.keyboard.press('Shift+Enter');
+  await page.keyboard.type('two');
+  await page.keyboard.press('Enter');
+  // A phone screenshot, taller than the page.
+  await pastePictures(page, 1, [1170, 2532]);
+  await page.keyboard.press('Shift+Enter');
+  await page.keyboard.type('three');
+  const [picture] = await pictures(page);
+  expect(picture!.blockText).toBe('three');
+  expect(picture!.right - picture!.left).toBeGreaterThan(400);
+  expectNextLine(await textAfter(page, 0, 'three'), 'the pasted screenshot');
+  // The paragraph is the picture and the typed line: nothing between them.
+  expect(Math.abs(picture!.block.bottom - picture!.bottom - LINE)).toBeLessThanOrEqual(PX);
+  // Back before the line break: the caret on the picture's line, at its right edge.
+  for (let i = 0; i <= 'three'.length; i++) await page.keyboard.press('ArrowLeft');
+  // The picture is taller than the page: its bottom, where the caret ends, mid-page.
+  await body(page)
+    .locator('.pm-image img')
+    .evaluate((img) => {
+      let scroller = img.parentElement;
+      while (scroller && scroller.scrollHeight <= scroller.clientHeight)
+        scroller = scroller.parentElement;
+      scroller!.scrollBy(0, img.getBoundingClientRect().bottom - innerHeight / 2);
+    });
+  const [shown] = await pictures(page);
+  expectCaretAfter(await caretBox(page), shown!);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/pen-80-pasted.png` });
 });

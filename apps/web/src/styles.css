@@ -5448,12 +5448,15 @@ button.history-entry:hover {
  * picture, a block 0.4 em tall breaks the line (none where the picture already starts its line,
  * after a separator: first in its block, after a line break or after another picture; none tall
  * under another picture); after it, the frame's end margin, as wide as the line, wraps what
- * follows onto the next line (none when the picture ends its block, but 3 px of padding: Chromium
- * draws the caret after a picture at the frame's edge, which would otherwise be over the picture's
- * last column). Each rule looks only at the
- * picture's own neighbours, so a lone, linked, bold or highlighted picture, one after text, in a
- * list item, quote, table cell or heading, and several in a row all come out the same. Only the
- * rendering: the markdown keeps the picture inline where it was written.
+ * follows onto the next line (none when the picture ends its block or its line, but 3 px of
+ * padding: Chromium draws the caret after a picture at the frame's edge, which would otherwise be
+ * over the picture's last column). A line break after a picture ends its line by itself (A1354):
+ * with the margin, the separator ProseMirror puts before the break wrapped onto a line of
+ * its own and the break ended that one, an empty line under the picture with the caret on it. Each
+ * rule looks only at the picture's own neighbours (or, for a picture in a mark such as bold or a
+ * link, the mark's), so a lone, linked, bold or highlighted picture, one after text, in a list item,
+ * quote, table cell or heading, one before a line break, and several in a row all come out the
+ * same. Only the rendering: the markdown keeps the picture inline where it was written.
  */
 .note-body .pm-image::before {
   display: block;
@@ -5477,10 +5480,16 @@ button.history-entry:hover {
 .note-body
   .pm-image:is(
     :has(+ .ProseMirror-separator:last-child),
-    :has(+ .ProseMirror-separator + .ProseMirror-trailingBreak),
-    :has(+ .ProseMirror-trailingBreak),
+    :has(+ .ProseMirror-separator + br),
+    :has(+ br),
     :has(+ .pm-comment-marker + .ProseMirror-separator)
   )
+  > .pm-image-frame,
+.note-body :has(+ .ProseMirror-separator + br) > .pm-image:last-child > .pm-image-frame,
+.note-body
+  :has(+ .ProseMirror-separator + br)
+  > :last-child
+  > .pm-image:last-child
   > .pm-image-frame {
   margin-inline-end: 0;
   padding-inline-end: 3px;

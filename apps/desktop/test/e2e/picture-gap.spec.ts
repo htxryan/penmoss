@@ -29,26 +29,29 @@ test.afterEach(async () => {
 });
 test.afterAll(() => removeDataDirs());
 
-/** Pastes a 200×100 PNG where the caret is, as a screenshot arrives. */
-async function pastePicture(page: Page): Promise<void> {
+/** Pastes a PNG (200×100 unless given) where the caret is, as a screenshot arrives. */
+async function pastePicture(page: Page, [width, height] = [200, 100]): Promise<void> {
   const before = await body(page).locator('.pm-image').count();
-  await page.evaluate(async () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 200;
-    canvas.height = 100;
-    const context = canvas.getContext('2d')!;
-    context.fillStyle = '#3f7d4e';
-    context.fillRect(0, 0, 200, 100);
-    const blob = await new Promise<Blob>((resolve) =>
-      canvas.toBlob((made) => resolve(made!), 'image/png'),
-    );
-    const transfer = new DataTransfer();
-    transfer.items.add(new File([blob], 'Shot.png', { type: 'image/png' }));
-    const editor = document.querySelector<HTMLElement>('[data-testid="note-body"] .ProseMirror')!;
-    editor.dispatchEvent(
-      new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }),
-    );
-  });
+  await page.evaluate(
+    async ([width, height]) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = width!;
+      canvas.height = height!;
+      const context = canvas.getContext('2d')!;
+      context.fillStyle = '#3f7d4e';
+      context.fillRect(0, 0, width, height);
+      const blob = await new Promise<Blob>((resolve) =>
+        canvas.toBlob((made) => resolve(made!), 'image/png'),
+      );
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([blob], 'Shot.png', { type: 'image/png' }));
+      const editor = document.querySelector<HTMLElement>('[data-testid="note-body"] .ProseMirror')!;
+      editor.dispatchEvent(
+        new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }),
+      );
+    },
+    [width, height] as const,
+  );
   const pictures = body(page).locator('.pm-image');
   await expect(pictures).toHaveCount(before + 1);
   await expect(pictures.nth(before)).toHaveAttribute('data-state', 'ready');
@@ -59,7 +62,7 @@ async function pastePicture(page: Page): Promise<void> {
         .locator('img')
         .evaluate((img: HTMLImageElement) => img.naturalWidth),
     )
-    .toBe(200);
+    .toBe(width);
 }
 
 /**
@@ -285,4 +288,54 @@ test('a picture that ends a paragraph, stands alone or ends a list item leaves n
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/mac-picture-gap.png` });
   await expect(lone).toBeInViewport();
   await expectCaretAfter(page, 1);
+});
+
+test('A1354: a line break after a pasted screenshot puts the next line right under it', async () => {
+  const launched = await launch();
+  opened.push(launched);
+  const { app, page } = launched;
+  await mainBounds(app, { x: 0, y: 0, width: 1280, height: 720 });
+  await gitNotebook(launched);
+  await expect(page.locator('button[data-command="note.new"]')).toBeVisible();
+  await page.keyboard.press(NEW_NOTE);
+  await expect(page).toHaveURL(ULID);
+  await page.keyboard.type('Line break after a picture');
+  await page.keyboard.press('Enter');
+
+  // As in Ryan's note: two lines, then a phone screenshot, a line break and a third line.
+  await page.keyboard.type('one');
+  await page.keyboard.press('Shift+Enter');
+  await page.keyboard.type('two');
+  await page.keyboard.press('Enter');
+  await pastePicture(page, [1170, 2532]);
+  await page.keyboard.press('Shift+Enter');
+  await page.keyboard.type('three');
+
+  const measured = await body(page)
+    .locator('.pm-image img')
+    .evaluate(async (img) => {
+      img.scrollIntoView({ block: 'center' });
+      for (let i = 0; i < 2; i++) await new Promise(requestAnimationFrame);
+      const block = img.closest('p')!;
+      const text = [...block.childNodes].find((node) => node.textContent === 'three')!;
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      const picture = img.getBoundingClientRect();
+      return {
+        width: picture.width,
+        textGap: range.getBoundingClientRect().top - picture.bottom,
+        under: block.getBoundingClientRect().bottom - picture.bottom,
+        line: parseFloat(getComputedStyle(block).lineHeight),
+      };
+    });
+  // The screenshot as wide as the column, and “three” on the line right under it: its glyphs the
+  // line's half-leading below the picture, and the paragraph one line taller than the picture.
+  expect(measured.width).toBeGreaterThan(300);
+  expect(measured.textGap, 'the line after the picture below it').toBeGreaterThanOrEqual(-PX);
+  expect(measured.textGap, 'no empty line after the picture').toBeLessThan(measured.line / 2);
+  expect(
+    Math.abs(measured.under - measured.line),
+    'one line under the picture',
+  ).toBeLessThanOrEqual(PX);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/mac-picture-line-break.png` });
 });

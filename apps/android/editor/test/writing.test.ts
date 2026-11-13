@@ -972,7 +972,7 @@ describe('the title against a first heading (T39 pass 3, A554)', () => {
     expect(web).not.toMatch(/\n\.note-body \.pm-image-resize \{[^}]*position:/);
     // Text keeps off the picture's line: a block 0.4 em tall breaks the line before it, unless it
     // starts its line; the frame's end margin, as wide as the line, wraps what follows, unless the
-    // picture ends its block.
+    // picture ends its block or a line break follows it (A1354), in a mark or not.
     expect(web).toMatch(
       /\n\.note-body \.pm-image::before \{[^}]*display: block;[^}]*height: 0\.4em;/,
     );
@@ -982,7 +982,7 @@ describe('the title against a first heading (T39 pass 3, A554)', () => {
       /\n\.note-body \.pm-image-frame \{\s*width: max-content;\s*margin-inline-end: 100%;/,
     );
     expect(web).toMatch(
-      /\+ \.ProseMirror-separator \+ \.ProseMirror-trailingBreak\)[^{]*\{\s*margin-inline-end: 0;\s*padding-inline-end: 3px;/,
+      /:has\(\+ \.ProseMirror-separator \+ br\),\s*:has\(\+ br\),[^{]*:has\(\+ \.ProseMirror-separator \+ br\) > \.pm-image:last-child[^{]*\{\s*margin-inline-end: 0;\s*padding-inline-end: 3px;/,
     );
     // No picture rule of its own on the phone undoes that, and the old lone-picture exception
     // (a `:has()` on the paragraph's exact children, A1107) is gone.
