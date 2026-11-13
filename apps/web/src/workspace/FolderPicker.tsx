@@ -7,6 +7,7 @@ import {
   useState,
   type CSSProperties,
   type KeyboardEvent,
+  type ReactNode,
 } from 'react';
 import { fuzzy, highlightRuns } from '../commands/fuzzy';
 import { DialogClose } from '../shell/DialogClose';
@@ -27,6 +28,8 @@ export interface FolderPickerProps {
   /** The search field's hint and Enter's action (T68: "Copy to…", "Copy here"). */
   readonly placeholder?: string;
   readonly action?: string;
+  /** Options at the dialog's foot, over its keys (A1353: Copy to Notebook's Copy Tags). */
+  readonly options?: ReactNode;
 }
 
 /**
@@ -45,6 +48,7 @@ export function FolderPicker({
   label: named,
   placeholder = 'Move to folder…',
   action = 'Move here',
+  options,
 }: FolderPickerProps) {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(() =>
@@ -192,6 +196,12 @@ export function FolderPicker({
             ))
           )}
         </div>
+        {options ? (
+          // Pressing one keeps the focus in the search field, so Enter still chooses.
+          <div className="dlg-options" onMouseDown={(event) => event.preventDefault()}>
+            {options}
+          </div>
+        ) : null}
         <div className="dlg-foot" aria-hidden="true">
           <span className="keys">
             <kbd>↑</kbd>

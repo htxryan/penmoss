@@ -149,10 +149,16 @@ export async function transfer(options: {
   readonly items: readonly ItemRef[];
   readonly folderId: string | null;
   readonly mode: 'move' | 'copy';
+  /**
+   * A copy's choice (A1353): whether its notes take their frontmatter tags (default true).
+   * A move always keeps them: the notes leave, so nothing is left to keep them.
+   */
+  readonly tags?: boolean;
   readonly now?: () => Date;
 }): Promise<TransferResult> {
   const { from, to, tree, folderId, mode } = options;
   const now = options.now ?? (() => new Date());
+  const tags = mode === 'move' || options.tags !== false;
   const folders: PlannedFolder[] = [];
   const notes: PlannedNote[] = [];
   const planNote = (id: string, title: string, parent: string | null) =>
@@ -203,6 +209,7 @@ export async function transfer(options: {
       now: now(),
       notebook: to.workspace.notebookOf(place),
       links,
+      tags,
     });
     to.notes.addCopy(record);
     to.workspace.registerNote(note.copyId, place);

@@ -14,6 +14,8 @@
  *   token (written only: it never comes back to the page), and Remove (Touch ID first; this
  *   Mac's copy and clone go; with changes not pushed, it says how many and offers to push first).
  *   Its agents and the penmoss command are Settings → Agents (A1098: LocalAgents.tsx).
+ * - **Copy to Notebook** (A1353), under the list: whether a note copied to another notebook
+ *   takes its tags, as the picker's Copy Tags first says. Synced, in the primary notebook.
  */
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
@@ -46,6 +48,7 @@ import { forgetGitStores } from './forget';
 import type { GitSource } from './git-source';
 import { copySettings } from './copy-settings';
 import { setSettingsInStep, useSettingsInStepChoice } from './settings-in-step';
+import { useCopyTagsDefault } from '../workspace/copy-tags-state';
 import './sources.css';
 
 const when = (at: number | null) =>
@@ -336,7 +339,44 @@ export function GitNotebooksSettings({ item }: { item?: string | undefined }) {
           ))}
         </ul>
       )}
+      {sources.length > 0 ? <CopyToNotebookSettings /> : null}
       <AddGitNotebookToggle git={git} open={sources.length === 0} />
+    </section>
+  );
+}
+
+/**
+ * Copy to Notebook (A1353): whether the picker's Copy Tags starts ticked. On by default, as a
+ * copy took its tags before. Synced like the rest of the app's settings (A1136).
+ */
+function CopyToNotebookSettings() {
+  const { copies, set, canChange } = useCopyTagsDefault();
+  const id = useId();
+  return (
+    <section
+      className="git-notebook-group"
+      aria-labelledby={`${id}-h`}
+      data-testid="copy-to-notebook-settings"
+    >
+      <h3 id={`${id}-h`} className="settings-subhead">
+        Copy to Notebook
+      </h3>
+      <label className="display-toggle">
+        <input
+          type="checkbox"
+          checked={copies}
+          disabled={!canChange}
+          aria-describedby={`${id}-help`}
+          data-testid="copy-tags-default"
+          onChange={(event) => set(event.target.checked)}
+        />
+        <span>Copy Tags When Copying Notes to Another Notebook</span>
+      </label>
+      <p id={`${id}-help`} className="muted git-notebook-note">
+        Where Copy Tags starts in Copy to Notebook’s picker; you can still change it for each copy.
+        Tags typed in a note’s text, like #idea, are part of it and always go with it. Move to
+        Notebook always keeps the tags. Changes sync to your other devices.
+      </p>
     </section>
   );
 }

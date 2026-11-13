@@ -2289,6 +2289,20 @@ a {
   flex: 1;
 }
 
+/* A picker's options over its keys (A1353: Copy to Notebook's Copy Tags). */
+.dlg-options {
+  display: flex;
+  align-items: center;
+  flex: none;
+  padding: 0.35rem 0.9rem;
+  border-top: 1px solid var(--pm-border);
+}
+
+.dlg-options .display-toggle {
+  min-height: 2rem;
+  font-size: var(--pm-text-sm);
+}
+
 /* Move to folder… (T39): indented by depth as in the tree, up to twelve levels. */
 .folder-picker .folder-opt[style] {
   padding-inline-start: calc(0.6rem + min(var(--depth), 12) * 0.9rem);
@@ -4474,6 +4488,10 @@ button.history-entry:hover {
      indented up to six levels as on Android (A363) (T39 review). */
   .folder-picker .dlg-foot {
     display: none;
+  }
+
+  .dlg-options .display-toggle {
+    min-height: var(--pm-hit);
   }
 
   .folder-picker .folder-opt[style] {

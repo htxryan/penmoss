@@ -191,6 +191,11 @@ export interface NoteCopyOptions {
   readonly notebook?: string | null;
   /** Links to notes copied with it: each original id to its copy's (T68, #230). */
   readonly links?: ReadonlyMap<string, string>;
+  /**
+   * Whether the frontmatter tags go with it (default true; A1353: Copy to Notebook's
+   * Copy Tags). Inline `#tags` are the body's text and always go.
+   */
+  readonly tags?: boolean;
 }
 
 /** The node types that point at another note by `noteId` (wikilinks and embeds). */
@@ -227,7 +232,8 @@ function remapLinks(root: Y.Node, links: ReadonlyMap<string, string>): void {
 /**
  * A copy of a note as a new note (T68: Duplicate, #227, and a copy to another notebook, #230):
  * a new id and creation time, the title given, the body in fresh Yjs items (no shared history),
- * and the frontmatter tags. Comments stay with the original: they were about that note.
+ * and the frontmatter tags unless `tags` is false. Comments stay with the original: they were
+ * about that note.
  */
 export function copyNote(state: Uint8Array, options: NoteCopyOptions): NoteRecord {
   const now = options.now ?? new Date();
@@ -243,8 +249,10 @@ export function copyNote(state: Uint8Array, options: NoteCopyOptions): NoteRecor
         options.title,
       );
       const meta = copy.get(NOTE_META);
-      for (const [key, value] of source.get(NOTE_META).attrEntries()) {
-        if (String(key).startsWith(META_TAG_PREFIX)) meta.setAttr(String(key), value);
+      if (options.tags !== false) {
+        for (const [key, value] of source.get(NOTE_META).attrEntries()) {
+          if (String(key).startsWith(META_TAG_PREFIX)) meta.setAttr(String(key), value);
+        }
       }
       copy.get(NOTE_ROOT).applyDelta(source.get(NOTE_ROOT).toDeltaDeep());
       if (options.links && options.links.size > 0) remapLinks(copy.get(NOTE_ROOT), options.links);

@@ -403,7 +403,7 @@
   border-top: 1px solid var(--pm-border);
 }
 
-.git-notebook .settings-subhead {
+:is(.git-notebook, .git-notebook-group) .settings-subhead {
   margin: 0 0 0.75rem;
   color: var(--pm-fg);
   font-size: var(--pm-text-md);

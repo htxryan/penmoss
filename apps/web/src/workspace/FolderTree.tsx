@@ -41,6 +41,7 @@ import {
   visibleSelection,
 } from './selection';
 import { FolderPicker } from './FolderPicker';
+import { useCopyTagsDefault } from './copy-tags-state';
 import { duplicateNote, itemsCount, transfer, type TransferResult } from './transfer';
 import { folderTreeOf } from './tree';
 import { useExpanded } from './expanded';
@@ -605,8 +606,16 @@ export function FolderTree({
     setTransferring({ items, mode, rowKey: key });
   };
 
-  /** Moves or copies to the chosen notebook and folder; says what happened (T68, #230). */
-  const runTransfer = (job: Transferring, target: Source, folderId: string | null) => {
+  /**
+   * Moves or copies to the chosen notebook and folder; says what happened (T68, #230). A copy
+   * takes the tags or not, as the picker's Copy Tags says (A1353).
+   */
+  const runTransfer = (
+    job: Transferring,
+    target: Source,
+    folderId: string | null,
+    tags: boolean,
+  ) => {
     setTransferring(null);
     focusRow(job.rowKey);
     const moving = job.mode === 'move';
@@ -618,6 +627,7 @@ export function FolderTree({
       items: job.items,
       folderId,
       mode: job.mode,
+      tags,
     }).then(
       (result: TransferResult) => {
         if (moving) {
@@ -1205,7 +1215,7 @@ export function FolderTree({
                   transferring.items.filter((item) => item.kind === 'folder').length,
                 )
           }
-          onChoose={(target, folderId) => runTransfer(transferring, target, folderId)}
+          onChoose={(target, folderId, tags) => runTransfer(transferring, target, folderId, tags)}
           onClose={() => {
             setTransferring(null);
             focusRow(transferring.rowKey);
@@ -1836,9 +1846,14 @@ function TransferPicker({
   job: Transferring;
   others: readonly Source[];
   title: string;
-  onChoose: (target: Source, folderId: string | null) => void;
+  onChoose: (target: Source, folderId: string | null, tags: boolean) => void;
   onClose: () => void;
 }) {
+  // A copy asks whether the tags go too (A1353), ticked as Settings → Git Notebooks says. A
+  // move always takes them: the notes leave this notebook.
+  const copying = job.mode === 'copy';
+  const { copies } = useCopyTagsDefault();
+  const [tags, setTags] = useState(copies);
   const choices = useMemo(
     () =>
       others.flatMap((other) =>
@@ -1864,9 +1879,22 @@ function TransferPicker({
       onChoose={(key) => {
         const [sourceId, folderId] = (key ?? '').split('\u0000');
         const target = others.find((other) => other.id === sourceId);
-        if (target) onChoose(target, folderId ? folderId : null);
+        if (target) onChoose(target, folderId ? folderId : null, copying ? tags : true);
       }}
       onClose={onClose}
+      options={
+        copying ? (
+          <label className="display-toggle">
+            <input
+              type="checkbox"
+              checked={tags}
+              data-testid="copy-tags"
+              onChange={(event) => setTags(event.target.checked)}
+            />
+            <span>Copy Tags</span>
+          </label>
+        ) : undefined
+      }
     />
   );
 }
