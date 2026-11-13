@@ -96,7 +96,7 @@ export function notesUrl(tag) {
 /**
  * The release notes the docs' Release notes page lists (PEN-111, RN13): the latest stable
  * release's `release-notes.json`, the file the apps read. Null when it can't be reached or doesn't
- * read: the page then says when notes start.
+ * read: the page then lists only the releases from before notes began (releases.mjs).
  * @param {{ tag?: string, fetchImpl?: typeof fetch }} [options]
  */
 export async function latestNotes(options = {}) {
@@ -109,19 +109,25 @@ export async function latestNotes(options = {}) {
       signal: AbortSignal.timeout(15_000),
     });
     if (!response.ok) {
-      console.warn(`site: ${url} answered ${response.status}; the Release notes page has none`);
+      console.warn(
+        `site: ${url} answered ${response.status}; the Release notes page has only the earlier releases`,
+      );
       return null;
     }
     const file = /** @type {{ schema?: unknown, notes?: unknown, releases?: unknown }} */ (
       await response.json()
     );
     if (file?.schema !== 1 || !Array.isArray(file.notes) || !Array.isArray(file.releases)) {
-      console.warn(`site: ${url} is not a schema 1 notes file; the Release notes page has none`);
+      console.warn(
+        `site: ${url} is not a schema 1 notes file; the Release notes page has only the earlier releases`,
+      );
       return null;
     }
     return { schema: 1, notes: file.notes, releases: file.releases };
   } catch (error) {
-    console.warn(`site: ${url} failed (${String(error)}); the Release notes page has none`);
+    console.warn(
+      `site: ${url} failed (${String(error)}); the Release notes page has only the earlier releases`,
+    );
     return null;
   }
 }

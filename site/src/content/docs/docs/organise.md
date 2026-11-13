@@ -48,7 +48,7 @@ A tag is a word after `#` in the note, such as `#ideas`, or an entry in the note
 
 ## Quick Access
 
-Quick Access holds up to 20 notes you want at hand. **Pin to Quick Access** in a note's ⋯ menu adds it, or drag a note onto the section. Right-click one for **Remove from Quick Access**. On the Mac the [menu bar icon](/docs/mac/#the-menu-bar-icon) lists them too.
+Quick Access holds up to 20 notes you want at hand. **Pin to Quick Access** in a note's ⋯ menu adds it, or drag a note onto the section. Right-click one for **Remove from Quick Access**. On the Mac the [menu bar icon](/docs/install/mac/#the-menu-bar-icon) lists them too.
 
 ## Recent Notes and the Inbox
 
