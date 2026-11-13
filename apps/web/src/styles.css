@@ -6461,10 +6461,17 @@ button.comment-quote:hover {
 
 /*
  * Settings → Updates' release notes (PEN-108): each block a sub-heading, its kinds a smaller one
- * over a plain list; earlier versions collapsed under a summary.
+ * over a plain list; earlier versions collapsed under a summary. The notes read in the section's
+ * own type scale: every version's heading is a sub-heading like any section's, and
+ * the notes and "nothing to notice" line are the section's explanation text, which they were
+ * 16px in the main colour beside.
  */
 .release-notes {
   margin-top: 0.5rem;
+}
+
+.release-notes-block h3 {
+  font-size: var(--pm-text-lg);
 }
 
 .release-notes-group h4 {
@@ -6479,6 +6486,17 @@ button.comment-quote:hover {
   padding-left: 1.25rem;
 }
 
+.release-notes-group li,
+.release-notes-block > p {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-md);
+  line-height: 1.55;
+}
+
+.release-notes-block > p {
+  margin: 0;
+}
+
 .release-notes-group li + li {
   margin-top: 0.25rem;
 }
@@ -6489,12 +6507,12 @@ button.comment-quote:hover {
 
 .release-notes-earlier > summary {
   cursor: pointer;
+  font-size: var(--pm-text-lg);
   font-weight: 600;
 }
 
 .release-notes-earlier .release-notes-block h3 {
   margin-top: 1.25rem;
-  font-size: var(--pm-text-md);
 }
 
 .settings-section > .release-notes-missing {

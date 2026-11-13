@@ -4,7 +4,7 @@
  * `penmoss` on this Mac follows the same setting (`~/.penmoss/meaning.json`). The Mac app only.
  */
 import { useId, useState } from 'react';
-import { meaningStatusText, modelName, useMeaningStatus } from './meaning-status';
+import { meaningStatusText, modelName, useMeaningStatus, waitingText } from './meaning-status';
 
 export function MeaningSettings() {
   const found = useMeaningStatus();
@@ -55,7 +55,7 @@ export function MeaningSettings() {
           data-state={status.state}
         >
           {meaningStatusText(status)}
-          {status.leaseElsewhere ? ' An agent’s penmoss mcp is indexing for now.' : null}
+          {waitingText(status)}
         </p>
       ) : null}
       {status?.license ? (

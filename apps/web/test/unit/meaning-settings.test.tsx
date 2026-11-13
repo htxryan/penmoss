@@ -104,11 +104,19 @@ describe('Settings → Search by Meaning (T78)', () => {
     });
     expect(shown()).toBe('Indexing: 3 of 40 notes.');
     expect(toggle().checked).toBe(true);
+    // Another app holds the lease (A1350): the notes this one has not indexed wait, and it says so.
+    act(() => {
+      for (const listener of listeners)
+        listener({ ...base, state: 'indexing', indexed: 34, leaseElsewhere: true });
+    });
+    expect(shown()).toBe(
+      'Indexing: 34 of 40 notes. Another copy of Penmoss on this Mac is indexing, so 6 notes wait here; search by meaning can miss them until then.',
+    );
     act(() => {
       for (const listener of listeners) listener({ ...base, leaseElsewhere: true });
     });
     expect(shown()).toBe(
-      'Ready: EmbeddingGemma 300M (219 MB), on this Mac. All 40 notes are indexed. An agent’s penmoss mcp is indexing for now.',
+      'Ready: EmbeddingGemma 300M (219 MB), on this Mac. All 40 notes are indexed.',
     );
     expect(host.querySelector('a')?.getAttribute('href')).toBe('https://ai.google.dev/gemma/terms');
     await act(async () => {

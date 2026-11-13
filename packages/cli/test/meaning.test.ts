@@ -41,6 +41,9 @@ function fakeMeaning(initial: { state?: MeaningStatus['state']; leaseFree?: bool
     state: initial.state ?? 'ready',
     enabled: true,
     leaseFree: initial.leaseFree ?? true,
+    /** Whether the lease taken last is still this process's (the app can take it, A1350). */
+    leaseHeld: false,
+    takes: 0,
     opened: 0,
     closed: 0,
     embedded: 0,
@@ -82,12 +85,15 @@ function fakeMeaning(initial: { state?: MeaningStatus['state']; leaseFree?: bool
           },
         },
         cache,
-        lease: () =>
-          Promise.resolve(
-            control.leaseFree
-              ? { held: () => Promise.resolve(true), release: () => Promise.resolve() }
-              : undefined,
-          ),
+        lease: () => {
+          control.takes++;
+          if (!control.leaseFree) return Promise.resolve(undefined);
+          control.leaseHeld = true;
+          return Promise.resolve({
+            held: () => Promise.resolve(control.leaseHeld),
+            release: () => Promise.resolve(),
+          });
+        },
         close: () => {
           control.closed++;
           return Promise.resolve();
@@ -98,7 +104,7 @@ function fakeMeaning(initial: { state?: MeaningStatus['state']; leaseFree?: bool
   return { meaning, control };
 }
 
-function machine(meaning: MeaningIo | undefined, indexEveryMs = 20) {
+function machine(meaning: MeaningIo | undefined, indexEveryMs = 20, leaseRetryMs = 60_000) {
   const notebooks = nodeNotebooks({
     home: join(root, 'home'),
     env: {},
@@ -109,6 +115,7 @@ function machine(meaning: MeaningIo | undefined, indexEveryMs = 20) {
     pullEveryMs: 60_000,
     lockWaitMs: 300,
     indexEveryMs,
+    leaseRetryMs,
     ...(meaning ? { meaning } : {}),
   });
   /** stdin's lines; 'wait' pauses, and a function runs then (the test changes something). */
@@ -316,6 +323,51 @@ describe('penmoss mcp with meaning (T75, A1157)', () => {
       mode: 'semantic',
       coverage: { total: 2 },
     });
+  });
+
+  it('keeps trying for the lease, and indexes once the holder is gone (A1350)', async () => {
+    const { meaning, control } = fakeMeaning({ leaseFree: false });
+    const cli = machine(meaning, 20, 20);
+    await withNotes(cli);
+    let before = -1;
+    const served = await cli(
+      ['mcp', '--notebook', 'nb'],
+      [
+        'wait',
+        () => {
+          // The app holds the lease: nothing indexed in the background, and still trying.
+          before = control.embedded;
+          control.leaseFree = true;
+        },
+        'wait',
+        'wait',
+        rpc(1, 'tools/list'),
+      ],
+    );
+    expect(before).toBe(0);
+    expect(control.takes).toBeGreaterThan(2);
+    // Indexed in the background as the new holder, without a search asking.
+    expect(control.embedded).toBe(2);
+    expect(served.stderr).toMatch(/indexing nb for meaning/);
+  });
+
+  it('stops indexing once the app takes the lease (A1350)', async () => {
+    const { meaning, control } = fakeMeaning();
+    const cli = machine(meaning, 20, 20);
+    await withNotes(cli);
+    const served = await cli(
+      ['mcp', '--notebook', 'nb'],
+      [
+        'wait',
+        () => {
+          control.leaseHeld = false;
+          control.leaseFree = false;
+        },
+        'wait',
+        rpc(1, 'tools/list'),
+      ],
+    );
+    expect(served.stderr).toMatch(/another process indexes for meaning now/);
   });
 
   it('falls back to words once Search by Meaning is switched off (A1158)', async () => {

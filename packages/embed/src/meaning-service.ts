@@ -3,12 +3,14 @@
  * It downloads the model in the background unless Search by Meaning is off, opens it, takes the
  * indexing lease, keeps one `MeaningIndex` per open notebook from the notes the page sends, and
  * answers the page's queries. As the lease holder that sees every open notebook, it is the one
- * process that compacts the shared cache. Off stops it all and removes the model and vectors.
+ * process that compacts the shared cache, and it takes the lease from an agent's `penmoss mcp`
+ * as it starts (A1350); without the lease it keeps trying. Off stops it all and removes the
+ * model and vectors.
  */
-import { MeaningIndex, type MeaningHit, type MeaningNote } from '@penmoss/core/search';
+import { LeaseKeeper, MeaningIndex, type MeaningHit, type MeaningNote } from '@penmoss/core/search';
 import type { NoteSection } from '@penmoss/core/search';
 import { ModelError } from './model-store';
-import type { MeaningLease, NodeMeaning, OpenedMeaning } from './node-meaning';
+import type { NodeMeaning, OpenedMeaning } from './node-meaning';
 
 /** What the service needs of `NodeMeaning` (tests give it a fake embedder). */
 export type MeaningSource = Pick<
@@ -33,7 +35,10 @@ export interface ServiceStatus {
   /** Notes with vectors, of the open notebooks' notes. */
   readonly indexed: number;
   readonly total: number;
-  /** Another process (`penmoss mcp`) holds the lease: it indexes, this one only searches. */
+  /**
+   * Another app on this Mac holds the lease, so this one only searches: notes it has not indexed
+   * wait (A1350).
+   */
   readonly leaseElsewhere?: boolean;
   readonly error?: string;
 }
@@ -52,7 +57,7 @@ export interface MeaningServiceOptions {
   /** One indexing slice (ms) and chunks per run, so a query waits little (A1160). */
   readonly sliceMs?: number;
   readonly batch?: number;
-  /** How often to try for the lease while another process holds it (ms). */
+  /** How often to try for the lease while another process holds it, or check it still has it (ms). */
   readonly leaseRetryMs?: number;
   /** Compact at most this often (ms), once indexing has caught up. */
   readonly compactEveryMs?: number;
@@ -74,14 +79,14 @@ export class MeaningService {
   private received: number | undefined;
   private error: string | undefined;
   private opened: OpenedMeaning | null = null;
-  private lease: MeaningLease | undefined;
+  /** Tries for the indexing lease while the model is open (A1157, A1350). */
+  private keeper: LeaseKeeper | null = null;
   private readonly notebooks = new Map<string, Notebook>();
   private starting: Promise<void> | null = null;
   private indexing = false;
   private indexTimer: ReturnType<typeof setTimeout> | null = null;
   /** The indexing run under way, which Off waits for. */
   private slice: Promise<void> | null = null;
-  private leaseTimer: ReturnType<typeof setInterval> | null = null;
   /** The first compaction waits a while too, so every open notebook has been sent. */
   private lastCompaction = Date.now();
   private download: AbortController | null = null;
@@ -115,7 +120,7 @@ export class MeaningService {
       ...(this.received !== undefined ? { received: this.received } : {}),
       indexed,
       total,
-      ...(this.opened && !this.lease ? { leaseElsewhere: true } : {}),
+      ...(this.opened && !this.keeper?.held ? { leaseElsewhere: true } : {}),
       ...(this.error ? { error: this.error } : {}),
     };
     const disk = await this.node.status();
@@ -179,6 +184,10 @@ export class MeaningService {
     const allowed = options.ids ? new Set(options.ids) : null;
     // Take what other processes indexed meanwhile, embedding nothing (A1157).
     await index.update(notebook.notes.values(), { embed: false });
+    // Notes without vectors and nobody here indexing them: try for the lease now, not in 30 s.
+    if (!this.keeper?.held && index.coverage().indexed < notebook.total) {
+      void this.keeper?.check();
+    }
     return index.search(query, {
       ...(options.limit !== undefined ? { limit: options.limit } : {}),
       ...(allowed ? { filter: (id: string) => allowed.has(id) } : {}),
@@ -276,7 +285,7 @@ export class MeaningService {
         await this.emitStatus();
         return;
       }
-      await this.takeLease();
+      await this.takeLease(this.opened);
       this.state = 'indexing';
       this.error = undefined;
       await this.emitStatus();
@@ -292,25 +301,26 @@ export class MeaningService {
     }
   }
 
-  private async takeLease(): Promise<void> {
-    if (!this.opened || this.lease) return;
-    this.lease = await this.opened.lease();
-    if (this.lease) {
-      if (this.leaseTimer) clearInterval(this.leaseTimer);
-      this.leaseTimer = null;
-      return;
-    }
-    // Another process indexes for now; try again later.
-    this.leaseTimer ??= setInterval(() => {
-      void this.takeLease().then(() => {
-        if (this.lease) this.indexSoon(0);
-      });
-    }, this.options.leaseRetryMs ?? 30_000);
-    this.leaseTimer.unref?.();
+  /** Takes the lease now, and keeps trying for it (and checking it) while the model is open. */
+  private async takeLease(opened: OpenedMeaning): Promise<void> {
+    if (this.keeper) return;
+    const keeper = new LeaseKeeper(() => opened.lease(), {
+      retryMs: this.options.leaseRetryMs ?? 30_000,
+      onChange: (held) => {
+        if (this.keeper !== keeper) return;
+        if (held) this.indexSoon(0);
+        void this.emitStatus();
+      },
+      ...(this.options.log
+        ? { log: (text: string) => this.options.log!(`[meaning] ${text}`) }
+        : {}),
+    });
+    this.keeper = keeper;
+    await keeper.start();
   }
 
   private indexSoon(ms: number): void {
-    if (!this.opened || !this.lease || this.stopped) return;
+    if (!this.opened || !this.keeper?.held || this.stopped) return;
     if (this.indexTimer) clearTimeout(this.indexTimer);
     this.indexTimer = setTimeout(() => {
       this.slice = this.indexSlice();
@@ -320,14 +330,11 @@ export class MeaningService {
 
   /** One slice: each notebook's missing chunks for a few seconds, then again until caught up. */
   private async indexSlice(): Promise<void> {
-    if (this.indexing || !this.opened || !this.lease) return;
+    if (this.indexing || !this.opened || !this.keeper?.held) return;
     this.indexing = true;
     try {
-      if (!(await this.lease.held())) {
-        this.lease = undefined;
-        await this.takeLease();
-        return;
-      }
+      // Lost it (a hang let another take it over): the keeper tries again.
+      if (!(await this.keeper.check())) return;
       let waiting = 0;
       for (const notebook of this.notebooks.values()) {
         if (!this.opened) return;
@@ -366,15 +373,15 @@ export class MeaningService {
 
   private async shut(): Promise<void> {
     const opened = this.opened;
+    const keeper = this.keeper;
     this.opened = null;
-    this.lease = undefined;
+    this.keeper = null;
     if (this.indexTimer) clearTimeout(this.indexTimer);
-    if (this.leaseTimer) clearInterval(this.leaseTimer);
     this.indexTimer = null;
-    this.leaseTimer = null;
     // An indexing run under way finishes its writes first, so Off's removal is the last word.
     await this.slice?.catch(() => undefined);
     this.slice = null;
+    await keeper?.stop();
     for (const notebook of this.notebooks.values()) notebook.index = null;
     await opened?.close();
   }

@@ -182,12 +182,13 @@ describe('the indexer lease (A1157)', () => {
     const lease = await Lease.acquire(home, 'app');
     expect(lease).toBeDefined();
     await lease!.release();
-    // A live holder keeps it, however new the taker.
+    // A live holder keeps it, however new the taker (but see A1350: the app outranks the CLI).
     await writeFile(
       leasePath(home),
-      JSON.stringify({ writer: 'mcp', pid: process.pid, token: 'live' }),
+      JSON.stringify({ writer: 'app', pid: process.pid, token: 'live' }),
     );
     expect(await Lease.acquire(home, 'app')).toBeUndefined();
+    expect(await Lease.acquire(home, 'mcp')).toBeUndefined();
   });
 
   it('treats a half-written lease file as stale once old', async () => {
