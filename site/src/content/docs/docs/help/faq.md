@@ -39,7 +39,7 @@ Not yet. Penmoss is for Mac and Android. The `penmoss` CLI can be built from sou
 
 ## Which agents work with Penmoss?
 
-Any agent on your Mac that can run a local MCP server, or run shell commands: [Claude Code](/docs/agents/claude-code/), [Codex](/docs/agents/codex/), [OpenCode](/docs/agents/opencode/) and [others](/docs/agents/other-mcp/).
+Any agent on your Mac that can run a local MCP server, or run shell commands: Claude Code, Codex, OpenCode and others. See [Connect an agent](/docs/agents/connect/).
 
 ## Can an agent delete my notes?
 

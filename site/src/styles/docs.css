@@ -231,15 +231,22 @@ site-search button[data-open-modal]::before {
   margin-top: 0;
 }
 
+/* Every section but Get Started starts folded (A1351): the caret says a section opens. */
 .sidebar-content summary {
   padding: 14px 10px 6px;
   font-size: 12px;
   line-height: normal;
-  cursor: default;
+  cursor: pointer;
+  border-radius: 6px;
 }
 
 .sidebar-content summary .caret {
-  display: none;
+  color: var(--pm-faint);
+}
+
+.sidebar-content summary:hover .caret,
+.sidebar-content summary:hover .group-label .large {
+  color: var(--pm-accent);
 }
 
 .sidebar-content .group-label .large {
@@ -474,6 +481,26 @@ h1#_top {
   display: block;
   font-size: 12.5px;
   color: var(--pm-faint);
+}
+
+/* Release Notes, Privacy and Send Feedback, under the foot (A1351) */
+.pm-doc-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 20px;
+  font-size: 13.5px;
+  line-height: normal;
+}
+
+.pm-doc-links a {
+  text-decoration: none;
+  color: var(--pm-muted);
+}
+
+.pm-doc-links a:hover,
+.pm-doc-links a[aria-current='page'] {
+  color: var(--pm-accent);
 }
 
 /* On this page */

@@ -16,7 +16,7 @@ Type `[[` and start typing a note's title. Pick it from the list, or choose **Cr
 | `[[Garden plan\|plans]]` | A link that reads "plans"                         |
 | `![[Garden plan]]`       | The note [embedded](/docs/editor/#embedded-notes) |
 
-Click a link, or move into it and press Enter, to open the note. On the Mac, ⌥-click opens it in a [window of its own](/docs/mac/#note-windows). A link to a note that does not exist yet is shown as such, and clicking it makes the note.
+Click a link, or move into it and press Enter, to open the note. On the Mac, ⌥-click opens it in a [window of its own](/docs/install/mac/#note-windows). A link to a note that does not exist yet is shown as such, and clicking it makes the note.
 
 Links stay inside one notebook.
 

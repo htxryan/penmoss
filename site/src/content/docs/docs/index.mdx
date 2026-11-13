@@ -1,6 +1,10 @@
 ---
 title: Penmoss Docs
 description: How to install Penmoss, keep your notes in your own git repository, and let your AI agents work with them.
+# The docs' home: its title is the site's name once, not "Penmoss Docs | Penmoss Docs".
+head:
+  - tag: title
+    content: Penmoss Docs
 ---
 
 import StartCard from '../../../components/docs/StartCard.astro';
@@ -26,10 +30,10 @@ import StartCard from '../../../components/docs/StartCard.astro';
     description="Make a private repository on GitHub and point Penmoss at it."
   />
   <StartCard
-    href="/docs/agents/claude-code/"
-    title="Connect Claude Code"
+    href="/docs/agents/connect/"
+    title="Connect an Agent"
     icon="sparkle"
-    description="Give Claude Code your notebook through the local MCP server."
+    description="Give Claude Code, Codex or OpenCode your notebook through the local MCP server."
   />
   <StartCard
     href="/docs/reference/cli/"

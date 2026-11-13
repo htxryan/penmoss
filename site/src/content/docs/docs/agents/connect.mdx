@@ -1,0 +1,134 @@
+---
+title: Connect an agent
+description: Give Claude Code, Codex, OpenCode or any other MCP client your Penmoss notes through the local MCP server, step by step.
+---
+
+import { TabItem, Tabs } from '@astrojs/starlight/components';
+
+This page shows you how to let an AI agent on your Mac search, read and edit a notebook through Penmoss's MCP server. Pick your agent in the tabs; the choice holds for the whole page.
+
+You need Penmoss on your Mac with the notebook added, and the agent installed: [Claude Code](https://docs.claude.com/en/docs/claude-code/overview), the [Codex CLI](https://github.com/openai/codex), [OpenCode](https://opencode.ai), or any client that runs local MCP servers, such as the Claude desktop app or Cursor.
+
+## Connect it
+
+1. In Penmoss, open **Settings → Agents** and choose the notebook.
+2. In **Another agent's name**, type the agent's name (Penmoss suggests **Claude Code**), and choose **Connect an Agent**.
+3. Confirm with Touch ID or your password. Penmoss makes the agent its own copy of the notebook, named after both, such as `notes-claude-code`, and shows how to add it.
+4. Add the server to the agent:
+
+<Tabs syncKey="agent">
+<TabItem label="Claude Code">
+
+Under **Claude Code: run in a terminal**, choose **Copy**, then paste the command into Terminal and run it. It looks like this:
+
+```sh
+claude mcp add penmoss-notes-claude-code -- '/Applications/Penmoss.app/Contents/Helpers/Penmoss CLI.app/Contents/MacOS/Penmoss' --penmoss-cli mcp --notebook notes-claude-code
+```
+
+This adds the server for the folder you run it in. To have it in every project, add `--scope user` after `add`.
+
+Start a new Claude Code session in that folder. Run `/mcp` to check that `penmoss-notes-claude-code` is connected. Then ask, for example: "Search my Penmoss notes for the garden plan and add today's watering to it."
+
+</TabItem>
+<TabItem label="Codex">
+
+Under **Codex: add to ~/.codex/config.toml**, choose **Copy**, and paste the lines at the end of `~/.codex/config.toml` (make the file if it does not exist). They look like this:
+
+```toml
+[mcp_servers."penmoss-notes-codex"]
+command = "/Applications/Penmoss.app/Contents/Helpers/Penmoss CLI.app/Contents/MacOS/Penmoss"
+args = ["--penmoss-cli", "mcp", "--notebook", "notes-codex"]
+```
+
+Start a new Codex session. Run `/mcp` to check that the Penmoss tools are there. Then ask, for example: "Find my Penmoss note about the release checklist and tick off the first item."
+
+</TabItem>
+<TabItem label="OpenCode">
+
+Add the server to OpenCode's configuration: `~/.config/opencode/opencode.json` for every project, or `opencode.json` in one project. Put the copy's name after `--notebook`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "penmoss": {
+      "type": "local",
+      "command": [
+        "/Applications/Penmoss.app/Contents/Helpers/Penmoss CLI.app/Contents/MacOS/Penmoss",
+        "--penmoss-cli",
+        "mcp",
+        "--notebook",
+        "notes-opencode"
+      ],
+      "enabled": true
+    }
+  }
+}
+```
+
+If the file already has an `mcp` section, add the `penmoss` entry to it. Penmoss's settings show ready-made lines for Claude Code and Codex only; for OpenCode the command is the same as Codex's.
+
+Start OpenCode again, so it reads the new configuration. Then ask, for example: "Append a summary of this session to today's note in Penmoss."
+
+</TabItem>
+<TabItem label="Other MCP clients">
+
+Penmoss's MCP server is a local server over stdio: the client starts it as a program and talks to it on its standard input and output. Give the client this program and these arguments, with your copy's name, such as `notes-cursor`:
+
+- **Command:** `/Applications/Penmoss.app/Contents/Helpers/Penmoss CLI.app/Contents/MacOS/Penmoss`
+- **Arguments:** `--penmoss-cli`, `mcp`, `--notebook`, `notes-cursor`
+
+If you have [installed the `penmoss` command](/docs/reference/cli/#install), the command can be `penmoss` and the arguments `mcp`, `--notebook`, `notes-cursor`.
+
+Many clients, such as the Claude desktop app (`~/Library/Application Support/Claude/claude_desktop_config.json`) and Cursor (`.cursor/mcp.json`), take a JSON file in this shape:
+
+```json
+{
+  "mcpServers": {
+    "penmoss": {
+      "command": "/Applications/Penmoss.app/Contents/Helpers/Penmoss CLI.app/Contents/MacOS/Penmoss",
+      "args": ["--penmoss-cli", "mcp", "--notebook", "notes-cursor"]
+    }
+  }
+}
+```
+
+Restart the client after you change it.
+
+</TabItem>
+</Tabs>
+
+## Receive comments from your notes
+
+Claude Code can also receive the [comments](/docs/comments/) you send it from a note, read the thread, edit the note and reply. This uses Claude Code's channels, a research preview.
+
+1. In **Settings → Agents**, turn on **Receive comments sent to this agent** for Claude Code.
+2. Copy and run the new **Claude Code: run in a terminal** command, which adds `--channel`. If you added the server before, run `claude mcp remove penmoss-notes-claude-code` first.
+3. Start Claude Code with the command under **Then start Claude Code with its channel**:
+
+   ```sh
+   claude --dangerously-load-development-channels server:penmoss-notes-claude-code
+   ```
+
+Now a thread you send to this session with **Send to** arrives in it. See [Comments to agents](/docs/agents/comments/).
+
+## With the CLI instead
+
+An agent that runs shell commands can also use the [`penmoss` command](/docs/reference/cli/). [Install the command](/docs/reference/cli/#install), then tell the agent how to use it in your project's `CLAUDE.md` or `AGENTS.md`: see [Agents and the CLI](/docs/reference/cli/#agents-and-the-cli) for a block to paste.
+
+- **Claude Code:** allow the commands, so it does not ask each time: add `Bash(penmoss:*)` to `permissions.allow` in `.claude/settings.json`.
+- **Codex** runs shell commands in a sandbox. The CLI writes to `~/.penmoss` and reaches your repository's host, so allow both in Codex's sandbox settings, or use the MCP server above.
+
+## What the server offers
+
+- **Tools only.** It has the [34 tools](/docs/reference/mcp/) and no resources or prompts.
+- **One notebook per server.** For two notebooks, connect the agent to each and add two servers.
+- **Instructions.** The server tells the client how to use its tools: search first, pass `baseVersion` to edits, and read again after a conflict.
+- **MCP versions** from 2024-11-05 to 2025-11-25.
+
+## If it does not work
+
+- **The agent shows no Penmoss tools, or says the server failed.** Run the server's command with its arguments in Terminal by itself. It should wait quietly for input; ⌃C stops it. If it prints an error, such as a notebook it cannot find, fix that first. `penmoss notebook ls` lists the copies on this Mac.
+- **Claude Code: the server is missing.** `claude mcp list` shows what Claude Code has, for this folder. Add it again with `--scope user` to have it everywhere.
+- **Codex or OpenCode: no Penmoss tools.** Check that `config.toml` or `opencode.json` has the lines exactly as copied (valid TOML or JSON, with the right notebook name), and start a new session.
+- **Its edits do not show in the app.** The server pushes a minute after edits settle. Choose **Sync Now** in the app to pull them at once.
