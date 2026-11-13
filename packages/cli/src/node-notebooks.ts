@@ -9,7 +9,7 @@
  * rewrites (`insteadOf`, `pushInsteadOf`) included (D62).
  */
 import { ulid } from '@penmoss/core';
-import { MeaningIndex } from '@penmoss/core/search';
+import { LEASE_RETRY_MS, LeaseKeeper, MeaningIndex } from '@penmoss/core/search';
 import {
   GitNotebookEngine,
   GitTransportError,
@@ -113,6 +113,11 @@ export interface NodeNotebooksOptions {
   readonly meaning?: MeaningIo;
   /** How often `penmoss mcp` indexes for meaning while it holds the lease (default 30 s). */
   readonly indexEveryMs?: number;
+  /**
+   * How often `penmoss mcp` tries for the indexing lease while another process holds it, and
+   * checks it still holds it (default 30 s; A1350).
+   */
+  readonly leaseRetryMs?: number;
   /**
    * Whether a person is at this machine's terminal (`/dev/tty` opens). Only then does signing get
    * its full minute.
@@ -906,6 +911,8 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
       let meaning = null as {
         opened: OpenedMeaning;
         index: MeaningIndex;
+        /** Tries for the indexing lease for as long as the model is open (A1350). */
+        keeper: LeaseKeeper;
         holder: boolean;
       } | null;
       const giveMeaning = (notebook: LocalNotebook) => {
@@ -992,6 +999,7 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
         meaning = null;
         (state as { notebook: LocalNotebook } | null)?.notebook.useMeaning(null);
         io.log(`penmoss: Search by Meaning is off: searching ${name} by words only`);
+        await current.keeper.stop();
         await current.opened.close();
       };
       const access: NotebookAccess = {
@@ -1075,6 +1083,8 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
         const current = meaning;
         if (!current || !serving) return;
         try {
+          // The app's service may have taken the lease (A1350): then this one only searches.
+          if (!(await current.keeper.check())) return;
           const notes = await access.use(false, (notebook) => notebook.meaningNotes());
           await current.index.update(notes, { budgetMs: INDEX_SLICE_MS, batch: 2 });
           indexSoon(current.index.waiting > 0 ? 0 : (options.indexEveryMs ?? INDEX_EVERY_MS));
@@ -1094,14 +1104,35 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
                 await opened.close();
                 return;
               }
-              const lease = await opened.lease();
-              meaning = {
+              // Tried for at once and again every retryMs, so a holder that dies or quits is
+              // replaced: one try at the start left nobody indexing once the app quit (A1350).
+              const next: NonNullable<typeof meaning> = {
                 opened,
                 index: new MeaningIndex(opened.embedder, opened.cache),
-                holder: lease !== undefined,
+                holder: false,
+                keeper: new LeaseKeeper(() => opened.lease(), {
+                  retryMs: options.leaseRetryMs ?? LEASE_RETRY_MS,
+                  onChange: (held) => {
+                    if (meaning !== next) return;
+                    next.holder = held;
+                    const current = state as { notebook: LocalNotebook } | null;
+                    if (current) giveMeaning(current.notebook);
+                    if (held) {
+                      io.log(`penmoss: indexing ${name} for meaning`);
+                      indexSoon(0);
+                    } else {
+                      io.log(`penmoss: another process indexes for meaning now`);
+                      if (indexTimer) clearTimeout(indexTimer);
+                      indexTimer = null;
+                    }
+                  },
+                  log: (text) => io.log(`penmoss: ${text}`),
+                }),
               };
+              meaning = next;
+              await next.keeper.start();
               const current = state as { notebook: LocalNotebook } | null;
-              if (current) giveMeaning(current.notebook);
+              if (current && meaning === next) giveMeaning(current.notebook);
               indexSoon(0);
             } catch (error) {
               io.log(
@@ -1153,6 +1184,7 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
         serving = false;
         if (indexTimer) clearTimeout(indexTimer);
         await opening;
+        await meaning?.keeper.stop();
         await meaning?.opened.close();
       }
       // On exit, what is left goes (A825). An agent's client stops its server by closing stdin or

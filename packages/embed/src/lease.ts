@@ -2,8 +2,10 @@
  * One indexer per Mac (A1157): `~/.penmoss/vectors/indexer.lease`, a lock file naming its holder
  * and kept fresh by a heartbeat. The holder embeds notes and compacts the cache; everyone else
  * reads vectors and embeds only queries. A lease whose heartbeat stopped (its process died or
- * hung) is taken over. A holder that finds the file no longer names it has lost the lease and
- * says so through `onLost`.
+ * hung) is taken over, and so is a fresh one whose process is gone. The app's service, which sees
+ * every open notebook, also takes the lease from a live `penmoss mcp` or `penmoss search`, which
+ * index only their own notebook (A1350). A holder that finds the file no longer names it has
+ * lost the lease and says so through `onLost`.
  */
 import { randomUUID } from 'node:crypto';
 import { mkdir, open, rename, unlink, utimes } from 'node:fs/promises';
@@ -21,6 +23,20 @@ export interface LeaseOptions {
   /** How often the holder touches the file (ms, default 5 s). */
   readonly heartbeatMs?: number;
   readonly onLost?: () => void;
+  /** Tests: the clock the heartbeat's age is measured on (default `Date.now`). */
+  readonly now?: () => number;
+  /** Tests: whether a pid runs on this Mac (default: `kill(pid, 0)`). */
+  readonly alive?: (pid: number) => boolean;
+  /** Tests: the pid written as this holder's (default `process.pid`). */
+  readonly pid?: number;
+}
+
+/**
+ * Whether `taker` takes the lease from a live `holder` (A1350): only the app's service does, from
+ * anyone but another app, since it indexes every open notebook and the CLI only its one.
+ */
+export function outranks(taker: string, holder: string): boolean {
+  return taker === 'app' && holder !== 'app';
 }
 
 export function leasePath(home: string): string {
@@ -53,9 +69,10 @@ async function readHolder(
 export async function leaseHolder(
   home: string,
   staleMs = 30_000,
+  now: () => number = Date.now,
 ): Promise<LeaseHolder | undefined> {
   const found = await readHolder(leasePath(home));
-  if (!found || Date.now() - found.mtimeMs > staleMs) return undefined;
+  if (!found || now() - found.mtimeMs > staleMs) return undefined;
   return found.holder;
 }
 
@@ -88,8 +105,11 @@ export class Lease {
   ): Promise<Lease | undefined> {
     const path = leasePath(home);
     await mkdir(join(home, 'vectors'), { recursive: true });
-    const holder: LeaseHolder = { writer, pid: process.pid, token: randomUUID() };
-    for (let attempt = 0; attempt < 2; attempt++) {
+    const holder: LeaseHolder = { writer, pid: options.pid ?? process.pid, token: randomUUID() };
+    const now = options.now ?? Date.now;
+    const isAlive = options.alive ?? alive;
+    // A third try: another taker can slip in between moving a stale lease aside and writing ours.
+    for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const handle = await open(path, 'wx');
         try {
@@ -104,11 +124,14 @@ export class Lease {
         if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
       }
       const found = await readHolder(path);
-      const fresh = found && Date.now() - found.mtimeMs <= (options.staleMs ?? 30_000);
+      const fresh = found && now() - found.mtimeMs <= (options.staleMs ?? 30_000);
       // Fresh but its process is gone (a crashed service): stale at once. The lease is this
-      // Mac's, so the pid is too.
-      if (fresh && alive(found.holder.pid)) return undefined;
-      // Stale: move it aside (only one taker's rename succeeds), then try once more.
+      // Mac's, so the pid is too. A live holder keeps it, unless this is the app's service and the
+      // holder an agent's `penmoss` (A1350): it learns at its next heartbeat that it lost it.
+      if (fresh && isAlive(found.holder.pid) && !outranks(writer, found.holder.writer)) {
+        return undefined;
+      }
+      // Stale (or outranked): move it aside (only one taker's rename succeeds), then try again.
       await rename(path, `${path}.stale-${holder.token}`)
         .then(() => unlink(`${path}.stale-${holder.token}`))
         .catch(() => undefined);

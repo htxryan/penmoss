@@ -579,7 +579,7 @@ export interface DesktopMeaningStatus {
   /** Notes with vectors, of the notes sent. */
   readonly indexed: number;
   readonly total: number;
-  /** `penmoss mcp` holds the indexing lease: it indexes, the app searches. */
+  /** Another copy of the app holds the indexing lease (A1350): this one only searches. */
   readonly leaseElsewhere?: boolean;
   readonly error?: string;
 }
