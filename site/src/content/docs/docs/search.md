@@ -27,6 +27,8 @@ Under the search box you can narrow the results by **Notebook** (with more than 
 
 With more than one notebook and Notebook on **All Notebooks**, Folder lists every notebook's folders under the notebook's name, and picking one switches Notebook to that folder's notebook; Tag lists the tags of every notebook.
 
+With one notebook chosen, Folder lists that notebook's folders after two choices: **All Folders (This Notebook)** searches every folder of the chosen notebook, and **All Folders (All Notebooks)** puts Notebook back to All Notebooks and searches every folder of every notebook.
+
 ## Search by meaning
 
 On the Mac, search also finds notes by what they are about, not only the words they use: a search for `holiday plans` can find a note about a trip to Lisbon.

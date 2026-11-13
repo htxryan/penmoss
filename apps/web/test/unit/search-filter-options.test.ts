@@ -5,8 +5,10 @@
 import { describe, expect, it } from 'vitest';
 import type { FolderRecord } from '@penmoss/core/workspace';
 import {
+  ALL_NOTEBOOKS_FOLDERS,
   folderGroups,
   folderOptions,
+  folderScopes,
   notebookTags,
   type FilterNotebook,
 } from '../../src/search/filter-options';
@@ -26,6 +28,28 @@ const notebook = (
   folders: FolderRecord[],
   tags: string[][] = [],
 ): FilterNotebook => ({ id, name, folders, tags });
+
+describe('folderScopes', () => {
+  it('offers All Folders alone with one notebook open', () => {
+    expect(folderScopes(false, false)).toEqual([{ value: '', label: 'All Folders' }]);
+  });
+
+  it('offers All Folders alone under All Notebooks', () => {
+    expect(folderScopes(true, false)).toEqual([{ value: '', label: 'All Folders' }]);
+  });
+
+  it('offers this notebook’s folders or all notebooks’ with one notebook chosen', () => {
+    expect(folderScopes(true, true)).toEqual([
+      { value: '', label: 'All Folders (This Notebook)' },
+      { value: ALL_NOTEBOOKS_FOLDERS, label: 'All Folders (All Notebooks)' },
+    ]);
+  });
+
+  it('gives All Notebooks a value no folder or grouped folder has', () => {
+    expect(ALL_NOTEBOOKS_FOLDERS).not.toBe('');
+    expect(() => JSON.parse(ALL_NOTEBOOKS_FOLDERS) as unknown).toThrow();
+  });
+});
 
 describe('folderOptions', () => {
   it('lists folders in tree order, subfolders indented', () => {
