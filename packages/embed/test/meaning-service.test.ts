@@ -1,11 +1,12 @@
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
-import { readdir, rm } from 'node:fs/promises';
+import { readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MessageChannel } from 'node:worker_threads';
 import { MemoryVectorCache, fakeEmbedder, type Embedder } from '@penmoss/core/search';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Lease } from '../src/lease';
+import { Lease, leasePath } from '../src/lease';
 import {
   MeaningService,
   type MeaningSource,
@@ -176,9 +177,9 @@ describe('the embedding service (T76)', () => {
     await service.stop();
   });
 
-  it('only searches while another process holds the lease, and indexes once it is free', async () => {
+  it('only searches while another app holds the lease, and indexes once it is free', async () => {
     const { source } = fakeSource();
-    const mcp = await Lease.acquire(home, 'mcp');
+    const other = await Lease.acquire(home, 'app');
     const statuses: ServiceStatus[] = [];
     const service = new MeaningService(source, (status) => statuses.push(status), {
       leaseRetryMs: 20,
@@ -187,8 +188,44 @@ describe('the embedding service (T76)', () => {
     await service.update('nb', NOTES);
     expect((await service.status()).leaseElsewhere).toBe(true);
     expect((await service.status()).indexed).toBe(0);
-    await mcp!.release();
+    await other!.release();
     await until(statuses, (status) => status.indexed === 3 && !status.leaseElsewhere);
+    await service.stop();
+  });
+
+  it('takes the lease from an agent’s penmoss mcp as it starts (A1350)', async () => {
+    const { source } = fakeSource();
+    let lost = false;
+    const mcp = await Lease.acquire(home, 'mcp', { onLost: () => (lost = true) });
+    const statuses: ServiceStatus[] = [];
+    const service = new MeaningService(source, (status) => statuses.push(status));
+    await service.start();
+    await service.update('nb', NOTES);
+    await until(statuses, (status) => status.indexed === 3 && !status.leaseElsewhere);
+    expect(statuses.some((status) => status.leaseElsewhere)).toBe(false);
+    expect(await mcp!.held()).toBe(false);
+    expect(lost).toBe(true);
+    await service.stop();
+  });
+
+  it('keeps trying for the lease after the holder dies, and tries at once on a search (A1350)', async () => {
+    const { source } = fakeSource();
+    const other = await Lease.acquire(home, 'app');
+    const statuses: ServiceStatus[] = [];
+    // A retry an hour away: only the search can bring the lease in time.
+    const service = new MeaningService(source, (status) => statuses.push(status), {
+      leaseRetryMs: 60 * 60_000,
+    });
+    await service.start();
+    await service.update('nb', NOTES);
+    expect((await service.status()).leaseElsewhere).toBe(true);
+    // The other app died without letting go: its file stays, naming a pid that is gone.
+    await other!.release();
+    const dead = spawnSync(process.execPath, ['-e', '']).pid;
+    await writeFile(leasePath(home), JSON.stringify({ writer: 'app', pid: dead, token: 'dead' }));
+    expect(await service.search('nb', 'bread')).toEqual([]);
+    await until(statuses, (status) => status.indexed === 3 && !status.leaseElsewhere);
+    expect((await service.search('nb', 'bread'))?.length).toBe(3);
     await service.stop();
   });
 

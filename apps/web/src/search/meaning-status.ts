@@ -74,3 +74,17 @@ export function meaningStatusText(status: DesktopMeaningStatus): string {
       return `Search by meaning could not start: ${status.error ?? 'unknown error'}.`;
   }
 }
+
+/**
+ * Another Penmoss app on this Mac holds the indexing lease (A1350): this one searches with what is
+ * indexed, so it says how many notes wait and that search by meaning can miss them. Nothing once
+ * every note is indexed.
+ */
+export function waitingText(status: DesktopMeaningStatus): string | null {
+  if (!('leaseElsewhere' in status) || !status.leaseElsewhere) return null;
+  const waiting = status.total - status.indexed;
+  if (waiting <= 0) return null;
+  return ` Another copy of Penmoss on this Mac is indexing, so ${waiting} ${
+    waiting === 1 ? 'note waits' : 'notes wait'
+  } here; search by meaning can miss ${waiting === 1 ? 'it' : 'them'} until then.`;
+}
