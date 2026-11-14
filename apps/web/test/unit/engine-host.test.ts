@@ -25,7 +25,11 @@ import {
   describe as describeFailure,
   FOCUS_PULL_GAP_MS,
   GitEngineHost,
+  shownStatus,
+  STARTING,
+  type GitSyncStatus,
 } from '../../src/sources/engine-host';
+import { GitStatusFeed } from '../../src/sources/git-source';
 import { memoryNotes } from './support/memory-notes';
 
 const hosts: GitEngineHost[] = [];
@@ -41,6 +45,10 @@ function controlled(inner: MemoryTransport) {
   /** Ops that take this long whatever `cancel` does (a git between two calls of a sync). */
   const slowOps = new Map<string, number>();
   const waiting: Array<(error: Error) => void> = [];
+  /** Ops that fail with this error (R2-7: a host that refuses). */
+  const failing = new Map<string, Error>();
+  /** Ops that wait until their gate opens, then go on (to fail or not). */
+  const gates = new Map<string, Promise<void>>();
   let slowPush: Promise<void> | null = null;
   const transport = new Proxy(inner, {
     get(target, key, receiver) {
@@ -62,6 +70,10 @@ function controlled(inner: MemoryTransport) {
           await new Promise<never>((_resolve, reject) => waiting.push(reject));
         }
         if (op === 'push' && slowPush) await slowPush;
+        const gate = gates.get(op);
+        if (gate) await gate;
+        const failure = failing.get(op);
+        if (failure) throw failure;
         return (value as (...a: unknown[]) => unknown).apply(target, args);
       };
     },
@@ -73,6 +85,17 @@ function controlled(inner: MemoryTransport) {
     hold: (op: string) => held.add(op),
     slowOp: (op: string, ms: number) => slowOps.set(op, ms),
     release: (op: string) => held.delete(op),
+    fail: (op: string, error: Error) => failing.set(op, error),
+    heal: (op: string) => failing.delete(op),
+    /** `op` waits from now until the function returned is called. */
+    gate: (op: string) => {
+      let open = () => undefined as void;
+      gates.set(op, new Promise<void>((resolve) => (open = resolve)));
+      return () => {
+        gates.delete(op);
+        open();
+      };
+    },
     /** The push lands only once `land` is called (a cancel does not stop it). */
     slow: () => {
       let land = () => undefined as void;
@@ -950,5 +973,113 @@ describe('after a Send to: at once, then every 10 s until the reply (A1061, A106
     expect(host.watchedThreads).toEqual([]);
     await vi.advanceTimersByTimeAsync(60_000);
     expect(count('pull')).toBe(1);
+  });
+});
+
+describe('Sync Stopped holds through its retries (Ryan’s R2-7)', () => {
+  const at = (patch: Partial<GitSyncStatus>): GitSyncStatus => ({ ...STARTING, ...patch });
+
+  it('shownStatus: a new attempt is not progress; landing, or getting further, is', () => {
+    // Failed at its fetch: the retry is stopped until its fetch answers.
+    const failed = at({ phase: 'stopped', reached: 'nothing', stoppedAt: 'nothing' });
+    expect(shownStatus(failed).phase).toBe('stopped');
+    const retrying = at({ phase: 'syncing', reached: 'nothing', stoppedAt: 'nothing' });
+    expect(shownStatus(retrying).phase).toBe('stopped');
+    expect(shownStatus(at({ ...retrying, reached: 'fetch' })).phase).toBe('syncing');
+    // Failed at its push: a fetch that answers is no further than that one got.
+    const pushing = at({ phase: 'syncing', reached: 'fetch', stoppedAt: 'fetch' });
+    expect(shownStatus(pushing).phase).toBe('stopped');
+    expect(shownStatus(at({ ...pushing, reached: 'push' })).phase).toBe('syncing');
+    // Landed, or never stopped: as it is.
+    expect(shownStatus(at({ phase: 'synced', stoppedAt: null })).phase).toBe('synced');
+    const fresh = at({ phase: 'syncing', reached: 'nothing', stoppedAt: null });
+    expect(shownStatus(fresh)).toBe(fresh);
+    expect(shownStatus(at({ phase: 'offline', stoppedAt: null })).phase).toBe('offline');
+  });
+
+  /** The host, and a window's feed on it: what the status bar and the sidebar's row show. */
+  async function watched() {
+    const world = await setup();
+    const feed = new GitStatusFeed('01JBNOTEBOOK00000000000001', null);
+    const off = feed.attach(world.host);
+    await world.host.start();
+    await vi.waitFor(() => expect(world.host.status.phase).toBe('synced'), { timeout: 3000 });
+    const shown = () => ({ shown: feed.shown.phase, bar: feed.local().phase });
+    return { ...world, feed, off, shown };
+  }
+
+  it('refused at its fetch: stopped through a retry and its failure, normal once a fetch answers', async () => {
+    const { git, host, shown, off } = await watched();
+    git.fail('fetch', new GitTransportError('auth', 'Authentication failed'));
+    await host.syncNow('now');
+    expect(host.status).toMatchObject({ phase: 'stopped', stoppedAt: 'nothing' });
+    expect(shown()).toEqual({ shown: 'stopped', bar: 'stopped' });
+    // The retry starts: still stopped, though the host is trying.
+    const open = git.gate('fetch');
+    let retry = host.syncNow('retry');
+    await vi.waitFor(() => expect(host.status.phase).toBe('syncing'));
+    expect(shown()).toEqual({ shown: 'stopped', bar: 'stopped' });
+    // It fails again: stopped.
+    open();
+    await retry;
+    expect(host.status.phase).toBe('stopped');
+    expect(shown()).toEqual({ shown: 'stopped', bar: 'stopped' });
+    // The host lets it in: once the fetch answers, the sync is getting somewhere.
+    git.heal('fetch');
+    setTitle(host.engineForTests!.replica.ensureNote('01JBNOTEMAC000000000000009'), 'Waiting');
+    const land = git.gate('push');
+    retry = host.syncNow('retry');
+    await vi.waitFor(() => expect(host.status.reached).toBe('fetch'));
+    expect(host.status.phase).toBe('syncing');
+    expect(shown()).toEqual({ shown: 'syncing', bar: 'syncing' });
+    land();
+    await retry;
+    expect(host.status).toMatchObject({ phase: 'synced', stoppedAt: null });
+    expect(shown()).toEqual({ shown: 'synced', bar: 'synced' });
+    off();
+  });
+
+  it('a push refused: a retry whose fetch answers is still stopped; one whose push lands is synced', async () => {
+    const { git, host, shown, off } = await watched();
+    git.fail('push', new GitTransportError('protected', 'GH006: Protected branch update failed'));
+    setTitle(host.engineForTests!.replica.ensureNote('01JBNOTEMAC000000000000010'), 'Refused');
+    await host.syncNow('push');
+    expect(host.status).toMatchObject({ phase: 'stopped', stoppedAt: 'fetch' });
+    expect(shown()).toEqual({ shown: 'stopped', bar: 'stopped' });
+    // The retry: its fetch answers, as the stopped one's did. Not progress.
+    const open = git.gate('push');
+    const retry = host.syncNow('retry');
+    await vi.waitFor(() => expect(host.status.reached).toBe('fetch'));
+    expect(host.status.phase).toBe('syncing');
+    expect(shown()).toEqual({ shown: 'stopped', bar: 'stopped' });
+    open();
+    await retry;
+    expect(shown()).toEqual({ shown: 'stopped', bar: 'stopped' });
+    // The host takes the push: synced.
+    git.heal('push');
+    await host.syncNow('retry');
+    expect(host.status).toMatchObject({ phase: 'synced', reached: 'push', stoppedAt: null });
+    expect(shown()).toEqual({ shown: 'synced', bar: 'synced' });
+    off();
+  });
+
+  it('a stop that turns into offline says Offline, and its retries are not held as stopped', async () => {
+    const { git, host, shown, off } = await watched();
+    git.fail('fetch', new GitTransportError('auth', 'Authentication failed'));
+    await host.syncNow('now');
+    expect(shown().shown).toBe('stopped');
+    git.fail('fetch', new GitTransportError('network', 'Could not resolve host'));
+    await host.syncNow('retry');
+    expect(host.status).toMatchObject({ phase: 'offline', stoppedAt: null });
+    expect(shown()).toEqual({ shown: 'offline', bar: 'offline' });
+    const open = git.gate('fetch');
+    const retry = host.syncNow('retry');
+    await vi.waitFor(() => expect(host.status.phase).toBe('syncing'));
+    expect(shown().shown).toBe('syncing');
+    git.heal('fetch');
+    open();
+    await retry;
+    expect(shown().shown).toBe('synced');
+    off();
   });
 });

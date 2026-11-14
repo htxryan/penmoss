@@ -19,7 +19,13 @@ import {
 } from '../notes/service';
 import { Workspace, type RestorePlace } from '../workspace/service';
 import { EngineStorage, engineDbName, idbEngineKv, type EngineKv } from './engine-store';
-import { GitEngineHost, MAC_WRITER_LABEL, STARTING, type GitSyncStatus } from './engine-host';
+import {
+  GitEngineHost,
+  MAC_WRITER_LABEL,
+  STARTING,
+  shownStatus,
+  type GitSyncStatus,
+} from './engine-host';
 import { IpcGitTransport } from './ipc-transport';
 
 /** The notes store of a git notebook (A860). */
@@ -56,6 +62,7 @@ const HEAD_WAIT_MS = 10_000;
 /** A notebook's sync status in this window: the engine's here, or its window's (A860). */
 export class GitStatusFeed {
   private current: GitSyncStatus = STARTING;
+  private shownNow: GitSyncStatus = STARTING;
   private localState: LocalSyncState = { phase: 'syncing', detail: null, pending: new Set() };
   private readonly listeners = new Set<() => void>();
   private host: GitEngineHost | null = null;
@@ -72,8 +79,17 @@ export class GitStatusFeed {
     this.post({ notebookId, command: 'hello' });
   }
 
+  /** The status as it is: what waits for a sync, and Settings → Notebooks, read this. */
   get status(): GitSyncStatus {
     return this.current;
+  }
+
+  /**
+   * The status as the app shows it (Ryan's R2-7, `shownStatus`): a stopped sync stays stopped
+   * through its retries. The note's status bar and the sidebar's notebook row show this.
+   */
+  get shown(): GitSyncStatus {
+    return this.shownNow;
   }
 
   /** As the notes service shows it (a stable reference between changes). */
@@ -196,15 +212,13 @@ export class GitStatusFeed {
 
   private set(status: GitSyncStatus): void {
     this.current = status;
+    // As shown (R2-7): a stopped sync's retries stay stopped until one gets somewhere.
+    const shown = shownStatus(status);
+    this.shownNow = shown;
     this.localState = {
-      phase:
-        status.phase === 'starting'
-          ? 'syncing'
-          : status.phase === 'syncing'
-            ? 'syncing'
-            : status.phase,
-      detail: status.detail,
-      pending: new Set(status.pending),
+      phase: shown.phase === 'starting' ? 'syncing' : shown.phase,
+      detail: shown.detail,
+      pending: new Set(shown.pending),
     };
     for (const listener of this.listeners) listener();
   }

@@ -1,5 +1,5 @@
 import { Icon } from '@penmoss/ui/icons';
-import { useId, useRef, useState, useSyncExternalStore, type MouseEvent } from 'react';
+import { useId, useRef, useState, type MouseEvent } from 'react';
 import { gitNotebookPath, linkHandler, navigate, useLocation } from '../router';
 import { ContextMenu } from '../shell/ContextMenu';
 import { TIME_MACHINE_PATH, timeMachinePath } from '../time-machine/path';
@@ -7,6 +7,7 @@ import { FolderTree } from '../workspace/FolderTree';
 import { TreeActions } from '../workspace/TreeActions';
 import type { GitSyncStatus } from './engine-host';
 import type { GitSource } from './git-source';
+import { useShownGitStatus } from './hooks';
 import { NameClash } from './NameClash';
 import { useNotebookRename } from './notebook-names';
 import type { Source } from './registry';
@@ -45,11 +46,8 @@ const LABELS: Record<GitSyncStatus['phase'], string> = {
  * and the detail are its tooltip and accessible name. It links to its page in Settings (A1098).
  */
 function GitSectionStatus({ source }: { source: GitSource }) {
-  const status = useSyncExternalStore(
-    source.feed.subscribe,
-    () => source.feed.status,
-    () => source.feed.status,
-  );
+  // As shown (R2-7): a stopped sync stays Sync Stopped through its retries.
+  const status = useShownGitStatus(source);
   const waiting = status.pending.filter((id) => id !== 'workspace').length;
   // Quitting waits for this push (#170 F8).
   const label = status.closing

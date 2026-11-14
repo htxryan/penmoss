@@ -408,18 +408,20 @@ test('9: Sync stopped opens Settings → Notebooks, where Sync Now starts it aga
   await page.setViewportSize({ width: 1440, height: 900 });
   // The host refuses this Mac's pushes (a protected branch), until the test lets them through.
   let refuse = true;
+  let refused = 0;
   const call = host.call.bind(host);
-  host.call = async (method, args) =>
-    refuse && method === 'op' && args[1] === 'push'
-      ? {
-          ok: false,
-          error: {
-            code: 'protected',
-            message: 'The host refused the push.',
-            hostMessage: 'GH006: Protected branch update failed',
-          },
-        }
-      : call(method, args);
+  host.call = async (method, args) => {
+    if (!(refuse && method === 'op' && args[1] === 'push')) return call(method, args);
+    refused++;
+    return {
+      ok: false,
+      error: {
+        code: 'protected',
+        message: 'The host refused the push.',
+        hostMessage: 'GH006: Protected branch update failed',
+      },
+    };
+  };
   await page.goto('/');
   await newNote(page, `Refused ${RUN}`, 'Kept here until it can go.');
   const dot = page.getByTestId('section-sync');
@@ -454,7 +456,47 @@ test('9: Sync stopped opens Settings → Notebooks, where Sync Now starts it aga
     expect(contrast(colours.color, colours.background), scheme).toBeGreaterThanOrEqual(4.5);
   }
   await page.emulateMedia({ colorScheme: 'light' });
+  // Flush in the bar, as its other items are: its full height, at its left edge (R2-6).
+  const fit = await band.evaluate((element) => {
+    const bar = element.closest('.status-bar')!;
+    const outer = bar.getBoundingClientRect();
+    const own = element.getBoundingClientRect();
+    const border = parseFloat(getComputedStyle(bar).borderTopWidth);
+    return {
+      left: own.left - outer.left,
+      top: own.top - outer.top - border,
+      bottom: outer.bottom - own.bottom,
+    };
+  });
+  expect(Math.abs(fit.left), 'left').toBeLessThan(0.5);
+  expect(Math.abs(fit.top), 'top').toBeLessThan(0.5);
+  expect(Math.abs(fit.bottom), 'bottom').toBeLessThan(0.5);
   await expect(page.getByTestId('save-alert')).toContainText('Sync Stopped.');
+
+  // A retry refused again: the sidebar's row and the note's bar stay Sync Stopped all through
+  // it, never Syncing (R2-7). Every state either shows from here is kept.
+  await page.evaluate(() => {
+    const seen: unknown[] = [];
+    for (const element of document.querySelectorAll(
+      '[data-testid="section-sync"], [data-testid="save-status"]',
+    )) {
+      seen.push(element.getAttribute('data-state'));
+      new MutationObserver(() => seen.push(element.getAttribute('data-state'))).observe(element, {
+        attributeFilter: ['data-state'],
+      });
+    }
+    (window as unknown as { seen: unknown[] }).seen = seen;
+  });
+  const before = refused;
+  await page.keyboard.press('ControlOrMeta+KeyK');
+  const palette = page.getByRole('dialog', { name: 'Command Palette' });
+  await palette
+    .getByRole('combobox', { name: 'Command Palette' })
+    .fill('Sync This Git Notebook Now');
+  await expect(palette.getByRole('option').first()).toContainText('Sync This Git Notebook Now');
+  await page.keyboard.press('Enter');
+  await expect(palette).toBeHidden();
+  await expect.poll(() => refused, { timeout: 60_000 }).toBeGreaterThan(before);
   // A link, reachable by keyboard.
   await expect(dot).toHaveRole('link');
   await dot.focus();
@@ -465,6 +507,9 @@ test('9: Sync stopped opens Settings → Notebooks, where Sync Now starts it aga
   await expect(card.getByTestId('git-status')).toHaveAttribute('data-phase', 'stopped');
   await expect(card.getByTestId('git-error')).toContainText('refused the push');
   await expect(card.getByTestId('git-error')).toContainText('GH006');
+  // The retry's states, from before it, never Syncing (R2-7).
+  const seen = await page.evaluate(() => (window as unknown as { seen: unknown[] }).seen);
+  expect(new Set(seen)).toEqual(new Set(['stopped']));
 
   // Let it through: Sync Now pushes, and the stop goes.
   refuse = false;
