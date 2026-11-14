@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, macContext, PREVIEW, seeded, test, type Locator, type Page } from './fixtures';
 import { remoteFiles, remoteMarkdown } from './support/remote';
 import { remoteBytes } from './support/sync';
@@ -58,6 +59,16 @@ async function newDrawing(page: Page) {
   await page.keyboard.press('Enter');
   await expect(editor(page)).toBeVisible({ timeout: 30_000 });
   await expect(editor(page)).toHaveAttribute('aria-label', 'New Excalidraw Diagram');
+}
+
+/**
+ * Closes Excalidraw's open dialog (Save To…, Export Image…), if one is open, with Escape from a
+ * button in it (its close button shows only at a phone's width).
+ */
+async function closeExcalidrawDialog(page: Page) {
+  const modal = page.locator('.excalidraw-modal-container .Modal');
+  if (await modal.count()) await modal.getByRole('button').first().press('Escape');
+  await expect(modal).toHaveCount(0);
 }
 
 /** Excalidraw's keys for its tools (its toolbar's radios are visually hidden inputs). */
@@ -266,6 +277,56 @@ test('PEN-28: draw in a note, save it as files in git, open it again and edit it
   await drawing.hover();
   await expect(editButton).toBeVisible();
   await page.waitForTimeout(2_000);
+  expect(errors).toEqual([]);
+});
+
+test('R2-19: Save To… saves the scene, and Export Image… its picture, as downloads', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const errors = collectErrors(page);
+  await page.goto('/');
+  await createNote(page, `Exports ${TAG}`);
+  await newDrawing(page);
+  await drawShape(page, 'rectangle', { x: 420, y: 200 }, { x: 640, y: 360 });
+
+  // The ☰ menu: Save To… and Export Image…, nothing that opens a file over the drawing.
+  await editor(page).getByTestId('main-menu-trigger').click();
+  await expect(editor(page).getByTestId('json-export-button')).toBeVisible();
+  await expect(editor(page).getByTestId('image-export-button')).toBeVisible();
+  await expect(editor(page).getByTestId('load-button')).toHaveCount(0);
+
+  // In the Mac app (this suite's page has its bridge) a file is a download, which the main
+  // process asks where to save; Chromium's own file picker is not used.
+  const saved = async (click: () => Promise<void>) => {
+    const download = page.waitForEvent('download');
+    await click();
+    const file = await download;
+    return { name: file.suggestedFilename(), bytes: readFileSync(await file.path()) };
+  };
+
+  // Save To… saves the scene, a `.excalidraw` file with its rectangle.
+  await editor(page).getByTestId('json-export-button').click();
+  const scene = await saved(() => page.getByRole('button', { name: 'Save to file' }).click());
+  expect(scene.name).toMatch(/\.excalidraw$/);
+  expect(shapes(scene.bytes)).toEqual(['rectangle']);
+  await closeExcalidrawDialog(page);
+
+  // Export Image…: a PNG, and an SVG, of the drawing.
+  await editor(page).getByTestId('main-menu-trigger').click();
+  await editor(page).getByTestId('image-export-button').click();
+  const png = await saved(() => page.getByRole('button', { name: 'Export to PNG' }).click());
+  expect(png.name).toMatch(/\.png$/);
+  expect([...png.bytes.subarray(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
+  const svg = await saved(() => page.getByRole('button', { name: 'Export to SVG' }).click());
+  expect(svg.name).toMatch(/\.svg$/);
+  expect(svg.bytes.toString('utf8')).toMatch(/<svg[^>]* xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
+  await closeExcalidrawDialog(page);
+
+  // The drawing is still being edited: Cancel leaves the note as it was.
+  await editor(page).getByRole('button', { name: 'Cancel' }).click();
+  await expect(editor(page)).toBeHidden();
+  await expect(body(page).getByTestId('drawing')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 

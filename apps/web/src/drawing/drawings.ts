@@ -10,6 +10,7 @@
  * those files (font-faces.ts), never its CDN.
  */
 import type { DrawingFiles, DrawingServices } from '@penmoss/editor';
+import { desktop } from '../desktop/bridge';
 import type { DrawingStep } from './editor';
 import { keepFontFacesLocal } from './font-faces';
 
@@ -37,10 +38,36 @@ export function loadDrawingEditor(): Promise<DrawingEditorModule> {
     // The `source` a scene file names: Penmoss, not the app's own origin.
     target.EXCALIDRAW_EXPORT_SOURCE = 'https://penmoss.app';
     keepFontFacesLocal();
-    loading = import('./editor');
+    loading = withoutFilePickers(() => import('./editor'));
     loading.catch(() => (loading = null));
   }
   return loading;
+}
+
+/** The File System Access pickers, which Excalidraw's file library uses where they exist. */
+const PICKERS = ['showOpenFilePicker', 'showSaveFilePicker', 'showDirectoryPicker'] as const;
+
+/**
+ * Loads Excalidraw with the File System Access pickers hidden in the Mac app (R2-19), so its Save
+ * To… and Export Image… save through a download, which the main process asks where to put (a
+ * save dialog, `will-download`), rather than through Chromium's own picker, whose file access
+ * the app's permission handler would have to allow (security.ts). Its file library chooses how
+ * to save as it loads; the pickers are back for the rest of the page once it has.
+ */
+async function withoutFilePickers<T>(load: () => Promise<T>): Promise<T> {
+  if (!desktop()) return load();
+  const target = window as unknown as Record<string, unknown>;
+  const hidden = PICKERS.flatMap((name) => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, name);
+    if (!descriptor?.configurable) return [];
+    delete target[name];
+    return [[name, descriptor] as const];
+  });
+  try {
+    return await load();
+  } finally {
+    for (const [name, descriptor] of hidden) Object.defineProperty(window, name, descriptor);
+  }
 }
 
 /** Whether a drawing editor is open in this window (one at a time). */

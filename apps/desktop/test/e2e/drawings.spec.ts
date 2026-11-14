@@ -1,4 +1,7 @@
-import { expect, test, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 import {
   body,
   collectErrors,
@@ -17,8 +20,9 @@ import {
 // puts the drawing in the note and its two files in the notebook's repository; a click selects it
 // and its Edit button opens it again with its shapes. The editor's bar is the window's title bar
 // (R2-17, R2-18): its empty part drags the window, after the lights come Back, Forward and the
-// pin. The web suite (apps/web/test/e2e/drawings.spec.ts) covers editing a drawing again, Back
-// keeping it, and the production build's CSP.
+// pin. Save To… and Export Image… save through a download that asks where to put it (R2-19). The
+// web suite (apps/web/test/e2e/drawings.spec.ts) covers editing a drawing again, Back keeping it,
+// and the production build's CSP.
 
 const mac = process.platform === 'darwin';
 const NEW_NOTE = mac ? 'Meta+Alt+KeyN' : 'Alt+KeyN';
@@ -53,6 +57,45 @@ const regionAt = (page: Page, x: number, y: number) =>
     },
     [x, y] as const,
   );
+
+/** A download the page starts, as the main process sent it on (R2-19). */
+interface Download {
+  readonly name: string;
+  readonly dialog: { title?: string; defaultPath?: string; filters?: unknown };
+  readonly path: string;
+}
+
+/**
+ * Saves each download the page starts into `dir`, where a person would have chosen in the save
+ * dialog, and records the dialog's options as the app set them (its own listener runs first).
+ */
+async function catchDownloads(app: ElectronApplication, dir: string) {
+  await app.evaluate(({ session }, folder) => {
+    const caught: unknown[] = [];
+    Object.assign(globalThis, { penmossDownloads: caught });
+    session.defaultSession.on('will-download', (_event, item) => {
+      const path = `${folder}/${item.getFilename()}`;
+      caught.push({ name: item.getFilename(), dialog: item.getSaveDialogOptions(), path });
+      item.setSavePath(path);
+    });
+  }, dir);
+  return {
+    list: () =>
+      app.evaluate(
+        () => (globalThis as unknown as { penmossDownloads: Download[] }).penmossDownloads,
+      ),
+  };
+}
+
+/**
+ * Closes Excalidraw's open dialog (Save To…, Export Image…), if one is open, with Escape from a
+ * button in it (its close button shows only at a phone's width).
+ */
+async function closeExcalidrawDialog(page: Page) {
+  const modal = page.locator('.excalidraw-modal-container .Modal');
+  if (await modal.count()) await modal.getByRole('button').first().press('Escape');
+  await expect(modal).toHaveCount(0);
+}
 
 /** Draws a rectangle (Excalidraw's R) from `from` to `to`, in the canvas's own coordinates. */
 async function drawRectangle(
@@ -163,6 +206,50 @@ test('a drawing made from the slash menu shows in the note and is kept as files 
   await expect(pin).toHaveAttribute('aria-pressed', 'true');
   await pin.click();
   await expect(pin).toHaveAttribute('aria-pressed', 'false');
+
+  // Save To… and Export Image… (R2-19): each saves through a download that asks where to save
+  // it, in Downloads by default, filtered to its kind.
+  const folder = join(tmpdir(), `penmoss-drawing-downloads-${Date.now()}`);
+  const downloads = await catchDownloads(app, folder);
+  await editor(page).getByTestId('main-menu-trigger').click();
+  await expect(editor(page).getByTestId('load-button')).toHaveCount(0);
+  await editor(page).getByTestId('json-export-button').click();
+  await page.getByRole('button', { name: 'Save to file' }).click();
+  await expect.poll(async () => (await downloads.list()).length, { timeout: 20_000 }).toBe(1);
+  const [sceneFile] = await downloads.list();
+  expect(sceneFile!.name).toMatch(/\.excalidraw$/);
+  expect(sceneFile!.dialog).toMatchObject({
+    title: 'Save',
+    defaultPath: expect.stringMatching(/Downloads\/.+\.excalidraw$/),
+    filters: [{ name: 'Excalidraw Scene', extensions: ['excalidraw'] }],
+  });
+  await expect
+    .poll(() => {
+      try {
+        return (JSON.parse(readFileSync(sceneFile!.path, 'utf8')) as { type: string }).type;
+      } catch {
+        return null;
+      }
+    })
+    .toBe('excalidraw');
+  await closeExcalidrawDialog(page);
+  await editor(page).getByTestId('main-menu-trigger').click();
+  await editor(page).getByTestId('image-export-button').click();
+  await page.getByRole('button', { name: 'Export to PNG' }).click();
+  await expect.poll(async () => (await downloads.list()).length, { timeout: 20_000 }).toBe(2);
+  const image = (await downloads.list())[1]!;
+  expect(image.name).toMatch(/\.png$/);
+  expect(image.dialog).toMatchObject({ filters: [{ name: 'PNG Image', extensions: ['png'] }] });
+  await expect
+    .poll(() => {
+      try {
+        return [...readFileSync(image.path).subarray(0, 4)];
+      } catch {
+        return null;
+      }
+    })
+    .toEqual([0x89, 0x50, 0x4e, 0x47]);
+  await closeExcalidrawDialog(page);
 
   await page.waitForTimeout(2_000);
   await editor(page).getByRole('button', { name: 'Cancel' }).click();

@@ -25,6 +25,7 @@ import {
   ALLOWED_PERMISSIONS,
   appPath,
   ClipboardGate,
+  downloadDialog,
   isAppFrame,
   isExternalUrl,
   isAppUrl,
@@ -732,5 +733,27 @@ describe('permissions a page may have', () => {
     ]) {
       expect(ALLOWED_PERMISSIONS.has(refused)).toBe(false);
     }
+  });
+});
+
+describe('downloads (R2-19)', () => {
+  it('asks where to save each one, in Downloads by default, filtered to its kind', () => {
+    expect(downloadDialog('Untitled-2026-11-14.excalidraw', '/Users/r/Downloads')).toEqual({
+      title: 'Save',
+      defaultPath: '/Users/r/Downloads/Untitled-2026-11-14.excalidraw',
+      filters: [{ name: 'Excalidraw Scene', extensions: ['excalidraw'] }],
+    });
+    expect(downloadDialog('Garden.PNG', '/d').filters).toEqual([
+      { name: 'PNG Image', extensions: ['png'] },
+    ]);
+    expect(downloadDialog('beds.svg', '/d').filters).toEqual([
+      { name: 'SVG Image', extensions: ['svg'] },
+    ]);
+    // Another kind of file, or none named, still asks, with no filter.
+    expect(downloadDialog('notes.txt', '/d')).toEqual({
+      title: 'Save',
+      defaultPath: '/d/notes.txt',
+    });
+    expect(downloadDialog('  ', '/d').defaultPath).toBe('/d/Untitled');
   });
 });

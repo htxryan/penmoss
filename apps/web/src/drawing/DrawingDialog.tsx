@@ -4,9 +4,11 @@
  * (R2-17, R2-18): it drags the window in the Mac app, the traffic lights before it, then Back,
  * Forward and the pin as the app's own title bar has them, the editor's title, and Cancel and
  * Done as the app's icon and text buttons. Back and Forward keep the drawing, as Done does, then
- * go. Only drawing tools are offered: no files to open or save, no libraries, no collaboration
- * and no AI, and nothing here reaches the network. The note shows the SVG Done makes, inverted in
- * dark mode as Excalidraw itself does.
+ * go. Excalidraw's menu offers Save To… (the `.excalidraw` file) and Export Image… (PNG or SVG,
+ * or a copy), saved through the browser's download, which the Mac app asks where to put (R2-19);
+ * nothing opens a file, and there are no libraries, no collaboration and no AI, and nothing here
+ * reaches the network. The note shows the SVG Done makes, inverted in dark mode as Excalidraw
+ * itself does.
  */
 import { Excalidraw, MainMenu, serializeAsJSON } from '@excalidraw/excalidraw';
 import { Icon } from '@penmoss/ui/icons';
@@ -122,16 +124,21 @@ export function DrawingDialog({
           }}
           UIOptions={{
             canvasActions: {
+              // Nothing opens a file over the drawing; Save To… and Export Image… save one (R2-19).
               loadScene: false,
-              saveToActiveFile: false,
-              saveAsImage: false,
-              export: false,
+              saveToActiveFile: true,
+              saveAsImage: true,
+              export: { saveFileToDisk: true },
               toggleTheme: false,
             },
             tools: { image: false },
           }}
         >
           <MainMenu>
+            <MainMenu.DefaultItems.SaveToActiveFile />
+            <MainMenu.DefaultItems.Export />
+            <MainMenu.DefaultItems.SaveAsImage />
+            <MainMenu.Separator />
             <MainMenu.DefaultItems.ClearCanvas />
             <MainMenu.DefaultItems.ChangeCanvasBackground />
           </MainMenu>
