@@ -390,8 +390,11 @@ function stopOf(run: Run, config: FactoryConfig): Stop | null {
       const finished = has('agent-finished');
       // Exit 127: the agent's CLI itself wasn't there, so the agent never ran (PEN-75's run 1).
       const notStarted = !has('agent-started') || /exit 127|command not found/i.test(clean);
-      const text =
-        !finished && notStarted
+      // A review round that only rebases onto main runs no agent (A1377).
+      const rebase = str(run.events[0]?.['phase']) === 'rebase';
+      const text = rebase
+        ? `Rebasing onto main stopped: ${clean}`
+        : !finished && notStarted
           ? `Failed before the agent started: ${clean}`
           : !finished
             ? `The agent stopped before it finished: ${clean}`
@@ -972,7 +975,9 @@ function card(
     step = 'Planning Blocked';
   } else if (set) {
     paused = true;
-    step = 'Paused by you';
+    // Only a stop the ledger says Ryan made is his. Otherwise the ledger has no reason (a block
+    // set in Linear, or by an older factory that didn't log one): say Blocked, not who (A1377).
+    step = stop?.paused ? 'Paused by you' : 'Blocked';
     since = stop?.paused ? stop.at : null;
   } else if (!spec.ok && (st === s.pick || planning)) {
     needed = need('card', `Won't start: ${spec.error}`, 'Fix the labels in Linear.');
