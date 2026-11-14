@@ -139,8 +139,9 @@ test('without a release-notes file, Settings → Updates links to GitHub', async
   );
 });
 
-// PEN-110: after Penmoss updates (a stored older version), a notice at the window's foot says
-// so once, and What's New opens Settings → Updates at "In this version". It never comes back.
+// PEN-110: after Penmoss updates (a stored older version), a notice says so once (in the sidebar's
+// bottom panel since PEN-135), and What's New opens Settings → Updates at "In this version". It
+// never comes back.
 test("after an update, a notice says so once and What's New opens this version's notes", async () => {
   const userData = dataDir();
   mkdirSync(userData, { recursive: true });

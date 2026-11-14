@@ -54,6 +54,11 @@ export function installFakeBridge(config: {
   readonly platform: string;
   /** Search by meaning's service (T77): a Mac app from T76 on, with the model here. */
   readonly meaning?: boolean;
+  /**
+   * The main and note windows' `macWindow` (T46, T47): Keep on Top's pin, kept in the page, and
+   * the compact title bar, so `<html data-titlebar="compact">` is set as in the Mac app.
+   */
+  readonly macWindow?: boolean;
 }): void {
   const toBase64 = (bytes: Uint8Array): string => {
     let text = '';
@@ -118,6 +123,9 @@ export function installFakeBridge(config: {
 
   const state: FakeBridgeState = { menus: null, theme: null };
   window.__penmossFake = state;
+  /** This window's pin (`macWindow`), as main keeps it per window. */
+  let macState = { keepOnTop: false, fullScreen: false };
+  const macListeners = new Set<(state: typeof macState) => void>();
   const menuListeners = new Set<(event: MenuCommandEvent) => void>();
   const storeListeners = new Set<(ids?: readonly string[]) => void>();
   const store =
@@ -226,6 +234,9 @@ export function installFakeBridge(config: {
       setAuto: (on) => host('updatesSetAuto', on),
       setChannel: (channel) => host('updatesSetChannel', channel),
       install: () => host('updatesInstall'),
+      // The notice after an update (PEN-110) and its release notes (PEN-108).
+      acknowledge: () => host('updatesAcknowledge'),
+      notes: () => host('updatesNotes'),
       onChange: (listener) => listen(updateListeners, listener as (state: unknown) => void),
     },
     // Search by meaning (T77): main's relay to the stand-in Mac's service, when it has one.
@@ -261,6 +272,21 @@ export function installFakeBridge(config: {
         }
       },
     },
+    ...(config.macWindow && kind !== 'capture'
+      ? {
+          macWindow: {
+            titleBar: 'compact' as const,
+            state: () => Promise.resolve(macState),
+            onState: (listener: (state: typeof macState) => void) => listen(macListeners, listener),
+            setKeepOnTop: (keepOnTop: boolean) => {
+              macState = { ...macState, keepOnTop };
+              for (const listener of macListeners) listener(macState);
+              return Promise.resolve(macState);
+            },
+            setCompactTitleBar: (compact: boolean) => Promise.resolve({ compact, reopened: false }),
+          },
+        }
+      : {}),
     onBeforeClose: () => () => undefined,
     onStoreChanged: (listener) => listen(storeListeners, listener),
     stored: (ids) => store?.postMessage({ ids }),

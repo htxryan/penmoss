@@ -58,12 +58,14 @@ test('1, 3: the rail starts at the top, square; Today and This Week show when th
   await expect(week).toHaveAttribute('aria-current', 'page');
   await expect(today).not.toHaveAttribute('aria-current', 'page');
 
-  // The rail: Back and Forward at the very top, every highlight square.
+  // The rail: its first button at the very top, every highlight square. Beside a note, Back and
+  // Forward start the note's title bar, so the toggle is first (PEN-135 item 6).
   await page.getByTestId('toggle-sidebar').click();
   await expect(page.getByTestId('app-root')).toHaveAttribute('data-sidebar', 'collapsed');
   const sidebar = (await page.locator('#app-sidebar').boundingBox())!;
-  const back = (await page.getByTestId('app-back').boundingBox())!;
-  expect(back.y - sidebar.y).toBeLessThan(1);
+  const first = (await page.getByTestId('toggle-sidebar').boundingBox())!;
+  expect(first.y - sidebar.y).toBeLessThan(1);
+  await expect(page.locator('.note-top').getByTestId('app-back')).toBeVisible();
   await expect(week).toHaveAttribute('aria-current', 'page');
   for (const selector of [
     '.history-pair',

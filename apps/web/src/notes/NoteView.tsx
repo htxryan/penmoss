@@ -23,6 +23,7 @@ import {
   lazy,
   Suspense,
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -69,6 +70,7 @@ import { UnsupportedNote } from './UnsupportedNote';
 import { AppBar } from '../shell/AppBar';
 import { withKeys } from '../shell/drawer';
 import { usePhone } from '../shell/media';
+import { TitleBarLead } from '../shell/title-lead';
 import { NoteActions, type NotePanelTab } from './NoteActions';
 import { useNotePanelMode, usePaneWidth } from './panel-mode';
 import { NOTE_MIN_REM, PANE_LIMITS, usePaneSize } from '../shell/pane-widths';
@@ -176,6 +178,7 @@ export function NoteView({
 }) {
   const notes = useNotes();
   const directory = useDirectory();
+  const lead = useContext(TitleBarLead);
   // Wikilinks (T16): titles and completion from the registry; new notes are filed beside this one.
   const links = useMemo(() => directory.forNote(id), [directory, id]);
   // T53 item 9 (A985): the panel is open on one tab beside the note's strip of tab icons, or
@@ -1060,6 +1063,12 @@ export function NoteView({
         <NoteActions source={showSource} tab={shownTab} pinned={pinned} />
       </AppBar>
       <header className="note-top">
+        {/* Back, Forward and the pin, beside the rail (PEN-135 item 6). */}
+        {lead ? (
+          <div className="note-top-lead" data-testid="note-top-lead">
+            {lead}
+          </div>
+        ) : null}
         {nav ?? (
           <nav className="crumbs" aria-label="Breadcrumb">
             <ol>

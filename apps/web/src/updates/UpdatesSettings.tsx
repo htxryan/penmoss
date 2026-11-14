@@ -1,14 +1,15 @@
 /**
  * Settings → Updates (the switch, the channel, Check Now and Install and Restart, then the release
- * notes, PEN-108) and the notice a newer build brings (T64 item 2, A1112, A1196). The Mac app only.
+ * notes, PEN-108) and the notice a newer build brings (T64 item 2, A1112, A1196), in the sidebar or
+ * as a toast (PEN-135; its model is notice.ts). The Mac app only.
  */
 import { Icon } from '@penmoss/ui/icons';
 import { useId, useState } from 'react';
 import type { DesktopUpdateChannel } from '../desktop/bridge';
 import { navigate } from '../router';
-import { updatedNotice, WHATS_NEW_PATH } from './notes';
+import { UPDATES_PATH, type UpdateNoticeModel } from './notice';
 import { ReleaseNotes } from './ReleaseNotes';
-import { nameOf, updateStatus, useReleaseNotes, useUpdates } from './updates';
+import { nameOf, updateStatus, useUpdates } from './updates';
 import { ToastSlot } from '../toasts/ToastSlot';
 
 const CHANNELS: ReadonlyArray<{ value: DesktopUpdateChannel; label: string }> = [
@@ -153,44 +154,23 @@ export function UpdatesSettings() {
 }
 
 /**
- * The notice a newer build brings (T64 item 2): at the window's foot until dismissed, with
- * Install and Restart, and the download's progress after it. After an update, and only when the
- * new version has notes, it says so once, with What's new (PEN-110).
+ * The notice as a toast at the window's foot (A1305, A1306): only where the sidebar is a drawer
+ * (a narrow window); elsewhere it is in the sidebar's bottom panel (PEN-135 item 10).
  */
-export function UpdateNotice() {
-  const found = useUpdates();
-  const file = useReleaseNotes();
-  const [dismissed, setDismissed] = useState<string | null>(null);
-  /** The notice after an update was answered here, before main says so. */
-  const [answered, setAnswered] = useState(false);
-  const state = found?.state ?? null;
-  const shown =
-    state &&
-    state.version &&
-    (state.phase === 'available' || state.phase === 'downloading' || state.phase === 'ready') &&
-    (state.phase !== 'available' || dismissed !== state.version)
-      ? state
-      : null;
-  const updated =
-    !shown && !answered && state ? updatedNotice(file, state.current, state.updatedFrom) : null;
-  const answer = (whatsNew: boolean) => {
-    setAnswered(true);
-    void found?.updates.acknowledge?.().catch(() => null);
-    if (whatsNew) navigate(WHATS_NEW_PATH);
-  };
+export function UpdateNotice({ notice: shown }: { readonly notice: UpdateNoticeModel | null }) {
   return (
     <ToastSlot>
-      {shown && found ? (
+      {shown?.kind === 'offered' ? (
         <div className="toast toast-with-action" data-tone="info" data-testid="update-notice">
           <Icon name="refresh" />
-          <span>{updateStatus(shown)}</span>
-          {shown.phase === 'available' ? (
+          <span>{shown.text}</span>
+          {shown.dismiss ? (
             <>
               <button
                 type="button"
                 className="btn primary"
                 data-ui="submit"
-                onClick={() => void found.updates.install().catch(() => null)}
+                onClick={shown.install}
                 data-testid="update-install"
               >
                 Install and Restart
@@ -200,22 +180,22 @@ export function UpdateNotice() {
                 className="toast-close"
                 data-ui="dismiss"
                 aria-label="Dismiss"
-                onClick={() => setDismissed(shown.version)}
+                onClick={shown.dismiss}
               >
                 <Icon name="close" size={14} />
               </button>
             </>
           ) : null}
         </div>
-      ) : updated ? (
+      ) : shown?.kind === 'updated' ? (
         <div className="toast toast-with-action" data-tone="info" data-testid="updated-notice">
           <Icon name="refresh" />
-          <span>Updated to {updated}.</span>
+          <span>Updated to {shown.version}.</span>
           <button
             type="button"
             className="btn primary"
             data-ui="submit"
-            onClick={() => answer(true)}
+            onClick={shown.whatsNew}
             data-testid="updated-whats-new"
           >
             What's New
@@ -225,7 +205,7 @@ export function UpdateNotice() {
             className="toast-close"
             data-ui="dismiss"
             aria-label="Dismiss"
-            onClick={() => answer(false)}
+            onClick={shown.dismiss}
             data-testid="updated-dismiss"
           >
             <Icon name="close" size={14} />
@@ -233,5 +213,102 @@ export function UpdateNotice() {
         </div>
       ) : null}
     </ToastSlot>
+  );
+}
+
+/**
+ * The notice in the sidebar's bottom panel, above Settings and Feedback (PEN-135 item 10): one
+ * compact line with its icon, what it says, its button (What's New, or Install and Restart) and
+ * ✕. On the rail it is one icon button with a dot: after an update it opens What's New, as the
+ * line's button does; a build on offer opens Settings → Updates, which has Install and Restart and
+ * the download's progress. Its name and tooltip say which.
+ */
+export function SidebarUpdateNotice({
+  notice,
+  rail,
+}: {
+  readonly notice: UpdateNoticeModel | null;
+  readonly rail: boolean;
+}) {
+  if (!notice) return null;
+  if (rail) {
+    const label =
+      notice.kind === 'updated'
+        ? `Updated to ${notice.version}: What's New`
+        : `${notice.text.replace(/\.$/, '')}: Settings → Updates`;
+    return (
+      <button
+        type="button"
+        className="icon-btn sb-update-dot"
+        data-ui="submit"
+        aria-label={label}
+        data-tip={label}
+        data-kind={notice.kind}
+        data-testid={notice.kind === 'updated' ? 'updated-notice' : 'update-notice'}
+        onClick={notice.kind === 'updated' ? notice.whatsNew : () => navigate(UPDATES_PATH)}
+      >
+        <Icon name="refresh" size={18} />
+        <span className="sb-update-badge" aria-hidden="true" />
+      </button>
+    );
+  }
+  return notice.kind === 'updated' ? (
+    <div className="sb-update" data-kind="updated" data-testid="updated-notice">
+      <Icon name="refresh" size={14} />
+      <span className="sb-update-text">Updated to {notice.version}.</span>
+      <button
+        type="button"
+        className="sb-update-action"
+        data-ui="submit"
+        onClick={notice.whatsNew}
+        data-testid="updated-whats-new"
+      >
+        What's New
+      </button>
+      <button
+        type="button"
+        className="icon-btn sb-update-close"
+        data-ui="dismiss"
+        aria-label="Dismiss"
+        data-tip="Dismiss"
+        onClick={notice.dismiss}
+        data-testid="updated-dismiss"
+      >
+        <Icon name="close" size={14} />
+      </button>
+    </div>
+  ) : (
+    <div
+      className="sb-update"
+      data-kind="offered"
+      data-phase={notice.phase}
+      data-testid="update-notice"
+    >
+      <Icon name="refresh" size={14} />
+      <span className="sb-update-text">{notice.text}</span>
+      {notice.dismiss ? (
+        <>
+          <button
+            type="button"
+            className="sb-update-action"
+            data-ui="submit"
+            onClick={notice.install}
+            data-testid="update-install"
+          >
+            Install and Restart
+          </button>
+          <button
+            type="button"
+            className="icon-btn sb-update-close"
+            data-ui="dismiss"
+            aria-label="Dismiss"
+            data-tip="Dismiss"
+            onClick={notice.dismiss}
+          >
+            <Icon name="close" size={14} />
+          </button>
+        </>
+      ) : null}
+    </div>
   );
 }

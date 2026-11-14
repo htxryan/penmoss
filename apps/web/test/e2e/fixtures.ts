@@ -92,7 +92,7 @@ function encode(value: unknown): unknown {
 export async function connectContext(
   context: BrowserContext,
   host: GitHost,
-  options: { readonly meaning?: boolean } = {},
+  options: { readonly meaning?: boolean; readonly macWindow?: boolean } = {},
 ): Promise<void> {
   await context.exposeBinding(GIT_BINDING, async (_source, method: unknown, args: unknown) => {
     if (typeof method !== 'string' || !CALLS.has(method)) {
@@ -105,6 +105,7 @@ export async function connectContext(
   await context.addInitScript(installFakeBridge, {
     platform: process.platform,
     meaning: meaning !== null,
+    macWindow: options.macWindow === true,
   });
   const tell = (hook: string) => {
     for (const page of context.pages()) {
@@ -176,16 +177,19 @@ export const test = base.extend<{
   host: GitHost;
   /** The stand-in Mac has search by meaning (T77): its service, with a concept embedder. */
   meaning: boolean;
+  /** The windows have the Mac's `macWindow`: Keep on Top's pin and the compact title bar. */
+  macWindow: boolean;
   /** The notebook the test starts in, or null with `seed: null`. */
   notebook: SeededNotebook | null;
 }>({
   seed: [{}, { option: true }],
   meaning: [false, { option: true }],
+  macWindow: [false, { option: true }],
   // The test's context is a window set of one stand-in Mac: its main process comes with it.
-  context: async ({ context, meaning }, use) => {
+  context: async ({ context, meaning, macWindow }, use) => {
     const host = new GitHost();
     hosts.set(context, host);
-    await connectContext(context, host, { meaning });
+    await connectContext(context, host, { meaning, macWindow });
     await use(context);
     await context.close();
     await host.meaning?.stop();

@@ -35,7 +35,7 @@ Penmoss can check for a newer release and offer it; you choose when to install i
 
 The main window has three panes: the sidebar, the note, and the note panel. Drag the edge between two panes to resize them; Penmoss remembers the widths on this Mac.
 
-- **The sidebar** holds the shortcuts row (New Note, Search, Today, This Week, Graph, Commands), then Quick Access, Recent Notes, your notebooks, the calendar and tags. ⌘\\ folds it to a rail of icons and back. **Settings → Display** chooses what it shows.
+- **The sidebar** holds the shortcuts row (New Note, Search, Today, This Week, Graph, Commands), then Quick Access, Recent Notes, your notebooks, the calendar and tags. Its bottom row has Settings and Send Feedback, and above them the notice of a new version. ⌘\\ folds it to a rail of icons and back: Settings and Send Feedback stay at the rail's foot, and a note's top bar then starts with Back, Forward and the Keep on Top pin. The buttons in the sidebar's top row always fit, however narrow you drag it. **Settings → Display** chooses what it shows.
 - **The note** has its title, the editor and, at the foot, the **status bar**: whether the note is saved and in git, and its words, characters and reading time (for the selection while text is selected). **Settings → Display** chooses what the status bar and the line under the title show, and which buttons the note's top bar has.
 - **The note panel**, on the right, has four tabs: **Metadata** (folder, dates, tags, frontmatter and [backlinks](/docs/links/#backlinks)), **Comments**, **History** and **Local Graph**. The **Note Panel** button in the note's top bar shows or hides it. **Settings → Appearance → Note Panel** chooses whether it starts open.
 
@@ -57,7 +57,7 @@ When no Penmoss window is on screen, clicking Penmoss in the Dock brings back th
 
 **Keep on Top** pins a window above other apps' windows, on every Space, so a note stays in view while you work elsewhere. It never floats over a full-screen app. Turn it on or off with:
 
-- the pin in the sidebar's header, or in a note window's top bar;
+- the pin in the sidebar's header (in the note's top bar while the sidebar is a rail), or in a note window's top bar;
 - **View → Keep on Top**;
 - **Keep on Top** in the command palette.
 
