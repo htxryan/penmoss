@@ -16,6 +16,7 @@ import {
   NotebookOps,
 } from '@penmoss/git-notebook';
 import { lockNotebook, NodeGitTransport } from '@penmoss/git-notebook/node';
+import { notebookTag, shortNoteRef } from '@penmoss/core/note-ref';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Io } from '../src/io';
 import { run } from '../src/main';
@@ -164,6 +165,44 @@ describe('penmoss notebook', () => {
     );
     expect((await cli(['cat', id, '--notebook', 'first', '--body'])).stdout).toBe('here\n');
     expect((await cli(['cat', id, '--notebook', 'second'])).code).toBe(4);
+  });
+
+  it('finds the notebook from a short id alone, and penmoss mcp names the notebook a short id is of (PEN-69)', async () => {
+    const cli = machine('refs');
+    await cli(['notebook', 'add', `file://${bare('first')}`, '--name', 'first']);
+    await cli(['notebook', 'add', `file://${bare('second')}`, '--name', 'second']);
+    const made = await cli(['new', 'Short', '--text', 'by ref', '--notebook', 'first', '--json']);
+    expect(made.code, made.stderr).toBe(0);
+    const id = made.json()['id'] as string;
+    const listed = await cli(['notebook', 'ls', '--json']);
+    const entries = (listed.json()['notebooks'] ?? listed.json()) as unknown as Array<{
+      name: string;
+      notebookId: string;
+    }>;
+    const first = entries.find((entry) => entry.name === 'first')!;
+    const ref = shortNoteRef(first.notebookId, id);
+    // Two notebooks here, no --notebook: the short id says which.
+    const read = await cli(['cat', ref.toLowerCase(), '--body']);
+    expect(read.code, read.stderr).toBe(0);
+    expect(read.stdout).toBe('by ref\n');
+    const wrong = await cli(['cat', ref, '--notebook', 'second']);
+    expect(wrong.code).toBe(4);
+    const nowhere = await cli(['cat', `${notebookTag('elsewhere')}-${id.slice(-8)}`]);
+    expect(nowhere.code).toBe(4);
+    expect(nowhere.stderr).toContain('No git notebook on this machine holds');
+    const served = await cli(['mcp', '--notebook', 'second'], {
+      lines: [
+        JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'tools/call',
+          params: { name: 'read_note', arguments: { id: ref } },
+        }),
+      ],
+    });
+    const reply = JSON.parse(served.stdout.trim().split('\n')[0]!) as McpReply;
+    expect(reply.result.isError).toBe(true);
+    expect(JSON.stringify(reply.result)).toContain('penmoss mcp --notebook \\"');
   });
 
   it('adds a notebook, edits it from two machines offline, and they converge with no merges', async () => {

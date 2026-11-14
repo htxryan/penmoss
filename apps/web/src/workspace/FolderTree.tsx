@@ -1135,7 +1135,7 @@ export function FolderTree({
               }}
               onCopyReference={(id) => {
                 closeMenu();
-                void copyAgentReference(id, titleOf(id)).then((done) =>
+                void copyAgentReference(id).then((done) =>
                   // The same words as the note's status, with no full stop (T52).
                   say(
                     done ? COPIED_AGENT_REFERENCE : 'Could not copy the agent reference',
