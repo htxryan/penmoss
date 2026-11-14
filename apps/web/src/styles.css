@@ -1624,6 +1624,20 @@ a {
 }
 
 /*
+ * The containment above makes each block its own formatting context, so the margins inside it
+ * (a nested list's lines, a quote's paragraphs) stop collapsing through its edges while the
+ * editor is unfocused. A list three levels deep grew 2.4 px when the caret went to the title, and
+ * the text below it moved (PEN-135, A1360). Each such block is its own formatting context with
+ * focus too, so the margins inside it stay inside it, the same with focus and without, at any
+ * depth.
+ */
+.note-body
+  .ProseMirror
+  > :is(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote):not(:has(.pm-symbols)) {
+  display: flow-root;
+}
+
+/*
  * Each block's height is remembered while the editor has focus too (T53 item 11), so the first
  * frame after it loses focus lays a block out at the height it had, not at the 1.7em guess: the
  * guess shrank a list or a wrapped paragraph for a frame and the text below jumped.

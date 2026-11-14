@@ -39,7 +39,7 @@ import { BlockMove } from './extensions/drag-handle';
 import { Callout, memoryFoldState, type FoldState } from './extensions/callout';
 import { ChecklistShortcut } from './extensions/checklist';
 import { ListJoin } from './extensions/list-join';
-import { TitleHandoff } from './extensions/title-handoff';
+import { TitleArrowUp, TitleHandoff } from './extensions/title-handoff';
 import { blockTypeKey } from './block-keys';
 import { CodeHighlight, PenmossCodeBlock } from './extensions/code-block';
 import { HiddenContent } from './extensions/hidden-content';
@@ -317,6 +317,7 @@ export function noteExtensions(options: NoteExtensionsOptions = {}): AnyExtensio
     ChecklistShortcut,
     ListJoin,
     TitleHandoff,
+    TitleArrowUp,
     alignNode(InlineMath, 'inlineMath'),
     alignNode(BlockMath, 'blockMath'),
     alignNode(wikilinkExtension(options.links), 'wikilink'),

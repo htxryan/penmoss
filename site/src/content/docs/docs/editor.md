@@ -7,6 +7,10 @@ This page shows you what the editor can do: the blocks you can insert, the markd
 
 Everything you write is saved as markdown. What you see in the editor is what the `.md` file in your repository holds.
 
+## The title
+
+The note's title sits above its first line, and the caret moves between them as it does between lines. Enter in the title, or ↓ on its last line, goes to the start of the note's first line. ↑ on the first line goes back to the end of the title, and Backspace at the start of a first line of plain text joins it to the title.
+
 ## The slash menu
 
 Type `/` at the start of a line or after a space to open the slash menu. Keep typing to filter it, move with ↑ and ↓, and press Enter or Tab to insert. Escape closes it.
