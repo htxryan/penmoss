@@ -323,7 +323,7 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
       name: 'describe_tags',
       title: 'Describe tags',
       description:
-        'What tags mean, in Ryan\'s words: each tag with its description (null when he wrote none), how many notes have it or a tag nested under it, and the descriptions of the tags above it (ancestors, outermost first) as context. ' +
+        "What tags mean, in Ryan's words: each tag with its description (null when he wrote none), how many notes have it or a tag nested under it, and the descriptions of the tags above it (ancestors, outermost first) as context. " +
         'A parent tag does not describe its children: each has its own. Without tags: every tag. With tags: those, and the tags nested under each. ' +
         'Read it before choosing tags for a note, or to understand what a tag in a search or a note is for.',
       inputSchema: object({
@@ -331,7 +331,8 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
           type: 'array',
           maxItems: 100,
           items: { type: 'string', maxLength: 200 },
-          description: 'Tags, without #, e.g. ["project/penmoss"]; a parent includes its nested tags.',
+          description:
+            'Tags, without #, e.g. ["project/penmoss"]; a parent includes its nested tags.',
         },
       }),
       write: false,

@@ -29,7 +29,12 @@ import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import { docToDelta } from '@y/prosemirror';
 import { toBase64 } from 'lib0/buffer';
 import * as Y from '@y/y';
-import { GitNotebookEngine, MemorySecrets, MemoryStorage, NotebookOps } from '@penmoss/git-notebook';
+import {
+  GitNotebookEngine,
+  MemorySecrets,
+  MemoryStorage,
+  NotebookOps,
+} from '@penmoss/git-notebook';
 import { LocalNotebook } from '@penmoss/git-notebook/local';
 import { NodeGitTransport } from '@penmoss/git-notebook/node';
 import { setTagDescription } from '@penmoss/sync-client/workspace';

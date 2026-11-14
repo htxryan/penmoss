@@ -74,11 +74,7 @@ import { isDeleted, readIdentity } from '@penmoss/sync-client/note';
 import { restoreContent, setBody } from '@penmoss/sync-client/history';
 import { revertChange } from '@penmoss/editor/revert';
 import { setFrontmatterTag } from '@penmoss/sync-client/tags';
-import {
-  readTagDescriptions,
-  readWorkspace,
-  setSortMode,
-} from '@penmoss/sync-client/workspace';
+import { readTagDescriptions, readWorkspace, setSortMode } from '@penmoss/sync-client/workspace';
 import * as Y from '@y/y';
 import { AgentActivity, type ActivityEntry } from '../agent-activity';
 import type { GitNotebookEngine } from '../engine';
