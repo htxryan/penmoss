@@ -345,8 +345,13 @@ test('a notebook made on the Mac, notes and the Journal in it, synced on quit, n
   // commit name and email… takes the person to it; its own identity is used from the next
   // commit (#170 F6), and File → Sync this git notebook now pushes it.
   await chooseMenu(app, 'app.home');
+  // From the home page, as a person gets there: the menu item is chosen once home has shown,
+  // not 3 ms after Close the Note (the failed CI run stayed on home).
+  await expect(page).toHaveURL('app://penmoss/');
   const ownCard = page.getByTestId('git-notebook').filter({ hasText: name });
   await chooseMenu(app, 'git.identity');
+  // Its page first, so a failure says whether the command took the person there at all.
+  await expect(page).toHaveURL(`app://penmoss/settings/git-notebooks/${notebookId}`);
   await expect(ownCard.getByTestId('git-author-email')).toBeFocused();
   await ownCard.getByTestId('git-author-name').fill('Ryan');
   await ownCard.getByTestId('git-author-email').fill('1234+ryan@users.noreply.github.com');
