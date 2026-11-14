@@ -300,6 +300,13 @@ export class MeaningIndex {
     return this.coverage();
   }
 
+  /** The keys of every live note's chunks, with vectors or still waiting: what to keep cached. */
+  usedKeys(): Set<string> {
+    const keys = this.index.keys();
+    for (const note of this.pending.values()) for (const chunk of note.chunks) keys.add(chunk.key);
+    return keys;
+  }
+
   /** Notes still waiting for vectors. */
   get waiting(): number {
     return this.pending.size;

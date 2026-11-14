@@ -6,8 +6,23 @@
  * writers' appends by reading each segment's new tail; the lease holder (A1157) compacts by
  * writing a new base and renaming it into place, keeping only the keys still in use. An append
  * racing a compaction can be lost: a cache miss embedded again later, never a wrong vector.
+ *
+ * The holder sees only its own notebooks, so every process that searches a notebook claims the
+ * keys that notebook uses, in `claims/<owner>.keys`, and a compaction keeps those too; a claim
+ * not renewed for `CLAIM_TTL_MS` is a notebook no longer used here, and goes (PEN-134, A1355).
  */
-import { mkdir, open, readdir, rename, rm, stat, unlink } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import {
+  mkdir,
+  open,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  unlink,
+  writeFile,
+} from 'node:fs/promises';
 import { join } from 'node:path';
 import type { VectorCache } from '@penmoss/core/search';
 
@@ -17,6 +32,10 @@ const HEADER_BYTES = 16;
 const KEY_BYTES = 32;
 const BASE = 'base.bin';
 const SEGMENT = /^seg-([a-z0-9-]+)\.bin$/;
+const CLAIMS = 'claims';
+const CLAIM = /^[0-9a-f]{32}\.keys$/;
+/** A claim not renewed for this long is a notebook no longer used on this Mac. */
+export const CLAIM_TTL_MS = 14 * 24 * 60 * 60_000;
 
 /** The cache's folder for a model id (its `/` and `@` made safe for a file name). */
 export function vectorsDir(home: string, model: string): string {
@@ -110,7 +129,8 @@ export class FileVectorCache implements VectorCache {
     await this.refresh();
     await mkdir(this.dir, { recursive: true });
     const absorbed = (await readdir(this.dir)).filter((name) => SEGMENT.test(name));
-    const kept = [...this.vectors].filter(([key]) => keep.has(key));
+    const claimed = await this.claimed();
+    const kept = [...this.vectors].filter(([key]) => keep.has(key) || claimed.has(key));
     const temp = join(this.dir, `base.${process.pid}.tmp`);
     const handle = await open(temp, 'w');
     try {
@@ -128,6 +148,42 @@ export class FileVectorCache implements VectorCache {
     this.tails.clear();
     await this.refresh();
     return dropped;
+  }
+
+  /**
+   * Records the keys one notebook's notes use (`owner`: anything that names it on this Mac, such
+   * as its clone's folder), so a compaction by a process that doesn't open it keeps them.
+   */
+  async claim(owner: string, keys: ReadonlySet<string>): Promise<void> {
+    const dir = join(this.dir, CLAIMS);
+    await mkdir(dir, { recursive: true });
+    const name = `${createHash('sha256').update(owner).digest('hex').slice(0, 32)}.keys`;
+    const body = Buffer.concat(
+      [...keys].filter((key) => /^[0-9a-f]{64}$/.test(key)).map((key) => Buffer.from(key, 'hex')),
+    );
+    const temp = join(dir, `${name}.${process.pid}.tmp`);
+    await writeFile(temp, body);
+    await rename(temp, join(dir, name));
+  }
+
+  /** Every key a live claim names; expired claims are removed on the way. */
+  private async claimed(): Promise<Set<string>> {
+    const dir = join(this.dir, CLAIMS);
+    const keys = new Set<string>();
+    const names = await readdir(dir).catch(() => [] as string[]);
+    for (const name of names.filter((n) => CLAIM.test(n))) {
+      const path = join(dir, name);
+      const info = await stat(path).catch(() => undefined);
+      if (!info) continue;
+      if (Date.now() - info.mtimeMs > CLAIM_TTL_MS) {
+        await unlink(path).catch(() => undefined);
+        continue;
+      }
+      const body = await readFile(path).catch(() => Buffer.alloc(0));
+      for (let at = 0; at + KEY_BYTES <= body.length; at += KEY_BYTES)
+        keys.add(body.subarray(at, at + KEY_BYTES).toString('hex'));
+    }
+    return keys;
   }
 
   /** Reads what other processes appended since the last call; reloads after a compaction. */

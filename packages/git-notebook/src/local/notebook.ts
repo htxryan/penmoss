@@ -148,6 +148,8 @@ export interface LocalMeaning {
    * lease holder indexes, everyone else embeds just the query and this budget (A1157).
    */
   readonly budgetMs?: number;
+  /** Records the keys this notebook uses, so a compaction elsewhere keeps them (PEN-134). */
+  readonly claim?: (keys: ReadonlySet<string>) => Promise<void>;
 }
 
 /** One search result, as the REST API's `GET /api/search` gives it. */
@@ -779,6 +781,8 @@ export class LocalNotebook {
       budgetMs,
       embed: budgetMs > 0,
     });
+    // A claim that fails costs a re-embedding later, never this search.
+    await meaning.claim?.(meaning.index.usedKeys()).catch(() => undefined);
     const found = await meaning.index.search(query, {
       limit: HYBRID_DEPTH,
       filter: (id) => {

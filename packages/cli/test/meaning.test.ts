@@ -36,7 +36,14 @@ function bare(name: string): string {
 /** The model as a test controls it: here or not, on or off, the lease free or taken. */
 function fakeMeaning(initial: { state?: MeaningStatus['state']; leaseFree?: boolean } = {}) {
   const embedder = fakeEmbedder();
-  const cache = Object.assign(new MemoryVectorCache(), { compact: () => Promise.resolve(0) });
+  const claims: Array<{ owner: string; keys: Set<string> }> = [];
+  const cache = Object.assign(new MemoryVectorCache(), {
+    compact: () => Promise.resolve(0),
+    claim: (owner: string, keys: ReadonlySet<string>) => {
+      claims.push({ owner, keys: new Set(keys) });
+      return Promise.resolve();
+    },
+  });
   const control = {
     state: initial.state ?? 'ready',
     enabled: true,
@@ -47,6 +54,8 @@ function fakeMeaning(initial: { state?: MeaningStatus['state']; leaseFree?: bool
     opened: 0,
     closed: 0,
     embedded: 0,
+    /** Each claim on the vectors a notebook uses (PEN-134). */
+    claims,
   };
   const status = (): Promise<MeaningStatus> =>
     Promise.resolve({
@@ -226,7 +235,8 @@ describe('penmoss search with meaning (T75, A1156)', () => {
     });
     expect(fused.json()['notice']).toBeUndefined();
     // Each one-shot search opens the model and lets it go.
-    expect(control.closed).toBe(control.opened);
+    expect(control.closed).toBe(control.opened); // And claims what the notebook uses, so the app's compaction keeps it (PEN-134).
+    expect(control.claims.at(-1)?.keys.size).toBe(2);
   });
 
   it('stays words only for full-text, without opening the model', async () => {
@@ -323,6 +333,20 @@ describe('penmoss mcp with meaning (T75, A1157)', () => {
       mode: 'semantic',
       coverage: { total: 2 },
     });
+  });
+
+  it('claims every chunk its notes use, without the lease and before they are embedded (PEN-134)', async () => {
+    const { meaning, control } = fakeMeaning({ leaseFree: false });
+    const cli = machine(meaning);
+    await withNotes(cli);
+    await cli(['mcp', '--notebook', 'nb'], ['wait', 'wait', 'wait']);
+    expect(control.embedded).toBe(0);
+    const last = control.claims.at(-1)!;
+    // One chunk for each of the two notes: the app's compaction keeps both.
+    expect(last.keys.size).toBe(2);
+    // A one-shot search renews the same claim, not a second one.
+    await cli(['search', 'battery', '--mode', 'semantic', '--no-sync']);
+    expect(control.claims.at(-1)!.owner).toBe(last.owner);
   });
 
   it('keeps trying for the lease, and indexes once the holder is gone (A1350)', async () => {

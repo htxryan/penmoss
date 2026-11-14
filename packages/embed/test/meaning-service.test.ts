@@ -54,6 +54,7 @@ function fakeSource(options: { embedder?: Embedder; ready?: boolean } = {}) {
       this.compacted.push(new Set(keep));
       return Promise.resolve(0);
     },
+    claim: () => Promise.resolve(),
   });
   const embedder = options.embedder ?? fakeEmbedder();
   const opens: string[] = [];
