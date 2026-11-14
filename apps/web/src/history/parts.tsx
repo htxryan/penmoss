@@ -59,10 +59,10 @@ export function Authors({ authors }: { authors: readonly Author[] }) {
 
 /**
  * A line diff as History shows it: `+` and `−` on the added and removed lines. Long unchanged runs
- * are folded unless `whole` (Replay shows the whole text, its changes marked).
+ * are folded.
  */
-export function DiffLines({ diff, whole = false }: { diff: readonly DiffOp[]; whole?: boolean }) {
-  const rows = whole ? diff : diffRows(diff);
+export function DiffLines({ diff }: { diff: readonly DiffOp[] }) {
+  const rows = diffRows(diff);
   return (
     <pre>
       {rows.map((row, i) =>

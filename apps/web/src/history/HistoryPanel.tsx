@@ -4,7 +4,6 @@ import { useCommand, useCommands } from '../commands/hooks';
 import { useNotes } from '../notes/hooks';
 import { useSource } from '../sources/hooks';
 import { Authors, DiffLines } from './parts';
-import { Replay } from './Replay';
 import { revertible } from './revertible';
 import {
   gitHistory,
@@ -73,8 +72,6 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
   const [status, setStatus] = useState<string | null>(null);
   const [conflicts, setConflicts] = useState<readonly Conflict[]>([]);
   const [busy, setBusy] = useState(false);
-  // Replay (PEN-21): the versions played forward, in place of the list.
-  const [replaying, setReplaying] = useState(false);
   const heading = useId();
 
   /** Bumped to read the list again (Try Again). */
@@ -189,17 +186,6 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
         >
           {source.saveLabel}
         </button>
-        <button
-          type="button"
-          className="btn quiet history-replay-start"
-          data-ui="item"
-          data-testid="history-replay-start"
-          disabled={!history || history.versions.length === 0 || replaying}
-          onClick={() => setReplaying(true)}
-        >
-          <Icon name="play" />
-          Replay
-        </button>
       </div>
       {error ? (
         <div className="history-empty muted" role="status">
@@ -224,8 +210,6 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
           <span className="spinner" aria-hidden="true" />
           Loading versions…
         </p>
-      ) : replaying ? (
-        <Replay source={source} versions={history.versions} onClose={() => setReplaying(false)} />
       ) : (
         <div className="history-body">
           <ol className="history-list" aria-label="Versions">
