@@ -255,6 +255,28 @@ describe('NodeGitTransport', () => {
     expect(classify('! [remote rejected] main -> main (pre-receive hook declined)')).toBe(
       'refused',
     );
+    // Where git went is no reason (PEN-117): a remote or folder named tls, ssl or GH006.
+    for (const remote of [
+      'file:///tmp/penmoss-nb-xSsLq1/gh007.git',
+      'https://github.com/tls-team/hassle.git',
+      'git@github.com:gh006/notes.git',
+      'ssh://git@tls.example.com/notes.git',
+      // A plain path remote: git prints it bare after "To", and quoted in "failed to push".
+      '/tmp/penmoss-nb-xTlS9a/gh007.git',
+    ]) {
+      expect(
+        classify(
+          `remote: error: GH007: Your push would publish a private email address.\nerror: failed to push some refs to '${remote}'\nTo ${remote}\n!\trefs/heads/main:refs/heads/main\t[remote rejected] (pre-receive hook declined)`,
+        ),
+        remote,
+      ).toBe('refused');
+    }
+    expect(classify("fatal: Unable to create '/tmp/ssl/clone.git/index.lock': File exists.")).toBe(
+      'git',
+    );
+    expect(
+      classify("fatal: unable to access 'https://tls.example.com/x.git/': SSL certificate problem"),
+    ).toBe('network');
     expect(hostMessage('remote: \u001b[1mone\u001b[0m\nremote:\nlocal\nremote: two')).toBe(
       'one\ntwo',
     );

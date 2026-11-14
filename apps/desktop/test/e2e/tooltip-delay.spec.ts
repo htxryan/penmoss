@@ -87,11 +87,20 @@ test('Show Tooltips After in Settings → Display sets the hover delay; Never st
   await page.waitForTimeout(2500);
   await expect(tooltip).toBeHidden();
 
-  // Keyboard focus still shows it at once.
+  // Keyboard focus still shows it at once. Tab on to the next control and Shift+Tab back, never
+  // the other way (PEN-84): with Back and Forward disabled, as they often are here, the link is
+  // the page's first control, so Shift+Tab wraps to the last one and scrolls the settings to it,
+  // and Tab wraps back. That scroll's event comes a frame later, after the link's focus showed
+  // its tooltip, and hides it, as scrolling does. Two frames after the Tab, any scroll it made
+  // has been and gone before the link takes the focus.
   await page.mouse.move(900, 700);
   await back.focus();
-  await page.keyboard.press('Shift+Tab');
   await page.keyboard.press('Tab');
+  await expect(back).not.toBeFocused();
+  await page.evaluate(
+    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+  );
+  await page.keyboard.press('Shift+Tab');
   await expect(back).toBeFocused();
   await expect(tooltip).toHaveText('Back to Your Notes', { timeout: 500 });
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/mac-tooltip-delay-focus.png` });

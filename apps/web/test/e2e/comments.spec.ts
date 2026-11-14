@@ -2,6 +2,7 @@ import { readThreads } from '@penmoss/sync-client/comments';
 import { expect, seeded, test, type Page } from './fixtures';
 import { COMMENT, NEW_NOTE } from './keys';
 import { readRemote, remoteMarkdown } from './support/remote';
+import { syncNow } from './support/sync';
 
 // T48: comment threads in the app, on a git notebook (T59): kept in the note's document, so
 // they reach the repository with it, and never in its markdown. Sending a thread to a Claude Code
@@ -178,15 +179,17 @@ test('threads on a passage and at a point: reply, resolve, reopen, the filter, a
   await expect(threads(page)).toHaveCount(2);
 
   // A comment is not the note (A770): the threads reach the repository in the note's document,
-  // and never its markdown.
+  // and never its markdown. Pushed by Sync Now (A1013), not by waiting out the push delay: 12 s
+  // after the last change, which with the rest of the test went past its 30 s under load.
   const { remote } = seeded(notebook);
+  await syncNow(page);
   await expect
     .poll(
       async () => {
         const doc = (await readRemote(host, remote)).ops.note(id);
         return doc ? readThreads(doc).filter((thread) => thread.status === 'open').length : 0;
       },
-      { timeout: 60_000, intervals: [2_000] },
+      { timeout: 20_000, intervals: [1_000] },
     )
     .toBe(2);
   const markdown = remoteMarkdown(host, remote, id) ?? '';

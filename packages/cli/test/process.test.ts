@@ -17,8 +17,15 @@ import { nodeTokenStore } from '../src/token-store';
 
 const TOKEN = 'ghp_' + 'A'.repeat(36);
 const GIT_ENV = { GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' };
-/** A run that takes longer than this is a hang. */
-const HANG_MS = 8_000;
+/**
+ * A run that takes longer than this is a hang. A hang never ends, so this is far above a slow
+ * run: alone one takes under a second, but a process started on this shared Mac when it is
+ * short of CPU runs up to 30 times slower (W12, PEN-60), as `node build.js` does: 0.1 s, then
+ * 3–4 s at utility QoS.
+ */
+const HANG_MS = 20_000;
+/** Each test starts git and the bundle, up to two runs of it: two hang bounds and some. */
+const PROCESS_TESTS = { timeout: 60_000 };
 
 let bundleDir: string;
 let bundle: string;
@@ -143,48 +150,44 @@ async function fakeKeychainTool(script: string) {
   await chmod(path, 0o755);
 }
 
-describe(
-  'edit --section never reads stdin it was not given (review #2)',
-  { timeout: 20_000 },
-  () => {
-    // On the only notebook here (A1050), not synced: the refusal comes before the note is read.
-    it('refuses with stdin at /dev/null instead of emptying the section', async () => {
-      await withNotebook();
-      const ran = await penmoss(['edit', 'Trip', '--section', 'Plans', '--no-sync']);
-      expect(ran.hung).toBe(false);
-      expect(ran.code).toBe(2);
-      expect(ran.stderr).toMatch(/pass - to read it from stdin|--text/);
-    });
+describe('edit --section never reads stdin it was not given (review #2)', PROCESS_TESTS, () => {
+  // On the only notebook here (A1050), not synced: the refusal comes before the note is read.
+  it('refuses with stdin at /dev/null instead of emptying the section', async () => {
+    await withNotebook();
+    const ran = await penmoss(['edit', 'Trip', '--section', 'Plans', '--no-sync']);
+    expect(ran.hung).toBe(false);
+    expect(ran.code).toBe(2);
+    expect(ran.stderr).toMatch(/pass - to read it from stdin|--text/);
+  });
 
-    it('refuses at once with an open pipe on stdin, never waiting on it', async () => {
-      await withNotebook();
-      const ran = await penmoss(['edit', 'Trip', '--section', 'Plans', '--no-sync'], OPEN);
-      expect(ran.hung).toBe(false);
-      expect(ran.code).toBe(2);
-      expect(ran.stderr).toMatch(/pass - to read it from stdin|--text/);
-    });
+  it('refuses at once with an open pipe on stdin, never waiting on it', async () => {
+    await withNotebook();
+    const ran = await penmoss(['edit', 'Trip', '--section', 'Plans', '--no-sync'], OPEN);
+    expect(ran.hung).toBe(false);
+    expect(ran.code).toBe(2);
+    expect(ran.stderr).toMatch(/pass - to read it from stdin|--text/);
+  });
 
-    it('refuses empty markdown for a section unless --allow-empty', async () => {
-      await withNotebook();
-      const piped = await penmoss(['edit', 'Trip', '--section', 'Plans', '-', '--no-sync'], '');
-      expect(piped.code).toBe(2);
-      expect(piped.stderr).toMatch(/--allow-empty/);
-      const inline = await penmoss([
-        'edit',
-        'Trip',
-        '--section',
-        'Plans',
-        '--text',
-        ' \n',
-        '--no-sync',
-      ]);
-      expect(inline.code).toBe(2);
-      expect(inline.stderr).toMatch(/--allow-empty/);
-    });
-  },
-);
+  it('refuses empty markdown for a section unless --allow-empty', async () => {
+    await withNotebook();
+    const piped = await penmoss(['edit', 'Trip', '--section', 'Plans', '-', '--no-sync'], '');
+    expect(piped.code).toBe(2);
+    expect(piped.stderr).toMatch(/--allow-empty/);
+    const inline = await penmoss([
+      'edit',
+      'Trip',
+      '--section',
+      'Plans',
+      '--text',
+      ' \n',
+      '--no-sync',
+    ]);
+    expect(inline.code).toBe(2);
+    expect(inline.stderr).toMatch(/--allow-empty/);
+  });
+});
 
-describe('the token stays out of what the CLI starts (review #7)', { timeout: 20_000 }, () => {
+describe('the token stays out of what the CLI starts (review #7)', PROCESS_TESTS, () => {
   it('a keychain helper never sees PENMOSS_GIT_TOKEN', async () => {
     // Saving a notebook's token asks the keychain first; nothing answers on 127.0.0.1:9, so the
     // add then fails, which is not what is checked here.
@@ -215,7 +218,7 @@ describe('the token stays out of what the CLI starts (review #7)', { timeout: 20
   });
 });
 
-describe('an older Node (review nit)', { timeout: 20_000 }, () => {
+describe('an older Node (review nit)', PROCESS_TESTS, () => {
   it('says which Node it needs before loading code that Node could not parse', async () => {
     // The bundle is replaced by something no Node parses: the version check must come first.
     const copy = await mkdtemp(join(tmpdir(), 'penmoss-old-'));
