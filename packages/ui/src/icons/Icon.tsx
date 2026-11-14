@@ -219,6 +219,9 @@ const PATHS = {
   pencil: <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17zM14 7l3 3" />,
   /** Keep on top (T46): a push pin. */
   pin: <path d="M9 4h6M10 4v5.5L6.5 13h11L14 9.5V4M12 13v7" />,
+  // History's Replay (PEN-21).
+  play: <path d="M8 5.5v13l10-6.5z" />,
+  pause: <path d="M8.5 5.5v13M15.5 5.5v13" />,
   phone: (
     <>
       <rect x="7" y="2.8" width="10" height="18.4" rx="2.2" />

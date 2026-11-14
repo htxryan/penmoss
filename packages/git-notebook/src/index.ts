@@ -28,3 +28,4 @@ export {
   sameContent,
 } from './yjs';
 export * from './ops';
+export * from './timeline';

@@ -94,7 +94,7 @@ const SAVE_WAIT_MS = 95_000;
 /** One reader per notebook, so commits read once stay read (they never change). */
 const readers = new WeakMap<GitSource, NotebookHistory>();
 
-function readerOf(source: GitSource): NotebookHistory {
+export function readerOf(source: GitSource): NotebookHistory {
   let reader = readers.get(source);
   if (!reader) {
     const info = source.info;
@@ -118,40 +118,9 @@ const THIS_MAC: HistoryAuthor = { id: 'this-mac', kind: 'device', label: 'This M
 export function gitHistory(source: GitSource, notes: Notes, noteId: string): HistorySource {
   const reader = () => readerOf(source);
   const missing = () => new HistoryRefused(404, 'No such version');
-  /**
-   * The note as it is now becomes a version before a Restore or a Revert replaces it, as the
-   * server saves one first: the restore can then be undone too. Not pushed (offline, refused),
-   * the restore is refused rather than replacing what history would not keep.
-   */
-  /**
-   * Pushes the note as this window holds it: the editor's last keystrokes stored, the engine's
-   * copy holding every record the windows stored (its window may not have taken them in yet), then
-   * a sync. A sync already under way when Sync Now was pressed may have committed the note
-   * before it took them in, so one more runs while the note is still not pushed.
-   */
-  const pushNote = async () => {
-    await notes.saveAll();
-    await source.feed.settled();
-    await syncAndWait(source);
-    if (source.feed.status.pending.includes(noteId)) await syncAndWait(source);
-  };
-  const saveCurrentFirst = async () => {
-    await pushNote().catch(() => undefined);
-    if (source.feed.status.pending.includes(noteId)) {
-      throw new HistoryRefused(
-        409,
-        'The note has changes not pushed yet, and they could not be saved as a version first. Sync, then try again: nothing was changed.',
-      );
-    }
-  };
-  /**
-   * The owner check first, while the click's activation lasts (A877, A901): Touch ID, as
-   * Android's BiometricPrompt, before a restore or a revert changes the note.
-   */
-  const ownerFirst = async (revert: boolean) => {
-    const refused = await source.restoreCheck(noteId, revert);
-    if (refused !== null) throw new HistoryRefused(403, refused);
-  };
+  const pushNote = () => pushNoteOf(source, notes, noteId);
+  const saveCurrentFirst = () => saveFirst(source, notes, noteId);
+  const ownerFirst = (revert: boolean) => ownerCheck(source, noteId, revert);
   return {
     offline: `Version history could not read ${source.name}’s git history.`,
     automatic:
@@ -172,17 +141,7 @@ export function gitHistory(source: GitSource, notes: Notes, noteId: string): His
       await ownerFirst(false);
       const found = await reader().commitOf(noteId, version);
       if (!found) throw missing();
-      await saveCurrentFirst();
-      const old = await reader().docAt(noteId, found.commit.id);
-      let changed = false;
-      try {
-        await notes.editNote(noteId, (doc) => {
-          changed = restoreContent(doc, old);
-        });
-      } finally {
-        old.destroy();
-      }
-      return { changed };
+      return restoreToCommit(source, notes, noteId, found.commit.id, { ownerChecked: true });
     },
     revert: async (version) => {
       await ownerFirst(true);
@@ -215,6 +174,70 @@ export function gitHistory(source: GitSource, notes: Notes, noteId: string): His
       return result;
     },
   };
+}
+
+/**
+ * Pushes the note as this window holds it: the editor's last keystrokes stored, the engine's
+ * copy holding every record the windows stored (its window may not have taken them in yet), then
+ * a sync. A sync already under way when Sync Now was pressed may have committed the note
+ * before it took them in, so one more runs while the note is still not pushed.
+ */
+async function pushNoteOf(source: GitSource, notes: Notes, noteId: string): Promise<void> {
+  await notes.saveAll();
+  await source.feed.settled();
+  await syncAndWait(source);
+  if (source.feed.status.pending.includes(noteId)) await syncAndWait(source);
+}
+
+/**
+ * The note as it is now becomes a version before a Restore or a Revert replaces it, as the
+ * server saves one first: the restore can then be undone too. Not pushed (offline, refused),
+ * the restore is refused rather than replacing what history would not keep.
+ */
+async function saveFirst(source: GitSource, notes: Notes, noteId: string): Promise<void> {
+  await pushNoteOf(source, notes, noteId).catch(() => undefined);
+  if (source.feed.status.pending.includes(noteId)) {
+    throw new HistoryRefused(
+      409,
+      'The note has changes not pushed yet, and they could not be saved as a version first. Sync, then try again: nothing was changed.',
+    );
+  }
+}
+
+/**
+ * The owner check first, while the click's activation lasts (A877, A901): Touch ID, as
+ * Android's BiometricPrompt, before a restore or a revert changes the note.
+ */
+async function ownerCheck(source: GitSource, noteId: string, revert: boolean): Promise<void> {
+  const refused = await source.restoreCheck(noteId, revert);
+  if (refused !== null) throw new HistoryRefused(403, refused);
+}
+
+/**
+ * Restore (A80, A858) to the note as it was at `commit`: the owner checked, the note as it is
+ * now saved as a version first, then the old content applied as an ordinary change. History's
+ * Restore This Version and the Time Machine's (PEN-21) both come here.
+ */
+export async function restoreToCommit(
+  source: GitSource,
+  notes: Notes,
+  noteId: string,
+  commit: string,
+  options: { readonly ownerChecked?: boolean } = {},
+): Promise<HistoryChange> {
+  // First, while the click's activation lasts (A877).
+  if (!options.ownerChecked) await ownerCheck(source, noteId, false);
+  await saveFirst(source, notes, noteId);
+  const old = await readerOf(source).docAt(noteId, commit);
+  let changed = false;
+  try {
+    await notes.editNote(noteId, (doc) => {
+      changed = restoreContent(doc, old);
+    });
+  } finally {
+    old.destroy();
+  }
+  return { changed };
 }
 
 /** Sync now, resolved once a sync after it ended; refused when it ended without syncing. */
