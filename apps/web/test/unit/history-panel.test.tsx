@@ -417,13 +417,15 @@ describe('Version History as a list over a docked preview (Ryan’s review of #1
     await flush();
     const detail = container.querySelector<HTMLElement>('[aria-label="Selected Version"]')!;
     const buttons = [...detail.querySelectorAll<HTMLButtonElement>('.history-actions button')];
-    // An agent's version: Restore, Revert, Copy Text, each an icon and Title Case words.
-    expect(buttons.map((button) => button.textContent)).toEqual([
-      'Restore This Version',
-      'Revert This Edit',
-      'Copy Text',
-    ]);
+    // An agent's version: Restore, Revert, Copy, each an icon and one word (Ryan's review of #193,
+    // R2-12), its full name in Title Case for screen readers and in its tooltip.
+    expect(buttons.map((button) => button.textContent)).toEqual(['Restore', 'Revert', 'Copy']);
+    const names = ['Restore This Version', 'Revert This Edit', 'Copy Text'];
+    expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual(names);
+    expect(buttons.map((button) => button.dataset['tip'])).toEqual(names);
     expect(buttons.every((button) => button.querySelector('svg'))).toBe(true);
+    // No ↑/↓ hint beside them (R2-11).
+    expect(detail.querySelector('kbd')).toBeNull();
     act(() => buttons[2]!.click());
     await flush();
     expect(writeText).toHaveBeenCalledWith('version 5\n');

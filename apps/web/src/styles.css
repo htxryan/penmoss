@@ -4023,7 +4023,6 @@ html:root[data-resizing='rows'] * {
   gap: 0.6rem;
   min-height: 6rem;
   padding: 0.7rem 0 0.9rem;
-  container: history-detail / inline-size;
 }
 
 .history-detail-head {
@@ -4062,32 +4061,31 @@ html:root[data-resizing='rows'] * {
   font-size: 0.78rem;
 }
 
+/*
+ * Restore, Revert and Copy: an icon and a word each, in one row that never wraps (Ryan's review of
+ * #193, R2-12; their full names are their tooltips and labels). A row too narrow drops words,
+ * Revert's and Copy's first (`data-fit="1"`), then Restore's (`"2"`); `useFit` measures it.
+ */
 .history-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.4rem;
+  min-width: 0;
 }
 
-.history-keys {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  margin-left: auto;
-  font-size: 0.7rem;
+.history-actions > .btn {
+  flex: none;
 }
 
-.history-keys kbd {
-  min-width: 1.1em;
-  padding: 0 0.25em;
-  font-size: 0.68rem;
+.history-actions[data-fit='1'] > .btn:not(.primary) > .history-action-word,
+.history-actions[data-fit='2'] > .btn > .history-action-word {
+  display: none;
 }
 
-/* In the panel's first width the arrows alone fit beside Restore and Copy Text. */
-@container history-detail (max-width: 27rem) {
-  .history-keys-word {
-    display: none;
-  }
+.history-actions[data-fit='1'] > .btn:not(.primary),
+.history-actions[data-fit='2'] > .btn {
+  padding-inline: 0.45rem;
 }
 
 .history-status {
@@ -4159,6 +4157,65 @@ html:root[data-resizing='rows'] * {
   display: inline-block;
   width: 1.1rem;
   color: var(--pm-muted);
+}
+
+/*
+ * History's docked preview numbers the lines (Ryan's review of #193, R2-13): one gutter, this
+ * version's numbers, a removed line's from the version before, dimmed. A long line wraps under its
+ * own text, its number on its first row only. The numbers are CSS's (`data-n`): selecting the diff
+ * never takes them.
+ */
+.history-diff pre[data-numbered] {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.history-diff pre[data-numbered] > span:not(.diff-fold) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  padding-left: 0;
+}
+
+/* Wrapped, a line's text lines up under its first row's text, not under its mark. */
+.diff-line {
+  padding-left: 1.1rem;
+  overflow-wrap: anywhere;
+  text-indent: -1.1rem;
+}
+
+.diff-line > .diff-sign {
+  text-indent: 0;
+}
+
+.diff-num {
+  box-sizing: content-box;
+  min-width: calc(var(--diff-digits, 2) * 1ch);
+  margin-right: 0.45rem;
+  padding: 0 0.45rem 0 0.6rem;
+  border-right: 1px solid var(--pm-border-soft);
+  background: color-mix(in oklab, var(--pm-fg) 4%, transparent);
+  color: var(--pm-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  user-select: none;
+}
+
+.diff-num::before,
+.diff-fold-lines::before {
+  content: attr(data-n);
+}
+
+.diff-del > .diff-num {
+  opacity: 0.55;
+}
+
+/* A fold names the lines it holds, at its end; the next line's number follows on from them. */
+.diff-fold-lines {
+  float: right;
+  padding-left: 0.6rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+  user-select: none;
 }
 
 .diff-add {

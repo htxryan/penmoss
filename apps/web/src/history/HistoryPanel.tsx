@@ -16,6 +16,7 @@ import { useNotes } from '../notes/hooks';
 import { PaneResizer } from '../shell/PaneResizer';
 import { PANE_LIMITS, usePaneSize } from '../shell/pane-widths';
 import { useSource } from '../sources/hooks';
+import { useFit } from './fit';
 import { authorName, bodyOf, clock, dayLabel, lineCounts, startOfDay, time } from './format';
 import { AuthorMark, DiffLines } from './parts';
 import { revertible } from './revertible';
@@ -238,6 +239,8 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
   const version = history?.versions.find((v) => v.id === selected) ?? null;
   const canRevert = version ? revertible(version) : false;
   const shown = detail && version && detail.id === version.id ? detail : null;
+  /** How short the actions are drawn to stay on one line: 1 drops Revert's and Copy's words, 2 all. */
+  const [fit, actionsRef] = useFit(2, canRevert);
 
   /** The versions by day, newest first. */
   const days = useMemo(() => {
@@ -462,7 +465,7 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                 </div>
                 <div className="history-diff" data-testid="history-diff">
                   {shown ? (
-                    <DiffLines diff={shown.diff} />
+                    <DiffLines diff={shown.diff} numbered />
                   ) : (
                     <p className="muted history-diff-loading">Reading the changes…</p>
                   )}
@@ -487,11 +490,15 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                     ))}
                   </ul>
                 ) : null}
-                <div className="history-actions">
+                {/* One row, never two (R2-12): a word and an icon each, the full name in the
+                    tooltip; narrower, Revert and Copy drop their words, then Restore too. */}
+                <div className="history-actions" ref={actionsRef} data-fit={fit || undefined}>
                   <button
                     type="button"
                     className="btn primary"
                     data-ui="submit"
+                    aria-label="Restore This Version"
+                    data-tip="Restore This Version"
                     disabled={busy}
                     onClick={() =>
                       void act(
@@ -504,13 +511,15 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                     }
                   >
                     <Icon name="history" />
-                    Restore This Version
+                    <span className="history-action-word">Restore</span>
                   </button>
                   {canRevert ? (
                     <button
                       type="button"
                       className="btn"
                       data-ui="submit"
+                      aria-label="Revert This Edit"
+                      data-tip="Revert This Edit"
                       disabled={busy}
                       onClick={() =>
                         void act(
@@ -531,31 +540,21 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                       }
                     >
                       <Icon name="undo" />
-                      Revert This Edit
+                      <span className="history-action-word">Revert</span>
                     </button>
                   ) : null}
                   <button
                     type="button"
                     className="btn"
                     data-ui="submit"
+                    aria-label="Copy Text"
+                    data-tip="Copy Text"
                     disabled={!shown}
                     onClick={copyText}
                   >
                     <Icon name="copy" />
-                    Copy Text
+                    <span className="history-action-word">Copy</span>
                   </button>
-                  <span
-                    className="history-keys muted"
-                    aria-hidden="true"
-                    data-tip="↑ ↓ Move Between Versions"
-                    data-tip-on="hover"
-                  >
-                    <span className="keys">
-                      <kbd>↑</kbd>
-                      <kbd>↓</kbd>
-                    </span>
-                    <span className="history-keys-word">versions</span>
-                  </span>
                 </div>
               </section>
             </>
