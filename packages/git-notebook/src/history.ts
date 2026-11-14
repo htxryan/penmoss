@@ -57,6 +57,14 @@ export interface GitVersionDetail {
 
 export { commitWriter } from './writer';
 
+/** Who made a commit: its `Penmoss-Writer` trailer (A825), else the commit's git identity. */
+export function commitAuthor(commit: CommitInfo): HistoryAuthor {
+  const named = commitWriter(commit.message);
+  if (named) return named;
+  // A commit from before the trailer: the device's git identity.
+  return { id: commit.author.email, kind: 'device', label: commit.author.name };
+}
+
 /** The most versions listed (as the server's History keeps them, newest first). */
 export const MAX_VERSIONS = 1000;
 
@@ -104,10 +112,7 @@ export class NotebookHistory {
   }
 
   private author(commit: CommitInfo): HistoryAuthor {
-    const named = commitWriter(commit.message);
-    if (named) return named;
-    // A commit from before the trailer: the device's git identity.
-    return { id: commit.author.email, kind: 'device', label: commit.author.name };
+    return commitAuthor(commit);
   }
 
   /**

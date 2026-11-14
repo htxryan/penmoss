@@ -136,7 +136,7 @@ Dependencies point one way: `core` at the bottom, the apps on top.
 | `packages/core`         | Schema, markdown codec, frontmatter, ids, tags, periodic notes (pure functions)                              |
 | `packages/editor`       | TipTap extensions, clipboard, slash menu, the markdown rendering of a note                                   |
 | `packages/sync-client`  | Yjs documents, the IndexedDB replica, attachments, the local search index                                    |
-| `packages/git-notebook` | The git-notebook engine, the local notes API and MCP tools, the transports                                   |
+| `packages/git-notebook` | The git-notebook engine, History and the Time Machine, the local notes API and MCP tools, the transports     |
 | `packages/ui`           | Shared React components and themes                                                                           |
 | `packages/embed`        | Search by meaning on the Mac: the model store, the ONNX embedder, the vector cache and the embedding service |
 | `packages/cli`          | The penmoss CLI                                                                                              |

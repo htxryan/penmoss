@@ -1,0 +1,343 @@
+/* The Time Machine (PEN-21): a git notebook at any moment, and what changed. */
+.time-machine {
+  box-sizing: border-box;
+  width: min(72rem, 100%);
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+}
+
+.tm-head h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+  letter-spacing: -0.015em;
+}
+
+.tm-lede {
+  margin: 0;
+  font-size: var(--pm-text-sm);
+}
+
+.tm-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.tm-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--pm-border);
+}
+
+.tm-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.8rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--pm-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tm-tab[aria-selected='true'] {
+  border-bottom-color: var(--pm-accent);
+  color: var(--pm-fg);
+  font-weight: 600;
+}
+
+.tm-notebook,
+.tm-date {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+}
+
+.tm-notebook span,
+.tm-date span {
+  color: var(--pm-muted);
+}
+
+.tm-moment,
+.tm-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.tm-scrub {
+  display: flex;
+  flex: 1 1 18rem;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tm-scrubber,
+.replay-scrubber {
+  flex: 1;
+  min-width: 8rem;
+  accent-color: var(--pm-accent);
+}
+
+.tm-place {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.tm-panes {
+  display: grid;
+  grid-template-columns: minmax(14rem, 20rem) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.tm-tree,
+.tm-note {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-raised);
+}
+
+.tm-tree {
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.tm-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tm-list .tm-list {
+  padding-inline-start: 1rem;
+}
+
+.tm-folder-name,
+.tm-note-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.35rem;
+  font-size: 0.85rem;
+}
+
+.tm-folder-name {
+  color: var(--pm-muted);
+  font-weight: 600;
+}
+
+.tm-note-row {
+  width: 100%;
+  border: 0;
+  background: none;
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: start;
+  cursor: pointer;
+}
+
+.tm-note-row:hover {
+  background: var(--pm-hover);
+}
+
+.tm-note-row[aria-pressed='true'] {
+  background: color-mix(in oklab, var(--pm-accent) 14%, transparent);
+  box-shadow: inset 2px 0 0 var(--pm-accent);
+}
+
+.tm-note-title {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.tm-note-when {
+  margin: 0.2rem 0 0.6rem;
+  font-size: 0.8rem;
+}
+
+.tm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tm-status {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+}
+
+.tm-text {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.75rem;
+  overflow-x: auto;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-bg);
+  font: 0.82rem/1.6 var(--pm-mono);
+  white-space: pre-wrap;
+}
+
+.tm-weeks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.tm-summary {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+}
+
+.tm-change-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tm-change {
+  margin-bottom: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-raised);
+}
+
+.tm-change-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+}
+
+.tm-change-title {
+  font-weight: 600;
+}
+
+.tm-change-folder {
+  font-size: 0.8rem;
+}
+
+.tm-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tm-kind {
+  padding: 0 0.4rem;
+  border: 1px solid var(--pm-border);
+  font-size: 0.75rem;
+}
+
+.tm-kind[data-kind='created'],
+.tm-kind[data-kind='restored'] {
+  background: color-mix(in oklab, var(--pm-success) 14%, transparent);
+}
+
+.tm-kind[data-kind='deleted'] {
+  background: color-mix(in oklab, var(--pm-danger) 12%, transparent);
+}
+
+.tm-show {
+  margin-inline-start: auto;
+}
+
+.tm-diff {
+  margin-top: 0.5rem;
+}
+
+.tm-empty {
+  margin: 1.5rem 0;
+}
+
+/* Under a weekly note's title (PEN-21). */
+.week-changes {
+  margin: -0.2rem 0 0.4rem;
+  font-size: 0.8rem;
+}
+
+.week-changes a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--pm-muted);
+}
+
+.week-changes a:hover {
+  color: var(--pm-link);
+}
+
+/* History's Replay (PEN-21). */
+.history-replay-start {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.history-replay {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.replay-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.replay-speeds {
+  display: flex;
+  gap: 0.15rem;
+}
+
+.replay-speeds .btn[aria-pressed='true'] {
+  background: color-mix(in oklab, var(--pm-accent) 16%, transparent);
+  font-weight: 600;
+}
+
+.replay-close {
+  margin-inline-start: auto;
+}
+
+.replay-place {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.replay-count {
+  color: var(--pm-muted);
+}
+
+@media (width <= 700px) {
+  .time-machine {
+    padding: 1.25rem 1rem 2rem;
+  }
+
+  .tm-panes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

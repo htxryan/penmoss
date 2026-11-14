@@ -12,6 +12,7 @@
     "./node": "./src/node/index.ts",
     "./system-git": "./src/node/system-git.ts",
     "./purge-check": "./src/purge-check.ts",
+    "./timeline": "./src/timeline.ts",
     "./identity": "./src/identity.ts",
     "./github": "./src/github.ts",
     "./github-browse": "./src/github-browse.ts"

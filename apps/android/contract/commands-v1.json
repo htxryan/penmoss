@@ -246,6 +246,15 @@
       }
     },
     {
+      "id": "app.timeMachine",
+      "title": "Time Machine",
+      "area": "Navigation",
+      "scope": "global",
+      "android": {
+        "na": "The Time Machine is the Mac app's for now (PEN-21: Android is not in its first version); a note's History is on the phone."
+      }
+    },
+    {
       "id": "note.openInNewWindow",
       "title": "Open in New Window",
       "area": "Note",

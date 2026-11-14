@@ -52,6 +52,7 @@ import { JournalCommands } from './journal/PeriodNav';
 import { tagFilter, useTagFilter } from './tags/filter';
 import { TaggedNotes } from './tags/TaggedNotes';
 import { TrashView } from './trash/TrashView';
+import { TimeMachinePage } from './time-machine/TimeMachinePage';
 import { TagPane } from './tags/TagPane';
 import { FolderTree } from './workspace/FolderTree';
 import { TreeActions } from './workspace/TreeActions';
@@ -581,6 +582,18 @@ function NotesShell({
                 }
               />
               <TrashView />
+            </InSource>
+          ) : route.name === 'time-machine' ? (
+            // A git notebook's past (PEN-21): `/time-machine?source=<id>`, the Journal's without.
+            <InSource
+              source={
+                sourcesRegistry?.sourceById(params.get('source') ?? '') ??
+                sourcesState?.journal ??
+                null
+              }
+            >
+              <AppBar title="Time Machine" />
+              <TimeMachinePage params={params} />
             </InSource>
           ) : route.name === 'not-found' ? (
             <>

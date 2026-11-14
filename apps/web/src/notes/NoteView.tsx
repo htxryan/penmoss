@@ -66,6 +66,7 @@ import {
   type QueuedEnter,
 } from './title-field';
 import { PeriodNav } from '../journal/PeriodNav';
+import { WeekChangesLink } from '../time-machine/WeekChangesLink';
 import { UnsupportedNote } from './UnsupportedNote';
 import { AppBar } from '../shell/AppBar';
 import { withKeys } from '../shell/drawer';
@@ -1190,6 +1191,8 @@ export function NoteView({
               onInput={(event) => fitHeight(event.currentTarget)}
               data-testid="note-title"
             />
+            {/* A weekly note's week in the Time Machine (PEN-21). */}
+            <WeekChangesLink replica={replica} />
             {/* The fields pinned under the title in Settings → Display (T62 item 4). */}
             <PinnedMetadata
               noteId={id}

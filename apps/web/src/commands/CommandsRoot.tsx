@@ -22,7 +22,8 @@ import { NotebookMeaning } from '../search/meaning';
 import { SearchService } from '../search/service';
 import { SourcesSearch } from '../search/sources';
 import { SourceScopeOr } from '../sources/context';
-import { useNoteSource, useSourcesState } from '../sources/hooks';
+import { useNoteSource, useSourcesRegistry, useSourcesState } from '../sources/hooks';
+import { timeMachinePath } from '../time-machine/path';
 import { JournalScope } from '../sources/JournalScope';
 import { useGitNotebookCommands } from '../sources/git-commands';
 import { useEveryOpenNoteList } from '../sources/lists';
@@ -279,6 +280,21 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
     if (overlay) close(false);
     navigate('/trash');
   });
+  const timeMachineRegistry = useSourcesRegistry();
+  const timeMachineSources = useSourcesState();
+  useCommand(
+    'app.timeMachine',
+    () => {
+      if (overlay) close(false);
+      // The open note's notebook; else the one in use (the Journal's).
+      const source =
+        (currentNoteId ? timeMachineRegistry?.sourceOfNote(currentNoteId) : null) ??
+        timeMachineSources?.journal ??
+        null;
+      navigate(timeMachinePath(source?.id ?? null));
+    },
+    () => (timeMachineSources?.all.length ?? 0) > 0,
+  );
   useCommand('journal.settings', () => {
     if (overlay) close(false);
     navigate('/settings/journal');

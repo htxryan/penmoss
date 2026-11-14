@@ -125,6 +125,8 @@ export const APP_COMMANDS: readonly CommandDefinition[] = [
   // T17; a tab of the note's side panel since T51 (A936), the full graph one click away.
   global('note.localGraph', 'Show or Hide the Note’s Local Graph', 'Navigation'),
   global('app.trash', 'Trash', 'Navigation'),
+  // PEN-21: the open note's git notebook as it was at any moment, and what changed this week.
+  global('app.timeMachine', 'Time Machine', 'Navigation'),
   // T45 (A710): the open note in a window of its own (a popup on the web). ⌘⌥O (Alt+O elsewhere,
   // A90): free in the app, the browsers and macOS.
   global('note.openInNewWindow', 'Open in New Window', 'Note', [
