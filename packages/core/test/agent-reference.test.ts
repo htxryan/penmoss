@@ -39,4 +39,24 @@ describe('agentReference (T52 item 4, PEN-69)', () => {
       agentReference({ id: ID, gitNotebook: 'My "big"\n\\ book', notebookId: NOTEBOOK }),
     ).toContain('(penmoss mcp --notebook "My \\"big\\" \\\\ book")');
   });
+
+  it('keeps every reference on one line', () => {
+    const git = agentReference({ id: NOTE, gitNotebook: 'Work\nBook', notebookId: NOTEBOOK });
+    expect(git.split('\n')).toHaveLength(1);
+    expect(agentReference({ id: ` ${ID}\n` }).split('\n')).toHaveLength(1);
+  });
+
+  it('names the id once, in the read_note call (T53 item 7)', () => {
+    const hosted = agentReference({ id: ID });
+    expect(hosted.split(ID)).toHaveLength(2);
+    const git = agentReference({ id: NOTE, gitNotebook: 'Personal', notebookId: NOTEBOOK });
+    expect(git.split('SXF7SQ9W')).toHaveLength(2);
+    expect(git).not.toContain(NOTE);
+  });
+
+  it('names the note by its whole id when the notebook id is blank', () => {
+    expect(agentReference({ id: NOTE, gitNotebook: 'Work', notebookId: '  ' })).toBe(
+      `Reference note via Penmoss MCP (penmoss mcp --notebook "Work") tool read_note {"id":"${NOTE}"}`,
+    );
+  });
 });
