@@ -68,7 +68,7 @@ function hasXdotool(): boolean {
   }
 }
 
-/** An accelerator in xdotool's names: ctrl, alt, shift; letters and space in lower case, F9. */
+/** An accelerator in xdotool's names: ctrl, alt, shift; letters and space in lower case. */
 function xdotoolKeys(accelerator: string): string {
   const names: Record<string, string> = {
     Control: 'ctrl',
@@ -80,66 +80,6 @@ function xdotoolKeys(accelerator: string): string {
     .split('+')
     .map((part) => names[part] ?? (part.length === 1 ? part.toLowerCase() : part))
     .join('+');
-}
-
-/** A command's output for a failure's report, or why there is none. */
-function output(command: string, args: readonly string[]): string {
-  try {
-    return execFileSync(command, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
-      .trim()
-      .slice(0, 4_000);
-  } catch (error) {
-    return `(${command}: ${error instanceof Error ? error.message.split('\n')[0] : String(error)})`;
-  }
-}
-
-/**
- * Only when a real press showed nothing: the X display's keymap for the keys pressed, the
- * versions of Xvfb, xkb and xdotool, whether Electron still holds the accelerator, and which of
- * a few accelerators registered now (another F-key, a letter, and the default's Space) fire
- * when xdotool presses them, so one failed run tells the key from a hotkey registered late.
- */
-async function xDiagnostics(app: ElectronApplication, accelerator: string) {
-  const probes = ['Control+Shift+F8', 'Control+Shift+K', 'Control+Shift+Space'];
-  await app.evaluate(({ globalShortcut }, list) => {
-    const fired: string[] = [];
-    (globalThis as Record<string, unknown>)['penmossProbes'] = fired;
-    for (const each of list) globalShortcut.register(each, () => fired.push(each));
-  }, probes);
-  for (const each of probes) execFileSync('xdotool', ['key', xdotoolKeys(each)]);
-  // The hotkey itself once more, a second after the first press.
-  execFileSync('xdotool', ['key', xdotoolKeys(accelerator)]);
-  await new Promise((resolve) => setTimeout(resolve, 1_000));
-  const electron = await app.evaluate(
-    ({ globalShortcut }, names) => ({
-      registered: names.map((each) => `${each} ${globalShortcut.isRegistered(each)}`),
-      fired: (globalThis as Record<string, unknown>)['penmossProbes'],
-    }),
-    [accelerator, ...probes],
-  );
-  const key = accelerator.split('+').pop()!;
-  const keys = new RegExp(`= .*\\b(${key}|F8|k|space)\\b`, 'i');
-  return {
-    electron,
-    shownByTheSecondPress: await captureVisible(app),
-    keymap: output('xmodmap', ['-pke'])
-      .split('\n')
-      .filter((line) => keys.test(line))
-      .join(' | '),
-    modifiers: output('xmodmap', ['-pm']),
-    xkb: output('setxkbmap', ['-query']),
-    xdotool: output('xdotool', ['version']),
-    packages: output('dpkg-query', [
-      '-W',
-      '-f',
-      '${Package} ${Version}; ',
-      'xvfb',
-      'xkb-data',
-      'x11-xkb-utils',
-      'x11-xserver-utils',
-      'xdotool',
-    ]),
-  };
 }
 
 /** Presses the capture hotkey (or shows the window as the hotkey does) and waits for it. */
@@ -173,9 +113,16 @@ async function openCapture(app: ElectronApplication): Promise<Page> {
           : null,
       };
     });
-    // Pressed on the X display: what the display and Electron made of it (the Mac app job on
-    // ubuntu-26.04, where the hotkey changed in Settings to Control+Shift+F9 showed nothing).
-    const x = pressed ? await xDiagnostics(app, accelerator) : null;
+    // Pressed on the X display: the keys xdotool sent, and whether Electron still holds them.
+    const x = pressed
+      ? {
+          pressed: xdotoolKeys(accelerator),
+          held: await app.evaluate(
+            ({ globalShortcut }, each) => globalShortcut.isRegistered(each),
+            accelerator,
+          ),
+        }
+      : null;
     throw new Error(`The capture window did not show: ${JSON.stringify({ ...known, x })}`, {
       cause: error,
     });
@@ -531,17 +478,24 @@ test('the capture hotkey changes only from Settings, and only to one A90 allows'
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form.getByRole('status')).toContainText('Penmoss keeps it free');
   expect((await hooks(app)).accelerator).toBe(original);
-  // A free one: taken.
+  // A free one with an F-key (A90 allows them): taken.
   await field.fill('Control+Shift+F9');
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form.getByRole('status')).toContainText('Control+Shift+F9');
   expect(await hooks(app)).toMatchObject({ accelerator: 'Control+Shift+F9', registered: true });
+  // And a free one with a letter, the one pressed below: xvfb on ubuntu-26.04 never hands an
+  // F-key that xdotool presses to the hotkey's grab (Control+Shift+F8 and F9 never fired there,
+  // Control+Shift+K and Space did, all registered the same way), so the real press is a letter's.
+  await field.fill('Control+Shift+J');
+  await form.getByRole('button', { name: 'Save' }).click();
+  await expect(form.getByRole('status')).toContainText('Control+Shift+J');
+  expect(await hooks(app)).toMatchObject({ accelerator: 'Control+Shift+J', registered: true });
 
   // Nor can the capture window, gesture or not.
   const capture = await openCapture(app);
   expect(
     await capture.evaluate(() => window.penmossDesktop!.capture.setHotkey('Control+Shift+F11')),
   ).toBeNull();
-  expect((await hooks(app)).accelerator).toBe('Control+Shift+F9');
+  expect((await hooks(app)).accelerator).toBe('Control+Shift+J');
   expect(launched.errors).toEqual([]);
 });
