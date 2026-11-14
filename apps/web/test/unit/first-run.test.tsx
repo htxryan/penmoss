@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 /**
  * The first run (T59, A1030): with no git notebook on this Mac the app has nothing to open, so
- * the window shows Settings → Git Notebooks' Add form; once a notebook is listed, the app opens
+ * the window shows Settings → Notebooks' Add form; once a notebook is listed, the app opens
  * it, and its views are mounted only then, with a root and a Journal notebook.
  */
 import { act } from 'react';
@@ -134,7 +134,7 @@ describe('the first run (A1030)', () => {
     expect(host.textContent).toContain('Welcome to Penmoss');
     expect($('git-add')).toBeNull();
     act(() => $('first-run-existing')!.click());
-    // Settings → Git Notebooks' own Add form.
+    // Settings → Notebooks' own Add form.
     expect($('git-add')).not.toBeNull();
     // Its name only once the repository turns out to hold no notebook.
     expect($('git-add-name')).toBeNull();

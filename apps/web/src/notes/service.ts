@@ -253,7 +253,7 @@ export interface AppSyncState {
 
 /**
  * What can stop sync (T42, A578): this device's storage, or a git notebook's sync (A860), whose
- * reason Settings → Git Notebooks says.
+ * reason Settings → Notebooks says.
  */
 export type SyncStopKind = 'storage' | 'git';
 

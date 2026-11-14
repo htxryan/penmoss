@@ -6720,18 +6720,12 @@ button.comment-quote:hover {
   }
 }
 
-/* Settings' heading, and where they are kept beside it (A1136). */
-.settings-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.25rem 1rem;
+/* Settings' heading, and where they are kept under it (A1136, PEN-135 item 11). */
+.settings-title:has(.settings-home) h1 {
+  margin-bottom: 0.3rem;
 }
 
 .settings-home {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin: 0;
+  margin: 0 0 1.25rem;
   font-size: var(--pm-text-sm, 0.86rem);
 }

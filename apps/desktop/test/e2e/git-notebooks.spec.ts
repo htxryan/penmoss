@@ -197,7 +197,7 @@ const section = (page: Page, name: string) =>
     has: page.locator('.sb-section-name', { hasText: name }),
   });
 
-/** The notebook's own page in Settings, from Git Notebooks' list (A1098). */
+/** The notebook's own page in Settings, from Notebooks' list (A1098). */
 async function notebookPage(page: Page, name: string) {
   await go(page, '/settings/git-notebooks');
   await page.getByTestId('git-notebook-row').filter({ hasText: name }).click();

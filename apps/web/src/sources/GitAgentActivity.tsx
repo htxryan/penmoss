@@ -5,7 +5,7 @@ import { gitUndoMessage, type ActivityEntry } from '../agents/activity';
 import type { GitSource } from './git-source';
 
 /**
- * A git notebook's Agent activity in Settings → Git Notebooks (#172, A920): what its agents (a
+ * A git notebook's Agent activity in Settings → Notebooks (#172, A920): what its agents (a
  * CLI or MCP writer added with `--agent`) changed in its folders, note places and settings in the
  * last 30 days, read from the branch on this Mac, offline too, each with Undo. Undo is your own
  * change, which the next sync pushes; changed again since, it says what and changes nothing. An

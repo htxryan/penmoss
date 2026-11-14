@@ -44,7 +44,7 @@ export function useSourcesState(): OpenSourcesState | null {
 }
 
 /**
- * The sources' state as it is, a notebook or not (the first run and Settings → Git Notebooks,
+ * The sources' state as it is, a notebook or not (the first run and Settings → Notebooks,
  * which list what there is); null without a registry.
  */
 export function useAllSources(): SourcesState | null {

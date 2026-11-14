@@ -7,17 +7,17 @@ This page shows you how to organise your notes: several notebooks side by side, 
 
 ## Notebooks
 
-Each git notebook has its own section in the sidebar, with its folder tree, its sync state and its own Trash. Add more in **Settings → Git Notebooks → Add a Git Notebook…**.
+Each git notebook has its own section in the sidebar, with its folder tree, its sync state and its own Trash. Add more in **Settings → Notebooks → Add a Git Notebook…**.
 
 - **Search** covers every notebook, and labels each result with its notebook.
 - **Links, embeds, tags, the graph and backlinks** stay inside one notebook.
 - **New notes** go where you last clicked: a notebook's **Top level**, or a folder.
 - **Move to Notebook…** and **Copy to Notebook…**, in a note's or folder's right-click menu, take it to another notebook.
-- **Copy Tags**, at the bottom of Copy to Notebook's picker, chooses whether the copies keep the tags you added to their notes. Turn it on or off by default in **Settings → Git Notebooks → Copy to Notebook**; it is on unless you change it. Tags typed in a note's text, like #idea, are part of the note and always go with it. Move to Notebook always keeps the tags.
+- **Copy Tags**, at the bottom of Copy to Notebook's picker, chooses whether the copies keep the tags you added to their notes. Turn it on or off by default in **Settings → Notebooks → Copy to Notebook**; it is on unless you change it. Tags typed in a note's text, like #idea, are part of the note and always go with it. Move to Notebook always keeps the tags.
 
 ### The Primary Notebook
 
-One notebook is your **Primary Notebook**. Today's note, This Week's note, the calendar, the Inbox and quick capture use it, and your app settings are kept in it. Choose it in **Settings → Git Notebooks**: open the notebook and choose **Make Primary Notebook**. Each Mac chooses its own. On Android the same setting is **Journal notebook**, in **Settings → Git Notebooks**.
+One notebook is your **Primary Notebook**. Today's note, This Week's note, the calendar, the Inbox and quick capture use it, and your app settings are kept in it. Choose it in **Settings → Notebooks**: open the notebook and choose **Make Primary Notebook**. Each Mac chooses its own. On Android the same setting is **Journal notebook**, in **Settings → Notebooks**.
 
 ## Folders
 

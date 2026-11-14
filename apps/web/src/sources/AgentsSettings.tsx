@@ -1,11 +1,11 @@
 /**
  * Settings → Agents (Ryan's feedback, 5 Nov 2026; A1098), in the Mac app: how agents such as
- * Claude Code and Codex reach the git notebooks on this Mac, out of Git Notebooks' own pages.
+ * Claude Code and Codex reach the git notebooks on this Mac, out of Notebooks' own pages.
  *
  * - **The penmoss Command** (A992): the CLI, which is this app, on the terminal's PATH.
  * - **Each notebook's agents** (A993, D52): the agent copy the app makes of every notebook by
  *   itself, so `penmoss mcp --notebook <its name>` serves it, and any agent connected by name.
- *   A list of the notebooks, each opening a page of its own with its agents, as Git Notebooks has
+ *   A list of the notebooks, each opening a page of its own with its agents, as Notebooks has
  *   it (Quanta feedback 2, item 5; A1125): with several notebooks, every notebook's agents on one
  *   page were too much at once.
  */

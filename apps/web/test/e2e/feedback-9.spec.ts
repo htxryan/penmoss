@@ -341,7 +341,7 @@ test('9, 10, 12: Settings name the primary notebook; settings copy to another no
   await expect(section(page, 'Work')).toBeVisible({ timeout: 40_000 });
   await page.goto('/settings/display');
   const home = page.getByTestId('settings-home');
-  await expect(home).toContainText('Kept in Quanta, your primary notebook');
+  await expect(home).toHaveText('Settings are synced through your primary notebook, Quanta.');
   if (SHOTS)
     await page.locator('.settings-title').screenshot({ path: `${SHOTS}/settings-home.png` });
 
@@ -367,7 +367,9 @@ test('9, 10, 12: Settings name the primary notebook; settings copy to another no
   // Work made primary: it reads the same, so the bar keeps Move to Trash.
   await page.getByTestId('git-make-primary').click();
   await expect(page.getByTestId('git-primary-state')).toBeVisible();
-  await expect(page.getByTestId('settings-home')).toContainText('Kept in Work');
+  await expect(page.getByTestId('settings-home')).toHaveText(
+    'Settings are synced through your primary notebook, Work.',
+  );
   await page.goto('/settings/display');
   await expect(page.getByTestId('display-note-bar-delete')).toBeChecked();
   expect(errors).toEqual([]);

@@ -2,7 +2,7 @@ import { expect, test } from './fixtures';
 import { NEW_NOTE } from './keys';
 
 // T59 (D48, D49): Penmoss has no account and no server. On a Mac with no git notebook the app
-// opens on a first-run screen that asks for one: Git Notebooks' Add form, there and then, not
+// opens on a first-run screen that asks for one: Notebooks' Add form, there and then, not
 // behind Settings. Adding a remote that holds no notebook makes one once it is named (a
 // repository on this Mac syncs without a check, D51) and the app opens it; its first note
 // reaches the remote.

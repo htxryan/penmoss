@@ -311,7 +311,7 @@ export interface GitNotebook {
 }
 
 /**
- * Makes a git notebook on a new bare repository, as Ryan does in Settings → Git Notebooks (one on
+ * Makes a git notebook on a new bare repository, as Ryan does in Settings → Notebooks (one on
  * this machine syncs without a check, D51), and waits until it has synced; then goes back to the
  * app's start. The notes the test makes are in it (T59: there is no other source).
  */
@@ -355,7 +355,7 @@ export const notebookSection = (page: Page, name: string) =>
     has: page.locator('.sb-section-name', { hasText: name }),
   });
 
-/** Waits until the notebook's row in Settings → Git Notebooks says it has synced. */
+/** Waits until the notebook's row in Settings → Notebooks says it has synced. */
 export async function notebookSynced(page: Page, name: string): Promise<void> {
   const back = page.url();
   if (!back.endsWith('/settings/git-notebooks')) await go(page, '/settings/git-notebooks');

@@ -5,7 +5,7 @@ import { useSourcesState } from './hooks';
 /**
  * The Primary Notebook's services (T50 G4, A827; "Journal notebook" until T62 item 9): Journal,
  * Calendar, Inbox, Today, This week and capture use the source this device chose, whichever note
- * is open. Chosen on a notebook's page in Settings → Git Notebooks.
+ * is open. Chosen on a notebook's page in Settings → Notebooks.
  */
 export function JournalScope({ children }: { children: ReactNode }) {
   const state = useSourcesState();

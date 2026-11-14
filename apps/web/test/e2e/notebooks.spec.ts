@@ -112,7 +112,7 @@ test('two git notebooks side by side: their own trees, search across both, and R
   await expect(menu.getByRole('menuitem', { name: 'Close on This Device' })).toHaveCount(0);
   await page.keyboard.press('Escape');
 
-  // Settings → Git Notebooks lists both; Work's own page removes it from this Mac; Notes stays.
+  // Settings → Notebooks lists both; Work's own page removes it from this Mac; Notes stays.
   await page.goto('/settings/git-notebooks');
   await expect(page.getByTestId('git-notebook-row')).toHaveCount(2);
   await page.getByTestId('git-notebook-row').filter({ hasText: 'Work' }).click();

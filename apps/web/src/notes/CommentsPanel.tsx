@@ -180,7 +180,7 @@ function SendTo({
       {sessions.length === 0 ? (
         <span className="comment-send-error" data-testid={`${testId}-none`}>
           No agent sessions yet: start one with <code>penmoss mcp --notebook … --channel</code>{' '}
-          (Settings → Git Notebooks → Agents on This Mac).
+          (Settings → Notebooks → Agents on This Mac).
         </span>
       ) : null}
     </span>

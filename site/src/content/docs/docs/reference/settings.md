@@ -38,7 +38,7 @@ Open Settings with ⌘, on the Mac, or from a notebook's menu on Android. Most s
 
 The [line symbols](/docs/editor/#line-symbols): each one's glyph and colour, their order, **Add a Symbol** (up to nine) and **Restore Defaults**.
 
-### Git Notebooks
+### Notebooks
 
 **Add a Git Notebook…**, then for each notebook:
 

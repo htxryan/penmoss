@@ -1849,7 +1849,7 @@ function TransferPicker({
   onChoose: (target: Source, folderId: string | null, tags: boolean) => void;
   onClose: () => void;
 }) {
-  // A copy asks whether the tags go too (A1353), ticked as Settings → Git Notebooks says. A
+  // A copy asks whether the tags go too (A1353), ticked as Settings → Notebooks says. A
   // move always takes them: the notes leave this notebook.
   const copying = job.mode === 'copy';
   const { copies } = useCopyTagsDefault();

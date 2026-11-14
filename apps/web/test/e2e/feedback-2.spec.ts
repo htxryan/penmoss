@@ -6,7 +6,7 @@ import { notebookAction } from './notebook-actions';
 // T42 (#104 items 1–9): Ryan's second round of feedback, in the web app (the Mac app runs the
 // same page; its own suite covers what differs there). On a git notebook (T59): search is this
 // device's words, versions are git's commits, settings are the notebook's (A827), and a stopped
-// sync is fixed in Settings → Git Notebooks.
+// sync is fixed in Settings → Notebooks.
 
 const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
@@ -378,7 +378,7 @@ test('8: Add a tag suggests every tag on any note, by keyboard too', async ({ pa
   expect(errors).toEqual([]);
 });
 
-test('9: Sync stopped opens Settings → Git Notebooks, where Sync Now starts it again', async ({
+test('9: Sync stopped opens Settings → Notebooks, where Sync Now starts it again', async ({
   page,
   host,
 }) => {

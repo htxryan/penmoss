@@ -183,7 +183,7 @@ export function FirstRun() {
           <AddGitNotebook git={git} mode={step} onAdded={onAdded} />
           <GitAccess />
           <p className="muted">
-            You can add more notebooks, and change how each syncs, in Settings → Git Notebooks.
+            You can add more notebooks, and change how each syncs, in Settings → Notebooks.
           </p>
         </section>
       )}
@@ -201,7 +201,7 @@ function GitAccess() {
         as GitHub Desktop’s or the macOS Keychain). If <code>git push</code> works in Terminal for
         the repository, Penmoss can sync it. If git isn’t signed in to GitHub, Sign In with GitHub
         here lets Penmoss list your repositories and sync the notebook it adds over HTTPS. You can
-        also give a notebook a personal access token in Settings → Git Notebooks once it is added.
+        also give a notebook a personal access token in Settings → Notebooks once it is added.
       </p>
       <p>Who can read the repository is up to you: keep it private to keep your notes private.</p>
     </details>

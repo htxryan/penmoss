@@ -10,7 +10,7 @@ A notebook lives in its repository, so every device that can reach the repositor
 ## Another Mac
 
 1. [Install Penmoss](/docs/install/mac/) and open it.
-2. Choose **Open a notebook you already have**. (With a notebook open already: **Settings → Git Notebooks → Add a Git Notebook…**.)
+2. Choose **Open a notebook you already have**. (With a notebook open already: **Settings → Notebooks → Add a Git Notebook…**.)
 3. Pick the repository, then the folder that holds the notebook (Penmoss shows its name), or choose **Type an Address** and paste the repository's address.
 4. Choose **Open Notebook**.
 
@@ -31,7 +31,7 @@ The phone syncs over HTTPS with a personal access token. SSH is not supported on
 
 The notebook is listed on the first screen; tap it to open it. To make a new notebook from the phone, point **Add** at an empty private repository: the app then asks for a **Notebook name**.
 
-When the token expires, the notebook stops syncing and says why. Save a new one in **Settings → Git Notebooks** (**Save Token**).
+When the token expires, the notebook stops syncing and says why. Save a new one in **Settings → Notebooks** (**Save Token**).
 
 ## The command line
 
