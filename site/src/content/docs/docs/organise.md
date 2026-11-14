@@ -56,7 +56,7 @@ A tag is a word after `#` in the note, such as `#ideas`, or an entry in the note
 
 ### The Tags page
 
-The **Tags** page is where you describe and tidy your tags: a table with a row for each tag, its note count, and what it means. Open it with **Tags** in the sidebar's top row (the # button after Search), the button at the end of the sidebar's **Tags** title (**Open the Tags Page**, shown when you point at the title), or **Tags** in the command palette. With several notebooks it has a table for each, in the sidebar's order, and each change stays in its own notebook.
+The **Tags** page is where you describe and tidy your tags: a table with a row for each tag, its note count, and what it means. Open it with **Tags** in the sidebar's top row (the # button after Search), the button at the end of the sidebar's **Tags** title (**Open the Tags Page**, shown when you point at the title), or **Tags** in the command palette. With several notebooks it has a table for each, in the sidebar's order, and each change stays in its own notebook. Only the tables scroll: the title and filter stay at the top, and as you scroll through a notebook's table, its name, its **Merge…** and **Delete…** buttons and its column headings stay above its rows.
 
 - **Find a tag:** type in the filter at the top. It narrows the tables to tags whose name or description has what you type. Escape clears it. Choose **Tag** or **Notes** at the top of a table to sort by it.
 - **See a tag's notes:** choose its name, or **Show Notes** in its ⋯ menu. Search opens on its notes, in that tag's notebook, as choosing it in the Tags section does.

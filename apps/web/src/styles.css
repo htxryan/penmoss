@@ -4209,16 +4209,46 @@ html:root[data-resizing='rows'] * {
  * notebook's heading row; a rename edits the name in its row, with a strip under it.
  */
 .tags-page {
-  box-sizing: border-box;
-  width: min(60rem, 100%);
-  margin: 0 auto;
-  padding: 2.5rem 1.5rem 4rem;
+  /* The page's column: 57rem of content, centred, with a 1.5rem gutter at least. */
+  --tags-gutter: max(1.5rem, calc((100% - 57rem) / 2));
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/*
+ * Only the tables scroll (R2-4 of Ryan's review of #193): the title and the filter stay above
+ * them, and the page fills the pane rather than scrolling it. The notebooks' tables scroll
+ * together, in one region; each notebook's heading row (its name, count and the selection's
+ * buttons) and its table's header row stick at the region's top while its rows pass under them,
+ * and the next notebook's push them off. Both parts span the pane, their content in the column.
+ */
+.note-main:has(> .tags-page) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tags-page-top {
+  flex: none;
+  padding: 2.5rem var(--tags-gutter) 0;
 }
 
 .tags-page h2 {
   margin: 0 0 0.75rem;
   font-size: 1.5rem;
   letter-spacing: -0.015em;
+}
+
+.tags-page-scroll {
+  flex: 1 1 0;
+  min-height: 0;
+  padding: 0 var(--tags-gutter) 4rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* A row reached by Tab is not left under the heading and header rows. */
+  scroll-padding-top: calc(var(--pm-control) + 0.4rem + var(--pm-control-sm) + 0.25rem);
 }
 
 .tags-filter {
@@ -4248,12 +4278,16 @@ html:root[data-resizing='rows'] * {
 }
 
 .tags-page-notebook-head {
+  position: sticky;
+  z-index: 4;
+  top: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.35rem 0.6rem;
   min-height: var(--pm-control);
-  margin-bottom: 0.4rem;
+  padding-bottom: 0.4rem;
+  background: var(--pm-bg);
 }
 
 .tags-page-notebook-name {
@@ -4283,7 +4317,6 @@ html:root[data-resizing='rows'] * {
 }
 
 .tags-table {
-  border-top: 1px solid var(--pm-border);
   font-size: var(--pm-text-sm);
 }
 
@@ -4317,8 +4350,17 @@ html:root[data-resizing='rows'] * {
   background: var(--pm-accent-softer);
 }
 
+/*
+ * The header row sticks under the notebook's heading row (its height measured into
+ * `--tags-head-h`, as it wraps), and slides under it as the next notebook pushes them up.
+ */
 .tags-head {
+  position: sticky;
+  z-index: 3;
+  top: var(--tags-head-h, calc(var(--pm-control) + 0.4rem));
   min-height: 0;
+  border-top: 1px solid var(--pm-border);
+  background: var(--pm-bg);
   color: var(--pm-muted);
   font-size: var(--pm-text-xs);
   font-weight: 600;
@@ -4644,7 +4686,15 @@ html:root[data-resizing='rows'] * {
 /* A phone: the description under the tag, across the row. */
 @media (max-width: 40rem) {
   .tags-page {
-    padding: 1.5rem 1rem 3rem;
+    --tags-gutter: 1rem;
+  }
+
+  .tags-page-top {
+    padding-top: 1.5rem;
+  }
+
+  .tags-page-scroll {
+    padding-bottom: 3rem;
   }
 
   .tags-row {
