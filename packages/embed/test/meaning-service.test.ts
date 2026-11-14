@@ -268,6 +268,48 @@ describe('the embedding service (T76)', () => {
     await service.stop();
   });
 
+  it('waits to compact until every notebook has sent the text of its notes (A1373)', async () => {
+    const { source, cache } = fakeSource();
+    const statuses: ServiceStatus[] = [];
+    const service = new MeaningService(source, (status) => statuses.push(status), {
+      compactEveryMs: 0,
+    });
+    await service.start();
+    await service.update('a', NOTES.slice(0, 2));
+    // Notebook b's versions are here, its sections not yet: its keys are still unknown.
+    const versions = NOTES.slice(2).map(({ id, version }) => ({ id, version }));
+    expect(await service.update('b', versions)).toEqual(['trip']);
+    await until(statuses, (status) => status.state === 'ready' && status.indexed === 2);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(cache.compacted).toEqual([]);
+    await service.update('b', NOTES.slice(2));
+    await vi.waitFor(() => expect(cache.compacted.at(-1)?.size).toBe(3));
+    await service.stop();
+  });
+
+  it('forgets a removed notebook: its count, its search and its keys (A1373)', async () => {
+    const { source, cache } = fakeSource();
+    const statuses: ServiceStatus[] = [];
+    const service = new MeaningService(source, (status) => statuses.push(status), {
+      compactEveryMs: 0,
+    });
+    await service.start();
+    await service.update('a', NOTES.slice(0, 2));
+    await service.update('b', NOTES.slice(2));
+    await until(statuses, (status) => status.state === 'ready' && status.indexed === 3);
+    await vi.waitFor(() => expect(cache.compacted.at(-1)?.size).toBe(3));
+    await service.close('b');
+    // The page hears the new count at once.
+    expect(statuses.at(-1)).toMatchObject({ indexed: 2, total: 2 });
+    expect(await service.search('b', 'Lisbon trams')).toBeNull();
+    // The next compaction keeps a's keys alone.
+    const before = cache.compacted.length;
+    await service.update('a', NOTES.slice(0, 2));
+    await vi.waitFor(() => expect(cache.compacted.length).toBeGreaterThan(before));
+    expect(cache.compacted.at(-1)?.size).toBe(2);
+    await service.stop();
+  });
+
   it('stops everything when switched off, and starts again when switched on (A1158)', async () => {
     const { source, opens } = fakeSource();
     const statuses: ServiceStatus[] = [];

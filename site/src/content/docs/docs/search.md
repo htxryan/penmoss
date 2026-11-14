@@ -40,7 +40,7 @@ On the Mac, search also finds notes by what they are about, not only the words t
 
 It uses EmbeddingGemma, a small language model that runs on your Mac. Penmoss downloads it once, about 219 MB from Hugging Face, the first time it starts. Your notes never leave the Mac: the model and its index of your notes stay in `~/.penmoss`. The Gemma Terms of Use apply to the model.
 
-**Settings → Search by Meaning** shows what it is doing (Not downloaded, Downloading, Indexing, Ready) and has the switch. Turning it off removes the model and its index, and search goes back to words only. The same setting applies to agents' `penmoss` on this Mac: see [MCP tools](/docs/reference/mcp/#search_notes).
+**Settings → Search by Meaning** shows what it is doing (Not downloaded, Downloading, Indexing, Ready) and how many notes of your open notebooks it has read, and has the switch. A notebook you remove from the Mac leaves that count. Turning it off removes the model and its index, and search goes back to words only. The same setting applies to agents' `penmoss` on this Mac: see [MCP tools](/docs/reference/mcp/#search_notes).
 
 One program at a time reads your notes for meaning, normally the Mac app, which reads every notebook it has open. While the app is closed, an agent's `penmoss mcp` reads its own notebook instead, and the app takes over again when it opens. If another copy of Penmoss on the Mac is doing it, Settings → Search by Meaning says how many notes wait, since search by meaning can miss them until then.
 
