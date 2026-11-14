@@ -221,7 +221,7 @@ test('8: the sidebar’s head never clips its buttons, however narrow the sideba
   await edge.focus();
   // The narrowest (Home), then a rem at a time up to 18rem.
   await page.keyboard.press('Home');
-  await expect(edge).toHaveAttribute('aria-valuenow', '15.5');
+  await expect(edge).toHaveAttribute('aria-valuenow', '14.5');
   if (SHOTS)
     await page.locator('.sidebar').screenshot({ path: `${SHOTS}/pen-135-8-narrowest.png` });
   for (let step = 0; step <= 4; step++) {
@@ -235,10 +235,6 @@ test('8: the sidebar’s head never clips its buttons, however narrow the sideba
       expect(each.x + each.width, ids[index]).toBeLessThanOrEqual(right + 0.5);
       if (index > 0) expect(each.x, ids[index]).toBeGreaterThanOrEqual(boxes[index - 1]!.x);
     }
-    // The logo by the lights (they end at 76px), whole, before Back.
-    const logo = await box(page, '.sb-head .brand-mark');
-    expect(logo.x).toBeGreaterThanOrEqual(76);
-    expect(logo.x + logo.width).toBeLessThanOrEqual(boxes[0]!.x);
     // The toggle ends the head at the sidebar's edge; the pin is right before it.
     const [, forward, pin, toggle] = boxes as [
       typeof sidebar,

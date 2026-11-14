@@ -5919,12 +5919,9 @@ a.toast-action {
 
 /*
  * The sidebar's head with the lights before Back and Forward: no room left for the name beside
- * the mark, which stays for screen readers. The mark itself sits by the lights (below).
+ * the mark, which stays for screen readers.
  */
-:root[data-titlebar='compact']
-  .notes-app:not([data-sidebar='collapsed'])
-  .brand
-  > span:not(.brand-mark) {
+:root[data-titlebar='compact'] .notes-app:not([data-sidebar='collapsed']) .brand > span {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -6921,31 +6918,4 @@ button.comment-quote:hover {
 .settings-home {
   margin: 0 0 1.25rem;
   font-size: var(--pm-text-sm, 0.86rem);
-}
-
-/*
- * The logo by the lights, before Back and Forward (Ryan, 13 Nov 2026; PEN-135): in the Mac window
- * the head's brand goes first, 6px after the lights' 76px, and Back and Forward push the pin and
- * the toggle to the row's end. It never shrinks: the narrowest sidebar (pane-widths.ts) fits it.
- */
-:root[data-titlebar='compact'] .notes-app:not([data-sidebar='collapsed']) .sb-head {
-  padding-left: calc(var(--pm-titlebar-inset) - 0.375rem);
-}
-
-:root[data-titlebar='compact'] .notes-app:not([data-sidebar='collapsed']) .sb-head .brand {
-  flex: none;
-  order: -1;
-  margin-right: 0.375rem;
-}
-
-:root[data-titlebar='compact']
-  .notes-app:not([data-sidebar='collapsed'])
-  .sb-head
-  .brand
-  > .brand-mark {
-  margin-inline-start: 0;
-}
-
-:root[data-titlebar='compact'] .notes-app:not([data-sidebar='collapsed']) .sb-head .history-nav {
-  margin-right: auto;
 }

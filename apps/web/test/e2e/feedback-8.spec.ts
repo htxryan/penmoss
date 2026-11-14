@@ -132,7 +132,7 @@ test('4: the sidebar and the note’s panel are resized by their edges, within l
   expect(await width('.sidebar')).toBeCloseTo(17 * 16 + 100, 0);
   await page.mouse.up();
   await expect(edge).toHaveAttribute('aria-valuenow', String(17 + 100 / 16));
-  // Never wider than 30rem, nor narrower than 15.5rem (13rem, then 14.5rem: PEN-135 item 8).
+  // Never wider than 30rem, nor narrower than 14.5rem (13rem until PEN-135 item 8).
   const wide = (await edge.boundingBox())!;
   await page.mouse.move(wide.x + 3, y);
   await page.mouse.down();
@@ -144,17 +144,17 @@ test('4: the sidebar and the note’s panel are resized by their edges, within l
   await page.mouse.down();
   await page.mouse.move(widest.x - 600, y, { steps: 6 });
   await page.mouse.up();
-  expect(await width('.sidebar')).toBeCloseTo(15.5 * 16, 0);
+  expect(await width('.sidebar')).toBeCloseTo(14.5 * 16, 0);
   // From the keyboard: → a rem wider, End the widest, a double-click back to the first width.
   await edge.focus();
   await page.keyboard.press('ArrowRight');
-  expect(await width('.sidebar')).toBeCloseTo(16.5 * 16, 0);
+  expect(await width('.sidebar')).toBeCloseTo(15.5 * 16, 0);
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('Shift+ArrowRight');
-  expect(await width('.sidebar')).toBeCloseTo(21.5 * 16, 0);
+  expect(await width('.sidebar')).toBeCloseTo(20.5 * 16, 0);
   await page.reload();
   await expect(sidebar).toBeVisible();
-  await expect.poll(() => width('.sidebar')).toBeCloseTo(21.5 * 16, 0);
+  await expect.poll(() => width('.sidebar')).toBeCloseTo(20.5 * 16, 0);
   await page.getByTestId('sidebar-resizer').dblclick();
   await expect.poll(() => width('.sidebar')).toBeCloseTo(17 * 16, 0);
 

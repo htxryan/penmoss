@@ -18,10 +18,10 @@ export interface PaneLimits {
 }
 
 export const PANE_LIMITS: Readonly<Record<PaneKind, PaneLimits>> = {
-  // 17rem was the sidebar's one width (T6). 15.5rem still fits its head after the Mac's traffic
-  // lights (the logo by them, then Back and Forward, the pin and the toggle: PEN-135 item 8), and
-  // a notebook's name beside its buttons.
-  sidebar: { initial: 17, min: 15.5, max: 30 },
+  // 17rem was the sidebar's one width (T6). 14.5rem still fits its head's buttons after the Mac's
+  // traffic lights (88px, then Back and Forward, the pin and the toggle: PEN-135 item 8), and a
+  // notebook's name beside its buttons.
+  sidebar: { initial: 17, min: 14.5, max: 30 },
   // 26rem was the panel's one width (T51), which History's diffs and the Local Graph need.
   panel: { initial: 26, min: 20, max: 44 },
 };
