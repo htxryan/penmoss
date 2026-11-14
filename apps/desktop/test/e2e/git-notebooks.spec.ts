@@ -12,6 +12,8 @@ import {
   capturePage,
   checksAsked,
   dataDir,
+  firstRunName,
+  firstRunPasteUrl,
   gitNotebook,
   launch,
   mainBounds,
@@ -164,14 +166,12 @@ function recordOutsideTraffic(page: Page, into: string[]): void {
 }
 
 /** Adds a git notebook in Settings → Git notebooks; returns its card. */
-async function addNotebook(page: Page, input: { remote: string; name?: string; firstRun?: true }) {
-  // The first notebook is added on the first-run screen (T59, A1030); later ones in Settings.
-  const settings = page.getByTestId(input.firstRun ? 'first-run' : 'git-notebooks-settings');
+async function addNotebook(page: Page, input: { remote: string; name?: string }) {
+  // The first notebook is added on the first run (T59, A1030; firstRunPasteUrl); later ones in
+  // Settings, whose form opens from Add a Git Notebook… under the list (A1098).
+  const settings = page.getByTestId('git-notebooks-settings');
   await expect(settings).toBeVisible();
-  // Under the list, the form opens from Add a Git Notebook… (A1098); on the first run, from
-  // its welcome's "Open a notebook you already have" (T69, A1146).
-  if (!input.firstRun) await settings.getByTestId('git-add-open').click();
-  else await settings.getByTestId('first-run-existing').click();
+  await settings.getByTestId('git-add-open').click();
   const form = settings.getByTestId('git-add');
   await form.getByTestId('git-add-remote').fill(input.remote);
   if (input.name) await form.getByTestId('git-add-name').fill(input.name);
@@ -239,14 +239,12 @@ test('a notebook made on the Mac, notes and the Journal in it, synced on quit, n
   const traffic: string[] = [];
   recordOutsideTraffic(page, traffic);
 
-  // The first-run screen's Add form (T59, A1030): GitHub cannot be asked about a repository on
-  // this machine, so it syncs without a check and nobody is asked (D51); it holds no notebook
-  // yet, so it needs a name, then Add again. Then the app opens on the notebook.
-  const first = await addNotebook(page, { remote: `file://${w.remote}`, firstRun: true });
-  await expect(first.getByTestId('git-add-message')).toContainText('name the new one');
+  // The first run's Paste a URL (T59, A1030; First Run C): GitHub cannot be asked about a
+  // repository on this machine, so it syncs without a check and nobody is asked (D51); it holds
+  // no notebook yet, so Name Your Notebook. Then the app opens on the notebook.
+  await firstRunPasteUrl(page, `file://${w.remote}`);
   const name = `Mac notes ${RUN}`;
-  await first.getByTestId('git-add-name').fill(name);
-  await first.locator('button[type="submit"]').click();
+  await firstRunName(page, name);
   await expect(section(page, name)).toBeVisible({ timeout: 30_000 });
   await chooseMenu(app, 'app.gitNotebooks');
   await expect(page).toHaveURL('app://penmoss/settings/git-notebooks');
@@ -905,17 +903,20 @@ test('Add a Git Notebook lists GitHub repositories with git’s own credential, 
   const traffic: string[] = [];
   recordOutsideTraffic(page, traffic);
 
-  await page.getByTestId('first-run-new').click();
-  const form = page.getByTestId('git-add');
-  const rows = form.getByTestId('repo-row');
+  // First Run C: Start a New Notebook, Use Existing Repo, the tree of repositories.
+  const firstRun = page.getByTestId('first-run');
+  await firstRun.getByTestId('first-run-start').click({ timeout: 30_000 });
+  await firstRun.getByTestId('first-run-continue').click();
+  await firstRun.getByTestId('first-run-way-existing').click();
+  await firstRun.getByTestId('first-run-continue').click();
+  const rows = firstRun.getByTestId('first-run-tree-repo');
   await expect(rows).toHaveCount(2, { timeout: 30_000 });
   await expect(rows.first()).toHaveAttribute('data-repo', 'ryan/notes');
-  await expect(rows.last()).toHaveAttribute('aria-disabled', 'true');
-  await rows.first().click();
-  await expect(form.getByTestId('repo-folders-empty')).toBeVisible();
-  const name = `Picked ${RUN}`;
-  await form.getByTestId('git-add-name').fill(name);
-  await form.getByRole('button', { name: 'Make Notebook', exact: true }).click();
+  await expect(rows.last().getByTestId('first-run-repo-pick')).toBeDisabled();
+  await rows.first().getByTestId('first-run-repo-pick').click();
+  await expect(firstRun.getByRole('heading', { name: 'Empty Repository' })).toBeVisible();
+  await firstRun.getByTestId('first-run-continue').click();
+  await firstRunName(page, `Picked ${RUN}`);
   await expect(page.getByTestId('note-title')).toHaveValue('Welcome to Penmoss', {
     timeout: 30_000,
   });
@@ -969,21 +970,31 @@ test('with no GitHub sign-in in git, Sign in with GitHub lists the repositories 
   const traffic: string[] = [];
   recordOutsideTraffic(page, traffic);
 
-  await page.getByTestId('first-run-new').click();
-  const form = page.getByTestId('git-add');
-  const signin = form.getByTestId('github-signin');
-  await signin.getByTestId('github-signin-start').click({ timeout: 30_000 });
-  await expect(signin.getByTestId('github-signin-code')).toHaveText(github.device.userCode);
+  // First Run C: Start a New Notebook, Use Existing Repo; git has no sign-in, so Sign In to GitHub.
+  const firstRun = page.getByTestId('first-run');
+  await firstRun.getByTestId('first-run-start').click({ timeout: 30_000 });
+  await firstRun.getByTestId('first-run-continue').click();
+  await firstRun.getByTestId('first-run-way-existing').click();
+  await firstRun.getByTestId('first-run-continue').click();
+  await firstRun.getByTestId('first-run-signin').click({ timeout: 30_000 });
+  await expect(firstRun.getByTestId('github-signin-code')).toHaveText(github.device.userCode);
   expect(github.device.codes).toBe(1);
   github.approve();
-  await expect(form.getByTestId('repo-picker-via')).toContainText(
-    'Signed in to GitHub as ryan in Penmoss.',
-    { timeout: 30_000 },
-  );
-  await form.getByTestId('repo-row').first().click();
-  await expect(form.getByTestId('repo-folders-empty')).toBeVisible();
-  await form.getByTestId('git-add-name').fill(`Signed in ${RUN}`);
-  await form.getByRole('button', { name: 'Make Notebook', exact: true }).click();
+  await expect(firstRun.getByTestId('first-run-signed-in')).toContainText('Signed in as ryan', {
+    timeout: 30_000,
+  });
+  await firstRun.getByTestId('first-run-continue').click();
+  await expect(firstRun.getByTestId('first-run-via')).toContainText('Signed in to GitHub as ryan', {
+    timeout: 30_000,
+  });
+  await firstRun
+    .getByTestId('first-run-tree-repo')
+    .first()
+    .getByTestId('first-run-repo-pick')
+    .click();
+  await expect(firstRun.getByRole('heading', { name: 'Empty Repository' })).toBeVisible();
+  await firstRun.getByTestId('first-run-continue').click();
+  await firstRunName(page, `Signed in ${RUN}`);
   await expect(page.getByTestId('note-title')).toHaveValue('Welcome to Penmoss', {
     timeout: 30_000,
   });

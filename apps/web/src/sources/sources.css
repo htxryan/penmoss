@@ -591,111 +591,716 @@
 }
 
 /*
- * The first run (T59, A1030): no git notebook yet. The Add form of Settings → Notebooks
- * stands alone in the window, with the brand above it; the wait before the list is read is a
- * quiet line in the same place.
+ * The first run (T59, A1030; Ryan's review of #192, findings 2–4, First Run C): no git notebook
+ * yet, so the window holds one screen at a time, a column in the middle of it: the "Step n of 3"
+ * bar, a title, the one thing the screen asks, and a footer with Back and its button.
  */
-.first-run .settings-section {
-  margin-top: 1.5rem;
+.first-run {
+  display: flex;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 1.5rem 1rem;
 }
 
-.first-run .settings-section > p {
+.first-run-plain {
   max-width: 34rem;
-  color: var(--pm-fg);
-  line-height: 1.5;
 }
 
-.first-run .settings-section > .muted {
-  color: var(--pm-muted);
+.fr-screen {
+  display: flex;
+  box-sizing: border-box;
+  flex-direction: column;
+  width: min(100%, 30rem);
+  min-height: min(36rem, calc(100vh - 6rem));
+  border: 1px solid var(--pm-border);
+  background: var(--pm-raised);
+  box-shadow: var(--pm-shadow);
+  font-size: var(--pm-text-md);
 }
 
-/*
- * The first run's guide (T69, A1146): a welcome with two ways on, each a wide button with an
- * icon, a title and a line; then that way's steps and its form, with Back above.
- */
-.first-run h2:focus {
+.fr-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.8rem;
+  min-width: 0;
+  padding: 1.25rem 1.6rem 1.4rem;
+}
+
+.fr-centered {
+  justify-content: center;
+  gap: 0.9rem;
+  padding-bottom: 2.5rem;
+}
+
+.fr-screen h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.fr-centered h2 {
+  font-size: 1.6rem;
+}
+
+.fr-screen h2:focus {
   outline: none;
 }
 
-.first-run-choices {
-  display: grid;
-  gap: 0.6rem;
-  max-width: 34rem;
-  margin: 1.2rem 0;
+.fr-brand {
+  display: flex;
 }
 
-.first-run-choice {
+.fr-foot {
   display: flex;
-  gap: 0.8rem;
-  align-items: flex-start;
-  width: 100%;
-  padding: 0.85rem 1rem;
-  border: 1px solid var(--pm-border);
-  border-radius: 0;
-  background: var(--pm-raised);
-  color: var(--pm-fg);
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 1.6rem;
+  border-top: 1px solid var(--pm-border-soft);
+}
+
+.fr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  margin-inline-start: auto;
+}
+
+.fr-progress {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.fr-step {
+  margin: 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fr-bars {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.fr-bars > span {
+  height: 3px;
+  background: var(--pm-border);
+}
+
+.fr-bars > .on {
+  background: var(--pm-accent);
+}
+
+.fr-lead {
+  margin: 0;
+  color: var(--pm-muted);
+  line-height: 1.45;
+}
+
+.fr-welcome {
+  font-size: var(--pm-text-md);
+}
+
+.fr-small {
+  font-size: var(--pm-text-sm);
+}
+
+/* A button that reads as a link (Try Again, Use field-notes-2, Start One Here). */
+.fr-link {
+  display: inline;
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
   font: inherit;
-  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
   cursor: pointer;
 }
 
-.first-run-choice:hover {
-  border-color: var(--pm-accent);
-  background: var(--pm-hover);
+.fr-learn,
+.fr-link {
+  color: var(--pm-link);
+  font-size: var(--pm-text-sm);
 }
 
-.first-run-choice:focus-visible {
+/* Inside a line of words, a link is the line's size. */
+:is(.fr-lead, .fr-warn, .fr-invalid-words, .fr-tree-none) .fr-link {
+  align-self: auto;
+  font-size: inherit;
+}
+
+/* The choices of 1.2 and 1.3: wide rows, each a radio button. */
+.fr-options {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.fr-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.4rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-raised);
+  cursor: pointer;
+}
+
+.fr-option:hover {
+  border-color: var(--pm-border-strong);
+}
+
+.fr-option:has(input:checked) {
+  border-color: var(--pm-accent);
+  background: var(--pm-accent-softer);
+  box-shadow: inset 0 0 0 1px var(--pm-accent);
+}
+
+.fr-option:has(input:focus-visible),
+.fr-choice:has(input:focus-visible) {
   outline: 2px solid var(--pm-focus);
   outline-offset: 2px;
 }
 
-.first-run-choice > .i {
+.fr-option input,
+.fr-choice input {
   flex: none;
-  margin-top: 0.15rem;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--pm-accent);
+}
+
+.fr-option-text {
+  display: grid;
+  flex: 1;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.fr-option-text strong {
+  font-weight: 600;
+}
+
+.fr-option-text > span {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+}
+
+/* Work going on, and what went wrong. */
+.fr-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+}
+
+.fr-spin {
+  box-sizing: border-box;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--pm-border);
+  border-top-color: var(--pm-accent);
+  border-radius: 50%;
+  animation: fr-spin 0.8s linear infinite;
+}
+
+.btn.primary .fr-spin {
+  border-color: color-mix(in oklab, var(--pm-on-accent) 40%, transparent);
+  border-top-color: var(--pm-on-accent);
+}
+
+.fr-spin-lg {
+  width: 18px;
+  height: 18px;
+}
+
+@keyframes fr-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fr-spin {
+    animation-duration: 2.4s;
+  }
+}
+
+.fr-error {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid color-mix(in oklab, var(--pm-danger) 35%, transparent);
+  background: var(--pm-danger-soft);
+  line-height: 1.45;
+}
+
+.fr-error > .i {
+  flex: none;
+  margin-top: 0.1rem;
+  color: var(--pm-danger);
+}
+
+.fr-ok {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid color-mix(in oklab, var(--pm-accent) 35%, transparent);
+  background: var(--pm-accent-softer);
+}
+
+.fr-empty {
+  margin: 0;
+  padding: 1.75rem 1rem;
+  border: 1px dashed var(--pm-border-strong);
+  color: var(--pm-muted);
+  text-align: center;
+}
+
+/* The device code (2.4): large enough to read across a desk, and copied whole. */
+.fr-code {
+  display: block;
+  padding: 1rem;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-bg);
+  font: 600 1.75rem/1 var(--pm-mono);
+  letter-spacing: 0.12em;
+  text-align: center;
+  user-select: all;
+}
+
+.fr-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Copy Code and Open GitHub's Page, side by side, each half the row. */
+.fr-row.fr-even > .btn {
+  flex: 1 1 0;
+}
+
+.fr-grow {
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+
+/* A label read only by a screen reader (the repository name beside its owner). */
+.fr-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Fields: the settings field, without its margins. */
+.fr-form,
+.fr-fields {
+  display: grid;
+  gap: 0.8rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fr-screen .fr-field {
+  margin: 0;
+}
+
+.fr-field .input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.fr-repo-name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 400;
+}
+
+.fr-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--pm-text-sm);
+  font-weight: 400;
+}
+
+.fr-owner {
+  font-weight: 400;
+}
+
+.input.fr-invalid {
+  border-color: var(--pm-danger);
+}
+
+.fr-invalid-words {
+  color: var(--pm-danger);
+  font-size: var(--pm-text-sm);
+  font-weight: 400;
+}
+
+.fr-warn {
+  padding: 0.4rem 0.5rem;
+  background: var(--pm-warn-bg);
+  font-size: var(--pm-text-sm);
+  font-weight: 400;
+}
+
+.fr-more > summary {
+  color: var(--pm-link);
+  font-size: var(--pm-text-sm);
+  cursor: pointer;
+}
+
+.fr-more .settings-field {
+  margin: 0.6rem 0 0;
+}
+
+/* Where a notebook is or goes: its folder and branch, each with its icon. */
+.fr-loc {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  font-weight: 400;
+}
+
+.fr-loc > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.fr-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-bg);
+  overflow-wrap: anywhere;
+}
+
+.fr-card-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: var(--pm-accent-soft);
   color: var(--pm-accent);
 }
 
-.first-run-choice-text {
+.fr-card-text {
   display: grid;
-  gap: 0.2rem;
+  gap: 0.15rem;
+  min-width: 0;
 }
 
-.first-run-choice-text > span {
-  color: var(--pm-muted);
-  font-size: 0.9em;
+.fr-card-title {
+  font-weight: 600;
 }
 
-.first-run-back {
-  display: inline-flex;
-  gap: 0.3rem;
+.fr-or {
+  display: flex;
   align-items: center;
-  margin-bottom: 0.8rem;
+  gap: 0.6rem;
+  margin: 0.2rem 0 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
 }
 
-.first-run-steps {
-  max-width: 34rem;
-  margin: 0 0 1rem;
-  padding-left: 1.3rem;
-  line-height: 1.6;
+.fr-or > span {
+  flex: 1;
+  height: 1px;
+  background: var(--pm-border);
 }
 
-.first-run-more {
-  max-width: 34rem;
-  margin: 0.8rem 0;
+.fr-another {
+  display: grid;
+  gap: 0.5rem;
 }
 
-.first-run-more > summary {
+/* Use Existing Repo (4.2): each repository, the notebooks in it beneath (Notebook List A). */
+.fr-filter {
+  position: relative;
+  display: block;
+}
+
+.fr-filter > .i {
+  position: absolute;
+  top: 50%;
+  left: 0.6rem;
+  color: var(--pm-muted);
+  transform: translateY(-50%);
+}
+
+.fr-filter > .input {
+  width: 100%;
+  box-sizing: border-box;
+  padding-left: 1.9rem;
+}
+
+.fr-tree,
+.fr-tree-in {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fr-tree {
+  max-height: 22rem;
+  overflow-y: auto;
+  border: 1px solid var(--pm-border);
+}
+
+.fr-tree-repo,
+.fr-tree-notebook,
+.fr-tree-none {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  border-bottom: 1px solid var(--pm-border-soft);
+}
+
+.fr-tree > li:last-child > :last-child,
+.fr-tree > li:last-child .fr-tree-in > li:last-child {
+  border-bottom: 0;
+}
+
+.fr-tree-repo {
+  min-height: 2rem;
+  padding: 0 0.6rem 0 0.25rem;
+  background: var(--pm-bg);
+  font-size: var(--pm-text-sm);
+}
+
+.fr-tree-toggle {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--pm-muted);
   cursor: pointer;
 }
 
-.first-run-more > p {
-  margin: 0.5rem 0 0;
-  line-height: 1.5;
+.fr-tree-name {
+  min-width: 0;
+  padding: 0.2rem 0;
+  overflow: hidden;
+  border: 0;
+  background: none;
+  color: var(--pm-fg);
+  font: inherit;
+  text-align: start;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
-.first-run-more .settings-row {
-  margin-top: 0.6rem;
+.fr-tree-name:hover:not(:disabled) strong {
+  text-decoration: underline;
+}
+
+.fr-tree-name:disabled,
+.fr-tree-toggle:disabled {
+  color: var(--pm-muted);
+  cursor: not-allowed;
+}
+
+.fr-tree-name strong {
+  font-weight: 600;
+}
+
+.fr-chip {
+  flex: none;
+  background: color-mix(in oklab, var(--pm-fg) 6%, transparent);
+  color: var(--pm-muted);
+}
+
+.fr-when {
+  flex: none;
+  margin-inline-start: auto;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  white-space: nowrap;
+}
+
+.fr-tree-notebook {
+  min-height: 2.4rem;
+  padding: 0.2rem 0.6rem 0.2rem 2rem;
+  cursor: default;
+}
+
+.fr-tree-notebook > .i {
+  flex: none;
+  color: var(--pm-accent);
+}
+
+.fr-tree-notebook > strong {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fr-tree-notebook > .btn {
+  height: var(--pm-control-sm);
+  margin-inline-start: auto;
+}
+
+.fr-tree-notebook.on {
+  background: var(--pm-accent-softer);
+}
+
+.fr-tree-none {
+  min-height: 1.9rem;
+  padding: 0 0.6rem 0 2rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+}
+
+.fr-tree-none > span:not(.fr-spin) {
+  flex: 1;
+}
+
+/* Several notebooks (4.7) and Pick Folder (4.8): one row each, a radio button. */
+.fr-choices {
+  display: grid;
+  border: 1px solid var(--pm-border);
+}
+
+.fr-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.5rem;
+  padding: 0.35rem 0.75rem;
+  font-size: var(--pm-text-sm);
+  border-bottom: 1px solid var(--pm-border-soft);
+  cursor: pointer;
+}
+
+.fr-choice:last-child {
+  border-bottom: 0;
+}
+
+.fr-choice:has(input:checked) {
+  background: var(--pm-accent-softer);
+}
+
+.fr-choice > .i {
+  flex: none;
+  color: var(--pm-muted);
+}
+
+.fr-choice-text {
+  display: grid;
+}
+
+.fr-choice-text strong {
+  font-weight: 600;
+}
+
+.fr-choice-text .muted {
+  font-size: var(--pm-text-sm);
+}
+
+/* Setting Up (7.1, 7.3): each part of the work, done, going or failed. */
+.fr-checklist {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0.2rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fr-checklist > li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.fr-checklist > li[data-mark='todo'] {
+  color: var(--pm-muted);
+}
+
+.fr-mark {
+  display: flex;
+  box-sizing: border-box;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
+
+.fr-mark-done {
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
+}
+
+.fr-mark-failed {
+  background: var(--pm-danger);
+  color: var(--pm-on-accent);
+}
+
+.fr-mark-todo {
+  border: 2px solid var(--pm-border);
+}
+
+@media (max-width: 480px) {
+  .first-run {
+    justify-content: flex-start;
+    padding: 0;
+  }
+
+  .fr-screen {
+    min-height: 100%;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .fr-body,
+  .fr-foot {
+    padding-inline: 1rem;
+  }
 }
 
 .boot {

@@ -1,6 +1,6 @@
 /**
  * Settings → Notebooks (T50 G5, #153; A853–A857), in the Mac app: notebooks kept in a git
- * repository and synced by this Mac's own git. The first run (A1030) shows the same Add form.
+ * repository and synced by this Mac's own git. The first run (A1030) has its own screens.
  *
  * - **Add** (remote, branch, optional directory; a name when the target holds no notebook yet).
  *   Any repository: Penmoss asks nobody whether it is private (D61), and git follows its own
@@ -1162,30 +1162,10 @@ function CommitIdentity({
 }
 
 /**
- * How the Add form is asked (T69, A1146): Settings' one form for both (`any`), or the first
- * run's two ways on, a new notebook (its name asked at once) or one that exists (its name only
- * if the repository turns out to hold none).
+ * Adds a git notebook, or makes one (Settings → Notebooks, A1030). The first run has screens of
+ * its own (FirstRun.tsx, Ryan's review of #192, findings 2–4) on the same bridge.
  */
-export type AddMode = 'any' | 'new' | 'existing';
-
-/** What was added, for the first run (T69): its welcome note goes in a notebook it made. */
-export interface Added {
-  readonly notebookId: string;
-  readonly name: string;
-  readonly created: boolean;
-}
-
-/** Adds a git notebook, or makes one (Settings → Notebooks, and the first run, A1030). */
-export function AddGitNotebook({
-  git,
-  mode = 'any',
-  onAdded,
-}: {
-  git: DesktopGit;
-  mode?: AddMode;
-  /** After the list has the notebook (the first run opens the app then). */
-  onAdded?: (added: Added) => void;
-}) {
+export function AddGitNotebook({ git }: { git: DesktopGit }) {
   const registry = useSourcesRegistry();
   const others = useOtherNotebookNames();
   const github = git.github;
@@ -1276,11 +1256,6 @@ export function AddGitNotebook({
             : ''),
       );
       await registry?.refresh();
-      onAdded?.({
-        notebookId: value.notebook.notebookId,
-        name: value.notebook.name,
-        created: value.created === true,
-      });
     } finally {
       setBusy(false);
     }
@@ -1338,21 +1313,16 @@ export function AddGitNotebook({
     <>
       <label className="settings-field">
         <span>
-          {mode === 'new' ? 'Notebook Name' : 'Name'}{' '}
+          Name{' '}
           <span className="muted">
-            {mode === 'new'
-              ? '(shown in the sidebar)'
-              : needsName
-                ? '(the repository holds none: name it)'
-                : '(for a new notebook)'}
+            {needsName ? '(the repository holds none: name it)' : '(for a new notebook)'}
           </span>
         </span>
         <input
           className="input"
-          required={needsName || mode === 'new'}
+          required={needsName}
           maxLength={80}
           value={name}
-          placeholder={mode === 'new' ? 'Notes' : undefined}
           data-testid="git-add-name"
           onChange={(event) => setName(event.target.value)}
         />
@@ -1367,16 +1337,7 @@ export function AddGitNotebook({
       ) : null}
     </>
   );
-  const moreOptions =
-    mode === 'any' ? (
-      placeFields
-    ) : (
-      // The first run keeps branch and folder out of the way (T69): most repositories use main.
-      <details className="first-run-more" data-testid="git-add-more">
-        <summary>More Options</summary>
-        {placeFields}
-      </details>
-    );
+  const moreOptions = placeFields;
   const status = (
     <span role="status" className="muted" data-testid="git-add-message">
       {message}
@@ -1392,26 +1353,12 @@ export function AddGitNotebook({
       <>
         <RepoPicker
           github={github}
-          startNew={mode === 'new'}
           picked={null}
           onPick={pick}
           onTypeAddress={() => setWay('type')}
           onSignedOut={(error) => {
             setSignedOut(error);
             setWay('type');
-          }}
-          onCreated={(repo, notebookName, via) => {
-            // Create, then Add at its root (B7); a failed Add leaves it picked, so trying again
-            // makes no second repository.
-            pick(repo, via);
-            setName(notebookName);
-            void add({
-              remote: repo.cloneUrl,
-              branch: repo.defaultBranch || 'main',
-              dir: '',
-              name: notebookName,
-              githubSignIn: via === 'penmoss',
-            });
           }}
         />
         {message ? <div className="settings-actions">{status}</div> : null}
@@ -1518,9 +1465,8 @@ export function AddGitNotebook({
             </div>
           </div>
         ) : null}
-        {mode === 'new' ? nameField : null}
         <label className="settings-field">
-          <span>{mode === 'any' ? 'Remote' : 'Repository address'}</span>
+          <span>Remote</span>
           <input
             className="input"
             required
@@ -1535,20 +1481,16 @@ export function AddGitNotebook({
           />
         </label>
         {moreOptions}
-        {mode === 'any' || (mode === 'existing' && needsName) ? nameField : null}
+        {nameField}
         <div className="settings-actions">
           <button
             type="submit"
             className="btn primary"
             data-ui="submit"
-            disabled={busy || remote.trim() === '' || (mode === 'new' && name.trim() === '')}
+            disabled={busy || remote.trim() === ''}
           >
             <Icon name="plus" size={14} />
-            {mode === 'new' || (mode === 'existing' && needsName)
-              ? 'Make Notebook'
-              : mode === 'existing'
-                ? 'Open Notebook'
-                : 'Add'}
+            Add
           </button>
           {status}
         </div>
@@ -1566,13 +1508,7 @@ export function AddGitNotebook({
         void add(opensNotebook ? { remote, branch, dir, name: '' } : undefined);
       }}
     >
-      <h3 id={`${id}-h`}>
-        {mode === 'new'
-          ? 'Make a new notebook'
-          : mode === 'existing'
-            ? 'Open a notebook'
-            : 'Add a git notebook'}
-      </h3>
+      <h3 id={`${id}-h`}>Add a git notebook</h3>
       {github ? (
         <div className="repo-way" role="group" aria-label="How to choose the repository">
           <button

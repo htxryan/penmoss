@@ -163,3 +163,43 @@ test('the sign-in code fits a narrow window', async ({ page, host }) => {
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/sign-in-narrow.png` });
   await page.getByTestId('github-signin-cancel').click();
 });
+
+test.describe('the first run', () => {
+  test.use({ seed: null });
+
+  test('signs in with GitHub on its own screens: the code, then Signed In, then the repositories', async ({
+    page,
+    host,
+  }) => {
+    test.setTimeout(60_000);
+    const errors = collectErrors(page);
+    host.offerSignIn = true;
+    host.githubRepo('notes', { pushedAt: '2026-11-06T10:00:00Z' });
+    await page.goto('/');
+    const firstRun = page.getByTestId('first-run');
+    await firstRun.getByTestId('first-run-start').click();
+    await firstRun.getByTestId('first-run-existing').click();
+    await firstRun.getByTestId('first-run-continue').click();
+    // 2.3: git has no GitHub sign-in.
+    await expect(firstRun.getByRole('heading', { name: 'Sign In to GitHub' })).toBeVisible();
+    await expect(firstRun.getByTestId('first-run-url-instead')).toBeVisible();
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/first-run-sign-in.png` });
+    await firstRun.getByTestId('first-run-signin').click();
+    // 2.4: the code, large, with Copy Code.
+    await expect(
+      firstRun.getByRole('heading', { name: 'Enter This Code on GitHub' }),
+    ).toBeVisible();
+    await expect(firstRun.getByTestId('github-signin-code')).toHaveText('WDJB-MJHT');
+    expect(host.opened).toEqual([`${GITHUB_WEB}/login/device`]);
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/first-run-code.png` });
+    host.githubRepos.approve();
+    // 2.5: Signed In, then Continue lists the repositories with it.
+    await expect(firstRun.getByTestId('first-run-signed-in')).toContainText('Signed in as ryan');
+    await firstRun.getByTestId('first-run-continue').click();
+    await expect(firstRun.getByTestId('first-run-tree-repo')).toHaveCount(1);
+    await expect(firstRun.getByTestId('first-run-via')).toContainText(
+      'Signed in to GitHub as ryan',
+    );
+    expect(errors).toEqual([]);
+  });
+});

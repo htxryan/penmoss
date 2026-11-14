@@ -70,14 +70,16 @@ test.describe('with no notebook', () => {
     // The screen starts below it, and its buttons still take a click.
     const welcome = await box(page, '[data-testid="first-run"]');
     expect(welcome.y).toBeGreaterThanOrEqual(TITLE_BAR_ROW);
-    const choice = await box(page, '[data-testid="first-run-new"]');
+    const choice = await box(page, '[data-testid="first-run-start"]');
     expect(await regionAt(page, choice.x + 10, choice.y + 10)).not.toBe('drag');
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/window-1-first-run.png` });
 
     // Scrolled, the screen goes under the strip, which still drags: its controls set no region
-    // of their own, so none takes the strip from it (PEN-65's trap).
-    await page.getByTestId('first-run-existing').click();
-    await expect(page.getByTestId('git-add')).toBeVisible();
+    // of their own, so none takes the strip from it (PEN-65's trap). Pick Repository (three
+    // choices) is taller than this window.
+    await page.getByTestId('first-run-start').click();
+    await page.getByTestId('first-run-continue').click();
+    await expect(page.getByRole('heading', { name: 'Pick Repository' })).toBeVisible();
     const scrolled = await page
       .locator('.window-bare')
       .evaluate((element) => ((element.scrollTop = 120), element.scrollTop));
@@ -85,6 +87,7 @@ test.describe('with no notebook', () => {
     for (const x of [20, 200, 450, 700]) {
       expect(await regionAt(page, x, TITLE_BAR_ROW / 2), `x ${x}`).toBe('drag');
     }
+    await page.getByTestId('first-run-back').click();
     await page.getByTestId('first-run-back').click();
     await expect(page.getByRole('heading', { name: 'Welcome to Penmoss' })).toBeVisible();
     expect(errors).toEqual([]);

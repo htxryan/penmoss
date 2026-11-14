@@ -18,33 +18,44 @@ Penmoss does not check who can read your repository. Make it **private** to keep
 
 ## Make the notebook
 
-1. Open Penmoss. It shows **Welcome to Penmoss** with two choices.
-2. Choose **Start a new notebook**.
-3. Pick the repository:
-   - **With GitHub:** Penmoss lists your repositories, most recently pushed first, with empty ones at the top. Pick an empty private one, or fill in **Create a private repository on GitHub**: a **Notebook name** (shown in the sidebar), a **Repository name** and an **Owner** (you or one of your organisations).
-   - **Another host, or to type it:** choose **Type an Address**. Make an empty private repository with no README on your host, copy its address (SSH, such as `git@github.com:you/notes.git`, or HTTPS) and paste it in **Repository address**.
-4. Name the notebook and choose **Make Notebook**. Penmoss sets it up in the repository at its first sync.
+Penmoss asks one thing per screen, in three steps. **Back** at the bottom left goes to the screen before.
 
-Penmoss opens the new notebook on a note called **Welcome to Penmoss**, a short guide you can delete.
+1. Open Penmoss. It shows **Welcome to Penmoss**. Choose **Get Started**.
+2. **Create or Open Notebook:** choose **Start a New Notebook**, then **Continue**.
+3. **Pick Repository:** choose one, then **Continue**.
+   - **Create New Repo** (recommended): Penmoss makes a private, empty repository on GitHub for you. Give the **Notebook name** (shown in the sidebar); the repository's name follows it until you change it. The repository goes under your own account; **Change** picks one of your organisations instead. Choose **Make Notebook**. If the name is taken, Penmoss says so and offers another.
+   - **Use Existing Repo:** Penmoss lists your GitHub repositories, empty ones first, each with the notebooks in it beneath. Choose an empty repository you made. One that holds other files, such as code, asks which folder the notebook goes in (**Pick Folder**): its **Root**, a folder, or a new one (**Add Folder**).
+   - **Paste a URL:** for another host, or a repository GitHub doesn't list. Make an empty private repository with no README on your host, copy its address (SSH, such as `git@github.com:you/notes.git`, or HTTPS), paste it in **Repository URL** and choose **Continue**.
+4. **Name Your Notebook:** Penmoss offers the repository's name. Change it if you like (you can rename it any time) and choose **Make Notebook**.
+
+Penmoss then sets the notebook up and runs its first sync, showing each step. When it is done, Penmoss opens the new notebook on a note called **Welcome to Penmoss**, a short guide you can delete.
+
+If the first sync fails, Penmoss says why. The notebook is on your Mac already, and nothing is lost: **Retry** tries again, and **Open Anyway** opens it, and the note's bottom bar shows how the sync stands until one works.
+
+If the repository you pick already holds a notebook, Penmoss offers to open it instead of making a second one.
 
 ### More options
 
-Under **More Options** you can set:
+When you use an empty repository or paste a URL, **More Options** lets you set:
 
 - **Branch:** `main` unless you say otherwise. A branch that does not exist yet is made by the first push.
-- **Directory:** a folder of the repository to keep the notebook in, such as `docs/notes` in a code repository. Penmoss then writes only inside that folder.
+- **Folder:** a folder of the repository to keep the notebook in, such as `docs/notes` in a code repository. Penmoss then writes only inside that folder.
 
 ## Sign in with GitHub
 
-If git on your Mac is not signed in to GitHub, Penmoss says so and offers **Sign In with GitHub**:
+Penmoss first tries git's own GitHub sign-in on your Mac (GitHub Desktop's, the GitHub CLI's or the Keychain's). If there is none, **Sign In to GitHub** offers Penmoss's own:
 
 1. Choose **Sign In with GitHub**. Penmoss shows a code and opens github.com in your browser.
 2. Enter the code there (**Copy Code** copies it) and approve Penmoss.
-3. Back in Penmoss, pick or create the repository as above.
+3. Back in Penmoss, choose **Continue**, then create or pick the repository as above.
+
+**Paste a URL Instead** skips GitHub altogether.
 
 Penmoss keeps the sign-in in the Mac's Keychain. It uses it to list your repositories, to sync notebooks it added from github.com over HTTPS, and to [send feedback](/docs/help/feedback/). **Settings → Status → GitHub Token** shows whose it is, and **Sign Out** forgets it.
 
-If you prefer git's own sign-in, install the GitHub CLI and run `gh auth login`, then `gh auth setup-git`.
+If you prefer git's own sign-in, install the GitHub CLI and run `gh auth login`, then `gh auth setup-git`, then **Try Again** in Penmoss.
+
+If GitHub refuses the sign-in (it ran out, or the repositories are in an organisation that uses single sign-on and hasn't authorised Penmoss), Penmoss says so and offers to sign in again. If git itself is missing, Penmoss asks you to install the Mac's command-line tools: run `xcode-select --install` in Terminal.
 
 ## A personal access token
 
@@ -54,7 +65,7 @@ On GitHub, a fine-grained token for that one repository needs **Contents: Read a
 
 ## Open a notebook you already have
 
-To open a notebook Penmoss made before, on this Mac or another device, choose **Open a notebook you already have** instead, then pick the repository and the folder that holds it (or type its address). See [More devices](/docs/more-devices/).
+To open a notebook Penmoss made before, on this Mac or another device, choose **Open an Existing Notebook** instead of Start a New Notebook. Penmoss lists your GitHub repositories with the notebooks in each beneath it: choose **Open** beside the one you want, or **Paste a URL Instead** for a repository on another host. The most recently pushed repositories are looked into at once; the arrow beside another shows what it holds, and the filter box finds a repository or notebook by name. A repository that holds several notebooks asks which one (**Pick Notebook**). See [More devices](/docs/more-devices/).
 
 ## Commits and your email
 

@@ -1,17 +1,38 @@
 /**
- * The first run (T59, A1030; T69, A1146): with no git notebook on this Mac the app has nothing to
- * open, since git notebooks are the only kind (D48, D49). Until one is added or made, the window
- * shows this guide (a welcome, then a new notebook or one that exists, each with Settings → Git
- * Notebooks' own Add form); once the list has one, the app opens it.
- * The app's views are mounted only then, so their root and Journal notebook are never missing.
+ * The first run (T59, A1030; T69, A1146; Ryan's review of #192, findings 2–4): with no git
+ * notebook on this Mac the app has nothing to open, since git notebooks are the only kind (D48,
+ * D49). Until one is added or made, the window shows this guide, one step per screen (First Run
+ * C): a short welcome; Create or Open Notebook; Pick Repository (Create New Repo, Use Existing
+ * Repo or Paste a URL), with GitHub's sign-in on the way when it is needed; Name Your Notebook
+ * when a new one is made; then Setting Up, until the first sync. Every screen but the first and
+ * the last has the "Step n of 3" bar and a footer with Back and its button. The app's views are
+ * mounted only once a notebook is set up, so their root and Journal notebook are never missing.
  */
-import { BrandMark, Icon } from '@penmoss/ui/icons';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { desktop } from '../desktop/bridge';
-import { navigate, notePath } from '../router';
-import { AddGitNotebook, type Added } from './GitNotebooksSettings';
-import { useAllSources, useSourcesRegistry } from './hooks';
-import { addWelcomeNote } from './welcome-note';
+import { BrandMark } from '@penmoss/ui/icons';
+import { Fragment, useCallback, useRef, useState, type ReactNode } from 'react';
+import { desktop, type GitHubRepo } from '../desktop/bridge';
+import {
+  FIRST_RUN_DOCS,
+  placeIn,
+  type AddNotebook,
+  type Goal,
+  type Hub,
+  type RepoRead,
+  type Screen,
+} from './first-run-flow';
+import { Action, Frame } from './FirstRunFrame';
+import { GitHubAccess } from './FirstRunGitHub';
+import {
+  CreateRepo,
+  FolderPick,
+  GitMissing,
+  NameNotebook,
+  PasteUrl,
+  RepoPicked,
+  RepoTree,
+} from './FirstRunRepos';
+import { SettingUp } from './FirstRunSetup';
+import { useAllSources } from './hooks';
 import { isOpen } from './registry';
 import './sources.css';
 
@@ -25,9 +46,11 @@ export function FirstRunGate({
   capture?: boolean;
 }) {
   const state = useAllSources();
+  /** A notebook is being set up (7.1): the first run stays until its first sync. */
+  const [held, setHeld] = useState(false);
   // Without a registry (tests that render one source), there is nothing to wait for.
   if (!state) return children;
-  if (isOpen(state)) return children;
+  if (isOpen(state) && !held) return children;
   if (!state.loaded) {
     return (
       <BareWindow>
@@ -37,7 +60,7 @@ export function FirstRunGate({
       </BareWindow>
     );
   }
-  return <BareWindow>{capture ? <CaptureFirstRun /> : <FirstRun />}</BareWindow>;
+  return <BareWindow>{capture ? <CaptureFirstRun /> : <FirstRun onHold={setHeld} />}</BareWindow>;
 }
 
 /**
@@ -55,180 +78,368 @@ function BareWindow({ children }: { children: ReactNode }) {
   );
 }
 
-/** Where the first run is (T69, A1146): the welcome, then one of its two ways on. */
-type Step = 'welcome' | 'new' | 'existing';
-
-const GITHUB_NEW = 'https://github.com/new';
-
-/**
- * Welcome, and add or make the first git notebook (T69, #228, A1146): what Penmoss keeps and
- * where, then a new notebook (an empty private repository, named) or one that exists.
- */
-export function FirstRun() {
-  const git = desktop()?.git ?? null;
-  const registry = useSourcesRegistry();
-  const [step, setStep] = useState<Step>('welcome');
-  const back = useRef<HTMLButtonElement>(null);
-  const heading = useRef<HTMLHeadingElement>(null);
-  // Each step's heading takes focus, so a screen reader hears where it is.
-  useEffect(() => {
-    if (step === 'welcome') heading.current?.focus();
-    else back.current?.focus();
-  }, [step]);
-
-  /** A notebook made here starts with the welcome note, which opens with the app. */
-  const onAdded = (added: Added) => {
-    if (!added.created || !registry) return;
-    const source = registry.getState().all.find((each) => each.id === added.notebookId);
-    if (!source) return;
-    void addWelcomeNote(source)
-      .then((id) => {
-        // Only while the app is still at its start: a note opened meanwhile stays open.
-        if (id && window.location.pathname === '/') navigate(notePath(id));
-      })
-      .catch((error: unknown) =>
-        console.warn('[first run] could not write the welcome note', error),
-      );
-  };
-
+/** Radio choices drawn as wide rows (1.2, 1.3): one picked, Continue goes on with it. */
+function Options<T extends string>({
+  label,
+  value,
+  onChange,
+  items,
+}: {
+  label: string;
+  value: T;
+  onChange: (value: T) => void;
+  items: ReadonlyArray<{
+    readonly value: T;
+    readonly title: string;
+    readonly line: string;
+    readonly chip?: string;
+    readonly testId: string;
+  }>;
+}) {
   return (
-    <main className="app-shell first-run" data-testid="first-run" data-step={step}>
-      <h1 className="brand">
-        <BrandMark />
-        <span>Penmoss</span>
-      </h1>
-      {!git ? (
-        <section className="settings-section" aria-labelledby="first-run-heading">
-          <h2 id="first-run-heading">Add a git notebook</h2>
-          <p data-testid="first-run-no-mac">
-            Penmoss runs in its Mac app, which keeps your notes in git notebooks. Open the Mac app
-            to add one.
-          </p>
-        </section>
-      ) : step === 'welcome' ? (
-        <section className="settings-section" aria-labelledby="first-run-heading">
-          <h2 id="first-run-heading" ref={heading} tabIndex={-1}>
-            Welcome to Penmoss
-          </h2>
-          <p>
-            Penmoss keeps your notes as Markdown in a <strong>git notebook</strong>: a private
-            repository you own, synced by this Mac’s own git. There is no Penmoss account, and your
-            notes never go to a Penmoss server.
-          </p>
-          <div className="first-run-choices">
-            <button
-              type="button"
-              className="first-run-choice"
-              data-ui="item"
-              data-testid="first-run-new"
-              onClick={() => setStep('new')}
-            >
-              <Icon name="plus" />
-              <span className="first-run-choice-text">
-                <strong>Start a new notebook</strong>
-                <span>In an empty private repository you make now.</span>
-              </span>
-            </button>
-            <button
-              type="button"
-              className="first-run-choice"
-              data-ui="item"
-              data-testid="first-run-existing"
-              onClick={() => setStep('existing')}
-            >
-              <Icon name="notebook" />
-              <span className="first-run-choice-text">
-                <strong>Open a notebook you already have</strong>
-                <span>From a repository Penmoss has kept notes in before.</span>
-              </span>
-            </button>
-          </div>
-          <GitAccess />
-        </section>
-      ) : (
-        <section className="settings-section" aria-labelledby="first-run-heading">
-          <button
-            ref={back}
-            type="button"
-            className="btn first-run-back"
-            data-ui="item"
-            data-testid="first-run-back"
-            onClick={() => setStep('welcome')}
-          >
-            <Icon name="chevL" size={14} />
-            Back
-          </button>
-          <h2 id="first-run-heading">
-            {step === 'new' ? 'Start a new notebook' : 'Open a notebook you already have'}
-          </h2>
-          {step === 'new' && git.github ? (
-            // T81 (B7): the repository is picked or created in the form below.
-            <ol className="first-run-steps">
-              <li>
-                Create a <strong>private</strong> repository below, or pick an empty one you made.
-                You can also{' '}
-                <a href={GITHUB_NEW} target="_blank" rel="noreferrer">
-                  create one on GitHub
-                </a>{' '}
-                yourself, or type the address of one anywhere this Mac’s git can push to.
-              </li>
-              <li>Name the notebook. Penmoss sets it up in the repository at its first sync.</li>
-            </ol>
-          ) : step === 'new' ? (
-            <ol className="first-run-steps">
-              <li>
-                Make an empty <strong>private</strong> repository, with no README:{' '}
-                <a href={GITHUB_NEW} target="_blank" rel="noreferrer">
-                  create one on GitHub
-                </a>
-                , or anywhere this Mac’s git can push to.
-              </li>
-              <li>Copy its address (SSH or HTTPS) and paste it below.</li>
-              <li>Name the notebook. Penmoss sets it up in the repository at its first sync.</li>
-            </ol>
-          ) : git.github ? (
-            <p>
-              Pick the repository that holds the notebook, then its folder, or type its address. If
-              the folder holds none yet, you will be asked to name a new one.
-            </p>
-          ) : (
-            <p>
-              Paste the address of the repository that holds the notebook. If it holds none yet, you
-              will be asked to name a new one.
-            </p>
-          )}
-          <AddGitNotebook git={git} mode={step} onAdded={onAdded} />
-          <GitAccess />
-          <p className="muted">
-            You can add more notebooks, and change how each syncs, in Settings → Notebooks.
-          </p>
-        </section>
-      )}
-    </main>
+    <div className="fr-options" role="radiogroup" aria-label={label}>
+      {items.map((item) => (
+        <label key={item.value} className="fr-option" data-testid={item.testId}>
+          <input
+            type="radio"
+            name={label}
+            value={item.value}
+            checked={value === item.value}
+            onChange={() => onChange(item.value)}
+          />
+          <span className="fr-option-text">
+            <strong>{item.title}</strong>
+            <span>{item.line}</span>
+          </span>
+          {item.chip ? <span className="chip">{item.chip}</span> : null}
+        </label>
+      ))}
+    </div>
   );
 }
 
-/** How Penmoss reaches the repository (T69): this Mac's git, or a token later. */
-function GitAccess() {
+type Way = 'create' | 'existing' | 'url';
+
+/**
+ * The first run's screens, as a stack: each step goes on to the next, Back goes to the one before.
+ * `onHold` keeps the first run on screen while a notebook is set up, past the moment the list has
+ * it, until its first sync.
+ */
+export function FirstRun({ onHold }: { onHold?: (hold: boolean) => void }) {
+  const git = desktop()?.git ?? null;
+  const github = git?.github;
+  const [stack, setStack] = useState<readonly Screen[]>([{ at: 'welcome' }]);
+  const [goal, setGoal] = useState<Goal>('new');
+  const [way, setWay] = useState<Way>('create');
+  const [hub, setHub] = useState<Hub | null>(null);
+  const [reads, setReads] = useState<ReadonlyMap<string, RepoRead>>(() => new Map());
+  const asked = useRef(new Set<string>());
+  const screen = stack[stack.length - 1]!;
+  const go = (next: Screen) => setStack((now) => [...now, next]);
+  const replace = (next: Screen) => setStack((now) => [...now.slice(0, -1), next]);
+  const back = () => setStack((now) => (now.length > 1 ? now.slice(0, -1) : now));
+
+  /** One repository's folders, read once (again on Try Again or Refresh). */
+  const read = useCallback(
+    (repo: GitHubRepo, again = false) => {
+      if (!github || (!again && asked.current.has(repo.fullName))) return;
+      asked.current.add(repo.fullName);
+      setReads((now) => new Map(now).set(repo.fullName, { state: 'loading' }));
+      void github
+        .folders(repo.fullName, repo.defaultBranch || 'main')
+        .catch(() => null)
+        .then((answer) => {
+          const loaded: RepoRead = !answer
+            ? { state: 'failed', message: 'This window cannot browse GitHub.' }
+            : !answer.ok
+              ? { state: 'failed', message: answer.error.message }
+              : { state: 'ready', folders: answer.value };
+          setReads((now) => new Map(now).set(repo.fullName, loaded));
+        });
+    },
+    [github],
+  );
+
+  /** git.add, holding the first run while it works and after it adds (until the first sync). */
+  const add: AddNotebook = async (input) => {
+    if (!git) return null;
+    onHold?.(true);
+    const result = await git.add(input).catch(() => null);
+    if (!(result?.ok && result.value.kind === 'added')) onHold?.(false);
+    return result;
+  };
+
+  if (!git) {
+    return (
+      <main className="app-shell first-run-plain" data-testid="first-run">
+        <h1 className="brand">
+          <BrandMark />
+          <span>Penmoss</span>
+        </h1>
+        <p data-testid="first-run-no-mac">
+          Penmoss runs in its Mac app, which keeps your notes in git notebooks. Open the Mac app to
+          add one.
+        </p>
+      </main>
+    );
+  }
+
+  /** GitHub's sign-in first when the flow has none yet (2.x), then `then`. */
+  const viaGitHub = (then: 'create' | 'list') =>
+    go(github ? (hub ? { at: then } : { at: 'github', then }) : { at: 'url' });
+
+  let body: ReactNode;
+  switch (screen.at) {
+    case 'welcome':
+      body = (
+        <Frame
+          name="welcome"
+          centered
+          above={
+            <span className="fr-brand" aria-hidden="true">
+              <BrandMark size={52} />
+            </span>
+          }
+          title="Welcome to Penmoss"
+          start={
+            <a className="fr-learn" href={FIRST_RUN_DOCS} target="_blank" rel="noreferrer">
+              Learn More
+            </a>
+          }
+          actions={
+            <Action primary testId="first-run-start" onClick={() => go({ at: 'goal' })}>
+              Get Started
+            </Action>
+          }
+        >
+          <p className="fr-lead fr-welcome">
+            Notes in a git repository you own. Three short steps and you’re writing.
+          </p>
+        </Frame>
+      );
+      break;
+    case 'goal':
+      body = (
+        <Frame
+          name="goal"
+          step={1}
+          title="Create or Open Notebook"
+          back={back}
+          actions={
+            <Action
+              primary
+              testId="first-run-continue"
+              onClick={() =>
+                goal === 'new' ? go(github ? { at: 'way' } : { at: 'url' }) : viaGitHub('list')
+              }
+            >
+              Continue
+            </Action>
+          }
+        >
+          <Options
+            label="Create or open"
+            value={goal}
+            onChange={setGoal}
+            items={[
+              {
+                value: 'new',
+                title: 'Start a New Notebook',
+                line: 'Your first Penmoss notebook',
+                testId: 'first-run-new',
+              },
+              {
+                value: 'existing',
+                title: 'Open an Existing Notebook',
+                line: 'From a repository with Penmoss notes',
+                testId: 'first-run-existing',
+              },
+            ]}
+          />
+        </Frame>
+      );
+      break;
+    case 'way':
+      body = (
+        <Frame
+          name="way"
+          step={2}
+          title="Pick Repository"
+          back={back}
+          actions={
+            <Action
+              primary
+              testId="first-run-continue"
+              onClick={() =>
+                way === 'url' ? go({ at: 'url' }) : viaGitHub(way === 'create' ? 'create' : 'list')
+              }
+            >
+              Continue
+            </Action>
+          }
+        >
+          <Options
+            label="Repository"
+            value={way}
+            onChange={setWay}
+            items={[
+              {
+                value: 'create',
+                title: 'Create New Repo',
+                line: 'On GitHub, private',
+                chip: 'Recommended',
+                testId: 'first-run-way-create',
+              },
+              {
+                value: 'existing',
+                title: 'Use Existing Repo',
+                line: 'An empty one you made',
+                testId: 'first-run-way-existing',
+              },
+              {
+                value: 'url',
+                title: 'Paste a URL',
+                line: 'Anywhere this Mac’s git can push to',
+                testId: 'first-run-way-url',
+              },
+            ]}
+          />
+        </Frame>
+      );
+      break;
+    case 'github':
+      body = github ? (
+        <GitHubAccess
+          github={github}
+          onReady={(answer) => {
+            setHub(answer);
+            replace({ at: screen.then });
+          }}
+          onUrl={() => replace({ at: 'url' })}
+          back={back}
+        />
+      ) : null;
+      break;
+    case 'create':
+      body =
+        github && hub ? (
+          <CreateRepo
+            github={github}
+            hub={hub}
+            onCreated={(place, name) => go({ at: 'setup', setup: { kind: 'create', place, name } })}
+            onUseExisting={() => replace({ at: 'list' })}
+            back={back}
+          />
+        ) : null;
+      break;
+    case 'list':
+      body = hub ? (
+        <RepoTree
+          hub={hub}
+          goal={goal}
+          reads={reads}
+          read={read}
+          onRepo={(repo) => go({ at: 'repo', repo })}
+          onOpen={(repo, folder) =>
+            go({
+              at: 'setup',
+              setup: {
+                kind: 'open',
+                place: placeIn(repo, hub.via, folder.path),
+                name: folder.notebook?.name ?? repo.name,
+              },
+            })
+          }
+          onUrl={() => go({ at: 'url' })}
+          onCreate={goal === 'new' ? () => replace({ at: 'create' }) : null}
+          onRefresh={() => {
+            asked.current.clear();
+            setReads(new Map());
+            setHub(null);
+            replace({ at: 'github', then: 'list' });
+          }}
+          back={back}
+        />
+      ) : null;
+      break;
+    case 'repo':
+      body = hub ? (
+        <RepoPicked
+          repo={screen.repo}
+          via={hub.via}
+          loaded={reads.get(screen.repo.fullName)}
+          read={read}
+          onOpen={(place, name) => go({ at: 'setup', setup: { kind: 'open', place, name } })}
+          onName={(place) => go({ at: 'name', place })}
+          onFolder={() => go({ at: 'folder', repo: screen.repo })}
+          onUrl={() => go({ at: 'url' })}
+          back={back}
+        />
+      ) : null;
+      break;
+    case 'folder': {
+      const loaded = reads.get(screen.repo.fullName);
+      body =
+        hub && loaded?.state === 'ready' ? (
+          <FolderPick
+            repo={screen.repo}
+            via={hub.via}
+            folders={loaded.folders}
+            beside
+            onName={(place) => go({ at: 'name', place })}
+            back={back}
+          />
+        ) : null;
+      break;
+    }
+    case 'url':
+      body = (
+        <PasteUrl
+          add={add}
+          onAdded={(setup) => go({ at: 'setup', setup })}
+          onName={(place) => go({ at: 'name', place })}
+          onGitMissing={() => go({ at: 'git-missing' })}
+          back={back}
+        />
+      );
+      break;
+    case 'git-missing':
+      body = <GitMissing back={back} />;
+      break;
+    case 'name':
+      body = (
+        <NameNotebook
+          place={screen.place}
+          onMake={(name) => go({ at: 'setup', setup: { kind: 'make', place: screen.place, name } })}
+          back={back}
+        />
+      );
+      break;
+    case 'setup':
+      body = (
+        <SettingUp
+          setup={screen.setup}
+          add={add}
+          onDone={() => onHold?.(false)}
+          onNeedsName={(place) => replace({ at: 'name', place })}
+          back={back}
+        />
+      );
+      break;
+  }
+
   return (
-    <details className="first-run-more" data-testid="first-run-access">
-      <summary>How Penmoss signs in to git</summary>
-      <p>
-        Penmoss uses this Mac’s own git and its sign-in: an SSH key, or the credential helper (such
-        as GitHub Desktop’s or the macOS Keychain). If <code>git push</code> works in Terminal for
-        the repository, Penmoss can sync it. If git isn’t signed in to GitHub, Sign In with GitHub
-        here lets Penmoss list your repositories and sync the notebook it adds over HTTPS. You can
-        also give a notebook a personal access token in Settings → Notebooks once it is added.
-      </p>
-      <p>Who can read the repository is up to you: keep it private to keep your notes private.</p>
-    </details>
+    <main className="first-run" data-testid="first-run" data-step={screen.at}>
+      {/* A new step is a new screen: its own fields, and its title takes focus. */}
+      <Fragment key={stack.length}>{body}</Fragment>
+    </main>
   );
 }
 
 /** The capture window with no notebook: nowhere to capture to yet. */
 function CaptureFirstRun() {
   return (
-    <main className="app-shell first-run" data-testid="first-run-capture">
+    <main className="app-shell first-run-plain" data-testid="first-run-capture">
       <p role="status">
         Add a git notebook in the Penmoss window first: captures go into your Primary Notebook.
       </p>
