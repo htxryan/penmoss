@@ -1,10 +1,12 @@
 /**
  * The drawing editor's dialog (PEN-28): Excalidraw (MIT, pinned in package.json) over the whole
- * window, with Done and Cancel, in the app's light or dark mode. Only drawing tools are offered:
- * no files to open or save, no libraries, no collaboration and no AI, and nothing here reaches
- * the network. The note shows the SVG Done makes, inverted in dark mode as Excalidraw itself does.
+ * window, with Cancel and Done as the app's icon and text buttons, in the app's light or dark
+ * mode. Only drawing tools are offered: no files to open or save, no libraries, no collaboration
+ * and no AI, and nothing here reaches the network. The note shows the SVG Done makes, inverted in
+ * dark mode as Excalidraw itself does.
  */
 import { Excalidraw, MainMenu, serializeAsJSON } from '@excalidraw/excalidraw';
+import { Icon } from '@penmoss/ui/icons';
 import '@excalidraw/excalidraw/index.css';
 import type {
   ExcalidrawImperativeAPI,
@@ -84,19 +86,21 @@ export function DrawingDialog({ initial, onDone, onCancel, onError }: DrawingDia
         <span className="drawing-editor-actions">
           <button
             type="button"
-            className="drawing-editor-cancel"
+            className="btn drawing-editor-cancel"
             data-ui="dismiss"
             onClick={onCancel}
           >
+            <Icon name="close" size={14} />
             Cancel
           </button>
           <button
             type="button"
-            className="drawing-editor-done"
+            className="btn primary drawing-editor-done"
             data-ui="submit"
             disabled={saving}
             onClick={() => void done()}
           >
+            <Icon name="check" size={14} />
             Done
           </button>
         </span>
