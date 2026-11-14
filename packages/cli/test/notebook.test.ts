@@ -820,7 +820,7 @@ describe('penmoss notebook', () => {
     );
     expect((await cli(['new', 'Kept', '--notebook', 'nb'])).code).toBe(0);
     const sync = await cli(['notebook', 'sync', 'nb']);
-    expect(sync.code).toBe(7);
+    expect(sync.code, sync.stderr).toBe(7);
     expect(sync.stderr).toContain(
       'GitHub refused the push: its commits would make your private email address public (GH007).',
     );
@@ -839,7 +839,7 @@ describe('penmoss notebook', () => {
     );
     const cli = machine('m', { gitEnv: { GIT_CONFIG_GLOBAL: global } });
     const refused = await cli(['notebook', 'add', `file://${remote}`, '--name', 'nb']);
-    expect(refused.code).toBe(7);
+    expect(refused.code, refused.stderr).toBe(7);
     expect(refused.stderr).toContain('(GH007)');
     // add rolled back, so the advice is add again, not `notebook set` on a notebook not there.
     expect(refused.stderr).toContain(
