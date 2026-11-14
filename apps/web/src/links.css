@@ -99,8 +99,13 @@
   grid-template-columns: minmax(0, 1fr) var(--pm-panel-width, 26rem) auto;
 }
 
-/* The panel scrolls on its own, between the note's bar and the status bar (A505, A1132). */
+/*
+ * The panel scrolls on its own, between the note's bar and the status bar (A505, A1132). It holds
+ * what is placed in it (`.sr-only` words, popovers): placed against the note's columns instead,
+ * they stretched the note's pane below the window, and it scrolled (Ryan's review of #193, R2-10).
+ */
 .note-side {
+  position: relative;
   box-sizing: border-box;
   min-height: 0;
   margin: 0;
