@@ -228,4 +228,138 @@ test.describe('with a notebook', () => {
     expect(await selected()).not.toBe('');
     expect(errors).toEqual([]);
   });
+
+  /** The notebook's row in the sidebar (its section's head). */
+  const notebookRow = (page: Page) => page.locator('.sb-source > .sb-section-head').first();
+
+  test('19: at the narrowest sidebar every chevron shows, the name is readable, and ⋯ holds the rest', async ({
+    page,
+  }) => {
+    const errors = collectErrors(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/');
+    await expect(tree(page).getByRole('treeitem', { name: 'Penmoss', exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+    const row = notebookRow(page);
+    const actions = row.getByTestId('tree-actions');
+    const more = row.getByTestId('notebook-more');
+    const folded = ['sort-order', 'section-time-machine', 'section-trash'];
+
+    // At the default width (17rem) every button is on the row, and no ⋯.
+    await row.hover();
+    for (const id of ['notebook-new-note', ...folded]) {
+      await expect(actions.getByTestId(id), id).toBeVisible();
+    }
+    await expect(actions.getByRole('button', { name: 'New Folder' })).toBeVisible();
+    await expect(more).toBeHidden();
+
+    // The narrowest.
+    const edge = page.getByTestId('sidebar-resizer');
+    await edge.focus();
+    await page.keyboard.press('Home');
+    await expect(edge).toHaveAttribute('aria-valuenow', '14.5');
+    await row.hover();
+    // The notebook's chevron keeps its 12 px, and its name has room to be read.
+    const chevron = (await row.locator('.sb-section-toggle > .i').boundingBox())!;
+    expect(chevron.width).toBeCloseTo(12, 0);
+    expect(chevron.height).toBeCloseTo(12, 0);
+    const name = (await row.locator('.sb-section-name').boundingBox())!;
+    expect(name.x).toBeGreaterThanOrEqual(chevron.x + chevron.width);
+    expect(name.width).toBeGreaterThanOrEqual(56);
+    // New Note, ⋯ and the sync dot; the others fold into ⋯.
+    await expect(actions.getByTestId('notebook-new-note')).toBeVisible();
+    await expect(more).toBeVisible();
+    await expect(row.getByTestId('section-sync')).toBeVisible();
+    for (const id of folded) await expect(actions.getByTestId(id), id).toBeHidden();
+    await expect(actions.getByRole('button', { name: 'New Folder' })).toBeHidden();
+    // Every folder's chevron has its size too.
+    for (const twisty of await tree(page).locator('.folder-row > .twisty').all()) {
+      const at = (await twisty.boundingBox())!;
+      expect(at.width).toBeGreaterThan(10);
+      expect(at.height).toBeGreaterThan(10);
+    }
+    if (SHOTS) await page.locator('.sidebar').screenshot({ path: `${SHOTS}/window-19-narrow.png` });
+
+    // ⋯ holds them, each still working: Sort Order… opens the sort order under it.
+    await more.click();
+    const menu = page.getByRole('menu', { name: 'More Notebook Actions' });
+    await expect(menu.getByRole('menuitem')).toHaveText([
+      'Sort Order…',
+      'New Folder',
+      'Time Machine',
+      'Trash',
+    ]);
+    await menu.getByRole('menuitem', { name: 'Sort Order…' }).click();
+    const sort = page.getByRole('menu', { name: /^Sort Order for / });
+    await expect(sort.getByRole('menuitemradio', { name: 'A–Z' })).toBeVisible();
+    await sort.getByRole('menuitemradio', { name: 'A–Z' }).click();
+    await expect(sort).toBeHidden();
+    await expect(actions.getByTestId('sort-order')).toHaveAttribute('data-sort', 'alpha');
+    await more.click();
+    await menu.getByRole('menuitem', { name: 'Trash' }).click();
+    await expect(page).toHaveURL(/\/trash\?source=/);
+    expect(errors).toEqual([]);
+  });
+
+  test('20: a folder’s + sits flush at its row’s end, the row’s height, as a notebook’s buttons do', async ({
+    page,
+  }) => {
+    const errors = collectErrors(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/');
+    const folder = tree(page).getByRole('treeitem', { name: 'Assistant Memory', exact: true });
+    await expect(folder).toBeVisible({ timeout: 30_000 });
+    for (const width of ['default', 'narrowest'] as const) {
+      if (width === 'narrowest') {
+        await page.getByTestId('sidebar-resizer').focus();
+        await page.keyboard.press('Home');
+      }
+      await folder.hover();
+      const plus = folder.getByTestId('folder-row-new-note');
+      await expect(plus).toBeVisible();
+      const row = (await folder.boundingBox())!;
+      const at = (await plus.boundingBox())!;
+      // No margin on any side: the row's full height, square, touching its right edge.
+      expect(at.y, width).toBeCloseTo(row.y, 0);
+      expect(at.height, width).toBeCloseTo(row.height, 0);
+      expect(at.width, width).toBeCloseTo(at.height, 0);
+      expect(at.x + at.width, width).toBeCloseTo(row.x + row.width, 0);
+      const margin = await plus.evaluate((element) => getComputedStyle(element).margin);
+      expect(margin, width).toBe('0px');
+      // The same as the notebook's row's buttons: square, its full height, no margin.
+      const head = notebookRow(page);
+      await head.hover();
+      const headBox = (await head.boundingBox())!;
+      const newNote = (await head.getByTestId('notebook-new-note').boundingBox())!;
+      expect(newNote.height, width).toBeCloseTo(headBox.height, 0);
+      expect(newNote.width, width).toBeCloseTo(newNote.height, 0);
+      // The section title rows' tools too (one shared class, `.row-end`).
+      const section = page.getByTestId('sidebar-section-quickAccess');
+      const title = section.locator('.sb-section-head').first();
+      await title.hover();
+      // Inside its borders: the row's padding box.
+      const inner = await title.evaluate((element) => {
+        const at = element.getBoundingClientRect();
+        return {
+          top: at.top + element.clientTop,
+          height: element.clientHeight,
+          right: at.left + element.clientLeft + element.clientWidth,
+        };
+      });
+      const move = (await section.getByTestId('section-move').boundingBox())!;
+      const hide = (await section.getByTestId('section-hide').boundingBox())!;
+      expect(move.y, width).toBeCloseTo(inner.top, 0);
+      expect(move.height, width).toBeCloseTo(inner.height, 0);
+      expect(move.width, width).toBeCloseTo(move.height, 0);
+      expect(hide.x, width).toBeCloseTo(move.x + move.width, 0);
+      expect(hide.x + hide.width, width).toBeCloseTo(inner.right, 0);
+    }
+    await folder.hover();
+    if (SHOTS) await folder.screenshot({ path: `${SHOTS}/window-20-folder-plus.png` });
+    // Still New Note in that folder.
+    await folder.getByTestId('folder-row-new-note').click();
+    await expect(page).toHaveURL(/\/notes\/[0-9A-HJKMNP-TV-Z]{26}$/);
+    expect(errors).toEqual([]);
+  });
 });

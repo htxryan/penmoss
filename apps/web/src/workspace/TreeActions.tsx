@@ -30,6 +30,8 @@ export interface TreeTimeMachine {
  * (a menu), New Folder and its Trash. They show while the pointer is over the row or focus is in
  * it, over the end of the name if it needs the room; the sync dot stays at the far right. Sort
  * and New Folder act on the folder chosen in the tree, as they did on the bar below (T52).
+ * In a narrow row (styles.css) Sort, New Folder, Time Machine and Trash fold into a ⋯ menu, so
+ * the notebook's name keeps room to be read (Ryan's review of #192, finding 19).
  * Rendered in the notebook's source scope.
  */
 export function TreeActions({
@@ -54,15 +56,28 @@ export function TreeActions({
   const currentName = current === null ? 'the Top Level' : (tree.byId.get(current)?.name ?? '');
   const sortMode = sortModeOf(tree, current);
   const [sortMenu, setSortMenu] = useState<{ x: number; y: number } | null>(null);
+  const [moreMenu, setMoreMenu] = useState<{ x: number; y: number } | null>(null);
   const sortButton = useRef<HTMLButtonElement>(null);
-  const openSortMenu = () => {
-    const rect = sortButton.current?.getBoundingClientRect();
-    if (rect) setSortMenu({ x: rect.left, y: rect.bottom + 4 });
+  const moreButton = useRef<HTMLButtonElement>(null);
+  /** The button a menu opened from: Sort's own, or ⋯ when Sort is folded into it. */
+  const sortAnchor = useRef<HTMLElement | null>(null);
+  const under = (button: HTMLElement | null) => {
+    const rect = button?.getBoundingClientRect();
+    return rect ? { x: rect.left, y: rect.bottom + 4 } : null;
   };
-  /** Closes the sort menu, focus back on its button. */
+  const openSortMenu = (from: HTMLElement | null = sortButton.current) => {
+    sortAnchor.current = from;
+    const at = under(from);
+    if (at) setSortMenu(at);
+  };
+  /** Closes the sort menu, focus back on the button it opened from. */
   const closeSortMenu = () => {
     setSortMenu(null);
-    sortButton.current?.focus();
+    sortAnchor.current?.focus();
+  };
+  const closeMoreMenu = () => {
+    setMoreMenu(null);
+    moreButton.current?.focus();
   };
   /** A new note at the notebook's top level, opened; new notes go there next. */
   const newNote = () => {
@@ -73,7 +88,11 @@ export function TreeActions({
   };
 
   return (
-    <div className="tree-actions" data-testid="tree-actions" data-open={sortMenu ? '' : undefined}>
+    <div
+      className="tree-actions row-end"
+      data-testid="tree-actions"
+      data-open={sortMenu || moreMenu ? '' : undefined}
+    >
       <button
         type="button"
         className="icon-btn"
@@ -88,7 +107,7 @@ export function TreeActions({
       <button
         ref={sortButton}
         type="button"
-        className="icon-btn"
+        className="icon-btn tree-action-fold"
         aria-haspopup="menu"
         aria-expanded={sortMenu !== null}
         aria-label={`Sort Order for ${currentName}`}
@@ -96,18 +115,18 @@ export function TreeActions({
         data-ui="menu"
         data-testid="sort-order"
         data-sort={sortMode}
-        onClick={() => (sortMenu ? setSortMenu(null) : openSortMenu())}
+        onClick={() => (sortMenu ? setSortMenu(null) : openSortMenu(sortButton.current))}
         onKeyDown={(event) => {
           if (event.key !== 'ArrowDown' || sortMenu) return;
           event.preventDefault();
-          openSortMenu();
+          openSortMenu(sortButton.current);
         }}
       >
         <Icon name="sort" />
       </button>
       <button
         type="button"
-        className="icon-btn"
+        className="icon-btn tree-action-fold"
         data-command="folder.new"
         aria-label="New Folder"
         aria-keyshortcuts={ariaKeyShortcuts(newFolderKeys) || undefined}
@@ -118,7 +137,7 @@ export function TreeActions({
       </button>
       {timeMachine ? (
         <a
-          className="icon-btn"
+          className="icon-btn tree-action-fold"
           href={timeMachine.href}
           data-ui="item"
           aria-label="Time Machine"
@@ -132,7 +151,7 @@ export function TreeActions({
       ) : null}
       {trash ? (
         <a
-          className="icon-btn"
+          className="icon-btn tree-action-fold"
           href={trash.href}
           data-command={trash.href === '/trash' ? 'app.trash' : undefined}
           aria-label="Trash"
@@ -144,12 +163,97 @@ export function TreeActions({
           <Icon name="trash" />
         </a>
       ) : null}
+      {/* Shown instead of the four above in a narrow row (finding 19). */}
+      <button
+        ref={moreButton}
+        type="button"
+        className="icon-btn tree-actions-more"
+        aria-haspopup="menu"
+        aria-expanded={moreMenu !== null}
+        aria-label="More Notebook Actions"
+        data-tip="More Notebook Actions"
+        data-ui="menu"
+        data-testid="notebook-more"
+        onClick={() => {
+          if (moreMenu) setMoreMenu(null);
+          else setMoreMenu(under(moreButton.current));
+        }}
+      >
+        <Icon name="more" />
+      </button>
+      {moreMenu ? (
+        <ContextMenu
+          label="More Notebook Actions"
+          x={moreMenu.x}
+          y={moreMenu.y}
+          anchor={moreButton}
+          onClose={closeMoreMenu}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            tabIndex={-1}
+            className="menu-item"
+            data-ui="item"
+            aria-haspopup="menu"
+            onClick={() => {
+              setMoreMenu(null);
+              openSortMenu(moreButton.current);
+            }}
+          >
+            <span className="menu-label">Sort Order…</span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            tabIndex={-1}
+            className="menu-item"
+            data-ui="item"
+            onClick={() => {
+              setMoreMenu(null);
+              commands.run('folder.new');
+            }}
+          >
+            <span className="menu-label">New Folder</span>
+          </button>
+          {timeMachine ? (
+            <button
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              className="menu-item"
+              data-ui="item"
+              onClick={() => {
+                setMoreMenu(null);
+                navigate(timeMachine.href);
+              }}
+            >
+              <span className="menu-label">Time Machine</span>
+            </button>
+          ) : null}
+          {trash ? (
+            <button
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              className="menu-item"
+              data-ui="item"
+              onClick={() => {
+                setMoreMenu(null);
+                navigate(trash.href);
+              }}
+            >
+              <span className="menu-label">Trash</span>
+            </button>
+          ) : null}
+        </ContextMenu>
+      ) : null}
       {sortMenu ? (
         <ContextMenu
           label={`Sort Order for ${currentName}`}
           x={sortMenu.x}
           y={sortMenu.y}
-          anchor={sortButton}
+          anchor={sortAnchor}
           onClose={closeSortMenu}
         >
           {SORT_MODES.map((mode) => (

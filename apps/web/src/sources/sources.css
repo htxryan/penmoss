@@ -56,6 +56,11 @@
   color: var(--pm-fg);
 }
 
+/* The chevron never gives way, however narrow the row: the name does (finding 19). */
+.sb-section-toggle > .i {
+  flex: none;
+}
+
 /* A notebook's own toggle keeps its colour; a hover shades the row instead (T52). */
 .sb-section-toggle.sb-notebook-name,
 .sb-section-toggle.sb-notebook-name:hover {

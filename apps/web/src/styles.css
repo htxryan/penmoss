@@ -694,6 +694,29 @@ a {
   color: var(--pm-fg);
 }
 
+/*
+ * A narrow notebook row (Ryan's review of #192, finding 19): Sort, New Folder, Time Machine and
+ * Trash fold into ⋯, so the name keeps room to be read beside New Note, ⋯ and the sync dot. The
+ * row is the container: at the default sidebar width (17rem) nothing folds.
+ */
+.sb-source > .sb-section-head {
+  container-type: inline-size;
+}
+
+.tree-actions > .tree-actions-more {
+  display: none;
+}
+
+@container (max-width: 16.5rem) {
+  .tree-actions > .tree-action-fold {
+    display: none;
+  }
+
+  .tree-actions > .tree-actions-more {
+    display: inline-grid;
+  }
+}
+
 .tree {
   display: flex;
   flex: 1;
@@ -851,16 +874,20 @@ a {
  * flow, always shown (below).
  */
 @media (hover: hover) {
+  /* Flush with the row's end and as tall as it, as a notebook's buttons are (finding 20). */
   .row-actions {
     position: absolute;
-    /* Inside the focus ring (2px, drawn within the row). */
-    inset-block: 2px;
-    inset-inline-end: 0.3rem;
+    inset-block: 0;
+    inset-inline-end: 0;
     display: flex;
-    align-items: center;
-    padding-inline-start: 0.25rem;
     visibility: hidden;
     background: var(--pm-sidebar);
+  }
+
+  /* Inside the focus ring (2px, drawn within the row) while it shows. */
+  .folder-row:focus-visible .row-actions {
+    inset-block: 2px;
+    inset-inline-end: 2px;
   }
 
   .folder-row:hover .row-actions,
@@ -4890,10 +4917,15 @@ button.history-entry:hover {
   }
 }
 
-/* Nothing only on hover: without one, a folder’s New Note always shows. */
+/* Nothing only on hover: without one, a folder’s New Note always shows, flush with the row's end. */
 @media (hover: none) {
   .row-actions {
     display: flex;
+  }
+
+  .sidebar .folder-row > .row-actions {
+    align-self: stretch;
+    margin-inline-end: calc(-1 * (var(--sb-gutter) + 0.3rem));
   }
 }
 
@@ -5579,22 +5611,33 @@ button.history-entry:hover {
   }
 }
 
-.sb-part-tools .icon-btn {
+/*
+ * Buttons at a row's end (D54, A1109; Ryan's review of #192, finding 20): flush with the row's
+ * end and with one another, as tall as the row and square, with no margin; under the pointer a
+ * step darker than the row. Every row's end tools are a `.row-end` (a section's title row, a
+ * notebook's row, a folder's row), so no kind of row drifts from the others. After the touch
+ * sizes above: the row's own height (a full target on touch) makes the square.
+ */
+.row-end {
+  align-items: stretch;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.row-end > :is(.icon-btn, a, button) {
+  flex: none;
+  align-self: stretch;
   width: auto;
-  height: 100%;
+  height: auto;
   aspect-ratio: 1;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
 }
 
-.sb-part-tools .icon-btn:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--pm-fg) 10%, transparent);
-}
-
-/* On a phone or touch screen, a full touch target each (T36): the row is that tall there. */
-@media (max-width: 700px), (pointer: coarse) {
-  .sb-part-tools .icon-btn {
-    width: var(--pm-hit);
-    height: 100%;
-  }
+.row-end > :is(.icon-btn, a, button):hover:not(:disabled) {
+  background: color-mix(in oklab, var(--pm-fg) 13%, transparent);
 }
 
 .sb-part-grip {

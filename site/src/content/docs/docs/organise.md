@@ -28,7 +28,7 @@ One notebook is your **Primary Notebook**. Today's note, This Week's note, the c
 
 ### Sort order
 
-Each folder sorts its notes in its own way: **Manual** (the default: drag to reorder), **A–Z**, or **Modified** (newest first). Choose it with the **Sort Order** button on the notebook's row in the sidebar, which sorts the current folder, or with the commands **Sort the Current Folder: Manual**, **A–Z** and **Last Modified**.
+Each folder sorts its notes in its own way: **Manual** (the default: drag to reorder), **A–Z**, or **Modified** (newest first). Choose it with the **Sort Order** button on the notebook's row in the sidebar (in its ⋯ menu when the sidebar is narrow), which sorts the current folder, or with the commands **Sort the Current Folder: Manual**, **A–Z** and **Last Modified**.
 
 ## Moving notes
 

@@ -87,12 +87,43 @@ describe('the notebook’s actions (T52, T53)', () => {
       [...bar().querySelectorAll<HTMLElement>('button, a')].map((item) =>
         item.getAttribute('aria-label'),
       ),
-    ).toEqual(['New Note in This Notebook', 'Sort Order for the Top Level', 'New Folder', 'Trash']);
+    ).toEqual([
+      'New Note in This Notebook',
+      'Sort Order for the Top Level',
+      'New Folder',
+      'Trash',
+      // Shown instead of Sort, New Folder and Trash in a narrow row (styles.css; finding 19).
+      'More Notebook Actions',
+    ]);
     const trash = bar().querySelector<HTMLAnchorElement>('[data-testid="sidebar-trash"]')!;
     expect(trash.getAttribute('href')).toBe('/trash');
     expect(trash.dataset['tip']).toBe('Trash');
     // No native picker under the sort order any more.
     expect(host.querySelector('select')).toBeNull();
+  });
+
+  it('folds Sort, New Folder and Trash into ⋯ in a narrow row, each still there (finding 19)', () => {
+    const more = host.querySelector<HTMLButtonElement>('[data-testid="notebook-more"]')!;
+    expect(more.getAttribute('aria-haspopup')).toBe('menu');
+    expect(more.dataset['tip']).toBe('More Notebook Actions');
+    for (const folded of ['sort-order', 'sidebar-trash']) {
+      expect(host.querySelector(`[data-testid="${folded}"]`)!.classList).toContain(
+        'tree-action-fold',
+      );
+    }
+    act(() => more.click());
+    expect(more.getAttribute('aria-expanded')).toBe('true');
+    expect(menuItems()).toEqual(['Sort Order…', 'New Folder', 'Trash']);
+    // Sort Order… opens the sort order's own menu, under ⋯, and closing it goes back to ⋯.
+    const sortOrder = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')][0]!;
+    act(() => sortOrder.click());
+    const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
+    expect(menu.getAttribute('aria-label')).toBe('Sort Order for the Top Level');
+    act(() => {
+      menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+    expect(document.activeElement).toBe(more);
   });
 
   it('opens the sort order as a menu, the order in use checked, and sets the one chosen', () => {
