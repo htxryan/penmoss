@@ -15,6 +15,7 @@
     "budgets": "PENMOSS_BUDGETS=1 vitest run"
   },
   "dependencies": {
+    "@excalidraw/excalidraw": "0.18.1",
     "@penmoss/core": "workspace:*",
     "@penmoss/editor": "workspace:*",
     "@penmoss/git-notebook": "workspace:*",

@@ -1,9 +1,9 @@
 ---
 title: The editor
-description: Write notes with the slash menu, blocks, diagrams, math, pictures, files, embedded notes and line symbols.
+description: Write notes with the slash menu, blocks, diagrams, math, pictures, files, drawings, embedded notes and line symbols.
 ---
 
-This page shows you what the editor can do: the blocks you can insert, the markdown it understands as you type, pictures and files, embedded notes, line symbols, the markdown source, and copy and paste.
+This page shows you what the editor can do: the blocks you can insert, the markdown it understands as you type, pictures and files, drawings, embedded notes, line symbols, the markdown source, and copy and paste.
 
 Everything you write is saved as markdown. What you see in the editor is what the `.md` file in your repository holds.
 
@@ -35,6 +35,7 @@ Type `/` at the start of a line or after a space to open the slash menu. Keep ty
 | Embed Note      | transclude, include, section       | `![[`            |
 | Image           | picture, photo, upload, screenshot |                  |
 | File            | attachment, pdf, document          |                  |
+| Drawing         | excalidraw, sketch, whiteboard     |                  |
 | Symbol          | signifier, important, idea, star   |                  |
 
 Each item is also in the [command palette](/docs/shortcuts/#the-command-palette) as **Insert: …**. In a table cell the menu offers only Inline Math, Link to Note, Image, File and Symbol.
@@ -103,6 +104,20 @@ Add any other file by dropping or pasting it, or with **File** in the slash menu
 The Mac app takes pictures and files up to 50 MB. The Android app, the `penmoss` CLI and agents keep files of at most 10 MB in a notebook (the CLI's `attach`, at most 700 KB).
 
 Pictures and files are saved on the device first, so this works offline, and go to the repository with the next sync, in its `attachments/` folder. See [Notebooks on disk](/docs/reference/notebook-format/#attachments).
+
+## Drawings
+
+Choose **Drawing** in the slash menu to sketch in [Excalidraw](https://excalidraw.com), a hand-drawn style drawing editor, which opens over the whole window. Draw with its shapes, arrows, lines, pen and text, then press **Done** to put the drawing in the note, or **Cancel** to leave the note as it was. The editor follows your light or dark mode, and works offline.
+
+The drawing shows in the note as a picture, as wide as you drew it. Click it, or select it and press Enter, to open it in Excalidraw again.
+
+Each drawing is two files in the repository's `attachments/` folder: the Excalidraw scene, a `.excalidraw` file you can also open at excalidraw.com, and an `.svg` picture of it. The note shows the picture, linked to the scene, so GitHub and any markdown viewer show the drawing too:
+
+```markdown
+[![Drawing](attachments/9c1e…b2.svg)](attachments/41d7…0a.excalidraw)
+```
+
+Each edit saves a new pair of files and points the note at them; the old pair stays in `attachments/`, as a picture does when you remove it from a note. Agents reading the note see the same picture link. The Android app shows drawings but can't edit them, and keeps them as they are when you edit the note around them.
 
 ## Embedded notes
 

@@ -126,9 +126,30 @@ class AttachmentsTest {
         assertNull(attachments.fileFor("2".repeat(64), "png"))
         // Not a picture name at all: never asked.
         assertNull(attachments.fileFor("../etc", "png"))
-        assertNull(attachments.fileFor(pngSha, "svg"))
+        assertNull(attachments.fileFor(pngSha, "pdf"))
+        assertNull(attachments.fileFor(pngSha, "excalidraw"))
         assertEquals(listOf("1".repeat(64), "2".repeat(64)), api.fetched.toList())
         assertEquals(0, cache.list()!!.size)
+    }
+
+    @Test
+    fun aDrawingsSvgIsFetchedAndShownOnlyIfItIsAnSvg() = runTest {
+        // PEN-28: the note shows a drawing's SVG as a picture.
+        val svg = "<?xml version=\"1.0\"?>\n<svg xmlns=\"http://www.w3.org/2000/svg\"><rect/></svg>".toByteArray()
+        val svgSha = Attachments.sha256(svg)
+        api.pictures = { svg }
+        val fetched = attachments.fileFor(svgSha, "svg")!!
+        assertEquals(File(cache, "$svgSha.svg"), fetched)
+        assertArrayEquals(svg, fetched.readBytes())
+        // A PNG asked for as an SVG, and an SVG asked for as a PNG, are neither shown.
+        api.pictures = { png }
+        assertNull(attachments.fileFor(pngSha, "svg"))
+        api.pictures = { svg }
+        assertNull(attachments.fileFor(svgSha, "png"))
+        assertTrue(Attachments.isSvg("\uFEFF  <svg viewBox=\"0 0 1 1\"/>".toByteArray()))
+        assertTrue(Attachments.isSvg("<!-- made by Excalidraw --><svg/>".toByteArray()))
+        assertFalse(Attachments.isSvg("<html><svg/></html>".toByteArray()))
+        assertFalse(Attachments.isSvg(png))
     }
 
     @Test
