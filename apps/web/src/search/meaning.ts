@@ -81,13 +81,16 @@ export class NotebookMeaning {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private syncing: Promise<void> | null = null;
   private again = false;
+  /** The notebook was removed: nothing more is sent (A-NEW-1). */
+  private closed = false;
+  private readonly off: () => void;
 
   constructor(
     readonly notebookId: string,
     private readonly bridge: DesktopMeaning,
     private readonly options: NotebookMeaningOptions = {},
   ) {
-    bridge.onChange((status) => this.heard(status));
+    this.off = bridge.onChange((status) => this.heard(status));
     void bridge
       .status()
       .then((status) => {
@@ -100,6 +103,24 @@ export class NotebookMeaning {
   attach(notes: MeaningNotes): void {
     this.notes = notes;
     this.schedule();
+  }
+
+  /**
+   * Stops listening and sending. `forget`: the notebook was removed from the app (A-NEW-1), so the
+   * window that feeds the service has it forget the notebook, which leaves "covers N of M" and the
+   * keys compaction keeps; without it (the view only went), the service keeps what it was sent.
+   */
+  close(forget = true): void {
+    if (this.closed) return;
+    this.closed = true;
+    this.off();
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = null;
+    this.notes = null;
+    if (!forget || this.options.feed === false) return;
+    this.bridge.close(this.notebookId).catch((error: unknown) => {
+      console.warn('[search] could not close search by meaning for a notebook', error);
+    });
   }
 
   /** Meaning can answer now (the model is open, indexing or done). */
@@ -121,7 +142,7 @@ export class NotebookMeaning {
 
   /** Notes changed: tell the service a moment after they settle. */
   schedule(delayMs = this.options.delayMs ?? MEANING_SYNC_DELAY_MS): void {
-    if (this.options.feed === false || !this.notes) return;
+    if (this.options.feed === false || !this.notes || this.closed) return;
     if (this.timer) clearTimeout(this.timer);
     this.timer = setTimeout(() => {
       this.timer = null;
@@ -159,6 +180,8 @@ export class NotebookMeaning {
       if (!status?.enabled || status.state === 'stopped' || status.state === 'restarting') return;
       try {
         const versions = await notes.versions();
+        // Removed meanwhile: an update now would bring the notebook back into the service.
+        if (this.closed) return;
         const list = [...versions].map(([id, version]) => ({ id, version }));
         const need = new Set(await this.bridge.update(this.notebookId, list));
         if (need.size > 0) {
@@ -169,6 +192,7 @@ export class NotebookMeaning {
             full.push(note ? { ...item, title: note.title, sections: note.sections } : item);
             if (note && ++built % SECTIONS_SLICE === 0) await this.options.yieldToPage?.();
           }
+          if (this.closed) return;
           await this.bridge.update(this.notebookId, full);
         }
         this.sent = status.generation;

@@ -6,9 +6,14 @@
  * every open notebook, also takes the lease from a live `penmoss mcp` or `penmoss search`, which
  * index only their own notebook (A1350). A holder that finds the file no longer names it has
  * lost the lease and says so through `onLost`.
+ *
+ * Moving a lease aside is a compare-and-swap (A-NEW-1): a taker holds a short takeover lock
+ * (`indexer.lease.takeover`), reads the lease again under it, and moves it aside only if it is
+ * still the very lease it judged (its token and heartbeat), so two takers racing for a stale lease
+ * never move aside the fresh one the first of them just made.
  */
 import { randomUUID } from 'node:crypto';
-import { mkdir, open, rename, unlink, utimes } from 'node:fs/promises';
+import { link, mkdir, open, rename, unlink, utimes } from 'node:fs/promises';
 import { join } from 'node:path';
 
 export interface LeaseHolder {
@@ -43,9 +48,59 @@ export function leasePath(home: string): string {
   return join(home, 'vectors', 'indexer.lease');
 }
 
-async function readHolder(
-  path: string,
-): Promise<{ holder: LeaseHolder; mtimeMs: number } | undefined> {
+/** A takeover lock this old was left by a taker that died mid-takeover (it takes milliseconds). */
+const TAKEOVER_STALE_MS = 5_000;
+/** How long a taker waits for another's takeover before reading the lease again. */
+const TAKEOVER_WAIT_MS = 15;
+
+interface Found {
+  readonly holder: LeaseHolder;
+  readonly mtimeMs: number;
+}
+
+const same = (a: Found | undefined, b: Found) =>
+  a !== undefined && a.holder.token === b.holder.token && a.mtimeMs === b.mtimeMs;
+
+/** Creates `path` holding `holder`, unless it exists. */
+async function create(path: string, holder: LeaseHolder): Promise<boolean> {
+  let handle;
+  try {
+    handle = await open(path, 'wx');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') return false;
+    throw error;
+  }
+  try {
+    await handle.writeFile(JSON.stringify(holder));
+  } finally {
+    await handle.close();
+  }
+  return true;
+}
+
+/**
+ * Moves `path` aside and deletes it, but only if it is still `expected`: a file another process
+ * put there since is put back (A-NEW-1). Answers whether `expected` is gone.
+ */
+async function moveAside(path: string, expected: Found, token: string): Promise<boolean> {
+  const aside = `${path}.stale-${token}`;
+  try {
+    await rename(path, aside);
+  } catch {
+    return false;
+  }
+  const moved = await readHolder(aside);
+  if (!same(moved, expected)) {
+    // Not the one judged: back where it was (link fails rather than overwrite a newer one).
+    await link(aside, path).catch(() => undefined);
+    await unlink(aside).catch(() => undefined);
+    return false;
+  }
+  await unlink(aside).catch(() => undefined);
+  return true;
+}
+
+async function readHolder(path: string): Promise<Found | undefined> {
   let handle;
   try {
     handle = await open(path, 'r');
@@ -108,35 +163,67 @@ export class Lease {
     const holder: LeaseHolder = { writer, pid: options.pid ?? process.pid, token: randomUUID() };
     const now = options.now ?? Date.now;
     const isAlive = options.alive ?? alive;
-    // A third try: another taker can slip in between moving a stale lease aside and writing ours.
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const handle = await open(path, 'wx');
-        try {
-          await handle.writeFile(JSON.stringify(holder));
-        } finally {
-          await handle.close();
-        }
-        const lease = new Lease(path, holder, options);
-        lease.start();
-        return lease;
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-      }
+    const staleMs = options.staleMs ?? 30_000;
+    const start = () => {
+      const lease = new Lease(path, holder, options);
+      lease.start();
+      return lease;
+    };
+    // A few rounds: another taker can slip in between moving a stale lease aside and writing ours,
+    // or hold the takeover lock for a moment.
+    for (let attempt = 0; attempt < 8; attempt++) {
+      if (await create(path, holder)) return start();
       const found = await readHolder(path);
-      const fresh = found && now() - found.mtimeMs <= (options.staleMs ?? 30_000);
+      if (!found) continue;
+      const fresh = now() - found.mtimeMs <= staleMs;
+      // Another taker is writing it this moment: read it again once it has.
+      if (fresh && found.holder.token === '') {
+        await new Promise((resolve) => setTimeout(resolve, TAKEOVER_WAIT_MS));
+        continue;
+      }
       // Fresh but its process is gone (a crashed service): stale at once. The lease is this
       // Mac's, so the pid is too. A live holder keeps it, unless this is the app's service and the
       // holder an agent's `penmoss` (A1350): it learns at its next heartbeat that it lost it.
       if (fresh && isAlive(found.holder.pid) && !outranks(writer, found.holder.writer)) {
         return undefined;
       }
-      // Stale (or outranked): move it aside (only one taker's rename succeeds), then try again.
-      await rename(path, `${path}.stale-${holder.token}`)
-        .then(() => unlink(`${path}.stale-${holder.token}`))
-        .catch(() => undefined);
+      // Stale (or outranked): move aside that lease and no other, then write ours (A-NEW-1).
+      const took = await Lease.takeover(path, found, holder, now);
+      if (took === 'ours') return start();
+      if (took === 'busy') await new Promise((resolve) => setTimeout(resolve, TAKEOVER_WAIT_MS));
     }
     return undefined;
+  }
+
+  /**
+   * Under the takeover lock: if the lease is still `found`, moves it aside and writes `holder`'s.
+   * `again`: it changed (another taker's, a heartbeat), so the caller judges it afresh.
+   */
+  private static async takeover(
+    path: string,
+    found: Found,
+    holder: LeaseHolder,
+    now: () => number,
+  ): Promise<'ours' | 'again' | 'busy'> {
+    // The lock a taker holds while it moves a stale lease aside and writes its own.
+    const lock = `${path}.takeover`;
+    if (!(await create(lock, holder))) {
+      const other = await readHolder(lock);
+      // Left by a taker that died mid-takeover: cleared, then tried again.
+      if (other && now() - other.mtimeMs > TAKEOVER_STALE_MS) {
+        await moveAside(lock, other, holder.token);
+        return 'again';
+      }
+      return other ? 'busy' : 'again';
+    }
+    try {
+      if (!same(await readHolder(path), found)) return 'again';
+      if (!(await moveAside(path, found, holder.token))) return 'again';
+      return (await create(path, holder)) ? 'ours' : 'again';
+    } finally {
+      const mine = await readHolder(lock);
+      if (mine?.holder.token === holder.token) await unlink(lock).catch(() => undefined);
+    }
   }
 
   /** True while the file still names this holder. */

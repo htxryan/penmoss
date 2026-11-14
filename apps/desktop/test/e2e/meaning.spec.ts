@@ -7,6 +7,7 @@ import { readdirSync } from 'node:fs';
 import { expect, test, type ElectronApplication } from '@playwright/test';
 import type { DesktopMeaningNote, DesktopMeaningStatus } from '../../../web/src/desktop/bridge';
 import {
+  answerChecks,
   dataDir,
   gitNotebook,
   go,
@@ -232,4 +233,61 @@ test('Settings → Search by Meaning: Off removes the model and the vectors, aft
   await expect(row.getByTestId('meaning-status')).toHaveAttribute('data-state', 'absent');
   await expect(row.getByTestId('meaning-status')).toContainText('Not downloaded.');
   await expect(row.getByTestId('meaning-enabled')).toBeChecked();
+});
+
+test('Settings → Search by Meaning: a removed notebook leaves its count (A-NEW-1)', async () => {
+  const launched = await start(meaningHome());
+  const { app, page } = launched;
+  await untilStarted(app);
+  // Notes, made on the first run, starts with the welcome note; Recipes, made after, is empty and
+  // keeps the app open once Notes goes. Three more notes stand for a notebook fed from elsewhere.
+  await gitNotebook(launched, 'Notes');
+  await gitNotebook(launched, 'Recipes');
+  await send(app, NOTES);
+  await untilReady(app, 1, NOTES.length + 1);
+  await go(page, '/settings/meaning');
+  const row = page.getByTestId('meaning-settings');
+  await expect(row.getByTestId('meaning-status')).toHaveText(
+    'Ready: EmbeddingGemma 300M (219 MB), on this Mac. All 4 notes are indexed.',
+  );
+  await page.waitForTimeout(1_500);
+
+  // Remove Notes from this Mac (everything is pushed, so the owner check comes at once).
+  answerChecks(launched, 'confirm');
+  await go(page, '/settings/git-notebooks');
+  const settings = page.getByTestId('git-notebooks-settings');
+  const rows = settings.getByTestId('git-notebook-row');
+  await expect(rows).toHaveCount(2);
+  await rows.filter({ has: page.locator('.git-notebook-row-name', { hasText: /^Notes/ }) }).click();
+  const card = page.getByTestId('git-notebook');
+  await expect(card.locator('.git-notebook-title')).toHaveText('Notes');
+  await card.getByTestId('git-remove').click();
+  // Should the welcome note not be pushed yet, it says so: push first, then remove.
+  const confirm = card.getByTestId('git-remove-confirm');
+  await expect
+    .poll(async () => (await confirm.isVisible()) || (await rows.count()) === 1, {
+      timeout: 30_000,
+    })
+    .toBe(true);
+  if (await confirm.isVisible()) {
+    await confirm.getByTestId('git-remove-push').click();
+    await expect(card.getByTestId('git-status')).toHaveAttribute('data-phase', 'synced', {
+      timeout: 30_000,
+    });
+    await card.getByTestId('git-remove').click();
+  }
+  await expect(rows).toHaveCount(1, { timeout: 30_000 });
+  await expect(rows.locator('.git-notebook-row-name')).toHaveText(/^Recipes/);
+
+  // The service forgot it: its note leaves the count, in the service and on the page.
+  await expect.poll(async () => (await status(app))?.total, { timeout: 30_000 }).toBe(3);
+  await go(page, '/settings/meaning');
+  await expect(row.getByTestId('meaning-status')).toHaveText(
+    'Ready: EmbeddingGemma 300M (219 MB), on this Mac. All 3 notes are indexed.',
+  );
+  await row.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(2_000);
+  await expect(row.getByTestId('meaning-status')).toHaveText(
+    'Ready: EmbeddingGemma 300M (219 MB), on this Mac. All 3 notes are indexed.',
+  );
 });

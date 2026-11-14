@@ -73,3 +73,57 @@ function merge(
     ...(preview ? { preview } : {}),
   };
 }
+
+/** What `SourceSearches` needs of a source: its id, and its notes' changes. */
+export interface SearchedSource {
+  readonly id: string;
+  readonly notes: { subscribe(listener: () => void): () => void };
+}
+
+/**
+ * Each source's search for the window's life, made on first use and kept up to date with its
+ * notes. A source that goes (its notebook removed) has its search closed, with its meaning and
+ * its subscription (A-NEW-1).
+ */
+export class SourceSearches<
+  S extends SearchedSource,
+  T extends Pick<SearchService, 'invalidate' | 'close'>,
+> {
+  private readonly entries = new Map<string, { readonly service: T; readonly off: () => void }>();
+
+  constructor(private readonly make: (source: S) => T) {}
+
+  get(source: S): T {
+    const known = this.entries.get(source.id);
+    if (known) return known.service;
+    const service = this.make(source);
+    const off = source.notes.subscribe(() => service.invalidate());
+    this.entries.set(source.id, { service, off });
+    return service;
+  }
+
+  /** Closes the search of every source not in `ids`: its notebook was removed. */
+  retain(ids: ReadonlySet<string>): void {
+    for (const [id, entry] of this.entries) {
+      if (!ids.has(id)) this.drop(id, entry, true);
+    }
+  }
+
+  /**
+   * Lets go of every search (the view that held them went). Only the sources not in `live` are
+   * forgotten by meaning's service: the others' notes stay there for the view that comes next.
+   */
+  release(live: ReadonlySet<string>): void {
+    for (const [id, entry] of this.entries) this.drop(id, entry, !live.has(id));
+  }
+
+  private drop(
+    id: string,
+    entry: { readonly service: T; readonly off: () => void },
+    forget: boolean,
+  ) {
+    this.entries.delete(id);
+    entry.off();
+    entry.service.close(forget);
+  }
+}

@@ -4,7 +4,14 @@
  * live agent's `penmoss mcp`, and a process that lost the race at its start takes the lease once
  * the holder is gone (the bug on Ryan's Mac: nobody indexed for two hours).
  */
-import { mkdtempSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  utimesSync,
+  writeFileSync,
+} from 'node:fs';
 import { rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -141,5 +148,72 @@ describe('a process that lost the race keeps trying (A1350)', () => {
     mac.offsetMs = 2 * 60 * 60_000;
     await vi.waitFor(() => expect(keeper.held).toBe(true), { timeout: 2_000, interval: 10 });
     await keeper.stop();
+  });
+});
+
+describe('a stale takeover moves aside only the lease it judged stale (A-NEW-1)', () => {
+  const HOUR_AGO = new Date(Date.now() - 60 * 60_000);
+
+  /** A lease file named `token`, its heartbeat at `at`. */
+  function writeLease(token: string, pid: number, at: Date) {
+    writeFileSync(leasePath(home), JSON.stringify({ writer: 'mcp', pid, token }));
+    utimesSync(leasePath(home), at, at);
+  }
+
+  it('keeps a fresh lease another taker wrote after this one judged the old one stale', async () => {
+    const { mac, options } = fakeMac();
+    mac.running.add(MCP).add(CLI);
+    await Lease.acquire(home, 'mcp', options(MCP)).then((lease) => lease?.release());
+    writeLease('stale', APP, HOUR_AGO);
+    // The other taker wins the race at the worst moment: just after this one read the stale lease
+    // and judged it by the clock, before it moved it aside.
+    let raced = false;
+    const taker = await Lease.acquire(
+      home,
+      'mcp',
+      options(CLI, {
+        now: () => {
+          if (!raced) {
+            raced = true;
+            writeLease('winner', MCP, new Date());
+          }
+          return Date.now();
+        },
+      }),
+    );
+    expect(taker).toBeUndefined();
+    expect(JSON.parse(readFileSync(leasePath(home), 'utf8'))).toMatchObject({ token: 'winner' });
+  });
+
+  it('gives a stale lease to exactly one of several takers racing for it', async () => {
+    const { mac, options } = fakeMac();
+    const pids = [401, 402, 403, 404, 405, 406];
+    for (const pid of pids) mac.running.add(pid);
+    mkdirSync(join(home, 'vectors'), { recursive: true });
+    for (let round = 0; round < 25; round++) {
+      writeLease(`stale-${round}`, APP, HOUR_AGO);
+      const leases = await Promise.all(pids.map((pid) => Lease.acquire(home, 'mcp', options(pid))));
+      const won = leases.filter((lease) => lease !== undefined);
+      expect(won).toHaveLength(1);
+      // The winner still holds it: no loser moved its fresh lease aside.
+      expect(await won[0]!.held()).toBe(true);
+      expect((await leaseHolder(home))?.token).toBe(won[0]!.holder.token);
+      await won[0]!.release();
+    }
+    expect(existsSync(`${leasePath(home)}.takeover`)).toBe(false);
+  });
+
+  it('clears a takeover lock left by a taker that died mid-takeover', async () => {
+    const { mac, options } = fakeMac();
+    mac.running.add(MCP);
+    await Lease.acquire(home, 'mcp', options(MCP)).then((lease) => lease?.release());
+    writeLease('stale', APP, HOUR_AGO);
+    const lock = `${leasePath(home)}.takeover`;
+    writeFileSync(lock, JSON.stringify({ writer: 'mcp', pid: CLI, token: 'crashed' }));
+    utimesSync(lock, HOUR_AGO, HOUR_AGO);
+    const lease = await Lease.acquire(home, 'mcp', options(MCP));
+    expect(lease?.holder.pid).toBe(MCP);
+    expect(existsSync(lock)).toBe(false);
+    await lease!.release();
   });
 });

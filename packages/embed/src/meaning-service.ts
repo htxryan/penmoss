@@ -164,9 +164,13 @@ export class MeaningService {
     return need;
   }
 
-  /** Forgets a notebook the page closed. */
-  close(notebookId: string): void {
-    this.notebooks.delete(notebookId);
+  /**
+   * Forgets a notebook the page removed (A-NEW-1): it leaves "covers N of M", indexing and
+   * compaction's keep set, and the page hears the new count.
+   */
+  async close(notebookId: string): Promise<void> {
+    if (!this.notebooks.delete(notebookId)) return;
+    await this.emitStatus();
   }
 
   /**
@@ -349,7 +353,10 @@ export class MeaningService {
       await this.emitStatus();
       if (waiting > 0) {
         this.indexSoon(0);
-      } else if (Date.now() - this.lastCompaction >= (this.options.compactEveryMs ?? 60 * 60_000)) {
+      } else if (
+        Date.now() - this.lastCompaction >= (this.options.compactEveryMs ?? 60 * 60_000) &&
+        this.everyNoteSent()
+      ) {
         const keep = new Set<string>();
         for (const notebook of this.notebooks.values()) {
           for (const key of notebook.index?.index.keys() ?? []) keep.add(key);
@@ -369,6 +376,17 @@ export class MeaningService {
     } finally {
       this.indexing = false;
     }
+  }
+
+  /**
+   * Every notebook has sent the text of each of its notes (A-NEW-1): until then a notebook's keys
+   * are not all known, and compaction would drop the vectors of the notes still to come.
+   */
+  private everyNoteSent(): boolean {
+    for (const notebook of this.notebooks.values()) {
+      if (notebook.notes.size < notebook.total) return false;
+    }
+    return true;
   }
 
   private async shut(): Promise<void> {

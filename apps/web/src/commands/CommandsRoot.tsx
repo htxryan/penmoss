@@ -20,9 +20,10 @@ import { navigate, notePath, useLocation } from '../router';
 import { SearchOverlay } from '../search/SearchOverlay';
 import { NotebookMeaning } from '../search/meaning';
 import { SearchService } from '../search/service';
-import { SourcesSearch } from '../search/sources';
+import { SourceSearches, SourcesSearch } from '../search/sources';
 import { SourceScopeOr } from '../sources/context';
-import { useNoteSource, useSourcesState } from '../sources/hooks';
+import { useNoteSource, useSourcesRegistry, useSourcesState } from '../sources/hooks';
+import type { Source } from '../sources/registry';
 import { JournalScope } from '../sources/JournalScope';
 import { useGitNotebookCommands } from '../sources/git-commands';
 import { useEveryOpenNoteList } from '../sources/lists';
@@ -138,6 +139,7 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
   );
   // One search across every notebook (T50, A826): each one's own index on this device.
   const sourcesState = useSourcesState();
+  const registry = useSourcesRegistry();
   // The theme and the other settings are the app's own (the Journal notebook's, A827), whatever
   // source the open note is in.
   const settingsWorkspace = sourcesState?.root.workspace ?? workspace;
@@ -146,39 +148,49 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
   // "Toggle Symbol ★": the symbol commands are titled by the person's glyphs (A940).
   useSymbolCommandTitles(commands, settingsWorkspace);
   // One search service per source for the window's life (a stable map, not render state).
-  const [gitSearches] = useState(() => new Map<string, SearchService>());
+  const [gitSearches] = useState(
+    () =>
+      new SourceSearches((source: Source) => {
+        const sourceNotes = source.notes;
+        // In the Mac app, meaning too (T77): the main window feeds the embedding service.
+        const bridge = desktop()?.meaning;
+        return new SearchService({
+          store: () => sourceNotes.openLocal(),
+          workspace: () => source.workspace.getState().snapshot,
+          reserved: RESERVED_KEYS,
+          ...(bridge
+            ? {
+                meaning: new NotebookMeaning(source.id, bridge, {
+                  feed: desktop()?.window === 'main',
+                  yieldToPage: () => new Promise((resolve) => setTimeout(resolve, 0)),
+                }),
+              }
+            : {}),
+        });
+      }),
+  );
   const search = useMemo(() => {
     const all = sourcesState?.all ?? [];
     if (all.length === 0) return own;
-    const services = gitSearches;
     return new SourcesSearch(() =>
-      (sourcesState?.all ?? []).map((source) => {
-        let service = services.get(source.id);
-        if (!service) {
-          const sourceNotes = source.notes;
-          // In the Mac app, meaning too (T77): the main window feeds the embedding service.
-          const bridge = desktop()?.meaning;
-          service = new SearchService({
-            store: () => sourceNotes.openLocal(),
-            workspace: () => source.workspace.getState().snapshot,
-            reserved: RESERVED_KEYS,
-            ...(bridge
-              ? {
-                  meaning: new NotebookMeaning(source.id, bridge, {
-                    feed: desktop()?.window === 'main',
-                    yieldToPage: () => new Promise((resolve) => setTimeout(resolve, 0)),
-                  }),
-                }
-              : {}),
-          });
-          services.set(source.id, service);
-          const made = service;
-          source.notes.subscribe(() => made.invalidate());
-        }
-        return { id: source.id, name: source.name, service };
-      }),
+      (sourcesState?.all ?? []).map((source) => ({
+        id: source.id,
+        name: source.name,
+        service: gitSearches.get(source),
+      })),
     );
   }, [own, sourcesState, gitSearches]);
+  // A removed notebook's search closes, and with it its meaning (A-NEW-1). Going, this view lets
+  // go of every search, and meaning forgets those whose notebook is gone by then: removing the
+  // last notebook unmounts this before it sees the list empty.
+  useEffect(() => {
+    gitSearches.retain(new Set((sourcesState?.all ?? []).map((source) => source.id)));
+  }, [sourcesState, gitSearches]);
+  useEffect(
+    () => () =>
+      gitSearches.release(new Set((registry?.getState().all ?? []).map((source) => source.id))),
+    [gitSearches, registry],
+  );
   // In the Mac app, every notebook's search starts now, so the embedding service is fed its notes
   // from launch rather than from the first search (T77).
   useEffect(() => {
