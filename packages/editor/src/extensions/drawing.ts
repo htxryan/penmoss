@@ -4,7 +4,7 @@
  * A drawing is not a node of its own: it is core's `image` of a rendered SVG, linked to the
  * Excalidraw scene it was drawn from, alone in its paragraph:
  *
- *     [![Drawing](attachments/<sha256>.svg)](attachments/<sha256>.excalidraw)
+ *     [![Excalidraw Diagram](attachments/<sha256>.svg)](attachments/<sha256>.excalidraw)
  *
  * so the repository and GitHub show the picture, agents read an image link, and every client of
  * any age keeps it as a linked picture: no schema change and no new notebook format. Both files
@@ -40,8 +40,11 @@ export interface DrawingServices {
   edit(scene: string | null): Promise<DrawingFiles | null>;
 }
 
-/** The alt text a new drawing gets; the markdown's `![Drawing](…)`. */
-export const DRAWING_ALT = 'Drawing';
+/**
+ * The alt text a new drawing gets, the slash menu's name for it: the markdown's
+ * `![Excalidraw Diagram](…)`. Older drawings keep the `![Drawing](…)` they were made with.
+ */
+export const DRAWING_ALT = 'Excalidraw Diagram';
 
 const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 
@@ -291,7 +294,7 @@ export class DrawingView implements NodeView {
     this.img.style.width = width === null ? '' : `${width}px`;
     this.fallback.textContent = label;
     if (this.editable) {
-      this.dom.title = 'Edit Drawing';
+      this.dom.title = 'Edit Excalidraw Diagram';
       this.dom.setAttribute('aria-label', `${label}: click or press Enter to edit`);
     } else {
       this.dom.removeAttribute('title');

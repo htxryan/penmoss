@@ -1,14 +1,15 @@
 /**
  * Drawings (PEN-28): an SVG picture linked to its Excalidraw scene, shown as a drawing block that
  * opens in the app's drawing editor. The model is core's image with a link mark, so the markdown
- * is `[![Drawing](….svg)](….excalidraw)` and every client keeps it as it is.
+ * is `[![Excalidraw Diagram](….svg)](….excalidraw)` and every client keeps it as it is.
  */
 import { schema as coreSchema, serializeMarkdown } from '@penmoss/core';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { describe, expect, it, vi } from 'vitest';
 import type { CollabEditor } from '../src/collab';
-import { availableBlockItems } from '../src/extensions/block-items';
+import { availableBlockItems, BLOCK_ITEMS, filterBlockItems } from '../src/extensions/block-items';
 import {
+  DRAWING_ALT,
   drawingNode,
   drawingOf,
   placeDrawing,
@@ -26,7 +27,7 @@ const pair = (svg: string, scene: string): DrawingFiles => ({
 });
 const FIRST = pair('a', 'b');
 const SECOND = pair('c', 'd');
-const LINE = (files: DrawingFiles) => `[![Drawing](${files.svg})](${files.scene})`;
+const LINE = (files: DrawingFiles) => `[![Excalidraw Diagram](${files.svg})](${files.scene})`;
 
 const images = (): ImageServices => ({
   add: vi.fn(() => Promise.resolve({ path: 'attachments/x.png' })),
@@ -105,6 +106,17 @@ describe('a new drawing from the slash menu', () => {
     expect(availableBlockItems(collab.editor).map((item) => item.id)).not.toContain('drawing');
   });
 
+  it('is "Excalidraw Diagram", beside Mermaid Diagram, and the old word still finds it', () => {
+    const item = BLOCK_ITEMS.find((block) => block.id === 'drawing')!;
+    expect(item.label).toBe('Excalidraw Diagram');
+    const found = (query: string) => filterBlockItems(BLOCK_ITEMS, query).map((block) => block.id);
+    expect(found('dia')).toEqual(['mermaid', 'drawing']);
+    expect(found('excalidraw')[0]).toBe('drawing');
+    expect(found('draw')[0]).toBe('drawing');
+    expect(found('drawing')).toEqual(['drawing']);
+    expect(DRAWING_ALT).toBe('Excalidraw Diagram');
+  });
+
   it('opens the drawing editor at once and, on Done, puts the drawing on its own line', async () => {
     const { services, edit, finish } = drawings();
     const collab = openEditor(undefined, { images: images(), drawings: services });
@@ -157,7 +169,9 @@ describe('a drawing in a note', () => {
     expect(shown.querySelector('img')!.getAttribute('src')).toBe(
       `data:image/svg+xml;base64,${btoa(FIRST.svg)}`,
     );
-    expect(shown.getAttribute('aria-label')).toBe('Drawing: click or press Enter to edit');
+    expect(shown.getAttribute('aria-label')).toBe(
+      'Excalidraw Diagram: click or press Enter to edit',
+    );
     shown.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     expect(edit).toHaveBeenCalledWith(FIRST.scene);
     finish(SECOND);

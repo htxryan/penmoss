@@ -1282,7 +1282,7 @@
     },
     {
       "id": "editor.insert.drawing",
-      "title": "Insert: Drawing",
+      "title": "Insert: Excalidraw Diagram",
       "area": "Insert",
       "scope": "editor",
       "android": {

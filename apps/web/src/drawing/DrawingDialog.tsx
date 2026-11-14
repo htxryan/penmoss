@@ -72,17 +72,20 @@ export function DrawingDialog({ initial, onDone, onCancel, onError }: DrawingDia
     }
   }, [initial, onDone, onError, saving]);
 
+  /** A drawing is named as the slash menu names it. */
+  const title = initial ? 'Edit Excalidraw Diagram' : 'New Excalidraw Diagram';
+
   return (
     <div
       className="drawing-editor"
       role="dialog"
       aria-modal="true"
-      aria-label={initial ? 'Edit Drawing' : 'New Drawing'}
+      aria-label={title}
       data-testid="drawing-editor"
       data-shapes={shapes}
     >
       <div className="drawing-editor-bar">
-        <span className="drawing-editor-title">{initial ? 'Edit Drawing' : 'New Drawing'}</span>
+        <span className="drawing-editor-title">{title}</span>
         <span className="drawing-editor-actions">
           <button
             type="button"

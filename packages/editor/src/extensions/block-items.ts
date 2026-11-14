@@ -409,10 +409,11 @@ export const BLOCK_ITEMS: readonly BlockItem[] = [
     },
   },
   {
-    // PEN-28: a new drawing, in the drawing editor at once; it goes in the note on Done.
+    // PEN-28: a new drawing, in the drawing editor at once; it goes in the note on Done. Named
+    // for Excalidraw beside Mermaid Diagram; "draw" and "drawing" still find it.
     id: 'drawing',
-    label: 'Drawing',
-    keywords: ['excalidraw', 'sketch', 'whiteboard', 'diagram', 'draw', 'canvas'],
+    label: 'Excalidraw Diagram',
+    keywords: ['draw', 'drawing', 'sketch', 'whiteboard', 'canvas'],
     icon: '✎',
     needsDrawings: true,
     insert: (context) => {
