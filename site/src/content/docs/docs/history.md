@@ -7,7 +7,7 @@ This page shows you how to see a note's earlier versions, bring one back, undo o
 
 ## Version history
 
-**Version History** (⌘⌥⇧H, or the note panel's **History** tab) lists the note's versions, newest first. Each one is a commit in your repository that changed the note, with when it was made, who made it (this Mac, your phone, or an agent, marked with a star) and a summary such as `Appended · +1 −0 line`. Changes that have not synced yet show as **Not saved as a version yet**.
+**Version History** (⌘⌥⇧H, or the note panel's **History** tab) lists the note's versions, newest first. Each one is a commit in your repository that changed the note, with when it was made, who made it (this Mac, your phone, or an agent, marked with a star) and a summary such as `Appended · +1 −0 line`. Changes that have not synced yet show as **Not saved as a version yet**. The list shows at once, and each version's summary fills in a moment later, the newest first.
 
 Select a version to see what it changed.
 

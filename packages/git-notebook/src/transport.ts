@@ -20,6 +20,14 @@ export interface CommitInfo {
 
 export type PushOutcome = 'pushed' | 'rejected';
 
+/** One directory at several commits (`GitTransport.readDir`): each blob's bytes given once. */
+export interface DirSnapshots {
+  /** Commit → the directory's files there (path from the repository's top → blob id). */
+  readonly files: ReadonlyMap<string, ReadonlyMap<string, string>>;
+  /** Blob id → bytes, for every blob `files` names. */
+  readonly blobs: ReadonlyMap<string, Uint8Array>;
+}
+
 export interface GitTransport {
   /** The notebook's directory in the repository: '' or `docs/notes/`. */
   readonly root: string;
@@ -51,6 +59,14 @@ export interface GitTransport {
   }): Promise<CommitInfo[]>;
   /** A file's bytes at any commit (History, G6). */
   readAt(commit: string, path: string): Promise<Uint8Array | null>;
+  /**
+   * The files under `dir` (under `root`, ending in `/`: a note's `.penmoss/notes/<id>/`) at each
+   * of `commits`, with their bytes, in one go (History; Ryan's review of #192): only that
+   * directory is listed, never the whole tree, and the blobs a partial clone lacks are fetched in
+   * one request. A commit without the directory has no files. Optional: without it, History
+   * lists and reads each commit (`list`, `read`).
+   */
+  readDir?(commits: readonly string[], dir: string): Promise<DirSnapshots>;
   /**
    * The branch's head at the remote now, cheaply and without fetching (T60, A1067: an
    * `ls-remote`); null when the branch does not exist there. Optional: the channel uses it to

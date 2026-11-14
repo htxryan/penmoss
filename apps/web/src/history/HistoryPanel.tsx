@@ -38,6 +38,10 @@ const time = (ms: number) =>
     minute: '2-digit',
   });
 
+/** Versions whose summaries are read first: about the rows on screen; the rest follow in one read. */
+const FIRST_SUMMARIES = 20;
+const NO_SUMMARIES: ReadonlyMap<number, string> = new Map();
+
 /** Why the history did not load, in words (T39: a server error used to read as offline). */
 function loadFailure(caught: unknown, source: HistorySource): string {
   return caught instanceof HistoryRefused
@@ -115,6 +119,35 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
       if (live.current === from) setError(loadFailure(caught, from));
     }
   };
+
+  // What each version changed, filled in once the list shows (Ryan's review of #192): the list
+  // comes from the log alone, and the summaries take reading every version's text.
+  // Kept with the source they were read from: another note's are never shown.
+  const [read, setRead] = useState<{
+    readonly of: HistorySource;
+    readonly summaries: ReadonlyMap<number, string>;
+  }>(() => ({ of: source, summaries: new Map() }));
+  const summaries = read.of === source ? read.summaries : NO_SUMMARIES;
+  useEffect(() => {
+    if (!history) return;
+    const wanted = history.versions.filter((v) => !v.summary).map((v) => v.id);
+    if (wanted.length === 0) return;
+    let current = true;
+    void (async () => {
+      for (const part of [wanted.slice(0, FIRST_SUMMARIES), wanted.slice(FIRST_SUMMARIES)]) {
+        if (part.length === 0) continue;
+        const got = await source.summaries(part).catch(() => null);
+        if (!current || !got) return;
+        setRead((before) => ({
+          of: source,
+          summaries: new Map([...(before.of === source ? before.summaries : []), ...got]),
+        }));
+      }
+    })();
+    return () => {
+      current = false;
+    };
+  }, [source, history]);
 
   useEffect(() => {
     if (selected === null) return;
@@ -222,23 +255,29 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                 </div>
               </li>
             ) : null}
-            {history.versions.map((v) => (
-              <li key={v.id} className="history-item">
-                <button
-                  type="button"
-                  className="history-entry"
-                  data-ui="item"
-                  aria-pressed={selected === v.id}
-                  onClick={() => setSelected(v.id)}
-                >
-                  <span className="history-time">{time(v.createdAt)}</span>
-                  <Authors authors={v.authors} />
-                  <span className="history-summary muted">
-                    {[REASONS[v.reason] ?? v.reason, v.summary].filter(Boolean).join(' · ')}
-                  </span>
-                </button>
-              </li>
-            ))}
+            {history.versions.map((v) => {
+              const summary = v.summary || summaries.get(v.id);
+              return (
+                <li key={v.id} className="history-item">
+                  <button
+                    type="button"
+                    className="history-entry"
+                    data-ui="item"
+                    aria-pressed={selected === v.id}
+                    onClick={() => setSelected(v.id)}
+                  >
+                    <span className="history-time">{time(v.createdAt)}</span>
+                    <Authors authors={v.authors} />
+                    <span className="history-summary muted" aria-busy={summary ? undefined : true}>
+                      {[REASONS[v.reason] ?? v.reason, summary].filter(Boolean).join(' · ')}
+                      {summary ? null : (
+                        <span className="history-summary-pending" aria-hidden="true" />
+                      )}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
             {history.versions.length === 0 && !history.unversioned ? (
               <li className="muted">No versions yet.</li>
             ) : null}

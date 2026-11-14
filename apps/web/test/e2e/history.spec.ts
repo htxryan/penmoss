@@ -69,6 +69,8 @@ test('history shows attributed versions with a diff, and restores one as a new c
   const first = panel(page).getByRole('list', { name: 'Versions' }).getByRole('button').first();
   await expect(first).toContainText('Penmoss for Mac');
   await expect(first).toContainText('Device');
+  // Its summary is read after the list shows (main's `readDir`, Ryan's review of #192).
+  await expect(first.locator('.history-summary')).toHaveText(/^\+\d+ −\d+ lines?$/);
   await expect.poll(() => remoteMarkdown(host, remote, id) ?? '').toContain('Book the night train');
   // The History tab of the note's side panel (T51, A936): the panel closes.
   await page.getByTestId('note-panel-close').click();

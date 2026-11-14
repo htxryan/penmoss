@@ -47,6 +47,7 @@ function slowHistory() {
         release = () => resolve(list);
       });
     },
+    summaries: (ids) => Promise.resolve(new Map(ids.map((id) => [id, '+1 −0 line']))),
     detail: (id) =>
       Promise.resolve<HistoryDetail>({
         id,
@@ -135,5 +136,67 @@ describe('Version History after Sync Now (A1180)', () => {
     // The top one is the saved version, and it is the one shown.
     expect(entries()[0]!.getAttribute('aria-pressed')).toBe('true');
     expect($('history-diff')?.textContent).toContain('version 2');
+  });
+});
+
+describe('Version History shows the list before the summaries (Ryan’s review of #192)', () => {
+  it('lists every version at once, then fills in what each changed', async () => {
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    const asked: number[][] = [];
+    let release: (() => void) | null = null;
+    const versions = Array.from({ length: 30 }, (_, i) => version(30 - i));
+    history.current = {
+      offline: 'offline',
+      automatic: 'Each sync with git is a version.',
+      saveLabel: 'Sync Now',
+      list: () => Promise.resolve({ versions, unversioned: null }),
+      summaries: (ids) => {
+        asked.push([...ids]);
+        const read = new Map(ids.map((id) => [id, `+${id} −0 lines`]));
+        // The first read (the rows on screen) waits until the test lets it land.
+        if (asked.length > 1) return Promise.resolve(read);
+        return new Promise((resolve) => {
+          release = () => resolve(read);
+        });
+      },
+      detail: () => Promise.resolve(null),
+      save: () => Promise.resolve(),
+      restore: () => Promise.resolve({ changed: true }),
+      revert: () => Promise.resolve({ changed: true, conflicts: [] }),
+    };
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    unmount = () => {
+      act(() => root.unmount());
+      container.remove();
+    };
+    act(() =>
+      root.render(
+        <WorkspaceContext.Provider value={workspace}>
+          <NotesProvider notes={testNotes(memoryNotes())}>
+            <CommandsProvider>
+              <HistoryPanel noteId={NOTE} />
+            </CommandsProvider>
+          </NotesProvider>
+        </WorkspaceContext.Provider>,
+      ),
+    );
+    await flush();
+    const summaries = () => [...container.querySelectorAll<HTMLElement>('.history-summary')];
+    // Every version is listed, each waiting for its summary.
+    expect(summaries()).toHaveLength(30);
+    expect(summaries().every((each) => each.getAttribute('aria-busy') === 'true')).toBe(true);
+    expect(container.querySelectorAll('.history-summary-pending')).toHaveLength(30);
+    // The newest 20 are read first, in one call.
+    expect(asked).toEqual([versions.slice(0, 20).map((v) => v.id)]);
+
+    act(() => release!());
+    await flush();
+    // Then the other 10, in one more.
+    expect(asked[1]).toEqual(versions.slice(20).map((v) => v.id));
+    expect(summaries()[0]!.textContent).toBe('+30 −0 lines');
+    expect(summaries()[29]!.textContent).toBe('+1 −0 lines');
+    expect(container.querySelectorAll('.history-summary-pending')).toHaveLength(0);
   });
 });

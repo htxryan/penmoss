@@ -6,6 +6,7 @@
 import {
   GitTransportError,
   type CommitInfo,
+  type DirSnapshots,
   type GitErrorCode,
   type GitTransport,
   type PushOutcome,
@@ -106,6 +107,18 @@ export class IpcGitTransport implements GitTransport {
   async readAt(commit: string, path: string): Promise<Uint8Array | null> {
     const bytes = await this.call<Uint8Array | null>('readAt', commit, path);
     return bytes ? new Uint8Array(bytes) : null;
+  }
+
+  /** History's reads (Ryan's review of #192): one call for the note's directory at many commits. */
+  async readDir(commits: readonly string[], dir: string): Promise<DirSnapshots> {
+    const answer = await this.call<{
+      files: Array<[string, Array<[string, string]>]>;
+      blobs: Array<[string, Uint8Array]>;
+    }>('readDir', [...commits], dir);
+    return {
+      files: new Map(answer.files.map(([commit, listed]) => [commit, new Map(listed)])),
+      blobs: new Map(answer.blobs.map(([id, bytes]) => [id, new Uint8Array(bytes)])),
+    };
   }
 
   async maintain(): Promise<void> {

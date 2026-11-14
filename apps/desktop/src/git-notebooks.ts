@@ -129,6 +129,7 @@ export const TRANSPORT_OPS = [
   'push',
   'log',
   'readAt',
+  'readDir',
   'maintain',
 ] as const;
 export type TransportOp = (typeof TRANSPORT_OPS)[number];
@@ -1281,6 +1282,19 @@ export class GitNotebooks {
       case 'readAt': {
         const [path] = paths([args[1]]);
         return transport.readAt(sha(args[0]), path!);
+      }
+      case 'readDir': {
+        // History's reads: a note's directory at many commits (Ryan's review of #192). The
+        // transport refuses a directory outside the notebook.
+        if (!Array.isArray(args[0]) || args[0].length > 2_000) {
+          throw new GitTransportError('git', 'Not a list of commits.');
+        }
+        const [dir] = paths([args[1]]);
+        const read = await transport.readDir(args[0].map(sha), dir!);
+        return {
+          files: [...read.files].map(([commit, listed]) => [commit, [...listed]]),
+          blobs: [...read.blobs],
+        };
       }
       case 'maintain':
         await transport.maintain();

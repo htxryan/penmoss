@@ -3887,6 +3887,23 @@ button.history-entry:hover {
   font-size: 0.78rem;
 }
 
+/* A summary still being read (Ryan's review of #192): a short bar where its words will be. */
+.history-summary-pending {
+  display: inline-block;
+  width: 4.5rem;
+  height: 0.6em;
+  border-radius: 999px;
+  background: var(--pm-border);
+  vertical-align: middle;
+  animation: pm-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .history-summary-pending {
+    animation: none;
+  }
+}
+
 .history-detail {
   padding: 0.75rem 0 1.5rem;
   border-top: 1px solid var(--pm-border);

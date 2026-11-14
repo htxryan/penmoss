@@ -147,6 +147,13 @@ function fakeGit(transport: MemoryTransport): DesktopGit & { secrets: Map<string
       }
       case 'commit':
         return t[op]!(args[0], new Map(args[1] as Array<[string, Uint8Array | null]>), args[2]);
+      case 'readDir': {
+        const read = await transport.readDir(args[0] as string[], args[1] as string);
+        return {
+          files: [...read.files].map(([commit, listed]) => [commit, [...listed]]),
+          blobs: [...read.blobs],
+        };
+      }
       default:
         return t[op]!(...args);
     }
