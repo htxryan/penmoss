@@ -1010,6 +1010,13 @@
       "keys": []
     },
     {
+      "id": "editor.insert.drawing",
+      "title": "Insert: Drawing",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
       "id": "editor.insert.symbol",
       "title": "Insert: Symbol",
       "area": "Insert",

@@ -1281,6 +1281,15 @@
       }
     },
     {
+      "id": "editor.insert.drawing",
+      "title": "Insert: Drawing",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "na": "The phone shows drawings but has no drawing editor: they are made in the Mac app (PEN-28)"
+      }
+    },
+    {
       "id": "editor.insert.symbol",
       "title": "Insert: Symbol",
       "area": "Insert",

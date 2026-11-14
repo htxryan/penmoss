@@ -537,6 +537,26 @@ describe('the local MCP server', () => {
     expect(init.instructions).toContain('describe_tags');
   });
 
+  it('shows a drawing as its image link, linked to its scene, and keeps it through edits (PEN-28)', async () => {
+    const { tool } = await server();
+    const drawing = `[![Drawing](attachments/${'a'.repeat(64)}.svg)](attachments/${'b'.repeat(64)}.excalidraw)`;
+    const markdown = `## Sketch\n\n${drawing}\n\n## Notes\n\nDraft\n`;
+    const made = await tool('create_note', { title: 'Whiteboard', markdown });
+    const id = made.structuredContent.id as string;
+    const read = await tool('read_note', { id });
+    expect(read.content[1]!.text).toBe(markdown);
+    const edited = await tool('replace_text', {
+      id,
+      find: 'Draft',
+      replace: 'Final',
+      baseVersion: read.structuredContent.baseVersion,
+    });
+    expect(edited.isError).toBeUndefined();
+    expect((await tool('read_note', { id })).content[1]!.text).toBe(
+      `## Sketch\n\n${drawing}\n\n## Notes\n\nFinal\n`,
+    );
+  });
+
   it('creates, searches, reads and edits notes, and refuses what it cannot do', async () => {
     const { tool, saves } = await server();
     const made = await tool('create_note', {

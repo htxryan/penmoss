@@ -19,6 +19,7 @@ import androidx.webkit.WebViewClientCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import app.penmoss.BuildConfig
+import app.penmoss.data.Attachments
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,8 +53,19 @@ object EditorWebView {
      */
     fun handsKeysToPage(focus: android.view.View?): Boolean = (focus as? SelectionWebView)?.dispatchesKeys == true
 
-    /** Where the page asks for a note's pictures (A304): `/attachments/<sha256>.<ext>`. */
-    private val PICTURE_PATH = Regex("^/attachments/([0-9a-f]{64})\\.(png|jpg|gif|webp|avif)$")
+    /**
+     * Where the page asks for a note's pictures (A304): `/attachments/<sha256>.<ext>`. A drawing's
+     * SVG too (PEN-28), which the note shows as a picture.
+     */
+    private val PICTURE_PATH = Regex("^/attachments/([0-9a-f]{64})\\.(png|jpg|gif|webp|avif|svg)$")
+
+    /**
+     * An SVG answered on the page's own origin is a picture only: shown in an `<img>`, which runs
+     * none of its script and loads nothing it links. Were it ever opened as a page, this policy
+     * gives it no script, no requests and a unique origin (PEN-28).
+     */
+    const val SVG_POLICY = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; sandbox"
+
 
     /** Where the page asks for a picture from a web address (T40 P8, ED13): `/remote?u=<address>`. */
     const val REMOTE_PATH = "/remote"
@@ -127,14 +139,18 @@ object EditorWebView {
     }
 
     /** A picture's file as the WebView's answer: its type, never sniffed, cached by the WebView. */
-    fun pictureResponse(file: File, ext: String): WebResourceResponse = WebResourceResponse(
-        "image/" + if (ext == "jpg") "jpeg" else ext,
-        null,
-        200,
-        "OK",
-        mapOf("X-Content-Type-Options" to "nosniff", "Cache-Control" to "private, max-age=31536000, immutable"),
-        FileInputStream(file),
-    )
+    fun pictureResponse(file: File, ext: String): WebResourceResponse {
+        val headers = mutableMapOf("X-Content-Type-Options" to "nosniff", "Cache-Control" to "private, max-age=31536000, immutable")
+        if (ext == Attachments.SVG_EXT) headers["Content-Security-Policy"] = SVG_POLICY
+        return WebResourceResponse(
+            if (ext == Attachments.SVG_EXT) Attachments.SVG_TYPE else "image/" + if (ext == "jpg") "jpeg" else ext,
+            null,
+            200,
+            "OK",
+            headers,
+            FileInputStream(file),
+        )
+    }
 
     /**
      * A picture from a web address as the WebView's answer (ED13): its sniffed type, and never

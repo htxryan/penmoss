@@ -779,6 +779,31 @@ describe('serializeMarkdown for the git mirror (T27)', () => {
     );
   });
 
+  it('keeps a drawing as its SVG picture linked to its scene, both paths rewritten (PEN-28)', () => {
+    const scene = 'b'.repeat(64);
+    const drawing = `[![Drawing](attachments/${sha}.svg)](attachments/${scene}.excalidraw)`;
+    const sized = `[![Drawing|480](attachments/${sha}.svg)](attachments/${scene}.excalidraw)`;
+    const doc = parseMarkdown(`A sketch:\n\n${drawing}\n\n${sized}\n`).doc;
+    // An image with a link mark: no node of its own, so every client keeps it.
+    const image = doc.child(1).child(0);
+    expect(image.type.name).toBe('image');
+    expect(image.marks.map((mark) => [mark.type.name, mark.attrs['href'] as string])).toEqual([
+      ['link', `attachments/${scene}.excalidraw`],
+    ]);
+    expect(serializeMarkdown({ frontmatter: null, doc })).toBe(
+      `A sketch:\n\n${drawing}\n\n${sized}\n`,
+    );
+    expect(
+      serializeMarkdown(
+        { frontmatter: null, doc },
+        { assetUrl: (url) => (url.startsWith('attachments/') ? `../${url}` : url) },
+      ),
+    ).toBe(
+      `A sketch:\n\n[![Drawing](../attachments/${sha}.svg)](../attachments/${scene}.excalidraw)\n\n` +
+        `[![Drawing|480](../attachments/${sha}.svg)](../attachments/${scene}.excalidraw)\n`,
+    );
+  });
+
   it('rewrites attachment paths through assetUrl, and nothing else', () => {
     const doc = parseMarkdown(
       `![Plan|300](attachments/${sha}.png) [spec](attachments/${sha}.pdf) [site](https://example.com/attachments/x.png)`,

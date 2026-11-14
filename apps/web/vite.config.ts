@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
 import { ports } from '../../scripts/ports.mjs';
 import { contentSecurityPolicy } from './csp';
+import { excalidrawAssets } from './excalidraw-assets';
 
 const page = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
@@ -30,16 +31,27 @@ const workerEntities = (): Plugin => ({
  * T59 (D49) it is the only build: no server to proxy to, no service worker and no spike page.
  */
 export default defineConfig(({ command }) => ({
-  plugins: [react()],
-  // The dev server bundles dependencies once for the page and the worker alike, so there both
-  // take the build without the DOM; it decodes the same references from a table.
-  ...(command === 'serve'
-    ? {
-        resolve: {
-          alias: [{ find: new RegExp(`^${ENTITIES}$`), replacement: entitiesWithoutDom() }],
-        },
-      }
-    : {}),
+  // Excalidraw's fonts, bundled for the drawing editor (PEN-28).
+  plugins: [react(), excalidrawAssets()],
+  resolve: {
+    alias: [
+      {
+        // The codec (packages/core) uses only the math syntax; the package's entry also has its
+        // HTML renderer, which imports KaTeX. Dev pre-bundling kept that KaTeX in the codec's
+        // start-up load, and once Excalidraw's Mermaid shared the version it became a file of its
+        // own there (PEN-28, blocks.spec.ts's T12): resolve the package to its syntax alone.
+        find: /^micromark-extension-math$/,
+        replacement: page(
+          '../../packages/core/node_modules/micromark-extension-math/lib/syntax.js',
+        ),
+      },
+      // The dev server bundles dependencies once for the page and the worker alike, so there both
+      // take the build without the DOM; it decodes the same references from a table.
+      ...(command === 'serve'
+        ? [{ find: new RegExp(`^${ENTITIES}$`), replacement: entitiesWithoutDom() }]
+        : []),
+    ],
+  },
   server: {
     // 5173, or this checkout's port block (scripts/ports.mjs).
     port: ports().vite,

@@ -16,6 +16,7 @@ import type { Node as PMNode } from '@tiptap/pm/model';
 import { NodeSelection, Plugin, PluginKey } from '@tiptap/pm/state';
 import type { EditorView, NodeView } from '@tiptap/pm/view';
 import { onDoubleActivate, openLightbox, type Lightbox, type LightboxImage } from '../lightbox';
+import { drawingOf, DrawingView, type DrawingServices } from './drawing';
 
 export interface ImageServices {
   /** Stores an image and returns the path to put in the note; rejects with a message to show. */
@@ -90,8 +91,12 @@ const imageShortcut = () =>
     },
   });
 
-/** The image node; without services, attachment images show their alt text. */
-export function imageExtension(services?: ImageServices) {
+/**
+ * The image node; without services, attachment images show their alt text. A picture that is a
+ * drawing (an SVG linked to its Excalidraw scene, PEN-28) shows as a drawing block, which opens
+ * in `drawings`' editor.
+ */
+export function imageExtension(services?: ImageServices, drawings?: DrawingServices) {
   const spec = nodeSpecs.image;
   return Node.create({
     name: 'image',
@@ -104,7 +109,9 @@ export function imageExtension(services?: ImageServices) {
     addNodeView:
       () =>
       ({ node, view, getPos }) =>
-        new ImageView(node, view, getPos, services),
+        drawingOf(node)
+          ? new DrawingView(node, view, getPos, services, drawings)
+          : new ImageView(node, view, getPos, services),
     addInputRules: () => [imageShortcut()],
     addProseMirrorPlugins: () => (services ? [imageInputPlugin(services)] : []),
   });
@@ -338,7 +345,8 @@ class ImageView implements NodeView {
   }
 
   update(node: PMNode): boolean {
-    if (node.type !== this.node.type) return false;
+    // A picture that became a drawing is drawn by a drawing's view.
+    if (node.type !== this.node.type || drawingOf(node)) return false;
     const srcChanged = node.attrs['src'] !== this.node.attrs['src'];
     this.node = node;
     this.render(srcChanged);
