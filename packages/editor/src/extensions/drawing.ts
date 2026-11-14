@@ -10,15 +10,17 @@
  * any age keeps it as a linked picture: no schema change and no new notebook format. Both files
  * are content-addressed attachments; an edit writes a new pair and points the picture at it.
  *
- * The editor shows such a picture as a drawing block: the SVG as wide as a picture, which a click
- * (or Enter on it) opens in the drawing editor, through `DrawingServices`. The editor itself is
- * the app's (apps/web loads Excalidraw only then); without the services (Android, a read-only
- * note) a drawing is a picture you can look at.
+ * The editor shows such a picture as a drawing block: the SVG as wide as a picture. A click selects
+ * it, as it does a picture; Edit and Delete buttons in its top-right corner (on hover, or while it
+ * is selected) open it in the drawing editor, through `DrawingServices`, or remove it, as Enter
+ * and Backspace do on the selected drawing. The editor itself is the app's (apps/web loads
+ * Excalidraw only then); without the services (Android) or in a read-only note, a drawing is a
+ * picture you can look at, with no buttons.
  */
 import { parseAttachmentPath } from '@penmoss/core/attachments';
 import { Extension, type Editor } from '@tiptap/core';
 import type { Mark, Node as PMNode, Schema } from '@tiptap/pm/model';
-import { NodeSelection, type Transaction } from '@tiptap/pm/state';
+import { NodeSelection, TextSelection, type Transaction } from '@tiptap/pm/state';
 import type { EditorView, NodeView } from '@tiptap/pm/view';
 import type { ImageServices } from './image';
 
@@ -201,15 +203,57 @@ export async function editDrawing(
 /** Each drawing's view by its element, so Enter on a selected drawing opens that view's. */
 const views = new WeakMap<globalThis.Node, DrawingView>();
 
+/** The app's pencil and trash icons (`packages/ui` Icon), for a drawing's Edit and Delete. */
+const ICON_PENCIL = 'M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17zM14 7l3 3';
+const ICON_TRASH = 'M5 7h14M10 4h4M7 7l.8 12a1.5 1.5 0 0 0 1.5 1.4h5.4a1.5 1.5 0 0 0 1.5-1.4L17 7';
+
+/** One of a drawing's corner buttons: a line icon, named by its label (and its tooltip). */
+function toolButton(doc: Document, label: string, path: string, kind: string): HTMLButtonElement {
+  const button = doc.createElement('button');
+  button.type = 'button';
+  button.className = `pm-drawing-tool pm-drawing-${kind}`;
+  button.title = label;
+  button.setAttribute('aria-label', label);
+  button.dataset['testid'] = `drawing-${kind}`;
+  // The note keeps focus and its selection: Enter, Backspace and ⌘Z still act on the drawing.
+  button.tabIndex = -1;
+  button.addEventListener('mousedown', (event) => event.preventDefault());
+  const SVG = 'http://www.w3.org/2000/svg';
+  const svg = doc.createElementNS(SVG, 'svg');
+  for (const [name, value] of Object.entries({
+    class: 'i',
+    viewBox: '0 0 24 24',
+    width: '14',
+    height: '14',
+    fill: 'none',
+    stroke: 'currentColor',
+    'stroke-width': '1.5',
+    'stroke-linecap': 'round',
+    'stroke-linejoin': 'round',
+    'aria-hidden': 'true',
+    focusable: 'false',
+  })) {
+    svg.setAttribute(name, value);
+  }
+  const shape = doc.createElementNS(SVG, 'path');
+  shape.setAttribute('d', path);
+  svg.append(shape);
+  button.append(svg);
+  return button;
+}
+
 /**
- * Shows one drawing: its SVG as a picture (or "Drawing" while it loads or when it cannot be
- * had). A click, or Enter while it is selected, opens it in the drawing editor when the note is
- * editable and the app has one.
+ * Shows one drawing: its SVG as a picture (or its alt text while it loads or when it cannot be
+ * had). A click selects it. Where the note is editable and the app has a drawing editor, Edit
+ * and Delete buttons show in its top-right corner on hover and while it is selected; Enter on the
+ * selected drawing edits it too, and Backspace or Delete removes it, as they do a picture.
  */
 export class DrawingView implements NodeView {
   readonly dom: HTMLSpanElement;
   private readonly img: HTMLImageElement;
   private readonly fallback: HTMLSpanElement;
+  /** Edit and Delete, only where a drawing can be edited (not on Android). */
+  private readonly tools: HTMLSpanElement | null = null;
   private loading: AbortController | null = null;
   /** The source whose URL this view holds (given back on change and on destroy). */
   private shown: string | null = null;
@@ -234,25 +278,65 @@ export class DrawingView implements NodeView {
     const frame = doc.createElement('span');
     frame.className = 'pm-image-frame';
     frame.append(this.img, this.fallback);
+    if (drawings) {
+      // Laid over the picture in the frame's one grid cell, not positioned (A1283).
+      const tools = doc.createElement('span');
+      tools.className = 'pm-drawing-tools';
+      const edit = toolButton(doc, 'Edit Excalidraw Diagram', ICON_PENCIL, 'edit');
+      edit.addEventListener('click', () => this.open());
+      const remove = toolButton(doc, 'Delete Excalidraw Diagram', ICON_TRASH, 'delete');
+      remove.addEventListener('click', () => this.remove());
+      tools.append(edit, remove);
+      frame.append(tools);
+      this.tools = tools;
+    }
     this.dom.append(frame);
     views.set(this.dom, this);
     this.dom.addEventListener('click', (event) => {
       // The link around the picture is the scene's file, never followed from the note.
       event.preventDefault();
-      if (event.button === 0) this.open();
+      if (event.button !== 0 || this.tools?.contains(event.target as globalThis.Node | null)) {
+        return;
+      }
+      if (this.editable) this.select();
     });
     this.render(true);
   }
 
-  /** Whether a click opens the drawing editor here. */
+  /** Whether the drawing can be edited or deleted here. */
   private get editable(): boolean {
     return this.drawings !== undefined && this.view.editable;
   }
 
-  /** Opens this drawing in the drawing editor (a click, or Enter while it is selected). */
+  /** Opens this drawing in the drawing editor (its Edit button, or Enter while it is selected). */
   open(): boolean {
     if (!this.editable || !this.drawings) return false;
     void editDrawing(this.view, this.drawings, this.getPos);
+    return true;
+  }
+
+  /** Selects the drawing, as a click selects a picture. */
+  private select(): void {
+    const pos = this.getPos();
+    if (pos === undefined) return;
+    const tr = this.view.state.tr.setSelection(NodeSelection.create(this.view.state.doc, pos));
+    this.view.dispatch(tr);
+    this.view.focus();
+  }
+
+  /**
+   * Takes the drawing out of the note (its Delete button), leaving the caret where it was, as
+   * Backspace on the selected drawing does; ⌘Z brings it back. Its files stay in the notebook's
+   * attachments, as a removed picture's do.
+   */
+  remove(): boolean {
+    const pos = this.getPos();
+    const node = pos === undefined ? null : this.view.state.doc.nodeAt(pos);
+    if (!this.editable || pos === undefined || !node || !drawingOf(node)) return false;
+    const tr = this.view.state.tr.delete(pos, pos + node.nodeSize);
+    tr.setSelection(TextSelection.near(tr.doc.resolve(tr.mapping.map(pos))));
+    this.view.dispatch(tr.scrollIntoView());
+    this.view.focus();
     return true;
   }
 
@@ -266,14 +350,20 @@ export class DrawingView implements NodeView {
 
   selectNode(): void {
     this.dom.classList.add('ProseMirror-selectednode');
+    // The note may have turned read-only since the drawing was drawn.
+    if (this.tools) this.tools.hidden = !this.editable;
   }
 
   deselectNode(): void {
     this.dom.classList.remove('ProseMirror-selectednode');
   }
 
-  /** Clicks are the drawing's (they open it), not the editor's or the link's. */
+  /**
+   * Clicks are the drawing's (they select it), not the editor's or the link's, which would open
+   * the scene's file; so are the buttons' events.
+   */
   stopEvent(event: Event): boolean {
+    if (this.tools?.contains(event.target as globalThis.Node | null)) return true;
     return event.type === 'click' || (event.type === 'mousedown' && this.editable);
   }
 
@@ -294,12 +384,11 @@ export class DrawingView implements NodeView {
     this.img.style.width = width === null ? '' : `${width}px`;
     this.fallback.textContent = label;
     if (this.editable) {
-      this.dom.title = 'Edit Excalidraw Diagram';
-      this.dom.setAttribute('aria-label', `${label}: click or press Enter to edit`);
+      this.dom.setAttribute('aria-label', `${label}: press Enter to edit`);
     } else {
-      this.dom.removeAttribute('title');
       this.dom.removeAttribute('aria-label');
     }
+    if (this.tools) this.tools.hidden = !this.editable;
     if (!reload) return;
     this.loading?.abort();
     if (this.shown !== null) this.images?.release?.(this.shown);

@@ -105,11 +105,11 @@ The Mac app takes pictures and files up to 50 MB. The Android app, the `penmoss`
 
 Pictures and files are saved on the device first, so this works offline, and go to the repository with the next sync, in its `attachments/` folder. See [Notebooks on disk](/docs/reference/notebook-format/#attachments).
 
-## Excalidraw diagrams
+## Excalidraw Diagrams
 
 Choose **Excalidraw Diagram** in the slash menu to sketch in [Excalidraw](https://excalidraw.com), a hand-drawn style drawing editor, which opens over the whole window. Draw with its shapes, arrows, lines, pen and text, then press **Done** to put the drawing in the note, or **Cancel** to leave the note as it was. The editor follows your light or dark mode, and works offline.
 
-The drawing shows in the note as a picture, as wide as you drew it. Click it, or select it and press Enter, to open it in Excalidraw again.
+The drawing shows in the note as a picture, as wide as you drew it. Click it to select it. Point at it, or select it, and two buttons show in its top-right corner: **Edit Excalidraw Diagram** (the pencil) opens it in Excalidraw again, and **Delete Excalidraw Diagram** (the bin) removes it from the note. With the drawing selected, Enter edits it too, and Backspace or Delete removes it. Undo (⌘Z, or Ctrl+Z) brings a removed drawing back. A read-only note, such as an older version in History, shows the drawing without the buttons.
 
 Each drawing is two files in the repository's `attachments/` folder: the Excalidraw scene, a `.excalidraw` file you can also open at excalidraw.com, and an `.svg` picture of it. The note shows the picture, linked to the scene, so GitHub and any markdown viewer show the drawing too:
 

@@ -5,8 +5,9 @@ import { remoteBytes } from './support/sync';
 // PEN-28: drawings. The slash menu's Excalidraw Diagram opens Excalidraw over the window; Done
 // stores the scene as `attachments/<sha256>.excalidraw` and its picture as
 // `attachments/<sha256>.svg`, and the note shows the SVG, linked to the scene:
-// `[![Excalidraw Diagram](….svg)](….excalidraw)`. A click opens it again, with its shapes; each
-// edit is a new pair of files.
+// `[![Excalidraw Diagram](….svg)](….excalidraw)`. A click selects it; its Edit button (or Enter)
+// opens it again, with its shapes, and its Delete button removes it. Each edit is a new pair of
+// files.
 
 const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const TAG = `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -135,9 +136,22 @@ test('PEN-28: draw in a note, save it as files in git, open it again and edit it
   const svg = remoteBytes(host, remote, firstSvg).toString('utf8');
   expect(svg).toMatch(/^<svg[^>]* xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
 
-  // A click opens it again, with its rectangle; an ellipse added and Done point the note at a
-  // new pair of files.
-  await drawing.click();
+  // A click selects it, and opens nothing; its Edit and Delete buttons show in its corner.
+  const editButton = drawing.getByRole('button', { name: 'Edit Excalidraw Diagram' });
+  const deleteButton = drawing.getByRole('button', { name: 'Delete Excalidraw Diagram' });
+  await body(page).getByText('The garden beds, drawn:').click();
+  await page.mouse.move(0, 0);
+  await expect(editButton).toBeHidden();
+  await drawing.locator('img').click();
+  await expect(drawing).toHaveClass(/ProseMirror-selectednode/);
+  await expect(editor(page)).toBeHidden();
+  await page.mouse.move(0, 0);
+  await expect(editButton).toBeVisible();
+  await expect(deleteButton).toBeVisible();
+
+  // Edit opens it again, with its rectangle; an ellipse added and Done point the note at a new
+  // pair of files.
+  await editButton.click();
   await expect(editor(page)).toBeVisible();
   await expect(editor(page)).toHaveAttribute('aria-label', 'Edit Excalidraw Diagram');
   await expect(editor(page)).toHaveAttribute('data-shapes', '1');
@@ -163,16 +177,28 @@ test('PEN-28: draw in a note, save it as files in git, open it again and edit it
     'rectangle',
   ]);
 
-  // Opened again, it has both shapes.
-  await drawing.click();
+  // Selected, Enter opens it again: it has both shapes.
+  await drawing.locator('img').click();
+  await expect(drawing).toHaveClass(/ProseMirror-selectednode/);
+  await page.keyboard.press('Enter');
   await expect(editor(page)).toBeVisible();
   await expect(editor(page)).toHaveAttribute('data-shapes', '2');
-
-  // The proof's last frame: the reopened drawing, both shapes on its canvas.
   await page.waitForTimeout(2_000);
   await editor(page).getByRole('button', { name: 'Cancel' }).click();
   await expect(editor(page)).toBeHidden();
+
+  // Delete takes it out of the note, and Undo brings it back.
+  await drawing.hover();
+  await deleteButton.click();
+  await expect(body(page).getByTestId('drawing')).toHaveCount(0);
+  await page.keyboard.press('ControlOrMeta+KeyZ');
+  await expect(body(page).getByTestId('drawing')).toHaveCount(1);
+  await expect(drawing).toHaveAttribute('data-state', 'ready');
+
+  // The proof's last frame: the drawing back in the note, its buttons on hover.
   await drawing.scrollIntoViewIfNeeded();
+  await drawing.hover();
+  await expect(editButton).toBeVisible();
   await page.waitForTimeout(2_000);
   expect(errors).toEqual([]);
 });

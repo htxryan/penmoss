@@ -2163,12 +2163,60 @@ a {
 }
 
 /*
- * Drawings (PEN-28): a drawing's SVG shows as a picture does, and a click opens it where the app
- * has the drawing editor (it then has a title). Its white background turns dark in dark mode, as
- * Excalidraw's own canvas does.
+ * Drawings (PEN-28): a drawing's SVG shows as a picture does, and a click selects it. Where the
+ * app has the drawing editor, Edit and Delete sit in its top-right corner, over the picture in
+ * the frame's grid cell (not positioned, A1283), shown on hover and while it is selected; never
+ * in a read-only note. Its white background turns dark in dark mode, as Excalidraw's own canvas
+ * does.
  */
-.note-body .pm-drawing[title] img {
+.note-body .pm-drawing-tools {
+  display: flex;
+  z-index: 1;
+  gap: 4px;
+  margin: 6px;
+  place-self: start end;
+  line-height: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--pm-fast),
+    visibility var(--pm-fast);
+}
+
+.note-body .pm-drawing-tools[hidden],
+.note-body .ProseMirror[contenteditable='false'] .pm-drawing-tools {
+  display: none;
+}
+
+.note-body .pm-image-frame:hover > .pm-drawing-tools,
+.note-body .pm-drawing.ProseMirror-selectednode .pm-drawing-tools {
+  opacity: 1;
+  visibility: visible;
+}
+
+.note-body .pm-drawing-tool {
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+  box-sizing: border-box;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-shadow-1);
+  color: var(--pm-fg);
   cursor: pointer;
+}
+
+.note-body .pm-drawing-tool:hover {
+  border-color: var(--pm-border-strong);
+}
+
+.note-body .pm-drawing-delete:hover {
+  border-color: color-mix(in oklab, var(--pm-danger) 45%, transparent);
+  background: var(--pm-danger-soft);
+  color: var(--pm-danger);
 }
 
 :root[data-mode='dark'] .note-body .pm-drawing img {

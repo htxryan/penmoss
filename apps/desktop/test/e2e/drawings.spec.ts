@@ -14,8 +14,8 @@ import {
 
 // PEN-28 in the Mac app: the slash menu's Excalidraw Diagram opens Excalidraw over the window,
 // from the app's own files (its fonts too: the app works offline, and its CSP allows nothing else). Done
-// puts the drawing in the note and its two files in the notebook's repository; a click opens it
-// again with its shapes. The web suite (apps/web/test/e2e/drawings.spec.ts) covers editing a
+// puts the drawing in the note and its two files in the notebook's repository; a click selects it
+// and its Edit button opens it again with its shapes. The web suite (apps/web/test/e2e/drawings.spec.ts) covers editing a
 // drawing again and the production build's CSP.
 
 const mac = process.platform === 'darwin';
@@ -103,8 +103,11 @@ test('a drawing made from the slash menu shows in the note and is kept as files 
   expect(saved.elements.map((element) => element.type)).toEqual(['rectangle']);
   expect(repositoryFile(remote, `attachments/${svg}.svg`)).toMatch(/^<svg[^>]* xmlns=/);
 
-  // A click opens it again, with its rectangle.
-  await drawing.click();
+  // A click selects it; its Edit button opens it again, with its rectangle.
+  await drawing.locator('img').click();
+  await expect(drawing).toHaveClass(/ProseMirror-selectednode/);
+  await expect(editor(page)).toBeHidden();
+  await drawing.getByRole('button', { name: 'Edit Excalidraw Diagram' }).click();
   await expect(editor(page)).toBeVisible();
   await expect(editor(page)).toHaveAttribute('aria-label', 'Edit Excalidraw Diagram');
   await expect(editor(page)).toHaveAttribute('data-shapes', '1');

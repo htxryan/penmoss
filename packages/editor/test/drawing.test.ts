@@ -5,6 +5,8 @@
  */
 import { schema as coreSchema, serializeMarkdown } from '@penmoss/core';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
+import type { EditorView } from '@tiptap/pm/view';
+import { yUndoPluginKey } from '@y/prosemirror';
 import { describe, expect, it, vi } from 'vitest';
 import type { CollabEditor } from '../src/collab';
 import { availableBlockItems, BLOCK_ITEMS, filterBlockItems } from '../src/extensions/block-items';
@@ -59,6 +61,17 @@ const replicaMarkdown = (collab: CollabEditor) =>
   });
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+/** A click on `target`, returned to check what the page did with it. */
+function click(target: Element): MouseEvent {
+  const event = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 });
+  target.dispatchEvent(event);
+  return event;
+}
+
+/** The drawing's Edit or Delete button. */
+const button = (view: EditorView, kind: 'edit' | 'delete') =>
+  view.dom.querySelector<HTMLButtonElement>(`[data-testid="drawing-${kind}"]`)!;
 
 /** A note with a line of text and a drawing after it. */
 function withDrawing(options: Parameters<typeof openEditor>[1] = {}) {
@@ -160,7 +173,7 @@ describe('a new drawing from the slash menu', () => {
 });
 
 describe('a drawing in a note', () => {
-  it('shows its SVG and opens its scene on a click; Done points it at the new pair', async () => {
+  it('shows its SVG and opens its scene from its Edit button; Done points it at the new pair', async () => {
     const { services, edit, finish } = drawings();
     const collab = withDrawing({ drawings: services });
     const { view } = collab.editor;
@@ -169,21 +182,87 @@ describe('a drawing in a note', () => {
     expect(shown.querySelector('img')!.getAttribute('src')).toBe(
       `data:image/svg+xml;base64,${btoa(FIRST.svg)}`,
     );
-    expect(shown.getAttribute('aria-label')).toBe(
-      'Excalidraw Diagram: click or press Enter to edit',
-    );
-    shown.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    expect(shown.getAttribute('aria-label')).toBe('Excalidraw Diagram: press Enter to edit');
+    const editButton = button(view, 'edit');
+    expect(editButton.getAttribute('aria-label')).toBe('Edit Excalidraw Diagram');
+    expect(editButton.title).toBe('Edit Excalidraw Diagram');
+    expect(button(view, 'delete').getAttribute('aria-label')).toBe('Delete Excalidraw Diagram');
+    // In the drawing's top-right corner, on hover and while selected (the stylesheet's).
+    expect(editButton.parentElement!.className).toBe('pm-drawing-tools');
+    expect(editButton.parentElement!.hidden).toBe(false);
+    click(editButton);
     expect(edit).toHaveBeenCalledWith(FIRST.scene);
     finish(SECOND);
     await flush();
     expect(markdownOf(collab)).toBe(`Beds\n\n${LINE(SECOND)}\n`);
     // The editor's document and the replica's agree (two transactions, see replaceDrawing): the
-    // next click opens the new scene, and git gets it.
+    // next edit opens the new scene, and git gets it.
     expect(replicaMarkdown(collab)).toBe(`Beds\n\n${LINE(SECOND)}\n`);
-    view.dom
-      .querySelector('[data-testid="drawing"]')!
-      .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    click(button(view, 'edit'));
     expect(edit).toHaveBeenLastCalledWith(SECOND.scene);
+  });
+
+  it('is selected by a click, which does not open it or follow its link', () => {
+    const { services, edit } = drawings();
+    const collab = withDrawing({ drawings: services });
+    const { view } = collab.editor;
+    const shown = view.dom.querySelector<HTMLElement>('[data-testid="drawing"]')!;
+    const event = click(shown.querySelector('img')!);
+    expect(event.defaultPrevented).toBe(true);
+    expect(edit).not.toHaveBeenCalled();
+    const { selection } = view.state;
+    expect(selection).toBeInstanceOf(NodeSelection);
+    expect(drawingOf((selection as NodeSelection).node)).toEqual(FIRST);
+    expect(shown.classList.contains('ProseMirror-selectednode')).toBe(true);
+  });
+
+  it('goes with its Delete button, the caret left where it was, and ⌘Z brings it back', () => {
+    const { services } = drawings();
+    const collab = withDrawing({ drawings: services });
+    const { view } = collab.editor;
+    // A pause: the delete is an undo step of its own.
+    yUndoPluginKey.getState(view.state)?.undoManager.stopCapturing();
+    click(button(view, 'delete'));
+    expect(markdownOf(collab)).toBe('Beds\n');
+    expect(replicaMarkdown(collab)).toBe('Beds\n');
+    expect(view.state.selection).toBeInstanceOf(TextSelection);
+    expect(view.state.selection.$from.parent.type.name).toBe('paragraph');
+    expect(collab.undo()).toBe(true);
+    expect(markdownOf(collab)).toBe(`Beds\n\n${LINE(FIRST)}\n`);
+    expect(replicaMarkdown(collab)).toBe(markdownOf(collab));
+  });
+
+  it('goes with Backspace or Delete while selected, as a picture does', () => {
+    for (const key of ['Backspace', 'Delete']) {
+      const { services } = drawings();
+      const collab = withDrawing({ drawings: services });
+      const { view } = collab.editor;
+      click(view.dom.querySelector('[data-testid="drawing"] img')!);
+      expect(view.state.selection).toBeInstanceOf(NodeSelection);
+      press(view, key);
+      expect(markdownOf(collab)).toBe('Beds\n');
+    }
+  });
+
+  it('in a read-only note, has no buttons and does nothing on a click', () => {
+    const { services, edit } = drawings();
+    const collab = withDrawing({ drawings: services });
+    const { view } = collab.editor;
+    collab.editor.setEditable(false);
+    const shown = view.dom.querySelector<HTMLElement>('[data-testid="drawing"]')!;
+    const before = view.state.selection;
+    click(shown.querySelector('img')!);
+    expect(view.state.selection.eq(before)).toBe(true);
+    // Its buttons, were they reached (the stylesheet hides them), do nothing either.
+    click(button(view, 'edit'));
+    click(button(view, 'delete'));
+    expect(edit).not.toHaveBeenCalled();
+    expect(markdownOf(collab)).toBe(`Beds\n\n${LINE(FIRST)}\n`);
+    // A drawing first shown in a read-only note has them hidden.
+    const readOnly = openEditor(undefined, { images: images(), drawings: services });
+    readOnly.editor.setEditable(false);
+    readOnly.editor.commands.setContent(collab.editor.getJSON());
+    expect(button(readOnly.editor.view, 'edit').parentElement!.hidden).toBe(true);
   });
 
   it('opens with Enter while selected', () => {
@@ -222,9 +301,9 @@ describe('a drawing in a note', () => {
     await flush();
     expect(shown.querySelector('img')!.getAttribute('src')).toMatch(/^data:image\/svg\+xml;/);
     expect(shown.hasAttribute('aria-label')).toBe(false);
-    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
-    shown.dispatchEvent(click);
-    expect(click.defaultPrevented).toBe(true);
+    // No Edit or Delete buttons: the phone has no drawing editor.
+    expect(shown.querySelector('.pm-drawing-tools')).toBeNull();
+    expect(click(shown).defaultPrevented).toBe(true);
     // Edited around: the drawing stays as it is.
     view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, 5)));
     type(view, ' and paths\nMore text');
