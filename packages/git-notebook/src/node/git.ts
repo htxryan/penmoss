@@ -222,11 +222,11 @@ export function hostMessage(output: string): string | undefined {
 
 /**
  * Where git says it went: a URL, an scp-style remote (`git@host:path`) or a quoted absolute
- * path. git prints the remote in every failed push (`To <remote>`, `failed to push some refs to
+ * path, or the line `To <remote>` whatever its form (a bare path). git prints the remote in every failed push (`To <remote>`, `failed to push some refs to
  * '<remote>'`), so a repository, account or folder whose name has `tls`, `ssl` or `GH006` in it
  * would read as that failure (PEN-117).
  */
-const LOCATION = /[a-z][a-z0-9+.-]*:\/\/[^\s'"]*|[\w.-]+@[\w.-]+:[^\s'"]*|'\/[^'\n]*'/gi;
+const LOCATION = /[a-z][a-z0-9+.-]*:\/\/[^\s'"]*|[\w.-]+@[\w.-]+:[^\s'"]*|'\/[^'\n]*'|^To \S.*$/gim;
 
 /** The code for a failed git call, from what git and the host printed, never from where. */
 export function classify(output: string): GitErrorCode {

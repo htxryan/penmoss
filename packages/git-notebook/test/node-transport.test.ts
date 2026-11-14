@@ -261,6 +261,8 @@ describe('NodeGitTransport', () => {
       'https://github.com/tls-team/hassle.git',
       'git@github.com:gh006/notes.git',
       'ssh://git@tls.example.com/notes.git',
+      // A plain path remote: git prints it bare after "To", and quoted in "failed to push".
+      '/tmp/penmoss-nb-xTlS9a/gh007.git',
     ]) {
       expect(
         classify(
