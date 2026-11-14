@@ -35,8 +35,9 @@ class TimeMachineNotOnPhoneInstrumentedTest {
     @Test
     fun searchListsNoTimeMachineAction() {
         val query = "time"
-        val actions = SearchActions.matching(query)
-        assertTrue("Search would offer the Time Machine", actions.none { it.id == "app.timeMachine" })
+        // What Search shows while typing: the best few (SHOWN), all on screen at once.
+        val actions = SearchActions.matching(query).take(SearchActions.SHOWN)
+        assertTrue("Search would offer the Time Machine", SearchActions.ALL.none { it.id == "app.timeMachine" })
         assertTrue(
             "the Time Machine is not listed as not on a phone",
             AndroidCommands.coverage("app.timeMachine", "global") is Coverage.NotHere,
