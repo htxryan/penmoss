@@ -3,6 +3,8 @@
  * writer (✦ for an agent), and a line diff with the added and removed lines marked.
  */
 import type { DiffOp } from '@penmoss/core/diff';
+import { Icon } from '@penmoss/ui/icons';
+import { authorName } from './format';
 import type { HistoryAuthor } from './source';
 
 type Author = HistoryAuthor;
@@ -53,6 +55,34 @@ export function Authors({ authors }: { authors: readonly Author[] }) {
           {author.label}
         </span>
       ))}
+    </span>
+  );
+}
+
+/** The icon for a writer: ✦ for an agent, a phone for an Android device, else a laptop. */
+const authorIcon = (author: Author | undefined) =>
+  author?.kind === 'agent'
+    ? 'agentRef'
+    : /android|phone/i.test(author?.label ?? '')
+      ? 'phone'
+      : 'laptop';
+
+/**
+ * Who made a version, as History's one-line rows show it (Ryan's review of #192, finding 13): the
+ * first writer's icon, their names in a tooltip on hover, and in words for screen readers.
+ */
+export function AuthorMark({ authors }: { authors: readonly Author[] }) {
+  const names = authors.map(authorName).join(', ');
+  const first = authors[0];
+  return (
+    <span
+      className="history-who"
+      data-kind={first?.kind ?? 'device'}
+      data-tip={names || undefined}
+      data-tip-on="hover"
+    >
+      <Icon name={authorIcon(first)} size={14} />
+      <span className="sr-only">{names}</span>
     </span>
   );
 }

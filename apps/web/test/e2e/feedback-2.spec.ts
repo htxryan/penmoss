@@ -158,9 +158,18 @@ test('5: version history says versions are automatic; saving one now is secondar
   await page.getByTestId('note-tab-history').click();
   const panel = page.getByTestId('history-panel');
   // A git notebook's versions are its commits (A858): each sync is one, and Save is Sync Now.
-  await expect(panel.getByTestId('history-auto')).toContainText(
+  // The head's ⓘ says so (Ryan's review of #192, finding 13), with a link to the docs.
+  await page.getByTestId('history-about').click();
+  const about = page.getByTestId('history-about-text');
+  await expect(about).toContainText(
     'Each sync with git is a version: this Mac commits its changes when it pushes',
   );
+  await expect(about.getByRole('link', { name: 'Learn More' })).toHaveAttribute(
+    'href',
+    'https://penmoss.app/docs/history/#version-history',
+  );
+  await page.getByTestId('history-about').click();
+  await expect(about).toHaveCount(0);
   await expect(panel.getByRole('button', { name: 'Save version', exact: true })).toHaveCount(0);
   const save = panel.getByRole('button', { name: 'Sync Now' });
   // A quiet button, not the panel's main action, described by the explanation.

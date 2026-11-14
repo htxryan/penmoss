@@ -8,7 +8,9 @@ const rootRem = () => parseFloat(getComputedStyle(document.documentElement).font
  * pointer lets go; from the keyboard (it is a focusable separator) ← and → move it by a rem,
  * four with Shift, and Home and End go to the narrowest and widest; a double-click goes back to
  * the pane's first width. `edge` is the pane's side it is on: the sidebar's end, the panel's
- * start, so dragging away from the pane widens it either way.
+ * start, so dragging away from the pane widens it either way. A `horizontal` one (History's
+ * split, Ryan's review of #192, finding 13) sizes a pane's height the same way, with ↑ and ↓; its
+ * edge `start` is the pane's top.
  */
 export function PaneResizer({
   kind,
@@ -19,6 +21,7 @@ export function PaneResizer({
   preview,
   commit,
   testId,
+  orientation = 'vertical',
 }: {
   kind: PaneKind;
   label: string;
@@ -32,7 +35,11 @@ export function PaneResizer({
   /** Keeps a width. */
   commit: (rem: number) => void;
   testId: string;
+  /** `vertical` (a width, the default) or `horizontal` (a height). */
+  orientation?: 'vertical' | 'horizontal';
 }) {
+  const rows = orientation === 'horizontal';
+  const at = (event: PointerEvent<HTMLDivElement>) => (rows ? event.clientY : event.clientX);
   const limits = PANE_LIMITS[kind];
   const widest = () => Math.max(limits.min, Math.min(limits.max, room?.() ?? limits.max));
   const fit = (rem: number, most = widest()) => Math.min(most, clampPane(kind, rem));
@@ -48,13 +55,13 @@ export function PaneResizer({
     if (event.button !== 0) return;
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
-    drag.current = { x: event.clientX, from: width, rem: rootRem(), most: widest(), at: width };
-    document.documentElement.dataset['resizing'] = '';
+    drag.current = { x: at(event), from: width, rem: rootRem(), most: widest(), at: width };
+    document.documentElement.dataset['resizing'] = rows ? 'rows' : '';
   };
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const state = drag.current;
     if (!state) return;
-    const moved = (event.clientX - state.x) / state.rem;
+    const moved = (at(event) - state.x) / state.rem;
     state.at = fit(state.from + (edge === 'end' ? moved : -moved), state.most);
     preview(state.at);
   };
@@ -70,8 +77,9 @@ export function PaneResizer({
   };
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const step = event.shiftKey ? 4 : 1;
-    const wider = edge === 'end' ? 'ArrowRight' : 'ArrowLeft';
-    const narrower = edge === 'end' ? 'ArrowLeft' : 'ArrowRight';
+    const [forward, back] = rows ? ['ArrowDown', 'ArrowUp'] : ['ArrowRight', 'ArrowLeft'];
+    const wider = edge === 'end' ? forward : back;
+    const narrower = edge === 'end' ? back : forward;
     let next: number | null = null;
     if (event.key === wider) next = width + step;
     else if (event.key === narrower) next = width - step;
@@ -87,15 +95,16 @@ export function PaneResizer({
     // A focusable separator is the ARIA pattern for a splitter, and handles its own keys.
     <div
       role="separator"
-      aria-orientation="vertical"
+      aria-orientation={rows ? 'horizontal' : 'vertical'}
       aria-label={label}
       aria-valuemin={limits.min}
       aria-valuemax={limits.max}
       aria-valuenow={width}
-      aria-valuetext={`${Math.round(width * 16)} pixels wide`}
+      aria-valuetext={`${Math.round(width * 16)} pixels ${rows ? 'tall' : 'wide'}`}
       tabIndex={0}
       className="pane-resizer"
       data-edge={edge}
+      data-orientation={orientation}
       data-testid={testId}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}

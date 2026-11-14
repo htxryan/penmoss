@@ -47,6 +47,7 @@ import { floats, shownInNote, useGoneDeliveries, useThreads } from './comments';
 import { COPIED_AGENT_REFERENCE, useCopyAgentReference } from './agent-reference';
 import { showToast } from '../toasts/toasts';
 import { NoteStats } from './note-stats';
+import { AboutVersions } from '../history/AboutVersions';
 import { HistoryPanel } from '../history/HistoryPanel';
 import { browserFoldStorage, localFoldState } from './folds';
 import { useNoteList, useNotes } from './hooks';
@@ -1263,6 +1264,8 @@ export function NoteView({
             {/* Its name and Close; on a phone the panel covers the note, the strip beside it. */}
             <div className="note-side-head">
               <h2>{tabLabel}</h2>
+              {/* History's ⓘ: how versions are made (Ryan's review of #192, finding 13). */}
+              {panelTab === 'history' ? <AboutVersions /> : null}
               <button
                 type="button"
                 className="icon-btn"

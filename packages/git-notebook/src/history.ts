@@ -13,7 +13,13 @@
  * Restore is A80's diff-apply (`restoreContent`) and Revert A81's three-way merge
  * (`revertChange`), both applied by the caller as an ordinary local change that syncs.
  */
-import { diffLines, splitLines, summarise, type DiffOp } from '@penmoss/core/diff';
+import {
+  describeChange,
+  diffLines,
+  splitLines,
+  type ChangeDescription,
+  type DiffOp,
+} from '@penmoss/core/diff';
 import { versionMarkdown } from '@penmoss/editor/markdown';
 import * as Y from '@y/y';
 import type { Layout } from './layout';
@@ -125,8 +131,8 @@ export class NotebookHistory {
   private readonly states = new Lru<string, Uint8Array | null>(32);
   /** Each version's markdown as History compares them, by note and commit. */
   private readonly texts = new Lru<string, string>(512);
-  /** What each version changed (`summarise`), by note and commit. */
-  private readonly summaryOf = new Lru<string, string>(5000);
+  /** What each version changed (`describeChange`), by note and commit. */
+  private readonly summaryOf = new Lru<string, ChangeDescription>(5000);
   /** The commit of the version before each one (null: the first), by note and commit. */
   private readonly previousOf = new Lru<string, string | null>(5000);
 
@@ -262,7 +268,7 @@ export class NotebookHistory {
         commit: commit.id,
         createdAt: commit.at,
         reason: author.kind === 'agent' ? 'edit' : 'auto',
-        summary: this.summaryOf.get(`${noteId}:${commit.id}`) ?? '',
+        summary: this.summaryOf.get(`${noteId}:${commit.id}`)?.summary ?? '',
         authors: [author],
       });
     }
@@ -283,7 +289,19 @@ export class NotebookHistory {
     noteId: string,
     versions: readonly Pick<GitVersion, 'id' | 'commit'>[],
   ): Promise<Map<number, string>> {
-    const out = new Map<number, string>();
+    const described = await this.descriptions(noteId, versions);
+    return new Map([...described].map(([id, change]) => [id, change.summary]));
+  }
+
+  /**
+   * `summaries` with a few words on each change as well (History's rows, Ryan's review of #192,
+   * finding 13): the same reads, kept as long.
+   */
+  async descriptions(
+    noteId: string,
+    versions: readonly Pick<GitVersion, 'id' | 'commit'>[],
+  ): Promise<Map<number, ChangeDescription>> {
+    const out = new Map<number, ChangeDescription>();
     const todo = versions.filter((version) => {
       const known = this.summaryOf.get(`${noteId}:${version.commit}`);
       if (known !== undefined) out.set(version.id, known);
@@ -303,12 +321,12 @@ export class NotebookHistory {
     const texts = await this.markdownsAt(noteId, needed);
     for (const version of todo) {
       const before = previous(version.commit);
-      const summary = summarise(
+      const change = describeChange(
         before ? (texts.get(before) ?? '') : '',
         texts.get(version.commit) ?? '',
       );
-      this.summaryOf.set(`${noteId}:${version.commit}`, summary);
-      out.set(version.id, summary);
+      this.summaryOf.set(`${noteId}:${version.commit}`, change);
+      out.set(version.id, change);
     }
     return out;
   }

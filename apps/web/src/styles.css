@@ -3768,38 +3768,38 @@ a {
   font-size: 0.85em;
 }
 
-/* Version history (T21): the History tab of the note's side panel since T51 (A936). */
+/* Version history (T21): the History tab of the note's side panel since T51 (A936). Laid out
+ * as "List over a Docked Preview" (Ryan's review of #192, finding 13): the versions, one line
+ * each and grouped by day, over a handle, then the chosen version's changes and actions. */
 .history-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   font-size: var(--pm-text-sm);
+}
+
+/* The panel holds History's list and its docked changes at its own height: the list scrolls,
+ * not the panel. */
+.note-side:has(> .note-tabpanel[data-tab='history']) {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.note-side > .note-tabpanel[data-tab='history'] {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.note-tabpanel[data-tab='history'] > .history-panel {
+  flex: 1;
 }
 
 .history-panel > .info-heading {
   margin-bottom: 0.25rem;
-}
-
-/* Versions are automatic (A79, A574): the note says so; saving now is secondary. */
-.history-auto {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem 0.75rem;
-  padding: 0.25rem 0 0.6rem;
-  border-bottom: 1px solid var(--pm-border-soft);
-  font-size: var(--pm-text-xs);
-}
-
-.history-auto p {
-  flex: 1 1 14rem;
-  margin: 0;
-}
-
-.history-save {
-  font-size: var(--pm-text-xs);
-}
-
-.history-body {
-  display: flex;
-  flex-direction: column;
 }
 
 .history-empty {
@@ -3810,27 +3810,58 @@ a {
   margin: 0 0 0.75rem;
 }
 
-.history-list {
+/* The list, edge to edge in the panel, so a chosen row's band spans it. */
+.history-scroll {
+  flex: 1 1 0;
+  min-height: 5rem;
+  margin: 0 -1rem;
+  overflow-y: auto;
+  border-top: 1px solid var(--pm-border-soft);
+}
+
+.history-list,
+.history-list ol {
   margin: 0;
-  padding: 0.5rem 0;
+  padding: 0;
   list-style: none;
 }
 
-/* Border-box: the current version's entry is a `div`, not a button, and its padding and dashed
- * border ran past the panel's edge under the tab strip (T53 pass). Every entry has a border, clear
- * but for the current one's dashes, so the entries are one height and their text starts where a
- * backlink's and a comment's does (A988). */
+.history-list {
+  padding-bottom: 0.5rem;
+}
+
+/* A day's heading: Today, Yesterday, Nov 12. */
+.history-day {
+  margin: 0;
+  padding: 0.65rem 1rem 0.2rem;
+  color: var(--pm-muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.history-none {
+  padding: 0.5rem 1rem;
+}
+
+/* One line per version: who, when, what, and the lines it changed. Border-box, full width
+ * (T53 pass, A988). The Now row above them has the same columns. */
 .history-entry {
   display: grid;
+  grid-template-columns: 1rem 4.4rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
   box-sizing: border-box;
   width: 100%;
-  gap: 0.15rem;
-  padding: 0.45rem 0.55rem;
-  border: 1px solid transparent;
+  min-height: 1.75rem;
+  padding: 0 1rem;
+  border: 0;
   border-radius: 0;
   background: none;
   color: var(--pm-fg);
   font: inherit;
+  font-size: 0.8rem;
   text-align: left;
 }
 
@@ -3838,23 +3869,88 @@ button.history-entry {
   cursor: pointer;
 }
 
-button.history-entry:hover {
+button.history-entry:hover:not([aria-pressed='true']) {
   background: var(--pm-hover);
 }
 
+button.history-entry:focus-visible {
+  outline-offset: -2px;
+}
+
 .history-entry[aria-pressed='true'] {
-  background: color-mix(in oklab, var(--pm-accent) 14%, transparent);
-  box-shadow: inset 2px 0 0 var(--pm-accent);
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
 }
 
-.history-item[data-current='true'] .history-entry {
-  border: 1px dashed var(--pm-border);
+.history-entry[aria-pressed='true'] :is(.history-time, .history-lines, .history-who, span) {
+  color: inherit;
 }
 
-/* The panel's text size, as a backlink's title and a comment's author have it (A988). */
+/* A version that changed no text (a sync of the title, an empty commit): there, but quiet. */
+.history-entry[data-dim]:not([aria-pressed='true']) {
+  color: var(--pm-muted);
+}
+
+/* Now: what this Mac has not synced yet, with Sync Now, quiet (finding 13). */
+.history-now {
+  display: grid;
+  grid-template-columns: 1rem 4.4rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 1.75rem;
+  padding: 0.3rem 1rem;
+  color: var(--pm-muted);
+  font-size: 0.8rem;
+}
+
+.history-now[data-pending] .history-summary {
+  color: var(--pm-fg);
+}
+
+.history-now .history-save {
+  height: 1.5rem;
+  padding: 0 0.4rem;
+  color: var(--pm-accent);
+  font-size: 0.78rem;
+}
+
+/* The writer's icon; the tooltip names them (finding 13). */
+.history-who {
+  display: inline-grid;
+  place-items: center;
+  color: var(--pm-muted);
+}
+
+.history-who[data-kind='agent'] {
+  color: var(--pm-agent);
+}
+
 .history-time {
-  font-weight: 600;
-  font-size: inherit;
+  color: var(--pm-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.history-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-lines {
+  display: inline-flex;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.history-added {
+  color: var(--pm-success);
+}
+
+.history-removed {
+  color: var(--pm-danger);
 }
 
 .history-authors {
@@ -3883,10 +3979,6 @@ button.history-entry:hover {
   fill: currentColor;
 }
 
-.history-summary {
-  font-size: 0.78rem;
-}
-
 /* A summary still being read (Ryan's review of #192): a short bar where its words will be. */
 .history-summary-pending {
   display: inline-block;
@@ -3904,24 +3996,129 @@ button.history-entry:hover {
   }
 }
 
-.history-detail {
-  padding: 0.75rem 0 1.5rem;
+/* The handle between the list and the changes: dragged up or down, or ↑ and ↓ when focused
+ * (A1122's edges, on their side). */
+.history-panel > .pane-resizer[data-orientation='horizontal'] {
+  position: relative;
+  inset: auto;
+  flex: none;
+  width: auto;
+  height: 0.75rem;
+  margin: 0 -1rem;
   border-top: 1px solid var(--pm-border);
+  border-bottom: 1px solid var(--pm-border-soft);
+  background: var(--pm-raised);
+  cursor: row-resize;
+}
+
+.history-panel > .pane-resizer[data-orientation='horizontal']::after {
+  inset: 50% auto auto 50%;
+  width: 2.25rem;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--pm-border-strong);
+  transform: translate(-50%, -50%);
+}
+
+.history-panel > .pane-resizer[data-orientation='horizontal']:is(:hover, :focus-visible)::after,
+:root[data-resizing='rows'] .history-panel > .pane-resizer::after {
+  left: 50%;
+  width: 2.25rem;
+  background: var(--pm-accent);
+}
+
+/* Over the edges' column cursor below (one more element in the selector, so it wins). */
+html:root[data-resizing='rows'],
+html:root[data-resizing='rows'] * {
+  cursor: row-resize !important;
+}
+
+/* The chosen version, docked under the list: its changes, then what to do with it. */
+.history-detail {
+  display: flex;
+  flex: 0 1 var(--history-preview, 20rem);
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 6rem;
+  padding: 0.7rem 0 0.9rem;
+  container: history-detail / inline-size;
+}
+
+.history-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.5rem;
+}
+
+.history-detail-head h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.history-detail-head .muted {
+  font-size: 0.75rem;
+}
+
+.history-detail .history-diff {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--pm-border-soft);
+  background: var(--pm-bg);
+}
+
+.history-detail .history-diff pre {
+  border: 0;
+}
+
+.history-diff-loading {
+  margin: 0;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.78rem;
 }
 
 .history-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.history-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+  font-size: 0.7rem;
+}
+
+.history-keys kbd {
+  min-width: 1.1em;
+  padding: 0 0.25em;
+  font-size: 0.68rem;
+}
+
+/* In the panel's first width the arrows alone fit beside Restore and Copy Text. */
+@container history-detail (max-width: 27rem) {
+  .history-keys-word {
+    display: none;
+  }
 }
 
 .history-status {
-  margin: 0.6rem 0 0;
-  font-size: 0.85rem;
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.history-scroll > .history-status {
+  padding: 0.25rem 1rem;
 }
 
 .history-conflicts {
-  margin: 0.5rem 0 0;
+  margin: 0;
   padding-left: 1.1rem;
   font-size: 0.8rem;
 }
@@ -3933,6 +4130,31 @@ button.history-entry:hover {
 .history-diff-caption {
   margin: 0.9rem 0 0.35rem;
   font-size: 0.78rem;
+}
+
+/* History's ⓘ in the panel's head: how versions are made, and the docs. */
+.history-about {
+  position: relative;
+}
+
+.history-about-pop {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  width: 16rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-raised);
+  box-shadow: var(--pm-shadow);
+  font-size: var(--pm-text-sm);
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.history-about-pop p {
+  margin: 0 0 0.4rem;
 }
 
 .history-diff pre {

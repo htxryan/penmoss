@@ -87,6 +87,15 @@ describe('History reads in batches (in memory)', () => {
     const again = await history.history(id, { limit: 100 });
     expect(again.versions.map((v) => v.summary)).toEqual([...summaries.values()]);
     expect(calls).toEqual({ log: 2, readDir: 1 });
+
+    // History's rows, with a few words on each change (Ryan's review of #192, finding 13): read
+    // with the summaries, so nothing more.
+    const described = await history.descriptions(id, listed.versions);
+    expect([...described.values()].map((change) => change.summary)).toEqual([
+      ...summaries.values(),
+    ]);
+    expect([...described.values()].every((change) => change.gist.startsWith('Added “'))).toBe(true);
+    expect(calls).toEqual({ log: 2, readDir: 1 });
   });
 
   it('reads only the versions made since, opened again', async () => {
