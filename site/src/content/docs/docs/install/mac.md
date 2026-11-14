@@ -65,7 +65,7 @@ The main window stays pinned after a relaunch; note windows start unpinned. Keep
 
 ## The compact title bar
 
-With **Settings → Appearance → Compact Title Bar** on (the default), the window's red, yellow and green buttons sit in Penmoss's own top row, and notes start higher. That row drags the window, and double-clicking an empty part of it zooms or minimises it, as **System Settings → Desktop & Dock** says. In full screen the buttons hide.
+With **Settings → Appearance → Compact Title Bar** on (the default), the window's red, yellow and green buttons sit in Penmoss's own top row, and notes start higher. That row drags the window, and double-clicking an empty part of it zooms or minimises it, as **System Settings → Desktop & Dock** says. Before you have a notebook, the strip across the top of the welcome screen does the same. In full screen the buttons hide.
 
 Turn it off to use macOS's own title bar: Penmoss asks, then reopens its windows where they were. The setting is for this Mac only.
 

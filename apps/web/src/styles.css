@@ -213,6 +213,32 @@ a {
   width: 100%;
 }
 
+/*
+ * A window with none of the app in it yet (the wait for the notebooks, the first run; FirstRun.tsx):
+ * what it shows scrolls in `.window-bare`, under `.window-drag`, a strip across the window's top
+ * that drags it with the compact title bar (Ryan's review of #192, finding 1). Without that title
+ * bar the strip takes no room.
+ */
+#root > .window-drag {
+  display: none;
+}
+
+:root[data-titlebar='compact'] #root > .window-drag {
+  display: block;
+  flex: none;
+  height: var(--pm-titlebar-row);
+}
+
+#root > .window-bare {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.window-bare > .app-shell {
+  box-sizing: border-box;
+}
+
 .sidebar {
   position: relative;
   display: flex;
@@ -5855,7 +5881,7 @@ a.toast-action {
  * match.
  */
 :root[data-titlebar='compact']
-  :is(.sb-head, .note-top, .pm-graph-bar, .settings-bar, .app-bar, #root > .banner) {
+  :is(.sb-head, .note-top, .pm-graph-bar, .settings-bar, .app-bar, #root > .banner, .window-drag) {
   -webkit-app-region: drag;
 }
 
@@ -5917,7 +5943,7 @@ a.toast-action {
  * toolbar) is still `no-drag` from it, and one in the text has none.
  */
 :root[data-titlebar='compact']
-  :is(.note-columns, .settings-content)
+  :is(.note-columns, .settings-content, .window-bare)
   :is(
     button,
     a[href],

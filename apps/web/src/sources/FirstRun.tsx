@@ -30,12 +30,29 @@ export function FirstRunGate({
   if (isOpen(state)) return children;
   if (!state.loaded) {
     return (
-      <p className="boot" role="status">
-        Opening Penmoss…
-      </p>
+      <BareWindow>
+        <p className="boot" role="status">
+          Opening Penmoss…
+        </p>
+      </BareWindow>
     );
   }
-  return capture ? <CaptureFirstRun /> : <FirstRun />;
+  return <BareWindow>{capture ? <CaptureFirstRun /> : <FirstRun />}</BareWindow>;
+}
+
+/**
+ * A window with none of the app in it yet (the wait for the notebooks, the first run): with the
+ * Mac's compact title bar, a strip across the top drags the window (Ryan's review of #192, finding
+ * 1), whatever the screen under it holds. That screen scrolls in its own box below the strip, so
+ * nothing it holds is ever in the strip.
+ */
+function BareWindow({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <div className="window-drag" aria-hidden="true" data-testid="window-drag" />
+      <div className="window-bare">{children}</div>
+    </>
+  );
 }
 
 /** Where the first run is (T69, A1146): the welcome, then one of its two ways on. */
