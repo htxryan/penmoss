@@ -52,18 +52,25 @@ A tag is a word after `#` in the note, such as `#ideas`, or an entry in the note
 
 - **Add a tag to the note's tags:** **Add a Tag to This Note**, or the tag field in the note's Metadata tab (`tag or area/tag`).
 - **See a tag's notes:** choose it in the sidebar's **Tags** section, choose a tag in the note's Metadata tab, or ⌘-click a #tag in the text. [Search](/docs/search/) opens with its **Tag** filter set and lists every note with that tag, or a tag inside it, newest first. Type to search those notes by their words. With several notebooks, Search starts on the tag's notebook.
-- **Rename or merge a tag:** the pencil beside a tag in the Tags section (**Rename or Merge**) changes it in every note, nested tags and notes in Trash included. Renaming to a tag that already exists merges the two.
+- **Rename or merge a tag:** the pencil beside a tag in the Tags section (**Rename or Merge**) changes it in every note, nested tags and notes in Trash included. Renaming to a tag that already exists merges the two. The Tags page does this too, and deletes tags.
 
-### Describe your tags
+### The Tags page
 
-The **Tags** page lists every tag with how many notes have it, nested tags under their parent, and a box under each to say what the tag means. Open it with the button at the end of the sidebar's **Tags** title (**Open the Tags Page**, shown when you point at the title) or **Tags** in the command palette. With several notebooks it has a section for each, in the sidebar's order.
+The **Tags** page is where you describe and tidy your tags: a table with a row for each tag, its note count, and what it means. Open it with the button at the end of the sidebar's **Tags** title (**Open the Tags Page**, shown when you point at the title) or **Tags** in the command palette. With several notebooks it has a table for each, in the sidebar's order, and each change stays in its own notebook.
 
-- **Describe a tag:** type in the box under its name. It saves as you type. Empty the box to remove the description.
+- **Find a tag:** type in the filter at the top. It narrows the tables to tags whose name or description has what you type. Escape clears it. Choose **Tag** or **Notes** at the top of a table to sort by it.
+- **See a tag's notes:** choose its name, or **Show Notes** in its ⋯ menu. Search opens on its notes, in that tag's notebook, as choosing it in the Tags section does.
+- **Describe a tag:** choose its description (or **Add a description**) and type. A row shows the first line of its description; while you edit it the box grows to show every line. It saves as you type: **Saving…**, then **Saved**. If it can't be saved, the row says **Not saved**; choose **Try Again**. Empty the box to remove the description.
+- **Rename a tag:** **Rename…** in its ⋯ menu, or F2 on its row, turns the name into a box in its row. Press Return, or click away, and it is renamed in every note at once; Escape cancels. A tag with tags inside it offers to rename those too (**Also rename the tags inside it**, on unless you turn it off). Its description goes with it.
+- **Rename to a name that exists:** the row asks whether to merge the two, with how many notes end up with the tag. **Merge Into #name** opens the Merge dialog with that tag chosen; **Pick Another Name** lets you type again.
+- **Merge tags:** **Merge Into…** in a tag's ⋯ menu, or select tags with their checkboxes and choose **Merge…** at the top. For one tag, find and choose the tag to merge it into; for several, choose the one to keep or type a new name. The dialog says how many notes change, and which description is kept: the kept tag's, or, if it has none, the first merged tag's that has one. **Merge Tags** replaces the merged tags with the kept one in every note, and the tags inside them move along.
+- **Delete tags:** **Delete…** in a tag's ⋯ menu, or select tags and choose **Delete…** at the top. After you confirm, the tags, and the tags inside them, are removed from every note that has them, notes in Trash included. The notes stay, and a tag in a note's text keeps its word without the #: `a #garden bed` becomes `a garden bed`. Its description goes too.
+- **Undo:** after a rename, merge or delete, the message at the bottom of the window offers **Undo** for a few seconds (longer while you point at it). Undo puts back the tags in each note, and the descriptions, unless you have changed that text since.
+- **With one tag selected,** **Rename…** joins **Merge…** and **Delete…** at the top. **Select All** at the top of the checkboxes selects every tag the filter shows.
 - **Each tag has its own description.** A parent's description says what the parent means, not its nested tags.
 - **Descriptions belong to the notebook.** They sync with it to your other devices, and agents read them with [`describe_tags`](/docs/reference/mcp/#what-tags-mean) to choose and understand tags.
-- **See a tag's notes:** choose its name. Search opens on its notes, in that tag's notebook, as choosing it in the Tags section does.
 
-Android shows tags as before and keeps their descriptions when it syncs; describe tags on your Mac.
+Android shows tags as before and keeps their descriptions when it syncs; describe and tidy tags on your Mac.
 
 ## Quick Access
 

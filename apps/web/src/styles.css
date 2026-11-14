@@ -4226,107 +4226,466 @@ html:root[data-resizing='rows'] * {
 }
 
 /*
- * The Tags page (PEN-68): Trash's column, every tag as an indented tree, each with its name, its
- * note count and its description, a field that grows with what is typed.
+ * The Tags page (PEN-68; finding 8 of Ryan's review of #192, design "Tags D"): a filter, then a
+ * compact table per notebook, one row per tag: a checkbox, the tag, its note count, its
+ * description (one line, cut, until it is edited) and ⋯. The selected tags' buttons sit in the
+ * notebook's heading row; a rename edits the name in its row, with a strip under it.
  */
 .tags-page {
   box-sizing: border-box;
-  width: min(44rem, 100%);
+  width: min(60rem, 100%);
   margin: 0 auto;
-  padding: 3rem 1.5rem;
+  padding: 2.5rem 1.5rem 4rem;
 }
 
 .tags-page h2 {
-  margin: 0 0 0.25rem;
+  margin: 0 0 0.75rem;
   font-size: 1.5rem;
   letter-spacing: -0.015em;
 }
 
-.tags-page-lede {
-  margin: 0 0 1.25rem;
-  font-size: var(--pm-text-sm);
+.tags-filter {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.tags-filter > .i {
+  position: absolute;
+  left: 0.6rem;
+  color: var(--pm-muted);
+  pointer-events: none;
+}
+
+.tags-filter > .input {
+  padding-left: 1.9rem;
+}
+
+.tags-page-filter {
+  max-width: 22rem;
+  margin-bottom: 1.25rem;
 }
 
 .tags-page-notebook + .tags-page-notebook {
   margin-top: 2rem;
 }
 
+.tags-page-notebook-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+  min-height: var(--pm-control);
+  margin-bottom: 0.4rem;
+}
+
 .tags-page-notebook-name {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  margin: 0 0 0.5rem;
-  padding-bottom: 0.35rem;
-  border-bottom: 1px solid var(--pm-border);
+  margin: 0;
   font-size: var(--pm-text-md);
 }
 
-.tags-page-tree {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.tags-page-count {
+  font-size: var(--pm-text-xs);
 }
 
-.tags-page-item {
-  padding: 0.5rem 0 0.25rem;
-}
-
-.tags-page-tree .tags-page-tree {
-  margin-top: 0.25rem;
-  padding-left: 1.25rem;
-  border-left: 1px solid var(--pm-border-soft);
-}
-
-.tags-page-row {
+.tags-page-actions {
   display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
 }
 
-.tags-page-name {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.15rem;
+.tags-page-selected {
+  margin-right: 0.25rem;
+  font-size: var(--pm-text-sm);
+  font-weight: 600;
+}
+
+.tags-table {
+  border-top: 1px solid var(--pm-border);
+  font-size: var(--pm-text-sm);
+}
+
+.tags-row {
+  display: grid;
+  grid-template-columns: 2rem minmax(9rem, 14rem) 3.5rem minmax(0, 1fr) var(--pm-control-sm);
+  align-items: start;
+  gap: 0 0.5rem;
+  padding: 0.1rem 0.25rem;
+  border-bottom: 1px solid var(--pm-border-soft);
+}
+
+.tags-row > [role='cell'],
+.tags-row > [role='columnheader'] {
+  display: flex;
+  align-items: center;
   min-width: 0;
-  min-height: 1.5rem;
-  padding: 0 0.25rem 0 0;
+  min-height: var(--pm-control-sm);
+}
+
+.tags-more-cell .icon-btn {
+  width: var(--pm-control-sm);
+  height: var(--pm-control-sm);
+}
+
+.tags-row:hover:not(.tags-head) {
+  background: var(--pm-hover);
+}
+
+.tags-row[data-selected] {
+  background: var(--pm-accent-softer);
+}
+
+.tags-head {
+  min-height: 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  font-weight: 600;
+}
+
+.tags-check {
+  margin: 0 auto;
+  accent-color: var(--pm-accent);
+}
+
+.tags-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tags-sort:hover {
+  color: var(--pm-fg);
+}
+
+.tags-row > .tags-count-cell {
+  justify-content: flex-end;
+  padding-right: 0.5rem;
+  color: var(--pm-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tags-name {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
   border: 0;
   background: none;
   color: var(--pm-fg);
   font: inherit;
   font-weight: 600;
-  overflow-wrap: anywhere;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.tags-page-name:hover {
+.tags-name:hover {
   color: var(--pm-accent);
 }
 
-.tags-page-name .tag-hash {
-  width: auto;
+.tags-name-parent {
+  color: var(--pm-muted);
+  font-weight: 400;
 }
 
-.tags-page-count {
+.tags-name mark {
+  background: var(--pm-accent-soft);
+  color: inherit;
+}
+
+.tags-name-edit {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.tags-name-edit > .input {
+  height: var(--pm-control-sm);
+  padding: 0 0.4rem;
+}
+
+.tags-name-edit[data-warn] > .input {
+  border-color: var(--pm-danger);
+}
+
+.tags-desc {
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.tags-desc-view {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--pm-control-sm);
+  padding: 0 0.5rem;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--pm-fg);
+  font: inherit;
+  text-align: left;
+  cursor: text;
+}
+
+.tags-desc-view:hover {
+  border-color: var(--pm-border);
+}
+
+.tags-desc-view[data-empty] {
+  color: var(--pm-muted);
+}
+
+.tags-desc-line {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.input.tags-desc-field {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--pm-control-sm);
+  padding: 0.25rem 0.5rem;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.45;
+}
+
+.tags-save {
+  display: inline-flex;
   flex: none;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: var(--pm-control-sm);
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  white-space: nowrap;
+}
+
+.tags-save:empty {
+  display: none;
+}
+
+.tags-desc[data-state='saved'] .tags-save .i {
+  color: var(--pm-success);
+}
+
+.tags-save-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--pm-accent);
+  animation: pm-tags-saving 1s ease-in-out infinite alternate;
+}
+
+@keyframes pm-tags-saving {
+  from {
+    opacity: 0.3;
+  }
+}
+
+.tags-save-failed {
+  color: var(--pm-danger);
+  font-weight: 600;
+}
+
+.tags-save .btn {
+  height: var(--pm-control-sm);
+}
+
+.tags-row > .tags-more-cell {
+  justify-content: flex-end;
+}
+
+.tags-strip {
+  display: block;
+  padding: 0.4rem 0.5rem 0.5rem 2.5rem;
+  border-bottom: 1px solid var(--pm-border-soft);
+  background: var(--pm-accent-softer);
+  font-size: var(--pm-text-sm);
+}
+
+.tags-strip[data-tone='offer'] {
+  background: var(--pm-warn-bg);
+}
+
+.tags-strip[data-tone='warn'] {
+  background: var(--pm-danger-soft);
+}
+
+.tags-strip-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+}
+
+.tags-strip-text {
+  margin: 0;
+}
+
+.tags-strip-hint {
   font-size: var(--pm-text-xs);
 }
 
-.input.tags-page-description {
-  display: block;
-  height: auto;
-  min-height: var(--pm-control);
-  margin-top: 0.3rem;
-  padding: 0.4rem 0.6rem;
-  resize: vertical;
-  field-sizing: content;
-  line-height: 1.45;
+.tags-strip-hint kbd {
+  font: inherit;
+  font-weight: 600;
+}
+
+.tags-strip-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tags-strip-end {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
 }
 
 .tags-page-none {
   margin: 0.5rem 0 0;
   font-size: var(--pm-text-sm);
+}
+
+/* The Merge dialog: a picker of tags with their counts, and a preview of what changes. */
+.confirm.tags-dialog {
+  width: min(30rem, calc(100vw - 2rem));
+  max-width: none;
+}
+
+.tags-merge-grid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.tags-merge-label {
+  padding-top: 0.4rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  font-weight: 600;
+}
+
+.tags-merge-source {
+  padding-top: 0.35rem;
+  font-size: var(--pm-text-sm);
+  font-weight: 600;
+}
+
+.tags-merge-source .muted {
+  font-size: var(--pm-text-xs);
+  font-weight: 400;
+}
+
+.tags-merge-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.tags-merge-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 14rem;
+  margin-bottom: 0.75rem;
+  overflow-y: auto;
+  border: 1px solid var(--pm-border-soft);
+}
+
+.tags-merge-pick .tags-merge-list {
+  margin-bottom: 0;
+}
+
+.tags-merge-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--pm-control);
+  padding: 0 0.5rem;
+  font-size: var(--pm-text-sm);
+  cursor: pointer;
+}
+
+.tags-merge-option:hover {
+  background: var(--pm-hover);
+}
+
+.tags-merge-option[data-on='true'] {
+  background: var(--pm-accent-softer);
+}
+
+.tags-merge-tag {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tags-merge-option .muted {
+  font-size: var(--pm-text-xs);
+}
+
+.tags-merge-option > .input {
+  height: var(--pm-control-sm);
+}
+
+.confirm .tags-merge-none {
+  margin: 0;
+  padding: 0.5rem;
+}
+
+.confirm .tags-merge-preview {
+  color: var(--pm-fg);
+}
+
+/* A phone: the description under the tag, across the row. */
+@media (max-width: 40rem) {
+  .tags-page {
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .tags-row {
+    grid-template-columns: 2rem minmax(0, 1fr) 2.5rem var(--pm-control);
+  }
+
+  .tags-row > .tags-desc-cell {
+    grid-column: 2 / -1;
+    grid-row: 2;
+  }
+
+  .tags-head > [role='columnheader']:nth-child(4) {
+    display: none;
+  }
+
+  .tags-strip {
+    padding-left: 0.5rem;
+  }
 }
 
 .trash-list {
