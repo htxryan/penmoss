@@ -34,7 +34,7 @@ const LABELS: Record<GitSyncStatus['phase'], string> = {
   syncing: 'Syncing',
   synced: 'Synced',
   offline: 'Offline',
-  stopped: 'Sync stopped',
+  stopped: 'Sync Stopped',
 };
 
 /**

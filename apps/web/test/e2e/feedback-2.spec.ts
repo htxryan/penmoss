@@ -378,6 +378,19 @@ test('8: Add a tag suggests every tag on any note, by keyboard too', async ({ pa
   expect(errors).toEqual([]);
 });
 
+/** WCAG contrast of two computed `rgb(…)` colours. */
+function contrast(a: string, b: string): number {
+  const luminance = (colour: string) => {
+    const [r, g, bl] = (colour.match(/[\d.]+/g) ?? []).slice(0, 3).map((part) => {
+      const c = Number(part) / 255;
+      return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r! + 0.7152 * g! + 0.0722 * bl!;
+  };
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (light! + 0.05) / (dark! + 0.05);
+}
+
 test('9: Sync stopped opens Settings → Notebooks, where Sync Now starts it again', async ({
   page,
   host,
@@ -402,7 +415,37 @@ test('9: Sync stopped opens Settings → Notebooks, where Sync Now starts it aga
   await newNote(page, `Refused ${RUN}`, 'Kept here until it can go.');
   const dot = page.getByTestId('section-sync');
   await expect(dot).toHaveAttribute('data-state', 'stopped', { timeout: 60_000 });
-  await expect(dot).toHaveAttribute('data-label', /Sync stopped/);
+  await expect(dot).toHaveAttribute('data-label', /Sync Stopped/);
+  // The note's bar says so in a red band, the page's colour on the theme's danger colour, at
+  // AA contrast, and leads to the same page (finding 12 of the #192 review).
+  const band = page.getByTestId('status-bar').getByRole('link', { name: /^Sync Stopped/ });
+  await expect(band).toHaveText('Sync Stopped');
+  await expect(page.getByTestId('save-status')).toHaveAttribute('data-state', 'stopped');
+  await expect(band).toHaveAttribute('href', /\/settings\/git-notebooks\/[0-9A-Z]{26}$/);
+  const measure = () =>
+    band.evaluate((element) => {
+      const style = getComputedStyle(element);
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--pm-danger)';
+      document.body.append(probe);
+      const danger = getComputedStyle(probe).color;
+      probe.remove();
+      return { background: style.backgroundColor, color: style.color, danger };
+    });
+  // In the light variant, then the dark one (the theme follows the system's).
+  const light = await measure();
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect.poll(async () => (await measure()).danger).not.toBe(light.danger);
+  const dark = await measure();
+  for (const [scheme, colours] of [
+    ['light', light],
+    ['dark', dark],
+  ] as const) {
+    expect(colours.background, scheme).toBe(colours.danger);
+    expect(contrast(colours.color, colours.background), scheme).toBeGreaterThanOrEqual(4.5);
+  }
+  await page.emulateMedia({ colorScheme: 'light' });
+  await expect(page.getByTestId('save-alert')).toContainText('Sync Stopped.');
   // A link, reachable by keyboard.
   await expect(dot).toHaveRole('link');
   await dot.focus();

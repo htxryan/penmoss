@@ -61,7 +61,7 @@ const PHASES: Record<GitSyncStatus['phase'], string> = {
   syncing: 'Syncing',
   synced: 'Synced',
   offline: 'Offline',
-  stopped: 'Sync stopped',
+  stopped: 'Sync Stopped',
 };
 
 /** “3 notes have changes”, “The folders have changes”, “2 notes and the folders have changes”. */

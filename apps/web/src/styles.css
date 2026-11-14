@@ -5114,9 +5114,32 @@ button.history-entry:hover {
   background: var(--pm-danger);
 }
 
-.save-status[data-state='conflict'],
-.save-status[data-state='error'] {
+.save-status[data-state='conflict'] {
   color: var(--pm-fg);
+}
+
+/*
+ * Sync stopped, or the note not stored on this device: a band in the theme's danger colour,
+ * with the page's colour as its text and icon, so it is as legible as danger text on the page,
+ * which every theme's contrast checks hold to AA (finding 12 of Ryan's review of #192). Sync
+ * Stopped is a link to its notebook's page in Settings. The other states stay quiet.
+ */
+.save-status:is([data-state='stopped'], [data-state='error']) {
+  min-height: 1.3rem;
+  padding: 0 0.5rem;
+  border-radius: 0;
+  background: var(--pm-danger);
+  color: var(--pm-bg);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.save-status:is([data-state='stopped'], [data-state='error']) .dot {
+  background: currentColor;
+}
+
+a.save-status[data-state='stopped']:hover {
+  text-decoration: underline;
 }
 
 /*

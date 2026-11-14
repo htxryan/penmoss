@@ -30,11 +30,33 @@ import { noteFields } from './markdown';
 import type { SaveStatus } from './save-status';
 import type { OpenNote } from './service';
 import { kindLabel } from './kind';
+import { Icon } from '@penmoss/ui/icons';
+import { gitNotebookPath, linkHandler } from '../router';
 import { charactersLabel, readingLabel, wordsLabel } from './stats';
 import { tokensLabel } from './tokens';
 
 function SaveStatusLabel({ status }: { status: SaveStatus | null }) {
+  const source = useSource();
   if (!status) return <span className="save-status">Opening…</span>;
+  // Sync stopped: a red pill, to the notebook's page in Settings, which says why and has Sync Now
+  // (finding 12 of Ryan's review of #192; the sidebar's dot leads there too, A1098).
+  if (status.state === 'stopped' && source?.kind === 'git') {
+    const path = gitNotebookPath(source.id);
+    return (
+      <a
+        className="save-status"
+        data-state={status.state}
+        data-ui="item"
+        href={path}
+        title={status.hint}
+        aria-label={`${status.label}: ${status.hint}`}
+        onClick={linkHandler(path)}
+      >
+        <Icon name="warning" size={12} />
+        {status.label}
+      </a>
+    );
+  }
   return (
     <span className="save-status" data-state={status.state} title={status.hint}>
       <span className="dot" aria-hidden="true" />
@@ -44,7 +66,7 @@ function SaveStatusLabel({ status }: { status: SaveStatus | null }) {
 }
 
 /** The save states worth interrupting for: not saved, or sync stopped. */
-const ANNOUNCED: ReadonlySet<SaveStatus['state']> = new Set(['error']);
+const ANNOUNCED: ReadonlySet<SaveStatus['state']> = new Set(['error', 'stopped']);
 
 /**
  * The bar along the bottom of the note: its save status on the left, the fields pinned to it on

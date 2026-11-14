@@ -13,7 +13,7 @@ export function syncLabel(state: AppSyncState): string {
     case 'synced':
       return 'Synced';
     case 'stopped':
-      return `Sync stopped${pending}`;
+      return `Sync Stopped${pending}`;
   }
 }
 
