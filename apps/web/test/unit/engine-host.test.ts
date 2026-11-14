@@ -116,7 +116,10 @@ async function setup(
     pullEveryMin: extra.pullEveryMin ?? 60,
     // Read each time, so fake timers' clock is the host's too.
     now: () => Date.now(),
-    syncLimitMs: extra.syncLimitMs ?? 200,
+    // A limit no sync reaches by being slow (PEN-126, as PEN-115 found on the fake clock): at
+    // 200 ms, a sync that a loaded Mac paused for a moment counted as offline and waited 30 s to
+    // try again. Tests of the limit set their own.
+    syncLimitMs: extra.syncLimitMs ?? 600_000,
     ...(extra.closingSyncMs !== undefined ? { closingSyncMs: extra.closingSyncMs } : {}),
     ...(extra.remote !== undefined ? { remote: extra.remote } : {}),
     ...(extra.onlineSettleMs !== undefined ? { onlineSettleMs: extra.onlineSettleMs } : {}),
@@ -139,7 +142,7 @@ async function storeEdit(
 
 describe('a sync out of time (A852, A859)', () => {
   it('is stopped for good: a call that ends after the cancel is the last git call', async () => {
-    const { git, host } = await setup();
+    const { git, host } = await setup({ syncLimitMs: 200 });
     // The fetch outlasts the limit and ends anyway (the cancel came between two calls).
     git.slowOp('fetch', 400);
     await host.start();
@@ -151,7 +154,8 @@ describe('a sync out of time (A852, A859)', () => {
   });
 
   it('a push that landed after the time ran out shows as synced, not offline', async () => {
-    const { git, host } = await setup();
+    // Far above the first sync (a few ms), and the held push below outlasts any limit.
+    const { git, host } = await setup({ syncLimitMs: 1000 });
     await host.start();
     await vi.waitFor(() => expect(host.status.phase).toBe('synced'), { timeout: 3000 });
     // An edit, pushed by a push that takes longer than the limit and lands anyway.
@@ -213,10 +217,10 @@ describe('the default cadence: 12 s after edits settle, every minute while shown
     const doc = Object.assign(new EventTarget(), { hidden: false });
     vi.stubGlobal('window', win);
     vi.stubGlobal('document', doc);
-    // Syncs on the fake clock get a limit they never reach (PEN-115): with the default 200 ms,
-    // a sync whose git outlasts the clock's jumps on a slow runner timed out, and its retry
+    // Syncs on the fake clock get a limit they never reach (setup's, PEN-115): with 200 ms, a
+    // sync whose git outlasts the clock's jumps on a slow runner timed out, and its retry
     // started a sync of its own that the focus below measured its gap from.
-    const { host } = await setup({ pushDelayS: 12, pullEveryMin: 1, syncLimitMs: 600_000 });
+    const { host } = await setup({ pushDelayS: 12, pullEveryMin: 1 });
     await host.start();
     await vi.waitFor(() => expect(host.status.phase).toBe('synced'), { timeout: 3000 });
     vi.useFakeTimers();
@@ -255,8 +259,8 @@ describe('the default cadence: 12 s after edits settle, every minute while shown
   });
 
   it('pushes 12 s after the last edit, and edits that keep coming within a minute', async () => {
-    // Syncs on the fake clock get a limit they never reach.
-    const { host, store } = await setup({ pushDelayS: 12, pullEveryMin: 60, syncLimitMs: 600_000 });
+    // Syncs on the fake clock get a limit they never reach (setup's).
+    const { host, store } = await setup({ pushDelayS: 12, pullEveryMin: 60 });
     await host.start();
     await vi.waitFor(() => expect(host.status.phase).toBe('synced'), { timeout: 3000 });
     vi.useFakeTimers();
@@ -823,8 +827,8 @@ describe('after a Send to: at once, then every 10 s until the reply (A1061, A106
   }
 
   async function started() {
-    // The usual cadence (A1013), and syncs on the fake clock that never run out of time.
-    const ready = await setup({ pushDelayS: 12, pullEveryMin: 60, syncLimitMs: 600_000 });
+    // The usual cadence (A1013); setup's syncs never run out of time on the fake clock.
+    const ready = await setup({ pushDelayS: 12, pullEveryMin: 60 });
     await ready.host.start();
     await vi.waitFor(() => expect(ready.host.status.phase).toBe('synced'), { timeout: 3000 });
     vi.useFakeTimers();
