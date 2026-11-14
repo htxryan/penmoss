@@ -328,6 +328,17 @@ export function RepoTree({
   );
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
+  const [tree, setTree] = useState<HTMLUListElement | null>(null);
+  /**
+   * The list's height when a filter was first typed: the list keeps at least that while filtered,
+   * so the centred card doesn't shrink and move as matches go (Ryan's review of #193).
+   */
+  const [floor, setFloor] = useState<number | null>(null);
+  const filter = (next: string) => {
+    if (!next.trim()) setFloor(null);
+    else if (!query.trim() && tree) setFloor(tree.getBoundingClientRect().height);
+    setQuery(next);
+  };
 
   useEffect(() => {
     for (const repo of ahead) if (!reads.has(repo.fullName)) read(repo);
@@ -418,22 +429,30 @@ export function RepoTree({
           placeholder="Filter repositories and notebooks"
           value={query}
           data-testid="first-run-filter"
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => filter(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Escape' && query) {
               event.preventDefault();
               event.stopPropagation();
-              setQuery('');
+              filter('');
             }
           }}
         />
       </label>
-      {q ? (
-        <p className="fr-lead fr-small" role="status" data-testid="first-run-filter-count">
-          {shown.length} of {repos.length} match.
-        </p>
-      ) : null}
-      <ul className="fr-tree" aria-label="Repositories and notebooks" data-testid="first-run-tree">
+      {/* Always there, so the list never moves when the filter is typed in (Ryan's review of #193).
+          A live region speaks only when its words change: as the filter is typed or cleared. */}
+      <p className="fr-lead fr-small fr-count" role="status" data-testid="first-run-filter-count">
+        {q
+          ? `${shown.length} of ${repos.length} match.`
+          : `${repos.length} ${repos.length === 1 ? 'repository' : 'repositories'}.`}
+      </p>
+      <ul
+        ref={setTree}
+        className="fr-tree"
+        style={floor === null ? undefined : { minHeight: floor }}
+        aria-label="Repositories and notebooks"
+        data-testid="first-run-tree"
+      >
         {shown.map(({ repo, notebooks }) => {
           // A filter shows what matched inside, opened or not.
           const expanded = open.has(repo.fullName) || (q !== '' && notebooks.length > 0);

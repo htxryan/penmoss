@@ -437,6 +437,8 @@ describe('the first run (A1030, First Run C)', () => {
     expect(repos[1]!.textContent).toContain('No notebook yet');
     expect(repos[2]!.textContent).toContain('Read Only');
     expect($('first-run-via')?.textContent).toContain('Signed in as ryan');
+    // The count line is there before any filter, so typing one never moves the list.
+    expect($('first-run-filter-count')?.textContent).toBe('3 repositories.');
     // The filter narrows repositories and notebooks.
     await type('first-run-filter', 'home');
     expect($$('first-run-notebook').map((each) => each.dataset['dir'])).toEqual(['home']);

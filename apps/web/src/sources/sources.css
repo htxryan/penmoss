@@ -1088,7 +1088,13 @@
   list-style: none;
 }
 
+/* The count above the tree keeps its line whatever it says, so the tree never moves under it. */
+.fr-count {
+  min-height: 1lh;
+}
+
 .fr-tree {
+  box-sizing: border-box;
   max-height: 22rem;
   overflow-y: auto;
   border: 1px solid var(--pm-border);
