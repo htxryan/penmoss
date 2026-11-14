@@ -259,6 +259,18 @@ test.describe('with a notebook', () => {
     }
     await expect(actions.getByRole('button', { name: 'New Folder' })).toBeVisible();
     await expect(more).toBeHidden();
+    // Nor when the sidebar's list has a scrollbar that takes room (Linux, or a Mac set to show
+    // scroll bars always): the sidebar's width decides, not the row's. Headless Chromium hides
+    // scrollbars, so 15 px of padding at the list's end stands in for one.
+    const bar = await page.addStyleTag({ content: '.sb-list { padding-inline-end: 15px; }' });
+    await expect
+      .poll(() => row.evaluate((element) => element.getBoundingClientRect().width))
+      .toBeLessThan(260);
+    await row.hover();
+    await expect(actions.getByRole('button', { name: 'New Folder' })).toBeVisible();
+    for (const id of folded) await expect(actions.getByTestId(id), id).toBeVisible();
+    await expect(more).toBeHidden();
+    await bar.evaluate((element) => element.remove());
 
     // The narrowest.
     const edge = page.getByTestId('sidebar-resizer');
