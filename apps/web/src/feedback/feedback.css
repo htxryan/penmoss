@@ -4,6 +4,11 @@
   max-height: 86vh;
 }
 
+/* The form itself holds focus only until its draft is read, then its first field: no ring. */
+.feedback-dlg:focus {
+  outline: none;
+}
+
 .feedback-overlay {
   padding-top: 6vh;
 }
