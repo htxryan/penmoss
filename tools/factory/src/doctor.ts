@@ -7,7 +7,8 @@
  */
 import { accessSync, constants, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
+import { expandHome, type AgentName, type FactoryConfig, type SlotConfig } from './config.ts';
+import { usageLimitLine } from './limits.ts';
 import type { Exec } from './exec.ts';
 import { hostGit } from './git.ts';
 import type { SecretKey } from './secrets.ts';
@@ -33,6 +34,11 @@ export interface Check {
   readonly setup?: boolean;
   /** Made on the host first: the slot's Android virtual device (F8). */
   readonly needsAvd?: boolean;
+  /**
+   * The agent whose plan the check's model call uses. When that plan is at its usage limit the
+   * check is a warning, not a failure, and the agent's later checks don't run (A1376).
+   */
+  readonly agent?: AgentName;
 }
 
 /** What the repo's deploy commands say inside a run (FD24): `Taskfile.yml`, `apps/relay`. */
@@ -314,6 +320,7 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
     },
     {
       name: 'Claude Code signs in with the setup token',
+      agent: 'claude',
       expect: 'pass',
       output: 'factory-ok',
       needs: ['CLAUDE_CODE_OAUTH_TOKEN'],
@@ -323,6 +330,7 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
       // The prompt has the word in capitals and the check wants it in lower case, so OpenCode
       // echoing the prompt back doesn't pass.
       name: 'OpenCode answers with the Go key and the default model',
+      agent: 'opencode',
       expect: 'pass',
       output: 'factory-ok',
       needs: ['OPENCODE_API_KEY'],
@@ -366,6 +374,7 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
       // asked to push and must report the rule's refusal. Nothing is pushed either way: the
       // command is a dry run, and the token above is read-only.
       name: "Claude's deny rules refuse a git push with permissions skipped (F0.1)",
+      agent: 'claude',
       expect: 'pass',
       output: 'Permission to use Bash with command git push',
       needs: ['CLAUDE_CODE_OAUTH_TOKEN'],
@@ -375,6 +384,7 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
       // The same for OpenCode, run as a run starts it: its config's bash deny list holds for its
       // shell tool, which runs anything else (an `echo` completes), and the push never executes.
       name: "OpenCode's deny permissions refuse a git push (F0.1)",
+      agent: 'opencode',
       expect: 'pass',
       output: 'Permission denied',
       needs: ['OPENCODE_API_KEY'],
@@ -446,9 +456,32 @@ export function doctorChecks(config: FactoryConfig, slot: SlotConfig, home: stri
   ];
 }
 
+const AGENT_LABEL: Record<AgentName, string> = { claude: 'Claude Code', opencode: 'OpenCode' };
+
+/**
+ * When a failed check's agent is at its usage limit (A1376): what the doctor says instead of a
+ * failure, or `null` when the failure is real. A limit is the plan's, not the setup's, and runs
+ * already wait one out (R13), so it mustn't turn the Factory UI's health bar red.
+ */
+export function usageLimited(check: Check, output: string): string | null {
+  if (!check.agent) return null;
+  const line = usageLimitLine(output);
+  return (
+    line && `${AGENT_LABEL[check.agent]} is at its usage limit, so this wasn't checked: ${line}`
+  );
+}
+
+/** What a check that wasn't run says when its agent's limit was hit earlier in the same doctor. */
+export function limitSkipped(agent: AgentName): string {
+  return `not run: ${AGENT_LABEL[agent]} is at its usage limit (see above)`;
+}
+
 export interface CheckOutcome {
   readonly check: Check;
-  /** `warned`: something optional is missing; the doctor still passes. */
+  /**
+   * `warned`: something optional is missing, or the check's agent is at its usage limit; the
+   * doctor still passes.
+   */
   readonly status: 'ok' | 'failed' | 'skipped' | 'warned';
   readonly detail: string;
   readonly seconds: number;

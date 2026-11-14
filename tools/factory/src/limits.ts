@@ -20,6 +20,22 @@ const DEFAULT_WAIT_MS = 30 * 60_000;
 const LIMIT =
   /usage limit reached|(?:5-hour|weekly|session) limit reached|you['’]ve hit your (?:usage )?limit|rate[_ ]limit(?:ed)?|\b429\b.*too many requests/i;
 
+/** Terminal colour codes, which OpenCode puts round its error line. */
+const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
+
+/**
+ * The line that says the agent hit a usage limit, colours stripped, or `null` when none does. The
+ * doctor shows it when a check couldn't run for that reason (A1376).
+ */
+export function usageLimitLine(output: string): string | null {
+  const line = output
+    .slice(-8000)
+    .replaceAll(ANSI, '')
+    .split('\n')
+    .findLast((l) => LIMIT.test(l));
+  return line === undefined ? null : line.trim().slice(0, 300);
+}
+
 /**
  * When the agent may run again, if its output says it hit a usage limit; `null` otherwise.
  * Understands Claude Code's `Claude AI usage limit reached|<epoch>` and `… resets 3pm`, and

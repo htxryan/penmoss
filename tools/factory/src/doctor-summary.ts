@@ -4,13 +4,15 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { expandHome, type FactoryConfig } from './config.ts';
+import { expandHome, type AgentName, type FactoryConfig } from './config.ts';
 
 export interface DoctorSummary {
   readonly slot: number;
   readonly at: string;
   /** The names of the checks that failed; empty when all passed. */
   readonly failed: readonly string[];
+  /** Agents whose plan was at its usage limit, so their checks were warnings (A1376). */
+  readonly limited?: readonly AgentName[];
 }
 
 const summaryPath = (config: FactoryConfig, slot: number) =>
@@ -20,7 +22,7 @@ const summaryPath = (config: FactoryConfig, slot: number) =>
 export function writeDoctorSummary(config: FactoryConfig, summary: DoctorSummary): void {
   writeFileSync(
     summaryPath(config, summary.slot),
-    `${JSON.stringify({ at: summary.at, failed: summary.failed })}\n`,
+    `${JSON.stringify({ at: summary.at, failed: summary.failed, limited: summary.limited ?? [] })}\n`,
   );
 }
 
@@ -37,6 +39,9 @@ export function readDoctorSummaries(config: FactoryConfig): DoctorSummary[] {
           slot: slot.id,
           at: r.at,
           failed: r.failed.filter((f) => typeof f === 'string'),
+          limited: (Array.isArray(r.limited) ? r.limited : []).filter(
+            (a): a is AgentName => a === 'claude' || a === 'opencode',
+          ),
         });
     } catch {
       // Not run since the summary was added, or a torn write.
