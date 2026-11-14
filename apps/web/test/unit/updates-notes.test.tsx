@@ -12,7 +12,22 @@ import type {
   PenmossDesktop,
 } from '../../src/desktop/bridge';
 import { ToastStack } from '../../src/toasts/ToastStack';
-import { UpdateNotice, UpdatesSettings } from '../../src/updates/UpdatesSettings';
+import { useUpdateNotice } from '../../src/updates/notice';
+import {
+  SidebarUpdateNotice,
+  UpdateNotice,
+  UpdatesSettings,
+} from '../../src/updates/UpdatesSettings';
+
+/** The toast, as a narrow window shows it (its sidebar a drawer, PEN-135). */
+function ToastNotice() {
+  return <UpdateNotice notice={useUpdateNotice()} />;
+}
+
+/** The notice in the sidebar's bottom panel, or on the rail (PEN-135 item 10). */
+function SidebarNotice({ rail = false }: { readonly rail?: boolean }) {
+  return <SidebarUpdateNotice notice={useUpdateNotice()} rail={rail} />;
+}
 
 const FILE: DesktopReleaseNotes = {
   schema: 1,
@@ -145,7 +160,7 @@ describe('the notice after an update (PEN-110)', () => {
       <>
         {/* The notice is a toast: it shows in the window's stack (A1306). */}
         <ToastStack />
-        <UpdateNotice />
+        <ToastNotice />
       </>,
     );
     const notice = block('updated-notice');
@@ -163,7 +178,7 @@ describe('the notice after an update (PEN-110)', () => {
       <>
         {/* The notice is a toast: it shows in the window's stack (A1306). */}
         <ToastStack />
-        <UpdateNotice />
+        <ToastNotice />
       </>,
     );
     act(() => (block('updated-dismiss') as HTMLButtonElement).click());
@@ -178,7 +193,7 @@ describe('the notice after an update (PEN-110)', () => {
       <>
         {/* The notice is a toast: it shows in the window's stack (A1306). */}
         <ToastStack />
-        <UpdateNotice />
+        <ToastNotice />
       </>,
     );
     expect(block('updated-notice')).toBeNull();
@@ -190,9 +205,48 @@ describe('the notice after an update (PEN-110)', () => {
       <>
         {/* The notice is a toast: it shows in the window's stack (A1306). */}
         <ToastStack />
-        <UpdateNotice />
+        <ToastNotice />
       </>,
     );
     expect(block('updated-notice')).toBeNull();
+  });
+});
+
+describe('the notice in the sidebar (PEN-135 item 10)', () => {
+  it('is one line in the bottom panel, with What’s New and Dismiss', async () => {
+    await show(state({ current: '0.2.1', updatedFrom: '0.2.0' }), FILE, <SidebarNotice />);
+    const notice = block('updated-notice');
+    expect(notice?.className).toBe('sb-update');
+    expect(notice?.textContent).toContain('Updated to 0.2.1.');
+    expect(notice?.closest('.toast')).toBeNull();
+    act(() => (block('updated-dismiss') as HTMLButtonElement).click());
+    expect(acknowledged).toBe(1);
+    expect(block('updated-notice')).toBeNull();
+  });
+
+  it('is an icon with a dot on the rail, which opens What’s New', async () => {
+    await show(state({ current: '0.2.1', updatedFrom: '0.2.0' }), FILE, <SidebarNotice rail />);
+    const icon = block('updated-notice') as HTMLButtonElement;
+    expect(icon.tagName).toBe('BUTTON');
+    expect(icon.getAttribute('aria-label')).toBe("Updated to 0.2.1: What's New");
+    expect(icon.querySelector('.sb-update-badge')).not.toBeNull();
+    act(() => icon.click());
+    expect(acknowledged).toBe(1);
+    expect(window.location.pathname + window.location.search).toBe('/settings/updates?whats-new');
+    expect(block('updated-notice')).toBeNull();
+  });
+
+  it('offers a build with Install and Restart; on the rail it leads to Settings → Updates', async () => {
+    const offered = state({ current: '0.2.0', phase: 'available', version: '0.2.1' });
+    await show(offered, FILE, <SidebarNotice />);
+    expect(block('update-notice')?.textContent).toContain('Version 0.2.1 is available.');
+    expect(block('update-install')?.textContent).toBe('Install and Restart');
+    act(() => root?.unmount());
+    root = null;
+    await show(offered, FILE, <SidebarNotice rail />);
+    const icon = block('update-notice') as HTMLButtonElement;
+    expect(icon.getAttribute('aria-label')).toBe('Version 0.2.1 is available: Settings → Updates');
+    act(() => icon.click());
+    expect(window.location.pathname).toBe('/settings/updates');
   });
 });

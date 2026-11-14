@@ -596,23 +596,37 @@ test('the compact title bar: room for the lights in every layout, rows that drag
   expect(rail.x).toBe(0);
   expect(rail.width).toBe(toggle.width + 1);
   expect(toggle.x).toBe(0);
-  // Back and Forward: one pair as wide as the rail, below the row.
-  const back = (await page.getByTestId('app-back').boundingBox())!;
-  const forward = (await page.getByTestId('app-forward').boundingBox())!;
-  expect(back.y).toBeGreaterThanOrEqual(TITLE_BAR_ROW);
-  expect(back.x).toBe(0);
-  expect(forward.x + forward.width).toBe(toggle.width);
-  expect(await overLights(page)).toEqual([]);
+  // Settings and Send Feedback at the rail's foot (PEN-135 item 4).
+  for (const id of ['sidebar-settings', 'sidebar-feedback']) {
+    const button = (await page.getByTestId(id).boundingBox())!;
+    expect(button.x, id).toBe(0);
+    expect(button.width, id).toBe(toggle.width);
+  }
+  expect(
+    (await page.getByTestId('sidebar-feedback').boundingBox())!.y +
+      (await page.getByTestId('sidebar-feedback').boundingBox())!.height,
+  ).toBeCloseTo(rail.y + rail.height, 0);
   // The note's title row starts at the rail's edge, under the lights (the row drags, as the
-  // sidebar's head does); what it holds starts after their inset.
+  // sidebar's head does); what it holds starts after their inset: Back, Forward and the pin, then
+  // the crumbs (PEN-135 item 6). The rail keeps none of them beside a note.
   const top = (await page.locator('.note-top').boundingBox())!;
   expect(top.x).toBe(rail.width);
   expect(top.height).toBe(TITLE_BAR_ROW + 1);
-  expect((await page.locator('.note-top .crumbs').boundingBox())!.x).toBeGreaterThanOrEqual(
-    TITLE_BAR_INSET,
+  const back = (await page.locator('.note-top').getByTestId('app-back').boundingBox())!;
+  const pin = (await page.locator('.note-top').getByTestId('keep-on-top').boundingBox())!;
+  expect(back.x).toBeGreaterThanOrEqual(TITLE_BAR_INSET);
+  expect(back.y).toBeLessThan(TITLE_BAR_ROW);
+  expect(pin.x).toBeGreaterThan(back.x);
+  await expect(page.locator('.sidebar').getByTestId('app-back')).toHaveCount(0);
+  await expect(page.locator('.sidebar').getByTestId('keep-on-top')).toHaveCount(0);
+  expect((await page.locator('.note-top .crumbs').boundingBox())!.x).toBeGreaterThan(
+    pin.x + pin.width,
   );
+  expect(await overLights(page)).toEqual([]);
+  expect(await region(page, '.note-top')).toBe('drag');
   await clicksEverywhere(page, 'main window');
-  // Home, Trash and the graph beside the rail.
+  // Home, Trash and the graph beside the rail: no note's title bar, so the rail keeps Back and
+  // Forward, one pair as wide as the rail, below the row.
   for (const [command, ready] of [
     ['app.home', '.home'],
     ['app.trash', '[data-testid="trash"]'],
@@ -620,6 +634,11 @@ test('the compact title bar: room for the lights in every layout, rows that drag
   ] as const) {
     await chooseMenu(app, command);
     await expect(page.locator(ready)).toBeVisible();
+    const railBack = (await page.locator('.sidebar').getByTestId('app-back').boundingBox())!;
+    const railForward = (await page.locator('.sidebar').getByTestId('app-forward').boundingBox())!;
+    expect(railBack.y, command).toBeGreaterThanOrEqual(TITLE_BAR_ROW);
+    expect(railBack.x, command).toBe(0);
+    expect(railForward.x + railForward.width, command).toBe(toggle.width);
     expect(await overLights(page), command).toEqual([]);
     expect((await page.locator('.note-main').boundingBox())!.x, command).toBe(rail.width);
     await clicksEverywhere(page, command);

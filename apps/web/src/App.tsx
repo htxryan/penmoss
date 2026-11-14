@@ -61,7 +61,9 @@ import { SidebarSections } from './shell/sidebar-layout';
 import { useSidebarLayout } from './shell/sidebar-layout-state';
 import { useWorkspace } from './workspace/hooks';
 import { RecoveredNotice } from './workspace/RecoveredNotice';
-import { UpdateNotice } from './updates/UpdatesSettings';
+import { SidebarUpdateNotice, UpdateNotice } from './updates/UpdatesSettings';
+import { useUpdateNotice } from './updates/notice';
+import { TitleBarLead } from './shell/title-lead';
 import { SourceScope, SourceScopeOr } from './sources/context';
 import { useNoteSource, useSourcesRegistry, useSourcesState } from './sources/hooks';
 import { useEveryOpenNoteList } from './sources/lists';
@@ -192,9 +194,13 @@ function NotesShell({
     'app.toggleSidebar',
     () => {
       // Collapsing hides the tree, the calendar and the tags: focus in them would be lost, so it
-      // moves to the toggle, where the same key brings them back (T41 review).
+      // moves to the toggle, where the same key brings them back (T41 review). So does focus on
+      // what moves (Back, Forward and the pin go to a note's title bar) or changes shape (the
+      // update notice becomes an icon) on the rail (PEN-135).
       const focused = document.activeElement;
-      const hidden = focused?.closest('.sb-list, .sb-foot');
+      const hidden = focused?.closest(
+        '.sb-list, .sb-foot .sb-update, .sb-head .history-nav, .sb-head .keep-on-top',
+      );
       if (!sidebarCollapsed && hidden && sidebar.current?.contains(hidden)) {
         sidebar.current.querySelector<HTMLElement>('[data-testid="toggle-sidebar"]')?.focus();
       }
@@ -325,6 +331,12 @@ function NotesShell({
   useCommand('app.graph', () => navigate(graphPath(openNote)));
 
   const tag = useTagFilter();
+  // The update notice: in the sidebar's bottom panel or on the rail, a toast where the sidebar
+  // is a drawer (PEN-135 item 10).
+  const updateNotice = useUpdateNotice();
+  // Beside the rail, a note's title bar starts with Back, Forward and the pin (PEN-135 item 6);
+  // Home, Trash and the graph have no title bar of their own, so the rail keeps them there.
+  const navInTitleBar = rail && route.name === 'note';
   return (
     <DrawerContext.Provider value={drawer}>
       <div
@@ -339,7 +351,7 @@ function NotesShell({
           <JournalCommands />
         </JournalScope>
         <RecoveredNotice />
-        <UpdateNotice />
+        {phone ? <UpdateNotice notice={updateNotice} /> : null}
         <aside
           ref={sidebar}
           id="app-sidebar"
@@ -349,14 +361,15 @@ function NotesShell({
           onKeyDown={onSidebarKeyDown}
         >
           <div className="sb-head">
-            {/* Back and Forward at the start of the window's first row (T51, A943). */}
-            <HistoryNav testIdPrefix="app" />
+            {/* Back and Forward at the start of the window's first row (T51, A943); beside the
+                rail, in the note's title bar instead (PEN-135 item 6). */}
+            {navInTitleBar ? null : <HistoryNav testIdPrefix="app" />}
             <h1 className="brand">
               <BrandMark />
               <span>Penmoss</span>
             </h1>
             {/* The main window's pin, in the Mac app (T46, A720). */}
-            <KeepOnTopButton />
+            {navInTitleBar ? null : <KeepOnTopButton />}
             <button
               type="button"
               className="icon-btn sb-collapse"
@@ -477,8 +490,10 @@ function NotesShell({
               }}
             />
           </nav>
-          {/* Icons with their names as tooltips (T51, A935); Trash is on the notebook's bar (T52). */}
+          {/* Icons with their names as tooltips (T51, A935); Trash is on the notebook's bar (T52).
+              The update notice above them (PEN-135 item 10); on the rail, all at its foot (item 4). */}
           <footer className="sb-foot">
+            {phone ? null : <SidebarUpdateNotice notice={updateNotice} rail={rail} />}
             <a
               className="icon-btn"
               href="/settings"
@@ -523,7 +538,18 @@ function NotesShell({
         <main className="note-main" inert={drawerOpen} tabIndex={-1}>
           {route.name === 'note' ? (
             <NoteSourceScope key={route.id} id={route.id}>
-              <NoteRoute id={route.id} heading={heading} />
+              <TitleBarLead.Provider
+                value={
+                  navInTitleBar ? (
+                    <>
+                      <HistoryNav testIdPrefix="app" />
+                      <KeepOnTopButton />
+                    </>
+                  ) : null
+                }
+              >
+                <NoteRoute id={route.id} heading={heading} />
+              </TitleBarLead.Provider>
             </NoteSourceScope>
           ) : route.name === 'graph' ? (
             <InSource
