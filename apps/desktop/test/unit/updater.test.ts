@@ -45,24 +45,39 @@ function fakeUpdater(next: { version: string | null } = { version: null }) {
     installs: 0,
     next,
     fail: null as Error | null,
+    failDownload: null as Error | null,
+    /** The build the last check found: what `downloadUpdate` fetches, as electron-updater's. */
+    found: null as string | null,
+    /** Every build downloaded, in order. */
+    downloaded: [] as string[],
+    /** The build each restart went into (the last downloaded). */
+    restarts: [] as Array<string | undefined>,
+    /** As MacUpdater's: Squirrel.Mac has fetched a build (PEN-135). */
+    squirrelDownloadedUpdate: false,
     setFeedURL(options: unknown) {
       this.feeds.push(options);
     },
     checkForUpdates() {
       this.checks++;
       if (this.fail) return Promise.reject(this.fail);
+      this.found = this.next.version;
       if (this.next.version) emit('update-available', { version: this.next.version });
       else emit('update-not-available');
       return Promise.resolve(null);
     },
     downloadUpdate() {
       this.downloads++;
+      if (this.failDownload) return Promise.reject(this.failDownload);
+      const version = this.found ?? this.next.version;
       emit('download-progress', { percent: 41.6 });
-      emit('update-downloaded', { version: this.next.version });
+      if (version) this.downloaded.push(version);
+      this.squirrelDownloadedUpdate = true;
+      emit('update-downloaded', { version });
       return Promise.resolve([]);
     },
     quitAndInstall() {
       this.installs++;
+      this.restarts.push(this.downloaded.at(-1));
     },
     on(event: string, listener: Listener) {
       listeners.set(event, [...(listeners.get(event) ?? []), listener]);
@@ -194,7 +209,11 @@ describe('Auto-Update (A1112, A1196)', () => {
     await updates.install();
     expect(updater.downloads).toBe(1);
     expect(updater.installs).toBe(1);
+    // Install and Restart asks the feed again before it downloads (PEN-135).
+    expect(updater.checks).toBe(2);
     expect(states.map((state) => state.phase)).toEqual([
+      'checking',
+      'available',
       'checking',
       'available',
       'downloading',
@@ -260,6 +279,121 @@ describe('Auto-Update (A1112, A1196)', () => {
     await updates.install();
     expect(updater.checks + updater.downloads + updater.installs).toBe(0);
     expect(updates.state().supported).toBe(false);
+  });
+});
+
+describe('always the newest build (PEN-135)', () => {
+  it('Install and Restart installs a build published after the offer, not the one offered', async () => {
+    const updater = fakeUpdater({ version: '0.2.0-alpha.1312' });
+    const { updates } = updatesWith(updater, 'enabled', '0.2.0-alpha.1311');
+    expect(await updates.check()).toMatchObject({ version: '0.2.0-alpha.1312' });
+    // Two more builds land on the alpha feed, which names only its newest.
+    updater.next = { version: '0.2.0-alpha.1314' };
+    await updates.install();
+    expect(updater.downloaded).toEqual(['0.2.0-alpha.1314']);
+    expect(updater.restarts).toEqual(['0.2.0-alpha.1314']);
+    expect(updates.state()).toMatchObject({ phase: 'ready', version: '0.2.0-alpha.1314' });
+  });
+
+  it('Install and Restart replaces a downloaded build with a newer one before restarting', async () => {
+    const updater = fakeUpdater({ version: '0.2.1' });
+    const { updates } = updatesWith(updater);
+    await updates.check();
+    await updates.install();
+    expect(updater.restarts).toEqual(['0.2.1']);
+    // The app is still running (the restart was refused, or the window only closed) and a newer
+    // build is published.
+    updater.next = { version: '0.2.2' };
+    await updates.install();
+    expect(updater.downloaded).toEqual(['0.2.1', '0.2.2']);
+    expect(updater.restarts).toEqual(['0.2.1', '0.2.2']);
+    expect(updates.state()).toMatchObject({ phase: 'ready', version: '0.2.2' });
+  });
+
+  it('Install and Restart restarts at once when the downloaded build is still the newest', async () => {
+    const updater = fakeUpdater({ version: '0.2.1' });
+    const { updates } = updatesWith(updater);
+    await updates.check();
+    await updates.install();
+    await updates.install();
+    expect(updater.downloads).toBe(1);
+    expect(updater.checks).toBe(3);
+    expect(updater.restarts).toEqual(['0.2.1', '0.2.1']);
+  });
+
+  it('a check with a build downloaded goes on quietly and downloads a newer one in its place', async () => {
+    vi.useFakeTimers();
+    const updater = fakeUpdater({ version: '0.2.1' });
+    const { updates, states } = updatesWith(updater);
+    await updates.setAuto(true);
+    await vi.advanceTimersByTimeAsync(0);
+    await updates.install();
+    const restarts = updater.installs;
+    const from = states.length;
+
+    // Nothing newer: still ready, never "checking", nothing downloaded again.
+    await vi.advanceTimersByTimeAsync(CHECK_EVERY_MS);
+    expect(updates.state()).toMatchObject({ phase: 'ready', version: '0.2.1' });
+    expect(updater.downloads).toBe(1);
+    expect(states.slice(from).map((state) => state.phase)).not.toContain('checking');
+
+    // A newer build: downloaded in place of the older, so a quit installs the newest, and no
+    // restart that wasn't asked for.
+    updater.next = { version: '0.2.3' };
+    await vi.advanceTimersByTimeAsync(CHECK_EVERY_MS);
+    expect(updater.downloaded).toEqual(['0.2.1', '0.2.3']);
+    expect(updates.state()).toMatchObject({ phase: 'ready', version: '0.2.3' });
+    expect(updater.installs).toBe(restarts);
+    // Check Now works while one is ready, too.
+    updater.next = { version: '0.2.4' };
+    expect(await updates.check()).toMatchObject({ phase: 'ready', version: '0.2.4' });
+    updates.stop();
+  });
+
+  it('Squirrel.Mac must fetch the newer build before the restart, not relaunch into the older', async () => {
+    const updater = fakeUpdater({ version: '0.2.1' });
+    const { updates } = updatesWith(updater);
+    await updates.check();
+    await updates.install();
+    expect(updater.squirrelDownloadedUpdate).toBe(true);
+    updater.next = { version: '0.2.2' };
+    // Seen as the newer download starts: MacUpdater's flag is cleared, so quitAndInstall waits.
+    const download = updater.downloadUpdate.bind(updater);
+    let flagAtDownload: boolean | null = null;
+    updater.downloadUpdate = () => {
+      flagAtDownload = updater.squirrelDownloadedUpdate;
+      return download();
+    };
+    await updates.check();
+    expect(flagAtDownload).toBe(false);
+    expect(updater.squirrelDownloadedUpdate).toBe(true);
+  });
+
+  it('a newer build that fails to download leaves the older one, which Install and Restart installs', async () => {
+    const updater = fakeUpdater({ version: '0.2.1' });
+    const { updates } = updatesWith(updater);
+    await updates.check();
+    await updates.install();
+    updater.next = { version: '0.2.2' };
+    updater.failDownload = new Error('net::ERR_CONNECTION_RESET');
+    await updates.install();
+    expect(updates.state()).toMatchObject({ phase: 'ready', version: '0.2.1', message: null });
+    expect(updater.restarts).toEqual(['0.2.1', '0.2.1']);
+    // MacUpdater's flag is put back: Squirrel still holds 0.2.1, ready to install.
+    expect(updater.squirrelDownloadedUpdate).toBe(true);
+  });
+
+  it("Install and Restart installs what was offered when the feed can't be reached", async () => {
+    const updater = fakeUpdater({ version: '0.2.1' });
+    const { updates } = updatesWith(updater);
+    await updates.check();
+    updater.fail = new Error('net::ERR_INTERNET_DISCONNECTED');
+    await updates.install();
+    expect(updater.restarts).toEqual(['0.2.1']);
+    // And a downloaded build, likewise.
+    await updates.install();
+    expect(updater.restarts).toEqual(['0.2.1', '0.2.1']);
+    expect(updates.state()).toMatchObject({ phase: 'ready', message: null });
   });
 });
 

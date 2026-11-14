@@ -18,6 +18,11 @@
  * channel, which checks at once. A newer build is only offered: the app says so, and Install and
  * Restart downloads it and restarts into it. Nothing is downloaded before that.
  *
+ * Always the newest build (PEN-135): Install and Restart asks the feed again first, so a build
+ * published since the offer (or since one was downloaded) is the one installed, and a check while
+ * a build is downloaded, which goes on quietly, downloads a newer one in its place. A feed names
+ * only its newest build, so however many were published since the last check, that is the one.
+ *
  * After an update (PEN-110), `updates.json` remembers the last version Penmoss ran
  * (`lastSeenVersion`): a launch of a newer one reports `updatedFrom` until the person answers the
  * notice (`acknowledge`). A first launch with no record records its version silently.
@@ -170,6 +175,11 @@ export class Updates {
   private lastSeen: string | null = null;
   /** Install and Restart was asked for: restart as soon as the download is in. */
   private installing = false;
+  /**
+   * The newest build downloaded in this run (what a quit installs, `autoInstallOnAppQuit`); a
+   * newer one found later is downloaded in its place (PEN-135).
+   */
+  private downloaded: string | null = null;
   private loaded: Promise<void> | null = null;
   /** The check under way, settled whatever it finds. */
   private checking: Promise<void> | null = null;
@@ -258,41 +268,49 @@ export class Updates {
     return this.state();
   }
 
-  /** Checks now (Check Now, Check for Updates…): unless a newer build is already in hand. */
+  /**
+   * Checks now (Check Now, Check for Updates…, the hourly check). With a build already
+   * downloaded it checks quietly, and a newer build is downloaded in its place, so a quit or
+   * Install and Restart ends on the newest (PEN-135).
+   */
   async check(): Promise<UpdateState> {
     if (!this.supported) return this.state();
-    if (this.phase === 'checking' || this.phase === 'downloading' || this.phase === 'ready') {
+    if (this.checking || this.phase === 'checking' || this.phase === 'downloading') {
       return this.state();
     }
     const updater = await this.load();
-    this.set({ phase: 'checking', message: null });
-    const done = updater.checkForUpdates().then(
-      () => undefined,
-      (error: unknown) => this.failed(error),
-    );
-    this.checking = done;
-    await done;
-    if (this.checking === done) this.checking = null;
+    await this.ask(updater);
+    if (this.downloaded !== null && this.phase === 'available') await this.fetch(updater);
     return this.state();
   }
 
-  /** Install and Restart: downloads the newer build, then restarts into it. */
+  /**
+   * Install and Restart: asks the feed again, downloads its newest build unless that is the one
+   * already downloaded, and restarts into it (PEN-135). When the feed can't be reached, what was
+   * offered or downloaded is installed.
+   */
   async install(): Promise<UpdateState> {
     if (!this.supported) return this.state();
     const updater = await this.load();
-    if (this.phase === 'ready') {
-      updater.quitAndInstall();
+    if (this.phase === 'downloading') {
+      // A newer build replacing a downloaded one: the restart follows its download.
+      this.installing = true;
       return this.state();
     }
-    if (this.phase !== 'available' && this.phase !== 'error') return this.state();
-    if (this.version === null) return this.state();
+    await this.checking;
+    if (this.phase !== 'available' && this.phase !== 'error' && this.phase !== 'ready') {
+      return this.state();
+    }
+    if (this.version === null && this.downloaded === null) return this.state();
     this.installing = true;
-    this.set({ phase: 'downloading', percent: 0, message: null });
-    try {
-      await updater.downloadUpdate();
-    } catch (error) {
+    await this.ask(updater);
+    if (this.phase === 'ready') {
+      this.restart(updater);
+    } else if (this.phase === 'available' && this.version !== null) {
+      await this.fetch(updater);
+    } else {
+      // The feed has nothing newer than this app now (another channel, a build withdrawn).
       this.installing = false;
-      this.failed(error);
     }
     return this.state();
   }
@@ -318,6 +336,46 @@ export class Updates {
       this.timer = setInterval(() => void this.check(), this.options.every ?? CHECK_EVERY_MS);
       (this.timer as { unref?: () => void }).unref?.();
     }
+  }
+
+  /**
+   * Asks the feed for its newest build; its events say what it found. With a build downloaded,
+   * the page keeps showing it ready while the check goes on.
+   */
+  private async ask(updater: Updater): Promise<void> {
+    if (this.downloaded === null) this.set({ phase: 'checking', message: null });
+    const done = updater.checkForUpdates().then(
+      () => undefined,
+      (error: unknown) => this.failed(error),
+    );
+    this.checking = done;
+    await done;
+    if (this.checking === done) this.checking = null;
+  }
+
+  /**
+   * Downloads the build the last check found; with Install and Restart asked for, restarts into
+   * it once it is in. A newer build replacing a downloaded one that fails to download leaves the
+   * older one, which Install and Restart then installs.
+   */
+  private async fetch(updater: Updater): Promise<void> {
+    this.set({ phase: 'downloading', percent: 0, message: null });
+    const restore = this.downloaded !== null ? forgetStaged(updater) : () => undefined;
+    try {
+      await updater.downloadUpdate();
+    } catch (error) {
+      restore();
+      this.failed(error);
+      if (this.installing && this.phase === 'ready') this.restart(updater);
+      else this.installing = false;
+    }
+  }
+
+  /** Hands over to the updater; a later download restarts only if Install and Restart asks again. */
+  private restart(updater: Updater): void {
+    this.installing = false;
+    this.options.log(`restarting into ${this.downloaded ?? this.version ?? 'the update'}`);
+    updater.quitAndInstall();
   }
 
   private read(): Promise<void> {
@@ -385,6 +443,17 @@ export class Updates {
     const missing =
       (error as { code?: unknown } | null)?.code === 'ERR_UPDATER_CHANNEL_FILE_NOT_FOUND';
     this.options.log(`update failed: ${message}`);
+    // A build is downloaded: it stays ready, and a quit or Install and Restart installs it.
+    if (this.downloaded !== null) {
+      this.set({
+        phase: 'ready',
+        version: this.downloaded,
+        percent: 100,
+        message: null,
+        checkedAt: this.now(),
+      });
+      return;
+    }
     // An Alpha build on Stable before the first stable release: nothing newer, which the page
     // says as "moves to Stable with the next stable release" rather than as a failure.
     if (missing && this.version === null && this.channel === 'stable' && this.onAlphaBuild()) {
@@ -426,22 +495,49 @@ export class Updates {
     });
     updater.on('update-available', (info) => {
       this.options.log(`update ${info.version} is available`);
+      // The feed names the build already downloaded (or an older one): it stays ready.
+      if (this.downloaded !== null && !isNewer(info.version, this.downloaded)) {
+        this.set({ phase: 'ready', version: this.downloaded, checkedAt: this.now() });
+        return;
+      }
       this.set({ phase: 'available', version: info.version, checkedAt: this.now() });
     });
-    updater.on('update-not-available', () =>
-      this.set({ phase: 'current', version: null, checkedAt: this.now() }),
-    );
+    updater.on('update-not-available', () => {
+      if (this.downloaded !== null) {
+        this.set({ phase: 'ready', version: this.downloaded, checkedAt: this.now() });
+        return;
+      }
+      this.set({ phase: 'current', version: null, checkedAt: this.now() });
+    });
     updater.on('download-progress', (progress) =>
       this.set({ percent: Math.max(0, Math.min(100, Math.round(progress.percent))) }),
     );
     updater.on('update-downloaded', (info) => {
       this.options.log(`update ${info.version} downloaded`);
+      this.downloaded = info.version;
       this.set({ phase: 'ready', version: info.version, percent: 100 });
-      if (this.installing) updater.quitAndInstall();
+      if (this.installing) this.restart(updater);
     });
     this.updater = updater;
     return updater;
   }
+}
+
+/**
+ * electron-updater's MacUpdater remembers that Squirrel.Mac has fetched a build
+ * (`squirrelDownloadedUpdate`) and never forgets it. After a newer build is downloaded in place of
+ * one Squirrel already holds, `quitAndInstall` would relaunch at once into whichever build
+ * Squirrel holds, the older one while it is still fetching the newer. Forgotten, `quitAndInstall`
+ * waits for Squirrel to say it has the newer one (its `update-downloaded` sets the flag again).
+ * Returns what puts it back, for a download that fails. Nothing on an updater without it.
+ */
+function forgetStaged(updater: Updater): () => void {
+  const mac = updater as Updater & { squirrelDownloadedUpdate?: unknown };
+  if (mac.squirrelDownloadedUpdate !== true) return () => undefined;
+  mac.squirrelDownloadedUpdate = false;
+  return () => {
+    mac.squirrelDownloadedUpdate = true;
+  };
 }
 
 function firstLine(text: string): string {
