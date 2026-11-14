@@ -1,5 +1,5 @@
 /**
- * Settings → Git Notebooks (T50 G5, #153; A853–A857), in the Mac app: notebooks kept in a git
+ * Settings → Notebooks (T50 G5, #153; A853–A857), in the Mac app: notebooks kept in a git
  * repository and synced by this Mac's own git. The first run (A1030) shows the same Add form.
  *
  * - **Add** (remote, branch, optional directory; a name when the target holds no notebook yet).
@@ -298,13 +298,13 @@ export function GitNotebooksSettings({ item }: { item?: string | undefined }) {
           onClick={linkHandler('/settings/git-notebooks')}
         >
           <Icon name="arrowL" size={14} />
-          Git Notebooks
+          Notebooks
         </a>
         {source ? (
           <GitNotebookCard key={source.id} source={source} git={git} identity={identity} />
         ) : (
           <>
-            <h2 id={`${id}-h`}>Git Notebooks</h2>
+            <h2 id={`${id}-h`}>Notebooks</h2>
             <p className="muted" data-testid="git-notebook-missing">
               That notebook isn’t on this Mac.
             </p>
@@ -319,7 +319,7 @@ export function GitNotebooksSettings({ item }: { item?: string | undefined }) {
       aria-labelledby={`${id}-h`}
       data-testid="git-notebooks-settings"
     >
-      <h2 id={`${id}-h`}>Git Notebooks</h2>
+      <h2 id={`${id}-h`}>Notebooks</h2>
       <p>
         Notebooks kept in a git repository you choose, beside your code if you like, synced with
         this Mac’s own git. Who can read the repository is yours to choose.
@@ -1096,7 +1096,7 @@ export interface Added {
   readonly created: boolean;
 }
 
-/** Adds a git notebook, or makes one (Settings → Git Notebooks, and the first run, A1030). */
+/** Adds a git notebook, or makes one (Settings → Notebooks, and the first run, A1030). */
 export function AddGitNotebook({
   git,
   mode = 'any',

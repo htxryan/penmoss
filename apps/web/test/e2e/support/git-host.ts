@@ -22,7 +22,7 @@
  * it is offered only once a test says this build has Penmoss's OAuth app (`offerSignIn`).
  */
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -43,7 +43,7 @@ import {
   FakeGitHubBrowse,
   type FakeBrowseRepo,
 } from '../../../../../packages/git-notebook/test/support/fake-github-browse';
-import type { DesktopGit, GitNotebookInfo } from '../../../src/desktop/bridge';
+import type { DesktopGit, DesktopReleaseNotes, GitNotebookInfo } from '../../../src/desktop/bridge';
 import { IpcGitTransport } from '../../../src/sources/ipc-transport';
 import { MeaningHost } from './meaning-host';
 
@@ -83,6 +83,8 @@ export const UPDATE_CALLS = [
   'updatesSetAuto',
   'updatesSetChannel',
   'updatesInstall',
+  'updatesAcknowledge',
+  'updatesNotes',
 ] as const;
 /** The penmoss command's state (A992), with the login shell's PATH kept as main keeps it (A1124). */
 export const CLI_CALLS = ['cliStatus'] as const;
@@ -225,6 +227,8 @@ export class GitHost {
   readonly updateFeed = new FakeUpdateFeed();
   /** The stand-in Mac app's version (`app.getVersion()`). */
   appVersion = '0.1.435';
+  /** Main's cached `release-notes.json` (PEN-108); none until a spec gives one. */
+  releaseNotes: DesktopReleaseNotes | null = null;
   /** Auto-Update, as the Mac's main process runs it, signed (A1112). */
   readonly updates: Updates;
   /** The login shell's PATH, kept as main keeps it, from a slow shell; asked as the app starts. */
@@ -312,6 +316,20 @@ export class GitHost {
     });
     // As main does at launch (A1124).
     this.loginPath.warm();
+  }
+
+  /**
+   * As if this Mac ran `version` before this launch, with `notes` cached: the notice after an
+   * update shows (PEN-110). Call before the first page asks main for the update state.
+   */
+  updatedFrom(version: string, notes: DesktopReleaseNotes): void {
+    const dir = join(this.root, 'userData');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, 'updates.json'),
+      `${JSON.stringify({ auto: false, lastSeenVersion: version })}\n`,
+    );
+    this.releaseNotes = notes;
   }
 
   /** Gives this Mac search by meaning: its service, with the concept embedder. */
@@ -530,6 +548,10 @@ export class GitHost {
         return a === 'stable' || a === 'alpha' ? this.updates.setChannel(a) : null;
       case 'updatesInstall':
         return this.updates.install();
+      case 'updatesAcknowledge':
+        return this.updates.acknowledge();
+      case 'updatesNotes':
+        return this.releaseNotes;
       case 'cliStatus': {
         // Not installed, its folder not on the slow shell's PATH (LocalAgents.cliStatus's view).
         const path = await this.loginPath.get();

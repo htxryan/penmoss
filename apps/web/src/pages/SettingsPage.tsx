@@ -33,7 +33,7 @@ const SECTIONS: ReadonlyArray<{
   // T44 (A743): after Display, both about how notes look; the phone's Settings has it there too.
   { id: 'symbols', label: 'Symbols', icon: 'star', command: 'app.symbols' },
   // T50 (A856): git notebooks on this Mac.
-  { id: 'git-notebooks', label: 'Git Notebooks', icon: 'terminal', command: 'app.gitNotebooks' },
+  { id: 'git-notebooks', label: 'Notebooks', icon: 'terminal', command: 'app.gitNotebooks' },
   // The agents that reach them, and the penmoss command (Ryan's feedback, 5 Nov 2026; A1098).
   { id: 'agents', label: 'Agents', icon: 'agentRef' },
   { id: 'journal', label: 'Daily Notes', icon: 'journal', command: 'journal.settings' },
@@ -149,8 +149,9 @@ export function SettingsPage({
 
 /**
  * Where the settings are kept (Quanta feedback 3, item 9; A1136): the primary notebook, named
- * beside the heading on every section, a link to its page. With one notebook it is still named,
- * so the place is never a guess.
+ * under the heading on every section, a link to its page. With one notebook it is still named,
+ * so the place is never a guess. A sentence of its own under the heading, not a note beside it
+ * (PEN-135 item 11).
  */
 function SettingsHome() {
   const state = useSourcesState();
@@ -158,20 +159,18 @@ function SettingsHome() {
   const path = gitNotebookPath(state.root.id);
   return (
     <p className="settings-home muted" data-testid="settings-home">
-      <Icon name="notebook" size={14} />
-      <span>
-        Kept in{' '}
-        <a
-          href={path}
-          data-ui="item"
-          aria-label={`${state.root.name}, your primary notebook`}
-          onClick={linkHandler(path)}
-          data-testid="settings-home-link"
-        >
-          {state.root.name}
-        </a>
-        , your primary notebook
-      </span>
+      Settings are synced through your primary notebook,{' '}
+      <a
+        href={path}
+        data-ui="item"
+        // Named apart from "← Notes" when the notebook is called Notes.
+        aria-label={`${state.root.name}, your primary notebook`}
+        onClick={linkHandler(path)}
+        data-testid="settings-home-link"
+      >
+        {state.root.name}
+      </a>
+      .
     </p>
   );
 }

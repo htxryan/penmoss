@@ -65,9 +65,7 @@ async function newNote(page: Page, title: string, text: string): Promise<string>
   return ULID.exec(new URL(page.url()).pathname)![1]!;
 }
 
-test('a phone reaches Settings → Git Notebooks, History and Trash from a note', async ({
-  page,
-}) => {
+test('a phone reaches Settings → Notebooks, History and Trash from a note', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto('/');
   // The phone layout: an app bar, and the sidebar out of sight until the menu opens it.
@@ -147,17 +145,15 @@ test('a phone reaches Settings → Git Notebooks, History and Trash from a note'
   await expect(page.locator('aside.note-side')).toHaveCount(0);
   await expect(rail).toBeHidden();
 
-  // Settings → Git Notebooks (the notebooks on this Mac, T59), from the drawer.
+  // Settings → Notebooks (the notebooks on this Mac, T59), from the drawer.
   await openDrawer(page);
   await drawer(page).getByRole('link', { name: 'Settings', exact: true }).tap();
   await expect(page).toHaveURL(/\/settings$/);
   const sections = page.getByRole('navigation', { name: 'Settings sections' });
-  await sections.getByRole('link', { name: 'Git Notebooks', exact: true }).tap();
+  await sections.getByRole('link', { name: 'Notebooks', exact: true }).tap();
   await expect(page).toHaveURL(/\/settings\/git-notebooks$/);
   const gitSettings = page.getByTestId('git-notebooks-settings');
-  await expect(
-    gitSettings.getByRole('heading', { name: 'Git Notebooks', exact: true }),
-  ).toBeVisible();
+  await expect(gitSettings.getByRole('heading', { name: 'Notebooks', exact: true })).toBeVisible();
   // The list, then the notebook's own page (A1098).
   await expect(gitSettings.getByTestId('git-notebook-row')).toHaveCount(1);
   await expectNoSideScroll(page, 'git notebooks');

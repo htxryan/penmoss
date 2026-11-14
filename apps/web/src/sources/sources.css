@@ -1,5 +1,5 @@
 /* Git notebooks in the Mac app (T50 G3–G5, A862): the sidebar's sections, their sync state, and
-   Settings → Git Notebooks' cards. Tokens only (styles.css :root). */
+   Settings → Notebooks' cards. Tokens only (styles.css :root). */
 
 /*
  * A notebook's name is in the accent (T52), a quarter of the way to the text colour: plain accent
@@ -193,7 +193,7 @@
   min-width: 0;
 }
 
-/* Settings → Git Notebooks. */
+/* Settings → Notebooks. */
 .settings-card {
   margin: 0 0 1rem;
   padding: 0.85rem 1rem;
@@ -271,7 +271,7 @@
 }
 
 /*
- * Settings → Git Notebooks lists the notebooks, and each opens a page of its own (Ryan's
+ * Settings → Notebooks lists the notebooks, and each opens a page of its own (Ryan's
  * feedback, 5 Nov 2026; A1098): a row with the name, the repository under it and the sync state.
  */
 .git-notebook-list {
@@ -566,7 +566,7 @@
 }
 
 /*
- * The first run (T59, A1030): no git notebook yet. The Add form of Settings → Git Notebooks
+ * The first run (T59, A1030): no git notebook yet. The Add form of Settings → Notebooks
  * stands alone in the window, with the brand above it; the wait before the list is read is a
  * quiet line in the same place.
  */

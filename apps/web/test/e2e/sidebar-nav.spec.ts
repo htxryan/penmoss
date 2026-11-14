@@ -5,7 +5,7 @@ import { notebookAction } from './notebook-actions';
 // pages (A943); the shortcuts as one row of icons (A932); each source's sync state as a dot
 // (A933); the Tags panel collapsing, remembered on this device (A934); the footer's icons
 // (A935); and Settings, whose content alone scrolls (A942). On a git notebook (T59): its own
-// Trash (`/trash?source=<id>`), its dot on its section's row, leading to Settings → Git Notebooks.
+// Trash (`/trash?source=<id>`), its dot on its section's row, leading to Settings → Notebooks.
 
 const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 /** A git notebook's own Trash. */
@@ -144,7 +144,7 @@ test('the sidebar: a row of shortcut icons, a sync dot, icons in the footer (A93
     await expect(tooltip).toHaveText('Synced', { timeout: 4_000 });
   }).toPass();
   await page.mouse.move(900, 600);
-  // It leads to the notebook's page in Settings → Git Notebooks, which says more (A860, A1098).
+  // It leads to the notebook's page in Settings → Notebooks, which says more (A860, A1098).
   await dot.click();
   await expect(page).toHaveURL(/\/settings\/git-notebooks\/[0-9A-Z]{26}$/);
   await expect(page.getByTestId('git-status')).toBeVisible();

@@ -32,6 +32,6 @@ export function syncHint(state: AppSyncState): string {
     case 'stopped':
       return state.reason === 'storage'
         ? `Sync stopped: ${state.detail ?? 'this device’s storage needs a reload'}`
-        : `Sync stopped: ${state.detail ?? 'the notebook’s git sync stopped'}. Settings → Git Notebooks says why`;
+        : `Sync stopped: ${state.detail ?? 'the notebook’s git sync stopped'}. Settings → Notebooks says why`;
   }
 }

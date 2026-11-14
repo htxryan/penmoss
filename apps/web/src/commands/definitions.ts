@@ -77,8 +77,8 @@ export const APP_COMMANDS: readonly CommandDefinition[] = [
   global('app.cheatsheet', 'Keyboard Shortcuts', 'General', ['Mod+/']),
   global('app.settings', 'Settings', 'General', ['Mod+,']),
   global('app.shortcuts', 'Customise Keyboard Shortcuts', 'General'),
-  // T50 (A856): Settings → Git Notebooks, in the Mac app. No default keys.
-  global('app.gitNotebooks', 'Git Notebooks', 'General'),
+  // T50 (A856): Settings → Notebooks, in the Mac app. No default keys.
+  global('app.gitNotebooks', 'Notebooks', 'General'),
   // Settings → Status: Send feedback's GitHub token and outbox (T57, T59 A1036).
   global('app.status', 'Feedback Status and GitHub Token', 'General'),
   // T64 item 2 (A1112): Settings → Updates, checking now. The Mac app only.
@@ -173,7 +173,7 @@ export const APP_COMMANDS: readonly CommandDefinition[] = [
   tree('folder.moveDown', 'Move the Focused Row Down', ['Alt+Down']),
   tree('folder.rename', 'Rename the Focused Folder', ['F2']),
   tree('folder.delete', 'Delete the Focused Folder', ['Delete', 'Backspace']),
-  // #170 F5: Settings → Git Notebooks' actions, for the open note's git notebook (or the only
+  // #170 F5: Settings → Notebooks' actions, for the open note's git notebook (or the only
   // one), in the Mac app only (sources/git-commands.ts). No default keys.
   global('git.syncNow', 'Sync This Git Notebook Now', 'Sync'),
   global('git.signCommits', 'Sign This Git Notebook’s Commits, or Stop', 'Sync'),

@@ -959,7 +959,10 @@ a {
  */
 .sb-foot {
   --sb-foot-height: 2.25rem;
+  /* The update notice's action and ✕ (PEN-135 item 10). */
+  --sb-update-hit: 1.5rem;
   display: flex;
+  flex-wrap: wrap;
   padding: 0 0 env(safe-area-inset-bottom);
   border-top: 1px solid var(--pm-border);
 }
@@ -970,9 +973,90 @@ a {
   height: var(--sb-foot-height);
 }
 
+/*
+ * The update notice in the bottom panel, above Settings and Feedback (PEN-135 item 10; it was a
+ * toast, A1305): the refresh icon in the accent, what it says in the small size and ✕ on the first
+ * line, its action in the accent under the text, flush like the row below (A1121).
+ */
+.sb-update {
+  display: grid;
+  flex: 1 0 100%;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.4rem;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 0.25rem 0 0.25rem 0.6rem;
+  border-bottom: 1px solid var(--pm-border-soft);
+  color: var(--pm-fg);
+  font-size: var(--pm-text-sm);
+  line-height: 1.3;
+}
+
+.sb-update > .i {
+  grid-area: 1 / 1;
+  color: var(--pm-accent);
+}
+
+.sb-update-text {
+  grid-area: 1 / 2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sb-update-action {
+  grid-area: 2 / 2;
+  justify-self: start;
+  min-height: var(--sb-update-hit);
+  margin-inline-start: -0.4rem;
+  padding: 0 0.4rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--pm-accent);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sb-update-action:hover {
+  background: var(--pm-hover);
+}
+
+.sb-update-action:focus-visible {
+  outline: none;
+  box-shadow: var(--pm-ring);
+}
+
+.sb-foot .sb-update .sb-update-close {
+  grid-area: 1 / 3;
+  width: 2rem;
+  height: var(--sb-update-hit);
+  color: var(--pm-muted);
+}
+
+/* On the rail: the icon, with a dot in the accent at its corner. */
+.sb-update-dot {
+  position: relative;
+  color: var(--pm-accent);
+}
+
+.sb-update-badge {
+  position: absolute;
+  top: 22%;
+  right: 22%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--pm-accent);
+  box-shadow: 0 0 0 2px var(--pm-sidebar);
+}
+
 @media (max-width: 700px), (pointer: coarse) {
   .sb-foot {
     --sb-foot-height: var(--pm-hit);
+    --sb-update-hit: var(--pm-hit);
   }
 }
 
@@ -1065,7 +1149,8 @@ a {
 /*
  * The note's header (T36): the note's folders, then its actions, after the prototype's editor bar.
  * Its end padding is the tab strip's (links.css), so the last action sits over the strip's icons,
- * on one column (A988).
+ * on one column (A988). In the sidebar's colour, so the title bar reads apart from the text in
+ * every theme, light and dark (PEN-135 item 7).
  */
 .note-top {
   position: sticky;
@@ -1077,7 +1162,52 @@ a {
   height: 3rem;
   padding: 0 0.3rem 0 1rem;
   border-bottom: 1px solid var(--pm-border-soft);
-  background: var(--pm-bg);
+  background: var(--pm-sidebar);
+}
+
+/*
+ * Beside the rail, Back, Forward and the pin start the note's title bar (PEN-135 item 6), flush
+ * and as tall as the row, as in the sidebar's head (A1135): from the rail's edge, or after the
+ * traffic lights' room in the Mac app, a hairline either side.
+ */
+.note-top:has(> .note-top-lead) {
+  padding-left: 0;
+}
+
+.note-top-lead {
+  display: flex;
+  flex: none;
+  align-self: stretch;
+  border-right: 1px solid var(--pm-border-soft);
+}
+
+.note-top-lead .history-nav {
+  align-self: stretch;
+}
+
+.note-top-lead .history-pair {
+  height: 100%;
+  background: none;
+}
+
+.note-top-lead .history-pair .history-half {
+  width: 2rem;
+}
+
+.note-top-lead .history-half + .history-half::before {
+  top: 0;
+  bottom: 0;
+  background: var(--pm-border-soft);
+}
+
+.note-top-lead > .icon-btn {
+  width: 2.5rem;
+  height: 100%;
+  border-left: 1px solid var(--pm-border-soft);
+}
+
+.note-top-lead + .crumbs {
+  margin-left: 0.5rem;
 }
 
 .crumbs {
@@ -1621,6 +1751,20 @@ a {
   .ProseMirror:not(.ProseMirror-focused)
   > :is(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote):not(:has(.pm-symbols)) {
   content-visibility: auto;
+}
+
+/*
+ * The containment above makes each block its own formatting context, so the margins inside it
+ * (a nested list's lines, a quote's paragraphs) stop collapsing through its edges while the
+ * editor is unfocused. A list three levels deep grew 2.4 px when the caret went to the title, and
+ * the text below it moved (PEN-135, A1360). Each such block is its own formatting context with
+ * focus too, so the margins inside it stay inside it, the same with focus and without, at any
+ * depth.
+ */
+.note-body
+  .ProseMirror
+  > :is(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote):not(:has(.pm-symbols)) {
+  display: flow-root;
 }
 
 /*
@@ -5379,9 +5523,23 @@ button.history-entry:hover {
 }
 
 .notes-app[data-sidebar='collapsed'] .brand,
-.notes-app[data-sidebar='collapsed'] .sb-list,
-.notes-app[data-sidebar='collapsed'] .sb-foot {
+.notes-app[data-sidebar='collapsed'] .sb-list {
   display: none;
+}
+
+/*
+ * Settings and Send Feedback stay at the rail's foot, a column there, with the update notice's
+ * icon above them (PEN-135 items 4 and 10).
+ */
+.notes-app[data-sidebar='collapsed'] .sb-foot {
+  flex-direction: column;
+  align-items: center;
+  margin-top: auto;
+}
+
+.notes-app[data-sidebar='collapsed'] .sb-foot .icon-btn {
+  width: var(--pm-rail);
+  height: var(--pm-rail);
 }
 
 .notes-app[data-sidebar='collapsed'] .sb-actions {
@@ -5395,7 +5553,7 @@ button.history-entry:hover {
 }
 
 /* Back and Forward fill the rail's width, each half of it. */
-.notes-app[data-sidebar='collapsed'] .history-pair .history-half {
+.notes-app[data-sidebar='collapsed'] .sb-head .history-pair .history-half {
   width: calc(var(--pm-rail) / 2);
   height: 100%;
 }
@@ -5635,14 +5793,14 @@ a.toast-action {
 
 /*
  * What scrolls under a row sets no region of its own (A1123; UNDER_ROWS in no-drag.ts): a note's
- * title and text go up under its top bar as it scrolls, and their controls' `no-drag`, later in
- * the DOM, took the bar's empty part from it. None of them is ever in a row. `unset`, not
+ * title and text go up under its top bar as it scrolls, and Settings' sections under its bar
+ * (PEN-65), and their controls' `no-drag`, later in the DOM, took the bar's empty part from it. None of them is ever in a row. `unset`, not
  * `none`: Chromium computes an explicit `none` as `no-drag`, while `unset` takes the parent's
  * region, as the property is inherited, so a control in a floating surface (a menu, the selection
  * toolbar) is still `no-drag` from it, and one in the text has none.
  */
 :root[data-titlebar='compact']
-  .note-columns
+  :is(.note-columns, .settings-content)
   :is(
     button,
     a[href],
@@ -5721,16 +5879,23 @@ a.toast-action {
  * beside the rail (the note's crumbs, the graph's bar) starts after the lights' inset.
  */
 :root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed'] .sidebar {
+  /* The row's colour over the rail: the page's beside Home, Trash and the graph. */
+  --pm-rail-row: var(--pm-bg);
   padding-right: 1px;
   border-right: 0;
   background:
     linear-gradient(var(--pm-border), var(--pm-border)) right bottom / 1px
       calc(100% - var(--pm-titlebar-row)) no-repeat,
     linear-gradient(
-      var(--pm-bg) var(--pm-titlebar-row),
+      var(--pm-rail-row) var(--pm-titlebar-row),
       var(--pm-border-soft) 0 calc(var(--pm-titlebar-row) + 1px),
       var(--pm-sidebar) 0
     );
+}
+
+/* Beside a note, its title bar's colour, the sidebar's (PEN-135 item 7). */
+:root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed']:has(.note-top) .sidebar {
+  --pm-rail-row: var(--pm-sidebar);
 }
 
 :root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed'] .sb-head {
@@ -5739,6 +5904,11 @@ a.toast-action {
 
 :root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed'] .note-top {
   padding-left: calc(var(--pm-titlebar-inset) - var(--pm-rail) - 1px);
+}
+
+/* Back and Forward after the lights: the hairline before them ends the lights' room (A1135). */
+:root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed'] .note-top-lead {
+  border-left: 1px solid var(--pm-border-soft);
 }
 
 :root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed'] .pm-graph-bar {
@@ -6642,9 +6812,29 @@ button.comment-quote:hover {
   background: var(--pm-border-soft);
 }
 
-/* With Back and Forward first, the logo keeps the room a button's padding gave it. */
-.notes-app:not([data-sidebar='collapsed']) .sb-head .history-nav + .brand {
-  padding-inline-start: 0.5rem;
+/*
+ * With Back and Forward first, the logo keeps the room a button's padding gave it: a margin of its
+ * own, so it goes with the logo when the head is narrow (PEN-135 item 8).
+ */
+.notes-app:not([data-sidebar='collapsed']) .sb-head .history-nav + .brand > .brand-mark {
+  margin-inline-start: 0.5rem;
+}
+
+/*
+ * The head's buttons never clip (PEN-135 item 8): as the sidebar narrows, the brand between Back
+ * and Forward and the pin gives way to nothing, so the pin and the toggle move left with the edge
+ * (its name ends in an ellipsis). The narrowest sidebar (14.5rem, pane-widths.ts) fits the lights'
+ * 88px, the pair, the pin and the toggle.
+ */
+.notes-app:not([data-sidebar='collapsed']) .sb-head .brand {
+  overflow: hidden;
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-head .brand > span:not(.brand-mark) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .notes-app:not([data-sidebar='collapsed']) .sb-actions {
@@ -6720,18 +6910,12 @@ button.comment-quote:hover {
   }
 }
 
-/* Settings' heading, and where they are kept beside it (A1136). */
-.settings-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.25rem 1rem;
+/* Settings' heading, and where they are kept under it (A1136, PEN-135 item 11). */
+.settings-title:has(.settings-home) h1 {
+  margin-bottom: 0.3rem;
 }
 
 .settings-home {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin: 0;
+  margin: 0 0 1.25rem;
   font-size: var(--pm-text-sm, 0.86rem);
 }

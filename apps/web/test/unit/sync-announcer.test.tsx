@@ -29,7 +29,7 @@ describe('SyncAnnouncer (T51, A933; git only since T59)', () => {
     expect(alertOf(offline)).toContain('Offline: 2 notes with changes saved on this device');
     expect(
       alertOf(render({ phase: 'stopped', pending: 0, detail: 'no remote', reason: 'git' })),
-    ).toContain('Sync stopped: no remote. Settings → Git Notebooks says why');
+    ).toContain('Sync stopped: no remote. Settings → Notebooks says why');
   });
 
   it('names a storage problem as this device’s, not git’s', () => {

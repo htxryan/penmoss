@@ -16,7 +16,7 @@ Each device keeps a full copy of its notebooks and works on that copy. Sync is a
 | Android, app closed | Soon after you leave the app                                               | About every 15 minutes ([The Android app](/docs/install/android/#syncing-in-the-background)) |
 | Agents (MCP server) | A minute after the agent's edits settle, and when it stops                 | Every two minutes                                                                            |
 
-**Sync Now** syncs at once. Each notebook's timing can be changed in **Settings → Git Notebooks**.
+**Sync Now** syncs at once. Each notebook's timing can be changed in **Settings → Notebooks**.
 
 Each notebook's section in the sidebar shows its state with a dot; its tooltip says **Synced**, **Offline**, **Pushing…** or why it stopped.
 
@@ -42,7 +42,7 @@ Agents are careful in one more way: an agent's edit is refused if the part of th
 
 If the host refuses a push, the notebook says **Sync stopped** with the host's own words, and your changes wait on the device. Nothing is lost. Common reasons:
 
-- **The token expired or was revoked.** Save a new one in **Settings → Git Notebooks**.
+- **The token expired or was revoked.** Save a new one in **Settings → Notebooks**.
 - **GitHub refused your email (GH007).** Set the notebook's **Commit email** to your GitHub no-reply address. See [Commits and your email](/docs/first-notebook/#commits-and-your-email).
 - **The branch is protected**, or requires signed commits. Allow pushes to it, or turn on signing.
 - **The branch was deleted.** Penmoss will not start it again by itself.

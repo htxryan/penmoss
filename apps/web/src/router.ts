@@ -24,7 +24,7 @@ export type Route =
   | {
       readonly name: 'settings';
       readonly section: SettingsSection;
-      /** One git notebook's own page under Git Notebooks (its source id; A1098). */
+      /** One git notebook's own page under Notebooks (its source id; A1098). */
       readonly item?: string;
     }
   | { readonly name: 'capture' }

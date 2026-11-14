@@ -287,7 +287,7 @@ test('A1353: Copy to Notebook asks whether the tags go, starting from the synced
   await tag('Plan', 'weekly');
   await tag('Loose', 'scraps');
 
-  // Settings → Git Notebooks → Copy to Notebook: on by default (a copy took its tags before);
+  // Settings → Notebooks → Copy to Notebook: on by default (a copy took its tags before);
   // turned off, it syncs in the primary notebook.
   await page.goto('/settings/git-notebooks');
   const fallback = page.getByTestId('copy-tags-default');

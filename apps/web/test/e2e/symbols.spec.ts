@@ -320,13 +320,13 @@ test('T44: Settings → Symbols edits the synced list; a removed glyph shows as 
   await page.goto('/settings/symbols');
   const settings = page.getByTestId('symbols-settings');
   await expect(settings).toBeVisible();
-  // Appearance first, then Display and Symbols (A551); Git Notebooks before Daily Notes and
+  // Appearance first, then Display and Symbols (A551); Notebooks before Daily Notes and
   // Keyboard Shortcuts; nothing of the server's (T59: no Git Mirror, no Devices and tokens).
   const links = page.getByRole('navigation', { name: 'Settings sections' }).getByRole('link');
   await expect(links.first()).toHaveText('Appearance');
   const sections = await links.allTextContents();
   expect(sections.slice(0, 3)).toEqual(['Appearance', 'Display', 'Symbols']);
-  const order = ['Git Notebooks', 'Daily Notes', 'Keyboard Shortcuts'].map((name) =>
+  const order = ['Notebooks', 'Daily Notes', 'Keyboard Shortcuts'].map((name) =>
     sections.indexOf(name),
   );
   expect(order.every((index) => index >= 0)).toBe(true);

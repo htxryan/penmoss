@@ -784,7 +784,7 @@ describe('GitHub refuses a private email (GH007, #170 F6)', () => {
       'GitHub refused the push: its commits would make your private email address public (GH007).',
     );
     expect(said.status.detail).toContain(
-      'set it as this notebook’s commit email in Settings → Git Notebooks, or as git’s user.email',
+      'set it as this notebook’s commit email in Settings → Notebooks, or as git’s user.email',
     );
   });
 });

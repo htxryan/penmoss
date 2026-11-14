@@ -30,4 +30,4 @@ Notes stay in a git notebook's Trash until you delete them for good. Deleted fol
 
 ### Only you delete for good
 
-No agent, script or command can delete a note for good: only you, in the app, with the owner check. If a Delete for Good waits a long time to sync, for example offline, Penmoss asks you to confirm it again before it syncs: **Settings → Git Notebooks** lists the notes and asks once more.
+No agent, script or command can delete a note for good: only you, in the app, with the owner check. If a Delete for Good waits a long time to sync, for example offline, Penmoss asks you to confirm it again before it syncs: **Settings → Notebooks** lists the notes and asks once more.

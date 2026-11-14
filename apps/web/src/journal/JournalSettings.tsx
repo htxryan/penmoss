@@ -44,7 +44,7 @@ export function JournalSettings() {
       <h2 id={`${zoneId}-h`}>Daily Notes</h2>
       <p className="muted">
         Today is {today(settings).toString()} in {zone}. Changes sync to your other devices. Daily
-        notes are kept in your Primary Notebook, chosen in Settings → Git Notebooks.
+        notes are kept in your Primary Notebook, chosen in Settings → Notebooks.
       </p>
       <label className="settings-field" htmlFor={zoneId}>
         <span>Time zone</span>

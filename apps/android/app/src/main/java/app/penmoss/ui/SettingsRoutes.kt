@@ -93,7 +93,7 @@ internal fun settingsSections(
     // Then Symbols, as on the web (T44, A747).
     SettingsSection("symbols", "Symbols", symbolsSummary(settings), SettingsIcons.Star),
     // As on the Mac (T50 G7, A856), with the Mac's icon (T39 pass 3, A902).
-    SettingsSection("git", "Git Notebooks", git, SettingsIcons.Terminal),
+    SettingsSection("git", "Notebooks", git, SettingsIcons.Terminal),
     SettingsSection("daily", "Daily Notes", settings.timeZone, SettingsIcons.Journal),
     SettingsSection("capture", "Quick Capture", destinationLabel(settings.captureDestination), SettingsIcons.Inbox),
     // A hardware keyboard's shortcuts (T40 P9, ST8): how many the person changed.

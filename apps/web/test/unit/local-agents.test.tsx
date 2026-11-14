@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { CliInfo, DesktopGit, GitAnswer, LocalAgentInfo } from '../../src/desktop/bridge';
 import { CommandLine, GitLocalAgents } from '../../src/sources/LocalAgents';
 
-// T54 (A992, A993): Settings → Git Notebooks connects an agent on this Mac through the local MCP
+// T54 (A992, A993): Settings → Notebooks connects an agent on this Mac through the local MCP
 // server, and installs the penmoss command, with no account and no agent token.
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;

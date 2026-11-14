@@ -38,7 +38,7 @@ Open Settings with ⌘, on the Mac, or from a notebook's menu on Android. Most s
 
 The [line symbols](/docs/editor/#line-symbols): each one's glyph and colour, their order, **Add a Symbol** (up to nine) and **Restore Defaults**.
 
-### Git Notebooks
+### Notebooks
 
 **Add a Git Notebook…**, then for each notebook:
 
@@ -98,7 +98,7 @@ What search by meaning is doing, and the switch: on by default. Off removes the 
 | Appearance         | Mode, theme, note width, fonts and the theme editor                                                                                                                                                                                                                                     |
 | Display            | Shortcuts on Home, the order of the sections, Notes in Recent Notes, Show Notebook Names in Quick Access                                                                                                                                                                                |
 | Symbols            | The line symbols, and their keys on a hardware keyboard                                                                                                                                                                                                                                 |
-| Git Notebooks      | Each notebook's sync, Wi-Fi only, signing, push and pull timing, token, commit identity and **Remove from This Phone**; then **Commits from this phone**, the **Signing key**, the **Journal notebook** and **In the background** ([The Android app](/docs/install/android/#notebooks)) |
+| Notebooks          | Each notebook's sync, Wi-Fi only, signing, push and pull timing, token, commit identity and **Remove from This Phone**; then **Commits from this phone**, the **Signing key**, the **Journal notebook** and **In the background** ([The Android app](/docs/install/android/#notebooks)) |
 | Daily Notes        | Time zone and templates                                                                                                                                                                                                                                                                 |
 | Quick Capture      | Where a capture goes by default                                                                                                                                                                                                                                                         |
 | Keyboard Shortcuts | Shortcuts for a hardware keyboard                                                                                                                                                                                                                                                       |

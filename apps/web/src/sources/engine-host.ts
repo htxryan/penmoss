@@ -34,7 +34,7 @@ import type { LocalNotes } from '../notes/service';
 import { EngineStorage } from './engine-store';
 import { GitRefused } from './ipc-transport';
 
-/** What Settings → Git Notebooks and the pill show of a notebook's sync (A860). */
+/** What Settings → Notebooks and the pill show of a notebook's sync (A860). */
 export interface GitSyncStatus {
   readonly phase: 'starting' | 'syncing' | 'synced' | 'offline' | 'stopped';
   /** Why it is offline or stopped, in plain words (with what to do). */
@@ -841,7 +841,7 @@ export function describe(
           status: {
             phase: 'stopped',
             code: 'auth',
-            detail: `Can't sign in to ${host}. Check git's credentials for it, or use a personal access token in Settings → Git Notebooks. ${kept}`,
+            detail: `Can't sign in to ${host}. Check git's credentials for it, or use a personal access token in Settings → Notebooks. ${kept}`,
             hostMessage,
           },
           log: false,
@@ -856,7 +856,7 @@ export function describe(
             detail:
               privateEmailAdvice(
                 hostMessage ?? error.message,
-                'set it as this notebook’s commit email in Settings → Git Notebooks, or as git’s user.email',
+                'set it as this notebook’s commit email in Settings → Notebooks, or as git’s user.email',
               ) ?? `${host} refused the push${hostMessage ? `: ${hostMessage}` : '.'} ${kept}`,
             hostMessage,
           },

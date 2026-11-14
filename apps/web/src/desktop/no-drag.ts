@@ -58,13 +58,14 @@ export const NO_DRAG_SURFACES = [
 
 /**
  * What scrolls under a row (A1123): a note's title and text go up under its top bar, which stays
- * put. Electron applies later regions over earlier ones, so its controls' `no-drag` (later in the
+ * put, and Settings' sections under its bar (PEN-65: Electron counts a control scrolled out of its
+ * box as where it would be, so the bar stopped dragging once Settings scrolled). Electron applies later regions over earlier ones, so its controls' `no-drag` (later in the
  * DOM than the bar) took the bar's empty part from it as soon as the note scrolled, and the
  * window could not be moved by it. Their controls set no region of their own (`unset`: the
  * parent's): none of them is ever in a row. The floating surfaces among them (a menu, the
  * selection toolbar) stay `no-drag`, and so do the controls in them, from them.
  */
-export const UNDER_ROWS = ['.note-columns'] as const;
+export const UNDER_ROWS = ['.note-columns', '.settings-content'] as const;
 
 /**
  * The title-bar rows: they drag the window (A722, A723, A727). Version History's own head, a row

@@ -17,7 +17,8 @@ Penmoss can check for a newer build and offer it. It never installs one until yo
 - **Settings → Updates → Auto-Update** (off until you turn it on) checks when Penmoss starts and every hour after.
 - **Check Now** in the same place, or **Penmoss → Check for Updates…**, checks at any time, with Auto-Update on or off.
 - **Update Channel** chooses what it offers: **Stable** (the default) or **Alpha**. Changing it checks at once, and Penmoss still only offers the update.
-- When a newer build is found, Settings and a notice at the foot of the window offer it. **Install and Restart** downloads it and restarts Penmoss into it.
+- When a newer build is found, Settings and a notice at the bottom of the sidebar, above Settings and Send Feedback, offer it. **Install and Restart** downloads it and restarts Penmoss into it. With the sidebar folded to a rail, the notice is an icon with a dot at the rail's foot, which opens Settings → Updates; in a narrow window it shows at the foot of the window.
+- Penmoss always updates to the newest build, never one step at a time. Install and Restart checks again first, so a build published since the offer is the one you get, however many came out since your last update. If a newer build appears after one has downloaded, Penmoss downloads it in its place.
 
 **About Penmoss** shows the version you have.
 
@@ -29,7 +30,7 @@ Penmoss can check for a newer build and offer it. It never installs one until yo
 - **In this version**: what your version brought. On Alpha, that's everything since the last stable release, each change with its build.
 - **Earlier versions**, folded away: each stable release's changes, newest first.
 
-After Penmoss restarts into a newer version, a notice at the foot of the window says **Updated to …** once, if that version has notes. **What's New** opens them in Settings → Updates; either button puts the notice away for good.
+After Penmoss restarts into a newer version, a notice at the bottom of the sidebar says **Updated to …** once, if that version has notes. **What's New** opens them in Settings → Updates; it and ✕ put the notice away for good. On the rail the notice is an icon with a dot, which opens What's New.
 
 Changes are grouped as **New**, **Improved** and **Fixed**, and only the Mac's are shown. Penmoss fetches the notes from GitHub when it checks for updates and when you open Settings, at most once an hour, and keeps them, so they read offline. Until it has reached GitHub once, the page links to the [Releases page](https://github.com/htxryan/penmoss/releases) instead. Each release on that page carries the same notes, and so does [Release notes](/docs/releases/) here.
 

@@ -22,7 +22,7 @@ export const WELCOME_MARKDOWN = `Your notes live in this notebook: Markdown file
 
 ## Keep going
 
-- Settings → Git Notebooks adds more notebooks, or a personal access token for one.
+- Settings → Notebooks adds more notebooks, or a personal access token for one.
 - Agents can read and write your notes too: see Settings → Agents.
 
 Delete this note whenever you like.

@@ -38,7 +38,7 @@ type Request = { readonly notebookId: string; readonly control: GitControl };
 let request: Request | null = null;
 const listeners = new Set<() => void>();
 
-/** Asks Settings → Git Notebooks to show and focus `control` in that notebook's card. */
+/** Asks Settings → Notebooks to show and focus `control` in that notebook's card. */
 export function requestGitControl(notebookId: string, control: GitControl): void {
   request = { notebookId, control };
   for (const listener of listeners) listener();

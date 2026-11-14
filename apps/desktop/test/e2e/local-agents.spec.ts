@@ -130,7 +130,7 @@ test('no account: connect an agent on this Mac; its MCP server writes the notebo
   await expect(page.locator('#app-sidebar').getByText(name, { exact: true }).first()).toBeVisible({
     timeout: 30_000,
   });
-  // The notebook's own page, from Settings → Git Notebooks' list (A1098).
+  // The notebook's own page, from Settings → Notebooks' list (A1098).
   await go(page, '/settings/git-notebooks');
   const settings = page.getByTestId('git-notebooks-settings');
   await settings.getByTestId('git-notebook-row').filter({ hasText: name }).click();

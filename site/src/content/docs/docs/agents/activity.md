@@ -18,7 +18,7 @@ An agent's edits to a note are in that note's [Version History](/docs/history/) 
 
 **Agent Activity** lists what agents changed outside the notes' text in the last 30 days: folders they made, renamed or moved, notes they moved, and settings they changed. Each entry names the agent and when, newest first, with **Undo**.
 
-- **On the Mac:** **Settings → Git Notebooks**, choose the notebook, then **Agent Activity**.
+- **On the Mac:** **Settings → Notebooks**, choose the notebook, then **Agent Activity**.
 - **On Android:** open the notebook's **Sync** screen and tap **Agent Activity**.
 
 **Undo** is a change of your own, made on this device and synced like any other; the entry then says **Undone by** you. If something else changed the same thing since, such as a folder renamed again, Undo says so and changes nothing.

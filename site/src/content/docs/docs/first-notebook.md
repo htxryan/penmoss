@@ -48,7 +48,7 @@ If you prefer git's own sign-in, install the GitHub CLI and run `gh auth login`,
 
 ## A personal access token
 
-For an HTTPS host that needs a token, open **Settings → Git Notebooks**, choose the notebook and save the token under **Access** (**Save Token**). Penmoss keeps it in the Keychain, hands it to git only when it syncs, and never shows it again. **Forget Token** removes it.
+For an HTTPS host that needs a token, open **Settings → Notebooks**, choose the notebook and save the token under **Access** (**Save Token**). Penmoss keeps it in the Keychain, hands it to git only when it syncs, and never shows it again. **Forget Token** removes it.
 
 On GitHub, a fine-grained token for that one repository needs **Contents: Read and write** (GitHub adds **Metadata: Read** itself).
 
@@ -58,7 +58,7 @@ To open a notebook Penmoss made before, on this Mac or another device, choose **
 
 ## Commits and your email
 
-Penmoss commits as git's `user.name` and `user.email`. If GitHub keeps your email private and blocks pushes that show it, a push is refused with the error GH007. Give the notebook its own **Commit email** in **Settings → Git Notebooks** (under **Commits**): your GitHub no-reply address, `…@users.noreply.github.com`, from GitHub's Settings → Emails.
+Penmoss commits as git's `user.name` and `user.email`. If GitHub keeps your email private and blocks pushes that show it, a push is refused with the error GH007. Give the notebook its own **Commit email** in **Settings → Notebooks** (under **Commits**): your GitHub no-reply address, `…@users.noreply.github.com`, from GitHub's Settings → Emails.
 
 ## Next
 

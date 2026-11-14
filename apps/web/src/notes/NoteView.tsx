@@ -1,4 +1,5 @@
 import {
+  ARROW_UP_INTO_TITLE,
   BACKSPACE_INTO_TITLE,
   COMMENT_ADD_EVENT,
   COMMENT_OPEN_EVENT,
@@ -22,6 +23,7 @@ import {
   lazy,
   Suspense,
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -55,6 +57,7 @@ import { useNoteBar } from './note-bar';
 import { browserStorage, rememberOpened } from './recent';
 import { bindTitleField, pastedTitle } from './title';
 import {
+  caretOnLastLine,
   fitHeight,
   growingTitle,
   isLineBreak,
@@ -67,6 +70,7 @@ import { UnsupportedNote } from './UnsupportedNote';
 import { AppBar } from '../shell/AppBar';
 import { withKeys } from '../shell/drawer';
 import { usePhone } from '../shell/media';
+import { TitleBarLead } from '../shell/title-lead';
 import { NoteActions, type NotePanelTab } from './NoteActions';
 import { useNotePanelMode, usePaneWidth } from './panel-mode';
 import { NOTE_MIN_REM, PANE_LIMITS, usePaneSize } from '../shell/pane-widths';
@@ -174,6 +178,7 @@ export function NoteView({
 }) {
   const notes = useNotes();
   const directory = useDirectory();
+  const lead = useContext(TitleBarLead);
   // Wikilinks (T16): titles and completion from the registry; new notes are filed beside this one.
   const links = useMemo(() => directory.forNote(id), [directory, id]);
   // T53 item 9 (A985): the panel is open on one tab beside the note's strip of tab icons, or
@@ -745,8 +750,20 @@ export function NoteView({
       field.focus();
       field.setSelectionRange(at, at);
     };
+    // ↑ on the note's first line goes to the end of the title (PEN-135), as ↓ comes back.
+    const onArrowUp = (event: Event) => {
+      const field = titleRef.current;
+      if (!field) return;
+      event.preventDefault();
+      field.focus();
+      field.setSelectionRange(field.value.length, field.value.length);
+    };
     slot.addEventListener(BACKSPACE_INTO_TITLE, onBackspace);
-    return () => slot.removeEventListener(BACKSPACE_INTO_TITLE, onBackspace);
+    slot.addEventListener(ARROW_UP_INTO_TITLE, onArrowUp);
+    return () => {
+      slot.removeEventListener(BACKSPACE_INTO_TITLE, onBackspace);
+      slot.removeEventListener(ARROW_UP_INTO_TITLE, onArrowUp);
+    };
   }, []);
 
   // The markdown source view follows the note (body and title, local and remote) while open.
@@ -961,7 +978,16 @@ export function NoteView({
   useCommand('note.openInNewWindow', () => openNoteWindow(id));
 
   const onTitleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
+    if (event.nativeEvent.isComposing) return;
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      enterBody();
+      return;
+    }
+    // ↓ on the title's last line goes to the start of the note's first line, as Enter does
+    // (PEN-135, A1360); with Shift, ⌥, ⌘ or Ctrl it keeps its meaning in the title.
+    if (event.key !== 'ArrowDown' || event.shiftKey || event.altKey || event.metaKey) return;
+    if (event.ctrlKey || !caretOnLastLine(event.currentTarget)) return;
     event.preventDefault();
     enterBody();
   };
@@ -1037,6 +1063,12 @@ export function NoteView({
         <NoteActions source={showSource} tab={shownTab} pinned={pinned} />
       </AppBar>
       <header className="note-top">
+        {/* Back, Forward and the pin, beside the rail (PEN-135 item 6). */}
+        {lead ? (
+          <div className="note-top-lead" data-testid="note-top-lead">
+            {lead}
+          </div>
+        ) : null}
         {nav ?? (
           <nav className="crumbs" aria-label="Breadcrumb">
             <ol>

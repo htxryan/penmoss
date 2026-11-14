@@ -478,7 +478,7 @@ export class GitNotebooks {
   // --- add and remove ---
 
   /**
-   * Settings → Git Notebooks → Add (A856). Joins the notebook the target holds, or makes one when
+   * Settings → Notebooks → Add (A856). Joins the notebook the target holds, or makes one when
    * it holds none and a name is given; asks for a name otherwise. Any repository will do (D61).
    */
   async add(input: {
@@ -927,7 +927,7 @@ export class GitNotebooks {
   }
 
   /**
-   * Settings → Git Notebooks → Use a personal access token (A857): written only, never read back
+   * Settings → Notebooks → Use a personal access token (A857): written only, never read back
    * by the page; null forgets it.
    */
   async setToken(localId: unknown, token: unknown): Promise<GitAnswer<null>> {
@@ -1176,7 +1176,7 @@ export class GitNotebooks {
           this.refusedPurges.set(entry.localId, unconfirmed);
           throw new Refused(
             'purge_unconfirmed',
-            `This sync would delete ${unconfirmed.length === 1 ? 'a note' : `${unconfirmed.length} notes`} for good that nobody confirmed on this Mac in the last ${PURGE_TTL_MS / 60_000} minutes, so nothing was pushed. Confirm Delete for good again in Settings → Git Notebooks (Touch ID).`,
+            `This sync would delete ${unconfirmed.length === 1 ? 'a note' : `${unconfirmed.length} notes`} for good that nobody confirmed on this Mac in the last ${PURGE_TTL_MS / 60_000} minutes, so nothing was pushed. Confirm Delete for good again in Settings → Notebooks (Touch ID).`,
           );
         }
         this.refusedPurges.delete(entry.localId);

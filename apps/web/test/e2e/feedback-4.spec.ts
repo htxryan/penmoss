@@ -2,7 +2,7 @@ import { expect, test, type Page } from './fixtures';
 
 // Ryan's feedback of 5 Nov 2026 ("Penmoss Feedback", Quanta), in the web app (the Mac app runs
 // the same page): the sidebar's rows run its full width and each section's title row is boxed
-// (A1097); Settings → Git Notebooks is a list whose rows open each notebook's own page, and the
+// (A1097); Settings → Notebooks is a list whose rows open each notebook's own page, and the
 // agents and the penmoss command are Settings → Agents (A1098).
 
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
@@ -74,7 +74,7 @@ test('1, 2: sidebar rows run edge to edge, and each section’s title row is box
   expect(errors).toEqual([]);
 });
 
-test('3: Git Notebooks lists the notebooks, each opening its own page; Agents has its own page', async ({
+test('3: Notebooks lists the notebooks, each opening its own page; Agents has its own page', async ({
   page,
   host,
 }) => {
