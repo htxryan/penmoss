@@ -15,7 +15,7 @@ object SearchActions {
         SearchAction("app.settings", "Settings"),
         SearchAction("app.shortcuts", "Customise Keyboard Shortcuts"),
         // Git notebooks (T50 G7, A856): Settings → Git notebooks, as on the Mac.
-        SearchAction("app.gitNotebooks", "Git Notebooks"),
+        SearchAction("app.gitNotebooks", "Notebooks"),
         // Feedback still on the phone and the GitHub token: Settings → About (T59, A1046).
         SearchAction("app.status", "Feedback Status and GitHub Token"),
         // In-app feedback (T49, D41): the same form as the overflow menu's, captured first.

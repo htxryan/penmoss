@@ -121,7 +121,7 @@ fun GitSyncRoute(graph: AppGraph, passText: String, onGitNotebooks: () -> Unit, 
                 enabled = !busy,
                 modifier = Modifier.testTag("gitSyncNow"),
             ) { Text(if (busy) "Syncing…" else "Sync Now") }
-            FilledTonalButton(onClick = onGitNotebooks, Modifier.testTag("gitSyncSettings")) { Text("Git Notebooks") }
+            FilledTonalButton(onClick = onGitNotebooks, Modifier.testTag("gitSyncSettings")) { Text("Notebooks") }
         }
         // What its agents changed in folders, note places and settings, with Undo (#172, A920).
         Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

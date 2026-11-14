@@ -190,7 +190,7 @@ class GitNotebooksActions(
 fun GitNotebooksScreen(ui: GitNotebooksUi, actions: GitNotebooksActions, onBack: () -> Unit) {
     var removing by remember { mutableStateOf<GitRow?>(null) }
     var pushingFirst by remember { mutableStateOf(false) }
-    SectionScreen(if (ui.home) "Penmoss" else "Git Notebooks", onBack, notice = null) {
+    SectionScreen(if (ui.home) "Penmoss" else "Notebooks", onBack, notice = null) {
         if (ui.message != null) {
             Text(
                 ui.message,

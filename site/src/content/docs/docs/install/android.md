@@ -44,7 +44,7 @@ Builds from the Alpha channel use the same app and certificate, so an Alpha buil
 
 ## Notebooks
 
-The first screen lists your notebooks; each opens in a screen of its own, with its Home, folders and search. **Settings → Git Notebooks** adds, configures and removes them:
+The first screen lists your notebooks; each opens in a screen of its own, with its Home, folders and search. **Settings → Notebooks** adds, configures and removes them:
 
 - **Sync Now**, **Wi-Fi only**, **Sign commits**, how soon it pushes (**Push after**, 12 seconds by default) and how often it pulls (**Pull every**, 1 minute by default).
 - **Personal access token** (**Save Token**, **Forget Token**), and a **Commit name** and **Commit email** for this notebook.
@@ -77,7 +77,7 @@ With the app closed, Android syncs your notebooks about every 15 minutes, the sh
 - on mobile data, it skips notebooks set to **Wi-Fi only** and fetches less;
 - in Doze, when the phone has been still for a while.
 
-**Settings → Git Notebooks → In the background** shows the last run and the next.
+**Settings → Notebooks → In the background** shows the last run and the next.
 
 ## Capture
 

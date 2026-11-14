@@ -58,7 +58,7 @@
     },
     {
       "id": "app.gitNotebooks",
-      "title": "Git Notebooks",
+      "title": "Notebooks",
       "area": "General",
       "scope": "global",
       "keys": []
