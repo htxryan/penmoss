@@ -124,3 +124,38 @@ export function typedAfterEnter(queued: QueuedEnter, now: string): string | null
   if (!now.startsWith(head) || !now.endsWith(tail)) return null;
   return now.slice(at, now.length - tail.length);
 }
+
+/**
+ * Whether the caret is on the title's last line as wrapped (PEN-135): ArrowDown there goes to the
+ * note's first line, and on a line above it moves down in the title as usual. Measured on a hidden
+ * copy of the field: the text up to the end of the caret's word (cut at the caret, a word could
+ * fit on a line it does not) is as tall as the whole text when nothing wraps below the caret.
+ */
+export function caretOnLastLine(field: HTMLTextAreaElement): boolean {
+  const { value } = field;
+  const caret = field.selectionEnd ?? value.length;
+  const wordEnd = caret + (/^\S*/.exec(value.slice(caret))?.[0].length ?? 0);
+  if (value.slice(wordEnd).trim() === '') return true;
+  const copy = field.cloneNode(false) as HTMLTextAreaElement;
+  copy.removeAttribute('id');
+  copy.removeAttribute('data-testid');
+  copy.setAttribute('aria-hidden', 'true');
+  copy.tabIndex = -1;
+  Object.assign(copy.style, {
+    position: 'absolute',
+    visibility: 'hidden',
+    boxSizing: 'border-box',
+    width: `${field.getBoundingClientRect().width}px`,
+    height: '0',
+    fieldSizing: 'fixed',
+  });
+  field.after(copy);
+  try {
+    copy.value = value.slice(0, wordEnd);
+    const upToCaret = copy.scrollHeight;
+    copy.value = value;
+    return upToCaret >= copy.scrollHeight;
+  } finally {
+    copy.remove();
+  }
+}

@@ -94,7 +94,11 @@ export {
   type SymbolSource,
 } from './extensions/line-symbols';
 export { NOTE_LAYOUT_EVENT, noteLayoutChanged } from './extensions/symbol-overflow';
-export { BACKSPACE_INTO_TITLE, type BackspaceIntoTitleDetail } from './extensions/title-handoff';
+export {
+  ARROW_UP_INTO_TITLE,
+  BACKSPACE_INTO_TITLE,
+  type BackspaceIntoTitleDetail,
+} from './extensions/title-handoff';
 export {
   COMMENT_ADD_EVENT,
   COMMENT_OPEN_EVENT,
