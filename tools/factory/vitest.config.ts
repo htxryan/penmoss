@@ -9,5 +9,7 @@ export default defineConfig({
     testTimeout: 30_000,
     hookTimeout: 30_000,
     include: ['test/**/*.test.ts'],
+    // The run's temporary folders in one of its own, removed at the end (test/tmp-root.ts).
+    globalSetup: ['test/tmp-root.ts'],
   },
 });
