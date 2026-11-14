@@ -5,6 +5,7 @@
  * Every note command runs on a git notebook (T59, A1050): the one `--notebook` names, else the
  * only one on this machine.
  */
+import { notebookTag, parseNoteRef } from '@penmoss/core/note-ref';
 import { parseArgs, UsageError, type FlagSpec, type FlagValue } from './args';
 import { Context, type Command } from './command';
 import { cat, history, ls, open, search } from './commands/read';
@@ -156,7 +157,9 @@ export async function run(argv: readonly string[], io: Io): Promise<number> {
     if (NOTEBOOK_COMMANDS.has(command.name)) {
       const notebooks = notebooksOf(io);
       const name =
-        (parsed.flags['notebook'] as string | undefined) ?? (await onlyNotebook(notebooks));
+        (parsed.flags['notebook'] as string | undefined) ??
+        (await notebookOfRefs(notebooks, parsed.positionals)) ??
+        (await onlyNotebook(notebooks));
       await onNotebook(io, notebooks, command, name, parsed.positionals, parsed.flags);
       return EXIT.OK;
     }
@@ -188,6 +191,33 @@ export async function onlyNotebook(notebooks: NotebookIo): Promise<string> {
   }
   throw new UsageError(
     `${names.length} git notebooks are on this machine (${names.join(', ')}): pass --notebook <name>`,
+  );
+}
+
+/**
+ * The notebook a note command runs on without `--notebook` when it names a note by its short
+ * reference (PEN-69): the notebook the reference's first 4 characters name, among this machine's
+ * (a device's clone before an agent's). Null when no argument is a short reference.
+ */
+export async function notebookOfRefs(
+  notebooks: NotebookIo,
+  positionals: readonly string[],
+): Promise<string | null> {
+  const wanted = positionals
+    .map(parseNoteRef)
+    .flatMap((ref) => (ref.kind === 'short' ? [ref.notebook] : []))[0];
+  if (wanted === undefined) return null;
+  const clones = (await notebooks.list()).filter(
+    (entry) => entry.notebookId !== undefined && notebookTag(entry.notebookId) === wanted,
+  );
+  const best = clones.find((entry) => entry.writer.kind === 'device') ?? clones[0];
+  if (best) return best.name;
+  throw new CliError(
+    EXIT.NOT_FOUND,
+    `No git notebook on this machine holds ${wanted}-… notes.`,
+    'notebook_not_found',
+    { notebook: wanted },
+    ['List them with penmoss notebook ls, or add one with penmoss notebook add <remote>.'],
   );
 }
 
@@ -323,9 +353,11 @@ function mainHelp(): string {
     ]),
     '',
     'Note commands run on a git notebook: the one --notebook names, or, without it, the',
-    'only one on this machine (`penmoss notebook ls`). Add one with `penmoss notebook add`.',
+    'one a short id names, else the only one on this machine (`penmoss notebook ls`). Add',
+    'one with `penmoss notebook add`.',
     '',
-    'Notes are named by id or by exact title, ignoring the case of A–Z only. Content',
+    'Notes are named by id, by short id (K7QD-9HTF2CXA, from Copy Agent Reference) or by',
+    'exact title, ignoring the case of A–Z only. Content',
     'is read from stdin only where a command is given -, e.g.',
     '`echo "- done" | penmoss daily --append -`.',
     '',

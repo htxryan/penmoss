@@ -9,6 +9,7 @@
  * shows notes.
  */
 import { isUlid } from '@penmoss/core/ids';
+import { isShortNoteRef } from '@penmoss/core/note-ref';
 import { useLayoutEffect, useReducer, useSyncExternalStore, type MouseEvent } from 'react';
 import { noteWindowPath, openInMain, openNoteWindow } from './window/open';
 
@@ -98,12 +99,13 @@ export function parseRoute(pathname: string): Route {
   const note = NOTE_PATH.exec(pathname);
   if (note) {
     const id = decodePart(note[1]!);
-    if (id !== null && isUlid(id)) return { name: 'note', id };
+    // A short reference (PEN-69) opens too: NoteSourceScope replaces it with the note's id.
+    if (id !== null && (isUlid(id) || isShortNoteRef(id))) return { name: 'note', id };
   }
   const window = WINDOW_PATH.exec(pathname);
   if (window) {
     const id = decodePart(window[1]!);
-    if (id !== null && isUlid(id)) return { name: 'window', id };
+    if (id !== null && (isUlid(id) || isShortNoteRef(id))) return { name: 'window', id };
   }
   return { name: 'not-found' };
 }

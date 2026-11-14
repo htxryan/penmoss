@@ -49,7 +49,8 @@ export interface ToolOptions {
 export const ID: Schema = {
   type: 'string',
   maxLength: 80,
-  description: 'The note id (26 characters), from search_notes, list_recent or list_folder.',
+  description:
+    'The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder.',
 };
 export const FOLDER_ID: Schema = {
   type: 'string',
@@ -832,7 +833,8 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
 const THREAD_NOTE: Schema = {
   type: 'string',
   maxLength: 80,
-  description: 'The note id (26 characters), from search_notes, list_recent or list_folder.',
+  description:
+    'The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder.',
 };
 const THREAD: Schema = {
   type: 'string',

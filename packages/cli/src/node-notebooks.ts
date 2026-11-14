@@ -9,6 +9,7 @@
  * rewrites (`insteadOf`, `pushInsteadOf`) included (D62).
  */
 import { ulid } from '@penmoss/core';
+import { notebookTag } from '@penmoss/core/note-ref';
 import { LEASE_RETRY_MS, LeaseKeeper, MeaningIndex } from '@penmoss/core/search';
 import {
   GitNotebookEngine,
@@ -1054,6 +1055,14 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
       }
       const server = new LocalMcpServer(access, name, (text) => io.log(text), {
         meaning: meaningOn,
+        // A short reference of another notebook on this machine (PEN-69): its name, for the
+        // refusal to say which server reads it.
+        notebookNamed: async (tag) => {
+          const other = (await readRegistry()).notebooks.find(
+            (each) => each.notebookId !== undefined && notebookTag(each.notebookId) === tag,
+          );
+          return other ? (other.notebookName ?? other.name) : null;
+        },
         ...(channel
           ? {
               channel: true,
