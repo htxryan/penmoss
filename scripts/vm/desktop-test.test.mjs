@@ -197,12 +197,15 @@ test('--check: 75 while another run holds the VM, without waiting for it', async
   const { lockFile, run } = setUp(0);
   const holder = spawn('lockf', ['-k', lockFile, 'sleep', '30'], { stdio: 'ignore' });
   t.after(() => holder.kill());
-  // The lock is taken once lockf runs its command.
-  for (let i = 0; i < 100; i++) {
-    const free = spawnSync('lockf', ['-s', '-t', '0', lockFile, 'true']);
-    if (free.status !== 0) break;
-    await new Promise((resolve) => setTimeout(resolve, 20));
+  // The lock is taken once lockf runs its command. Wait for that by a deadline, not a count of
+  // tries: under `task check`'s load the holder can take seconds to start, and a run that went
+  // ahead with the lock still free would find the VM free (as a gate run once did).
+  let held = false;
+  for (const deadline = Date.now() + 20_000; !held && Date.now() < deadline;) {
+    held = spawnSync('lockf', ['-s', '-t', '0', lockFile, 'true']).status !== 0;
+    if (!held) await new Promise((resolve) => setTimeout(resolve, 20));
   }
+  assert.ok(held, 'the holder never took the lock');
   const r = run({}, ['--check']);
   assert.equal(r.status, 75);
   assert.match(r.stderr, /is busy with another run/);
