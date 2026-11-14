@@ -46,6 +46,7 @@ import { HiddenContent } from './extensions/hidden-content';
 import { BlockMath, InlineMath } from './extensions/math';
 import { PenmossTable, PenmossTableRow, TableShortcuts } from './extensions/table';
 import { imageExtension, type ImageServices } from './extensions/image';
+import { DrawingExtension, type DrawingServices } from './extensions/drawing';
 import { LinkShortcut } from './extensions/link-shortcut';
 import { SlashMenuExtension } from './extensions/slash-menu';
 import { SelectionToolbarExtension } from './extensions/bubble-toolbar';
@@ -192,6 +193,11 @@ export interface NoteExtensionsOptions {
   readonly symbolShortcut?: (index: number) => string | null;
   /** Comment threads (T48): highlights, and the toolbar's Comment button. Off by default. */
   readonly comments?: boolean;
+  /**
+   * The drawing editor (PEN-28): the slash menu's Drawing, and drawings that open on a click.
+   * Without it, drawings show as pictures.
+   */
+  readonly drawings?: DrawingServices;
 }
 
 /**
@@ -307,7 +313,8 @@ export function noteExtensions(options: NoteExtensionsOptions = {}): AnyExtensio
     CodeHighlight,
     // Ahead of images: a paste or drop with any non-image file is handled here, all of it.
     alignNode(attachmentExtension(options.files), 'attachment'),
-    imageExtension(options.images),
+    imageExtension(options.images, options.drawings),
+    DrawingExtension.configure({ services: options.drawings }),
     alignNode(Callout.configure({ foldState: options.foldState ?? memoryFoldState() }), 'callout'),
     alignNode(PenmossTable, 'table'),
     alignNode(PenmossTableRow, 'tableRow'),

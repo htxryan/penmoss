@@ -66,6 +66,7 @@ describe('filterBlockItems', () => {
       'embed',
       'image',
       'file',
+      'drawing',
       'symbol',
     ]);
     expect(filterBlockItems(BLOCK_ITEMS, '   ')).toEqual(all);

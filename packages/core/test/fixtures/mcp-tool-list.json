@@ -66,7 +66,7 @@
         "id": {
           "type": "string",
           "maxLength": 80,
-          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+          "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         },
         "heading": {
           "type": "string",
@@ -119,7 +119,7 @@
   {
     "name": "list_tags",
     "title": "List tags",
-    "description": "Without tag: every tag with how many notes have it. With tag: the notes that have it or a tag nested under it (newest first, at most 200; truncated: true when there are more).",
+    "description": "Without tag: every tag with how many notes have it, and its description when Ryan wrote one (what the tag means). With tag: the notes that have it or a tag nested under it (newest first, at most 200; truncated: true when there are more).",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -138,6 +138,31 @@
     }
   },
   {
+    "name": "describe_tags",
+    "title": "Describe tags",
+    "description": "What tags mean, in Ryan's words: each tag with its description (null when he wrote none), how many notes have it or a tag nested under it, and the descriptions of the tags above it (ancestors, outermost first) as context. A parent tag does not describe its children: each has its own. Without tags: every tag. With tags: those, and the tags nested under each. Read it before choosing tags for a note, or to understand what a tag in a search or a note is for.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "tags": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "description": "Tags, without #, e.g. [\"project/penmoss\"]; a parent includes its nested tags."
+        }
+      },
+      "additionalProperties": false
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false,
+      "title": "Describe tags"
+    }
+  },
+  {
     "name": "get_backlinks",
     "title": "Get backlinks",
     "description": "The notes that link to a note ([[its title]]), with the heading of each link, and the notes that mention its title without linking.",
@@ -147,7 +172,7 @@
         "id": {
           "type": "string",
           "maxLength": 80,
-          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+          "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         }
       },
       "required": [
@@ -193,7 +218,7 @@
         "id": {
           "type": "string",
           "maxLength": 80,
-          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+          "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         },
         "versionId": {
           "type": "integer",
@@ -304,7 +329,7 @@
         "id": {
           "type": "string",
           "maxLength": 80,
-          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+          "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         },
         "markdown": {
           "type": "string",
@@ -344,7 +369,7 @@
         "id": {
           "type": "string",
           "maxLength": 80,
-          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+          "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         },
         "heading": {
           "type": "string",
@@ -395,7 +420,7 @@
         "id": {
           "type": "string",
           "maxLength": 80,
-          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+          "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         },
         "find": {
           "type": "string",
@@ -448,7 +473,7 @@
         "id": {
           "type": "string",
           "maxLength": 80,
-          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+          "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         },
         "title": {
           "type": "string",
@@ -492,7 +517,7 @@
         "id": {
           "type": "string",
           "maxLength": 80,
-          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+          "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         },
         "folderId": {
           "type": [
@@ -526,7 +551,7 @@
         "id": {
           "type": "string",
           "maxLength": 80,
-          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+          "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         }
       },
       "required": [
@@ -552,7 +577,7 @@
         "id": {
           "type": "string",
           "maxLength": 80,
-          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+          "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         }
       },
       "required": [
@@ -765,7 +790,7 @@
         "id": {
           "type": "string",
           "maxLength": 80,
-          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+          "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         }
       },
       "required": [
@@ -791,7 +816,7 @@
         "id": {
           "type": "string",
           "maxLength": 80,
-          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+          "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         },
         "versionId": {
           "type": "integer",
@@ -823,7 +848,7 @@
         "id": {
           "type": "string",
           "maxLength": 80,
-          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+          "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         },
         "versionId": {
           "type": "integer",
@@ -855,7 +880,7 @@
         "id": {
           "type": "string",
           "maxLength": 80,
-          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+          "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         },
         "name": {
           "type": "string",
@@ -981,7 +1006,7 @@
         "id": {
           "type": "string",
           "maxLength": 80,
-          "description": "The note id (26 characters), from search_notes, list_recent or list_folder."
+          "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         },
         "add": {
           "type": "array",

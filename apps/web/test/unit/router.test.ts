@@ -10,6 +10,17 @@ describe('parseRoute', () => {
     expect(parseRoute('/trash')).toEqual({ name: 'trash' });
   });
 
+  // PEN-69: a note's short id opens it (NoteSourceScope finds the note, then replaces the path).
+  it('opens a note and its window by a short id too', () => {
+    expect(parseRoute('/notes/K7QD-9HTF2CXA')).toEqual({ name: 'note', id: 'K7QD-9HTF2CXA' });
+    expect(parseRoute(`/notes/K7QD-${ID}`)).toEqual({ name: 'note', id: `K7QD-${ID}` });
+    expect(parseRoute('/window/notes/K7QD-9HTF2CXA')).toEqual({
+      name: 'window',
+      id: 'K7QD-9HTF2CXA',
+    });
+    expect(parseRoute('/notes/K7QD-9HTF2C')).toEqual({ name: 'not-found' });
+  });
+
   // T59 (D49): the server's pages went with it.
   it('has no devices, link, sign-in, sync or mirror pages', () => {
     for (const path of [

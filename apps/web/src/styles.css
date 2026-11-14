@@ -2109,6 +2109,19 @@ a {
   display: none !important;
 }
 
+/*
+ * Drawings (PEN-28): a drawing's SVG shows as a picture does, and a click opens it where the app
+ * has the drawing editor (it then has a title). Its white background turns dark in dark mode, as
+ * Excalidraw's own canvas does.
+ */
+.note-body .pm-drawing[title] img {
+  cursor: pointer;
+}
+
+:root[data-mode='dark'] .note-body .pm-drawing img {
+  filter: invert(93%) hue-rotate(180deg);
+}
+
 .pm-image-tools .pm-image-lightbox {
   padding: 0.2rem 0.55rem;
   border: 1px solid var(--pm-border);
@@ -3938,6 +3951,110 @@ button.history-entry:hover {
 
 .trash-status:empty {
   display: none;
+}
+
+/*
+ * The Tags page (PEN-68): Trash's column, every tag as an indented tree, each with its name, its
+ * note count and its description, a field that grows with what is typed.
+ */
+.tags-page {
+  box-sizing: border-box;
+  width: min(44rem, 100%);
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+
+.tags-page h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+  letter-spacing: -0.015em;
+}
+
+.tags-page-lede {
+  margin: 0 0 1.25rem;
+  font-size: var(--pm-text-sm);
+}
+
+.tags-page-notebook + .tags-page-notebook {
+  margin-top: 2rem;
+}
+
+.tags-page-notebook-name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.5rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--pm-border);
+  font-size: var(--pm-text-md);
+}
+
+.tags-page-tree {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tags-page-item {
+  padding: 0.5rem 0 0.25rem;
+}
+
+.tags-page-tree .tags-page-tree {
+  margin-top: 0.25rem;
+  padding-left: 1.25rem;
+  border-left: 1px solid var(--pm-border-soft);
+}
+
+.tags-page-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.tags-page-name {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.15rem;
+  min-width: 0;
+  min-height: 1.5rem;
+  padding: 0 0.25rem 0 0;
+  border: 0;
+  background: none;
+  color: var(--pm-fg);
+  font: inherit;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.tags-page-name:hover {
+  color: var(--pm-accent);
+}
+
+.tags-page-name .tag-hash {
+  width: auto;
+}
+
+.tags-page-count {
+  flex: none;
+  font-size: var(--pm-text-xs);
+}
+
+.input.tags-page-description {
+  display: block;
+  height: auto;
+  min-height: var(--pm-control);
+  margin-top: 0.3rem;
+  padding: 0.4rem 0.6rem;
+  resize: vertical;
+  field-sizing: content;
+  line-height: 1.45;
+}
+
+.tags-page-none {
+  margin: 0.5rem 0 0;
+  font-size: var(--pm-text-sm);
 }
 
 .trash-list {

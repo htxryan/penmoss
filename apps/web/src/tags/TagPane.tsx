@@ -6,6 +6,7 @@ import { useStoredCollapse } from '../shell/collapsed';
 import { useOpenNoteList } from '../workspace/notebooks';
 import { tagFilter, useTagFilter } from './filter';
 import { SectionHead } from '../shell/SectionHead';
+import { linkHandler } from '../router';
 
 /** Whether the Tags panel is collapsed on this device (T51, A934). */
 export const TAGS_COLLAPSED_KEY = 'penmoss.sidebar.tags';
@@ -223,5 +224,27 @@ function RenameTag({
         </p>
       ) : null}
     </form>
+  );
+}
+
+/**
+ * The Tags page (PEN-68) from the Tags section's title row, first among its tools: where each
+ * tag's description is written.
+ */
+export function TagsPageLink({ current }: { readonly current: boolean }) {
+  return (
+    <a
+      className="icon-btn"
+      data-ui="item"
+      href="/tags"
+      data-command="app.tags"
+      aria-label="Open the Tags Page"
+      aria-current={current ? 'page' : undefined}
+      data-tip="Open the Tags Page"
+      data-testid="open-tags-page"
+      onClick={linkHandler('/tags')}
+    >
+      <Icon name="list" size={14} />
+    </a>
   );
 }

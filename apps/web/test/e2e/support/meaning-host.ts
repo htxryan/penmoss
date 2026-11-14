@@ -121,6 +121,10 @@ export class MeaningHost {
     return this.service.update(notebookId, notes);
   }
 
+  close(notebookId: string): Promise<void> {
+    return this.service.close(notebookId);
+  }
+
   async search(
     notebookId: string,
     query: string,

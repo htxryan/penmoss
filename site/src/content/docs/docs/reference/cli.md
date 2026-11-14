@@ -72,7 +72,7 @@ Every note command accepts `--json`, `--notebook <name>` and `--no-sync`. `penmo
 
 ### Naming notes and folders
 
-- **A note** is its id (26 characters) or its exact title. Titles match ignoring the case of A–Z only. No match exits 4; several exit 6 and list their ids.
+- **A note** is its id (26 characters), its short id (such as `K7QD-9HTF2CXA`, from **Copy Agent Reference**) or its exact title. Titles match ignoring the case of A–Z only. No match exits 4; several exit 6 and list their ids. A short id names its notebook too, so `--notebook` can be left out: `penmoss cat K7QD-9HTF2CXA` finds the notebook on this Mac.
 - **A folder** is its path from the top, such as `Journal/2026` (ignoring case), its id, or `/` for the top level.
 
 ### Input

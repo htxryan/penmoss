@@ -246,6 +246,24 @@
       }
     },
     {
+      "id": "app.tags",
+      "title": "Tags",
+      "area": "Navigation",
+      "scope": "global",
+      "android": {
+        "na": "Describing tags is the Mac's (PEN-68): the phone's Tags lists them and their notes"
+      }
+    },
+    {
+      "id": "app.timeMachine",
+      "title": "Time Machine",
+      "area": "Navigation",
+      "scope": "global",
+      "android": {
+        "na": "The Time Machine is the Mac app's for now (PEN-21: Android is not in its first version); a note's History is on the phone."
+      }
+    },
+    {
       "id": "note.openInNewWindow",
       "title": "Open in New Window",
       "area": "Note",
@@ -1260,6 +1278,15 @@
       "scope": "editor",
       "android": {
         "elsewhere": "The format bar's Attach a file (ED12)"
+      }
+    },
+    {
+      "id": "editor.insert.drawing",
+      "title": "Insert: Drawing",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "na": "The phone shows drawings but has no drawing editor: they are made in the Mac app (PEN-28)"
       }
     },
     {

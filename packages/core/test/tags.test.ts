@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  cleanTagDescription,
   cleanTags,
+  describeTags,
   inlineTagEdits,
   inlineTagRanges,
   inlineTags,
@@ -9,6 +11,7 @@ import {
   tagAncestors,
   tagMatches,
   tagTree,
+  TAG_DESCRIPTION_MAX,
 } from '../src/tags';
 import { fixtures } from './support/fixtures';
 
@@ -92,5 +95,60 @@ describe('renaming', () => {
       out = out.slice(0, edit.index) + edit.text + out.slice(edit.index + edit.length);
     }
     expect(out).toBe('Cook #home/cooking and #home, not #areas or C#area');
+  });
+});
+
+describe('describeTags (PEN-68)', () => {
+  const notes = [['project/penmoss'], ['project/penmoss/android', 'garden'], ['project/other']];
+  const descriptions = {
+    project: 'Work with an end.',
+    'project/penmoss': ' The notes app. ',
+    unused: 'No note has it.',
+  };
+
+  it('gives every tag and level with its description, count and described parents', () => {
+    expect(describeTags(notes, descriptions)).toEqual([
+      { name: 'garden', description: null, notes: 1, ancestors: [] },
+      { name: 'project', description: 'Work with an end.', notes: 3, ancestors: [] },
+      {
+        name: 'project/other',
+        description: null,
+        notes: 1,
+        ancestors: [{ name: 'project', description: 'Work with an end.' }],
+      },
+      {
+        name: 'project/penmoss',
+        description: 'The notes app.',
+        notes: 2,
+        ancestors: [{ name: 'project', description: 'Work with an end.' }],
+      },
+      {
+        name: 'project/penmoss/android',
+        description: null,
+        notes: 1,
+        ancestors: [
+          { name: 'project', description: 'Work with an end.' },
+          { name: 'project/penmoss', description: 'The notes app.' },
+        ],
+      },
+    ]);
+  });
+
+  it('gives the wanted tags and those nested under each, and a wanted tag no note has', () => {
+    expect(describeTags(notes, descriptions, ['project/penmoss']).map((t) => t.name)).toEqual([
+      'project/penmoss',
+      'project/penmoss/android',
+    ]);
+    expect(describeTags(notes, descriptions, ['unused', 'nothing'])).toEqual([
+      { name: 'nothing', description: null, notes: 0, ancestors: [] },
+      { name: 'unused', description: 'No note has it.', notes: 0, ancestors: [] },
+    ]);
+  });
+
+  it('keeps a description within its limit, and none for blank text', () => {
+    expect(cleanTagDescription('  ')).toBeNull();
+    expect(cleanTagDescription('x'.repeat(TAG_DESCRIPTION_MAX + 1))).toHaveLength(
+      TAG_DESCRIPTION_MAX,
+    );
   });
 });

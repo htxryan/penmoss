@@ -1,7 +1,8 @@
 ---
 /**
  * The privacy policy (T80.11), linked from the Play listing, rewritten for the public apps (D64):
- * no telemetry; updates, downloads and Sign in with GitHub go to github.com; search by meaning
+ * no telemetry in the apps; the website counts page views with Cloudflare Web Analytics (PEN-123);
+ * updates, downloads and Sign in with GitHub go to github.com; search by meaning
  * downloads its model from Hugging Face once; Send feedback uses the visitor's own GitHub token.
  * Keep docs/android.md's Play Data safety answers in step, and change the date with the text.
  */
@@ -11,11 +12,11 @@ import { REPOSITORY } from '../site';
 
 <SiteLayout
   title="Privacy policy · Penmoss"
-  description="Penmoss has no server, no account and no analytics. Your notes stay on your devices and in a git repository you choose."
+  description="The Penmoss apps have no server, no account and no analytics. Your notes stay on your devices and in a git repository you choose."
 >
   <article class="wrap prose">
     <h1>Privacy policy</h1>
-    <p class="meta">Effective 7 November 2026</p>
+    <p class="meta">Effective 14 November 2026</p>
 
     <p>
       Penmoss is a free, open source notes app for the Mac, Android and the command line. It is made
@@ -26,8 +27,8 @@ import { REPOSITORY } from '../site';
     <p>
       <strong>In short.</strong> Penmoss has no server and no account. Your notes stay on your devices
       and in a git repository that you choose and control. The developer does not receive your
-      notes. There are no ads, no analytics and no tracking, in the apps or on this website, and
-      nothing is sold or shared for anyone else&rsquo;s use.
+      notes. There are no ads, no analytics and no tracking in the apps, and nothing is sold or
+      shared for anyone else&rsquo;s use. This website only counts page views, without cookies.
     </p>
 
     <h2>Where your notes are</h2>
@@ -90,8 +91,10 @@ import { REPOSITORY } from '../site';
       </li>
     </ul>
     <p>
-      Penmoss sends no analytics, no crash reports and no usage data to the developer or anyone else.
-      This website sets no cookies and loads nothing from any other site.
+      The apps send no analytics, no crash reports and no usage data to the developer or anyone else.
+      This website counts page views with Cloudflare Web Analytics, which totals the pages opened,
+      the sites visitors came from, their browsers and countries, sets no cookies, and gets nothing
+      from the apps; it is the only thing the website loads from another site.
     </p>
 
     <h2>The developer&rsquo;s own relay</h2>

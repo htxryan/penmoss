@@ -48,6 +48,12 @@ object NodeGitRunner {
     /** An edit of the note's title on top of [updates]: the pending update the editor would store. */
     fun retitle(id: String, title: String, updates: List<String>): String = run("retitle", id, title, *updates.toTypedArray())
 
+    /**
+     * The Mac app's writer on a fresh clone in [dir] describes tags (PEN-68: [pairs] are tag,
+     * text, tag, text…) and pushes; with no pairs, what an agent's `describe_tags` reads, as JSON.
+     */
+    fun describe(remote: String, dir: File, vararg pairs: String): String = run("describe", remote, dir.absolutePath, *pairs)
+
     private fun run(vararg args: String): String {
         val process = node(*args).start()
         process.outputStream.close()

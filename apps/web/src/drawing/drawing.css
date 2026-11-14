@@ -1,0 +1,86 @@
+/*
+ * The drawing editor (PEN-28): Excalidraw over the whole window, under a bar with Done and Cancel.
+ * Loaded with the editor's chunk, the first time a drawing opens. Above the lightbox and menus,
+ * below tooltips.
+ */
+.drawing-editor {
+  position: fixed;
+  z-index: 115;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+}
+
+.drawing-editor-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3rem;
+  box-sizing: border-box;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--pm-border);
+  background: var(--pm-sidebar);
+}
+
+/* The Mac app's compact title bar: the traffic lights keep their room (A722). */
+:root[data-titlebar='compact'] .drawing-editor-bar {
+  min-height: var(--pm-titlebar-row);
+  padding-left: var(--pm-titlebar-inset);
+}
+
+.drawing-editor-title {
+  font-weight: 600;
+}
+
+.drawing-editor-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.drawing-editor-actions button {
+  min-width: 5rem;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 6px;
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.drawing-editor-actions button:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--pm-raised), var(--pm-fg) 8%);
+}
+
+.drawing-editor-actions .drawing-editor-done {
+  border-color: var(--pm-accent);
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
+}
+
+.drawing-editor-actions .drawing-editor-done:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--pm-accent), var(--pm-fg) 12%);
+}
+
+.drawing-editor-actions button:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.drawing-editor-actions button:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 2px;
+}
+
+.drawing-editor-canvas {
+  position: relative;
+  min-height: 0;
+}
+
+/* Excalidraw's libraries are not part of Penmoss's drawings (PEN-28): no Library button. */
+.drawing-editor .default-sidebar-trigger {
+  display: none;
+}

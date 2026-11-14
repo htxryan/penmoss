@@ -19,6 +19,12 @@ export interface TreeTrash {
   readonly current: boolean;
 }
 
+/** A notebook's Time Machine (PEN-21): where it is, and whether it is the page showing. */
+export interface TreeTimeMachine {
+  readonly href: string;
+  readonly current: boolean;
+}
+
 /**
  * A notebook's actions, on its name's row (T53 item 4): New Note at its top level, the sort order
  * (a menu), New Folder and its Trash. They show while the pointer is over the row or focus is in
@@ -30,10 +36,12 @@ export function TreeActions({
   currentFolder,
   onCurrentFolderChange,
   trash,
+  timeMachine,
 }: {
   readonly currentFolder: string | null;
   readonly onCurrentFolderChange: (folderId: string | null) => void;
   readonly trash?: TreeTrash | undefined;
+  readonly timeMachine?: TreeTimeMachine | undefined;
 }) {
   const notes = useNotes();
   const workspace = useWorkspace();
@@ -108,6 +116,20 @@ export function TreeActions({
       >
         <Icon name="folderPlus" />
       </button>
+      {timeMachine ? (
+        <a
+          className="icon-btn"
+          href={timeMachine.href}
+          data-ui="item"
+          aria-label="Time Machine"
+          data-tip="Time Machine"
+          data-testid="section-time-machine"
+          aria-current={timeMachine.current ? 'page' : undefined}
+          onClick={linkHandler(timeMachine.href)}
+        >
+          <Icon name="history" />
+        </a>
+      ) : null}
       {trash ? (
         <a
           className="icon-btn"

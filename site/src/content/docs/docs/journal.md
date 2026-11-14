@@ -14,7 +14,7 @@ Daily and weekly notes go in your [Primary Notebook](/docs/organise/#the-primary
 
 If the note does not exist yet, Penmoss makes it from the template. So does any other device, or an agent, that asks for the same day: every device makes the same note, and they merge into one.
 
-Above a daily note are the previous and next day, the date, and a **Week** button for its week. Above a weekly note are the previous and next week and its seven days. Choosing a day that has no note makes it. The commands **Previous Day or Week**, **Next Day or Week** and **The Week of This Daily Note** do the same from the keyboard.
+Above a daily note are the previous and next day, the date, and a **Week** button for its week. Above a weekly note are the previous and next week and its seven days. Choosing a day that has no note makes it. Under a weekly note's title, **What changed this week** opens the [Time Machine](/docs/time-machine/#what-changed) on that week. The commands **Previous Day or Week**, **Next Day or Week** and **The Week of This Daily Note** do the same from the keyboard.
 
 ## The calendar
 

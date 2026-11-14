@@ -1,11 +1,12 @@
 /**
  * Naming notes and folders on the command line (A162). A note is its id (a
- * ULID) or its exact title, ignoring the case of A–Z only (SQLite's NOCASE,
+ * ULID), its short reference (`K7QD-9HTF2CXA`, PEN-69) or its exact title, ignoring the case of A–Z only (SQLite's NOCASE,
  * A175: "Écoles" does not match "écoles"), looked up in the index (which
  * trails edits by a few seconds); a title several notes share is an error
  * listing them. A folder is `/` (the top level), its path (`Projects/Garden`,
  * ignoring case) or its id.
  */
+import { isShortNoteRef } from '@penmoss/core/note-ref';
 import type { Client } from './client';
 import { ApiError, CliError, EXIT } from './errors';
 import { when } from './format';
@@ -31,6 +32,11 @@ export async function resolveNote(api: Client, ref: string): Promise<NoteRef> {
   const name = ref.trim();
   if (!name) throw new CliError(EXIT.USAGE, 'a note id or title is required', 'invalid_request');
   if (ULID.test(name)) return { id: name.toUpperCase(), title: null };
+  // A short reference (PEN-69, `K7QD-9HTF2CXA`): the notebook finds the note it names.
+  if (isShortNoteRef(name)) {
+    const { notes: named } = await api.get<{ notes: Listed[] }>('/api/notes', { ref: name });
+    return { id: named[0]!.id, title: named[0]!.title };
+  }
   const { notes: found } = await api.get<{ notes: Listed[] }>('/api/notes', {
     title: name,
     limit: MAX_LISTED + 1,

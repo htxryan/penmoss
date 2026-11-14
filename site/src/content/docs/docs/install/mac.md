@@ -92,7 +92,7 @@ Every command is in the menus, with its current shortcut:
 
 ## Links into Penmoss
 
-A `penmoss://note/<id>` link opens that note in Penmoss, from any app; `penmoss://capture` opens the capture window. **Copy Agent Reference** and `penmoss open <note> --print` give a note's link. Web links in notes open in your browser.
+A `penmoss://note/<id>` link opens that note in Penmoss, from any app, with its 26-character id or its short id (such as `penmoss://note/K7QD-9HTF2CXA`); `penmoss://capture` opens the capture window. `penmoss open <note> --print` gives a note's link. Web links in notes open in your browser.
 
 ## The owner check
 

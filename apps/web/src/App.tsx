@@ -52,7 +52,9 @@ import { JournalCommands } from './journal/PeriodNav';
 import { tagFilter, useTagFilter } from './tags/filter';
 import { TaggedNotes } from './tags/TaggedNotes';
 import { TrashView } from './trash/TrashView';
-import { TagPane } from './tags/TagPane';
+import { TagPane, TagsPageLink } from './tags/TagPane';
+import { TagsPage, type ShowTag } from './tags/TagsPage';
+import { TimeMachinePage } from './time-machine/TimeMachinePage';
 import { FolderTree } from './workspace/FolderTree';
 import { TreeActions } from './workspace/TreeActions';
 import { RecentSection } from './notes/RecentSection';
@@ -331,6 +333,14 @@ function NotesShell({
   useCommand('app.graph', () => navigate(graphPath(openNote)));
 
   const tag = useTagFilter();
+  // A tag's name on the Tags page (PEN-68): its notes in the sidebar, in its notebook.
+  const showTag: ShowTag = (sourceId, chosen) => {
+    if (sourceId !== null && sourceId !== currentSource) {
+      setCurrentSource(sourceId);
+      setCurrentFolder(null);
+    }
+    tagFilter.set(chosen);
+  };
   // The update notice: in the sidebar's bottom panel or on the rail, a toast where the sidebar
   // is a drawer (PEN-135 item 10).
   const updateNotice = useUpdateNotice();
@@ -409,6 +419,8 @@ function NotesShell({
             {/* The sections in the person's order, each hidden or shown (T53 item 8, A983). */}
             <SidebarSections
               layout={layout}
+              // The Tags page from the Tags section's title row (PEN-68).
+              leads={{ tags: <TagsPageLink current={route.name === 'tags'} /> }}
               render={{
                 // The pinned notes (T51, A946).
                 quickAccess: (tools) => (
@@ -581,6 +593,23 @@ function NotesShell({
                 }
               />
               <TrashView />
+            </InSource>
+          ) : route.name === 'tags' ? (
+            <>
+              <AppBar title="Tags" />
+              <TagsPage onShowTag={showTag} />
+            </>
+          ) : route.name === 'time-machine' ? (
+            // A git notebook's past (PEN-21): `/time-machine?source=<id>`, the Journal's without.
+            <InSource
+              source={
+                sourcesRegistry?.sourceById(params.get('source') ?? '') ??
+                sourcesState?.journal ??
+                null
+              }
+            >
+              <AppBar title="Time Machine" />
+              <TimeMachinePage params={params} />
             </InSource>
           ) : route.name === 'not-found' ? (
             <>

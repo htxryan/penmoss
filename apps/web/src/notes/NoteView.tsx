@@ -37,6 +37,7 @@ import {
 } from 'react';
 import { useCommand, useCommands, useKeys } from '../commands/hooks';
 import { Kbd } from '../commands/Kbd';
+import { drawingServices } from '../drawing/drawings';
 import { navigate } from '../router';
 import { InfoPanel, PinnedMetadata, StatusBar } from './NoteInfo';
 import { useNoteMetadataSettings } from './metadata-state';
@@ -66,6 +67,7 @@ import {
   type QueuedEnter,
 } from './title-field';
 import { PeriodNav } from '../journal/PeriodNav';
+import { WeekChangesLink } from '../time-machine/WeekChangesLink';
 import { UnsupportedNote } from './UnsupportedNote';
 import { AppBar } from '../shell/AppBar';
 import { withKeys } from '../shell/drawer';
@@ -461,6 +463,12 @@ export function NoteView({
           release: (src) => notes.attachments.release(src),
           onError: (message) => created?.host?.notice(message),
         };
+        // Drawings (PEN-28): Excalidraw, loaded the first time one opens; its files are
+        // attachments like the rest.
+        const drawings = drawingServices(notes.attachments, {
+          onError: (message) => created?.host?.notice(message),
+          suspendShortcuts: () => commands.suspend(),
+        });
         // The editor's own element: it moves to whichever view shows the note next. In the
         // page before the editor is made, as node views may measure.
         const element = document.createElement('div');
@@ -474,6 +482,7 @@ export function NoteView({
             extensions: noteExtensions({
               images: files,
               files,
+              drawings,
               foldState: localFoldState(id, browserFoldStorage()),
               links,
               // Line symbols (T44): the synced list, Settings → Symbols, and each slot's keys.
@@ -848,7 +857,7 @@ export function NoteView({
   useCommand('note.copyRich', () => copyNote('rich'));
   // T52 item 4: what an agent needs to find this note through the Penmoss MCP server.
   useCommand('note.copyAgentReference', () => {
-    void copyAgentReference(id, titleRef.current?.value ?? title).then((done) =>
+    void copyAgentReference(id).then((done) =>
       showCopied(done ? COPIED_AGENT_REFERENCE : 'Could not copy the agent reference', done),
     );
   });
@@ -1190,6 +1199,8 @@ export function NoteView({
               onInput={(event) => fitHeight(event.currentTarget)}
               data-testid="note-title"
             />
+            {/* A weekly note's week in the Time Machine (PEN-21). */}
+            <WeekChangesLink replica={replica} />
             {/* The fields pinned under the title in Settings → Display (T62 item 4). */}
             <PinnedMetadata
               noteId={id}

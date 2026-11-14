@@ -1,6 +1,7 @@
 import { Icon } from '@penmoss/ui/icons';
 import { useId, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { gitNotebookPath, linkHandler, useLocation } from '../router';
+import { TIME_MACHINE_PATH, timeMachinePath } from '../time-machine/path';
 import { FolderTree } from '../workspace/FolderTree';
 import { TreeActions } from '../workspace/TreeActions';
 import type { GitSyncStatus } from './engine-host';
@@ -131,6 +132,10 @@ export function SourceSection({
   const trashOpen =
     location.pathname === '/trash' &&
     new URLSearchParams(location.search).get('source') === source.id;
+  const timeMachine = timeMachinePath(source.id);
+  const timeMachineOpen =
+    location.pathname === TIME_MACHINE_PATH &&
+    new URLSearchParams(location.search).get('source') === source.id;
   return (
     <section
       className="sb-section sb-source"
@@ -167,6 +172,7 @@ export function SourceSection({
           currentFolder={currentFolder}
           onCurrentFolderChange={onCurrentFolderChange}
           trash={{ href: trash, testId: 'section-trash', current: trashOpen }}
+          timeMachine={{ href: timeMachine, current: timeMachineOpen }}
         />
         <GitSectionStatus source={source} />
       </header>
