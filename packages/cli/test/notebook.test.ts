@@ -980,7 +980,7 @@ describe('penmoss mcp --notebook', () => {
       .split('\n')
       .map((line) => JSON.parse(line) as McpReply);
     expect(replies.map((reply) => reply.id)).toEqual([1, 2, 3, 4, 5]);
-    expect(replies[1]!.result.tools).toHaveLength(34);
+    expect(replies[1]!.result.tools).toHaveLength(35);
     expect(replies[2]!.result.structuredContent).toMatchObject({ created: true, changed: true });
     expect(replies[3]!.result.structuredContent?.results?.[0]?.title).toBe('From the agent');
     expect(replies[4]!.result.isError).toBe(true);
@@ -1278,7 +1278,7 @@ describe('penmoss mcp --notebook', () => {
       },
     ]);
     const tools = messages.find((m) => m['id'] === 2) as unknown as McpReply;
-    expect(tools.result.tools).toHaveLength(34);
+    expect(tools.result.tools).toHaveLength(35);
 
     // Read by Claude in a new run: seen, pushed at once (no detach, nothing left).
     const read = await cli(['mcp', '--notebook', 'nb', '--channel', '--name', 'laptop:/garden'], {

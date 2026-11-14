@@ -147,3 +147,66 @@ export function tagTree(notes: Iterable<readonly string[]>): TagNode[] {
       }));
   return build(null);
 }
+
+/** The longest tag description kept (PEN-68): a paragraph or two of meaning, never a note. */
+export const TAG_DESCRIPTION_MAX = 2000;
+
+/** A description as it is kept: within the limit; null when it has no text (no entry). */
+export function cleanTagDescription(text: string): string | null {
+  const kept = text.slice(0, TAG_DESCRIPTION_MAX);
+  return kept.trim() === '' ? null : kept;
+}
+
+/** One tag as `describe_tags` gives it (PEN-68). */
+export interface DescribedTag {
+  readonly name: string;
+  /** What Ryan wrote it means; null when he wrote nothing. */
+  readonly description: string | null;
+  /** Notes with this tag or one nested under it. */
+  readonly notes: number;
+  /** Its parents' descriptions, outermost first: only the parents that have one. */
+  readonly ancestors: ReadonlyArray<{ readonly name: string; readonly description: string }>;
+}
+
+/**
+ * Tags with their descriptions (PEN-68): every tag and every level above one (as `tagTree`),
+ * or only `wanted` and the tags nested under each. A wanted tag no note has is still given, with
+ * no notes. Sorted by name.
+ */
+export function describeTags(
+  notes: Iterable<readonly string[]>,
+  descriptions: Readonly<Record<string, string>>,
+  wanted?: readonly string[],
+): DescribedTag[] {
+  const counts = new Map<string, number>();
+  const walk = (nodes: readonly TagNode[]) => {
+    for (const node of nodes) {
+      counts.set(node.tag, node.count);
+      walk(node.children);
+    }
+  };
+  walk(tagTree(notes));
+  const described = (tag: string): string | null => {
+    const text = Object.hasOwn(descriptions, tag) ? descriptions[tag]! : '';
+    return text.trim() === '' ? null : text.trim();
+  };
+  const names = new Set<string>();
+  if (wanted === undefined) for (const tag of counts.keys()) names.add(tag);
+  else {
+    for (const want of wanted) {
+      names.add(want);
+      for (const tag of counts.keys()) if (tagMatches(tag, want)) names.add(tag);
+    }
+  }
+  return [...names].sort().map((name) => ({
+    name,
+    description: described(name),
+    notes: counts.get(name) ?? 0,
+    ancestors: tagAncestors(name)
+      .slice(0, -1)
+      .flatMap((parent) => {
+        const text = described(parent);
+        return text === null ? [] : [{ name: parent, description: text }];
+      }),
+  }));
+}

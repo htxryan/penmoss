@@ -312,12 +312,31 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
       name: 'list_tags',
       title: 'List tags',
       description:
-        'Without tag: every tag with how many notes have it. With tag: the notes that have it or a tag nested under it (newest first, at most 200; truncated: true when there are more).',
+        'Without tag: every tag with how many notes have it, and its description when Ryan wrote one (what the tag means). With tag: the notes that have it or a tag nested under it (newest first, at most 200; truncated: true when there are more).',
       inputSchema: object({
         tag: { type: 'string', maxLength: 200, description: 'A tag, without #.' },
       }),
       write: false,
       annotations: { ...READ, title: 'List tags' },
+    },
+    {
+      name: 'describe_tags',
+      title: 'Describe tags',
+      description:
+        "What tags mean, in Ryan's words: each tag with its description (null when he wrote none), how many notes have it or a tag nested under it, and the descriptions of the tags above it (ancestors, outermost first) as context. " +
+        'A parent tag does not describe its children: each has its own. Without tags: every tag. With tags: those, and the tags nested under each. ' +
+        'Read it before choosing tags for a note, or to understand what a tag in a search or a note is for.',
+      inputSchema: object({
+        tags: {
+          type: 'array',
+          maxItems: 100,
+          items: { type: 'string', maxLength: 200 },
+          description:
+            'Tags, without #, e.g. ["project/penmoss"]; a parent includes its nested tags.',
+        },
+      }),
+      write: false,
+      annotations: { ...READ, title: 'Describe tags' },
     },
     {
       name: 'get_backlinks',

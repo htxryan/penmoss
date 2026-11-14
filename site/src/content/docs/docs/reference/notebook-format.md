@@ -23,7 +23,7 @@ notes/                       the notebook's folder (or the top of the repository
 └── .penmoss/
     ├── notebook.json        the notebook's id, name and format
     ├── actors/              one file per device or agent that writes
-    ├── workspace/           the folder tree, Trash and settings
+    ├── workspace/           the folder tree, Trash, tag descriptions and settings
     └── notes/               each note's edit history
 ```
 
@@ -57,7 +57,7 @@ The markdown files are what you read; the `.penmoss` folder is what Penmoss sync
 
 - `notebook.json` holds the notebook's id, name and format version.
 - `actors/` names each writer: a device such as your Mac, or an agent such as Claude Code.
-- `workspace/` holds the folder tree, sort orders, Trash, the notebook's settings (time zone and templates), your app settings and agents' sessions.
+- `workspace/` holds the folder tree, sort orders, Trash, what each tag means, the notebook's settings (time zone and templates), your app settings and agents' sessions.
 - `notes/<id>/` holds each note's history of edits and its comment threads.
 
 Leave the `.penmoss` folder as it is: it is the notebook.

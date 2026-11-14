@@ -123,6 +123,7 @@ const DESCRIPTIONS: Readonly<Record<string, string>> = {
 
 export const LOCAL_INSTRUCTIONS = `This is one of Ryan's git notebooks: notes that sync only through a git repository, never through the Penmoss server. Markdown with a title, tags (nested with /), headings, [[wikilinks]] between notes, folders, and a daily and weekly journal.
 - Find notes with search_notes (words only here), list_recent, list_folder or list_tags; read one with read_note.
+- Ryan describes what some tags mean: describe_tags gives each tag's description, and its parents'. Read them before choosing tags for a note or to know what a tag is for.
 - Every read returns a baseVersion. Pass it to your next edit of that note; update_section and replace_text require it. Each edit returns the next baseVersion.
 - An edit refused with a conflict means the part changed since you read it: call read_note again and redo the edit on the current text. Never retry blindly.
 - For today's journal call get_daily_note (it creates the day's note from the notebook's template, in its time zone), then append_to_note, optionally under one of its headings.
@@ -133,6 +134,7 @@ export const LOCAL_INSTRUCTIONS = `This is one of Ryan's git notebooks: notes th
 /** `LOCAL_INSTRUCTIONS` where search by meaning is set up (A1156). */
 export const LOCAL_MEANING_INSTRUCTIONS = `This is one of Ryan's git notebooks: notes that sync only through a git repository, never through the Penmoss server. Markdown with a title, tags (nested with /), headings, [[wikilinks]] between notes, folders, and a daily and weekly journal.
 - Find notes with search_notes (by their words and their meaning: describe what you are looking for in your own words), list_recent, list_folder or list_tags; read one with read_note.
+- Ryan describes what some tags mean: describe_tags gives each tag's description, and its parents'. Read them before choosing tags for a note or to know what a tag is for.
 - Every read returns a baseVersion. Pass it to your next edit of that note; update_section and replace_text require it. Each edit returns the next baseVersion.
 - An edit refused with a conflict means the part changed since you read it: call read_note again and redo the edit on the current text. Never retry blindly.
 - For today's journal call get_daily_note (it creates the day's note from the notebook's template, in its time zone), then append_to_note, optionally under one of its headings.
@@ -362,6 +364,16 @@ const HANDLERS: Readonly<Record<string, Handler>> = {
         notes: listed.notes.map((note) => ({ ...note, updatedAt: iso(note.updatedAt) })),
       },
     };
+  },
+  describe_tags: (notebook, args) => {
+    try {
+      return { data: notebook.describeTags(args['tags'] as string[] | undefined) };
+    } catch (error) {
+      if (error instanceof LocalError && error.status === 400) {
+        return { error: `${error.message}. A tag is letters, digits, - and _, nested with /.` };
+      }
+      throw error;
+    }
   },
   get_backlinks: (notebook, args) => {
     const id = args['id'] as string;

@@ -30,7 +30,7 @@ import {
   type MeaningNote,
   type NoteSection,
 } from '@penmoss/core/search';
-import { normaliseTag, tagMatches } from '@penmoss/core/tags';
+import { describeTags, normaliseTag, tagMatches, type DescribedTag } from '@penmoss/core/tags';
 import {
   folderPath,
   folderSubtree,
@@ -74,7 +74,7 @@ import { isDeleted, readIdentity } from '@penmoss/sync-client/note';
 import { restoreContent, setBody } from '@penmoss/sync-client/history';
 import { revertChange } from '@penmoss/editor/revert';
 import { setFrontmatterTag } from '@penmoss/sync-client/tags';
-import { readWorkspace, setSortMode } from '@penmoss/sync-client/workspace';
+import { readTagDescriptions, readWorkspace, setSortMode } from '@penmoss/sync-client/workspace';
 import * as Y from '@y/y';
 import { AgentActivity, type ActivityEntry } from '../agent-activity';
 import type { GitNotebookEngine } from '../engine';
@@ -835,15 +835,45 @@ export class LocalNotebook {
     };
   }
 
-  /** `GET /api/tags`: every tag with its note count (nested tags counted under their own). */
-  tags(): { tags: Array<{ name: string; notes: number }> } {
+  /**
+   * `GET /api/tags`: every tag with its note count (nested tags counted under their own), and
+   * its description when it has one (PEN-68).
+   */
+  tags(): { tags: Array<{ name: string; notes: number; description?: string }> } {
     const counts = new Map<string, number>();
     for (const note of this.live())
       for (const tag of note.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    const descriptions = readTagDescriptions(this.workspace);
     return {
       tags: [...counts]
         .sort((a, b) => (a[0] < b[0] ? -1 : 1))
-        .map(([name, notes]) => ({ name, notes })),
+        .map(([name, notes]) => {
+          const description = descriptions[name]?.trim();
+          return { name, notes, ...(description ? { description } : {}) };
+        }),
+    };
+  }
+
+  /**
+   * `describe_tags` (PEN-68): each tag with what it means, its note count (with nested tags) and
+   * its parents' descriptions; every tag, or `wanted` and the tags nested under each.
+   */
+  describeTags(wanted?: readonly string[]): { tags: DescribedTag[] } {
+    let names: string[] | undefined;
+    if (wanted !== undefined) {
+      names = [];
+      for (const raw of wanted) {
+        const name = normaliseTag(raw);
+        if (!name) throw new LocalError(400, 'invalid_request', `Not a valid tag: ${raw}`);
+        names.push(name);
+      }
+    }
+    return {
+      tags: describeTags(
+        this.live().map((note) => note.tags),
+        readTagDescriptions(this.workspace),
+        names,
+      ),
     };
   }
 

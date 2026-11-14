@@ -13,6 +13,7 @@ import {
   localFetch,
   LOCAL_ORIGIN,
 } from '../src/local';
+import { setTagDescription } from '@penmoss/sync-client/workspace';
 import { NOTEBOOK_ID, testNotebook } from './support/notebooks';
 
 /** A route's JSON reply: the fields these tests read past `toMatchObject` are typed. */
@@ -461,7 +462,8 @@ describe('the local MCP server', () => {
         .sort(),
     ).toEqual([]);
     // G6 (A858): the four history tools are here now; T60 (A1064): the five comment tools too.
-    expect(localTools().length).toBe(34);
+    // PEN-68: describe_tags.
+    expect(localTools().length).toBe(35);
     expect(ABSENT_TOOLS.size).toBe(0);
     expect((await rpc('nope/nope')).error!.code).toBe(-32601);
     for (const name of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
@@ -472,6 +474,67 @@ describe('the local MCP server', () => {
       await (async () =>
         (await server()).mcp.line('{"jsonrpc":"2.0","method":"notifications/initialized"}'))(),
     ).toBeNull();
+  });
+
+  it('describes tags with what the app wrote, through a sync (PEN-68)', async () => {
+    const { nb, clone, notebook, tool, rpc } = await server();
+    for (const [title, tags] of [
+      ['Roadmap', ['project/penmoss']],
+      ['Android', ['project/penmoss/android']],
+      ['Beds', ['garden']],
+    ] as const) {
+      expect((await tool('create_note', { title, markdown: 'x', tags: [...tags] })).isError).toBe(
+        undefined,
+      );
+    }
+    await clone.engine.sync();
+    // The Mac app describes two tags in its own clone and pushes.
+    const mac = await nb.open('Mac');
+    setTagDescription(mac.ops.workspace, 'project', 'Work with an end.');
+    setTagDescription(mac.ops.workspace, 'project/penmoss', 'The notes app itself.');
+    await mac.engine.sync();
+    await clone.engine.sync();
+
+    const all = await tool('describe_tags', {});
+    expect(all.structuredContent['tags']).toEqual([
+      { name: 'garden', description: null, notes: 1, ancestors: [] },
+      { name: 'project', description: 'Work with an end.', notes: 2, ancestors: [] },
+      {
+        name: 'project/penmoss',
+        description: 'The notes app itself.',
+        notes: 2,
+        ancestors: [{ name: 'project', description: 'Work with an end.' }],
+      },
+      {
+        name: 'project/penmoss/android',
+        description: null,
+        notes: 1,
+        ancestors: [
+          { name: 'project', description: 'Work with an end.' },
+          { name: 'project/penmoss', description: 'The notes app itself.' },
+        ],
+      },
+    ]);
+    const some = await tool('describe_tags', { tags: ['#Project/Penmoss'] });
+    expect((some.structuredContent['tags'] as { name: string }[]).map((t) => t.name)).toEqual([
+      'project/penmoss',
+      'project/penmoss/android',
+    ]);
+    const bad = await tool('describe_tags', { tags: ['two words'] });
+    expect(bad.isError).toBe(true);
+    expect(bad.content[0]!.text).toContain('Not a valid tag: two words');
+    // list_tags gives a tag's description when it has one.
+    expect((await tool('list_tags', {})).structuredContent['tags']).toEqual([
+      { name: 'garden', notes: 1 },
+      { name: 'project/penmoss', notes: 1, description: 'The notes app itself.' },
+      { name: 'project/penmoss/android', notes: 1 },
+    ]);
+    expect(notebook.tags().tags).toHaveLength(3);
+    // The instructions tell agents the descriptions exist.
+    const init = (await rpc('initialize', { protocolVersion: '2025-06-18' })).result as {
+      instructions: string;
+    };
+    expect(init.instructions).toContain('describe_tags');
   });
 
   it('creates, searches, reads and edits notes, and refuses what it cannot do', async () => {
