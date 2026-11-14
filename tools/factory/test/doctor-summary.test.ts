@@ -13,11 +13,29 @@ describe("the doctor's summary (A1233)", () => {
 
   it('keeps the last full result per slot', () => {
     writeDoctorSummary(config, { slot: 1, at: '2026-11-09T01:00:00.000Z', failed: [] });
-    writeDoctorSummary(config, { slot: 2, at: '2026-11-09T01:05:00.000Z', failed: ['jdk'] });
+    writeDoctorSummary(config, {
+      slot: 2,
+      at: '2026-11-09T01:05:00.000Z',
+      failed: ['jdk'],
+      limited: ['opencode'],
+    });
     expect(readDoctorSummaries(config)).toEqual([
-      { slot: 1, at: '2026-11-09T01:00:00.000Z', failed: [] },
-      { slot: 2, at: '2026-11-09T01:05:00.000Z', failed: ['jdk'] },
+      { slot: 1, at: '2026-11-09T01:00:00.000Z', failed: [], limited: [] },
+      { slot: 2, at: '2026-11-09T01:05:00.000Z', failed: ['jdk'], limited: ['opencode'] },
     ]);
+  });
+
+  it('reads a summary written before agents at their limit were recorded', () => {
+    writeFileSync(
+      join(dir, 'doctor', 'summary-slot2.json'),
+      '{"at":"2026-11-09T01:05:00.000Z","failed":[]}',
+    );
+    expect(readDoctorSummaries(config)[1]).toEqual({
+      slot: 2,
+      at: '2026-11-09T01:05:00.000Z',
+      failed: [],
+      limited: [],
+    });
   });
 
   it('skips a torn summary and a slot that has none', () => {

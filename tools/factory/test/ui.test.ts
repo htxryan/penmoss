@@ -203,6 +203,14 @@ describe("the daemon's health (A1233)", () => {
     ]);
     expect(v.health.doctor).toBe('doctor failing');
   });
+
+  it("passes the doctor, and says so, when an agent's plan is at its usage limit (A1376)", () => {
+    const v = buildView(
+      input({ doctor: [{ slot: 1, at: minutesAgo(60), failed: [], limited: ['opencode'] }] }),
+    );
+    expect(v.health.problems).toEqual([]);
+    expect(v.health.doctor).toMatch(/^doctor passed .*; OpenCode at its usage limit$/);
+  });
 });
 
 describe("the plan's open points, asked once each", () => {

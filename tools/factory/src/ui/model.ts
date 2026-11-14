@@ -789,6 +789,10 @@ function health(input: ViewInput): Health {
         text: `Doctor on slot ${d.slot} (${time(d.at)}) failed: ${d.failed.join('; ')}`,
         fix: `task factory:doctor -- --slot ${d.slot}`,
       });
+  // An agent at its usage limit isn't a broken setup, but its cards wait, so the line says so.
+  const limited = [...new Set(doctor.flatMap((d) => d.limited ?? []))].map(
+    (a) => `${a === 'claude' ? 'Claude Code' : 'OpenCode'} at its usage limit`,
+  );
   const doctorLine = doctor.length
     ? doctor.every((d) => d.failed.length === 0)
       ? `doctor passed ${time(
@@ -796,7 +800,7 @@ function health(input: ViewInput): Health {
             .map((d) => d.at)
             .sort()
             .at(-1)!,
-        )}`
+        )}${limited.length ? `; ${limited.join(', ')}` : ''}`
       : 'doctor failing'
     : null;
   const base = {

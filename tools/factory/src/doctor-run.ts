@@ -8,7 +8,8 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { FactoryConfig, SlotConfig } from './config.ts';
-import { doctorChecks, judge, type CheckOutcome } from './doctor.ts';
+import { doctorChecks, judge, limitSkipped, usageLimited, type CheckOutcome } from './doctor.ts';
+import type { AgentName } from './config.ts';
 import { writeDoctorSummary } from './doctor-summary.ts';
 import type { Exec } from './exec.ts';
 import { hostGit } from './git.ts';
@@ -58,6 +59,8 @@ export async function runDoctor(config: FactoryConfig, slot: SlotConfig, options
     sandbox: await seatbeltProvider(spec),
   });
   const outcomes: CheckOutcome[] = [];
+  // Agents whose plan hit its usage limit: their later checks would only hit it again (A1376).
+  const limited = new Set<AgentName>();
   // Each check's whole output, for when its tail isn't enough.
   const logs = join(expandHome(config.stateDir), 'doctor');
   mkdirSync(logs, { recursive: true });
@@ -77,6 +80,11 @@ export async function runDoctor(config: FactoryConfig, slot: SlotConfig, options
           detail: `needs ${missing.join(', ')} (${missing.includes('GH_TOKEN') ? 'the GitHub App' : 'the env file'})`,
           seconds: 0,
         });
+        continue;
+      }
+      if (check.agent && limited.has(check.agent)) {
+        outcomes.push({ check, status: 'warned', detail: limitSkipped(check.agent), seconds: 0 });
+        options.log(`! ${check.name}`);
         continue;
       }
       const started = Date.now();
@@ -102,16 +110,20 @@ export async function runDoctor(config: FactoryConfig, slot: SlotConfig, options
         logFile,
         `$ ${check.command}\n\n${result.stdout}\n--- stderr ---\n${result.stderr}\n`,
       );
+      const limit = verdict.ok ? null : usageLimited(check, result.stdout + result.stderr);
+      if (limit && check.agent) limited.add(check.agent);
       const outcome: CheckOutcome = {
         check,
-        status: verdict.ok ? 'ok' : 'failed',
+        status: verdict.ok ? 'ok' : limit ? 'warned' : 'failed',
         detail: verdict.ok
           ? verdict.detail
-          : `${verdict.detail}\n    ${tail(result.stdout + result.stderr)}`,
+          : (limit ?? `${verdict.detail}\n    ${tail(result.stdout + result.stderr)}`),
         seconds: (Date.now() - started) / 1000,
       };
       outcomes.push(outcome);
-      options.log(`${verdict.ok ? '✓' : '✗'} ${check.name}`);
+      options.log(
+        `${{ ok: '✓', failed: '✗', warned: '!', skipped: '–' }[outcome.status]} ${check.name}`,
+      );
     }
   } finally {
     await sandbox.close();
@@ -123,6 +135,7 @@ export async function runDoctor(config: FactoryConfig, slot: SlotConfig, options
       slot: slot.id,
       at: new Date().toISOString(),
       failed: outcomes.filter((o) => o.status === 'failed').map((o) => o.check.name),
+      limited: [...limited],
     });
   return outcomes;
 }

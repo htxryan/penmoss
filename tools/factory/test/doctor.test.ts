@@ -10,10 +10,12 @@ import {
   hostChecks,
   hostCommands,
   judge,
+  limitSkipped,
   READ_REFUSED,
   readProbe,
   report,
   TASK_CHECK_NO_BAIL,
+  usageLimited,
   type Check,
 } from '../src/doctor.ts';
 import { claudeFlags } from '../src/agents/claude.ts';
@@ -221,6 +223,44 @@ describe("the unreadable-file checks' probe (A1258)", { timeout: 30_000 }, () =>
     expect(r.code).toBe(1);
     expect(r.verdict.ok).toBe(false);
     expect(r.verdict.detail).toContain('another reason: head: illegal byte count -- 0');
+  });
+});
+
+describe('a usage limit is a warning, not a failure (A1376)', () => {
+  const checks = doctorChecks(config, slot, '/Users/r');
+  const named = (part: string) => checks.find((c) => c.name.includes(part))!;
+  // What the doctor's OpenCode check printed on 14 Nov 2026, colours and all.
+  const goLimit =
+    '\u001b[0m\n> build · kimi-k3\n\u001b[91m\u001b[1mError: \u001b[0mOpenCode Go usage limit reached (weekly, resets in 1d 19h). To keep going now, turn on Extra Usage.\n';
+
+  it('names the agent whose plan each model-calling check uses', () => {
+    expect(named('OpenCode answers').agent).toBe('opencode');
+    expect(named("OpenCode's deny").agent).toBe('opencode');
+    expect(named('Claude Code signs in').agent).toBe('claude');
+    expect(named("Claude's deny").agent).toBe('claude');
+    // Listing models calls no model, and the isolation checks call no agent.
+    expect(named('OpenCode Go lists').agent).toBeUndefined();
+    expect(named('~/.ssh').agent).toBeUndefined();
+  });
+
+  it("says the agent is at its limit, with the limit's own line, colours stripped", () => {
+    expect(usageLimited(named('OpenCode answers'), goLimit)).toBe(
+      "OpenCode is at its usage limit, so this wasn't checked: Error: OpenCode Go usage limit reached (weekly, resets in 1d 19h). To keep going now, turn on Extra Usage.",
+    );
+    expect(limitSkipped('opencode')).toContain('OpenCode is at its usage limit');
+  });
+
+  it('leaves a real failure, and a check that calls no agent, as failures', () => {
+    expect(usageLimited(named('OpenCode answers'), 'Error: invalid API key\n')).toBeNull();
+    expect(usageLimited(named('~/.ssh'), goLimit)).toBeNull();
+  });
+
+  it('passes the doctor with a warning', () => {
+    const check = named('OpenCode answers');
+    const text = report([
+      { check, status: 'warned', detail: usageLimited(check, goLimit)!, seconds: 3 },
+    ]);
+    expect(text).toContain('All checks passed, 1 warning(s).');
   });
 });
 
