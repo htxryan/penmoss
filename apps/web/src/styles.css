@@ -3241,74 +3241,6 @@ a {
   display: none;
 }
 
-/*
- * A tag's notes in place of the tree: the tag and its count on one row, ✕ at its end, and the
- * notes under it, all starting on the sidebar's icon column (A988). A long tag gives way.
- */
-.tagged-head {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-height: var(--pm-control-sm);
-  padding: 0 0.3rem 0.25rem var(--sb-icon-inset, 0.25rem);
-}
-
-.tagged-title {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 0.4rem;
-  min-width: 0;
-  margin: 0;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-.tagged-title .chip {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tagged-title .muted {
-  flex: none;
-  white-space: nowrap;
-}
-
-.tagged-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.tagged-link {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.35rem 0.3rem 0.35rem var(--sb-icon-inset, 0.45rem);
-  border-radius: 0;
-  color: var(--pm-fg);
-  font-size: 0.85rem;
-  text-decoration: none;
-}
-
-.tagged-link:hover {
-  background: var(--pm-hover);
-}
-
-.tagged-link[aria-current='page'] {
-  background: var(--pm-raised);
-  box-shadow: inset 2px 0 0 var(--pm-accent);
-  font-weight: 600;
-}
-
-.tagged-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-}
-
 .tag-mini {
   color: var(--pm-muted);
   font-size: 0.72rem;
@@ -4899,7 +4831,6 @@ button.history-entry:hover {
   .display-toggle,
   .menu-item,
   .back-link,
-  .tagged-link,
   .history-entry {
     min-height: var(--pm-hit);
   }
@@ -4913,10 +4844,6 @@ button.history-entry:hover {
   .tree-row,
   .tag-row {
     height: var(--pm-hit);
-  }
-
-  .tagged-link {
-    justify-content: center;
   }
 
   /* Dense controls stay a little smaller: a calendar cell, a chip in a line of tags (A183). */
@@ -5431,8 +5358,7 @@ button.history-entry:hover {
   flex-direction: column;
 }
 
-.sb-notebooks-body > .folders,
-.sb-notebooks-body > .tagged {
+.sb-notebooks-body > .folders {
   flex: 1 1 0;
   min-height: 12rem;
   overflow-y: auto;
@@ -5515,7 +5441,7 @@ button.history-entry:hover {
   padding-inline: calc(var(--sb-gutter) + var(--depth, 0) * 0.9rem) var(--sb-gutter);
 }
 
-.sidebar :is(.tagged-head, .tagged-link, .calendar-nav) {
+.sidebar .calendar-nav {
   padding-right: calc(var(--sb-gutter) + 0.3rem);
 }
 
@@ -5717,8 +5643,7 @@ button.history-entry:hover {
   }
 
   .sb-notebooks-body,
-  .sb-notebooks-body > .folders,
-  .sb-notebooks-body > .tagged {
+  .sb-notebooks-body > .folders {
     flex: 1 0 auto;
     min-height: 0;
     overflow-y: visible;

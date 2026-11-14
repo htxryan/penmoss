@@ -3,7 +3,12 @@ import type { NoteRecord } from '@penmoss/sync-client';
 import { describe, expect, it, vi } from 'vitest';
 import { vaultDocuments } from '../../../../packages/core/test/support/search-vault-docs';
 import { MEANING_ELSEWHERE } from '../../src/search/meaning';
-import { NO_FILTERS, SearchService, type SearchDeps } from '../../src/search/service';
+import {
+  NO_FILTERS,
+  SearchService,
+  type SearchDeps,
+  type SearchMode,
+} from '../../src/search/service';
 import { memoryNotes } from './support/memory-notes';
 
 const docs = vaultDocuments();
@@ -150,6 +155,80 @@ describe('search as you type (A111)', () => {
     expect(hybrid!.preview).toBeUndefined();
     // Search by meaning has nothing to show.
     expect(await service.typing(request('backu', { mode: 'semantic' }))).toBeNull();
+  });
+});
+
+// Finding 9 of Ryan's review of #192: a tag opens Search with its Tag filter and no words.
+describe('a search with no words', () => {
+  it('lists every note a tag, folder or date passes, newest first, in any mode', async () => {
+    const { service } = setup();
+    const blank = (filters: Partial<typeof NO_FILTERS>, mode: SearchMode = 'hybrid') =>
+      service.search(request('  ', { mode, filters: { ...NO_FILTERS, ...filters } }));
+    const tagged = docs
+      .filter((doc) => doc.tags.some((tag) => tag === 'homelab' || tag.startsWith('homelab/')))
+      .sort((a, b) => b.updatedAt - a.updatedAt || (a.id < b.id ? -1 : 1));
+    expect(tagged.length).toBeGreaterThan(3);
+    const outcome = await blank({ tag: 'homelab' });
+    expect(outcome).toEqual({
+      source: 'device',
+      notice: null,
+      hits: tagged.map((doc) => ({
+        id: doc.id,
+        title: doc.title,
+        titleHighlighted: doc.title,
+        snippet: '',
+        heading: null,
+        tags: doc.tags,
+        updatedAt: doc.updatedAt,
+        sources: ['full-text'],
+      })),
+    });
+    // Every one, not the 30 a search shows at most; semantic lists them too.
+    expect(ids((await blank({ tag: 'homelab' }, 'semantic')).hits)).toEqual(ids(outcome.hits));
+    expect(ids((await blank({ folderId: 'storage' })).hits)).toEqual(['zfs-snapshots']);
+    expect((await blank({ updatedAfter: Date.parse('2026-09-01') })).hits.length).toBeGreaterThan(
+      0,
+    );
+    // Typing gives the same, final answer.
+    expect(
+      await service.typing(request('', { filters: { ...NO_FILTERS, tag: 'homelab' } })),
+    ).toEqual({
+      source: 'device',
+      notice: null,
+      hits: (await blank({ tag: 'homelab' }, 'full-text')).hits,
+    });
+  });
+
+  it('lists from the live note list when it has one: a tag just typed is there', async () => {
+    const entry = (id: string, tags: string[], updatedAt: number) => ({
+      id,
+      title: id,
+      excerpt: `About ${id}`,
+      updatedAt,
+      unsynced: false,
+      tags,
+    });
+    const { service } = setup({
+      list: () => [
+        entry('fresh', ['garden/herbs'], 3),
+        entry('older', ['garden'], 1),
+        entry('workspace', ['garden'], 9),
+        entry('other', ['work'], 2),
+      ],
+    });
+    const outcome = await service.search(
+      request('', { mode: 'hybrid', filters: { ...NO_FILTERS, tag: 'garden' } }),
+    );
+    expect(ids(outcome.hits)).toEqual(['fresh', 'older']);
+    expect(outcome.hits[0]).toMatchObject({ snippet: 'About fresh', tags: ['garden/herbs'] });
+  });
+
+  it('lists nothing without a filter, or with a notebook alone', async () => {
+    const { service } = setup();
+    expect((await service.search(request(''))).hits).toEqual([]);
+    expect(
+      (await service.search(request('', { filters: { ...NO_FILTERS, notebookId: 'x' } }))).hits,
+    ).toEqual([]);
   });
 });
 

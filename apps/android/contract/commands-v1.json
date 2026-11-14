@@ -417,15 +417,6 @@
       }
     },
     {
-      "id": "tags.clearFilter",
-      "title": "Show All Notes (Clear the Tag Filter)",
-      "area": "Tags",
-      "scope": "global",
-      "android": {
-        "elsewhere": "Back from a tag's notes (TG2)"
-      }
-    },
-    {
       "id": "folder.new",
       "title": "New Folder",
       "area": "Folders",

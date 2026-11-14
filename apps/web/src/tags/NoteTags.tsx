@@ -5,14 +5,14 @@ import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useCommands } from '../commands/hooks';
 import { useNoteList } from '../notes/hooks';
-import { tagFilter } from './filter';
+import { useShowTag } from '../search/show-tag';
 import { tagSuggestions } from './suggest';
 
 /**
  * A note's frontmatter tags (T18), set and removed here; in the Info panel
  * since T41 (A502), no longer under the title. Inline `#tags` are shown where
  * they are written, in the text, so they are not repeated as chips (T36,
- * A188). Choosing a tag filters the sidebar by it. The note view owns
+ * A188). Choosing a tag opens Search on its notes. The note view owns
  * `note.addTag` (it opens the panel first) and says when to start adding.
  *
  * The Add a tag field is a combobox (T42, A577): typing suggests every tag
@@ -33,6 +33,7 @@ export function NoteTags({
   onAdding: (adding: boolean) => void;
 }) {
   const commands = useCommands();
+  const showTag = useShowTag();
   const [listed, setListed] = useState<readonly string[]>([]);
   const setAdding = onAdding;
   const [value, setValue] = useState('');
@@ -123,7 +124,7 @@ export function NoteTags({
               className="tag-chip-name"
               data-ui="item"
               data-tip={`Show Notes Tagged #${tag}`}
-              onClick={() => tagFilter.set(tag)}
+              onClick={() => showTag(tag)}
             >
               #{tag}
             </button>

@@ -3,8 +3,8 @@ import { readAsAgent, syncNow } from './support/sync';
 
 // PEN-68: the Tags page. Every tag as a tree with its note count and a description that saves as
 // it is typed into the notebook's WorkspaceDoc, one section per notebook; opened from the Tags
-// section's title row and the palette; a tag's name shows its notes in the sidebar, as the
-// sidebar's tag does. Once pushed, an agent's describe_tags reads the description.
+// section's title row and the palette; a tag's name opens Search on its notes, as the sidebar's
+// tag does. Once pushed, an agent's describe_tags reads the description.
 
 test.use({
   seed: {
@@ -46,6 +46,16 @@ test('the Tags page describes each tag, per notebook, and agents read the descri
   await expect(pane.getByRole('button', { name: /^#garden, 1 note$/ })).toBeVisible({
     timeout: 30_000,
   });
+  // The sidebar's tag opens Search on its notes, starting on the notebook the tag is in, with the
+  // sidebar's Notes section left as it is (finding 9 of the #192 review).
+  await pane.getByRole('button', { name: /^#garden, 1 note$/ }).click();
+  const fromPane = page.getByTestId('search');
+  await expect(fromPane.getByTestId('search-notebook').locator('option:checked')).toHaveText(
+    'Work',
+  );
+  await expect(fromPane.locator('.search-hit')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await expect(fromPane).toBeHidden();
 
   // Opened from the Tags section's title row.
   await pane.getByTestId('tag-pane-toggle').hover();
@@ -110,9 +120,16 @@ test('the Tags page describes each tag, per notebook, and agents read the descri
   await page.goto('/tags');
   await description(section(page, 'Work'), 'project').fill('');
 
-  // A tag's name shows its notes in the sidebar, as the sidebar's tag does.
+  // A tag's name opens Search on its notes, as the sidebar's tag does, on its notebook (finding 9
+  // of the #192 review).
   await section(page, 'Work').getByRole('button', { name: '#garden, 1 note', exact: true }).click();
-  await expect(page.getByTestId('tagged-notes').getByText('Beds')).toBeVisible();
+  const search = page.getByTestId('search');
+  await expect(search.getByTestId('search-notebook').locator('option:checked')).toHaveText('Work');
+  await expect(search.getByRole('combobox', { name: 'Tag' })).toHaveValue('garden');
+  await expect(search.locator('.search-hit')).toHaveCount(1);
+  await expect(search.locator('.search-hit')).toContainText('Beds');
+  await page.keyboard.press('Escape');
+  await expect(search).toBeHidden();
   await expect(page).toHaveURL(/\/tags$/);
 
   // The palette opens it too.

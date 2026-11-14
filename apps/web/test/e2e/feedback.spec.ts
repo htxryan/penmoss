@@ -243,10 +243,12 @@ test('the sidebar: an icon rail, remembered; a tag filter moves nothing below th
       .toEqual([...order, ...known.filter((id) => !order.includes(id))]);
   }
   const before = { calendar: await calendar(), tags: await tagPane() };
+  // A tag opens Search on its notes (finding 9 of the #192 review): the sidebar stays put.
   await page.getByTestId('tag-pane').getByText(tag, { exact: true }).click();
-  await expect(page.getByTestId('tagged-notes')).toBeVisible();
+  await expect(page.getByTestId('search').locator('.search-hit').first()).toBeVisible();
   expect({ calendar: await calendar(), tags: await tagPane() }).toEqual(before);
-  await page.getByTestId('tagged-notes').getByRole('button', { name: 'All Notes' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('search')).toBeHidden();
   expect({ calendar: await calendar(), tags: await tagPane() }).toEqual(before);
 
   // Collapsed: Search, Today, This Week, Graph and Commands (and Back and Forward, A943). Collapsed from the

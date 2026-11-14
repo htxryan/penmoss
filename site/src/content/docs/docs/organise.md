@@ -43,7 +43,7 @@ What a move or copy did, or why it could not be done, shows in a message at the 
 A tag is a word after `#` in the note, such as `#ideas`, or an entry in the note's tags. Tags nest with `/`: `#work/plans` is inside `#work`. Tags ignore case. `#2026` and `C#` are not tags: a tag needs a letter, and must follow a space or an opening bracket.
 
 - **Add a tag to the note's tags:** **Add a Tag to This Note**, or the tag field in the note's Metadata tab (`tag or area/tag`).
-- **Filter by a tag:** choose it in the sidebar's **Tags** section. The sidebar then shows only the notes with that tag, or a tag inside it. **All Notes** clears the filter.
+- **See a tag's notes:** choose it in the sidebar's **Tags** section, choose a tag in the note's Metadata tab, or ⌘-click a #tag in the text. [Search](/docs/search/) opens with its **Tag** filter set and lists every note with that tag, or a tag inside it, newest first. Type to search those notes by their words. With several notebooks, Search starts on the tag's notebook.
 - **Rename or merge a tag:** the pencil beside a tag in the Tags section (**Rename or Merge**) changes it in every note, nested tags and notes in Trash included. Renaming to a tag that already exists merges the two.
 
 ### Describe your tags
@@ -53,7 +53,7 @@ The **Tags** page lists every tag with how many notes have it, nested tags under
 - **Describe a tag:** type in the box under its name. It saves as you type. Empty the box to remove the description.
 - **Each tag has its own description.** A parent's description says what the parent means, not its nested tags.
 - **Descriptions belong to the notebook.** They sync with it to your other devices, and agents read them with [`describe_tags`](/docs/reference/mcp/#what-tags-mean) to choose and understand tags.
-- **See a tag's notes:** choose its name. The sidebar shows its notes, as choosing it in the Tags section does.
+- **See a tag's notes:** choose its name. Search opens on its notes, in that tag's notebook, as choosing it in the Tags section does.
 
 Android shows tags as before and keeps their descriptions when it syncs; describe tags on your Mac.
 
