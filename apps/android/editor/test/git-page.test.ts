@@ -35,7 +35,7 @@ import contract from '../../contract/git-engine-v1.json';
 
 // The engine's real git work (hashing, packing, two engines over one remote) takes about 0.2 s a
 // test alone and several seconds when the gate's other suites share the CPUs, past vitest's 5 s
-// default: the file gets the 60 s that the engine's own suite (packages/git-notebook) has (A-NEW-1).
+// default: the file gets the 60 s that the engine's own suite (packages/git-notebook) has (A1378).
 vi.setConfig({ testTimeout: 60_000 });
 
 const NOTEBOOK = '01JBNOTEBOOK00000000000001';
