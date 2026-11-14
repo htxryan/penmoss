@@ -410,6 +410,40 @@ describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () =
     expect(withCadence(own)).toMatchObject({ pushDelayS: 30, pullEveryMin: 2, cadence: 2 });
   });
 
+  it('renames a notebook here, until a sync reports that name at the branch (Ryan’s review of PR #192)', async () => {
+    let changes = 0;
+    const notebooks = service({ onChange: () => void changes++ });
+    const notebook = await added(notebooks);
+    const id = notebook.localId;
+    await expect(notebooks.update(id, { name: '  ' })).resolves.toMatchObject({ ok: false });
+    await expect(notebooks.update(id, { name: ' Personal\n(old) ' })).resolves.toMatchObject({
+      ok: true,
+      value: { name: 'Personal (old)', pendingName: 'Personal (old)' },
+    });
+    // Until it lands, a sync still finding the old name at the branch does not undo it.
+    await notebooks.update(id, { branchName: notebook.name });
+    expect((await notebooks.list())[0]).toMatchObject({
+      name: 'Personal (old)',
+      pendingName: 'Personal (old)',
+    });
+    // Landed: no longer pending.
+    await notebooks.update(id, { branchName: 'Personal (old)' });
+    expect((await notebooks.list())[0]).toMatchObject({
+      name: 'Personal (old)',
+      pendingName: null,
+    });
+    // Another device's rename is followed.
+    await notebooks.update(id, { branchName: 'From the phone' });
+    expect((await notebooks.list())[0]).toMatchObject({
+      name: 'From the phone',
+      pendingName: null,
+    });
+    // The same name reported again writes nothing and tells no window.
+    const before = changes;
+    await notebooks.update(id, { branchName: 'From the phone' });
+    expect(changes).toBe(before);
+  });
+
   it('keeps the cadence in range', async () => {
     const notebooks = service();
     const notebook = await added(notebooks);

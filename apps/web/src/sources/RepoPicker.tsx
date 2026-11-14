@@ -9,6 +9,8 @@ import { defaultRepoName } from '@penmoss/git-notebook/github-browse';
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useEffectEvent, useId, useMemo, useRef, useState } from 'react';
 import { fuzzy } from '../commands/fuzzy';
+import { NameClash } from './NameClash';
+import { freeName, nameClash, useOtherNotebookNames } from './notebook-names';
 import { listKeys, pushedWords, SIGNED_OUT } from './repo-words';
 import type {
   BrowseError,
@@ -309,6 +311,8 @@ function CreateRepository({
   onCreated: (repo: GitHubRepo, notebookName: string) => void;
 }) {
   const [notebook, setNotebook] = useState('');
+  const others = useOtherNotebookNames();
+  const twin = nameClash(notebook, others);
   const [repoName, setRepoName] = useState('notes');
   const [edited, setEdited] = useState(false);
   const [owners, setOwners] = useState<readonly GitHubOwner[] | null>(null);
@@ -355,7 +359,7 @@ function CreateRepository({
       <div className="settings-row">
         <label className="settings-field">
           <span>
-            Notebook name <span className="muted">(shown in the sidebar)</span>
+            Notebook Name <span className="muted">(shown in the sidebar)</span>
           </span>
           <input
             className="input"
@@ -400,6 +404,17 @@ function CreateRepository({
           </select>
         </label>
       </div>
+      {twin ? (
+        <NameClash
+          name={notebook.trim()}
+          other={twin}
+          suggestion={freeName(notebook, others)}
+          onUse={(name) => {
+            setNotebook(name);
+            if (!edited) setRepoName(defaultRepoName(name));
+          }}
+        />
+      ) : null}
       <p className="muted">
         Private, empty, no README.{' '}
         {edited

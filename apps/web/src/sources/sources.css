@@ -224,6 +224,51 @@
   margin: 0.6rem 0 0;
 }
 
+/* Rename Notebook on a notebook's row (Ryan's review of PR #192): its name, edited in place. */
+.sb-section-rename {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--sb-name-gap, 0.425rem);
+  min-width: 0;
+  padding: 0.2rem 0.3rem 0.2rem var(--sb-chevron-inset, 0.375rem);
+  color: var(--pm-notebook-name);
+}
+
+/* What Rename says under the row: that it renames it everywhere, or a name already in use. */
+.sb-section-clash {
+  margin: 0.25rem 0.5rem 0.4rem;
+  font-size: 0.8rem;
+}
+
+/* A name another notebook on this Mac has (add and Rename): a free one to use instead. */
+.name-clash {
+  margin: 0.5rem 0 0;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-warn-bg);
+  border-radius: 0;
+}
+
+.name-clash p {
+  margin: 0;
+}
+
+.name-clash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+/* Settings → Notebooks → the notebook's Name: the field and Rename side by side. */
+.git-notebook-rename {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
 /* Remove with changes not pushed: what would be lost, and the way to keep it. */
 .git-remove-confirm {
   margin: 0.75rem 0 0;

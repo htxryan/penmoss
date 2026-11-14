@@ -403,6 +403,19 @@ export class LocalAgents {
             this.options.log?.(`agents: token for ${automatic.name}: ${cliMessage(error)}`),
         );
       }
+      // Renamed in the app (Ryan's review of PR #192): its clones in ~/.penmoss take the name
+      // now, before they next sync it from notebook.json, and keep the old one, so
+      // `--notebook <either>` finds them. Their folders and names stay as they are.
+      for (const clone of clones) {
+        // Names are matched ignoring case, so a clone told only a change of case is left be.
+        const known = clone.notebookName?.toLowerCase();
+        if (!sameTarget(clone, entry) || !known || known === entry.name.toLowerCase()) continue;
+        await notebooks.set(clone.name, { notebookName: entry.name }).then(
+          () => this.options.log?.(`agents: ${clone.name} is now “${entry.name}”`),
+          (error: unknown) =>
+            this.options.log?.(`agents: could not rename ${clone.name}: ${cliMessage(error)}`),
+        );
+      }
       if (clones.some((each) => each.writer.kind === 'agent' && sameTarget(each, entry))) {
         this.waits.delete(entry.localId);
         continue;

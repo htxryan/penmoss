@@ -1,11 +1,20 @@
 import { Icon } from '@penmoss/ui/icons';
-import { useId, useState, useSyncExternalStore } from 'react';
-import { gitNotebookPath, linkHandler, useLocation } from '../router';
+import {
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type MouseEvent,
+} from 'react';
+import { gitNotebookPath, linkHandler, navigate, useLocation } from '../router';
+import { ContextMenu } from '../shell/ContextMenu';
 import { TIME_MACHINE_PATH, timeMachinePath } from '../time-machine/path';
 import { FolderTree } from '../workspace/FolderTree';
 import { TreeActions } from '../workspace/TreeActions';
 import type { GitSyncStatus } from './engine-host';
 import type { GitSource } from './git-source';
+import { NameClash } from './NameClash';
+import { useNotebookRename } from './notebook-names';
 import type { Source } from './registry';
 import './sources.css';
 
@@ -110,6 +119,32 @@ export function SourceSection({
   const timeMachineOpen =
     location.pathname === TIME_MACHINE_PATH &&
     new URLSearchParams(location.search).get('source') === source.id;
+  // Its row's menu (Ryan's review of PR #192): Rename Notebook, in place, and its settings.
+  const head = useRef<HTMLElement>(null);
+  const toggle = useRef<HTMLButtonElement>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+  const [renaming, setRenaming] = useState(false);
+  const { rename, clash, message, cancel } = useNotebookRename(source);
+  const openMenu = (event: MouseEvent) => {
+    if (renaming) return;
+    event.preventDefault();
+    // From the keyboard (the context-menu key, Shift+F10) there is no pointer: under the row.
+    const rect = head.current?.getBoundingClientRect();
+    const fromKeys = event.clientX === 0 && event.clientY === 0;
+    setMenu({
+      x: fromKeys && rect ? rect.left + 16 : event.clientX,
+      y: fromKeys && rect ? rect.bottom : event.clientY,
+    });
+  };
+  const closeMenu = () => {
+    setMenu(null);
+    toggle.current?.focus();
+  };
+  const finish = (name: string | null) => {
+    setRenaming(false);
+    if (name !== null) void rename(name);
+    requestAnimationFrame(() => toggle.current?.focus());
+  };
   return (
     <section
       className="sb-section sb-source"
@@ -121,26 +156,38 @@ export function SourceSection({
       onPointerDownCapture={onActivate}
       onFocusCapture={onActivate}
     >
-      <header className="sb-section-head">
-        <button
-          type="button"
-          className="sb-section-toggle sb-notebook-name"
-          data-ui="item"
-          aria-expanded={!collapsed}
-          aria-controls={`${id}-body`}
-          onClick={() => {
-            const next = readCollapsed();
-            if (collapsed) next.delete(source.id);
-            else next.add(source.id);
-            writeCollapsed(next);
-            setCollapsed(!collapsed);
-          }}
-        >
-          <Icon name={collapsed ? 'chevR' : 'chevD'} size={12} />
-          <span id={`${id}-name`} className="sb-section-name">
-            {source.name}
-          </span>
-        </button>
+      <header ref={head} className="sb-section-head" onContextMenu={openMenu}>
+        {renaming ? (
+          <div className="sb-section-rename">
+            <Icon name={collapsed ? 'chevR' : 'chevD'} size={12} />
+            <NotebookNameInput
+              label={`Rename Notebook ${source.name}`}
+              initial={source.name}
+              onDone={finish}
+            />
+          </div>
+        ) : (
+          <button
+            ref={toggle}
+            type="button"
+            className="sb-section-toggle sb-notebook-name"
+            data-ui="item"
+            aria-expanded={!collapsed}
+            aria-controls={`${id}-body`}
+            onClick={() => {
+              const next = readCollapsed();
+              if (collapsed) next.delete(source.id);
+              else next.add(source.id);
+              writeCollapsed(next);
+              setCollapsed(!collapsed);
+            }}
+          >
+            <Icon name={collapsed ? 'chevR' : 'chevD'} size={12} />
+            <span id={`${id}-name`} className="sb-section-name">
+              {source.name}
+            </span>
+          </button>
+        )}
         {/* Its actions on the name's row, on hover (T53 item 4), even while it is collapsed. */}
         <TreeActions
           currentFolder={currentFolder}
@@ -150,6 +197,60 @@ export function SourceSection({
         />
         <GitSectionStatus source={source} />
       </header>
+      {menu ? (
+        <ContextMenu label={`Notebook ${source.name}`} x={menu.x} y={menu.y} onClose={closeMenu}>
+          <button
+            type="button"
+            role="menuitem"
+            tabIndex={-1}
+            className="menu-item"
+            data-ui="item"
+            data-testid="notebook-rename"
+            onClick={() => {
+              setMenu(null);
+              setRenaming(true);
+            }}
+          >
+            <Icon name="pencil" />
+            <span className="menu-label">Rename Notebook</span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            tabIndex={-1}
+            className="menu-item"
+            data-ui="item"
+            data-testid="notebook-settings"
+            onClick={() => {
+              setMenu(null);
+              navigate(gitNotebookPath(source.id));
+            }}
+          >
+            <Icon name="settings" />
+            <span className="menu-label">Notebook Settings</span>
+          </button>
+        </ContextMenu>
+      ) : null}
+      {renaming ? (
+        <p className="sb-section-clash muted" data-testid="notebook-rename-hint">
+          Renames it on every device that syncs it.
+        </p>
+      ) : clash ? (
+        <div className="sb-section-clash">
+          <NameClash
+            name={clash.name}
+            other={clash.other}
+            suggestion={clash.suggestion}
+            onUse={(name) => void rename(name)}
+            onKeep={() => void rename(clash.name, true)}
+            onCancel={cancel}
+          />
+        </div>
+      ) : message && !message.startsWith('Renamed') ? (
+        <p className="sb-section-clash muted" role="status">
+          {message}
+        </p>
+      ) : null}
       {collapsed ? null : (
         <div id={`${id}-body`} className="sb-section-body">
           <FolderTree
@@ -162,5 +263,49 @@ export function SourceSection({
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * The notebook's name, edited in place on its row (Rename Notebook): Enter or leaving it renames,
+ * Escape keeps the name. As a folder's Rename in the tree (FolderTree's NameInput).
+ */
+function NotebookNameInput({
+  label,
+  initial,
+  onDone,
+}: {
+  label: string;
+  initial: string;
+  /** The name typed, or null for Escape. */
+  onDone: (name: string | null) => void;
+}) {
+  const done = useRef(false);
+  const finish = (name: string | null) => {
+    if (done.current) return;
+    done.current = true;
+    onDone(name);
+  };
+  return (
+    <input
+      className="tree-input"
+      aria-label={label}
+      data-testid="notebook-rename-input"
+      defaultValue={initial}
+      autoFocus
+      maxLength={80}
+      onFocus={(event) => event.currentTarget.select()}
+      onKeyDown={(event) => {
+        event.stopPropagation();
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          finish(event.currentTarget.value);
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          finish(null);
+        }
+      }}
+      onBlur={(event) => finish(event.currentTarget.value)}
+    />
   );
 }

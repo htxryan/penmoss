@@ -70,6 +70,11 @@ export interface NotebookEntry {
   /** `notebook.json`'s id and name, once known. */
   readonly notebookId?: string;
   readonly notebookName?: string;
+  /**
+   * The names `notebook.json` had before it was renamed (Ryan's review of PR #192), the latest
+   * last: `--notebook <old name>` still finds this clone, so agents' MCP configs keep working.
+   */
+  readonly formerNames?: readonly string[];
   /** Made by the Mac app for one of its notebooks (D52): the app removes it with that notebook. */
   readonly automatic?: true;
 }
@@ -175,6 +180,11 @@ export interface NotebookIo {
       readonly sign?: boolean;
       /** This notebook's own commit name and email (#170 F6); null: git's own again. */
       readonly author?: { readonly name: string; readonly email: string } | null;
+      /**
+       * The notebook's name as the Mac app has it once renamed there, before this clone syncs
+       * it from `notebook.json`: the old one is kept in `formerNames`.
+       */
+      readonly notebookName?: string;
     },
   ): Promise<void>;
   remove(name: string, force: boolean): Promise<NotebookEntry>;

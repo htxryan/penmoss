@@ -24,6 +24,7 @@ import { readWorkspace } from '@penmoss/sync-client/workspace';
 import * as Y from '@y/y';
 import { actorFile, parseActor, type ActorFile } from './actors';
 import {
+  cleanNotebookName,
   encodeNotebookInfo,
   FORMAT,
   formatOf,
@@ -326,6 +327,36 @@ export class GitNotebookEngine {
     return this.replica.state.info;
   }
 
+  /** The name Rename gave it here, until a sync lands it in `notebook.json`; null: none. */
+  get pendingName(): string | null {
+    return this.replica.state.pendingName ?? null;
+  }
+
+  /**
+   * Rename (Ryan's review of PR #192): `info.name` is `name` at once, and the next sync writes it
+   * to `notebook.json`, so every device and agent that syncs follows. A rename made on two
+   * devices before either synced: the later push wins. Saved with the next save; throws a
+   * RangeError for a name with nothing in it.
+   */
+  rename(name: string): void {
+    const clean = cleanNotebookName(name);
+    if (clean === null) throw new RangeError('A notebook needs a name.');
+    const info = this.replica.state.info;
+    if (!info) throw new NotebookError('no_notebook', 'There is no Penmoss notebook here yet.');
+    if (info.name === clean && this.pendingName === null) return;
+    this.replica.update({ info: { ...info, name: clean }, pendingName: clean });
+  }
+
+  /** What a sync that landed leaves: its `notebook.json`, with a Rename made since kept. */
+  private settleInfo(info: NotebookInfo): void {
+    const pending = this.pendingName;
+    if (pending === null || pending === info.name) {
+      this.replica.update({ info, pendingName: null });
+    } else {
+      this.replica.update({ info: { ...info, name: pending } });
+    }
+  }
+
   get writer(): WriterRecord | null {
     return this.writerRecord;
   }
@@ -478,7 +509,7 @@ export class GitNotebookEngine {
       for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
         const built = await this.build(options.full === true || ensured.fresh);
         if (built.commit === null) {
-          replica.update({ info: built.info });
+          this.settleInfo(built.info);
           replica.synced(built.head, built.dirtyAt, built.workspaceDirty);
           return this.report(built, null, attempt, ensured);
         }
@@ -490,7 +521,7 @@ export class GitNotebookEngine {
         if (pushed === 'pushed') {
           await options.afterPush?.(built.commit);
           built.landed();
-          replica.update({ info: built.info });
+          this.settleInfo(built.info);
           replica.synced(built.commit, built.dirtyAt, built.workspaceDirty);
           return this.report(built, built.commit, attempt, ensured);
         }
@@ -669,6 +700,12 @@ export class GitNotebookEngine {
         throw new NotebookError('no_notebook', 'There is no Penmoss notebook at this target yet.');
       }
       info = mine;
+      writeInfo = true;
+    }
+    // A Rename made here (Ryan's review of PR #192) goes into notebook.json with this commit.
+    const pendingName = replica.state.pendingName ?? null;
+    if (pendingName !== null && pendingName !== info.name) {
+      info = { ...info, name: pendingName };
       writeInfo = true;
     }
 

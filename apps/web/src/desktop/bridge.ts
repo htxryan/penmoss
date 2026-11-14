@@ -141,6 +141,11 @@ export interface GitNotebookInfo {
    */
   readonly salt?: string;
   readonly name: string;
+  /**
+   * Renamed on this Mac and not yet in `notebook.json` (Ryan's review of PR #192): the engine's
+   * window writes it at its next sync. Null or absent: none.
+   */
+  readonly pendingName?: string | null;
   /** This Mac makes the notebook: the target held none when it was added. */
   readonly create: boolean;
   readonly remote: string;
@@ -207,6 +212,10 @@ export interface DesktopGit {
       readonly tokenUser?: string | null;
       /** This notebook's own commit identity; null goes back to git's (#170 F6). */
       readonly author?: { readonly name: string; readonly email: string } | null;
+      /** Rename (after a gesture): written to `notebook.json` at the next sync, on every device. */
+      readonly name?: string;
+      /** The name a sync found in `notebook.json` (another device's rename, or this one landing). */
+      readonly branchName?: string;
     },
   ): Promise<GitAnswer<GitNotebookInfo> | null>;
   /** Written only: the token never comes back (A857). Null forgets it. */

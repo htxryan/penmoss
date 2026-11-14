@@ -15,6 +15,14 @@ Each git notebook has its own section in the sidebar, with its folder tree, its 
 - **Move to Notebook…** and **Copy to Notebook…**, in a note's or folder's right-click menu, take it to another notebook.
 - **Copy Tags**, at the bottom of Copy to Notebook's picker, chooses whether the copies keep the tags you added to their notes. Turn it on or off by default in **Settings → Notebooks → Copy to Notebook**; it is on unless you change it. Tags typed in a note's text, like #idea, are part of the note and always go with it. Move to Notebook always keeps the tags.
 
+### Rename a notebook
+
+Right-click a notebook's row in the sidebar and choose **Rename Notebook**, type the new name and press Return (Escape keeps the old one). Or change **Notebook Name** on its page in **Settings → Notebooks** and choose **Rename**. With only one notebook, the sidebar shows no row for it: use Settings.
+
+The name is kept in the notebook's repository, so it renames it on every device that syncs it, your agents' copies included. Agents keep working: `--notebook` still finds a notebook by the name it had before.
+
+Two notebooks with one name can't be told apart by agents, so Penmoss warns when you add or rename a notebook to a name another notebook on this Mac has, and offers a free one, such as "Personal (2)".
+
 ### The Primary Notebook
 
 One notebook is your **Primary Notebook**. Today's note, This Week's note, the calendar, the Inbox and quick capture use it, and your app settings are kept in it. Choose it in **Settings → Notebooks**: open the notebook and choose **Make Primary Notebook**. Each Mac chooses its own. On Android the same setting is **Journal notebook**, in **Settings → Notebooks**.
