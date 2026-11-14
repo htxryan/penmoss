@@ -1,11 +1,5 @@
 import { Icon } from '@penmoss/ui/icons';
-import {
-  useId,
-  useRef,
-  useState,
-  useSyncExternalStore,
-  type MouseEvent,
-} from 'react';
+import { useId, useRef, useState, useSyncExternalStore, type MouseEvent } from 'react';
 import { gitNotebookPath, linkHandler, navigate, useLocation } from '../router';
 import { ContextMenu } from '../shell/ContextMenu';
 import { TIME_MACHINE_PATH, timeMachinePath } from '../time-machine/path';
