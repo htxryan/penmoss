@@ -16,6 +16,7 @@ import { attachmentPath, filePath, isImageType, sniffFileType } from '@penmoss/c
 import { findSection } from '@penmoss/core/diff-apply';
 import { summarise } from '@penmoss/core/diff';
 import { extractLinks, type DocJson, type NoteLink } from '@penmoss/core/links';
+import { matchNoteRef, notebookTag, noteRefNamer, parseNoteRef } from '@penmoss/core/note-ref';
 import { isTimeZone, type PeriodKind } from '@penmoss/core/periodic';
 import {
   HYBRID_DEPTH,
@@ -321,6 +322,47 @@ export class LocalNotebook {
 
   private live(): NoteInfo[] {
     return this.all().filter((note) => !note.deleted);
+  }
+
+  /** The ids of the notes this notebook holds (in Trash or not), which short references name. */
+  private heldIds(): string[] {
+    return readWorkspace(this.workspace)
+      .notes.map((note) => note.id)
+      .filter((id) => !isPurged(this.workspace, id));
+  }
+
+  /** The notebook's id (`notebook.json`), whose hash names it in short references (PEN-69). */
+  get notebookId(): string | null {
+    return this.engine.info?.id ?? null;
+  }
+
+  /**
+   * The note a reference names (PEN-69): a note id as it is, or a short reference
+   * (`K7QD-9HTF2CXA`) resolved among this notebook's notes. A short reference of another notebook
+   * is refused (`other_notebook`, its 4 characters in `details.notebook`); one naming no note
+   * here is `not_found`.
+   */
+  noteIdOf(ref: string): string {
+    const parsed = parseNoteRef(ref);
+    if (parsed.kind === 'id') return parsed.id;
+    const own = this.notebookId;
+    if (own === null || notebookTag(own) !== parsed.notebook) {
+      throw new LocalError(
+        404,
+        'other_notebook',
+        `${ref.trim()} is a note of another notebook (${parsed.notebook}), not of this one`,
+        { notebook: parsed.notebook },
+      );
+    }
+    const id = matchNoteRef(parsed.note, this.heldIds());
+    if (id === null) throw new LocalError(404, 'not_found', 'No such note');
+    return id;
+  }
+
+  /** Names this notebook's notes by their short references (PEN-69), for one list. */
+  refNamer(): (id: string) => string {
+    const own = this.notebookId;
+    return own === null ? (id) => id : noteRefNamer(own, this.heldIds());
   }
 
   private require(id: string): { doc: Y.Doc; info: NoteInfo } {
