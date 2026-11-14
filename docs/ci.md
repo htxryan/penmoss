@@ -214,9 +214,9 @@ Ryan then edits the notes and publishes the draft, which makes it Latest: `https
 
 ## Deploying penmoss.app (A1205)
 
-`.github/workflows/site.yml` builds and deploys penmoss.app when a stable release is published, so its download cards show that release's version, date and sizes (T80.12). A prerelease (an Alpha build or a `-rc.N` rehearsal) never moves it. A dispatch (Actions → Site → Run workflow) deploys the chosen branch, and its `release` input points the cards at another release, such as a rehearsal: `gh workflow run site.yml --ref main -f release=v0.2.0-rc.1`.
+`.github/workflows/site.yml` builds and deploys penmoss.app on every push to `main` that changes `site/` (or the workflow, the setup action or the lockfile), so a merged change is live within minutes (A1361); the cards then describe the latest stable release. It also deploys when a stable release is published, so its download cards show that release's version, date and sizes (T80.12). A prerelease (an Alpha build or a `-rc.N` rehearsal) never moves it. A dispatch (Actions → Site → Run workflow) deploys the chosen branch, and its `release` input points the cards at another release, such as a rehearsal: `gh workflow run site.yml --ref main -f release=v0.2.0-rc.1`.
 
-- **What it runs.** On a hosted Ubuntu runner (A1235), in the `site-deploy` environment: `task site:build` (with `PENMOSS_SITE_RELEASE` set to the release's tag), then `wrangler deploy` of `site/dist` to the `penmoss-site` Worker.
+- **What it runs.** On a hosted Ubuntu runner (A1235), in the `site-deploy` environment: `task site:build` (with `PENMOSS_SITE_RELEASE` set to the release's tag, or empty for the latest stable one), then `wrangler deploy` of `site/dist` to the `penmoss-site` Worker.
 - **Without the token** the job warns and stops; it never fails a release.
 - **Ryan sets up once:**
   1. A Cloudflare API token for the Penmoss account with only **Account → Workers Scripts: Edit** and **Zone (penmoss.app) → Workers Routes: Edit**. Cloudflare can't limit a token to one Worker, so it reaches the account's other Workers too; keep it in this one environment.
