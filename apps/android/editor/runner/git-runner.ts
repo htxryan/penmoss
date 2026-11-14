@@ -7,7 +7,10 @@
  * - `page <dir>`: one notebook's engine page, its store in files under `<dir>`;
  * - `guard`: the commit check page;
  * - `cli <home> <args…>`: `penmoss <args…>` with `PENMOSS_HOME`-style state in `<home>`, its
- *   secrets in a file there (never a keychain).
+ *   secrets in a file there (never a keychain);
+ * - `describe <remote> <dir> [<tag> <text>]…`: the Mac app's writer on a clone in `<dir>` describes
+ *   tags in the notebook's WorkspaceDoc (PEN-68) and pushes; with no pair, it prints what an agent's
+ *   `describe_tags` gives, as JSON.
  *
  * Frames go over stdio, each as a big-endian u32 length and the frame's bytes. Never shipped.
  */
@@ -26,6 +29,10 @@ import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import { docToDelta } from '@y/prosemirror';
 import { toBase64 } from 'lib0/buffer';
 import * as Y from '@y/y';
+import { GitNotebookEngine, MemorySecrets, MemoryStorage, NotebookOps } from '@penmoss/git-notebook';
+import { LocalNotebook } from '@penmoss/git-notebook/local';
+import { NodeGitTransport } from '@penmoss/git-notebook/node';
+import { setTagDescription } from '@penmoss/sync-client/workspace';
 
 function stdioPort(): FramePort {
   let buffered: Buffer = Buffer.alloc(0);
@@ -166,6 +173,43 @@ function editorNote(id: string, title: string, markdown: string): string {
   return toBase64(Y.encodeStateAsUpdate(doc));
 }
 
+/**
+ * The Mac app's writer (or, with no `pairs`, an agent reading) on a fresh clone of `remote` in
+ * `dir` (PEN-68): sets each tag's description and pushes, or prints `describe_tags`' answer.
+ */
+async function describe(remote: string, dir: string, pairs: string[]): Promise<void> {
+  const env = { GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' };
+  const transport = new NodeGitTransport({
+    gitDir: join(dir, 'repo.git'),
+    remote,
+    branch: 'main',
+    root: '',
+    author: { name: 'Ryan on the Mac', email: 'ryan@example.invalid' },
+    env,
+    sign: false,
+  });
+  await transport.init();
+  const reading = pairs.length === 0;
+  const engine = await GitNotebookEngine.open({
+    transport,
+    storage: new MemoryStorage(),
+    secrets: new MemorySecrets(),
+    writer: reading ? { kind: 'agent', label: 'Reader' } : { kind: 'device', label: 'Mac' },
+  });
+  await engine.sync();
+  const ops = new NotebookOps(engine);
+  if (reading) {
+    process.stdout.write(`${JSON.stringify(new LocalNotebook(ops).describeTags())}\n`);
+    return;
+  }
+  for (let i = 0; i + 1 < pairs.length; i += 2) {
+    setTagDescription(ops.workspace, pairs[i]!, pairs[i + 1]!);
+  }
+  await engine.save();
+  const report = await engine.sync();
+  if (!report.commit) throw new Error('The descriptions made no commit.');
+}
+
 const [role, ...rest] = process.argv.slice(2);
 if (role === 'page') {
   const dir = rest[0]!;
@@ -194,6 +238,14 @@ if (role === 'page') {
   const before = Y.encodeStateVector(doc);
   setTitle(doc, rest[1] ?? '');
   process.stdout.write(`${toBase64(Y.encodeStateAsUpdate(doc, before))}\n`);
+} else if (role === 'describe') {
+  describe(rest[0]!, rest[1]!, rest.slice(2)).then(
+    () => process.exit(0),
+    (error: unknown) => {
+      process.stderr.write(`${String(error)}\n`);
+      process.exit(1);
+    },
+  );
 } else {
   process.stderr.write(
     'usage: git-runner page <dir> | guard | cli <home> <args…> | note <id> <title> <markdown>\n',

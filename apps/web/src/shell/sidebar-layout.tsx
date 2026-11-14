@@ -34,9 +34,12 @@ const KEPT_MOUNTED: ReadonlySet<SidebarSection> = new Set(['notebooks']);
 export function SidebarSections({
   layout,
   render,
+  leads,
 }: {
   readonly layout: SidebarLayout;
   readonly render: Readonly<Record<SidebarSection, (tools: ReactNode) => ReactNode>>;
+  /** A section's own button, first among its tools (the Tags page's, PEN-68). */
+  readonly leads?: Partial<Readonly<Record<SidebarSection, ReactNode>>>;
 }) {
   const [dragging, setDragging] = useState<SidebarSection | null>(null);
   useOnRevealNotebooks(() => {
@@ -83,7 +86,14 @@ export function SidebarSections({
               layout.move(dragging, rest.indexOf(id) + (after ? 1 : 0));
             }}
           >
-            {render[id](<SectionTools id={id} layout={layout} onDragEnd={() => setHint(null)} />)}
+            {render[id](
+              <SectionTools
+                id={id}
+                layout={layout}
+                lead={leads?.[id]}
+                onDragEnd={() => setHint(null)}
+              />,
+            )}
           </div>
         ))}
     </DragContext.Provider>
@@ -98,15 +108,24 @@ export function SidebarSections({
 function SectionTools({
   id,
   layout,
+  lead,
   onDragEnd,
 }: {
   readonly id: SidebarSection;
   readonly layout: SidebarLayout;
+  /** The section's own button, before the handle. */
+  readonly lead?: ReactNode;
   readonly onDragEnd: () => void;
 }) {
   const { setDragging } = useContext(DragContext);
   const name = SIDEBAR_SECTION_NAMES[id];
-  if (!layout.canChange) return null;
+  if (!layout.canChange) {
+    return lead ? (
+      <span className="sb-part-tools" data-testid="section-tools">
+        {lead}
+      </span>
+    ) : null;
+  }
   const step = (event: KeyboardEvent<HTMLButtonElement>) => {
     const by = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0;
     if (by === 0) return;
@@ -133,6 +152,7 @@ function SectionTools({
   };
   return (
     <span className="sb-part-tools" data-testid="section-tools">
+      {lead}
       <button
         type="button"
         className="icon-btn sb-part-grip"

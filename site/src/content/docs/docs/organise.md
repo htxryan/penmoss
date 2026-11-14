@@ -46,6 +46,17 @@ A tag is a word after `#` in the note, such as `#ideas`, or an entry in the note
 - **Filter by a tag:** choose it in the sidebar's **Tags** section. The sidebar then shows only the notes with that tag, or a tag inside it. **All Notes** clears the filter.
 - **Rename or merge a tag:** the pencil beside a tag in the Tags section (**Rename or Merge**) changes it in every note, nested tags and notes in Trash included. Renaming to a tag that already exists merges the two.
 
+### Describe your tags
+
+The **Tags** page lists every tag with how many notes have it, nested tags under their parent, and a box under each to say what the tag means. Open it with the button at the end of the sidebar's **Tags** title (**Open the Tags Page**, shown when you point at the title) or **Tags** in the command palette. With several notebooks it has a section for each, in the sidebar's order.
+
+- **Describe a tag:** type in the box under its name. It saves as you type. Empty the box to remove the description.
+- **Each tag has its own description.** A parent's description says what the parent means, not its nested tags.
+- **Descriptions belong to the notebook.** They sync with it to your other devices, and agents read them with [`describe_tags`](/docs/reference/mcp/#what-tags-mean) to choose and understand tags.
+- **See a tag's notes:** choose its name. The sidebar shows its notes, as choosing it in the Tags section does.
+
+Android shows tags as before and keeps their descriptions when it syncs; describe tags on your Mac.
+
 ## Quick Access
 
 Quick Access holds up to 20 notes you want at hand. **Pin to Quick Access** in a note's ⋯ menu adds it, or drag a note onto the section. Right-click one for **Remove from Quick Access**. On the Mac the [menu bar icon](/docs/install/mac/#the-menu-bar-icon) lists them too.
