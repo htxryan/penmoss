@@ -602,9 +602,10 @@ test('the compact title bar: room for the lights in every layout, rows that drag
     expect(button.x, id).toBe(0);
     expect(button.width, id).toBe(toggle.width);
   }
+  // Settings last, at the very bottom (Ryan's review of #192, finding 18).
   expect(
-    (await page.getByTestId('sidebar-feedback').boundingBox())!.y +
-      (await page.getByTestId('sidebar-feedback').boundingBox())!.height,
+    (await page.getByTestId('sidebar-settings').boundingBox())!.y +
+      (await page.getByTestId('sidebar-settings').boundingBox())!.height,
   ).toBeCloseTo(rail.y + rail.height, 0);
   // The note's title row starts at the rail's edge, under the lights (the row drags, as the
   // sidebar's head does); what it holds starts after their inset: Back, Forward and the pin, then

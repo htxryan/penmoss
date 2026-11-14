@@ -91,9 +91,14 @@ test('4: the rail keeps Settings and Send Feedback at its foot', async ({ page }
   await expect(feedback).toBeVisible();
   const s = (await settings.boundingBox())!;
   const f = (await feedback.boundingBox())!;
-  // A column at the rail's foot, each the rail's width, Settings above Feedback.
-  expect(f.y + f.height).toBeCloseTo(rail.y + rail.height, 0);
-  expect(s.y + s.height).toBeCloseTo(f.y, 0);
+  // A column at the rail's foot, each the rail's width, Feedback above Settings, which is last
+  // (Ryan's review of #192, finding 18).
+  expect(s.y + s.height).toBeCloseTo(rail.y + rail.height, 0);
+  expect(f.y + f.height).toBeCloseTo(s.y, 0);
+  // Tab goes in the order shown.
+  await feedback.focus();
+  await page.keyboard.press('Tab');
+  await expect(settings).toBeFocused();
   for (const button of [s, f]) {
     expect(button.x).toBeCloseTo(rail.x, 0);
     expect(button.width).toBeGreaterThanOrEqual(rail.width - 2);
@@ -303,8 +308,8 @@ test('10: after an update, the notice is in the sidebar’s bottom panel, an ico
   await expect(icon).toHaveAccessibleName("Updated to build 1313: What's New");
   await expect(icon.locator('.sb-update-badge')).toBeVisible();
   const at = (await icon.boundingBox())!;
-  const railSettings = await box(page, '[data-testid="sidebar-settings"]');
-  expect(at.y + at.height).toBeCloseTo(railSettings.y, 0);
+  const railFeedback = await box(page, '[data-testid="sidebar-feedback"]');
+  expect(at.y + at.height).toBeCloseTo(railFeedback.y, 0);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/pen-135-10-rail.png` });
   // It opens What's New, and the notice is answered.
   await icon.click();

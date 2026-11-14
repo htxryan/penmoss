@@ -68,4 +68,4 @@ Quick Access holds up to 20 notes you want at hand. **Pin to Quick Access** in a
 
 ## The sidebar
 
-**Settings → Display** chooses which shortcuts the sidebar's top row shows (Search is always there), the order of its sections (Quick Access, Recent Notes, Notebooks, Calendar, Tags), and how many notes Recent Notes lists. ⌘\\ folds the sidebar to a rail of icons and back. On the rail, Settings and Send Feedback stay at its foot, and a note's top bar starts with Back and Forward.
+**Settings → Display** chooses which shortcuts the sidebar's top row shows (Search is always there), the order of its sections (Quick Access, Recent Notes, Notebooks, Calendar, Tags), and how many notes Recent Notes lists. ⌘\\ folds the sidebar to a rail of icons and back. On the rail, Send Feedback and Settings stay at its foot, Settings at the very bottom, and a note's top bar starts with Back and Forward.

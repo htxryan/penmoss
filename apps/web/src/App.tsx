@@ -255,6 +255,20 @@ function NotesShell({
     setDrawerShown(false);
   }
   const drawerOpen = phone && drawerShown && drawerScreen === screen;
+  // The sidebar's Send Feedback: after Settings in its bottom row, above it on the rail (finding 18).
+  const feedbackButton = (
+    <button
+      type="button"
+      className="icon-btn"
+      data-command="app.sendFeedback"
+      data-testid="sidebar-feedback"
+      aria-label="Send Feedback"
+      data-tip="Send Feedback"
+      onClick={() => commands.run('app.sendFeedback', { source: 'button' })}
+    >
+      <Icon name="feedback" size={18} />
+    </button>
+  );
   const sidebar = useRef<HTMLElement>(null);
   // Dismissed (not closed by opening something): focus goes back to the menu button, once
   // the page behind is no longer inert.
@@ -503,9 +517,12 @@ function NotesShell({
             />
           </nav>
           {/* Icons with their names as tooltips (T51, A935); Trash is on the notebook's bar (T52).
-              The update notice above them (PEN-135 item 10); on the rail, all at its foot (item 4). */}
+              The update notice above them (PEN-135 item 10); on the rail, all at its foot (item 4),
+              Settings last, at the very bottom (Ryan's review of #192, finding 18). In the DOM in
+              the order shown, so Tab follows it. */}
           <footer className="sb-foot">
             {phone ? null : <SidebarUpdateNotice notice={updateNotice} rail={rail} />}
+            {rail ? feedbackButton : null}
             <a
               className="icon-btn"
               href="/settings"
@@ -518,17 +535,7 @@ function NotesShell({
             >
               <Icon name="gear" size={18} />
             </a>
-            <button
-              type="button"
-              className="icon-btn"
-              data-command="app.sendFeedback"
-              data-testid="sidebar-feedback"
-              aria-label="Send Feedback"
-              data-tip="Send Feedback"
-              onClick={() => commands.run('app.sendFeedback', { source: 'button' })}
-            >
-              <Icon name="feedback" size={18} />
-            </button>
+            {rail ? null : feedbackButton}
           </footer>
           {rail || phone ? null : (
             <PaneResizer
