@@ -18,6 +18,7 @@ Penmoss can check for a newer build and offer it. It never installs one until yo
 - **Check Now** in the same place, or **Penmoss → Check for Updates…**, checks at any time, with Auto-Update on or off.
 - **Update Channel** chooses what it offers: **Stable** (the default) or **Alpha**. Changing it checks at once, and Penmoss still only offers the update.
 - When a newer build is found, Settings and a notice at the foot of the window offer it. **Install and Restart** downloads it and restarts Penmoss into it.
+- Penmoss always updates to the newest build, never one step at a time. Install and Restart checks again first, so a build published since the offer is the one you get, however many came out since your last update. If a newer build appears after one has downloaded, Penmoss downloads it in its place.
 
 **About Penmoss** shows the version you have.
 
