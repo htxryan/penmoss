@@ -131,6 +131,8 @@ describe('the offline index (T22)', () => {
     }
   });
 
+  // Some 4,000 queries, each run on both indexes and compared: 0.4 s alone, 10-12 s with the
+  // Mac short of CPU (utility QoS, load 260), and nothing in it can hang (PEN-124).
   it('finds the same notes with the same bm25 scores as FTS5, for every word in the vault', () => {
     const words = [...new Set(docs.flatMap((doc) => doc.body.split(/\s+/)))];
     const queries = [
@@ -184,7 +186,7 @@ describe('the offline index (T22)', () => {
     expect(compared).toBeGreaterThan(1000);
     // Partly typed words the prefix alone missed, compared with FTS5's OR (A680).
     expect(completed).toBeGreaterThan(50);
-  });
+  }, 120_000);
 
   it('leaves excluded notes out and marks title: words only in titles', () => {
     expect(localIds('backup -git')).toEqual(['zfs-snapshots', 'offsite-backup']);

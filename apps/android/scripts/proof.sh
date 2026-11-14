@@ -45,8 +45,14 @@ echo "[proof] building the debug and test APKs"
 
 emulator_pid=''
 watcher=''
+# The dialog watcher is stopped with KILL, never TERM. This script traps TERM, and dash (Linux's
+# sh) runs a just-forked subshell with that trap's handler until it resets it: a TERM that lands
+# first is lost, and the watcher, and the `wait` for it, run on forever.
+stop_watcher() {
+  [ -z "$watcher" ] || kill -KILL "$watcher" 2>/dev/null || true
+}
 cleanup() {
-  [ -z "$watcher" ] || kill "$watcher" 2>/dev/null || true
+  stop_watcher
   "$ADB" -s "$ANDROID_SERIAL" emu kill >/dev/null 2>&1 || true
   if [ -n "$emulator_pid" ]; then
     sleep 2
@@ -111,7 +117,7 @@ for spec in "$@"; do
   watch_dialogs "$spec" &
   watcher=$!
   result="$("$ADB" -s "$ANDROID_SERIAL" shell am instrument -w -e class "$spec" "$RUNNER" 2>&1 || true)"
-  kill "$watcher" 2>/dev/null || true
+  stop_watcher
   wait "$watcher" 2>/dev/null || true
   watcher=''
   printf '%s\n' "$result" >"$OUT/android-$n.log"

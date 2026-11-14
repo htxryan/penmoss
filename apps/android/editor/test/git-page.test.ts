@@ -1092,6 +1092,17 @@ describe('offline, as on the Mac (#174 review: F9 on Android)', () => {
     return net;
   }
 
+  /** The next status the page sends with this phase: its own signal, never a poll. */
+  function next(phone: ReturnType<typeof fakeApp>, phase: GitSyncStatus['phase']) {
+    return new Promise<GitSyncStatus>((resolve) => {
+      const off = phone.app.on('status', (status) => {
+        if ((status as GitSyncStatus).phase !== phase) return;
+        off();
+        resolve(status as GitSyncStatus);
+      });
+    });
+  }
+
   it('an edit with the network down says Offline at once; Sync now still tries; back, it syncs', async () => {
     const net = network(true);
     try {
@@ -1105,25 +1116,28 @@ describe('offline, as on the Mac (#174 review: F9 on Android)', () => {
         label: 'Penmoss for Android (Pixel)',
         front: true,
         onlineSettleMs: 100,
+        // Only the network coming back syncs here, never the push after edits.
+        pushDelayS: 3600,
       });
       await settle(phone.app);
       net.online = false;
       window.dispatchEvent(new Event('offline'));
+      // At once: the page sends the status while it takes the edit, before it answers it, so it
+      // is here by the time the answer is (#170 F9), however slow the machine.
       await typed(phone, NOTE, 'Offline');
-      await vi.waitFor(() => expect(phone.statuses.at(-1)?.phase).toBe('offline'));
+      expect(phone.statuses.at(-1)?.phase).toBe('offline');
       expect(phone.statuses.at(-1)?.pending).toContain(NOTE);
       // Sync now is the person's: tried whatever the network says.
       const tried = await settle(phone.app);
       expect(tried.phase).toBe('synced');
       await typed(phone, SECOND, 'Offline again');
-      await vi.waitFor(() => expect(phone.statuses.at(-1)?.phase).toBe('offline'));
+      expect(phone.statuses.at(-1)?.phase).toBe('offline');
+      // Back, it syncs once the network has stayed up a moment (onlineSettleMs).
+      const synced = next(phone, 'synced');
       net.online = true;
       window.dispatchEvent(new Event('online'));
-      await vi.waitFor(
-        async () =>
-          expect((await onBranch(phone)).some((path) => path.includes(`/${SECOND}/`))).toBe(true),
-        { timeout: 3000 },
-      );
+      expect((await synced).pending).not.toContain(SECOND);
+      expect((await onBranch(phone)).some((path) => path.includes(`/${SECOND}/`))).toBe(true);
     } finally {
       vi.unstubAllGlobals();
     }
