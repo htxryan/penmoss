@@ -197,9 +197,7 @@ test.describe('the first run', () => {
     await expect(firstRun.getByTestId('first-run-signed-in')).toContainText('Signed in as ryan');
     await firstRun.getByTestId('first-run-continue').click();
     await expect(firstRun.getByTestId('first-run-tree-repo')).toHaveCount(1);
-    await expect(firstRun.getByTestId('first-run-via')).toContainText(
-      'Signed in to GitHub as ryan',
-    );
+    await expect(firstRun.getByTestId('first-run-via')).toContainText('Signed in as ryan');
     expect(errors).toEqual([]);
   });
 });

@@ -1146,6 +1146,12 @@
   font-weight: 600;
 }
 
+/* What the filter matched (4.3). */
+.fr-tree mark {
+  background: var(--pm-highlight-bg);
+  color: inherit;
+}
+
 .fr-chip {
   flex: none;
   background: color-mix(in oklab, var(--pm-fg) 6%, transparent);

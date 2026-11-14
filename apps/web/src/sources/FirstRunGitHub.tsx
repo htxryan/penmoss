@@ -5,6 +5,7 @@
  * Paste a URL Instead goes on without GitHub. Once a sign-in answers, the flow goes straight on to
  * the next screen, which names the sign-in in a line (2.2 is not a stop).
  */
+import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useState } from 'react';
 import type { BrowseError, DesktopGitHubBrowse } from '../desktop/bridge';
 import { useDeviceSignIn } from './device-sign-in';
@@ -136,7 +137,8 @@ export function GitHubAccess({
             {device.copied ? 'Copied' : 'Copy Code'}
           </Action>
           <a className="btn" href={waiting.verificationUri} target="_blank" rel="noreferrer">
-            Open GitHub’s Page
+            <Icon name="link" size={14} />
+            Open {waiting.verificationUri.replace(/^https?:\/\//, '')}
           </a>
         </div>
         <Working testId="github-signin-waiting">Waiting for you to approve…</Working>

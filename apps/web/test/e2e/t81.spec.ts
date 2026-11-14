@@ -84,7 +84,7 @@ test.describe('the first run', () => {
     await expect(notebook).toContainText('Kept');
     await expect(notebook).toContainText('Root');
     await expect(repos.nth(1)).toContainText('No notebook yet');
-    await expect(firstRun.getByTestId('first-run-via')).toContainText('Signed in to GitHub as');
+    await expect(firstRun.getByTestId('first-run-via')).toContainText('Signed in');
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/tree.png` });
 
     // The filter narrows repositories and notebooks; Escape clears it.

@@ -984,7 +984,7 @@ test('with no GitHub sign-in in git, Sign in with GitHub lists the repositories 
     timeout: 30_000,
   });
   await firstRun.getByTestId('first-run-continue').click();
-  await expect(firstRun.getByTestId('first-run-via')).toContainText('Signed in to GitHub as ryan', {
+  await expect(firstRun.getByTestId('first-run-via')).toContainText('Signed in as ryan', {
     timeout: 30_000,
   });
   await firstRun

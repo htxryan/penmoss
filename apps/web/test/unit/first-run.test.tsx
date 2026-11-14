@@ -436,7 +436,7 @@ describe('the first run (A1030, First Run C)', () => {
     expect(notebooks.map((each) => each.textContent)).toEqual(['Workwork/Open', 'Homehome/Open']);
     expect(repos[1]!.textContent).toContain('No notebook yet');
     expect(repos[2]!.textContent).toContain('Read Only');
-    expect($('first-run-via')?.textContent).toContain('Signed in to GitHub as ryan');
+    expect($('first-run-via')?.textContent).toContain('Signed in as ryan');
     // The filter narrows repositories and notebooks.
     await type('first-run-filter', 'home');
     expect($$('first-run-notebook').map((each) => each.dataset['dir'])).toEqual(['home']);

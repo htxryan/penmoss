@@ -9,7 +9,7 @@ import { defaultRepoName } from '@penmoss/git-notebook/github-browse';
 import { Icon } from '@penmoss/ui/icons';
 import { Select } from '@penmoss/ui/controls/Select';
 import { useEffect, useId, useMemo, useState, type FormEvent } from 'react';
-import { fuzzy } from '../commands/fuzzy';
+import { fuzzy, highlightRuns } from '../commands/fuzzy';
 import type {
   DesktopGitHubBrowse,
   GitHubRepo,
@@ -262,6 +262,15 @@ export function CreateRepo({
   );
 }
 
+/** Text with what the filter matched marked (4.3). */
+function Marked({ text, query }: { text: string; query: string }) {
+  const match = query ? fuzzy(query, text) : null;
+  if (!match || match.indices.length === 0) return text;
+  return highlightRuns(text, match.indices).map((run, index) =>
+    run.match ? <mark key={index}>{run.text}</mark> : run.text,
+  );
+}
+
 /** The notebooks in one repository's folders. */
 const notebooksIn = (folders: RepoFolders) =>
   folders.folders.filter(
@@ -346,10 +355,10 @@ export function RepoTree({
   const signedInLine = (
     <p className="fr-lead fr-small" data-testid="first-run-via">
       {hub.login
-        ? `Signed in to GitHub as ${hub.login}`
+        ? `Signed in as ${hub.login}`
         : hub.via === 'git'
-          ? 'Signed in to GitHub through this Mac’s git'
-          : 'Signed in to GitHub in Penmoss'}
+          ? 'Signed in through this Mac’s git'
+          : 'Signed in to GitHub'}
       {' · '}
       <LinkButton testId="first-run-refresh" onClick={onRefresh}>
         Refresh
@@ -453,8 +462,12 @@ export function RepoTree({
                   data-testid="first-run-repo-pick"
                   onClick={() => onRepo(repo)}
                 >
-                  <span className="muted">{repo.owner}/</span>
-                  <strong>{repo.name}</strong>
+                  <span className="muted">
+                    <Marked text={`${repo.owner}/`} query={q} />
+                  </span>
+                  <strong>
+                    <Marked text={repo.name} query={q} />
+                  </strong>
                 </button>
                 {repo.empty ? <span className="chip fr-chip">Empty</span> : null}
                 {repo.visibility !== 'private' ? (
@@ -497,7 +510,9 @@ export function RepoTree({
                           onClick={() => setSelected(key)}
                         >
                           <Icon name="notebook" size={16} />
-                          <strong>{folder.notebook.name}</strong>
+                          <strong>
+                            <Marked text={folder.notebook.name} query={q} />
+                          </strong>
                           <Location dir={folder.path} />
                           <Action
                             primary={isChosen}
