@@ -17,6 +17,7 @@ import app.penmoss.data.PenmossDatabase
 import app.penmoss.data.UpdateEntity
 import app.penmoss.engine.bridge.FormatCommand
 import app.penmoss.engine.sync.ExchangeResult
+import app.penmoss.proof.ProofShot
 import app.penmoss.sync.NoteSync
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
 import org.junit.After
@@ -137,26 +139,37 @@ class TypingInstrumentedTest {
         // and so does this test. On a slow emulator (a hosted runner's, A1235) the first word
         // otherwise came first, and the list started at the second line.
         waitUntil("the list from the bar", 10_000) { items() == 1 }
-        onImeThread(ic) { it.commitText("first item", 1) }
+        typeWords(ic, "first item")
         enter(ic)
         waitUntil("a second item", 10_000) { items() == 2 }
-        onImeThread(ic) { it.commitText("second item", 1) }
+        typeWords(ic, "second item")
+        SystemClock.sleep(PROOF_PAUSE_MS)
         // Keyboards delete with both deleteSurroundingText and DEL key events.
         onImeThread(ic) { it.deleteSurroundingText(2, 0) }
         repeat(2) { key(ic, KeyEvent.KEYCODE_DEL) }
-        onImeThread(ic) { it.commitText("thing", 1) }
-        // getText puts a separator before every block, so each item's paragraph has two (the
-        // item's and its own), and the paragraph after the list one.
-        waitForBody("first item\n\nsecond thing")
+        typeWords(ic, "thing")
+        // One line per item: a blank line here would be a real empty paragraph (PEN-59).
+        waitForBody("first item\nsecond thing")
         enter(ic) // a new, empty item
         waitUntil("a third, empty item", 10_000) { items() == 3 }
         enter(ic) // an empty item: out of the list
         waitUntil("out of the list", 10_000) { items() == 2 }
-        onImeThread(ic) { it.commitText("after list", 1) }
-        waitForBody("first item\n\nsecond thing\nafter list")
+        typeWords(ic, "after list")
+        waitForBody("first item\nsecond thing\nafter list")
         val json = decode(js("JSON.stringify(penmossEditor.editor.editor.getJSON())"))!!
         assertEquals("one bulletList", 1, Regex("\"type\":\"bulletList\"").findAll(json).count())
         assertEquals("two list items", 2, Regex("\"type\":\"listItem\"").findAll(json).count())
+        // One tight list of two items, each a single paragraph, then the paragraph typed after
+        // it: no loose item and no second paragraph in an item. The empty paragraph at the end is
+        // the shared editor's TrailingNode, added while the list ended the note, as on the Mac
+        // (apps/android/editor/test/writing.test.ts checks the same document).
+        assertEquals(
+            "bulletList[tight](listItem(paragraph(\"first item\")),listItem(paragraph(\"second thing\"))),paragraph(\"after list\"),paragraph",
+            outline(JSONObject(json).getJSONArray("content")),
+        )
+        // The list on screen for the proof's video and screenshot.
+        SystemClock.sleep(2_000)
+        ProofShot.take()
     }
 
     @Test
@@ -274,18 +287,53 @@ class TypingInstrumentedTest {
     /** How many list items the body has. */
     private fun items(): Int? = js("penmossEditor.editor.editor.view.dom.querySelectorAll('li').length")?.toIntOrNull()
 
-    /** The body's text as the editor holds it, one line per block. */
+    /**
+     * Commits [text] a word at a time, a space between, as a keyboard's suggestions do, with a
+     * short pause after each so the proof's video shows it being typed.
+     */
+    private fun typeWords(ic: InputConnection, text: String) {
+        val words = text.split(" ")
+        words.forEachIndexed { index, word ->
+            onImeThread(ic) { it.commitText(if (index < words.lastIndex) "$word " else word, 1) }
+            SystemClock.sleep(PROOF_PAUSE_MS)
+        }
+    }
+
+    /**
+     * The body's text as the editor holds it, one line per paragraph or other textblock, so an
+     * empty paragraph reads as a blank line. ProseMirror's textBetween, not TipTap's getText:
+     * getText puts a separator before every block, so a list item's text came after two (the
+     * item's and its paragraph's) and a tight list read as one with a blank line between its
+     * items (PEN-59).
+     */
     private fun waitForBody(expected: String) {
         var last: String? = null
         try {
             waitUntil("the typed text", 10_000) {
-                last = decode(js("penmossEditor.editor.editor.getText({ blockSeparator: '\\n' })"))?.replace('\u00a0', ' ')?.trim()
+                last = decode(js("(d => d.textBetween(0, d.content.size, '\\n'))(penmossEditor.editor.editor.state.doc)"))
+                    ?.replace('\u00a0', ' ')?.trim()
                 last == expected
             }
         } catch (e: AssertionError) {
             // The document too: blocks with no text read the same as one in getText.
             val doc = runCatching { decode(js("JSON.stringify(penmossEditor.editor.editor.getJSON())")) }.getOrNull()
             throw AssertionError("Expected <$expected> but the editor has <$last>, as $doc", e)
+        }
+    }
+
+    /**
+     * The blocks of a document's content as `type(children)`, a text node as its quoted text, and a
+     * list's `[tight]` when it is: the document's shape, without the attributes nothing here sets.
+     */
+    private fun outline(content: JSONArray): String = (0 until content.length()).joinToString(",") { index ->
+        val node = content.getJSONObject(index)
+        val type = node.getString("type")
+        if (type == "text") {
+            "\"${node.getString("text")}\""
+        } else {
+            val tight = node.optJSONObject("attrs")?.optBoolean("tight", false) == true
+            val children = node.optJSONArray("content")?.let { "(${outline(it)})" } ?: ""
+            type + (if (tight) "[tight]" else "") + children
         }
     }
 
@@ -322,6 +370,9 @@ class TypingInstrumentedTest {
 
         /** An update with nothing in it: what a note holds before its first edit. */
         const val EMPTY_NOTE = "AAA="
+
+        /** A pause between typed words, so the proof's video shows the list being typed. */
+        const val PROOF_PAUSE_MS = 250L
 
         /** The T2 spike's paragraph (spikes/android-editor), typed word by word. */
         const val PARAGRAPH =
