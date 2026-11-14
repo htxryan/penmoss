@@ -10,6 +10,7 @@
  * those files (font-faces.ts), never its CDN.
  */
 import type { DrawingFiles, DrawingServices } from '@penmoss/editor';
+import type { DrawingStep } from './editor';
 import { keepFontFacesLocal } from './font-faces';
 
 /** Where the drawing's files are kept: this device's attachment store (A1032). */
@@ -45,6 +46,11 @@ export function loadDrawingEditor(): Promise<DrawingEditorModule> {
 /** Whether a drawing editor is open in this window (one at a time). */
 let open = false;
 
+/** Whether the drawing editor is open in this window now (it holds the window's history). */
+export function drawingEditorOpen(): boolean {
+  return open;
+}
+
 export interface DrawingServicesOptions {
   /** Shows a message about a drawing that couldn't be opened or saved. */
   readonly onError: (message: string) => void;
@@ -53,16 +59,20 @@ export interface DrawingServicesOptions {
    * Undo, are the drawing's); returns the call that gives them back.
    */
   readonly suspendShortcuts?: () => () => void;
+  /** The app's commands, which the editor's bar runs as the title bar does (its pin, R2-18). */
+  readonly commands?: { run(id: string): unknown };
 }
 
 export function drawingServices(
   store: DrawingStore,
-  { onError, suspendShortcuts }: DrawingServicesOptions,
+  { onError, suspendShortcuts, commands }: DrawingServicesOptions,
 ): DrawingServices {
   return {
     async edit(scene): Promise<DrawingFiles | null> {
       if (open) return null;
       open = true;
+      /** The bar's Back or Forward, if one closed the editor. */
+      let step: DrawingStep | null = null;
       try {
         let text: string | null = null;
         if (scene) {
@@ -81,12 +91,18 @@ export function drawingServices(
           return null;
         }
         const resume = suspendShortcuts?.();
-        let drawn;
+        let outcome;
         try {
-          drawn = await editor.openDrawingEditor({ scene: text, onError });
+          outcome = await editor.openDrawingEditor({
+            scene: text,
+            onError,
+            ...(commands ? { commands } : {}),
+          });
         } finally {
           resume?.();
         }
+        step = outcome.step;
+        const { drawn } = outcome;
         if (!drawn) return null;
         const encoder = new TextEncoder();
         const saved = await store.addFile(encoder.encode(drawn.scene), 'drawing.excalidraw');
@@ -99,6 +115,12 @@ export function drawingServices(
         return null;
       } finally {
         open = false;
+        // The window goes once the note has the drawing: the note's editor puts the files in as
+        // soon as this resolves, before a timer's turn (R2-18).
+        if (step) {
+          const go = step;
+          setTimeout(() => window.history[go](), 0);
+        }
       }
     },
   };

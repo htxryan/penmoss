@@ -470,6 +470,7 @@ export function NoteView({
         const drawings = drawingServices(notes.attachments, {
           onError: (message) => created?.host?.notice(message),
           suspendShortcuts: () => commands.suspend(),
+          commands,
         });
         // The editor's own element: it moves to whichever view shows the note next. In the
         // page before the editor is made, as node views may measure.

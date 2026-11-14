@@ -12,11 +12,13 @@ import {
   type Launched,
 } from './support';
 
-// PEN-28 in the Mac app: the slash menu's Excalidraw Diagram opens Excalidraw over the window,
+// PEN-28 in the Mac app: the slash menu's Diagram: Excalidraw opens Excalidraw over the window,
 // from the app's own files (its fonts too: the app works offline, and its CSP allows nothing else). Done
 // puts the drawing in the note and its two files in the notebook's repository; a click selects it
-// and its Edit button opens it again with its shapes. The web suite (apps/web/test/e2e/drawings.spec.ts) covers editing a
-// drawing again and the production build's CSP.
+// and its Edit button opens it again with its shapes. The editor's bar is the window's title bar
+// (R2-17, R2-18): its empty part drags the window, after the lights come Back, Forward and the
+// pin. The web suite (apps/web/test/e2e/drawings.spec.ts) covers editing a drawing again, Back
+// keeping it, and the production build's CSP.
 
 const mac = process.platform === 'darwin';
 const NEW_NOTE = mac ? 'Meta+Alt+KeyN' : 'Alt+KeyN';
@@ -30,6 +32,27 @@ test.afterEach(async () => {
 test.afterAll(() => removeDataDirs());
 
 const editor = (page: Page) => page.getByTestId('drawing-editor');
+
+/**
+ * The region Electron gives the point (A723, A1123): of the elements with one there, the last in
+ * the DOM wins, as later regions are applied over earlier ones (as mac-window.spec.ts reads it).
+ */
+const regionAt = (page: Page, x: number, y: number) =>
+  page.evaluate(
+    ([px, py]) => {
+      let won = 'none';
+      for (const element of document.querySelectorAll<HTMLElement>('body *')) {
+        const style = getComputedStyle(element);
+        const value = style.getPropertyValue('-webkit-app-region');
+        if (value !== 'drag' && value !== 'no-drag') continue;
+        if (style.visibility !== 'visible') continue;
+        const box = element.getBoundingClientRect();
+        if (px >= box.left && px < box.right && py >= box.top && py < box.bottom) won = value;
+      }
+      return won;
+    },
+    [x, y] as const,
+  );
 
 /** Draws a rectangle (Excalidraw's R) from `from` to `to`, in the canvas's own coordinates. */
 async function drawRectangle(
@@ -51,7 +74,7 @@ async function drawRectangle(
 }
 
 test('a drawing made from the slash menu shows in the note and is kept as files in git', async () => {
-  const launched = await launch();
+  const launched = await launch({ macWindow: true });
   opened.push(launched);
   const { app, page } = launched;
   const errors = collectErrors(page, false);
@@ -111,6 +134,36 @@ test('a drawing made from the slash menu shows in the note and is kept as files 
   await expect(editor(page)).toBeVisible();
   await expect(editor(page)).toHaveAttribute('aria-label', 'Edit Excalidraw Diagram');
   await expect(editor(page)).toHaveAttribute('data-shapes', '1');
+
+  // Its bar is the window's title bar (R2-17, R2-18): the lights' room, then Back, Forward and the
+  // pin, the title, and Cancel and Done. Its empty part drags the window; its buttons click.
+  const bar = editor(page).getByTestId('drawing-editor-bar');
+  await expect(bar.getByRole('button', { name: 'Back' })).toBeEnabled();
+  await expect(bar.getByRole('button', { name: 'Forward' })).toBeDisabled();
+  await expect(bar.getByTestId('drawing-editor-pin')).toBeVisible();
+  const titled = await page.evaluate(() => document.documentElement.dataset['titlebar'] ?? null);
+  if (titled === 'compact') {
+    const barBox = (await bar.boundingBox())!;
+    const title = (await bar.locator('.drawing-editor-title').boundingBox())!;
+    const done = (await bar.getByRole('button', { name: 'Done' }).boundingBox())!;
+    const back = (await bar.getByRole('button', { name: 'Back' }).boundingBox())!;
+    const middle = barBox.y + barBox.height / 2;
+    // Beside the title, and the empty stretch before Cancel.
+    expect(await regionAt(page, title.x + 4, middle)).toBe('drag');
+    expect(await regionAt(page, title.x + title.width - 4, middle)).toBe('drag');
+    expect(await regionAt(page, done.x + done.width / 2, middle)).toBe('no-drag');
+    expect(await regionAt(page, back.x + back.width / 2, middle)).toBe('no-drag');
+    // The lights' room is clear of the buttons.
+    expect(back.x).toBeGreaterThanOrEqual(80);
+  }
+
+  // The pin pins the window, and again unpins it.
+  const pin = bar.getByTestId('drawing-editor-pin');
+  await pin.click();
+  await expect(pin).toHaveAttribute('aria-pressed', 'true');
+  await pin.click();
+  await expect(pin).toHaveAttribute('aria-pressed', 'false');
+
   await page.waitForTimeout(2_000);
   await editor(page).getByRole('button', { name: 'Cancel' }).click();
   await expect(editor(page)).toBeHidden();

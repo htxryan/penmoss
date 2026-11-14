@@ -210,6 +210,57 @@ test('PEN-28: draw in a note, save it as files in git, open it again and edit it
   await expect(body(page).getByTestId('drawing')).toHaveCount(1);
   await expect(drawing).toHaveAttribute('data-state', 'ready');
 
+  // The editor's bar is the window's title bar (R2-18): Back and Forward as the window has them
+  // (no pin outside the Mac app), the title, then Cancel and Done. Back keeps the drawing, as
+  // Done does, then goes back; Forward comes back to the note with it.
+  await drawing.hover();
+  await editButton.click();
+  await expect(editor(page)).toHaveAttribute('data-shapes', '2');
+  const bar = editor(page).getByTestId('drawing-editor-bar');
+  await expect(bar.getByRole('button', { name: 'Back' })).toBeEnabled();
+  await expect(bar.getByRole('button', { name: 'Forward' })).toBeDisabled();
+  await expect(bar.getByTestId('drawing-editor-pin')).toHaveCount(0);
+  // Nothing after the bar in the page lies over its title: in the Mac app a later region wins, so
+  // Excalidraw's window-wide layers would take the drag from it (R2-17).
+  expect(
+    await bar.evaluate((element) => {
+      const title = element.querySelector('.drawing-editor-title')!.getBoundingClientRect();
+      const [x, y] = [title.left + 4, title.top + title.height / 2];
+      return [...document.querySelectorAll('body *')]
+        .filter(
+          (other) =>
+            element.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING &&
+            !element.contains(other),
+        )
+        .filter((other) => {
+          const box = other.getBoundingClientRect();
+          return x >= box.left && x < box.right && y >= box.top && y < box.bottom;
+        })
+        .map((other) => other.className.toString());
+    }),
+  ).toEqual([]);
+  await drawShape(page, 'rectangle', { x: 300, y: 440 }, { x: 420, y: 540 });
+  await bar.getByRole('button', { name: 'Back' }).click();
+  await expect(editor(page)).toBeHidden();
+  await expect(page).not.toHaveURL(new RegExp(id));
+  await page.goForward();
+  await expect(page).toHaveURL(new RegExp(id));
+  await expect(drawing).toHaveAttribute('data-state', 'ready');
+  await expect
+    .poll(
+      () => {
+        const found = DRAWING.exec(remoteMarkdown(host, remote, id) ?? '');
+        if (!found) return null;
+        try {
+          return shapes(remoteBytes(host, remote, `attachments/${found[2]}.excalidraw`)).length;
+        } catch {
+          return null;
+        }
+      },
+      { timeout: 60_000, intervals: [2_000] },
+    )
+    .toBe(3);
+
   // The proof's last frame: the drawing back in the note, its buttons on hover.
   await drawing.scrollIntoViewIfNeeded();
   await drawing.hover();

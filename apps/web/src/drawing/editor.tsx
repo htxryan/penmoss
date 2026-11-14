@@ -5,26 +5,35 @@
  */
 import type { ExcalidrawInitialDataState } from '@excalidraw/excalidraw/types';
 import { createRoot } from 'react-dom/client';
-import { DrawingDialog } from './DrawingDialog';
+import { DrawingDialog, type DrawingStep } from './DrawingDialog';
 import { parseScene, type DrawingResult } from './scene';
 
+export type { DrawingStep } from './DrawingDialog';
 export type { DrawingResult } from './scene';
+
+/** How the editor closed: Done's files (null on Cancel), and Back or Forward if one closed it. */
+export interface DrawingOutcome {
+  readonly drawn: DrawingResult | null;
+  readonly step: DrawingStep | null;
+}
 
 export interface DrawingEditorOptions {
   /** The scene to open (a `.excalidraw` file's text), or null for a new drawing. */
   readonly scene: string | null;
   readonly onError: (message: string) => void;
+  /** The app's commands, for the bar's pin. */
+  readonly commands?: { run(id: string): unknown };
 }
 
-/** Opens the drawing editor over the page; resolves with Done's files, or null on Cancel. */
-export function openDrawingEditor(options: DrawingEditorOptions): Promise<DrawingResult | null> {
+/** Opens the drawing editor over the page; resolves with Done's files, or none on Cancel. */
+export function openDrawingEditor(options: DrawingEditorOptions): Promise<DrawingOutcome> {
   let initial: ExcalidrawInitialDataState | null = null;
   if (options.scene !== null) {
     try {
       initial = parseScene(options.scene);
     } catch {
       options.onError("This drawing's file couldn't be read");
-      return Promise.resolve(null);
+      return Promise.resolve({ drawn: null, step: null });
     }
   }
   return new Promise((resolve) => {
@@ -32,10 +41,10 @@ export function openDrawingEditor(options: DrawingEditorOptions): Promise<Drawin
     host.className = 'drawing-editor-host';
     document.body.append(host);
     const root = createRoot(host);
-    const close = (result: DrawingResult | null) => {
+    const close = (drawn: DrawingResult | null, step?: DrawingStep) => {
       root.unmount();
       host.remove();
-      resolve(result);
+      resolve({ drawn, step: step ?? null });
     };
     root.render(
       <DrawingDialog
@@ -43,6 +52,7 @@ export function openDrawingEditor(options: DrawingEditorOptions): Promise<Drawin
         onDone={close}
         onCancel={() => close(null)}
         onError={options.onError}
+        {...(options.commands ? { commands: options.commands } : {})}
       />,
     );
   });

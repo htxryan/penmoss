@@ -2,6 +2,7 @@ import { openLightboxNow } from '@penmoss/editor';
 import { useEffect } from 'react';
 import { useCommand, useCommands } from '../commands/hooks';
 import { desktop } from '../desktop/bridge';
+import { drawingEditorOpen } from '../drawing/drawings';
 import { useHistoryPlace } from '../router';
 
 /** The mouse's back and forward buttons (`MouseEvent.button`). */
@@ -55,8 +56,9 @@ export function useHistoryCommands(): void {
       const step = mouseStep(event.button);
       if (step === null) return;
       event.preventDefault();
-      // Not from behind the image lightbox, which is modal (T51 review, A948).
-      if (openLightboxNow()?.open) return;
+      // Not from behind the image lightbox, which is modal (T51 review, A948), nor the drawing
+      // editor, whose own Back and Forward keep the drawing first (R2-18).
+      if (openLightboxNow()?.open || drawingEditorOpen()) return;
       commands.run(step === 'back' ? 'window.back' : 'window.forward');
     };
     window.addEventListener('mouseup', onMouseUp);

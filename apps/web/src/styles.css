@@ -6628,7 +6628,8 @@ a.toast-action {
     #root > .banner,
     .window-drag,
     .home,
-    .tags-page-top
+    .tags-page-top,
+    .drawing-editor-bar
   ) {
   -webkit-app-region: drag;
 }
