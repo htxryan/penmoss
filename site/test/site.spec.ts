@@ -2,12 +2,31 @@
  * penmoss.app as it is served (T80.15, P9, P13, P14): the built site under `wrangler dev` with the
  * real `_headers`. The brochure pages run no script under the site-wide policy; the docs run only
  * their own, with search, the theme switch and the mobile menu working under the docs' policy,
- * and nothing loads from anywhere but this site.
+ * and nothing loads from anywhere but this site. Both policies allow Cloudflare Web Analytics'
+ * beacon (PEN-123), which Cloudflare adds only as it serves penmoss.app, so here the policy text
+ * is checked, and that no page logs a policy error or any other.
  */
 import { expect, test, type ConsoleMessage, type Page } from '@playwright/test';
 
 const SITE_POLICY =
-  "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+  "default-src 'none'; script-src https://static.cloudflareinsights.com; style-src 'unsafe-inline'; img-src 'self'; connect-src https://cloudflareinsights.com; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+
+/** The only hosts either policy names: the analytics beacon's script, and where it reports. */
+const ANALYTICS_HOSTS = {
+  'script-src': ['https://static.cloudflareinsights.com'],
+  'connect-src': ['https://cloudflareinsights.com'],
+};
+
+/** The hosts each directive of a policy allows, by directive. */
+function hostsOf(policy: string) {
+  const hosts: Record<string, string[]> = {};
+  for (const directive of policy.split(';')) {
+    const [name, ...sources] = directive.trim().split(/\s+/);
+    const found = sources.filter((source) => /^https?:/i.test(source));
+    if (name && found.length) hosts[name] = found;
+  }
+  return hosts;
+}
 
 /** Every request leaving the site, and every console error, while `run` runs. */
 async function watch(page: Page, run: () => Promise<void>) {
@@ -345,8 +364,10 @@ test.describe('the docs', () => {
       const response = await page.goto('/docs/');
       expect(response?.status()).toBe(200);
       const policy = response?.headers()['content-security-policy'] ?? '';
-      expect(policy).toMatch(/^default-src 'none'; script-src 'self' 'wasm-unsafe-eval' 'sha256-/);
-      expect(policy).not.toMatch(/https?:/);
+      expect(policy).toMatch(
+        /^default-src 'none'; script-src 'self' 'wasm-unsafe-eval' https:\/\/static\.cloudflareinsights\.com 'sha256-/,
+      );
+      expect(hostsOf(policy)).toEqual(ANALYTICS_HOSTS);
       await expect(page.getByRole('heading', { level: 1 })).toHaveText('Penmoss Docs');
     });
     expect(offsite).toEqual([]);
@@ -621,4 +642,59 @@ test.describe('the docs', () => {
     await page.goto('/docs/install/mac/');
     await expect(page).toHaveTitle('The Mac app | Penmoss Docs');
   });
+});
+
+test.describe('Cloudflare Web Analytics (PEN-123)', () => {
+  // Cloudflare adds the beacon only as it serves penmoss.app, so it can't load here: this checks
+  // that every policy allows it, and that no page logs a policy error or any other.
+  for (const route of [...BROCHURE, '/docs/', '/docs/install/mac/', '/docs/help/privacy/']) {
+    test(`${route} allows the beacon and its reports, no other host, and logs no error`, async ({
+      page,
+    }) => {
+      const { offsite, errors } = await watch(page, async () => {
+        const response = await page.goto(route);
+        expect(response?.status()).toBe(200);
+        const policy = response?.headers()['content-security-policy'] ?? '';
+        expect(hostsOf(policy)).toEqual(ANALYTICS_HOSTS);
+        await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      });
+      expect(offsite).toEqual([]);
+      expect(errors.filter((error) => /Content Security Policy/i.test(error))).toEqual([]);
+      expect(errors).toEqual([]);
+    });
+  }
+
+  for (const route of ['/', '/docs/']) {
+    test(`${route} lets a stand-in beacon load from Cloudflare and report there`, async ({
+      page,
+    }) => {
+      // Cloudflare's own script can't load here, so a stand-in served from its host does what it
+      // does: it loads from static.cloudflareinsights.com and posts to cloudflareinsights.com.
+      const reported: string[] = [];
+      await page.route('https://static.cloudflareinsights.com/**', (request) =>
+        request.fulfill({
+          contentType: 'text/javascript',
+          body: "fetch('https://cloudflareinsights.com/cdn-cgi/rum', { method: 'POST', body: '{}' }).then(() => { document.documentElement.dataset.beacon = 'sent'; });",
+        }),
+      );
+      await page.route('https://cloudflareinsights.com/**', (request) => {
+        reported.push(request.request().url());
+        return request.fulfill({ status: 204, headers: { 'access-control-allow-origin': '*' } });
+      });
+      const errors: string[] = [];
+      page.on('console', (message) => {
+        if (message.type() === 'error') errors.push(message.text());
+      });
+      await page.goto(route);
+      await page.evaluate(() => {
+        const script = document.createElement('script');
+        script.defer = true;
+        script.src = 'https://static.cloudflareinsights.com/beacon.min.js/v1';
+        document.body.append(script);
+      });
+      await expect(page.locator('html')).toHaveAttribute('data-beacon', 'sent');
+      expect(reported).toEqual(['https://cloudflareinsights.com/cdn-cgi/rum']);
+      expect(errors).toEqual([]);
+    });
+  }
 });

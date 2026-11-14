@@ -33,6 +33,11 @@ import { AndroidGitHost, describe as describeFailure, type GitSyncStatus } from 
 import { captureNoteId } from '../src/git/server';
 import contract from '../../contract/git-engine-v1.json';
 
+// The engine's real git work (hashing, packing, two engines over one remote) takes about 0.2 s a
+// test alone and several seconds when the gate's other suites share the CPUs, past vitest's 5 s
+// default: the file gets the 60 s that the engine's own suite (packages/git-notebook) has (A1378).
+vi.setConfig({ testTimeout: 60_000 });
+
 const NOTEBOOK = '01JBNOTEBOOK00000000000001';
 const NOTE = '01JBNOTE000000000000000001';
 const FOLDER = '01JBF0000000000000000000B1';
@@ -1043,7 +1048,7 @@ describe('leaving the screen, as on the Mac (#174 review: F8 on Android)', () =>
     expect(phone.cancels.count).toBe(0);
     expect((await onBranch(phone)).some((path) => path.includes(`/${NOTE}/`))).toBe(true);
     await pushing;
-  }, 20_000);
+  });
 
   it('a plain pause (the file picker, the share sheet) never stops a push; leaving does, at the limit (#174 delta review)', async () => {
     const remote = new MemoryRemote();
@@ -1077,7 +1082,7 @@ describe('leaving the screen, as on the Mac (#174 review: F8 on Android)', () =>
     await phone.app.call('close', { leaving: true });
     expect(phone.cancels.count).toBe(1);
     await again;
-  }, 20_000);
+  });
 });
 
 describe('offline, as on the Mac (#174 review: F9 on Android)', () => {
