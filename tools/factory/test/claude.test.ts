@@ -51,6 +51,19 @@ describe('the Claude adapter', { timeout: 30_000 }, () => {
     // Production deploys happen after merge (FD24): the site's task too, not only wrangler.
     expect(settings.permissions.deny).toContain('Bash(task site:deploy:*)');
     expect(agent.env['ENABLE_CLAUDEAI_MCP_SERVERS']).toBe('false');
+    expect(argv).not.toContain('--effort');
+  });
+
+  it('passes the effort its model alias names (A1363)', async () => {
+    for (const remote of [undefined, '[PF] Penmoss PEN-7 run']) {
+      const agent = await claudeAgent('claude-opus-5-5', {}, remote, 'high');
+      const { command } = agent.buildPrintCommand({
+        prompt: 'do it',
+        dangerouslySkipPermissions: true,
+      });
+      expect(command).toMatch(/(^| )claude .*--effort high /);
+      expect(command).toContain("--model 'claude-opus-5-5'");
+    }
   });
 });
 

@@ -39,6 +39,8 @@ The factory comments and moves cards as its own Linear app, the way its GitHub A
 
 In Linear, the agent is a label in the group **Agent** and the model a label in the group **Model**, named without a prefix: `claude`, `opencode`, `opus`, `sonnet`, `go`. The factory reads a label in a group as `group:name` (`claude` in Agent is `agent:claude`, `go` in Model is `model:go`), and its messages and `task factory:next` name them that way. `plan:skip` and the `platform:*` labels are plain labels, in no group. A group holds one label per issue, so Linear itself refuses two agents. `task factory:linear:check` lists any that are missing, and `-- --fix` creates them. On Project 8 each label is named as the factory reads it.
 
+Each Claude alias in `tools/factory/factory.config.json` names its model exactly and its effort: `opus` is Opus 5.5 (`claude-opus-5-5`) at `high`. Planning sessions use Claude's default alias too, so every top-level Claude Code session the factory starts runs on the same model and effort (A1363).
+
 Conflicting labels (two `agent:` or two `model:` labels, or `agent:claude` with `model:go`) stop the card from starting: the daemon says why on the issue and sets Blocked, and `task factory:next` says why too.
 
 OpenCode runs under the same sandbox as Claude Code. Its permissions come from `tools/factory/agents/opencode.json`, whose bash deny list mirrors Claude's. The factory passes that file inline with the worktree's own OpenCode config turned off, so the agent can't loosen it.

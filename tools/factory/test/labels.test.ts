@@ -11,7 +11,7 @@ describe('parseIssueSpec', () => {
       spec: {
         agent: 'claude',
         modelAlias: 'opus',
-        model: 'opus',
+        model: 'claude-opus-5-5',
         planSkip: false,
         platforms: null,
         priority: 3,

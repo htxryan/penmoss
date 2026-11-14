@@ -10,10 +10,13 @@ import { opencodeAgent } from './opencode.ts';
 
 const modelOf = (config: FactoryConfig, spec: IssueSpec) =>
   config.models[spec.modelAlias]?.model ?? spec.model;
+const effortOf = (config: FactoryConfig, spec: IssueSpec) => config.models[spec.modelAlias]?.effort;
 
 export function agentFor(config: FactoryConfig, spec: IssueSpec): Promise<AgentProvider> {
   const model = modelOf(config, spec);
-  return spec.agent === 'opencode' ? opencodeAgent(model) : claudeAgent(model);
+  return spec.agent === 'opencode'
+    ? opencodeAgent(model)
+    : claudeAgent(model, {}, undefined, effortOf(config, spec));
 }
 
 /** A run's sessions' name in the Claude app: the card as people know it, marked as the factory's. */
@@ -31,5 +34,10 @@ export async function remoteAgentFor(
 ): Promise<AgentProvider | undefined> {
   const dir = loginDir(config);
   if (spec.agent !== 'claude' || !dir || !hasLogin(dir)) return undefined;
-  return claudeAgent(modelOf(config, spec), {}, runSessionName(config, issue));
+  return claudeAgent(
+    modelOf(config, spec),
+    {},
+    runSessionName(config, issue),
+    effortOf(config, spec),
+  );
 }
