@@ -46,7 +46,10 @@ function embed(text: string): Float32Array {
 function conceptSource(): MeaningSource {
   let enabled = true;
   let ready = true;
-  const cache = Object.assign(new MemoryVectorCache(), { compact: () => Promise.resolve(0) });
+  const cache = Object.assign(new MemoryVectorCache(), {
+    compact: () => Promise.resolve(0),
+    claim: () => Promise.resolve(),
+  });
   const status = () =>
     Promise.resolve({
       enabled,

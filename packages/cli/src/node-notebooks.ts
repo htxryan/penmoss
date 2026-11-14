@@ -92,6 +92,8 @@ const INDEX_SLICE_MS = 5_000;
 /** How long after an agent's edit the holder indexes it. */
 const EDIT_INDEX_DELAY_MS = 1_000;
 const INDEX_EVERY_MS = 30_000;
+/** How often an MCP server renews its notebook's claim on the vectors it uses (PEN-134). */
+const CLAIM_EVERY_MS = 10 * 60_000;
 const NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
 export interface NodeNotebooksOptions {
@@ -118,6 +120,8 @@ export interface NodeNotebooksOptions {
    * checks it still holds it (default 30 s; A1350).
    */
   readonly leaseRetryMs?: number;
+  /** How often `penmoss mcp` renews its notebook's claim on the vectors it uses (default 10 min). */
+  readonly claimEveryMs?: number;
   /**
    * Whether a person is at this machine's terminal (`/dev/tty` opens). Only then does signing get
    * its full minute.
@@ -823,9 +827,12 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
             );
           }
           if (!meaning) return;
+          const cache = meaning.cache;
           notebook.useMeaning({
-            index: new MeaningIndex(meaning.embedder, meaning.cache),
+            index: new MeaningIndex(meaning.embedder, cache),
             budgetMs: CLI_MEANING_BUDGET_MS,
+            // The app's compaction keeps what this notebook uses, though it never opens it.
+            ...(cache.claim ? { claim: (keys) => cache.claim!(cloneDir(entry), keys) } : {}),
           });
         },
         // Every change is on disk before its reply (B1 of #165): a command killed during the
@@ -1070,7 +1077,8 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
       });
       void started;
       // The holder of the lease indexes this notebook in the background, a slice at a time. It
-      // never compacts: the cache is every notebook's, and only the app's service sees them all.
+      // never compacts: the cache is every notebook's, and the app's service compacts, keeping
+      // what each notebook's claim names (PEN-134).
       let indexTimer: ReturnType<typeof setTimeout> | null = null;
       let serving = true;
       const indexSoon = (ms: number) => {
@@ -1093,6 +1101,23 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
             `penmoss: indexing for meaning stopped: ${error instanceof Error ? error.message : String(error)}`,
           );
           indexSoon(options.indexEveryMs ?? INDEX_EVERY_MS);
+        }
+      };
+      // Whoever holds the lease, this notebook claims the vectors its notes use, so the app's
+      // compaction keeps them though the app may never open this notebook (PEN-134).
+      let claimTimer: ReturnType<typeof setInterval> | null = null;
+      const claimUsed = async () => {
+        const current = meaning;
+        const claim = current?.opened.cache.claim?.bind(current.opened.cache);
+        if (!current || !claim || !serving) return;
+        try {
+          const notes = await access.use(false, (notebook) => notebook.meaningNotes());
+          await current.index.update(notes, { embed: false });
+          await claim(cloneDir(entry), current.index.usedKeys());
+        } catch (error) {
+          io.log(
+            `penmoss: could not claim ${name}'s vectors: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
       };
       const opening = meaningOn
@@ -1134,6 +1159,12 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
               const current = state as { notebook: LocalNotebook } | null;
               if (current && meaning === next) giveMeaning(current.notebook);
               indexSoon(0);
+              void claimUsed();
+              claimTimer = setInterval(
+                () => void claimUsed(),
+                options.claimEveryMs ?? CLAIM_EVERY_MS,
+              );
+              claimTimer.unref?.();
             } catch (error) {
               io.log(
                 `penmoss: searching ${name} by words only: ${error instanceof Error ? error.message : String(error)}`,
@@ -1183,6 +1214,7 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
         if (stoppedBy !== null) void lines.return?.();
         serving = false;
         if (indexTimer) clearTimeout(indexTimer);
+        if (claimTimer) clearInterval(claimTimer);
         await opening;
         await meaning?.keeper.stop();
         await meaning?.opened.close();

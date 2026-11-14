@@ -224,7 +224,11 @@ export interface MeaningStatus {
 
 export interface OpenedMeaning {
   readonly embedder: Embedder;
-  readonly cache: VectorCache & { compact(keep: ReadonlySet<string>): Promise<number> };
+  readonly cache: VectorCache & {
+    compact(keep: ReadonlySet<string>): Promise<number>;
+    /** Records the keys a notebook uses, so the app's compaction keeps them (PEN-134). */
+    claim?(owner: string, keys: ReadonlySet<string>): Promise<void>;
+  };
   /** The indexer lease (A1157), or undefined while another process holds it. */
   lease(): Promise<{ held(): Promise<boolean>; release(): Promise<void> } | undefined>;
   close(): Promise<void>;

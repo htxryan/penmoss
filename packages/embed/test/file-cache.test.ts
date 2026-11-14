@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MeaningIndex, chunkKey, fakeEmbedder, type MeaningNote } from '@penmoss/core/search';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { FileVectorCache, removeOtherVectors, vectorsDir } from '../src/file-cache';
+import { CLAIM_TTL_MS, FileVectorCache, removeOtherVectors, vectorsDir } from '../src/file-cache';
 import { Lease, leaseHolder, leasePath } from '../src/lease';
 
 let home: string;
@@ -79,6 +79,35 @@ describe('the file vector cache (A1153)', () => {
     expect([...seen.keys()].sort()).toEqual([await key(1), await key(3)].sort());
     await reader.put(await entries(4));
     expect((await cache('mcp').get([await key(4), await key(1)])).size).toBe(2);
+  });
+
+  it('keeps the vectors a notebook the compactor never opens claims (PEN-134)', async () => {
+    // An agent's notebook: embedded and claimed by `penmoss mcp`, never opened by the app.
+    const agent = cache('mcp');
+    await agent.put(await entries(5, 6));
+    await agent.claim('/clones/agent-notebook', new Set([await key(5), await key(6)]));
+    // The app's own notebook uses 1; 2 is no one's.
+    const app = cache('app');
+    await app.put(await entries(1, 2));
+    expect(await app.compact(new Set([await key(1)]))).toBe(1);
+    const left = await cache('cli').get(await Promise.all([1, 2, 5, 6].map(key)));
+    expect([...left.keys()].sort()).toEqual([await key(1), await key(5), await key(6)].sort());
+    // A renewed claim replaces the last: 6 left the agent's notes.
+    await agent.claim('/clones/agent-notebook', new Set([await key(5)]));
+    expect(await app.compact(new Set([await key(1)]))).toBe(1);
+    expect((await cache('cli').get([await key(6)])).size).toBe(0);
+  });
+
+  it('forgets a claim no one has renewed for two weeks', async () => {
+    const agent = cache('mcp');
+    await agent.put(await entries(5));
+    await agent.claim('/clones/gone', new Set([await key(5)]));
+    const claims = join(agent.dir, 'claims');
+    const [file] = await readdir(claims);
+    const old = (Date.now() - CLAIM_TTL_MS - 60_000) / 1000;
+    await utimes(join(claims, file!), old, old);
+    expect(await cache('app').compact(new Set())).toBe(1);
+    expect(await readdir(claims)).toEqual([]);
   });
 
   it('starts empty for another model, and removes other models’ vectors', async () => {
