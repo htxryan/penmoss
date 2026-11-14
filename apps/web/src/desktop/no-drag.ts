@@ -66,14 +66,21 @@ export const NO_DRAG_SURFACES = [
  * parent's): none of them is ever in a row. The floating surfaces among them (a menu, the
  * selection toolbar) stay `no-drag`, and so do the controls in them, from them.
  */
-export const UNDER_ROWS = ['.note-columns', '.settings-content', '.window-bare'] as const;
+export const UNDER_ROWS = [
+  '.note-columns',
+  '.settings-content',
+  '.window-bare',
+  // The Tags page's tables, under its top (R2-4, R2-8 of Ryan's review of #193).
+  '.tags-page-scroll',
+] as const;
 
 /**
  * The title-bar rows: they drag the window (A722, A723, A727). Version History's own head, a row
  * over its overlay, went with the overlay (T51, A936): it is a tab of the note's side panel. With
  * them, what drags where there is no row (Ryan's review of #192): the strip across the top of a
  * window with none of the app in it yet (the wait, the first run; finding 1), and with no note
- * open the empty home beside the sidebar (finding 6).
+ * open the empty home beside the sidebar (finding 6), and the Tags page's top, its title and filter
+ * (R2-8 of Ryan's review of #193).
  */
 export const TITLE_BAR_ROWS = [
   '.sb-head',
@@ -84,4 +91,5 @@ export const TITLE_BAR_ROWS = [
   '#root > .banner',
   '.window-drag',
   '.home',
+  '.tags-page-top',
 ] as const;

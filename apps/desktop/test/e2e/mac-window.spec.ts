@@ -11,6 +11,7 @@ import { TITLE_BAR_INSET, TITLE_BAR_ROW, TRAFFIC_LIGHTS } from '../../src/mac-wi
 import {
   body,
   capturePage,
+  go,
   launch,
   mainBounds,
   removeDataDirs,
@@ -958,6 +959,60 @@ test('nothing that clicks drags the window: Version history, scrolled Settings a
   await page.keyboard.press('Escape');
   await expect(menu).toBeHidden();
   expect(await region(page, '.note-top')).toBe('drag');
+  expect(launched.errors).toEqual([]);
+});
+
+test('the Tags page: its title and filter drag the window, and its tables scroll under them (R2-4, R2-8)', async () => {
+  const launched = await start();
+  const { app, page } = launched;
+  await gitNotebook(launched);
+  await mainBounds(app, { x: 0, y: 0, width: 1100, height: 520 });
+  const tags = Array.from({ length: 30 }, (_, n) => `#topic${String(n).padStart(2, '0')}`);
+  await newNote(page, `Tagged ${RUN}`, `${tags.join(' ')} `);
+  await go(page, '/tags');
+  await expect(page.locator('.tags-row[data-tag]')).toHaveCount(30, { timeout: 30_000 });
+
+  // The page's top drags, as a page's title bar does, beside the sidebar and clear of its
+  // resize strip (A1147); the filter in it still types.
+  const top = page.getByTestId('tags-page-top');
+  expect(await region(page, '.tags-page-top')).toBe('drag');
+  const box = (await top.boundingBox())!;
+  const strip = (await page.locator('.sidebar > .pane-resizer').boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(strip.x + strip.width);
+  const heading = (await top.getByRole('heading', { name: 'Tags' }).boundingBox())!;
+  const empty = { x: box.x + box.width - 40, y: heading.y + heading.height / 2 };
+  expect(await regionAt(page, empty.x, empty.y)).toBe('drag');
+  expect(await regionAt(page, box.x + 10, box.y + 10)).toBe('drag');
+  const filter = (await page.getByTestId('tags-filter').boundingBox())!;
+  expect(await regionAt(page, filter.x + 20, filter.y + filter.height / 2)).toBe('no-drag');
+  expect(await overLights(page)).toEqual([]);
+  await clicksEverywhere(page, 'tags page');
+
+  // Only the tables scroll: the top stays, and still drags over controls scrolled up past it
+  // (Electron counts them where they would be, PEN-65; they set no region, UNDER_ROWS).
+  expect(await scrollAround(page, '.tags-row[data-tag]', 400)).toBeGreaterThan(0);
+  expect(await page.locator('.note-main').evaluate((element) => element.scrollTop)).toBe(0);
+  expect((await top.boundingBox())!.y).toBe(box.y);
+  expect(await regionAt(page, empty.x, empty.y)).toBe('drag');
+  // The selection's buttons stay in view in the notebook's heading row, and click.
+  await page.locator('.tags-row[data-tag="topic20"]').getByRole('checkbox').check();
+  await expect(
+    page.getByTestId('tags-page').getByRole('button', { name: 'Delete…' }),
+  ).toBeInViewport();
+  await clicksEverywhere(page, 'tags page scrolled');
+
+  // A narrow window: the app bar is the first row, the top drags under it, and neither does
+  // under the drawer, which comes before them in the DOM.
+  await mainBounds(app, { x: 0, y: 0, width: 600, height: 760 });
+  await expect(page.getByTestId('app-bar')).toBeVisible();
+  expect(await region(page, '.tags-page-top')).toBe('drag');
+  await clicksEverywhere(page, 'tags page, narrow');
+  await page.getByRole('button', { name: 'Open Navigation' }).click();
+  await expect(page.locator('.notes-app')).toHaveAttribute('data-drawer', 'open');
+  await clicksEverywhere(page, 'tags page, drawer open', {
+    stopped: ['.app-bar', '.tags-page-top'],
+  });
+  await page.keyboard.press('Escape');
   expect(launched.errors).toEqual([]);
 });
 

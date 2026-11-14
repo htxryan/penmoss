@@ -6563,7 +6563,8 @@ a.toast-action {
     .app-bar,
     #root > .banner,
     .window-drag,
-    .home
+    .home,
+    .tags-page-top
   ) {
   -webkit-app-region: drag;
 }
@@ -6626,7 +6627,7 @@ a.toast-action {
  * toolbar) is still `no-drag` from it, and one in the text has none.
  */
 :root[data-titlebar='compact']
-  :is(.note-columns, .settings-content, .window-bare)
+  :is(.note-columns, .settings-content, .window-bare, .tags-page-scroll)
   :is(
     button,
     a[href],
@@ -6676,11 +6677,14 @@ a.toast-action {
  * ones, so while one is open those rows stop dragging rather than rely on regions being taken
  * in paint order. (`#root` outweighs the rows' rule, whose `#root > .banner` makes it an id's.)
  */
-:root[data-titlebar='compact'] #root .notes-app[data-drawer='open'] :is(.app-bar, .home),
+:root[data-titlebar='compact']
+  #root
+  .notes-app[data-drawer='open']
+  :is(.app-bar, .home, .tags-page-top),
 :root[data-titlebar='compact']:has(
     #root .sidebar :is(.menu, [role='menu'], [role='dialog'], [role='listbox'])
   )
-  :is(.note-top, .pm-graph-bar, .settings-bar, .app-bar, .home) {
+  :is(.note-top, .pm-graph-bar, .settings-bar, .app-bar, .home, .tags-page-top) {
   -webkit-app-region: no-drag;
 }
 
@@ -6690,6 +6694,15 @@ a.toast-action {
  * strip, whose 4 px over it are earlier in the DOM, so the home's drag would win there (A1147).
  */
 :root[data-titlebar='compact'] .home {
+  margin-inline-start: 4px;
+}
+
+/*
+ * The Tags page's top, its title and filter, drags the window as a page's title bar does (R2-8
+ * of Ryan's review of #193); the filter still types. Clear of the sidebar's resize strip, as the
+ * home is. The tables below it scroll, and set no region (UNDER_ROWS).
+ */
+:root[data-titlebar='compact'] .tags-page-top {
   margin-inline-start: 4px;
 }
 
