@@ -83,7 +83,56 @@ describe("Needs you: only the factory's own claims (A1233)", () => {
       }),
     );
     expect(v.needs).toEqual([]);
-    expect([card(v, 'PEN-20').group, card(v, 'PEN-20').step]).toEqual(['queue', 'Paused by you']);
+    // Nothing in the ledger says who set Blocked, so the card doesn't say it was Ryan (A1377).
+    expect([card(v, 'PEN-20').group, card(v, 'PEN-20').step]).toEqual(['queue', 'Blocked']);
+  });
+
+  it('says Paused by you only when the ledger says Ryan stopped it (A1377)', () => {
+    const v = buildView(
+      input({
+        board: {
+          items: [
+            pen(20, { status: 'In Review', labels: ['Blocked'], blocked: true, blockedSet: true }),
+          ],
+        },
+        ledger: [
+          line('20-a', 'claimed', minutesAgo(50), { issue: 20 }),
+          line('20-a', 'failed', minutesAgo(40), {
+            stopped: 'Blocked set by Ryan: stopped before a push',
+          }),
+        ].join('\n'),
+        status: null,
+      }),
+    );
+    expect(card(v, 'PEN-20').step).toBe('Paused by you');
+  });
+
+  it("says why a rebase onto main stopped, and asks for a retry, not Ryan's pause (A1377)", () => {
+    const v = buildView(
+      input({
+        board: {
+          items: [
+            pen(59, { status: 'In Review', labels: ['Blocked'], blocked: true, blockedSet: true }),
+          ],
+        },
+        ledger: [
+          line('59-a', 'claimed', minutesAgo(90), { issue: 59 }),
+          line('59-a', 'in-review', minutesAgo(80), {
+            pr: 'https://github.com/htxryan/penmoss/pull/188',
+          }),
+          line('59-b', 'claimed', minutesAgo(6), { issue: 59, phase: 'rebase' }),
+          line('59-b', 'failed', minutesAgo(6), {
+            error:
+              "git fetch failed: error: cannot lock ref 'refs/remotes/origin/main': is at 5545ce3 but expected a48dcfe",
+          }),
+        ].join('\n'),
+        status: null,
+      }),
+    );
+    const c = card(v, 'PEN-59');
+    expect(c.step).toMatch(/^Rebasing onto main stopped: git fetch failed/);
+    expect(c.step).not.toContain('Paused by you');
+    expect(v.needs.map((n) => n.key)).toContain(c.key);
   });
 
   it('says which unfinished issue holds a card, with no Blocked to clear (LD8)', () => {

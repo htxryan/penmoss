@@ -51,7 +51,7 @@ export async function preparePublishRepo(
     await ensureConfig(exec, dir, 'user.email', identity.email);
   }
   const known = await hostGit(exec, dir, ['rev-parse', '--verify', '--quiet', MAIN]);
-  await mustGit(exec, dir, [
+  await fetchOrigin(exec, dir, [
     'fetch',
     '--quiet',
     '--no-tags',
@@ -59,6 +59,44 @@ export async function preparePublishRepo(
     ...(known.code === 0 ? ['main'] : []),
   ]);
   return dir;
+}
+
+/** The fetch of origin each repo is running, so the next waits for it (A1377). */
+const fetching = new Map<string, Promise<void>>();
+
+/** How long a fetch that found `origin/main` locked waits before its one retry. */
+export const LOCKED_RETRY_MS = 2_000;
+
+/**
+ * Fetches origin into `dir` one fetch at a time, and retries once when another git still held
+ * the ref (A1377). Two picks in one poll fetched main into the publish repo together, and the
+ * second failed with "cannot lock ref 'refs/remotes/origin/main'", which Blocked its card: twice
+ * on 14 Nov 2026, once at a pick and once rebasing PRs after main moved.
+ */
+export async function fetchOrigin(
+  exec: Exec,
+  dir: string,
+  args: readonly string[],
+  retryMs = LOCKED_RETRY_MS,
+): Promise<void> {
+  const before = fetching.get(dir) ?? Promise.resolve();
+  const mine = before.then(async () => {
+    try {
+      await mustGit(exec, dir, args);
+    } catch (error) {
+      if (!(error instanceof Error) || !/cannot lock ref/i.test(error.message)) throw error;
+      await new Promise((resolve) => setTimeout(resolve, retryMs));
+      await mustGit(exec, dir, args);
+    }
+  });
+  // The next fetch waits for this one whether or not it fails.
+  const settled = mine.catch(() => undefined);
+  fetching.set(dir, settled);
+  try {
+    await mine;
+  } finally {
+    if (fetching.get(dir) === settled) fetching.delete(dir);
+  }
 }
 
 export function ensurePublishRepo(
@@ -70,8 +108,12 @@ export function ensurePublishRepo(
 }
 
 /** Fetches main from GitHub into the publish repo; returns its commit, the base runs are given. */
-export async function fetchMainInto(exec: Exec, dir: string): Promise<string> {
-  await mustGit(exec, dir, ['fetch', '--quiet', '--no-tags', 'origin', 'main']);
+export async function fetchMainInto(
+  exec: Exec,
+  dir: string,
+  retryMs = LOCKED_RETRY_MS,
+): Promise<string> {
+  await fetchOrigin(exec, dir, ['fetch', '--quiet', '--no-tags', 'origin', 'main'], retryMs);
   return mainOf(exec, dir);
 }
 

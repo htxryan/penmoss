@@ -266,6 +266,9 @@ export async function executeRevise(
       return 'stopped';
     }
     const message = error instanceof Error ? error.message : String(error);
+    // In the ledger too, as a run's own failure is (start.ts), so the Factory UI says why the
+    // card stopped instead of guessing that Ryan paused it (A1377).
+    deps.log('failed', { error: message });
     if (!(await isBlocked())) {
       await deps
         .comment(item.number, `A review round stopped on an error: ${message}`)
