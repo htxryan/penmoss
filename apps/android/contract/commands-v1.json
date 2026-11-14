@@ -1284,65 +1284,39 @@
   "fuzzy": [
     {
       "query": "dark",
-      "ids": [
-        "theme.toggleDark"
-      ]
+      "ids": ["theme.toggleDark"]
     },
     {
       "query": "week",
-      "ids": [
-        "journal.thisWeek"
-      ]
+      "ids": ["journal.thisWeek"]
     },
     {
       "query": "folder",
-      "ids": [
-        "folder.new"
-      ]
+      "ids": ["folder.new"]
     },
     {
       "query": "today",
-      "ids": [
-        "journal.today"
-      ]
+      "ids": ["journal.today"]
     },
     {
       "query": "set",
-      "ids": [
-        "app.settings",
-        "app.display",
-        "app.home",
-        "journal.thisWeek"
-      ]
+      "ids": ["app.settings", "app.display", "app.home", "journal.thisWeek"]
     },
     {
       "query": "tr",
-      "ids": [
-        "app.trash",
-        "theme.toggleDark",
-        "app.capture"
-      ]
+      "ids": ["app.trash", "theme.toggleDark", "app.capture"]
     },
     {
       "query": "new",
-      "ids": [
-        "note.new",
-        "folder.new"
-      ]
+      "ids": ["note.new", "folder.new"]
     },
     {
       "query": "theme",
-      "ids": [
-        "app.appearance",
-        "theme.switch"
-      ]
+      "ids": ["app.appearance", "theme.switch"]
     },
     {
       "query": "nw",
-      "ids": [
-        "note.new",
-        "folder.new"
-      ]
+      "ids": ["note.new", "folder.new"]
     },
     {
       "query": "zzz",
