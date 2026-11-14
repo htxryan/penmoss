@@ -185,11 +185,50 @@ function TheApp() {
   );
 }
 
+/**
+ * The list's view, as the repository tree's IntersectionObserver sees it (happy-dom's never
+ * answers): `near` says which rows are in or near the view; `scrolled` tells the tree again.
+ */
+let near: (row: Element) => boolean = () => true;
+const observers = new Set<SeeingObserver>();
+class SeeingObserver {
+  readonly targets = new Set<Element>();
+  constructor(private readonly callback: IntersectionObserverCallback) {
+    observers.add(this);
+  }
+  tell(targets: Iterable<Element>) {
+    const entries = [...targets].map((target) => ({ target, isIntersecting: near(target) }));
+    this.callback(entries as unknown as IntersectionObserverEntry[], this as never);
+  }
+  observe(target: Element) {
+    this.targets.add(target);
+    queueMicrotask(() => {
+      if (this.targets.has(target)) this.tell([target]);
+    });
+  }
+  unobserve(target: Element) {
+    this.targets.delete(target);
+  }
+  disconnect() {
+    this.targets.clear();
+    observers.delete(this);
+  }
+  takeRecords() {
+    return [];
+  }
+}
+const scrolled = () =>
+  act(() => {
+    for (const observer of observers) observer.tell(observer.targets);
+  });
+
 let host: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  near = () => true;
+  vi.stubGlobal('IntersectionObserver', SeeingObserver);
   host = document.createElement('div');
   document.body.append(host);
   root = createRoot(host);
@@ -199,6 +238,8 @@ afterEach(() => {
   act(() => root.unmount());
   host.remove();
   Reflect.deleteProperty(window, 'penmossDesktop');
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 function render(sources: Sources | null, capture = false) {
@@ -434,7 +475,16 @@ describe('the first run (A1030, First Run C)', () => {
     // The notebooks under their repository, each with where it is; no "in " before the line.
     const notebooks = $$('first-run-notebook');
     expect(notebooks.map((each) => each.textContent)).toEqual(['Workwork/Open', 'Homehome/Open']);
+    // One with no notebook stays closed; opened, it offers to start one.
+    const toggles = $$('first-run-repo-toggle');
+    expect(toggles.map((each) => each.getAttribute('aria-expanded'))).toEqual([
+      'true',
+      'false',
+      'false',
+    ]);
+    await press(toggles[1]!);
     expect(repos[1]!.textContent).toContain('No notebook yet');
+    expect(repos[1]!.querySelector('[data-testid="first-run-start-here"]')).not.toBeNull();
     expect(repos[2]!.textContent).toContain('Read Only');
     expect($('first-run-via')?.textContent).toContain('Signed in as ryan');
     // The count line is there before any filter, so typing one never moves the list.
@@ -449,6 +499,117 @@ describe('the first run (A1030, First Run C)', () => {
       expect.objectContaining({ remote: 'https://github.com/ryan/kept.git', dir: 'home' }),
     );
     expect(add.mock.calls.at(-1)![0]).not.toHaveProperty('name');
+  });
+
+  it('reads repositories as they near the view, a few at a time, and opens those with a notebook', async () => {
+    const names = ['r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8', 'r9'];
+    const holding = new Set(['ryan/r1', 'ryan/r4', 'ryan/r7', 'ryan/r8']);
+    const { browse } = github({
+      repos: {
+        ok: true,
+        via: 'git',
+        value: {
+          more: false,
+          repos: [...names.map((name) => repo(name)), repo('fresh', { empty: true })],
+        },
+      },
+    });
+    // Each read waits until the test answers it.
+    const pending = new Map<string, () => void>();
+    const asked: string[] = [];
+    browse.folders = (fullName) => {
+      asked.push(fullName);
+      return new Promise((resolve) => {
+        pending.set(fullName, () =>
+          resolve({
+            ok: true,
+            via: 'git',
+            value: {
+              empty: false,
+              truncated: false,
+              folders: holding.has(fullName)
+                ? [{ path: '', notebook: { id: `01JB${fullName}`, name: `Notes ${fullName}` } }]
+                : [{ path: '', notebook: null }],
+            },
+          }),
+        );
+      });
+    };
+    const answer = async (...fullNames: string[]) => {
+      for (const name of fullNames) {
+        pending.get(name)!();
+        pending.delete(name);
+      }
+      await settle();
+      await settle();
+    };
+    const row = (name: string) => host.querySelector<HTMLElement>(`[data-repo="ryan/${name}"]`)!;
+    const opened = (name: string) =>
+      row(name)
+        .querySelector('[data-testid="first-run-repo-toggle"]')!
+        .getAttribute('aria-expanded');
+    // The list shows r0 to r4; r5 is within a list's height below; the rest are further down.
+    const index = (each: Element) => names.indexOf((each as HTMLElement).dataset['repo']!.slice(5));
+    near = (each) => index(each) >= 0 && index(each) <= 5;
+
+    await start(browse);
+    await press('first-run-start');
+    await choose('first-run-existing');
+    await press('first-run-continue');
+    await vi.waitFor(() => expect(screen()).toBe('list'));
+    await settle();
+    // Three at a time, in the list's order; nothing opens before it is read.
+    expect(asked).toEqual(['ryan/r0', 'ryan/r1', 'ryan/r2']);
+    expect(names.map(opened)).toEqual(names.map(() => 'false'));
+    // r1, opened and closed by hand before its read lands, stays closed.
+    await press(row('r1').querySelector<HTMLElement>('[data-testid="first-run-repo-toggle"]')!);
+    expect(opened('r1')).toBe('true');
+    await press(row('r1').querySelector<HTMLElement>('[data-testid="first-run-repo-toggle"]')!);
+    expect(opened('r1')).toBe('false');
+    await answer('ryan/r0', 'ryan/r1', 'ryan/r2');
+    expect(opened('r1')).toBe('false');
+    expect(asked.slice(3)).toEqual(['ryan/r3', 'ryan/r4', 'ryan/r5']);
+    // r4 holds a notebook: it opens by itself. r3 and r5 hold none and stay closed.
+    await answer('ryan/r3', 'ryan/r4', 'ryan/r5');
+    expect([opened('r3'), opened('r4'), opened('r5')]).toEqual(['false', 'true', 'false']);
+    expect(row('r4').textContent).toContain('Notes ryan/r4');
+    // Nothing further down is read until it nears the view.
+    expect(asked).toHaveLength(6);
+
+    // The pointer over the list holds a row in view closed: opening it would move what is under
+    // the pointer. It opens when the pointer leaves.
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      // Scrolled down to r5: the list shows 100 to 220, r5 to r10.
+      const isTree = this.dataset['testid'] === 'first-run-tree';
+      const at = isTree ? 100 : this.dataset['repo'] ? index(this) * 20 : 0;
+      const height = isTree ? 120 : 20;
+      return { top: at, bottom: at + height, left: 0, right: 100, height, width: 100 } as DOMRect;
+    });
+    const tree = $('first-run-tree')!;
+    act(() => {
+      tree.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
+    });
+    near = () => true;
+    scrolled();
+    await settle();
+    expect(asked.slice(6)).toEqual(['ryan/r6', 'ryan/r7', 'ryan/r8']);
+    await answer('ryan/r6', 'ryan/r7', 'ryan/r8');
+    // r7 and r8 hold notebooks, in view.
+    expect([opened('r7'), opened('r8')]).toEqual(['false', 'false']);
+    act(() => {
+      tree.dispatchEvent(
+        new PointerEvent('pointerout', { bubbles: true, relatedTarget: document.body }),
+      );
+    });
+    await settle();
+    expect([opened('r7'), opened('r8')]).toEqual(['true', 'true']);
+    await answer('ryan/r9');
+    expect(opened('r9')).toBe('false');
+    // Empty repositories are never read, and stay closed.
+    expect(asked).not.toContain('ryan/fresh');
+    expect(opened('fresh')).toBe('false');
   });
 
   it('a repository picked: empty starts at its root, other files ask for a folder', async () => {

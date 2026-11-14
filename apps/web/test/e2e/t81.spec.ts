@@ -79,11 +79,18 @@ test.describe('the first run', () => {
     await expect(repos.nth(2)).toContainText('Internal');
     await expect(repos.nth(2)).toContainText('Read Only');
     await expect(repos.nth(2).getByTestId('first-run-repo-pick')).toBeDisabled();
-    // The notebooks beneath their repository, read at once; site holds none.
+    // The notebooks beneath their repository, which opens by itself once read; site holds none,
+    // so it stays closed until opened.
     const notebook = repos.nth(0).getByTestId('first-run-notebook');
     await expect(notebook).toContainText('Kept');
     await expect(notebook).toContainText('Root');
+    const siteToggle = repos.nth(1).getByTestId('first-run-repo-toggle');
+    await expect(siteToggle).toHaveAttribute('aria-expanded', 'false');
+    await siteToggle.click();
     await expect(repos.nth(1)).toContainText('No notebook yet');
+    await expect(repos.nth(1).getByTestId('first-run-start-here')).toBeVisible();
+    await siteToggle.click();
+    await expect(siteToggle).toHaveAttribute('aria-expanded', 'false');
     // The count line is there before any filter, so typing one never moves the list.
     await expect(firstRun.getByTestId('first-run-filter-count')).toHaveText('3 repositories.');
     await expect(firstRun.getByTestId('first-run-via')).toContainText('Signed in');
