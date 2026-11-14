@@ -208,9 +208,11 @@ test('a drawing made from the slash menu shows in the note and is kept as files 
   await expect(pin).toHaveAttribute('aria-pressed', 'false');
 
   // Save To… and Export Image… (R2-19): each saves through a download that asks where to save
-  // it, in Downloads by default, filtered to its kind.
+  // it, in Downloads by default, filtered to its kind. Downloads is Electron's: on Linux with no
+  // XDG Downloads folder (CI's runner) it is the home folder.
   const folder = join(tmpdir(), `penmoss-drawing-downloads-${Date.now()}`);
   const downloads = await catchDownloads(app, folder);
+  const downloadsFolder = await app.evaluate(({ app: electron }) => electron.getPath('downloads'));
   await editor(page).getByTestId('main-menu-trigger').click();
   await expect(editor(page).getByTestId('load-button')).toHaveCount(0);
   await editor(page).getByTestId('json-export-button').click();
@@ -220,7 +222,7 @@ test('a drawing made from the slash menu shows in the note and is kept as files 
   expect(sceneFile!.name).toMatch(/\.excalidraw$/);
   expect(sceneFile!.dialog).toMatchObject({
     title: 'Save',
-    defaultPath: expect.stringMatching(/Downloads\/.+\.excalidraw$/),
+    defaultPath: join(downloadsFolder, sceneFile!.name),
     filters: [{ name: 'Excalidraw Scene', extensions: ['excalidraw'] }],
   });
   await expect
@@ -239,7 +241,10 @@ test('a drawing made from the slash menu shows in the note and is kept as files 
   await expect.poll(async () => (await downloads.list()).length, { timeout: 20_000 }).toBe(2);
   const image = (await downloads.list())[1]!;
   expect(image.name).toMatch(/\.png$/);
-  expect(image.dialog).toMatchObject({ filters: [{ name: 'PNG Image', extensions: ['png'] }] });
+  expect(image.dialog).toMatchObject({
+    defaultPath: join(downloadsFolder, image.name),
+    filters: [{ name: 'PNG Image', extensions: ['png'] }],
+  });
   await expect
     .poll(() => {
       try {
