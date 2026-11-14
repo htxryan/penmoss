@@ -61,14 +61,27 @@ test('history shows attributed versions with a diff, and restores one as a new c
   // On demand: Sync Now saves a version (a commit) of the note as it is.
   await page.keyboard.press(VERSION_HISTORY);
   await expect(panel(page)).toBeVisible();
-  await expect(panel(page).getByTestId('history-auto')).toContainText(
+  // How versions are made is the head's ⓘ, not a paragraph over the list (Ryan's review of #192,
+  // finding 13); Sync Now is on the Now row, quiet.
+  await page.getByTestId('history-about').click();
+  await expect(page.getByTestId('history-about-text')).toContainText(
     'Each sync with git is a version',
   );
-  await panel(page).getByRole('button', { name: 'Sync Now' }).click();
+  await page.getByTestId('history-about').click();
+  await panel(page).getByTestId('history-now').getByRole('button', { name: 'Sync Now' }).click();
   await expect(panel(page).getByTestId('history-status')).toContainText('Saved a version');
   const first = panel(page).getByRole('list', { name: 'Versions' }).getByRole('button').first();
-  await expect(first).toContainText('Penmoss for Mac');
-  await expect(first).toContainText('Device');
+  // One line: the writer's icon (its name for screen readers, and a tooltip on hover), the time,
+  // what changed and the lines it changed, under the day.
+  await expect(first).toHaveAccessibleName(/Penmoss for Mac/);
+  await expect(panel(page).locator('.history-day').first()).toHaveText('Today');
+  // Its summary is read after the list shows (main's `readDir`, Ryan's review of #192).
+  await expect(first.locator('.history-summary')).toHaveText(
+    /^(Added|Edited) “Book the night train”$/,
+  );
+  await expect(first.locator('.history-lines')).toHaveText(/^\+\d+(−\d+)?$/);
+  await first.locator('.history-who').hover();
+  await expect(page.getByTestId('tooltip')).toHaveText('Penmoss for Mac');
   await expect.poll(() => remoteMarkdown(host, remote, id) ?? '').toContain('Book the night train');
   // The History tab of the note's side panel (T51, A936): the panel closes.
   await page.getByTestId('note-panel-close').click();
@@ -82,9 +95,7 @@ test('history shows attributed versions with a diff, and restores one as a new c
 
   // Not pushed yet, the change is not a version; the saved one's diff, then restore it.
   await page.getByTestId('note-tab-history').click();
-  await expect(panel(page).getByRole('listitem').first()).toContainText(
-    'Not saved as a version yet',
-  );
+  await expect(panel(page).getByTestId('history-now')).toContainText('Not saved as a version yet');
   const saved = panel(page).getByRole('list', { name: 'Versions' }).getByRole('button').first();
   await saved.click();
   const diff = panel(page).getByTestId('history-diff');

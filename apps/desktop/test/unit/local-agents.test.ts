@@ -302,6 +302,28 @@ describe(
       });
     });
 
+    it('a notebook renamed in the app: its clone keeps its folder and name, and takes both names (Ryan’s review of PR #192)', async () => {
+      const remote = bare('notes');
+      await seeded(remote);
+      let entry = appEntry(remote, { name: 'notes' });
+      const { service, home, secrets } = agents({ entry, all: () => [{ entry, token: null }] });
+      await service.ensureAll();
+      const cli = cliNotebooks(join(home, '.penmoss'), secrets);
+      const [before] = await cli.list();
+      expect(before).toMatchObject({ name: 'notes-agent', notebookName: 'notes' });
+      entry = { ...entry, name: 'Notes (old)', pendingName: 'Notes (old)' };
+      await service.ensureAll();
+      const [after] = await cli.list();
+      expect(after).toMatchObject({
+        name: 'notes-agent',
+        localId: before!.localId,
+        notebookName: 'Notes (old)',
+        formerNames: ['notes'],
+      });
+      // No second clone was made for the new name.
+      expect(await cli.list()).toHaveLength(1);
+    });
+
     it('waits for the app’s first push rather than make a notebook of its own', async () => {
       const remote = bare('new');
       const entry = appEntry(remote, { create: true });

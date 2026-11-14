@@ -319,10 +319,16 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
     const own = all.find((each) => each.name === name);
     if (own) return own;
     const folded = name.toLowerCase();
+    // A name the notebook had before a Rename (Ryan's review of PR #192) still finds it, so an
+    // agent's MCP config keeps working; a notebook named that now comes first.
+    const formerly = (each: StoredNotebook, match: (former: string) => boolean) =>
+      (each.formerNames ?? []).some(match);
     const matches =
       [
         all.filter((each) => each.notebookName === name),
         all.filter((each) => each.notebookName?.toLowerCase() === folded),
+        all.filter((each) => formerly(each, (former) => former === name)),
+        all.filter((each) => formerly(each, (former) => former.toLowerCase() === folded)),
       ].find((list) => list.length > 0) ?? [];
     if (new Set(matches.map((each) => each.notebookId)).size > 1) {
       throw new CliError(
@@ -478,9 +484,8 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
           filterIgnored !== (entry.filterIgnored ?? false))
       ) {
         await update(entry.name, (each) => ({
-          ...each,
+          ...renamedTo(each, info.name),
           notebookId: info.id,
-          notebookName: info.name,
           filterIgnored,
         }));
       }
@@ -721,7 +726,7 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
         else if (change.sign === true) delete next.sign;
         if (change.author === null) delete next.identity;
         else if (change.author) next.identity = change.author;
-        return next;
+        return change.notebookName ? renamedTo(next, change.notebookName) : next;
       });
     },
 
@@ -1250,6 +1255,23 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
   };
 }
 
+/** How many former names a clone keeps (Ryan's review of PR #192). */
+export const MAX_FORMER_NAMES = 5;
+
+/**
+ * A clone whose notebook is now called `name`: the name it had joins its former names (the
+ * latest last, at most MAX_FORMER_NAMES), so `--notebook <old name>` still finds it.
+ */
+export function renamedTo<T extends NotebookEntry>(entry: T, name: string): T {
+  if (entry.notebookName === name) return entry;
+  const former = [...(entry.formerNames ?? []), ...(entry.notebookName ? [entry.notebookName] : [])]
+    .filter((each, at, all) => each !== name && all.lastIndexOf(each) === at)
+    .slice(-MAX_FORMER_NAMES);
+  const next: T = { ...entry, notebookName: name, formerNames: former };
+  if (former.length === 0) delete (next as { formerNames?: readonly string[] }).formerNames;
+  return next;
+}
+
 function publicEntry(entry: StoredNotebook): NotebookEntry {
   return {
     name: entry.name,
@@ -1260,6 +1282,7 @@ function publicEntry(entry: StoredNotebook): NotebookEntry {
     writer: entry.writer,
     ...(entry.notebookId ? { notebookId: entry.notebookId } : {}),
     ...(entry.notebookName ? { notebookName: entry.notebookName } : {}),
+    ...(entry.formerNames?.length ? { formerNames: entry.formerNames } : {}),
     ...(entry.automatic ? { automatic: true as const } : {}),
   };
 }

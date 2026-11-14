@@ -284,13 +284,11 @@ class ShortcutsScreenTest {
     }
 
     @Test
-    fun theRecentNotesSwitcherAndShowAllNotesCanBeRebound() {
-        // P6's commands run on Android now (the final parity pass): their keys show and change.
+    fun theRecentNotesSwitcherCanBeRebound() {
+        // P6's command runs on Android now (the final parity pass): its keys show and change.
         show()
         row("app.recent")
         compose.onNodeWithTag("keys-app.recent", useUnmergedTree = true).assertTextEquals("Ctrl+E")
         compose.onNodeWithTag("change-app.recent").assertExists()
-        row("tags.clearFilter")
-        compose.onNodeWithTag("change-tags.clearFilter").assertExists()
     }
 }

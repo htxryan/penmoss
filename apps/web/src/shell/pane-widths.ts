@@ -8,7 +8,11 @@
  */
 import { useCallback, useSyncExternalStore } from 'react';
 
-export type PaneKind = 'sidebar' | 'panel';
+/**
+ * `historyPreview` is a height: History's docked changes under its list of versions (Ryan's
+ * review of #192, finding 13), split from the list by a handle.
+ */
+export type PaneKind = 'sidebar' | 'panel' | 'historyPreview';
 
 export interface PaneLimits {
   /** The width it has until it is dragged, in rem. */
@@ -24,11 +28,14 @@ export const PANE_LIMITS: Readonly<Record<PaneKind, PaneLimits>> = {
   sidebar: { initial: 17, min: 14.5, max: 30 },
   // 26rem was the panel's one width (T51), which History's diffs and the Local Graph need.
   panel: { initial: 26, min: 20, max: 44 },
+  // About 14 diff lines and the actions under them; the list keeps its own room above it.
+  historyPreview: { initial: 20, min: 8, max: 48 },
 };
 
 export const PANE_KEYS: Readonly<Record<PaneKind, string>> = {
   sidebar: 'penmoss.sidebarWidth',
   panel: 'penmoss.notePanelWidth',
+  historyPreview: 'penmoss.historyPreviewHeight',
 };
 
 /** How wide the note's text stays beside the open panel, in rem (the panel moves over it below). */

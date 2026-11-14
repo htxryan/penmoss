@@ -6,7 +6,6 @@ import {
   type CSSProperties,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -49,8 +48,7 @@ import { useSidebarCollapsed } from './shell/sidebar';
 import { isKeyRepeat, isRepeatedNewNote, type LastCreated } from './notes/new-note';
 import { Calendar } from './journal/Calendar';
 import { JournalCommands } from './journal/PeriodNav';
-import { tagFilter, useTagFilter } from './tags/filter';
-import { TaggedNotes } from './tags/TaggedNotes';
+import { tagSearch } from './search/show-tag';
 import { TrashView } from './trash/TrashView';
 import { TagPane, TagsPageLink } from './tags/TagPane';
 import { TagsPage, type ShowTag } from './tags/TagsPage';
@@ -72,7 +70,7 @@ import { useEveryOpenNoteList } from './sources/lists';
 import type { Source } from './sources/registry';
 import { JournalScope } from './sources/JournalScope';
 import { NoteSourceScope } from './sources/NoteSourceScope';
-import { SourceHeading, SourceSection } from './sources/SourceSection';
+import { SourceSection } from './sources/SourceSection';
 import { WindowBlockedToast } from './window/BlockedToast';
 import { ToastStack } from './toasts/ToastStack';
 import { NoteWindow } from './window/NoteWindow';
@@ -255,6 +253,20 @@ function NotesShell({
     setDrawerShown(false);
   }
   const drawerOpen = phone && drawerShown && drawerScreen === screen;
+  // The sidebar's Send Feedback: after Settings in its bottom row, above it on the rail (finding 18).
+  const feedbackButton = (
+    <button
+      type="button"
+      className="icon-btn"
+      data-command="app.sendFeedback"
+      data-testid="sidebar-feedback"
+      aria-label="Send Feedback"
+      data-tip="Send Feedback"
+      onClick={() => commands.run('app.sendFeedback', { source: 'button' })}
+    >
+      <Icon name="feedback" size={18} />
+    </button>
+  );
   const sidebar = useRef<HTMLElement>(null);
   // Dismissed (not closed by opening something): focus goes back to the menu button, once
   // the page behind is no longer inert.
@@ -276,18 +288,6 @@ function NotesShell({
       document.querySelector<HTMLElement>('.app-bar [aria-controls="app-sidebar"]')?.focus();
     }
   }, [drawerOpen]);
-  // A tag chosen under a note's title filters the sidebar: on a phone, show it.
-  const latestPhone = useRef(phone);
-  useLayoutEffect(() => {
-    latestPhone.current = phone;
-  });
-  useEffect(
-    () =>
-      tagFilter.subscribe(() => {
-        if (tagFilter.get() !== null && latestPhone.current) setDrawerShown(true);
-      }),
-    [],
-  );
   const onSidebarKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key !== 'Escape' || !drawerOpen || event.defaultPrevented) return;
     event.preventDefault();
@@ -332,15 +332,10 @@ function NotesShell({
   // Mod+Shift+G by default.
   useCommand('app.graph', () => navigate(graphPath(openNote)));
 
-  const tag = useTagFilter();
-  // A tag's name on the Tags page (PEN-68): its notes in the sidebar, in its notebook.
-  const showTag: ShowTag = (sourceId, chosen) => {
-    if (sourceId !== null && sourceId !== currentSource) {
-      setCurrentSource(sourceId);
-      setCurrentFolder(null);
-    }
-    tagFilter.set(chosen);
-  };
+  // A tag's name on the Tags page (PEN-68): its notes in Search, starting on its notebook when
+  // there are several (finding 9 of Ryan's review of #192).
+  const showTag: ShowTag = (sourceId, chosen) =>
+    tagSearch.set({ tag: chosen, notebookId: shownSources.length > 1 ? sourceId : null });
   // The update notice: in the sidebar's bottom panel or on the rail, a toast where the sidebar
   // is a drawer (PEN-135 item 10).
   const updateNotice = useUpdateNotice();
@@ -438,18 +433,7 @@ function NotesShell({
                 ),
                 notebooks: (tools) => (
                   <NotebooksSection tools={tools}>
-                    {tag ? (
-                      inActive(
-                        <>
-                          {/* Whose notes these are, and their sync state (A933). */}
-                          {activeSource ? <SourceHeading source={activeSource} /> : null}
-                          <TaggedNotes
-                            tag={tag}
-                            activeId={route.name === 'note' ? route.id : null}
-                          />
-                        </>,
-                      )
-                    ) : multi ? (
+                    {multi ? (
                       shownSources.map((source) => (
                         <SourceScope key={source.id} source={source}>
                           <SourceSection
@@ -503,9 +487,12 @@ function NotesShell({
             />
           </nav>
           {/* Icons with their names as tooltips (T51, A935); Trash is on the notebook's bar (T52).
-              The update notice above them (PEN-135 item 10); on the rail, all at its foot (item 4). */}
+              The update notice above them (PEN-135 item 10); on the rail, all at its foot (item 4),
+              Settings last, at the very bottom (Ryan's review of #192, finding 18). In the DOM in
+              the order shown, so Tab follows it. */}
           <footer className="sb-foot">
             {phone ? null : <SidebarUpdateNotice notice={updateNotice} rail={rail} />}
+            {rail ? feedbackButton : null}
             <a
               className="icon-btn"
               href="/settings"
@@ -518,17 +505,7 @@ function NotesShell({
             >
               <Icon name="gear" size={18} />
             </a>
-            <button
-              type="button"
-              className="icon-btn"
-              data-command="app.sendFeedback"
-              data-testid="sidebar-feedback"
-              aria-label="Send Feedback"
-              data-tip="Send Feedback"
-              onClick={() => commands.run('app.sendFeedback', { source: 'button' })}
-            >
-              <Icon name="feedback" size={18} />
-            </button>
+            {rail ? null : feedbackButton}
           </footer>
           {rail || phone ? null : (
             <PaneResizer

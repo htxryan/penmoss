@@ -3,18 +3,12 @@
  * Git Notebook offers Penmoss's own. Main asks GitHub for a short code and opens
  * github.com/login/device; the person enters the code there and approves, and main keeps the
  * token. This shows the code (with Copy), waits, and says how it ended. Nothing shows in a build
- * without Penmoss's OAuth app.
+ * without Penmoss's OAuth app. The first run draws the same sign-in (`useDeviceSignIn`) as
+ * screens of its own (Ryan's review of #192, findings 3 and 4).
  */
 import { Icon } from '@penmoss/ui/icons';
-import { useEffect, useEffectEvent, useState } from 'react';
-import type { DesktopGitHubSignIn, GitHubSignInState } from '../desktop/bridge';
-
-/** What a sign-in that did not finish says, and the button's words then. */
-const ENDED: Partial<Record<GitHubSignInState['state'], string>> = {
-  denied: 'GitHub says the sign-in was not approved.',
-  expired: 'The code ran out before it was approved. Ask for a new one.',
-  cancelled: 'Sign-in cancelled.',
-};
+import type { DesktopGitHubSignIn } from '../desktop/bridge';
+import { useDeviceSignIn } from './device-sign-in';
 
 export function GitHubSignIn({
   signIn,
@@ -27,62 +21,11 @@ export function GitHubSignIn({
   /** The sign-in this started finished: list the repositories with it. */
   onSignedIn: () => void;
 }) {
-  const [available, setAvailable] = useState(false);
-  const [state, setState] = useState<GitHubSignInState>({ state: 'idle' });
-  const [started, setStarted] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  /** Main is asking GitHub for a code. */
-  const [asking, setAsking] = useState(false);
-  const finished = useEffectEvent((next: GitHubSignInState) => {
-    setState(next);
-    if (next.state === 'signed-in' && started) onSignedIn();
-  });
-
-  useEffect(() => {
-    let live = true;
-    void signIn
-      .status()
-      .catch(() => null)
-      .then((status) => {
-        if (!live || !status) return;
-        setAvailable(status.available);
-        // A sign-in still waiting from before (the form was closed and opened again) is shown,
-        // and its approval lists the repositories as one started here would (review).
-        if (status.state.state === 'waiting') {
-          setState(status.state);
-          setStarted(true);
-        }
-      });
-    const stop = signIn.onChange((next) => finished(next));
-    return () => {
-      live = false;
-      stop();
-    };
-  }, [signIn]);
-
+  const { available, state, ended, asking, copied, start, cancel, copy } = useDeviceSignIn(
+    signIn,
+    onSignedIn,
+  );
   if (!available) return null;
-
-  const start = async () => {
-    // One start at a time: a second click would ask GitHub for a second code (review).
-    if (asking) return;
-    setAsking(true);
-    setProblem(null);
-    setCopied(false);
-    setStarted(true);
-    try {
-      const answer = await signIn.start().catch(() => null);
-      if (!answer) {
-        setProblem('This window can’t sign in to GitHub.');
-      } else if ('ok' in answer) {
-        setProblem(answer.ok ? null : answer.error.message);
-      } else {
-        setState(answer);
-      }
-    } finally {
-      setAsking(false);
-    }
-  };
 
   if (state.state === 'waiting') {
     return (
@@ -97,12 +40,7 @@ export function GitHubSignIn({
             className="btn"
             data-ui="item"
             data-testid="github-signin-copy"
-            onClick={() =>
-              void navigator.clipboard
-                .writeText(state.userCode)
-                .then(() => setCopied(true))
-                .catch(() => setCopied(false))
-            }
+            onClick={copy}
           >
             <Icon name="copy" size={14} />
             {copied ? 'Copied' : 'Copy Code'}
@@ -120,7 +58,7 @@ export function GitHubSignIn({
             className="btn quiet"
             data-ui="dismiss"
             data-testid="github-signin-cancel"
-            onClick={() => void signIn.cancel()}
+            onClick={cancel}
           >
             Cancel
           </button>
@@ -129,12 +67,11 @@ export function GitHubSignIn({
     );
   }
 
-  const ended = state.state === 'failed' ? state.message : (ENDED[state.state] ?? null);
   return (
     <div className="repo-sign-in" data-testid="github-signin" data-state={state.state}>
-      {ended || problem ? (
+      {ended ? (
         <p role="status" data-testid="github-signin-ended">
-          {problem ?? ended}
+          {ended}
         </p>
       ) : null}
       <div className="settings-actions">

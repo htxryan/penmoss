@@ -8,7 +8,6 @@ import {
   timeMachineStory,
 } from '../../../web/test/e2e/support/dated-history';
 import {
-  body,
   gitConfig,
   gitNotebook,
   go,
@@ -22,8 +21,7 @@ import {
 // each on its own clone, push commits dated Thursday 1 October (Projects, Roadmap in it,
 // Groceries), Tuesday 13 October (the agent adds a line to Roadmap and makes Ideas) and Wednesday
 // 14 October (Ideas renamed, Roadmap moved to the top level, Groceries put in Trash). The Time
-// Machine shows the notebook on 5 October and What Changed in the week of 12 October; History's
-// Replay plays Roadmap's versions with their writers. The web suite
+// Machine shows the notebook on 5 October and What Changed in the week of 12 October. The web suite
 // (apps/web/test/e2e/time-machine.spec.ts) covers each part in more detail.
 
 const opened: Launched[] = [];
@@ -114,33 +112,5 @@ test('the Time Machine shows the notebook on a past date and what changed that w
     moved.locator('[data-op="add"] ins', { hasText: 'Agent added replay' }),
   ).toBeVisible();
   await moved.scrollIntoViewIfNeeded();
-  await page.waitForTimeout(2_000);
-});
-
-test('History’s Replay plays a note’s versions forward, with who made each', async () => {
-  test.setTimeout(150_000);
-  const launched = await launch();
-  opened.push(launched);
-  const { page } = launched;
-  const { name, remote } = await gitNotebook(launched);
-  const { roadmap } = await story(remote);
-  await pull(page, name);
-
-  await go(page, `/notes/${roadmap}`);
-  await expect(body(page)).toContainText('Agent added replay', { timeout: 30_000 });
-  await page.getByTestId('note-tab-history').click();
-  const panel = page.getByTestId('history-panel');
-  await panel.getByTestId('history-replay-start').click();
-  const replay = panel.getByTestId('history-replay');
-  const place = replay.getByTestId('replay-place');
-  await expect(place).toContainText('Version 1 of 2');
-  await expect(place).toContainText(DEVICE);
-  await expect(place).toContainText('Version 2 of 2', { timeout: 5_000 });
-  await expect(place).toContainText(AGENT);
-  await expect(
-    replay.getByTestId('replay-text').locator('[data-op="add"] ins', {
-      hasText: 'Agent added replay',
-    }),
-  ).toBeVisible();
   await page.waitForTimeout(2_000);
 });

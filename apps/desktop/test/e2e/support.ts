@@ -330,23 +330,50 @@ export async function gitNotebook(
   if (!first) await go(page, '/settings/git-notebooks');
   const settings = first ? firstRun : page.getByTestId('git-notebooks-settings');
   await expect(settings).toBeVisible();
-  // Under the list, the form opens from Add a Git Notebook… (A1098); on the first run, from its
-  // welcome's "Start a new notebook" (T69, A1146).
-  if (!first) await settings.getByTestId('git-add-open').click();
-  else await settings.getByTestId('first-run-new').click();
-  const form = settings.getByTestId('git-add');
-  await form.getByTestId('git-add-remote').fill(`file://${remote}`);
-  await form.getByTestId('git-add-name').fill(name);
-  await form.locator('button[type="submit"]').click();
-  if (first) await expect(notebookSection(page, name)).toBeVisible({ timeout: 30_000 });
-  else
+  // Under the list, the form opens from Add a Git Notebook… (A1098); on the first run, its
+  // Paste a URL, then Name Your Notebook (First Run C, Ryan's review of #192).
+  if (first) {
+    await firstRunPasteUrl(page, `file://${remote}`);
+    await firstRunName(page, name);
+    await expect(notebookSection(page, name)).toBeVisible({ timeout: 30_000 });
+  } else {
+    await settings.getByTestId('git-add-open').click();
+    const form = settings.getByTestId('git-add');
+    await form.getByTestId('git-add-remote').fill(`file://${remote}`);
+    await form.getByTestId('git-add-name').fill(name);
+    await form.locator('button[type="submit"]').click();
     await expect(settings.getByTestId('git-add-message')).toContainText(
       `Made the notebook “${name}”`,
     );
+  }
   await notebookSynced(page, name);
   await go(page, '/');
   await expect(notebookSection(page, name)).toBeVisible();
   return { name, remote };
+}
+
+/**
+ * The first run's way to a repository on this machine (First Run C): Get Started, Start a New
+ * Notebook, Paste a URL, the address, Continue. A remote that holds a notebook opens it (no name
+ * asked); one that holds none goes on to Name Your Notebook (`firstRunName`).
+ */
+export async function firstRunPasteUrl(page: Page, remote: string): Promise<void> {
+  const firstRun = page.getByTestId('first-run');
+  await expect(firstRun).toBeVisible({ timeout: 30_000 });
+  await firstRun.getByTestId('first-run-start').click();
+  await firstRun.getByTestId('first-run-continue').click();
+  await firstRun.getByTestId('first-run-way-url').click();
+  await firstRun.getByTestId('first-run-continue').click();
+  await firstRun.getByTestId('first-run-url-input').fill(remote);
+  await firstRun.getByTestId('first-run-continue').click();
+}
+
+/** The first run's Name Your Notebook: the name, then Make Notebook. */
+export async function firstRunName(page: Page, name: string): Promise<void> {
+  const field = page.getByTestId('first-run-name-input');
+  await expect(field).toBeVisible({ timeout: 30_000 });
+  await field.fill(name);
+  await page.getByTestId('first-run-make').click();
 }
 
 /** The notebook's section in the sidebar. */

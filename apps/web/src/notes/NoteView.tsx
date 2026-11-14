@@ -47,6 +47,7 @@ import { floats, shownInNote, useGoneDeliveries, useThreads } from './comments';
 import { COPIED_AGENT_REFERENCE, useCopyAgentReference } from './agent-reference';
 import { showToast } from '../toasts/toasts';
 import { NoteStats } from './note-stats';
+import { AboutVersions } from '../history/AboutVersions';
 import { HistoryPanel } from '../history/HistoryPanel';
 import { browserFoldStorage, localFoldState } from './folds';
 import { useNoteList, useNotes } from './hooks';
@@ -92,7 +93,7 @@ import { useNoteFolders } from '../workspace/tree';
 import { useSource, useSourcesState } from '../sources/hooks';
 import { defaultNotebookName } from '@penmoss/sync-client/workspace';
 import { PhoneFormatBar } from './PhoneFormatBar';
-import { tagFilter } from '../tags/filter';
+import { useShowTag } from '../search/show-tag';
 import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
 import type { OpenNote } from './service';
 import { useFullWidth } from './width';
@@ -221,6 +222,7 @@ export function NoteView({
   const [noteDraft, setNoteDraft] = useState(false);
   const copyAgentReference = useCopyAgentReference();
   const commands = useCommands();
+  const showTag = useShowTag();
   // The person's line symbols (T44), one live source for every editor of this workspace.
   const workspace = useWorkspace();
   const symbols = useMemo(() => symbolSource(workspace), [workspace]);
@@ -483,6 +485,8 @@ export function NoteView({
               images: files,
               files,
               drawings,
+              // A right-click with nothing selected opens the block menu there (Mac and web).
+              blockContextMenu: true,
               foldState: localFoldState(id, browserFoldStorage()),
               links,
               // Line symbols (T44): the synced list, Settings → Symbols, and each slot's keys.
@@ -1219,12 +1223,13 @@ export function NoteView({
               className="note-body"
               data-testid="note-body"
               onClick={(event) => {
-                // ⌘-click (Ctrl-click) on an inline #tag shows the notes with it (T18).
+                // ⌘-click (Ctrl-click) on an inline #tag shows the notes with it in Search (T18;
+                // finding 9 of Ryan's review of #192).
                 if (!(event.metaKey || event.ctrlKey)) return;
                 const tag = (event.target as HTMLElement).closest<HTMLElement>('.pm-tag')?.dataset[
                   'tag'
                 ];
-                if (tag) tagFilter.set(tag);
+                if (tag) showTag(tag);
               }}
             />
             {/* T52 item 5: a new thread, or one opened, floating over the note at its passage. */}
@@ -1259,6 +1264,8 @@ export function NoteView({
             {/* Its name and Close; on a phone the panel covers the note, the strip beside it. */}
             <div className="note-side-head">
               <h2>{tabLabel}</h2>
+              {/* History's ⓘ: how versions are made (Ryan's review of #192, finding 13). */}
+              {panelTab === 'history' ? <AboutVersions /> : null}
               <button
                 type="button"
                 className="icon-btn"

@@ -165,15 +165,11 @@
 
 /*
  * Every tab's content starts the same distance under the head (A988). With its heading hidden,
- * Comments kept the gap above its filter row (5.6 px) and History the room under its heading
- * (4 px), so their first lines sat lower than Metadata's and the Local Graph's.
+ * Comments kept the gap above its filter row (5.6 px), so its first line sat lower than
+ * Metadata's and the Local Graph's.
  */
 .note-side .comments-header {
   row-gap: 0;
-}
-
-.note-side .history-auto {
-  padding-top: 0;
 }
 
 .note-rail {

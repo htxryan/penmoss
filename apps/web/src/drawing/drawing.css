@@ -40,39 +40,14 @@
   gap: 0.5rem;
 }
 
-.drawing-editor-actions button {
+/* Cancel and Done are the app's icon and text buttons (`.btn`, Done `.btn.primary`). */
+.drawing-editor-actions .btn {
   min-width: 5rem;
-  padding: 0.35rem 0.9rem;
-  border: 1px solid var(--pm-border);
-  border-radius: 6px;
-  background: var(--pm-raised);
-  color: var(--pm-fg);
-  font: inherit;
-  cursor: pointer;
 }
 
-.drawing-editor-actions button:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--pm-raised), var(--pm-fg) 8%);
-}
-
-.drawing-editor-actions .drawing-editor-done {
-  border-color: var(--pm-accent);
-  background: var(--pm-accent);
-  color: var(--pm-on-accent);
-}
-
-.drawing-editor-actions .drawing-editor-done:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--pm-accent), var(--pm-fg) 12%);
-}
-
-.drawing-editor-actions button:disabled {
+/* Done while the drawing is being saved. */
+.drawing-editor-actions .btn:disabled {
   cursor: progress;
-  opacity: 0.6;
-}
-
-.drawing-editor-actions button:focus-visible {
-  outline: 2px solid var(--pm-focus);
-  outline-offset: 2px;
 }
 
 .drawing-editor-canvas {

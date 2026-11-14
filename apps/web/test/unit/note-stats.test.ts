@@ -106,8 +106,8 @@ describe('a git note’s save status (A860)', () => {
     expect(gitSaveStatus(local, sync('offline', ['N']), 'N').hint).toContain('github.com');
     expect(gitSaveStatus(local, sync('offline'), 'N').label).toBe('Saved · offline');
     expect(gitSaveStatus(local, sync('stopped'), 'N')).toMatchObject({
-      state: 'error',
-      label: 'Sync stopped',
+      state: 'stopped',
+      label: 'Sync Stopped',
     });
     expect(gitSaveStatus({ ...local, savedLocally: false }, sync('synced'), 'N').state).toBe(
       'saving',

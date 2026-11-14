@@ -17,6 +17,7 @@ import { join } from 'node:path';
 import {
   GitTransportError,
   type CommitInfo,
+  type DirSnapshots,
   type GitTransport,
   type PushOutcome,
 } from '../transport';
@@ -407,6 +408,48 @@ export class NodeGitTransport implements GitTransport {
     return out;
   }
 
+  readDir(commits: readonly string[], dir: string): Promise<DirSnapshots> {
+    return this.readDirNow(commits, dir);
+  }
+
+  /**
+   * One directory at many commits (History): every commit's tree of `dir` read by one
+   * `cat-file --batch` (`<commit>:<dir>`, then its subtrees by id, a round per level), never
+   * the whole tree; then every blob they name, the missing ones fetched in one go.
+   */
+  private async readDirNow(commits: readonly string[], dir: string): Promise<DirSnapshots> {
+    if (
+      !dir.endsWith('/') ||
+      !dir.startsWith(this.root) ||
+      dir.split('/').some((part, i, all) => part === '..' || (part === '' && i < all.length - 1))
+    ) {
+      throw new GitTransportError('git', `Not a directory of the notebook: ${dir}`);
+    }
+    const files = new Map<string, Map<string, string>>();
+    let round = [...new Set(commits)].map((commit) => {
+      files.set(commit, new Map());
+      return { commit, prefix: dir, name: `${commit}:${dir.slice(0, -1)}` };
+    });
+    while (round.length > 0) {
+      const result = await this.git(['cat-file', '--batch'], {
+        input: `${round.map((each) => each.name).join('\n')}\n`,
+      });
+      const next: typeof round = [];
+      const trees = parseTrees(result.stdout, round.length);
+      for (const [i, entries] of trees.entries()) {
+        const { commit, prefix } = round[i]!;
+        for (const entry of entries) {
+          if (entry.tree) next.push({ commit, prefix: `${prefix}${entry.name}/`, name: entry.id });
+          else files.get(commit)!.set(`${prefix}${entry.name}`, entry.id);
+        }
+      }
+      round = next;
+    }
+    const ids = new Set<string>();
+    for (const listed of files.values()) for (const id of listed.values()) ids.add(id);
+    return { files, blobs: await this.blobs([...ids]) };
+  }
+
   /** Blobs by id: the missing ones fetched in batches first, then all read with one `cat-file`. */
   private async blobs(ids: readonly string[]): Promise<Map<string, Uint8Array>> {
     const out = new Map<string, Uint8Array>();
@@ -706,6 +749,56 @@ function parseBatch(stdout: Buffer, out: Map<string, Uint8Array>): void {
     if (type === 'blob') out.set(id!, bytes);
     at += length + 1;
   }
+}
+
+interface TreeEntry {
+  readonly name: string;
+  readonly id: string;
+  readonly tree: boolean;
+}
+
+/**
+ * Parses `git cat-file --batch` output of `count` tree names into each one's entries, in the
+ * order asked: an empty list for a name that is missing or not a tree. A tree's entries are
+ * `<mode> <name>\0<raw id>`; a submodule (mode 160000) is left out, as `ls-tree -r` lists it
+ * as a commit rather than a blob.
+ */
+function parseTrees(stdout: Buffer, count: number): TreeEntry[][] {
+  const out: TreeEntry[][] = [];
+  let at = 0;
+  while (out.length < count && at < stdout.length) {
+    const newline = stdout.indexOf(0x0a, at);
+    if (newline < 0) break;
+    const header = stdout.subarray(at, newline).toString('utf8');
+    at = newline + 1;
+    // `<name> missing` (the name may hold spaces), or `<id> <type> <size>`.
+    const parts = header.split(' ');
+    const size = Number(parts[2]);
+    if (parts.length !== 3 || !Number.isSafeInteger(size)) {
+      out.push([]);
+      continue;
+    }
+    const body = stdout.subarray(at, at + size);
+    at += size + 1;
+    if (parts[1] !== 'tree') {
+      out.push([]);
+      continue;
+    }
+    const raw = parts[0]!.length / 2;
+    const entries: TreeEntry[] = [];
+    for (let i = 0; i < body.length;) {
+      const space = body.indexOf(0x20, i);
+      const nul = body.indexOf(0x00, space);
+      const mode = body.subarray(i, space).toString('utf8');
+      const name = body.subarray(space + 1, nul).toString('utf8');
+      const id = body.subarray(nul + 1, nul + 1 + raw).toString('hex');
+      i = nul + 1 + raw;
+      if (mode === '40000') entries.push({ name, id, tree: true });
+      else if (mode !== '160000') entries.push({ name, id, tree: false });
+    }
+    out.push(entries);
+  }
+  return out;
 }
 
 function limitOf(options: NodeGitTransportOptions): number {

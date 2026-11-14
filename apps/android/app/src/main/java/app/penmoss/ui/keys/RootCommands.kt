@@ -111,12 +111,3 @@ fun FolderCommands(newNote: () -> Unit, newFolder: () -> Unit, sort: (String) ->
     RegisterCommand("folder.sortAlpha") { sort("alpha") }
     RegisterCommand("folder.sortModified") { sort("modified") }
 }
-
-/**
- * A tag's notes (T40 P6, TG2): the web's Show all notes clears the sidebar's tag filter; here the
- * filter is this screen, so it is Back ([clear]).
- */
-@Composable
-fun TaggedCommands(clear: () -> Unit) {
-    RegisterCommand("tags.clearFilter", run = clear)
-}

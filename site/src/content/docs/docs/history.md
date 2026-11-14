@@ -7,15 +7,17 @@ This page shows you how to see a note's earlier versions, bring one back, undo o
 
 ## Version history
 
-**Version History** (⌘⌥⇧H, or the note panel's **History** tab) lists the note's versions, newest first. Each one is a commit in your repository that changed the note, with when it was made, who made it (this Mac, your phone, or an agent, marked with a star) and a summary such as `Appended · +1 −0 line`. Changes that have not synced yet show as **Not saved as a version yet**.
+**Version History** (⌘⌥⇧H, or the note panel's **History** tab) lists the note's versions, newest first, one line each under its day (Today, Yesterday, then the date). Each version is a commit in your repository that changed the note. Its line shows who made it as an icon (this Mac, your phone, or an agent's star; hover the icon for the name), the time, a few words on what changed, such as `Added “Book the night train”`, `Checked off “Call Sam”` or the headings it touched, and how many lines it added and removed. A version that changed no text is dimmed. The list shows at once, and what each version changed fills in a moment later, the newest first.
 
-Select a version to see what it changed.
+The **Now** row at the top says whether the note has changes that are not synced yet. **Sync Now** beside it syncs, which saves a version now; otherwise each sync makes one. The **ⓘ** beside the panel's Close button says how versions are made, with a link to this page.
+
+Select a version, or move through them with ↑ and ↓, to see what it changed under the list. Drag the handle between the list and the changes to give either more room (or focus it and press ↑ or ↓); Penmoss remembers the split. Under the changes:
 
 - **Restore This Version** brings back the whole note as it was then, as a new change. Nothing is lost: the versions after it stay in the history.
 - **Revert This Edit**, on an agent's version, undoes only what that version changed and keeps every edit made since. If a later edit changed the same lines, it says so.
-- **Sync Now** saves a version now. Otherwise each sync makes one.
+- **Copy Text** copies the note's text as it was in that version.
 
-**Replay** plays the note's versions forward, oldest first, about one a second. Each one shows the whole note with what that version changed marked (lines added and removed) and who made it. **Pause**, **Previous Version** and **Next Version** stop and step, the slider jumps to any version, and **1×**, **2×** and **4×** set the speed. **Close Replay** goes back to the list.
+On Android, History is a screen of its own that lists the same versions, with Restore and Revert.
 
 On the Mac, Restore and Revert first ask for Touch ID or your password. On Android they ask for your fingerprint, face or screen lock.
 

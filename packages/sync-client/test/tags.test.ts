@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { NOTE_ROOT } from '../src/replica';
 import {
   bodyTags,
+  changeTagInDoc,
   frontmatterTags,
   noteTags,
   renameTagInDoc,
+  revertTagEdit,
   setFrontmatterTag,
 } from '../src/tags';
 
@@ -124,5 +126,95 @@ describe('tags in a note document (T18)', () => {
     expect(json).toContain('"insert":"x","format":{"code":{}}');
     expect(json).toContain('"insert":"#home"}');
     expect(renameTagInDoc(doc, 'chores', 'home')).toBe(false);
+  });
+});
+
+describe('deleting, merging and undoing a tag change (the Tags page)', () => {
+  it('deletes a tag: frontmatter goes, an inline tag keeps its word, nested tags go too', () => {
+    const doc = docWith((root) => {
+      paragraph(root, 'A ', ['#garden', { bold: {} }], ' bed and #garden/herbs, not ', [
+        '#garden',
+        { code: {} },
+      ]);
+      paragraph(root, 'Also #gardening and #other');
+    });
+    setFrontmatterTag(doc, 'garden', true);
+    setFrontmatterTag(doc, 'garden/beds', true);
+    setFrontmatterTag(doc, 'keep', true);
+    const log = changeTagInDoc(doc, { from: 'garden', to: null });
+    expect(log).not.toBeNull();
+    expect(noteTags(doc)).toEqual(['gardening', 'keep', 'other']);
+    const json = text(doc);
+    expect(json).toContain('"insert":"A "');
+    expect(json).toContain('"insert":"garden","format":{"bold":{}}');
+    expect(json).toContain('"insert":" bed and garden/herbs, not "');
+    expect(json).toContain('"insert":"#garden","format":{"code":{}}');
+    expect(json).toContain('Also #gardening and #other');
+    expect(changeTagInDoc(doc, { from: 'garden', to: null })).toBeNull();
+  });
+
+  it('deletes only the tag itself when nested is false', () => {
+    const doc = docWith((root) => paragraph(root, '#garden and #garden/herbs'));
+    changeTagInDoc(doc, { from: 'garden', to: null, nested: false });
+    expect(noteTags(doc)).toEqual(['garden/herbs']);
+  });
+
+  it('renames only the tag itself when nested is false', () => {
+    const doc = docWith((root) => paragraph(root, '#penmoss and #penmoss/review'));
+    setFrontmatterTag(doc, 'penmoss/factory', true);
+    setFrontmatterTag(doc, 'penmoss', true);
+    changeTagInDoc(doc, { from: 'penmoss', to: 'app', nested: false });
+    expect(noteTags(doc)).toEqual(['app', 'penmoss/factory', 'penmoss/review']);
+  });
+
+  it('undoes a delete exactly, through an edit made since elsewhere in the paragraph', () => {
+    const doc = docWith((root) => paragraph(root, 'Plant the #garden bed'));
+    setFrontmatterTag(doc, 'garden', true);
+    const log = changeTagInDoc(doc, { from: 'garden', to: null })!;
+    expect(text(doc)).toContain('Plant the garden bed');
+    (doc.get(NOTE_ROOT).get(0) as Y.Node).insert(0, 'Today: ');
+    expect(revertTagEdit(doc, log)).toBe(true);
+    expect(text(doc)).toContain('Today: Plant the #garden bed');
+    expect(noteTags(doc)).toEqual(['garden']);
+    expect(frontmatterTags(doc)).toEqual(['garden']);
+  });
+
+  it('undoes a merge into a tag the note had, leaving that tag where it was', () => {
+    const doc = docWith((root) => paragraph(root, '#cf workers, #cloudflare R2'));
+    setFrontmatterTag(doc, 'cf', true);
+    setFrontmatterTag(doc, 'cloudflare', true);
+    const log = changeTagInDoc(doc, { from: 'cf', to: 'cloudflare' })!;
+    expect(noteTags(doc)).toEqual(['cloudflare']);
+    expect(log.added).toEqual([]);
+    expect(log.removed).toEqual(['cf']);
+    revertTagEdit(doc, log);
+    expect(text(doc)).toContain('#cf workers, #cloudflare R2');
+    expect(frontmatterTags(doc)).toEqual(['cf', 'cloudflare']);
+  });
+
+  it('undoes several changes in reverse, and leaves a tag edited since as it is', () => {
+    const doc = docWith((root) => paragraph(root, '#dev and #devs'));
+    setFrontmatterTag(doc, 'dev', true);
+    const first = changeTagInDoc(doc, { from: 'dev', to: 'development' })!;
+    const second = changeTagInDoc(doc, { from: 'devs', to: 'development' })!;
+    expect(noteTags(doc)).toEqual(['development']);
+    expect(text(doc)).toContain('#development and #development');
+    // Someone retypes the second tag before the undo.
+    const block = doc.get(NOTE_ROOT).get(0) as Y.Node;
+    block.delete('#development and '.length, '#development'.length);
+    block.insert('#development and '.length, '#elsewhere');
+    revertTagEdit(doc, second);
+    revertTagEdit(doc, first);
+    expect(text(doc)).toContain('#dev and #elsewhere');
+    expect(frontmatterTags(doc)).toEqual(['dev']);
+  });
+
+  it('undoes in a copy of the note made from its stored state', () => {
+    const doc = docWith((root) => paragraph(root, 'See #recipes'));
+    const log = changeTagInDoc(doc, { from: 'recipes', to: 'cooking' })!;
+    const copy = new Y.Doc();
+    Y.applyUpdate(copy, Y.encodeStateAsUpdate(doc));
+    expect(revertTagEdit(copy, JSON.parse(JSON.stringify(log)) as typeof log)).toBe(true);
+    expect(bodyTags(copy)).toEqual(['recipes']);
   });
 });

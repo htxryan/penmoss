@@ -38,7 +38,7 @@ const notebookJson = (id: string, name: string) => JSON.stringify({ format: 1, i
 test.describe('the first run', () => {
   test.use({ seed: null });
 
-  test('opens a notebook by picking its repository and folder, with nothing typed', async ({
+  test('Use Existing Repo shows each repository with its notebooks beneath; Open opens one', async ({
     page,
     host,
   }) => {
@@ -65,41 +65,39 @@ test.describe('the first run', () => {
     });
 
     await page.goto('/');
-    await page.getByTestId('first-run-existing').click();
-    const form = page.getByTestId('git-add');
-    const rows = form.getByTestId('repo-row');
-    // Newest push first, each labelled; any visibility can be picked (D61), read-only can't.
-    await expect(rows).toHaveCount(3);
-    await expect(rows.nth(0)).toHaveAttribute('data-repo', 'ryan/notes');
-    await expect(rows.nth(0)).toContainText('Private');
-    await expect(rows.nth(1)).toContainText('Public');
-    await expect(rows.nth(2)).toContainText('Internal');
-    await expect(rows.nth(2)).toContainText('Read only');
-    await expect(rows.nth(2)).toHaveAttribute('aria-disabled', 'true');
-    await expect(form.getByTestId('repo-picker-via')).toContainText('through git on this Mac');
-    if (SHOTS) await page.screenshot({ path: `${SHOTS}/repos.png` });
+    const firstRun = page.getByTestId('first-run');
+    await firstRun.getByTestId('first-run-start').click();
+    await firstRun.getByTestId('first-run-existing').click();
+    await firstRun.getByTestId('first-run-continue').click();
+    // Git's own sign-in answers, so the tree comes at once (no stop to say so).
+    await expect(firstRun.getByRole('heading', { name: 'Pick Repository' })).toBeVisible();
+    const repos = firstRun.getByTestId('first-run-tree-repo');
+    // Newest push first; any visibility can be picked (D61), read-only can't.
+    await expect(repos).toHaveCount(3);
+    await expect(repos.nth(0)).toHaveAttribute('data-repo', 'ryan/notes');
+    await expect(repos.nth(1)).toContainText('Public');
+    await expect(repos.nth(2)).toContainText('Internal');
+    await expect(repos.nth(2)).toContainText('Read Only');
+    await expect(repos.nth(2).getByTestId('first-run-repo-pick')).toBeDisabled();
+    // The notebooks beneath their repository, read at once; site holds none.
+    const notebook = repos.nth(0).getByTestId('first-run-notebook');
+    await expect(notebook).toContainText('Kept');
+    await expect(notebook).toContainText('Root');
+    await expect(repos.nth(1)).toContainText('No notebook yet');
+    await expect(firstRun.getByTestId('first-run-via')).toContainText('Signed in');
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/tree.png` });
 
-    // Search filters; Escape clears it; the arrow keys and Enter pick.
-    const search = form.getByTestId('repo-picker-search');
-    await search.fill('wiki');
-    await expect(rows).toHaveCount(1);
-    await search.press('Escape');
-    await expect(search).toHaveValue('');
-    await expect(rows).toHaveCount(3);
-    await search.press('ArrowDown');
-    await expect(rows.nth(0)).toBeFocused();
-    await page.keyboard.press('Enter');
+    // The filter narrows repositories and notebooks; Escape clears it.
+    const filter = firstRun.getByTestId('first-run-filter');
+    await filter.fill('kept');
+    await expect(repos).toHaveCount(1);
+    await expect(firstRun.getByTestId('first-run-filter-count')).toHaveText('1 of 3 match.');
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/tree-filtered.png` });
+    await filter.press('Escape');
+    await expect(filter).toHaveValue('');
+    await expect(repos).toHaveCount(3);
 
-    // The folder step: the root holds Kept, which opens under its own name.
-    await expect(form.getByTestId('git-add-picked')).toContainText('ryan/notes');
-    const root = form.getByTestId('repo-folder').first();
-    await expect(root).toHaveAttribute('data-path', '');
-    await expect(root).toContainText('Notebook · Kept');
-    await root.click();
-    await expect(form.getByTestId('git-add-opens')).toContainText('opens the existing notebook');
-    await expect(form.getByTestId('git-add-name')).toHaveCount(0);
-    if (SHOTS) await page.screenshot({ path: `${SHOTS}/folder-notebook.png` });
-    await form.getByRole('button', { name: 'Open Notebook', exact: true }).click();
+    await notebook.getByTestId('first-run-notebook-open').click();
     const tree = page.getByRole('tree', { name: 'Folders and notes' });
     await expect(tree.getByRole('treeitem', { name: 'Already here', exact: true })).toBeVisible({
       timeout: 30_000,
@@ -112,7 +110,54 @@ test.describe('the first run', () => {
     expect(errors).toEqual([]);
   });
 
-  test('Start New creates a private repository named after the notebook and makes it there', async ({
+  test('a repository with other files asks for a folder, then a name', async ({ page, host }) => {
+    test.setTimeout(90_000);
+    const errors = collectErrors(page);
+    host.signInGit();
+    const code = host.githubRepo('code', { pushedAt: '2026-11-06T10:00:00Z' });
+    pushFiles(host, code.remote, {
+      'src/app.ts': 'export {};\n',
+      'docs/guide/intro.md': '# Intro\n',
+      '.github/workflows/ci.yml': 'on: push\n',
+    });
+    await page.goto('/');
+    const firstRun = page.getByTestId('first-run');
+    await firstRun.getByTestId('first-run-start').click();
+    await firstRun.getByTestId('first-run-continue').click();
+    await firstRun.getByTestId('first-run-way-existing').click();
+    await firstRun.getByTestId('first-run-continue').click();
+    await firstRun.getByTestId('first-run-tree-repo').getByTestId('first-run-repo-pick').click();
+
+    await expect(firstRun.getByRole('heading', { name: 'Pick Folder' })).toBeVisible();
+    const folders = firstRun.getByTestId('first-run-folder-option');
+    expect(
+      await folders.evaluateAll((all) => all.map((each) => each.getAttribute('data-path'))),
+    ).toEqual(['', 'docs', 'docs/guide', 'src']);
+    // Root carries the repository's name.
+    await expect(folders.first()).toContainText('ryan/code');
+    await folders
+      .filter({ hasText: /^docs\// })
+      .first()
+      .click();
+    await firstRun.getByTestId('first-run-new-folder').fill('notes');
+    await firstRun.getByTestId('first-run-new-folder-add').click();
+    await expect(firstRun.locator('[data-path="docs/notes"] input')).toBeChecked();
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/pick-folder.png` });
+    await firstRun.getByTestId('first-run-continue').click();
+    await expect(firstRun.getByRole('heading', { name: 'Name Your Notebook' })).toBeVisible();
+    await expect(firstRun.getByTestId('first-run-place')).toContainText('docs/notes/');
+    await firstRun.getByTestId('first-run-name-input').fill('Code Notes');
+    await firstRun.getByTestId('first-run-make').click();
+    await expect(page.getByTestId('first-run')).toHaveCount(0, { timeout: 30_000 });
+    const listed = await host.notebooks.list();
+    expect(listed.find((each) => each.name === 'Code Notes')).toMatchObject({
+      remote: code.remote,
+      dir: 'docs/notes',
+    });
+    expect(errors).toEqual([]);
+  });
+
+  test('Create New Repo makes a private repository named after the notebook, and the notebook in it', async ({
     page,
     host,
   }) => {
@@ -122,30 +167,34 @@ test.describe('the first run', () => {
     host.githubRepos.orgs = ['acme'];
     const used = host.githubRepo('used', { pushedAt: '2026-11-06T10:00:00Z' });
     pushFiles(host, used.remote, { 'README.md': '# used' });
-    host.githubRepo('blank', { pushedAt: '2026-01-01T10:00:00Z' });
 
     await page.goto('/');
-    await page.getByTestId('first-run-new').click();
-    const form = page.getByTestId('git-add');
-    // Empty repositories first in Start New.
-    const rows = form.getByTestId('repo-row');
-    await expect(rows).toHaveCount(2);
-    await expect(rows.nth(0)).toHaveAttribute('data-repo', 'ryan/blank');
-    const create = form.getByTestId('repo-create');
-    await expect(create.getByTestId('repo-create-owner')).toContainText('ryan (you)');
-    await expect(create.getByTestId('repo-create-owner')).toContainText('acme');
-    // The name follows the notebook's until it is edited (D62).
-    await create.getByTestId('repo-create-notebook').fill('Work Log');
-    await expect(create.getByTestId('repo-create-name')).toHaveValue('work-log-notes');
-    await create.getByTestId('repo-create-name').fill('used');
-    await create.getByTestId('repo-create-notebook').fill('Work Logs');
-    await expect(create.getByTestId('repo-create-name')).toHaveValue('used');
-    // GitHub's refusal shows in place.
-    await create.getByTestId('repo-create-submit').click();
-    await expect(create.getByTestId('repo-create-message')).toContainText('is there already');
-    await create.getByTestId('repo-create-name').fill('work-log-notes');
+    const firstRun = page.getByTestId('first-run');
+    await firstRun.getByTestId('first-run-start').click();
+    await firstRun.getByTestId('first-run-continue').click();
+    await firstRun.getByTestId('first-run-continue').click();
+    await expect(firstRun.getByRole('heading', { name: 'Create New Repo' })).toBeVisible();
+    // The owner is words; Change offers the organisations.
+    await expect(firstRun.getByTestId('first-run-create-owner-label')).toHaveText('ryan /');
+    await firstRun.getByTestId('first-run-create-change').click();
+    await expect(firstRun.getByTestId('first-run-create-owner')).toContainText('ryan (you)');
+    await expect(firstRun.getByTestId('first-run-create-owner')).toContainText('acme');
+    // The repository's name follows the notebook's until it is edited (D62).
+    await firstRun.getByTestId('first-run-create-notebook').fill('Work Log');
+    await expect(firstRun.getByTestId('first-run-create-repo')).toHaveValue('work-log-notes');
+    await firstRun.getByTestId('first-run-create-repo').fill('used');
+    await firstRun.getByTestId('first-run-create-notebook').fill('Work Logs');
+    await expect(firstRun.getByTestId('first-run-create-repo')).toHaveValue('used');
+    // A name GitHub has: said in place, with another offered and Use Existing Repo.
+    await firstRun.getByTestId('first-run-create-submit').click();
+    await expect(firstRun.getByTestId('first-run-create-taken')).toContainText(
+      'ryan/used already exists.',
+    );
+    await expect(firstRun.getByTestId('first-run-use-existing')).toBeVisible();
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/create-taken.png` });
+    await firstRun.getByTestId('first-run-create-repo').fill('work-log-notes');
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/create.png` });
-    await create.getByTestId('repo-create-submit').click();
+    await firstRun.getByTestId('first-run-create-submit').click();
 
     await expect(page.getByTestId('note-title')).toHaveValue('Welcome to Penmoss', {
       timeout: 30_000,

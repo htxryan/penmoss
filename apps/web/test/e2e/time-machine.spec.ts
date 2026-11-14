@@ -5,8 +5,8 @@ import { STORY_AGENT, STORY_DEVICE, timeMachineStory, type Story } from './suppo
 // agent: Thursday 1 October, the device makes Projects, Roadmap in it and Groceries; Tuesday 13
 // October, Claude Code adds a line to Roadmap and makes Ideas; Wednesday 14 October, the device
 // renames Ideas, moves Roadmap to the top level and puts Groceries in Trash. The page shows the
-// right tree and text for a past date, Replay steps through a note's versions in order with their
-// writers, and What Changed lists each kind of change for the week of 12 October.
+// right tree and text for a past date, and What Changed lists each kind of change for the week of
+// 12 October.
 
 test.use({ seed: null });
 
@@ -83,45 +83,6 @@ test('shows the notebook’s tree and a note’s text as they were on a past dat
   await page.getByRole('button', { name: 'Restore Note' }).click();
   await expect(page).toHaveURL(new RegExp(`/notes/${groceries}$`), { timeout: 60_000 });
   await expect(page.getByTestId('note-body').locator('.ProseMirror')).toHaveText('Milk and eggs');
-});
-
-test('Replay steps through a note’s versions in order, with who made each', async ({
-  page,
-  host,
-}) => {
-  test.setTimeout(120_000);
-  const { roadmap } = await story(host);
-  await page.goto(`/notes/${roadmap}`);
-  await expect(page.getByTestId('note-body').locator('.ProseMirror')).toContainText(
-    'Agent added replay',
-    { timeout: 30_000 },
-  );
-  await page.getByTestId('note-tab-history').click();
-  const panel = page.getByTestId('history-panel');
-  await panel.getByTestId('history-replay-start').click();
-  const replay = panel.getByTestId('history-replay');
-  const place = replay.getByTestId('replay-place');
-  // It plays from the first version: the device's, then the agent's with its line marked.
-  await expect(place).toContainText('Version 1 of 2');
-  await expect(place).toContainText(DEVICE);
-  await expect(replay.getByTestId('replay-text')).toContainText('Ship the scrubber');
-  await expect(place).toContainText('Version 2 of 2', { timeout: 5_000 });
-  await expect(place).toContainText(AGENT);
-  await expect(
-    replay
-      .getByTestId('replay-text')
-      .locator('[data-op="add"] ins', { hasText: 'Agent added replay' }),
-  ).toBeVisible();
-  // Played to the end, it pauses; a step back and the speed are the person's.
-  await expect(replay.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
-  await replay.getByRole('button', { name: 'Previous Version' }).click();
-  await expect(place).toContainText('Version 1 of 2');
-  await replay.getByRole('button', { name: '4×' }).click();
-  await expect(replay.getByRole('button', { name: '4×' })).toHaveAttribute('aria-pressed', 'true');
-  await replay.getByRole('button', { name: 'Play', exact: true }).click();
-  await expect(place).toContainText('Version 2 of 2');
-  await expect(place).toContainText(AGENT);
-  await page.waitForTimeout(2_000);
 });
 
 test('What Changed lists each kind of change in a week, with who and a diff', async ({

@@ -717,7 +717,7 @@ test('9, fidelity: the note panel keeps one set of columns, rows and gaps on eve
   const first = {
     info: '.note-side .info-list',
     comments: '.note-side .comments-filter',
-    history: '.note-side .history-auto',
+    history: '.note-side .history-scroll',
     graph: '.note-side .note-graph-bar',
   } as const;
   const starts: number[] = [];

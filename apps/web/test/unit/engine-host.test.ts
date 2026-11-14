@@ -94,6 +94,7 @@ async function setup(
     onlineSettleMs?: number;
     pushDelayS?: number;
     pullEveryMin?: number;
+    onName?: (name: string) => void;
   } = {},
 ) {
   const nb = testNotebook();
@@ -123,6 +124,7 @@ async function setup(
     ...(extra.closingSyncMs !== undefined ? { closingSyncMs: extra.closingSyncMs } : {}),
     ...(extra.remote !== undefined ? { remote: extra.remote } : {}),
     ...(extra.onlineSettleMs !== undefined ? { onlineSettleMs: extra.onlineSettleMs } : {}),
+    ...(extra.onName ? { onName: extra.onName } : {}),
   });
   hosts.push(host);
   return { nb, cli, git, host, store };
@@ -203,6 +205,42 @@ describe('Push after and Pull every (A825)', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('Rename (Ryan’s review of PR #192)', () => {
+  it('writes the name to notebook.json and pushes it at once, then says it landed', async () => {
+    const names: string[] = [];
+    const { host, nb, cli } = await setup({ onName: (name) => names.push(name) });
+    await host.start();
+    await vi.waitFor(() => expect(host.status.phase).toBe('synced'), { timeout: 3000 });
+    expect(names.at(-1)).toBe('Work');
+    const commits = nb.remote.history(nb.branch).length;
+    host.rename('Work (old)');
+    // Twice, as a window and main's list both ask: one rename, one push.
+    host.rename('Work (old)');
+    await vi.waitFor(() => expect(names.at(-1)).toBe('Work (old)'), { timeout: 3000 });
+    await host.idle();
+    expect(nb.remote.history(nb.branch).length).toBe(commits + 1);
+    const head = nb.head()!;
+    const info = JSON.parse(
+      new TextDecoder().decode(nb.remote.read(head, '.penmoss/notebook.json')!),
+    ) as { name: string };
+    expect(info.name).toBe('Work (old)');
+    // Another device follows at its next sync.
+    await cli.engine.sync();
+    expect(cli.engine.info?.name).toBe('Work (old)');
+  });
+
+  it('reports another device’s rename after a sync', async () => {
+    const names: string[] = [];
+    const { host, cli } = await setup({ onName: (name) => names.push(name) });
+    await host.start();
+    await vi.waitFor(() => expect(host.status.phase).toBe('synced'), { timeout: 3000 });
+    cli.engine.rename('From the CLI');
+    await cli.engine.sync();
+    await host.syncNow('now');
+    expect(names.at(-1)).toBe('From the CLI');
   });
 });
 

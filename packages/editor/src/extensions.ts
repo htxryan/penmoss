@@ -198,6 +198,12 @@ export interface NoteExtensionsOptions {
    * Without it, drawings show as pictures.
    */
   readonly drawings?: DrawingServices;
+  /**
+   * A right-click in the note with nothing selected (or the context-menu key, Shift+F10) opens
+   * the slash menu's blocks there, with no `/` typed. The Mac app and the web; off on Android,
+   * where a long-press selects.
+   */
+  readonly blockContextMenu?: boolean;
 }
 
 /**
@@ -341,6 +347,7 @@ export function noteExtensions(options: NoteExtensionsOptions = {}): AnyExtensio
       images: options.images,
       links: options.links,
       files: options.files,
+      contextMenu: options.blockContextMenu ?? false,
     }),
     SelectionToolbarExtension,
     // A key pressed as the note takes focus keeps its selection (#224, A1141).

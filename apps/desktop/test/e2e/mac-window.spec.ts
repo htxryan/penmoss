@@ -602,9 +602,10 @@ test('the compact title bar: room for the lights in every layout, rows that drag
     expect(button.x, id).toBe(0);
     expect(button.width, id).toBe(toggle.width);
   }
+  // Settings last, at the very bottom (Ryan's review of #192, finding 18).
   expect(
-    (await page.getByTestId('sidebar-feedback').boundingBox())!.y +
-      (await page.getByTestId('sidebar-feedback').boundingBox())!.height,
+    (await page.getByTestId('sidebar-settings').boundingBox())!.y +
+      (await page.getByTestId('sidebar-settings').boundingBox())!.height,
   ).toBeCloseTo(rail.y + rail.height, 0);
   // The note's title row starts at the rail's edge, under the lights (the row drags, as the
   // sidebar's head does); what it holds starts after their inset: Back, Forward and the pin, then
@@ -673,8 +674,9 @@ test('the compact title bar: room for the lights in every layout, rows that drag
   await expect(page.locator('.notes-app')).toHaveAttribute('data-drawer', 'open');
   await page.waitForTimeout(300); // The drawer slides in.
   expect(await overLights(page)).toEqual([]);
-  // The drawer comes before the app bar in the DOM, so the app bar stops dragging under it.
-  await clicksEverywhere(page, 'narrow window, drawer open', { stopped: ['.app-bar'] });
+  // The drawer comes before the app bar in the DOM, so the app bar stops dragging under it, and
+  // so does the empty home, with no note open (Ryan's review of #192, finding 6).
+  await clicksEverywhere(page, 'narrow window, drawer open', { stopped: ['.app-bar', '.home'] });
   await page.keyboard.press('Escape');
   await mainBounds(app, { x: 0, y: 0, width: 1100, height: 760 });
   await expect(page.locator('.note-top')).toBeVisible();

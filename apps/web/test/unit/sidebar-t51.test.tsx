@@ -112,7 +112,7 @@ describe('the sidebar (T51)', () => {
     // Send Feedback's own icon, not the comments' bubble (T62 item 7).
     expect(foot).toContain('data-icon="feedback"');
     expect(foot).not.toContain('data-icon="trash"');
-    const bar = between(html, 'class="tree-actions"', 'class="sync-dot');
+    const bar = between(html, 'class="tree-actions row-end"', 'class="sync-dot');
     const [trash] = tagsWith(bar, 'data-testid="sidebar-trash"');
     expect(trash).toContain('href="/trash"');
     expect(trash).toContain('aria-label="Trash"');

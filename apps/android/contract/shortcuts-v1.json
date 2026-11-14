@@ -330,13 +330,6 @@
       "keys": []
     },
     {
-      "id": "tags.clearFilter",
-      "title": "Show All Notes (Clear the Tag Filter)",
-      "area": "Tags",
-      "scope": "global",
-      "keys": []
-    },
-    {
       "id": "folder.new",
       "title": "New Folder",
       "area": "Folders",
@@ -1011,7 +1004,7 @@
     },
     {
       "id": "editor.insert.drawing",
-      "title": "Insert: Drawing",
+      "title": "Insert: Excalidraw Diagram",
       "area": "Insert",
       "scope": "editor",
       "keys": []

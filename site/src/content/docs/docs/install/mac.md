@@ -35,11 +35,13 @@ Penmoss can check for a newer release and offer it; you choose when to install i
 
 The main window has three panes: the sidebar, the note, and the note panel. Drag the edge between two panes to resize them; Penmoss remembers the widths on this Mac.
 
-- **The sidebar** holds the shortcuts row (New Note, Search, Today, This Week, Graph, Commands), then Quick Access, Recent Notes, your notebooks, the calendar and tags. Its bottom row has Settings and Send Feedback, and above them the notice of a new version. ⌘\\ folds it to a rail of icons and back: Settings and Send Feedback stay at the rail's foot, and a note's top bar then starts with Back, Forward and the Keep on Top pin. The buttons in the sidebar's top row always fit, however narrow you drag it. **Settings → Display** chooses what it shows.
-- **The note** has its title, the editor and, at the foot, the **status bar**: whether the note is saved and in git, and its words, characters and reading time (for the selection while text is selected). **Settings → Display** chooses what the status bar and the line under the title show, and which buttons the note's top bar has.
+- **The sidebar** holds the shortcuts row (New Note, Search, Today, This Week, Graph, Commands), then Quick Access, Recent Notes, your notebooks, the calendar and tags. Its bottom row has Settings and Send Feedback, and above them the notice of a new version. ⌘\\ folds it to a rail of icons and back: Send Feedback and Settings stay at the rail's foot, Settings at the very bottom, and a note's top bar then starts with Back, Forward and the Keep on Top pin. The buttons in the sidebar's top row always fit, however narrow you drag it; a notebook's row then keeps New Note and puts Sort Order, New Folder, Time Machine and Trash in its ⋯ menu, so its name stays readable. **Settings → Display** chooses what it shows.
+- **The note** has its title, the editor and, at the foot, the **status bar**: whether the note is saved and in git (**Sync Stopped** in red when its notebook cannot sync; click it to see why), and its words, characters and reading time (for the selection while text is selected). **Settings → Display** chooses what the status bar and the line under the title show, and which buttons the note's top bar has.
 - **The note panel**, on the right, has four tabs: **Metadata** (folder, dates, tags, frontmatter and [backlinks](/docs/links/#backlinks)), **Comments**, **History** and **Local Graph**. The **Note Panel** button in the note's top bar shows or hides it. **Settings → Appearance → Note Panel** chooses whether it starts open.
 
 The note's other actions are in the ⋯ at the end of its top bar.
+
+As in other Mac apps, Penmoss's own words (buttons, labels, headings, the sidebar) can't be selected, and the pointer stays an arrow over them. What you might copy can: your notes, every field, code and paths, comments, History, release notes, a notebook's details in Settings, and error messages.
 
 ## Note windows
 
@@ -65,7 +67,7 @@ The main window stays pinned after a relaunch; note windows start unpinned. Keep
 
 ## The compact title bar
 
-With **Settings → Appearance → Compact Title Bar** on (the default), the window's red, yellow and green buttons sit in Penmoss's own top row, and notes start higher. That row drags the window, and double-clicking an empty part of it zooms or minimises it, as **System Settings → Desktop & Dock** says. In full screen the buttons hide.
+With **Settings → Appearance → Compact Title Bar** on (the default), the window's red, yellow and green buttons sit in Penmoss's own top row, and notes start higher. That row drags the window, and double-clicking an empty part of it zooms or minimises it, as **System Settings → Desktop & Dock** says. With no note open, so does the empty space beside the sidebar; before you have a notebook, the strip across the top of the welcome screen does. In full screen the buttons hide.
 
 Turn it off to use macOS's own title bar: Penmoss asks, then reopens its windows where they were. The setting is for this Mac only.
 

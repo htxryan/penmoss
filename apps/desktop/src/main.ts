@@ -1295,9 +1295,11 @@ function registerIpc(): void {
     CHANNELS.gitUpdate,
     (event, localId: unknown, patch: unknown, gesture: unknown) => {
       if (!fromAppWindow(event)) return null;
-      // Who commits is the person's to set (#174 review): after a click or a key press in the app.
-      const author = typeof patch === 'object' && patch !== null && 'author' in patch;
-      if (author && gesture !== true) return NEEDS_A_PERSON;
+      // Who commits is the person's to set (#174 review), and so is the notebook's name on every
+      // device (Rename, Ryan's review of PR #192): after a click or a key press in the app.
+      const personal =
+        typeof patch === 'object' && patch !== null && ('author' in patch || 'name' in patch);
+      if (personal && gesture !== true) return NEEDS_A_PERSON;
       return gitNotebooks.update(localId, patch);
     },
   );

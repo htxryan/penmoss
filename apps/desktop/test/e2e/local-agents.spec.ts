@@ -8,6 +8,8 @@ import {
   checksAsked,
   dataDir,
   DESKTOP,
+  firstRunName,
+  firstRunPasteUrl,
   launch,
   mainBounds,
   removeDataDirs,
@@ -111,20 +113,12 @@ test('no account: connect an agent on this Mac; its MCP server writes the notebo
   await mainBounds(launched.app, { x: 0, y: 0, width: 1200, height: 900 });
 
   // A git notebook made on the Mac: one on this machine syncs without a check (D51).
-  // With none yet, the app opens on the first-run screen and its Add form (T59, A1030).
+  // With none yet, the app opens on the first run (T59, A1030; First Run C): Paste a URL, and
+  // the remote holds no notebook, so Name Your Notebook.
   answerChecks(launched, 'confirm');
-  await expect(page.getByTestId('first-run')).toBeVisible({ timeout: 30_000 });
-  // The welcome's "Open a notebook you already have" (T69, A1146).
-  await page.getByTestId('first-run-existing').click();
-  const form = page.getByTestId('git-add');
-  await form.getByTestId('git-add-remote').fill(`file://${w.remote}`);
-  await form.locator('button[type="submit"]').click();
-  await expect(form.getByTestId('git-add-message')).toContainText('name the new one', {
-    timeout: 30_000,
-  });
+  await firstRunPasteUrl(page, `file://${w.remote}`);
   const name = `Notes ${RUN}`;
-  await form.getByTestId('git-add-name').fill(name);
-  await form.locator('button[type="submit"]').click();
+  await firstRunName(page, name);
   // Nobody was asked to confirm anything.
   expect(checksAsked(launched)).toEqual([]);
   await expect(page.locator('#app-sidebar').getByText(name, { exact: true }).first()).toBeVisible({

@@ -43,7 +43,7 @@ describe('SyncAnnouncer (T51, A933; git only since T59)', () => {
     expect(syncLabel({ phase: 'syncing', pending: 3, detail: null })).toBe('Syncing');
     expect(syncLabel({ phase: 'synced', pending: 0, detail: null })).toBe('Synced');
     expect(syncLabel({ phase: 'stopped', pending: 1, detail: null })).toBe(
-      'Sync stopped · 1 pending',
+      'Sync Stopped · 1 pending',
     );
   });
 });

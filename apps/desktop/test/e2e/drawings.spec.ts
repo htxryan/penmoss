@@ -12,16 +12,16 @@ import {
   type Launched,
 } from './support';
 
-// PEN-28 in the Mac app: the slash menu's Drawing opens Excalidraw over the window, from the
-// app's own files (its fonts too: the app works offline, and its CSP allows nothing else). Done
-// puts the drawing in the note and its two files in the notebook's repository; a click opens it
-// again with its shapes. The web suite (apps/web/test/e2e/drawings.spec.ts) covers editing a
+// PEN-28 in the Mac app: the slash menu's Excalidraw Diagram opens Excalidraw over the window,
+// from the app's own files (its fonts too: the app works offline, and its CSP allows nothing else). Done
+// puts the drawing in the note and its two files in the notebook's repository; a click selects it
+// and its Edit button opens it again with its shapes. The web suite (apps/web/test/e2e/drawings.spec.ts) covers editing a
 // drawing again and the production build's CSP.
 
 const mac = process.platform === 'darwin';
 const NEW_NOTE = mac ? 'Meta+Alt+KeyN' : 'Alt+KeyN';
 const DRAWING =
-  /\[!\[Drawing\]\(attachments\/([0-9a-f]{64})\.svg\)\]\(attachments\/([0-9a-f]{64})\.excalidraw\)/;
+  /\[!\[Excalidraw Diagram\]\(attachments\/([0-9a-f]{64})\.svg\)\]\(attachments\/([0-9a-f]{64})\.excalidraw\)/;
 const opened: Launched[] = [];
 
 test.afterEach(async () => {
@@ -65,13 +65,13 @@ test('a drawing made from the slash menu shows in the note and is kept as files 
   await page.keyboard.type('The beds, drawn:');
   await page.keyboard.press('Enter');
 
-  // The slash menu's Drawing opens the drawing editor at once.
+  // The slash menu's Excalidraw Diagram opens the drawing editor at once.
   await page.keyboard.type('/drawing');
   const slash = page.getByTestId('slash-menu');
-  await expect(slash.getByRole('option', { selected: true })).toContainText('Drawing');
+  await expect(slash.getByRole('option', { selected: true })).toContainText('Excalidraw Diagram');
   await page.keyboard.press('Enter');
   await expect(editor(page)).toBeVisible({ timeout: 30_000 });
-  await expect(editor(page)).toHaveAttribute('aria-label', 'New Drawing');
+  await expect(editor(page)).toHaveAttribute('aria-label', 'New Excalidraw Diagram');
   await drawRectangle(page, { x: 420, y: 200 }, { x: 680, y: 380 });
   await editor(page).getByRole('button', { name: 'Done' }).click();
   await expect(editor(page)).toBeHidden();
@@ -103,10 +103,13 @@ test('a drawing made from the slash menu shows in the note and is kept as files 
   expect(saved.elements.map((element) => element.type)).toEqual(['rectangle']);
   expect(repositoryFile(remote, `attachments/${svg}.svg`)).toMatch(/^<svg[^>]* xmlns=/);
 
-  // A click opens it again, with its rectangle.
-  await drawing.click();
+  // A click selects it; its Edit button opens it again, with its rectangle.
+  await drawing.locator('img').click();
+  await expect(drawing).toHaveClass(/ProseMirror-selectednode/);
+  await expect(editor(page)).toBeHidden();
+  await drawing.getByRole('button', { name: 'Edit Excalidraw Diagram' }).click();
   await expect(editor(page)).toBeVisible();
-  await expect(editor(page)).toHaveAttribute('aria-label', 'Edit Drawing');
+  await expect(editor(page)).toHaveAttribute('aria-label', 'Edit Excalidraw Diagram');
   await expect(editor(page)).toHaveAttribute('data-shapes', '1');
   await page.waitForTimeout(2_000);
   await editor(page).getByRole('button', { name: 'Cancel' }).click();

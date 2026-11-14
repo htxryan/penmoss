@@ -213,6 +213,32 @@ a {
   width: 100%;
 }
 
+/*
+ * A window with none of the app in it yet (the wait for the notebooks, the first run; FirstRun.tsx):
+ * what it shows scrolls in `.window-bare`, under `.window-drag`, a strip across the window's top
+ * that drags it with the compact title bar (Ryan's review of #192, finding 1). Without that title
+ * bar the strip takes no room.
+ */
+#root > .window-drag {
+  display: none;
+}
+
+:root[data-titlebar='compact'] #root > .window-drag {
+  display: block;
+  flex: none;
+  height: var(--pm-titlebar-row);
+}
+
+#root > .window-bare {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.window-bare > .app-shell {
+  box-sizing: border-box;
+}
+
 .sidebar {
   position: relative;
   display: flex;
@@ -668,6 +694,29 @@ a {
   color: var(--pm-fg);
 }
 
+/*
+ * A narrow notebook row (Ryan's review of #192, finding 19): Sort, New Folder, Time Machine and
+ * Trash fold into ⋯, so the name keeps room to be read beside New Note, ⋯ and the sync dot. The
+ * row is the container: at the default sidebar width (17rem) nothing folds.
+ */
+.sb-source > .sb-section-head {
+  container-type: inline-size;
+}
+
+.tree-actions > .tree-actions-more {
+  display: none;
+}
+
+@container (max-width: 16.5rem) {
+  .tree-actions > .tree-action-fold {
+    display: none;
+  }
+
+  .tree-actions > .tree-actions-more {
+    display: inline-grid;
+  }
+}
+
 .tree {
   display: flex;
   flex: 1;
@@ -825,16 +874,20 @@ a {
  * flow, always shown (below).
  */
 @media (hover: hover) {
+  /* Flush with the row's end and as tall as it, as a notebook's buttons are (finding 20). */
   .row-actions {
     position: absolute;
-    /* Inside the focus ring (2px, drawn within the row). */
-    inset-block: 2px;
-    inset-inline-end: 0.3rem;
+    inset-block: 0;
+    inset-inline-end: 0;
     display: flex;
-    align-items: center;
-    padding-inline-start: 0.25rem;
     visibility: hidden;
     background: var(--pm-sidebar);
+  }
+
+  /* Inside the focus ring (2px, drawn within the row) while it shows. */
+  .folder-row:focus-visible .row-actions {
+    inset-block: 2px;
+    inset-inline-end: 2px;
   }
 
   .folder-row:hover .row-actions,
@@ -2110,12 +2163,60 @@ a {
 }
 
 /*
- * Drawings (PEN-28): a drawing's SVG shows as a picture does, and a click opens it where the app
- * has the drawing editor (it then has a title). Its white background turns dark in dark mode, as
- * Excalidraw's own canvas does.
+ * Drawings (PEN-28): a drawing's SVG shows as a picture does, and a click selects it. Where the
+ * app has the drawing editor, Edit and Delete sit in its top-right corner, over the picture in
+ * the frame's grid cell (not positioned, A1283), shown on hover and while it is selected; never
+ * in a read-only note. Its white background turns dark in dark mode, as Excalidraw's own canvas
+ * does.
  */
-.note-body .pm-drawing[title] img {
+.note-body .pm-drawing-tools {
+  display: flex;
+  z-index: 1;
+  gap: 4px;
+  margin: 6px;
+  place-self: start end;
+  line-height: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--pm-fast),
+    visibility var(--pm-fast);
+}
+
+.note-body .pm-drawing-tools[hidden],
+.note-body .ProseMirror[contenteditable='false'] .pm-drawing-tools {
+  display: none;
+}
+
+.note-body .pm-image-frame:hover > .pm-drawing-tools,
+.note-body .pm-drawing.ProseMirror-selectednode .pm-drawing-tools {
+  opacity: 1;
+  visibility: visible;
+}
+
+.note-body .pm-drawing-tool {
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+  box-sizing: border-box;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-shadow-1);
+  color: var(--pm-fg);
   cursor: pointer;
+}
+
+.note-body .pm-drawing-tool:hover {
+  border-color: var(--pm-border-strong);
+}
+
+.note-body .pm-drawing-delete:hover {
+  border-color: color-mix(in oklab, var(--pm-danger) 45%, transparent);
+  background: var(--pm-danger-soft);
+  color: var(--pm-danger);
 }
 
 :root[data-mode='dark'] .note-body .pm-drawing img {
@@ -3140,74 +3241,6 @@ a {
   display: none;
 }
 
-/*
- * A tag's notes in place of the tree: the tag and its count on one row, ✕ at its end, and the
- * notes under it, all starting on the sidebar's icon column (A988). A long tag gives way.
- */
-.tagged-head {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-height: var(--pm-control-sm);
-  padding: 0 0.3rem 0.25rem var(--sb-icon-inset, 0.25rem);
-}
-
-.tagged-title {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 0.4rem;
-  min-width: 0;
-  margin: 0;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-.tagged-title .chip {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tagged-title .muted {
-  flex: none;
-  white-space: nowrap;
-}
-
-.tagged-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.tagged-link {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.35rem 0.3rem 0.35rem var(--sb-icon-inset, 0.45rem);
-  border-radius: 0;
-  color: var(--pm-fg);
-  font-size: 0.85rem;
-  text-decoration: none;
-}
-
-.tagged-link:hover {
-  background: var(--pm-hover);
-}
-
-.tagged-link[aria-current='page'] {
-  background: var(--pm-raised);
-  box-shadow: inset 2px 0 0 var(--pm-accent);
-  font-weight: 600;
-}
-
-.tagged-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-}
-
 .tag-mini {
   color: var(--pm-muted);
   font-size: 0.72rem;
@@ -3735,38 +3768,38 @@ a {
   font-size: 0.85em;
 }
 
-/* Version history (T21): the History tab of the note's side panel since T51 (A936). */
+/* Version history (T21): the History tab of the note's side panel since T51 (A936). Laid out
+ * as "List over a Docked Preview" (Ryan's review of #192, finding 13): the versions, one line
+ * each and grouped by day, over a handle, then the chosen version's changes and actions. */
 .history-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   font-size: var(--pm-text-sm);
+}
+
+/* The panel holds History's list and its docked changes at its own height: the list scrolls,
+ * not the panel. */
+.note-side:has(> .note-tabpanel[data-tab='history']) {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.note-side > .note-tabpanel[data-tab='history'] {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.note-tabpanel[data-tab='history'] > .history-panel {
+  flex: 1;
 }
 
 .history-panel > .info-heading {
   margin-bottom: 0.25rem;
-}
-
-/* Versions are automatic (A79, A574): the note says so; saving now is secondary. */
-.history-auto {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem 0.75rem;
-  padding: 0.25rem 0 0.6rem;
-  border-bottom: 1px solid var(--pm-border-soft);
-  font-size: var(--pm-text-xs);
-}
-
-.history-auto p {
-  flex: 1 1 14rem;
-  margin: 0;
-}
-
-.history-save {
-  font-size: var(--pm-text-xs);
-}
-
-.history-body {
-  display: flex;
-  flex-direction: column;
 }
 
 .history-empty {
@@ -3777,27 +3810,58 @@ a {
   margin: 0 0 0.75rem;
 }
 
-.history-list {
+/* The list, edge to edge in the panel, so a chosen row's band spans it. */
+.history-scroll {
+  flex: 1 1 0;
+  min-height: 5rem;
+  margin: 0 -1rem;
+  overflow-y: auto;
+  border-top: 1px solid var(--pm-border-soft);
+}
+
+.history-list,
+.history-list ol {
   margin: 0;
-  padding: 0.5rem 0;
+  padding: 0;
   list-style: none;
 }
 
-/* Border-box: the current version's entry is a `div`, not a button, and its padding and dashed
- * border ran past the panel's edge under the tab strip (T53 pass). Every entry has a border, clear
- * but for the current one's dashes, so the entries are one height and their text starts where a
- * backlink's and a comment's does (A988). */
+.history-list {
+  padding-bottom: 0.5rem;
+}
+
+/* A day's heading: Today, Yesterday, Nov 12. */
+.history-day {
+  margin: 0;
+  padding: 0.65rem 1rem 0.2rem;
+  color: var(--pm-muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.history-none {
+  padding: 0.5rem 1rem;
+}
+
+/* One line per version: who, when, what, and the lines it changed. Border-box, full width
+ * (T53 pass, A988). The Now row above them has the same columns. */
 .history-entry {
   display: grid;
+  grid-template-columns: 1rem 4.4rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
   box-sizing: border-box;
   width: 100%;
-  gap: 0.15rem;
-  padding: 0.45rem 0.55rem;
-  border: 1px solid transparent;
+  min-height: 1.75rem;
+  padding: 0 1rem;
+  border: 0;
   border-radius: 0;
   background: none;
   color: var(--pm-fg);
   font: inherit;
+  font-size: 0.8rem;
   text-align: left;
 }
 
@@ -3805,23 +3869,88 @@ button.history-entry {
   cursor: pointer;
 }
 
-button.history-entry:hover {
+button.history-entry:hover:not([aria-pressed='true']) {
   background: var(--pm-hover);
 }
 
+button.history-entry:focus-visible {
+  outline-offset: -2px;
+}
+
 .history-entry[aria-pressed='true'] {
-  background: color-mix(in oklab, var(--pm-accent) 14%, transparent);
-  box-shadow: inset 2px 0 0 var(--pm-accent);
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
 }
 
-.history-item[data-current='true'] .history-entry {
-  border: 1px dashed var(--pm-border);
+.history-entry[aria-pressed='true'] :is(.history-time, .history-lines, .history-who, span) {
+  color: inherit;
 }
 
-/* The panel's text size, as a backlink's title and a comment's author have it (A988). */
+/* A version that changed no text (a sync of the title, an empty commit): there, but quiet. */
+.history-entry[data-dim]:not([aria-pressed='true']) {
+  color: var(--pm-muted);
+}
+
+/* Now: what this Mac has not synced yet, with Sync Now, quiet (finding 13). */
+.history-now {
+  display: grid;
+  grid-template-columns: 1rem 4.4rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 1.75rem;
+  padding: 0.3rem 1rem;
+  color: var(--pm-muted);
+  font-size: 0.8rem;
+}
+
+.history-now[data-pending] .history-summary {
+  color: var(--pm-fg);
+}
+
+.history-now .history-save {
+  height: 1.5rem;
+  padding: 0 0.4rem;
+  color: var(--pm-accent);
+  font-size: 0.78rem;
+}
+
+/* The writer's icon; the tooltip names them (finding 13). */
+.history-who {
+  display: inline-grid;
+  place-items: center;
+  color: var(--pm-muted);
+}
+
+.history-who[data-kind='agent'] {
+  color: var(--pm-agent);
+}
+
 .history-time {
-  font-weight: 600;
-  font-size: inherit;
+  color: var(--pm-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.history-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-lines {
+  display: inline-flex;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.history-added {
+  color: var(--pm-success);
+}
+
+.history-removed {
+  color: var(--pm-danger);
 }
 
 .history-authors {
@@ -3850,28 +3979,146 @@ button.history-entry:hover {
   fill: currentColor;
 }
 
-.history-summary {
-  font-size: 0.78rem;
+/* A summary still being read (Ryan's review of #192): a short bar where its words will be. */
+.history-summary-pending {
+  display: inline-block;
+  width: 4.5rem;
+  height: 0.6em;
+  border-radius: 999px;
+  background: var(--pm-border);
+  vertical-align: middle;
+  animation: pm-pulse 1.4s ease-in-out infinite;
 }
 
-.history-detail {
-  padding: 0.75rem 0 1.5rem;
+@media (prefers-reduced-motion: reduce) {
+  .history-summary-pending {
+    animation: none;
+  }
+}
+
+/* The handle between the list and the changes: dragged up or down, or ↑ and ↓ when focused
+ * (A1122's edges, on their side). */
+.history-panel > .pane-resizer[data-orientation='horizontal'] {
+  position: relative;
+  inset: auto;
+  flex: none;
+  width: auto;
+  height: 0.75rem;
+  margin: 0 -1rem;
   border-top: 1px solid var(--pm-border);
+  border-bottom: 1px solid var(--pm-border-soft);
+  background: var(--pm-raised);
+  cursor: row-resize;
+}
+
+.history-panel > .pane-resizer[data-orientation='horizontal']::after {
+  inset: 50% auto auto 50%;
+  width: 2.25rem;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--pm-border-strong);
+  transform: translate(-50%, -50%);
+}
+
+.history-panel > .pane-resizer[data-orientation='horizontal']:is(:hover, :focus-visible)::after,
+:root[data-resizing='rows'] .history-panel > .pane-resizer::after {
+  left: 50%;
+  width: 2.25rem;
+  background: var(--pm-accent);
+}
+
+/* Over the edges' column cursor below (one more element in the selector, so it wins). */
+html:root[data-resizing='rows'],
+html:root[data-resizing='rows'] * {
+  cursor: row-resize !important;
+}
+
+/* The chosen version, docked under the list: its changes, then what to do with it. */
+.history-detail {
+  display: flex;
+  flex: 0 1 var(--history-preview, 20rem);
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 6rem;
+  padding: 0.7rem 0 0.9rem;
+  container: history-detail / inline-size;
+}
+
+.history-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.5rem;
+}
+
+.history-detail-head h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.history-detail-head .muted {
+  font-size: 0.75rem;
+}
+
+.history-detail .history-diff {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--pm-border-soft);
+  background: var(--pm-bg);
+}
+
+.history-detail .history-diff pre {
+  border: 0;
+}
+
+.history-diff-loading {
+  margin: 0;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.78rem;
 }
 
 .history-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.history-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+  font-size: 0.7rem;
+}
+
+.history-keys kbd {
+  min-width: 1.1em;
+  padding: 0 0.25em;
+  font-size: 0.68rem;
+}
+
+/* In the panel's first width the arrows alone fit beside Restore and Copy Text. */
+@container history-detail (max-width: 27rem) {
+  .history-keys-word {
+    display: none;
+  }
 }
 
 .history-status {
-  margin: 0.6rem 0 0;
-  font-size: 0.85rem;
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.history-scroll > .history-status {
+  padding: 0.25rem 1rem;
 }
 
 .history-conflicts {
-  margin: 0.5rem 0 0;
+  margin: 0;
   padding-left: 1.1rem;
   font-size: 0.8rem;
 }
@@ -3883,6 +4130,31 @@ button.history-entry:hover {
 .history-diff-caption {
   margin: 0.9rem 0 0.35rem;
   font-size: 0.78rem;
+}
+
+/* History's ⓘ in the panel's head: how versions are made, and the docs. */
+.history-about {
+  position: relative;
+}
+
+.history-about-pop {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  width: 16rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-raised);
+  box-shadow: var(--pm-shadow);
+  font-size: var(--pm-text-sm);
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.history-about-pop p {
+  margin: 0 0 0.4rem;
 }
 
 .history-diff pre {
@@ -3954,107 +4226,466 @@ button.history-entry:hover {
 }
 
 /*
- * The Tags page (PEN-68): Trash's column, every tag as an indented tree, each with its name, its
- * note count and its description, a field that grows with what is typed.
+ * The Tags page (PEN-68; finding 8 of Ryan's review of #192, design "Tags D"): a filter, then a
+ * compact table per notebook, one row per tag: a checkbox, the tag, its note count, its
+ * description (one line, cut, until it is edited) and ⋯. The selected tags' buttons sit in the
+ * notebook's heading row; a rename edits the name in its row, with a strip under it.
  */
 .tags-page {
   box-sizing: border-box;
-  width: min(44rem, 100%);
+  width: min(60rem, 100%);
   margin: 0 auto;
-  padding: 3rem 1.5rem;
+  padding: 2.5rem 1.5rem 4rem;
 }
 
 .tags-page h2 {
-  margin: 0 0 0.25rem;
+  margin: 0 0 0.75rem;
   font-size: 1.5rem;
   letter-spacing: -0.015em;
 }
 
-.tags-page-lede {
-  margin: 0 0 1.25rem;
-  font-size: var(--pm-text-sm);
+.tags-filter {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.tags-filter > .i {
+  position: absolute;
+  left: 0.6rem;
+  color: var(--pm-muted);
+  pointer-events: none;
+}
+
+.tags-filter > .input {
+  padding-left: 1.9rem;
+}
+
+.tags-page-filter {
+  max-width: 22rem;
+  margin-bottom: 1.25rem;
 }
 
 .tags-page-notebook + .tags-page-notebook {
   margin-top: 2rem;
 }
 
+.tags-page-notebook-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+  min-height: var(--pm-control);
+  margin-bottom: 0.4rem;
+}
+
 .tags-page-notebook-name {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  margin: 0 0 0.5rem;
-  padding-bottom: 0.35rem;
-  border-bottom: 1px solid var(--pm-border);
+  margin: 0;
   font-size: var(--pm-text-md);
 }
 
-.tags-page-tree {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.tags-page-count {
+  font-size: var(--pm-text-xs);
 }
 
-.tags-page-item {
-  padding: 0.5rem 0 0.25rem;
-}
-
-.tags-page-tree .tags-page-tree {
-  margin-top: 0.25rem;
-  padding-left: 1.25rem;
-  border-left: 1px solid var(--pm-border-soft);
-}
-
-.tags-page-row {
+.tags-page-actions {
   display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
 }
 
-.tags-page-name {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.15rem;
+.tags-page-selected {
+  margin-right: 0.25rem;
+  font-size: var(--pm-text-sm);
+  font-weight: 600;
+}
+
+.tags-table {
+  border-top: 1px solid var(--pm-border);
+  font-size: var(--pm-text-sm);
+}
+
+.tags-row {
+  display: grid;
+  grid-template-columns: 2rem minmax(9rem, 14rem) 3.5rem minmax(0, 1fr) var(--pm-control-sm);
+  align-items: start;
+  gap: 0 0.5rem;
+  padding: 0.1rem 0.25rem;
+  border-bottom: 1px solid var(--pm-border-soft);
+}
+
+.tags-row > [role='cell'],
+.tags-row > [role='columnheader'] {
+  display: flex;
+  align-items: center;
   min-width: 0;
-  min-height: 1.5rem;
-  padding: 0 0.25rem 0 0;
+  min-height: var(--pm-control-sm);
+}
+
+.tags-more-cell .icon-btn {
+  width: var(--pm-control-sm);
+  height: var(--pm-control-sm);
+}
+
+.tags-row:hover:not(.tags-head) {
+  background: var(--pm-hover);
+}
+
+.tags-row[data-selected] {
+  background: var(--pm-accent-softer);
+}
+
+.tags-head {
+  min-height: 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  font-weight: 600;
+}
+
+.tags-check {
+  margin: 0 auto;
+  accent-color: var(--pm-accent);
+}
+
+.tags-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tags-sort:hover {
+  color: var(--pm-fg);
+}
+
+.tags-row > .tags-count-cell {
+  justify-content: flex-end;
+  padding-right: 0.5rem;
+  color: var(--pm-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tags-name {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
   border: 0;
   background: none;
   color: var(--pm-fg);
   font: inherit;
   font-weight: 600;
-  overflow-wrap: anywhere;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.tags-page-name:hover {
+.tags-name:hover {
   color: var(--pm-accent);
 }
 
-.tags-page-name .tag-hash {
-  width: auto;
+.tags-name-parent {
+  color: var(--pm-muted);
+  font-weight: 400;
 }
 
-.tags-page-count {
+.tags-name mark {
+  background: var(--pm-accent-soft);
+  color: inherit;
+}
+
+.tags-name-edit {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.tags-name-edit > .input {
+  height: var(--pm-control-sm);
+  padding: 0 0.4rem;
+}
+
+.tags-name-edit[data-warn] > .input {
+  border-color: var(--pm-danger);
+}
+
+.tags-desc {
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.tags-desc-view {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--pm-control-sm);
+  padding: 0 0.5rem;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--pm-fg);
+  font: inherit;
+  text-align: left;
+  cursor: text;
+}
+
+.tags-desc-view:hover {
+  border-color: var(--pm-border);
+}
+
+.tags-desc-view[data-empty] {
+  color: var(--pm-muted);
+}
+
+.tags-desc-line {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.input.tags-desc-field {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--pm-control-sm);
+  padding: 0.25rem 0.5rem;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.45;
+}
+
+.tags-save {
+  display: inline-flex;
   flex: none;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: var(--pm-control-sm);
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  white-space: nowrap;
+}
+
+.tags-save:empty {
+  display: none;
+}
+
+.tags-desc[data-state='saved'] .tags-save .i {
+  color: var(--pm-success);
+}
+
+.tags-save-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--pm-accent);
+  animation: pm-tags-saving 1s ease-in-out infinite alternate;
+}
+
+@keyframes pm-tags-saving {
+  from {
+    opacity: 0.3;
+  }
+}
+
+.tags-save-failed {
+  color: var(--pm-danger);
+  font-weight: 600;
+}
+
+.tags-save .btn {
+  height: var(--pm-control-sm);
+}
+
+.tags-row > .tags-more-cell {
+  justify-content: flex-end;
+}
+
+.tags-strip {
+  display: block;
+  padding: 0.4rem 0.5rem 0.5rem 2.5rem;
+  border-bottom: 1px solid var(--pm-border-soft);
+  background: var(--pm-accent-softer);
+  font-size: var(--pm-text-sm);
+}
+
+.tags-strip[data-tone='offer'] {
+  background: var(--pm-warn-bg);
+}
+
+.tags-strip[data-tone='warn'] {
+  background: var(--pm-danger-soft);
+}
+
+.tags-strip-cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+}
+
+.tags-strip-text {
+  margin: 0;
+}
+
+.tags-strip-hint {
   font-size: var(--pm-text-xs);
 }
 
-.input.tags-page-description {
-  display: block;
-  height: auto;
-  min-height: var(--pm-control);
-  margin-top: 0.3rem;
-  padding: 0.4rem 0.6rem;
-  resize: vertical;
-  field-sizing: content;
-  line-height: 1.45;
+.tags-strip-hint kbd {
+  font: inherit;
+  font-weight: 600;
+}
+
+.tags-strip-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tags-strip-end {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
 }
 
 .tags-page-none {
   margin: 0.5rem 0 0;
   font-size: var(--pm-text-sm);
+}
+
+/* The Merge dialog: a picker of tags with their counts, and a preview of what changes. */
+.confirm.tags-dialog {
+  width: min(30rem, calc(100vw - 2rem));
+  max-width: none;
+}
+
+.tags-merge-grid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.tags-merge-label {
+  padding-top: 0.4rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  font-weight: 600;
+}
+
+.tags-merge-source {
+  padding-top: 0.35rem;
+  font-size: var(--pm-text-sm);
+  font-weight: 600;
+}
+
+.tags-merge-source .muted {
+  font-size: var(--pm-text-xs);
+  font-weight: 400;
+}
+
+.tags-merge-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.tags-merge-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 14rem;
+  margin-bottom: 0.75rem;
+  overflow-y: auto;
+  border: 1px solid var(--pm-border-soft);
+}
+
+.tags-merge-pick .tags-merge-list {
+  margin-bottom: 0;
+}
+
+.tags-merge-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--pm-control);
+  padding: 0 0.5rem;
+  font-size: var(--pm-text-sm);
+  cursor: pointer;
+}
+
+.tags-merge-option:hover {
+  background: var(--pm-hover);
+}
+
+.tags-merge-option[data-on='true'] {
+  background: var(--pm-accent-softer);
+}
+
+.tags-merge-tag {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tags-merge-option .muted {
+  font-size: var(--pm-text-xs);
+}
+
+.tags-merge-option > .input {
+  height: var(--pm-control-sm);
+}
+
+.confirm .tags-merge-none {
+  margin: 0;
+  padding: 0.5rem;
+}
+
+.confirm .tags-merge-preview {
+  color: var(--pm-fg);
+}
+
+/* A phone: the description under the tag, across the row. */
+@media (max-width: 40rem) {
+  .tags-page {
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .tags-row {
+    grid-template-columns: 2rem minmax(0, 1fr) 2.5rem var(--pm-control);
+  }
+
+  .tags-row > .tags-desc-cell {
+    grid-column: 2 / -1;
+    grid-row: 2;
+  }
+
+  .tags-head > [role='columnheader']:nth-child(4) {
+    display: none;
+  }
+
+  .tags-strip {
+    padding-left: 0.5rem;
+  }
 }
 
 .trash-list {
@@ -4798,7 +5429,6 @@ button.history-entry:hover {
   .display-toggle,
   .menu-item,
   .back-link,
-  .tagged-link,
   .history-entry {
     min-height: var(--pm-hit);
   }
@@ -4812,10 +5442,6 @@ button.history-entry:hover {
   .tree-row,
   .tag-row {
     height: var(--pm-hit);
-  }
-
-  .tagged-link {
-    justify-content: center;
   }
 
   /* Dense controls stay a little smaller: a calendar cell, a chip in a line of tags (A183). */
@@ -4864,10 +5490,15 @@ button.history-entry:hover {
   }
 }
 
-/* Nothing only on hover: without one, a folder’s New Note always shows. */
+/* Nothing only on hover: without one, a folder’s New Note always shows, flush with the row's end. */
 @media (hover: none) {
   .row-actions {
     display: flex;
+  }
+
+  .sidebar .folder-row > .row-actions {
+    align-self: stretch;
+    margin-inline-end: calc(-1 * (var(--sb-gutter) + 0.3rem));
   }
 }
 
@@ -5081,9 +5712,32 @@ button.history-entry:hover {
   background: var(--pm-danger);
 }
 
-.save-status[data-state='conflict'],
-.save-status[data-state='error'] {
+.save-status[data-state='conflict'] {
   color: var(--pm-fg);
+}
+
+/*
+ * Sync stopped, or the note not stored on this device: a band in the theme's danger colour,
+ * with the page's colour as its text and icon, so it is as legible as danger text on the page,
+ * which every theme's contrast checks hold to AA (finding 12 of Ryan's review of #192). Sync
+ * Stopped is a link to its notebook's page in Settings. The other states stay quiet.
+ */
+.save-status:is([data-state='stopped'], [data-state='error']) {
+  min-height: 1.3rem;
+  padding: 0 0.5rem;
+  border-radius: 0;
+  background: var(--pm-danger);
+  color: var(--pm-bg);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.save-status:is([data-state='stopped'], [data-state='error']) .dot {
+  background: currentColor;
+}
+
+a.save-status[data-state='stopped']:hover {
+  text-decoration: underline;
 }
 
 /*
@@ -5325,8 +5979,7 @@ button.history-entry:hover {
   flex-direction: column;
 }
 
-.sb-notebooks-body > .folders,
-.sb-notebooks-body > .tagged {
+.sb-notebooks-body > .folders {
   flex: 1 1 0;
   min-height: 12rem;
   overflow-y: auto;
@@ -5409,7 +6062,7 @@ button.history-entry:hover {
   padding-inline: calc(var(--sb-gutter) + var(--depth, 0) * 0.9rem) var(--sb-gutter);
 }
 
-.sidebar :is(.tagged-head, .tagged-link, .calendar-nav) {
+.sidebar .calendar-nav {
   padding-right: calc(var(--sb-gutter) + 0.3rem);
 }
 
@@ -5553,22 +6206,33 @@ button.history-entry:hover {
   }
 }
 
-.sb-part-tools .icon-btn {
+/*
+ * Buttons at a row's end (D54, A1109; Ryan's review of #192, finding 20): flush with the row's
+ * end and with one another, as tall as the row and square, with no margin; under the pointer a
+ * step darker than the row. Every row's end tools are a `.row-end` (a section's title row, a
+ * notebook's row, a folder's row), so no kind of row drifts from the others. After the touch
+ * sizes above: the row's own height (a full target on touch) makes the square.
+ */
+.row-end {
+  align-items: stretch;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.row-end > :is(.icon-btn, a, button) {
+  flex: none;
+  align-self: stretch;
   width: auto;
-  height: 100%;
+  height: auto;
   aspect-ratio: 1;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
 }
 
-.sb-part-tools .icon-btn:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--pm-fg) 10%, transparent);
-}
-
-/* On a phone or touch screen, a full touch target each (T36): the row is that tall there. */
-@media (max-width: 700px), (pointer: coarse) {
-  .sb-part-tools .icon-btn {
-    width: var(--pm-hit);
-    height: 100%;
-  }
+.row-end > :is(.icon-btn, a, button):hover:not(:disabled) {
+  background: color-mix(in oklab, var(--pm-fg) 13%, transparent);
 }
 
 .sb-part-grip {
@@ -5600,8 +6264,7 @@ button.history-entry:hover {
   }
 
   .sb-notebooks-body,
-  .sb-notebooks-body > .folders,
-  .sb-notebooks-body > .tagged {
+  .sb-notebooks-body > .folders {
     flex: 1 0 auto;
     min-height: 0;
     overflow-y: visible;
@@ -5855,7 +6518,16 @@ a.toast-action {
  * match.
  */
 :root[data-titlebar='compact']
-  :is(.sb-head, .note-top, .pm-graph-bar, .settings-bar, .app-bar, #root > .banner) {
+  :is(
+    .sb-head,
+    .note-top,
+    .pm-graph-bar,
+    .settings-bar,
+    .app-bar,
+    #root > .banner,
+    .window-drag,
+    .home
+  ) {
   -webkit-app-region: drag;
 }
 
@@ -5917,7 +6589,7 @@ a.toast-action {
  * toolbar) is still `no-drag` from it, and one in the text has none.
  */
 :root[data-titlebar='compact']
-  :is(.note-columns, .settings-content)
+  :is(.note-columns, .settings-content, .window-bare)
   :is(
     button,
     a[href],
@@ -5967,12 +6639,21 @@ a.toast-action {
  * ones, so while one is open those rows stop dragging rather than rely on regions being taken
  * in paint order. (`#root` outweighs the rows' rule, whose `#root > .banner` makes it an id's.)
  */
-:root[data-titlebar='compact'] #root .notes-app[data-drawer='open'] .app-bar,
+:root[data-titlebar='compact'] #root .notes-app[data-drawer='open'] :is(.app-bar, .home),
 :root[data-titlebar='compact']:has(
     #root .sidebar :is(.menu, [role='menu'], [role='dialog'], [role='listbox'])
   )
-  :is(.note-top, .pm-graph-bar, .settings-bar, .app-bar) {
+  :is(.note-top, .pm-graph-bar, .settings-bar, .app-bar, .home) {
   -webkit-app-region: no-drag;
+}
+
+/*
+ * With no note open, the empty home beside the sidebar drags the window (Ryan's review of #192,
+ * finding 6); its links and buttons click, as anywhere. It starts clear of the sidebar's resize
+ * strip, whose 4 px over it are earlier in the DOM, so the home's drag would win there (A1147).
+ */
+:root[data-titlebar='compact'] .home {
+  margin-inline-start: 4px;
 }
 
 /* The sidebar's header is the first row: as tall as the note's top bar, the lights before the brand. */
@@ -6880,6 +7561,41 @@ button.comment-quote:hover {
 :is(.note-top, .status-bar, .sb-head, .pm-graph-bar, .settings-bar, .app-bar) {
   cursor: default;
   user-select: none;
+}
+
+/*
+ * The whole app is interface, not text (Ryan's review of #192, finding 7; extends A1129): as in a
+ * Mac app, its words are not selectable and the pointer stays the arrow over them. What someone
+ * reads or copies opts back in, selectable with the text cursor: every field, a note's text (a
+ * read-only one's too) and its Markdown, code and paths, a comment's words and its quote, History's
+ * and the Time Machine's text, release notes, a notebook's facts, error messages, and anything
+ * marked `.selectable`. `:where`, so a control's own cursor still wins.
+ */
+body {
+  cursor: default;
+  user-select: none;
+}
+
+:where(
+  input,
+  textarea,
+  [contenteditable]:not([contenteditable='false']),
+  .note-body,
+  pre,
+  code,
+  samp,
+  .history-diff,
+  .comment-body,
+  .comment-quote,
+  .release-notes,
+  .settings-facts dd,
+  .error,
+  .field-error,
+  [role='alert'],
+  .selectable
+) {
+  cursor: auto;
+  user-select: text;
 }
 
 /*

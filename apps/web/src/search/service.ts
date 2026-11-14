@@ -20,6 +20,7 @@ import {
   type SliceOptions,
 } from '@penmoss/sync-client/local-index';
 import type { RegistryEntry } from '@penmoss/sync-client/workspace';
+import type { NoteListEntry } from '../notes/list';
 import { MEANING_ELSEWHERE, sectionsOfRecord, type NotebookMeaning } from './meaning';
 
 export const SEARCH_MODES = ['full-text', 'semantic', 'hybrid'] as const;
@@ -48,6 +49,19 @@ export const NO_FILTERS: SearchFilters = {
   tag: null,
   updatedAfter: null,
 };
+
+/** A search with no words: it lists the notes its filters pass (`browsable`), or nothing. */
+export function isBlank(input: string): boolean {
+  return input.trim() === '';
+}
+
+/**
+ * Whether a search with no words lists notes: when a tag, folder or date narrows them (finding 9
+ * of Ryan's review of #192). The notebook alone does not: Search lists no whole notebook.
+ */
+export function browsable(filters: SearchFilters): boolean {
+  return filters.tag !== null || filters.folderId !== null || filters.updatedAfter !== null;
+}
 
 export interface SearchHit {
   readonly id: string;
@@ -111,6 +125,12 @@ export interface SearchDeps {
   readonly indexSlice?: number;
   /** How long after a change the offline index is saved. */
   readonly saveDelayMs?: number;
+  /**
+   * The notes' list as the sidebar shows it, live: an open note's new tags are in it before its
+   * stored record has them. A search with no words lists from it (finding 9); without it, from
+   * the index.
+   */
+  readonly list?: () => readonly NoteListEntry[];
   /** Search by meaning for this notebook, in the Mac app (T77). */
   readonly meaning?: NotebookMeaning;
   /** A note's heading sections for meaning (default: from its record's Yjs document). */
@@ -122,6 +142,11 @@ export const SEARCH_INDEX_KEY = 'searchIndex';
 const SAVE_DELAY_MS = 5_000;
 
 const DEFAULT_LIMIT = 30;
+
+/** What the filters read of a note: an index document or a list entry. */
+type Listed = Pick<LocalSearchDocument, 'id' | 'title' | 'tags' | 'updatedAt'> & {
+  readonly excerpt?: string;
+};
 
 function documentOf(text: NoteText): LocalSearchDocument {
   return {
@@ -198,6 +223,7 @@ export class SearchService {
    * preview the hybrid answer replaces; without, it is the answer. Null for semantic search.
    */
   async typing(request: SearchRequest): Promise<SearchOutcome | null> {
+    if (isBlank(request.input)) return this.search(request);
     if (request.mode === 'semantic') return null;
     if (request.mode === 'hybrid' && this.deps.meaning?.ready()) {
       return { source: 'device', hits: await this.local(request), notice: null, preview: true };
@@ -206,6 +232,9 @@ export class SearchService {
   }
 
   async search(request: SearchRequest): Promise<SearchOutcome> {
+    if (isBlank(request.input)) {
+      return { source: 'device', hits: await this.browse(request), notice: null };
+    }
     if (request.mode === 'full-text') {
       return { source: 'device', hits: await this.local(request), notice: null };
     }
@@ -273,6 +302,39 @@ export class SearchService {
       .map((hit) => ({ ...hit, heading: null, sources: ['full-text'] }));
   }
 
+  /**
+   * No words, only filters (Ryan's review of #192, finding 9: a tag opens Search with its Tag
+   * filter): every note passing them, newest first, by any mode. Nothing without a filter.
+   */
+  private async browse(request: SearchRequest): Promise<SearchHit[]> {
+    if (!browsable(request.filters)) return [];
+    const filter = this.filterOf(request.filters);
+    let notes: Iterable<Listed>;
+    if (this.deps.list) {
+      const reserved = this.deps.reserved ?? new Set<string>();
+      notes = this.deps.list().filter((entry) => !reserved.has(entry.id));
+    } else {
+      await this.refresh();
+      notes = this.index!.documents();
+    }
+    const hits: SearchHit[] = [];
+    for (const note of notes) {
+      if (filter && !filter(note)) continue;
+      hits.push({
+        id: note.id,
+        title: note.title,
+        titleHighlighted: note.title,
+        snippet: note.excerpt ?? '',
+        heading: null,
+        tags: note.tags,
+        updatedAt: note.updatedAt,
+        sources: ['full-text'],
+      });
+    }
+    hits.sort((a, b) => b.updatedAt - a.updatedAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    return request.limit === undefined ? hits : hits.slice(0, request.limit);
+  }
+
   /** Whether an indexed note passes `filter`. */
   private passes(id: string, filter: (doc: LocalSearchDocument) => boolean): boolean {
     const doc = this.index?.get(id);
@@ -280,7 +342,7 @@ export class SearchService {
   }
 
   /** The folder, tag, date and open-notebook filters, or null when nothing is filtered. */
-  private filterOf(filters: SearchFilters): ((doc: LocalSearchDocument) => boolean) | null {
+  private filterOf(filters: SearchFilters): ((doc: Listed) => boolean) | null {
     const { folderId, tag, updatedAfter } = filters;
     let inFolder: Set<string> | null = null;
     if (folderId) {

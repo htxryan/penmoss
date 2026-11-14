@@ -1,9 +1,9 @@
 ---
 title: The editor
-description: Write notes with the slash menu, blocks, diagrams, math, pictures, files, drawings, embedded notes and line symbols.
+description: Write notes with the slash menu, blocks, diagrams, math, pictures, files, Excalidraw drawings, embedded notes and line symbols.
 ---
 
-This page shows you what the editor can do: the blocks you can insert, the markdown it understands as you type, pictures and files, drawings, embedded notes, line symbols, the markdown source, and copy and paste.
+This page shows you what the editor can do: the blocks you can insert, the markdown it understands as you type, pictures and files, Excalidraw diagrams, embedded notes, line symbols, the markdown source, and copy and paste.
 
 Everything you write is saved as markdown. What you see in the editor is what the `.md` file in your repository holds.
 
@@ -15,28 +15,30 @@ The note's title sits above its first line, and the caret moves between them as 
 
 Type `/` at the start of a line or after a space to open the slash menu. Keep typing to filter it, move with ↑ and ↓, and press Enter or Tab to insert. Escape closes it.
 
-| Item            | Also found by                      | In markdown      |
-| --------------- | ---------------------------------- | ---------------- |
-| Text            | paragraph, plain                   |                  |
-| Heading 1, 2, 3 | h1, h2, h3, title, section         | `#`, `##`, `###` |
-| Bulleted List   | bullet, ul                         | `-`              |
-| Numbered List   | ordered, number, ol                | `1.`             |
-| Checklist       | todo, task, checkbox               | `- [ ]`          |
-| Quote           | blockquote, citation               | `>`              |
-| Divider         | rule, hr, line, separator          | `---`            |
-| Code Block      | snippet, fence, pre                | ` ``` `          |
-| Table           | grid, columns, rows                | `\| a \| b \|`   |
-| Callout         | admonition, note, info, aside      | `> [!note]`      |
-| Toggle          | collapse, fold, details, expand    | `> [!note]-`     |
-| Mermaid Diagram | diagram, flowchart, chart, graph   | ` ```mermaid `   |
-| Math Block      | equation, formula, latex, katex    | `$$`             |
-| Inline Math     |                                    | `$x$`            |
-| Link to Note    | wikilink, reference, backlink      | `[[`             |
-| Embed Note      | transclude, include, section       | `![[`            |
-| Image           | picture, photo, upload, screenshot |                  |
-| File            | attachment, pdf, document          |                  |
-| Drawing         | excalidraw, sketch, whiteboard     |                  |
-| Symbol          | signifier, important, idea, star   |                  |
+In the Mac app and on the web you can also right-click in a note, with no text selected, to open the same menu at that spot without typing `/`, or press the context-menu key or Shift+F10 to open it at the caret. Type to filter it as before; what you type shows at the top of the menu, not in the note. A right-click with text selected, or on a link, a picture, a drawing, a table, code or a comment, works as it did.
+
+| Item               | Also found by                      | In markdown      |
+| ------------------ | ---------------------------------- | ---------------- |
+| Text               | paragraph, plain                   |                  |
+| Heading 1, 2, 3    | h1, h2, h3, title, section         | `#`, `##`, `###` |
+| Bulleted List      | bullet, ul                         | `-`              |
+| Numbered List      | ordered, number, ol                | `1.`             |
+| Checklist          | todo, task, checkbox               | `- [ ]`          |
+| Quote              | blockquote, citation               | `>`              |
+| Divider            | rule, hr, line, separator          | `---`            |
+| Code Block         | snippet, fence, pre                | ` ``` `          |
+| Table              | grid, columns, rows                | `\| a \| b \|`   |
+| Callout            | admonition, note, info, aside      | `> [!note]`      |
+| Toggle             | collapse, fold, details, expand    | `> [!note]-`     |
+| Mermaid Diagram    | diagram, flowchart, chart, graph   | ` ```mermaid `   |
+| Math Block         | equation, formula, latex, katex    | `$$`             |
+| Inline Math        |                                    | `$x$`            |
+| Link to Note       | wikilink, reference, backlink      | `[[`             |
+| Embed Note         | transclude, include, section       | `![[`            |
+| Image              | picture, photo, upload, screenshot |                  |
+| File               | attachment, pdf, document          |                  |
+| Excalidraw Diagram | draw, drawing, sketch, whiteboard  |                  |
+| Symbol             | signifier, important, idea, star   |                  |
 
 Each item is also in the [command palette](/docs/shortcuts/#the-command-palette) as **Insert: …**. In a table cell the menu offers only Inline Math, Link to Note, Image, File and Symbol.
 
@@ -105,16 +107,16 @@ The Mac app takes pictures and files up to 50 MB. The Android app, the `penmoss`
 
 Pictures and files are saved on the device first, so this works offline, and go to the repository with the next sync, in its `attachments/` folder. See [Notebooks on disk](/docs/reference/notebook-format/#attachments).
 
-## Drawings
+## Excalidraw Diagrams
 
-Choose **Drawing** in the slash menu to sketch in [Excalidraw](https://excalidraw.com), a hand-drawn style drawing editor, which opens over the whole window. Draw with its shapes, arrows, lines, pen and text, then press **Done** to put the drawing in the note, or **Cancel** to leave the note as it was. The editor follows your light or dark mode, and works offline.
+Choose **Excalidraw Diagram** in the slash menu to sketch in [Excalidraw](https://excalidraw.com), a hand-drawn style drawing editor, which opens over the whole window. Draw with its shapes, arrows, lines, pen and text, then press **Done** to put the drawing in the note, or **Cancel** to leave the note as it was. The editor follows your light or dark mode, and works offline.
 
-The drawing shows in the note as a picture, as wide as you drew it. Click it, or select it and press Enter, to open it in Excalidraw again.
+The drawing shows in the note as a picture, as wide as you drew it. Click it to select it. Point at it, or select it, and two buttons show in its top-right corner: **Edit Excalidraw Diagram** (the pencil) opens it in Excalidraw again, and **Delete Excalidraw Diagram** (the bin) removes it from the note. With the drawing selected, Enter edits it too, and Backspace or Delete removes it. Undo (⌘Z, or Ctrl+Z) brings a removed drawing back. A read-only note, such as an older version in History, shows the drawing without the buttons.
 
 Each drawing is two files in the repository's `attachments/` folder: the Excalidraw scene, a `.excalidraw` file you can also open at excalidraw.com, and an `.svg` picture of it. The note shows the picture, linked to the scene, so GitHub and any markdown viewer show the drawing too:
 
 ```markdown
-[![Drawing](attachments/9c1e…b2.svg)](attachments/41d7…0a.excalidraw)
+[![Excalidraw Diagram](attachments/9c1e…b2.svg)](attachments/41d7…0a.excalidraw)
 ```
 
 Each edit saves a new pair of files and points the note at them; the old pair stays in `attachments/`, as a picture does when you remove it from a note. Agents reading the note see the same picture link. The Android app shows drawings but can't edit them, and keeps them as they are when you edit the note around them.

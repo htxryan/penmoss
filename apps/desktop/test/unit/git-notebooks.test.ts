@@ -371,6 +371,15 @@ describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () =
     ).toBe('{"format":1}');
     const log = await notebooks.op(id, 'log', [{ limit: 5 }]);
     expect(log.ok && (log.value as Array<{ message: string }>)[0]!.message).toBe('Penmoss: first');
+    // History's reads (Ryan's review of #192): a directory at many commits, each blob once.
+    const dir = await notebooks.op(id, 'readDir', [[sha, sha], '.penmoss/']);
+    expect(dir.ok).toBe(true);
+    const value = (dir.ok ? dir.value : null) as {
+      files: Array<[string, Array<[string, string]>]>;
+      blobs: Array<[string, Uint8Array]>;
+    };
+    expect(value.files).toEqual([[sha, [['.penmoss/notebook.json', expect.any(String)]]]]);
+    expect(new TextDecoder().decode(value.blobs[0]![1])).toBe('{"format":1}');
   });
 
   it('refuses calls it does not know and arguments that are not what git takes', async () => {
@@ -390,6 +399,19 @@ describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () =
     await expect(
       notebooks.op(notebook.localId, 'commit', [null, [['../outside', new Uint8Array(1)]], 'x']),
     ).resolves.toMatchObject({ ok: false, error: { code: 'git' } });
+    const sha = 'a'.repeat(40);
+    for (const args of [
+      ['--output=/etc/passwd', '.penmoss/'],
+      [[sha], '../outside/'],
+      [[sha], '.penmoss'],
+      [['--all'], '.penmoss/'],
+      [Array(2_001).fill(sha), '.penmoss/'],
+    ]) {
+      await expect(notebooks.op(notebook.localId, 'readDir', args)).resolves.toMatchObject({
+        ok: false,
+        error: { code: 'git' },
+      });
+    }
   });
 
   it('moves a notebook still on the old defaults to the new cadence once (A1013)', async () => {
@@ -408,6 +430,40 @@ describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () =
     // One set to something else before T57 keeps it.
     const own = { ...old, pushDelayS: 30, pullEveryMin: 2 };
     expect(withCadence(own)).toMatchObject({ pushDelayS: 30, pullEveryMin: 2, cadence: 2 });
+  });
+
+  it('renames a notebook here, until a sync reports that name at the branch (Ryan’s review of PR #192)', async () => {
+    let changes = 0;
+    const notebooks = service({ onChange: () => void changes++ });
+    const notebook = await added(notebooks);
+    const id = notebook.localId;
+    await expect(notebooks.update(id, { name: '  ' })).resolves.toMatchObject({ ok: false });
+    await expect(notebooks.update(id, { name: ' Personal\n(old) ' })).resolves.toMatchObject({
+      ok: true,
+      value: { name: 'Personal (old)', pendingName: 'Personal (old)' },
+    });
+    // Until it lands, a sync still finding the old name at the branch does not undo it.
+    await notebooks.update(id, { branchName: notebook.name });
+    expect((await notebooks.list())[0]).toMatchObject({
+      name: 'Personal (old)',
+      pendingName: 'Personal (old)',
+    });
+    // Landed: no longer pending.
+    await notebooks.update(id, { branchName: 'Personal (old)' });
+    expect((await notebooks.list())[0]).toMatchObject({
+      name: 'Personal (old)',
+      pendingName: null,
+    });
+    // Another device's rename is followed.
+    await notebooks.update(id, { branchName: 'From the phone' });
+    expect((await notebooks.list())[0]).toMatchObject({
+      name: 'From the phone',
+      pendingName: null,
+    });
+    // The same name reported again writes nothing and tells no window.
+    const before = changes;
+    await notebooks.update(id, { branchName: 'From the phone' });
+    expect(changes).toBe(before);
   });
 
   it('keeps the cadence in range', async () => {

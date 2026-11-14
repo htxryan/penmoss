@@ -37,7 +37,7 @@ A tool's `id` is a note's 26-character id or its short id, such as `K7QD-9HTF2CX
 
 ### What tags mean
 
-Each tag can have a description you write on the [Tags page](/docs/organise/#describe-your-tags). `describe_tags` gives each tag with its `description` (`null` when it has none), how many `notes` have it or a tag nested under it, and the descriptions of the tags above it (`ancestors`, outermost first), so an agent reading `#project/penmoss` also learns what `#project` means. With no `tags`, it gives every tag; with `tags`, those and the tags nested under each. Agents read descriptions but can't change them.
+Each tag can have a description you write on the [Tags page](/docs/organise/#the-tags-page). `describe_tags` gives each tag with its `description` (`null` when it has none), how many `notes` have it or a tag nested under it, and the descriptions of the tags above it (`ancestors`, outermost first), so an agent reading `#project/penmoss` also learns what `#project` means. With no `tags`, it gives every tag; with `tags`, those and the tags nested under each. Agents read descriptions but can't change them.
 
 ## Write
 

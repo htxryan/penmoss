@@ -20,6 +20,7 @@ import { navigate, notePath, useLocation } from '../router';
 import { SearchOverlay } from '../search/SearchOverlay';
 import { NotebookMeaning } from '../search/meaning';
 import { SearchService } from '../search/service';
+import { tagSearch, type TagSearch } from '../search/show-tag';
 import { SourceSearches, SourcesSearch } from '../search/sources';
 import { SourceScopeOr } from '../sources/context';
 import { useNoteSource, useSourcesRegistry, useSourcesState } from '../sources/hooks';
@@ -102,7 +103,8 @@ type Overlay =
   | { readonly kind: 'palette'; readonly mode: PaletteMode }
   | { readonly kind: 'recent'; readonly index: number; readonly held: boolean }
   | { readonly kind: 'cheatsheet' }
-  | { readonly kind: 'search' }
+  /** With a tag's notes listed, from choosing the tag (finding 9 of Ryan's review of #192). */
+  | { readonly kind: 'search'; readonly tag?: TagSearch }
   | { readonly kind: 'themes' }
   | { readonly kind: 'capture' }
   | { readonly kind: 'move'; readonly noteIds: readonly string[] }
@@ -132,6 +134,7 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
     () =>
       new SearchService({
         store: () => notes.openLocal(),
+        list: () => notes.list(),
         workspace: () => workspace.getState().snapshot,
         closed: closedNotebooks,
         reserved: RESERVED_KEYS,
@@ -157,6 +160,7 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
         const bridge = desktop()?.meaning;
         return new SearchService({
           store: () => sourceNotes.openLocal(),
+          list: () => sourceNotes.list(),
           workspace: () => source.workspace.getState().snapshot,
           reserved: RESERVED_KEYS,
           ...(bridge
@@ -424,6 +428,18 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
       }),
     [],
   );
+  // A tag chosen anywhere (the sidebar, a note's chips, ⌘-click on #tag, the Tags page): Search
+  // lists its notes (finding 9 of Ryan's review of #192).
+  useEffect(
+    () =>
+      tagSearch.subscribe(() => {
+        const tag = tagSearch.get();
+        if (!tag) return;
+        tagSearch.set(null);
+        latestOpen.current({ kind: 'search', tag });
+      }),
+    [],
+  );
 
   return (
     <>
@@ -468,7 +484,10 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
       case 'search':
         return (
           <SearchOverlay
+            // Another tag chosen while Search is open starts it again on that tag.
+            key={overlay.tag ? JSON.stringify(overlay.tag) : ''}
             service={search}
+            initial={overlay.tag ?? null}
             onOpenNote={(id, heading) => {
               close(false);
               notes.requestBodyFocus(id);

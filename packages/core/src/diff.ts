@@ -256,3 +256,100 @@ function versionParts(markdown: string): { title: string; tags: string; body: st
     body: lines.slice(start).filter((line) => line.trim() !== ''),
   };
 }
+
+/** What a version changed, as History's row says it: the counts and a few words. */
+export interface ChangeDescription {
+  /** `summarise`'s words: `+3 −1 lines`, `Title changed`, `No text changes`. */
+  readonly summary: string;
+  /**
+   * What the change was about (Ryan's review of #192, finding 13): `Added “Buy milk”`,
+   * `Checked off “Call Sam”`, `Edited “Next up”`, or the headings it touched (`Next up,
+   * Android`). '' when no line of the body changed.
+   */
+  readonly gist: string;
+}
+
+export function describeChange(before: string, after: string): ChangeDescription {
+  return { summary: summarise(before, after), gist: gist(before, after) };
+}
+
+/** The longest a gist quotes of a line, in characters. */
+const GIST_QUOTE = 60;
+
+/** A markdown line as words: no list marker, task box, heading hashes, emphasis or link targets. */
+function plainLine(line: string): string {
+  return line
+    .trim()
+    .replace(/^(?:>\s*)+/, '')
+    .replace(/^(?:[-*+]|\d+[.)])\s+/, '')
+    .replace(/^\[[ xX]\]\s+/, '')
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[\[([^\]|]*)\|([^\]]*)\]\]/g, '$2')
+    .replace(/\[\[([^\]]*)\]\]/g, '$1')
+    .replace(/(\*\*|__|~~|==|`)/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const quote = (text: string) =>
+  `“${text.length > GIST_QUOTE ? `${text.slice(0, GIST_QUOTE - 1).trimEnd()}…` : text}”`;
+
+/** A task line's box: true when ticked, false when not, null for any other line. */
+function taskState(line: string): boolean | null {
+  const match = /^\s*(?:[-*+]|\d+[.)])\s+\[([ xX])\]\s/.exec(line);
+  return match ? match[1] !== ' ' : null;
+}
+
+const isImage = (line: string) => /^\s*!\[[^\]]*\]\([^)]*\)\s*$/.test(line);
+const headingOf = (line: string) => (/^#{1,6}\s/.test(line) ? plainLine(line) : null);
+
+/**
+ * A few words on what changed between two versions' bodies (Ryan's review of #192, finding 13):
+ * one line added, removed or edited is quoted; a task ticked is "Checked off"; a change across
+ * several sections names their headings. '' when the body is the same.
+ */
+export function gist(before: string, after: string): string {
+  const ops = diffLines(versionParts(before).body, versionParts(after).body);
+  const added = ops.filter((op) => op.op === 'add').map((op) => op.line);
+  const removed = ops.filter((op) => op.op === 'del').map((op) => op.line);
+  if (added.length === 0 && removed.length === 0) return '';
+
+  if (added.length === 1 && removed.length === 1) {
+    const now = added[0]!;
+    const was = removed[0]!;
+    const ticked = taskState(now);
+    const unticked = taskState(was);
+    if (ticked !== null && unticked !== null && plainLine(now) === plainLine(was)) {
+      if (ticked && !unticked) return `Checked off ${quote(plainLine(now))}`;
+      if (!ticked && unticked) return `Unchecked ${quote(plainLine(now))}`;
+    }
+    return plainLine(now) ? `Edited ${quote(plainLine(now))}` : 'Edited a line';
+  }
+
+  // The sections the change touched, by the heading above each changed line (or its own).
+  const sections: string[] = [];
+  let heading: string | null = null;
+  for (const op of ops) {
+    const own = headingOf(op.line);
+    if (op.op !== 'del' && own !== null) heading = own;
+    if (op.op === 'same') continue;
+    const section = own ?? heading;
+    if (section && !sections.includes(section)) sections.push(section);
+  }
+  if (sections.length > 1) {
+    const shown = sections.slice(0, 3).join(', ');
+    return sections.length > 3 ? `${shown} and ${sections.length - 3} more` : shown;
+  }
+
+  const verb = removed.length === 0 ? 'Added' : added.length === 0 ? 'Removed' : 'Edited';
+  const lines = added.length === 0 ? removed : added;
+  if (lines.length === 1 && isImage(lines[0]!)) {
+    return verb === 'Added' ? 'Added an image' : 'Removed an image';
+  }
+  const first = lines.map(plainLine).find((text) => text !== '');
+  if (!first) return `${verb} ${lines.length === 1 ? 'a line' : `${lines.length} lines`}`;
+  const more = lines.length - 1;
+  return more > 0 ? `${verb} ${quote(first)} and ${more} more` : `${verb} ${quote(first)}`;
+}

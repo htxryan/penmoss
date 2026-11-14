@@ -580,6 +580,90 @@ describe('Notes: offline-first replica (T8)', () => {
     expect(ids.map((id) => store.records.get(id)!.rev)).toEqual(revs);
   });
 
+  /** A stored note with `tags` under its title, and an open one with them too. */
+  async function taggedNotes(tags: { stored: string[]; open: string[] }) {
+    const made = setup();
+    await made.notes.start();
+    const stored = made.notes.create();
+    const editing = made.notes.openNote(stored);
+    await editing.ready;
+    for (const tag of tags.stored) setFrontmatterTag(editing.replica.doc, tag, true);
+    editing.close();
+    await vi.waitFor(() =>
+      expect(made.store.records.get(stored)?.tags).toEqual([...tags.stored].sort()),
+    );
+    const id = made.notes.create();
+    const open = made.notes.openNote(id);
+    await open.ready;
+    for (const tag of tags.open) setFrontmatterTag(open.replica.doc, tag, true);
+    await vi.waitFor(() =>
+      expect(made.notes.list().find((entry) => entry.id === id)?.tags).toEqual(
+        [...tags.open].sort(),
+      ),
+    );
+    await made.notes.refreshLocal();
+    return { ...made, stored, id, open };
+  }
+
+  it('deletes a tag, and those under it, from open and stored notes, and undoes it (finding 8)', async () => {
+    const { notes, store, stored, id, open } = await taggedNotes({
+      stored: ['garden', 'keep'],
+      open: ['garden/herbs'],
+    });
+    const done = await notes.changeTags([{ from: 'garden', to: null }]);
+    expect([...done.notes].sort()).toEqual([id, stored].sort());
+    expect(frontmatterTags(open.replica.doc)).toEqual([]);
+    expect(store.records.get(stored)).toMatchObject({ tags: ['keep'], unsynced: true });
+    expect(await store.getState?.('tagRenames')).toBeUndefined();
+
+    expect([...(await done.undo())].sort()).toEqual([id, stored].sort());
+    expect(frontmatterTags(open.replica.doc)).toEqual(['garden/herbs']);
+    expect(store.records.get(stored)?.tags).toEqual(['garden', 'keep']);
+    open.close();
+  });
+
+  it('merges several tags into one, and Undo leaves a note’s own tag where it was (finding 8)', async () => {
+    const { notes, store, stored, id, open } = await taggedNotes({
+      stored: ['dev', 'development'],
+      open: ['dev-notes'],
+    });
+    const done = await notes.changeTags([
+      { from: 'dev', to: 'development' },
+      { from: 'dev-notes', to: 'development' },
+    ]);
+    expect([...done.notes].sort()).toEqual([id, stored].sort());
+    expect(store.records.get(stored)?.tags).toEqual(['development']);
+    expect(frontmatterTags(open.replica.doc)).toEqual(['development']);
+
+    await done.undo();
+    expect(store.records.get(stored)?.tags).toEqual(['dev', 'development']);
+    expect(frontmatterTags(open.replica.doc)).toEqual(['dev-notes']);
+    open.close();
+  });
+
+  it('renames one level only when asked, and finishes a journalled delete at the next start (finding 8)', async () => {
+    const { notes, store, stored, id, open } = await taggedNotes({
+      stored: ['penmoss', 'penmoss/review'],
+      open: ['penmoss/factory'],
+    });
+    const renamed = await notes.changeTags([{ from: 'penmoss', to: 'app', nested: false }]);
+    expect(renamed.notes).toEqual([stored]);
+    expect(store.records.get(stored)?.tags).toEqual(['app', 'penmoss/review']);
+    expect(frontmatterTags(open.replica.doc)).toEqual(['penmoss/factory']);
+    open.close();
+    await notes.whenRenamed();
+    notes.stop();
+
+    // A delete journalled by a window that closed before it ran.
+    await store.setState?.('tagRenames', [{ from: 'penmoss', to: null }]);
+    const next = setup({ store });
+    await next.notes.start();
+    await vi.waitFor(() => expect(store.records.get(id)?.tags).toEqual([]));
+    await next.notes.whenRenamed();
+    expect(store.records.get(stored)?.tags).toEqual(['app']);
+    expect(await store.getState?.('tagRenames')).toBeUndefined();
+  });
+
   it('creates a daily note from its template once, with a fixed id (T19)', async () => {
     const { notes, store } = setup();
     await notes.start();

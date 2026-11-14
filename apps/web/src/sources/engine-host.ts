@@ -138,6 +138,11 @@ export interface EngineHostOptions {
   /** How long the network must stay up before a sync chases it (default `ONLINE_SETTLE_MS`). */
   readonly onlineSettleMs?: number;
   readonly log?: (message: string, error?: unknown) => void;
+  /**
+   * After each sync that landed with no Rename left to write: the name `notebook.json` has
+   * (another device's rename, or this Mac's landing), for main's list (Ryan's review of PR #192).
+   */
+  readonly onName?: (name: string) => void;
 }
 
 /**
@@ -192,6 +197,8 @@ export class GitEngineHost {
     { readonly noteId: string; readonly threadId: string; readonly until: number }
   >();
   private watchTimer: ReturnType<typeof setInterval> | null = null;
+  /** A Rename on its way into the engine. */
+  private renaming: string | null = null;
 
   constructor(private readonly options: EngineHostOptions) {
     this.storage = new EngineStorage(options.kv);
@@ -312,6 +319,35 @@ export class GitEngineHost {
       this.set({ detail: 'Pushing what was not pushed when Penmoss last quit.' });
     }
     void this.syncNow('start');
+  }
+
+  /**
+   * Rename (Ryan's review of PR #192): the engine writes `name` to `notebook.json` and pushes it
+   * at once. Main keeps the name until a sync reports it landed, so a rename asked before the
+   * engine opened, or lost with a window, is asked again.
+   */
+  rename(name: string): void {
+    const engine = this.engine;
+    if (this.stopped || !engine) return;
+    if (engine.pendingName === name || this.renaming === name) return;
+    if (engine.pendingName === null && engine.info?.name === name) {
+      // Already the name at the branch: only main is behind.
+      this.options.onName?.(name);
+      return;
+    }
+    this.renaming = name;
+    void engine
+      .exclusive(async () => {
+        engine.rename(name);
+        await engine.save();
+      })
+      .then(
+        () => void this.syncNow('push'),
+        (error: unknown) => this.options.log?.('could not rename the notebook', error),
+      )
+      .finally(() => {
+        if (this.renaming === name) this.renaming = null;
+      });
   }
 
   /** Windows stored these records (null: maybe any): taken in, then pushed once they settle. */
@@ -621,6 +657,8 @@ export class GitEngineHost {
     });
     // Edits made while it synced go at the next push.
     if (pendingOf(engine).length > 0) this.schedulePush();
+    const name = engine.info?.name;
+    if (name && engine.pendingName === null) this.options.onName?.(name);
   }
 
   /** What the repository changed that no report gave (a sync that failed after its fetch). */

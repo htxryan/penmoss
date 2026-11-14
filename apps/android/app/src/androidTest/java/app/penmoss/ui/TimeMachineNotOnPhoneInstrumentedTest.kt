@@ -21,8 +21,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * PEN-21's Android proof: the Mac and web apps gain the Time Machine (a page, a command, a
- * notebook's button and History's Replay). Its first version is not on the phone, so Android is
+ * PEN-21's Android proof: the Mac and web apps gain the Time Machine (a page, a command and
+ * a notebook's button). Its first version is not on the phone, so Android is
  * unchanged: Search's actions for "time" are what they were, with no Time Machine among them, and
  * the command is listed as not on a phone. Run with
  * `task proof:android -- app.penmoss.ui.TimeMachineNotOnPhoneInstrumentedTest`.

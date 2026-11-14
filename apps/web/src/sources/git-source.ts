@@ -397,8 +397,9 @@ export class GitSource {
   /** Main listed it again (cadence, token, settings changed). */
   setInfo(info: GitNotebookInfo): void {
     this.infoNow = info;
-    // The running engine follows a new Push after or Pull every at once.
+    // The running engine follows a new Push after or Pull every at once, and a Rename.
     this.host?.setCadence(info.pushDelayS, info.pullEveryMin);
+    if (info.pendingName) this.host?.rename(info.pendingName);
     for (const listener of this.infoListeners) listener();
   }
 
@@ -455,6 +456,14 @@ export class GitSource {
       pushDelayS: info.pushDelayS,
       pullEveryMin: info.pullEveryMin,
       ...(this.deps.log ? { log: this.deps.log } : {}),
+      // What notebook.json is called after a sync: main follows another device's rename, and
+      // knows this Mac's landed.
+      onName: (name) => {
+        if (name === this.infoNow.name && !this.infoNow.pendingName) return;
+        void this.deps.git
+          .update(this.infoNow.localId, { branchName: name })
+          .catch((error: unknown) => this.deps.log?.('could not record the name', error));
+      },
     });
     this.host = host;
     const detach = this.feed.attach(host);
@@ -462,6 +471,8 @@ export class GitSource {
     const offStored = this.notes.onStored((ids) => host.changed(ids));
     try {
       await host.start();
+      // A Rename main still holds (asked while no engine ran here, or never pushed).
+      if (this.infoNow.pendingName) host.rename(this.infoNow.pendingName);
       await new Promise<void>((resolve) => {
         this.release = resolve;
         this.abort.signal.addEventListener('abort', () => resolve(), { once: true });
@@ -487,6 +498,19 @@ export class GitSource {
 
   syncNow(): void {
     this.feed.syncNow();
+  }
+
+  /**
+   * Rename (Ryan's review of PR #192): main keeps the new name for this Mac at once, and the
+   * engine's window, here or another, writes it to `notebook.json` and pushes it, so every device
+   * and agent follows. Returns why not, or null when done.
+   */
+  async rename(name: string): Promise<string | null> {
+    const answer = await this.deps.git.update(this.infoNow.localId, { name });
+    if (!answer) return 'This window cannot rename notebooks.';
+    if (!answer.ok) return answer.error.message;
+    this.setInfo(answer.value);
+    return null;
   }
 
   /**

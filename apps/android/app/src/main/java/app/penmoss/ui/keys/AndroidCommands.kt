@@ -96,7 +96,6 @@ object AndroidCommands {
         "journal.calendar" to Coverage.Native(ANYWHERE),
         "journal.settings" to Coverage.Native(ANYWHERE),
         "note.addTag" to Coverage.Native(NOTE),
-        "tags.clearFilter" to Coverage.Native("a tag's notes"),
         "folder.new" to Coverage.Native(FOLDERS),
         // T43 (A750, A752): Home's ⋮ New notebook, and Settings → Notebooks.
         "folder.topLevel" to Coverage.NotHere("New note on the phone files in the folder shown, or asks for one (T38): there is no default folder to set."),
