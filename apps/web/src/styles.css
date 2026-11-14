@@ -6927,6 +6927,41 @@ button.comment-quote:hover {
 }
 
 /*
+ * The whole app is interface, not text (Ryan's review of #192, finding 7; extends A1129): as in a
+ * Mac app, its words are not selectable and the pointer stays the arrow over them. What someone
+ * reads or copies opts back in, selectable with the text cursor: every field, a note's text (a
+ * read-only one's too) and its Markdown, code and paths, a comment's words and its quote, History's
+ * and the Time Machine's text, release notes, a notebook's facts, error messages, and anything
+ * marked `.selectable`. `:where`, so a control's own cursor still wins.
+ */
+body {
+  cursor: default;
+  user-select: none;
+}
+
+:where(
+  input,
+  textarea,
+  [contenteditable]:not([contenteditable='false']),
+  .note-body,
+  pre,
+  code,
+  samp,
+  .history-diff,
+  .comment-body,
+  .comment-quote,
+  .release-notes,
+  .settings-facts dd,
+  .error,
+  .field-error,
+  [role='alert'],
+  .selectable
+) {
+  cursor: auto;
+  user-select: text;
+}
+
+/*
  * Flush rows (Quanta feedback 3, item 8; A1135), as the sidebar's bottom row is (A1121): the
  * sidebar's head and its row of shortcuts, the note's title bar's buttons and the panel's tab
  * strip go edge to edge, their buttons as tall as the row with no margin or gap. Back and

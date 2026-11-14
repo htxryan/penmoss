@@ -41,6 +41,8 @@ The main window has three panes: the sidebar, the note, and the note panel. Drag
 
 The note's other actions are in the ⋯ at the end of its top bar.
 
+As in other Mac apps, Penmoss's own words (buttons, labels, headings, the sidebar) can't be selected, and the pointer stays an arrow over them. What you might copy can: your notes, every field, code and paths, comments, History, release notes, a notebook's details in Settings, and error messages.
+
 ## Note windows
 
 Open a note in a window of its own with **Open in New Window** (⌘⌥O), from the note's ⋯ menu, from a note's right-click menu in the sidebar, or by ⌥-clicking a link, a backlink or a note in the sidebar.

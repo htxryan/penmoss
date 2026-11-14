@@ -166,4 +166,66 @@ test.describe('with a notebook', () => {
       'no-drag',
     );
   });
+
+  test('7: interface text is not selectable and keeps the arrow; a note’s text and fields are', async ({
+    page,
+  }) => {
+    const errors = collectErrors(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/');
+    await expect(tree(page)).toBeVisible({ timeout: 30_000 });
+    const selected = () => page.evaluate(() => getSelection()?.toString() ?? '');
+    const cursor = (selector: string) =>
+      page
+        .locator(selector)
+        .first()
+        .evaluate((element) => getComputedStyle(element).cursor);
+    /** Drags across `selector`'s text, from its start to its end, and returns what that selects. */
+    const dragAcross = async (selector: string) => {
+      await page.evaluate(() => getSelection()?.removeAllRanges());
+      const at = await box(page, selector);
+      await page.mouse.move(at.x + 2, at.y + at.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(at.x + at.width / 2, at.y + at.height / 2, { steps: 4 });
+      await page.mouse.move(at.x + at.width - 2, at.y + at.height / 2, { steps: 4 });
+      await page.mouse.up();
+      return selected();
+    };
+
+    // The empty state's words (Ryan's screenshot): a drag selects nothing, the arrow over them.
+    expect(await dragAcross('[data-testid="empty-state"] p')).toBe('');
+    expect(await cursor('[data-testid="empty-state"] p')).toBe('default');
+    expect(await cursor('[data-testid="empty-state"] h2')).toBe('default');
+    // Nor the sidebar's names, or a double-click on a word there.
+    await page.locator('.sb-section-name').first().dblclick();
+    expect(await selected()).toBe('');
+    expect(await cursor('.sb-section-name')).not.toBe('text');
+
+    // A note: its title and its text select, with the text cursor.
+    await tree(page).getByRole('treeitem', { name: 'Alpha', exact: true }).click();
+    await expect(page.getByTestId('note-title')).toHaveValue('Alpha');
+    const text = '[data-testid="note-body"] .ProseMirror p';
+    await expect(page.locator(text)).toHaveText('The first note.');
+    expect(await dragAcross(text)).toContain('first note');
+    expect(await cursor(text)).toBe('auto');
+    expect(await cursor('[data-testid="note-title"]')).toBe('auto');
+    await page.getByTestId('note-title').selectText();
+    expect(
+      await page
+        .getByTestId('note-title')
+        .evaluate((field: HTMLTextAreaElement) =>
+          field.value.slice(field.selectionStart, field.selectionEnd),
+        ),
+    ).toBe('Alpha');
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/window-7-note.png` });
+
+    // A notebook's facts in Settings (its repository's address) select too; their labels do not.
+    await page.goto('/settings/git-notebooks');
+    await page.getByTestId('git-notebook-row').first().click();
+    await expect(page.getByTestId('git-repository')).toBeVisible();
+    expect(await cursor('.settings-facts dt')).toBe('default');
+    await page.getByTestId('git-repository').dblclick({ position: { x: 4, y: 6 } });
+    expect(await selected()).not.toBe('');
+    expect(errors).toEqual([]);
+  });
 });
