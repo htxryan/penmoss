@@ -848,7 +848,7 @@ export function NoteView({
   useCommand('note.copyRich', () => copyNote('rich'));
   // T52 item 4: what an agent needs to find this note through the Penmoss MCP server.
   useCommand('note.copyAgentReference', () => {
-    void copyAgentReference(id, titleRef.current?.value ?? title).then((done) =>
+    void copyAgentReference(id).then((done) =>
       showCopied(done ? COPIED_AGENT_REFERENCE : 'Could not copy the agent reference', done),
     );
   });

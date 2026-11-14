@@ -102,9 +102,17 @@ class MainActivity : ComponentActivity() {
         (deepLinkOf(intent) as? DeepLink.Note)?.let { note -> openNote(note.id) }
     }
 
-    /** Opens [noteId] in the git notebook that holds it, else in the Journal notebook. */
+    /**
+     * Opens [noteId] in the git notebook that holds it, else in the Journal notebook. A short
+     * reference (PEN-69) opens the note it names, in the notebook it names, when this phone has it.
+     */
     private fun openNote(noteId: String) {
         lifecycleScope.launch {
+            if (noteId.contains('-')) {
+                val (notebook, id) = runCatching { graph.git.noteOfRef(noteId) }.getOrNull() ?: return@launch
+                GitNotebookActivity.open(this@MainActivity, notebook, note = id)
+                return@launch
+            }
             val notebook = runCatching { graph.git.notebookOfNote(noteId) }.getOrNull() ?: return@launch
             GitNotebookActivity.open(this@MainActivity, notebook, note = noteId)
         }

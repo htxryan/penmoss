@@ -19,6 +19,10 @@ Searches the notebook. Arguments: `query`\*, `mode` (`hybrid`, `full-text` or `s
 
 Meaning needs the model on this Mac, and **Settings → Search by Meaning** on when the server starts (or `penmoss models fetch`). Without it, `hybrid` searches words only and says so, and `semantic` is refused with `semantic_unavailable`.
 
+### Note ids
+
+A tool's `id` is a note's 26-character id or its short id, such as `K7QD-9HTF2CXA`, in any case (see [Point an agent at a note](/docs/agents/#point-an-agent-at-a-note)). `search_notes`, `list_recent` and `list_folder` give each note's `shortId` beside its `id`. A short id from another notebook is refused, with the `penmoss mcp --notebook` command that reads it when your Mac has that notebook.
+
 ### Reading
 
 | Tool             | What it does                                                                      | Arguments                              |
