@@ -77,6 +77,11 @@ describe('the planning session', () => {
     // Its chat in the Claude app, on Ryan's own login (A1286).
     expect(args[args.indexOf('--remote-control') + 1]).toBe(sessionName(c, 70));
     expect(args.indexOf('--remote-control')).toBeLessThan(args.indexOf('--'));
+    // Claude's default model and effort from the config, not Ryan's own defaults (A1363).
+    const alias = c.models[c.agents.claude.defaultModel]!;
+    expect(args[args.indexOf('--model') + 1]).toBe(alias.model);
+    expect(args[args.indexOf('--effort') + 1]).toBe(alias.effort);
+    expect(args.indexOf('--effort')).toBeLessThan(args.indexOf('--'));
     expect(started).toEqual({ id: '0ff38e2e' });
   });
 

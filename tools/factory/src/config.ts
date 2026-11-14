@@ -21,9 +21,15 @@ export interface SlotConfig {
   readonly adbServerPort: number;
 }
 
+/** Claude Code's `--effort` levels. */
+export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+export type Effort = (typeof EFFORTS)[number];
+
 export interface ModelAlias {
   readonly agent: AgentName;
   readonly model: string;
+  /** Claude only: the session's `--effort`. Unset, Claude Code's default applies. */
+  readonly effort?: Effort;
 }
 
 export type TrackerName = 'github' | 'linear';
@@ -274,6 +280,8 @@ export function parseConfig(raw: unknown): ConfigResult {
       problems.push(`config.models.${alias}.agent must be claude or opencode`);
     }
     str(m, 'model', `config.models.${alias}`);
+    if (m['effort'] !== undefined && !(EFFORTS as readonly unknown[]).includes(m['effort']))
+      problems.push(`config.models.${alias}.effort must be one of ${EFFORTS.join(', ')}`);
   }
   for (const name of ['claude', 'opencode'] as const) {
     const alias =

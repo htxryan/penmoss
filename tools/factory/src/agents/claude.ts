@@ -6,6 +6,7 @@
  */
 import type { AgentProvider } from '@ai-hero/sandcastle';
 import { fileURLToPath } from 'node:url';
+import type { Effort } from '../config.ts';
 
 /** What the agent may never do, even with permissions skipped: the harness owns these. */
 export const DENY_RULES = [
@@ -70,11 +71,14 @@ export async function claudeAgent(
   env: Readonly<Record<string, string>> = {},
   /** The session's name in the Claude app: given, the session gets a chat there (A1287). */
   remote?: string,
+  /** `--effort`, from the model's alias in the config (A1363). */
+  effort?: Effort,
 ): Promise<AgentProvider> {
   const { claudeCode } = await import('@ai-hero/sandcastle');
   // claude.ai connectors come with an account login; the factory's token must not bring them.
   const base = claudeCode(model, { env: { ENABLE_CLAUDEAI_MCP_SERVERS: 'false', ...env } });
-  const flagged = withFlags(base, claudeFlags(remote !== undefined));
+  const flags = claudeFlags(remote !== undefined) + (effort ? ` --effort ${effort}` : '');
+  const flagged = withFlags(base, flags);
   return remote === undefined ? flagged : withRemoteControl(flagged, remote);
 }
 

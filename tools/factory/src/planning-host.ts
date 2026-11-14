@@ -108,6 +108,16 @@ export function readState(files: PlanFiles): { state: PlanState; writtenAt: Date
 export const agreedPlanPath = (files: PlanFiles) => join(files.root, 'agreed.html');
 
 /** The flags every planning session runs with (F0.5): no MCP, no Chrome, project settings, path-scoped tools. */
+/**
+ * The planning session's model and effort: Claude's default alias in the config, as a run's
+ * (A1363). Without them a session took whatever Ryan's own Claude Code defaults to.
+ */
+export function planningModelFlags(config: FactoryConfig): string[] {
+  const alias = config.models[config.agents.claude.defaultModel];
+  if (!alias) return [];
+  return ['--model', alias.model, ...(alias.effort ? ['--effort', alias.effort] : [])];
+}
+
 export function planningFlags(files: PlanFiles): string[] {
   return [
     '--no-chrome',
@@ -306,6 +316,7 @@ export async function launchSession(
     // Its chat in the Claude app and on claude.ai, which needs Ryan's own login (planningEnv).
     '--remote-control',
     sessionName(config, issue),
+    ...planningModelFlags(config),
     ...planningFlags(files),
     '--',
     message,

@@ -101,11 +101,13 @@
   "models": {
     "opus": {
       "agent": "claude",
-      "model": "opus"
+      "model": "claude-opus-5-5",
+      "effort": "high"
     },
     "sonnet": {
       "agent": "claude",
-      "model": "sonnet"
+      "model": "sonnet",
+      "effort": "high"
     },
     "go": {
       "agent": "opencode",

@@ -41,6 +41,24 @@ describe('config', () => {
     });
   });
 
+  it('runs Claude on Opus 5.5 at high effort, and checks the effort (A1363)', () => {
+    const loaded = loadConfig();
+    if (!loaded.ok) throw new Error(loaded.error);
+    const { models, agents } = loaded.config;
+    expect(models[agents.claude.defaultModel]).toEqual({
+      agent: 'claude',
+      model: 'claude-opus-5-5',
+      effort: 'high',
+    });
+    for (const alias of Object.values(models))
+      if (alias.agent === 'claude') expect(alias.effort).toBe('high');
+    const bad = { ...models, opus: { agent: 'claude', model: 'claude-opus-5-5', effort: 'huge' } };
+    expect(parseConfig({ ...loaded.config, models: bad })).toEqual({
+      ok: false,
+      error: 'config.models.opus.effort must be one of low, medium, high, xhigh, max',
+    });
+  });
+
   it('rejects a non-object', () => {
     expect(parseConfig([]).ok).toBe(false);
   });
