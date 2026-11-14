@@ -694,30 +694,6 @@ a {
   color: var(--pm-fg);
 }
 
-/*
- * A narrow notebook row (Ryan's review of #192, finding 19): Sort, New Folder, Time Machine and
- * Trash fold into ⋯, so the name keeps room to be read beside New Note, ⋯ and the sync dot. The
- * sidebar is the container, not the row: at the default sidebar width (17rem) nothing folds, even
- * with a scrollbar in the list taking room from the row (Linux, or a Mac that always shows them).
- */
-.sidebar {
-  container: sidebar / inline-size;
-}
-
-.tree-actions > .tree-actions-more {
-  display: none;
-}
-
-@container sidebar (max-width: 16.5rem) {
-  .tree-actions > .tree-action-fold {
-    display: none;
-  }
-
-  .tree-actions > .tree-actions-more {
-    display: inline-grid;
-  }
-}
-
 .tree {
   display: flex;
   flex: 1;

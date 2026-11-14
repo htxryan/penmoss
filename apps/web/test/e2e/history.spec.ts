@@ -1,7 +1,7 @@
 import { anotherMac, expect, seeded, test, type GitHost, type Page } from './fixtures';
 import { NEW_FOLDER, NEW_NOTE, VERSION_HISTORY, LINE_END } from './keys';
 import { noteAction } from './note-menu';
-import { notebookAction } from './notebook-actions';
+import { notebookMenuItem } from './notebook-actions';
 import { asAgent, syncNow } from './support/sync';
 import { readRemote, remoteFiles, remoteMarkdown } from './support/remote';
 
@@ -192,8 +192,8 @@ test('Trash restores a note into its folder, and deletes it for good', async ({
 
   await noteAction(page, 'delete-note');
   await expect(row).toHaveCount(0);
-  // The notebook's Trash, on its name's row (T53 item 4).
-  await (await notebookAction(page, 'Trash', { role: 'link' })).click();
+  // The notebook's Trash, in its row's ⋯ (T53 item 4, R2-21).
+  await (await notebookMenuItem(page, 'Trash')).click();
   const entry = page.getByTestId('trash').locator(`[data-note-id="${id}"]`);
   await expect(entry).toContainText(title);
   await expect(entry).toContainText(`from ${folder}`);
@@ -207,8 +207,8 @@ test('Trash restores a note into its folder, and deletes it for good', async ({
 
   // Again, then for good.
   await noteAction(page, 'delete-note');
-  // The notebook's Trash, on its name's row (T53 item 4).
-  await (await notebookAction(page, 'Trash', { role: 'link' })).click();
+  // The notebook's Trash, in its row's ⋯ (T53 item 4, R2-21).
+  await (await notebookMenuItem(page, 'Trash')).click();
   await expect(entry).toBeVisible();
   await entry.getByRole('button', { name: `Delete ${title} for Good` }).click();
   await entry.getByRole('button', { name: 'Delete for Good' }).click();

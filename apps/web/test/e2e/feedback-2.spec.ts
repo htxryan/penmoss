@@ -270,6 +270,8 @@ test('7: Settings → Display hides sidebar shortcuts, on the rail too; Search s
   const graph = settings.getByRole('checkbox', { name: 'Graph' });
   await expect(settings.getByRole('checkbox', { name: /Search/ })).toBeDisabled();
   await expect(settings.getByRole('checkbox', { name: /Search/ })).toBeChecked();
+  // Tags may be hidden too, and shows unless it is (R2-9).
+  await expect(settings.getByTestId('display-tags')).toBeChecked();
   // Enabled once this device's copy of the settings is read: before, they are only defaults.
   await expect(today).toBeEnabled();
   const actions = page.locator('.sidebar .sb-actions');
@@ -299,6 +301,10 @@ test('7: Settings → Display hides sidebar shortcuts, on the rail too; Search s
     await page.getByTestId('toggle-sidebar').click();
     await expect(page.getByTestId('app-root')).toHaveAttribute('data-sidebar', 'collapsed');
     await expect(actions.locator('[data-command="app.search"]')).toBeVisible();
+    // Tags, on by default, is on the rail too, right after Search (R2-9).
+    await expect(
+      actions.locator('[data-command="app.search"] + [data-command="app.tags"]'),
+    ).toBeVisible();
     await expect(actions.locator('[data-command="journal.today"]')).toHaveCount(0);
     await expect(actions.locator('[data-command="app.graph"]')).toHaveCount(0);
     await page.getByTestId('toggle-sidebar').click();
@@ -433,27 +439,36 @@ test('9: Sync stopped opens Settings → Notebooks, where Sync Now starts it aga
   await expect(band).toHaveText('Sync Stopped');
   await expect(page.getByTestId('save-status')).toHaveAttribute('data-state', 'stopped');
   await expect(band).toHaveAttribute('href', /\/settings\/git-notebooks\/[0-9A-Z]{26}$/);
-  const measure = () =>
-    band.evaluate((element) => {
+  // The notebook's row in the sidebar is a red band too, its dot the bar's (!) (R2-5).
+  const head = page.getByTestId('source-section').locator('.sb-section-head');
+  await expect(head).toHaveAttribute('data-sync', 'stopped');
+  await expect(dot.locator('[data-icon="warning"]')).toHaveCount(1);
+  await expect(dot.locator('.dot')).toHaveCount(0);
+  const measure = (target = band, text?: string) =>
+    target.evaluate((element, inner) => {
       const style = getComputedStyle(element);
+      const words = inner ? element.querySelector(inner)! : element;
       const probe = document.createElement('span');
       probe.style.color = 'var(--pm-danger)';
       document.body.append(probe);
       const danger = getComputedStyle(probe).color;
       probe.remove();
-      return { background: style.backgroundColor, color: style.color, danger };
-    });
+      return { background: style.backgroundColor, color: getComputedStyle(words).color, danger };
+    }, text);
   // In the light variant, then the dark one (the theme follows the system's).
-  const light = await measure();
+  const light = [await measure(), await measure(head, '.sb-section-name')];
   await page.emulateMedia({ colorScheme: 'dark' });
-  await expect.poll(async () => (await measure()).danger).not.toBe(light.danger);
-  const dark = await measure();
-  for (const [scheme, colours] of [
+  await expect.poll(async () => (await measure()).danger).not.toBe(light[0]!.danger);
+  const dark = [await measure(), await measure(head, '.sb-section-name')];
+  for (const [scheme, all] of [
     ['light', light],
     ['dark', dark],
   ] as const) {
-    expect(colours.background, scheme).toBe(colours.danger);
-    expect(contrast(colours.color, colours.background), scheme).toBeGreaterThanOrEqual(4.5);
+    for (const [index, colours] of all.entries()) {
+      const what = `${scheme} ${index === 0 ? 'status bar' : 'notebook row'}`;
+      expect(colours.background, what).toBe(colours.danger);
+      expect(contrast(colours.color, colours.background), what).toBeGreaterThanOrEqual(4.5);
+    }
   }
   await page.emulateMedia({ colorScheme: 'light' });
   // Flush in the bar, as its other items are: its full height, at its left edge (R2-6).

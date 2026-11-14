@@ -1,4 +1,5 @@
 import { expect, macContext, PREVIEW, test, type GitHost, type Page } from './fixtures';
+import { notebookMenuItem } from './notebook-actions';
 import { STORY_AGENT, STORY_DEVICE, timeMachineStory, type Story } from './support/dated-history';
 
 // PEN-21: the Time Machine. A notebook built with known commits on known days, by a device and an
@@ -25,11 +26,11 @@ const tree = (page: Page) => page.getByRole('navigation', { name: 'Folders and n
 async function openTimeMachine(page: Page): Promise<void> {
   await page.goto('/');
   await expect(page.getByTestId('source-section')).toHaveCount(1);
-  // The notebook's own button, on its name's row, goes to its Time Machine.
-  await expect(page.getByTestId('section-time-machine')).toHaveAttribute(
-    'href',
-    /^\/time-machine\?source=/,
-  );
+  // The notebook's own item, in its row's ⋯ (R2-21), goes to its Time Machine.
+  await (await notebookMenuItem(page, 'Time Machine')).click();
+  await expect(page).toHaveURL(/\/time-machine\?source=/);
+  await page.goto('/');
+  await expect(page.getByTestId('source-section')).toHaveCount(1);
   // The command opens the one in use.
   await page.keyboard.press('ControlOrMeta+KeyK');
   const palette = page.getByRole('dialog', { name: 'Command Palette' });

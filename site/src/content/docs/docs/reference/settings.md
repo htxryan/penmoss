@@ -24,7 +24,7 @@ Open Settings with ⌘, on the Mac, or from a notebook's menu on Android. Most s
 
 | Setting                             | What it does                                                                                                                                                      |
 | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Show in the sidebar                 | Which of Today, This Week, Graph and Commands the sidebar's top row shows (Search always shows)                                                                   |
+| Show in the sidebar                 | Which of Tags, Today, This Week, Graph and Commands the sidebar's top row shows (Search always shows); all are on by default                                      |
 | Sections                            | The order of Quick Access, Recent Notes, Notebooks, Calendar and Tags                                                                                             |
 | Notes in Recent Notes               | 1 to 50, 10 by default                                                                                                                                            |
 | Show Notebook Names in Quick Access | Labels each pinned note with its notebook                                                                                                                         |

@@ -17,7 +17,7 @@ Each git notebook has its own section in the sidebar, with its folder tree, its 
 
 ### Rename a notebook
 
-Right-click a notebook's row in the sidebar and choose **Rename Notebook**, type the new name and press Return (Escape keeps the old one). Or change **Notebook Name** on its page in **Settings → Notebooks** and choose **Rename**. With only one notebook, the sidebar shows no row for it: use Settings.
+Point at a notebook's row in the sidebar, open its ⋯ menu (**More Notebook Actions**) and choose **Rename…**, or right-click the row and choose **Rename Notebook**. Type the new name and press Return (Escape keeps the old one). Or change **Notebook Name** on its page in **Settings → Notebooks** and choose **Rename**.
 
 The name is kept in the notebook's repository, so it renames it on every device that syncs it, your agents' copies included. Agents keep working: `--notebook` still finds a notebook by the name it had before.
 
@@ -36,7 +36,7 @@ One notebook is your **Primary Notebook**. Today's note, This Week's note, the c
 
 ### Sort order
 
-Each folder sorts its notes in its own way: **Manual** (the default: drag to reorder), **A–Z**, or **Modified** (newest first). Choose it with the **Sort Order** button on the notebook's row in the sidebar (in its ⋯ menu when the sidebar is narrow), which sorts the current folder, or with the commands **Sort the Current Folder: Manual**, **A–Z** and **Last Modified**.
+Each folder sorts its notes in its own way: **Manual** (the default: drag to reorder), **A–Z**, or **Modified** (newest first). Choose it with **Sort Order…** in the ⋯ menu on the notebook's row in the sidebar, which sorts the current folder, or with the commands **Sort the Current Folder: Manual**, **A–Z** and **Last Modified**.
 
 ## Moving notes
 
@@ -56,7 +56,7 @@ A tag is a word after `#` in the note, such as `#ideas`, or an entry in the note
 
 ### The Tags page
 
-The **Tags** page is where you describe and tidy your tags: a table with a row for each tag, its note count, and what it means. Open it with the button at the end of the sidebar's **Tags** title (**Open the Tags Page**, shown when you point at the title) or **Tags** in the command palette. With several notebooks it has a table for each, in the sidebar's order, and each change stays in its own notebook.
+The **Tags** page is where you describe and tidy your tags: a table with a row for each tag, its note count, and what it means. Open it with **Tags** in the sidebar's top row (the # button after Search), the button at the end of the sidebar's **Tags** title (**Open the Tags Page**, shown when you point at the title), or **Tags** in the command palette. With several notebooks it has a table for each, in the sidebar's order, and each change stays in its own notebook.
 
 - **Find a tag:** type in the filter at the top. It narrows the tables to tags whose name or description has what you type. Escape clears it. Choose **Tag** or **Notes** at the top of a table to sort by it.
 - **See a tag's notes:** choose its name, or **Show Notes** in its ⋯ menu. Search opens on its notes, in that tag's notebook, as choosing it in the Tags section does.
@@ -83,4 +83,4 @@ Quick Access holds up to 20 notes you want at hand. **Pin to Quick Access** in a
 
 ## The sidebar
 
-**Settings → Display** chooses which shortcuts the sidebar's top row shows (Search is always there), the order of its sections (Quick Access, Recent Notes, Notebooks, Calendar, Tags), and how many notes Recent Notes lists. ⌘\\ folds the sidebar to a rail of icons and back. On the rail, Send Feedback and Settings stay at its foot, Settings at the very bottom, and a note's top bar starts with Back and Forward.
+**Settings → Display** chooses which shortcuts the sidebar's top row shows (Search is always there; Tags, Today, This Week, Graph and Commands show unless you turn them off), the order of its sections (Quick Access, Recent Notes, Notebooks, Calendar, Tags), and how many notes Recent Notes lists. ⌘\\ folds the sidebar to a rail of icons and back. On the rail, Send Feedback and Settings stay at its foot, Settings at the very bottom, and a note's top bar starts with Back and Forward.

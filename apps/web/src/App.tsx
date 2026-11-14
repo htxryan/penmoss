@@ -407,6 +407,7 @@ function NotesShell({
             <SidebarShortcuts
               openNote={openNote}
               graphOpen={route.name === 'graph'}
+              tagsOpen={route.name === 'tags'}
               shownNote={route.name === 'note' ? route.id : null}
             />
           </div>

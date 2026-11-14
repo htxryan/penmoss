@@ -42,12 +42,20 @@ const LABELS: Record<GitSyncStatus['phase'], string> = {
 };
 
 /**
+ * A git notebook's sync status, as the status bar reads it, for both its row's red band and its
+ * dot (R2-5). The one place they read it: as shown (R2-7), so a stopped sync stays Sync Stopped
+ * through its retries (sources/hooks.ts).
+ */
+function useGitStatus(source: GitSource): GitSyncStatus {
+  return useShownGitStatus(source);
+}
+
+/**
  * A git notebook's sync state on its section's header (T50; a dot since T51, A933): the words
  * and the detail are its tooltip and accessible name. It links to its page in Settings (A1098).
+ * Sync stopped, it is the status bar's (!) on the row's red band (Ryan's review of #193, R2-5).
  */
-function GitSectionStatus({ source }: { source: GitSource }) {
-  // As shown (R2-7): a stopped sync stays Sync Stopped through its retries.
-  const status = useShownGitStatus(source);
+function GitSectionStatus({ source, status }: { source: GitSource; status: GitSyncStatus }) {
   const waiting = status.pending.filter((id) => id !== 'workspace').length;
   // Quitting waits for this push (#170 F8).
   const label = status.closing
@@ -67,7 +75,11 @@ function GitSectionStatus({ source }: { source: GitSource }) {
       data-tip={tip}
       onClick={linkHandler(gitNotebookPath(source.id))}
     >
-      <span className="dot" aria-hidden="true" />
+      {status.phase === 'stopped' ? (
+        <Icon name="warning" size={12} />
+      ) : (
+        <span className="dot" aria-hidden="true" />
+      )}
     </a>
   );
 }
@@ -117,6 +129,7 @@ export function SourceSection({
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const [renaming, setRenaming] = useState(false);
   const { rename, clash, message, cancel } = useNotebookRename(source);
+  const status = useGitStatus(source);
   const openMenu = (event: MouseEvent) => {
     if (renaming) return;
     event.preventDefault();
@@ -148,7 +161,13 @@ export function SourceSection({
       onPointerDownCapture={onActivate}
       onFocusCapture={onActivate}
     >
-      <header ref={head} className="sb-section-head" onContextMenu={openMenu}>
+      {/* A red band while its sync is stopped, as the status bar's Sync Stopped (R2-5). */}
+      <header
+        ref={head}
+        className="sb-section-head"
+        data-sync={status.phase}
+        onContextMenu={openMenu}
+      >
         {renaming ? (
           <div className="sb-section-rename">
             <Icon name={collapsed ? 'chevR' : 'chevD'} size={12} />
@@ -186,8 +205,10 @@ export function SourceSection({
           onCurrentFolderChange={onCurrentFolderChange}
           trash={{ href: trash, testId: 'section-trash', current: trashOpen }}
           timeMachine={{ href: timeMachine, current: timeMachineOpen }}
+          // Its ⋯ menu renames too, as its right-click does (R2-21).
+          onRename={renaming ? undefined : () => setRenaming(true)}
         />
-        <GitSectionStatus source={source} />
+        <GitSectionStatus source={source} status={status} />
       </header>
       {menu ? (
         <ContextMenu label={`Notebook ${source.name}`} x={menu.x} y={menu.y} onClose={closeMenu}>

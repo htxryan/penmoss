@@ -175,7 +175,12 @@ test('a phone reaches Settings → Notebooks, History and Trash from a note', as
   // Back on the screen it was last opened on, the drawer stays closed.
   await expect(drawer(page)).toBeHidden();
   await openDrawer(page);
-  await drawer(page).getByRole('link', { name: 'Trash', exact: true }).tap();
+  // In the notebook row's ⋯ (R2-21).
+  await drawer(page).getByRole('button', { name: 'More Notebook Actions', exact: true }).tap();
+  await page
+    .getByRole('menu', { name: 'More Notebook Actions' })
+    .getByRole('menuitem', { name: 'Trash', exact: true })
+    .tap();
   // The notebook's own Trash.
   await expect(page).toHaveURL(/\/trash\?source=[0-9A-Z]{26}$/);
   await expect(drawer(page)).toBeHidden();
@@ -231,7 +236,7 @@ test('phone controls are at least 44 px and nothing scrolls sideways', async ({ 
   await openDrawer(page);
   const actions = drawer(page).locator('.sb-actions');
   // One row of icon buttons, New Note first (T51, A932; T52), each still a 44 px target.
-  for (const name of ['New Note', 'Search', 'Today', 'This Week', 'Commands']) {
+  for (const name of ['New Note', 'Search', 'Tags', 'Today', 'This Week', 'Commands']) {
     await expectTouchSize(actions.getByRole('button', { name, exact: true }), name);
   }
   await expectTouchSize(actions.getByRole('link', { name: 'Graph', exact: true }), 'Graph');
@@ -240,13 +245,14 @@ test('phone controls are at least 44 px and nothing scrolls sideways', async ({ 
   const tops = await Promise.all(icons.map(async (icon) => (await icon.boundingBox())!.y));
   expect(new Set(tops.map(Math.round)).size).toBe(1);
   await expect(drawer(page).getByTestId('sidebar-more')).toHaveCount(0);
-  for (const name of ['Settings', 'Trash']) {
+  for (const name of ['Settings']) {
     await expectTouchSize(drawer(page).getByRole('link', { name, exact: true }), name);
   }
-  // The sort order is an icon button that opens a menu (T52), still a 44 px target (T36).
-  const sort = drawer(page).getByRole('button', { name: /^Sort Order for / });
-  await expectTouchSize(sort, 'sort order');
-  expect((await sort.boundingBox())!.width).toBeLessThan(60);
+  // The notebook's ⋯, which holds the sort order (R2-21), is an icon button that opens a menu,
+  // still a 44 px target (T36).
+  const more = drawer(page).getByRole('button', { name: 'More Notebook Actions', exact: true });
+  await expectTouchSize(more, 'more notebook actions');
+  expect((await more.boundingBox())!.width).toBeLessThan(60);
   await expectNoSideScroll(page, 'drawer');
   await page.keyboard.press('Escape');
 

@@ -27,7 +27,7 @@ Your repository's git history keeps every version, so you can also read it with 
 
 ## Trash
 
-**Move to Trash**, in the note's ⋯ menu, moves a note to its notebook's Trash, with **Undo** for a few seconds. **Trash** at the foot of the sidebar lists what is there.
+**Move to Trash**, in the note's ⋯ menu, moves a note to its notebook's Trash, with **Undo** for a few seconds. **Trash**, in the ⋯ menu on the notebook's row in the sidebar, lists what is there.
 
 - **Restore** puts the note back in the folder it came from (or the top level, if that folder has gone).
 - **Delete for Good** removes the note's files from the notebook. It asks first, then for Touch ID or your password (on Android, your fingerprint, face or screen lock). The repository's git history still keeps it.

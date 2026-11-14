@@ -238,7 +238,7 @@ test.describe('with a notebook', () => {
   /** The notebook's row in the sidebar (its section's head). */
   const notebookRow = (page: Page) => page.locator('.sb-source > .sb-section-head').first();
 
-  test('19: at the narrowest sidebar every chevron shows, the name is readable, and ⋯ holds the rest', async ({
+  test('19: a notebook’s row is New Note, New Folder and ⋯ at any width; ⋯ is the right-click menu with Rename…, Sort Order…, Time Machine and Trash', async ({
     page,
   }) => {
     const errors = collectErrors(page);
@@ -250,34 +250,24 @@ test.describe('with a notebook', () => {
     const row = notebookRow(page);
     const actions = row.getByTestId('tree-actions');
     const more = row.getByTestId('notebook-more');
-    const folded = ['sort-order', 'section-time-machine', 'section-trash'];
+    /** The row's buttons, in order (R2-21: the same at every width; A1392's fold is gone). */
+    const buttons = async () => {
+      await row.hover();
+      await expect(more).toBeVisible();
+      return actions
+        .locator(':scope > :is(button, a)')
+        .evaluateAll((all) => all.map((each) => each.getAttribute('aria-label')));
+    };
+    const ROW = ['New Note in This Notebook', 'New Folder', 'More Notebook Actions'];
+    expect(await buttons()).toEqual(ROW);
+    await expect(row.getByTestId('section-sync')).toBeVisible();
 
-    // At the default width (17rem) every button is on the row, and no ⋯.
-    await row.hover();
-    for (const id of ['notebook-new-note', ...folded]) {
-      await expect(actions.getByTestId(id), id).toBeVisible();
-    }
-    await expect(actions.getByRole('button', { name: 'New Folder' })).toBeVisible();
-    await expect(more).toBeHidden();
-    // Nor when the sidebar's list has a scrollbar that takes room (Linux, or a Mac set to show
-    // scroll bars always): the sidebar's width decides, not the row's. Headless Chromium hides
-    // scrollbars, so 15 px of padding at the list's end stands in for one.
-    const bar = await page.addStyleTag({ content: '.sb-list { padding-inline-end: 15px; }' });
-    await expect
-      .poll(() => row.evaluate((element) => element.getBoundingClientRect().width))
-      .toBeLessThan(260);
-    await row.hover();
-    await expect(actions.getByRole('button', { name: 'New Folder' })).toBeVisible();
-    for (const id of folded) await expect(actions.getByTestId(id), id).toBeVisible();
-    await expect(more).toBeHidden();
-    await bar.evaluate((element) => (element as HTMLStyleElement).remove());
-
-    // The narrowest.
+    // The narrowest: the same buttons.
     const edge = page.getByTestId('sidebar-resizer');
     await edge.focus();
     await page.keyboard.press('Home');
     await expect(edge).toHaveAttribute('aria-valuenow', '14.5');
-    await row.hover();
+    expect(await buttons()).toEqual(ROW);
     // The notebook's chevron keeps its 12 px, and its name has room to be read.
     const chevron = (await row.locator('.sb-section-toggle > .i').boundingBox())!;
     expect(chevron.width).toBeCloseTo(12, 0);
@@ -285,12 +275,7 @@ test.describe('with a notebook', () => {
     const name = (await row.locator('.sb-section-name').boundingBox())!;
     expect(name.x).toBeGreaterThanOrEqual(chevron.x + chevron.width);
     expect(name.width).toBeGreaterThanOrEqual(56);
-    // New Note, ⋯ and the sync dot; the others fold into ⋯.
-    await expect(actions.getByTestId('notebook-new-note')).toBeVisible();
-    await expect(more).toBeVisible();
     await expect(row.getByTestId('section-sync')).toBeVisible();
-    for (const id of folded) await expect(actions.getByTestId(id), id).toBeHidden();
-    await expect(actions.getByRole('button', { name: 'New Folder' })).toBeHidden();
     // Every folder's chevron has its size too.
     for (const twisty of await tree(page).locator('.folder-row > .twisty').all()) {
       const at = (await twisty.boundingBox())!;
@@ -299,21 +284,83 @@ test.describe('with a notebook', () => {
     }
     if (SHOTS) await page.locator('.sidebar').screenshot({ path: `${SHOTS}/window-19-narrow.png` });
 
-    // ⋯ holds them, each still working: Sort Order… opens the sort order under it.
+    // ⋯ holds the rest, each with its icon (R2-20, R2-21).
     await more.click();
     const menu = page.getByRole('menu', { name: 'More Notebook Actions' });
-    await expect(menu.getByRole('menuitem')).toHaveText([
-      'Sort Order…',
-      'New Folder',
-      'Time Machine',
-      'Trash',
-    ]);
-    await menu.getByRole('menuitem', { name: 'Sort Order…' }).click();
+    const items = menu.getByRole('menuitem');
+    await expect(items).toHaveText(['Rename…', 'Sort Order…', 'Time Machine', 'Trash']);
+    expect(
+      await items.evaluateAll((all) =>
+        all.map((each) => each.querySelector('[data-icon]')?.getAttribute('data-icon')),
+      ),
+    ).toEqual(['pencil', 'sort', 'history', 'trash']);
+    // The sidebar's right-click menu's look: its surface, its items, and their hover.
+    const look = async (target: typeof menu) => {
+      const item = target.getByRole('menuitem').first();
+      await item.hover();
+      const surface = await target.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return [style.backgroundColor, style.borderTopColor, style.boxShadow, style.padding];
+      });
+      const each = await item.evaluate((element) => {
+        const style = getComputedStyle(element);
+        const icon = element.querySelector('[data-icon]')!;
+        return [
+          style.backgroundColor,
+          style.color,
+          style.fontSize,
+          style.minHeight,
+          getComputedStyle(icon).color,
+        ];
+      });
+      return [...surface, ...each];
+    };
+    const moreLook = await look(menu);
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    await expect(more).toBeFocused();
+    await tree(page)
+      .getByRole('treeitem', { name: 'Penmoss', exact: true })
+      .click({ button: 'right' });
+    const folderMenu = page.getByTestId('context-menu');
+    await expect(folderMenu).toBeVisible();
+    expect(moreLook).toEqual(await look(folderMenu));
+    await page.keyboard.press('Escape');
+
+    // By keyboard: ↓ on ⋯ opens it, focus on its first item; ↓ moves; Sort Order… opens the
+    // sort order under ⋯; Escape goes back to ⋯.
+    await row.hover();
+    await more.focus();
+    await page.keyboard.press('ArrowDown');
+    await expect(items.first()).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(menu.getByRole('menuitem', { name: 'Sort Order…' })).toBeFocused();
+    await page.keyboard.press('Enter');
     const sort = page.getByRole('menu', { name: /^Sort Order for / });
     await expect(sort.getByRole('menuitemradio', { name: 'A–Z' })).toBeVisible();
     await sort.getByRole('menuitemradio', { name: 'A–Z' }).click();
     await expect(sort).toBeHidden();
-    await expect(actions.getByTestId('sort-order')).toHaveAttribute('data-sort', 'alpha');
+    await more.click();
+    await menu.getByRole('menuitem', { name: 'Sort Order…' }).click();
+    await expect(sort.getByRole('menuitemradio', { name: 'A–Z' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await sort.getByRole('menuitemradio', { name: 'Manual' }).click();
+
+    // Rename… edits the name in place, as the row's right-click does (A1383); Escape keeps it.
+    const before = await row.locator('.sb-section-name').textContent();
+    await row.hover();
+    await more.click();
+    await menu.getByRole('menuitem', { name: 'Rename…' }).click();
+    const input = page.getByTestId('notebook-rename-input');
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue(before!);
+    await input.press('Escape');
+    await expect(row.locator('.sb-section-name')).toHaveText(before!);
+
+    // Trash opens the notebook's Trash.
+    await row.hover();
     await more.click();
     await menu.getByRole('menuitem', { name: 'Trash' }).click();
     await expect(page).toHaveURL(/\/trash\?source=/);
