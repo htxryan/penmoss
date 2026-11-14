@@ -93,9 +93,11 @@ class EditorWebViewTest {
         val sha = "a".repeat(64)
         assertSame(picture, client.intercept(uri("https://${EditorWebView.ASSET_HOST}/attachments/$sha.png")))
         assertSame(picture, client.intercept(uri("https://${EditorWebView.ASSET_HOST}/attachments/$sha.jpg")))
+        // A drawing's SVG (PEN-28), shown as a picture.
+        assertSame(picture, client.intercept(uri("https://${EditorWebView.ASSET_HOST}/attachments/$sha.svg")))
         // A picture the phone cannot get: missing, not refused, so the editor shows its placeholder.
         assertEquals(404, client.intercept(uri("https://${EditorWebView.ASSET_HOST}/attachments/$MISSING.webp")).statusCode)
-        assertEquals(listOf(sha to "png", sha to "jpg", MISSING to "webp"), pictures)
+        assertEquals(listOf(sha to "png", sha to "jpg", sha to "svg", MISSING to "webp"), pictures)
     }
 
     @Test
@@ -118,7 +120,8 @@ class EditorWebViewTest {
             "http://${EditorWebView.ASSET_HOST}/attachments/$sha.png",
             "https://api.penmoss.app/attachments/$sha.png",
             "https://${EditorWebView.ASSET_HOST}:8443/attachments/$sha.png",
-            "https://${EditorWebView.ASSET_HOST}/attachments/$sha.svg",
+            "https://${EditorWebView.ASSET_HOST}/attachments/$sha.svg?x=1",
+            "https://${EditorWebView.ASSET_HOST}/attachments/$sha.excalidraw",
             "https://${EditorWebView.ASSET_HOST}/attachments/${"A".repeat(64)}.png",
             "https://${EditorWebView.ASSET_HOST}/attachments/$sha.png?token=x",
             "https://${EditorWebView.ASSET_HOST}/attachments/../databases/penmoss.db",
@@ -138,6 +141,25 @@ class EditorWebViewTest {
             assertEquals(200, response.statusCode)
             assertEquals("nosniff", response.responseHeaders["X-Content-Type-Options"])
             assertEquals(1, response.data.read())
+            response.data.close()
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
+    fun aDrawingsSvgIsAnsweredAsAPictureThatCouldNeverRunAsAPage() {
+        // PEN-28: an `<img>` runs none of an SVG's script; opened as a page, the policy would
+        // still give it no script, no requests and an origin of its own.
+        val file = java.io.File.createTempFile("drawing", ".svg").apply { writeText("<svg xmlns=\"http://www.w3.org/2000/svg\"/>") }
+        try {
+            val response = EditorWebView.pictureResponse(file, "svg")
+            assertEquals("image/svg+xml", response.mimeType)
+            assertEquals("nosniff", response.responseHeaders["X-Content-Type-Options"])
+            val policy = response.responseHeaders["Content-Security-Policy"]!!
+            assertTrue(policy, policy.contains("default-src 'none'"))
+            assertTrue(policy, policy.endsWith("sandbox"))
+            assertEquals(null, EditorWebView.pictureResponse(file, "png").responseHeaders["Content-Security-Policy"])
             response.data.close()
         } finally {
             file.delete()

@@ -37,6 +37,7 @@ import {
 } from 'react';
 import { useCommand, useCommands, useKeys } from '../commands/hooks';
 import { Kbd } from '../commands/Kbd';
+import { drawingServices } from '../drawing/drawings';
 import { navigate } from '../router';
 import { InfoPanel, PinnedMetadata, StatusBar } from './NoteInfo';
 import { useNoteMetadataSettings } from './metadata-state';
@@ -461,6 +462,12 @@ export function NoteView({
           release: (src) => notes.attachments.release(src),
           onError: (message) => created?.host?.notice(message),
         };
+        // Drawings (PEN-28): Excalidraw, loaded the first time one opens; its files are
+        // attachments like the rest.
+        const drawings = drawingServices(notes.attachments, {
+          onError: (message) => created?.host?.notice(message),
+          suspendShortcuts: () => commands.suspend(),
+        });
         // The editor's own element: it moves to whichever view shows the note next. In the
         // page before the editor is made, as node views may measure.
         const element = document.createElement('div');
@@ -474,6 +481,7 @@ export function NoteView({
             extensions: noteExtensions({
               images: files,
               files,
+              drawings,
               foldState: localFoldState(id, browserFoldStorage()),
               links,
               // Line symbols (T44): the synced list, Settings → Symbols, and each slot's keys.

@@ -2109,6 +2109,19 @@ a {
   display: none !important;
 }
 
+/*
+ * Drawings (PEN-28): a drawing's SVG shows as a picture does, and a click opens it where the app
+ * has the drawing editor (it then has a title). Its white background turns dark in dark mode, as
+ * Excalidraw's own canvas does.
+ */
+.note-body .pm-drawing[title] img {
+  cursor: pointer;
+}
+
+:root[data-mode='dark'] .note-body .pm-drawing img {
+  filter: invert(93%) hue-rotate(180deg);
+}
+
 .pm-image-tools .pm-image-lightbox {
   padding: 0.2rem 0.55rem;
   border: 1px solid var(--pm-border);
