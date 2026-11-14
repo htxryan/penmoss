@@ -673,8 +673,9 @@ test('the compact title bar: room for the lights in every layout, rows that drag
   await expect(page.locator('.notes-app')).toHaveAttribute('data-drawer', 'open');
   await page.waitForTimeout(300); // The drawer slides in.
   expect(await overLights(page)).toEqual([]);
-  // The drawer comes before the app bar in the DOM, so the app bar stops dragging under it.
-  await clicksEverywhere(page, 'narrow window, drawer open', { stopped: ['.app-bar'] });
+  // The drawer comes before the app bar in the DOM, so the app bar stops dragging under it, and
+  // so does the empty home, with no note open (Ryan's review of #192, finding 6).
+  await clicksEverywhere(page, 'narrow window, drawer open', { stopped: ['.app-bar', '.home'] });
   await page.keyboard.press('Escape');
   await mainBounds(app, { x: 0, y: 0, width: 1100, height: 760 });
   await expect(page.locator('.note-top')).toBeVisible();

@@ -72,7 +72,8 @@ export const UNDER_ROWS = ['.note-columns', '.settings-content', '.window-bare']
  * The title-bar rows: they drag the window (A722, A723, A727). Version History's own head, a row
  * over its overlay, went with the overlay (T51, A936): it is a tab of the note's side panel. With
  * them, what drags where there is no row (Ryan's review of #192): the strip across the top of a
- * window with none of the app in it yet (the wait, the first run; finding 1).
+ * window with none of the app in it yet (the wait, the first run; finding 1), and with no note
+ * open the empty home beside the sidebar (finding 6).
  */
 export const TITLE_BAR_ROWS = [
   '.sb-head',
@@ -82,4 +83,5 @@ export const TITLE_BAR_ROWS = [
   '.app-bar',
   '#root > .banner',
   '.window-drag',
+  '.home',
 ] as const;

@@ -5881,7 +5881,16 @@ a.toast-action {
  * match.
  */
 :root[data-titlebar='compact']
-  :is(.sb-head, .note-top, .pm-graph-bar, .settings-bar, .app-bar, #root > .banner, .window-drag) {
+  :is(
+    .sb-head,
+    .note-top,
+    .pm-graph-bar,
+    .settings-bar,
+    .app-bar,
+    #root > .banner,
+    .window-drag,
+    .home
+  ) {
   -webkit-app-region: drag;
 }
 
@@ -5993,12 +6002,21 @@ a.toast-action {
  * ones, so while one is open those rows stop dragging rather than rely on regions being taken
  * in paint order. (`#root` outweighs the rows' rule, whose `#root > .banner` makes it an id's.)
  */
-:root[data-titlebar='compact'] #root .notes-app[data-drawer='open'] .app-bar,
+:root[data-titlebar='compact'] #root .notes-app[data-drawer='open'] :is(.app-bar, .home),
 :root[data-titlebar='compact']:has(
     #root .sidebar :is(.menu, [role='menu'], [role='dialog'], [role='listbox'])
   )
-  :is(.note-top, .pm-graph-bar, .settings-bar, .app-bar) {
+  :is(.note-top, .pm-graph-bar, .settings-bar, .app-bar, .home) {
   -webkit-app-region: no-drag;
+}
+
+/*
+ * With no note open, the empty home beside the sidebar drags the window (Ryan's review of #192,
+ * finding 6); its links and buttons click, as anywhere. It starts clear of the sidebar's resize
+ * strip, whose 4 px over it are earlier in the DOM, so the home's drag would win there (A1147).
+ */
+:root[data-titlebar='compact'] .home {
+  margin-inline-start: 4px;
 }
 
 /* The sidebar's header is the first row: as tall as the note's top bar, the lights before the brand. */
