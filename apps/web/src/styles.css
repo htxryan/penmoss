@@ -2186,13 +2186,15 @@ a {
   cursor: pointer;
 }
 
+/* Hovered, each stays opaque over the drawing: its tint is mixed into the raised surface (R2-16). */
 .note-body .pm-drawing-tool:hover {
   border-color: var(--pm-border-strong);
+  background: color-mix(in oklab, var(--pm-fg) 6%, var(--pm-raised));
 }
 
 .note-body .pm-drawing-delete:hover {
-  border-color: color-mix(in oklab, var(--pm-danger) 45%, transparent);
-  background: var(--pm-danger-soft);
+  border-color: color-mix(in oklab, var(--pm-danger) 45%, var(--pm-raised));
+  background: color-mix(in oklab, var(--pm-danger) 12%, var(--pm-raised));
   color: var(--pm-danger);
 }
 

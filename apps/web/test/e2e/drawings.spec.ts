@@ -1,4 +1,4 @@
-import { expect, macContext, PREVIEW, seeded, test, type Page } from './fixtures';
+import { expect, macContext, PREVIEW, seeded, test, type Locator, type Page } from './fixtures';
 import { remoteFiles, remoteMarkdown } from './support/remote';
 import { remoteBytes } from './support/sync';
 
@@ -26,6 +26,16 @@ function collectErrors(page: Page): string[] {
   });
   page.on('pageerror', (error) => errors.push(error.message));
   return errors;
+}
+
+/** Whether `button`'s background, in whatever colour syntax it computes to, is fully opaque. */
+async function opaque(button: Locator): Promise<boolean> {
+  return button.evaluate((element) => {
+    const context = document.createElement('canvas').getContext('2d')!;
+    context.fillStyle = getComputedStyle(element).backgroundColor;
+    context.fillRect(0, 0, 1, 1);
+    return context.getImageData(0, 0, 1, 1).data[3] === 255;
+  });
 }
 
 async function createNote(page: Page, title: string): Promise<string> {
@@ -148,6 +158,11 @@ test('PEN-28: draw in a note, save it as files in git, open it again and edit it
   await page.mouse.move(0, 0);
   await expect(editButton).toBeVisible();
   await expect(deleteButton).toBeVisible();
+  // Both are opaque over the drawing's lines, Delete's red tint too while pointed at (R2-16).
+  expect(await opaque(editButton)).toBe(true);
+  await deleteButton.hover();
+  expect(await opaque(deleteButton)).toBe(true);
+  await page.mouse.move(0, 0);
 
   // Edit opens it again, with its rectangle; an ellipse added and Done point the note at a new
   // pair of files.
