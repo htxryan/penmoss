@@ -246,6 +246,15 @@
       }
     },
     {
+      "id": "app.tags",
+      "title": "Tags",
+      "area": "Navigation",
+      "scope": "global",
+      "android": {
+        "na": "Describing tags is the Mac's (PEN-68): the phone's Tags lists them and their notes"
+      }
+    },
+    {
       "id": "note.openInNewWindow",
       "title": "Open in New Window",
       "area": "Note",

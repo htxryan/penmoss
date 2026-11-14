@@ -197,6 +197,13 @@
       "keys": []
     },
     {
+      "id": "app.tags",
+      "title": "Tags",
+      "area": "Navigation",
+      "scope": "global",
+      "keys": []
+    },
+    {
       "id": "note.openInNewWindow",
       "title": "Open in New Window",
       "area": "Note",

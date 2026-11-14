@@ -279,6 +279,10 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
     if (overlay) close(false);
     navigate('/trash');
   });
+  useCommand('app.tags', () => {
+    if (overlay) close(false);
+    navigate('/tags');
+  });
   useCommand('journal.settings', () => {
     if (overlay) close(false);
     navigate('/settings/journal');

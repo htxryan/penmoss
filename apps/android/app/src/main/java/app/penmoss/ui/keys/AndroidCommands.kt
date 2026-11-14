@@ -75,6 +75,8 @@ object AndroidCommands {
         // T52 item 4: the note's ⋮ menu, Home's selection bar and a search result's sheet.
         "note.copyAgentReference" to Coverage.Native(NOTE),
         "app.trash" to Coverage.Native(ANYWHERE),
+        // PEN-68: the Mac's Tags page, where tags are described; the phone keeps the descriptions as it syncs.
+        "app.tags" to Coverage.NotHere("Describing tags is the Mac app's (PEN-68): the phone's Tags lists them and their notes, and keeps their descriptions as it syncs."),
         // T45 (D37, A710): note windows are the Mac app's and the web's; a phone has one screen.
         "note.openInNewWindow" to Coverage.NotHere("A phone shows one screen at a time (PL7): Android's split screen and Recents already put Penmoss beside another app, and a note opened from a link opens on its own screen with Back (T45, D37)."),
         "window.back" to Coverage.NotHere("A note window's (T45): the phone's own Back goes back from a note to the one before it."),

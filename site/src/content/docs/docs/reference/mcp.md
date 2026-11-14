@@ -1,11 +1,11 @@
 ---
 title: MCP tools
-description: The 34 tools Penmoss's local MCP server gives an agent, with their arguments, and how search, edits and conflicts work.
+description: The 35 tools Penmoss's local MCP server gives an agent, with their arguments, and how search, edits and conflicts work.
 ---
 
 This page lists every tool the MCP server gives an agent, what each one does and the arguments it takes. To connect an agent, see [How agents work](/docs/agents/).
 
-`penmoss mcp --notebook <name>` is an MCP server over stdio for one notebook. It has 34 tools, no resources and no prompts. It works on the notebook's clone on your Mac, as that clone's writer. Required arguments are marked \*.
+`penmoss mcp --notebook <name>` is an MCP server over stdio for one notebook. It has 35 tools, no resources and no prompts. It works on the notebook's clone on your Mac, as that clone's writer. Required arguments are marked \*.
 
 ## Search and read
 
@@ -21,14 +21,19 @@ Meaning needs the model on this Mac, and **Settings → Search by Meaning** on w
 
 ### Reading
 
-| Tool             | What it does                                                                      | Arguments                              |
-| ---------------- | --------------------------------------------------------------------------------- | -------------------------------------- |
-| `read_note`      | The note's title, tags, headings, body and `baseVersion`, in parts of about 60 KB | `id`\*, `heading`, `offset`            |
-| `list_folder`    | A folder's folders and notes, in the app's order                                  | `folderId` or `path`                   |
-| `list_tags`      | Every tag with its count, or the notes with one tag                               | `tag`                                  |
-| `get_backlinks`  | The notes that link to this one, and those that mention it                        | `id`\*                                 |
-| `list_recent`    | Notes, newest first, with daily and weekly notes marked                           | `limit` (1 to 100)                     |
-| `get_daily_note` | Today's note (or a date's, or the week's), made from the template if needed       | `date`, `period` (`daily` or `weekly`) |
+| Tool             | What it does                                                                      | Arguments                                  |
+| ---------------- | --------------------------------------------------------------------------------- | ------------------------------------------ |
+| `read_note`      | The note's title, tags, headings, body and `baseVersion`, in parts of about 60 KB | `id`\*, `heading`, `offset`                |
+| `list_folder`    | A folder's folders and notes, in the app's order                                  | `folderId` or `path`                       |
+| `list_tags`      | Every tag with its count and description, or the notes with one tag               | `tag`                                      |
+| `describe_tags`  | What tags mean: each tag's description, count and its parents' descriptions       | `tags` (a parent includes its nested tags) |
+| `get_backlinks`  | The notes that link to this one, and those that mention it                        | `id`\*                                     |
+| `list_recent`    | Notes, newest first, with daily and weekly notes marked                           | `limit` (1 to 100)                         |
+| `get_daily_note` | Today's note (or a date's, or the week's), made from the template if needed       | `date`, `period` (`daily` or `weekly`)     |
+
+### What tags mean
+
+Each tag can have a description you write on the [Tags page](/docs/organise/#describe-your-tags). `describe_tags` gives each tag with its `description` (`null` when it has none), how many `notes` have it or a tag nested under it, and the descriptions of the tags above it (`ancestors`, outermost first), so an agent reading `#project/penmoss` also learns what `#project` means. With no `tags`, it gives every tag; with `tags`, those and the tags nested under each. Agents read descriptions but can't change them.
 
 ## Write
 
