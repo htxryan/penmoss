@@ -15,6 +15,8 @@ The note's title sits above its first line, and the caret moves between them as 
 
 Type `/` at the start of a line or after a space to open the slash menu. Keep typing to filter it, move with ↑ and ↓, and press Enter or Tab to insert. Escape closes it.
 
+In the Mac app and on the web you can also right-click in a note, with no text selected, to open the same menu at that spot without typing `/`, or press the context-menu key or Shift+F10 to open it at the caret. Type to filter it as before; what you type shows at the top of the menu, not in the note. A right-click with text selected, or on a link, a picture, a drawing, a table, code or a comment, works as it did.
+
 | Item               | Also found by                      | In markdown      |
 | ------------------ | ---------------------------------- | ---------------- |
 | Text               | paragraph, plain                   |                  |

@@ -483,6 +483,8 @@ export function NoteView({
               images: files,
               files,
               drawings,
+              // A right-click with nothing selected opens the block menu there (Mac and web).
+              blockContextMenu: true,
               foldState: localFoldState(id, browserFoldStorage()),
               links,
               // Line symbols (T44): the synced list, Settings → Symbols, and each slot's keys.

@@ -531,3 +531,177 @@ describe('slash menu: image', () => {
     }
   });
 });
+
+describe('the block menu on a right-click (no `/` typed)', () => {
+  /** A note opened as the Mac app and the web open one: with the right-click menu. */
+  const withMenu = (content?: Parameters<typeof openEditor>[0]) =>
+    openEditor(content, { blockContextMenu: true });
+
+  /**
+   * A right-click at document position `pos` (happy-dom has no layout, so the place under the
+   * pointer is given), on `target` (the note's text by default). Returns the contextmenu event.
+   */
+  function rightClick(collab: Collab, pos: number, target?: Element): MouseEvent {
+    const { view } = collab.editor;
+    const at = vi.spyOn(view, 'posAtCoords').mockReturnValue({ pos, inside: -1 });
+    try {
+      const on = target ?? view.dom.querySelector('p') ?? view.dom;
+      const init = { bubbles: true, cancelable: true, button: 2, clientX: 10, clientY: 10 };
+      on.dispatchEvent(new MouseEvent('mousedown', init));
+      const event = new MouseEvent('contextmenu', init);
+      on.dispatchEvent(event);
+      return event;
+    } finally {
+      at.mockRestore();
+    }
+  }
+
+  const typeKeys = (collab: Collab, text: string) => {
+    for (const key of text) expect(press(collab.editor.view, key)).toBe(true);
+  };
+
+  const filterOf = () => document.querySelector<HTMLElement>('[data-testid="slash-filter"]')!;
+
+  it('opens at the click with the caret there, filters as you type, and inserts there', () => {
+    const collab = withMenu([paragraph('Beds'), paragraph(), paragraph('Paths')]);
+    const { view } = collab.editor;
+    const at = startOf(view, 'paragraph', 1);
+    const event = rightClick(collab, at);
+    expect(event.defaultPrevented).toBe(true);
+    expect(isOpen(collab)).toBe(true);
+    expect(menuOf(collab)!.isContextMenu).toBe(true);
+    expect(view.state.selection.empty).toBe(true);
+    expect(view.state.selection.from).toBe(at);
+    expect(ids(menuOf(collab)!.options)).toEqual(
+      ids(availableBlockItems(collab.editor).filter((item) => !item.searchOnly)),
+    );
+    expect(filterOf().hidden).toBe(false);
+    expect(filterOf().textContent).toBe('/');
+    // Typing filters the menu, not the note.
+    typeKeys(collab, 'checkx');
+    expect(menuOf(collab)!.options).toEqual([]);
+    expect(press(view, 'Backspace')).toBe(true);
+    expect(filterOf().textContent).toBe('/check');
+    expect(menuOf(collab)!.selected?.id).toBe('taskList');
+    expect(markdownOf(collab)).toBe('Beds\n\nPaths\n');
+    expect(press(view, 'Enter')).toBe(true);
+    expect(isOpen(collab)).toBe(false);
+    type(view, 'Water');
+    expect(markdownOf(collab)).toBe('Beds\n\n- [ ] Water\n\nPaths\n');
+  });
+
+  it('closes with Escape, or Backspace with nothing typed, leaving the note as it was', () => {
+    const collab = withMenu([paragraph('Beds')]);
+    const { view } = collab.editor;
+    rightClick(collab, 3);
+    typeKeys(collab, 'he');
+    expect(press(view, 'Escape')).toBe(true);
+    expect(isOpen(collab)).toBe(false);
+    rightClick(collab, 3);
+    expect(press(view, 'Backspace')).toBe(true);
+    expect(isOpen(collab)).toBe(false);
+    expect(markdownOf(collab)).toBe('Beds\n');
+    // Any other key closes it and does what it does.
+    rightClick(collab, 3);
+    expect(isOpen(collab)).toBe(true);
+    expect(press(view, 'ArrowLeft')).toBe(false);
+    expect(isOpen(collab)).toBe(false);
+  });
+
+  it('after text in the line, puts the block after it, as the slash menu does', () => {
+    const collab = withMenu([paragraph('Beds')]);
+    rightClick(collab, 5);
+    typeKeys(collab, 'divider');
+    press(collab.editor.view, 'Enter');
+    expect(markdownOf(collab)).toBe('Beds\n\n---\n');
+  });
+
+  it('opens at the caret with the context-menu key or Shift+F10', () => {
+    const collab = withMenu([paragraph('Beds')]);
+    const { view } = collab.editor;
+    select(view, 3);
+    expect(press(view, 'ContextMenu')).toBe(true);
+    expect(menuOf(collab)!.isContextMenu).toBe(true);
+    // The key's own contextmenu event that follows opens nothing more, and no page menu.
+    const follow = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    view.dom.dispatchEvent(follow);
+    expect(follow.defaultPrevented).toBe(true);
+    press(view, 'Escape');
+    expect(press(view, 'F10', { shiftKey: true })).toBe(true);
+    expect(isOpen(collab)).toBe(true);
+    press(view, 'Escape');
+    expect(press(view, 'F10')).toBe(false);
+    expect(isOpen(collab)).toBe(false);
+  });
+
+  it('leaves the page its own menu with text selected', () => {
+    const collab = withMenu([paragraph('Beds and paths')]);
+    const { view } = collab.editor;
+    select(view, 1, 5);
+    expect(rightClick(collab, 3).defaultPrevented).toBe(false);
+    expect(isOpen(collab)).toBe(false);
+    expect(press(view, 'ContextMenu')).toBe(false);
+  });
+
+  it('leaves the page its own menu on a link, in code, in a table, or on a comment', () => {
+    const link = { type: 'link', attrs: { href: 'https://example.com' } };
+    const collab = withMenu([
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'See ' },
+          { type: 'text', text: 'the site', marks: [link] },
+          { type: 'text', text: ' and ' },
+          { type: 'text', text: 'code', marks: [{ type: 'code' }] },
+        ],
+      },
+      codeBlock('const a = 1;'),
+    ]);
+    const { view } = collab.editor;
+    expect(rightClick(collab, 7, view.dom.querySelector('a')!).defaultPrevented).toBe(false);
+    expect(rightClick(collab, 20, view.dom.querySelector('code')!).defaultPrevented).toBe(false);
+    // Places in a link or in code, whatever the element under the pointer says.
+    expect(rightClick(collab, 7).defaultPrevented).toBe(false);
+    expect(rightClick(collab, startOf(view, 'codeBlock') + 2).defaultPrevented).toBe(false);
+    const comment = document.createElement('span');
+    comment.className = 'pm-comment';
+    view.dom.querySelector('p')!.append(comment);
+    expect(rightClick(collab, 2, comment).defaultPrevented).toBe(false);
+    expect(isOpen(collab)).toBe(false);
+
+    const table = withMenu();
+    type(table.editor.view, '| a | b |\n');
+    const cell = startOf(table.editor.view, 'tableCell');
+    const td = table.editor.view.dom.querySelector('td, th')!;
+    expect(rightClick(table, cell, td).defaultPrevented).toBe(false);
+    expect(rightClick(table, cell).defaultPrevented).toBe(false);
+    expect(isOpen(table)).toBe(false);
+  });
+
+  it('is off without the option (Android) and in a read-only note', () => {
+    const android = openEditor([paragraph('Beds')]);
+    expect(rightClick(android, 3).defaultPrevented).toBe(false);
+    select(android.editor.view, 3);
+    expect(press(android.editor.view, 'ContextMenu')).toBe(false);
+    expect(isOpen(android)).toBe(false);
+    const readOnly = withMenu([paragraph('Beds')]);
+    readOnly.editor.setEditable(false);
+    expect(rightClick(readOnly, 3).defaultPrevented).toBe(false);
+    expect(isOpen(readOnly)).toBe(false);
+  });
+
+  it('closes on a press outside it, and a click on an option inserts that block', () => {
+    const collab = withMenu([paragraph()]);
+    rightClick(collab, 1);
+    document.body.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    expect(isOpen(collab)).toBe(false);
+    rightClick(collab, 1);
+    const option = [...document.querySelectorAll<HTMLElement>('.pm-slash-option')].find((element) =>
+      element.textContent?.includes('Quote'),
+    )!;
+    option.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(isOpen(collab)).toBe(false);
+    type(collab.editor.view, 'Said');
+    expect(markdownOf(collab)).toBe('> Said\n');
+  });
+});

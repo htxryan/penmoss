@@ -693,6 +693,26 @@
   text-transform: uppercase;
 }
 
+/* Opened by a right-click (no `/` in the note): what is typed to filter it, as `/query`. */
+.pm-slash-filter {
+  margin: 0 0.25rem 0.25rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-bg);
+  font-family: var(--pm-mono);
+  white-space: pre;
+}
+
+.pm-slash-filter[hidden] {
+  display: none;
+}
+
+.pm-slash-filter-empty::after {
+  color: var(--pm-muted);
+  font-family: var(--pm-font);
+  content: ' Type to filter';
+}
+
 .pm-slash-option {
   display: flex;
   gap: 0.6rem;
