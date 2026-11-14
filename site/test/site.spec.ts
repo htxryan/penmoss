@@ -317,7 +317,11 @@ test.describe('the brochure pages', () => {
   }) => {
     await page.goto('/');
     await expect(page).toHaveTitle('Penmoss: Your Git. Your Agents. Your Notes.');
-    await expect(page.locator('.hero .pill')).toHaveText('Free and open source · Mac and Android');
+    // No pill over the title, and the title close under the header (PEN-74).
+    await expect(page.locator('.hero .pill')).toHaveCount(0);
+    const header = await page.locator('.site-header').boundingBox();
+    const title = await page.locator('#hero-title').boundingBox();
+    expect(title!.y - (header!.y + header!.height)).toBeLessThanOrEqual(48);
     await expect(page.locator('.arch img')).toHaveCount(3);
     await expect(page.locator('#features .feature-card')).toHaveCount(6);
     await expect(page.locator('#download')).toContainText('Install Guide');

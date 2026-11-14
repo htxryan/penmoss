@@ -5635,14 +5635,14 @@ a.toast-action {
 
 /*
  * What scrolls under a row sets no region of its own (A1123; UNDER_ROWS in no-drag.ts): a note's
- * title and text go up under its top bar as it scrolls, and their controls' `no-drag`, later in
- * the DOM, took the bar's empty part from it. None of them is ever in a row. `unset`, not
+ * title and text go up under its top bar as it scrolls, and Settings' sections under its bar
+ * (PEN-65), and their controls' `no-drag`, later in the DOM, took the bar's empty part from it. None of them is ever in a row. `unset`, not
  * `none`: Chromium computes an explicit `none` as `no-drag`, while `unset` takes the parent's
  * region, as the property is inherited, so a control in a floating surface (a menu, the selection
  * toolbar) is still `no-drag` from it, and one in the text has none.
  */
 :root[data-titlebar='compact']
-  .note-columns
+  :is(.note-columns, .settings-content)
   :is(
     button,
     a[href],

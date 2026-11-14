@@ -237,7 +237,7 @@ describe('the compact title bar in the page (T47, A722, A723)', () => {
       'utf8',
     );
     const rule =
-      /:root\[data-titlebar='compact'\]\s*([.#\w-]+)\s*:is\(([^{]*?)\):not\(([^{]*)\)\s*\{\s*-webkit-app-region: unset;/.exec(
+      /:root\[data-titlebar='compact'\]\s*:is\(([^)]*)\)\s*:is\(([^{]*?)\):not\(([^{]*)\)\s*\{\s*-webkit-app-region: unset;/.exec(
         css,
       );
     expect(rule).not.toBeNull();
@@ -246,7 +246,7 @@ describe('the compact title bar in the page (T47, A722, A723)', () => {
         .split(/,\s*(?![^()]*\))/)
         .map((selector) => selector.trim().replaceAll("'", '"'))
         .filter(Boolean);
-    expect([rule![1]]).toEqual([...UNDER_ROWS]);
+    expect(list(rule![1]!)).toEqual([...UNDER_ROWS]);
     expect(list(rule![2]!)).toEqual([...NO_DRAG_CONTROLS]);
     expect(list(rule![3]!)).toEqual([...NO_DRAG_SURFACES]);
     // The editor's floating toolbars and menus are surfaces.

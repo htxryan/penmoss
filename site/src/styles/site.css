@@ -225,10 +225,10 @@ a:focus-visible {
   font-weight: 750;
 }
 
-/* The hero */
+/* The hero: the title close under the header (PEN-74) */
 .hero {
   background: linear-gradient(var(--pm-cream), var(--pm-paper));
-  padding: 88px 24px 0;
+  padding: 40px 24px 0;
 }
 
 .hero .wrap {
@@ -237,20 +237,6 @@ a:focus-visible {
   align-items: center;
   text-align: center;
   gap: 24px;
-}
-
-.pill {
-  margin: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--pm-accent);
-  background: var(--pm-pill);
-  border-radius: 999px;
-  padding: 6px 14px;
 }
 
 .hero h1 {
