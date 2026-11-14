@@ -204,6 +204,13 @@
       "keys": []
     },
     {
+      "id": "app.timeMachine",
+      "title": "Time Machine",
+      "area": "Navigation",
+      "scope": "global",
+      "keys": []
+    },
+    {
       "id": "note.openInNewWindow",
       "title": "Open in New Window",
       "area": "Note",

@@ -3,13 +3,13 @@ import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useSta
 import { useCommand, useCommands } from '../commands/hooks';
 import { useNotes } from '../notes/hooks';
 import { useSource } from '../sources/hooks';
+import { Authors, DiffLines } from './parts';
+import { Replay } from './Replay';
 import { revertible } from './revertible';
 import {
   gitHistory,
   noHistory,
   HistoryRefused,
-  type DiffOp,
-  type HistoryAuthor,
   type HistoryChange,
   type HistoryConflict,
   type HistoryDetail,
@@ -17,7 +17,6 @@ import {
   type HistorySource,
 } from './source';
 
-type Author = HistoryAuthor;
 type History = HistoryList;
 type Detail = HistoryDetail;
 type Conflict = HistoryConflict;
@@ -39,56 +38,6 @@ const time = (ms: number) =>
     hour: 'numeric',
     minute: '2-digit',
   });
-
-/** Unchanged lines kept around each change in the diff. */
-const CONTEXT = 2;
-
-/** The diff with long unchanged runs folded, as rows to render. */
-function diffRows(diff: readonly DiffOp[]): Array<DiffOp | { op: 'fold'; count: number }> {
-  const rows: Array<DiffOp | { op: 'fold'; count: number }> = [];
-  const changed = diff.map((op) => op.op !== 'same');
-  const near = (i: number) => {
-    for (let j = Math.max(0, i - CONTEXT); j <= Math.min(diff.length - 1, i + CONTEXT); j++) {
-      if (changed[j]) return true;
-    }
-    return false;
-  };
-  let folded = 0;
-  diff.forEach((op, i) => {
-    if (op.op === 'same' && !near(i)) {
-      folded++;
-      return;
-    }
-    if (folded > 0) rows.push({ op: 'fold', count: folded });
-    folded = 0;
-    rows.push(op);
-  });
-  if (folded > 0) rows.push({ op: 'fold', count: folded });
-  return rows;
-}
-
-function Authors({ authors }: { authors: readonly Author[] }) {
-  return (
-    <span className="history-authors">
-      {authors.map((author) => (
-        <span key={author.id} className="history-author" data-kind={author.kind}>
-          <span className="sr-only">{author.kind === 'agent' ? 'Agent' : 'Device'}: </span>
-          {author.kind === 'agent' ? (
-            <svg viewBox="0 0 16 16" aria-hidden="true" className="history-kind">
-              <path d="M8 1.5 9.6 6.4 14.5 8 9.6 9.6 8 14.5 6.4 9.6 1.5 8 6.4 6.4Z" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 16 16" aria-hidden="true" className="history-kind">
-              <rect x="2" y="3" width="12" height="8" rx="1.2" fill="none" stroke="currentColor" />
-              <path d="M5.5 13.5h5" stroke="currentColor" />
-            </svg>
-          )}
-          {author.label}
-        </span>
-      ))}
-    </span>
-  );
-}
 
 /** Why the history did not load, in words (T39: a server error used to read as offline). */
 function loadFailure(caught: unknown, source: HistorySource): string {
@@ -124,6 +73,8 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
   const [status, setStatus] = useState<string | null>(null);
   const [conflicts, setConflicts] = useState<readonly Conflict[]>([]);
   const [busy, setBusy] = useState(false);
+  // Replay (PEN-21): the versions played forward, in place of the list.
+  const [replaying, setReplaying] = useState(false);
   const heading = useId();
 
   /** Bumped to read the list again (Try Again). */
@@ -238,6 +189,17 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
         >
           {source.saveLabel}
         </button>
+        <button
+          type="button"
+          className="btn quiet history-replay-start"
+          data-ui="item"
+          data-testid="history-replay-start"
+          disabled={!history || history.versions.length === 0 || replaying}
+          onClick={() => setReplaying(true)}
+        >
+          <Icon name="play" />
+          Replay
+        </button>
       </div>
       {error ? (
         <div className="history-empty muted" role="status">
@@ -262,6 +224,8 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
           <span className="spinner" aria-hidden="true" />
           Loading versions…
         </p>
+      ) : replaying ? (
+        <Replay source={source} versions={history.versions} onClose={() => setReplaying(false)} />
       ) : (
         <div className="history-body">
           <ol className="history-list" aria-label="Versions">
@@ -375,30 +339,7 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                       ? 'The first version'
                       : 'Changes since the version before'}
                   </p>
-                  <pre>
-                    {diffRows(detail.diff).map((row, i) =>
-                      row.op === 'fold' ? (
-                        <span key={i} className="diff-fold">
-                          ⋯ {row.count} unchanged {row.count === 1 ? 'line' : 'lines'}
-                          {'\n'}
-                        </span>
-                      ) : (
-                        <span key={i} className={`diff-${row.op}`} data-op={row.op}>
-                          <span className="diff-sign" aria-hidden="true">
-                            {row.op === 'add' ? '+' : row.op === 'del' ? '−' : ' '}
-                          </span>
-                          {row.op === 'add' ? (
-                            <ins>{row.line}</ins>
-                          ) : row.op === 'del' ? (
-                            <del>{row.line}</del>
-                          ) : (
-                            row.line
-                          )}
-                          {'\n'}
-                        </span>
-                      ),
-                    )}
-                  </pre>
+                  <DiffLines diff={detail.diff} />
                 </div>
               ) : null}
             </section>

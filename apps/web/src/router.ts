@@ -24,6 +24,8 @@ export type Route =
   | { readonly name: 'trash' }
   /** Every tag, with what each means (PEN-68). */
   | { readonly name: 'tags' }
+  /** The Time Machine (PEN-21): a git notebook at any moment, and what changed. */
+  | { readonly name: 'time-machine' }
   | {
       readonly name: 'settings';
       readonly section: SettingsSection;
@@ -80,6 +82,8 @@ export function parseRoute(pathname: string): Route {
       return { name: 'trash' };
     case '/tags':
       return { name: 'tags' };
+    case '/time-machine':
+      return { name: 'time-machine' };
     case '/settings':
     case '/settings/':
       return { name: 'settings', section: SETTINGS_SECTIONS[0] };

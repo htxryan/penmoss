@@ -54,6 +54,7 @@ import { TaggedNotes } from './tags/TaggedNotes';
 import { TrashView } from './trash/TrashView';
 import { TagPane, TagsPageLink } from './tags/TagPane';
 import { TagsPage, type ShowTag } from './tags/TagsPage';
+import { TimeMachinePage } from './time-machine/TimeMachinePage';
 import { FolderTree } from './workspace/FolderTree';
 import { TreeActions } from './workspace/TreeActions';
 import { RecentSection } from './notes/RecentSection';
@@ -598,6 +599,18 @@ function NotesShell({
               <AppBar title="Tags" />
               <TagsPage onShowTag={showTag} />
             </>
+          ) : route.name === 'time-machine' ? (
+            // A git notebook's past (PEN-21): `/time-machine?source=<id>`, the Journal's without.
+            <InSource
+              source={
+                sourcesRegistry?.sourceById(params.get('source') ?? '') ??
+                sourcesState?.journal ??
+                null
+              }
+            >
+              <AppBar title="Time Machine" />
+              <TimeMachinePage params={params} />
+            </InSource>
           ) : route.name === 'not-found' ? (
             <>
               <AppBar title="Penmoss" brand />

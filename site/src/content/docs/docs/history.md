@@ -15,7 +15,11 @@ Select a version to see what it changed.
 - **Revert This Edit**, on an agent's version, undoes only what that version changed and keeps every edit made since. If a later edit changed the same lines, it says so.
 - **Sync Now** saves a version now. Otherwise each sync makes one.
 
+**Replay** plays the note's versions forward, oldest first, about one a second. Each one shows the whole note with what that version changed marked (lines added and removed) and who made it. **Pause**, **Previous Version** and **Next Version** stop and step, the slider jumps to any version, and **1×**, **2×** and **4×** set the speed. **Close Replay** goes back to the list.
+
 On the Mac, Restore and Revert first ask for Touch ID or your password. On Android they ask for your fingerprint, face or screen lock.
+
+To see a whole notebook as it was on any day, or what changed this week, use the [Time Machine](/docs/time-machine/).
 
 Your repository's git history keeps every version, so you can also read it with `git log`, or with [`penmoss history`](/docs/reference/cli/#history).
 
