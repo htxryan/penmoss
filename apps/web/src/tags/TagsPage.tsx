@@ -253,7 +253,12 @@ function NotebookTags({
           <div className="tags-page-actions" role="group" aria-label="Selected Tags">
             <span className="tags-page-selected">{picked.length} Selected</span>
             {picked.length === 1 ? (
-              <button type="button" className="btn" onClick={() => setRenaming(picked[0]!)}>
+              <button
+                type="button"
+                className="btn"
+                data-ui="item"
+                onClick={() => setRenaming(picked[0]!)}
+              >
                 <Icon name="pencil" size={14} />
                 Rename…
               </button>
@@ -261,18 +266,25 @@ function NotebookTags({
             <button
               type="button"
               className="btn"
+              data-ui="item"
               onClick={() => setMerging({ sources: picked, target: null })}
             >
               <Icon name="branch" size={14} />
               Merge…
             </button>
-            <button type="button" className="btn danger" onClick={() => setDeleting(picked)}>
+            <button
+              type="button"
+              className="btn danger"
+              data-ui="item"
+              onClick={() => setDeleting(picked)}
+            >
               <Icon name="trash" size={14} />
               Delete…
             </button>
             <button
               type="button"
               className="icon-btn"
+              data-ui="item"
               aria-label="Clear Selection"
               data-tip="Clear Selection"
               onClick={() => setSelected(new Set())}
@@ -661,6 +673,7 @@ function RenameRow({
             <button
               type="button"
               className="btn"
+              data-ui="dismiss"
               onClick={() => {
                 input.current?.focus();
                 input.current?.select();
@@ -671,6 +684,7 @@ function RenameRow({
             <button
               type="button"
               className="btn primary"
+              data-ui="submit"
               onClick={() => {
                 closed.current = true;
                 onMergeInto(existing.tag);
@@ -719,12 +733,13 @@ function RenameRow({
                 ? `Renames ${moved.length + 1} tags in ${notesText(notes)}.`
                 : `Renames it in ${notesText(notes)}.`}
             </span>
-            <button type="button" className="btn" onClick={cancel}>
+            <button type="button" className="btn" data-ui="dismiss" onClick={cancel}>
               Cancel
             </button>
             <button
               type="button"
               className="btn primary"
+              data-ui="submit"
               disabled={busy || unchanged}
               onClick={commit}
             >
@@ -949,7 +964,7 @@ function DescriptionField({
         ) : state === 'failed' ? (
           <>
             <span className="tags-save-failed">Not saved</span>
-            <button type="button" className="btn quiet" onClick={store}>
+            <button type="button" className="btn quiet" data-ui="submit" onClick={store}>
               Try Again
             </button>
           </>
