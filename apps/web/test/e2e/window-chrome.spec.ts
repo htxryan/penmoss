@@ -2,7 +2,10 @@ import { expect, test, type Page } from './fixtures';
 
 // Ryan's review of #192 (14 Nov 2026), the window and its chrome, in the web app with the Mac
 // app's window (`macWindow`: the compact title bar): the first run's window drags by a strip
-// across its top (finding 1).
+// across its top (finding 1); with no note open the empty home drags it (6); interface text is
+// not selectable and keeps the arrow, content is (7); at the narrowest sidebar a notebook's
+// chevron shows and ⋯ holds its other buttons (19); a folder's + sits flush (20). The rail's
+// order (18) is in sidebar-pen-135.spec.ts.
 
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
 /** The first row, where the traffic lights are (`--pm-titlebar-row`). */
