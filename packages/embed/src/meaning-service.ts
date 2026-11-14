@@ -165,7 +165,7 @@ export class MeaningService {
   }
 
   /**
-   * Forgets a notebook the page removed (A-NEW-1): it leaves "covers N of M", indexing and
+   * Forgets a notebook the page removed (A1373): it leaves "covers N of M", indexing and
    * compaction's keep set, and the page hears the new count.
    */
   async close(notebookId: string): Promise<void> {
@@ -379,7 +379,7 @@ export class MeaningService {
   }
 
   /**
-   * Every notebook has sent the text of each of its notes (A-NEW-1): until then a notebook's keys
+   * Every notebook has sent the text of each of its notes (A1373): until then a notebook's keys
    * are not all known, and compaction would drop the vectors of the notes still to come.
    */
   private everyNoteSent(): boolean {

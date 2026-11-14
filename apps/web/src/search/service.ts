@@ -172,7 +172,7 @@ export class SearchService {
 
   /**
    * The search is let go: its meaning stops, and with `forget` (the notebook was removed) the
-   * service forgets the notebook (A-NEW-1).
+   * service forgets the notebook (A1373).
    */
   close(forget = true): void {
     this.deps.meaning?.close(forget);

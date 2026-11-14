@@ -268,7 +268,7 @@ describe('the embedding service (T76)', () => {
     await service.stop();
   });
 
-  it('waits to compact until every notebook has sent the text of its notes (A-NEW-1)', async () => {
+  it('waits to compact until every notebook has sent the text of its notes (A1373)', async () => {
     const { source, cache } = fakeSource();
     const statuses: ServiceStatus[] = [];
     const service = new MeaningService(source, (status) => statuses.push(status), {
@@ -287,7 +287,7 @@ describe('the embedding service (T76)', () => {
     await service.stop();
   });
 
-  it('forgets a removed notebook: its count, its search and its keys (A-NEW-1)', async () => {
+  it('forgets a removed notebook: its count, its search and its keys (A1373)', async () => {
     const { source, cache } = fakeSource();
     const statuses: ServiceStatus[] = [];
     const service = new MeaningService(source, (status) => statuses.push(status), {

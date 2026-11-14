@@ -235,7 +235,7 @@ test('Settings → Search by Meaning: Off removes the model and the vectors, aft
   await expect(row.getByTestId('meaning-enabled')).toBeChecked();
 });
 
-test('Settings → Search by Meaning: a removed notebook leaves its count (A-NEW-1)', async () => {
+test('Settings → Search by Meaning: a removed notebook leaves its count (A1373)', async () => {
   const launched = await start(meaningHome());
   const { app, page } = launched;
   await untilStarted(app);

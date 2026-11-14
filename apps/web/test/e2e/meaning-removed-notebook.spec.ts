@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures';
 
-// Search by meaning forgets a removed notebook (A-NEW-1): Settings → Notebooks removes one from
+// Search by meaning forgets a removed notebook (A1373): Settings → Notebooks removes one from
 // this Mac, and the stand-in Mac's embedding service (MeaningService, support/meaning-host.ts)
 // drops its notes from "All N notes are indexed" and from the keys compaction keeps.
 
@@ -33,7 +33,7 @@ function collectErrors(page: Page): string[] {
   return errors;
 }
 
-test('a removed notebook leaves Search by Meaning’s count (A-NEW-1)', async ({ page, host }) => {
+test('a removed notebook leaves Search by Meaning’s count (A1373)', async ({ page, host }) => {
   test.setTimeout(120_000);
   const errors = collectErrors(page);
   // A second notebook beside the seeded one.

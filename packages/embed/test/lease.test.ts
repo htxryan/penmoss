@@ -151,7 +151,7 @@ describe('a process that lost the race keeps trying (A1350)', () => {
   });
 });
 
-describe('a stale takeover moves aside only the lease it judged stale (A-NEW-1)', () => {
+describe('a stale takeover moves aside only the lease it judged stale (A1373)', () => {
   const HOUR_AGO = new Date(Date.now() - 60 * 60_000);
 
   /** A lease file named `token`, its heartbeat at `at`. */

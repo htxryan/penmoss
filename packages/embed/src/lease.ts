@@ -7,7 +7,7 @@
  * index only their own notebook (A1350). A holder that finds the file no longer names it has
  * lost the lease and says so through `onLost`.
  *
- * Moving a lease aside is a compare-and-swap (A-NEW-1): a taker holds a short takeover lock
+ * Moving a lease aside is a compare-and-swap (A1373): a taker holds a short takeover lock
  * (`indexer.lease.takeover`), reads the lease again under it, and moves it aside only if it is
  * still the very lease it judged (its token and heartbeat), so two takers racing for a stale lease
  * never move aside the fresh one the first of them just made.
@@ -80,7 +80,7 @@ async function create(path: string, holder: LeaseHolder): Promise<boolean> {
 
 /**
  * Moves `path` aside and deletes it, but only if it is still `expected`: a file another process
- * put there since is put back (A-NEW-1). Answers whether `expected` is gone.
+ * put there since is put back (A1373). Answers whether `expected` is gone.
  */
 async function moveAside(path: string, expected: Found, token: string): Promise<boolean> {
   const aside = `${path}.stale-${token}`;
@@ -187,7 +187,7 @@ export class Lease {
       if (fresh && isAlive(found.holder.pid) && !outranks(writer, found.holder.writer)) {
         return undefined;
       }
-      // Stale (or outranked): move aside that lease and no other, then write ours (A-NEW-1).
+      // Stale (or outranked): move aside that lease and no other, then write ours (A1373).
       const took = await Lease.takeover(path, found, holder, now);
       if (took === 'ours') return start();
       if (took === 'busy') await new Promise((resolve) => setTimeout(resolve, TAKEOVER_WAIT_MS));

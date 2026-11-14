@@ -170,7 +170,7 @@ describe('feeding the embedding service (T77)', () => {
   });
 });
 
-describe('a removed notebook (A-NEW-1)', () => {
+describe('a removed notebook (A1373)', () => {
   /** A source as `SourceSearches` sees it, counting its notes' subscribers. */
   const source = () => {
     const subscribers = new Set<() => void>();

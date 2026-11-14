@@ -81,7 +81,7 @@ export class NotebookMeaning {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private syncing: Promise<void> | null = null;
   private again = false;
-  /** The notebook was removed: nothing more is sent (A-NEW-1). */
+  /** The notebook was removed: nothing more is sent (A1373). */
   private closed = false;
   private readonly off: () => void;
 
@@ -106,7 +106,7 @@ export class NotebookMeaning {
   }
 
   /**
-   * Stops listening and sending. `forget`: the notebook was removed from the app (A-NEW-1), so the
+   * Stops listening and sending. `forget`: the notebook was removed from the app (A1373), so the
    * window that feeds the service has it forget the notebook, which leaves "covers N of M" and the
    * keys compaction keeps; without it (the view only went), the service keeps what it was sent.
    */

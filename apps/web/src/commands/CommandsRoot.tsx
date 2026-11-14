@@ -180,7 +180,7 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
       })),
     );
   }, [own, sourcesState, gitSearches]);
-  // A removed notebook's search closes, and with it its meaning (A-NEW-1). Going, this view lets
+  // A removed notebook's search closes, and with it its meaning (A1373). Going, this view lets
   // go of every search, and meaning forgets those whose notebook is gone by then: removing the
   // last notebook unmounts this before it sees the list empty.
   useEffect(() => {

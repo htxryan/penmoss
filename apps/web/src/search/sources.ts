@@ -83,7 +83,7 @@ export interface SearchedSource {
 /**
  * Each source's search for the window's life, made on first use and kept up to date with its
  * notes. A source that goes (its notebook removed) has its search closed, with its meaning and
- * its subscription (A-NEW-1).
+ * its subscription (A1373).
  */
 export class SourceSearches<
   S extends SearchedSource,
