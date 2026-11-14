@@ -8,8 +8,10 @@ import path from 'node:path';
 import { after, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
+  ANALYTICS,
   docsPolicy,
   hashOf,
+  hostsOf,
   inlineScripts,
   latestNotes,
   latestRelease,
@@ -22,6 +24,7 @@ import {
 } from './build.mjs';
 import { BEFORE_NOTES, longDate, stableReleases, withEarlierReleases } from './src/releases.mjs';
 
+const here = path.dirname(fileURLToPath(import.meta.url));
 const dir = mkdtempSync(path.join(tmpdir(), 'penmoss-site-build-'));
 after(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -51,15 +54,21 @@ describe('the docs policy', () => {
     assert.equal(hashOf('a()'), `'sha256-${expected}'`);
   });
 
-  it('allows only this site, WebAssembly and the hashed scripts, in a stable order', () => {
+  it('allows only this site, WebAssembly, the analytics beacon and the hashed scripts, in a stable order', () => {
     const policy = docsPolicy(["'sha256-b'", "'sha256-a'", "'sha256-b'"]);
     assert.match(
       policy,
-      /^default-src 'none'; script-src 'self' 'wasm-unsafe-eval' 'sha256-a' 'sha256-b';/,
+      /^default-src 'none'; script-src 'self' 'wasm-unsafe-eval' https:\/\/static\.cloudflareinsights\.com 'sha256-a' 'sha256-b';/,
     );
-    assert.match(policy, /connect-src 'self'/);
+    assert.match(policy, /connect-src 'self' https:\/\/cloudflareinsights\.com;/);
     assert.match(policy, /frame-ancestors 'none'/);
-    assert.doesNotMatch(policy, /https?:/);
+  });
+
+  it('reads the hosts each directive allows', () => {
+    assert.deepEqual(
+      hostsOf("default-src 'none'; script-src 'self' https://a.example 'sha256-x'; img-src data:"),
+      { 'script-src': ['https://a.example'] },
+    );
   });
 
   it('detaches the site-wide policy for the docs and their search, and keeps the rest', () => {
@@ -90,6 +99,51 @@ describe('the docs policy', () => {
     assert.throws(() => writeHeaders(inline), /\/index.html runs a script/);
     const external = dist('external', { 'privacy/index.html': '<script src="/a.js"></script>' });
     assert.throws(() => writeHeaders(external), /\/privacy\/index.html runs a script/);
+  });
+});
+
+describe('Cloudflare Web Analytics in both policies (PEN-123)', () => {
+  /** Exactly the beacon's script host, and exactly where it reports; no other host anywhere. */
+  const ALLOWED = {
+    'script-src': ['https://static.cloudflareinsights.com'],
+    'connect-src': ['https://cloudflareinsights.com'],
+  };
+
+  it('names the two hosts Cloudflare documents for the beacon', () => {
+    assert.deepEqual(ANALYTICS, {
+      script: 'https://static.cloudflareinsights.com',
+      connect: 'https://cloudflareinsights.com',
+    });
+  });
+
+  it('the docs policy allows exactly these hosts', () => {
+    assert.deepEqual(hostsOf(docsPolicy(["'sha256-a'"])), ALLOWED);
+    assert.deepEqual(hostsOf(docsPolicy([])), ALLOWED);
+  });
+
+  it('the site-wide policy in public/_headers allows exactly these hosts', () => {
+    const base = readFileSync(path.join(here, 'public', '_headers'), 'utf8');
+    const policies = [...base.matchAll(/^\s*Content-Security-Policy:\s*(.+)$/gm)].map((m) => m[1]);
+    assert.equal(policies.length, 1);
+    assert.deepEqual(hostsOf(policies[0] ?? ''), ALLOWED);
+  });
+
+  it('the generated dist/_headers allows exactly these hosts in every policy', () => {
+    const root = dist('analytics', {
+      'index.html': '<main>No script</main>',
+      'docs/index.html': '<script>one()</script>',
+    });
+    writeFileSync(
+      path.join(root, '_headers'),
+      readFileSync(path.join(here, 'public', '_headers'), 'utf8'),
+    );
+    writeHeaders(root);
+    const headers = readFileSync(path.join(root, '_headers'), 'utf8');
+    const policies = [...headers.matchAll(/^\s*Content-Security-Policy:\s*(.+)$/gm)].map(
+      (m) => m[1] ?? '',
+    );
+    assert.equal(policies.length, 4, 'the site-wide policy and one for each docs path');
+    for (const policy of policies) assert.deepEqual(hostsOf(policy), ALLOWED, policy);
   });
 });
 
