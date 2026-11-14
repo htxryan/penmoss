@@ -119,14 +119,20 @@ describe('a new drawing from the slash menu', () => {
     expect(availableBlockItems(collab.editor).map((item) => item.id)).not.toContain('drawing');
   });
 
-  it('is "Excalidraw Diagram", beside Mermaid Diagram, and the old word still finds it', () => {
+  it('is "Diagram: Excalidraw", right after "Diagram: Mermaid", and the old words still find it', () => {
     const item = BLOCK_ITEMS.find((block) => block.id === 'drawing')!;
-    expect(item.label).toBe('Excalidraw Diagram');
+    expect(item.label).toBe('Diagram: Excalidraw');
+    expect(BLOCK_ITEMS.find((block) => block.id === 'mermaid')!.label).toBe('Diagram: Mermaid');
+    const ids = BLOCK_ITEMS.map((block) => block.id);
+    expect(ids.indexOf('drawing')).toBe(ids.indexOf('mermaid') + 1);
     const found = (query: string) => filterBlockItems(BLOCK_ITEMS, query).map((block) => block.id);
     expect(found('dia')).toEqual(['mermaid', 'drawing']);
-    expect(found('excalidraw')[0]).toBe('drawing');
+    expect(found('diagram')).toEqual(['mermaid', 'drawing']);
+    expect(found('mermaid')).toEqual(['mermaid']);
+    expect(found('excalidraw')).toEqual(['drawing']);
     expect(found('draw')[0]).toBe('drawing');
     expect(found('drawing')).toEqual(['drawing']);
+    // The editor's title and a new drawing's alt text keep the thing's name.
     expect(DRAWING_ALT).toBe('Excalidraw Diagram');
   });
 

@@ -65,10 +65,10 @@ test('a drawing made from the slash menu shows in the note and is kept as files 
   await page.keyboard.type('The beds, drawn:');
   await page.keyboard.press('Enter');
 
-  // The slash menu's Excalidraw Diagram opens the drawing editor at once.
+  // The slash menu's Diagram: Excalidraw opens the drawing editor at once.
   await page.keyboard.type('/drawing');
   const slash = page.getByTestId('slash-menu');
-  await expect(slash.getByRole('option', { selected: true })).toContainText('Excalidraw Diagram');
+  await expect(slash.getByRole('option', { selected: true })).toContainText('Diagram: Excalidraw');
   await page.keyboard.press('Enter');
   await expect(editor(page)).toBeVisible({ timeout: 30_000 });
   await expect(editor(page)).toHaveAttribute('aria-label', 'New Excalidraw Diagram');

@@ -2,7 +2,7 @@ import { expect, macContext, PREVIEW, seeded, test, type Page } from './fixtures
 import { remoteFiles, remoteMarkdown } from './support/remote';
 import { remoteBytes } from './support/sync';
 
-// PEN-28: drawings. The slash menu's Excalidraw Diagram opens Excalidraw over the window; Done
+// PEN-28: drawings. The slash menu's Diagram: Excalidraw opens Excalidraw over the window; Done
 // stores the scene as `attachments/<sha256>.excalidraw` and its picture as
 // `attachments/<sha256>.svg`, and the note shows the SVG, linked to the scene:
 // `[![Excalidraw Diagram](….svg)](….excalidraw)`. A click selects it; its Edit button (or Enter)
@@ -40,11 +40,11 @@ async function createNote(page: Page, title: string): Promise<string> {
   return ULID.exec(new URL(page.url()).pathname)![1]!;
 }
 
-/** Picks the slash menu's Excalidraw Diagram: the drawing editor opens at once, on an empty scene. */
+/** Picks the slash menu's Diagram: Excalidraw: the drawing editor opens at once, on an empty scene. */
 async function newDrawing(page: Page) {
   await page.keyboard.type('/drawing');
   const slash = page.getByTestId('slash-menu');
-  await expect(slash.getByRole('option', { selected: true })).toContainText('Excalidraw Diagram');
+  await expect(slash.getByRole('option', { selected: true })).toContainText('Diagram: Excalidraw');
   await page.keyboard.press('Enter');
   await expect(editor(page)).toBeVisible({ timeout: 30_000 });
   await expect(editor(page)).toHaveAttribute('aria-label', 'New Excalidraw Diagram');

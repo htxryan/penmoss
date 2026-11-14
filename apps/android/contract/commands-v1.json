@@ -1210,11 +1210,20 @@
     },
     {
       "id": "editor.insert.mermaid",
-      "title": "Insert: Mermaid Diagram",
+      "title": "Insert: Diagram: Mermaid",
       "area": "Insert",
       "scope": "editor",
       "android": {
         "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.drawing",
+      "title": "Insert: Diagram: Excalidraw",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "na": "The phone shows drawings but has no drawing editor: they are made in the Mac app (PEN-28)"
       }
     },
     {
@@ -1269,15 +1278,6 @@
       "scope": "editor",
       "android": {
         "elsewhere": "The format bar's Attach a file (ED12)"
-      }
-    },
-    {
-      "id": "editor.insert.drawing",
-      "title": "Insert: Excalidraw Diagram",
-      "area": "Insert",
-      "scope": "editor",
-      "android": {
-        "na": "The phone shows drawings but has no drawing editor: they are made in the Mac app (PEN-28)"
       }
     },
     {
