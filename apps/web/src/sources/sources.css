@@ -80,7 +80,7 @@
  * square, with no margin (feedback of 6 Nov 2026). The row keeps its height: the dot's 1.5rem
  * target and the 0.15rem it had above and below.
  */
-:is(.sb-source > .sb-section-head, .sb-heading) {
+.sb-source > .sb-section-head {
   --sb-head-height: 1.8rem;
   align-items: stretch;
   min-height: var(--sb-head-height);
@@ -88,21 +88,17 @@
   padding-inline-end: 0;
 }
 
-:is(.sb-source > .sb-section-head, .sb-heading) .tree-actions {
+.sb-source > .sb-section-head .tree-actions {
   align-items: stretch;
 }
 
-:is(.sb-source > .sb-section-head, .sb-heading) :is(.tree-actions .icon-btn, .sync-dot) {
+.sb-source > .sb-section-head :is(.tree-actions .icon-btn, .sync-dot) {
   width: var(--sb-head-height);
   height: auto;
 }
 
-.sb-heading > .sb-section-name {
-  align-self: center;
-}
-
 @media (max-width: 700px), (pointer: coarse) {
-  :is(.sb-source > .sb-section-head, .sb-heading) {
+  .sb-source > .sb-section-head {
     --sb-head-height: var(--pm-hit);
   }
 }
@@ -170,27 +166,6 @@
   background: var(--pm-danger);
   outline: 1.5px solid var(--pm-danger);
   outline-offset: 1.5px;
-}
-
-/*
- * A header without a tree of its own (T51, A933): the personal notes' when they are the only
- * source, and the source in use's above a tag's notes. It reads as a section toggle's name.
- */
-.sb-heading {
-  flex: none;
-  padding: 0.15rem calc(var(--sb-gutter, 0rem) + 0.5rem) 0.15rem 0;
-}
-
-.sb-heading > .sb-section-name {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-  padding: 0.2rem 0.3rem 0.2rem var(--sb-icon-inset, 1.55rem);
-  color: var(--pm-notebook-name);
-  font-size: 0.72rem;
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .sb-section {

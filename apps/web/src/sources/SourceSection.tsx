@@ -1,5 +1,5 @@
 import { Icon } from '@penmoss/ui/icons';
-import { useId, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useId, useState, useSyncExternalStore } from 'react';
 import { gitNotebookPath, linkHandler, useLocation } from '../router';
 import { TIME_MACHINE_PATH, timeMachinePath } from '../time-machine/path';
 import { FolderTree } from '../workspace/FolderTree';
@@ -68,32 +68,6 @@ function GitSectionStatus({ source }: { source: GitSource }) {
     >
       <span className="dot" aria-hidden="true" />
     </a>
-  );
-}
-
-/**
- * A section's header without its tree (T51, A933): the source in use's above a tag's notes, so
- * the dot always names what it covers. Rendered in the source's scope.
- */
-export function SourceHeading({
-  source,
-  actions,
-}: {
-  source: Source;
-  /** The notebook's actions on its row (T53 item 4), above its tree; none above a tag's notes. */
-  actions?: ReactNode;
-}) {
-  return (
-    <div
-      className="sb-section-head sb-heading"
-      data-testid="source-heading"
-      data-source={source.id}
-      data-kind={source.kind}
-    >
-      <h2 className="sb-section-name">{source.name}</h2>
-      {actions}
-      <GitSectionStatus source={source} />
-    </div>
   );
 }
 
