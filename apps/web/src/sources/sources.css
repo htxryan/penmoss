@@ -934,6 +934,18 @@
   box-sizing: border-box;
 }
 
+/*
+ * The card is the raised colour, as a field is, so a field on it read as none (Ryan's review of
+ * #193): every field on the card takes the page's colour and a stronger edge, in either theme.
+ */
+.fr-screen :is(.input, .pm-select) {
+  background-color: var(--pm-bg);
+}
+
+.fr-screen :is(.input, .pm-select):not(:focus, .fr-invalid) {
+  border-color: var(--pm-border-strong);
+}
+
 .fr-repo-name {
   display: flex;
   align-items: center;
