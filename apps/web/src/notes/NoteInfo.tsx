@@ -98,7 +98,11 @@ export function StatusBar({
   );
   return (
     <footer className="status-bar" data-testid="status-bar" aria-label="Note status">
-      <span data-testid="save-status" data-state={status?.state ?? 'opening'}>
+      <span
+        className="save-status-slot"
+        data-testid="save-status"
+        data-state={status?.state ?? 'opening'}
+      >
         <SaveStatusLabel status={status} />
       </span>
       {/* Read out only when it needs attention, never for routine saving and syncing (T41 review). */}

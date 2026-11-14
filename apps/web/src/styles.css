@@ -5667,8 +5667,9 @@ html:root[data-resizing='rows'] * {
   justify-content: space-between;
   gap: 1rem;
   box-sizing: border-box;
+  --status-bar-inset: 1rem;
   min-height: var(--status-bar-height);
-  padding: 0 1rem;
+  padding: 0 var(--status-bar-inset);
   border-top: 1px solid var(--pm-border-soft);
   background: var(--pm-bg);
   color: var(--pm-muted);
@@ -5686,6 +5687,13 @@ html:root[data-resizing='rows'] * {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+}
+
+/* The save status's place in the bar: the bar's full height, so a band in it fills it (R2-6). */
+.save-status-slot {
+  display: flex;
+  align-self: stretch;
+  align-items: center;
 }
 
 /* A still dot: no animation runs while typing (the T31 budget). */
@@ -5724,8 +5732,10 @@ html:root[data-resizing='rows'] * {
  * Stopped is a link to its notebook's page in Settings. The other states stay quiet.
  */
 .save-status:is([data-state='stopped'], [data-state='error']) {
-  min-height: 1.3rem;
-  padding: 0 0.5rem;
+  align-self: stretch;
+  /* Flush with the bar's left edge, top to bottom, as its other items are (Ryan's R2-6). */
+  margin-left: calc(-1 * var(--status-bar-inset, 0px));
+  padding: 0 0.75rem;
   border-radius: 0;
   background: var(--pm-danger);
   color: var(--pm-bg);
