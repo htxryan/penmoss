@@ -609,7 +609,7 @@ export class LocalNotebook {
     if (utf8(markdown) > MAX_MARKDOWN_BYTES) {
       throw new LocalError(413, 'too_large', 'markdown is over 256 KB');
     }
-    const inTrashOk = op.op === 'rename-tag';
+    const inTrashOk = op.op === 'rename-tag' || op.op === 'delete-tag';
     const { doc } = inTrashOk ? this.require(id) : this.writable(id);
     const links = this.resolver(doc);
     if (baseVersion !== null) {
@@ -952,6 +952,21 @@ export class LocalNotebook {
       .map((n) => n.id);
     for (const id of notes) this.edit(id, { op: 'rename-tag', from, to }, null);
     return { from, to, notes };
+  }
+
+  /**
+   * Deletes a tag, and those nested under it, from every note that has it (Trash too, so a
+   * restore never brings it back), at once here: a frontmatter tag goes, and an inline `#tag`
+   * loses its `#` and keeps its word, so the sentence it was in still reads. The notes stay.
+   */
+  deleteTag(input: { readonly tag: string }) {
+    const tag = normaliseTag(input.tag);
+    if (!tag) throw new LocalError(400, 'invalid_request', 'Not a valid tag');
+    const notes = this.all()
+      .filter((note) => note.tags.some((each) => tagMatches(each, tag)))
+      .map((n) => n.id);
+    for (const id of notes) this.edit(id, { op: 'delete-tag', tag }, null);
+    return { tag, notes };
   }
 
   /** `get_backlinks`: the notes linking to a note, and those naming its title without a link. */
