@@ -270,7 +270,7 @@ test.describe('with a notebook', () => {
     await expect(actions.getByRole('button', { name: 'New Folder' })).toBeVisible();
     for (const id of folded) await expect(actions.getByTestId(id), id).toBeVisible();
     await expect(more).toBeHidden();
-    await bar.evaluate((element) => element.remove());
+    await bar.evaluate((element) => (element as HTMLStyleElement).remove());
 
     // The narrowest.
     const edge = page.getByTestId('sidebar-resizer');
