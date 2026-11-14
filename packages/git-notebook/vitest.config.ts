@@ -11,6 +11,8 @@ export default defineConfig({
     include: budgets ? ['test/**/*.budget.test.ts'] : ['test/**/*.test.ts'],
     exclude: budgets ? [] : ['test/**/*.budget.test.ts'],
     maxWorkers: budgets ? 1 : 2,
+    // Real git on a shared Mac (W12): a timeout is for a hang, as in the other packages.
     testTimeout: 60_000,
+    hookTimeout: 30_000,
   },
 });
