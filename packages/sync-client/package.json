@@ -32,8 +32,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run",
-    "perf": "vitest run --config vitest.perf.config.ts",
-    "budgets": "PENMOSS_BUDGETS=1 vitest run"
+    "perf": "vitest run --config vitest.perf.config.ts"
   },
   "devDependencies": {
     "vitest": "5.0.5"
