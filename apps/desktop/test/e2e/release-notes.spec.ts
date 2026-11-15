@@ -136,6 +136,8 @@ test('without a release-notes file, Settings → Updates links to GitHub', async
   const { page } = launched;
   await gitNotebook(launched);
   await go(page, '/settings/updates');
+  // What's New is folded away until it is opened (A1567).
+  await page.getByTestId('whats-new-summary').click();
   const missing = page.getByTestId('release-notes-missing');
   await expect(missing).toContainText('Release notes show once Penmoss can reach GitHub');
   await expect(missing.getByRole('link')).toHaveAttribute(
