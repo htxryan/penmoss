@@ -1,6 +1,6 @@
 /**
  * The agent edit engine (T24, A3, A120–A126): operations an agent (or the
- * app, for tag renames) asks the server to make to one note. Each operation
+ * app, for tag renames) asks for on one note. Each operation
  * is planned against the note as it is now, then applied as the smallest
  * change: the target body is built from the live blocks (untouched blocks
  * are the live blocks themselves, `reuseBlocks` keeps unchanged ones the

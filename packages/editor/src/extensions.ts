@@ -4,7 +4,7 @@
  * TipTap's extensions supply rendering, input rules, commands and keyboard
  * handling; the model (content expressions, groups, flags and attributes)
  * comes from `@penmoss/core/schema`, so a document the markdown codec or the
- * server builds always fits the editor and the other way round. Attributes
+ * engine builds always fits the editor and the other way round. Attributes
  * TipTap adds that core does not model (an ordered list's `type`, a link's
  * `target`/`rel`/`class`) are dropped; attributes core adds (`tight`, a code
  * block's `meta`) are kept on the node but not rendered.
@@ -64,7 +64,7 @@ import type { LineSymbol } from '@penmoss/core/line-symbols';
 
 /**
  * Node and mark names the editor supports: every node core has (A157), so
- * any document the codec or the server builds opens here.
+ * any document the codec or the engine builds opens here.
  */
 export const NOTE_NODES = [
   'doc',

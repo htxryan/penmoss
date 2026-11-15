@@ -317,7 +317,7 @@ export class NotebookReplica {
     this.update({ dirty: without(this.meta.dirty, id), revs: without(this.meta.revs, id) });
   }
 
-  /** The note's local `baseVersion` (A821's local stand-in for the server's version ids). */
+  /** The note's local `baseVersion` (A821): its change counter on this device. */
   rev(id: string): number {
     return this.meta.revs[id] ?? 1;
   }

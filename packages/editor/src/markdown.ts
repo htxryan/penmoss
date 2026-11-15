@@ -1,8 +1,6 @@
 /**
- * Renders a note's Yjs document as markdown with frontmatter (T3 codec). On the
- * server it runs inside the NoteDoc, never in a Worker request (A13): a
- * 10,000-word note takes ~25 ms to serialise, more than a Free-plan request
- * may use. Shared since T50 G1 (A832): git notebooks render with it too.
+ * Renders a note's Yjs document as markdown with frontmatter (T3 codec): what a git notebook
+ * writes as the note's file (T50 G1, A832), and what Copy as Markdown and the source view show.
  */
 import {
   createFrontmatter,
@@ -250,23 +248,6 @@ export function bodyDelta(body: PMNode): ReturnType<typeof pmnodeToDelta> {
   const problem = unfitBody(body);
   if (problem) throw new RangeError(`A note body must fit the schema the apps open: ${problem}`);
   return pmnodeToDelta(body);
-}
-
-/** The attachments a body uses (images and file links under `attachments/`), by SHA-256, sorted. */
-export function attachmentRefs(body: PMNode): string[] {
-  const found = new Set<string>();
-  body.descendants((node) => {
-    const path =
-      node.type.name === 'image'
-        ? (node.attrs['src'] as string)
-        : node.type.name === 'attachment'
-          ? (node.attrs['href'] as string)
-          : null;
-    const parsed = path ? parseAttachmentPath(path) : null;
-    if (parsed) found.add(parsed.sha256);
-    return true;
-  });
-  return [...found].sort();
 }
 
 /**

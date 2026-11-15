@@ -155,7 +155,7 @@ export class NotebookOps {
         { id, created: isoInZone(this.clock(), this.timeZone()), kind: input.kind ?? 'note' },
         input.title,
       );
-      // No body given: none written, as the server's create of an empty note.
+      // No body given: none written (an empty note).
       const body =
         input.body ?? (input.markdown === undefined ? null : parseMarkdown(input.markdown).doc);
       if (body) doc.get(NOTE_ROOT).applyDelta(docToDelta(body));

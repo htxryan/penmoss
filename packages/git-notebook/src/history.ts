@@ -5,10 +5,9 @@
  * version is the merge of every writer's file there. Who made it comes from the commit's
  * `Penmoss-Writer` trailer (A825) and the actor files (A829).
  *
- * The answers have the server's shapes (`/api/notes/:id/versions`, MCP `get_history`), so the
- * apps' History panel, the CLI and the local MCP read them unchanged. Version ids are whole
- * numbers, as the server's are: the oldest commit that touched the note is 1, and each later one
- * the next. Pushes are fast-forwards only, so an id never changes once given.
+ * The answers are `/api/notes/:id/versions`'s and MCP `get_history`'s shapes, which the apps'
+ * History panel, the CLI and the local MCP read. Version ids are whole numbers: the oldest
+ * commit that touched the note is 1, and each later one the next. Pushes are fast-forwards only, so an id never changes once given.
  *
  * Restore is A80's diff-apply (`restoreContent`) and Revert A81's three-way merge
  * (`revertChange`), both applied by the caller as an ordinary local change that syncs.
@@ -72,7 +71,7 @@ export function commitAuthor(commit: CommitInfo): HistoryAuthor {
   return { id: commit.author.email, kind: 'device', label: commit.author.name };
 }
 
-/** The most versions listed (as the server's History keeps them, newest first). */
+/** The most versions listed, newest first. */
 export const MAX_VERSIONS = 1000;
 
 /** Commits listed and read at once where the transport has no `readDir`. */
@@ -366,7 +365,7 @@ export class NotebookHistory {
     return { commit, previous: id > 1 ? commits[id - 2]! : null };
   }
 
-  /** A version's markdown and its line diff against the version before (the server's shape). */
+  /** A version's markdown and its line diff against the version before. */
   async detail(noteId: string, id: number): Promise<GitVersionDetail | null> {
     const found = await this.commitOf(noteId, id);
     if (!found) return null;
