@@ -10,7 +10,6 @@
  * those files (font-faces.ts), never its CDN.
  */
 import type { DrawingFiles, DrawingServices } from '@penmoss/editor';
-import { desktop } from '../desktop/bridge';
 import type { DrawingStep } from './editor';
 import { keepFontFacesLocal } from './font-faces';
 
@@ -55,7 +54,6 @@ const PICKERS = ['showOpenFilePicker', 'showSaveFilePicker', 'showDirectoryPicke
  * to save as it loads; the pickers are back for the rest of the page once it has.
  */
 async function withoutFilePickers<T>(load: () => Promise<T>): Promise<T> {
-  if (!desktop()) return load();
   const target = window as unknown as Record<string, unknown>;
   const hidden = PICKERS.flatMap((name) => {
     const descriptor = Object.getOwnPropertyDescriptor(window, name);

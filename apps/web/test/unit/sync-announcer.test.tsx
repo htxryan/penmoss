@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { NotesProvider } from '../../src/notes/context';
 import type { AppSyncState, Notes } from '../../src/notes/service';
 import { SyncAnnouncer } from '../../src/notes/SyncAnnouncer';
-import { syncHint, syncLabel } from '../../src/notes/sync-label';
+import { syncHint } from '../../src/notes/sync-label';
 
 function render(state: AppSyncState): string {
   const notes = {
@@ -35,15 +35,6 @@ describe('SyncAnnouncer (T51, A933; git only since T59)', () => {
   it('names a storage problem as this device’s, not git’s', () => {
     expect(syncHint({ phase: 'stopped', pending: 0, detail: null, reason: 'storage' })).toBe(
       'Sync stopped: this device’s storage needs a reload',
-    );
-  });
-
-  it('labels each phase in words, with what waits', () => {
-    expect(syncLabel({ phase: 'offline', pending: 3, detail: null })).toBe('Offline · 3 pending');
-    expect(syncLabel({ phase: 'syncing', pending: 3, detail: null })).toBe('Syncing');
-    expect(syncLabel({ phase: 'synced', pending: 0, detail: null })).toBe('Synced');
-    expect(syncLabel({ phase: 'stopped', pending: 1, detail: null })).toBe(
-      'Sync Stopped · 1 pending',
     );
   });
 });

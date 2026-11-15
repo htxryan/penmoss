@@ -1,16 +1,12 @@
 /**
  * The open note as stored markdown (T11's source view): frontmatter plus the
- * body, rendered on this device by the core codec, the same way the NoteDoc
- * renders the R2 snapshot (apps/server/src/do/markdown.ts) except `updated`,
- * which the indexer stamps (A16). The codec loads on first use, so notes that
- * never open the source view do not download it.
+ * body, rendered on this device by the core codec, as the git notebook writes
+ * the note's file. The codec loads on first use, so notes that never open the
+ * source view do not download it.
  */
 import type { LinkResolver } from '@penmoss/core';
 import { noteFields } from '@penmoss/editor/note-fields';
 import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
-
-/** The frontmatter fields this device writes for the note (shared with the Android page). */
-export { noteFields } from '@penmoss/editor/note-fields';
 
 /**
  * `body` is the editor's document as JSON (`editor.getJSON()`), which fits the

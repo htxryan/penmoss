@@ -6,7 +6,7 @@
  */
 import { readIdentity, isDeleted } from '@penmoss/sync-client/note';
 import type { WorkspaceSnapshot } from '@penmoss/sync-client/workspace';
-import { docText, textStats } from '../notes/stats';
+import { docText, textStats } from '@penmoss/editor/stats';
 import type { LocalLinks, OpenNote } from '../notes/service';
 import type { NoteListEntry } from '../notes/list';
 import { localLinked } from '../notes/backlinks';

@@ -54,13 +54,18 @@ export interface HistoryChange {
   readonly conflicts?: readonly HistoryConflict[];
 }
 
-/** A reply that was not a success: the history's keeper is reachable, unlike offline. */
-export class HistoryRefused extends Error {
+/**
+ * Why the history could not do what was asked, in words the panel shows as they are: there is
+ * no git notebook here, no such version, the note's changes could not be saved first, or the
+ * owner check refused. Anything else (a throw from git) reads as "could not be reached".
+ */
+export class HistoryError extends Error {
   constructor(
-    readonly status: number,
-    message = `HTTP ${status}`,
+    readonly kind: 'no-notebook' | 'no-version' | 'not-saved' | 'refused',
+    message: string,
   ) {
     super(message);
+    this.name = 'HistoryError';
   }
 }
 
@@ -93,7 +98,8 @@ export interface HistorySource {
 
 /** No git notebook in scope (a view without one): nothing to read, and nothing changes. */
 export function noHistory(): HistorySource {
-  const refused = () => Promise.reject(new HistoryRefused(404, 'No git notebook holds this note'));
+  const refused = () =>
+    Promise.reject(new HistoryError('no-notebook', 'No git notebook holds this note'));
   return {
     offline: 'Version history is the note’s git notebook’s, and none is open here.',
     automatic: 'Versions are the git notebook’s commits.',
@@ -140,7 +146,7 @@ const THIS_MAC: HistoryAuthor = { id: 'this-mac', kind: 'device', label: 'This M
  */
 export function gitHistory(source: GitSource, notes: Notes, noteId: string): HistorySource {
   const reader = () => readerOf(source);
-  const missing = () => new HistoryRefused(404, 'No such version');
+  const missing = () => new HistoryError('no-version', 'No such version');
   const pushNote = () => pushNoteOf(source, notes, noteId);
   const saveCurrentFirst = () => saveFirst(source, notes, noteId);
   const ownerFirst = (revert: boolean) => ownerCheck(source, noteId, revert);
@@ -236,15 +242,15 @@ async function pushNoteOf(source: GitSource, notes: Notes, noteId: string): Prom
 }
 
 /**
- * The note as it is now becomes a version before a Restore or a Revert replaces it, as the
- * server saves one first: the restore can then be undone too. Not pushed (offline, refused),
+ * The note as it is now becomes a version before a Restore or a Revert replaces it: the restore
+ * can then be undone too. Not pushed (offline, refused),
  * the restore is refused rather than replacing what history would not keep.
  */
 async function saveFirst(source: GitSource, notes: Notes, noteId: string): Promise<void> {
   await pushNoteOf(source, notes, noteId).catch(() => undefined);
   if (source.feed.status.pending.includes(noteId)) {
-    throw new HistoryRefused(
-      409,
+    throw new HistoryError(
+      'not-saved',
       'The note has changes not pushed yet, and they could not be saved as a version first. Sync, then try again: nothing was changed.',
     );
   }
@@ -256,7 +262,7 @@ async function saveFirst(source: GitSource, notes: Notes, noteId: string): Promi
  */
 async function ownerCheck(source: GitSource, noteId: string, revert: boolean): Promise<void> {
   const refused = await source.restoreCheck(noteId, revert);
-  if (refused !== null) throw new HistoryRefused(403, refused);
+  if (refused !== null) throw new HistoryError('refused', refused);
 }
 
 /**

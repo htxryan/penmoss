@@ -43,17 +43,9 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { useCommands } from '../commands/hooks';
-import { desktop } from '../desktop/bridge';
 import { DialogClose } from '../shell/DialogClose';
 import { buildContext, type ContextFacts } from './context';
-import {
-  captureThisTab,
-  checkImage,
-  nameFor,
-  outputType,
-  prepareImage,
-  type Screenshot,
-} from './images';
+import { checkImage, nameFor, outputType, prepareImage, type Screenshot } from './images';
 import { appVersion } from './open';
 import type { Attempt } from './outbox';
 import { problemsOf, sizeProblem, type Problems } from './problems';
@@ -133,7 +125,6 @@ function FeedbackForm({
   const [problems, setProblems] = useState<Problems>({});
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
   const [imageError, setImageError] = useState<string | null>(null);
-  const [hidden, setHidden] = useState(false);
   const [linkHref, setLinkHref] = useState<string | null>(null);
   /** Which formats the selection has, for the toolbar's pressed states (read on each change). */
   const [active, setActive] = useState<ReadonlySet<string>>(new Set());
@@ -355,38 +346,6 @@ function FeedbackForm({
       return next;
     });
 
-  const canCaptureTab =
-    !desktop() &&
-    // Never a git notebook's screen (A889).
-    facts.where.git !== true &&
-    typeof navigator !== 'undefined' &&
-    typeof navigator.mediaDevices?.getDisplayMedia === 'function';
-
-  const captureTab = async () => {
-    setImageError(null);
-    if (shots.length >= FEEDBACK_LIMITS.screenshots) {
-      setImageError(`At most ${FEEDBACK_LIMITS.screenshots} screenshots.`);
-      return;
-    }
-    try {
-      const blob = await captureThisTab(setHidden);
-      if (!blob) return;
-      setShots((current) => [
-        ...current,
-        {
-          id: `tab-${Date.now()}`,
-          name: 'This tab.png',
-          type: 'image/png',
-          blob,
-          included: true,
-          source: 'tab',
-        },
-      ]);
-    } catch {
-      setImageError('The browser did not share this tab.');
-    }
-  };
-
   const answer = (attempt: Attempt) => {
     if (attempt.kind === 'sent') {
       // The toast says "Sent as #n" with the issue's link (FeedbackToasts).
@@ -418,7 +377,7 @@ function FeedbackForm({
         markdown,
         context: sent,
         screenshots: included.length,
-        client: desktop() ? 'mac' : 'web',
+        client: 'mac',
         version: appVersion(),
         submissionId,
       });
@@ -505,11 +464,7 @@ function FeedbackForm({
   const groupsShown = context.groups.map((group) => group.id);
 
   return (
-    <div
-      className="overlay feedback-overlay"
-      data-testid="feedback-dialog"
-      style={hidden ? { visibility: 'hidden' } : undefined}
-    >
+    <div className="overlay feedback-overlay" data-testid="feedback-dialog">
       <div
         ref={dialog}
         tabIndex={-1}
@@ -852,17 +807,6 @@ function FeedbackForm({
                     <Icon name="plus" />
                     Add Images…
                   </button>
-                  {canCaptureTab ? (
-                    <button
-                      type="button"
-                      className="btn"
-                      data-ui="item"
-                      data-testid="feedback-capture-tab"
-                      onClick={() => void captureTab()}
-                    >
-                      Capture This Window
-                    </button>
-                  ) : null}
                   <input
                     ref={fileInput}
                     type="file"

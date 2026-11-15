@@ -12,7 +12,6 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
-import { CaptureForm } from './capture/CaptureForm';
 import { desktop } from './desktop/bridge';
 import { DesktopIntegration } from './desktop/DesktopIntegration';
 import { KeepOnTopButton } from './desktop/KeepOnTopButton';
@@ -71,10 +70,8 @@ import type { Source } from './sources/registry';
 import { JournalScope } from './sources/JournalScope';
 import { NoteSourceScope } from './sources/NoteSourceScope';
 import { SourceSection } from './sources/SourceSection';
-import { WindowBlockedToast } from './window/BlockedToast';
 import { ToastStack } from './toasts/ToastStack';
 import { NoteWindow } from './window/NoteWindow';
-import { listenForOpenInMain } from './window/open';
 
 // The graph (T17) loads with d3-force on first use, never with the shell.
 const GraphPage = lazy(() => import('./graph/GraphPage').then((m) => ({ default: m.GraphPage })));
@@ -85,9 +82,6 @@ export function App({ location }: { location?: RouteLocation | undefined }) {
   const { pathname, search } = location ?? current;
   const route = parseRoute(pathname);
   const params = new URLSearchParams(search);
-  // A note window asks the window that opened it to show what it does not (T45, A710).
-  useEffect(() => listenForOpenInMain((path) => navigate(path)), []);
-
   // The Mac app opens where it was: launched, or its window reopened, on the
   // home page, it goes to the note this device opened last, once the list has
   // loaded. Only at that start, so "Close the note" still reaches home. Every notebook's
@@ -115,14 +109,6 @@ export function App({ location }: { location?: RouteLocation | undefined }) {
       <NoteSourceScope id={route.id}>
         <NoteWindow id={route.id} heading={params.get('heading')} />
       </NoteSourceScope>
-    ) : route.name === 'capture' ? (
-      // The web app's capture page (the Mac app shows CaptureWindow here instead, main.tsx).
-      <main className="app-shell" data-testid="app-root">
-        {/* Captures go to the Journal notebook (A827). */}
-        <JournalScope>
-          <CaptureForm onSaved={() => navigate('/')} onCancel={() => navigate('/')} />
-        </JournalScope>
-      </main>
     ) : (
       <NotesShell route={route} params={params} />
     );
@@ -137,7 +123,6 @@ export function App({ location }: { location?: RouteLocation | undefined }) {
       <OverlaysScope noteId={overlaysNote}>
         <CommandOverlays currentNoteId={overlaysNote} />
       </OverlaysScope>
-      <WindowBlockedToast />
       {/* Every toast in this window, at its bottom centre (PEN-63); a note window has its own. */}
       <ToastStack />
       <TooltipLayer />

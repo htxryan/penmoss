@@ -8,7 +8,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useNotes, useSyncState } from './hooks';
 import { gitSaveStatus, type SaveStatus } from './save-status';
 import type { OpenNote } from './service';
-import { docText, textStats, type TextStats } from './stats';
+import { docText, textStats, type TextStats } from '@penmoss/editor/stats';
 import { loadTokenCounter } from './tokens';
 
 type Editor = CollabEditor['editor'];

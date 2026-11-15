@@ -23,7 +23,7 @@ import { revertible } from './revertible';
 import {
   gitHistory,
   noHistory,
-  HistoryRefused,
+  HistoryError,
   type HistoryChange,
   type HistoryConflict,
   type HistoryDetail,
@@ -63,11 +63,9 @@ const NO_SUMMARIES: ReadonlyMap<number, HistorySummary> = new Map();
 /** The list's least height while its handle is dragged, in rem: a few rows. */
 const LIST_MIN_REM = 6;
 
-/** Why the history did not load, in words (T39: a server error used to read as offline). */
+/** Why the history did not load, in words: its own, else that git could not be reached. */
 function loadFailure(caught: unknown, source: HistorySource): string {
-  return caught instanceof HistoryRefused
-    ? `The server could not load the history (error ${caught.status}). Try again in a moment.`
-    : source.offline;
+  return caught instanceof HistoryError ? caught.message : source.offline;
 }
 
 /**
@@ -214,11 +212,9 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
       setStatus(said);
     } catch (caught) {
       setStatus(
-        caught instanceof HistoryRefused
-          ? // Its own words when it has them (a git notebook's note not saved first, A858).
-            caught.message !== `HTTP ${caught.status}`
-            ? caught.message
-            : `The server could not do that (error ${caught.status}). Try again in a moment.`
+        caught instanceof HistoryError
+          ? // Its own words (a git notebook's note not saved first, A858).
+            caught.message
           : 'That did not work. Check the connection and try again.',
       );
     } finally {

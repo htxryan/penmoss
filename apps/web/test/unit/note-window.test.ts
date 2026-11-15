@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 /**
  * T45 (D37, A710, A711): a note in a window of its own. The router's window route and its
- * in-window history, where links and other pages go from a note window, opening a window (and
- * a blocked one), and the windows' offline refresh over a BroadcastChannel or the Mac app.
+ * in-window history, where links and other pages go from a note window, opening a window, and
+ * the windows' offline refresh through the Mac app's main process.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PenmossDesktop } from '../../src/desktop/bridge';
@@ -16,22 +16,12 @@ import {
   historyPlace,
   startHistory,
 } from '../../src/router';
-import {
-  blockedWindow,
-  listenForOpenInMain,
-  NOTE_WINDOW_FEATURES,
-  noteWindowPath,
-  OPEN_IN_MAIN_MESSAGE,
-  openInMain,
-  openNoteWindow,
-} from '../../src/window/open';
+import { noteWindowPath, openNoteWindow } from '../../src/window/open';
 import {
   ANNOUNCE_DELAY_MS,
   MAX_ANNOUNCED_IDS,
-  parseChanged,
   StorePuller,
   storeSync,
-  type ChannelLike,
 } from '../../src/window/store-sync';
 
 const ID = '01JB7Q3V6M8K2T9RZ4XN5C1HPD';
@@ -49,7 +39,6 @@ function load(path: string): void {
 afterEach(() => {
   vi.restoreAllMocks();
   delete (window as { penmossDesktop?: unknown }).penmossDesktop;
-  blockedWindow.set(null);
 });
 
 describe('the note window route (T45, A710)', () => {
@@ -114,31 +103,12 @@ describe('navigating in a note window', () => {
     expect({ ...historyPlace() }).toEqual({ back: true, forward: false });
   });
 
-  it('sends any other page to the window that opened it', () => {
-    const opener = {
-      closed: false,
-      location: window.location,
-      postMessage: vi.fn(),
-      focus: vi.fn(),
-    };
-    vi.spyOn(window, 'opener', 'get').mockReturnValue(opener);
-    navigate('/settings');
-    expect(here()).toBe(`/window/notes/${ID}`);
-    expect(opener.postMessage).toHaveBeenCalledWith(
-      { type: OPEN_IN_MAIN_MESSAGE, path: '/settings' },
-      window.location.origin,
-    );
-    expect(opener.focus).toHaveBeenCalled();
-  });
-
-  it('opens other pages in a new tab once the opener has gone, and in the Mac app’s main window', () => {
+  it('sends any other page to the main window, and stays on its note', () => {
+    // The Mac app's main process sends an app path from window.open to the main window (A712).
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
-    vi.spyOn(window, 'opener', 'get').mockReturnValue(null);
     navigate('/trash');
     expect(open).toHaveBeenLastCalledWith('/trash', '_blank');
-    // The Mac app's main process sends an app path from window.open to the main window (A712).
-    (window as { penmossDesktop?: unknown }).penmossDesktop = { window: 'note' };
-    openInMain('/settings/appearance');
+    navigate('/settings/appearance');
     expect(open).toHaveBeenLastCalledWith('/settings/appearance', '_blank');
     expect(here()).toBe(`/window/notes/${ID}`);
   });
@@ -147,26 +117,14 @@ describe('navigating in a note window', () => {
 describe('opening a note window', () => {
   beforeEach(() => load('/'));
 
-  it('opens a popup from the click, always a new one', () => {
-    const open = vi.spyOn(window, 'open').mockReturnValue({} as Window);
+  it('asks main for a window of its own, always a new one (A712)', () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
     openNoteWindow(ID);
     openNoteWindow(ID, 'Beds');
     expect(open.mock.calls).toEqual([
-      [`/window/notes/${ID}`, '_blank', NOTE_WINDOW_FEATURES],
-      [`/window/notes/${ID}?heading=Beds`, '_blank', NOTE_WINDOW_FEATURES],
+      [`/window/notes/${ID}`, '_blank'],
+      [`/window/notes/${ID}?heading=Beds`, '_blank'],
     ]);
-    expect(NOTE_WINDOW_FEATURES).toBe('popup,width=720,height=800');
-    expect(blockedWindow.get()).toBeNull();
-  });
-
-  it('offers a new tab when the browser blocks the popup; the Mac app returns no window', () => {
-    vi.spyOn(window, 'open').mockReturnValue(null);
-    openNoteWindow(ID);
-    expect(blockedWindow.get()).toEqual({ path: `/window/notes/${ID}` });
-    blockedWindow.set(null);
-    (window as { penmossDesktop?: unknown }).penmossDesktop = { window: 'main' };
-    openNoteWindow(ID);
-    expect(blockedWindow.get()).toBeNull();
   });
 
   it('opens a note in a new window on ⌥-click, never the browser’s download', () => {
@@ -187,11 +145,7 @@ describe('opening a note window', () => {
     };
     const alt = click({ altKey: true });
     expect(alt.preventDefault).toHaveBeenCalled();
-    expect(open).toHaveBeenCalledWith(
-      `/window/notes/${ID}?heading=Beds`,
-      '_blank',
-      NOTE_WINDOW_FEATURES,
-    );
+    expect(open).toHaveBeenCalledWith(`/window/notes/${ID}?heading=Beds`, '_blank');
     expect(here()).toBe('/');
     // A plain click navigates here; ⌘-click is the browser's (a new tab).
     click({});
@@ -200,58 +154,31 @@ describe('opening a note window', () => {
     expect(meta.preventDefault).not.toHaveBeenCalled();
     expect(open).toHaveBeenCalledTimes(1);
   });
-
-  it('shows what a note window asks, only from this origin and only an app path', () => {
-    const opened: string[] = [];
-    const off = listenForOpenInMain((path) => opened.push(path));
-    const post = (data: unknown, origin = window.location.origin, source: unknown = {}) =>
-      window.dispatchEvent(new MessageEvent('message', { data, origin, source: source as Window }));
-    post({ type: OPEN_IN_MAIN_MESSAGE, path: '/settings' });
-    post({ type: OPEN_IN_MAIN_MESSAGE, path: '/trash' }, 'https://elsewhere.example');
-    post({ type: OPEN_IN_MAIN_MESSAGE, path: '//elsewhere.example/x' });
-    post({ type: OPEN_IN_MAIN_MESSAGE, path: 'javascript:alert(1)' });
-    post({ type: 'other', path: '/trash' });
-    off();
-    post({ type: OPEN_IN_MAIN_MESSAGE, path: '/graph' });
-    expect(opened).toEqual(['/settings']);
-  });
 });
 
 describe('windows refresh each other offline (T45, A711)', () => {
-  /** Two windows' channels: what one posts, the other hears. */
-  function channels(): [ChannelLike, ChannelLike] {
-    const make = (): ChannelLike & {
-      peer?: (ChannelLike & { hear(data: unknown): void }) | undefined;
-    } => {
-      const listeners = new Set<(event: MessageEvent) => void>();
-      const channel = {
-        peer: undefined as (ChannelLike & { hear(data: unknown): void }) | undefined,
-        postMessage: (data: unknown) => channel.peer?.hear(structuredClone(data)),
-        addEventListener: (_: 'message', listener: (event: MessageEvent) => void) =>
-          listeners.add(listener),
-        removeEventListener: (_: 'message', listener: (event: MessageEvent) => void) =>
-          listeners.delete(listener),
-        close: vi.fn(),
-        hear: (data: unknown) => {
-          for (const listener of listeners) listener(new MessageEvent('message', { data }));
+  /** The Mac app's main process: what one window stores, every other hears. */
+  function mainProcess() {
+    const listeners = new Set<(ids?: readonly string[]) => void>();
+    const window = (): PenmossDesktop =>
+      ({
+        stored: (ids: readonly string[] | null) => {
+          for (const listener of listeners) listener(ids ?? undefined);
         },
-      };
-      return channel;
-    };
-    const a = make();
-    const b = make();
-    a.peer = b as never;
-    b.peer = a as never;
-    return [a, b];
+        onStoreChanged: (listener: (ids?: readonly string[]) => void) => {
+          listeners.add(listener);
+          return () => listeners.delete(listener);
+        },
+      }) as unknown as PenmossDesktop;
+    return { window };
   }
 
   it('tells the other windows which records were stored, a burst as one message', () => {
     vi.useFakeTimers();
     try {
-      const [a, b] = channels();
-      const closeA = vi.spyOn(a, 'close');
-      const one = storeSync({ bridge: null, channel: () => a });
-      const two = storeSync({ bridge: null, channel: () => b });
+      const main = mainProcess();
+      const one = storeSync(main.window());
+      const two = storeSync(main.window());
       const heard: Array<readonly string[] | null> = [];
       two.onChanged((ids) => heard.push(ids));
       one.announce([ID]);
@@ -269,20 +196,15 @@ describe('windows refresh each other offline (T45, A711)', () => {
       expect(heard.at(-1)).toEqual([ID]);
       vi.advanceTimersByTime(ANNOUNCE_DELAY_MS);
       expect(heard).toHaveLength(3);
+      // Without the bridge (a unit test's page): nothing is sent, and nothing heard.
+      const alone = storeSync(null);
+      alone.announce([ID]);
+      vi.advanceTimersByTime(ANNOUNCE_DELAY_MS);
+      expect(heard).toHaveLength(3);
       one.close();
-      expect(closeA).toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
     }
-  });
-
-  it('ignores messages that are not a list of record ids', () => {
-    expect(parseChanged({ ids: [ID] })).toEqual([ID]);
-    expect(parseChanged({ ids: null })).toBeNull();
-    expect(parseChanged({ ids: 'x' })).toBeUndefined();
-    expect(parseChanged({ ids: [1] })).toBeUndefined();
-    expect(parseChanged({ ids: ['x'.repeat(65)] })).toBeUndefined();
-    expect(parseChanged('hello')).toBeUndefined();
   });
 
   it('goes through the Mac app’s main process when there is one', () => {
@@ -297,14 +219,12 @@ describe('windows refresh each other offline (T45, A711)', () => {
           return () => undefined;
         },
       } as unknown as PenmossDesktop;
-      const channel = vi.fn();
-      const sync = storeSync({ bridge, channel });
+      const sync = storeSync(bridge);
       const heard: Array<readonly string[] | null> = [];
       sync.onChanged((ids) => heard.push(ids));
       sync.announce([ID]);
       vi.advanceTimersByTime(ANNOUNCE_DELAY_MS);
       expect(stored).toHaveBeenCalledWith([ID]);
-      expect(channel).not.toHaveBeenCalled();
       listener!([OTHER]);
       // The capture window's save names nothing: read everything (T30).
       listener!();

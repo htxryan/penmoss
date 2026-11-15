@@ -533,10 +533,10 @@ describe('History’s restore and revert ask the Mac’s owner first, as Android
     };
     const history = gitHistory(a, a.notes, first);
     await expect(history.restore(1)).rejects.toMatchObject({
-      status: 403,
+      kind: 'refused',
       message: 'Not done: you cancelled.',
     });
-    await expect(history.revert(1)).rejects.toMatchObject({ status: 403 });
+    await expect(history.revert(1)).rejects.toMatchObject({ kind: 'refused' });
     expect(asked).toEqual([
       [a.info.localId, first, false],
       [a.info.localId, first, true],
@@ -570,7 +570,7 @@ describe('History’s Sync Now pushes the note as this window stored it (T59)', 
   });
 });
 
-describe('History saves the note as it is before a Restore or a Revert (as the server does)', () => {
+describe('History saves the note as it is before a Restore or a Revert', () => {
   it('an edit not pushed yet becomes a version first; with no way to push it, nothing changes', async () => {
     const { cli, first, window, mac } = await world();
     const a = window('A');
@@ -585,7 +585,7 @@ describe('History saves the note as it is before a Restore or a Revert (as the s
       throw new GitTransportError('network', 'The network dropped');
     };
     const history = gitHistory(a, a.notes, first);
-    await expect(history.restore(1)).rejects.toMatchObject({ status: 409 });
+    await expect(history.restore(1)).rejects.toMatchObject({ kind: 'not-saved' });
     expect(readTitle(open.replica.doc)).toBe('Typed, not pushed yet');
     // Online again: the edit is pushed as a version, then the restore comes after it.
     mac.beforePush = null;

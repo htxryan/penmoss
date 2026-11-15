@@ -84,17 +84,6 @@ a {
   margin: 0;
 }
 
-.banner {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.6rem 1rem;
-  background: var(--pm-warn-bg);
-  color: var(--pm-fg);
-  border-bottom: 1px solid var(--pm-border);
-}
-
 /* A section's sub-headings, one step below its title in every section (T39 pass 2). */
 .settings h3,
 .settings-section h3 {
@@ -558,61 +547,6 @@ a {
   list-style: none;
   margin: 0;
   padding: 0;
-}
-
-.note-item {
-  position: relative;
-  display: block;
-  padding: 0.5rem 0.6rem 0.5rem 0.75rem;
-  border: 1px solid transparent;
-  border-radius: 0;
-  color: inherit;
-  text-decoration: none;
-}
-
-.note-item:hover {
-  background: var(--pm-hover);
-}
-
-.note-item[aria-current='page'] {
-  background: var(--pm-raised);
-  border-color: var(--pm-border);
-}
-
-.note-item[aria-current='page']::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.6rem;
-  bottom: 0.6rem;
-  width: 2px;
-  border-radius: 0;
-  background: var(--pm-accent);
-}
-
-.note-item-title {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.note-item[data-untitled] .note-item-title {
-  color: var(--pm-muted);
-  font-weight: 500;
-}
-
-.note-item-excerpt {
-  display: -webkit-box;
-  margin-top: 0.15rem;
-  overflow: hidden;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  color: var(--pm-muted);
-  font-size: 0.8rem;
-  line-height: 1.4;
 }
 
 /* Folder tree (T7): after the prototype's sidebar tree. */
@@ -1286,14 +1220,6 @@ a {
 .note-actions .icon-btn[aria-pressed='true'] {
   background: var(--pm-accent-soft);
   color: var(--pm-accent);
-}
-
-/* Settings → Sync (A578): the state now, and when it stopped, why and the fix. */
-.sync-now {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem 0.75rem;
 }
 
 .btn.quiet {
@@ -4094,11 +4020,6 @@ html:root[data-resizing='rows'] * {
   white-space: pre-wrap;
 }
 
-.history-diff-caption {
-  margin: 0.9rem 0 0.35rem;
-  font-size: 0.78rem;
-}
-
 /* History's ⓘ in the panel's head: how versions are made, and the docs. */
 .history-about {
   position: relative;
@@ -6833,13 +6754,6 @@ a.toast-action {
   padding-left: var(--pm-titlebar-inset);
 }
 
-/* Above the notes, the "Sign in again" banner is the first row. */
-:root[data-titlebar='compact'] #root > .banner {
-  box-sizing: border-box;
-  min-height: var(--pm-titlebar-row);
-  padding-left: var(--pm-titlebar-inset);
-}
-
 /*
  * Settings: its bar is the first row, and Back starts after the lights. The bar spans the window
  * with the centred column's gutter as its padding (T51, A942), and only the content scrolls, so
@@ -7497,11 +7411,6 @@ button.comment-quote:hover {
   gap: 0.35rem;
   color: var(--pm-muted);
   font-style: italic;
-}
-
-/* The top bar's Comments button carries the open threads' count. */
-.comments-toggle {
-  position: relative;
 }
 
 .comments-count {
