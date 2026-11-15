@@ -161,7 +161,7 @@ describe('All Notebooks (PEN-146)', () => {
       'keep-settings-in-step',
       'copy-tags-when-copying-notes',
       'copy-settings',
-      'commits-from-this-mac',
+      'commit-identity',
     ]);
     // A1558: Primary Notebook is Between Notebooks' first row, not a group of its own.
     const between = find(root, 'git-primary')!.closest('.lf-group')!;

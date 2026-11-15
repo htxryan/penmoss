@@ -184,17 +184,31 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
   }),
   between('Copy Tags When Copying Notes'),
   between('Copy Settings', { help: 'From one notebook to another, once' }),
-  at('git-notebooks')('Commits From This Mac', {
+  at('git-notebooks')('Commit Identity', {
     help: 'The name and email commits are made with',
-    aliases: ['author', 'commit name', 'commit email', 'signing', 'identity', 'git config'],
+    aliases: [
+      'commits from this mac',
+      'author',
+      'commit name',
+      'commit email',
+      'signing',
+      'git config',
+    ],
   }),
   // Agents.
   at('agents')('Penmoss Command', {
     help: 'Agents read and edit your notes through it',
     aliases: ['cli', 'terminal', 'install'],
   }),
-  at('agents')('Connected on This Mac', {
-    aliases: ['connect an agent', 'claude code', 'codex', 'mcp', 'disconnect'],
+  at('agents')('Connected Agents', {
+    aliases: [
+      'connected on this mac',
+      'connect an agent',
+      'claude code',
+      'codex',
+      'mcp',
+      'disconnect',
+    ],
   }),
   at('agent-activity')('Agent Activity', {
     id: 'agent-activity-filters',

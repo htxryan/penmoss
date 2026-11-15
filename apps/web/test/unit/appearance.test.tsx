@@ -88,7 +88,8 @@ describe('Settings → Appearance (T28)', () => {
     const { render } = setup();
     const html = render('/settings/appearance');
     const page = html.slice(html.indexOf('data-testid="appearance-settings"'));
-    for (const group of ['Theme', 'Text']) expect(page).toContain(`<span>${group}</span>`);
+    for (const group of ['Theme', 'Text'])
+      expect(page).toMatch(new RegExp(`<h3 class="lf-sub-name"[^>]*>${group}</h3>`));
     for (const id of [
       'mode',
       'theme',

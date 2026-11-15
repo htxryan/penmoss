@@ -5,7 +5,7 @@ description: Every section of Settings in the Mac and Android apps, what each se
 
 This page lists every setting, page by page, so you can find one and see what it does.
 
-Open Settings with ⌘, on the Mac, or from the gear on the first screen on Android. Most settings are kept in your [Primary Notebook](/docs/organise/#the-primary-notebook) and so reach your other devices; the ones marked **this Mac** or **this device** stay where they are set. Settings that belong to a notebook itself (its time zone and templates) are the same on every device and agent that opens it.
+Open Settings with ⌘, on the Mac, or from the gear on the first screen on Android. Most settings are kept in your [Primary Notebook](/docs/organise/#the-primary-notebook) and so reach your other devices; the ones marked with a laptop stay on the device where you set them (hover over the laptop, or focus it, to read why). Settings that belong to a notebook itself (its time zone and templates) are the same on every device and agent that opens it.
 
 ## On the Mac
 

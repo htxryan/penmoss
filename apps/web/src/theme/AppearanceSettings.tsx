@@ -87,7 +87,8 @@ export function AppearanceSettings() {
       <h2 id={`${id}-h`}>Appearance</h2>
       <p>
         Kept in your Primary Notebook, so it syncs to your other devices
-        {mac ? ', except what says This Mac' : ''}. Every theme has a light and a dark variant.
+        {mac ? ', except what’s marked with the laptop' : ''}. Every theme has a light and a dark
+        variant.
       </p>
 
       <div className="lf-split">

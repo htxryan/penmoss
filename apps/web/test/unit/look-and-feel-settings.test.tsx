@@ -187,10 +187,18 @@ describe('Settings → Note (PEN-146)', () => {
       expect(ids(), id).toContain(id);
     }
     expect(host.querySelectorAll('[data-testid^="display-note-bar-"]')).toHaveLength(9);
-    // Note Panel is this device's own.
-    expect(byTest('note-panel-setting').querySelector('.lf-scope')!.textContent).toBe(
-      'This Device',
-    );
+    // Note Panel is this device's own: a laptop, its sentence its name and its tooltip (A1559),
+    // beside the label, so the radios' group keeps the label alone as its name.
+    const mark = byTest('note-panel-setting').querySelector<HTMLElement>('.lf-scope')!;
+    const sentence =
+      'Unlike other settings, this setting is kept only on this device and isn’t synced through your primary notebook.';
+    expect(mark.querySelector('[data-icon="laptop"]')).not.toBeNull();
+    expect(mark.getAttribute('role')).toBe('img');
+    expect(mark.getAttribute('aria-label')).toBe(sentence);
+    expect(mark.dataset['tip']).toBe(sentence);
+    expect(mark.tabIndex).toBe(0);
+    expect(mark.textContent).toBe('');
+    expect(mark.closest('label, .lf-row-label')).toBeNull();
     // The status bar never offers Tags.
     expect(host.querySelector('[data-testid="metadata-status-tags"]')).toBeNull();
   });

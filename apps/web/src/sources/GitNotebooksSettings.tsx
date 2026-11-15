@@ -8,7 +8,7 @@
  *   Add Notebook…, which opens the form (open at once with none: any repository, D61, and git
  *   follows its own configuration, D62); Between Notebooks (the one Primary Notebook picker, this
  *   Mac's choice, then Keep Settings in Step, Copy Tags When Copying Notes, Copy Settings…); and
- *   Commits From This Mac, git's own identity.
+ *   Commit Identity, this Mac's git identity.
  * - **A notebook's page** (`/settings/git-notebooks/<id>`, each notebook also an entry in the
  *   nav, NotebookNavEntries.tsx): a header with its name, the Primary chip, the sync dot and
  *   time, and Sync Now; a stopped sync's words under it on every tab; then three tabs, kept in
@@ -433,10 +433,10 @@ function AllNotebooks({
       {sources.length > 0 ? (
         <>
           <BetweenNotebooks />
-          <GroupHead scope>Commits From This Mac</GroupHead>
+          <GroupHead scope>Commit Identity</GroupHead>
           <div className="lf-group">
             <SettingRow
-              setting="commits-from-this-mac"
+              setting="commit-identity"
               testId="git-identity"
               label={identity ? identity.name : 'No Name Set'}
               help={

@@ -53,6 +53,7 @@ import app.penmoss.engine.git.GitRefusal
 import app.penmoss.engine.git.OwnerWords
 import app.penmoss.engine.git.PendingPurge
 import app.penmoss.ui.settings.ChoiceRow
+import app.penmoss.ui.settings.DeviceOnlyHeadline
 import app.penmoss.ui.settings.GroupTitle
 import app.penmoss.ui.settings.Help
 import app.penmoss.ui.settings.SectionScreen
@@ -318,7 +319,7 @@ private fun BetweenNotebooks(ui: GitNotebooksUi, actions: GitNotebooksActions, o
     GroupTitle("Between Notebooks")
     val chosen = ui.rows.firstOrNull { it.view.localId == ui.journal }
     ListItem(
-        headlineContent = { Text("Primary Notebook") },
+        headlineContent = { DeviceOnlyHeadline("Primary Notebook") },
         supportingContent = { Text("Holds your journal, Inbox and these settings") },
         trailingContent = { Text("${chosen?.view?.name ?: "None"} ›", color = MaterialTheme.colorScheme.onSurfaceVariant) },
         modifier = Modifier.settingRow("primary-notebook").testTag("gitPrimary").clickable(role = Role.Button, onClick = onPickPrimary),
@@ -326,8 +327,8 @@ private fun BetweenNotebooks(ui: GitNotebooksUi, actions: GitNotebooksActions, o
     if (several) {
         val primary = ui.rows.firstOrNull { it.view.localId == ui.journal } ?: ui.rows.first()
         ListItem(
-            headlineContent = { Text("Keep Settings in Step") },
-            supportingContent = { Text("A change to ${primary.view.name}’s settings goes to the other notebooks. This phone’s choice.") },
+            headlineContent = { DeviceOnlyHeadline("Keep Settings in Step") },
+            supportingContent = { Text("A change to ${primary.view.name}’s settings goes to the other notebooks") },
             trailingContent = { Switch(checked = ui.inStep, onCheckedChange = null) },
             modifier = Modifier.settingRow("keep-settings-in-step").testTag("gitSettingsInStep")
                 .toggleable(value = ui.inStep, role = Role.Switch, onValueChange = actions.onInStep),

@@ -5,7 +5,7 @@
  *
  * - **The penmoss command** (A992): one line when it is installed and on PATH ("penmoss command
  *   installed", its path, Manage…); the full card otherwise, or once Manage… opens it.
- * - **Connected on This Mac** (A993, D52): each notebook a row that folds open in place, with its
+ * - **Connected Agents** (A993, D52; A1559): each notebook a row that folds open in place, with its
  *   agents (the copy Penmoss makes for every agent, and each agent connected by name, with
  *   Disconnect and the lines to give it) and Connect an Agent… on each row.
  *   `/settings/agents/<notebook id>` opens with that notebook unfolded.
@@ -59,7 +59,7 @@ export function AgentsSettings({ item }: { item?: string | undefined }) {
         which runs on this Mac from this app: no account and no agent token.
       </p>
       <CommandLine git={git} />
-      <GroupHead scope>Connected on This Mac</GroupHead>
+      <GroupHead scope>Connected Agents</GroupHead>
       {missing ? (
         <p className="muted" data-testid="agents-notebook-missing">
           That notebook isn’t on this Mac.
@@ -81,7 +81,7 @@ export function AgentsSettings({ item }: { item?: string | undefined }) {
         <ul
           className="nset-fold-list"
           data-testid="agents-notebook-list"
-          data-setting="connected-on-this-mac"
+          data-setting="connected-agents"
         >
           {sources.map((source) => (
             <NotebookAgentsRow

@@ -47,23 +47,39 @@
   margin-top: 0;
 }
 
+.lf-sub-name {
+  margin: 0;
+  font: inherit;
+}
+
 .lf-sub-hint {
   color: var(--pm-muted);
   font-size: var(--pm-text-xs);
   font-weight: 400;
 }
 
-/* This Mac (or This Device): a setting kept on this device alone. */
+/*
+ * A setting kept on this device alone (A1559): a laptop, its words in the tooltip. Beside the
+ * row's label (`lf-row-name`) or after a group's name.
+ */
+.lf-row-name {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .lf-scope {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  padding: 0.05rem 0.4rem;
-  border: 1px solid var(--pm-border-strong);
+  justify-content: center;
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
-  font-weight: 600;
-  line-height: 1.4;
-  white-space: nowrap;
+  cursor: help;
+}
+
+.lf-scope:hover {
+  color: var(--pm-fg);
 }
 
 /* A bordered list of rows. */
