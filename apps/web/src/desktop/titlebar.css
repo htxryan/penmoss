@@ -52,7 +52,8 @@
     .window-drag,
     .home,
     .tags-page-top,
-    .drawing-editor-bar
+    .drawing-editor-bar,
+    .history-view-head
   ) {
   -webkit-app-region: no-drag;
 }
