@@ -58,13 +58,14 @@ class TooltipDelayInstrumentedTest {
             do {
                 instrumentation.waitForIdleSync()
                 scenario.onActivity { activity -> texts = ScreenTree.texts(activity.window.decorView) }
-                if ("Today" in texts && "Show Notebook Names in Quick Access" in texts) break
+                if ("Today" in texts && "Show Notebook Names" in texts) break
                 SystemClock.sleep(250)
             } while (SystemClock.uptimeMillis() < deadline)
             // The whole screen, scrolled-off rows included: Display's own rows are there...
             assertTrue(texts.toString(), "Today" in texts)
-            assertTrue(texts.toString(), "Notes in Recent Notes" in texts)
-            assertTrue(texts.toString(), "Show Notebook Names in Quick Access" in texts)
+            assertTrue(texts.toString(), "Recent Notes" in texts)
+            // PEN-146: Quick Access's own switch, under its section.
+            assertTrue(texts.toString(), "Show Notebook Names" in texts)
             // ...and nothing names the web's tooltip field or its choices.
             assertTrue(texts.toString(), texts.none { it.contains("Tooltip", ignoreCase = true) })
             assertTrue(texts.toString(), texts.none { it == "Never" || it.endsWith("(Default)") || it.endsWith("Seconds") })

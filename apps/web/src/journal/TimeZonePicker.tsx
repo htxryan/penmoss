@@ -45,7 +45,13 @@ export function TimeZonePicker({
   const items = useMemo<ZoneChoice[]>(() => {
     const q = fold(query.trim());
     if (!q) {
-      const own = device ? all.find((each) => each.zone === device) : undefined;
+      // A device on UTC (or another alias) is not in the browser's list of zones: offer it anyway.
+      const own = device
+        ? (all.find((each) => each.zone === device) ?? {
+            zone: device,
+            offset: utcOffset(device, new Date()),
+          })
+        : undefined;
       return own ? [{ ...own, device: true }, ...all] : all;
     }
     const found = all.filter((each) => fold(each.zone).includes(q) || fold(each.offset) === q);
