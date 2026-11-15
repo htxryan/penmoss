@@ -17,7 +17,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import app.penmoss.editor.PickedPictures
 import app.penmoss.engine.api.CaptureRequest
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.graph
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -49,7 +49,7 @@ class CaptureActivity : ComponentActivity() {
     private lateinit var draftId: String
 
     /** The graph of a git notebook the sheet offers (A888, G8; A1040). */
-    private fun graphOf(key: String?): AppGraph? =
+    private fun graphOf(key: String?): NotebookGraph? =
         key?.let { graph.gitIfAny?.let { hub -> runCatching { hub.graph(key) }.getOrNull() } }
 
     /** What the person chose on this sheet (kept through rotation), or null. */
@@ -77,7 +77,7 @@ class CaptureActivity : ComponentActivity() {
         val chosen = savedInstanceState?.getString(DESTINATION)
         lifecycleScope.launch {
             // Read first: `ui` is copied once it is known, never a copy from before the read.
-            val destination = chosen ?: graph.captures.destination()
+            val destination = chosen ?: graph.store.captureDestination()
             ui = ui.copy(destination = destination)
         }
         // Which notebook (A888): named on the sheet, changeable; with several git notebooks and

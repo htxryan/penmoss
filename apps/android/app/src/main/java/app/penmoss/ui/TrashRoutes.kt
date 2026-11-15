@@ -13,7 +13,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.data.NoteEntity
 import app.penmoss.data.NoteStore
 import app.penmoss.data.RestoreQuestion
@@ -26,7 +26,6 @@ import app.penmoss.engine.api.RestoredFolder
 import app.penmoss.engine.api.TrashListed
 import app.penmoss.engine.api.TrashedFolderListed
 import app.penmoss.engine.git.OwnerWords
-import app.penmoss.git.GraphSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -367,14 +366,14 @@ internal fun purgeFailure(error: Exception): String = when (error) {
 }
 
 @Composable
-internal fun TrashRoute(graph: AppGraph, onOpen: (String) -> Unit, onBack: () -> Unit) {
+internal fun TrashRoute(graph: NotebookGraph, onOpen: (String) -> Unit, onBack: () -> Unit) {
     val model = viewModel {
         TrashModel(
             graph.store,
             graph.api,
             graph.purge,
             requestSync = { graph.sync.requestSync() },
-            git = graph.source is GraphSource.Git,
+            git = true,
         )
     }
     val folders = viewModel {

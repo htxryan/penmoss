@@ -9,7 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.BuildConfig
 import app.penmoss.data.NoteStore
 import app.penmoss.engine.settings.SettingKeys
@@ -39,8 +39,8 @@ import java.time.ZoneId
 
 /*
  * The Settings screens' data (T40 P1): each reads the settings as the phone shows them
- * (`AppGraph.settings`, the last tree's with unsent changes laid over) and changes them through
- * `AppGraph.changeSetting`: the device's go to the Journal notebook's device map (A1014), a
+ * (`NotebookGraph.settings`, the last tree's with unsent changes laid over) and changes them through
+ * `NotebookGraph.changeSetting`: the device's go to the Journal notebook's device map (A1014), a
  * notebook's own with its next pass (A411).
  */
 
@@ -119,11 +119,11 @@ internal fun shortcutsSummary(settings: Settings): String {
 }
 
 @Composable
-internal fun SettingsHomeRoute(graph: AppGraph, status: String, onOpen: (String) -> Unit, onBack: () -> Unit) {
+internal fun SettingsHomeRoute(graph: NotebookGraph, status: String, onOpen: (String) -> Unit, onBack: () -> Unit) {
     val state by graph.settings.collectAsStateWithLifecycle()
     val appearance by graph.appearance.collectAsStateWithLifecycle()
     val themeName = appearance.theme?.get("name")?.jsonPrimitive?.content ?: "Penmoss"
-    val gitCount by remember(graph) { graph.gitIfAny?.list ?: kotlinx.coroutines.flow.MutableStateFlow(emptyList()) }.collectAsStateWithLifecycle()
+    val gitCount by remember(graph) { graph.git.list }.collectAsStateWithLifecycle()
     // A git notebook's Appearance, Display and Symbols are the device's (A827): the app's settings.
     val device by graph.device.settings.collectAsStateWithLifecycle()
     val git = app.penmoss.git.gitSummary(gitCount.size)
@@ -176,7 +176,7 @@ internal fun themeCard(theme: JsonObject, custom: Boolean): ThemeCard {
 }
 
 @Composable
-internal fun AppearanceRoute(graph: AppGraph, onEditTheme: (String) -> Unit, onBack: () -> Unit) {
+internal fun AppearanceRoute(graph: app.penmoss.DeviceGraph, onEditTheme: (String) -> Unit, onBack: () -> Unit) {
     val state by graph.settings.collectAsStateWithLifecycle()
     val catalogue = ThemeCatalogue.bundled
     val settings = state.settings
@@ -224,7 +224,7 @@ internal fun AppearanceRoute(graph: AppGraph, onEditTheme: (String) -> Unit, onB
 
 /** The theme editor's screen for the custom theme [id] (T40 P1b, ST5, A417). */
 @Composable
-internal fun ThemeEditorRoute(graph: AppGraph, id: String, onEditTheme: (String) -> Unit, onBack: () -> Unit) {
+internal fun ThemeEditorRoute(graph: app.penmoss.DeviceGraph, id: String, onEditTheme: (String) -> Unit, onBack: () -> Unit) {
     val state by graph.settings.collectAsStateWithLifecycle()
     val appearance by graph.appearance.collectAsStateWithLifecycle()
     val catalogue = ThemeCatalogue.bundled
@@ -253,7 +253,7 @@ internal fun ThemeEditorRoute(graph: AppGraph, id: String, onEditTheme: (String)
 internal fun todayIn(zone: String): String = journalToday(zone).toString()
 
 @Composable
-internal fun DailyNotesRoute(graph: AppGraph, onTimeZone: () -> Unit, onBack: () -> Unit) {
+internal fun DailyNotesRoute(graph: NotebookGraph, onTimeZone: () -> Unit, onBack: () -> Unit) {
     val state by graph.settings.collectAsStateWithLifecycle()
     val settings = state.settings
     DailyNotesScreen(
@@ -271,7 +271,7 @@ internal fun DailyNotesRoute(graph: AppGraph, onTimeZone: () -> Unit, onBack: ()
 }
 
 @Composable
-internal fun TimeZoneRoute(graph: AppGraph, onBack: () -> Unit) {
+internal fun TimeZoneRoute(graph: NotebookGraph, onBack: () -> Unit) {
     val state by graph.settings.collectAsStateWithLifecycle()
     val zones = remember { regionTimeZones() }
     TimeZonePicker(
@@ -287,7 +287,7 @@ internal fun TimeZoneRoute(graph: AppGraph, onBack: () -> Unit) {
 }
 
 @Composable
-internal fun QuickCaptureRoute(graph: AppGraph, onBack: () -> Unit) {
+internal fun QuickCaptureRoute(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
     val state by graph.settings.collectAsStateWithLifecycle()
     QuickCaptureScreen(
         destination = state.settings.captureDestination,

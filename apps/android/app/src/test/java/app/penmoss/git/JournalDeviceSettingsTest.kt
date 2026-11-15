@@ -58,7 +58,7 @@ class JournalDeviceSettingsTest {
         journalDb = PenmossDatabase.inMemory(context)
         device = NoteStore(deviceDb)
         journal = NoteStore(journalDb)
-        settings = JournalDeviceSettings(device, journal) { set ->
+        settings = JournalDeviceSettings(device.settings, journal.settings) { set ->
             if (refuse) error("The notebook is opening")
             written += set
             // The page's `setSetting(doc, 'device', key, value)`; a null removes it.

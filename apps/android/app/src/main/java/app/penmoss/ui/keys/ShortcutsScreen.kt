@@ -53,7 +53,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.engine.keys.Bindings
 import app.penmoss.engine.keys.Combos
 import app.penmoss.engine.keys.ShortcutCommand
@@ -129,7 +129,7 @@ fun hasHardwareKeyboard(): Boolean {
 
 /** Settings → Keyboard shortcuts (T40 P9, ST8, A495), with the synced bindings. */
 @Composable
-fun ShortcutsRoute(graph: AppGraph, onBack: () -> Unit) {
+fun ShortcutsRoute(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
     val commands = LocalAppCommands.current
     val bindings by commands.bindings.collectAsStateWithLifecycle()
     val settings by graph.settings.collectAsStateWithLifecycle()

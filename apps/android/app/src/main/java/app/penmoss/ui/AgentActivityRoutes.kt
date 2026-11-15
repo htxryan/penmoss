@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.engine.api.AgentActivityEntry
 import app.penmoss.engine.api.ApiException
 import app.penmoss.engine.api.PenmossApi
@@ -135,7 +135,7 @@ class AgentActivityModel(
 }
 
 @Composable
-internal fun AgentActivityRoute(graph: AppGraph, onBack: () -> Unit) {
+internal fun AgentActivityRoute(graph: NotebookGraph, onBack: () -> Unit) {
     val model = viewModel {
         AgentActivityModel(graph.api, requestSync = { graph.sync.requestSync() })
     }
@@ -148,6 +148,6 @@ internal fun AgentActivityRoute(graph: AppGraph, onBack: () -> Unit) {
         onFilter = { agent, group -> model.filter(agent, group) },
         onUndo = model::undo,
         onMessageShown = model::messageShown,
-        git = graph.isGit,
+        git = true,
     )
 }

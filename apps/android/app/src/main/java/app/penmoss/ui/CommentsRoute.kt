@@ -5,7 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.editor.NoteComments
 import app.penmoss.engine.bridge.DraftSource
 import app.penmoss.engine.bridge.ThreadStatus
@@ -17,7 +17,7 @@ import app.penmoss.engine.bridge.ThreadStatus
  */
 @Composable
 internal fun NoteCommentsSheet(
-    graph: AppGraph,
+    graph: NotebookGraph,
     noteId: String,
     comments: NoteComments,
     editable: Boolean,

@@ -53,7 +53,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.editor.EditorWebView
 import app.penmoss.engine.bridge.FromGraph
 import app.penmoss.engine.bridge.GraphProtocol
@@ -153,7 +153,7 @@ internal const val GRAPH_BATCH_MS = 250L
 
 /** The graph (LK7) from Home, or a note's local graph (LK8) when [note] is set. */
 @Composable
-fun GraphRoute(graph: AppGraph, note: String?, onBack: () -> Unit, onOpen: (String) -> Unit) {
+fun GraphRoute(graph: NotebookGraph, note: String?, onBack: () -> Unit, onOpen: (String) -> Unit) {
     val model by remember {
         // Open notebooks only (T43, A752).
         graph.store.observeGraph().atMostEvery(GRAPH_BATCH_MS).map(GraphInput::model).distinctUntilChanged().flowOn(Dispatchers.Default)

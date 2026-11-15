@@ -3,7 +3,7 @@ package app.penmoss.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import androidx.compose.runtime.Immutable
 import app.penmoss.engine.settings.DisplayKeys
 import app.penmoss.engine.settings.SidebarLayout
@@ -54,7 +54,7 @@ fun displaySummary(settings: Settings): String {
 }
 
 @Composable
-internal fun DisplayRoute(graph: AppGraph, onBack: () -> Unit) {
+internal fun DisplayRoute(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
     val state by graph.settings.collectAsStateWithLifecycle()
     DisplayScreen(
         choices = displayChoices(state.settings),

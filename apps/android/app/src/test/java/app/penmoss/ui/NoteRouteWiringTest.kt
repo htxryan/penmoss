@@ -25,7 +25,7 @@ import androidx.work.testing.WorkManagerTestInitHelper
 import androidx.webkit.JavaScriptExecutionException
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebViewOutcomeReceiver
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.PenmossApp
 import app.penmoss.TestGraphs
 import app.penmoss.git.GitNotebookActivity
@@ -65,8 +65,8 @@ class NoteRouteWiringTest {
 
     private val app: PenmossApp = ApplicationProvider.getApplicationContext()
     /** The app's graph, and the git notebook's that holds Garden. */
-    private lateinit var main: AppGraph
-    private lateinit var graph: AppGraph
+    private lateinit var main: app.penmoss.DeviceGraph
+    private lateinit var graph: NotebookGraph
     private var scenario: ActivityScenario<GitNotebookActivity>? = null
 
     private val garden = "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"

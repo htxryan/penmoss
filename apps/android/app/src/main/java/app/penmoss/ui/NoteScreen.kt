@@ -90,7 +90,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.editor.EditorPageServices
 import app.penmoss.editor.EditorUiState
 import app.penmoss.editor.EditorWebView
@@ -137,7 +137,7 @@ private const val MAX_PICKED = 10
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun NoteRoute(
-    graph: AppGraph,
+    graph: NotebookGraph,
     noteId: String,
     onBack: () -> Unit,
     onOpenNote: (String) -> Unit,
@@ -513,7 +513,7 @@ fun NoteRoute(
                             BreadcrumbBar(
                                 path = crumbs,
                                 onOpenFolder = onOpenFolder,
-                                notebook = (graph.source as? app.penmoss.git.GraphSource.Git)?.name ?: app.penmoss.data.Notebooks.DEFAULT_NAME,
+                                notebook = graph.name,
                             )
                             if (notebookName != null) NoteNotebookLine(notebookName)
                         }

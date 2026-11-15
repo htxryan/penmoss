@@ -27,7 +27,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.ui.DotState
 import app.penmoss.ui.SectionTitle
 import app.penmoss.ui.SyncDot
@@ -43,7 +43,7 @@ import kotlinx.coroutines.launch
  * and no personal notes.
  */
 @Composable
-fun NotebooksHome(graph: AppGraph, onBack: () -> Unit) {
+fun NotebooksHome(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
     val context = LocalContext.current
     GitNotebooksRoute(graph.git, onOpen = { GitNotebookActivity.open(context, it) }, onBack = onBack, home = true)
 }
@@ -54,8 +54,8 @@ fun NotebooksHome(graph: AppGraph, onBack: () -> Unit) {
  * what only the person can do (a token, Delete for good again, Keep note).
  */
 @Composable
-fun GitSyncRoute(graph: AppGraph, passText: String, onGitNotebooks: () -> Unit, onBack: () -> Unit, onAgentActivity: () -> Unit = {}) {
-    val source = graph.source as? GraphSource.Git ?: return
+fun GitSyncRoute(graph: NotebookGraph, passText: String, onGitNotebooks: () -> Unit, onBack: () -> Unit, onAgentActivity: () -> Unit = {}) {
+    val source = graph
     val hub = graph.git
     val statuses by hub.statuses.collectAsStateWithLifecycle()
     val views by hub.list.collectAsStateWithLifecycle()

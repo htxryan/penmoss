@@ -9,7 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.ui.settings.StorageSection
 import app.penmoss.ui.settings.StorageUse
 import kotlinx.coroutines.Dispatchers
@@ -18,7 +18,7 @@ import kotlinx.coroutines.withContext
 
 /** Sync and storage's storage (T40 P8, ED12, ED13), from the phone's own files and setting. */
 @Composable
-internal fun StorageRoute(graph: AppGraph) {
+internal fun StorageRoute(graph: NotebookGraph) {
     val setting by graph.webPictures.settings.setting.collectAsStateWithLifecycle()
     var use by remember { mutableStateOf<StorageUse?>(null) }
     var counts by remember { mutableIntStateOf(0) }

@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.data.FolderEntity
 import app.penmoss.data.Notebooks
 import app.penmoss.ui.settings.SettingsIcons
@@ -75,7 +75,7 @@ fun NotebookTurnBackDialog(name: String, defaultName: String, onConfirm: () -> U
 }
 
 /** Turns a folder into a notebook or back (A756). */
-suspend fun setNotebookAndSay(graph: AppGraph, id: String, name: String, on: Boolean): String {
+suspend fun setNotebookAndSay(graph: NotebookGraph, id: String, name: String, on: Boolean): String {
     val flag = graph.store.setNotebook(id, on)
     if (flag.changed) graph.sync.requestSync()
     return notebookFlagSaid(name, on, flag)

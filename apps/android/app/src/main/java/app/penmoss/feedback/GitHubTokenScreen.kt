@@ -22,7 +22,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.ui.settings.Help
 import app.penmoss.ui.settings.SectionScreen
 import app.penmoss.ui.square.Button
@@ -73,7 +73,7 @@ class GitHubTokenModel(
 }
 
 @Composable
-fun GitHubTokenRoute(graph: AppGraph, onBack: () -> Unit) {
+fun GitHubTokenRoute(graph: NotebookGraph, onBack: () -> Unit) {
     val store = graph.githubToken
     val model = remember(store) { GitHubTokenModel(store, graph.githubFeedback::checkToken, graph.githubFeedback.repo) }
     GitHubTokenScreen(

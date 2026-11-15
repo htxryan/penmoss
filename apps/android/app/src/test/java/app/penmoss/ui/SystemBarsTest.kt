@@ -8,7 +8,7 @@ import androidx.core.view.WindowCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.PenmossApp
 import app.penmoss.TestGraphs
 import app.penmoss.capture.CaptureActivity
@@ -38,7 +38,7 @@ class SystemBarsTest {
     val compose = createEmptyComposeRule()
 
     private val app: PenmossApp = ApplicationProvider.getApplicationContext()
-    private lateinit var graph: AppGraph
+    private lateinit var graph: app.penmoss.DeviceGraph
     private var scenario: ActivityScenario<out ComponentActivity>? = null
 
     @After
@@ -59,7 +59,7 @@ class SystemBarsTest {
 
     /** The device settings read again, now saying [mode]. */
     private fun settle(mode: String, hash: String) {
-        runBlocking { graph.store.saveTree(SyncTree(hash = hash, settings = JsonObject(mapOf(SettingKeys.MODE to JsonPrimitive(mode))))) }
+        runBlocking { graph.store.saveTreeSettings(SyncTree(hash = hash, settings = JsonObject(mapOf(SettingKeys.MODE to JsonPrimitive(mode))))) }
         // Room answers on its own thread and the app's flows collect on the main looper: wait until
         // the appearance the screen will read has the settings, however slow the machine.
         compose.waitUntil(5_000) {

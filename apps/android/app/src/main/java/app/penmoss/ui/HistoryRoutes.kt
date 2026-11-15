@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.data.NoteStore
 import app.penmoss.engine.api.ApiException
 import app.penmoss.engine.api.DiffOp
@@ -341,7 +341,7 @@ internal fun historyFailure(error: Exception): String {
 
 @Composable
 internal fun HistoryRoute(
-    graph: AppGraph,
+    graph: NotebookGraph,
     noteId: String,
     flushEditor: suspend () -> Unit,
     exchangeNow: suspend () -> ExchangeResult?,

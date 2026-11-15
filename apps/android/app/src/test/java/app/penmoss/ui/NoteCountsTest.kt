@@ -4,7 +4,7 @@ import android.content.Context
 import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.auth.SecretBox
 import app.penmoss.data.AttachmentEntity
 import app.penmoss.data.CaptureEntity
@@ -34,7 +34,7 @@ import java.io.File
 @RunWith(AndroidJUnit4::class)
 class NoteCountsTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
-    private lateinit var graph: AppGraph
+    private lateinit var graph: NotebookGraph
     private val db get() = graph.database
 
     @Before
@@ -44,7 +44,7 @@ class NoteCountsTest {
 
             override fun open(sealed: ByteArray) = sealed
         }
-        graph = AppGraph(context, database = PenmossDatabase.inMemory(context), box = box)
+        graph = app.penmoss.TestGraphs.notebook(context, app.penmoss.DeviceGraph(context, database = PenmossDatabase.inMemory(context), box = box))
     }
 
     @After
@@ -52,6 +52,7 @@ class NoteCountsTest {
         // The app’s work has ended before the database closes, never against a closed pool (A610, A690).
         stopMainScope(graph.scope)
         graph.database.close()
+        graph.device.database.close()
     }
 
     private fun <T> Flow<T>.settlesOn(expected: T): T = runBlocking { withTimeout(5_000) { first { it == expected } } }

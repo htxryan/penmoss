@@ -67,7 +67,6 @@ internal suspend fun agentReferenceOf(
 }
 
 /** [noteId]'s reference in [graph] (its git notebook's, when it is one). */
-internal suspend fun agentReferenceIn(graph: app.penmoss.AppGraph, noteId: String): String? {
-    val git = graph.source as? app.penmoss.git.GraphSource.Git
-    return agentReferenceOf(graph.store, noteId, git?.name, git?.notebookId)
+internal suspend fun agentReferenceIn(graph: app.penmoss.NotebookGraph, noteId: String): String? {
+    return agentReferenceOf(graph.store, noteId, graph.name, graph.notebookId)
 }

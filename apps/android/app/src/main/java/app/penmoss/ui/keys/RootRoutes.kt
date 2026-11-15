@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.res.Configuration
 import android.widget.Toast
 import androidx.navigation.NavHostController
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.capture.CaptureTileService
 import app.penmoss.engine.bridge.ToEditor
 import app.penmoss.engine.settings.SettingKeys
@@ -30,7 +30,7 @@ fun openCapture(context: Context) {
  * one in front, as from Home's buttons.
  */
 internal fun rootActions(
-    graph: AppGraph,
+    graph: NotebookGraph,
     nav: NavHostController,
     context: Context,
     openPeriodic: (ToEditor.PeriodKind, String?) -> Unit,

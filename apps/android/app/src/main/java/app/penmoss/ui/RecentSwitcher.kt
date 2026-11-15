@@ -188,7 +188,7 @@ internal const val RECENT_SWITCHER_NOTES = 9
  * chosen. The command itself, from Search or the page, opens it without Ctrl held.
  */
 @Composable
-internal fun RecentSwitcherHost(graph: app.penmoss.AppGraph, currentNote: String?, openNote: (String) -> Unit) {
+internal fun RecentSwitcherHost(graph: app.penmoss.NotebookGraph, currentNote: String?, openNote: (String) -> Unit) {
     val switch = androidx.compose.runtime.remember { RecentSwitch() }
     val recent by androidx.compose.runtime.remember(graph) {
         // Open notebooks only (T43, A752).

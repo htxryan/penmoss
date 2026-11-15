@@ -46,7 +46,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.editor.NewNoteRequest
 import app.penmoss.editor.PeriodicNoteRequest
 import app.penmoss.engine.bridge.ToEditor
@@ -100,7 +100,7 @@ private const val RECENT = app.penmoss.engine.settings.SidebarLayout.RECENT_MAX
  * ([app.penmoss.git.NotebooksHome], A1040).
  */
 @Composable
-fun PenmossRoot(graph: AppGraph, deepLinks: DeepLinkInbox = DeepLinkInbox()) {
+fun PenmossRoot(graph: NotebookGraph, deepLinks: DeepLinkInbox = DeepLinkInbox()) {
     LaunchedEffect(graph) { graph.sync.requestSync() }
     // The lists' selection mode (T42 on Android, NT26, A652), which their rows join.
     val selection = remember { NoteSelection() }
@@ -108,7 +108,7 @@ fun PenmossRoot(graph: AppGraph, deepLinks: DeepLinkInbox = DeepLinkInbox()) {
 }
 
 @Composable
-private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
+private fun Screens(graph: NotebookGraph, deepLinks: DeepLinkInbox) {
     val nav = rememberNavController()
     val context = LocalContext.current
     val status by graph.sync.status.collectAsStateWithLifecycle()
@@ -339,7 +339,7 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
                     if (graph.device.settings.value.known) graph.device.changeSetting(key, value)
                 }
                 HomeScreen(
-                    title = (graph.source as? app.penmoss.git.GraphSource.Git)?.name ?: "Penmoss",
+                    title = graph.name,
                     quickAccess = quickAccess,
                     // The sidebar's sections and Quick Access (T53 items 8 and 10), synced settings.
                     layout = layout,
@@ -891,7 +891,7 @@ private sealed interface FolderNaming {
 
 /** Deletes a folder after saying what moves up (T40 P4, NT4); gone meanwhile: nothing to ask. */
 @Composable
-private fun FolderDeleteHost(graph: AppGraph, folder: FolderItem, onDone: () -> Unit) {
+private fun FolderDeleteHost(graph: NotebookGraph, folder: FolderItem, onDone: () -> Unit) {
     val context = LocalContext.current
     val summary by produceState<NoteStore.FolderDeleteSummary?>(initialValue = null, folder.id) {
         value = graph.store.folderDeleteSummary(folder.id)

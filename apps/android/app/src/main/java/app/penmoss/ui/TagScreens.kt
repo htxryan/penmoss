@@ -46,7 +46,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.data.NoteStore
 import app.penmoss.engine.api.ApiException
 import app.penmoss.engine.notes.TagNode
@@ -296,7 +296,7 @@ internal interface TagRenamer {
     fun syncAfterRename()
 }
 
-private class GraphTagRenamer(private val graph: AppGraph) : TagRenamer {
+private class GraphTagRenamer(private val graph: NotebookGraph) : TagRenamer {
     override suspend fun rename(from: String, to: String, noteIds: List<String>): List<String> =
         graph.api.renameTag(from, to, noteIds).notes
 
@@ -318,7 +318,7 @@ internal const val RENAME_RESYNC_MS = 5_000L
 
 /** Tags' route (TG1, TG3): the tree from Room, and the rename dialog over it. */
 @Composable
-internal fun TagsRoute(graph: AppGraph, onBack: () -> Unit, onOpenTag: (String) -> Unit) {
+internal fun TagsRoute(graph: NotebookGraph, onBack: () -> Unit, onOpenTag: (String) -> Unit) {
     val renamer = remember(graph) { GraphTagRenamer(graph) }
     TagsRoute(graph.store, renamer, onBack, onOpenTag)
 }
@@ -386,7 +386,7 @@ private suspend fun renameTag(store: NoteStore, renamer: TagRenamer, from: Strin
 
 /** A tag's notes' route (TG2). */
 @Composable
-internal fun TaggedRoute(graph: AppGraph, tag: String, onBack: () -> Unit, onOpen: (String) -> Unit, onNoteLongPress: (NoteItem) -> Unit) {
+internal fun TaggedRoute(graph: NotebookGraph, tag: String, onBack: () -> Unit, onOpen: (String) -> Unit, onNoteLongPress: (NoteItem) -> Unit) {
     val notes by remember(graph, tag) {
         graph.store.observeTagged(tag).map { Items.notes(it, System.currentTimeMillis()) }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }.collectAsStateWithLifecycle(emptyList())

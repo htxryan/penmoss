@@ -24,7 +24,7 @@ import kotlinx.serialization.json.JsonPrimitive
  */
 class SettingsStore(
     private val db: PenmossDatabase,
-    private val now: () -> Long,
+    private val now: () -> Long = System::currentTimeMillis,
 ) {
     private val settings = db.settings()
     private val pendingSettings = db.pendingSettings()

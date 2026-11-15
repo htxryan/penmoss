@@ -3,7 +3,7 @@ package app.penmoss.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.engine.settings.LineSymbol
 import app.penmoss.engine.settings.LineSymbols
 import app.penmoss.engine.settings.SettingKeys
@@ -27,7 +27,7 @@ fun symbolsSummary(settings: Settings): String {
 internal fun symbolsChange(symbols: List<LineSymbol>): String? = LineSymbols.listProblem(symbols)
 
 @Composable
-internal fun SymbolsRoute(graph: AppGraph, onShortcuts: () -> Unit, onBack: () -> Unit) {
+internal fun SymbolsRoute(graph: app.penmoss.DeviceGraph, onShortcuts: () -> Unit, onBack: () -> Unit) {
     val state by graph.settings.collectAsStateWithLifecycle()
     SymbolsScreen(
         symbols = state.settings.symbols,

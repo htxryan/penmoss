@@ -72,7 +72,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.engine.api.SearchFilters
 import app.penmoss.search.SearchAction
 import app.penmoss.search.SearchActions
@@ -428,7 +428,7 @@ private fun SearchResultRow(result: SearchResult, onOpen: (String) -> Unit, onLo
  */
 @Composable
 internal fun SearchRoute(
-    graph: AppGraph,
+    graph: NotebookGraph,
     onBack: () -> Unit,
     onOpen: (String) -> Unit,
     onLongPress: (NoteItem) -> Unit,
