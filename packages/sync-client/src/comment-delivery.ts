@@ -9,7 +9,7 @@
  * server, a token or a socket: a target is `{writer, session, label}` (A1060), and whoever reads
  * a thread knows only its own writer.
  */
-import { ulid } from '@penmoss/core';
+import { ulid } from '@penmoss/core/ids';
 import * as Y from '@y/y';
 import {
   addComment,

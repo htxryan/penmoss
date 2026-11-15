@@ -11,8 +11,8 @@
  * A626, A711).
  */
 import type { NoteLink } from '@penmoss/core/links';
-import { linksField, type NoteRecord, type ReplicaStore } from './record';
-import type { Replica, UpdateInfo } from './replica';
+import { linksField, type NoteRecord, type ReplicaStore } from '@penmoss/sync-client/record';
+import type { Replica, UpdateInfo } from '@penmoss/sync-client/replica';
 
 /** A note's state held in memory, e.g. while its last write is still in flight. */
 export interface ReplicaSnapshot {

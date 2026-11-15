@@ -1,6 +1,6 @@
 import { buildTree } from '@penmoss/core/workspace';
 import { initNote } from '@penmoss/sync-client/note';
-import type { NoteRecord } from '@penmoss/sync-client';
+import type { NoteRecord } from '@penmoss/sync-client/record';
 import { setFrontmatterTag } from '@penmoss/sync-client/tags';
 import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
 import { describe, expect, it } from 'vitest';

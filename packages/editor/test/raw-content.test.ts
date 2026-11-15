@@ -1,6 +1,7 @@
-import { parseMarkdown, schema as coreSchema, serializeMarkdown } from '@penmoss/core';
+import { parseMarkdown, serializeMarkdown } from '@penmoss/core';
+import { schema as coreSchema } from '@penmoss/core/schema';
 import { markSpecs, nodeSpecs } from '@penmoss/core/schema';
-import { NOTE_ROOT } from '@penmoss/sync-client';
+import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import { setBody } from '@penmoss/sync-client/history';
 import { createYjs14Replica, type Yjs14Replica } from '@penmoss/sync-client/yjs14';
 import { Schema, type Node as PMNode } from '@tiptap/pm/model';

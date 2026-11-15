@@ -1,7 +1,13 @@
 import { contextText } from '@penmoss/core/links';
 import { describe, expect, it } from 'vitest';
-import { toMeta } from '../src/idb';
-import { LINKS_VERSION, needsLinks, recordFromDoc, withLinks, withoutLinks } from '../src/records';
+import {
+  LINKS_VERSION,
+  needsLinks,
+  recordFromDoc,
+  toMeta,
+  withLinks,
+  withoutLinks,
+} from '../src/records';
 import { bodyJson } from '../src/yjs14';
 import {
   appendEmbed,

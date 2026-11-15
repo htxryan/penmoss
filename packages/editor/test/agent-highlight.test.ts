@@ -1,4 +1,4 @@
-import { NOTE_ROOT } from '@penmoss/sync-client';
+import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import { setTitle } from '@penmoss/sync-client/note';
 import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
 import * as Y from '@y/y';

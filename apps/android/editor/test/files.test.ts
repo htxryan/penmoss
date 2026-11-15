@@ -2,7 +2,7 @@
  * The editor page's T40 P8 second part: files through the app (ED12) and
  * pictures from web addresses on the page's own origin (ED13).
  */
-import { NOTE_ROOT } from '@penmoss/sync-client';
+import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import { initNote } from '@penmoss/sync-client/note';
 import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
 import type { JSONContent } from '@tiptap/core';

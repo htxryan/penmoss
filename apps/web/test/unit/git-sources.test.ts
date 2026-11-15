@@ -9,7 +9,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AgentActivity, type MemoryTransport } from '@penmoss/git-notebook';
-import type { NoteRecord } from '@penmoss/sync-client';
+import type { NoteRecord } from '@penmoss/sync-client/record';
 import { readTitle, setTitle } from '@penmoss/sync-client/note';
 import { readWorkspace } from '@penmoss/sync-client/workspace';
 import { appendMarkdown } from '@penmoss/editor/capture';

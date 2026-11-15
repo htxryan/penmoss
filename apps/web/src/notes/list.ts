@@ -2,7 +2,7 @@
  * The note list: a source's local records (IndexedDB), with the live changes of open notes.
  */
 import type { NoteLink } from '@penmoss/core/links';
-import type { NoteMeta } from '@penmoss/sync-client';
+import type { NoteMeta } from '@penmoss/sync-client/record';
 import { WORKSPACE_RECORD_KEY } from '@penmoss/sync-client/workspace';
 
 export interface NoteListEntry {

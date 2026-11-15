@@ -3,7 +3,7 @@
  * Collaboration extension wraps the old binding, so the sync and undo
  * plugins are added directly, as in y-prosemirror's own TipTap demo.
  */
-import { NOTE_ROOT } from '@penmoss/sync-client';
+import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import { createYjs14Replica, type Yjs14Replica } from '@penmoss/sync-client/yjs14';
 import { Editor, Extension, type AnyExtension } from '@tiptap/core';
 import { Plugin, type EditorState, type PluginSpec } from '@tiptap/pm/state';

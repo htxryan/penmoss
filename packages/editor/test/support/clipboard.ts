@@ -1,4 +1,5 @@
-import { schema as coreSchema, serializeMarkdown } from '@penmoss/core';
+import { serializeMarkdown } from '@penmoss/core';
+import { schema as coreSchema } from '@penmoss/core/schema';
 import type { CollabEditor } from '../../src/collab';
 
 /** A DataTransfer stand-in (happy-dom's holds no custom types or files). */

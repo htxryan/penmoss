@@ -134,14 +134,14 @@ Dependencies point one way: `core` at the bottom, the apps on top.
 
 | Package                 | Holds                                                                                                        |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `packages/core`         | Schema, markdown codec, frontmatter, ids, tags, periodic notes (pure functions)                              |
+| `packages/core`         | The markdown codec at its root; schema, ids, links, tags, periodic notes and the rest by subpath (pure)      |
 | `packages/editor`       | TipTap extensions, clipboard, slash menu, the markdown rendering of a note                                   |
-| `packages/sync-client`  | Yjs documents, the IndexedDB replica, attachments, the local search index                                    |
+| `packages/sync-client`  | Yjs documents and their records, comments, tags, history, the local search index (platform-free, by subpath) |
 | `packages/git-notebook` | The git-notebook engine, History and the Time Machine, the local notes API and MCP tools, the transports     |
 | `packages/ui`           | Shared React components and themes                                                                           |
 | `packages/embed`        | Search by meaning on the Mac: the model store, the ONNX embedder, the vector cache and the embedding service |
 | `packages/cli`          | The penmoss CLI                                                                                              |
-| `apps/web`              | The React app, loaded by the Mac app and the test harness                                                    |
+| `apps/web`              | The React app, loaded by the Mac app and the test harness; its IndexedDB store (`src/store`)                 |
 | `apps/desktop`          | The Mac app's main process, preload, capture window and packaging                                            |
 | `apps/android`          | The Android app                                                                                              |
 | `apps/relay`            | The relay                                                                                                    |

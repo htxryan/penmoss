@@ -1,5 +1,4 @@
 /// <reference types="node" />
-import 'fake-indexeddb/auto';
 /**
  * The offline index ranks as SQLite's FTS5 does (T22): the same notes, the same order and the
  * same bm25 scores as the FTS5 tables the server used to search with (its migrations 0006 and
@@ -23,11 +22,7 @@ import {
 import { beforeAll, describe, expect, it } from 'vitest';
 import { RANKING_CASES } from '../../core/test/support/search-ranking';
 import { vaultDocuments } from '../../core/test/support/search-vault-docs';
-import * as Y from '@y/y';
-import { NoteStore } from '../src/idb';
 import { LocalSearchIndex, type LocalSearchDocument } from '../src/local-index';
-import { recordFromDoc } from '../src/records';
-import { NOTE_ROOT } from '../src/replica';
 
 const docs: LocalSearchDocument[] = vaultDocuments().map((doc) => ({
   id: doc.id,
@@ -397,38 +392,6 @@ describe('partly typed words (#120, A680)', () => {
     restored!.remove('joy');
     expect(restored!.search(parseQuery('happin*'))).toEqual([]);
     expect(restored!.unfinished('happin')).toBe(false);
-  });
-});
-
-describe('search fields in records (T22)', () => {
-  it('stores the headings with each record, and lists them with the text and tags', async () => {
-    const doc = new Y.Doc();
-    const root = doc.get(NOTE_ROOT);
-    const heading = new Y.Node('heading');
-    heading.setAttr('level', 2);
-    const paragraph = new Y.Node('paragraph');
-    root.push([heading, paragraph]);
-    heading.insert(0, 'Restoring');
-    paragraph.insert(0, 'Clone the #backup repository');
-    const record = recordFromDoc('n1', doc, { unsynced: false, updatedAt: 5 });
-    expect(record.headings).toBe('Restoring');
-    const store = await NoteStore.open(`penmoss-search-${Date.now()}`);
-    try {
-      await store.put(record);
-      expect(await store.listTexts()).toEqual([
-        {
-          noteId: 'n1',
-          title: '',
-          text: 'Restoring\nClone the #backup repository',
-          headings: 'Restoring',
-          tags: ['backup'],
-          updatedAt: 5,
-          deleted: false,
-        },
-      ]);
-    } finally {
-      store.close();
-    }
   });
 });
 

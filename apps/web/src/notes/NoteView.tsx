@@ -15,7 +15,7 @@ import {
   type CollabEditor,
   type FileServices,
 } from '@penmoss/editor';
-import { assertFileSize } from '@penmoss/sync-client/attachments';
+import { assertFileSize } from '../store/attachments';
 import { ariaKeyShortcuts, formatCombo } from '@penmoss/editor/keys';
 import { findHeading } from '@penmoss/core/line-symbols';
 import { Icon } from '@penmoss/ui/icons';

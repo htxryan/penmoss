@@ -19,7 +19,7 @@ import {
   setNoteNotebook,
   type TrashInfo,
 } from './note';
-import { linksField, withoutLinks, type NoteRecord } from './record';
+import { linksField, withoutLinks, type NoteMeta, type NoteRecord } from './record';
 
 export { LINKS_VERSION, linksField, needsLinks, withoutLinks } from './record';
 import { NOTE_META } from './note';
@@ -269,4 +269,33 @@ export function noteAttachmentPaths(state: Uint8Array): string[] {
   } finally {
     doc.destroy();
   }
+}
+
+const TITLE_LENGTH = 120;
+const EXCERPT_LENGTH = 160;
+
+export function toMeta(record: NoteRecord): NoteMeta {
+  let { title } = record;
+  let body = record.text;
+  if (title === undefined) {
+    // Records from before T6 have no title: use the first line, as the spike did.
+    const newline = body.indexOf('\n');
+    title = newline === -1 ? body : body.slice(0, newline);
+    body = newline === -1 ? '' : body.slice(newline + 1);
+  }
+  return {
+    noteId: record.noteId,
+    engine: record.engine,
+    title: title.slice(0, TITLE_LENGTH),
+    excerpt: body.replace(/\s+/g, ' ').trim().slice(0, EXCERPT_LENGTH),
+    tags: record.tags ?? [],
+    updatedAt: record.updatedAt,
+    unsynced: record.unsynced,
+    deleted: record.deleted ?? false,
+    ...(record.deletedAt !== undefined ? { deletedAt: record.deletedAt } : {}),
+    ...(record.deletedFrom !== undefined ? { deletedFrom: record.deletedFrom } : {}),
+    bytes: record.update.byteLength,
+    ...(record.links?.length ? { links: record.links } : {}),
+    ...(record.linksVersion !== undefined ? { linksVersion: record.linksVersion } : {}),
+  };
 }

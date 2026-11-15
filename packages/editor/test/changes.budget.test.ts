@@ -1,6 +1,6 @@
 // A wall-clock budget (A1244): `task budgets` runs it, never
 // `task check`. What changedRanges covers is a unit test (changes.test.ts).
-import { schema } from '@penmoss/core';
+import { schema } from '@penmoss/core/schema';
 import { EditorState } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { changedRanges } from '../src/extensions/changes';

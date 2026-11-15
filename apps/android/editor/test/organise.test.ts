@@ -4,7 +4,7 @@
  * (`tags`, `setTag`). Tags live in the note's document, so only the page
  * touches them; the app stores the edit as it stores typing.
  */
-import { schema as coreSchema } from '@penmoss/core';
+import { schema as coreSchema } from '@penmoss/core/schema';
 import { markSpecs, nodeSpecs } from '@penmoss/core/schema';
 import { setBody } from '@penmoss/sync-client/history';
 import { initNote, NOTE_META, readTitle } from '@penmoss/sync-client/note';

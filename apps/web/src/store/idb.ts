@@ -5,7 +5,13 @@
  * database per document and appends an update log.
  */
 import type { AttachmentMeta, AttachmentStore, StoredAttachment } from './attachment-store';
-import type { NoteMeta, NoteRecord, RecordUpdater, ReplicaStore, UnloadWrite } from './record';
+import type {
+  NoteMeta,
+  NoteRecord,
+  RecordUpdater,
+  ReplicaStore,
+  UnloadWrite,
+} from '@penmoss/sync-client/record';
 import {
   decodeUnloadWrite,
   encodeUnloadWrite,
@@ -14,9 +20,10 @@ import {
   withUnloadWrite,
   type UnloadOutcome,
 } from './unload';
-import { WORKSPACE_RECORD_KEY } from './workspace';
+import { toMeta } from '@penmoss/sync-client/records';
+import { WORKSPACE_RECORD_KEY } from '@penmoss/sync-client/workspace';
 
-export type { NoteMeta, NoteRecord, UnloadWrite } from './record';
+export type { NoteMeta, NoteRecord, UnloadWrite } from '@penmoss/sync-client/record';
 
 export const NOTES_STORE = 'notes';
 /** Small key-value state next to the notes, e.g. the tag-rename journal (T18). */
@@ -47,8 +54,6 @@ const UNLOAD_DROPS_PREFIX = 'unloadDrops:';
 const UNLOAD_PREFIX = 'penmoss:unload:';
 /** How long a tab may take to save its open notes before it lets a newer version upgrade. */
 const VERSION_CHANGE_GRACE_MS = 2000;
-const TITLE_LENGTH = 120;
-const EXCERPT_LENGTH = 160;
 
 function promisify<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -67,31 +72,7 @@ function done(transaction: IDBTransaction): Promise<void> {
   });
 }
 
-export function toMeta(record: NoteRecord): NoteMeta {
-  let { title } = record;
-  let body = record.text;
-  if (title === undefined) {
-    // Records from before T6 have no title: use the first line, as the spike did.
-    const newline = body.indexOf('\n');
-    title = newline === -1 ? body : body.slice(0, newline);
-    body = newline === -1 ? '' : body.slice(newline + 1);
-  }
-  return {
-    noteId: record.noteId,
-    engine: record.engine,
-    title: title.slice(0, TITLE_LENGTH),
-    excerpt: body.replace(/\s+/g, ' ').trim().slice(0, EXCERPT_LENGTH),
-    tags: record.tags ?? [],
-    updatedAt: record.updatedAt,
-    unsynced: record.unsynced,
-    deleted: record.deleted ?? false,
-    ...(record.deletedAt !== undefined ? { deletedAt: record.deletedAt } : {}),
-    ...(record.deletedFrom !== undefined ? { deletedFrom: record.deletedFrom } : {}),
-    bytes: record.update.byteLength,
-    ...(record.links?.length ? { links: record.links } : {}),
-    ...(record.linksVersion !== undefined ? { linksVersion: record.linksVersion } : {}),
-  };
-}
+export { toMeta };
 
 export interface NoteStoreOptions {
   /**

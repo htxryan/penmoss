@@ -15,7 +15,7 @@
  * falls back to keyword search and semantic is refused, as on the relay. The history tools (G6, A831, A858) read the git log: a version is a
  * commit that touched the note.
  */
-import { ulid } from '@penmoss/core';
+import { ulid } from '@penmoss/core/ids';
 import {
   checkArguments,
   COMMENT_TOOL_NAMES,

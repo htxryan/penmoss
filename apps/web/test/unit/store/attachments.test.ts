@@ -5,8 +5,8 @@
  */
 import { sha256Hex } from '@penmoss/core/attachments';
 import { describe, expect, it, vi } from 'vitest';
-import type { StoredAttachment } from '../src/attachment-store';
-import { Attachments, type AttachmentsElsewhere } from '../src/attachments';
+import type { StoredAttachment } from '../../../src/store/attachment-store';
+import { Attachments, type AttachmentsElsewhere } from '../../../src/store/attachments';
 
 /** One pixel of PNG: its signature is all the sniffing reads. */
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4]);

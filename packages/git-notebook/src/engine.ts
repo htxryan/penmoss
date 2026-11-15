@@ -16,7 +16,7 @@
  * difference from the remote head. The local clone is disposable; the truth is the remote plus
  * the device's docs.
  */
-import { ulid } from '@penmoss/core';
+import { ulid } from '@penmoss/core/ids';
 import { gitBlobSha } from '@penmoss/core/mirror';
 import { attachmentFiles, noteBody } from '@penmoss/editor/markdown';
 import { NOTE_META, readTitle } from '@penmoss/sync-client/note';

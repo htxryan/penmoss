@@ -15,10 +15,10 @@ import {
   frontmatterKeys,
   parseMarkdown,
   readNoteMeta,
-  schema,
   serializeMarkdown,
   type LinkResolver,
 } from '@penmoss/core';
+import { schema } from '@penmoss/core/schema';
 import {
   blocksOf,
   findSection,

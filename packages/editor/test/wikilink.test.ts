@@ -1,4 +1,5 @@
-import { schema as coreSchema, serializeMarkdown } from '@penmoss/core';
+import { serializeMarkdown } from '@penmoss/core';
+import { schema as coreSchema } from '@penmoss/core/schema';
 import { DOMParser as PMDOMParser, DOMSerializer, Slice } from '@tiptap/pm/model';
 import { NodeSelection } from '@tiptap/pm/state';
 import { describe, expect, it, vi } from 'vitest';
