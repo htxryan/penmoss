@@ -1,7 +1,7 @@
 /**
  * Version history on a note's Yjs document (T21, A3, A5): bringing an old
- * state back as a new change. Shared by the NoteDoc (restore and revert on the
- * server) and tests; no editor and no markdown codec here.
+ * state back as a new change, for History's Restore and Revert; no editor and
+ * no markdown codec here.
  *
  * A restore never replaces the document. The body is diffed, node by node and
  * then by line, word and character (`lib0/delta`'s `diff`, the same diff the

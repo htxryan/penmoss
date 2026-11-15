@@ -24,17 +24,12 @@ export interface NoteRecord {
    * records written before T22 (the v6 upgrade fills it in).
    */
   readonly headings?: string;
-  /** Server epoch this replica last synced with (A5); null before the first sync. */
-  readonly epoch: string | null;
   readonly updatedAt: number;
-  /** True while the replica holds local edits the server has not confirmed. */
-  readonly unsynced: boolean;
   /**
-   * This copy has had the server's state (#141, A810): a `sync-step2` was applied, not only the
-   * opening `session` message, which sets `epoch` first. Absent: not yet, or unknown (a record
-   * written before A810, or by a writer that does not track it).
+   * Edited on this device since the git notebook's engine last took the note in: the note list
+   * shows it as not yet synced.
    */
-  readonly seeded?: boolean;
+  readonly unsynced: boolean;
   /** The note is soft-deleted (A16 `meta.deleted`); absent means false. */
   readonly deleted?: boolean;
   /** Its wikilinks and embeds (T16); absent when it has none, or they were never computed. */
@@ -45,17 +40,8 @@ export interface NoteRecord {
   readonly deletedAt?: number;
   readonly deletedFrom?: string | null;
   /**
-   * The server said the note is gone (its document was lost, or it was restored
-   * to before the note existed), so this device marked it deleted (T31, A270).
-   * Unlike a note the user put in Trash, a daily or weekly note in this state is
-   * made again from this copy, under no epoch, when its period is opened.
-   */
-  readonly gone?: boolean;
-  /** The conflict copy made of this note's unsynced edits when it went (A269): holds all of it. */
-  readonly goneCopy?: string;
-  /**
    * Changes on every write. A writer that finds a `rev` other than its own last
-   * one knows someone else (another tab, catch-up sync) wrote the note since,
+   * one knows someone else (another window, the engine) wrote the note since,
    * and merges instead of overwriting.
    */
   readonly rev?: string;
@@ -70,7 +56,6 @@ export interface NoteMeta {
   readonly excerpt: string;
   /** Frontmatter and inline tags (T18), sorted. */
   readonly tags: readonly string[];
-  readonly epoch: string | null;
   readonly updatedAt: number;
   readonly unsynced: boolean;
   readonly deleted: boolean;
@@ -93,25 +78,16 @@ export interface UnloadWrite {
    * note's editor and an embed of it in the same page would.
    */
   readonly source: string;
-  /** The update's epoch (A5); one from another epoch is never merged into the record. */
-  readonly epoch: string | null;
   /** The changes the stored record lacks, or the whole document when `whole` (a Yjs update). */
   readonly update: Uint8Array;
   /** `update` is the whole document: it stands alone when no record is stored. */
   readonly whole: boolean;
   readonly unsynced: boolean;
-  /**
-   * The page's copy had had the server's state (`NoteRecord.seeded`, A810). Kept with the entry,
-   * so a note first stored by it, or merged with it, says so too (T50 G1, folded in from #141).
-   */
-  readonly seeded?: boolean;
   readonly updatedAt: number;
 }
 
 /** Called inside a read-write transaction; returns the record to store, or null to leave it as it is. */
 export type RecordUpdater = (current: NoteRecord | undefined) => NoteRecord | null;
-/** Like RecordUpdater, but may store several records (of any notes) in the same transaction. */
-export type RecordsUpdater = (current: NoteRecord | undefined) => readonly NoteRecord[] | null;
 
 /** The storage the replica keeper needs; NoteStore (IndexedDB) implements it. */
 export interface ReplicaStore {
@@ -119,7 +95,7 @@ export interface ReplicaStore {
   put(record: NoteRecord): Promise<void>;
   /**
    * Read-modify-write of one record in a single transaction, so two writers
-   * (tabs, the catch-up sync) never overwrite each other's changes. `fn` must
+   * (windows, the engine) never overwrite each other's changes. `fn` must
    * be synchronous. Resolves with what was stored (null when `fn` declined).
    */
   update?(noteId: string, fn: RecordUpdater): Promise<NoteRecord | null>;

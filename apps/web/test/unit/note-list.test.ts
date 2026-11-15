@@ -7,7 +7,6 @@ const local = (noteId: string, overrides: Partial<NoteMeta> = {}): NoteMeta => (
   engine: 'yjs14',
   title: `Local ${noteId}`,
   excerpt: 'local body',
-  epoch: null,
   updatedAt: 1000,
   unsynced: false,
   deleted: false,

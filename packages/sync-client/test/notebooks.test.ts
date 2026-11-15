@@ -14,18 +14,12 @@ import {
   readFolderTrash,
   readWorkspace,
   registerNote,
-  rehomeNotes,
   restoreFolder,
   setDefaultNotebookName,
   setNotebook,
   trashAsNotebook,
   WorkspaceError,
 } from '../src/workspace';
-
-function sync(a: Y.Doc, b: Y.Doc) {
-  Y.applyUpdate(b, Y.encodeStateAsUpdate(a, Y.encodeStateVector(b)));
-  Y.applyUpdate(a, Y.encodeStateAsUpdate(b, Y.encodeStateVector(a)));
-}
 
 function workspace() {
   const doc = new Y.Doc();
@@ -107,20 +101,6 @@ describe('notebooks in the workspace document (T43)', () => {
     const restored = restoreFolder(doc, 'work');
     expect(restored.skipped).toEqual(['plan']);
     expect(readWorkspace(doc).notes.find((n) => n.id === 'plan')?.folderId).toBe('home');
-  });
-
-  it('sends a note filed into the notebook as it was deleted to Trash with it', () => {
-    const a = workspace();
-    const b = new Y.Doc();
-    sync(a, b);
-    deleteFolder(a, 'work');
-    registerNote(b, { id: 'late', folderId: 'specs' });
-    sync(a, b);
-    // The merge leaves `late` filed in a folder that is gone; the repair (A674) runs on it.
-    expect(rehomeNotes(a)).toEqual({ moved: 1, untracked: 0, folders: 0 });
-    expect(readWorkspace(a).notes.some((n) => n.id === 'late')).toBe(false);
-    expect(notebookTrashNotes(a).get('late')).toBe('work');
-    expect(restoreFolder(a, 'work').filed).toContain('late');
   });
 
   it('names the default notebook, "Personal" until someone does', () => {

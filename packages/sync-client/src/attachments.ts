@@ -45,7 +45,7 @@ export interface AttachmentsElsewhere {
 }
 
 export interface AttachmentsOptions {
-  readonly store: () => Promise<Pick<AttachmentStore, 'getAttachment' | 'saveAttachment'>>;
+  readonly store: () => Promise<AttachmentStore>;
   readonly elsewhere?: AttachmentsElsewhere;
   readonly now?: () => number;
   /** Makes a URL an `<img>` can show (`URL.createObjectURL` of a Blob). */
@@ -124,10 +124,13 @@ export class Attachments {
     }
     const sha256 = await sha256Hex(bytes);
     const store = await this.options.store();
-    const added = await store.saveAttachment(
-      { sha256, type, bytes, size: bytes.byteLength, createdAt: this.now(), uploaded: false },
-      null,
-    );
+    const added = await store.saveAttachment({
+      sha256,
+      type,
+      bytes,
+      size: bytes.byteLength,
+      createdAt: this.now(),
+    });
     const path = attachmentPath(sha256, type);
     await this.keep(path, bytes);
     return { sha256, type, path, added };
@@ -143,10 +146,13 @@ export class Attachments {
     const type = sniffFileType(bytes.subarray(0, SNIFF_BYTES));
     const sha256 = await sha256Hex(bytes);
     const store = await this.options.store();
-    const added = await store.saveAttachment(
-      { sha256, type, bytes, size: bytes.byteLength, createdAt: this.now(), uploaded: false },
-      null,
-    );
+    const added = await store.saveAttachment({
+      sha256,
+      type,
+      bytes,
+      size: bytes.byteLength,
+      createdAt: this.now(),
+    });
     const path = filePath(sha256, type, name);
     await this.keep(path, bytes);
     return { sha256, type, path, added };
@@ -174,17 +180,13 @@ export class Attachments {
     if (!parsed || (await sha256Hex(bytes)) !== parsed.sha256) return false;
     const store = await this.options.store();
     const type = sniffFileType(bytes.subarray(0, SNIFF_BYTES));
-    await store.saveAttachment(
-      {
-        sha256: parsed.sha256,
-        type,
-        bytes,
-        size: bytes.byteLength,
-        createdAt: this.now(),
-        uploaded: false,
-      },
-      null,
-    );
+    await store.saveAttachment({
+      sha256: parsed.sha256,
+      type,
+      bytes,
+      size: bytes.byteLength,
+      createdAt: this.now(),
+    });
     await this.keep(src, bytes);
     return true;
   }
@@ -270,10 +272,7 @@ export class Attachments {
         const type = sniffFileType(bytes.subarray(0, SNIFF_BYTES));
         const store = await this.options.store();
         await store
-          .saveAttachment(
-            { sha256, type, bytes, size: bytes.byteLength, createdAt: this.now(), uploaded: true },
-            null,
-          )
+          .saveAttachment({ sha256, type, bytes, size: bytes.byteLength, createdAt: this.now() })
           .catch(() => false);
         return { bytes, type };
       })().finally(() => this.fetching.delete(sha256));

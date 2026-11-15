@@ -162,7 +162,7 @@ async function storeEdit(
 ) {
   const replica = createYjs14Replica();
   initNote(replica.doc, { id, created: '2026-10-30T09:00:00-05:00', kind: 'note' }, title);
-  await store.put(recordFromDoc(id, replica.doc, { epoch: null, unsynced: true, updatedAt }));
+  await store.put(recordFromDoc(id, replica.doc, { unsynced: true, updatedAt }));
 }
 
 describe('a sync out of time (A852, A859)', () => {
@@ -217,9 +217,7 @@ describe('Push after and Pull every (A825)', () => {
         { id: NOTE, created: '2026-10-29T09:00:00-05:00', kind: 'note' },
         'Soon',
       );
-      await store.put(
-        recordFromDoc(NOTE, replica.doc, { epoch: null, unsynced: true, updatedAt: 1 }),
-      );
+      await store.put(recordFromDoc(NOTE, replica.doc, { unsynced: true, updatedAt: 1 }));
       host.changed([NOTE]);
       await vi.advanceTimersByTimeAsync(10);
       host.setCadence(5, 60);
@@ -408,7 +406,6 @@ describe('a store cleared since it last synced here (A886)', () => {
     );
     await windows.put(
       recordFromDoc('01JBNOTEMAC000000000000009', replica.doc, {
-        epoch: null,
         unsynced: true,
         updatedAt: 1,
       }),
@@ -487,9 +484,7 @@ describe('a store cleared since it last synced here (A886)', () => {
     const windows = memoryNotes();
     const replica = createYjs14Replica();
     initNote(replica.doc, { id, created: '2026-10-29T09:00:00-05:00', kind: 'note' }, 'Made here');
-    await windows.put(
-      recordFromDoc(id, replica.doc, { epoch: null, unsynced: true, updatedAt: 1 }),
-    );
+    await windows.put(recordFromDoc(id, replica.doc, { unsynced: true, updatedAt: 1 }));
     const kv = memoryEngineKv();
     const secrets = new MemorySecrets();
     const make = () => {
@@ -556,13 +551,11 @@ describe('a store cleared since it last synced here (A886)', () => {
     );
     await windows.put(
       recordFromDoc('01JBNOTEMAC000000000000007', good.doc, {
-        epoch: null,
         unsynced: true,
         updatedAt: 1,
       }),
     );
     const broken = recordFromDoc('01JBNOTEMAC000000000000008', createYjs14Replica().doc, {
-      epoch: null,
       unsynced: true,
       updatedAt: 1,
     });
@@ -882,9 +875,7 @@ describe('after a Send to: at once, then every 10 s until the reply (A1061, A106
       session: TARGET.session,
       at: 1,
     });
-    await store.put(
-      recordFromDoc(NOTE, replica.doc, { epoch: null, unsynced: true, updatedAt: 5 }),
-    );
+    await store.put(recordFromDoc(NOTE, replica.doc, { unsynced: true, updatedAt: 5 }));
   }
 
   async function started() {

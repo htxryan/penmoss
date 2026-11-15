@@ -46,7 +46,7 @@ function storeNote(
   for (const [index, target] of targets.entries()) {
     appendLinkParagraph(replica, index === 0 ? text : '', target, '');
   }
-  store.records.set(id, recordFromDoc(id, replica.doc, { epoch: 'e', unsynced, updatedAt: 1000 }));
+  store.records.set(id, recordFromDoc(id, replica.doc, { unsynced, updatedAt: 1000 }));
 }
 
 function directoryFor(notes: Notes, navigate = vi.fn()) {
@@ -249,7 +249,7 @@ describe('NoteDirectory', () => {
     const { notes, store } = setup();
     const replica = createYjs14Replica();
     appendHeading(replica, 2, 'Beds');
-    store.records.set('H', recordFromDoc('H', replica.doc, { epoch: null, unsynced: false }));
+    store.records.set('H', recordFromDoc('H', replica.doc, { unsynced: false }));
     const { directory } = directoryFor(notes);
     expect(await directory.headings('H')).toEqual(['Beds']);
   });

@@ -2,8 +2,6 @@ import * as Y from '@y/y';
 import { describe, expect, it } from 'vitest';
 import {
   addComment,
-  commentsBackup,
-  restoreThreads,
   anchorAtStart,
   anchorBetween,
   anchoredText,
@@ -19,7 +17,6 @@ import {
   keptQuote,
   MAX_QUOTE_CHARS,
   NOTE_COMMENTS,
-  openThreadCount,
   orderThreads,
   readThread,
   readThreads,
@@ -29,7 +26,6 @@ import {
   setThreadDelivery,
   setThreadStatus,
   setThreadTarget,
-  touchesComments,
   touchesOnlyComments,
   type CommentAnchor,
   type CommentAuthor,
@@ -103,12 +99,10 @@ describe('comment threads in the note (T48, A770)', () => {
       ['Claude Code', 'Done: tightened.', 2500],
     ]);
     // Resolved threads are kept for good and can be reopened (A777).
-    expect(openThreadCount(doc)).toBe(0);
     expect(setThreadStatus(doc, 't1', 'open', RYAN, 4000)).toBe(true);
     thread = readThread(doc, 't1')!;
     expect(thread.status).toBe('open');
     expect(thread.resolvedBy).toBeUndefined();
-    expect(openThreadCount(doc)).toBe(1);
     // An agent's reply can be taken back (A779).
     expect(addComment(doc, 't1', { id: 'c3', author: RYAN, body: 'Thanks', at: 5000 })).toBe(true);
     expect(deleteComment(doc, 't1', 'c2')).toBe(true);
@@ -182,12 +176,9 @@ describe('comment threads in the note (T48, A770)', () => {
 
   it('tells a comment-only transaction from an edit (A770)', () => {
     const doc = note('Text.');
-    const seen: Array<{ only: boolean; any: boolean }> = [];
+    const seen: boolean[] = [];
     doc.on('afterTransaction', (transaction: Y.Transaction) => {
-      seen.push({
-        only: touchesOnlyComments(doc, transaction),
-        any: touchesComments(doc, transaction),
-      });
+      seen.push(touchesOnlyComments(doc, transaction));
     });
     start(doc, 't1', quoteAnchor(doc, 'Text'), 'Text');
     addComment(doc, 't1', { id: 'c2', author: RYAN, body: 'more', at: 2 });
@@ -199,15 +190,7 @@ describe('comment threads in the note (T48, A770)', () => {
       block(doc, 0).insert(0, 'X');
     });
     doc.transact(() => undefined);
-    expect(seen).toEqual([
-      { only: true, any: true },
-      { only: true, any: true },
-      { only: true, any: true },
-      { only: false, any: false },
-      { only: false, any: false },
-      { only: false, any: true },
-      { only: false, any: false },
-    ]);
+    expect(seen).toEqual([true, true, true, false, false, false, false]);
   });
 
   it('restore and revert leave the comments as they are', () => {
@@ -457,68 +440,6 @@ describe('anchors (A771)', () => {
   });
 });
 
-describe('the comments backup (A786)', () => {
-  it('writes each thread with its text and occurrence, and makes it again in a rebuilt note', () => {
-    const doc = note('A cat and a cat.', 'One more cat here.', 'Last line.');
-    start(doc, 't1', quoteAnchor(doc, 'cat', 2), 'cat');
-    addComment(doc, 't1', { id: 'r1', author: CLAUDE, body: 'Which cat?', at: 2000 });
-    deleteComment(doc, 't1', 't1-c1');
-    setThreadTarget(doc, 't1', {
-      writer: '01JBWRITER0000000000000001',
-      session: 'key',
-      label: 'Claude · garden',
-    });
-    setThreadDelivery(doc, 't1', { state: 'sent', commentId: 'r1', session: 'key', at: 3000 });
-    // A point at the start of a line, and one at its end.
-    start(doc, 'p1', anchorBetween(doc, { path: [1, 0], assoc: 1 })!, 'One more cat here.');
-    start(doc, 'p2', anchorBetween(doc, { path: [2, 10], assoc: 1 })!, 'Last line.');
-    start(doc, 'gone', quoteAnchor(doc, 'Last'), 'Last');
-    setThreadStatus(doc, 'gone', 'resolved', RYAN, 4000);
-    block(doc, 2).delete(0, 4);
-
-    const backup = commentsBackup(doc, '01NOTE', 5000);
-    const written = JSON.parse(JSON.stringify(backup)) as typeof backup;
-    expect(written).toMatchObject({ version: 1, noteId: '01NOTE', at: 5000 });
-    const t1 = written.threads.find((each) => each.id === 't1')!;
-    expect(t1).toMatchObject({ text: 'cat', occurrence: 2, kind: 'range', status: 'open' });
-    expect(t1.comments.map((each) => [each.id, each.body, each.removed])).toEqual([
-      ['t1-c1', '', true],
-      ['r1', 'Which cat?', undefined],
-    ]);
-    expect(written.threads.find((each) => each.id === 'gone')).toMatchObject({
-      orphaned: true,
-      status: 'resolved',
-    });
-
-    // The note rebuilt from its markdown: new Yjs items, the same text.
-    const rebuilt = note('A cat and a cat.', 'One more cat here.', ' line.');
-    expect(restoreThreads(rebuilt, written)).toEqual({ restored: 4, orphaned: 1 });
-    const anchorText = (id: string) => textOf(rebuilt, readThread(rebuilt, id)!.anchor!);
-    expect(anchorText('t1')).toBe('cat');
-    // The second "cat": the text before it is the same in the rebuilt note.
-    const second = resolveAnchor(rebuilt, readThread(rebuilt, 't1')!.anchor);
-    expect(second.orphaned ? null : second.from.path).toEqual([0, 12]);
-    const point = (id: string) => {
-      const found = resolveAnchor(rebuilt, readThread(rebuilt, id)!.anchor);
-      return found.orphaned ? null : found.from.path;
-    };
-    expect(point('p1')).toEqual([1, 0]);
-    expect(point('p2')).toEqual([2, 6]);
-    expect(resolveAnchor(rebuilt, readThread(rebuilt, 'gone')!.anchor).orphaned).toBe(true);
-    const back = readThread(rebuilt, 't1')!;
-    expect(back.target).toEqual({
-      writer: '01JBWRITER0000000000000001',
-      session: 'key',
-      label: 'Claude · garden',
-    });
-    expect(back.delivery).toMatchObject({ state: 'sent', commentId: 'r1' });
-    expect(back.comments[0]).toMatchObject({ removed: true, body: '' });
-    expect(readThread(rebuilt, 'gone')).toMatchObject({ status: 'resolved', resolvedBy: RYAN });
-    // Threads the note has already are left as they are.
-    expect(restoreThreads(rebuilt, written)).toEqual({ restored: 0, orphaned: 0 });
-  });
-});
-
 function heading(doc: Y.Doc, index: number, level: number, text: string): Y.Node {
   const node = new Y.Node('heading');
   doc.get(NOTE_ROOT).insert(index, [node]);
@@ -651,16 +572,5 @@ describe('threads on the note as a whole (T52 item 5)', () => {
     const doc = note('Text.');
     start(doc, 'legacy', anchorAtStart(doc)!, '');
     expect(isNoteThread(readThread(doc, 'legacy')!)).toBe(true);
-  });
-
-  it('come back from the backup as threads on the note, with their context kept', () => {
-    const doc = plans();
-    createNoteThread(doc, { id: 'whole', author: RYAN, at: 1, comment: { id: 'c', body: 'Hi' } });
-    start(doc, 't1', quoteAnchor(doc, 'plant the garden'), 'plant the garden');
-    const backup = commentsBackup(doc, '01NOTE', 5);
-    const fresh = plans();
-    restoreThreads(fresh, JSON.parse(JSON.stringify(backup)) as typeof backup);
-    expect(readThread(fresh, 'whole')).toMatchObject({ scope: 'note' });
-    expect(readThread(fresh, 't1')!.context).toEqual(readThread(doc, 't1')!.context);
   });
 });

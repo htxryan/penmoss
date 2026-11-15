@@ -169,7 +169,6 @@ function noteFacts(deps: GatherDeps, id: string): { facts: NoteFacts; text: stri
       // The UTF-8 size of the note's text, as Android measures it.
       bytes: editor ? new TextEncoder().encode(text).byteLength : null,
       engine: copy?.replica.engine ?? null,
-      epoch: copy?.keeper.currentEpoch ?? null,
       unsynced: copy?.keeper.unsynced ?? entry?.unsynced ?? false,
       inTrash: doc ? isDeleted(doc) : false,
       backlinks: localLinked(deps.links, id).length,
@@ -192,7 +191,6 @@ function gitNoteFacts(facts: NoteFacts): NoteFacts {
     created: null,
     updated: null,
     kind: null,
-    epoch: null,
   };
 }
 

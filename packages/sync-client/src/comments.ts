@@ -14,7 +14,7 @@
  * Anchors (A771) are Yjs relative positions in the body (`prosemirror`), kept as JSON: one for a
  * point, two for a range, the first bound to the quote's first character and the second to its
  * last, so text typed just outside never joins it. They are made and read through delta
- * positions (paths into the body's tree), the same on the server and in the editor. A range
+ * positions (paths into the body's tree), the same in the editor and headless. A range
  * whose text is all deleted, or an anchor whose block is gone, orphans its thread, which keeps
  * its quote.
  */
@@ -293,15 +293,6 @@ export function readThread(doc: Y.Doc, id: string): ThreadData | null {
   return node ? threadOf(id, node) : null;
 }
 
-/** How many threads are open (the note's top bar, and Send feedback's "This note"). */
-export function openThreadCount(doc: Y.Doc): number {
-  let count = 0;
-  for (const value of doc.get(NOTE_COMMENTS).attrValues()) {
-    if (value instanceof Y.Node && value.getAttr('status') !== 'resolved') count++;
-  }
-  return count;
-}
-
 // --- writing ---
 
 /** A quote as kept: trimmed of surrounding blank lines, at most MAX_QUOTE_CHARS. */
@@ -461,28 +452,6 @@ export function deleteComment(
   return true;
 }
 
-/**
- * Names a comment's true writer (the NoteDoc's check, A781): the actor whose connection wrote
- * it, as A3 maps Yjs client ids. A thread's first comment names the thread's author too.
- */
-export function setCommentAuthor(
-  doc: Y.Doc,
-  threadId: string,
-  commentId: string,
-  author: CommentAuthor,
-  origin: unknown = null,
-): boolean {
-  const node = threadNode(doc, threadId);
-  const index = node ? commentIndex(node, commentId) : -1;
-  if (!node || index < 0) return false;
-  const comment = node.get(index) as Y.Node;
-  doc.transact(() => {
-    comment.setAttr('author', { ...author });
-    if (index === 0) node.setAttr('author', { ...author });
-  }, origin);
-  return true;
-}
-
 export function deleteThread(doc: Y.Doc, threadId: string, origin: unknown = null): boolean {
   if (!threadNode(doc, threadId)) return false;
   doc.transact(() => doc.get(NOTE_COMMENTS).deleteAttr(threadId), origin);
@@ -606,15 +575,6 @@ export function touchesOnlyComments(doc: Y.Doc, transaction: Y.Transaction): boo
   return true;
 }
 
-/** Whether a transaction changed the comments at all (the NoteDoc's delivery watch, A774). */
-export function touchesComments(doc: Y.Doc, transaction: Y.Transaction): boolean {
-  const root = doc.get(NOTE_COMMENTS);
-  for (const type of transaction.changed.keys()) {
-    if (withinComments(type as Y.Node, root)) return true;
-  }
-  return false;
-}
-
 // --- anchors (A771) ---
 
 /** A position in the body's tree, as lib0's delta positions and @y/prosemirror take it. */
@@ -731,7 +691,7 @@ function collapseBlankLines(body: BodyText): BodyText {
 }
 
 /** Relative positions for body positions (null where one cannot be anchored). */
-export function anchorPositions(
+function anchorPositions(
   doc: Y.Doc,
   positions: readonly BodyPosition[],
 ): Array<RelativePositionJson | null> {
@@ -1080,7 +1040,7 @@ export function reanchorAcrossEdit<T>(doc: Y.Doc, edit: () => T, origin: unknown
 }
 
 /** Document order of two body positions. */
-export function comparePositions(a: BodyPosition, b: BodyPosition): number {
+function comparePositions(a: BodyPosition, b: BodyPosition): number {
   return comparePaths(a.path, b.path);
 }
 
@@ -1396,229 +1356,4 @@ export function locateThreads(doc: Y.Doc, threads: readonly ThreadData[]): Threa
       ...place(span, null),
     };
   });
-}
-
-// --- the comments backup (A786) ---
-
-/** The backup's format version. */
-export const COMMENTS_BACKUP_VERSION = 1;
-
-/** The most characters of text a point keeps to be found again by. */
-const POINT_TEXT_CHARS = 60;
-
-/** One thread as the backup keeps it: found again by its text, not by Yjs positions. */
-export interface BackupThread {
-  readonly id: string;
-  readonly kind: 'range' | 'point';
-  /** The thread's quote as it was started. */
-  readonly quote: string;
-  /**
-   * The text it is on now: a range's own text; for a point, the text after it in its block
-   * (`side` start) or, at a block's end, before it (`side` end). Null when orphaned.
-   */
-  readonly text: string | null;
-  /** Which occurrence of `text` in the note's text (1-based), when it was written. */
-  readonly occurrence: number;
-  readonly side: 'start' | 'end';
-  readonly orphaned: boolean;
-  readonly status: ThreadStatus;
-  readonly created: number;
-  readonly author: CommentAuthor;
-  readonly target?: CommentTarget;
-  readonly delivery?: CommentDelivery;
-  readonly resolvedAt?: number;
-  readonly resolvedBy?: CommentAuthor;
-  /** On the note as a whole (T52 item 5): restored at the note's start. */
-  readonly scope?: ThreadScope;
-  /** Where it was when it was made (T52 item 5), kept as it was. */
-  readonly context?: AnchorContext;
-  readonly comments: readonly CommentData[];
-}
-
-/** A note's threads, as written beside its markdown in R2. */
-export interface CommentsBackup {
-  readonly version: typeof COMMENTS_BACKUP_VERSION;
-  readonly noteId: string;
-  /** When it was written. */
-  readonly at: number;
-  readonly threads: readonly BackupThread[];
-}
-
-/** The text a thread is on now, and which occurrence of it that is. */
-function placeText(
-  body: BodyText,
-  resolved: ResolvedAnchor,
-): Pick<BackupThread, 'text' | 'occurrence' | 'side'> | null {
-  if (resolved.orphaned) return null;
-  const from = resolved.from.path;
-  let start = body.chars.findIndex((char) => char !== null && comparePaths(char.path, from) >= 0);
-  if (start < 0) start = body.text.length;
-  let end = start;
-  let side: 'start' | 'end' = 'start';
-  if (resolved.to) {
-    const to = resolved.to.path;
-    for (let i = start; i < body.chars.length; i++) {
-      const char = body.chars[i];
-      if (!char) continue;
-      if (comparePaths(char.path, to) >= 0) break;
-      end = i + 1;
-    }
-  } else {
-    const block = from.slice(0, -1);
-    const sameBlock = (i: number) => {
-      const char = body.chars[i];
-      return (
-        !!char &&
-        char.path.length === from.length &&
-        comparePaths(char.path.slice(0, -1), block) === 0
-      );
-    };
-    if (start < body.chars.length && sameBlock(start)) {
-      while (end < body.chars.length && end - start < POINT_TEXT_CHARS && sameBlock(end)) end++;
-    } else {
-      // At the end of its block: the text before it.
-      side = 'end';
-      end = start;
-      while (start > 0 && end - start < POINT_TEXT_CHARS && sameBlock(start - 1)) start--;
-    }
-  }
-  const text = body.text.slice(start, end);
-  if (!text) return null;
-  let occurrence = 1;
-  for (
-    let at = body.text.indexOf(text);
-    at >= 0 && at < start;
-    at = body.text.indexOf(text, at + 1)
-  ) {
-    occurrence++;
-  }
-  return { text, occurrence, side };
-}
-
-/** The note's threads for the backup (A786): each with the text it is on, to be found again. */
-export function commentsBackup(doc: Y.Doc, noteId: string, at: number): CommentsBackup {
-  const body = bodyText(doc);
-  const threads = readThreads(doc).map((thread): BackupThread => {
-    const placed = placeText(body, resolveAnchor(doc, thread.anchor));
-    return {
-      id: thread.id,
-      kind: thread.anchor && !thread.anchor.to ? 'point' : 'range',
-      quote: thread.quote,
-      text: placed?.text ?? null,
-      occurrence: placed?.occurrence ?? 1,
-      side: placed?.side ?? 'start',
-      orphaned: placed === null,
-      status: thread.status,
-      created: thread.created,
-      author: thread.author,
-      ...(thread.target ? { target: thread.target } : {}),
-      ...(thread.delivery ? { delivery: thread.delivery } : {}),
-      ...(thread.resolvedAt !== undefined ? { resolvedAt: thread.resolvedAt } : {}),
-      ...(thread.resolvedBy ? { resolvedBy: thread.resolvedBy } : {}),
-      ...(thread.scope ? { scope: thread.scope } : {}),
-      ...(thread.context ? { context: thread.context } : {}),
-      comments: thread.comments,
-    };
-  });
-  return { version: COMMENTS_BACKUP_VERSION, noteId, at, threads };
-}
-
-/** Reads a backup's JSON, or null when it is not one. */
-export function parseCommentsBackup(value: unknown): CommentsBackup | null {
-  if (typeof value !== 'object' || value === null) return null;
-  const { version, noteId, at, threads } = value as Record<string, unknown>;
-  if (
-    version !== COMMENTS_BACKUP_VERSION ||
-    typeof noteId !== 'string' ||
-    !Array.isArray(threads)
-  ) {
-    return null;
-  }
-  return { version, noteId, at: num(at) ?? 0, threads: threads as BackupThread[] };
-}
-
-/** Where a backed-up thread goes in this note, or null (orphaned) when its text is not there. */
-function anchorFromBackup(doc: Y.Doc, thread: BackupThread): CommentAnchor | null {
-  if (thread.scope === 'note') return anchorAtStart(doc);
-  if (thread.orphaned || !thread.text) return null;
-  let match = anchorForQuote(doc, thread.text, Math.max(1, thread.occurrence));
-  // The note has fewer occurrences now: the last one is the nearest.
-  if ('error' in match && match.error === 'occurrence') {
-    match = anchorForQuote(doc, thread.text, match.occurrences);
-  }
-  if ('error' in match) return null;
-  if (thread.kind === 'range') return match.anchor;
-  const at = resolveAnchor(doc, match.anchor);
-  if (at.orphaned || !at.to) return null;
-  return anchorBetween(doc, thread.side === 'end' ? at.to : at.from);
-}
-
-/**
- * Makes a backup's threads again in a note rebuilt from its markdown (A786): each on its text,
- * found by quote and occurrence; one whose text is gone comes back orphaned, never dropped.
- * Threads the note already has are left alone. How many came back, and how many orphaned.
- */
-export function restoreThreads(
-  doc: Y.Doc,
-  backup: CommentsBackup,
-  origin: unknown = null,
-): { restored: number; orphaned: number } {
-  let restored = 0;
-  let orphaned = 0;
-  const root = doc.get(NOTE_COMMENTS);
-  doc.transact(() => {
-    for (const thread of backup.threads) {
-      if (typeof thread?.id !== 'string' || root.hasAttr(thread.id)) continue;
-      const author = authorOf(thread.author);
-      if (!author) continue;
-      const anchor = anchorFromBackup(doc, thread);
-      const node = new Y.Node();
-      root.setAttr(thread.id, node);
-      if (anchor) {
-        node.setAttr('anchor', {
-          from: { ...anchor.from },
-          to: anchor.to ? { ...anchor.to } : null,
-        });
-      } else {
-        orphaned++;
-      }
-      node.setAttr('quote', keptQuote(str(thread.quote) ?? ''));
-      if (thread.scope === 'note') node.setAttr('scope', 'note');
-      const context = contextOf(thread.context);
-      if (context) node.setAttr('context', copyContext(context));
-      node.setAttr('status', thread.status === 'resolved' ? 'resolved' : 'open');
-      node.setAttr('created', num(thread.created) ?? 0);
-      node.setAttr('author', { ...author });
-      const target = targetOf(thread.target);
-      if (target) node.setAttr('target', { ...target });
-      const delivery = deliveryOf(thread.delivery);
-      if (delivery) node.setAttr('delivery', { ...delivery });
-      const resolvedAt = num(thread.resolvedAt);
-      const resolvedBy = authorOf(thread.resolvedBy);
-      if (resolvedAt !== null) node.setAttr('resolvedAt', resolvedAt);
-      if (resolvedBy) node.setAttr('resolvedBy', { ...resolvedBy });
-      const comments: Y.Node[] = [];
-      const listed: unknown[] = Array.isArray(thread.comments) ? thread.comments : [];
-      for (const raw of listed) {
-        if (typeof raw !== 'object' || raw === null) continue;
-        const comment = raw as Record<string, unknown>;
-        const writer = authorOf(comment['author']);
-        const id = str(comment['id']);
-        if (!writer || !id) continue;
-        const each = writeComment({
-          id,
-          author: writer,
-          body: str(comment['body']) ?? '',
-          at: num(comment['at']) ?? 0,
-        });
-        const edited = num(comment['edited']);
-        if (edited !== null) each.setAttr('edited', edited);
-        if (comment['removed'] === true) each.setAttr('removed', true);
-        comments.push(each);
-      }
-      node.push(comments);
-      restored++;
-    }
-  }, origin);
-  return { restored, orphaned };
 }

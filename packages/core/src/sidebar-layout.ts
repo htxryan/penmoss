@@ -34,14 +34,6 @@ export const HIDDEN_SECTIONS_SETTING = 'sidebar.hiddenSections';
 export const RECENT_COUNT_SETTING = 'sidebar.recentCount';
 export const QUICK_ACCESS_NOTEBOOK_SETTING = 'quickAccess.showNotebook';
 
-/** Every setting of the sidebar's layout. */
-export const SIDEBAR_LAYOUT_KEYS = [
-  SECTION_ORDER_SETTING,
-  HIDDEN_SECTIONS_SETTING,
-  RECENT_COUNT_SETTING,
-  QUICK_ACCESS_NOTEBOOK_SETTING,
-] as const;
-
 /** Recent Notes' length: unset, and the least and most it may be. */
 export const RECENT_COUNT_DEFAULT = 10;
 export const RECENT_COUNT_MIN = 1;
