@@ -15,10 +15,11 @@ Select a version, or move through them with ↑ and ↓, to see what it changed 
 
 The changes have line numbers down the left: the line's number in that version, or, on a removed line, its number in the version before, dimmed. Long runs of unchanged lines are folded, and a fold shows which lines it holds, so the numbers carry on after it. Selecting the changes, or **Copy Text**, never copies the numbers.
 
-Under the changes are three buttons. Each shows an icon and one word, and its full name when you hover over it. In a narrow panel the words drop to keep the buttons on one line, Revert's and Copy's first.
+Under the changes are four buttons. Each shows an icon and one word, and its full name when you hover over it. In a narrow panel the words drop to keep the buttons on one line, all but Restore's first.
 
+- **View** (View This Version) shows that version beside the note as it is now. See [View a version beside now](#view-a-version-beside-now).
 - **Restore** (Restore This Version) brings back the whole note as it was then, as a new change. Nothing is lost: the versions after it stay in the history.
-- **Revert** (Revert This Edit), on an agent's version, undoes only what that version changed and keeps every edit made since. If a later edit changed the same lines, it says so.
+- **Revert** (Revert This Edit) undoes only what that version changed and keeps every edit made since. It works on any version, yours or an agent's, except a move to Trash or back out of it, which Trash undoes. If a later edit changed the same lines, it says so.
 - **Copy** (Copy Text) copies the note's text as it was in that version.
 
 On Android, History is a screen of its own that lists the same versions, with Restore and Revert.
@@ -28,6 +29,16 @@ On the Mac, Restore and Revert first ask for Touch ID or your password. On Andro
 To see a whole notebook as it was on any day, or what changed this week, use the [Time Machine](/docs/time-machine/).
 
 Your repository's git history keeps every version, so you can also read it with `git log`, or with [`penmoss history`](/docs/reference/cli/#history).
+
+### View a version beside now
+
+**View** opens the version over the rest of the window, with History still beside it. The version is on the left and the note as it is now on the right, both read-only, laid out as the note is, pictures included, and scrolling together. What differs is tinted on each side: on the left, what is not in the note now; on the right, what was added since. That is what **Restore** would change.
+
+- Pick another version in History, or move with ↑ and ↓, and the left side shows that one instead.
+- **Restore**, **Revert** and **Copy** are at the top too. Restore and Revert close the view and show the result in the note.
+- **Close** or Esc goes back to History.
+
+View is not there in a narrow window, which has no room for two sides.
 
 ## Trash
 

@@ -52,7 +52,7 @@ import app.penmoss.ui.common.shortWhen
 
 /**
  * Version history (T40 P3b, NT16–NT20): the note's versions with time, author chip and summary;
- * one version's diff, restore with confirm, revert of an agent's change, and save-a-version.
+ * one version's diff, restore with confirm, revert of one version's change, and save-a-version.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -268,7 +268,7 @@ private fun HistoryDetail(
             TextButton(onClick = onAskRestore, enabled = !ui.busy, modifier = Modifier.testTag("restoreVersion")) {
                 Text("Restore This Version")
             }
-            // Not on an agent's move to Trash or its restore: Trash undoes those (N7, A654).
+            // Not on a move to Trash or its restore: Trash undoes those (N7, A654, A1575).
             if (revertible(version)) {
                 TextButton(onClick = onRevert, enabled = !ui.busy, modifier = Modifier.testTag("revertVersion")) {
                     // The web's name, as its messages say (Reverted…) (T39 pass 3, A896).

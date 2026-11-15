@@ -14,6 +14,7 @@ import {
 import { useCommand, useCommands } from '../commands/hooks';
 import { useNotes } from '../notes/hooks';
 import { PaneResizer } from '../shell/PaneResizer';
+import { useNarrowWindow } from '../shell/media';
 import { PANE_LIMITS, usePaneSize } from '../shell/pane-widths';
 import { useSource } from '../sources/hooks';
 import { useFit } from './fit';
@@ -32,6 +33,7 @@ import {
   type HistorySummary,
   type HistoryVersion,
 } from './source';
+import { VersionView, type ViewImages } from './VersionView';
 
 type History = HistoryList;
 type Detail = HistoryDetail;
@@ -62,7 +64,7 @@ function loadFailure(caught: unknown, source: HistorySource): string {
  * Version history of the open note (T21): the versions the NoteDoc keeps
  * (newest first, each naming the devices and agents behind it), what each
  * changed as a line diff of its markdown, Restore (the old content comes back
- * as a new change that syncs everywhere) and, for an agent's edit, Revert (a
+ * as a new change that syncs everywhere) and Revert (a
  * three-way merge that keeps later edits and reports overlaps). The versions
  * are the note's git notebook's commits (A858), read through the Mac app.
  * Since T51 (A936) it is the History tab of the note's side panel, not an
@@ -70,11 +72,21 @@ function loadFailure(caught: unknown, source: HistorySource): string {
  *
  * Laid out as "List over a Docked Preview" (Ryan's review of #192, finding 13): one line per
  * version (who, when, what), grouped by day, ↑ and ↓ to move through them; under a handle that
- * resizes the two, the chosen version's changes with Restore, Revert and Copy Text. How versions
- * are made is the head's ⓘ (`AboutVersions`); Sync Now is on the Now row.
+ * resizes the two, the chosen version's changes with View, Restore, Revert and Copy Text. How
+ * versions are made is the head's ⓘ (`AboutVersions`); Sync Now is on the Now row. View (A1572)
+ * shows the version beside the note as it is now, in a modal over the rest of the window
+ * (`VersionView`); the list stays beside it and picks what it shows.
  */
 export function HistoryPanel({ noteId }: { noteId: string }) {
   const notes = useNotes();
+  /** View's images, from this device's attachments, as the editor's (A1032). */
+  const images = useMemo<ViewImages>(
+    () => ({
+      resolve: (src, signal) => notes.attachments.url(src, signal),
+      release: (src) => notes.attachments.release(src),
+    }),
+    [notes],
+  );
   const scope = useSource();
   // A note is always a git notebook's (D49); without one in scope (a test's lone source) there
   // is no history to read.
@@ -96,6 +108,14 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
   const panelRef = useRef<HTMLElement>(null);
   const listRef = useRef<HTMLOListElement>(null);
   const [previewHeight, setPreviewHeight] = usePaneSize('historyPreview');
+  const narrow = useNarrowWindow();
+  /** The source View was opened for: another note's (a new source) never shows it. */
+  const [viewingOf, setViewingOf] = useState<HistorySource | null>(null);
+  /** History's panel as View's modal owns it: the note's side panel, else this section. */
+  const [viewPanel, setViewPanel] = useState<HTMLElement | null>(null);
+  const viewRef = useRef<HTMLButtonElement>(null);
+  /** Bumped as View closes: focus goes back to View once the preview shows again. */
+  const [viewClosed, setViewClosed] = useState(0);
 
   /** Bumped to read the list again (Try Again). */
   const [generation, setGeneration] = useState(0);
@@ -225,8 +245,56 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
   const version = history?.versions.find((v) => v.id === selected) ?? null;
   const canRevert = version ? revertible(version) : false;
   const shown = detail && version && detail.id === version.id ? detail : null;
-  /** How short the actions are drawn to stay on one line: 1 drops Revert's and Copy's words, 2 all. */
-  const [fit, actionsRef] = useFit(2, canRevert);
+  // Only with a note as it is now to compare with (a git notebook's), and room for two sides.
+  const canView = Boolean(source.current) && !narrow;
+  const viewing = canView && viewingOf === source && version !== null;
+  /**
+   * How short the actions are drawn to stay on one line: 1 drops the words of all but Restore
+   * (View, Revert and Copy), 2 all.
+   */
+  const [fit, actionsRef] = useFit(2, `${canView}:${canRevert}`);
+
+  const openView = () => {
+    const panel = panelRef.current;
+    setViewPanel(panel?.closest<HTMLElement>('.note-side[id]') ?? panel);
+    setViewingOf(source);
+  };
+  const closeView = () => {
+    setViewingOf(null);
+    setViewClosed((n) => n + 1);
+  };
+  // Open, focus is on the version picked in the list, where ↑ and ↓ change it (the design's).
+  useEffect(() => {
+    if (viewing) listRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]')?.focus();
+  }, [viewing]);
+  useEffect(() => {
+    if (viewClosed > 0) viewRef.current?.focus();
+  }, [viewClosed]);
+
+  const restoreVersion = (shownVersion: HistoryVersion) =>
+    act(
+      () => source.restore(shownVersion.id),
+      (body: HistoryChange) =>
+        body.changed
+          ? `Restored the version of ${time(shownVersion.createdAt)} as a new change.`
+          : 'The note already matches this version.',
+    );
+  const revertVersion = (shownVersion: HistoryVersion) =>
+    act(
+      () => source.revert(shownVersion.id),
+      (result: HistoryChange) => {
+        setConflicts(result.conflicts ?? []);
+        const n = result.conflicts?.length ?? 0;
+        if (n > 0) {
+          return `Reverted what did not overlap later edits. ${n} ${
+            n === 1 ? 'part was' : 'parts were'
+          } changed again since, and kept.`;
+        }
+        return result.changed
+          ? 'Reverted this edit; later edits are kept.'
+          : 'Nothing to revert: the note no longer has this edit.';
+      },
+    );
 
   /** The versions by day, newest first. */
   const days = useMemo(() => {
@@ -281,6 +349,7 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
   return (
     <section
       ref={panelRef}
+      id={`${heading}-panel`}
       className="history-panel"
       aria-labelledby={heading}
       data-testid="history-panel"
@@ -415,7 +484,31 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
             </ol>
             {version ? null : statusLine}
           </div>
-          {version ? (
+          {version && viewing ? (
+            <>
+              {/* The preview folds away while View shows the version (the design's). */}
+              <p className="history-viewing muted" data-testid="history-viewing">
+                <Icon name="eye" size={14} />
+                Viewing the selected version beside the note as it is now.
+              </p>
+              {statusLine}
+              <VersionView
+                source={source}
+                version={version}
+                detail={shown}
+                nowKey={history}
+                synced={!history.unversioned}
+                panel={viewPanel}
+                images={images}
+                canRevert={canRevert}
+                busy={busy}
+                onRestore={() => void restoreVersion(version).then(closeView)}
+                onRevert={() => void revertVersion(version).then(closeView)}
+                onCopy={copyVersion}
+                onClose={closeView}
+              />
+            </>
+          ) : version ? (
             <>
               <PaneResizer
                 kind="historyPreview"
@@ -477,8 +570,23 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                   </ul>
                 ) : null}
                 {/* One row, never two (R2-12): a word and an icon each, the full name in the
-                    tooltip; narrower, Revert and Copy drop their words, then Restore too. */}
+                    tooltip; narrower, View, Revert and Copy drop their words, then Restore too. */}
                 <div className="history-actions" ref={actionsRef} data-fit={fit || undefined}>
+                  {canView ? (
+                    <button
+                      ref={viewRef}
+                      type="button"
+                      className="btn"
+                      data-ui="submit"
+                      aria-label="View This Version"
+                      data-tip="View This Version"
+                      data-testid="history-view-open"
+                      onClick={openView}
+                    >
+                      <Icon name="eye" />
+                      <span className="history-action-word">View</span>
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="btn primary"
@@ -486,15 +594,7 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                     aria-label="Restore This Version"
                     data-tip="Restore This Version"
                     disabled={busy}
-                    onClick={() =>
-                      void act(
-                        () => source.restore(version.id),
-                        (body: HistoryChange) =>
-                          body.changed
-                            ? `Restored the version of ${time(version.createdAt)} as a new change.`
-                            : 'The note already matches this version.',
-                      )
-                    }
+                    onClick={() => void restoreVersion(version)}
                   >
                     <Icon name="history" />
                     <span className="history-action-word">Restore</span>
@@ -507,23 +607,7 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                       aria-label="Revert This Edit"
                       data-tip="Revert This Edit"
                       disabled={busy}
-                      onClick={() =>
-                        void act(
-                          () => source.revert(version.id),
-                          (result: HistoryChange) => {
-                            setConflicts(result.conflicts ?? []);
-                            const n = result.conflicts?.length ?? 0;
-                            if (n > 0) {
-                              return `Reverted what did not overlap later edits. ${n} ${
-                                n === 1 ? 'part was' : 'parts were'
-                              } changed again since, and kept.`;
-                            }
-                            return result.changed
-                              ? 'Reverted the agent’s edit; later edits are kept.'
-                              : 'Nothing to revert: the note no longer has this edit.';
-                          },
-                        )
-                      }
+                      onClick={() => void revertVersion(version)}
                     >
                       <Icon name="undo" />
                       <span className="history-action-word">Revert</span>

@@ -117,7 +117,6 @@ class HistoryModelTest {
         assertEquals("Saved by hand", versionLine(saved))
         val edit = app.penmoss.engine.api.NoteVersion(3, reason = "edit", summary = "Appended")
         assertEquals("Appended", versionLine(edit))
-        assertTrue(isAgentVersion(app.penmoss.engine.api.NoteVersion(3, authors = listOf(app.penmoss.engine.api.HistoryAuthor("a1", "agent", "Claude")))))
     }
 
     @Test
@@ -238,7 +237,7 @@ class HistoryModelTest {
         model.revert(3)
         val ui = until { it.message != null && !it.busy }
         assertEquals(listOf("flush", "exchange"), events)
-        assertEquals("Reverted the agent’s edit; later edits are kept.", ui.message)
+        assertEquals("Reverted this edit; later edits are kept.", ui.message)
         assertEquals(listOf("EDIT"), pendingUpdates())
     }
 
@@ -344,7 +343,7 @@ class HistoryModelTest {
         model.revert(3)
         val ui = until { it.message != null && !it.busy }
         assertEquals(listOf("flush", "exchange"), events)
-        assertTrue(ui.message!!.startsWith("Reverted the agent’s edit"))
+        assertTrue(ui.message!!.startsWith("Reverted this edit"))
         assertTrue(ui.message!!.contains("still coming"))
     }
 
