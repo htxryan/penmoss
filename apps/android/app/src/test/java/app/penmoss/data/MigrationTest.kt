@@ -26,7 +26,7 @@ import java.io.File
 
 /**
  * A phone's T32 database (schema 2) opened by T33 (schema 3, A308), T34 (schema 4, A337) and T38
- * (schema 5, A359), and up to schema 8 (T40 P3a, A430, A431), and on to 18 (T43): every row
+ * (schema 5, A359), and up to schema 8 (T40 P3a, A430, A431), and on to 20 (A1536): every row
  * survives, the new columns take their defaults, and edits a T32 build kept
  * apart, with no base rows, are kept rather than copied onto nothing (A309).
  * The schema-2 tables are made from the schema Room exported for that version.
@@ -523,9 +523,8 @@ class MigrationTest {
     }
 
     /**
-     * A T49 database (schema 17) opens at 18 (T43, A750): its folders and their queued changes
-     * kept, each folder not a notebook until the tree says so, which the next pass reads whole
-     * again (its hash forgotten), and a notebook change queued after the upgrade.
+     * A T49 database (schema 17) opens at 18 (T43, A750) and on to 20: its folders and their
+     * queued changes kept, and the tree read whole again at the next pass (its hash forgotten).
      */
     @Test
     fun aT49BuildsSchema17OpensAt18WithEveryFolderReadAgainForItsNotebookFlag() = runTest {
@@ -539,10 +538,8 @@ class MigrationTest {
             val store = NoteStore(db)
             val folder = db.folders().get("w")!!
             assertEquals("Work", folder.name)
-            assertEquals(false, folder.notebook)
             val ops = db.folderOps().all()
             assertEquals(listOf(FolderOpEntity.RENAME), ops.map { it.kind })
-            assertEquals(false, ops.single().notebook)
             assertNull(store.treeHash())
         } finally {
             db.close()
@@ -550,9 +547,8 @@ class MigrationTest {
     }
 
     /**
-     * A schema 18 database opens at 19 (T43, fix c): a note waiting to be filed and a folder move
-     * waiting to be sent are kept, neither with a notebook recorded; a move queued after the upgrade
-     * records none either, since a git notebook has no notebooks inside it (A912).
+     * A schema 18 database opens at 19 (T43, fix c) and on to 20: a note waiting to be filed and a
+     * folder move waiting to be sent are kept, and a move queued after the upgrade queues as any.
      */
     @Test
     fun aSchema18OpensAt19WithQueuedMovesKeptAndNoNotebookRecordedForThem() = runTest {
@@ -571,10 +567,96 @@ class MigrationTest {
             val store = NoteStore(db)
             val note = store.note("kept")!!
             assertEquals(true, note.toFile)
-            assertNull(note.moveNotebook)
-            assertNull(db.folderOps().all().single().fromNotebook)
+            assertEquals("p", note.fileIn)
+            assertEquals(listOf(FolderOpEntity.MOVE), db.folderOps().all().map { it.kind })
             assertEquals(NoteStore.FolderMove.MOVED, store.moveFolder("p", "q"))
-            assertEquals(listOf(null, null), db.folderOps().all().map { it.fromNotebook })
+            assertEquals(listOf(FolderOpEntity.MOVE, FolderOpEntity.MOVE), db.folderOps().all().map { it.kind })
+        } finally {
+            db.close()
+        }
+    }
+
+    /**
+     * A schema 19 database opens at 20 (A1536): T43's notebook columns and the settings queue's
+     * change time are gone, and every row of the tables Room rebuilt for that is kept with each
+     * of its other columns: the notes (their text and search too), the folders, the queued
+     * folder changes and the queued settings.
+     */
+    @Test
+    fun aSchema19OpensAt20WithEveryNoteAndItsColumnsKeptAndTheUnusedColumnsGone() = runTest {
+        createVersion(19) { db ->
+            db.execSQL(
+                "INSERT INTO notes (id, title, excerpt, updatedAt, clock, deleted, folderId, position, contentClock, cursor, epoch, gone, " +
+                    "toFile, fileIn, checkFrom, movedFrom, trashChange, trashChangeAt, seq, trashSeq, trashTried, trashNotice, " +
+                    "filePlaceBefore, filePlaceAfter, kind, period, fileKind, fileDate, openedAt, textDue, textHash, moveNotebook) " +
+                    "VALUES ('trip', 'Trip to Lisbon', 'trams and tiles', 50, 7, 0, 'w', 'a1', 6, 'SV', 'e3', 0, " +
+                    "1, 'p', 1, 'w', 1, 40, 12, 11, 1, 1, 'n0', 'n2', 'note', NULL, 'daily', '2026-11-15', 45, 0, 'h1', 'nb')",
+            )
+            db.execSQL(
+                "INSERT INTO notes (id, title, excerpt, updatedAt, clock, deleted, position, contentClock, gone, kind, period, textDue) " +
+                    "VALUES ('day', '2026-11-15', '', 60, 2, 0, 'a2', 2, 0, 'daily', '2026-11-15', 1)",
+            )
+            db.execSQL(
+                "INSERT INTO note_texts (noteId, title, body, tags, headings, ftitle, fbody, ftags, fheadings, tokens, fwords) " +
+                    "VALUES ('trip', 'Trip to Lisbon', 'Trams and tiles', 'travel', '', 'trip to lisbon', 'tram and tile', 'travel', '', 5, 'trip to lisbon trams and tiles travel')",
+            )
+            db.execSQL("INSERT INTO note_text_fts (docid, ftitle, fbody, ftags, fheadings) SELECT rowid, ftitle, fbody, ftags, fheadings FROM note_texts")
+            db.execSQL("INSERT INTO note_word_fts (docid, fwords) SELECT rowid, fwords FROM note_texts")
+            for (sql in contentSyncTriggers(19)) db.execSQL(sql)
+            db.execSQL("INSERT INTO updates (noteId, state, data, epoch) VALUES ('trip', 1, 'PENDING', 'e3')")
+            db.execSQL("INSERT INTO folders (id, name, parentId, position, sortMode, notebook) VALUES ('w', 'Work', NULL, 'a0', 'alpha', 1)")
+            db.execSQL("INSERT INTO folders (id, name, parentId, position, sortMode, notebook) VALUES ('p', 'Plans', 'w', 'a0', 'manual', 0)")
+            db.execSQL(
+                "INSERT INTO folder_ops (folderId, kind, name, fromName, checkName, parentId, fromParentId, checkParent, sortMode, placeBefore, placeAfter, label, tried, notebook, fromNotebook) " +
+                    "VALUES ('p', 'MOVE', 'Plans', 'Plans', 1, NULL, 'w', 1, NULL, 'x', NULL, 'Plans', 1, 1, 'nb')",
+            )
+            db.execSQL("INSERT INTO pending_settings (`key`, value, base, changedAt, sent) VALUES ('mode', '\"dark\"', '\"light\"', 99, '[\"dark\"]')")
+        }
+        val db = Room.databaseBuilder(context, PenmossDatabase::class.java, name).build()
+        try {
+            val store = NoteStore(db)
+            assertEquals(
+                NoteEntity(
+                    "trip", title = "Trip to Lisbon", excerpt = "trams and tiles", updatedAt = 50, clock = 7, deleted = false, folderId = "w",
+                    position = "a1", contentClock = 6, cursor = "SV", epoch = "e3", gone = false, toFile = true, fileIn = "p", checkFrom = true,
+                    movedFrom = "w", trashChange = 1, trashChangeAt = 40, seq = 12, trashSeq = 11, trashTried = true, trashNotice = true,
+                    filePlaceBefore = "n0", filePlaceAfter = "n2", kind = "note", period = null, fileKind = "daily", fileDate = "2026-11-15",
+                    openedAt = 45, textDue = false, textHash = "h1",
+                ),
+                store.note("trip"),
+            )
+            assertEquals(
+                NoteEntity("day", title = "2026-11-15", updatedAt = 60, clock = 2, position = "a2", contentClock = 2, kind = "daily", period = "2026-11-15"),
+                store.note("day"),
+            )
+            // Its text, its index and its edits waiting to be sent.
+            val text = db.search().text("trip")!!
+            assertEquals("Trams and tiles", text.body)
+            assertEquals("travel", text.tags)
+            assertEquals(listOf("trip"), OfflineSearch(db).search("lisbon").map { it.noteId })
+            assertEquals(listOf("PENDING"), db.updates().updates("trip", UpdateEntity.PENDING).map { it.update })
+            assertEquals(
+                listOf(FolderEntity("p", "Plans", "w", "a0", "manual"), FolderEntity("w", "Work", null, "a0", "alpha")),
+                db.folders().all().sortedBy { it.id },
+            )
+            assertEquals(
+                listOf(
+                    FolderOpEntity(
+                        rowId = 1, folderId = "p", kind = FolderOpEntity.MOVE, name = "Plans", fromName = "Plans", checkName = true,
+                        parentId = null, fromParentId = "w", checkParent = true, placeBefore = "x", label = "Plans", tried = true,
+                    ),
+                ),
+                db.folderOps().all(),
+            )
+            assertEquals(listOf(PendingSettingEntity("mode", "\"dark\"", "\"light\"", sent = "[\"dark\"]")), db.pendingSettings().all())
+            // The columns themselves are gone.
+            val raw = db.openHelper.readableDatabase
+            for ((table, column) in listOf("notes" to "moveNotebook", "folders" to "notebook", "folder_ops" to "notebook", "folder_ops" to "fromNotebook", "pending_settings" to "changedAt")) {
+                raw.query("SELECT name FROM pragma_table_info('$table')").use { cursor ->
+                    val columns = buildList { while (cursor.moveToNext()) add(cursor.getString(0)) }
+                    assertFalse("$table.$column", column in columns)
+                }
+            }
         } finally {
             db.close()
         }

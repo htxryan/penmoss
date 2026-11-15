@@ -238,7 +238,7 @@ class NoteRouteWiringTest {
     fun theMetadataTabListsInlineTagsAndNoNotebookRowInAGitNotebook() {
         openGarden()
         runBlocking {
-            graph.database.folders().put(FolderEntity("01JD2Z7Q8R4T6Y8W0E2R4T6YN1", "Work", null, "a", "manual", notebook = true))
+            graph.database.folders().put(FolderEntity("01JD2Z7Q8R4T6Y8W0E2R4T6YN1", "Work", null, "a", "manual"))
             // The server's index: its tags, frontmatter and inline; the page's: no frontmatter tags.
             graph.store.saveChanges(ChangesPage(1, notes = listOf(ChangedNote(garden, 1, "Garden", "", 10, seq = 1, tags = listOf("t51test")))))
         }
@@ -247,7 +247,7 @@ class NoteRouteWiringTest {
         await { compose.onAllNodes(hasTestTag("infoInlineTags")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("infoInlineTags").assert(hasText("In the text: #t51test"))
         compose.onNodeWithTag("infoTags").assert(hasAnyChild(hasText("No tags yet.")).not())
-        // A git notebook is the notebook: no Notebook row, even beside a folder marked as one (A912).
+        // A git notebook is the notebook: no Notebook row, even in a top-level folder (A912).
         compose.onNodeWithTag("infoRow-Notebook").assertDoesNotExist()
         runBlocking { graph.database.notes().place(garden, "01JD2Z7Q8R4T6Y8W0E2R4T6YN1", "a") }
         compose.onNodeWithTag("infoRow-Notebook").assertDoesNotExist()

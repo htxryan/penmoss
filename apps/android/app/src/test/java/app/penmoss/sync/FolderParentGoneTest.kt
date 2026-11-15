@@ -119,7 +119,7 @@ class FolderParentGoneTest {
     @Test
     fun aDefaultNotebookRenameOrNotebookFlagLeftQueuedIsDroppedUnsent() = runTest {
         db.folderOps().insert(FolderOpEntity(folderId = null, kind = FolderOpEntity.ROOT_NAME, name = "Home"))
-        db.folderOps().insert(FolderOpEntity(folderId = "w", kind = FolderOpEntity.NOTEBOOK, notebook = true, label = "Work"))
+        db.folderOps().insert(FolderOpEntity(folderId = "w", kind = FolderOpEntity.NOTEBOOK, label = "Work"))
         store.renameFolder("p", "Plans")
         FolderSender(store, api).sendDue()
         assertEquals(listOf("p" to "Plans"), api.patchedFolders.map { it.first to it.second.name })

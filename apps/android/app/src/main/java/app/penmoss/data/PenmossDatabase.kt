@@ -3,6 +3,7 @@ package app.penmoss.data
 import android.content.Context
 import androidx.room.AutoMigration
 import androidx.room.Database
+import androidx.room.DeleteColumn
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.AutoMigrationSpec
@@ -11,7 +12,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 /** The device's cache (T32): note metadata, the folder tree, and each note's opaque updates. */
 @Database(
     entities = [NoteEntity::class, FolderEntity::class, FolderOpEntity::class, UpdateEntity::class, SettingEntity::class, AttachmentEntity::class, CaptureEntity::class, PendingSettingEntity::class, HistoryCacheEntity::class, FoldsEntity::class, NoteLinkEntity::class, BacklinksCacheEntity::class, NoteTextEntity::class, NoteTextFts::class, NoteTagEntity::class, NoteWordFts::class, app.penmoss.feedback.FeedbackOutboxEntity::class],
-    version = 19,
+    version = 20,
     exportSchema = true,
     // 2: each pending edit's epoch (A291). 3: pictures (A304) and notes made on the phone to file (A303).
     // 4: quick captures waiting to be sent (A337). 5: where a note moved here was moved from (A359).
@@ -31,7 +32,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     // 18: notebooks (T43): each folder's notebook flag, and notebook changes made here to send;
     // the tree is read again so the flags fill in (A750).
     // 19: the notebook the phone saw a note or folder in when it was moved, sent with the move
-    // (T43, A766).
+    // (T43, A766). 20: those notebook columns and the settings queue's change time go, unread
+    // and unwritten since A1470 (A1536).
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -51,6 +53,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         AutoMigration(from = 16, to = 17),
         AutoMigration(from = 17, to = 18, spec = PenmossDatabase.ReadTreeAgain::class),
         AutoMigration(from = 18, to = 19),
+        AutoMigration(from = 19, to = 20, spec = PenmossDatabase.DropUnusedColumns::class),
     ],
 )
 abstract class PenmossDatabase : RoomDatabase() {
@@ -137,6 +140,21 @@ abstract class PenmossDatabase : RoomDatabase() {
             const val SLICE = 262_144
         }
     }
+
+    /**
+     * Schema 20 drops the columns nothing reads (A1536): T43's notebook flag on folders and on
+     * queued folder changes (A750, A756) and the notebook a move was made from (A766), unused
+     * since a git notebook has no notebooks inside it (A912, A1470), and the settings queue's
+     * change time, written and never read. Room rebuilds each table with its rows.
+     */
+    @DeleteColumn.Entries(
+        DeleteColumn(tableName = "notes", columnName = "moveNotebook"),
+        DeleteColumn(tableName = "folders", columnName = "notebook"),
+        DeleteColumn(tableName = "folder_ops", columnName = "notebook"),
+        DeleteColumn(tableName = "folder_ops", columnName = "fromNotebook"),
+        DeleteColumn(tableName = "pending_settings", columnName = "changedAt"),
+    )
+    class DropUnusedColumns : AutoMigrationSpec
 
     abstract fun notes(): NoteDao
 

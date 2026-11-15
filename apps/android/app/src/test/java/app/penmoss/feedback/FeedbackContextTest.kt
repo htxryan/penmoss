@@ -130,7 +130,7 @@ class FeedbackContextTest {
     @Test
     fun fromAGitNotebookTheContextHoldsKindsAndCountsAndNothingOfTheNotebook() = runTest {
         val id = "01JBN00000000000000000GIT1"
-        db.folders().put(FolderEntity("w", "Acme Work", null, "a0", "manual", notebook = true))
+        db.folders().put(FolderEntity("w", "Acme Work", null, "a0", "manual"))
         db.folders().put(FolderEntity("c", "Clients Zeta", "w", "a0", "manual"))
         db.notes().insert(NoteEntity(id, title = "Secret merger plan", folderId = "c", updatedAt = 1_793_113_200_000, epoch = "epoch-of-the-secret-store"))
         NoteStore(db).savePageText(id, "Quarterly numbers", tags = listOf("confidential-tag"))

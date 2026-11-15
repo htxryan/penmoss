@@ -38,8 +38,7 @@ class NotebookScreensTest {
     val compose = createComposeRule()
 
     private val folders = listOf(
-        // Flagged by an older version's row (T43): read as a folder.
-        FolderEntity("w", "Work", null, "a0", "manual", notebook = true),
+        FolderEntity("w", "Work", null, "a0", "manual"),
         FolderEntity("c", "Clients", "w", "a0", "manual"),
         FolderEntity("p", "Projects", null, "a1", "manual"),
         FolderEntity("r", "Recipes", "p", "a0", "manual"),
