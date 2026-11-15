@@ -24,7 +24,8 @@ export function TabMenu({
   readonly id: string;
   readonly x: number;
   readonly y: number;
-  readonly onClose: () => void;
+  /** `false`: the item put focus somewhere of its own (Reveal in Sidebar), so not on the tab. */
+  readonly onClose: (giveFocusBack?: boolean) => void;
 }) {
   const tabs = useTabs();
   const state = useTabsState();
@@ -45,6 +46,7 @@ export function TabMenu({
     run: () => void,
     disabled = false,
     keys: readonly string[] = [],
+    focusMoves = false,
   ) => (
     <MenuItem
       icon={icon}
@@ -60,7 +62,7 @@ export function TabMenu({
         ) : null
       }
       onClick={() => {
-        onClose();
+        onClose(!focusMoves);
         run();
       }}
     >
@@ -127,9 +129,14 @@ export function TabMenu({
         'Reveal in Sidebar',
         'folder',
         () => {
-          if (note !== null) revealNote(note);
+          if (note === null) return;
+          // Its tab first, which the tree reveals (a tab behind too); focus goes to the row.
+          tabs.activate(id);
+          revealNote(note);
         },
         note === null,
+        [],
+        true,
       )}
     </ContextMenu>
   );

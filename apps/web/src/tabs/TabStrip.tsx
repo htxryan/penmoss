@@ -393,10 +393,10 @@ export function TabStrip({
           id={menu.id}
           x={menu.x}
           y={menu.y}
-          onClose={() => {
+          onClose={(giveFocusBack = true) => {
             const id = menu.id;
             setMenu(null);
-            if (state.tabs.some((tab) => tab.id === id)) focusTab(id);
+            if (giveFocusBack && state.tabs.some((tab) => tab.id === id)) focusTab(id);
           }}
         />
       ) : null}

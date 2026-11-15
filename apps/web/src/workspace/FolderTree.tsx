@@ -152,16 +152,28 @@ export function FolderTree({
   // closed, and open again when it moves), once the workspace says where it is, and bring
   // its row into view (T39).
   // Reveal in Sidebar (PEN-140): the open note's folders again, its row scrolled to and focused.
+  // A tab behind asks before it is the active one (its menu makes it so): the reveal waits for it.
   const [revealAsked, setRevealAsked] = useState(0);
+  const revealFor = useRef<string | null>(null);
   useOnRevealNote((id) => {
-    if (id !== activeId) return;
-    revealed.current = null;
-    pendingFocus.current = rowKey({ kind: 'note', id });
+    revealFor.current = id;
     setRevealAsked((count) => count + 1);
   });
   useEffect(() => {
     if (!activeId) return;
     void revealAsked;
+    if (revealFor.current === activeId) {
+      revealFor.current = null;
+      revealed.current = null;
+      const key = rowKey({ kind: 'note', id: activeId });
+      pendingFocus.current = key;
+      // Its folders open already, no render follows to place the focus: place it now.
+      const element = findRow(treeRef.current, key);
+      if (element) {
+        pendingFocus.current = null;
+        element.focus();
+      }
+    }
     // Read from this device is all there is to wait for (D49): no server copy is on its way.
     const around = revealFolders(activeId, snapshot, tree, loaded);
     if (around === null) return;

@@ -238,27 +238,30 @@ test('each note’s tab starts with its notebook’s badge, and the note has no 
   const titleBox = (await groceriesTab.locator('.tab-title').boundingBox())!;
   expect(badgeBox.x + badgeBox.width).toBeLessThanOrEqual(titleBox.x);
 
-  // No title row above the text (AC20): the note's buttons are at the strip's end, its place at
-  // the start of the status bar, before its save status.
+  // No title row above the text (AC20): the note's buttons are at the strip's end. The status bar
+  // names no place since A1587 (the tab and the sidebar do): its save status comes first.
   await expect(page.locator('.note-main .note-top')).toHaveCount(0);
   await expect(page.locator('.tab-strip-end').getByTestId('note-menu')).toBeVisible();
   const stripBox = (await page.getByTestId('tab-strip').boundingBox())!;
   const scrollBox = (await page.getByTestId('note-scroll').boundingBox())!;
   expect(scrollBox.y).toBeCloseTo(stripBox.y + stripBox.height, 0);
-  const place = page.getByTestId('status-place');
-  await expect(place.getByTestId('note-source-crumb')).toHaveText('Personal');
+  await expect(page.getByTestId('status-place')).toHaveCount(0);
   await expect(page.locator('[data-testid="status-bar"] > :not(.sr-only)').first()).toHaveAttribute(
     'data-testid',
-    'status-place',
+    'save-status',
   );
-  const placeBox = (await place.boundingBox())!;
-  const saveBox = (await page.getByTestId('save-status').boundingBox())!;
-  expect(placeBox.x + placeBox.width).toBeLessThanOrEqual(saveBox.x);
-  // A click reveals the note in the sidebar.
-  await place.click();
+  // The tab's Reveal in Sidebar shows the note in its notebook's section.
+  await groceriesTab.click({ button: 'right' });
+  await page.getByTestId('tab-menu-reveal').click();
   await expect(sidebarSection(page, 'Personal').locator(':focus')).toContainText(
     `Groceries ${RUN}`,
   );
+  // From a tab behind, too: its tab comes in front and its row is shown.
+  await meetingTab.click({ button: 'right' });
+  await page.getByTestId('tab-menu-reveal').click();
+  await expect(meetingTab).toHaveAttribute('aria-selected', 'true');
+  await expect(sidebarSection(page, 'Penmoss').locator(':focus')).toContainText(meeting);
+  await groceriesTab.click();
   // The tab's tooltip: its title, notebook and ⌘ number (AC8).
   await page.mouse.move(640, 500);
   await expect(async () => {
