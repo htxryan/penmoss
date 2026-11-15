@@ -1,5 +1,6 @@
-// Where CI's jobs may run (A1235): .github/scripts/runner-policy.mjs against fixture
-// workflows and the real ones. Part of `task ci:lint`.
+// Where CI's jobs may run (A1235) and the fork guard (P10, A1183): .github/scripts/
+// runner-policy.mjs against fixture workflows and the real ones. Part of `task ci:lint`. The fork
+// guard's cases came from workflow-guard.test.mjs (A1481).
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import {
@@ -15,7 +16,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { problems } from './runner-policy.mjs';
-import { FORK_GUARD } from './workflow-guard.mjs';
+import { FORK_GUARD, parseWorkflow } from './workflow-yaml.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const GUARD =
@@ -80,11 +81,15 @@ test('fails larger runners, runner groups and other hosted images, even in a job
 });
 
 test('fails an expression, which could pick any runner at run time', () => {
+  // The fork guard refuses it as well, as it could name a Mac (below).
   assert.match(
-    messages(workflow('  a:\n    runs-on: ${{ fromJSON(needs.pick.outputs.mac) }}\n'))[0] ?? '',
+    messages(workflow('  a:\n    runs-on: ${{ fromJSON(needs.pick.outputs.mac) }}\n')).join('\n'),
     /expression/,
   );
-  assert.match(messages(workflow('  a:\n    runs-on: ${{ matrix.os }}\n'))[0] ?? '', /expression/);
+  assert.match(
+    messages(workflow('  a:\n    runs-on: ${{ matrix.os }}\n')).join('\n'),
+    /expression/,
+  );
 });
 
 test("fails a self-hosted label that isn't one of the Macs', or names no Mac", () => {
@@ -135,7 +140,7 @@ test('the command line runs the check from a checkout whose path has a space', (
   // The factory's worktrees are under "~/Library/Application Support" (A1231).
   const dir = mkdtempSync(join(tmpdir(), 'runner policy '));
   try {
-    for (const f of ['runner-policy.mjs', 'workflow-guard.mjs'])
+    for (const f of ['runner-policy.mjs', 'workflow-yaml.mjs'])
       copyFileSync(join(here, f), join(dir, f));
     const file = join(dir, 'ci.yml');
     writeFileSync(file, workflow('  a:\n    runs-on: ubuntu-latest-8-cores\n'));
@@ -148,4 +153,92 @@ test('the command line runs the check from a checkout whose path has a space', (
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+/** The fork guard's problems alone (a self-hosted label check may add its own). */
+const forkMessages = (/** @type {string} */ text) =>
+  messages(text).filter((m) => m.includes("a fork's pull request could reach"));
+
+test('fails a guard that another condition can bypass, or one that only fails a fork', () => {
+  const bypass = `  build:\n    if: (${FORK_GUARD}) || true\n    runs-on: [self-hosted, penmoss-mac]\n`;
+  assert.equal(forkMessages(workflow(bypass)).length, 1);
+  const failing = [
+    '  result:',
+    '    if: always()',
+    '    runs-on: [self-hosted, penmoss-mac]',
+    '    permissions: {}',
+    '    steps:',
+    '      - run: exit 1',
+    '',
+  ].join('\n');
+  assert.equal(forkMessages(workflow(failing)).length, 1);
+});
+
+test('treats a runs-on expression as self-hosted for the fork guard, as well as refusing it', () => {
+  const found = messages(
+    workflow('  check:\n    needs: pick\n    runs-on: ${{ fromJSON(needs.pick.outputs.mac) }}\n'),
+  );
+  assert.equal(found.length, 2, found.join('; '));
+  assert.match(found.join('\n'), /expression/);
+  assert.match(found.join('\n'), /a fork's pull request could reach/);
+});
+
+test('accepts the guard and-ed in a folded if: with comments', () => {
+  const job = `  b:\n    # a comment\n    if: >-\n      (github.event_name != 'pull_request' ||\n      github.event.pull_request.head.repo.full_name == github.repository) &&\n      needs.pick.outputs.check == 'true' # trailing\n    runs-on: [self-hosted, macOS, penmoss-mac]\n`;
+  assert.deepEqual(messages(workflow(job)), []);
+});
+
+test("guards a reusable workflow, which a pull request's run can call", () => {
+  const job = '  a:\n    runs-on: [self-hosted, penmoss-mac]\n';
+  assert.equal(forkMessages(workflow(job, 'on:\n  workflow_call:\n')).length, 1);
+  assert.deepEqual(
+    messages(workflow('  a:\n    runs-on: macos-latest\n', 'on:\n  workflow_call:\n')),
+    [],
+  );
+});
+
+test('fails pull_request_target and workflow_run outright, at the on: line', () => {
+  const found = problems(
+    workflow(
+      '  a:\n    runs-on: ubuntu-latest\n',
+      'on:\n  pull_request_target:\n  workflow_run:\n',
+    ),
+  );
+  assert.equal(found.length, 2);
+  assert.match(found[0]?.problem ?? '', /pull_request_target/);
+  assert.match(found[1]?.problem ?? '', /workflow_run/);
+  assert.equal(found[0]?.line, 3);
+});
+
+test('fails default permissions that are not read-only', () => {
+  const text = workflow('  a:\n    runs-on: ubuntu-latest\n').replace(
+    'contents: read',
+    'contents: write',
+  );
+  const found = problems(text);
+  assert.equal(found.length, 1);
+  assert.match(found[0]?.problem ?? '', /default permissions must be read-only/);
+  assert.match(
+    messages(
+      workflow('  a:\n    runs-on: ubuntu-latest\n').replace(
+        'permissions:\n  contents: read\n',
+        '',
+      ),
+    )[0] ?? '',
+    /not "unset"/,
+  );
+});
+
+test('parseWorkflow reads an inline on: list and a block if:', () => {
+  const parsed = parseWorkflow(
+    workflow(
+      `  a:\n    if: >-\n      ${GUARD} &&\n      true\n    runs-on: [self-hosted]\n`,
+      'on: [push, pull_request]\n',
+    ),
+  );
+  assert.deepEqual(parsed.triggers, ['push', 'pull_request']);
+  assert.match(
+    parsed.jobs[0]?.if ?? '',
+    /^\(github\.event_name != 'pull_request' \|\| .* && true$/,
+  );
 });

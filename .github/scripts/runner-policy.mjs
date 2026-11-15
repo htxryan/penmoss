@@ -9,16 +9,20 @@
 //   `macos-latest-xlarge`, any custom name), a runner group, Windows or other hosted images, or
 //   an unknown self-hosted label;
 // - a `runs-on` given as an expression, which could turn into any of those at run time;
-// - a self-hosted job, in a workflow that runs on pull requests, whose `if:` doesn't start with
-//   the fork guard (P10, A1183), so a fork's pull request could reach a Mac.
+// - a self-hosted job (or a runs-on that could be one), in a workflow that runs on pull requests
+//   or that another workflow calls, whose `if:` doesn't start with the fork guard (P10, A1183),
+//   so a fork's pull request could reach a Mac;
+// - `pull_request_target` or `workflow_run`, which run a fork's code with secrets, and default
+//   permissions that aren't read-only.
 //
-// Part of `task ci:lint` (and so of `task check`).
+// Part of `task ci:lint` (and so of `task check`). It is the one workflow checker: it took
+// workflow-guard.mjs's rules (A1481).
 //
 //   node .github/scripts/runner-policy.mjs [workflow.yml …]   (default: .github/workflows/*)
 import { readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { FORK_GUARD, parseWorkflow } from './workflow-guard.mjs';
+import { FORK_GUARD, isSelfHosted, parseWorkflow } from './workflow-yaml.mjs';
 
 /** GitHub's standard hosted runners, free for a public repository (macos-latest: Apple Silicon). */
 export const STANDARD_HOSTED = ['ubuntu-latest', 'ubuntu-24.04', 'macos-latest'];
@@ -115,22 +119,23 @@ export function runsOnProblem({ value, group }) {
   return `runs-on ${label} is neither ${STANDARD_HOSTED.join(' nor ')} nor self-hosted (a larger runner is billed)`;
 }
 
+/** Triggers a fork's pull request reaches: its own, and a workflow a pull request's run calls. */
+const FORK_REACHES = ['pull_request', 'pull_request_target', 'workflow_call'];
+
 /**
  * Self-hosted jobs that a fork's pull request could reach: in a workflow that runs on
- * `pull_request`, every job on a self-hosted runner starts its `if:` with the fork guard.
+ * `pull_request` or is called by one that does, every job on a self-hosted runner (or on an
+ * expression, which could name one) starts its `if:` with the fork guard.
  * @param {string} text
  * @returns {{ job: string; problem: string }[]}
  */
 export function forkProblems(text) {
   const workflow = parseWorkflow(text);
-  if (!workflow.triggers.some((t) => t === 'pull_request' || t === 'pull_request_target')) {
-    return [];
-  }
+  if (!workflow.triggers.some((t) => FORK_REACHES.includes(t))) return [];
   /** @type {{ job: string; problem: string }[]} */
   const found = [];
   for (const job of workflow.jobs) {
-    // parseWorkflow folds a block list into one line, separated by spaces.
-    if (!job.runsOn.split(/[\s,[\]'"]+/).includes('self-hosted')) continue;
+    if (!isSelfHosted(job)) continue;
     const condition = (job.if ?? '').replace(/\s+/g, ' ');
     if (condition === 'false') continue;
     if (condition !== FORK_GUARD && !condition.startsWith(`(${FORK_GUARD}) && `)) {
@@ -144,13 +149,49 @@ export function forkProblems(text) {
 }
 
 /**
+ * What a workflow as a whole may not do: run on `pull_request_target` or `workflow_run`, which
+ * run a fork's code with the repository's secrets, or give its jobs more than read access by
+ * default (each job asks for what it writes).
+ * @param {string} text
+ * @returns {{ line: number; problem: string }[]}
+ */
+export function workflowProblems(text) {
+  const workflow = parseWorkflow(text);
+  const lines = text.split('\n');
+  const at = (/** @type {RegExp} */ re) => Math.max(1, lines.findIndex((l) => re.test(l)) + 1);
+  /** @type {{ line: number; problem: string }[]} */
+  const found = [];
+  const on = at(/^(on|'on'|"on"):/);
+  if (workflow.triggers.includes('pull_request_target')) {
+    found.push({
+      line: on,
+      problem: "uses pull_request_target, which runs with secrets on a fork's code",
+    });
+  }
+  if (workflow.triggers.includes('workflow_run')) {
+    found.push({
+      line: on,
+      problem: "uses workflow_run, which can run a fork's code with secrets",
+    });
+  }
+  const perms = (workflow.permissions ?? '').replace(/\s+/g, ' ');
+  if (!/^(\{\}|read-all|contents: read)$/.test(perms)) {
+    found.push({
+      line: at(/^permissions:/),
+      problem: `default permissions must be read-only (contents: read), not "${workflow.permissions ?? 'unset'}"`,
+    });
+  }
+  return found;
+}
+
+/**
  * Every problem in one workflow's text.
  * @param {string} text
  * @returns {{ line: number; problem: string }[]}
  */
 export function problems(text) {
   /** @type {{ line: number; problem: string }[]} */
-  const found = [];
+  const found = [...workflowProblems(text)];
   for (const runsOn of runsOnValues(text)) {
     const problem = runsOnProblem(runsOn);
     if (problem) found.push({ line: runsOn.line, problem });
@@ -182,7 +223,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
   }
   if (bad > 0) {
     console.error(
-      `Jobs run on ${STANDARD_HOSTED.join(' or ')}, or on Ryan's self-hosted Macs behind the fork guard (A1235, docs/ci.md §1).`,
+      `Jobs run on ${STANDARD_HOSTED.join(' or ')}, or on Ryan's self-hosted Macs behind the fork guard, with read-only default permissions (A1235, A1183, docs/ci.md §1).`,
     );
     process.exitCode = 1;
   }

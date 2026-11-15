@@ -1,0 +1,94 @@
+name: Build the public APK
+
+# The release build of app.penmoss, signed with the stable sideload key (P8, A400), checked and
+# uploaded as one artifact (A1481). ci.yml calls it for every merge to main that builds Android
+# (A1187), release.yml for a stable release (A1189). On a hosted runner (A1348), which is thrown
+# away after the job; the key lives in the android-sideload environment, which only main and v*
+# tags can use (A405, docs/ci.md §10). It runs only when called (`secrets: inherit`).
+on:
+  workflow_call:
+    inputs:
+      version-code:
+        description: Android's versionCode, the build number; default, this ci.yml run's (D65)
+        type: string
+        default: ''
+      version-name:
+        description: The app version; default, X.Y.(Z+1)-alpha.<build> from the newest v* tag (P5)
+        type: string
+        default: ''
+      artifact-name:
+        description: The name of the artifact with app-release.apk and version.txt
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+
+jobs:
+  apk:
+    name: Build, sign, check and upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    environment: android-sideload
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      - name: The build number
+        if: inputs.version-code == ''
+        uses: ./.github/actions/build-number
+
+      # The command-line tools, platform 37 and build tools, and Gradle's downloads.
+      - uses: ./.github/actions/android-toolchain
+
+      # The key exists only in this step's runner temp folder, and is removed at the end.
+      - name: The public APK, release-signed with the sideload key
+        env:
+          KEYSTORE_B64: ${{ secrets.PENMOSS_SIDELOAD_KEYSTORE_B64 }}
+          PENMOSS_SIDELOAD_PASSWORD: ${{ secrets.PENMOSS_SIDELOAD_PASSWORD }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CODE: ${{ inputs.version-code }}
+          NAME: ${{ inputs.version-name }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$PENMOSS_SIDELOAD_PASSWORD" ]; then
+            echo "::error::The android-sideload environment gave no key (is this ref allowed? docs/ci.md §10)."
+            exit 1
+          fi
+          code="${CODE:-$PENMOSS_RUN}"
+          # P5 (A1188): X.Y.(Z+1)-alpha.<build> from the newest v* tag, unless the caller names
+          # it; the release jobs read it from version.txt beside the APK.
+          version="${NAME:-$(node .github/scripts/releases.mjs version --run "$code")}"
+          umask 077
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/sideload.jks"
+          export PENMOSS_SIDELOAD_KEYSTORE="$RUNNER_TEMP/sideload.jks"
+          export PENMOSS_VERSION_CODE="$code" PENMOSS_VERSION_NAME="$version"
+          task android:apk:sideload
+          echo "$version" > apps/android/app/build/outputs/apk/release/version.txt
+          rm -f "$RUNNER_TEMP/sideload.jks"
+          # Not debuggable, app.penmoss, v2 or later, and the sideload key's certificate.
+          bash .github/scripts/apk-check.sh apps/android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Upload the public APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: |
+            apps/android/app/build/outputs/apk/release/app-release.apk
+            apps/android/app/build/outputs/apk/release/version.txt
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Remove the sideload key and stop Gradle
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/sideload.jks"
+          if [ -x apps/android/gradlew ]; then apps/android/gradlew -p apps/android --stop; fi

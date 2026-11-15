@@ -16,7 +16,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { parseWorkflow } from './workflow-guard.mjs';
+import { parseWorkflow } from './workflow-yaml.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = path.join(here, 'android-emulator.sh');

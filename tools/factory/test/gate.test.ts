@@ -125,7 +125,7 @@ describe("the gate's refusal of workflow changes (A1314)", () => {
     ]);
   });
   it('lets everything else through, the CI scripts the workflows call included', () => {
-    expect(workflowChanges(patch('.github/scripts/mac-runner.sh', '+echo'))).toEqual([]);
+    expect(workflowChanges(patch('.github/scripts/apk-check.sh', '+echo'))).toEqual([]);
     expect(workflowChanges(patch('docs/ci.md', '+.github/workflows/ci.yml'))).toEqual([]);
   });
   it("tells the agent the factory can't push it, and what to do", () => {

@@ -1,10 +1,8 @@
-// The fork guard (P10, A1183): no pull request from a fork runs a job on Ryan's self-hosted Mac
-// runners. `task workflows:test` checks every workflow in .github/workflows against these rules.
+// The parts of a workflow the checks read (runner-policy.mjs, android-emulator.test.mjs): its
+// triggers, default permissions, and each job's runs-on, if: and permissions (A1481).
 //
 // The workflows are Prettier-formatted YAML, so this reads them line by line (two-space indents)
 // rather than adding a YAML parser to the root of the workspace.
-import { readdirSync, readFileSync } from 'node:fs';
-import path from 'node:path';
 
 /** The `if:` every self-hosted job carries in a workflow that runs on pull requests. */
 export const FORK_GUARD =
@@ -104,53 +102,9 @@ export function parseWorkflow(text, file = '<workflow>') {
 
 /** @param {Job} job */
 export function isSelfHosted(job) {
-  const labels = job.runsOn.replace(/[[\]]/g, '').trim();
+  const labels = job.runsOn.replace(/[[\]'"]/g, '').trim();
   if (labels === '') return false;
   if (labels.includes('self-hosted')) return true;
   // One GitHub-hosted label, e.g. `ubuntu-latest`. An expression may name the Mac runners.
   return !GITHUB_HOSTED.test(labels);
-}
-
-/**
- * Every way a workflow could let a fork's pull request reach a self-hosted runner.
- * @param {Workflow} workflow
- * @returns {string[]}
- */
-export function guardProblems(workflow) {
-  /** @type {string[]} */
-  const problems = [];
-  const where = workflow.file;
-  if (workflow.triggers.includes('pull_request_target')) {
-    problems.push(`${where}: uses pull_request_target, which runs with secrets on a fork's code`);
-  }
-  if (workflow.triggers.includes('workflow_run')) {
-    problems.push(`${where}: uses workflow_run, which can run a fork's code with secrets`);
-  }
-  const perms = (workflow.permissions ?? '').replace(/\s+/g, ' ');
-  if (!/^(\{\}|read-all|contents: read)$/.test(perms)) {
-    problems.push(
-      `${where}: default permissions must be read-only (contents: read), not "${workflow.permissions ?? 'unset'}"`,
-    );
-  }
-  if (!workflow.triggers.includes('pull_request')) return problems;
-  for (const job of workflow.jobs) {
-    if (!isSelfHosted(job)) continue;
-    const condition = (job.if ?? '').replace(/\s+/g, ' ');
-    if (condition === 'false') continue;
-    // The guard comes first and is and-ed with the rest, so nothing after it can bypass it.
-    if (condition !== FORK_GUARD && !condition.startsWith(`(${FORK_GUARD}) && `)) {
-      problems.push(
-        `${where}: job ${job.name} runs on a self-hosted runner without the fork guard: its if: must be (${FORK_GUARD}) && …`,
-      );
-    }
-  }
-  return problems;
-}
-
-/** @param {string} dir */
-export function checkWorkflows(dir) {
-  return readdirSync(dir)
-    .filter((f) => /\.ya?ml$/.test(f))
-    .sort()
-    .flatMap((f) => guardProblems(parseWorkflow(readFileSync(path.join(dir, f), 'utf8'), f)));
 }

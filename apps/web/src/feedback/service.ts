@@ -113,7 +113,7 @@ export class FeedbackService {
         ? options.file
         : bridge?.file
           ? (payload: string, shots: Parameters<NonNullable<typeof bridge.file>>[1]) =>
-              bridge.file!(payload, shots)
+              bridge.file(payload, shots)
           : null;
     this.outbox = new FeedbackOutbox({
       store: this.store,

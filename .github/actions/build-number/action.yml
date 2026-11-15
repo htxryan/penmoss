@@ -1,0 +1,27 @@
+name: Build number
+description: >-
+  The build number (D65): ci.yml's run number plus 1000, as PENMOSS_RUN and the `build` output.
+  The public repository's runs started again at 1 on 7 Nov 2026, after about 490 in the private
+  one, and builds must keep counting up: the Mac's update feed and Android's versionCode never go
+  back. The offset lives here alone (A1481).
+inputs:
+  run-number:
+    description: The ci.yml run number to count from (release.yml's newest CI run); default, this run's
+    default: ''
+outputs:
+  build:
+    description: The build number
+    value: ${{ steps.number.outputs.build }}
+runs:
+  using: composite
+  steps:
+    - name: Build number (run number + 1000, D65)
+      id: number
+      shell: bash
+      env:
+        RUN_NUMBER: ${{ inputs.run-number }}
+      run: |
+        build=$((${RUN_NUMBER:-$GITHUB_RUN_NUMBER} + 1000))
+        echo "PENMOSS_RUN=$build" >> "$GITHUB_ENV"
+        echo "build=$build" >> "$GITHUB_OUTPUT"
+        echo "Build $build"

@@ -23,7 +23,7 @@ The Mac app is an Electron shell around the Penmoss web app, bundled inside it. 
 
 ```sh
 task desktop:build     # web bundle (PENMOSS_BUILD=desktop) into apps/desktop/dist/web, then main + preload
-task desktop:test      # unit tests, then Playwright for Electron (xvfb-run on Linux)
+task desktop:test      # Playwright for Electron (xvfb-run on Linux); its unit tests are task test's
 task desktop:package   # .dmg and .zip in apps/desktop/release (section 3)
 ```
 
