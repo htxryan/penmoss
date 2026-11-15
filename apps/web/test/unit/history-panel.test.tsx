@@ -487,38 +487,55 @@ describe('Version History as a list over a docked preview (Ryan’s review of #1
     expect(side('right').getAttribute('aria-label')).toBe('Now');
     expect(side('left').getAttribute('aria-label')).toBe(dialog.querySelector('h2')!.textContent);
     // The title is the same; the version's line was replaced; now's last line has a gap beside it.
+    const cells = (which: string) =>
+      [...side(which).children].filter((cell) => !cell.classList.contains('history-view-line'));
+    const numbers = (which: string) =>
+      [...side(which).querySelectorAll('.history-view-line')].map((cell) => cell.textContent);
     const changes = (which: string) =>
-      [...side(which).children].map((cell) =>
+      cells(which).map((cell) =>
         cell.classList.contains('history-view-gap')
           ? 'gap'
           : ((cell as HTMLElement).dataset['change'] ?? 'same'),
       );
     expect(changes('left')).toEqual(['same', 'removed', 'gap']);
     expect(changes('right')).toEqual(['same', 'added', 'added']);
-    expect(side('left').children[1]!.textContent).toBe('Not in now: version 5');
-    // The top actions keep the short names.
+    expect(cells('left')[1]!.textContent).toBe('Not in now: version 5');
+    // Each block's line in the markdown, in its side's gutter; the gap's is empty.
+    expect(numbers('left')).toEqual(['2', '5', '']);
+    expect(numbers('right')).toEqual(['2', '5', '7']);
+    // The top actions keep the short names; the first switches Diff (the default) to Full File.
     const actions = [...dialog.querySelectorAll<HTMLButtonElement>('.history-view-head button')];
     expect(actions.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Show Full File',
       'Restore This Version',
       'Revert This Edit',
       'Copy Text',
       'Close',
     ]);
-    expect(actions.slice(0, 3).map((button) => button.textContent)).toEqual([
+    expect(actions[0]!.querySelector('.history-view-long')!.textContent).toBe('Show Full File');
+    expect(actions[0]!.querySelector('.history-view-short')!.textContent).toBe('Full File');
+    expect(actions.slice(1, 4).map((button) => button.textContent)).toEqual([
       'Restore',
       'Revert',
       'Copy',
     ]);
     // Close is the app's × for a dialog (DialogClose), with no words of its own.
-    expect(actions[3]!.textContent).toBe('');
-    expect(actions[3]!.querySelector('svg[data-icon="close"]')).not.toBeNull();
-    expect(actions[3]!.dataset['tip']).toBe('Close (Esc)');
+    expect(actions[4]!.textContent).toBe('');
+    expect(actions[4]!.querySelector('svg[data-icon="close"]')).not.toBeNull();
+    expect(actions[4]!.dataset['tip']).toBe('Close (Esc)');
+    // The toggle flips, and this device remembers it.
+    act(() => actions[0]!.click());
+    expect(actions[0]!.getAttribute('aria-label')).toBe('Show Diff');
+    expect(localStorage.getItem('penmoss.historyView.mode')).toBe('full');
+    act(() => actions[0]!.click());
+    expect(actions[0]!.getAttribute('aria-label')).toBe('Show Full File');
+    expect(localStorage.getItem('penmoss.historyView.mode')).toBeNull();
 
     // Another version from the list: only the left side changes. A phone's can be reverted too
     // (A1575).
     const rows = [...container.querySelectorAll<HTMLElement>('.history-list .history-entry')];
     act(() => rows[2]!.click());
-    await vi.waitFor(() => expect(side('left').children[1]?.textContent).toBe('version 3'));
+    await vi.waitFor(() => expect(cells('left')[1]?.textContent).toBe('version 3'));
     expect(changes('left')).toEqual(['same', 'same', 'gap']);
     expect(dialog.querySelector('[aria-label="Revert This Edit"]')).not.toBeNull();
 

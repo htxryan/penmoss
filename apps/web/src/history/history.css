@@ -583,6 +583,22 @@ html:root[data-resizing='rows'] * {
   flex: none;
 }
 
+/*
+ * A head too narrow for every word (`useFit`): the toggle's short name (`data-fit="1"`), then
+ * words drop from all but Restore (`"2"`), then from Restore too (`"3"`), as History's row does.
+ */
+.history-view-head:not([data-fit]) .history-view-short,
+.history-view-head[data-fit] .history-view-long,
+.history-view-head[data-fit='2'] > .btn:not(.primary) > .history-action-word,
+.history-view-head[data-fit='3'] > .btn > .history-action-word {
+  display: none;
+}
+
+.history-view-head[data-fit='2'] > .btn:not(.primary),
+.history-view-head[data-fit='3'] > .btn {
+  padding-inline: 0.45rem;
+}
+
 .history-view-sep {
   flex: none;
   width: 1px;
@@ -591,13 +607,37 @@ html:root[data-resizing='rows'] * {
   background: var(--pm-border);
 }
 
-/* Each side's name, its time or sync state, and what its tint means. */
+/*
+ * Each side's name, its time or sync state, and what its tint means. In the scroll, pinned over
+ * the sides: the same box as theirs, so its line between the sides is theirs to the pixel, with a
+ * scrollbar or without.
+ */
 .history-view-sides-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: grid;
-  flex: none;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   border-bottom: 1px solid var(--pm-border-soft);
   background: var(--pm-sidebar);
+}
+
+/* The version's commit, short, as git names it: a click copies it whole. */
+.history-view-sha {
+  flex: none;
+  padding: 0.05rem 0.3rem;
+  border: 0;
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--pm-fg) 6%, transparent);
+  color: var(--pm-fg);
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-code-inline);
+  cursor: pointer;
+  user-select: all;
+}
+
+.history-view-sha:hover {
+  background: color-mix(in oklab, var(--pm-fg) 11%, transparent);
 }
 
 .history-view-sides-head > div {
@@ -607,10 +647,6 @@ html:root[data-resizing='rows'] * {
   min-width: 0;
   padding: 0.6rem 1.5rem;
   white-space: nowrap;
-}
-
-.history-view-sides-head > div:first-child {
-  border-right: 1px solid var(--pm-border);
 }
 
 .history-view-key {
@@ -645,10 +681,13 @@ html:root[data-resizing='rows'] * {
  */
 /* Rows as tall as their blocks, not stretched to the scroll's height. */
 .history-view-grid {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-content: start;
+  box-sizing: border-box;
   min-height: 100%;
+  padding: 1.75rem 0 3rem;
 }
 
 /* The line between the sides, to the bottom however short they are. Its own element, not a
@@ -665,14 +704,85 @@ html:root[data-resizing='rows'] * {
 .note-body .history-view-side {
   display: grid;
   grid-template-rows: subgrid;
-  grid-template-columns: minmax(0, 1fr);
+  /* The gutter, as wide as the longest line number on either side, then the blocks. */
+  grid-template-columns: calc(var(--history-gutter, 2) * 1ch + 0.5rem) minmax(0, 1fr);
+  column-gap: 0.75rem;
   align-items: start;
   min-height: 0;
-  padding: 1.75rem 2rem 3rem 2rem;
+  padding: 0 2rem 0 0.75rem;
 }
 
-/* A gap held open beside a block the other side has alone. */
+/* Each side in its own column: a fold over both rows never pushes them aside. */
+.note-body .history-view-side[data-side='left'] {
+  grid-column: 1;
+}
+
+.note-body .history-view-side[data-side='right'] {
+  grid-column: 2;
+}
+
+/*
+ * A block on its row's first line, its number beside it (a gap has no line: it fills its row).
+ * Never skipped off screen as the note's blocks are (note.css): that containment gives a block no
+ * first line to set its number on. Its selector outweighs that one's.
+ */
+.history-view-grid.note-body
+  .ProseMirror.history-view-side
+  > :not(.history-view-line, .history-view-gap) {
+  grid-column: 2;
+  align-self: baseline;
+  content-visibility: visible;
+}
+
+/* The first block, after its number, starts at the top as the note's first does. */
+.note-body .history-view-side > :nth-child(2) {
+  margin-top: 0;
+}
+
+/* A block's first line in the markdown, as an editor's gutter numbers it. */
+.note-body .history-view-side > .history-view-line {
+  grid-column: 1;
+  align-self: baseline;
+  margin: 0;
+  color: var(--pm-color-meta);
+  font-family: var(--pm-font);
+  font-size: var(--pm-text-meta);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--pm-leading-meta);
+  text-align: right;
+  user-select: none;
+}
+
+/*
+ * Where Diff leaves out the same blocks: a band over both sides, the line between them too,
+ * saying how many lines it holds. A click shows them.
+ */
+.history-view-fold {
+  position: relative;
+  z-index: 1;
+  grid-column: 1 / -1;
+  align-self: center;
+  margin: 0.35rem 0 1.1rem;
+  padding: 0.4rem 1.5rem;
+  border: 0;
+  border-block: 1px solid var(--pm-border-soft);
+  background: var(--pm-sidebar);
+  color: var(--pm-muted);
+  font-size: var(--pm-text-item);
+  line-height: var(--pm-leading-item);
+  text-align: left;
+  cursor: pointer;
+}
+
+.history-view-fold:hover {
+  background: color-mix(in oklab, var(--pm-fg) 6%, var(--pm-sidebar));
+  color: var(--pm-fg);
+}
+
+/* A gap held open beside a block the other side has alone: from the row's top, with no line to
+ * set it on. */
 .note-body .history-view-side > .history-view-gap {
+  align-self: stretch;
   margin: 0;
 }
 

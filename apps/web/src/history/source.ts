@@ -21,6 +21,8 @@ export interface HistoryAuthor {
 }
 export interface HistoryVersion {
   readonly id: number;
+  /** Its commit, in a git notebook (View shows it, A1572). */
+  readonly commit?: string;
   readonly createdAt: number;
   readonly reason: string;
   readonly summary: string;

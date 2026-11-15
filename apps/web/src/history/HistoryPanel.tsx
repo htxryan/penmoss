@@ -505,6 +505,11 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                 onRestore={() => void restoreVersion(version).then(closeView)}
                 onRevert={() => void revertVersion(version).then(closeView)}
                 onCopy={copyVersion}
+                onCopySha={(commit) =>
+                  void copyText(document, commit).then((done) =>
+                    setStatus(done ? 'Copied the commit SHA.' : 'Could not copy the commit SHA.'),
+                  )
+                }
                 onClose={closeView}
               />
             </>

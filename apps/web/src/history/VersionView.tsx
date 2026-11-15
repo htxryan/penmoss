@@ -7,6 +7,10 @@
  * right what it would take away. Picking another version in the panel (a click, ↑ or ↓) swaps
  * the left side.
  *
+ * Diff (the default, remembered on this device) shows only the changed blocks, each with a few
+ * of the same blocks around it, as a code review does; a fold stands for the rest and opens on a
+ * click. Full File shows every block. Each block carries its line in the markdown, in a gutter.
+ *
  * Nothing is read again for it: the version is the markdown the docked preview read, and now is
  * this window's copy of the note (`HistorySource.current`).
  */
@@ -14,18 +18,31 @@ import type { DocJson } from '@penmoss/core/links';
 import { renderBlocks, type ImageServices } from '@penmoss/editor';
 import { editorSchema } from '@penmoss/editor/schema';
 import { Icon } from '@penmoss/ui/icons';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { DialogClose } from '../shell/DialogClose';
+import { devicePref, useDevicePref } from '../shell/device-pref';
 import {
   blocksOf,
   compareRows,
+  diffItems,
   differs,
+  fullItems,
   readMarkdown,
   type CompareBlock,
   type CompareRow,
+  type DiffItem,
   type ReadNote,
 } from './compare';
+import { useFit } from './fit';
 import { authorName, time } from './format';
 import { AuthorMark } from './parts';
 import type { HistoryDetail, HistorySource, HistoryVersion } from './source';
@@ -36,6 +53,28 @@ type Side = 'left' | 'right';
 export type ViewImages = Pick<ImageServices, 'resolve' | 'release'>;
 
 const WEB_IMAGE = /^https?:\/\//i;
+
+/** Diff (just the changes) or Full File (every block). */
+export type ViewMode = 'diff' | 'full';
+
+/** Diff or Full File, as last chosen on this device: Diff unless Full File was. */
+export const VIEW_MODE_KEY = 'penmoss.historyView.mode';
+const viewMode = devicePref<ViewMode>(VIEW_MODE_KEY, {
+  parse: (stored) => (stored === 'full' ? 'full' : 'diff'),
+  serialise: (mode) => (mode === 'diff' ? null : mode),
+});
+
+/** The toggle's names, for what it switches to: in full, and short for a narrow head. */
+const MODE_NAMES: Record<ViewMode, { readonly long: string; readonly short: string }> = {
+  diff: { long: 'Show Diff', short: 'Diff' },
+  full: { long: 'Show Full File', short: 'Full File' },
+};
+
+/** A commit's short name, as git shows it. */
+const shortSha = (commit: string) => commit.slice(0, 7);
+
+/** The folds' words: `⋯ 12 unchanged lines`. */
+const foldWords = (lines: number) => `⋯ ${lines} unchanged ${lines === 1 ? 'line' : 'lines'}`;
 
 /**
  * Shows the images in `host` (rendered with their path in `data-src`) as the editor does: a web
@@ -123,17 +162,21 @@ function cellOf(row: CompareRow, side: Side, doc: Document): HTMLElement {
 }
 
 /**
- * One side's blocks, a cell per row. The two sides share the rows (a subgrid of one grid), so a
- * block and its counterpart, or the gap beside it, stay level however tall either is. The blocks
- * are the side's own children, as in the editor, so the note's styles lay them out the same.
+ * One side's blocks, a cell per row shown, each after its line number in the markdown (a gap's
+ * gutter is empty). The two sides share the rows (a subgrid of one grid), so a block and its
+ * counterpart, or the gap beside it, stay level however tall either is; a fold's row is empty on
+ * both, under the fold. The blocks are the side's own children, as in the editor, so the note's
+ * styles lay them out the same.
  */
 function SideBlocks({
   rows,
+  items,
   side,
   label,
   images,
 }: {
   rows: readonly CompareRow[];
+  items: readonly DiffItem[];
   side: Side;
   label: string;
   images: ViewImages | undefined;
@@ -142,9 +185,26 @@ function SideBlocks({
   useLayoutEffect(() => {
     const host = ref.current;
     if (!host) return;
-    host.replaceChildren(...rows.map((row) => cellOf(row, side, host.ownerDocument)));
+    const doc = host.ownerDocument;
+    const cells: HTMLElement[] = [];
+    items.forEach((item, at) => {
+      const row = item.kind === 'row' ? rows[item.index] : undefined;
+      if (!row) return;
+      const gridRow = String(at + 1);
+      const number = doc.createElement('span');
+      number.className = 'history-view-line';
+      number.setAttribute('aria-hidden', 'true');
+      number.dataset['testid'] = 'history-view-line';
+      const start = row[side]?.lines?.start;
+      if (start !== undefined) number.textContent = String(start);
+      number.style.gridRow = gridRow;
+      const cell = cellOf(row, side, doc);
+      cell.style.gridRow = gridRow;
+      cells.push(number, cell);
+    });
+    host.replaceChildren(...cells);
     return showImages(host, images);
-  }, [rows, side, images]);
+  }, [rows, items, side, images]);
   return (
     <article
       ref={ref}
@@ -152,9 +212,21 @@ function SideBlocks({
       data-side={side}
       data-testid={`history-view-${side}`}
       aria-label={label}
-      style={{ gridRow: `1 / span ${Math.max(1, rows.length)}` }}
+      style={{ gridRow: `1 / span ${Math.max(1, items.length)}` }}
     />
   );
+}
+
+/** The most digits a line number has on either side: the gutters' width. */
+function gutterDigits(rows: readonly CompareRow[]): number {
+  let most = 1;
+  for (const row of rows) {
+    for (const block of [row.left, row.right]) {
+      const end = block?.lines?.start;
+      if (end !== undefined) most = Math.max(most, String(end).length);
+    }
+  }
+  return most;
 }
 
 /** Where History's panel begins in the window: the modal ends there, and the cap above it. */
@@ -176,6 +248,7 @@ export function VersionView({
   onRestore,
   onRevert,
   onCopy,
+  onCopySha,
   onClose,
 }: {
   source: HistorySource;
@@ -195,6 +268,8 @@ export function VersionView({
   onRestore: () => void;
   onRevert: () => void;
   onCopy: () => void;
+  /** Copies the version's commit (its full SHA), from the short one over the left side. */
+  onCopySha: (commit: string) => void;
   onClose: () => void;
 }) {
   const dialogRef = useRef<HTMLElement>(null);
@@ -277,6 +352,26 @@ export function VersionView({
   const when = time(version.createdAt);
   const different = rows ? differs(rows) : false;
 
+  const [mode, setMode] = useDevicePref(viewMode);
+  /** The folds opened, by their first row, for these rows: another version's start closed. */
+  const [opened, setOpened] = useState<{
+    readonly rows: readonly CompareRow[] | null;
+    readonly folds: ReadonlySet<number>;
+  }>({ rows: null, folds: new Set() });
+  const folds = useMemo(
+    () => (opened.rows === rows ? opened.folds : new Set<number>()),
+    [opened, rows],
+  );
+  const items = useMemo(
+    () => (rows ? (mode === 'diff' ? diffItems(rows, folds) : fullItems(rows)) : null),
+    [rows, mode, folds],
+  );
+  const openFold = (from: number) => setOpened({ rows, folds: new Set([...folds, from]) });
+  const next: ViewMode = mode === 'diff' ? 'full' : 'diff';
+
+  // A head too narrow for every word: the toggle's short name, then words drop (as History's).
+  const [fit, headRef] = useFit(3, canRevert);
+
   /** A link in either side does not leave: the sides are to read. */
   const keepLinks = (event: MouseEvent<HTMLElement>) => {
     if ((event.target as HTMLElement).closest('a')) event.preventDefault();
@@ -300,7 +395,7 @@ export function VersionView({
         data-testid="history-view"
         style={edge ? { width: edge.left } : undefined}
       >
-        <div className="history-view-head">
+        <div className="history-view-head" ref={headRef} data-fit={fit || undefined}>
           <AuthorMark authors={version.authors} />
           <h2 className="history-view-when">{when}</h2>
           <span className="history-view-who muted">
@@ -311,6 +406,21 @@ export function VersionView({
             Read Only
           </span>
           <span className="history-view-space" />
+          {/* Named for what it switches to; short in a narrow head (`data-fit`). */}
+          <button
+            type="button"
+            className="btn"
+            data-ui="option"
+            aria-label={MODE_NAMES[next].long}
+            data-tip={MODE_NAMES[next].long}
+            data-testid="history-view-mode"
+            onClick={() => setMode(next)}
+          >
+            <Icon name={next === 'diff' ? 'diff' : 'file'} />
+            <span className="history-action-word history-view-long">{MODE_NAMES[next].long}</span>
+            <span className="history-action-word history-view-short">{MODE_NAMES[next].short}</span>
+          </button>
+          <span className="history-view-sep" aria-hidden="true" />
           {/* The short names, as in the docked preview, the full ones in tooltips (Ryan). */}
           <button
             type="button"
@@ -322,7 +432,7 @@ export function VersionView({
             onClick={onRestore}
           >
             <Icon name="history" />
-            Restore
+            <span className="history-action-word">Restore</span>
           </button>
           {canRevert ? (
             <button
@@ -335,7 +445,7 @@ export function VersionView({
               onClick={onRevert}
             >
               <Icon name="undo" />
-              Revert
+              <span className="history-action-word">Revert</span>
             </button>
           ) : null}
           <button
@@ -348,39 +458,14 @@ export function VersionView({
             onClick={onCopy}
           >
             <Icon name="copy" />
-            Copy
+            <span className="history-action-word">Copy</span>
           </button>
           <span className="history-view-sep" aria-hidden="true" />
           {/* The app's × for a dialog (Ryan): Close, its tooltip Close (Esc). */}
           <DialogClose label="Close" onClose={onClose} />
         </div>
-        <div className="history-view-sides-head" aria-hidden="true">
-          <div>
-            <strong>This Version</strong>
-            <span className="muted">{when}</span>
-            <span className="history-view-space" />
-            {different ? (
-              <span className="history-view-key" data-change="removed">
-                Not in Now
-              </span>
-            ) : null}
-          </div>
-          <div>
-            <strong>Now</strong>
-            <span className="muted">{synced ? 'Synced' : 'Not synced yet'}</span>
-            <span className="history-view-space" />
-            {different ? (
-              <span className="history-view-key" data-change="added">
-                Added Since
-              </span>
-            ) : rows ? (
-              <span className="muted" data-testid="history-view-same">
-                The Same as This Version
-              </span>
-            ) : null}
-          </div>
-        </div>
-        {/* One scroll for both sides, so they move together and stay level. */}
+        {/* One scroll for both sides, so they move together and stay level. The sides' names
+            scroll in it too, over them, so the two lines between the sides are one. */}
         <div
           className="history-view-scroll"
           role="group"
@@ -388,11 +473,81 @@ export function VersionView({
           tabIndex={0}
           data-testid="history-view-scroll"
         >
-          {rows ? (
-            <div className="note-body history-view-grid" onClick={keepLinks}>
+          <div className="history-view-sides-head" data-testid="history-view-sides-head">
+            <span className="history-view-divider" aria-hidden="true" />
+            <div>
+              {version.commit ? (
+                <>
+                  <button
+                    type="button"
+                    className="history-view-sha"
+                    data-ui="submit"
+                    aria-label={`Copy Commit SHA ${shortSha(version.commit)}`}
+                    data-tip="Copy Commit SHA"
+                    data-testid="history-view-sha"
+                    onClick={() => version.commit && onCopySha(version.commit)}
+                  >
+                    {shortSha(version.commit)}
+                  </button>
+                  <span className="muted" aria-hidden="true">
+                    ·
+                  </span>
+                </>
+              ) : (
+                <strong>This Version</strong>
+              )}
+              <span className="muted">{when}</span>
+              <span className="history-view-space" />
+              {different ? (
+                <span className="history-view-key" data-change="removed">
+                  Not in Now
+                </span>
+              ) : null}
+            </div>
+            <div>
+              <strong>Now</strong>
+              <span className="muted">{synced ? 'Synced' : 'Not synced yet'}</span>
+              <span className="history-view-space" />
+              {different ? (
+                <span className="history-view-key" data-change="added">
+                  Added Since
+                </span>
+              ) : rows ? (
+                <span className="muted" data-testid="history-view-same">
+                  The Same as This Version
+                </span>
+              ) : null}
+            </div>
+          </div>
+          {rows && items && items.length === 0 ? (
+            <p className="muted history-view-loading" data-testid="history-view-no-changes">
+              No changes from now.
+            </p>
+          ) : rows && items ? (
+            <div
+              className="note-body history-view-grid"
+              data-mode={mode}
+              style={{ '--history-gutter': gutterDigits(rows) } as CSSProperties}
+              onClick={keepLinks}
+            >
               <span className="history-view-divider" aria-hidden="true" />
-              <SideBlocks rows={rows} side="left" label={when} images={images} />
-              <SideBlocks rows={rows} side="right" label="Now" images={images} />
+              <SideBlocks rows={rows} items={items} side="left" label={when} images={images} />
+              <SideBlocks rows={rows} items={items} side="right" label="Now" images={images} />
+              {items.map((item, at) =>
+                item.kind === 'fold' ? (
+                  <button
+                    key={item.from}
+                    type="button"
+                    className="history-view-fold"
+                    data-ui="item"
+                    data-testid="history-view-fold"
+                    style={{ gridRow: at + 1 }}
+                    onClick={() => openFold(item.from)}
+                  >
+                    {foldWords(item.lines)}
+                  </button>
+                ) : null,
+              )}
             </div>
           ) : now === 'missing' ? (
             <p className="muted history-view-loading" role="status">

@@ -39,6 +39,38 @@ const HTML_LINE_BREAK = /^<br\s*\/?>$/i;
  * `rawInline` and is written back verbatim.
  */
 export function parseMarkdown(markdown: string, context: CodecContext = {}): ParsedNote {
+  const { frontmatter, doc } = parseMarkdownWithLines(markdown, context);
+  return { frontmatter, doc };
+}
+
+/** Where a block is in the markdown: its first and last line, counted from 1. */
+export interface LineSpan {
+  readonly start: number;
+  readonly end: number;
+}
+
+/** A top-level block's lines, and a list's each item's (in the order of the list's items). */
+export interface BlockLines extends LineSpan {
+  readonly items?: readonly LineSpan[];
+}
+
+/**
+ * A note parsed as `parseMarkdown` parses it, with where each of its top-level blocks is in the
+ * markdown (History's View numbers its lines, A1572): `lines[i]` is `doc.child(i)`'s, null for
+ * the empty paragraph a note with no blocks gets. `titleLine` is the frontmatter's `title:`
+ * line, null without one. Lines count the file's own, the frontmatter's too.
+ */
+export interface LinedNote extends ParsedNote {
+  readonly lines: ReadonlyArray<BlockLines | null>;
+  readonly titleLine: number | null;
+}
+
+const LIST_NODES = new Set(['bulletList', 'orderedList', 'taskList']);
+
+const spanOf = (node: Nodes): LineSpan | null =>
+  node.position ? { start: node.position.start.line, end: node.position.end.line } : null;
+
+export function parseMarkdownWithLines(markdown: string, context: CodecContext = {}): LinedNote {
   const source = markdown.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
   const tree = fromMarkdown(source, {
     extensions: micromarkExtensions,
@@ -46,15 +78,43 @@ export function parseMarkdown(markdown: string, context: CodecContext = {}): Par
   });
   let children = tree.children;
   let frontmatter: Frontmatter | null = null;
+  let titleLine: number | null = null;
   const head = children[0];
   if (head?.type === 'yaml') {
     frontmatter = parseFrontmatter(head.value);
     children = children.slice(1);
+    const at = head.value.split('\n').findIndex((line) => /^title\s*:/.test(line));
+    // The value starts on the line after the opening `---`.
+    if (at >= 0 && head.position) titleLine = head.position.start.line + 1 + at;
   }
   const converter = new MdastToDoc(source, context.links ?? unresolvedLinks);
-  const blocks = converter.blocks(children, true);
+  const blocks: PMNode[] = [];
+  const lines: Array<BlockLines | null> = [];
+  for (const node of children) {
+    const made = converter.blocks([node], true);
+    // A list can become several (a run of task items beside plain ones, A157): each takes its
+    // own items, in order.
+    let items = node.type === 'list' ? node.children : [];
+    for (const block of made) {
+      blocks.push(block);
+      if (node.type === 'list' && LIST_NODES.has(block.type.name)) {
+        const mine = items.slice(0, block.childCount);
+        items = items.slice(block.childCount);
+        const spans = mine.map(spanOf);
+        const first = spans[0];
+        const last = spans[spans.length - 1];
+        lines.push(
+          first && last && spans.every(Boolean)
+            ? { start: first.start, end: last.end, items: spans as LineSpan[] }
+            : spanOf(node),
+        );
+      } else {
+        lines.push(spanOf(node));
+      }
+    }
+  }
   const doc = schema.node('doc', null, blocks.length > 0 ? blocks : [paragraph([])]);
-  return { frontmatter, doc };
+  return { frontmatter, doc, lines: blocks.length > 0 ? lines : [null], titleLine };
 }
 
 function paragraph(content: PMNode[]): PMNode {
