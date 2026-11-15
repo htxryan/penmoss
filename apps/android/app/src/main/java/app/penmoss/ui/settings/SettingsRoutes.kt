@@ -3,6 +3,7 @@ package app.penmoss.ui.settings
 import android.content.Context
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -94,16 +95,26 @@ internal class SettingsHost(
     val openNotebook: (String) -> Unit = { app.penmoss.git.GitNotebookActivity.open(context, it) },
 )
 
-/** The primary notebook's graph (A1101), where Daily Notes' settings are; null with no notebook. */
+/**
+ * The primary notebook's graph (A1101), where Daily Notes' settings are; null with no notebook.
+ * Its own screens may be closed (Settings over the first screen, or over another notebook): while
+ * shown here it is watched, so a pass reads its settings and a change made here is sent (PEN-146).
+ */
 @Composable
 internal fun rememberPrimary(host: SettingsHost): NotebookGraph? {
     val hub = host.device.gitIfAny ?: return host.notebook
     val list by hub.list.collectAsStateWithLifecycle()
     val pick by hub.journalPick.collectAsStateWithLifecycle()
-    return remember(list, pick, host.notebook) {
+    val primary = remember(list, pick, host.notebook) {
         val id = hub.journal() ?: return@remember host.notebook
         if (host.notebook?.localId == id) host.notebook else runCatching { hub.graph(id) }.getOrNull() ?: host.notebook
     }
+    DisposableEffect(primary) {
+        // The open notebook's own screens sync it already.
+        val release = primary?.takeIf { it !== host.notebook }?.sync?.watch()
+        onDispose { release?.invoke() }
+    }
+    return primary
 }
 
 internal fun modeLabel(mode: String) = when (mode) {
@@ -343,7 +354,7 @@ internal fun DailyNotesRoute(host: SettingsHost, onTimeZone: () -> Unit, onBack:
     val graph = rememberPrimary(host)
     if (graph == null) {
         // No notebook yet: nothing holds these, so they wait.
-        DailyNotesScreen(Settings().timeZone, journalToday(Settings().timeZone), emptyList(), enabled = false, onTimeZone = {}, onSave = { _, _ -> }, onBack = onBack)
+        DailyNotesScreen(Settings().timeZone, journalToday(Settings().timeZone), emptyList(), enabled = false, onTimeZone = {}, onSave = { _, _ -> }, onBack = onBack, noNotebook = true)
         return
     }
     val state by graph.settings.collectAsStateWithLifecycle()
@@ -394,6 +405,7 @@ internal fun QuickCaptureRoute(host: SettingsHost, onNotebooks: () -> Unit, onBa
         onBack = onBack,
         notebook = primary?.name,
         onNotebook = onNotebooks,
+        noNotebook = primary == null,
     )
 }
 

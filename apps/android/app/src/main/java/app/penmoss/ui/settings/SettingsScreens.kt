@@ -277,11 +277,14 @@ internal fun Help(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/**
- * Shown on a screen while its settings are not read yet: they live in the primary notebook
- * (A1014), which has not been opened on this phone, or there is no notebook yet.
- */
-const val SETTINGS_WAIT = "These settings can be changed once Penmoss has read them from your primary notebook. Add a notebook first if there is none."
+/** Shown on a screen while its settings are not read yet from the primary notebook, where they live (A1014). */
+const val SETTINGS_WAIT = "These settings can be changed once Penmoss has read them from your primary notebook."
+
+/** Shown instead while there is no notebook on the phone, so nothing holds them yet (PEN-146). */
+const val SETTINGS_NO_NOTEBOOK = "These settings are kept in your primary notebook. Add a notebook to change them."
+
+/** What a screen whose settings cannot be changed yet says: no notebook, or not read yet. */
+internal fun settingsWait(noNotebook: Boolean) = if (noNotebook) SETTINGS_NO_NOTEBOOK else SETTINGS_WAIT
 
 /** A radio choice as a whole row, so the label is the target and TalkBack reads one control. */
 @Composable
@@ -586,9 +589,11 @@ fun DailyNotesScreen(
     onUsePhoneZone: (String) -> Unit = {},
     /** The primary notebook's name, which these belong to. */
     notebook: String? = null,
+    /** No notebook on the phone: nothing holds these yet. */
+    noNotebook: Boolean = false,
 ) {
     var tab by rememberSaveable { mutableStateOf(0) }
-    SectionScreen("Daily Notes", onBack, notice = SETTINGS_WAIT.takeIf { !enabled }) {
+    SectionScreen("Daily Notes", onBack, notice = settingsWait(noNotebook).takeIf { !enabled }) {
         ListItem(
             headlineContent = { Text("Time Zone") },
             supportingContent = { Text("$timeZone · today is ${app.penmoss.ui.journal.journalLongDate(today).substringBeforeLast(' ')}") },
@@ -810,8 +815,10 @@ fun QuickCaptureScreen(
     /** The primary notebook's name, where captures go; null with no notebook yet. */
     notebook: String? = null,
     onNotebook: () -> Unit = {},
+    /** No notebook on the phone: nothing holds these yet. */
+    noNotebook: Boolean = false,
 ) {
-    SectionScreen("Quick Capture", onBack, notice = SETTINGS_WAIT.takeIf { !enabled }) {
+    SectionScreen("Quick Capture", onBack, notice = settingsWait(noNotebook).takeIf { !enabled }) {
         GroupTitle("Saves To")
         Column(Modifier.selectableGroup()) {
             ChoiceRow("Today’s Note", "At the end of ## Captures, with the time", destination == "daily", enabled, "capture-daily") { onChoose("daily") }

@@ -172,11 +172,28 @@ class SyncCoordinator(
         if (loop != null) return
         loop = scope.launch {
             while (true) {
-                // A request, or the interval while the app is in front.
-                withTimeoutOrNull(FOREGROUND_INTERVAL_MS) { requests.receive() }
-                if (_foreground.value) runPass()
+                // A request, or the interval while the app is in front; a request also while a
+                // screen reads this notebook from outside its own screens ([watch]).
+                val asked = withTimeoutOrNull(FOREGROUND_INTERVAL_MS) { requests.receive() } != null
+                if (_foreground.value || (asked && watchers.get() > 0)) runPass()
             }
         }
+    }
+
+    /** Screens reading this notebook with its own screens closed ([watch]). */
+    private val watchers = java.util.concurrent.atomic.AtomicInteger(0)
+
+    /**
+     * A screen shows this notebook's settings while its own screens are closed (Settings over the
+     * app's first screen, PEN-146): a pass now reads them (the tree's settings, A411), and a
+     * request runs one until the returned release is called, so a change made there is sent at
+     * once. Out of front a pass otherwise runs only in a background run (A825).
+     */
+    fun watch(): () -> Unit {
+        watchers.incrementAndGet()
+        requestSync()
+        val released = java.util.concurrent.atomic.AtomicBoolean(false)
+        return { if (released.compareAndSet(false, true)) watchers.decrementAndGet() }
     }
 
     fun setForeground(value: Boolean) {

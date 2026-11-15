@@ -387,4 +387,46 @@ class SettingsSyncTest {
         assertEquals(emptySet<String>(), shown().unsent)
         assertNull(shown().refused)
     }
+
+    /** Waits up to [ms] for [done], on the test's thread; false if it never came. */
+    private fun within(ms: Long, done: () -> Boolean): Boolean {
+        val end = System.currentTimeMillis() + ms
+        while (System.currentTimeMillis() < end) {
+            if (done()) return true
+            Thread.sleep(50)
+        }
+        return done()
+    }
+
+    /**
+     * PEN-146: Settings opened from the app's first screen shows the primary notebook's Daily Notes
+     * while that notebook's own screens are closed, so its coordinator is never in front. A request
+     * alone runs no pass then (A825): its settings would stay unread and every control disabled.
+     * Watched, a pass reads them at once and a change made there is sent; released, it waits again.
+     */
+    @Test
+    fun aNotebookWatchedFromSettingsWithItsScreensClosedReadsItsSettingsAndSendsAChange() {
+        penmoss.setOnWeb(SettingKeys.TIME_ZONE, "Europe/Paris")
+        sync.start()
+        sync.requestSync()
+        assertFalse("out of front, a request alone runs no pass", within(500) { shown().known })
+
+        val release = sync.watch()
+        assertTrue("watched, a pass reads the notebook's settings", within(5_000) { shown().known })
+        assertEquals("Europe/Paris", shown().settings.timeZone)
+
+        // Daily Notes → Time Zone: the change goes at once, as the graph's changeSetting asks.
+        assertTrue(change(SettingKeys.TIME_ZONE, "Asia/Tokyo"))
+        sync.requestSync()
+        assertTrue("the change is sent", within(5_000) { penmoss.settings[SettingKeys.TIME_ZONE] == "Asia/Tokyo" && shown().unsent.isEmpty() })
+
+        // Settings closed: out of front, requests wait for a background run again.
+        release()
+        release()
+        val sent = penmoss.settingsChanges.size
+        assertTrue(change(SettingKeys.TIME_ZONE, "America/Chicago"))
+        sync.requestSync()
+        assertFalse(within(500) { penmoss.settingsChanges.size > sent })
+        assertEquals(setOf(SettingKeys.TIME_ZONE), shown().unsent)
+    }
 }
