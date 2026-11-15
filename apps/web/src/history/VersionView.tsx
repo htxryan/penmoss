@@ -399,6 +399,7 @@ export function VersionView({
         >
           {rows ? (
             <div className="note-body history-view-grid" onClick={keepLinks}>
+              <span className="history-view-divider" aria-hidden="true" />
               <SideBlocks rows={rows} side="left" label={when} images={images} />
               <SideBlocks rows={rows} side="right" label="Now" images={images} />
             </div>

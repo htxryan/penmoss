@@ -23,6 +23,24 @@ async function endOf(page: Page, text: string) {
   await page.keyboard.press(LINE_END);
 }
 
+/**
+ * The sides' text against what is behind it, tints included: axe's colour contrast (AA, 4.5:1),
+ * as the HTML of each element it passed, failed, or could not decide.
+ */
+async function sidesContrast(page: Page) {
+  const results = await new AxeBuilder({ page })
+    .include('[data-testid="history-view-scroll"]')
+    .withRules(['color-contrast'])
+    .analyze();
+  const html = (list: typeof results.passes) =>
+    list.flatMap((rule) => rule.nodes.map((node) => node.html));
+  return {
+    passed: html(results.passes),
+    failed: html(results.violations),
+    unsure: html(results.incomplete),
+  };
+}
+
 // Two versions made elsewhere, so this Mac's own pushes (on a timer) never split them: the
 // note as seeded, then an agent's line added.
 test.use({
@@ -131,17 +149,23 @@ test('View shows a version beside the note as it is now, and restores it', async
   await first.click();
   await expect(side(page, 'left').locator('.history-view-gap')).toHaveCount(1);
 
-  if (SHOTS) {
-    for (const scheme of ['light', 'dark'] as const) {
-      await page.emulateMedia({ colorScheme: scheme });
-      await expect(page.locator('html')).toHaveAttribute('data-mode', scheme);
-      await page.mouse.move(0, 0);
-      // The colours' transitions end before the picture is taken.
-      await page.evaluate(() => Promise.all(document.getAnimations().map((each) => each.finished)));
-      await page.screenshot({ path: `${SHOTS}/history-view-${scheme}.png` });
-    }
-    await page.emulateMedia({ colorScheme: 'light' });
+  // Light and dark: the tints read clearly, and the text on them keeps AA contrast.
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await expect(page.locator('html')).toHaveAttribute('data-mode', scheme);
+    await page.mouse.move(0, 0);
+    // The colours' transitions end before they are measured.
+    await page.evaluate(() => Promise.all(document.getAnimations().map((each) => each.finished)));
+    const contrast = await sidesContrast(page);
+    expect(contrast.failed).toEqual([]);
+    expect(contrast.unsure).toEqual([]);
+    expect(contrast.passed.filter((html) => html.includes('data-change="removed"'))).toHaveLength(
+      1,
+    );
+    expect(contrast.passed.filter((html) => html.includes('data-change="added"'))).toHaveLength(2);
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/history-view-${scheme}.png` });
   }
+  await page.emulateMedia({ colorScheme: 'light' });
 
   // Esc closes it, and focus goes back to View.
   await page.keyboard.press('Escape');

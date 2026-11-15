@@ -645,14 +645,23 @@ html:root[data-resizing='rows'] * {
  * The two sides share one grid's rows (each side a subgrid), so a block and what is beside it
  * stay level. Each side is laid out as the note's text is (`.note-body .ProseMirror`).
  */
-/* Rows as tall as their blocks (not stretched to the scroll's height); the line between the
- * sides runs to the bottom. */
+/* Rows as tall as their blocks, not stretched to the scroll's height. */
 .history-view-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-content: start;
   min-height: 100%;
-  background: linear-gradient(var(--pm-border), var(--pm-border)) center / 1px 100% no-repeat;
+}
+
+/* The line between the sides, to the bottom however short they are. Its own element, not a
+ * background image on the grid: a checker cannot see the colour behind text over an image. */
+.history-view-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: var(--pm-border);
 }
 
 .note-body .history-view-side {
@@ -676,6 +685,16 @@ html:root[data-resizing='rows'] * {
 
 [data-change='added'] {
   --history-tint: color-mix(in oklab, var(--pm-success) 18%, transparent);
+}
+
+/* On a dark page the same share of colour barely shows: twice as much reads as clearly as in light,
+ * and the text on it keeps AA contrast (history-view.spec.ts measures both). */
+:root[data-mode='dark'] [data-change='removed'] {
+  --history-tint: color-mix(in oklab, var(--pm-danger) 30%, transparent);
+}
+
+:root[data-mode='dark'] [data-change='added'] {
+  --history-tint: color-mix(in oklab, var(--pm-success) 32%, transparent);
 }
 
 .history-view-side > [data-change] {
