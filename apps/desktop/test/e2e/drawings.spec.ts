@@ -125,6 +125,9 @@ test('a drawing made from the slash menu shows in the note and is kept as files 
   await mainBounds(app, { x: 0, y: 0, width: 1280, height: 720 });
   const { remote } = await gitNotebook(launched);
   await expect(page.locator('button[data-command="note.new"]')).toBeVisible();
+  // A page before the note, for the editor's Back to go to: Home is in no tab's history (A1594).
+  await page.getByTestId('open-graph').click();
+  await expect(page).toHaveURL(/\/graph/);
   await page.keyboard.press(NEW_NOTE);
   await expect(page).toHaveURL(ULID);
   await page.keyboard.type('Garden sketch');

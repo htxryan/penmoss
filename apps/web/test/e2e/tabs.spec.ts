@@ -504,13 +504,46 @@ test('New Tab asks which note, and makes no tab when cancelled', async ({ page, 
   await shows(page, EXTRAS[1]!);
   expect(await titles(page)).toEqual([ALPHA, EXTRAS[0]!, `*${EXTRAS[1]}`, BETA, GAMMA]);
 
+  // A note open in a tab already gets no second one (as A1574, A1581): a pick goes to its tab,
+  // and ⌘↩ points that tab out, the tabs as they were.
+  await page.getByTestId('tab-new').click();
+  await field.fill(BETA);
+  await expect(picker.getByRole('option').first()).toContainText(BETA);
+  await page.keyboard.press('Enter');
+  await expect(picker).toBeHidden();
+  await shows(page, BETA);
+  expect(await titles(page)).toEqual([ALPHA, EXTRAS[0]!, EXTRAS[1]!, `*${BETA}`, GAMMA]);
+  await page.keyboard.press('ControlOrMeta+KeyT');
+  await field.fill(GAMMA);
+  await expect(picker.getByRole('option').first()).toContainText(GAMMA);
+  await page.keyboard.press('ControlOrMeta+Enter');
+  await expect(picker).toBeHidden();
+  expect(await titles(page)).toEqual([ALPHA, EXTRAS[0]!, EXTRAS[1]!, `*${BETA}`, GAMMA]);
+  expect(await tab(page, GAMMA).evaluate((element) => element.getAnimations().length)).toBe(1);
+  await shows(page, BETA);
+  // ⌘↩ on a note in no tab opens it behind.
+  await page.keyboard.press('ControlOrMeta+KeyT');
+  await field.fill(EXTRAS[2]!);
+  await expect(picker.getByRole('option').first()).toContainText(EXTRAS[2]!);
+  await page.keyboard.press('ControlOrMeta+Enter');
+  await expect(picker).toBeHidden();
+  expect(await titles(page)).toEqual([
+    ALPHA,
+    EXTRAS[0]!,
+    EXTRAS[1]!,
+    `*${BETA}`,
+    EXTRAS[2]!,
+    GAMMA,
+  ]);
+  await shows(page, BETA);
+
   // New Note: a new note, in a new tab in front.
   await page.getByTestId('tab-new').click();
   await expect(picker.getByRole('option').first()).toContainText('New Note');
   await page.keyboard.press('Enter');
   await expect(picker).toBeHidden();
-  await expect(tabs(page)).toHaveCount(6);
-  await expect(tabs(page).nth(3)).toHaveAttribute('aria-selected', 'true');
+  await expect(tabs(page)).toHaveCount(7);
+  await expect(tabs(page).nth(4)).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
   // Its title takes the cursor, as New Note's does anywhere.
   await expect(page.getByTestId('note-title')).toBeFocused();
@@ -519,10 +552,10 @@ test('New Tab asks which note, and makes no tab when cancelled', async ({ page, 
   // A note window's ⌘T reaches this window as /?tab=new: the picker, over the same tabs.
   await page.goto('/?tab=new');
   await expect(field).toBeFocused({ timeout: 40_000 });
-  await expect(tabs(page)).toHaveCount(6);
+  await expect(tabs(page)).toHaveCount(7);
   await page.keyboard.press('Escape');
   await expect(picker).toBeHidden();
-  await expect(tabs(page)).toHaveCount(6);
+  await expect(tabs(page)).toHaveCount(7);
   expect(await titles(page)).not.toContain('Home');
   expect(errors).toEqual([]);
 
@@ -547,7 +580,7 @@ test('New Tab asks which note, and makes no tab when cancelled', async ({ page, 
     (window as { homeSeeded?: boolean }).homeSeeded = true;
   });
   await next.goto('/');
-  await expect(tabs(next)).toHaveCount(6, { timeout: 40_000 });
+  await expect(tabs(next)).toHaveCount(7, { timeout: 40_000 });
   expect(await next.evaluate(() => (window as { homeSeeded?: boolean }).homeSeeded)).toBe(true);
   expect(await titles(next)).not.toContain('Home');
   expect(await titles(next)).not.toContain('*Home');
