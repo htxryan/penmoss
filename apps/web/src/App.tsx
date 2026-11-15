@@ -41,7 +41,7 @@ import { HistoryCommands, HistoryNav } from './shell/HistoryNav';
 import { Home } from './shell/Home';
 import { SidebarShortcuts } from './shell/SidebarShortcuts';
 import { TooltipLayer } from './shell/Tooltip';
-import { usePhone } from './shell/media';
+import { useNarrowWindow } from './shell/media';
 import { useSidebarCollapsed } from './shell/sidebar';
 import { isKeyRepeat, isRepeatedNewNote, type LastCreated } from './notes/new-note';
 import { Calendar } from './journal/Calendar';
@@ -160,7 +160,7 @@ function NotesShell({
   const graphNote = route.name === 'graph' ? params.get('note') : null;
   const notes = useNotes();
   const commands = useCommands();
-  const phone = usePhone();
+  const phone = useNarrowWindow();
   const sidebarKeys = useKeys('app.toggleSidebar');
   const settingsKeys = useKeys('app.settings');
   // The sidebar as an icon rail (T41, A508); a phone has its drawer instead.

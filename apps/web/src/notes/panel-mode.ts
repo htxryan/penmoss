@@ -15,7 +15,7 @@ import {
 } from 'react';
 import { deviceStorage } from '../shell/device-pref';
 import type { KeyValueStore } from '../shell/key-value';
-import { usePhone } from '../shell/media';
+import { useNarrowWindow } from '../shell/media';
 
 export type NotePanelMode = 'closed' | 'open';
 
@@ -140,7 +140,7 @@ function subscribeDefault(listener: () => void): () => void {
 
 /** Settings → Appearance → Note Panel: this device's default, and a way to change it. */
 export function useDefaultPanelMode(): readonly [NotePanelMode, (mode: NotePanelMode) => void] {
-  const phone = usePhone();
+  const phone = useNarrowWindow();
   const mode = useSyncExternalStore<NotePanelMode>(
     subscribeDefault,
     () => readDefaultPanelMode(deviceStorage(), phone),

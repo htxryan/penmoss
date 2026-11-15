@@ -74,7 +74,7 @@ import { UnsupportedNote } from './UnsupportedNote';
 import { AppBar } from '../shell/AppBar';
 import { devicePref, deviceStorage } from '../shell/device-pref';
 import { withKeys } from '../shell/drawer';
-import { usePhone } from '../shell/media';
+import { useNarrowWindow } from '../shell/media';
 import { TitleBarLead } from '../shell/title-lead';
 import { NoteActions, type NotePanelTab } from './NoteActions';
 import { useNotePanelMode, usePaneWidth } from './panel-mode';
@@ -241,7 +241,7 @@ export function NoteView({
   const [panelAddingTag, setPanelAddingTag] = useState(false);
   /** Word and character counts, taken after typing pauses (T41, A505). */
   const stats = useMemo(() => new NoteStats(), []);
-  const phone = usePhone();
+  const phone = useNarrowWindow();
   // The app bar's title on a phone: the note's title as the list has it.
   const title = useNoteList().find((entry) => entry.id === id)?.title ?? '';
   const trail = useNoteFolders(id);
