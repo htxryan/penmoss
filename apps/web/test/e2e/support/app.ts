@@ -23,6 +23,15 @@ export function collectErrors(page: Page, expected?: RegExp): string[] {
   return errors;
 }
 
+/**
+ * Holds the page still for `ms` while the proof records its video (`PENMOSS_PROOF=1`, `task
+ * proof:web`, the factory's F5), so a state shows long enough to see; no wait otherwise (A1528).
+ * Never for a test's own timing: a check that nothing happens in a time waits on its own.
+ */
+export async function holdForProof(page: Page, ms: number): Promise<void> {
+  if (process.env['PENMOSS_PROOF'] === '1') await page.waitForTimeout(ms);
+}
+
 /** The open note's editor. */
 export const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 

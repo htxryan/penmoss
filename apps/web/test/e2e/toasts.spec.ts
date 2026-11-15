@@ -2,7 +2,7 @@ import { expect, type Locator, type Page, test } from './fixtures';
 import { NEW_FOLDER } from './keys';
 import { noteAction } from './note-menu';
 import { notebookAction } from './notebook-actions';
-import { body, collectErrors, ULID } from './support/app';
+import { body, collectErrors, ULID, holdForProof } from './support/app';
 
 // PEN-63: every toast shows in one stack at the bottom centre of the window, drawn on the
 // theme's raised surface with its border, text and glyph colours, light or dark, in any theme.
@@ -159,7 +159,7 @@ test('toasts sit at the bottom centre of the window, in the theme’s colours, s
   await expect(stack(page)).toHaveAttribute('role', 'status');
   // AC2/AC8: the light theme's raised surface, with a check in the accent.
   const light = await expectThemed(page, copied, '--pm-accent');
-  await page.waitForTimeout(HOLD);
+  await holdForProof(page, HOLD);
   await shot(page, 'toast-light');
 
   // AC2: dark mode draws it from the dark theme's tokens.
@@ -167,7 +167,7 @@ test('toasts sit at the bottom centre of the window, in the theme’s colours, s
   await expect(page.locator('html')).toHaveAttribute('data-mode', 'dark');
   const dark = await expectThemed(page, copied, '--pm-accent');
   expect(dark.background).not.toBe(light.background);
-  await page.waitForTimeout(HOLD);
+  await holdForProof(page, HOLD);
   await shot(page, 'toast-dark');
   await page.emulateMedia({ colorScheme: 'light' });
   await expect(page.locator('html')).toHaveAttribute('data-mode', 'light');
@@ -212,14 +212,14 @@ test('toasts sit at the bottom centre of the window, in the theme’s colours, s
   }
   // The toast with controls takes the pointer; its Undo has focus (A524).
   await expect(trashed.getByRole('button', { name: 'Undo' })).toBeFocused();
-  await page.waitForTimeout(HOLD);
+  await holdForProof(page, HOLD);
   await shot(page, 'toast-stack');
 
   // AC4: at a phone's width, 72 px above the bottom edge, 16 px or more from each side.
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(trashed).toBeVisible();
   await expectPlaced(page, trashed, 72);
-  await page.waitForTimeout(HOLD);
+  await holdForProof(page, HOLD);
   await shot(page, 'toast-phone');
   await page.setViewportSize({ width: 1280, height: 720 });
 
@@ -243,7 +243,7 @@ test('toasts sit at the bottom centre of the window, in the theme’s colours, s
   await expect(copied).toHaveText('Copied Agent Reference');
   const slate = await expectThemed(page, copied, '--pm-accent');
   expect(slate.background).not.toBe(dark.background);
-  await page.waitForTimeout(HOLD);
+  await holdForProof(page, HOLD);
   await shot(page, 'toast-slate');
   await expect(copied).toBeVisible();
   expect(errors).toEqual([]);

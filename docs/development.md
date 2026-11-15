@@ -58,6 +58,12 @@ export function dailyNotePath(date: PlainDate): string {
 | Android           | The sync engine, the bridge, Room and Compose UI                    | `apps/android` (JVM and Robolectric)                   |
 | Manual            | The running app on the Mac and the Pixel                            | Evidence in the issue or pull request                  |
 
+In `apps/web/test/e2e`, a spec is named for the feature it checks, and a ticket goes in a comment
+above its tests, never in a file name (A1527). The helpers most specs need are in `support/`:
+`app.ts` (errors, a note's id, its editor, a new note) and `sync.ts` (Sync Now, a second Mac, an
+agent's clone). A spec that waits for git presses Sync Now rather than waiting out the push delay
+(A1526), and a pause held only for the proof's video is `holdForProof` (A1528).
+
 ## Boundaries
 
 **Always:**

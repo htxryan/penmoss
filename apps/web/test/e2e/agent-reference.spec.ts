@@ -4,7 +4,7 @@
  * then the last 8 of the note's id). The proof pastes what was copied into the note, so it shows.
  */
 import { expect, test, type Page } from './fixtures';
-import { ULID, body } from './support/app';
+import { ULID, body, holdForProof } from './support/app';
 
 test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
 
@@ -42,6 +42,6 @@ test('PEN-69: Copy Agent Reference copies one short line with the note’s short
   await expect(body(page)).toContainText(`tool read_note {"id":"`);
   await expect(body(page)).toContainText(`-${id.slice(-8)}"}`);
   await body(page).scrollIntoViewIfNeeded();
-  await page.waitForTimeout(2000);
+  await holdForProof(page, 2000);
   await expect(body(page)).toContainText('Reference note via Penmoss MCP');
 });

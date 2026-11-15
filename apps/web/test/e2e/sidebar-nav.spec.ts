@@ -1,6 +1,6 @@
 import { expect, type Page, test } from './fixtures';
 import { notebookMenuItem } from './notebook-actions';
-import { collectErrors, ULID } from './support/app';
+import { collectErrors, ULID, holdForProof } from './support/app';
 
 // T51 (web): the sidebar's shell and the app's navigation. Back and Forward through the app's own
 // pages (A943); the shortcuts as one row of icons (A932); each source's sync state as a dot
@@ -257,7 +257,7 @@ test('Settings: the heading keeps the page gutter, in line with the sections (PE
   expect(Math.abs(headingLeft - (await leftOf('.settings-page')) - gutter)).toBeLessThanOrEqual(1);
   expect(Math.abs(headingLeft - (await leftOf('.settings-nav')))).toBeLessThanOrEqual(1);
   // Held on screen, so the proof's recording shows the heading in line.
-  await page.waitForTimeout(2_000);
+  await holdForProof(page, 2_000);
   await expect(heading).toBeInViewport();
   expect(errors).toEqual([]);
 });

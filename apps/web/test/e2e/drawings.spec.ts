@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, macContext, PREVIEW, seeded, test, type Locator, type Page } from './fixtures';
 import { remoteFiles, remoteMarkdown } from './support/remote';
 import { pushedUntil, remoteBytes } from './support/sync';
-import { ULID, body, collectErrors } from './support/app';
+import { ULID, body, collectErrors, holdForProof } from './support/app';
 
 // PEN-28: drawings. The slash menu's Diagram: Excalidraw opens Excalidraw over the window; Done
 // stores the scene as `attachments/<sha256>.excalidraw` and its picture as
@@ -189,7 +189,7 @@ test('PEN-28: draw in a note, save it as files in git, open it again and edit it
   await page.keyboard.press('Enter');
   await expect(editor(page)).toBeVisible();
   await expect(editor(page)).toHaveAttribute('data-shapes', '2');
-  await page.waitForTimeout(2_000);
+  await holdForProof(page, 2_000);
   await editor(page).getByRole('button', { name: 'Cancel' }).click();
   await expect(editor(page)).toBeHidden();
 
@@ -249,7 +249,7 @@ test('PEN-28: draw in a note, save it as files in git, open it again and edit it
   await drawing.scrollIntoViewIfNeeded();
   await drawing.hover();
   await expect(editButton).toBeVisible();
-  await page.waitForTimeout(2_000);
+  await holdForProof(page, 2_000);
   expect(errors).toEqual([]);
 });
 

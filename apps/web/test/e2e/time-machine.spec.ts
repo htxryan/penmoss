@@ -1,6 +1,7 @@
 import { expect, macContext, PREVIEW, test, type GitHost, type Page } from './fixtures';
 import { notebookMenuItem } from './notebook-actions';
 import { STORY_AGENT, STORY_DEVICE, timeMachineStory, type Story } from './support/dated-history';
+import { holdForProof } from './support/app';
 
 // PEN-21: the Time Machine. A notebook built with known commits on known days, by a device and an
 // agent: Thursday 1 October, the device makes Projects, Roadmap in it and Groceries; Tuesday 13
@@ -138,7 +139,7 @@ test('What Changed lists each kind of change in a week, with who and a diff', as
     row(roadmap).locator('[data-op="add"] ins', { hasText: 'Agent added replay' }),
   ).toBeVisible();
   await row(roadmap).scrollIntoViewIfNeeded();
-  await page.waitForTimeout(2_000);
+  await holdForProof(page, 2_000);
 });
 
 test('the production build reads history in its worker, under the page’s policy', async ({
