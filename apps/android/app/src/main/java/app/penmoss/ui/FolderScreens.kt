@@ -1,5 +1,15 @@
 package app.penmoss.ui
 
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavType
+import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import app.penmoss.ui.keys.FolderCommands
+import app.penmoss.ui.screens.FolderScreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -503,4 +513,73 @@ private fun DragHandle() {
         }
     }
 }
+
+/** A folder's screen (T40 P4): its subfolders and notes, its sort, and its own actions. */
+internal fun NavGraphBuilder.folderRoutes(root: RootUi) {
+    val graph = root.graph
+    val nav = root.nav
+    composable("folder/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
+        val folderId = entry.arguments?.getString("id")
+        // A folder's own New note, New folder and sort, over the root's (T40 P9).
+        FolderCommands(
+            newNote = { root.newNote(folderId) },
+            newFolder = { root.folderNaming = FolderNaming.Create(folderId) },
+            sort = { if (folderId != null) root.sortFolder(folderId, it) },
+        )
+        val contents by remember(folderId) {
+            combine(graph.store.observeList(), graph.store.observeFolders(), graph.store.observeRootSortMode()) { notes, folders, mode ->
+                val folder = folders.firstOrNull { it.id == folderId }
+                val name = folder?.name ?: "Folder"
+                val (subfolders, filed) = Items.folder(folderId, mode, folders, notes, System.currentTimeMillis())
+                val above = Items.folderPath(folders, folder?.parentId)
+                val item = folder?.let(Items::item)
+                FolderView(
+                    name = name,
+                    folders = subfolders,
+                    notes = filed,
+                    sortMode = folder?.sortMode ?: "manual",
+                    subtitle = Items.pathText(above.map { it.name }).takeIf { above.isNotEmpty() }
+                        ?: "Notebook".takeIf { item?.notebook == true },
+                    notebook = item?.notebook == true,
+                )
+            }.distinctUntilChanged().flowOn(Dispatchers.Default)
+        }.collectAsStateWithLifecycle(FolderView("", emptyList(), emptyList(), "manual", null))
+        FolderScreen(
+            title = contents.name,
+            folders = contents.folders,
+            notes = contents.notes,
+            onBack = { nav.leave(entry) },
+            onFolder = { nav.open("folder/$it") },
+            onOpen = root::openNote,
+            onNewNote = { root.newNote(folderId) },
+            onNewNoteIn = { root.choosing = Choosing.NewNote(folderId) },
+            onNoteLongPress = root::startSelection,
+            subtitle = contents.subtitle,
+            sortMode = contents.sortMode,
+            onSort = { if (folderId != null) root.sortFolder(folderId, it) },
+            onNewFolder = { root.folderNaming = FolderNaming.Create(folderId) },
+            onRenameFolder = { if (folderId != null) root.folderNaming = FolderNaming.Rename(folderId, contents.name, contents.notebook) },
+            onMoveFolderTo = { if (folderId != null) root.choosing = Choosing.MoveFolder(folderId, contents.name) },
+            onDeleteFolder = { if (folderId != null) root.askDeleteFolder(folderId) },
+            // Notebooks (T43, A750, A756).
+            notebook = contents.notebook,
+            onTurnBack = { if (folderId != null) root.notebookTurningBack = FolderItem(folderId, contents.name, notebook = true) },
+            onFolderLongPress = { root.folderActing = it },
+            reordering = root.folderReordering == folderId,
+            onReorder = { root.folderReordering = if (it) folderId else null },
+            onMoveFolder = root::reorderFolder,
+            onMoveNote = root::reorderNote,
+        )
+    }
+}
+
+/** A folder's screen: its name, rows, sort order and path from the top (T40 P4). */
+private data class FolderView(
+    val name: String,
+    val folders: List<FolderItem>,
+    val notes: List<NoteItem>,
+    val sortMode: String,
+    val subtitle: String?,
+    val notebook: Boolean = false,
+)
 

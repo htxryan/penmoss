@@ -1,5 +1,7 @@
 package app.penmoss.ui
 
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.compose.composable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -637,4 +639,11 @@ class TrashFoldersModel(
     fun leaveInTrash(ask: FolderRestoreAsk) = state.update { it.copy(asking = null, message = "“${ask.folder.name}” stays in Trash.") }
 
     fun messageShown() = state.update { it.copy(message = null) }
+}
+
+/** Trash (T40 P3a, NT13). */
+internal fun NavGraphBuilder.trashRoutes(root: RootUi) {
+    composable(TrashRoutes.TRASH) { entry ->
+        TrashRoute(root.graph, onOpen = root::openNote, onBack = { root.nav.leave(entry) })
+    }
 }

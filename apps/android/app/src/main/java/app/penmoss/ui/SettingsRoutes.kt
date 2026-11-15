@@ -1,5 +1,14 @@
 package app.penmoss.ui
 
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.compose.composable
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import app.penmoss.ui.keys.CommandRoutes
+import app.penmoss.ui.keys.ShortcutsRoute
+import app.penmoss.feedback.AboutScreen
+import app.penmoss.feedback.FeedbackRoute
+import app.penmoss.feedback.FeedbackRoutes
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
@@ -320,3 +329,75 @@ internal fun WhatsNewRoute(onBack: () -> Unit) {
     )
 }
 
+/**
+ * Settings (T40 P1): its home, the device's sections (Appearance, Display, Symbols, Quick capture
+ * and the shortcuts, A827), the notebook's Daily notes and Sync, What's New, agents' activity and
+ * the git notebooks. [sync] is the notebook's sync line, which the home and Sync say.
+ */
+internal fun NavGraphBuilder.settingsRoutes(root: RootUi, sync: SyncLine) {
+    val graph = root.graph
+    val nav = root.nav
+    // Settings → Keyboard shortcuts (T40 P9, ST8, A495).
+    composable(CommandRoutes.SHORTCUTS) { entry -> ShortcutsRoute(graph.device, onBack = { nav.leave(entry) }) }
+    composable(SettingsRoutes.HOME) { entry ->
+        SettingsHomeRoute(graph, sync.text, onOpen = { nav.open(it) }, onBack = { nav.leave(entry) })
+    }
+    // What agents changed, with Undo (T42, A561; T40 P9, AC11).
+    composable(AgentActivityRoutes.ACTIVITY) { entry -> AgentActivityRoute(graph, onBack = { nav.leave(entry) }) }
+    // Settings → Git notebooks (T50 G7, A856): the app's hub, from a git notebook's screens too.
+    composable(CommandRoutes.GIT_NOTEBOOKS) { entry ->
+        app.penmoss.git.GitNotebooksRoute(
+            graph.git,
+            onOpen = { app.penmoss.git.GitNotebookActivity.open(root.context, it) },
+            onBack = { nav.leave(entry) },
+        )
+    }
+    // Appearance, Display, Symbols, Quick capture and the shortcuts are the device's (A827).
+    composable(SettingsRoutes.APPEARANCE) { entry ->
+        AppearanceRoute(graph.device, onEditTheme = { nav.open(SettingsRoutes.theme(it)) }, onBack = { nav.leave(entry) })
+    }
+    composable(SettingsRoutes.THEME, arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
+        val id = entry.arguments?.getString("id").orEmpty()
+        ThemeEditorRoute(graph.device, id, onEditTheme = { nav.open(SettingsRoutes.theme(it)) }, onBack = { nav.leave(entry) })
+    }
+    composable(SettingsRoutes.DAILY) { entry ->
+        DailyNotesRoute(graph, onTimeZone = { nav.open(SettingsRoutes.ZONE) }, onBack = { nav.leave(entry) })
+    }
+    composable(SettingsRoutes.ZONE) { entry -> TimeZoneRoute(graph, onBack = { nav.leave(entry) }) }
+    composable(SettingsRoutes.CAPTURE) { entry -> QuickCaptureRoute(graph.device, onBack = { nav.leave(entry) }) }
+    // What changed in this version and earlier ones (PEN-109).
+    composable(SettingsRoutes.WHATS_NEW) { entry -> WhatsNewRoute(onBack = { nav.leave(entry) }) }
+    composable(SettingsRoutes.SYNC) { entry ->
+        // A git notebook's sync is its own: the repository, the page, what waits (A880).
+        app.penmoss.git.GitSyncRoute(graph, sync.pass, onGitNotebooks = { nav.open(CommandRoutes.GIT_NOTEBOOKS) }, onBack = { nav.leave(entry) }, onAgentActivity = { nav.open(AgentActivityRoutes.ACTIVITY) })
+    }
+    // Home's shortcuts, synced with the web's sidebar (T42, A576; T40 ST12, A650).
+    composable(SettingsRoutes.DISPLAY) { entry -> DisplayRoute(graph.device, onBack = { nav.leave(entry) }) }
+    // The line symbols, synced with the web's (T44, ST13, A747).
+    composable(SettingsRoutes.SYMBOLS) { entry ->
+        SymbolsRoute(graph.device, onShortcuts = { nav.open(CommandRoutes.SHORTCUTS) }, onBack = { nav.leave(entry) })
+    }
+}
+
+/** Send feedback (T49, D41), Settings → About and its GitHub token (A1012). */
+internal fun NavGraphBuilder.feedbackRoutes(root: RootUi) {
+    val graph = root.graph
+    val nav = root.nav
+    // Send feedback (T49, D41): over the screen it was opened from, captured first.
+    composable(FeedbackRoutes.FORM) { entry -> FeedbackRoute(graph, onClose = { nav.leave(entry) }) }
+    // Settings → About (T49): the version, and Send feedback.
+    composable(FeedbackRoutes.ABOUT) { entry ->
+        AboutScreen(
+            version = graph.feedback.version,
+            onSendFeedback = { root.openFeedback("Settings → About", null, null, "Settings → About", 0) },
+            onBack = { nav.leave(entry) },
+            // Read again each time About is shown (back from the token's screen too).
+            githubToken = FeedbackRoutes.tokenSummary(graph.githubToken.hasToken, graph.githubToken.login()),
+            onGitHubToken = { nav.open(FeedbackRoutes.GITHUB_TOKEN) },
+            // Feedback still on the phone (A1046), with Retry, Edit and Discard.
+            outbox = { app.penmoss.feedback.FeedbackOutboxRoute(graph, openForm = { nav.open(FeedbackRoutes.FORM) }) },
+        )
+    }
+    // Settings → About → GitHub Token (A1012): the token Send feedback files with.
+    composable(FeedbackRoutes.GITHUB_TOKEN) { entry -> app.penmoss.feedback.GitHubTokenRoute(graph, onBack = { nav.leave(entry) }) }
+}

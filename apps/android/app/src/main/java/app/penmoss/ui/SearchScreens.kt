@@ -1,5 +1,9 @@
 package app.penmoss.ui
 
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.compose.composable
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -486,4 +490,18 @@ internal fun searchActionsFor(query: String, actionsFirst: Boolean): List<Search
     query.isBlank() -> if (actionsFirst) SearchActions.ALL else emptyList()
     actionsFirst -> SearchActions.matching(query)
     else -> SearchActions.matching(query).take(SearchActions.SHOWN)
+}
+
+/** Search (T32; T40 P6), its results' long press, and its actions ([targets], FD6). */
+internal fun NavGraphBuilder.searchRoutes(root: RootUi, targets: ActionTargets) {
+    composable(SEARCH_ROUTE, arguments = listOf(navArgument("actions") { type = NavType.BoolType; defaultValue = false })) { entry ->
+        SearchRoute(
+            root.graph,
+            onBack = { root.nav.leave(entry) },
+            root::openNote,
+            { root.acting = it },
+            actionsFirst = entry.arguments?.getBoolean("actions") == true,
+            onAction = { runSearchAction(it.id, targets) },
+        )
+    }
 }

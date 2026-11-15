@@ -1,5 +1,16 @@
 package app.penmoss.ui
 
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.compose.composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.penmoss.engine.bridge.ToEditor
+import app.penmoss.ui.screens.JournalScreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import app.penmoss.data.JournalMark
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -92,3 +103,23 @@ fun journalMarksOf(marks: List<JournalMark>): JournalMarks = JournalMarks(
     days = marks.filter { it.kind == "daily" }.mapTo(HashSet()) { it.period },
     weeks = marks.filter { it.kind == "weekly" }.mapTo(HashSet()) { it.period },
 )
+
+/** The Journal calendar (T40 P5, JR3): month marks from Room, offline too. */
+internal fun NavGraphBuilder.journalRoutes(root: RootUi) {
+    val graph = root.graph
+    composable("journal") { entry ->
+        val settings by graph.settings.collectAsStateWithLifecycle()
+        val marks by remember {
+            graph.store.observeJournalMarks().map(::journalMarksOf)
+                .distinctUntilChanged().flowOn(Dispatchers.Default)
+        }.collectAsStateWithLifecycle(JournalMarks())
+        JournalScreen(
+            timeZone = settings.settings.timeZone,
+            marks = marks,
+            onBack = { root.nav.leave(entry) },
+            onOpenDay = { day -> root.openPeriodic(ToEditor.PeriodKind.DAILY, day) },
+            onOpenWeek = { monday -> root.openPeriodic(ToEditor.PeriodKind.WEEKLY, monday) },
+            onOpenToday = { root.openPeriodic(ToEditor.PeriodKind.DAILY, null) },
+        )
+    }
+}

@@ -1,5 +1,9 @@
 package app.penmoss.ui
 
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.compose.composable
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -391,4 +395,13 @@ internal fun TaggedRoute(graph: NotebookGraph, tag: String, onBack: () -> Unit, 
         graph.store.observeTagged(tag).map { Items.notes(it, System.currentTimeMillis()) }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }.collectAsStateWithLifecycle(emptyList())
     TaggedNotesScreen(tag, notes, onBack, onOpen, onNoteLongPress)
+}
+
+/** Tags (T40 P6, TG1–TG3): the tree, a tag's notes, rename and merge. */
+internal fun NavGraphBuilder.tagRoutes(root: RootUi) {
+    composable("tags") { entry -> TagsRoute(root.graph, onBack = { root.nav.leave(entry) }, onOpenTag = root::openTag) }
+    composable("tag/{tag}", arguments = listOf(navArgument("tag") { type = NavType.StringType })) { entry ->
+        val tag = entry.arguments?.getString("tag") ?: return@composable
+        TaggedRoute(root.graph, tag, onBack = { root.nav.leave(entry) }, onOpen = root::openNote, onNoteLongPress = root::startSelection)
+    }
 }

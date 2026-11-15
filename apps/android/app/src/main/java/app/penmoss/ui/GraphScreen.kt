@@ -1,5 +1,7 @@
 package app.penmoss.ui
 
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.compose.composable
 import android.content.Context
 import android.net.Uri
 import android.view.View
@@ -430,4 +432,11 @@ private fun GraphView(
     LaunchedEffect(feed) { onFeed(feed) }
     LaunchedEffect(feed, ready) { feed?.reset() }
     LaunchedEffect(feed, ready, theme, graph, scope) { if (ready > 0) feed?.update(theme, graph, scope) }
+}
+
+/** The graph (T40 P7, LK7, LK8): from Room, offline too; a note's local graph. */
+internal fun NavGraphBuilder.graphRoutes(root: RootUi) {
+    composable(GRAPH_ROUTE, arguments = graphArguments) { entry ->
+        GraphRoute(root.graph, entry.arguments?.getString("note"), onBack = { root.nav.leave(entry) }, onOpen = root::openNote)
+    }
 }
