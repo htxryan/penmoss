@@ -28,7 +28,7 @@ class NoteStore private constructor(
     /** The offline index's text and tags, the tag list, and links. */
     val index: NoteIndex = NoteIndex(db, now, folders),
     /** Synced settings, quick capture's destination and a git notebook's device map. */
-    val settings: SettingsStore = SettingsStore(db, now),
+    val settings: SettingsStore = SettingsStore(db),
     /** Trash, restores and notes deleted for good. */
     val trash: TrashOps = TrashOps(db, now, placement),
     /** The editor's content and edits, and the note lists. */
