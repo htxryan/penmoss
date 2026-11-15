@@ -4,6 +4,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
@@ -21,6 +25,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.penmoss.engine.settings.ColourLock
 import app.penmoss.engine.settings.LineSymbol
 import app.penmoss.engine.settings.LineSymbols
 import app.penmoss.engine.settings.SettingKeys
@@ -127,19 +132,72 @@ class SymbolsScreenTest {
         compose.onNodeWithTag("symbols-notice").assertTextContains("Saved ⁇.")
     }
 
-    /** The glyph picker (T51, A939): the web's presets, one already in the list not offered again. */
+    /**
+     * An emoji keeps its own colours (A1588): its row says so in place of a colour, its colours are
+     * disabled with the note, and its colour is kept for a glyph that takes one.
+     */
     @Test
-    fun picksAPresetGlyph() {
+    fun anEmojisColourCannotBeChangedAndIsKept() {
+        screen()
+        // 💡, a default: its row names no colour; ★'s does.
+        compose.onNodeWithTag("symbol-colour-label-3", useUnmergedTree = true).assertTextEquals(OWN_COLOURS)
+        compose.onNodeWithTag("symbol-colour-label-0", useUnmergedTree = true).assertTextEquals("Orange")
+        compose.onNodeWithTag("symbol-row-3").performScrollTo().performClick()
+        compose.onNodeWithTag("symbol-colour-calloutTip").performScrollTo().assertIsNotEnabled().assertIsSelected()
+        compose.onNodeWithTag("symbol-colour-custom").assertIsNotEnabled()
+        compose.onNodeWithTag("symbol-colour-locked").performScrollTo().assertTextEquals(ColourLock.NOTE)
+        // A glyph that takes a colour: the colours are back, the one it had still chosen.
+        compose.onNodeWithTag("symbol-glyph").performTextReplacement("⚑")
+        compose.onNodeWithTag("symbol-colour-locked").assertDoesNotExist()
+        compose.onNodeWithTag("symbol-colour-calloutTip").performScrollTo().assertIsEnabled().assertIsSelected()
+        // An emoji again, and saved: the colour is kept.
+        compose.onNodeWithTag("symbol-glyph").performTextReplacement("🔥")
+        compose.onNodeWithTag("symbol-colour-calloutTip").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("symbol-save").performClick()
+        assertEquals(LineSymbol("🔥", "🔥", "calloutTip"), stored.last()[3])
+    }
+
+    /**
+     * The symbol picker (T51, A939; A1569): every symbol and emoji, found by name, one already in
+     * the list refused, Recently Used the next time.
+     */
+    @Test
+    fun picksAGlyphFromTheSymbolPicker() {
         screen()
         compose.onNodeWithTag("symbol-row-0").performClick()
+        compose.onNodeWithTag("symbol-choose").performScrollTo().performClick()
+        compose.onNodeWithTag("character-picker").assertIsDisplayed()
+        compose.onNodeWithTag("character-search").assertIsFocused()
         // ★ is this symbol's own; ? is symbol 2's and cannot be chosen.
-        val question = LineSymbols.PRESET_GLYPHS.indexOf("?")
-        compose.onNodeWithTag("symbol-preset-$question").performScrollTo().assertIsNotEnabled()
-        val heart = LineSymbols.PRESET_GLYPHS.indexOf("♥")
-        compose.onNodeWithTag("symbol-preset-$heart").performScrollTo().assertIsEnabled().performClick()
+        compose.onNodeWithTag("character-?").assertIsNotEnabled()
+            .assertContentDescriptionEquals("Question Mark, Already in the list")
+        compose.onNodeWithTag("character-★").assertIsSelected()
+        compose.onNodeWithTag("character-search").performTextInput("heart")
+        compose.onNodeWithTag("character-♥").assertIsEnabled().performClick()
+        compose.onNodeWithTag("character-picker").assertDoesNotExist()
         compose.onNodeWithTag("symbol-glyph").assertTextContains("♥")
         compose.onNodeWithTag("symbol-save").performClick()
         assertEquals(LineSymbol("♥", "♥", "calloutWarning"), stored.last()[0])
+        // Opened again: ♥ leads Recently Used.
+        compose.onNodeWithTag("symbol-row-0").performClick()
+        compose.onNodeWithTag("symbol-choose").performScrollTo().performClick()
+        compose.onNodeWithText("Recently Used").assertIsDisplayed()
+        compose.onAllNodesWithTag("character-♥")[0].assertIsSelected()
+    }
+
+    /** A pasted glyph (A1569): one not in the list is offered as itself; one the rules refuse says why. */
+    @Test
+    fun takesAPastedGlyphAndSaysWhyOneCannotBe() {
+        screen()
+        compose.onNodeWithTag("symbol-row-0").performClick()
+        compose.onNodeWithTag("symbol-choose").performScrollTo().performClick()
+        compose.onNodeWithTag("character-search").performTextInput("#")
+        compose.onNodeWithTag("character-said").assertTextEquals(LineSymbols.glyphProblem("#")!!)
+        compose.onNodeWithTag("character-search").performTextReplacement("zzqqxx")
+        compose.onNodeWithTag("character-said").assertTextEquals("No characters match “zzqqxx”.")
+        compose.onNodeWithTag("character-search").performTextReplacement("⸙")
+        compose.onNodeWithTag("character-⸙").assertContentDescriptionEquals("Use ⸙").performClick()
+        compose.onNodeWithTag("symbol-glyph").assertTextContains("⸙")
     }
 
     /** Any colour (T51, A939): a hex typed in any accepted form is stored lower case, opaque without alpha. */

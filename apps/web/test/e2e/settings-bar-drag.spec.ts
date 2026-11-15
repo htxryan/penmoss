@@ -42,7 +42,11 @@ test('PEN-65: Settings’ bar still drags the Mac window once its sections scrol
   await page.evaluate(() => (document.documentElement.dataset['titlebar'] = 'compact'));
   const bar = await box(page, '.settings-bar');
   // The page's first control: Appearance's fonts sit too far down to scroll up under the bar.
-  const control = page.locator('.settings-content :is(button, select, input)').first();
+  // Not the page's header, which stays pinned (A1560), nor the preview, the app's own buttons
+  // drawn inert (A1564).
+  const control = page
+    .locator('.settings-content :is(button, select, input):not(.settings-head-bar *, [inert] *)')
+    .first();
   await expect(control).toBeVisible();
   const before = (await control.boundingBox())!;
   // The bar's empty part, over the column the control is in.

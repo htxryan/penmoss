@@ -52,8 +52,11 @@ export function createMainWindow(path = '/'): BrowserWindow {
   });
 
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  // Kept as it was when it started closing (A1577): hiding it, or taking it out of full
+  // screen first, is not a change to keep.
+  let closing = false;
   const save = () => {
-    if (window.isDestroyed()) return;
+    if (closing || window.isDestroyed()) return;
     const bounds = window.getNormalBounds();
     const next: WindowState = {
       ...bounds,
@@ -82,12 +85,16 @@ export function createMainWindow(path = '/'): BrowserWindow {
     save();
   };
   state.saveMainState = saveNow;
-  storeBeforeClose(window, saveNow);
+  storeBeforeClose(window, () => {
+    saveNow();
+    closing = true;
+  });
   window.on('closed', () => {
     if (state.saveMainState === saveNow) state.saveMainState = null;
     // Note windows stay open (A712). Elsewhere the app ends with its last window; a Mac keeps
-    // it running (the capture hotkey). Not while the windows open again (A724).
-    if (!mac && !state.reopening && windows.notes().length === 0) app.quit();
+    // it running (the capture hotkey). Not while the windows open again (A724), nor when a new
+    // main window opened while this one stored and pushed out of sight (A1577): it is not the last.
+    if (!mac && !state.reopening && !windows.main && windows.notes().length === 0) app.quit();
   });
   void window.loadURL(`${PAGE_ORIGIN}${path}`);
   return window;

@@ -28,9 +28,11 @@ Two notebooks with one name can't be told apart by agents, so Penmoss warns when
 Each notebook has a badge: a small square in a colour, holding a letter, a number or an icon. It shows at the start of the notebook's row in the sidebar, at the start of each of its notes' [tabs](/docs/install/mac/#tabs), and in Settings (its entry under **All Notebooks**, its row in the list and its page's heading), so you can tell notebooks apart at a glance.
 
 - **By default** a notebook's badge shows the first letter (or digit) of its name in one of ten colours, picked from the notebook itself, so it is the same on every Mac. Two notebooks can have the same badge: Personal and Penmoss are both **P** until you change one.
-- **To change it**, open Settings, choose the notebook under **All Notebooks**, and use the **Badge** rows on its **Overview**, after its name: pick a colour (Moss, Teal, Blue, Indigo, Violet, Rose, Red, Orange, Ochre, Slate, or **Custom…** for any colour), then what it **Shows**: a **Letter**, a **Number** from 0 to 99, or one of 24 **Icons**. The preview shows it alone, on a sidebar row and on a tab, and the change applies at once.
+- **To change it**, open Settings, choose the notebook under **All Notebooks**, and use the **Badge** rows on its **Overview**, after its name: pick a colour (Moss, Teal, Blue, Indigo, Violet, Rose, Red, Orange, Ochre, Slate, or **Custom…** for any colour), then what it **Shows**: a **Letter**, a **Number** from 0 to 99, or an **Icon**. The preview shows it alone, then on the notebook's own row in the sidebar and on a tab of one of its notes, and the change applies at once.
+- **To choose an icon**, pick **Icon**, then **Choose Icon…**. The icon picker opens with its search field ready: type a name or a word for what you want (`notebook`, `star`, `favourite`) and the icons narrow as you type. Click one, or use the arrow keys and press Return; Escape closes it without a change. **Recently Used**, at the top, shows the icons you picked last on this Mac. The icons are [Lucide](https://lucide.dev)'s, about 2,000 of them. A badge that had one of the 24 icons from before keeps it, drawn with Lucide's matching icon.
 - **Reset to Default** brings back the first letter and the colour it started with. A default letter follows the notebook's name when you rename it; one you chose stays.
-- The badge belongs to the notebook and syncs with it to your other Macs. **Copy Settings…** and **Keep Settings in Step** leave each notebook's badge its own. Android doesn't show badges yet.
+- The badge belongs to the notebook and syncs with it to your other Macs. **Copy Settings…** and **Keep Settings in Step** leave each notebook's badge its own.
+- **On Android** the badge shows on the notebooks' rows (the first screen, and **Settings → All Notebooks** and its **Notebooks** group), at the top of a notebook's page in Settings, and before its name over its folders. Change it on the notebook's page in Settings, on **Overview**: the same colours, **Letter**, **Number** or **Icon**, and **Choose Icon…**, which opens the icon picker with its search ready and the icons you picked last on the phone first. A change syncs with the notebook, so your Macs show it too.
 
 ### The Primary Notebook
 
@@ -53,7 +55,7 @@ Each folder sorts its notes in its own way: **Manual** (the default: drag to reo
 
 - **Drag** a note to a folder in the sidebar.
 - **Move to Folder…**, in the note's ⋯ menu, the File menu or the command palette, opens a picker: choose the folder and **Move here**.
-- **Several at once:** Shift-click selects a range, ⌘-click adds or removes one. Then right-click (or Ctrl-click, or Shift+F10) for **Move N Notes…** or **Move N Notes to Trash**, with one Undo.
+- **Several at once:** Shift-click selects a range; once several are selected, ⌘-click adds or removes one, and Space adds or removes the note you are on. On a single note, ⌘-click opens it in a [new tab](/docs/install/mac/#tabs) instead. Then right-click (or Ctrl-click, or Shift+F10) for **Move N Notes…** or **Move N Notes to Trash**, with one Undo.
 
 What a move or copy did, or why it could not be done, shows in a message at the bottom centre of the window, with a check when it worked and a warning sign when it did not. Up to three messages show at once, newest at the bottom. On Android the same messages show at the bottom of the screen.
 
@@ -85,7 +87,7 @@ Android shows tags as before and keeps their descriptions when it syncs; describ
 
 ## Quick Access
 
-Quick Access holds up to 20 notes you want at hand. **Pin to Quick Access** in a note's ⋯ menu adds it, or drag a note onto the section. Right-click one for **Remove from Quick Access** or **Open in New Tab**. On the Mac the [menu bar icon](/docs/install/mac/#the-menu-bar-icon) lists them too.
+Quick Access holds up to 20 notes you want at hand. **Pin to Quick Access** in a note's ⋯ menu adds it, or drag a note onto the section. Right-click one for **Open in New Tab**, **Open in New Window** or **Remove from Quick Access**. A note's right-click menu in your notebooks' tree starts with the same two Open items. On the Mac the [menu bar icon](/docs/install/mac/#the-menu-bar-icon) lists them too.
 
 Quick Access is not the same as a pinned [tab](/docs/install/mac/#tabs): Quick Access is one list for all your devices, and a pinned tab belongs to the window it is in. A tab's right-click menu has **Pin to Quick Access**, and dragging a tab onto Quick Access pins its note; neither pins the tab.
 
@@ -96,7 +98,7 @@ Quick Access is not the same as a pinned [tab](/docs/install/mac/#tabs): Quick A
 
 ## The sidebar
 
-**Settings → Sidebar** (**Sidebar Settings** in the command palette) shows a small sidebar beside its settings that changes as you change them:
+**Settings → Sidebar** (**Sidebar Settings** in the command palette) shows your sidebar itself, made small, beside its settings, and it changes as you change them:
 
 - **Shortcuts**: which buttons the sidebar's top row shows. Search is always there; **Tags**, **Today**, **This Week**, **Graph** and **Commands** show unless you switch them off. A hidden shortcut still works from its keys and the command palette.
 - **Sections**: **Quick Access** (with **Show Notebook Names**, which labels each pinned note with its notebook), **Recent Notes** (with how many notes it lists), **Notebooks**, **Calendar** and **Tags**, each with a switch to show or hide it. Drag a section by its handle to move it, or press Alt+↑ or Alt+↓ on its row. You can also drag a section by the handle on its title in the sidebar.
@@ -105,7 +107,7 @@ Quick Access is not the same as a pinned [tab](/docs/install/mac/#tabs): Quick A
 
 ## The note in Settings
 
-**Settings → Note** shows a small note beside its settings that changes as you change them:
+**Settings → Note** shows the note you opened last, made small, beside its settings, and under it **Fonts at Real Size**: a note's title, headings, text and code at the size Penmoss draws them, each with its font and size. The preview changes as you change these settings:
 
 - **Layout**: **Note Width**, the theme's width or **Full Window**, and **Note Panel**, whether a note's panel starts **Closed** or **Open** (marked **This Mac**, as it is kept on each device). Each note then remembers its own.
 - **Title Bar Buttons**: which of Full Width, Markdown Source, the two copies, Copy Agent Reference, Pin to Quick Access, Open in New Window, Move to Folder and Move to Trash have a button at the end of the tab strip (beside the title in a note window). Each is also in the note's ⋯ menu.

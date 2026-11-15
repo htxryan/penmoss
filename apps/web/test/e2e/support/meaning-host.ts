@@ -49,6 +49,8 @@ function conceptSource(): MeaningSource {
   const cache = Object.assign(new MemoryVectorCache(), {
     compact: () => Promise.resolve(0),
     claim: () => Promise.resolve(),
+    // The vectors are the "files" here: Delete Index… clears them (A1595).
+    forget: () => undefined,
   });
   const status = () =>
     Promise.resolve({
@@ -70,8 +72,16 @@ function conceptSource(): MeaningSource {
     },
     remove: () => {
       ready = false;
+      cache.vectors.clear();
       return Promise.resolve();
     },
+    removeIndex: () => {
+      cache.vectors.clear();
+      return Promise.resolve();
+    },
+    // A record as the file cache writes it: the key, the vector and a checksum.
+    indexBytes: () =>
+      Promise.resolve(cache.vectors.size * (32 + conceptEmbedder.dimensions * 4 + 4)),
     setEnabled: (value) => {
       enabled = value;
       return Promise.resolve();
@@ -137,6 +147,14 @@ export class MeaningHost {
 
   async setEnabled(enabled: boolean): Promise<DesktopMeaningStatus> {
     return this.withGeneration(await this.service.setEnabled(enabled));
+  }
+
+  async removeModel(): Promise<DesktopMeaningStatus> {
+    return this.withGeneration(await this.service.removeModel());
+  }
+
+  async removeIndex(): Promise<DesktopMeaningStatus> {
+    return this.withGeneration(await this.service.removeIndex());
   }
 
   stop(): Promise<void> {

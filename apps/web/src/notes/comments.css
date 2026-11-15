@@ -2,7 +2,7 @@
 .comments-panel {
   border-top: 1px solid var(--pm-border);
   padding-top: 1rem;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 @media (min-width: 78rem) {
@@ -101,7 +101,7 @@ button.comment-quote:hover {
 .comment-quote-note {
   display: block;
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
   font-style: italic;
 }
 
@@ -122,7 +122,7 @@ button.comment-quote:hover {
 }
 
 .comment-author {
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
   overflow-wrap: anywhere;
 }
 
@@ -132,7 +132,7 @@ button.comment-quote:hover {
 
 .comment-when {
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
   white-space: nowrap;
 }
 
@@ -183,13 +183,13 @@ button.comment-quote:hover {
 
 .comment-confirm p {
   margin: 0;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 .comment-state {
   margin: 0.5rem 0 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
 }
 
 .comment-state[data-state='replied'],
@@ -228,7 +228,7 @@ button.comment-quote:hover {
   gap: 0.2rem;
   margin-top: 0.5rem;
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
 }
 
 .comment-send-error {
@@ -259,7 +259,7 @@ button.comment-quote:hover {
   border-radius: 0;
   background: var(--pm-raised);
   box-shadow: var(--pm-popover-shadow);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
   animation: pm-rise var(--pm-medium) var(--pm-ease);
 }
 
@@ -305,9 +305,11 @@ button.comment-quote:hover {
   border-radius: 0;
   background: var(--pm-accent);
   color: var(--pm-bg);
-  font-size: 0.65rem;
-  font-weight: 700;
-  line-height: 1rem;
+  font-size: var(--pm-text-micro);
+  font-weight: var(--pm-weight-bold);
+  display: grid;
+  place-items: center;
+  line-height: var(--pm-leading-none);
   text-align: center;
   pointer-events: none;
 }

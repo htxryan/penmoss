@@ -34,11 +34,6 @@
   --pm-radius-lg: 0;
   --pm-radius-xl: 0;
   --pm-radius-sheet: 0;
-  /* Type scale (the prototype's 11.5 / 13 / 14 / 16 px). */
-  --pm-text-xs: 0.72rem;
-  --pm-text-sm: 0.8125rem;
-  --pm-text-md: 0.875rem;
-  --pm-text-lg: 1rem;
   /* Controls: buttons and fields, and the touch size on phones (44 px, A183). */
   --pm-control: 2rem;
   --pm-control-sm: 1.75rem;
@@ -59,6 +54,8 @@ body {
   background: var(--pm-bg);
   color: var(--pm-fg);
   font-family: var(--pm-font);
+  /* Text that names no role of its own is running text (type.css, A1561). */
+  font-size: var(--pm-text-body);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
@@ -75,7 +72,7 @@ a {
 
 .app-shell h1 {
   margin: 0 0 0.5rem;
-  font-size: 1.4rem;
+  font-size: var(--pm-text-page-title);
   letter-spacing: -0.01em;
 }
 
@@ -88,7 +85,8 @@ a {
 .settings h3,
 .settings-section h3 {
   margin: 2rem 0 0.5rem;
-  font-size: var(--pm-text-lg);
+  font-size: var(--pm-text-group-head);
+  font-weight: var(--pm-weight-group-head);
 }
 
 /*
@@ -126,7 +124,7 @@ a {
   min-height: 3.25rem;
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--pm-border-soft);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 .list li:last-child {
@@ -160,7 +158,7 @@ a {
   border-radius: 0;
   background: var(--pm-raised);
   font-family: var(--pm-mono);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-code);
   overflow-wrap: anywhere;
 }
 

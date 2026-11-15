@@ -247,7 +247,7 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier) {
         text,
         // A heading for TalkBack's headings navigation (T40 P9, PL14, A498).
         modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 4.dp).semantics { heading() },
-        style = MaterialTheme.typography.titleSmall,
+        style = MaterialTheme.roles.listHead,
         color = MaterialTheme.colorScheme.primary,
     )
 }
@@ -257,7 +257,7 @@ fun EmptyMessage(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
         modifier.padding(24.dp),
-        style = MaterialTheme.typography.bodyMedium,
+        style = MaterialTheme.roles.body,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }

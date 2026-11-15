@@ -20,6 +20,7 @@ import { appCss } from './support/app-css';
 import {
   NO_DRAG_CONTROLS,
   NO_DRAG_SURFACES,
+  PICTURES,
   TITLE_BAR_ROWS,
   UNDER_ROWS,
 } from '../../src/desktop/no-drag';
@@ -207,14 +208,17 @@ describe('the compact title bar in the page (T47, A722, A723)', () => {
         /:root\[data-titlebar='compact'\]\s*:is\(([^{]*)\)\s*\{\s*-webkit-app-region: ([a-z-]+);/g,
       ),
     ];
-    return rules
-      .filter((rule) => rule[2] === value)
-      .map((rule) =>
-        rule[1]!
-          .split(/,\s*(?![^()]*\))/)
-          .map((selector) => selector.trim().replaceAll("'", '"'))
-          .filter(Boolean),
-      );
+    return (
+      rules
+        // The pictures' rule (two lists) has its own test below.
+        .filter((rule) => rule[2] === value && !/\)\s*:is\(/.test(rule[1]!))
+        .map((rule) =>
+          rule[1]!
+            .split(/,\s*(?![^()]*\))/)
+            .map((selector) => selector.trim().replaceAll("'", '"'))
+            .filter(Boolean),
+        )
+    );
   }
 
   it('makes exactly the rows drag, and every control and floating surface not (A723)', () => {
@@ -226,6 +230,21 @@ describe('the compact title bar in the page (T47, A722, A723)', () => {
     }
     // A focusable element is a control; one only focusable from script (tabindex -1, a pane) is not.
     expect(NO_DRAG_CONTROLS).toContain('[tabindex]:not([tabindex="-1"])');
+  });
+
+  it('lets no row drag inside a picture of the app, a Settings preview (A1564)', () => {
+    const rule =
+      /:root\[data-titlebar='compact'\]\s*:is\(([^)]*)\)\s*:is\(([^{]*?)\)\s*\{\s*-webkit-app-region: no-drag;/.exec(
+        appCss(),
+      );
+    expect(rule).not.toBeNull();
+    const list = (text: string) =>
+      text
+        .split(/,\s*(?![^()]*\))/)
+        .map((selector) => selector.trim().replaceAll("'", '"'))
+        .filter(Boolean);
+    expect(list(rule![1]!)).toEqual([...PICTURES]);
+    expect(list(rule![2]!)).toEqual([...TITLE_BAR_ROWS]);
   });
 
   it('gives what scrolls under a row no region, but its floating surfaces (A1123)', () => {

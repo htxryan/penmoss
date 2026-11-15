@@ -6,6 +6,7 @@ import { TabMark } from './TabStrip';
 import { facePath, useTabFaces, type TabFace } from './describe';
 import { useTabs, useTabsState } from './hooks';
 import { sheet } from './sheet';
+import { shownTabCount } from './state';
 
 /**
  * The narrow window's tabs (700 px and narrower, AC13, A1502): the strip is hidden, and the app
@@ -18,7 +19,7 @@ export function TabsButton() {
   const state = useTabsState();
   const open = useSyncExternalStore(sheet.subscribe, sheet.get, sheet.get);
   if (!tabs || !state) return null;
-  const count = state.tabs.length;
+  const count = shownTabCount(state);
   return (
     <button
       type="button"
@@ -161,13 +162,13 @@ function TabsSheet({ onClose }: { readonly onClose: () => void }) {
           data-command="tab.new"
           data-testid="tabs-sheet-new"
           onClick={() => {
-            // Closed without giving focus back to the Tabs button: Search takes it.
+            // Closed without giving focus back to the Tabs button: New Tab’s picker takes it.
             sheet.set(false);
             commands.run('tab.new');
           }}
         >
           <Icon name="plus" size={16} />
-          New Tab
+          New Tab…
         </button>
       </div>
     </>

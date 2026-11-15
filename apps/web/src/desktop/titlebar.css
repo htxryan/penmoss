@@ -31,9 +31,31 @@
     .window-drag,
     .home,
     .tags-page-top,
-    .drawing-editor-bar
+    .drawing-editor-bar,
+    .history-view-head
   ) {
   -webkit-app-region: drag;
+}
+
+/* Pictures of the app (PICTURES in no-drag.ts): a Settings preview draws the real rows (A1564),
+   which must not drag the window from inside the page. */
+:root[data-titlebar='compact']
+  :is(.preview-zoom, .preview-zoom-body)
+  :is(
+    .sb-head,
+    .note-top,
+    .tab-strip,
+    .pm-graph-bar,
+    .settings-bar,
+    .app-bar,
+    #root > .banner,
+    .window-drag,
+    .home,
+    .tags-page-top,
+    .drawing-editor-bar,
+    .history-view-head
+  ) {
+  -webkit-app-region: no-drag;
 }
 
 :root[data-titlebar='compact']
@@ -305,7 +327,10 @@
   flex: none;
   min-width: 3.2rem;
   color: var(--pm-muted);
-  font: 0.75rem var(--pm-mono);
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-meta);
+  font-weight: var(--pm-weight-regular);
+  line-height: normal;
 }
 
 .symbol-actions {

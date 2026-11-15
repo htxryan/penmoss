@@ -83,7 +83,7 @@
   margin: 0;
   color: var(--pm-fg);
   font-size: var(--pm-text-md);
-  font-weight: 650;
+  font-weight: var(--pm-weight-semibold);
   letter-spacing: -0.01em;
 }
 
@@ -247,8 +247,8 @@
   box-shadow: var(--pm-shadow-1);
   color: var(--pm-fg);
   font: inherit;
-  font-size: var(--pm-text-sm);
-  font-weight: 500;
+  font-size: var(--pm-text-item);
+  font-weight: var(--pm-weight-medium);
   white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
@@ -291,8 +291,23 @@
   background: var(--pm-danger-soft);
 }
 
+/* Solid red: an action that deletes (Delete Model…, a confirm's Delete; A1595). */
+.btn.danger-fill {
+  border-color: var(--pm-danger);
+  background: var(--pm-danger);
+  color: var(--pm-on-accent);
+}
+
+.btn.danger-fill:hover:not(:disabled) {
+  border-color: color-mix(in oklab, var(--pm-danger), var(--pm-fg) 12%);
+  background: color-mix(in oklab, var(--pm-danger), var(--pm-fg) 12%);
+}
+
 .btn kbd {
-  font: 500 0.7rem/1 var(--pm-font);
+  font-family: var(--pm-font);
+  font-size: var(--pm-text-badge);
+  font-weight: var(--pm-weight-medium);
+  line-height: var(--pm-leading-none);
   opacity: 0.8;
 }
 
@@ -329,7 +344,7 @@
   background: none;
   color: var(--pm-muted);
   font: inherit;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-sidebar-item);
   text-align: left;
   text-decoration: none;
   white-space: nowrap;
@@ -348,7 +363,7 @@
 .sb-item[aria-current='page'] {
   background: var(--pm-active);
   color: var(--pm-fg);
-  font-weight: 500;
+  font-weight: var(--pm-weight-medium);
 }
 
 .sb-item .label {
@@ -370,7 +385,7 @@
 .list-empty {
   margin: 0.5rem;
   color: var(--pm-muted);
-  font-size: 0.85rem;
+  font-size: var(--pm-text-help);
 }
 
 .note-list {

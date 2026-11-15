@@ -22,6 +22,7 @@ import {
   type NotebookActivity,
 } from './agent-activity-list';
 import './notebook-settings.css';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 const keyOf = (item: NotebookActivity) => `${item.notebookId}:${item.entry.id}`;
 
@@ -106,45 +107,49 @@ export function AgentActivitySettings() {
       aria-labelledby={`${id}-h`}
       data-testid="agent-activity-settings"
     >
-      <div className="nset-title">
-        <h2 id={`${id}-h`}>Agent Activity</h2>
-        <div className="nset-filters" data-setting="agent-activity-filters">
-          {sources.length > 1 ? (
+      <SettingsHeader
+        id={`${id}-h`}
+        title="Agent Activity"
+        intro="What agents changed in your notebooks in the last 30 days, with Undo."
+        actions={
+          <div className="nset-filters" data-setting="agent-activity-filters">
+            {sources.length > 1 ? (
+              <Select
+                aria-label="Notebook"
+                size="small"
+                value={notebook}
+                data-testid="agent-activity-notebook"
+                onChange={(event) => setNotebook(event.currentTarget.value)}
+              >
+                <option value={EVERY}>All Notebooks</option>
+                {sources.map((source) => (
+                  <option key={source.id} value={source.id}>
+                    {source.name}
+                  </option>
+                ))}
+              </Select>
+            ) : null}
             <Select
-              aria-label="Notebook"
+              aria-label="Agent"
               size="small"
-              value={notebook}
-              data-testid="agent-activity-notebook"
-              onChange={(event) => setNotebook(event.currentTarget.value)}
+              value={agents.includes(agent) ? agent : EVERY}
+              data-testid="agent-activity-agent"
+              onChange={(event) => setAgent(event.currentTarget.value)}
             >
-              <option value={EVERY}>All Notebooks</option>
-              {sources.map((source) => (
-                <option key={source.id} value={source.id}>
-                  {source.name}
+              <option value={EVERY}>All Agents</option>
+              {agents.map((label) => (
+                <option key={label} value={label}>
+                  {label}
                 </option>
               ))}
             </Select>
-          ) : null}
-          <Select
-            aria-label="Agent"
-            size="small"
-            value={agents.includes(agent) ? agent : EVERY}
-            data-testid="agent-activity-agent"
-            onChange={(event) => setAgent(event.currentTarget.value)}
-          >
-            <option value={EVERY}>All Agents</option>
-            {agents.map((label) => (
-              <option key={label} value={label}>
-                {label}
-              </option>
-            ))}
-          </Select>
-        </div>
-      </div>
-      <p className="muted">
-        What agents changed in your notebooks’ folders, note places and settings in the last 30
-        days, read from each notebook’s branch on this Mac. Undo is your own change, pushed with the
-        next sync. An agent’s edits to notes and their tags are in each note’s History.
+          </div>
+        }
+      />
+      <p className="muted settings-help">
+        Folders, note places and settings, read from each notebook’s branch on this Mac. Undo is
+        your own change, pushed with the next sync. An agent’s edits to notes and their tags are in
+        each note’s History.
       </p>
       <p role="status" className="git-message muted" data-testid="agent-activity-status">
         {status}

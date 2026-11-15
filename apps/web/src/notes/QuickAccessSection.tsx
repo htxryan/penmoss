@@ -1,12 +1,13 @@
 import { MAX_QUICK_ACCESS } from '@penmoss/core/quick-access';
 import { Icon } from '@penmoss/ui/icons';
 import { useId, useRef, useState, type DragEvent, type ReactNode } from 'react';
-import { hasTabs, linkAuxHandler, linkHandler, notePath, openPath } from '../router';
+import { REVEAL, hasTabs, linkAuxHandler, linkHandler, notePath, openPath } from '../router';
 import { useStoredCollapse } from '../shell/collapsed';
 import { ContextMenu } from '../shell/ContextMenu';
-import { ClickHint } from '../shell/ClickHint';
+import { OpenNoteItems } from '../shell/OpenNoteItems';
 import { MenuItem } from '../shell/Menu';
 import { useSidebarLayout } from '../shell/sidebar-layout-state';
+import { openNoteWindow } from '../window/open';
 import { displayTitle } from './list';
 import { NOTE_DRAG_TYPE } from './note-drag';
 import { useQuickAccess, useQuickAccessNotes } from './quick-access';
@@ -186,8 +187,8 @@ export function QuickAccessSection({
                 aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
                 data-testid="quick-access-note"
                 data-note-id={note.id}
-                onClick={linkHandler(notePath(note.id))}
-                onAuxClick={linkAuxHandler(notePath(note.id))}
+                onClick={linkHandler(notePath(note.id), REVEAL)}
+                onAuxClick={linkAuxHandler(notePath(note.id), REVEAL)}
                 onContextMenu={(event) => {
                   event.preventDefault();
                   setMenu({ x: event.clientX, y: event.clientY, id: note.id });
@@ -240,6 +241,24 @@ export function QuickAccessSection({
           y={menu.y}
           onClose={closeMenu}
         >
+          {/* The open group leads, as on the tree's notes (Ryan, A1571). */}
+          <OpenNoteItems
+            testIdPrefix="quick-access"
+            onTab={
+              hasTabs()
+                ? () => {
+                    const pin = menu.id;
+                    setMenu(null);
+                    openPath(notePath(pin), 'background', REVEAL);
+                  }
+                : null
+            }
+            onWindow={() => {
+              const pin = menu.id;
+              setMenu(null);
+              openNoteWindow(pin);
+            }}
+          />
           <MenuItem
             icon="pin"
             data-testid="quick-access-remove"
@@ -252,20 +271,6 @@ export function QuickAccessSection({
           >
             Remove from Quick Access
           </MenuItem>
-          {hasTabs() ? (
-            <MenuItem
-              icon="plus"
-              data-testid="quick-access-open-tab"
-              hint={<ClickHint modifier="mod" />}
-              onClick={() => {
-                const pin = menu.id;
-                setMenu(null);
-                openPath(notePath(pin), 'background');
-              }}
-            >
-              Open in New Tab
-            </MenuItem>
-          ) : null}
         </ContextMenu>
       ) : null}
     </section>

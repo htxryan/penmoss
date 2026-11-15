@@ -343,21 +343,25 @@ test('T44: Settings → Symbols edits the synced list; a removed glyph shows as 
     // Its 3 px focus ring included.
     expect(lastBox.y + lastBox.height + 3).toBeLessThanOrEqual(addBox.y);
 
-    // The glyph picker (T51 item 9): a preset another symbol has is marked; a pasted glyph that
-    // is markdown is refused; a preset is chosen.
+    // The glyph picker (T51 item 9; A1568's Characters): a modal, its search focused, Characters
+    // only; one another symbol has is marked; a pasted glyph that is markdown is refused; one is
+    // found by name and chosen.
     await settings.getByTestId('symbol-glyph-1').click();
-    const glyphs = settings.getByTestId('symbol-glyph-1-picker');
-    await expect(glyphs).toBeVisible();
-    await expect(glyphs.getByRole('button', { name: '?, Already symbol 2' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-    await glyphs.getByTestId('symbol-glyph-1-custom').fill('#');
-    await glyphs.getByTestId('symbol-glyph-1-custom').press('Enter');
+    const glyphs = page.getByTestId('symbol-glyph-1-picker');
+    await expect(glyphs.getByRole('dialog', { name: 'Choose a Symbol' })).toBeVisible();
+    const glyphSearch = glyphs.getByTestId('symbol-glyph-1-picker-search');
+    await expect(glyphSearch).toBeFocused();
+    await expect(glyphs.getByRole('tab')).toHaveCount(0);
+    await expect(
+      glyphs.getByRole('option', { name: 'Question Mark, Already symbol 2' }),
+    ).toHaveAttribute('aria-disabled', 'true');
+    await glyphSearch.fill('#');
     await expect(glyphs.getByRole('alert')).toContainText('Glyph cannot hold #');
-    await glyphs.getByRole('button', { name: '⚑', exact: true }).click();
+    await glyphSearch.fill('flag');
+    await glyphs.getByRole('option', { name: 'Flag', exact: true }).click();
     await expect(glyphs).toBeHidden();
     await expect(settings.getByTestId('symbol-glyph-1')).toHaveText('⚑');
+    await expect(settings.getByTestId('symbol-glyph-1')).toBeFocused();
 
     // The colour picker (T51 item 10): a theme colour, then a colour of one's own by hex.
     await settings.getByTestId('symbol-colour-1').click();
@@ -414,6 +418,68 @@ test('T44: Settings → Symbols edits the synced list; a removed glyph shows as 
     await expect(page.getByTestId('section-sync')).toHaveAttribute('data-state', 'synced', {
       timeout: 40_000,
     });
+  }
+  expect(errors).toEqual([]);
+});
+
+test('A1588: an emoji keeps its own colours, so its colour is disabled with a note, and kept', async ({
+  page,
+}) => {
+  const errors = collectErrors(page);
+  await page.goto('/settings/symbols');
+  const settings = page.getByTestId('symbols-settings');
+  const rows = settings.getByTestId('symbol-row');
+  const restore = settings.getByRole('button', { name: 'Restore Defaults' });
+  const NOTE = 'This emoji’s colour can’t be changed.';
+  await expect(settings.getByTestId('symbol-glyph-1')).toBeEnabled();
+  try {
+    if (await restore.isEnabled()) await restore.click();
+    await expect(rows).toHaveCount(5);
+    // 💡, a default: its colour is disabled, the note beside it and describing it, and the
+    // glyph drawn without its colour.
+    const idea = settings.getByTestId('symbol-colour-4');
+    await expect(settings.getByTestId('symbol-glyph-4')).toHaveText('💡');
+    await expect(idea).toBeDisabled();
+    await expect(settings.getByTestId('symbol-colour-note-4')).toHaveText(NOTE);
+    await expect(idea).toHaveAccessibleDescription(NOTE);
+    await expect(settings.getByTestId('symbol-glyph-4')).not.toHaveAttribute('style', /color/);
+    // ★ takes its colour.
+    const star = settings.getByTestId('symbol-colour-1');
+    await expect(star).toBeEnabled();
+    await expect(star).toContainText('Orange');
+    await expect(settings.getByTestId('symbol-colour-note-1')).toHaveCount(0);
+    await expect(settings.getByTestId('symbol-glyph-1')).toHaveAttribute('style', /color/);
+
+    // An emoji chosen in ★'s row: its colour is disabled with the note, and kept.
+    await settings.getByTestId('symbol-glyph-1').click();
+    let picker = page.getByTestId('symbol-glyph-1-picker');
+    await picker.getByTestId('symbol-glyph-1-picker-search').fill('fire');
+    await picker.getByRole('option', { name: 'Fire', exact: true }).click();
+    await expect(settings.getByTestId('symbol-glyph-1')).toHaveText('🔥');
+    await expect(star).toBeDisabled();
+    await expect(settings.getByTestId('symbol-colour-note-1')).toHaveText(NOTE);
+    await expect(star).toContainText('Orange');
+    await expect
+      .poll(async () => ((await storedSetting(page, 'symbols.list')) as unknown[] | undefined)?.[0])
+      .toEqual({ glyph: '🔥', name: '🔥', colour: 'calloutWarning' });
+
+    // A glyph that takes a colour again: the colour is back, as it was.
+    await settings.getByTestId('symbol-glyph-1').click();
+    picker = page.getByTestId('symbol-glyph-1-picker');
+    await picker.getByTestId('symbol-glyph-1-picker-search').fill('star');
+    // Two are named Star: the symbol and the emoji (⭐).
+    await picker
+      .getByRole('option', { name: 'Star', exact: true })
+      .filter({ hasText: '★' })
+      .click();
+    await expect(settings.getByTestId('symbol-glyph-1')).toHaveText('★');
+    await expect(star).toBeEnabled();
+    await expect(star).toContainText('Orange');
+    await expect(settings.getByTestId('symbol-colour-note-1')).toHaveCount(0);
+    await expect(settings.getByTestId('symbol-glyph-1')).toHaveAttribute('style', /color/);
+  } finally {
+    if (await restore.isEnabled()) await restore.click();
+    await expect(rows).toHaveCount(5);
   }
   expect(errors).toEqual([]);
 });

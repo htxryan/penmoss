@@ -1,6 +1,5 @@
 package app.penmoss.ui.settings
 
-import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -45,15 +43,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import app.penmoss.engine.settings.ColourLock
 import app.penmoss.engine.settings.LineSymbol
 import app.penmoss.engine.settings.LineSymbols
 import app.penmoss.ui.common.LocalSymbolColours
@@ -114,11 +111,18 @@ fun SymbolsScreen(
                             Modifier.size(40.dp).border(1.dp, MaterialTheme.colorScheme.outlineVariant).testTag("symbol-glyph-$index"),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(symbol.glyph, color = symbolColour(symbol.colour), style = MaterialTheme.typography.titleLarge, maxLines = 1)
+                            // An emoji keeps its own colours (A1588).
+                            val ink = if (ColourLock.isLocked(symbol.glyph)) Color.Unspecified else symbolColour(symbol.colour)
+                            Text(symbol.glyph, color = ink, style = MaterialTheme.typography.titleLarge, maxLines = 1)
                         }
                     }
                 },
-                headlineContent = { Text(LineSymbols.colourLabel(symbol.colour)) },
+                headlineContent = {
+                    Text(
+                        if (ColourLock.isLocked(symbol.glyph)) OWN_COLOURS else LineSymbols.colourLabel(symbol.colour),
+                        Modifier.testTag("symbol-colour-label-$index"),
+                    )
+                },
                 supportingContent = { Text(keys.getOrNull(index) ?: "No key", Modifier.testTag("symbol-key-$index")) },
                 trailingContent = {
                     IconButton(
@@ -191,6 +195,9 @@ fun SymbolsScreen(
     }
 }
 
+/** What a symbol's row says in place of its colour for an emoji, in its own colours (A1588). */
+internal const val OWN_COLOURS = "Its own colours"
+
 /** The colour chips' value for "any colour", until one is picked. */
 private const val CUSTOM = "custom"
 
@@ -199,7 +206,7 @@ private const val CUSTOM_START = "#3a7bd5"
 
 /**
  * One symbol's glyph and colour (T51, A939), checked by the web's rules as they are chosen: a
- * grid of preset glyphs or a glyph of one's own, and a theme colour or any colour. A symbol
+ * glyph from the symbol picker (A1569) or of one's own, and a theme colour or any colour. A symbol
  * keeps its name while its glyph stays; a new glyph is its name too (A940).
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -217,10 +224,26 @@ private fun SymbolDialog(
     // The last custom colour, kept while a theme colour is tried.
     var customColour by rememberSaveable { mutableStateOf(initial.colour.takeIf(LineSymbols::isHexColour) ?: CUSTOM_START) }
     var refused by remember { mutableStateOf<String?>(null) }
+    var picking by rememberSaveable { mutableStateOf(false) }
     val colours = LocalSymbolColours.current
     val taken = others.map { LineSymbols.glyphKey(it.glyph) }.toSet()
     val glyphProblem = LineSymbols.glyphProblem(glyph)
         ?: if (LineSymbols.glyphKey(glyph) in taken) "$glyph is already in the list" else null
+    // An emoji comes in its own colours (A1588): no colour to choose, and the one it had is kept.
+    val locked = ColourLock.isLocked(glyph)
+    if (picking) {
+        CharacterPicker(
+            current = glyph,
+            refusal = { candidate ->
+                if (LineSymbols.glyphKey(candidate) in taken) "Already in the list" else LineSymbols.glyphProblem(candidate)
+            },
+            onPick = {
+                glyph = it
+                picking = false
+            },
+            onDismiss = { picking = false },
+        )
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         // Clear of the keyboard (T51 manual pass): the dialog shrinks above it and its body
@@ -231,40 +254,17 @@ private fun SymbolDialog(
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Glyph", style = MaterialTheme.typography.labelLarge)
-                FlowRow(
-                    Modifier.testTag("symbol-presets"),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    LineSymbols.PRESET_GLYPHS.forEachIndexed { index, preset ->
-                        val chosen = LineSymbols.glyphKey(preset) == LineSymbols.glyphKey(glyph)
-                        val inList = LineSymbols.glyphKey(preset) in taken
-                        Box(
-                            Modifier
-                                .size(40.dp)
-                                .background(
-                                    if (chosen) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
-                                    RectangleShape,
-                                )
-                                .border(
-                                    1.dp,
-                                    if (chosen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                                    RectangleShape,
-                                )
-                                .selectable(selected = chosen, enabled = !inList, role = Role.RadioButton) { glyph = preset }
-                                .testTag("symbol-preset-$index")
-                                .semantics {
-                                    contentDescription = preset
-                                    if (inList) stateDescription = "Already in the list"
-                                },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                preset,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = if (inList) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else symbolColour(colour),
-                            )
-                        }
+                // The symbol picker (A1569): every symbol and emoji, searched by name.
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(
+                        Modifier.size(48.dp).border(1.dp, MaterialTheme.colorScheme.outlineVariant, RectangleShape)
+                            .clearAndSetSemantics {},
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(glyph.ifEmpty { "●" }, style = MaterialTheme.typography.titleLarge, color = if (locked) Color.Unspecified else symbolColour(colour))
+                    }
+                    OutlinedButton(onClick = { picking = true }, modifier = Modifier.testTag("symbol-choose")) {
+                        Text("Choose Symbol…")
                     }
                 }
                 OutlinedTextField(
@@ -282,6 +282,7 @@ private fun SymbolDialog(
                         FilterChip(
                             selected = key == colour,
                             onClick = { colour = key },
+                            enabled = !locked,
                             label = { Text(label) },
                             leadingIcon = {
                                 Text(glyph.ifEmpty { "●" }, color = colours[key] ?: Color.Unspecified, modifier = Modifier.clearAndSetSemantics {})
@@ -293,6 +294,7 @@ private fun SymbolDialog(
                     FilterChip(
                         selected = custom,
                         onClick = { colour = customColour },
+                        enabled = !locked,
                         label = { Text(if (custom) "Custom: ${LineSymbols.colourLabel(colour)}" else "Custom Colour") },
                         leadingIcon = {
                             Text(glyph.ifEmpty { "●" }, color = HexColours.color(customColour), modifier = Modifier.clearAndSetSemantics {})
@@ -300,7 +302,9 @@ private fun SymbolDialog(
                         modifier = Modifier.testTag("symbol-colour-$CUSTOM"),
                     )
                 }
-                if (LineSymbols.isHexColour(colour)) {
+                if (locked) {
+                    Help(ColourLock.NOTE, Modifier.testTag("symbol-colour-locked"))
+                } else if (LineSymbols.isHexColour(colour)) {
                     ColourPicker(
                         hex = colour,
                         onChange = {

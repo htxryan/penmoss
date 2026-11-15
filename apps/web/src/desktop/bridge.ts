@@ -150,7 +150,10 @@ export interface GitNotebookInfo {
   readonly remote: string;
   /** `github.com/owner/repo`, or the host and path. */
   readonly repository: string;
+  /** The host as the remote names it: an SSH alias stays the alias. */
   readonly host: string;
+  /** The host's real name (A1565): an SSH alias resolved as SSH resolves it. Absent: `host`. */
+  readonly webHost?: string;
   readonly branch: string;
   readonly dir: string;
   readonly pushDelayS: number;
@@ -602,6 +605,8 @@ export interface DesktopMeaningStatus {
   /** Notes with vectors, of the notes sent. */
   readonly indexed: number;
   readonly total: number;
+  /** The bytes this Mac's index (the vectors) takes on disk (A1595). */
+  readonly indexBytes?: number;
   /** Another copy of the app holds the indexing lease (A1350): this one only searches. */
   readonly leaseElsewhere?: boolean;
   readonly error?: string;
@@ -640,6 +645,16 @@ export interface DesktopMeaning {
   ): Promise<{ readonly floor: number; readonly hits: DesktopMeaningHit[] } | null>;
   /** After a key press or click only, main window only (null otherwise; A1158). */
   setEnabled(on: boolean): Promise<DesktopMeaningStatus | null>;
+  /**
+   * Delete Model… (A1566): off, then the downloaded model and its vectors deleted from this Mac.
+   * After a click, main window only (null otherwise).
+   */
+  removeModel(): Promise<DesktopMeaningStatus | null>;
+  /**
+   * Recreate Index… (on) and Delete Index… (off) (A1595): this Mac's vectors deleted, the model
+   * kept; on, the notes are indexed again. After a click, main window only (null otherwise).
+   */
+  removeIndex(): Promise<DesktopMeaningStatus | null>;
   onChange(listener: (status: DesktopMeaningStatus) => void): () => void;
 }
 

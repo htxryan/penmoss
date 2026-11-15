@@ -26,7 +26,7 @@ import './search/search.css';
 import './feedback/feedback.css';
 import './theme/theme.css';
 import { hasTabs, isNoteWindowPath, navigate, openPath, startHistory } from './router';
-import { openNoteWindow } from './window/open';
+import { openNoteWindow, setStoreBeforeNoteWindow } from './window/open';
 import { StorePuller, storeSync } from './window/store-sync';
 import { browserThemeEnvironment, ThemeController } from './theme/controller';
 import { ThemeProvider } from './theme/ThemeProvider';
@@ -111,12 +111,23 @@ window.addEventListener('pagehide', () => windows.flush());
 // notebook has synced once if it can (A825). Main asks for `flush` before the capture window
 // reads the store or a title bar change: then nothing syncs (#174 review).
 bridge?.onBeforeClose(async (reason) => {
-  // The tabs as they are, for the next launch (A228, A626).
-  tabs?.flush();
+  // The tabs as they are, for the next launch (A228, A626). As the window closes, the last
+  // time: a main window opened while this one still pushes keeps its own (A1577).
+  if (reason === 'close') tabs?.closeWindow();
+  else tabs?.flush();
   await sources.store(reason);
   // The other windows hear this window's last writes before it goes (before `saved`).
   windows.flush();
 });
+
+// A note window reads its note from the store: this window's last keystrokes go there first,
+// and the other windows hear of them (A1591).
+if (bridge) {
+  setStoreBeforeNoteWindow(async () => {
+    await sources.store('flush');
+    windows.flush();
+  });
+}
 
 // Send feedback (T49): its outbox sends what waits, here and when back online. Its sync facts
 // are the Journal notebook's (the app's own, A827).

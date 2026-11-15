@@ -48,6 +48,59 @@ export function TabMark({ face }: { readonly face: TabFace }) {
 }
 
 /**
+ * What a tab shows (PEN-140): its pin when pinned, its mark, its title, its notebook's name when
+ * two tabs look alike, and × unless pinned. The strip's tabs draw it, and so does the notebook
+ * badge's preview in Settings (A1564), so the badge shows there on a tab as it is.
+ */
+export function TabFaceView({
+  face,
+  closeTip,
+  onClose,
+}: {
+  readonly face: TabFace;
+  readonly closeTip?: string | undefined;
+  readonly onClose?: (() => void) | undefined;
+}) {
+  return (
+    <>
+      {/* A pinned tab starts with its pin, before the badge, and has no × (ac5). */}
+      {face.pinned ? (
+        <span className="tab-pin" aria-hidden="true" data-testid="tab-pinned">
+          <Icon name="pin" size={12} />
+        </span>
+      ) : null}
+      <span className="tab-mark" aria-hidden="true">
+        <TabMark face={face} />
+      </span>
+      {/* The title shortens first, so a look-alike's notebook name stays readable (AC8). */}
+      <span className="tab-title">
+        <bdi>{face.title}</bdi>
+      </span>
+      {face.suffix ? (
+        <span className="tab-suffix" data-testid="tab-notebook">
+          {'· '}
+          <bdi>{face.suffix}</bdi>
+        </span>
+      ) : null}
+      {face.pinned ? null : (
+        <span
+          className="tab-close"
+          aria-hidden="true"
+          data-testid="tab-close"
+          data-tip={closeTip}
+          onClick={(event) => {
+            event.stopPropagation();
+            onClose?.();
+          }}
+        >
+          <Icon name="close" size={12} />
+        </span>
+      )}
+    </>
+  );
+}
+
+/**
  * The main window's tab strip (PEN-140, layout A, A1502): the note pane's first row, one tab
  * per open tab, a badge then the title then ×, + after the last, and the note's bar buttons at
  * its right end (`end`, filled by the note on screen). A tablist with a roving tabindex: ← and →
@@ -258,39 +311,11 @@ export function TabStrip({
           setDrop(null);
         }}
       >
-        {/* A pinned tab starts with its pin, before the badge, and has no × (ac5). */}
-        {face.pinned ? (
-          <span className="tab-pin" aria-hidden="true" data-testid="tab-pinned">
-            <Icon name="pin" size={12} />
-          </span>
-        ) : null}
-        <span className="tab-mark" aria-hidden="true">
-          <TabMark face={face} />
-        </span>
-        {/* The title shortens first, so a look-alike's notebook name stays readable (AC8). */}
-        <span className="tab-title">
-          <bdi>{face.title}</bdi>
-        </span>
-        {face.suffix ? (
-          <span className="tab-suffix" data-testid="tab-notebook">
-            {'· '}
-            <bdi>{face.suffix}</bdi>
-          </span>
-        ) : null}
-        {face.pinned ? null : (
-          <span
-            className="tab-close"
-            aria-hidden="true"
-            data-testid="tab-close"
-            data-tip={withKeys('Close Tab', closeKeys)}
-            onClick={(event) => {
-              event.stopPropagation();
-              tabs.close(face.id);
-            }}
-          >
-            <Icon name="close" size={12} />
-          </span>
-        )}
+        <TabFaceView
+          face={face}
+          closeTip={withKeys('Close Tab', closeKeys)}
+          onClose={() => tabs.close(face.id)}
+        />
       </div>
     );
   };
@@ -338,13 +363,13 @@ export function TabStrip({
         className="icon-btn tab-new"
         data-command="tab.new"
         aria-label="New Tab"
-        data-tip={withKeys('New Tab', newKeys)}
+        data-tip={withKeys('New Tab…', newKeys)}
         data-testid="tab-new"
         onClick={() => commands.run('tab.new')}
       >
         <Icon name="plus" size={16} />
       </button>
-      {overflow.any ? (
+      {faces.length > 0 ? (
         <button
           ref={allButton}
           type="button"
@@ -368,10 +393,10 @@ export function TabStrip({
           id={menu.id}
           x={menu.x}
           y={menu.y}
-          onClose={() => {
+          onClose={(giveFocusBack = true) => {
             const id = menu.id;
             setMenu(null);
-            if (state.tabs.some((tab) => tab.id === id)) focusTab(id);
+            if (giveFocusBack && state.tabs.some((tab) => tab.id === id)) focusTab(id);
           }}
         />
       ) : null}

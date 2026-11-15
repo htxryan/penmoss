@@ -66,7 +66,7 @@ fun WhatsNewScreen(view: NotesView, onOpenReleases: () -> Unit, onBack: () -> Un
     }
 }
 
-/** The version card (PEN-146): this build's version, Current, and where updates come from. */
+/** The version card (PEN-146): this build's version, Current, where updates come from, and Open Source Notices (A1580). */
 @Composable
 private fun VersionCard(version: String) {
     Column(
@@ -84,6 +84,7 @@ private fun VersionCard(version: String) {
             )
         }
         Text(VERSION_UPDATES, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        OpenSourceNoticesLink()
     }
 }
 

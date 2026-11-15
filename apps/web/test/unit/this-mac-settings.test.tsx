@@ -80,7 +80,7 @@ describe('Settings → GitHub (PEN-146)', () => {
   it('offers Sign In with GitHub first, and the token behind Use a Token Instead…', async () => {
     bridge(true);
     await shown();
-    expect(host.querySelector('h2')?.textContent).toBe('GitHub');
+    expect(host.querySelector('h1')?.textContent).toBe('GitHub');
     expect(byTestId('github-account')?.textContent).toContain('Not Signed In');
     expect(byTestId('github-signin-start')?.textContent).toBe('Sign In with GitHub');
     expect(byTestId('github-token-input')).toBeNull();

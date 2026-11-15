@@ -299,6 +299,7 @@ const inView = (row: Element, box: DOMRect) => {
 export function RepoTree({
   hub,
   goal,
+  added,
   reads,
   read,
   onRepo,
@@ -310,6 +311,8 @@ export function RepoTree({
 }: {
   hub: Hub;
   goal: Goal;
+  /** Notebook ids already on this Mac (Add Notebook, A1562): shown Already Added, not opened. */
+  added: ReadonlySet<string>;
   reads: ReadonlyMap<string, RepoRead>;
   read: (repo: GitHubRepo) => void;
   onRepo: (repo: GitHubRepo) => void;
@@ -440,10 +443,13 @@ export function RepoTree({
     if (waiting.length > 0) setRetry((now) => now + 1);
   };
 
-  const firstNotebook = shown.find((each) => each.notebooks.length > 0);
+  const isAdded = (folder: RepoFolder) => folder.notebook !== null && added.has(folder.notebook.id);
+  const firstNotebook = shown
+    .flatMap(({ repo, notebooks }) => notebooks.map((folder) => ({ repo, folder })))
+    .find(({ folder }) => !isAdded(folder));
   const chosen =
     selected ??
-    (firstNotebook ? `${firstNotebook.repo.fullName}\n${firstNotebook.notebooks[0]!.path}` : null);
+    (firstNotebook ? `${firstNotebook.repo.fullName}\n${firstNotebook.folder.path}` : null);
 
   const signedInLine = (
     <p className="fr-lead fr-small" data-testid="first-run-via">
@@ -610,7 +616,8 @@ export function RepoTree({
                   ) : (
                     notebooks.map((folder) => {
                       const key = `${repo.fullName}\n${folder.path}`;
-                      const isChosen = chosen === key;
+                      const here = isAdded(folder);
+                      const isChosen = chosen === key && !here;
                       return (
                         <li
                           key={key}
@@ -618,20 +625,27 @@ export function RepoTree({
                           data-testid="first-run-notebook"
                           data-repo={repo.fullName}
                           data-dir={folder.path}
-                          onClick={() => setSelected(key)}
+                          aria-disabled={here || undefined}
+                          onClick={here ? undefined : () => setSelected(key)}
                         >
                           <Icon name="notebook" size={16} />
                           <strong>
                             <Marked text={folder.notebook.name} query={q} />
                           </strong>
                           <Location dir={folder.path} />
-                          <Action
-                            primary={isChosen}
-                            testId="first-run-notebook-open"
-                            onClick={() => onOpen(repo, folder)}
-                          >
-                            Open
-                          </Action>
+                          {here ? (
+                            <span className="chip fr-chip" data-testid="first-run-already-added">
+                              Already Added
+                            </span>
+                          ) : (
+                            <Action
+                              primary={isChosen}
+                              testId="first-run-notebook-open"
+                              onClick={() => onOpen(repo, folder)}
+                            >
+                              Open
+                            </Action>
+                          )}
                         </li>
                       );
                     })
@@ -662,6 +676,7 @@ export function RepoTree({
 export function RepoPicked({
   repo,
   via,
+  added,
   loaded,
   read,
   onOpen,
@@ -672,6 +687,8 @@ export function RepoPicked({
 }: {
   repo: GitHubRepo;
   via: GitHubVia;
+  /** Notebook ids already on this Mac: shown Already Added, not opened again. */
+  added: ReadonlySet<string>;
   loaded: RepoRead | undefined;
   read: (repo: GitHubRepo, again?: boolean) => void;
   onOpen: (place: Place, name: string) => void;
@@ -730,6 +747,7 @@ export function RepoPicked({
 
   const { folders } = loaded;
   const notebooks = notebooksIn(folders);
+  const isAdded = (each: { notebook: { id: string } }) => added.has(each.notebook.id);
   const branchNow = repo.defaultBranch || 'main';
   const rootIsNotebook = notebooks.some((each) => each.path === '');
 
@@ -790,13 +808,19 @@ export function RepoPicked({
           branch={branchNow}
           notebook={only.notebook.name}
         />
-        <Action
-          primary
-          testId="first-run-open"
-          onClick={() => onOpen(placeIn(repo, via, only.path), only.notebook.name)}
-        >
-          Open {only.notebook.name}
-        </Action>
+        {isAdded(only) ? (
+          <p className="fr-lead fr-small" data-testid="first-run-already-added">
+            Already Added: it is on this Mac.
+          </p>
+        ) : (
+          <Action
+            primary
+            testId="first-run-open"
+            onClick={() => onOpen(placeIn(repo, via, only.path), only.notebook.name)}
+          >
+            Open {only.notebook.name}
+          </Action>
+        )}
         {rootIsNotebook ? null : (
           <form id={formId} className="fr-another" onSubmit={startAnother}>
             <p className="fr-or" aria-hidden="true">
@@ -837,7 +861,10 @@ export function RepoPicked({
 
   // 4.7: several notebooks: pick one.
   if (notebooks.length > 1) {
-    const picked = notebooks.find((each) => each.path === pick) ?? notebooks[0]!;
+    const picked =
+      notebooks.find((each) => each.path === pick) ??
+      notebooks.find((each) => !isAdded(each)) ??
+      notebooks[0]!;
     return (
       <Frame
         name="repo"
@@ -848,6 +875,7 @@ export function RepoPicked({
         actions={
           <Action
             primary
+            disabled={isAdded(picked)}
             testId="first-run-open"
             onClick={() => onOpen(placeIn(repo, via, picked.path), picked.notebook.name)}
           >
@@ -865,10 +893,16 @@ export function RepoPicked({
                 type="radio"
                 name={`${formId}-notebook`}
                 checked={each.path === picked.path}
+                disabled={isAdded(each)}
                 onChange={() => setPick(each.path)}
               />
               <strong className="fr-grow">{each.notebook.name}</strong>
               <Location dir={each.path} />
+              {isAdded(each) ? (
+                <span className="chip fr-chip" data-testid="first-run-already-added">
+                  Already Added
+                </span>
+              ) : null}
             </label>
           ))}
         </div>

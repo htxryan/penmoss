@@ -6,7 +6,15 @@ import { TrashedToast } from '../trash/TrashedToast';
 import { showToast } from '../toasts/toasts';
 import { chooseTheme, resolveThemeSettings, toggleDarkMode } from '@penmoss/ui/theme';
 import { WorkspaceError } from '@penmoss/model/workspace';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { CaptureDialog } from '../capture/CaptureDialog';
 import { FeedbackDialog, type FeedbackSnapshot } from '../feedback/FeedbackDialog';
 import { FeedbackToasts } from '../feedback/FeedbackToasts';
@@ -16,7 +24,7 @@ import { useNoteList, useNotes } from '../notes/hooks';
 import { RESERVED_KEYS } from '../notes/service';
 import { readOpened, recentNotes } from '../notes/recent';
 import { desktop } from '../desktop/bridge';
-import { hasTabs, navigate, notePath, openPath, useLocation } from '../router';
+import { REVEAL, hasTabs, navigate, notePath, openPath, useLocation } from '../router';
 import { SearchOverlay } from '../search/SearchOverlay';
 import { NotebookMeaning } from '../search/meaning';
 import { SearchService } from '../search/service';
@@ -35,13 +43,13 @@ import { FolderPicker } from '../workspace/FolderPicker';
 import { moveRequest } from '../workspace/move-request';
 import { moveSummary } from '../workspace/selection';
 import { folderTreeOf } from '../workspace/tree';
-import { useWorkspace } from '../workspace/hooks';
+import { useWorkspace, WorkspaceContext } from '../workspace/hooks';
 import { folderChoices, planMoveTo } from '../workspace/model';
 import { useFolderTree } from '../workspace/tree';
 import { useThemeController } from '../theme/hooks';
 import { ThemePicker } from '../theme/ThemePicker';
 import { settingsBindings } from './bindings';
-import { CommandCenter } from './center';
+import { CommandCenter, memoryBindings } from './center';
 import { Cheatsheet } from './Cheatsheet';
 import { COMMANDS } from './definitions';
 import { CommandsContext, useCommand, useCommands } from './hooks';
@@ -84,6 +92,37 @@ export function CommandsProvider({ children }: { children: ReactNode }) {
       {children}
     </CommandsContext.Provider>
   );
+}
+
+/**
+ * A registry of its own for a Settings preview (A1564): the real sidebar or note drawn there
+ * registers its commands (the calendar's, the tree's, the note's) here, where no key, menu or
+ * palette reaches them, so they never stand in for the app's. Its keys are the app's, so the
+ * preview's buttons name the same shortcuts.
+ */
+export function PreviewCommands({ children }: { children: ReactNode }) {
+  // The settings around it (the Primary Notebook's); none in a view drawn alone: the defaults.
+  const workspace = useContext(WorkspaceContext);
+  const center = useMemo(
+    () =>
+      new CommandCenter(
+        COMMANDS,
+        workspace
+          ? settingsBindings({
+              settings: () => workspace.settings(),
+              // A preview changes nothing.
+              setSetting: () => undefined,
+              subscribe: (listener) => workspace.subscribe(listener),
+            })
+          : memoryBindings(),
+      ),
+    [workspace],
+  );
+  useLayoutEffect(() => {
+    center.start();
+    return () => center.dispose();
+  }, [center]);
+  return <CommandsContext.Provider value={center}>{children}</CommandsContext.Provider>;
 }
 
 /**
@@ -243,13 +282,48 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
       openPath(notePath(id), where);
       return;
     }
+    // A note open in a tab already: that tab (A1581).
     notes.requestBodyFocus(id);
-    navigate(notePath(id));
+    openPath(notePath(id), 'current', REVEAL);
+  };
+
+  /**
+   * New Tab's picker closing with the tabs on screen as they were (Escape, a click outside, ⌘↩):
+   * focus goes back where it was, and from + to the tab on screen (A1594).
+   */
+  const leaveNewTab = () => {
+    if (returnFocus.current?.dataset['testid'] === 'tab-new') {
+      const tab = document.querySelector<HTMLElement>(
+        '.tab-strip [role="tab"][aria-selected="true"]',
+      );
+      if (tab) returnFocus.current = tab;
+    }
+    close();
+  };
+
+  /**
+   * A note picked in New Tab's picker (A1594): a new tab in front, or behind with ⌘↩. A note open
+   * in a tab already gets no second one, as in the sidebar (A1574) and Search (A1581): a pick goes
+   * to its tab, and ⌘↩ points that tab out.
+   */
+  const openInNewTab = (id: string, where: TabIntent = 'foreground') => {
+    if (where === 'background') {
+      leaveNewTab();
+    } else {
+      close(false);
+      notes.requestBodyFocus(id);
+    }
+    openPath(notePath(id), where, REVEAL);
   };
 
   useCommand('app.palette', () => {
     if (overlay?.kind === 'palette' && overlay.mode === 'all') close();
     else open({ kind: 'palette', mode: 'all' });
+  });
+  // New Tab's picker (A1594): a note, or New Note, in a new tab; Esc leaves the tabs as they were.
+  useCommand('app.newTabPicker', () => {
+    if (overlay?.kind === 'palette' && overlay.mode === 'newTab') close();
+    else open({ kind: 'palette', mode: 'newTab' });
   });
   useCommand('app.quickOpen', () => {
     if (overlay?.kind === 'palette' && overlay.mode === 'notes') close();
@@ -449,9 +523,15 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
             key={overlay.mode}
             mode={overlay.mode}
             notes={recentNotes(openList, readOpened(deviceStorage()), null, openList.length)}
-            onClose={() => close()}
-            onOpenNote={openNote}
+            onClose={() => (overlay.mode === 'newTab' ? leaveNewTab() : close())}
+            onOpenNote={overlay.mode === 'newTab' ? openInNewTab : openNote}
             onRunCommand={(id) => {
+              // New Tab's New Note: the note in a new tab, which takes focus (A1594).
+              if (overlay.mode === 'newTab') {
+                close(false);
+                commands.run(id, { source: 'palette', newTab: 'foreground' });
+                return;
+              }
               close();
               commands.run(id, { source: 'palette' });
             }}
@@ -488,8 +568,9 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
                 openPath(path, where);
                 return;
               }
+              // A note open in a tab already: that tab (A1581).
               notes.requestBodyFocus(id);
-              navigate(path);
+              openPath(path, 'current', REVEAL);
             }}
             onClose={() => close()}
           />

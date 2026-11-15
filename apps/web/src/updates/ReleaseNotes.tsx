@@ -1,11 +1,63 @@
 /**
  * The release notes in Settings → Updates (PEN-108): what the offered update brings, what this
  * version brought, and earlier versions, collapsed. Each block is a heading with its notes
- * grouped by kind, each group a heading and a list, so a screen reader announces them.
+ * grouped by kind, each group a heading and a list, so a screen reader announces them. What's
+ * New holds them folded away (A1567), its summary saying the version and how many changes.
  */
-import { useEffect, useId, useRef } from 'react';
+import { Icon } from '@penmoss/ui/icons';
+import { useEffect, useId, useRef, useState } from 'react';
 import { RELEASES_URL, useReleaseNotes } from './updates';
-import { noteText, notesView, WHATS_NEW_PATH, type NotesBlock } from './notes';
+import {
+  noteText,
+  notesView,
+  WHATS_NEW_PATH,
+  whatsNewSummary,
+  type NotesBlock,
+  type NotesView,
+} from './notes';
+
+/** Settings → Updates was opened to show what changed: the notice after an update (PEN-110). */
+const openedToShow = () =>
+  window.location.search === WHATS_NEW_PATH.slice(WHATS_NEW_PATH.indexOf('?'));
+
+/**
+ * Settings → Updates' What's New (A1567): a disclosure, folded by default, its summary the
+ * section's heading with the version and its count of changes. Open when the page was opened to
+ * show what changed (the notice after an update) and while an update is offered, which is what
+ * the notes are for then. Its state lasts while the page is open, and is not kept.
+ */
+export function WhatsNew({ current, offered }: { current: string; offered: string | null }) {
+  const file = useReleaseNotes();
+  const [open, setOpen] = useState(() => openedToShow() || offered !== null);
+  // An update found while the page is open: what it brings, unfolded.
+  const [seen, setSeen] = useState(offered);
+  if (offered !== seen) {
+    setSeen(offered);
+    if (offered !== null) setOpen(true);
+  }
+  const id = useId();
+  const view = notesView(file, current, offered);
+  return (
+    <details
+      className="updates-whats-new"
+      data-setting="whats-new"
+      data-testid="whats-new"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary className="lf-sub updates-whats-new-summary" data-testid="whats-new-summary">
+        <Icon name="chevR" size={14} className="updates-whats-new-chevron" />
+        <h3 className="lf-sub-name" id={`${id}-h`}>
+          What’s New
+        </h3>
+        <span className="lf-sub-hint" data-testid="whats-new-count">
+          {whatsNewSummary(view, current, offered)}
+        </span>
+      </summary>
+      <ReleaseNotesView view={view} />
+    </details>
+  );
+}
 
 function Block({
   block,
@@ -59,9 +111,8 @@ function Groups({ block }: { block: NotesBlock }) {
   );
 }
 
-export function ReleaseNotes({ current, offered }: { current: string; offered: string | null }) {
-  const file = useReleaseNotes();
-  const view = notesView(file, current, offered);
+/** The notes, or a link to GitHub while there are none to show. */
+function ReleaseNotesView({ view }: { readonly view: NotesView }) {
   if (view.status !== 'ok') {
     return (
       <p className="muted release-notes-missing" data-testid="release-notes-missing">
@@ -79,11 +130,7 @@ export function ReleaseNotes({ current, offered }: { current: string; offered: s
     <div className="release-notes" data-testid="release-notes">
       {view.offered ? <Block block={view.offered} testId="release-notes-offered" /> : null}
       {view.current ? (
-        <Block
-          block={view.current}
-          testId="release-notes-current"
-          scrollTo={window.location.search === WHATS_NEW_PATH.slice(WHATS_NEW_PATH.indexOf('?'))}
-        />
+        <Block block={view.current} testId="release-notes-current" scrollTo={openedToShow()} />
       ) : null}
       {view.earlier.length > 0 ? (
         <details className="release-notes-earlier" data-testid="release-notes-earlier">

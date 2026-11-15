@@ -17,7 +17,7 @@ import { useKeys } from '../commands/hooks';
 import { setTitle } from '@penmoss/model/note';
 import { useNotes } from '../notes/hooks';
 import { oneLineTitle } from '@penmoss/model/title';
-import { hasTabs, isPlainLeftClick, isWindowClick, navigate, notePath, openPath } from '../router';
+import { REVEAL, hasTabs, navigate, notePath, openPath } from '../router';
 import { closeTabsOfTrashed } from '../tabs/trash';
 import { openNoteWindow } from '../window/open';
 import { COPIED_AGENT_REFERENCE, useCopyAgentReference } from '../notes/agent-reference';
@@ -25,11 +25,11 @@ import { useQuickAccess } from '../notes/quick-access';
 import { MAX_QUICK_ACCESS } from '@penmoss/core/quick-access';
 import { ConfirmDialog } from '../shell/ConfirmDialog';
 import { ContextMenu } from '../shell/ContextMenu';
-import { ClickHint } from '../shell/ClickHint';
+import { OpenNoteItems } from '../shell/OpenNoteItems';
 import { MenuItem } from '../shell/Menu';
 import { trashAll, trashedNote } from '../trash/trashed';
 import { moveRequest } from './move-request';
-import { isToggleClick, notesLabel, notesNamed, toggled } from './selection';
+import { isToggleClick, notesLabel, notesNamed, toggled, treeNoteClick } from './selection';
 import { duplicateNote, itemsCount, transfer, type TransferResult } from './transfer';
 import { useExpanded } from './expanded';
 import {
@@ -152,16 +152,28 @@ export function FolderTree({
   // closed, and open again when it moves), once the workspace says where it is, and bring
   // its row into view (T39).
   // Reveal in Sidebar (PEN-140): the open note's folders again, its row scrolled to and focused.
+  // A tab behind asks before it is the active one (its menu makes it so): the reveal waits for it.
   const [revealAsked, setRevealAsked] = useState(0);
+  const revealFor = useRef<string | null>(null);
   useOnRevealNote((id) => {
-    if (id !== activeId) return;
-    revealed.current = null;
-    pendingFocus.current = rowKey({ kind: 'note', id });
+    revealFor.current = id;
     setRevealAsked((count) => count + 1);
   });
   useEffect(() => {
     if (!activeId) return;
     void revealAsked;
+    if (revealFor.current === activeId) {
+      revealFor.current = null;
+      revealed.current = null;
+      const key = rowKey({ kind: 'note', id: activeId });
+      pendingFocus.current = key;
+      // Its folders open already, no render follows to place the focus: place it now.
+      const element = findRow(treeRef.current, key);
+      if (element) {
+        pendingFocus.current = null;
+        element.focus();
+      }
+    }
     // Read from this device is all there is to wait for (D49): no server copy is on its way.
     const around = revealFolders(activeId, snapshot, tree, loaded);
     if (around === null) return;
@@ -302,9 +314,10 @@ export function FolderTree({
     if (id) focusRow(rowKey({ kind: 'note', id }));
   };
 
+  /** A click or Enter: the note here, or in the tab that has it already (A1574). */
   const openNote = (row: NoteRow) => {
     onCurrentFolderChange(row.parentId);
-    navigate(notePath(row.id));
+    openPath(notePath(row.id), 'current', REVEAL);
   };
 
   // --- the context menu (A570) ---
@@ -500,41 +513,52 @@ export function FolderTree({
       setPicked([]);
       setPickAnchor(row.key);
       activateFolder(row);
-    } else if (isWindowClick(event)) {
-      // ⌥-click (Alt-click): the note in a new window (T45, A710). Not the browser's own
-      // ⌥-click on the row's link, which downloads it.
-      event.preventDefault();
-      openNoteWindow(row.id);
-    } else if (event.button === 0 && event.shiftKey && !event.altKey) {
-      // A range, not a new window (A570); with a folder at its start, folders too (T68).
-      event.preventDefault();
-      if (pickedFolders.length > 0 || pickAnchor?.startsWith('folder:')) selection.pickRange(row);
-      else selection.selectRange(row);
-    } else if (event.button === 0 && isToggleClick(event, isApplePlatform()) && !event.altKey) {
-      // One more, not a new tab: ⌘ on a Mac, where Ctrl-click is a right-click (A570).
-      event.preventDefault();
-      selection.toggleSelected(row);
-      setPickAnchor(row.key);
-    } else if (isPlainLeftClick(event)) {
-      event.preventDefault();
-      setSelection([row.id]);
-      setAnchor(row.id);
-      setPicked([]);
-      setPickAnchor(row.key);
-      openNote(row);
+      return;
+    }
+    const click = treeNoteClick(event, {
+      apple: isApplePlatform(),
+      tabs: hasTabs(),
+      picked: selected.length + pickedFolders.length,
+    });
+    if (click === null) return;
+    event.preventDefault();
+    switch (click) {
+      case 'window':
+        // ⌥-click (Alt-click): the note in a new window (T45, A710). Not the browser's own
+        // ⌥-click on the row's link, which downloads it.
+        openNoteWindow(row.id);
+        return;
+      case 'background':
+      case 'foreground':
+        // ⌘-click (Ctrl-click) on one row: a new tab, the selection as it was (A1570).
+        openPath(notePath(row.id), click, REVEAL);
+        return;
+      case 'range':
+        // A range, not a new window (A570); with a folder at its start, folders too (T68).
+        if (pickedFolders.length > 0 || pickAnchor?.startsWith('folder:')) selection.pickRange(row);
+        else selection.selectRange(row);
+        return;
+      case 'toggle':
+        // One more, or one fewer, while several rows are picked (A570, A1570).
+        selection.toggleSelected(row);
+        setPickAnchor(row.key);
+        return;
+      case 'current':
+        setSelection([row.id]);
+        setAnchor(row.id);
+        setPicked([]);
+        setPickAnchor(row.key);
+        openNote(row);
     }
   };
 
-  /**
-   * A middle click on a note opens it in a new tab behind this one (PEN-140, A1498). ⌘-click
-   * stays the tree's own, one more row picked (A570); its menu has Open in New Tab.
-   */
+  /** A middle click on a note opens it in a new tab behind this one (PEN-140, A1498). */
   const onAuxClick = (event: MouseEvent<HTMLDivElement>) => {
     if (event.button !== 1 || !hasTabs()) return;
     const row = rowOf(rowElement(event));
     if (row?.kind !== 'note') return;
     event.preventDefault();
-    openPath(notePath(row.id), 'background');
+    openPath(notePath(row.id), 'background', REVEAL);
   };
 
   const onContextMenu = (event: MouseEvent<HTMLDivElement>) => {
@@ -710,7 +734,7 @@ export function FolderTree({
                 hasTabs()
                   ? (id) => {
                       closeMenu();
-                      openPath(notePath(id), 'background');
+                      openPath(notePath(id), 'background', REVEAL);
                     }
                   : null
               }
@@ -854,6 +878,12 @@ function NoteMenuItems({
     <>
       {only ? (
         <>
+          {/* The open group leads, then New Note Here and New Folder Here (Ryan, A1571). */}
+          <OpenNoteItems
+            testIdPrefix="note"
+            onTab={onTab ? () => onTab(only) : null}
+            onWindow={() => onWindow(only)}
+          />
           <MenuItem icon="plus" data-testid="note-new-note" onClick={() => onNewNote(only)}>
             New Note Here
           </MenuItem>
@@ -865,26 +895,6 @@ function NoteMenuItems({
             New Folder Here
           </MenuItem>
           <div className="menu-sep" role="separator" />
-          {/* The open group: Open in New Tab leads it, above Open in New Window, each with its
-              click (PEN-140, mockup ac2). The tree's ⌘-click picks a row (A570), so a tab is
-              its middle click. */}
-          {onTab ? (
-            <MenuItem
-              icon="plus"
-              data-testid="note-open-tab"
-              hint={<ClickHint modifier="middle" />}
-              onClick={() => onTab(only)}
-            >
-              Open in New Tab
-            </MenuItem>
-          ) : null}
-          <MenuItem
-            icon="windowNew"
-            hint={<ClickHint modifier="alt" />}
-            onClick={() => onWindow(only)}
-          >
-            Open in New Window
-          </MenuItem>
           <MenuItem
             icon="agentRef"
             onClick={() => onCopyReference(only)}

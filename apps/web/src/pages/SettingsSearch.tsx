@@ -9,6 +9,7 @@ import { useId, type KeyboardEvent, type ReactNode } from 'react';
 import { isPlainLeftClick, settingsPath } from '../router';
 import type { SettingEntry, SettingMatch } from './settings-index';
 import type { SettingsSearchState } from './settings-search';
+import { SettingsHeader } from './SettingsHeader';
 
 export function SettingsSearch({
   search,
@@ -67,10 +68,10 @@ export function SettingsSearchResults({
   const id = useId();
   const { query, results, input, listId } = search;
   const shownQuery = query.trim();
-  const heading =
+  const count =
     results.length === 0
-      ? `No Settings Match “${shownQuery}”`
-      : `${results.length} ${results.length === 1 ? 'Setting Matches' : 'Settings Match'} “${shownQuery}”`;
+      ? `No settings match “${shownQuery}”.`
+      : `${results.length} ${results.length === 1 ? 'setting matches' : 'settings match'} “${shownQuery}”.`;
   const onKeyDown = (event: KeyboardEvent<HTMLUListElement>) => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Escape') return;
     const links = [...event.currentTarget.querySelectorAll<HTMLElement>('a')];
@@ -94,9 +95,7 @@ export function SettingsSearchResults({
       aria-labelledby={`${id}-h`}
       data-testid="settings-search-results"
     >
-      <h2 id={`${id}-h`} aria-live="polite">
-        {heading}
-      </h2>
+      <SettingsHeader id={`${id}-h`} title="Search Results" intro={count} live />
       {results.length > 0 ? (
         <ul id={listId} className="setting-results" onKeyDown={onKeyDown}>
           {results.map(({ entry, marks, place }) => (

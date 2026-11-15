@@ -8,6 +8,8 @@
 import { Layout, NotebookHistory, type GitVersion } from '@penmoss/git-notebook';
 import { revertChange } from '@penmoss/model/revert';
 import { restoreContent } from '@penmoss/model/history';
+import { versionMarkdown } from '@penmoss/model/markdown';
+import { createYjs14Replica } from '@penmoss/model/yjs14';
 import type { Notes } from '../notes/service';
 import type { GitSource } from '../sources/git-source';
 import { IpcGitTransport } from '../sources/ipc-transport';
@@ -19,6 +21,8 @@ export interface HistoryAuthor {
 }
 export interface HistoryVersion {
   readonly id: number;
+  /** Its commit, in a git notebook (View shows it, A1572). */
+  readonly commit?: string;
   readonly createdAt: number;
   readonly reason: string;
   readonly summary: string;
@@ -90,6 +94,12 @@ export interface HistorySource {
    */
   watch?(listener: () => void): () => void;
   detail(version: number): Promise<HistoryDetail | null>;
+  /**
+   * The note as it is now, as a version's markdown is (its title and tags, then the body), read
+   * from this window's copy: View This Version's right side (A1572). Null when there is no copy.
+   * Absent where there is no history to compare with, and View is not offered.
+   */
+  readonly current?: () => Promise<string | null>;
   /** Makes a version of the note as it is now. */
   save(): Promise<void>;
   restore(version: number): Promise<HistoryChange>;
@@ -188,6 +198,17 @@ export function gitHistory(source: GitSource, notes: Notes, noteId: string): His
         }),
       ),
     detail: (version) => reader().detail(noteId, version),
+    current: async () => {
+      const state = await notes.stateOf(noteId);
+      if (!state) return null;
+      const replica = createYjs14Replica();
+      try {
+        replica.applyUpdate(state);
+        return versionMarkdown(replica.doc);
+      } finally {
+        replica.destroy();
+      }
+    },
     save: pushNote,
     restore: async (version) => {
       await ownerFirst(false);

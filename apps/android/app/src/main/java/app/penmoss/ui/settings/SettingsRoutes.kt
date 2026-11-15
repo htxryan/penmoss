@@ -126,13 +126,33 @@ internal fun modeLabel(mode: String) = when (mode) {
 internal fun destinationLabel(destination: String) = if (destination == "inbox") "New Note in Inbox" else "Today’s Note"
 
 /** A notebook as Settings lists it (PEN-146): its row in the Notebooks group. */
-data class NotebookEntry(val localId: String, val name: String, val primary: Boolean, val status: String, val dot: DotState)
+data class NotebookEntry(
+    val localId: String,
+    val name: String,
+    val primary: Boolean,
+    val status: String,
+    val dot: DotState,
+    /** Its badge (A1579), before its name as the Mac's nav entry has it. */
+    val badge: app.penmoss.engine.settings.NotebookBadge? = null,
+)
 
 /** The notebooks' rows, the primary first as the Mac lists them. */
-internal fun notebookEntries(views: List<GitNotebookView>, statuses: Map<String, GitEngineStatus>, primary: String?): List<NotebookEntry> =
+internal fun notebookEntries(
+    views: List<GitNotebookView>,
+    statuses: Map<String, GitEngineStatus>,
+    primary: String?,
+    badges: Map<String, app.penmoss.engine.settings.NotebookBadge> = emptyMap(),
+): List<NotebookEntry> =
     views.map { view ->
         val status = statuses[view.localId]
-        NotebookEntry(view.localId, view.name, view.localId == primary, app.penmoss.git.gitStatusLine(status, view.host), app.penmoss.git.dotOf(status))
+        NotebookEntry(
+            view.localId,
+            view.name,
+            view.localId == primary,
+            app.penmoss.git.gitStatusLine(status, view.host),
+            app.penmoss.git.dotOf(status),
+            badges[view.localId] ?: app.penmoss.engine.settings.NotebookBadges.defaultBadge(view.notebookId, view.name),
+        )
     }.sortedByDescending { it.primary }
 
 /**
@@ -179,6 +199,7 @@ internal fun settingsGroups(
                 if (notebook.primary) "Primary · ${notebook.status.replaceFirstChar { it.lowercase() }}" else notebook.status,
                 route = SettingsRoutes.notebook(notebook.localId),
                 dot = notebook.dot,
+                badge = notebook.badge,
             )
         } + SettingsSection("git", "All Notebooks", app.penmoss.git.gitSummary(notebooks.size), SettingsIcons.Terminal, CommandRoutes.GIT_NOTEBOOKS),
     ),
@@ -212,6 +233,7 @@ internal fun SettingsHomeRoute(host: SettingsHost, onBack: () -> Unit) {
     val hub = device.gitIfAny
     val views = hub?.list?.collectAsStateWithLifecycle()?.value.orEmpty()
     val statuses = hub?.statuses?.collectAsStateWithLifecycle()?.value.orEmpty()
+    val badges = hub?.badges?.collectAsStateWithLifecycle(emptyMap())?.value.orEmpty()
     val primary = rememberPrimary(host)
     val daily = primary?.settings?.collectAsStateWithLifecycle()?.value
     var storage by remember { mutableStateOf<String?>(null) }
@@ -222,7 +244,7 @@ internal fun SettingsHomeRoute(host: SettingsHost, onBack: () -> Unit) {
             state.settings,
             themeName,
             daily = daily?.settings ?: state.settings,
-            notebooks = notebookEntries(views, statuses, hub?.journal()),
+            notebooks = notebookEntries(views, statuses, hub?.journal(), badges),
             storage = storage,
             github = github,
         ),
@@ -316,6 +338,7 @@ internal fun AppearanceRoute(graph: DeviceGraph, onEditTheme: (String) -> Unit, 
         ),
         // The note in the preview is the editor page itself, as the theme editor's (A418).
         notePreview = { modifier -> ThemePreview(resolved.theme, variant, modifier) },
+        homeShortcuts = HomeShortcuts.of(settings),
     )
 }
 

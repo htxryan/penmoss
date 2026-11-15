@@ -8,6 +8,7 @@ import {
   activeTab,
   currentEntry,
   initialState,
+  isBareHome,
   MAX_SAVED,
   openTab,
   setPinned,
@@ -135,6 +136,61 @@ describe('the address and the browser’s history (A1497)', () => {
     expect(tabs.launchNote).toBe(C);
   });
 
+  it('drops Home tabs a session saved before A1594 holds, and a window left with none is bare', () => {
+    const ids = counter();
+    const store = memory();
+    let saved = initialState(ids, note(A));
+    saved = {
+      ...saved,
+      tabs: [
+        ...saved.tabs,
+        { id: 'home', pinned: false, entries: [{ path: '/', scrollTop: 0 }], index: 0 },
+      ],
+    };
+    // A tab whose history starts at Home keeps its note.
+    saved = {
+      ...saved,
+      tabs: [
+        ...saved.tabs,
+        {
+          id: 'old',
+          pinned: false,
+          entries: [
+            { path: '/', scrollTop: 0 },
+            { path: note(B), scrollTop: 0 },
+          ],
+          index: 1,
+        },
+      ],
+      active: 'home',
+    };
+    save(store, saved);
+    const tabs = new TabsController({ storage: store, ids, location: '/' });
+    const paths = tabs.getState().tabs.map((tab) => tab.entries.map((entry) => entry.path));
+    expect(paths).toEqual([[note(A)], [note(B)]]);
+    expect(activePath(tabs.getState())).toBe(note(A));
+    const bare = memory();
+    save(bare, initialState(ids, '/'));
+    expect(isBareHome(new TabsController({ storage: bare, ids, location: '/' }).getState())).toBe(
+      true,
+    );
+  });
+
+  it('asks for New Tab’s picker once when the window loads at /?tab=new (A1594)', () => {
+    const ids = counter();
+    const store = memory();
+    save(store, initialState(ids, note(A)));
+    const tabs = new TabsController({ storage: store, ids, location: '/?tab=new' });
+    expect(tabs.getState().tabs.map((tab) => currentEntry(tab).path)).toEqual([note(A)]);
+    expect(tabs.takeNewTabAsk()).toBe(true);
+    expect(tabs.takeNewTabAsk()).toBe(false);
+    let told = 0;
+    tabs.subscribe(() => told++);
+    tabs.askNewTab();
+    expect(told).toBe(1);
+    expect(tabs.takeNewTabAsk()).toBe(true);
+  });
+
   it('sends navigate to the active tab, and Back and Forward step it', () => {
     const ids = counter();
     const tabs = installMainTabs({ storage: memory(), ids, location: '/' });
@@ -142,13 +198,15 @@ describe('the address and the browser’s history (A1497)', () => {
     navigate(note(B));
     expect(window.location.pathname).toBe(note(B));
     expect(historyPlace()).toEqual({ back: true, forward: false });
-    tabs.newTab();
-    expect(window.location.pathname).toBe('/');
+    tabs.open(note(C), false);
+    expect(window.location.pathname).toBe(note(C));
     expect(historyPlace()).toEqual({ back: false, forward: false });
     tabs.activate(tabs.getState().tabs[0]!.id);
     goBack();
     expect(window.location.pathname).toBe(note(A));
-    expect(activeTab(tabs.getState()).index).toBe(1);
+    // Home is in no tab's history (A1594): the note took the bare Home's place.
+    expect(activeTab(tabs.getState()).index).toBe(0);
+    expect(historyPlace()).toEqual({ back: false, forward: true });
   });
 
   it('steps the active tab when the browser goes back', () => {
@@ -185,7 +243,7 @@ describe('the address and the browser’s history (A1497)', () => {
     window.history.pushState(null, '', note(C));
     window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
     expect(activePath(tabs.getState())).toBe(note(C));
-    expect(activeTab(tabs.getState()).entries.map((entry) => entry.path)).toEqual(['/', note(C)]);
+    expect(activeTab(tabs.getState()).entries.map((entry) => entry.path)).toEqual([note(C)]);
   });
 
   it('saves a moment after a change, and at once as the page goes', () => {
@@ -197,9 +255,29 @@ describe('the address and the browser’s history (A1497)', () => {
       expect(store.values.has(TABS_KEY)).toBe(false);
       vi.advanceTimersByTime(400);
       expect(load(store)?.tabs[0]?.entries.at(-1)?.path).toBe(note(A));
-      tabs.newTab();
+      tabs.open(note(B), false);
       window.dispatchEvent(new Event('pagehide'));
       expect(load(store)?.tabs).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('saves once more as its window closes, then never again (A1577)', () => {
+    vi.useFakeTimers();
+    try {
+      const store = memory();
+      const tabs = installMainTabs({ storage: store, ids: counter(), location: '/' });
+      navigate(note(A));
+      tabs.closeWindow();
+      expect(load(store)?.tabs[0]?.entries.at(-1)?.path).toBe(note(A));
+      // A main window opened while this one still pushes, out of sight, saves its own tabs:
+      // this page's later changes and its `pagehide` never write over them.
+      store.values.set(TABS_KEY, 'the new window’s');
+      tabs.open(note(B), false);
+      vi.advanceTimersByTime(400);
+      window.dispatchEvent(new Event('pagehide'));
+      expect(store.values.get(TABS_KEY)).toBe('the new window’s');
     } finally {
       vi.useRealTimers();
     }

@@ -71,7 +71,11 @@ for (const mode of ['light', 'dark'] as const) {
     await go(page, '/settings/updates');
     await expect(page.locator('html')).toHaveAttribute('data-mode', mode);
 
+    // What's New is folded away until opened (A1567).
     const current = page.getByTestId('release-notes-current');
+    await expect(current).toBeHidden();
+    await page.getByTestId('whats-new-summary').click();
+    await expect(current).toBeVisible();
     await expect(current.getByRole('heading', { level: 3 })).toHaveText('In this version');
     await expect(current.getByRole('heading', { level: 4 })).toHaveText([
       'New',
@@ -132,6 +136,8 @@ test('without a release-notes file, Settings → Updates links to GitHub', async
   const { page } = launched;
   await gitNotebook(launched);
   await go(page, '/settings/updates');
+  // What's New is folded away until it is opened (A1567).
+  await page.getByTestId('whats-new-summary').click();
   const missing = page.getByTestId('release-notes-missing');
   await expect(missing).toContainText('Release notes show once Penmoss can reach GitHub');
   await expect(missing.getByRole('link')).toHaveAttribute(
@@ -174,6 +180,9 @@ test("after an update, a notice says so once and What's New opens this version's
   opened.push(again);
   // The same data directory: its notebook is already there.
   await go(again.page, '/settings/updates');
+  // Opened as usual, What's New is folded away again (A1567); a click shows this version's notes.
+  await expect(again.page.getByTestId('whats-new')).not.toHaveAttribute('open');
+  await again.page.getByTestId('whats-new-summary').click();
   await expect(again.page.getByTestId('release-notes-current')).toBeVisible();
   await expect(again.page.getByTestId('updated-notice')).toHaveCount(0);
 });

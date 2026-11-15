@@ -227,6 +227,12 @@ export interface HistoryDriver {
   open(path: string, background: boolean): void;
   /** A page asked for from outside the window's pages: the tab showing it, else a new one. */
   show(path: string): void;
+  /**
+   * A sidebar's note already open in a tab (A1574): a plain click or ⇧⌘-click makes that tab
+   * active, a ⌘-click leaves the tabs as they are and points it out. False when no tab shows it,
+   * or (a plain click) when the tab on screen does, so the caller opens it as before.
+   */
+  reveal(path: string, intent: 'current' | 'background' | 'foreground'): boolean;
 }
 
 let driver: HistoryDriver | null = null;
@@ -459,11 +465,23 @@ export function openIntent(
 export const hasTabs = (): boolean =>
   driver !== null && typeof window !== 'undefined' && !isNoteWindowPath(window.location.pathname);
 
+/** The sidebar's notes: a note already open in a tab is gone to there (A1574). */
+export const REVEAL: OpenOptions = { existing: 'reveal' };
+
+/** How an opener treats a note already open in a tab. */
+export interface OpenOptions {
+  /**
+   * `reveal`: the sidebar's notes (A1574). A click goes to the tab that has the note, and a
+   * ⌘-click opens no second one. Links in notes, Search, the palette and the rest open as asked.
+   */
+  readonly existing?: 'reveal';
+}
+
 /**
  * Opens `path` as `intent` says: where there are no tabs (a note window), a new tab is the main
  * window's, and anything but a window shows here.
  */
-export function openPath(path: string, intent: OpenIntent): void {
+export function openPath(path: string, intent: OpenIntent, options: OpenOptions = {}): void {
   if (intent === 'window') {
     const note = noteOfPath(path);
     if (note) {
@@ -472,6 +490,7 @@ export function openPath(path: string, intent: OpenIntent): void {
     }
     intent = 'current';
   }
+  if (options.existing === 'reveal' && hasTabs() && driver!.reveal(path, intent)) return;
   if (intent === 'current' || !driver) {
     navigate(path);
     return;
@@ -498,21 +517,21 @@ export function showPath(path: string): void {
  * onClick for in-app links: navigate without a page load. An ⌥-click on a link to a note opens
  * it in a new window (T45); a ⌘-click, a new tab (PEN-140).
  */
-export function linkHandler(path: string) {
+export function linkHandler(path: string, options: OpenOptions = {}) {
   return (event: MouseEvent<HTMLAnchorElement>) => {
     const intent = openIntent(event);
     if (intent === 'window' && !noteOfPath(path)) return;
     if (intent === null || (intent !== 'current' && intent !== 'window' && !hasTabs())) return;
     event.preventDefault();
-    openPath(path, intent);
+    openPath(path, intent, options);
   };
 }
 
 /** onAuxClick for in-app links: a middle click opens a new tab behind this one (PEN-140). */
-export function linkAuxHandler(path: string) {
+export function linkAuxHandler(path: string, options: OpenOptions = {}) {
   return (event: MouseEvent<HTMLElement>) => {
     if (event.button !== 1 || !hasTabs()) return;
     event.preventDefault();
-    openPath(path, 'background');
+    openPath(path, 'background', options);
   };
 }

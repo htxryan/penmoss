@@ -16,6 +16,7 @@ import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useId, useState } from 'react';
 import { desktop, type DesktopGit, type LocalAgentInfo } from '../desktop/bridge';
 import { linkHandler, notebookAgentsPath } from '../router';
+import { SettingsHeader } from '../pages/SettingsHeader';
 import { GroupHead } from '../theme/look-rows';
 import { AgentServer, CommandLine, GitLocalAgents } from './LocalAgents';
 import { useAllSources, useGitInfo } from './hooks';
@@ -53,11 +54,11 @@ export function AgentsSettings({ item }: { item?: string | undefined }) {
       aria-labelledby={`${id}-h`}
       data-testid="agents-settings"
     >
-      <h2 id={`${id}-h`}>Agents</h2>
-      <p>
-        Agents such as Claude Code and Codex read and edit your notes through Penmoss’s MCP server,
-        which runs on this Mac from this app: no account and no agent token.
-      </p>
+      <SettingsHeader
+        id={`${id}-h`}
+        title="Agents"
+        intro="Claude Code, Codex and other agents read and edit your notes through Penmoss on this Mac."
+      />
       <CommandLine git={git} />
       <AgentServer git={git} />
       <GroupHead scope>Agent Copies on This Mac</GroupHead>

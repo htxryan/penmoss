@@ -11,6 +11,7 @@
  * its WorkspaceDoc; the Android app through `PUT /api/settings`, which checks it with
  * `symbolListProblem`.
  */
+import { isColourLocked } from './colour-lock.js';
 
 /** The synced setting that holds the list (A743). */
 export const SYMBOLS_SETTING = 'symbols.list';
@@ -104,6 +105,13 @@ export function symbolSpokenName(symbol: Pick<LineSymbol, 'glyph' | 'name'>): st
 /** A colour for a style: a theme colour's custom property (`var(--pm-callout-warning)`), or the hex itself. */
 export const symbolColourVar = (colour: SymbolColour): string =>
   isHexColour(colour) ? colour : `var(${SYMBOL_COLOURS[colour]})`;
+
+/**
+ * What a symbol is drawn in: its colour, or null for an emoji in its own colours (A1588), which
+ * is drawn without one. Its colour is kept for when its glyph changes back.
+ */
+export const symbolInk = (symbol: Pick<LineSymbol, 'glyph' | 'colour'>): string | null =>
+  isColourLocked(symbol.glyph) ? null : symbolColourVar(symbol.colour);
 
 /** What Settings calls a colour: the theme colour's name, or its hex in capitals. */
 export const symbolColourLabel = (colour: SymbolColour): string =>

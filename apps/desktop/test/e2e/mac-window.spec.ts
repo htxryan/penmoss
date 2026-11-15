@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import {
   NO_DRAG_CONTROLS,
   NO_DRAG_SURFACES,
+  PICTURES,
   TITLE_BAR_ROWS,
   UNDER_ROWS,
 } from '../../../web/src/desktop/no-drag';
@@ -513,16 +514,18 @@ async function clicksEverywhere(
   await transitionsEnded(page);
   expect(await draggable(page, true), where).toEqual([]);
   expect(await clicksThatDrag(page), where).toEqual([]);
-  // The rows themselves drag, but for those a surface before them in the DOM is open over.
+  // The rows themselves drag, but for those a surface before them in the DOM is open over, and
+  // those drawn in a picture of the app (a Settings preview, PICTURES).
   const rows = await page.evaluate(
-    ([selectors, except]) =>
+    ([selectors, except, pictures]) =>
       [...document.querySelectorAll<HTMLElement>(selectors.join(', '))]
         .filter((row) => row.getBoundingClientRect().height > 0)
         .map((row) => [
-          except.some((selector) => row.matches(selector)),
+          except.some((selector) => row.matches(selector)) ||
+            row.closest(pictures.join(', ')) !== null,
           getComputedStyle(row).getPropertyValue('-webkit-app-region'),
         ]),
-    [TITLE_BAR_ROWS, stopped] as const,
+    [TITLE_BAR_ROWS, stopped, PICTURES] as const,
   );
   for (const [still, region] of rows) {
     expect(region, where).toBe(still ? 'no-drag' : 'drag');
@@ -917,11 +920,11 @@ test('nothing that clicks drags the window: Version history, scrolled Settings a
   expect(await regionAt(page, actions.x + 10, empty.y)).toBe('no-drag');
   await clicksEverywhere(page, 'note scrolled');
 
-  // Settings scrolled: only its content scrolls; the bar, the heading and the sections' list
-  // stay put (T51, A942).
+  // Settings scrolled: only its content scrolls; the bar, the page's pinned header row and the
+  // sections' list stay put (T51, A942, A1560).
   await chooseMenu(app, 'app.shortcuts');
   await expect(page.locator('.settings-content')).toBeVisible();
-  const fixed = ['.settings-bar', '.settings-title > h1', '.settings-nav'];
+  const fixed = ['.settings-bar', '.settings-head-bar', '.settings-nav'];
   const tops = async () =>
     Promise.all(fixed.map(async (selector) => (await page.locator(selector).boundingBox())!.y));
   const before = await tops();
@@ -982,6 +985,93 @@ test('nothing that clicks drags the window: Version history, scrolled Settings a
   await page.keyboard.press('Escape');
   await expect(menu).toBeHidden();
   expect(await region(page, '.tab-strip')).toBe('drag');
+  expect(launched.errors).toEqual([]);
+});
+
+/** Opens View This Version (A1572) on the note's newest version, from its History tab. */
+async function openView(app: ElectronApplication, page: Page): Promise<void> {
+  const panel = page.getByTestId('history-panel');
+  // A reopened window may bring its tab's panel back open (A1497): the command would close it.
+  if (!(await panel.isVisible())) await chooseMenu(app, 'note.history');
+  await expect(panel).toBeVisible();
+  const version = panel.getByRole('list', { name: 'Versions' }).locator('.history-entry').first();
+  await expect(version).toBeVisible({ timeout: 40_000 });
+  await version.click();
+  await panel.getByRole('button', { name: 'View This Version' }).click();
+  await expect(page.getByTestId('history-view')).toBeVisible();
+  // The newest version is the note as it is now, so Diff (the default, A1597) may show no sides,
+  // only "No changes from now": what this test needs is the view's head.
+  await expect(page.locator('.history-view-head')).toBeVisible();
+  await expect(
+    page.getByTestId('history-view-left').or(page.getByTestId('history-view-no-changes')),
+  ).toBeVisible();
+}
+
+test('View This Version: its head drags the window as the title bar does, its buttons click (A1572)', async () => {
+  const launched = await start();
+  const { app, page } = launched;
+  await gitNotebook(launched);
+  const id = await newNote(page, `Viewed ${RUN}`, `What it said ${RUN}.`);
+  // A version: History's Sync Now.
+  await chooseMenu(app, 'note.history');
+  const history = page.getByTestId('history-panel');
+  await history.getByTestId('history-now').getByRole('button', { name: 'Sync Now' }).click();
+  await expect(
+    history.getByRole('list', { name: 'Versions' }).locator('.history-entry'),
+  ).not.toHaveCount(0, { timeout: 40_000 });
+  await chooseMenu(app, 'note.history');
+  await expect(history).toHaveCount(0);
+
+  // The compact title bar: the modal covers the rows beside the panel, so its head is the row.
+  await openView(app, page);
+  expect(await compactNow(page)).toBe('compact');
+  const head = page.locator('.history-view-head');
+  const box = (await head.boundingBox())!;
+  expect(box.y).toBe(0);
+  expect(box.height).toBe(TITLE_BAR_ROW);
+  const middle = box.y + box.height / 2;
+  expect(await region(page, '.history-view-head')).toBe('drag');
+  // Its empty stretch, and beside the time, drag; past the lights' room.
+  const restore = (await head.getByRole('button', { name: 'Restore This Version' }).boundingBox())!;
+  expect(await regionAt(page, restore.x - 12, middle)).toBe('drag');
+  const when = (await head.locator('.history-view-when').boundingBox())!;
+  expect(when.x).toBeGreaterThanOrEqual(TITLE_BAR_INSET);
+  expect(await regionAt(page, when.x + when.width / 2, middle)).toBe('drag');
+  // Its buttons click.
+  for (const name of ['Restore This Version', 'Copy Text', 'Close']) {
+    const button = (await head.getByRole('button', { name, exact: true }).boundingBox())!;
+    expect(await regionAt(page, button.x + button.width / 2, middle), name).toBe('no-drag');
+  }
+  // Above History's panel, the cap over the tab strip leaves the strip's own regions: its empty
+  // part still drags.
+  const panel = (await page.locator('.note-side').boundingBox())!;
+  const above: string[] = [];
+  for (let x = panel.x + 4; x < panel.x + panel.width; x += 8) {
+    above.push(await regionAt(page, x, middle));
+  }
+  expect(above).toContain('drag');
+  expect(await overLights(page)).toEqual([]);
+  await clicksEverywhere(page, 'view this version');
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('history-view')).toHaveCount(0);
+
+  // The standard title bar (Settings → Appearance, the windows reopen): the window's own frame
+  // drags, above the page, and nothing in the page sets a region.
+  await chooseMenu(app, 'app.appearance');
+  await answerDialog(app, 0);
+  await page.getByTestId('compact-title-bar').click();
+  await expect.poll(() => page.isClosed()).toBe(true);
+  const [main] = await shownWindows(app, 1);
+  expect(await titleBarOf(app, 'main')).toBe('native');
+  await go(main!, `/notes/${id}`);
+  await expect(main!.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+  await openView(app, main!);
+  expect(await compactNow(main!)).toBeNull();
+  expect(await region(main!, '.history-view-head')).not.toBe('drag');
+  const standardHead = (await main!.locator('.history-view-head').boundingBox())!;
+  expect(await regionAt(main!, standardHead.x + standardHead.width / 2, standardHead.y + 10)).toBe(
+    'none',
+  );
   expect(launched.errors).toEqual([]);
 });
 
@@ -1055,19 +1145,20 @@ const stallSaves = (app: ElectronApplication, which: Which, stalled: boolean) =>
     }, stalled),
   );
 
-test('Settings: the heading keeps the page gutter, in line with Back and the sections (PEN-64)', async () => {
+test('Settings: Search Settings keeps the page gutter, in line with Back and the sections (PEN-64)', async () => {
   const launched = await start();
   const { app, page } = launched;
   await gitNotebook(launched);
   await mainBounds(app, { x: 0, y: 0, width: 1280, height: 720 });
   await chooseMenu(app, 'app.shortcuts');
-  const heading = page.locator('.settings-title > h1');
+  // The column's first row since the Settings title went (A1560): Search Settings.
+  const heading = page.locator('.settings-search');
   await expect(heading).toBeVisible();
   await expect(page.locator('.settings-nav a').first()).toBeVisible();
   const leftOf = async (selector: string) =>
     (await page.locator(selector).first().boundingBox())!.x;
-  // The heading starts at the sections' gutter, clear of the window's edge and the lights.
-  const headingLeft = await leftOf('.settings-title > h1');
+  // Search starts at the sections' gutter, clear of the window's edge and the lights.
+  const headingLeft = await leftOf('.settings-search');
   expect(headingLeft).toBeGreaterThan(TITLE_BAR_INSET - 1);
   expect(Math.abs(headingLeft - (await leftOf('.settings-nav')))).toBeLessThanOrEqual(1);
   // Held on screen, so the proof's recording shows the heading in line.

@@ -1,6 +1,7 @@
 package app.penmoss.ui.settings
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -40,8 +41,9 @@ class WhatsNewScreenTest {
         compose.onNodeWithText(VERSION_UPDATES).assertIsDisplayed()
         compose.onNodeWithTag("whatsNewCurrent").assertIsDisplayed()
         compose.onNodeWithText("In This Version").assertIsDisplayed()
-        compose.onNodeWithText("• Release notes in the app.").assertIsDisplayed()
-        compose.onNodeWithText("• The keyboard stays down.").assertIsDisplayed()
+        // Under the large top app bar (A1560) the list may start below the screen's fold.
+        compose.onNodeWithText("• Release notes in the app.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("• The keyboard stays down.").performScrollTo().assertIsDisplayed()
         assertEquals(0, compose.onAllNodesWithText("• Mac only.").fetchSemanticsNodes().size)
         // Earlier Versions open from their button.
         compose.onNodeWithTag("whatsNewEarlier").assertDoesNotExist()
@@ -64,5 +66,21 @@ class WhatsNewScreenTest {
     fun aNewerFileLinksToGitHubToo() {
         compose.setContent { WhatsNewScreen(NotesView.Newer, onOpenReleases = {}, onBack = {}) }
         compose.onNodeWithText("This version of Penmoss can’t read the newest release notes. They’re on GitHub.").assertIsDisplayed()
+    }
+
+    @Test
+    fun openSourceNoticesInTheVersionCardShowsTheNoticesAndDoneClosesThem() {
+        compose.setContent { WhatsNewScreen(notesView(file, "0.2.1"), onOpenReleases = {}, onBack = {}, version = "0.2.1") }
+        compose.onNodeWithTag("noticesDialog").assertDoesNotExist()
+        compose.onNodeWithTag("openSourceNotices").assertIsDisplayed().assertTextEquals("Open Source Notices").performClick()
+        compose.onNodeWithTag("noticesDialog").assertIsDisplayed()
+        // The web's file itself: Lucide's licence and the Characters' notice.
+        val text = compose.onNodeWithTag("noticesText").fetchSemanticsNode()
+            .config[androidx.compose.ui.semantics.SemanticsProperties.Text].joinToString("")
+        assertEquals(app.penmoss.engine.settings.Notices.text, text)
+        org.junit.Assert.assertTrue(text.contains("ISC License"))
+        org.junit.Assert.assertTrue(text.contains("UNICODE LICENSE V3"))
+        compose.onNodeWithTag("noticesDone").performClick()
+        compose.onNodeWithTag("noticesDialog").assertDoesNotExist()
     }
 }

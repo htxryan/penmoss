@@ -7,6 +7,7 @@ import { expect, test, type Page } from './fixtures';
 const RUN = `${Date.now().toString(36)}${100 + Math.floor(Math.random() * 900)}`;
 const ALPHA = `Alpha ${RUN}`;
 const BETA = `Beta ${RUN}`;
+const GAMMA = `Gamma ${RUN}`;
 
 test.use({
   seed: {
@@ -14,6 +15,7 @@ test.use({
     notes: [
       { title: ALPHA, markdown: 'The first note.' },
       { title: BETA, markdown: 'The second note.' },
+      { title: GAMMA, markdown: 'The third note.' },
     ],
   },
 });
@@ -94,15 +96,22 @@ test('a narrow window lists the tabs in a sheet from the app bar (AC13)', async 
   await expect(sheet(page)).toBeHidden();
   await shows(page, BETA);
 
-  // New Tab from it, then close it from the sheet.
+  // New Tab from it asks which note (A1594): Escape makes no tab, a pick makes one.
   await button(page).click();
   await sheet(page).getByTestId('tabs-sheet-new').click();
   await expect(sheet(page)).toBeHidden();
-  await expect(page).toHaveURL(/\/$/);
-  // With the cursor in Search; Escape leaves Home.
-  await expect(page.getByTestId('search')).toBeVisible();
+  const picker = page.getByRole('dialog', { name: 'New Tab' });
+  await expect(picker.getByRole('combobox', { name: 'New Tab' })).toBeFocused();
   await page.keyboard.press('Escape');
-  await expect(page.getByTestId('search')).toBeHidden();
+  await expect(picker).toBeHidden();
+  await expect(page.getByTestId('tabs-button')).toHaveAccessibleName('Tabs, 2');
+  await shows(page, BETA);
+  await button(page).click();
+  await sheet(page).getByTestId('tabs-sheet-new').click();
+  await picker.getByRole('combobox', { name: 'New Tab' }).fill(GAMMA);
+  await expect(picker.getByRole('option').first()).toContainText(GAMMA);
+  await page.keyboard.press('Enter');
+  await shows(page, GAMMA);
   await expect(page.getByTestId('tabs-button')).toHaveAccessibleName('Tabs, 3');
   await page.getByTestId('tabs-button').click();
   await expect(sheet(page).getByTestId('tabs-sheet-tab')).toHaveCount(3);

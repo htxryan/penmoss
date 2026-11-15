@@ -62,6 +62,8 @@ function scriptedBridge(initial: DesktopMeaningStatus = READY) {
       return Promise.resolve({ floor: state.floor, hits: state.hits });
     },
     setEnabled: () => Promise.resolve(null),
+    removeModel: () => Promise.resolve(null),
+    removeIndex: () => Promise.resolve(null),
     onChange: (listener) => {
       listeners.push(listener);
       return () => {

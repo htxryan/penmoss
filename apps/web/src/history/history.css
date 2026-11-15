@@ -5,7 +5,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 /* The panel holds History's list and its docked changes at its own height: the list scrolls,
@@ -70,8 +70,8 @@
   margin: 0;
   padding: 0.65rem 1rem 0.2rem;
   color: var(--pm-muted);
-  font-size: 0.72rem;
-  font-weight: 650;
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -96,7 +96,7 @@
   background: none;
   color: var(--pm-fg);
   font: inherit;
-  font-size: 0.8rem;
+  font-size: var(--pm-text-item);
   text-align: left;
 }
 
@@ -135,7 +135,7 @@ button.history-entry:focus-visible {
   min-height: 1.75rem;
   padding: 0.3rem 1rem;
   color: var(--pm-muted);
-  font-size: 0.8rem;
+  font-size: var(--pm-text-item);
 }
 
 .history-now[data-pending] .history-summary {
@@ -146,7 +146,7 @@ button.history-entry:focus-visible {
   height: 1.5rem;
   padding: 0 0.4rem;
   color: var(--pm-accent);
-  font-size: 0.78rem;
+  font-size: var(--pm-text-item);
 }
 
 /* The writer's icon; the tooltip names them (finding 13). */
@@ -175,7 +175,7 @@ button.history-entry:focus-visible {
 .history-lines {
   display: inline-flex;
   gap: 0.3rem;
-  font-size: 0.75rem;
+  font-size: var(--pm-text-meta);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -201,7 +201,7 @@ button.history-entry:focus-visible {
   padding: 0 0.4rem;
   border-radius: 0;
   background: var(--pm-hover);
-  font-size: 0.75rem;
+  font-size: var(--pm-text-meta);
 }
 
 .history-author[data-kind='agent'] {
@@ -288,12 +288,12 @@ html:root[data-resizing='rows'] * {
 .history-detail-head h3 {
   flex: 1;
   margin: 0;
-  font-size: 0.875rem;
-  font-weight: 650;
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
 }
 
 .history-detail-head .muted {
-  font-size: 0.75rem;
+  font-size: var(--pm-text-meta);
 }
 
 .history-detail .history-diff {
@@ -311,13 +311,13 @@ html:root[data-resizing='rows'] * {
 .history-diff-loading {
   margin: 0;
   padding: 0.5rem 0.6rem;
-  font-size: 0.78rem;
+  font-size: var(--pm-text-help);
 }
 
 /*
- * Restore, Revert and Copy: an icon and a word each, in one row that never wraps (Ryan's review of
- * #193, R2-12; their full names are their tooltips and labels). A row too narrow drops words,
- * Revert's and Copy's first (`data-fit="1"`), then Restore's (`"2"`); `useFit` measures it.
+ * View, Restore, Revert and Copy: an icon and a word each, in one row that never wraps (Ryan's
+ * review of #193, R2-12; their full names are their tooltips and labels). A row too narrow drops
+ * words, all but Restore's first (`data-fit="1"`), then Restore's (`"2"`); `useFit` measures it.
  */
 .history-actions {
   display: flex;
@@ -343,7 +343,7 @@ html:root[data-resizing='rows'] * {
 
 .history-status {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--pm-text-help);
 }
 
 .history-scroll > .history-status {
@@ -353,7 +353,7 @@ html:root[data-resizing='rows'] * {
 .history-conflicts {
   margin: 0;
   padding-left: 1.1rem;
-  font-size: 0.8rem;
+  font-size: var(--pm-text-help);
 }
 
 .history-conflicts code {
@@ -375,8 +375,8 @@ html:root[data-resizing='rows'] * {
   border: 1px solid var(--pm-border);
   background: var(--pm-raised);
   box-shadow: var(--pm-shadow);
-  font-size: var(--pm-text-sm);
-  font-weight: 400;
+  font-size: var(--pm-text-item);
+  font-weight: var(--pm-weight-regular);
   letter-spacing: normal;
   text-transform: none;
 }
@@ -392,7 +392,10 @@ html:root[data-resizing='rows'] * {
   border: 1px solid var(--pm-border);
   border-radius: 0;
   background: var(--pm-bg);
-  font: 0.78rem/1.55 var(--pm-mono);
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-code);
+  font-weight: var(--pm-weight-regular);
+  line-height: var(--pm-leading-code);
 }
 
 .history-diff pre > span {
@@ -487,4 +490,417 @@ html:root[data-resizing='rows'] * {
 .diff-fold {
   color: var(--pm-muted);
   font-style: italic;
+}
+
+/* While View This Version shows (A1572), the docked preview folds away to this line. */
+.history-viewing {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 -1rem;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid var(--pm-border-soft);
+}
+
+/*
+ * View This Version (A1572; design C, Side by Side with Now): a modal over the window up to
+ * History's panel, which stays beside it, and a cap over the rows above the panel (the note's
+ * bar, the tabs), so only the panel shows. Below menus, the palette and tooltips.
+ */
+.history-view,
+.history-view-cap {
+  position: fixed;
+  top: 0;
+  z-index: 50;
+  background: var(--pm-bg);
+}
+
+.history-view-cap {
+  right: 0;
+  border-bottom: 1px solid var(--pm-border);
+}
+
+.history-view {
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  border-right: 1px solid var(--pm-border);
+  box-shadow: 4px 0 14px color-mix(in oklab, var(--pm-shadow-color) 10%, transparent);
+  font-size: var(--pm-text-sm);
+}
+
+.history-view-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.5rem;
+  height: 3.25rem;
+  box-sizing: border-box;
+  padding: 0 0.75rem 0 1rem;
+  border-bottom: 1px solid var(--pm-border);
+}
+
+/* The Mac app's compact title bar: the traffic lights keep their room (A722). */
+:root[data-titlebar='compact'] .history-view-head {
+  height: var(--pm-titlebar-row);
+  padding-left: var(--pm-titlebar-inset);
+}
+
+.history-view-when {
+  margin: 0;
+  font-size: var(--pm-text-md);
+  white-space: nowrap;
+}
+
+.history-view-who {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-view-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.45rem;
+  background: color-mix(in oklab, var(--pm-fg) 6%, transparent);
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  white-space: nowrap;
+}
+
+.history-view-space {
+  flex: 1;
+}
+
+.history-view-head > .btn {
+  flex: none;
+}
+
+/*
+ * A head too narrow for every word (`useFit`): the toggle's short name (`data-fit="1"`), then
+ * words drop from all but Restore (`"2"`), then from Restore too (`"3"`), as History's row does.
+ */
+.history-view-head:not([data-fit]) .history-view-short,
+.history-view-head[data-fit] .history-view-long,
+.history-view-head[data-fit='2'] > .btn:not(.primary) > .history-action-word,
+.history-view-head[data-fit='3'] > .btn > .history-action-word {
+  display: none;
+}
+
+.history-view-head[data-fit='2'] > .btn:not(.primary),
+.history-view-head[data-fit='3'] > .btn {
+  padding-inline: 0.45rem;
+}
+
+.history-view-sep {
+  flex: none;
+  width: 1px;
+  height: 1.25rem;
+  margin: 0 0.15rem;
+  background: var(--pm-border);
+}
+
+/*
+ * Each side's name, its time or sync state, and what its tint means. In the scroll, pinned over
+ * the sides: the same box as theirs, so its line between the sides is theirs to the pixel, with a
+ * scrollbar or without.
+ */
+.history-view-sides-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-bottom: 1px solid var(--pm-border-soft);
+  background: var(--pm-sidebar);
+}
+
+/* The version's commit, short, as git names it: a click copies it whole. */
+.history-view-sha {
+  flex: none;
+  padding: 0.05rem 0.3rem;
+  border: 0;
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--pm-fg) 6%, transparent);
+  color: var(--pm-fg);
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-code-inline);
+  cursor: pointer;
+  user-select: all;
+}
+
+.history-view-sha:hover {
+  background: color-mix(in oklab, var(--pm-fg) 11%, transparent);
+}
+
+.history-view-sides-head > div {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.6rem 1.5rem;
+  white-space: nowrap;
+}
+
+.history-view-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--pm-muted);
+}
+
+.history-view-key::before {
+  width: 1.1rem;
+  height: 0.75rem;
+  background: var(--history-tint);
+  content: '';
+}
+
+.history-view-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  outline-offset: -2px;
+}
+
+.history-view-loading {
+  margin: 0;
+  padding: 1.5rem;
+}
+
+/*
+ * The two sides share one grid's rows (each side a subgrid), so a block and what is beside it
+ * stay level. Each side is laid out as the note's text is (`.note-body .ProseMirror`).
+ */
+/* Rows as tall as their blocks, not stretched to the scroll's height. */
+.history-view-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: 1.75rem 0 3rem;
+}
+
+/* The line between the sides, to the bottom however short they are. Its own element, not a
+ * background image on the grid: a checker cannot see the colour behind text over an image. */
+.history-view-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: var(--pm-border);
+}
+
+.note-body .history-view-side {
+  /* The gutter: a band as wide as the longest line number on either side, ruled off from the
+     blocks, as an editor's is (Ryan's review of #210). */
+  --history-gutter-width: calc(var(--history-gutter, 2) * 1ch + 1.4rem);
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-template-columns: var(--history-gutter-width) minmax(0, 1fr);
+  column-gap: 1rem;
+  align-items: start;
+  min-height: 0;
+  padding: 0 2rem 0 0;
+}
+
+/* The band behind the numbers, an element of its own spanning every row: a background image or
+   a pseudo-element on the side would leave the numbers' contrast unreadable to axe. */
+.note-body .history-view-side > .history-view-gutter {
+  grid-column: 1;
+  align-self: stretch;
+  margin: 0;
+  border-right: 1px solid var(--pm-border-soft);
+  background: var(--pm-sidebar);
+}
+
+/* Each side in its own column: a fold over both rows never pushes them aside. */
+.note-body .history-view-side[data-side='left'] {
+  grid-column: 1;
+}
+
+.note-body .history-view-side[data-side='right'] {
+  grid-column: 2;
+}
+
+/*
+ * A block on its row's first line, its number beside it (a gap has no line: it fills its row).
+ * Never skipped off screen as the note's blocks are (note.css): that containment gives a block no
+ * first line to set its number on. Its selector outweighs that one's.
+ */
+.history-view-grid.note-body
+  .ProseMirror.history-view-side
+  > :not(.history-view-line, .history-view-gap, .history-view-gutter) {
+  grid-column: 2;
+  align-self: baseline;
+  content-visibility: visible;
+}
+
+/* The first block, after its number, starts at the top as the note's first does. */
+.note-body .history-view-side > :nth-child(3) {
+  margin-top: 0;
+}
+
+/* A block's first line in the markdown, as an editor's gutter numbers it. */
+.note-body .history-view-side > .history-view-line {
+  grid-column: 1;
+  align-self: baseline;
+  margin: 0;
+  padding-right: 0.7rem;
+  color: var(--pm-color-meta);
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-meta);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--pm-leading-meta);
+  text-align: right;
+  user-select: none;
+}
+
+/*
+ * Where Diff leaves out the same blocks: a band over both sides, the line between them too,
+ * saying how many lines it holds. A click shows them.
+ */
+.history-view-fold {
+  position: relative;
+  z-index: 1;
+  grid-column: 1 / -1;
+  align-self: center;
+  margin: 0.35rem 0 1.1rem;
+  padding: 0.4rem 1.5rem;
+  border: 0;
+  border-block: 1px solid var(--pm-border-soft);
+  background: var(--pm-sidebar);
+  color: var(--pm-muted);
+  font-size: var(--pm-text-item);
+  line-height: var(--pm-leading-item);
+  text-align: left;
+  cursor: pointer;
+}
+
+.history-view-fold:hover {
+  background: color-mix(in oklab, var(--pm-fg) 6%, var(--pm-sidebar));
+  color: var(--pm-fg);
+}
+
+/* A gap held open beside a block the other side has alone: from the row's top, with no line to
+ * set it on. */
+.note-body .history-view-side > .history-view-gap {
+  align-self: stretch;
+  margin: 0;
+}
+
+/* The tint of a block that differs: on the left not in the note now, on the right added since. */
+[data-change='removed'] {
+  --history-tint: color-mix(in oklab, var(--pm-danger) 14%, transparent);
+}
+
+[data-change='added'] {
+  --history-tint: color-mix(in oklab, var(--pm-success) 18%, transparent);
+}
+
+/* On a dark page the same share of colour barely shows: twice as much reads as clearly as in light,
+ * and the text on it keeps AA contrast (history-view.spec.ts measures both). */
+:root[data-mode='dark'] [data-change='removed'] {
+  --history-tint: color-mix(in oklab, var(--pm-danger) 30%, transparent);
+}
+
+:root[data-mode='dark'] [data-change='added'] {
+  --history-tint: color-mix(in oklab, var(--pm-success) 32%, transparent);
+}
+
+.history-view-side > [data-change] {
+  background: var(--history-tint);
+  box-shadow: 0 0 0 0.35rem var(--history-tint);
+}
+
+/* An image keeps to its side, at the width the note gave it or less. */
+.history-view-side img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* The title, as the note's own title field shows it over the text. */
+.note-body .history-view-side > .history-view-title {
+  margin: 0 0 0.85em;
+}
+
+/*
+ * The version is the note as it is now: one placeholder in the middle of the view, as Home's,
+ * in Diff and Full File alike, instead of two identical sides.
+ */
+.empty-state.history-view-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.history-view-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--pm-border-soft);
+  border-radius: 50%;
+  background: var(--pm-sidebar);
+  color: var(--pm-muted);
+}
+
+/* Wrap Lines (on unless turned off): pressed, as the note's own toggles are. */
+.history-view-head > .btn[aria-pressed='true'] {
+  background: var(--pm-active);
+  color: var(--pm-fg);
+}
+
+/*
+ * Wrap Lines off: each block keeps its lines as written, and each side scrolls sideways on its
+ * own, under its gutter, which stays put. The rows stay shared, so the sides stay level. A block
+ * with a picture keeps its side's width, so the picture keeps its size (as wide as its block
+ * would make it as wide as the picture itself).
+ */
+.history-view-grid[data-wrap='off'] .history-view-side {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+}
+
+.history-view-grid[data-wrap='off'].note-body
+  .ProseMirror.history-view-side
+  > :not(.history-view-line, .history-view-gap, .history-view-gutter):not(
+    :has(img, video, iframe, canvas)
+  ) {
+  width: max-content;
+  min-width: 100%;
+  white-space: pre;
+}
+
+.history-view-grid[data-wrap='off'] .history-view-side > .history-view-gutter,
+.history-view-grid[data-wrap='off'] .history-view-side > .history-view-line {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+/* The gutter's band also covers the gap after it, so text scrolled under it is hidden. */
+.history-view-grid[data-wrap='off'] .history-view-side > .history-view-gutter {
+  box-shadow: calc(1rem + 1px) 0 0 var(--pm-bg);
+}
+
+.history-view-grid[data-wrap='off'] .history-view-side > .history-view-line {
+  z-index: 2;
 }

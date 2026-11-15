@@ -11,13 +11,17 @@ import {
 import { useId, useState, type CSSProperties } from 'react';
 import { CompactTitleBarSetting } from '../desktop/CompactTitleBarSetting';
 import { desktop } from '../desktop/bridge';
+import { DadJokesSetting } from '../shell/DadJokesSetting';
 import { TooltipDelaySetting } from '../shell/TooltipDelaySetting';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import { AppPreview } from './AppPreview';
 import { useThemeState } from './hooks';
 import { FontSettings } from './FontSettings';
+import { PreviewZoom } from './PreviewZoom';
+import { TypeSpecimen } from './TypeSpecimen';
 import { GroupHead, SettingRow } from './look-rows';
 import { ThemeEditor } from './ThemeEditor';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 const MODES: ReadonlyArray<{ mode: ThemeMode; label: string; icon: IconName }> = [
   { mode: 'light', label: 'Light', icon: 'sun' },
@@ -30,7 +34,7 @@ const MODES: ReadonlyArray<{ mode: ThemeMode; label: string; icon: IconName }> =
  * beside a live miniature of the app (`AppPreview`) that redraws as they change. Theme: the mode
  * (Light, Dark, System), the theme (eight built-ins and the user's own) and Customize…, which
  * opens the theme editor on a copy of a built-in. Text: the fonts (T51 item 16, A944) and Show
- * Tooltips After (A1247, from Display). Window, the Mac app's only and this Mac's own: the
+ * Tooltips After (A1247, from Display) and Dad Jokes (the empty window's heading). Window, the Mac app's only and this Mac's own: the
  * compact title bar (T47, A724). The rest is the Primary Notebook's settings (A827), so it
  * follows Ryan to every device. Note Width and Note Panel are on the Note page now. On a narrow
  * window the preview goes under the controls.
@@ -56,7 +60,7 @@ export function AppearanceSettings() {
         aria-labelledby={`${id}-h`}
         data-testid="appearance-settings"
       >
-        <h2 id={`${id}-h`}>Appearance</h2>
+        <SettingsHeader id={`${id}-h`} title="Appearance" intro="Customize a theme of your own." />
         <ThemeEditor theme={state.theme} themes={themes} onDone={() => setEditing(null)} />
       </section>
     );
@@ -84,11 +88,11 @@ export function AppearanceSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="appearance-settings"
     >
-      <h2 id={`${id}-h`}>Appearance</h2>
-      <p>
-        Kept in your Primary Notebook, so it syncs to your other devices
-        {mac ? ', except what says This Mac' : ''}. Every theme has a light and a dark variant.
-      </p>
+      <SettingsHeader
+        id={`${id}-h`}
+        title="Appearance"
+        intro="The theme, fonts and tooltips. Every theme has a light and a dark variant."
+      />
 
       <div className="lf-split">
         <div className="lf-controls">
@@ -172,6 +176,7 @@ export function AppearanceSettings() {
           >
             <FontSettings onSizeDraft={setSizeDraft} />
             <TooltipDelaySetting />
+            <DadJokesSetting />
           </div>
           <p className="lf-help">
             Fonts lie over the theme’s own on every device. Code keeps the theme’s monospace font. A
@@ -192,8 +197,18 @@ export function AppearanceSettings() {
 
         <aside className="lf-preview-col" aria-label="Preview">
           <p className="lf-label">Preview</p>
-          <AppPreview style={previewStyle} />
+          <PreviewZoom name="Appearance" testId="app-preview-zoom">
+            {(enlarged) => (
+              <AppPreview
+                style={previewStyle}
+                enlarged={enlarged}
+                testId={enlarged ? 'app-preview-large' : 'app-preview'}
+              />
+            )}
+          </PreviewZoom>
           <p className="lf-help">Redraws as you change the mode, theme, fonts or size.</p>
+          {/* The fonts at the size the app draws them, beside the shrunk window (A1582). */}
+          <TypeSpecimen style={previewStyle} />
         </aside>
       </div>
     </section>

@@ -49,6 +49,10 @@ import {
   showInTab,
   step,
   stepTarget,
+  isHomePath,
+  withoutHome,
+  switchToTab,
+  tabShowing,
   updateEntry,
   HOME_PATH,
   NEW_TAB_PATH,
@@ -78,6 +82,8 @@ export class TabsController implements HistoryDriver {
   private readonly ids: IdMaker;
   private readonly storage: KeyValueStore | null;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  /** Closing (`closeWindow`): saves nothing more. */
+  private closed = false;
   /** The browser entry the address is at (`history.state.penmossIndex`). */
   private browserIndex = 0;
   private placeCache: HistoryPlace = { back: false, forward: false };
@@ -94,12 +100,15 @@ export class TabsController implements HistoryDriver {
   constructor(options: TabsOptions) {
     this.ids = options.ids ?? randomId;
     this.storage = options.storage;
-    const saved = load(options.storage);
+    // A session saved before A1594 can hold Home tabs: they go.
+    const loaded = load(options.storage);
+    const saved = loaded ? withoutHome(loaded, this.ids) : null;
     this.restored = saved !== null;
     this.launchNote = noteIdOfPath(options.location ?? HOME_PATH);
     const at = options.location ?? HOME_PATH;
     const location = at === NEW_TAB_PATH ? HOME_PATH : at;
     this.state = saved ? startFrom(saved, at, this.ids) : initialState(this.ids, location);
+    if (at === NEW_TAB_PATH) this.newTabAsked = true;
   }
 
   getState = (): TabsState => this.state;
@@ -130,7 +139,21 @@ export class TabsController implements HistoryDriver {
   flush(): void {
     if (this.timer !== null) clearTimeout(this.timer);
     this.timer = null;
-    save(this.storage, this.state);
+    this.persist();
+  }
+
+  /**
+   * The window is closing (A1577): saves now, and never again. It goes from the screen at once
+   * while its page still pushes, and a main window opened meanwhile has the tabs from here on;
+   * this page's later saves (its `pagehide` as it goes) would write over them.
+   */
+  closeWindow(): void {
+    this.flush();
+    this.closed = true;
+  }
+
+  private persist(): void {
+    if (!this.closed) save(this.storage, this.state);
   }
 
   /** Which notes Back and Forward pass over (a note in Trash deeper in a tab's history). */
@@ -139,6 +162,9 @@ export class TabsController implements HistoryDriver {
   }
 
   private skip = (entry: Entry): boolean => {
+    // Home is no tab's page (A1594): only the empty window's, under Settings opened there. Beside
+    // other tabs it is passed over; so is a note in Trash (A1501).
+    if (isHomePath(entry.path)) return this.state.tabs.length > 1;
     const note = noteIdOfPath(entry.path);
     return note !== null && this.gone(note);
   };
@@ -166,7 +192,7 @@ export class TabsController implements HistoryDriver {
     for (const listener of [...this.listeners]) listener();
     this.timer ??= setTimeout(() => {
       this.timer = null;
-      save(this.storage, this.state);
+      this.persist();
     }, SAVE_MS);
   }
 
@@ -206,6 +232,20 @@ export class TabsController implements HistoryDriver {
     this.commit(showInTab(this.state, path, this.ids));
   }
 
+  reveal(path: string, intent: 'current' | 'background' | 'foreground'): boolean {
+    const id = tabShowing(this.state, path);
+    if (id === null) return false;
+    // Behind: no second tab of it; the tab that has it is pointed out.
+    if (intent === 'background') {
+      flashTab(id);
+      return true;
+    }
+    // The tab on screen has it already: a plain click goes there as it always did.
+    if (id === this.state.active) return intent !== 'current';
+    this.commit(switchToTab(this.state, id, path));
+    return true;
+  }
+
   /** The browser went back or forward (its buttons, `history.go`): the active tab follows. */
   private popped(state: unknown): void {
     const marked =
@@ -242,7 +282,7 @@ export class TabsController implements HistoryDriver {
   private scheduleSave(): void {
     this.timer ??= setTimeout(() => {
       this.timer = null;
-      save(this.storage, this.state);
+      this.persist();
     }, SAVE_MS);
   }
 
@@ -256,9 +296,21 @@ export class TabsController implements HistoryDriver {
     return true;
   }
 
-  /** ⌘T and +: a new tab on Home, in front. */
-  newTab(): void {
-    this.commit(openTab(this.state, HOME_PATH, { background: false, ids: this.ids }));
+  /**
+   * A new tab asked for from outside the window (a note window's ⌘T, `/?tab=new` at launch): the
+   * window's New Tab picker opens for it (A1594). Taken once by whoever shows the picker.
+   */
+  private newTabAsked = false;
+
+  askNewTab(): void {
+    this.newTabAsked = true;
+    for (const listener of [...this.listeners]) listener();
+  }
+
+  takeNewTabAsk(): boolean {
+    const asked = this.newTabAsked;
+    this.newTabAsked = false;
+    return asked;
   }
 
   /** Opens `path` in a new tab dropped at `at` in the strip (a note dragged onto it), in front. */
@@ -324,7 +376,7 @@ export class TabsController implements HistoryDriver {
     this.state = next;
     this.timer ??= setTimeout(() => {
       this.timer = null;
-      save(this.storage, this.state);
+      this.persist();
     }, SAVE_MS);
   }
 
@@ -361,7 +413,8 @@ function startFrom(saved: TabsState, location: string, ids: IdMaker): TabsState 
   if (location === HOME_PATH || location === '') {
     return leaveSettings(saved) ?? navigateActive(saved, HOME_PATH, { ids });
   }
-  if (location === NEW_TAB_PATH) return openTab(saved, HOME_PATH, { background: false, ids });
+  // A note window's ⌘T as the window loads: the tabs as they were, and the picker (A1594).
+  if (location === NEW_TAB_PATH) return leaveSettings(saved) ?? saved;
   if (currentEntry(activeTab(saved)).path === location) return saved;
   // A note opened from outside as the window loads (a deep link): its tab, or a new one, its
   // panel as the note itself remembers it (A985).
@@ -388,4 +441,19 @@ export function uninstallMainTabs(): void {
   detach?.();
   detach = null;
   main = null;
+}
+
+/**
+ * Points out a tab that already has the note a ⌘-click asked for (A1574): a short pulse of the
+ * hover colour, none with Reduce Motion. Only where the strip is drawn.
+ */
+function flashTab(id: string): void {
+  if (typeof document === 'undefined') return;
+  const tab = document.querySelector<HTMLElement>(`.tab-strip [data-tab-id="${CSS.escape(id)}"]`);
+  if (!tab || typeof tab.animate !== 'function') return;
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  tab.animate(
+    [{ backgroundColor: 'var(--pm-active)' }, { backgroundColor: 'var(--pm-active)' }, {}],
+    { duration: 700, easing: 'ease-out' },
+  );
 }

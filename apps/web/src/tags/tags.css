@@ -45,7 +45,7 @@
   background: none;
   color: var(--pm-fg);
   font: inherit;
-  font-size: 0.85rem;
+  font-size: var(--pm-text-sidebar-item);
   text-align: left;
   cursor: pointer;
 }
@@ -56,7 +56,7 @@
 }
 
 .tag-name[aria-pressed='true'] {
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .tag-hash {
@@ -76,7 +76,7 @@
 
 .tag-name .count {
   color: var(--pm-muted);
-  font-size: 0.75rem;
+  font-size: var(--pm-text-meta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -91,7 +91,7 @@
   background: none;
   color: var(--pm-muted);
   font: inherit;
-  font-size: 0.72rem;
+  font-size: var(--pm-text-meta);
   cursor: pointer;
   opacity: 0;
 }
@@ -116,7 +116,7 @@
   display: grid;
   gap: 0.35rem;
   margin: 0.25rem 0 0.5rem 1.2rem;
-  font-size: 0.8rem;
+  font-size: var(--pm-text-field);
 }
 
 .tag-rename p {
@@ -130,13 +130,13 @@
 
 .tag-empty {
   margin: 0.25rem 0.35rem;
-  font-size: 0.8rem;
+  font-size: var(--pm-text-meta);
 }
 
 .tag-mini {
   color: var(--pm-muted);
-  font-size: 0.72rem;
-  font-weight: 400;
+  font-size: var(--pm-text-meta);
+  font-weight: var(--pm-weight-meta);
 }
 
 .note-tags {
@@ -159,7 +159,7 @@
   border: 1px solid var(--pm-accent-line);
   border-radius: 0;
   background: var(--pm-accent-soft);
-  font-size: 0.78rem;
+  font-size: var(--pm-text-item);
 }
 
 .tag-chip-name,
@@ -194,7 +194,7 @@
   background: none;
   color: var(--pm-muted);
   font: inherit;
-  font-size: 0.78rem;
+  font-size: var(--pm-text-item);
   cursor: pointer;
 }
 
@@ -212,7 +212,7 @@
 .tag-input {
   width: 12rem;
   padding: 0.15rem 0.5rem;
-  font-size: 0.8rem;
+  font-size: var(--pm-text-field);
 }
 
 /* Tag suggestions under Add a tag (A577): every tag on any note, matched to what is typed. */
@@ -241,7 +241,7 @@
 .tag-suggestion {
   padding: 0.3rem 0.5rem;
   border-radius: 0;
-  font-size: 0.8rem;
+  font-size: var(--pm-text-item);
   white-space: nowrap;
   cursor: pointer;
 }

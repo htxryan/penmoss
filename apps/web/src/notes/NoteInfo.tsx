@@ -18,8 +18,7 @@ import { readIdentity } from '@penmoss/model/note';
 import type { Yjs14Replica } from '@penmoss/model/yjs14';
 import type { MetadataField } from '@penmoss/core/note-metadata';
 import { Icon } from '@penmoss/ui/icons';
-import { Fragment, useEffect, useId, useState } from 'react';
-import { revealNote } from '../shell/reveal-notebooks';
+import { useEffect, useId, useState } from 'react';
 import { shortWhen } from '../shell/when';
 import { NoteTags } from '../tags/NoteTags';
 import { BacklinksPanel } from './BacklinksPanel';
@@ -68,49 +67,24 @@ function SaveStatusLabel({ status }: { status: SaveStatus | null }) {
 /** The save states worth interrupting for: not saved, or sync stopped. */
 const ANNOUNCED: ReadonlySet<SaveStatus['state']> = new Set(['error', 'stopped']);
 
-/** The states shown as a band flush with the bar's left edge (R2-6), so they come first. */
-const BANDED: ReadonlySet<SaveStatus['state']> = new Set(['error', 'stopped']);
-
 /**
  * The bar along the bottom of the note: its save status on the left, the fields pinned to it on
  * the right (T62 item 4; Words, Characters and Reading Time unset), a selection's counts in place
  * of the note's. Hidden on a phone, where the format bar sits there; the Info panel has the same
  * facts.
  */
-/**
- * Where a note is, as the status bar shows it (A1505): its notebook first when two or more are
- * open (`source`), then its folders; a note at the top level of the only notebook, its name.
- */
-export interface NotePlace {
-  readonly source: string | null;
-  readonly folders: readonly string[];
-  readonly notebook: string;
-}
-
-function placeParts(place: NotePlace): string[] {
-  const parts = [...(place.source === null ? [] : [place.source]), ...place.folders];
-  return parts.length > 0 ? parts : [place.notebook];
-}
-
 export function StatusBar({
   noteId,
   note,
   replica,
   folder,
   stats,
-  place = null,
 }: {
   noteId: string;
   note: OpenNote | null;
   replica: Yjs14Replica | null;
   folder: readonly string[];
   stats: NoteStats;
-  /**
-   * Where the note is, at the start of the bar in the main window, which has no title row (PEN-140,
-   * A1505), after only a Sync Stopped band (R2-6): a click reveals the note in the sidebar. Null:
-   * not shown.
-   */
-  place?: NotePlace | null;
 }) {
   const status = useSaveStatus(note);
   const { selection } = useNoteCounts(stats);
@@ -121,52 +95,17 @@ export function StatusBar({
   const shown = statusBar.filter(
     (field): field is TextField => field !== 'tags' && !(selection && counted(field)),
   );
-  const banded = status !== null && BANDED.has(status.state);
-  const slotView = (
-    <span
-      className="save-status-slot"
-      data-testid="save-status"
-      data-state={status?.state ?? 'opening'}
-    >
-      <SaveStatusLabel status={status} />
-    </span>
-  );
   return (
     <footer className="status-bar" data-testid="status-bar" aria-label="Note status">
-      {/* Where the note is comes first (AC20), except that Sync Stopped's band keeps the bar's left edge (R2-6). */}
-      {banded ? slotView : null}
-      {place ? (
-        <button
-          type="button"
-          className="status-place"
-          data-ui="item"
-          data-testid="status-place"
-          data-tip="Reveal in Sidebar"
-          aria-label={`${placeParts(place).join(', ')}: Reveal in Sidebar`}
-          onClick={() => revealNote(noteId)}
-        >
-          <Icon name="folder" size={12} />
-          <span className="status-place-path">
-            {place.source !== null ? (
-              <>
-                <bdi data-testid="note-source-crumb">{place.source}</bdi>
-                {place.folders.length > 0 ? ' › ' : null}
-              </>
-            ) : null}
-            {place.folders.length > 0
-              ? place.folders.map((part, index) => (
-                  <Fragment key={index}>
-                    {index > 0 ? ' › ' : null}
-                    <bdi>{part}</bdi>
-                  </Fragment>
-                ))
-              : place.source === null
-                ? place.notebook
-                : null}
-          </span>
-        </button>
-      ) : null}
-      {banded ? null : slotView}
+      {/* First, so Sync Stopped's band keeps the bar's left edge (R2-6). Where the note is, the
+          sidebar and its tab show; the bar no longer does (A1587). */}
+      <span
+        className="save-status-slot"
+        data-testid="save-status"
+        data-state={status?.state ?? 'opening'}
+      >
+        <SaveStatusLabel status={status} />
+      </span>
       {/* Read out only when it needs attention, never for routine saving and syncing (T41 review). */}
       <span className="sr-only" role="status" data-testid="save-alert">
         {status && ANNOUNCED.has(status.state) ? `${status.label}. ${status.hint}` : ''}

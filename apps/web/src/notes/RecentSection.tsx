@@ -1,7 +1,7 @@
 import { Icon } from '@penmoss/ui/icons';
 import { deviceStorage } from '../shell/device-pref';
 import { useId, useMemo, type ReactNode } from 'react';
-import { linkAuxHandler, linkHandler, notePath } from '../router';
+import { REVEAL, linkAuxHandler, linkHandler, notePath } from '../router';
 import { useStoredCollapse } from '../shell/collapsed';
 import { useEveryOpenNoteList } from '../sources/lists';
 import { displayTitle } from './list';
@@ -68,8 +68,8 @@ export function RecentSection({
                 aria-current={note.id === activeId ? 'page' : undefined}
                 data-testid="recent-note"
                 data-note-id={note.id}
-                onClick={linkHandler(notePath(note.id))}
-                onAuxClick={linkAuxHandler(notePath(note.id))}
+                onClick={linkHandler(notePath(note.id), REVEAL)}
+                onAuxClick={linkAuxHandler(notePath(note.id), REVEAL)}
                 onDragStart={(event) => {
                   event.dataTransfer.setData(NOTE_DRAG_TYPE, note.id);
                   event.dataTransfer.effectAllowed = 'copyLink';

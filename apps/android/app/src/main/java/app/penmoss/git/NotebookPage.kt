@@ -84,7 +84,12 @@ fun NotebookPage(
     var shown by rememberSaveable(id) { mutableStateOf(tab) }
     var removing by remember { mutableStateOf(false) }
     var pushingFirst by remember { mutableStateOf(false) }
-    SectionScreen(row.view.name, onBack) {
+    SectionScreen(
+        row.view.name,
+        onBack,
+        // Its badge before its name, as the Mac's page heading has it (A1579).
+        titleLead = { app.penmoss.ui.common.NotebookBadgeView(row.badge, row.view.name, size = 26.dp, decorative = true) },
+    ) {
         if (ui.message != null) {
             Text(
                 ui.message,
@@ -167,6 +172,8 @@ private fun OverviewTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksAc
         headlineContent = { Text("Name") },
         supportingContent = { Text(view.name) },
     )
+    // Its badge, right after its name, as the Mac's Overview has it (A1504, A1579).
+    app.penmoss.ui.settings.BadgeSettings(row.badge, view.notebookId, view.name) { key, value -> actions.onBadge(id, key, value) }
     val primary = ui.journal == id
     // Its notes and Copy Settings…, as the Mac's Overview has them (PEN-148).
     ListItem(

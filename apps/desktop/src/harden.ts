@@ -1,7 +1,7 @@
 /** What pages may do (A224): navigate only within the app, open note windows, nothing else. */
 import { BrowserWindow, shell, type WebContents } from 'electron';
 import { windows } from './app-state';
-import { appPath, isAppUrl, isExternalUrl } from './security';
+import { isAppUrl, isExternalUrl, openedLink } from './security';
 import { noteWindowPath, NoteWindowGate } from './windows';
 import { openInMain } from './windows/main-window';
 import { createNoteWindow } from './windows/note-window';
@@ -37,9 +37,10 @@ export function harden(contents: WebContents): void {
       return { action: 'deny' };
     }
     // A note opened "in a new tab", or a page a note window does not show: the main window.
-    const path = appPath(url);
-    if (path) openInMain(path);
-    else outward(url);
+    // A web link (Open on GitHub): the default browser.
+    const opened = openedLink(url);
+    if (opened?.kind === 'app') openInMain(opened.path);
+    else if (opened?.kind === 'browser') void shell.openExternal(url);
     return { action: 'deny' };
   });
 }

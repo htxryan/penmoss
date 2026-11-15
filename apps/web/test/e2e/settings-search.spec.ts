@@ -43,7 +43,8 @@ test('Search Settings finds a setting, Enter opens it on its page, Escape clears
   await page.goto('/settings/shortcuts');
   await field(page).fill('font');
   const results = page.getByTestId('settings-search-results');
-  await expect(results.getByRole('heading', { level: 2 })).toHaveText('3 Settings Match “font”');
+  await expect(results.getByRole('heading', { level: 1 })).toHaveText('Search Results');
+  await expect(results.getByTestId('settings-intro')).toHaveText('3 settings match “font”.');
   const links = results.getByTestId('settings-search-result');
   await expect(links).toHaveCount(3);
   await expect(links.first()).toContainText('Interface Font');
@@ -98,7 +99,7 @@ test('a renamed section’s old address opens the new one', async ({ page }) => 
   );
   await page.goto('/settings/status');
   await expect(page).toHaveURL(/\/settings\/github$/);
-  await expect(page.getByTestId('github-token').getByRole('heading', { level: 2 })).toHaveText(
+  await expect(page.getByTestId('github-token').getByRole('heading', { level: 1 })).toHaveText(
     'GitHub',
   );
   expect(errors).toEqual([]);

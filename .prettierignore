@@ -21,3 +21,5 @@ apps/android/app/src/main/assets/editor/
 # Room writes its schema on every build (T32).
 apps/android/app/schemas/
 docs/brand/source/
+# The Characters, generated one to a line by scripts/characters.mjs (task characters).
+packages/core/data/characters.json

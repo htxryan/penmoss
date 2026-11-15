@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "characters": 2040,
+  "cases": [
+    {
+      "query": "",
+      "count": 2040,
+      "first": ["★", "☆", "?", "!", "‼", "⁉", "→", "←"]
+    },
+    {
+      "query": "star",
+      "count": 30,
+      "first": ["★", "⭐", "☆", "🤩", "✡️", "☪️", "✦", "✧"]
+    },
+    {
+      "query": "Star Outline",
+      "count": 4,
+      "first": ["☆", "✧", "✩", "✰"]
+    },
+    {
+      "query": "arrow",
+      "count": 46,
+      "first": ["➤", "→", "←", "↑", "↓", "⇒", "↔", "↕"]
+    },
+    {
+      "query": "right arrow",
+      "count": 16,
+      "first": ["→", "↪", "⤴️", "⤵️", "⇒", "↔", "⇔", "⟶"]
+    },
+    {
+      "query": "light-bulb",
+      "count": 1,
+      "first": ["💡"]
+    },
+    {
+      "query": "idea",
+      "count": 2,
+      "first": ["💡", "💭"]
+    },
+    {
+      "query": "heart",
+      "count": 50,
+      "first": ["♥", "♡", "💘", "💝", "💟", "❣️", "❤️‍🔥", "🫶"]
+    },
+    {
+      "query": "flag",
+      "count": 277,
+      "first": ["⚑", "⚐", "⛳", "🇦🇨", "🇦🇩", "🇦🇪", "🇦🇫", "🇦🇬"]
+    },
+    {
+      "query": "check",
+      "count": 10,
+      "first": ["✓", "✅", "✔", "☑", "√", "🛫", "☐", "☒"]
+    },
+    {
+      "query": "face smil",
+      "count": 26,
+      "first": ["☺", "☻", "😄", "😁", "🙂", "😊", "😇", "🥰"]
+    },
+    {
+      "query": "favourite",
+      "count": 2,
+      "first": ["★", "☆"]
+    },
+    {
+      "query": "ookm",
+      "count": 2,
+      "first": ["📑", "🔖"]
+    },
+    {
+      "query": "★",
+      "count": 1,
+      "first": ["★"]
+    },
+    {
+      "query": "❤️",
+      "count": 1,
+      "first": ["❤"]
+    },
+    {
+      "query": "⸙",
+      "count": 0,
+      "first": []
+    },
+    {
+      "query": "zzqqxx",
+      "count": 0,
+      "first": []
+    }
+  ]
+}

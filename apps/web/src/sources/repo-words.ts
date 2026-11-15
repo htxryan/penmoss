@@ -1,9 +1,7 @@
 /**
- * Words and keys shared by Add a Git Notebook's repository and folder steps (T81, #229):
- * RepoPicker.tsx and RepoFolderStep.tsx.
+ * Words for the notebook steps' repository and folder screens (T81, #229, A1562):
+ * FirstRunRepos.tsx, which the first run and Add Notebook both show.
  */
-import type { KeyboardEvent } from 'react';
-import type { BrowseError } from '../desktop/bridge';
 
 /** "3 days ago", "last week": when a repository was last pushed. */
 export function pushedWords(iso: string | null, now = Date.now()): string {
@@ -23,34 +21,6 @@ export function pushedWords(iso: string | null, now = Date.now()): string {
   if (months < 12) return `${months} months ago`;
   const years = Math.round(days / 365);
   return years === 1 ? 'a year ago' : `${years} years ago`;
-}
-
-/** The refusals that mean no usable sign-in: the form offers typing and the sign-in hint (B8). */
-export const SIGNED_OUT: ReadonlySet<BrowseError['reason']> = new Set([
-  'no_credential',
-  'timeout',
-  'unauthorized',
-]);
-
-/** Moves focus through a list's enabled options with the arrow keys, Home and End. */
-export function listKeys(event: KeyboardEvent<HTMLElement>): void {
-  if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
-  const list = event.currentTarget;
-  const options = [
-    ...list.querySelectorAll<HTMLButtonElement>('[role="option"]:not([aria-disabled="true"])'),
-  ];
-  if (options.length === 0) return;
-  event.preventDefault();
-  const at = options.indexOf(document.activeElement as HTMLButtonElement);
-  const next =
-    event.key === 'Home'
-      ? 0
-      : event.key === 'End'
-        ? options.length - 1
-        : event.key === 'ArrowDown'
-          ? Math.min(options.length - 1, at + 1)
-          : Math.max(0, at - 1);
-  options[next]!.focus();
 }
 
 /** A folder name as the typed Directory takes it: no slashes, no `.` or `..`, no `.git`. */

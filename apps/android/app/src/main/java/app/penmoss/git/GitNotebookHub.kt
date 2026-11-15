@@ -27,10 +27,18 @@ import app.penmoss.sync.PassOutcome
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import app.penmoss.engine.settings.NotebookBadge
+import app.penmoss.engine.settings.NotebookBadges
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -38,6 +46,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import okhttp3.OkHttpClient
@@ -122,6 +131,36 @@ class GitNotebookHub(
 
     /** The notebooks on this phone, as Settings and Home list them. */
     val list: StateFlow<List<GitNotebookView>> = listed.asStateFlow()
+
+    /**
+     * Each notebook's badge (A1579), by local id: from its own settings as its store holds them
+     * (the last pass's, with changes made here laid over them) and its name, as the Mac's. Reading
+     * them makes the notebook's graph (its database and an idle sync loop, never its page).
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val badges: Flow<Map<String, NotebookBadge>> by lazy {
+        list.flatMapLatest { views ->
+            if (views.isEmpty()) flowOf(emptyMap()) else combine(views.map(::badgeOf)) { it.toMap() }
+        }.distinctUntilChanged().flowOn(Dispatchers.IO)
+    }
+
+    private fun badgeOf(view: GitNotebookView): Flow<Pair<String, NotebookBadge>> {
+        val graph = runCatching { graph(view.localId) }.getOrNull()
+            ?: return flowOf(view.localId to NotebookBadges.defaultBadge(view.notebookId, view.name))
+        return graph.store.observeSettings().map { state ->
+            view.localId to NotebookBadges.badgeOf(view.notebookId, view.name, state.settings.values)
+        }
+    }
+
+    /**
+     * Changes a notebook's badge (A1579): [key] is `badge.color` or `badge.glyph`, a null value
+     * back to its default. Its own setting, sent by its next pass, which runs now if anything
+     * watches the notebook (its page in Settings does).
+     */
+    fun setBadge(localId: String, key: String, value: JsonElement?) {
+        require(key == NotebookBadges.COLOR || key == NotebookBadges.GLYPH) { "not a badge setting: $key" }
+        graph(localId).changeSetting(key, value)
+    }
 
     private val sources = ConcurrentHashMap<String, Source>()
 

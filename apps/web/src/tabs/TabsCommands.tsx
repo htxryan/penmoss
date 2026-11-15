@@ -1,8 +1,9 @@
+import { useEffect } from 'react';
 import { useCommand, useCommands } from '../commands/hooks';
 import { useSourcesRegistry } from '../sources/hooks';
 import { openInMain, openNoteWindow } from '../window/open';
 import { useTabs, useTabsState } from './hooks';
-import { activeTab, currentEntry, noteIdOfPath, NEW_TAB_PATH } from './state';
+import { activeTab, currentEntry, isBareHome, noteIdOfPath, NEW_TAB_PATH } from './state';
 
 /**
  * The tab commands (PEN-140, A1503): New Tab, Close Tab, Reopen Closed Tab, the others, and
@@ -15,18 +16,32 @@ export function TabsCommands() {
   const registry = useSourcesRegistry();
   const has = () => tabs !== null;
   const count = state?.tabs.length ?? 0;
-  const active = state ? activeTab(state) : null;
+  // A bare Home is no tab to close (A1576).
+  const active = state && !isBareHome(state) ? activeTab(state) : null;
 
   const commands = useCommands();
-  // A new tab is Home with the cursor in Search, as a browser's is in its address bar (AC2).
+  // New Tab asks which note (A1594): a pick opens a new tab, a cancel leaves the tabs as they were.
+  // A note window asks the main window, whose picker opens.
   useCommand('tab.new', () => {
     if (!tabs) {
       openInMain(NEW_TAB_PATH);
       return;
     }
-    tabs.newTab();
-    commands.run('app.search', { source: 'menu' });
+    commands.run('app.newTabPicker', { source: 'menu' });
   });
+  useEffect(() => {
+    if (!tabs) return;
+    const asked = () => {
+      if (tabs.takeNewTabAsk()) commands.run('app.newTabPicker', { source: 'menu' });
+    };
+    // A launch at /?tab=new asks before the picker's own command is there: after this render.
+    const first = window.setTimeout(asked, 0);
+    const stop = tabs.subscribe(asked);
+    return () => {
+      window.clearTimeout(first);
+      stop();
+    };
+  }, [tabs, commands]);
   // ⌘W leaves a pinned tab open (A1499).
   useCommand(
     'tab.close',
@@ -123,7 +138,7 @@ export function TabsCommands() {
   useCommand(
     'tab.all',
     () => {
-      // The strip's All Tabs button when the tabs overflow; else the first tab takes focus.
+      // The strip's All Tabs button (always there while a tab is, A1592); else the first tab takes focus.
       const all = document.querySelector<HTMLButtonElement>('[data-testid="tab-all"]');
       if (all) {
         all.click();

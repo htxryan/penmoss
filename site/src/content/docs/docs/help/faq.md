@@ -7,7 +7,7 @@ This page answers the questions people ask most about Penmoss.
 
 ## Is Penmoss free?
 
-Yes. It is open source under the MIT licence, with no account and no subscription. Your git host may charge for its own plans; GitHub's free plan includes private repositories.
+Yes. It is open source under the MIT licence, with no account and no subscription. Your git host may charge for its own plans; GitHub's free plan includes private repositories. It includes [Lucide](https://lucide.dev)'s icons (ISC licence) and emoji names from [emojibase](https://emojibase.dev) and Unicode's CLDR; their licences ship with the app, in `third-party-notices.txt`.
 
 ## Do I need GitHub?
 
@@ -49,9 +49,9 @@ An agent can move a note to Trash, which you can undo. Only you can delete a not
 
 They are not end-to-end encrypted: your git host can read the files in your repository, as it can any file there. Keep the repository private. See [Privacy and security](/docs/help/privacy/).
 
-## Why does search by meaning download a model?
+## Why does semantic search download a model?
 
-The model runs on your Mac so that your notes never leave it. It is downloaded once, about 219 MB. You can turn it off in **Settings → Search by Meaning**.
+The model runs on your Mac so that your notes never leave it. It is downloaded once, about 219 MB. You can turn it off in **Settings → Semantic Search**, and **Delete Model…** there deletes it to free the space.
 
 ## My daily note has the wrong date
 

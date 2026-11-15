@@ -159,11 +159,43 @@ test.describe('in the Mac window, in Quanta with two notes', () => {
     // It opens What's New, and the notice is answered.
     await icon.click();
     await expect(page).toHaveURL(/\/settings\/updates\?whats-new$/);
+    // Opened to show what changed, What's New is unfolded (A1567).
+    await expect(page.getByTestId('whats-new')).toHaveAttribute('open', '');
+    await expect(page.getByTestId('release-notes-current')).toBeVisible();
     await page.goto('/');
     await expect(tree(page).or(page.locator('.sidebar'))).toBeVisible();
     await expect(page.getByTestId('updated-notice')).toHaveCount(0);
     await expand(page);
     await expect(page.getByTestId('updated-notice')).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+  // Ryan's review of 15 Nov 2026 (A1567).
+  test('What’s New is folded away until opened, by a click or from the keyboard', async ({
+    page,
+    host,
+  }) => {
+    const errors = collectErrors(page);
+    host.appVersion = '0.2.1-alpha.1313';
+    host.updatedFrom('0.2.1-alpha.1300', NOTES);
+    await page.goto('/settings/updates');
+    const whatsNew = page.getByTestId('whats-new');
+    const summary = page.getByTestId('whats-new-summary');
+    const notes = page.getByTestId('release-notes-current');
+    await expect(summary).toContainText('What’s New');
+    await expect(page.getByTestId('whats-new-count')).toHaveText('Build 1313 · 1 change');
+    await expect(whatsNew).not.toHaveAttribute('open');
+    await expect(notes).toBeHidden();
+    await summary.click();
+    await expect(notes).toBeVisible();
+    await summary.click();
+    await expect(notes).toBeHidden();
+    // From the keyboard: the summary takes focus, Enter and Space open and close it.
+    await summary.focus();
+    await page.keyboard.press('Enter');
+    await expect(notes).toBeVisible();
+    await page.keyboard.press('Space');
+    await expect(notes).toBeHidden();
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/whats-new-folded.png` });
     expect(errors).toEqual([]);
   });
   // PEN-135, item 10.

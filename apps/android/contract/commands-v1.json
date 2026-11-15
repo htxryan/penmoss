@@ -21,6 +21,15 @@
       }
     },
     {
+      "id": "app.newTabPicker",
+      "title": "New Tab…",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "New Tab’s note picker in the Mac app’s main window (A1594); the phone has no tabs."
+      }
+    },
+    {
       "id": "app.search",
       "title": "Search Notes…",
       "area": "Navigation",
@@ -625,7 +634,7 @@
     },
     {
       "id": "tab.new",
-      "title": "New Tab",
+      "title": "New Tab…",
       "area": "Tabs",
       "scope": "global",
       "android": {

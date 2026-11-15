@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 /**
  * Runs one of the open note's actions from the top bar's ⋯ menu (T42, A575; three groups since
@@ -9,4 +9,20 @@ import type { Page } from '@playwright/test';
 export async function noteAction(page: Page, item: string): Promise<void> {
   await page.getByTestId('note-menu').click();
   await page.getByTestId(item).click();
+}
+
+/**
+ * A context menu's items and separators in order: each item's test id (else its text), `—` for
+ * a separator. A sidebar note's menu leads with its open group (A1571).
+ */
+export async function menuLayout(menu: Locator): Promise<string[]> {
+  return menu
+    .locator('[role="menuitem"], [role="separator"]')
+    .evaluateAll((all) =>
+      all.map((each) =>
+        each.getAttribute('role') === 'separator'
+          ? '—'
+          : (each.getAttribute('data-testid') ?? each.textContent?.trim() ?? ''),
+      ),
+    );
 }

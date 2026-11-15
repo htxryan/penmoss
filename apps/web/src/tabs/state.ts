@@ -110,6 +110,49 @@ export function activeTab(state: TabsState): Tab {
   return state.tabs.find((tab) => tab.id === state.active) ?? state.tabs[0]!;
 }
 
+/** Home (`/`, or a new tab's `/?tab=new`): the empty window's page, never a tab's (A1594). */
+export const isHomePath = (path: string): boolean => path.split('?')[0] === HOME_PATH;
+
+/**
+ * The window has no note open (A1576): its one tab, unpinned, is on Home. The strip then shows no
+ * tab, only +, and closing that tab does nothing. It is the only way Home is ever in the tabs:
+ * Home is no tab's page and in no tab's history (A1594).
+ */
+export function isBareHome(state: TabsState): boolean {
+  if (state.tabs.length !== 1) return false;
+  const tab = state.tabs[0]!;
+  return !tab.pinned && isHomePath(currentEntry(tab).path);
+}
+
+/**
+ * The tabs with Home taken out (A1594), as a saved session from before is read: Home entries
+ * leave each tab's history (and the closed tabs'), a tab with nothing else goes, and with no tab
+ * left the window is bare.
+ */
+export function withoutHome(state: TabsState, ids: IdMaker = randomId): TabsState {
+  const tabs = state.tabs.map(withoutHomeEntries).filter((tab): tab is Tab => tab !== null);
+  const closed = state.closed.flatMap((item) => {
+    const tab = withoutHomeEntries(item.tab);
+    return tab ? [{ ...item, tab }] : [];
+  });
+  if (tabs.length === 0) return { ...initialState(ids), closed };
+  const active = tabs.some((tab) => tab.id === state.active) ? state.active : tabs[0]!.id;
+  return { tabs, active, closed };
+}
+
+function withoutHomeEntries(tab: Tab): Tab | null {
+  const entries = tab.entries.filter((item) => !isHomePath(item.path));
+  if (entries.length === tab.entries.length) return tab;
+  if (entries.length === 0) return null;
+  // The current entry, or the last one kept before it.
+  const kept = tab.entries.slice(0, tab.index + 1).filter((item) => !isHomePath(item.path));
+  return { ...tab, entries, index: Math.max(0, kept.length - 1) };
+}
+
+/** How many tabs the strip shows: none while the window is on a bare Home (A1576). */
+export const shownTabCount = (state: TabsState): number =>
+  isBareHome(state) ? 0 : state.tabs.length;
+
 /** The page the window shows now: the active tab's entry. */
 export const activePath = (state: TabsState): string => currentEntry(activeTab(state)).path;
 
@@ -140,7 +183,10 @@ function replaceEntry(tab: Tab, path: string): Tab {
 /**
  * The active tab goes to `path`: a new entry after its current one, or in its place with
  * `replace`. A pinned tab keeps its page: going elsewhere opens a new active tab to its right
- * (Settings, full-window, is the exception: Back returns from it).
+ * (Settings, full-window, is the exception: Back returns from it). Home is no tab's page
+ * (A1594): going there closes the tab (Close the Note), and a page opened from the bare Home
+ * takes its place. Only Settings goes over it (full-window, A1497), so that Back and "← Notes"
+ * return to the empty window.
  */
 export function navigateActive(
   state: TabsState,
@@ -150,7 +196,10 @@ export function navigateActive(
   const tab = activeTab(state);
   const current = currentEntry(tab).path;
   if (current === path) return state;
-  if (options.replace) return replaceTab(state, replaceEntry(tab, path));
+  if (isHomePath(path)) return closeTab(state, tab.id, options.ids);
+  if (options.replace || (isBareHome(state) && !isSettingsPath(path))) {
+    return replaceTab(state, replaceEntry(tab, path));
+  }
   if (tab.pinned && !isSettingsPath(path) && !isSettingsPath(current)) {
     return openTab(state, path, { background: false, ids: options.ids });
   }
@@ -181,6 +230,14 @@ export function openTab(
     readonly at?: number | undefined;
   } = {},
 ): TabsState {
+  // A bare Home is no tab to keep (A1576): the new one takes its place, and with nothing else
+  // to show it is the tab on screen, behind or not.
+  if (isBareHome(state)) {
+    const only = makeTab((options.ids ?? randomId)(), path);
+    return { ...state, tabs: [only], active: only.id };
+  }
+  // Never a Home tab (A1594).
+  if (isHomePath(path)) return state;
   const background = options.background ?? false;
   const tab = makeTab(
     (options.ids ?? randomId)(),
@@ -209,18 +266,29 @@ function clearOpener(tab: Tab): Tab {
  * tab shows it. It never replaces the page on screen (A1498).
  */
 export function showInTab(state: TabsState, path: string, ids: IdMaker = randomId): TabsState {
-  const note = noteIdOfPath(path);
-  if (note === null) return navigateActive(state, path, { ids });
-  const active = activeTab(state);
-  if (noteIdOfPath(currentEntry(active).path) === note) {
-    return navigateActive(state, path, { replace: true });
-  }
-  const showing = state.tabs.find((tab) => noteIdOfPath(currentEntry(tab).path) === note);
-  if (showing) {
-    const activated = activate(state, showing.id);
-    return navigateActive(activated, path, { replace: true });
-  }
+  if (noteIdOfPath(path) === null) return navigateActive(state, path, { ids });
+  const showing = tabShowing(state, path);
+  if (showing !== null) return switchToTab(state, showing, path);
   return openTab(state, path, { background: false, ids });
+}
+
+/**
+ * The tab whose page is the note `path` opens, the active one first; null for a page that is no
+ * note, or a note no tab shows (A1498, A1574).
+ */
+export function tabShowing(state: TabsState, path: string): string | null {
+  const note = noteIdOfPath(path);
+  if (note === null) return null;
+  const shows = (tab: Tab) => noteIdOfPath(currentEntry(tab).path) === note;
+  if (shows(activeTab(state))) return state.active;
+  return state.tabs.find(shows)?.id ?? null;
+}
+
+/** Tab `id` made active, showing `path` in place of its page (a heading, say) when it differs. */
+export function switchToTab(state: TabsState, id: string, path: string): TabsState {
+  const activated = activate(state, id);
+  if (currentEntry(activeTab(activated)).path === path) return activated;
+  return navigateActive(activated, path, { replace: true });
 }
 
 export function activate(state: TabsState, id: string): TabsState {
@@ -245,18 +313,22 @@ export function selectNth(state: TabsState, n: number): TabsState {
 export const selectLast = (state: TabsState): TabsState =>
   activate(state, state.tabs[state.tabs.length - 1]!.id);
 
+/** A closed tab, for Reopen Closed Tab; not one with no page of its own (Home, only Settings). */
 function remember(closed: readonly ClosedTab[], tab: Tab, position: number): ClosedTab[] {
+  const page = pageIndex(tab);
+  if (page === null || isHomePath(tab.entries[page]!.path)) return [...closed];
   return [...closed, { tab: clearOpener(tab), position }].slice(-MAX_CLOSED);
 }
 
 /**
  * Closes tab `id`: the tab to its right becomes active, else the one to its left. Closing the
- * only tab leaves a Home tab, and the window stays open. Pinned or not: the commands decide
- * whether a pinned tab closes (⌘W leaves it).
+ * only tab leaves a Home tab, which the strip does not show, and the window stays open; with
+ * only that Home, nothing closes (A1576). Pinned or not: the commands decide whether a pinned
+ * tab closes (⌘W leaves it).
  */
 export function closeTab(state: TabsState, id: string, ids: IdMaker = randomId): TabsState {
   const position = state.tabs.findIndex((tab) => tab.id === id);
-  if (position < 0) return state;
+  if (position < 0 || isBareHome(state)) return state;
   const tab = state.tabs[position]!;
   const tabs = state.tabs.filter((item) => item.id !== id);
   const closed = remember(state.closed, tab, position);

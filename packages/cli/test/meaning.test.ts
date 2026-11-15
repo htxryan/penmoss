@@ -190,7 +190,7 @@ describe('penmoss models (T75)', () => {
     const cli = machine(meaning);
     const before = await cli(['models', 'status']);
     expect(before.code).toBe(0);
-    expect(before.stdout).toContain('Search by meaning: on');
+    expect(before.stdout).toContain('Semantic search: on');
     expect(before.stdout).toContain('not downloaded (1 MB): run penmoss models fetch');
     const fetched = await cli(['models', 'fetch']);
     expect(fetched.code).toBe(0);
@@ -435,7 +435,7 @@ describe('penmoss mcp with meaning (T75, A1157)', () => {
       results: [{ title: 'UPS shutdown' }],
     });
     expect(control.closed).toBe(1);
-    expect(served.stderr).toMatch(/Search by Meaning is off/);
+    expect(served.stderr).toMatch(/Semantic Search is off/);
   });
 
   it('keeps the words-only tools without the model', async () => {

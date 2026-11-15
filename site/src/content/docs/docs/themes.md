@@ -5,7 +5,7 @@ description: Choose light or dark, a built-in theme or one of your own, the font
 
 This page shows you how to change how Penmoss looks: light or dark, the theme, the fonts and the width of your notes.
 
-Most of it is in **Settings → Appearance** (**Appearance and Themes** in the command palette). Its settings are in three groups, **Theme**, **Text** and, on the Mac, **Window**, beside a **Preview**: a small copy of Penmoss, with a sidebar and a note, that changes as you change the mode, the theme, the fonts or the text size. On a narrow window the preview is under the settings. Appearance is kept in your [Primary Notebook](/docs/organise/#the-primary-notebook), so your other devices get it too, except what is marked **This Mac**.
+Most of it is in **Settings → Appearance** (**Appearance and Themes** in the command palette). Its settings are in three groups, **Theme**, **Text** and, on the Mac, **Window**, beside a **Preview**: Penmoss itself, made small, with your sidebar and the note you opened last, that changes as you change the mode, the theme, the fonts or the text size. Nothing in it takes a click of its own: click the preview (or press Return on it), where a magnifying glass shows as you point at it, to see it larger in a window of its own, as big as fits and at its real size when there is room. **Close**, Escape or a click outside it closes it. Every preview in Settings opens larger the same way: the sidebar's, the note's, the theme editor's and a notebook's badge. Under it, **Fonts at Real Size** shows your text at the size Penmoss draws it: the interface's page titles, sidebar, settings, body and help text, and a note's title, headings, text and code, each labelled with what it is, its font and its size (for example, Text · Inter · 16 px). It changes as you change a font or the size. On a narrow window the preview is under the settings, and shows the note as a phone does. On Android the preview is Home's own row of shortcuts above a note, with the interface's text at its real size under it; tap it to see it full screen, and Back or **Close** to return. Appearance is kept in your [Primary Notebook](/docs/organise/#the-primary-notebook), so your other devices get it too, except what is marked **This Mac**.
 
 ## Light and dark
 
@@ -20,7 +20,7 @@ Penmoss comes with eight themes, each in a light and a dark version: **Penmoss**
 The built-in themes cannot be changed, but you can copy one and change the copy:
 
 1. Choose a theme and click **Customize** under the themes (it reads **Customize Nord…**, for example). For a built-in theme, Penmoss makes a copy named "… copy", chooses it and opens the **Theme Editor** on it. For a theme of your own, it opens the editor on that theme.
-2. Change its name, its light and dark colours, and under **Type and Layout** its interface, note and code fonts and its note width (32 to 72 rem). The preview beside the editor shows the variant you are editing as you change it.
+2. Change its name, its light and dark colours, and under **Type and Layout** its interface, note and code fonts and its note width (32 to 72 rem). The preview beside the editor shows the variant you are editing as you change it, with its fonts at their real size under it.
 3. Changes save as you make them. **← Appearance** goes back.
 
 If a pair of colours is too close for comfortable reading (below WCAG AA contrast), the editor says which. **Delete This Theme** deletes it on every device.
@@ -32,6 +32,7 @@ Under **Text**:
 - **Interface Font** and **Note Font**: Theme Default, System, Serif, Rounded, Humanist, Monospace, or **Custom…** with the name of a font installed on the device. A font that is not installed falls back to the system font. Code always uses the theme's monospace font.
 - **Note Font Size**: 12 to 28 px, 16 by default. The preview shows the size as you drag. **Reset** puts it back.
 - **Show Tooltips After**: how long the pointer rests on a button before its name shows: 0.5, 1 (the default), 1.5 or 2 seconds, or **Never**. Moving to a button with the Tab key shows its name at once.
+- **Dad Jokes**: a dad joke as the heading of a window with no note open. On by default; turn it off and the heading reads **Welcome to Penmoss**. The two lines on where to start stay either way.
 
 ## Note width
 

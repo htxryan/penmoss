@@ -9,6 +9,7 @@ import {
   selectionAfterOpen,
   moveSummary,
   toggled,
+  treeNoteClick,
   visibleSelection,
 } from '../../src/workspace/selection';
 
@@ -23,6 +24,62 @@ describe('note selection', () => {
     expect(isToggleClick({ metaKey: false, ctrlKey: true }, true)).toBe(false);
     expect(isToggleClick({ metaKey: false, ctrlKey: true }, false)).toBe(true);
     expect(isToggleClick({ metaKey: true, ctrlKey: false }, false)).toBe(false);
+  });
+
+  describe('a click on a note row (A570, A1570)', () => {
+    const click = (extra: Partial<Parameters<typeof treeNoteClick>[0]> = {}) => ({
+      button: 0,
+      metaKey: false,
+      ctrlKey: false,
+      shiftKey: false,
+      altKey: false,
+      defaultPrevented: false,
+      ...extra,
+    });
+    const mac = (picked: number, tabs = true) => ({ apple: true, tabs, picked });
+    const pc = (picked: number, tabs = true) => ({ apple: false, tabs, picked });
+
+    it('opens ⌘-click on one row in a tab behind, ⇧⌘-click in front', () => {
+      for (const picked of [0, 1]) {
+        expect(treeNoteClick(click({ metaKey: true }), mac(picked))).toBe('background');
+        expect(treeNoteClick(click({ metaKey: true, shiftKey: true }), mac(picked))).toBe(
+          'foreground',
+        );
+        expect(treeNoteClick(click({ ctrlKey: true }), pc(picked))).toBe('background');
+        expect(treeNoteClick(click({ ctrlKey: true, shiftKey: true }), pc(picked))).toBe(
+          'foreground',
+        );
+      }
+    });
+
+    it('toggles with ⌘-click while several rows are picked, and ⇧⌘-click is then a range', () => {
+      expect(treeNoteClick(click({ metaKey: true }), mac(2))).toBe('toggle');
+      expect(treeNoteClick(click({ metaKey: true }), mac(5))).toBe('toggle');
+      expect(treeNoteClick(click({ ctrlKey: true }), pc(2))).toBe('toggle');
+      expect(treeNoteClick(click({ metaKey: true, shiftKey: true }), mac(2))).toBe('range');
+    });
+
+    it('always toggles where there are no tabs (a note window), as before', () => {
+      expect(treeNoteClick(click({ metaKey: true }), mac(0, false))).toBe('toggle');
+      expect(treeNoteClick(click({ ctrlKey: true }), pc(1, false))).toBe('toggle');
+    });
+
+    it('opens a plain click here, Shift-click a range, ⌥-click a window', () => {
+      expect(treeNoteClick(click(), mac(3))).toBe('current');
+      expect(treeNoteClick(click({ shiftKey: true }), mac(0))).toBe('range');
+      expect(treeNoteClick(click({ shiftKey: true }), mac(3))).toBe('range');
+      expect(treeNoteClick(click({ altKey: true }), mac(0))).toBe('window');
+    });
+
+    it('leaves alone a right or middle click, a Mac’s Ctrl-click and the other modifiers', () => {
+      expect(treeNoteClick(click({ button: 2 }), mac(0))).toBeNull();
+      // The middle click is the tree's onAuxClick, a tab behind (A1498).
+      expect(treeNoteClick(click({ button: 1 }), mac(0))).toBeNull();
+      expect(treeNoteClick(click({ ctrlKey: true }), mac(0))).toBeNull();
+      expect(treeNoteClick(click({ metaKey: true }), pc(0))).toBeNull();
+      expect(treeNoteClick(click({ altKey: true, metaKey: true }), mac(0))).toBeNull();
+      expect(treeNoteClick(click({ metaKey: true, defaultPrevented: true }), mac(0))).toBeNull();
+    });
   });
 
   it('selects a range of notes either way round, skipping folders', () => {

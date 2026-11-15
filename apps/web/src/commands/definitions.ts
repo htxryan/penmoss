@@ -73,6 +73,8 @@ const tree = (id: string, title: string, keys: readonly string[]): CommandDefini
 export const APP_COMMANDS: readonly CommandDefinition[] = [
   global('app.palette', 'Command Palette', 'General', ['Mod+K'], { hidden: true }),
   global('app.quickOpen', 'Quick Open Note…', 'Navigation', ['Mod+P']),
+  // New Tab's picker (A1594), which tab.new opens in a window with tabs.
+  global('app.newTabPicker', 'New Tab…', 'Tabs', [], { hidden: true }),
   // T22. Mod+Shift+F, as in Obsidian and VS Code (Mod+F stays the browser's find, A90).
   global('app.search', 'Search Notes…', 'Navigation', ['Mod+Shift+F']),
   global('app.recent', 'Switch to a Recent Note', 'Navigation', ['Mod+E']),
@@ -209,7 +211,8 @@ export const APP_COMMANDS: readonly CommandDefinition[] = [
   // PEN-140 (A1503): the main window's tabs. ⌘T, ⌘W and ⇧⌘T are the browser's on the web
   // (BROWSER_RESERVED): they reach the page as the Mac menu's accelerators. ⌃Tab, ⇧⌃Tab and
   // ⌘1–⌘9 are the page's own.
-  global('tab.new', 'New Tab', 'Tabs', ['Mod+T']),
+  // A1594: it opens a picker of notes (Quick Open's, with New Note), so its name ends with "…".
+  global('tab.new', 'New Tab…', 'Tabs', ['Mod+T']),
   global('tab.close', 'Close Tab', 'Tabs', ['Mod+W']),
   global('tab.reopenClosed', 'Reopen Closed Tab', 'Tabs', ['Mod+Shift+T']),
   global('tab.closeOthers', 'Close Other Tabs', 'Tabs'),

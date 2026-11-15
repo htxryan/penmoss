@@ -146,6 +146,47 @@ test("reverts an agent's edit, keeping a later edit by the user", async ({
   expect(errors).toEqual([]);
 });
 
+test('reverts one of your own versions too, keeping a later edit (A1575)', async ({
+  page,
+  host,
+  notebook,
+}) => {
+  test.setTimeout(120_000);
+  const errors = collectErrors(page);
+  const { remote } = seeded(notebook);
+  await page.goto('/');
+  const id = await newNote(page, `Own ${RUN}`, 'First line');
+  await pushed(page, host, remote, id, 'First line');
+
+  // This Mac's own version: a paragraph added, then pushed.
+  await body(page).getByText('First line').click();
+  await page.keyboard.press(LINE_END);
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Second thought');
+  await pushed(page, host, remote, id, 'Second thought');
+
+  // A later edit, in the first paragraph, pushed as a version of its own.
+  await body(page).getByText('First line').click();
+  await page.keyboard.press(LINE_END);
+  await page.keyboard.type(', then edited');
+  await pushed(page, host, remote, id, 'First line, then edited');
+
+  await page.getByTestId('note-tab-history').click();
+  const own = panel(page)
+    .getByRole('list', { name: 'Versions' })
+    .getByRole('button', { name: /Added “Second thought”/ });
+  await expect(own).toBeVisible({ timeout: 15_000 });
+  await expect(own).toHaveAccessibleName(/Penmoss for Mac/);
+  await own.click();
+  await panel(page).getByRole('button', { name: 'Revert This Edit' }).click();
+  await expect(panel(page).getByTestId('history-status')).toContainText(
+    'Reverted this edit; later edits are kept.',
+  );
+  await expect(body(page)).not.toContainText('Second thought');
+  await expect(body(page)).toContainText('First line, then edited');
+  expect(errors).toEqual([]);
+});
+
 test('Trash restores a note into its folder, and deletes it for good', async ({
   page,
   host,
@@ -301,19 +342,20 @@ test.describe('a note with many versions (Ryan’s review of #193)', () => {
     const gutter = diff.locator('.diff-num').first();
     expect(await gutter.evaluate((el) => getComputedStyle(el).userSelect)).toBe('none');
 
-    // R2-11 and R2-12: Restore, Revert and Copy in one row, words and icons, no ↑/↓ hint.
+    // R2-11 and R2-12: View (A1572), Restore, Revert and Copy in one row, words and icons, no
+    // ↑/↓ hint.
     const actions = panel(page).locator('.history-actions');
     const buttons = actions.getByRole('button');
-    await expect(buttons).toHaveText(['Restore', 'Revert', 'Copy']);
+    await expect(buttons).toHaveText(['View', 'Restore', 'Revert', 'Copy']);
     await expect(actions.locator('kbd')).toHaveCount(0);
     const oneRow = () =>
       buttons.evaluateAll(
         (all) => new Set(all.map((button) => Math.round(button.getBoundingClientRect().top))).size,
       );
     expect(await oneRow()).toBe(1);
-    await buttons.first().hover();
+    await buttons.nth(1).hover();
     await expect(page.getByTestId('tooltip')).toHaveText('Restore This Version');
-    // A narrower panel: the words go, Revert's and Copy's first, then Restore's; still one row,
+    // A narrower panel: the words go, all but Restore's first, then Restore's; still one row,
     // each button still named in full.
     const width = (rem: number) =>
       page
@@ -323,7 +365,7 @@ test.describe('a note with many versions (Ryan’s review of #193)', () => {
           rem,
         );
     const words = actions.locator('.history-action-word:visible');
-    await width(13);
+    await width(18);
     await expect(actions).toHaveAttribute('data-fit', '1');
     await expect(words).toHaveText(['Restore']);
     expect(await oneRow()).toBe(1);
@@ -331,11 +373,12 @@ test.describe('a note with many versions (Ryan’s review of #193)', () => {
     await expect(actions).toHaveAttribute('data-fit', '2');
     await expect(words).toHaveCount(0);
     expect(await oneRow()).toBe(1);
+    await expect(actions.getByRole('button', { name: 'View This Version' })).toBeVisible();
     await expect(actions.getByRole('button', { name: 'Restore This Version' })).toBeVisible();
     await expect(actions.getByRole('button', { name: 'Copy Text' })).toBeVisible();
     await width(26);
     await expect(actions).not.toHaveAttribute('data-fit');
-    await expect(buttons).toHaveText(['Restore', 'Revert', 'Copy']);
+    await expect(buttons).toHaveText(['View', 'Restore', 'Revert', 'Copy']);
     expect(errors).toEqual([]);
   });
 });

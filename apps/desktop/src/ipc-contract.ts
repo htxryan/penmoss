@@ -156,6 +156,8 @@ export interface Invokes {
     { readonly floor: number; readonly hits: DesktopMeaningHit[] } | null
   >;
   meaningSetEnabled: Call<[on: boolean], DesktopMeaningStatus | null>;
+  meaningRemoveModel: Call<[], DesktopMeaningStatus | null>;
+  meaningRemoveIndex: Call<[], DesktopMeaningStatus | null>;
   gitList: Call<[], GitNotebookInfo[]>;
   gitAdd: Call<
     [
@@ -283,6 +285,18 @@ export const INVOKE = {
   meaningSearch: { channel: 'penmoss:meaning:search', from: 'window' },
   meaningSetEnabled: {
     channel: 'penmoss:meaning:set-enabled',
+    from: 'main',
+    gesture: { refused: null },
+  },
+  // Delete Model… (A1566): the main window's too, after the click that confirms it.
+  meaningRemoveModel: {
+    channel: 'penmoss:meaning:remove-model',
+    from: 'main',
+    gesture: { refused: null },
+  },
+  // Recreate Index… and Delete Index… (A1595): as Delete Model…, after the click that confirms.
+  meaningRemoveIndex: {
+    channel: 'penmoss:meaning:remove-index',
     from: 'main',
     gesture: { refused: null },
   },

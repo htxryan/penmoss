@@ -9,8 +9,8 @@ import { NEW_TAB_PATH } from './state';
 export function openFromOutside(path: string): void {
   const tabs = mainTabs();
   if (tabs && path === NEW_TAB_PATH) {
-    // A note window's ⌘T: a new Home tab here, the main window brought forward.
-    tabs.newTab();
+    // A note window's ⌘T: the New Tab picker here, the main window brought forward (A1594).
+    tabs.askNewTab();
     return;
   }
   showPath(path);

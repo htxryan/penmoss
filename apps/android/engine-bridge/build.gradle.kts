@@ -29,9 +29,26 @@ val contractResources = tasks.register<Copy>("contractResources") {
     into(layout.buildDirectory.dir("generated/contract-resources"))
 }
 
+// The Characters a line symbol is chosen from (A1569): the web's own file, written by
+// scripts/characters.mjs, with the notice its data's licences ask for beside it.
+val characterResources = tasks.register<Copy>("characterResources") {
+    from(rootProject.file("../../packages/core/data/characters.json"))
+    from(rootProject.file("../../packages/core/data/NOTICE.txt")) { rename { "characters-NOTICE.txt" } }
+    into(layout.buildDirectory.dir("generated/character-resources"))
+}
+
+// The open source notices (A1580): the web's file, which holds the Characters' notice and
+// Lucide's licence, shown by Settings → What's New.
+val noticeResources = tasks.register<Copy>("noticeResources") {
+    from(rootProject.file("../web/public/third-party-notices.txt"))
+    into(layout.buildDirectory.dir("generated/notice-resources"))
+}
+
 sourceSets {
     main {
         resources.srcDir(contractResources)
+        resources.srcDir(characterResources)
+        resources.srcDir(noticeResources)
     }
 }
 
@@ -95,4 +112,6 @@ tasks.test {
             this.scratch.set(scratch)
         },
     )
+    // The badges' Lucide icons the app ships (A1579), which NotebookBadgesTest checks.
+    inputs.files(root.file("app/src/main/assets/lucide/icons.txt")).withPropertyName("lucideIcons")
 }

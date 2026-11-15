@@ -391,15 +391,24 @@ test('a context menu on notes, a selection and folders: Move, Trash with Undo, R
   await expect(two).toBeVisible();
 
   // A selection never lingers once a note is opened another way (back, search, a link): the
-  // next Move or Trash cannot reach notes chosen earlier (review S1).
+  // next Move or Trash cannot reach notes chosen earlier (review S1). Trash closed their tab, so
+  // the tab starts again at three: Home is in no tab's history to go back to (A1594).
+  await three.click();
   await one.click();
   await two.click({ modifiers: ['Shift'] });
   await expect(two).toHaveAttribute('aria-selected', 'true');
   await page.goBack();
   await expect(one).toHaveAttribute('aria-selected', 'false');
   await expect(two).toHaveAttribute('aria-selected', 'false');
-  // ⌘ or Ctrl-click with nothing chosen takes only that note, not the open one unseen.
+  // ⌘ or Ctrl-click with nothing chosen opens a tab and picks nothing (A1570); Space then takes
+  // only that note, not the open one unseen.
   await two.click({ modifiers: [process.platform === 'darwin' ? 'Meta' : 'Control'] });
+  await expect(two).toHaveAttribute('aria-selected', 'false');
+  await expect(one).toHaveAttribute('aria-selected', 'false');
+  await two.focus();
+  await page.keyboard.press('Space');
+  await expect(two).toHaveAttribute('aria-selected', 'true');
+  await expect(one).toHaveAttribute('aria-selected', 'false');
   await two.click({ button: 'right' });
   await expect(page.getByRole('menu', { name: `“Ctx two ${RUN}”` })).toBeVisible();
   await page.keyboard.press('Escape');
@@ -466,7 +475,8 @@ test('New Note on a notebook and a folder; New Folder Here and New Note Here bes
   await expect(folderMenu.getByRole('menuitem').nth(1)).toHaveText(/New Folder Here/);
   await page.keyboard.press('Escape');
 
-  // A note's menu starts with New Note Here and New Folder Here, beside it in its folder.
+  // A note's menu has New Note Here and New Folder Here, under its open group (A1571), beside it
+  // in its folder.
   await row(page, inside).click({ button: 'right' });
   await page.getByTestId('note-new-folder').click();
   const sibling = `Sibling ${RUN}`;

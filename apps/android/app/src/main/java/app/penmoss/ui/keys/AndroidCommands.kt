@@ -140,6 +140,7 @@ object AndroidCommands {
         "tab.duplicate" to Coverage.NotHere(TABS),
         "tab.moveToWindow" to Coverage.NotHere(TABS),
         "tab.all" to Coverage.NotHere(TABS),
+        "app.newTabPicker" to Coverage.NotHere(TABS),
     )
 
     /** Where [id] runs on Android, or null when it has no entry (the coverage test fails). */

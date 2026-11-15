@@ -12,9 +12,9 @@
   border-radius: 0;
   background: var(--nb-badge-bg);
   color: var(--nb-badge-ink);
-  font-size: calc(var(--nb-badge-size, 1rem) * 0.62);
-  font-weight: 700;
-  line-height: 1;
+  font-size: calc(var(--nb-badge-size, 1rem) * var(--pm-badge-glyph-ratio));
+  font-weight: var(--pm-weight-bold);
+  line-height: var(--pm-leading-none);
   font-variant-numeric: tabular-nums;
   overflow: hidden;
   user-select: none;
@@ -30,7 +30,7 @@
 }
 
 .nb-badge[data-size='26'] {
-  font-size: 0.95rem;
+  font-size: var(--pm-text-md);
 }
 
 /* Two digits fit a small square. */
@@ -46,21 +46,23 @@
   gap: 1rem;
 }
 
-.badge-preview-row,
-.badge-preview-tab {
+/* The badge on the sidebar's own row and the strip's own tab (A1564), framed as they sit. */
+.badge-preview-places {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.425rem;
-  padding: 0.3rem 0.6rem;
-  border: 1px solid var(--pm-border-soft);
-  background: var(--pm-sidebar);
-  font-size: 0.85rem;
+  gap: 1rem;
 }
 
-.badge-preview-tab {
-  min-inline-size: 7.5rem;
-  border-top: 2px solid var(--pm-accent);
-  background: var(--pm-bg);
+.badge-preview-sidebar {
+  display: block;
+  width: 14rem;
+  border: 1px solid var(--pm-border-soft);
+}
+
+.badge-preview-strip {
+  display: inline-flex;
+  border: 1px solid var(--pm-border-soft);
 }
 
 .badge-swatches {
@@ -117,38 +119,34 @@
   inline-size: 4.5rem;
 }
 
-.badge-icons {
-  display: grid;
-  grid-template-columns: repeat(8, 2rem);
-  gap: 0.3rem;
+.badge-icon-chooser {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
 }
 
-.badge-icon {
+.badge-icon-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: var(--pm-text-sm);
+}
+
+.badge-icon-cell {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   inline-size: 2rem;
   block-size: 2rem;
-  padding: 0;
   border: 1px solid var(--pm-border-soft);
-  border-radius: 0;
   background: var(--pm-bg);
   color: var(--pm-fg);
-  cursor: pointer;
-}
-
-.badge-icon[aria-checked='true'] {
-  border-color: var(--pm-accent);
-  background: color-mix(in oklab, var(--pm-accent), transparent 85%);
-}
-
-.badge-icon:focus-visible {
-  outline: 2px solid var(--pm-accent);
-  outline-offset: 1px;
 }
 
 /* The badge before a notebook's name: in Settings' list and on its page. */
 .git-notebook-row > .nb-badge,
-.git-notebook-title > .nb-badge {
+.settings-head-title > .nb-badge {
   margin-inline-end: 0.15rem;
 }

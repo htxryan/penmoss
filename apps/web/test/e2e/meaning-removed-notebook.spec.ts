@@ -25,7 +25,7 @@ const go = (page: Page, path: string) =>
     window.dispatchEvent(new PopStateEvent('popstate'));
   }, path);
 
-test('a removed notebook leaves Search by Meaning’s count (A1373)', async ({ page, host }) => {
+test('a removed notebook leaves Semantic Search’s count (A1373)', async ({ page, host }) => {
   test.setTimeout(120_000);
   const errors = collectErrors(page);
   // A second notebook beside the seeded one.

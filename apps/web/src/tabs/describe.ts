@@ -8,7 +8,7 @@ import { parseRoute } from '../router';
 import { useSourcesRegistry } from '../sources/hooks';
 import { useEveryOpenNoteList } from '../sources/lists';
 import type { Source } from '../sources/registry';
-import { currentEntry, noteIdOfPath, type Tab, type TabsState } from './state';
+import { currentEntry, isBareHome, noteIdOfPath, type Tab, type TabsState } from './state';
 
 export type PageKind =
   'note' | 'home' | 'graph' | 'trash' | 'tags' | 'time-machine' | 'settings' | 'other';
@@ -146,12 +146,15 @@ export function tabTip(face: TabFace, apple: boolean): string {
 export const facePath = (face: TabFace): string =>
   face.source ? [face.source.name, ...face.folders].join(' › ') : '';
 
-/** The faces of the tabs now; they follow renames, moves and the badges. */
+/**
+ * The faces of the tabs the strip and the sheet show; they follow renames, moves and the badges.
+ * None while the window has no note open (a bare Home, A1576).
+ */
 export function useTabFaces(state: TabsState | null, look: BadgeLook): TabFace[] {
   const registry = useSourcesRegistry();
   const list = useEveryOpenNoteList();
   return useMemo(() => {
-    if (!state) return [];
+    if (!state || isBareHome(state)) return [];
     const titles = new Map(list.map((entry) => [entry.id, entry.title]));
     return describeTabs(state, {
       sourceOf: (id) => registry.sourceOfNote(id),

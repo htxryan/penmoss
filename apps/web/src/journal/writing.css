@@ -28,7 +28,7 @@
 
 .zone-picker .zone-offset {
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -49,7 +49,7 @@
   background: transparent;
   color: var(--pm-muted);
   font: inherit;
-  font-size: var(--pm-text-md);
+  font-size: var(--pm-text-item);
   cursor: pointer;
 }
 
@@ -60,7 +60,7 @@
 .wr-tab[aria-selected='true'] {
   border-bottom-color: var(--pm-accent);
   color: var(--pm-fg);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .wr-tab:focus-visible {
@@ -90,7 +90,7 @@
 }
 
 .wr-template-tools .muted {
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-help);
 }
 
 .wr-template-editor .template-input {
@@ -99,14 +99,14 @@
   box-sizing: border-box;
   width: 100%;
   font-family: var(--pm-mono);
-  font-size: var(--pm-text-sm);
-  line-height: 1.55;
+  font-size: var(--pm-text-field);
+  line-height: var(--pm-leading-relaxed);
   resize: vertical;
 }
 
 .wr-placeholder-menu .menu-item .muted {
   margin-left: 0.5rem;
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
 }
 
 /* The note the template makes for today (or this week), as the note shows it. */
@@ -122,21 +122,21 @@
   background: var(--pm-bg);
   font-family: var(--pm-font-body);
   font-size: var(--pm-text-md);
-  line-height: 1.5;
+  line-height: var(--pm-leading-relaxed);
 }
 
 .wr-preview-label {
   margin: 0 0 0.5rem;
   color: var(--pm-muted);
   font-family: var(--pm-font);
-  font-size: var(--pm-text-xs);
-  font-weight: 600;
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
 }
 
 .wr-preview-title {
   margin: 0 0 0.6rem;
-  font-size: 1.3rem;
-  font-weight: 700;
+  font-size: var(--pm-text-2xl);
+  font-weight: var(--pm-weight-bold);
 }
 
 .wr-preview p {
@@ -146,19 +146,19 @@
 
 .wr-preview .pv-h1 {
   margin-top: 0.6rem;
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: var(--pm-text-xl);
+  font-weight: var(--pm-weight-bold);
 }
 
 .wr-preview .pv-h2 {
   margin-top: 0.6rem;
-  font-size: 1.1rem;
-  font-weight: 650;
+  font-size: var(--pm-text-lg);
+  font-weight: var(--pm-weight-semibold);
 }
 
 .wr-preview :is(.pv-h3, .pv-h4, .pv-h5, .pv-h6) {
   margin-top: 0.5rem;
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .wr-preview .pv-item {
@@ -194,7 +194,7 @@
   gap: 0.3rem;
   min-height: 1.25rem;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-meta);
 }
 
 @media (max-width: 700px) {
@@ -249,7 +249,7 @@
 .kb-found {
   margin: 0.5rem 0 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-meta);
 }
 
 /* Keyboard Shortcuts: a command's row, one line at every width: its name shrinks beside its keys. */
@@ -274,7 +274,7 @@
 }
 
 .kb-row .lf-row-label {
-  font-weight: 450;
+  font-weight: var(--pm-weight-regular);
 }
 
 .kb-row-keys {
@@ -338,7 +338,7 @@
 
 .kb-foot .muted {
   margin-left: auto;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-help);
 }
 
 @media (hover: none), (max-width: 700px), (pointer: coarse) {

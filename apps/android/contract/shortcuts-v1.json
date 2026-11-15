@@ -22,6 +22,14 @@
       "keys": ["Mod+P"]
     },
     {
+      "id": "app.newTabPicker",
+      "title": "New Tab…",
+      "area": "Tabs",
+      "scope": "global",
+      "keys": [],
+      "hidden": true
+    },
+    {
       "id": "app.search",
       "title": "Search Notes…",
       "area": "Navigation",
@@ -496,7 +504,7 @@
     },
     {
       "id": "tab.new",
-      "title": "New Tab",
+      "title": "New Tab…",
       "area": "Tabs",
       "scope": "global",
       "keys": ["Mod+T"]

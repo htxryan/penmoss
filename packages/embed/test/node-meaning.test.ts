@@ -39,7 +39,18 @@ describe('NodeMeaning (T75)', () => {
     expect(opened).not.toBeNull();
     const [vector] = await opened!.embedder.embedDocuments(['sourdough']);
     expect(dot(vector!, vector!)).toBeCloseTo(1, 5);
+    expect(await node.indexBytes()).toBe(0);
     await opened!.cache.put(new Map([['a'.repeat(64), vector!]]));
+    // The index (A1595): its bytes on disk, and Delete Index removes them and keeps the model.
+    const bytes = await node.indexBytes();
+    expect(bytes).toBeGreaterThan(64);
+    await node.removeIndex();
+    expect(await node.indexBytes()).toBe(0);
+    expect((await node.status()).state).toBe('ready');
+    opened!.cache.forget();
+    expect(await opened!.cache.get(['a'.repeat(64)])).toEqual(new Map());
+    await opened!.cache.put(new Map([['a'.repeat(64), vector!]]));
+    expect(await node.indexBytes()).toBe(bytes);
     const lease = await opened!.lease();
     expect((await leaseHolder(home))?.writer).toBe('cli');
     await opened!.close();

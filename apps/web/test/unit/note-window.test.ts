@@ -16,7 +16,12 @@ import {
   historyPlace,
   startHistory,
 } from '../../src/router';
-import { noteWindowPath, openNoteWindow } from '../../src/window/open';
+import {
+  noteWindowPath,
+  openNoteWindow,
+  setStoreBeforeNoteWindow,
+  STORE_BEFORE_OPEN_MS,
+} from '../../src/window/open';
 import {
   ANNOUNCE_DELAY_MS,
   MAX_ANNOUNCED_IDS,
@@ -125,6 +130,45 @@ describe('opening a note window', () => {
       [`/window/notes/${ID}`, '_blank'],
       [`/window/notes/${ID}?heading=Beds`, '_blank'],
     ]);
+  });
+
+  it('in the Mac app, opens it once this window has stored its notes (A1591)', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    let stored!: () => void;
+    setStoreBeforeNoteWindow(() => new Promise<void>((resolve) => (stored = resolve)));
+    try {
+      openNoteWindow(ID);
+      await Promise.resolve();
+      // The new window would read the note without this window's last keystrokes.
+      expect(open).not.toHaveBeenCalled();
+      stored();
+      await vi.waitFor(() => expect(open).toHaveBeenCalledTimes(1));
+      expect(open).toHaveBeenCalledWith(`/window/notes/${ID}`, '_blank');
+    } finally {
+      setStoreBeforeNoteWindow(null);
+    }
+  });
+
+  it('opens it anyway once storing takes too long, or fails, and only once (A1591)', async () => {
+    vi.useFakeTimers();
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    try {
+      let stored!: () => void;
+      setStoreBeforeNoteWindow(() => new Promise<void>((resolve) => (stored = resolve)));
+      openNoteWindow(ID);
+      vi.advanceTimersByTime(STORE_BEFORE_OPEN_MS);
+      expect(open).toHaveBeenCalledTimes(1);
+      stored();
+      await vi.runAllTimersAsync();
+      expect(open).toHaveBeenCalledTimes(1);
+      setStoreBeforeNoteWindow(() => Promise.reject(new Error('no store')));
+      openNoteWindow(ID);
+      await vi.runAllTimersAsync();
+      expect(open).toHaveBeenCalledTimes(2);
+    } finally {
+      setStoreBeforeNoteWindow(null);
+      vi.useRealTimers();
+    }
   });
 
   it('opens a note in a new window on ⌥-click, never the browser’s download', () => {

@@ -17,6 +17,7 @@ const READY: ServiceStatus = {
   modelBytes: 1,
   totalBytes: 1,
   license: { name: 'none', url: '' },
+  indexBytes: 100,
   indexed: 1,
   total: 1,
 };
@@ -65,6 +66,8 @@ function calls(overrides: Partial<ServiceCalls> = {}): ServiceCalls {
       }),
     setEnabled: (enabled) =>
       Promise.resolve({ ...READY, enabled, state: enabled ? 'ready' : 'off' }),
+    removeModel: () => Promise.resolve({ ...READY, enabled: false, state: 'off', modelBytes: 0 }),
+    removeIndex: () => Promise.resolve({ ...READY, state: 'indexing', indexBytes: 0, indexed: 0 }),
     ...overrides,
   };
 }
@@ -147,6 +150,48 @@ describe('the embedding service in main (T76)', () => {
     expect(written).toEqual([false, true]);
     expect(processes).toHaveLength(2);
     await vi.waitFor(() => expect(asked).toEqual([false, true]));
+  });
+
+  it('relays Delete Model, and keeps it for the next service when none runs (A1566)', async () => {
+    let removed = 0;
+    const make = () =>
+      calls({
+        removeModel: () => {
+          removed++;
+          return Promise.resolve({ ...READY, enabled: false, state: 'off', modelBytes: 0 });
+        },
+      });
+    const { service, processes, written } = setUp(make);
+    expect(await service.removeModel()).toMatchObject({ state: 'off', enabled: false });
+    expect(removed).toBe(1);
+    // While it waits to restart after a crash: off is written at once, and the files go as the
+    // next one starts.
+    processes[0]!.crash(9);
+    expect(await service.removeModel()).toMatchObject({ state: 'off', enabled: false });
+    expect(written).toEqual([false]);
+    expect(processes).toHaveLength(2);
+    await vi.waitFor(() => expect(removed).toBe(2));
+  });
+
+  it('relays Recreate and Delete Index, and keeps it for the next service when none runs (A1595)', async () => {
+    let removed = 0;
+    const make = () =>
+      calls({
+        removeIndex: () => {
+          removed++;
+          return Promise.resolve({ ...READY, state: 'indexing', indexed: 0, indexBytes: 0 });
+        },
+      });
+    const { service, processes, written } = setUp(make);
+    expect(await service.removeIndex()).toMatchObject({ state: 'indexing', indexBytes: 0 });
+    expect(removed).toBe(1);
+    // While it waits to restart after a crash: the files go as the next one starts, and the
+    // setting is left as it was.
+    processes[0]!.crash(9);
+    await service.removeIndex();
+    expect(written).toEqual([]);
+    expect(processes).toHaveLength(2);
+    await vi.waitFor(() => expect(removed).toBe(2));
   });
 
   it('fails a call that was waiting when the process went, and backs off', async () => {

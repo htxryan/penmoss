@@ -4,7 +4,7 @@
  * the current colour. Icons are always decorative here: the button or link
  * around one carries its name (`aria-label`, or visible text beside it).
  */
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 const dot = (cx: number, cy: number, r: number) => (
   <circle cx={cx} cy={cy} r={r} fill="currentColor" stroke="none" />
@@ -78,6 +78,19 @@ const PATHS = {
       <rect x="16" y="9" width="6" height="11" rx="1.5" />
     </>
   ),
+  /** Just the changes (History's View, A1572): a file with a line added and one taken out. */
+  diff: (
+    <path d="M6.5 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5zM13.5 3.5V8H18M11 9.5v5M8.5 12h5M8.5 17h5" />
+  ),
+  // History's View This Version (A1572): an eye.
+  eye: (
+    <>
+      <path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z" />
+      <circle cx="12" cy="12" r="2.8" />
+    </>
+  ),
+  // History's View: Wrap Lines (Lucide's wrap-text).
+  wrap: <path d="M3 5h18M3 19h6M3 12h14.5a3.5 3.5 0 0 1 0 7H13m3-3-3 3 3 3" />,
   file: (
     <path d="M6.5 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5zM13.5 3.5V8H18M8.5 12.5h7M8.5 16h5" />
   ),
@@ -145,6 +158,13 @@ const PATHS = {
   ),
   logOut: (
     <path d="M14 4.5h4A1.5 1.5 0 0 1 19.5 6v12a1.5 1.5 0 0 1-1.5 1.5h-4M10 16.5 5.5 12 10 7.5M5.5 12H15" />
+  ),
+  // A read-only view (A1572): a padlock.
+  lock: (
+    <>
+      <rect x="5.5" y="10.5" width="13" height="9" rx="1.5" />
+      <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
+    </>
   ),
   md: (
     <>
@@ -227,8 +247,6 @@ const PATHS = {
   ),
   plus: <path d="M12 5v14M5 12h14" />,
   minus: <path d="M5 12h14" />,
-  // A pulse, for Settings → Status (T39 pass 3, A902): Android's; `info` is the Info panel's.
-  pulse: <path d="M3.5 12.5h4l2-5 3.5 10 2.5-6.5 1.5 1.5h3.5" />,
   redo: <path d="m15 14 5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />,
   refresh: (
     <path d="M19.5 11A7.6 7.6 0 0 0 6 7.3L4.5 9M4.5 4.5V9H9M4.5 13A7.6 7.6 0 0 0 18 16.7l1.5-1.7M19.5 19.5V15H15" />
@@ -237,6 +255,13 @@ const PATHS = {
     <>
       <circle cx="11" cy="11" r="6.5" />
       <path d="m20 20-4.2-4.2" />
+    </>
+  ),
+  // A1589: a Settings preview opens larger; Search's glass with a plus.
+  'zoom-in': (
+    <>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m20 20-4.2-4.2M11 8.5v5M8.5 11h5" />
     </>
   ),
   sort: <path d="M7.5 4.5v15m0 0-3-3m3 3 3-3M16.5 19.5v-15m0 0-3 3m3-3 3 3" />,
@@ -293,14 +318,18 @@ export function Icon({
   name,
   size = 16,
   className,
+  style,
 }: {
   readonly name: IconName;
   readonly size?: number;
   readonly className?: string;
+  /** Inline style, for an icon whose look no container may change (a notebook's badge). */
+  readonly style?: CSSProperties;
 }) {
   return (
     <svg
       className={className ? `i ${className}` : 'i'}
+      style={style}
       viewBox="0 0 24 24"
       width={size}
       height={size}

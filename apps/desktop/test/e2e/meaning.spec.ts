@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, symlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, symlinkSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { EMBEDDING_GEMMA, fetchModel, modelId, modelPaths, vectorsDir } from '@penmoss/embed';
@@ -200,7 +200,7 @@ test('a crash is restarted, the page searching by words meanwhile', async () => 
   ).toBe('ups');
 });
 
-test('Settings → Search by Meaning: Off removes the model and the vectors, after a click (A1158)', async () => {
+test('Settings → Semantic Search: Off keeps the model, and Delete Model removes it and the vectors, after a click (A1158, A1566)', async () => {
   const home = meaningHome(true);
   const launched = await start(home);
   const { app, page } = launched;
@@ -208,6 +208,7 @@ test('Settings → Search by Meaning: Off removes the model and the vectors, aft
   // From a script, with no click or key press, nothing changes (before anything is typed: a key
   // press lets the page act for a few seconds after it).
   expect(await inPage(app, 'window.penmossDesktop.meaning.setEnabled(false)')).toBeNull();
+  expect(await inPage(app, 'window.penmossDesktop.meaning.removeModel()')).toBeNull();
   // Settings needs a notebook (with none, the app shows its first-run screen).
   await gitNotebook(launched);
   await send(app, NOTES);
@@ -221,23 +222,33 @@ test('Settings → Search by Meaning: Off removes the model and the vectors, aft
   await expect(row.getByTestId('meaning-status')).toHaveText(
     'Ready: EmbeddingGemma 300M (219 MB), on this Mac. All 4 notes are indexed.',
   );
-  // PEN-146: the switch is Find Notes by Meaning, the progress a real bar, and Off asks first,
-  // naming the size; nothing is removed until Turn Off.
-  await expect(row.getByRole('switch', { name: 'Find Notes by Meaning' })).toBeChecked();
+  // PEN-146, A1566: the switch is Semantic Search, the progress a real bar. Off stops it at once,
+  // and search goes by words; the model stays.
+  await expect(row.getByRole('switch', { name: 'Semantic Search' })).toBeChecked();
   await expect(row.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100');
   await row.getByTestId('meaning-enabled').click();
-  await expect(row.getByTestId('meaning-off-ask')).toContainText(
-    'Turn off and remove the model (219 MB) and the index?',
-  );
-  await expect(row.getByTestId('meaning-enabled')).toBeChecked();
-  expect(existsSync(modelPaths(EMBEDDING_GEMMA, home).dir)).toBe(true);
-  await row.getByTestId('meaning-off-confirm').click();
   await expect(row.getByTestId('meaning-status')).toHaveAttribute('data-state', 'off');
   await expect(row.getByTestId('meaning-enabled')).not.toBeChecked();
   expect(JSON.parse(readFileSync(join(home, 'meaning.json'), 'utf8'))).toEqual({ enabled: false });
+  expect((await search(app, 'blackout')).answer).toBeNull();
+  expect(existsSync(modelPaths(EMBEDDING_GEMMA, home).dir)).toBe(true);
+  expect(existsSync(vectorsDir(home, modelId(EMBEDDING_GEMMA)))).toBe(true);
+  // Delete Model… asks first, naming the size; nothing is removed until Delete Model.
+  await expect(row.getByTestId('meaning-model-state')).toHaveText('EmbeddingGemma 300M · 219 MB');
+  await row.getByTestId('meaning-delete-model').click();
+  const ask = page.getByTestId('meaning-delete-ask');
+  await expect(ask).toContainText('EmbeddingGemma 300M (219 MB) and the semantic index');
+  await ask.getByTestId('meaning-delete-cancel').click();
+  await expect(ask).toBeHidden();
+  expect(existsSync(modelPaths(EMBEDDING_GEMMA, home).dir)).toBe(true);
+  await row.getByTestId('meaning-delete-model').click();
+  await page.getByTestId('meaning-delete-confirm').click();
+  await expect(row.getByTestId('meaning-model-state')).toHaveText(
+    'EmbeddingGemma 300M · Not downloaded',
+  );
+  await expect(row.getByTestId('meaning-delete-model')).toHaveCount(0);
   expect(existsSync(modelPaths(EMBEDDING_GEMMA, home).dir)).toBe(false);
   expect(existsSync(vectorsDir(home, modelId(EMBEDDING_GEMMA)))).toBe(false);
-  expect((await search(app, 'blackout')).answer).toBeNull();
   // On again: the model is gone and this service never downloads, so it says Not downloaded.
   await row.getByTestId('meaning-enabled').click();
   await expect(row.getByTestId('meaning-status')).toHaveAttribute('data-state', 'absent');
@@ -245,7 +256,64 @@ test('Settings → Search by Meaning: Off removes the model and the vectors, aft
   await expect(row.getByTestId('meaning-enabled')).toBeChecked();
 });
 
-test('Settings → Search by Meaning: a removed notebook leaves its count (A1373)', async () => {
+test('Settings → Semantic Search: Recreate Index rebuilds the vectors while on, and Delete Index removes them while off (A1595)', async () => {
+  const home = meaningHome();
+  const launched = await start(home);
+  const { app, page } = launched;
+  await untilStarted(app);
+  // From a script, with no click or key press, nothing is deleted.
+  expect(await inPage(app, 'window.penmossDesktop.meaning.removeIndex()')).toBeNull();
+  await gitNotebook(launched);
+  await send(app, NOTES);
+  await untilReady(app, 1, NOTES.length + 1);
+  const vectors = vectorsDir(home, modelId(EMBEDDING_GEMMA));
+  const segment = join(vectors, 'seg-app.bin');
+  expect(existsSync(segment)).toBe(true);
+  const born = statSync(segment).birthtimeMs;
+  await go(page, '/settings/meaning');
+  const row = page.getByTestId('meaning-settings');
+  const state = row.getByTestId('meaning-index-state');
+  await expect(row.getByTestId('meaning-delete-model')).toHaveClass(/danger-fill/);
+  // On: Recreate Index… alone, with the index's size on disk.
+  await expect(state).toHaveText(/^\d+ (KB|MB) on this Mac, from your notes$/);
+  await expect(row.getByTestId('meaning-recreate-index')).toBeVisible();
+  await expect(row.getByTestId('meaning-delete-index')).toHaveCount(0);
+  await row.getByTestId('meaning-recreate-index').click();
+  const ask = page.getByTestId('meaning-index-ask');
+  await expect(ask).toContainText('is deleted and built again from your notes');
+  await ask.getByTestId('meaning-index-confirm').click();
+  // The vectors are deleted and written again from the notes, the model kept.
+  await expect.poll(async () => (await status(app))?.state, { timeout: 30_000 }).toBe('ready');
+  await untilReady(app, 1, NOTES.length + 1);
+  expect(existsSync(segment)).toBe(true);
+  expect(statSync(segment).birthtimeMs).toBeGreaterThan(born);
+  expect(
+    (await search(app, 'keep the computers running during a blackout')).answer?.hits[0]?.id,
+  ).toBe('ups');
+  await expect(row.getByTestId('meaning-status')).toHaveText(
+    'Ready: EmbeddingGemma 300M (219 MB), on this Mac. All 4 notes are indexed.',
+  );
+  await expect(state).toHaveText(/ on this Mac, from your notes$/);
+
+  // Off: Delete Index… alone; it removes the vectors and keeps the model.
+  await row.getByTestId('meaning-enabled').click();
+  await expect(row.getByTestId('meaning-status')).toHaveAttribute('data-state', 'off');
+  await expect(row.getByTestId('meaning-recreate-index')).toHaveCount(0);
+  await row.getByTestId('meaning-delete-index').click();
+  await expect(ask).toContainText('The model stays');
+  await ask.getByTestId('meaning-index-cancel').click();
+  await expect(ask).toBeHidden();
+  expect(existsSync(segment)).toBe(true);
+  await row.getByTestId('meaning-delete-index').click();
+  await ask.getByTestId('meaning-index-confirm').click();
+  await expect(state).toHaveText('No index');
+  await expect(row.getByTestId('meaning-delete-index')).toHaveCount(0);
+  expect(existsSync(vectors)).toBe(false);
+  expect(existsSync(modelPaths(EMBEDDING_GEMMA, home).dir)).toBe(true);
+  await expect(row.getByTestId('meaning-model-state')).toHaveText('EmbeddingGemma 300M · 219 MB');
+});
+
+test('Settings → Semantic Search: a removed notebook leaves its count (A1373)', async () => {
   const launched = await start(meaningHome());
   const { app, page } = launched;
   await untilStarted(app);
@@ -270,7 +338,7 @@ test('Settings → Search by Meaning: a removed notebook leaves its count (A1373
   await expect(rows).toHaveCount(2);
   await rows.filter({ has: page.locator('.git-notebook-row-name', { hasText: /^Notes/ }) }).click();
   const card = page.getByTestId('git-notebook');
-  await expect(card.locator('.git-notebook-title')).toHaveText('Notes');
+  await expect(card.getByTestId('settings-title')).toHaveText('Notes');
   await card.getByTestId('git-remove').click();
   // Should the welcome note not be pushed yet, it says so: push first, then remove.
   const confirm = card.getByTestId('git-remove-confirm');

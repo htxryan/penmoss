@@ -22,8 +22,8 @@
  */
 import {
   DEFAULT_SYMBOLS,
-  symbolColourVar,
   symbolEdits,
+  symbolInk,
   symbolRun,
   symbolSpokenName,
   type LineSymbol,
@@ -203,7 +203,9 @@ function gutter(
     glyph.className = 'pm-symbol';
     glyph.setAttribute('aria-hidden', 'true');
     glyph.dataset['symbol'] = String(token.index + 1);
-    glyph.style.color = symbolColourVar(symbol.colour);
+    // An emoji keeps its own colours (A1588).
+    const ink = symbolInk(symbol);
+    if (ink) glyph.style.color = ink;
     glyph.textContent = symbol.glyph;
     element.append(glyph);
   }

@@ -18,6 +18,7 @@ export function Frame({
   state,
   start,
   above,
+  cancel,
 }: {
   /** Above the title (the welcome's mark). */
   above?: ReactNode;
@@ -31,6 +32,11 @@ export function Frame({
   children?: ReactNode;
   /** Back, when there is somewhere to go back to. */
   back?: (() => void) | undefined;
+  /**
+   * Cancel, in Back's place: the flow's first screen when it was opened from Settings (Add
+   * Notebook, A1562), which closes it.
+   */
+  cancel?: (() => void) | undefined;
   /** The footer's buttons, the primary one last. */
   actions?: ReactNode;
   /** The welcome: its words in the middle of the screen. */
@@ -68,9 +74,19 @@ export function Frame({
         </h2>
         {children}
       </div>
-      {back || actions || start ? (
+      {back || cancel || actions || start ? (
         <div className="fr-foot">
-          {back ? (
+          {cancel && !back ? (
+            <button
+              type="button"
+              className="btn quiet"
+              data-ui="item"
+              data-testid="first-run-cancel"
+              onClick={cancel}
+            >
+              Cancel
+            </button>
+          ) : back ? (
             <button
               type="button"
               className="btn quiet"

@@ -95,4 +95,13 @@ export const TITLE_BAR_ROWS = [
   '.home',
   '.tags-page-top',
   '.drawing-editor-bar',
+  // View This Version's head (A1572): its modal covers the rows beside the History panel, so its
+  // head is the first row there; its buttons click.
+  '.history-view-head',
 ] as const;
+
+/**
+ * Pictures of the app (A1564): a Settings preview, small or enlarged, draws the app's real rows,
+ * which would drag the window from inside the page. In them no row drags (Ryan's review of #210).
+ */
+export const PICTURES = ['.preview-zoom', '.preview-zoom-body'] as const;

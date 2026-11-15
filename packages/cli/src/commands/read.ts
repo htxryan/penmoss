@@ -33,7 +33,7 @@ export const search: Command = {
   ],
   description: [
     'Searches the notes on this machine. hybrid (the default) finds notes by their words and by their meaning: notes about what you mean, in other words. full-text matches words only ("a phrase", prefix*, -excluded and title:word), and semantic by meaning alone.',
-    'Search by meaning needs its model on this Mac (penmoss models fetch, or the app’s Settings → Search by Meaning). Without it hybrid is words only and says so, and semantic is refused (exit 7). While notes are still being indexed, results say how many notes meaning covers so far.',
+    'Semantic search needs its model on this Mac (penmoss models fetch, or the app’s Settings → Semantic Search). Without it hybrid is words only and says so, and semantic is refused (exit 7). While notes are still being indexed, results say how many notes meaning covers so far.',
     'Each result shows the note id, title, when it was last updated, its tags and a snippet with the matches.',
   ],
   flags: [

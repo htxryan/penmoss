@@ -222,7 +222,7 @@ test.describe.serial('T28: a custom theme', () => {
         page.evaluate(() => document.documentElement.style.getPropertyValue('--pm-accent')),
       )
       .toBe('#7a3e9d');
-    await expect(page.getByTestId('theme-preview').locator('.tp-button')).toHaveCSS(
+    await expect(page.getByTestId('theme-preview').locator('.sb-shortcut.new-note')).toHaveCSS(
       'background-color',
       rgb('#7a3e9d'),
     );
@@ -243,7 +243,7 @@ test.describe.serial('T28: a custom theme', () => {
     await expect(settings.locator(`label.theme-card[data-theme-id="${customId}"]`)).toContainText(
       name,
     );
-    await expect(settings.getByTestId('app-preview').locator('.tp-button')).toHaveCSS(
+    await expect(settings.getByTestId('app-preview').locator('.sb-shortcut.new-note')).toHaveCSS(
       'background-color',
       rgb('#7a3e9d'),
     );

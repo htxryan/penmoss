@@ -82,7 +82,7 @@ const radio = (setting: string) =>
 describe('Settings → Quick Capture', () => {
   it('chooses where a capture saves, Today’s Note by default', async () => {
     await render();
-    expect(host.querySelector('h2')?.textContent).toBe('Quick Capture');
+    expect(host.querySelector('h1')?.textContent).toBe('Quick Capture');
     expect(radio('todays-note').checked).toBe(true);
     expect(host.querySelector('[data-setting="todays-note"]')?.textContent).toContain(
       'At the end of ## Captures, with the time',

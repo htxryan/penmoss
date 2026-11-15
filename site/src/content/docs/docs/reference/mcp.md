@@ -17,7 +17,7 @@ Without `--notebook`, the server reaches every notebook at once, and each tool a
 - **Nothing moves between notebooks.** Moving a note or folder into another notebook's folder is refused with `cross_notebook`. Make it in the other notebook and trash this one.
 - **Each notebook syncs on its own.** It syncs when it's first used, pushes a minute after its edits settle, and is pulled every two minutes while it's in use. A notebook added while the server runs is served from the next call.
 
-- **Search by meaning covers every notebook** when it's on in Settings → Search by Meaning. The model opens once for the whole server. While no other Penmoss process is indexing, the server indexes every notebook it serves, a little at a time, each in turn, and `coverage` says how far each notebook has got.
+- **Semantic search covers every notebook** when it's on in Settings → Semantic Search. The model opens once for the whole server. While no other Penmoss process is indexing, the server indexes every notebook it serves, a little at a time, each in turn, and `coverage` says how far each notebook has got.
 
 - **One channel for every notebook.** With `--channel`, the session is listed in every notebook, so **Send to…** offers it in each one. A thread arrives naming its notebook (`notebook`), and the agent's reply goes back to that notebook at once.
 
@@ -31,7 +31,7 @@ Searches the notebook. Arguments: `query`\*, `mode` (`hybrid`, `full-text` or `s
 - **`full-text`** finds notes by their words.
 - **`semantic`** finds notes by meaning alone.
 
-Meaning needs the model on this Mac, and **Settings → Search by Meaning** on when the server starts (or `penmoss models fetch`). Without it, `hybrid` searches words only and says so, and `semantic` is refused with `semantic_unavailable`.
+Meaning needs the model on this Mac, and **Settings → Semantic Search** on when the server starts (or `penmoss models fetch`). Without it, `hybrid` searches words only and says so, and `semantic` is refused with `semantic_unavailable`.
 
 ### Note ids
 

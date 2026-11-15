@@ -25,4 +25,6 @@ export function registerMeaningIpc(ipc: IpcHandlers): void {
   ipc.handle('meaningSetEnabled', (_call, on) =>
     typeof on === 'boolean' ? (meaning?.setEnabled(on) ?? null) : null,
   );
+  ipc.handle('meaningRemoveModel', () => meaning?.removeModel() ?? null);
+  ipc.handle('meaningRemoveIndex', () => meaning?.removeIndex() ?? null);
 }

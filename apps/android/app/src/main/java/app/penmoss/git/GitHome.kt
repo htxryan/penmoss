@@ -52,17 +52,22 @@ import kotlinx.coroutines.launch
 fun NotebooksHome(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
     val context = LocalContext.current
     val nav = rememberNavController()
-    app.penmoss.ui.PenmossNavHost(nav, startDestination = HOME_ROUTE) {
-        composable(HOME_ROUTE) {
-            GitNotebooksRoute(
-                graph.git,
-                onOpen = { GitNotebookActivity.open(context, it) },
-                onBack = onBack,
-                home = true,
-                onSettings = { nav.open(app.penmoss.ui.settings.SettingsRoutes.HOME) },
-            )
+    // Settings' (i) names the primary notebook on every Settings screen (A1560).
+    androidx.compose.runtime.CompositionLocalProvider(
+        app.penmoss.ui.settings.LocalPrimaryNotebookName provides app.penmoss.ui.settings.rememberPrimaryName(graph),
+    ) {
+        app.penmoss.ui.PenmossNavHost(nav, startDestination = HOME_ROUTE) {
+            composable(HOME_ROUTE) {
+                GitNotebooksRoute(
+                    graph.git,
+                    onOpen = { GitNotebookActivity.open(context, it) },
+                    onBack = onBack,
+                    home = true,
+                    onSettings = { nav.open(app.penmoss.ui.settings.SettingsRoutes.HOME) },
+                )
+            }
+            settingsRoutes(SettingsHost(graph, nav, context))
         }
-        settingsRoutes(SettingsHost(graph, nav, context))
     }
 }
 

@@ -128,7 +128,8 @@ class DisplayAndSyncStopTest {
         compose.onNodeWithTag("display-${DisplayKeys.TODAY}").assert(SemanticsMatcher.expectValue(SemanticsProperties.ToggleableState, ToggleableState.Off))
         // Shown again is stored as true, as the web stores it.
         compose.onNodeWithTag("display-${DisplayKeys.TODAY}").performClick()
-        compose.onNodeWithTag("display-${DisplayKeys.COMMANDS}").performClick()
+        // Under the large top app bar (A1560), below the screen's fold.
+        compose.onNodeWithTag("display-${DisplayKeys.COMMANDS}").performScrollTo().performClick()
         assertEquals(listOf(DisplayKeys.TODAY to false, DisplayKeys.TODAY to true, DisplayKeys.COMMANDS to false), changes)
         assertEquals(listOf("Tags", "Today", "This Week", "Graph", "Commands"), displayChoices(Settings()).map { it.label })
         // Android's Home has only what Home has (PEN-146): no "on the web and the Mac" words or rows.
