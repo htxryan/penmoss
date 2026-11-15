@@ -421,6 +421,14 @@ tasks:
     cmds:
       - ./gradlew --console=plain :engine-bridge:test :engine-git:test :app:testDebugUnitTest :app:assembleDebugAndroidTest {{.CLI_ARGS}}
 
+  android:budgets:
+    desc: 'Android: the wall-clock budgets (*BudgetTest, A1244, A1539) alone, in one fork, never in `android:test`'
+    deps: [android:editor]
+    dir: apps/android
+    env: *android-env
+    cmds:
+      - PENMOSS_BUDGETS=1 ./gradlew --console=plain :app:testDebugUnitTest {{.CLI_ARGS}}
+
   android:release:
     desc: 'Android: the signed App Bundle for Play internal testing (needs the PENMOSS_KEY* signing settings; docs/android.md)'
     deps: [android:editor]

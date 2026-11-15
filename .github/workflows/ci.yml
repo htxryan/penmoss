@@ -469,6 +469,10 @@ jobs:
       - name: Android tests and the debug APK
         run: task android:test -- :app:assembleDebug
 
+      # The budgets after the rest, alone in one fork, so the other forks never skew them (A1539).
+      - name: Android budgets
+        run: task android:budgets
+
       - name: Upload the debug APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
