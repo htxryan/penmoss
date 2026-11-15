@@ -1,5 +1,5 @@
 /**
- * The shape of a note's Yjs document (A16), shared by clients and the NoteDoc:
+ * The shape of a note's Yjs document (A16), shared by the apps, the editor and the engine:
  *
  * - `prosemirror` (NOTE_ROOT): the body, bound to the editor.
  * - `title`: the title as plain text, so concurrent title edits merge by character.
@@ -11,7 +11,7 @@
  *   tree and this record agree.
  *
  * `updated` is not stored in the document (it would change on every
- * keystroke); the NoteDoc stamps it when it indexes the note.
+ * keystroke); a record keeps it beside the document.
  */
 import * as Y from '@y/y';
 

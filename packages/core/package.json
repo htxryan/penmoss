@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "Schema, markdown codec, frontmatter, IDs, tags, periodic notes, templates",
+  "description": "Schema, markdown codec, frontmatter, IDs, tags, periodic notes, search and feedback rules",
   "exports": {
     ".": "./src/index.ts",
     "./agent-reference": "./src/agent-reference.ts",

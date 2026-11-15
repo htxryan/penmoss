@@ -102,7 +102,7 @@ export function isWithin(
 /**
  * A folder and every folder below it, as the tree shows them (cycles and
  * orphans resolved as `effectiveParents` does); empty for an unknown folder.
- * Search filters by folder with it (T22), on the server and offline.
+ * Search filters by folder with it (T22).
  */
 export function folderSubtree(folders: readonly FolderRecord[], folderId: string): Set<string> {
   const parents = effectiveParents(folders);

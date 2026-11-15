@@ -1,7 +1,6 @@
 /**
- * Snippets with the matched words marked (T22). The server's FTS5
- * `snippet()` and this function use the same markers, so the app renders
- * both the same way: STX before a match and ETX after it, so marking never
+ * Snippets with the matched words marked (T22), with the markers an FTS5
+ * `snippet()` would take, so the apps render every snippet the same way: STX before a match and ETX after it, so marking never
  * needs HTML escaping. A note could hold those control characters, so text is
  * indexed and marked through `searchText`, which turns them into spaces (both
  * are separators to the tokenizer, so no word changes).

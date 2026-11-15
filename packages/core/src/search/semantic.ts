@@ -99,7 +99,7 @@ export const FAKE_DIMENSIONS = 1024;
 export const FAKE_FLOOR = 0.2;
 
 /**
- * A deterministic stand-in for a real model (the server's A105, revived): stemmed words and
+ * A deterministic stand-in for a real model (A105's, revived): stemmed words and
  * their character trigrams hashed into 1,024 signed dimensions, then normalised. Texts that share
  * words land close together, which is all tests need of "meaning". `delayMs` makes each call slow,
  * for tests of indexing in the background.
@@ -156,7 +156,7 @@ export interface MeaningSearchOptions {
   readonly filter?: (id: string) => boolean;
 }
 
-/** The depth of each list hybrid fuses (the server's HYBRID_DEPTH). */
+/** The depth of each list hybrid fuses. */
 export const HYBRID_DEPTH = 50;
 
 /** Every note's chunks in memory, searched by a scan: a few thousand chunks take milliseconds. */
@@ -393,7 +393,7 @@ export interface FusedHit<T, M> {
 }
 
 /**
- * Hybrid search (A1155, after the server's T23 and A571, A905): the words' and meaning's lists
+ * Hybrid search (A1155, after T23, A571 and A905): the words' and meaning's lists
  * fused by reciprocal rank fusion; a note found only by meaning stays when its best chunk is at
  * least `floor` similar; notes with a matched word in the title come first.
  */

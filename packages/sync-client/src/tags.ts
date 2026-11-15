@@ -3,7 +3,7 @@
  * one attribute per tag (`tags/<name>` = true), so two devices adding tags
  * concurrently keep both (a single list value would keep one device's list).
  * Inline `#tags` are read from the body's text, outside code. The same code
- * runs on clients (records, the tag pane) and in the NoteDoc (the index).
+ * runs in the apps (records, the tag pane) and in the engine (its frontmatter).
  */
 import {
   cleanTags,

@@ -1,9 +1,9 @@
 /**
  * Content-addressed attachments (T10, A10). A file is named by the SHA-256 of
  * its bytes, so the same image pasted twice, or on two devices, is one file.
- * Notes reference it as `attachments/<sha256>.<ext>`; the git mirror (T27)
- * rewrites that path relative to each note's folder on export. DOM-free: the
- * Worker, the sync client and the editor share these rules.
+ * Notes reference it as `attachments/<sha256>.<ext>`; a git notebook's render
+ * (T27, T50) rewrites that path relative to each note's folder. DOM-free: the
+ * engine, the apps and the editor share these rules.
  */
 
 /** Image types T10 accepts, with their file extensions. SVG is excluded: it can carry script. */
