@@ -26,7 +26,7 @@ import { adoptRemoteHead, remoteBranch, resumablePr, unchangedSincePush } from '
 import { sweep } from '../src/janitor.ts';
 import { prepareSnapshot, planFiles } from '../src/planning-host.ts';
 import { checkMacVm, runMacProof } from '../src/proof/mac.ts';
-import type { RunSandbox } from '../src/run.ts';
+import type { RunSandbox } from '../src/run-deps.ts';
 import { testConfig } from './helpers.ts';
 
 const BRANCH = 'factory/42-fix-the-typo';

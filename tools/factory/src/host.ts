@@ -81,7 +81,7 @@ import {
   unchangedSincePush,
 } from './publish.ts';
 import { parseAgentResult, RESULT_PATH } from './result.ts';
-import type { RunDeps, RunEvent, RunSandbox } from './run.ts';
+import type { RunDeps, RunEvent, RunSandbox } from './run-deps.ts';
 import type { IssueComment } from './issue.ts';
 import { makeOwnDirs, sandboxSpec, seatbeltProvider, withJavaHome } from './sandbox.ts';
 import { ANDROID_WALK_CLASS, MAC_WALK_SPEC, WALK_SHOT, walkFile, walkTail } from './walk.ts';
@@ -598,7 +598,7 @@ export function hostDeps(options: HostOptions): HostDeps {
         `${MAIN}...${commit}`,
       ]);
       const count = await mustGit(exec, publish, ['rev-list', '--count', `${MAIN}..${commit}`]);
-      // The branch's first commit's subject: the PR's title (prTitle, run.ts).
+      // The branch's first commit's subject: the PR's title (prTitle, pr-title.ts).
       const subjects = await mustGit(exec, publish, [
         ...['log', '--reverse', '--no-merges', '--format=%s'],
         `${MAIN}..${commit}`,

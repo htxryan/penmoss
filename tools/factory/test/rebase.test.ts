@@ -15,7 +15,7 @@ import {
   resolveAppendConflicts,
   unpadRow,
 } from '../src/rebase.ts';
-import type { RunSandbox } from '../src/run.ts';
+import type { RunSandbox } from '../src/run-deps.ts';
 
 // Real git in a temp repository: main and a factory branch that both add decisions (F6).
 const env: Record<string, string> = {

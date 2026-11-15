@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CheckRun } from '../src/checks.ts';
 import { ciHistory } from '../src/ci-failure.ts';
-import { failedLogs } from '../src/run.ts';
+import { failedLogs } from '../src/ci-watch.ts';
 import { ciRepairText, beforeRepairInReview } from '../src/watch.ts';
 import { item, testConfig } from './helpers.ts';
 

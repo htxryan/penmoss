@@ -31,7 +31,9 @@ import {
 } from './planning-host.ts';
 import type { PlanningAction } from './planning.ts';
 import { fill, promptTemplate } from './prompt.ts';
-import { branchName, runImplement, type RunInput, type RunOutcome } from './run.ts';
+import { branchName } from './pr-title.ts';
+import { runImplement } from './run.ts';
+import type { RunInput, RunOutcome } from './run-deps.ts';
 import { parseAgentResult, type AgentResult } from './result.ts';
 import { loadSecrets, type Secrets } from './secrets.ts';
 import { openTracker } from './tracker/index.ts';

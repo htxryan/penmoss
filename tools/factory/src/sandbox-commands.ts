@@ -3,7 +3,7 @@
  * main the host fetched (A1232), take commits pushed to the PR by hand (PEN-101), get the sandbox
  * ready (A1289), and go again past the other slot's ref lock (A1267).
  */
-import type { RunSandbox } from './run.ts';
+import type { RunSandbox } from './run-deps.ts';
 
 /**
  * The gate sandbox's fetch of main into the runs' clone, with the sandbox's read-only token, and

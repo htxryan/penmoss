@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { excerpt } from '../src/run.ts';
+import { excerpt } from '../src/gate-log.ts';
 
 describe("the gate's feedback on a failed check (A1250)", () => {
   it('puts the error lines above the tail when the tail has none', () => {

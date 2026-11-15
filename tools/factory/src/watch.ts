@@ -32,15 +32,9 @@ import { publishRefs } from './proof/store.ts';
 import { readConversation, reviewState, roundText, type ReviewState } from './review.ts';
 import { runRebase, runRevise, type ReviseDeps } from './revise.ts';
 import { infraFailure, MAX_FLAKE_RERUNS } from './ci-failure.ts';
-import {
-  branchName,
-  CI_REPAIR_LIMITS,
-  ciFailureText,
-  failedLogs,
-  rerunFlake,
-  rerunInfra,
-  type RunDeps,
-} from './run.ts';
+import { branchName } from './pr-title.ts';
+import { CI_REPAIR_LIMITS, ciFailureText, failedLogs, rerunFlake, rerunInfra } from './ci-watch.ts';
+import type { RunDeps } from './run-deps.ts';
 import { issueForAgent, planFor, runImages, type Factory } from './start.ts';
 
 export interface FactoryPr {

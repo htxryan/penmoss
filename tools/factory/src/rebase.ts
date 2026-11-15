@@ -17,7 +17,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { formatDecisions, numberLines, renumberLines, takenDecisions } from './decisions.ts';
-import type { RunSandbox } from './run.ts';
+import type { RunSandbox } from './run-deps.ts';
 
 export const DECISIONS = 'docs/decisions.md';
 
