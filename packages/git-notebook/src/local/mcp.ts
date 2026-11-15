@@ -30,6 +30,13 @@ import type { SortMode } from '@penmoss/core/workspace';
 import type { EditOp, SectionMode } from '@penmoss/model/edit-engine';
 import { COMMENT_HANDLERS } from './comment-tools';
 import {
+  NotebookBusy,
+  NotebookRouter,
+  notebooksInstructions,
+  withNotebookArgument,
+  type NotebookSet,
+} from './router';
+import {
   CREATE_RETRY_WINDOW_MS,
   LocalError,
   markdownMarks,
@@ -640,16 +647,47 @@ export interface LocalServerPresentation {
 export class LocalMcpServer {
   private readonly tools: ReadonlyMap<string, ToolDefinition>;
   private readonly absent: ReadonlyMap<string, string>;
+  /** Several notebooks (PEN-150): calls go to the notebook their ids or `notebook` name. */
+  private readonly router: NotebookRouter | null;
 
+  /** One notebook: `penmoss mcp --notebook`, the relay. */
   constructor(
-    private readonly access: NotebookAccess,
+    access: NotebookAccess,
+    name: string,
+    log?: (text: string) => void,
+    presentation?: LocalServerPresentation,
+  );
+  /** Several notebooks: `penmoss mcp` (PEN-139). */
+  constructor(
+    access: NotebookSet,
+    name: string,
+    log?: (text: string) => void,
+    presentation?: LocalServerPresentation,
+  );
+  constructor(
+    private readonly access: NotebookAccess | NotebookSet,
     private readonly name: string,
     private readonly log: (text: string) => void = () => undefined,
     private readonly presentation: LocalServerPresentation = {},
   ) {
     this.absent = new Map([...ABSENT_TOOLS, ...(presentation.absent ?? [])]);
+    const several = 'notebooks' in access;
+    this.router =
+      'notebooks' in access
+        ? new NotebookRouter(access, (notebook, tool, args, waitMs) =>
+            this.run(
+              (write, run) =>
+                access.use(notebook, write, run, waitMs === undefined ? {} : { waitMs }),
+              tool,
+              args,
+            ),
+          )
+        : null;
     this.tools = new Map(
-      localTools(this.absent, presentation.meaning).map((tool) => [tool.name, tool]),
+      localTools(this.absent, presentation.meaning).map((tool) => [
+        tool.name,
+        several ? withNotebookArgument(tool) : tool,
+      ]),
     );
   }
 
@@ -702,13 +740,22 @@ export class LocalMcpServer {
             ...(this.presentation.channel ? { experimental: { 'claude/channel': {} } } : {}),
           },
           serverInfo: {
-            name: 'penmoss-notebook',
-            title: this.presentation.title ?? `Penmoss git notebook ${this.name}`,
+            name: this.router ? 'penmoss-notebooks' : 'penmoss-notebook',
+            title:
+              this.presentation.title ??
+              (this.router ? 'Penmoss git notebooks' : `Penmoss git notebook ${this.name}`),
             version: LOCAL_SERVER_VERSION,
           },
           instructions:
             this.presentation.instructions ??
-            (this.presentation.meaning ? LOCAL_MEANING_INSTRUCTIONS : LOCAL_INSTRUCTIONS),
+            (this.router
+              ? notebooksInstructions(
+                  await this.router.notebooks(),
+                  this.presentation.meaning === true,
+                )
+              : this.presentation.meaning
+                ? LOCAL_MEANING_INSTRUCTIONS
+                : LOCAL_INSTRUCTIONS),
         };
       }
       case 'ping':
@@ -745,22 +792,38 @@ export class LocalMcpServer {
         error: `Invalid arguments for ${tool.name}: ${checked.problem}.${tool.hint ? ` ${tool.hint}` : ''}`,
       };
     }
+    if (this.router) return this.router.call(tool, checked.args);
+    return this.run(
+      (write, run) => (this.access as NotebookAccess).use(write, run),
+      tool,
+      checked.args,
+    );
+  }
+
+  /** Runs a checked call on one notebook, reached through `use`: its outcome, or its refusal. */
+  private async run(
+    use: NotebookAccess['use'],
+    tool: ToolDefinition,
+    args: Record<string, unknown>,
+  ): Promise<LocalToolOutcome> {
     const handler = HANDLERS[tool.name]!;
-    const ref = checked.args['id'];
+    const ref = args['id'];
     try {
       // get_daily_note may make the day's note, read_comment_thread mark a thread seen: they
       // save and sync like a write.
       const writes = tool.write || WRITES_TOO.has(tool.name);
-      return await this.access.use(writes, (notebook) =>
+      return await use(writes, (notebook) =>
         handler(
           notebook,
           // A note named by its short reference (PEN-69) is named by its id from here on.
           typeof ref === 'string' && 'id' in tool.inputSchema.properties
-            ? { ...checked.args, id: notebook.noteIdOf(ref) }
-            : checked.args,
+            ? { ...args, id: notebook.noteIdOf(ref) }
+            : args,
         ),
       );
     } catch (error) {
+      // A read across notebooks leaves a busy one out (PEN-150): the router says so.
+      if (error instanceof NotebookBusy) throw error;
       if (error instanceof LocalError && error.code === 'other_notebook') {
         const named = error.details?.['notebook'];
         const tag = typeof named === 'string' ? named : '';

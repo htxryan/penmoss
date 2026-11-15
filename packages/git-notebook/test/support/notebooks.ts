@@ -23,12 +23,22 @@ export interface TestClone {
   readonly transport: MemoryTransport;
 }
 
-export function testNotebook(options: { readonly dir?: string; readonly branch?: string } = {}) {
+export function testNotebook(
+  options: {
+    readonly dir?: string;
+    readonly branch?: string;
+    /** The notebook's id and name (default NOTEBOOK_ID, Work). */
+    readonly id?: string;
+    readonly name?: string;
+    /** Where its note ids start counting, so two notebooks' ids differ (or match, on purpose). */
+    readonly firstId?: number;
+  } = {},
+) {
   const remote = new MemoryRemote();
   const branch = options.branch ?? 'main';
   const root = options.dir ? `${options.dir}/` : '';
   let time = Date.UTC(2026, 9, 29, 14, 0, 0);
-  let ids = 0;
+  let ids = options.firstId ?? 0;
   const clock = () => time;
   /** ULIDs in creation order: the time part grows, so a later note has a later id. */
   const newId = () => {
@@ -77,7 +87,9 @@ export function testNotebook(options: { readonly dir?: string; readonly branch?:
       storage,
       secrets,
       writer: { kind: input.kind ?? 'device', label: name },
-      ...(input.create ? { create: { id: NOTEBOOK_ID, name: 'Work' } } : {}),
+      ...(input.create
+        ? { create: { id: options.id ?? NOTEBOOK_ID, name: options.name ?? 'Work' } }
+        : {}),
       clock,
       newId,
       ...input.engine,
