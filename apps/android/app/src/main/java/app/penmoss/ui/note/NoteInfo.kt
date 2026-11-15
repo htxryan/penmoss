@@ -74,7 +74,7 @@ import java.io.IOException
 import java.time.OffsetDateTime
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.shortWhen
-import app.penmoss.ui.titleOf
+import app.penmoss.ui.trash.titleOf
 
 /*
  * The note's Info sheet on the phone (T40 P7, NT23, LK5, LK6; A474, A475): the web's Info panel

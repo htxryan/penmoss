@@ -43,6 +43,7 @@ import app.penmoss.ui.note.noteRoutes
 import app.penmoss.ui.search.ActionTargets
 import app.penmoss.ui.search.searchRoutes
 import app.penmoss.ui.tags.tagRoutes
+import app.penmoss.ui.trash.trashRoutes
 import java.text.DateFormat
 import java.util.Date
 

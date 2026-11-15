@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.trash
 
 import app.penmoss.stopScope
 import androidx.test.core.app.ApplicationProvider

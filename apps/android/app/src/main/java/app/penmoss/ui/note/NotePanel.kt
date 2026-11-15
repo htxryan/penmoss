@@ -78,7 +78,7 @@ import kotlin.math.sin
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.TipIconButton
 import app.penmoss.ui.GraphModel
-import app.penmoss.ui.titleOf
+import app.penmoss.ui.trash.titleOf
 
 /*
  * The note panel (T51, A936; T53 item 9, A985): Metadata, Comments, Version History and Local

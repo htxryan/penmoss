@@ -37,8 +37,8 @@ import app.penmoss.data.NoteStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import app.penmoss.ui.UNDO_MS
-import app.penmoss.ui.titleOf
+import app.penmoss.ui.trash.UNDO_MS
+import app.penmoss.ui.trash.titleOf
 
 /*
  * Several notes at once on the phone (T42, A570; T40 NT26, A652): the web's tree selection and

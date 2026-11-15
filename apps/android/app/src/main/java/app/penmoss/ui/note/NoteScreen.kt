@@ -105,7 +105,7 @@ import app.penmoss.ui.atMostEvery
 import app.penmoss.ui.journalMarksOf
 import app.penmoss.ui.open
 import app.penmoss.ui.folders.refreshTagList
-import app.penmoss.ui.titleOf
+import app.penmoss.ui.trash.titleOf
 
 /**
  * An open note (T32; the writing screen, T33): the native top bar, the editor

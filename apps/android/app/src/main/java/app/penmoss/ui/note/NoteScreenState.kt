@@ -75,7 +75,7 @@ import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.readableTheme
 import app.penmoss.ui.historyFailure
 import app.penmoss.ui.folders.moveNoteAndSay
-import app.penmoss.ui.trashAfterClosing
+import app.penmoss.ui.trash.trashAfterClosing
 
 /** Pictures one trip to the photo picker may bring. */
 private const val MAX_PICKED = 10

@@ -47,7 +47,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
-import app.penmoss.ui.moveToTrashWithUndo
+import app.penmoss.ui.trash.moveToTrashWithUndo
 import app.penmoss.ui.folders.oneMoveSaid
 import app.penmoss.ui.open
 

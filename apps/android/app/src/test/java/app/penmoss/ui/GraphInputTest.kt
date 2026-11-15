@@ -7,6 +7,7 @@ import app.penmoss.data.NoteLinkEntity
 import app.penmoss.engine.bridge.GraphGroup
 import app.penmoss.engine.bridge.GraphNote
 import app.penmoss.engine.bridge.GraphScope
+import app.penmoss.ui.trash.titleOf
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList

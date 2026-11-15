@@ -22,7 +22,6 @@ import app.penmoss.ui.HomeLayout
 import app.penmoss.ui.HomeShortcuts
 import app.penmoss.ui.RootUi
 import app.penmoss.ui.SettingsRoutes
-import app.penmoss.ui.TrashRoutes
 import app.penmoss.ui.common.FolderItem
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.NoteItem
@@ -30,6 +29,7 @@ import app.penmoss.ui.graphRoute
 import app.penmoss.ui.keys.openCapture
 import app.penmoss.ui.leave
 import app.penmoss.ui.open
+import app.penmoss.ui.trash.TrashRoutes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged

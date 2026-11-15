@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.trash
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -42,6 +42,8 @@ import app.penmoss.ui.common.SnackbarTone
 import app.penmoss.ui.common.noneToTrash
 import app.penmoss.ui.common.say
 import app.penmoss.ui.common.shortWhen
+import app.penmoss.ui.RootUi
+import app.penmoss.ui.leave
 
 /*
  * Trash on the phone (T40 P3a, NT12–NT15, A430–A433): Move to Trash with Undo, the Trash

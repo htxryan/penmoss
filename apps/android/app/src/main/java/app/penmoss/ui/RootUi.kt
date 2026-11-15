@@ -63,6 +63,9 @@ import app.penmoss.ui.folders.renameFolderAndSay
 import app.penmoss.ui.folders.reorderFolderAndSay
 import app.penmoss.ui.folders.reorderNoteAndSay
 import app.penmoss.ui.folders.sortFolderAndSay
+import app.penmoss.ui.trash.NoteActionsSheet
+import app.penmoss.ui.trash.moveToTrashWithUndo
+import app.penmoss.ui.trash.trashRefusedMessage
 
 /**
  * What a git notebook's screens share (A6): the navigation, the snackbar over every screen, the
