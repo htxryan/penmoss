@@ -28,7 +28,10 @@ test.use({
 });
 
 const SEARCH = 'ControlOrMeta+Shift+KeyF';
-/** Screenshots: docs/evidence/192/t77/web when EVIDENCE_DIR names it, else the test's output. */
+/**
+ * Where screenshots go: the folder EVIDENCE_DIR names, else the test's output. Evidence goes
+ * in the pull request or the issue, not the repository (A1478).
+ */
 const EVIDENCE_DIR = process.env['EVIDENCE_DIR'];
 
 const overlay = (page: Page) => page.getByTestId('search');

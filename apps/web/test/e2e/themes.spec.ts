@@ -21,7 +21,10 @@ import { BUILT_IN_THEMES, NORD, PENMOSS, themeVariables } from '@penmoss/ui/them
 
 const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
-/** Where screenshots go: docs/evidence/t28 when EVIDENCE_DIR names it, else the test's output. */
+/**
+ * Where screenshots go: the folder EVIDENCE_DIR names, else the test's output. Evidence goes
+ * in the pull request or the issue, not the repository (A1478).
+ */
 const EVIDENCE_DIR = process.env['EVIDENCE_DIR'];
 
 function collectErrors(page: Page): string[] {

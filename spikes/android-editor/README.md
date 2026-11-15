@@ -168,6 +168,6 @@ Each entry in `web.imeLog.entries` has `t` (ms since page load), `ev` and, depen
   - Typing it through IME composition (CDP `Input.imeSetComposition` + `Input.insertText`) gives an exact match. The IME log records `compositionstart`/`update`/`end`, `beforeinput:insertCompositionText` and transactions.
   - Every `exec()` command runs.
   - With a stubbed `penmossNative` object, the `ready` (with timings), `state`, `testResult` and `export` messages the Android shell relies on all arrive.
-- Screenshots: [`docs/evidence/t2-web-editor.png`](../../docs/evidence/t2-web-editor.png) and [`docs/evidence/t2-web-editor-diff.png`](../../docs/evidence/t2-web-editor-diff.png).
+- Screenshots: [`docs/evidence/t2-web-editor.png`](https://github.com/htxryan/penmoss/blob/f072e31/docs/evidence/t2-web-editor.png) and [`docs/evidence/t2-web-editor-diff.png`](https://github.com/htxryan/penmoss/blob/f072e31/docs/evidence/t2-web-editor-diff.png), in the history at f072e31.
 
 Not verified here (needs the Pixel): everything that depends on a real keyboard, the WebView's real frame rate and cold open on device, and the instrumentation tests.
