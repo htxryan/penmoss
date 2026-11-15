@@ -140,15 +140,16 @@
 
 /*
  * A surface earlier in the DOM than a row it opens over: the narrow window's drawer over the app
- * bar and the page's own row under it (the graph's bar, which a tab can be showing, PEN-140), a
- * sidebar menu over a note's top bar. Electron applies later drag regions over earlier
+ * bar and the page's own row under it (the graph's bar, which a tab can be showing, PEN-140; the
+ * tab strip, which no window that narrow draws, all the same: nothing drags under a drawer),
+ * a sidebar menu over a note's top bar. Electron applies later drag regions over earlier
  * ones, so while one is open those rows stop dragging rather than rely on regions being taken
  * in paint order. (`#root` outweighs the rows' rule, whose `#root > .banner` makes it an id's.)
  */
 :root[data-titlebar='compact']
   #root
   .notes-app[data-drawer='open']
-  :is(.app-bar, .note-top, .pm-graph-bar, .home, .tags-page-top, .drawing-editor-bar),
+  :is(.app-bar, .note-top, .tab-strip, .pm-graph-bar, .home, .tags-page-top, .drawing-editor-bar),
 :root[data-titlebar='compact']:has(
     #root .sidebar :is(.menu, [role='menu'], [role='dialog'], [role='listbox'])
   )
