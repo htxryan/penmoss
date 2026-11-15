@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 /**
- * A badge's icon from Lucide (A1568): stored as `lucide:<name>`, the app's 24 icons from before
- * still read and drawn as they were, each with a Lucide twin the picker marks, and a name this
- * build has no icon for shown as the badge's letter.
+ * A badge's icon from Lucide (A1568): stored as `lucide:<name>`, the 24 icons from before still
+ * read and drawn with their Lucide twins, and a name this build has no icon for shown as the
+ * badge's letter.
  */
 import { lucideIconNames } from '@lucide/icons/dynamic';
 import nodes from 'lucide-static/icon-nodes.json';
@@ -15,7 +15,6 @@ import {
   BADGE_GLYPH_SETTING,
   BADGE_ICONS,
   FIRST_BADGE_ICON,
-  appBadgeIcon,
   badgeIconInLucide,
   badgeOf,
   parseBadgeGlyph,
@@ -59,13 +58,11 @@ describe('Lucide names', () => {
   });
 });
 
-describe('the app’s own badge icons, from before Lucide', () => {
-  it('still read, as they were', () => {
+describe('the badge icons from before Lucide', () => {
+  it('still read, as they were stored', () => {
     for (const icon of BADGE_ICONS) {
       expect(parseBadgeGlyph({ kind: 'icon', value: icon })).toEqual({ kind: 'icon', value: icon });
-      expect(appBadgeIcon(icon)).toBe(icon);
     }
-    expect(appBadgeIcon('lucide:star')).toBeNull();
   });
 
   it('each have a Lucide twin that exists, all different', () => {
@@ -102,7 +99,7 @@ describe('BadgeView', () => {
     await act(async () => {
       root.render(<BadgeView badge={badge(value)} name="Personal" size={18} />);
       // The icon's chunk, then the redraw.
-      const name = lucideName(value);
+      const name = badgeIconInLucide(value);
       if (name) await loadLucideIcon(name);
     });
     // The redraw the loaded icon asks for.
@@ -119,10 +116,20 @@ describe('BadgeView', () => {
     expect(drawn.dataset['kind']).toBe('icon');
   });
 
-  it('draws an icon from before Lucide with the app’s own icon, as it was', async () => {
-    const drawn = await render('star');
-    expect(drawn.querySelector('svg')!.getAttribute('data-icon')).toBe('star');
-    expect(drawn.querySelector('svg[data-lucide]')).toBeNull();
+  it('draws an icon from before Lucide with its Lucide twin, keeping the stored value', async () => {
+    for (const [old, twin] of [
+      ['star', 'star'],
+      ['branch', 'git-branch'],
+      ['pulse', 'activity'],
+    ] as const) {
+      const drawn = await render(old);
+      const svg = drawn.querySelector('svg')!;
+      expect(svg.getAttribute('data-lucide')).toBe(twin);
+      expect(svg.hasAttribute('data-icon')).toBe(false);
+      expect(svg.style.color).toBe('var(--nb-badge-ink)');
+      expect(drawn.dataset['kind']).toBe('icon');
+      expect(drawn.dataset['glyph']).toBe(`icon:${old}`);
+    }
   });
 
   it('shows the letter for a Lucide name this build has no icon for', async () => {

@@ -227,8 +227,6 @@ const PATHS = {
   ),
   plus: <path d="M12 5v14M5 12h14" />,
   minus: <path d="M5 12h14" />,
-  // A pulse, for Settings → Status (T39 pass 3, A902): Android's; `info` is the Info panel's.
-  pulse: <path d="M3.5 12.5h4l2-5 3.5 10 2.5-6.5 1.5 1.5h3.5" />,
   redo: <path d="m15 14 5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />,
   refresh: (
     <path d="M19.5 11A7.6 7.6 0 0 0 6 7.3L4.5 9M4.5 4.5V9H9M4.5 13A7.6 7.6 0 0 0 18 16.7l1.5-1.7M19.5 19.5V15H15" />

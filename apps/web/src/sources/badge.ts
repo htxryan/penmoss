@@ -8,7 +8,6 @@
  * letter or digit of its name. Duplicates are expected (Personal and Penmoss are both P).
  * Copying settings between notebooks (A1137) skips both keys.
  */
-import type { IconName } from '@penmoss/ui/icons';
 import { NOTEBOOK_BADGE_COLOURS, NOTEBOOK_BADGE_INK } from '@penmoss/ui/theme';
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { LUCIDE_PREFIX, lucideName } from '../shell/lucide';
@@ -47,8 +46,9 @@ export const BADGE_PRESETS: readonly BadgePreset[] = [
 ];
 
 /**
- * The 24 icons a badge could show before Lucide (PEN-140), from the app's own set. A badge that
- * has one keeps it, drawn as it was; the icon picker marks its Lucide twin (APP_ICON_IN_LUCIDE).
+ * The 24 icons a badge could show before Lucide (PEN-140), once from the app's own set. A badge
+ * that has one keeps the value (nothing is migrated) and is drawn with its Lucide twin
+ * (APP_ICON_IN_LUCIDE), so every badge icon is Lucide's (A1568).
  */
 export const BADGE_ICONS = [
   'notebook',
@@ -75,10 +75,10 @@ export const BADGE_ICONS = [
   'sun',
   'moon',
   'pulse',
-] as const satisfies readonly IconName[];
+] as const;
 export type BadgeIcon = (typeof BADGE_ICONS)[number];
 
-/** Each of the app's badge icons as the Lucide icon that looks most like it (A1568). */
+/** Each icon from before Lucide as the Lucide icon that draws it (A1568). */
 export const APP_ICON_IN_LUCIDE: Readonly<Record<BadgeIcon, string>> = {
   notebook: 'notebook',
   journal: 'book-text',
@@ -109,20 +109,15 @@ export const APP_ICON_IN_LUCIDE: Readonly<Record<BadgeIcon, string>> = {
 /** The icon a new Icon badge starts with: Lucide's notebook. */
 export const FIRST_BADGE_ICON = `${LUCIDE_PREFIX}notebook`;
 
-const isAppIcon = (value: string): value is BadgeIcon =>
+const isOldIcon = (value: string): value is BadgeIcon =>
   (BADGE_ICONS as readonly string[]).includes(value);
 
 /**
- * The Lucide icon an icon badge's value is (`lucide:star` is `star`, the app's `branch` is
+ * The Lucide icon an icon badge's value draws (`lucide:star` is `star`, the old `branch` is
  * `git-branch`), or null when it is neither.
  */
 export function badgeIconInLucide(value: string): string | null {
-  return isAppIcon(value) ? APP_ICON_IN_LUCIDE[value] : lucideName(value);
-}
-
-/** The app's own icon an icon badge's value names, or null for a Lucide one. */
-export function appBadgeIcon(value: string): BadgeIcon | null {
-  return isAppIcon(value) ? value : null;
+  return isOldIcon(value) ? APP_ICON_IN_LUCIDE[value] : lucideName(value);
 }
 
 export type BadgeGlyphKind = 'letter' | 'number' | 'icon';
@@ -218,7 +213,7 @@ export function parseBadgeGlyph(value: unknown): BadgeGlyph | null {
     return /^(0|[1-9][0-9]?)$/.test(text) ? { kind, value: text } : null;
   }
   if (kind === 'icon') {
-    return isAppIcon(text) || lucideName(text) !== null ? { kind, value: text } : null;
+    return badgeIconInLucide(text) !== null ? { kind, value: text } : null;
   }
   return null;
 }

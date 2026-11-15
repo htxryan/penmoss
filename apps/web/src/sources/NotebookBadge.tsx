@@ -1,8 +1,7 @@
-import { Icon } from '@penmoss/ui/icons';
 import type { CSSProperties } from 'react';
-import { LucideSvg, lucideName, useLucideIcon } from '../shell/lucide';
+import { LucideSvg, useLucideIcon } from '../shell/lucide';
 import {
-  appBadgeIcon,
+  badgeIconInLucide,
   defaultGlyph,
   glyphInk,
   useNotebookBadge,
@@ -50,12 +49,12 @@ export function BadgeView({
     '--nb-badge-size': `${size / 16}rem`,
   } as CSSProperties;
   const { glyph } = badge;
-  const lucide = glyph.kind === 'icon' ? lucideName(glyph.value) : null;
+  // Every icon is Lucide's, an old one (`star`) its twin's (A1568).
+  const lucide = glyph.kind === 'icon' ? badgeIconInLucide(glyph.value) : null;
   const node = useLucideIcon(lucide);
   // A Lucide name this build has no icon for shows the badge's letter (A1568).
   const shown: BadgeGlyph = lucide !== null && node === null ? defaultGlyph(name) : glyph;
   const iconSize = Math.round(size * 0.72);
-  const appIcon = shown.kind === 'icon' ? appBadgeIcon(shown.value) : null;
   return (
     <span
       className={className ? `nb-badge ${className}` : 'nb-badge'}
@@ -67,15 +66,7 @@ export function BadgeView({
       data-kind={shown.kind}
       {...(decorative ? { 'aria-hidden': true } : { role: 'img', 'aria-label': name })}
     >
-      {appIcon ? (
-        // The app's own icons, as badges had before Lucide: drawn as they were.
-        <Icon
-          name={appIcon}
-          size={iconSize}
-          className="nb-badge-icon"
-          style={glyphStyle(iconSize)}
-        />
-      ) : shown.kind === 'icon' ? (
+      {shown.kind === 'icon' ? (
         // Lucide's, once its chunk is in (an instant at most): the square alone until then.
         node && lucide ? (
           <LucideSvg
