@@ -505,6 +505,28 @@ class GitNotebooksScreenTest {
         compose.onNodeWithText("Journal notebook", substring = true, ignoreCase = true).assertDoesNotExist()
     }
 
+    /** A1558: the Primary Notebook is Between Notebooks' first row, above Keep Settings in Step. */
+    @Test
+    fun thePrimaryNotebookIsBetweenNotebooksFirstRow() {
+        val other = view().copy(localId = "01JBL0000000000000000000L2", name = "Personal")
+        compose.setContent {
+            PenmossTheme {
+                GitNotebooksScreen(
+                    GitNotebooksUi(rows = listOf(GitRow(view(), GitEngineStatus(phase = "synced")), GitRow(other, null)), journal = id, copyTags = true),
+                    GitNotebooksActions(),
+                    onBack = {},
+                )
+            }
+        }
+        // One scrolling column holds the whole screen, so every row has its place, shown or not.
+        fun top(node: androidx.compose.ui.test.SemanticsNodeInteraction) = node.fetchSemanticsNode().boundsInRoot.top
+        val group = top(compose.onNodeWithText("Between Notebooks"))
+        val primary = top(compose.onNodeWithTag("gitPrimary"))
+        val inStep = top(compose.onNodeWithTag("gitSettingsInStep"))
+        assertTrue("the group's title comes first", group < primary)
+        assertTrue("Primary Notebook is above Keep Settings in Step", primary < inStep)
+    }
+
     /** PEN-146: a notebook's page has Overview, Sync and Git tabs, and no Agents tab. */
     @Test
     fun aNotebooksPageHasOverviewSyncAndGitTabs() {

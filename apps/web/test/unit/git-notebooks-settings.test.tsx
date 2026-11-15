@@ -163,6 +163,19 @@ describe('All Notebooks (PEN-146)', () => {
       'copy-settings',
       'commits-from-this-mac',
     ]);
+    // A1558: Primary Notebook is Between Notebooks' first row, not a group of its own.
+    const between = find(root, 'git-primary')!.closest('.lf-group')!;
+    expect(between.previousElementSibling?.textContent).toBe('Between Notebooks');
+    expect(
+      [...between.querySelectorAll<HTMLElement>('[data-setting]')].map(
+        (row) => row.dataset['setting'],
+      ),
+    ).toEqual([
+      'primary-notebook',
+      'keep-settings-in-step',
+      'copy-tags-when-copying-notes',
+      'copy-settings',
+    ]);
     const picker = find(root, 'git-primary-picker') as HTMLSelectElement;
     expect(picker.value).toBe(A);
     act(() => {

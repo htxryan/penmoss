@@ -94,7 +94,7 @@ Every command's shortcut, to change, remove or reset ([Keyboard shortcuts](/docs
 | Access                               | **Save Token** and **Forget Token**, for an HTTPS host that needs a token                                                                                                                                          |
 | Remove from This Mac                 | Removes this Mac's copy, after Touch ID; the repository keeps everything pushed                                                                                                                                    |
 
-On All Notebooks:
+On All Notebooks, under **Between Notebooks**, with **Primary Notebook** first:
 
 | Setting                                          | What it does                                                                                                  |
 | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
@@ -128,7 +128,7 @@ A card with the version you're running, whether it's up to date, the channel and
 
 ## On Android
 
-Open Settings from the gear on the first screen. The same five groups as the Mac, with **This Phone** in place of This Mac, and a **Search Settings** field at the top that opens the screen a setting is on, scrolled to the setting and marked for a moment. On **All Notebooks**, **Between Notebooks** has **Keep Settings in Step** and **Copy Settings…** as on the Mac (with two notebooks or more), and Keep Settings in Step is this phone's own choice.
+Open Settings from the gear on the first screen. The same five groups as the Mac, with **This Phone** in place of This Mac, and a **Search Settings** field at the top that opens the screen a setting is on, scrolled to the setting and marked for a moment. On **All Notebooks**, **Between Notebooks** starts with **Primary Notebook**, then has **Keep Settings in Step** and **Copy Settings…** as on the Mac (with two notebooks or more), and Keep Settings in Step is this phone's own choice.
 
 | Group         | Screen             | What it holds                                                                                                                      |
 | ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
@@ -139,7 +139,7 @@ Open Settings from the gear on the first screen. The same five groups as the Mac
 | Writing       | Quick Capture      | Where a capture goes by default, and which notebook                                                                                |
 | Writing       | Keyboard Shortcuts | Shortcuts for a hardware keyboard                                                                                                  |
 | Notebooks     | Each notebook      | Its page: **Overview** (its notes, **Copy Settings…**), **Sync** and **Git** ([The Android app](/docs/install/android/#notebooks)) |
-| Notebooks     | All Notebooks      | **Add Notebook**, **Primary Notebook**, Between Notebooks, **Commits From This Phone**, the signing key and background sync        |
+| Notebooks     | All Notebooks      | **Add Notebook**, Between Notebooks (**Primary Notebook** first), **Commits From This Phone**, the signing key and background sync |
 | Agents        | Agent Activity     | What agents changed, in every notebook, with **Undo**                                                                              |
 | This Phone    | Storage            | Files and pictures in notes, pictures from the web and **Clear…**, and whether to load pictures from the web                       |
 | This Phone    | GitHub             | **Sign In with GitHub** (or a token), and what the account is used for, such as **Send Feedback**                                  |

@@ -6,8 +6,8 @@
  * - **All Notebooks** (`/settings/git-notebooks`): the notebooks, each a row with its sync dot,
  *   name, Primary chip, and its repository and last sync (or what stopped it), opening its page;
  *   Add Notebook…, which opens the form (open at once with none: any repository, D61, and git
- *   follows its own configuration, D62); the one Primary Notebook picker (this Mac's choice);
- *   Between Notebooks (Keep Settings in Step, Copy Tags When Copying Notes, Copy Settings…); and
+ *   follows its own configuration, D62); Between Notebooks (the one Primary Notebook picker, this
+ *   Mac's choice, then Keep Settings in Step, Copy Tags When Copying Notes, Copy Settings…); and
  *   Commits From This Mac, git's own identity.
  * - **A notebook's page** (`/settings/git-notebooks/<id>`, each notebook also an entry in the
  *   nav, NotebookNavEntries.tsx): a header with its name, the Primary chip, the sync dot and
@@ -376,7 +376,7 @@ export function GitNotebooksSettings({ item }: { item?: string | undefined }) {
   return <AllNotebooks git={git} identity={identity} headingId={`${id}-h`} />;
 }
 
-/** All Notebooks: the list, Add Notebook…, the Primary picker, Between Notebooks, git's identity. */
+/** All Notebooks: the list, Add Notebook…, Between Notebooks (Primary first), git's identity. */
 function AllNotebooks({
   git,
   identity,
@@ -432,7 +432,6 @@ function AllNotebooks({
       ) : null}
       {sources.length > 0 ? (
         <>
-          <PrimaryPicker />
           <BetweenNotebooks />
           <GroupHead scope>Commits From This Mac</GroupHead>
           <div className="lf-group">
@@ -502,44 +501,44 @@ function GitNotebookRow({ source }: { source: GitSource }) {
 /**
  * The Primary Notebook (A1101; PEN-146): the one whose daily and weekly notes, Calendar, Inbox
  * and Quick Capture the app uses, and whose settings it reads. This Mac's choice, made here once
- * for all the notebooks; the first notebook until one is chosen.
+ * for all the notebooks; the first notebook until one is chosen. Between Notebooks' first row
+ * (A1558), since it is where the settings the other rows copy come from.
  */
 function PrimaryPicker() {
   const registry = useSourcesRegistry();
   const state = useSourcesState();
   const id = useId();
   return (
-    <div className="lf-group nset-first-group">
-      <SettingRow
-        setting="primary-notebook"
-        label="Primary Notebook"
-        labelFor={`${id}-select`}
-        help="Holds your journal, Inbox and these settings"
-        helpId={`${id}-help`}
-        testId="git-primary"
-        scope
+    <SettingRow
+      setting="primary-notebook"
+      label="Primary Notebook"
+      labelFor={`${id}-select`}
+      help="Holds your journal, Inbox and these settings"
+      helpId={`${id}-help`}
+      testId="git-primary"
+      scope
+    >
+      <Select
+        id={`${id}-select`}
+        value={state.journal.id}
+        aria-describedby={`${id}-help`}
+        data-testid="git-primary-picker"
+        disabled={state.all.length < 2}
+        onChange={(event) => registry.setJournal(event.currentTarget.value)}
       >
-        <Select
-          id={`${id}-select`}
-          value={state.journal.id}
-          aria-describedby={`${id}-help`}
-          data-testid="git-primary-picker"
-          disabled={state.all.length < 2}
-          onChange={(event) => registry.setJournal(event.currentTarget.value)}
-        >
-          {state.all.map((source) => (
-            <option key={source.id} value={source.id}>
-              {source.name}
-            </option>
-          ))}
-        </Select>
-      </SettingRow>
-    </div>
+        {state.all.map((source) => (
+          <option key={source.id} value={source.id}>
+            {source.name}
+          </option>
+        ))}
+      </Select>
+    </SettingRow>
   );
 }
 
 /**
- * Between Notebooks: what goes from one notebook to another. Keep Settings in Step (A1137, this
+ * Between Notebooks: the Primary Notebook first, then what goes from one notebook to another.
+ * Keep Settings in Step (A1137, this
  * Mac's choice) copies each change of the primary's settings to the others; Copy Tags When
  * Copying Notes (A1353, synced) is where Copy to Notebook's Copy Tags starts; Copy Settings…
  * copies one notebook's settings into another, once.
@@ -555,6 +554,7 @@ function BetweenNotebooks() {
     <>
       <GroupHead>Between Notebooks</GroupHead>
       <div className="lf-group">
+        <PrimaryPicker />
         {several ? (
           <SettingRow
             setting="keep-settings-in-step"

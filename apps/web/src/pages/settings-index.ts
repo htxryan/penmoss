@@ -174,7 +174,7 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
   }),
   // All Notebooks.
   at('git-notebooks')('Add Notebook', { aliases: ['git', 'repository', 'clone', 'github'] }),
-  at('git-notebooks')('Primary Notebook', {
+  between('Primary Notebook', {
     help: 'Holds your journal, Inbox and these settings',
     aliases: ['default notebook', 'journal'],
   }),
