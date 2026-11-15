@@ -266,7 +266,7 @@ internal class NoteScreenState(
     /** Moves the note to [folder] (null: the top level), and says so. */
     fun moveTo(folder: String?) {
         // Outlives the screen: a move the person asked for.
-        graph.launchReporting(Dispatchers.Main.immediate) { controller.notify(moveNoteAndSay(graph, noteId, folder)) }
+        graph.launchReporting(Dispatchers.Main.immediate) { controller.notify(moveNoteAndSay(graph, noteId, folder).text) }
     }
 
     /**

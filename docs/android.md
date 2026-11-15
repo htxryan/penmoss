@@ -191,7 +191,7 @@ Deploy the server first (A358, A359). Install the debug build and sign in, and k
 2. **Move from a list, offline.**
    1. Turn on airplane mode.
    2. On Home, in All notes or in a folder, long-press a note. The phone gives a short buzz and the picker opens.
-   3. Move the note to the top level. A toast says "Moved to Top level", and the lists show it there.
+   3. Move the note to the top level. A snackbar says "Moved to Top level.", and the lists show it there.
    4. Turn airplane mode off and wait a minute, or leave and reopen the app. On the web, the note is at the top level.
 3. **Tags.**
    1. Open a note that has tags on the web. Choose ⋮ → **Tags…**: the sheet lists the same tags as the web shows under the title.
