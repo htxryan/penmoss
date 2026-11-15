@@ -1,7 +1,7 @@
 /**
  * The relay's notebook (T55) in Node, against a fake GitHub over an in-memory remote: MCP over
  * HTTP in front of the local tools, a Mac over git as the other writer, pulls before reads,
- * pushes on the alarm, and a public repository refused (A841).
+ * pushes on the alarm, and a public repository synced like any other (D61).
  */
 import {
   GitNotebookEngine,
@@ -186,13 +186,22 @@ describe('the relay over MCP', () => {
     expect(after.isError).toBeFalsy();
   });
 
-  it('never syncs a public repository', async () => {
-    const { tool, remote } = await setup({ private: false });
+  it('syncs a public repository like any other (D61)', async () => {
+    const { tool, remote, mac, macOps } = await setup({ private: false });
     const before = remote.branches.get('main');
     const read = await tool('list_recent', {});
-    expect(read.isError).toBe(true);
-    expect(read.content[0]!.text).toMatch(/public/);
-    expect(remote.branches.get('main')).toBe(before);
+    expect(read.isError).toBeFalsy();
+    expect(JSON.stringify(read.structuredContent)).toContain('Garden plan');
+    const created = await tool('create_note', {
+      title: 'From claude.ai',
+      markdown: 'public is fine',
+    });
+    const id = created.structuredContent!['id'] as string;
+    // save_version pushes at once, past the same checks as any sync.
+    expect((await tool('save_version', { id })).isError).toBeFalsy();
+    expect(remote.branches.get('main')).not.toBe(before);
+    await mac.sync();
+    expect(readTitle(macOps.requireNote(id))).toBe('From claude.ai');
   });
 
   it('keeps what it wrote across a restart, and pushes it then', async () => {

@@ -24,11 +24,10 @@ const bytes = (text: string) => encoder.encode(text);
 
 function github(
   remote: MemoryRemote,
-  options: { root?: string; branch?: string; compareLimit?: number; private?: boolean } = {},
+  options: { root?: string; branch?: string; compareLimit?: number } = {},
 ) {
   const fake = fakeGitHub(remote, {
     ...(options.compareLimit !== undefined ? { compareLimit: options.compareLimit } : {}),
-    ...(options.private !== undefined ? { private: options.private } : {}),
   });
   let time = Date.UTC(2026, 10, 4, 9, 0, 0);
   const transport = new GitHubTransport({
@@ -168,7 +167,6 @@ describe('GitHubTransport', () => {
     fake.settings.token = 'rotated';
     await expect(a.fetch()).rejects.toMatchObject({ code: 'auth' });
     fake.settings.token = FAKE_TOKEN;
-    const { transport: elsewhere } = github(remote);
     // A repository the token cannot see is `not_found`.
     const missing = new GitHubTransport({
       repository: 'ryan/other',
@@ -180,8 +178,6 @@ describe('GitHubTransport', () => {
       fetch: fakeGitHub(remote).fetch,
     });
     await expect(missing.fetch()).rejects.toMatchObject({ code: 'not_found' });
-    expect(await elsewhere.isPrivate()).toBe(true);
-    expect(await github(remote, { private: false }).transport.isPrivate()).toBe(false);
   });
 });
 
