@@ -96,7 +96,7 @@ fun SymbolsScreen(
         return problem
     }
     SectionScreen("Symbols", onBack, notice = if (enabled) null else SETTINGS_WAIT) {
-        Help("Type a symbol at the start of a line to mark it, as plain text (★ Call the bank), so agents and the repository see it too. Up to ${LineSymbols.MAX}. Changes sync to your other devices.")
+        Help(modifier = Modifier.settingRow("symbols"), text = "Type a symbol at the start of a line to mark it, as plain text (★ Call the bank), so agents and the repository see it too. Up to ${LineSymbols.MAX}. Changes sync to your other devices.")
         ReorderableColumn(
             items = symbols.mapIndexed { index, symbol -> index to symbol },
             key = { (_, symbol) -> symbol.glyph },
@@ -153,7 +153,7 @@ fun SymbolsScreen(
                     said = "Restored " + LineSymbols.DEFAULTS.joinToString(" ") { it.glyph } + "."
                 },
                 enabled = enabled && custom,
-                modifier = Modifier.testTag("symbol-reset"),
+                modifier = Modifier.settingRow("restore-default-symbols").testTag("symbol-reset"),
             ) { Text("Restore Defaults") }
             TextButton(onClick = onShortcuts, modifier = Modifier.testTag("symbol-shortcuts")) { Text("Change Their Keys…") }
         }

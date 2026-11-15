@@ -98,6 +98,30 @@
   border-left: 1px solid var(--pm-border-soft);
 }
 
+/* Each cell one line at any width: icon, name, then its switch at the end. */
+.lf-group-two > .lf-row {
+  flex-wrap: nowrap;
+}
+
+.lf-group-two > .lf-row > .lf-row-text {
+  flex: 1 1 0;
+}
+
+.lf-group-two > .lf-row > .lf-row-control {
+  flex: none;
+}
+
+/* A long name wraps beside its icon, never under it. */
+.lf-group-two .lf-row-label {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
+.lf-group-two .lf-row-label > .i {
+  flex: none;
+  margin-top: 0.15rem;
+}
+
 .lf-row {
   display: flex;
   flex-wrap: wrap;
@@ -147,6 +171,43 @@
 
 .lf-row-control > .pm-select {
   width: 12rem;
+}
+
+/* A row's own status or alert, under its help (SettingRow's `extra`). */
+.lf-row-note {
+  margin: 0.2rem 0 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+}
+
+.lf-row-note[role='alert'] {
+  color: var(--pm-danger);
+}
+
+/* A control's empty value (no hotkey). */
+.lf-none {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+}
+
+/* A choice that fills its row (Quick Capture's Saves To): the whole row is the radio's label. */
+.lf-choice {
+  cursor: pointer;
+}
+
+.lf-choice:hover {
+  background: var(--pm-hover);
+}
+
+.lf-choice input {
+  flex: none;
+  margin: 0;
+  accent-color: var(--pm-accent);
+}
+
+.lf-choice:has(input:focus-visible) {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: -2px;
 }
 
 .lf-help {

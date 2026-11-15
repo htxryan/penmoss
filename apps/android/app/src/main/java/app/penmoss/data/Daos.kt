@@ -71,6 +71,10 @@ interface NoteDao {
     )
     fun observeList(): Flow<List<NoteListRow>>
 
+    /** How many live notes the phone holds, Trash left out: a notebook's page's Notes row (PEN-148). */
+    @Query("SELECT COUNT(*) FROM notes WHERE deleted = 0 AND gone = 0")
+    suspend fun liveCount(): Int
+
     /** The ids of the notes held (in Trash or not) that end with [end]: a short reference's clashes (PEN-69). */
     @Query("SELECT id FROM notes WHERE gone = 0 AND id LIKE '%' || :end")
     suspend fun idsEndingWith(end: String): List<String>

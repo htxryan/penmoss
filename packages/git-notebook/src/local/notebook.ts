@@ -677,7 +677,12 @@ export class LocalNotebook {
         );
       }
     }
-    const changedSince = keys.filter((key) => (now[key] ?? null) !== (base[key] ?? null));
+    // A notebook that never set its time zone reports the default one (the sync tree, A827), so a
+    // base naming that default is the unset value it saw, not a change made since (A1557).
+    const unchanged = (key: string) =>
+      (now[key] ?? null) === (base[key] ?? null) ||
+      (key === 'timeZone' && now[key] === undefined && base[key] === this.ops.timeZone());
+    const changedSince = keys.filter((key) => !unchanged(key));
     if (changedSince.length > 0) {
       throw new LocalError(
         409,

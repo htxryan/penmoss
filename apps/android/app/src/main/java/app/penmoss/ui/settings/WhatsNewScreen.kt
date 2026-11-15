@@ -28,8 +28,8 @@ import app.penmoss.updates.noteLine
 
 /*
  * Settings → What's New (PEN-109; PEN-146): a version card first (the only place Settings names
- * the version; the phone never updates itself, so it has no update controls: a newer
- * Penmoss.apk installs over it, as install/android.md says), then this version's
+ * the version; it has no update controls: Google Play updates a Play install, and a newer
+ * Penmoss.apk installs over a sideloaded one, as install/android.md says), then this version's
  * notes and, behind Earlier Versions, the earlier ones', grouped New, Improved and Fixed. Each
  * block and each kind is a heading, so TalkBack can move between them; each note is its own line.
  * Without notes yet, it says so and links to GitHub.
@@ -70,7 +70,7 @@ fun WhatsNewScreen(view: NotesView, onOpenReleases: () -> Unit, onBack: () -> Un
 @Composable
 private fun VersionCard(version: String) {
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+        Modifier.settingRow("what-s-new").fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant).padding(16.dp).testTag("whatsNewVersion"),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -131,5 +131,11 @@ private fun Block(block: NotesBlock, tag: String) {
 internal fun headingCase(title: String): String =
     title.replace("In this version", "In This Version").replace("(since ", "(Since ")
 
-/** The version card's line (PEN-146): Penmoss isn't in Google Play, and the phone never updates itself. */
-internal const val VERSION_UPDATES = "Penmoss doesn’t update itself on Android: install a newer Penmoss.apk from GitHub over this one."
+/**
+ * The version card's line (PEN-146; PEN-148): how each install updates. One from Google Play (its
+ * internal testing track) is updated by Google Play, as any app is; Penmoss.apk never updates
+ * itself, so a newer one installs over it.
+ */
+internal const val VERSION_UPDATES =
+    "Installed from Google Play: Google Play updates it, as it does your other apps. " +
+        "Installed from Penmoss.apk: it doesn’t update itself, so install a newer Penmoss.apk from GitHub over this one."

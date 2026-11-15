@@ -16,10 +16,10 @@ object SearchActions {
         SearchAction("app.cheatsheet", "Keyboard Shortcuts"),
         SearchAction("app.settings", "Settings"),
         SearchAction("app.shortcuts", "Customise Keyboard Shortcuts"),
-        // Git notebooks (T50 G7, A856): Settings → Git notebooks, as on the Mac.
-        SearchAction("app.gitNotebooks", "Notebooks"),
-        // Feedback still on the phone and the GitHub token: Settings → About (T59, A1046).
-        SearchAction("app.status", "Feedback Status and GitHub Token"),
+        // Git notebooks (T50 G7, A856): Settings → All Notebooks, as on the Mac.
+        SearchAction("app.gitNotebooks", "Notebook Settings"),
+        // The GitHub sign-in Send Feedback files with: Settings → GitHub (T59, A1046; PEN-148).
+        SearchAction("app.status", "GitHub Settings"),
         // In-app feedback (T49, D41): the same form as the overflow menu's, captured first.
         SearchAction("app.sendFeedback", "Send Feedback"),
         SearchAction("app.home", "Close the Note"),
@@ -33,7 +33,7 @@ object SearchActions {
         SearchAction("journal.settings", "Time Zone and Templates"),
         SearchAction("folder.new", "New Folder"),
         SearchAction("app.appearance", "Appearance and Themes"),
-        SearchAction("app.display", "Sidebar Display Settings"),
+        SearchAction("app.display", "Sidebar Settings"),
         SearchAction("app.symbols", "Edit Line Symbols"),
         SearchAction("theme.switch", "Switch Theme…"),
         SearchAction("theme.toggleDark", "Toggle Dark Mode"),

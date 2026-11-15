@@ -30,12 +30,16 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
 import okhttp3.OkHttpClient
 import java.io.File
 import java.util.Base64
@@ -354,6 +358,103 @@ class GitNotebookHub(
 
     /** The Journal notebook as picked, as it changes: the device's settings are read again (A1014). */
     val journalPick: StateFlow<String?> = journalPicks.asStateFlow()
+
+    // --- Between Notebooks (A1137, A1550; PEN-148) ---
+
+    private val inStep = MutableStateFlow(prefs.getBoolean(IN_STEP, false))
+
+    /** Keep Settings in Step: this phone's choice, off until turned on in All Notebooks. */
+    val settingsInStep: StateFlow<Boolean> = inStep.asStateFlow()
+
+    fun setSettingsInStep(on: Boolean) {
+        prefs.edit { if (on) putBoolean(IN_STEP, true) else remove(IN_STEP) }
+        inStep.value = on
+    }
+
+    /**
+     * A notebook's settings now (its device map as its page holds it, and its own as its last
+     * pass read them, a pass running first if none has); null while they cannot be read.
+     */
+    private suspend fun settingsOf(graph: NotebookGraph): NotebookSettings? {
+        if (!graph.store.settingsNow().known) passNow(graph)
+        val own = graph.store.settingsNow().takeIf { it.known } ?: return null
+        val device = graph.notesServer.deviceSettings().device
+        return NotebookSettings(device, JsonObject(own.settings.values.filterKeys(SettingsCopy::isOwn)))
+    }
+
+    /** A pass of [graph]'s Room sync now, its screens open or not (a pass runs only while watched). */
+    private suspend fun passNow(graph: NotebookGraph) {
+        val release = graph.sync.watch()
+        try {
+            withTimeoutOrNull(PASS_MS) { graph.sync.syncNow() }
+        } finally {
+            release()
+        }
+    }
+
+    /**
+     * Writes [from] into [graph]'s settings, replacing what differs (A1137): its device map through
+     * its page, at once; its own settings through the next pass, which runs now. Answers how many
+     * settings changed. Refused while its settings cannot be read yet.
+     */
+    private suspend fun copyInto(from: NotebookSettings, graph: NotebookGraph): Int {
+        val now = settingsOf(graph) ?: throw GitRefusal("not_read", "Penmoss hasn’t read ${graph.name}’s settings yet. Try again once it has synced.")
+        val changes = SettingsCopy.changes(from, now)
+        if (changes.isEmpty) return 0
+        for (chunk in changes.device.entries.chunked(DEVICE_PER_CHANGE)) {
+            val reply = graph.notesServer.changeDeviceSettings(JsonObject(chunk.associate { (key, value) -> key to (value ?: JsonNull) }))
+            // The primary's device map is the device's settings (A1014): they show it at once.
+            graph.store.settings.putDeviceMap(reply.device)
+        }
+        var queued = false
+        for ((key, value) in changes.own) if (graph.store.changeSetting(key, value)) queued = true
+        if (queued) passNow(graph)
+        return changes.size
+    }
+
+    /**
+     * Copy Settings… (A1137; PEN-148): [from]'s settings into [to]'s, or every other notebook's
+     * when [to] is null, replacing theirs, once. Quick Access and the badge stay as they are.
+     * Answers how many settings changed.
+     */
+    suspend fun copySettings(from: String, to: String?): Int = withContext(Dispatchers.IO) {
+        val source = settingsOf(graph(from)) ?: throw GitRefusal("not_read", "Penmoss hasn’t read ${graph(from).name}’s settings yet. Try again once it has synced.")
+        val targets = if (to != null) listOf(to) else notebooks.entries().map { it.localId }.filter { it != from }
+        targets.sumOf { copyInto(source, graph(it)) }
+    }
+
+    /**
+     * Keep Settings in Step (A1137; PEN-148): while this phone's choice is on, each change of the
+     * [primary] notebook's settings goes to every other notebook a moment after it is made, and
+     * once when the choice is turned on or a notebook is added. Runs until cancelled.
+     */
+    suspend fun keepInStep(primary: NotebookGraph) {
+        val settings = combine(primary.store.settings.observeDeviceMap(), primary.store.observeSettings()) { device, own ->
+            if (device == null || !own.known) null else NotebookSettings(device, JsonObject(own.settings.values.filterKeys(SettingsCopy::isOwn)))
+        }
+        val others = list.map { views -> views.map { it.localId }.filter { it != primary.localId } }
+        SettingsCopy.keepInStep(
+            inStep,
+            settings,
+            others,
+            onFailure = { error -> runCatching { android.util.Log.w("PenmossGit", "Keep Settings in Step could not copy", error) } },
+        ) { from, id -> withContext(Dispatchers.IO) { copyInto(from, graph(id)) } }
+    }
+
+    /** How many notes the notebook has on this phone (its page's Notes row); null before its notes are read. */
+    suspend fun noteCount(localId: String): Int? = withContext(Dispatchers.IO) {
+        runCatching {
+            val made = sources[localId]?.madeGraph
+            if (made != null) return@runCatching made.store.noteCount()
+            if (!context.getDatabasePath(databaseName(localId)).exists()) return@runCatching null
+            val db = PenmossDatabase.open(context, databaseName(localId))
+            try {
+                db.notes().liveCount()
+            } finally {
+                db.close()
+            }
+        }.getOrNull()
+    }
 
     // --- the registry, through GitNotebooks' checks ---
 
@@ -760,6 +861,13 @@ class GitNotebookHub(
         private const val JOURNAL = "journalNotebook"
         private const val LAST_RUN = "background.lastRun"
         private const val SCHEDULED = "background.scheduled"
+        private const val IN_STEP = "settingsInStep"
+
+        /** At most this many device settings in one change, as the notes server takes them. */
+        private const val DEVICE_PER_CHANGE = 50
+
+        /** How long a pass to read or send a notebook's settings may take before Between Notebooks goes on. */
+        private const val PASS_MS = 30_000L
         private val EMAIL_SHAPE = Regex("^[^\\s<>@]+@[^\\s<>@]+$")
 
         /** A background run's git sync, per notebook: the page's own limit in front (A859). */

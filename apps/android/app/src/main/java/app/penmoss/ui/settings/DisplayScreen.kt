@@ -41,9 +41,9 @@ fun DisplayScreen(
 ) {
     SectionScreen("Home", onBack, notice = if (enabled) null else SETTINGS_WAIT) {
         Help("A hidden shortcut still works from Search and a keyboard. Search always shows.")
-        GroupTitle("Shortcuts on Home")
+        GroupTitle("Shortcuts on Home", Modifier.settingRow("shortcuts-on-home"))
         for (choice in choices) Toggle(choice.label, null, choice.shown, enabled, "display-${choice.key}") { onChange(choice.key, it) }
-        GroupTitle("Sections")
+        GroupTitle("Sections", Modifier.settingRow("sections"))
         Help("Drag a section by its handle to move it.")
         val home = layout.order.filter { it in HomeLayout.HOME_SECTIONS }
         ReorderableColumn(
@@ -58,6 +58,7 @@ fun DisplayScreen(
             // One column per section: the row's Box would draw Quick Access's own switch over it.
             Column {
                 ListItem(
+                    modifier = if (section == SidebarLayout.RECENT) Modifier.settingRow("recent-notes") else Modifier,
                     leadingContent = handle,
                     headlineContent = { Text(SidebarLayout.NAMES.getValue(section)) },
                     supportingContent = when (section) {
@@ -78,7 +79,7 @@ fun DisplayScreen(
                     },
                 )
                 if (section == SidebarLayout.QUICK_ACCESS) {
-                    Toggle("Show Notebook Names", "Under each note in Quick Access", layout.quickAccessNotebook, enabled, "display-quickAccessNotebook", Modifier.padding(start = 40.dp)) {
+                    Toggle("Show Notebook Names", "Under each note in Quick Access", layout.quickAccessNotebook, enabled, "display-quickAccessNotebook", Modifier.settingRow("show-notebook-names").padding(start = 40.dp)) {
                         onQuickAccessNotebook(it)
                     }
                 }

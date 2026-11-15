@@ -148,6 +148,7 @@ fun SettingsHome(
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     var query by rememberSaveable { mutableStateOf("") }
     val found = remember(query, index) { searchSettings(index, query) }
+    val mark = LocalSettingMark.current
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = { LargeTopAppBar(title = { Text("Settings") }, navigationIcon = { BackButton(onBack) }, scrollBehavior = scroll) },
@@ -187,7 +188,11 @@ fun SettingsHome(
                         supportingContent = { Text(listOfNotNull(entry.section, entry.help).joinToString(" · "), maxLines = 2, overflow = TextOverflow.Ellipsis) },
                         modifier = Modifier
                             .testTag("found-${entry.id}")
-                            .clickable(role = Role.Button, onClick = { onOpen(entry.route) }),
+                            .clickable(role = Role.Button, onClick = {
+                                // Its screen scrolls to the row and marks it a moment (PEN-148).
+                                mark.request(entry.id)
+                                onOpen(entry.route)
+                            }),
                     )
                 }
                 return@LazyColumn
@@ -257,11 +262,12 @@ internal fun SectionScreen(
     }
 }
 
+/** A group's title; the full width, so Search Settings' mark (settingRow) spans the row as it does a ListItem's. */
 @Composable
 internal fun GroupTitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
-        modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp).semantics { heading() },
+        modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp).semantics { heading() },
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
     )
@@ -380,8 +386,8 @@ fun AppearanceScreen(
 ) {
     SectionScreen("Appearance", onBack, notice = SETTINGS_WAIT.takeIf { !enabled }) {
         AppearancePreview(notePreview)
-        GroupTitle("Theme")
-        Segments(MODES, mode, enabled, "themeMode", icons = MODE_ICONS, itemTag = { "mode-$it" }, onChoose = onMode)
+        GroupTitle("Theme", Modifier.settingRow("theme"))
+        Segments(MODES, mode, enabled, "themeMode", Modifier.settingRow("mode"), icons = MODE_ICONS, itemTag = { "mode-$it" }, onChoose = onMode)
         Help(
             if (mode == "system") "System follows this phone’s setting: ${if (systemDark) "dark" else "light"} right now."
             else "Always $mode, whatever the phone’s setting.",
@@ -389,7 +395,7 @@ fun AppearanceScreen(
         ThemeGrid(themes, chosen, enabled, onTheme)
         if (editor != null) {
             // One button for both (PEN-146): a built-in is duplicated first, your own opens as it is.
-            FilledTonalButton(onClick = editor.onOpen, enabled = enabled, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("customizeTheme")) {
+            FilledTonalButton(onClick = editor.onOpen, enabled = enabled, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).settingRow("customize-theme").testTag("customizeTheme")) {
                 Text("Customize ${editor.name}…")
             }
             Help(
@@ -402,7 +408,7 @@ fun AppearanceScreen(
             FontsGroup(fonts, enabled)
         }
         GroupTitle("Note")
-        Text("Note Width", Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyLarge)
+        Text("Note Width", Modifier.settingRow("note-width").padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyLarge)
         Segments(
             listOf("theme" to "The Theme’s Width", "full" to "Full Width"),
             if (fullWidth) "full" else "theme",
@@ -592,13 +598,15 @@ fun DailyNotesScreen(
     /** No notebook on the phone: nothing holds these yet. */
     noNotebook: Boolean = false,
 ) {
-    var tab by rememberSaveable { mutableStateOf(0) }
+    // A search for the weekly template opens on its tab (PEN-148).
+    val asked = LocalSettingMark.current.target
+    var tab by rememberSaveable { mutableStateOf(templates.indexOfFirst { settingId(it.label) == asked }.coerceAtLeast(0)) }
     SectionScreen("Daily Notes", onBack, notice = settingsWait(noNotebook).takeIf { !enabled }) {
         ListItem(
             headlineContent = { Text("Time Zone") },
             supportingContent = { Text("$timeZone · today is ${app.penmoss.ui.journal.journalLongDate(today).substringBeforeLast(' ')}") },
             trailingContent = { Text("›", style = MaterialTheme.typography.titleMedium) },
-            modifier = Modifier.testTag("timeZone").clickable(enabled = enabled, role = Role.Button, onClick = onTimeZone),
+            modifier = Modifier.settingRow("time-zone").testTag("timeZone").clickable(enabled = enabled, role = Role.Button, onClick = onTimeZone),
         )
         if (phoneZone != timeZone) {
             TextButton(onClick = { onUsePhoneZone(phoneZone) }, enabled = enabled, modifier = Modifier.padding(horizontal = 8.dp).testTag("dailyUsePhoneZone")) {
@@ -609,7 +617,7 @@ fun DailyNotesScreen(
             val shown = tab.coerceIn(0, templates.size - 1)
             PrimaryTabRow(selectedTabIndex = shown, modifier = Modifier.padding(top = 8.dp).testTag("templateTabs")) {
                 templates.forEachIndexed { index, field ->
-                    Tab(selected = index == shown, onClick = { tab = index }, text = { Text(field.label) }, modifier = Modifier.testTag("tab-${field.key}"))
+                    Tab(selected = index == shown, onClick = { tab = index }, text = { Text(field.label) }, modifier = Modifier.settingRow(settingId(field.label)).testTag("tab-${field.key}"))
                 }
             }
             val field = templates[shown]
@@ -819,7 +827,7 @@ fun QuickCaptureScreen(
     noNotebook: Boolean = false,
 ) {
     SectionScreen("Quick Capture", onBack, notice = settingsWait(noNotebook).takeIf { !enabled }) {
-        GroupTitle("Saves To")
+        GroupTitle("Saves To", Modifier.settingRow("saves-to"))
         Column(Modifier.selectableGroup()) {
             ChoiceRow("Today’s Note", "At the end of ## Captures, with the time", destination == "daily", enabled, "capture-daily") { onChoose("daily") }
             ChoiceRow("New Note in Inbox", "Titled by its first line", destination == "inbox", enabled, "capture-inbox") { onChoose("inbox") }

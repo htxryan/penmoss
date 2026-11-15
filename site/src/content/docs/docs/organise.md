@@ -7,7 +7,7 @@ This page shows you how to organise your notes: several notebooks side by side, 
 
 ## Notebooks
 
-Each git notebook has its own section in the sidebar, with its folder tree, its sync state and its own Trash. Add more in **Settings → All Notebooks → Add Notebook…**. Each notebook also has its own entry under **All Notebooks** in Settings, with its sync dot, which opens its page.
+Each git notebook has its own section in the sidebar, with its folder tree, its sync state and its own Trash. Add more in **Settings → All Notebooks → Add Notebook…** (**Notebook Settings** in the command palette opens the page). Each notebook also has its own entry under **All Notebooks** in Settings, with its sync dot, which opens its page.
 
 - **Search** covers every notebook, and labels each result with its notebook.
 - **Links, embeds, tags, the graph and backlinks** stay inside one notebook.
@@ -36,7 +36,7 @@ Each notebook has a badge: a small square in a colour, holding a letter, a numbe
 
 One notebook is your **Primary Notebook**. Today's note, This Week's note, the calendar, the Inbox and quick capture use it, and your app settings are kept in it. Choose it with **Primary Notebook** in **Settings → All Notebooks**. Each Mac chooses its own; the notebook's row and page show a **Primary** chip.
 
-To give another notebook the same settings, choose **Copy Settings…** under **Between Notebooks**, pick **From** and **To**, and choose **Copy Settings**: it replaces the other notebook's settings, once (Quick Access stays as it is). **Keep Settings in Step** does it for every change from then on, on this Mac. On Android the same setting is **Primary Notebook**, in **Settings → All Notebooks**.
+To give another notebook the same settings, choose **Copy Settings…** under **Between Notebooks**, pick **From** and **To**, and choose **Copy Settings**: it replaces the other notebook's settings, once (Quick Access stays as it is). **Keep Settings in Step** does it for every change from then on, on this Mac. Android has **Primary Notebook**, **Keep Settings in Step** and **Copy Settings…** in **Settings → All Notebooks** too, and Keep Settings in Step is each phone's own choice.
 
 ## Folders
 
@@ -96,7 +96,7 @@ Quick Access is not the same as a pinned [tab](/docs/install/mac/#tabs): Quick A
 
 ## The sidebar
 
-**Settings → Sidebar** shows a small sidebar beside its settings that changes as you change them:
+**Settings → Sidebar** (**Sidebar Settings** in the command palette) shows a small sidebar beside its settings that changes as you change them:
 
 - **Shortcuts**: which buttons the sidebar's top row shows. Search is always there; **Tags**, **Today**, **This Week**, **Graph** and **Commands** show unless you switch them off. A hidden shortcut still works from its keys and the command palette.
 - **Sections**: **Quick Access** (with **Show Notebook Names**, which labels each pinned note with its notebook), **Recent Notes** (with how many notes it lists), **Notebooks**, **Calendar** and **Tags**, each with a switch to show or hide it. Drag a section by its handle to move it, or press Alt+↑ or Alt+↓ on its row. You can also drag a section by the handle on its title in the sidebar.

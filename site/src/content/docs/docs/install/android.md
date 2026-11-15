@@ -40,22 +40,24 @@ shasum -a 256 -c SHA256SUMS.txt --ignore-missing
 
 The Android app does not update itself. To update, download `Penmoss.apk` from the latest release again and open it: it installs over the copy you have and keeps your notebooks.
 
+If you have Penmoss from Google Play (its internal testing track, by invitation only), Google Play updates it, as it does your other apps. A `Penmoss.apk` doesn't install over a Play copy, nor the other way round: to switch, remove Penmoss first and add your notebooks again.
+
 Builds from the Alpha channel use the same app and certificate, so an Alpha build installs over a stable one, and the next stable release installs over it again once its version is higher. See [Updates and the Alpha channel](/docs/help/updates/).
 
 ## Notebooks
 
-The first screen lists your notebooks; each opens in a screen of its own, with its Home, folders and search. The gear at the top opens **Settings**, which has a **Search Settings** field and five groups: **Look and Feel** (Appearance, Home, Symbols), **Writing** (Daily Notes, Quick Capture, Keyboard Shortcuts), **Notebooks**, **Agents** (Agent Activity) and **This Phone** (Storage, GitHub, What’s New).
+The first screen lists your notebooks; each opens in a screen of its own, with its Home, folders and search. The gear at the top opens **Settings**, which has a **Search Settings** field (a match opens its screen scrolled to the setting, marked for a moment) and five groups: **Look and Feel** (Appearance, Home, Symbols), **Writing** (Daily Notes, Quick Capture, Keyboard Shortcuts), **Notebooks**, **Agents** (Agent Activity) and **This Phone** (Storage, GitHub, What’s New).
 
 Under **Notebooks**, each notebook has a row with its sync state; tap it for the notebook's page, which has three tabs:
 
-- **Overview:** its sync state with **Sync Now**, **Open Notebook**, **Make Primary**, and **Remove from This Phone…**, which asks for your fingerprint, face or screen lock first.
+- **Overview:** its sync state with **Sync Now**, **Open Notebook**, **Make Primary**, how many **Notes** it has, **Copy Settings…** (with two notebooks or more), and **Remove from This Phone…**, which asks for your fingerprint, face or screen lock first.
 - **Sync:** what the last sync said, **Wi-Fi Only**, how soon it pushes (**Push After**, 12 seconds by default) and how often it pulls (**Pull Every**, 1 minute by default).
 - **Git:** the **Personal Access Token** (**Save Token**, **Forget Token**), **Sign Commits**, and a **Commit Name** and **Commit Email** for this notebook.
 
 **All Notebooks** lists them all, with **+ Add Notebook**, and:
 
 - **Primary Notebook:** where Today, This Week and captures go on this phone, and where your app settings are kept.
-- **Between Notebooks → Copy Tags When Copying Notes.**
+- **Between Notebooks:** **Keep Settings in Step** (each change to the Primary Notebook's settings goes to your other notebooks a moment later; this phone's choice), **Copy Tags When Copying Notes**, and **Copy Settings…**: pick **From** and **To** and choose **Copy Settings** to replace the other notebook's settings, once. Quick Access stays as it is. Keep Settings in Step and Copy Settings… show with two notebooks or more.
 - **Commits From This Phone:** the name and email the phone commits as, and its signing key.
 - **Background Sync:** the last background sync and the next.
 
@@ -106,7 +108,7 @@ Removing a notebook, Delete for Good and restoring a version first ask for your 
 
 ## What's new
 
-**Settings → What’s New** names the version you have, then shows what changed in it and, under **Earlier Versions**, in earlier ones, grouped as **New**, **Improved** and **Fixed**. Only changes that reach Android are listed. An Alpha build lists every change since the last stable release, each with its build. The phone fetches the notes from GitHub when you open the screen and after an update, at most once an hour, and keeps them for offline. Until it has them, the screen links to the [Releases page](https://github.com/htxryan/penmoss/releases).
+**Settings → What’s New** names the version you have and how it updates (by Google Play, or with a newer `Penmoss.apk`), then shows what changed in it and, under **Earlier Versions**, in earlier ones, grouped as **New**, **Improved** and **Fixed**. Only changes that reach Android are listed. An Alpha build lists every change since the last stable release, each with its build. The phone fetches the notes from GitHub when you open the screen and after an update, at most once an hour, and keeps them for offline. Until it has them, the screen links to the [Releases page](https://github.com/htxryan/penmoss/releases).
 
 After you install a newer version, a message at the foot of the screen says **Updated to …** once, with **What’s New**, if that version has notes for Android.
 

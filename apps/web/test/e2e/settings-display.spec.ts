@@ -4,6 +4,42 @@ import { expect, type Page, test } from './fixtures';
 import { collectErrors, ULID } from './support/app';
 import { pushed } from './support/sync';
 
+// PEN-148: each of the title bar's buttons is one row, icon, name, then its switch at the end, in
+// both columns and on a narrow window, where the grid is one column.
+test('Settings → Note draws each title bar button on one row, its switch at the end', async ({
+  page,
+}) => {
+  const errors = collectErrors(page);
+  for (const width of [1440, 1000, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/settings/note');
+    const cells = page.getByTestId('note-bar-settings').locator(':scope > .lf-row');
+    await expect(cells).toHaveCount(9);
+    const rows = await cells.evaluateAll((all) =>
+      all.map((cell) => {
+        const box = (el: Element) => el.getBoundingClientRect();
+        const row = box(cell);
+        const icon = box(cell.querySelector('.lf-row-label svg')!);
+        const name = box(cell.querySelector('.lf-row-label')!);
+        const toggle = box(cell.querySelector('[role="switch"]')!);
+        const mid = (r: DOMRect) => r.top + r.height / 2;
+        return {
+          left: row.left,
+          inOrder: icon.right <= toggle.left && name.right <= toggle.left,
+          // The switch beside the name, not on a line of its own under it.
+          beside: mid(toggle) > name.top && mid(toggle) < name.bottom,
+          atEnd: row.right - toggle.right < 24,
+        };
+      }),
+    );
+    for (const row of rows)
+      expect(row, `${width}px`).toMatchObject({ inOrder: true, beside: true, atEnd: true });
+    const columns = new Set(rows.map((row) => Math.round(row.left))).size;
+    expect(columns, `${width}px`).toBe(width < 700 ? 1 : 2);
+  }
+  expect(errors).toEqual([]);
+});
+
 // T42, item 7.
 test('Settings → Sidebar hides sidebar shortcuts, on the rail too; Search stays', async ({
   page,

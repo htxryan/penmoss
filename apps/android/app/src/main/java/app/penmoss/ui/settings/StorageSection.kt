@@ -58,11 +58,13 @@ fun StorageScreen(
     var clearing by rememberSaveable { mutableStateOf(false) }
     SectionScreen("Storage", onBack) {
         ListItem(
+            modifier = Modifier.settingRow("files-and-pictures-in-notes"),
             headlineContent = { Text("Files and Pictures in Notes") },
             // The upload queue's own rule (review PS2): a large file is not sent over mobile data.
             supportingContent = { Text((use?.let { formatBytes(it.files) } ?: "Counting…") + " · files over 10 MB upload on Wi-Fi", Modifier.testTag("storageFiles")) },
         )
         ListItem(
+            modifier = Modifier.settingRow("pictures-from-the-web"),
             headlineContent = { Text("Pictures From the Web") },
             supportingContent = {
                 Text(
@@ -76,7 +78,7 @@ fun StorageScreen(
                 }
             },
         )
-        GroupTitle("Load Pictures From the Web")
+        GroupTitle("Load Pictures From the Web", Modifier.settingRow("load-pictures-from-the-web"))
         Segments(WEB_PICTURE_CHOICES, webPictures.key, enabled = true, tag = "webPictures") { key ->
             WebPictureSetting.entries.firstOrNull { it.key == key }?.let(onWebPictures)
         }

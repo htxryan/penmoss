@@ -332,6 +332,23 @@ describe('the REST routes, locally', () => {
     expect(stale.body['error'].code).toBe('setting_changed');
   });
 
+  it('takes a time zone whose base is the default a notebook with none reports', async () => {
+    const { call } = await setup();
+    const tree = await call('PUT', '/api/settings', {
+      set: { timeZone: 'Asia/Tokyo' },
+      base: { timeZone: 'America/Chicago' },
+    });
+    expect(tree.status).toBe(200);
+    expect((await call('GET', '/api/settings')).body).toEqual({
+      settings: { timeZone: 'Asia/Tokyo' },
+    });
+    const stale = await call('PUT', '/api/settings', {
+      set: { timeZone: 'Europe/Paris' },
+      base: { timeZone: 'America/Chicago' },
+    });
+    expect(stale.status).toBe(409);
+  });
+
   it('searches words only: hybrid falls back with a notice, semantic is refused (A101)', async () => {
     const { call } = await setup();
     await call('POST', '/api/notes', {

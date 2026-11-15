@@ -74,6 +74,9 @@ class NoteStore private constructor(
     fun observeList(): Flow<List<NoteListRow>> = editor.observeList()
     fun observeQuickAccess(pins: Flow<List<String>> = settings.observeSettings().map { it.settings.quickAccess }): Flow<List<NoteListRow>> = editor.observeQuickAccess(pins)
     suspend fun unsentCount(): Int = editor.unsentCount()
+
+    /** How many live notes the notebook has on this phone, Trash left out (PEN-148). */
+    suspend fun noteCount(): Int = editor.noteCount()
     suspend fun unsentFeedbackCount(): Int = editor.unsentFeedbackCount()
     suspend fun pendingCount(): Int = editor.pendingCount()
     suspend fun markOpened(noteId: String) = editor.markOpened(noteId)

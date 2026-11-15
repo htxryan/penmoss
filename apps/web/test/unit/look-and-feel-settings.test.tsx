@@ -1,4 +1,6 @@
 // @vitest-environment happy-dom
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { DEFAULT_SYMBOLS } from '@penmoss/core/line-symbols';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -191,6 +193,30 @@ describe('Settings → Note (PEN-146)', () => {
     );
     // The status bar never offers Tags.
     expect(host.querySelector('[data-testid="metadata-status-tags"]')).toBeNull();
+  });
+
+  it('draws each title bar button as one row: icon, name, then its switch at the end', () => {
+    render(<NoteSettings />);
+    const cells = [...byTest('note-bar-settings').children];
+    expect(cells).toHaveLength(9);
+    for (const cell of cells) {
+      expect(cell.className).toBe('lf-row');
+      expect([...cell.children].map((child) => child.className)).toEqual([
+        'lf-row-text',
+        'lf-row-control',
+      ]);
+      const label = cell.querySelector('.lf-row-text > label')!;
+      expect(label.firstElementChild!.tagName.toLowerCase()).toBe('svg');
+      expect(label.textContent.trim()).not.toBe('');
+      const control = cell.lastElementChild!;
+      expect(control.children).toHaveLength(1);
+      expect(control.firstElementChild!.getAttribute('role')).toBe('switch');
+      expect(label.getAttribute('for')).toBe(control.firstElementChild!.id);
+    }
+    // The grid's cells never wrap the switch under the name (PEN-148), in either column.
+    // Run from the package, as `pnpm --filter` does.
+    const css = readFileSync(resolve(process.cwd(), 'src/theme/look-settings.css'), 'utf8');
+    expect(css).toMatch(/\.lf-group-two > \.lf-row \{\s*flex-wrap: nowrap;/);
   });
 
   it('turns a detail on as a chip, and the preview shows it', () => {

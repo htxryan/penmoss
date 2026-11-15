@@ -92,6 +92,9 @@ class EditorStore(
     /** The held notes' ids that end with [end] (PEN-69: two notes a short reference could name). */
     suspend fun idsEndingWith(end: String): List<String> = notes.idsEndingWith(end)
 
+    /** How many live notes the notebook has on this phone, Trash left out (PEN-148). */
+    suspend fun noteCount(): Int = notes.liveCount()
+
     fun observeNote(noteId: String): Flow<NoteEntity?> = notes.observe(noteId)
 
     /** A note's title as the phone holds it; null for one it does not. */

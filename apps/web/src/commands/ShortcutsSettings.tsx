@@ -8,7 +8,8 @@ import {
 import { Icon } from '@penmoss/ui/icons';
 import { useId, useRef, useState, useSyncExternalStore } from 'react';
 import { desktop } from '../desktop/bridge';
-import { WritingGroup, WritingSubhead } from '../journal/writing-rows';
+import { GroupHead } from '../theme/look-rows';
+import '../journal/writing.css';
 import { settingId } from '../pages/settings-index';
 import { linkHandler, settingsPath } from '../router';
 import { ConfirmDialog } from '../shell/ConfirmDialog';
@@ -194,18 +195,18 @@ export function ShortcutsSettings() {
     return (
       <div
         key={command.id}
-        className={`wr-row kb-row${listening ? ' capturing' : ''}${custom ? ' changed' : ''}`}
+        className={`lf-row kb-row${listening ? ' capturing' : ''}${custom ? ' changed' : ''}`}
         data-command-row={command.id}
         data-setting={settingId(command.title)}
       >
-        <div className="wr-row-text">
-          <span className="wr-row-label">
+        <div className="lf-row-text">
+          <span className="lf-row-label">
             {command.title}
             {command.pending ? (
               <span className="muted"> · arrives with {command.pending}</span>
             ) : null}
           </span>
-          {help ? <span className="wr-row-help">{help}</span> : null}
+          {help ? <span className="lf-row-help">{help}</span> : null}
           {rowNotice?.kind === 'conflict' ? (
             <div className="kb-conflict" role="alert" data-testid="shortcut-conflict">
               <Kbd combo={rowNotice.combo} /> is used by{' '}
@@ -239,7 +240,7 @@ export function ShortcutsSettings() {
             </div>
           ) : null}
         </div>
-        <div className="wr-row-control">
+        <div className="lf-row-control">
           {keys.length > 0 && !listening ? (
             <button
               type="button"
@@ -404,10 +405,14 @@ export function ShortcutsSettings() {
       </p>
       {groups.map((group) => (
         <div key={group.area} data-area={group.area}>
-          <WritingSubhead id={`${id}-${settingId(group.label)}`}>{group.label}</WritingSubhead>
-          <WritingGroup role="group" aria-labelledby={`${id}-${settingId(group.label)}`}>
+          <GroupHead id={`${id}-${settingId(group.label)}`}>{group.label}</GroupHead>
+          <div
+            className="lf-group"
+            role="group"
+            aria-labelledby={`${id}-${settingId(group.label)}`}
+          >
             {group.rows.map(row)}
-          </WritingGroup>
+          </div>
         </div>
       ))}
       <div className="kb-foot">

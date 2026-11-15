@@ -1,5 +1,6 @@
 package app.penmoss.feedback
 
+import app.penmoss.ui.settings.settingRow
 import kotlinx.coroutines.Dispatchers
 import android.content.Context
 import android.net.Uri
@@ -162,12 +163,14 @@ fun GitHubScreen(
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(vertical = 8.dp)) {
             if (signedIn) {
                 ListItem(
+                    modifier = Modifier.settingRow("github"),
                     headlineContent = { Text(login ?: "Signed in", Modifier.testTag("githubLogin")) },
                     supportingContent = { Text("Signed in with GitHub · kept on this phone, encrypted by the Android Keystore") },
                     trailingContent = { TextButton(onClick = { signingOut = true }, Modifier.testTag("githubSignOut")) { Text("Sign Out") } },
                 )
             } else {
                 ListItem(
+                    modifier = Modifier.settingRow("github"),
                     headlineContent = { Text("Not signed in", Modifier.testTag("githubLogin")) },
                     supportingContent = { Text("Sign in so Send Feedback can file issues in $repo.") },
                 )
@@ -192,7 +195,7 @@ fun GitHubScreen(
                         if (canSignIn) {
                             app.penmoss.ui.common.Button(onClick = onSignIn, Modifier.testTag("githubSignIn")) { Text(if (signedIn) "Sign In Again" else "Sign In with GitHub") }
                         }
-                        app.penmoss.ui.common.OutlinedButton(onClick = onToken, Modifier.testTag("githubUseToken")) { Text("Use a Token Instead…") }
+                        app.penmoss.ui.common.OutlinedButton(onClick = onToken, Modifier.settingRow("github-token").testTag("githubUseToken")) { Text("Use a Token Instead…") }
                     }
                 }
             }
@@ -211,7 +214,7 @@ fun GitHubScreen(
                     )
                 },
                 trailingContent = if (onSendFeedback != null) ({ Text("›", style = MaterialTheme.typography.titleMedium) }) else null,
-                modifier = (if (onSendFeedback != null) Modifier.clickable(role = Role.Button, onClick = onSendFeedback) else Modifier).testTag("githubSendFeedback"),
+                modifier = (if (onSendFeedback != null) Modifier.clickable(role = Role.Button, onClick = onSendFeedback) else Modifier).settingRow("send-feedback").testTag("githubSendFeedback"),
             )
             Text(
                 "A notebook’s own repository uses the token typed on its Git tab.",

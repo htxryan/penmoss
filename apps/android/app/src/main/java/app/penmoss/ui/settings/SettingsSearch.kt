@@ -5,7 +5,8 @@ import app.penmoss.ui.keys.CommandRoutes
 /**
  * Settings → Search Settings on the phone (PEN-146): every setting a person can look for, by its
  * label, its help or another word for it ("dark", "token", "hotkey"), and the screen it is on.
- * The ids are the rows' labels in kebab case, as the Mac's `data-setting` ids are.
+ * The ids are the rows' labels in kebab case, as the Mac's `data-setting` ids are: the row with
+ * `Modifier.settingRow(id)` is the one a result scrolls to and marks (PEN-148).
  */
 data class SettingEntry(
     val id: String,
@@ -17,8 +18,11 @@ data class SettingEntry(
     val aliases: List<String> = emptyList(),
 )
 
+/** A row's id from its label, in kebab case as the Mac's `data-setting`: "Copy Settings…" → copy-settings. */
+fun settingId(label: String): String = label.lowercase().replace('’', '-').replace(Regex("[^a-z0-9]+"), "-").trim('-')
+
 private fun entry(label: String, section: String, route: String, help: String? = null, vararg aliases: String) =
-    SettingEntry(label.lowercase().replace('’', '-').replace(Regex("[^a-z0-9]+"), "-").trim('-'), label, section, route, help, aliases.toList())
+    SettingEntry(settingId(label), label, section, route, help, aliases.toList())
 
 /** Every setting on the phone's Settings, screen by screen in the list's order. */
 val SETTINGS_INDEX: List<SettingEntry> = listOf(
@@ -43,7 +47,9 @@ val SETTINGS_INDEX: List<SettingEntry> = listOf(
     entry("All Notebooks", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "The notebooks on this phone", "git", "repository", "repo"),
     entry("Add Notebook", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "From a private GitHub repository", "new notebook", "clone", "repository"),
     entry("Primary Notebook", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "Holds your journal, Inbox and these settings", "journal notebook", "default notebook"),
+    entry("Keep Settings in Step", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "The primary notebook’s changes go to the others", "between notebooks", "sync settings", "same settings"),
     entry("Copy Tags When Copying Notes", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "Copy to Notebook’s starting choice", "between notebooks"),
+    entry("Copy Settings…", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "From one notebook to another, once", "between notebooks", "same settings", "duplicate settings"),
     entry("Commits From This Phone", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "Your commit name, email and signing key", "git identity", "author", "email", "signing key", "ssh"),
     entry("Background Sync", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "About every 15 minutes while the app is closed", "battery", "doze"),
     entry("Agent Activity", "Agent Activity", SettingsRoutes.AGENT_ACTIVITY, "What agents changed, with Undo", "agents", "undo", "mcp", "cli"),
