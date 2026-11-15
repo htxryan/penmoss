@@ -42,6 +42,7 @@ const POLICY: Record<keyof typeof INVOKE, [Caller, 'none' | 'handler' | { refuse
   meaningSearch: ['window', 'none'],
   meaningSetEnabled: ['main', { refused: null }],
   meaningRemoveModel: ['main', { refused: null }],
+  meaningRemoveIndex: ['main', { refused: null }],
   gitList: ['app', 'none'],
   gitAdd: ['window', 'none'],
   gitRemove: ['window', { refused: NEEDS_A_PERSON }],

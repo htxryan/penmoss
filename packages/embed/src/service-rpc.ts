@@ -20,6 +20,8 @@ export interface ServiceCalls {
   setEnabled(enabled: boolean): Promise<ServiceStatus>;
   /** Delete Model… (A1566): off, then the model and its vectors deleted. */
   removeModel(): Promise<ServiceStatus>;
+  /** Recreate Index… and Delete Index… (A1595): the vectors deleted, and indexed again if on. */
+  removeIndex(): Promise<ServiceStatus>;
 }
 
 export type ServiceMethod = keyof ServiceCalls;
@@ -30,6 +32,7 @@ const METHODS: ReadonlySet<string> = new Set<ServiceMethod>([
   'search',
   'setEnabled',
   'removeModel',
+  'removeIndex',
 ]);
 
 export interface ServiceRequest {
@@ -69,6 +72,7 @@ export function serviceCalls(service: MeaningService): ServiceCalls {
     },
     setEnabled: (enabled) => service.setEnabled(enabled),
     removeModel: () => service.removeModel(),
+    removeIndex: () => service.removeIndex(),
   };
 }
 
@@ -88,6 +92,8 @@ function dispatch(calls: ServiceCalls, request: ServiceRequest): Promise<unknown
       return calls.setEnabled(...(args as Parameters<ServiceCalls['setEnabled']>));
     case 'removeModel':
       return calls.removeModel();
+    case 'removeIndex':
+      return calls.removeIndex();
   }
 }
 
@@ -145,6 +151,7 @@ export function serviceClient(
     search: (notebookId, query, options) => call('search', notebookId, query, options ?? {}),
     setEnabled: (enabled) => call('setEnabled', enabled),
     removeModel: () => call('removeModel'),
+    removeIndex: () => call('removeIndex'),
     failAll: (why) => {
       for (const { reject } of waiting.values()) reject(new Error(why));
       waiting.clear();

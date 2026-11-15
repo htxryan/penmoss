@@ -346,12 +346,6 @@
   gap: 0.5rem;
 }
 
-.btn.danger-fill {
-  border-color: var(--pm-danger);
-  background: var(--pm-danger);
-  color: var(--pm-on-accent);
-}
-
 /*
  * Settings and Feedback as icons (T51, A935), flush with the row's start and as tall as the row,
  * square, with no margin or gap, as a notebook's buttons and a section's tools are (T63; Quanta

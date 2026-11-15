@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, symlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, symlinkSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { EMBEDDING_GEMMA, fetchModel, modelId, modelPaths, vectorsDir } from '@penmoss/embed';
@@ -254,6 +254,63 @@ test('Settings → Semantic Search: Off keeps the model, and Delete Model remove
   await expect(row.getByTestId('meaning-status')).toHaveAttribute('data-state', 'absent');
   await expect(row.getByTestId('meaning-status')).toContainText('Not downloaded.');
   await expect(row.getByTestId('meaning-enabled')).toBeChecked();
+});
+
+test('Settings → Semantic Search: Recreate Index rebuilds the vectors while on, and Delete Index removes them while off (A1595)', async () => {
+  const home = meaningHome();
+  const launched = await start(home);
+  const { app, page } = launched;
+  await untilStarted(app);
+  // From a script, with no click or key press, nothing is deleted.
+  expect(await inPage(app, 'window.penmossDesktop.meaning.removeIndex()')).toBeNull();
+  await gitNotebook(launched);
+  await send(app, NOTES);
+  await untilReady(app, 1, NOTES.length + 1);
+  const vectors = vectorsDir(home, modelId(EMBEDDING_GEMMA));
+  const segment = join(vectors, 'seg-app.bin');
+  expect(existsSync(segment)).toBe(true);
+  const born = statSync(segment).birthtimeMs;
+  await go(page, '/settings/meaning');
+  const row = page.getByTestId('meaning-settings');
+  const state = row.getByTestId('meaning-index-state');
+  await expect(row.getByTestId('meaning-delete-model')).toHaveClass(/danger-fill/);
+  // On: Recreate Index… alone, with the index's size on disk.
+  await expect(state).toHaveText(/^\d+ (KB|MB) on this Mac, from your notes$/);
+  await expect(row.getByTestId('meaning-recreate-index')).toBeVisible();
+  await expect(row.getByTestId('meaning-delete-index')).toHaveCount(0);
+  await row.getByTestId('meaning-recreate-index').click();
+  const ask = page.getByTestId('meaning-index-ask');
+  await expect(ask).toContainText('is deleted and built again from your notes');
+  await ask.getByTestId('meaning-index-confirm').click();
+  // The vectors are deleted and written again from the notes, the model kept.
+  await expect.poll(async () => (await status(app))?.state, { timeout: 30_000 }).toBe('ready');
+  await untilReady(app, 1, NOTES.length + 1);
+  expect(existsSync(segment)).toBe(true);
+  expect(statSync(segment).birthtimeMs).toBeGreaterThan(born);
+  expect(
+    (await search(app, 'keep the computers running during a blackout')).answer?.hits[0]?.id,
+  ).toBe('ups');
+  await expect(row.getByTestId('meaning-status')).toHaveText(
+    'Ready: EmbeddingGemma 300M (219 MB), on this Mac. All 4 notes are indexed.',
+  );
+  await expect(state).toHaveText(/ on this Mac, from your notes$/);
+
+  // Off: Delete Index… alone; it removes the vectors and keeps the model.
+  await row.getByTestId('meaning-enabled').click();
+  await expect(row.getByTestId('meaning-status')).toHaveAttribute('data-state', 'off');
+  await expect(row.getByTestId('meaning-recreate-index')).toHaveCount(0);
+  await row.getByTestId('meaning-delete-index').click();
+  await expect(ask).toContainText('The model stays');
+  await ask.getByTestId('meaning-index-cancel').click();
+  await expect(ask).toBeHidden();
+  expect(existsSync(segment)).toBe(true);
+  await row.getByTestId('meaning-delete-index').click();
+  await ask.getByTestId('meaning-index-confirm').click();
+  await expect(state).toHaveText('No index');
+  await expect(row.getByTestId('meaning-delete-index')).toHaveCount(0);
+  expect(existsSync(vectors)).toBe(false);
+  expect(existsSync(modelPaths(EMBEDDING_GEMMA, home).dir)).toBe(true);
+  await expect(row.getByTestId('meaning-model-state')).toHaveText('EmbeddingGemma 300M · 219 MB');
 });
 
 test('Settings → Semantic Search: a removed notebook leaves its count (A1373)', async () => {

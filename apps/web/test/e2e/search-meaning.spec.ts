@@ -236,6 +236,75 @@ test('Settings → Semantic Search deletes the model after asking, and search go
   expect(errors).toEqual([]);
 });
 
+// A1595: one index action, never both: Recreate Index… while on, Delete Index… while off.
+test('Settings → Semantic Search recreates the index while on, and deletes it while off', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const errors = collectErrors(page);
+  await page.goto('/');
+  await openSearch(page);
+  await page.keyboard.press('Escape');
+  await page.goto('/settings/meaning');
+  const section = page.getByTestId('meaning-settings');
+  const recreate = section.getByRole('button', { name: 'Recreate Index…' });
+  const remove = section.getByRole('button', { name: 'Delete Index…' });
+  const state = section.getByTestId('meaning-index-state');
+  const indexed = () =>
+    page.evaluate(async () => {
+      const status = await window.penmossDesktop?.meaning?.status();
+      return status ? `${status.indexed}/${status.total}` : null;
+    });
+  // Delete Model… is the solid red button.
+  await expect(section.getByRole('button', { name: 'Delete Model…' })).toHaveClass(/danger-fill/);
+  // On: Recreate alone, with the index's size.
+  await expect(state).toHaveText(/^\d+ KB on this Mac, from your notes$/);
+  await expect(recreate).toBeVisible();
+  await expect(remove).toHaveCount(0);
+  // Asked first; Cancel keeps it.
+  await recreate.click();
+  const again = page.getByRole('dialog', { name: 'Recreate the Index?' });
+  await expect(again).toContainText('is deleted and built again from your notes');
+  await again.getByRole('button', { name: 'Cancel' }).click();
+  await expect(again).toBeHidden();
+  await expect(state).toHaveText(/ KB on this Mac/);
+  // Recreate Index: deleted, then built again from the notes, the model kept.
+  await recreate.click();
+  await again.getByRole('button', { name: 'Recreate Index' }).click();
+  await expect(again).toBeHidden();
+  await expect.poll(indexed, { timeout: 30_000 }).toBe('4/4');
+  await expect(state).toHaveText(/ KB on this Mac/, { timeout: 30_000 });
+  await expect(section.getByTestId('meaning-model-state')).toHaveText(/ · 219 MB$/);
+
+  // Off: Delete Index alone, in red.
+  await section.getByRole('switch', { name: 'Semantic Search' }).click();
+  await expect(section.getByTestId('meaning-status')).toHaveAttribute('data-state', 'off');
+  await expect(recreate).toHaveCount(0);
+  await expect(remove).toBeVisible();
+  await expect(remove).toHaveClass(/danger-fill/);
+  await remove.click();
+  const ask = page.getByRole('dialog', { name: 'Delete the Index?' });
+  await expect(ask).toContainText('The model stays');
+  await expect(ask.getByRole('button', { name: 'Delete Index' })).toHaveClass(/danger-fill/);
+  await ask.getByRole('button', { name: 'Cancel' }).click();
+  await expect(ask).toBeHidden();
+  await expect(remove).toBeVisible();
+  await remove.click();
+  await ask.getByRole('button', { name: 'Delete Index' }).click();
+  await expect(ask).toBeHidden();
+  // Nothing left to delete: neither button, and the model is still here.
+  await expect(state).toHaveText('No index');
+  await expect(remove).toHaveCount(0);
+  await expect(recreate).toHaveCount(0);
+  await expect(section.getByTestId('meaning-model-state')).toHaveText(/ · 219 MB$/);
+  // On again: built from the notes without a download, and Recreate is back.
+  await section.getByRole('switch', { name: 'Semantic Search' }).click();
+  await expect(recreate).toBeVisible({ timeout: 30_000 });
+  await expect(remove).toHaveCount(0);
+  await expect(state).toHaveText(/ KB on this Mac/, { timeout: 30_000 });
+  expect(errors).toEqual([]);
+});
+
 test('a narrow window shows the same', async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 390, height: 780 });

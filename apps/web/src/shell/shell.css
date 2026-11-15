@@ -291,6 +291,18 @@
   background: var(--pm-danger-soft);
 }
 
+/* Solid red: an action that deletes (Delete Model…, a confirm's Delete; A1595). */
+.btn.danger-fill {
+  border-color: var(--pm-danger);
+  background: var(--pm-danger);
+  color: var(--pm-on-accent);
+}
+
+.btn.danger-fill:hover:not(:disabled) {
+  border-color: color-mix(in oklab, var(--pm-danger), var(--pm-fg) 12%);
+  background: color-mix(in oklab, var(--pm-danger), var(--pm-fg) 12%);
+}
+
 .btn kbd {
   font-family: var(--pm-font);
   font-size: var(--pm-text-badge);

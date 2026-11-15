@@ -253,6 +253,7 @@ export function installFakeBridge(config: {
               host('meaningSearch', notebookId, query, options ?? {}),
             setEnabled: (on) => host('meaningSetEnabled', on),
             removeModel: () => host('meaningRemoveModel'),
+            removeIndex: () => host('meaningRemoveIndex'),
             onChange: (listener) => listen(meaningListeners, listener as (status: unknown) => void),
           },
         }

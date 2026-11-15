@@ -59,6 +59,8 @@ export class EmbeddingService {
   private pending: boolean | null = null;
   /** Delete Model…, clicked while no service ran (A1566). */
   private pendingRemove = false;
+  /** Recreate Index… or Delete Index… asked while the service was not running (A1595). */
+  private pendingRemoveIndex = false;
   private last: DesktopMeaningStatus = {
     state: 'starting',
     generation: 0,
@@ -87,6 +89,12 @@ export class EmbeddingService {
       this.pending = null;
       void client
         .removeModel()
+        .then((status) => this.child === child && this.publish({ ...status, generation }))
+        .catch(this.failed(undefined));
+    } else if (this.pendingRemoveIndex) {
+      this.pendingRemoveIndex = false;
+      void client
+        .removeIndex()
         .then((status) => this.child === child && this.publish({ ...status, generation }))
         .catch(this.failed(undefined));
     } else if (this.pending !== null) {
@@ -199,6 +207,22 @@ export class EmbeddingService {
       });
     }
     const status = await client.removeModel();
+    return this.publish({ ...status, generation: this.generation });
+  }
+
+  /**
+   * Settings → Semantic Search → Recreate Index… and Delete Index… (A1595): the service, which
+   * has the vectors open, stops indexing, deletes them and, on, indexes the notes again.
+   */
+  async removeIndex(): Promise<DesktopMeaningStatus> {
+    const client = this.client;
+    if (!client) {
+      // Not running: the files go once it starts, which a restart does at once.
+      this.pendingRemoveIndex = true;
+      this.restartNow();
+      return this.last;
+    }
+    const status = await client.removeIndex();
     return this.publish({ ...status, generation: this.generation });
   }
 

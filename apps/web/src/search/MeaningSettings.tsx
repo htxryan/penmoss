@@ -1,9 +1,12 @@
 /**
  * Settings → Semantic Search (T78, A1158; PEN-146; A1566): the switch, what the Mac's embedding
- * service is doing with a progress bar, and the model with its size and licence, and Delete
- * Model…. On by default. Off stops it and search goes by words; the model stays, so On is quick.
- * Delete Model… asks first, naming the size, then deletes the model and the index from this Mac
- * and switches it off; On downloads it again. Agents' `penmoss` on this Mac follows the same
+ * service is doing with a progress bar, the model with its size and licence, and Delete Model…
+ * (solid red). On by default. Off stops it and search goes by words; the model stays, so On is
+ * quick. Delete Model… asks first, naming the size, then deletes the model and the index from this
+ * Mac and switches it off; On downloads it again. The Semantic Index row (A1595) says how much the index
+ * takes, and offers one action, never both: on, Recreate Index… (deleted and built again from the
+ * notes, the Indexing row showing its progress); off, Delete Index… while there is one (the model
+ * stays). Agents' `penmoss` on this Mac follows the same
  * setting (`~/.penmoss/meaning.json`). The Mac app only.
  */
 import { useId, useState } from 'react';
@@ -11,6 +14,7 @@ import type { DesktopMeaningStatus } from '../desktop/bridge';
 import { ConfirmDialog } from '../shell/ConfirmDialog';
 import { SettingRow, Switch } from '../theme/look-rows';
 import {
+  indexSize,
   meaningProgress,
   meaningStatusText,
   megabytes,
@@ -36,6 +40,10 @@ export function MeaningSettings() {
   const [asking, setAsking] = useState(false);
   /** The model is being deleted. */
   const [deleting, setDeleting] = useState(false);
+  /** Recreate Index… or Delete Index… was clicked: its question waits. */
+  const [askingIndex, setAskingIndex] = useState(false);
+  /** The index is being deleted (and, on, built again). */
+  const [removingIndex, setRemovingIndex] = useState(false);
   if (!found) return null;
   const { meaning, status } = found;
   const on = wanted ?? status?.enabled !== false;
@@ -54,8 +62,30 @@ export function MeaningSettings() {
       .catch(() => null)
       .finally(() => setDeleting(false));
   };
+  const removeIndex = () => {
+    setAskingIndex(false);
+    setRemovingIndex(true);
+    void meaning
+      .removeIndex()
+      .catch(() => null)
+      .finally(() => setRemovingIndex(false));
+  };
   const progress = status ? meaningProgress(status) : null;
   const here = modelHere(status);
+  const busy = deleting || removingIndex || wanted !== null;
+  // On: Recreate Index…, once the model is open. Off: Delete Index…, while there is one.
+  const enabled = status?.enabled === true;
+  const indexBytes = status?.indexBytes ?? 0;
+  const indexAction: 'recreate' | 'delete' | null =
+    status === null
+      ? null
+      : enabled
+        ? status.state === 'indexing' || status.state === 'ready'
+          ? 'recreate'
+          : null
+        : indexBytes > 0
+          ? 'delete'
+          : null;
   return (
     <section
       className="settings-section"
@@ -83,7 +113,7 @@ export function MeaningSettings() {
           <Switch
             id={`${id}-on`}
             checked={on}
-            disabled={wanted !== null || deleting || status === null}
+            disabled={busy || status === null}
             aria-describedby={`${id}-help`}
             data-testid="meaning-enabled"
             onChange={(event) => set(event.target.checked)}
@@ -154,10 +184,10 @@ export function MeaningSettings() {
             {here || deleting ? (
               <button
                 type="button"
-                className="btn danger"
+                className="btn danger-fill"
                 data-ui="item"
                 data-testid="meaning-delete-model"
-                disabled={deleting || wanted !== null}
+                disabled={busy}
                 onClick={() => setAsking(true)}
               >
                 {deleting ? 'Deleting…' : 'Delete Model…'}
@@ -165,7 +195,79 @@ export function MeaningSettings() {
             ) : null}
           </SettingRow>
         ) : null}
+        {status ? (
+          <SettingRow
+            setting="semantic-index"
+            label="Semantic Index"
+            testId="meaning-index"
+            help={
+              <span data-testid="meaning-index-state">
+                {indexBytes > 0
+                  ? `${indexSize(indexBytes)} on this Mac, from your notes`
+                  : 'No index'}
+              </span>
+            }
+          >
+            {indexAction === 'recreate' ? (
+              <button
+                type="button"
+                className="btn"
+                data-ui="item"
+                data-testid="meaning-recreate-index"
+                disabled={busy}
+                onClick={() => setAskingIndex(true)}
+              >
+                {removingIndex ? 'Recreating…' : 'Recreate Index…'}
+              </button>
+            ) : indexAction === 'delete' ? (
+              <button
+                type="button"
+                className="btn danger-fill"
+                data-ui="item"
+                data-testid="meaning-delete-index"
+                disabled={busy}
+                onClick={() => setAskingIndex(true)}
+              >
+                {removingIndex ? 'Deleting…' : 'Delete Index…'}
+              </button>
+            ) : null}
+          </SettingRow>
+        ) : null}
       </div>
+      {askingIndex && indexAction ? (
+        <ConfirmDialog
+          title={indexAction === 'recreate' ? 'Recreate the Index?' : 'Delete the Index?'}
+          testId="meaning-index-ask"
+          onCancel={() => setAskingIndex(false)}
+          onSubmit={removeIndex}
+        >
+          <p>
+            {indexAction === 'recreate'
+              ? `The semantic index${indexBytes > 0 ? ` (${indexSize(indexBytes)})` : ''} is deleted and built again from your notes. That takes a while and keeps this Mac busy; until it is done, search matches your words in the notes not indexed yet.`
+              : `The semantic index (${indexSize(indexBytes)}) is deleted from this Mac. The model stays, so turning Semantic Search on builds the index again without a download.`}
+          </p>
+          <div className="confirm-actions">
+            <button
+              type="button"
+              className="btn"
+              data-ui="dismiss"
+              onClick={() => setAskingIndex(false)}
+              data-testid="meaning-index-cancel"
+              autoFocus
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className={indexAction === 'recreate' ? 'btn primary' : 'btn danger-fill'}
+              data-ui="submit"
+              data-testid="meaning-index-confirm"
+            >
+              {indexAction === 'recreate' ? 'Recreate Index' : 'Delete Index'}
+            </button>
+          </div>
+        </ConfirmDialog>
+      ) : null}
       {asking ? (
         <ConfirmDialog
           title="Delete the Model?"

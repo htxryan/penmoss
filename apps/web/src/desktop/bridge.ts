@@ -591,6 +591,8 @@ export interface DesktopMeaningStatus {
   /** Notes with vectors, of the notes sent. */
   readonly indexed: number;
   readonly total: number;
+  /** The bytes this Mac's index (the vectors) takes on disk (A1595). */
+  readonly indexBytes?: number;
   /** Another copy of the app holds the indexing lease (A1350): this one only searches. */
   readonly leaseElsewhere?: boolean;
   readonly error?: string;
@@ -634,6 +636,11 @@ export interface DesktopMeaning {
    * After a click, main window only (null otherwise).
    */
   removeModel(): Promise<DesktopMeaningStatus | null>;
+  /**
+   * Recreate Index… (on) and Delete Index… (off) (A1595): this Mac's vectors deleted, the model
+   * kept; on, the notes are indexed again. After a click, main window only (null otherwise).
+   */
+  removeIndex(): Promise<DesktopMeaningStatus | null>;
   onChange(listener: (status: DesktopMeaningStatus) => void): () => void;
 }
 

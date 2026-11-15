@@ -186,6 +186,12 @@ export class FileVectorCache implements VectorCache {
     return keys;
   }
 
+  /** Lets go of every vector read so far (the files were deleted: Recreate Index…, A1595). */
+  forget(): void {
+    this.vectors.clear();
+    this.tails.clear();
+  }
+
   /** Reads what other processes appended since the last call; reloads after a compaction. */
   async refresh(): Promise<void> {
     const names = await readdir(this.dir).catch(() => [] as string[]);

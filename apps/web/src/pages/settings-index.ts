@@ -239,6 +239,19 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
       'disk space',
     ],
   }),
+  // Recreate Index… on, Delete Index… off (A1595).
+  at('meaning')('Semantic Index', {
+    help: 'Recreate it while on, or delete it while off',
+    aliases: [
+      'semantic index',
+      'recreate index',
+      'rebuild index',
+      'reindex',
+      'delete index',
+      'vectors',
+      'disk space',
+    ],
+  }),
   // GitHub.
   at('github')('GitHub Account', {
     help: 'Sign in with GitHub, kept in this Mac’s Keychain',
