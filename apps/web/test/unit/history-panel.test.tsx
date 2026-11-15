@@ -434,6 +434,113 @@ describe('Version History as a list over a docked preview (Ryan’s review of #1
     );
   });
 
+  it('offers View only where there is a note as it is now to compare with (A1572)', async () => {
+    const without = render(source());
+    await flush();
+    expect(without.querySelector('[data-testid="history-view-open"]')).toBeNull();
+    unmount();
+    const container = render(
+      source({ current: () => Promise.resolve('---\ntitle: Plan\n---\n\nnow\n') }),
+    );
+    await flush();
+    const buttons = [...container.querySelectorAll<HTMLButtonElement>('.history-actions button')];
+    // First, an icon and one word, its full name for screen readers and in its tooltip.
+    expect(buttons.map((button) => button.textContent)).toEqual([
+      'View',
+      'Restore',
+      'Revert',
+      'Copy',
+    ]);
+    expect(buttons[0]!.getAttribute('aria-label')).toBe('View This Version');
+    expect(buttons[0]!.dataset['tip']).toBe('View This Version');
+    expect(buttons[0]!.querySelector('svg[data-icon="eye"]')).not.toBeNull();
+  });
+
+  it('views a version beside now: a dialog owning the panel, both sides, the differences tinted', async () => {
+    const restored: number[] = [];
+    const container = render(
+      source({
+        current: () => Promise.resolve('---\ntitle: Plan\n---\n\nversion 3\n\nnow only\n'),
+        restore: (id) => {
+          restored.push(id);
+          return Promise.resolve({ changed: true });
+        },
+      }),
+    );
+    await flush();
+    const view = () => document.querySelector<HTMLElement>('[data-testid="history-view"]');
+    const open = () =>
+      container.querySelector<HTMLButtonElement>('[data-testid="history-view-open"]');
+    act(() => open()!.click());
+    await vi.waitFor(() => expect(view()?.querySelector('.history-view-side')).not.toBeNull());
+    const dialog = view()!;
+    expect(dialog.getAttribute('role')).toBe('dialog');
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    // The panel stays beside it, in it for Tab and for screen readers.
+    const panel = container.querySelector<HTMLElement>('[data-testid="history-panel"]')!;
+    expect(dialog.getAttribute('aria-owns')).toBe(panel.id);
+    // The preview folds away; focus is on the version picked in the list.
+    expect(container.querySelector('[aria-label="Selected Version"]')).toBeNull();
+    expect(container.querySelector('[data-testid="history-viewing"]')).not.toBeNull();
+    expect(document.activeElement?.getAttribute('data-version')).toBe('5');
+    const side = (which: string) => dialog.querySelector<HTMLElement>(`[data-side="${which}"]`)!;
+    expect(side('right').getAttribute('aria-label')).toBe('Now');
+    expect(side('left').getAttribute('aria-label')).toBe(dialog.querySelector('h2')!.textContent);
+    // The title is the same; the version's line was replaced; now's last line has a gap beside it.
+    const changes = (which: string) =>
+      [...side(which).children].map((cell) =>
+        cell.classList.contains('history-view-gap')
+          ? 'gap'
+          : ((cell as HTMLElement).dataset['change'] ?? 'same'),
+      );
+    expect(changes('left')).toEqual(['same', 'removed', 'gap']);
+    expect(changes('right')).toEqual(['same', 'added', 'added']);
+    expect(side('left').children[1]!.textContent).toBe('Not in now: version 5');
+    // The top actions keep the short names; an agent's version can be reverted.
+    const actions = [...dialog.querySelectorAll<HTMLButtonElement>('.history-view-head button')];
+    expect(actions.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Restore This Version',
+      'Revert This Edit',
+      'Copy Text',
+      'Close',
+    ]);
+    expect(actions.slice(0, 3).map((button) => button.textContent)).toEqual([
+      'Restore',
+      'Revert',
+      'Copy',
+    ]);
+
+    // Another version from the list: only the left side changes. A device's: no Revert.
+    const rows = [...container.querySelectorAll<HTMLElement>('.history-list .history-entry')];
+    act(() => rows[2]!.click());
+    await vi.waitFor(() => expect(side('left').children[1]?.textContent).toBe('version 3'));
+    expect(changes('left')).toEqual(['same', 'same', 'gap']);
+    expect(dialog.querySelector('[aria-label="Revert This Edit"]')).toBeNull();
+
+    // Esc closes it, and focus goes back to View.
+    act(() => {
+      document.activeElement!.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+      );
+    });
+    await flush();
+    expect(view()).toBeNull();
+    expect(document.activeElement).toBe(open());
+
+    // Restore from it restores that version, closes it, and says so under the changes.
+    act(() => open()!.click());
+    await vi.waitFor(() => expect(view()?.querySelector('.history-view-side')).not.toBeNull());
+    act(() =>
+      view()!.querySelector<HTMLButtonElement>('[aria-label="Restore This Version"]')!.click(),
+    );
+    await vi.waitFor(() => expect(view()).toBeNull());
+    expect(restored).toEqual([3]);
+    expect(container.querySelector('[data-testid="history-status"]')?.textContent).toContain(
+      'as a new change',
+    );
+    expect(document.activeElement).toBe(open());
+  });
+
   it('reads the list again when the note’s sync state changes', async () => {
     let changed: (() => void) | null = null;
     let pending = true;

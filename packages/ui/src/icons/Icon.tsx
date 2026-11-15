@@ -78,6 +78,13 @@ const PATHS = {
       <rect x="16" y="9" width="6" height="11" rx="1.5" />
     </>
   ),
+  // History's View This Version (A1572): an eye.
+  eye: (
+    <>
+      <path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z" />
+      <circle cx="12" cy="12" r="2.8" />
+    </>
+  ),
   file: (
     <path d="M6.5 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5zM13.5 3.5V8H18M8.5 12.5h7M8.5 16h5" />
   ),
@@ -145,6 +152,13 @@ const PATHS = {
   ),
   logOut: (
     <path d="M14 4.5h4A1.5 1.5 0 0 1 19.5 6v12a1.5 1.5 0 0 1-1.5 1.5h-4M10 16.5 5.5 12 10 7.5M5.5 12H15" />
+  ),
+  // A read-only view (A1572): a padlock.
+  lock: (
+    <>
+      <rect x="5.5" y="10.5" width="13" height="9" rx="1.5" />
+      <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
+    </>
   ),
   md: (
     <>
