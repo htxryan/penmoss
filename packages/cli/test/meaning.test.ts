@@ -6,7 +6,7 @@
 import { readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { MemoryVectorCache, fakeEmbedder } from '@penmoss/core/search';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Io, MeaningIo, MeaningStatus } from '../src/io';
 import { run } from '../src/main';
 import { memoryTokenStore } from '../src/memory-store';
@@ -115,8 +115,8 @@ function machine(meaning: MeaningIo | undefined, indexEveryMs = 20, leaseRetryMs
     leaseRetryMs,
     ...(meaning ? { meaning } : {}),
   });
-  /** stdin's lines; 'wait' pauses, and a function runs then (the test changes something). */
-  return async (argv: string[], lines: Array<string | (() => void)> = []) => {
+  /** stdin's lines; a function runs between two (it waits for something, or changes it). */
+  return async (argv: string[], lines: Array<string | (() => void | Promise<void>)> = []) => {
     let stdout = '';
     let stderr = '';
     const io: Io = {
@@ -130,8 +130,7 @@ function machine(meaning: MeaningIo | undefined, indexEveryMs = 20, leaseRetryMs
       stdio: {
         lines: async function* () {
           for (const line of lines) {
-            if (typeof line === 'function') line();
-            else if (line === 'wait') await new Promise((resolve) => setTimeout(resolve, 300));
+            if (typeof line === 'function') await line();
             else yield line;
           }
         },
@@ -143,6 +142,20 @@ function machine(meaning: MeaningIo | undefined, indexEveryMs = 20, leaseRetryMs
     return { code, stdout, stderr, json: () => JSON.parse(stdout) as Record<string, unknown> };
   };
 }
+
+/**
+ * A line that waits until `check` holds: what the server does in the background, seen. The
+ * server reads past a line that throws, so a wait that ran out fails the test after it.
+ */
+const missed: string[] = [];
+afterEach(() => {
+  const late = missed.splice(0);
+  expect(late, 'what a line waited for never happened').toEqual([]);
+});
+const until = (check: () => boolean) => () =>
+  vi
+    .waitFor(() => expect(check()).toBe(true), { timeout: 10_000, interval: 5 })
+    .catch(() => void missed.push(check.toString()));
 
 async function withNotes(cli: ReturnType<typeof machine>) {
   expect((await cli(['notebook', 'add', hosts.url('nb'), '--name', 'nb'])).code).toBe(0);
@@ -255,7 +268,8 @@ describe('penmoss mcp with meaning (T75, A1157)', () => {
       [
         rpc(1, 'initialize', { protocolVersion: '2025-06-18' }),
         rpc(2, 'tools/list'),
-        'wait',
+        // Indexed in the background, as the holder.
+        until(() => control.embedded === 2),
         searchCall(3, 'battery rack'),
       ],
     );
@@ -278,23 +292,20 @@ describe('penmoss mcp with meaning (T75, A1157)', () => {
   });
 
   it('indexes an agent’s edit a moment after it, as the holder', async () => {
-    const { meaning } = fakeMeaning();
+    const { meaning, control } = fakeMeaning();
     // The background pass is an hour away: only the edit itself can bring the new note in.
     const cli = machine(meaning, 60 * 60_000);
     await withNotes(cli);
     const served = await cli(
       ['mcp', '--notebook', 'nb'],
       [
-        'wait',
+        // The first pass, at start.
+        until(() => control.embedded === 2),
         rpc(1, 'tools/call', {
           name: 'create_note',
           arguments: { title: 'Generator', markdown: 'A diesel generator behind the shed.' },
         }),
-        'wait',
-        'wait',
-        'wait',
-        'wait',
-        'wait',
+        until(() => control.embedded === 3),
         searchCall(2, 'battery rack'),
       ],
     );
@@ -310,10 +321,14 @@ describe('penmoss mcp with meaning (T75, A1157)', () => {
   });
 
   it('without the lease, embeds only within its small budget', async () => {
-    const { meaning } = fakeMeaning({ leaseFree: false });
+    const { meaning, control } = fakeMeaning({ leaseFree: false });
     const cli = machine(meaning);
     await withNotes(cli);
-    const served = await cli(['mcp', '--notebook', 'nb'], ['wait', searchCall(1, 'battery rack')]);
+    const served = await cli(
+      ['mcp', '--notebook', 'nb'],
+      // The model is open and the lease asked for (and refused).
+      [until(() => control.takes > 0), searchCall(1, 'battery rack')],
+    );
     const reply = JSON.parse(served.stdout.trim()) as {
       result: { structuredContent: Record<string, unknown> };
     };
@@ -327,7 +342,7 @@ describe('penmoss mcp with meaning (T75, A1157)', () => {
     const { meaning, control } = fakeMeaning({ leaseFree: false });
     const cli = machine(meaning);
     await withNotes(cli);
-    await cli(['mcp', '--notebook', 'nb'], ['wait', 'wait', 'wait']);
+    await cli(['mcp', '--notebook', 'nb'], [until(() => control.claims.at(-1)?.keys.size === 2)]);
     expect(control.embedded).toBe(0);
     const last = control.claims.at(-1)!;
     // One chunk for each of the two notes: the app's compaction keeps both.
@@ -345,14 +360,13 @@ describe('penmoss mcp with meaning (T75, A1157)', () => {
     const served = await cli(
       ['mcp', '--notebook', 'nb'],
       [
-        'wait',
+        until(() => control.takes > 2),
         () => {
           // The app holds the lease: nothing indexed in the background, and still trying.
           before = control.embedded;
           control.leaseFree = true;
         },
-        'wait',
-        'wait',
+        until(() => control.embedded === 2),
         rpc(1, 'tools/list'),
       ],
     );
@@ -367,15 +381,18 @@ describe('penmoss mcp with meaning (T75, A1157)', () => {
     const { meaning, control } = fakeMeaning();
     const cli = machine(meaning, 20, 20);
     await withNotes(cli);
+    let taken = 0;
     const served = await cli(
       ['mcp', '--notebook', 'nb'],
       [
-        'wait',
+        until(() => control.embedded === 2),
         () => {
+          taken = control.takes;
           control.leaseHeld = false;
           control.leaseFree = false;
         },
-        'wait',
+        // It asks for the lease again: it heard it lost it.
+        until(() => control.takes > taken),
         rpc(1, 'tools/list'),
       ],
     );
@@ -391,7 +408,7 @@ describe('penmoss mcp with meaning (T75, A1157)', () => {
     const served = await cli(
       ['mcp', '--notebook', 'nb'],
       [
-        'wait',
+        until(() => control.embedded === 2),
         searchCall(1, 'battery rack'),
         () => {
           control.enabled = false;
