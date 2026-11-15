@@ -35,7 +35,6 @@ import {
 } from '@penmoss/sync-client/note';
 import { periodicNoteId, type PeriodKind } from '@penmoss/core/periodic';
 import {
-  changeRecord,
   deleteRecord,
   linksField,
   mergeRecords,
@@ -44,16 +43,11 @@ import {
   recordFromUpdates,
   withLinks,
 } from '@penmoss/sync-client/records';
-import {
-  changeTagInDoc,
-  noteTags,
-  revertTagEdit,
-  type TagChange,
-  type TagEditLog,
-} from '@penmoss/sync-client/tags';
+import { noteTags, type TagChange } from '@penmoss/sync-client/tags';
 import { WORKSPACE_RECORD_KEY } from '@penmoss/sync-client/workspace';
 import { bodyJson, createYjs14Replica, type Yjs14Replica } from '@penmoss/sync-client/yjs14';
 import { applyLive, mergeNotes, type LiveNote, type NoteListEntry } from './list';
+import { TagChanges } from './tag-changes';
 
 /** What the app needs from local storage; NoteStore (IndexedDB) implements it. */
 export interface LocalNotes extends ReplicaStore, AttachmentStore {
@@ -77,28 +71,6 @@ export interface LocalNotes extends ReplicaStore, AttachmentStore {
   watchUnloadWrites?(onMerged: (noteIds: readonly string[]) => void): () => void;
 }
 
-/** Where tag changes (renames, merges, deletes) wait until every note on this device has them (T18). */
-const TAG_RENAMES_KEY = 'tagRenames';
-
-/** A journalled tag change: a rename or merge, or a delete (`to` null); see `TagChange`. */
-type TagRename = TagChange;
-
-const isTagRename = (value: unknown): value is TagRename => {
-  const change = value as { from?: unknown; to?: unknown; nested?: unknown } | null;
-  return (
-    typeof change?.from === 'string' &&
-    (typeof change.to === 'string' || change.to === null) &&
-    (change.nested === undefined || typeof change.nested === 'boolean')
-  );
-};
-
-const sameChange = (a: TagChange, b: TagChange) =>
-  a.from === b.from && a.to === b.to && (a.nested ?? true) === (b.nested ?? true);
-
-/** A note's Yjs document, as the tag functions take it. */
-type NoteDoc = Parameters<typeof changeTagInDoc>[0];
-
-/** What a batch of tag changes did (the Tags page): the notes it changed, and its Undo. */
 export interface TagChangeResult {
   readonly notes: readonly string[];
   /** Puts back what the changes did in each note, where its text is still as they left it. */
@@ -459,8 +431,15 @@ export class Notes {
   private readonly registry: NoteRegistry | undefined;
   private readonly online: () => boolean;
   private readonly persistStorage: () => Promise<boolean>;
-  /** Tag renames in progress, one at a time (T18). */
-  private renaming: Promise<unknown> = Promise.resolve();
+  /** Tag renames, merges and deletes, one batch at a time (T18). */
+  private readonly tags = new TagChanges({
+    localStore: () => this.localStore(),
+    refreshLocal: () => this.refreshLocal(),
+    listed: () => this.entries,
+    openDoc: (id) =>
+      [...this.open].find((note) => note.id === id && note.isLoaded)?.replica.doc ?? null,
+    isReserved: (id) => isReserved(id),
+  });
   /** Other keepers flushed with the notes, e.g. the workspace's. */
   private readonly watched = new Set<ReplicaKeeper>();
   /** A list refresh for another window's edits, at most once a second (T45). */
@@ -611,7 +590,7 @@ export class Notes {
     }
     return this.refreshLocal().then(() => {
       // A tag rename the last session did not finish (the window closed) completes now.
-      void this.resumeTagRenames();
+      void this.tags.resume();
     });
   }
 
@@ -1244,146 +1223,14 @@ export class Notes {
     this.notify();
   }
 
-  /**
-   * Tag changes in order (T18, T24; the Tags page and the sidebar's Tags, finding 8 of Ryan's
-   * review of #192, A1508): renames and merges (a rename to a tag that exists), with the levels
-   * nested under the tag unless `nested` is false, and deletes (`to` null), in every note in this
-   * notebook that has the tag, Trash included, so a restore never brings an old tag back. Each
-   * note changes through its own document: open notes in their editor's replica, the rest in the
-   * local store. Journalled first, so a batch cut short (the window closed) completes at the next
-   * start. Returns the notes changed and an Undo that puts back what each change did in each note
-   * (not journalled: it lasts while the page that offers it is open).
-   */
+  /** Tag renames, merges and deletes in this notebook's notes, with Undo (`TagChanges`). */
   changeTags(changes: readonly TagChange[]): Promise<TagChangeResult> {
-    const run = this.renaming.then(async () => {
-      const store = await this.localStore();
-      const pending = await this.pendingRenames(store);
-      await store.setState?.(TAG_RENAMES_KEY, [...pending, ...changes]);
-      const logs = new Map<string, TagEditLog[]>();
-      for (const change of changes) {
-        await this.applyTagChange(store, change, logs);
-        await this.finishRename(store, change);
-      }
-      await this.refreshLocal();
-      return {
-        notes: [...logs.keys()],
-        undo: () => this.undoTagChanges(logs),
-      };
-    });
-    this.renaming = run.catch(() => undefined);
-    return run;
-  }
-
-  /** Notes on this device with `tag` or a tag nested under it: stored (Trash included) and open. */
-  private async notesTagged(store: LocalNotes, tag: string): Promise<Set<string>> {
-    const has = (tags: readonly string[] | undefined) =>
-      (tags ?? []).some((name) => name === tag || name.startsWith(`${tag}/`));
-    // Stored notes (Trash included, so a restore never brings the old tag back), and what open
-    // notes show now (a tag typed a moment ago is not stored yet).
-    const affected = new Set<string>();
-    for (const meta of await store.listMeta()) {
-      if (!isReserved(meta.noteId) && has(meta.tags)) affected.add(meta.noteId);
-    }
-    for (const entry of this.entries) if (has(entry.tags)) affected.add(entry.id);
-    return affected;
+    return this.tags.change(changes);
   }
 
   /** Resolves once no tag rename is running (tests). */
   async whenRenamed(): Promise<void> {
-    await this.renaming;
-  }
-
-  /** Completes the tag changes a previous session journalled but did not finish. */
-  private resumeTagRenames(): Promise<unknown> {
-    this.renaming = this.renaming
-      .then(async () => {
-        const store = await this.localStore();
-        const pending = await this.pendingRenames(store);
-        for (const change of pending) {
-          await this.applyTagChange(store, change, new Map());
-          await this.finishRename(store, change);
-        }
-        if (pending.length > 0) await this.refreshLocal();
-      })
-      .catch((error: unknown) => console.warn('[notes] could not finish a tag rename', error));
-    return this.renaming;
-  }
-
-  private async pendingRenames(store: LocalNotes): Promise<TagRename[]> {
-    const value = await store.getState?.(TAG_RENAMES_KEY);
-    return Array.isArray(value) ? value.filter(isTagRename) : [];
-  }
-
-  private async finishRename(store: LocalNotes, done: TagRename): Promise<void> {
-    const pending = await this.pendingRenames(store);
-    const index = pending.findIndex((change) => sameChange(change, done));
-    if (index >= 0) pending.splice(index, 1);
-    await store.setState?.(TAG_RENAMES_KEY, pending.length > 0 ? pending : undefined);
-  }
-
-  /** One tag change in every note that has the tag; what it did is added to `logs`. */
-  private async applyTagChange(
-    store: LocalNotes,
-    change: TagChange,
-    logs: Map<string, TagEditLog[]>,
-  ): Promise<void> {
-    const keep = (id: string, log: TagEditLog | null) => {
-      if (!log) return;
-      const kept = logs.get(id);
-      if (kept) kept.push(log);
-      else logs.set(id, [log]);
-    };
-    for (const id of await this.notesTagged(store, change.from)) {
-      await this.editNoteDoc(store, id, (doc) => {
-        const log = changeTagInDoc(doc, change);
-        keep(id, log);
-        return log !== null;
-      });
-    }
-  }
-
-  /** Undo for `changeTags`: each note's changes put back, the latest first. */
-  private undoTagChanges(logs: ReadonlyMap<string, readonly TagEditLog[]>): Promise<string[]> {
-    const run = this.renaming.then(async () => {
-      const store = await this.localStore();
-      const changed: string[] = [];
-      for (const [id, done] of logs) {
-        const did = await this.editNoteDoc(store, id, (doc) => {
-          let reverted = false;
-          for (const log of [...done].reverse()) reverted = revertTagEdit(doc, log) || reverted;
-          return reverted;
-        });
-        if (did) changed.push(id);
-      }
-      await this.refreshLocal();
-      return changed;
-    });
-    this.renaming = run.catch(() => undefined);
-    return run;
-  }
-
-  /**
-   * Edits one note's document: an open note's in its editor's replica, otherwise its stored
-   * record (`edit` says whether it changed anything). Returns whether it did.
-   */
-  private async editNoteDoc(
-    store: LocalNotes,
-    id: string,
-    edit: (doc: NoteDoc) => boolean,
-  ): Promise<boolean> {
-    const open = [...this.open].find((note) => note.id === id && note.isLoaded);
-    if (open) return edit(open.replica.doc);
-    let did = false;
-    await store.update(id, (record) => {
-      if (!record) return null;
-      let changed = false;
-      const next = changeRecord(record, (doc) => {
-        changed = edit(doc);
-      });
-      did = changed;
-      return changed ? { ...next, updatedAt: Date.now() } : null;
-    });
-    return did;
+    await this.tags.idle();
   }
 
   /** @internal */

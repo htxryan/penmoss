@@ -49,7 +49,7 @@ import { checkImage, nameFor, outputType, prepareImage, type Screenshot } from '
 import { appVersion } from './open';
 import type { Attempt } from './outbox';
 import { problemsOf, sizeProblem, type Problems } from './problems';
-import { useFeedback, type FeedbackService } from './service';
+import { useFeedbackService, type FeedbackService } from './service';
 import type { FeedbackDraftText, OutboxEntry, OutboxError } from './store';
 
 function writeDraft(feedback: FeedbackService, draft: FeedbackDraftText): void {
@@ -107,7 +107,7 @@ function FeedbackForm({
   onClose: (restoreFocus?: boolean) => void;
   onReopen: () => void;
 }) {
-  const feedback = useFeedback() as FeedbackService;
+  const feedback = useFeedbackService();
   const commands = useCommands();
   const id = useId();
   const { facts } = snapshot;
