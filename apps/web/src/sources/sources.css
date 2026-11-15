@@ -604,6 +604,27 @@
   max-width: 34rem;
 }
 
+/* The flow's screen stack: the screen itself is the column's child. */
+.fr-steps {
+  display: contents;
+}
+
+/*
+ * Add Notebook from Settings (A1562): the first run's screens over Settings, on the dialogs' scrim,
+ * the card in the middle as on the first run. It scrolls itself when the window is short.
+ */
+.fr-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow: auto;
+  background: var(--pm-scrim);
+}
+
+.fr-sheet > .first-run {
+  min-height: 100%;
+}
+
 .fr-screen {
   display: flex;
   box-sizing: border-box;
@@ -1348,167 +1369,6 @@
   .settings-facts dd {
     margin-bottom: 0.4rem;
   }
-}
-
-/* Add a Git Notebook: picking a GitHub repository and folder (T81, A1166, A1167, B10). */
-.repo-way {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin: 0 0 0.8rem;
-}
-
-.repo-way .btn[aria-pressed='true'] {
-  border-color: var(--pm-accent);
-  background: var(--pm-accent-softer);
-}
-
-.repo-picker,
-.repo-folders {
-  display: grid;
-  gap: 0.6rem;
-  min-width: 0;
-}
-
-.repo-signed-in {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0;
-}
-
-.repo-inline {
-  padding-block: 0.1rem;
-  font-size: var(--pm-text-item);
-}
-
-.repo-list {
-  display: grid;
-  max-height: 18rem;
-  overflow-y: auto;
-  border: 1px solid var(--pm-border);
-  background: var(--pm-raised);
-}
-
-.repo-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.25rem 0.75rem;
-  min-width: 0;
-  padding: 0.45rem 0.6rem;
-  border: 0;
-  border-bottom: 1px solid var(--pm-border-soft);
-  background: transparent;
-  color: var(--pm-fg);
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-}
-
-.repo-row:last-child {
-  border-bottom: 0;
-}
-
-.repo-row:hover {
-  background: var(--pm-hover);
-}
-
-.repo-row:focus-visible {
-  outline: 2px solid var(--pm-focus);
-  outline-offset: -2px;
-}
-
-.repo-row[aria-selected='true'] {
-  background: var(--pm-accent-soft);
-}
-
-.repo-row[aria-disabled='true'] {
-  color: var(--pm-muted);
-  cursor: not-allowed;
-}
-
-.repo-row-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.repo-row-facts {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: var(--pm-text-meta);
-}
-
-.repo-public,
-.repo-internal,
-.repo-readonly {
-  background: var(--pm-warn-bg);
-}
-
-.repo-notebook {
-  background: var(--pm-accent-soft);
-}
-
-.repo-none,
-.repo-list-note {
-  margin: 0;
-  padding: 0.5rem 0.6rem;
-}
-
-.repo-list-note {
-  padding: 0;
-  font-size: var(--pm-text-help);
-}
-
-.repo-create {
-  display: grid;
-  gap: 0.5rem;
-  min-width: 0;
-  margin: 0;
-  padding: 0.75rem;
-  border: 1px solid var(--pm-border);
-}
-
-.repo-create > legend {
-  padding: 0 0.3rem;
-  font-weight: var(--pm-weight-semibold);
-}
-
-.repo-create > p {
-  margin: 0;
-}
-
-.repo-picked {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.6rem;
-  min-width: 0;
-  margin-bottom: 0.6rem;
-  overflow-wrap: anywhere;
-}
-
-.repo-new-folder {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 0.5rem;
-}
-
-.repo-new-folder .settings-field {
-  flex: 1 1 12rem;
-  min-width: 0;
-}
-
-.repo-new-folder [role='status'] {
-  flex-basis: 100%;
 }
 
 /* Sign in with GitHub (T82, A1170): the code to enter, large enough to read across a desk. */

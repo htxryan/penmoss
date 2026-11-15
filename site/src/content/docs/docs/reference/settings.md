@@ -80,7 +80,7 @@ Every command's shortcut, to change, remove or reset ([Keyboard shortcuts](/docs
 
 ## Notebooks
 
-**All Notebooks** lists every notebook with **Add Notebook…**, then each notebook has an entry of its own in the list, with its [badge](/docs/organise/#notebook-badges) and a dot for how its sync is going. A notebook's page, in its **Overview**, **Sync** and **Git** tabs:
+**All Notebooks** lists every notebook with **Add Notebook…** (the same steps as [your first notebook](/docs/first-notebook/#more-notebooks-on-this-mac)), then each notebook has an entry of its own in the list, with its [badge](/docs/organise/#notebook-badges) and a dot for how its sync is going. A notebook's page, in its **Overview**, **Sync** and **Git** tabs:
 
 | Setting                              | What it does                                                                                                                                                                                                       |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

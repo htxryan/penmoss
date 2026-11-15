@@ -2,7 +2,8 @@
  * The first run's last screen (First Run C, 7.1 and 7.3): the notebook is added (or made), then
  * its first sync runs while the screen says so, step by step. Once it syncs the app opens on it
  * (7.2: a new notebook on its welcome note). A failed first sync says why, with Retry and Open
- * Anyway: the notebook is on this Mac already, and nothing is lost.
+ * Anyway: the notebook is on this Mac already, and nothing is lost. Add Notebook in Settings
+ * (A1562) ends on this screen too, with no welcome note.
  */
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useRef, useState } from 'react';
@@ -27,14 +28,17 @@ const SLOW_MS = 15_000;
 export function SettingUp({
   setup,
   add,
+  welcomeNote,
   onDone,
   onNeedsName,
   back,
 }: {
   setup: Setup;
   add: AddNotebook;
-  /** The notebook is set up (or opened anyway): the app opens it. */
-  onDone: () => void;
+  /** A notebook made here starts with the welcome note: the first run's, not a later one's. */
+  welcomeNote: boolean;
+  /** The notebook is set up (or opened anyway): the flow ends on it (null: it went meanwhile). */
+  onDone: (notebookId: string | null) => void;
   /** The folder held no notebook after all: name the new one. */
   onNeedsName: (place: Place) => void;
   back: () => void;
@@ -44,6 +48,9 @@ export function SettingUp({
   const [attempt, setAttempt] = useState(0);
   const [slow, setSlow] = useState(false);
   const ran = useRef(-1);
+  /** The notebook this screen set up, once added. */
+  const added = useRef<string | null>(null);
+  const done = () => onDone(added.current);
   const { place, name } = setup;
 
   useEffect(() => {
@@ -51,9 +58,10 @@ export function SettingUp({
     if (ran.current === attempt) return;
     ran.current = attempt;
     const watch = async (notebookId: string, created: boolean) => {
+      added.current = notebookId;
       await registry.refresh();
       const source = registry.gitSource(notebookId);
-      if (created && source) {
+      if (created && source && welcomeNote) {
         // A notebook made here starts with the welcome note, which opens with the app (T69).
         void addWelcomeNote(source)
           .then((id) => {
@@ -66,7 +74,8 @@ export function SettingUp({
       }
       // Not listed after all (removed meanwhile): nothing to wait for.
       if (!source) {
-        onDone();
+        added.current = null;
+        done();
         return;
       }
       setPhase({ at: 'syncing', source });
@@ -99,7 +108,7 @@ export function SettingUp({
     if (!syncing) return;
     const heard = () => {
       const status = syncing.feed.status;
-      if (status.phase === 'synced') onDone();
+      if (status.phase === 'synced') done();
       else if (status.phase === 'offline' || status.phase === 'stopped') {
         setPhase({
           at: 'sync-failed',
@@ -163,7 +172,7 @@ export function SettingUp({
           </Action>
         ) : phase.at === 'sync-failed' ? (
           <>
-            <Action testId="first-run-open-anyway" onClick={onDone}>
+            <Action testId="first-run-open-anyway" onClick={done}>
               Open Anyway
             </Action>
             <Action
@@ -179,7 +188,7 @@ export function SettingUp({
             </Action>
           </>
         ) : phase.at === 'syncing' && slow ? (
-          <Action testId="first-run-open-now" onClick={onDone}>
+          <Action testId="first-run-open-now" onClick={done}>
             Open Now
           </Action>
         ) : undefined

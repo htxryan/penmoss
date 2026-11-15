@@ -29,10 +29,13 @@ test.describe('in Quanta, with two notes', () => {
     await expect(settings.getByTestId('git-notebook')).toHaveCount(0);
     await expect(settings.getByTestId('git-sync-now')).toHaveCount(0);
     await expect(page.getByTestId('git-local-agents')).toHaveCount(0);
-    await expect(page.getByTestId('git-add')).toHaveCount(0);
+    await expect(page.getByTestId('add-notebook')).toHaveCount(0);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/git-notebooks.png` });
+    // Add Notebook… is the first run's own screens, in a sheet (A1562); Cancel closes it.
     await settings.getByTestId('git-add-open').click();
-    await expect(page.getByTestId('git-add')).toBeVisible();
+    await expect(page.getByTestId('add-notebook')).toBeVisible();
+    await page.getByTestId('first-run-cancel').click();
+    await expect(page.getByTestId('add-notebook')).toHaveCount(0);
 
     // A row opens that notebook's page, at its own address, in three tabs (PEN-146); All
     // Notebooks in the nav returns to the list.
