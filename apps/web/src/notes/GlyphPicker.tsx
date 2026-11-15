@@ -53,8 +53,11 @@ export function GlyphPicker({
     setCustom('');
     setProblem(null);
     setOpen(true);
+    // The current preset takes focus once the panel is drawn, unless focus is in it already (the
+    // custom field clicked and typed in before a late frame).
     requestAnimationFrame(() => {
       const drawn = panel.current;
+      if (drawn?.contains(document.activeElement)) return;
       (
         drawn?.querySelector<HTMLElement>('[data-grid-item][tabindex="0"]') ??
         drawn?.querySelector<HTMLElement>('[data-grid-item]')
