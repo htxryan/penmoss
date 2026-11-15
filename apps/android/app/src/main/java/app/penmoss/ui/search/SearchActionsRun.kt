@@ -1,6 +1,10 @@
-package app.penmoss.ui
+package app.penmoss.ui.search
 
 import app.penmoss.engine.bridge.ToEditor
+import app.penmoss.ui.SettingsRoutes
+import app.penmoss.ui.TrashRoutes
+import app.penmoss.ui.graphRoute
+import app.penmoss.ui.open
 
 /**
  * What Search's actions reach (T40 P6, FD6): the screens and the app's own handlers, as the

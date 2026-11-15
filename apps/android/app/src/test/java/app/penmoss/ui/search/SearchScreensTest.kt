@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.search
 
 import android.view.KeyEvent
 import androidx.compose.runtime.getValue
@@ -16,9 +16,13 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.search.SearchResult
+import app.penmoss.ui.RecentSwitch
+import app.penmoss.ui.RecentSwitcher
 import app.penmoss.ui.common.FolderChoice
 import app.penmoss.ui.common.NoteItem
 import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.open
+import app.penmoss.ui.recentWithCurrent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.search
 
 import android.os.SystemClock
 import android.view.View
@@ -27,7 +27,7 @@ import org.junit.runner.RunWith
  * a notebook's button). Its first version is not on the phone, so Android is
  * unchanged: Search's actions for "time" are what they were, with no Time Machine among them, and
  * the command is listed as not on a phone. Run with
- * `task proof:android -- app.penmoss.ui.TimeMachineNotOnPhoneInstrumentedTest`.
+ * `task proof:android -- app.penmoss.ui.search.TimeMachineNotOnPhoneInstrumentedTest`.
  *
  * Reads the screen through Compose's semantics tree, not the Compose test rule (see
  * [TooltipDelayInstrumentedTest]).

@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.search
 
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.os.SystemClock
@@ -22,7 +22,7 @@ import org.junit.runner.RunWith
  * notebook's folders under All Notebooks. Android's search has no Notebook filter, and its Folder
  * sheet already lists every folder it has, so it is unchanged: the Folder chip opens "Search in"
  * with "All folders" and the folders. Run with
- * `task proof:android -- app.penmoss.ui.SearchFolderFilterInstrumentedTest`.
+ * `task proof:android -- app.penmoss.ui.search.SearchFolderFilterInstrumentedTest`.
  *
  * The sheet is a window of its own, so this reads the screen through the accessibility tree
  * (UiAutomation), not the Compose test rule (see [TooltipDelayInstrumentedTest]).

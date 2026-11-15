@@ -40,6 +40,8 @@ import app.penmoss.ui.home.stoppedLine
 import app.penmoss.ui.keys.RootCommands
 import app.penmoss.ui.keys.rootActions
 import app.penmoss.ui.note.noteRoutes
+import app.penmoss.ui.search.ActionTargets
+import app.penmoss.ui.search.searchRoutes
 import java.text.DateFormat
 import java.util.Date
 

@@ -3,7 +3,7 @@ package app.penmoss.search
 /**
  * One action Search can run (T40 P6, FD6, A466): a web command's id and title, from
  * `apps/android/contract/commands-v1.json`, whose `{"search": true}` entries are exactly these
- * (`SearchActionsTest`). What each does is the app's ([app.penmoss.ui.runSearchAction]).
+ * (`SearchActionsTest`). What each does is the app's ([app.penmoss.ui.search.runSearchAction]).
  */
 data class SearchAction(val id: String, val title: String)
 
