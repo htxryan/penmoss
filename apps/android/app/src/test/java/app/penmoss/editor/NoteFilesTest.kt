@@ -38,6 +38,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 
 /**
@@ -246,8 +247,18 @@ class NoteFilesTest {
     @Test
     fun filesPickedWhileThePageReloadsGoInOnceTheNoteShows() {
         val controller = opened()
-        page(controller, FromEditor.Ready)
-        runBlocking { controller.files.insertPicked(listOf(PickedFile("Budget.csv") { csv.inputStream() })) }
+        // The reloaded page's open has not been read yet when the file is picked (PEN-145): the
+        // controller's thread is held from its `ready` until the file is stored.
+        val held = CountDownLatch(1)
+        runBlocking(thread) {
+            thread.executor.execute { held.await() }
+            controller.onPageMessage(BridgeProtocol.encode(FromEditor.Ready))
+        }
+        try {
+            runBlocking { controller.files.insertPicked(listOf(PickedFile("Budget.csv") { csv.inputStream() })) }
+        } finally {
+            held.countDown()
+        }
         waitFor { sent.count { it is ToEditor.Open } == 2 }
         runBlocking(thread) {}
         assertTrue(sent.none { it is ParityToEditor.InsertFiles })
