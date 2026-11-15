@@ -33,7 +33,7 @@ export function NoteWindow({ id, heading }: { id: string; heading: string | null
   useCommand('note.new', (context) => {
     if (isKeyRepeat(context)) return;
     const folderId = workspace.folderOfNote(id);
-    const next = notes.create(new Date(), { folderId });
+    const next = notes.create(new Date());
     workspace.registerNote(next, folderId);
     navigate(notePath(next));
   });

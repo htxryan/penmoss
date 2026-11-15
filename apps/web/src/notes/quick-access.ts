@@ -4,11 +4,9 @@ import {
   QUICK_ACCESS_SETTING,
   toggledQuickAccess,
 } from '@penmoss/core/quick-access';
-import { defaultNotebookName } from '@penmoss/sync-client/workspace';
 import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useSourcesState } from '../sources/hooks';
-import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
-import { notebookOfNote } from '../workspace/notebooks';
+import { useWorkspace } from '../workspace/hooks';
 import type { Workspace } from '../workspace/service';
 import { useNotes } from './hooks';
 import type { NoteListEntry } from './list';
@@ -121,21 +119,12 @@ export function useQuickAccessNotes(withNotebooks = false): readonly QuickAccess
   const { ids } = useQuickAccess();
   const notes = useNotes();
   const state = useSourcesState();
-  const inScope = useWorkspace();
   const lists = useMemo(
     () => (state ? state.all.map((source) => source.notes) : [notes]),
     [state, notes],
   );
-  /** The notebook's name for a note in the list at `index`. */
-  const notebookOf = useCallback(
-    (index: number, id: string): string => {
-      const source = state?.all[index];
-      if (source?.kind === 'git') return source.name;
-      const { snapshot } = (source?.workspace ?? inScope).getState();
-      return notebookOfNote(snapshot, id)?.name ?? defaultNotebookName(snapshot);
-    },
-    [state, inScope],
-  );
+  /** The notebook's name for a note in the list at `index` ('' without a registry). */
+  const notebookOf = useCallback((index: number): string => state?.all[index]?.name ?? '', [state]);
   const subscribe = useMemo(() => {
     if (lists.length === 0) return NO_SOURCES;
     return (listener: () => void) => {
@@ -155,9 +144,6 @@ export function useQuickAccessNotes(withNotebooks = false): readonly QuickAccess
     return last.current;
   }, [lists]);
   const snapshot = useSyncExternalStore(subscribe, read, read);
-  // Where each note is filed and what its notebook is called: a notebook renamed or a pinned
-  // note moved to another one names it afresh (the note lists carry neither).
-  const filed = useWorkspaceState().snapshot;
   const key = ids.join(',');
   return useMemo(() => {
     const found = new Map<string, { title: string; index: number }>();
@@ -169,8 +155,7 @@ export function useQuickAccessNotes(withNotebooks = false): readonly QuickAccess
       .filter((id) => id !== '' && found.has(id))
       .map((id) => {
         const { title, index } = found.get(id)!;
-        return { id, title, notebook: withNotebooks ? notebookOf(index, id) : null };
+        return { id, title, notebook: withNotebooks ? notebookOf(index) : null };
       });
-    // `filed` is read through `notebookOf`; listed so a change to it names the notebooks again.
-  }, [snapshot, key, notebookOf, withNotebooks, withNotebooks ? filed : null]);
+  }, [snapshot, key, notebookOf, withNotebooks]);
 }

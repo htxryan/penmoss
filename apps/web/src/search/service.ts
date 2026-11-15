@@ -12,7 +12,7 @@
  */
 import { HYBRID_DEPTH, fuseHybrid, parseQuery, type NoteSection } from '@penmoss/core/search';
 import { tagMatches } from '@penmoss/core/tags';
-import { folderSubtree, openNotebookFilter, type FolderRecord } from '@penmoss/core/workspace';
+import { folderSubtree, type FolderRecord } from '@penmoss/core/workspace';
 import type { NoteMeta, NoteRecord, NoteText } from '@penmoss/sync-client';
 import {
   LocalSearchIndex,
@@ -113,8 +113,6 @@ export interface SearchDeps {
   readonly store: () => Promise<SearchStore>;
   /** The folder tree and registry, from the local WorkspaceDoc replica. */
   readonly workspace: () => { readonly folders: FolderRecord[]; readonly notes: RegistryEntry[] };
-  /** Notebooks closed on this device (T43, A752): their notes are never found here. */
-  readonly closed?: () => ReadonlySet<string>;
   /** Keys in the notes store that are not notes. */
   readonly reserved?: ReadonlySet<string>;
   /** Awaited between slices of building or restoring the offline index (default: a timeout). */
@@ -339,7 +337,7 @@ export class SearchService {
     return doc !== undefined && filter(doc);
   }
 
-  /** The folder, tag, date and open-notebook filters, or null when nothing is filtered. */
+  /** The folder, tag and date filters, or null when nothing is filtered. */
   private filterOf(filters: SearchFilters): ((doc: Listed) => boolean) | null {
     const { folderId, tag, updatedAfter } = filters;
     let inFolder: Set<string> | null = null;
@@ -352,23 +350,11 @@ export class SearchService {
           .map((note) => note.id),
       );
     }
-    const isOpen = this.openFilter();
-    if (!inFolder && !isOpen && !tag && updatedAfter === null) return null;
+    if (!inFolder && !tag && updatedAfter === null) return null;
     return (doc) =>
       (!inFolder || inFolder.has(doc.id)) &&
-      (!isOpen || isOpen(doc.id)) &&
       (!tag || doc.tags.some((each) => tagMatches(each, tag))) &&
       (updatedAfter === null || doc.updatedAt >= updatedAfter);
-  }
-
-  /** Whether a note is in an open notebook (T43), or null with every notebook open. */
-  private openFilter(): ((noteId: string) => boolean) | null {
-    const closed = this.deps.closed?.() ?? new Set<string>();
-    if (closed.size === 0) return null;
-    const workspace = this.deps.workspace();
-    const inOpen = openNotebookFilter(workspace.folders, closed);
-    const folderOf = new Map(workspace.notes.map((note) => [note.id, note.folderId]));
-    return (noteId) => inOpen(folderOf.get(noteId) ?? null);
   }
 
   private async doRefresh(): Promise<void> {

@@ -316,7 +316,7 @@ function NotesShell({
       commands.run('note.focusTitle');
       return;
     }
-    const id = target.notes.create(new Date(), { folderId: targetFolder });
+    const id = target.notes.create(new Date());
     lastCreated.current = { id, at: Date.now() };
     target.workspace.registerNote(id, targetFolder);
     navigate(notePath(id));

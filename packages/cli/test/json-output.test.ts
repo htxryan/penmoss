@@ -468,9 +468,8 @@ describe('the review’s nits', () => {
     expect(ran.stderr).toMatch(/mv does not create folders/);
   });
 
-  it('ls marks a notebook, and --json passes its notebook through (T43)', async () => {
-    const personal = { id: 'default', name: 'Personal' };
-    const withNotebook: FetchLike = (url, init) =>
+  it('ls lists each folder by id and name, and --json passes the folders through', async () => {
+    const withFolders: FetchLike = (url, init) =>
       new URL(url).pathname === '/api/folders'
         ? Promise.resolve({
             status: 200,
@@ -480,33 +479,24 @@ describe('the review’s nits', () => {
                 JSON.stringify({
                   folder: null,
                   folders: [
-                    {
-                      id: 'f1',
-                      name: 'QDK',
-                      path: 'QDK',
-                      isNotebook: true,
-                      notebook: { id: 'f1', name: 'QDK' },
-                    },
-                    { id: 'f2', name: 'Home', path: 'Home', isNotebook: false, notebook: personal },
+                    { id: 'f1', name: 'QDK', path: 'QDK' },
+                    { id: 'f2', name: 'Home', path: 'Home' },
                   ],
                   notes: [],
                 }),
               ),
           })
         : stubFetch(url, init);
-    const text = await penmoss(['ls'], '', withNotebook);
-    expect(text.stdout).toMatch(/^f1 +QDK\/ {2}notebook$/m);
+    const text = await penmoss(['ls'], '', withFolders);
+    expect(text.stdout).toMatch(/^f1 +QDK\/$/m);
     expect(text.stdout).toMatch(/^f2 +Home\/$/m);
-    const listed = JSON.parse((await penmoss(['ls', '--json'], '', withNotebook)).stdout) as {
+    const listed = JSON.parse((await penmoss(['ls', '--json'], '', withFolders)).stdout) as {
       folders: unknown[];
     };
-    expect(listed.folders[1]).toEqual({
-      id: 'f2',
-      name: 'Home',
-      path: 'Home',
-      isNotebook: false,
-      notebook: personal,
-    });
+    expect(listed.folders).toEqual([
+      { id: 'f1', name: 'QDK', path: 'QDK' },
+      { id: 'f2', name: 'Home', path: 'Home' },
+    ]);
   });
 
   it('caps ls --recent --limit', async () => {

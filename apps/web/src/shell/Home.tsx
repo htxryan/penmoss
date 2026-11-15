@@ -4,7 +4,6 @@ import { Icon } from '@penmoss/ui/icons';
 import { useCommands, useKeys } from '../commands/hooks';
 import { today } from '../journal/journal';
 import { useNoteList } from '../notes/hooks';
-import { useOpenNoteList } from '../workspace/notebooks';
 import { displayTitle } from '../notes/list';
 import { browserStorage, readOpened, recentNotes } from '../notes/recent';
 import { linkHandler, notePath } from '../router';
@@ -30,13 +29,11 @@ export function Home({ phone }: { readonly phone: boolean }) {
   const workspace = useWorkspace();
   useWorkspaceState(); // the time zone setting
   const list = useNoteList();
-  // Closed notebooks' notes are not Recent on this device (T43, A752).
-  const openList = useOpenNoteList();
   const newNoteKeys = useKeys('note.new');
   const paletteKeys = useKeys('app.palette');
   const day = today(workspace.settings());
   const recent = phone
-    ? recentNotes(openList, readOpened(browserStorage()), null, RECENT_ON_PHONE)
+    ? recentNotes(list, readOpened(browserStorage()), null, RECENT_ON_PHONE)
     : [];
   return (
     <div className="home">

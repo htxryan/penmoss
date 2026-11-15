@@ -32,7 +32,6 @@ import {
   isoWithOffset,
   readTitle,
   setDeleted,
-  setNoteNotebook,
 } from '@penmoss/sync-client/note';
 import { periodicNoteId, type PeriodKind } from '@penmoss/core/periodic';
 import {
@@ -144,7 +143,7 @@ const isReserved = (noteId: string) => RESERVED_KEYS.has(noteId);
 /** The WorkspaceDoc's note registry (T7), told when a note is deleted or restored. */
 export interface NoteRegistry {
   unregister(noteId: string): void;
-  /** Files a new note beside `besideId` (a copy, A5): the same folder, so the same notebook. */
+  /** Files a new note beside `besideId` (a copy, A5): the same folder. */
   register?(noteId: string, besideId?: string): void;
   /** The note's folder now (null: top level), recorded when it goes to Trash (T21). */
   folderOf?(noteId: string): string | null;
@@ -152,34 +151,22 @@ export interface NoteRegistry {
   restore?(noteId: string, folderId: string | null): void;
   /**
    * Where a note out of Trash would go (T43 review B2): a folder (null: the top level), or no
-   * safe place because its notebook was deleted (`refused`), when the person is asked.
+   * place known (`refused`: Trash forgets the folder it was in), when the person is asked.
    */
   restorePlace?(
     noteId: string,
     folderId: string | null,
-  ):
-    | { readonly folderId: string | null }
-    | { readonly refused: true; readonly notebook: { id: string; name: string } | null };
-  /** The notebook of a note filed in `folderId` (A766), or null when that is not certain. */
-  notebookOf?(folderId: string | null): string | null;
+  ): { readonly folderId: string | null } | { readonly refused: true };
 }
 
 /**
  * A note could not come out of Trash on its own (T43 review B2, A757): the folder it was deleted
- * from is gone and the way up passes a deleted notebook (`notebook`, while it is in Trash), so
- * there is no safe place for it. Nothing was restored; the app asks where to put it, or offers to
- * restore the notebook first. Never the default notebook's top level on its own.
+ * from is gone and Trash no longer knows where that was, so there is no place for it. Nothing was
+ * restored; the app asks where to put it.
  */
 export class RestoreNeedsFolder extends Error {
-  constructor(
-    readonly noteId: string,
-    readonly notebook: { readonly id: string; readonly name: string } | null,
-  ) {
-    super(
-      notebook
-        ? `The note was in “${notebook.name}”, which is in Trash. Restore the notebook, or choose a folder for the note.`
-        : 'The folder the note was in is gone. Choose a folder for it.',
-    );
+  constructor(readonly noteId: string) {
+    super('The folder the note was in is gone. Choose a folder for it.');
     this.name = 'RestoreNeedsFolder';
   }
 }
@@ -823,26 +810,12 @@ export class Notes {
     options: {
       readonly title?: string;
       readonly focus?: boolean;
-      /**
-       * The note's notebook (T43 review, A766), recorded in its own document: the folder it is
-       * made in (`folderId`), or a notebook named outright (`notebook`, `default` for captures).
-       */
-      readonly folderId?: string | null;
-      readonly notebook?: string;
     } = {},
   ): string {
     const id = ulid(now.getTime());
     const title = options.title?.replace(/[\r\n]+/g, ' ').trim() ?? '';
-    const notebook =
-      options.notebook ??
-      (options.folderId !== undefined ? this.registry?.notebookOf?.(options.folderId) : null) ??
-      null;
     const replica = createYjs14Replica();
-    initNote(
-      replica.doc,
-      { id, created: isoWithOffset(now), kind: 'note', ...(notebook ? { notebook } : {}) },
-      title,
-    );
+    initNote(replica.doc, { id, created: isoWithOffset(now), kind: 'note' }, title);
     const record: NoteRecord = {
       noteId: id,
       engine: replica.engine,
@@ -876,8 +849,8 @@ export class Notes {
   async deleteNote(id: string, options: { readonly folderId?: string | null } = {}): Promise<void> {
     this.deleted.add(id);
     this.changed();
-    // Trash (T21) remembers when and from which folder, so a restore puts it back. A deleted
-    // notebook's notes have left the registry already, so their folder is given (T43).
+    // Trash (T21) remembers when and from which folder, so a restore puts it back; a caller
+    // whose note has left the registry already gives its folder.
     const folderId =
       options.folderId !== undefined ? options.folderId : (this.registry?.folderOf?.(id) ?? null);
     const info = { at: Date.now(), folderId };
@@ -933,7 +906,7 @@ export class Notes {
     let folderId = chosen ? (options.folderId ?? null) : (record.deletedFrom ?? null);
     if (!chosen) {
       const place = this.registry?.restorePlace?.(id, folderId);
-      if (place && 'refused' in place) throw new RestoreNeedsFolder(id, place.notebook);
+      if (place && 'refused' in place) throw new RestoreNeedsFolder(id);
       if (place) folderId = place.folderId;
     }
     this.deleted.delete(id);
@@ -941,9 +914,6 @@ export class Notes {
     await untilStored(() =>
       store.update(id, (current) => (current?.deleted ? deleteRecord(current, false) : null)),
     );
-    // Where the person chose, recorded in the note itself (A766): perhaps another notebook.
-    const notebook = chosen ? (this.registry?.notebookOf?.(folderId) ?? null) : null;
-    if (notebook) await this.recordNotebook(id, notebook);
     await this.refreshLocal();
   }
 
@@ -1209,18 +1179,6 @@ export class Notes {
     edit(note.replica.doc);
     await note.flush();
     note.close();
-  }
-
-  /**
-   * Records the note's notebook in its own document (T43 review, A766), after this device moved
-   * it to another notebook.
-   */
-  async recordNotebook(id: string, notebook: string): Promise<void> {
-    try {
-      await this.editNote(id, (doc) => setNoteNotebook(doc, notebook));
-    } catch (error) {
-      console.error('[notes] could not record a note’s notebook', id, error);
-    }
   }
 
   /** Asks the note's body to take focus once it opens (the palette and switcher, T20). */

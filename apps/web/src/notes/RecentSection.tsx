@@ -13,7 +13,7 @@ export const RECENT_COLLAPSED_KEY = 'penmoss.sidebar.recent';
 
 /**
  * Recent Notes in the sidebar (T53 item 8, A983): the notes opened here or changed anywhere last,
- * newest first, as many as Settings → Display says (ten unset), from the open notebooks (A752).
+ * newest first, as many as Settings → Display says (ten unset).
  * The open note is marked, not moved to the top. Collapsed or open on this device. A note dragged
  * from here to Quick Access is pinned there.
  */

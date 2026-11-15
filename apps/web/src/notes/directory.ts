@@ -102,7 +102,7 @@ export class NoteDirectory implements LinkServices {
     const clean = title.trim();
     if (!clean) return null;
     const folderId = this.source ? this.options.folderOf(this.source) : null;
-    const id = this.options.notes.create(new Date(), { title: clean, focus: false, folderId });
+    const id = this.options.notes.create(new Date(), { title: clean, focus: false });
     this.options.register(id, folderId);
     return id;
   }

@@ -170,10 +170,7 @@ export function FolderPicker({
                 onClick={() => choose(choice)}
               >
                 <span className="oic" aria-hidden="true">
-                  <Icon
-                    name={choice.id === null ? 'list' : choice.notebook ? 'notebook' : 'folder'}
-                    size={14}
-                  />
+                  <Icon name={choice.id === null ? 'list' : 'folder'} size={14} />
                 </span>
                 <span className="ot">
                   {/* Filtered, a folder shows its path, so two "Notes" folders differ. */}

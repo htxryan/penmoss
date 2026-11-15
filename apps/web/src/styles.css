@@ -734,21 +734,6 @@ a {
   color: var(--pm-accent);
 }
 
-/* T43: a notebook's folder, its own icon in the accent, its name in the normal weight. */
-.notebook-row .tree-icon {
-  color: var(--pm-accent);
-}
-
-.notebook-row .tree-label {
-  color: var(--pm-fg);
-}
-
-/* The default notebook's folders start below the notebooks, after a quiet rule. */
-.folder-row[data-section-start] {
-  margin-top: 0.35rem;
-  box-shadow: inset 0 1px 0 var(--pm-border-soft);
-}
-
 .twisty {
   display: grid;
   flex: none;

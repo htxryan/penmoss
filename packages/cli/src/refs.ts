@@ -65,26 +65,16 @@ export async function resolveNote(api: Client, ref: string): Promise<NoteRef> {
   );
 }
 
-/** A folder's notebook (T43): `default` for the default notebook. */
-export interface NotebookRef {
-  readonly id: string;
-  readonly name: string;
-}
-
 export interface FolderListing {
   readonly folder: {
     id: string;
     name: string;
     path: string;
-    isNotebook?: boolean;
-    notebook?: NotebookRef;
   } | null;
   readonly folders: Array<{
     id: string;
     name: string;
     path: string;
-    isNotebook?: boolean;
-    notebook?: NotebookRef;
   }>;
   readonly notes: Array<{ id: string; title: string | null; updatedAt: number | null }>;
   readonly truncated?: boolean;

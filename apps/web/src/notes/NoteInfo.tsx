@@ -21,7 +21,6 @@ import { useEffect, useId, useState } from 'react';
 import { shortWhen } from '../shell/when';
 import { NoteTags } from '../tags/NoteTags';
 import { BacklinksPanel } from './BacklinksPanel';
-import { useNoteNotebook, useNotebooks } from '../workspace/notebooks';
 import { useAllSources, useSource } from '../sources/hooks';
 import { useNoteMetadataSettings } from './metadata-state';
 import { useNoteList } from './hooks';
@@ -233,7 +232,7 @@ function useFieldTexts(
   stats: NoteStats,
 ): Readonly<Record<TextField, string>> {
   const entry = useNoteList().find((item) => item.id === noteId);
-  const notebook = useNoteNotebookName(noteId);
+  const notebook = useNoteNotebookName();
   const details = useNoteDetails(noteId, replica);
   const { doc, tokens } = useNoteCounts(stats);
   const created = details?.fields['created'];
@@ -251,12 +250,9 @@ function useFieldTexts(
   };
 }
 
-/** The note's notebook: its git notebook's name, or the notebook it is filed in. */
-function useNoteNotebookName(noteId: string): string {
-  const source = useSource();
-  const notebook = useNoteNotebook(noteId);
-  const notebooks = useNotebooks();
-  return source?.name ?? notebook?.name ?? notebooks[0]?.name ?? '';
+/** The note's notebook: its git notebook's name. */
+function useNoteNotebookName(): string {
+  return useSource()?.name ?? '';
 }
 
 /** The Info panel, the side panel's Metadata tab since T51 (A936), beside the note (below it on narrow windows and phones). */
@@ -278,9 +274,7 @@ export function InfoPanel({
 }) {
   const id = useId();
   const entry = useNoteList().find((item) => item.id === noteId);
-  const notebook = useNoteNotebook(noteId);
-  const notebookName = useNoteNotebookName(noteId);
-  const notebooks = useNotebooks();
+  const notebookName = useNoteNotebookName();
   const gitNotebooks = useAllSources()?.all.length ?? 0;
   const details = useNoteDetails(noteId, replica);
   const { doc, tokens } = useNoteCounts(stats);
@@ -300,16 +294,11 @@ export function InfoPanel({
         </p>
       ) : null}
       <dl className="info-list" data-testid="note-details">
-        {/* T43: which notebook, so its repository; only once there are other notebooks. */}
-        {notebooks.length > 1 || gitNotebooks > 1 ? (
+        {/* Which notebook, so its repository; only once there are other notebooks. */}
+        {gitNotebooks > 1 ? (
           <>
             <dt>Notebook</dt>
-            <dd data-testid="info-notebook">
-              {notebookName}
-              {notebook && notebooks.find((each) => each.id === notebook.id)?.open === false
-                ? ' (closed on this device)'
-                : ''}
-            </dd>
+            <dd data-testid="info-notebook">{notebookName}</dd>
           </>
         ) : null}
         <dt>Folder</dt>

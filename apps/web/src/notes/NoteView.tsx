@@ -88,10 +88,8 @@ import {
   type EditorHost,
   type NoteEditor,
 } from './kept-editors';
-import { useNoteNotebook } from '../workspace/notebooks';
 import { useNoteFolders } from '../workspace/tree';
 import { useSource, useSourcesState } from '../sources/hooks';
-import { defaultNotebookName } from '@penmoss/sync-client/workspace';
 import { PhoneFormatBar } from './PhoneFormatBar';
 import { useShowTag } from '../search/show-tag';
 import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
@@ -100,7 +98,7 @@ import { useFullWidth } from './width';
 import { trashedNote } from '../trash/trashed';
 import { openNoteWindow } from '../window/open';
 import { symbolSource } from './symbols';
-import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
+import { useWorkspace } from '../workspace/hooks';
 
 /** "Copied as Markdown" after an explicit copy (T15), in the window's toast stack (PEN-63). */
 function showCopied(text: string, ok: boolean): void {
@@ -255,14 +253,9 @@ export function NoteView({
   // The app bar's title on a phone: the note's title as the list has it.
   const title = useNoteList().find((entry) => entry.id === id)?.title ?? '';
   const trail = useNoteFolders(id);
-  // A note in a notebook names it first in its breadcrumb (T43, A752), closed or not.
-  const notebook = useNoteNotebook(id);
-  // A note at the top level: the phone's app bar names its notebook (T52), the default one's
-  // current name or a git notebook's.
-  const { snapshot: workspaceSnapshot } = useWorkspaceState();
+  // A note at the top level: the phone's app bar names its notebook (T52).
   const noteSource = useSource();
-  const topNotebook =
-    noteSource?.kind === 'git' ? noteSource.name : defaultNotebookName(workspaceSnapshot);
+  const topNotebook = noteSource?.name;
   // With two notebooks or more open, the breadcrumb starts with the note's (T64 item 5).
   const openSources = useSourcesState();
   const sourceCrumb =
@@ -1071,7 +1064,11 @@ export function NoteView({
       data-ready={ready ? 'true' : 'false'}
       data-width={fullWidth ? 'full' : undefined}
     >
-      <AppBar title={title} path={trail} notebook={topNotebook}>
+      <AppBar
+        title={title}
+        path={trail}
+        {...(topNotebook !== undefined ? { notebook: topNotebook } : {})}
+      >
         {/* Below 700 px the top bar hides: the app bar carries its actions (a note window's pin). */}
         {actions}
         <NoteActions source={showSource} tab={shownTab} pinned={pinned} />
@@ -1093,20 +1090,12 @@ export function NoteView({
                   <Icon name="chevR" size={12} />
                 </li>
               ) : null}
-              {trail.map((name, index) =>
-                index === 0 && notebook ? (
-                  <li key={index} className="crumb-notebook" data-testid="note-notebook">
-                    <Icon name="notebook" size={12} />
-                    {name}
-                    <Icon name="chevR" size={12} />
-                  </li>
-                ) : (
-                  <li key={index}>
-                    {name}
-                    <Icon name="chevR" size={12} />
-                  </li>
-                ),
-              )}
+              {trail.map((name, index) => (
+                <li key={index}>
+                  {name}
+                  <Icon name="chevR" size={12} />
+                </li>
+              ))}
               <li aria-current="page">{title || 'Untitled'}</li>
             </ol>
           </nav>

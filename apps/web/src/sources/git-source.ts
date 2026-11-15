@@ -295,7 +295,6 @@ export class GitSource {
         restorePlace: (id, folderId): RestorePlace => this.workspace.restorePlace(id, folderId),
         folderOf: (id): string | null => this.workspace.folderOfNote(id),
         restore: (id, folderId): void => this.workspace.restoreNote(id, folderId),
-        notebookOf: (folderId): string | null => this.workspace.notebookOf(folderId),
       },
       backend,
       // The notebook's own salt, when it has one (`''`: the imported workspace's ids, A1021).
@@ -310,9 +309,6 @@ export class GitSource {
       gitNotebook: { id: this.id, ...(info.salt !== undefined ? { salt: info.salt } : {}) },
     });
     this.offs.push(notes.watchKeeper(this.workspace.keeper));
-    this.offs.push(
-      this.workspace.onNotebookMove((id, notebook) => void notes.recordNotebook(id, notebook)),
-    );
     this.directory = deps.directory(notes, this.workspace);
   }
 

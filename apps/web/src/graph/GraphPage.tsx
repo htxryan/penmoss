@@ -8,7 +8,6 @@ import { useMemo, useState } from 'react';
 import { useNoteList, useNotes } from '../notes/hooks';
 import { displayTitle } from '../notes/list';
 import { navigate, notePath } from '../router';
-import { useClosedNotebooks } from '../workspace/notebooks';
 import { useWorkspaceState } from '../workspace/hooks';
 import { GraphInputCache } from './data';
 import { graphPath } from './path';
@@ -24,7 +23,6 @@ export function GraphPage({ note, local }: GraphPageProps) {
   // The list changes whenever a note's title or content does; links are read with it.
   const list = useNoteList();
   const { snapshot } = useWorkspaceState();
-  const closed = useClosedNotebooks();
   const [cache] = useState(() => new GraphInputCache());
   const input = useMemo(
     () =>
@@ -32,12 +30,11 @@ export function GraphPage({ note, local }: GraphPageProps) {
         folders: snapshot.folders,
         registry: snapshot.notes,
         rootSortMode: snapshot.rootSortMode,
-        closed,
       }),
     // `list` stands for the note store's state, which localLinks reads. The cache keeps the
     // same input (so no new layout) unless notes, titles, links or groups changed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [notes, list, snapshot, cache, closed],
+    [notes, list, snapshot, cache],
   );
   const known = note !== null && input.notes.some((entry) => entry.id === note);
   const title = known ? displayTitle(list.find((entry) => entry.id === note)?.title ?? '') : null;
