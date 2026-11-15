@@ -4,7 +4,7 @@ import { refuseOnMacHost } from './test/e2e/host-guard';
 // Every run of this suite loads this file first, however it is started.
 refuseOnMacHost('The Mac app’s Playwright suite');
 
-import { desktopFakeGitHubPort } from '../../packages/core/test/support/checkout-ports';
+import { desktopFakeGitHubPort } from '../../scripts/checkout-ports.mjs';
 
 const isCI = Boolean(process.env.CI);
 /** Proof mode (`task proof:mac`, the software factory's F7): a JSON report the factory reads. */

@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@penmoss/core": "workspace:*",
+    "@penmoss/embed": "workspace:*",
     "@penmoss/git-notebook": "workspace:*"
   },
   "devDependencies": {

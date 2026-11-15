@@ -99,7 +99,7 @@ export async function readHub(
   const list = owners?.ok ? owners.value : null;
   let login = list?.find((each) => each.kind === 'user')?.login ?? null;
   if (!login && answer.via === 'penmoss') {
-    login = (await github.signIn?.status().catch(() => null))?.login ?? null;
+    login = (await github.signIn.status().catch(() => null))?.login ?? null;
   }
   return { ok: true, hub: { list: answer.value, via: answer.via, login, owners: list } };
 }

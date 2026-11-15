@@ -7,21 +7,15 @@
  * choice still works while signed out (when synced settings cannot change). A
  * choice made while signed out is sent as the synced setting once it can be.
  */
+import { FULL_WIDTH_SETTING, fullWidthOf } from '@penmoss/core/settings';
+import { deviceStorage } from '../shell/device-pref';
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { useCommand } from '../commands/hooks';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
-import type { KeyValueStore } from '../shell/key-value';
 
-export const FULL_WIDTH_SETTING = 'note.fullWidth';
 export const FULL_WIDTH_KEY = 'penmoss.fullWidth';
 /** Set while a choice made here has not reached the synced setting yet (signed out). */
 export const FULL_WIDTH_PENDING_KEY = 'penmoss.fullWidth.pending';
-
-/** The synced value: true only for `true` (anything else is the theme's width). */
-export function fullWidthOf(settings: Readonly<Record<string, unknown>>): boolean | null {
-  const value = settings[FULL_WIDTH_SETTING];
-  return value === undefined ? null : value === true;
-}
 
 /**
  * What the note shows and what to write, from the synced value (null: none, or it cannot be
@@ -40,19 +34,11 @@ export function widthPlan(facts: {
   return { full, send: null, cache: synced !== null && synced !== cached ? synced : null };
 }
 
-function storage(): KeyValueStore | null {
-  try {
-    return typeof localStorage === 'undefined' ? null : localStorage;
-  } catch {
-    return null;
-  }
-}
-
 const listeners = new Set<() => void>();
 
 function readLocal(): boolean {
   try {
-    return storage()?.getItem(FULL_WIDTH_KEY) === 'full';
+    return deviceStorage()?.getItem(FULL_WIDTH_KEY) === 'full';
   } catch {
     return false;
   }
@@ -60,10 +46,10 @@ function readLocal(): boolean {
 
 function writeLocal(full: boolean, pending = false): void {
   try {
-    if (full) storage()?.setItem(FULL_WIDTH_KEY, 'full');
-    else storage()?.removeItem(FULL_WIDTH_KEY);
-    if (pending) storage()?.setItem(FULL_WIDTH_PENDING_KEY, '1');
-    else storage()?.removeItem(FULL_WIDTH_PENDING_KEY);
+    if (full) deviceStorage()?.setItem(FULL_WIDTH_KEY, 'full');
+    else deviceStorage()?.removeItem(FULL_WIDTH_KEY);
+    if (pending) deviceStorage()?.setItem(FULL_WIDTH_PENDING_KEY, '1');
+    else deviceStorage()?.removeItem(FULL_WIDTH_PENDING_KEY);
   } catch {
     // Private mode: the synced setting still holds it.
   }
@@ -72,7 +58,7 @@ function writeLocal(full: boolean, pending = false): void {
 
 function pendingLocal(): boolean {
   try {
-    return storage()?.getItem(FULL_WIDTH_PENDING_KEY) === '1';
+    return deviceStorage()?.getItem(FULL_WIDTH_PENDING_KEY) === '1';
   } catch {
     return false;
   }

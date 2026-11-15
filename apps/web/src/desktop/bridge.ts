@@ -76,8 +76,7 @@ export interface MacWindowState {
 
 /**
  * The Mac's window behaviours (T46, T47; A720–A725): keep on top and the compact title bar, in
- * main and note windows only. Absent in a browser, the capture window and a Mac app built
- * before T46.
+ * main and note windows only. Absent in a browser and the capture window.
  */
 export interface MacWindow {
   /**
@@ -109,7 +108,7 @@ export interface MenuBarPin {
 /**
  * The menu bar icon (T51 item 17, A945): this Mac's own preference, off by default, and the Quick
  * Access notes its menu lists. Main and note windows on a Mac only; `setQuickAccess` in the main
- * window only. Absent in a browser and in a Mac app from before T51.
+ * window only. Absent in a browser.
  */
 export interface MenuBar {
   /** Whether the icon shows; null when main refuses to say. */
@@ -262,8 +261,8 @@ export interface DesktopGit {
   /** Writes `~/.local/bin/penmoss`; never over another program's. Only just after a click. */
   installCli(): Promise<GitAnswer<CliInfo> | null>;
   removeCli(): Promise<GitAnswer<CliInfo> | null>;
-  /** Browsing GitHub in Add a Git Notebook (T81, A1165): the main window only; absent in older builds. */
-  readonly github?: DesktopGitHubBrowse;
+  /** Browsing GitHub in Add a Git Notebook (T81, A1165): main answers the main window only. */
+  readonly github: DesktopGitHubBrowse;
 }
 
 /** Which sign-in a browse call used: git's own, or Penmoss's (T82). */
@@ -283,8 +282,8 @@ export interface DesktopGitHubBrowse {
   owners(): Promise<GitHubAnswer<readonly GitHubOwner[]> | null>;
   /** Makes an empty private repository; only just after a click. */
   create(owner: GitHubOwner, name: string): Promise<GitHubAnswer<GitHubRepo> | null>;
-  /** Sign in with GitHub (T82, A1170); absent in older builds. */
-  readonly signIn?: DesktopGitHubSignIn;
+  /** Sign in with GitHub (T82, A1170). */
+  readonly signIn: DesktopGitHubSignIn;
 }
 
 /** What the page may know of a sign-in (A1170): never the device code or the token. */
@@ -364,48 +363,45 @@ export interface PenmossDesktop {
     /**
      * What main held until this main window's page listened (T51, A945): a command id (the menu
      * bar icon's Open Today's Journal), a path to show (a Quick Access note, a deep link), or
-     * null. Asking also tells main the page listens now. Optional: a Mac app before T51 does
-     * not have it.
+     * null. Asking also tells main the page listens now.
      */
-    takePending?(): Promise<string | { readonly path: string } | null>;
+    takePending(): Promise<string | { readonly path: string } | null>;
   };
   /**
    * The theme on screen (T28): its two backgrounds and the mode. The windows
    * behind the page take the variant macOS shows, and the next launch opens in it.
-   * Optional: a Mac app built before T28 does not have it.
    */
-  readonly theme?: {
+  readonly theme: {
     set(theme: DesktopTheme): void;
   };
   readonly macWindow?: MacWindow;
   readonly menuBar?: MenuBar;
   /**
-   * Git notebooks (T50): absent in a browser and older Mac apps. The capture window has `list`
-   * and `onChange` only: it files captures in the Journal notebook and never runs an engine.
+   * Git notebooks (T50). The capture window has `list` and `onChange` only: it files captures in
+   * the Journal notebook and never runs an engine.
    */
-  readonly git?: DesktopGit;
+  readonly git: DesktopGit;
   /**
    * Send feedback (T49, A798): `capturePage()` of this window as a PNG, taken as the form
-   * opens, so it shows the screen behind the form. Null when it could not be taken. Absent in a
-   * browser and in a Mac app from before T49.
+   * opens, so it shows the screen behind the form. Null when it could not be taken. Absent in
+   * the capture window.
    */
   readonly feedback?: {
     capture(): Promise<Uint8Array | null>;
     /**
      * Files the outbox's entry with the person's GitHub token, in the main process (T57, A1010):
      * the payload part and each screenshot's bytes. Answers the Worker's statuses and body.
-     * Absent in a Mac app from before T57.
      */
-    file?(
+    file(
       payload: string,
       screenshots: ReadonlyArray<{ readonly type: string; readonly bytes: Uint8Array }>,
     ): Promise<DesktopFeedbackAnswer | null>;
   };
-  /** The person's own GitHub token (T57, A1012): never read back. Absent before T57. */
+  /** The person's own GitHub token (T57, A1012): never read back. Absent in the capture window. */
   readonly githubToken?: DesktopGitHubToken;
-  /** Auto-Update (T64 item 2, A1112): main windows only. Absent in a Mac app from before T64. */
+  /** Auto-Update (T64 item 2, A1112): main and note windows (main changes it from the main one). */
   readonly updates?: DesktopUpdates;
-  /** Search by meaning (T76): main and note windows. Absent in a Mac app from before T76. */
+  /** Search by meaning (T76): main and note windows. */
   readonly meaning?: DesktopMeaning;
   readonly clipboard: {
     /** Only just after a key press or click, or a menu command (false otherwise). */
@@ -424,17 +420,19 @@ export interface PenmossDesktop {
   onStoreChanged(listener: (ids?: readonly string[]) => void): () => void;
   /**
    * This window stored these records (null: too many to name): the main process tells every
-   * other window (T45, A711). Absent in a Mac app from before T45.
+   * other window (T45, A711).
    */
-  stored?(ids: readonly string[] | null): void;
+  stored(ids: readonly string[] | null): void;
   /** In-app paths to open (deep links: `penmoss://note/<id>`). */
   onOpenPath(listener: (path: string) => void): () => void;
   readonly capture: {
     /** Hides the capture window (after Escape, or a save: `saved` tells the main window). */
     done(saved: boolean): void;
     onShow(listener: () => void): () => void;
-    hotkey(): Promise<CaptureHotkey>;
-    setHotkey(accelerator: string): Promise<CaptureHotkey & { readonly error?: string }>;
+    /** Null when main refuses to say (a window that may not ask). */
+    hotkey(): Promise<CaptureHotkey | null>;
+    /** Null when main refuses it: a window that may not change it, or a shortcut too long. */
+    setHotkey(accelerator: string): Promise<(CaptureHotkey & { readonly error?: string }) | null>;
   };
 }
 
@@ -458,8 +456,8 @@ export interface DesktopGitHubTokenStatus {
   readonly login: string | null;
   readonly problem: string | null;
   readonly keychain: boolean;
-  /** From Sign in with GitHub (T82), not pasted; absent from older builds. */
-  readonly signedIn?: boolean;
+  /** From Sign in with GitHub (T82), not pasted. */
+  readonly signedIn: boolean;
 }
 
 export interface DesktopGitHubToken {
@@ -504,9 +502,9 @@ export interface DesktopUpdateState {
   readonly checkedAt: number | null;
   /**
    * The version before this one, on the first launches of a newer version until the notice is
-   * answered (PEN-110). Absent in a Mac app from before PEN-110.
+   * answered (PEN-110); null otherwise.
    */
-  readonly updatedFrom?: string | null;
+  readonly updatedFrom: string | null;
 }
 
 export interface DesktopUpdates {
@@ -520,17 +518,17 @@ export interface DesktopUpdates {
   install(): Promise<DesktopUpdateState | null>;
   /**
    * After a click only: the notice after an update was answered, so it doesn't come back
-   * (PEN-110). Absent in a Mac app from before PEN-110.
+   * (PEN-110).
    */
-  acknowledge?(): Promise<DesktopUpdateState | null>;
+  acknowledge(): Promise<DesktopUpdateState | null>;
   onChange(listener: (state: DesktopUpdateState) => void): () => void;
   /**
    * The cached `release-notes.json` (PEN-108), null before main has one; asking also fetches a
-   * newer one, at most once an hour. Absent in a Mac app from before PEN-108.
+   * newer one, at most once an hour.
    */
-  notes?(): Promise<DesktopReleaseNotes | null>;
-  /** A newer `release-notes.json` came in. Absent in a Mac app from before PEN-108. */
-  onNotes?(listener: (file: DesktopReleaseNotes) => void): () => void;
+  notes(): Promise<DesktopReleaseNotes | null>;
+  /** A newer `release-notes.json` came in. */
+  onNotes(listener: (file: DesktopReleaseNotes) => void): () => void;
 }
 
 /** One release note (apps/desktop/src/release-notes.ts `ReleaseNote`). */

@@ -12,7 +12,7 @@
  *
  * What it guards against: a person at an unlocked Mac, and code running in the page.
  */
-import { spawn } from 'node:child_process';
+import { boundedExec } from './bounded-exec';
 
 /** What the page is told: done, or not done and why (shown as is). */
 export type AdminCheckAnswer =
@@ -165,29 +165,14 @@ export function answerOf(outcome: HelperOutcome): AdminCheckAnswer {
 }
 
 /** Runs the helper as a child process: no shell, no environment from the page, no input. */
-export const runHelper: HelperRunner = (helper, reason, timeoutMs) =>
-  new Promise((resolve) => {
-    let settled = false;
-    const settle = (outcome: HelperOutcome) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve(outcome);
-    };
-    let child: ReturnType<typeof spawn>;
-    try {
-      child = spawn(helper, [reason], { stdio: ['ignore', 'ignore', 'pipe'], shell: false });
-    } catch (error) {
-      resolve({ kind: 'error', error: error instanceof Error ? error : new Error(String(error)) });
-      return;
-    }
-    const timer = setTimeout(() => {
-      child.kill('SIGKILL');
-      settle({ kind: 'timeout' });
-    }, timeoutMs);
-    child.stderr?.on('data', (chunk: Buffer) => {
-      console.warn(`[penmoss] owner check: ${chunk.toString().trim()}`);
-    });
-    child.on('error', (error) => settle({ kind: 'error', error }));
-    child.on('exit', (code) => settle({ kind: 'exit', code }));
+export const runHelper: HelperRunner = async (helper, reason, timeoutMs) => {
+  const ran = await boundedExec({
+    command: helper,
+    args: [reason],
+    timeoutMs,
+    onStderr: (chunk) => console.warn(`[penmoss] owner check: ${chunk.trim()}`),
   });
+  if (ran.kind === 'timeout') return { kind: 'timeout' };
+  if (ran.kind === 'error') return { kind: 'error', error: ran.error };
+  return { kind: 'exit', code: ran.code };
+};

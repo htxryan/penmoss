@@ -1,0 +1,48 @@
+import { describe, expect, it } from 'vitest';
+import { DEFAULT_DAILY_TEMPLATE, DEFAULT_WEEKLY_TEMPLATE } from '../src/periodic';
+import {
+  captureDestinationOf,
+  fullWidthOf,
+  isNotebookSetting,
+  noteBarSetting,
+  templateOf,
+  templateSetting,
+  timeZoneOf,
+} from '../src/settings';
+
+describe('the synced settings with no feature module of their own', () => {
+  it('uses America/Chicago until a time zone is set, and ignores one it does not know (T19)', () => {
+    expect(timeZoneOf({})).toBe('America/Chicago');
+    expect(timeZoneOf({ timeZone: 'Asia/Tokyo' })).toBe('Asia/Tokyo');
+    expect(timeZoneOf({ timeZone: 'Mars/Olympus' })).toBe('America/Chicago');
+    expect(timeZoneOf({ timeZone: 42 })).toBe('America/Chicago');
+  });
+
+  it('uses the saved template, the empty one included, or the default', () => {
+    expect(templateOf({}, 'daily')).toBe(DEFAULT_DAILY_TEMPLATE);
+    expect(templateOf({}, 'weekly')).toBe(DEFAULT_WEEKLY_TEMPLATE);
+    expect(templateOf({ 'template.daily': '# {{date}}\n' }, 'daily')).toBe('# {{date}}\n');
+    expect(templateOf({ 'template.weekly': '' }, 'weekly')).toBe('');
+    expect(templateSetting('weekly')).toBe('template.weekly');
+  });
+
+  it('starts Quick Capture on today’s note unless the Inbox is chosen (A947)', () => {
+    expect(captureDestinationOf({})).toBe('daily');
+    expect(captureDestinationOf({ 'capture.destination': 'inbox' })).toBe('inbox');
+    expect(captureDestinationOf({ 'capture.destination': 'elsewhere' })).toBe('daily');
+  });
+
+  it('reads full width as true only for true, and null while unset (A501)', () => {
+    expect(fullWidthOf({})).toBeNull();
+    expect(fullWidthOf({ 'note.fullWidth': true })).toBe(true);
+    expect(fullWidthOf({ 'note.fullWidth': 'yes' })).toBe(false);
+    expect(noteBarSetting('move')).toBe('noteBar.move');
+  });
+
+  it('keeps the time zone and templates as the notebook’s own, every other key a device’s (A827)', () => {
+    expect(isNotebookSetting('timeZone')).toBe(true);
+    expect(isNotebookSetting('template.daily')).toBe(true);
+    expect(isNotebookSetting('theme.id')).toBe(false);
+    expect(isNotebookSetting('capture.destination')).toBe(false);
+  });
+});

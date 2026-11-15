@@ -7,6 +7,7 @@ import {
   periodicNoteId,
   todayIn,
   type PeriodKind,
+  plainDate,
 } from '@penmoss/core/periodic';
 import { readIdentity, readTitle } from '@penmoss/sync-client/note';
 import { NOTE_ROOT } from '@penmoss/sync-client/replica';
@@ -15,7 +16,7 @@ import * as Y from '@y/y';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createCollabEditor } from '../src/collab';
 import { noteExtensions } from '../src/extensions';
-import { periodicNote } from '../src/periodic';
+import { periodicNote } from '@penmoss/sync-client/periodic';
 import fixture from '../../../apps/android/contract/periodic-fixture.json';
 
 const zone = process.env.TZ;
@@ -79,7 +80,7 @@ describe('periodic notes from templates (T19, A4)', () => {
     const note = periodicNote(
       core,
       'weekly',
-      isoWeek(core.plainDate(2026, 10, 21)).toString(),
+      isoWeek(plainDate(2026, 10, 21)).toString(),
       ['# Week {{week}}', DEFAULT_WEEKLY_TEMPLATE].join('\n\n'),
     );
     expect(note.body).toContain('# Week 2026-W43');

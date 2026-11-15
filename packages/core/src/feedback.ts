@@ -1,13 +1,13 @@
 /**
- * In-app feedback (T49, D41): what a client sends to `POST /api/feedback` and how the Worker
- * writes it into a GitHub issue. Shared by the Worker, which builds the issue, and the web and
- * Mac clients, whose form previews the captured context exactly as the issue will hold it
- * (A791, A794). The Android app renders the same markdown in Kotlin; both follow
+ * In-app feedback (T49, D41): what Send Feedback files and how it is written into a GitHub
+ * issue. Shared by the Mac app's main process, which files the issue (`feedback-github.ts`,
+ * A1010), and the page, whose form previews the captured context exactly as the issue will hold
+ * it (A791, A794). The Android app renders the same markdown in Kotlin; both follow
  * `apps/android/contract/feedback-v1.json`.
  *
  * The captured context is metadata only, in six groups (A791): never a note's body text,
  * excerpts, search queries or other notes' text. Each group is a small table of strings, so the
- * Worker can check its shape and size without knowing what a client collects.
+ * filer can check its shape and size without knowing what the page collects.
  */
 
 /** The groups, in the order the issue lists them. */
@@ -69,7 +69,7 @@ export const FEEDBACK_CLIENT_NAMES: Readonly<Record<FeedbackClient, string>> = {
   android: 'Android',
 };
 
-/** The limits every client and the Worker share (A792). */
+/** The limits the form and the filer share (A792). */
 export const FEEDBACK_LIMITS = {
   titleMax: 256,
   descriptionMax: 20_000,
@@ -105,7 +105,7 @@ export function feedbackLabels(type: FeedbackType, priority: FeedbackPriority): 
 
 /**
  * A group of named values; a value of null or undefined is left out. Each value is cut to
- * FEEDBACK_LIMITS.cell (the Worker refuses a longer cell) and the group to groupRows rows.
+ * FEEDBACK_LIMITS.cell (the filer refuses a longer cell) and the group to groupRows rows.
  */
 export function fieldGroup(
   id: FeedbackGroupId,
@@ -245,7 +245,7 @@ export function feedbackIssueBody(input: FeedbackIssueInput): string {
 const isString = (value: unknown): value is string => typeof value === 'string';
 
 /**
- * A context as a client sent it, checked (the Worker's side of A791): known groups once each in
+ * A context as a client sent it, checked (the filer's side of A791): known groups once each in
  * any order, string cells within the limits. Null when anything is off. The order of the issue
  * is the order sent; the clients send FEEDBACK_GROUP_IDS' order.
  */
@@ -345,7 +345,7 @@ export function redactText(text: string, names: readonly string[] = []): string 
 }
 
 /**
- * `text` with Penmoss and GitHub tokens and bearer credentials removed: the Worker's last check on
+ * `text` with Penmoss and GitHub tokens and bearer credentials removed: the filer's last check on
  * everything it posts to GitHub (A791), the description and title included.
  */
 export function redactSecrets(text: string): string {

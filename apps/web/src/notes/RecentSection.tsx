@@ -1,11 +1,12 @@
 import { Icon } from '@penmoss/ui/icons';
+import { deviceStorage } from '../shell/device-pref';
 import { useId, useMemo, type ReactNode } from 'react';
 import { linkHandler, notePath } from '../router';
 import { useStoredCollapse } from '../shell/collapsed';
 import { useEveryOpenNoteList } from '../sources/lists';
 import { displayTitle } from './list';
 import { NOTE_DRAG_TYPE } from './note-drag';
-import { browserStorage, readOpened, recentNotes } from './recent';
+import { readOpened, recentNotes } from './recent';
 import { SectionHead } from '../shell/SectionHead';
 
 /** Whether Recent Notes is collapsed on this device (T53 item 8). */
@@ -13,7 +14,7 @@ export const RECENT_COLLAPSED_KEY = 'penmoss.sidebar.recent';
 
 /**
  * Recent Notes in the sidebar (T53 item 8, A983): the notes opened here or changed anywhere last,
- * newest first, as many as Settings → Display says (ten unset), from the open notebooks (A752).
+ * newest first, as many as Settings → Display says (ten unset).
  * The open note is marked, not moved to the top. Collapsed or open on this device. A note dragged
  * from here to Quick Access is pinned there.
  */
@@ -33,7 +34,7 @@ export function RecentSection({
   const id = useId();
   // Read again as the open note changes: opening one records it (NoteView).
   const notes = useMemo(
-    () => recentNotes(list, readOpened(browserStorage()), null, count),
+    () => recentNotes(list, readOpened(deviceStorage()), null, count),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- activeId: a note was opened
     [list, count, activeId],
   );

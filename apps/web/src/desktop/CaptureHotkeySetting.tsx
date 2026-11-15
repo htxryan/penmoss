@@ -15,6 +15,7 @@ export function CaptureHotkeySetting() {
 
   useEffect(() => {
     void bridge?.capture.hotkey().then((hotkey) => {
+      if (!hotkey) return;
       setCurrent(hotkey);
       setDraft(hotkey.accelerator);
     });
@@ -23,6 +24,13 @@ export function CaptureHotkeySetting() {
   if (!bridge || !current) return null;
   const save = async () => {
     const result = await bridge.capture.setHotkey(draft);
+    // Refused outright (a shortcut too long to be one): the old one stays, and the form says so.
+    if (!result) {
+      setMessage(
+        `That shortcut wasn’t saved: quick capture still opens with ${current.accelerator}.`,
+      );
+      return;
+    }
     setCurrent(result);
     setDraft(result.accelerator);
     setMessage(result.error ?? `Quick capture now opens with ${result.accelerator}.`);

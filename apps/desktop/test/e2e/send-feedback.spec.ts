@@ -1,6 +1,6 @@
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 
-import { desktopFakeGitHubPort } from '../../../../packages/core/test/support/checkout-ports';
+import { desktopFakeGitHubPort } from '../../../../scripts/checkout-ports.mjs';
 import {
   body,
   launch,

@@ -1,14 +1,14 @@
 /**
- * The REST API's routes, answered on this device (T50 G2): a `fetch` the CLI's `Api` client
- * calls instead of the network when a command runs with `--notebook`. The CLI's commands are
- * unchanged: they ask `/api/...` and read the server's shapes and error codes, and this answers
- * them from a `LocalNotebook`. Nothing leaves the process.
+ * The notes API's REST routes, answered on this device (T50 G2, A843): a `fetch` over a
+ * `LocalNotebook`, in its shapes and error codes. Android's local notes server answers its page's
+ * `/api/*` with it (`apps/android/editor/src/git/server.ts`). The CLI and the MCP tools call
+ * `LocalNotebook` itself. Nothing leaves the process.
  */
-import type { EditOp, SectionMode } from '@penmoss/editor/edit-engine';
+import type { EditOp, SectionMode } from '@penmoss/sync-client/edit-engine';
 import type { SortMode } from '@penmoss/core/workspace';
 import { LocalError, propertiesOp, type LocalNotebook } from './notebook';
 
-/** What the CLI's `FetchLike` gives (Node's and workerd's fetch both fit). */
+/** What a request gives (Node's and workerd's fetch both fit). */
 export interface LocalRequestInit {
   readonly method: string;
   readonly headers: Record<string, string>;
@@ -21,7 +21,7 @@ export interface LocalResponse {
   text(): Promise<string>;
 }
 
-/** The origin `--notebook` commands use: never a host, so nothing can reach the network. */
+/** The origin requests use: never a host, so nothing can reach the network. */
 export const LOCAL_ORIGIN = 'http://notebook.invalid';
 
 type Body = Record<string, unknown>;
@@ -78,7 +78,7 @@ function tags(body: Body, key: string): string[] {
  */
 export function localFetch(
   notebook: LocalNotebook,
-  /** After every request that may write, awaited before its reply: the CLI saves there. */
+  /** After every request that may write, awaited before its reply: the caller saves there. */
   changed: () => void | Promise<void> = () => undefined,
 ): (url: string, init: LocalRequestInit) => Promise<LocalResponse> {
   return async (url, init) => {
@@ -173,7 +173,7 @@ async function route(
     const action = versions[3];
     if (version === null && method === 'GET') return ok(await notebook.versions(id));
     if (version === null && method === 'POST') {
-      // The server answers with the version itself (MCP's save_version wraps it).
+      // The answer is the version itself (MCP's save_version wraps it).
       const done = await notebook.saveVersion(id);
       if (!done.version) throw new LocalError(404, 'not_found', 'Nothing committed yet');
       return ok(done.version, done.saved ? 201 : 200);
@@ -196,7 +196,7 @@ async function route(
     const id = notebook.noteIdOf(decodeURIComponent(note[1]!));
     const action = note[2];
     if (action === 'content' && method === 'GET') return ok(notebook.content(id));
-    // set_properties and `penmoss set-title` (#170 F10), as the server's PATCH.
+    // set_properties and `penmoss set-title` (#170 F10).
     if (action === 'properties' && method === 'PATCH') {
       return ok(
         notebook.edit(
@@ -360,7 +360,7 @@ async function route(
   }
   if (folder && method === 'DELETE')
     return ok(notebook.deleteFolder(decodeURIComponent(folder[1]!)));
-  // Agent activity (#172, A920): the server's routes, from the branch.
+  // Agent activity (#172, A920), read from the branch.
   if (path === '/api/agent-activity' && method === 'GET') return ok(await notebook.agentActivity());
   const undo = ACTIVITY_UNDO.exec(path);
   if (undo && method === 'POST') {

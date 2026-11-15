@@ -17,13 +17,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.editor.EditorWebView
 import app.penmoss.graph
 import app.penmoss.ui.DeepLinkInbox
 import app.penmoss.ui.PenmossRoot
-import app.penmoss.ui.PenmossTheme
-import app.penmoss.ui.followShownVariant
+import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.common.followShownVariant
 import app.penmoss.ui.keys.AppCommands
 import app.penmoss.ui.keys.LocalAppCommands
 import kotlinx.coroutines.launch
@@ -36,7 +36,7 @@ import kotlinx.coroutines.launch
  * on its interval and pushes after edits settle (A825); leaving it syncs what waits.
  */
 class GitNotebookActivity : ComponentActivity() {
-    private lateinit var notebook: AppGraph
+    private lateinit var notebook: NotebookGraph
     private lateinit var localId: String
     private val commands = AppCommands()
     private val deepLinks = DeepLinkInbox()
@@ -93,7 +93,8 @@ class GitNotebookActivity : ComponentActivity() {
             val id = localId
             // A pause for the file picker or the share sheet is not a leave (#174 delta review).
             val leaving = isFinishing
-            graph.scope.launch { runCatching { hub.source(id).front(false, leaving) } }
+            // The process scope, not the activity's: leaving closes the page after the activity is gone.
+            graph.launchReporting(kotlinx.coroutines.Dispatchers.Main.immediate) { hub.source(id).front(false, leaving) }
         }
     }
 

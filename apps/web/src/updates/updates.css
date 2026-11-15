@@ -1,0 +1,330 @@
+/* Settings → Updates (T64 item 2): what the last check found, apart from the switch's help. */
+.settings-section > .updates-status {
+  margin: 1.25rem 0 0.75rem;
+}
+
+/*
+ * Settings → Updates' release notes (PEN-108): each block a sub-heading, its kinds a smaller one
+ * over a plain list; earlier versions collapsed under a summary. The notes read in the section's
+ * own type scale: every version's heading is a sub-heading like any section's, and
+ * the notes and "nothing to notice" line are the section's explanation text, which they were
+ * 16px in the main colour beside.
+ */
+.release-notes {
+  margin-top: 0.5rem;
+}
+
+.release-notes-block h3 {
+  font-size: var(--pm-text-lg);
+}
+
+.release-notes-group h4 {
+  margin: 0.75rem 0 0.25rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  font-weight: 600;
+}
+
+.release-notes-group ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.release-notes-group li,
+.release-notes-block > p {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-md);
+  line-height: 1.55;
+}
+
+.release-notes-block > p {
+  margin: 0;
+}
+
+.release-notes-group li + li {
+  margin-top: 0.25rem;
+}
+
+.release-notes-earlier {
+  margin-top: 2rem;
+}
+
+.release-notes-earlier > summary {
+  cursor: pointer;
+  font-size: var(--pm-text-lg);
+  font-weight: 600;
+}
+
+.release-notes-earlier .release-notes-block h3 {
+  margin-top: 1.25rem;
+}
+
+.settings-section > .release-notes-missing {
+  margin-top: 1.5rem;
+}
+
+/*
+ * The edges the sidebar and the note's panel are resized by (Quanta feedback 2, item 4; A1122):
+ * a strip 7 px wide over the pane's border, the resize cursor on it, the accent while it is
+ * hovered, focused or dragged. While one is dragged, the whole page has that cursor and nothing
+ * is selected.
+ */
+.pane-resizer {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.sidebar > .pane-resizer {
+  right: -4px;
+}
+
+/*
+ * With the compact title bar the strip starts below the first row: its 4 px over the note's top
+ * bar would be no-drag earlier in the DOM than that row, which drags over it (A1147).
+ */
+:root[data-titlebar='compact'] .sidebar > .pane-resizer {
+  top: var(--pm-titlebar-row);
+}
+
+/* Out of the grid's flow, on the panel's column: its containing block is that grid area. */
+.note-columns:has(> .pane-resizer) {
+  position: relative;
+}
+
+.note-columns > .pane-resizer {
+  grid-row: 1;
+  grid-column: 2;
+  left: -4px;
+}
+
+.pane-resizer::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: 3px;
+  width: 1px;
+  background: transparent;
+  transition: background var(--pm-fast, 120ms) ease;
+}
+
+.pane-resizer:is(:hover, :focus-visible)::after,
+:root[data-resizing] .pane-resizer::after {
+  left: 2px;
+  width: 3px;
+  background: var(--pm-accent);
+}
+
+.pane-resizer:focus-visible {
+  outline: none;
+}
+
+:root[data-resizing],
+:root[data-resizing] * {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
+/*
+ * The title bars and the status bar take the arrow, not the text cursor, over their words as
+ * over their empty parts (Quanta feedback 3, item 6; A1129): they are the window's chrome, not
+ * text to select. Their controls keep their own cursors.
+ */
+:is(.note-top, .status-bar, .sb-head, .pm-graph-bar, .settings-bar, .app-bar) {
+  cursor: default;
+  user-select: none;
+}
+
+/*
+ * The whole app is interface, not text (Ryan's review of #192, finding 7; extends A1129): as in a
+ * Mac app, its words are not selectable and the pointer stays the arrow over them. What someone
+ * reads or copies opts back in, selectable with the text cursor: every field, a note's text (a
+ * read-only one's too) and its Markdown, code and paths, a comment's words and its quote, History's
+ * and the Time Machine's text, release notes, a notebook's facts, error messages, and anything
+ * marked `.selectable`. `:where`, so a control's own cursor still wins.
+ */
+body {
+  cursor: default;
+  user-select: none;
+}
+
+:where(
+  input,
+  textarea,
+  [contenteditable]:not([contenteditable='false']),
+  .note-body,
+  pre,
+  code,
+  samp,
+  .history-diff,
+  .comment-body,
+  .comment-quote,
+  .release-notes,
+  .settings-facts dd,
+  .error,
+  .field-error,
+  [role='alert'],
+  .selectable
+) {
+  cursor: auto;
+  user-select: text;
+}
+
+/*
+ * Flush rows (Quanta feedback 3, item 8; A1135), as the sidebar's bottom row is (A1121): the
+ * sidebar's head and its row of shortcuts, the note's title bar's buttons and the panel's tab
+ * strip go edge to edge, their buttons as tall as the row with no margin or gap. Back and
+ * Forward have a hairline either side, the one on their left ending the traffic lights' room in
+ * the Mac app, since the lights cannot be made square.
+ */
+.notes-app:not([data-sidebar='collapsed']) .sb-head {
+  --sb-row: 2.25rem;
+  box-sizing: border-box;
+  height: var(--sb-row);
+  gap: 0;
+  padding: 0 0 0 0.875rem;
+  border-bottom: 1px solid var(--pm-border-soft);
+}
+
+:root[data-titlebar='compact'] .notes-app:not([data-sidebar='collapsed']) .sb-head {
+  --sb-row: var(--pm-titlebar-row);
+  padding-left: var(--pm-titlebar-inset);
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-head > .icon-btn {
+  width: 2.25rem;
+  height: 100%;
+  border-left: 1px solid var(--pm-border-soft);
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-head .history-nav {
+  align-self: stretch;
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-head .history-pair {
+  height: 100%;
+  border-inline: 1px solid var(--pm-border-soft);
+  background: none;
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-head .history-pair .history-half {
+  width: 2rem;
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-head .history-half + .history-half::before {
+  top: 0;
+  bottom: 0;
+  background: var(--pm-border-soft);
+}
+
+/*
+ * With Back and Forward first, the logo keeps the room a button's padding gave it: a margin of its
+ * own, so it goes with the logo when the head is narrow (PEN-135 item 8).
+ */
+.notes-app:not([data-sidebar='collapsed']) .sb-head .history-nav + .brand > .brand-mark {
+  margin-inline-start: 0.5rem;
+}
+
+/*
+ * The head's buttons never clip (PEN-135 item 8): as the sidebar narrows, the brand between Back
+ * and Forward and the pin gives way to nothing, so the pin and the toggle move left with the edge
+ * (its name ends in an ellipsis). The narrowest sidebar (14.5rem, pane-widths.ts) fits the lights'
+ * 88px, the pair, the pin and the toggle.
+ */
+.notes-app:not([data-sidebar='collapsed']) .sb-head .brand {
+  overflow: hidden;
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-head .brand > span:not(.brand-mark) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-actions {
+  padding: 0;
+  border-bottom: 1px solid var(--pm-border-soft);
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-shortcuts {
+  gap: 0;
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-shortcuts .sb-shortcut {
+  flex: 1 1 0;
+  height: 2.25rem;
+  margin: 0;
+}
+
+.notes-app:not([data-sidebar='collapsed']) .sb-shortcuts .sb-shortcut.new-note {
+  flex: 0 0 2.5rem;
+}
+
+.note-top {
+  padding-right: 0;
+}
+
+.note-top > .note-actions {
+  align-self: stretch;
+  gap: 0;
+  border-left: 1px solid var(--pm-border-soft);
+}
+
+.note-top > .note-actions .icon-btn {
+  width: 2.5rem;
+  height: 100%;
+}
+
+.note-top > .note-actions > .menu-anchor {
+  display: flex;
+  align-self: stretch;
+}
+
+.note-top > .note-actions > .menu-anchor > button {
+  width: 2.5rem;
+  height: 100%;
+}
+
+.note-columns .note-rail-icons {
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+}
+
+.note-columns .note-rail-icons .note-rail-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+@media (max-width: 700px), (pointer: coarse) {
+  .notes-app:not([data-sidebar='collapsed']) .sb-shortcuts .sb-shortcut,
+  .note-columns .note-rail-icons .note-rail-btn {
+    height: var(--pm-hit);
+  }
+
+  /* Touch: every shortcut at least a finger wide, wrapping rather than narrowing (T53). */
+  .notes-app:not([data-sidebar='collapsed']) .sb-shortcuts .sb-shortcut,
+  .notes-app:not([data-sidebar='collapsed']) .sb-shortcuts .sb-shortcut.new-note {
+    flex: 1 0 var(--pm-hit);
+    min-width: var(--pm-hit);
+  }
+
+  .note-columns .note-rail-icons .note-rail-btn {
+    width: var(--pm-hit);
+  }
+}
+
+/* Settings' heading, and where they are kept under it (A1136, PEN-135 item 11). */
+.settings-title:has(.settings-home) h1 {
+  margin-bottom: 0.3rem;
+}
+
+.settings-home {
+  margin: 0 0 1.25rem;
+  font-size: var(--pm-text-sm, 0.86rem);
+}

@@ -347,3 +347,33 @@ export async function preflight(
     );
   }
 }
+
+/**
+ * The person's own git identity: `user.name` and `user.email` from the global config, then the
+ * system's, never the repository a command happens to run in (#165). Without one: `fallbackName`
+ * and `penmoss@localhost` (A825). The CLI and the Mac app commit as this unless a notebook has
+ * its own (#170 F6).
+ */
+export async function gitUserIdentity(
+  env: Readonly<Record<string, string | undefined>> | undefined,
+  fallbackName: string,
+): Promise<{ readonly name: string; readonly email: string }> {
+  const git = gitRunner({ env: { GIT_DIR: undefined, ...env } });
+  const read = async (key: string) => {
+    for (const scope of ['--global', '--system']) {
+      try {
+        const value = (await git(['config', scope, '--get', key], { ok: [0, 1] })).stdout
+          .toString('utf8')
+          .trim();
+        if (value) return value;
+      } catch {
+        // No such config file: the next scope.
+      }
+    }
+    return '';
+  };
+  return {
+    name: (await read('user.name')) || fallbackName,
+    email: (await read('user.email')) || 'penmoss@localhost',
+  };
+}

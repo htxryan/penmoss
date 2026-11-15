@@ -1,5 +1,6 @@
-import { schema as coreSchema, serializeMarkdown } from '@penmoss/core';
-import { NOTE_ROOT } from '@penmoss/sync-client';
+import { serializeMarkdown } from '@penmoss/core';
+import { schema as coreSchema } from '@penmoss/core/schema';
+import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import { describe, expect, it, vi } from 'vitest';
 import { setNativeClipboard, type NativeClipboardPayload } from '../src/clipboard';
 import { DEFER_CHARS, DEFER_MS } from '../src/extensions/code-highlight';

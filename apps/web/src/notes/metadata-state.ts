@@ -7,9 +7,7 @@ import {
   type MetadataField,
 } from '@penmoss/core/note-metadata';
 import { useSyncExternalStore } from 'react';
-import { useSourcesState } from '../sources/hooks';
-import { useWorkspace } from '../workspace/hooks';
-import type { Workspace } from '../workspace/service';
+import { useAppWorkspace } from '../sources/hooks';
 
 export interface NoteMetadataSettings {
   /** The fields under a note's title, in order. */
@@ -27,9 +25,7 @@ export interface NoteMetadataSettings {
  * app's own settings (the Primary notebook's, as the sidebar's layout is).
  */
 export function useNoteMetadataSettings(): NoteMetadataSettings {
-  const inScope = useWorkspace();
-  const sources = useSourcesState();
-  const workspace: Workspace = sources?.root.workspace ?? inScope;
+  const workspace = useAppWorkspace();
   // Re-renders when the settings change, here or by sync.
   const { loaded } = useSyncExternalStore(
     workspace.subscribe,

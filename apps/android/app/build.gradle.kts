@@ -163,6 +163,26 @@ abstract class MergedManifestArgument : CommandLineArgumentProvider {
         listOf("-Dpenmoss.mergedManifest.${variant.get()}=${manifest.get().asFile.absolutePath}")
 }
 
+/**
+ * The contracts the unit tests read (architecture review A8): an input, so a contract the
+ * TypeScript side wrote again with no Kotlin change runs them again rather than coming from the
+ * cache, and handed over as `penmoss.contract` (bridge-v1.json; the tests read its siblings), so
+ * no test leans on the working directory. Its path is no part of the cache key.
+ */
+abstract class ContractsArgument : CommandLineArgumentProvider {
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val contracts: DirectoryProperty
+
+    override fun asArguments(): List<String> =
+        listOf("-Dpenmoss.contract=${contracts.get().file("bridge-v1.json").asFile.absolutePath}")
+}
+
+val contractsArgument = objects.newInstance(ContractsArgument::class.java).apply {
+    contracts.set(rootProject.layout.projectDirectory.dir("contract"))
+}
+tasks.withType<Test>().configureEach { jvmArgumentProviders.add(contractsArgument) }
+
 androidComponents {
     onVariants { variant ->
         val argument = objects.newInstance(MergedManifestArgument::class.java).apply {
@@ -217,6 +237,7 @@ tasks.matching { it.name == "bundleRelease" || it.name == "assembleRelease" }.co
 
 dependencies {
     implementation(project(":engine-bridge"))
+    implementation(project(":engine-git"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.foundation)

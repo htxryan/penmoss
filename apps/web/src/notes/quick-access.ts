@@ -4,13 +4,8 @@ import {
   QUICK_ACCESS_SETTING,
   toggledQuickAccess,
 } from '@penmoss/core/quick-access';
-import { defaultNotebookName } from '@penmoss/sync-client/workspace';
 import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useSourcesState } from '../sources/hooks';
-import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
-import { notebookOfNote } from '../workspace/notebooks';
-import type { Workspace } from '../workspace/service';
-import { useNotes } from './hooks';
 import type { NoteListEntry } from './list';
 
 export interface QuickAccess {
@@ -32,10 +27,8 @@ export interface QuickAccess {
  * source's note is open, so a pin made beside a git note lands in the same list.
  */
 export function useQuickAccess(): QuickAccess {
-  const inScope = useWorkspace();
   const sources = useSourcesState();
-  const notes = useNotes();
-  const workspace: Workspace = sources?.root.workspace ?? inScope;
+  const workspace = sources.journal.workspace;
   // Re-renders when the settings change, here or by sync.
   const { loaded } = useSyncExternalStore(
     workspace.subscribe,
@@ -47,14 +40,14 @@ export function useQuickAccess(): QuickAccess {
   const knows = useCallback(
     (id: string): boolean | null => {
       let unsure = false;
-      for (const each of sources ? sources.all.map((source) => source.notes) : [notes]) {
+      for (const { notes: each } of sources.all) {
         const known = each.knows(id);
         if (known === true) return true;
         if (known === null) unsure = true;
       }
       return unsure ? null : false;
     },
-    [sources, notes],
+    [sources],
   );
   const toggle = useCallback(
     (id: string) => {
@@ -109,42 +102,26 @@ export interface QuickAccessNote {
   readonly notebook: string | null;
 }
 
-const NO_SOURCES = (): (() => void) => () => undefined;
-
 /**
  * The pinned notes with their titles, in pin order (T51, A946), looked up in every source this
- * window holds (the personal notes and each git notebook), or the notes in context without a
- * registry. A trashed note, or one not on this device, is left out but stays pinned. With
+ * window holds. A trashed note, or one not on this device, is left out but stays pinned. With
  * `withNotebooks`, each names its notebook too (T53 item 10).
  */
 export function useQuickAccessNotes(withNotebooks = false): readonly QuickAccessNote[] {
   const { ids } = useQuickAccess();
-  const notes = useNotes();
   const state = useSourcesState();
-  const inScope = useWorkspace();
-  const lists = useMemo(
-    () => (state ? state.all.map((source) => source.notes) : [notes]),
-    [state, notes],
-  );
+  const lists = useMemo(() => state.all.map((source) => source.notes), [state]);
   /** The notebook's name for a note in the list at `index`. */
-  const notebookOf = useCallback(
-    (index: number, id: string): string => {
-      const source = state?.all[index];
-      if (source?.kind === 'git') return source.name;
-      const { snapshot } = (source?.workspace ?? inScope).getState();
-      return notebookOfNote(snapshot, id)?.name ?? defaultNotebookName(snapshot);
-    },
-    [state, inScope],
-  );
-  const subscribe = useMemo(() => {
-    if (lists.length === 0) return NO_SOURCES;
-    return (listener: () => void) => {
+  const notebookOf = useCallback((index: number): string => state.all[index]?.name ?? '', [state]);
+  const subscribe = useMemo(
+    () => (listener: () => void) => {
       const offs = lists.map((source) => source.subscribe(listener));
       return () => {
         for (const off of offs) off();
       };
-    };
-  }, [lists]);
+    },
+    [lists],
+  );
   // Each source's list keeps its reference until it changes: the same snapshot until one does.
   const last = useRef<readonly (readonly NoteListEntry[])[]>([]);
   const read = useCallback(() => {
@@ -155,9 +132,6 @@ export function useQuickAccessNotes(withNotebooks = false): readonly QuickAccess
     return last.current;
   }, [lists]);
   const snapshot = useSyncExternalStore(subscribe, read, read);
-  // Where each note is filed and what its notebook is called: a notebook renamed or a pinned
-  // note moved to another one names it afresh (the note lists carry neither).
-  const filed = useWorkspaceState().snapshot;
   const key = ids.join(',');
   return useMemo(() => {
     const found = new Map<string, { title: string; index: number }>();
@@ -169,8 +143,7 @@ export function useQuickAccessNotes(withNotebooks = false): readonly QuickAccess
       .filter((id) => id !== '' && found.has(id))
       .map((id) => {
         const { title, index } = found.get(id)!;
-        return { id, title, notebook: withNotebooks ? notebookOf(index, id) : null };
+        return { id, title, notebook: withNotebooks ? notebookOf(index) : null };
       });
-    // `filed` is read through `notebookOf`; listed so a change to it names the notebooks again.
-  }, [snapshot, key, notebookOf, withNotebooks, withNotebooks ? filed : null]);
+  }, [snapshot, key, notebookOf, withNotebooks]);
 }

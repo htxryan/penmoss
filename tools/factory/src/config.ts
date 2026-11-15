@@ -105,6 +105,8 @@ export interface FactoryConfig {
     readonly agentMinutes: number;
     readonly proofMinutes: number;
     readonly ciMinutes: number;
+    /** The gate's install and its check, each (F2); waiting for a heavy-job slot doesn't count. */
+    readonly gateMinutes: number;
   };
   readonly slots: readonly SlotConfig[];
   readonly sharedDir: string;
@@ -246,7 +248,7 @@ export function parseConfig(raw: unknown): ConfigResult {
   int(rounds, 'gateFix', 'config.rounds');
   int(rounds, 'ciRepair', 'config.rounds');
   const timeouts = obj(root['timeouts'], 'config.timeouts');
-  for (const key of ['agentMinutes', 'proofMinutes', 'ciMinutes'])
+  for (const key of ['agentMinutes', 'proofMinutes', 'ciMinutes', 'gateMinutes'])
     int(timeouts, key, 'config.timeouts', 1);
   if (!Array.isArray(root['slots']) || root['slots'].length === 0) {
     problems.push('config.slots must be a non-empty list');

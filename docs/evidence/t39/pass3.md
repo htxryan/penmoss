@@ -91,7 +91,7 @@ Checked, with no new defect: the console during every web and Electron e2e test 
 
 ### Screenshots
 
-In [`pass3/`](pass3/), each light and dark, before (`origin/main` at 410c7187) and after. Made-up notes only.
+In [`pass3/`](https://github.com/htxryan/penmoss/tree/f072e31/docs/evidence/t39/pass3), each light and dark, before (`origin/main` at 410c7187) and after. Made-up notes only.
 
 - The table toolbar, web and Mac: `before-web-table-toolbar-*.png` → `after-web-table-toolbar-*.png`; `before-mac-table-toolbar-*.png` → `after-mac-table-toolbar-*.png`.
 - Settings' sections and their icons, web and Mac: `before-web-settings-icons-*.png` → `after-web-settings-icons-*.png`; `before-mac-settings-icons-*.png` → `after-mac-settings-icons-*.png`.

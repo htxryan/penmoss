@@ -4,10 +4,8 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "The IndexedDB replica store, its keeper, records, attachments and the local index",
+  "description": "The notes' and the workspace's Yjs documents, their records, comments, tags, history and the local search index: platform-free, shared by every client",
   "exports": {
-    ".": "./src/index.ts",
-    "./protocol": "./src/protocol.ts",
     "./replica": "./src/replica.ts",
     "./yjs14": "./src/yjs14.ts",
     "./note": "./src/note.ts",
@@ -19,24 +17,32 @@
     "./agent-sessions": "./src/agent-sessions.ts",
     "./comment-delivery": "./src/comment-delivery.ts",
     "./local-index": "./src/local-index.ts",
-    "./keeper": "./src/keeper.ts",
-    "./attachments": "./src/attachments.ts"
+    "./record": "./src/record.ts",
+    "./protocol": "./src/protocol.ts",
+    "./markdown": "./src/markdown.ts",
+    "./edit-engine": "./src/edit-engine.ts",
+    "./revert": "./src/revert.ts",
+    "./capture": "./src/capture.ts",
+    "./periodic": "./src/periodic.ts",
+    "./title": "./src/title.ts",
+    "./stats": "./src/stats.ts",
+    "./note-fields": "./src/note-fields.ts",
+    "./unsupported": "./src/unsupported.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run",
-    "perf": "vitest run --config vitest.perf.config.ts",
-    "budgets": "PENMOSS_BUDGETS=1 vitest run"
+    "perf": "vitest run --config vitest.perf.config.ts"
   },
   "devDependencies": {
-    "@y/protocols": "1.0.6-rc.1",
-    "fake-indexeddb": "6.2.6",
     "vitest": "5.0.5"
   },
   "dependencies": {
     "@penmoss/core": "workspace:*",
+    "@y/prosemirror": "2.0.0-15",
     "@y/y": "14.0.0-rc.29",
     "lib0": "1.0.0-rc.36",
-    "minisearch": "7.2.0"
+    "minisearch": "7.2.0",
+    "prosemirror-model": "1.25.12"
   }
 }

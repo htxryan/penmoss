@@ -1,7 +1,7 @@
 /**
- * The page's Content Security Policy (T59, A1038), for `vite preview` of a production build:
- * the e2e suite runs the build under it. The Mac app serves the same files with its own policy
- * (apps/desktop/src/csp.ts). There is no API host any more (D49): git runs in the Mac app's main
+ * The page's Content Security Policy (T59, A1038): the Mac app's `app://` protocol serves the
+ * page under it (apps/desktop/src/protocol.ts), and so does `vite preview` of a production
+ * build, which the e2e suite runs. There is no API host any more (D49): git runs in the Mac app's main
  * process and the page reaches it over IPC, so `connect-src` is this origin and the page's own
  * blob: pictures only.
  *

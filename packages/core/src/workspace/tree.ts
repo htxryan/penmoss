@@ -18,11 +18,6 @@ export interface FolderRecord {
   readonly position: string;
   readonly sortMode: SortMode;
   /**
-   * A notebook's folder (T43, A750): set only on a top-level folder, and absent (never false)
-   * on every other, so a tree without notebooks reads exactly as before.
-   */
-  readonly notebook?: true;
-  /**
    * Its subfolders and notes share one Manual order (T62 item 6), so a note may sit above or
    * between them; absent (never false) until a note or folder is first placed among the other
    * kind, so every tree reads as before: subfolders, then notes.
@@ -107,7 +102,7 @@ export function isWithin(
 /**
  * A folder and every folder below it, as the tree shows them (cycles and
  * orphans resolved as `effectiveParents` does); empty for an unknown folder.
- * Search filters by folder with it (T22), on the server and offline.
+ * Search filters by folder with it (T22).
  */
 export function folderSubtree(folders: readonly FolderRecord[], folderId: string): Set<string> {
   const parents = effectiveParents(folders);

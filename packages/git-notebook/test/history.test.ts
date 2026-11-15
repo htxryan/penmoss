@@ -4,7 +4,7 @@
  * three-way merge, as new changes that sync. Over a real engine and the in-memory transport,
  * two devices and an agent; the local MCP's tools give the server's shapes.
  */
-import { bodyMarkdown } from '@penmoss/editor/markdown';
+import { bodyMarkdown } from '@penmoss/sync-client/markdown';
 import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import * as Y from '@y/y';
 import { describe, expect, it } from 'vitest';

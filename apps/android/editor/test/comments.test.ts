@@ -4,7 +4,7 @@
  * writes what the sheet asks for in the note's own document, which the app stores and uploads
  * as any other edit. A new thread takes its place first (`commentDraft`), then its comment.
  */
-import { NOTE_ROOT } from '@penmoss/sync-client';
+import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import { readAgentSessions, recordAgentSession } from '@penmoss/sync-client/agent-sessions';
 import {
   addComment,

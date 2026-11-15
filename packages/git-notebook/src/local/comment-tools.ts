@@ -1,8 +1,9 @@
 /**
  * The comment tools of the local MCP server (T60, A1064; rescued from the deleted server's
  * `mcp/comment-tools.ts`, T48): list, read, start, reply to and resolve threads, over the
- * clone's own notes and as its writer. What an agent reads of a thread is the server's: its
- * quote, its place now and when it was made (T52 item 5), its state and every comment.
+ * clone's own notes and as its writer. What an agent reads of a thread is what the deleted
+ * server gave: its quote, its place now and when it was made (T52 item 5), its state and every
+ * comment.
  */
 import type { ThreadView } from '@penmoss/sync-client/comment-delivery';
 import type { StatusFilter } from '@penmoss/sync-client/comment-delivery';

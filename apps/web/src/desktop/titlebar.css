@@ -1,0 +1,312 @@
+/*
+ * The Mac app's compact title bar (T47, D39, A722, A723): the traffic lights sit in the app's
+ * own first row, which drags the window, and every control in it still clicks (`no-drag`).
+ * `data-titlebar` is set only in a compact window out of full screen, so full screen (the
+ * lights hidden) and the native title bar keep the layout as it was. The rows keep their
+ * height: the note starts higher by the native title bar's 28 px.
+ */
+:root {
+  /* The room for the lights: 16 px, three buttons (60 px on macOS 26), and 12 px after them. */
+  --pm-titlebar-inset: 88px;
+  /* The first row, where the lights are centred (TITLE_BAR_ROW in apps/desktop). */
+  --pm-titlebar-row: 48px;
+}
+
+/*
+ * The rows drag the window (A723). Nothing else does: no strip behind the page, since on a Mac
+ * a drag region wins over whatever is painted on it unless that is `no-drag`. So every control
+ * anywhere, and every surface that can float over a row (a panel, a menu, a dialog, a scrim),
+ * is `no-drag`. The same lists are in apps/web/src/desktop/no-drag.ts, and a test checks they
+ * match.
+ */
+:root[data-titlebar='compact']
+  :is(
+    .sb-head,
+    .note-top,
+    .pm-graph-bar,
+    .settings-bar,
+    .app-bar,
+    #root > .banner,
+    .window-drag,
+    .home,
+    .tags-page-top,
+    .drawing-editor-bar
+  ) {
+  -webkit-app-region: drag;
+}
+
+:root[data-titlebar='compact']
+  :is(
+    .menu,
+    .menu-scrim,
+    .overlay,
+    .drawer-scrim,
+    .sidebar,
+    .settings-nav,
+    .toast,
+    [role='dialog'],
+    [role='menu'],
+    [role='listbox'],
+    [role='toolbar'],
+    .pm-slash-menu
+  ) {
+  -webkit-app-region: no-drag;
+}
+
+:root[data-titlebar='compact']
+  :is(
+    button,
+    a[href],
+    input,
+    textarea,
+    select,
+    label,
+    summary,
+    [contenteditable='true'],
+    [tabindex]:not([tabindex='-1']),
+    [role='button'],
+    [role='link'],
+    [role='menuitem'],
+    [role='menuitemcheckbox'],
+    [role='menuitemradio'],
+    [role='option'],
+    [role='tab'],
+    [role='switch'],
+    [role='checkbox'],
+    [role='radio'],
+    [role='combobox'],
+    [role='slider'],
+    [role='spinbutton'],
+    [role='textbox'],
+    [role='searchbox'],
+    [role='treeitem']
+  ) {
+  -webkit-app-region: no-drag;
+}
+
+/*
+ * What scrolls under a row sets no region of its own (A1123; UNDER_ROWS in no-drag.ts): a note's
+ * title and text go up under its top bar as it scrolls, and Settings' sections under its bar
+ * (PEN-65), and their controls' `no-drag`, later in the DOM, took the bar's empty part from it. None of them is ever in a row. `unset`, not
+ * `none`: Chromium computes an explicit `none` as `no-drag`, while `unset` takes the parent's
+ * region, as the property is inherited, so a control in a floating surface (a menu, the selection
+ * toolbar) is still `no-drag` from it, and one in the text has none.
+ */
+:root[data-titlebar='compact']
+  :is(.note-columns, .settings-content, .window-bare, .tags-page-scroll)
+  :is(
+    button,
+    a[href],
+    input,
+    textarea,
+    select,
+    label,
+    summary,
+    [contenteditable='true'],
+    [tabindex]:not([tabindex='-1']),
+    [role='button'],
+    [role='link'],
+    [role='menuitem'],
+    [role='menuitemcheckbox'],
+    [role='menuitemradio'],
+    [role='option'],
+    [role='tab'],
+    [role='switch'],
+    [role='checkbox'],
+    [role='radio'],
+    [role='combobox'],
+    [role='slider'],
+    [role='spinbutton'],
+    [role='textbox'],
+    [role='searchbox'],
+    [role='treeitem']
+  ):not(
+    .menu,
+    .menu-scrim,
+    .overlay,
+    .drawer-scrim,
+    .sidebar,
+    .settings-nav,
+    .toast,
+    [role='dialog'],
+    [role='menu'],
+    [role='listbox'],
+    [role='toolbar'],
+    .pm-slash-menu
+  ) {
+  -webkit-app-region: unset;
+}
+
+/*
+ * A surface earlier in the DOM than a row it opens over: the narrow window's drawer over the app
+ * bar, a sidebar menu over a note's top bar. Electron applies later drag regions over earlier
+ * ones, so while one is open those rows stop dragging rather than rely on regions being taken
+ * in paint order. (`#root` outweighs the rows' rule, whose `#root > .banner` makes it an id's.)
+ */
+:root[data-titlebar='compact']
+  #root
+  .notes-app[data-drawer='open']
+  :is(.app-bar, .home, .tags-page-top),
+:root[data-titlebar='compact']:has(
+    #root .sidebar :is(.menu, [role='menu'], [role='dialog'], [role='listbox'])
+  )
+  :is(.note-top, .pm-graph-bar, .settings-bar, .app-bar, .home, .tags-page-top) {
+  -webkit-app-region: no-drag;
+}
+
+/*
+ * With no note open, the empty home beside the sidebar drags the window (Ryan's review of #192,
+ * finding 6); its links and buttons click, as anywhere. It starts clear of the sidebar's resize
+ * strip, whose 4 px over it are earlier in the DOM, so the home's drag would win there (A1147).
+ */
+:root[data-titlebar='compact'] .home {
+  margin-inline-start: 4px;
+}
+
+/*
+ * The Tags page's top, its title and filter, drags the window as a page's title bar does (R2-8
+ * of Ryan's review of #193); the filter still types. Clear of the sidebar's resize strip, as the
+ * home is. The tables below it scroll, and set no region (UNDER_ROWS).
+ */
+:root[data-titlebar='compact'] .tags-page-top {
+  margin-inline-start: 4px;
+}
+
+/* The sidebar's header is the first row: as tall as the note's top bar, the lights before the brand. */
+:root[data-titlebar='compact'] .notes-app:not([data-sidebar='collapsed']) .sb-head {
+  box-sizing: border-box;
+  height: var(--pm-titlebar-row);
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: var(--pm-titlebar-inset);
+}
+
+/* The rail: a column of buttons. */
+.notes-app[data-sidebar='collapsed'] .sb-head {
+  flex-direction: column;
+}
+
+/*
+ * With the rail, the lights sit in the note's title row (T52, superseding A949): the row runs the
+ * window's width, over the rail's column too, so the rail is painted from below it (its border
+ * and the row's line drawn as backgrounds) and its buttons start there. Whatever the row holds
+ * beside the rail (the note's crumbs, the graph's bar) starts after the lights' inset.
+ */
+:root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed'] .sidebar {
+  /* The row's colour over the rail: the page's beside Home, Trash and the graph. */
+  --pm-rail-row: var(--pm-bg);
+  padding-right: 1px;
+  border-right: 0;
+  background:
+    linear-gradient(var(--pm-border), var(--pm-border)) right bottom / 1px
+      calc(100% - var(--pm-titlebar-row)) no-repeat,
+    linear-gradient(
+      var(--pm-rail-row) var(--pm-titlebar-row),
+      var(--pm-border-soft) 0 calc(var(--pm-titlebar-row) + 1px),
+      var(--pm-sidebar) 0
+    );
+}
+
+/* Beside a note, its title bar's colour, the sidebar's (PEN-135 item 7). */
+:root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed']:has(.note-top) .sidebar {
+  --pm-rail-row: var(--pm-sidebar);
+}
+
+:root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed'] .sb-head {
+  padding-top: calc(var(--pm-titlebar-row) + 1px);
+}
+
+:root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed'] .note-top {
+  padding-left: calc(var(--pm-titlebar-inset) - var(--pm-rail) - 1px);
+}
+
+/* Back and Forward after the lights: the hairline before them ends the lights' room (A1135). */
+:root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed'] .note-top-lead {
+  border-left: 1px solid var(--pm-border-soft);
+}
+
+:root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed'] .pm-graph-bar {
+  box-sizing: border-box;
+  min-height: calc(var(--pm-titlebar-row) + 1px);
+  padding-left: calc(var(--pm-titlebar-inset) - var(--pm-rail) - 1px);
+}
+
+/*
+ * The sidebar's head with the lights before Back and Forward: no room left for the name beside
+ * the mark, which stays for screen readers.
+ */
+:root[data-titlebar='compact'] .notes-app:not([data-sidebar='collapsed']) .brand > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* A note window's top bar (T45): the lights before Back and Forward. */
+:root[data-titlebar='compact'] .note-window .note-top {
+  padding-left: var(--pm-titlebar-inset);
+}
+
+/*
+ * Settings: its bar is the first row, and Back starts after the lights. The bar spans the window
+ * with the centred column's gutter as its padding (T51, A942), and only the content scrolls, so
+ * no page scrollbar is counted in 100vw.
+ */
+:root[data-titlebar='compact'] .settings-shell {
+  padding-top: 0;
+}
+
+:root[data-titlebar='compact'] .settings-bar {
+  box-sizing: border-box;
+  /* The lights' row's height, so Back and Forward sit centred beside them (T52 item 12). */
+  min-height: var(--pm-titlebar-row);
+  padding-left: max(var(--settings-gutter, 0px), var(--pm-titlebar-inset));
+}
+
+@media (max-width: 700px) {
+  /* A narrow window: the app bar is the first row, and Settings' bar spans the window. */
+  :root[data-titlebar='compact'] .app-bar {
+    padding-left: var(--pm-titlebar-inset);
+  }
+
+  /* "← Notes" reaches 0.5rem into its bar. */
+  :root[data-titlebar='compact'] .settings-bar {
+    padding-left: calc(var(--pm-titlebar-inset) + 0.5rem);
+  }
+}
+
+/*
+ * Settings → Symbols (T44, A743): one row per shortcut slot, the slot's keys, the glyph and
+ * colour pickers and the row's actions, all one control high (T51 items 9–11, A939). The
+ * list keeps a gap below it so a focused control's ring never reaches the buttons under it.
+ */
+.symbol-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.75rem 0 1.25rem;
+  padding: 0;
+  list-style: none;
+}
+
+.symbol-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  min-height: var(--pm-control);
+}
+
+.symbol-keys {
+  flex: none;
+  min-width: 3.2rem;
+  color: var(--pm-muted);
+  font: 0.75rem var(--pm-mono);
+}
+
+.symbol-actions {
+  display: flex;
+  flex: none;
+  gap: 0.15rem;
+}

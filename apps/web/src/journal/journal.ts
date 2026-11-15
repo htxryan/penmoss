@@ -3,34 +3,11 @@
  * time zone setting, America/Chicago by default), the user's templates, and
  * opening a period's note, creating it from its template when needed.
  */
-import {
-  DEFAULT_DAILY_TEMPLATE,
-  DEFAULT_TIME_ZONE,
-  DEFAULT_WEEKLY_TEMPLATE,
-  isoWeek,
-  isTimeZone,
-  todayIn,
-  type PeriodKind,
-  type PlainDate,
-} from '@penmoss/core/periodic';
+import { isoWeek, todayIn, type PeriodKind, type PlainDate } from '@penmoss/core/periodic';
+import { templateOf, timeZoneOf } from '@penmoss/core/settings';
 import type { Notes } from '../notes/service';
 import { navigate, notePath } from '../router';
 import type { Workspace } from '../workspace/service';
-
-export const TIME_ZONE_SETTING = 'timeZone';
-export const templateSetting = (kind: PeriodKind) => `template.${kind}`;
-
-/** The user's time zone setting, or the default when unset or unknown here. */
-export function timeZoneOf(settings: Record<string, unknown>): string {
-  const zone = settings[TIME_ZONE_SETTING];
-  return typeof zone === 'string' && isTimeZone(zone) ? zone : DEFAULT_TIME_ZONE;
-}
-
-export function templateOf(settings: Record<string, unknown>, kind: PeriodKind): string {
-  const template = settings[templateSetting(kind)];
-  if (typeof template === 'string') return template;
-  return kind === 'daily' ? DEFAULT_DAILY_TEMPLATE : DEFAULT_WEEKLY_TEMPLATE;
-}
 
 export function today(settings: Record<string, unknown>, now: Date = new Date()): PlainDate {
   return todayIn(timeZoneOf(settings), now);

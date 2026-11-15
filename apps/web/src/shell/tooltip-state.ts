@@ -5,9 +5,7 @@ import {
   type TooltipDelayChoice,
 } from '@penmoss/core/tooltips';
 import { useSyncExternalStore } from 'react';
-import { useSourcesState } from '../sources/hooks';
-import { useWorkspace } from '../workspace/hooks';
-import type { Workspace } from '../workspace/service';
+import { useAppWorkspace } from '../sources/hooks';
 
 /**
  * Show Tooltips After (PEN-70, A1247): how long the mouse rests on a control before its
@@ -24,9 +22,7 @@ export function useTooltipDelay(): {
   /** Settings can change now: this device's copy is read (until then they are only defaults). */
   readonly canChange: boolean;
 } {
-  const inScope = useWorkspace();
-  const sources = useSourcesState();
-  const workspace: Workspace = sources?.root.workspace ?? inScope;
+  const workspace = useAppWorkspace();
   // Re-renders when the settings change, here or by sync.
   const { loaded } = useSyncExternalStore(
     workspace.subscribe,

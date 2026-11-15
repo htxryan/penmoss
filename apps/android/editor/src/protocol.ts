@@ -194,11 +194,6 @@ export type ToEditor =
       /** Edits this device made that the server has not confirmed yet, oldest first. */
       readonly pending: readonly StoredUpdate[];
       readonly editable: boolean;
-      /**
-       * The notebook the app sees the note in (T43, A766): a notebook's folder id, or
-       * `default`. A link's new note made from it records it, as it is filed beside it.
-       */
-      readonly notebook?: string;
     }
   | { readonly v: 1; readonly type: 'remote'; readonly noteId: string; readonly update: string }
   /** Send the edits waiting for the batch timer now (the app is going to the background). */
@@ -246,8 +241,6 @@ export type ToEditor =
       readonly base: readonly StoredUpdate[];
       readonly edits: readonly StoredUpdate[];
       readonly into?: CopyInto;
-      /** The original's notebook as the app sees it (T43, A766): the copy's when the note does not say. */
-      readonly notebook?: string;
     }
   /** The answer to `attachment` and its bytes: the app stored them, or not (A311). */
   | {
@@ -303,13 +296,7 @@ export type ToEditor =
    * Make a new, empty note with this id, as the web's New note does (T38): the
    * page builds it and answers `created`, so a note made offline needs no server.
    */
-  | {
-      readonly v: 1;
-      readonly type: 'create';
-      readonly noteId: string;
-      /** The notebook of the folder it is made in (T43, A766), recorded in the note itself. */
-      readonly notebook?: string;
-    }
+  | { readonly v: 1; readonly type: 'create'; readonly noteId: string }
   /**
    * Make the daily or weekly note for `day` (or today in `timeZone` when null)
    * from `template`, exactly as the web does (T40 P5): the page resolves the
@@ -1008,11 +995,6 @@ export function parseToEditor(raw: string): ToEditor | null {
   }
   const noteId = value['noteId'];
   if (!isString(noteId) || !NOTE_ID.test(noteId)) return null;
-  // An optional notebook (T43, A766): a notebook id when present, else the message is refused.
-  const rawNotebook = value['notebook'];
-  if (rawNotebook !== undefined && (!isString(rawNotebook) || !NOTE_ID.test(rawNotebook)))
-    return null;
-  const notebook = rawNotebook === undefined ? {} : { notebook: rawNotebook };
   switch (value['type']) {
     case 'open': {
       const synced = storedUpdates(value['synced']);
@@ -1025,7 +1007,6 @@ export function parseToEditor(raw: string): ToEditor | null {
         synced,
         pending,
         editable: value['editable'],
-        ...notebook,
       };
     }
     case 'remote': {
@@ -1069,8 +1050,7 @@ export function parseToEditor(raw: string): ToEditor | null {
       const edits = storedUpdates(value['edits']);
       if (!base || !edits || edits.length === 0) return null;
       const raw = value['into'];
-      if (raw === undefined)
-        return { v: 1, type: 'copyConflicts', noteId, base, edits, ...notebook };
+      if (raw === undefined) return { v: 1, type: 'copyConflicts', noteId, base, edits };
       if (!isRecord(raw)) return null;
       const target = raw['noteId'];
       const updates = storedUpdates(raw['updates']);
@@ -1082,7 +1062,6 @@ export function parseToEditor(raw: string): ToEditor | null {
         base,
         edits,
         into: { noteId: target, updates },
-        ...notebook,
       };
     }
     case 'attachmentStored': {
@@ -1091,7 +1070,7 @@ export function parseToEditor(raw: string): ToEditor | null {
       return { v: 1, type: 'attachmentStored', noteId, path, ok };
     }
     case 'create':
-      return { v: 1, type: 'create', noteId, ...notebook };
+      return { v: 1, type: 'create', noteId };
     case 'periodicNav':
       return { v: 1, type: 'periodicNav', noteId };
     case 'setTag': {

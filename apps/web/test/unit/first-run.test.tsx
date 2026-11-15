@@ -103,12 +103,19 @@ function github(
           : { ok: true, via: 'git', value: repo(name, { empty: true }) },
       );
     },
+    // No sign-in here: its status is null, as from a window that may not sign in.
+    signIn: {
+      status: () => Promise.resolve(null),
+      start: () => Promise.resolve(null),
+      cancel: () => Promise.resolve(null),
+      onChange: () => () => undefined,
+    },
   };
   return { browse, calls };
 }
 
-/** The Mac's git, with no notebook until `add` makes one; a GitHub stand-in when given one. */
-function macGit(browse?: DesktopGitHubBrowse) {
+/** The Mac's git, with no notebook until `add` makes one, and a GitHub stand-in. */
+function macGit(browse: DesktopGitHubBrowse = github().browse) {
   const listed: GitNotebookInfo[] = [];
   const listeners = new Set<() => void>();
   const add = vi.fn(
@@ -132,7 +139,7 @@ function macGit(browse?: DesktopGitHubBrowse) {
       return () => listeners.delete(listener);
     },
     add,
-    ...(browse ? { github: browse } : {}),
+    github: browse,
   } as unknown as DesktopGit;
   return { git, add };
 }
@@ -158,7 +165,17 @@ function feed() {
   };
 }
 
-/** A notebook source as the app would make it (its engine is not this test's). */
+/** A sync feed whose first sync has landed. */
+function synced() {
+  const done = feed();
+  done.set('synced');
+  return done;
+}
+
+/**
+ * A notebook source as the app would make it (its engine is not this test's): its first sync
+ * landed unless `sync` tells it.
+ */
 const fakeSource =
   (sync?: ReturnType<typeof feed>, syncNow = vi.fn()) =>
   (each: GitNotebookInfo) =>
@@ -167,7 +184,8 @@ const fakeSource =
       id: each.notebookId,
       name: each.name,
       info: each,
-      ...(sync ? { feed: sync.feed, syncNow } : {}),
+      feed: (sync ?? synced()).feed,
+      syncNow,
       notes: { knows: () => false, list: () => [], onStored: () => () => undefined },
       start: () => undefined,
       stop: () => undefined,
@@ -175,14 +193,9 @@ const fakeSource =
       storedElsewhere: () => Promise.resolve(),
     }) as unknown as Source;
 
-/** What the app shows once open: its root and Journal notebook, never missing. */
+/** What the app shows once open: its Journal notebook, never missing. */
 function TheApp() {
-  const state = useSourcesState();
-  return (
-    <p data-testid="the-app">
-      {state ? `${state.root.id} ${state.journal.id}` : 'no notebook in the app'}
-    </p>
-  );
+  return <p data-testid="the-app">{useSourcesState().journal.id}</p>;
 }
 
 /**
@@ -242,15 +255,13 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function render(sources: Sources | null, capture = false) {
+function render(sources: Sources, capture = false) {
   const gate = (
     <FirstRunGate capture={capture}>
       <TheApp />
     </FirstRunGate>
   );
-  act(() =>
-    root.render(sources ? <SourcesProvider sources={sources}>{gate}</SourcesProvider> : gate),
-  );
+  act(() => root.render(<SourcesProvider sources={sources}>{gate}</SourcesProvider>));
 }
 
 const $ = (testId: string) => host.querySelector<HTMLElement>(`[data-testid="${testId}"]`);
@@ -328,11 +339,12 @@ describe('the first run (A1030, First Run C)', () => {
     expect(screen()).toBe('welcome');
   });
 
-  it('without GitHub, a new notebook is a pasted address, named, then the app opens it', async () => {
+  it('Paste a URL: a new notebook is a pasted address, named, then the app opens it', async () => {
     const { add } = await start();
     await press('first-run-start');
     await press('first-run-continue');
-    // No GitHub browsing in this window: straight to Paste a URL.
+    await choose('first-run-way-url');
+    await press('first-run-continue');
     expect(screen()).toBe('url');
     expect(host.textContent).toContain('Step 2 of 3');
     await type('first-run-url-input', 'git@github.com:me/field-notes.git');
@@ -345,7 +357,7 @@ describe('the first run (A1030, First Run C)', () => {
     expect($('first-run-place')!.textContent).toContain('Root');
     await type('first-run-name-input', 'Journal');
     await press('first-run-make');
-    await vi.waitFor(() => expect($('the-app')?.textContent).toBe('NB1 NB1'));
+    await vi.waitFor(() => expect($('the-app')?.textContent).toBe('NB1'));
     expect($('first-run')).toBeNull();
     expect(add).toHaveBeenLastCalledWith(
       expect.objectContaining({ remote: 'git@github.com:me/field-notes.git', name: 'Journal' }),
@@ -359,6 +371,8 @@ describe('the first run (A1030, First Run C)', () => {
       error: { code: 'auth', message: 'The host refused the sign-in.', hostMessage: 'denied' },
     } as never);
     await press('first-run-start');
+    await press('first-run-continue');
+    await choose('first-run-way-url');
     await press('first-run-continue');
     await type('first-run-url-input', 'git@example.com:me/notes.git');
     await press('first-run-continue');
@@ -378,6 +392,8 @@ describe('the first run (A1030, First Run C)', () => {
     } as never);
     await press('first-run-start');
     await press('first-run-continue');
+    await choose('first-run-way-url');
+    await press('first-run-continue');
     await type('first-run-url-input', 'git@example.com:me/notes.git');
     await press('first-run-continue');
     expect(screen()).toBe('git-missing');
@@ -391,9 +407,12 @@ describe('the first run (A1030, First Run C)', () => {
     await press('first-run-start');
     await choose('first-run-existing');
     await press('first-run-continue');
+    // Your repositories, then Paste a URL Instead.
+    await vi.waitFor(() => expect(screen()).toBe('list'));
+    await press('first-run-url-instead');
     await type('first-run-url-input', 'git@github.com:me/kept.git');
     await press('first-run-continue');
-    await vi.waitFor(() => expect($('the-app')?.textContent).toBe('NB1 NB1'));
+    await vi.waitFor(() => expect($('the-app')?.textContent).toBe('NB1'));
     expect(add).toHaveBeenCalledTimes(1);
     expect(add.mock.calls[0]![0]).not.toHaveProperty('name');
   });
@@ -424,7 +443,7 @@ describe('the first run (A1030, First Run C)', () => {
     await press('first-run-create-change');
     expect($('first-run-create-owner')).not.toBeNull();
     await press('first-run-create-submit');
-    await vi.waitFor(() => expect($('the-app')?.textContent).toBe('NB1 NB1'));
+    await vi.waitFor(() => expect($('the-app')?.textContent).toBe('NB1'));
     expect(calls).toContainEqual(['create', 'ryan', 'used-2']);
     expect(add).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -494,7 +513,7 @@ describe('the first run (A1030, First Run C)', () => {
     expect($$('first-run-notebook').map((each) => each.dataset['dir'])).toEqual(['home']);
     expect($('first-run-filter-count')?.textContent).toBe('1 of 3 match.');
     await press($$('first-run-notebook-open')[0]!);
-    await vi.waitFor(() => expect($('the-app')?.textContent).toBe('NB1 NB1'));
+    await vi.waitFor(() => expect($('the-app')?.textContent).toBe('NB1'));
     expect(add).toHaveBeenLastCalledWith(
       expect.objectContaining({ remote: 'https://github.com/ryan/kept.git', dir: 'home' }),
     );
@@ -721,6 +740,8 @@ describe('the first run (A1030, First Run C)', () => {
     render(sources);
     await press('first-run-start');
     await press('first-run-continue');
+    await choose('first-run-way-url');
+    await press('first-run-continue');
     await type('first-run-url-input', 'git@github.com:me/notes.git');
     await press('first-run-continue');
     await press('first-run-make');
@@ -742,7 +763,7 @@ describe('the first run (A1030, First Run C)', () => {
     expect(syncNow).toHaveBeenCalled();
     expect($('first-run-setup')?.dataset['state']).toBe('syncing');
     act(() => sync.set('synced'));
-    await vi.waitFor(() => expect($('the-app')?.textContent).toBe('NB1 NB1'));
+    await vi.waitFor(() => expect($('the-app')?.textContent).toBe('NB1'));
   });
 
   it('says to open the Mac app where there is no git', () => {
@@ -766,13 +787,8 @@ describe('the first run (A1030, First Run C)', () => {
     const sources = new Sources({ git, makeGit: fakeSource() });
     await sources.load();
     render(sources);
-    expect($('the-app')?.textContent).toBe('NB1 NB1');
+    expect($('the-app')?.textContent).toBe('NB1');
     expect($('first-run')).toBeNull();
-  });
-
-  it('gets out of the way without a registry (a view rendered over one source)', () => {
-    render(null);
-    expect($('the-app')?.textContent).toBe('no notebook in the app');
   });
 });
 

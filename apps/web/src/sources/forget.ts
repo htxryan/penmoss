@@ -3,7 +3,7 @@
  * engine's copy are deleted in this browser profile once its source has stopped. Main deletes
  * the clone and its secrets. Other windows close their connections on `versionchange`.
  */
-import { engineDbName } from './engine-store';
+import { engineDbName } from '@penmoss/git-notebook/host';
 import { gitStoreName } from './git-source';
 
 function deleteDatabase(name: string): Promise<void> {

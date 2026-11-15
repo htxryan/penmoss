@@ -40,16 +40,13 @@ concurrency:
 
 env:
   COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
-  # D65: the build number is the run number plus this. The public repository's runs started again
-  # at 1 on 7 Nov 2026, after about 490 in the private one, and builds must keep counting up: the
-  # Mac's update feed and Android's versionCode never go back.
-  PENMOSS_RUN_OFFSET: '1000'
 
 # Where each job runs (A1348, docs/ci.md §1). The repository is public, so GitHub's standard
 # hosted runners cost nothing, macOS's included: `ubuntu-latest` runs pick, every test job and
-# the publishing jobs, and `macos-latest` the budgets and the dmg. A fork's pull request runs once
-# a maintainer approves it (docs/ci.md §9). The signing jobs run on pushes to main only, with
-# their secrets in environments limited to main (A405). No job runs on Ryan's self-hosted Macs.
+# the publishing jobs, and `macos-latest` the dmg. A fork's pull request runs once a maintainer
+# approves it (docs/ci.md §9). The signing jobs run on pushes to main only, with their secrets in
+# environments limited to main (A405). No job runs on Ryan's self-hosted Macs. The Mac app and the
+# public APK are built by build-mac.yml and build-apk.yml, which release.yml calls too (A1481).
 # Every runs-on is static, and .github/scripts/runner-policy.mjs (task ci:lint) holds all of this.
 jobs:
   pick:
@@ -174,9 +171,9 @@ jobs:
 
       - name: Install Chromium, and its system libraries if the image lacks any
         timeout-minutes: 15
-        run: |
-          pnpm --filter @penmoss/site exec playwright install chromium
-          sh .github/scripts/system-deps.sh @penmoss/site
+        uses: ./.github/actions/playwright
+        with:
+          package: '@penmoss/site'
 
       - name: Build the site and check it as served
         run: |
@@ -184,19 +181,25 @@ jobs:
           export PENMOSS_SITE_PORT
           task site:test
 
-  e2e:
-    name: E2E smoke
+  e2e-shard:
+    name: E2E smoke (shard ${{ matrix.shard }} of 3)
     if: needs.pick.outputs.web == 'true'
-    # A fresh hosted machine each time (A1235), so the default ports are free.
+    # A1482: the smoke suite in three shards, each on a fresh hosted machine (A1235), so the
+    # default ports are free. `fullyParallel` splits by test, so the shards come out even. The
+    # required check is the `e2e` job below, which needs all three.
     needs: pick
     runs-on: ubuntu-latest
-    # A620: on Ubuntu the suite took 14–16 minutes on 26 Oct 2026 (130–140 tests, then on one
-    # worker), and apt fetched Chromium's system packages at 20–40 kB/s that day, so the install
-    # took 9–15 minutes and three main runs were cancelled at 20. Each step has its own limit
-    # below, so a hang still fails fast.
+    # A620: on Ubuntu the whole suite took 14–16 minutes on 26 Oct 2026, and apt fetched
+    # Chromium's system packages at 20–40 kB/s that day, so the install took 9–15 minutes and
+    # three main runs were cancelled at 20. Each step has its own limit below, so a hang still
+    # fails fast.
     timeout-minutes: 45
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -208,29 +211,51 @@ jobs:
 
       - name: Install Chromium, and its system libraries if the image lacks any
         timeout-minutes: 15
-        run: |
-          task e2e:install
-          sh .github/scripts/system-deps.sh @penmoss/web
+        uses: ./.github/actions/playwright
 
-      - name: Playwright E2E (smoke)
-        # Twice the 16 minutes it took on Ubuntu (A620) leaves room for retries.
-        timeout-minutes: 30
-        # Frame-rate budgets (@perf) are measured locally: a shared 4-CPU runner's fps says
-        # nothing about Ryan's machines, and the budget stays enforced by `task e2e`. The
-        # T31 budgets (@budget) run in their own job below. Two workers, not the Mac's four
-        # (A1235): with both of the suite's servers on the hosted runner's few cores, four at once
-        # timed out pages ("Target page, context or browser has been closed") at random.
+      - name: Playwright E2E (smoke), this shard
+        # Twice a third of the 16 minutes the whole suite took on Ubuntu (A620), with room for
+        # retries.
+        timeout-minutes: 20
+        # The chromium project alone: it leaves out the timed specs. Frame-rate budgets (@perf)
+        # are measured locally, as a shared 4-CPU runner's fps says nothing about Ryan's
+        # machines, and the T31 budgets (@budget) run in their own job below; `task e2e`'s
+        # second pass, the timed project, would start both web servers to run nothing. Two
+        # workers, not the Mac's four (A1235): with both of the suite's servers on the hosted
+        # runner's few cores, four at once timed out pages ("Target page, context or browser
+        # has been closed") at random.
         env:
           PENMOSS_E2E_WORKERS: '2'
-        run: task e2e -- --grep-invert "@perf|@budget"
+          SHARD: ${{ matrix.shard }}
+        run: pnpm --filter @penmoss/web exec playwright test --project=chromium --shard="$SHARD/3"
 
-      - name: Upload Playwright report
+      - name: Upload this shard's Playwright report
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: apps/web/playwright-report/
           retention-days: 7
+
+  e2e:
+    name: E2E smoke
+    # The check ruleset "main: CI checks" requires (A1181, A1482): it passes only when all three
+    # shards passed, and fails when any failed or was cancelled. Skipped, as the shards are, when
+    # the change can't affect the web app (A1095).
+    needs: [pick, e2e-shard]
+    if: always() && needs.pick.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Every shard passed
+        env:
+          RESULT: ${{ needs.e2e-shard.result }}
+        run: |
+          if [ "$RESULT" != success ]; then
+            echo "::error::E2E smoke's shards ended $RESULT: each failed shard's report is its playwright-report-<n> artifact."
+            exit 1
+          fi
 
   budgets:
     name: Performance budgets
@@ -257,20 +282,16 @@ jobs:
         with:
           playwright-cache: 'true'
 
-      - name: Search budget (T22, the offline index)
-        run: pnpm --filter @penmoss/sync-client perf
-
-      - name: Unit-level budgets (A1244)
-        run: pnpm -r --workspace-concurrency=1 --if-present budgets
+      - name: Unit-level budgets (A1244) and the search budget (T22, the offline index)
+        run: task budgets:run
 
       - name: Install Chromium, and its system libraries if the image lacks any
         timeout-minutes: 15
-        run: |
-          task e2e:install
-          sh .github/scripts/system-deps.sh @penmoss/web
+        uses: ./.github/actions/playwright
 
+      # The timed project alone, one test at a time; the chromium project leaves the budgets out.
       - name: Typing and note-switch budgets (T31)
-        run: task e2e -- --grep @budget
+        run: pnpm --filter @penmoss/web exec playwright test --project=timed --grep @budget
 
       - name: Upload Playwright report
         if: failure()
@@ -369,27 +390,11 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      # The committed gradle-wrapper.jar must be one Gradle published.
-      - uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
-
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+      # The wrapper checked, Java, the SDK, and Gradle's and Robolectric's downloads (~/.m2),
+      # which this job saves for the others.
+      - uses: ./.github/actions/android-toolchain
         with:
-          distribution: temurin
-          java-version: '21'
-
-      # Gradle's dependencies and wrapper, and Robolectric's Android jars (~/.m2).
-      - name: Cache Gradle and Robolectric's downloads
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            ~/.m2/repository
-          key: gradle-${{ runner.os }}-${{ hashFiles('apps/android/**/*.gradle.kts', 'apps/android/gradle/libs.versions.toml', 'apps/android/gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: gradle-${{ runner.os }}-
-
-      # The command-line tools, platform 37 and build tools, cached (.github/actions/android-sdk).
-      - uses: ./.github/actions/android-sdk
+          robolectric: 'true'
 
       - name: Android tests
         run: task android:test
@@ -413,6 +418,7 @@ jobs:
           name: android-test-reports
           path: |
             apps/android/engine-bridge/build/reports/tests/
+            apps/android/engine-git/build/reports/tests/
             apps/android/app/build/reports/tests/
           retention-days: 7
 
@@ -425,86 +431,17 @@ jobs:
     name: Public APK (release-signed with the sideload key)
     # On main, the public APK (P8, A1187): the release build of app.penmoss, signed with the
     # stable sideload key (A400) and numbered by build, so each published APK installs over the
-    # last. On a hosted runner (A1348), which is thrown away after the job. Only once the
-    # android job's tests have passed.
+    # last (build-apk.yml, A1481). Only once the android job's tests have passed.
     needs: [pick, android]
     if: >-
-      (github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository) &&
       github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       needs.pick.outputs.android-app == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
     permissions:
       contents: read
-    # The sideload key and password live in this environment, limited to main (A405).
-    environment: android-sideload
-    steps:
-      - name: Build number (run number + PENMOSS_RUN_OFFSET, D65)
-        run: echo "PENMOSS_RUN=$((GITHUB_RUN_NUMBER + PENMOSS_RUN_OFFSET))" >> "$GITHUB_ENV"
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: ./.github/actions/setup
-
-      # The committed gradle-wrapper.jar must be one Gradle published.
-      - uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
-
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
-        with:
-          distribution: temurin
-          java-version: '21'
-
-      - name: Cache Gradle's downloads
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('apps/android/**/*.gradle.kts', 'apps/android/gradle/libs.versions.toml', 'apps/android/gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: gradle-${{ runner.os }}-
-
-      # The command-line tools, platform 37 and build tools, cached (.github/actions/android-sdk).
-      - uses: ./.github/actions/android-sdk
-
-      # The key exists only in this step's runner temp folder, and is removed at the end.
-      - name: The public APK, release-signed with the sideload key
-        env:
-          KEYSTORE_B64: ${{ secrets.PENMOSS_SIDELOAD_KEYSTORE_B64 }}
-          PENMOSS_SIDELOAD_PASSWORD: ${{ secrets.PENMOSS_SIDELOAD_PASSWORD }}
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-        run: |
-          # P5 (A1188): X.Y.(Z+1)-alpha.<build> from the newest v* tag; the release jobs read it
-          # from version.txt beside the APK.
-          version="$(node .github/scripts/releases.mjs version --run "$PENMOSS_RUN")"
-          umask 077
-          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/sideload.jks"
-          export PENMOSS_SIDELOAD_KEYSTORE="$RUNNER_TEMP/sideload.jks"
-          export PENMOSS_VERSION_CODE="$PENMOSS_RUN" PENMOSS_VERSION_NAME="$version"
-          task android:apk:sideload
-          echo "$version" > apps/android/app/build/outputs/apk/release/version.txt
-          rm -f "$RUNNER_TEMP/sideload.jks"
-          # Not debuggable, app.penmoss, v2 or later, and the sideload key's certificate.
-          bash .github/scripts/apk-check.sh apps/android/app/build/outputs/apk/release/app-release.apk
-
-      - name: Upload the public APK
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: penmoss-android-sideload
-          path: |
-            apps/android/app/build/outputs/apk/release/app-release.apk
-            apps/android/app/build/outputs/apk/release/version.txt
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Remove the sideload key and stop Gradle
-        if: always()
-        run: |
-          rm -f "$RUNNER_TEMP/sideload.jks"
-          if [ -x apps/android/gradlew ]; then apps/android/gradlew -p apps/android --stop; fi
+    uses: ./.github/workflows/build-apk.yml
+    with:
+      artifact-name: penmoss-android-sideload
+    secrets: inherit
 
   android-emulator:
     name: Android app on an emulator (instrumented tests)
@@ -535,29 +472,12 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      # The committed gradle-wrapper.jar must be one Gradle published.
-      - uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
-
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+      # The android job's Gradle cache, which that job saves, and its SDK with the emulator, adb
+      # and the API 37 image. The image (about 1.5 GB) is downloaded on every run and never cached.
+      - uses: ./.github/actions/android-toolchain
         with:
-          distribution: temurin
-          java-version: '21'
-
-      # The android job's cache; that job saves it.
-      - name: Restore Gradle's downloads
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            ~/.m2/repository
-          key: gradle-${{ runner.os }}-${{ hashFiles('apps/android/**/*.gradle.kts', 'apps/android/gradle/libs.versions.toml', 'apps/android/gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: gradle-${{ runner.os }}-
-
-      # The android job's SDK, with the emulator, adb and the API 37 image. The image (about
-      # 1.5 GB) is downloaded on every run and never cached.
-      - uses: ./.github/actions/android-sdk
-        with:
+          cache: restore
+          robolectric: 'true'
           packages: platform-tools emulator system-images;android-37.0;google_apis;x86_64
 
       - name: The CI AVD
@@ -599,8 +519,6 @@ jobs:
     # ships (A1349, PEN-128): a merge of only CI, tests or docs builds and tests, and publishes
     # nothing; its pull requests' notes go with the next build that ships.
     if: >-
-      (github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository) &&
       github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       needs.pick.outputs.ships == 'true'
     needs: [pick, android-sideload]
@@ -614,13 +532,14 @@ jobs:
       group: releases
       cancel-in-progress: false
     steps:
-      - name: Build number (run number + PENMOSS_RUN_OFFSET, D65)
-        run: echo "PENMOSS_RUN=$((GITHUB_RUN_NUMBER + PENMOSS_RUN_OFFSET))" >> "$GITHUB_ENV"
-
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          sparse-checkout: .github/scripts
+          sparse-checkout: |
+            .github/scripts
+            .github/actions/build-number
           persist-credentials: false
+
+      - uses: ./.github/actions/build-number
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -653,128 +572,27 @@ jobs:
   mac:
     name: Mac app dmg
     # A403: every merge to main, and workflow_dispatch on any branch, packages the Mac app on
-    # GitHub's hosted Mac (A1348), where main's build is signed with the Developer ID (A406).
-    # Nothing else waits for this job, and a newer build of the same branch cancels one still
-    # waiting or running. A1095: on main, only when something the Mac app is built from
+    # GitHub's hosted Mac (A1348, build-mac.yml), where main's build is signed with the Developer
+    # ID (A406). Nothing else waits for this job, and a newer build of the same branch cancels one
+    # still waiting or running. A1095: on main, only when something the Mac app is built from
     # changed. A dispatch always builds it, with or without the CI jobs (pick is skipped without
     # `ci`).
     needs: pick
     if: >-
-      (github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository) &&
       !cancelled() && (github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' && needs.pick.outputs.desktop == 'true'))
-    runs-on: macos-latest
-    timeout-minutes: 60
     permissions:
       contents: read
-    # The signing secrets live in this environment, limited to main; other builds get none
-    # (A405, docs/ci.md §7).
-    environment: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'mac-signing' || '' }}
     concurrency:
       group: mac-build-${{ github.ref }}
       cancel-in-progress: true
-    steps:
-      - name: Build number (run number + PENMOSS_RUN_OFFSET, D65)
-        run: echo "PENMOSS_RUN=$((GITHUB_RUN_NUMBER + PENMOSS_RUN_OFFSET))" >> "$GITHUB_ENV"
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: ./.github/actions/setup
-
-      # P5 (A1188): X.Y.(Z+1)-alpha.<build> counted from the newest v* tag (0.2.0-alpha.<build>
-      # before any). About Penmoss shows it, and the alpha feed names it.
-      - name: The app version
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-        run: |
-          version="$(node .github/scripts/releases.mjs version --run "$PENMOSS_RUN")"
-          echo "PENMOSS_APP_VERSION=$version" >> "$GITHUB_ENV"
-          echo "Version $version"
-
-      # A Developer ID certificate only ever comes from these secrets, never from Ryan's
-      # keychain. Without one the app is signed ad hoc (electron-builder.config.cjs). They belong
-      # in the `mac-signing` environment, which only main's pushes can use (docs/desktop.md §3).
-      - name: Signing and notarisation credentials, if the secrets exist
-        env:
-          HAS_CERTIFICATE: ${{ secrets.PENMOSS_MAC_CSC_LINK != '' }}
-          NOTARY_KEY: ${{ secrets.PENMOSS_MAC_APPLE_API_KEY }}
-        run: |
-          if [ "$HAS_CERTIFICATE" = true ]; then
-            echo "Signing with the Developer ID certificate in PENMOSS_MAC_CSC_LINK."
-          else
-            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
-            echo "No certificate secret: signing ad hoc."
-          fi
-          if [ -n "$NOTARY_KEY" ]; then
-            umask 077
-            printf '%s\n' "$NOTARY_KEY" > "$RUNNER_TEMP/penmoss-notary.p8"
-            echo "APPLE_API_KEY=$RUNNER_TEMP/penmoss-notary.p8" >> "$GITHUB_ENV"
-          fi
-
-      - name: Package the app (task desktop:build, then electron-builder)
-        env:
-          CSC_LINK: ${{ secrets.PENMOSS_MAC_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.PENMOSS_MAC_CSC_KEY_PASSWORD }}
-          APPLE_API_KEY_ID: ${{ secrets.PENMOSS_MAC_APPLE_API_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.PENMOSS_MAC_APPLE_API_ISSUER }}
-          PENMOSS_BUILD_NUMBER: ${{ env.PENMOSS_RUN }}
-          # P7 (A1186): every Mac build CI makes runs on Apple Silicon and Intel Macs alike.
-          PENMOSS_MAC_ARCH: universal
-        run: |
-          # electron-builder reads an empty CSC_LINK as a path; a missing secret must be unset.
-          for name in CSC_LINK CSC_KEY_PASSWORD APPLE_API_KEY_ID APPLE_API_ISSUER; do
-            if [ -z "${!name}" ]; then unset "$name"; fi
-          done
-          unset CSC_NAME
-          rm -rf apps/desktop/dist apps/desktop/release
-          task desktop:package
-
-      # The signature, Gatekeeper's verdict, the owner check, both architectures in every binary
-      # (P7, A1186), the update feed and the dmg (.github/scripts/mac-check.sh).
-      - name: Check the signature, Gatekeeper's verdict, the architectures and the dmg
-        env:
-          HAS_CERTIFICATE: ${{ secrets.PENMOSS_MAC_CSC_LINK != '' }}
-          RUN: ${{ env.PENMOSS_RUN }}
-          VERSION: ${{ env.PENMOSS_APP_VERSION }}
-        run: |
-          bash .github/scripts/mac-check.sh
-          echo "$VERSION" > apps/desktop/release/version.txt
-
-      # The pinned model, kept between builds (packages/embed/src/manifest.ts pins it).
-      - name: Cache the pinned model
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/Library/Caches/penmoss-ci/models
-          key: penmoss-models-${{ hashFiles('packages/embed/src/manifest.ts') }}
-
-      # T75 (A1152): the app's binary as the CLI finds a note by meaning with the pinned model,
-      # and refuses semantic search without it.
-      - name: Search by meaning in the packaged app
-        run: |
-          shopt -s nullglob
-          apps=(apps/desktop/release/mac*/Penmoss.app)
-          bash .github/scripts/meaning-check.sh "${apps[0]}"
-
-      - name: Upload the dmg, and a signed build's update files (A1015, A1188)
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: penmoss-mac
-          path: |
-            apps/desktop/release/penmoss-mac-${{ env.PENMOSS_RUN }}.dmg
-            apps/desktop/release/penmoss-mac-${{ env.PENMOSS_RUN }}.zip
-            apps/desktop/release/alpha-mac.yml
-            apps/desktop/release/version.txt
-          if-no-files-found: error
-          compression-level: 0
-          retention-days: 7
-
-      - name: Remove the notarisation key
-        if: always()
-        run: rm -f "$RUNNER_TEMP/penmoss-notary.p8"
+    uses: ./.github/workflows/build-mac.yml
+    with:
+      # The signing secrets live in this environment, limited to main; other builds get none
+      # (A405, docs/ci.md §7).
+      environment: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'mac-signing' || '' }}
+      artifact-name: penmoss-mac
+    secrets: inherit
 
   mac-release:
     name: Publish the Mac app to the build's release and to alpha
@@ -786,8 +604,6 @@ jobs:
     # re-run that push run's failed or cancelled jobs (docs/desktop.md §3).
     needs: [pick, mac, android-release]
     if: >-
-      (github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository) &&
       !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       needs.pick.outputs.ships == 'true' &&
       needs.mac.result == 'success' && needs.android-release.result == 'success'
@@ -799,13 +615,14 @@ jobs:
       group: releases
       cancel-in-progress: false
     steps:
-      - name: Build number (run number + PENMOSS_RUN_OFFSET, D65)
-        run: echo "PENMOSS_RUN=$((GITHUB_RUN_NUMBER + PENMOSS_RUN_OFFSET))" >> "$GITHUB_ENV"
-
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          sparse-checkout: .github/scripts
+          sparse-checkout: |
+            .github/scripts
+            .github/actions/build-number
           persist-credentials: false
+
+      - uses: ./.github/actions/build-number
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:

@@ -339,7 +339,8 @@ class Attachments(
     /** The bytes notes' files and pictures take on this phone: kept to upload, and fetched to show (ED12). */
     fun bytesUsed(): Long = listOf(dir, cache).sumOf { folder -> folder.listFiles()?.filter { it.isFile }?.sumOf { it.length() } ?: 0L }
 
-    /** Forgets every picture's file (the cache was cleared for another account). */
+    /** Forgets every picture's file. */
+    @androidx.annotation.VisibleForTesting
     fun clearFiles() {
         dir.deleteRecursively()
         cache.deleteRecursively()

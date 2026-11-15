@@ -109,9 +109,6 @@ export function fontSettingProblem(key: string, value: unknown): string | null {
   return `${key} must be one of ${FONT_PRESETS.join(', ')}, or custom:<font name>`;
 }
 
-export const isFontSetting = (key: string): boolean =>
-  (FONT_SETTING_KEYS as readonly string[]).includes(key);
-
 /** A stored choice, or `theme` while unset or unreadable. */
 export function fontChoiceOf(
   settings: Readonly<Record<string, unknown>>,
@@ -149,9 +146,4 @@ export function fontStack(choice: FontChoice): string | null {
   const family = customFamily(choice);
   if (family !== null) return `${quoted(family)}, ${FONT_PRESET_STACKS.system}`;
   return FONT_PRESET_STACKS[choice as Exclude<FontPreset, 'theme'>];
-}
-
-/** What Settings shows for a choice: the preset's label or the custom family. */
-export function fontChoiceLabel(choice: FontChoice): string {
-  return customFamily(choice) ?? FONT_PRESET_LABELS[choice as FontPreset];
 }

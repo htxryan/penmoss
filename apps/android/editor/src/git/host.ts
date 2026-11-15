@@ -12,18 +12,30 @@
  */
 import {
   GitNotebookEngine,
-  GitTransportError,
   isLoopbackHost,
-  privateEmailAdvice,
-  NotebookError,
   NotebookOps,
   type CopyToWithhold,
   type SyncReport,
   type WriterSecrets,
 } from '@penmoss/git-notebook';
+import {
+  CLOSING_SYNC_MS,
+  describeFailure,
+  EngineStorage,
+  FRONT_PULL_GAP_MS,
+  MAX_PUSH_DELAYS,
+  ONLINE_SETTLE_MS,
+  pendingOf,
+  persistStorage,
+  RETRY_MAX_MS,
+  RETRY_MIN_MS,
+  SYNC_LIMIT_MS,
+  SyncTimeout,
+  type EngineKv,
+  type FailureWords,
+} from '@penmoss/git-notebook/host';
 import { LocalNotebook } from '@penmoss/git-notebook/local';
-import { EngineStorage, type EngineKv } from '../../../../web/src/sources/engine-store';
-import { GitRefused, type BridgeTransport } from './bridge-transport';
+import type { BridgeTransport } from './bridge-transport';
 import {
   emptyState,
   LocalServer,
@@ -66,27 +78,21 @@ export const STARTING: GitSyncStatus = {
   head: null,
 };
 
-/** The longest one sync may take in front before it is stopped and counted as offline (A859). */
-export const SYNC_LIMIT_MS = 90_000;
-/**
- * As the app leaves the screen (A825): what waits is pushed, a push already running is given
- * the time to finish; as on the Mac (#170 F8, #174 review), 10 s, after which it is stopped and
- * the app's background run pushes it soon.
- */
-export const CLOSING_SYNC_MS = 10_000;
-/** How long the network must stay up before a sync chases it (#174 review, as the Mac's). */
-export const ONLINE_SETTLE_MS = 2000;
-export const RETRY_MIN_MS = 30_000;
-export const RETRY_MAX_MS = 10 * 60_000;
-/**
- * The sync cadence (A1013): push 12 s after edits settle, pull every minute while the app is
- * visible (and on focus and open), as on the Mac. The app sends each notebook's own.
- */
-export const PUSH_DELAY_S = 12;
-export const PULL_EVERY_MIN = 1;
-/** Coming to the front pulls at most this often. */
-export const FRONT_PULL_GAP_MS = 30_000;
-const MAX_DELAYS = 5;
+// The cadence and its bounds are the Mac's (`@penmoss/git-notebook/host`): a sync in front is
+// stopped after `SYNC_LIMIT_MS`; as the app leaves the screen (A825), what waits is pushed, a
+// push already running given `CLOSING_SYNC_MS` to finish, after which it is stopped and the
+// app's background run pushes it soon. The app sends each notebook's own push and pull cadence.
+
+/** A failure in the phone's words (A824): where changes wait, and where its settings are. */
+export const ANDROID_FAILURE_WORDS: FailureWords = {
+  kept: 'Changes stay on this phone and go once it syncs.',
+  signIn: 'Check the personal access token in Settings → Git notebooks',
+  email: 'set it as this notebook’s commit email in Settings → Git notebooks',
+};
+
+/** A failure as the status says it on the phone (A824, A859). */
+export const describeAndroidFailure = (error: unknown, host: string) =>
+  describeFailure(error, host, ANDROID_FAILURE_WORDS);
 
 export interface HostOptions {
   readonly notebookId: string;
@@ -128,13 +134,6 @@ export interface HostOptions {
   /** Tests shorten CLOSING_SYNC_MS. */
   readonly closingSyncMs?: number;
   readonly log?: (message: string) => void;
-}
-
-class SyncTimeout extends Error {
-  constructor(ms: number) {
-    super(`The git host did not answer within ${Math.round(ms / 1000)} s.`);
-    this.name = 'SyncTimeout';
-  }
 }
 
 export class AndroidGitHost {
@@ -361,7 +360,7 @@ export class AndroidGitHost {
     if (this.stopped) return;
     const delay = Math.max(1, this.pushDelayS) * 1000;
     this.firstChangeAt ??= this.now();
-    const latest = this.firstChangeAt + delay * MAX_DELAYS;
+    const latest = this.firstChangeAt + delay * MAX_PUSH_DELAYS;
     const at = Math.min(this.now() + delay, latest);
     if (this.pushTimer) clearTimeout(this.pushTimer);
     this.pushTimer = setTimeout(
@@ -513,7 +512,7 @@ export class AndroidGitHost {
         void this.syncNow('retry');
       }, delay);
     }
-    const described = describe(error, this.options.host);
+    const described = describeAndroidFailure(error, this.options.host);
     if (described.log) this.options.log?.(`git sync failed: ${String(error)}`);
     this.set({ ...described.status, since: null, nextRetryAt });
   }
@@ -619,120 +618,3 @@ export class AndroidGitHost {
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-export function pendingOf(engine: GitNotebookEngine): string[] {
-  const state = engine.replica.state;
-  return [...Object.keys(state.dirty), ...(state.workspaceDirty ? ['workspace'] : [])];
-}
-
-/** A failure as the status says it (A824, A859): offline, or stopped, saying why and what to do. */
-export function describe(
-  error: unknown,
-  host: string,
-): { status: Partial<GitSyncStatus>; log: boolean } {
-  const kept = 'Changes stay on this phone and go once it syncs.';
-  if (error instanceof SyncTimeout) {
-    return {
-      status: {
-        phase: 'offline',
-        code: 'timeout',
-        detail: `${error.message} ${kept}`,
-        hostMessage: null,
-      },
-      log: false,
-    };
-  }
-  if (error instanceof GitRefused) {
-    return {
-      status: {
-        phase: 'stopped',
-        code: error.code,
-        detail: error.message,
-        hostMessage: error.hostMessage ?? null,
-      },
-      log: false,
-    };
-  }
-  if (error instanceof GitTransportError) {
-    const hostMessage = error.hostMessage ?? null;
-    switch (error.code) {
-      case 'network':
-      case 'timeout':
-        return {
-          status: {
-            phase: 'offline',
-            code: error.code,
-            detail: `Can't reach ${host}. ${kept}`,
-            hostMessage,
-          },
-          log: false,
-        };
-      case 'auth':
-        return {
-          status: {
-            phase: 'stopped',
-            code: 'auth',
-            detail: `Can't sign in to ${host}. Check the personal access token in Settings → Git notebooks. ${kept}`,
-            hostMessage,
-          },
-          log: false,
-        };
-      case 'protected':
-      case 'rules':
-      case 'refused':
-        return {
-          status: {
-            phase: 'stopped',
-            code: error.code,
-            detail:
-              privateEmailAdvice(
-                hostMessage ?? error.message,
-                'set it as this notebook’s commit email in Settings → Git notebooks',
-              ) ?? `${host} refused the push${hostMessage ? `: ${hostMessage}` : '.'} ${kept}`,
-            hostMessage,
-          },
-          log: false,
-        };
-      default:
-        return {
-          status: {
-            phase: 'stopped',
-            code: error.code,
-            detail: `${error.message} ${kept}`,
-            hostMessage,
-          },
-          log: error.code === 'git',
-        };
-    }
-  }
-  if (error instanceof NotebookError) {
-    return {
-      status: { phase: 'stopped', code: error.code, detail: error.message, hostMessage: null },
-      log: false,
-    };
-  }
-  return {
-    status: {
-      phase: 'stopped',
-      code: 'error',
-      detail: `${error instanceof Error ? error.message : String(error)} ${kept}`,
-      hostMessage: null,
-    },
-    log: true,
-  };
-}
-
-/**
- * `navigator.storage.persist()` (A886): true once the store is kept under low storage, false when
- * refused, null where the page cannot ask (no StorageManager: Node in the tests, an old WebView).
- */
-export async function persistStorage(): Promise<boolean | null> {
-  const storage = (globalThis as { navigator?: { storage?: StorageManager } }).navigator?.storage;
-  if (!storage || typeof storage.persist !== 'function') return null;
-  try {
-    if (typeof storage.persisted === 'function' && (await storage.persisted())) return true;
-    return await storage.persist();
-  } catch {
-    return null;
-  }
-}

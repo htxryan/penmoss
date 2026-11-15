@@ -1,9 +1,9 @@
 /**
- * Fuzzy matching for note titles (T16 `[[` completion; later quick open).
- * Every query character must appear in order in the text, ignoring case and
- * accents; matches that start words, run together or start the title rank
- * higher, and an exact title ranks highest. DOM-free and synchronous: the
- * editor ranks the local registry on each keystroke, offline included.
+ * Fuzzy matching, the one ranking every list uses: note titles (T16 `[[` completion, Android's
+ * link search) and the palette, Quick Open and the pickers (T20). Every query character must
+ * appear in order in the text, ignoring case and accents; matches that start words, run together
+ * or start the title rank higher, and an exact title ranks highest. DOM-free and synchronous:
+ * the editor ranks the local registry on each keystroke, offline included.
  */
 
 /** Lower case without accents, keeping one code unit per character where possible. */
@@ -25,10 +25,88 @@ export function fuzzyScore(query: string, text: string): number | null {
   return foldedScore(fold(query.trim()), fold(text));
 }
 
-/** `fuzzyScore` for a query and text already folded (`fold`). */
-function foldedScore(q: string, t: string): number | null {
+/** A match and where it is, for highlighting. */
+export interface FuzzyMatch {
+  readonly score: number;
+  /** The matched characters' positions in the text (UTF-16 offsets, as `indexOf` gives). */
+  readonly indices: readonly number[];
+}
+
+export interface FuzzyMatchOptions {
+  /**
+   * False: no match when the letters are scattered across a long text, unless the query appears
+   * in it as it is (the palette and the pickers, where a few letters would match most rows).
+   * Defaults to true.
+   */
+  readonly scattered?: boolean;
+}
+
+/**
+ * `fuzzyScore` with the matched positions (the palette and pickers highlight them), or null.
+ * An empty query matches with no positions.
+ */
+export function fuzzyMatch(
+  query: string,
+  text: string,
+  options: FuzzyMatchOptions = {},
+): FuzzyMatch | null {
+  const q = fold(query.trim());
+  const { folded, origin } = foldMapped(text);
+  const positions: number[] = [];
+  const score = foldedScore(q, folded, positions);
+  if (score === null) return null;
+  if (options.scattered === false && positions.length > 0 && !folded.includes(q)) {
+    const spread = positions.at(-1)! - positions[0]!;
+    if (spread > positions.length * 3 + 4) return null;
+  }
+  return { score, indices: [...new Set(positions.map((at) => origin[at]!))] };
+}
+
+/**
+ * `fold`, one character at a time, with each folded code unit's offset in `text`: a character
+ * whose folded form is longer or shorter (an accent typed as its own mark) keeps the map true.
+ */
+function foldMapped(text: string): { folded: string; origin: number[] } {
+  let folded = '';
+  const origin: number[] = [];
+  let at = 0;
+  for (const char of text) {
+    const part = fold(char);
+    folded += part;
+    for (let i = 0; i < part.length; i++) origin.push(at);
+    at += char.length;
+  }
+  return { folded, origin };
+}
+
+/** Splits text into runs, marking the matched characters (`indices`, as `fuzzyMatch` gives). */
+export function highlightRuns(
+  text: string,
+  indices: readonly number[],
+): Array<{ readonly text: string; readonly match: boolean }> {
+  const matched = new Set(indices);
+  const runs: Array<{ text: string; match: boolean }> = [];
+  let at = 0;
+  for (const char of text) {
+    const match = matched.has(at);
+    at += char.length;
+    const last = runs.at(-1);
+    if (last && last.match === match) last.text += char;
+    else runs.push({ text: char, match });
+  }
+  return runs;
+}
+
+/**
+ * `fuzzyScore` for a query and text already folded (`fold`); `positions`, when given, gets the
+ * matched offsets in `t`.
+ */
+function foldedScore(q: string, t: string, positions?: number[]): number | null {
   if (q === '') return 0;
-  if (t === q) return 1000;
+  if (t === q) {
+    for (let i = 0; i < t.length; i++) if (t[i] !== ' ') positions?.push(i);
+    return 1000;
+  }
   // Greedy, preferring word starts: for each query character, the next word
   // start holding it if there is one before a plain occurrence would be used.
   const chars = [...q].filter((char) => char !== ' ');
@@ -50,6 +128,7 @@ function foldedScore(q: string, t: string): number | null {
     if (isBoundary(t, at)) score += 8;
     if (at === 0) score += 10;
     score -= Math.min(at - from, 10) * 0.5;
+    positions?.push(at);
     previous = at;
     from = at + 1;
   }

@@ -8,34 +8,28 @@
 import { ulid } from '@penmoss/core/ids';
 import { journalFolderId, type PeriodKind } from '@penmoss/core/periodic';
 import { type SortMode } from '@penmoss/core/workspace';
-import { NoteStore, type ReplicaStore } from '@penmoss/sync-client';
-import { ReplicaKeeper } from '@penmoss/sync-client/keeper';
+import type { ReplicaStore } from '@penmoss/sync-client/record';
+import { ReplicaKeeper } from '../store/keeper';
 import { mergeRecords } from '@penmoss/sync-client/records';
 import {
   createFolder,
   deleteFolder,
   endPosition,
   fallbackFolder,
-  notebookOfFolder,
-  notebookPlaces,
-  notebookTrashNotes,
-  setDefaultNotebookName,
-  setNotebook,
   moveFolder,
   moveNote,
   readFolderTrash,
-  readSettings,
+  mergedSettings,
   readWorkspace,
   registerNote,
   renameFolder,
   restoreFolder,
-  setSetting,
   setSortMode,
   setTagDescription,
   setTogether,
   unregisterNote,
   WORKSPACE_RECORD_KEY,
-  type DeletedFolder,
+  writeSetting,
   type FolderRestore,
   type TrashedFolder,
   type WorkspaceSnapshot,
@@ -47,14 +41,8 @@ import type { MovePlan } from './model';
 /** Where captures filed as new notes go (T30). */
 export const INBOX = 'Inbox';
 
-/** Where a note out of Trash goes (`restorePlace`), or that there is no safe place (T43). */
-export type RestorePlace =
-  | { readonly folderId: string | null }
-  | {
-      readonly refused: true;
-      /** Its deleted notebook, while it is in Trash: restoring it brings the note's place back. */
-      readonly notebook: { readonly id: string; readonly name: string } | null;
-    };
+/** Where a note out of Trash goes (`restorePlace`), or that no place is known (T43 review B2). */
+export type RestorePlace = { readonly folderId: string | null } | { readonly refused: true };
 
 export interface WorkspaceOptions {
   /**
@@ -64,7 +52,8 @@ export interface WorkspaceOptions {
    * personal workspace, A1021).
    */
   readonly gitNotebook: { readonly id: string; readonly salt?: string };
-  readonly openStore?: () => Promise<ReplicaStore>;
+  /** Opens the store the WorkspaceDoc is kept in (the notebook's own database). */
+  readonly openStore: () => Promise<ReplicaStore>;
   /**
    * Whether this window shows the folder notice (default true). One that does not (the Mac's
    * capture window) leaves the count of folder changes a closed window could not keep to the
@@ -72,15 +61,6 @@ export interface WorkspaceOptions {
    */
   readonly notices?: boolean;
 }
-
-/** A git notebook's own settings (A827): the same in every client of the notebook. */
-export function isNotebookSetting(key: string): boolean {
-  return key === 'timeZone' || key.startsWith('template.');
-}
-
-/** Where a git notebook keeps the notebook's settings and the device's (A827). */
-export const GIT_NOTEBOOK_SETTINGS = 'notebook';
-export const GIT_DEVICE_SETTINGS = 'device';
 
 export interface WorkspaceState {
   readonly snapshot: WorkspaceSnapshot;
@@ -99,8 +79,6 @@ export class Workspace {
   readonly keeper: ReplicaKeeper;
   private readonly listeners = new Set<() => void>();
   private state: WorkspaceState;
-  /** Told of each note this device moves to another notebook (A766), to record it in the note. */
-  private readonly notebookListeners = new Set<(noteId: string, notebook: string) => void>();
   private loading: Promise<void> | null = null;
   private stopped: (() => void) | null = null;
   private readonly store: ReplicaStore & Required<Pick<ReplicaStore, 'update'>>;
@@ -114,7 +92,7 @@ export class Workspace {
     this.gitNotebookId = options.gitNotebook.id;
     this.gitSalt = options.gitNotebook.salt ?? options.gitNotebook.id;
     this.notices = options.notices ?? true;
-    const openStore = options.openStore ?? (() => NoteStore.open());
+    const { openStore } = options;
     let store: Promise<ReplicaStore> | null = null;
     // The store once open, for the page-hide write, which cannot wait for a promise (A626).
     let opened: ReplicaStore | null = null;
@@ -146,7 +124,6 @@ export class Workspace {
       mergeRecords,
     });
     this.replica.onUpdate(() => this.update({ snapshot: readWorkspace(this.replica.doc) }));
-    this.watchNotebookMoves(this.replica.doc);
     this.state = { snapshot: readWorkspace(this.replica.doc), loaded: false };
   }
 
@@ -239,42 +216,13 @@ export class Workspace {
     return id;
   }
 
-  /** Makes a notebook at the end of the top level (T43, A750) and returns its id. */
-  createNotebook(name: string): string {
-    const id = ulid();
-    createFolder(this.doc, { id, name, parentId: null, notebook: true });
-    return id;
-  }
-
-  /**
-   * Turns a top-level folder into a notebook or back (T43, A756). Throws WorkspaceError when
-   * it cannot be one (not at the top level, or the Journal or Inbox).
-   */
-  setNotebook(id: string, on: boolean): void {
-    setNotebook(this.doc, id, on);
-  }
-
-  /** Names the default notebook ('' gives back "Personal"; T43, A751). */
-  setDefaultNotebookName(name: string): void {
-    setDefaultNotebookName(this.doc, name);
-  }
-
   renameFolder(id: string, name: string): void {
     renameFolder(this.doc, id, name);
   }
 
-  /**
-   * Deletes a folder and its subfolders to Trash; their notes move up (A17, T42 A560). A
-   * notebook goes to Trash with its notes (T43, A755): the caller moves each of `trashed` to
-   * Trash too.
-   */
-  deleteFolder(id: string): DeletedFolder {
-    return deleteFolder(this.doc, id);
-  }
-
-  /** Notes in Trash with a deleted notebook (T43): they come back with it, never on their own. */
-  notebookTrashNotes(): ReadonlyMap<string, string> {
-    return notebookTrashNotes(this.doc);
+  /** Deletes a folder and its subfolders to Trash; their notes move up (A17, T42 A560). */
+  deleteFolder(id: string): void {
+    deleteFolder(this.doc, id);
   }
 
   /** Folders in Trash, newest first (T42, A560). Read from the document: it works offline. */
@@ -293,46 +241,33 @@ export class Workspace {
 
   /**
    * Files a new note at the end of `folderId` (null: the top level). A folder that is gone gives
-   * way to the nearest folder above it within its notebook (T43 review B2, A757: never the
-   * default notebook's top level for a notebook's note); with no safe place the note is filed
-   * where it was meant to go.
+   * way to the nearest folder above it still in the tree (T43 review B2, A757); with no place
+   * known the note is filed where it was meant to go.
    */
   registerNote(id: string, folderId: string | null): void {
     const place = fallbackFolder(this.doc, folderId);
     registerNote(this.doc, { id, folderId: 'folderId' in place ? place.folderId : folderId });
   }
 
-  /** Files a conflict copy (A5) beside its original: the same folder, so the same notebook. */
+  /** Files a conflict copy (A5) beside its original: the same folder. */
   registerCopy(id: string, originalId: string | undefined): void {
     const original = originalId
       ? this.state.snapshot.notes.find((note) => note.id === originalId)
       : undefined;
-    // An original the registry does not file (in Trash with its notebook, say): its copy is
-    // filed nowhere yet, so no mirror publishes it; the device files it once it knows where.
-    if (originalId && !original) {
-      if (notebookTrashNotes(this.doc).has(originalId)) return;
-    }
     this.registerNote(id, original?.folderId ?? null);
   }
 
   /**
    * Where a note coming out of Trash goes (T43 review B2, A757): the folder it was deleted from,
-   * or the nearest one above it within its notebook; refused when there is no safe place (its
-   * notebook was deleted, or Trash forgets the folder): the person is asked.
+   * or the nearest one above it still in the tree; refused when Trash forgets a folder on the way
+   * up: the person is asked.
    */
   restorePlace(noteId: string, folderId: string | null): RestorePlace {
     // Still filed (deleted on a device that had not synced the tree, A197): it stays.
     const entry = this.state.snapshot.notes.find((note) => note.id === noteId);
     if (entry) return { folderId: entry.folderId };
     const place = fallbackFolder(this.doc, folderId);
-    if ('folderId' in place) return { folderId: place.folderId };
-    const notebook = place.notebook
-      ? (readFolderTrash(this.doc).find((folder) => folder.id === place.notebook) ?? null)
-      : null;
-    return {
-      refused: true,
-      notebook: notebook ? { id: notebook.id, name: notebook.name } : null,
-    };
+    return 'folderId' in place ? { folderId: place.folderId } : { refused: true };
   }
 
   /**
@@ -365,12 +300,9 @@ export class Workspace {
    */
   fileInInbox(id: string): string {
     const folders = readWorkspace(this.doc).folders;
-    // Never a notebook's (T43): captures stay in the default notebook.
     const own = folders.find(
       (folder) =>
-        folder.parentId === null &&
-        folder.notebook !== true &&
-        folder.name.trim().toLowerCase() === INBOX.toLowerCase(),
+        folder.parentId === null && folder.name.trim().toLowerCase() === INBOX.toLowerCase(),
     );
     const folderId = own?.id ?? journalFolderId(INBOX, this.salt);
     this.doc.transact(() => {
@@ -439,62 +371,12 @@ export class Workspace {
 
   /** The settings: the device's, with the notebook's own over them (A827). */
   settings(): Record<string, unknown> {
-    const device = readSettings(this.doc, GIT_DEVICE_SETTINGS);
-    const notebook = readSettings(this.doc, GIT_NOTEBOOK_SETTINGS);
-    for (const key of Object.keys(device)) if (isNotebookSetting(key)) delete device[key];
-    for (const key of Object.keys(notebook)) if (!isNotebookSetting(key)) delete notebook[key];
-    return { ...device, ...notebook };
+    return mergedSettings(this.doc);
   }
 
   /** Sets one setting (undefined removes it), straight in: the engine commits it (A827). */
   setSetting(key: string, value: unknown): void {
-    setSetting(
-      this.doc,
-      isNotebookSetting(key) ? GIT_NOTEBOOK_SETTINGS : GIT_DEVICE_SETTINGS,
-      key,
-      value,
-    );
-  }
-
-  /**
-   * Each note this device's own change moves to another notebook (T43 review, A766): a move, a
-   * folder moved, a notebook turned on or off. Changes from elsewhere are theirs to record; a
-   * note filed for the first time is its maker's (or recorded by the caller that chose).
-   */
-  private watchNotebookMoves(doc: Yjs14Replica['doc']): () => void {
-    // Read only around this device's own changes: before and after, never for remote updates.
-    let before: Map<string, string> | null = null;
-    const start = (transaction: { readonly local: boolean }) => {
-      before = transaction.local ? notebookPlaces(doc) : null;
-    };
-    const end = (transaction: { readonly local: boolean }) => {
-      const was = before;
-      before = null;
-      if (!transaction.local || !was) return;
-      for (const [id, notebook] of notebookPlaces(doc)) {
-        const old = was.get(id);
-        if (old !== undefined && old !== notebook) {
-          for (const listener of this.notebookListeners) listener(id, notebook);
-        }
-      }
-    };
-    doc.on('beforeTransaction', start);
-    doc.on('afterTransaction', end);
-    return () => {
-      doc.off('beforeTransaction', start);
-      doc.off('afterTransaction', end);
-    };
-  }
-
-  /** Listens for notes this device moves to another notebook (A766). */
-  onNotebookMove(listener: (noteId: string, notebook: string) => void): () => void {
-    this.notebookListeners.add(listener);
-    return () => this.notebookListeners.delete(listener);
-  }
-
-  /** The notebook a note filed in `folderId` belongs to (A766), or null when not certain. */
-  notebookOf(folderId: string | null): string | null {
-    return notebookOfFolder(this.doc, folderId);
+    writeSetting(this.doc, key, value);
   }
 
   /** The salt of derived folder ids (A820): a git notebook's id, or its own (A1021). */

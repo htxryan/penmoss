@@ -7,7 +7,7 @@
  */
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useEffectEvent, useId, useMemo, useRef, useState } from 'react';
-import { fuzzy } from '../commands/fuzzy';
+import { fuzzyMatch } from '@penmoss/core/fuzzy';
 import { listKeys, pushedWords, SIGNED_OUT } from './repo-words';
 import type {
   BrowseError,
@@ -108,7 +108,7 @@ export function RepoPicker({
 
   const viaPenmoss = load.state === 'ready' && load.via === 'penmoss';
   useEffect(() => {
-    if (!viaPenmoss || !github.signIn) return;
+    if (!viaPenmoss) return;
     let live = true;
     void github.signIn
       .status()
@@ -130,7 +130,11 @@ export function RepoPicker({
     if (load.state !== 'ready') return [];
     const q = query.trim();
     const matched = load.list.repos
-      .map((repo, index) => ({ repo, index, match: fuzzy(q, repo.fullName) }))
+      .map((repo, index) => ({
+        repo,
+        index,
+        match: fuzzyMatch(q, repo.fullName, { scattered: false }),
+      }))
       .filter((each) => each.match !== null);
     if (q) matched.sort((a, b) => b.match!.score - a.match!.score || a.index - b.index);
     return matched.map((each) => each.repo);

@@ -10,10 +10,17 @@
  * fields. It is then kept up to date from the notes' list metadata (only notes whose record
  * changed are read again) and saved a moment after it changes.
  */
-import { HYBRID_DEPTH, fuseHybrid, parseQuery, type NoteSection } from '@penmoss/core/search';
+import {
+  HYBRID_DEPTH,
+  fuseHybrid,
+  parseQuery,
+  type NoteSection,
+  type SearchMode,
+} from '@penmoss/core/search';
 import { tagMatches } from '@penmoss/core/tags';
-import { folderSubtree, openNotebookFilter, type FolderRecord } from '@penmoss/core/workspace';
-import type { NoteMeta, NoteRecord, NoteText } from '@penmoss/sync-client';
+import { folderSubtree, type FolderRecord } from '@penmoss/core/workspace';
+import type { NoteText } from '../store/idb';
+import type { NoteMeta, NoteRecord } from '@penmoss/sync-client/record';
 import {
   LocalSearchIndex,
   type LocalSearchDocument,
@@ -23,8 +30,7 @@ import type { RegistryEntry } from '@penmoss/sync-client/workspace';
 import type { NoteListEntry } from '../notes/list';
 import { MEANING_ELSEWHERE, sectionsOfRecord, type NotebookMeaning } from './meaning';
 
-export const SEARCH_MODES = ['full-text', 'semantic', 'hybrid'] as const;
-export type SearchMode = (typeof SEARCH_MODES)[number];
+export { SEARCH_MODES, type SearchMode } from '@penmoss/core/search';
 
 /**
  * The app always searches Hybrid (T42, #104 item 2, A571), with no picker: by meaning too in the
@@ -107,16 +113,12 @@ export interface SearchStore {
   /** Saved values (the offline index's snapshot, A119). */
   getState?(key: string): Promise<unknown>;
   setState?(key: string, value: unknown): Promise<void>;
-  /** Fills in older records' tags and headings (NoteStore, A119). */
-  backfillSearchFields?(): Promise<void>;
 }
 
 export interface SearchDeps {
   readonly store: () => Promise<SearchStore>;
   /** The folder tree and registry, from the local WorkspaceDoc replica. */
   readonly workspace: () => { readonly folders: FolderRecord[]; readonly notes: RegistryEntry[] };
-  /** Notebooks closed on this device (T43, A752): their notes are never found here. */
-  readonly closed?: () => ReadonlySet<string>;
   /** Keys in the notes store that are not notes. */
   readonly reserved?: ReadonlySet<string>;
   /** Awaited between slices of building or restoring the offline index (default: a timeout). */
@@ -341,7 +343,7 @@ export class SearchService {
     return doc !== undefined && filter(doc);
   }
 
-  /** The folder, tag, date and open-notebook filters, or null when nothing is filtered. */
+  /** The folder, tag and date filters, or null when nothing is filtered. */
   private filterOf(filters: SearchFilters): ((doc: Listed) => boolean) | null {
     const { folderId, tag, updatedAfter } = filters;
     let inFolder: Set<string> | null = null;
@@ -354,30 +356,16 @@ export class SearchService {
           .map((note) => note.id),
       );
     }
-    const isOpen = this.openFilter();
-    if (!inFolder && !isOpen && !tag && updatedAfter === null) return null;
+    if (!inFolder && !tag && updatedAfter === null) return null;
     return (doc) =>
       (!inFolder || inFolder.has(doc.id)) &&
-      (!isOpen || isOpen(doc.id)) &&
       (!tag || doc.tags.some((each) => tagMatches(each, tag))) &&
       (updatedAfter === null || doc.updatedAt >= updatedAfter);
-  }
-
-  /** Whether a note is in an open notebook (T43), or null with every notebook open. */
-  private openFilter(): ((noteId: string) => boolean) | null {
-    const closed = this.deps.closed?.() ?? new Set<string>();
-    if (closed.size === 0) return null;
-    const workspace = this.deps.workspace();
-    const inOpen = openNotebookFilter(workspace.folders, closed);
-    const folderOf = new Map(workspace.notes.map((note) => [note.id, note.folderId]));
-    return (noteId) => inOpen(folderOf.get(noteId) ?? null);
   }
 
   private async doRefresh(): Promise<void> {
     this.stale = false;
     const store = await this.deps.store();
-    // Records from before the search fields existed get them first (A119).
-    await store.backfillSearchFields?.();
     const reserved = this.deps.reserved ?? new Set<string>();
     const slices: SliceOptions = {
       ...(this.deps.yieldToPage ? { yield: this.deps.yieldToPage } : {}),

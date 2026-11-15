@@ -11,6 +11,11 @@
  */
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import type {
+  DesktopReleaseNote,
+  DesktopReleaseNotes,
+  DesktopReleaseNotesRelease,
+} from '../../web/src/desktop/bridge';
 import { FEED_URLS, type UpdateChannel, type UpdateMode } from './updater';
 
 export const NOTES_FILE = 'release-notes.json';
@@ -18,31 +23,12 @@ export const NOTES_EVERY_MS = 60 * 60 * 1000;
 /** The largest file read: the record grows by a few notes a build, so this is years of them. */
 export const NOTES_MAX_BYTES = 4 * 1024 * 1024;
 
-export type NoteKind = 'new' | 'improved' | 'fixed';
-export type NotePlatform = 'mac' | 'android';
-
-export interface ReleaseNote {
-  readonly build: number;
-  readonly pr: number;
-  readonly kind: NoteKind;
-  readonly platform: NotePlatform | null;
-  readonly text: string;
-}
-
-export interface ReleaseNotesRelease {
-  readonly version: string;
-  readonly tag: string;
-  readonly build: number;
-  readonly date: string;
-}
-
-/** What the page gets (the bridge's `DesktopReleaseNotes`). */
-export interface ReleaseNotesFile {
-  readonly schema: number;
-  readonly generated: string;
-  readonly notes: readonly ReleaseNote[];
-  readonly releases: readonly ReleaseNotesRelease[];
-}
+export type ReleaseNote = DesktopReleaseNote;
+export type NoteKind = ReleaseNote['kind'];
+export type NotePlatform = NonNullable<ReleaseNote['platform']>;
+export type ReleaseNotesRelease = DesktopReleaseNotesRelease;
+/** What the page gets: the page's own type (ipc-contract.ts). */
+export type ReleaseNotesFile = DesktopReleaseNotes;
 
 const KINDS: readonly unknown[] = ['new', 'improved', 'fixed'];
 const PLATFORMS: readonly unknown[] = ['mac', 'android', null];

@@ -8,7 +8,7 @@ export default defineConfig({
     testTimeout: 30_000,
     hookTimeout: 30_000,
     include: ['test/unit/**/*.test.ts'],
-    // The agent worker has 4 CPUs shared with other agents (W5).
+    // Two at a time: several sessions' suites share this Mac (W12).
     maxWorkers: 2,
   },
 });

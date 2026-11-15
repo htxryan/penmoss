@@ -5,8 +5,8 @@
  * never reaches `happi` (happiness), nor `conditio*` `condit` (conditioning).
  *
  * Every client therefore keeps the index's words as written (folded, not
- * stemmed): the server in `notes_words` (migration 0011), the web in its
- * offline index, the phone in `note_word_fts`. A prefix term looks up the
+ * stemmed): the page and `LocalNotebook` in their index, the phone in
+ * `note_word_fts`. A prefix term looks up the
  * first `COMPLETION_SCAN` words that start with it, in code-point order (as
  * SQLite sorts them), and keeps those whose stems its own stem cannot reach:
  * its completions. Each is matched as one more whole word, ORed with the
@@ -19,7 +19,7 @@ import { stemTerm, tokenize } from './tokenize';
 
 /** Shorter prefixes are left alone: porter keeps a word's first two letters (A680). */
 export const MIN_COMPLETION_LENGTH = 3;
-/** Words looked at per prefix, the first in code-point order (D1 reads one row for each). */
+/** Words looked at per prefix, the first in code-point order. */
 export const COMPLETION_SCAN = 64;
 /** Completions kept per prefix (each is one more term FTS5 looks up). */
 export const MAX_COMPLETIONS = 16;

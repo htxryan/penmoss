@@ -1,10 +1,11 @@
 /**
- * What every command gets: its parsed arguments, the git notebook it runs on (its local API,
- * under the clone's lock), and output that is human-readable by default and one JSON document
- * with `--json`.
+ * What every command gets: its parsed arguments, the git notebook it runs on (its notes API,
+ * `LocalNotebook`, under the clone's lock), and output that is human-readable by default and one
+ * JSON document with `--json`.
  */
+import type { LocalNotebook } from '@penmoss/git-notebook/local';
 import { UsageError, type FlagSpec, type FlagValue } from './args';
-import { Client } from './client';
+import { apiErrorOf } from './errors';
 import type { Io, NotebookSession } from './io';
 
 export interface Command {
@@ -20,21 +21,13 @@ export interface Command {
   run(context: Context): Promise<void>;
 }
 
-/**
- * Where note commands send their requests (T50): to the notebook's local API, through its own
- * fetch. `.invalid` never resolves, so nothing could reach a network even by mistake.
- */
-export const NOTEBOOK_API = 'http://notebook.invalid';
-
 export class Context {
-  private client: Client | null = null;
-
   constructor(
     readonly io: Io,
     readonly positionals: readonly string[],
     readonly flags: Readonly<Record<string, FlagValue>>,
     /** The git notebook a note command runs on (`--notebook`, or the only one, A1050). */
-    readonly notebook: NotebookSession | null = null,
+    readonly session: NotebookSession | null = null,
   ) {}
 
   get json(): boolean {
@@ -62,11 +55,37 @@ export class Context {
     return this.flags[name] === true;
   }
 
-  /** The notebook's local API (A820): only a note command, which runs on a notebook, has one. */
-  api(): Promise<Client> {
-    if (!this.notebook) return Promise.reject(new Error('this command runs on no notebook'));
-    this.client ??= new Client(NOTEBOOK_API, this.notebook.fetch);
-    return Promise.resolve(this.client);
+  /**
+   * Reads the notebook (A820): only a note command, which runs on a notebook, has one. Its
+   * refusals become `ApiError`s with their exit codes.
+   */
+  async read<T>(read: (notebook: LocalNotebook) => T | Promise<T>): Promise<T> {
+    if (!this.session) throw new Error('this command runs on no notebook');
+    try {
+      return await read(this.session.notebook);
+    } catch (error) {
+      throw apiErrorOf(error);
+    }
+  }
+
+  /**
+   * Changes the notebook, as `read` reads it. The clone is saved after the change, and after a
+   * refusal too, before the command goes on (B1 of #165): a command killed during the sync that
+   * follows loses nothing; the next sync sends it.
+   */
+  async write<T>(change: (notebook: LocalNotebook) => T | Promise<T>): Promise<T> {
+    if (!this.session) throw new Error('this command runs on no notebook');
+    const session = this.session;
+    let result: T;
+    try {
+      result = await change(session.notebook);
+    } catch (error) {
+      const refusal = apiErrorOf(error);
+      if (refusal !== error) await session.save();
+      throw refusal;
+    }
+    await session.save();
+    return result;
   }
 
   /** Writes the result: `data` as JSON with `--json`, else the human lines. */

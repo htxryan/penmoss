@@ -52,7 +52,7 @@ A tag is a word after `#` in the note, such as `#ideas`, or an entry in the note
 
 - **Add a tag to the note's tags:** **Add a Tag to This Note**, or the tag field in the note's Metadata tab (`tag or area/tag`).
 - **See a tag's notes:** choose it in the sidebar's **Tags** section, choose a tag in the note's Metadata tab, or ⌘-click a #tag in the text. [Search](/docs/search/) opens with its **Tag** filter set and lists every note with that tag, or a tag inside it, newest first. Type to search those notes by their words. With several notebooks, Search starts on the tag's notebook.
-- **Rename or merge a tag:** the pencil beside a tag in the Tags section (**Rename or Merge**) changes it in every note, nested tags and notes in Trash included. Renaming to a tag that already exists merges the two. The Tags page does this too, and deletes tags.
+- **Rename or merge a tag:** the pencil beside a tag in the Tags section (**Rename or Merge**) changes it in every note, nested tags and notes in Trash included. Renaming to a tag that already exists merges the two. A tag's description goes with it, and the message at the bottom of the window offers **Undo**, as on the Tags page, which also deletes tags.
 
 ### The Tags page
 

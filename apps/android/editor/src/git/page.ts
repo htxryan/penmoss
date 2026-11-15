@@ -16,10 +16,10 @@ import {
   type HeadReader,
 } from '@penmoss/git-notebook/purge-check';
 import type { WriterSecrets } from '@penmoss/git-notebook';
-import type { EngineKv } from '../../../../web/src/sources/engine-store';
+import { PULL_EVERY_MIN, PUSH_DELAY_S, type EngineKv } from '@penmoss/git-notebook/host';
 import { BridgeTransport } from './bridge-transport';
 import { Channel, ChannelError, type FramePort } from './channel';
-import { AndroidGitHost, PULL_EVERY_MIN, PUSH_DELAY_S, type GitSyncStatus } from './host';
+import { AndroidGitHost, type GitSyncStatus } from './host';
 import { fromBase64 } from 'lib0/buffer';
 
 /** Where the engine page keeps a notebook's state: IndexedDB in the app, memory in the tests. */

@@ -3,7 +3,7 @@
  * one attribute per tag (`tags/<name>` = true), so two devices adding tags
  * concurrently keep both (a single list value would keep one device's list).
  * Inline `#tags` are read from the body's text, outside code. The same code
- * runs on clients (records, the tag pane) and in the NoteDoc (the index).
+ * runs in the apps (records, the tag pane) and in the engine (its frontmatter).
  */
 import {
   cleanTags,
@@ -124,19 +124,6 @@ export function bodyTags(doc: Y.Doc): string[] {
 /** Every tag of the note: frontmatter and inline, sorted, without duplicates. */
 export function noteTags(doc: Y.Doc): string[] {
   return cleanTags([...frontmatterTags(doc), ...bodyTags(doc)]);
-}
-
-/** The tags of a stored note's merged update (records written before T18). */
-export function tagsOfUpdate(update: Uint8Array): string[] {
-  const doc = new Y.Doc();
-  try {
-    Y.applyUpdate(doc, update);
-    return noteTags(doc);
-  } catch {
-    return [];
-  } finally {
-    doc.destroy();
-  }
 }
 
 /**

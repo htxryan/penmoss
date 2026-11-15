@@ -277,9 +277,9 @@ describe('Agent activity in a git notebook (#172, A920)', () => {
   });
   it('never files again a note deleted for good, here or at head: skipped, and said (#174 review)', async () => {
     const { nb, mac, agent, note } = await world();
-    // A notebook (A750): deleting it puts its notes in Trash with it, and Restore files them.
-    const work = 'NOTEBOOKWORK00000000000001';
-    createFolder(mac.ops.workspace, { id: work, name: 'Work', parentId: null, notebook: true });
+    // A folder (A17, A560): deleting it moves its notes up, and Undo files them back in it.
+    const work = 'FOLDERWORK0000000000000001';
+    createFolder(mac.ops.workspace, { id: work, name: 'Work', parentId: null });
     mac.ops.move(note, work);
     const other = mac.ops.createNote({ title: 'Other', markdown: 'kept', folderId: work });
     await mac.engine.sync();
@@ -306,9 +306,13 @@ describe('Agent activity in a git notebook (#172, A920)', () => {
     expect(result.ok && result.notice).toContain('“Plan” is already deleted for good');
     expect(result.ok && result.notice).toContain('“Other” is already deleted for good');
     expect(folderNamed(mac, 'Work')).toBeDefined();
-    const filed = readWorkspace(live).notes.map((entry) => entry.id);
-    expect(filed).not.toContain(note);
-    expect(filed).not.toContain(other);
+    // Neither goes back into Work; Plan, deleted for good here, is filed nowhere. Other is still
+    // where the delete moved it until the Pixel's purge is merged, below.
+    const entries = readWorkspace(live).notes;
+    const inWork = entries.filter((entry) => entry.folderId === work).map((entry) => entry.id);
+    expect(inWork).not.toContain(note);
+    expect(inWork).not.toContain(other);
+    expect(entries.map((entry) => entry.id)).not.toContain(note);
     // Nothing of a purge goes back: the sync's commit reverses none.
     const head = await mac.engine.transport.fetch();
     await mac.engine.sync();
@@ -328,10 +332,10 @@ describe('Agent activity in a git notebook (#172, A920)', () => {
     ).not.toContain(other);
   });
 
-  it('a person restoring a notebook from Trash never files a note deleted for good either', async () => {
+  it('a person restoring a folder from Trash never files a note deleted for good either', async () => {
     const { mac, note } = await world();
-    const work = 'NOTEBOOKWORK00000000000001';
-    createFolder(mac.ops.workspace, { id: work, name: 'Work', parentId: null, notebook: true });
+    const work = 'FOLDERWORK0000000000000001';
+    createFolder(mac.ops.workspace, { id: work, name: 'Work', parentId: null });
     mac.ops.move(note, work);
     mac.ops.deleteFolder(work);
     mac.ops.purge(note);

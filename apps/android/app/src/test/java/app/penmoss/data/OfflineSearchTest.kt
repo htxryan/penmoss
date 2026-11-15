@@ -188,11 +188,10 @@ class OfflineSearchTest {
         note("a", "Tagged", "body", tags = listOf("project", "area/cooking", "project"))
         assertEquals(listOf("area/cooking", "project"), db.search().tagsOf("a"))
         assertEquals(listOf(TagCountRow("area/cooking", 1), TagCountRow("project", 1)), store.observeTagCounts().first())
-        // An older server sends no tags: they stay as they were.
+        // A newer row with the same tags, then an older row: it never replaces the newer one's.
         clock++
-        store.saveChanges(ChangesPage(clock, notes = listOf(ChangedNote("a", clock, "Tagged", "", 200))))
+        store.saveChanges(ChangesPage(clock, notes = listOf(ChangedNote("a", clock, "Tagged", "", 200, tags = listOf("project", "area/cooking")))))
         assertEquals(listOf("area/cooking", "project"), db.search().tagsOf("a"))
-        // An older row never replaces a newer one's tags.
         store.saveChanges(ChangesPage(clock, notes = listOf(ChangedNote("a", 1, "Tagged", "", 200, tags = listOf("stale")))))
         assertEquals(listOf("area/cooking", "project"), db.search().tagsOf("a"))
         // In Trash: the server sends none, and the note leaves search and the counts.
@@ -302,15 +301,6 @@ class OfflineSearchTest {
         assertEquals(emptyList<String>(), ids("unique"))
     }
 
-    @Test
-    fun saysWhenTheLastWordIsStillBeingTyped() = runTest {
-        note("a", "Lemons", "lemon tart")
-        assertTrue(search.unfinished("lem"))
-        assertFalse(search.unfinished("lemon"))
-        assertFalse(search.unfinished("lem "))
-        assertFalse(search.unfinished("zzz"))
-    }
-
     /** #120 (A680): a word typed past its stem finds what the whole word finds. */
     @Test
     fun findsAWordTypedPastItsStem() = runTest {
@@ -332,14 +322,10 @@ class OfflineSearchTest {
         val hit = search.search("happin", prefixLast = true).single()
         assertEquals("\u0002Happiness\u0003", hit.titleMarked)
         assertTrue(hit.snippet, hit.snippet.contains("\u0002happiness\u0003, and on being \u0002happy\u0003"))
-        assertTrue(search.unfinished("happin"))
-        assertTrue(search.unfinished("conditio"))
-        assertFalse(search.unfinished("happiness"))
         // A note gone takes its words with it.
         clock++
         store.saveChanges(ChangesPage(clock, notes = listOf(ChangedNote("joy", clock, purged = true))))
         assertEquals(emptyList<String>(), ids("happin", prefixLast = true))
-        assertFalse(search.unfinished("happin"))
     }
 
     /** Review B1: the phone cuts and folds text where the server's unicode61 does. */
@@ -469,7 +455,6 @@ class OfflineSearchTest {
             assertTrue("answered while its dispatcher was held: $early", early.isFailure)
             held.countDown()
             assertEquals(expected, withContext(Dispatchers.IO) { withTimeout(5_000) { answer.await() } })
-            assertTrue(withContext(Dispatchers.IO) { withTimeout(5_000) { CoroutineScope(Dispatchers.Unconfined).async { offMain.unfinished("gard") }.await() } })
         } finally {
             pool.shutdownNow()
         }

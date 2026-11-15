@@ -5,14 +5,13 @@
  * counts are kept in what is returned (`private` is for redaction and never sent).
  */
 import { readIdentity, isDeleted } from '@penmoss/sync-client/note';
-import { defaultNotebookName, type WorkspaceSnapshot } from '@penmoss/sync-client/workspace';
-import { docText, textStats } from '../notes/stats';
+import type { WorkspaceSnapshot } from '@penmoss/sync-client/workspace';
+import { docText, textStats } from '@penmoss/sync-client/stats';
 import type { LocalLinks, OpenNote } from '../notes/service';
 import type { NoteListEntry } from '../notes/list';
 import { localLinked } from '../notes/backlinks';
 import { folderTrail } from '../notes/crumbs';
 import { parseRoute } from '../router';
-import { notebookOfNote } from '../workspace/notebooks';
 import type { ContextFacts, NoteFacts, SyncFacts } from './context';
 import type { RecentError } from './errors';
 
@@ -158,7 +157,6 @@ function noteFacts(deps: GatherDeps, id: string): { facts: NoteFacts; text: stri
       id,
       title: entry?.title ?? '',
       folder: folderPath(deps.snapshot, registry?.folderId ?? null),
-      notebook: notebookOfNote(deps.snapshot, id)?.name ?? defaultNotebookName(deps.snapshot),
       tags: entry?.tags ?? [],
       created: identity.created ?? null,
       updated: entry?.updatedAt || null,
@@ -169,7 +167,6 @@ function noteFacts(deps: GatherDeps, id: string): { facts: NoteFacts; text: stri
       // The UTF-8 size of the note's text, as Android measures it.
       bytes: editor ? new TextEncoder().encode(text).byteLength : null,
       engine: copy?.replica.engine ?? null,
-      epoch: copy?.keeper.currentEpoch ?? null,
       unsynced: copy?.keeper.unsynced ?? entry?.unsynced ?? false,
       inTrash: doc ? isDeleted(doc) : false,
       backlinks: localLinked(deps.links, id).length,
@@ -192,7 +189,6 @@ function gitNoteFacts(facts: NoteFacts): NoteFacts {
     created: null,
     updated: null,
     kind: null,
-    epoch: null,
   };
 }
 

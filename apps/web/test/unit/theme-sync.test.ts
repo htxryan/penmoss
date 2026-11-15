@@ -17,7 +17,8 @@ import {
   SLATE,
 } from '@penmoss/ui/theme';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { GIT_DEVICE_SETTINGS, type Workspace } from '../../src/workspace/service';
+import { DEVICE_MAP } from '@penmoss/sync-client/workspace';
+import type { Workspace } from '../../src/workspace/service';
 import { testWorkspace } from './support/local-sources';
 import { memoryNotes } from './support/memory-notes';
 
@@ -146,7 +147,7 @@ describe('custom themes sync across devices (T28)', () => {
     const { web } = await twoDevices();
     // Another writer (an old build, an agent's clone) writes nonsense straight into the doc.
     const other = createYjs14Replica();
-    const scope = GIT_DEVICE_SETTINGS;
+    const scope = DEVICE_MAP;
     setSetting(other.doc, scope, 'theme.id', 'custom-broken');
     setSetting(other.doc, scope, 'theme.mode', 42);
     setSetting(other.doc, scope, `${CUSTOM_THEME_PREFIX}custom-broken`, { id: 'custom-broken' });

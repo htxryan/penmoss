@@ -28,13 +28,13 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import app.penmoss.ui.square.IconButton
+import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import app.penmoss.ui.square.OutlinedButton
+import app.penmoss.ui.common.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import app.penmoss.ui.square.TextButton
+import app.penmoss.ui.common.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,8 +57,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import app.penmoss.engine.settings.LineSymbol
 import app.penmoss.engine.settings.LineSymbols
-import app.penmoss.ui.LocalSymbolColours
-import app.penmoss.ui.symbolColour
+import app.penmoss.ui.common.LocalSymbolColours
+import app.penmoss.ui.common.symbolColour
 
 /**
  * Settings → Symbols (T44, ST13, A747; T51, A939, A940): the person's line symbols, in shortcut

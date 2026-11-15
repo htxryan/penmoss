@@ -4,43 +4,13 @@
  * shrink), as the Mac's main process does for its page (`IpcGitTransport`). Bytes cross as bytes.
  */
 import {
-  GitTransportError,
+  GitRefused,
+  refusalError,
   type CommitInfo,
-  type GitErrorCode,
   type GitTransport,
   type PushOutcome,
 } from '@penmoss/git-notebook';
 import { ChannelError, type Channel } from './channel';
-
-const GIT_CODES: ReadonlySet<string> = new Set<GitErrorCode>([
-  'auth',
-  'network',
-  'not_found',
-  'host_key',
-  'signing',
-  'protected',
-  'rules',
-  'refused',
-  'git_missing',
-  'timeout',
-  'redirected',
-  'git',
-]);
-
-/**
- * A refusal from the app's own checks (a public repository, Delete for good nobody confirmed):
- * not git's, so the engine host shows it as it is and stops until the person acts.
- */
-export class GitRefused extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-    readonly hostMessage?: string,
-  ) {
-    super(message);
-    this.name = 'GitRefused';
-  }
-}
 
 /** Reads go in parts of at most this many bytes, so no frame gets large. */
 export const READ_PART_BYTES = 8 * 1024 * 1024;
@@ -51,12 +21,9 @@ export const READ_PART_FILES = 400;
 const CALL_LIMIT_MS = 5 * 60_000;
 
 function translated(error: unknown): Error {
-  if (error instanceof ChannelError) {
-    if (GIT_CODES.has(error.code)) {
-      return new GitTransportError(error.code as GitErrorCode, error.message, error.hostMessage);
-    }
-    return new GitRefused(error.code, error.message, error.hostMessage);
-  }
+  // git's own refusal as a GitTransportError (A824); the app's own checks' as GitRefused.
+  if (error instanceof ChannelError)
+    return refusalError(error.code, error.message, error.hostMessage);
   return error instanceof Error ? error : new Error(String(error));
 }
 
@@ -179,9 +146,12 @@ export class BridgeTransport implements GitTransport {
     });
   }
 
-  async readAt(commit: string, path: string): Promise<Uint8Array | null> {
-    const bytes = await this.call('readAt', [commit, path]);
-    return bytes instanceof Uint8Array ? bytes.slice() : null;
+  /**
+   * No caller reads a file at a commit, and the app no longer answers it (architecture review,
+   * editor-git §3): kept only while `GitTransport` still declares it; it goes with that member.
+   */
+  readAt(): Promise<Uint8Array | null> {
+    return Promise.reject(new GitRefused('unsupported', 'The app does not read files at a commit'));
   }
 
   async maintain(): Promise<void> {

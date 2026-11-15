@@ -1,15 +1,15 @@
 import { SORT_MODES } from '@penmoss/core/workspace';
 import { ariaKeyShortcuts } from '@penmoss/editor/keys';
 import { Icon } from '@penmoss/ui/icons';
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useCommands, useKeys } from '../commands/hooks';
 import { useNotes } from '../notes/hooks';
 import { navigate, notePath } from '../router';
 import { ContextMenu } from '../shell/ContextMenu';
+import { MenuItem } from '../shell/Menu';
 import { withKeys } from '../shell/drawer';
 import { useWorkspace } from './hooks';
-import { SORT_LABELS, sortModeOf, withoutClosed } from './model';
-import { useClosedNotebooks } from './notebooks';
+import { SORT_LABELS, sortModeOf } from './model';
 import { useFolderTree } from './tree';
 
 /** A notebook's Trash: where it is, its test id, and whether it is the page showing. */
@@ -53,9 +53,7 @@ export function TreeActions({
   const workspace = useWorkspace();
   const commands = useCommands();
   const newFolderKeys = useKeys('folder.new');
-  const { tree: everything } = useFolderTree(true);
-  const closed = useClosedNotebooks();
-  const tree = useMemo(() => withoutClosed(everything, closed), [everything, closed]);
+  const { tree } = useFolderTree(true);
   const current = currentFolder !== null && tree.byId.has(currentFolder) ? currentFolder : null;
   const currentName = current === null ? 'the Top Level' : (tree.byId.get(current)?.name ?? '');
   const sortMode = sortModeOf(tree, current);
@@ -81,7 +79,7 @@ export function TreeActions({
   /** A new note at the notebook's top level, opened; new notes go there next. */
   const newNote = () => {
     onCurrentFolderChange(null);
-    const id = notes.create(new Date(), { folderId: null });
+    const id = notes.create(new Date());
     workspace.registerNote(id, null);
     navigate(notePath(id));
   };
@@ -148,64 +146,44 @@ export function TreeActions({
           onClose={closeMenus}
         >
           {onRename ? (
-            <button
-              type="button"
-              role="menuitem"
-              tabIndex={-1}
-              className="menu-item"
-              data-ui="item"
+            <MenuItem
+              icon="pencil"
               data-testid="notebook-more-rename"
               onClick={() => choose(onRename)}
             >
-              <Icon name="pencil" />
-              <span className="menu-label">Rename…</span>
-            </button>
+              Rename…
+            </MenuItem>
           ) : null}
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            className="menu-item"
-            data-ui="item"
+          <MenuItem
+            icon="sort"
             aria-haspopup="menu"
             data-testid="sort-order"
             data-sort={sortMode}
             onClick={() => choose(() => setSortMenu(underMore()))}
           >
-            <Icon name="sort" />
-            <span className="menu-label">Sort Order…</span>
-          </button>
+            Sort Order…
+          </MenuItem>
           {timeMachine || trash ? <div className="menu-sep" role="separator" /> : null}
           {timeMachine ? (
-            <button
-              type="button"
-              role="menuitem"
-              tabIndex={-1}
-              className="menu-item"
-              data-ui="item"
+            <MenuItem
+              icon="history"
               data-testid="section-time-machine"
               aria-current={timeMachine.current ? 'page' : undefined}
               onClick={() => choose(() => navigate(timeMachine.href))}
             >
-              <Icon name="history" />
-              <span className="menu-label">Time Machine</span>
-            </button>
+              Time Machine
+            </MenuItem>
           ) : null}
           {trash ? (
-            <button
-              type="button"
-              role="menuitem"
-              tabIndex={-1}
-              className="menu-item"
-              data-ui="item"
+            <MenuItem
+              icon="trash"
               data-command={trash.href === '/trash' ? 'app.trash' : undefined}
               data-testid={trash.testId}
               aria-current={trash.current ? 'page' : undefined}
               onClick={() => choose(() => navigate(trash.href))}
             >
-              <Icon name="trash" />
-              <span className="menu-label">Trash</span>
-            </button>
+              Trash
+            </MenuItem>
           ) : null}
         </ContextMenu>
       ) : null}

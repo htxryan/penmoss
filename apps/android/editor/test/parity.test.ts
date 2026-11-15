@@ -5,7 +5,7 @@
  * (ED4, ED5), the table and code buttons (ED6, ED7), toggles remembered per
  * note (ED8) and the counts (NT24).
  */
-import { NOTE_ROOT } from '@penmoss/sync-client';
+import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import { initNote, setTitle } from '@penmoss/sync-client/note';
 import { createYjs14Replica, type Yjs14Replica } from '@penmoss/sync-client/yjs14';
 import type { JSONContent } from '@tiptap/core';

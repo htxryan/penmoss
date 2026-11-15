@@ -62,7 +62,7 @@ abstract class PenmossDatabase : RoomDatabase() {
      */
     class ReadChangesAgain : AutoMigrationSpec {
         override fun onPostMigrate(db: SupportSQLiteDatabase) {
-            // NoteStore's CHANGES_CLOCK: where the next pass reads `/sync/changes` from.
+            // RoomSyncStore's CHANGES_CLOCK: where the next pass reads `/sync/changes` from.
             db.execSQL("DELETE FROM settings WHERE `key` = 'changesClock'")
         }
     }
@@ -76,7 +76,7 @@ abstract class PenmossDatabase : RoomDatabase() {
      */
     class ReadTreeAgain : AutoMigrationSpec {
         override fun onPostMigrate(db: SupportSQLiteDatabase) {
-            // NoteStore's TREE_HASH: the `since` the next `/sync/tree` read sends.
+            // RoomSyncStore's TREE_HASH: the `since` the next `/sync/tree` read sends.
             db.execSQL("DELETE FROM settings WHERE `key` = 'treeHash'")
         }
     }

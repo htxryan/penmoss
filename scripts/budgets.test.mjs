@@ -60,3 +60,19 @@ test('every package with a budget runs it in `budgets` and leaves it out of `tes
     assert.match(config, /exclude: .*budget\.test/, `${name}: the unit run leaves budgets out`);
   }
 });
+
+test('a package runs `budgets` only when it has a budget to run', () => {
+  const withBudgets = new Set(tests.filter((file) => BUDGET.test(file)).map(packageOf));
+  const idle = ['apps', 'packages', 'tools']
+    .flatMap((top) =>
+      readdirSync(join(root, top), { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => join(root, top, entry.name)),
+    )
+    .filter((dir) => existsSync(join(dir, 'package.json')))
+    .filter((dir) => JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')).scripts?.budgets)
+    .filter((dir) => !withBudgets.has(dir))
+    .map((dir) => relative(root, dir));
+  // vitest finds no files and exits 1, failing `task budgets` (A1244).
+  assert.deepEqual(idle, [], 'a `budgets` script with no *.budget.test.ts file');
+});

@@ -41,4 +41,4 @@ This repository becomes `htxryan/penmoss-private`, private, with its history, is
 
 ## Keeping it clean
 
-`task audit:secrets` runs in `task check`, and so in CI. `task audit:test` checks that the scan fails on a planted token or private key and passes the reviewed false positives. gitleaks is pinned and its download checked against its release's SHA-256 (`scripts/gitleaks.sh`).
+`task audit:secrets` runs in `task check`, and so in CI. `task audit:test` checks that the scan fails on a planted token or private key and passes the reviewed false positives. gitleaks is pinned and its download checked against its release's SHA-256 (`scripts/pinned-tool.sh gitleaks`).

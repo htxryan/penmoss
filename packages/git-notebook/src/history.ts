@@ -5,10 +5,9 @@
  * version is the merge of every writer's file there. Who made it comes from the commit's
  * `Penmoss-Writer` trailer (A825) and the actor files (A829).
  *
- * The answers have the server's shapes (`/api/notes/:id/versions`, MCP `get_history`), so the
- * apps' History panel, the CLI and the local MCP read them unchanged. Version ids are whole
- * numbers, as the server's are: the oldest commit that touched the note is 1, and each later one
- * the next. Pushes are fast-forwards only, so an id never changes once given.
+ * The answers are `/api/notes/:id/versions`'s and MCP `get_history`'s shapes, which the apps'
+ * History panel, the CLI and the local MCP read. Version ids are whole numbers: the oldest
+ * commit that touched the note is 1, and each later one the next. Pushes are fast-forwards only, so an id never changes once given.
  *
  * Restore is A80's diff-apply (`restoreContent`) and Revert A81's three-way merge
  * (`revertChange`), both applied by the caller as an ordinary local change that syncs.
@@ -20,14 +19,14 @@ import {
   type ChangeDescription,
   type DiffOp,
 } from '@penmoss/core/diff';
-import { versionMarkdown } from '@penmoss/editor/markdown';
-import * as Y from '@y/y';
+import { versionMarkdown } from '@penmoss/sync-client/markdown';
+import type * as Y from '@y/y';
+import { docOfState, mergedLogs, noteFilesAt } from './at-commit';
 import type { Layout } from './layout';
 import { Lru } from './lru';
 import type { CommitInfo, GitTransport } from './transport';
 import { commitWriter } from './writer';
 import type { WriterKind } from './writer';
-import { isUpdate, mergeUpdates } from './yjs';
 
 export interface HistoryAuthor {
   /** The writer's id (or the commit author's email where a commit names no writer). */
@@ -72,45 +71,17 @@ export function commitAuthor(commit: CommitInfo): HistoryAuthor {
   return { id: commit.author.email, kind: 'device', label: commit.author.name };
 }
 
-/** The most versions listed (as the server's History keeps them, newest first). */
+/** The most versions listed, newest first. */
 export const MAX_VERSIONS = 1000;
-
-/** Commits listed and read at once where the transport has no `readDir`. */
-const PARALLEL_READS = 4;
 
 /** Versions rendered to markdown before `summaries` lets other work run (a page's input). */
 const RENDERS_PER_TURN = 8;
 
 const nextTurn = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
-/** Runs `work` on each of `items`, at most `limit` at a time. */
-async function eachLimited<T>(
-  items: readonly T[],
-  limit: number,
-  work: (item: T) => Promise<void>,
-): Promise<void> {
-  let next = 0;
-  const lane = async () => {
-    while (next < items.length) await work(items[next++]!);
-  };
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane));
-}
-
-/** The merge of every writer's log among `files`; null where there is none. */
-function merged(files: ReadonlyMap<string, Uint8Array> | undefined): Uint8Array | null {
-  const parts = [...(files?.values() ?? [])].filter(isUpdate);
-  return parts.length > 0 ? mergeUpdates(parts) : null;
-}
-
-function docOf(state: Uint8Array | null): Y.Doc {
-  const doc = new Y.Doc();
-  if (state) Y.applyUpdate(doc, state);
-  return doc;
-}
-
 /** The note's markdown as History compares versions. */
 function markdownOf(state: Uint8Array | null): string {
-  const doc = docOf(state);
+  const doc = docOfState(state);
   try {
     return versionMarkdown(doc);
   } finally {
@@ -154,35 +125,6 @@ export class NotebookHistory {
     return commits;
   }
 
-  /** The note's files at each of `commits` (path → bytes), read together. */
-  private async filesAt(
-    noteId: string,
-    commits: readonly string[],
-  ): Promise<Map<string, ReadonlyMap<string, Uint8Array>>> {
-    const dir = this.layout.noteDir(noteId);
-    const out = new Map<string, ReadonlyMap<string, Uint8Array>>();
-    if (commits.length === 0) return out;
-    if (this.transport.readDir) {
-      const { files, blobs } = await this.transport.readDir(commits, dir);
-      for (const commit of commits) {
-        const read = new Map<string, Uint8Array>();
-        for (const [path, blob] of files.get(commit) ?? []) {
-          const bytes = blobs.get(blob);
-          if (bytes) read.set(path, bytes);
-        }
-        out.set(commit, read);
-      }
-      return out;
-    }
-    // A transport without it lists each commit and reads the note's files, a few at a time.
-    await eachLimited(commits, PARALLEL_READS, async (commit) => {
-      const files = await this.transport.list(commit);
-      const paths = [...files.keys()].filter((path) => path.startsWith(dir));
-      out.set(commit, paths.length > 0 ? await this.transport.read(commit, paths) : new Map());
-    });
-    return out;
-  }
-
   /** The note as every writer's files had it at each of `commits`, read together. */
   private async statesAt(
     noteId: string,
@@ -196,9 +138,9 @@ export class NotebookHistory {
       if (this.states.has(key)) out.set(commit, this.states.get(key) ?? null);
       else wanted.push(commit);
     }
-    const read = await this.filesAt(noteId, wanted);
+    const read = await noteFilesAt(this.transport, this.layout, noteId, wanted);
     for (const commit of wanted) {
-      const state = merged(read.get(commit));
+      const state = mergedLogs(read.get(commit)?.values());
       this.states.set(`${noteId}:${commit}`, state);
       out.set(commit, state);
     }
@@ -212,7 +154,7 @@ export class NotebookHistory {
 
   /** A doc of the note at `commit` (empty where it had none). */
   async docAt(noteId: string, commit: string | null): Promise<Y.Doc> {
-    return docOf(commit ? await this.stateAt(noteId, commit) : null);
+    return docOfState(commit ? await this.stateAt(noteId, commit) : null);
   }
 
   /** The note's markdown at each of `commits`, the ones not known yet read together. */
@@ -229,11 +171,11 @@ export class NotebookHistory {
       else if (this.states.has(key)) out.set(commit, markdownOf(this.states.get(key) ?? null));
       else wanted.push(commit);
     }
-    const read = await this.filesAt(noteId, wanted);
+    const read = await noteFilesAt(this.transport, this.layout, noteId, wanted);
     for (const [i, commit] of wanted.entries()) {
       // Rendering a long note's markdown takes a few ms: a window's page stays responsive.
       if (i > 0 && i % RENDERS_PER_TURN === 0) await nextTurn();
-      out.set(commit, markdownOf(merged(read.get(commit))));
+      out.set(commit, markdownOf(mergedLogs(read.get(commit)?.values())));
     }
     for (const [commit, markdown] of out) this.texts.set(`${noteId}:${commit}`, markdown);
     return out;
@@ -366,7 +308,7 @@ export class NotebookHistory {
     return { commit, previous: id > 1 ? commits[id - 2]! : null };
   }
 
-  /** A version's markdown and its line diff against the version before (the server's shape). */
+  /** A version's markdown and its line diff against the version before. */
   async detail(noteId: string, id: number): Promise<GitVersionDetail | null> {
     const found = await this.commitOf(noteId, id);
     if (!found) return null;
@@ -395,8 +337,8 @@ export class NotebookHistory {
     const parent = found.commit.parents[0] ?? null;
     const states = await this.statesAt(noteId, [found.commit.id, parent]);
     return {
-      before: docOf(parent ? (states.get(parent) ?? null) : null),
-      after: docOf(states.get(found.commit.id) ?? null),
+      before: docOfState(parent ? (states.get(parent) ?? null) : null),
+      after: docOfState(states.get(found.commit.id) ?? null),
     };
   }
 }

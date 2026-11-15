@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readBoard, setBlocked, setStatus } from '../src/board.ts';
 import type { Exec, ExecOptions } from '../src/exec.ts';
-import { createGh, GhError } from '../src/github.ts';
+import { createGh, GH_TIMEOUT_MS, GhError } from '../src/github.ts';
 import { testConfig } from './helpers.ts';
 
 interface Call {
@@ -149,6 +149,14 @@ describe('createGh', () => {
     const gh = createGh({ exec });
     await expect(gh.run(['api', 'user'])).rejects.toBeInstanceOf(GhError);
     await expect(gh.graphql('query { x }')).rejects.toThrow('bad field');
+  });
+
+  it('gives every gh call a time limit (F2)', async () => {
+    const { exec, calls } = fakeExec([{ ok: 1 }, { ok: 1 }]);
+    await createGh({ exec }).json(['api', 'user']);
+    await createGh({ exec, timeoutMs: 1000 }).json(['api', 'user']);
+    expect(calls[0]?.options?.timeoutMs).toBe(GH_TIMEOUT_MS);
+    expect(calls[1]?.options?.timeoutMs).toBe(1000);
   });
 
   it('passes the given environment to gh', async () => {

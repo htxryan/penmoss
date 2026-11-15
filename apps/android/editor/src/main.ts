@@ -1,6 +1,7 @@
 /**
- * The Android editor page (T32): the shared editor, the web app's note
- * styles and theme tokens, and the bridge to the app. Loaded from the APK
+ * The Android editor page (T32): the shared editor, the web app's styles
+ * (all of them: which of `styles.css`'s feature files the page uses is not
+ * told apart yet, A1511) and theme tokens, and the bridge to the app. Loaded from the APK
  * through WebViewAssetLoader; the `penmossNative` listener exists only there.
  */
 import '../../../web/src/theme/defaults.css';

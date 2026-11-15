@@ -4,6 +4,7 @@ import {
   useId,
   useRef,
   useState,
+  type ButtonHTMLAttributes,
   type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
@@ -15,7 +16,7 @@ const ITEMS = '[role="menuitem"]:not([disabled]), [role="menuitemcheckbox"]:not(
  * A menu button with a WAI-ARIA menu (T15, T36): arrows move between items,
  * Home and End jump, Escape and Tab close it and give focus back to the
  * button. Choosing an item closes it. On a phone it opens as a sheet from the
- * bottom of the screen (styles.css, `.menu[data-sheet]`), over a scrim.
+ * bottom of the screen (shell/narrow.css, `.menu[data-sheet]`), over a scrim.
  *
  * Items are the caller's own buttons, `role="menuitem"` (or
  * `menuitemcheckbox`), each running its command through the registry.
@@ -137,5 +138,38 @@ export function Menu({
         </>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * One item of a menu (`Menu`, `ContextMenu`): its icon and label, `danger` for a destructive one.
+ * Its other props (an `onClick`, a `data-testid`, `disabled`) go on the button as they are.
+ */
+export function MenuItem({
+  icon,
+  danger = false,
+  children,
+  ...button
+}: {
+  readonly icon: IconName;
+  readonly danger?: boolean;
+  readonly children: ReactNode;
+} & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type' | 'role' | 'className' | 'children'> & {
+    readonly 'data-testid'?: string | undefined;
+    readonly 'data-command'?: string | undefined;
+    readonly 'data-sort'?: string | undefined;
+  }) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      tabIndex={-1}
+      className={danger ? 'menu-item danger' : 'menu-item'}
+      data-ui="item"
+      {...button}
+    >
+      <Icon name={icon} />
+      <span className="menu-label">{children}</span>
+    </button>
   );
 }

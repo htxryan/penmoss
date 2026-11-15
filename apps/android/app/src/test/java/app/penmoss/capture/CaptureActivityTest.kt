@@ -28,7 +28,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.Configuration
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.PenmossApp
 import app.penmoss.TestGraphs
 import app.penmoss.engine.api.CaptureRequest
@@ -67,8 +67,8 @@ class CaptureActivityTest {
 
     private val app: PenmossApp = ApplicationProvider.getApplicationContext()
     /** The app's graph (its device settings), and the git notebook's the sheet saves to. */
-    private lateinit var main: AppGraph
-    private lateinit var graph: AppGraph
+    private lateinit var main: app.penmoss.DeviceGraph
+    private lateinit var graph: NotebookGraph
     private var scenario: ActivityScenario<CaptureActivity>? = null
 
     /** A phone with one git notebook (or none), offline: everything here works with no network. */
@@ -183,7 +183,7 @@ class CaptureActivityTest {
     fun theSheetStartsOnTheDestinationTheOtherAppsRemember() {
         phone()
         // The device's setting, as the Journal notebook's device map last gave it (A1014).
-        runBlocking { main.store.saveTree(SyncTree(hash = "h", capture = CaptureSetting(CaptureRequest.INBOX))) }
+        runBlocking { main.store.saveTreeSettings(SyncTree(hash = "h", capture = CaptureSetting(CaptureRequest.INBOX))) }
         launch(Intent(ShareIntents.ACTION_CAPTURE))
         compose.onNodeWithTag("captureInbox").assertIsSelected()
     }

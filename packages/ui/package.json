@@ -4,9 +4,8 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "Shared React components, commands, themes, search UI, graph",
+  "description": "Shared React components: the theme model, the graph, Backlinks, icons and controls",
   "exports": {
-    ".": "./src/index.ts",
     "./panels/Backlinks": "./src/panels/Backlinks.tsx",
     "./controls/Select": "./src/controls/Select.tsx",
     "./graph/GraphView": "./src/graph/GraphView.tsx",
@@ -16,15 +15,11 @@
     "./graph/renderer": "./src/graph/renderer.ts",
     "./graph/theme": "./src/graph/theme.ts",
     "./icons": "./src/icons/Icon.tsx",
-    "./theme": "./src/theme/index.ts",
-    "./theme/fonts": "./src/theme/fonts.ts",
-    "./theme/schema": "./src/theme/schema.ts",
-    "./theme/settings": "./src/theme/settings.ts",
-    "./theme/tokens": "./src/theme/tokens.ts"
+    "./theme": "./src/theme/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "budgets": "PENMOSS_BUDGETS=1 vitest run"
   },
   "dependencies": {

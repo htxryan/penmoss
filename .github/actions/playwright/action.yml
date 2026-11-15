@@ -1,0 +1,20 @@
+name: Playwright's Chromium
+description: >-
+  The Chromium build a package's Playwright needs, and its system libraries if the image lacks
+  any (.github/scripts/system-deps.sh, A1308). Run it after .github/actions/setup with
+  `playwright-cache: 'true'`, and give the step a timeout-minutes: a stalled apt mirror once took
+  whole jobs (A620, A623).
+inputs:
+  package:
+    description: The workspace package whose Playwright runs (@penmoss/web, @penmoss/site)
+    default: '@penmoss/web'
+runs:
+  using: composite
+  steps:
+    - name: Install Chromium, and its system libraries if the image lacks any
+      shell: bash
+      env:
+        PACKAGE: ${{ inputs.package }}
+      run: |
+        pnpm --filter "$PACKAGE" exec playwright install chromium
+        sh .github/scripts/system-deps.sh "$PACKAGE"

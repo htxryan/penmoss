@@ -4,7 +4,8 @@
  * alone (⌘⇧Space is 1Password's, ⌥Space Raycast's and Alfred's, ⌃⌥Space
  * switches input sources), and N is for note. It can be changed in Settings →
  * Keyboard shortcuts; the choice is this Mac's own (preferences.json), not a
- * synced setting, since a hotkey free on one machine may be taken on another.
+ * synced setting, since a hotkey free on one machine may be taken on another
+ * (preferences.ts).
  *
  * A system-wide hotkey takes its keys from every app, so it passes A90's
  * checks as well as needing two modifiers: never the clipboard, undo, find or
@@ -12,9 +13,7 @@
  * off a Mac (AltGr types there). Only the Settings page may change it, after
  * a key press or click there, a few times a minute (`HotkeyChangeGate`).
  */
-import { readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { bindingProblem } from '@penmoss/editor/keys';
-import { parseWindowTheme, type WindowTheme } from './theme';
 
 export function defaultCaptureHotkey(platform: NodeJS.Platform): string {
   // Off a Mac (the tests' Linux), Ctrl+Alt+letter is AltGr (A90): Ctrl+Shift+Space instead.
@@ -128,45 +127,6 @@ export class HotkeyChangeGate {
   }
 }
 
-export interface Preferences {
-  readonly captureHotkey?: string;
-  /** The page's theme, for the windows' background (T28). */
-  readonly windowTheme?: WindowTheme;
-  /**
-   * The compact title bar (T47, A724): this Mac's own choice, never synced. Absent is on, the
-   * default; only `false` turns it off.
-   */
-  readonly compactTitleBar?: boolean;
-  /**
-   * The menu bar icon (T51 item 17, A945): this Mac's own choice, never synced. Absent is on,
-   * the default since T53 (item 6, A976); only `false` hides it.
-   */
-  readonly menuBarIcon?: boolean;
-}
-
-export function loadPreferences(file: string): Preferences {
-  try {
-    const raw = JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>;
-    const windowTheme = parseWindowTheme(raw['windowTheme']);
-    return {
-      ...(typeof raw['captureHotkey'] === 'string' ? { captureHotkey: raw['captureHotkey'] } : {}),
-      ...(windowTheme ? { windowTheme } : {}),
-      ...(typeof raw['compactTitleBar'] === 'boolean'
-        ? { compactTitleBar: raw['compactTitleBar'] }
-        : {}),
-      ...(typeof raw['menuBarIcon'] === 'boolean' ? { menuBarIcon: raw['menuBarIcon'] } : {}),
-    };
-  } catch {
-    return {};
-  }
-}
-
-export function savePreferences(file: string, preferences: Preferences): void {
-  const temp = `${file}.tmp`;
-  writeFileSync(temp, JSON.stringify(preferences), { mode: 0o600 });
-  renameSync(temp, file);
-}
-
 /**
  * Where focus goes when the capture window closes (T30; T39 pass 3 review, A904). On a Mac the
  * app hides, so focus goes back to the app the hotkey was pressed in, unless a Penmoss window had
@@ -184,34 +144,4 @@ export function afterCapture(state: {
   if (state.focusedBefore) return 'focus-before';
   if (state.openedWhileStarting && !state.startedOnItsOwn) return 'focus-main';
   return 'hide-app';
-}
-
-/** Launches kept in the launch log (A904). */
-const LAUNCHES_KEPT = 20;
-
-/**
- * The launch log with this launch added (A904): how macOS says the app started, from
- * `app.getLoginItemSettings()` (its plain values only), so a Mac run can check that
- * `wasOpenedAtLogin` is reliable. A debug log in the app's logs folder; the last 20 launches.
- */
-export function launchLog(previous: string, settings: object, at: Date): string {
-  const values = Object.entries(settings)
-    .filter(([, value]) => ['boolean', 'string', 'number'].includes(typeof value))
-    .map(([key, value]) => `${key}=${String(value)}`);
-  const line = `${at.toISOString()} launch: ${values.join(' ')} (A904)`;
-  const lines = [...previous.split('\n').filter((one) => one !== ''), line];
-  return `${lines.slice(-LAUNCHES_KEPT).join('\n')}\n`;
-}
-
-/** Adds this launch to the launch log file (A904); a log that cannot be written is skipped. */
-export function writeLaunchLog(file: string, settings: object, at: Date): void {
-  let previous = '';
-  try {
-    previous = readFileSync(file, 'utf8');
-  } catch {
-    // The first launch with the log.
-  }
-  const temp = `${file}.tmp`;
-  writeFileSync(temp, launchLog(previous, settings, at), { mode: 0o600 });
-  renameSync(temp, file);
 }

@@ -60,7 +60,7 @@ export function useReleaseNotes(): DesktopReleaseNotes | null {
   const updates = desktop()?.updates ?? null;
   const [file, setFile] = useState<DesktopReleaseNotes | null>(null);
   useEffect(() => {
-    if (!updates?.notes) return;
+    if (!updates) return;
     let live = true;
     void updates
       .notes()
@@ -68,12 +68,12 @@ export function useReleaseNotes(): DesktopReleaseNotes | null {
       .then((next) => {
         if (live && next) setFile(next);
       });
-    const off = updates.onNotes?.((next) => {
+    const off = updates.onNotes((next) => {
       if (live) setFile(next);
     });
     return () => {
       live = false;
-      off?.();
+      off();
     };
   }, [updates]);
   return file;

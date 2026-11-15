@@ -4,18 +4,17 @@ import android.content.Context
 import android.content.res.Configuration
 import android.widget.Toast
 import androidx.navigation.NavHostController
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.capture.CaptureTileService
 import app.penmoss.engine.bridge.ToEditor
 import app.penmoss.engine.settings.SettingKeys
-import app.penmoss.ui.GRAPH_ROUTE
+import app.penmoss.ui.graph.GRAPH_ROUTE
 import app.penmoss.ui.SEARCH_ROUTE
-import app.penmoss.ui.graphRoute
+import app.penmoss.ui.graph.graphRoute
 import app.penmoss.ui.open
-import app.penmoss.ui.sortFolderAndSay
+import app.penmoss.ui.folders.sortFolderAndSay
 import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -30,7 +29,7 @@ fun openCapture(context: Context) {
  * one in front, as from Home's buttons.
  */
 internal fun rootActions(
-    graph: AppGraph,
+    graph: NotebookGraph,
     nav: NavHostController,
     context: Context,
     openPeriodic: (ToEditor.PeriodKind, String?) -> Unit,
@@ -50,7 +49,8 @@ internal fun rootActions(
     newNote = { newNote(null) },
     newFolder = newFolder,
     sort = { mode ->
-        graph.scope.launch { Toast.makeText(context, sortFolderAndSay(graph, null, mode), Toast.LENGTH_SHORT).show() }
+        // Outlives the screen: the top level's sort order, written for the person.
+        graph.launchReporting(kotlinx.coroutines.Dispatchers.Main.immediate) { Toast.makeText(context, sortFolderAndSay(graph, null, mode), Toast.LENGTH_SHORT).show() }
     },
     capture = { openCapture(context) },
     // The opposite of the variant shown, as the web's `toggleDarkMode` does.

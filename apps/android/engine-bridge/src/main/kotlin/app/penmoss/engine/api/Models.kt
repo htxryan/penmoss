@@ -35,16 +35,10 @@ data class ChangedNote(
     /** A daily or weekly note's kind and period (T40 P5): regular notes carry neither. */
     val kind: String? = null,
     val period: String? = null,
-    /**
-     * The notes this one links to or embeds, distinct and sorted (T40 P7, A473), from D1's links
-     * index; null from a server before P7, which leaves what the phone has alone.
-     */
-    val links: List<String>? = null,
-    /**
-     * The note's tags, frontmatter and inline, sorted, from the server's index (T40 P6, FD3,
-     * TG1); none for a note in Trash. Null from an older server, which leaves what Room holds.
-     */
-    val tags: List<String>? = null,
+    /** The notes this one links to or embeds, distinct and sorted (T40 P7, A473). */
+    val links: List<String> = emptyList(),
+    /** The note's tags, frontmatter and inline, sorted (T40 P6, FD3, TG1); none for a note in Trash. */
+    val tags: List<String> = emptyList(),
 )
 
 @Serializable
@@ -95,7 +89,7 @@ data class BatchNoteReply(
     val headings: String? = null,
     /** The SHA-256 of the server's text and headings: alone, it says the phone's copy is current. */
     val textHash: String? = null,
-    /** Filed by this upload (T43, fix c): where; null when not (an older server, or filed already). */
+    /** Filed by this upload (T43, fix c): where; null when not (filed already). */
     val filed: BatchFiled? = null,
 )
 
@@ -114,25 +108,14 @@ data class SyncTree(
     val rootSortMode: String = "manual",
     val folders: List<TreeFolder> = emptyList(),
     val notes: List<TreeNote> = emptyList(),
-    /**
-     * The user's theme and mode as the server resolved them (T33, A305): `{ mode, theme }`,
-     * the theme with its light and dark colours by token name. Kept as JSON: the native
-     * screens read a few colours from it and the editor page gets it as it came.
-     */
-    val appearance: JsonObject? = null,
     /** Where the user's captures go, as the web and Mac apps remember it (T34, A336). */
     val capture: CaptureSetting? = null,
     /**
      * The user's settings the phone shows and changes (T40 P1, A410), as the server reads them:
      * each one set and readable by key (`theme.mode`, `timeZone`…), and the custom themes,
-     * validated, under `theme.custom.<id>`. Null from a server without the settings channel.
+     * validated, under `theme.custom.<id>`.
      */
-    val settings: JsonObject? = null,
-    /**
-     * The default notebook's name (T43, A751): absent from a server before notebooks, or while
-     * the person has not named it, which reads as "Personal".
-     */
-    val defaultNotebook: String? = null,
+    val settings: JsonObject = JsonObject(emptyMap()),
     /**
      * A git notebook's device map (A1014): every `device/<key>` setting in its WorkspaceDoc, as
      * the Mac writes them. The device's settings when this is the Journal notebook and there is no
@@ -195,8 +178,6 @@ data class TreeFolder(
     val parentId: String? = null,
     val position: String = "",
     val sortMode: String = "manual",
-    /** A notebook's own folder (T43, A750): only ever at the top level; absent otherwise. */
-    val notebook: Boolean = false,
 )
 
 @Serializable
@@ -209,41 +190,7 @@ data class TreeNote(
     val period: String? = null,
 )
 
-/** One hit of `GET /api/search`. Matched words sit between U+0002 and U+0003. */
-@Serializable
-data class SearchHit(
-    val id: String,
-    val title: String = "",
-    val snippet: String = "",
-    val updatedAt: Long = 0,
-    /** The title with its matched words marked (T40 P6, FD1). */
-    val titleHighlighted: String = "",
-    /** The section that matched (semantic results). */
-    val heading: String? = null,
-    val tags: List<String> = emptyList(),
-    /** `full-text`, `semantic`, or both (T23). */
-    val sources: List<String> = emptyList(),
-    /** The notebook the note is in (T43, A752): absent from a server before notebooks. */
-    val notebook: SearchNotebook? = null,
-)
-
-/** A search result's notebook (T43): its id (`default` for the default notebook) and name. */
-@Serializable
-data class SearchNotebook(val id: String, val name: String = "")
-
-/** The search modes (T23), as the route and the web name them. */
-enum class SearchMode(val wire: String, val label: String) {
-    FULL_TEXT("full-text", "Full-text"),
-    SEMANTIC("semantic", "Semantic"),
-    HYBRID("hybrid", "Hybrid"),
-    ;
-
-    companion object {
-        fun of(wire: String?): SearchMode = entries.firstOrNull { it.wire == wire } ?: FULL_TEXT
-    }
-}
-
-/** The filters of a search (T40 P6, FD3), as the route takes them; null: no filter. */
+/** The filters of a search on the phone (T40 P6, FD3); null: no filter. */
 data class SearchFilters(
     /** A folder, with its subfolders. */
     val folderId: String? = null,
@@ -251,17 +198,9 @@ data class SearchFilters(
     val tag: String? = null,
     /** Updated at or after this time (epoch ms). */
     val updatedAfter: Long? = null,
-    /**
-     * The notebooks open on this phone (T43, A752), sent as `notebooks=`: null sends none (every
-     * notebook open). Not a filter the person sets, so [none] leaves it out.
-     */
-    val notebooks: List<String>? = null,
 ) {
     val none: Boolean get() = folderId == null && tag == null && updatedAfter == null
 }
-
-@Serializable
-data class SearchReply(val results: List<SearchHit> = emptyList(), val notice: String? = null)
 
 /** The id of a note the server made or found (`POST /api/daily`). */
 @Serializable
@@ -282,22 +221,10 @@ data class FolderRef(
     val name: String,
     val parentId: String? = null,
     val sortMode: String = "manual",
-    /** Made in Trash with its deleted notebook: its parent was gone (T43, A757). */
-    val inTrash: Boolean = false,
-    /** The notebook the folder is in (T43): with [inTrash], the deleted one it went to Trash with. */
-    val notebook: FolderNotebook? = null,
 )
 
-/** A folder reply's notebook (T43): its name, and its id unless the token may not see it. */
-@Serializable
-data class FolderNotebook(val id: String? = null, val name: String = "")
-
-/** Where `POST /api/notes/:id/move` filed the note (T43, A757): the folder the server used. */
+/** Where `POST /api/notes/:id/move` filed the note (A757): the folder the server used. */
 data class FiledNote(val folderId: String?)
-
-/** A notebook as a refusal names it (T43, A757): `{ id, name }`. */
-@Serializable
-data class NotebookRef(val id: String, val name: String = "")
 
 /** A manual-order anchor among notes or folders (NT7): immediately before or after the sibling. */
 data class NotePlace(val before: String? = null, val after: String? = null)
@@ -321,14 +248,6 @@ data class FolderPatch(
     val checkParent: Boolean = false,
     val sortMode: String? = null,
     val place: FolderPlace? = null,
-    /** Turn into a notebook (true) or back into a folder (false), T43 (A756); null leaves it. */
-    val notebook: Boolean? = null,
-    /**
-     * With a move ([changeParent]): the notebook the phone saw the folder in when the move was
-     * made, `default` for the default notebook (T43, A766). Sent as `fromNotebook`; the server
-     * records the notebook in its notes' own documents only when it agrees.
-     */
-    val fromNotebook: String? = null,
 )
 
 @Serializable
@@ -352,8 +271,7 @@ data class TrashedNote(
 
 /**
  * What `POST /api/notes/:id/restore` answers: the folder it was deleted from (null: the top
- * level, or unknown), whether it was in Trash (a server from before T40 P3a does not say: true),
- * and the index seq the restore was made after.
+ * level, or unknown), whether it was in Trash, and the index seq the restore was made after.
  */
 @Serializable
 data class RestoredNote(val folderId: String? = null, val restored: Boolean = true, val seq: Long = 0)
@@ -365,14 +283,9 @@ data class TrashListed(
     val title: String = "",
     val deletedAt: Long = 0,
     val updatedAt: Long = 0,
-    /** Who moved it there (T42, #113, A574; T40 NT30, A655): absent from an older server. */
+    /** Who moved it there (T42, #113, A574; T40 NT30, A655): absent when no one is recorded. */
     @Serializable(with = DeletedBySerializer::class)
     val deletedBy: FolderDeleter? = null,
-    /**
-     * It went to Trash with a deleted notebook (T43, A755): it comes back when the notebook is
-     * restored, so Trash lists it with the notebook rather than on its own.
-     */
-    val withNotebook: Boolean = false,
 )
 
 @Serializable
@@ -420,8 +333,6 @@ data class TrashedFolderListed(
     val deletedBy: FolderDeleter? = null,
     val folders: Int = 0,
     val notes: Int = 0,
-    /** A deleted notebook, with its notes (T43, A755). */
-    val notebook: Boolean = false,
 )
 
 @Serializable
@@ -429,7 +340,7 @@ data class FolderTrashList(val folders: List<TrashedFolderListed> = emptyList())
 
 /**
  * `POST /api/folders/:id/restore` (T40 P9, NT25): whether it was in Trash, whether the folder it
- * was in is gone (it then comes back in the nearest folder above within its notebook, T43 A757,
+ * was in is gone (it then comes back in the nearest folder above that still exists, A757,
  * named by [RestoredFolder.parentId]), the notes put back, and those left where they were moved since.
  */
 @Serializable
@@ -439,27 +350,9 @@ data class RestoredFolder(
     val parentGone: Boolean = false,
     val notes: Int = 0,
     val skipped: List<String> = emptyList(),
-    /** A notebook brought back with its notes (T43, A755). */
-    val notebook: Boolean = false,
-    /**
-     * Where it came back (T43, A757): `parentId` as the server sent it, a folder id or JSON null
-     * for the top level (kept as JSON, as this client reads a null as absent otherwise); an empty
-     * object when an older server did not say. Read through [parentKnown] and [parentId].
-     */
-    @kotlinx.serialization.SerialName("parentId")
-    val parent: kotlinx.serialization.json.JsonElement = NOT_SAID,
-) {
-    /** The server said where it came back. */
-    val parentKnown: Boolean get() = parent != NOT_SAID
-
-    /** The folder it came back in (null: the top level, or not said; see [parentKnown]). */
-    val parentId: String? get() = (parent as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it !is kotlinx.serialization.json.JsonNull }?.content
-
-    companion object {
-        /** No `parentId` in the reply: an older server. */
-        val NOT_SAID = kotlinx.serialization.json.JsonObject(emptyMap())
-    }
-}
+    /** Where it came back (A757): a folder's id, or null for the top level. */
+    val parentId: String? = null,
+)
 
 /** The agent token an activity entry names (T42, A561). */
 @Serializable

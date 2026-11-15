@@ -19,7 +19,7 @@ import {
   setNoteNotebook,
   type TrashInfo,
 } from './note';
-import { linksField, withoutLinks, type NoteRecord } from './record';
+import { linksField, withoutLinks, type NoteMeta, type NoteRecord } from './record';
 
 export { LINKS_VERSION, linksField, needsLinks, withoutLinks } from './record';
 import { NOTE_META } from './note';
@@ -47,10 +47,7 @@ export function newRev(): string {
 }
 
 export interface RecordFields {
-  readonly epoch: string | null;
   readonly unsynced: boolean;
-  /** The copy has had the server's state (`NoteRecord.seeded`). */
-  readonly seeded?: boolean | undefined;
   readonly updatedAt?: number;
 }
 
@@ -73,10 +70,8 @@ export function recordFromDoc(noteId: string, doc: Y.Doc, fields: RecordFields):
     ...(deleted ? { deleted: true } : {}),
     ...(trash.at !== undefined ? { deletedAt: trash.at } : {}),
     ...(trash.folderId !== undefined ? { deletedFrom: trash.folderId } : {}),
-    epoch: fields.epoch,
     updatedAt: fields.updatedAt ?? Date.now(),
     unsynced: fields.unsynced,
-    ...(fields.seeded ? { seeded: true } : {}),
     rev: newRev(),
   };
 }
@@ -104,13 +99,11 @@ export function recordFromUpdates(
 /**
  * Merges a record another writer stored into the one this writer is about to
  * store. Nothing is lost: Yjs merges both, and the result is unsynced if
- * either side was, and has had the server's state if either had.
+ * either side was.
  */
 export function mergeRecords(stored: NoteRecord, mine: NoteRecord): NoteRecord {
   return recordFromUpdates(mine.noteId, [stored.update, mine.update], {
-    epoch: mine.epoch ?? stored.epoch,
     unsynced: mine.unsynced || stored.unsynced,
-    seeded: mine.seeded === true || stored.seeded === true,
     updatedAt: Math.max(mine.updatedAt, stored.updatedAt),
   });
 }
@@ -120,11 +113,7 @@ export function changeRecord(record: NoteRecord, change: (doc: Y.Doc) => void): 
   const doc = docOf([record.update]);
   try {
     change(doc);
-    return recordFromDoc(record.noteId, doc, {
-      epoch: record.epoch,
-      unsynced: true,
-      seeded: record.seeded,
-    });
+    return recordFromDoc(record.noteId, doc, { unsynced: true });
   } finally {
     doc.destroy();
   }
@@ -147,10 +136,10 @@ export function notebookRecord(record: NoteRecord, notebook: string): NoteRecord
 }
 
 /**
- * A5: a copy of a note's local state as a new note, saved when the server's
- * epoch changed (it was restored) so local changes are kept without merging
- * them into the restored document. The body is copied into fresh Yjs items
- * (this device's client id), so the copy shares no history with the original.
+ * A copy of a note's local state as a new note (A640), made when a change kept as a page went
+ * cannot join the record, so its edits are kept without merging them into another document.
+ * The body is copied into fresh Yjs items (this device's client id), so the copy shares no
+ * history with the original.
  */
 export function conflictCopy(
   state: Uint8Array,
@@ -172,7 +161,7 @@ export function conflictCopy(
       );
       copy.get(NOTE_ROOT).applyDelta(source.get(NOTE_ROOT).toDeltaDeep());
     });
-    return recordFromDoc(id, copy, { epoch: null, unsynced: true, updatedAt: now.getTime() });
+    return recordFromDoc(id, copy, { unsynced: true, updatedAt: now.getTime() });
   } finally {
     source.destroy();
     copy.destroy();
@@ -257,7 +246,7 @@ export function copyNote(state: Uint8Array, options: NoteCopyOptions): NoteRecor
       copy.get(NOTE_ROOT).applyDelta(source.get(NOTE_ROOT).toDeltaDeep());
       if (options.links && options.links.size > 0) remapLinks(copy.get(NOTE_ROOT), options.links);
     });
-    return recordFromDoc(id, copy, { epoch: null, unsynced: true, updatedAt: now.getTime() });
+    return recordFromDoc(id, copy, { unsynced: true, updatedAt: now.getTime() });
   } finally {
     source.destroy();
     copy.destroy();
@@ -282,20 +271,31 @@ export function noteAttachmentPaths(state: Uint8Array): string[] {
   }
 }
 
-/** The tags and headings of a stored note's merged update (records written before T18, T22). */
-export function searchFieldsOfUpdate(update: Uint8Array): { tags: string[]; headings: string } {
-  const doc = new Y.Doc();
-  try {
-    Y.applyUpdate(doc, update);
-    return { tags: noteTags(doc), headings: noteHeadings(bodyJson(doc)) };
-  } catch {
-    return { tags: [], headings: '' };
-  } finally {
-    doc.destroy();
-  }
-}
+const TITLE_LENGTH = 120;
+const EXCERPT_LENGTH = 160;
 
-/** A Yjs v1 update that carries nothing (no structs, no deletions). */
-export function isEmptyUpdate(update: Uint8Array): boolean {
-  return update.byteLength <= 2;
+export function toMeta(record: NoteRecord): NoteMeta {
+  let { title } = record;
+  let body = record.text;
+  if (title === undefined) {
+    // Records from before T6 have no title: use the first line, as the spike did.
+    const newline = body.indexOf('\n');
+    title = newline === -1 ? body : body.slice(0, newline);
+    body = newline === -1 ? '' : body.slice(newline + 1);
+  }
+  return {
+    noteId: record.noteId,
+    engine: record.engine,
+    title: title.slice(0, TITLE_LENGTH),
+    excerpt: body.replace(/\s+/g, ' ').trim().slice(0, EXCERPT_LENGTH),
+    tags: record.tags ?? [],
+    updatedAt: record.updatedAt,
+    unsynced: record.unsynced,
+    deleted: record.deleted ?? false,
+    ...(record.deletedAt !== undefined ? { deletedAt: record.deletedAt } : {}),
+    ...(record.deletedFrom !== undefined ? { deletedFrom: record.deletedFrom } : {}),
+    bytes: record.update.byteLength,
+    ...(record.links?.length ? { links: record.links } : {}),
+    ...(record.linksVersion !== undefined ? { linksVersion: record.linksVersion } : {}),
+  };
 }

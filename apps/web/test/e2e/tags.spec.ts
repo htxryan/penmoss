@@ -172,9 +172,10 @@ test('renaming a tag offline changes every note through its document, and syncs'
   const name = pane(page).getByRole('textbox', { name: `New name for #${old}` });
   await name.fill(merged);
   await pane(page).getByRole('button', { name: 'Merge' }).click();
-  await expect(pane(page).getByRole('status')).toHaveText(
-    `Merged #${old} into #${merged} in 2 notes`,
-  );
+  // The Tags page's words and its Undo (A1508).
+  const done = page.getByTestId('tag-done-toast');
+  await expect(done).toContainText(`Merged #${old} into #${merged} in 2 notes.`);
+  await expect(done.getByRole('button', { name: 'Undo' })).toBeVisible();
   await expect(body(page)).toContainText(`Sweep #${merged} and #${merged}`);
   await expect(anyTag(page, old)).toHaveCount(0);
   await expect(tagButton(page, merged, 2)).toBeVisible();

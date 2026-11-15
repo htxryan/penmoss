@@ -15,7 +15,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.work.Configuration
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.PenmossApp
 import app.penmoss.TestGraphs
 import app.penmoss.data.NoteEntity
@@ -46,7 +46,7 @@ class DeepLinkActivityTest {
     val compose = createEmptyComposeRule()
 
     private val app: PenmossApp = ApplicationProvider.getApplicationContext()
-    private lateinit var graph: AppGraph
+    private lateinit var graph: app.penmoss.DeviceGraph
     private var scenario: ActivityScenario<MainActivity>? = null
 
     private val garden = "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"

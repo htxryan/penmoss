@@ -150,9 +150,7 @@ class EditorPageServices(
             val reply = CompletableDeferred<FromEditor?>()
             awaiting = noteId to reply
             val into = set.into?.let { CopyInto(it.noteId, it.updates) }
-            // The original's notebook as the phone sees it: the copy's when the note does not say (A766).
-            val notebook = store.notebookOfNote(noteId)
-            send(BridgeProtocol.encode(ToEditor.CopyConflicts(noteId, set.base, set.edits, into, notebook)))
+            send(BridgeProtocol.encode(ToEditor.CopyConflicts(noteId, set.base, set.edits, into)))
             val answer = withTimeoutOrNull(copyTimeoutMs) { reply.await() }
             awaiting = null
             val replaces = set.edits.map { it.id }

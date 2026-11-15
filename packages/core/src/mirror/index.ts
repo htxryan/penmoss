@@ -1,8 +1,7 @@
 /**
- * The git mirror's pure code (T27, T43), shared since T50 G1 (A832): the server's mirror and the
- * git notebooks (`@penmoss/git-notebook`) name files, read the folder tree and diff trees with
- * the same functions, so both write the same paths for the same notes.
+ * The git notebook's file layout, shared by the engine and Android's page (A832): note and folder
+ * names, paths, the blob SHA git gives a file, and the tree hash.
  */
 export * from './paths';
+export * from './text-hash';
 export * from './tree';
-export * from './workspace-tree';

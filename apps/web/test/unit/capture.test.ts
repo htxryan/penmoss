@@ -3,7 +3,8 @@ import { journalFolderId, periodicNoteId } from '@penmoss/core/periodic';
 import { readWorkspace } from '@penmoss/sync-client/workspace';
 import { bodyJson, createYjs14Replica } from '@penmoss/sync-client/yjs14';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DESTINATION_SETTING, destinationOf, saveCapture } from '../../src/capture/save';
+import { CAPTURE_DESTINATION_SETTING, captureDestinationOf } from '@penmoss/core/settings';
+import { saveCapture } from '../../src/capture/save';
 import { INBOX } from '../../src/workspace/service';
 import { TEST_NOTEBOOK, testNotes, testWorkspace } from './support/local-sources';
 import { memoryNotes } from './support/memory-notes';
@@ -94,7 +95,7 @@ describe('saving a capture (T30)', () => {
     expect(store.records.get(id)).toMatchObject({ unsynced: true });
     // Filed in the journal like any daily note.
     expect(workspace.folderOfNote(id)).toBe(journalFolderId('Journal/2026/10', TEST_NOTEBOOK));
-    expect(destinationOf(workspace.settings())).toBe('daily');
+    expect(captureDestinationOf(workspace.settings())).toBe('daily');
   });
 
   it('files a new note in Inbox, made once, without changing the default (A947)', async () => {
@@ -114,8 +115,8 @@ describe('saving a capture (T30)', () => {
     const inbox = journalFolderId(INBOX, TEST_NOTEBOOK);
     expect(workspace.folderOfNote(noteId)).toBe(inbox);
     // The form's choice is for this capture only: Settings → Daily Notes sets the default.
-    expect(workspace.settings()[DESTINATION_SETTING]).toBeUndefined();
-    expect(destinationOf(workspace.settings())).toBe('daily');
+    expect(workspace.settings()[CAPTURE_DESTINATION_SETTING]).toBeUndefined();
+    expect(captureDestinationOf(workspace.settings())).toBe('daily');
 
     // A second capture reuses the folder; the workspace record holds both, stored.
     const again = await saveCapture(notes, workspace, 'Shed idea', 'inbox');
@@ -127,9 +128,9 @@ describe('saving a capture (T30)', () => {
 
   it('leaves a default of New Note in Inbox as it is when one capture goes to today (A947)', async () => {
     const { notes, workspace } = await offlineDevice();
-    workspace.setSetting(DESTINATION_SETTING, 'inbox');
+    workspace.setSetting(CAPTURE_DESTINATION_SETTING, 'inbox');
     await saveCapture(notes, workspace, 'Just this once', 'daily');
-    expect(destinationOf(workspace.settings())).toBe('inbox');
+    expect(captureDestinationOf(workspace.settings())).toBe('inbox');
   });
 
   it('uses the user’s own Inbox folder when there is one', async () => {

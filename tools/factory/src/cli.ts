@@ -37,6 +37,18 @@ import { createLinearClient, type LinearClient } from './tracker/linear-client.t
 import { ownerKey } from './ui/owner.ts';
 import { decisionNumber } from './decision-number.ts';
 import { helpFor, usage } from './usage.ts';
+import { followLogs, openUi, serveOnTailnet, stopDaemon, type ControlDeps } from './control.ts';
+
+/** The control commands' terminal: the command's own stdin, stdout and stderr. */
+function controlDeps(): ControlDeps {
+  return {
+    run: (cmd, args) => spawnSync(cmd, [...args], { stdio: 'inherit' }).status ?? 1,
+    read: (file) => readFileSync(file, 'utf8'),
+    uid: String(process.getuid?.() ?? ''),
+    sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    log: (line) => console.log(line),
+  };
+}
 
 function describe(pick: Pick, config: FactoryConfig): string[] {
   const { item, spec } = pick;
@@ -289,6 +301,14 @@ async function main(argv: readonly string[]): Promise<number> {
       return startFactory(agentDeps());
     case 'status':
       return status(loaded.config);
+    case 'stop':
+      return stopDaemon(controlDeps());
+    case 'logs':
+      return followLogs(loaded.config, controlDeps());
+    case 'ui-open':
+      return openUi(loaded.config, controlDeps());
+    case 'ui-tailnet':
+      return serveOnTailnet(loaded.config, controlDeps());
     case 'daemon':
       return runDaemon(loaded.config, (line) => console.log(`${new Date().toISOString()} ${line}`));
     case 'report': {

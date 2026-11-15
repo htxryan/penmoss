@@ -117,10 +117,8 @@ data class NoteEntity(
     /** The SHA-256 of the text in the offline index, sent so the server sends text only when it differs. */
     val textHash: String? = null,
     /**
-     * The notebook the phone saw the note in when the move waiting to file ([toFile]) was made,
-     * `default` for the default notebook (T43, A766): sent as the move's `fromNotebook`. Kept
-     * across later moves made before it files, as [movedFrom] is; a note made here holds the
-     * notebook it was made in. Null for a move queued before schema 19 (worked out at sending).
+     * Unused: T43's `fromNotebook` for a move (A766), gone with notebooks inside a notebook
+     * (A912). Kept so the schema stays 19; nothing reads or writes it.
      */
     val moveNotebook: String? = null,
 ) {
@@ -142,12 +140,6 @@ data class NoteEntity(
 
         /** The restore is in flight: Move to Trash meanwhile queues a move, never a cancel. */
         const val RESTORE_SENDING = 6
-
-        /**
-         * In Trash with a notebook deleted here (T43, A755): nothing to send, as the notebook's
-         * delete trashes it on the server; held as [TRASH_SENT] is. Trash lists it with the notebook.
-         */
-        const val TRASH_WITH_NOTEBOOK = 7
     }
 }
 
@@ -159,7 +151,10 @@ data class FolderEntity(
     val parentId: String?,
     val position: String,
     val sortMode: String,
-    /** A notebook's own folder (T43, A750): a top-level folder the tree flags. */
+    /**
+     * Unused: T43's notebook flag (A750), which a git notebook's tree never sets (A912). Kept so
+     * the schema stays 19; nothing reads or writes it.
+     */
     @ColumnInfo(defaultValue = "0") val notebook: Boolean = false,
 )
 
@@ -175,9 +170,9 @@ data class FolderOpEntity(
     @PrimaryKey(autoGenerate = true) val rowId: Long = 0,
     /** The folder changed; null for the top level's sort mode (ROOT_SORT). */
     val folderId: String?,
-    /** CREATE, RENAME, MOVE, SORT, REORDER, DELETE, ROOT_SORT, NOTEBOOK or ROOT_NAME. */
+    /** CREATE, RENAME, MOVE, SORT, REORDER, DELETE or ROOT_SORT (NOTEBOOK and ROOT_NAME: an older version's, dropped unsent). */
     val kind: String,
-    /** The new name (CREATE, RENAME), or the default notebook's (ROOT_NAME, T43). */
+    /** The new name (CREATE, RENAME). */
     val name: String? = null,
     /** Precondition for RENAME when [checkName]: the name seen when it was asked. */
     val fromName: String? = null,
@@ -201,15 +196,9 @@ data class FolderOpEntity(
      * sends the delete instead of cancelling both, so the folder does not reappear.
      */
     @ColumnInfo(defaultValue = "0") val tried: Boolean = false,
-    /**
-     * T43 (A750, A756): a CREATE that makes a notebook, or the flag a NOTEBOOK change sets
-     * (true: Turn into notebook; false: Turn back into a folder).
-     */
+    /** Unused: T43's notebook flag on a CREATE or NOTEBOOK change (A756). Kept for schema 19. */
     @ColumnInfo(defaultValue = "0") val notebook: Boolean = false,
-    /**
-     * A MOVE's `fromNotebook` (T43, A766): the notebook the phone saw the folder in when the move
-     * was made, `default` for the default notebook. Null for one queued before schema 19.
-     */
+    /** Unused: T43's `fromNotebook` on a MOVE (A766). Kept for schema 19. */
     val fromNotebook: String? = null,
 ) {
     companion object {
@@ -221,10 +210,16 @@ data class FolderOpEntity(
         const val DELETE = "DELETE"
         const val ROOT_SORT = "ROOT_SORT"
 
-        /** Turn a top-level folder into a notebook, or a notebook back into a folder (T43, A756). */
+        /**
+         * T43's Turn into notebook or back into a folder (A756), which an older version could
+         * queue. Dropped unsent: a git notebook has no notebooks inside it (A912).
+         */
         const val NOTEBOOK = "NOTEBOOK"
 
-        /** The default notebook's name (T43, A751): `PATCH /api/folders/root { notebookName }`. */
+        /**
+         * The default notebook's name (T43, A751), which an older version could queue. Dropped
+         * unsent: a git notebook has no default notebook to name (A912).
+         */
         const val ROOT_NAME = "ROOT_NAME"
     }
 }
@@ -353,8 +348,6 @@ data class CapturesWaiting(
     val count: Int = 0,
     /** When the oldest was made (epoch ms). */
     val oldest: Long? = null,
-    /** The server answered that it has no capture route: it is waiting for a deploy (A342). */
-    val serverOutdated: Boolean = false,
 )
 
 @Entity(tableName = "settings")

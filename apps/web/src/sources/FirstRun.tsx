@@ -10,7 +10,7 @@
  */
 import { BrandMark } from '@penmoss/ui/icons';
 import { Fragment, useCallback, useRef, useState, type ReactNode } from 'react';
-import { desktop, type GitHubRepo } from '../desktop/bridge';
+import { desktop, type DesktopGit, type GitHubRepo } from '../desktop/bridge';
 import {
   FIRST_RUN_DOCS,
   placeIn,
@@ -48,8 +48,6 @@ export function FirstRunGate({
   const state = useAllSources();
   /** A notebook is being set up (7.1): the first run stays until its first sync. */
   const [held, setHeld] = useState(false);
-  // Without a registry (tests that render one source), there is nothing to wait for.
-  if (!state) return children;
   if (isOpen(state) && !held) return children;
   if (!state.loaded) {
     return (
@@ -120,14 +118,39 @@ function Options<T extends string>({
 
 type Way = 'create' | 'existing' | 'url';
 
+/** The first run, or, outside the Mac app's bridge, where to find it. */
+export function FirstRun({ onHold }: { onHold?: (hold: boolean) => void }) {
+  const git = desktop()?.git ?? null;
+  if (!git) {
+    return (
+      <main className="app-shell first-run-plain" data-testid="first-run">
+        <h1 className="brand">
+          <BrandMark />
+          <span>Penmoss</span>
+        </h1>
+        <p data-testid="first-run-no-mac">
+          Penmoss runs in its Mac app, which keeps your notes in git notebooks. Open the Mac app to
+          add one.
+        </p>
+      </main>
+    );
+  }
+  return <FirstRunSteps git={git} onHold={onHold} />;
+}
+
 /**
  * The first run's screens, as a stack: each step goes on to the next, Back goes to the one before.
  * `onHold` keeps the first run on screen while a notebook is set up, past the moment the list has
  * it, until its first sync.
  */
-export function FirstRun({ onHold }: { onHold?: (hold: boolean) => void }) {
-  const git = desktop()?.git ?? null;
-  const github = git?.github;
+function FirstRunSteps({
+  git,
+  onHold,
+}: {
+  git: DesktopGit;
+  onHold: ((hold: boolean) => void) | undefined;
+}) {
+  const github = git.github;
   const [stack, setStack] = useState<readonly Screen[]>([{ at: 'welcome' }]);
   const [goal, setGoal] = useState<Goal>('new');
   const [way, setWay] = useState<Way>('create');
@@ -142,7 +165,7 @@ export function FirstRun({ onHold }: { onHold?: (hold: boolean) => void }) {
   /** One repository's folders, read once (again on Try Again or Refresh). */
   const read = useCallback(
     (repo: GitHubRepo, again = false) => {
-      if (!github || (!again && asked.current.has(repo.fullName))) return;
+      if (!again && asked.current.has(repo.fullName)) return;
       asked.current.add(repo.fullName);
       setReads((now) => new Map(now).set(repo.fullName, { state: 'loading' }));
       void github
@@ -162,31 +185,14 @@ export function FirstRun({ onHold }: { onHold?: (hold: boolean) => void }) {
 
   /** git.add, holding the first run while it works and after it adds (until the first sync). */
   const add: AddNotebook = async (input) => {
-    if (!git) return null;
     onHold?.(true);
     const result = await git.add(input).catch(() => null);
     if (!(result?.ok && result.value.kind === 'added')) onHold?.(false);
     return result;
   };
 
-  if (!git) {
-    return (
-      <main className="app-shell first-run-plain" data-testid="first-run">
-        <h1 className="brand">
-          <BrandMark />
-          <span>Penmoss</span>
-        </h1>
-        <p data-testid="first-run-no-mac">
-          Penmoss runs in its Mac app, which keeps your notes in git notebooks. Open the Mac app to
-          add one.
-        </p>
-      </main>
-    );
-  }
-
   /** GitHub's sign-in first when the flow has none yet (2.x), then `then`. */
-  const viaGitHub = (then: 'create' | 'list') =>
-    go(github ? (hub ? { at: then } : { at: 'github', then }) : { at: 'url' });
+  const viaGitHub = (then: 'create' | 'list') => go(hub ? { at: then } : { at: 'github', then });
 
   let body: ReactNode;
   switch (screen.at) {
@@ -229,9 +235,7 @@ export function FirstRun({ onHold }: { onHold?: (hold: boolean) => void }) {
             <Action
               primary
               testId="first-run-continue"
-              onClick={() =>
-                goal === 'new' ? go(github ? { at: 'way' } : { at: 'url' }) : viaGitHub('list')
-              }
+              onClick={() => (goal === 'new' ? go({ at: 'way' }) : viaGitHub('list'))}
             >
               Continue
             </Action>
@@ -308,7 +312,7 @@ export function FirstRun({ onHold }: { onHold?: (hold: boolean) => void }) {
       );
       break;
     case 'github':
-      body = github ? (
+      body = (
         <GitHubAccess
           github={github}
           onReady={(answer) => {
@@ -318,19 +322,18 @@ export function FirstRun({ onHold }: { onHold?: (hold: boolean) => void }) {
           onUrl={() => replace({ at: 'url' })}
           back={back}
         />
-      ) : null;
+      );
       break;
     case 'create':
-      body =
-        github && hub ? (
-          <CreateRepo
-            github={github}
-            hub={hub}
-            onCreated={(place, name) => go({ at: 'setup', setup: { kind: 'create', place, name } })}
-            onUseExisting={() => replace({ at: 'list' })}
-            back={back}
-          />
-        ) : null;
+      body = hub ? (
+        <CreateRepo
+          github={github}
+          hub={hub}
+          onCreated={(place, name) => go({ at: 'setup', setup: { kind: 'create', place, name } })}
+          onUseExisting={() => replace({ at: 'list' })}
+          back={back}
+        />
+      ) : null;
       break;
     case 'list':
       body = hub ? (

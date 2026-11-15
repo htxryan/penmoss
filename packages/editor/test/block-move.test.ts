@@ -1,4 +1,4 @@
-import type { Replica } from '@penmoss/sync-client';
+import type { Replica } from '@penmoss/sync-client/replica';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import {

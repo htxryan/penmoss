@@ -47,9 +47,6 @@ export const STATUS_BAR_FIELDS: readonly MetadataField[] = METADATA_FIELDS.filte
 export const UNDER_TITLE_SETTING = 'metadata.underTitle';
 export const STATUS_BAR_SETTING = 'metadata.statusBar';
 
-/** Every pinned-metadata setting. */
-export const NOTE_METADATA_KEYS = [UNDER_TITLE_SETTING, STATUS_BAR_SETTING] as const;
-
 /** The status bar unset: the counts it has always shown. */
 export const STATUS_BAR_DEFAULT: readonly MetadataField[] = ['words', 'characters', 'reading'];
 

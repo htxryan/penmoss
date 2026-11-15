@@ -20,13 +20,13 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import app.penmoss.ui.square.IconButton
+import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import app.penmoss.ui.square.TextButton
+import app.penmoss.ui.common.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -53,7 +53,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.engine.keys.Bindings
 import app.penmoss.engine.keys.Combos
 import app.penmoss.engine.keys.ShortcutCommand
@@ -129,7 +129,7 @@ fun hasHardwareKeyboard(): Boolean {
 
 /** Settings → Keyboard shortcuts (T40 P9, ST8, A495), with the synced bindings. */
 @Composable
-fun ShortcutsRoute(graph: AppGraph, onBack: () -> Unit) {
+fun ShortcutsRoute(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
     val commands = LocalAppCommands.current
     val bindings by commands.bindings.collectAsStateWithLifecycle()
     val settings by graph.settings.collectAsStateWithLifecycle()

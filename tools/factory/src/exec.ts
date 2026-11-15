@@ -18,14 +18,23 @@ export interface ExecOptions {
   readonly signal?: AbortSignal;
   /** How long a stopped command gets between SIGTERM and SIGKILL (default 30 s). */
   readonly killGraceMs?: number;
+  /**
+   * Stops the command, and everything in its process group, when it runs longer (F2): SIGTERM,
+   * then SIGKILL `killGraceMs` later. It then answers once it exits (plus DRAIN_MS), so a
+   * grandchild that holds its pipes open can't keep the answer waiting. What it leaves running
+   * after a normal exit is left alone (git's credential cache, an ssh master).
+   */
+  readonly timeoutMs?: number;
 }
 
 export interface ExecResult {
   readonly code: number;
   readonly stdout: string;
   readonly stderr: string;
-  /** The command was stopped through `signal`. */
+  /** The command was stopped through `signal`, or at `timeoutMs`. */
   readonly aborted?: boolean;
+  /** It was stopped at `timeoutMs`. */
+  readonly timedOut?: boolean;
 }
 
 export type Exec = (
@@ -35,6 +44,8 @@ export type Exec = (
 ) => Promise<ExecResult>;
 
 export const KILL_GRACE_MS = 30_000;
+/** How long a command with `timeoutMs` gets after it exits for its pipes to close. */
+export const DRAIN_MS = 100;
 
 /**
  * Stops the group `$1` if its reader goes away without saying "done": this process died (even by
@@ -55,19 +66,23 @@ function killGroup(pid: number, signal: NodeJS.Signals): void {
 
 export const nodeExec: Exec = (cmd, args, options = {}) =>
   new Promise((resolve, reject) => {
-    const { signal } = options;
+    const { signal, timeoutMs } = options;
     const grace = options.killGraceMs ?? KILL_GRACE_MS;
     const child = spawn(cmd, args, {
       cwd: options.cwd,
       env: options.env ? { ...options.env } : process.env,
       stdio: ['pipe', 'pipe', 'pipe'],
       // Its own process group, so a stop reaches everything it started.
-      detached: signal !== undefined,
+      detached: signal !== undefined || timeoutMs !== undefined,
     });
     const out: Buffer[] = [];
     const err: Buffer[] = [];
     let aborted = false;
+    let timedOut = false;
     let escalate: ReturnType<typeof setTimeout> | undefined;
+    let limit: ReturnType<typeof setTimeout> | undefined;
+    let drain: ReturnType<typeof setTimeout> | undefined;
+    let settled = false;
     let standDown: () => void = () => undefined;
     const onAbort = () => {
       if (aborted || child.pid === undefined) return;
@@ -98,23 +113,50 @@ export const nodeExec: Exec = (cmd, args, options = {}) =>
       if (signal.aborted) onAbort();
       else signal.addEventListener('abort', onAbort, { once: true });
     }
+    if (timeoutMs !== undefined) {
+      limit = setTimeout(() => {
+        timedOut = true;
+        onAbort();
+      }, timeoutMs);
+    }
     child.stdout.on('data', (d: Buffer) => out.push(d));
     child.stderr.on('data', (d: Buffer) => err.push(d));
     child.stdin.on('error', () => undefined);
     child.on('error', (error) => {
+      settled = true;
+      clearTimeout(limit);
       standDown();
       reject(error);
     });
-    child.on('close', (code) => {
+    const finish = (code: number | null) => {
+      if (settled) return;
+      settled = true;
       clearTimeout(escalate);
+      clearTimeout(limit);
+      clearTimeout(drain);
       signal?.removeEventListener('abort', onAbort);
       standDown();
+      if (timedOut)
+        err.push(Buffer.from(`\n${cmd} took longer than ${timeoutMs} ms, so it was stopped.`));
       resolve({
         code: code ?? 1,
         stdout: Buffer.concat(out).toString('utf8'),
         stderr: Buffer.concat(err).toString('utf8'),
         ...(aborted ? { aborted } : {}),
+        ...(timedOut ? { timedOut } : {}),
       });
-    });
+    };
+    // With only a time limit, the answer is what it wrote by the time it exited: a grandchild
+    // holding the pipe doesn't hold it. With a signal, every holder of its output finishes first.
+    if (timeoutMs !== undefined && signal === undefined) {
+      child.on('exit', (code) => {
+        drain = setTimeout(() => {
+          child.stdout.destroy();
+          child.stderr.destroy();
+          finish(code);
+        }, DRAIN_MS);
+      });
+    }
+    child.on('close', (code) => finish(code));
     child.stdin.end(options.input ?? '');
   });

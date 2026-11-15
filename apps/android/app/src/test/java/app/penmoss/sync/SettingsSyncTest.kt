@@ -262,15 +262,6 @@ class SettingsSyncTest {
     }
 
     @Test
-    fun aServerWithoutTheSettingsChannelTakesNoChangesAndNothingIsLost() {
-        penmoss.settingsChannel = false
-        assertEquals(PassOutcome.SYNCED, pass())
-        assertFalse(shown().known)
-        assertFalse(change(SettingKeys.MODE, "dark"))
-        assertEquals(0, runBlocking { store.unsentCount() })
-    }
-
-    @Test
     fun aChoiceMadeBackToWhatTheServerHadWhileTheChangeIsOutStillWins() {
         penmoss.setOnWeb(SettingKeys.MODE, "system")
         assertEquals(PassOutcome.SYNCED, pass())
@@ -375,105 +366,8 @@ class SettingsSyncTest {
         assertEquals(CaptureRequest.INBOX, runBlocking { store.captureDestination() })
     }
 
-    private fun nordCopy(): kotlinx.serialization.json.JsonObject =
-        ThemeEdits.duplicate(ThemeCatalogue.bundled.builtIn("nord")!!, "custom-abc", "Nord copy", ThemeCatalogue.bundled)
-
     @Test
-    fun aThemeDuplicatedOfflineIsMadeAndChosenOnTheFirstPassOnline() {
-        assertEquals(PassOutcome.SYNCED, pass())
-        online = false
-        val copy = nordCopy()
-        assertTrue(change(SettingKeys.THEME, "custom-abc"))
-        assertTrue(runBlocking { store.changeSetting(ThemeEdits.key("custom-abc"), copy) })
-        // Shown at once: chosen, and the app resolves it from the phone's own copy.
-        assertEquals("custom-abc", ThemeCatalogue.bundled.resolve(shown().settings).id)
-        online = true
-        assertEquals(PassOutcome.SYNCED, pass())
-        // One change carrying both, the theme before it is chosen (A416).
-        val sent = penmoss.settingsChanges.single()
-        assertTrue(sent.getJSONObject("base").isNull(ThemeEdits.key("custom-abc")))
-        assertEquals("Nord copy", (penmoss.settings[ThemeEdits.key("custom-abc")] as JSONObject).getString("name"))
-        assertEquals("custom-abc", penmoss.settings[SettingKeys.THEME])
-        assertEquals(emptySet<String>(), shown().unsent)
-    }
-
-    @Test
-    fun aThemeEditSurvivesAnotherDevicesEditToTheSameTheme() {
-        val copy = nordCopy()
-        penmoss.setOnWeb(ThemeEdits.key("custom-abc"), JSONObject(copy.toString()))
-        assertEquals(PassOutcome.SYNCED, pass())
-        // The phone renames it; the settings route is busy, so the tree comes first…
-        runBlocking { store.changeSetting(ThemeEdits.key("custom-abc"), ThemeEdits.withName(copy, "Night")) }
-        // …and shows the Mac's edit to another field of the same theme.
-        penmoss.setOnWeb(ThemeEdits.key("custom-abc"), JSONObject(ThemeEdits.withColour(copy, "dark", "bg", "#101418").toString()))
-        penmoss.settingsDown = true
-        assertEquals(PassOutcome.SYNCED, pass())
-        // Not a conflict: the server merges the two (A416), so the phone's edit still goes.
-        assertEquals(setOf(ThemeEdits.key("custom-abc")), shown().unsent)
-        penmoss.settingsDown = false
-        assertEquals(PassOutcome.SYNCED, pass())
-        assertEquals("Night", (penmoss.settings[ThemeEdits.key("custom-abc")] as JSONObject).getString("name"))
-        val base = penmoss.settingsChanges.last().getJSONObject("base").getJSONObject(ThemeEdits.key("custom-abc"))
-        assertEquals("Nord copy", base.getString("name"))
-    }
-
-    @Test
-    fun anEditOfAThemeDeletedElsewhereIsDroppedNotBroughtBack() {
-        val copy = nordCopy()
-        penmoss.setOnWeb(ThemeEdits.key("custom-abc"), JSONObject(copy.toString()))
-        assertEquals(PassOutcome.SYNCED, pass())
-        online = false
-        runBlocking { store.changeSetting(ThemeEdits.key("custom-abc"), ThemeEdits.withName(copy, "Night")) }
-        // Deleted on the web meanwhile.
-        penmoss.setOnWeb(ThemeEdits.key("custom-abc"), JSONObject(ThemeEdits.deletion(copy, ThemeCatalogue.bundled).toString()))
-        online = true
-        assertEquals(PassOutcome.SYNCED, pass())
-        assertTrue((penmoss.settings[ThemeEdits.key("custom-abc")] as JSONObject).getBoolean("deleted"))
-        assertEquals(emptySet<String>(), shown().unsent)
-        assertTrue(shown().settings.customThemes.none { it.string("id") == "custom-abc" })
-    }
-
-    @Test
-    fun aDeletionGoesEvenAfterAnotherDevicesEdit() {
-        val copy = nordCopy()
-        penmoss.setOnWeb(ThemeEdits.key("custom-abc"), JSONObject(copy.toString()))
-        penmoss.setOnWeb(SettingKeys.THEME, "custom-abc")
-        assertEquals(PassOutcome.SYNCED, pass())
-        online = false
-        runBlocking { store.changeSetting(ThemeEdits.key("custom-abc"), ThemeEdits.deletion(copy, ThemeCatalogue.bundled)) }
-        change(SettingKeys.THEME, "nord")
-        penmoss.setOnWeb(ThemeEdits.key("custom-abc"), JSONObject(ThemeEdits.withName(copy, "Renamed").toString()))
-        online = true
-        assertEquals(PassOutcome.SYNCED, pass())
-        assertTrue((penmoss.settings[ThemeEdits.key("custom-abc")] as JSONObject).getBoolean("deleted"))
-        assertEquals("nord", penmoss.settings[SettingKeys.THEME])
-    }
-
-    @Test
-    fun aColourPutBackAfterALostReplyIsPutBackOnTheServerToo() {
-        val copy = nordCopy()
-        penmoss.setOnWeb(ThemeEdits.key("custom-abc"), JSONObject(copy.toString()))
-        assertEquals(PassOutcome.SYNCED, pass())
-        val accent = ThemeEdits.colours(copy, "light").getValue("accent")
-        // A yellow accent reaches the server, but its reply is lost.
-        runBlocking { store.changeSetting(ThemeEdits.key("custom-abc"), ThemeEdits.withColour(copy, "light", "accent", "#d8b04a")) }
-        loseSettingsReply = true
-        assertEquals(PassOutcome.FAILED, pass())
-        assertEquals("#d8b04a", (penmoss.settings[ThemeEdits.key("custom-abc")] as JSONObject).getJSONObject("light").getString("accent"))
-        // Offline, Ryan puts the accent back: the theme is as the phone first had it.
-        runBlocking { store.changeSetting(ThemeEdits.key("custom-abc"), copy) }
-        online = true
-        assertEquals(PassOutcome.SYNCED, pass())
-        // The server's merge saw a change and wrote it (A416); the yellow does not come back.
-        assertEquals(accent, (penmoss.settings[ThemeEdits.key("custom-abc")] as JSONObject).getJSONObject("light").getString("accent"))
-        val sentBase = penmoss.settingsChanges.last().getJSONObject("base").getJSONObject(ThemeEdits.key("custom-abc"))
-        assertEquals("#d8b04a", sentBase.getJSONObject("light").getString("accent"))
-        assertEquals(accent, ThemeEdits.colours(shown().settings.customThemes.single(), "light")["accent"])
-        assertEquals(emptySet<String>(), shown().unsent)
-    }
-
-    @Test
-    fun moreThanTwentySettingsGoTwentyAtATimeThemesFirst() {
+    fun moreThanTwentySettingsGoTwentyAtATime() {
         assertEquals(PassOutcome.SYNCED, pass())
         online = false
         val nord = ThemeCatalogue.bundled.builtIn("nord")!!
@@ -485,38 +379,12 @@ class SettingsSyncTest {
         change(SettingKeys.MODE, "dark")
         online = true
         assertEquals(PassOutcome.SYNCED, pass())
-        // 26 settings: 20, then 6, the themes before the choice of one of them.
+        // 26 settings: 20, then 6.
         assertEquals(listOf(20, 6), penmoss.settingsChanges.map { it.getJSONObject("set").length() })
-        assertTrue(penmoss.settingsChanges.first().getJSONObject("set").keys().asSequence().all { it.startsWith("theme.custom.") })
         assertEquals(ids.map(ThemeEdits::key).toSet(), penmoss.settings.keys.filter { it.startsWith("theme.custom.") }.toSet())
         assertEquals(ids.last(), penmoss.settings[SettingKeys.THEME])
         assertEquals("dark", penmoss.settings[SettingKeys.MODE])
         assertEquals(emptySet<String>(), shown().unsent)
         assertNull(shown().refused)
-    }
-
-    @Test
-    fun aThemeMadeHereWhoseReplyWasLostKeepsTheEditMadeSinceAndTheWebsToo() {
-        assertEquals(PassOutcome.SYNCED, pass())
-        val copy = nordCopy()
-        // Made here and sent; the reply is lost.
-        assertTrue(runBlocking { store.changeSetting(ThemeEdits.key("custom-abc"), copy) })
-        loseSettingsReply = true
-        assertEquals(PassOutcome.FAILED, pass())
-        // The web, which now has it, darkens its dark background; offline, the phone renames it.
-        penmoss.setOnWeb(ThemeEdits.key("custom-abc"), JSONObject(ThemeEdits.withColour(copy, "dark", "bg", "#101418").toString()))
-        runBlocking { store.changeSetting(ThemeEdits.key("custom-abc"), ThemeEdits.withName(copy, "Night")) }
-        // The settings route is busy: the tree comes first, showing the theme as the web left it.
-        online = true
-        penmoss.settingsDown = true
-        assertEquals(PassOutcome.SYNCED, pass())
-        assertEquals(setOf(ThemeEdits.key("custom-abc")), shown().unsent)
-        penmoss.settingsDown = false
-        assertEquals(PassOutcome.SYNCED, pass())
-        // Both edits stand: the phone's name and the web's background.
-        val stored = penmoss.settings[ThemeEdits.key("custom-abc")] as JSONObject
-        assertEquals("Night", stored.getString("name"))
-        assertEquals("#101418", stored.getJSONObject("dark").getString("bg"))
-        assertEquals(emptySet<String>(), shown().unsent)
     }
 }

@@ -4,7 +4,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.FakeApi
 import app.penmoss.data.NoteStore
-import app.penmoss.data.Notebooks
 import app.penmoss.data.PenmossDatabase
 import app.penmoss.engine.api.ApiException
 import app.penmoss.engine.api.BatchFiled
@@ -160,43 +159,13 @@ class NoteFilerTest {
     }
 
     /**
-     * A move names the notebook the phone saw the note in (T43, A766, fix c), the same on every
-     * try; a move queued before schema 19 is named from where the phone has the note now.
-     */
-    @Test
-    fun aMoveNamesTheNotebookThePhoneSawItInOnEveryTry() = runTest {
-        store.saveChanges(ChangesPage(1, notes = listOf(ChangedNote("soup", 1, "Soup", "", 10), ChangedNote("plan", 2, "Plan", "", 20))))
-        store.saveTree(
-            SyncTree(
-                "h",
-                folders = listOf(TreeFolder("w", "Work", notebook = true), TreeFolder("garden", "Garden")),
-                notes = listOf(TreeNote("soup", null, "a0"), TreeNote("plan", "w", "a0")),
-            ),
-        )
-        store.moveNote("soup", "w")
-        api.onMove = { _, _ -> throw java.io.IOException("airplane mode") }
-        assertEquals(0, filer.fileDue())
-        api.onMove = { _, _ -> }
-        assertEquals(1, filer.fileDue())
-        assertEquals(listOf(Notebooks.DEFAULT, Notebooks.DEFAULT), api.fromNotebooks.toList())
-
-        made("new", "w")
-        store.moveNote("plan", "garden")
-        db.openHelper.writableDatabase.execSQL("UPDATE notes SET moveNotebook = NULL WHERE id = 'plan'")
-        api.fromNotebooks.clear()
-        api.moves.clear()
-        assertEquals(2, filer.fileDue())
-        assertEquals(mapOf("new" to "w", "plan" to "w"), api.moves.map { it.first }.zip(api.fromNotebooks).toMap())
-    }
-
-    /**
      * A note made here names its folder on its first upload (T43, fix c), so the server files it
      * there at once: one it answers `filed` for is never moved again; for one it does not (an
      * older server), the filer moves it as before.
      */
     @Test
     fun aNoteItsUploadFiledIsNotMovedAgainAndOneItDidNotIs() = runTest {
-        store.saveTree(SyncTree("h", folders = listOf(TreeFolder("w", "Work", notebook = true), TreeFolder("plans", "Plans", "w"))))
+        store.saveTree(SyncTree("h", folders = listOf(TreeFolder("w", "Work"), TreeFolder("plans", "Plans", "w"))))
         store.addLocalNote(PageNote("a", "A", "WHOLE"), "plans")
         store.addLocalNote(PageNote("b", "B", "WHOLE"), "plans")
         val a = store.content("a")

@@ -220,40 +220,6 @@ class TrashSyncTest {
         assertTrue(penmoss.inTree("soup"))
     }
 
-    /**
-     * A restore with no safe place (T43, A757: fail closed; Trash forgot the folder the note was
-     * deleted from): the server restores nothing, the note goes back to Trash here, Trash asks
-     * where it goes, and nothing is sent again by itself.
-     */
-    @Test
-    fun aRestoreWithNoSafePlaceRestoresNothingAndAsksWhereItGoes() {
-        soupInGarden()
-        runBlocking { store.moveToTrash("soup") }
-        assertEquals(PassOutcome.SYNCED, pass())
-        penmoss.forgetFolder("garden")
-        penmoss.purgeFolderRecord("garden")
-        assertEquals(PassOutcome.SYNCED, pass())
-        runBlocking { store.restoreFromTrash("soup") }
-        assertTrue(listed("soup"))
-        assertEquals(PassOutcome.SYNCED, pass())
-        assertTrue(penmoss.inTrash("soup"))
-        assertFalse(listed("soup"))
-        assertTrue(inTrashHere("soup"))
-        val asked = runBlocking { store.observeRestoreQuestions().first() }
-        assertEquals(listOf("soup"), asked.map { it.noteId })
-        assertEquals("Soup", asked[0].title)
-        assertEquals("The folder the note was deleted from is gone", asked[0].message)
-        assertNull(asked[0].notebookId)
-        runBlocking {
-            assertEquals(NoteEntity.TRASH_SENT, store.note("soup")!!.trashChange)
-            assertEquals(0, store.trashChangesWaiting())
-        }
-        // Never sent again by a later pass, nor filed anywhere.
-        assertEquals(PassOutcome.SYNCED, pass())
-        assertEquals(listOf("trash:soup", "restore:soup"), penmoss.trashCalls.toList())
-        assertTrue(penmoss.inTrash("soup"))
-    }
-
     @Test
     fun aRestoreMadeElsewhereAfterThisPhonesMoveToTrashWins() {
         soupInGarden()
@@ -317,29 +283,6 @@ class TrashSyncTest {
         assertEquals("garden", folderOnPhone("soup"))
         assertEquals(listOf("U09VUA=="), penmoss.updates("soup"))
         runBlocking { assertTrue(store.note("soup")!!.cursor != null) }
-    }
-
-    @Test
-    fun aServerWithoutTheTrashRouteLeavesTheMoveWaitingAndTheNoteKept() {
-        soupInGarden()
-        penmoss.trashRouteMissing = true
-        runBlocking { store.moveToTrash("soup") }
-        assertEquals(PassOutcome.SYNCED, pass())
-        assertEquals(listOf("trash:soup"), penmoss.trashCalls.toList())
-        // Nothing is dropped: the note is still in Trash here, its move still waits, and the
-        // phone knows why.
-        assertTrue(inTrashHere("soup"))
-        assertTrue(runBlocking { store.observeTrashRouteMissing().first() })
-        runBlocking {
-            assertEquals(NoteEntity.TRASH_QUEUED, store.note("soup")!!.trashChange)
-            assertEquals(1, store.unsentCount())
-        }
-        // Once the server has the route, the next pass sends it.
-        penmoss.trashRouteMissing = false
-        assertEquals(PassOutcome.SYNCED, pass())
-        assertTrue(penmoss.inTrash("soup"))
-        assertFalse(runBlocking { store.observeTrashRouteMissing().first() })
-        runBlocking { assertEquals(0, store.unsentCount()) }
     }
 
     // --- Review of #94 ---
@@ -457,7 +400,6 @@ class TrashSyncTest {
         runBlocking {
             assertNull(store.note("soup"))
             assertEquals(0, store.unsentCount())
-            assertFalse(store.observeTrashRouteMissing().first())
         }
     }
 
@@ -584,15 +526,12 @@ class TrashSyncTest {
         penmoss.proxyNotFound = true
         runBlocking { store.moveToTrash("soup") }
         pass()
-        // Not "No such note": nothing is dropped, and the move waits for the next pass, said
-        // as a server that cannot take it yet (what an older server's 404 looks like too).
+        // Not "No such note": nothing is dropped, and the move waits for the next pass.
         runBlocking { assertEquals(NoteEntity.TRASH_QUEUED, store.note("soup")!!.trashChange) }
         assertTrue(inTrashHere("soup"))
-        assertTrue(runBlocking { store.observeTrashRouteMissing().first() })
         assertEquals(PassOutcome.SYNCED, pass())
         assertEquals(listOf("trash:soup (proxy 404)", "trash:soup"), penmoss.trashCalls.toList())
         assertTrue(penmoss.inTrash("soup"))
-        assertFalse(runBlocking { store.observeTrashRouteMissing().first() })
         runBlocking { assertEquals(0, store.unsentCount()) }
     }
 

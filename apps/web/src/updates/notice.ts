@@ -59,7 +59,7 @@ export function useUpdateNotice(): UpdateNoticeModel | null {
   if (!updated) return null;
   const answer = (whatsNew: boolean) => {
     setAnswered(true);
-    void found.updates.acknowledge?.().catch(() => null);
+    void found.updates.acknowledge().catch(() => null);
     if (whatsNew) navigate(WHATS_NEW_PATH);
   };
   return {

@@ -86,25 +86,4 @@ class ThemeEditsTest {
         assertEquals("#00ff00", Colour.fromHsv(120f, 1f, 1f))
         assertEquals("#808080", Colour.fromHsv(200f, 0f, 128f / 255f))
     }
-
-    /**
-     * A version sent without an answer may be what the server holds: a field put back to the base's
-     * value since is sent with that version's value as its base, so the server writes it back (A416).
-     */
-    @Test
-    fun aFieldPutBackAfterALostReplyIsSentAgainstTheValueSent() {
-        val start = ThemeEdits.duplicate(catalogue.builtIn("nord")!!, "custom-abc", "Nord copy", catalogue)
-        val lost = ThemeEdits.withName(ThemeEdits.withColour(ThemeEdits.withFont(start, "body", "Georgia, serif"), "light", "accent", "#d8b04a"), "Honey")
-        // Since: the accent and the font put back, the name kept, the dark background changed.
-        val now = ThemeEdits.withColour(ThemeEdits.withFont(ThemeEdits.withColour(lost, "light", "accent", ThemeEdits.colours(start, "light").getValue("accent")), "body", ThemeEdits.font(start, "body")), "dark", "bg", "#101418")
-        val base = ThemeEdits.sendingBase(start, now, listOf(lost, now))
-        assertEquals("#d8b04a", ThemeEdits.colours(base, "light")["accent"])
-        assertEquals("Georgia, serif", ThemeEdits.font(base, "body"))
-        // The rest is the true base: the name and the dark background differ from it anyway.
-        assertEquals("Nord copy", base.string("name"))
-        assertEquals(ThemeEdits.colours(start, "dark"), ThemeEdits.colours(base, "dark"))
-        assertEquals(ThemeEdits.colours(start, "light") - "accent", ThemeEdits.colours(base, "light") - "accent")
-        // Nothing sent without an answer: the base as it is.
-        assertEquals(start, ThemeEdits.sendingBase(start, now, emptyList()))
-    }
 }

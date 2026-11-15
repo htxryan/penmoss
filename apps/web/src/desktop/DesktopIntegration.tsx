@@ -74,7 +74,7 @@ export function DesktopIntegration() {
       }
     });
     // Listening now: what main held while this window loaded runs or opens (T51, A945).
-    void bridge.menu.takePending?.().then((held) => {
+    void bridge.menu.takePending().then((held) => {
       if (typeof held === 'string') commands.run(held, { source: 'menu' });
       else if (held && typeof held.path === 'string') navigate(held.path);
     });
@@ -84,7 +84,7 @@ export function DesktopIntegration() {
   useEffect(() => bridge?.onOpenPath((path) => navigate(path)), [bridge]);
 
   // The windows behind the page take the theme's background (T28, A249).
-  useEffect(() => bridge?.theme?.set({ light, dark, mode }), [bridge, light, dark, mode]);
+  useEffect(() => bridge?.theme.set({ light, dark, mode }), [bridge, light, dark, mode]);
 
   useEffect(() => {
     if (!bridge) return;

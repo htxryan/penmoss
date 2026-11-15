@@ -1,0 +1,52 @@
+name: Android toolchain
+description: >-
+  What every Android job needs after .github/actions/setup: the committed gradle-wrapper.jar
+  checked against Gradle's published ones, Java 21 (Temurin), Gradle's downloads from
+  actions/cache, and the Android SDK (.github/actions/android-sdk).
+inputs:
+  cache:
+    description: "`save` restores Gradle's downloads and saves them after the job; `restore` only restores them (the android job saves them)"
+    default: save
+  robolectric:
+    description: "'true': Robolectric's Android jars (~/.m2) are cached with Gradle's"
+    default: 'false'
+  packages:
+    description: More sdkmanager packages for the Android SDK (the emulator job's system image)
+    default: ''
+runs:
+  using: composite
+  steps:
+    - uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+    - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+      with:
+        distribution: temurin
+        java-version: '21'
+
+    # The key names only the build files; the paths are part of the cache's version, so a job
+    # with Robolectric's jars and one without keep separate entries.
+    - name: Cache Gradle's downloads
+      if: inputs.cache == 'save'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+          ${{ inputs.robolectric == 'true' && '~/.m2/repository' || '' }}
+        key: gradle-${{ runner.os }}-${{ hashFiles('apps/android/**/*.gradle.kts', 'apps/android/gradle/libs.versions.toml', 'apps/android/gradle/wrapper/gradle-wrapper.properties') }}
+        restore-keys: gradle-${{ runner.os }}-
+
+    - name: Restore Gradle's downloads
+      if: inputs.cache == 'restore'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+          ${{ inputs.robolectric == 'true' && '~/.m2/repository' || '' }}
+        key: gradle-${{ runner.os }}-${{ hashFiles('apps/android/**/*.gradle.kts', 'apps/android/gradle/libs.versions.toml', 'apps/android/gradle/wrapper/gradle-wrapper.properties') }}
+        restore-keys: gradle-${{ runner.os }}-
+
+    - uses: ./.github/actions/android-sdk
+      with:
+        packages: ${{ inputs.packages }}

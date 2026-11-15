@@ -33,7 +33,7 @@ class LinksStoreTest {
     @After
     fun close() = db.close()
 
-    private fun row(id: String, clock: Long, links: List<String>?, updatedAt: Long = clock, deleted: Boolean = false) =
+    private fun row(id: String, clock: Long, links: List<String>, updatedAt: Long = clock, deleted: Boolean = false) =
         ChangedNote(id, clock, id.replaceFirstChar { it.uppercase() }, "", updatedAt, deleted = deleted, seq = clock, links = links)
 
     private suspend fun linkingHere(id: String) = store.observeBacklinkSources(id).first().map { it.id }
@@ -47,13 +47,6 @@ class LinksStoreTest {
         store.saveChanges(ChangesPage(4, notes = listOf(row("review", 4, listOf("beds")))))
         assertTrue(linkingHere("garden").isEmpty())
         assertEquals(listOf("review"), linkingHere("beds"))
-    }
-
-    @Test
-    fun anOlderServerSendsNoLinksAndLeavesWhatThePhoneHas() = runTest {
-        store.saveChanges(ChangesPage(2, notes = listOf(row("garden", 1, emptyList()), row("review", 2, listOf("garden")))))
-        store.saveChanges(ChangesPage(3, notes = listOf(row("review", 3, links = null))))
-        assertEquals(listOf("review"), linkingHere("garden"))
     }
 
     @Test

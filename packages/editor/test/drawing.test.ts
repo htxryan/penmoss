@@ -3,7 +3,8 @@
  * opens in the app's drawing editor. The model is core's image with a link mark, so the markdown
  * is `[![Excalidraw Diagram](….svg)](….excalidraw)` and every client keeps it as it is.
  */
-import { schema as coreSchema, serializeMarkdown } from '@penmoss/core';
+import { serializeMarkdown } from '@penmoss/core';
+import { schema as coreSchema } from '@penmoss/core/schema';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
 import { yUndoPluginKey } from '@y/prosemirror';
@@ -20,7 +21,7 @@ import {
   type DrawingServices,
 } from '../src/extensions/drawing';
 import type { ImageServices } from '../src/extensions/image';
-import { noteBody } from '../src/markdown';
+import { noteBody } from '@penmoss/sync-client/markdown';
 import { openEditor, press, type } from './support/editor';
 
 const pair = (svg: string, scene: string): DrawingFiles => ({

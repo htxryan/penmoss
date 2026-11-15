@@ -26,6 +26,7 @@ export {
 } from './completions';
 export { ELLIPSIS, MATCH_END, MATCH_START, highlight, searchText, snippet } from './snippet';
 export { RRF_K, reciprocalRankFusion, type Fused } from './rrf';
+export { SEARCH_MODES, type SearchMode } from './modes';
 export {
   FAKE_DIMENSIONS,
   FAKE_FLOOR,
@@ -72,9 +73,3 @@ export {
   capNoteText,
   noteTextKey,
 } from './note-text';
-export {
-  LEASE_RETRY_MS,
-  LeaseKeeper,
-  type HeldLease,
-  type LeaseKeeperOptions,
-} from './lease-keeper';

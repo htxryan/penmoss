@@ -13,7 +13,7 @@ import { useId, useMemo, useState } from 'react';
 import { useNoteList, useNotes } from '../notes/hooks';
 import { displayTitle } from '../notes/list';
 import { navigate, notePath } from '../router';
-import { useClosedNotebooks } from '../workspace/notebooks';
+import { devicePref, useDevicePref } from '../shell/device-pref';
 import { useWorkspaceState } from '../workspace/hooks';
 import { GraphInputCache } from './data';
 import { graphPath } from './path';
@@ -23,31 +23,21 @@ const DEPTHS = [1, 2, 3] as const;
 const DEPTH_KEY = 'penmoss.noteGraphDepth';
 
 /** The depth last chosen on this device (2 until one is). */
-function readDepth(): number {
-  try {
-    const value = Number(localStorage.getItem(DEPTH_KEY));
+const depthPref = devicePref(DEPTH_KEY, {
+  parse: (stored) => {
+    const value = Number(stored);
     return (DEPTHS as readonly number[]).includes(value) ? value : 2;
-  } catch {
-    return 2;
-  }
-}
-
-function writeDepth(depth: number): void {
-  try {
-    localStorage.setItem(DEPTH_KEY, String(depth));
-  } catch {
-    // Private mode: the choice lasts for this page only.
-  }
-}
+  },
+  serialise: (depth) => String(depth),
+});
 
 export function NoteGraph({ noteId }: { readonly noteId: string }) {
   const notes = useNotes();
   // The list changes whenever a note's title or content does; links are read with it.
   const list = useNoteList();
   const { snapshot } = useWorkspaceState();
-  const closed = useClosedNotebooks();
   const [cache] = useState(() => new GraphInputCache());
-  const [depth, setDepth] = useState(readDepth);
+  const [depth, setDepth] = useDevicePref(depthPref);
   const depthId = useId();
   const input = useMemo(
     () =>
@@ -55,11 +45,10 @@ export function NoteGraph({ noteId }: { readonly noteId: string }) {
         folders: snapshot.folders,
         registry: snapshot.notes,
         rootSortMode: snapshot.rootSortMode,
-        closed,
       }),
     // As GraphPage: `list` stands for the note store's state, which localLinks reads.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [notes, list, snapshot, cache, closed],
+    [notes, list, snapshot, cache],
   );
   const data = useMemo(
     () => buildGraph(input.notes, { kind: 'local', id: noteId, depth }),
@@ -92,7 +81,6 @@ export function NoteGraph({ noteId }: { readonly noteId: string }) {
           onChange={(event) => {
             const next = Number(event.target.value);
             setDepth(next);
-            writeDepth(next);
           }}
         >
           {DEPTHS.map((value) => (

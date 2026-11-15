@@ -1,23 +1,22 @@
 /**
  * A note's plain text as the Android app's offline index stores it (T40 P6,
- * FD4): the text the server indexes (`plainText` of the note's document),
- * cut to at most MAX_NOTE_TEXT_BYTES of UTF-8 at a character boundary. The
- * server sends it in `/sync/batch` replies and the editor page reports the
- * open note's, both through `capNoteText`, so a phone's stored copy and the
- * server's hash agree on the same note.
+ * FD4): `plainText` of the note's document, cut to at most MAX_NOTE_TEXT_BYTES
+ * of UTF-8 at a character boundary. The editor page reports the open note's
+ * text and headings through `capNoteText`, so the phone's stored copy is cut
+ * the same way wherever it came from.
  */
 
-/** The most of a note's text the phone stores and the server sends: 256 KB of UTF-8. */
+/** The most of a note's text the phone stores: 256 KB of UTF-8. */
 export const MAX_NOTE_TEXT_BYTES = 256 * 1024;
 
 const encoder = new TextEncoder();
 
-/** The most of a note's headings (one per line) the phone stores and the server sends: 64 KB. */
+/** The most of a note's headings (one per line) the phone stores: 64 KB. */
 export const MAX_NOTE_HEADINGS_BYTES = 64 * 1024;
 
 /**
  * What a note's text hash covers (T40 P6, FD4, S6): its capped text and its capped headings,
- * apart. The server hashes it with SHA-256; the phone compares its own copy's.
+ * apart, hashed with SHA-256 (Android's `textHash` in Kotlin builds the same key).
  */
 export function noteTextKey(text: string, headings: string): string {
   return `${text}\u0000${headings}`;

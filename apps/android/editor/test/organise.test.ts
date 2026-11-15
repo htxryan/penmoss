@@ -4,7 +4,7 @@
  * (`tags`, `setTag`). Tags live in the note's document, so only the page
  * touches them; the app stores the edit as it stores typing.
  */
-import { schema as coreSchema } from '@penmoss/core';
+import { schema as coreSchema } from '@penmoss/core/schema';
 import { markSpecs, nodeSpecs } from '@penmoss/core/schema';
 import { setBody } from '@penmoss/sync-client/history';
 import { initNote, NOTE_META, readTitle } from '@penmoss/sync-client/note';
@@ -87,29 +87,8 @@ describe('New note on the phone (T38)', () => {
     expect(meta.getAttr('kind')).toBe('note');
     expect(String(meta.getAttr('created'))).toMatch(/^2026-10-2\dT\d\d:\d\d:\d\d[+-]\d\d:\d\d$/);
     expect(readTitle(doc)).toBe('');
-    // No notebook said (an older app): none recorded.
+    // No notebook inside a git notebook (A912): none recorded.
     expect(meta.getAttr('notebook')).toBeUndefined();
-  });
-
-  it('records the notebook of the folder it is made in, with its identity (T43, A766)', () => {
-    const { host, sent } = page();
-    host.handle({ v: 1, type: 'create', noteId: NEW, notebook: '01JD2Z7Q8R4T6Y8W0E2R4T6YW1' });
-    const [created] = ofType(sent, 'created');
-    const doc = new Y.Doc();
-    Y.applyUpdate(doc, fromBase64(created!.note.update));
-    expect(doc.get(NOTE_META).getAttr('notebook')).toBe('01JD2Z7Q8R4T6Y8W0E2R4T6YW1');
-    expect(doc.get(NOTE_META).getAttr('id')).toBe(NEW);
-    // The default notebook's top level and folders say so too.
-    host.handle({
-      v: 1,
-      type: 'create',
-      noteId: '01JD2Z7Q8R4T6Y8W0E2R4T6YB6',
-      notebook: 'default',
-    });
-    const [, again] = ofType(sent, 'created');
-    const other = new Y.Doc();
-    Y.applyUpdate(other, fromBase64(again!.note.update));
-    expect(other.get(NOTE_META).getAttr('notebook')).toBe('default');
   });
 
   it('puts the caret in the title of the note it made once the app opens it', () => {

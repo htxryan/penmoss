@@ -73,7 +73,7 @@ export interface NoteFacts {
   readonly id: string;
   readonly title: string;
   readonly folder: string;
-  /** Its notebook's name (T43): the default notebook's for a note outside the others. */
+  /** Its notebook's name; blank for a git notebook's note, which is named by kind only (A889). */
   readonly notebook?: string;
   readonly tags: readonly string[];
   readonly created: string | null;
@@ -84,7 +84,6 @@ export interface NoteFacts {
   readonly attachments: number | null;
   readonly bytes: number | null;
   readonly engine: string | null;
-  readonly epoch: string | null;
   readonly unsynced: boolean;
   readonly inTrash: boolean;
   readonly backlinks: number;
@@ -196,7 +195,6 @@ export function buildContext(facts: ContextFacts): FeedbackContext {
         ['Attachments', note.attachments],
         ['Size in bytes', note.bytes],
         ['Engine', note.engine],
-        ['Epoch', note.epoch],
         ['Unsynced', note.unsynced],
         ['In Trash', note.inTrash],
         ['Backlinks', note.backlinks],

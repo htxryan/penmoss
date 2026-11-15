@@ -4,14 +4,12 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "Schema, markdown codec, frontmatter, IDs, tags, periodic notes, templates",
+  "description": "Schema, markdown codec, frontmatter, IDs, tags, periodic notes, search and feedback rules",
   "exports": {
     ".": "./src/index.ts",
-    "./admin-actions": "./src/admin-actions.ts",
     "./agent-reference": "./src/agent-reference.ts",
     "./note-ref": "./src/note-ref.ts",
     "./anchor-match": "./src/anchor-match.ts",
-    "./admin-requests": "./src/admin-requests.ts",
     "./attachments": "./src/attachments.ts",
     "./fuzzy": "./src/fuzzy.ts",
     "./ids": "./src/ids.ts",
@@ -22,6 +20,7 @@
     "./note-text": "./src/search/note-text.ts",
     "./wikilinks": "./src/markdown/wikilink-syntax.ts",
     "./workspace": "./src/workspace/index.ts",
+    "./settings": "./src/settings.ts",
     "./tags": "./src/tags.ts",
     "./periodic": "./src/periodic.ts",
     "./diff": "./src/diff.ts",
@@ -37,8 +36,7 @@
     "./diff-apply": "./src/markdown/diff-apply.ts",
     "./feedback": "./src/feedback.ts",
     "./feedback-github": "./src/feedback-github.ts",
-    "./mirror": "./src/mirror/index.ts",
-    "./mcp": "./src/mcp/index.ts"
+    "./mirror": "./src/mirror/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",

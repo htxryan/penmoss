@@ -85,11 +85,6 @@ sealed interface ToEditor {
         val synced: List<StoredUpdate>,
         val pending: List<StoredUpdate>,
         val editable: Boolean,
-        /**
-         * The notebook the phone sees the note in (T43, A766): a notebook's folder id, or
-         * `default`. A link's new note made from it records it, as it is filed beside it.
-         */
-        val notebook: String? = null,
     ) : ToEditor
 
     data class Remote(val noteId: String, val update: String) : ToEditor
@@ -131,8 +126,6 @@ sealed interface ToEditor {
         val base: List<StoredUpdate>,
         val edits: List<StoredUpdate>,
         val into: CopyInto? = null,
-        /** The original's notebook as the phone sees it (T43, A766): the copy's, when the note itself does not say. */
-        val notebook: String? = null,
     ) : ToEditor
 
     /** The answer to [FromEditor.Attachment] and its bytes: stored on the phone, or not (A311). */
@@ -175,11 +168,7 @@ sealed interface ToEditor {
      * Make a new, empty note with this id, as the web's New note does (T38): the page builds it
      * (Kotlin never writes Yjs) and answers [FromEditor.Created] with the whole note.
      */
-    data class Create(
-        val noteId: String,
-        /** The notebook of the folder it is made in (T43, A766), recorded in the note itself. */
-        val notebook: String? = null,
-    ) : ToEditor
+    data class Create(val noteId: String) : ToEditor
 
     /** Add ([on]) or remove a frontmatter tag on the open note, as the web's tag chips do (T38). */
     data class SetTag(val noteId: String, val tag: String, val on: Boolean) : ToEditor
@@ -473,16 +462,6 @@ object BridgeProtocol {
     private val BASE64 = Regex("^[A-Za-z0-9+/]*={0,2}$")
     private val NOTE_ID = Regex("^[A-Za-z0-9_-]{1,80}$")
 
-    /** An optional `notebook` (T43, A766): null when absent; a notebook id, or [BAD_NOTEBOOK]. */
-    private fun notebookOf(value: JsonObject): String? {
-        val raw = value["notebook"] ?: return null
-        val text = (raw as? JsonPrimitive)?.takeIf { it.isString }?.content
-        return text?.takeIf(NOTE_ID::matches) ?: BAD_NOTEBOOK
-    }
-
-    /** What [notebookOf] answers for a `notebook` that is not a notebook id: the message is refused. */
-    private const val BAD_NOTEBOOK = "\u0000"
-
     /** A command's id, as `keys.<id>` and the registry name one (T40 P9; `@penmoss/editor/keys`). */
     val COMMAND_ID = Regex("^[A-Za-z][A-Za-z0-9-]*(\\.[A-Za-z0-9-]+)*$")
 
@@ -522,7 +501,6 @@ object BridgeProtocol {
                 putJsonArray("synced") { stored(message.synced) }
                 putJsonArray("pending") { stored(message.pending) }
                 put("editable", message.editable)
-                message.notebook?.let { put("notebook", it) }
             }
             is ToEditor.Remote -> {
                 type("remote", message.noteId)
@@ -556,7 +534,6 @@ object BridgeProtocol {
                         putJsonArray("updates") { stored(into.updates) }
                     }
                 }
-                message.notebook?.let { put("notebook", it) }
             }
             is ToEditor.AttachmentStored -> {
                 type("attachmentStored", message.noteId)
@@ -598,7 +575,6 @@ object BridgeProtocol {
             }
             is ToEditor.Create -> {
                 type("create", message.noteId)
-                message.notebook?.let { put("notebook", it) }
             }
             is ToEditor.CreatePeriodic -> {
                 put("type", "createPeriodic")
@@ -1057,7 +1033,6 @@ object BridgeProtocol {
                 storedOf(value["synced"]) ?: return null,
                 storedOf(value["pending"]) ?: return null,
                 value.boolean("editable") ?: return null,
-                notebookOf(value).takeIf { it != BAD_NOTEBOOK } ?: if (value.containsKey("notebook")) return null else null,
             )
             "remote" -> ToEditor.Remote(noteId, value.base64("update") ?: return null)
             "flush" -> ToEditor.Flush(noteId)
@@ -1092,14 +1067,13 @@ object BridgeProtocol {
                     )
                     else -> return null
                 },
-                notebookOf(value).takeIf { it != BAD_NOTEBOOK } ?: if (value.containsKey("notebook")) return null else null,
             )
             "attachmentStored" -> ToEditor.AttachmentStored(
                 noteId,
                 value.string("path")?.takeIf(ATTACHMENT_PATH::matches) ?: return null,
                 value.boolean("ok") ?: return null,
             )
-            "create" -> ToEditor.Create(noteId, notebookOf(value).takeIf { it != BAD_NOTEBOOK } ?: if (value.containsKey("notebook")) return null else null)
+            "create" -> ToEditor.Create(noteId)
             "periodicNav" -> ToEditor.PeriodicNav(noteId)
             "setTag" -> ToEditor.SetTag(
                 noteId,

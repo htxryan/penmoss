@@ -1,9 +1,8 @@
 /**
  * What search reads from a note body besides its plain text: the headings
  * (the FTS `headings` column, T22) and the heading sections that semantic
- * search embeds (T23). Both read ProseMirror JSON, which the NoteDoc renders
- * on the server and clients read from their replica (`bodyJson`), so the
- * two sides index the same headings.
+ * search embeds (T23). Both read ProseMirror JSON, which every reader takes
+ * from its replica (`bodyJson`), so every index holds the same headings.
  */
 import { headingsOf, linkLabel, linkRefOf, type DocJson } from '../links';
 

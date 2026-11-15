@@ -21,7 +21,7 @@ import {
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { chromium, expect, test, type Browser, type Page } from '@playwright/test';
-import { checkoutPortBase } from '../../../../packages/core/test/support/checkout-ports';
+import { checkoutPortBase } from '../../../../scripts/checkout-ports.mjs';
 import { parseBlock } from '../../../../scripts/ports.mjs';
 import { cliScript } from '../../src/local-agents';
 import { inVirtualMachine, refuseOnMacHost } from './host-guard';
@@ -168,7 +168,7 @@ print(NSRunningApplication(processIdentifier: pid)?.terminate() ?? false)
  * Quits the app as Penmoss → Quit Penmoss and the Dock's Quit do: a quit Apple Event to that
  * process (NSRunningApplication.terminate), so AppKit and Electron run their whole quit. A signal
  * isn't the same: the packaged app didn't end in 45 s after SIGTERM in the VM. With a git
- * notebook, each window may take its whole closing time to store and push (main.ts: 3 s, and 11 s
+ * notebook, each window may take its whole closing time to store and push (windows/window-common.ts: 3 s, and 11 s
  * more to push, then 3 s for the capture window), so the wait is well past their sum. Still
  * running after it, the app is sampled, so the failure says where it waits.
  */

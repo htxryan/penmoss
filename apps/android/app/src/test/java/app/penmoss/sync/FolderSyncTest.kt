@@ -296,7 +296,7 @@ class FolderSyncTest {
     }
 
     @Test
-    fun folderChangesWaitForAnOlderServer() {
+    fun folderChangesWaitOnANotFoundThatNamesNoFolder() {
         penmoss.folder("a", name = "A", position = "a0")
         assertEquals(PassOutcome.SYNCED, pass())
         penmoss.foldersRouteMissing = true
@@ -307,7 +307,7 @@ class FolderSyncTest {
             store.setSortMode(null, "modified")
         }
         assertEquals(PassOutcome.SYNCED, pass())
-        // Nothing dropped, nothing said: the server simply has no such route yet (A449).
+        // Nothing dropped, nothing said: only `folder_not_found` drops a change (A449).
         runBlocking {
             assertEquals(4, store.folderOpsWaiting())
             assertTrue(store.observeFolderNotices().first().isEmpty())

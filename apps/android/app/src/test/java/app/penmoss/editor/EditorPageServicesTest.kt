@@ -200,8 +200,6 @@ class EditorPageServicesTest {
         assertEquals("n", ask.noteId)
         assertEquals(listOf("OLD"), ask.base.map { it.update })
         assertEquals(listOf("EDIT"), ask.edits.map { it.update })
-        // The copy's notebook record, for a note that has none of its own (T43, A766, fix c).
-        assertEquals(app.penmoss.data.Notebooks.DEFAULT, ask.notebook)
         val copy = PageNote("copy", "Note (conflict copy)", "COPY")
         page(FromEditor.ConflictCopy("n", copy, ask.edits.map { it.id }))
         waitFor { copied.isNotEmpty() }

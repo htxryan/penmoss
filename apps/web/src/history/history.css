@@ -1,0 +1,490 @@
+/* Version history (T21): the History tab of the note's side panel since T51 (A936). Laid out
+ * as "List over a Docked Preview" (Ryan's review of #192, finding 13): the versions, one line
+ * each and grouped by day, over a handle, then the chosen version's changes and actions. */
+.history-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  font-size: var(--pm-text-sm);
+}
+
+/* The panel holds History's list and its docked changes at its own height: the list scrolls,
+ * not the panel. */
+.note-side:has(> .note-tabpanel[data-tab='history']) {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+
+.note-side > .note-tabpanel[data-tab='history'] {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.note-tabpanel[data-tab='history'] > .history-panel {
+  flex: 1;
+}
+
+.history-panel > .info-heading {
+  margin-bottom: 0.25rem;
+}
+
+.history-empty {
+  padding: 1rem 0;
+}
+
+.history-empty p {
+  margin: 0 0 0.75rem;
+}
+
+/*
+ * The list, edge to edge in the panel, so a chosen row's band spans it. It places its rows'
+ * `.sr-only` names (R2-10): with no place of their own they hung below the list, as far down as
+ * the last version, and the note's pane scrolled the whole view up to reach them.
+ */
+.history-scroll {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 5rem;
+  margin: 0 -1rem;
+  overflow-y: auto;
+  border-top: 1px solid var(--pm-border-soft);
+}
+
+.history-list,
+.history-list ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-list {
+  padding-bottom: 0.5rem;
+}
+
+/* A day's heading: Today, Yesterday, Nov 12. */
+.history-day {
+  margin: 0;
+  padding: 0.65rem 1rem 0.2rem;
+  color: var(--pm-muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.history-none {
+  padding: 0.5rem 1rem;
+}
+
+/* One line per version: who, when, what, and the lines it changed. Border-box, full width
+ * (T53 pass, A988). The Now row above them has the same columns. */
+.history-entry {
+  display: grid;
+  grid-template-columns: 1rem 4.4rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 1.75rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+}
+
+button.history-entry {
+  cursor: pointer;
+}
+
+button.history-entry:hover:not([aria-pressed='true']) {
+  background: var(--pm-hover);
+}
+
+button.history-entry:focus-visible {
+  outline-offset: -2px;
+}
+
+.history-entry[aria-pressed='true'] {
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
+}
+
+.history-entry[aria-pressed='true'] :is(.history-time, .history-lines, .history-who, span) {
+  color: inherit;
+}
+
+/* A version that changed no text (a sync of the title, an empty commit): there, but quiet. */
+.history-entry[data-dim]:not([aria-pressed='true']) {
+  color: var(--pm-muted);
+}
+
+/* Now: what this Mac has not synced yet, with Sync Now, quiet (finding 13). */
+.history-now {
+  display: grid;
+  grid-template-columns: 1rem 4.4rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 1.75rem;
+  padding: 0.3rem 1rem;
+  color: var(--pm-muted);
+  font-size: 0.8rem;
+}
+
+.history-now[data-pending] .history-summary {
+  color: var(--pm-fg);
+}
+
+.history-now .history-save {
+  height: 1.5rem;
+  padding: 0 0.4rem;
+  color: var(--pm-accent);
+  font-size: 0.78rem;
+}
+
+/* The writer's icon; the tooltip names them (finding 13). */
+.history-who {
+  display: inline-grid;
+  place-items: center;
+  color: var(--pm-muted);
+}
+
+.history-who[data-kind='agent'] {
+  color: var(--pm-agent);
+}
+
+.history-time {
+  color: var(--pm-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.history-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-lines {
+  display: inline-flex;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.history-added {
+  color: var(--pm-success);
+}
+
+.history-removed {
+  color: var(--pm-danger);
+}
+
+.history-authors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.history-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 0.4rem;
+  border-radius: 0;
+  background: var(--pm-hover);
+  font-size: 0.75rem;
+}
+
+.history-author[data-kind='agent'] {
+  background: color-mix(in oklab, var(--pm-accent) 18%, transparent);
+}
+
+.history-kind {
+  width: 0.8rem;
+  height: 0.8rem;
+  fill: currentColor;
+}
+
+/* A summary still being read (Ryan's review of #192): a short bar where its words will be. */
+.history-summary-pending {
+  display: inline-block;
+  width: 4.5rem;
+  height: 0.6em;
+  border-radius: 999px;
+  background: var(--pm-border);
+  vertical-align: middle;
+  animation: pm-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .history-summary-pending {
+    animation: none;
+  }
+}
+
+/* The handle between the list and the changes: dragged up or down, or ↑ and ↓ when focused
+ * (A1122's edges, on their side). */
+.history-panel > .pane-resizer[data-orientation='horizontal'] {
+  position: relative;
+  inset: auto;
+  flex: none;
+  width: auto;
+  height: 0.75rem;
+  margin: 0 -1rem;
+  border-top: 1px solid var(--pm-border);
+  border-bottom: 1px solid var(--pm-border-soft);
+  background: var(--pm-raised);
+  cursor: row-resize;
+}
+
+.history-panel > .pane-resizer[data-orientation='horizontal']::after {
+  inset: 50% auto auto 50%;
+  width: 2.25rem;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--pm-border-strong);
+  transform: translate(-50%, -50%);
+}
+
+.history-panel > .pane-resizer[data-orientation='horizontal']:is(:hover, :focus-visible)::after,
+:root[data-resizing='rows'] .history-panel > .pane-resizer::after {
+  left: 50%;
+  width: 2.25rem;
+  background: var(--pm-accent);
+}
+
+/* Over the edges' column cursor below (one more element in the selector, so it wins). */
+html:root[data-resizing='rows'],
+html:root[data-resizing='rows'] * {
+  cursor: row-resize !important;
+}
+
+/* The chosen version, docked under the list: its changes, then what to do with it. */
+.history-detail {
+  display: flex;
+  flex: 0 1 var(--history-preview, 20rem);
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 6rem;
+  padding: 0.7rem 0 0.9rem;
+}
+
+.history-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.5rem;
+}
+
+.history-detail-head h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.history-detail-head .muted {
+  font-size: 0.75rem;
+}
+
+.history-detail .history-diff {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--pm-border-soft);
+  background: var(--pm-bg);
+}
+
+.history-detail .history-diff pre {
+  border: 0;
+}
+
+.history-diff-loading {
+  margin: 0;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.78rem;
+}
+
+/*
+ * Restore, Revert and Copy: an icon and a word each, in one row that never wraps (Ryan's review of
+ * #193, R2-12; their full names are their tooltips and labels). A row too narrow drops words,
+ * Revert's and Copy's first (`data-fit="1"`), then Restore's (`"2"`); `useFit` measures it.
+ */
+.history-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.history-actions > .btn {
+  flex: none;
+}
+
+.history-actions[data-fit='1'] > .btn:not(.primary) > .history-action-word,
+.history-actions[data-fit='2'] > .btn > .history-action-word {
+  display: none;
+}
+
+.history-actions[data-fit='1'] > .btn:not(.primary),
+.history-actions[data-fit='2'] > .btn {
+  padding-inline: 0.45rem;
+}
+
+.history-status {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.history-scroll > .history-status {
+  padding: 0.25rem 1rem;
+}
+
+.history-conflicts {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+}
+
+.history-conflicts code {
+  white-space: pre-wrap;
+}
+
+/* History's ⓘ in the panel's head: how versions are made, and the docs. */
+.history-about {
+  position: relative;
+}
+
+.history-about-pop {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  width: 16rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-raised);
+  box-shadow: var(--pm-shadow);
+  font-size: var(--pm-text-sm);
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.history-about-pop p {
+  margin: 0 0 0.4rem;
+}
+
+.history-diff pre {
+  margin: 0;
+  padding: 0.35rem 0;
+  overflow-x: auto;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-bg);
+  font: 0.78rem/1.55 var(--pm-mono);
+}
+
+.history-diff pre > span {
+  display: block;
+  padding: 0 0.6rem;
+  white-space: pre-wrap;
+}
+
+.diff-sign {
+  display: inline-block;
+  width: 1.1rem;
+  color: var(--pm-muted);
+}
+
+/*
+ * History's docked preview numbers the lines (Ryan's review of #193, R2-13): one gutter, this
+ * version's numbers, a removed line's from the version before, dimmed. A long line wraps under its
+ * own text, its number on its first row only. The numbers are CSS's (`data-n`): selecting the diff
+ * never takes them.
+ */
+.history-diff pre[data-numbered] {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.history-diff pre[data-numbered] > span:not(.diff-fold) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  padding-left: 0;
+}
+
+/* Wrapped, a line's text lines up under its first row's text, not under its mark. */
+.diff-line {
+  padding-left: 1.1rem;
+  overflow-wrap: anywhere;
+  text-indent: -1.1rem;
+}
+
+.diff-line > .diff-sign {
+  text-indent: 0;
+}
+
+.diff-num {
+  box-sizing: content-box;
+  min-width: calc(var(--diff-digits, 2) * 1ch);
+  margin-right: 0.45rem;
+  padding: 0 0.45rem 0 0.6rem;
+  border-right: 1px solid var(--pm-border-soft);
+  background: color-mix(in oklab, var(--pm-fg) 4%, transparent);
+  color: var(--pm-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  user-select: none;
+}
+
+.diff-num::before,
+.diff-fold-lines::before {
+  content: attr(data-n);
+}
+
+.diff-del > .diff-num {
+  opacity: 0.55;
+}
+
+/* A fold names the lines it holds, at its end; the next line's number follows on from them. */
+.diff-fold-lines {
+  float: right;
+  padding-left: 0.6rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+  user-select: none;
+}
+
+.diff-add {
+  background: color-mix(in oklab, var(--pm-success) 16%, transparent);
+}
+
+.diff-del {
+  background: color-mix(in oklab, var(--pm-danger) 14%, transparent);
+}
+
+.diff-add ins,
+.diff-del del {
+  text-decoration: none;
+}
+
+.diff-del del {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in oklab, var(--pm-danger) 60%, transparent);
+}
+
+.diff-fold {
+  color: var(--pm-muted);
+  font-style: italic;
+}

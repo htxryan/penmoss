@@ -1,16 +1,9 @@
 import { Icon } from '@penmoss/ui/icons';
-import {
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type KeyboardEvent,
-  type ReactNode,
-} from 'react';
-import { fuzzy, highlightRuns } from '../commands/fuzzy';
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { fuzzyMatch, highlightRuns } from '@penmoss/core/fuzzy';
 import { DialogClose } from '../shell/DialogClose';
+import { PickerField, PickerListbox, PickerOverlay } from '../shell/picker';
+import { usePickerList } from '../shell/picker-list';
 import type { FolderChoice } from './model';
 
 export interface FolderPickerProps {
@@ -57,168 +50,112 @@ export function FolderPicker({
       choices.findIndex((choice) => choice.id === currentId),
     ),
   );
-  const input = useRef<HTMLInputElement>(null);
-  const list = useRef<HTMLDivElement>(null);
-  const id = useId();
 
   const items = useMemo(() => {
     const q = query.trim();
     return choices.flatMap((choice) => {
       if (!q) return [{ choice, indices: [] as readonly number[], filtered: false }];
-      const match = fuzzy(q, choice.path);
+      const match = fuzzyMatch(q, choice.path, { scattered: false });
       return match ? [{ choice, indices: match.indices, filtered: true }] : [];
     });
   }, [choices, query]);
-  const current = Math.min(active, Math.max(0, items.length - 1));
-
-  useLayoutEffect(() => input.current?.focus(), []);
-  useLayoutEffect(() => {
-    list.current
-      ?.querySelector<HTMLElement>(`[data-index="${current}"]`)
-      ?.scrollIntoView?.({ block: 'nearest' });
-  }, [current, items]);
 
   const choose = (choice: FolderChoice | undefined) => {
     if (choice) onChoose(choice.id);
   };
+  const picker = usePickerList({
+    items,
+    active,
+    setActive,
+    onChoose: (index) => choose(items[index]?.choice),
+    onClose,
+  });
 
-  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.nativeEvent.isComposing) return;
-    const count = Math.max(1, items.length);
-    switch (event.key) {
-      case 'ArrowDown':
-        event.preventDefault();
-        setActive((current + 1) % count);
-        break;
-      case 'ArrowUp':
-        event.preventDefault();
-        setActive((current - 1 + count) % count);
-        break;
-      case 'Enter':
-        event.preventDefault();
-        choose(items[current]?.choice);
-        break;
-      case 'Escape':
-        event.preventDefault();
-        event.stopPropagation();
-        onClose();
-        break;
-    }
-  };
-
-  const option = (index: number) => `${id}-option-${index}`;
   const label =
     named ??
     (count === 1 ? `Move “${title || 'Untitled'}” to a folder` : `Move ${count} notes to a folder`);
   return (
-    <div
-      className="overlay"
-      data-testid="folder-picker"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <PickerOverlay
+      testId="folder-picker"
+      className="palette folder-picker"
+      label={label}
+      onClose={onClose}
     >
-      <div
-        className="dialog palette folder-picker"
-        role="dialog"
-        aria-modal="true"
-        aria-label={label}
-      >
-        <div className="dlg-search">
-          <input
-            ref={input}
-            type="text"
-            role="combobox"
-            aria-expanded="true"
-            aria-controls={`${id}-list`}
-            aria-autocomplete="list"
-            aria-activedescendant={items.length > 0 ? option(current) : undefined}
-            aria-label="Folder"
-            placeholder={placeholder}
-            autoComplete="off"
-            spellCheck={false}
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setActive(0);
-            }}
-            onKeyDown={onKeyDown}
-          />
-          <DialogClose label="Close the Folder Picker" onClose={onClose} />
-        </div>
-        <div ref={list} className="dlg-list" id={`${id}-list`} role="listbox" aria-label="Folders">
-          {items.length === 0 ? (
-            <p className="dlg-empty" role="status">
-              No folder matches “{query}”
-            </p>
-          ) : (
-            items.map(({ choice, indices, filtered }, index) => (
-              <div
-                key={choice.id ?? 'top'}
-                id={option(index)}
-                role="option"
-                className="opt folder-opt"
-                aria-selected={index === current}
-                aria-current={choice.id === currentId ? 'location' : undefined}
-                data-index={index}
-                // Indented by depth as in the tree, capped in CSS (six levels on a phone, A363).
-                style={filtered ? undefined : ({ '--depth': choice.depth } as CSSProperties)}
-                onMouseMove={() => {
-                  if (index !== current) setActive(index);
-                }}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => choose(choice)}
-              >
-                <span className="oic" aria-hidden="true">
-                  <Icon
-                    name={choice.id === null ? 'list' : choice.notebook ? 'notebook' : 'folder'}
-                    size={14}
-                  />
-                </span>
-                <span className="ot">
-                  {/* Filtered, a folder shows its path, so two "Notes" folders differ. */}
-                  {(filtered
-                    ? highlightRuns(choice.path, indices)
-                    : [{ text: choice.name, match: false }]
-                  ).map((run, i) =>
-                    run.match ? <b key={i}>{run.text}</b> : <span key={i}>{run.text}</span>,
-                  )}
-                </span>
-                <span className="os">
-                  {choice.id === currentId ? (
-                    <>
-                      <span className="sr-only">Here now</span>
-                      <Icon name="check" size={14} />
-                    </>
-                  ) : null}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-        {options ? (
-          // Pressing one keeps the focus in the search field, so Enter still chooses.
-          <div className="dlg-options" onMouseDown={(event) => event.preventDefault()}>
-            {options}
-          </div>
-        ) : null}
-        <div className="dlg-foot" aria-hidden="true">
-          <span className="keys">
-            <kbd>↑</kbd>
-            <kbd>↓</kbd>
-          </span>
-          Choose
-          <span className="keys">
-            <kbd>↵</kbd>
-          </span>
-          {action}
-          <span className="grow" />
-          <span className="keys">
-            <kbd>Esc</kbd>
-          </span>
-          Cancel
-        </div>
+      <div className="dlg-search">
+        <PickerField
+          picker={picker}
+          aria-label="Folder"
+          placeholder={placeholder}
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setActive(0);
+          }}
+        />
+        <DialogClose label="Close the Folder Picker" onClose={onClose} />
       </div>
-    </div>
+      <PickerListbox picker={picker} label="Folders">
+        {items.length === 0 ? (
+          <p className="dlg-empty" role="status">
+            No folder matches “{query}”
+          </p>
+        ) : (
+          items.map(({ choice, indices, filtered }, index) => (
+            <div
+              key={choice.id ?? 'top'}
+              {...picker.optionProps(index)}
+              className="opt folder-opt"
+              aria-current={choice.id === currentId ? 'location' : undefined}
+              // Indented by depth as in the tree, capped in CSS (six levels on a phone, A363).
+              style={filtered ? undefined : ({ '--depth': choice.depth } as CSSProperties)}
+              onClick={() => choose(choice)}
+            >
+              <span className="oic" aria-hidden="true">
+                <Icon name={choice.id === null ? 'list' : 'folder'} size={14} />
+              </span>
+              <span className="ot">
+                {/* Filtered, a folder shows its path, so two "Notes" folders differ. */}
+                {(filtered
+                  ? highlightRuns(choice.path, indices)
+                  : [{ text: choice.name, match: false }]
+                ).map((run, i) =>
+                  run.match ? <b key={i}>{run.text}</b> : <span key={i}>{run.text}</span>,
+                )}
+              </span>
+              <span className="os">
+                {choice.id === currentId ? (
+                  <>
+                    <span className="sr-only">Here now</span>
+                    <Icon name="check" size={14} />
+                  </>
+                ) : null}
+              </span>
+            </div>
+          ))
+        )}
+      </PickerListbox>
+      {options ? (
+        // Pressing one keeps the focus in the search field, so Enter still chooses.
+        <div className="dlg-options" onMouseDown={(event) => event.preventDefault()}>
+          {options}
+        </div>
+      ) : null}
+      <div className="dlg-foot" aria-hidden="true">
+        <span className="keys">
+          <kbd>↑</kbd>
+          <kbd>↓</kbd>
+        </span>
+        Choose
+        <span className="keys">
+          <kbd>↵</kbd>
+        </span>
+        {action}
+        <span className="grow" />
+        <span className="keys">
+          <kbd>Esc</kbd>
+        </span>
+        Cancel
+      </div>
+    </PickerOverlay>
   );
 }

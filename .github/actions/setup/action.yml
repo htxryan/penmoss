@@ -1,39 +1,19 @@
 name: Set up Penmoss
 description: >-
   Node from .node-version, pnpm through Corepack, the workspace's dependencies and Task, on a
-  GitHub-hosted Ubuntu or Mac runner (docs/ci.md). The pnpm store comes from actions/cache, and
-  on Ubuntu, when asked, Electron's download and Playwright's browsers too. On a self-hosted
-  runner (none runs CI now, A1348) every cache lives in that runner's own tool cache.
+  GitHub-hosted Ubuntu or Mac runner (docs/ci.md; no job runs self-hosted, A1348). The pnpm store
+  comes from actions/cache, and on Ubuntu, when asked, Electron's download and Playwright's
+  browsers too.
 inputs:
   electron-cache:
-    description: On Ubuntu, also cache Electron's download (a Mac keeps it in its tool cache)
+    description: On Ubuntu, also cache Electron's download
     default: 'false'
   playwright-cache:
-    description: On Ubuntu, also cache Playwright's browsers (a Mac keeps them in its tool cache)
+    description: On Ubuntu, also cache Playwright's browsers
     default: 'false'
 runs:
   using: composite
   steps:
-    # Each runner has its own _work/_tool, and runs one job at a time, so nothing here is written
-    # by two jobs at once. Nothing goes in the home folder of the account the runner runs as.
-    - name: Keep caches in this runner's tool cache (_work/_tool/penmoss)
-      if: runner.environment == 'self-hosted'
-      shell: bash
-      run: |
-        cache="$RUNNER_TOOL_CACHE/penmoss"
-        mkdir -p "$cache"
-        {
-          echo "PENMOSS_CACHE=$cache"
-          echo "COREPACK_HOME=$cache/corepack"
-          echo "PNPM_STORE=$cache/pnpm-store"
-          echo "XDG_CACHE_HOME=$cache/xdg-cache"
-          echo "ELECTRON_CACHE=$cache/electron"
-          echo "ELECTRON_BUILDER_CACHE=$cache/electron-builder"
-          echo "PLAYWRIGHT_BROWSERS_PATH=$cache/ms-playwright"
-          echo "GRADLE_USER_HOME=$cache/gradle"
-        } >> "$GITHUB_ENV"
-        echo "Runner $RUNNER_NAME, caches in $cache ($(sysctl -n hw.ncpu) CPUs, $(($(sysctl -n hw.memsize) / 1073741824)) GB)"
-
     # A623: on 26 Oct 2026 the Azure Ubuntu mirror stalled for whole jobs: apt waited 120 s per
     # silent connection (its default) and three main runs' E2E and a PR's Electron job ran out
     # of time installing Chromium's libraries. A stall now fails after 15 s and is tried again,
@@ -54,12 +34,9 @@ runs:
       run: |
         corepack enable pnpm
         pnpm --version
-        if [ -z "${PNPM_STORE:-}" ]; then
-          echo "PNPM_STORE=$(pnpm store path --silent)" >> "$GITHUB_ENV"
-        fi
+        echo "PNPM_STORE=$(pnpm store path --silent)" >> "$GITHUB_ENV"
 
     - name: Cache pnpm store
-      if: runner.environment == 'github-hosted'
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ env.PNPM_STORE }}

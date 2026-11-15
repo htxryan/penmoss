@@ -46,8 +46,6 @@ class WordingTest {
             FeedbackFormModel.queuedMessage("Timed out"),
             FeedbackFormModel.failedMessage(null, "Refused"),
             handEditsText(listOf("a.md")),
-            notebookDeleteText(1),
-            notebookClosedMessage("Work"),
         )
         for (line in said) assertFalse(line, line.contains('\''))
     }

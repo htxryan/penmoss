@@ -4,8 +4,9 @@
  * carries it. The rules are the apps': the same WorkspaceDoc and note helpers, ids from
  * `@penmoss/core`, and the notebook's own settings (A827: the `notebook/` keys).
  */
-import { parseMarkdown, ulid } from '@penmoss/core';
-import { isSha256 } from '@penmoss/core/attachments';
+import { parseMarkdown } from '@penmoss/core';
+import { ulid } from '@penmoss/core/ids';
+import { AGENT_ATTACHMENT_MAX_BYTES, isSha256 } from '@penmoss/core/attachments';
 import {
   DEFAULT_DAILY_TEMPLATE,
   DEFAULT_TIME_ZONE,
@@ -18,7 +19,7 @@ import {
   type PeriodKind,
 } from '@penmoss/core/periodic';
 import { keyBetween } from '@penmoss/core/workspace';
-import { periodicNote } from '@penmoss/editor/periodic';
+import { periodicNote } from '@penmoss/sync-client/periodic';
 import { initNote, isDeleted, setDeleted, type NoteKind } from '@penmoss/sync-client/note';
 import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import {
@@ -26,6 +27,7 @@ import {
   deleteFolder,
   moveFolder,
   moveNote,
+  NOTEBOOK_MAP,
   readSettings,
   readWorkspace,
   registerNote,
@@ -40,9 +42,7 @@ import { notebookSalt } from './layout';
 import { isPurged, markPurged } from './purge';
 
 /** A git notebook's own settings live under this user id in the WorkspaceDoc (A827). */
-export const NOTEBOOK_SETTINGS = 'notebook';
-/** Attachments in the repository are refused over this (A828; A213's cap, no R2 here). */
-export const NOTEBOOK_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+export const NOTEBOOK_SETTINGS = NOTEBOOK_MAP;
 
 export class NotebookOpError extends Error {
   constructor(
@@ -56,7 +56,7 @@ export class NotebookOpError extends Error {
 }
 
 /** ISO 8601 with the offset of `timeZone` at `at` (frontmatter `created`, A209). */
-export function isoInZone(at: number, timeZone: string): string {
+function isoInZone(at: number, timeZone: string): string {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone,
     hourCycle: 'h23',
@@ -155,7 +155,7 @@ export class NotebookOps {
         { id, created: isoInZone(this.clock(), this.timeZone()), kind: input.kind ?? 'note' },
         input.title,
       );
-      // No body given: none written, as the server's create of an empty note.
+      // No body given: none written (an empty note).
       const body =
         input.body ?? (input.markdown === undefined ? null : parseMarkdown(input.markdown).doc);
       if (body) doc.get(NOTE_ROOT).applyDelta(docToDelta(body));
@@ -329,10 +329,10 @@ export class NotebookOps {
    * and returns its path as notes write it. Refused over 10 MB.
    */
   async keepAttachment(bytes: Uint8Array, ext: string): Promise<{ sha256: string; path: string }> {
-    if (bytes.byteLength > NOTEBOOK_ATTACHMENT_MAX_BYTES) {
+    if (bytes.byteLength > AGENT_ATTACHMENT_MAX_BYTES) {
       throw new NotebookOpError(
         'file_too_large',
-        `Files in a git notebook are at most ${NOTEBOOK_ATTACHMENT_MAX_BYTES / 1024 / 1024} MB`,
+        `Files in a git notebook are at most ${AGENT_ATTACHMENT_MAX_BYTES / 1024 / 1024} MB`,
         413,
       );
     }

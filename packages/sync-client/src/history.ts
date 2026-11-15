@@ -1,7 +1,7 @@
 /**
  * Version history on a note's Yjs document (T21, A3, A5): bringing an old
- * state back as a new change. Shared by the NoteDoc (restore and revert on the
- * server) and tests; no editor and no markdown codec here.
+ * state back as a new change, for History's Restore and Revert; no editor and
+ * no markdown codec here.
  *
  * A restore never replaces the document. The body is diffed, node by node and
  * then by line, word and character (`lib0/delta`'s `diff`, the same diff the
@@ -18,6 +18,7 @@ import * as Y from '@y/y';
 import { NOTE_META, readTitle, setTitle } from './note';
 import { NOTE_ROOT } from './replica';
 import { META_TAG_PREFIX } from './tags';
+import { isEmptyUpdate } from './yjs14';
 
 type AnyDelta = ReturnType<Y.Node['toDeltaDeep']>;
 
@@ -58,7 +59,7 @@ export function setTagKeys(doc: Y.Doc, keys: ReadonlySet<string>): void {
 export function restoreContent(doc: Y.Doc, version: Y.Doc, origin: unknown = null): boolean {
   let changed = false;
   const off = (update: Uint8Array) => {
-    if (update.byteLength > 2) changed = true;
+    if (!isEmptyUpdate(update)) changed = true;
   };
   doc.on('update', off);
   try {

@@ -9,23 +9,22 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AgentActivity, type MemoryTransport } from '@penmoss/git-notebook';
-import type { NoteRecord } from '@penmoss/sync-client';
+import type { NoteRecord } from '@penmoss/sync-client/record';
 import { readTitle, setTitle } from '@penmoss/sync-client/note';
 import { readWorkspace } from '@penmoss/sync-client/workspace';
-import { appendMarkdown } from '@penmoss/editor/capture';
+import { appendMarkdown } from '@penmoss/sync-client/capture';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { testNotebook } from '../../../../packages/git-notebook/test/support/notebooks';
 import type { DesktopGit, GitAnswer, GitNotebookInfo } from '../../src/desktop/bridge';
 import { NoteDirectory } from '../../src/notes/directory';
 import type { LocalNotes, Notes } from '../../src/notes/service';
-import { memoryEngineKv } from '../../src/sources/engine-store';
-import { describe as describeFailure } from '../../src/sources/engine-host';
+import { memoryEngineKv } from '@penmoss/git-notebook/host';
+import { describeMacFailure as describeFailure } from '../../src/sources/engine-host';
 import { GitSource, type EngineLocks, type StatusChannel } from '../../src/sources/git-source';
-import { GitRefused } from '../../src/sources/ipc-transport';
 import { gitHistory } from '../../src/history/source';
 import { isOpen, JOURNAL_KEY, routeChanged, Sources } from '../../src/sources/registry';
 import type { Workspace } from '../../src/workspace/service';
-import { GitTransportError } from '@penmoss/git-notebook';
+import { GitRefused, GitTransportError } from '@penmoss/git-notebook';
 import { fitWords, GitNotebooks } from '../../../desktop/src/git-notebooks';
 import { memoryNotes } from './support/memory-notes';
 import { memoryStorage } from './support/memory-storage';
@@ -197,6 +196,20 @@ function fakeGit(transport: MemoryTransport): DesktopGit & { secrets: Map<string
     installCli: () => Promise.resolve(null),
     removeCli: () => Promise.resolve(null),
     onChange: () => () => undefined,
+    // No GitHub to browse: every call answers null, as to a window that may not browse.
+    github: {
+      repos: () => Promise.resolve(null),
+      folders: () => Promise.resolve(null),
+      owners: () => Promise.resolve(null),
+      create: () => Promise.resolve(null),
+      // No sign-in here: its status is null, as from a window that may not sign in.
+      signIn: {
+        status: () => Promise.resolve(null),
+        start: () => Promise.resolve(null),
+        cancel: () => Promise.resolve(null),
+        onChange: () => () => undefined,
+      },
+    },
   };
 }
 
@@ -533,10 +546,10 @@ describe('History’s restore and revert ask the Mac’s owner first, as Android
     };
     const history = gitHistory(a, a.notes, first);
     await expect(history.restore(1)).rejects.toMatchObject({
-      status: 403,
+      kind: 'refused',
       message: 'Not done: you cancelled.',
     });
-    await expect(history.revert(1)).rejects.toMatchObject({ status: 403 });
+    await expect(history.revert(1)).rejects.toMatchObject({ kind: 'refused' });
     expect(asked).toEqual([
       [a.info.localId, first, false],
       [a.info.localId, first, true],
@@ -570,7 +583,7 @@ describe('History’s Sync Now pushes the note as this window stored it (T59)', 
   });
 });
 
-describe('History saves the note as it is before a Restore or a Revert (as the server does)', () => {
+describe('History saves the note as it is before a Restore or a Revert', () => {
   it('an edit not pushed yet becomes a version first; with no way to push it, nothing changes', async () => {
     const { cli, first, window, mac } = await world();
     const a = window('A');
@@ -585,7 +598,7 @@ describe('History saves the note as it is before a Restore or a Revert (as the s
       throw new GitTransportError('network', 'The network dropped');
     };
     const history = gitHistory(a, a.notes, first);
-    await expect(history.restore(1)).rejects.toMatchObject({ status: 409 });
+    await expect(history.restore(1)).rejects.toMatchObject({ kind: 'not-saved' });
     expect(readTitle(open.replica.doc)).toBe('Typed, not pushed yet');
     // Online again: the edit is pushed as a version, then the restore comes after it.
     mac.beforePush = null;
@@ -807,20 +820,13 @@ describe('sources side by side, git notebooks only (A820, A826, A827, T59)', () 
     expect(registry.getState().all.map((source) => source.id)).toEqual(['NB1', 'NB2']);
   });
 
-  it('has no personal source: the Journal notebook is the root, and holds unknown ids', async () => {
+  it('has no personal source: the Journal notebook holds unknown ids', async () => {
     const { registry } = sources({ listed: () => ['NB1'] });
     await registry.load();
     const state = registry.getState();
-    expect(Object.keys(state).sort()).toEqual([
-      'all',
-      'journal',
-      'journalPicked',
-      'loaded',
-      'root',
-    ]);
+    expect(Object.keys(state).sort()).toEqual(['all', 'journal', 'journalPicked', 'loaded']);
     expect(state.all.map((source) => source.id)).toEqual(['NB1']);
     expect(state.journal?.id).toBe('NB1');
-    expect(state.root?.id).toBe('NB1');
     expect(isOpen(state)).toBe(true);
     // An unknown id opens in the Journal notebook: there is no other store to look in.
     expect(registry.sourceOfNote('nowhere')?.id).toBe('NB1');
@@ -832,19 +838,19 @@ describe('sources side by side, git notebooks only (A820, A826, A827, T59)', () 
     expect(registry.getState().loaded).toBe(false);
     await registry.load();
     const empty = registry.getState();
-    expect(empty).toMatchObject({ all: [], journal: null, root: null, loaded: true });
+    expect(empty).toMatchObject({ all: [], journal: null, loaded: true });
     expect(isOpen(empty)).toBe(false);
     expect(registry.sourceOfNote('anything')).toBeNull();
     // The first one added opens the app.
     listed = ['NB1'];
     changed();
     await vi.waitFor(() => expect(isOpen(registry.getState())).toBe(true));
-    expect(registry.getState().root?.id).toBe('NB1');
+    expect(registry.getState().journal?.id).toBe('NB1');
   });
 
   it('without the Mac app’s git, has nothing to load and no notebook', () => {
     const registry = new Sources({ git: null });
-    expect(registry.getState()).toMatchObject({ all: [], journal: null, root: null, loaded: true });
+    expect(registry.getState()).toMatchObject({ all: [], journal: null, loaded: true });
   });
 
   it('keeps the Journal notebook this device chose, and falls back when it goes (A827)', async () => {
@@ -857,7 +863,6 @@ describe('sources side by side, git notebooks only (A820, A826, A827, T59)', () 
     registry.setJournal('NB2');
     expect(storage.getItem(JOURNAL_KEY)).toBe('NB2');
     expect(registry.getState().journal?.id).toBe('NB2');
-    expect(registry.getState().root?.id).toBe('NB2');
     expect(registry.getState().journalPicked).toBe(true);
     listed = ['NB1'];
     await registry.refresh();
@@ -979,6 +984,20 @@ describe('Delete for good confirmed again from Settings (A855)', () => {
       installCli: () => Promise.resolve(null),
       removeCli: () => Promise.resolve(null),
       onChange: () => () => undefined,
+      // No GitHub to browse: every call answers null, as to a window that may not browse.
+      github: {
+        repos: () => Promise.resolve(null),
+        folders: () => Promise.resolve(null),
+        owners: () => Promise.resolve(null),
+        create: () => Promise.resolve(null),
+        // No sign-in here: its status is null, as from a window that may not sign in.
+        signIn: {
+          status: () => Promise.resolve(null),
+          start: () => Promise.resolve(null),
+          cancel: () => Promise.resolve(null),
+          onChange: () => () => undefined,
+        },
+      },
     };
     const store = connection(memoryNotes());
     const kv = memoryEngineKv();

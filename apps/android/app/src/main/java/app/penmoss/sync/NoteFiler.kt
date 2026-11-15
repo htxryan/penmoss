@@ -15,12 +15,10 @@ import app.penmoss.engine.api.PenmossApi
  * never reads Yjs, asks the API. A note in Trash is never filed (A358), and a move
  * made here never undoes one made elsewhere since (A359).
  *
- * A folder gone since is the server's to place (A352, T43 A757: fail closed): it files the note
- * in the nearest folder above within its notebook and answers that folder, or, for a note not
- * filed yet with no safe place, where it was meant to go (its repair then puts it in Trash with
- * its deleted notebook). A note already filed with no safe place is refused (422
- * `folder_not_found`) and stays where it is. The phone never retries at the top level, which is
- * the default notebook.
+ * A folder gone since is the notes server's to place (A352, A757): it files the note in the
+ * nearest folder above that still exists and answers that folder. A note already filed with no
+ * safe place is refused (422 `folder_not_found`) and stays where it is. The phone never retries
+ * at the top level.
  */
 class NoteFiler(private val store: NoteStore, private val api: PenmossApi) {
     suspend fun fileDue(): Int {
@@ -102,11 +100,8 @@ class NoteFiler(private val store: NoteStore, private val api: PenmossApi) {
         } else {
             null
         }
-        // The notebook the phone saw it in when it was moved (T43, A766): kept with the move, or,
-        // for one queued before that was kept, where the phone sees the folder it moved from.
-        val fromNotebook = note?.moveNotebook ?: store.notebookOfFolder(if (from != null) from.folderId else note?.fileIn)
         // Where the server filed it: the folder asked for, or a gone folder's safe place (A757).
-        Outcome.Filed(api.moveNote(noteId, folderId, from, place, fromNotebook).folderId)
+        Outcome.Filed(api.moveNote(noteId, folderId, from, place).folderId)
     } catch (error: ApiException) {
         when {
             error.unauthorized -> throw error

@@ -17,8 +17,16 @@ function scan(name, text) {
   const folder = mkdtempSync(path.join(dir, `${name}-`));
   writeFileSync(path.join(folder, 'sample.ts'), text);
   const run = spawnSync(
-    path.join(root, 'scripts/gitleaks.sh'),
-    ['dir', '--no-banner', '--redact', '--config', path.join(root, '.gitleaks.toml'), folder],
+    path.join(root, 'scripts/pinned-tool.sh'),
+    [
+      'gitleaks',
+      'dir',
+      '--no-banner',
+      '--redact',
+      '--config',
+      path.join(root, '.gitleaks.toml'),
+      folder,
+    ],
     { encoding: 'utf8' },
   );
   return run.status;

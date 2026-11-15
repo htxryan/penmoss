@@ -61,6 +61,25 @@ describe('timeouts (F13)', async () => {
     // In time, the step's own result.
     await expect(withTimeout(() => Promise.resolve(7), 1, 'x')).resolves.toBe(7);
   });
+  it("stops the gate's command when it runs past gateMinutes (F2)", async () => {
+    const { gateExec } = await import('../src/run.ts');
+    let seen: AbortSignal | undefined;
+    const gate = {
+      worktreePath: '/w',
+      exec: (_command: string, options?: { readonly signal?: AbortSignal }) => {
+        seen = options?.signal;
+        // As the sandbox's does: it ends once what it runs is stopped.
+        return new Promise<{ exitCode: number; stdout: string; stderr: string }>((resolve) =>
+          seen?.addEventListener('abort', () => resolve({ exitCode: 143, stdout: '', stderr: '' })),
+        );
+      },
+      close: () => Promise.resolve(),
+    };
+    await expect(gateExec(gate, 'task check', 0.0001)).rejects.toThrow(
+      '`task check` took longer than 0.0001 min',
+    );
+    expect(seen?.aborted).toBe(true);
+  });
   it("waits as long as OpenCode's error says (PEN-117: Go's 5-hour limit, 4.45 hours)", () => {
     const error =
       '{"type":"error","error":{"type":"provider.quota","message":"OpenCode Go usage limit reached","status":429,"retryAfterMs":16032000}}';

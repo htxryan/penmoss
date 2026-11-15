@@ -1,0 +1,308 @@
+/* Commands (T20): palette, quick open, recent-notes switcher, cheat sheet and shortcut editor. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--pm-muted);
+}
+
+/*
+ * A name that turns bold when it is the chosen one (a Settings section, a segment) keeps its bold
+ * width all the time, from a hidden bold copy under it (`data-label`), so choosing it moves
+ * nothing beside it (A988). The phone's row of Settings tabs moved by up to 3px.
+ */
+.bold-steady {
+  display: inline-grid;
+}
+
+.bold-steady::after {
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  content: attr(data-label);
+  font-weight: 600;
+}
+
+.keys {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.keys kbd,
+.dlg-foot kbd {
+  min-width: 1.35em;
+  padding: 0.1em 0.35em;
+  border: 1px solid var(--pm-border);
+  border-bottom-width: 2px;
+  border-radius: 0;
+  background: var(--pm-raised);
+  color: var(--pm-muted);
+  font: 500 0.72rem/1.2 var(--pm-font);
+  text-align: center;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  justify-items: center;
+  align-items: start;
+  padding: 12vh 1rem 1rem;
+  background: var(--pm-scrim);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(40rem, 100%);
+  max-height: 76vh;
+  overflow: hidden;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+  box-shadow: var(--pm-shadow);
+}
+
+.dlg-search {
+  display: flex;
+  align-items: center;
+  flex: none;
+  height: 3.1rem;
+  padding: 0 0.9rem;
+  border-bottom: 1px solid var(--pm-border);
+}
+
+.dlg-search .dlg-close {
+  flex: none;
+  margin-right: -0.45rem;
+}
+
+.dlg-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+.dlg-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex: none;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--pm-border);
+}
+
+.dlg-title h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.dlg-title .muted {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  font-size: 0.78rem;
+}
+
+.dlg-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.35rem;
+  outline: none;
+}
+
+.dlg-empty {
+  margin: 0;
+  padding: 1.2rem;
+  color: var(--pm-muted);
+  text-align: center;
+}
+
+.dlg-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: none;
+  height: 2.2rem;
+  padding: 0 0.9rem;
+  border-top: 1px solid var(--pm-border);
+  color: var(--pm-muted);
+  font-size: 0.72rem;
+}
+
+.dlg-foot .grow {
+  flex: 1;
+}
+
+/* A picker's options over its keys (A1353: Copy to Notebook's Copy Tags). */
+.dlg-options {
+  display: flex;
+  align-items: center;
+  flex: none;
+  padding: 0.35rem 0.9rem;
+  border-top: 1px solid var(--pm-border);
+}
+
+.dlg-options .display-toggle {
+  min-height: 2rem;
+  font-size: var(--pm-text-sm);
+}
+
+/* Move to folder… (T39): indented by depth as in the tree, up to twelve levels. */
+.folder-picker .folder-opt[style] {
+  padding-inline-start: calc(0.6rem + min(var(--depth), 12) * 0.9rem);
+}
+
+.grp-h {
+  padding: 0.55rem 0.6rem 0.25rem;
+  color: var(--pm-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.opt {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.2rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.opt[aria-selected='true'] {
+  background: var(--pm-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--pm-accent-line);
+}
+
+.opt:hover:not([aria-selected='true']) {
+  background: var(--pm-hover);
+}
+
+.opt .oic {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  color: var(--pm-muted);
+}
+
+.opt .ot {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.opt .ot b {
+  color: var(--pm-accent);
+  font-weight: 650;
+}
+
+/* On the selected option's accent tint, matched letters stay text-coloured for contrast (T28). */
+.opt[aria-selected='true'] .ot b {
+  color: var(--pm-fg);
+}
+
+.opt .ot .p {
+  margin-left: 0.4rem;
+  color: var(--pm-muted);
+  font-size: 0.75rem;
+}
+
+.opt .os {
+  color: var(--pm-muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.mru {
+  width: min(32rem, 100%);
+}
+
+.mru .opt {
+  min-height: 2.8rem;
+}
+
+.mru-num {
+  width: 1.2rem;
+  color: var(--pm-muted);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.mru .two {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mru .two .t {
+  overflow: hidden;
+  font-weight: 550;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mru .two .s {
+  color: var(--pm-muted);
+  font-size: 0.72rem;
+}
+
+.cheat-dlg {
+  width: min(54rem, 100%);
+}
+
+.cheat {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.25rem 1.75rem;
+  overflow-y: auto;
+  padding: 0.4rem 1.25rem 1.25rem;
+}
+
+.cheat h3 {
+  margin: 1rem 0 0.35rem;
+  color: var(--pm-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cheat .cheat-note {
+  margin: 0 0 0.3rem;
+  color: var(--pm-muted);
+  font-size: 0.75rem;
+}
+
+.cheat .cr {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--pm-border);
+  font-size: 0.82rem;
+}

@@ -17,7 +17,7 @@
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import type { EngineKv } from '../../../web/src/sources/engine-store';
+import type { EngineKv } from '@penmoss/git-notebook/host';
 import { serveEngine, serveGuard } from '../src/git/page';
 import type { FramePort } from '../src/git/channel';
 import { run } from '../../../../packages/cli/src/main';

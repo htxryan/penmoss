@@ -293,9 +293,6 @@ importers:
       '@cloudflare/workers-oauth-provider':
         specifier: 1.2.4
         version: 1.2.4
-      '@penmoss/core':
-        specifier: workspace:*
-        version: link:../../packages/core
       '@penmoss/git-notebook':
         specifier: workspace:*
         version: link:../../packages/git-notebook
@@ -303,6 +300,9 @@ importers:
       '@cloudflare/vitest-plugin':
         specifier: 1.4.6
         version: 1.4.6(@cloudflare/workers-types@5.20261021.1)(@types/node@24.19.2)(vitest@5.0.5(@types/node@24.19.2)(happy-dom@21.0.4)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))
+      '@penmoss/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@penmoss/sync-client':
         specifier: workspace:*
         version: link:../../packages/sync-client
@@ -336,9 +336,15 @@ importers:
       '@penmoss/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@y/y':
+        specifier: 14.0.0-rc.29
+        version: 14.0.0-rc.29
       gpt-tokenizer:
         specifier: 4.1.0
         version: 4.1.0
+      lib0:
+        specifier: 1.0.0-rc.36
+        version: 1.0.0-rc.36
       react:
         specifier: 19.3.1
         version: 19.3.1
@@ -349,6 +355,9 @@ importers:
       '@axe-core/playwright':
         specifier: 4.14.0
         version: 4.14.0(playwright-core@1.64.1)
+      '@penmoss/embed':
+        specifier: workspace:*
+        version: link:../../packages/embed
       '@playwright/test':
         specifier: 1.64.1
         version: 1.64.1
@@ -364,6 +373,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: 6.1.2
         version: 6.1.2(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      fake-indexeddb:
+        specifier: 6.2.6
+        version: 6.2.6
       happy-dom:
         specifier: 21.0.4
         version: 21.0.4
@@ -379,6 +391,9 @@ importers:
       '@penmoss/core':
         specifier: workspace:*
         version: link:../core
+      '@penmoss/embed':
+        specifier: workspace:*
+        version: link:../embed
       '@penmoss/git-notebook':
         specifier: workspace:*
         version: link:../git-notebook
@@ -590,9 +605,6 @@ importers:
       '@penmoss/core':
         specifier: workspace:*
         version: link:../core
-      '@penmoss/editor':
-        specifier: workspace:*
-        version: link:../editor
       '@penmoss/sync-client':
         specifier: workspace:*
         version: link:../sync-client
@@ -621,6 +633,9 @@ importers:
       '@penmoss/core':
         specifier: workspace:*
         version: link:../core
+      '@y/prosemirror':
+        specifier: 2.0.0-15
+        version: 2.0.0-15(@y/protocols@1.0.6-rc.1(@y/y@14.0.0-rc.29))(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.2)(prosemirror-view@1.42.6)
       '@y/y':
         specifier: 14.0.0-rc.29
         version: 14.0.0-rc.29
@@ -630,13 +645,10 @@ importers:
       minisearch:
         specifier: 7.2.0
         version: 7.2.0
+      prosemirror-model:
+        specifier: 1.25.12
+        version: 1.25.12
     devDependencies:
-      '@y/protocols':
-        specifier: 1.0.6-rc.1
-        version: 1.0.6-rc.1(@y/y@14.0.0-rc.29)
-      fake-indexeddb:
-        specifier: 6.2.6
-        version: 6.2.6
       vitest:
         specifier: 5.0.5
         version: 5.0.5(@types/node@24.19.2)(happy-dom@21.0.4)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))

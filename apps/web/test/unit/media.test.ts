@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mediaStore, PHONE_QUERY } from '../../src/shell/media';
+import { mediaStore, NARROW_QUERY } from '../../src/shell/media';
 
 function fakeMedia(initial: boolean) {
   const listeners = new Set<() => void>();
@@ -26,7 +26,7 @@ function fakeMedia(initial: boolean) {
 describe('mediaStore (T36)', () => {
   it('reads the query and follows its changes', () => {
     const media = fakeMedia(false);
-    const store = mediaStore(PHONE_QUERY, media.matchMedia);
+    const store = mediaStore(NARROW_QUERY, media.matchMedia);
     expect(media.queries).toEqual(['(max-width: 700px)']);
     expect(store.getSnapshot()).toBe(false);
     let changes = 0;
@@ -41,7 +41,7 @@ describe('mediaStore (T36)', () => {
   });
 
   it('never matches without matchMedia (server rendering)', () => {
-    const store = mediaStore(PHONE_QUERY, undefined);
+    const store = mediaStore(NARROW_QUERY, undefined);
     expect(store.getSnapshot()).toBe(false);
     const off = store.subscribe(() => undefined);
     expect(() => off()).not.toThrow();

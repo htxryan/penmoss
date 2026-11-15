@@ -1,4 +1,5 @@
 /** Shaping replies for people and for `--json`. */
+import type { LocalEditReply } from '@penmoss/git-notebook/local';
 
 /** Search marks matches with U+0002 … U+0003 (A118). */
 const START = String.fromCharCode(2);
@@ -33,35 +34,23 @@ export const named = (title: string | null | undefined, id: string) =>
   title ? `“${title}” (${id})` : id;
 
 /** What an edit reply says, for people: ` · summary · version 12`. */
-export function editTail(reply: EditReply): string {
+export function editTail(reply: LocalEditReply): string {
   const parts: string[] = [];
   if (!reply.changed) parts.push('no change');
-  const summary = editSummary(reply);
-  if (summary) parts.push(summary);
-  if (reply.baseVersion !== null) parts.push(`version ${reply.baseVersion}`);
-  return parts.length > 0 ? ` · ${parts.join(' · ')}` : '';
+  if (reply.summary) parts.push(reply.summary);
+  parts.push(`version ${reply.baseVersion}`);
+  return ` · ${parts.join(' · ')}`;
 }
 
-/** Every edit endpoint's reply (A123). */
-export interface EditReply {
-  readonly id: string;
-  readonly changed: boolean;
-  readonly baseVersion: number | null;
-  /** What this edit did (A177); absent from replays. */
-  readonly summary?: string;
-  readonly version: { readonly summary?: string } | null;
-}
-
-/** What the edit did, else what its version says (it may hold earlier edits too). */
-const editSummary = (reply: EditReply) => reply.summary ?? reply.version?.summary;
-
-/** An edit reply for `--json`: the next baseVersion and what the edit did. */
-export function editJson(reply: EditReply): Record<string, unknown> {
-  const summary = editSummary(reply);
+/**
+ * An edit reply (A123) for `--json`: the next baseVersion and what the edit did (A177; absent
+ * from a replayed create).
+ */
+export function editJson(reply: LocalEditReply): Record<string, unknown> {
   return {
     id: reply.id,
     changed: reply.changed,
     baseVersion: reply.baseVersion,
-    ...(summary ? { summary } : {}),
+    ...(reply.summary ? { summary: reply.summary } : {}),
   };
 }

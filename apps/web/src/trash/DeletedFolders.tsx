@@ -1,7 +1,6 @@
 import { Icon } from '@penmoss/ui/icons';
 import { FOLDER_TRASH_DAYS, type TrashedFolder } from '@penmoss/sync-client/workspace';
 import { useState } from 'react';
-import { useNotes } from '../notes/hooks';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import { folderContents, restoredMessage } from './deleted-folders';
 import { DeletedByChip } from './DeletedByChip';
@@ -38,18 +37,10 @@ export function DeletedFolderList({
           Math.ceil((folder.deletedAt + FOLDER_TRASH_DAYS * DAY_MS - now) / DAY_MS),
         );
         return (
-          <li
-            key={folder.id}
-            className="trash-item"
-            data-folder-id={folder.id}
-            data-notebook={folder.notebook ? '' : undefined}
-          >
+          <li key={folder.id} className="trash-item" data-folder-id={folder.id}>
             <div className="trash-info">
-              <Icon name={folder.notebook ? 'notebook' : 'folder'} />
-              <span className="trash-title">
-                {folder.name}
-                {folder.notebook ? <span className="muted"> · Notebook</span> : null}
-              </span>
+              <Icon name="folder" />
+              <span className="trash-title">{folder.name}</span>
               <span className="muted">
                 {folderContents(folder)} · Deleted {deletedOn(folder.deletedAt)} from{' '}
                 {folderName(folder.parentId)}
@@ -68,7 +59,7 @@ export function DeletedFolderList({
                 className="btn"
                 data-ui="item"
                 disabled={busy}
-                aria-label={`Restore the ${folder.notebook ? 'notebook' : 'folder'} ${folder.name}`}
+                aria-label={`Restore the folder ${folder.name}`}
                 onClick={() => onRestore(folder)}
               >
                 <Icon name="undo" />
@@ -85,7 +76,6 @@ export function DeletedFolderList({
 /** Trash's folders, read from the workspace document (so offline too), and their Restore. */
 export function DeletedFolders({ onStatus }: { readonly onStatus: (text: string) => void }) {
   const workspace = useWorkspace();
-  const notes = useNotes();
   // Re-read on every change of the document, as the tree is.
   const { snapshot } = useWorkspaceState();
   const [now] = useState(() => Date.now());
@@ -101,14 +91,7 @@ export function DeletedFolders({ onStatus }: { readonly onStatus: (text: string)
       busy={false}
       folderName={folderName}
       onRestore={(folder) => {
-        const result = workspace.restoreFolder(folder.id);
-        onStatus(restoredMessage(folder.name, result));
-        // A notebook's notes come out of Trash with it (T43, A755), here and on the server.
-        for (const id of result.filed) {
-          void notes.restoreFromTrash(id).catch(() => {
-            // Offline with no copy here: the server restores it once the workspace syncs.
-          });
-        }
+        onStatus(restoredMessage(folder.name, workspace.restoreFolder(folder.id)));
       }}
     />
   );

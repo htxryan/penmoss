@@ -16,7 +16,7 @@ import java.io.File
  * Search's actions are the commands contract's (T40 P6, FD6, A466): `commands-v1.json` lists
  * every web command with how a phone reaches it, and its web test fails when one has no entry.
  * Here: the phone offers exactly the `{"search": true}` entries, in the registry's order, with
- * the web's titles, and ranks them as the palette's `fuzzy` does.
+ * the web's titles, and ranks them as the palette's `fuzzyMatch` does.
  */
 class SearchActionsTest {
     private val contract: JsonObject = run {
@@ -63,6 +63,8 @@ class SearchActionsTest {
         assertNull(Fuzzy.score("mdt", "Toggle Dark Mode"))
         // Scattered across a long title: no match, as on the web.
         assertNull(Fuzzy.score("sx", "s" + "a".repeat(20) + "x"))
+        // Accents fold, as in core's matcher.
+        assertNotNull(Fuzzy.score("cafe", "Café Notes"))
         assertTrue(SearchActions.matching("  ").isEmpty())
     }
 }

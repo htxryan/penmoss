@@ -3,7 +3,7 @@
  * keeps the embedding service fed and fuses its hits with the words'. The bridge here is
  * scripted: it records what the page sends and answers the hits a test gives it.
  */
-import type { NoteRecord } from '@penmoss/sync-client';
+import type { NoteRecord } from '@penmoss/sync-client/record';
 import { describe, expect, it, vi } from 'vitest';
 import { vaultDocuments } from '../../../../packages/core/test/support/search-vault-docs';
 import type {
@@ -87,7 +87,6 @@ function recordOf(doc: (typeof docs)[number], overrides: Partial<NoteRecord> = {
     title: doc.title,
     tags: doc.tags,
     headings: doc.headings,
-    epoch: 'e',
     updatedAt: doc.updatedAt,
     unsynced: false,
     ...overrides,

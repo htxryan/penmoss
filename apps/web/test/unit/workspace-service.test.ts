@@ -1,25 +1,19 @@
 /**
  * A git notebook's folders and settings (T59: the only kind, D49): the tree kept in the note
- * store under the reserved key, filing, notebooks, journal folders, the notebook's and the
+ * store under the reserved key, filing, journal folders, the notebook's and the
  * device's settings (A827), and the notice for folder changes a closed window could not keep.
  */
 import {
   deleteFolder,
-  moveNote,
   readSettings,
   readWorkspace,
-  setNotebook,
+  DEVICE_MAP,
+  NOTEBOOK_MAP,
   WORKSPACE_RECORD_KEY,
 } from '@penmoss/sync-client/workspace';
-import { createYjs14Replica, type Yjs14Replica } from '@penmoss/sync-client/yjs14';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { planDrop } from '../../src/workspace/model';
-import {
-  GIT_DEVICE_SETTINGS,
-  GIT_NOTEBOOK_SETTINGS,
-  Workspace,
-  type WorkspaceOptions,
-} from '../../src/workspace/service';
+import { Workspace, type WorkspaceOptions } from '../../src/workspace/service';
 import { memoryNotes } from './support/memory-notes';
 import { testNotes, testWorkspace } from './support/local-sources';
 
@@ -65,8 +59,8 @@ describe('Workspace', () => {
     expect(notes.list()).toEqual([]);
   });
 
-  // Fail closed (T43 review B2, A757): a folder Trash knows nothing of is no proof the note is the
-  // default notebook's; it is filed as asked, held by every mirror until the repair settles it.
+  // Fail closed (T43 review B2, A757): a folder Trash knows nothing of gives no place to go
+  // instead; the note is filed as asked.
   it('files a new note where it was asked when its folder is gone and Trash forgets it', async () => {
     const { workspace } = setup();
     await workspace.start();
@@ -76,78 +70,39 @@ describe('Workspace', () => {
     ]);
   });
 
-  it('files a new note in the folder above when its own was deleted, within the notebook', async () => {
+  it('files a new note in the folder above when its own was deleted', async () => {
     const { workspace } = setup();
     await workspace.start();
     const work = workspace.createFolder('Work', null);
-    setNotebook(workspace.doc, work, true);
     const specs = workspace.createFolder('Specs', work);
     deleteFolder(workspace.doc, specs);
     workspace.registerNote('01A', specs);
     expect(readWorkspace(workspace.doc).notes).toMatchObject([{ id: '01A', folderId: work }]);
   });
 
-  it('files a conflict copy beside its original, and nowhere while the original is in Trash with its notebook', async () => {
+  it('files a conflict copy beside its original', async () => {
     const { workspace } = setup();
     await workspace.start();
     const work = workspace.createFolder('Work', null);
-    setNotebook(workspace.doc, work, true);
     workspace.registerNote('01ORIG', work);
     workspace.registerCopy('01COPY', '01ORIG');
     expect(workspace.folderOfNote('01COPY')).toBe(work);
-    deleteFolder(workspace.doc, work);
-    workspace.registerCopy('01LATER', '01ORIG');
-    expect(readWorkspace(workspace.doc).notes.some((note) => note.id === '01LATER')).toBe(false);
+    // An original the registry does not know: the copy goes to the top level.
+    workspace.registerCopy('01LATER', '01UNKNOWN');
+    expect(workspace.folderOfNote('01LATER')).toBeNull();
   });
 
-  it('asks where a note goes when its notebook is in Trash, never the top level (review B2)', async () => {
+  it('asks where a note goes when Trash forgets its folder, never the top level (review B2)', async () => {
     const { workspace } = setup();
     await workspace.start();
     const work = workspace.createFolder('Work', null);
-    setNotebook(workspace.doc, work, true);
+    const specs = workspace.createFolder('Specs', work);
+    deleteFolder(workspace.doc, specs);
+    expect(workspace.restorePlace('01GONE', specs)).toEqual({ folderId: work });
     const home = workspace.createFolder('Home', null);
     deleteFolder(workspace.doc, home);
     expect(workspace.restorePlace('01GONE', home)).toEqual({ folderId: null });
-    deleteFolder(workspace.doc, work);
-    expect(workspace.restorePlace('01GONE', work)).toEqual({
-      refused: true,
-      notebook: { id: work, name: 'Work' },
-    });
-  });
-
-  it('tells of each note this device moves to another notebook, and of no other change (A766)', async () => {
-    const { workspace } = setup();
-    await workspace.start();
-    const work = workspace.createFolder('Work', null);
-    setNotebook(workspace.doc, work, true);
-    const home = workspace.createFolder('Home', null);
-    workspace.registerNote('01A', home);
-    workspace.registerNote('01B', home);
-    const moves: Array<[string, string]> = [];
-    workspace.onNotebookMove((id, notebook) => moves.push([id, notebook]));
-    // Filed for the first time, or moved within a notebook: nothing to record.
-    workspace.registerNote('01C', work);
-    const inner = workspace.createFolder('Inner', home);
-    moveNote(workspace.doc, '01B', inner, 'a5');
-    expect(moves).toEqual([]);
-    moveNote(workspace.doc, '01A', work, 'a1');
-    expect(moves).toEqual([['01A', work]]);
-    // A notebook turned back into a folder: each of its notes is the default's now.
-    setNotebook(workspace.doc, work, false);
-    expect(moves.slice(1).sort()).toEqual([
-      ['01A', 'default'],
-      ['01C', 'default'],
-    ]);
-    // A change from elsewhere is that device's to record.
-    const local = (workspace as unknown as { replica: Yjs14Replica }).replica;
-    const remote = createYjs14Replica();
-    remote.applyUpdate(local.encodeStateAsUpdate());
-    const sv = remote.encodeStateVector();
-    setNotebook(remote.doc, work, true);
-    local.applyUpdate(remote.encodeStateAsUpdate(sv), 'remote');
-    expect(moves).toHaveLength(3);
-    expect(workspace.notebookOf(work)).toBe(work);
-    expect(workspace.notebookOf(null)).toBe('default');
+    expect(workspace.restorePlace('01GONE', 'never-known')).toEqual({ refused: true });
   });
 
   it('restores a note filed at the top level meanwhile into its folder (B10)', async () => {
@@ -217,10 +172,10 @@ describe('Workspace', () => {
     workspace.setSetting('timeZone', 'America/Chicago');
     workspace.setSetting('theme', 'dark');
     expect(workspace.settings()).toEqual({ timeZone: 'America/Chicago', theme: 'dark' });
-    expect(readSettings(workspace.doc, GIT_NOTEBOOK_SETTINGS)).toEqual({
+    expect(readSettings(workspace.doc, NOTEBOOK_MAP)).toEqual({
       timeZone: 'America/Chicago',
     });
-    expect(readSettings(workspace.doc, GIT_DEVICE_SETTINGS)).toEqual({ theme: 'dark' });
+    expect(readSettings(workspace.doc, DEVICE_MAP)).toEqual({ theme: 'dark' });
     workspace.setSetting('timeZone', undefined);
     expect(workspace.settings()).toEqual({ theme: 'dark' });
   });

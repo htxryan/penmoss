@@ -20,7 +20,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.Configuration
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.PenmossApp
 import app.penmoss.TestGraphs
 import app.penmoss.git.GitNotebookActivity
@@ -54,8 +54,8 @@ class SelectionRootTest {
 
     private val app: PenmossApp = ApplicationProvider.getApplicationContext()
     /** The app's graph, and the git notebook's whose Home is open. */
-    private lateinit var main: AppGraph
-    private lateinit var graph: AppGraph
+    private lateinit var main: app.penmoss.DeviceGraph
+    private lateinit var graph: NotebookGraph
     private var scenario: ActivityScenario<GitNotebookActivity>? = null
 
     private val roomQueries = Executors.newSingleThreadExecutor()

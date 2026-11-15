@@ -11,16 +11,14 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import { useNotes } from '../notes/hooks';
-import { Menu } from '../shell/Menu';
+import { useNoteList } from '../notes/hooks';
+import { Menu, MenuItem } from '../shell/Menu';
 import { SourceScope } from '../sources/context';
 import { useSourcesState } from '../sources/hooks';
 import type { Source } from '../sources/registry';
 import type { Workspace } from '../workspace/service';
-import { useOpenNoteList } from '../workspace/notebooks';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import {
-  describedAfter,
   filterKey,
   mergeChanges,
   mergeCounts,
@@ -32,12 +30,11 @@ import {
   type TagRow,
 } from './manage';
 import { DeleteDialog, MergeDialog } from './TagDialogs';
+import { useTagChanges } from './tag-changes';
 import { TagDoneToast, type TagDone } from './TagDoneToast';
 
 /** What choosing a tag's name does: what choosing it in the sidebar does, in its notebook. */
 export type ShowTag = (sourceId: string | null, tag: string) => void;
-
-const NO_SOURCES = (): (() => void) => () => undefined;
 
 /**
  * The Tags page (PEN-68, `/tags`; finding 8 of Ryan's review of #192, design "Tags D"): one
@@ -49,16 +46,15 @@ const NO_SOURCES = (): (() => void) => () => undefined;
  * notebook's notes only, and its toast offers Undo. Choosing a tag's name opens Search on it.
  */
 export function TagsPage({ onShowTag }: { readonly onShowTag: ShowTag }) {
-  const state = useSourcesState();
-  const sources = state?.all ?? null;
+  const sources = useSourcesState().all;
   const anyTags = useAnyTags(sources);
   const [query, setQuery] = useState('');
   const [done, setDone] = useState<TagDone | null>(null);
   const closeDone = useCallback(() => setDone(null), []);
-  const section = (source: Source | null) => (
+  const section = (source: Source) => (
     <NotebookTags
-      name={source ? source.name : null}
-      sourceId={source ? source.id : null}
+      name={source.name}
+      sourceId={source.id}
       query={query}
       onShowTag={onShowTag}
       onDone={setDone}
@@ -98,8 +94,6 @@ export function TagsPage({ onShowTag }: { readonly onShowTag: ShowTag }) {
             <h3>No tags yet</h3>
             <p>Tag a note, with #name in its text or under its title, and the tag shows here.</p>
           </div>
-        ) : sources === null ? (
-          section(null)
         ) : (
           sources.map((source) => (
             <SourceScope key={source.id} source={source}>
@@ -113,19 +107,18 @@ export function TagsPage({ onShowTag }: { readonly onShowTag: ShowTag }) {
   );
 }
 
-/** Whether any notebook has a tag; null without the sources (one notebook in context). */
-function useAnyTags(sources: readonly Source[] | null): boolean | null {
-  const subscribe = useMemo(() => {
-    if (!sources) return NO_SOURCES;
-    return (listener: () => void) => {
+/** Whether any notebook has a tag. */
+function useAnyTags(sources: readonly Source[]): boolean {
+  const subscribe = useMemo(
+    () => (listener: () => void) => {
       const offs = sources.map((source) => source.notes.subscribe(listener));
       return () => {
         for (const off of offs) off();
       };
-    };
-  }, [sources]);
-  const read = () =>
-    sources ? sources.some((source) => source.notes.list().some((n) => n.tags.length > 0)) : null;
+    },
+    [sources],
+  );
+  const read = () => sources.some((source) => source.notes.list().some((n) => n.tags.length > 0));
   return useSyncExternalStore(subscribe, read, read);
 }
 
@@ -139,16 +132,15 @@ function NotebookTags({
   onShowTag,
   onDone,
 }: {
-  /** The notebook's name, as its section's heading; null outside the sources (tests). */
-  readonly name: string | null;
-  readonly sourceId: string | null;
+  /** The notebook's name, as its section's heading. */
+  readonly name: string;
+  readonly sourceId: string;
   readonly query: string;
   readonly onShowTag: ShowTag;
   readonly onDone: (done: TagDone) => void;
 }) {
-  const notes = useNotes();
   const workspace = useWorkspace();
-  const list = useOpenNoteList();
+  const list = useNoteList();
   const noteTags = useMemo(() => list.map((entry) => entry.tags), [list]);
   const rows = useMemo(() => tagRows(noteTags), [noteTags]);
   const stored = useWorkspaceState().snapshot.tagDescriptions;
@@ -189,26 +181,12 @@ function NotebookTags({
    * Makes `changes` in this notebook's notes and moves the descriptions with them; the toast
    * says `text` and offers Undo, which puts back the notes and the descriptions.
    */
+  const change = useTagChanges();
   const run = async (changes: readonly TagChange[], text: (notes: number) => string) => {
-    const before = descriptions;
-    const moved = describedAfter(before, changes);
-    const result = await notes.changeTags(changes);
-    for (const [tag, description] of Object.entries(moved)) {
-      workspace.setTagDescription(tag, description);
-    }
-    void workspace.flush().catch(() => undefined);
+    onDone(await change(changes, text));
     // The tags it changed leave the selection; a merge's target too, as the selection was its.
-    const touched = new Set(changes.flatMap((change) => [change.from, change.to ?? change.from]));
+    const touched = new Set(changes.flatMap((each) => [each.from, each.to ?? each.from]));
     setSelected((current) => new Set([...current].filter((tag) => !touched.has(tag))));
-    onDone({
-      text: text(result.notes.length),
-      undo: async () => {
-        const back = await result.undo();
-        for (const tag of Object.keys(moved)) workspace.setTagDescription(tag, before[tag] ?? '');
-        void workspace.flush().catch(() => undefined);
-        return back.length;
-      },
-    });
   };
 
   const rename = async (from: string, to: string, nested: boolean) => {
@@ -237,7 +215,7 @@ function NotebookTags({
     setDeleting(null);
   };
 
-  const headingId = sourceId ? `tags-page-${sourceId}` : 'tags-page-notebook';
+  const headingId = `tags-page-${sourceId}`;
   const count = `${key ? `${shown.length} of ` : ''}${rows.length} ${rows.length === 1 ? 'Tag' : 'Tags'}`;
   return (
     <section
@@ -592,32 +570,6 @@ function TagRowView({
       <span className="tags-name-parent">#{marked(row.parent, 0, at, filter)}</span>
       {marked(row.name, row.parent.length, at, filter)}
     </button>,
-  );
-}
-
-function MenuItem({
-  icon,
-  danger = false,
-  onClick,
-  children,
-}: {
-  readonly icon: 'search' | 'pencil' | 'branch' | 'trash';
-  readonly danger?: boolean;
-  readonly onClick: () => void;
-  readonly children: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      tabIndex={-1}
-      className={danger ? 'menu-item danger' : 'menu-item'}
-      data-ui="item"
-      onClick={onClick}
-    >
-      <Icon name={icon} />
-      <span className="menu-label">{children}</span>
-    </button>
   );
 }
 

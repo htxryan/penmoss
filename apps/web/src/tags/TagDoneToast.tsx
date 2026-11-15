@@ -1,9 +1,10 @@
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useState } from 'react';
 import { showToast } from '../toasts/toasts';
+import { ActionToast } from '../toasts/ActionToast';
 import { ToastSlot } from '../toasts/ToastSlot';
 
-/** What a rename, merge or delete on the Tags page did, with its Undo. */
+/** What a rename, merge or delete did (the Tags page, the sidebar's Tags), with its Undo. */
 export interface TagDone {
   /** `Renamed #a to #b in 3 notes.` */
   readonly text: string;
@@ -15,7 +16,8 @@ export interface TagDone {
 export const TAG_DONE_MS = 8000;
 
 /**
- * A tag change's toast on the Tags page (finding 8 of Ryan's review of #192): what it did, with
+ * A tag change's toast, on the Tags page and the sidebar's Tags (finding 8 of Ryan's review of
+ * #192; A1508): what it did, with
  * Undo in place of a confirm before a rename. It waits while pointed at or focused, as Trash's
  * Undo does (A524), so a keyboard user has no time limit.
  */
@@ -60,45 +62,27 @@ export function TagDoneToast({
   return (
     <ToastSlot>
       {done ? (
-        <div
-          className="toast toast-with-action"
-          data-tone="done"
-          data-testid="tag-done-toast"
-          onPointerEnter={() => setHeld(true)}
-          onPointerLeave={() => setHeld(false)}
-          onFocus={() => setHeld(true)}
-          onBlur={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget)) setHeld(false);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              event.stopPropagation();
-              onClose();
-            }
-          }}
+        <ActionToast
+          tone="done"
+          testId="tag-done-toast"
+          icon={<Icon name="check" className="toast-glyph" />}
+          actions={
+            <button
+              type="button"
+              className="toast-action"
+              data-ui="submit"
+              disabled={busy}
+              onClick={() => void undo()}
+              data-testid="tag-undo"
+            >
+              Undo
+            </button>
+          }
+          onDismiss={onClose}
+          onHold={setHeld}
         >
-          <Icon name="check" className="toast-glyph" />
-          <span className="toast-text">{done.text}</span>
-          <button
-            type="button"
-            className="toast-action"
-            data-ui="submit"
-            disabled={busy}
-            onClick={() => void undo()}
-            data-testid="tag-undo"
-          >
-            Undo
-          </button>
-          <button
-            type="button"
-            className="toast-close"
-            data-ui="dismiss"
-            aria-label="Dismiss"
-            onClick={onClose}
-          >
-            <Icon name="close" size={14} />
-          </button>
-        </div>
+          {done.text}
+        </ActionToast>
       ) : null}
     </ToastSlot>
   );

@@ -179,6 +179,42 @@ describe("a run's sandbox starts from the host's main (A1232)", () => {
     expect(sandcastle.closed).toBe(1);
   });
 
+  it('closes the sandbox when a step after it opened throws (F1)', async () => {
+    const { exec: answer } = fakeExec();
+    // GitHub can't be reached: ls-remote fails, after Sandcastle made the worktree.
+    const exec: Exec = (cmd, args, opts) =>
+      args.includes('ls-remote')
+        ? Promise.resolve({ code: 128, stdout: '', stderr: 'fatal: unable to access' })
+        : answer(cmd, args, opts);
+    const deps = hostDeps(options(config, exec));
+    await expect(deps.openSandbox(BRANCH)).rejects.toThrow(/unable to access/);
+    expect(sandcastle.created).toHaveLength(1);
+    expect(sandcastle.closed).toBe(1);
+  });
+
+  it('stops what runs in the worktree when an exec runs out of time (F2)', async () => {
+    const { exec: answer } = fakeExec();
+    const asked: string[] = [];
+    const exec: Exec = (cmd, args, opts) => {
+      asked.push(cmd);
+      return answer(cmd, args, opts);
+    };
+    const deps = hostDeps(options(config, exec));
+    const work = await deps.openSandbox(BRANCH);
+    const before = asked.filter((c) => c === 'lsof').length;
+    const controller = new AbortController();
+    await work.exec('pnpm install', { signal: controller.signal });
+    // Done before the abort: nothing more is stopped.
+    controller.abort();
+    expect(asked.filter((c) => c === 'lsof').length).toBe(before);
+    const late = new AbortController();
+    sandcastle.onExec = () => late.abort();
+    await work.exec('pnpm install', { signal: late.signal });
+    sandcastle.onExec = () => undefined;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(asked.filter((c) => c === 'lsof').length).toBeGreaterThan(before);
+  });
+
   it('goes again when the other slot held the ref lock, and not for other failures (A1267)', async () => {
     const lock = {
       exitCode: 1,

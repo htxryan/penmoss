@@ -2,7 +2,7 @@
  * Search queries (T22): words, `"quoted phrases"` and `prefix*`, all of which
  * must match (AND). `-word` or `-"phrase"` leaves out notes holding it, and
  * `title:word` or `title:"phrase"` looks in the title only (A117). One parser
- * serves the server (an FTS5 MATCH expression) and the client's offline index
+ * serves an FTS5 MATCH expression (`ftsMatch`) and the offline index
  * (`queryMatcher`), so both read a query the same way. Words are folded as the
  * index folds text; FTS5 stems them itself, and the client stems them with the
  * same porter step. A prefix term may carry completions (`completions.ts`,

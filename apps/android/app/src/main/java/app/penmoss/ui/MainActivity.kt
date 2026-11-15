@@ -22,6 +22,8 @@ import app.penmoss.engine.notes.DeepLinks
 import app.penmoss.git.GitNotebookActivity
 import app.penmoss.git.NotebooksHome
 import app.penmoss.graph
+import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.common.followShownVariant
 import app.penmoss.ui.keys.AppCommands
 import app.penmoss.ui.keys.LauncherAction
 import app.penmoss.ui.keys.LauncherShortcuts

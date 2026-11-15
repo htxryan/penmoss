@@ -20,10 +20,9 @@ import { recordFromDoc } from '@penmoss/sync-client/records';
 import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { testNotebook } from '../../../../packages/git-notebook/test/support/notebooks';
-import { memoryEngineKv } from '../../src/sources/engine-store';
+import { FRONT_PULL_GAP_MS, memoryEngineKv } from '@penmoss/git-notebook/host';
 import {
-  describe as describeFailure,
-  FOCUS_PULL_GAP_MS,
+  describeMacFailure as describeFailure,
   GitEngineHost,
   shownStatus,
   STARTING,
@@ -162,7 +161,7 @@ async function storeEdit(
 ) {
   const replica = createYjs14Replica();
   initNote(replica.doc, { id, created: '2026-10-30T09:00:00-05:00', kind: 'note' }, title);
-  await store.put(recordFromDoc(id, replica.doc, { epoch: null, unsynced: true, updatedAt }));
+  await store.put(recordFromDoc(id, replica.doc, { unsynced: true, updatedAt }));
 }
 
 describe('a sync out of time (A852, A859)', () => {
@@ -217,9 +216,7 @@ describe('Push after and Pull every (A825)', () => {
         { id: NOTE, created: '2026-10-29T09:00:00-05:00', kind: 'note' },
         'Soon',
       );
-      await store.put(
-        recordFromDoc(NOTE, replica.doc, { epoch: null, unsynced: true, updatedAt: 1 }),
-      );
+      await store.put(recordFromDoc(NOTE, replica.doc, { unsynced: true, updatedAt: 1 }));
       host.changed([NOTE]);
       await vi.advanceTimersByTimeAsync(10);
       host.setCadence(5, 60);
@@ -306,14 +303,14 @@ describe('the default cadence: 12 s after edits settle, every minute while shown
     let idle = false;
     void host.idle().then(() => (idle = true));
     while (!idle) await vi.advanceTimersByTimeAsync(100);
-    // However long that took, the last sync began more than FOCUS_PULL_GAP_MS ago, as it would
+    // However long that took, the last sync began more than FRONT_PULL_GAP_MS ago, as it would
     // after three hidden minutes on a fast machine.
-    await vi.advanceTimersByTimeAsync(FOCUS_PULL_GAP_MS);
+    await vi.advanceTimersByTimeAsync(FRONT_PULL_GAP_MS);
     expect(pulls()).toBe(2);
     doc.hidden = false;
     doc.dispatchEvent(new Event('visibilitychange'));
     expect(pulls()).toBe(3);
-    // A focus right after it does not pull again (FOCUS_PULL_GAP_MS).
+    // A focus right after it does not pull again (FRONT_PULL_GAP_MS).
     await vi.advanceTimersByTimeAsync(1_000);
     win.dispatchEvent(new Event('focus'));
     expect(pulls()).toBe(3);
@@ -408,7 +405,6 @@ describe('a store cleared since it last synced here (A886)', () => {
     );
     await windows.put(
       recordFromDoc('01JBNOTEMAC000000000000009', replica.doc, {
-        epoch: null,
         unsynced: true,
         updatedAt: 1,
       }),
@@ -487,9 +483,7 @@ describe('a store cleared since it last synced here (A886)', () => {
     const windows = memoryNotes();
     const replica = createYjs14Replica();
     initNote(replica.doc, { id, created: '2026-10-29T09:00:00-05:00', kind: 'note' }, 'Made here');
-    await windows.put(
-      recordFromDoc(id, replica.doc, { epoch: null, unsynced: true, updatedAt: 1 }),
-    );
+    await windows.put(recordFromDoc(id, replica.doc, { unsynced: true, updatedAt: 1 }));
     const kv = memoryEngineKv();
     const secrets = new MemorySecrets();
     const make = () => {
@@ -556,13 +550,11 @@ describe('a store cleared since it last synced here (A886)', () => {
     );
     await windows.put(
       recordFromDoc('01JBNOTEMAC000000000000007', good.doc, {
-        epoch: null,
         unsynced: true,
         updatedAt: 1,
       }),
     );
     const broken = recordFromDoc('01JBNOTEMAC000000000000008', createYjs14Replica().doc, {
-      epoch: null,
       unsynced: true,
       updatedAt: 1,
     });
@@ -882,9 +874,7 @@ describe('after a Send to: at once, then every 10 s until the reply (A1061, A106
       session: TARGET.session,
       at: 1,
     });
-    await store.put(
-      recordFromDoc(NOTE, replica.doc, { epoch: null, unsynced: true, updatedAt: 5 }),
-    );
+    await store.put(recordFromDoc(NOTE, replica.doc, { unsynced: true, updatedAt: 5 }));
   }
 
   async function started() {

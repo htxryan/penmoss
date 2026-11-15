@@ -18,6 +18,7 @@
  * The epoch (A5) is the engine store's own: a store made afresh (its data lost) has a new one,
  * so every copy on the phone is replaced from git instead of being merged into nothing.
  */
+import { isNotebookSetting } from '@penmoss/core/settings';
 import {
   isPurged,
   isUpdate,
@@ -36,7 +37,6 @@ import {
   initNote,
   isDeleted,
   isoWithOffset,
-  readNoteNotebook,
   readTitle,
   readTrashInfo,
   setDeleted,
@@ -49,14 +49,16 @@ import {
   fallbackFolder,
   moveNote,
   readFolderTrash,
+  DEVICE_MAP,
+  deviceSettings,
   readSettings,
   readWorkspace,
   registerNote,
   setSetting,
 } from '@penmoss/sync-client/workspace';
 import { parseMarkdown } from '@penmoss/core';
-import { appendCapture, captureTime, splitCapture } from '@penmoss/editor/capture';
-import { mirrorMarkdown, readNoteState } from '@penmoss/editor/markdown';
+import { appendCapture, captureTime, splitCapture } from '@penmoss/sync-client/capture';
+import { mirrorMarkdown, readNoteState } from '@penmoss/sync-client/markdown';
 import { fromBase64, toBase64 } from 'lib0/buffer';
 import * as Y from '@y/y';
 
@@ -155,12 +157,6 @@ export async function captureNoteId(captureId: string): Promise<string> {
 const SHA256 = /^[0-9a-f]{64}$/;
 const INBOX = 'Inbox';
 
-/**
- * Where a git notebook keeps each device's settings (A827, A1014): the WorkspaceDoc's settings
- * under the user id `device`, as the Mac's and the web's `GIT_DEVICE_SETTINGS`; the notebook's own
- * (`timeZone`, `template.*`) are under `notebook`.
- */
-export const DEVICE_SETTINGS = 'device';
 /** The app's own route for them: only Penmoss's Kotlin reaches this server (never an agent). */
 export const DEVICE_SETTINGS_PATH = '/android/device-settings';
 /**
@@ -168,9 +164,6 @@ export const DEVICE_SETTINGS_PATH = '/android/device-settings';
  * the app's own route, as the device settings'.
  */
 export const AGENT_SESSIONS_PATH = '/android/agent-sessions';
-/** A setting of the notebook's own, never a device's (the web's `isNotebookSetting`). */
-export const isNotebookSetting = (key: string): boolean =>
-  key === 'timeZone' || key.startsWith('template.');
 /** At most this many settings in one change, as the server's `PUT /api/settings`. */
 const DEVICE_SETTINGS_PER_CHANGE = 50;
 const SETTING_KEY = /^[A-Za-z0-9._-]{1,200}$/;
@@ -375,16 +368,12 @@ export class LocalServer {
       );
       return json(200, { id: reply.id, created: reply.created });
     }
-    if (path === '/api/search' && method === 'GET') return json(200, await this.search(query));
     if (path === '/api/trash' && method === 'GET') return json(200, { notes: this.trashList() });
     if (path === '/api/folders/trash' && method === 'GET') {
       return json(200, { folders: this.folderTrash() });
     }
     if (path === '/api/folders' && method === 'POST') return this.createFolder(body);
     if (path === '/api/folders/root' && method === 'PATCH') {
-      if (body['notebookName'] !== undefined) {
-        return refusal(404, 'not_available', 'A git notebook has no default notebook to name');
-      }
       return json(
         200,
         await this.write(() => this.notebook.patchRoot(sortModeOf(body['sortMode']))),
@@ -475,9 +464,7 @@ export class LocalServer {
 
   /** The device map (A1014): every `device/<key>`, the notebook's own keys left out as the Mac does. */
   deviceSettings(): Record<string, unknown> {
-    const device = readSettings(this.workspace, DEVICE_SETTINGS);
-    for (const key of Object.keys(device)) if (isNotebookSetting(key)) delete device[key];
-    return device;
+    return deviceSettings(this.workspace);
   }
 
   /**
@@ -505,7 +492,7 @@ export class LocalServer {
         return refusal(403, 'setting_not_allowed', `${key} is the notebook's own setting`);
       }
     }
-    const live = readSettings(this.workspace, DEVICE_SETTINGS);
+    const live = readSettings(this.workspace, DEVICE_MAP);
     const writes = entries.filter(
       ([key, value]) => JSON.stringify(live[key] ?? null) !== JSON.stringify(value ?? null),
     );
@@ -513,7 +500,7 @@ export class LocalServer {
       await this.write(() => {
         this.workspace.transact(() => {
           for (const [key, value] of writes) {
-            setSetting(this.workspace, DEVICE_SETTINGS, key, value === null ? undefined : value);
+            setSetting(this.workspace, DEVICE_MAP, key, value === null ? undefined : value);
           }
         });
       });
@@ -968,9 +955,6 @@ export class LocalServer {
   }
 
   private async createFolder(body: Body): Promise<LocalReply> {
-    if (body['notebook'] === true) {
-      return refusal(422, 'not_available', 'A git notebook has no notebooks inside it');
-    }
     const parentId = body['parentId'] ?? null;
     if (parentId !== null && typeof parentId !== 'string') {
       return refusal(400, 'invalid_request', 'parentId must be a folder id or null');
@@ -982,9 +966,6 @@ export class LocalServer {
   }
 
   private async patchFolder(id: string, body: Body) {
-    if (body['notebook'] !== undefined) {
-      throw new LocalError(422, 'not_available', 'A git notebook has no notebooks inside it');
-    }
     const from = (
       typeof body['from'] === 'object' && body['from'] !== null ? body['from'] : {}
     ) as Body;
@@ -1005,25 +986,6 @@ export class LocalServer {
         ...(place ? { place } : {}),
       }),
     );
-  }
-
-  /** `GET /api/search`: keyword only (A101), in the phone's shape. */
-  private async search(query: URLSearchParams) {
-    const number = (name: string) => (query.has(name) ? Number(query.get(name)) : null);
-    const mode = query.get('mode') === 'semantic' ? 'full-text' : (query.get('mode') ?? 'hybrid');
-    const found = (await this.notebook.search({
-      q: query.get('q') ?? '',
-      mode,
-      limit: number('limit') ?? 10,
-      tag: query.get('tag'),
-      folderId: query.get('folder'),
-      after: number('after'),
-      before: number('before'),
-    })) as { results?: unknown[]; notice?: string };
-    return {
-      results: found.results ?? [],
-      notice: 'A git notebook searches words only (A101).',
-    };
   }
 
   /**
@@ -1110,7 +1072,6 @@ export class LocalServer {
         const now = new Date(this.hooks.now());
         const id = ulid(now.getTime());
         const title = `${readTitle(old).trim() || 'Untitled'} (recovered)`;
-        const notebook = readNoteNotebook(old);
         const trashedAt = readTrashInfo(old).at ?? now.getTime();
         let folderId =
           input.folderId !== null && FOLDER_ID.test(input.folderId) ? input.folderId : null;
@@ -1122,11 +1083,7 @@ export class LocalServer {
           folderId = 'folderId' in place ? place.folderId : null;
         }
         copy.transact(() => {
-          initNote(
-            copy,
-            { id, created: isoWithOffset(now), kind: 'note', ...(notebook ? { notebook } : {}) },
-            title,
-          );
+          initNote(copy, { id, created: isoWithOffset(now), kind: 'note' }, title);
           copy.get(NOTE_ROOT).applyDelta(old.get(NOTE_ROOT).toDeltaDeep());
         });
         // In Trash it stays in Trash, never in a live folder.

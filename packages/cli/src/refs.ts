@@ -7,7 +7,8 @@
  * ignoring case) or its id.
  */
 import { isShortNoteRef } from '@penmoss/core/note-ref';
-import type { Client } from './client';
+import { LocalError, type LocalNotebook } from '@penmoss/git-notebook/local';
+import type { Context } from './command';
 import { ApiError, CliError, EXIT } from './errors';
 import { when } from './format';
 
@@ -22,25 +23,22 @@ export interface NoteRef {
   readonly title: string | null;
 }
 
-interface Listed {
-  readonly id: string;
-  readonly title: string;
-  readonly updatedAt: number;
-}
-
-export async function resolveNote(api: Client, ref: string): Promise<NoteRef> {
+export async function resolveNote(context: Context, ref: string): Promise<NoteRef> {
   const name = ref.trim();
   if (!name) throw new CliError(EXIT.USAGE, 'a note id or title is required', 'invalid_request');
   if (ULID.test(name)) return { id: name.toUpperCase(), title: null };
   // A short reference (PEN-69, `K7QD-9HTF2CXA`): the notebook finds the note it names.
   if (isShortNoteRef(name)) {
-    const { notes: named } = await api.get<{ notes: Listed[] }>('/api/notes', { ref: name });
-    return { id: named[0]!.id, title: named[0]!.title };
+    return context.read((notebook) => {
+      const id = notebook.noteIdOf(name);
+      const found = notebook.describe(id);
+      if (!found) throw new LocalError(404, 'not_found', 'No such note');
+      return { id, title: found.title };
+    });
   }
-  const { notes: found } = await api.get<{ notes: Listed[] }>('/api/notes', {
-    title: name,
-    limit: MAX_LISTED + 1,
-  });
+  const { notes: found } = await context.read((notebook) =>
+    notebook.listNotes({ title: name, limit: MAX_LISTED + 1 }),
+  );
   if (found.length === 1) return { id: found[0]!.id, title: found[0]!.title };
   if (found.length === 0) {
     throw new CliError(EXIT.NOT_FOUND, `No note titled “${name}”.`, 'not_found', undefined, [
@@ -65,45 +63,27 @@ export async function resolveNote(api: Client, ref: string): Promise<NoteRef> {
   );
 }
 
-/** A folder's notebook (T43): `default` for the default notebook. */
-export interface NotebookRef {
-  readonly id: string;
-  readonly name: string;
-}
-
-export interface FolderListing {
-  readonly folder: {
-    id: string;
-    name: string;
-    path: string;
-    isNotebook?: boolean;
-    notebook?: NotebookRef;
-  } | null;
-  readonly folders: Array<{
-    id: string;
-    name: string;
-    path: string;
-    isNotebook?: boolean;
-    notebook?: NotebookRef;
-  }>;
-  readonly notes: Array<{ id: string; title: string | null; updatedAt: number | null }>;
-  readonly truncated?: boolean;
-}
+export type FolderListing = ReturnType<LocalNotebook['listFolder']>;
 
 /** A folder's listing by `/`, path or id (a path is tried first, then an id). */
-export async function listFolder(api: Client, ref: string | undefined): Promise<FolderListing> {
+export async function listFolder(
+  context: Context,
+  ref: string | undefined,
+): Promise<FolderListing> {
   const name = ref?.trim() ?? '';
-  if (!name || name === '/') return api.get<FolderListing>('/api/folders');
-  if (ULID.test(name)) return api.get<FolderListing>('/api/folders', { folderId: name });
+  const list = (input: { folderId?: string; path?: string }) =>
+    context.read((notebook) => notebook.listFolder(input));
+  if (!name || name === '/') return list({});
+  if (ULID.test(name)) return list({ folderId: name });
   try {
-    return await api.get<FolderListing>('/api/folders', { path: name });
+    return await list({ path: name });
   } catch (error) {
     if (!(error instanceof ApiError && error.code === 'folder_not_found' && ID.test(name))) {
       throw error;
     }
   }
   try {
-    return await api.get<FolderListing>('/api/folders', { folderId: name });
+    return await list({ folderId: name });
   } catch (error) {
     if (error instanceof ApiError && error.code === 'folder_not_found') {
       throw new CliError(EXIT.NOT_FOUND, `No folder “${name}”.`, 'folder_not_found', undefined, [
@@ -115,9 +95,9 @@ export async function listFolder(api: Client, ref: string | undefined): Promise<
 }
 
 /** A folder's id, or null for the top level. */
-export async function resolveFolder(api: Client, ref: string): Promise<string | null> {
+export async function resolveFolder(context: Context, ref: string): Promise<string | null> {
   const name = ref.trim();
   if (!name || name === '/') return null;
   if (ULID.test(name)) return name.toUpperCase();
-  return (await listFolder(api, name)).folder?.id ?? null;
+  return (await listFolder(context, name)).folder?.id ?? null;
 }

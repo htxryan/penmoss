@@ -1,4 +1,5 @@
-import { parseMarkdown, schema as coreSchema, serializeMarkdown } from '@penmoss/core';
+import { parseMarkdown, serializeMarkdown } from '@penmoss/core';
+import { schema as coreSchema } from '@penmoss/core/schema';
 import type { JSONContent } from '@tiptap/core';
 import { NodeSelection } from '@tiptap/pm/state';
 import { describe, expect, it, vi } from 'vitest';

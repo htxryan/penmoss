@@ -97,20 +97,14 @@ import {
   openLightboxNow,
 } from '@penmoss/editor';
 import { formatCombo } from '@penmoss/editor/keys';
-import { noteFields } from '@penmoss/editor/note-fields';
-import { docText, textStats } from '@penmoss/editor/stats';
-import { bindTitleField, oneLineTitle } from '@penmoss/editor/title';
-import { NOTE_ROOT } from '@penmoss/sync-client';
-import {
-  initNote,
-  isoWithOffset,
-  readIdentity,
-  readNoteNotebook,
-  readTitle,
-} from '@penmoss/sync-client/note';
+import { noteFields } from '@penmoss/sync-client/note-fields';
+import { docText, textStats } from '@penmoss/sync-client/stats';
+import { bindTitleField, oneLineTitle } from '@penmoss/sync-client/title';
+import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { initNote, isoWithOffset, readIdentity, readTitle } from '@penmoss/sync-client/note';
 import type { LinkResolver } from '@penmoss/core';
 import type { CommentAuthor } from '@penmoss/sync-client/comments';
-import { conflictCopy, notebookRecord } from '@penmoss/sync-client/records';
+import { conflictCopy } from '@penmoss/sync-client/records';
 import { frontmatterTags, noteTags, setFrontmatterTag } from '@penmoss/sync-client/tags';
 import { bodyJson, createYjs14Replica, type Yjs14Replica } from '@penmoss/sync-client/yjs14';
 import {
@@ -260,7 +254,7 @@ const blockEntry = (item: BlockItem): BlockEntry => ({
 });
 
 /** The note's frontmatter fields, as the web writes them (shared, so the two cannot drift). */
-export { noteFields } from '@penmoss/editor/note-fields';
+export { noteFields } from '@penmoss/sync-client/note-fields';
 
 /**
  * The Info sheet's details are read at most this often while the note changes (T40 P7, NT23):
@@ -473,8 +467,6 @@ interface OpenNote {
 
 export class EditorHost {
   private current: OpenNote | null = null;
-  /** The open note's notebook as the app sees it (T43, A766), from `open`; null when not said. */
-  private openNotebook: string | null = null;
   private readonly idleMs: number;
   private readonly maxWaitMs: number;
   private readonly textIdleMs: number;
@@ -722,13 +714,7 @@ export class EditorHost {
         this.insertImages(message.noteId, message.paths);
         return;
       case 'copyConflicts':
-        this.copyConflicts(
-          message.noteId,
-          message.base,
-          message.edits,
-          message.into,
-          message.notebook,
-        );
+        this.copyConflicts(message.noteId, message.base, message.edits, message.into);
         return;
       case 'attachmentStored': {
         const waiting = this.storing.get(message.path);
@@ -782,7 +768,7 @@ export class EditorHost {
         this.setDirectory(message.notes);
         return;
       case 'create':
-        this.create(message.noteId, message.notebook);
+        this.create(message.noteId);
         return;
       case 'createPeriodic':
         this.createPeriodic(message);
@@ -1014,8 +1000,6 @@ export class EditorHost {
   private open(message: Extract<ToEditor, { type: 'open' }>): void {
     this.close();
     const { noteId } = message;
-    // Where the app sees it (T43, A766): a link's new note made from it records this notebook.
-    this.openNotebook = message.notebook ?? null;
     const replica = createYjs14Replica();
     let compacted: Compacted | null;
     let compactedPending: Compacted | null;
@@ -1284,7 +1268,7 @@ export class EditorHost {
       const period = kind === 'daily' ? atDay.toString() : isoWeek(atDay).toString();
       const date = kind === 'daily' ? atDay.toString() : weekMonday(isoWeek(atDay)).toString();
       const [{ periodicNote }, codec] = await Promise.all([
-        import('@penmoss/editor/periodic'),
+        import('@penmoss/sync-client/periodic'),
         import('@penmoss/core'),
       ]);
       const note = periodicNote(codec, kind, period, template);
@@ -1377,18 +1361,12 @@ export class EditorHost {
    * here because only the page writes Yjs. The app stores it as one pending
    * edit, so it uploads when it can and opens offline at once.
    */
-  private create(noteId: string, notebook: string | undefined): void {
+  private create(noteId: string): void {
     const now = this.now();
     const replica = createYjs14Replica();
     let note: NewNote;
     try {
-      // Its notebook recorded with its identity, in the same transaction (T43, A766).
-      initNote(replica.doc, {
-        id: noteId,
-        created: isoWithOffset(now),
-        kind: 'note',
-        ...(notebook ? { notebook } : {}),
-      });
+      initNote(replica.doc, { id: noteId, created: isoWithOffset(now), kind: 'note' });
       note = { id: noteId, title: '', update: toBase64(replica.encodeStateAsUpdate()) };
     } finally {
       replica.destroy();
@@ -2168,7 +2146,6 @@ export class EditorHost {
     base: readonly StoredUpdate[],
     edits: readonly StoredUpdate[],
     into: CopyInto | undefined,
-    notebook?: string,
   ): void {
     const replaces = edits.map((stored) => stored.id);
     const failed = (reason: CopyFailure) =>
@@ -2194,9 +2171,7 @@ export class EditorHost {
         });
         return;
       }
-      // In the original's notebook (T43, A766): the note's own record, else where the app sees it.
-      const made = conflictCopy(Y.encodeStateAsUpdate(full), { now: this.now() });
-      const record = notebook && !readNoteNotebook(full) ? notebookRecord(made, notebook) : made;
+      const record = conflictCopy(Y.encodeStateAsUpdate(full), { now: this.now() });
       this.post({
         v: BRIDGE_VERSION,
         type: 'conflictCopy',
@@ -2377,13 +2352,7 @@ export class EditorHost {
     const replica = createYjs14Replica();
     let note: NewNote;
     try {
-      // In the notebook of the note it was made from, beside which it is filed (T43, A766).
-      const notebook = from === this.current?.noteId ? this.openNotebook : null;
-      initNote(
-        replica.doc,
-        { id, created: isoWithOffset(now), kind: 'note', ...(notebook ? { notebook } : {}) },
-        title,
-      );
+      initNote(replica.doc, { id, created: isoWithOffset(now), kind: 'note' }, title);
       note = { id, title, update: toBase64(replica.encodeStateAsUpdate()) };
     } finally {
       replica.destroy();

@@ -18,7 +18,7 @@ export interface NotebookServices {
   readonly notes: Pick<Notes, 'stateOf' | 'addCopy' | 'deleteNote' | 'attachments'>;
   readonly workspace: Pick<
     Workspace,
-    'createFolder' | 'registerNote' | 'setSortMode' | 'deleteFolder' | 'notebookOf' | 'apply'
+    'createFolder' | 'registerNote' | 'setSortMode' | 'deleteFolder' | 'apply'
   >;
 }
 
@@ -207,7 +207,8 @@ export async function transfer(options: {
       id: note.copyId,
       title: note.title,
       now: now(),
-      notebook: to.workspace.notebookOf(place),
+      // Another git notebook's folders say nothing of the original's notebook record.
+      notebook: null,
       links,
       tags,
     });

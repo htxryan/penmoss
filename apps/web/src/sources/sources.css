@@ -1,5 +1,5 @@
 /* Git notebooks in the Mac app (T50 G3–G5, A862): the sidebar's sections, their sync state, and
-   Settings → Notebooks' cards. Tokens only (styles.css :root). */
+   Settings → Notebooks' cards. Tokens only (shell/base.css :root). */
 
 /*
  * A notebook's name is in the accent (T52), a quarter of the way to the text colour: plain accent

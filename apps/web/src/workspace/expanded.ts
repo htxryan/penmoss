@@ -4,6 +4,7 @@
  * (private windows, blocked site data); the tree then starts collapsed.
  */
 import { useCallback, useState } from 'react';
+import { deviceStorage } from '../shell/device-pref';
 
 export const EXPANDED_KEY = 'penmoss.sidebar.expanded';
 
@@ -24,21 +25,13 @@ export function writeExpanded(storage: Pick<Storage, 'setItem'> | null, ids: Rea
   }
 }
 
-const browserStorage = (): Storage | null => {
-  try {
-    return typeof localStorage === 'undefined' ? null : localStorage;
-  } catch {
-    return null;
-  }
-};
-
 /** The open folders, and a setter that opens (true), closes (false) or toggles (undefined) some. */
 export function useExpanded(): [
   ReadonlySet<string>,
   (ids: readonly string[], open?: boolean) => void,
 ] {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() =>
-    readExpanded(browserStorage()),
+    readExpanded(deviceStorage()),
   );
   const change = useCallback((ids: readonly string[], open?: boolean) => {
     setExpanded((current) => {
@@ -49,7 +42,7 @@ export function useExpanded(): [
         else next.delete(id);
       }
       if (next.size === current.size && [...next].every((id) => current.has(id))) return current;
-      writeExpanded(browserStorage(), next);
+      writeExpanded(deviceStorage(), next);
       return next;
     });
   }, []);

@@ -1,16 +1,9 @@
 import { Icon } from '@penmoss/ui/icons';
 import { DialogClose } from '../shell/DialogClose';
 import { Select } from '@penmoss/ui/controls/Select';
-import {
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { PickerField, PickerListbox, PickerOverlay } from '../shell/picker';
+import { usePickerList } from '../shell/picker-list';
 import { useNoteList } from '../notes/hooks';
 import { snippetParts } from '../notes/backlinks';
 import { displayTitle } from '../notes/list';
@@ -88,7 +81,7 @@ function useFilterNotebooks(sources: readonly Source[]): FilterNotebook[] {
     [sources, revision],
   );
 }
-/** Bumped when any notebook's notes change (or the notes in context, without a registry). */
+/** Bumped when any notebook's notes change. */
 function useNotesChanges(sources: readonly Source[], list: unknown): number {
   const [revision, bump] = useReducer((count: number) => count + 1, 0);
   useEffect(() => {
@@ -97,7 +90,7 @@ function useNotesChanges(sources: readonly Source[], list: unknown): number {
       for (const off of offs) off();
     };
   }, [sources]);
-  // The notes in context are one of `sources`, or the only ones: their list counts too.
+  // The notes in context are one of `sources`: their list, as this render has it, counts too.
   const [seen, setSeen] = useState(list);
   if (seen !== list) {
     setSeen(list);
@@ -161,15 +154,12 @@ export function SearchOverlay({
   const [submitted, setSubmitted] = useState<string | null>(null);
   const [active, setActive] = useState(0);
   const answeredKey = useRef<string | null>(null);
-  const input = useRef<HTMLInputElement>(null);
-  const results = useRef<HTMLDivElement>(null);
-  const id = useId();
 
   // With several notebooks, a Notebook filter first (Quanta feedback 3, item 2; A1127). Under
   // All Notebooks, Folder lists every notebook's folders grouped by notebook and Tag every
   // notebook's tags; with one chosen, that notebook's (PEN-71, A1290).
   const sourcesState = useSourcesState();
-  const sources = useMemo(() => sourcesState?.all ?? NO_SOURCES, [sourcesState]);
+  const sources = sourcesState.all;
   const changes = useNotesChanges(sources, list);
   const several = sources.length > 1;
   const notebooks = useFilterNotebooks(several ? sources : NO_SOURCES);
@@ -263,56 +253,26 @@ export function SearchOverlay({
     // found again, so a tag's notes stay whole without a keystroke.
   }, [service, query, mode, filters, requestKey, submitted, changes]);
 
-  useLayoutEffect(() => {
-    input.current?.focus();
-  }, []);
-
   const outcome = asking ? (answer?.outcome ?? null) : null;
   const answered = answer?.key === requestKey;
   const searching = asking && !(answered && answer.final);
   const hits = useMemo(() => outcome?.hits ?? [], [outcome]);
-  const current = Math.min(active, Math.max(0, hits.length - 1));
-
-  useLayoutEffect(() => {
-    results.current
-      ?.querySelector<HTMLElement>(`[data-index="${current}"]`)
-      ?.scrollIntoView?.({ block: 'nearest' });
-  }, [current, hits]);
-
   const choose = (hit: SearchHit | undefined) => {
     if (hit) onOpenNote(hit.id, hit.heading);
   };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.nativeEvent.isComposing) return;
-    const count = Math.max(1, hits.length);
-    switch (event.key) {
-      case 'ArrowDown':
-        event.preventDefault();
-        setActive((current + 1) % count);
-        break;
-      case 'ArrowUp':
-        event.preventDefault();
-        setActive((current - 1 + count) % count);
-        break;
-      case 'Enter':
-        event.preventDefault();
-        // Answered: Enter opens; before the answer, it asks for one at once.
-        if (answered && answer.final) {
-          choose(hits[current]);
-        } else if (asking) {
-          setSubmitted(requestKey);
-        }
-        break;
-      case 'Escape':
-        event.preventDefault();
-        event.stopPropagation();
-        onClose();
-        break;
-    }
-  };
-
-  const option = (index: number) => `${id}-result-${index}`;
+  const picker = usePickerList({
+    items: hits,
+    active,
+    setActive,
+    // Answered: Enter opens; before the answer, it asks for one at once.
+    onChoose: (index) => {
+      if (answered && answer.final) choose(hits[index]);
+      else if (asking) setSubmitted(requestKey);
+    },
+    onClose,
+    optionName: 'result',
+  });
   const status = !asking
     ? 'Type to search every note.'
     : searching && !outcome
@@ -328,242 +288,217 @@ export function SearchOverlay({
           : '';
 
   return (
-    <div
-      className="overlay"
-      data-testid="search"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div className="dialog palette search" role="dialog" aria-modal="true" aria-label="Search">
-        <div className="dlg-search">
-          <span className="search-icon" aria-hidden="true">
-            <Icon name="search" />
-          </span>
-          <input
-            ref={input}
-            type="search"
-            role="combobox"
-            aria-expanded="true"
-            aria-controls={`${id}-results`}
-            aria-autocomplete="list"
-            aria-activedescendant={hits.length > 0 ? option(current) : undefined}
-            aria-label="Search notes"
-            placeholder="Search notes…  “phrase”  prefix*"
-            autoComplete="off"
-            spellCheck={false}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={onKeyDown}
-          />
-          <DialogClose label="Close Search" onClose={onClose} />
-        </div>
-        <div className="search-controls">
-          {sources.length > 1 ? (
-            <div className="search-filter">
-              <Select
-                size="small"
-                aria-label="Notebook"
-                data-testid="search-notebook"
-                value={filters.notebookId ?? ''}
-                onChange={(event) => chooseNotebook(event.target.value || null)}
-              >
-                <option value="">All Notebooks</option>
-                {sources.map((source) => (
-                  <option key={source.id} value={source.id}>
-                    {source.name}
+    <PickerOverlay testId="search" className="palette search" label="Search" onClose={onClose}>
+      <div className="dlg-search">
+        <span className="search-icon" aria-hidden="true">
+          <Icon name="search" />
+        </span>
+        <PickerField
+          picker={picker}
+          type="search"
+          aria-label="Search notes"
+          placeholder="Search notes…  “phrase”  prefix*"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <DialogClose label="Close Search" onClose={onClose} />
+      </div>
+      <div className="search-controls">
+        {sources.length > 1 ? (
+          <div className="search-filter">
+            <Select
+              size="small"
+              aria-label="Notebook"
+              data-testid="search-notebook"
+              value={filters.notebookId ?? ''}
+              onChange={(event) => chooseNotebook(event.target.value || null)}
+            >
+              <option value="">All Notebooks</option>
+              {sources.map((source) => (
+                <option key={source.id} value={source.id}>
+                  {source.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+        ) : null}
+        <div className="search-filter search-filter-folder">
+          <Select
+            size="small"
+            aria-label="Folder"
+            data-testid="search-folder"
+            value={filters.folderId ?? ''}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value === ALL_NOTEBOOKS_FOLDERS) {
+                // All Folders (All Notebooks): Notebook back to All Notebooks.
+                chooseNotebook(null);
+              } else if (grouped && value) {
+                // A folder from a notebook's group: Notebook switches to its notebook.
+                const [notebookId, folderId] = JSON.parse(value) as [string, string];
+                chooseNotebook(notebookId, folderId);
+              } else {
+                setFilters({ ...filters, folderId: value || null });
+              }
+            }}
+          >
+            {scopes.map((scope) => (
+              <option key={scope.value} value={scope.value}>
+                {scope.label}
+              </option>
+            ))}
+            {grouped
+              ? groups.map((group) => (
+                  <optgroup key={group.notebookId} label={group.name}>
+                    {group.folders.map((folder) => (
+                      <option key={folder.id} value={groupedValue(group.notebookId, folder.id)}>
+                        {folder.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))
+              : folders.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.label}
                   </option>
                 ))}
-              </Select>
-            </div>
-          ) : null}
-          <div className="search-filter search-filter-folder">
-            <Select
-              size="small"
-              aria-label="Folder"
-              data-testid="search-folder"
-              value={filters.folderId ?? ''}
-              onChange={(event) => {
-                const value = event.target.value;
-                if (value === ALL_NOTEBOOKS_FOLDERS) {
-                  // All Folders (All Notebooks): Notebook back to All Notebooks.
-                  chooseNotebook(null);
-                } else if (grouped && value) {
-                  // A folder from a notebook's group: Notebook switches to its notebook.
-                  const [notebookId, folderId] = JSON.parse(value) as [string, string];
-                  chooseNotebook(notebookId, folderId);
-                } else {
-                  setFilters({ ...filters, folderId: value || null });
-                }
-              }}
-            >
-              {scopes.map((scope) => (
-                <option key={scope.value} value={scope.value}>
-                  {scope.label}
-                </option>
-              ))}
-              {grouped
-                ? groups.map((group) => (
-                    <optgroup key={group.notebookId} label={group.name}>
-                      {group.folders.map((folder) => (
-                        <option key={folder.id} value={groupedValue(group.notebookId, folder.id)}>
-                          {folder.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))
-                : folders.map((folder) => (
-                    <option key={folder.id} value={folder.id}>
-                      {folder.label}
-                    </option>
-                  ))}
-            </Select>
-          </div>
-          <div className="search-filter">
-            <Select
-              size="small"
-              aria-label="Tag"
-              value={filters.tag ?? ''}
-              onChange={(event) => setFilters({ ...filters, tag: event.target.value || null })}
-            >
-              <option value="">Any Tag</option>
-              {tags.map((tag) => (
-                <option key={tag} value={tag}>
-                  #{tag}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="search-filter">
-            <Select
-              size="small"
-              aria-label="Updated"
-              value={range}
-              onChange={(event) => {
-                const index = Number(event.target.value);
-                setRange(index);
-                const days = DATE_RANGES[index]?.days ?? null;
-                setFilters({
-                  ...filters,
-                  updatedAfter: days === null ? null : Date.now() - days * DAY_MS,
-                });
-              }}
-            >
-              {DATE_RANGES.map((each, index) => (
-                <option key={each.label} value={index}>
-                  {each.label}
-                </option>
-              ))}
-            </Select>
-          </div>
+          </Select>
         </div>
-        <div className="search-status" role="status" data-testid="search-status">
-          {searching ? (
-            <span className="spinner" aria-hidden="true" data-testid="search-spinner" />
-          ) : null}
-          <span>{status}</span>
-          {outcome?.notice ? (
-            <span className="search-notice" data-testid="search-notice">
-              {outcome.notice}
-            </span>
-          ) : null}
-          {outcome?.wordsOnly && !outcome.notice ? (
-            <span
-              className="search-words-only"
-              data-testid="search-words-only"
-              data-tip={outcome.wordsOnly}
-            >
-              Words only
-              <span className="sr-only">. {outcome.wordsOnly}</span>
-            </span>
-          ) : null}
+        <div className="search-filter">
+          <Select
+            size="small"
+            aria-label="Tag"
+            value={filters.tag ?? ''}
+            onChange={(event) => setFilters({ ...filters, tag: event.target.value || null })}
+          >
+            <option value="">Any Tag</option>
+            {tags.map((tag) => (
+              <option key={tag} value={tag}>
+                #{tag}
+              </option>
+            ))}
+          </Select>
         </div>
-        <div
-          ref={results}
-          className="dlg-list search-results"
-          id={`${id}-results`}
-          role="listbox"
-          aria-label="Search results"
-          aria-busy={searching}
-        >
-          {hits.map((hit, index) => (
-            <div
-              key={hit.id}
-              id={option(index)}
-              role="option"
-              className="opt search-hit"
-              aria-selected={index === current}
-              data-index={index}
-              data-sources={hit.sources.join(' ')}
-              data-note-id={hit.id}
-              onMouseMove={() => {
-                if (index !== current) setActive(index);
-              }}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => choose(hit)}
-            >
-              <span className="search-hit-title">
-                {hit.titleHighlighted ? (
-                  <Marked text={hit.titleHighlighted} />
-                ) : (
-                  displayTitle(hit.title)
-                )}
-              </span>
-              <span className="search-hit-meta">
-                {hit.notebook ? (
-                  <span className="search-notebook" data-testid="search-hit-notebook">
-                    {hit.notebook}
-                  </span>
-                ) : null}
-                {hit.heading ? <span className="search-heading">› {hit.heading}</span> : null}
-                {hit.tags.map((tag) => (
-                  <span key={tag} className="tag-mini">
-                    #{tag}
-                  </span>
-                ))}
-                {hit.updatedAt > 0 ? (
-                  <time dateTime={new Date(hit.updatedAt).toISOString()}>
-                    {dateFormat.format(hit.updatedAt)}
-                  </time>
-                ) : null}
-                {/* Found by meaning alone (A1156): its words are not in the note. */}
-                {hit.sources.includes('semantic') && !hit.sources.includes('full-text') ? (
-                  <span className="search-source" title="Found by meaning">
-                    ≈
-                  </span>
-                ) : null}
-              </span>
-              {hit.snippet ? (
-                <span className="search-snippet">
-                  <Marked text={hit.snippet} />
-                </span>
-              ) : null}
-            </div>
-          ))}
-        </div>
-        {/* The list's empty state, as the palette's (T39 pass 2); the status line counts. */}
-        {asking && outcome && !searching && hits.length === 0 ? (
-          <p className="dlg-empty" data-testid="search-empty">
-            {browsing ? 'No notes match these filters' : `No notes match “${query.trim()}”`}
-          </p>
-        ) : null}
-        <div className="dlg-foot" aria-hidden="true">
-          <span className="keys">
-            <kbd>↑</kbd>
-            <kbd>↓</kbd>
-          </span>
-          Navigate
-          <span className="keys">
-            <kbd>↵</kbd>
-          </span>
-          Open
-          <span className="grow" />
-          <span className="keys">
-            <kbd>Esc</kbd>
-          </span>
-          Close
+        <div className="search-filter">
+          <Select
+            size="small"
+            aria-label="Updated"
+            value={range}
+            onChange={(event) => {
+              const index = Number(event.target.value);
+              setRange(index);
+              const days = DATE_RANGES[index]?.days ?? null;
+              setFilters({
+                ...filters,
+                updatedAfter: days === null ? null : Date.now() - days * DAY_MS,
+              });
+            }}
+          >
+            {DATE_RANGES.map((each, index) => (
+              <option key={each.label} value={index}>
+                {each.label}
+              </option>
+            ))}
+          </Select>
         </div>
       </div>
-    </div>
+      <div className="search-status" role="status" data-testid="search-status">
+        {searching ? (
+          <span className="spinner" aria-hidden="true" data-testid="search-spinner" />
+        ) : null}
+        <span>{status}</span>
+        {outcome?.notice ? (
+          <span className="search-notice" data-testid="search-notice">
+            {outcome.notice}
+          </span>
+        ) : null}
+        {outcome?.wordsOnly && !outcome.notice ? (
+          <span
+            className="search-words-only"
+            data-testid="search-words-only"
+            data-tip={outcome.wordsOnly}
+          >
+            Words only
+            <span className="sr-only">. {outcome.wordsOnly}</span>
+          </span>
+        ) : null}
+      </div>
+      <PickerListbox
+        picker={picker}
+        className="dlg-list search-results"
+        label="Search results"
+        busy={searching}
+      >
+        {hits.map((hit, index) => (
+          <div
+            key={hit.id}
+            {...picker.optionProps(index)}
+            className="opt search-hit"
+            data-sources={hit.sources.join(' ')}
+            data-note-id={hit.id}
+            onClick={() => choose(hit)}
+          >
+            <span className="search-hit-title">
+              {hit.titleHighlighted ? (
+                <Marked text={hit.titleHighlighted} />
+              ) : (
+                displayTitle(hit.title)
+              )}
+            </span>
+            <span className="search-hit-meta">
+              {hit.notebook ? (
+                <span className="search-notebook" data-testid="search-hit-notebook">
+                  {hit.notebook}
+                </span>
+              ) : null}
+              {hit.heading ? <span className="search-heading">› {hit.heading}</span> : null}
+              {hit.tags.map((tag) => (
+                <span key={tag} className="tag-mini">
+                  #{tag}
+                </span>
+              ))}
+              {hit.updatedAt > 0 ? (
+                <time dateTime={new Date(hit.updatedAt).toISOString()}>
+                  {dateFormat.format(hit.updatedAt)}
+                </time>
+              ) : null}
+              {/* Found by meaning alone (A1156): its words are not in the note. */}
+              {hit.sources.includes('semantic') && !hit.sources.includes('full-text') ? (
+                <span className="search-source" title="Found by meaning">
+                  ≈
+                </span>
+              ) : null}
+            </span>
+            {hit.snippet ? (
+              <span className="search-snippet">
+                <Marked text={hit.snippet} />
+              </span>
+            ) : null}
+          </div>
+        ))}
+      </PickerListbox>
+      {/* The list's empty state, as the palette's (T39 pass 2); the status line counts. */}
+      {asking && outcome && !searching && hits.length === 0 ? (
+        <p className="dlg-empty" data-testid="search-empty">
+          {browsing ? 'No notes match these filters' : `No notes match “${query.trim()}”`}
+        </p>
+      ) : null}
+      <div className="dlg-foot" aria-hidden="true">
+        <span className="keys">
+          <kbd>↑</kbd>
+          <kbd>↓</kbd>
+        </span>
+        Navigate
+        <span className="keys">
+          <kbd>↵</kbd>
+        </span>
+        Open
+        <span className="grow" />
+        <span className="keys">
+          <kbd>Esc</kbd>
+        </span>
+        Close
+      </div>
+    </PickerOverlay>
   );
 }

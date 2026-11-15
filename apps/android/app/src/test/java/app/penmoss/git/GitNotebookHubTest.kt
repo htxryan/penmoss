@@ -8,12 +8,12 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
-import app.penmoss.auth.SecretBox
 import app.penmoss.engine.git.AddResult
 import app.penmoss.engine.git.FramePort
 import app.penmoss.engine.git.GitRefusal
 import app.penmoss.engine.git.OwnerAnswer
 import app.penmoss.engine.git.OwnerConfirm
+import app.penmoss.security.SecretBox
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import org.junit.After

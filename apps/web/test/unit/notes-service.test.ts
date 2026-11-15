@@ -1,6 +1,6 @@
 import { isUlid } from '@penmoss/core/ids';
 import { periodicNoteId } from '@penmoss/core/periodic';
-import { readNoteNotebook, readIdentity, readTitle, setTitle } from '@penmoss/sync-client/note';
+import { readIdentity, readTitle, setTitle } from '@penmoss/sync-client/note';
 import { frontmatterTags, setFrontmatterTag } from '@penmoss/sync-client/tags';
 import { createThread } from '@penmoss/sync-client/comments';
 import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
@@ -12,12 +12,17 @@ import {
   type LocalSyncState,
   type NoteRegistry,
 } from '../../src/notes/service';
-import type { UnloadWrite } from '@penmoss/sync-client';
+import type { UnloadWrite } from '@penmoss/sync-client/record';
 import { appendParagraph } from '../../../../packages/sync-client/test/support/editing';
 import { TEST_NOTEBOOK } from './support/local-sources';
 import { memoryNotes } from './support/memory-notes';
 
 const notesToStop: Notes[] = [];
+
+/** A rename (or merge), as the sidebar's Tags makes one: the notes it changed. */
+const renameTag = async (notes: Notes, from: string, to: string): Promise<string[]> => [
+  ...(await notes.changeTags([{ from, to }])).notes,
+];
 afterEach(() => {
   for (const notes of notesToStop.splice(0)) notes.stop();
   vi.restoreAllMocks();
@@ -416,23 +421,21 @@ describe('Notes: offline-first replica (T8)', () => {
     await vi.waitFor(() => expect(store.records.get(id)?.deleted).toBe(true));
   });
 
-  it('keeps the epoch and unsynced flag when reopening a note whose closing write is in flight', async () => {
+  it('keeps the unsynced flag when reopening a note whose closing write is in flight', async () => {
     const { notes, store } = setup();
     await notes.start();
     const id = notes.create();
     await notes.settled(id);
-    store.records.set(id, { ...store.records.get(id)!, epoch: 'epoch-1', unsynced: false });
+    store.records.set(id, { ...store.records.get(id)!, unsynced: false });
     const first = notes.openNote(id);
     await first.ready;
     first.close(); // nothing changed: the snapshot must not claim unsynced changes
     const second = notes.openNote(id);
     await second.ready;
-    expect(second.keeper.currentEpoch).toBe('epoch-1');
     expect(second.unsynced).toBe(false);
     setTitle(second.replica.doc, 'Edited');
     await second.flush();
     expect(store.records.get(id)).toMatchObject({
-      epoch: 'epoch-1',
       unsynced: true,
       title: 'Edited',
     });
@@ -518,7 +521,7 @@ describe('Notes: offline-first replica (T8)', () => {
       expect(notes.list().find((entry) => entry.id === id)?.tags).toEqual(['chores/yard']),
     );
 
-    const changed = await notes.renameTag('chores', 'home');
+    const changed = await renameTag(notes, 'chores', 'home');
     expect(changed.sort()).toEqual([id, stored].sort());
     expect(frontmatterTags(open.replica.doc)).toEqual(['home/yard']);
     expect(store.records.get(stored)).toMatchObject({ tags: ['home'], unsynced: true });
@@ -538,7 +541,7 @@ describe('Notes: offline-first replica (T8)', () => {
     await notes.refreshLocal();
     expect(notes.list().map((entry) => entry.id)).not.toContain(id);
 
-    expect(await notes.renameTag('chores', 'home')).toEqual([id]);
+    expect(await renameTag(notes, 'chores', 'home')).toEqual([id]);
     expect(store.records.get(id)).toMatchObject({ tags: ['home'], deleted: true, unsynced: true });
   });
 
@@ -561,7 +564,7 @@ describe('Notes: offline-first replica (T8)', () => {
     const update = store.update.bind(store);
     store.update = (noteId, fn) =>
       noteId === ids[1] ? Promise.reject(new Error('The tab closed')) : update(noteId, fn);
-    await expect(first.notes.renameTag('chores', 'home')).rejects.toThrow('The tab closed');
+    await expect(renameTag(first.notes, 'chores', 'home')).rejects.toThrow('The tab closed');
     first.notes.stop();
     store.update = update;
     expect(store.records.get(ids[1]!)?.tags).toEqual(['chores']);
@@ -670,7 +673,7 @@ describe('Notes: offline-first replica (T8)', () => {
     const id = await notes.ensurePeriodic('daily', '2026-10-21', '## Plan\n\n{{date}}\n');
     expect(id).toBe(periodicNoteId('daily', '2026-10-21', TEST_NOTEBOOK));
     const record = store.records.get(id)!;
-    expect(record).toMatchObject({ title: '2026-10-21', unsynced: true, epoch: null });
+    expect(record).toMatchObject({ title: '2026-10-21', unsynced: true });
     const replica = createYjs14Replica();
     replica.applyUpdate(record.update);
     expect(readIdentity(replica.doc)).toMatchObject({
@@ -699,7 +702,7 @@ describe('Notes: offline-first replica (T8)', () => {
     const { notes, store } = setup({ online: () => false });
     await notes.start();
     const id = await notes.ensurePeriodic('daily', '2026-10-18', '## Plan\n');
-    expect(store.records.get(id)).toMatchObject({ epoch: null, unsynced: true });
+    expect(store.records.get(id)).toMatchObject({ unsynced: true });
     expect(store.records.get(id)!.text).toContain('Plan');
   });
 
@@ -723,12 +726,9 @@ describe('Notes: offline-first replica (T8)', () => {
     expect(notes.list().map((entry) => entry.id)).toContain(id);
   });
 
-  it('asks where a note goes when its notebook is in Trash, and files it where the person chose (T43 review B2)', async () => {
+  it('asks where a note goes when Trash forgets its folder, and files it where the person chose (T43 review B2)', async () => {
     const restore = vi.fn();
-    const restorePlace = vi.fn(() => ({
-      refused: true as const,
-      notebook: { id: 'nb-1', name: 'Work' },
-    }));
+    const restorePlace = vi.fn(() => ({ refused: true as const }));
     const registry = { unregister: vi.fn(), folderOf: () => 'folder-7', restore, restorePlace };
     const { notes, store } = setup({ registry });
     await notes.start();
@@ -739,7 +739,10 @@ describe('Notes: offline-first replica (T8)', () => {
 
     const refused = await notes.restoreFromTrash(id).catch((error: unknown) => error);
     expect(refused).toBeInstanceOf(RestoreNeedsFolder);
-    expect(refused).toMatchObject({ noteId: id, notebook: { id: 'nb-1', name: 'Work' } });
+    expect(refused).toMatchObject({
+      noteId: id,
+      message: 'The folder the note was in is gone. Choose a folder for it.',
+    });
     expect(restorePlace).toHaveBeenCalledWith(id, 'folder-7');
     // Nothing moved: still in Trash, filed nowhere.
     expect(restore).not.toHaveBeenCalled();
@@ -750,44 +753,6 @@ describe('Notes: offline-first replica (T8)', () => {
     expect(store.records.get(id)?.deleted).toBeUndefined();
   });
 
-  it('records each note’s notebook in its own document: at creation, and on a move or a chosen restore (A766)', async () => {
-    const restore = vi.fn();
-    const notebookOf = (folderId: string | null) =>
-      folderId === 'work-folder' ? 'work' : folderId === 'gone' ? null : 'default';
-    const registry = { unregister: vi.fn(), folderOf: () => 'work-folder', restore, notebookOf };
-    const { notes, store } = setup({ registry });
-    await notes.start();
-    const recorded = (id: string) => {
-      const replica = createYjs14Replica();
-      replica.applyUpdate(store.records.get(id)!.update);
-      return readNoteNotebook(replica.doc);
-    };
-    const inWork = notes.create(new Date('2026-10-22T15:00:00Z'), { folderId: 'work-folder' });
-    const atTop = notes.create(new Date('2026-10-22T15:00:01Z'), { folderId: null });
-    const capture = notes.create(new Date('2026-10-22T15:00:02Z'), { notebook: 'default' });
-    const unknown = notes.create(new Date('2026-10-22T15:00:03Z'), { folderId: 'gone' });
-    const unplaced = notes.create(new Date('2026-10-22T15:00:04Z'));
-    for (const id of [inWork, atTop, capture, unknown, unplaced]) await notes.settled(id);
-    expect(recorded(inWork)).toBe('work');
-    expect(recorded(atTop)).toBe('default');
-    expect(recorded(capture)).toBe('default');
-    // Where it goes isn't known: no record, so every mirror holds it until one is written.
-    expect(recorded(unknown)).toBeNull();
-    expect(recorded(unplaced)).toBeNull();
-
-    await notes.recordNotebook(atTop, 'work');
-    expect(recorded(atTop)).toBe('work');
-    expect(store.records.get(atTop)?.unsynced).toBe(true);
-
-    await notes.deleteNote(inWork);
-    await notes.refreshLocal();
-    await notes.restoreFromTrash(inWork, { folderId: null });
-    expect(restore).toHaveBeenCalledWith(inWork, null);
-    expect(recorded(inWork)).toBe('default');
-  });
-});
-
-describe('Notes: a git notebook, with no server (A860)', () => {
   it('asks no server: create, open, edit, Trash, rename a tag, journal and purge', async () => {
     const fetch = vi.spyOn(globalThis, 'fetch');
     const git = gitBackend();
@@ -801,7 +766,7 @@ describe('Notes: a git notebook, with no server (A860)', () => {
     open.close();
     await notes.deleteNote(id);
     expect((await notes.trash()).map((entry) => entry.id)).toEqual([id]);
-    await notes.renameTag('a', 'b');
+    await renameTag(notes, 'a', 'b');
     const daily = await notes.ensurePeriodic('daily', '2026-10-29', '## Plan\n');
     // Salted with the notebook's id, as the CLI makes it (A820).
     expect(daily).toBe(periodicNoteId('daily', '2026-10-29', salt));

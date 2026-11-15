@@ -1,3 +1,4 @@
+import { copyText } from '@penmoss/editor';
 import { Icon } from '@penmoss/ui/icons';
 import {
   useCallback,
@@ -11,7 +12,6 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { useCommand, useCommands } from '../commands/hooks';
-import { desktop } from '../desktop/bridge';
 import { useNotes } from '../notes/hooks';
 import { PaneResizer } from '../shell/PaneResizer';
 import { PANE_LIMITS, usePaneSize } from '../shell/pane-widths';
@@ -23,7 +23,7 @@ import { revertible } from './revertible';
 import {
   gitHistory,
   noHistory,
-  HistoryRefused,
+  HistoryError,
   type HistoryChange,
   type HistoryConflict,
   type HistoryDetail,
@@ -47,27 +47,15 @@ const REASONS: Record<string, string> = {
   edit: '',
 };
 
-/** Copies `text` (the click is the gesture the Mac app's clipboard needs). */
-async function copy(text: string): Promise<boolean> {
-  const app = desktop();
-  if (app) return app.clipboard.write({ text });
-  return navigator.clipboard.writeText(text).then(
-    () => true,
-    () => false,
-  );
-}
-
 /** Versions whose summaries are read first: about the rows on screen; the rest follow in one read. */
 const FIRST_SUMMARIES = 20;
 const NO_SUMMARIES: ReadonlyMap<number, HistorySummary> = new Map();
 /** The list's least height while its handle is dragged, in rem: a few rows. */
 const LIST_MIN_REM = 6;
 
-/** Why the history did not load, in words (T39: a server error used to read as offline). */
+/** Why the history did not load, in words: its own, else that git could not be reached. */
 function loadFailure(caught: unknown, source: HistorySource): string {
-  return caught instanceof HistoryRefused
-    ? `The server could not load the history (error ${caught.status}). Try again in a moment.`
-    : source.offline;
+  return caught instanceof HistoryError ? caught.message : source.offline;
 }
 
 /**
@@ -214,11 +202,9 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
       setStatus(said);
     } catch (caught) {
       setStatus(
-        caught instanceof HistoryRefused
-          ? // Its own words when it has them (a git notebook's note not saved first, A858).
-            caught.message !== `HTTP ${caught.status}`
-            ? caught.message
-            : `The server could not do that (error ${caught.status}). Try again in a moment.`
+        caught instanceof HistoryError
+          ? // Its own words (a git notebook's note not saved first, A858).
+            caught.message
           : 'That did not work. Check the connection and try again.',
       );
     } finally {
@@ -279,9 +265,9 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
     setSelected(Number(row.dataset['version']));
   };
 
-  const copyText = () => {
+  const copyVersion = () => {
     if (!shown) return;
-    void copy(bodyOf(shown.markdown)).then((done) =>
+    void copyText(document, bodyOf(shown.markdown)).then((done) =>
       setStatus(done ? 'Copied the text of this version.' : 'Could not copy the text.'),
     );
   };
@@ -550,7 +536,7 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                     aria-label="Copy Text"
                     data-tip="Copy Text"
                     disabled={!shown}
-                    onClick={copyText}
+                    onClick={copyVersion}
                   >
                     <Icon name="copy" />
                     <span className="history-action-word">Copy</span>

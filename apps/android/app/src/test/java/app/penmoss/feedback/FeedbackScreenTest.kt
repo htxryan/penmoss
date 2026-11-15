@@ -25,7 +25,7 @@ import app.penmoss.data.PenmossDatabase
 import app.penmoss.engine.api.FeedbackAnswer
 import app.penmoss.engine.api.FeedbackImage
 import app.penmoss.engine.api.PenmossFeedbackApi
-import app.penmoss.ui.PenmossTheme
+import app.penmoss.ui.common.PenmossTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

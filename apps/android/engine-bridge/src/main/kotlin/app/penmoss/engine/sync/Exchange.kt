@@ -33,7 +33,7 @@ data class ExchangeResult(
     val text: String? = null,
     /** Its headings, with [text]. */
     val headings: String? = null,
-    /** The SHA-256 of the server's text (alone: the phone's copy is current); null from an older server. */
+    /** The SHA-256 of the server's text (alone: the phone's copy is current); null when the text was not asked for. */
     val textHash: String? = null,
     /**
      * The server's words when it refused edits that stay waiting and no retry will clear

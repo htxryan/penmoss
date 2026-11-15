@@ -1,22 +1,22 @@
 /**
- * The offline full-text index (T22, A101): every note on this device, ranked
- * exactly as the server's D1 FTS5 ranks it, so an exact-word query returns
- * the same top results offline as online.
+ * The full-text index (T22, A101) the page and `LocalNotebook` (the CLI and
+ * MCP) search with: every note of a notebook, ranked as SQLite's FTS5 ranks
+ * it, so a query reads the same here as in an FTS5 index.
  *
  * Terms come from `@penmoss/core/search`, which cuts, folds and stems text
  * as FTS5's `porter unicode61 remove_diacritics 2` does. The dictionary is
  * MiniSearch's radix tree (`SearchableMap`: incremental inserts and deletes,
  * fast prefix walks); each term holds, per note, its count in each column.
  * Scoring is FTS5's bm25 (fts5_aux.c) over those counts with the shared
- * column weights, so scores match the server's to rounding. MiniSearch's own
+ * column weights, so scores match FTS5's to rounding. MiniSearch's own
  * `search()` is not used: its per-field BM25+ ranks differently from FTS5,
  * and FlexSearch keeps no term frequencies to rank with at all.
  *
  * A partly typed word (#120, A680) is completed from the notes' words as
  * written (folded, not stemmed: `words`, with how many notes hold each):
  * core's `completions` picks the whole words a prefix's stem cannot reach,
- * and each counts as one more phrase ORed with the prefix, as the server's
- * `notes_words` and FTS5 do.
+ * and each counts as one more phrase ORed with the prefix, as FTS5 would
+ * count it.
  *
  * Phrases are checked against each candidate's text (kept for snippets).
  * `title:` clauses count the title column only and `-` clauses leave notes
@@ -59,7 +59,7 @@ export interface LocalSearchDocument {
 
 export interface LocalSearchHit {
   readonly id: string;
-  /** bm25, higher is better (the server's `rank` is its negative). */
+  /** bm25, higher is better (FTS5's `rank` is its negative). */
   readonly score: number;
   readonly title: string;
   readonly titleHighlighted: string;
@@ -70,7 +70,7 @@ export interface LocalSearchHit {
 
 export interface LocalSearchOptions {
   readonly limit?: number;
-  /** Applied after ranking, as the server's filters are (bm25's statistics stay whole-index). */
+  /** Applied after ranking (bm25's statistics stay whole-index). */
   readonly filter?: (doc: LocalSearchDocument) => boolean;
   /**
    * A term also matches the words holding it inside them (A1126): the app's search. Off, the
@@ -164,7 +164,7 @@ function columnsOf(doc: LocalSearchDocument): string[] {
     tags: doc.tags.join(' '),
     headings: doc.headings,
   };
-  // The server indexes the same text without match markers (searchText, A118).
+  // Indexed without match markers (searchText, A118), so a snippet's markers are its own.
   return FTS_COLUMNS.map((column) => searchText(values[column]));
 }
 

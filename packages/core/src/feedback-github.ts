@@ -1,9 +1,8 @@
 /**
- * Filing Send feedback on GitHub (T49, A793, A794; T57, A1010–A1013). The Worker did this with its
- * own token until D48; the Mac app now does it in its main process with the person's own GitHub
- * token, and Android ports the same steps to Kotlin. Both answer in the Worker's shape
- * (`POST /api/feedback`'s statuses and `{ issue }` / `{ error: { code, message } }`), so the
- * clients' outboxes sort an answer the same way whoever filed it.
+ * Filing Send feedback on GitHub (T49, A793, A794; T57, A1010–A1013). The Mac app does it in its
+ * main process with the person's own GitHub token, and Android ports the same steps to Kotlin.
+ * Both answer in one shape (an HTTP-like status and `{ issue }` / `{ error: { code, message } }`,
+ * A792), so the outboxes sort an answer the same way whoever filed it.
  *
  * The GitHub calls, one of which is not in GitHub's REST reference:
  *
@@ -350,7 +349,7 @@ async function reasonOf(response: Response): Promise<string> {
   }
 }
 
-// --- the submission, checked (the Worker's readSubmission, shared) ---
+// --- the submission, checked ---
 
 export interface FeedbackSubmission {
   readonly submissionId: string;
@@ -459,8 +458,8 @@ export const LONGEST_ASSET_URL = `https://github.com/user-attachments/assets/${'
 // --- filing on the device (T57, A1010) ---
 
 /**
- * What a device remembers of each submission it filed or tried to (the Worker's
- * `feedback_submissions` row, A792): enough that a retry never files twice.
+ * What a device remembers of each submission it filed or tried to (A792): enough that a retry
+ * never files twice.
  */
 export interface FeedbackLedgerEntry {
   readonly createdAt: number;
@@ -491,7 +490,7 @@ export function memoryLedger(): FeedbackLedger & {
   };
 }
 
-/** The Worker's answer shape (A792), whoever filed it. */
+/** The answer's shape (A792), whoever filed it. */
 export interface FeedbackAnswer {
   readonly status: number;
   readonly body:
@@ -538,10 +537,10 @@ const refusal = (
 const running = new Set<string>();
 
 /**
- * Files one submission with the device's own token (A1010): the same checks, body, labels,
- * screenshots and footer as the Worker, and the same answers. A submission tried before is
- * looked up by its footer first and adopted, so a retry never files twice; the ledger keeps what
- * the Worker's row kept. Never throws: every outcome is an answer.
+ * Files one submission with the device's own token (A1010): the submission checked, then its
+ * body, labels, screenshots and footer. A submission tried before is looked up by its footer
+ * first and adopted, so a retry never files twice; the ledger remembers each try. Never throws:
+ * every outcome is an answer.
  */
 export async function fileFeedback(input: FileFeedbackInput): Promise<FeedbackAnswer> {
   const now = input.now ?? Date.now;
