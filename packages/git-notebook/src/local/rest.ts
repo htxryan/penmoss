@@ -1,13 +1,14 @@
 /**
- * The REST API's routes, answered on this device (T50 G2): a `fetch` the CLI's `Api` client
- * calls when a command runs with `--notebook`: the CLI asks `/api/...` and this answers from a
- * `LocalNotebook`, in the shapes and error codes the CLI reads. Nothing leaves the process.
+ * The notes API's REST routes, answered on this device (T50 G2, A843): a `fetch` over a
+ * `LocalNotebook`, in its shapes and error codes. Android's local notes server answers its page's
+ * `/api/*` with it (`apps/android/editor/src/git/server.ts`). The CLI and the MCP tools call
+ * `LocalNotebook` itself. Nothing leaves the process.
  */
 import type { EditOp, SectionMode } from '@penmoss/editor/edit-engine';
 import type { SortMode } from '@penmoss/core/workspace';
 import { LocalError, propertiesOp, type LocalNotebook } from './notebook';
 
-/** What the CLI's `FetchLike` gives (Node's and workerd's fetch both fit). */
+/** What a request gives (Node's and workerd's fetch both fit). */
 export interface LocalRequestInit {
   readonly method: string;
   readonly headers: Record<string, string>;
@@ -20,7 +21,7 @@ export interface LocalResponse {
   text(): Promise<string>;
 }
 
-/** The origin `--notebook` commands use: never a host, so nothing can reach the network. */
+/** The origin requests use: never a host, so nothing can reach the network. */
 export const LOCAL_ORIGIN = 'http://notebook.invalid';
 
 type Body = Record<string, unknown>;
@@ -77,7 +78,7 @@ function tags(body: Body, key: string): string[] {
  */
 export function localFetch(
   notebook: LocalNotebook,
-  /** After every request that may write, awaited before its reply: the CLI saves there. */
+  /** After every request that may write, awaited before its reply: the caller saves there. */
   changed: () => void | Promise<void> = () => undefined,
 ): (url: string, init: LocalRequestInit) => Promise<LocalResponse> {
   return async (url, init) => {

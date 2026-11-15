@@ -221,7 +221,7 @@ export async function notebookOfRefs(
   );
 }
 
-/** A command on a git notebook (T50): its local API, under the clone's lock, and one sync. */
+/** A command on a git notebook (T50): its notes API, under the clone's lock, and one sync. */
 async function onNotebook(
   io: Io,
   notebooks: NotebookIo,

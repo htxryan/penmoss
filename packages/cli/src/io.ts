@@ -6,18 +6,7 @@
  */
 
 import type { Embedder, VectorCache } from '@penmoss/core/search';
-
-/** The parts of a fetch Response the CLI reads: a notebook's local API answers with these. */
-export interface FetchResponse {
-  readonly status: number;
-  readonly headers: { get(name: string): string | null };
-  text(): Promise<string>;
-}
-
-export type FetchLike = (
-  url: string,
-  init: { method: string; headers: Record<string, string>; body?: string; signal?: AbortSignal },
-) => Promise<FetchResponse>;
+import type { LocalNotebook } from '@penmoss/git-notebook/local';
 
 export type TokenLocation = 'keychain' | 'file';
 
@@ -122,9 +111,14 @@ export interface NotebookStatus extends NotebookEntry {
   readonly filterIgnored: boolean;
 }
 
-/** One command's use of a notebook: its local REST API, under the clone's lock. */
+/** One command's use of a notebook: its notes API (A843), under the clone's lock. */
 export interface NotebookSession {
-  readonly fetch: FetchLike;
+  readonly notebook: LocalNotebook;
+  /**
+   * Saves the clone's state: after every change, refused or not, before its reply (B1 of #165),
+   * so a command killed during the sync that follows loses nothing.
+   */
+  save(): Promise<void>;
   /**
    * Gives this session's searches meaning (A1156) when the model is here and Search by Meaning
    * is on; otherwise nothing changes. Searches embed their query and at most a short budget of

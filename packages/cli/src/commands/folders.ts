@@ -2,34 +2,15 @@
  * mkdir, rmdir, rename and sort: changing folders (T42 item 11, A567), attributed to the clone's
  * writer, through the notebook's folder routes. `mv --folder` (write.ts) moves one.
  */
+import { ulid } from '@penmoss/core/ids';
+import type { LocalFolder } from '@penmoss/git-notebook/local';
 import { UsageError } from '../args';
-import type { Command } from '../command';
+import type { Command, Context } from '../command';
 import { ApiError, CliError, EXIT } from '../errors';
 import { listFolder, resolveFolder, type FolderListing } from '../refs';
 
 const FOLDER_HELP =
   'A folder is its path from the top (Projects/Garden, ignoring case), its id, or / for the top level.';
-
-/** A new folder's id: a ULID, as the apps make (core's ids.ts; the CLI bundles no packages). */
-function newFolderId(now = Date.now()): string {
-  const alphabet = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
-  let time = '';
-  for (let rest = now, i = 0; i < 10; i++) {
-    time = alphabet[rest % 32]! + time;
-    rest = Math.floor(rest / 32);
-  }
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  let random = '';
-  for (const byte of bytes) random += alphabet[byte & 31]!;
-  return time + random;
-}
-
-interface FolderReply {
-  readonly id: string;
-  readonly name: string;
-  readonly parentId: string | null;
-  readonly sortMode: string;
-}
 
 /** The path's folders, top first; blank segments (a leading or doubled /) are dropped. */
 function segments(path: string): string[] {
@@ -40,12 +21,9 @@ function segments(path: string): string[] {
 }
 
 /** The listing of `path`, or null when no such folder exists. */
-async function folderAt(
-  api: Awaited<ReturnType<Parameters<Command['run']>[0]['api']>>,
-  path: string,
-): Promise<FolderListing | null> {
+async function folderAt(context: Context, path: string): Promise<FolderListing | null> {
   try {
-    return await listFolder(api, path);
+    return await listFolder(context, path);
   } catch (error) {
     if (
       (error instanceof ApiError || error instanceof CliError) &&
@@ -79,14 +57,13 @@ export const mkdir: Command = {
     const parts = segments(path!);
     if (parts.length === 0) throw new UsageError('path names no folder');
     const parents = context.bool('parents');
-    const api = await context.api();
     // The deepest folder along the path that exists already, looked for from the deepest up:
     // a token scoped to a nested folder cannot see the folders above its own (T42 review S6).
     let found = 0;
     let parentId: string | null = null;
     let last: FolderListing | null = null;
     for (let depth = parts.length; depth >= 1; depth--) {
-      const listing = await folderAt(api, parts.slice(0, depth).join('/'));
+      const listing = await folderAt(context, parts.slice(0, depth).join('/'));
       if (!listing?.folder) continue;
       found = depth;
       parentId = listing.folder.id;
@@ -115,13 +92,15 @@ export const mkdir: Command = {
         'Pass -p to make the missing folders too, or see penmoss ls.',
       ]);
     }
-    const created: FolderReply[] = [];
+    const created: LocalFolder[] = [];
     for (const name of parts.slice(found)) {
-      const reply: FolderReply = await api.request<FolderReply>('POST', '/api/folders', {
-        // The folder's id is made here, as the apps make theirs.
-        // reuseName: a folder of that name made since the walk (another mkdir -p) is the answer.
-        body: { id: newFolderId(), name, parentId, ...(parents ? { reuseName: true } : {}) },
-      });
+      const under = parentId;
+      const reply: LocalFolder = await context.write(
+        (notebook) =>
+          // The folder's id is made here, as the apps make theirs.
+          // reuseName: a folder of that name made since the walk (another mkdir -p) is the answer.
+          notebook.createFolder({ id: ulid(), name, parentId: under, reuseName: parents }).folder,
+      );
       created.push(reply);
       parentId = reply.id;
     }
@@ -134,11 +113,8 @@ export const mkdir: Command = {
 };
 
 /** A folder by path or id; the top level is no folder to change. */
-async function changeable(
-  api: Awaited<ReturnType<Parameters<Command['run']>[0]['api']>>,
-  ref: string,
-): Promise<string> {
-  const id = await resolveFolder(api, ref);
+async function changeable(context: Context, ref: string): Promise<string> {
+  const id = await resolveFolder(context, ref);
   if (id === null) throw new UsageError('the top level is not a folder to change');
   return id;
 }
@@ -155,12 +131,8 @@ export const rmdir: Command = {
   examples: ['penmoss rmdir Projects/Old'],
   async run(context) {
     const [ref] = context.args(['folder']);
-    const api = await context.api();
-    const id = await changeable(api, ref!);
-    const reply = await api.request<{ id: string; deleted: boolean }>(
-      'DELETE',
-      `/api/folders/${encodeURIComponent(id)}`,
-    );
+    const id = await changeable(context, ref!);
+    const reply = await context.write((notebook) => notebook.deleteFolder(id));
     context.emit(reply, () =>
       reply.deleted
         ? `Moved ${ref} to Trash; its notes moved up. Ryan can restore it, with its subfolders and notes, from the notebook’s Trash in the apps.`
@@ -184,15 +156,10 @@ export const rename: Command = {
     if (!name!.trim() || name!.includes('/')) {
       throw new UsageError('name must be one folder’s name, without /');
     }
-    const api = await context.api();
-    const id = await changeable(api, ref!);
-    const listing = await listFolder(api, id);
-    const reply = await api.request<FolderReply>(
-      'PATCH',
-      `/api/folders/${encodeURIComponent(id)}`,
-      {
-        body: { name: name!.trim(), from: { name: listing.folder?.name ?? '' } },
-      },
+    const id = await changeable(context, ref!);
+    const listing = await listFolder(context, id);
+    const reply = await context.write((notebook) =>
+      notebook.patchFolder(id, { name: name!.trim(), expectedName: listing.folder?.name ?? '' }),
     );
     context.emit(reply, () => `Renamed ${ref} to ${reply.name}.`);
   },
@@ -215,12 +182,11 @@ export const sort: Command = {
     if (!(SORT_MODES as readonly string[]).includes(mode!)) {
       throw new UsageError(`order must be one of ${SORT_MODES.join(', ')}`);
     }
-    const api = await context.api();
-    const id = await resolveFolder(api, ref!);
-    const path = id === null ? '/api/folders/root' : `/api/folders/${encodeURIComponent(id)}`;
-    const reply = await api.request<{ sortMode: string }>('PATCH', path, {
-      body: { sortMode: mode },
-    });
+    const id = await resolveFolder(context, ref!);
+    const sortMode = mode as (typeof SORT_MODES)[number];
+    const reply = await context.write((notebook) =>
+      id === null ? notebook.patchRoot(sortMode) : notebook.patchFolder(id, { sortMode }),
+    );
     context.emit(
       { folderId: id, sortMode: reply.sortMode },
       () => `${ref} sorts ${reply.sortMode}.`,

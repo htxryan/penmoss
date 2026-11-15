@@ -1,11 +1,12 @@
 /** new, append, edit, daily, mv and tag: changing notes, attributed to the clone’s writer. */
 import { stripInvisible } from '@penmoss/core/invisible';
+import { LocalError, propertiesOp, type LocalNoteContent } from '@penmoss/git-notebook/local';
 import { UsageError, type FlagSpec } from '../args';
 import type { Command, Context } from '../command';
 import { ApiError, CliError } from '../errors';
-import { editJson, editTail, named, type EditReply } from '../format';
+import { editJson, editTail, named } from '../format';
 import { resolveFolder, resolveNote } from '../refs';
-import { noteJson, readContent, type NoteContent } from './read';
+import { noteJson, readContent } from './read';
 
 /** `text` as one shell word (#174 review): single-quoted, so nothing in it is expanded. */
 const shellWord = (text: string): string => `'${text.replaceAll("'", `'\\''`)}'`;
@@ -19,7 +20,6 @@ const TEXT: FlagSpec = {
   description: 'The markdown, inline (instead of - for stdin)',
 };
 
-const notePath = (id: string, action = '') => `/api/notes/${encodeURIComponent(id)}${action}`;
 const tagName = (tag: string) => tag.trim().replace(/^#/, '');
 
 /** Positionals as `[note] [-]`: the note, and whether `-` (stdin) was given. */
@@ -67,17 +67,17 @@ export const create: Command = {
       dash || context.string('text') !== undefined
         ? await context.content({ dash, what: 'body' })
         : '';
-    const api = await context.api();
     const folderRef = context.string('folder');
-    const folderId = folderRef === undefined ? null : await resolveFolder(api, folderRef);
-    const reply = await api.request<EditReply>('POST', '/api/notes', {
-      body: {
-        ...(title !== undefined ? { title } : {}),
-        markdown,
-        tags: context.list('tag').map(tagName).filter(Boolean),
-        folderId,
-      },
-    });
+    const folderId = folderRef === undefined ? null : await resolveFolder(context, folderRef);
+    const reply = await context.write(
+      (notebook) =>
+        notebook.create({
+          title,
+          markdown,
+          tags: context.list('tag').map(tagName).filter(Boolean),
+          folderId,
+        }).reply,
+    );
     context.emit(
       { id: reply.id, title: title ?? null, created: true, ...editJson(reply) },
       () => `Created ${named(title, reply.id)}${editTail(reply)}`,
@@ -109,13 +109,16 @@ export const append: Command = {
     const { ref, dash } = noteAndDash(context, 'the markdown');
     const markdown = await context.content({ dash, what: 'markdown to append' });
     if (!markdown.trim()) throw new UsageError('nothing to append: the markdown is empty');
-    const api = await context.api();
-    const note = await resolveNote(api, ref);
+    const note = await resolveNote(context, ref);
     const heading = context.string('heading');
     const reply = await sectionErrors(
-      api.request<EditReply>('POST', notePath(note.id, '/append'), {
-        body: { markdown, ...(heading !== undefined ? { heading } : {}) },
-      }),
+      context.write((notebook) =>
+        notebook.edit(
+          note.id,
+          { op: 'append', markdown, ...(heading !== undefined ? { heading } : {}) },
+          null,
+        ),
+      ),
       note.id,
     );
     context.emit(
@@ -219,17 +222,29 @@ export const edit: Command = {
       );
     }
 
-    const api = await context.api();
     const note = await readContent(context, ref);
     const baseVersion = context.number('base') ?? note.baseVersion;
-    const request =
-      section !== undefined
-        ? api.request<EditReply>('POST', notePath(note.id, '/section'), {
-            body: { heading: section, markdown, mode, baseVersion },
-          })
-        : api.request<EditReply>('POST', notePath(note.id, '/replace'), {
-            body: { find, replace: replacement, all: context.bool('all'), scope, baseVersion },
-          });
+    const request = context.write((notebook) => {
+      if (find === '') throw new LocalError(400, 'invalid_request', 'find must not be empty');
+      return notebook.edit(
+        note.id,
+        section !== undefined
+          ? {
+              op: 'section',
+              heading: section,
+              markdown: markdown!,
+              mode: mode as 'replace' | 'prepend' | 'append',
+            }
+          : {
+              op: 'replace',
+              find: find!,
+              replace: replacement!,
+              all: context.bool('all'),
+              scope,
+            },
+        baseVersion,
+      );
+    });
     const reply = await conflictErrors(
       sectionErrors(
         request,
@@ -289,7 +304,11 @@ async function sectionErrors<T>(
 }
 
 /** A 409 printed so a person or an agent can redo the edit on the current text. */
-async function conflictErrors<T>(request: Promise<T>, note: NoteContent, base: number): Promise<T> {
+async function conflictErrors<T>(
+  request: Promise<T>,
+  note: LocalNoteContent,
+  base: number,
+): Promise<T> {
   try {
     return await request;
   } catch (error) {
@@ -362,12 +381,11 @@ export const setTitle: Command = {
     }
     // Only bidi or format characters is empty too (#174 review).
     if (stripInvisible(title).trim() === '') throw new UsageError('the title must not be empty');
-    const api = await context.api();
-    const note = await resolveNote(api, ref);
+    const note = await resolveNote(context, ref);
     const base = context.number('base');
-    const reply = await api.request<EditReply>('PATCH', notePath(note.id, '/properties'), {
-      body: { title, ...(base !== undefined ? { baseVersion: base } : {}) },
-    });
+    const reply = await context.write((notebook) =>
+      notebook.edit(note.id, propertiesOp({ title }), base ?? null),
+    );
     context.emit(
       { ...editJson(reply), title },
       () => `Retitled ${named(note.title, note.id)} to “${title}”${editTail(reply)}`,
@@ -376,15 +394,6 @@ export const setTitle: Command = {
 };
 
 // --- daily ---
-
-interface Daily extends NoteContent {
-  readonly kind: 'daily' | 'weekly';
-  readonly date?: string;
-  readonly week?: string;
-  readonly timeZone: string;
-  readonly created: boolean;
-  readonly restoredFromTrash?: boolean;
-}
 
 export const daily: Command = {
   name: 'daily',
@@ -439,13 +448,12 @@ export const daily: Command = {
     if (markdown !== undefined && !markdown.trim())
       throw new UsageError('nothing to append: the markdown is empty');
 
-    const api = await context.api();
     const kind = context.bool('weekly') ? 'weekly' : 'daily';
-    const note = await api.request<Daily>('POST', '/api/daily', {
-      body: { period: kind, ...(date !== undefined ? { date } : {}) },
-    });
-    const period = note.kind === 'daily' ? { date: note.date } : { week: note.week };
-    const label = note.kind === 'daily' ? `daily note ${note.date}` : `weekly note ${note.week}`;
+    const note = await context.write((notebook) =>
+      notebook.daily({ period: kind, ...(date !== undefined ? { date } : {}) }),
+    );
+    const period = 'date' in note ? { date: note.date } : { week: note.week };
+    const label = 'date' in note ? `daily note ${note.date}` : `weekly note ${note.week}`;
     if (markdown === undefined) {
       if (note.created && !context.json) context.note(`(Created the ${label} from your template.)`);
       if (note.notice && !context.json) context.note(note.notice);
@@ -462,11 +470,15 @@ export const daily: Command = {
       return;
     }
     const reply = await sectionErrors(
-      api.request<EditReply>('POST', notePath(note.id, '/append'), {
-        // No base, as `append` sends none (A170): adding at the end changes nothing already
-        // there, and a base would refuse it whenever the section changed since the read above.
-        body: { markdown, ...(heading !== undefined ? { heading } : {}) },
-      }),
+      // No base, as `append` passes none (A170): adding at the end changes nothing already
+      // there, and a base would refuse it whenever the section changed since the read above.
+      context.write((notebook) =>
+        notebook.edit(
+          note.id,
+          { op: 'append', markdown, ...(heading !== undefined ? { heading } : {}) },
+          null,
+        ),
+      ),
       note.id,
     );
     context.emit(
@@ -496,15 +508,12 @@ export const mv: Command = {
   ],
   async run(context) {
     const [ref, folderRef] = context.args(['note', 'folder']);
-    const api = await context.api();
     if (context.bool('folder')) {
-      const id = await resolveFolder(api, ref!);
+      const id = await resolveFolder(context, ref!);
       if (id === null) throw new UsageError('the top level is not a folder to move');
-      const parentId = await resolveFolder(api, folderRef!);
-      const reply = await api.request<{ id: string; parentId: string | null }>(
-        'PATCH',
-        `/api/folders/${encodeURIComponent(id)}`,
-        { body: { parentId } },
+      const parentId = await resolveFolder(context, folderRef!);
+      const reply = await context.write((notebook) =>
+        notebook.patchFolder(id, { changeParent: true, parentId }),
       );
       context.emit(
         { id: reply.id, parentId: reply.parentId },
@@ -512,10 +521,10 @@ export const mv: Command = {
       );
       return;
     }
-    const note = await resolveNote(api, ref!);
+    const note = await resolveNote(context, ref!);
     let folderId: string | null;
     try {
-      folderId = await resolveFolder(api, folderRef!);
+      folderId = await resolveFolder(context, folderRef!);
     } catch (error) {
       if (!(error instanceof CliError && error.code === 'folder_not_found')) throw error;
       throw new CliError(error.exitCode, error.message, error.code, error.details, [
@@ -523,13 +532,7 @@ export const mv: Command = {
         'mv does not create folders: make it with penmoss mkdir (or move the note to an existing one).',
       ]);
     }
-    const reply = await api.request<{ id: string; folderId: string | null }>(
-      'POST',
-      notePath(note.id, '/move'),
-      {
-        body: { folderId },
-      },
-    );
+    const reply = await context.write((notebook) => notebook.move(note.id, folderId));
     context.emit(
       reply,
       () =>
@@ -552,17 +555,10 @@ export const trash: Command = {
   examples: ['penmoss trash "Old idea"'],
   async run(context) {
     const [ref] = context.args(['note']);
-    const api = await context.api();
-    const note = await resolveNote(api, ref!);
+    const note = await resolveNote(context, ref!);
     // Idempotent (a note already in Trash answers as it was), so asking twice is safe.
     // The reply is trash_note's: deletedAt in ISO 8601, as every time --json prints.
-    const reply = await api.request<{
-      id: string;
-      inTrash: true;
-      alreadyInTrash: boolean;
-      deletedAt: string;
-      folderId: string | null;
-    }>('POST', notePath(note.id, '/trash'), { body: {} });
+    const reply = await context.write((notebook) => notebook.trash(note.id));
     context.emit(reply, () =>
       reply.alreadyInTrash
         ? `${named(note.title, note.id)} was in Trash already.`
@@ -597,11 +593,10 @@ export const tag: Command = {
     const remove = context.list('remove').map(tagName).filter(Boolean);
     if (add.length === 0 && remove.length === 0)
       throw new UsageError('give tags to add, or --remove <tag>');
-    const api = await context.api();
-    const note = await resolveNote(api, ref);
-    const reply = await api.request<EditReply>('POST', notePath(note.id, '/tags'), {
-      body: { add, remove },
-    });
+    const note = await resolveNote(context, ref);
+    const reply = await context.write((notebook) =>
+      notebook.edit(note.id, { op: 'tag', add, remove }, null),
+    );
     const change = [...add.map((each) => `+#${each}`), ...remove.map((each) => `-#${each}`)].join(
       ' ',
     );

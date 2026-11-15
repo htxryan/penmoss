@@ -29,7 +29,6 @@ import {
   LOCAL_MEANING_INSTRUCTIONS,
   LocalMcpServer,
   LocalNotebook,
-  localFetch,
   type NotebookAccess,
 } from '@penmoss/git-notebook/local';
 import {
@@ -841,9 +840,10 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
             ...(cache.claim ? { claim: (keys) => cache.claim!(cloneDir(entry), keys) } : {}),
           });
         },
+        notebook,
         // Every change is on disk before its reply (B1 of #165): a command killed during the
         // sync that follows loses nothing; the next sync sends it.
-        fetch: localFetch(notebook, () => engine.engine.save()),
+        save: () => engine.engine.save(),
         sync: async (syncOptions = {}) => {
           const timeoutMs = syncOptions.timeoutMs;
           if (timeoutMs === undefined) return syncEngine(entry, engine);

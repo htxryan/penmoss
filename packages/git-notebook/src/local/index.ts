@@ -1,6 +1,7 @@
 /**
- * `@penmoss/git-notebook/local` (T50 G2): a git notebook's notes API on this device, for the
- * CLI's `--notebook` (as REST routes) and the local MCP server (as tools).
+ * `@penmoss/git-notebook/local` (T50 G2): a git notebook's notes API on this device
+ * (`LocalNotebook`), for the CLI, the local MCP server (as tools) and Android's local notes
+ * server (as REST routes).
  */
 export * from './notebook';
 export * from './rest';
