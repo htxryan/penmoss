@@ -1,5 +1,6 @@
 package app.penmoss.ui.settings
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.toggleable
@@ -54,29 +55,32 @@ fun DisplayScreen(
             modifier = Modifier.testTag("homeSections"),
         ) { section, _, handle ->
             val shown = section !in layout.hidden
-            ListItem(
-                leadingContent = handle,
-                headlineContent = { Text(SidebarLayout.NAMES.getValue(section)) },
-                supportingContent = when (section) {
-                    SidebarLayout.RECENT -> ({ Text("Shows ${layout.recentCount}") })
-                    else -> null
-                },
-                trailingContent = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (section == SidebarLayout.RECENT) RecentStepper(layout.recentCount, enabled, onRecentCount)
-                        // Its own switch, not the row's: the row holds the drag handle and the stepper too.
-                        Switch(
-                            checked = shown,
-                            onCheckedChange = { onSectionHidden(section, !it) },
-                            enabled = enabled,
-                            modifier = Modifier.testTag("display-section-$section").semantics { contentDescription = "Show ${SidebarLayout.NAMES.getValue(section)}" },
-                        )
+            // One column per section: the row's Box would draw Quick Access's own switch over it.
+            Column {
+                ListItem(
+                    leadingContent = handle,
+                    headlineContent = { Text(SidebarLayout.NAMES.getValue(section)) },
+                    supportingContent = when (section) {
+                        SidebarLayout.RECENT -> ({ Text("Shows ${layout.recentCount}") })
+                        else -> null
+                    },
+                    trailingContent = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (section == SidebarLayout.RECENT) RecentStepper(layout.recentCount, enabled, onRecentCount)
+                            // Its own switch, not the row's: the row holds the drag handle and the stepper too.
+                            Switch(
+                                checked = shown,
+                                onCheckedChange = { onSectionHidden(section, !it) },
+                                enabled = enabled,
+                                modifier = Modifier.testTag("display-section-$section").semantics { contentDescription = "Show ${SidebarLayout.NAMES.getValue(section)}" },
+                            )
+                        }
+                    },
+                )
+                if (section == SidebarLayout.QUICK_ACCESS) {
+                    Toggle("Show Notebook Names", "Under each note in Quick Access", layout.quickAccessNotebook, enabled, "display-quickAccessNotebook", Modifier.padding(start = 40.dp)) {
+                        onQuickAccessNotebook(it)
                     }
-                },
-            )
-            if (section == SidebarLayout.QUICK_ACCESS) {
-                Toggle("Show Notebook Names", "Under each note in Quick Access", layout.quickAccessNotebook, enabled, "display-quickAccessNotebook", Modifier.padding(start = 40.dp)) {
-                    onQuickAccessNotebook(it)
                 }
             }
         }
