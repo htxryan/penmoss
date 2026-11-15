@@ -152,7 +152,7 @@ describe('ci.yml', () => {
   });
 
   it("caches the Electron job's tool packages, and fetches Electron before checking its libraries", () => {
-    const desktop = ci.slice(ci.indexOf('\n  desktop:'), ci.indexOf('\n  android:'));
+    const desktop = ci.slice(ci.indexOf('\n  desktop-shard:'), ci.indexOf('\n  desktop:'));
     const cache = desktop.indexOf('path: ~/.cache/penmoss-ci/debs');
     const electron = desktop.indexOf(`exec node -e "require('electron')"`);
     const deps = desktop.indexOf('sh .github/scripts/system-deps.sh');
@@ -163,7 +163,7 @@ describe('ci.yml', () => {
     // `env.ImageOS` is empty in an expression (the runner sets it, not the workflow), so the
     // first run's key was `debs-desktop-Linux--`, the same for every image.
     assert.doesNotMatch(ci, /env\.Image(OS|Version)/);
-    const desktop = ci.slice(ci.indexOf('\n  desktop:'), ci.indexOf('\n  android:'));
+    const desktop = ci.slice(ci.indexOf('\n  desktop-shard:'), ci.indexOf('\n  desktop:'));
     assert.match(desktop, /\$\{ImageOS:\?\}/);
     assert.match(desktop, /\$\{ImageVersion:\?\}/);
     assert.match(
