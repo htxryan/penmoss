@@ -74,7 +74,7 @@ data class GitHubFeedbackConfig(
 /** What the person is told about their token, in plain words (A1012; core's TOKEN_MESSAGES). */
 object GitHubTokenMessages {
     /** Where the token is entered on Android. */
-    const val WHERE = "Settings → About → GitHub Token"
+    const val WHERE = "Settings → GitHub"
     const val MISSING = "Add your GitHub token in $WHERE to send it."
     const val INVALID = "GitHub does not accept this token: it may have expired or been revoked."
 

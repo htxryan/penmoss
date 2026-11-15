@@ -1,0 +1,496 @@
+/*
+ * Settings → Writing (PEN-146): Daily Notes, Quick Capture and Keyboard Shortcuts. Their rows
+ * (writing-rows.tsx), the template editor and its preview, the time zone picker's rows, and the
+ * shortcut list's groups, filter and rows.
+ */
+
+/* A group's subhead, a rule after it. */
+.wr-sub {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1.5rem 0 0.5rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  font-weight: 600;
+}
+
+.wr-sub::after {
+  flex: 1;
+  border-top: 1px solid var(--pm-border);
+  content: '';
+}
+
+.wr-group {
+  margin: 1rem 0 0;
+  border: 1px solid var(--pm-border);
+  border-radius: var(--pm-radius);
+  background: var(--pm-raised);
+}
+
+.wr-sub + .wr-group {
+  margin-top: 0;
+}
+
+.wr-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: var(--pm-hit);
+  box-sizing: border-box;
+  padding: 0.55rem 0.8rem;
+}
+
+.wr-row + .wr-row {
+  border-top: 1px solid var(--pm-border);
+}
+
+.wr-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.wr-row-label {
+  font-size: var(--pm-text-md);
+  font-weight: 500;
+}
+
+.wr-row-help {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  line-height: 1.45;
+}
+
+.wr-row-control {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* A row's own status or alert, under its help. */
+.wr-row-note {
+  margin: 0.2rem 0 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+}
+
+.wr-row-note[role='alert'] {
+  color: var(--pm-danger);
+}
+
+/* A choice that fills its row (Saves To): the whole row is the radio's label. */
+.wr-choice {
+  cursor: pointer;
+}
+
+.wr-choice:hover {
+  background: var(--pm-hover);
+}
+
+.wr-choice input {
+  flex: none;
+  margin: 0;
+  accent-color: var(--pm-accent);
+}
+
+.wr-choice:has(input:focus-visible) {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: -2px;
+}
+
+/* A switch: a native checkbox, drawn as on and off. */
+.wr-switch {
+  position: relative;
+  flex: none;
+  width: 2.2rem;
+  height: 1.25rem;
+  margin: 0;
+  border: 1px solid var(--pm-border);
+  border-radius: var(--pm-radius);
+  background: var(--pm-sidebar);
+  cursor: pointer;
+  appearance: none;
+  transition: background var(--pm-fast);
+}
+
+.wr-switch::before {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(1.25rem - 6px);
+  height: calc(1.25rem - 6px);
+  border-radius: var(--pm-radius);
+  background: var(--pm-muted);
+  content: '';
+  transition: transform var(--pm-fast);
+}
+
+.wr-switch:checked {
+  border-color: var(--pm-accent);
+  background: var(--pm-accent);
+}
+
+.wr-switch:checked::before {
+  background: var(--pm-on-accent);
+  transform: translateX(0.95rem);
+}
+
+.wr-switch:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 2px;
+}
+
+.wr-switch:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* A link or button at a row's end that goes to another page (Quick Capture's notebook). */
+.wr-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  text-decoration: none;
+}
+
+/* Daily Notes: the time zone button, which opens its picker. */
+.wr-zone {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 22rem;
+}
+
+.wr-zone > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zone-picker .zone-offset {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Daily Notes: the template tabs, over one editor beside its preview. */
+.wr-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 1.5rem 0 0;
+  border-bottom: 1px solid var(--pm-border);
+}
+
+.wr-tab {
+  margin-bottom: -1px;
+  padding: 0.45rem 0.8rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--pm-muted);
+  font: inherit;
+  font-size: var(--pm-text-md);
+  cursor: pointer;
+}
+
+.wr-tab:hover {
+  color: var(--pm-fg);
+}
+
+.wr-tab[aria-selected='true'] {
+  border-bottom-color: var(--pm-accent);
+  color: var(--pm-fg);
+  font-weight: 600;
+}
+
+.wr-tab:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: -2px;
+}
+
+.wr-template {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.wr-template-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.wr-template-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.wr-template-tools .muted {
+  font-size: var(--pm-text-sm);
+}
+
+.wr-template-editor .template-input {
+  flex: 1;
+  min-height: 16rem;
+  box-sizing: border-box;
+  width: 100%;
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-sm);
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.wr-placeholder-menu .menu-item .muted {
+  margin-left: 0.5rem;
+  font-size: var(--pm-text-xs);
+}
+
+/* The note the template makes for today (or this week), as the note shows it. */
+.wr-preview {
+  min-width: 0;
+  min-height: 16rem;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0.9rem 1.1rem;
+  overflow: auto;
+  border: 1px solid var(--pm-border);
+  border-radius: var(--pm-radius);
+  background: var(--pm-bg);
+  font-family: var(--pm-font-body);
+  font-size: var(--pm-text-md);
+  line-height: 1.5;
+}
+
+.wr-preview-label {
+  margin: 0 0 0.5rem;
+  color: var(--pm-muted);
+  font-family: var(--pm-font);
+  font-size: var(--pm-text-xs);
+  font-weight: 600;
+}
+
+.wr-preview-title {
+  margin: 0 0 0.6rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.wr-preview p {
+  margin: 0.25rem 0;
+  overflow-wrap: anywhere;
+}
+
+.wr-preview .pv-h1 {
+  margin-top: 0.6rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.wr-preview .pv-h2 {
+  margin-top: 0.6rem;
+  font-size: 1.1rem;
+  font-weight: 650;
+}
+
+.wr-preview :is(.pv-h3, .pv-h4, .pv-h5, .pv-h6) {
+  margin-top: 0.5rem;
+  font-weight: 600;
+}
+
+.wr-preview .pv-item {
+  padding-left: 1.2rem;
+  text-indent: -0.9rem;
+}
+
+.wr-preview .pv-quote {
+  padding-left: 0.7rem;
+  border-left: 3px solid var(--pm-border);
+  color: var(--pm-muted);
+}
+
+.wr-preview .pv-empty {
+  color: var(--pm-muted);
+  font-style: italic;
+}
+
+.wr-template-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.6rem;
+}
+
+.wr-template-foot .btn {
+  margin-left: auto;
+}
+
+.wr-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 1.25rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+}
+
+@media (max-width: 700px) {
+  /* On a phone the preview goes under the editor. */
+  .wr-template {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .wr-row {
+    flex-wrap: wrap;
+  }
+
+  /* A command's row stays one line: its name shrinks beside its keys. */
+  .wr-row.kb-row {
+    flex-wrap: nowrap;
+  }
+
+  .wr-zone {
+    max-width: 100%;
+  }
+}
+
+/* Keyboard Shortcuts: the search (which also takes keys) and the filter. */
+.kb-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1rem 0 0;
+}
+
+.kb-search {
+  display: flex;
+  flex: 1 1 16rem;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.kb-search .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.kb-key-filter {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 0 0 0.4rem;
+  border: 1px solid var(--pm-border);
+  border-radius: var(--pm-radius);
+  background: var(--pm-accent-softer);
+}
+
+.kb-key-filter .icon-btn {
+  width: var(--pm-control-sm);
+  height: var(--pm-control-sm);
+}
+
+.kb-found {
+  margin: 0.5rem 0 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+}
+
+/* Keyboard Shortcuts: a command's row. */
+.kb-row.capturing {
+  background: var(--pm-accent-soft);
+}
+
+.kb-row.changed {
+  background: var(--pm-accent-softer);
+}
+
+.kb-row .wr-row-label {
+  font-weight: 450;
+}
+
+.kb-row-keys {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* The keys are the button that records new ones. */
+.kb-key-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: var(--pm-control-sm);
+  padding: 0 0.35rem;
+  border: 1px solid transparent;
+  border-radius: var(--pm-radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.kb-key-btn:hover {
+  border-color: var(--pm-border);
+  background: var(--pm-hover);
+}
+
+.kb-key-btn:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 1px;
+}
+
+.kb-key-btn[aria-pressed='true'] {
+  border-color: var(--pm-accent);
+}
+
+/* Remove shows on the row's hover and focus, where there is a pointer that hovers. */
+.kb-remove {
+  opacity: 0;
+}
+
+.kb-row:hover .kb-remove,
+.kb-row:focus-within .kb-remove {
+  opacity: 1;
+}
+
+.kb-row .kb-conflict,
+.kb-row .kb-error,
+.kb-row .kb-done {
+  margin-top: 0.2rem;
+}
+
+.kb-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.25rem 0 0;
+}
+
+.kb-foot .muted {
+  margin-left: auto;
+  font-size: var(--pm-text-sm);
+}
+
+@media (hover: none), (max-width: 700px), (pointer: coarse) {
+  .kb-remove {
+    opacity: 1;
+  }
+
+  .kb-key-btn {
+    min-width: var(--pm-hit);
+    min-height: var(--pm-hit);
+    justify-content: center;
+  }
+}

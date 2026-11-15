@@ -79,7 +79,8 @@ export const APP_COMMANDS: readonly CommandDefinition[] = [
   global('app.shortcuts', 'Customise Keyboard Shortcuts', 'General'),
   // T50 (A856): Settings → Notebooks, in the Mac app. No default keys.
   global('app.gitNotebooks', 'Notebooks', 'General'),
-  // Settings → Status: Send feedback's GitHub token and outbox (T57, T59 A1036).
+  // Settings → GitHub (Status until PEN-146): the GitHub sign-in Send Feedback files with (T57,
+  // T59 A1036). The id and title are the Android contract's (commands-v1.json).
   global('app.status', 'Feedback Status and GitHub Token', 'General'),
   // T64 item 2 (A1112): Settings → Updates, checking now. The Mac app only.
   global('app.checkForUpdates', 'Check for Updates…', 'General'),
@@ -189,7 +190,7 @@ export const APP_COMMANDS: readonly CommandDefinition[] = [
   global('git.remove', 'Remove This Git Notebook from This Mac…', 'Sync'),
   // T28. No default keys: users bind them in Settings → Keyboard Shortcuts (A70, A90).
   global('app.appearance', 'Appearance and Themes', 'Appearance'),
-  // T42 (A576): which shortcuts the sidebar shows.
+  // T42 (A576): which shortcuts the sidebar shows; Settings → Sidebar since PEN-146.
   global('app.display', 'Sidebar Display Settings', 'Appearance'),
   // T44 (A743): the line symbols, their names, colours and order. The picker's "Edit symbols…".
   global('app.symbols', 'Edit Line Symbols', 'Symbols'),

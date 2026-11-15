@@ -16,6 +16,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
@@ -29,6 +30,7 @@ import app.penmoss.ui.settings.Hsva
 import app.penmoss.ui.settings.SETTINGS_WAIT
 import app.penmoss.ui.settings.SymbolsScreen
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import android.graphics.Color as AColor
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
@@ -80,11 +82,23 @@ class SymbolsScreenTest {
         }
     }
 
+    /** PEN-146 option A: each row its key, one size of glyph box, a drag handle and "N of 9". */
     @Test
-    fun movesASymbolToAnotherSlot() {
+    fun eachRowShowsItsKeyAndDraggingMovesItToAnotherSlot() {
         screen()
-        compose.onNodeWithTag("symbol-up-0").assertIsNotEnabled()
-        compose.onNodeWithTag("symbol-down-0").performClick()
+        compose.onNodeWithTag("symbol-key-0", useUnmergedTree = true).assertTextEquals("Alt+Shift+1")
+        compose.onNodeWithTag("symbol-key-4", useUnmergedTree = true).assertTextEquals("Alt+Shift+5")
+        compose.onNodeWithTag("symbol-count").performScrollTo().assertTextEquals("5 of 9")
+        val first = compose.onNodeWithTag("symbol-glyph-0", useUnmergedTree = true).fetchSemanticsNode().size
+        assertEquals(first, compose.onNodeWithTag("symbol-glyph-3", useUnmergedTree = true).fetchSemanticsNode().size)
+        // Dragged down by a little over one row: it takes the second slot.
+        val row = compose.onNodeWithTag("symbol-row-0").fetchSemanticsNode().size.height.toFloat()
+        compose.onNodeWithTag("drag-★", useUnmergedTree = true).performScrollTo().performTouchInput {
+            down(center)
+            moveBy(androidx.compose.ui.geometry.Offset(0f, 20f))
+            moveBy(androidx.compose.ui.geometry.Offset(0f, row * 0.8f))
+            up()
+        }
         assertEquals(listOf("?", "★", "!", "💡", "→"), stored.last().map { it.glyph })
         compose.onNodeWithTag("symbols-notice").assertTextContains("★ is now symbol 2.")
         // Moved: Restore defaults has something to do now.
@@ -269,8 +283,28 @@ class SymbolsScreenTest {
     fun waitsForTheFirstSyncBeforeAnyChange() {
         screen(enabled = false)
         compose.onNodeWithText(SETTINGS_WAIT).assertIsDisplayed()
-        compose.onNodeWithTag("symbol-down-0").assertIsNotEnabled()
+        compose.onNodeWithTag("symbol-delete-0").assertIsNotEnabled()
         compose.onNodeWithTag("symbol-add").performScrollTo().assertIsNotEnabled()
+    }
+
+    @Test
+    fun aRowsRemoveTakesItOffAndARebindingShowsItsNewKey() {
+        var symbols by mutableStateOf(LineSymbols.DEFAULTS)
+        compose.setContent {
+            PenmossTheme {
+                SymbolsScreen(
+                    symbols = symbols, custom = false, enabled = true,
+                    onChange = { next -> stored += next; symbols = next; null },
+                    onReset = {}, onShortcuts = {}, onBack = {},
+                    keys = symbolKeys(JsonObject(mapOf("keys.editor.symbol1" to kotlinx.serialization.json.JsonArray(listOf(JsonPrimitive("Mod+Shift+1"))))))
+                )
+            }
+        }
+        compose.onNodeWithTag("symbol-key-0", useUnmergedTree = true).assertTextEquals("Ctrl+Shift+1")
+        compose.onNodeWithTag("symbol-key-1", useUnmergedTree = true).assertTextEquals("Alt+Shift+2")
+        compose.onNodeWithTag("symbol-delete-1").performClick()
+        assertEquals(listOf("★", "!", "💡", "→"), stored.last().map { it.glyph })
+        compose.onNodeWithTag("symbols-notice").assertTextContains("Removed ?.", substring = true)
     }
 
     @Test

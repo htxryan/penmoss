@@ -10,6 +10,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -49,19 +50,21 @@ import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
 
-/** The feedback screens' routes (T49). */
+/** The feedback screens' routes (T49; PEN-146). */
 object FeedbackRoutes {
     const val FORM = "feedback"
+
+    /** Settings → About, which Settings → GitHub replaced (PEN-146): opens GitHub. */
     const val ABOUT = "settings/about"
 
-    /** Settings → About → GitHub Token (A1012). */
-    const val GITHUB_TOKEN = "settings/about/github-token"
+    /** Settings → GitHub → Use a Token Instead… (A1012). */
+    const val GITHUB_TOKEN = "settings/github/token"
 
-    /** What About's GitHub Token row says. */
+    /** What Settings' GitHub row says (PEN-146): the account, or how to add one. */
     fun tokenSummary(saved: Boolean, login: String?): String = when {
-        !saved -> "Not set: Send Feedback needs it to file the issue"
-        login != null -> "Saved, for @$login"
-        else -> "Saved"
+        !saved -> "Not signed in"
+        login != null -> login
+        else -> "Signed in"
     }
 }
 
@@ -130,44 +133,122 @@ private fun sizeOf(context: Context, uri: Uri): Long? = runCatching {
 }.getOrNull()
 
 /**
- * Settings → About (T49): the app's version and build, Send feedback, its GitHub token and the
- * feedback still on the phone ([outbox], A1046).
+ * Settings → GitHub (PEN-146; replaces About, A1012): the GitHub account this phone uses, with Sign
+ * Out; Sign In with GitHub (GitHub's device flow, [signIn]) or Use a Token Instead…; what the
+ * account is used for, Send Feedback opening the form; and the feedback still on the phone
+ * ([outbox], A1046). The version is on What's New alone.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AboutScreen(
-    version: String,
-    onSendFeedback: () -> Unit,
+fun GitHubScreen(
+    /** The account's login, or null; [signedIn] without a login is a token GitHub did not name. */
+    login: String?,
+    signedIn: Boolean,
+    signIn: SignInState,
+    canSignIn: Boolean,
+    onSignIn: () -> Unit,
+    onCancelSignIn: () -> Unit,
+    onSignOut: () -> Unit,
+    onToken: () -> Unit,
     onBack: () -> Unit,
-    /** What the GitHub Token row says (A1012), and where it goes; no row without it. */
-    githubToken: String? = null,
-    onGitHubToken: () -> Unit = {},
+    repo: String = "htxryan/penmoss",
+    /** Send Feedback's form, where it can open (a notebook's screens); null on the app's home. */
+    onSendFeedback: (() -> Unit)? = null,
     /** The feedback outbox ([FeedbackOutboxRoute]): nothing while it is empty. */
     outbox: @Composable () -> Unit = {},
 ) {
-    Scaffold(topBar = { TopAppBar(title = { Text("About") }, navigationIcon = { BackButton(onBack) }) }) { padding ->
+    var signingOut by rememberSaveable { mutableStateOf(false) }
+    Scaffold(topBar = { TopAppBar(title = { Text("GitHub") }, navigationIcon = { BackButton(onBack) }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(vertical = 8.dp)) {
-            ListItem(headlineContent = { Text("Penmoss for Android") }, supportingContent = { Text("Version $version", Modifier.testTag("aboutVersion")) })
+            if (signedIn) {
+                ListItem(
+                    headlineContent = { Text(login ?: "Signed in", Modifier.testTag("githubLogin")) },
+                    supportingContent = { Text("Signed in with GitHub · kept on this phone, encrypted by the Android Keystore") },
+                    trailingContent = { TextButton(onClick = { signingOut = true }, Modifier.testTag("githubSignOut")) { Text("Sign Out") } },
+                )
+            } else {
+                ListItem(
+                    headlineContent = { Text("Not signed in", Modifier.testTag("githubLogin")) },
+                    supportingContent = { Text("Sign in so Send Feedback can file issues in $repo.") },
+                )
+            }
+            when (signIn) {
+                is SignInState.Waiting -> Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("githubSignInWaiting")) {
+                    Text("Enter this code on GitHub:", style = MaterialTheme.typography.bodyMedium)
+                    Text(signIn.userCode, Modifier.testTag("githubUserCode"), style = MaterialTheme.typography.headlineSmall)
+                    Text("at ${signIn.verificationUri}. Penmoss waits here until you approve it.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onClick = onCancelSignIn, Modifier.testTag("githubSignInCancel")) { Text("Cancel") }
+                }
+                else -> {
+                    signInWords(signIn)?.let {
+                        Text(
+                            it,
+                            Modifier.padding(horizontal = 16.dp, vertical = 4.dp).semantics { liveRegion = LiveRegionMode.Polite }.testTag("githubSignInMessage"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (signIn is SignInState.Failed || signIn is SignInState.Denied) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                    Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (canSignIn) {
+                            app.penmoss.ui.common.Button(onClick = onSignIn, Modifier.testTag("githubSignIn")) { Text(if (signedIn) "Sign In Again" else "Sign In with GitHub") }
+                        }
+                        app.penmoss.ui.common.OutlinedButton(onClick = onToken, Modifier.testTag("githubUseToken")) { Text("Use a Token Instead…") }
+                    }
+                }
+            }
+            Text(
+                "Used For",
+                Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp).semantics { heading() },
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
             ListItem(
                 headlineContent = { Text("Send Feedback") },
                 supportingContent = {
-                    Text("A bug report or a feature request, filed on the Penmoss board with where you are in the app and the note’s details, never its text.")
+                    Text(
+                        "Opens issues in $repo: a bug report or a feature request, with where you are in the app and the note’s details, never its text." +
+                            if (onSendFeedback == null) " Send it from a notebook’s ⋮ menu." else "",
+                    )
                 },
-                modifier = Modifier.clickable(role = Role.Button, onClick = onSendFeedback).testTag("aboutSendFeedback"),
+                trailingContent = if (onSendFeedback != null) ({ Text("›", style = MaterialTheme.typography.titleMedium) }) else null,
+                modifier = (if (onSendFeedback != null) Modifier.clickable(role = Role.Button, onClick = onSendFeedback) else Modifier).testTag("githubSendFeedback"),
             )
-            if (githubToken != null) {
-                ListItem(
-                    headlineContent = { Text("GitHub Token") },
-                    supportingContent = { Text(githubToken) },
-                    modifier = Modifier.clickable(role = Role.Button, onClick = onGitHubToken).testTag("aboutGitHubToken"),
-                )
-            }
+            Text(
+                "A notebook’s own repository uses the token typed on its Git tab.",
+                Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             outbox()
         }
     }
+    if (signingOut) {
+        AlertDialog(
+            onDismissRequest = { signingOut = false },
+            title = { Text("Sign Out of GitHub?") },
+            text = { Text("This phone forgets the account. Feedback waits on the phone until you sign in again; your notebooks keep their own tokens.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    signingOut = false
+                    onSignOut()
+                }, Modifier.testTag("githubSignOutConfirm")) { Text("Sign Out") }
+            },
+            dismissButton = { TextButton(onClick = { signingOut = false }) { Text("Cancel") } },
+        )
+    }
 }
 
-/** How a waiting or refused submission is described in Settings → About. */
+/** What the screen says of a sign-in that has ended, in plain words; null with nothing to say. */
+internal fun signInWords(state: SignInState): String? = when (state) {
+    SignInState.Idle, is SignInState.Waiting -> null
+    is SignInState.SignedIn -> state.message
+    SignInState.Denied -> "GitHub says the sign-in was declined. Nothing was kept."
+    SignInState.Expired -> "The code ran out before it was entered. Sign in again for a new one."
+    SignInState.Cancelled -> "Stopped. Nothing was kept."
+    is SignInState.Failed -> state.message
+}
+
+/** How a waiting or refused submission is described in Settings → GitHub. */
 internal fun outboxLine(row: FeedbackOutboxEntity, dateOf: (Long) -> String): String = when (row.state) {
     // The web's words (T39 pass 3, A892).
     FeedbackOutboxEntity.FAILED -> "Not sent: ${row.lastError.orEmpty().trimEnd('.').ifEmpty { "refused" }}${row.lastStatus?.let { " ($it)" }.orEmpty()}."
@@ -179,7 +260,7 @@ internal fun outboxLine(row: FeedbackOutboxEntity, dateOf: (Long) -> String): St
 }
 
 /**
- * Settings → About's feedback still on the phone (T49, A796; A1046): each with Retry and Discard, and
+ * Settings → GitHub's feedback still on the phone (T49, A796; A1046): each with Retry and Discard, and
  * one refused with Edit too, which puts it back in the form (T49 review).
  */
 @Composable
@@ -194,7 +275,7 @@ fun FeedbackOutboxList(
     if (rows.isEmpty()) return
     var discarding by rememberSaveable { mutableStateOf<String?>(null) }
     Text(
-        "Feedback outbox",
+        "Feedback Outbox",
         Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp).semantics { heading() },
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,

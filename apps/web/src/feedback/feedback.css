@@ -33,6 +33,21 @@
   font-size: var(--pm-text-sm);
 }
 
+/* Waiting to Send (PEN-146): the reports not sent yet, over the form that writes new ones. */
+.feedback-outbox h3 {
+  margin: 0 0 0.35rem;
+  font-size: var(--pm-text-md);
+  font-weight: 600;
+}
+
+.feedback-outbox .list {
+  margin: 0;
+}
+
+.feedback-outbox .field-error {
+  margin: 0.4rem 0 0;
+}
+
 .feedback-choice {
   margin: 0;
   padding: 0;

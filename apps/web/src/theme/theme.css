@@ -277,15 +277,21 @@ fieldset:disabled .theme-card {
   background: var(--sw-accent);
 }
 
-/* The theme editor. */
+/* The theme editor, opened from Appearance's Customize… in place of the page (PEN-146). */
 .theme-editor {
-  margin-top: 2rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--pm-border-soft);
+  margin-top: 0.5rem;
+}
+
+.theme-editor-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .theme-editor h3 {
-  margin: 0 0 0.6rem;
+  margin: 0;
   font-size: var(--pm-text-lg);
 }
 
@@ -322,7 +328,11 @@ fieldset:disabled .theme-card {
   margin: 0;
 }
 
-/* The preview sets the edited variant's tokens on itself: everything inside reads them. */
+/*
+ * The miniature of Penmoss (AppPreview), on Appearance and in the theme editor. The editor sets
+ * the edited variant's tokens on it; everything inside reads them, and the note's text follows
+ * the Note Font Size (`--pm-note-size`), scaled down.
+ */
 .theme-preview {
   display: grid;
   grid-template-columns: 8.5rem minmax(0, 1fr);
@@ -365,12 +375,30 @@ fieldset:disabled .theme-card {
 }
 
 .tp-title {
-  font: 700 1.15rem/1.25 var(--pm-font-body);
+  font: 700 calc(var(--pm-note-size, 16px) * 1.15) / 1.25 var(--pm-font-body);
+}
+
+.tp-main .tp-meta {
+  font-size: var(--pm-text-xs);
 }
 
 .tp-text {
   font-family: var(--pm-font-body);
+  font-size: calc(var(--pm-note-size, 16px) * 0.875);
   line-height: 1.6;
+}
+
+.tp-task {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.tp-box {
+  flex: none;
+  width: 0.8em;
+  height: 0.8em;
+  border: 1.5px solid var(--pm-border-strong);
 }
 
 .tp-link {
@@ -459,6 +487,12 @@ fieldset:disabled .theme-card {
   background: var(--pm-accent);
   color: var(--pm-on-accent);
   font-weight: 600;
+}
+
+.tp-plain {
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-raised);
 }
 
 .tp-danger {

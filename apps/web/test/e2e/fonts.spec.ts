@@ -4,7 +4,7 @@ import { NEW_NOTE } from './keys';
 import { storedSetting } from './stored';
 import { readRemote } from './support/remote';
 
-// T51 item 16 (A944): Settings → Appearance → Fonts. The Interface Font, the Note Font and the
+// T51 item 16 (A944): Settings → Appearance → Text. The Interface Font, the Note Font and the
 // Note Font Size are synced settings laid over the theme's fonts: the interface takes the
 // first, a note's title, headings and text the second and third, code keeps the theme's mono
 // font, and the page starts in them after a reload. On a git notebook (T59) they are the

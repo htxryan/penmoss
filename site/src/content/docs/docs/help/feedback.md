@@ -10,16 +10,16 @@ This page shows you how to send a bug report or a feature request from Penmoss, 
 ## Where it is
 
 - **On the Mac:** **Help → Send Feedback**, the sidebar's feedback button, the note's ⋯ menu, or the command palette.
-- **On Android:** the ⋮ menu on Home or in a note, or **Settings → About → Send Feedback**.
+- **On Android:** the ⋮ menu on Home or in a note, or **Settings → GitHub → Send Feedback**.
 
-## Your GitHub token
+## Your GitHub account
 
-Feedback is filed with a GitHub token of yours:
+Feedback is filed with your own GitHub account:
 
-- **On the Mac:** **Settings → Status → GitHub Token**. If you used [Sign in with GitHub](/docs/first-notebook/#sign-in-with-github), it is already there.
-- **On Android:** **Settings → About → GitHub Token**.
+- **On the Mac:** **Settings → GitHub**. Choose **Sign In with GitHub**, or **Use a Token Instead…** to paste a token. If you used [Sign in with GitHub](/docs/first-notebook/#sign-in-with-github) to add a notebook, you're already signed in. The page also says how many reports are waiting, and **Open** opens Send Feedback. **Sign Out** forgets the sign-in.
+- **On Android:** **Settings → GitHub**: **Sign In with GitHub**, or **Use a Token Instead…**.
 
-A classic token with the `public_repo` scope works. Penmoss checks the token when you save it, and keeps it encrypted on the device. Without a token, a report waits until you save one.
+A classic token with the `public_repo` scope works. Penmoss checks a token when you save it, and keeps it encrypted on the device. Without a sign-in, a report waits until you sign in.
 
 ## The form
 
@@ -43,7 +43,7 @@ Facts about the app, never your notes' text:
 
 ## Offline
 
-A report sent offline waits in an outbox and goes when the device is back online; the form says **Queued, will send when you're online**. A report GitHub refuses stays in the outbox with the reason, with **Edit**, **Retry** and **Discard**. On the Mac the outbox is in **Settings → Status**; on Android, in **Settings → About**.
+A report sent offline waits in an outbox and goes when the device is back online; the form says **Queued, will send when you're online**. A report GitHub refuses stays in the outbox with the reason, with **Edit**, **Retry** and **Discard**. On the Mac, reports waiting to send are listed at the top of the Send Feedback form, under **Waiting to Send**; on Android, in **Settings → About**.
 
 ## Without the app
 

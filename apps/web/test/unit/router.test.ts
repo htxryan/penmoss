@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { isPlainLeftClick, notePath, parseRoute } from '../../src/router';
+import {
+  gitNotebookPath,
+  isPlainLeftClick,
+  notebookAgentsPath,
+  notePath,
+  parseRoute,
+  settingsRedirect,
+} from '../../src/router';
 
 const ID = '01JB7Q3V6M8K2T9RZ4XN5C1HPD';
 
@@ -52,7 +59,32 @@ describe('parseRoute', () => {
       item: '01M6F03GY028BT0CNQR1YRC2TE',
     });
     expect(parseRoute('/settings/shortcuts/01M6F03GY028BT0CNQR1YRC2TE').name).toBe('not-found');
+    // PEN-146's new sections.
+    for (const section of ['sidebar', 'note', 'quick-capture', 'agent-activity', 'github']) {
+      expect(parseRoute(`/settings/${section}`)).toEqual({ name: 'settings', section });
+    }
     expect(parseRoute('/settings/git-notebooks/nope').name).toBe('not-found');
+  });
+
+  // PEN-146: Display became Sidebar, Status became GitHub; old links, bookmarks and commands land.
+  it('opens a renamed section at its new name', () => {
+    expect(parseRoute('/settings/display')).toEqual({ name: 'settings', section: 'sidebar' });
+    expect(parseRoute('/settings/status')).toEqual({ name: 'settings', section: 'github' });
+    expect(settingsRedirect('/settings/display')).toBe('/settings/sidebar');
+    expect(settingsRedirect('/settings/status/')).toBe('/settings/github');
+    expect(settingsRedirect('/settings/sidebar')).toBeNull();
+    expect(settingsRedirect('/settings/constructor')).toBeNull();
+    expect(parseRoute('/settings/constructor').name).toBe('not-found');
+    expect(parseRoute('/settings/display/01M6F03GY028BT0CNQR1YRC2TE').name).toBe('not-found');
+    // The notebook pages keep their addresses.
+    expect(gitNotebookPath('01M6F03GY028BT0CNQR1YRC2TE')).toBe(
+      '/settings/git-notebooks/01M6F03GY028BT0CNQR1YRC2TE',
+    );
+    expect(parseRoute(notebookAgentsPath('01M6F03GY028BT0CNQR1YRC2TE'))).toEqual({
+      name: 'settings',
+      section: 'agents',
+      item: '01M6F03GY028BT0CNQR1YRC2TE',
+    });
   });
 
   it('opens notes by ULID, with or without a trailing slash', () => {

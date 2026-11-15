@@ -1,23 +1,28 @@
 package app.penmoss.ui.settings
 
-import app.penmoss.ui.common.TextButton
 import androidx.compose.foundation.layout.Row
-import app.penmoss.engine.settings.SidebarLayout
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import app.penmoss.engine.settings.SidebarLayout
+import app.penmoss.ui.common.TextButton
 
 /**
- * Settings → Display (T42, A576; T40 ST12, A650): a switch for each of Home's shortcuts, synced
- * with the web's sidebar. Search always shows. Nothing changes before the first sync has sent
- * the settings, as in Appearance.
+ * Settings → Home (T42, A576; T40 ST12, A650; PEN-146): the Mac's Sidebar page, with only what Home
+ * has. A switch for each of Home's shortcuts (Tags is new, A1438); Home's sections, dragged into
+ * their order and each shown or hidden; Quick Access's notebook names; and how many notes Recent
+ * Notes lists. Search always shows. Nothing changes before the settings are read.
  */
 @Composable
 fun DisplayScreen(
@@ -30,60 +35,77 @@ fun DisplayScreen(
     onSectionHidden: (section: String, hide: Boolean) -> Unit = { _, _ -> },
     onRecentCount: (Int) -> Unit = {},
     onQuickAccessNotebook: (Boolean) -> Unit = {},
+    /** Home's sections in their new order (PEN-146). */
+    onSectionOrder: (List<String>) -> Unit = {},
 ) {
-    SectionScreen("Display", onBack, notice = if (enabled) null else SETTINGS_WAIT) {
+    SectionScreen("Home", onBack, notice = if (enabled) null else SETTINGS_WAIT) {
+        Help("A hidden shortcut still works from Search and a keyboard. Search always shows.")
         GroupTitle("Shortcuts on Home")
-        Help("Hide the ones you don’t use. They still open from Search and a keyboard, and the web and Mac apps hide them from the sidebar too. Search always shows.")
-        for (choice in choices) {
-            ListItem(
-                headlineContent = { Text(choice.label) },
-                supportingContent = { Text(choice.where) },
-                trailingContent = { Switch(checked = choice.shown, onCheckedChange = null, enabled = enabled) },
-                // The whole row is the switch, so TalkBack reads one control with its name.
-                modifier = Modifier
-                    .testTag("display-${choice.key}")
-                    .toggleable(value = choice.shown, enabled = enabled, role = Role.Switch) { onChange(choice.key, it) },
-            )
-        }
+        for (choice in choices) Toggle(choice.label, null, choice.shown, enabled, "display-${choice.key}") { onChange(choice.key, it) }
         GroupTitle("Sections")
-        Help("Which of the sidebar’s sections show, in its order: on Home, Quick Access, Notebooks and Recent Notes; on the web and the Mac, the Calendar and Tags too. A section title’s long press moves or hides it.")
-        for (section in layout.order) {
+        Help("Drag a section by its handle to move it.")
+        val home = layout.order.filter { it in HomeLayout.HOME_SECTIONS }
+        ReorderableColumn(
+            items = home,
+            key = { it },
+            name = { SidebarLayout.NAMES.getValue(it) },
+            enabled = enabled,
+            onMove = { from, to -> onSectionOrder(home.movedTo(from, to)) },
+            modifier = Modifier.testTag("homeSections"),
+        ) { section, _, handle ->
             val shown = section !in layout.hidden
             ListItem(
+                leadingContent = handle,
                 headlineContent = { Text(SidebarLayout.NAMES.getValue(section)) },
-                supportingContent = if (section in HomeLayout.HOME_SECTIONS) null else ({ Text("In the sidebar on the web and the Mac") }),
-                trailingContent = { Switch(checked = shown, onCheckedChange = null, enabled = enabled) },
-                modifier = Modifier
-                    .testTag("display-section-$section")
-                    .toggleable(value = shown, enabled = enabled, role = Role.Switch) { onSectionHidden(section, !it) },
+                supportingContent = when (section) {
+                    SidebarLayout.RECENT -> ({ Text("Shows ${layout.recentCount}") })
+                    else -> null
+                },
+                trailingContent = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (section == SidebarLayout.RECENT) RecentStepper(layout.recentCount, enabled, onRecentCount)
+                        // Its own switch, not the row's: the row holds the drag handle and the stepper too.
+                        Switch(
+                            checked = shown,
+                            onCheckedChange = { onSectionHidden(section, !it) },
+                            enabled = enabled,
+                            modifier = Modifier.testTag("display-section-$section").semantics { contentDescription = "Show ${SidebarLayout.NAMES.getValue(section)}" },
+                        )
+                    }
+                },
             )
-        }
-        ListItem(
-            headlineContent = { Text("Notes in Recent Notes") },
-            supportingContent = { Text("${layout.recentCount}") },
-            trailingContent = {
-                Row {
-                    TextButton(
-                        onClick = { onRecentCount(layout.recentCount - 1) },
-                        enabled = enabled && layout.recentCount > SidebarLayout.RECENT_MIN,
-                        // Named for TalkBack, which would read "minus" alone (T53 pass).
-                        modifier = Modifier.testTag("recentFewer").semantics { contentDescription = "Fewer Notes in Recent Notes" },
-                    ) { Text("−") }
-                    TextButton(
-                        onClick = { onRecentCount(layout.recentCount + 1) },
-                        enabled = enabled && layout.recentCount < SidebarLayout.RECENT_MAX,
-                        modifier = Modifier.testTag("recentMore").semantics { contentDescription = "More Notes in Recent Notes" },
-                    ) { Text("+") }
+            if (section == SidebarLayout.QUICK_ACCESS) {
+                Toggle("Show Notebook Names", "Under each note in Quick Access", layout.quickAccessNotebook, enabled, "display-quickAccessNotebook", Modifier.padding(start = 40.dp)) {
+                    onQuickAccessNotebook(it)
                 }
-            },
-            modifier = Modifier.testTag("display-recentCount"),
-        )
-        ListItem(
-            headlineContent = { Text("Show Notebook Names in Quick Access") },
-            trailingContent = { Switch(checked = layout.quickAccessNotebook, onCheckedChange = null, enabled = enabled) },
-            modifier = Modifier
-                .testTag("display-quickAccessNotebook")
-                .toggleable(value = layout.quickAccessNotebook, enabled = enabled, role = Role.Switch) { onQuickAccessNotebook(it) },
-        )
+            }
+        }
     }
+}
+
+/** A switch as a whole row, so TalkBack reads one control with its name. */
+@Composable
+private fun Toggle(label: String, supporting: String?, on: Boolean, enabled: Boolean, tag: String, modifier: Modifier = Modifier, onChange: (Boolean) -> Unit) {
+    ListItem(
+        headlineContent = { Text(label) },
+        supportingContent = supporting?.let { { Text(it, style = MaterialTheme.typography.bodySmall) } },
+        trailingContent = { Switch(checked = on, onCheckedChange = null, enabled = enabled) },
+        modifier = modifier.testTag(tag).toggleable(value = on, enabled = enabled, role = Role.Switch, onValueChange = onChange),
+    )
+}
+
+/** Recent Notes' − and + (1 to 50), each named for TalkBack, which would read "minus" alone (T53 pass). */
+@Composable
+private fun RecentStepper(count: Int, enabled: Boolean, onRecentCount: (Int) -> Unit) {
+    TextButton(
+        onClick = { onRecentCount(count - 1) },
+        enabled = enabled && count > SidebarLayout.RECENT_MIN,
+        modifier = Modifier.testTag("recentFewer").semantics { contentDescription = "Fewer Notes in Recent Notes" },
+    ) { Text("−") }
+    Text("$count", Modifier.testTag("display-recentCount"))
+    TextButton(
+        onClick = { onRecentCount(count + 1) },
+        enabled = enabled && count < SidebarLayout.RECENT_MAX,
+        modifier = Modifier.testTag("recentMore").semantics { contentDescription = "More Notes in Recent Notes" },
+    ) { Text("+") }
 }

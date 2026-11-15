@@ -500,57 +500,6 @@
     background: var(--pm-accent-soft);
   }
 
-  /* Each shortcut is one compact row: the command over its keys, the icon buttons beside them. */
-  .kb-table thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
-
-  .kb-table tbody tr {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      'name actions'
-      'keys actions';
-    align-items: center;
-    column-gap: 0.5rem;
-    padding: 0.4rem 0;
-    border-bottom: 1px solid var(--pm-border);
-  }
-
-  .kb-table tbody th,
-  .kb-table tbody td {
-    padding: 0;
-    border: 0;
-  }
-
-  .kb-table tbody th {
-    grid-area: name;
-    overflow-wrap: anywhere;
-  }
-
-  .kb-table .area {
-    display: none;
-  }
-
-  .kb-table .kb-keys {
-    grid-area: keys;
-    padding-top: 0.2rem;
-    white-space: normal;
-  }
-
-  .kb-table .kb-keys .keys {
-    flex-wrap: wrap;
-  }
-
-  .kb-table .act {
-    grid-area: actions;
-    width: auto;
-  }
-
   .list li {
     flex-wrap: wrap;
   }

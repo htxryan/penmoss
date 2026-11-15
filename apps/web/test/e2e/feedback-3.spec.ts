@@ -87,10 +87,13 @@ test('1, 3: the rail starts at the top, square; Today and This Week show when th
   expect(errors).toEqual([]);
 });
 
-/** Shows or hides a sidebar section in Settings → Display (T62 item 11), then goes back. */
+/** Shows or hides a sidebar section in Settings → Sidebar (T62 item 11), then goes back. */
 async function toggleSection(page: Page, section: string): Promise<void> {
   await page.getByTestId('sidebar-settings').click();
-  await page.getByRole('navigation', { name: 'Settings sections' }).getByText('Display').click();
+  await page
+    .getByRole('navigation', { name: 'Settings sections' })
+    .getByRole('link', { name: 'Sidebar', exact: true })
+    .click();
   await page.getByTestId(`display-section-${section}`).click();
   await page.goBack();
   await page.goBack();
@@ -310,8 +313,8 @@ test('10: Quick Access removes from its menu, reorders, and names the notebook w
   await page.keyboard.press('Alt+ArrowUp');
   await expect.poll(async () => (await ids()).slice(-2)).toEqual([b, a]);
 
-  // Settings → Display: each pin's notebook under its title.
-  await page.goto('/settings/display');
+  // Settings → Sidebar: each pin's notebook under its title.
+  await page.goto('/settings/sidebar');
   await expect(page.getByTestId('quick-access-notebook')).not.toBeChecked();
   await page.getByTestId('quick-access-notebook').check();
   await expect.poll(() => storedSetting(page, 'quickAccess.showNotebook')).toBe(true);
@@ -332,7 +335,7 @@ test('10: Quick Access removes from its menu, reorders, and names the notebook w
       0,
     );
   }
-  await page.goto('/settings/display');
+  await page.goto('/settings/sidebar');
   await expect(page.getByTestId('quick-access-notebook')).toBeChecked();
   await page.getByTestId('quick-access-notebook').uncheck();
   await expect.poll(() => storedSetting(page, 'quickAccess.showNotebook')).toBe(false);
@@ -555,12 +558,10 @@ test('8, fidelity: Settings, menus, Trash and search keep their columns, and cho
         return [b.x, b.y, b.width, b.height].map((n) => Math.round(n * 10) / 10);
       }),
     );
-  // Settings → Display: a group's label and a field's label in one type, as far over their
-  // controls, each group as far under what is above it (A988).
-  await page.goto('/settings/display');
-  const labels = page.locator(
-    '.settings-content :is(.display-toggles > legend, .settings-field > span:first-child)',
-  );
+  // Settings → Sidebar: every row's label in one type, and each group as far under its
+  // subhead (A988, in PEN-146's rows).
+  await page.goto('/settings/sidebar');
+  const labels = page.locator('.settings-content .lf-row-label');
   await expect(labels.first()).toBeVisible();
   const type = await labels.evaluateAll((all) =>
     all.map((el) => {
@@ -570,25 +571,25 @@ test('8, fidelity: Settings, menus, Trash and search keep their columns, and cho
   );
   expect(type.length).toBeGreaterThan(2);
   expect(new Set(type).size).toBe(1);
-  const above = await page
-    .locator('.settings-content .settings-section > :is(.display-toggles, .settings-field)')
-    .evaluateAll((all) =>
-      all.map((el) => {
-        const prev = el.previousElementSibling!.getBoundingClientRect();
-        return Math.round(el.getBoundingClientRect().top - prev.bottom);
-      }),
-    );
+  const above = await page.locator('.settings-content .lf-sub + .lf-group').evaluateAll((all) =>
+    all.map((el) => {
+      const prev = el.previousElementSibling!.getBoundingClientRect();
+      return Math.round(el.getBoundingClientRect().top - prev.bottom);
+    }),
+  );
+  expect(above.length).toBe(2);
   expect(new Set(above).size).toBe(1);
   // A section's actions are one height. (Settings → Notebooks, whose link drawn as a button this
-  // measured, went with the server's notebooks, A912: the git notebook's card has the actions.)
+  // measured, went with the server's notebooks, A912: the git notebook's page has the actions,
+  // Sync Now in its header and its Overview's, PEN-146.)
   await page.goto('/settings/git-notebooks');
   await page.getByTestId('git-notebook-row').first().click();
   await expect(page.getByTestId('git-sync-now')).toBeVisible();
-  const buttons = await box('[data-testid="git-notebook"] .settings-actions .btn');
+  const buttons = await box('[data-testid="git-notebook"] .btn');
   expect(buttons.length).toBeGreaterThan(1);
   expect(new Set(buttons.map((each) => each[3])).size).toBe(1);
-  // Appearance → Note Panel (this device's own): choosing a segment moves none of them.
-  await page.goto('/settings/appearance');
+  // Note → Note Panel (this device's own): choosing a segment moves none of them.
+  await page.goto('/settings/note');
   const panel = page.getByTestId('note-panel-setting');
   await expect(panel).toBeVisible();
   const options = '[data-testid="note-panel-setting"] .seg-option';

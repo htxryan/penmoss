@@ -3,7 +3,7 @@
  * ⌃⌥⌘N on a Mac: macOS and the common Mac apps leave ⌃⌥⌘ combinations
  * alone (⌘⇧Space is 1Password's, ⌥Space Raycast's and Alfred's, ⌃⌥Space
  * switches input sources), and N is for note. It can be changed in Settings →
- * Keyboard shortcuts; the choice is this Mac's own (preferences.json), not a
+ * Quick Capture; the choice is this Mac's own (preferences.json), not a
  * synced setting, since a hotkey free on one machine may be taken on another
  * (preferences.ts).
  *
@@ -116,7 +116,7 @@ export class HotkeyChangeGate {
     readonly now: number;
   }): string | null {
     if (!/^app:\/\/penmoss\/settings(?:[/?#]|$)/.test(request.url) || !request.gesture) {
-      return 'Change the capture shortcut in Settings → Keyboard Shortcuts';
+      return 'Change the capture shortcut in Settings → Quick Capture';
     }
     while (this.recent.length > 0 && request.now - this.recent[0]! >= 60_000) this.recent.shift();
     if (this.recent.length >= HotkeyChangeGate.PER_MINUTE) {

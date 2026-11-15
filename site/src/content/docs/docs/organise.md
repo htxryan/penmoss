@@ -7,17 +7,17 @@ This page shows you how to organise your notes: several notebooks side by side, 
 
 ## Notebooks
 
-Each git notebook has its own section in the sidebar, with its folder tree, its sync state and its own Trash. Add more in **Settings → Notebooks → Add a Git Notebook…**.
+Each git notebook has its own section in the sidebar, with its folder tree, its sync state and its own Trash. Add more in **Settings → All Notebooks → Add Notebook…**. Each notebook also has its own entry under **All Notebooks** in Settings, with its sync dot, which opens its page.
 
 - **Search** covers every notebook, and labels each result with its notebook.
 - **Links, embeds, tags, the graph and backlinks** stay inside one notebook.
 - **New notes** go where you last clicked: a notebook's **Top level**, or a folder.
 - **Move to Notebook…** and **Copy to Notebook…**, in a note's or folder's right-click menu, take it to another notebook.
-- **Copy Tags**, at the bottom of Copy to Notebook's picker, chooses whether the copies keep the tags you added to their notes. Turn it on or off by default in **Settings → Notebooks → Copy to Notebook**; it is on unless you change it. Tags typed in a note's text, like #idea, are part of the note and always go with it. Move to Notebook always keeps the tags.
+- **Copy Tags**, at the bottom of Copy to Notebook's picker, chooses whether the copies keep the tags you added to their notes. Turn it on or off by default with **Copy Tags When Copying Notes**, under **Between Notebooks** in **Settings → All Notebooks**; it is on unless you change it. Tags typed in a note's text, like #idea, are part of the note and always go with it. Move to Notebook always keeps the tags.
 
 ### Rename a notebook
 
-Point at a notebook's row in the sidebar, open its ⋯ menu (**More Notebook Actions**) and choose **Rename…**, or right-click the row and choose **Rename Notebook**. Type the new name and press Return (Escape keeps the old one). Or change **Notebook Name** on its page in **Settings → Notebooks** and choose **Rename**.
+Point at a notebook's row in the sidebar, open its ⋯ menu (**More Notebook Actions**) and choose **Rename…**, or right-click the row and choose **Rename Notebook**. Type the new name and press Return (Escape keeps the old one). Or change **Name** on its page in Settings (choose the notebook under **All Notebooks**), and choose **Rename**.
 
 The name is kept in the notebook's repository, so it renames it on every device that syncs it, your agents' copies included. Agents keep working: `--notebook` still finds a notebook by the name it had before.
 
@@ -25,7 +25,9 @@ Two notebooks with one name can't be told apart by agents, so Penmoss warns when
 
 ### The Primary Notebook
 
-One notebook is your **Primary Notebook**. Today's note, This Week's note, the calendar, the Inbox and quick capture use it, and your app settings are kept in it. Choose it in **Settings → Notebooks**: open the notebook and choose **Make Primary Notebook**. Each Mac chooses its own. On Android the same setting is **Journal notebook**, in **Settings → Notebooks**.
+One notebook is your **Primary Notebook**. Today's note, This Week's note, the calendar, the Inbox and quick capture use it, and your app settings are kept in it. Choose it with **Primary Notebook** in **Settings → All Notebooks**. Each Mac chooses its own; the notebook's row and page show a **Primary** chip.
+
+To give another notebook the same settings, choose **Copy Settings…** under **Between Notebooks**, pick **From** and **To**, and choose **Copy Settings**: it replaces the other notebook's settings, once (Quick Access stays as it is). **Keep Settings in Step** does it for every change from then on, on this Mac. On Android the same setting is **Journal notebook**, in **Settings → Notebooks**.
 
 ## Folders
 
@@ -78,9 +80,22 @@ Quick Access holds up to 20 notes you want at hand. **Pin to Quick Access** in a
 
 ## Recent Notes and the Inbox
 
-- **Recent Notes** lists the notes opened on this device or changed anywhere, newest first: ten unless you change it in **Settings → Display**. **Switch to a Recent Note** (⌘E) steps through them.
+- **Recent Notes** lists the notes opened on this device or changed anywhere, newest first: ten unless you change it with **−** and **+** in **Settings → Sidebar** (1 to 50). **Switch to a Recent Note** (⌘E) steps through them.
 - **Inbox** is the top-level folder that [quick capture](/docs/quick-capture/) files new notes in. Penmoss uses a folder called Inbox if you have one, and makes it otherwise.
 
 ## The sidebar
 
-**Settings → Display** chooses which shortcuts the sidebar's top row shows (Search is always there; Tags, Today, This Week, Graph and Commands show unless you turn them off), the order of its sections (Quick Access, Recent Notes, Notebooks, Calendar, Tags), and how many notes Recent Notes lists. ⌘\\ folds the sidebar to a rail of icons and back. On the rail, Send Feedback and Settings stay at its foot, Settings at the very bottom, and a note's top bar starts with Back and Forward.
+**Settings → Sidebar** shows a small sidebar beside its settings that changes as you change them:
+
+- **Shortcuts**: which buttons the sidebar's top row shows. Search is always there; **Tags**, **Today**, **This Week**, **Graph** and **Commands** show unless you switch them off. A hidden shortcut still works from its keys and the command palette.
+- **Sections**: **Quick Access** (with **Show Notebook Names**, which labels each pinned note with its notebook), **Recent Notes** (with how many notes it lists), **Notebooks**, **Calendar** and **Tags**, each with a switch to show or hide it. Drag a section by its handle to move it, or press Alt+↑ or Alt+↓ on its row. You can also drag a section by the handle on its title in the sidebar.
+
+⌘\\ folds the sidebar to a rail of icons and back. On the rail, Send Feedback and Settings stay at its foot, Settings at the very bottom, and a note's top bar starts with Back and Forward.
+
+## The note in Settings
+
+**Settings → Note** shows a small note beside its settings that changes as you change them:
+
+- **Layout**: **Note Width**, the theme's width or **Full Window**, and **Note Panel**, whether a note's panel starts **Closed** or **Open** (marked **This Mac**, as it is kept on each device). Each note then remembers its own.
+- **Title Bar Buttons**: which of Full Width, Markdown Source, the two copies, Copy Agent Reference, Pin to Quick Access, Open in New Window, Move to Folder and Move to Trash have a button beside the note's title. Each is also in the note's ⋯ menu.
+- **Under the Title** and **In the Status Bar**: click a detail to show or hide it there: notebook, folder, created, edited, tags, words, characters, reading time and token count. The status bar does not offer tags, which you edit under the title or in the Metadata tab.

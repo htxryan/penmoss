@@ -16,7 +16,6 @@ import app.penmoss.engine.api.ApiException
 import app.penmoss.ui.common.PenmossTheme
 import app.penmoss.ui.settings.AgentActivityScreen
 import app.penmoss.ui.settings.NO_AGENT_ACTIVITY
-import app.penmoss.ui.settings.NO_GIT_AGENT_ACTIVITY
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
@@ -30,8 +29,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Agent activity on the phone (T42, A561; T40 P9, AC11): what agent tokens changed, filtered as
- * on the web, and Undo, which says what the server answered and reads the list again.
+ * Agent Activity on the phone (T42, A561; #172, A920; PEN-146): what agents changed across every
+ * notebook, filtered by notebook, agent and kind, and Undo, which says what the notebook answered
+ * and reads the lists again.
  */
 @RunWith(AndroidJUnit4::class)
 class AgentActivityTest {
@@ -45,27 +45,38 @@ class AgentActivityTest {
     private val theme = AgentActivityEntry(1, at = 1_000, actor = claude, kinds = listOf("settings.change"), summary = "Changed theme.id", undoneAt = 1_500, undoneBy = "Pixel 9")
 
     private val api = FakeApi()
+    private val other = FakeApi()
     private var syncs = 0
 
+    private fun personal(entry: AgentActivityEntry) = ActivityItem("n1", "Personal", entry)
+
     @Test
-    fun theFiltersPickAnAgentAndAKindOfChangeAsTheWebsDo() {
-        val all = listOf(rename, sort, theme)
+    fun theFiltersPickANotebookAnAgentAndAKindOfChange() {
+        val all = listOf(personal(rename), personal(sort), ActivityItem("n2", "Quanta", theme))
         assertTrue(inActivityGroup(sort, "folder"))
         assertTrue(inActivityGroup(rename, "folder"))
         assertTrue(!inActivityGroup(theme, "folder"))
         assertTrue(inActivityGroup(theme, "settings"))
-        assertEquals(listOf("agent:claude" to "Claude Code", "agent:codex" to "Codex"), activityAgents(all))
-        assertEquals(listOf(sort, theme), AgentActivityUi(entries = all, agent = "agent:claude").shown)
-        assertEquals(listOf(sort), AgentActivityUi(entries = all, agent = "agent:claude", group = "folder").shown)
-        assertEquals(all, AgentActivityUi(entries = all).shown)
-        val detail = activityDetail(theme, now = 2_000)
-        assertTrue(detail, detail.startsWith("✦ Claude Code · "))
+        assertEquals(listOf("agent:claude" to "Claude Code", "agent:codex" to "Codex"), activityAgents(all.map { it.entry }))
+        assertEquals(listOf(sort, theme), AgentActivityUi(items = all, agent = "agent:claude").shown.map { it.entry })
+        assertEquals(listOf(sort), AgentActivityUi(items = all, agent = "agent:claude", group = "folder").shown.map { it.entry })
+        assertEquals(listOf(theme), AgentActivityUi(items = all, notebook = "n2").shown.map { it.entry })
+        assertEquals(listOf("n1" to "Personal", "n2" to "Quanta"), AgentActivityUi(items = all).notebooks)
+        assertEquals(all, AgentActivityUi(items = all).shown)
+        val detail = activityDetail(theme, now = 2_000, notebook = "Quanta")
+        assertTrue(detail, detail.startsWith("✦ Claude Code · Quanta · "))
         assertTrue(detail, detail.contains(" · Undone by Pixel 9 "))
+        // The week's changes not undone since: the Agents row's count.
+        assertEquals(2, recentChanges(all, now = 3_000))
     }
 
     private fun withModel(block: suspend (AgentActivityModel) -> Unit) = runBlocking {
         val job = SupervisorJob()
-        val model = AgentActivityModel(api, requestSync = { syncs++ }, scope = CoroutineScope(coroutineContext + job))
+        val sources = listOf(
+            ActivitySource("n1", "Personal", api = { api }, requestSync = { syncs++ }),
+            ActivitySource("n2", "Quanta", api = { other }),
+        )
+        val model = AgentActivityModel({ sources }, scope = CoroutineScope(coroutineContext + job))
         try {
             block(model)
         } finally {
@@ -76,75 +87,92 @@ class AgentActivityTest {
     private suspend fun AgentActivityModel.until(what: (AgentActivityUi) -> Boolean) = withTimeout(5_000) { ui.first(what) }
 
     @Test
-    fun undoSaysWhatTheServerAnsweredAndReadsTheListAgain() = withModel { model ->
+    fun theListIsEveryNotebooksNewestFirst() = withModel { model ->
+        api.activityList = { listOf(sort) }
+        other.activityList = { listOf(rename, theme) }
+        model.load()
+        val ui = model.until { it.items != null && !it.loading }
+        assertEquals(listOf("n2-3", "n1-2", "n2-1"), ui.items!!.map { it.key })
+        assertEquals(null, ui.problem)
+    }
+
+    @Test
+    fun undoSaysWhatTheNotebookAnsweredAndReadsTheListAgain() = withModel { model ->
         var listed = listOf(rename, sort)
         api.activityList = { listed }
+        other.activityList = { emptyList() }
         model.load()
-        assertEquals(listOf(rename, sort), model.until { it.entries != null && !it.loading }.entries)
+        assertEquals(listOf(rename, sort), model.until { it.items != null && !it.loading }.items!!.map { it.entry })
         api.onUndoActivity = { id ->
             listed = listOf(rename.copy(undoneAt = 4_000, undoneBy = "Pixel 9"), sort)
             ActivityUndone(id, notice = null)
         }
-        model.undo(rename)
-        val done = model.until { it.message != null && it.entries?.first()?.undoneAt != null }
+        model.undo(personal(rename))
+        val done = model.until { it.message != null && it.items?.first()?.entry?.undoneAt != null }
         assertEquals("Undone: Renamed the folder “Plans” to “Ideas”.", done.message)
         assertEquals(listOf(3L), api.undone.toList())
         assertEquals(1, syncs)
         model.messageShown()
-        // The server's notice says what it could not put back; undone before, it says so.
+        // The notebook's notice says what it could not put back; undone before, it says so.
         api.onUndoActivity = { ActivityUndone(it, notice = "Renamed back. 2 notes kept the new tag.") }
-        model.undo(sort)
+        model.undo(personal(sort))
         assertEquals("Renamed back. 2 notes kept the new tag.", model.until { it.message != null }.message)
         model.messageShown()
         api.onUndoActivity = { ActivityUndone(it, alreadyUndone = true) }
-        model.undo(sort)
+        model.undo(personal(sort))
         assertEquals("That change was undone already.", model.until { it.message != null }.message)
     }
 
     @Test
     fun aChangeMadeSinceIsSaidAndNothingChanges() = withModel { model ->
         api.activityList = { listOf(rename) }
+        other.activityList = { emptyList() }
         model.load()
-        model.until { it.entries != null }
+        model.until { it.items != null }
         api.onUndoActivity = { throw ApiException(409, "changed_since", "“Ideas” was renamed again since, to “Later”") }
-        model.undo(rename)
+        model.undo(personal(rename))
         assertEquals("“Ideas” was renamed again since, to “Later”", model.until { it.message != null }.message)
         assertEquals(0, syncs)
         model.messageShown()
-        api.onUndoActivity = { throw java.io.IOException("offline") }
-        model.undo(rename)
-        assertEquals("Offline: Undo needs Penmoss. Try again once the phone is online.", model.until { it.message != null }.message)
+        api.onUndoActivity = { throw java.io.IOException("the page is gone") }
+        model.undo(personal(rename))
+        assertEquals("Couldn’t undo it just now: the page is gone.", model.until { it.message != null }.message)
+    }
+
+    /** No server-era words (PEN-146): a notebook whose list can't be read is named, and the others still show. */
+    @Test
+    fun aNotebookThatCannotBeReadIsNamedAndTheOthersShow() = withModel { model ->
+        api.activityList = { throw java.io.IOException("the page is gone") }
+        other.activityList = { listOf(theme) }
+        model.load()
+        val ui = model.until { it.problem != null && !it.loading }
+        assertEquals("Penmoss couldn’t read what agents changed in Personal: the page is gone.", ui.problem)
+        assertEquals(listOf(theme), ui.items!!.map { it.entry })
+        assertTrue(!ui.problem!!.contains("server") && !ui.problem!!.contains("kept by Penmoss"))
     }
 
     @Test
-    fun offlineTheListSaysWhereItIs() = withModel { model ->
-        model.load()
-        val ui = model.until { it.problem != null }
-        assertEquals("Offline: what agents changed is kept by Penmoss. Try again once the phone is online.", ui.problem)
-        // A refusal says the notebook's words (no sign-in to lose since T59).
-        api.activityList = { throw ApiException(401, "unauthorized", "Unauthorized") }
-        model.load()
-        model.until { it.problem?.startsWith("Penmoss couldn’t") == true }
-    }
-
-    @Test
-    fun theScreenListsEachChangeWithUndoUnlessUndone() {
-        val undone = mutableListOf<Long>()
+    fun theScreenListsEachChangeWithItsNotebookAndUndoUnlessUndone() {
+        val undone = mutableListOf<String>()
         compose.setContent {
             PenmossTheme {
                 AgentActivityScreen(
-                    ui = AgentActivityUi(entries = listOf(rename, theme)),
-                    onBack = {}, onRetry = {}, onFilter = { _, _ -> }, onUndo = { undone += it.id }, onMessageShown = {}, now = 2_000,
+                    ui = AgentActivityUi(items = listOf(personal(rename), personal(theme))),
+                    onBack = {}, onRetry = {}, onFilter = { _, _, _ -> }, onUndo = { undone += it.key }, onMessageShown = {}, now = 2_000,
                 )
             }
         }
         compose.onNodeWithText("Renamed the folder “Plans” to “Ideas”").assertIsDisplayed()
+        compose.onNodeWithText("✦ Codex · Personal", substring = true).assertIsDisplayed()
         compose.onNodeWithContentDescription("Undo: Renamed the folder “Plans” to “Ideas”").performClick()
-        assertEquals(listOf(3L), undone)
+        assertEquals(listOf("n1-3"), undone)
         // Undone already: who undid it shows, and there is no Undo.
-        compose.onNodeWithTag("undo-1").assertDoesNotExist()
+        compose.onNodeWithTag("undo-n1-1").assertDoesNotExist()
+        compose.onNodeWithTag("activityNotebook").assertIsDisplayed()
         compose.onNodeWithTag("activityAgent").assertIsDisplayed()
         compose.onNodeWithTag("activityGroup").assertIsDisplayed()
+        compose.onNodeWithText("All Notebooks").assertIsDisplayed()
+        compose.onNodeWithText("All Agents").assertIsDisplayed()
     }
 
     @Test
@@ -152,30 +180,14 @@ class AgentActivityTest {
         compose.setContent {
             PenmossTheme {
                 AgentActivityScreen(
-                    ui = AgentActivityUi(entries = listOf(rename), busy = 3, group = "tag"),
-                    onBack = {}, onRetry = {}, onFilter = { _, _ -> }, onUndo = {}, onMessageShown = {},
+                    ui = AgentActivityUi(items = listOf(personal(rename)), busy = "n1-3", group = "tag"),
+                    onBack = {}, onRetry = {}, onFilter = { _, _, _ -> }, onUndo = {}, onMessageShown = {},
                 )
             }
         }
         compose.onNodeWithText(NO_AGENT_ACTIVITY).assertIsDisplayed()
         compose.onNodeWithTag("activityLoading").assertIsDisplayed()
-    }
-
-    /** #172 (A920): a git notebook's, read from its branch, in the web's `GitAgentActivity` words. */
-    @Test
-    fun aGitNotebooksListSaysItIsReadFromItsBranchAndListsNoTags() {
-        compose.setContent {
-            PenmossTheme {
-                AgentActivityScreen(
-                    ui = AgentActivityUi(entries = emptyList()),
-                    onBack = {}, onRetry = {}, onFilter = { _, _ -> }, onUndo = {}, onMessageShown = {},
-                    git = true,
-                )
-            }
-        }
-        compose.onNodeWithText(NO_GIT_AGENT_ACTIVITY).assertIsDisplayed()
-        compose.onNodeWithText("read from its branch", substring = true).assertIsDisplayed()
-        assertEquals("No agent has moved notes or changed folders or settings here in the last 30 days.", NO_GIT_AGENT_ACTIVITY)
+        compose.onNodeWithText("read from each notebook’s branch", substring = true).assertIsDisplayed()
     }
 
     @Test
@@ -183,11 +195,11 @@ class AgentActivityTest {
         compose.setContent {
             PenmossTheme {
                 AgentActivityScreen(
-                    ui = AgentActivityUi(entries = listOf(rename, sort), busy = 2),
-                    onBack = {}, onRetry = {}, onFilter = { _, _ -> }, onUndo = {}, onMessageShown = {},
+                    ui = AgentActivityUi(items = listOf(personal(rename), personal(sort)), busy = "n1-2"),
+                    onBack = {}, onRetry = {}, onFilter = { _, _, _ -> }, onUndo = {}, onMessageShown = {},
                 )
             }
         }
-        compose.onNodeWithTag("undo-3").assertIsNotEnabled()
+        compose.onNodeWithTag("undo-n1-3").assertIsNotEnabled()
     }
 }

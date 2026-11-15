@@ -7,7 +7,8 @@ import { NEW_NOTE } from './keys';
 // person's own GitHub token: here apps/desktop's GitHubToken against core's fake GitHub, in the
 // stand-in Mac (support/git-host.ts). Opened from the sidebar and the palette; an image pasted
 // and one picked; offline, it waits in the outbox and goes once the browser is back; with no
-// token it waits until one is saved in Settings → Status. The note's body holds a marker that
+// token it waits until one is saved in Settings → GitHub. Unsent reports wait in the form's
+// Waiting to Send (PEN-146). The note's body holds a marker that
 // must reach neither what the page hands main nor the issue (A791). The Mac app's own suite
 // covers the window captured by main (apps/desktop/test/e2e/send-feedback.spec.ts).
 
@@ -206,23 +207,20 @@ test('offline, it waits in the outbox and goes when the browser is back', async 
   await page.getByTestId('feedback-close').click();
   await expect(dialog(page)).toBeHidden();
 
-  // In the app (a page load needs the network): Settings, then Status.
-  await page.keyboard.press('ControlOrMeta+Comma');
-  await page
-    .getByRole('navigation', { name: 'Settings sections' })
-    .getByRole('link', { name: 'Status' })
-    .click();
-  const entry = page.getByTestId('feedback-outbox-entry').filter({ hasText: title });
+  // In the app (a page load needs the network): the form again, where it waits (PEN-146).
+  await page.getByTestId('sidebar-feedback').click();
+  const entry = dialog(page).getByTestId('feedback-outbox-entry').filter({ hasText: title });
   await expect(entry).toBeVisible();
 
   await context.setOffline(false);
   await expect(page.getByTestId('feedback-sent-toast')).toBeVisible({ timeout: 20_000 });
   await expect(entry).toBeHidden();
+  await expect(dialog(page).getByTestId('feedback-outbox')).toHaveCount(0);
   const issue = fakeIssue(host, title);
   expect(issue?.labels).toEqual(['in-app feedback', 'bug', 'P2']);
 });
 
-test('with no GitHub token, a report waits until one is saved in Settings → Status', async ({
+test('with no GitHub token, a report waits until one is saved in Settings → GitHub', async ({
   page,
   host,
 }) => {
@@ -232,25 +230,27 @@ test('with no GitHub token, a report waits until one is saved in Settings → St
   const title = `[e2e] Waiting for a token ${RUN}`;
   await fillForm(page, title, 'Sent before a token was saved.');
   await dialog(page).getByTestId('feedback-send').click();
-  await expect(dialog(page)).toContainText('Add your GitHub token in Settings → Status');
+  await expect(dialog(page)).toContainText('Sign in to GitHub in Settings → GitHub');
   await page.getByTestId('feedback-close').click();
   await expect(dialog(page)).toBeHidden();
   expect(fakeIssue(host, title)).toBeUndefined();
 
-  // Settings → Status: the outbox keeps it, and the token is saved there.
+  // Settings → GitHub (PEN-146): it says a report waits, and the token is saved there. This
+  // stand-in Mac has no Penmoss GitHub app, so the token's field shows without Use a Token.
   await page.keyboard.press('ControlOrMeta+Comma');
   await page
     .getByRole('navigation', { name: 'Settings sections' })
-    .getByRole('link', { name: 'Status' })
+    .getByRole('link', { name: 'GitHub' })
     .click();
-  const entry = page.getByTestId('feedback-outbox-entry').filter({ hasText: title });
-  await expect(entry).toBeVisible();
+  const waiting = page.getByTestId('github-feedback-waiting');
+  await expect(waiting).toHaveText('· 1 report waiting');
   await expect(page.getByTestId('github-token-none')).toBeVisible();
   await page.getByTestId('github-token-input').fill(GITHUB_TOKEN);
   await page.getByTestId('github-token-save').click();
-  await expect(page.getByTestId('github-token-saved')).toContainText('htxryan');
+  await expect(page.getByTestId('github-account')).toContainText('htxryan');
+  await expect(page.getByTestId('github-token-saved')).toContainText('Token saved');
   // Saving it sends what waited for one (A1012).
-  await expect(entry).toBeHidden({ timeout: 20_000 });
+  await expect(waiting).toBeHidden({ timeout: 20_000 });
   await expect.poll(() => Boolean(fakeIssue(host, title)), { timeout: 10_000 }).toBe(true);
   expect(await host.githubToken.status()).toMatchObject({ saved: true, login: 'htxryan' });
 });
@@ -376,7 +376,7 @@ test('a report GitHub refuses is kept: Edit puts it back in the form, and it the
   expect(fakeIssue(host, title)).toBeUndefined();
 });
 
-test('Edit from Settings → Status reopens a refused report with the context it was captured with', async ({
+test('Edit in Waiting to Send reopens a refused report with the context it was captured with', async ({
   page,
   host,
 }) => {
@@ -392,12 +392,15 @@ test('Edit from Settings → Status reopens a refused report with the context it
   await page.getByTestId('feedback-close').click();
   await expect(dialog(page)).toBeHidden();
 
+  // Settings → GitHub → Send Feedback's Open (PEN-146): the form, with the report waiting in it.
   await page.keyboard.press('ControlOrMeta+Comma');
   await page
     .getByRole('navigation', { name: 'Settings sections' })
-    .getByRole('link', { name: 'Status' })
+    .getByRole('link', { name: 'GitHub' })
     .click();
-  const entry = page.getByTestId('feedback-outbox-entry').filter({ hasText: title });
+  await expect(page.getByTestId('github-feedback-waiting')).toHaveText('· 1 report waiting');
+  await page.getByTestId('github-feedback-open').click();
+  const entry = dialog(page).getByTestId('feedback-outbox-entry').filter({ hasText: title });
   await expect(entry).toHaveAttribute('data-state', 'failed');
   await entry.getByTestId('feedback-outbox-edit').click();
 

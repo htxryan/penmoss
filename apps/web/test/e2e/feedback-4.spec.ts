@@ -74,7 +74,7 @@ test('1, 2: sidebar rows run edge to edge, and each section’s title row is box
   expect(errors).toEqual([]);
 });
 
-test('3: Notebooks lists the notebooks, each opening its own page; Agents has its own page', async ({
+test('3: All Notebooks lists the notebooks, each opening its own page; Agents has its own page', async ({
   page,
   host,
 }) => {
@@ -98,16 +98,16 @@ test('3: Notebooks lists the notebooks, each opening its own page; Agents has it
   await settings.getByTestId('git-add-open').click();
   await expect(page.getByTestId('git-add')).toBeVisible();
 
-  // A row opens that notebook's page, at its own address; the back link returns to the list.
+  // A row opens that notebook's page, at its own address, in three tabs (PEN-146); All
+  // Notebooks in the nav returns to the list.
   await rows.filter({ hasText: 'Quanta' }).click();
   await expect(page).toHaveURL(/\/settings\/git-notebooks\/[0-9A-Z]{26}$/);
   const card = settings.getByTestId('git-notebook');
   await expect(card).toHaveCount(1);
   await expect(card.getByRole('heading', { name: 'Quanta' })).toBeVisible();
   await expect(card.getByTestId('git-status')).toHaveAttribute('data-phase', 'synced');
-  await expect(card.getByTestId('git-notebook-agents')).toContainText(
-    'penmoss mcp --notebook Quanta',
-  );
+  await expect(card.getByRole('tab')).toHaveText(['Overview', 'Sync', 'Git']);
+  // Agents are not a notebook's (PEN-146): they are Settings → Agents.
   await expect(page.getByTestId('git-local-agents')).toHaveCount(0);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/git-notebook-page.png` });
   // It is a page of its own: a reload keeps it.
@@ -115,7 +115,10 @@ test('3: Notebooks lists the notebooks, each opening its own page; Agents has it
   await expect(settings.getByTestId('git-notebook').getByRole('heading', { level: 2 })).toHaveText(
     'Quanta',
   );
-  await settings.getByTestId('git-notebook-back').click();
+  await page
+    .getByRole('navigation', { name: 'Settings sections' })
+    .getByRole('link', { name: 'All Notebooks', exact: true })
+    .click();
   await expect(page).toHaveURL(/\/settings\/git-notebooks$/);
   await expect(rows).toHaveCount(2);
 
@@ -127,20 +130,23 @@ test('3: Notebooks lists the notebooks, each opening its own page; Agents has it
     .click();
   await expect(page).toHaveURL(/\/settings\/agents$/);
   const agents = page.getByTestId('agents-settings');
-  // A list of the notebooks (Quanta feedback 2, A1125), each with the name agents reach it by…
+  // A list of the notebooks, folded (PEN-146: one page, amending A1125)…
   const agentRows = agents.getByTestId('agents-notebook-row');
   await expect(agentRows).toHaveCount(2);
-  await expect(agentRows.filter({ hasText: 'Work' })).toContainText('penmoss mcp --notebook Work');
   await expect(agents.getByTestId('git-local-agents')).toHaveCount(0);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/agents.png` });
-  // …opening a page of its own with its agents.
-  await agentRows.filter({ hasText: 'Work' }).click();
-  await expect(page).toHaveURL(/\/settings\/agents\/[0-9A-Z]{26}$/);
+  // …each unfolding in place to its agents and the name agents reach it by.
+  const work = agentRows.filter({ hasText: 'Work' });
+  await work.getByTestId('agents-notebook-fold').click();
+  await expect(page).toHaveURL(/\/settings\/agents$/);
   await expect(agents.getByTestId('notebook-agents')).toHaveCount(1);
   await expect(agents.getByTestId('notebook-agents')).toContainText('penmoss mcp --notebook Work');
   await expect(agents.getByTestId('git-local-agents')).toHaveCount(1);
-  await agents.getByTestId('agents-back').click();
-  await expect(page).toHaveURL(/\/settings\/agents$/);
+  await work.getByTestId('agents-notebook-fold').click();
+  await expect(agents.getByTestId('notebook-agents')).toHaveCount(0);
+  // Its own address opens the page with it unfolded.
+  await page.goto((await work.getAttribute('data-path'))!);
+  await expect(agents.getByTestId('notebook-agents')).toContainText('penmoss mcp --notebook Work');
   await expect(agentRows).toHaveCount(2);
   // A page that is not a notebook here says so.
   await page.goto('/settings/git-notebooks/01M6AAAAAAAAAAAAAAAAAAAAAA');

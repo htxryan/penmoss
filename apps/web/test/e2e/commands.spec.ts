@@ -186,7 +186,7 @@ test('rebinding a shortcut warns on conflicts, takes effect at once and reaches 
   const errors = collectErrors(page);
   const { remote } = seeded(notebook);
   await page.goto('/settings/shortcuts');
-  const row = page.locator('tr[data-command-row="note.new"]');
+  const row = page.locator('[data-command-row="note.new"]');
   // Until the bindings are read the rows show the defaults (A627).
   await expect(page.getByTestId('shortcuts-settings')).not.toHaveAttribute(
     'data-bindings',
@@ -242,7 +242,7 @@ test('rebinding a shortcut warns on conflicts, takes effect at once and reaches 
   try {
     await other.page.goto('/settings/shortcuts');
     await expect(
-      other.page.locator('tr[data-command-row="note.new"]').getByTestId('keys-note.new'),
+      other.page.locator('[data-command-row="note.new"]').getByTestId('keys-note.new'),
     ).toContainText('L', { timeout: 40_000 });
   } finally {
     await other.context.close();

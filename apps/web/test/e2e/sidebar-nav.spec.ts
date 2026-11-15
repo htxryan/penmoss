@@ -62,14 +62,14 @@ test('Back and Forward step through the app’s pages, greyed out at either end 
   await expect(page).toHaveURL(/\/settings/);
   await page
     .getByRole('navigation', { name: 'Settings sections' })
-    .getByRole('link', { name: /^Display$/i })
+    .getByRole('link', { name: /^Sidebar$/i })
     .click();
-  await expect(page).toHaveURL(/\/settings\/display$/);
+  await expect(page).toHaveURL(/\/settings\/sidebar$/);
   await expect(forward).toBeDisabled();
 
   // Back, from Settings' own bar, through every page in turn.
   await back.click();
-  await expect(page).not.toHaveURL(/\/settings\/display$/);
+  await expect(page).not.toHaveURL(/\/settings\/sidebar$/);
   await expect(page).toHaveURL(/\/settings/);
   await expect(forward).toBeEnabled();
   await back.click();

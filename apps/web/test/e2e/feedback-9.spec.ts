@@ -215,9 +215,9 @@ test('5: the title bar’s buttons are chosen in Display, each also in ⋯', asy
   }
   await page.keyboard.press('Escape');
 
-  await page.goto('/settings/display');
+  await page.goto('/settings/note');
   const settings = page.getByTestId('note-bar-settings');
-  await expect(settings.getByRole('checkbox')).toHaveCount(9);
+  await expect(settings.getByRole('switch')).toHaveCount(9);
   await settings.getByTestId('display-note-bar-copyAgentReference').uncheck();
   await settings.getByTestId('display-note-bar-toggleSource').check();
   await settings.getByTestId('display-note-bar-pinQuickAccess').check();
@@ -339,7 +339,7 @@ test('9, 10, 12: Settings name the primary notebook; settings copy to another no
   await openNote(page, 'Source');
   await host.seed({ name: 'Work', notes: [{ title: 'Parser' }] });
   await expect(section(page, 'Work')).toBeVisible({ timeout: 40_000 });
-  await page.goto('/settings/display');
+  await page.goto('/settings/note');
   const home = page.getByTestId('settings-home');
   await expect(home).toHaveText('Settings are synced through your primary notebook, Quanta.');
   if (SHOTS)
@@ -348,12 +348,16 @@ test('9, 10, 12: Settings name the primary notebook; settings copy to another no
   // A setting in the primary notebook, copied into Work from Work's page.
   await page.getByTestId('display-note-bar-delete').check();
   await page.getByTestId('settings-home-link').click();
-  await expect(page.getByTestId('git-primary-state')).toBeVisible();
+  await expect(page.getByTestId('git-primary-chip')).toBeVisible();
   // Item 12: no Private line.
   await expect(page.getByText('Private', { exact: true })).toHaveCount(0);
   await page.goto('/settings/git-notebooks');
   await page.getByTestId('git-notebook-row').filter({ hasText: 'Work' }).click();
+  // Copy Settings… opens From (the primary) and To (this notebook) (PEN-146).
+  await page.getByTestId('git-copy-settings-open').click();
   const copy = page.getByTestId('git-settings-copy');
+  await expect(copy.getByTestId('git-copy-from').locator('option:checked')).toHaveText('Quanta');
+  await expect(copy.getByTestId('git-copy-to').locator('option:checked')).toHaveText('Work');
   await copy.getByTestId('git-copy-settings').click();
   await expect(copy.getByTestId('git-copy-settings-done')).toHaveText(
     'Copied Quanta’s settings to Work.',
@@ -362,15 +366,18 @@ test('9, 10, 12: Settings name the primary notebook; settings copy to another no
   await expect(copy.getByTestId('git-copy-settings-done')).toHaveText(
     'Work already had these settings.',
   );
-  if (SHOTS)
-    await page.getByTestId('git-primary').screenshot({ path: `${SHOTS}/copy-settings.png` });
-  // Work made primary: it reads the same, so the bar keeps Move to Trash.
-  await page.getByTestId('git-make-primary').click();
-  await expect(page.getByTestId('git-primary-state')).toBeVisible();
+  if (SHOTS) await copy.screenshot({ path: `${SHOTS}/copy-settings.png` });
+  // Work made primary, in All Notebooks' picker: it reads the same, so the bar keeps Move to
+  // Trash.
+  await page.goto('/settings/git-notebooks');
+  await page.getByTestId('git-primary-picker').selectOption({ label: 'Work' });
+  await expect(
+    page.getByTestId('git-notebook-row').filter({ hasText: 'Work' }).getByTestId('git-row-primary'),
+  ).toBeVisible();
   await expect(page.getByTestId('settings-home')).toHaveText(
     'Settings are synced through your primary notebook, Work.',
   );
-  await page.goto('/settings/display');
+  await page.goto('/settings/note');
   await expect(page.getByTestId('display-note-bar-delete')).toBeChecked();
   expect(errors).toEqual([]);
 });

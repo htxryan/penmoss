@@ -104,6 +104,17 @@ describe('Settings → Search by Meaning (T78)', () => {
     });
     expect(shown()).toBe('Indexing: 3 of 40 notes.');
     expect(toggle().checked).toBe(true);
+    // PEN-146: a switch named for what it does, and a real progress bar, not a slider.
+    expect(toggle().getAttribute('role')).toBe('switch');
+    expect(host.querySelector(`label[for="${toggle().id}"]`)?.textContent).toBe(
+      'Find Notes by Meaning',
+    );
+    const bar = host.querySelector('[role="progressbar"]')!;
+    expect(bar.getAttribute('aria-valuenow')).toBe('7');
+    expect(bar.getAttribute('aria-valuetext')).toBe('3 of 40 notes');
+    expect(host.querySelector('[data-testid="meaning-model"]')?.textContent).toBe(
+      'ModelEmbeddingGemma 300M · 219 MB · Gemma Terms of Use',
+    );
     // Another app holds the lease (A1350): the notes this one has not indexed wait, and it says so.
     act(() => {
       for (const listener of listeners)
@@ -119,11 +130,22 @@ describe('Settings → Search by Meaning (T78)', () => {
       'Ready: EmbeddingGemma 300M (219 MB), on this Mac. All 40 notes are indexed.',
     );
     expect(host.querySelector('a')?.getAttribute('href')).toBe('https://ai.google.dev/gemma/terms');
+    // Off asks first, naming the size; Cancel keeps it on.
+    act(() => toggle().click());
+    expect(asked).toEqual([]);
+    expect(toggle().checked).toBe(true);
+    const ask = () => host.querySelector('[data-testid="meaning-off-ask"]');
+    expect(ask()?.textContent).toContain('Turn off and remove the model (219 MB) and the index?');
+    act(() => host.querySelector<HTMLButtonElement>('[data-testid="meaning-off-cancel"]')!.click());
+    expect(ask()).toBeNull();
+    expect(asked).toEqual([]);
+    act(() => toggle().click());
     await act(async () => {
-      toggle().click();
+      host.querySelector<HTMLButtonElement>('[data-testid="meaning-off-confirm"]')!.click();
       await Promise.resolve();
     });
     expect(asked).toEqual([false]);
+    expect(ask()).toBeNull();
     expect(toggle().checked).toBe(false);
     expect(shown()).toMatch(/^Off\. Search matches your words\./);
     await act(async () => {

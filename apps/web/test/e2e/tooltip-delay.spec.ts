@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from './fixtures';
 import { storedSetting } from './stored';
 
 // PEN-70 (A1247), in the web app (the Mac app runs the same page): tooltips wait 1 second by
-// default, and Settings → Display → Show Tooltips After chooses 0.5, 1, 1.5 or 2 seconds, or
+// default, and Settings → Appearance → Show Tooltips After (on Display until PEN-146) chooses 0.5, 1, 1.5 or 2 seconds, or
 // Never on hover. Keyboard focus still shows a tooltip at once. A change applies to the next
 // hover, with no reload, and is stored as the synced `tooltip.delay`.
 
@@ -51,12 +51,12 @@ test('Show Tooltips After sets how long a hover waits, Never stops it, focus sho
   page,
 }) => {
   const errors = collectErrors(page);
-  await page.goto('/settings/display');
+  await page.goto('/settings/appearance');
   const field = page.getByLabel('Show Tooltips After');
   const tooltip = page.getByTestId('tooltip');
   const back = page.locator('.back-link');
 
-  // AC3: after the title bar's buttons, every choice, 1 Second (Default) when unset.
+  // AC3: a row of Appearance's Text group, every choice, 1 Second (Default) when unset.
   await expect(field).toBeEnabled();
   await expect(field.locator('option')).toHaveText([
     '0.5 Seconds',
@@ -66,18 +66,12 @@ test('Show Tooltips After sets how long a hover waits, Never stops it, focus sho
     'Never',
   ]);
   await expect(field).toHaveValue('1000');
-  const order = await page
-    .getByTestId('display-settings')
-    .evaluate((section) =>
-      [
-        ...section.querySelectorAll(
-          '[data-testid="note-bar-settings"], [data-testid="tooltip-delay"]',
-        ),
-      ].map((each) => each.getAttribute('data-testid')),
-    );
-  expect(order).toEqual(['note-bar-settings', 'tooltip-delay']);
+  await expect(page.getByTestId('font-settings').getByTestId('tooltip-delay')).toBeVisible();
+  await expect(page.locator('[data-setting="show-tooltips-after"]')).toContainText(
+    'Show Tooltips After',
+  );
   await expect(page.getByTestId('tooltip-delay-help')).toHaveText(
-    'How long the pointer rests on a button before its name shows. Tabbing to a button shows it at once. Changes sync to your other devices.',
+    'How long the pointer rests on a button before its name shows. Tabbing to a button shows it at once.',
   );
   if (SHOTS) {
     await field.scrollIntoViewIfNeeded();

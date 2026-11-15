@@ -11,7 +11,7 @@ Each note command works on this machine's copy (clone) of a notebook and syncs i
 
 ### From the Mac app
 
-The Mac app is the CLI, so it needs nothing else installed. In **Settings → Agents → The penmoss Command**, choose **Install Command**. It writes `~/.local/bin/penmoss`, a short script that runs the app.
+The Mac app is the CLI, so it needs nothing else installed. In **Settings → Agents → The penmoss Command**, choose **Install Command** (once it is installed, choose **Manage…** to see the card again). It writes `~/.local/bin/penmoss`, a short script that runs the app.
 
 - If `~/.local/bin` is not on your terminal's PATH, the card gives the line to add to your shell's profile, such as `export PATH="$HOME/.local/bin:$PATH"` in `~/.zshrc`.
 - If you move or rename the app, the card says so, and **Update Command** rewrites the script.
@@ -150,7 +150,7 @@ Commits carry your git identity (read for each commit), or the notebook's own (`
 
 The CLI suits agents that run shell commands. For most agents the [MCP server](/docs/agents/) is simpler.
 
-1. **Give the agent its own clone**, with **Connect an Agent** in **Settings → Agents**, or `penmoss notebook add <remote> --name notes-<agent> --agent "<Agent name>"`, and have it pass `--notebook` with that name.
+1. **Give the agent its own clone**, with **Connect an Agent…** in **Settings → Agents**, or `penmoss notebook add <remote> --name notes-<agent> --agent "<Agent name>"`, and have it pass `--notebook` with that name.
 2. **Tell the agent how to use it**, for example in the project's `CLAUDE.md` or `AGENTS.md`:
 
    ```md

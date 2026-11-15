@@ -10,7 +10,7 @@ import {
   type Launched,
 } from './support';
 
-// T51 item 17 (A945, A946): the menu bar icon. On by default (T53 item 6); Settings → Display
+// T51 item 17 (A945, A946): the menu bar icon. On by default (T53 item 6); Settings → Quick Capture
 // turns it off for this Mac, and it stays off after a restart. Its menu holds Quick Capture (with the hotkey),
 // Open Today's Journal and the Quick Access notes the main window's page sends as they change,
 // each opening in the main window. Under xvfb the app stands in for a Mac (A725) but shows no
@@ -87,14 +87,14 @@ async function newNote(page: Page, title: string, text: string): Promise<string>
   return ULID.exec(new URL(page.url()).pathname)![1]!;
 }
 
-test('the menu bar icon: on by default, off and on from Settings → Display, its menu lists Quick Access and opens notes', async () => {
+test('the menu bar icon: on by default, off and on from Settings → Quick Capture, its menu lists Quick Access and opens notes', async () => {
   const launched = await start();
   const { app, page } = launched;
   await gitNotebook(launched);
   await expect.poll(() => trayMenu(app)).not.toBeNull();
 
-  // Settings → Display → Show Penmoss in the Menu Bar: on, this Mac's own.
-  await openPath(app, '/settings/display');
+  // Settings → Quick Capture → Show in the Menu Bar (on Display until PEN-146): on, this Mac's own.
+  await openPath(app, '/settings/quick-capture');
   const setting = page.getByTestId('menu-bar-icon');
   await expect(setting).toBeChecked();
   await expect(setting).toBeEnabled();
@@ -141,8 +141,8 @@ test('the menu bar icon: on by default, off and on from Settings → Display, it
   expect((await trayMenu(app))?.at(-2)).toBe('-');
 
   // A pinned note opens in the main window, from wherever it was.
-  await openPath(app, '/settings/display');
-  await expect(page).toHaveURL(/\/settings\/display$/);
+  await openPath(app, '/settings/quick-capture');
+  await expect(page).toHaveURL(/\/settings\/quick-capture$/);
   expect(await clickTray(app, `tray.note.${id}`)).toBe(true);
   await expect(page).toHaveURL(new RegExp(`/notes/${id}$`));
   await expect(page.getByTestId('note-title')).toHaveValue(`${title} renamed`);
@@ -161,7 +161,7 @@ test('the menu bar icon: on by default, off and on from Settings → Display, it
     .toBe(false);
 
   // Off again: no icon, no menu.
-  await openPath(app, '/settings/display');
+  await openPath(app, '/settings/quick-capture');
   await setting.uncheck();
   await expect.poll(() => trayMenu(app)).toBeNull();
 });
@@ -169,7 +169,7 @@ test('the menu bar icon: on by default, off and on from Settings → Display, it
 test('the menu bar icon stays off after a restart, and is this Mac’s alone', async () => {
   const first = await start();
   await gitNotebook(first);
-  await openPath(first.app, '/settings/display');
+  await openPath(first.app, '/settings/quick-capture');
   await first.page.getByTestId('menu-bar-icon').uncheck();
   await expect.poll(() => trayMenu(first.app)).toBeNull();
   opened.splice(opened.indexOf(first), 1);
@@ -179,7 +179,7 @@ test('the menu bar icon stays off after a restart, and is this Mac’s alone', a
   // The hook sends straight to the page, past main's inbox (A945): only once the page listens.
   await expect(again.page.locator('button[data-command="note.new"]')).toBeVisible();
   expect(await trayMenu(again.app)).toBeNull();
-  await openPath(again.app, '/settings/display');
+  await openPath(again.app, '/settings/quick-capture');
   await expect(again.page.getByTestId('menu-bar-icon')).not.toBeChecked();
 
   // A script in the page, with no key press or click behind it, cannot change it. Playwright's

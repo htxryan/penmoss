@@ -33,12 +33,19 @@ class WhatsNewScreenTest {
 
     @Test
     fun showsThisVersionAndEarlierOnesGroupedByKind() {
-        compose.setContent { WhatsNewScreen(notesView(file, "0.2.1"), onOpenReleases = {}, onBack = {}) }
+        compose.setContent { WhatsNewScreen(notesView(file, "0.2.1"), onOpenReleases = {}, onBack = {}, version = "0.2.1") }
+        // The version card first (PEN-146): the version once, and no update controls.
+        compose.onNodeWithTag("whatsNewVersion").assertIsDisplayed()
+        compose.onNodeWithText("Penmoss 0.2.1").assertIsDisplayed()
+        compose.onNodeWithText(VERSION_UPDATES).assertIsDisplayed()
         compose.onNodeWithTag("whatsNewCurrent").assertIsDisplayed()
-        compose.onNodeWithText("In this version").assertIsDisplayed()
+        compose.onNodeWithText("In This Version").assertIsDisplayed()
         compose.onNodeWithText("• Release notes in the app.").assertIsDisplayed()
         compose.onNodeWithText("• The keyboard stays down.").assertIsDisplayed()
         assertEquals(0, compose.onAllNodesWithText("• Mac only.").fetchSemanticsNodes().size)
+        // Earlier Versions open from their button.
+        compose.onNodeWithTag("whatsNewEarlier").assertDoesNotExist()
+        compose.onNodeWithTag("whatsNewEarlierToggle").performScrollTo().performClick()
         compose.onNodeWithTag("whatsNewEarlier").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("• Quick capture.").performScrollTo().assertIsDisplayed()
         assertEquals(3, compose.onAllNodesWithTag("whatsNewNote").fetchSemanticsNodes().size)

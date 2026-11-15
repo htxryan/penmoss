@@ -278,11 +278,11 @@ test('each note remembers its panel open or closed; T52’s modes read as open o
   expect(errors).toEqual([]);
 });
 
-test('the default from Settings → Appearance; in a narrow pane the panel lies over the text', async ({
+test('the default from Settings → Note; in a narrow pane the panel lies over the text', async ({
   page,
 }) => {
   const errors = collectErrors(page);
-  await page.goto('/settings/appearance');
+  await page.goto('/settings/note');
   const setting = page.getByTestId('note-panel-setting');
   await expect(setting.getByRole('radio')).toHaveCount(2);
   await expect(setting.getByRole('radio', { name: 'Open' })).toBeChecked();
@@ -295,7 +295,7 @@ test('the default from Settings → Appearance; in a narrow pane the panel lies 
   await expect(columns(page)).toHaveAttribute('data-panel', 'closed');
   await expect(side(page)).toHaveCount(0);
 
-  await page.goto('/settings/appearance');
+  await page.goto('/settings/note');
   await setting.getByText('Open', { exact: true }).click();
   await expect(setting.getByRole('radio', { name: 'Open' })).toBeChecked();
   await page.goto('/');

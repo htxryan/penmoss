@@ -101,8 +101,11 @@ class RemotePictures(
         null
     }
 
-    /** The bytes the cache holds on this phone, for Settings → Sync and storage. */
+    /** The bytes the cache holds on this phone, for Settings → Storage. */
     fun bytesUsed(): Long = cache.listFiles()?.filter { it.isFile }?.sumOf { it.length() } ?: 0L
+
+    /** How many pictures the cache holds, for Settings → Storage (PEN-146). */
+    fun count(): Int = cache.listFiles()?.count { it.isFile } ?: 0
 
     /** Forgets every picture fetched (Settings, or the cache cleared for another account). */
     fun clear() {

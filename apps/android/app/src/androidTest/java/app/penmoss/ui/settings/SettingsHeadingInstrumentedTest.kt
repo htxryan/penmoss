@@ -16,6 +16,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import app.penmoss.proof.ProofShot
 import app.penmoss.ui.common.PenmossTheme
 import app.penmoss.ui.common.TooltipDelayInstrumentedTest
+import app.penmoss.ui.settings.SettingsGroup
 import app.penmoss.ui.settings.SettingsHome
 import app.penmoss.ui.settings.SettingsIcons
 import app.penmoss.ui.settings.SettingsSection
@@ -36,14 +37,19 @@ import org.junit.runner.RunWith
 class SettingsHeadingInstrumentedTest {
     @Test
     fun settingsHeadingKeepsItsPaddingAtPhoneWidth() {
-        val sections = listOf(
-            SettingsSection("appearance", "Appearance", "Theme and fonts", SettingsIcons.Gear),
-            SettingsSection("display", "Display", "Home and lists", SettingsIcons.Gear),
+        val groups = listOf(
+            SettingsGroup(
+                "Look and Feel",
+                listOf(
+                    SettingsSection("appearance", "Appearance", "Theme and fonts", SettingsIcons.Gear),
+                    SettingsSection("home", "Home", "Shortcuts and sections", SettingsIcons.Gear),
+                ),
+            ),
         )
         ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
-                    PenmossTheme { SettingsHome(sections, onOpen = {}, onBack = {}) }
+                    PenmossTheme { SettingsHome(groups, onOpen = {}, onBack = {}) }
                 }
             }
             val instrumentation = InstrumentationRegistry.getInstrumentation()

@@ -13,7 +13,7 @@ A notebook lives in its repository, so every device that can reach the repositor
 2. Choose **Get Started**, then **Open an Existing Notebook** and **Continue**.
 3. Penmoss lists your GitHub repositories with the notebooks in each beneath it. Choose **Open** beside the notebook. To use a repository on another host, choose **Paste a URL Instead** and paste its address.
 
-With a notebook open already, use **Settings → Notebooks → Add a Git Notebook…** instead: pick the repository, then the folder that holds the notebook (Penmoss shows its name), or choose **Type an Address**, and choose **Add**.
+With a notebook open already, use **Settings → All Notebooks → Add Notebook…** instead: pick the repository, then the folder that holds the notebook (Penmoss shows its name), or choose **Type an Address**, and choose **Add**.
 
 The second Mac needs its own git sign-in for the repository, as the first did: see [Your first notebook](/docs/first-notebook/#before-you-start).
 
@@ -47,5 +47,5 @@ See [The penmoss CLI](/docs/reference/cli/).
 ## Which settings follow you
 
 - **The notebook's own settings** go with it to every device: its time zone and its daily and weekly templates.
-- **Your app settings** (theme, sidebar, shortcuts and the rest) are kept in your **Primary Notebook** (on Android, the **Journal notebook**), so another device that opens the same notebook gets them too.
-- **This device only:** which notebook is primary, the Mac's window settings (compact title bar, menu bar icon, the capture hotkey), and Auto-Update.
+- **Your app settings** (theme, sidebar, shortcuts and the rest) are kept in your **Primary Notebook**, so another device that opens the same notebook gets them too.
+- **This device only:** which notebook is primary, the Mac's window settings (compact title bar, menu bar icon, the capture hotkey), and everything under **This Mac** in Settings: Search by Meaning, the GitHub sign-in and Updates.

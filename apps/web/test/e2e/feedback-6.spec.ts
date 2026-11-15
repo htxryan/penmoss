@@ -322,7 +322,7 @@ test('3: Token Count in the Metadata tab, and pinned under the title and in the 
   // Not in the status bar until pinned there.
   await expect(page.getByTestId('note-counts')).not.toContainText('tokens');
 
-  await page.goto('/settings/display');
+  await page.goto('/settings/note');
   await page.getByTestId('metadata-title-tokens').check();
   await page.getByTestId('metadata-status-tokens').check();
   await expect.poll(() => storedSetting(page, 'metadata.underTitle')).toEqual(['tokens']);

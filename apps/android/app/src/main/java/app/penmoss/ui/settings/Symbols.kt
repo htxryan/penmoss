@@ -17,7 +17,7 @@ import app.penmoss.ui.settings.SymbolsScreen
  * list never changes a note: a glyph taken off it shows as text again (A742).
  */
 
-/** What the Settings home says of Symbols: the glyphs, in order. */
+/** What the Settings list says of Symbols: the glyphs, in order. */
 fun symbolsSummary(settings: Settings): String {
     val symbols = settings.symbols
     return if (symbols.isEmpty()) "None" else symbols.joinToString(" ") { it.glyph }
@@ -42,5 +42,6 @@ internal fun SymbolsRoute(graph: app.penmoss.DeviceGraph, onShortcuts: () -> Uni
         onReset = { graph.changeSetting(SettingKeys.SYMBOLS, null) },
         onShortcuts = onShortcuts,
         onBack = onBack,
+        keys = symbolKeys(state.settings.values),
     )
 }

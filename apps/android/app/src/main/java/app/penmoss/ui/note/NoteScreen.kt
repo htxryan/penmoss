@@ -683,7 +683,7 @@ internal fun NoteSyncIcon(sync: NoteSync, onClick: () -> Unit) {
     }
 }
 
-/** What the sync icon means, with a way to Sync and storage, and Retry for failed pictures (PL10, AC8). */
+/** What the sync icon means, with a way to the notebook's Sync tab, and Retry for failed pictures (PL10, AC8). */
 @Composable
 internal fun NoteSyncExplanation(sync: NoteSync, onSyncStorage: () -> Unit, onRetryPictures: () -> Unit, onDismiss: () -> Unit) {
     val failed = sync.state == NoteSyncState.PICTURES_FAILED
@@ -705,7 +705,7 @@ internal fun NoteSyncExplanation(sync: NoteSync, onSyncStorage: () -> Unit, onRe
             TextButton(onClick = {
                 onDismiss()
                 onSyncStorage()
-            }, modifier = Modifier.testTag("openSyncStorage")) { Text("Sync and Storage") }
+            }, modifier = Modifier.testTag("openSyncStorage")) { Text("Notebook Sync") }
         },
     )
 }

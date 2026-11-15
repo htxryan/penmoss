@@ -304,10 +304,11 @@ describe('the panel open or closed (T53 item 9, A985)', () => {
     expect(other.$('note-rail')).not.toBeNull();
   });
 
-  it('takes the default from Settings → Appearance → Note Panel', () => {
-    const settings = mount('/settings/appearance');
+  it('takes the default from Settings → Note → Note Panel, this device’s own', () => {
+    const settings = mount('/settings/note');
     const group = settings.$('note-panel-setting')!;
-    expect(group.querySelector('legend')!.textContent).toBe('Note Panel');
+    expect(group.querySelector('.lf-row-label')!.firstChild!.textContent).toBe('Note Panel');
+    expect(group.querySelector('.lf-scope')!.textContent).toBe('This Device');
     const radios = [...group.querySelectorAll<HTMLInputElement>('input[type="radio"]')];
     expect(radios.map((radio) => radio.parentElement!.textContent)).toEqual(['Closed', 'Open']);
     expect(radios[1]!.checked).toBe(true);

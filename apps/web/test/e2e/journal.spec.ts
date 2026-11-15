@@ -1,4 +1,4 @@
-import { expect, seeded, test, type Page } from './fixtures';
+import { expect, seeded, test, type Locator, type Page } from './fixtures';
 import { THIS_WEEK, LINE_END } from './keys';
 import { storedSetting } from './stored';
 import { syncNow } from './support/sync';
@@ -7,9 +7,10 @@ import { readRemote } from './support/remote';
 // T19: daily and weekly notes. ⌘D and ⌘⌥W open the note for today and this week (in the
 // synced time zone, America/Chicago by default), creating it from its template; the sidebar
 // calendar marks the days that have a note; the bar above a periodic note moves to the
-// previous and next period and between a day and its week; Settings → Daily notes changes
-// the time zone and the templates, which are the git notebook's own settings (A827), pushed
-// with it so every device builds the same daily notes (T59).
+// previous and next period and between a day and its week; Settings → Daily Notes changes
+// the time zone (a searchable picker) and the templates (saved as you type, PEN-146), which are
+// the git notebook's own settings (A827), pushed with it so every device builds the same daily
+// notes (T59).
 
 const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 
@@ -62,6 +63,17 @@ async function openJournalSettings(page: Page) {
   const settings = page.getByTestId('journal-settings');
   await expect(settings).toBeVisible();
   return settings;
+}
+
+/** Settings → Daily Notes → Time Zone: the picker, searched by the zone's name (PEN-146). */
+async function chooseZone(page: Page, settings: Locator, zone: string) {
+  await settings.getByRole('button', { name: /^Time Zone/ }).click();
+  const picker = page.getByTestId('time-zone-picker');
+  await picker.getByRole('combobox', { name: 'Time Zone' }).fill(zone);
+  await expect(picker.getByRole('option').first()).toHaveAttribute('data-zone', zone);
+  await page.keyboard.press('Enter');
+  await expect(picker).toHaveCount(0);
+  await expect(settings.getByTestId('time-zone-setting')).toHaveAttribute('data-zone', zone);
 }
 
 test('⌘D opens today from the template, and the bar walks days and weeks', async ({ page }) => {
@@ -166,13 +178,17 @@ test('the time zone and templates in Settings decide the day and the new note', 
   const east = 'Pacific/Kiritimati';
   {
     const settings = await openJournalSettings(page);
-    await expect(settings).toContainText('in America/Chicago');
-    await settings.getByLabel('Time zone').selectOption(east);
-    await expect(settings).toContainText(`Today is ${dayIn(east)} in ${east}`);
-    const template = settings.getByLabel('Daily template');
+    const zoneRow = settings.getByTestId('time-zone-setting');
+    await expect(zoneRow).toHaveAttribute('data-zone', 'America/Chicago');
+    await chooseZone(page, settings, east);
+    await expect(zoneRow).toHaveAttribute('data-today', dayIn(east));
+    // The template saves as you type (no Save button), and the preview fills it in for today.
+    const template = settings.getByRole('textbox', { name: 'Daily Template' });
     await template.fill('# Log for {{longDate}}\n\nWeek {{week}}\n');
-    await settings.getByRole('button', { name: 'Save' }).first().click();
-    await expect(settings.getByRole('status').first()).toHaveText('Saved');
+    await expect(settings.getByTestId('template-preview')).toContainText(dayIn(east));
+    await expect(settings.getByTestId('template-preview')).toContainText(/Week \d{4}-W\d{2}/);
+    await expect(settings.getByTestId('template-status')).toHaveText('Saved');
+    await expect(settings.getByRole('button', { name: 'Save', exact: true })).toHaveCount(0);
 
     await page.goto('/');
     await ready(page);
@@ -202,8 +218,7 @@ test('the time zone and templates in Settings decide the day and the new note', 
 
     // Another zone moves "today" in the calendar straight away.
     const again = await openJournalSettings(page);
-    await again.getByLabel('Time zone').selectOption(west);
-    await expect(again).toContainText(`in ${west}`);
+    await chooseZone(page, again, west);
     // Settings' back link: in the Mac app, to the note open before Settings (B13).
     await page.locator('.settings-bar .back-link').click();
     await ready(page);
@@ -224,11 +239,19 @@ test('the time zone and templates in Settings decide the day and the new note', 
   expect(errors).toEqual([]);
 });
 
-// T51 item 19 (A947): Settings → Daily Notes chooses where Quick Capture starts; a choice in
-// the capture form is for that capture only.
+// T51 item 19 (A947): Settings → Quick Capture (its own page since PEN-146) chooses where Quick
+// Capture starts; a choice in the capture form is for that capture only.
 test('Quick Capture starts on the default from Settings every time', async ({ page }) => {
   const errors = collectErrors(page);
-  const settings = await openJournalSettings(page);
+  await openJournalSettings(page);
+  await page
+    .getByRole('navigation', { name: 'Settings sections' })
+    .getByRole('link', { name: 'Quick Capture' })
+    .click();
+  const settings = page.getByTestId('quick-capture-settings');
+  await expect(settings).toBeVisible();
+  // Quick Capture's settings left Daily Notes.
+  await expect(page.getByTestId('journal-settings')).toHaveCount(0);
   const quick = settings.getByTestId('capture-default-setting');
   try {
     await quick.getByText('New Note in Inbox').click();

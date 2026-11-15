@@ -10,7 +10,7 @@ A capture goes to one of two places:
 - **Today's Note:** added under a `## Captures` heading in [today's note](/docs/journal/), with the time in bold, such as `**14:32** Call the plumber`.
 - **New Note in Inbox:** a new note in the Inbox folder, titled from its first line.
 
-The default is set in **Settings → Daily Notes → Quick Capture** (on Android, **Settings → Quick Capture**). The capture form lets you pick the other one for a single capture. Captures go into your [Primary Notebook](/docs/organise/#the-primary-notebook); with several notebooks, **Into** in the form chooses another.
+Choose the default in **Settings → Quick Capture → Saves To**. The capture form lets you pick the other one for a single capture. Captures go into your [Primary Notebook](/docs/organise/#the-primary-notebook), which the **Notebook** row on the same page names, with a link to it; with several notebooks, **Into** in the form chooses another.
 
 Captures are saved on the device at once, offline too, and synced later.
 
@@ -25,7 +25,9 @@ Inside Penmoss, **Quick Capture…** (⌘⇧K) opens the same form. The [menu ba
 
 ### Change the hotkey
 
-Set it in **Settings → Keyboard Shortcuts → Quick capture from any app**, then **Save**. It needs two modifiers or more, one of them ⌘ or ⌃, and not a combination that copies, pastes, undoes or edits text. macOS cannot tell Penmoss whether another app takes the keys first, so if the hotkey does nothing, choose another.
+In **Settings → Quick Capture → Shortcut From Any App**, click **Change**, then press the keys you want, as you would for any other [shortcut](/docs/shortcuts/#change-a-shortcut). Escape cancels. It needs two modifiers or more, one of them ⌘ or ⌃, and not a combination that copies, pastes, undoes or edits text; if Penmoss can't use the keys you pressed, the row says why and keeps the old ones. macOS cannot tell Penmoss whether another app takes the keys first, so if the hotkey does nothing, choose another.
+
+**Show in the Menu Bar**, under it, turns the [menu bar icon](/docs/install/mac/#the-menu-bar-icon) on or off. Both are this Mac's own: they don't sync.
 
 ## On Android
 

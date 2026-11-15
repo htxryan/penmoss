@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { collectErrors, gitNotebook, go, launch, removeDataDirs, type Launched } from './support';
 
-// PEN-70 (A1247) in the Mac app: tooltips wait 1 second by default; Settings → Display → Show
+// PEN-70 (A1247) in the Mac app: tooltips wait 1 second by default; Settings → Appearance → Show
 // Tooltips After chooses 0.5, 1, 1.5 or 2 seconds, or Never on hover, and the next hover uses
 // it with no reload. Keyboard focus still shows a tooltip at once.
 
@@ -43,13 +43,13 @@ async function tipDelay(page: Page, target: Locator): Promise<number> {
   return times.shown - times.over;
 }
 
-test('Show Tooltips After in Settings → Display sets the hover delay; Never stops it; focus shows at once', async () => {
+test('Show Tooltips After in Settings → Appearance sets the hover delay; Never stops it; focus shows at once', async () => {
   const launched = await launch({ macWindow: true });
   opened.push(launched);
   const { page } = launched;
   const errors = collectErrors(page, false);
   await gitNotebook(launched);
-  await go(page, '/settings/display');
+  await go(page, '/settings/appearance');
   const field = page.getByLabel('Show Tooltips After');
   const tooltip = page.getByTestId('tooltip');
   const back = page.locator('.back-link');
@@ -64,7 +64,7 @@ test('Show Tooltips After in Settings → Display sets the hover delay; Never st
   ]);
   await expect(field).toHaveValue('1000');
   await expect(page.getByTestId('tooltip-delay-help')).toHaveText(
-    'How long the pointer rests on a button before its name shows. Tabbing to a button shows it at once. Changes sync to your other devices.',
+    'How long the pointer rests on a button before its name shows. Tabbing to a button shows it at once.',
   );
   if (SHOTS) {
     await field.scrollIntoViewIfNeeded();

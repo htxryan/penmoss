@@ -17,6 +17,8 @@ import { Icon } from '@penmoss/ui/icons';
 import { useId, useState } from 'react';
 import { useCommands, useCommandsVersion, useKeys } from '../commands/hooks';
 import { ColourPicker, type ColourSwatch } from '../shell/ColourPicker';
+import { useReorder } from '../shell/reorder';
+import '../theme/look-settings.css';
 import { GlyphPicker } from './GlyphPicker';
 import { SPACES_CLASH, symbolKeysMayClash, useLineSymbols } from './symbols';
 
@@ -54,7 +56,9 @@ function SlotKeys({ slot }: { slot: number }) {
  * again (A742). The glyph comes from a picker of presets or is pasted in, the colour from the
  * theme's or any of one's own (T51 items 9 and 10, A939). Symbols are known by their glyphs:
  * there are no names to give (A940), and a new or changed glyph is stored as its own name, so
- * older builds still read the list.
+ * older builds still read the list. Each row shows its slot's keys, read from the bindings, so a
+ * rebound key shows as rebound; a row moves by its handle (drag, or Alt+↑ and Alt+↓), which
+ * changes its keys (PEN-146, Show the Keys).
  */
 export function SymbolsSettings() {
   const { symbols, custom, save, reset, canChange } = useLineSymbols();
@@ -71,12 +75,22 @@ export function SymbolsSettings() {
   };
   const update = (index: number, patch: Partial<LineSymbol>) =>
     change(symbols.map((symbol, at) => (at === index ? { ...symbol, ...patch } : symbol)));
-  const move = (index: number, by: -1 | 1) => {
-    const next = [...symbols];
-    const [moved] = next.splice(index, 1);
-    next.splice(index + by, 0, moved!);
-    change(next, `${moved!.glyph} is now symbol ${index + by + 1}.`);
-  };
+  const ids = symbols.map((symbol) => glyphKey(symbol.glyph));
+  const reorder = useReorder({
+    ids,
+    type: 'application/x-penmoss-symbol',
+    disabled,
+    onMove: (key, index) => {
+      const next = [...symbols];
+      const [moved] = next.splice(ids.indexOf(key), 1);
+      next.splice(index, 0, moved!);
+      const combo = commands.keysOf(`editor.symbol${index + 1}`)[0];
+      change(
+        next,
+        `${moved!.glyph} is now symbol ${index + 1}${combo ? `, ${formatCombo(combo)}` : ''}.`,
+      );
+    },
+  });
   /** The other symbol with this glyph, said as a sentence, or null. */
   const takenBy = (index: number) => (glyph: string) => {
     const other = symbols.findIndex(
@@ -86,19 +100,38 @@ export function SymbolsSettings() {
   };
   return (
     <section
-      className="settings-section"
+      className="settings-section symbols-settings lf-page"
       aria-labelledby={`${id}-h`}
       data-testid="symbols-settings"
     >
       <h2 id={`${id}-h`}>Symbols</h2>
       <p>
-        Mark a line as important, a question, a follow-up, an idea or next with a symbol in the
-        margin. Each one is plain text at the start of the line (<code>★ Call the bank</code>), so
-        the git mirror and agents see it too. Changes sync to your other devices.
+        Type a symbol at the start of a line to mark it as important, a question, a follow-up, an
+        idea or next. It is plain text in the note (<code>★ Call the bank</code>), so agents see it
+        too. Up to {MAX_SYMBOLS}; each one&rsquo;s shortcut follows its place in the list. Changes
+        sync to your other devices.
       </p>
-      <ol className="symbol-list" aria-label="Your symbols">
+      <ol className="symbol-list lf-group" aria-label="Your Symbols" data-setting="symbols">
         {symbols.map((symbol, index) => (
-          <li key={`${index}:${symbol.glyph}`} className="symbol-row" data-testid="symbol-row">
+          <li
+            key={ids[index]}
+            className="symbol-row"
+            data-testid="symbol-row"
+            {...reorder.rowProps(ids[index]!)}
+          >
+            <button
+              type="button"
+              className="icon-btn lf-grip"
+              data-ui="item"
+              aria-label={`Move ${symbolSpokenName(symbol)}, symbol ${index + 1} of ${symbols.length}`}
+              aria-description="Drag, or press Alt and the up or down arrow"
+              data-tip={`Drag to Move ${symbol.glyph}`}
+              data-testid={`symbol-move-${index + 1}`}
+              disabled={disabled}
+              {...reorder.handleProps(ids[index]!)}
+            >
+              <Icon name="grip" size={14} />
+            </button>
             <SlotKeys slot={index} />
             <GlyphPicker
               glyph={symbol.glyph}
@@ -127,28 +160,6 @@ export function SymbolsSettings() {
             <span className="symbol-actions">
               <button
                 type="button"
-                className="btn quiet"
-                data-ui="item"
-                aria-label={`Move ${symbolSpokenName(symbol)} Up`}
-                data-tip={`Move ${symbol.glyph} Up`}
-                disabled={disabled || index === 0}
-                onClick={() => move(index, -1)}
-              >
-                <Icon name="chevU" />
-              </button>
-              <button
-                type="button"
-                className="btn quiet"
-                data-ui="item"
-                aria-label={`Move ${symbolSpokenName(symbol)} Down`}
-                data-tip={`Move ${symbol.glyph} Down`}
-                disabled={disabled || index === symbols.length - 1}
-                onClick={() => move(index, 1)}
-              >
-                <Icon name="chevD" />
-              </button>
-              <button
-                type="button"
                 className="btn quiet danger"
                 data-ui="item"
                 aria-label={`Remove ${symbolSpokenName(symbol)}`}
@@ -161,7 +172,7 @@ export function SymbolsSettings() {
                   )
                 }
               >
-                <Icon name="trash" />
+                <Icon name="close" />
               </button>
             </span>
           </li>
@@ -170,11 +181,12 @@ export function SymbolsSettings() {
       {symbols.length === 0 ? (
         <p className="muted">No symbols: add one, or restore the defaults.</p>
       ) : null}
-      <div className="settings-actions">
+      <div className="settings-actions symbol-foot">
         <button
           type="button"
           className="btn"
           data-ui="submit"
+          data-setting="add-a-symbol"
           disabled={disabled || symbols.length >= MAX_SYMBOLS}
           onClick={() => {
             const glyph = nextGlyph(symbols);
@@ -187,26 +199,33 @@ export function SymbolsSettings() {
           <Icon name="plus" />
           Add a Symbol
         </button>
-        <button
-          type="button"
-          className="btn"
-          data-ui="submit"
-          disabled={disabled || !custom}
-          onClick={() => {
-            reset();
-            setNotice(`Restored ${DEFAULT_SYMBOLS.map((symbol) => symbol.glyph).join(' ')}.`);
-          }}
-        >
-          Restore Defaults
-        </button>
-        <button
-          type="button"
-          className="btn quiet"
-          data-command="app.shortcuts"
-          onClick={() => commands.run('app.shortcuts')}
-        >
-          Change Their Shortcuts
-        </button>
+        <span className="lf-help" data-testid="symbols-count">
+          {symbols.length} of {MAX_SYMBOLS}
+        </span>
+        <span className="symbol-foot-end">
+          <button
+            type="button"
+            className="btn quiet"
+            data-command="app.shortcuts"
+            data-setting="change-their-shortcuts"
+            onClick={() => commands.run('app.shortcuts')}
+          >
+            Change Their Shortcuts
+          </button>
+          <button
+            type="button"
+            className="btn quiet"
+            data-ui="submit"
+            data-setting="restore-defaults"
+            disabled={disabled || !custom}
+            onClick={() => {
+              reset();
+              setNotice(`Restored ${DEFAULT_SYMBOLS.map((symbol) => symbol.glyph).join(' ')}.`);
+            }}
+          >
+            Restore Defaults
+          </button>
+        </span>
       </div>
       {symbolKeysMayClash((slot) => commands.keysOf(slot)) ? (
         <p className="muted settings-help" data-testid="symbols-spaces">
@@ -215,7 +234,7 @@ export function SymbolsSettings() {
       ) : null}
       <p role="status" className="muted settings-help" data-testid="symbols-notice">
         {notice ??
-          `Up to ${MAX_SYMBOLS}. A glyph is a symbol or emoji without letters, digits or markdown characters.`}
+          'Drag a row, or press Alt+↑ or Alt+↓ on it, to change its key. A glyph is a symbol or emoji without letters, digits or markdown characters. Removing a symbol leaves it as text in your notes.'}
       </p>
     </section>
   );

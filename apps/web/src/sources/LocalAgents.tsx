@@ -1,5 +1,6 @@
 /**
- * Agents on this Mac with no account (T54, D47), in Settings → Agents (A1098):
+ * Agents on this Mac with no account (T54, D47), in Settings → Agents (A1098; PEN-146: each
+ * notebook folds open there, AgentsSettings.tsx):
  *
  * - **Each notebook's agents** (A993, D52): the app's own agent clone of every notebook
  *   (“Agent”), made by itself, which every agent on this Mac can use and which goes only with
@@ -11,11 +12,12 @@
  *   agent" (T60, A1073) shows the Claude Code command with `--channel`, and how to start Claude
  *   Code so it loads that channel, for the threads Ryan sends it with Send to….
  * - **The penmoss Command** (A992): writes `~/.local/bin/penmoss`, which runs this app as the CLI,
- *   and says how to put its folder on PATH.
+ *   and says how to put its folder on PATH. Installed and on PATH, it is one line with Manage…,
+ *   which opens the card (PEN-146).
  */
 import { copyText } from '@penmoss/editor';
 import { Icon } from '@penmoss/ui/icons';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import {
   type CliInfo,
   type DesktopGit,
@@ -50,8 +52,30 @@ function said<T>(result: GitAnswer<T> | null): string | null {
   return result.ok ? null : result.error.message;
 }
 
-export function GitLocalAgents({ git, localId }: { git: DesktopGit; localId: string }) {
+export function GitLocalAgents({
+  git,
+  localId,
+  focus = 0,
+  onAgents,
+}: {
+  git: DesktopGit;
+  localId: string;
+  /** Bumped by the row's Connect an Agent…: the agent's name field takes the focus. */
+  focus?: number;
+  /** The agents connected, each time they are read. */
+  onAgents?: (agents: readonly LocalAgentInfo[]) => void;
+}) {
   const id = useId();
+  const labelField = useRef<HTMLInputElement>(null);
+  const told = useRef(onAgents);
+  useEffect(() => {
+    told.current = onAgents;
+  });
+  useEffect(() => {
+    if (focus === 0) return;
+    labelField.current?.focus();
+    labelField.current?.select();
+  }, [focus]);
   const [agents, setAgents] = useState<readonly LocalAgentInfo[] | null>(null);
   const [label, setLabel] = useState('Claude Code');
   const [busy, setBusy] = useState(false);
@@ -74,8 +98,10 @@ export function GitLocalAgents({ git, localId }: { git: DesktopGit; localId: str
     void git.agents(localId).then(
       (result) => {
         if (cancelled) return;
-        if (result?.ok) setAgents(result.value);
-        else {
+        if (result?.ok) {
+          setAgents(result.value);
+          told.current?.(result.value);
+        } else {
           setAgents([]);
           setMessage(said(result));
         }
@@ -235,9 +261,10 @@ export function GitLocalAgents({ git, localId }: { git: DesktopGit; localId: str
       >
         <label className="settings-field">
           <span>
-            Another agent’s name <span className="muted">(its own copy, named in History)</span>
+            Agent Name <span className="muted">(its own copy, named in History)</span>
           </span>
           <input
+            ref={labelField}
             className="input"
             maxLength={40}
             value={label}
@@ -253,7 +280,7 @@ export function GitLocalAgents({ git, localId }: { git: DesktopGit; localId: str
           disabled={busy || label.trim() === ''}
         >
           <Icon name="key" size={14} />
-          Connect an Agent
+          Connect
         </button>
       </form>
       <p role="status" className="muted" data-testid="git-local-agent-message">
@@ -270,6 +297,8 @@ export function CommandLine({ git }: { git: DesktopGit }) {
   const [cli, setCli] = useState<CliInfo | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  /** The card opened (Manage…, or an action taken): it stays open while the page is. */
+  const [managing, setManaging] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -298,6 +327,7 @@ export function CommandLine({ git }: { git: DesktopGit }) {
   const change = async (run: () => Promise<GitAnswer<CliInfo> | null>, done: string) => {
     setBusy(true);
     setMessage(null);
+    setManaging(true);
     try {
       const result = await run();
       if (result?.ok) {
@@ -341,12 +371,40 @@ export function CommandLine({ git }: { git: DesktopGit }) {
     );
   }
   const mine = cli.state === 'installed' || cli.state === 'stale';
+  if (cli.state === 'installed' && cli.onPath === true && !managing) {
+    // Healthy: one line, and the card behind Manage… (PEN-146).
+    return (
+      <div
+        className="nset-okline"
+        data-testid="git-cli"
+        data-state={cli.state}
+        data-compact="true"
+        data-setting="penmoss-command"
+      >
+        <span className="nset-okline-mark" data-testid="git-cli-state">
+          <Icon name="check" size={14} />
+          penmoss command installed
+        </span>
+        <code className="muted">{cli.path}</code>
+        <button
+          data-ui="item"
+          type="button"
+          className="btn"
+          data-testid="git-cli-manage"
+          onClick={() => setManaging(true)}
+        >
+          Manage…
+        </button>
+      </div>
+    );
+  }
   return (
     <section
       className="settings-card"
       aria-labelledby={`${id}-h`}
       data-testid="git-cli"
       data-state={cli.state}
+      data-setting="penmoss-command"
     >
       {head}
       <p data-testid="git-cli-state">

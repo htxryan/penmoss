@@ -44,19 +44,26 @@ Builds from the Alpha channel use the same app and certificate, so an Alpha buil
 
 ## Notebooks
 
-The first screen lists your notebooks; each opens in a screen of its own, with its Home, folders and search. **Settings → Notebooks** adds, configures and removes them:
+The first screen lists your notebooks; each opens in a screen of its own, with its Home, folders and search. The gear at the top opens **Settings**, which has a **Search Settings** field and five groups: **Look and Feel** (Appearance, Home, Symbols), **Writing** (Daily Notes, Quick Capture, Keyboard Shortcuts), **Notebooks**, **Agents** (Agent Activity) and **This Phone** (Storage, GitHub, What’s New).
 
-- **Sync Now**, **Wi-Fi only**, **Sign commits**, how soon it pushes (**Push after**, 12 seconds by default) and how often it pulls (**Pull every**, 1 minute by default).
-- **Personal access token** (**Save Token**, **Forget Token**), and a **Commit name** and **Commit email** for this notebook.
-- **Remove from This Phone**, which asks for your fingerprint, face or screen lock first.
-- **Commits from this phone:** the name and email the phone commits as.
-- **Journal notebook:** where Today, This week and captures go on this phone.
+Under **Notebooks**, each notebook has a row with its sync state; tap it for the notebook's page, which has three tabs:
+
+- **Overview:** its sync state with **Sync Now**, **Open Notebook**, **Make Primary**, and **Remove from This Phone…**, which asks for your fingerprint, face or screen lock first.
+- **Sync:** what the last sync said, **Wi-Fi Only**, how soon it pushes (**Push After**, 12 seconds by default) and how often it pulls (**Pull Every**, 1 minute by default).
+- **Git:** the **Personal Access Token** (**Save Token**, **Forget Token**), **Sign Commits**, and a **Commit Name** and **Commit Email** for this notebook.
+
+**All Notebooks** lists them all, with **+ Add Notebook**, and:
+
+- **Primary Notebook:** where Today, This Week and captures go on this phone, and where your app settings are kept.
+- **Between Notebooks → Copy Tags When Copying Notes.**
+- **Commits From This Phone:** the name and email the phone commits as, and its signing key.
+- **Background Sync:** the last background sync and the next.
 
 The phone syncs over HTTPS with a token; SSH remotes are not supported.
 
 ## Signing commits
 
-If your branch requires signed commits, turn on **Sign commits**. **Signing key** shows the phone's public key: **Copy** it and add it on GitHub as an SSH key with the key type **Signing Key**. The commit email must be a verified email of that GitHub account. **Make a New Key** and **Make an Ed25519 Key** replace the key.
+If your branch requires signed commits, turn on **Sign Commits** on the notebook's **Git** tab. **Signing Key** shows the phone's public key: **Copy** it and add it on GitHub as an SSH key with the key type **Signing Key**. The commit email must be a verified email of that GitHub account. **Make a New Key** and **Make an Ed25519 Key** replace the key.
 
 ## The editor
 
@@ -77,7 +84,7 @@ With the app closed, Android syncs your notebooks about every 15 minutes, the sh
 - on mobile data, it skips notebooks set to **Wi-Fi only** and fetches less;
 - in Doze, when the phone has been still for a while.
 
-**Settings → Notebooks → In the background** shows the last run and the next.
+**Settings → All Notebooks → Background Sync** shows the last run and the next.
 
 ## Capture
 
@@ -89,19 +96,23 @@ A long press on the app icon offers **Quick Capture**, **New Note**, **Today's N
 
 Removing a notebook, Delete for Good and restoring a version first ask for your fingerprint, face or screen lock ("Confirm it's you"). Android checks it on the phone; Penmoss never sees it. With no screen lock set, these changes are refused until you set one.
 
-## Pictures from the web
+## Storage and pictures from the web
 
-**Settings → Sync and Storage** chooses whether notes load pictures from web addresses, which lets those websites see your phone's IP address, and shows the space files and pictures take on the phone. Files over 10 MB upload on Wi-Fi only.
+**Settings → Storage** shows the space **Files and Pictures in Notes** and **Pictures From the Web** take on the phone; **Clear…** empties the saved web pictures after asking. **Load Pictures From the Web** is **Always**, **On Wi-Fi** or **Never**: loading one lets its website see your phone's IP address. Files over 10 MB upload on Wi-Fi only.
+
+## GitHub
+
+**Settings → GitHub** shows the GitHub account the phone is signed in to, with **Sign Out**. **Sign In with GitHub** shows a code to enter at github.com/login/device; **Use a Token Instead…** takes a personal access token. The account is used for **Send Feedback**. A notebook's own repository uses the token on its **Git** tab.
 
 ## What's new
 
-**Settings → What’s New** shows what changed in the version you have, and in earlier versions, grouped as **New**, **Improved** and **Fixed**. Only changes that reach Android are listed. An Alpha build lists every change since the last stable release, each with its build. The phone fetches the notes from GitHub when you open the screen and after an update, at most once an hour, and keeps them for offline. Until it has them, the screen links to the [Releases page](https://github.com/htxryan/penmoss/releases).
+**Settings → What’s New** names the version you have, then shows what changed in it and, under **Earlier Versions**, in earlier ones, grouped as **New**, **Improved** and **Fixed**. Only changes that reach Android are listed. An Alpha build lists every change since the last stable release, each with its build. The phone fetches the notes from GitHub when you open the screen and after an update, at most once an hour, and keeps them for offline. Until it has them, the screen links to the [Releases page](https://github.com/htxryan/penmoss/releases).
 
 After you install a newer version, a message at the foot of the screen says **Updated to …** once, with **What’s New**, if that version has notes for Android.
 
 ## What the phone does not have
 
-Compared with the Mac: note windows, Keep on Top, the menu bar icon and hotkey, Sign in with GitHub and the repository picker, SSH remotes, search by meaning, and the sidebar's Calendar and Tags sections. Agents connect on a Mac, not on the phone.
+Compared with the Mac: note windows, Keep on Top, the menu bar icon and hotkey, the repository picker (Sign In with GitHub on the phone is for Send Feedback), SSH remotes, search by meaning, and the sidebar's Calendar and Tags sections. Agents connect on a Mac, not on the phone.
 
 ## Uninstall
 

@@ -69,7 +69,7 @@ export function refreshTray(): void {
   }
 }
 
-/** Settings → Display → Show Penmoss in the Menu Bar (A945): saved for this Mac, then applied. */
+/** Settings → Quick Capture → Show in the Menu Bar (A945): saved for this Mac, then applied. */
 export function setMenuBarIcon(shown: boolean): boolean {
   const current = state.preferences.menuBarIcon !== false;
   if (current !== shown) {

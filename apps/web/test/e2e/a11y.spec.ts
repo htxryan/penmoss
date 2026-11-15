@@ -427,12 +427,17 @@ test.describe.serial('no serious axe violations on any main screen', () => {
       // Settings, every section the Mac app has with no server (T59).
       for (const path of [
         '/settings',
-        '/settings/display',
+        '/settings/sidebar',
+        '/settings/note',
         '/settings/symbols',
+        '/settings/journal',
+        '/settings/quick-capture',
+        '/settings/shortcuts',
         '/settings/git-notebooks',
         '/settings/agents',
-        '/settings/journal',
-        '/settings/shortcuts',
+        '/settings/agent-activity',
+        '/settings/github',
+        '/settings/updates',
       ]) {
         await settings(page, path);
         await check(page, `${scheme} ${path}`);

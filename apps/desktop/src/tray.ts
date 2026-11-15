@@ -1,6 +1,6 @@
 /**
  * The menu bar icon (T51 item 17, A945): a template image in the Mac's menu bar, on by default
- * since T53 (item 6, A976) and turned off in Settings → Display (a preference of this Mac, preferences.json, like the
+ * since T53 (item 6, A976) and turned off in Settings → Quick Capture (a preference of this Mac, preferences.json, like the
  * compact title bar). Its menu: Quick Capture, Open Today's Journal, the Quick Access notes
  * (A946), each opening in the main window, then Open Penmoss. The main window's page tells main
  * the pinned notes and their titles as they change (`quickAccessSet`).

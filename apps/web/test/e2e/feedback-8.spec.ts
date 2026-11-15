@@ -215,21 +215,21 @@ test('5: Settings → Agents shows the command’s card at once, and its noteboo
     timeout: 1000,
   });
 
-  // A notebook's agents, on a page of its own.
-  await agents.getByTestId('agents-notebook-row').click();
-  await expect(page).toHaveURL(/\/settings\/agents\/[0-9A-Z]{26}$/);
+  // A notebook's agents, unfolded in place (PEN-146: one page, folded, amending A1125).
+  const row = agents.getByTestId('agents-notebook-row');
+  await row.getByTestId('agents-notebook-fold').click();
+  await expect(row.getByTestId('agents-notebook-fold')).toHaveAttribute('aria-expanded', 'true');
   const notebook = agents.getByTestId('notebook-agents');
-  await expect(notebook.getByRole('heading', { level: 2 })).toHaveText('Quanta');
+  await expect(row).toContainText('Quanta');
   await expect(notebook).toContainText('penmoss mcp --notebook Quanta');
   await expect(notebook.getByTestId('git-local-agents')).toBeVisible();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/agents-notebook.png` });
-  // Its git notebook page links here, and here back to it.
-  await notebook.getByTestId('agents-notebook-git').click();
-  await expect(page).toHaveURL(/\/settings\/git-notebooks\/[0-9A-Z]{26}$/);
-  await page.getByTestId('git-notebook-agents-link').click();
-  await expect(page).toHaveURL(/\/settings\/agents\/[0-9A-Z]{26}$/);
-  await page.getByTestId('agents-back').click();
-  await expect(page).toHaveURL(/\/settings\/agents$/);
+  // Its address opens the page with it unfolded; Agent Activity is the page beside it.
+  await page.goto((await row.getAttribute('data-path'))!);
+  await expect(notebook.getByTestId('git-local-agents')).toBeVisible();
+  await agents.getByTestId('agents-activity-link').click();
+  await expect(page).toHaveURL(/\/settings\/agent-activity$/);
+  await expect(page.getByTestId('agent-activity-settings')).toBeVisible();
   void host;
   expect(errors).toEqual([]);
 });

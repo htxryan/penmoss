@@ -258,18 +258,19 @@ test('6: the note’s actions are in one ⋯ menu; Full width and Copy Agent Ref
   expect(errors).toEqual([]);
 });
 
-test('7: Settings → Display hides sidebar shortcuts, on the rail too; Search stays', async ({
+test('7: Settings → Sidebar hides sidebar shortcuts, on the rail too; Search stays', async ({
   page,
 }) => {
   const errors = collectErrors(page);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/settings/display');
+  await page.goto('/settings/sidebar');
   const settings = page.getByTestId('display-settings');
   await expect(settings).toBeVisible();
-  const today = settings.getByRole('checkbox', { name: 'Today' });
-  const graph = settings.getByRole('checkbox', { name: 'Graph' });
-  await expect(settings.getByRole('checkbox', { name: /Search/ })).toBeDisabled();
-  await expect(settings.getByRole('checkbox', { name: /Search/ })).toBeChecked();
+  // Switches since PEN-146.
+  const today = settings.getByRole('switch', { name: 'Today' });
+  const graph = settings.getByRole('switch', { name: 'Graph' });
+  await expect(settings.getByRole('switch', { name: /Search/ })).toBeDisabled();
+  await expect(settings.getByRole('switch', { name: /Search/ })).toBeChecked();
   // Tags may be hidden too, and shows unless it is (R2-9).
   await expect(settings.getByTestId('display-tags')).toBeChecked();
   // Enabled once this device's copy of the settings is read: before, they are only defaults.
@@ -315,7 +316,7 @@ test('7: Settings → Display hides sidebar shortcuts, on the rail too; Search s
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/\/graph/);
   } finally {
-    await page.goto('/settings/display');
+    await page.goto('/settings/sidebar');
     await expect(today).toBeEnabled();
     for (const box of [today, graph]) if (!(await box.isChecked())) await box.check();
     await expect(today).toBeChecked();

@@ -3,6 +3,8 @@ package app.penmoss.ui
 import android.content.Intent
 import android.net.Uri
 import android.os.Looper
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
@@ -123,7 +125,8 @@ class DeepLinkActivityTest {
             compose.onAllNodes(hasTestTag("gitNotebook-$work")).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithTag("gitFirstRun").assertDoesNotExist()
-        compose.onNode(hasTestTag("gitOpen-$work")).performScrollTo().assertExists()
+        // The row itself opens the notebook (PEN-146); its page is under Settings.
+        compose.onNode(hasTestTag("gitNotebook-$work")).performScrollTo().assert(hasClickAction())
         assertEquals(0, shown("Sign In", substring = true))
     }
 

@@ -87,7 +87,7 @@ export function ReleaseNotes({ current, offered }: { current: string; offered: s
       ) : null}
       {view.earlier.length > 0 ? (
         <details className="release-notes-earlier" data-testid="release-notes-earlier">
-          <summary>Earlier versions</summary>
+          <summary>Earlier Versions</summary>
           {view.earlier.map((block) => (
             <Block key={block.title} block={block} testId="release-notes-release" />
           ))}

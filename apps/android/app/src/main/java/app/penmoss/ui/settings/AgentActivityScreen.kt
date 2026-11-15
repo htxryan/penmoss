@@ -3,6 +3,8 @@ package app.penmoss.ui.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,6 +37,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -44,16 +47,14 @@ import androidx.compose.ui.unit.dp
 import app.penmoss.engine.api.AgentActivityEntry
 import app.penmoss.ui.common.PenmossSnackbar
 
-/** The web's words for an empty list (`ActivityList`). */
-internal const val NO_AGENT_ACTIVITY = "No agent has moved notes or changed folders, settings or tags in the last 30 days."
-
-/** A git notebook's (#172, A920): the web's `GitAgentActivity` words. */
-internal const val NO_GIT_AGENT_ACTIVITY = "No agent has moved notes or changed folders or settings here in the last 30 days."
+/** The words for an empty list (#172, A920): read from each notebook's branch, so no tags. */
+internal const val NO_AGENT_ACTIVITY = "No agent has moved notes or changed folders or settings in your notebooks in the last 30 days."
 
 /**
- * Agent activity (T42, A561; T40 P9, AC11), as the web's: what agent tokens changed in the last
- * 30 days, newest first, filtered by agent and kind of change, each with **Undo**, which puts it
- * back as your own change unless it was changed again since; then who undid it and when.
+ * Agent Activity (T42, A561; #172, A920; PEN-146): what agents changed in the last 30 days across
+ * every notebook on this phone, newest first, filtered by notebook, agent and kind of change, each
+ * with **Undo**, which puts it back as your own change unless it was changed again since; then who
+ * undid it and when.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,12 +62,10 @@ fun AgentActivityScreen(
     ui: AgentActivityUi,
     onBack: () -> Unit,
     onRetry: () -> Unit,
-    onFilter: (agent: String, group: String) -> Unit,
-    onUndo: (AgentActivityEntry) -> Unit,
+    onFilter: (notebook: String, agent: String, group: String) -> Unit,
+    onUndo: (ActivityItem) -> Unit,
     onMessageShown: () -> Unit,
     now: Long = System.currentTimeMillis(),
-    /** A git notebook's (#172, A920): read from its branch, its agents being `--agent` clones. */
-    git: Boolean = false,
 ) {
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(ui.message) {
@@ -82,11 +81,9 @@ fun AgentActivityScreen(
             item {
                 if (ui.loading || ui.busy != null) LinearProgressIndicator(Modifier.fillMaxWidth().testTag("activityLoading"))
                 Help(
-                    if (git) {
-                        "What agents (a CLI or MCP clone added with --agent) changed in this notebook in the last 30 days: folders, where notes are and settings, read from its branch. Undo puts it back as your own change, pushed with the next sync, unless it was changed again since. An agent’s edits to a note and its tags are in the note’s History, and the notes and folders it deleted are in Trash."
-                    } else {
-                        "What agent tokens changed in the last 30 days: folders, where notes are, settings and tags. Undo puts it back as your own change, unless it was changed again since. An agent’s edits to a note are in the note’s History, and the notes and folders it deleted are in Trash."
-                    },
+                    "What agents (a CLI or MCP clone added with --agent) changed in your notebooks in the last 30 days: folders, where notes are and settings, " +
+                        "read from each notebook’s branch. Undo puts it back as your own change, pushed with the next sync, unless it was changed again since. " +
+                        "An agent’s edits to a note and its tags are in the note’s History, and the notes and folders it deleted are in Trash.",
                 )
             }
             ui.problem?.let { problem ->
@@ -95,12 +92,12 @@ fun AgentActivityScreen(
                     Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) { OutlinedButton(onClick = onRetry) { Text("Try Again") } }
                 }
             }
-            val entries = ui.entries
-            if (entries != null) {
-                item { Filters(ui, entries, onFilter) }
-                if (ui.shown.isEmpty()) item { Help(if (git) NO_GIT_AGENT_ACTIVITY else NO_AGENT_ACTIVITY, Modifier.padding(vertical = 8.dp).testTag("noActivity")) }
-                items(ui.shown, key = { it.id }) { entry ->
-                    ActivityRow(entry, now, enabled = ui.busy == null, onUndo = { onUndo(entry) })
+            val items = ui.items
+            if (items != null) {
+                item { Filters(ui, items, onFilter) }
+                if (ui.shown.isEmpty()) item { Help(NO_AGENT_ACTIVITY, Modifier.padding(vertical = 8.dp).testTag("noActivity")) }
+                items(ui.shown, key = { it.key }) { item ->
+                    ActivityRow(item, now, enabled = ui.busy == null, onUndo = { onUndo(item) })
                     HorizontalDivider()
                 }
             }
@@ -108,65 +105,71 @@ fun AgentActivityScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun Filters(ui: AgentActivityUi, entries: List<AgentActivityEntry>, onFilter: (String, String) -> Unit) {
-    var picking by rememberSaveable { mutableStateOf<String?>(null) }
-    val agents = activityAgents(entries)
-    val agentName = agents.firstOrNull { it.first == ui.agent }?.second ?: "Every agent"
-    val groupName = ACTIVITY_GROUPS.firstOrNull { it.first == ui.group }?.second ?: "All changes"
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box {
-            FilterChip(
-                selected = ui.agent != "all",
-                onClick = { picking = "agent" },
-                label = { Text(agentName) },
-                trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
-                modifier = Modifier.testTag("activityAgent").semantics { contentDescription = "Agent: $agentName" },
-            )
-            DropdownMenu(expanded = picking == "agent", onDismissRequest = { picking = null }) {
-                for ((id, label) in listOf("all" to "Every agent") + agents) {
-                    DropdownMenuItem(text = { Text(label) }, onClick = {
-                        picking = null
-                        onFilter(id, ui.group)
-                    }, modifier = Modifier.testTag("activityAgent-$id"))
-                }
-            }
-        }
-        Box {
-            FilterChip(
-                selected = ui.group != "all",
-                onClick = { picking = "group" },
-                label = { Text(groupName) },
-                trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
-                modifier = Modifier.testTag("activityGroup").semantics { contentDescription = "Changes: $groupName" },
-            )
-            DropdownMenu(expanded = picking == "group", onDismissRequest = { picking = null }) {
-                for ((id, label) in ACTIVITY_GROUPS) {
-                    DropdownMenuItem(text = { Text(label) }, onClick = {
-                        picking = null
-                        onFilter(ui.agent, id)
-                    }, modifier = Modifier.testTag("activityGroup-$id"))
-                }
+private fun FilterMenu(
+    tag: String,
+    what: String,
+    selected: Boolean,
+    label: String,
+    options: List<Pair<String, String>>,
+    onPick: (String) -> Unit,
+) {
+    var open by rememberSaveable { mutableStateOf(false) }
+    Box {
+        FilterChip(
+            selected = selected,
+            onClick = { open = true },
+            label = { Text(label) },
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
+            modifier = Modifier.testTag(tag).semantics { contentDescription = "$what: $label" },
+        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            for ((id, name) in options) {
+                DropdownMenuItem(text = { Text(name) }, onClick = {
+                    open = false
+                    onPick(id)
+                }, modifier = Modifier.testTag("$tag-$id"))
             }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ActivityRow(entry: AgentActivityEntry, now: Long, enabled: Boolean, onUndo: () -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 4.dp).testTag("activity-${entry.id}")) {
-        Text(entry.summary, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-        Text(activityDetail(entry, now), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun Filters(ui: AgentActivityUi, items: List<ActivityItem>, onFilter: (String, String, String) -> Unit) {
+    val notebooks = listOf("all" to "All Notebooks") + ui.notebooks
+    val agents = listOf("all" to "All Agents") + activityAgents(items.map { it.entry })
+    FlowRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterMenu("activityNotebook", "Notebook", ui.notebook != "all", notebooks.firstOrNull { it.first == ui.notebook }?.second ?: "All Notebooks", notebooks) {
+            onFilter(it, ui.agent, ui.group)
+        }
+        FilterMenu("activityAgent", "Agent", ui.agent != "all", agents.firstOrNull { it.first == ui.agent }?.second ?: "All Agents", agents) {
+            onFilter(ui.notebook, it, ui.group)
+        }
+        FilterMenu("activityGroup", "Changes", ui.group != "all", ACTIVITY_GROUPS.firstOrNull { it.first == ui.group }?.second ?: "All Changes", ACTIVITY_GROUPS) {
+            onFilter(ui.notebook, ui.agent, it)
+        }
+    }
+}
+
+@Composable
+private fun ActivityRow(item: ActivityItem, now: Long, enabled: Boolean, onUndo: () -> Unit) {
+    val entry = item.entry
+    Row(
+        Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp).testTag("activity-${item.key}"),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(entry.summary, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            Text(activityDetail(entry, now, item.notebookName), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         if (entry.undoneAt == null) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(
-                    onClick = onUndo,
-                    enabled = enabled,
-                    // Said with what it undoes, as the web's button (aria-describedby).
-                    modifier = Modifier.testTag("undo-${entry.id}").semantics { contentDescription = "Undo: ${entry.summary}" },
-                ) { Text("Undo") }
-            }
+            TextButton(
+                onClick = onUndo,
+                enabled = enabled,
+                // Said with what it undoes, as the web's button (aria-describedby).
+                modifier = Modifier.testTag("undo-${item.key}").semantics { contentDescription = "Undo: ${entry.summary}" },
+            ) { Text("Undo") }
         }
     }
 }

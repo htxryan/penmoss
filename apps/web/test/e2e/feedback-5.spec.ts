@@ -47,7 +47,7 @@ async function openNote(page: Page, notebook: string, title: string): Promise<st
   return ULID.exec(new URL(page.url()).pathname)![1]!;
 }
 
-test('1, 9: a notebook’s page reads on the page’s own background; the Primary Notebook is chosen there', async ({
+test('1, 9: a notebook’s page reads on the page’s own background; the Primary Notebook is chosen in All Notebooks', async ({
   page,
   host,
 }) => {
@@ -66,32 +66,27 @@ test('1, 9: a notebook’s page reads on the page’s own background; the Primar
   await rows.filter({ hasText: 'Personal' }).click();
   const page1 = settings.getByTestId('git-notebook');
   await expect(page1.getByRole('heading', { level: 2 })).toHaveText('Personal');
-  // No card: the page's background shows through, and its groups have headings of their own.
+  // No card: the page's background shows through.
   expect(await page1.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
     'rgba(0, 0, 0, 0)',
   );
   expect(await page1.evaluate((element) => getComputedStyle(element).borderTopWidth)).toBe('0px');
-  // Name is the first group since a notebook can be renamed there (A1383).
-  await expect(page1.getByRole('heading', { level: 3 })).toHaveText([
-    'Name',
-    'About',
-    'Primary Notebook',
-    'Sync',
-    'Commits',
-    'Access',
-    'Agent Activity',
-  ]);
-  // Commits' fields are one width, one under the other.
+  // Three tabs (PEN-146); the commit name and email are on Git, one width, one under the other.
+  await expect(page1.getByRole('tab')).toHaveText(['Overview', 'Sync', 'Git']);
+  await page1.getByRole('tab', { name: 'Git' }).click();
   const name = await page1.getByTestId('git-author-name').boundingBox();
   const email = await page1.getByTestId('git-author-email').boundingBox();
   expect(Math.round(name!.width)).toBe(Math.round(email!.width));
   expect(email!.y).toBeGreaterThan(name!.y);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/git-notebook-page.png`, fullPage: true });
 
-  await page1.getByTestId('git-make-primary').click();
-  await expect(page1.getByTestId('git-primary-chip')).toHaveText('Primary Notebook');
-  await expect(page1.getByTestId('git-primary-state')).toContainText('your primary notebook');
-  await expect(page1.getByTestId('git-make-primary')).toHaveCount(0);
+  // The one Primary Notebook picker is All Notebooks' (PEN-146).
+  await page.goto('/settings/git-notebooks');
+  const picker = settings.getByTestId('git-primary-picker');
+  await picker.selectOption({ label: 'Personal' });
+  await expect(rows.filter({ hasText: 'Personal' }).getByTestId('git-row-primary')).toBeVisible();
+  await rows.filter({ hasText: 'Personal' }).click();
+  await expect(page1.getByTestId('git-primary-chip')).toHaveText('Primary');
   // Daily Notes no longer chooses it, and says where it is chosen.
   await page.goto('/settings/journal');
   await expect(page.getByTestId('journal-notebook')).toHaveCount(0);
@@ -186,9 +181,9 @@ test('4, 5: metadata pinned under the title and in the status bar; the Metadata 
   await expect(details).not.toContainText('Length');
   await expect(page.getByTestId('info-words')).toHaveText('3');
 
-  // Settings → Display pins Edited and Tags under the title, and Edited in the status bar for
+  // Settings → Note pins Edited and Tags under the title, and Edited in the status bar for
   // the counts.
-  await page.goto('/settings/display');
+  await page.goto('/settings/note');
   await page.getByTestId('metadata-title-edited').check();
   await page.getByTestId('metadata-title-tags').check();
   await page.getByTestId('metadata-status-edited').check();

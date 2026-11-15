@@ -1,73 +1,69 @@
 package app.penmoss.ui.settings
 
-import androidx.navigation.NavGraphBuilder
-import androidx.navigation.compose.composable
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
-import app.penmoss.ui.keys.CommandRoutes
-import app.penmoss.ui.keys.ShortcutsRoute
-import app.penmoss.feedback.AboutScreen
-import app.penmoss.feedback.FeedbackRoute
-import app.penmoss.feedback.FeedbackRoutes
+import android.content.Context
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.penmoss.NotebookGraph
+import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import app.penmoss.BuildConfig
+import app.penmoss.DeviceGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.data.NoteStore
+import app.penmoss.engine.git.GitEngineStatus
+import app.penmoss.engine.git.GitNotebookView
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.SettingLabels
 import app.penmoss.engine.settings.Settings
 import app.penmoss.engine.settings.ThemeCatalogue
 import app.penmoss.engine.settings.string
-import app.penmoss.ui.settings.AppearanceScreen
-import app.penmoss.ui.settings.FontsUi
-import app.penmoss.ui.settings.DailyNotesScreen
-import app.penmoss.ui.settings.QuickCaptureScreen
-import app.penmoss.ui.settings.SettingsHome
-import app.penmoss.ui.settings.SettingsIcons
-import app.penmoss.ui.settings.SettingsSection
-import app.penmoss.ui.settings.Swatch
-import app.penmoss.ui.settings.TemplateField
-import app.penmoss.ui.settings.ThemeCard
-import app.penmoss.ui.settings.ThemeEditorEntry
-import app.penmoss.ui.settings.ThemeEditorScreen
-import app.penmoss.ui.settings.TimeZonePicker
-import app.penmoss.ui.settings.regionTimeZones
+import app.penmoss.feedback.FeedbackRoutes
+import app.penmoss.ui.common.DotState
+import app.penmoss.ui.journal.journalToday
+import app.penmoss.ui.keys.CommandRoutes
+import app.penmoss.ui.keys.ShortcutsRoute
+import app.penmoss.ui.open
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.coroutines.launch
 import java.time.ZoneId
-import app.penmoss.ui.home.SyncLine
-import app.penmoss.ui.journal.journalToday
-import app.penmoss.ui.RootUi
-import app.penmoss.ui.leave
-import app.penmoss.ui.open
 
 /*
- * The Settings screens' data (T40 P1): each reads the settings as the phone shows them
- * (`NotebookGraph.settings`, the last tree's with unsent changes laid over) and changes them through
- * `NotebookGraph.changeSetting`: the device's go to the Journal notebook's device map (A1014), a
- * notebook's own with its next pass (A411).
+ * The Settings screens' data (T40 P1; PEN-146): each reads the settings as the phone shows them and
+ * changes them: the device's (Appearance, Home, Symbols, Quick Capture, the shortcuts) through
+ * `DeviceGraph.changeSetting`, which writes the primary notebook's device map (A1014); Daily Notes'
+ * in the primary notebook's own settings (A827). The same routes open from the app's first screen
+ * and from a notebook's screens ([SettingsHost]).
  */
 
-/** The sections of the Settings home, in the order the web's Settings lists the ones it shares. */
+/** The Settings screens, in the order the list shows them. */
 internal object SettingsRoutes {
     const val HOME = "settings"
     const val APPEARANCE = "settings/appearance"
+
+    /** Settings → Home, the Mac's Sidebar page (its route kept from when it was Display). */
     const val DISPLAY = "settings/display"
     const val SYMBOLS = "settings/symbols"
     const val DAILY = "settings/daily"
     const val ZONE = "settings/daily/zone"
     const val CAPTURE = "settings/capture"
-    const val SYNC = "settings/sync"
+
+    /** A notebook's page (PEN-146), on a tab: overview, sync or git. */
+    const val NOTEBOOK = "settings/git/{id}?tab={tab}"
+    const val AGENT_ACTIVITY = AgentActivityRoutes.ACTIVITY
+    const val STORAGE = "settings/storage"
+    const val GITHUB = "settings/github"
 
     /** What changed in this version and earlier ones (PEN-109). */
     const val WHATS_NEW = "settings/whatsnew"
@@ -76,6 +72,38 @@ internal object SettingsRoutes {
     const val THEME = "settings/appearance/theme/{id}"
 
     fun theme(id: String) = "settings/appearance/theme/$id"
+
+    fun notebook(localId: String, tab: String? = null) = "settings/git/$localId" + (tab?.let { "?tab=$it" } ?: "")
+}
+
+/**
+ * Where Settings is open (PEN-146): the app's first screen, or a notebook's screens ([notebook]).
+ * Both show the same screens over the device and every notebook on the phone.
+ */
+internal class SettingsHost(
+    val device: DeviceGraph,
+    val nav: NavHostController,
+    val context: Context,
+    /** The notebook whose screens Settings opened over; null on the app's first screen. */
+    val notebook: NotebookGraph? = null,
+    /** Opens Send Feedback over Settings; null where it cannot (the first screen). */
+    val openFeedback: ((from: String) -> Unit)? = null,
+    /** The notebook's own sync line, which its page's Sync tab says. */
+    val syncPass: String? = null,
+    /** Opens a notebook's own screens; inside that notebook, goes back to its Home. */
+    val openNotebook: (String) -> Unit = { app.penmoss.git.GitNotebookActivity.open(context, it) },
+)
+
+/** The primary notebook's graph (A1101), where Daily Notes' settings are; null with no notebook. */
+@Composable
+internal fun rememberPrimary(host: SettingsHost): NotebookGraph? {
+    val hub = host.device.gitIfAny ?: return host.notebook
+    val list by hub.list.collectAsStateWithLifecycle()
+    val pick by hub.journalPick.collectAsStateWithLifecycle()
+    return remember(list, pick, host.notebook) {
+        val id = hub.journal() ?: return@remember host.notebook
+        if (host.notebook?.localId == id) host.notebook else runCatching { hub.graph(id) }.getOrNull() ?: host.notebook
+    }
 }
 
 internal fun modeLabel(mode: String) = when (mode) {
@@ -86,46 +114,78 @@ internal fun modeLabel(mode: String) = when (mode) {
 
 internal fun destinationLabel(destination: String) = if (destination == "inbox") "New Note in Inbox" else "Today’s Note"
 
+/** A notebook as Settings lists it (PEN-146): its row in the Notebooks group. */
+data class NotebookEntry(val localId: String, val name: String, val primary: Boolean, val status: String, val dot: DotState)
+
+/** The notebooks' rows, the primary first as the Mac lists them. */
+internal fun notebookEntries(views: List<GitNotebookView>, statuses: Map<String, GitEngineStatus>, primary: String?): List<NotebookEntry> =
+    views.map { view ->
+        val status = statuses[view.localId]
+        NotebookEntry(view.localId, view.name, view.localId == primary, app.penmoss.git.gitStatusLine(status, view.host), app.penmoss.git.dotOf(status))
+    }.sortedByDescending { it.primary }
+
 /**
- * The Settings home's rows, each with a one-line summary of what it holds now (ST1): a git
- * notebook's Settings (A880), the device's sections and the notebook's Daily notes and Sync. The
- * Penmoss account's (Git mirror, Status, Devices, This phone) went with the server (T59).
+ * The Settings list's groups (PEN-146), each row with a one-line summary of what it holds now
+ * (A415): Look and Feel, Writing, Notebooks (each notebook with its sync dot, then All
+ * Notebooks), Agents, and This Phone. The version is said once, on What's New.
  */
-internal fun settingsSections(
+internal fun settingsGroups(
+    /** The device's settings: appearance, Home, symbols, capture, shortcuts. */
     settings: Settings,
     themeName: String,
-    status: String,
-    unsent: Int,
-    /** The app's version and build, which About shows (T49). */
-    version: String = app.penmoss.feedback.FeedbackService.version(BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE),
-    /** What the Git notebooks row says (T50 G7): how many are on this phone. */
-    git: String = app.penmoss.git.gitSummary(0),
-): List<SettingsSection> = listOf(
-    SettingsSection("appearance", "Appearance", "$themeName · ${modeLabel(settings.mode)}", SettingsIcons.Palette),
-    // Right after Appearance, as on the web (T42, A576, A650).
-    SettingsSection("display", "Display", displaySummary(settings), SettingsIcons.PanelLeft),
-    // Then Symbols, as on the web (T44, A747).
-    SettingsSection("symbols", "Symbols", symbolsSummary(settings), SettingsIcons.Star),
-    // As on the Mac (T50 G7, A856), with the Mac's icon (T39 pass 3, A902).
-    SettingsSection("git", "Notebooks", git, SettingsIcons.Terminal),
-    SettingsSection("daily", "Daily Notes", settings.timeZone, SettingsIcons.Journal),
-    SettingsSection("capture", "Quick Capture", destinationLabel(settings.captureDestination), SettingsIcons.Inbox),
-    // A hardware keyboard's shortcuts (T40 P9, ST8): how many the person changed.
-    SettingsSection("shortcuts", "Keyboard Shortcuts", shortcutsSummary(settings), SettingsIcons.Keyboard),
-    SettingsSection(
-        "sync",
-        "Sync and Storage",
-        listOfNotNull(status.ifEmpty { null }, if (unsent > 0) "$unsent ${if (unsent == 1) "setting" else "settings"} to send" else null)
-            .joinToString(" · ").ifEmpty { "Not synced yet" },
-        SettingsIcons.Refresh,
+    /** The primary notebook's settings, which hold Daily Notes'. */
+    daily: Settings = settings,
+    notebooks: List<NotebookEntry> = emptyList(),
+    /** What Storage takes now; null while it is counted. */
+    storage: String? = null,
+    github: String = "Not signed in",
+    version: String = BuildConfig.VERSION_NAME,
+    agentActivity: String = "What agents changed, with Undo",
+): List<SettingsGroup> = listOf(
+    SettingsGroup(
+        "Look and Feel",
+        listOf(
+            SettingsSection("appearance", "Appearance", "$themeName · ${modeLabel(settings.mode)}", SettingsIcons.Palette, SettingsRoutes.APPEARANCE),
+            SettingsSection("home", "Home", displaySummary(settings), SettingsIcons.PanelLeft, SettingsRoutes.DISPLAY),
+            SettingsSection("symbols", "Symbols", symbolsSummary(settings), SettingsIcons.Star, SettingsRoutes.SYMBOLS),
+        ),
     ),
-    // What changed in this version and earlier ones (PEN-109), just above About.
-    SettingsSection("whatsnew", "What’s New", "Version ${BuildConfig.VERSION_NAME}", SettingsIcons.WhatsNew),
-    // Last (T49): the version, and Send Feedback (Title Case as the action is named, A938).
-    SettingsSection("about", "About", "Version $version · Send Feedback", Icons.Outlined.Info),
+    SettingsGroup(
+        "Writing",
+        listOf(
+            SettingsSection("daily", "Daily Notes", daily.timeZone, SettingsIcons.Journal, SettingsRoutes.DAILY),
+            SettingsSection("capture", "Quick Capture", destinationLabel(settings.captureDestination), SettingsIcons.Inbox, SettingsRoutes.CAPTURE),
+            // A hardware keyboard's shortcuts (T40 P9, ST8): how many the person changed.
+            SettingsSection("shortcuts", "Keyboard Shortcuts", shortcutsSummary(settings), SettingsIcons.Keyboard, CommandRoutes.SHORTCUTS),
+        ),
+    ),
+    SettingsGroup(
+        "Notebooks",
+        notebooks.map { notebook ->
+            SettingsSection(
+                "notebook-${notebook.localId}",
+                notebook.name,
+                if (notebook.primary) "Primary · ${notebook.status.replaceFirstChar { it.lowercase() }}" else notebook.status,
+                route = SettingsRoutes.notebook(notebook.localId),
+                dot = notebook.dot,
+            )
+        } + SettingsSection("git", "All Notebooks", app.penmoss.git.gitSummary(notebooks.size), SettingsIcons.Terminal, CommandRoutes.GIT_NOTEBOOKS),
+    ),
+    SettingsGroup(
+        "Agents",
+        listOf(SettingsSection("agent-activity", "Agent Activity", agentActivity, SettingsIcons.Spark, SettingsRoutes.AGENT_ACTIVITY)),
+    ),
+    SettingsGroup(
+        "This Phone",
+        listOf(
+            SettingsSection("storage", "Storage", storage ?: "Counting…", SettingsIcons.Storage, SettingsRoutes.STORAGE),
+            SettingsSection("github", "GitHub", github, SettingsIcons.Account, SettingsRoutes.GITHUB),
+            SettingsSection("whatsnew", "What’s New", version, SettingsIcons.WhatsNew, SettingsRoutes.WHATS_NEW),
+        ),
+    ),
 )
 
-/** What the Keyboard shortcuts row says: how many commands' keys the person changed. */
+/** What the Keyboard Shortcuts row says: how many commands' keys the person changed. */
 internal fun shortcutsSummary(settings: Settings): String {
     // The ones this phone uses: not a Mac-only binding, nor one it cannot read (review N1).
     val changed = app.penmoss.engine.keys.Bindings.of(app.penmoss.engine.keys.ShortcutCatalogue.bundled, settings.values).usable.size
@@ -133,28 +193,36 @@ internal fun shortcutsSummary(settings: Settings): String {
 }
 
 @Composable
-internal fun SettingsHomeRoute(graph: NotebookGraph, status: String, onOpen: (String) -> Unit, onBack: () -> Unit) {
-    val state by graph.settings.collectAsStateWithLifecycle()
-    val appearance by graph.appearance.collectAsStateWithLifecycle()
+internal fun SettingsHomeRoute(host: SettingsHost, onBack: () -> Unit) {
+    val device = host.device
+    val state by device.settings.collectAsStateWithLifecycle()
+    val appearance by device.appearance.collectAsStateWithLifecycle()
     val themeName = appearance.theme?.get("name")?.jsonPrimitive?.content ?: "Penmoss"
-    val gitCount by remember(graph) { graph.git.list }.collectAsStateWithLifecycle()
-    // A git notebook's Appearance, Display and Symbols are the device's (A827): the app's settings.
-    val device by graph.device.settings.collectAsStateWithLifecycle()
-    val git = app.penmoss.git.gitSummary(gitCount.size)
-    val own = settingsSections(state.settings, themeName, status, state.unsent.size, git = git)
-    // Daily notes and Sync are the notebook's own; the rest the device's.
-    val shown = settingsSections(device.settings, themeName, status, 0, git = git)
-        .map { section -> if (section.id == "daily" || section.id == "sync") own.first { it.id == section.id } else section }
+    val hub = device.gitIfAny
+    val views = hub?.list?.collectAsStateWithLifecycle()?.value.orEmpty()
+    val statuses = hub?.statuses?.collectAsStateWithLifecycle()?.value.orEmpty()
+    val primary = rememberPrimary(host)
+    val daily = primary?.settings?.collectAsStateWithLifecycle()?.value
+    var storage by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(views.size) { storage = formatBytes(storageUse(device).total) }
+    val github = FeedbackRoutes.tokenSummary(device.githubToken.hasToken, device.githubToken.login())
     SettingsHome(
-        shown,
-        onOpen = { onOpen("settings/$it") },
+        settingsGroups(
+            state.settings,
+            themeName,
+            daily = daily?.settings ?: state.settings,
+            notebooks = notebookEntries(views, statuses, hub?.journal()),
+            storage = storage,
+            github = github,
+        ),
+        onOpen = { route -> host.nav.open(route) },
         onBack = onBack,
-        refusal = state.refused?.let(::refusalText),
-        onDismissRefusal = { graph.dismissSettingsRefusal() },
+        refusal = daily?.refused?.let(::refusalText),
+        onDismissRefusal = { primary?.dismissSettingsRefusal() },
     )
 }
 
-/** What Settings says of changes the server would not take: which, and its reason (A411). */
+/** What Settings says of changes the notebook would not take: which, and its reason (A411). */
 internal fun refusalText(refusal: NoteStore.SettingsRefusal): String {
     val names = refusal.keys.map(SettingLabels::of).joinToString(", ").ifEmpty { "settings" }
     val reason = refusal.message.trim().removeSuffix(".").ifEmpty { "it was refused" }
@@ -190,8 +258,9 @@ internal fun themeCard(theme: JsonObject, custom: Boolean): ThemeCard {
 }
 
 @Composable
-internal fun AppearanceRoute(graph: app.penmoss.DeviceGraph, onEditTheme: (String) -> Unit, onBack: () -> Unit) {
+internal fun AppearanceRoute(graph: DeviceGraph, onEditTheme: (String) -> Unit, onBack: () -> Unit) {
     val state by graph.settings.collectAsStateWithLifecycle()
+    val appearance by graph.appearance.collectAsStateWithLifecycle()
     val catalogue = ThemeCatalogue.bundled
     val settings = state.settings
     val resolved = catalogue.resolve(settings)
@@ -200,6 +269,7 @@ internal fun AppearanceRoute(graph: app.penmoss.DeviceGraph, onEditTheme: (Strin
         catalogue.builtIns.map { themeCard(it, custom = false) } + settings.customThemes.map { themeCard(it, custom = true) }
     }
     val width = (resolved.theme["editorWidth"] as? JsonPrimitive)?.content?.toDoubleOrNull()?.toInt() ?: 52
+    val variant = if (appearance.isDark(isSystemInDarkTheme())) "dark" else "light"
     AppearanceScreen(
         mode = settings.mode,
         systemDark = isSystemInDarkTheme(),
@@ -233,12 +303,14 @@ internal fun AppearanceRoute(graph: app.penmoss.DeviceGraph, onEditTheme: (Strin
                 }
             },
         ),
+        // The note in the preview is the editor page itself, as the theme editor's (A418).
+        notePreview = { modifier -> ThemePreview(resolved.theme, variant, modifier) },
     )
 }
 
 /** The theme editor's screen for the custom theme [id] (T40 P1b, ST5, A417). */
 @Composable
-internal fun ThemeEditorRoute(graph: app.penmoss.DeviceGraph, id: String, onEditTheme: (String) -> Unit, onBack: () -> Unit) {
+internal fun ThemeEditorRoute(graph: DeviceGraph, id: String, onEditTheme: (String) -> Unit, onBack: () -> Unit) {
     val state by graph.settings.collectAsStateWithLifecycle()
     val appearance by graph.appearance.collectAsStateWithLifecycle()
     val catalogue = ThemeCatalogue.bundled
@@ -267,25 +339,35 @@ internal fun ThemeEditorRoute(graph: app.penmoss.DeviceGraph, id: String, onEdit
 internal fun todayIn(zone: String): String = journalToday(zone).toString()
 
 @Composable
-internal fun DailyNotesRoute(graph: NotebookGraph, onTimeZone: () -> Unit, onBack: () -> Unit) {
+internal fun DailyNotesRoute(host: SettingsHost, onTimeZone: () -> Unit, onBack: () -> Unit) {
+    val graph = rememberPrimary(host)
+    if (graph == null) {
+        // No notebook yet: nothing holds these, so they wait.
+        DailyNotesScreen(Settings().timeZone, journalToday(Settings().timeZone), emptyList(), enabled = false, onTimeZone = {}, onSave = { _, _ -> }, onBack = onBack)
+        return
+    }
     val state by graph.settings.collectAsStateWithLifecycle()
     val settings = state.settings
     DailyNotesScreen(
         timeZone = settings.timeZone,
-        today = todayIn(settings.timeZone),
+        today = journalToday(settings.timeZone),
         templates = listOf(
-            TemplateField(SettingKeys.DAILY_TEMPLATE, "Daily template", settings.templateOrDefault(SettingKeys.DAILY_TEMPLATE), settings.template(SettingKeys.DAILY_TEMPLATE) != null),
-            TemplateField(SettingKeys.WEEKLY_TEMPLATE, "Weekly template", settings.templateOrDefault(SettingKeys.WEEKLY_TEMPLATE), settings.template(SettingKeys.WEEKLY_TEMPLATE) != null),
+            TemplateField(SettingKeys.DAILY_TEMPLATE, "Daily Template", settings.templateOrDefault(SettingKeys.DAILY_TEMPLATE), settings.template(SettingKeys.DAILY_TEMPLATE) != null),
+            TemplateField(SettingKeys.WEEKLY_TEMPLATE, "Weekly Template", settings.templateOrDefault(SettingKeys.WEEKLY_TEMPLATE), settings.template(SettingKeys.WEEKLY_TEMPLATE) != null),
         ),
         enabled = state.known,
         onTimeZone = onTimeZone,
         onSave = { key, value -> graph.changeSetting(key, value?.let(::JsonPrimitive)) },
         onBack = onBack,
+        phoneZone = ZoneId.systemDefault().id,
+        onUsePhoneZone = { graph.changeSetting(SettingKeys.TIME_ZONE, JsonPrimitive(it)) },
+        notebook = graph.name,
     )
 }
 
 @Composable
-internal fun TimeZoneRoute(graph: NotebookGraph, onBack: () -> Unit) {
+internal fun TimeZoneRoute(host: SettingsHost, onBack: () -> Unit) {
+    val graph = rememberPrimary(host) ?: return
     val state by graph.settings.collectAsStateWithLifecycle()
     val zones = remember { regionTimeZones() }
     TimeZonePicker(
@@ -301,16 +383,19 @@ internal fun TimeZoneRoute(graph: NotebookGraph, onBack: () -> Unit) {
 }
 
 @Composable
-internal fun QuickCaptureRoute(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
+internal fun QuickCaptureRoute(host: SettingsHost, onNotebooks: () -> Unit, onBack: () -> Unit) {
+    val graph = host.device
     val state by graph.settings.collectAsStateWithLifecycle()
+    val primary = rememberPrimary(host)
     QuickCaptureScreen(
         destination = state.settings.captureDestination,
         enabled = state.known,
         onChoose = { graph.changeSetting(SettingKeys.CAPTURE, JsonPrimitive(it)) },
         onBack = onBack,
+        notebook = primary?.name,
+        onNotebook = onNotebooks,
     )
 }
-
 
 /** Settings → What's New (PEN-109): the cached notes at once, and a fetch at most hourly. */
 @Composable
@@ -318,11 +403,11 @@ internal fun WhatsNewRoute(onBack: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val store = remember(context) { app.penmoss.updates.ReleaseNotesStore.get(context) }
     val file by store.notes.collectAsStateWithLifecycle()
-    androidx.compose.runtime.LaunchedEffect(store) {
+    LaunchedEffect(store) {
         store.load()
         store.refresh(BuildConfig.VERSION_NAME)
     }
-    app.penmoss.ui.settings.WhatsNewScreen(
+    WhatsNewScreen(
         view = app.penmoss.updates.notesView(file, BuildConfig.VERSION_NAME),
         onOpenReleases = {
             context.startActivity(
@@ -331,78 +416,149 @@ internal fun WhatsNewRoute(onBack: () -> Unit) {
             )
         },
         onBack = onBack,
+        version = BuildConfig.VERSION_NAME,
+    )
+}
+
+/** Settings → GitHub (PEN-146): the account, Sign In with GitHub, a token instead, and the outbox. */
+@Composable
+internal fun GitHubRoute(host: SettingsHost, onToken: () -> Unit, onFeedbackForm: () -> Unit, onBack: () -> Unit) {
+    val device = host.device
+    val store = device.githubToken
+    val signIn by device.githubSignIn.state.collectAsStateWithLifecycle()
+    var saved by remember { mutableStateOf(store.hasToken) }
+    var login by remember { mutableStateOf(store.login()) }
+    // Read again as a sign-in ends, and back from the token's screen.
+    LaunchedEffect(signIn) {
+        saved = store.hasToken
+        login = store.login()
+    }
+    val scope = rememberCoroutineScope()
+    app.penmoss.feedback.GitHubScreen(
+        login = login,
+        signedIn = saved,
+        signIn = signIn,
+        canSignIn = device.githubSignIn.available,
+        onSignIn = {
+            device.githubSignIn.start(device.scope) { uri ->
+                host.context.startActivity(
+                    android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(uri)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }
+        },
+        onCancelSignIn = device.githubSignIn::cancel,
+        onSignOut = {
+            store.clear()
+            device.githubSignIn.reset()
+            saved = store.hasToken
+            login = store.login()
+        },
+        onToken = onToken,
+        onBack = {
+            scope.launch { device.githubSignIn.reset() }
+            onBack()
+        },
+        repo = device.githubFeedback.repo,
+        onSendFeedback = host.openFeedback?.let { open -> { open("Settings → GitHub") } },
+        // Feedback still on the phone (A1046), with Retry, Edit and Discard.
+        outbox = { host.notebook?.let { app.penmoss.feedback.FeedbackOutboxRoute(it, openForm = onFeedbackForm) } },
     )
 }
 
 /**
- * Settings (T40 P1): its home, the device's sections (Appearance, Display, Symbols, Quick capture
- * and the shortcuts, A827), the notebook's Daily notes and Sync, What's New, agents' activity and
- * the git notebooks. [sync] is the notebook's sync line, which the home and Sync say.
+ * Settings (T40 P1; PEN-146): its list, the device's screens (Appearance, Home, Symbols, Quick
+ * Capture and the shortcuts, A827), Daily Notes (the primary notebook's), All Notebooks and each
+ * notebook's page, Agent Activity, Storage, GitHub and What's New. The same on the app's first
+ * screen and in a notebook's screens.
  */
-internal fun NavGraphBuilder.settingsRoutes(root: RootUi, sync: SyncLine) {
-    val graph = root.graph
-    val nav = root.nav
-    // Settings → Keyboard shortcuts (T40 P9, ST8, A495).
-    composable(CommandRoutes.SHORTCUTS) { entry -> ShortcutsRoute(graph.device, onBack = { nav.leave(entry) }) }
-    composable(SettingsRoutes.HOME) { entry ->
-        SettingsHomeRoute(graph, sync.text, onOpen = { nav.open(it) }, onBack = { nav.leave(entry) })
-    }
-    // What agents changed, with Undo (T42, A561; T40 P9, AC11).
-    composable(AgentActivityRoutes.ACTIVITY) { entry -> AgentActivityRoute(graph, onBack = { nav.leave(entry) }) }
-    // Settings → Git notebooks (T50 G7, A856): the app's hub, from a git notebook's screens too.
+internal fun NavGraphBuilder.settingsRoutes(host: SettingsHost) {
+    val device = host.device
+    val nav = host.nav
+    fun back(entry: androidx.navigation.NavBackStackEntry) = { leaveSettings(nav, entry) }
+    // Settings → Keyboard Shortcuts (T40 P9, ST8, A495).
+    composable(CommandRoutes.SHORTCUTS) { entry -> ShortcutsRoute(device, onBack = back(entry)) }
+    composable(SettingsRoutes.HOME) { entry -> SettingsHomeRoute(host, onBack = back(entry)) }
+    // What agents changed, across notebooks, with Undo (T42, A561; #172, A920; PEN-146).
+    composable(SettingsRoutes.AGENT_ACTIVITY) { entry -> AgentActivityRoute(device, onBack = back(entry)) }
+    // Settings → All Notebooks (T50 G7, A856; PEN-146): the app's hub, from a notebook's screens too.
     composable(CommandRoutes.GIT_NOTEBOOKS) { entry ->
+        val settings by device.settings.collectAsStateWithLifecycle()
         app.penmoss.git.GitNotebooksRoute(
-            graph.git,
-            onOpen = { app.penmoss.git.GitNotebookActivity.open(root.context, it) },
-            onBack = { nav.leave(entry) },
+            device.git,
+            onOpen = host.openNotebook,
+            onBack = back(entry),
+            onPage = { nav.open(SettingsRoutes.notebook(it)) },
+            copyTags = settings.settings.values[app.penmoss.git.COPY_TAGS_SETTING] != JsonPrimitive(false),
+            onCopyTags = { device.changeSetting(app.penmoss.git.COPY_TAGS_SETTING, JsonPrimitive(it)) },
         )
     }
-    // Appearance, Display, Symbols, Quick capture and the shortcuts are the device's (A827).
+    composable(
+        SettingsRoutes.NOTEBOOK,
+        arguments = listOf(
+            navArgument("id") { type = NavType.StringType },
+            navArgument("tab") {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            },
+        ),
+    ) { entry ->
+        val id = entry.arguments?.getString("id").orEmpty()
+        app.penmoss.git.NotebookPageRoute(
+            device.git,
+            id,
+            entry.arguments?.getString("tab"),
+            onOpen = host.openNotebook,
+            onBack = back(entry),
+            passText = host.syncPass.takeIf { host.notebook?.localId == id },
+        )
+    }
+    // Appearance, Home, Symbols, Quick Capture and the shortcuts are the device's (A827).
     composable(SettingsRoutes.APPEARANCE) { entry ->
-        AppearanceRoute(graph.device, onEditTheme = { nav.open(SettingsRoutes.theme(it)) }, onBack = { nav.leave(entry) })
+        AppearanceRoute(device, onEditTheme = { nav.open(SettingsRoutes.theme(it)) }, onBack = back(entry))
     }
     composable(SettingsRoutes.THEME, arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->
         val id = entry.arguments?.getString("id").orEmpty()
-        ThemeEditorRoute(graph.device, id, onEditTheme = { nav.open(SettingsRoutes.theme(it)) }, onBack = { nav.leave(entry) })
+        ThemeEditorRoute(device, id, onEditTheme = { nav.open(SettingsRoutes.theme(it)) }, onBack = back(entry))
     }
-    composable(SettingsRoutes.DAILY) { entry ->
-        DailyNotesRoute(graph, onTimeZone = { nav.open(SettingsRoutes.ZONE) }, onBack = { nav.leave(entry) })
-    }
-    composable(SettingsRoutes.ZONE) { entry -> TimeZoneRoute(graph, onBack = { nav.leave(entry) }) }
-    composable(SettingsRoutes.CAPTURE) { entry -> QuickCaptureRoute(graph.device, onBack = { nav.leave(entry) }) }
+    composable(SettingsRoutes.DAILY) { entry -> DailyNotesRoute(host, onTimeZone = { nav.open(SettingsRoutes.ZONE) }, onBack = back(entry)) }
+    composable(SettingsRoutes.ZONE) { entry -> TimeZoneRoute(host, onBack = back(entry)) }
+    composable(SettingsRoutes.CAPTURE) { entry -> QuickCaptureRoute(host, onNotebooks = { nav.open(CommandRoutes.GIT_NOTEBOOKS) }, onBack = back(entry)) }
     // What changed in this version and earlier ones (PEN-109).
-    composable(SettingsRoutes.WHATS_NEW) { entry -> WhatsNewRoute(onBack = { nav.leave(entry) }) }
-    composable(SettingsRoutes.SYNC) { entry ->
-        // A git notebook's sync is its own: the repository, the page, what waits (A880).
-        app.penmoss.git.GitSyncRoute(graph, sync.pass, onGitNotebooks = { nav.open(CommandRoutes.GIT_NOTEBOOKS) }, onBack = { nav.leave(entry) }, onAgentActivity = { nav.open(AgentActivityRoutes.ACTIVITY) })
-    }
-    // Home's shortcuts, synced with the web's sidebar (T42, A576; T40 ST12, A650).
-    composable(SettingsRoutes.DISPLAY) { entry -> DisplayRoute(graph.device, onBack = { nav.leave(entry) }) }
-    // The line symbols, synced with the web's (T44, ST13, A747).
+    composable(SettingsRoutes.WHATS_NEW) { entry -> WhatsNewRoute(onBack = back(entry)) }
+    // This phone's storage (T40 P8; PEN-146), apart from any notebook's sync.
+    composable(SettingsRoutes.STORAGE) { entry -> StorageRoute(device, onBack = back(entry)) }
+    // Home's shortcuts and sections, synced with the Mac's sidebar (T42, A576; T40 ST12, A650).
+    composable(SettingsRoutes.DISPLAY) { entry -> DisplayRoute(device, onBack = back(entry)) }
+    // The line symbols, synced with the Mac's (T44, ST13, A747).
     composable(SettingsRoutes.SYMBOLS) { entry ->
-        SymbolsRoute(graph.device, onShortcuts = { nav.open(CommandRoutes.SHORTCUTS) }, onBack = { nav.leave(entry) })
+        SymbolsRoute(device, onShortcuts = { nav.open(CommandRoutes.SHORTCUTS) }, onBack = back(entry))
     }
+    // Settings → GitHub (PEN-146), and About's old route, which opens it.
+    for (route in listOf(SettingsRoutes.GITHUB, FeedbackRoutes.ABOUT)) {
+        composable(route) { entry ->
+            GitHubRoute(host, onToken = { nav.open(FeedbackRoutes.GITHUB_TOKEN) }, onFeedbackForm = { nav.open(FeedbackRoutes.FORM) }, onBack = back(entry))
+        }
+    }
+    // Settings → GitHub → Use a Token Instead… (A1012).
+    composable(FeedbackRoutes.GITHUB_TOKEN) { entry -> app.penmoss.feedback.GitHubTokenRoute(device, onBack = back(entry)) }
 }
 
-/** Send feedback (T49, D41), Settings → About and its GitHub token (A1012). */
-internal fun NavGraphBuilder.feedbackRoutes(root: RootUi) {
+/**
+ * Leaves [entry]'s screen (its Back button), only while it is the settled screen in front (T39,
+ * A387): two quick taps on Back used to pop the screen under it too.
+ */
+private fun leaveSettings(nav: NavHostController, entry: androidx.navigation.NavBackStackEntry) {
+    if (entry.lifecycle.currentState != androidx.lifecycle.Lifecycle.State.RESUMED || nav.currentBackStackEntry != entry) return
+    nav.popBackStack()
+}
+
+/** Send Feedback's form (T49, D41), over the notebook's screen it was opened from. */
+internal fun NavGraphBuilder.feedbackRoutes(root: app.penmoss.ui.RootUi) {
     val graph = root.graph
     val nav = root.nav
     // Send feedback (T49, D41): over the screen it was opened from, captured first.
-    composable(FeedbackRoutes.FORM) { entry -> FeedbackRoute(graph, onClose = { nav.leave(entry) }) }
-    // Settings → About (T49): the version, and Send feedback.
-    composable(FeedbackRoutes.ABOUT) { entry ->
-        AboutScreen(
-            version = graph.feedback.version,
-            onSendFeedback = { root.openFeedback("Settings → About", null, null, "Settings → About", 0) },
-            onBack = { nav.leave(entry) },
-            // Read again each time About is shown (back from the token's screen too).
-            githubToken = FeedbackRoutes.tokenSummary(graph.githubToken.hasToken, graph.githubToken.login()),
-            onGitHubToken = { nav.open(FeedbackRoutes.GITHUB_TOKEN) },
-            // Feedback still on the phone (A1046), with Retry, Edit and Discard.
-            outbox = { app.penmoss.feedback.FeedbackOutboxRoute(graph, openForm = { nav.open(FeedbackRoutes.FORM) }) },
-        )
+    composable(FeedbackRoutes.FORM) { entry ->
+        app.penmoss.feedback.FeedbackRoute(graph, onClose = { leaveSettings(nav, entry) })
     }
-    // Settings → About → GitHub Token (A1012): the token Send feedback files with.
-    composable(FeedbackRoutes.GITHUB_TOKEN) { entry -> app.penmoss.feedback.GitHubTokenRoute(graph, onBack = { nav.leave(entry) }) }
 }

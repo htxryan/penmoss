@@ -3,6 +3,7 @@ package app.penmoss.git
 import androidx.compose.ui.test.assert
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
@@ -22,7 +23,7 @@ import app.penmoss.engine.git.GitNotebookView
 import app.penmoss.engine.git.PendingPurge
 import app.penmoss.engine.settings.Settings
 import app.penmoss.ui.common.PenmossTheme
-import app.penmoss.ui.settings.settingsSections
+import app.penmoss.ui.settings.settingsGroups
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -32,8 +33,9 @@ import org.junit.runner.RunWith
 import java.time.ZoneId
 
 /**
- * Settings → Git notebooks (T50 G7, A855, A856, A859): what each notebook shows, and what only the
- * person can do, each through its own confirmation.
+ * Settings → All Notebooks and each notebook's page (T50 G7, A855, A856, A859; PEN-146): what each
+ * notebook shows on its Overview, Sync and Git tabs, and what only the person can do, each through
+ * its own confirmation.
  */
 @RunWith(AndroidJUnit4::class)
 class GitNotebooksScreenTest {
@@ -58,6 +60,11 @@ class GitNotebooksScreenTest {
         wifiOnly = false,
         hasToken = true,
     )
+
+    /** The first notebook's own page (PEN-146), open at [tab]. */
+    @Composable
+    private fun Page(ui: GitNotebooksUi, actions: GitNotebooksActions, tab: String = NotebookTab.OVERVIEW, onBack: () -> Unit = {}) =
+        NotebookPage(ui.rows.first(), ui, actions, tab, onBack)
 
     /**
      * T39 pass 3 (A893): a file edited by hand in the repository is written again from its note, as
@@ -100,14 +107,14 @@ class GitNotebooksScreenTest {
         var shown by mutableStateOf(GitNotebooksUi(rows = listOf(GitRow(view(), GitEngineStatus(phase = "synced")))))
         compose.setContent {
             PenmossTheme {
-                GitNotebooksScreen(
+                Page(
                     shown,
                     GitNotebooksActions(
                         onSignCommits = { localId, on -> signed += localId to on },
                         onCopySigningKey = { copied += it },
                         onNewSigningKey = { made += it },
                     ),
-                    onBack = {},
+                    tab = NotebookTab.GIT,
                 )
             }
         }
@@ -124,7 +131,10 @@ class GitNotebooksScreenTest {
             ),
             signingKey = key,
         )
-        compose.onNodeWithTag("gitStatus-$id").assertTextContains("Sync stopped: signing.", substring = true)
+        // The status is on the Overview tab; the key is on Git.
+        compose.onNodeWithTag("notebookTab-overview").performClick()
+        compose.onNodeWithTag("gitStatus-$id", useUnmergedTree = true).assertTextContains("Sync stopped: signing.", substring = true)
+        compose.onNodeWithTag("notebookTab-git").performClick()
         compose.onNodeWithTag("gitSigningKey").performScrollTo().assertTextEquals(key)
         compose.onNodeWithTag("gitSigningKeyCopy").performScrollTo().performClick()
         assertEquals(listOf(key), copied)
@@ -156,10 +166,10 @@ class GitNotebooksScreenTest {
         var shown by mutableStateOf(GitNotebooksUi(rows = listOf(GitRow(view(), GitEngineStatus(phase = "synced")))))
         compose.setContent {
             PenmossTheme {
-                GitNotebooksScreen(
+                Page(
                     shown,
                     GitNotebooksActions(onAuthor = { localId, name, email -> saved += Triple(localId, name, email) }),
-                    onBack = {},
+                    tab = NotebookTab.GIT,
                 )
             }
         }
@@ -180,7 +190,7 @@ class GitNotebooksScreenTest {
         val removed = mutableListOf<String>()
         compose.setContent {
             PenmossTheme {
-                GitNotebooksScreen(
+                Page(
                     GitNotebooksUi(rows = listOf(GitRow(view(), GitEngineStatus(phase = "synced", pending = listOf("n1", "n2", "workspace"))))),
                     GitNotebooksActions(onRemove = { removed += it }),
                     onBack = {},
@@ -208,7 +218,7 @@ class GitNotebooksScreenTest {
         var status by mutableStateOf(GitEngineStatus(phase = "synced", pending = listOf("n1", "n2")))
         compose.setContent {
             PenmossTheme {
-                GitNotebooksScreen(
+                Page(
                     GitNotebooksUi(rows = listOf(GitRow(view(), status))),
                     GitNotebooksActions(onRemove = { removed += it }, onSyncNow = { synced += it }, unpushed = { status.pending.size }),
                     onBack = {},
@@ -240,7 +250,7 @@ class GitNotebooksScreenTest {
         var unsent: Int? = 2
         compose.setContent {
             PenmossTheme {
-                GitNotebooksScreen(
+                Page(
                     GitNotebooksUi(rows = listOf(GitRow(view(), GitEngineStatus(phase = "synced", pending = emptyList())))),
                     GitNotebooksActions(unpushed = { unsent }),
                     onBack = {},
@@ -278,7 +288,7 @@ class GitNotebooksScreenTest {
         val kept = listOf(PendingPurge("01JBN0000000000000000000P4", "Seed list", confirmedBefore = false))
         compose.setContent {
             PenmossTheme {
-                GitNotebooksScreen(
+                Page(
                     GitNotebooksUi(rows = listOf(GitRow(view(), GitEngineStatus(phase = "stopped", code = "purge_unconfirmed", detail = "Delete for good waits."), purges, kept = kept))),
                     GitNotebooksActions(onConfirmPurge = { _, note -> confirmed += note }, onUndoKeep = { _, note -> undone += note }),
                     onBack = {},
@@ -305,7 +315,7 @@ class GitNotebooksScreenTest {
         )
         compose.setContent {
             PenmossTheme {
-                GitNotebooksScreen(
+                Page(
                     GitNotebooksUi(rows = listOf(GitRow(view(), GitEngineStatus(phase = "stopped", code = "purge_unconfirmed", detail = "Delete for good waits."), purges))),
                     GitNotebooksActions(onConfirmPurges = { _, ids -> again += ids }, onKeep = { _, note -> kept += note }),
                     onBack = {},
@@ -328,7 +338,7 @@ class GitNotebooksScreenTest {
         val notice = GitRecoveryNotice(1_761_750_000_000L, listOf("Budget for 2027 (recovered)", "Draft (recovered)"))
         compose.setContent {
             PenmossTheme {
-                GitNotebooksScreen(
+                Page(
                     GitNotebooksUi(rows = listOf(GitRow(view(), GitEngineStatus(phase = "synced"), recovered = notice, storageKept = false))),
                     GitNotebooksActions(onDismissRecovery = { dismissed += it }),
                     onBack = {},
@@ -349,7 +359,7 @@ class GitNotebooksScreenTest {
         val notice = GitRecoveryNotice(1_761_750_000_000L, listOf("Draft (recovered)"), unrecovered = listOf("Broken"))
         compose.setContent {
             PenmossTheme {
-                GitNotebooksScreen(
+                Page(
                     GitNotebooksUi(rows = listOf(GitRow(view(), GitEngineStatus(phase = "synced"), recovered = notice))),
                     GitNotebooksActions(onSaveUnrecovered = { saved += it }),
                     onBack = {},
@@ -376,7 +386,7 @@ class GitNotebooksScreenTest {
         val copy = "01JBN0000000000000000000C1"
         compose.setContent {
             PenmossTheme {
-                GitNotebooksScreen(
+                Page(
                     GitNotebooksUi(
                         rows = listOf(
                             GitRow(
@@ -397,7 +407,7 @@ class GitNotebooksScreenTest {
             }
         }
         compose.onNodeWithText("A recovered copy of a note deleted for good on another device was kept on this device only.").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithTag("gitWithheldTitle-$copy").assertIsDisplayed()
+        compose.onNodeWithTag("gitWithheldTitle-$copy").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Passwords NEWEDIT (recovered)", substring = true).assertIsDisplayed()
         compose.onNodeWithTag("gitWithheldSave").performScrollTo().performClick()
         compose.onNodeWithTag("gitWithheldDelete-$copy").performScrollTo().performClick()
@@ -416,7 +426,7 @@ class GitNotebooksScreenTest {
         val removed = mutableListOf<String>()
         compose.setContent {
             PenmossTheme {
-                GitNotebooksScreen(
+                Page(
                     GitNotebooksUi(rows = listOf(GitRow(view(), GitEngineStatus(phase = "offline", pending = emptyList()), oldCopies = GitOldCopies(waiting = 2, kept = 1)))),
                     GitNotebooksActions(onSaveUnrecovered = { saved += it }, onRemove = { removed += it }),
                     onBack = {},
@@ -439,26 +449,82 @@ class GitNotebooksScreenTest {
 
     @Test
     fun anyRepositorySyncsAndNobodyConfirmsIt() {
-        val added = mutableListOf<AddForm>()
-        compose.setContent {
-            PenmossTheme {
-                GitNotebooksScreen(
-                    GitNotebooksUi(rows = listOf(GitRow(view(), null))),
-                    GitNotebooksActions(onAdd = { added += it }),
-                    onBack = {},
-                )
-            }
-        }
+        compose.setContent { PenmossTheme { Page(GitNotebooksUi(rows = listOf(GitRow(view(), null))), GitNotebooksActions()) } }
         // D51, D61: no privacy line, and no Confirm private anywhere.
         assertTrue(compose.onAllNodes(hasTestTag("gitPrivacy-$id")).fetchSemanticsNodes().isEmpty())
         assertTrue(compose.onAllNodes(hasText("Confirm Private", substring = true, ignoreCase = true)).fetchSemanticsNodes().isEmpty())
         assertTrue(compose.onAllNodes(hasTestTag("gitConfirmPrivate-$id")).fetchSemanticsNodes().isEmpty())
         compose.onNodeWithText("Opens when you open the notebook", substring = true).performScrollTo().assertIsDisplayed()
-        // Add is the one button, with no confirmation to give.
+    }
+
+    /** PEN-146: with a notebook, the Add form shows only after Add Notebook, and Add needs no confirmation. */
+    @Test
+    fun addNotebookOpensTheFormAndAddsWithNoConfirmation() {
+        val added = mutableListOf<AddForm>()
+        compose.setContent {
+            PenmossTheme {
+                GitNotebooksScreen(GitNotebooksUi(rows = listOf(GitRow(view(), null))), GitNotebooksActions(onAdd = { added += it }), onBack = {})
+            }
+        }
+        compose.onNodeWithTag("gitAddForm").assertDoesNotExist()
+        compose.onNodeWithTag("gitAddOpen").performScrollTo().performClick()
         compose.onNodeWithTag("gitAddRemote").performScrollTo().performTextInput("https://git.example.com/me/notes.git")
         compose.onNode(hasTestTag("gitAdd")).performScrollTo().performClick()
         assertEquals(listOf("https://git.example.com/me/notes.git"), added.map { it.remote })
         assertTrue(compose.onAllNodes(hasTestTag("gitAddConfirm")).fetchSemanticsNodes().isEmpty())
+        // Cancel closes it again.
+        compose.onNodeWithTag("gitAddCancel").performScrollTo().performClick()
+        compose.onNodeWithTag("gitAddForm").assertDoesNotExist()
+    }
+
+    /** PEN-146: All Notebooks lists each notebook to open its page, picks the primary, and copies tags between notebooks. */
+    @Test
+    fun allNotebooksOpensAPagePicksThePrimaryAndCopiesTags() {
+        val pages = mutableListOf<String>()
+        val primary = mutableListOf<String?>()
+        val copyTags = mutableListOf<Boolean>()
+        val other = view().copy(localId = "01JBL0000000000000000000L2", name = "Personal")
+        compose.setContent {
+            PenmossTheme {
+                GitNotebooksScreen(
+                    GitNotebooksUi(rows = listOf(GitRow(view(), GitEngineStatus(phase = "synced")), GitRow(other, null)), journal = id, copyTags = true),
+                    GitNotebooksActions(onPage = { pages += it }, onJournal = { primary += it }, onCopyTags = { copyTags += it }),
+                    onBack = {},
+                )
+            }
+        }
+        compose.onNodeWithText("All Notebooks").assertExists()
+        compose.onNodeWithTag("gitNotebook-$id").performClick()
+        assertEquals(listOf(id), pages)
+        compose.onNodeWithTag("gitPrimary").performScrollTo().assertTextContains("Work", substring = true).performClick()
+        compose.onNodeWithTag("gitJournal-${other.localId}").performClick()
+        assertEquals(listOf<String?>(other.localId), primary)
+        compose.onNodeWithTag("gitCopyTags").performScrollTo().performClick()
+        assertEquals(listOf(false), copyTags)
+        // The old page's words are gone.
+        compose.onNodeWithText("Journal notebook", substring = true, ignoreCase = true).assertDoesNotExist()
+    }
+
+    /** PEN-146: a notebook's page has Overview, Sync and Git tabs, and no Agents tab. */
+    @Test
+    fun aNotebooksPageHasOverviewSyncAndGitTabs() {
+        val opened = mutableListOf<String>()
+        compose.setContent {
+            PenmossTheme { Page(GitNotebooksUi(rows = listOf(GitRow(view(), GitEngineStatus(phase = "synced")))), GitNotebooksActions(onOpen = { opened += it })) }
+        }
+        compose.onNodeWithTag("notebookTab-overview").assertIsDisplayed()
+        compose.onNodeWithTag("notebookTab-sync").assertIsDisplayed()
+        compose.onNodeWithTag("notebookTab-git").assertIsDisplayed()
+        compose.onNodeWithText("Agents").assertDoesNotExist()
+        compose.onNodeWithTag("gitOpen-$id").performScrollTo().performClick()
+        assertEquals(listOf(id), opened)
+        compose.onNodeWithTag("notebookTab-sync").performClick()
+        compose.onNodeWithTag("gitPush-$id").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("gitWifi-$id").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("gitRemove-$id").assertDoesNotExist()
+        compose.onNodeWithTag("notebookTab-git").performClick()
+        compose.onNodeWithTag("gitToken-$id").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("gitSign-$id").performScrollTo().assertIsDisplayed()
     }
 
     /** The app's home (A1040): the notebooks under "Penmoss", with no first-run words once there is one. */
@@ -481,12 +547,12 @@ class GitNotebooksScreenTest {
     }
 
     @Test
-    fun aGitNotebooksSettingsKeepAppearanceFirstAndNothingOfTheAccount() {
-        val ids = settingsSections(Settings(), "Penmoss", "", 0).map { it.id }
+    fun theSettingsGroupsKeepAppearanceFirstAndNothingOfTheAccount() {
+        val ids = settingsGroups(Settings(), "Penmoss").flatMap { it.sections }.map { it.id }
         assertEquals("appearance", ids.first())
-        assertEquals(listOf("appearance", "display", "symbols", "git", "daily", "capture", "shortcuts", "sync", "whatsnew", "about"), ids)
-        for (account in listOf("notebooks", "mirror", "status", "devices", "phone")) assertFalse(account, account in ids)
-        assertEquals("Notes in a private GitHub repository", gitSummary(0))
-        assertEquals("2 notebooks on this phone", gitSummary(2))
+        assertEquals(listOf("appearance", "home", "symbols", "daily", "capture", "shortcuts", "git", "agent-activity", "storage", "github", "whatsnew"), ids)
+        for (account in listOf("notebooks", "mirror", "status", "devices", "phone", "sync", "about")) assertFalse(account, account in ids)
+        assertEquals("Add a notebook from a private GitHub repository", gitSummary(0))
+        assertEquals("Add, Primary Notebook, Between Notebooks", gitSummary(2))
     }
 }

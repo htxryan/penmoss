@@ -58,12 +58,14 @@ object SettingKeys {
  * against the `display` block of `contract/settings-v1.json`.
  */
 object DisplayKeys {
+    /** The Tags shortcut (A1438), first, as core's `SIDEBAR_ITEMS` lists it. */
+    const val TAGS = "sidebar.tags"
     const val TODAY = "sidebar.today"
     const val THIS_WEEK = "sidebar.thisWeek"
     const val GRAPH = "sidebar.graph"
     const val COMMANDS = "sidebar.commands"
 
-    val ALL = listOf(TODAY, THIS_WEEK, GRAPH, COMMANDS)
+    val ALL = listOf(TAGS, TODAY, THIS_WEEK, GRAPH, COMMANDS)
 }
 
 /** What each setting is when it is not set, as the web reads it. */
@@ -127,6 +129,7 @@ object SettingLabels {
         SettingKeys.HIDDEN_SECTIONS -> "Hidden sections"
         SettingKeys.RECENT_COUNT -> "Recent Notes"
         SettingKeys.QUICK_ACCESS_NOTEBOOK -> "Show Notebook Names in Quick Access"
+        DisplayKeys.TAGS -> "Tags"
         DisplayKeys.TODAY -> "Today"
         DisplayKeys.THIS_WEEK -> "This week"
         DisplayKeys.GRAPH -> "Graph"

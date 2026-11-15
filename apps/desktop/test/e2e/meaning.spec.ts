@@ -221,7 +221,17 @@ test('Settings → Search by Meaning: Off removes the model and the vectors, aft
   await expect(row.getByTestId('meaning-status')).toHaveText(
     'Ready: EmbeddingGemma 300M (219 MB), on this Mac. All 4 notes are indexed.',
   );
+  // PEN-146: the switch is Find Notes by Meaning, the progress a real bar, and Off asks first,
+  // naming the size; nothing is removed until Turn Off.
+  await expect(row.getByRole('switch', { name: 'Find Notes by Meaning' })).toBeChecked();
+  await expect(row.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100');
   await row.getByTestId('meaning-enabled').click();
+  await expect(row.getByTestId('meaning-off-ask')).toContainText(
+    'Turn off and remove the model (219 MB) and the index?',
+  );
+  await expect(row.getByTestId('meaning-enabled')).toBeChecked();
+  expect(existsSync(modelPaths(EMBEDDING_GEMMA, home).dir)).toBe(true);
+  await row.getByTestId('meaning-off-confirm').click();
   await expect(row.getByTestId('meaning-status')).toHaveAttribute('data-state', 'off');
   await expect(row.getByTestId('meaning-enabled')).not.toBeChecked();
   expect(JSON.parse(readFileSync(join(home, 'meaning.json'), 'utf8'))).toEqual({ enabled: false });

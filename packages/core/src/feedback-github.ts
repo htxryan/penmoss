@@ -289,7 +289,7 @@ const REPO_NAME = `${FEEDBACK_REPO.owner}/${FEEDBACK_REPO.repo}`;
 
 /** What the person is told about their token, in plain words (A1012). */
 export const TOKEN_MESSAGES = {
-  missing: 'Add your GitHub token in Settings → Status → GitHub Token to send it.',
+  missing: 'Sign in to GitHub in Settings → GitHub to send it.',
   invalid: 'GitHub does not accept this token: it may have expired or been revoked.',
   cannotFile: `This GitHub token cannot open issues in ${REPO_NAME}. Use a classic token with the public_repo scope or, as a collaborator, a fine-grained token with Issues and Contents (read and write) on ${REPO_NAME}.`,
 } as const;

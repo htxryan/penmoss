@@ -317,18 +317,19 @@ test('a notebook made on the Mac, notes and the Journal in it, synced on quit, n
   const cliLink = section(page, name).getByRole('link', { name: `From the CLI ${RUN}` });
   await expect(cliLink).toBeVisible();
 
-  // An agent's clone (the CLI with --agent) makes a folder; the notebook's Agent activity lists
-  // it from the branch, and Undo is the Mac's own change, pushed, which the CLI reads (#172, A920).
+  // An agent's clone (the CLI with --agent) makes a folder; Settings → Agent Activity lists it
+  // from the branch, with its notebook, and Undo is the Mac's own change, pushed, which the CLI
+  // reads (#172, A920; PEN-146: one list across notebooks, no longer on the notebook's page).
   w.cli(['notebook', 'add', `file://${w.remote}`, '--name', 'agent', '--agent', 'Claude Code']);
   const agentFolder = `Agent folder ${RUN}`;
   w.cli(['mkdir', agentFolder, '--notebook', 'agent']);
-  const synced = await syncNow(page, name);
-  await synced.getByTestId('git-agent-activity-open').click();
-  const activity = synced.getByTestId('git-agent-activity');
+  await syncNow(page, name);
+  await go(page, '/settings/agent-activity');
+  const activity = page.getByTestId('agent-activity-settings');
   const made = activity
     .getByRole('listitem')
     .filter({ hasText: `Made the folder “${agentFolder}”` });
-  await expect(made).toContainText('✦ Claude Code');
+  await expect(made).toContainText(`✦ Claude Code · ${name}`);
   await made.getByRole('button', { name: 'Undo' }).click();
   await expect(activity.getByTestId('agent-activity-status')).toHaveText(
     `Undone: Made the folder “${agentFolder}”.`,
@@ -350,8 +351,8 @@ test('a notebook made on the Mac, notes and the Journal in it, synced on quit, n
   await expect(page).toHaveURL('app://penmoss/');
   const ownCard = page.getByTestId('git-notebook').filter({ hasText: name });
   await chooseMenu(app, 'git.identity');
-  // Its page first, so a failure says whether the command took the person there at all.
-  await expect(page).toHaveURL(`app://penmoss/settings/git-notebooks/${notebookId}`);
+  // Its page first, at its Git tab, so a failure says whether the command took the person there.
+  await expect(page).toHaveURL(`app://penmoss/settings/git-notebooks/${notebookId}?tab=git`);
   await expect(ownCard.getByTestId('git-author-email')).toBeFocused();
   await ownCard.getByTestId('git-author-name').fill('Ryan');
   await ownCard.getByTestId('git-author-email').fill('1234+ryan@users.noreply.github.com');
@@ -501,10 +502,11 @@ test('a notebook made on the Mac, notes and the Journal in it, synced on quit, n
       ({ Menu }) => Menu.getApplicationMenu()?.getMenuItemById('git.confirmPrivate') ?? null,
     ),
   ).toBeNull();
-  // A write (Pull every, here) keeps the notebook and drops the old confirmation.
-  await loaded.getByTestId('git-pull-interval').fill('7');
-  await loaded.getByTestId('git-pull-interval').blur();
-  await expect.poll(() => readFileSync(registryFile, 'utf8')).toContain('"pullEveryMin": 7');
+  // A write (Pull Changes, on the Sync tab, here) keeps the notebook and drops the old
+  // confirmation.
+  await loaded.getByTestId('git-tab-sync').click();
+  await loaded.getByTestId('git-pull-interval').selectOption('5');
+  await expect.poll(() => readFileSync(registryFile, 'utf8')).toContain('"pullEveryMin": 5');
   expect(readFileSync(registryFile, 'utf8')).not.toContain('"confirmed"');
   expect(checksAsked(again)).toEqual([]);
 
@@ -746,10 +748,11 @@ test('two git notebooks side by side, one over HTTP; two windows, History, a tag
     .poll(() => w.cli(['cat', made.id, '--notebook', 'team']))
     .not.toContain(`Second line ${RUN}`);
 
-  // The Primary Notebook is this Mac's choice (A827; T62 item 9, on the notebook's page): today's
+  // The Primary Notebook is this Mac's choice (A827; PEN-146: All Notebooks' one picker): today's
   // note goes to the notebook.
+  await go(page, '/settings/git-notebooks');
+  await page.getByTestId('git-primary-picker').selectOption(notebookId);
   await go(page, `/settings/git-notebooks/${notebookId}`);
-  await page.getByTestId('git-make-primary').click();
   await expect(page.getByTestId('git-primary-chip')).toBeVisible();
   await chooseMenu(app, 'app.home');
   await chooseMenu(app, 'journal.today');

@@ -51,7 +51,7 @@ Penmoss first tries git's own GitHub sign-in on your Mac (GitHub Desktop's, the 
 
 **Paste a URL Instead** skips GitHub altogether.
 
-Penmoss keeps the sign-in in the Mac's Keychain. It uses it to list your repositories, to sync notebooks it added from github.com over HTTPS, and to [send feedback](/docs/help/feedback/). **Settings → Status → GitHub Token** shows whose it is, and **Sign Out** forgets it.
+Penmoss keeps the sign-in in the Mac's Keychain. It uses it to list your repositories, to sync notebooks it added from github.com over HTTPS, and to [send feedback](/docs/help/feedback/). **Settings → GitHub** shows whose it is, and **Sign Out** forgets it.
 
 If you prefer git's own sign-in, install the GitHub CLI and run `gh auth login`, then `gh auth setup-git`, then **Try Again** in Penmoss.
 
@@ -59,7 +59,7 @@ If GitHub refuses the sign-in (it ran out, or the repositories are in an organis
 
 ## A personal access token
 
-For an HTTPS host that needs a token, open **Settings → Notebooks**, choose the notebook and save the token under **Access** (**Save Token**). Penmoss keeps it in the Keychain, hands it to git only when it syncs, and never shows it again. **Forget Token** removes it.
+For an HTTPS host that needs a token, open the notebook's page in Settings (under **All Notebooks**), choose the **Git** tab and save the token under **Sign-In** (**Save Token**). Penmoss keeps it in the Keychain, hands it to git only when it syncs, and never shows it again. **Forget Token** removes it.
 
 On GitHub, a fine-grained token for that one repository needs **Contents: Read and write** (GitHub adds **Metadata: Read** itself).
 
@@ -69,7 +69,7 @@ To open a notebook Penmoss made before, on this Mac or another device, choose **
 
 ## Commits and your email
 
-Penmoss commits as git's `user.name` and `user.email`. If GitHub keeps your email private and blocks pushes that show it, a push is refused with the error GH007. Give the notebook its own **Commit email** in **Settings → Notebooks** (under **Commits**): your GitHub no-reply address, `…@users.noreply.github.com`, from GitHub's Settings → Emails.
+Penmoss commits as git's `user.name` and `user.email`. If GitHub keeps your email private and blocks pushes that show it, a push is refused with the error GH007. Give the notebook its own **Commit Email** on the **Git** tab of its page in Settings (under **Commit Name and Email**): your GitHub no-reply address, `…@users.noreply.github.com`, from GitHub's Settings → Emails.
 
 ## Next
 

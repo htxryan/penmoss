@@ -137,11 +137,12 @@ test('no account: connect an agent on this Mac; its MCP server writes the notebo
 
   // Settings → Agents (A1098): every notebook has an agent copy the app made by itself (D52),
   // which no Disconnect removes, and `penmoss mcp --notebook <the notebook's name>` serves it.
-  // The page lists the notebooks, each with a page of its own for its agents (A1125).
+  // The page lists the notebooks, each folding open in place to its agents (PEN-146), and
+  // `/settings/agents/<id>` opens with that one unfolded.
   await go(page, '/settings/agents');
   const row = page.getByTestId('agents-notebook-row').filter({ hasText: name });
-  await expect(row).toHaveAttribute('href', `/settings/agents/${notebookId}`);
-  await row.click();
+  await expect(row).toHaveAttribute('data-path', `/settings/agents/${notebookId}`);
+  await row.getByTestId('agents-notebook-fold').click();
   const agentsPage = page.getByTestId('agents-settings');
   const notebookAgents = agentsPage.getByTestId('notebook-agents').filter({ hasText: name });
   const agents = notebookAgents.getByTestId('git-local-agents');
@@ -157,8 +158,7 @@ test('no account: connect an agent on this Mac; its MCP server writes the notebo
   await expect(automatic.getByTestId('git-local-agent-disconnect')).toHaveCount(0);
   await expect(notebookAgents).toContainText(`penmoss mcp --notebook "${name}"`);
 
-  // The penmoss command, on the list page: written under the suite's home, running this app.
-  await page.getByTestId('agents-back').click();
+  // The penmoss command, on the same page: written under the suite's home, running this app.
   const command = agentsPage.getByTestId('git-cli');
   await expect(command).toHaveAttribute('data-state', 'missing');
   await command.getByTestId('git-cli-install').click();
@@ -174,9 +174,10 @@ test('no account: connect an agent on this Mac; its MCP server writes the notebo
   expect(byName.status, byName.stderr).toBe(0);
   expect(JSON.parse(byName.stdout)).toMatchObject({ name: `${slug}-agent` });
 
-  // Connect an Agent, on the notebook's page: Touch ID, then its own clone, and the commands to
+  // Connect an Agent…, on the notebook's row: Touch ID, then its own clone, and the commands to
   // give it the server.
-  await row.click();
+  await row.getByTestId('agents-connect-open').click();
+  await expect(agents.getByTestId('git-local-agent-label')).toBeFocused();
   await agents.getByTestId('git-local-agent-label').fill('Codex');
   await agents.getByTestId('git-local-agent-connect').click();
   await expect(agents.getByTestId('git-local-agent-message')).toContainText('Connected “Codex”');
