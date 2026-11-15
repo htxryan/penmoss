@@ -14,6 +14,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.penmoss.proof.ProofShot
 import app.penmoss.search.SearchActions
+import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.common.TooltipDelayInstrumentedTest
 import app.penmoss.ui.keys.AndroidCommands
 import app.penmoss.ui.keys.Coverage
 import org.junit.Assert.assertTrue

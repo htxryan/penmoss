@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.common
 
 import androidx.compose.runtime.Immutable
 import app.penmoss.data.FolderEntity

@@ -24,6 +24,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
+import app.penmoss.ui.common.FolderItem
+import app.penmoss.ui.common.NoteItem
+import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.common.SectionTitle
 
 /**
  * The accessibility pass (T40 P9, PL14, A498), as far as Robolectric reaches: headings for

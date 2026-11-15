@@ -20,13 +20,13 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import app.penmoss.ui.square.OutlinedButton
+import app.penmoss.ui.common.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import app.penmoss.ui.square.TextButton
+import app.penmoss.ui.common.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,7 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.penmoss.engine.api.AgentActivityEntry
 import app.penmoss.ui.ACTIVITY_GROUPS
-import app.penmoss.ui.PenmossSnackbar
+import app.penmoss.ui.common.PenmossSnackbar
 import app.penmoss.ui.AgentActivityUi
 import app.penmoss.ui.activityAgents
 import app.penmoss.ui.activityDetail

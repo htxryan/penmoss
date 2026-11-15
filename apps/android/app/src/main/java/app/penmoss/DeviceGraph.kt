@@ -11,7 +11,7 @@ import app.penmoss.security.KeystoreSecretBox
 import app.penmoss.security.PhoneOwnerCheck
 import app.penmoss.security.ResumedActivity
 import app.penmoss.security.SecretBox
-import app.penmoss.ui.Appearance
+import app.penmoss.ui.common.Appearance
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

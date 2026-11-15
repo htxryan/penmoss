@@ -1,6 +1,5 @@
-package app.penmoss.ui
+package app.penmoss.ui.common
 
-import app.penmoss.ui.square.SQUARE_SHAPES
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme

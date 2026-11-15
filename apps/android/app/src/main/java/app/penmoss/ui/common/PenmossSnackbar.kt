@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.common
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
@@ -33,8 +33,6 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import app.penmoss.ui.square.IconButton
-import app.penmoss.ui.square.TextButton
 
 /** The widest a snackbar grows; past it, its text wraps (PEN-63). */
 val SNACKBAR_MAX_WIDTH = 380.dp

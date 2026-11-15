@@ -16,6 +16,9 @@ import app.penmoss.data.CapturesWaiting
 import app.penmoss.engine.bridge.ToEditor
 import app.penmoss.engine.settings.QuickAccess
 import app.penmoss.engine.settings.SettingKeys
+import app.penmoss.ui.common.FolderItem
+import app.penmoss.ui.common.Items
+import app.penmoss.ui.common.NoteItem
 import app.penmoss.ui.keys.openCapture
 import app.penmoss.ui.screens.AllNotesScreen
 import app.penmoss.ui.screens.HomeActions

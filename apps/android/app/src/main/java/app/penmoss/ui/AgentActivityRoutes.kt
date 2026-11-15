@@ -11,6 +11,7 @@ import app.penmoss.NotebookGraph
 import app.penmoss.engine.api.AgentActivityEntry
 import app.penmoss.engine.api.ApiException
 import app.penmoss.engine.api.PenmossApi
+import app.penmoss.ui.common.shortWhen
 import app.penmoss.ui.settings.AgentActivityScreen
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope

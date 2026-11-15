@@ -26,6 +26,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
+import app.penmoss.ui.common.PenmossTheme
 
 /** Version history's screens (T40 P3b, NT16–NT20), on Robolectric. */
 @RunWith(AndroidJUnit4::class)

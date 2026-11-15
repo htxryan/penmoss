@@ -38,6 +38,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
+import app.penmoss.ui.common.PenmossTheme
 
 /**
  * Settings → Symbols on the phone (T44, ST13, A747): the web's synced list, changed by the web's

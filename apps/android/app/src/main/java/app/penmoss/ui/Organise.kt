@@ -32,7 +32,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
-import app.penmoss.ui.square.TextButton
+import app.penmoss.ui.common.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -54,6 +54,8 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.penmoss.engine.notes.Tags
+import app.penmoss.ui.common.FolderChoice
+import app.penmoss.ui.common.FolderIcon
 
 /**
  * Where a note goes (T38): the top level and every folder, nested as the tree is. [current]

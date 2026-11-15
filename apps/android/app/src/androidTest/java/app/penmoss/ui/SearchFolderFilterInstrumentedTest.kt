@@ -9,6 +9,9 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.penmoss.proof.ProofShot
+import app.penmoss.ui.common.FolderChoice
+import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.common.TooltipDelayInstrumentedTest
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test

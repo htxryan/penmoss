@@ -9,6 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.penmoss.engine.notes.TagTree
 import app.penmoss.proof.ProofShot
+import app.penmoss.ui.common.PenmossTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue

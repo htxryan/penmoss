@@ -15,6 +15,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.data.FolderEntity
+import app.penmoss.ui.common.Items
+import app.penmoss.ui.common.PenmossTheme
 import app.penmoss.ui.screens.FolderScreen
 import app.penmoss.ui.screens.HomeActions
 import app.penmoss.ui.screens.HomeScreen

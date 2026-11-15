@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.common
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable

@@ -16,6 +16,9 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.search.SearchResult
+import app.penmoss.ui.common.FolderChoice
+import app.penmoss.ui.common.NoteItem
+import app.penmoss.ui.common.PenmossTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

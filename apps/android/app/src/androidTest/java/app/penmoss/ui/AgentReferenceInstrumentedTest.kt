@@ -34,6 +34,10 @@ import app.penmoss.data.NoteEntity
 import app.penmoss.data.NoteStore
 import app.penmoss.data.PenmossDatabase
 import app.penmoss.proof.ProofShot
+import app.penmoss.ui.common.PenmossSnackbar
+import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.common.SnackbarTone
+import app.penmoss.ui.common.say
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

@@ -20,7 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import app.penmoss.ui.square.TextButton
+import app.penmoss.ui.common.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,6 +49,7 @@ import androidx.compose.ui.window.PopupProperties
 import app.penmoss.editor.FormatState
 import app.penmoss.engine.bridge.FormatCommand
 import app.penmoss.engine.settings.LineSymbol
+import app.penmoss.ui.common.symbolColour
 
 /** One button of the bar: what it does, its name and icon, and whether it shows as on. */
 private data class BarButton(val command: FormatCommand, val label: String, val icon: ImageVector)

@@ -24,8 +24,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import app.penmoss.ui.MainActivity
-import app.penmoss.ui.PenmossTheme
-import app.penmoss.ui.followShownVariant
+import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.common.followShownVariant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

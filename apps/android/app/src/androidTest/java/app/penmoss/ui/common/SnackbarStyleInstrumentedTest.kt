@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.common
 
 import android.graphics.Bitmap
 import android.os.SystemClock
@@ -45,7 +45,7 @@ import kotlin.math.abs
  * PEN-63's Android proof: every snackbar is the web's toast, a square card on the theme's raised
  * surface with its border and text colour, led by its tone's glyph, centred at the bottom and only as wide as its text
  * (up to 380 dp), light and dark, its action in the accent. Run in the factory's proof with
- * `task proof:android -- app.penmoss.ui.SnackbarStyleInstrumentedTest`.
+ * `task proof:android -- app.penmoss.ui.common.SnackbarStyleInstrumentedTest`.
  *
  * Reads the screen through Compose's semantics tree and a screenshot, not the Compose test rule:
  * the rule's Espresso link doesn't start on the API 37 emulator (InputManager.getInstance is gone).

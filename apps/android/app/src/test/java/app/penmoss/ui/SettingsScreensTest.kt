@@ -61,6 +61,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
+import app.penmoss.ui.common.PenmossTheme
 
 /** Settings on the phone (T40 P1): the home's sections, Appearance, Daily notes and Quick capture. */
 @RunWith(AndroidJUnit4::class)

@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.common
 
 import android.graphics.Color
 import androidx.activity.ComponentActivity

@@ -13,6 +13,7 @@ import app.penmoss.engine.api.ActivityActor
 import app.penmoss.engine.api.ActivityUndone
 import app.penmoss.engine.api.AgentActivityEntry
 import app.penmoss.engine.api.ApiException
+import app.penmoss.ui.common.PenmossTheme
 import app.penmoss.ui.settings.AgentActivityScreen
 import app.penmoss.ui.settings.NO_AGENT_ACTIVITY
 import app.penmoss.ui.settings.NO_GIT_AGENT_ACTIVITY

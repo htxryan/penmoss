@@ -32,7 +32,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import app.penmoss.ui.square.IconButton
+import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -94,6 +94,13 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
+import app.penmoss.ui.common.DateLabels
+import app.penmoss.ui.common.EmptyMessage
+import app.penmoss.ui.common.FolderChoice
+import app.penmoss.ui.common.Items
+import app.penmoss.ui.common.LocalSearchMatch
+import app.penmoss.ui.common.NoteItem
+import app.penmoss.ui.common.mark
 
 /** The Updated filter's choices, in the web's words (T40 P6, FD3): a label and its days back. */
 internal val DATE_RANGES: List<Pair<String, Int?>> = listOf(

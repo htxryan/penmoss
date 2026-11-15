@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import app.penmoss.ui.square.Button
-import app.penmoss.ui.square.FilledTonalButton
+import app.penmoss.ui.common.Button
+import app.penmoss.ui.common.FilledTonalButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -28,10 +28,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.penmoss.NotebookGraph
-import app.penmoss.ui.DotState
-import app.penmoss.ui.SectionTitle
-import app.penmoss.ui.SyncDot
-import app.penmoss.ui.SyncStateDot
+import app.penmoss.ui.common.DotState
+import app.penmoss.ui.common.SectionTitle
+import app.penmoss.ui.common.SyncDot
+import app.penmoss.ui.common.SyncStateDot
 import app.penmoss.ui.settings.GroupTitle
 import app.penmoss.ui.settings.Help
 import app.penmoss.ui.settings.SectionScreen

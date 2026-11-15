@@ -19,7 +19,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import app.penmoss.ui.square.IconButton
+import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
@@ -27,7 +27,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import app.penmoss.ui.square.TextButton
+import app.penmoss.ui.common.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -46,6 +46,9 @@ import androidx.compose.ui.unit.dp
 import app.penmoss.engine.api.HistoryAuthor
 import app.penmoss.engine.api.NoteVersion
 import app.penmoss.ui.settings.SettingsIcons
+import app.penmoss.ui.common.EmptyMessage
+import app.penmoss.ui.common.PenmossSnackbar
+import app.penmoss.ui.common.shortWhen
 
 /**
  * Version history (T40 P3b, NT16–NT20): the note's versions with time, author chip and summary;

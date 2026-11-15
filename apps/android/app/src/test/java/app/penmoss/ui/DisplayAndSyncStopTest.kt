@@ -36,6 +36,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
+import app.penmoss.ui.common.PenmossTheme
 
 /**
  * T42's Display and "Sync stopped" on the phone (T40 ST12, AC12; A650, A651): Home hides the

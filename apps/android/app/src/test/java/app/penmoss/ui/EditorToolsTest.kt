@@ -25,6 +25,7 @@ import app.penmoss.engine.bridge.BlockPurpose
 import app.penmoss.engine.bridge.CopyFormat
 import app.penmoss.engine.bridge.FormatCommand
 import app.penmoss.engine.bridge.TextCounts
+import app.penmoss.ui.common.PenmossTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test

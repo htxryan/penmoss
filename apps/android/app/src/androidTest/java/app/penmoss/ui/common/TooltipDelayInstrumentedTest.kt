@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.common
 
 import android.os.SystemClock
 import android.view.View
@@ -14,6 +14,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.penmoss.engine.settings.Settings
 import app.penmoss.proof.ProofShot
+import app.penmoss.ui.HomeLayout
+import app.penmoss.ui.displayChoices
+import app.penmoss.ui.displaySummary
 import app.penmoss.ui.settings.DisplayScreen
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
@@ -26,7 +29,7 @@ import org.junit.runner.RunWith
  * (`tooltip.delay`) has no row on the phone, and a synced value, Never included, changes
  * nothing on Settings → Display. Phones have no hover, and Android times a long press itself
  * (A657). Run in the factory's proof with
- * `task proof:android -- app.penmoss.ui.TooltipDelayInstrumentedTest`.
+ * `task proof:android -- app.penmoss.ui.common.TooltipDelayInstrumentedTest`.
  *
  * Reads the screen through Compose's semantics tree, not the Compose test rule: the rule's
  * Espresso link doesn't start on the API 37 emulator (InputManager.getInstance is gone).

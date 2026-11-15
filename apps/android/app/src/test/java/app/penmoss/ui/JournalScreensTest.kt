@@ -19,6 +19,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import app.penmoss.ui.common.PenmossTheme
 
 /**
  * Daily and weekly notes on the phone (T40 P5): the Journal calendar and the period row

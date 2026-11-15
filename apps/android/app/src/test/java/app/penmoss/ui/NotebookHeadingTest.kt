@@ -29,6 +29,13 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
+import app.penmoss.ui.common.DotMark
+import app.penmoss.ui.common.DotState
+import app.penmoss.ui.common.FolderItem
+import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.common.SyncDot
+import app.penmoss.ui.common.SyncStateDot
+import app.penmoss.ui.common.mark
 
 /**
  * Home's notebook heading as the sidebar's notebook bar (T52 items 10, 11): the name with its sync

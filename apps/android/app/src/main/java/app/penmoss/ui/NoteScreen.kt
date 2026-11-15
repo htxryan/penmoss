@@ -28,14 +28,14 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import app.penmoss.ui.square.IconButton
+import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import app.penmoss.ui.square.TextButton
+import app.penmoss.ui.common.TextButton
 import app.penmoss.ui.settings.SettingsIcons
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -91,6 +91,9 @@ import app.penmoss.ui.screens.CenteredMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import app.penmoss.ui.common.Items
+import app.penmoss.ui.common.PenmossSnackbar
+import app.penmoss.ui.common.TipIconButton
 
 /**
  * An open note (T32; the writing screen, T33): the native top bar, the editor

@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.common
 
 import android.content.Intent
 import android.os.Looper
@@ -15,6 +15,7 @@ import app.penmoss.capture.CaptureActivity
 import app.penmoss.engine.api.SyncTree
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.stopMainScope
+import app.penmoss.ui.MainActivity
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive

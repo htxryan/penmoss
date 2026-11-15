@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.common
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.CompositionLocalProvider
@@ -47,6 +47,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
+import app.penmoss.ui.moveToTrashWithUndo
+import app.penmoss.ui.oneMoveSaid
+import app.penmoss.ui.open
 
 /**
  * Several notes at once (T42, A570; T40 NT26, A652): a long press on a note in a list starts

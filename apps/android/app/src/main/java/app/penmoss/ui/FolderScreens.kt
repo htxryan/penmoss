@@ -34,7 +34,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import app.penmoss.ui.square.TextButton
+import app.penmoss.ui.common.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -73,6 +73,9 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import app.penmoss.ui.common.FolderItem
+import app.penmoss.ui.common.Items
+import app.penmoss.ui.common.NoteItem
 
 /**
  * What a long press on a folder row offers (T40 P4, NT3–NT5): make a folder inside it (New Folder

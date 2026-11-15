@@ -1,11 +1,10 @@
-package app.penmoss.ui
+package app.penmoss.ui.common
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import app.penmoss.ui.square.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text

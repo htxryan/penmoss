@@ -23,12 +23,12 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import app.penmoss.ui.square.IconButton
+import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import app.penmoss.ui.square.TextButton
+import app.penmoss.ui.common.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -67,6 +67,12 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
 import java.io.IOException
+import app.penmoss.ui.common.EmptyMessage
+import app.penmoss.ui.common.Items
+import app.penmoss.ui.common.KeepSelectionShown
+import app.penmoss.ui.common.NoteItem
+import app.penmoss.ui.common.NoteList
+import app.penmoss.ui.common.underSelectionBar
 
 /** "1 note", "3 notes". */
 internal fun notesCount(count: Int) = "$count ${if (count == 1) "note" else "notes"}"

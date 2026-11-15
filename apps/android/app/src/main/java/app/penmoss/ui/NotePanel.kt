@@ -27,7 +27,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import app.penmoss.ui.square.FilledTonalButton
+import app.penmoss.ui.common.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -75,6 +75,8 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
+import app.penmoss.ui.common.Items
+import app.penmoss.ui.common.TipIconButton
 
 /*
  * The note panel (T51, A936; T53 item 9, A985): Metadata, Comments, Version History and Local

@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.common
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -9,7 +9,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import app.penmoss.ui.square.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
@@ -38,6 +37,8 @@ import app.penmoss.data.NoteStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import app.penmoss.ui.UNDO_MS
+import app.penmoss.ui.titleOf
 
 /*
  * Several notes at once on the phone (T42, A570; T40 NT26, A652): the web's tree selection and

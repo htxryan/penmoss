@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.common
 
 import app.penmoss.engine.settings.FontSettings
 import app.penmoss.engine.settings.ResolvedTheme

@@ -28,7 +28,7 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import app.penmoss.ui.square.IconButton
+import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -72,6 +72,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.time.OffsetDateTime
+import app.penmoss.ui.common.Items
+import app.penmoss.ui.common.shortWhen
 
 /*
  * The note's Info sheet on the phone (T40 P7, NT23, LK5, LK6; A474, A475): the web's Info panel

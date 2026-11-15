@@ -42,6 +42,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
+import app.penmoss.ui.common.PenmossTheme
 
 /**
  * The theme editor on the phone (T40 P1b, ST5, A417, A418, A419): its way in from Appearance,

@@ -23,10 +23,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import app.penmoss.NotebookGraph
+import app.penmoss.ui.common.Button
+import app.penmoss.ui.common.TextButton
 import app.penmoss.ui.settings.Help
 import app.penmoss.ui.settings.SectionScreen
-import app.penmoss.ui.square.Button
-import app.penmoss.ui.square.TextButton
 import kotlinx.coroutines.launch
 
 /**

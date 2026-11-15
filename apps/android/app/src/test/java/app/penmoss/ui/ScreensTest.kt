@@ -53,6 +53,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import app.penmoss.ui.common.FolderItem
+import app.penmoss.ui.common.NoteItem
+import app.penmoss.ui.common.NoteList
+import app.penmoss.ui.common.PenmossTheme
 
 /** Compose UI tests of the native screens (T32), on Robolectric: no emulator on the worker. */
 @RunWith(AndroidJUnit4::class)

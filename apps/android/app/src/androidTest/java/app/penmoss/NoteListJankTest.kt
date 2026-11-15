@@ -9,9 +9,9 @@ import androidx.compose.ui.test.swipeUp
 import androidx.metrics.performance.JankStats
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.data.NoteListRow
-import app.penmoss.ui.Items
-import app.penmoss.ui.NoteList
-import app.penmoss.ui.PenmossTheme
+import app.penmoss.ui.common.Items
+import app.penmoss.ui.common.NoteList
+import app.penmoss.ui.common.PenmossTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test

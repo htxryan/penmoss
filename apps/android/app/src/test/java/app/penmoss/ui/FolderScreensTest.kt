@@ -31,6 +31,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import app.penmoss.ui.common.FolderItem
+import app.penmoss.ui.common.Items
+import app.penmoss.ui.common.NoteItem
+import app.penmoss.ui.common.PenmossTheme
 
 /**
  * Folders on the phone (T40 P4, NT2–NT7, NT11): sheets, dialogs, the sort menu, the breadcrumb

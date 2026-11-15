@@ -33,6 +33,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.TimeUnit
+import app.penmoss.ui.common.PenmossTheme
 
 /**
  * Trash's folders on the phone (T40 P9, NT25, A560): the server's list, in the web's words, and

@@ -46,6 +46,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.common.shortWhen
 
 /**
  * The Comments sheet (T48): threads in the page's order with the Open and Resolved filter, their

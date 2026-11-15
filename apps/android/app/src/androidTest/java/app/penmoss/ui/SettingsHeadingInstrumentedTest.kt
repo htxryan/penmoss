@@ -14,6 +14,8 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.penmoss.proof.ProofShot
+import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.common.TooltipDelayInstrumentedTest
 import app.penmoss.ui.settings.SettingsHome
 import app.penmoss.ui.settings.SettingsIcons
 import app.penmoss.ui.settings.SettingsSection

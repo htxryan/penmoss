@@ -1,4 +1,4 @@
-package app.penmoss.ui.square
+package app.penmoss.ui.common
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource

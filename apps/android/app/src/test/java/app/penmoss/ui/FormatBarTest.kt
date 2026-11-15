@@ -33,6 +33,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
+import app.penmoss.ui.common.PenmossTheme
 
 /** The formatting bar above the keyboard (T33, A301), on Robolectric. */
 @RunWith(AndroidJUnit4::class)

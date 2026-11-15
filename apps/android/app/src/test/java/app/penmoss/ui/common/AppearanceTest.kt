@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.common
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme

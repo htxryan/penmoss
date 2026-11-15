@@ -10,6 +10,7 @@ import app.penmoss.engine.bridge.GraphScope
 import app.penmoss.engine.bridge.ToGraph
 import app.penmoss.engine.tree.FolderRow
 import app.penmoss.engine.tree.FolderTree
+import app.penmoss.ui.common.Items
 
 /** A note the graph's search field can find. */
 @Immutable

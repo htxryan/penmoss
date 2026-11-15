@@ -22,8 +22,8 @@ import app.penmoss.editor.EditorWebView
 import app.penmoss.graph
 import app.penmoss.ui.DeepLinkInbox
 import app.penmoss.ui.PenmossRoot
-import app.penmoss.ui.PenmossTheme
-import app.penmoss.ui.followShownVariant
+import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.common.followShownVariant
 import app.penmoss.ui.keys.AppCommands
 import app.penmoss.ui.keys.LocalAppCommands
 import kotlinx.coroutines.launch

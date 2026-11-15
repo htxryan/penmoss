@@ -26,6 +26,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
 import java.io.IOException
+import app.penmoss.ui.common.NoteItem
+import app.penmoss.ui.common.PenmossTheme
 
 /** The tag browser, a tag's notes, and rename or merge (T40 P6, TG1–TG3), on Robolectric. */
 @RunWith(AndroidJUnit4::class)

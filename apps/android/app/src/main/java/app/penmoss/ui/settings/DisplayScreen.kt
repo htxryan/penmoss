@@ -1,6 +1,6 @@
 package app.penmoss.ui.settings
 
-import app.penmoss.ui.square.TextButton
+import app.penmoss.ui.common.TextButton
 import androidx.compose.foundation.layout.Row
 import app.penmoss.ui.HomeLayout
 import app.penmoss.engine.settings.SidebarLayout

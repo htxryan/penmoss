@@ -33,6 +33,18 @@ import app.penmoss.feedback.feedbackActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import app.penmoss.ui.common.FolderItem
+import app.penmoss.ui.common.Items
+import app.penmoss.ui.common.LocalNoteSelection
+import app.penmoss.ui.common.NoteItem
+import app.penmoss.ui.common.NoteSelection
+import app.penmoss.ui.common.Picked
+import app.penmoss.ui.common.SelectionBar
+import app.penmoss.ui.common.SnackbarTone
+import app.penmoss.ui.common.moveNotesAndSay
+import app.penmoss.ui.common.moveNotesToTrashWithUndo
+import app.penmoss.ui.common.moveTitle
+import app.penmoss.ui.common.say
 
 /**
  * What a git notebook's screens share (A6): the navigation, the snackbar over every screen, the

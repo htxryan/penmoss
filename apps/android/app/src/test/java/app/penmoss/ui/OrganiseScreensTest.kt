@@ -47,6 +47,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import app.penmoss.ui.common.Items
+import app.penmoss.ui.common.NoteItem
+import app.penmoss.ui.common.NoteList
+import app.penmoss.ui.common.PenmossTheme
 
 /** The folder picker, the tag sheet and New note in a folder (T38), on Robolectric. */
 @RunWith(AndroidJUnit4::class)

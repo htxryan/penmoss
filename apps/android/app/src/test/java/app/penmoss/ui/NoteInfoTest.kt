@@ -55,6 +55,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.time.ZonedDateTime
+import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.common.shortWhen
 
 /**
  * The note's Info sheet (T40 P7, NT23, LK5, LK6; A474, A475): the web's Info panel's details

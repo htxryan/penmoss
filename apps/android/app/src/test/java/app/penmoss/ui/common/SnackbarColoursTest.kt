@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.common
 
 import app.penmoss.engine.settings.ThemeCatalogue
 import kotlinx.serialization.json.JsonObject
