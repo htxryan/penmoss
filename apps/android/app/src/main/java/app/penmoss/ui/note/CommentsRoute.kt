@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.Composable

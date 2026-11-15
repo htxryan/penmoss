@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.graphics.RectangleShape
@@ -50,6 +50,7 @@ import app.penmoss.editor.FormatState
 import app.penmoss.engine.bridge.FormatCommand
 import app.penmoss.engine.settings.LineSymbol
 import app.penmoss.ui.common.symbolColour
+import app.penmoss.ui.open
 
 /** One button of the bar: what it does, its name and icon, and whether it shows as on. */
 private data class BarButton(val command: FormatCommand, val label: String, val icon: ImageVector)

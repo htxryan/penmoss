@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import android.content.Context
 import androidx.compose.ui.graphics.RectangleShape
@@ -77,6 +77,8 @@ import kotlin.math.min
 import kotlin.math.sin
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.TipIconButton
+import app.penmoss.ui.GraphModel
+import app.penmoss.ui.titleOf
 
 /*
  * The note panel (T51, A936; T53 item 9, A985): Metadata, Comments, Version History and Local

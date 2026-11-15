@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 /**
  * Short note references (PEN-69): `<notebook>-<note>`, e.g. `K7QD-9HTF2CXA`. The notebook part is

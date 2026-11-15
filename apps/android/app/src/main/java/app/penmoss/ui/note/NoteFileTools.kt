@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -19,6 +19,7 @@ import app.penmoss.editor.NoteFiles
 import app.penmoss.editor.OpenedFiles
 import app.penmoss.engine.bridge.FileAction
 import app.penmoss.engine.bridge.FileLimits
+import app.penmoss.ui.open
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

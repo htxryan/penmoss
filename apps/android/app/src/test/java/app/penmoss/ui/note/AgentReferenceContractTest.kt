@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import android.content.ClipData
 import androidx.test.core.app.ApplicationProvider

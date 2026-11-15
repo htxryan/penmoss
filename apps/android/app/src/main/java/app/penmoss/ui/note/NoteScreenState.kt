@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import kotlinx.coroutines.CoroutineScope
 import android.content.Context
@@ -73,6 +73,9 @@ import kotlinx.coroutines.withContext
 import app.penmoss.ui.common.FolderItem
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.readableTheme
+import app.penmoss.ui.historyFailure
+import app.penmoss.ui.moveNoteAndSay
+import app.penmoss.ui.trashAfterClosing
 
 /** Pictures one trip to the photo picker may bring. */
 private const val MAX_PICKED = 10

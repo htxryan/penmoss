@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import android.webkit.WebView
 import androidx.compose.ui.graphics.RectangleShape
@@ -72,6 +72,7 @@ import app.penmoss.engine.bridge.BlockAction
 import app.penmoss.engine.bridge.BlockEntry
 import app.penmoss.engine.bridge.BlockPurpose
 import app.penmoss.engine.bridge.CopyFormat
+import app.penmoss.ui.open
 
 /*
  * The note screen's editor tools (T40 P8): the ⋮ menu's copies, Markdown source, Find in note

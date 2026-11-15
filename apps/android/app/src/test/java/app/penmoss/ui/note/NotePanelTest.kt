@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import android.view.View
 import androidx.compose.foundation.layout.Box

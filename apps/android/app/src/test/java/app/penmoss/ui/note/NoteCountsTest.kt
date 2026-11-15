@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import android.content.Context
 import android.os.Looper
@@ -13,6 +13,7 @@ import app.penmoss.data.PenmossDatabase
 import app.penmoss.data.UpdateEntity
 import app.penmoss.security.SecretBox
 import app.penmoss.stopMainScope
+import app.penmoss.ui.open
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking

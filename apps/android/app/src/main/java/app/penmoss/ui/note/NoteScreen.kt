@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import app.penmoss.engine.notes.Tags
 import kotlinx.coroutines.flow.combine
@@ -94,6 +94,18 @@ import kotlinx.coroutines.flow.map
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.PenmossSnackbar
 import app.penmoss.ui.common.TipIconButton
+import app.penmoss.ui.BreadcrumbBar
+import app.penmoss.ui.FolderPickerFor
+import app.penmoss.ui.GRAPH_BATCH_MS
+import app.penmoss.ui.GraphInput
+import app.penmoss.ui.HistoryRoute
+import app.penmoss.ui.JournalMarks
+import app.penmoss.ui.TagSheet
+import app.penmoss.ui.atMostEvery
+import app.penmoss.ui.journalMarksOf
+import app.penmoss.ui.open
+import app.penmoss.ui.refreshTagList
+import app.penmoss.ui.titleOf
 
 /**
  * An open note (T32; the writing screen, T33): the native top bar, the editor

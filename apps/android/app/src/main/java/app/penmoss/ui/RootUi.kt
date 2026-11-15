@@ -45,6 +45,8 @@ import app.penmoss.ui.common.moveNotesAndSay
 import app.penmoss.ui.common.moveNotesToTrashWithUndo
 import app.penmoss.ui.common.moveTitle
 import app.penmoss.ui.common.say
+import app.penmoss.ui.note.AgentReference
+import app.penmoss.ui.note.agentReferenceIn
 
 /**
  * What a git notebook's screens share (A6): the navigation, the snackbar over every screen, the

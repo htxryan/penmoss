@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import androidx.compose.ui.test.assertIsSelected
 import android.content.res.Configuration
@@ -52,6 +52,7 @@ import org.robolectric.Shadows.shadowOf
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import app.penmoss.ui.open
 
 /**
  * The note screen's own wiring for links (T40 P7 review S7, LK4, LK5), through the app with a

@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue

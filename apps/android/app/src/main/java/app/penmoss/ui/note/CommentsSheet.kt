@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -73,6 +73,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.IOException
 import app.penmoss.ui.common.shortWhen
+import app.penmoss.ui.open
 
 /*
  * The Comments sheet (T48, D40, A770–A784): the note's threads in document order, orphans last,

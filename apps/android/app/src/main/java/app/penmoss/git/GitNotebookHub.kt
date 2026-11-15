@@ -311,9 +311,9 @@ class GitNotebookHub(
         val parts = ref.uppercase().split('-')
         if (parts.size != 2) return null
         val (tag, end) = parts
-        val entry = notebooks.entries().firstOrNull { app.penmoss.ui.NoteRef.notebookTag(it.notebookId) == tag } ?: return null
+        val entry = notebooks.entries().firstOrNull { app.penmoss.ui.note.NoteRef.notebookTag(it.notebookId) == tag } ?: return null
         val ids = runCatching { idsEndingWith(entry.localId, end) }.getOrDefault(emptyList())
-        val id = if (end.length > app.penmoss.ui.NoteRef.NOTE_LENGTH) ids.firstOrNull { it == end } else ids.filter { it.length == 26 }.minOrNull()
+        val id = if (end.length > app.penmoss.ui.note.NoteRef.NOTE_LENGTH) ids.firstOrNull { it == end } else ids.filter { it.length == 26 }.minOrNull()
         return id?.let { entry.localId to it }
     }
 

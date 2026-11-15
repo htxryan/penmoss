@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.TextField

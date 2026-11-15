@@ -20,6 +20,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.note.PeriodNavRow
 
 /**
  * Daily and weekly notes on the phone (T40 P5): the Journal calendar and the period row
@@ -103,7 +104,7 @@ class JournalScreensTest {
         val events = mutableListOf<String>()
         compose.setContent {
             PenmossTheme {
-                app.penmoss.ui.PeriodNavRow(dailyNav(), onOpenPeriodic = { kind, date -> events += "${kind.wire}:$date" })
+                app.penmoss.ui.note.PeriodNavRow(dailyNav(), onOpenPeriodic = { kind, date -> events += "${kind.wire}:$date" })
             }
         }
         compose.onNodeWithText("Wednesday 21 October 2026").assertExists()
@@ -132,7 +133,7 @@ class JournalScreensTest {
         )
         compose.setContent {
             PenmossTheme {
-                app.penmoss.ui.PeriodNavRow(nav, onOpenPeriodic = { kind, date -> events += "${kind.wire}:$date" })
+                app.penmoss.ui.note.PeriodNavRow(nav, onOpenPeriodic = { kind, date -> events += "${kind.wire}:$date" })
             }
         }
         click("periodDay-2026-10-21")
@@ -158,7 +159,7 @@ class JournalScreensTest {
         var nav by mutableStateOf(weekly)
         val marks = JournalMarks(days = setOf("2026-10-20", "2026-10-23"), weeks = setOf("2026-W43"))
         compose.setContent {
-            PenmossTheme { app.penmoss.ui.PeriodNavRow(nav, onOpenPeriodic = { _, _ -> }, marks = marks) }
+            PenmossTheme { app.penmoss.ui.note.PeriodNavRow(nav, onOpenPeriodic = { _, _ -> }, marks = marks) }
         }
         compose.onNodeWithTag("periodDay-2026-10-20-held", useUnmergedTree = true).assertExists()
         compose.onNodeWithTag("periodDay-2026-10-23-held", useUnmergedTree = true).assertExists()

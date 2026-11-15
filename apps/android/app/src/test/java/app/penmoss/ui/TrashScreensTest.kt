@@ -36,6 +36,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
 import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.note.CopyNotice
 
 /** Trash's screens (T40 P3a, NT12–NT15, NT21), on Robolectric. */
 @RunWith(AndroidJUnit4::class)

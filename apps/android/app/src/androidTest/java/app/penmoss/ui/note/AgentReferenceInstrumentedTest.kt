@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import android.os.SystemClock
 import android.view.View
@@ -50,7 +50,7 @@ import org.junit.runner.RunWith
  * MCP server and read_note with the note's short id (the notebook's 4 characters, then the last 8
  * of the note's id), built from what the phone holds, as the web and the Mac copy it. The test
  * puts it on the clipboard and shows it with the snackbar Copy Agent Reference says. Run in the
- * factory's proof with `task proof:android -- app.penmoss.ui.AgentReferenceInstrumentedTest`.
+ * factory's proof with `task proof:android -- app.penmoss.ui.note.AgentReferenceInstrumentedTest`.
  *
  * Reads the screen through Compose's semantics tree, not the Compose test rule: the rule's
  * Espresso link doesn't start on the API 37 emulator (InputManager.getInstance is gone).

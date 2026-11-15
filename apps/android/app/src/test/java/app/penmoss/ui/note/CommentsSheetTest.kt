@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
@@ -48,6 +48,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import app.penmoss.ui.common.PenmossTheme
 import app.penmoss.ui.common.shortWhen
+import app.penmoss.ui.open
 
 /**
  * The Comments sheet (T48): threads in the page's order with the Open and Resolved filter, their

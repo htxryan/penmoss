@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor

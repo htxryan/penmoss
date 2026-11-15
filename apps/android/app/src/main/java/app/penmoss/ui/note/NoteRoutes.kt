@@ -1,9 +1,22 @@
-package app.penmoss.ui
+package app.penmoss.ui.note
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import app.penmoss.editor.PeriodicNoteRequest
 import app.penmoss.engine.bridge.ToEditor
+import app.penmoss.ui.NOTE_ROUTE
+import app.penmoss.ui.PERIODIC_ROUTE
+import app.penmoss.ui.RootUi
+import app.penmoss.ui.SettingsRoutes
+import app.penmoss.ui.graphRoute
+import app.penmoss.ui.leave
+import app.penmoss.ui.markNoteMade
+import app.penmoss.ui.newNoteRequest
+import app.penmoss.ui.noteArguments
+import app.penmoss.ui.open
+import app.penmoss.ui.periodicArguments
+import app.penmoss.ui.periodicScreenId
+import app.penmoss.ui.replaceWithNote
 
 /** A note's screen (T32, T38), and Today, a calendar day or a week's note (T40 P5). */
 internal fun NavGraphBuilder.noteRoutes(root: RootUi) {
