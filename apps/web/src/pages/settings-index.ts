@@ -114,6 +114,10 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
   text('Note Font', { aliases: ['typeface', 'editor font'] }),
   text('Note Font Size', { aliases: ['text size', 'font size', 'zoom', 'bigger', 'smaller'] }),
   text('Show Tooltips After', { aliases: ['tooltip', 'hover', 'delay'] }),
+  text('Dad Jokes', {
+    help: 'A joke in place of the heading when no note is open',
+    aliases: ['joke', 'jokes', 'welcome', 'empty window'],
+  }),
   macWindow('Compact Title Bar', {
     help: 'Reopens the windows; your notes are saved first',
     aliases: ['toolbar', 'window'],

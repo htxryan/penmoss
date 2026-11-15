@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_DAILY_TEMPLATE, DEFAULT_WEEKLY_TEMPLATE } from '../src/periodic';
 import {
   captureDestinationOf,
+  DAD_JOKES_SETTING,
+  dadJokesOf,
   fullWidthOf,
   isNotebookSetting,
   noteBarSetting,
@@ -30,6 +32,16 @@ describe('the synced settings with no feature module of their own', () => {
     expect(captureDestinationOf({})).toBe('daily');
     expect(captureDestinationOf({ 'capture.destination': 'inbox' })).toBe('inbox');
     expect(captureDestinationOf({ 'capture.destination': 'elsewhere' })).toBe('daily');
+  });
+
+  it('heads the empty window with a dad joke unless Dad Jokes is turned off (A1598)', () => {
+    expect(DAD_JOKES_SETTING).toBe('home.dadJokes');
+    expect(dadJokesOf({})).toBe(true);
+    expect(dadJokesOf({ 'home.dadJokes': true })).toBe(true);
+    expect(dadJokesOf({ 'home.dadJokes': false })).toBe(false);
+    // A value another client wrote that this one does not know keeps the default.
+    expect(dadJokesOf({ 'home.dadJokes': 'off' })).toBe(true);
+    expect(isNotebookSetting('home.dadJokes')).toBe(false);
   });
 
   it('reads full width as true only for true, and null while unset (A501)', () => {

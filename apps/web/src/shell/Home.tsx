@@ -1,6 +1,7 @@
 import { isoWeek, longDate } from '@penmoss/core/periodic';
 import { useState } from 'react';
 import { DAD_JOKES } from './dad-jokes';
+import { useDadJokes } from './dad-jokes-state';
 import { deviceStorage } from './device-pref';
 import { drawJoke } from './joke-deck';
 import { formatCombo } from '@penmoss/editor/keys';
@@ -26,7 +27,8 @@ const when = (time: number) =>
 /**
  * With no note open. On a phone, the prototype's home screen (T36): search,
  * today's and this week's notes, the graph and recent notes, one tap each.
- * Elsewhere, a dad joke and two lines on where to start (A1576).
+ * Elsewhere, a dad joke (or, with Dad Jokes off, Welcome to Penmoss) and two lines on where to
+ * start (A1576).
  */
 export function Home({ phone }: { readonly phone: boolean }) {
   const commands = useCommands();
@@ -39,6 +41,7 @@ export function Home({ phone }: { readonly phone: boolean }) {
   const recent = phone ? recentNotes(list, readOpened(deviceStorage()), null, RECENT_ON_PHONE) : [];
   // Dealt once as the empty state appears, not on each render.
   const [joke] = useState(() => drawJoke(DAD_JOKES, deviceStorage()));
+  const jokes = useDadJokes();
   return (
     <div className="home">
       {phone ? (
@@ -125,9 +128,10 @@ export function Home({ phone }: { readonly phone: boolean }) {
           <path d="M24 26h24M24 34h18M24 42h21" className="art-lines" />
           <path d="M14 60c6-8 12-10 22-10s14 4 22 10" className="art-moss" />
         </svg>
-        {/* A dad joke where "No note open" was, a new one each time this shows (A1576). */}
+        {/* A dad joke where "No note open" was, a new one each time this shows (A1576); with
+            Dad Jokes off, a welcome. */}
         <h2 className="empty-joke" data-testid="empty-joke">
-          {joke}
+          {jokes.on ? joke : 'Welcome to Penmoss'}
         </h2>
         <p data-testid="empty-hint">
           Open a note or create one with <strong>New Note</strong>
