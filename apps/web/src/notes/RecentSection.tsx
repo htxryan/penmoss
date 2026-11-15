@@ -1,11 +1,12 @@
 import { Icon } from '@penmoss/ui/icons';
+import { deviceStorage } from '../shell/device-pref';
 import { useId, useMemo, type ReactNode } from 'react';
 import { linkHandler, notePath } from '../router';
 import { useStoredCollapse } from '../shell/collapsed';
 import { useEveryOpenNoteList } from '../sources/lists';
 import { displayTitle } from './list';
 import { NOTE_DRAG_TYPE } from './note-drag';
-import { browserStorage, readOpened, recentNotes } from './recent';
+import { readOpened, recentNotes } from './recent';
 import { SectionHead } from '../shell/SectionHead';
 
 /** Whether Recent Notes is collapsed on this device (T53 item 8). */
@@ -33,7 +34,7 @@ export function RecentSection({
   const id = useId();
   // Read again as the open note changes: opening one records it (NoteView).
   const notes = useMemo(
-    () => recentNotes(list, readOpened(browserStorage()), null, count),
+    () => recentNotes(list, readOpened(deviceStorage()), null, count),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- activeId: a note was opened
     [list, count, activeId],
   );

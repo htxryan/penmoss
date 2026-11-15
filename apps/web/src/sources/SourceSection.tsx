@@ -2,6 +2,7 @@ import { Icon } from '@penmoss/ui/icons';
 import { useId, useRef, useState, type MouseEvent } from 'react';
 import { gitNotebookPath, linkHandler, navigate, useLocation } from '../router';
 import { ContextMenu } from '../shell/ContextMenu';
+import { devicePref, useDevicePref } from '../shell/device-pref';
 import { TIME_MACHINE_PATH, timeMachinePath } from '../time-machine/path';
 import { FolderTree } from '../workspace/FolderTree';
 import { TreeActions } from '../workspace/TreeActions';
@@ -16,22 +17,17 @@ import './sources.css';
 /** Which sections are collapsed on this device (A862). */
 export const COLLAPSED_SECTIONS_KEY = 'penmoss.sidebar.sections.collapsed';
 
-function readCollapsed(): Set<string> {
-  try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(COLLAPSED_SECTIONS_KEY) ?? '[]');
-    return new Set(Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function writeCollapsed(ids: ReadonlySet<string>): void {
-  try {
-    localStorage.setItem(COLLAPSED_SECTIONS_KEY, JSON.stringify([...ids]));
-  } catch {
-    // Remembering is a convenience: the section still works.
-  }
-}
+const collapsedSections = devicePref(COLLAPSED_SECTIONS_KEY, {
+  parse: (stored): ReadonlySet<string> => {
+    try {
+      const parsed: unknown = JSON.parse(stored ?? '[]');
+      return new Set(Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string') : []);
+    } catch {
+      return new Set();
+    }
+  },
+  serialise: (ids) => JSON.stringify([...ids]),
+});
 
 const LABELS: Record<GitSyncStatus['phase'], string> = {
   starting: 'Starting',
@@ -112,7 +108,8 @@ export function SourceSection({
   onActivate?: () => void;
   shown: boolean;
 }) {
-  const [collapsed, setCollapsed] = useState(() => readCollapsed().has(source.id));
+  const [collapsedIds, setCollapsedIds] = useDevicePref(collapsedSections);
+  const collapsed = collapsedIds.has(source.id);
   const id = useId();
   const trash = `/trash?source=${encodeURIComponent(source.id)}`;
   const location = useLocation();
@@ -186,11 +183,10 @@ export function SourceSection({
             aria-expanded={!collapsed}
             aria-controls={`${id}-body`}
             onClick={() => {
-              const next = readCollapsed();
+              const next = new Set(collapsedSections.read());
               if (collapsed) next.delete(source.id);
               else next.add(source.id);
-              writeCollapsed(next);
-              setCollapsed(!collapsed);
+              setCollapsedIds(next);
             }}
           >
             <Icon name={collapsed ? 'chevR' : 'chevD'} size={12} />

@@ -1,11 +1,12 @@
 import { isoWeek, longDate } from '@penmoss/core/periodic';
+import { deviceStorage } from './device-pref';
 import { formatCombo } from '@penmoss/editor/keys';
 import { Icon } from '@penmoss/ui/icons';
 import { useCommands, useKeys } from '../commands/hooks';
 import { today } from '../journal/journal';
 import { useNoteList } from '../notes/hooks';
 import { displayTitle } from '../notes/list';
-import { browserStorage, readOpened, recentNotes } from '../notes/recent';
+import { readOpened, recentNotes } from '../notes/recent';
 import { linkHandler, notePath } from '../router';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 
@@ -32,9 +33,7 @@ export function Home({ phone }: { readonly phone: boolean }) {
   const newNoteKeys = useKeys('note.new');
   const paletteKeys = useKeys('app.palette');
   const day = today(workspace.settings());
-  const recent = phone
-    ? recentNotes(list, readOpened(browserStorage()), null, RECENT_ON_PHONE)
-    : [];
+  const recent = phone ? recentNotes(list, readOpened(deviceStorage()), null, RECENT_ON_PHONE) : [];
   return (
     <div className="home">
       {phone ? (

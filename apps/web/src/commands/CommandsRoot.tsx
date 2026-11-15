@@ -1,4 +1,5 @@
 import { buildTree } from '@penmoss/core/workspace';
+import { deviceStorage } from '../shell/device-pref';
 import { useSettingsInStep } from '../sources/settings-in-step';
 import { openLightboxNow, setLightboxHooks } from '@penmoss/editor';
 import { TrashedToast } from '../trash/TrashedToast';
@@ -13,7 +14,7 @@ import { captureWindow, openedFromLabel, openingFacts } from '../feedback/open';
 import { useFeedback } from '../feedback/service';
 import { useNoteList, useNotes } from '../notes/hooks';
 import { RESERVED_KEYS } from '../notes/service';
-import { browserStorage, readOpened, recentNotes } from '../notes/recent';
+import { readOpened, recentNotes } from '../notes/recent';
 import { desktop } from '../desktop/bridge';
 import { navigate, notePath, useLocation } from '../router';
 import { SearchOverlay } from '../search/SearchOverlay';
@@ -219,8 +220,7 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
       ms: MOVED_MS,
     });
 
-  const mru = () =>
-    recentNotes(openList, readOpened(browserStorage()), currentNoteId, RECENT_LIMIT);
+  const mru = () => recentNotes(openList, readOpened(deviceStorage()), currentNoteId, RECENT_LIMIT);
 
   const open = (next: Exclude<Overlay, null>) => {
     // Recorded unless an overlay already holds where focus was. A command the palette ran
@@ -456,7 +456,7 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
           <Palette
             key={overlay.mode}
             mode={overlay.mode}
-            notes={recentNotes(openList, readOpened(browserStorage()), null, openList.length)}
+            notes={recentNotes(openList, readOpened(deviceStorage()), null, openList.length)}
             onClose={() => close()}
             onOpenNote={openNote}
             onRunCommand={(id) => {

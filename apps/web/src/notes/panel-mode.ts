@@ -13,6 +13,7 @@ import {
   useSyncExternalStore,
   type RefObject,
 } from 'react';
+import { deviceStorage } from '../shell/device-pref';
 import type { KeyValueStore } from '../shell/key-value';
 import { usePhone } from '../shell/media';
 
@@ -83,14 +84,6 @@ export function parsePanelModes(raw: string | null): Remembered {
   }
 }
 
-function storage(): KeyValueStore | null {
-  try {
-    return typeof localStorage === 'undefined' ? null : localStorage;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * The default where this device has none chosen: closed in the phone layout (700 px and below),
  * where the panel covers the note and every tab is in the ⋯ sheet, so the note keeps the
@@ -102,7 +95,7 @@ export function unchosenPanelMode(phone: boolean): NotePanelMode {
 
 /** This device's default: the one chosen in Settings, else closed on a phone, else open. */
 export function readDefaultPanelMode(
-  store: KeyValueStore | null = storage(),
+  store: KeyValueStore | null = deviceStorage(),
   phone = false,
 ): NotePanelMode {
   try {
@@ -115,7 +108,7 @@ export function readDefaultPanelMode(
 /** The note's own mode, or null when it has none (it takes the default). */
 export function readNotePanelMode(
   noteId: string,
-  store: KeyValueStore | null = storage(),
+  store: KeyValueStore | null = deviceStorage(),
 ): NotePanelMode | null {
   try {
     const list = parsePanelModes(store?.getItem(PANEL_NOTES_KEY) ?? null);
@@ -128,7 +121,7 @@ export function readNotePanelMode(
 export function writeNotePanelMode(
   noteId: string,
   mode: NotePanelMode,
-  store: KeyValueStore | null = storage(),
+  store: KeyValueStore | null = deviceStorage(),
 ): void {
   try {
     const list = parsePanelModes(store?.getItem(PANEL_NOTES_KEY) ?? null);
@@ -150,12 +143,12 @@ export function useDefaultPanelMode(): readonly [NotePanelMode, (mode: NotePanel
   const phone = usePhone();
   const mode = useSyncExternalStore<NotePanelMode>(
     subscribeDefault,
-    () => readDefaultPanelMode(storage(), phone),
+    () => readDefaultPanelMode(deviceStorage(), phone),
     () => unchosenPanelMode(phone),
   );
   const set = useCallback((next: NotePanelMode) => {
     try {
-      storage()?.setItem(PANEL_DEFAULT_KEY, next);
+      deviceStorage()?.setItem(PANEL_DEFAULT_KEY, next);
     } catch {
       // Private mode: as above.
     }

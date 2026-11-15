@@ -1,4 +1,5 @@
 import { ariaKeyShortcuts } from '@penmoss/editor/keys';
+import { deviceStorage } from './shell/device-pref';
 import { BrandMark, Icon } from '@penmoss/ui/icons';
 import {
   lazy,
@@ -19,7 +20,7 @@ import { CommandOverlays, CommandsProvider } from './commands/CommandsRoot';
 import { useCommand, useCommands, useKeys } from './commands/hooks';
 import { graphPath } from './graph/path';
 import { useNotes } from './notes/hooks';
-import { browserStorage, lastOpenedNote, readOpened } from './notes/recent';
+import { lastOpenedNote, readOpened } from './notes/recent';
 import { NoteRoute } from './notes/NoteRoute';
 import { QuickAccessSection } from './notes/QuickAccessSection';
 import { SyncAnnouncer } from './notes/SyncAnnouncer';
@@ -96,7 +97,7 @@ export function App({ location }: { location?: RouteLocation | undefined }) {
     }
     if (list.length === 0) return;
     resumed.current = true;
-    const last = lastOpenedNote(list, readOpened(browserStorage()));
+    const last = lastOpenedNote(list, readOpened(deviceStorage()));
     if (last) navigate(notePath(last), { replace: true });
   }, [list, route.name]);
 

@@ -1,12 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react';
-// localStorage itself: removeItem is needed, which KeyValueStorage leaves out.
-const browserStorage = (): Storage | null => {
-  try {
-    return typeof localStorage === 'undefined' ? null : localStorage;
-  } catch {
-    return null;
-  }
-};
+import { deviceStorage } from '../shell/device-pref';
 import { copySettings, readInStep, writeInStep } from './copy-settings';
 import type { OpenSourcesState } from './registry';
 
@@ -18,11 +11,11 @@ import type { OpenSourcesState } from './registry';
 const listeners = new Set<() => void>();
 let inStep: boolean | null = null;
 
-const read = (): boolean => (inStep ??= readInStep(browserStorage()));
+const read = (): boolean => (inStep ??= readInStep(deviceStorage()));
 
 export function setSettingsInStep(on: boolean): void {
   inStep = on;
-  writeInStep(browserStorage(), on);
+  writeInStep(deviceStorage(), on);
   for (const listener of listeners) listener();
 }
 

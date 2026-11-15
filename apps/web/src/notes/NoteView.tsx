@@ -49,7 +49,7 @@ import { showToast } from '../toasts/toasts';
 import { NoteStats } from './note-stats';
 import { AboutVersions } from '../history/AboutVersions';
 import { HistoryPanel } from '../history/HistoryPanel';
-import { browserFoldStorage, localFoldState } from './folds';
+import { localFoldState } from './folds';
 import { useNoteList, useNotes } from './hooks';
 import { useDirectory } from './directory-hooks';
 import { noteFields } from '@penmoss/editor/note-fields';
@@ -57,7 +57,7 @@ import { markdownDoc, noteMarkdown } from './markdown';
 import { MarkdownSource } from './MarkdownSource';
 import { NoteBarButtonView } from './NoteBarButton';
 import { useNoteBar } from './note-bar';
-import { browserStorage, rememberOpened } from './recent';
+import { rememberOpened } from './recent';
 import { bindTitleField, pastedTitle } from '@penmoss/editor/title';
 import {
   caretOnLastLine,
@@ -72,6 +72,7 @@ import { PeriodNav } from '../journal/PeriodNav';
 import { WeekChangesLink } from '../time-machine/WeekChangesLink';
 import { UnsupportedNote } from './UnsupportedNote';
 import { AppBar } from '../shell/AppBar';
+import { devicePref, deviceStorage } from '../shell/device-pref';
 import { withKeys } from '../shell/drawer';
 import { usePhone } from '../shell/media';
 import { TitleBarLead } from '../shell/title-lead';
@@ -133,27 +134,16 @@ const PANEL_TABS: ReadonlyArray<{
   { tab: 'graph', label: 'Local Graph', icon: 'graph', command: 'note.localGraph' },
 ];
 
-function readPanelTab(): SidePanel {
-  try {
-    const stored = localStorage.getItem(PANEL_TAB_KEY);
-    return PANEL_TABS.find((entry) => entry.tab === stored)?.tab ?? 'info';
-  } catch {
-    return 'info';
-  }
-}
+/** The side panel's tab last shown on this device (Metadata until one is). */
+const panelTabPref = devicePref<SidePanel>(PANEL_TAB_KEY, {
+  parse: (stored) => PANEL_TABS.find((entry) => entry.tab === stored)?.tab ?? 'info',
+  serialise: (tab) => tab,
+});
 
 /** The Local Graph tab draws with d3-force: loaded the first time it shows (T51, as GraphPage). */
 const NoteGraph = lazy(() =>
   import('../graph/NoteGraph').then((module) => ({ default: module.NoteGraph })),
 );
-
-function writePanelTab(tab: SidePanel): void {
-  try {
-    localStorage.setItem(PANEL_TAB_KEY, tab);
-  } catch {
-    // Private mode: as above.
-  }
-}
 
 /**
  * One open note: the title field above the TipTap body, both bound to the
@@ -209,7 +199,8 @@ export function NoteView({
     laidOut.current = layoutKey;
     noteLayoutChanged();
   }, [layoutKey]);
-  const [panelTab, setPanelTab] = useState<SidePanel>(readPanelTab);
+  // Seeded from this device's choice; each note view keeps its own while it is open.
+  const [panelTab, setPanelTab] = useState<SidePanel>(panelTabPref.read);
   /** The thread picked in the panel or the note (T48). */
   const [activeThread, setActiveThread] = useState<string | null>(null);
   /**
@@ -306,7 +297,7 @@ export function NoteView({
   }, [id, notes]);
 
   // The recent-notes switcher (T20) orders notes by when this device last opened them.
-  useEffect(() => rememberOpened(browserStorage(), id, Date.now()), [id]);
+  useEffect(() => rememberOpened(deviceStorage(), id, Date.now()), [id]);
 
   // The window (or tab) is named after the note, so Mission Control and the
   // Window menu can tell notes apart.
@@ -482,7 +473,7 @@ export function NoteView({
               drawings,
               // A right-click with nothing selected opens the block menu there (Mac and web).
               blockContextMenu: true,
-              foldState: localFoldState(id, browserFoldStorage()),
+              foldState: localFoldState(id, deviceStorage()),
               links,
               // Line symbols (T44): the synced list, Settings → Symbols, and each slot's keys.
               symbols,
@@ -876,7 +867,7 @@ export function NoteView({
   /** Opens the panel on `tab`, remembered for this note (open) and this device (the tab). */
   const openTab = (tab: SidePanel) => {
     setPanelTab(tab);
-    writePanelTab(tab);
+    panelTabPref.write(tab);
     if (!showPanel) setPanelMode('open');
   };
   useLayoutEffect(() => {
