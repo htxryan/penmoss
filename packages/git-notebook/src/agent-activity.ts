@@ -37,6 +37,7 @@ import {
 import * as Y from '@y/y';
 import { titleAt } from './at-commit';
 import { commitWriter } from './history';
+import { commitSessions, sessionLabel, type CommitSession } from './sessions';
 import type { Layout } from './layout';
 import { isPurged, purgedIds } from './purge';
 import type { CommitInfo, GitTransport } from './transport';
@@ -952,7 +953,10 @@ export class AgentActivity {
           entry: {
             id: activityId(commit.id),
             at: commit.at,
-            actor: { id: writer.id, label: writer.label },
+            actor: {
+              id: writer.id,
+              label: actorLabel(writer.label, commitSessions(commit.message)),
+            },
             kinds,
             summary: parts.join('; '),
             undoneAt: undone?.at ?? null,
@@ -1017,4 +1021,9 @@ export class AgentActivity {
       notice: notices.length > 0 ? notices.join(' ') : null,
     };
   }
+}
+
+/** An entry's actor (PEN-152): the sessions its commit names, else the writer's label. */
+function actorLabel(writer: string, sessions: readonly CommitSession[]): string {
+  return sessions.length === 0 ? writer : sessions.map(sessionLabel).join(', ');
 }

@@ -7,6 +7,7 @@
 import * as Y from '@y/y';
 import type { NotebookInfo } from './layout';
 import type { WriterRecord } from './writer';
+import { sessionKey, type AgentSession, type SessionEdits } from './sessions';
 import { isEmptyUpdate } from '@penmoss/model/yjs14';
 import { applyKeepingId, ENGINE_ORIGIN, GIT_ORIGIN, newDoc, LOCAL_STORE_ORIGIN } from './yjs';
 
@@ -61,6 +62,11 @@ export interface NotebookMeta {
    * (Ryan's review of PR #192). `info.name` is already this name. Null: none.
    */
   readonly pendingName: string | null;
+  /**
+   * The agent sessions whose edits are not committed yet (PEN-152), by `sessionKey`: a commit
+   * names them in `Penmoss-Session` trailers. Pruned to what is still dirty after each sync.
+   */
+  readonly sessions: Readonly<Record<string, SessionEdits>>;
 }
 
 /** A copy withheld from the push (A886), as this device keeps it. */
@@ -92,6 +98,7 @@ export const EMPTY_META: NotebookMeta = {
   withheld: {},
   keptCopies: [],
   pendingName: null,
+  sessions: {},
 };
 
 /** A whole saved notebook. */
@@ -403,10 +410,39 @@ export class NotebookReplica {
   synced(head: string | null, upTo: ReadonlyMap<string, number>, workspaceAt: boolean): void {
     const dirty: Record<string, number> = { ...this.meta.dirty };
     for (const [id, at] of upTo) if (dirty[id] === at) delete dirty[id];
+    const workspaceDirty = workspaceAt ? false : this.meta.workspaceDirty;
+    // A session's edits that landed are named by the commit now: only what is still dirty stays.
+    const sessions: Record<string, SessionEdits> = {};
+    for (const [key, edits] of Object.entries(this.meta.sessions ?? {})) {
+      const notes = Object.fromEntries(
+        Object.entries(edits.notes).filter(([id]) => dirty[id] !== undefined),
+      );
+      const workspace = edits.workspace && workspaceDirty;
+      if (Object.keys(notes).length > 0 || workspace) {
+        sessions[key] = { ...edits, notes, workspace };
+      }
+    }
+    this.update({ lastHead: head, dirty, workspaceDirty, sessions });
+  }
+
+  /** An agent session changed these notes, or the workspace (PEN-152): its next commit says so. */
+  recordSession(session: AgentSession, noteIds: readonly string[], workspace: boolean): void {
+    const key = sessionKey(session);
+    const before = this.meta.sessions?.[key];
+    const now = this.clock();
+    const notes: Record<string, number> = { ...before?.notes };
+    for (const id of noteIds) notes[id] = now;
     this.update({
-      lastHead: head,
-      dirty,
-      workspaceDirty: workspaceAt ? false : this.meta.workspaceDirty,
+      sessions: {
+        ...this.meta.sessions,
+        [key]: {
+          client: session.client,
+          session: session.session,
+          own: session.own,
+          notes,
+          workspace: (before?.workspace ?? false) || workspace,
+        },
+      },
     });
   }
 

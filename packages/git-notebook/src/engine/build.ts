@@ -44,6 +44,7 @@ import {
 import { NotebookError, WriterFull } from './errors';
 import { foreignAt, headPaths, namesAt, renderedPaths } from './names-at';
 import { MAX_ACTOR_BYTES, MAX_LOG_BYTES, type EngineOptions } from './options';
+import { sessionTrailers, type CommitSession, type SessionEdits } from '../sessions';
 
 /**
  * Commits name how many notes they carry; `[skip ci]` keeps a code repo's CI quiet (A825). The
@@ -53,11 +54,34 @@ import { MAX_ACTOR_BYTES, MAX_LOG_BYTES, type EngineOptions } from './options';
 export function commitMessage(
   notes: number,
   writer?: { readonly id: string; readonly kind: WriterKind; readonly label: string },
+  sessions: readonly CommitSession[] = [],
 ): string {
   const subject = `Penmoss: ${notes} ${notes === 1 ? 'note' : 'notes'} [skip ci]`;
   if (!writer) return subject;
   const label = writer.label.replace(/["\r\n]/g, ' ').trim();
-  return `${subject}\n\nPenmoss-Writer: ${writer.id} (${writer.kind} "${label}")\n`;
+  // The agent sessions whose edits the commit carries (PEN-152), after the writer.
+  const trailers = [
+    `Penmoss-Writer: ${writer.id} (${writer.kind} "${label}")`,
+    ...sessionTrailers(sessions),
+  ];
+  return `${subject}\n\n${trailers.join('\n')}\n`;
+}
+
+/** The sessions a commit names: those whose recorded notes it carries, or its workspace edits. */
+export function commitSessionsOf(
+  recorded: Readonly<Record<string, SessionEdits>> | undefined,
+  touched: ReadonlySet<string>,
+  workspace: boolean,
+): CommitSession[] {
+  const out: CommitSession[] = [];
+  for (const edits of Object.values(recorded ?? {})) {
+    const notes = Object.keys(edits.notes)
+      .filter((id) => touched.has(id))
+      .sort();
+    if (notes.length === 0 && !(workspace && edits.workspace)) continue;
+    out.push({ client: edits.client, session: edits.session, own: edits.own, notes });
+  }
+  return out;
 }
 
 /** What a build gives the engine: a commit to push, or nothing to commit. */
@@ -745,7 +769,15 @@ export class Build {
     }
     let commit: string | null;
     try {
-      commit = await this.git.commit(head, changes, commitMessage(this.touchedNotes.size, writer));
+      commit = await this.git.commit(
+        head,
+        changes,
+        commitMessage(
+          this.touchedNotes.size,
+          writer,
+          commitSessionsOf(replica.state.sessions, this.touchedNotes, this.workspaceDirty),
+        ),
+      );
     } catch (error) {
       // Main refused a copy whose original is deleted for good (A886): a Keep and sync whose
       // confirmation ran out. The copy is withheld again at the next sync, for the person.

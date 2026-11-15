@@ -279,7 +279,7 @@ export class McpNotebooks {
     private readonly registry: NotebookRegistry,
     private readonly home: string,
     private readonly io: McpIo,
-    options: McpSessionOptions,
+    private readonly options: McpSessionOptions,
   ) {
     this.host = {
       clones,
@@ -327,7 +327,9 @@ export class McpNotebooks {
         (await this.refresh()).map((slot) => ({ name: slot.name, tag: slot.tag })),
       use: (name, write, run, use = {}) => this.slotNamed(name).use(write, run, use.waitMs),
     };
-    const server = new LocalMcpServer(set, 'penmoss', (text) => io.log(text), {});
+    const server = new LocalMcpServer(set, 'penmoss', (text) => io.log(text), {
+      env: this.options.env ?? {},
+    });
     const pulls = setInterval(() => {
       for (const slot of this.served) void slot.pull();
     }, this.host.pullEveryMs);

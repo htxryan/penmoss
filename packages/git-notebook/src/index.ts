@@ -14,6 +14,7 @@ export * from './names';
 export * from './purge';
 export * from './render';
 export * from './replica';
+export * from './sessions';
 export * from './transport';
 export * from './identity';
 export * from './writer';
