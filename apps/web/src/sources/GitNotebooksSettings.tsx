@@ -722,7 +722,7 @@ function CopySettingsPanel({
         </button>
       </div>
       {done ? (
-        <p className="muted" role="status" data-testid="git-copy-settings-done">
+        <p className="t-help" role="status" data-testid="git-copy-settings-done">
           {done}
         </p>
       ) : null}
@@ -1863,7 +1863,7 @@ export function AddGitNotebook({
                 setWay('browse');
               }}
             />
-            <p className="muted">
+            <p className="t-help">
               To pick from your repositories, run <code>gh auth login</code> in Terminal, then{' '}
               <code>gh auth setup-git</code>, then Try Again.
             </p>
