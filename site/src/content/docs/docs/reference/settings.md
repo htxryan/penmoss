@@ -124,7 +124,7 @@ The GitHub account Penmoss uses, kept in this Mac's Keychain: **Sign In with Git
 
 ### Updates
 
-A card with the version you're running, whether it's up to date, the channel and when Penmoss last checked, and **Check Now** (or **Install and Restart**). Then **Update Automatically** (off by default) and **Update Channel** (Stable or Alpha), and **What's New**: what an offered update brings, what this version brought, and earlier versions. See [Updates](/docs/help/updates/#whats-new).
+A card with the version you're running, whether it's up to date, the channel and when Penmoss last checked, and **Check Now** (or **Install and Restart**). Under it, **Open Source Notices** with **Show Notices**, which shows the licences of the open source software Penmoss includes, such as [Lucide](https://lucide.dev)'s icons. Then **Update Automatically** (off by default) and **Update Channel** (Stable or Alpha), and **What's New**: what an offered update brings, what this version brought, and earlier versions. See [Updates](/docs/help/updates/#whats-new).
 
 ## On Android
 
@@ -143,7 +143,7 @@ Open Settings from the gear on the first screen. The same five groups as the Mac
 | Agents        | Agent Activity     | What agents changed, in every notebook, with **Undo**                                                                              |
 | This Phone    | Storage            | Files and pictures in notes, pictures from the web and **Clear…**, and whether to load pictures from the web                       |
 | This Phone    | GitHub             | **Sign In with GitHub** (or a token), and what the account is used for, such as **Send Feedback**                                  |
-| This Phone    | What’s New         | The version, what changed in it, and in earlier ones ([The Android app](/docs/install/android/#whats-new))                         |
+| This Phone    | What’s New         | The version, open source notices, what changed in it, and in earlier ones ([The Android app](/docs/install/android/#whats-new))    |
 
 ## For a notebook, from the CLI or an agent
 

@@ -229,6 +229,10 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
     help: 'Whether this Mac has the newest Penmoss',
     aliases: ['check now', 'check for updates', 'up to date', 'install', 'about'],
   }),
+  at('updates')('Open Source Notices', {
+    help: 'The licences of the open source software Penmoss includes',
+    aliases: ['licences', 'licenses', 'third-party notices', 'credits', 'about', 'lucide'],
+  }),
   at('updates')('Update Automatically', {
     help: 'Checks at launch and every hour, and asks before restarting',
     aliases: ['auto-update', 'auto update'],

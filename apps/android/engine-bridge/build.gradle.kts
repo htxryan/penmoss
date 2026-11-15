@@ -37,10 +37,18 @@ val characterResources = tasks.register<Copy>("characterResources") {
     into(layout.buildDirectory.dir("generated/character-resources"))
 }
 
+// The open source notices (A1580): the web's file, which holds the Characters' notice and
+// Lucide's licence, shown by Settings → What's New.
+val noticeResources = tasks.register<Copy>("noticeResources") {
+    from(rootProject.file("../web/public/third-party-notices.txt"))
+    into(layout.buildDirectory.dir("generated/notice-resources"))
+}
+
 sourceSets {
     main {
         resources.srcDir(contractResources)
         resources.srcDir(characterResources)
+        resources.srcDir(noticeResources)
     }
 }
 
