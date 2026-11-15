@@ -162,8 +162,6 @@ describe.concurrent(
           'args = ["--penmoss-cli", "mcp", "--notebook", "notes-claude-code"]',
         ].join('\n'),
       );
-      // Any other client: the server's own command line.
-      expect(answer.value.mcp).toBe(`${EXE} --penmoss-cli mcp --notebook notes-claude-code`);
       expect(asked).toHaveLength(1);
       expect(asked[0]).toContain('let the agent “Claude Code” edit');
       // The CLI's own registry: an agent's clone, and no confirmation of any kind (D51).
@@ -453,6 +451,19 @@ describe.concurrent(
     });
   },
 );
+
+describe('the one MCP server (PEN-155)', () => {
+  it('gives every agent penmoss mcp for every notebook, named penmoss', async ({ dir }) => {
+    const { service } = agents(dir);
+    expect((await service.cliStatus()).server).toEqual({
+      server: 'penmoss',
+      claude: `claude mcp add penmoss -- ${EXE} --penmoss-cli mcp`,
+      claudeChannel: `claude mcp add penmoss -- ${EXE} --penmoss-cli mcp --channel`,
+      claudeLaunch: 'claude --dangerously-load-development-channels server:penmoss',
+      codex: `[mcp_servers."penmoss"]\ncommand = "${EXE}"\nargs = ["--penmoss-cli", "mcp"]`,
+    });
+  });
+});
 
 describe('the penmoss command (A992)', () => {
   it('writes ~/.local/bin/penmoss that runs this app, and says when its folder is not on PATH', async ({

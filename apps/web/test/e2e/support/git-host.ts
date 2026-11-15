@@ -36,13 +36,7 @@ import type { CredentialAnswer } from '../../../../desktop/src/git-credential';
 import { GitHubBrowseHost } from '../../../../desktop/src/github-browse-host';
 import { DeviceSignIn, type SignInState } from '../../../../desktop/src/github-device-sign-in';
 import { GitHubToken } from '../../../../desktop/src/github-token';
-import {
-  agentCloneName,
-  AUTOMATIC_AGENT,
-  keptLoginPath,
-  shellWord,
-  type LocalAgentView,
-} from '../../../../desktop/src/local-agents';
+import { keptLoginPath } from '../../../../desktop/src/local-agents';
 import { Updates, type Updater, type UpdateState } from '../../../../desktop/src/updater';
 import { FakeFeedbackGitHub } from '../../../../../packages/core/test/support/fake-github-feedback';
 import {
@@ -92,12 +86,8 @@ export const UPDATE_CALLS = [
   'updatesAcknowledge',
   'updatesNotes',
 ] as const;
-/**
- * The penmoss command's state (A992), with the login shell's PATH kept as main keeps it (A1124),
- * and the agents on this stand-in Mac (A993, D52): each notebook's own copy for every agent, and
- * those connected by name (no Touch ID and no clone here; the Electron suite makes real ones).
- */
-export const CLI_CALLS = ['cliStatus', 'agentsList', 'agentsConnect', 'agentsDisconnect'] as const;
+/** The penmoss command's state (A992), with the login shell's PATH kept as main keeps it (A1124). */
+export const CLI_CALLS = ['cliStatus'] as const;
 /** Browsing GitHub in Add a Git Notebook (T81), which go to apps/desktop's `GitHubBrowseHost`. */
 export const GITHUB_CALLS = [
   'githubRepos',
@@ -230,8 +220,6 @@ export class GitHost {
   readonly github = new FakeFeedbackGitHub({ token: GITHUB_TOKEN });
   /** The person's GitHub token, as the Mac's main process keeps it (A1012). */
   readonly githubToken: GitHubToken;
-  /** The agents connected by name, by the app notebook's localId (A993). */
-  readonly agents = new Map<string, LocalAgentView[]>();
   /** Every `payload` part a page asked main to file, as sent (A791: never a note's text). */
   readonly feedbackPayloads: string[] = [];
   private readonly listeners = new Set<() => void>();
@@ -571,12 +559,6 @@ export class GitHost {
         return this.updates.acknowledge();
       case 'updatesNotes':
         return this.releaseNotes;
-      case 'agentsList':
-        return this.listAgents(a);
-      case 'agentsConnect':
-        return this.connectAgent(a, b);
-      case 'agentsDisconnect':
-        return this.disconnectAgent(a);
       case 'cliStatus': {
         // Not installed, its folder not on the slow shell's PATH (LocalAgents.cliStatus's view).
         const path = await this.loginPath.get();
@@ -587,74 +569,20 @@ export class GitHost {
           pathLine: 'export PATH="$HOME/.local/bin:$PATH"',
           profile: '~/.zshrc',
           direct: '/Applications/Penmoss.app/Contents/MacOS/Penmoss --cli',
+          // The one MCP server for every notebook (PEN-155), as main's serverLines writes it.
+          server: {
+            server: 'penmoss',
+            claude:
+              'claude mcp add penmoss -- /Applications/Penmoss.app/Contents/MacOS/Penmoss --cli mcp',
+            claudeChannel:
+              'claude mcp add penmoss -- /Applications/Penmoss.app/Contents/MacOS/Penmoss --cli mcp --channel',
+            claudeLaunch: 'claude --dangerously-load-development-channels server:penmoss',
+            codex:
+              '[mcp_servers."penmoss"]\ncommand = "/Applications/Penmoss.app/Contents/MacOS/Penmoss"\nargs = ["--cli", "mcp"]',
+          },
         };
       }
     }
-  }
-
-  /** Main's view of an agent's clone, as LocalAgents.view makes it, on the app's binary. */
-  private agentView(name: string, label: string, automatic: boolean): LocalAgentView {
-    const server = `penmoss-${name}`;
-    const words = ['/Applications/Penmoss.app/Contents/MacOS/Penmoss', '--penmoss-cli'];
-    const mcp = [...words, 'mcp', '--notebook', name];
-    const line = (parts: readonly string[]) => parts.map(shellWord).join(' ');
-    return {
-      name,
-      label,
-      automatic,
-      server,
-      claude: line(['claude', 'mcp', 'add', server, '--', ...mcp]),
-      claudeChannel: line(['claude', 'mcp', 'add', server, '--', ...mcp, '--channel']),
-      claudeLaunch: line(['claude', '--dangerously-load-development-channels', `server:${server}`]),
-      codex: [
-        `[mcp_servers.${JSON.stringify(server)}]`,
-        `command = ${JSON.stringify(mcp[0])}`,
-        `args = [${mcp
-          .slice(1)
-          .map((word) => JSON.stringify(word))
-          .join(', ')}]`,
-      ].join('\n'),
-      mcp: line(mcp),
-    };
-  }
-
-  private async listAgents(localId: unknown) {
-    const entry = (await this.notebooks.list()).find((each) => each.localId === localId);
-    if (!entry || typeof localId !== 'string') {
-      return {
-        ok: false,
-        error: { code: 'not_found', message: 'That notebook is not on this Mac.' },
-      };
-    }
-    const shared = this.agentView(
-      agentCloneName(entry.name, AUTOMATIC_AGENT, new Set()),
-      AUTOMATIC_AGENT,
-      true,
-    );
-    return { ok: true, value: [shared, ...(this.agents.get(localId) ?? [])] };
-  }
-
-  private async connectAgent(localId: unknown, label: unknown) {
-    const listed = await this.listAgents(localId);
-    if (!listed.ok || !listed.value || typeof localId !== 'string') return listed;
-    const name = typeof label === 'string' ? label.trim().replace(/\s+/g, ' ') : '';
-    if (!name)
-      return { ok: false, error: { code: 'invalid_label', message: 'Give the agent a name.' } };
-    const entry = (await this.notebooks.list()).find((each) => each.localId === localId)!;
-    const taken = new Set(listed.value.map((each) => each.name));
-    const agent = this.agentView(agentCloneName(entry.name, name, taken), name, false);
-    this.agents.set(localId, [...(this.agents.get(localId) ?? []), agent]);
-    return { ok: true, value: agent };
-  }
-
-  private disconnectAgent(name: unknown) {
-    for (const [localId, list] of this.agents) {
-      this.agents.set(
-        localId,
-        list.filter((each) => each.name !== name),
-      );
-    }
-    return { ok: true, value: null };
   }
 
   /**

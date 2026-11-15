@@ -53,7 +53,7 @@ test('Copy Agent Reference copies one short line with the note’s short id', as
   const copied = await app.evaluate(({ clipboard }) => clipboard.readText());
   expect(copied).toMatch(
     new RegExp(
-      `^Reference note via Penmoss MCP \\(penmoss mcp --notebook "Personal"\\) tool read_note \\{"id":"[0-9A-HJKMNP-TV-Z]{4}-${id.slice(-8)}"\\}$`,
+      `^Reference note via Penmoss MCP tool read_note \\{"id":"[0-9A-HJKMNP-TV-Z]{4}-${id.slice(-8)}"\\}$`,
     ),
   );
   expect(copied).not.toContain(id);
@@ -64,6 +64,6 @@ test('Copy Agent Reference copies one short line with the note’s short id', as
   await expect(body(page)).toContainText(`-${id.slice(-8)}"}`);
   await body(page).scrollIntoViewIfNeeded();
   await page.waitForTimeout(2000);
-  await expect(body(page)).toContainText('Reference note via Penmoss MCP (penmoss mcp --notebook');
+  await expect(body(page)).toContainText('Reference note via Penmoss MCP tool read_note');
   expect(errors).toEqual([]);
 });

@@ -479,303 +479,53 @@
   gap: 0.5rem;
 }
 
-/*
- * Settings → Agents (A1578): one table, a row per agent per notebook, each opening its drawer.
- * The columns: the agent, its notebook, its status, a chevron.
- */
-.agents-table {
-  margin: 1rem 0 0;
-  border: 1px solid var(--pm-border-soft);
-  background: var(--pm-raised);
+/* Settings → Agents (PEN-146): a notebook unfolded, its agents under its row. */
+.notebook-agents .local-agents {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
 }
 
-.agents-table > ul {
-  margin: 0;
+/* Agents on This Mac and the penmoss command (T54, A992, A993). */
+.local-agents {
+  margin: 1rem 0 0;
+  padding: 0.75rem 0 0;
+  border-top: 1px solid var(--pm-border);
+}
+
+.local-agents > h4 {
+  margin: 0 0 0.4rem;
+}
+
+.local-agents > p {
+  margin: 0 0 0.5rem;
+}
+
+.local-agent-list {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0.6rem 0 0;
   padding: 0;
   list-style: none;
 }
 
-.agents-table-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(6.5rem, auto) 14px;
-  gap: 0.85rem;
-  align-items: center;
-  box-sizing: border-box;
-  width: 100%;
-  padding: 0.65rem 0.85rem;
-  border-top: 1px solid var(--pm-border-soft);
-}
-
-.agents-table-head {
-  padding-block: 0.5rem 0.4rem;
-  border-top: 0;
-  color: var(--pm-color-list-head);
-  font-size: var(--pm-text-list-head);
-  font-weight: var(--pm-weight-list-head);
-}
-
-.agents-row {
-  border-right: 0;
-  border-bottom: 0;
-  border-left: 0;
-  background: none;
-  color: var(--pm-fg);
-  font: inherit;
-  font-size: var(--pm-text-item);
-  text-align: left;
-  cursor: pointer;
-}
-
-.agents-row:hover {
-  background: var(--pm-hover);
-}
-
-.agents-row:focus-visible {
-  outline: 2px solid var(--pm-focus);
-  outline-offset: -2px;
-}
-
-.agents-row[data-selected='true'] {
-  background: var(--pm-accent-softer);
-  box-shadow: inset 3px 0 0 var(--pm-accent);
-}
-
-.agents-row > .i {
-  color: var(--pm-muted);
-}
-
-.agents-table-quiet {
-  font-size: var(--pm-text-item);
-}
-
-.agents-cell-agent,
-.agents-cell-notebook,
-.agents-cell-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-width: 0;
-}
-
-.agents-cell-agent {
-  font-weight: var(--pm-weight-row-label);
-}
-
-.agents-cell-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.agents-cell-agent > .chip {
-  flex: none;
-}
-
-.agents-cell-status {
-  color: var(--pm-color-meta);
-  font-size: var(--pm-text-meta);
-}
-
-.agents-cell-status[data-used='true'] {
-  color: var(--pm-fg);
-}
-
-.agents-dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--pm-success);
-}
-
-.settings-content .settings-section > p.agents-table-help {
-  margin: 0.6rem 0.25rem 0;
-}
-
-.agents-page > .nset-okline,
-.agents-page > .settings-card {
-  margin-top: 1.5rem;
-}
-
-/*
- * The drawer: at the window's right edge, from under Settings' bar to the bottom. On a wide
- * window the page makes room for it beside the table; on a narrow one it covers the page.
- */
-.agents-drawer {
-  --agents-drawer-width: min(25rem, 100vw);
-  position: fixed;
-  top: var(--agents-drawer-top, 0);
-  right: 0;
-  bottom: 0;
-  z-index: 30;
-  display: flex;
-  box-sizing: border-box;
-  flex-direction: column;
-  gap: 1rem;
-  width: var(--agents-drawer-width);
-  padding: 1.25rem 1.25rem 1.5rem;
-  overflow-y: auto;
-  border-left: 1px solid var(--pm-border);
-  background: var(--pm-raised);
-  box-shadow: var(--pm-shadow);
-}
-
-@media (min-width: 701px) {
-  .agents-page[data-drawer='open'] {
-    margin-right: max(0px, calc(min(25rem, 100vw) - var(--settings-gutter, 0px) + 1rem));
-  }
-}
-
-@media (max-width: 700px) {
-  .agents-drawer {
-    left: 0;
-    width: auto;
-    border-left: 0;
-  }
-}
-
-.agents-drawer-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.agents-drawer-heading {
-  min-width: 0;
-}
-
-.agents-drawer-title {
+.local-agent-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-  font-size: var(--pm-text-dialog-title);
-  font-weight: var(--pm-weight-dialog-title);
-  line-height: var(--pm-leading-dialog-title);
+  gap: 0.4rem 0.75rem;
 }
 
-.agents-drawer-title:focus {
-  outline: none;
+.local-agent-head .btn {
+  margin-left: auto;
 }
 
-.agents-drawer-title:focus-visible {
-  outline: 2px solid var(--pm-focus);
-  outline-offset: 2px;
-}
-
-.agents-drawer-sub {
+/* T60 (A1073): the switch that shows the Claude Code command with its channel. */
+.local-agent-channel {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem;
-  margin: 0.3rem 0 0;
-  color: var(--pm-color-help);
-}
-
-.agents-drawer-notice {
-  margin: 0;
-  padding: 0.5rem 0.65rem;
-  background: var(--pm-accent-softer);
-  font-size: var(--pm-text-help);
-  line-height: var(--pm-leading-help);
-}
-
-.agents-drawer-body {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.agent-setup-tabs {
-  margin: 0;
-}
-
-.agent-setup-panel > .local-agent-copy:first-child {
-  margin-top: 0.75rem;
-}
-
-.agent-setup-panel > p {
+  gap: 0.45rem;
   margin: 0.45rem 0 0;
-}
-
-.agent-drawer-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--pm-border-soft);
-}
-
-.agent-drawer-row-text,
-.agent-drawer-fact {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  min-width: 0;
-}
-
-.agent-drawer-fact {
-  padding-top: 1rem;
-  border-top: 1px solid var(--pm-border-soft);
-}
-
-.agent-drawer-fact > code {
-  color: var(--pm-muted);
-  font-family: var(--pm-mono);
-  font-size: var(--pm-text-code);
-  overflow-wrap: anywhere;
-}
-
-.agent-drawer-label {
-  font-size: var(--pm-text-row-label);
-  font-weight: var(--pm-weight-row-label);
-}
-
-.agent-drawer-foot {
-  margin: auto 0 0;
-  padding-top: 1rem;
-  border-top: 1px solid var(--pm-border-soft);
-}
-
-.agent-drawer-foot > p {
-  margin: 0.4rem 0 0;
-}
-
-/* Connect an Agent, in the drawer: which agent, which notebook, its name, then Touch ID. */
-.agent-connect {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.agent-connect > .settings-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  margin: 0;
-}
-
-.agent-notebook {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
   font-size: var(--pm-text-item);
-}
-
-.agent-connect-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 0.75rem;
-}
-
-.agent-connect > p {
-  margin: 0;
 }
 
 .local-agent-copy {

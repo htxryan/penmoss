@@ -15,19 +15,19 @@ import { useWorkspaceState } from '../workspace/hooks';
 export const COPIED_AGENT_REFERENCE = 'Copied Agent Reference';
 
 /**
- * The reference's parts for a note: a git notebook's note (`git`: its name and id) is named by
- * its short reference and read through that notebook's local MCP server; any other by its id.
+ * The reference's parts for a note: a git notebook's note (`git`: its notebook's id) is named by
+ * its short reference, which finds its notebook on the one MCP server (PEN-155); any other by
+ * its id.
  */
 export function agentReferenceInput(
   snapshot: WorkspaceSnapshot,
   id: string,
-  git: { readonly name: string; readonly id: string } | null = null,
+  git: { readonly id: string } | null = null,
 ): AgentReferenceInput {
   return git === null
     ? { id }
     : {
         id,
-        gitNotebook: git.name,
         notebookId: git.id,
         noteIds: snapshot.notes.map((note) => note.id),
       };
@@ -40,20 +40,13 @@ export function agentReferenceInput(
 export function useCopyAgentReference(): (id: string) => Promise<boolean> {
   const { snapshot } = useWorkspaceState();
   const source = useSource();
-  const gitName = source?.kind === 'git' ? source.name : null;
   const gitId = source?.kind === 'git' ? source.id : null;
   return useCallback(
     (id) =>
       copyText(
         document,
-        agentReference(
-          agentReferenceInput(
-            snapshot,
-            id,
-            gitName !== null && gitId !== null ? { name: gitName, id: gitId } : null,
-          ),
-        ),
+        agentReference(agentReferenceInput(snapshot, id, gitId !== null ? { id: gitId } : null)),
       ),
-    [snapshot, gitName, gitId],
+    [snapshot, gitId],
   );
 }

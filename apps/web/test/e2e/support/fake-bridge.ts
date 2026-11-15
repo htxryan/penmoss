@@ -13,8 +13,7 @@
  * - `feedback.file` and `githubToken`: main's filing with the person's GitHub token (A1010),
  *   through the binding too; `feedback.capture` takes no picture of the window (null).
  * - `updates`: main's Auto-Update (A1112) over a stand-in feed the spec sets.
- * - Local agents and the `penmoss` command: the test's `GitHost` too (each notebook's shared copy,
- *   and agents connected by name, with no clone), the command never installed.
+ * - Local agents and the `penmoss` command: none on this stand-in Mac.
  *
  * This function is serialized into each page (`addInitScript`): it must not close over anything.
  * Bytes cross the binding as base64 (`{ __bytes }`), both ways.
@@ -194,9 +193,9 @@ export function installFakeBridge(config: {
       cancel: (localId) => host('cancel', localId),
       identity: () => host('identity'),
       onChange: (listener) => listen(gitListeners, listener),
-      agents: (localId) => host('agentsList', localId),
-      connectAgent: (localId, label) => host('agentsConnect', localId, label),
-      disconnectAgent: (name, force) => host('agentsDisconnect', name, force),
+      agents: () => Promise.resolve({ ok: true, value: [] }),
+      connectAgent: () => Promise.resolve(none),
+      disconnectAgent: () => Promise.resolve(none),
       cli: () => host('cliStatus'),
       // Browsing GitHub in Add a Git Notebook (T81): main's GitHubBrowseHost on the stand-in Mac.
       github: {

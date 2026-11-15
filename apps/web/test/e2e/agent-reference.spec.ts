@@ -31,7 +31,7 @@ test('PEN-69: Copy Agent Reference copies one short line with the note’s short
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toMatch(
     new RegExp(
-      `^Reference note via Penmoss MCP \\(penmoss mcp --notebook "[^"]+"\\) tool read_note \\{"id":"[0-9A-HJKMNP-TV-Z]{4}-${id.slice(-8)}"\\}$`,
+      `^Reference note via Penmoss MCP tool read_note \\{"id":"[0-9A-HJKMNP-TV-Z]{4}-${id.slice(-8)}"\\}$`,
     ),
   );
   // The long id is nowhere in it: the short id is the last 8 characters only.

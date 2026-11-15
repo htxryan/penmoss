@@ -598,28 +598,25 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   await holdForProof(page);
 
   // The notebook's automatic agent: claude mcp add and the Codex lines name the CLI bundle.
-  // Its row in the table (A1578), whose address opens Agents with it in the drawer.
-  const row = page.locator('[data-testid="agents-row"][data-name="notes-agent"]');
+  const row = page.getByTestId('agents-notebook-row').filter({ hasText: 'Notes' });
+  await expect(row).toBeVisible({ timeout: 30_000 });
+  // Its address opens Agents with it unfolded (PEN-146).
+  const href = (await row.getAttribute('data-path'))!;
   const automatic = page.locator('[data-testid="git-local-agent"][data-name="notes-agent"]');
   await expect(async () => {
     // The list is read when the page opens: open it again until the app has made the copy.
     await go(page, '/settings/git-notebooks');
-    await go(page, '/settings/agents');
-    await expect(row).toBeVisible({ timeout: 2_000 });
+    await go(page, href);
+    await expect(automatic).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 90_000 });
-  const href = (await row.getAttribute('data-path'))!;
-  await go(page, href);
-  await expect(automatic).toBeVisible({ timeout: 30_000 });
   const claude = automatic.getByTestId('git-local-agent-claude').locator('code');
   await claude.scrollIntoViewIfNeeded();
   const command = (await claude.textContent())!;
   expect(command).toContain(`'${CLI_EXE}' --penmoss-cli mcp --notebook notes-agent`);
-  await automatic.getByTestId('agent-tab-codex').click();
   await expect(automatic.getByTestId('git-local-agent-codex')).toContainText(
     `command = "${CLI_EXE}"`,
   );
   await holdForProof(page);
-  await automatic.getByTestId('agent-tab-claude').click();
 
   // The agent runs the command it was given: the MCP server answers, and LaunchServices knows it
   // only as the CLI, never as Penmoss.

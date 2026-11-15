@@ -185,7 +185,7 @@ describe('Send to… in a git notebook (A1065)', () => {
     const { container } = mount(<Live replica={replica} id={id} />, sourceWith(doc).source);
     expect(picker(container)!.querySelectorAll('option')).toHaveLength(1);
     expect(container.querySelector('[data-testid="comment-send-to-none"]')!.textContent).toContain(
-      'penmoss mcp --notebook … --channel',
+      'penmoss mcp --channel',
     );
   });
 
