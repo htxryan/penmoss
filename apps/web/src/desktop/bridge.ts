@@ -334,6 +334,8 @@ export interface LocalAgentInfo {
   readonly claudeLaunch: string;
   /** The lines for Codex's `~/.codex/config.toml`. */
   readonly codex: string;
+  /** The MCP server's own command line, for any other client that runs one over stdio. */
+  readonly mcp: string;
 }
 
 /** The `penmoss` command the app writes (A992). */

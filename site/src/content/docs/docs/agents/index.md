@@ -20,7 +20,9 @@ When you connect an agent, Penmoss makes it its own copy (a clone) of the notebo
 - [Agent activity](/docs/agents/activity/) lists what each agent moved, made or renamed, with **Undo**.
 - Comments you [send to an agent](/docs/agents/comments/) reach its session.
 
-Connect each agent in **Settings → Agents**: choose **Connect an Agent…** on the notebook's row, type the agent's name, and choose **Connect**. The copy is named after both, such as `notes-claude-code`. Penmoss also makes one copy for every agent by itself, marked **Made by Penmoss for every agent on this Mac**, but its edits are all named "Agent".
+Connect each agent in **Settings → Agents**: choose **Connect an Agent…**, pick the agent and the notebook, check its name, and choose **Connect**. The copy is named after both, such as `notes-claude-code`.
+
+**Settings → Agents** lists every agent in one table: a row for each agent and notebook, with the notebook's badge and when the agent last used it (**Used today**, from [Agent activity](/docs/agents/activity/)), or **Ready**. Choose a row to open its panel on the right, with the lines to set it up for Claude Code, Codex or another client, its server's name and **Disconnect…**; Esc or × closes it. Each notebook also has an **Any Agent** row, marked **Shared**: the copy Penmoss makes by itself for every agent on this Mac, which `penmoss mcp --notebook <notebook's name>` reaches. Its edits are all named "Agent", and it goes only with the notebook, so it has no **Disconnect…**.
 
 ## Point an agent at a note
 
@@ -60,7 +62,7 @@ The MCP server syncs when it starts, pushes a minute after the agent's edits set
 
 ## Disconnect an agent
 
-In **Settings → Agents**, open the notebook's row and choose **Disconnect** by the agent. Penmoss removes its copy, never your repository. If the copy has changes it has not pushed, Penmoss says so and offers **Disconnect Anyway** (with Touch ID) or **Keep It**. Then remove its server from the agent too, for example with `claude mcp remove penmoss-notes-claude-code`.
+In **Settings → Agents**, choose the agent's row, then **Disconnect…** at the bottom of its panel, and **Disconnect** to confirm. Penmoss removes its copy, never your repository. If the copy has changes it has not pushed, Penmoss says so and offers **Disconnect Anyway** (with Touch ID) or **Keep It**. Then remove its server from the agent too, for example with `claude mcp remove penmoss-notes-claude-code`.
 
 ## Claude on the web and phone
 

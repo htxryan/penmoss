@@ -85,6 +85,8 @@ export interface LocalAgentView {
   readonly claudeLaunch: string;
   /** The lines for Codex's `~/.codex/config.toml`. */
   readonly codex: string;
+  /** The MCP server's own command line, for any other client that runs one over stdio. */
+  readonly mcp: string;
 }
 
 /** The `penmoss` command on this Mac. */
@@ -251,6 +253,7 @@ export class LocalAgents {
         `command = ${tomlString(command)}`,
         `args = [${args.map(tomlString).join(', ')}]`,
       ].join('\n'),
+      mcp: this.mcpCommand(entry.name).map(shellWord).join(' '),
     };
   }
 

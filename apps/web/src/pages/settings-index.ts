@@ -193,8 +193,15 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
     help: 'Agents read and edit your notes through it',
     aliases: ['cli', 'terminal', 'install'],
   }),
-  at('agents')('Connected on This Mac', {
-    aliases: ['connect an agent', 'claude code', 'codex', 'mcp', 'disconnect'],
+  at('agents')('Connected Agents', {
+    aliases: [
+      'connected on this mac',
+      'connect an agent',
+      'claude code',
+      'codex',
+      'mcp',
+      'disconnect',
+    ],
   }),
   at('agent-activity')('Agent Activity', {
     id: 'agent-activity-filters',

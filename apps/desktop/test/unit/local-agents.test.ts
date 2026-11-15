@@ -162,6 +162,8 @@ describe.concurrent(
           'args = ["--penmoss-cli", "mcp", "--notebook", "notes-claude-code"]',
         ].join('\n'),
       );
+      // Any other client: the server's own command line.
+      expect(answer.value.mcp).toBe(`${EXE} --penmoss-cli mcp --notebook notes-claude-code`);
       expect(asked).toHaveLength(1);
       expect(asked[0]).toContain('let the agent “Claude Code” edit');
       // The CLI's own registry: an agent's clone, and no confirmation of any kind (D51).
