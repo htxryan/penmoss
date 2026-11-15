@@ -1,37 +1,24 @@
 /**
  * Search by meaning from the CLI (T75): `penmoss models`, `search` with and without the model,
  * and `penmoss mcp` indexing in the background while it holds the lease. The model is a fake
- * `MeaningIo` over core's fake embedder; the notebook is real git, as in notebook.test.ts.
+ * `MeaningIo` over core's fake embedder; the notebook's host is in memory (A1516).
  */
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { MemoryVectorCache, fakeEmbedder } from '@penmoss/core/search';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import type { Io, MeaningIo, MeaningStatus } from '../src/io';
 import { run } from '../src/main';
 import { memoryTokenStore } from '../src/memory-store';
 import { nodeNotebooks } from '../src/node-notebooks';
+import { GIT_ENV, MemoryHosts, testRoot } from './support/machine';
 
-vi.setConfig({ testTimeout: 60_000 });
-
-const GIT_ENV = { GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' };
-let root: string;
+const temp = testRoot('penmoss-meaning-');
+/** The notebook's host, in memory (A1516): what is tested here is the CLI's, not git's. */
+let hosts: MemoryHosts;
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'penmoss-meaning-'));
+  hosts = new MemoryHosts();
 });
-afterEach(() => rmSync(root, { recursive: true, force: true }));
-
-function bare(name: string): string {
-  const path = join(root, `${name}.git`);
-  mkdirSync(path, { recursive: true });
-  execFileSync('git', ['init', '--bare', '--quiet', '--initial-branch=main'], {
-    cwd: path,
-    env: { ...process.env, ...GIT_ENV },
-  });
-  return path;
-}
 
 /** The model as a test controls it: here or not, on or off, the lease free or taken. */
 function fakeMeaning(initial: { state?: MeaningStatus['state']; leaseFree?: boolean } = {}) {
@@ -66,7 +53,7 @@ function fakeMeaning(initial: { state?: MeaningStatus['state']; leaseFree?: bool
       model: embedder.model,
       repository: 'onnx-community/test',
       revision: '0123456789abcdef',
-      dir: join(root, 'models', 'test'),
+      dir: join(temp.path, 'models', 'test'),
       license: { name: 'Test terms', url: 'https://example.invalid/terms' },
     });
   const meaning: MeaningIo = {
@@ -115,11 +102,12 @@ function fakeMeaning(initial: { state?: MeaningStatus['state']; leaseFree?: bool
 
 function machine(meaning: MeaningIo | undefined, indexEveryMs = 20, leaseRetryMs = 60_000) {
   const notebooks = nodeNotebooks({
-    home: join(root, 'home'),
+    home: join(temp.path, 'home'),
     env: {},
     platform: process.platform,
     secrets: memoryTokenStore(),
     gitEnv: GIT_ENV,
+    transport: hosts.transport,
     pushDelayMs: 50,
     pullEveryMs: 60_000,
     lockWaitMs: 300,
@@ -157,7 +145,7 @@ function machine(meaning: MeaningIo | undefined, indexEveryMs = 20, leaseRetryMs
 }
 
 async function withNotes(cli: ReturnType<typeof machine>) {
-  expect((await cli(['notebook', 'add', `file://${bare('nb')}`, '--name', 'nb'])).code).toBe(0);
+  expect((await cli(['notebook', 'add', hosts.url('nb'), '--name', 'nb'])).code).toBe(0);
   for (const [title, text] of [
     [
       'UPS shutdown',

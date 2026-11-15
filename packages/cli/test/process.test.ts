@@ -14,9 +14,9 @@ import type { Io } from '../src/io';
 import { run } from '../src/main';
 import { nodeNotebooks } from '../src/node-notebooks';
 import { nodeTokenStore } from '../src/token-store';
+import { bareRepository, GIT_ENV } from '../../git-notebook/test/support/git';
 
 const TOKEN = 'ghp_' + 'A'.repeat(36);
-const GIT_ENV = { GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' };
 /**
  * A run that takes longer than this is a hang. A hang never ends, so this is far above a slow
  * run: alone one takes under a second, but a process started on this shared Mac when it is
@@ -110,7 +110,7 @@ async function penmoss(args: string[], stdin: string | null | typeof OPEN = null
  */
 async function withNotebook(): Promise<void> {
   const remote = join(root, 'notes.git');
-  execFileSync('git', ['init', '--bare', '--quiet', '--initial-branch=main', remote]);
+  bareRepository(remote);
   const penmossHome = join(home, '.penmoss');
   const nokeychain = join(root, 'nokeychain');
   await mkdir(nokeychain, { recursive: true });

@@ -26,7 +26,7 @@ import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { CliError, EXIT } from './errors';
 import type { MeaningIo, NotebookIo, NotebookStatus, OpenedMeaning, TokenStore } from './io';
-import { Clones } from './notebooks/clone';
+import { Clones, type ClonesOptions } from './notebooks/clone';
 import { cliError } from './notebooks/errors';
 import { McpSession } from './notebooks/mcp-session';
 import {
@@ -75,6 +75,8 @@ export interface NodeNotebooksOptions {
    * its full minute.
    */
   readonly terminal?: () => boolean;
+  /** For the tests: each clone over another transport than system git (A1516). */
+  readonly transport?: NonNullable<ClonesOptions['transport']>;
 }
 
 /** How long a command waits for its stopped sync to end once its time is up (A852). */
