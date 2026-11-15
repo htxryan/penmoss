@@ -143,6 +143,36 @@ describe('Settings → Updates: release notes', () => {
     );
   });
 
+  it('folds What’s New away, its summary the version and its count of changes (A1567)', async () => {
+    window.history.replaceState(null, '', '/settings/updates');
+    await show(state({ current: '0.2.1', phase: 'current' }), FILE);
+    const whatsNew = block('whats-new') as HTMLDetailsElement;
+    expect(whatsNew.tagName).toBe('DETAILS');
+    expect(whatsNew.open).toBe(false);
+    expect(block('whats-new-summary')?.querySelector('h3')?.textContent).toBe('What’s New');
+    expect(block('whats-new-count')?.textContent).toBe('0.2.1 · 2 changes');
+    act(() => (block('whats-new-summary') as HTMLElement).click());
+    expect(whatsNew.open).toBe(true);
+  });
+
+  it('opens What’s New when the page was opened to show it, or for an offered update', async () => {
+    window.history.replaceState(null, '', '/settings/updates?whats-new');
+    await show(state({ current: '0.2.1', phase: 'current' }), FILE);
+    expect((block('whats-new') as HTMLDetailsElement).open).toBe(true);
+    act(() => root?.unmount());
+    root = null;
+    window.history.replaceState(null, '', '/settings/updates');
+    await show(state({ current: '0.2.0', phase: 'available', version: '0.2.1' }), FILE);
+    expect((block('whats-new') as HTMLDetailsElement).open).toBe(true);
+    expect(block('whats-new-count')?.textContent).toBe('0.2.1 to install · 2 changes');
+  });
+
+  it('counts builds on Alpha', async () => {
+    window.history.replaceState(null, '', '/settings/updates');
+    await show(state({ current: '0.2.1-alpha.1178', channel: 'alpha' }), FILE);
+    expect(block('whats-new-count')?.textContent).toBe('Build 1178 · 2 changes');
+  });
+
   it('links to GitHub until there is a file', async () => {
     await show(state({}), null);
     const missing = block('release-notes-missing');

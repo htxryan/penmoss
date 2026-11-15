@@ -1,18 +1,18 @@
 /**
  * Settings → Updates (PEN-108, PEN-146): a card with this version, whether it is current, the
  * channel and the last check, and Check Now (or Install and Restart); then Update Automatically
- * and Update Channel as rows with their help; then What's New, the release notes (T64 item 2,
- * A1112, A1196). Also the notice a newer build brings, in the sidebar or as a toast (PEN-135; its
+ * and Update Channel as rows with their help; then What's New, the release notes, folded away
+ * until opened (T64 item 2, A1112, A1196, A1567). Also the notice a newer build brings, in the sidebar or as a toast (PEN-135; its
  * model is notice.ts). The Mac app only.
  */
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useId, useState } from 'react';
 import type { DesktopUpdateChannel } from '../desktop/bridge';
 import { navigate } from '../router';
-import { GroupHead, SettingRow, Switch } from '../theme/look-rows';
+import { SettingRow, Switch } from '../theme/look-rows';
 import { UPDATES_PATH, type UpdateNoticeModel } from './notice';
 import { versionLabel } from './notes';
-import { ReleaseNotes } from './ReleaseNotes';
+import { WhatsNew } from './ReleaseNotes';
 import { checkedLine, updateChip, updateStatus, useUpdates } from './updates';
 import { ActionToast } from '../toasts/ActionToast';
 import { ToastSlot } from '../toasts/ToastSlot';
@@ -183,13 +183,10 @@ export function UpdatesSettings() {
         </SettingRow>
       </div>
       {state ? (
-        <div data-setting="whats-new" className="updates-whats-new">
-          <GroupHead>What’s New</GroupHead>
-          <ReleaseNotes
-            current={state.current}
-            offered={offered || state.phase === 'downloading' ? state.version : null}
-          />
-        </div>
+        <WhatsNew
+          current={state.current}
+          offered={offered || state.phase === 'downloading' ? state.version : null}
+        />
       ) : null}
     </section>
   );

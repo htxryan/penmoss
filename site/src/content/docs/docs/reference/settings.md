@@ -127,7 +127,7 @@ The GitHub account Penmoss uses, kept in this Mac's Keychain: **Sign In with Git
 
 ### Updates
 
-A card with the version you're running, whether it's up to date, the channel and when Penmoss last checked, and **Check Now** (or **Install and Restart**). Then **Update Automatically** (off by default) and **Update Channel** (Stable or Alpha), and **What's New**: what an offered update brings, what this version brought, and earlier versions. See [Updates](/docs/help/updates/#whats-new).
+A card with the version you're running, whether it's up to date, the channel and when Penmoss last checked, and **Check Now** (or **Install and Restart**). Then **Update Automatically** (off by default) and **Update Channel** (Stable or Alpha), and **What's New**, folded away until you open it (open by itself for an offered update or after one): what an offered update brings, what this version brought, and earlier versions. See [Updates](/docs/help/updates/#whats-new).
 
 ## On Android
 

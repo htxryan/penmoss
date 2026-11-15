@@ -216,3 +216,22 @@ export const WHATS_NEW_PATH = '/settings/updates?whats-new';
 export function noteText(note: DesktopReleaseNote, builds: boolean): string {
   return builds ? `${note.text} (build ${note.build})` : note.text;
 }
+
+/** A block's notes, counted. */
+const changes = (block: NotesBlock) =>
+  block.groups.reduce((count, group) => count + group.notes.length, 0);
+
+/** What's New's summary: the version it shows first and its changes, "Build 1413 · 12 changes". */
+export function whatsNewSummary(view: NotesView, current: string, offered: string | null): string {
+  const label = (version: string) => {
+    const words = versionLabel(version);
+    return words.charAt(0).toUpperCase() + words.slice(1);
+  };
+  if (view.status !== 'ok') return 'On GitHub';
+  const block = view.offered ?? view.current;
+  const version = view.offered && offered ? offered : current;
+  if (!block) return label(version);
+  const count = changes(block);
+  const counted = count === 0 ? 'nothing to notice' : count === 1 ? '1 change' : `${count} changes`;
+  return `${view.offered ? `${label(version)} to install` : label(version)} · ${counted}`;
+}
