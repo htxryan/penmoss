@@ -1,0 +1,237 @@
+/*
+ * Type (A1561): one scale, and the roles every screen's text takes from it. A stylesheet never
+ * writes a font size, weight or line height itself (stylelint, scripts/stylelint-type.mjs): it
+ * names the role its text plays (`--pm-text-help`, or the `t-help` class), or for a one-off
+ * (a glyph, a miniature) a step of the scale. So a note under a setting is the same size as
+ * every other note under a setting, and a child is never larger than its parent's heading.
+ *
+ * The note's own text (its title, headings, code, the margin's symbols) has a scale of its own
+ * at the end, relative to the Note Font Size (A944); it is the note's typography, not chrome.
+ */
+:root {
+  /* The scale: the prototype's 11.5, 13, 14 and 16 px (A182), and a step or two either side. */
+  --pm-text-2xs: 0.65rem; /* 10.4 px */
+  --pm-text-xs: 0.72rem; /* 11.5 px */
+  --pm-text-sm: 0.8125rem; /* 13 px */
+  --pm-text-md: 0.875rem; /* 14 px */
+  --pm-text-lg: 1rem; /* 16 px */
+  --pm-text-xl: 1.125rem; /* 18 px */
+  --pm-text-2xl: 1.25rem; /* 20 px */
+  --pm-text-3xl: 1.5rem; /* 24 px */
+  --pm-text-4xl: 1.75rem; /* 28 px */
+  --pm-text-5xl: 2rem; /* 32 px */
+  --pm-weight-regular: 400;
+  --pm-weight-medium: 500;
+  --pm-weight-semibold: 600;
+  --pm-weight-bold: 700;
+  --pm-leading-none: 1;
+  --pm-leading-tight: 1.25;
+  --pm-leading-snug: 1.4;
+  --pm-leading-relaxed: 1.5;
+
+  /*
+   * The roles, largest first. Each has a size, a weight and a line height (`normal` where the
+   * text sits in a row whose height is set elsewhere), and a colour where the role has one.
+   */
+  /* A page's title: Settings, Trash, Tags, the Time Machine, the welcome. */
+  --pm-text-page-title: var(--pm-text-5xl);
+  --pm-weight-page-title: var(--pm-weight-bold);
+  --pm-leading-page-title: var(--pm-leading-tight);
+  /* The page's title again, small, in a bar pinned over the page once it scrolls. */
+  --pm-text-bar-title: var(--pm-text-xl);
+  --pm-weight-bar-title: var(--pm-weight-bold);
+  --pm-leading-bar-title: var(--pm-leading-tight);
+  /* A section of a page: a Settings page's own title (Appearance, Sidebar…). */
+  --pm-text-section-head: var(--pm-text-xl);
+  --pm-weight-section-head: var(--pm-weight-bold);
+  --pm-leading-section-head: var(--pm-leading-tight);
+  /* A group within a section (Shortcuts, Sections), a card's title. */
+  --pm-text-group-head: var(--pm-text-lg);
+  --pm-weight-group-head: var(--pm-weight-semibold);
+  --pm-leading-group-head: var(--pm-leading-tight);
+  /* A dialog's or a sheet's title. */
+  --pm-text-dialog-title: var(--pm-text-lg);
+  --pm-weight-dialog-title: var(--pm-weight-semibold);
+  --pm-leading-dialog-title: var(--pm-leading-tight);
+  /* Running text: a page's or a dialog's paragraphs. */
+  --pm-text-body: var(--pm-text-md);
+  --pm-weight-body: var(--pm-weight-regular);
+  --pm-leading-body: var(--pm-leading-relaxed);
+  /* A setting's or a field's name. */
+  --pm-text-row-label: var(--pm-text-sm);
+  --pm-weight-row-label: var(--pm-weight-semibold);
+  --pm-leading-row-label: normal;
+  /* A thing you pick or press: a menu item, a button, a list or table row, a tab, a toast. */
+  --pm-text-item: var(--pm-text-sm);
+  --pm-weight-item: var(--pm-weight-regular);
+  --pm-leading-item: normal;
+  /* A row of the sidebar: its notes, folders, tags and shortcuts. */
+  --pm-text-sidebar-item: var(--pm-text-sm);
+  /* What you type into: fields and selects. */
+  --pm-text-field: var(--pm-text-sm);
+  /* What a row, a group or a panel means: a setting's help, a note under a form, a hint. */
+  --pm-text-help: var(--pm-text-xs);
+  --pm-weight-help: var(--pm-weight-regular);
+  --pm-leading-help: var(--pm-leading-snug);
+  --pm-color-help: var(--pm-muted);
+  /* About a thing, beside or under it: a time, a count, a path, a status, a caption. */
+  --pm-text-meta: var(--pm-text-xs);
+  --pm-weight-meta: var(--pm-weight-regular);
+  --pm-leading-meta: normal;
+  --pm-color-meta: var(--pm-muted);
+  /* A list's heading over its items: a sidebar section, a menu's group, a panel's heading. */
+  --pm-text-list-head: var(--pm-text-xs);
+  --pm-weight-list-head: var(--pm-weight-semibold);
+  --pm-leading-list-head: normal;
+  --pm-color-list-head: var(--pm-muted);
+  /* A chip, a key cap, a scope marker. */
+  --pm-text-badge: var(--pm-text-xs);
+  --pm-weight-badge: var(--pm-weight-semibold);
+  --pm-leading-badge: normal;
+  /* A count on a tab or an icon, and the text of a miniature. */
+  --pm-text-micro: var(--pm-text-2xs);
+  --pm-weight-micro: var(--pm-weight-semibold);
+  /* A tooltip. */
+  --pm-text-tooltip: var(--pm-text-xs);
+  --pm-weight-tooltip: var(--pm-weight-medium);
+  --pm-leading-tooltip: var(--pm-leading-snug);
+  /* Code and other monospaced text in the chrome: a diff, a source, a command. */
+  --pm-text-code: var(--pm-text-sm);
+  --pm-leading-code: var(--pm-leading-relaxed);
+  /* Code inside a line of chrome text. */
+  --pm-text-code-inline: 0.85em;
+  /* A code to read out or type somewhere else (GitHub's device code). */
+  --pm-text-display: var(--pm-text-4xl);
+  --pm-weight-display: var(--pm-weight-semibold);
+  /* A notebook badge's letter, as a share of its square (badge.css). */
+  --pm-badge-glyph-ratio: 0.62;
+
+  /*
+   * The note's own scale, from the Note Font Size (A944): the title a step above a first
+   * heading (A554), headings in em of the text, code a little smaller than it.
+   */
+  --pm-note-text-size: var(--pm-note-size, 16px);
+  --pm-note-leading: 1.7;
+  --pm-note-title-size: calc(var(--pm-note-size, 16px) * 1.9);
+  --pm-note-title-weight: var(--pm-weight-bold);
+  --pm-note-title-leading: 1.2;
+  --pm-note-h1-size: 1.6em;
+  --pm-note-h2-size: 1.28em;
+  --pm-note-h3-size: 1.07em;
+  --pm-note-heading-leading: 1.3;
+  --pm-note-code-size: 0.86em;
+  --pm-note-code-leading: 1.55;
+  /* A callout's type and title, in the interface font. */
+  --pm-note-callout-type-size: 0.92rem;
+  --pm-note-callout-title-size: 0.95rem;
+  /* The margin's symbols on a line, in em of that line, and their "+N". */
+  --pm-note-symbol-size: 0.9em;
+  --pm-note-symbol-more-size: 0.7em;
+  --pm-note-symbol-badge-size: 0.6em;
+  /* An agent's name on its edit. */
+  --pm-note-agent-label-size: 0.7em;
+  /* Appearance's preview of a note, a little under the note's own sizes. */
+  --pm-note-preview-title-size: calc(var(--pm-note-size, 16px) * 1.15);
+  --pm-note-preview-text-size: calc(var(--pm-note-size, 16px) * 0.875);
+}
+
+/* Phones: titles a step smaller, and the note's title a little under the desktop's (A554). */
+@media (max-width: 700px) {
+  :root {
+    --pm-text-page-title: var(--pm-text-3xl);
+    --pm-note-title-size: calc(var(--pm-note-size, 16px) * 1.85);
+  }
+}
+
+/* Touch: the sidebar's rows a step larger, and fields at 16 px so iOS never zooms into them. */
+@media (max-width: 700px), (pointer: coarse) {
+  :root {
+    --pm-text-sidebar-item: var(--pm-text-md);
+    --pm-text-field: var(--pm-text-lg);
+  }
+}
+
+/*
+ * The roles as classes, for an element whose stylesheet has nothing else to say about it
+ * (`<p className="t-help">`). Each sets the role's size, weight, line height and colour.
+ */
+.t-page-title {
+  font-size: var(--pm-text-page-title);
+  font-weight: var(--pm-weight-page-title);
+  line-height: var(--pm-leading-page-title);
+}
+
+.t-bar-title {
+  font-size: var(--pm-text-bar-title);
+  font-weight: var(--pm-weight-bar-title);
+  line-height: var(--pm-leading-bar-title);
+}
+
+.t-section-head {
+  font-size: var(--pm-text-section-head);
+  font-weight: var(--pm-weight-section-head);
+  line-height: var(--pm-leading-section-head);
+}
+
+.t-group-head {
+  font-size: var(--pm-text-group-head);
+  font-weight: var(--pm-weight-group-head);
+  line-height: var(--pm-leading-group-head);
+}
+
+.t-dialog-title {
+  font-size: var(--pm-text-dialog-title);
+  font-weight: var(--pm-weight-dialog-title);
+  line-height: var(--pm-leading-dialog-title);
+}
+
+.t-body {
+  font-size: var(--pm-text-body);
+  font-weight: var(--pm-weight-body);
+  line-height: var(--pm-leading-body);
+}
+
+.t-row-label {
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
+  line-height: var(--pm-leading-row-label);
+}
+
+.t-item {
+  font-size: var(--pm-text-item);
+  font-weight: var(--pm-weight-item);
+  line-height: var(--pm-leading-item);
+}
+
+.t-help {
+  color: var(--pm-color-help);
+  font-size: var(--pm-text-help);
+  font-weight: var(--pm-weight-help);
+  line-height: var(--pm-leading-help);
+}
+
+.t-meta {
+  color: var(--pm-color-meta);
+  font-size: var(--pm-text-meta);
+  font-weight: var(--pm-weight-meta);
+  line-height: var(--pm-leading-meta);
+}
+
+.t-list-head {
+  color: var(--pm-color-list-head);
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
+  line-height: var(--pm-leading-list-head);
+}
+
+.t-badge {
+  font-size: var(--pm-text-badge);
+  font-weight: var(--pm-weight-badge);
+  line-height: var(--pm-leading-badge);
+}
+
+.t-code {
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-code);
+  line-height: var(--pm-leading-code);
+}

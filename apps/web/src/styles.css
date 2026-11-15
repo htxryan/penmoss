@@ -4,6 +4,7 @@
  * notes/note.css and notes/marks.css, which Android's editor imports too (A1511).
  */
 @import './shell/base.css'; /* the tokens, the page and the shared text styles */
+@import './shell/type.css'; /* the type scale, its roles and their classes (A1561) */
 @import './shell/shell.css'; /* the notes shell and the sidebar */
 @import './workspace/tree.css'; /* the folder tree */
 @import './shell/controls.css'; /* the note's header, buttons, menus, toasts and tooltips */

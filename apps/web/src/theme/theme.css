@@ -18,15 +18,15 @@
   /* As far over its control as every Settings field's label (pages/settings.css, A988). */
   margin-bottom: 0.35rem;
   color: var(--pm-fg);
-  font-size: var(--pm-text-md);
-  font-weight: 600;
+  font-size: var(--pm-text-group-head);
+  font-weight: var(--pm-weight-group-head);
 }
 
 /* A hint, as `.settings-help` is under the other Settings controls (A988). */
 .appearance-note {
   margin: 0.5rem 0 0;
-  font-size: var(--pm-text-sm);
-  line-height: 1.5;
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-help);
 }
 
 /* Settings → Appearance → Fonts (T51 item 16, A944). */
@@ -44,8 +44,8 @@
 }
 
 .font-field > label {
-  font-size: var(--pm-text-sm);
-  font-weight: 600;
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
 }
 
 .font-custom {
@@ -55,7 +55,7 @@
 
 .font-problem {
   color: var(--pm-danger);
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-help);
 }
 
 /* Each choice as it will look, a line of it. */
@@ -64,7 +64,7 @@
   overflow: hidden;
   color: var(--pm-muted);
   font-size: var(--pm-text-md);
-  line-height: 1.4;
+  line-height: var(--pm-leading-snug);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -84,7 +84,7 @@
 
 .font-size-value {
   min-width: 3.2rem;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
   font-variant-numeric: tabular-nums;
 }
 
@@ -107,7 +107,7 @@
   padding: 0 0.75rem;
   border-radius: 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
   cursor: pointer;
   transition:
     background var(--pm-fast),
@@ -133,7 +133,7 @@
   background: var(--pm-raised);
   box-shadow: var(--pm-shadow-1);
   color: var(--pm-fg);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .seg-option:has(input:focus-visible),
@@ -185,8 +185,8 @@ fieldset:disabled .theme-card {
   gap: 0.5rem;
   padding: 0.5rem 0.65rem 0.55rem;
   color: var(--pm-fg);
-  font-size: var(--pm-text-sm);
-  font-weight: 600;
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
 }
 
 .theme-card-foot .i {
@@ -197,8 +197,8 @@ fieldset:disabled .theme-card {
 .theme-card-note {
   display: block;
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
-  font-weight: 400;
+  font-size: var(--pm-text-meta);
+  font-weight: var(--pm-weight-meta);
 }
 
 /* A theme's two variants in miniature: sidebar, title, text, code and a button. */
@@ -292,7 +292,7 @@ fieldset:disabled .theme-card {
 
 .theme-editor h3 {
   margin: 0;
-  font-size: var(--pm-text-lg);
+  font-size: var(--pm-text-group-head);
 }
 
 .theme-editor-empty {
@@ -308,8 +308,8 @@ fieldset:disabled .theme-card {
 .theme-editor-empty p {
   margin: 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-md);
-  line-height: 1.55;
+  font-size: var(--pm-text-body);
+  line-height: var(--pm-leading-body);
 }
 
 .theme-editor-head {
@@ -362,7 +362,7 @@ fieldset:disabled .theme-card {
 
 .tp-current {
   background: color-mix(in oklab, var(--pm-fg) 9%, transparent);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .tp-main {
@@ -375,7 +375,10 @@ fieldset:disabled .theme-card {
 }
 
 .tp-title {
-  font: 700 calc(var(--pm-note-size, 16px) * 1.15) / 1.25 var(--pm-font-body);
+  font-family: var(--pm-font-body, var(--pm-font));
+  font-size: var(--pm-note-preview-title-size);
+  font-weight: var(--pm-weight-bold);
+  line-height: var(--pm-leading-tight);
 }
 
 .tp-main .tp-meta {
@@ -384,8 +387,8 @@ fieldset:disabled .theme-card {
 
 .tp-text {
   font-family: var(--pm-font-body);
-  font-size: calc(var(--pm-note-size, 16px) * 0.875);
-  line-height: 1.6;
+  font-size: var(--pm-note-preview-text-size);
+  line-height: var(--pm-note-leading);
 }
 
 .tp-task {
@@ -417,7 +420,7 @@ fieldset:disabled .theme-card {
 .tp-code {
   background: color-mix(in oklab, var(--pm-bg), var(--pm-fg) 6%);
   font-family: var(--pm-mono);
-  font-size: 0.85em;
+  font-size: var(--pm-note-code-size);
 }
 
 .tp-text code {
@@ -487,7 +490,7 @@ fieldset:disabled .theme-card {
   border-radius: 0;
   background: var(--pm-accent);
   color: var(--pm-on-accent);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .tp-plain {
@@ -503,8 +506,8 @@ fieldset:disabled .theme-card {
 .theme-contrast {
   margin: 0 0 1rem;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
-  line-height: 1.5;
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-help);
 }
 
 .theme-contrast.warn {
@@ -537,7 +540,7 @@ fieldset:disabled .theme-card {
   gap: 0.5rem;
   min-height: var(--pm-control);
   color: var(--pm-fg);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 .token-row > select {
@@ -575,7 +578,7 @@ fieldset:disabled .theme-card {
 .theme-editor-actions {
   flex-wrap: wrap;
   margin-top: 1rem;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 @media (max-width: 700px) {

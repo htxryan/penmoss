@@ -701,7 +701,7 @@ function CopySettingsPanel({
           ))}
         </Select>
       </div>
-      <p className="muted nset-panel-note">
+      <p className="t-help nset-panel-note">
         Replaces {target ? `${target.name}’s` : 'their'} settings with {source.name}’s: the theme,
         the sidebar, shortcuts and the rest. Quick Access stays as it is.
       </p>

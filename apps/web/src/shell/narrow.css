@@ -147,8 +147,8 @@
     min-width: 0;
     margin: 0 0 0 0.25rem;
     overflow: hidden;
-    font-size: 1.0625rem;
-    font-weight: 600;
+    font-size: var(--pm-text-dialog-title);
+    font-weight: var(--pm-weight-dialog-title);
     letter-spacing: -0.01em;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -162,8 +162,8 @@
   .app-bar-path {
     direction: rtl;
     color: var(--pm-muted);
-    font-size: 0.875rem;
-    font-weight: 500;
+    font-size: var(--pm-text-item);
+    font-weight: var(--pm-weight-medium);
     text-align: left;
   }
 
@@ -184,12 +184,6 @@
   /* Clear of the formatting bar fixed at the bottom (3.25rem), then the same 2.5rem (T52 item 7). */
   .doc {
     padding: 1.25rem var(--doc-gutter) calc(5.75rem + env(safe-area-inset-bottom));
-  }
-
-  /* A step above a first heading (1.6rem), so the two never look alike (T39 pass 3, A554). */
-  .doc-title {
-    font-size: 1.85rem;
-    font-size: calc(var(--pm-note-size, 16px) * 1.85);
   }
 
   .menu[data-sheet] {
@@ -307,7 +301,7 @@
     background: var(--pm-hover);
     color: var(--pm-muted);
     font: inherit;
-    font-size: 1rem;
+    font-size: var(--pm-text-field);
     text-align: left;
     cursor: pointer;
   }
@@ -342,23 +336,23 @@
     align-items: center;
     gap: 0.4rem;
     color: var(--pm-accent);
-    font-size: var(--pm-text-xs);
-    font-weight: 600;
+    font-size: var(--pm-text-list-head);
+    font-weight: var(--pm-weight-list-head);
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
 
   .ph-head {
-    font-size: 1.0625rem;
-    font-weight: 650;
+    font-size: var(--pm-text-group-head);
+    font-weight: var(--pm-weight-group-head);
     letter-spacing: -0.01em;
   }
 
   .ph-section h2 {
     margin: 0.5rem 0 0.4rem 0.25rem;
     color: var(--pm-muted);
-    font-size: var(--pm-text-xs);
-    font-weight: 600;
+    font-size: var(--pm-text-list-head);
+    font-weight: var(--pm-weight-list-head);
     letter-spacing: 0.05em;
     text-transform: uppercase;
   }
@@ -408,8 +402,8 @@
   }
 
   .ph-two > span:first-child {
-    font-size: 0.9375rem;
-    font-weight: 500;
+    font-size: var(--pm-text-md);
+    font-weight: var(--pm-weight-medium);
   }
 
   .ph-two > span[data-untitled] {
@@ -417,7 +411,7 @@
   }
 
   .ph-two .muted {
-    font-size: var(--pm-text-sm);
+    font-size: var(--pm-text-help);
   }
 
   /* Trash and the graph under the app bar. */
@@ -470,7 +464,6 @@
 
   .settings-page h1 {
     margin: 1rem 0 0.75rem;
-    font-size: 1.375rem;
   }
 
   .settings-layout {

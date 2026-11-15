@@ -9,7 +9,7 @@
 .glyph-trigger {
   width: 3rem;
   padding: 0;
-  font-size: 1.15rem;
+  font-size: var(--pm-text-xl);
 }
 
 .colour-trigger {
@@ -69,7 +69,7 @@
   border-radius: 0;
   background: transparent;
   color: var(--pm-fg);
-  font-size: 1.1rem;
+  font-size: var(--pm-text-xl);
   cursor: pointer;
 }
 
@@ -108,7 +108,7 @@
 .colour-problem {
   max-width: 16rem;
   color: var(--pm-danger);
-  font-size: 0.8rem;
+  font-size: var(--pm-text-help);
 }
 
 .colour-popover {
@@ -148,8 +148,8 @@
 
 .colour-custom-title {
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
-  font-weight: 600;
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
 }
 
 .colour-custom-row {
@@ -222,7 +222,7 @@
   display: grid;
   gap: 0.1rem;
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
 }
 
 .colour-range {

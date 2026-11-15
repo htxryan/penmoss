@@ -4,6 +4,7 @@
  * WebViewAssetLoader beside the editor page, with the same CSP.
  */
 import '../../../web/src/theme/defaults.css';
+import '../../../web/src/shell/type.css';
 import '../../../web/src/graph/graph.css';
 import './graph.css';
 import { GraphHost } from './graph-host';

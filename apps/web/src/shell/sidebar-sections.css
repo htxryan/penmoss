@@ -138,7 +138,7 @@
   min-height: var(--pm-control-sm);
   padding: 0 calc(var(--sb-gutter) + 0.3rem) 0 var(--sb-icon-inset);
   color: var(--pm-fg);
-  font-size: 0.85rem;
+  font-size: var(--pm-text-sidebar-item);
 }
 
 /* Notes look the same in every section: the title in the text's colour, the icon muted. */
@@ -153,7 +153,7 @@
   margin: 0;
   padding: 0.5rem var(--sb-gutter);
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
   text-align: center;
 }
 
@@ -170,7 +170,7 @@
   flex: none;
   padding-inline-end: 0.3rem;
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
   white-space: nowrap;
 }
 
@@ -195,7 +195,7 @@
   display: flex;
   flex-direction: column;
   padding: 0.2rem 0;
-  line-height: 1.25;
+  line-height: var(--pm-leading-tight);
 }
 
 .sb-item-title,
@@ -206,7 +206,7 @@
 
 .sb-item-notebook {
   color: color-mix(in oklab, var(--pm-muted) 80%, transparent);
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
 }
 
 /* A Quick Access note being dragged, and where it would land (T53 item 10). */

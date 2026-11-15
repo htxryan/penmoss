@@ -6,7 +6,7 @@
 .search-icon {
   margin-right: 0.5rem;
   color: var(--pm-muted);
-  font-size: 1.1rem;
+  font-size: var(--pm-text-xl);
 }
 
 /* The dialog has its own close button (T39); the browser's clear button was off-theme. */
@@ -45,7 +45,7 @@
   /* On the results' text edge, as a palette row's (A988). */
   padding: 0.4rem 0.95rem 0;
   color: var(--pm-muted);
-  font-size: 0.75rem;
+  font-size: var(--pm-text-meta);
 }
 
 /* Searching (T53 item 2): a spinner, and the last results faded until the answer replaces them. */
@@ -61,7 +61,7 @@
 
 .search-notice {
   color: var(--pm-fg);
-  font-weight: 500;
+  font-weight: var(--pm-weight-medium);
 }
 
 /* Hybrid answered by words alone (A571): said quietly, the reason on hover and to readers. */
@@ -82,7 +82,7 @@
 
 .search-hit-title {
   overflow: hidden;
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -93,7 +93,7 @@
   align-items: center;
   gap: 0.15rem 0.55rem;
   color: var(--pm-muted);
-  font-size: 0.72rem;
+  font-size: var(--pm-text-meta);
 }
 
 .search-heading {
@@ -102,15 +102,15 @@
 
 .search-source {
   color: var(--pm-accent);
-  font-weight: 700;
+  font-weight: var(--pm-weight-bold);
 }
 
 .search-snippet {
   display: -webkit-box;
   overflow: hidden;
   color: var(--pm-muted);
-  font-size: 0.8rem;
-  line-height: 1.4;
+  font-size: var(--pm-text-item);
+  line-height: var(--pm-leading-snug);
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -127,5 +127,5 @@
    */
   background: color-mix(in srgb, var(--pm-search-match) 38%, var(--pm-raised));
   color: var(--pm-fg);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }

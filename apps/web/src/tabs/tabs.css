@@ -140,7 +140,7 @@
   padding: 0 0.35rem 0 0.6rem;
   border-right: 1px solid var(--pm-border-soft);
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
   cursor: default;
 }
 
@@ -269,7 +269,7 @@
   background: none;
   color: var(--pm-muted);
   font: inherit;
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -346,7 +346,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.35rem 0.5rem;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
   cursor: default;
 }
 
@@ -355,7 +355,7 @@
 }
 
 .all-tabs-item[data-active] {
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 /* The pinned tabs first, each with its pin, and a rule under them (ac12). */
@@ -393,20 +393,20 @@
 
 .all-tabs-path {
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
-  font-weight: 400;
+  font-size: var(--pm-text-meta);
+  font-weight: var(--pm-weight-meta);
 }
 
 .all-tabs-key {
   color: var(--pm-muted);
   font: inherit;
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
 }
 
 .all-tabs-none {
   padding: 0.5rem;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-help);
 }
 
 /* The narrow window's Tabs button and sheet (AC13, A1502). */
@@ -419,8 +419,8 @@
   height: 1.4rem;
   padding: 0 0.25rem;
   border: 1.5px solid currentcolor;
-  font-size: var(--pm-text-xs);
-  font-weight: 600;
+  font-size: var(--pm-text-badge);
+  font-weight: var(--pm-weight-badge);
   font-variant-numeric: tabular-nums;
 }
 
@@ -453,7 +453,8 @@
 
 .tabs-sheet-head h2 {
   margin: 0;
-  font-size: var(--pm-text-md);
+  font-size: var(--pm-text-dialog-title);
+  font-weight: var(--pm-weight-dialog-title);
 }
 
 .tabs-sheet-list {
@@ -512,7 +513,7 @@
 
 .tabs-sheet-path {
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
 }
 
 .tabs-sheet-new {

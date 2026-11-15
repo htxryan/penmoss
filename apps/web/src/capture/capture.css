@@ -8,7 +8,8 @@
 
 .capture-title {
   margin: 0;
-  font-size: var(--pm-text-md, 0.95rem);
+  font-size: var(--pm-text-dialog-title);
+  font-weight: var(--pm-weight-dialog-title);
 }
 
 .capture-text {
@@ -21,7 +22,7 @@
   background: var(--pm-bg);
   color: var(--pm-fg);
   font: inherit;
-  line-height: 1.45;
+  line-height: var(--pm-leading-snug);
   resize: vertical;
 }
 
@@ -47,7 +48,7 @@
   padding: 0;
   border: 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm, 0.85rem);
+  font-size: var(--pm-text-item);
 }
 
 .capture-dest label {
@@ -67,7 +68,7 @@
   align-items: center;
   gap: 0.5rem;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm, 0.85rem);
+  font-size: var(--pm-text-item);
 }
 
 .capture-into .pm-select {
@@ -78,7 +79,7 @@
 .capture-error {
   margin: 0;
   color: var(--pm-danger);
-  font-size: var(--pm-text-sm, 0.85rem);
+  font-size: var(--pm-text-help);
 }
 
 .capture-dlg {

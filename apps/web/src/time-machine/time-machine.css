@@ -8,13 +8,14 @@
 
 .tm-head h2 {
   margin: 0 0 0.25rem;
-  font-size: 1.5rem;
+  font-size: var(--pm-text-page-title);
+  line-height: var(--pm-leading-page-title);
   letter-spacing: -0.015em;
 }
 
 .tm-lede {
   margin: 0;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-body);
 }
 
 .tm-bar {
@@ -41,13 +42,14 @@
   background: none;
   color: var(--pm-muted);
   font: inherit;
+  font-size: var(--pm-text-item);
   cursor: pointer;
 }
 
 .tm-tab[aria-selected='true'] {
   border-bottom-color: var(--pm-accent);
   color: var(--pm-fg);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .tm-notebook,
@@ -55,7 +57,7 @@
   display: inline-flex;
   flex-direction: column;
   gap: 0.2rem;
-  font-size: 0.8rem;
+  font-size: var(--pm-text-item);
 }
 
 .tm-notebook span,
@@ -92,7 +94,7 @@
   align-items: center;
   gap: 0.5rem;
   margin: 0;
-  font-size: 0.85rem;
+  font-size: var(--pm-text-item);
 }
 
 .tm-panes {
@@ -132,12 +134,12 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.2rem 0.35rem;
-  font-size: 0.85rem;
+  font-size: var(--pm-text-item);
 }
 
 .tm-folder-name {
   color: var(--pm-muted);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .tm-note-row {
@@ -146,7 +148,7 @@
   background: none;
   color: var(--pm-fg);
   font: inherit;
-  font-size: 0.85rem;
+  font-size: var(--pm-text-item);
   text-align: start;
   cursor: pointer;
 }
@@ -162,12 +164,12 @@
 
 .tm-note-title {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: var(--pm-text-section-head);
 }
 
 .tm-note-when {
   margin: 0.2rem 0 0.6rem;
-  font-size: 0.8rem;
+  font-size: var(--pm-text-meta);
 }
 
 .tm-actions {
@@ -178,7 +180,7 @@
 
 .tm-status {
   margin: 0.6rem 0 0;
-  font-size: 0.85rem;
+  font-size: var(--pm-text-help);
 }
 
 .tm-text {
@@ -187,7 +189,10 @@
   overflow-x: auto;
   border: 1px solid var(--pm-border);
   background: var(--pm-bg);
-  font: 0.82rem/1.6 var(--pm-mono);
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-code);
+  font-weight: var(--pm-weight-regular);
+  line-height: var(--pm-leading-code);
   white-space: pre-wrap;
 }
 
@@ -199,7 +204,7 @@
 
 .tm-summary {
   margin: 0 0 0.75rem;
-  font-size: 0.9rem;
+  font-size: var(--pm-text-body);
 }
 
 .tm-change-list {
@@ -223,11 +228,11 @@
 }
 
 .tm-change-title {
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .tm-change-folder {
-  font-size: 0.8rem;
+  font-size: var(--pm-text-meta);
 }
 
 .tm-kinds {
@@ -242,7 +247,7 @@
 .tm-kind {
   padding: 0 0.4rem;
   border: 1px solid var(--pm-border);
-  font-size: 0.75rem;
+  font-size: var(--pm-text-badge);
 }
 
 .tm-kind[data-kind='created'],
@@ -269,7 +274,7 @@
 /* Under a weekly note's title (PEN-21). */
 .week-changes {
   margin: -0.2rem 0 0.4rem;
-  font-size: 0.8rem;
+  font-size: var(--pm-text-item);
 }
 
 .week-changes a {
