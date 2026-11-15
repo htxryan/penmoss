@@ -130,20 +130,20 @@ A card with the version you're running, whether it's up to date, the channel and
 
 Open Settings from the gear on the first screen. The same five groups as the Mac, with **This Phone** in place of This Mac, and a **Search Settings** field at the top that opens the screen a setting is on, scrolled to the setting and marked for a moment. On **All Notebooks**, **Between Notebooks** has **Keep Settings in Step** and **Copy Settings…** as on the Mac (with two notebooks or more), and Keep Settings in Step is this phone's own choice.
 
-| Group         | Screen             | What it holds                                                                                                                                   |
-| ------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Look and Feel | Appearance         | A live preview, then mode, theme and **Customize Penmoss…**, fonts, and note width                                                              |
-| Look and Feel | Home               | Shortcuts on Home, the order of the sections, Notes in Recent Notes, Show Notebook Names in Quick Access                                        |
-| Look and Feel | Symbols            | The line symbols, and their keys on a hardware keyboard                                                                                         |
-| Writing       | Daily Notes        | Time zone, and the daily and weekly templates beside a preview of today's note                                                                  |
-| Writing       | Quick Capture      | Where a capture goes by default, and which notebook                                                                                             |
-| Writing       | Keyboard Shortcuts | Shortcuts for a hardware keyboard                                                                                                               |
-| Notebooks     | Each notebook      | Its page: **Overview** (its notes, **Copy Settings…**), **Sync** and **Git** ([The Android app](/docs/install/android/#notebooks))              |
-| Notebooks     | All Notebooks      | **Add Notebook**, **Primary Notebook**, Between Notebooks, **Commits From This Phone**, the signing key and background sync                     |
-| Agents        | Agent Activity     | What agents changed, in every notebook, with **Undo**                                                                                           |
-| This Phone    | Storage            | Files and pictures in notes, pictures from the web and **Clear…**, and whether to load pictures from the web                                    |
-| This Phone    | GitHub             | **Sign In with GitHub** (or a token), and what the account is used for, such as **Send Feedback**                                               |
-| This Phone    | What’s New         | The version, what changed in it, and in earlier ones ([The Android app](/docs/install/android/#whats-new))                                      |
+| Group         | Screen             | What it holds                                                                                                                      |
+| ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Look and Feel | Appearance         | A live preview, then mode, theme and **Customize Penmoss…**, fonts, and note width                                                 |
+| Look and Feel | Home               | Shortcuts on Home, the order of the sections, Notes in Recent Notes, Show Notebook Names in Quick Access                           |
+| Look and Feel | Symbols            | The line symbols, and their keys on a hardware keyboard                                                                            |
+| Writing       | Daily Notes        | Time zone, and the daily and weekly templates beside a preview of today's note                                                     |
+| Writing       | Quick Capture      | Where a capture goes by default, and which notebook                                                                                |
+| Writing       | Keyboard Shortcuts | Shortcuts for a hardware keyboard                                                                                                  |
+| Notebooks     | Each notebook      | Its page: **Overview** (its notes, **Copy Settings…**), **Sync** and **Git** ([The Android app](/docs/install/android/#notebooks)) |
+| Notebooks     | All Notebooks      | **Add Notebook**, **Primary Notebook**, Between Notebooks, **Commits From This Phone**, the signing key and background sync        |
+| Agents        | Agent Activity     | What agents changed, in every notebook, with **Undo**                                                                              |
+| This Phone    | Storage            | Files and pictures in notes, pictures from the web and **Clear…**, and whether to load pictures from the web                       |
+| This Phone    | GitHub             | **Sign In with GitHub** (or a token), and what the account is used for, such as **Send Feedback**                                  |
+| This Phone    | What’s New         | The version, what changed in it, and in earlier ones ([The Android app](/docs/install/android/#whats-new))                         |
 
 ## For a notebook, from the CLI or an agent
 
