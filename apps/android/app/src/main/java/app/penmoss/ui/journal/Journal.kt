@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.journal
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -6,7 +6,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.penmoss.engine.bridge.ToEditor
-import app.penmoss.ui.screens.JournalScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
@@ -17,6 +16,9 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.temporal.IsoFields
+import app.penmoss.ui.RootUi
+import app.penmoss.ui.leave
+import app.penmoss.ui.todayIn
 
 /**
  * The Journal calendar's month (T40 P5): which month grid shows, with the previous and next.

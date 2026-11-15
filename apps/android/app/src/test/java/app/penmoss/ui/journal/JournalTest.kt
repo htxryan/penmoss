@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.journal
 
 import app.penmoss.data.JournalMark
 import org.junit.Assert.assertEquals

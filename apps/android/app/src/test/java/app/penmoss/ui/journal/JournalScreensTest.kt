@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.journal
 
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.runtime.setValue
@@ -13,7 +13,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import app.penmoss.engine.bridge.FromEditor
 import app.penmoss.engine.bridge.ToEditor
-import app.penmoss.ui.screens.JournalScreen
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test

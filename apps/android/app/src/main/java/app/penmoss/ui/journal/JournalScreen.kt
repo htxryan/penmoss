@@ -1,4 +1,4 @@
-package app.penmoss.ui.screens
+package app.penmoss.ui.journal
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,11 +34,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import app.penmoss.ui.JournalMarks
-import app.penmoss.ui.JournalMonth
-import app.penmoss.ui.journalLongDate
-import app.penmoss.ui.journalToday
-import app.penmoss.ui.journalWeeks
 import java.time.LocalDate
 import java.time.Month
 import java.time.format.TextStyle

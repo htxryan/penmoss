@@ -37,6 +37,7 @@ import app.penmoss.ui.folders.folderRoutes
 import app.penmoss.ui.home.SyncLine
 import app.penmoss.ui.home.homeRoutes
 import app.penmoss.ui.home.stoppedLine
+import app.penmoss.ui.journal.journalRoutes
 import app.penmoss.ui.keys.RootCommands
 import app.penmoss.ui.keys.rootActions
 import app.penmoss.ui.note.noteRoutes
