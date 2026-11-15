@@ -35,6 +35,7 @@ import { isBindingTransaction } from '../collab/binding';
 import { availableBlockItems, filterBlockItems, type BlockItem } from './block-items';
 import type { FileServices } from './attachment';
 import type { ImageServices } from './image';
+import { SuggestionListbox } from './suggestion-listbox';
 import type { LinkServices } from './wikilink';
 
 export const slashMenuKey = new PluginKey('penmossSlashMenu');
@@ -93,15 +94,10 @@ let menus = 0;
  */
 export const MENU_FLOATING_UI = { middleware: [shift({ padding: 8 })] };
 
-/** The menu's DOM and keyboard handling; one per editor, shown while a `/query` is active. */
+/** The menu's options and keyboard handling; one per editor, shown while a `/query` is active. */
 export class SlashMenu {
-  readonly element: HTMLDivElement;
-  private readonly heading: HTMLDivElement;
-  private readonly list: HTMLDivElement;
-  private readonly empty: HTMLParagraphElement;
+  private readonly listbox: SuggestionListbox<BlockItem>;
   private readonly id: string;
-  private items: readonly BlockItem[] = [];
-  private index = 0;
   private query: string | null = null;
   private choose: ((item: BlockItem) => void) | null = null;
   private unmount: (() => void) | null = null;
@@ -118,34 +114,24 @@ export class SlashMenu {
   ) {
     const doc = editor.view.dom.ownerDocument;
     this.id = `pm-slash-${(menus += 1)}`;
-    this.element = doc.createElement('div');
-    this.element.className = 'pm-slash-menu';
-    this.element.dataset['testid'] = 'slash-menu';
-    this.heading = doc.createElement('div');
-    this.heading.className = 'pm-slash-heading';
-    this.heading.id = `${this.id}-heading`;
-    this.heading.setAttribute('aria-hidden', 'true');
-    this.list = doc.createElement('div');
-    this.list.id = this.id;
-    this.list.className = 'pm-slash-list';
-    this.list.setAttribute('role', 'listbox');
-    this.list.setAttribute('aria-label', 'Insert block');
-    this.empty = doc.createElement('p');
-    this.empty.className = 'pm-slash-empty';
-    this.empty.setAttribute('role', 'status');
+    this.listbox = new SuggestionListbox(editor, {
+      id: this.id,
+      className: 'pm-slash-menu',
+      testId: 'slash-menu',
+      label: 'Insert block',
+      pick: (item) => this.choose?.(item),
+    });
+    this.listbox.heading.id = `${this.id}-heading`;
     this.filterLine = doc.createElement('div');
     this.filterLine.className = 'pm-slash-filter';
     this.filterLine.dataset['testid'] = 'slash-filter';
     this.filterLine.setAttribute('aria-hidden', 'true');
     this.filterLine.hidden = true;
-    this.element.append(this.heading, this.filterLine, this.list, this.empty);
-    // Clicking an option must not take focus (and the selection) from the editor.
-    this.element.addEventListener('mousedown', (event) => event.preventDefault());
-    this.element.addEventListener('click', (event) => {
-      const option = (event.target as Element | null)?.closest<HTMLElement>('[role="option"]');
-      const index = Number(option?.dataset['index']);
-      if (option && Number.isInteger(index)) this.pick(index);
-    });
+    this.listbox.heading.after(this.filterLine);
+  }
+
+  get element(): HTMLDivElement {
+    return this.listbox.element;
   }
 
   get isOpen(): boolean {
@@ -154,19 +140,16 @@ export class SlashMenu {
 
   /** The options shown, in order (for tests and the editor's ARIA attributes). */
   get options(): readonly BlockItem[] {
-    return this.items;
+    return this.listbox.items;
   }
 
   get selected(): BlockItem | undefined {
-    return this.items[this.index];
+    return this.listbox.selected;
   }
 
   open(props: SuggestionProps<BlockItem, BlockItem>): void {
     this.unmount ??= props.mount(this.element);
-    const dom = this.editor.view.dom;
-    dom.setAttribute('aria-haspopup', 'listbox');
-    dom.setAttribute('aria-controls', this.id);
-    dom.setAttribute('aria-autocomplete', 'list');
+    this.listbox.attach();
     this.update(props);
   }
 
@@ -209,10 +192,7 @@ export class SlashMenu {
       });
     };
     this.unmount = this.mountAt(view, context);
-    const dom = view.dom;
-    dom.setAttribute('aria-haspopup', 'listbox');
-    dom.setAttribute('aria-controls', this.id);
-    dom.setAttribute('aria-autocomplete', 'list');
+    this.listbox.attach();
     this.filter('');
     return true;
   }
@@ -290,7 +270,7 @@ export class SlashMenu {
       case 'ArrowUp':
       case 'Enter':
       case 'Tab':
-        if (event.shiftKey || this.items.length === 0) {
+        if (event.shiftKey || this.listbox.items.length === 0) {
           if (event.key === 'Enter' || event.key === 'Tab') this.close();
           return false;
         }
@@ -329,15 +309,7 @@ export class SlashMenu {
     this.query = null;
     this.context = null;
     this.filterLine.hidden = true;
-    const dom = this.editor.view.dom;
-    for (const name of [
-      'aria-haspopup',
-      'aria-controls',
-      'aria-autocomplete',
-      'aria-activedescendant',
-    ]) {
-      dom.removeAttribute(name);
-    }
+    this.listbox.detach();
   }
 
   /** Handles a key while the menu is open; true when the menu used it. */
@@ -346,59 +318,26 @@ export class SlashMenu {
     // Keys can arrive before Suggestion has reported the latest query: catch up first.
     const state = slashMenuKey.getState(this.editor.state) as { query: string | null } | undefined;
     if (state?.query != null) this.filter(state.query);
-    switch (event.key) {
-      case 'ArrowDown':
-      case 'ArrowUp': {
-        if (this.items.length === 0) return false;
-        const step = event.key === 'ArrowDown' ? 1 : -1;
-        this.highlight((this.index + step + this.items.length) % this.items.length);
-        return true;
-      }
-      case 'Enter':
-      case 'Tab':
-        if (event.shiftKey || this.items.length === 0) return false;
-        this.pick(this.index);
-        return true;
-      case 'Escape':
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  private pick(index: number) {
-    const item = this.items[index];
-    if (item) this.choose?.(item);
+    return event.key === 'Escape' || this.listbox.keydown(event);
   }
 
   private filter(query: string) {
     if (query === this.query) return;
     this.query = query;
-    this.items = filterBlockItems(
+    const items = filterBlockItems(
       availableBlockItems(this.editor, this.images, this.links, this.files),
       query,
     );
-    this.index = 0;
-    this.render();
-  }
-
-  private render() {
-    const doc = this.element.ownerDocument;
-    this.heading.textContent = this.query ? 'Blocks' : 'Insert block';
+    this.listbox.heading.textContent = query ? 'Blocks' : 'Insert block';
     // Opened with no `/` typed, the menu shows its own filter, as the note shows a typed `/query`.
     this.filterLine.hidden = this.context === null;
     this.filterLine.textContent = this.context ? `/${this.context.query}` : '';
     this.filterLine.classList.toggle('pm-slash-filter-empty', !this.context?.query);
-    this.empty.textContent = this.items.length ? '' : `No blocks match “${this.query ?? ''}”`;
-    this.empty.hidden = this.items.length > 0;
-    this.list.replaceChildren(
-      ...this.items.map((item, index) => {
-        const option = doc.createElement('div');
-        option.id = `${this.id}-${item.id}`;
-        option.className = 'pm-slash-option';
-        option.setAttribute('role', 'option');
-        option.setAttribute('aria-selected', 'false');
-        option.dataset['index'] = String(index);
+    this.listbox.show(items, {
+      index: 0,
+      empty: `No blocks match “${query}”`,
+      key: (item) => item.id,
+      fill: (option, item, doc) => {
         const icon = doc.createElement('span');
         icon.className = 'pm-slash-icon';
         icon.setAttribute('aria-hidden', 'true');
@@ -414,26 +353,8 @@ export class SlashMenu {
           hint.textContent = item.hint.trim();
           option.append(hint);
         }
-        return option;
-      }),
-    );
-    this.highlight(this.index);
-  }
-
-  /** Marks option `index` as the active one; the options themselves stay as they are. */
-  private highlight(index: number) {
-    const options = this.list.children;
-    options[this.index]?.setAttribute('aria-selected', 'false');
-    this.index = index;
-    const selected = options[index] as HTMLElement | undefined;
-    const dom = this.editor.view.dom;
-    if (selected) {
-      selected.setAttribute('aria-selected', 'true');
-      dom.setAttribute('aria-activedescendant', selected.id);
-      selected.scrollIntoView?.({ block: 'nearest' });
-    } else {
-      dom.removeAttribute('aria-activedescendant');
-    }
+      },
+    });
   }
 }
 

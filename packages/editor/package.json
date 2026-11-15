@@ -10,7 +10,6 @@
     "./collab": "./src/collab/index.ts",
     "./extensions": "./src/extensions.ts",
     "./schema": "./src/schema.ts",
-    "./spike/schema": "./src/spike/schema.ts",
     "./keys": "./src/keys.ts",
     "./commands": "./src/commands.ts",
     "./periodic": "./src/periodic.ts",
