@@ -1,0 +1,38 @@
+/* Settings → Devices and Agent Tokens → Agent activity (T42, A561). */
+.agent-activity {
+  margin-top: 2rem;
+}
+
+/*
+ * A note in a window of its own (T45, A710): the note's pane fills the window, with no
+ * sidebar; Back and Forward sit where the breadcrumbs do in the main window.
+ */
+#root > .note-window {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.note-window > .note-main {
+  flex: 1 1 0;
+}
+
+.window-nav {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.note-window-trashed .window-nav,
+.empty-state .window-nav {
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+/* The blocked window's toast offers a link (T45). */
+a.toast-action {
+  text-decoration: none;
+}

@@ -70,7 +70,7 @@ describe('the sidebar (T51)', () => {
     // Icons alone: no visible label or keys beside them.
     expect(row).not.toContain('class="label"');
     expect(row).not.toContain('<kbd');
-    // New Note leads, in the accent (styles.css `.sb-shortcut.new-note`); no big button above.
+    // New Note leads, in the accent (shell/shell.css `.sb-shortcut.new-note`); no big button above.
     expect(items[0]).toContain('sb-shortcut new-note');
     expect(items[0]).toContain('data-command="note.new"');
     expect(html).not.toContain('btn primary new-note');

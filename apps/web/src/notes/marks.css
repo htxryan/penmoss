@@ -1,0 +1,97 @@
+/* Comment threads (T48): the passage a thread is on, and a point's marker. The open one is
+   picked out. Decorations only: nothing is written to the note. */
+.ProseMirror .pm-comment {
+  border-bottom: 2px solid var(--pm-accent-line);
+  background: var(--pm-accent-softer);
+  cursor: pointer;
+}
+
+.ProseMirror .pm-comment.pm-comment-active {
+  border-bottom-color: var(--pm-accent);
+  background: var(--pm-accent-soft);
+}
+
+.ProseMirror .pm-comment-marker {
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  margin: 0 0.1em;
+  border: 2px solid var(--pm-accent);
+  border-radius: 50% 50% 50% 0;
+  background: var(--pm-bg);
+  vertical-align: 0.05em;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ProseMirror .pm-comment-marker.pm-comment-active {
+  background: var(--pm-accent);
+}
+
+/*
+ * A new thread's passage while its composer floats (T52): a thread's mark, lighter, so it still
+ * shows what is being commented on once the selection is no longer drawn.
+ */
+.ProseMirror .pm-comment-pending {
+  border-bottom: 2px dashed var(--pm-accent-line);
+  background: color-mix(in oklab, var(--pm-accent-softer) 60%, transparent);
+}
+
+.ProseMirror .pm-comment-marker.pm-comment-pending {
+  border-style: dashed;
+  border-color: var(--pm-accent-line);
+  background: transparent;
+  cursor: default;
+}
+
+/* Agent edits (T24): what an agent just changed glows briefly, with a chip naming it. */
+.ProseMirror .pm-agent-edit {
+  border-radius: 0;
+  animation: pm-agent-fade 4s ease-out forwards;
+}
+
+.ProseMirror .pm-agent-label {
+  display: inline-block;
+  margin-right: 0.3em;
+  padding: 0 0.4em;
+  border-radius: 0;
+  background: var(--pm-agent);
+  color: var(--pm-bg);
+  font-size: 0.7em;
+  font-weight: 600;
+  line-height: 1.5;
+  vertical-align: 0.15em;
+  user-select: none;
+  pointer-events: none;
+  animation: pm-agent-label-fade 4s ease-in forwards;
+}
+
+@keyframes pm-agent-fade {
+  0%,
+  40% {
+    background-color: var(--pm-agent-soft);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes pm-agent-label-fade {
+  0%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ProseMirror .pm-agent-edit {
+    animation: none;
+    background-color: var(--pm-agent-soft);
+  }
+  .ProseMirror .pm-agent-label {
+    animation: none;
+  }
+}

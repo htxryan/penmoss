@@ -15,7 +15,7 @@
 .appearance-group > legend,
 .token-group > legend {
   padding: 0;
-  /* As far over its control as every Settings field's label (styles.css, A988). */
+  /* As far over its control as every Settings field's label (pages/settings.css, A988). */
   margin-bottom: 0.35rem;
   color: var(--pm-fg);
   font-size: var(--pm-text-md);

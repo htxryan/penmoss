@@ -188,8 +188,11 @@ describe('the compact title bar (T47, A722, A724, A725)', () => {
     // between them, so it does not crowd the green button.
     expect(TRAFFIC_LIGHTS.width).toBe(60);
     expect(TITLE_BAR_INSET - (TRAFFIC_LIGHTS.x + TRAFFIC_LIGHTS.width)).toBeGreaterThanOrEqual(12);
-    // The page's CSS says the same (styles.css).
-    const css = readFileSync(new URL('../../../web/src/styles.css', import.meta.url), 'utf8');
+    // The page's CSS says the same (its compact title bar's, desktop/titlebar.css).
+    const css = readFileSync(
+      new URL('../../../web/src/desktop/titlebar.css', import.meta.url),
+      'utf8',
+    );
     expect(css).toContain(`--pm-titlebar-inset: ${TITLE_BAR_INSET}px;`);
     expect(css).toContain(`--pm-titlebar-row: ${TITLE_BAR_ROW}px;`);
   });

@@ -1,0 +1,703 @@
+/* The note's gutters (T39, A500): the text column and the Info panel below it share them. */
+.note {
+  --doc-gutter: 3rem;
+}
+
+.doc {
+  /* The theme's note width (T28, A500): Penmoss 52rem of text. The full width up to it, also as a
+     grid item beside the Info panel, where auto margins would shrink it to its content
+     (T39); its padding is inside that width, so it never overflows a narrow pane. Full width
+     (A501) lifts only the cap; the gutters stay. */
+  box-sizing: border-box;
+  width: 100%;
+  max-width: calc(var(--pm-editor-width, 52rem) + 2 * var(--doc-gutter, 3rem));
+  margin: 0 auto;
+  /* T52 item 7: 2.5rem below the last line, not 10rem, so the status bar follows the text. */
+  padding: 1.5rem var(--doc-gutter, 3rem) 2.5rem;
+}
+
+.doc-title {
+  display: block;
+  width: 100%;
+  /* Room below the last line for the system font's descenders, which overflow a 1.2 line
+     height by about 2 px and would be clipped (T39); the gap below stays the same. */
+  margin: 0 0 calc(0.75rem - 0.1em);
+  padding: 0 0 0.1em;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--pm-fg);
+  font: 700 1.9rem/1.2 var(--pm-font-body, var(--pm-font));
+  /* 1.9rem at the default note size; the Note Font Size setting scales it with the text and
+     its headings (T51 item 16, A944). */
+  font-size: calc(var(--pm-note-size, 16px) * 1.9);
+  letter-spacing: -0.02em;
+  /* A long title wraps and the field grows with it (T39; JS sizes it where this is missing). */
+  field-sizing: content;
+  overflow-wrap: anywhere;
+  resize: none;
+}
+
+.doc-title::placeholder {
+  color: var(--pm-muted);
+  opacity: 0.7;
+}
+
+.doc-title:focus {
+  outline: none;
+}
+
+/*
+ * The fields pinned under the title (T62 item 4): one muted row of short labels, then the tags'
+ * chips and +, wrapping as one line of text would. The title's gap below moves under the row.
+ */
+.doc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 1rem;
+  margin: calc(-0.75rem + 0.1em + 0.15rem) 0 0.75rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.doc-meta-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+}
+
+.doc-meta-field {
+  white-space: nowrap;
+}
+
+.doc-meta .note-tags {
+  margin: 0;
+}
+
+.note-body .ProseMirror {
+  min-height: 12rem;
+  outline: none;
+  /* The theme's note font (T28), or the Note Font setting's (A944); headings and text inherit
+     it, code keeps the mono font. Headings are sized in em, so the Note Font Size scales them. */
+  font-family: var(--pm-font-body, var(--pm-font));
+  font-size: var(--pm-note-size, 16px);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  caret-color: var(--pm-accent);
+}
+
+.note-body .ProseMirror > * {
+  margin: 0 0 0.85em;
+}
+
+.note-body .ProseMirror > :first-child {
+  margin-top: 0;
+}
+
+/*
+ * A long note lays out its first screen first (T31): until the editor takes focus, text
+ * blocks off screen skip style, layout and paint, keeping their last rendered height. Not
+ * while it has focus: a block just made (Enter, a shortcut) counts as off screen until the
+ * next frame, and keys typed into it meanwhile land in the wrong place. Only blocks that
+ * draw nothing outside their own box: the containment clips overflow, and a table's
+ * toolbar or an image's tools float outside theirs, as a line's symbols do in the margin (T44).
+ * A list or quote holding a symbol line is never contained, nor are its items: an item's
+ * containment would clip its own outside bullet or number (T44 review).
+ */
+.note-body
+  .ProseMirror:not(.ProseMirror-focused)
+  > :is(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote):not(:has(.pm-symbols)) {
+  content-visibility: auto;
+}
+
+/*
+ * The containment above makes each block its own formatting context, so the margins inside it
+ * (a nested list's lines, a quote's paragraphs) stop collapsing through its edges while the
+ * editor is unfocused. A list three levels deep grew 2.4 px when the caret went to the title, and
+ * the text below it moved (PEN-135, A1360). Each such block is its own formatting context with
+ * focus too, so the margins inside it stay inside it, the same with focus and without, at any
+ * depth.
+ */
+.note-body
+  .ProseMirror
+  > :is(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote):not(:has(.pm-symbols)) {
+  display: flow-root;
+}
+
+/*
+ * Each block's height is remembered while the editor has focus too (T53 item 11), so the first
+ * frame after it loses focus lays a block out at the height it had, not at the 1.7em guess: the
+ * guess shrank a list or a wrapped paragraph for a frame and the text below jumped.
+ */
+.note-body .ProseMirror > :is(p, h1, h2, h3, h4, h5, h6, ul, ol, blockquote) {
+  contain-intrinsic-block-size: auto 1.7em;
+}
+
+/*
+ * The containment above stops margins collapsing through a list or quote, so the margins at its
+ * edges (a quote's paragraph, an item's) stayed inside it once the editor lost focus and the
+ * text moved down (T53 item 11). None there: the margins between blocks are the blocks' own,
+ * the same with focus and without.
+ */
+.note-body .ProseMirror > :is(ul, ol, blockquote) > :first-child,
+.note-body .ProseMirror > :is(ul, ol, blockquote) > :first-child > :first-child,
+.note-body .ProseMirror > :is(ul, ol, blockquote) > :first-child > :first-child > :first-child,
+.note-body
+  .ProseMirror
+  > :is(ul, ol, blockquote)
+  > :first-child
+  > :first-child
+  > :first-child
+  > :first-child {
+  margin-top: 0;
+}
+
+.note-body .ProseMirror > :is(ul, ol, blockquote) > :last-child,
+.note-body .ProseMirror > :is(ul, ol, blockquote) > :last-child > :last-child,
+.note-body .ProseMirror > :is(ul, ol, blockquote) > :last-child > :last-child > :last-child,
+.note-body
+  .ProseMirror
+  > :is(ul, ol, blockquote)
+  > :last-child
+  > :last-child
+  > :last-child
+  > :last-child {
+  margin-bottom: 0;
+}
+
+.note-body h1,
+.note-body h2,
+.note-body h3 {
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+
+/* Headings open a section: more space above than below, as in the prototype (T36). */
+.note-body .ProseMirror > h1 {
+  margin-top: 1.4em;
+}
+
+.note-body .ProseMirror > h2 {
+  margin: 1.6em 0 0.5em;
+}
+
+.note-body .ProseMirror > h3 {
+  margin: 1.3em 0 0.35em;
+}
+
+.note-body .ProseMirror > :is(h1, h2, h3):first-child {
+  margin-top: 0;
+}
+
+.note-body h1 {
+  font-size: 1.6em;
+}
+
+.note-body h2 {
+  font-size: 1.28em;
+}
+
+.note-body h3 {
+  font-size: 1.07em;
+}
+
+.note-body a {
+  color: var(--pm-accent);
+}
+
+.note-body code {
+  padding: 0.12em 0.36em;
+  border-radius: 0;
+  background: var(--pm-code-bg);
+  font-family: var(--pm-mono);
+  font-size: 0.86em;
+}
+
+/* A note a newer version wrote, shown read-only as text (A158). */
+.note-unsupported-text {
+  white-space: pre-wrap;
+  color: var(--pm-fg);
+}
+
+.note-body pre {
+  padding: 0.75rem 1rem;
+  border-radius: 0;
+  background: var(--pm-code-bg);
+  overflow-x: auto;
+}
+
+.note-body pre code {
+  padding: 0;
+  background: none;
+}
+
+.note-body blockquote {
+  margin-left: 0;
+  padding-left: 1em;
+  border-left: 2px solid var(--pm-border-strong);
+  color: var(--pm-muted);
+}
+
+.note-body ul,
+.note-body ol {
+  padding-left: 1.5em;
+}
+
+/* A numbered list's levels read as an outline (T64 item 4): 1, A, i, a, then 1 again. */
+.note-body ol {
+  list-style-type: decimal;
+}
+
+.note-body ol ol {
+  list-style-type: upper-alpha;
+}
+
+.note-body ol ol ol {
+  list-style-type: lower-roman;
+}
+
+.note-body ol ol ol ol {
+  list-style-type: lower-alpha;
+}
+
+.note-body ol ol ol ol ol {
+  list-style-type: decimal;
+}
+
+.note-body ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0.1em;
+}
+
+.note-body ul[data-type='taskList'] li {
+  display: flex;
+  gap: 0.55em;
+  align-items: flex-start;
+}
+
+.note-body ul[data-type='taskList'] li > label {
+  display: flex;
+  margin-top: 0.3em;
+}
+
+/*
+ * The checkbox is drawn here, in theme colours, so that it can look 16 px yet take clicks
+ * across 24 px (WCAG 2.5.8): a transparent border widens the box, negative margins keep the
+ * layout, and the inset shadow and fill paint only inside the border.
+ */
+.note-body ul[data-type='taskList'] li > label > input[type='checkbox'] {
+  display: grid;
+  place-content: center;
+  box-sizing: border-box;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: -0.25rem;
+  border: 0.25rem solid transparent;
+  border-radius: 0;
+  background: var(--pm-bg) padding-box;
+  box-shadow: inset 0 0 0 1.5px var(--pm-muted);
+  appearance: none;
+  cursor: pointer;
+}
+
+.note-body ul[data-type='taskList'] li > label > input[type='checkbox']::before {
+  width: 0.6rem;
+  height: 0.6rem;
+  box-shadow: inset 1rem 1rem var(--pm-on-accent);
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+  content: '';
+  transform: scale(0);
+}
+
+.note-body ul[data-type='taskList'] li > label > input[type='checkbox']:checked {
+  background-color: var(--pm-accent);
+  box-shadow: none;
+}
+
+.note-body ul[data-type='taskList'] li > label > input[type='checkbox']:checked::before {
+  transform: scale(1);
+}
+
+.note-body ul[data-type='taskList'] li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.note-body li p {
+  margin: 0.15em 0;
+}
+
+.note-body hr {
+  height: 1px;
+  margin: 2em 0;
+  border: 0;
+  background: var(--pm-border);
+}
+
+/*
+ * Inline images (T10): shown from local bytes; resize handle and fields while selected. The frame
+ * lays the picture (or its placeholder) and the handle over each other in one grid cell rather than
+ * positioning the handle: Chromium draws no caret beside a positioned box inside the node, so a
+ * caret after a picture that ends its block would not show (PEN-66, A1283). Only while the fields
+ * show is the frame positioned, for them to hang below the picture; the caret is elsewhere then.
+ */
+.note-body .pm-image-frame {
+  display: inline-grid;
+  box-sizing: border-box;
+  max-width: 100%;
+  grid-template-columns: minmax(0, max-content);
+  vertical-align: bottom;
+  border-radius: 0;
+  line-height: 0;
+}
+
+.note-body .pm-image-frame > * {
+  grid-area: 1 / 1;
+}
+
+/* A picture held back on mobile data has its Tap to Load button beside its alt text (T40 P8). */
+.note-body .pm-image-frame > .pm-image-load {
+  grid-area: 1 / 2;
+  align-self: start;
+}
+
+.note-body .pm-image-frame:has(> .pm-image-tools:not([hidden])) {
+  position: relative;
+}
+
+.note-body .pm-image img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0;
+}
+
+.note-body .pm-image[data-state='loading'] img,
+.note-body .pm-image[data-state='missing'] img {
+  display: none;
+}
+
+.note-body .pm-image-fallback {
+  display: none;
+  padding: 0.75rem 1rem;
+  border: 1px dashed var(--pm-border);
+  border-radius: 0;
+  color: var(--pm-muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.note-body .pm-image[data-state='loading'] .pm-image-fallback,
+.note-body .pm-image[data-state='missing'] .pm-image-fallback {
+  display: inline-block;
+}
+
+.note-body .pm-image.ProseMirror-selectednode > .pm-image-frame > :is(img, .pm-image-fallback) {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 2px;
+}
+
+.note-body .pm-image-resize {
+  width: 12px;
+  margin: 0 -5px -5px 0;
+  place-self: end;
+  height: 12px;
+  border: 2px solid var(--pm-bg);
+  border-radius: 50%;
+  background: var(--pm-accent);
+  cursor: nwse-resize;
+  opacity: 0;
+  touch-action: none;
+}
+
+.note-body .pm-image-frame:hover .pm-image-resize,
+.note-body .pm-image.ProseMirror-selectednode .pm-image-resize {
+  opacity: 1;
+}
+
+.note-body .pm-image-tools {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 8px);
+  left: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: 0 4px 16px color-mix(in oklab, var(--pm-fg) 12%, transparent);
+  font-size: 0.85rem;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.note-body .pm-image-tools[hidden] {
+  display: none;
+}
+
+.note-body .pm-image-tools label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--pm-muted);
+}
+
+.note-body .pm-image-tools input {
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font: inherit;
+}
+
+.note-body .pm-image-alt {
+  width: 14rem;
+}
+
+.note-body .pm-image-width {
+  width: 5rem;
+}
+
+/* A read-only note's picture shows Open in Lightbox alone (T51, A948). */
+.pm-image-tools [hidden] {
+  display: none !important;
+}
+
+/*
+ * Drawings (PEN-28): a drawing's SVG shows as a picture does, and a click selects it. Where the
+ * app has the drawing editor, Edit and Delete sit in its top-right corner, over the picture in
+ * the frame's grid cell (not positioned, A1283), shown on hover and while it is selected; never
+ * in a read-only note. Its white background turns dark in dark mode, as Excalidraw's own canvas
+ * does.
+ */
+.note-body .pm-drawing-tools {
+  display: flex;
+  z-index: 1;
+  gap: 4px;
+  margin: 6px;
+  place-self: start end;
+  line-height: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--pm-fast),
+    visibility var(--pm-fast);
+}
+
+.note-body .pm-drawing-tools[hidden],
+.note-body .ProseMirror[contenteditable='false'] .pm-drawing-tools {
+  display: none;
+}
+
+.note-body .pm-image-frame:hover > .pm-drawing-tools,
+.note-body .pm-drawing.ProseMirror-selectednode .pm-drawing-tools {
+  opacity: 1;
+  visibility: visible;
+}
+
+.note-body .pm-drawing-tool {
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+  box-sizing: border-box;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-shadow-1);
+  color: var(--pm-fg);
+  cursor: pointer;
+}
+
+/* Hovered, each stays opaque over the drawing: its tint is mixed into the raised surface (R2-16). */
+.note-body .pm-drawing-tool:hover {
+  border-color: var(--pm-border-strong);
+  background: color-mix(in oklab, var(--pm-fg) 6%, var(--pm-raised));
+}
+
+.note-body .pm-drawing-delete:hover {
+  border-color: color-mix(in oklab, var(--pm-danger) 45%, var(--pm-raised));
+  background: color-mix(in oklab, var(--pm-danger) 12%, var(--pm-raised));
+  color: var(--pm-danger);
+}
+
+:root[data-mode='dark'] .note-body .pm-drawing img {
+  filter: invert(93%) hue-rotate(180deg);
+}
+
+.pm-image-tools .pm-image-lightbox {
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.pm-image-tools .pm-image-lightbox:hover {
+  background: var(--pm-hover);
+}
+
+/*
+ * The image lightbox (T51 item 20, A948; packages/editor/src/lightbox.ts): the picture over
+ * a dark backdrop, fitted to the window, its controls in a floating bar at the top.
+ */
+.pm-lightbox {
+  position: fixed;
+  z-index: 110;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: color-mix(in oklab, var(--pm-shadow-color) 86%, transparent);
+  color: var(--pm-fg);
+  outline: none;
+  animation: pm-fade var(--pm-fast) var(--pm-ease);
+  overscroll-behavior: contain;
+}
+
+.pm-lightbox-bar {
+  display: flex;
+  align-items: center;
+  justify-self: center;
+  gap: 0.25rem;
+  margin: max(0.75rem, env(safe-area-inset-top)) 0.75rem 0.5rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 0;
+  background: color-mix(in oklab, var(--pm-raised) 92%, transparent);
+  box-shadow: var(--pm-popover-shadow);
+  font: 500 var(--pm-text-xs) / 1 var(--pm-font);
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-lightbox-count,
+.pm-lightbox-level {
+  min-width: 3.25rem;
+  padding: 0 0.35rem;
+  color: var(--pm-muted);
+  text-align: center;
+}
+
+.pm-lightbox-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--pm-fg);
+  cursor: pointer;
+}
+
+.pm-lightbox-btn:hover:not(:disabled) {
+  background: var(--pm-hover);
+}
+
+.pm-lightbox-btn:disabled {
+  color: var(--pm-muted);
+  cursor: default;
+  opacity: 0.5;
+}
+
+.pm-lightbox-btn:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 1px;
+}
+
+.pm-lightbox-btn[hidden],
+.pm-lightbox-count[hidden],
+.pm-lightbox-caption[hidden] {
+  display: none;
+}
+
+.pm-lightbox-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 0 3.5rem;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+
+.pm-lightbox-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 0;
+  box-shadow: var(--pm-popover-shadow);
+  transform-origin: center;
+  cursor: zoom-in;
+  will-change: transform;
+}
+
+.pm-lightbox[data-zoomed='true'] .pm-lightbox-img {
+  cursor: grab;
+}
+
+.pm-lightbox[data-zoomed='true'] .pm-lightbox-img:active {
+  cursor: grabbing;
+}
+
+.pm-lightbox-prev,
+.pm-lightbox-next {
+  position: absolute;
+  top: 50%;
+  background: color-mix(in oklab, var(--pm-raised) 92%, transparent);
+  box-shadow: var(--pm-popover-shadow);
+  transform: translateY(-50%);
+}
+
+.pm-lightbox-prev {
+  left: max(0.75rem, env(safe-area-inset-left));
+}
+
+.pm-lightbox-next {
+  right: max(0.75rem, env(safe-area-inset-right));
+}
+
+.pm-lightbox .pm-lightbox-prev:hover,
+.pm-lightbox .pm-lightbox-next:hover {
+  background: var(--pm-raised);
+}
+
+.pm-lightbox-caption {
+  justify-self: center;
+  max-width: min(40rem, calc(100vw - 2rem));
+  margin: 0.5rem 1rem max(1rem, env(safe-area-inset-bottom));
+  padding: 0.35rem 0.75rem;
+  border-radius: 0;
+  background: color-mix(in oklab, var(--pm-raised) 92%, transparent);
+  font-size: var(--pm-text-sm);
+  text-align: center;
+}
+
+.pm-lightbox:fullscreen {
+  background: var(--pm-shadow-color);
+}
+
+@media (max-width: 40rem) {
+  .pm-lightbox-stage {
+    padding: 0 0.5rem;
+  }
+
+  .pm-lightbox-level {
+    display: none;
+  }
+}
+
+.notice {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0;
+  background: var(--pm-warn-bg);
+}

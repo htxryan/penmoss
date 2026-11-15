@@ -1,10 +1,8 @@
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../../src/App';
 import { InSources, oneSource, type OneSource } from './support/one-source';
+import { appCss } from './support/app-css';
 
 // What T53's manual pass found on the web and the Mac app (docs/evidence/t53/web-mac.md).
 
@@ -22,10 +20,7 @@ function render(pathname: string): string {
   );
 }
 
-const css = readFileSync(
-  join(dirname(fileURLToPath(import.meta.url)), '../../src/styles.css'),
-  'utf8',
-);
+const css = appCss();
 
 /** The declarations of the first rule whose selector is exactly `selector`. */
 function rule(selector: string): string {

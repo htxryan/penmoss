@@ -85,7 +85,7 @@
   gap: 0.4rem;
 }
 
-/* The shared small select (T51 item 13, A941), its look in styles.css. */
+/* The shared small select (T51 item 13, A941), its look in pages/settings.css. */
 .pm-graph-field .pm-select {
   max-width: 12rem;
 }

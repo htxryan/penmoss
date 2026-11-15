@@ -1,0 +1,513 @@
+/* A collapsed section is its title row alone. */
+.sb-part:has(> [data-collapsed]) {
+  padding-bottom: 0;
+}
+
+/* Above the parts' own display (Notebooks is a flex column). */
+.sb-part:empty,
+.sb-list > .sb-part[hidden],
+.sb-notebooks > .sb-notebooks-body[hidden] {
+  display: none;
+}
+
+/* The tree itself keeps its 12rem (six or so rows), under however many headings sit above it. */
+.sb-part[data-section='notebooks'] {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+}
+
+.sb-part[data-section='notebooks']:has(.sb-notebooks[data-collapsed]) {
+  flex: none;
+  min-height: 0;
+}
+
+.sb-notebooks {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.sb-notebooks-body {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+}
+
+.sb-notebooks-body > .folders {
+  flex: 1 1 0;
+  min-height: 12rem;
+  overflow-y: auto;
+}
+
+.sb-part[data-section='quickAccess'],
+.sb-part[data-section='calendar'] {
+  flex: none;
+}
+
+.sb-part[data-section='recent'],
+.sb-part[data-section='tags'] {
+  flex: 0 1 auto;
+  min-height: 4rem;
+  max-height: 30%;
+  overflow-y: auto;
+}
+
+/*
+ * Recent Notes keeps its title and up to three notes before it gives way, so it never shrinks to a
+ * row and a half while Tags keeps its 30% (T53 pass). A shorter list asks only its own height.
+ */
+.sb-part[data-section='recent'] {
+  --recent-rows: 1;
+  min-height: calc(0.7rem + 1.55rem + var(--recent-rows) * var(--pm-control-sm));
+}
+
+.sb-part[data-section='recent']:has(.sb-quick-list > li:nth-child(2)) {
+  --recent-rows: 2;
+}
+
+.sb-part[data-section='recent']:has(.sb-quick-list > li:nth-child(3)) {
+  --recent-rows: 3;
+}
+
+.sb-part:is([data-section='recent'], [data-section='tags']):has([data-collapsed]) {
+  min-height: 0;
+}
+
+/*
+ * The sidebar's columns (A988): every section's chevron where a tree row's twisty is, and its
+ * name where the rows' icons are, and the rows' labels after a 16 px icon. Quick Access, Recent
+ * Notes, the notebooks' tree, Tags and the calendar's month all start on them.
+ */
+.sidebar {
+  /*
+   * Rows run the sidebar's full width, edge to edge (Ryan's feedback, 5 Nov 2026; A1097): the
+   * parts have no side padding, and each row keeps this much inside its own ends instead, so
+   * the text stays where it was.
+   */
+  --sb-gutter: 0.5rem;
+  /* The rows' icons, and a section's name: where they have always started. */
+  --sb-icon-inset: calc(var(--sb-gutter) + 1.55rem);
+  /*
+   * A 12 px chevron as far from the window's edge as from the name or icon after it (Quanta
+   * feedback 3, item 11; A1130): a section's and a tree row's alike, in one column.
+   */
+  --sb-chevron-inset: calc((var(--sb-icon-inset) - 12px) / 2);
+  --sb-name-gap: calc(var(--sb-icon-inset) - var(--sb-chevron-inset) - 12px);
+  /*
+   * One level of the notebooks' tree (#231, A1143): a subfolder's chevron sits under its
+   * parent's folder icon, and a note's icon one step in from its folder's, so what is inside
+   * a folder reads at a glance.
+   */
+  --tree-indent: calc(var(--sb-icon-inset) - var(--sb-chevron-inset) + 2px);
+}
+
+/* The twisty (16 px, its chevron centred) starts 2 px before the chevron. */
+.sidebar .tree-row {
+  padding-inline: calc(var(--sb-chevron-inset) - 2px + var(--depth, 0) * var(--tree-indent))
+    calc(var(--sb-gutter) + 0.3rem);
+}
+
+/* And the icon after it stays on the rows' icon column. */
+.sidebar .tree-row > .twisty {
+  margin-inline-end: calc(var(--sb-icon-inset) - var(--sb-chevron-inset) + 2px - 1rem - 0.3rem);
+}
+
+.sidebar .tag-row {
+  padding-inline: calc(var(--sb-gutter) + var(--depth, 0) * 0.9rem) var(--sb-gutter);
+}
+
+.sidebar .calendar-nav {
+  padding-right: calc(var(--sb-gutter) + 0.3rem);
+}
+
+.sidebar .calendar-grid {
+  width: calc(100% - 2 * var(--sb-gutter));
+  margin-inline: var(--sb-gutter);
+}
+
+/* Quick Access (T51, A946) and Recent Notes (T53): notes under the title, icons on its name. */
+.sb-quick-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sb-quick-list .sb-item {
+  gap: 0.3rem;
+  min-height: var(--pm-control-sm);
+  padding: 0 calc(var(--sb-gutter) + 0.3rem) 0 var(--sb-icon-inset);
+  color: var(--pm-fg);
+  font-size: 0.85rem;
+}
+
+/* Notes look the same in every section: the title in the text's colour, the icon muted. */
+.sb-quick-list .sb-item .i {
+  color: var(--pm-muted);
+}
+
+/* Open, empty Quick Access: subdued words centred in its panel (feedback of 6 Nov 2026). */
+/* Empty Tags reads as empty Quick Access does (T64 item 3). */
+.sb-quick-empty,
+.sb-part .tag-empty {
+  margin: 0;
+  padding: 0.5rem var(--sb-gutter);
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  text-align: center;
+}
+
+/* An empty section's words start where its rows would. */
+.sb-part .list-empty {
+  margin: 0.25rem calc(var(--sb-gutter) + 0.3rem) 0.25rem var(--sb-icon-inset);
+}
+
+/*
+ * Empty Quick Access asks for a note quietly, at its title row's end: smaller than the other
+ * sections' words, in their muted colour (a dimmer one falls under 4.5:1 in some themes).
+ */
+.sb-section-hint {
+  flex: none;
+  padding-inline-end: 0.3rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  white-space: nowrap;
+}
+
+/* Gives way to the section's tools, which lie over the same end of the row (touch: always). */
+.sb-section-head:is(:hover, :focus-within) > .sb-section-hint {
+  visibility: hidden;
+}
+
+@media (hover: none) {
+  .sb-section-hint {
+    visibility: hidden;
+  }
+}
+
+/* `.sb-item` is 100% wide plus its padding: auto, inside the list's indent. */
+.sb-part .sb-item {
+  width: auto;
+}
+
+/* A Quick Access note's notebook, in subtle text under its title (T53 item 10). */
+.sb-item .label:has(.sb-item-notebook) {
+  display: flex;
+  flex-direction: column;
+  padding: 0.2rem 0;
+  line-height: 1.25;
+}
+
+.sb-item-title,
+.sb-item-notebook {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sb-item-notebook {
+  color: color-mix(in oklab, var(--pm-muted) 80%, transparent);
+  font-size: var(--pm-text-xs);
+}
+
+/* A Quick Access note being dragged, and where it would land (T53 item 10). */
+.sb-quick-list > li[data-dragging] {
+  opacity: 0.5;
+}
+
+.sb-quick-list > li[data-drop='before'] {
+  box-shadow: inset 0 2px var(--pm-accent);
+}
+
+.sb-quick-list > li[data-drop='after'] {
+  box-shadow: inset 0 -2px var(--pm-accent);
+}
+
+/* A note from Notebooks or Recent Notes over Quick Access, not over a pin: it goes last. */
+.sb-quick[data-receiving]:not(:has(li[data-drop])) {
+  background: var(--pm-drop);
+  box-shadow: inset 0 0 0 1px var(--pm-accent);
+}
+
+/*
+ * A section's tools (T53 item 8): a drag handle and ✕ at the end of its title row, while the
+ * pointer is over the row or focus is in it; on touch, always. They lie over the row's end, on
+ * the row's own shade, so the row never changes height or moves as they come and go (A988).
+ * Flush with the row's end and as tall as the row, square, with no margin (feedback of 6 Nov
+ * 2026); a button under the pointer is a step darker than the row in a light theme (the text's
+ * colour mixed in), not the sidebar's lighter shade.
+ */
+.sb-section-head:has(> .sb-part-tools) {
+  position: relative;
+}
+
+.sb-part-tools {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  display: none;
+  align-items: stretch;
+  /* The row's shade exactly, opaque: `--pm-active` is translucent, so on its own it would stack
+     a second layer over the row's (a strip darker than the row, by theme). */
+  background: linear-gradient(var(--pm-active), var(--pm-active)) var(--pm-sidebar);
+}
+
+.sb-section-head:is(:hover, :focus-within) > .sb-part-tools {
+  display: flex;
+}
+
+@media (hover: none) {
+  .sb-part-tools {
+    display: flex;
+  }
+}
+
+/*
+ * Buttons at a row's end (D54, A1109; Ryan's review of #192, finding 20): flush with the row's
+ * end and with one another, as tall as the row and square, with no margin; under the pointer a
+ * step darker than the row. Every row's end tools are a `.row-end` (a section's title row, a
+ * notebook's row, a folder's row), so no kind of row drifts from the others. After the touch
+ * sizes above: the row's own height (a full target on touch) makes the square.
+ */
+.row-end {
+  align-items: stretch;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.row-end > :is(.icon-btn, a, button) {
+  flex: none;
+  align-self: stretch;
+  width: auto;
+  height: auto;
+  aspect-ratio: 1;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+}
+
+.row-end > :is(.icon-btn, a, button):hover:not(:disabled) {
+  background: color-mix(in oklab, var(--pm-fg) 13%, transparent);
+}
+
+.sb-part-grip {
+  cursor: grab;
+}
+
+.sb-part[data-dragging] {
+  opacity: 0.5;
+}
+
+.sb-part[data-drop='before'] {
+  box-shadow: inset 0 2px var(--pm-accent);
+}
+
+.sb-part[data-drop='after'] {
+  box-shadow: inset 0 -2px var(--pm-accent);
+}
+
+/*
+ * A short window has no room for the list's own share beside the calendar and the tags (the
+ * list would be a few rows in a box that itself scrolls). There the sidebar scrolls as one, as
+ * before T41, and the list still fills at least the room left, so a short tag filter leaves the
+ * calendar and the tags where they were. Below 54rem the list's 12rem would not fit (A521).
+ */
+@media (max-height: 54rem) {
+  .sb-part[data-section='notebooks'] {
+    flex: 1 0 auto;
+    min-height: 0;
+  }
+
+  .sb-notebooks-body,
+  .sb-notebooks-body > .folders {
+    flex: 1 0 auto;
+    min-height: 0;
+    overflow-y: visible;
+  }
+
+  .sb-part:is([data-section='recent'], [data-section='tags']) {
+    flex: none;
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+/*
+ * The collapsed sidebar (A508): an icon rail exactly one button wide, plus its border (T52). Its
+ * buttons are 2 px bigger than the sidebar's, with no margin around them; on touch, 44 px.
+ */
+.notes-app {
+  --pm-rail: calc(var(--pm-control) + 2px);
+}
+
+@media (pointer: coarse) {
+  .notes-app {
+    --pm-rail: var(--pm-hit);
+  }
+}
+
+.notes-app[data-sidebar='collapsed'] {
+  grid-template-columns: calc(var(--pm-rail) + 1px) minmax(0, 1fr);
+}
+
+/* The rail starts at the window's top: Back and Forward first, no gap above them (T53 item 1). */
+.notes-app[data-sidebar='collapsed'] .sb-head {
+  justify-content: center;
+  gap: 2px;
+  padding: 0 0 2px;
+}
+
+.notes-app[data-sidebar='collapsed'] .brand,
+.notes-app[data-sidebar='collapsed'] .sb-list {
+  display: none;
+}
+
+/*
+ * Settings and Send Feedback stay at the rail's foot, a column there, with the update notice's
+ * icon above them (PEN-135 items 4 and 10).
+ */
+.notes-app[data-sidebar='collapsed'] .sb-foot {
+  flex-direction: column;
+  align-items: center;
+  margin-top: auto;
+}
+
+.notes-app[data-sidebar='collapsed'] .sb-foot .icon-btn {
+  width: var(--pm-rail);
+  height: var(--pm-rail);
+}
+
+.notes-app[data-sidebar='collapsed'] .sb-actions {
+  justify-items: center;
+  padding: 0 0 0.5rem;
+}
+
+.notes-app[data-sidebar='collapsed'] :is(.sb-head, .sb-shortcuts) .icon-btn {
+  width: var(--pm-rail);
+  height: var(--pm-rail);
+}
+
+/* Back and Forward fill the rail's width, each half of it. */
+.notes-app[data-sidebar='collapsed'] .sb-head .history-pair .history-half {
+  width: calc(var(--pm-rail) / 2);
+  height: 100%;
+}
+
+/* The rail keeps New Note and the shortcuts as a column (A508, A932, T52). */
+.notes-app[data-sidebar='collapsed'] .sb-shortcuts {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.notes-app[data-sidebar='collapsed'] .sb-shortcuts .sb-shortcut {
+  flex: none;
+  margin-inline-start: 0;
+}
+
+.notes-app[data-sidebar='collapsed'] .sb-shortcut.new-note {
+  margin: 0 0 0.3rem;
+}
+
+.notes-app[data-sidebar='collapsed'] .sb-item {
+  position: relative;
+  justify-content: center;
+  width: 2.5rem;
+  padding: 0;
+}
+
+/* Hidden but still read out: each item keeps its name. */
+.notes-app[data-sidebar='collapsed'] .sb-item .label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .sb-head .sb-collapse {
+    display: none;
+  }
+}
+
+/*
+ * Pictures never sit beside text (A506), and leave no empty line under them (PEN-66, A1283).
+ * The node is inline and its picture (the frame: the image or its placeholder, with the handle
+ * and the fields) an inline box its own size, so ProseMirror's cursor helpers after a picture that
+ * ends its block (a separator and a line break) share the picture's line instead of making a new
+ * one, and the caret after it stands at its right edge. Text keeps off that line: before the
+ * picture, a block 0.4 em tall breaks the line (none where the picture already starts its line,
+ * after a separator: first in its block, after a line break or after another picture; none tall
+ * under another picture); after it, the frame's end margin, as wide as the line, wraps what
+ * follows onto the next line (none when the picture ends its block or its line, but 3 px of
+ * padding: Chromium draws the caret after a picture at the frame's edge, which would otherwise be
+ * over the picture's last column). A line break after a picture ends its line by itself (A1354):
+ * with the margin, the separator ProseMirror puts before the break wrapped onto a line of
+ * its own and the break ended that one, an empty line under the picture with the caret on it. Each
+ * rule looks only at the picture's own neighbours (or, for a picture in a mark such as bold or a
+ * link, the mark's), so a lone, linked, bold or highlighted picture, one after text, in a list item,
+ * quote, table cell or heading, one before a line break, and several in a row all come out the
+ * same. Only the rendering: the markdown keeps the picture inline where it was written.
+ */
+.note-body .pm-image::before {
+  display: block;
+  height: 0.4em;
+  content: '';
+}
+
+.note-body .ProseMirror-separator + .pm-image::before {
+  display: none;
+}
+
+.note-body .pm-image + .pm-image::before {
+  height: 0;
+}
+
+.note-body .pm-image-frame {
+  width: max-content;
+  margin-inline-end: 100%;
+}
+
+.note-body
+  .pm-image:is(
+    :has(+ .ProseMirror-separator:last-child),
+    :has(+ .ProseMirror-separator + br),
+    :has(+ br),
+    :has(+ .pm-comment-marker + .ProseMirror-separator)
+  )
+  > .pm-image-frame,
+.note-body :has(+ .ProseMirror-separator + br) > .pm-image:last-child > .pm-image-frame,
+.note-body
+  :has(+ .ProseMirror-separator + br)
+  > :last-child
+  > .pm-image:last-child
+  > .pm-image-frame {
+  margin-inline-end: 0;
+  padding-inline-end: 3px;
+}
+
+/*
+ * The zero-wide separator before a picture that starts its block takes no place on the line:
+ * beside it, Chromium breaks the line before a picture whose end margin overflows the line, which
+ * would leave the separator on an empty line of its own.
+ */
+.note-body img.ProseMirror-separator:has(+ .pm-image) {
+  position: absolute;
+}
+
+/* A highlight's padding beside a picture would show as a sliver of colour at its edges. */
+.note-body mark:has(> .pm-image) {
+  padding-inline: 0;
+}
+
+/*
+ * Toasts float above the status bar while it shows (the T39 review); at a phone's width they
+ * keep clear of the format bar instead.
+ */
+@media (min-width: 701px) {
+  body:has(.status-bar) .toast-stack {
+    bottom: calc(1.25rem + var(--status-bar-height) + env(safe-area-inset-bottom));
+  }
+}

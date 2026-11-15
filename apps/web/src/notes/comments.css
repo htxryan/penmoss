@@ -1,0 +1,313 @@
+/* The Comments panel (T48): a note's threads beside it, where Info goes. */
+.comments-panel {
+  border-top: 1px solid var(--pm-border);
+  padding-top: 1rem;
+  font-size: var(--pm-text-sm);
+}
+
+@media (min-width: 78rem) {
+  .comments-panel {
+    border-top: 0;
+    border-left: 1px solid var(--pm-border);
+    padding: 0 0 0 1rem;
+  }
+}
+
+.comments-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.comments-header .info-heading {
+  margin: 0;
+}
+
+.comments-filter {
+  display: inline-flex;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  gap: 0.15rem;
+}
+
+.comments-filter .btn[aria-pressed='true'] {
+  background: var(--pm-active);
+  color: var(--pm-fg);
+}
+
+.comments-empty {
+  margin: 0.5rem 0;
+}
+
+.comment-threads,
+.comment-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Its text starts where a backlink's and a version's does, 0.55 rem inside the border (A988). */
+.comment-thread {
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 0.55rem;
+  border: 1px solid var(--pm-border-soft);
+  border-radius: 0;
+  background: var(--pm-bg);
+}
+
+.comment-thread[data-active='true'] {
+  border-color: var(--pm-accent-line);
+  box-shadow: var(--pm-shadow-1);
+}
+
+.comment-thread[data-status='resolved'] {
+  opacity: 0.85;
+}
+
+.comment-quote {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 0.5rem;
+  padding: 0.1rem 0 0.1rem 0.6rem;
+  border: 0;
+  border-left: 3px solid var(--pm-accent-line);
+  background: none;
+  color: var(--pm-muted);
+  font: inherit;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+button.comment-quote {
+  cursor: pointer;
+}
+
+button.comment-quote:hover {
+  color: var(--pm-fg);
+}
+
+.comment-quote.orphaned {
+  border-left-color: var(--pm-border-strong);
+}
+
+.comment-quote-note {
+  display: block;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  font-style: italic;
+}
+
+.comment {
+  position: relative;
+}
+
+.comment + .comment {
+  margin-top: 0.55rem;
+}
+
+.comment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.4rem;
+  margin: 0;
+}
+
+.comment-author {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.comment[data-author='agent'] .comment-author {
+  color: var(--pm-agent);
+}
+
+.comment-when {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  white-space: nowrap;
+}
+
+.comment-tools {
+  position: absolute;
+  top: -0.25rem;
+  right: 0;
+  display: inline-flex;
+  border-radius: 0;
+  background: var(--pm-bg);
+  opacity: 0;
+}
+
+.comment:hover .comment-tools,
+.comment:focus-within .comment-tools {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .comment-tools {
+    opacity: 1;
+  }
+}
+
+.comment-tools .icon-btn {
+  width: var(--pm-control-sm);
+  height: var(--pm-control-sm);
+}
+
+.comment-body {
+  margin: 0.15rem 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comment-removed {
+  color: var(--pm-muted);
+  font-style: italic;
+}
+
+.comment-confirm {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-danger-soft);
+}
+
+.comment-confirm p {
+  margin: 0;
+  font-size: var(--pm-text-sm);
+}
+
+.comment-state {
+  margin: 0.5rem 0 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+}
+
+.comment-state[data-state='replied'],
+.comment-state[data-state='seen'] {
+  color: var(--pm-agent);
+}
+
+.comment-state[data-state='failed'] {
+  color: var(--pm-danger);
+}
+
+.comment-composer {
+  margin-top: 0.6rem;
+}
+
+.comment-composer textarea.input {
+  height: auto;
+  min-height: 3.5rem;
+  padding: 0.4rem 0.6rem;
+  resize: vertical;
+}
+
+/* Centred: Cancel (a quiet button, 28 px) sat 2 px higher than Comment (32 px) beside it (A988). */
+.comment-composer-actions,
+.comment-thread-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+
+.comment-send {
+  display: grid;
+  gap: 0.2rem;
+  margin-top: 0.5rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+}
+
+.comment-send-error {
+  color: var(--pm-muted);
+}
+
+/* A session not running now (A1065): offered, greyed, with when it was last seen. */
+.comment-send option.comment-send-idle {
+  color: var(--pm-muted);
+}
+
+.comment-send-again {
+  padding-inline: 0.3rem;
+  font-size: inherit;
+}
+
+/* T52 item 5: a comment floating over the note at its passage (CommentPopover.tsx), placed in
+   viewport pixels below the passage, or above it, by placePopover. */
+.comment-popover {
+  position: fixed;
+  z-index: 45;
+  box-sizing: border-box;
+  width: min(22rem, calc(100vw - 1rem));
+  max-height: min(70vh, 34rem);
+  overflow: auto;
+  padding: 0.25rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-popover-shadow);
+  font-size: var(--pm-text-sm);
+  animation: pm-rise var(--pm-medium) var(--pm-ease);
+}
+
+.comment-popover > .comment-thread {
+  margin: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.comment-popover-close {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  z-index: 1;
+}
+
+.comment-popover .comment-quote {
+  padding-right: 1.75rem;
+}
+
+/* The Comments tab's Add Note Comment, and a thread on the note as a whole. */
+.comments-add-note {
+  margin: 0 0 0.75rem;
+}
+
+.comment-quote-whole {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--pm-muted);
+  font-style: italic;
+}
+
+.comments-count {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.2rem;
+  box-sizing: border-box;
+  border-radius: 0;
+  background: var(--pm-accent);
+  color: var(--pm-bg);
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1rem;
+  text-align: center;
+  pointer-events: none;
+}

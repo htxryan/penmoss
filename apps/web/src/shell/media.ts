@@ -2,8 +2,9 @@
  * Phone layout (T36, A181): one breakpoint, the prototype's. At 700 px and
  * narrower the sidebar becomes a drawer behind a top app bar, note actions
  * move into a sheet, and a formatting bar sits above the keyboard. CSS uses
- * the same query (styles.css, `--pm-phone`); components read it here for
- * what CSS alone cannot do (focus, `inert`, rendering phone-only controls).
+ * the same query (shell/narrow.css and the other `max-width: 700px` rules);
+ * components read it here for what CSS alone cannot do (focus, `inert`,
+ * rendering phone-only controls).
  */
 import { useSyncExternalStore } from 'react';
 

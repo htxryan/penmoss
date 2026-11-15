@@ -1,0 +1,169 @@
+/*
+ * Tokens (plan #style). The theme (T28: packages/ui/src/theme) sets every
+ * colour, the fonts and the editor width on <html> (`--pm-bg`, `--pm-fg`,
+ * `--pm-accent`…, see COLOUR_TOKENS) along with `data-mode` (light or dark).
+ * Everything here is derived from those with color-mix, so each theme gets
+ * the same hover, pressed, focus, soft and shadow states. Stylesheets never
+ * write a colour literally (stylelint, A244).
+ */
+:root {
+  color-scheme: light dark;
+  /* The note's status bar (A505): toasts float above it. */
+  --status-bar-height: 1.8rem;
+  --pm-hover: color-mix(in oklab, var(--pm-fg) 6%, transparent);
+  --pm-code-bg: color-mix(in oklab, var(--pm-bg), var(--pm-fg) 6%);
+  --pm-focus: color-mix(in oklab, var(--pm-accent) 70%, var(--pm-fg));
+  --pm-active: color-mix(in oklab, var(--pm-fg) 9%, transparent);
+  --pm-drop: color-mix(in oklab, var(--pm-accent) 14%, transparent);
+  --pm-radius: 0;
+  --pm-scrim: color-mix(in oklab, var(--pm-shadow-color) 28%, transparent);
+  --pm-shadow: 0 12px 40px color-mix(in oklab, var(--pm-shadow-color) 22%, transparent);
+  --pm-accent-soft: color-mix(in oklab, var(--pm-accent) 14%, transparent);
+  --pm-accent-line: color-mix(in oklab, var(--pm-accent) 45%, transparent);
+  /* Agent edits (T24): a colour of their own, apart from the accent and the user's selection. */
+  --pm-agent-soft: color-mix(in oklab, var(--pm-agent) 22%, transparent);
+  /* T36: the fidelity pass (A182). Derived colours, after the prototype's. */
+  --pm-border-strong: color-mix(in oklab, var(--pm-border), var(--pm-fg) 15%);
+  --pm-border-soft: color-mix(in oklab, var(--pm-border), var(--pm-bg) 45%);
+  --pm-danger-soft: color-mix(in oklab, var(--pm-danger) 12%, transparent);
+  --pm-accent-softer: color-mix(in oklab, var(--pm-accent) 8%, transparent);
+  --pm-ring: 0 0 0 3px color-mix(in oklab, var(--pm-accent) 18%, transparent);
+  --pm-shadow-1: 0 1px 2px color-mix(in oklab, var(--pm-shadow-color) 8%, transparent);
+  /* Shape. */
+  --pm-radius-sm: 0;
+  --pm-radius-lg: 0;
+  --pm-radius-xl: 0;
+  --pm-radius-sheet: 0;
+  /* Type scale (the prototype's 11.5 / 13 / 14 / 16 px). */
+  --pm-text-xs: 0.72rem;
+  --pm-text-sm: 0.8125rem;
+  --pm-text-md: 0.875rem;
+  --pm-text-lg: 1rem;
+  /* Controls: buttons and fields, and the touch size on phones (44 px, A183). */
+  --pm-control: 2rem;
+  --pm-control-sm: 1.75rem;
+  --pm-hit: 2.75rem;
+  --pm-bar: 3.5rem;
+  --pm-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --pm-fast: 120ms;
+  --pm-medium: 200ms;
+}
+
+/* Shadows read heavier on dark surfaces. */
+:root[data-mode='dark'] {
+  --pm-shadow-1: 0 1px 2px color-mix(in oklab, var(--pm-shadow-color) 30%, transparent);
+}
+
+body {
+  margin: 0;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font-family: var(--pm-font);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: var(--pm-link, var(--pm-accent));
+}
+
+.app-shell {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: max(3rem, env(safe-area-inset-top)) 1rem 3rem;
+}
+
+.app-shell h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
+}
+
+.app-shell p {
+  color: var(--pm-muted);
+  margin: 0;
+}
+
+/* A section's sub-headings, one step below its title in every section (T39 pass 2). */
+.settings h3,
+.settings-section h3 {
+  margin: 2rem 0 0.5rem;
+  font-size: var(--pm-text-lg);
+}
+
+/*
+ * Devices' too, past its empty status line: its first sub-heading sat 32px under the title,
+ * Status's 20px (A988).
+ */
+.settings h2 + h3,
+.settings h2 + p:empty + h3,
+.settings-section h2 + h3 {
+  margin-top: 1.25rem;
+}
+
+.settings p {
+  margin: 0.25rem 0 0.75rem;
+}
+
+.list {
+  margin: 0 0 1rem;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  list-style: none;
+}
+
+.list:empty {
+  display: none;
+}
+
+.list li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--pm-border-soft);
+  font-size: var(--pm-text-sm);
+}
+
+.list li:last-child {
+  border-bottom: 0;
+}
+
+.list small {
+  color: var(--pm-muted);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.secret {
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--pm-accent-line);
+  border-radius: 0;
+  background: var(--pm-accent-softer);
+}
+
+.secret code {
+  display: block;
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-sm);
+  overflow-wrap: anywhere;
+}
+
+.error {
+  color: var(--pm-danger);
+}
