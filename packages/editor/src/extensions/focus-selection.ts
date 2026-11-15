@@ -13,6 +13,12 @@
  * sets the same 20 ms timer. When it fires, a selection the person has moved with a key since
  * the focus is read into the editor, as ProseMirror's observer would a moment later; with no
  * key, the editor's selection is restored to the page as before.
+ *
+ * ProseMirror also reads a caret at the very start of the note, within 200 ms of a focus, as the
+ * browser's own reset on focus, and writes its last selection back over it. A key that moves the
+ * caret is the person's doing, so it ends that window too (PEN-144): ↓ from the title, then ↓ and
+ * ↑ in quick succession, put the caret back on the second line, and the next ↑ never reached the
+ * title.
  */
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
@@ -43,9 +49,23 @@ function rangeOf(view: EditorView): Range {
   };
 }
 
+/** The keys that move the caret without changing the note. */
+const CARET_KEYS = new Set([
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'Home',
+  'End',
+  'PageUp',
+  'PageDown',
+]);
+
 /** The parts of ProseMirror's view its own focus handler uses (prosemirror-view `focus`). */
 interface ViewInternals {
   focused?: boolean;
+  /** When the view last took focus; its observer's reset-on-focus check reads it. */
+  input?: { lastFocus?: number };
   domObserver?: {
     stop(): void;
     start(): void;
@@ -84,8 +104,12 @@ export function focusSelectionPlugin(): Plugin {
           // ProseMirror's handler still runs: it notes the time, and sees the view focused.
           return false;
         },
-        keydown: () => {
+        keydown: (view, event) => {
           if (pending) pending.keyed = true;
+          const input = (view as unknown as ViewInternals).input;
+          // As ProseMirror does once its check has run: no reset on focus is waiting any more.
+          if (CARET_KEYS.has(event.key) && typeof input?.lastFocus === 'number')
+            input.lastFocus = 0;
           return false;
         },
       },
