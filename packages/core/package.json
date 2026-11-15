@@ -9,6 +9,7 @@
     ".": "./src/index.ts",
     "./admin-actions": "./src/admin-actions.ts",
     "./agent-reference": "./src/agent-reference.ts",
+    "./note-ref": "./src/note-ref.ts",
     "./anchor-match": "./src/anchor-match.ts",
     "./admin-requests": "./src/admin-requests.ts",
     "./attachments": "./src/attachments.ts",

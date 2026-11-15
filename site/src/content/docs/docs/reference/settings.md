@@ -24,7 +24,7 @@ Open Settings with ⌘, on the Mac, or from a notebook's menu on Android. Most s
 
 | Setting                             | What it does                                                                                                                                                      |
 | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Show in the sidebar                 | Which of Today, This Week, Graph and Commands the sidebar's top row shows (Search always shows)                                                                   |
+| Show in the sidebar                 | Which of Tags, Today, This Week, Graph and Commands the sidebar's top row shows (Search always shows); all are on by default                                      |
 | Sections                            | The order of Quick Access, Recent Notes, Notebooks, Calendar and Tags                                                                                             |
 | Notes in Recent Notes               | 1 to 50, 10 by default                                                                                                                                            |
 | Show Notebook Names in Quick Access | Labels each pinned note with its notebook                                                                                                                         |
@@ -42,18 +42,19 @@ The [line symbols](/docs/editor/#line-symbols): each one's glyph and colour, the
 
 **Add a Git Notebook…**, then for each notebook:
 
-| Setting                              | What it does                                                                                    |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| Sync Now                             | Syncs at once                                                                                   |
-| Push after (seconds)                 | How long after your edits settle it pushes: 12 by default                                       |
-| Pull every (minutes)                 | How often it pulls while Penmoss is open: 1 by default                                          |
-| Sign commits as git is configured to | Untick to never sign this notebook's commits                                                    |
-| Commit name, Commit email            | This notebook's own commit identity, over git's (a GitHub no-reply address keeps yours private) |
-| Access                               | **Save Token** and **Forget Token**, for an HTTPS host that needs a token                       |
-| Agent Activity                       | What agents changed, with Undo ([Agent activity](/docs/agents/activity/))                       |
-| Primary Notebook                     | **Make Primary Notebook** (this device)                                                         |
-| Copy Settings to Other Notebooks     | Copies your app settings to your other notebooks; you can keep them in step on this Mac         |
-| Remove from This Mac                 | Removes this Mac's copy, after Touch ID; the repository keeps everything pushed                 |
+| Setting                              | What it does                                                                                      |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| Sync Now                             | Syncs at once                                                                                     |
+| Notebook Name, Rename                | Renames it on every device that syncs it ([Rename a notebook](/docs/organise/#rename-a-notebook)) |
+| Push after (seconds)                 | How long after your edits settle it pushes: 12 by default                                         |
+| Pull every (minutes)                 | How often it pulls while Penmoss is open: 1 by default                                            |
+| Sign commits as git is configured to | Untick to never sign this notebook's commits                                                      |
+| Commit name, Commit email            | This notebook's own commit identity, over git's (a GitHub no-reply address keeps yours private)   |
+| Access                               | **Save Token** and **Forget Token**, for an HTTPS host that needs a token                         |
+| Agent Activity                       | What agents changed, with Undo ([Agent activity](/docs/agents/activity/))                         |
+| Primary Notebook                     | **Make Primary Notebook** (this device)                                                           |
+| Copy Settings to Other Notebooks     | Copies your app settings to your other notebooks; you can keep them in step on this Mac           |
+| Remove from This Mac                 | Removes this Mac's copy, after Touch ID; the repository keeps everything pushed                   |
 
 Under the list of notebooks:
 

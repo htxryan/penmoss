@@ -6,6 +6,7 @@
  * (A306), and the IME and caret care (A307).
  */
 import { NOTE_ROOT } from '@penmoss/sync-client';
+import type { JSONContent } from '@tiptap/core';
 import {
   initNote,
   readNoteNotebook,
@@ -127,6 +128,43 @@ describe('the formatting bar (A301)', () => {
     expect(json(host).match(/"bulletList"/g)).toHaveLength(2);
     host.handle(format('outdent'));
     expect(json(host).match(/"bulletList"/g)).toHaveLength(1);
+  });
+
+  it('keeps a list from the bar tight through Enter, deleting and leaving it (PEN-59)', () => {
+    const { host, view, editor } = opened();
+    host.handle(format('bulletList'));
+    type(view, 'first item\nsecond item');
+    // A keyboard deletes "em" with deleteSurroundingText and "it" with two DEL key events:
+    // both reach the page as deletions before the caret.
+    for (let i = 0; i < 2; i += 1) {
+      const { from } = view.state.selection;
+      view.dispatch(view.state.tr.delete(from - 2, from));
+    }
+    // Enter twice: a new, empty item, then out of the list.
+    type(view, 'thing\n\nafter list');
+    const outline = (nodes: readonly JSONContent[] = []): string =>
+      nodes
+        .map((node) =>
+          node.type === 'text'
+            ? JSON.stringify(node.text)
+            : `${node.type}${node.attrs?.['tight'] === true ? '[tight]' : ''}${node.content ? `(${outline(node.content)})` : ''}`,
+        )
+        .join(',');
+    // One tight list of two one-paragraph items, the paragraph typed after it, and the empty
+    // paragraph TrailingNode added while the list ended the note.
+    expect(outline(editor.getJSON().content)).toBe(
+      'bulletList[tight](listItem(paragraph("first item")),listItem(paragraph("second thing"))),paragraph("after list"),paragraph',
+    );
+    // One line per paragraph...
+    expect(editor.state.doc.textBetween(0, editor.state.doc.content.size, '\n').trim()).toBe(
+      'first item\nsecond thing\nafter list',
+    );
+    // ...but getText puts its separator before every block, the item's and its paragraph's, so
+    // this same tight list reads with a blank line between the items: what the instrumented
+    // test read on 7 Nov and took for a loose list.
+    expect(editor.getText({ blockSeparator: '\n' }).trim()).toBe(
+      'first item\n\nsecond thing\nafter list',
+    );
   });
 
   it('leaves a paragraph outside a list as it is when asked to indent', () => {

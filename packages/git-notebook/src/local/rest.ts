@@ -126,6 +126,13 @@ async function route(
   const query = url.searchParams;
   const ok = (data: unknown, status = 200) => ({ status, body: data });
 
+  if (path === '/api/notes' && method === 'GET' && query.has('ref')) {
+    // The note a reference names (PEN-69): its id or a short reference, in Trash or not.
+    const id = notebook.noteIdOf(query.get('ref')!);
+    const found = notebook.describe(id);
+    if (!found) throw new LocalError(404, 'not_found', 'No such note');
+    return ok({ notes: [{ id, title: found.title, updatedAt: found.updatedAt }] });
+  }
   if (path === '/api/notes' && method === 'GET') {
     const limit = query.has('limit') ? Number(query.get('limit')) : 20;
     return ok(
@@ -158,7 +165,7 @@ async function route(
   const versions = VERSIONS.exec(path);
   if (versions) {
     // History (G6, A831): the commits that touched the note's logs.
-    const id = decodeURIComponent(versions[1]!);
+    const id = notebook.noteIdOf(decodeURIComponent(versions[1]!));
     const version = versions[2] === undefined ? null : Number(versions[2]);
     if (version !== null && !(Number.isSafeInteger(version) && version > 0)) {
       throw bad('Invalid version id');
@@ -186,7 +193,7 @@ async function route(
   }
   const note = NOTE_ACTION.exec(path);
   if (note) {
-    const id = decodeURIComponent(note[1]!);
+    const id = notebook.noteIdOf(decodeURIComponent(note[1]!));
     const action = note[2];
     if (action === 'content' && method === 'GET') return ok(notebook.content(id));
     // set_properties and `penmoss set-title` (#170 F10), as the server's PATCH.

@@ -8,6 +8,7 @@ import { gitBlobSha } from '@penmoss/core/mirror';
 import {
   GitTransportError,
   type CommitInfo,
+  type DirSnapshots,
   type GitTransport,
   type PushOutcome,
 } from './transport';
@@ -98,7 +99,15 @@ export class MemoryTransport implements GitTransport {
   /** Test hooks around a push: throw from them to crash there. */
   beforePush: ((commit: string) => void | Promise<void>) | null = null;
   afterPush: ((commit: string) => void | Promise<void>) | null = null;
-  readonly stats = { fetches: 0, pushes: 0, rejected: 0, commits: 0, reads: 0, heads: 0 };
+  readonly stats = {
+    fetches: 0,
+    pushes: 0,
+    rejected: 0,
+    commits: 0,
+    reads: 0,
+    heads: 0,
+    dirReads: 0,
+  };
 
   constructor(private readonly options: MemoryTransportOptions) {
     this.root = options.root;
@@ -163,6 +172,22 @@ export class MemoryTransport implements GitTransport {
       if (blob !== undefined) out.set(path, this.options.remote.blobs.get(blob)!);
     }
     return Promise.resolve(out);
+  }
+
+  readDir(commits: readonly string[], dir: string): Promise<DirSnapshots> {
+    this.stats.dirReads++;
+    const files = new Map<string, Map<string, string>>();
+    const blobs = new Map<string, Uint8Array>();
+    for (const commit of commits) {
+      const listed = new Map<string, string>();
+      for (const [path, blob] of this.commitOf(commit).tree) {
+        if (!path.startsWith(dir) || !path.startsWith(this.root)) continue;
+        listed.set(path, blob);
+        blobs.set(blob, this.options.remote.blobs.get(blob)!);
+      }
+      files.set(commit, listed);
+    }
+    return Promise.resolve({ files, blobs });
   }
 
   async commit(

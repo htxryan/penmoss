@@ -15,7 +15,9 @@ export type SaveState =
   | 'synced'
   /** On this device; git gets it when the host answers. */
   | 'offline'
-  /** Not stored on this device, or the notebook's sync stopped. */
+  /** On this device, but the notebook's sync stopped: a red pill that opens its Settings page. */
+  | 'stopped'
+  /** Not stored on this device. */
   | 'error';
 
 /** What the note's keeper says about its own write. */
@@ -57,9 +59,9 @@ export function gitSaveStatus(
   const pending = sync.pending.has(noteId);
   if (sync.phase === 'stopped') {
     return status(
-      'error',
-      'Sync stopped',
-      `Saved on this device. ${sync.detail ?? 'The notebook’s git sync stopped.'}`,
+      'stopped',
+      'Sync Stopped',
+      `Saved on this device. ${sync.detail ?? 'The notebook’s git sync stopped.'} Settings → Notebooks says why.`,
     );
   }
   if (sync.phase === 'offline') {

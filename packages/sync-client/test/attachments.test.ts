@@ -117,3 +117,35 @@ describe('attachments in a git notebook (A1032)', () => {
     expect(await attachments.url(`attachments/${'1'.repeat(64)}.png`)).toBeNull();
   });
 });
+
+describe('a drawing’s SVG (PEN-28)', () => {
+  const SVG = new TextEncoder().encode(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>',
+  );
+
+  it('is stored under its own .svg name and shown from a data: URL, never an object URL', async () => {
+    const nb = notebook();
+    const { attachments } = setup(nb.elsewhere);
+    const added = await attachments.addFile(new Uint8Array(SVG), 'drawing.svg');
+    expect(added.path).toBe(`attachments/${added.sha256}.svg`);
+    expect(nb.handed.get(`${added.sha256}.svg`)).toEqual(SVG);
+
+    const url = await attachments.url(added.path);
+    expect(url).toMatch(/^data:image\/svg\+xml;base64,/);
+    const decoded = atob(url!.slice(url!.indexOf(',') + 1));
+    expect(decoded).toBe(new TextDecoder().decode(SVG));
+    // Shared while shown, as other pictures' URLs are; nothing to revoke when let go.
+    expect(await attachments.url(added.path)).toBe(url);
+    attachments.release(added.path);
+    attachments.release(added.path);
+  });
+
+  it('keeps an .excalidraw scene as a file to download, under its own name', async () => {
+    const { attachments } = setup();
+    const scene = new TextEncoder().encode('{"type":"excalidraw","version":2,"elements":[]}');
+    const added = await attachments.addFile(new Uint8Array(scene), 'drawing.excalidraw');
+    expect(added.path).toBe(`attachments/${added.sha256}.excalidraw`);
+    expect(added.type).toBe('application/octet-stream');
+    expect(await attachments.bytes(added.path)).toEqual(scene);
+  });
+});

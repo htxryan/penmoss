@@ -35,7 +35,12 @@ import { withCapture, withMarkdown } from './capture';
 import { reanchorAcrossEdit } from '@penmoss/sync-client/comments';
 import { setBody } from '@penmoss/sync-client/history';
 import { readTitle, setTitle } from '@penmoss/sync-client/note';
-import { frontmatterTags, renameTagInDoc, setFrontmatterTag } from '@penmoss/sync-client/tags';
+import {
+  changeTagInDoc,
+  frontmatterTags,
+  renameTagInDoc,
+  setFrontmatterTag,
+} from '@penmoss/sync-client/tags';
 import type * as Y from '@y/y';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import { bodyDelta, noteBody, unfitBody } from './markdown';
@@ -77,6 +82,8 @@ export type EditOp =
       readonly remove: readonly string[];
     }
   | { readonly op: 'rename-tag'; readonly from: string; readonly to: string }
+  /** Removes a tag and those nested under it; an inline tag keeps its word, without its `#`. */
+  | { readonly op: 'delete-tag'; readonly tag: string }
   | {
       /**
        * A quick capture from a client that never reads Yjs (the Android app, T34, A335): added
@@ -140,6 +147,7 @@ export interface EditPlan {
   /** Replaces the frontmatter tags with exactly these. */
   readonly setTags?: readonly string[];
   readonly renameTag?: { readonly from: string; readonly to: string };
+  readonly deleteTag?: string;
   /** For the version's summary, e.g. `Replaced section “Plans”`. */
   readonly label: string;
 }
@@ -348,6 +356,11 @@ function planOp(live: Y.Doc, op: EditOp, links: LinkResolver): EditPlan | EditFa
       if (!from || !to) return fail(400, 'invalid_request', 'Invalid tag');
       return { ok: true, renameTag: { from, to }, label: `Renamed #${from} to #${to}` };
     }
+    case 'delete-tag': {
+      const tag = normaliseTag(op.tag);
+      if (!tag) return fail(400, 'invalid_request', 'Invalid tag');
+      return { ok: true, deleteTag: tag, label: `Deleted #${tag}` };
+    }
     case 'capture': {
       const current = noteBody(live);
       const body =
@@ -400,6 +413,7 @@ export function applyPlan(live: Y.Doc, plan: EditPlan): void {
   for (const tag of plan.removeTags ?? []) setFrontmatterTag(live, tag, false);
   for (const tag of plan.addTags ?? []) setFrontmatterTag(live, tag, true);
   if (plan.renameTag) renameTagInDoc(live, plan.renameTag.from, plan.renameTag.to);
+  if (plan.deleteTag) changeTagInDoc(live, { from: plan.deleteTag, to: null });
 }
 
 /**

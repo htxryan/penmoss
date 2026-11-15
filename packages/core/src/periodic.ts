@@ -149,6 +149,42 @@ export function todayIn(timeZone: string, now: Date = new Date()): PlainDate {
   return plainDate(part('year'), part('month'), part('day'));
 }
 
+/**
+ * The instant a calendar day starts in an IANA time zone, in epoch ms (the Time Machine's ranges,
+ * PEN-21): its midnight there, or the first moment after it where a clock change skips midnight.
+ */
+export function startOfDayIn(date: PlainDate, timeZone: string): number {
+  const local = Date.UTC(date.year, date.month - 1, date.day);
+  let at = local;
+  // The zone's offset near that midnight, found again from the guess so a change that day is met.
+  for (let i = 0; i < 3; i++) at = local - offsetAt(at, timeZone);
+  return at;
+}
+
+/** How far a zone's clock is ahead of UTC at `at`, in ms. */
+function offsetAt(at: number, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(new Date(at));
+  const part = (type: string) => Number(parts.find((entry) => entry.type === type)?.value);
+  const shown = Date.UTC(
+    part('year'),
+    part('month') - 1,
+    part('day'),
+    part('hour'),
+    part('minute'),
+    part('second'),
+  );
+  return shown - Math.floor(at / 1000) * 1000;
+}
+
 /** Whether `timeZone` is an IANA zone this runtime knows. */
 export function isTimeZone(timeZone: string): boolean {
   try {

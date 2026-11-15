@@ -9,6 +9,7 @@
  * shows notes.
  */
 import { isUlid } from '@penmoss/core/ids';
+import { isShortNoteRef } from '@penmoss/core/note-ref';
 import { useLayoutEffect, useReducer, useSyncExternalStore, type MouseEvent } from 'react';
 import { noteWindowPath, openInMain, openNoteWindow } from './window/open';
 
@@ -21,6 +22,10 @@ export type Route =
   | { readonly name: 'window'; readonly id: string }
   | { readonly name: 'graph' }
   | { readonly name: 'trash' }
+  /** Every tag, with what each means (PEN-68). */
+  | { readonly name: 'tags' }
+  /** The Time Machine (PEN-21): a git notebook at any moment, and what changed. */
+  | { readonly name: 'time-machine' }
   | {
       readonly name: 'settings';
       readonly section: SettingsSection;
@@ -75,6 +80,10 @@ export function parseRoute(pathname: string): Route {
       return { name: 'home' };
     case '/trash':
       return { name: 'trash' };
+    case '/tags':
+      return { name: 'tags' };
+    case '/time-machine':
+      return { name: 'time-machine' };
     case '/settings':
     case '/settings/':
       return { name: 'settings', section: SETTINGS_SECTIONS[0] };
@@ -94,12 +103,13 @@ export function parseRoute(pathname: string): Route {
   const note = NOTE_PATH.exec(pathname);
   if (note) {
     const id = decodePart(note[1]!);
-    if (id !== null && isUlid(id)) return { name: 'note', id };
+    // A short reference (PEN-69) opens too: NoteSourceScope replaces it with the note's id.
+    if (id !== null && (isUlid(id) || isShortNoteRef(id))) return { name: 'note', id };
   }
   const window = WINDOW_PATH.exec(pathname);
   if (window) {
     const id = decodePart(window[1]!);
-    if (id !== null && isUlid(id)) return { name: 'window', id };
+    if (id !== null && (isUlid(id) || isShortNoteRef(id))) return { name: 'window', id };
   }
   return { name: 'not-found' };
 }

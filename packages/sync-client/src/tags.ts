@@ -8,11 +8,13 @@
 import {
   cleanTags,
   inlineTagEdits,
+  inlineTagRanges,
   inlineTags,
   normaliseTag,
   renamedTag,
 } from '@penmoss/core/tags';
 import * as Y from '@y/y';
+import type { RelativePositionJson } from './comments';
 import { NOTE_META } from './note';
 import { NOTE_ROOT } from './replica';
 
@@ -149,15 +151,72 @@ export function renameTagInDoc(
   to: string,
   origin: unknown = null,
 ): boolean {
-  let changed = false;
+  return changeTagInDoc(doc, { from, to }, origin) !== null;
+}
+
+/**
+ * A change to one tag across a note: renamed to `to` (merged when the note has `to` already), or
+ * deleted (`to` null). The tags nested under it change too unless `nested` is false.
+ */
+export interface TagChange {
+  readonly from: string;
+  readonly to: string | null;
+  readonly nested?: boolean;
+}
+
+/**
+ * One inline edit a tag change made, enough to put it back (Undo on the Tags page): where the
+ * text it left starts (a relative position, so it holds through edits elsewhere), what is there
+ * now (`now`, which must still be there to undo), how many of those characters go, and what goes
+ * back in their place.
+ */
+export interface InlineTagEdit {
+  readonly at: RelativePositionJson;
+  readonly now: string;
+  readonly remove: number;
+  readonly restore: string;
+}
+
+/** What a tag change did in one note, for `revertTagEdit`. */
+export interface TagEditLog {
+  /** Frontmatter tags it removed. */
+  readonly removed: readonly string[];
+  /** Frontmatter tags it added (not those the note had already). */
+  readonly added: readonly string[];
+  readonly inline: readonly InlineTagEdit[];
+}
+
+/**
+ * Renames, merges or deletes a tag in one note, in one transaction (see `TagChange`): frontmatter
+ * attributes, and the inline tags in the body's text, edited in place so concurrent edits
+ * elsewhere survive. A deleted inline tag loses its `#` and keeps its word, so the sentence it
+ * was in still reads (`a #garden bed` → `a garden bed`). Returns what it did, or null when the
+ * note had nothing to change.
+ */
+export function changeTagInDoc(
+  doc: Y.Doc,
+  change: TagChange,
+  origin: unknown = null,
+): TagEditLog | null {
+  const { from, to } = change;
+  const nested = change.nested ?? true;
+  const removed: string[] = [];
+  const added: string[] = [];
+  const inline: InlineTagEdit[] = [];
   doc.transact(() => {
     const meta = doc.get(NOTE_META);
-    for (const tag of frontmatterTags(doc)) {
-      const renamed = renamedTag(tag, from, to);
-      if (renamed === null || renamed === tag) continue;
+    const had = new Set(frontmatterTags(doc));
+    for (const tag of had) {
+      const affected = tag === from || (nested && tag.startsWith(`${from}/`));
+      if (!affected) continue;
+      const renamed = to === null ? null : renamedTag(tag, from, to, nested);
+      if (renamed === tag) continue;
       meta.deleteAttr(`${META_TAG_PREFIX}${tag}`);
-      meta.setAttr(`${META_TAG_PREFIX}${renamed}`, true);
-      changed = true;
+      removed.push(tag);
+      if (renamed !== null && !had.has(renamed) && !added.includes(renamed)) {
+        meta.setAttr(`${META_TAG_PREFIX}${renamed}`, true);
+        added.push(renamed);
+      }
     }
     const visit = (node: Y.Node, name: string | undefined) => {
       if (name && CODE_BLOCKS.has(name)) return;
@@ -167,17 +226,92 @@ export function renameTagInDoc(
         const child: unknown = node.get(index);
         if (child instanceof Y.Node) visit(child, nodeName(child));
       }
-      // The same text detection reads, so exactly the tags it sees are renamed; each name
-      // keeps the marks of its first character. Applied from the end, so offsets stay valid.
-      const edits = inlineTagEdits(block.text, from, to);
+      // The same text detection reads, so exactly the tags it sees change; a renamed name keeps
+      // the marks of its first character. Applied from the end, so offsets stay valid.
+      const edits = to === null ? inlineTagRemovals(block.text, from, nested) : renames(block.text);
       for (const edit of edits.reverse()) {
         const run = block.runs.findLast((candidate) => candidate.start <= edit.index);
+        const was = block.text.slice(edit.index, edit.index + edit.length);
         node.delete(edit.index, edit.length);
-        node.insert(edit.index, edit.text, run?.format ?? {});
-        changed = true;
+        if (edit.text) node.insert(edit.index, edit.text, run?.format ?? {});
+        // What follows the edit now: the new name, or the word a deleted tag's `#` was before.
+        const now = edit.text || edit.after;
+        const at = Y.createRelativePositionFromTypeIndex(node, edit.index, 0);
+        inline.push({
+          at: Y.relativePositionToJSON(at) as RelativePositionJson,
+          now,
+          remove: edit.text.length,
+          restore: was,
+        });
       }
     };
+    const renames = (text: string) =>
+      inlineTagEdits(text, from, to ?? from, nested).map((edit) => ({ ...edit, after: '' }));
     visit(doc.get(NOTE_ROOT), undefined);
   }, origin);
+  return removed.length + inline.length > 0 ? { removed, added, inline } : null;
+}
+
+/** The `#` of each inline tag to delete in a run of text, with the word after it. */
+function inlineTagRemovals(
+  text: string,
+  tag: string,
+  nested: boolean,
+): Array<{ index: number; length: number; text: string; after: string }> {
+  return inlineTagRanges(text)
+    .filter((range) => range.tag === tag || (nested && range.tag.startsWith(`${tag}/`)))
+    .map((range) => ({
+      index: range.index,
+      length: 1,
+      text: '',
+      after: text.slice(range.index + 1, range.index + range.length),
+    }));
+}
+
+/**
+ * Puts back what `changeTagInDoc` did (Undo), in one transaction: the frontmatter tags, and each
+ * inline edit whose text is still as the change left it (one edited since stays as it is).
+ * Returns whether anything changed.
+ */
+export function revertTagEdit(doc: Y.Doc, log: TagEditLog, origin: unknown = null): boolean {
+  let changed = false;
+  doc.transact(() => {
+    const meta = doc.get(NOTE_META);
+    for (const tag of log.added) {
+      if (meta.getAttr(`${META_TAG_PREFIX}${tag}`) !== true) continue;
+      meta.deleteAttr(`${META_TAG_PREFIX}${tag}`);
+      changed = true;
+    }
+    for (const tag of log.removed) {
+      meta.setAttr(`${META_TAG_PREFIX}${tag}`, true);
+      changed = true;
+    }
+    // In the order made: each was applied from the end of its block, so the latest is first.
+    for (const edit of log.inline) {
+      const position = Y.createAbsolutePositionFromRelativePosition(
+        Y.createRelativePositionFromJSON(edit.at),
+        doc,
+        false,
+      );
+      if (!position) continue;
+      const node = position.type as Y.Node;
+      if (isDeleted(node)) continue;
+      const block = blockText(node.toDelta().toJSON() as DeltaNode);
+      const index = position.index;
+      if (block.text.slice(index, index + edit.now.length) !== edit.now) continue;
+      const run = block.runs.findLast((candidate) => candidate.start <= index);
+      if (edit.remove > 0) node.delete(index, edit.remove);
+      node.insert(index, edit.restore, run?.format ?? {});
+      changed = true;
+    }
+  }, origin);
   return changed;
+}
+
+/** Whether a node, or one above it, was deleted. */
+function isDeleted(type: Y.Node): boolean {
+  for (let node: Y.Node | null = type; node; node = node.parent) {
+    if (node._item?.deleted) return true;
+  }
+  return false;
 }

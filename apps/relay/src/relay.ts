@@ -39,6 +39,7 @@ const STALE_COPY: ReadonlySet<NotebookErrorCode> = new Set(['branch_gone', 'othe
 
 export const RELAY_INSTRUCTIONS = `This is Ryan's Penmoss notebook, reached through his relay: notes kept in a private git repository. Markdown with a title, tags (nested with /), headings, [[wikilinks]] between notes, folders, and a daily and weekly journal.
 - Find notes with search_notes (words only here), list_recent, list_folder or list_tags; read one with read_note.
+- Ryan describes what some tags mean: describe_tags gives each tag's description, and its parents'. Read them before choosing tags for a note or to know what a tag is for.
 - Every read returns a baseVersion. Pass it to your next edit of that note; update_section and replace_text require it. Each edit returns the next baseVersion.
 - An edit refused with a conflict means the part changed since you read it: call read_note again and redo the edit on the current text. Never retry blindly.
 - For today's journal call get_daily_note (it creates the day's note from the notebook's template, in its time zone), then append_to_note, optionally under one of its headings.

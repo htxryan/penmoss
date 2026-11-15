@@ -12,6 +12,10 @@
  * store, which commits it with the note as `attachments/<sha256>.<ext>`, and `elsewhere.fetch`
  * reads one this device has no copy of (another writer's) from the engine's store or the clone,
  * kept here once it checks out against its hash.
+ *
+ * An SVG (a drawing's picture, PEN-28) is shown from a `data:` URL, never an object URL: an
+ * `<img>` draws an SVG without its scripts or anything it links, and a `data:` URL is no page of
+ * this origin, so even opened on its own it could never run as the app.
  */
 import {
   GENERIC_TYPE,
@@ -213,7 +217,7 @@ export class Attachments {
     if (signal?.aborted) return null;
     const loaded = (await this.local(sha256)) ?? (await this.fetch(sha256, parsed.ext));
     if (!loaded || signal?.aborted) return null;
-    return this.acquire(sha256, loaded);
+    return this.acquire(sha256, loaded, parsed.ext);
   }
 
   /** Gives back a URL from `url`; the last release revokes it. */
@@ -224,17 +228,18 @@ export class Attachments {
     entry.refs--;
     if (entry.refs > 0) return;
     this.urls.delete(parsed.sha256);
-    this.revokeUrl(entry.url);
+    if (!entry.url.startsWith('data:')) this.revokeUrl(entry.url);
   }
 
-  private acquire(sha256: string, loaded: Loaded): string {
+  private acquire(sha256: string, loaded: Loaded, ext: string): string {
     let entry = this.urls.get(sha256);
     if (!entry) {
       // Object URLs share this page's origin: a stored type other than an image or a PDF (an
       // older build's copy, anything else writing this IndexedDB) must never make one a page,
-      // so it is a file to download.
+      // so it is a file to download. An SVG is a `data:` URL instead (see above).
       const type = isInlineType(loaded.type) ? loaded.type : GENERIC_TYPE;
-      entry = { url: this.createUrl(loaded.bytes, type), refs: 0 };
+      const url = ext === 'svg' ? svgDataUrl(loaded.bytes) : this.createUrl(loaded.bytes, type);
+      entry = { url, refs: 0 };
       this.urls.set(sha256, entry);
     }
     entry.refs++;
@@ -282,4 +287,14 @@ export class Attachments {
     const local = await store.getAttachment(sha256);
     return local ? { bytes: local.bytes as Uint8Array<ArrayBuffer>, type: local.type } : null;
   }
+}
+
+/** An SVG's bytes as a `data:` URL an `<img>` shows (PEN-28). */
+export function svgDataUrl(bytes: Uint8Array): string {
+  let binary = '';
+  const CHUNK = 0x8000;
+  for (let at = 0; at < bytes.length; at += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(at, at + CHUNK));
+  }
+  return `data:image/svg+xml;base64,${btoa(binary)}`;
 }

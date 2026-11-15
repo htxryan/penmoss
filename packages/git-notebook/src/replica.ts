@@ -55,6 +55,11 @@ export interface NotebookMeta {
   readonly withheld?: Readonly<Record<string, WithheldCopy>>;
   /** Withheld copies the person confirmed keeping and syncing: pushed, until on the branch. */
   readonly keptCopies?: readonly string[];
+  /**
+   * The name Rename gave the notebook on this device, until a sync lands it in `notebook.json`
+   * (Ryan's review of PR #192). `info.name` is already this name. Absent or null: none.
+   */
+  readonly pendingName?: string | null;
 }
 
 /** A copy withheld from the push (A886), as this device keeps it. */

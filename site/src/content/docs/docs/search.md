@@ -25,6 +25,8 @@ Type words to find the notes that have all of them. The last word matches the st
 
 Under the search box you can narrow the results by **Notebook** (with more than one), **Folder**, **Tag**, and when the note was **Updated**: Any Time, Past Day, Past Week, Past Month or Past Year.
 
+With the search box empty, a **Folder**, **Tag** or **Updated** filter lists every note it matches, newest first. Choosing a tag elsewhere in Penmoss (the sidebar's **Tags** section, a note's tags, the Tags page) opens Search this way, with **Tag** set.
+
 With more than one notebook and Notebook on **All Notebooks**, Folder lists every notebook's folders under the notebook's name, and picking one switches Notebook to that folder's notebook; Tag lists the tags of every notebook.
 
 With one notebook chosen, Folder lists that notebook's folders after two choices: **All Folders (This Notebook)** searches every folder of the chosen notebook, and **All Folders (All Notebooks)** puts Notebook back to All Notebooks and searches every folder of every notebook.
@@ -40,7 +42,7 @@ On the Mac, search also finds notes by what they are about, not only the words t
 
 It uses EmbeddingGemma, a small language model that runs on your Mac. Penmoss downloads it once, about 219 MB from Hugging Face, the first time it starts. Your notes never leave the Mac: the model and its index of your notes stay in `~/.penmoss`. The Gemma Terms of Use apply to the model.
 
-**Settings → Search by Meaning** shows what it is doing (Not downloaded, Downloading, Indexing, Ready) and has the switch. Turning it off removes the model and its index, and search goes back to words only. The same setting applies to agents' `penmoss` on this Mac: see [MCP tools](/docs/reference/mcp/#search_notes).
+**Settings → Search by Meaning** shows what it is doing (Not downloaded, Downloading, Indexing, Ready) and how many notes of your open notebooks it has read, and has the switch. A notebook you remove from the Mac leaves that count. Turning it off removes the model and its index, and search goes back to words only. The same setting applies to agents' `penmoss` on this Mac: see [MCP tools](/docs/reference/mcp/#search_notes).
 
 One program at a time reads your notes for meaning, normally the Mac app, which reads every notebook it has open. While the app is closed, an agent's `penmoss mcp` reads its own notebook instead, and the app takes over again when it opens. If another copy of Penmoss on the Mac is doing it, Settings → Search by Meaning says how many notes wait, since search by meaning can miss them until then.
 

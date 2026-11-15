@@ -167,7 +167,7 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
     /** Copy Agent Reference from a list (T52 item 4): read from Room, said over every screen. */
     val copyAgentReference: (String) -> Unit = { id ->
         graph.scope.launch {
-            val said = agentReferenceOf(graph.store, id, (graph.source as? app.penmoss.git.GraphSource.Git)?.name)?.let { AgentReference.copy(context, it) }
+            val said = agentReferenceIn(graph, id)?.let { AgentReference.copy(context, it) }
                 ?: "This note isn't on this phone any more"
             rootSnackbar.currentSnackbarData?.dismiss()
             rootSnackbar.say(said, if (said == AgentReference.COPIED) SnackbarTone.Done else SnackbarTone.Error)
@@ -520,7 +520,6 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
             composable("tags") { entry -> TagsRoute(graph, onBack = { nav.leave(entry) }, onOpenTag = openTag) }
             composable("tag/{tag}", arguments = listOf(navArgument("tag") { type = NavType.StringType })) { entry ->
                 val tag = entry.arguments?.getString("tag") ?: return@composable
-                app.penmoss.ui.keys.TaggedCommands(clear = { nav.leave(entry) })
                 TaggedRoute(graph, tag, onBack = { nav.leave(entry) }, onOpen = openNote, onNoteLongPress = noteActions)
             }
             composable(TrashRoutes.TRASH) { entry ->

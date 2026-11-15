@@ -72,6 +72,7 @@ export default defineConfig({
             { label: 'Links and the Graph', slug: 'docs/links' },
             { label: 'Search', slug: 'docs/search' },
             { label: 'History and Trash', slug: 'docs/history' },
+            { label: 'Time Machine', slug: 'docs/time-machine' },
             { label: 'Comments', slug: 'docs/comments' },
             { label: 'Themes and Fonts', slug: 'docs/themes' },
             { label: 'Keyboard Shortcuts', slug: 'docs/shortcuts' },

@@ -213,7 +213,7 @@ class Attachments(
      * (A312). Blocks: the WebView asks on a background thread.
      */
     fun fileFor(sha: String, ext: String): File? {
-        if (!SHA256.matches(sha) || ext !in TYPES) return null
+        if (!SHA256.matches(sha) || (ext !in TYPES && ext != SVG_EXT)) return null
         File(dir, "$sha.$ext").takeIf { it.isFile }?.let { return it }
         File(cache, "$sha.$ext").takeIf { it.isFile }?.let { return it }
         // One fetch per picture: other requests for it wait for that one.
@@ -244,8 +244,10 @@ class Attachments(
         File(cache, "$sha.$ext").takeIf { it.isFile }?.let { return@withContext it }
         try {
             val bytes = api.attachment(sha)
-            // Content-addressed: what came back must be what was asked for, and a picture.
-            if (sha256(bytes) != sha || sniff(bytes) == null) return@withContext null
+            // Content-addressed: what came back must be what was asked for, and a picture (a
+            // drawing's SVG for an `.svg`, PEN-28).
+            val picture = if (ext == SVG_EXT) isSvg(bytes) else sniff(bytes) != null
+            if (sha256(bytes) != sha || !picture) return@withContext null
             File(cache, "$sha.$ext").also { write(it, bytes) }
         } catch (error: IOException) {
             null
@@ -388,6 +390,20 @@ class Attachments(
         )
 
         private val SHA256 = Regex("^[0-9a-f]{64}$")
+
+        /**
+         * A drawing's picture (PEN-28): the SVG Excalidraw rendered, beside its `.excalidraw`
+         * scene. The note shows it as a picture only (an `<img>` runs none of an SVG's script);
+         * the phone has no drawing editor.
+         */
+        const val SVG_EXT = "svg"
+        const val SVG_TYPE = "image/svg+xml"
+
+        /** Whether the bytes are an SVG document: `<svg`, after any byte-order mark, XML declaration or comments. */
+        fun isSvg(bytes: ByteArray): Boolean {
+            val head = String(bytes, 0, minOf(bytes.size, 1024), Charsets.UTF_8).trimStart('\uFEFF', ' ', '\t', '\r', '\n')
+            return head.startsWith("<svg") || ((head.startsWith("<?xml") || head.startsWith("<!--")) && head.contains("<svg"))
+        }
 
         const val PDF_EXT = "pdf"
         const val PDF_TYPE = "application/pdf"

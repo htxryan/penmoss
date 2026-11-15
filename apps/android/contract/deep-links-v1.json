@@ -1,5 +1,5 @@
 {
-  "$comment": "Deep links (T29 on the Mac, T40 P7 PL5 on Android, A476): penmoss://note/<ULID> opens the note and penmoss://capture the capture window; anything else is ignored, since a link is data from whatever app sent it, and a link never creates, moves or deletes. Checked by apps/desktop/test/unit/deep-links-contract.test.ts and the Kotlin DeepLinksTest.",
+  "$comment": "Deep links (T29 on the Mac, T40 P7 PL5 on Android, A476): penmoss://note/<ULID> opens the note (since PEN-69 also penmoss://note/<short id>, e.g. K7QD-9HTF2CXA: the notebook's 4 characters and the note id's last 8, or its whole ULID, which the app resolves among its notebooks) and penmoss://capture the capture window; anything else is ignored, since a link is data from whatever app sent it, and a link never creates, moves or deletes. Checked by apps/desktop/test/unit/deep-links-contract.test.ts and the Kotlin DeepLinksTest.",
   "notes": [
     {
       "link": "penmoss://note/01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
@@ -12,6 +12,18 @@
     {
       "link": "penmoss://note/01JD2Z7Q8R4T6Y8W0E2R4T6YB1?from=shortcuts",
       "id": "01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
+    },
+    {
+      "link": "penmoss://note/K7QD-9HTF2CXA",
+      "id": "K7QD-9HTF2CXA"
+    },
+    {
+      "link": "penmoss://note/k7qd-9htf2cxa/",
+      "id": "K7QD-9HTF2CXA"
+    },
+    {
+      "link": "penmoss://note/K7QD-01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
+      "id": "K7QD-01JD2Z7Q8R4T6Y8W0E2R4T6YB1"
     }
   ],
   "capture": ["penmoss://capture", "penmoss://capture/"],
@@ -31,6 +43,9 @@
     "penmoss://new?title=x",
     "penmoss:note/01JD2Z7Q8R4T6Y8W0E2R4T6YB1",
     "not a url",
-    ""
+    "",
+    "penmoss://note/K7QD-9HTF2C",
+    "penmoss://note/K7Q-9HTF2CXA",
+    "penmoss://note/K7QD_9HTF2CXA"
   ]
 }

@@ -5,7 +5,7 @@
  * Revert (A81) are ordinary changes to the note: this window makes them, and they sync as any
  * other edit does, so an agent's change stays undoable on the Mac too.
  */
-import { Layout, NotebookHistory } from '@penmoss/git-notebook';
+import { Layout, NotebookHistory, type GitVersion } from '@penmoss/git-notebook';
 import { revertChange } from '@penmoss/editor/revert';
 import { restoreContent } from '@penmoss/sync-client/history';
 import type { Notes } from '../notes/service';
@@ -31,6 +31,12 @@ export interface HistoryList {
 export interface DiffOp {
   readonly op: 'same' | 'add' | 'del';
   readonly line: string;
+}
+/** What a version changed: `+1 −0 line` (or `Title changed`), and a few words on it. */
+export interface HistorySummary {
+  readonly summary: string;
+  /** `Added “Buy milk”`, the headings touched, or '' (no line of the body changed). */
+  readonly gist: string;
 }
 export interface HistoryDetail {
   readonly id: number;
@@ -65,7 +71,19 @@ export interface HistorySource {
   readonly automatic: string;
   /** The Save button's words. */
   readonly saveLabel: string;
+  /**
+   * The versions, fast (Ryan's review of #192): when and who from the log alone. A version's
+   * `summary` is '' until `summaries` has read it.
+   */
   list(): Promise<HistoryList>;
+  /** What each of these versions (ids from `list`) changed, read together, by id. */
+  summaries(versions: readonly number[]): Promise<ReadonlyMap<number, HistorySummary>>;
+  /**
+   * Calls `listener` when the list may have changed: the note's changes waiting to sync, or a
+   * sync that may have made a version (Ryan's review of #192, finding 13: the Now row is live).
+   * Returns the way to stop.
+   */
+  watch?(listener: () => void): () => void;
   detail(version: number): Promise<HistoryDetail | null>;
   /** Makes a version of the note as it is now. */
   save(): Promise<void>;
@@ -81,6 +99,7 @@ export function noHistory(): HistorySource {
     automatic: 'Versions are the git notebook’s commits.',
     saveLabel: 'Sync Now',
     list: refused,
+    summaries: () => Promise.resolve(new Map()),
     detail: () => Promise.resolve(null),
     save: refused,
     restore: refused,
@@ -88,13 +107,17 @@ export function noHistory(): HistorySource {
   };
 }
 
+/** How a git notebook's versions are made, as History's ⓘ and Sync Now's description say it. */
+export const GIT_VERSIONS =
+  'Each sync with git is a version: this Mac commits its changes when it pushes, and every agent’s commit is a version of its own.';
+
 /** How long Save waits for the engine's sync (its own limit is 90 s). */
 const SAVE_WAIT_MS = 95_000;
 
 /** One reader per notebook, so commits read once stay read (they never change). */
 const readers = new WeakMap<GitSource, NotebookHistory>();
 
-function readerOf(source: GitSource): NotebookHistory {
+export function readerOf(source: GitSource): NotebookHistory {
   let reader = readers.get(source);
   if (!reader) {
     const info = source.info;
@@ -118,47 +141,18 @@ const THIS_MAC: HistoryAuthor = { id: 'this-mac', kind: 'device', label: 'This M
 export function gitHistory(source: GitSource, notes: Notes, noteId: string): HistorySource {
   const reader = () => readerOf(source);
   const missing = () => new HistoryRefused(404, 'No such version');
-  /**
-   * The note as it is now becomes a version before a Restore or a Revert replaces it, as the
-   * server saves one first: the restore can then be undone too. Not pushed (offline, refused),
-   * the restore is refused rather than replacing what history would not keep.
-   */
-  /**
-   * Pushes the note as this window holds it: the editor's last keystrokes stored, the engine's
-   * copy holding every record the windows stored (its window may not have taken them in yet), then
-   * a sync. A sync already under way when Sync Now was pressed may have committed the note
-   * before it took them in, so one more runs while the note is still not pushed.
-   */
-  const pushNote = async () => {
-    await notes.saveAll();
-    await source.feed.settled();
-    await syncAndWait(source);
-    if (source.feed.status.pending.includes(noteId)) await syncAndWait(source);
-  };
-  const saveCurrentFirst = async () => {
-    await pushNote().catch(() => undefined);
-    if (source.feed.status.pending.includes(noteId)) {
-      throw new HistoryRefused(
-        409,
-        'The note has changes not pushed yet, and they could not be saved as a version first. Sync, then try again: nothing was changed.',
-      );
-    }
-  };
-  /**
-   * The owner check first, while the click's activation lasts (A877, A901): Touch ID, as
-   * Android's BiometricPrompt, before a restore or a revert changes the note.
-   */
-  const ownerFirst = async (revert: boolean) => {
-    const refused = await source.restoreCheck(noteId, revert);
-    if (refused !== null) throw new HistoryRefused(403, refused);
-  };
+  const pushNote = () => pushNoteOf(source, notes, noteId);
+  const saveCurrentFirst = () => saveFirst(source, notes, noteId);
+  const ownerFirst = (revert: boolean) => ownerCheck(source, noteId, revert);
+  /** The versions `list` gave last, by id: their commits, for `summaries`. */
+  let listed = new Map<number, GitVersion>();
   return {
     offline: `Version history could not read ${source.name}’s git history.`,
-    automatic:
-      'Each sync with git is a version: this Mac commits its changes when it pushes, and every agent’s commit is a version of its own.',
+    automatic: GIT_VERSIONS,
     saveLabel: 'Sync Now',
     list: async () => {
-      const history = await reader().history(noteId, { limit: 100 });
+      const history = await reader().versions(noteId, { limit: 100 });
+      listed = new Map(history.versions.map((version) => [version.id, version]));
       const pending = source.feed.status.pending.includes(noteId);
       const since = notes.list().find((entry) => entry.id === noteId)?.updatedAt ?? Date.now();
       return {
@@ -166,23 +160,34 @@ export function gitHistory(source: GitSource, notes: Notes, noteId: string): His
         unversioned: pending ? { authors: [THIS_MAC], since } : null,
       };
     },
+    watch: (listener) => {
+      const state = () => {
+        const status = source.feed.status;
+        return `${status.pending.includes(noteId)}:${status.lastSyncAt ?? 0}`;
+      };
+      let last = state();
+      return source.feed.subscribe(() => {
+        const next = state();
+        if (next === last) return;
+        last = next;
+        listener();
+      });
+    },
+    summaries: (ids) =>
+      reader().descriptions(
+        noteId,
+        ids.flatMap((id) => {
+          const version = listed.get(id);
+          return version ? [version] : [];
+        }),
+      ),
     detail: (version) => reader().detail(noteId, version),
     save: pushNote,
     restore: async (version) => {
       await ownerFirst(false);
       const found = await reader().commitOf(noteId, version);
       if (!found) throw missing();
-      await saveCurrentFirst();
-      const old = await reader().docAt(noteId, found.commit.id);
-      let changed = false;
-      try {
-        await notes.editNote(noteId, (doc) => {
-          changed = restoreContent(doc, old);
-        });
-      } finally {
-        old.destroy();
-      }
-      return { changed };
+      return restoreToCommit(source, notes, noteId, found.commit.id, { ownerChecked: true });
     },
     revert: async (version) => {
       await ownerFirst(true);
@@ -215,6 +220,70 @@ export function gitHistory(source: GitSource, notes: Notes, noteId: string): His
       return result;
     },
   };
+}
+
+/**
+ * Pushes the note as this window holds it: the editor's last keystrokes stored, the engine's
+ * copy holding every record the windows stored (its window may not have taken them in yet), then
+ * a sync. A sync already under way when Sync Now was pressed may have committed the note
+ * before it took them in, so one more runs while the note is still not pushed.
+ */
+async function pushNoteOf(source: GitSource, notes: Notes, noteId: string): Promise<void> {
+  await notes.saveAll();
+  await source.feed.settled();
+  await syncAndWait(source);
+  if (source.feed.status.pending.includes(noteId)) await syncAndWait(source);
+}
+
+/**
+ * The note as it is now becomes a version before a Restore or a Revert replaces it, as the
+ * server saves one first: the restore can then be undone too. Not pushed (offline, refused),
+ * the restore is refused rather than replacing what history would not keep.
+ */
+async function saveFirst(source: GitSource, notes: Notes, noteId: string): Promise<void> {
+  await pushNoteOf(source, notes, noteId).catch(() => undefined);
+  if (source.feed.status.pending.includes(noteId)) {
+    throw new HistoryRefused(
+      409,
+      'The note has changes not pushed yet, and they could not be saved as a version first. Sync, then try again: nothing was changed.',
+    );
+  }
+}
+
+/**
+ * The owner check first, while the click's activation lasts (A877, A901): Touch ID, as
+ * Android's BiometricPrompt, before a restore or a revert changes the note.
+ */
+async function ownerCheck(source: GitSource, noteId: string, revert: boolean): Promise<void> {
+  const refused = await source.restoreCheck(noteId, revert);
+  if (refused !== null) throw new HistoryRefused(403, refused);
+}
+
+/**
+ * Restore (A80, A858) to the note as it was at `commit`: the owner checked, the note as it is
+ * now saved as a version first, then the old content applied as an ordinary change. History's
+ * Restore This Version and the Time Machine's (PEN-21) both come here.
+ */
+export async function restoreToCommit(
+  source: GitSource,
+  notes: Notes,
+  noteId: string,
+  commit: string,
+  options: { readonly ownerChecked?: boolean } = {},
+): Promise<HistoryChange> {
+  // First, while the click's activation lasts (A877).
+  if (!options.ownerChecked) await ownerCheck(source, noteId, false);
+  await saveFirst(source, notes, noteId);
+  const old = await readerOf(source).docAt(noteId, commit);
+  let changed = false;
+  try {
+    await notes.editNote(noteId, (doc) => {
+      changed = restoreContent(doc, old);
+    });
+  } finally {
+    old.destroy();
+  }
+  return { changed };
 }
 
 /** Sync now, resolved once a sync after it ended; refused when it ended without syncing. */

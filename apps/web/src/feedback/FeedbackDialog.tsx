@@ -137,6 +137,7 @@ function FeedbackForm({
   const [linkHref, setLinkHref] = useState<string | null>(null);
   /** Which formats the selection has, for the toolbar's pressed states (read on each change). */
   const [active, setActive] = useState<ReadonlySet<string>>(new Set());
+  const dialog = useRef<HTMLDivElement>(null);
   const editorHost = useRef<HTMLDivElement>(null);
   const editorRef = useRef<FeedbackEditor | null>(null);
   /** The description the editor opens with: the draft's, as read. */
@@ -223,6 +224,12 @@ function FeedbackForm({
     // Made once, from the draft as read; the editor holds the description after that.
   }, [loaded, id]);
 
+  // Focus is in the form from the moment it shows, so Escape closes it even before the draft is
+  // read (on a slow disk Escape did nothing, and the button behind kept focus); the first field
+  // takes it once the draft is in.
+  useLayoutEffect(() => {
+    if (!dialog.current?.contains(document.activeElement)) dialog.current?.focus();
+  }, []);
   useLayoutEffect(() => {
     if (loaded) firstField.current?.focus();
   }, [loaded]);
@@ -504,6 +511,8 @@ function FeedbackForm({
       style={hidden ? { visibility: 'hidden' } : undefined}
     >
       <div
+        ref={dialog}
+        tabIndex={-1}
         className="dialog feedback-dlg"
         role="dialog"
         aria-modal="true"

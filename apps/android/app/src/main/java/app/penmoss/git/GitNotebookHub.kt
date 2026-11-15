@@ -294,6 +294,34 @@ class GitNotebookHub(
         return ids.firstOrNull { id -> holds(id, noteId) } ?: journal()
     }
 
+    /**
+     * The notebook and note a short reference names (PEN-69, `K7QD-9HTF2CXA` from a
+     * `penmoss://note/…` link): the notebook whose id's 4 characters it starts with, and of its notes
+     * the one whose id it ends with (the oldest, as `NoteRef` names them). Null when this phone
+     * holds no such note.
+     */
+    suspend fun noteOfRef(ref: String): Pair<String, String>? {
+        val parts = ref.uppercase().split('-')
+        if (parts.size != 2) return null
+        val (tag, end) = parts
+        val entry = notebooks.entries().firstOrNull { app.penmoss.ui.NoteRef.notebookTag(it.notebookId) == tag } ?: return null
+        val ids = runCatching { idsEndingWith(entry.localId, end) }.getOrDefault(emptyList())
+        val id = if (end.length > app.penmoss.ui.NoteRef.NOTE_LENGTH) ids.firstOrNull { it == end } else ids.filter { it.length == 26 }.minOrNull()
+        return id?.let { entry.localId to it }
+    }
+
+    private suspend fun idsEndingWith(localId: String, end: String): List<String> {
+        val made = sources[localId]?.madeGraph
+        if (made != null) return made.store.idsEndingWith(end)
+        if (!context.getDatabasePath(databaseName(localId)).exists()) return emptyList()
+        val db = PenmossDatabase.open(context, databaseName(localId))
+        try {
+            return db.notes().idsEndingWith(end)
+        } finally {
+            db.close()
+        }
+    }
+
     /** Whether the notebook's Room cache has [noteId]: its graph's if made, else its file read once (no page, no sync). */
     private suspend fun holds(localId: String, noteId: String): Boolean = runCatching {
         val made = sources[localId]?.madeGraph

@@ -67,6 +67,8 @@ describe('the sidebar (T51)', () => {
     expect(items.map((tag) => /aria-label="([^"]*)"/.exec(tag)?.[1])).toEqual([
       'New Note',
       'Search',
+      // The Tags page, after Search (R2-9); it has no keys by default (PEN-68).
+      'Tags',
       'Today',
       'This Week',
       'Graph',
@@ -74,8 +76,9 @@ describe('the sidebar (T51)', () => {
     ]);
     for (const tag of items) {
       expect(tag).toContain('icon-btn');
-      // The keys are always in the tooltip now, not only on the rail.
-      expect(tag).toMatch(/data-tip="[^"]+\([^)]+\)"/);
+      // The keys are always in the tooltip now, not only on the rail; Tags has none by default.
+      if (tag.includes('data-command="app.tags"')) expect(tag).toContain('data-tip="Tags"');
+      else expect(tag).toMatch(/data-tip="[^"]+\([^)]+\)"/);
     }
     // Icons alone: no visible label or keys beside them.
     expect(row).not.toContain('class="label"');
@@ -98,7 +101,7 @@ describe('the sidebar (T51)', () => {
     expect(html.indexOf('data-testid="sync-alert"')).toBeLessThan(html.indexOf('class="sb-list"'));
   });
 
-  it('has Settings and Feedback as named icons in its footer, Trash on the notebook’s row (A935, T52, T53)', () => {
+  it('has Settings and Feedback as named icons in its footer, Trash in the notebook’s ⋯ (A935, T52, T53, R2-21)', () => {
     const html = setup().render('/');
     const foot = between(html, 'class="sb-foot"', '</footer>');
     expect(foot).not.toContain('class="label"');
@@ -112,10 +115,10 @@ describe('the sidebar (T51)', () => {
     // Send Feedback's own icon, not the comments' bubble (T62 item 7).
     expect(foot).toContain('data-icon="feedback"');
     expect(foot).not.toContain('data-icon="trash"');
-    const bar = between(html, 'class="tree-actions"', 'class="sync-dot');
-    const [trash] = tagsWith(bar, 'data-testid="sidebar-trash"');
-    expect(trash).toContain('href="/trash"');
-    expect(trash).toContain('aria-label="Trash"');
+    // Trash is in the notebook row's ⋯ (sidebar-t52.test.tsx opens it), not a button of its own.
+    const bar = between(html, 'class="tree-actions row-end"', 'class="sync-dot');
+    expect(tagsWith(bar, 'data-testid="sidebar-trash"')).toEqual([]);
+    expect(tagsWith(bar, 'aria-label="More Notebook Actions"')).toHaveLength(1);
   });
 
   it('starts its head with Back and Forward, greyed out with nowhere to go (A943)', () => {

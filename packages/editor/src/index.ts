@@ -7,6 +7,15 @@ export {
 } from './collab';
 export { NOTE_MARKS, NOTE_NODES, noteExtensions, type NoteExtensionsOptions } from './extensions';
 export type { ImageServices } from './extensions/image';
+// PEN-28: drawings, an SVG picture linked to its Excalidraw scene.
+export {
+  DRAWING_ALT,
+  drawingOf,
+  editDrawing,
+  insertDrawing,
+  type DrawingFiles,
+  type DrawingServices,
+} from './extensions/drawing';
 // T51 (A948): the image lightbox, opened from an image's tools or a double click.
 export {
   openLightbox,

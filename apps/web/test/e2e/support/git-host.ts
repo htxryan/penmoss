@@ -531,6 +531,7 @@ export class GitHost {
           ? this.meaning.update(a, b as Parameters<MeaningHost['update']>[1])
           : [];
       case 'meaningClose':
+        if (this.meaning && typeof a === 'string') await this.meaning.close(a);
         return null;
       case 'meaningSearch':
         return this.meaning && typeof a === 'string' && typeof b === 'string'

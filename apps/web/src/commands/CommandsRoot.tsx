@@ -20,9 +20,12 @@ import { navigate, notePath, useLocation } from '../router';
 import { SearchOverlay } from '../search/SearchOverlay';
 import { NotebookMeaning } from '../search/meaning';
 import { SearchService } from '../search/service';
-import { SourcesSearch } from '../search/sources';
+import { tagSearch, type TagSearch } from '../search/show-tag';
+import { SourceSearches, SourcesSearch } from '../search/sources';
 import { SourceScopeOr } from '../sources/context';
-import { useNoteSource, useSourcesState } from '../sources/hooks';
+import { useNoteSource, useSourcesRegistry, useSourcesState } from '../sources/hooks';
+import { timeMachinePath } from '../time-machine/path';
+import type { Source } from '../sources/registry';
 import { JournalScope } from '../sources/JournalScope';
 import { useGitNotebookCommands } from '../sources/git-commands';
 import { useEveryOpenNoteList } from '../sources/lists';
@@ -100,7 +103,8 @@ type Overlay =
   | { readonly kind: 'palette'; readonly mode: PaletteMode }
   | { readonly kind: 'recent'; readonly index: number; readonly held: boolean }
   | { readonly kind: 'cheatsheet' }
-  | { readonly kind: 'search' }
+  /** With a tag's notes listed, from choosing the tag (finding 9 of Ryan's review of #192). */
+  | { readonly kind: 'search'; readonly tag?: TagSearch }
   | { readonly kind: 'themes' }
   | { readonly kind: 'capture' }
   | { readonly kind: 'move'; readonly noteIds: readonly string[] }
@@ -130,6 +134,7 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
     () =>
       new SearchService({
         store: () => notes.openLocal(),
+        list: () => notes.list(),
         workspace: () => workspace.getState().snapshot,
         closed: closedNotebooks,
         reserved: RESERVED_KEYS,
@@ -138,6 +143,7 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
   );
   // One search across every notebook (T50, A826): each one's own index on this device.
   const sourcesState = useSourcesState();
+  const registry = useSourcesRegistry();
   // The theme and the other settings are the app's own (the Journal notebook's, A827), whatever
   // source the open note is in.
   const settingsWorkspace = sourcesState?.root.workspace ?? workspace;
@@ -146,39 +152,50 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
   // "Toggle Symbol ★": the symbol commands are titled by the person's glyphs (A940).
   useSymbolCommandTitles(commands, settingsWorkspace);
   // One search service per source for the window's life (a stable map, not render state).
-  const [gitSearches] = useState(() => new Map<string, SearchService>());
+  const [gitSearches] = useState(
+    () =>
+      new SourceSearches((source: Source) => {
+        const sourceNotes = source.notes;
+        // In the Mac app, meaning too (T77): the main window feeds the embedding service.
+        const bridge = desktop()?.meaning;
+        return new SearchService({
+          store: () => sourceNotes.openLocal(),
+          list: () => sourceNotes.list(),
+          workspace: () => source.workspace.getState().snapshot,
+          reserved: RESERVED_KEYS,
+          ...(bridge
+            ? {
+                meaning: new NotebookMeaning(source.id, bridge, {
+                  feed: desktop()?.window === 'main',
+                  yieldToPage: () => new Promise((resolve) => setTimeout(resolve, 0)),
+                }),
+              }
+            : {}),
+        });
+      }),
+  );
   const search = useMemo(() => {
     const all = sourcesState?.all ?? [];
     if (all.length === 0) return own;
-    const services = gitSearches;
     return new SourcesSearch(() =>
-      (sourcesState?.all ?? []).map((source) => {
-        let service = services.get(source.id);
-        if (!service) {
-          const sourceNotes = source.notes;
-          // In the Mac app, meaning too (T77): the main window feeds the embedding service.
-          const bridge = desktop()?.meaning;
-          service = new SearchService({
-            store: () => sourceNotes.openLocal(),
-            workspace: () => source.workspace.getState().snapshot,
-            reserved: RESERVED_KEYS,
-            ...(bridge
-              ? {
-                  meaning: new NotebookMeaning(source.id, bridge, {
-                    feed: desktop()?.window === 'main',
-                    yieldToPage: () => new Promise((resolve) => setTimeout(resolve, 0)),
-                  }),
-                }
-              : {}),
-          });
-          services.set(source.id, service);
-          const made = service;
-          source.notes.subscribe(() => made.invalidate());
-        }
-        return { id: source.id, name: source.name, service };
-      }),
+      (sourcesState?.all ?? []).map((source) => ({
+        id: source.id,
+        name: source.name,
+        service: gitSearches.get(source),
+      })),
     );
   }, [own, sourcesState, gitSearches]);
+  // A removed notebook's search closes, and with it its meaning (A1373). Going, this view lets
+  // go of every search, and meaning forgets those whose notebook is gone by then: removing the
+  // last notebook unmounts this before it sees the list empty.
+  useEffect(() => {
+    gitSearches.retain(new Set((sourcesState?.all ?? []).map((source) => source.id)));
+  }, [sourcesState, gitSearches]);
+  useEffect(
+    () => () =>
+      gitSearches.release(new Set((registry?.getState().all ?? []).map((source) => source.id))),
+    [gitSearches, registry],
+  );
   // In the Mac app, every notebook's search starts now, so the embedding service is fed its notes
   // from launch rather than from the first search (T77).
   useEffect(() => {
@@ -279,6 +296,25 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
     if (overlay) close(false);
     navigate('/trash');
   });
+  useCommand('app.tags', () => {
+    if (overlay) close(false);
+    navigate('/tags');
+  });
+  const timeMachineRegistry = useSourcesRegistry();
+  const timeMachineSources = useSourcesState();
+  useCommand(
+    'app.timeMachine',
+    () => {
+      if (overlay) close(false);
+      // The open note's notebook; else the one in use (the Journal's).
+      const source =
+        (currentNoteId ? timeMachineRegistry?.sourceOfNote(currentNoteId) : null) ??
+        timeMachineSources?.journal ??
+        null;
+      navigate(timeMachinePath(source?.id ?? null));
+    },
+    () => (timeMachineSources?.all.length ?? 0) > 0,
+  );
   useCommand('journal.settings', () => {
     if (overlay) close(false);
     navigate('/settings/journal');
@@ -392,6 +428,18 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
       }),
     [],
   );
+  // A tag chosen anywhere (the sidebar, a note's chips, ⌘-click on #tag, the Tags page): Search
+  // lists its notes (finding 9 of Ryan's review of #192).
+  useEffect(
+    () =>
+      tagSearch.subscribe(() => {
+        const tag = tagSearch.get();
+        if (!tag) return;
+        tagSearch.set(null);
+        latestOpen.current({ kind: 'search', tag });
+      }),
+    [],
+  );
 
   return (
     <>
@@ -436,7 +484,10 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
       case 'search':
         return (
           <SearchOverlay
+            // Another tag chosen while Search is open starts it again on that tag.
+            key={overlay.tag ? JSON.stringify(overlay.tag) : ''}
             service={search}
+            initial={overlay.tag ?? null}
             onOpenNote={(id, heading) => {
               close(false);
               notes.requestBodyFocus(id);

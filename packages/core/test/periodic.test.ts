@@ -17,6 +17,7 @@ import {
   periodicNoteId,
   plainDate,
   periodicClientId,
+  startOfDayIn,
   todayIn,
   weekDays,
   weeklyNotePath,
@@ -189,5 +190,24 @@ describe('periodic note ids and templates (T19, A4)', () => {
     expect(periodicNoteId('daily', '2026-10-21', '#2')).not.toBe(
       periodicNoteId('daily', '2026-10-21'),
     );
+  });
+});
+
+describe('startOfDayIn (PEN-21)', () => {
+  it('is midnight in the zone, across a change of the clocks', () => {
+    // Chicago: CDT (UTC−5) until 1 November 2026, then CST (UTC−6).
+    expect(startOfDayIn(plainDate(2026, 10, 26), 'America/Chicago')).toBe(Date.UTC(2026, 9, 26, 5));
+    expect(startOfDayIn(plainDate(2026, 11, 1), 'America/Chicago')).toBe(Date.UTC(2026, 10, 1, 5));
+    expect(startOfDayIn(plainDate(2026, 11, 2), 'America/Chicago')).toBe(Date.UTC(2026, 10, 2, 6));
+    expect(startOfDayIn(plainDate(2026, 11, 2), 'UTC')).toBe(Date.UTC(2026, 10, 2));
+    expect(startOfDayIn(plainDate(2026, 11, 2), 'Asia/Tokyo')).toBe(Date.UTC(2026, 10, 1, 15));
+  });
+
+  it('is the first moment of a day whose midnight the clocks skip', () => {
+    // Santiago springs forward at midnight on 6 September 2026: 00:00 at UTC−4 is 01:00 at UTC−3.
+    const start = startOfDayIn(plainDate(2026, 9, 6), 'America/Santiago');
+    expect(start).toBe(Date.UTC(2026, 8, 6, 4));
+    expect(todayIn('America/Santiago', new Date(start)).toString()).toBe('2026-09-06');
+    expect(todayIn('America/Santiago', new Date(start - 1)).toString()).toBe('2026-09-05');
   });
 });

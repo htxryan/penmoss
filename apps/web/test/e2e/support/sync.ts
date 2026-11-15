@@ -105,3 +105,37 @@ export async function asAgent(
     rmSync(dir, { recursive: true, force: true });
   }
 }
+
+/**
+ * What an agent reads on a fresh clone of the notebook (its own writer, as `penmoss mcp` is):
+ * `read` gets the local notes API once the clone has pulled. Nothing is pushed.
+ */
+export async function readAsAgent<T>(
+  host: GitHost,
+  remote: string,
+  read: (notebook: LocalNotebook) => T,
+): Promise<T> {
+  const dir = mkdtempSync(join(host.root, 'agent-read-'));
+  try {
+    const transport = new NodeGitTransport({
+      gitDir: join(dir, 'repo.git'),
+      remote,
+      branch: 'main',
+      root: '',
+      author: { name: 'Reader', email: 'agent@example.invalid' },
+      env: host.env,
+      sign: false,
+    });
+    await transport.init();
+    const engine = await GitNotebookEngine.open({
+      transport,
+      storage: new MemoryStorage(),
+      secrets: new MemorySecrets(),
+      writer: { kind: 'agent', label: 'Reader' },
+    });
+    await engine.sync();
+    return read(new LocalNotebook(new NotebookOps(engine)));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}

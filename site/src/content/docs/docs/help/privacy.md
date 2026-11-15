@@ -25,7 +25,7 @@ Penmoss does not check who can read your repository. Keep it **private** to keep
 - **Pictures from the web** in a note are downloaded from their websites, which see your IP address. On Android you can turn this off in **Settings → Sync and Storage**.
 - **Updates**: the Mac app asks for the newest build when it checks.
 
-Penmoss sends no analytics, crash reports or usage data.
+The apps send no analytics, crash reports or usage data. This website, penmoss.app, counts page views with Cloudflare Web Analytics, which sets no cookies; see the [privacy policy](/privacy).
 
 ## Tokens and sign-ins
 

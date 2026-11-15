@@ -152,6 +152,25 @@ export function encodeJson(value: unknown): Uint8Array {
   return encoder.encode(`${JSON.stringify(value, null, 2)}\n`);
 }
 
+/** How long a notebook's name may be (the sidebar shows it; the Mac's and Android's add forms cut it there). */
+export const NOTEBOOK_NAME_MAX = 80;
+
+/**
+ * A notebook's name as Rename writes it to `notebook.json` (Ryan's review of PR #192): one line,
+ * its spaces collapsed, no control characters, at most `NOTEBOOK_NAME_MAX` characters. Null when
+ * nothing is left.
+ */
+export function cleanNotebookName(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const clean = value
+    .replace(/\p{Cc}/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, NOTEBOOK_NAME_MAX)
+    .trim();
+  return clean || null;
+}
+
 /** `notebook.json`, or null when it is unreadable (never thrown: a broken file is reported). */
 export function parseNotebookInfo(bytes: Uint8Array): NotebookInfo | null {
   try {

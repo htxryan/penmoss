@@ -9,6 +9,7 @@ import { NodeSelection, TextSelection, type Transaction } from '@tiptap/pm/state
 import { insertFiles, type FileServices } from './attachment';
 import { CALLOUT_TYPES } from './callout';
 import { IMAGE_TYPES, insertImageFiles, type ImageServices } from './image';
+import { drawingServicesOf, insertDrawing } from './drawing';
 import { canHaveSymbols, openSymbolPicker } from './line-symbols';
 import { editFormulaAt } from './math';
 import { tableFromHeaders } from './table';
@@ -44,6 +45,8 @@ export interface BlockItem {
   readonly needsLinks?: boolean;
   /** Needs file storage (T13; the slash menu hides it without). */
   readonly needsFiles?: boolean;
+  /** Needs the drawing editor (PEN-28; the slash menu hides it without). */
+  readonly needsDrawings?: boolean;
   /** Offered by the selection toolbar's "Turn into" menu. */
   readonly turnInto?: boolean;
   /** Whether the selection's block is already this kind (for "Turn into"). */
@@ -307,11 +310,27 @@ export const BLOCK_ITEMS: readonly BlockItem[] = [
   },
   {
     id: 'mermaid',
-    label: 'Mermaid Diagram',
-    keywords: ['diagram', 'flowchart', 'chart', 'graph', 'sequence'],
+    label: 'Diagram: Mermaid',
+    keywords: ['flowchart', 'chart', 'graph', 'sequence'],
     icon: '⧉',
     hint: '```mermaid',
     insert: (context) => start(context).setNode('codeBlock', { language: 'mermaid' }).run(),
+  },
+  {
+    // PEN-28: a new drawing, in the drawing editor at once; it goes in the note on Done. The two
+    // diagrams are "Diagram: …" and sit together (R2-15); "draw" and "drawing" still find it.
+    id: 'drawing',
+    label: 'Diagram: Excalidraw',
+    keywords: ['draw', 'drawing', 'sketch', 'whiteboard', 'canvas'],
+    icon: '✎',
+    needsDrawings: true,
+    insert: (context) => {
+      const { editor } = context;
+      if (!drawingServicesOf(editor)) return false;
+      const ok = start(context).run();
+      if (ok) void insertDrawing(editor, editor.state.selection.from);
+      return ok;
+    },
   },
   {
     id: 'blockMath',
@@ -496,6 +515,7 @@ export function availableBlockItems(
       (!item.needsImages || images !== undefined) &&
       (!item.needsLinks || links !== undefined) &&
       (!item.needsFiles || files !== undefined) &&
+      (!item.needsDrawings || drawingServicesOf(editor) !== undefined) &&
       (item.id !== 'embed' || embeds) &&
       (!cell || item.inline),
   );

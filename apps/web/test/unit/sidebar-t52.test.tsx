@@ -79,28 +79,69 @@ const menuItems = () =>
     (item) => item.textContent,
   );
 
+const more = () => host.querySelector<HTMLButtonElement>('[data-testid="notebook-more"]')!;
+/** Opens ⋯ and chooses Sort Order…: the sort order's own menu. */
+const openSortMenu = () => {
+  act(() => more().click());
+  act(() => document.querySelector<HTMLElement>('[data-testid="sort-order"]')!.click());
+};
+
 describe('the notebook’s actions (T52, T53)', () => {
-  it('has icons only: New Note, Sort, New Folder and Trash, no Top Level label', () => {
+  it('has icons only: New Note, New Folder and ⋯, no Top Level label (R2-21)', () => {
     expect(bar().textContent).toBe('');
     expect(host.textContent).not.toContain('Top Level');
     expect(
       [...bar().querySelectorAll<HTMLElement>('button, a')].map((item) =>
         item.getAttribute('aria-label'),
       ),
-    ).toEqual(['New Note in This Notebook', 'Sort Order for the Top Level', 'New Folder', 'Trash']);
-    const trash = bar().querySelector<HTMLAnchorElement>('[data-testid="sidebar-trash"]')!;
-    expect(trash.getAttribute('href')).toBe('/trash');
-    expect(trash.dataset['tip']).toBe('Trash');
+    ).toEqual(['New Note in This Notebook', 'New Folder', 'More Notebook Actions']);
     // No native picker under the sort order any more.
     expect(host.querySelector('select')).toBeNull();
   });
 
+  it('has Sort Order…, Time Machine and Trash in ⋯, whatever the width, each with its icon (R2-20, R2-21)', () => {
+    expect(more().getAttribute('aria-haspopup')).toBe('menu');
+    expect(more().dataset['tip']).toBe('More Notebook Actions');
+    act(() => more().click());
+    expect(more().getAttribute('aria-expanded')).toBe('true');
+    const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
+    // The sidebar's right-click menu (ContextMenu), its items as the folder menu's.
+    expect(menu.dataset['testid']).toBe('context-menu');
+    expect(menu.getAttribute('aria-label')).toBe('More Notebook Actions');
+    // No rename here: this row was given none (a git notebook's row is, SourceSection).
+    expect(menuItems()).toEqual(['Sort Order…', 'Trash']);
+    const items = [...menu.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+    for (const item of items) {
+      expect(item.classList).toContain('menu-item');
+      expect(item.querySelector('[data-icon]')).not.toBeNull();
+    }
+    expect(
+      items.map((item) => item.querySelector('[data-icon]')!.getAttribute('data-icon')),
+    ).toEqual(['sort', 'trash']);
+    // Trash opens the notebook's Trash.
+    act(() => items[1]!.click());
+    expect(location.pathname).toBe('/trash');
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+  });
+
+  it('opens Sort Order… under ⋯, and closing it goes back to ⋯', () => {
+    openSortMenu();
+    const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
+    expect(menu.getAttribute('aria-label')).toBe('Sort Order for the Top Level');
+    act(() => {
+      menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+    expect(document.activeElement).toBe(more());
+  });
+
   it('opens the sort order as a menu, the order in use checked, and sets the one chosen', () => {
-    const sort = host.querySelector<HTMLButtonElement>('[data-testid="sort-order"]')!;
-    expect(sort.getAttribute('aria-haspopup')).toBe('menu');
-    expect(sort.dataset['tip']).toBe('Sort Order for the Top Level: Manual');
-    act(() => sort.click());
-    expect(sort.getAttribute('aria-expanded')).toBe('true');
+    act(() => more().click());
+    const sortItem = document.querySelector<HTMLElement>('[data-testid="sort-order"]')!;
+    expect(sortItem.getAttribute('aria-haspopup')).toBe('menu');
+    expect(sortItem.dataset['sort']).toBe('manual');
+    act(() => sortItem.click());
+    expect(more().getAttribute('aria-expanded')).toBe('true');
     const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
     expect(menu.getAttribute('aria-label')).toBe('Sort Order for the Top Level');
     const radios = [...menu.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
@@ -117,23 +158,28 @@ describe('the notebook’s actions (T52, T53)', () => {
 
     act(() => radios[1]!.click());
     expect(document.querySelector('[role="menu"]')).toBeNull();
-    expect(document.activeElement).toBe(sort);
-    // Set in the workspace: the button reads it back.
-    expect(sort.dataset['sort']).toBe('alpha');
+    expect(document.activeElement).toBe(more());
+    // Set in the workspace: the item reads it back.
+    act(() => more().click());
+    expect(document.querySelector<HTMLElement>('[data-testid="sort-order"]')!.dataset['sort']).toBe(
+      'alpha',
+    );
+    act(() => more().click());
+    expect(document.querySelector('[role="menu"]')).toBeNull();
 
-    // Escape closes it, focus back on the button; so does the button itself.
-    act(() => sort.click());
+    // Escape closes it, focus back on ⋯; so does ⋯ itself.
+    openSortMenu();
     act(() => {
       document
         .querySelector('[role="menu"]')!
         .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     });
     expect(document.querySelector('[role="menu"]')).toBeNull();
-    expect(document.activeElement).toBe(sort);
-    act(() => sort.click());
+    expect(document.activeElement).toBe(more());
+    openSortMenu();
     act(() => {
-      sort.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
-      sort.click();
+      more().dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      more().click();
     });
     expect(document.querySelector('[role="menu"]')).toBeNull();
   });

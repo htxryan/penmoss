@@ -328,20 +328,14 @@ fun NoteRoute(
     val crumbs = remember(folders, placed) { Items.folderPath(folders, placed?.folderId) }
     // Its notebook's name when not the default (T43, A752): a link into a closed one still opens it.
     val notebookName = remember(folders, placed) { noteNotebookName(folders, placed?.folderId) }
-    // Copy Agent Reference (T52 item 4): the note's title, id and place, and the MCP call that reads it.
     val defaultNotebook by remember { graph.store.observeDefaultNotebookName() }.collectAsStateWithLifecycle(app.penmoss.data.Notebooks.defaultName(null))
-    val copyAgentReference: (() -> Unit)? = placed?.let { note ->
+    // Copy Agent Reference (T52 item 4; PEN-69): the MCP call that reads the note by its short id.
+    val copyAgentReference: (() -> Unit)? = placed?.let { _ ->
         {
-            val title = state.title.takeIf { state.phase == EditorUiState.Phase.READY } ?: note.title
-            val reference = AgentReference.of(
-                noteId,
-                title,
-                note.folderId,
-                folders,
-                defaultNotebook,
-                gitNotebook = (graph.source as? app.penmoss.git.GraphSource.Git)?.name,
-            )
-            controller.notify(AgentReference.copy(context, reference))
+            graph.scope.launch {
+                val reference = agentReferenceIn(graph, noteId)
+                controller.notify(reference?.let { AgentReference.copy(context, it) } ?: "This note isn't on this phone any more")
+            }
         }
     }
 

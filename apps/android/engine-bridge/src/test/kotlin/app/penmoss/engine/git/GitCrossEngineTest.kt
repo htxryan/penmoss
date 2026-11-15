@@ -240,6 +240,52 @@ class GitCrossEngineTest {
     }
 
     @Test
+    fun theMacsTagDescriptionsSurviveThePhonesSyncsAndItsOwnChanges() = runBlocking {
+        // PEN-68: the Mac app keeps what each tag means in the notebook's WorkspaceDoc. The phone
+        // has no Tags page and never reads them, but its engine merges the whole WorkspaceDoc, so
+        // its own changes (a note filed, a folder made) push beside them and never drop them.
+        val remote = bare()
+        val phone = Phone()
+        val added = phone.notebooks.add(GitTestRepos.url(remote), "main", "", "Work") as AddResult.Added
+        val localId = added.notebook.localId
+        val entry = phone.notebooks.entry(localId)!!
+        val engine = phone.engine(localId)
+        engine.open(entry, label, front = false)
+        val api = LocalGitApi.api(localId, OkHttpClient(), phone.asks) { engine }
+        val store = InMemorySyncStore()
+        val sync = SyncEngine(api, store) { _: ExchangeResult -> }
+        val roadmap = "01JBN0000000000000000000T1"
+        store.addPending(roadmap, NodeGitRunner.note(roadmap, "Roadmap", "Plans for #project/penmoss"))
+        sync.sync()
+        api.moveNote(roadmap, null, null, null, null)
+        assertEquals("synced", engine.sync().phase)
+
+        // The Mac describes two tags and pushes.
+        NodeGitRunner.describe(GitTestRepos.url(remote), temp.newFolder("mac"), "project", "Work with an end.", "project/penmoss", "The notes app itself.")
+
+        // The phone pulls, files a new tagged note in a folder of its own, and pushes.
+        assertEquals("synced", engine.sync().phase)
+        val folder = api.createFolder("01JBN0000000000000000000F1", "Android", null)
+        val phoneNote = "01JBN0000000000000000000T2"
+        store.addPending(phoneNote, NodeGitRunner.note(phoneNote, "Phone build", "The #project/penmoss/android build"))
+        sync.sync()
+        api.moveNote(phoneNote, folder.id, null, null, null)
+        assertEquals("synced", engine.sync().phase)
+        assertTrue("the phone pushed its change", GitTestRepos.paths(remote, "main").any { it.contains("Phone build") })
+
+        // An agent on a fresh clone reads both descriptions, with the phone's new tag under them.
+        val read = NodeGitRunner.describe(GitTestRepos.url(remote), temp.newFolder("reader"))
+        assertTrue(read, read.contains("""{"name":"project","description":"Work with an end.","notes":2,"ancestors":[]}"""))
+        assertTrue(read, read.contains("""{"name":"project/penmoss","description":"The notes app itself.","notes":2,"""))
+        assertTrue(
+            read,
+            read.contains(
+                """{"name":"project/penmoss/android","description":null,"notes":1,"ancestors":[{"name":"project","description":"Work with an end."},{"name":"project/penmoss","description":"The notes app itself."}]}""",
+            ),
+        )
+    }
+
+    @Test
     fun aNoteDeletedForGoodNeverComesBackFromRoomsOldCopy() = runBlocking {
         // The PR #167 probe: "Passwords" is deleted for good and the purge lands; Room has not
         // pulled the tombstone yet; Android clears the page's store.

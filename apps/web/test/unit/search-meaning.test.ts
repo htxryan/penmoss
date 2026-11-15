@@ -19,6 +19,7 @@ import {
   coverageNotice,
 } from '../../src/search/meaning';
 import { NO_FILTERS, SearchService, type SearchRequest } from '../../src/search/service';
+import { SourceSearches } from '../../src/search/sources';
 import { memoryNotes } from './support/memory-notes';
 
 const docs = vaultDocuments();
@@ -39,6 +40,7 @@ function scriptedBridge(initial: DesktopMeaningStatus = READY) {
   const known = new Map<string, string | number>();
   const updates: DesktopMeaningNote[][] = [];
   const searches: Array<{ query: string; ids?: readonly string[] }> = [];
+  const closes: string[] = [];
   const state = { hits: [] as DesktopMeaningHit[], floor: 0.28 };
   const bridge: DesktopMeaning = {
     status: () => Promise.resolve(status),
@@ -51,7 +53,10 @@ function scriptedBridge(initial: DesktopMeaningStatus = READY) {
       }
       return Promise.resolve(need);
     },
-    close: () => Promise.resolve(),
+    close: (notebook) => {
+      closes.push(notebook);
+      return Promise.resolve();
+    },
     search: (_notebook, query, options) => {
       searches.push({ query, ...(options?.ids ? { ids: options.ids } : {}) });
       return Promise.resolve({ floor: state.floor, hits: state.hits });
@@ -59,14 +64,17 @@ function scriptedBridge(initial: DesktopMeaningStatus = READY) {
     setEnabled: () => Promise.resolve(null),
     onChange: (listener) => {
       listeners.push(listener);
-      return () => undefined;
+      return () => {
+        const at = listeners.indexOf(listener);
+        if (at >= 0) listeners.splice(at, 1);
+      };
     },
   };
   const emit = (next: Partial<DesktopMeaningStatus>) => {
     status = { ...status, ...next };
     for (const listener of listeners) listener(status);
   };
-  return { bridge, updates, searches, state, known, emit };
+  return { bridge, updates, searches, closes, listeners, state, known, emit };
 }
 
 function recordOf(doc: (typeof docs)[number], overrides: Partial<NoteRecord> = {}): NoteRecord {
@@ -159,6 +167,89 @@ describe('feeding the embedding service (T77)', () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(noteWindow.updates).toEqual([]);
     expect(updates.length).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe('a removed notebook (A1373)', () => {
+  /** A source as `SourceSearches` sees it, counting its notes' subscribers. */
+  const source = () => {
+    const subscribers = new Set<() => void>();
+    return {
+      id: 'nb',
+      subscribers,
+      notes: {
+        subscribe: (listener: () => void) => {
+          subscribers.add(listener);
+          return () => subscribers.delete(listener);
+        },
+      },
+    };
+  };
+
+  it('closes its meaning: the service forgets it, and nothing more is heard or sent', async () => {
+    const { service, updates, known, closes, listeners, emit } = await setup();
+    await vi.waitFor(() => expect(known.size).toBe(docs.length));
+    const searches = new SourceSearches(() => service);
+    const nb = source();
+    expect(searches.get(nb)).toBe(service);
+    expect(nb.subscribers.size).toBe(1);
+    expect(listeners).toHaveLength(1);
+    // Still open: kept.
+    searches.retain(new Set(['nb', 'other']));
+    expect(closes).toEqual([]);
+    // Removed from the app.
+    searches.retain(new Set(['other']));
+    expect(closes).toEqual(['nb']);
+    expect(listeners).toHaveLength(0);
+    expect(nb.subscribers.size).toBe(0);
+    // A new start of the service, or a change, sends nothing for it.
+    const before = updates.length;
+    emit({ generation: 2 });
+    service.invalidate();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(updates.length).toBe(before);
+    // Closing again is a no-op.
+    searches.retain(new Set());
+    service.close();
+    expect(closes).toEqual(['nb']);
+  });
+
+  it('sends nothing it was sending when it is removed mid-sync', async () => {
+    const { service, updates, known, closes, meaning } = await setup();
+    await vi.waitFor(() => expect(known.size).toBe(docs.length));
+    const before = updates.length;
+    // A sync is reading its notes' versions when the notebook goes.
+    const syncing = meaning.sync();
+    service.close();
+    await syncing;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(closes).toEqual(['nb']);
+    expect(updates.length).toBe(before);
+  });
+
+  it('a view that goes lets go of its searches, and meaning forgets only the removed ones', async () => {
+    const { service, closes, listeners } = await setup();
+    const searches = new SourceSearches(() => service);
+    const nb = source();
+    searches.get(nb);
+    // The view remounts with the notebook still there: nothing is forgotten.
+    searches.release(new Set(['nb']));
+    expect(listeners).toHaveLength(0);
+    expect(nb.subscribers.size).toBe(0);
+    expect(closes).toEqual([]);
+    // The view went because the last notebook was removed: then it is.
+    const again = await setup();
+    const later = new SourceSearches(() => again.service);
+    later.get(source());
+    later.release(new Set());
+    expect(again.closes).toEqual(['nb']);
+  });
+
+  it('only the window that feeds the service tells it to forget the notebook', async () => {
+    const { service, closes, listeners } = await setup({ feed: false });
+    service.close();
+    expect(listeners).toHaveLength(0);
+    expect(closes).toEqual([]);
   });
 });
 

@@ -128,8 +128,9 @@ test('↑ on the note’s first line goes to the end of the title', async ({ pag
 test('↑ on a wrapped first line’s second line stays in the note', async ({ page }) => {
   await openNote(page, 'Wrapped');
   const first = body(page).locator('p').first();
-  // Two lines: taller than one line of 1.7 × 16 px.
-  expect(await first.evaluate((p: HTMLElement) => p.offsetHeight)).toBeGreaterThan(40);
+  // Two lines: taller than one line of 1.7 × 16 px. Waited for: until its first layout, the
+  // unfocused editor's block has the height it is given ahead of it, one line (styles.css).
+  await expect.poll(() => first.evaluate((p: HTMLElement) => p.offsetHeight)).toBeGreaterThan(40);
   /** Where the page's caret is: in the first paragraph's text, at which character. */
   const caret = () =>
     page.evaluate(() => {

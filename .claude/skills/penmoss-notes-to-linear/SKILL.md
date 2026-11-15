@@ -1,6 +1,6 @@
 ---
 name: penmoss-notes-to-linear
-description: Turn one or more Penmoss notes (feedback, roadmap or idea notes, given as links, reference text or note ids) into Linear issues in the Penmoss team's Triage, one issue per item, with screenshots uploaded, then write each issue's PEN id back into the note as a link at the start of its bullet. Use when Ryan pastes a Penmoss note reference ("Read it with ... read_note {"id":...}") and asks to capture, file, triage or add its items to Linear or the roadmap.
+description: Turn one or more Penmoss notes (feedback, roadmap or idea notes, given as links, reference text or note ids) into Linear issues in the Penmoss team's Triage, one issue per item, with screenshots uploaded, then write each issue's PEN id back into the note as a link at the start of its bullet. Use when Ryan pastes a Penmoss note reference ("Reference note via Penmoss MCP ... read_note {"id":...}") and asks to capture, file, triage or add its items to Linear or the roadmap.
 ---
 
 # Penmoss notes to Linear issues
@@ -9,7 +9,7 @@ Takes notes Ryan wrote in Penmoss (feedback lists, roadmap ideas) and files each
 
 ## 1. Read the notes
 
-- Each note arrives as a reference: a title, a notebook and `read_note {"id":"<id>"}`. Use the **local** Penmoss MCP (`penmoss-local`), not the hosted `penmoss` one at `api.penmoss.app`, which may not resolve.
+- Each note arrives as a reference: `Reference note via Penmoss MCP (penmoss mcp --notebook "<name>") tool read_note {"id":"<id>"}`, where the id is a short id such as `K7QD-9HTF2CXA` (PEN-69) or, in older references, a 26-character id after a title and a notebook. Both work with `read_note`. Use the **local** Penmoss MCP (`penmoss-local`), not the hosted `penmoss` one at `api.penmoss.app`, which may not resolve.
 - If `penmoss-local` isn't registered, register it for the clone that holds the note, then start a new session to load it: `claude mcp add --scope user penmoss-local -- /Applications/Penmoss.app/Contents/MacOS/Penmoss --penmoss-cli mcp --notebook <clone>`. The `<clone>` is the clone's own name from `Penmoss --penmoss-cli notebook ls` (for example `personal-agent`). A notebook's display name such as "Personal" can match several clones and is refused as ambiguous.
 - Until the MCP loads, use the same CLI from Bash: `Penmoss --penmoss-cli cat <id> --notebook <clone> --body` (add `--json` for the `baseVersion`). Call it through a shell function, since zsh won't split a command held in a variable. A note id missing from one clone may be in another: try each clone.
 - Never read or edit the Yjs files under `~/.penmoss/git/`, and never run `strings` on them. They go stale, and the running app owns them.

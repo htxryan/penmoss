@@ -31,6 +31,7 @@ import {
   restoreFolder,
   setSetting,
   setSortMode,
+  setTagDescription,
   setTogether,
   unregisterNote,
   WORKSPACE_RECORD_KEY,
@@ -429,6 +430,11 @@ export class Workspace {
       if (item.kind === 'folder') moveFolder(this.doc, item.id, parentId, position);
       else placeNote(item.id, position);
     });
+  }
+
+  /** Sets what `tag` means (PEN-68); a description with no text removes it. */
+  setTagDescription(tag: string, text: string): void {
+    setTagDescription(this.doc, tag, text);
   }
 
   /** The settings: the device's, with the notebook's own over them (A827). */

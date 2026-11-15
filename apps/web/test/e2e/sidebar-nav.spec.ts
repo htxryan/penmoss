@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures';
-import { notebookAction } from './notebook-actions';
+import { notebookMenuItem } from './notebook-actions';
 
 // T51 (web): the sidebar's shell and the app's navigation. Back and Forward through the app's own
 // pages (A943); the shortcuts as one row of icons (A932); each source's sync state as a dot
@@ -53,8 +53,8 @@ test('Back and Forward step through the app’s pages, greyed out at either end 
   await expect(back).toBeEnabled();
   await page.getByTestId('open-graph').click();
   await expect(page).toHaveURL(/\/graph/);
-  // The notebook's Trash, on its name's row (T53 item 4).
-  const trash = await notebookAction(page, 'Trash', { role: 'link' });
+  // The notebook's Trash, in its row's ⋯ (T53 item 4, R2-21).
+  const trash = await notebookMenuItem(page, 'Trash');
   await expect(trash).toHaveAttribute('data-testid', /^(sidebar|section)-trash$/);
   await trash.click();
   await expect(page).toHaveURL(TRASH);
@@ -113,16 +113,28 @@ test('the sidebar: a row of shortcut icons, a sync dot, icons in the footer (A93
 
   // One row, New Note first (T52), each icon named, its keys in its tooltip.
   const row = sidebar.getByTestId('sidebar-shortcuts');
-  const names = ['New Note', 'Search', 'Today', 'This Week', 'Graph', 'Commands'];
+  const names = ['New Note', 'Search', 'Tags', 'Today', 'This Week', 'Graph', 'Commands'];
   const tops = new Set<number>();
+  const lefts: number[] = [];
   for (const name of names) {
     const item = row
       .getByRole('button', { name, exact: true })
       .or(row.getByRole('link', { name, exact: true }));
     await expect(item).toBeVisible();
-    tops.add(Math.round((await item.boundingBox())!.y));
+    const box = (await item.boundingBox())!;
+    tops.add(Math.round(box.y));
+    lefts.push(box.x);
   }
   expect(tops.size).toBe(1);
+  // In that order: Tags right after Search (R2-9).
+  expect(lefts).toEqual([...lefts].sort((a, b) => a - b));
+  // Tags opens the Tags page, and shows as the page while it is.
+  const tagsButton = row.getByRole('button', { name: 'Tags', exact: true });
+  await tagsButton.click();
+  await expect(page).toHaveURL(/\/tags$/);
+  await expect(tagsButton).toHaveAttribute('aria-current', 'page');
+  await page.goBack();
+  await expect(tagsButton).not.toHaveAttribute('aria-current', 'page');
   await row.getByRole('button', { name: 'Today', exact: true }).hover();
   await expect(tooltip).toHaveText(/^Today \(.+\)$/);
   await page.mouse.move(900, 600);
@@ -150,24 +162,25 @@ test('the sidebar: a row of shortcut icons, a sync dot, icons in the footer (A93
   await expect(page.getByTestId('git-status')).toBeVisible();
   await page.goBack();
 
-  // The footer: icons, each named, with its tooltip. Trash is on the notebook's bar (T52).
+  // The footer: icons, each named, with its tooltip. Trash is in the notebook row's ⋯ (R2-21).
   const foot = sidebar.locator('.sb-foot');
   await expect(foot.getByRole('link', { name: 'Trash', exact: true })).toHaveCount(0);
   for (const [name, role, where] of [
     ['Settings', 'link', foot],
     ['Send Feedback', 'button', foot],
-    ['Trash', 'link', sidebar.locator('.tree-actions')],
+    ['More Notebook Actions', 'button', sidebar.locator('.tree-actions')],
   ] as const) {
     const item = where.getByRole(role, { name, exact: true });
-    // Trash is on the notebook's row since T53, shown on hover.
-    if (name === 'Trash') await heading.hover();
+    // ⋯ is on the notebook's row since T53, shown on hover.
+    const onRow = name === 'More Notebook Actions';
+    if (onRow) await heading.hover();
     await expect(item).toBeVisible();
     await expect(item).toHaveText('');
-    // Trash sits in the scrolling list now: hovering it may scroll the list back to the top,
-    // and a scroll hides a tooltip (A189), so hover again once it has stopped (as for the dot).
+    // ⋯ sits in the scrolling list: hovering it may scroll the list back to the top, and a
+    // scroll hides a tooltip (A189), so hover again once it has stopped (as for the dot).
     await expect(async () => {
       await page.mouse.move(900, 600);
-      if (name === 'Trash') await heading.hover();
+      if (onRow) await heading.hover();
       await item.hover();
       await expect(tooltip).toHaveText(new RegExp(`^${name}( \\(.+\\))?$`), { timeout: 4_000 });
     }).toPass();

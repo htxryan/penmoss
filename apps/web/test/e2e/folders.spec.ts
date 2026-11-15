@@ -1,6 +1,6 @@
 import { anotherMac, expect, seeded, test, type Locator, type Page } from './fixtures';
 import { NEW_FOLDER } from './keys';
-import { notebookAction } from './notebook-actions';
+import { notebookAction, notebookMenuItem } from './notebook-actions';
 import { carried } from './support/sync';
 
 // T7 on a git notebook (T59): nested folders, manual order (drag and Alt+↑/↓), per-folder sort
@@ -69,18 +69,31 @@ const SORT_NAMES: Record<SortMode, string> = {
   modified: 'Modified',
 };
 
-/** The sort order is a menu on the notebook's bar (T52): open it, choose `mode`. */
-/** The sort order's button, shown or not (it is on the notebook's row, on hover: T53). */
-const sortOrder = (page: Page, label: string) =>
-  page.locator(`[data-testid="sort-order"][aria-label="${label}"]`);
+/**
+ * The sort order's menu (T52), for the folder `label` names ("Sort Order for Work"): Sort Order…
+ * in the notebook row's ⋯ (R2-21), shown on hover (T53 item 4).
+ */
+async function openSort(page: Page, label: string): Promise<Locator> {
+  await (await notebookMenuItem(page, 'Sort Order…')).click();
+  const menu = page.getByRole('menu', { name: label, exact: true });
+  await expect(menu).toBeVisible();
+  return menu;
+}
 
-async function chooseSort(button: Locator, mode: SortMode) {
-  // On the notebook's row, shown on hover (T53 item 4).
-  await button.page().locator('.sb-section-head:has(.tree-actions)').first().hover();
-  await button.click();
-  const item = button.page().getByRole('menuitemradio', { name: SORT_NAMES[mode], exact: true });
-  await item.click();
-  await expect(button).toHaveAttribute('data-sort', mode);
+/** The sort order in use for the folder `label` names, as its menu checks it. */
+async function sortIn(page: Page, label: string): Promise<SortMode | undefined> {
+  const menu = await openSort(page, label);
+  const checked = await menu.getByRole('menuitemradio', { checked: true }).textContent();
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  return (Object.keys(SORT_NAMES) as SortMode[]).find((mode) => SORT_NAMES[mode] === checked);
+}
+
+/** Chooses `mode` for the folder `label` names. */
+async function chooseSort(page: Page, label: string, mode: SortMode) {
+  const menu = await openSort(page, label);
+  await menu.getByRole('menuitemradio', { name: SORT_NAMES[mode], exact: true }).click();
+  await expect.poll(() => sortIn(page, label)).toBe(mode);
 }
 
 async function inView(source: Locator, target: Locator) {
@@ -209,8 +222,8 @@ test('nested folders: create, reorder, sort, refuse a loop, and sync to a second
     // Sort modes are per folder and sync; the order follows.
     // Work is still the chosen folder (new notes went into it).
     await expect(work).toHaveAttribute('aria-selected', 'true');
-    const sort = sortOrder(page, `Sort Order for ${name('Work')}`);
-    await chooseSort(sort, 'alpha');
+    const sort = `Sort Order for ${name('Work')}`;
+    await chooseSort(page, sort, 'alpha');
     await expect
       .poll(() => rows(page, tag))
       .toEqual(['Projects', 'Work', 'Alpha', 'Bravo', 'Charlie']);
@@ -218,10 +231,7 @@ test('nested folders: create, reorder, sort, refuse a loop, and sync to a second
       await expect
         .poll(() => rows(device, tag))
         .toEqual(['Projects', 'Work', 'Alpha', 'Bravo', 'Charlie']);
-      await expect(sortOrder(device, `Sort Order for ${name('Work')}`)).toHaveAttribute(
-        'data-sort',
-        'alpha',
-      );
+      await expect.poll(() => sortIn(device, sort)).toBe('alpha');
     });
     // In a sorted folder, Alt+↑/↓ explains instead of moving.
     await item(page, name('Charlie')).focus();
@@ -229,7 +239,7 @@ test('nested folders: create, reorder, sort, refuse a loop, and sync to a second
     await expect(page.getByTestId('tree-message')).toContainText('Switch it to Manual to reorder');
 
     // Modified: the note edited last comes first.
-    await chooseSort(sort, 'modified');
+    await chooseSort(page, sort, 'modified');
     await item(page, name('Bravo')).click();
     await expect(page.getByTestId('note-title')).toHaveValue(name('Bravo'));
     await page.getByTestId('note-body').locator('.ProseMirror').click();
@@ -237,15 +247,10 @@ test('nested folders: create, reorder, sort, refuse a loop, and sync to a second
     await expect
       .poll(() => rows(page, tag))
       .toEqual(['Projects', 'Work', 'Bravo', 'Charlie', 'Alpha']);
-    await carried(page, device, () =>
-      expect(sortOrder(device, `Sort Order for ${name('Work')}`)).toHaveAttribute(
-        'data-sort',
-        'modified',
-      ),
-    );
+    await carried(page, device, () => expect.poll(() => sortIn(device, sort)).toBe('modified'));
 
     // Back to Manual: the manual order was kept.
-    await chooseSort(sort, 'manual');
+    await chooseSort(page, sort, 'manual');
     await carried(page, device, () =>
       expect
         .poll(() => rows(device, tag))
@@ -254,14 +259,13 @@ test('nested folders: create, reorder, sort, refuse a loop, and sync to a second
 
     // The top level has its own sort mode, which syncs too.
     await page.getByTestId('tree-root-drop').click();
-    const rootSort = sortOrder(page, 'Sort Order for the Top Level');
-    const before = (await rootSort.getAttribute('data-sort')) as SortMode;
+    const rootSort = 'Sort Order for the Top Level';
+    const before = (await sortIn(page, rootSort))!;
     await device.getByTestId('tree-root-drop').click();
-    const otherRootSort = sortOrder(device, 'Sort Order for the Top Level');
-    await chooseSort(rootSort, 'alpha');
-    await carried(page, device, () => expect(otherRootSort).toHaveAttribute('data-sort', 'alpha'));
-    await chooseSort(rootSort, before);
-    await carried(page, device, () => expect(otherRootSort).toHaveAttribute('data-sort', before));
+    await chooseSort(page, rootSort, 'alpha');
+    await carried(page, device, () => expect.poll(() => sortIn(device, rootSort)).toBe('alpha'));
+    await chooseSort(page, rootSort, before);
+    await carried(page, device, () => expect.poll(() => sortIn(device, rootSort)).toBe(before));
 
     // Rename with F2, then delete: the notes move up into Projects, on both devices.
     await work.focus();

@@ -246,6 +246,24 @@
       }
     },
     {
+      "id": "app.tags",
+      "title": "Tags",
+      "area": "Navigation",
+      "scope": "global",
+      "android": {
+        "na": "Describing tags is the Mac's (PEN-68): the phone's Tags lists them and their notes"
+      }
+    },
+    {
+      "id": "app.timeMachine",
+      "title": "Time Machine",
+      "area": "Navigation",
+      "scope": "global",
+      "android": {
+        "na": "The Time Machine is the Mac app's for now (PEN-21: Android is not in its first version); a note's History is on the phone."
+      }
+    },
+    {
       "id": "note.openInNewWindow",
       "title": "Open in New Window",
       "area": "Note",
@@ -396,15 +414,6 @@
       "scope": "global",
       "android": {
         "elsewhere": "A note's ⋮ menu: Tags… (T38)"
-      }
-    },
-    {
-      "id": "tags.clearFilter",
-      "title": "Show All Notes (Clear the Tag Filter)",
-      "area": "Tags",
-      "scope": "global",
-      "android": {
-        "elsewhere": "Back from a tag's notes (TG2)"
       }
     },
     {
@@ -1201,11 +1210,20 @@
     },
     {
       "id": "editor.insert.mermaid",
-      "title": "Insert: Mermaid Diagram",
+      "title": "Insert: Diagram: Mermaid",
       "area": "Insert",
       "scope": "editor",
       "android": {
         "elsewhere": "A note's slash menu (ED3)"
+      }
+    },
+    {
+      "id": "editor.insert.drawing",
+      "title": "Insert: Diagram: Excalidraw",
+      "area": "Insert",
+      "scope": "editor",
+      "android": {
+        "na": "The phone shows drawings but has no drawing editor: they are made in the Mac app (PEN-28)"
       }
     },
     {

@@ -3,25 +3,20 @@ package app.penmoss.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import app.penmoss.data.FolderEntity
-import app.penmoss.data.Notebooks
-import kotlinx.coroutines.flow.first
 
 /**
- * Copy Agent Reference (T52 item 4): two lines of plain text that name a note so an agent finds
- * it through Penmoss's MCP server: its title and place (the notebook, then its folders), and the
- * read_note call that reads it, the only place the id appears (T53 item 7). The text is core's `agentReference`
- * (`packages/core/src/agent-reference.ts`), matched here case for case against
- * `contract/agent-reference-v1.json` by `AgentReferenceContractTest`.
+ * Copy Agent Reference (T52 item 4; shortened by PEN-69): one line of plain text that names a note
+ * so an agent reads it through Penmoss's MCP server: the server (a git notebook's local one,
+ * `penmoss mcp --notebook <name>`) and the read_note call with the note's short reference
+ * ([NoteRef]). The text is core's `agentReference` (`packages/core/src/agent-reference.ts`),
+ * matched here case for case against `contract/agent-reference-v1.json` by
+ * `AgentReferenceContractTest`.
  */
 object AgentReference {
     /** What the snackbar says once the reference is on the clipboard. */
     const val COPIED = "Copied Agent Reference"
 
-    /** Between the notebook and each folder. */
-    private const val SEPARATOR = " › "
-
-    /** JavaScript's `\s`, so a title collapses on every client alike (Java's `\s` is ASCII only). */
+    /** JavaScript's `\s`, so a name collapses on every client alike (Java's `\s` is ASCII only). */
     private val SPACES = Regex("[\\t\\n\\u000B\\f\\r \\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]+")
 
     /** One line: every run of whitespace as one space, trimmed. */
@@ -31,54 +26,20 @@ object AgentReference {
     private fun quoted(text: String): String = "\"" + oneLine(text).replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
     /**
-     * The reference's text: two lines, no final line break. [notebook] is the notebook's name (the
-     * default one's included); [folders] are the folders below it, outermost first; [gitNotebook]
-     * names a git notebook, whose notes are read through its local MCP server instead.
+     * The reference's text: one line. [gitNotebook] names the git notebook whose local MCP server
+     * reads the note; with [notebookId] (its `notebook.json` id) the note is named by its short
+     * reference, else by its id. [noteIds] are the notebook's notes that may end as this one does.
      */
-    fun text(id: String, title: String, notebook: String, folders: List<String>, gitNotebook: String? = null): String {
-        val cleanId = oneLine(id)
-        val name = oneLine(title).ifEmpty { "Untitled" }
-        val place = (listOf(notebook) + folders).map(::oneLine).filter { it.isNotEmpty() }.joinToString(SEPARATOR)
-        val call = "read_note {\"id\":\"$cleanId\"}"
-        val how = if (gitNotebook == null) {
-            "Read it with the Penmoss MCP tool $call"
-        } else {
-            "Read it with the git notebook’s local Penmoss MCP (penmoss mcp --notebook ${quoted(gitNotebook)}) tool $call"
-        }
-        return "Penmoss note ${quoted(name)}${if (place.isEmpty()) "" else " ($place)"}\n$how"
-    }
-
-    /**
-     * A note's reference from what the phone holds: its folder in [folders] (null at the top level)
-     * gives its notebook and the folders below it. A note in no notebook is in the default one,
-     * [defaultNotebook]; in a git notebook ([gitNotebook]) that notebook's name stands for both.
-     */
-    fun of(
+    fun text(
         id: String,
-        title: String,
-        folderId: String?,
-        folders: List<FolderEntity>,
-        defaultNotebook: String,
         gitNotebook: String? = null,
+        notebookId: String? = null,
+        noteIds: Collection<String> = emptyList(),
     ): String {
-        val byId = folders.associateBy { it.id }
-        val chain = ArrayList<FolderEntity>()
-        val seen = HashSet<String>()
-        var at = folderId
-        while (at != null && seen.add(at)) {
-            val folder = byId[at] ?: break
-            chain += folder
-            at = folder.parentId
-        }
-        chain.reverse()
-        if (gitNotebook != null) return text(id, title, gitNotebook, chain.map { it.name }, gitNotebook)
-        val notebookId = Notebooks.index(folders).ofFolder(folderId)
-        val notebookAt = chain.indexOfFirst { it.id == notebookId }
-        return if (notebookId != null && notebookAt >= 0) {
-            text(id, title, chain[notebookAt].name, chain.drop(notebookAt + 1).map { it.name })
-        } else {
-            text(id, title, defaultNotebook, chain.map { it.name })
-        }
+        val cleanId = oneLine(id)
+        val ref = if (notebookId.isNullOrBlank()) cleanId else NoteRef.shortRef(notebookId, cleanId, noteIds)
+        val server = if (gitNotebook == null) "Penmoss MCP" else "Penmoss MCP (penmoss mcp --notebook ${quoted(gitNotebook)})"
+        return "Reference note via $server tool read_note {\"id\":\"$ref\"}"
     }
 
     /** Puts [reference] on the clipboard as plain text; returns what to say ([COPIED], or why not). */
@@ -91,9 +52,22 @@ object AgentReference {
 
 /**
  * [noteId]'s reference from what [store] holds, or null when the note is not on the phone or is in
- * Trash (T52 item 4). [gitNotebook] names the git notebook [store] is, if it is one.
+ * Trash (T52 item 4). [gitNotebook] and [notebookId] are the git notebook [store] is, if it is one:
+ * its name and its `notebook.json` id, which gives the note its short id (PEN-69).
  */
-internal suspend fun agentReferenceOf(store: app.penmoss.data.NoteStore, noteId: String, gitNotebook: String? = null): String? {
+internal suspend fun agentReferenceOf(
+    store: app.penmoss.data.NoteStore,
+    noteId: String,
+    gitNotebook: String? = null,
+    notebookId: String? = null,
+): String? {
     val note = store.note(noteId)?.takeUnless { it.deleted } ?: return null
-    return AgentReference.of(note.id, note.title, note.folderId, store.observeFolders().first(), store.defaultNotebookName(), gitNotebook)
+    val others = if (notebookId == null) emptyList() else store.idsEndingWith(note.id.takeLast(NoteRef.NOTE_LENGTH))
+    return AgentReference.text(note.id, gitNotebook, notebookId, others)
+}
+
+/** [noteId]'s reference in [graph] (its git notebook's, when it is one). */
+internal suspend fun agentReferenceIn(graph: app.penmoss.AppGraph, noteId: String): String? {
+    val git = graph.source as? app.penmoss.git.GraphSource.Git
+    return agentReferenceOf(graph.store, noteId, git?.name, git?.notebookId)
 }

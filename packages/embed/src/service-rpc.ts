@@ -58,10 +58,7 @@ export function serviceCalls(service: MeaningService): ServiceCalls {
   return {
     status: () => service.status(),
     update: (notebookId, notes) => service.update(notebookId, notes),
-    close: (notebookId) => {
-      service.close(notebookId);
-      return Promise.resolve();
-    },
+    close: (notebookId) => service.close(notebookId),
     search: async (notebookId, query, options) => {
       const hits = await service.search(notebookId, query, options);
       const floor = service.floor();

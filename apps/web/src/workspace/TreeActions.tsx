@@ -4,7 +4,7 @@ import { Icon } from '@penmoss/ui/icons';
 import { useMemo, useRef, useState } from 'react';
 import { useCommands, useKeys } from '../commands/hooks';
 import { useNotes } from '../notes/hooks';
-import { linkHandler, navigate, notePath } from '../router';
+import { navigate, notePath } from '../router';
 import { ContextMenu } from '../shell/ContextMenu';
 import { withKeys } from '../shell/drawer';
 import { useWorkspace } from './hooks';
@@ -19,21 +19,35 @@ export interface TreeTrash {
   readonly current: boolean;
 }
 
+/** A notebook's Time Machine (PEN-21): where it is, and whether it is the page showing. */
+export interface TreeTimeMachine {
+  readonly href: string;
+  readonly current: boolean;
+}
+
 /**
- * A notebook's actions, on its name's row (T53 item 4): New Note at its top level, the sort order
- * (a menu), New Folder and its Trash. They show while the pointer is over the row or focus is in
- * it, over the end of the name if it needs the room; the sync dot stays at the far right. Sort
- * and New Folder act on the folder chosen in the tree, as they did on the bar below (T52).
- * Rendered in the notebook's source scope.
+ * A notebook's actions, on its name's row (T53 item 4): New Note at its top level, New Folder,
+ * and ⋯ (More Notebook Actions). They show while the pointer is over the row or focus is in it,
+ * over the end of the name if it needs the room; the sync dot stays at the far right. ⋯ holds
+ * Rename… (where the row can rename its notebook), Sort Order… (its own menu), Time Machine and
+ * Trash, whatever the sidebar's width, so the name keeps room to be read (Ryan's review of #193,
+ * R2-20 and R2-21; replaces A1392's fold below 16.5rem). It is the sidebar's right-click menu
+ * (`ContextMenu`), an icon beside each item. Sort and New Folder act on the folder chosen in the
+ * tree, as they did on the bar below (T52). Rendered in the notebook's source scope.
  */
 export function TreeActions({
   currentFolder,
   onCurrentFolderChange,
   trash,
+  timeMachine,
+  onRename,
 }: {
   readonly currentFolder: string | null;
   readonly onCurrentFolderChange: (folderId: string | null) => void;
   readonly trash?: TreeTrash | undefined;
+  readonly timeMachine?: TreeTimeMachine | undefined;
+  /** Renames the notebook in place on its row (A1383); absent where the row cannot. */
+  readonly onRename?: (() => void) | undefined;
 }) {
   const notes = useNotes();
   const workspace = useWorkspace();
@@ -46,15 +60,23 @@ export function TreeActions({
   const currentName = current === null ? 'the Top Level' : (tree.byId.get(current)?.name ?? '');
   const sortMode = sortModeOf(tree, current);
   const [sortMenu, setSortMenu] = useState<{ x: number; y: number } | null>(null);
-  const sortButton = useRef<HTMLButtonElement>(null);
-  const openSortMenu = () => {
-    const rect = sortButton.current?.getBoundingClientRect();
-    if (rect) setSortMenu({ x: rect.left, y: rect.bottom + 4 });
+  const [moreMenu, setMoreMenu] = useState<{ x: number; y: number } | null>(null);
+  const moreButton = useRef<HTMLButtonElement>(null);
+  /** Where a menu opens: under ⋯, which both open from. */
+  const underMore = () => {
+    const rect = moreButton.current?.getBoundingClientRect();
+    return rect ? { x: rect.left, y: rect.bottom + 4 } : null;
   };
-  /** Closes the sort menu, focus back on its button. */
-  const closeSortMenu = () => {
+  /** Closes either menu, focus back on ⋯. */
+  const closeMenus = () => {
+    setMoreMenu(null);
     setSortMenu(null);
-    sortButton.current?.focus();
+    moreButton.current?.focus();
+  };
+  /** An item of ⋯: the menu closes, then it runs. */
+  const choose = (run: () => void) => {
+    setMoreMenu(null);
+    run();
   };
   /** A new note at the notebook's top level, opened; new notes go there next. */
   const newNote = () => {
@@ -63,9 +85,14 @@ export function TreeActions({
     workspace.registerNote(id, null);
     navigate(notePath(id));
   };
+  const open = moreMenu !== null || sortMenu !== null;
 
   return (
-    <div className="tree-actions" data-testid="tree-actions" data-open={sortMenu ? '' : undefined}>
+    <div
+      className="tree-actions row-end"
+      data-testid="tree-actions"
+      data-open={open ? '' : undefined}
+    >
       <button
         type="button"
         className="icon-btn"
@@ -78,26 +105,6 @@ export function TreeActions({
         <Icon name="plus" />
       </button>
       <button
-        ref={sortButton}
-        type="button"
-        className="icon-btn"
-        aria-haspopup="menu"
-        aria-expanded={sortMenu !== null}
-        aria-label={`Sort Order for ${currentName}`}
-        data-tip={`Sort Order for ${currentName}: ${SORT_LABELS[sortMode]}`}
-        data-ui="menu"
-        data-testid="sort-order"
-        data-sort={sortMode}
-        onClick={() => (sortMenu ? setSortMenu(null) : openSortMenu())}
-        onKeyDown={(event) => {
-          if (event.key !== 'ArrowDown' || sortMenu) return;
-          event.preventDefault();
-          openSortMenu();
-        }}
-      >
-        <Icon name="sort" />
-      </button>
-      <button
         type="button"
         className="icon-btn"
         data-command="folder.new"
@@ -108,27 +115,107 @@ export function TreeActions({
       >
         <Icon name="folderPlus" />
       </button>
-      {trash ? (
-        <a
-          className="icon-btn"
-          href={trash.href}
-          data-command={trash.href === '/trash' ? 'app.trash' : undefined}
-          aria-label="Trash"
-          data-tip="Trash"
-          data-testid={trash.testId}
-          aria-current={trash.current ? 'page' : undefined}
-          onClick={linkHandler(trash.href)}
+      <button
+        ref={moreButton}
+        type="button"
+        className="icon-btn tree-actions-more"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="More Notebook Actions"
+        data-tip="More Notebook Actions"
+        data-ui="menu"
+        data-testid="notebook-more"
+        onClick={() => {
+          if (open) {
+            setMoreMenu(null);
+            setSortMenu(null);
+          } else setMoreMenu(underMore());
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== 'ArrowDown' || open) return;
+          event.preventDefault();
+          setMoreMenu(underMore());
+        }}
+      >
+        <Icon name="more" />
+      </button>
+      {moreMenu ? (
+        <ContextMenu
+          label="More Notebook Actions"
+          x={moreMenu.x}
+          y={moreMenu.y}
+          anchor={moreButton}
+          onClose={closeMenus}
         >
-          <Icon name="trash" />
-        </a>
+          {onRename ? (
+            <button
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              className="menu-item"
+              data-ui="item"
+              data-testid="notebook-more-rename"
+              onClick={() => choose(onRename)}
+            >
+              <Icon name="pencil" />
+              <span className="menu-label">Rename…</span>
+            </button>
+          ) : null}
+          <button
+            type="button"
+            role="menuitem"
+            tabIndex={-1}
+            className="menu-item"
+            data-ui="item"
+            aria-haspopup="menu"
+            data-testid="sort-order"
+            data-sort={sortMode}
+            onClick={() => choose(() => setSortMenu(underMore()))}
+          >
+            <Icon name="sort" />
+            <span className="menu-label">Sort Order…</span>
+          </button>
+          {timeMachine || trash ? <div className="menu-sep" role="separator" /> : null}
+          {timeMachine ? (
+            <button
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              className="menu-item"
+              data-ui="item"
+              data-testid="section-time-machine"
+              aria-current={timeMachine.current ? 'page' : undefined}
+              onClick={() => choose(() => navigate(timeMachine.href))}
+            >
+              <Icon name="history" />
+              <span className="menu-label">Time Machine</span>
+            </button>
+          ) : null}
+          {trash ? (
+            <button
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              className="menu-item"
+              data-ui="item"
+              data-command={trash.href === '/trash' ? 'app.trash' : undefined}
+              data-testid={trash.testId}
+              aria-current={trash.current ? 'page' : undefined}
+              onClick={() => choose(() => navigate(trash.href))}
+            >
+              <Icon name="trash" />
+              <span className="menu-label">Trash</span>
+            </button>
+          ) : null}
+        </ContextMenu>
       ) : null}
       {sortMenu ? (
         <ContextMenu
           label={`Sort Order for ${currentName}`}
           x={sortMenu.x}
           y={sortMenu.y}
-          anchor={sortButton}
-          onClose={closeSortMenu}
+          anchor={moreButton}
+          onClose={closeMenus}
         >
           {SORT_MODES.map((mode) => (
             <button
@@ -141,7 +228,7 @@ export function TreeActions({
               data-ui="item"
               onClick={() => {
                 workspace.setSortMode(current, mode);
-                closeSortMenu();
+                closeMenus();
               }}
             >
               <span className="menu-check" aria-hidden="true">

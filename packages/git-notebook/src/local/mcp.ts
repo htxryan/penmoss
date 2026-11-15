@@ -123,6 +123,7 @@ const DESCRIPTIONS: Readonly<Record<string, string>> = {
 
 export const LOCAL_INSTRUCTIONS = `This is one of Ryan's git notebooks: notes that sync only through a git repository, never through the Penmoss server. Markdown with a title, tags (nested with /), headings, [[wikilinks]] between notes, folders, and a daily and weekly journal.
 - Find notes with search_notes (words only here), list_recent, list_folder or list_tags; read one with read_note.
+- Ryan describes what some tags mean: describe_tags gives each tag's description, and its parents'. Read them before choosing tags for a note or to know what a tag is for.
 - Every read returns a baseVersion. Pass it to your next edit of that note; update_section and replace_text require it. Each edit returns the next baseVersion.
 - An edit refused with a conflict means the part changed since you read it: call read_note again and redo the edit on the current text. Never retry blindly.
 - For today's journal call get_daily_note (it creates the day's note from the notebook's template, in its time zone), then append_to_note, optionally under one of its headings.
@@ -133,6 +134,7 @@ export const LOCAL_INSTRUCTIONS = `This is one of Ryan's git notebooks: notes th
 /** `LOCAL_INSTRUCTIONS` where search by meaning is set up (A1156). */
 export const LOCAL_MEANING_INSTRUCTIONS = `This is one of Ryan's git notebooks: notes that sync only through a git repository, never through the Penmoss server. Markdown with a title, tags (nested with /), headings, [[wikilinks]] between notes, folders, and a daily and weekly journal.
 - Find notes with search_notes (by their words and their meaning: describe what you are looking for in your own words), list_recent, list_folder or list_tags; read one with read_note.
+- Ryan describes what some tags mean: describe_tags gives each tag's description, and its parents'. Read them before choosing tags for a note or to know what a tag is for.
 - Every read returns a baseVersion. Pass it to your next edit of that note; update_section and replace_text require it. Each edit returns the next baseVersion.
 - An edit refused with a conflict means the part changed since you read it: call read_note again and redo the edit on the current text. Never retry blindly.
 - For today's journal call get_daily_note (it creates the day's note from the notebook's template, in its time zone), then append_to_note, optionally under one of its headings.
@@ -300,6 +302,7 @@ const HANDLERS: Readonly<Record<string, Handler>> = {
     }
     const tag = args['tag'] === undefined ? null : normaliseTag(args['tag'] as string);
     if (args['tag'] !== undefined && !tag) return { error: 'tag is not a valid tag name.' };
+    const named = notebook.refNamer();
     const found = await notebook.search({
       q: query,
       mode: (args['mode'] as string | undefined) ?? 'hybrid',
@@ -314,6 +317,7 @@ const HANDLERS: Readonly<Record<string, Handler>> = {
         mode: found.mode,
         results: found.results.map((hit) => ({
           id: hit.id,
+          shortId: named(hit.id),
           title: hit.title,
           snippet: markdownMarks(hit.snippet),
           ...(hit.heading ? { heading: hit.heading } : {}),
@@ -336,10 +340,15 @@ const HANDLERS: Readonly<Record<string, Handler>> = {
   list_folder: (notebook, args) => {
     try {
       const listed = notebook.listFolder(pick(args, ['folderId', 'path']));
+      const named = notebook.refNamer();
       return {
         data: {
           ...listed,
-          notes: listed.notes.map((note) => ({ ...note, updatedAt: iso(note.updatedAt) })),
+          notes: listed.notes.map((note) => ({
+            ...note,
+            shortId: named(note.id),
+            updatedAt: iso(note.updatedAt),
+          })),
         },
       };
     } catch (error) {
@@ -363,6 +372,16 @@ const HANDLERS: Readonly<Record<string, Handler>> = {
       },
     };
   },
+  describe_tags: (notebook, args) => {
+    try {
+      return { data: notebook.describeTags(args['tags'] as string[] | undefined) };
+    } catch (error) {
+      if (error instanceof LocalError && error.status === 400) {
+        return { error: `${error.message}. A tag is letters, digits, - and _, nested with /.` };
+      }
+      throw error;
+    }
+  },
   get_backlinks: (notebook, args) => {
     const id = args['id'] as string;
     const links = notebook.backlinks(id);
@@ -381,10 +400,12 @@ const HANDLERS: Readonly<Record<string, Handler>> = {
   },
   list_recent: (notebook, args) => {
     const { notes } = notebook.listNotes({ limit: (args['limit'] as number | undefined) ?? 20 });
+    const named = notebook.refNamer();
     return {
       data: {
         notes: notes.map((note) => ({
           id: note.id,
+          shortId: named(note.id),
           title: note.title,
           kind: note.kind,
           ...(note.period ? { period: note.period } : {}),
@@ -607,6 +628,11 @@ export interface LocalServerPresentation {
   readonly channel?: boolean;
   /** The client said `notifications/initialized`: a channel may notify from now on. */
   readonly onInitialized?: () => void;
+  /**
+   * The name of the notebook on this machine whose short references (PEN-69) start with `tag`,
+   * or null: a reference of another notebook is refused with the server that reads it.
+   */
+  readonly notebookNamed?: (tag: string) => Promise<string | null> | string | null;
 }
 
 export class LocalMcpServer {
@@ -718,12 +744,34 @@ export class LocalMcpServer {
       };
     }
     const handler = HANDLERS[tool.name]!;
+    const ref = checked.args['id'];
     try {
       // get_daily_note may make the day's note, read_comment_thread mark a thread seen: they
       // save and sync like a write.
       const writes = tool.write || WRITES_TOO.has(tool.name);
-      return await this.access.use(writes, (notebook) => handler(notebook, checked.args));
+      return await this.access.use(writes, (notebook) =>
+        handler(
+          notebook,
+          // A note named by its short reference (PEN-69) is named by its id from here on.
+          typeof ref === 'string' && 'id' in tool.inputSchema.properties
+            ? { ...checked.args, id: notebook.noteIdOf(ref) }
+            : checked.args,
+        ),
+      );
     } catch (error) {
+      if (error instanceof LocalError && error.code === 'other_notebook') {
+        const named = error.details?.['notebook'];
+        const tag = typeof named === 'string' ? named : '';
+        const name = await Promise.resolve(this.presentation.notebookNamed?.(tag) ?? null).catch(
+          () => null,
+        );
+        return {
+          error:
+            name === null
+              ? `${String(ref)} is a note of another notebook, not of this one (${this.name}), and this machine has no notebook whose references start with ${tag}.`
+              : `${String(ref)} is a note of the notebook “${name}”, not of this one (${this.name}). Read it with that notebook’s server: penmoss mcp --notebook "${name}".`,
+        };
+      }
       if (error instanceof LocalError) {
         return {
           error: describeRefusal(

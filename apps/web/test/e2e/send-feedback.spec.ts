@@ -296,6 +296,60 @@ test('at phone width, from the palette: fits the screen, keeps its draft, closes
   await expect(form).toBeHidden();
 });
 
+test('before its draft is read, the form already has focus: Escape closes it', async ({ page }) => {
+  // The feedback database answers only when the test says (a slow disk: CI's sidebar-pen-135
+  // pressed Escape at that moment, focus was still on the button behind, and the form stayed).
+  await page.addInitScript(() => {
+    const held = new Promise<void>((resolve) => {
+      (window as unknown as { releaseFeedback: () => void }).releaseFeedback = resolve;
+    });
+    const open = Object.getOwnPropertyDescriptor(IDBFactory.prototype, 'open')!.value as (
+      this: IDBFactory,
+      name: string,
+      version?: number,
+    ) => IDBOpenDBRequest;
+    IDBFactory.prototype.open = function (name: string, version?: number) {
+      const request = open.call(this, name, version);
+      if (name !== 'penmoss-feedback') return request;
+      let handler: ((event: Event) => void) | null = null;
+      Object.defineProperty(request, 'onsuccess', {
+        configurable: true,
+        get: () => handler,
+        set: (value: ((event: Event) => void) | null) => {
+          handler = value;
+        },
+      });
+      request.addEventListener('success', (event) => {
+        void held.then(() => handler?.call(request, event));
+      });
+      return request;
+    };
+  });
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/');
+  const button = page.getByTestId('sidebar-feedback');
+  await button.click();
+  const form = dialog(page);
+  await expect(form).toBeVisible();
+  await expect(form).toBeFocused();
+  // Still reading: its first field has no focus yet.
+  await expect(form.getByTestId('feedback-type-bug')).not.toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(form).toBeHidden();
+  await expect(button).toBeFocused();
+
+  // Once the database answers, the form opens on its first field as before.
+  await page.evaluate(() =>
+    (window as unknown as { releaseFeedback: () => void }).releaseFeedback(),
+  );
+  await button.click();
+  await expect(form.getByTestId('feedback-type-bug')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(form).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
 test('a report GitHub refuses is kept: Edit puts it back in the form, and it then files once', async ({
   page,
   host,

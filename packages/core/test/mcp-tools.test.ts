@@ -1,7 +1,8 @@
 /**
  * The MCP tool definitions shared by the remote server and the local one (T50, A830): what
  * `tools/list` advertises must not change by moving them. The fixture is the remote server's
- * list for a write token as it was before the move (comment tools aside, which stay there).
+ * list for a write token as it was before the move (comment tools aside, which stay there), with the
+ * note id's description naming short ids since PEN-69.
  */
 import { describe, expect, it } from 'vitest';
 import {

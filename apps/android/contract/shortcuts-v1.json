@@ -197,6 +197,20 @@
       "keys": []
     },
     {
+      "id": "app.tags",
+      "title": "Tags",
+      "area": "Navigation",
+      "scope": "global",
+      "keys": []
+    },
+    {
+      "id": "app.timeMachine",
+      "title": "Time Machine",
+      "area": "Navigation",
+      "scope": "global",
+      "keys": []
+    },
+    {
       "id": "note.openInNewWindow",
       "title": "Open in New Window",
       "area": "Note",
@@ -311,13 +325,6 @@
     {
       "id": "note.addTag",
       "title": "Add a Tag to This Note",
-      "area": "Tags",
-      "scope": "global",
-      "keys": []
-    },
-    {
-      "id": "tags.clearFilter",
-      "title": "Show All Notes (Clear the Tag Filter)",
       "area": "Tags",
       "scope": "global",
       "keys": []
@@ -948,7 +955,14 @@
     },
     {
       "id": "editor.insert.mermaid",
-      "title": "Insert: Mermaid Diagram",
+      "title": "Insert: Diagram: Mermaid",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.drawing",
+      "title": "Insert: Diagram: Excalidraw",
       "area": "Insert",
       "scope": "editor",
       "keys": []

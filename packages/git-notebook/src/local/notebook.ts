@@ -16,6 +16,7 @@ import { attachmentPath, filePath, isImageType, sniffFileType } from '@penmoss/c
 import { findSection } from '@penmoss/core/diff-apply';
 import { summarise } from '@penmoss/core/diff';
 import { extractLinks, type DocJson, type NoteLink } from '@penmoss/core/links';
+import { matchNoteRef, notebookTag, noteRefNamer, parseNoteRef } from '@penmoss/core/note-ref';
 import { isTimeZone, type PeriodKind } from '@penmoss/core/periodic';
 import {
   HYBRID_DEPTH,
@@ -30,7 +31,7 @@ import {
   type MeaningNote,
   type NoteSection,
 } from '@penmoss/core/search';
-import { normaliseTag, tagMatches } from '@penmoss/core/tags';
+import { describeTags, normaliseTag, tagMatches, type DescribedTag } from '@penmoss/core/tags';
 import {
   folderPath,
   folderSubtree,
@@ -74,7 +75,7 @@ import { isDeleted, readIdentity } from '@penmoss/sync-client/note';
 import { restoreContent, setBody } from '@penmoss/sync-client/history';
 import { revertChange } from '@penmoss/editor/revert';
 import { setFrontmatterTag } from '@penmoss/sync-client/tags';
-import { readWorkspace, setSortMode } from '@penmoss/sync-client/workspace';
+import { readTagDescriptions, readWorkspace, setSortMode } from '@penmoss/sync-client/workspace';
 import * as Y from '@y/y';
 import { AgentActivity, type ActivityEntry } from '../agent-activity';
 import type { GitNotebookEngine } from '../engine';
@@ -323,6 +324,47 @@ export class LocalNotebook {
     return this.all().filter((note) => !note.deleted);
   }
 
+  /** The ids of the notes this notebook holds (in Trash or not), which short references name. */
+  private heldIds(): string[] {
+    return readWorkspace(this.workspace)
+      .notes.map((note) => note.id)
+      .filter((id) => !isPurged(this.workspace, id));
+  }
+
+  /** The notebook's id (`notebook.json`), whose hash names it in short references (PEN-69). */
+  get notebookId(): string | null {
+    return this.engine.info?.id ?? null;
+  }
+
+  /**
+   * The note a reference names (PEN-69): a note id as it is, or a short reference
+   * (`K7QD-9HTF2CXA`) resolved among this notebook's notes. A short reference of another notebook
+   * is refused (`other_notebook`, its 4 characters in `details.notebook`); one naming no note
+   * here is `not_found`.
+   */
+  noteIdOf(ref: string): string {
+    const parsed = parseNoteRef(ref);
+    if (parsed.kind === 'id') return parsed.id;
+    const own = this.notebookId;
+    if (own === null || notebookTag(own) !== parsed.notebook) {
+      throw new LocalError(
+        404,
+        'other_notebook',
+        `${ref.trim()} is a note of another notebook (${parsed.notebook}), not of this one`,
+        { notebook: parsed.notebook },
+      );
+    }
+    const id = matchNoteRef(parsed.note, this.heldIds());
+    if (id === null) throw new LocalError(404, 'not_found', 'No such note');
+    return id;
+  }
+
+  /** Names this notebook's notes by their short references (PEN-69), for one list. */
+  refNamer(): (id: string) => string {
+    const own = this.notebookId;
+    return own === null ? (id) => id : noteRefNamer(own, this.heldIds());
+  }
+
   private require(id: string): { doc: Y.Doc; info: NoteInfo } {
     if (!NOTE_ID.test(id)) throw new LocalError(400, 'invalid_request', 'Invalid note id');
     const entry = readWorkspace(this.workspace).notes.find((note) => note.id === id);
@@ -567,7 +609,7 @@ export class LocalNotebook {
     if (utf8(markdown) > MAX_MARKDOWN_BYTES) {
       throw new LocalError(413, 'too_large', 'markdown is over 256 KB');
     }
-    const inTrashOk = op.op === 'rename-tag';
+    const inTrashOk = op.op === 'rename-tag' || op.op === 'delete-tag';
     const { doc } = inTrashOk ? this.require(id) : this.writable(id);
     const links = this.resolver(doc);
     if (baseVersion !== null) {
@@ -835,15 +877,45 @@ export class LocalNotebook {
     };
   }
 
-  /** `GET /api/tags`: every tag with its note count (nested tags counted under their own). */
-  tags(): { tags: Array<{ name: string; notes: number }> } {
+  /**
+   * `GET /api/tags`: every tag with its note count (nested tags counted under their own), and
+   * its description when it has one (PEN-68).
+   */
+  tags(): { tags: Array<{ name: string; notes: number; description?: string }> } {
     const counts = new Map<string, number>();
     for (const note of this.live())
       for (const tag of note.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    const descriptions = readTagDescriptions(this.workspace);
     return {
       tags: [...counts]
         .sort((a, b) => (a[0] < b[0] ? -1 : 1))
-        .map(([name, notes]) => ({ name, notes })),
+        .map(([name, notes]) => {
+          const description = descriptions[name]?.trim();
+          return { name, notes, ...(description ? { description } : {}) };
+        }),
+    };
+  }
+
+  /**
+   * `describe_tags` (PEN-68): each tag with what it means, its note count (with nested tags) and
+   * its parents' descriptions; every tag, or `wanted` and the tags nested under each.
+   */
+  describeTags(wanted?: readonly string[]): { tags: DescribedTag[] } {
+    let names: string[] | undefined;
+    if (wanted !== undefined) {
+      names = [];
+      for (const raw of wanted) {
+        const name = normaliseTag(raw);
+        if (!name) throw new LocalError(400, 'invalid_request', `Not a valid tag: ${raw}`);
+        names.push(name);
+      }
+    }
+    return {
+      tags: describeTags(
+        this.live().map((note) => note.tags),
+        readTagDescriptions(this.workspace),
+        names,
+      ),
     };
   }
 
@@ -880,6 +952,21 @@ export class LocalNotebook {
       .map((n) => n.id);
     for (const id of notes) this.edit(id, { op: 'rename-tag', from, to }, null);
     return { from, to, notes };
+  }
+
+  /**
+   * Deletes a tag, and those nested under it, from every note that has it (Trash too, so a
+   * restore never brings it back), at once here: a frontmatter tag goes, and an inline `#tag`
+   * loses its `#` and keeps its word, so the sentence it was in still reads. The notes stay.
+   */
+  deleteTag(input: { readonly tag: string }) {
+    const tag = normaliseTag(input.tag);
+    if (!tag) throw new LocalError(400, 'invalid_request', 'Not a valid tag');
+    const notes = this.all()
+      .filter((note) => note.tags.some((each) => tagMatches(each, tag)))
+      .map((n) => n.id);
+    for (const id of notes) this.edit(id, { op: 'delete-tag', tag }, null);
+    return { tag, notes };
   }
 
   /** `get_backlinks`: the notes linking to a note, and those naming its title without a link. */

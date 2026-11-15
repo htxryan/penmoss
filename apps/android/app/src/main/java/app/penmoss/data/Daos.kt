@@ -72,6 +72,10 @@ interface NoteDao {
     )
     fun observeList(): Flow<List<NoteListRow>>
 
+    /** The ids of the notes held (in Trash or not) that end with [end]: a short reference's clashes (PEN-69). */
+    @Query("SELECT id FROM notes WHERE gone = 0 AND id LIKE '%' || :end")
+    suspend fun idsEndingWith(end: String): List<String>
+
     /** The live notes of [ids] (T51, A946: Quick Access), in no order; trashed and unknown ones left out. */
     @Query(
         "SELECT id, title, excerpt, updatedAt, folderId, position FROM notes " +

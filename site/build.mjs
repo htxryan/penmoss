@@ -2,8 +2,10 @@
 // into src/data/release.json, then `astro build`, then the docs' Content-Security-Policy.
 // The brochure pages run no script and keep the site-wide policy in public/_headers. Starlight's
 // pages under /docs run a few inline scripts of their own, so their policy allows exactly those
-// (by hash, computed from the built pages) and Pagefind's WebAssembly; nothing loads from
-// anywhere but penmoss.app. `node build.mjs` is `task site:build`.
+// (by hash, computed from the built pages) and Pagefind's WebAssembly. The one thing from
+// anywhere but penmoss.app is Cloudflare Web Analytics' beacon, which Cloudflare adds to every
+// page as it serves it (PEN-123): both policies allow its script and where it reports, and no
+// other host. `node build.mjs` is `task site:build`.
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -142,6 +144,31 @@ export function writeNotes(notes, root = here) {
   );
 }
 
+/**
+ * Cloudflare Web Analytics (PEN-123): the beacon's script, which Cloudflare adds to each page as
+ * it serves it, and where the beacon reports. Both policies allow these and no other host.
+ */
+export const ANALYTICS = {
+  script: 'https://static.cloudflareinsights.com',
+  connect: 'https://cloudflareinsights.com',
+};
+
+/**
+ * The hosts each directive of a policy allows (its `http:` and `https:` sources), by directive.
+ * @param {string} policy
+ * @returns {Record<string, string[]>}
+ */
+export function hostsOf(policy) {
+  /** @type {Record<string, string[]>} */
+  const hosts = {};
+  for (const directive of policy.split(';')) {
+    const [name, ...sources] = directive.trim().split(/\s+/);
+    const found = sources.filter((source) => /^https?:/i.test(source));
+    if (name && found.length) hosts[name] = found;
+  }
+  return hosts;
+}
+
 /** The paths that serve the docs and their search, which get the docs' policy. */
 export const DOCS_PATHS = ['/docs', '/docs/*', '/pagefind/*'];
 
@@ -173,11 +200,11 @@ export function docsPolicy(hashes) {
   const scripts = [...new Set(hashes)].sort();
   return [
     "default-src 'none'",
-    `script-src 'self' 'wasm-unsafe-eval'${scripts.length ? ` ${scripts.join(' ')}` : ''}`,
+    `script-src 'self' 'wasm-unsafe-eval' ${ANALYTICS.script}${scripts.length ? ` ${scripts.join(' ')}` : ''}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
-    "connect-src 'self'",
+    `connect-src 'self' ${ANALYTICS.connect}`,
     "worker-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'none'",

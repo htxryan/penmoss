@@ -14,6 +14,9 @@
  *   default notebook's name (T43, A751)
  * - `folderTrash`: folderId → a deleted folder, kept for FOLDER_TRASH_DAYS so it can be
  *   restored with its subfolders and its notes (T42, A560)
+ * - `tagDescriptions`: tag (its full path, `project/penmoss`) → what it means, as text (PEN-68).
+ *   A plain string per tag, so each tag's description merges on its own (the last edit wins);
+ *   an empty description is no entry.
  * - `settings`: `<userId>/<key>` → JSON value (keybindings, theme, time zone, capture default…).
  *   Flat on purpose: a lazily created per-user node would be one map entry,
  *   so two devices writing a user's first setting concurrently would each
@@ -36,6 +39,7 @@ import {
   type NotebookLineage,
   type SortMode,
 } from '@penmoss/core/workspace';
+import { cleanTagDescription, normaliseTag } from '@penmoss/core/tags';
 import * as Y from '@y/y';
 
 export const WORKSPACE_FOLDERS = 'folders';
@@ -43,6 +47,8 @@ export const WORKSPACE_NOTES = 'notes';
 export const WORKSPACE_ROOT = 'root';
 export const WORKSPACE_SETTINGS = 'settings';
 export const WORKSPACE_FOLDER_TRASH = 'folderTrash';
+/** Each tag's description, by its full path (PEN-68). */
+export const WORKSPACE_TAG_DESCRIPTIONS = 'tagDescriptions';
 /** How long a deleted folder can be restored, as a deleted note (A83). */
 export const FOLDER_TRASH_DAYS = 30;
 const FOLDER_TRASH_MS = FOLDER_TRASH_DAYS * 24 * 60 * 60 * 1000;
@@ -65,6 +71,8 @@ export interface WorkspaceSnapshot {
   readonly rootTogether?: true;
   /** The default notebook's name (T43, A751); absent until someone names it. */
   readonly defaultNotebookName?: string;
+  /** Each described tag's description (PEN-68); absent while no tag has one. */
+  readonly tagDescriptions?: Readonly<Record<string, string>>;
 }
 
 export class WorkspaceError extends Error {
@@ -111,13 +119,44 @@ export function readWorkspace(doc: Y.Doc): WorkspaceSnapshot {
   }
   const root = doc.get(WORKSPACE_ROOT);
   const name = str(root.getAttr('notebookName'))?.trim();
+  const described = readTagDescriptions(doc);
   return {
     folders,
     notes,
     rootSortMode: sortMode(root.getAttr('sortMode')),
     ...(root.getAttr('together') === true ? { rootTogether: true as const } : {}),
     ...(name ? { defaultNotebookName: name } : {}),
+    ...(Object.keys(described).length > 0 ? { tagDescriptions: described } : {}),
   };
+}
+
+/** Each described tag's description (PEN-68), by the tag's full path. */
+export function readTagDescriptions(doc: Y.Doc): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [tag, value] of doc.get(WORKSPACE_TAG_DESCRIPTIONS).attrEntries()) {
+    if (typeof value === 'string' && value.trim() !== '') out[String(tag)] = value;
+  }
+  return out;
+}
+
+/**
+ * Sets what `tag` means (PEN-68), as typed (cut to `TAG_DESCRIPTION_MAX`); a description with no
+ * text removes the entry. Throws WorkspaceError for a name that is not a tag's canonical form.
+ */
+export function setTagDescription(
+  doc: Y.Doc,
+  tag: string,
+  text: string,
+  origin: unknown = null,
+): void {
+  if (normaliseTag(tag) !== tag) throw new WorkspaceError('Not a tag');
+  const kept = cleanTagDescription(text);
+  const map = doc.get(WORKSPACE_TAG_DESCRIPTIONS);
+  if ((map.getAttr(tag) ?? null) === kept) return;
+  doc.transact(() => {
+    if (kept === null) map.deleteAttr(tag);
+    else map.setAttr(tag, kept);
+  }, origin);
 }
 
 /** The default notebook's name: the one set in Settings, else "Personal" (T43, A751). */
