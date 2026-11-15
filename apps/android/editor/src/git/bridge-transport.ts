@@ -179,9 +179,12 @@ export class BridgeTransport implements GitTransport {
     });
   }
 
-  async readAt(commit: string, path: string): Promise<Uint8Array | null> {
-    const bytes = await this.call('readAt', [commit, path]);
-    return bytes instanceof Uint8Array ? bytes.slice() : null;
+  /**
+   * No caller reads a file at a commit, and the app no longer answers it (architecture review,
+   * editor-git §3): kept only while `GitTransport` still declares it; it goes with that member.
+   */
+  readAt(): Promise<Uint8Array | null> {
+    return Promise.reject(new GitRefused('unsupported', 'The app does not read files at a commit'));
   }
 
   async maintain(): Promise<void> {

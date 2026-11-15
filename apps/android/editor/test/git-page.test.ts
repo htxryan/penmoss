@@ -134,7 +134,6 @@ function fakeApp(options: {
     },
     'git.push': (args) => wrap(() => git.push((args as string[])[0]!)),
     'git.log': (args) => wrap(() => git.log((args as [{ paths?: string[]; limit?: number }])[0])),
-    'git.readAt': (args) => wrap(() => git.readAt((args as string[])[0]!, (args as string[])[1]!)),
     'git.maintain': () => null,
     'git.cancel': () => {
       cancels.count++;
