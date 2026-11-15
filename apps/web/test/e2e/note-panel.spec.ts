@@ -84,7 +84,11 @@ test.describe('in a 1440 × 900 window', () => {
     // Open on Metadata by default on a wide window: beside the strip, named, with Close.
     await expect(columns(page)).toHaveAttribute('data-panel', 'open');
     await expect(tab(page, 'info')).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', /-info$/);
+    // The note's own (the window's tab strip has one too, PEN-140).
+    await expect(page.getByTestId('note-view').getByRole('tabpanel')).toHaveAttribute(
+      'aria-labelledby',
+      /-info$/,
+    );
     await expect(page.getByRole('complementary', { name: 'Metadata' })).toBeVisible();
     // The head names the tab (its own heading stays for screen readers only).
     await expect(side(page).locator('.note-side-head h2')).toHaveText('Metadata');
@@ -159,12 +163,11 @@ test.describe('in a 1440 × 900 window', () => {
     await page.goto('/');
     await newNote(page, `Panel ${RUN}`, 'Words beside the panel.');
     // The note's bar has no panel buttons of its own any more: the strip is the way in.
-    await expect(
-      page.locator('.note-top').getByRole('button', { name: /^Note Panel/ }),
-    ).toHaveCount(0);
-    await expect(page.locator('.note-top').getByRole('button', { name: /^Comments/ })).toHaveCount(
-      0,
-    );
+    // (At the tab strip's end since PEN-140, A1505.)
+    const bar = page.locator('.tab-strip-end');
+    await expect(bar.getByTestId('note-actions')).toBeVisible();
+    await expect(bar.getByRole('button', { name: /^Note Panel/ })).toHaveCount(0);
+    await expect(bar.getByRole('button', { name: /^Comments/ })).toHaveCount(0);
     // Open by default on a wide window; History from the ⋯ menu.
     await page.getByTestId('note-tab-history').click();
     await expect(tab(page, 'history')).toHaveAttribute('aria-selected', 'true');
@@ -371,7 +374,7 @@ test.describe('in a 1440 × 900 window', () => {
     await expect(button).toBeVisible();
     await expect(button).toHaveAccessibleName('Comments');
     // Not in the note's bar any more: only in the strip.
-    await expect(page.locator('.note-top').getByTestId('comments-count')).toHaveCount(0);
+    await expect(page.locator('.tab-strip-end').getByTestId('comments-count')).toHaveCount(0);
     await expect(page.getByTestId('comments-count')).toHaveCount(0);
     await button.click();
     await expect(button).toHaveAttribute('aria-selected', 'true');
@@ -522,7 +525,8 @@ test('the note panel is vertical tabs, open or closed, with no tab row; Comments
   await expect(side.locator('.note-side-head h2')).toHaveText('Comments');
   // No tab row inside: the strip is the only tab list.
   await expect(side.getByRole('tablist')).toHaveCount(0);
-  await expect(page.getByRole('tablist')).toHaveCount(1);
+  // The note's own (the window's tab strip is above the note, PEN-140).
+  await expect(page.getByTestId('note-view').getByRole('tablist')).toHaveCount(1);
   // Beside the note, not over it, on a wide window; no dialog.
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const text = (await page.locator('.note-body').boundingBox())!;
@@ -594,7 +598,7 @@ test('the note panel keeps one set of columns, rows and gaps on every tab', asyn
     );
   expect(new Set(rail).size).toBe(1);
   const last = await page
-    .locator('.note-top .note-actions button')
+    .locator('.tab-strip-end .note-actions button')
     .last()
     .evaluate((el) => el.getBoundingClientRect().x + el.getBoundingClientRect().width / 2);
   expect(Math.abs(last - rail[0]!)).toBeLessThan(1);

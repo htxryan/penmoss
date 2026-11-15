@@ -215,6 +215,11 @@ describe('A notebook’s page (PEN-146)', () => {
     ]);
     expect(settings(find(page, 'git-panel-overview')!)).toEqual([
       'notebook-name',
+      // Its badge (PEN-140), right after its name.
+      'badge',
+      'badge-colour',
+      'badge-shows',
+      'badge-letter',
       'repository',
       'notebook-notes',
       'notebook-copy-settings',

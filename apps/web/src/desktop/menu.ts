@@ -17,6 +17,8 @@ export const MENU_ORDER = [
   'Insert',
   'View',
   'Go',
+  // PEN-140: the tab commands that are not the File menu's, added to the system's Window menu.
+  'Window',
   'Help',
 ] as const;
 export type MenuLabel = (typeof MENU_ORDER)[number];
@@ -34,6 +36,8 @@ const AREA_MENU: Readonly<Record<CommandArea, MenuLabel>> = {
   Tags: 'View',
   Navigation: 'Go',
   'Daily notes': 'Go',
+  // PEN-140 (A1503): New Tab, Reopen Closed Tab, Close Tab and Close Other Tabs.
+  Tabs: 'File',
 };
 
 /** Commands whose menu is not their area's. */
@@ -63,7 +67,62 @@ const PLACED: Readonly<Record<string, MenuLabel>> = {
   'app.toggleSidebar': 'View',
   // T46 (A720): a checkbox for the window in front.
   'window.keepOnTop': 'View',
+  // PEN-140 (A1503): moving between tabs, and the tab's own commands.
+  'tab.next': 'Window',
+  'tab.previous': 'Window',
+  'tab.pin': 'Window',
+  'tab.duplicate': 'Window',
+  'tab.moveToWindow': 'Window',
+  'tab.all': 'Window',
 };
+
+/**
+ * Commands with keys but no menu item (PEN-140): ⌘1–⌘9 would be nine items, and Close Tabs to
+ * the Right is the tab menu's.
+ */
+export const NO_MENU_COMMANDS: ReadonlySet<string> = new Set([
+  ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) => `tab.select${n}`),
+  'tab.selectLast',
+  'tab.closeRight',
+]);
+
+/**
+ * In a window with no tabs (a note window, D37), only New Tab of the tab commands, which opens a
+ * tab in the main window; ⌘W there still closes the window (A1503).
+ */
+const isTabCommand = (id: string) => id.startsWith('tab.') && id !== 'tab.new';
+
+/**
+ * Items that sit right after another item of their menu rather than in their area's group
+ * (PEN-140, A1503): New Tab after New Note and Reopen Closed Tab after Open in New Window, as
+ * in other tabbed Mac apps, so the File menu's Tabs group is left with Close Tab and Close
+ * Other Tabs, which the Mac app ends with Close Window.
+ */
+export const FOLLOWS: Readonly<Record<string, string>> = {
+  'tab.new': 'note.new',
+  'tab.reopenClosed': 'note.openInNewWindow',
+};
+
+/** Moves each FOLLOWS item to just after its anchor, when the anchor is in the same menu. */
+function placeFollowers(groups: DesktopMenuItem[][]): DesktopMenuItem[][] {
+  let out = groups.map((items) => [...items]);
+  for (const [id, anchor] of Object.entries(FOLLOWS)) {
+    const where = (target: string) => {
+      for (const [g, items] of out.entries()) {
+        const i = items.findIndex((item) => item.id === target);
+        if (i >= 0) return [g, i] as const;
+      }
+      return null;
+    };
+    const from = where(id);
+    if (!from || !where(anchor)) continue;
+    const [item] = out[from[0]]!.splice(from[1], 1);
+    const to = where(anchor)!;
+    out[to[0]]!.splice(to[1] + 1, 0, item!);
+    out = out.filter((items) => items.length > 0);
+  }
+  return out;
+}
 
 /** Edit: undo and redo, then the copy commands, then find (the system's Cut, Copy and Paste sit between). */
 const EDIT_GROUPS = ['history', 'copy', 'find'] as const;
@@ -88,6 +147,7 @@ const SHOWN_HIDDEN = new Set(['app.palette']);
 export function menuOf(definition: CommandDefinition): MenuLabel | null {
   if (definition.pending || definition.scope === 'tree') return null;
   if (definition.hidden && !SHOWN_HIDDEN.has(definition.id)) return null;
+  if (NO_MENU_COMMANDS.has(definition.id)) return null;
   return PLACED[definition.id] ?? AREA_MENU[definition.area];
 }
 
@@ -105,6 +165,8 @@ export function menuModel(
     readonly checked?: (id: string) => boolean | undefined;
     /** The window has the Mac's window behaviours (keep on top, A726). */
     readonly macWindow?: boolean;
+    /** The window has tabs (the main window, PEN-140); without, only New Tab of theirs. */
+    readonly tabs?: boolean;
   },
 ): DesktopMenu[] {
   const menus = new Map<MenuLabel, Map<string, DesktopMenuItem[]>>();
@@ -112,6 +174,7 @@ export function menuModel(
     const label = menuOf(definition);
     if (!label) continue;
     if (MAC_WINDOW_COMMANDS.has(definition.id) && !options.macWindow) continue;
+    if (isTabCommand(definition.id) && !options.tabs) continue;
     const groups = menus.get(label) ?? new Map<string, DesktopMenuItem[]>();
     menus.set(label, groups);
     // Edit keeps undo apart from the copy commands; other menus group by area.
@@ -148,6 +211,6 @@ export function menuModel(
               ? []
               : [items, ...(groups.has(`${key}:apart`) ? [groups.get(`${key}:apart`)!] : [])],
           );
-    return { label, groups: ordered.filter((items) => items.length > 0) };
+    return { label, groups: placeFollowers(ordered.filter((items) => items.length > 0)) };
   });
 }

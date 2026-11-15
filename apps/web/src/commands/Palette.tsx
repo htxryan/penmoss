@@ -1,3 +1,4 @@
+import { tabIntentOf, type TabIntent } from './tab-intent';
 import { Icon } from '@penmoss/ui/icons';
 import { DialogClose } from '../shell/DialogClose';
 import { PickerField, PickerListbox, PickerOverlay } from '../shell/picker';
@@ -35,7 +36,8 @@ export interface PaletteProps {
   /** Notes, most recently used first. */
   readonly notes: readonly NoteListEntry[];
   readonly onRunCommand: (id: string) => void;
-  readonly onOpenNote: (id: string) => void;
+  /** `where`: a new tab, behind (⌘↩) or in front (⇧⌘↩), PEN-140; else this one. */
+  readonly onOpenNote: (id: string, where?: TabIntent) => void;
   readonly onClose: () => void;
 }
 
@@ -99,16 +101,17 @@ export function Palette({ mode, notes, onRunCommand, onOpenNote, onClose }: Pale
     return found.sort((a, b) => b.match.score - a.match.score).slice(0, MAX_RESULTS);
   }, [commands, version, mode, notes, query]);
 
-  const choose = (item: Item | undefined) => {
+  const choose = (item: Item | undefined, where?: TabIntent) => {
     if (!item) return;
     if (item.kind === 'command') onRunCommand(item.command.id);
+    else if (where) onOpenNote(item.note.id, where);
     else onOpenNote(item.note.id);
   };
   const picker = usePickerList({
     items,
     active,
     setActive,
-    onChoose: (index) => choose(items[index]),
+    onChoose: (index, event) => choose(items[index], tabIntentOf(event)),
     onClose,
   });
 
@@ -160,7 +163,7 @@ export function Palette({ mode, notes, onRunCommand, onOpenNote, onClose }: Pale
                 {...picker.optionProps(index)}
                 className="opt"
                 data-kind={item.kind}
-                onClick={() => choose(item)}
+                onClick={(event) => choose(item, tabIntentOf(event))}
               >
                 <span className="oic" aria-hidden="true">
                   <Icon name={item.kind === 'command' ? 'command' : 'file'} size={14} />

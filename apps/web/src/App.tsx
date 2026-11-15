@@ -68,6 +68,13 @@ import { NoteSourceScope } from './sources/NoteSourceScope';
 import { SourceSection } from './sources/SourceSection';
 import { ToastStack } from './toasts/ToastStack';
 import { NoteWindow } from './window/NoteWindow';
+import { mainTabs } from './tabs/controller';
+import { TabStripEnd, useTabs, useTabsState } from './tabs/hooks';
+import { TabStrip } from './tabs/TabStrip';
+import { TabsCommands } from './tabs/TabsCommands';
+import { TabsWatcher } from './tabs/TabsWatcher';
+import { TabsSheetHost } from './tabs/TabsSheet';
+import { useOnRevealNote } from './shell/reveal-notebooks';
 
 // The graph (T17) loads with d3-force on first use, never with the shell.
 const GraphPage = lazy(() => import('./graph/GraphPage').then((m) => ({ default: m.GraphPage })));
@@ -83,7 +90,8 @@ export function App({ location }: { location?: RouteLocation | undefined }) {
   // loaded. Only at that start, so "Close the note" still reaches home. Every notebook's
   // notes, as the last one may be in any (T62 item 10).
   const list = useEveryOpenNoteList();
-  const resumed = useRef(route.name !== 'home');
+  // Tabs saved at the last launch open instead (PEN-140, A1496).
+  const resumed = useRef(route.name !== 'home' || mainTabs()?.restored === true);
   useEffect(() => {
     if (resumed.current) return;
     if (route.name !== 'home') {
@@ -113,6 +121,9 @@ export function App({ location }: { location?: RouteLocation | undefined }) {
       <DesktopIntegration />
       {/* Back and Forward in the main window (T51, A943); a note window has its own (T45). */}
       {route.name === 'window' ? null : <HistoryCommands />}
+      {/* The main window's tabs (PEN-140): their commands, and in step with the notebooks. */}
+      <TabsCommands />
+      {route.name === 'window' ? null : <TabsWatcher />}
       <FullWidthCommand />
       {page}
       {/* The palette, the switcher and Move work in the open note's source (A826). */}
@@ -311,12 +322,27 @@ function NotesShell({
   // there are several (finding 9 of Ryan's review of #192).
   const showTag: ShowTag = (sourceId, chosen) =>
     tagSearch.set({ tag: chosen, notebookId: shownSources.length > 1 ? sourceId : null });
+  // The main window's tabs (PEN-140, layout A): the strip is the note pane's first row, and the
+  // open note's buttons sit at its right end (A1505); at 700 px and narrower the app bar's
+  // Tabs button stands in for it (A1502).
+  const tabs = useTabs();
+  const tabsState = useTabsState();
+  const strip = tabs !== null && !phone;
+  const pageKey = tabsState
+    ? `${tabsState.active}:${tabsState.tabs.find((tab) => tab.id === tabsState.active)?.index ?? 0}`
+    : '';
+  const [stripEnd, setStripEnd] = useState<HTMLElement | null>(null);
+  // Reveal in Sidebar: the sidebar shows (expanded from the rail, the drawer opened).
+  useOnRevealNote(() => {
+    if (phone) setDrawerShown(true);
+    else if (sidebarCollapsed) setSidebarCollapsed(false);
+  });
   // The update notice: in the sidebar's bottom panel or on the rail, a toast where the sidebar
   // is a drawer (PEN-135 item 10).
   const updateNotice = useUpdateNotice();
   // Beside the rail, a note's title bar starts with Back, Forward and the pin (PEN-135 item 6);
   // Home, Trash and the graph have no title bar of their own, so the rail keeps them there.
-  const navInTitleBar = rail && route.name === 'note';
+  const navInTitleBar = rail && (route.name === 'note' || strip);
   return (
     <DrawerContext.Provider value={drawer}>
       <div
@@ -479,92 +505,117 @@ function NotesShell({
         {drawerOpen ? (
           <div className="drawer-scrim" aria-hidden="true" onClick={dismissDrawer} />
         ) : null}
+        {/* The narrow window's tabs (PEN-140, AC13), from the app bar's Tabs button. */}
+        {phone && tabs ? <TabsSheetHost /> : null}
         <main className="note-main" inert={drawerOpen} tabIndex={-1}>
-          {route.name === 'note' ? (
-            <NoteSourceScope key={route.id} id={route.id}>
-              <TitleBarLead.Provider
-                value={
-                  navInTitleBar ? (
-                    <>
-                      <HistoryNav testIdPrefix="app" />
-                      <KeepOnTopButton />
-                    </>
-                  ) : null
-                }
-              >
-                <NoteRoute id={route.id} heading={heading} />
-              </TitleBarLead.Provider>
-            </NoteSourceScope>
-          ) : route.name === 'graph' ? (
-            <InSource
-              source={
-                sourcesRegistry.sourceById(params.get('source') ?? '') ??
-                (graphNote ? sourcesRegistry.sourceOfNote(graphNote) : null)
+          {strip ? (
+            <TabStrip
+              lead={
+                navInTitleBar ? (
+                  <>
+                    <HistoryNav testIdPrefix="app" />
+                    <KeepOnTopButton />
+                  </>
+                ) : null
               }
-            >
-              <AppBar title="Graph" />
-              <Suspense
-                fallback={
-                  <p className="graph-loading" role="status">
-                    <span className="spinner" aria-hidden="true" />
-                    Loading the graph…
-                  </p>
-                }
-              >
-                <GraphPage note={graphNote} local={params.get('local') === '1'} />
-              </Suspense>
-            </InSource>
-          ) : route.name === 'trash' ? (
-            <InSource source={trashSource}>
-              <AppBar title={`Trash · ${(trashSource ?? sourcesState.journal).name}`} />
-              <TrashView />
-            </InSource>
-          ) : route.name === 'tags' ? (
-            <>
-              <AppBar title="Tags" />
-              <TagsPage onShowTag={showTag} />
-            </>
-          ) : route.name === 'time-machine' ? (
-            // A git notebook's past (PEN-21): `/time-machine?source=<id>`, the Journal's without.
-            <InSource
-              source={
-                sourcesRegistry.sourceById(params.get('source') ?? '') ?? sourcesState.journal
-              }
-            >
-              <AppBar title="Time Machine" />
-              <TimeMachinePage params={params} />
-            </InSource>
-          ) : route.name === 'not-found' ? (
-            <>
-              <AppBar title="Penmoss" brand />
-              <div className="empty-state">
-                <h2>Nothing here</h2>
-                <p>
-                  This address is not a note.{' '}
-                  <a href="/" data-command="app.home" onClick={linkHandler('/')}>
-                    Back to Your Notes
-                  </a>
-                </p>
-              </div>
-            </>
-          ) : (
-            <>
-              <AppBar title="Penmoss" brand />
-              <Home phone={phone} />
-              {phone ? (
-                <button
-                  type="button"
-                  className="fab"
-                  data-command="note.new"
-                  aria-label="New Note"
-                  data-tip="New Note"
-                  onClick={() => commands.run('note.new')}
+              onEnd={setStripEnd}
+            />
+          ) : null}
+          <div
+            className="tab-panel"
+            id="tab-panel"
+            role={strip ? 'tabpanel' : undefined}
+            aria-labelledby={strip && tabsState ? `tab-${tabsState.active}` : undefined}
+          >
+            <TabStripEnd.Provider value={strip ? stripEnd : null}>
+              {route.name === 'note' ? (
+                // One view per tab and page (PEN-140): two tabs on one note keep their own place.
+                <NoteSourceScope key={`${pageKey}:${route.id}`} id={route.id}>
+                  <TitleBarLead.Provider
+                    value={
+                      navInTitleBar && !strip ? (
+                        <>
+                          <HistoryNav testIdPrefix="app" />
+                          <KeepOnTopButton />
+                        </>
+                      ) : null
+                    }
+                  >
+                    <NoteRoute id={route.id} heading={heading} />
+                  </TitleBarLead.Provider>
+                </NoteSourceScope>
+              ) : route.name === 'graph' ? (
+                <InSource
+                  source={
+                    sourcesRegistry.sourceById(params.get('source') ?? '') ??
+                    (graphNote ? sourcesRegistry.sourceOfNote(graphNote) : null)
+                  }
                 >
-                  <Icon name="plus" size={24} />
-                </button>
-              ) : null}
-            </>
-          )}
+                  <AppBar title="Graph" />
+                  <Suspense
+                    fallback={
+                      <p className="graph-loading" role="status">
+                        <span className="spinner" aria-hidden="true" />
+                        Loading the graph…
+                      </p>
+                    }
+                  >
+                    <GraphPage note={graphNote} local={params.get('local') === '1'} />
+                  </Suspense>
+                </InSource>
+              ) : route.name === 'trash' ? (
+                <InSource source={trashSource}>
+                  <AppBar title={`Trash · ${(trashSource ?? sourcesState.journal).name}`} />
+                  <TrashView />
+                </InSource>
+              ) : route.name === 'tags' ? (
+                <>
+                  <AppBar title="Tags" />
+                  <TagsPage onShowTag={showTag} />
+                </>
+              ) : route.name === 'time-machine' ? (
+                // A git notebook's past (PEN-21): `/time-machine?source=<id>`, the Journal's without.
+                <InSource
+                  source={
+                    sourcesRegistry.sourceById(params.get('source') ?? '') ?? sourcesState.journal
+                  }
+                >
+                  <AppBar title="Time Machine" />
+                  <TimeMachinePage params={params} />
+                </InSource>
+              ) : route.name === 'not-found' ? (
+                <>
+                  <AppBar title="Penmoss" brand />
+                  <div className="empty-state">
+                    <h2>Nothing here</h2>
+                    <p>
+                      This address is not a note.{' '}
+                      <a href="/" data-command="app.home" onClick={linkHandler('/')}>
+                        Back to Your Notes
+                      </a>
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <AppBar title="Penmoss" brand />
+                  <Home phone={phone} />
+                  {phone ? (
+                    <button
+                      type="button"
+                      className="fab"
+                      data-command="note.new"
+                      aria-label="New Note"
+                      data-tip="New Note"
+                      onClick={() => commands.run('note.new')}
+                    >
+                      <Icon name="plus" size={24} />
+                    </button>
+                  ) : null}
+                </>
+              )}
+            </TabStripEnd.Provider>
+          </div>
         </main>
       </div>
     </DrawerContext.Provider>

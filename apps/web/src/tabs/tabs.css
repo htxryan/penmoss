@@ -1,0 +1,534 @@
+/*
+ * Note tabs (PEN-140): the main window's tab strip, All Tabs, and the narrow window's Tabs button
+ * and sheet. Imported before the phone layout (styles.css), so the phone layout's rules win a tie.
+ */
+
+/*
+ * Note tabs (PEN-140, A1502): the main window's strip, layout A, the note pane's first row in
+ * the sidebar's colour, 48 px, with a rule below. Tabs are 36 px tall, 120 to 184 px wide, square
+ * (A976): the active one takes the note's background and a 2 px accent line on top and opens
+ * onto the note. The note's bar buttons sit at its right end (A1505).
+ */
+.note-main:has(> .tab-strip) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.note-main:has(> .tab-strip) > .tab-panel {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.note-main:has(> .tab-strip) > .tab-panel > :is(.note, .graph-page) {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* Without the strip (a phone, a test without tabs) the panel is not a box of its own. */
+.note-main:not(:has(> .tab-strip)) > .tab-panel {
+  display: contents;
+}
+
+.tab-strip {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex: none;
+  align-items: flex-end;
+  /* The row and its 1 px rule below, as the note's title row was: the text starts where it did. */
+  box-sizing: content-box;
+  height: 3rem;
+  min-width: 0;
+  border-bottom: 1px solid var(--pm-border-soft);
+  background: var(--pm-sidebar);
+  cursor: default;
+  user-select: none;
+}
+
+:root[data-titlebar='compact'] .tab-strip {
+  height: var(--pm-titlebar-row);
+}
+
+.tab-strip-lead {
+  display: flex;
+  flex: none;
+  align-self: stretch;
+  border-right: 1px solid var(--pm-border-soft);
+}
+
+.tab-strip-lead .history-nav {
+  align-self: stretch;
+}
+
+.tab-strip-lead .history-pair {
+  height: 100%;
+  background: none;
+}
+
+.tab-strip-lead .history-pair .history-half {
+  width: 2rem;
+}
+
+.tab-strip-lead > .icon-btn {
+  width: 2.5rem;
+  height: 100%;
+  border-left: 1px solid var(--pm-border-soft);
+}
+
+.tab-list {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: flex-end;
+  align-self: stretch;
+  min-width: 0;
+}
+
+.tab-group {
+  display: flex;
+  align-items: flex-end;
+  align-self: stretch;
+}
+
+.tab-group-pinned {
+  flex: none;
+}
+
+.tab-group-scroll {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tab-group-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Faded edges where more tabs are scrolled out of view (AC12). */
+.tab-group-scroll[data-fade-start] {
+  mask-image: linear-gradient(to right, transparent, currentcolor 1.5rem);
+}
+
+.tab-group-scroll[data-fade-end] {
+  mask-image: linear-gradient(to left, transparent, currentcolor 1.5rem);
+}
+
+.tab-group-scroll[data-fade-start][data-fade-end] {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    currentcolor 1.5rem,
+    currentcolor calc(100% - 1.5rem),
+    transparent
+  );
+}
+
+.tab {
+  position: relative;
+  display: flex;
+  flex: 0 1 11.5rem;
+  align-items: center;
+  gap: 0.4rem;
+  box-sizing: border-box;
+  width: 11.5rem;
+  min-width: 7.5rem;
+  height: 2.25rem;
+  padding: 0 0.35rem 0 0.6rem;
+  border-right: 1px solid var(--pm-border-soft);
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  cursor: default;
+}
+
+.tab:first-child {
+  border-left: 1px solid var(--pm-border-soft);
+}
+
+.tab-group-pinned + .tab-group-scroll > .tab:first-child {
+  border-left: 0;
+}
+
+.tab:hover {
+  background: var(--pm-hover);
+  color: var(--pm-fg);
+}
+
+.tab[aria-selected='true'] {
+  /* Opens straight onto the note: its background, over the strip's rule. */
+  height: calc(2.25rem + 1px);
+  margin-bottom: -1px;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  box-shadow: inset 0 2px 0 var(--pm-accent);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: -2px;
+}
+
+.tab[data-pinned] {
+  flex: 0 1 8.25rem;
+  width: auto;
+  min-width: 0;
+  max-width: 8.25rem;
+}
+
+.tab[data-drop='before']::before,
+.tab[data-drop='after']::after {
+  position: absolute;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  width: 2px;
+  background: var(--pm-accent);
+  content: '';
+}
+
+.tab[data-drop='before']::before {
+  left: -1px;
+}
+
+.tab[data-drop='after']::after {
+  right: -1px;
+}
+
+.tab-mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+}
+
+/* The title gives way first: a look-alike's notebook name after it stays readable (AC8). */
+.tab-title {
+  flex: 0 1 auto;
+  min-width: 1.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-suffix {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  color: var(--pm-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-close,
+.tab-pin {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--pm-muted);
+}
+
+/* At the tab's end, however short its title. */
+.tab-close {
+  margin-left: auto;
+}
+
+/* The pin leads a pinned tab, before its badge (ac5). */
+.tab-pin {
+  width: auto;
+}
+
+/* × shows on the active tab and the one pointed at. */
+.tab:not([aria-selected='true'], :hover, :focus-visible) > .tab-close {
+  visibility: hidden;
+}
+
+.tab-close:hover {
+  background: var(--pm-active);
+  color: var(--pm-fg);
+}
+
+.tab-strip > .tab-new {
+  flex: none;
+  align-self: center;
+  margin-left: 0.15rem;
+}
+
+.tab-all {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  align-self: center;
+  gap: 0.2rem;
+  height: var(--pm-control-sm);
+  padding: 0 0.4rem;
+  border: 1px solid var(--pm-border-soft);
+  background: none;
+  color: var(--pm-muted);
+  font: inherit;
+  font-size: var(--pm-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.tab-all:hover {
+  background: var(--pm-hover);
+  color: var(--pm-fg);
+}
+
+.tab-strip-fill {
+  flex: 1 1 0;
+  align-self: stretch;
+}
+
+/* The note's buttons at the strip's end, as tall as the row (A1135). */
+.tab-strip-end {
+  display: flex;
+  flex: none;
+  align-self: stretch;
+}
+
+.tab-strip-end:empty {
+  display: none;
+}
+
+.tab-strip-end > .note-actions {
+  display: flex;
+  align-items: stretch;
+  align-self: stretch;
+  gap: 0;
+  border-left: 1px solid var(--pm-border-soft);
+}
+
+.tab-strip-end > .note-actions .icon-btn {
+  width: 2.5rem;
+  height: 100%;
+}
+
+.tab-strip-end > .note-actions > .menu-anchor {
+  display: flex;
+  align-self: stretch;
+}
+
+.tab-strip-end > .note-actions > .menu-anchor > button {
+  width: 2.5rem;
+  height: 100%;
+}
+
+/* All Tabs (AC12): a list that filters as you type, under its button. */
+.all-tabs {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  width: min(22rem, calc(100vw - 1rem));
+  max-height: min(28rem, calc(100vh - 6rem));
+  padding: 0.35rem;
+}
+
+.all-tabs-filter {
+  box-sizing: border-box;
+  width: 100%;
+  margin-bottom: 0.35rem;
+}
+
+.all-tabs-list {
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.all-tabs-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  font-size: var(--pm-text-sm);
+  cursor: default;
+}
+
+.all-tabs-item[aria-selected='true'] {
+  background: var(--pm-hover);
+}
+
+.all-tabs-item[data-active] {
+  font-weight: 600;
+}
+
+/* The pinned tabs first, each with its pin, and a rule under them (ac12). */
+.all-tabs-pin {
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  width: 12px;
+  color: var(--pm-muted);
+}
+
+.all-tabs-list:not(:has([data-pinned])) .all-tabs-pin {
+  display: none;
+}
+
+.all-tabs-item[data-group-end] {
+  margin-bottom: 0.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--pm-border);
+}
+
+.all-tabs-title {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.all-tabs-title > bdi,
+.all-tabs-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.all-tabs-path {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  font-weight: 400;
+}
+
+.all-tabs-key {
+  color: var(--pm-muted);
+  font: inherit;
+  font-size: var(--pm-text-xs);
+}
+
+.all-tabs-none {
+  padding: 0.5rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+}
+
+/* The narrow window's Tabs button and sheet (AC13, A1502). */
+.tabs-button .tabs-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 0.25rem;
+  border: 1.5px solid currentcolor;
+  font-size: var(--pm-text-xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabs-scrim {
+  z-index: 70;
+}
+
+.tabs-sheet {
+  position: fixed;
+  z-index: 71;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+  padding: 0 0 max(0.75rem, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--pm-border);
+  background: var(--pm-raised);
+  box-shadow: var(--pm-popover-shadow);
+}
+
+.tabs-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.25rem 0.25rem 1rem;
+  border-bottom: 1px solid var(--pm-border-soft);
+}
+
+.tabs-sheet-head h2 {
+  margin: 0;
+  font-size: var(--pm-text-md);
+}
+
+.tabs-sheet-list {
+  flex: 1 1 auto;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.tabs-sheet-row {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--pm-border-soft);
+}
+
+.tabs-sheet-row[data-active] {
+  box-shadow: inset 3px 0 0 var(--pm-accent);
+}
+
+.tabs-sheet-tab {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  min-height: var(--pm-hit);
+  padding: 0.4rem 1rem;
+  border: 0;
+  background: none;
+  color: var(--pm-fg);
+  font: inherit;
+  text-align: start;
+}
+
+.tabs-sheet-pin {
+  display: inline-flex;
+  flex: none;
+  margin-inline-end: -0.25rem;
+  color: var(--pm-muted);
+}
+
+.tabs-sheet-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tabs-sheet-title,
+.tabs-sheet-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tabs-sheet-path {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+}
+
+.tabs-sheet-new {
+  align-self: stretch;
+  margin: 0.75rem 1rem 0;
+}
+
+/* Beside the rail, the strip starts after the traffic lights, as the note's title row did. */
+:root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed'] .tab-strip {
+  padding-left: calc(var(--pm-titlebar-inset) - var(--pm-rail) - 1px);
+}
+
+:root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed'] .tab-strip-lead {
+  border-left: 1px solid var(--pm-border-soft);
+}
+
+:root[data-titlebar='compact'] .notes-app[data-sidebar='collapsed']:has(.tab-strip) .sidebar {
+  --pm-rail-row: var(--pm-sidebar);
+}

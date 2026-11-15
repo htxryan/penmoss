@@ -35,11 +35,28 @@ Penmoss can check for a newer release and offer it; you choose when to install i
 
 The main window has three panes: the sidebar, the note, and the note panel. Drag the edge between two panes to resize them; Penmoss remembers the widths on this Mac.
 
-- **The sidebar** holds the shortcuts row (New Note, Search, Tags, Today, This Week, Graph, Commands), then Quick Access, Recent Notes, your notebooks, the calendar and tags. Its bottom row has Settings and Send Feedback, and above them the notice of a new version. ⌘\\ folds it to a rail of icons and back: Send Feedback and Settings stay at the rail's foot, Settings at the very bottom, and a note's top bar then starts with Back, Forward and the Keep on Top pin. The buttons in the sidebar's top row always fit, however narrow you drag it. A notebook's row has **New Note**, **New Folder** and a ⋯ menu (**More Notebook Actions**) with **Rename…**, **Sort Order…**, **Time Machine** and **Trash**, so its name stays readable; when the notebook's sync stops, its row turns red. **Settings → Sidebar** chooses what it shows.
-- **The note** has its title, the editor and, at the foot, the **status bar**: whether the note is saved and in git (**Sync Stopped** in red when its notebook cannot sync; click it to see why), and its words, characters and reading time (for the selection while text is selected). **Settings → Note** chooses what the status bar and the line under the title show, and which buttons the note's top bar has.
-- **The note panel**, on the right, has four tabs: **Metadata** (folder, dates, tags, frontmatter and [backlinks](/docs/links/#backlinks)), **Comments**, **History** and **Local Graph**. The **Note Panel** button in the note's top bar shows or hides it. **Settings → Note → Note Panel** chooses whether it starts open.
+- **The sidebar** holds the shortcuts row (New Note, Search, Tags, Today, This Week, Graph, Commands), then Quick Access, Recent Notes, your notebooks (each with its [badge](/docs/organise/#notebook-badges)), the calendar and tags. Its bottom row has Settings and Send Feedback, and above them the notice of a new version. ⌘\\ folds it to a rail of icons and back: Send Feedback and Settings stay at the rail's foot, Settings at the very bottom, and the tab strip then starts with Back, Forward and the Keep on Top pin. The buttons in the sidebar's top row always fit, however narrow you drag it. A notebook's row has **New Note**, **New Folder** and a ⋯ menu (**More Notebook Actions**) with **Rename…**, **Sort Order…**, **Time Machine** and **Trash**, so its name stays readable; when the notebook's sync stops, its row turns red. **Settings → Sidebar** chooses what it shows.
+- **The note** sits under the [tab strip](#tabs). It has its title, the editor and, at the foot, the **status bar**: where the note is (click it to reveal the note in the sidebar), whether it is saved and in git (**Sync Stopped** in red at the bar's left edge when its notebook cannot sync; click it to see why), and its words, characters and reading time (for the selection while text is selected). **Settings → Note** chooses what the status bar and the line under the title show, and which buttons sit at the end of the tab strip.
+- **The note panel**, on the right, has four tabs: **Metadata** (folder, dates, tags, frontmatter and [backlinks](/docs/links/#backlinks)), **Comments**, **History** and **Local Graph**. The **Note Panel** button at the end of the tab strip shows or hides it. **Settings → Note → Note Panel** chooses whether it starts open.
 
-The note's other actions are in the ⋯ at the end of its top bar.
+The note's other actions are in the ⋯ at the end of the tab strip. There is no title row above the note: its tab shows its notebook's badge and its title.
+
+## Tabs
+
+The main window opens several notes at once, as tabs in the strip above the note. Each tab has its own Back and Forward (their tooltips name the page they go to in this tab), keeps its place in the note and its note panel, and Penmoss reopens your tabs, in order, when you relaunch.
+
+- **Open a note in the tab you are in:** click it, as before. A pinned tab keeps its note, so a click there opens a new tab.
+- **Open a note in a new tab:** ⌘-click it (or middle-click) in Quick Access, Recent Notes, a tag's notes, Backlinks, the graph or a link, press ⌘↩ on a result in [Search](/docs/search/) or the palette, or choose **Open in New Tab** from a note's right-click menu in the sidebar. The tab opens behind the one you are in; ⇧⌘-click or ⇧⌘↩ opens it in front. In your notebooks' tree, ⌘-click picks one more note, so use a middle click or the menu there. You can also drag a note from the sidebar onto the strip.
+- **New Tab** (⌘T, or + after the last tab) opens Home with Search open and the cursor in it; Escape leaves Home.
+- **Today's Note** (⌘D), **This Week's Note**, the menu bar icon's **Open Today's Journal**, its Quick Access notes and `penmoss://` links never replace the page you are on: they switch to the tab already showing that note, or open it in a new tab.
+- **Close a tab:** its ×, a middle click on it, or ⌘W. Closing the last tab leaves Home. **Reopen Closed Tab** (⇧⌘T) brings back the last 20 you closed, each where it was.
+- **Switch tabs:** click one, ⌃Tab and ⇧⌃Tab for the next and previous, ⌘1 to ⌘8 for the first eight and ⌘9 for the last.
+- **Reorder:** drag a tab along the strip, or press ⌥← or ⌥→ with it focused. Dragging a tab onto Quick Access pins its note there.
+- **Right-click a tab** for Close Tab, Close Other Tabs, Close Tabs to the Right, **Pin Tab**, Duplicate Tab, Move to New Window, Pin to Quick Access and Reveal in Sidebar. A pinned tab moves to the strip's start, starts with a pin and has no ×, and ⌘W leaves it open.
+
+Each note's tab starts with its notebook's badge. When two tabs have the same title and their notebooks' badges look alike, each also names its notebook; a tab's tooltip shows its notebook, its folders and its ⌘ number. A note moved to Trash closes its tabs, wherever it was moved from, and a message offers **Restore**. When the tabs no longer fit, they scroll sideways and **All Tabs**, with the count, lists them all, pinned tabs first with their pin.
+
+In a window 700 points wide or narrower the strip hides, and the **Tabs** button in the top bar, with the count, lists your tabs (pinned ones first, marked Pinned) and has **New Tab**. Settings opens over the whole window, and closing it brings back your tabs as they were.
 
 As in other Mac apps, Penmoss's own words (buttons, labels, headings, the sidebar) can't be selected, and the pointer stays an arrow over them. What you might copy can: your notes, every field, code and paths, comments, History, release notes, a notebook's details in Settings, and error messages.
 
@@ -47,7 +64,7 @@ As in other Mac apps, Penmoss's own words (buttons, labels, headings, the sideba
 
 Open a note in a window of its own with **Open in New Window** (⌘⌥O), from the note's ⋯ menu, from a note's right-click menu in the sidebar, or by ⌥-clicking a link, a backlink or a note in the sidebar.
 
-A note window has the note, its ⋯ menu, the note panel and the status bar, but no sidebar. Links open in the same window; its ← and → buttons, ⌘[ and ⌘], go back and forward. Several windows can show the same note, and typing in one shows in the others at once, offline too. Settings, Trash and the graph open in the main window.
+A note window has the note, its title row and ⋯ menu, the note panel and the status bar, but no sidebar and no tabs. ⌘T there opens a new tab in the main window, and **Move to New Window** in a tab's menu moves that tab's note into a window of its own. Links open in the same window; its ← and → buttons, ⌘[ and ⌘], go back and forward. Several windows can show the same note, and typing in one shows in the others at once, offline too. Settings, Trash and the graph open in the main window.
 
 Closing the main window leaves note windows open; the Dock icon or **Window → Penmoss** brings it back. Note windows are not reopened after you quit.
 
@@ -59,7 +76,7 @@ When no Penmoss window is on screen, clicking Penmoss in the Dock brings back th
 
 **Keep on Top** pins a window above other apps' windows, on every Space, so a note stays in view while you work elsewhere. It never floats over a full-screen app. Turn it on or off with:
 
-- the pin in the sidebar's header (in the note's top bar while the sidebar is a rail), or in a note window's top bar;
+- the pin in the sidebar's header (at the start of the tab strip while the sidebar is a rail), or in a note window's top bar;
 - **View → Keep on Top**;
 - **Keep on Top** in the command palette.
 
@@ -67,7 +84,7 @@ The main window stays pinned after a relaunch; note windows start unpinned. Keep
 
 ## The compact title bar
 
-With **Settings → Appearance → Window → Compact Title Bar** on (the default), the window's red, yellow and green buttons sit in Penmoss's own top row, and notes start higher. That row drags the window, and double-clicking an empty part of it zooms or minimises it, as **System Settings → Desktop & Dock** says. With no note open, so does the empty space beside the sidebar, and on the Tags page, the empty space around its title and filter; before you have a notebook, the strip across the top of the welcome screen does. In full screen the buttons hide.
+With **Settings → Appearance → Window → Compact Title Bar** on (the default), the window's red, yellow and green buttons sit in Penmoss's own top row, beside the tab strip, and notes start higher. That row, and the strip's empty part, drags the window, and double-clicking an empty part of it zooms or minimises it, as **System Settings → Desktop & Dock** says. On Home, so does its empty space, and on the Tags page, the empty space around its title and filter; before you have a notebook, the strip across the top of the welcome screen does. In full screen the buttons hide.
 
 Turn it off to use macOS's own title bar: Penmoss asks, then reopens its windows where they were. The setting is for this Mac only.
 
@@ -76,13 +93,14 @@ Turn it off to use macOS's own title bar: Penmoss asks, then reopens its windows
 Every command is in the menus, with its current shortcut:
 
 - **Penmoss:** About Penmoss, Settings (⌘,) and **Check for Updates…**.
-- **File:** new notes and folders, quick capture, moving, history, note windows, Move to Trash, sort order, and the git notebook's actions (Sync This Git Notebook Now, its token, commit name and email, Remove This Git Notebook from This Mac…).
+- **File:** New Note, then New Tab (⌘T), new folders, quick capture, moving, history, Open in New Window, then Reopen Closed Tab (⇧⌘T), Move to Trash, sort order, the git notebook's actions (Sync This Git Notebook Now, its token, commit name and email, Remove This Git Notebook from This Mac…), and last Close Tab (⌘W), Close Other Tabs and Close Window (⇧⌘W; in a note window, ⌘W).
 - **Edit:** undo, the clipboard, Copy Note as Markdown or Rich Text, Copy Agent Reference, and Search Notes….
 - **Format:** text formatting, headings, lists, blocks and line symbols.
 - **Insert:** every block from the slash menu.
 - **View:** the command palette, Keep on Top, the sidebar, the note panel's tabs, full width, tags and themes.
 - **Go:** Quick Open, recent notes, the graph, Trash, Back and Forward, and the daily and weekly notes.
-- **Window** and **Help:** the open windows; keyboard shortcuts and **Send Feedback**.
+- **Window:** Show Next Tab (⌃Tab) and Show Previous Tab (⇧⌃Tab), Pin or Unpin Tab, Duplicate Tab, Move Tab to New Window, Show All Tabs, and the open windows.
+- **Help:** keyboard shortcuts and **Send Feedback**.
 
 ## The menu bar icon
 

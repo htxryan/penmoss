@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { CommandCenter, memoryBindings, type ActiveEditor } from '../../src/commands/center';
 import { COMMANDS } from '../../src/commands/definitions';
-import { menuModel, menuOf } from '../../src/desktop/menu';
+import { menuModel, menuOf, NO_MENU_COMMANDS } from '../../src/desktop/menu';
 
 // T29: the web app's side of the Mac app: the menus it describes from the command registry,
 // and menu shortcuts dispatched without running twice. Its session, sign-in and admin requests
@@ -53,6 +53,8 @@ describe('menus from the command registry (T29, A222)', () => {
   // A Mac app's window, with keep on top (T46); without it, see mac-window.test.tsx.
   const menus = menuModel(center.definitions.values(), (id) => center.keysOf(id), {
     macWindow: true,
+    // The main window, with tabs (PEN-140).
+    tabs: true,
   });
   const items = menus.flatMap((menu) => menu.groups.flat());
 
@@ -61,6 +63,8 @@ describe('menus from the command registry (T29, A222)', () => {
       (command) =>
         !command.pending &&
         command.scope !== 'tree' &&
+        // ⌘1–⌘9 and Close Tabs to the Right: keys and the tab menu, no menu bar item (A1503).
+        !NO_MENU_COMMANDS.has(command.id) &&
         (!command.hidden || command.id === 'app.palette'),
     ).map((command) => command.id);
     expect(items.map((item) => item.id).sort()).toEqual(expected.sort());
@@ -100,6 +104,8 @@ describe('menus from the command registry (T29, A222)', () => {
       'Insert',
       'View',
       'Go',
+      // The tabs' own commands, added to the system's Window menu (PEN-140).
+      'Window',
       'Help',
     ]);
     const edit = menus.find((menu) => menu.label === 'Edit')!;
@@ -185,5 +191,38 @@ describe('shortcuts a native menu took (T29)', () => {
     expect(center.dispatchMenuShortcut('Mod+B', null)).toBe(false);
     expect(center.dispatchMenuShortcut('Mod+B', inside)).toBe(true);
     expect(calls).toEqual(['bold']);
+  });
+});
+
+describe('the tab commands in the menus (PEN-140, A1503)', () => {
+  const center = new CommandCenter(COMMANDS, memoryBindings());
+  const ids = (tabs: boolean) =>
+    menuModel(center.definitions.values(), (id) => center.keysOf(id), { tabs }).flatMap((menu) =>
+      menu.groups.flat().map((item) => `${menu.label}:${item.id}`),
+    );
+
+  it('puts New Tab, Reopen Closed Tab, Close Tab and Close Other Tabs in File', () => {
+    const main = ids(true);
+    for (const id of ['tab.new', 'tab.reopenClosed', 'tab.close', 'tab.closeOthers']) {
+      expect(main).toContain(`File:${id}`);
+    }
+    for (const id of ['tab.next', 'tab.previous', 'tab.pin', 'tab.all']) {
+      expect(main).toContain(`Window:${id}`);
+    }
+  });
+
+  it('puts New Tab after New Note, Reopen Closed Tab after Open in New Window, and ends File with Close Tab', () => {
+    const file = menuModel(center.definitions.values(), (id) => center.keysOf(id), {
+      tabs: true,
+    }).find((menu) => menu.label === 'File')!;
+    const flat = file.groups.flat().map((item) => item.id);
+    expect(flat[flat.indexOf('note.new') + 1]).toBe('tab.new');
+    expect(flat[flat.indexOf('note.openInNewWindow') + 1]).toBe('tab.reopenClosed');
+    expect(file.groups.at(-1)!.map((item) => item.id)).toEqual(['tab.close', 'tab.closeOthers']);
+  });
+
+  it('gives a window without tabs New Tab only, so ⌘W still closes it', () => {
+    const note = ids(false).filter((id) => id.includes(':tab.'));
+    expect(note).toEqual(['File:tab.new']);
   });
 });

@@ -23,6 +23,15 @@ The name is kept in the notebook's repository, so it renames it on every device 
 
 Two notebooks with one name can't be told apart by agents, so Penmoss warns when you add or rename a notebook to a name another notebook on this Mac has, and offers a free one, such as "Personal (2)".
 
+### Notebook badges
+
+Each notebook has a badge: a small square in a colour, holding a letter, a number or an icon. It shows at the start of the notebook's row in the sidebar, at the start of each of its notes' [tabs](/docs/install/mac/#tabs), and in Settings (its entry under **All Notebooks**, its row in the list and its page's heading), so you can tell notebooks apart at a glance.
+
+- **By default** a notebook's badge shows the first letter (or digit) of its name in one of ten colours, picked from the notebook itself, so it is the same on every Mac. Two notebooks can have the same badge: Personal and Penmoss are both **P** until you change one.
+- **To change it**, open Settings, choose the notebook under **All Notebooks**, and use the **Badge** rows on its **Overview**, after its name: pick a colour (Moss, Teal, Blue, Indigo, Violet, Rose, Red, Orange, Ochre, Slate, or **Custom…** for any colour), then what it **Shows**: a **Letter**, a **Number** from 0 to 99, or one of 24 **Icons**. The preview shows it alone, on a sidebar row and on a tab, and the change applies at once.
+- **Reset to Default** brings back the first letter and the colour it started with. A default letter follows the notebook's name when you rename it; one you chose stays.
+- The badge belongs to the notebook and syncs with it to your other Macs. **Copy Settings…** and **Keep Settings in Step** leave each notebook's badge its own. Android doesn't show badges yet.
+
 ### The Primary Notebook
 
 One notebook is your **Primary Notebook**. Today's note, This Week's note, the calendar, the Inbox and quick capture use it, and your app settings are kept in it. Choose it with **Primary Notebook** in **Settings → All Notebooks**. Each Mac chooses its own; the notebook's row and page show a **Primary** chip.
@@ -76,7 +85,9 @@ Android shows tags as before and keeps their descriptions when it syncs; describ
 
 ## Quick Access
 
-Quick Access holds up to 20 notes you want at hand. **Pin to Quick Access** in a note's ⋯ menu adds it, or drag a note onto the section. Right-click one for **Remove from Quick Access**. On the Mac the [menu bar icon](/docs/install/mac/#the-menu-bar-icon) lists them too.
+Quick Access holds up to 20 notes you want at hand. **Pin to Quick Access** in a note's ⋯ menu adds it, or drag a note onto the section. Right-click one for **Remove from Quick Access** or **Open in New Tab**. On the Mac the [menu bar icon](/docs/install/mac/#the-menu-bar-icon) lists them too.
+
+Quick Access is not the same as a pinned [tab](/docs/install/mac/#tabs): Quick Access is one list for all your devices, and a pinned tab belongs to the window it is in. A tab's right-click menu has **Pin to Quick Access**, and dragging a tab onto Quick Access pins its note; neither pins the tab.
 
 ## Recent Notes and the Inbox
 
@@ -90,12 +101,12 @@ Quick Access holds up to 20 notes you want at hand. **Pin to Quick Access** in a
 - **Shortcuts**: which buttons the sidebar's top row shows. Search is always there; **Tags**, **Today**, **This Week**, **Graph** and **Commands** show unless you switch them off. A hidden shortcut still works from its keys and the command palette.
 - **Sections**: **Quick Access** (with **Show Notebook Names**, which labels each pinned note with its notebook), **Recent Notes** (with how many notes it lists), **Notebooks**, **Calendar** and **Tags**, each with a switch to show or hide it. Drag a section by its handle to move it, or press Alt+↑ or Alt+↓ on its row. You can also drag a section by the handle on its title in the sidebar.
 
-⌘\\ folds the sidebar to a rail of icons and back. On the rail, Send Feedback and Settings stay at its foot, Settings at the very bottom, and a note's top bar starts with Back and Forward.
+⌘\\ folds the sidebar to a rail of icons and back. On the rail, Send Feedback and Settings stay at its foot, Settings at the very bottom, and the tab strip starts with Back and Forward.
 
 ## The note in Settings
 
 **Settings → Note** shows a small note beside its settings that changes as you change them:
 
 - **Layout**: **Note Width**, the theme's width or **Full Window**, and **Note Panel**, whether a note's panel starts **Closed** or **Open** (marked **This Mac**, as it is kept on each device). Each note then remembers its own.
-- **Title Bar Buttons**: which of Full Width, Markdown Source, the two copies, Copy Agent Reference, Pin to Quick Access, Open in New Window, Move to Folder and Move to Trash have a button beside the note's title. Each is also in the note's ⋯ menu.
+- **Title Bar Buttons**: which of Full Width, Markdown Source, the two copies, Copy Agent Reference, Pin to Quick Access, Open in New Window, Move to Folder and Move to Trash have a button at the end of the tab strip (beside the title in a note window). Each is also in the note's ⋯ menu.
 - **Under the Title** and **In the Status Bar**: click a detail to show or hide it there: notebook, folder, created, edited, tags, words, characters, reading time and token count. The status bar does not offer tags, which you edit under the title or in the Metadata tab.

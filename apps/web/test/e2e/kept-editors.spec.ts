@@ -9,7 +9,7 @@ import { body, collectErrors, newNote } from './support/app';
 // switching back to one shows it at once. A kept editor must stay what a freshly opened one
 // would show: current with every change made meanwhile (on a git notebook, T59: another Mac's
 // and an agent's, once git carries them), with its own undo history, and never kept for a note
-// that left the list or fell out of the two kept. (The server's restore of a note from its R2
+// that left the list or fell out of the eight kept (two before PEN-140, A1500). (The server's restore of a note from its R2
 // copy under a new epoch went with the server.) Each editor element gets a mark in the page:
 // the mark coming back means the kept editor was shown again, no mark means the note was
 // opened afresh.
@@ -150,24 +150,28 @@ test('a kept note keeps its caret, and focus moves as when it opened afresh', as
   expect(errors).toEqual([]);
 });
 
-test('at most two notes are kept, and none for a note gone from the list', async ({
+test('at most eight notes are kept, and none for a note gone from the list', async ({
   page,
   browser,
   notebook,
 }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(240_000);
   const errors = collectErrors(page);
   await page.goto('/');
-  const titles = [1, 2, 3, 4].map((n) => `Kept bound ${n} ${RUN}`);
+  // Eight since PEN-140 (A1500), so a handful of tabs switch at once: ten notes, shown in
+  // one tab, take A past the eight kept.
+  const titles = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => `Kept bound ${n} ${RUN}`);
   const ids: string[] = [];
   for (const title of titles) ids.push(await newNote(page, title, `Text of ${title}`));
   await pushed(page);
-  const [a, b, c, d] = titles as [string, string, string, string];
+  const [a, b, ...rest] = titles as [string, string, ...string[]];
+  const c = rest[rest.length - 2]!;
+  const d = rest[rest.length - 1]!;
 
-  // Two kept: after A, B, C and D, A is no longer kept, C is.
+  // Eight kept: after A, B, and the eight others, A is no longer kept, the last but one is.
   await show(page, a);
   await mark(page, 'a');
-  for (const title of [b, c]) {
+  for (const title of [b, ...rest.slice(0, -1)]) {
     await show(page, title);
     await mark(page, title);
   }

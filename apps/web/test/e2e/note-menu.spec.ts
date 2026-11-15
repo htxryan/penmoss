@@ -11,7 +11,8 @@ test('the note’s actions are in one ⋯ menu; Full width and Copy Agent Refere
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await newNote(page, `Menu ${RUN}`, 'Text for the menu.');
-  const bar = page.locator('.note-top .note-actions');
+  // At the tab strip's end since PEN-140 (A1505), the main window having no title row.
+  const bar = page.locator('.tab-strip-end .note-actions');
   // Two buttons and the menu (Copy Agent Reference since T52, A962; the Note Panel and Comments
   // buttons left for the tab icons down the note's edge in T53 item 9): nothing else on the bar.
   await expect(bar.locator(':scope > button, :scope > a, :scope > .menu-anchor')).toHaveCount(3);

@@ -278,6 +278,80 @@ describe('menu accelerators', () => {
     expect(shown).toBe(2);
   });
 
+  // PEN-140 (A1503): a window with tabs closes a tab on ⌘W; Close Window takes ⇧⌘W.
+  it('makes ⇧⌘W Close Window, and adds the tab items to Window, in a window with tabs', () => {
+    const tabbed = menuTemplate(
+      [
+        {
+          label: 'File',
+          groups: [
+            [
+              { id: 'tab.new', title: 'New Tab', keys: ['Mod+T'] },
+              { id: 'tab.close', title: 'Close Tab', keys: ['Mod+W'] },
+            ],
+          ],
+        },
+        {
+          label: 'Window',
+          groups: [[{ id: 'tab.next', title: 'Show Next Tab', keys: ['Ctrl+Tab'] }]],
+        },
+      ],
+      { platform: 'darwin', appName: 'Penmoss', devTools: false, onCommand: () => undefined },
+    );
+    const file = tabbed.find((menu) => menu.label === 'File')!
+      .submenu as Electron.MenuItemConstructorOptions[];
+    expect(file.find((item) => item.id === 'tab.close')?.accelerator).toBe('CommandOrControl+W');
+    const close = file.find((item) => item.role === 'close')!;
+    expect(close.label).toBe('Close Window');
+    expect(close.accelerator).toBe('Shift+CommandOrControl+W');
+    const window = tabbed.find((menu) => menu.label === 'Window')!
+      .submenu as Electron.MenuItemConstructorOptions[];
+    expect(window.find((item) => item.id === 'tab.next')?.accelerator).toBe('Control+Tab');
+
+    // A note window's page sends no Close Tab: ⌘W closes the window, as before.
+    const plain = menuTemplate(
+      [{ label: 'File', groups: [[{ id: 'tab.new', title: 'New Tab', keys: ['Mod+T'] }]] }],
+      { platform: 'darwin', appName: 'Penmoss', devTools: false, onCommand: () => undefined },
+    );
+    const plainFile = plain.find((menu) => menu.label === 'File')!
+      .submenu as Electron.MenuItemConstructorOptions[];
+    expect(plainFile.find((item) => item.role === 'close')).toEqual({ role: 'close' });
+  });
+
+  // PEN-140 (A1503): Close Tab, Close Other Tabs and Close Window are one closing group.
+  it('ends the group Close Tab is in with Close Window, after the File menu’s other groups', () => {
+    const template = menuTemplate(
+      [
+        {
+          label: 'File',
+          groups: [
+            [
+              { id: 'note.new', title: 'New Note', keys: [] },
+              { id: 'tab.new', title: 'New Tab', keys: ['Mod+T'] },
+            ],
+            [{ id: 'note.delete', title: 'Move to Trash', keys: [] }],
+            [
+              { id: 'tab.close', title: 'Close Tab', keys: ['Mod+W'] },
+              { id: 'tab.closeOthers', title: 'Close Other Tabs', keys: [] },
+            ],
+          ],
+        },
+      ],
+      { platform: 'darwin', appName: 'Penmoss', devTools: false, onCommand: () => undefined },
+    );
+    const file = template[1]!.submenu as Electron.MenuItemConstructorOptions[];
+    expect(file.map((item) => item.label ?? item.type)).toEqual([
+      'New Note',
+      'New Tab',
+      'separator',
+      'Move to Trash',
+      'separator',
+      'Close Tab',
+      'Close Other Tabs',
+      'Close Window',
+    ]);
+  });
+
   // T39 pass 2 (A526): what cannot run now is greyed out, as in any Mac app.
   it('greys out an item the page says cannot run now', () => {
     const template = menuTemplate(

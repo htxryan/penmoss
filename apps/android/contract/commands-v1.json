@@ -624,6 +624,186 @@
       }
     },
     {
+      "id": "tab.new",
+      "title": "New Tab",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.close",
+      "title": "Close Tab",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.reopenClosed",
+      "title": "Reopen Closed Tab",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.closeOthers",
+      "title": "Close Other Tabs",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.closeRight",
+      "title": "Close Tabs to the Right",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.next",
+      "title": "Show Next Tab",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.previous",
+      "title": "Show Previous Tab",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.select1",
+      "title": "Show Tab 1",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.select2",
+      "title": "Show Tab 2",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.select3",
+      "title": "Show Tab 3",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.select4",
+      "title": "Show Tab 4",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.select5",
+      "title": "Show Tab 5",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.select6",
+      "title": "Show Tab 6",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.select7",
+      "title": "Show Tab 7",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.select8",
+      "title": "Show Tab 8",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.selectLast",
+      "title": "Show the Last Tab",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.pin",
+      "title": "Pin or Unpin Tab",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.duplicate",
+      "title": "Duplicate Tab",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.moveToWindow",
+      "title": "Move Tab to New Window",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
+      "id": "tab.all",
+      "title": "Show All Tabs",
+      "area": "Tabs",
+      "scope": "global",
+      "android": {
+        "na": "The Mac app’s main window has tabs (PEN-140); the phone shows one note at a time with its system Back."
+      }
+    },
+    {
       "id": "note.fullWidth",
       "title": "Toggle Full-Width Notes",
       "area": "Note",

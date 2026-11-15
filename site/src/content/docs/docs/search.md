@@ -9,6 +9,8 @@ Open search with **Search Notes…** (⌘⇧F), or **Search** in the sidebar. To
 
 Search runs on your device, over every notebook you have open, offline too. The status line says how many results it found.
 
+Press Enter on a result, or click it, to open it in the tab you are in. In the Mac app, ⌘↩ (or ⌘-click) opens it in a [new tab](/docs/install/mac/#tabs) behind that one, and ⇧⌘↩ in a new tab in front; Quick Open and the command palette do the same.
+
 ## Search by words
 
 Type words to find the notes that have all of them. The last word matches the start of a word as you type, and a word can match inside a longer one: `moss` finds Penmoss.

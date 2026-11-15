@@ -3,6 +3,7 @@ import { BrandMark, Icon } from '@penmoss/ui/icons';
 import { Fragment, useContext, type ReactNode } from 'react';
 import { useCommands, useKeys } from '../commands/hooks';
 import { DrawerContext, withKeys } from './drawer';
+import { TabsButton } from '../tabs/TabsSheet';
 
 /**
  * The phone's top app bar (T36, A181), after the prototype's: the menu button
@@ -85,6 +86,8 @@ export function AppBar({
       >
         <Icon name="search" />
       </button>
+      {/* The main window's tabs, at 700 px and narrower (PEN-140, A1502). */}
+      <TabsButton />
       {children}
     </header>
   );

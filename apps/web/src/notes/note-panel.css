@@ -46,6 +46,8 @@
 .status-counts {
   display: flex;
   gap: 0.9rem;
+  /* At the bar's right end, whatever comes before it (the folder path, the save status). */
+  margin-left: auto;
   white-space: nowrap;
 }
 
@@ -318,4 +320,30 @@ a.save-status[data-state='stopped']:hover {
 
 .sb-part-head .sb-section-toggle {
   color: var(--pm-fg);
+}
+
+/* The status bar's folder path (A1505), at its start: where the title row showed it; a click reveals it. */
+.status-place {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0 0.25rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: default;
+}
+
+.status-place:hover {
+  background: var(--pm-hover);
+  color: var(--pm-fg);
+}
+
+.status-place-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

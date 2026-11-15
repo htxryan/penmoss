@@ -2,7 +2,7 @@ import { openLightboxNow } from '@penmoss/editor';
 import { useEffect } from 'react';
 import { useCommand, useCommands } from '../commands/hooks';
 import { drawingEditorOpen } from '../drawing/drawings';
-import { useHistoryPlace } from '../router';
+import { goBack, goForward, useHistoryPlace } from '../router';
 
 /** The mouse's back and forward buttons (`MouseEvent.button`). */
 export const MOUSE_BACK = 3;
@@ -19,6 +19,15 @@ export function mouseStep(button: number): 'back' | 'forward' | null {
 }
 
 /**
+ * A key on a focused tab of the strip: ⌥← and ⌥→ move it there (PEN-140), where Back and
+ * Forward's keys off Apple platforms are the same, so they give way.
+ */
+function onTab(event: Event | undefined): boolean {
+  const target = event?.target;
+  return target instanceof Element && target.closest('.tab-strip [role="tab"]') !== null;
+}
+
+/**
  * Back and Forward through this window's own history (T45 for a note window; T51, A943 for the
  * main window): the notes, Today and This Week, Search, the graph, Settings' pages and Trash all
  * have their address, so the browser's history is the app's. Each window has its own. The
@@ -29,16 +38,18 @@ export function useHistoryCommands(): void {
   const place = useHistoryPlace();
   useCommand(
     'window.back',
-    () => {
-      window.history.back();
+    (context) => {
+      if (context.source === 'key' && onTab(context.event)) return false;
+      goBack();
       return true;
     },
     () => place.back,
   );
   useCommand(
     'window.forward',
-    () => {
-      window.history.forward();
+    (context) => {
+      if (context.source === 'key' && onTab(context.event)) return false;
+      goForward();
       return true;
     },
     () => place.forward,

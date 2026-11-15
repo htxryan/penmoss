@@ -1,6 +1,13 @@
 import { Backlinks } from '@penmoss/ui/panels/Backlinks';
 import { useEffect, useMemo, useState, type MouseEvent } from 'react';
-import { isPlainLeftClick, isWindowClick, navigate } from '../router';
+import {
+  hasTabs,
+  isPlainLeftClick,
+  isWindowClick,
+  navigate,
+  openIntent,
+  openPath,
+} from '../router';
 import { openNoteWindow } from '../window/open';
 import { loadBacklinks, othersKey, type Backlinks as BacklinksData } from './backlinks';
 import { noteHref } from './directory';
@@ -57,6 +64,13 @@ export function BacklinksPanel({ noteId }: { noteId: string }) {
       // ⌥-click: in a new window (T45, A710), not the browser's download.
       event.preventDefault();
       openNoteWindow(id);
+      return;
+    }
+    // ⌘-click or ⇧⌘-click: a new tab (PEN-140, A1498).
+    const intent = openIntent(event);
+    if ((intent === 'background' || intent === 'foreground') && hasTabs()) {
+      event.preventDefault();
+      openPath(noteHref(id), intent);
       return;
     }
     if (!isPlainLeftClick(event)) return;

@@ -6,7 +6,8 @@ import {
   useCommandsAvailability,
   useCommandsVersion,
 } from '../commands/hooks';
-import { navigate, useLocation } from '../router';
+import { hasTabs, useLocation } from '../router';
+import { openFromOutside } from '../tabs/outside';
 import { useThemeState } from '../theme/hooks';
 import { desktop } from './bridge';
 import { macWindowStore, useMacWindowState } from './mac-window';
@@ -49,6 +50,8 @@ export function DesktopIntegration() {
           available: (id) => commands.available(id),
           checked: (id) => (id === 'window.keepOnTop' && macWindow ? keepOnTop : undefined),
           macWindow: macWindow !== null,
+          // The tab commands, in the main window (PEN-140); a note window has New Tab only.
+          tabs: hasTabs(),
         }),
       ),
     );
@@ -76,12 +79,13 @@ export function DesktopIntegration() {
     // Listening now: what main held while this window loaded runs or opens (T51, A945).
     void bridge.menu.takePending().then((held) => {
       if (typeof held === 'string') commands.run(held, { source: 'menu' });
-      else if (held && typeof held.path === 'string') navigate(held.path);
+      else if (held && typeof held.path === 'string') openFromOutside(held.path);
     });
     return stop;
   }, [bridge, commands]);
 
-  useEffect(() => bridge?.onOpenPath((path) => navigate(path)), [bridge]);
+  // A Quick Access note from the menu bar icon, a deep link: its tab, or a new one (A1498).
+  useEffect(() => bridge?.onOpenPath(openFromOutside), [bridge]);
 
   // The windows behind the page take the theme's background (T28, A249).
   useEffect(() => bridge?.theme.set({ light, dark, mode }), [bridge, light, dark, mode]);

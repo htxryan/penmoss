@@ -82,10 +82,28 @@
  */
 .sb-source > .sb-section-head {
   --sb-head-height: 1.8rem;
+  container: sb-notebook-row / inline-size;
   align-items: stretch;
   min-height: var(--sb-head-height);
   padding-block: 0;
   padding-inline-end: 0;
+}
+
+/*
+ * In a sidebar near its narrowest, the badge (PEN-140) and its gaps tighten, so the notebook's
+ * name keeps room to be read beside the row's buttons (R2-21, finding 19).
+ */
+@container sb-notebook-row (max-width: 15.5rem) {
+  .sb-source > .sb-section-head .sb-notebook-name {
+    gap: 0.2rem;
+    padding-inline-end: 0.1rem;
+  }
+
+  .sb-source > .sb-section-head .nb-badge.sb-source-badge {
+    inline-size: 1rem;
+    block-size: 1rem;
+    font-size: 0.62rem;
+  }
 }
 
 .sb-source > .sb-section-head .tree-actions {

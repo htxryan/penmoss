@@ -33,10 +33,11 @@ export const noteBarSetting = (button: string): string => `noteBar.${button}`;
 
 /**
  * A git notebook's own settings (A827): the same in every client of the notebook, kept in its
- * notebook map. Every other key is a device's.
+ * notebook map. Its badge (PEN-140, A1504: `badge.color`, `badge.glyph`) is one: it names the
+ * notebook on every Mac. Every other key is a device's.
  */
 export function isNotebookSetting(key: string): boolean {
-  return key === TIME_ZONE_SETTING || key.startsWith('template.');
+  return key === TIME_ZONE_SETTING || key.startsWith('template.') || key.startsWith('badge.');
 }
 
 /** The time zone setting, or the default when unset or unknown here. */

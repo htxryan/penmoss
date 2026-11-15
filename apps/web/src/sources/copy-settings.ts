@@ -1,12 +1,14 @@
 import { QUICK_ACCESS_SETTING } from '@penmoss/core/quick-access';
+import { BADGE_SETTINGS } from './badge';
 
 /**
  * Settings copied from one notebook to another (Quanta feedback 3, item 10; A1137): the
  * primary notebook's theme, display, shortcuts and the rest, written into another notebook so
  * it reads the same if it becomes the primary, or on a device where it is. Quick Access is not
- * copied: its pins are the primary notebook's own notes.
+ * copied: its pins are the primary notebook's own notes. Nor is the badge (PEN-140): it names
+ * the notebook it belongs to.
  */
-export const NOT_COPIED: ReadonlySet<string> = new Set([QUICK_ACCESS_SETTING]);
+export const NOT_COPIED: ReadonlySet<string> = new Set([QUICK_ACCESS_SETTING, ...BADGE_SETTINGS]);
 
 export interface SettingsHolder {
   settings(): Record<string, unknown>;

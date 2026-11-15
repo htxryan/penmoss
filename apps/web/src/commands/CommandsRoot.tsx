@@ -16,7 +16,7 @@ import { useNoteList, useNotes } from '../notes/hooks';
 import { RESERVED_KEYS } from '../notes/service';
 import { readOpened, recentNotes } from '../notes/recent';
 import { desktop } from '../desktop/bridge';
-import { navigate, notePath, useLocation } from '../router';
+import { hasTabs, navigate, notePath, openPath, useLocation } from '../router';
 import { SearchOverlay } from '../search/SearchOverlay';
 import { NotebookMeaning } from '../search/meaning';
 import { SearchService } from '../search/service';
@@ -46,6 +46,7 @@ import { Cheatsheet } from './Cheatsheet';
 import { COMMANDS } from './definitions';
 import { CommandsContext, useCommand, useCommands } from './hooks';
 import { Palette, type PaletteMode } from './Palette';
+import type { TabIntent } from './tab-intent';
 import { RecentSwitcher } from './RecentSwitcher';
 
 /**
@@ -234,8 +235,14 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
     else commands.run('note.focusTitle');
   };
 
-  const openNote = (id: string) => {
+  const openNote = (id: string, where?: TabIntent) => {
     close(false);
+    // ⌘↩ and ⇧⌘↩ (PEN-140, A1498): a new tab behind this one, or in front.
+    if (where && hasTabs()) {
+      if (where === 'foreground') notes.requestBodyFocus(id);
+      openPath(notePath(id), where);
+      return;
+    }
     notes.requestBodyFocus(id);
     navigate(notePath(id));
   };
@@ -470,12 +477,19 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
             key={overlay.tag ? JSON.stringify(overlay.tag) : ''}
             service={search}
             initial={overlay.tag ?? null}
-            onOpenNote={(id, heading) => {
+            onOpenNote={(id, heading, where) => {
               close(false);
+              const path = heading
+                ? `${notePath(id)}?heading=${encodeURIComponent(heading)}`
+                : notePath(id);
+              // ⌘↩ and ⇧⌘↩ (PEN-140, A1498): a new tab behind this one, or in front.
+              if (where && hasTabs()) {
+                if (where === 'foreground') notes.requestBodyFocus(id);
+                openPath(path, where);
+                return;
+              }
               notes.requestBodyFocus(id);
-              navigate(
-                heading ? `${notePath(id)}?heading=${encodeURIComponent(heading)}` : notePath(id),
-              );
+              navigate(path);
             }}
             onClose={() => close()}
           />

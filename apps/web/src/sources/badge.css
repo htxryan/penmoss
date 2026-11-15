@@ -1,0 +1,154 @@
+/* Notebook badges (PEN-140): a square of the notebook's colour holding its glyph. The colour and
+   the glyph's ink are the notebook's own, set on the element (badge.ts), not the theme's. */
+
+.nb-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--nb-badge-size, 1rem);
+  block-size: var(--nb-badge-size, 1rem);
+  /* Square corners (A976). */
+  border-radius: 0;
+  background: var(--nb-badge-bg);
+  color: var(--nb-badge-ink);
+  font-size: calc(var(--nb-badge-size, 1rem) * 0.62);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  user-select: none;
+}
+
+.nb-badge-text {
+  display: block;
+  white-space: nowrap;
+}
+
+.nb-badge-text::before {
+  content: attr(data-text);
+}
+
+.nb-badge[data-size='26'] {
+  font-size: 0.95rem;
+}
+
+/* Two digits fit a small square. */
+.nb-badge[data-kind='number'] .nb-badge-text {
+  letter-spacing: -0.04em;
+}
+
+/* A notebook's page in Settings, its Overview: the Badge rows (PEN-140, ac17). */
+.badge-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}
+
+.badge-preview-row,
+.badge-preview-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.425rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--pm-border-soft);
+  background: var(--pm-sidebar);
+  font-size: 0.85rem;
+}
+
+.badge-preview-tab {
+  min-inline-size: 7.5rem;
+  border-top: 2px solid var(--pm-accent);
+  background: var(--pm-bg);
+}
+
+.badge-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.badge-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 0;
+  background: var(--nb-badge-bg);
+  cursor: pointer;
+}
+
+.badge-swatch[aria-checked='true'] {
+  outline: 2px solid var(--pm-fg);
+  outline-offset: 2px;
+}
+
+.badge-swatch:focus-visible {
+  outline: 2px solid var(--pm-accent);
+  outline-offset: 2px;
+}
+
+.badge-swatch .i {
+  color: var(--nb-badge-ink);
+}
+
+/* Letter, Number and Icon side by side as one control; the chosen one in the accent. */
+.segmented.badge-kind-segments {
+  gap: 0;
+}
+
+.badge-kind-segments .badge-kind + .badge-kind > span {
+  margin-inline-start: -1px;
+}
+
+.badge-kind-segments .badge-kind input:checked + span {
+  position: relative;
+  border-color: var(--pm-accent);
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
+}
+
+.badge-field {
+  inline-size: 4.5rem;
+}
+
+.badge-icons {
+  display: grid;
+  grid-template-columns: repeat(8, 2rem);
+  gap: 0.3rem;
+}
+
+.badge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  padding: 0;
+  border: 1px solid var(--pm-border-soft);
+  border-radius: 0;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  cursor: pointer;
+}
+
+.badge-icon[aria-checked='true'] {
+  border-color: var(--pm-accent);
+  background: color-mix(in oklab, var(--pm-accent), transparent 85%);
+}
+
+.badge-icon:focus-visible {
+  outline: 2px solid var(--pm-accent);
+  outline-offset: 1px;
+}
+
+/* The badge before a notebook's name: in Settings' list and on its page. */
+.git-notebook-row > .nb-badge,
+.git-notebook-title > .nb-badge {
+  margin-inline-end: 0.15rem;
+}

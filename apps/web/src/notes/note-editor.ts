@@ -194,6 +194,9 @@ export function useNoteEditor({
           return;
         }
         if (!notes.takeBodyFocus(id)) return;
+        // Not from a dialog opened while the note was being read (Search again, the palette):
+        // what is typed there stays there.
+        if (view.dom.ownerDocument.activeElement?.closest('[role="dialog"]')) return;
         collab.editor.commands.setTextSelection(1);
         view.focus();
       });

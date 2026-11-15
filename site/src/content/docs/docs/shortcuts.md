@@ -49,12 +49,30 @@ On Android with a hardware keyboard, Ctrl takes the place of ⌘; **Settings →
 | Search Notes…                  | ⌘⇧F     |
 | Switch to a Recent Note        | ⌘E      |
 | Today's Note                   | ⌘D      |
-| This Week's Note               | ⌘⇧W     |
+| This Week's Note               | ⌘⌥W     |
 | Graph                          | ⌘⇧G     |
 | Back / Forward                 | ⌘[ / ⌘] |
 | Collapse or Expand the Sidebar | ⌘\\     |
 | Keyboard Shortcuts             | ⌘/      |
 | Settings                       | ⌘,      |
+
+### Tabs
+
+In the Mac app's main window ([tabs](/docs/install/mac/#tabs)).
+
+| Action                     | Keys          |
+| -------------------------- | ------------- |
+| New Tab                    | ⌘T            |
+| Close Tab                  | ⌘W            |
+| Reopen Closed Tab          | ⌘⇧T           |
+| Show Next Tab              | ⌃Tab          |
+| Show Previous Tab          | ⌃⇧Tab         |
+| Show Tab 1 to 8            | ⌘1 to ⌘8      |
+| Show the Last Tab          | ⌘9            |
+| Open in New Tab (behind)   | ⌘-click, ⌘↩   |
+| Open in New Tab (in front) | ⌘⇧-click, ⌘⇧↩ |
+| Move the Focused Tab       | ⌥← / ⌥→       |
+| Close Window               | ⌘⇧W           |
 
 ### Notes
 

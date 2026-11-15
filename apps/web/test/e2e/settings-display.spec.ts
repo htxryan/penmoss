@@ -106,7 +106,8 @@ test.describe('in Quanta, with a folder, a long note and a source', () => {
     const errors = collectErrors(page);
     await page.goto('/');
     await openNote(page, 'Source');
-    const bar = page.locator('.note-top .note-actions');
+    // At the tab strip's end since PEN-140 (A1505).
+    const bar = page.locator('.tab-strip-end .note-actions');
     // As before: Full Width and Copy Agent Reference, then ⋯.
     await expect(bar.locator('[data-note-bar]')).toHaveCount(2);
     await expect(bar.getByTestId('toggle-full-width')).toBeVisible();
@@ -152,7 +153,7 @@ test.describe('in Quanta, with a folder, a long note and a source', () => {
       'aria-pressed',
       'true',
     );
-    if (SHOTS) await page.locator('.note-top').screenshot({ path: `${SHOTS}/note-bar.png` });
+    if (SHOTS) await page.locator('.tab-strip').screenshot({ path: `${SHOTS}/note-bar.png` });
     expect(errors).toEqual([]);
   });
 });
