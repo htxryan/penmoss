@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.tags
 
 import android.os.SystemClock
 import android.view.accessibility.AccessibilityNodeInfo
@@ -22,7 +22,7 @@ import org.junit.runner.RunWith
  * before, nested under their parents with their counts, and shows no description field. That the
  * phone keeps the descriptions as it syncs is `GitCrossEngineTest`'s
  * `theMacsTagDescriptionsSurviveThePhonesSyncsAndItsOwnChanges` (engine-bridge, the engine page
- * the APK ships). Run with `task proof:android -- app.penmoss.ui.TagsUnchangedInstrumentedTest`.
+ * the APK ships). Run with `task proof:android -- app.penmoss.ui.tags.TagsUnchangedInstrumentedTest`.
  */
 @RunWith(AndroidJUnit4::class)
 class TagsUnchangedInstrumentedTest {

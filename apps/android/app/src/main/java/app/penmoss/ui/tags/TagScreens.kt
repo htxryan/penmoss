@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.tags
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -73,6 +73,9 @@ import app.penmoss.ui.common.KeepSelectionShown
 import app.penmoss.ui.common.NoteItem
 import app.penmoss.ui.common.NoteList
 import app.penmoss.ui.common.underSelectionBar
+import app.penmoss.ui.RootUi
+import app.penmoss.ui.leave
+import app.penmoss.ui.open
 
 /** "1 note", "3 notes". */
 internal fun notesCount(count: Int) = "$count ${if (count == 1) "note" else "notes"}"
