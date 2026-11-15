@@ -18,10 +18,9 @@ import { testNotebook } from '../../../../packages/git-notebook/test/support/not
 import type { DesktopGit, GitAnswer, GitNotebookInfo } from '../../src/desktop/bridge';
 import { NoteDirectory } from '../../src/notes/directory';
 import type { LocalNotes, Notes } from '../../src/notes/service';
-import { memoryEngineKv } from '../../src/sources/engine-store';
-import { describe as describeFailure } from '../../src/sources/engine-host';
+import { GitRefused, memoryEngineKv } from '@penmoss/git-notebook/host';
+import { describeMacFailure as describeFailure } from '../../src/sources/engine-host';
 import { GitSource, type EngineLocks, type StatusChannel } from '../../src/sources/git-source';
-import { GitRefused } from '../../src/sources/ipc-transport';
 import { gitHistory } from '../../src/history/source';
 import { isOpen, JOURNAL_KEY, routeChanged, Sources } from '../../src/sources/registry';
 import type { Workspace } from '../../src/workspace/service';

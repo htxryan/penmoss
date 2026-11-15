@@ -20,10 +20,9 @@ import { recordFromDoc } from '@penmoss/sync-client/records';
 import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { testNotebook } from '../../../../packages/git-notebook/test/support/notebooks';
-import { memoryEngineKv } from '../../src/sources/engine-store';
+import { FRONT_PULL_GAP_MS, memoryEngineKv } from '@penmoss/git-notebook/host';
 import {
-  describe as describeFailure,
-  FOCUS_PULL_GAP_MS,
+  describeMacFailure as describeFailure,
   GitEngineHost,
   shownStatus,
   STARTING,
@@ -304,14 +303,14 @@ describe('the default cadence: 12 s after edits settle, every minute while shown
     let idle = false;
     void host.idle().then(() => (idle = true));
     while (!idle) await vi.advanceTimersByTimeAsync(100);
-    // However long that took, the last sync began more than FOCUS_PULL_GAP_MS ago, as it would
+    // However long that took, the last sync began more than FRONT_PULL_GAP_MS ago, as it would
     // after three hidden minutes on a fast machine.
-    await vi.advanceTimersByTimeAsync(FOCUS_PULL_GAP_MS);
+    await vi.advanceTimersByTimeAsync(FRONT_PULL_GAP_MS);
     expect(pulls()).toBe(2);
     doc.hidden = false;
     doc.dispatchEvent(new Event('visibilitychange'));
     expect(pulls()).toBe(3);
-    // A focus right after it does not pull again (FOCUS_PULL_GAP_MS).
+    // A focus right after it does not pull again (FRONT_PULL_GAP_MS).
     await vi.advanceTimersByTimeAsync(1_000);
     win.dispatchEvent(new Event('focus'));
     expect(pulls()).toBe(3);

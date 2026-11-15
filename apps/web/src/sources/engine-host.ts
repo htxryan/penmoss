@@ -20,19 +20,29 @@ import { recordFromDoc } from '@penmoss/sync-client/records';
 import type { NoteRecord } from '@penmoss/sync-client/record';
 import {
   GitNotebookEngine,
-  GitTransportError,
   isLocalRemote,
   isPurged,
-  privateEmailAdvice,
-  NotebookError,
   type GitChanges,
   type GitTransport,
   type SyncReport,
   type WriterSecrets,
 } from '@penmoss/git-notebook';
+import {
+  CLOSING_SYNC_MS,
+  describeFailure,
+  EngineStorage,
+  FRONT_PULL_GAP_MS,
+  MAX_PUSH_DELAYS,
+  ONLINE_SETTLE_MS,
+  pendingOf,
+  persistStorage,
+  RETRY_MAX_MS,
+  RETRY_MIN_MS,
+  SYNC_LIMIT_MS,
+  SyncTimeout,
+  type FailureWords,
+} from '@penmoss/git-notebook/host';
 import type { LocalNotes } from '../notes/service';
-import { EngineStorage } from './engine-store';
-import { GitRefused } from './ipc-transport';
 
 /** What Settings → Notebooks and the pill show of a notebook's sync (A860). */
 export interface GitSyncStatus {
@@ -122,23 +132,11 @@ export const STARTING: GitSyncStatus = {
   here: false,
 };
 
-/** The longest one sync may take before it is stopped and counted as offline (A859). */
-export const SYNC_LIMIT_MS = 90_000;
-/**
- * As the window closes or the app quits (A825, #170 F8): how long a push may take, one already
- * running included; main waits this long, and a little more, for the window. A sync on a slow
- * Mac takes longer than the 2.5 s it once had, so the push was left to the next launch.
- */
-export const CLOSING_SYNC_MS = 10_000;
+// The cadence's bounds (`SYNC_LIMIT_MS`, `CLOSING_SYNC_MS`, the retries, the online settle) are
+// Android's too: `@penmoss/git-notebook/host`. As the window closes or the app quits, main waits
+// `CLOSING_SYNC_MS`, and a little more, for the window.
 /** Kept when a push could not finish before the app quit: the next start pushes first. */
 const OWED_KEY = 'pushOwed';
-/** Failures back off from this, doubling to `RETRY_MAX_MS`. */
-export const RETRY_MIN_MS = 30_000;
-export const RETRY_MAX_MS = 10 * 60_000;
-/** A focus pulls at most this often. */
-export const FOCUS_PULL_GAP_MS = 30_000;
-/** Edits that keep coming are pushed at least this many push delays after the first. */
-const MAX_DELAYS = 5;
 /** After a Send to (A1065, A1072): the notebook is pulled this often… */
 export const REPLY_PULL_MS = 10_000;
 /** …for this long, or until the thread's delivery is replied. */
@@ -178,19 +176,16 @@ export interface EngineHostOptions {
   readonly onName?: (name: string) => void;
 }
 
-/**
- * How long the network must stay up after an `online` event before the backoff is reset and a
- * sync runs (#174 review): a network that flaps is not chased on every event.
- */
-export const ONLINE_SETTLE_MS = 2000;
+/** A failure in the Mac's words (A824): where changes wait, and where its settings are. */
+export const MAC_FAILURE_WORDS: FailureWords = {
+  kept: 'Changes stay on this device and go once it syncs.',
+  signIn: "Check git's credentials for it, or use a personal access token in Settings → Notebooks",
+  email: 'set it as this notebook’s commit email in Settings → Notebooks, or as git’s user.email',
+};
 
-/** A sync that ran out of time (A859). */
-class SyncTimeout extends Error {
-  constructor(ms: number) {
-    super(`The git host did not answer within ${Math.round(ms / 1000)} s.`);
-    this.name = 'SyncTimeout';
-  }
-}
+/** A failure as Status shows it on the Mac (A824, A859). */
+export const describeMacFailure = (error: unknown, host: string) =>
+  describeFailure(error, host, MAC_FAILURE_WORDS);
 
 export class GitEngineHost {
   private engine: GitNotebookEngine | null = null;
@@ -550,7 +545,7 @@ export class GitEngineHost {
   }
 
   private focused(): void {
-    if (this.now() - this.lastPullAt < FOCUS_PULL_GAP_MS) return;
+    if (this.now() - this.lastPullAt < FRONT_PULL_GAP_MS) return;
     void this.syncNow('pull');
   }
 
@@ -609,7 +604,7 @@ export class GitEngineHost {
     if (this.stopped) return;
     const delay = Math.max(1, this.pushDelayS) * 1000;
     this.firstChangeAt ??= this.now();
-    const latest = this.firstChangeAt + delay * MAX_DELAYS;
+    const latest = this.firstChangeAt + delay * MAX_PUSH_DELAYS;
     const at = Math.min(this.now() + delay, latest);
     if (this.pushTimer) clearTimeout(this.pushTimer);
     this.pushTimer = setTimeout(
@@ -799,7 +794,7 @@ export class GitEngineHost {
       this.retryTimer = null;
       void this.syncNow('retry');
     }, delay);
-    const described = describe(error, this.options.host);
+    const described = describeMacFailure(error, this.options.host);
     if (described.log) this.options.log?.('git sync failed', error);
     // A stop holds through its retries until one gets further (R2-7); offline is a newer word.
     const stoppedAt =
@@ -908,122 +903,4 @@ const revOf = (record: NoteRecord) => record.rev ?? `t${record.updatedAt}`;
 async function allRecordIds(store: LocalNotes): Promise<string[]> {
   const metas = await store.listMeta();
   return [WORKSPACE_RECORD_KEY, ...metas.map((meta) => meta.noteId)];
-}
-
-/** What the engine has not pushed yet: its marked notes, and the WorkspaceDoc. */
-export function pendingOf(engine: GitNotebookEngine): string[] {
-  const state = engine.replica.state;
-  return [...Object.keys(state.dirty), ...(state.workspaceDirty ? [WORKSPACE_RECORD_KEY] : [])];
-}
-
-/** A failure as Status shows it (A824, A859): offline, or stopped, saying why and what to do. */
-export function describe(
-  error: unknown,
-  host: string,
-): { status: Partial<GitSyncStatus>; log: boolean } {
-  const kept = 'Changes stay on this device and go once it syncs.';
-  if (error instanceof SyncTimeout) {
-    return {
-      status: {
-        phase: 'offline',
-        code: 'timeout',
-        detail: `${error.message} ${kept}`,
-        hostMessage: null,
-      },
-      log: false,
-    };
-  }
-  if (error instanceof GitRefused) {
-    return {
-      status: {
-        phase: 'stopped',
-        code: error.code,
-        detail: error.message,
-        hostMessage: error.hostMessage ?? null,
-      },
-      log: false,
-    };
-  }
-  if (error instanceof GitTransportError) {
-    const hostMessage = error.hostMessage ?? null;
-    switch (error.code) {
-      case 'network':
-      case 'timeout':
-        return {
-          status: {
-            phase: 'offline',
-            code: error.code,
-            detail: `Can't reach ${host}. ${kept}`,
-            hostMessage,
-          },
-          log: false,
-        };
-      case 'auth':
-        return {
-          status: {
-            phase: 'stopped',
-            code: 'auth',
-            detail: `Can't sign in to ${host}. Check git's credentials for it, or use a personal access token in Settings → Notebooks. ${kept}`,
-            hostMessage,
-          },
-          log: false,
-        };
-      case 'protected':
-      case 'rules':
-      case 'refused':
-        return {
-          status: {
-            phase: 'stopped',
-            code: error.code,
-            detail:
-              privateEmailAdvice(
-                hostMessage ?? error.message,
-                'set it as this notebook’s commit email in Settings → Notebooks, or as git’s user.email',
-              ) ?? `${host} refused the push${hostMessage ? `: ${hostMessage}` : '.'} ${kept}`,
-            hostMessage,
-          },
-          log: false,
-        };
-      default:
-        return {
-          status: {
-            phase: 'stopped',
-            code: error.code,
-            detail: `${error.message} ${kept}`,
-            hostMessage,
-          },
-          log: error.code === 'git',
-        };
-    }
-  }
-  if (error instanceof NotebookError) {
-    return {
-      status: { phase: 'stopped', code: error.code, detail: error.message, hostMessage: null },
-      log: false,
-    };
-  }
-  return {
-    status: {
-      phase: 'stopped',
-      code: 'error',
-      detail: `${error instanceof Error ? error.message : String(error)} ${kept}`,
-      hostMessage: null,
-    },
-    log: true,
-  };
-}
-
-/**
- * `navigator.storage.persist()` (A886): true once the stores are kept under low storage, false
- * when refused, null where it cannot be asked.
- */
-export async function persistStorage(): Promise<boolean | null> {
-  const storage = typeof navigator === 'undefined' ? undefined : navigator.storage;
-  if (!storage || typeof storage.persist !== 'function') return null;
-  try {
-    if (typeof storage.persisted === 'function' && (await storage.persisted())) return true;
-    return await storage.persist();
-  } catch {
-    return null;
-  }
 }

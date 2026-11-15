@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./local": "./src/local/index.ts",
+    "./host": "./src/host/index.ts",
     "./node": "./src/node/index.ts",
     "./system-git": "./src/node/system-git.ts",
     "./purge-check": "./src/purge-check.ts",

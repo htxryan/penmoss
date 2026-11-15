@@ -18,7 +18,12 @@ import {
   type LocalSyncState,
 } from '../notes/service';
 import { Workspace, type RestorePlace } from '../workspace/service';
-import { EngineStorage, engineDbName, idbEngineKv, type EngineKv } from './engine-store';
+import {
+  EngineStorage,
+  engineDbName,
+  idbEngineKv,
+  type EngineKv,
+} from '@penmoss/git-notebook/host';
 import {
   GitEngineHost,
   MAC_WRITER_LABEL,
