@@ -1,7 +1,7 @@
 /**
  * Synced settings that belong to no feature module of their own (A827, A1014): the Journal's time
  * zone and templates, where Quick Capture starts, full-width notes and the note's title-bar
- * buttons. Each key has its reader, which gives the value typed, or the default when it is unset
+ * buttons, the empty window's dad jokes. Each key has its reader, which gives the value typed, or the default when it is unset
  * or unreadable. The other keys live beside what reads them: `fonts.ts`, `display.ts`,
  * `line-symbols.ts`, `quick-access.ts`, `sidebar-layout.ts`, `note-metadata.ts`, `tooltips.ts`,
  * `copy-to-notebook.ts`, and the theme's in `@penmoss/ui/theme`. Android's
@@ -30,6 +30,8 @@ export const CAPTURE_DESTINATION_SETTING = 'capture.destination';
 export const FULL_WIDTH_SETTING = 'note.fullWidth';
 /** Whether a button shows in the note's title bar (`noteBar.<button>`). */
 export const noteBarSetting = (button: string): string => `noteBar.${button}`;
+/** A dad joke heads the empty window (A1576): `false` for Welcome to Penmoss instead. */
+export const DAD_JOKES_SETTING = 'home.dadJokes';
 
 /**
  * A git notebook's own settings (A827): the same in every client of the notebook, kept in its
@@ -58,6 +60,11 @@ export type CaptureDestination = 'daily' | 'inbox';
 /** Where Quick Capture's form starts (A947): today's note while unset. */
 export function captureDestinationOf(settings: Settings): CaptureDestination {
   return settings[CAPTURE_DESTINATION_SETTING] === 'inbox' ? 'inbox' : 'daily';
+}
+
+/** Whether the empty window's heading is a dad joke: on unless turned off (`false`). */
+export function dadJokesOf(settings: Settings): boolean {
+  return settings[DAD_JOKES_SETTING] !== false;
 }
 
 /** The full-width setting: true only for `true`; null while unset (the device's copy shows). */

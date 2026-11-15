@@ -30,6 +30,7 @@ Old links still work: Settings → Display opens Sidebar, and Settings → Statu
 | Interface Font, Note Font | The fonts over the theme's own                                                                                                                                    |
 | Note Font Size            | 12 to 28 px                                                                                                                                                       |
 | Show Tooltips After       | How long the pointer rests on a control before its tooltip shows: 0.5, 1 (the default), 1.5 or 2 seconds, or Never. Keyboard focus always shows a tooltip at once |
+| Dad Jokes                 | A dad joke as the heading when no note is open; on by default. Off, the heading reads Welcome to Penmoss                                                          |
 | Compact Title Bar         | The window's buttons in Penmoss's own top row; on by default (this Mac)                                                                                           |
 
 ### Sidebar

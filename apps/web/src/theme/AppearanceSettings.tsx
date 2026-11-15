@@ -11,6 +11,7 @@ import {
 import { useId, useState, type CSSProperties } from 'react';
 import { CompactTitleBarSetting } from '../desktop/CompactTitleBarSetting';
 import { desktop } from '../desktop/bridge';
+import { DadJokesSetting } from '../shell/DadJokesSetting';
 import { TooltipDelaySetting } from '../shell/TooltipDelaySetting';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import { AppPreview } from './AppPreview';
@@ -33,7 +34,7 @@ const MODES: ReadonlyArray<{ mode: ThemeMode; label: string; icon: IconName }> =
  * beside a live miniature of the app (`AppPreview`) that redraws as they change. Theme: the mode
  * (Light, Dark, System), the theme (eight built-ins and the user's own) and Customize…, which
  * opens the theme editor on a copy of a built-in. Text: the fonts (T51 item 16, A944) and Show
- * Tooltips After (A1247, from Display). Window, the Mac app's only and this Mac's own: the
+ * Tooltips After (A1247, from Display) and Dad Jokes (the empty window's heading). Window, the Mac app's only and this Mac's own: the
  * compact title bar (T47, A724). The rest is the Primary Notebook's settings (A827), so it
  * follows Ryan to every device. Note Width and Note Panel are on the Note page now. On a narrow
  * window the preview goes under the controls.
@@ -175,6 +176,7 @@ export function AppearanceSettings() {
           >
             <FontSettings onSizeDraft={setSizeDraft} />
             <TooltipDelaySetting />
+            <DadJokesSetting />
           </div>
           <p className="lf-help">
             Fonts lie over the theme’s own on every device. Code keeps the theme’s monospace font. A
