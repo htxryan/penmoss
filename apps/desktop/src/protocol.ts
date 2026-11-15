@@ -3,13 +3,14 @@
  * app's own `web` directory and nowhere else: paths are decoded and
  * normalised, and anything resolving outside the directory is refused.
  * Paths without a file extension are app routes (`/notes/<id>`) and get
- * index.html. Every page carries the app's Content Security Policy (csp.ts),
- * so scripts run only from the bundle and connect nowhere else.
+ * index.html. Every page carries the page's Content Security Policy, the one
+ * `vite preview` serves too (apps/web/csp.ts, A1038), so scripts run only from
+ * the bundle and connect nowhere else.
  */
 import { readFile, stat } from 'node:fs/promises';
 import { extname, isAbsolute, join, relative, sep } from 'node:path';
 import { APP_HOST } from './config';
-import { contentSecurityPolicy } from './csp';
+import { contentSecurityPolicy } from '../../web/csp';
 
 const TYPES: Readonly<Record<string, string>> = {
   '.html': 'text/html; charset=utf-8',
