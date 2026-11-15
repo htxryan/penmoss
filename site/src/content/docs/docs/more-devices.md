@@ -32,7 +32,7 @@ The phone syncs over HTTPS with a personal access token. SSH is not supported on
 
 The notebook is listed on the first screen; tap it to open it. To make a new notebook from the phone, point **Add** at an empty private repository: the app then asks for a **Notebook name**.
 
-When the token expires, the notebook stops syncing and says why. Save a new one in **Settings → Notebooks** (**Save Token**).
+When the token expires, the notebook stops syncing and says why. Save a new one on the notebook's **Git** tab in Settings (**Save Token**).
 
 ## The command line
 

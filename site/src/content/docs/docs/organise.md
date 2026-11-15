@@ -27,7 +27,7 @@ Two notebooks with one name can't be told apart by agents, so Penmoss warns when
 
 One notebook is your **Primary Notebook**. Today's note, This Week's note, the calendar, the Inbox and quick capture use it, and your app settings are kept in it. Choose it with **Primary Notebook** in **Settings → All Notebooks**. Each Mac chooses its own; the notebook's row and page show a **Primary** chip.
 
-To give another notebook the same settings, choose **Copy Settings…** under **Between Notebooks**, pick **From** and **To**, and choose **Copy Settings**: it replaces the other notebook's settings, once (Quick Access stays as it is). **Keep Settings in Step** does it for every change from then on, on this Mac. On Android the same setting is **Journal notebook**, in **Settings → Notebooks**.
+To give another notebook the same settings, choose **Copy Settings…** under **Between Notebooks**, pick **From** and **To**, and choose **Copy Settings**: it replaces the other notebook's settings, once (Quick Access stays as it is). **Keep Settings in Step** does it for every change from then on, on this Mac. On Android the same setting is **Primary Notebook**, in **Settings → All Notebooks**.
 
 ## Folders
 

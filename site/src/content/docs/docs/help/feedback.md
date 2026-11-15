@@ -43,7 +43,7 @@ Facts about the app, never your notes' text:
 
 ## Offline
 
-A report sent offline waits in an outbox and goes when the device is back online; the form says **Queued, will send when you're online**. A report GitHub refuses stays in the outbox with the reason, with **Edit**, **Retry** and **Discard**. On the Mac, reports waiting to send are listed at the top of the Send Feedback form, under **Waiting to Send**; on Android, in **Settings → About**.
+A report sent offline waits in an outbox and goes when the device is back online; the form says **Queued, will send when you're online**. A report GitHub refuses stays in the outbox with the reason, with **Edit**, **Retry** and **Discard**. On the Mac, reports waiting to send are listed at the top of the Send Feedback form, under **Waiting to Send**; on Android, in **Settings → GitHub**.
 
 ## Without the app
 
