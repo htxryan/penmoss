@@ -3,7 +3,7 @@
  * server, `git.html?role=guard` the app's commit check (A876). Each talks only to the app, over
  * `penmossNative` with binary frames; without that bridge it does nothing.
  */
-import { engineDbName, idbEngineKv } from '../../../web/src/sources/engine-store';
+import { engineDbName, idbEngineKv } from '@penmoss/git-notebook/host';
 import { nativePort } from './git/channel';
 import { serveEngine, serveGuard } from './git/page';
 

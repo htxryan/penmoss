@@ -1,4 +1,5 @@
 import { Icon, type IconName } from '@penmoss/ui/icons';
+import { deviceStorage } from '../shell/device-pref';
 import { useLayoutEffect, useRef } from 'react';
 import { ShortcutsSettings } from '../commands/ShortcutsSettings';
 import { desktop } from '../desktop/bridge';
@@ -9,7 +10,7 @@ import { AgentsSettings } from '../sources/AgentsSettings';
 import { JournalScope } from '../sources/JournalScope';
 import { useSourcesState } from '../sources/hooks';
 import { gitNotebookPath } from '../router';
-import { browserStorage, lastOpenedNote, readOpened } from '../notes/recent';
+import { lastOpenedNote, readOpened } from '../notes/recent';
 import { linkHandler, notePath, type SettingsSection } from '../router';
 import { DisplaySettings } from '../shell/DisplaySettings';
 import { HistoryNav } from '../shell/HistoryNav';
@@ -81,7 +82,7 @@ export function SettingsPage({
     else if (end > row.scrollLeft + row.clientWidth) row.scrollLeft = end - row.clientWidth + 16;
   }, [section]);
   // In the Mac app, back to the note open before Settings, not the empty home page (B13).
-  const last = desktop() ? lastOpenedNote(list, readOpened(browserStorage())) : null;
+  const last = desktop() ? lastOpenedNote(list, readOpened(deviceStorage())) : null;
   const back = last ? notePath(last) : '/';
   return (
     <main className="settings-shell" data-testid="app-root">
@@ -155,8 +156,7 @@ export function SettingsPage({
  */
 function SettingsHome() {
   const state = useSourcesState();
-  if (!state) return null;
-  const path = gitNotebookPath(state.root.id);
+  const path = gitNotebookPath(state.journal.id);
   return (
     <p className="settings-home muted" data-testid="settings-home">
       Settings are synced through your primary notebook,{' '}
@@ -164,11 +164,11 @@ function SettingsHome() {
         href={path}
         data-ui="item"
         // Named apart from "← Notes" when the notebook is called Notes.
-        aria-label={`${state.root.name}, your primary notebook`}
+        aria-label={`${state.journal.name}, your primary notebook`}
         onClick={linkHandler(path)}
         data-testid="settings-home-link"
       >
-        {state.root.name}
+        {state.journal.name}
       </a>
       .
     </p>

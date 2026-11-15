@@ -1,4 +1,6 @@
-import { useId, useLayoutEffect, useRef, type KeyboardEvent } from 'react';
+import { useId, useLayoutEffect, useRef } from 'react';
+import { PickerListbox, PickerOverlay } from '../shell/picker';
+import { usePickerList } from '../shell/picker-list';
 import { displayTitle, type NoteListEntry } from '../notes/list';
 import { Kbd } from './Kbd';
 
@@ -42,16 +44,11 @@ export function RecentSwitcher({
   onChoose,
   onClose,
 }: RecentSwitcherProps) {
-  const list = useRef<HTMLDivElement>(null);
   const id = useId();
   const latest = useRef({ notes, index, onChoose });
   useLayoutEffect(() => {
     latest.current = { notes, index, onChoose };
   });
-
-  useLayoutEffect(() => {
-    list.current?.focus();
-  }, []);
 
   // Letting go of the modifier that opened it chooses the highlighted note (attached before paint).
   useLayoutEffect(() => {
@@ -65,87 +62,58 @@ export function RecentSwitcher({
     return () => window.removeEventListener('keyup', onKeyUp, true);
   }, [held]);
 
-  const count = Math.max(1, notes.length);
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    switch (event.key) {
-      case 'ArrowDown':
-        event.preventDefault();
-        onIndexChange((index + 1) % count);
-        break;
-      case 'ArrowUp':
-        event.preventDefault();
-        onIndexChange((index - 1 + count) % count);
-        break;
-      case 'Enter': {
-        event.preventDefault();
-        const note = notes[index];
-        if (note) onChoose(note.id);
-        break;
-      }
-      case 'Escape':
-        event.preventDefault();
-        event.stopPropagation();
-        onClose();
-        break;
-    }
-  };
-
-  const option = (i: number) => `${id}-recent-${i}`;
+  const picker = usePickerList({
+    items: notes,
+    active: index,
+    setActive: onIndexChange,
+    onChoose: (at) => {
+      const note = notes[at];
+      if (note) onChoose(note.id);
+    },
+    onClose,
+    optionName: 'recent',
+  });
   return (
-    <div
-      className="overlay"
-      data-testid="recent-switcher"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <PickerOverlay
+      testId="recent-switcher"
+      className="mru"
+      labelledBy={`${id}-title`}
+      onClose={onClose}
     >
-      <div className="dialog mru" role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
-        <div className="dlg-title">
-          <h2 id={`${id}-title`}>Recent notes</h2>
-          <span className="muted">
-            <Kbd combo={combo} /> again to move on · let go to open
-          </span>
-        </div>
-        <div
-          ref={list}
-          className="dlg-list"
-          role="listbox"
-          // Tabbable, as a list that can scroll must be (axe's scrollable-region-focusable): with
-          // many recent notes, or while the dialog opens, its options overflow it.
-          tabIndex={0}
-          aria-label="Recent notes"
-          aria-activedescendant={notes.length > 0 ? option(index) : undefined}
-          onKeyDown={onKeyDown}
-        >
-          {notes.length === 0 ? (
-            <p className="dlg-empty">No notes yet.</p>
-          ) : (
-            notes.map((note, i) => (
-              <div
-                key={note.id}
-                id={option(i)}
-                role="option"
-                className="opt"
-                aria-selected={i === index}
-                data-index={i}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => onChoose(note.id)}
-              >
-                <span className="mru-num" aria-hidden="true">
-                  {i + 1}
-                </span>
-                <span className="two">
-                  <span className="t">
-                    {displayTitle(note.title)}
-                    {note.id === currentId ? <span className="muted"> · open now</span> : null}
-                  </span>
-                  <span className="s">Edited {ago(note.updatedAt)}</span>
-                </span>
-              </div>
-            ))
-          )}
-        </div>
+      <div className="dlg-title">
+        <h2 id={`${id}-title`}>Recent notes</h2>
+        <span className="muted">
+          <Kbd combo={combo} /> again to move on · let go to open
+        </span>
       </div>
-    </div>
+      {/* The list takes the keys: with many recent notes its options overflow it. */}
+      <PickerListbox picker={picker} label="Recent notes" focus>
+        {notes.length === 0 ? (
+          <p className="dlg-empty">No notes yet.</p>
+        ) : (
+          notes.map((note, i) => (
+            <div
+              key={note.id}
+              {...picker.optionProps(i)}
+              // The pointer does not move the highlight: letting go of ⌘ opens it.
+              onMouseMove={undefined}
+              className="opt"
+              onClick={() => onChoose(note.id)}
+            >
+              <span className="mru-num" aria-hidden="true">
+                {i + 1}
+              </span>
+              <span className="two">
+                <span className="t">
+                  {displayTitle(note.title)}
+                  {note.id === currentId ? <span className="muted"> · open now</span> : null}
+                </span>
+                <span className="s">Edited {ago(note.updatedAt)}</span>
+              </span>
+            </div>
+          ))
+        )}
+      </PickerListbox>
+    </PickerOverlay>
   );
 }

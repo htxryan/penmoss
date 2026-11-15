@@ -16,7 +16,7 @@
 /*
  * As a note's title bar is (`.note-top`): 48 px, the sidebar's colour, Back, Forward and the pin
  * flush at its start (`.note-top-lead`), then the title; Cancel and Done at its end. In the Mac
- * app it is a title-bar row (TITLE_BAR_ROWS, styles.css): it drags the window, its buttons click.
+ * app it is a title-bar row (TITLE_BAR_ROWS, desktop/titlebar.css): it drags the window, its buttons click.
  * It is after the canvas in the page, over Excalidraw's window-wide SVG layer (DrawingDialog).
  */
 .drawing-editor-bar {

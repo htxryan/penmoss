@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import type { FiledIssue } from './outbox';
 import { issueLink } from './send';
 import { useFeedback } from './service';
+import { ActionToast } from '../toasts/ActionToast';
 import { ToastSlot } from '../toasts/ToastSlot';
 
 /** How long the toast shows. */
@@ -25,46 +26,28 @@ export function FeedbackToasts() {
   return (
     <ToastSlot>
       {issue ? (
-        <div
-          className="toast toast-with-action"
-          data-tone="done"
-          data-testid="feedback-sent-toast"
-          onPointerEnter={() => setHeld(true)}
-          onPointerLeave={() => setHeld(false)}
-          onFocus={() => setHeld(true)}
-          onBlur={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget)) setHeld(false);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              event.stopPropagation();
-              setIssue(null);
-            }
-          }}
+        <ActionToast
+          tone="done"
+          testId="feedback-sent-toast"
+          icon={<Icon name="check" className="toast-glyph" />}
+          actions={
+            issueLink(issue.url) ? (
+              <a
+                className="toast-action"
+                href={issueLink(issue.url)!}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="feedback-sent-link"
+              >
+                Open
+              </a>
+            ) : null
+          }
+          onDismiss={() => setIssue(null)}
+          onHold={setHeld}
         >
-          <Icon name="check" className="toast-glyph" />
-          <span>Sent as #{issue.number}</span>
-          {issueLink(issue.url) ? (
-            <a
-              className="toast-action"
-              href={issueLink(issue.url)!}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="feedback-sent-link"
-            >
-              Open
-            </a>
-          ) : null}
-          <button
-            type="button"
-            className="toast-close"
-            data-ui="dismiss"
-            aria-label="Dismiss"
-            onClick={() => setIssue(null)}
-          >
-            <Icon name="close" size={14} />
-          </button>
-        </div>
+          Sent as #{issue.number}
+        </ActionToast>
       ) : null}
     </ToastSlot>
   );

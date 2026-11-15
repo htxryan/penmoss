@@ -1,44 +1,26 @@
 import { renderToString } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../../src/App';
-import { NotesProvider } from '../../src/notes/context';
-import { NoteDirectory } from '../../src/notes/directory';
-import { DirectoryProvider } from '../../src/notes/links-context';
-import { WorkspaceProvider } from '../../src/workspace/context';
-import type { Workspace } from '../../src/workspace/service';
-import { testNotes, testWorkspace } from './support/local-sources';
-import { memoryNotes } from './support/memory-notes';
+import { InSources, oneSource, type OneSource } from './support/one-source';
 
-interface RenderOptions {
-  /** Seeds the workspace before rendering. */
-  setup?: (workspace: Workspace) => void;
-  /** Whether a note's id is known to be a note (B12); every id is, by default. */
-  knows?: boolean | null;
-}
+// The app as the Mac app's window holds it: one notebook in the registry (web.md 2.2).
+let one: OneSource;
+beforeEach(async () => {
+  one = await oneSource();
+});
+afterEach(() => one.stop());
 
-function render(pathname: string, options: RenderOptions = {}) {
-  const { setup, knows = true } = options;
+/**
+ * The page at `pathname`. `knows`: whether a note's id is known to be a note (B12); every id
+ * is, by default.
+ */
+function render(pathname: string, { knows = true }: { knows?: boolean | null } = {}) {
   const [path = pathname, query = ''] = pathname.split('?');
-  const store = memoryNotes();
-  const notes = testNotes(store);
-  notes.knows = () => knows;
-  const workspace = testWorkspace(store);
-  setup?.(workspace);
-  const directory = new NoteDirectory({
-    notes,
-    folderOf: () => null,
-    folderName: () => null,
-    register: () => undefined,
-    navigate: () => undefined,
-  });
+  one.source.notes.knows = () => knows;
   return renderToString(
-    <NotesProvider notes={notes}>
-      <WorkspaceProvider workspace={workspace}>
-        <DirectoryProvider directory={directory}>
-          <App location={{ pathname: path, search: query ? `?${query}` : '' }} />
-        </DirectoryProvider>
-      </WorkspaceProvider>
-    </NotesProvider>,
+    <InSources sources={one.sources}>
+      <App location={{ pathname: path, search: query ? `?${query}` : '' }} />
+    </InSources>,
   );
 }
 

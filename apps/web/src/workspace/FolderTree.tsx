@@ -25,7 +25,9 @@ import { openNoteWindow } from '../window/open';
 import { COPIED_AGENT_REFERENCE, useCopyAgentReference } from '../notes/agent-reference';
 import { useQuickAccess } from '../notes/quick-access';
 import { MAX_QUICK_ACCESS } from '@penmoss/core/quick-access';
+import { ConfirmDialog } from '../shell/ConfirmDialog';
 import { ContextMenu } from '../shell/ContextMenu';
+import { MenuItem } from '../shell/Menu';
 import { trashAll, trashedNote } from '../trash/trashed';
 import { moveRequest } from './move-request';
 import {
@@ -40,11 +42,14 @@ import {
   visibleFolders,
   visibleSelection,
 } from './selection';
-import { FolderPicker } from './FolderPicker';
-import { useCopyTagsDefault } from './copy-tags-state';
 import { duplicateNote, itemsCount, transfer, type TransferResult } from './transfer';
-import { folderTreeOf } from './tree';
 import { useExpanded } from './expanded';
+import {
+  TransferMenuItems,
+  TransferButtons,
+  TransferPicker,
+  type Transferring,
+} from './TreeTransfer';
 import { useWorkspace, useWorkspaceState } from './hooks';
 import { useFolderTree } from './tree';
 import { revealNotebooks } from '../shell/reveal-notebooks';
@@ -61,7 +66,6 @@ import {
   sortModeOf,
   revealFolders,
   rowKey,
-  folderChoices,
   SORT_LABELS,
   visibleRows,
   type DropTarget,
@@ -85,17 +89,6 @@ type ContextTarget =
   | { readonly kind: 'folder'; readonly id: string }
   /** Folders and notes picked together (T68, #230): what goes to another notebook at once. */
   | { readonly kind: 'items'; readonly items: readonly ItemRef[] };
-
-/** Moving or copying to another open notebook (T68, #230): what, and which way. */
-interface Transferring {
-  readonly items: readonly ItemRef[];
-  readonly mode: 'move' | 'copy';
-  readonly rowKey: string;
-}
-
-/** The other notebook's folder chosen in the picker: its source's id, then the folder's. */
-const choiceKey = (sourceId: string, folderId: string | null) =>
-  `${sourceId}\u0000${folderId ?? ''}`;
 
 interface MenuState {
   readonly x: number;
@@ -180,7 +173,7 @@ export function FolderTree({
   // The other open notebooks, which a note or folder can move or be copied to (T68, #230).
   const source = useSource();
   const sourcesState = useSourcesState();
-  const others = (sourcesState?.all ?? []).filter((each) => each !== source);
+  const others = sourcesState.all.filter((each) => each !== source);
   /** The sort order's menu (T52), open under its button. */
   // Another note opened: the selection starts afresh unless a click just chose it (S1).
   const [selectionFor, setSelectionFor] = useState(activeId);
@@ -1194,109 +1187,47 @@ function NoteMenuItems({
     <>
       {only ? (
         <>
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            className="menu-item"
-            data-ui="item"
-            data-testid="note-new-note"
-            onClick={() => onNewNote(only)}
-          >
-            <Icon name="plus" />
-            <span className="menu-label">New Note Here</span>
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            className="menu-item"
-            data-ui="item"
+          <MenuItem icon="plus" data-testid="note-new-note" onClick={() => onNewNote(only)}>
+            New Note Here
+          </MenuItem>
+          <MenuItem
+            icon="folderPlus"
             data-testid="note-new-folder"
             onClick={() => onNewFolder(only)}
           >
-            <Icon name="folderPlus" />
-            <span className="menu-label">New Folder Here</span>
-          </button>
+            New Folder Here
+          </MenuItem>
           <div className="menu-sep" role="separator" />
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            className="menu-item"
-            data-ui="item"
-            onClick={() => onWindow(only)}
-          >
-            <Icon name="windowNew" />
-            <span className="menu-label">Open in New Window</span>
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            className="menu-item"
-            data-ui="item"
+          <MenuItem icon="windowNew" onClick={() => onWindow(only)}>
+            Open in New Window
+          </MenuItem>
+          <MenuItem
+            icon="agentRef"
             onClick={() => onCopyReference(only)}
             data-testid="note-menu-copy-agent-reference"
           >
-            <Icon name="agentRef" />
-            <span className="menu-label">Copy Agent Reference</span>
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            className="menu-item"
-            data-ui="item"
+            Copy Agent Reference
+          </MenuItem>
+          <MenuItem
+            icon="pin"
             data-testid="note-menu-quick-access"
             disabled={quickAccess === null}
             onClick={() => onPin(only)}
           >
-            <Icon name="pin" />
-            <span className="menu-label">
-              {quickAccess?.(only) ? 'Unpin from Quick Access' : 'Pin to Quick Access'}
-            </span>
-          </button>
+            {quickAccess?.(only) ? 'Unpin from Quick Access' : 'Pin to Quick Access'}
+          </MenuItem>
           <div className="menu-sep" role="separator" />
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            className="menu-item"
-            data-ui="item"
-            data-testid="note-menu-rename"
-            onClick={() => onRename(only)}
-          >
-            <Icon name="pencil" />
-            <span className="menu-label">Rename</span>
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            className="menu-item"
-            data-ui="item"
-            data-testid="note-menu-duplicate"
-            onClick={() => onDuplicate(only)}
-          >
-            <Icon name="copy" />
-            <span className="menu-label">Duplicate</span>
-          </button>
+          <MenuItem icon="pencil" data-testid="note-menu-rename" onClick={() => onRename(only)}>
+            Rename
+          </MenuItem>
+          <MenuItem icon="copy" data-testid="note-menu-duplicate" onClick={() => onDuplicate(only)}>
+            Duplicate
+          </MenuItem>
         </>
       ) : null}
-      <button
-        type="button"
-        role="menuitem"
-        tabIndex={-1}
-        className="menu-item"
-        data-ui="item"
-        onClick={() => onMove(ids)}
-      >
-        <Icon name="folder" />
-        <span className="menu-label">
-          {several ? `Move ${ids.length} Notes…` : 'Move to Folder…'}
-        </span>
-      </button>
+      <MenuItem icon="folder" onClick={() => onMove(ids)}>
+        {several ? `Move ${ids.length} Notes…` : 'Move to Folder…'}
+      </MenuItem>
       {onTransfer ? (
         <TransferButtons
           noun={several ? `${ids.length} Notes` : null}
@@ -1304,19 +1235,9 @@ function NoteMenuItems({
         />
       ) : null}
       <div className="menu-sep" role="separator" />
-      <button
-        type="button"
-        role="menuitem"
-        tabIndex={-1}
-        className="menu-item danger"
-        data-ui="item"
-        onClick={() => onTrash(ids)}
-      >
-        <Icon name="trash" />
-        <span className="menu-label">
-          {several ? `Move ${ids.length} Notes to Trash` : 'Move to Trash'}
-        </span>
-      </button>
+      <MenuItem icon="trash" danger onClick={() => onTrash(ids)}>
+        {several ? `Move ${ids.length} Notes to Trash` : 'Move to Trash'}
+      </MenuItem>
     </>
   );
 }
@@ -1344,30 +1265,12 @@ function FolderMenuItems({
 }) {
   return (
     <>
-      <button
-        type="button"
-        role="menuitem"
-        tabIndex={-1}
-        className="menu-item"
-        data-ui="item"
-        data-testid="folder-new-note"
-        onClick={() => onNewNote(id)}
-      >
-        <Icon name="plus" />
-        <span className="menu-label">New Note Here</span>
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        tabIndex={-1}
-        className="menu-item"
-        data-ui="item"
-        data-testid="folder-new-folder"
-        onClick={() => onNewFolder(id)}
-      >
-        <Icon name="folderPlus" />
-        <span className="menu-label">New Folder Here</span>
-      </button>
+      <MenuItem icon="plus" data-testid="folder-new-note" onClick={() => onNewNote(id)}>
+        New Note Here
+      </MenuItem>
+      <MenuItem icon="folderPlus" data-testid="folder-new-folder" onClick={() => onNewFolder(id)}>
+        New Folder Here
+      </MenuItem>
       {onTransfer ? (
         <>
           <div className="menu-sep" role="separator" />
@@ -1375,30 +1278,14 @@ function FolderMenuItems({
         </>
       ) : null}
       <div className="menu-sep" role="separator" />
-      <button
-        type="button"
-        role="menuitem"
-        tabIndex={-1}
-        className="menu-item"
-        data-ui="item"
-        onClick={() => onRename(id)}
-      >
-        {/* The menu's own icon size, on its items' column; the row's 14px one sat 2px short (A988). */}
-        <Icon name="pencil" />
-        <span className="menu-label">Rename</span>
-      </button>
+      {/* The menu's own icon size, on its items' column; the row's 14px one sat 2px short (A988). */}
+      <MenuItem icon="pencil" onClick={() => onRename(id)}>
+        Rename
+      </MenuItem>
       <div className="menu-sep" role="separator" />
-      <button
-        type="button"
-        role="menuitem"
-        tabIndex={-1}
-        className="menu-item danger"
-        data-ui="item"
-        onClick={() => onDelete(id)}
-      >
-        <Icon name="trash" />
-        <span className="menu-label">Delete Folder…</span>
-      </button>
+      <MenuItem icon="trash" danger onClick={() => onDelete(id)}>
+        Delete Folder…
+      </MenuItem>
     </>
   );
 }
@@ -1466,51 +1353,29 @@ function ConfirmDelete({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const dialog = ref.current;
-    if (dialog && !dialog.open) dialog.showModal();
-  }, []);
   const notes = countNotes(folder);
   const subfolders = folder.folders.length;
   const into = destination === 'The top level' ? 'the top level' : destination;
   return (
-    <dialog
-      ref={ref}
-      className="confirm"
-      aria-labelledby="confirm-delete-title"
-      onCancel={(event) => {
-        event.preventDefault();
-        onCancel();
-      }}
-    >
-      <form
-        method="dialog"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onConfirm();
-        }}
-      >
-        <h2 id="confirm-delete-title">Delete “{folder.name}”?</h2>
-        <p>
-          {subfolders > 0
-            ? `It and its ${subfolders === 1 ? 'subfolder' : `${subfolders} subfolders`} will be deleted. `
-            : ''}
-          {notes > 0
-            ? `${notes === 1 ? 'Its note moves' : `Its ${notes} notes move`} to ${into}; no notes are deleted.`
-            : 'It holds no notes.'}{' '}
-          You can restore it from Trash for 30 days.
-        </p>
-        <div className="confirm-actions">
-          <button type="button" className="btn" data-ui="dismiss" onClick={onCancel} autoFocus>
-            Cancel
-          </button>
-          <button type="submit" className="btn danger-fill" data-ui="submit">
-            Delete Folder
-          </button>
-        </div>
-      </form>
-    </dialog>
+    <ConfirmDialog title={`Delete “${folder.name}”?`} onCancel={onCancel} onSubmit={onConfirm}>
+      <p>
+        {subfolders > 0
+          ? `It and its ${subfolders === 1 ? 'subfolder' : `${subfolders} subfolders`} will be deleted. `
+          : ''}
+        {notes > 0
+          ? `${notes === 1 ? 'Its note moves' : `Its ${notes} notes move`} to ${into}; no notes are deleted.`
+          : 'It holds no notes.'}{' '}
+        You can restore it from Trash for 30 days.
+      </p>
+      <div className="confirm-actions">
+        <button type="button" className="btn" data-ui="dismiss" onClick={onCancel} autoFocus>
+          Cancel
+        </button>
+        <button type="submit" className="btn danger-fill" data-ui="submit">
+          Delete Folder
+        </button>
+      </div>
+    </ConfirmDialog>
   );
 }
 
@@ -1518,146 +1383,3 @@ const FolderIcon = () => <Icon name="folder" className="tree-icon" />;
 const NoteIcon = () => <Icon name="file" className="tree-icon" />;
 const ChevronIcon = () => <Icon name="chevR" size={12} className="chevron" />;
 const PlusIcon = () => <Icon name="plus" size={14} />;
-
-/** Move to Notebook… and Copy to Notebook… (T68, #230), for one item or several. */
-function TransferButtons({
-  noun,
-  onTransfer,
-}: {
-  /** "3 Notes", "4 Items"; null for one note or folder. */
-  noun: string | null;
-  onTransfer: (mode: 'move' | 'copy') => void;
-}) {
-  return (
-    <>
-      <button
-        type="button"
-        role="menuitem"
-        tabIndex={-1}
-        className="menu-item"
-        data-ui="item"
-        data-testid="menu-move-to-notebook"
-        onClick={() => onTransfer('move')}
-      >
-        <Icon name="notebook" />
-        <span className="menu-label">
-          {noun ? `Move ${noun} to Notebook…` : 'Move to Notebook…'}
-        </span>
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        tabIndex={-1}
-        className="menu-item"
-        data-ui="item"
-        data-testid="menu-copy-to-notebook"
-        onClick={() => onTransfer('copy')}
-      >
-        <Icon name="copy" />
-        <span className="menu-label">
-          {noun ? `Copy ${noun} to Notebook…` : 'Copy to Notebook…'}
-        </span>
-      </button>
-    </>
-  );
-}
-
-/** The menu on folders and notes picked together (T68, #230). */
-function TransferMenuItems({
-  items,
-  canTransfer,
-  onTransfer,
-}: {
-  items: readonly ItemRef[];
-  canTransfer: boolean;
-  onTransfer: (items: readonly ItemRef[], mode: 'move' | 'copy') => void;
-}) {
-  if (!canTransfer) {
-    return (
-      <button
-        type="button"
-        role="menuitem"
-        tabIndex={-1}
-        className="menu-item"
-        data-ui="item"
-        disabled
-      >
-        <Icon name="notebook" />
-        <span className="menu-label">Open another notebook to move these to</span>
-      </button>
-    );
-  }
-  return (
-    <TransferButtons
-      noun={`${items.length} Items`}
-      onTransfer={(mode) => onTransfer(items, mode)}
-    />
-  );
-}
-
-/**
- * Where in another open notebook (T68, #230): the folder picker over every other notebook's top
- * level and folders, each path starting with the notebook's name.
- */
-function TransferPicker({
-  job,
-  others,
-  title,
-  onChoose,
-  onClose,
-}: {
-  job: Transferring;
-  others: readonly Source[];
-  title: string;
-  onChoose: (target: Source, folderId: string | null, tags: boolean) => void;
-  onClose: () => void;
-}) {
-  // A copy asks whether the tags go too (A1353), ticked as Settings → Notebooks says. A
-  // move always takes them: the notes leave this notebook.
-  const copying = job.mode === 'copy';
-  const { copies } = useCopyTagsDefault();
-  const [tags, setTags] = useState(copies);
-  const choices = useMemo(
-    () =>
-      others.flatMap((other) =>
-        folderChoices(folderTreeOf(other.workspace.getState().snapshot, []).tree).map((choice) => ({
-          ...choice,
-          id: choiceKey(other.id, choice.id),
-          name: choice.id === null ? other.name : choice.name,
-          path: choice.id === null ? other.name : `${other.name} / ${choice.path}`,
-        })),
-      ),
-    [others],
-  );
-  const verb = job.mode === 'move' ? 'Move' : 'Copy';
-  return (
-    <FolderPicker
-      title={title}
-      count={job.items.length}
-      label={`${verb} “${title}” to another notebook`}
-      placeholder={`${verb} to notebook…`}
-      action={`${verb} here`}
-      choices={choices}
-      currentId={undefined}
-      onChoose={(key) => {
-        const [sourceId, folderId] = (key ?? '').split('\u0000');
-        const target = others.find((other) => other.id === sourceId);
-        if (target) onChoose(target, folderId ? folderId : null, copying ? tags : true);
-      }}
-      onClose={onClose}
-      options={
-        copying ? (
-          <label className="display-toggle">
-            <input
-              type="checkbox"
-              checked={tags}
-              data-testid="copy-tags"
-              onChange={(event) => setTags(event.target.checked)}
-            />
-            <span>Copy Tags</span>
-          </label>
-        ) : undefined
-      }
-    />
-  );
-}

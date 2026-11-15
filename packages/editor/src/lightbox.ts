@@ -5,7 +5,7 @@
  * screen where it has one, the arrow keys step through the note's pictures
  * and Escape leaves full screen, then closes. Framework-free DOM, so the web,
  * the Mac app and Android's editor page share it; its look is the web's CSS
- * (`.pm-lightbox` in apps/web/src/styles.css).
+ * (`.pm-lightbox` in apps/web/src/notes/note.css).
  */
 
 export interface LightboxImage {

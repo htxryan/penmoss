@@ -4,6 +4,7 @@ import { useId, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import { linkHandler, notePath } from '../router';
 import { useStoredCollapse } from '../shell/collapsed';
 import { ContextMenu } from '../shell/ContextMenu';
+import { MenuItem } from '../shell/Menu';
 import { useSidebarLayout } from '../shell/sidebar-layout-state';
 import { displayTitle } from './list';
 import { NOTE_DRAG_TYPE } from './note-drag';
@@ -237,12 +238,8 @@ export function QuickAccessSection({
           y={menu.y}
           onClose={closeMenu}
         >
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            className="menu-item"
-            data-ui="item"
+          <MenuItem
+            icon="pin"
             data-testid="quick-access-remove"
             disabled={!quickAccess.canChange}
             onClick={() => {
@@ -251,9 +248,8 @@ export function QuickAccessSection({
               quickAccess.toggle(pin);
             }}
           >
-            <Icon name="pin" />
-            <span className="menu-label">Remove from Quick Access</span>
-          </button>
+            Remove from Quick Access
+          </MenuItem>
         </ContextMenu>
       ) : null}
     </section>

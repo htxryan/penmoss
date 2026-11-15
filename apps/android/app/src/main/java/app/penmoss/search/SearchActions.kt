@@ -1,5 +1,7 @@
 package app.penmoss.search
 
+import java.text.Normalizer
+
 /**
  * One action Search can run (T40 P6, FD6, A466): a web command's id and title, from
  * `apps/android/contract/commands-v1.json`, whose `{"search": true}` entries are exactly these
@@ -50,39 +52,73 @@ object SearchActions {
 }
 
 /**
- * The web palette's fuzzy match (`apps/web/src/commands/fuzzy.ts`, T20): every query character
- * in order; runs, word starts and a contiguous or prefix match score higher, long titles and
- * late starts lower; scattered letters across a long title are no match.
+ * The web palette's fuzzy match, which is core's (`packages/core/src/fuzzy.ts`, `fuzzyMatch` with
+ * `scattered: false`): every query character in order, ignoring case and accents; word starts,
+ * runs and a prefix or contained match score higher, an exact title highest, gaps and long titles
+ * lower; letters scattered across a long title are no match.
  */
 internal object Fuzzy {
-    private const val WORD_BREAK = " \t\n\r\u000B\u000C-—–/:·(.,_#["
+    private const val BOUNDARY = "-_/.,:;()[]{}'\"#|"
+    private val MARKS = Regex("[\\u0300-\\u036f]")
+
+    /** Lower case without accents. */
+    private fun fold(text: String): String =
+        Normalizer.normalize(text, Normalizer.Form.NFD).replace(MARKS, "").lowercase()
+
+    private fun isBoundary(text: String, index: Int): Boolean =
+        index == 0 || text[index - 1].let { it.isWhitespace() || it in BOUNDARY }
 
     fun score(query: String, text: String): Double? {
-        val q = query.lowercase().trim()
+        val q = fold(query.trim())
+        val t = fold(text)
         if (q.isEmpty()) return 0.0
-        val t = text.lowercase()
-        var from = 0
-        var score = 0.0
-        var previous = -2
-        val indices = ArrayList<Int>()
-        // UTF-16 units, where the web's `for…of` walks code points: the two differ only for an
+        if (t == q) return 1000.0
+        // UTF-16 units, where core's `[...q]` walks code points: the two differ only for an
         // astral character (an emoji) in the query, which no action title holds (review nit).
-        for (char in q) {
-            if (char == ' ') continue
-            val found = t.indexOf(char, from)
-            if (found < 0) return null
-            indices += found
-            score += 1
-            if (found == previous + 1) score += 3
-            if (found == 0 || t[found - 1].let { it in WORD_BREAK || it.isWhitespace() }) score += 4
-            previous = found
-            from = found + 1
+        val chars = q.filter { it != ' ' }
+        var score = 0.0
+        var from = 0
+        var previous = -2
+        var first = -1
+        var last = -1
+        for ((n, char) in chars.withIndex()) {
+            var at = t.indexOf(char, from)
+            if (at == -1) return null
+            // Greedy, preferring word starts: a later word start holding the character, when
+            // the rest still matches after it.
+            if (at != previous + 1) {
+                var i = t.indexOf(char, at + 1)
+                while (i != -1) {
+                    if (isBoundary(t, i) && !isBoundary(t, at) && isSubsequence(chars, n + 1, t, i + 1)) {
+                        at = i
+                        break
+                    }
+                    i = t.indexOf(char, i + 1)
+                }
+            }
+            if (at == previous + 1) score += 6.0
+            if (isBoundary(t, at)) score += 8.0
+            if (at == 0) score += 10.0
+            score -= minOf(at - from, 10) * 0.5
+            if (first == -1) first = at
+            last = at
+            previous = at
+            from = at + 1
         }
-        val contiguous = t.contains(q)
-        val spread = indices.last() - indices.first()
-        if (!contiguous && spread > q.replace(Regex("\\s"), "").length * 3 + 4) return null
-        if (contiguous) score += 12
-        if (t.startsWith(q)) score += 6
-        return score - t.length * 0.02 - indices.first() * 0.05
+        val contained = t.contains(q)
+        if (!contained && last - first > chars.length * 3 + 4) return null
+        if (t.startsWith(q)) score += 40.0 else if (contained) score += 20.0
+        // Shorter titles win ties: the match covers more of them.
+        return score - t.length * 0.05
+    }
+
+    private fun isSubsequence(chars: String, from: Int, text: String, at: Int): Boolean {
+        var position = at
+        for (i in from until chars.length) {
+            position = text.indexOf(chars[i], position)
+            if (position == -1) return false
+            position++
+        }
+        return true
     }
 }

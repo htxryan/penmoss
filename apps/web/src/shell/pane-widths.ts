@@ -6,7 +6,7 @@
  * Kept in rem, so a larger text size widens them with everything else; every window on this Mac
  * follows a change made in another.
  */
-import { useCallback, useSyncExternalStore } from 'react';
+import { devicePref, useDevicePref, type DevicePref } from './device-pref';
 
 /**
  * `historyPreview` is a height: History's docked changes under its list of versions (Ryan's
@@ -54,52 +54,28 @@ export function readPaneWidth(kind: PaneKind, value: string | null): number {
   return clampPane(kind, Number(value));
 }
 
-const listeners = new Set<() => void>();
-/** Where storage throws (private mode), the widths for this page. */
-const fallback: Partial<Record<PaneKind, number>> = {};
+/** Each kind's width on this device; another window on this Mac (a note window) follows a drag. */
+const widths = Object.fromEntries(
+  (Object.keys(PANE_KEYS) as PaneKind[]).map((kind) => [
+    kind,
+    devicePref(PANE_KEYS[kind], {
+      parse: (stored) => readPaneWidth(kind, stored),
+      // The initial width forgets it.
+      serialise: (rem) => {
+        const width = clampPane(kind, rem);
+        return width === PANE_LIMITS[kind].initial ? null : String(width);
+      },
+      crossWindow: true,
+    }),
+  ]),
+) as Record<PaneKind, DevicePref<number>>;
 
-function read(kind: PaneKind): number {
-  const kept = fallback[kind];
-  if (kept !== undefined) return kept;
-  try {
-    return readPaneWidth(kind, localStorage.getItem(PANE_KEYS[kind]));
-  } catch {
-    return PANE_LIMITS[kind].initial;
-  }
-}
-
-/** Keeps `rem` as the kind's width (the initial width forgets it). */
+/** Keeps `rem` as the kind's width, within its limits. */
 export function writePaneWidth(kind: PaneKind, rem: number): void {
-  const width = clampPane(kind, rem);
-  try {
-    if (width === PANE_LIMITS[kind].initial) localStorage.removeItem(PANE_KEYS[kind]);
-    else localStorage.setItem(PANE_KEYS[kind], String(width));
-  } catch {
-    fallback[kind] = width;
-  }
-  for (const listener of listeners) listener();
+  widths[kind].write(rem);
 }
-
-const subscribe = (listener: () => void) => {
-  listeners.add(listener);
-  // Another window on this Mac (a note window) dragged one.
-  const onStorage = (event: StorageEvent) => {
-    if (event.key === null || Object.values(PANE_KEYS).includes(event.key)) listener();
-  };
-  window.addEventListener('storage', onStorage);
-  return () => {
-    listeners.delete(listener);
-    window.removeEventListener('storage', onStorage);
-  };
-};
 
 /** The kind's width in rem, and a way to keep a new one. */
 export function usePaneSize(kind: PaneKind): readonly [number, (rem: number) => void] {
-  const width = useSyncExternalStore(
-    subscribe,
-    () => read(kind),
-    () => PANE_LIMITS[kind].initial,
-  );
-  const set = useCallback((rem: number) => writePaneWidth(kind, rem), [kind]);
-  return [width, set] as const;
+  return useDevicePref(widths[kind]);
 }

@@ -51,8 +51,8 @@ export function SettingUp({
     if (ran.current === attempt) return;
     ran.current = attempt;
     const watch = async (notebookId: string, created: boolean) => {
-      await registry?.refresh();
-      const source = registry?.gitSource(notebookId) ?? null;
+      await registry.refresh();
+      const source = registry.gitSource(notebookId);
       if (created && source) {
         // A notebook made here starts with the welcome note, which opens with the app (T69).
         void addWelcomeNote(source)
@@ -64,8 +64,8 @@ export function SettingUp({
             console.warn('[first run] could not write the welcome note', error),
           );
       }
-      // Without a sync feed (tests that stand in a notebook) there is nothing to wait for.
-      if (!source?.feed) {
+      // Not listed after all (removed meanwhile): nothing to wait for.
+      if (!source) {
         onDone();
         return;
       }

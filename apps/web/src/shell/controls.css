@@ -1,0 +1,484 @@
+/*
+ * The note's header (T36): the note's folders, then its actions, after the prototype's editor bar.
+ * Its end padding is the tab strip's (links.css), so the last action sits over the strip's icons,
+ * on one column (A988). In the sidebar's colour, so the title bar reads apart from the text in
+ * every theme, light and dark (PEN-135 item 7).
+ */
+.note-top {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 3rem;
+  padding: 0 0.3rem 0 1rem;
+  border-bottom: 1px solid var(--pm-border-soft);
+  background: var(--pm-sidebar);
+}
+
+/*
+ * Beside the rail, Back, Forward and the pin start the note's title bar (PEN-135 item 6), flush
+ * and as tall as the row, as in the sidebar's head (A1135): from the rail's edge, or after the
+ * traffic lights' room in the Mac app, a hairline either side.
+ */
+.note-top:has(> .note-top-lead) {
+  padding-left: 0;
+}
+
+.note-top-lead {
+  display: flex;
+  flex: none;
+  align-self: stretch;
+  border-right: 1px solid var(--pm-border-soft);
+}
+
+.note-top-lead .history-nav {
+  align-self: stretch;
+}
+
+.note-top-lead .history-pair {
+  height: 100%;
+  background: none;
+}
+
+.note-top-lead .history-pair .history-half {
+  width: 2rem;
+}
+
+.note-top-lead .history-half + .history-half::before {
+  top: 0;
+  bottom: 0;
+  background: var(--pm-border-soft);
+}
+
+.note-top-lead > .icon-btn {
+  width: 2.5rem;
+  height: 100%;
+  border-left: 1px solid var(--pm-border-soft);
+}
+
+.note-top-lead + .crumbs {
+  margin-left: 0.5rem;
+}
+
+.crumbs {
+  flex: 1;
+  min-width: 0;
+}
+
+.crumbs ol {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  white-space: nowrap;
+}
+
+.crumbs li {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.3rem;
+  margin-right: 0.3rem;
+}
+
+.crumbs li .i {
+  opacity: 0.6;
+}
+
+.crumbs li.crumb-notebook .i:first-child {
+  opacity: 1;
+  color: var(--pm-accent);
+}
+
+.crumbs li[aria-current='page'] {
+  flex: 0 1 auto;
+  min-width: 0;
+  display: block;
+  overflow: hidden;
+  color: var(--pm-fg);
+  text-overflow: ellipsis;
+}
+
+.note-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.note-top .sep {
+  width: 1px;
+  height: 1.1rem;
+  margin: 0 0.3rem;
+  background: var(--pm-border-strong);
+}
+
+/* Pressed is the accent's tint, so an open panel or the source view reads at a glance. */
+.note-actions .icon-btn[aria-pressed='true'] {
+  background: var(--pm-accent-soft);
+  color: var(--pm-accent);
+}
+
+.btn.quiet {
+  height: var(--pm-control-sm);
+  padding: 0 0.6rem;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+}
+
+.btn.quiet:hover:not(:disabled) {
+  background: var(--pm-hover);
+  color: var(--pm-fg);
+}
+
+/* A quiet destructive action (Delete for good) is red too, without a fill. */
+.btn.quiet.danger,
+.btn.quiet.danger:hover:not(:disabled) {
+  color: var(--pm-danger);
+}
+
+/*
+ * Beside a full button (Cancel by Save, Delete for Good by Restore) a quiet one is as tall, so
+ * its hover box is not 4px shorter than its neighbour; as are a symbol's icon buttons, in a row
+ * of full-height controls (A988). A minimum, so touch keeps its 44px.
+ */
+:is(.capture, .feedback-dlg, .trash, .settings-content)
+  .btn.quiet:is(.btn:not(.quiet) ~ *, :has(~ .btn:not(.quiet))),
+.symbol-actions .btn.quiet {
+  min-height: var(--pm-control);
+}
+
+/* The note header's Copy menu (T15). */
+.menu-anchor {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 14rem;
+  padding: 0.25rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-popover-shadow);
+  animation: pm-rise var(--pm-medium) var(--pm-ease);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: var(--pm-control);
+  padding: 0 0.6rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: var(--pm-text-sm);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.menu-item .i {
+  color: var(--pm-muted);
+}
+
+.menu-item:hover,
+.menu-item:focus {
+  outline: none;
+  background: var(--pm-hover);
+}
+
+.menu-item:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--pm-focus);
+}
+
+.menu-item.danger,
+.menu-item.danger .i {
+  color: var(--pm-danger);
+}
+
+/* The tree's context menu (A570): fixed at the pointer, not under a button. */
+.menu.context-menu {
+  position: fixed;
+  right: auto;
+  z-index: 60;
+}
+
+/* The notes a context menu acts on (review S1): named above its items. */
+.menu-caption {
+  max-width: 18rem;
+  margin: 0;
+  padding: 0.3rem 0.6rem 0.4rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  overflow-wrap: anywhere;
+}
+
+/* Selected notes in the tree (A570), and folders picked with them (T68, #230). */
+.tree-row.note-row[aria-selected='true'],
+.tree-row.folder-row[data-picked] {
+  background: var(--pm-accent-soft);
+}
+
+/* The note's actions menu (A575): label, then the command's keys, then On for a toggle. */
+.menu-item .menu-label {
+  flex: 1;
+}
+
+.menu-keys {
+  display: inline-flex;
+  margin-left: 1rem;
+  color: var(--pm-muted);
+}
+
+.menu[data-sheet] .menu-keys {
+  display: none;
+}
+
+.menu-item[aria-checked='true']::after {
+  margin-left: auto;
+  padding-left: 1rem;
+  color: var(--pm-accent);
+  content: 'On';
+  font-size: var(--pm-text-xs);
+  font-weight: 600;
+}
+
+/*
+ * A menu with toggles keeps a column for On at the end of every item, empty when off, so the
+ * keys line up whether an item is on or not; On used to push its row's keys left (A988).
+ */
+.menu:has(> .menu-item[role='menuitemcheckbox']) > .menu-item::after {
+  flex: none;
+  box-sizing: border-box;
+  width: 2.25rem;
+  margin-left: 0;
+  padding-left: 1rem;
+  text-align: right;
+}
+
+.menu:has(> .menu-item[role='menuitemcheckbox']) > .menu-item:not([aria-checked='true'])::after {
+  content: '';
+}
+
+/* A choice (the sort order, T52): a check before the one in use, not On after it. */
+.menu-item[role='menuitemradio'][aria-checked='true']::after {
+  content: none;
+}
+
+.menu-check {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1rem;
+}
+
+.menu-check .i {
+  color: var(--pm-accent);
+}
+
+.menu-sep {
+  height: 1px;
+  margin: 0.3rem 0.5rem;
+  background: var(--pm-border);
+}
+
+.menu-scrim {
+  display: none;
+}
+
+/*
+ * The window's toasts (PEN-63): one stack at the bottom centre, newest at the bottom, 8 px
+ * apart, at most three. It never takes the pointer; only a toast with controls does (A558).
+ */
+.toast-stack {
+  position: fixed;
+  z-index: 80;
+  bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: max-content;
+  max-width: min(28rem, calc(100vw - 2rem));
+  translate: -50% 0;
+  pointer-events: none;
+}
+
+.toast-slot {
+  display: contents;
+}
+
+/* A raised card in the theme's own colours, square (A976). */
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: 2.5rem;
+  margin: 0;
+  padding: 0.5rem 1rem 0.5rem 0.875rem;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--pm-border-strong);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-popover-shadow);
+  color: var(--pm-fg);
+  font-size: var(--pm-text-sm);
+  line-height: 1.4;
+  animation: pm-toast-in var(--pm-medium) var(--pm-ease);
+}
+
+/* Only a toast with controls takes the pointer: a text toast lets a click or drop through. */
+.toast:has(button, a) {
+  pointer-events: auto;
+}
+
+.toast .i {
+  flex: none;
+  color: var(--pm-muted);
+}
+
+/* A check for a success, in the accent; a warning for a refusal or failure, in danger. */
+.toast[data-tone='done'] .toast-glyph,
+.toast .toast-glyph[data-icon='check'] {
+  color: var(--pm-accent);
+}
+
+.toast[data-tone='error'] .toast-glyph,
+.toast .toast-glyph[data-icon='warning'] {
+  color: var(--pm-danger);
+}
+
+/* A toast with an action (A524): Undo after Move to Trash. */
+.toast-with-action {
+  padding-right: 0.25rem;
+}
+
+.toast-action,
+.toast-close {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.toast-action {
+  padding: 0 0.6rem;
+  color: var(--pm-accent);
+  font-weight: 600;
+}
+
+.toast-close {
+  width: 2rem;
+  color: var(--pm-muted);
+}
+
+.toast-close .i {
+  color: inherit;
+}
+
+.toast-action:hover,
+.toast-close:hover {
+  background: var(--pm-hover);
+}
+
+.toast-close:hover {
+  color: var(--pm-fg);
+}
+
+.toast-action:focus-visible,
+.toast-close:focus-visible {
+  outline: none;
+  box-shadow: var(--pm-ring);
+}
+
+@keyframes pm-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Going: it fades. */
+.toast[data-leaving] {
+  opacity: 0;
+  transition: opacity var(--pm-fast) var(--pm-ease);
+}
+
+.note-main:focus {
+  outline: none;
+}
+
+/* Tooltips (T36, A189): one layer, after a control's data-tip (shell/Tooltip.tsx). */
+.tooltip {
+  position: fixed;
+  z-index: 120;
+  max-width: min(18rem, calc(100vw - 1rem));
+  padding: 0.3rem 0.55rem;
+  border-radius: 0;
+  background: var(--pm-fg);
+  box-shadow: var(--pm-popover-shadow);
+  color: var(--pm-bg);
+  font: 500 var(--pm-text-xs) / 1.35 var(--pm-font);
+  pointer-events: none;
+  animation: pm-fade var(--pm-fast) var(--pm-ease);
+}
+
+/* Touch screens have no hover: a control's label is in its sheet, drawer or app bar instead. */
+@media (hover: none) {
+  .tooltip {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tooltip,
+  .toast {
+    animation: none;
+  }
+
+  .toast[data-leaving] {
+    opacity: 0;
+    transition: none;
+  }
+}
+
+@keyframes pm-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes pm-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}

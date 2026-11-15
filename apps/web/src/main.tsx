@@ -7,12 +7,13 @@ import { startTitleBar } from './desktop/mac-window';
 import { NoteDirectory } from './notes/directory';
 import type { Notes } from './notes/service';
 import { FirstRunGate } from './sources/FirstRun';
-import { RootScope } from './sources/RootScope';
+import { JournalScope } from './sources/JournalScope';
 import { SourcesProvider } from './sources/context';
 import { GIT_STATUS_CHANNEL } from './sources/git-source';
 import { Sources } from './sources/registry';
 import { errorRing } from './feedback/errors';
 import { FeedbackContext, FeedbackService } from './feedback/service';
+import { deviceStorage } from './shell/device-pref';
 import { installModalFocusTrap } from './shell/focus-trap';
 import './theme/defaults.css';
 import './styles.css';
@@ -74,13 +75,6 @@ const makeDirectory = (notes: Notes, workspace: Workspace) =>
     openWindow: (id, heading) => openNoteWindow(id, heading),
   });
 
-const browserStore = (() => {
-  try {
-    return typeof localStorage === 'undefined' ? null : localStorage;
-  } catch {
-    return null;
-  }
-})();
 // Each git notebook on this Mac, side by side (T50, A862); the only kind (D48, A1030). The
 // capture window lists them only (it never runs an engine; its captures reach the engine's
 // window through the store, A822).
@@ -97,7 +91,7 @@ const sources = new Sources({
     log: (message, error) => console.warn(`[git] ${message}`, error ?? ''),
   },
   sync: windows,
-  storage: browserStore,
+  storage: deviceStorage(),
 });
 await sources.load().catch((error: unknown) => console.warn('[git] could not list', error));
 // Another window's stored records (`<notebook>/<id>`) go to their notebook.
@@ -116,7 +110,7 @@ bridge?.onBeforeClose(async (reason) => {
 
 // Send feedback (T49): its outbox sends what waits, here and when back online. Its sync facts
 // are the Journal notebook's (the app's own, A827).
-const rootNotes = () => sources.getState().root?.notes ?? null;
+const rootNotes = () => sources.getState().journal?.notes ?? null;
 const feedback = new FeedbackService({
   syncState: () => rootNotes()?.syncState() ?? { phase: 'syncing', pending: 0, detail: null },
   subscribeSync: (listener) => {
@@ -140,11 +134,11 @@ createRoot(container).render(
     <SourcesProvider sources={sources}>
       <FeedbackContext.Provider value={feedback}>
         <FirstRunGate capture={capture}>
-          <RootScope>
+          <JournalScope>
             <ThemeProvider controller={theme}>
               {capture ? <CaptureWindow /> : <App />}
             </ThemeProvider>
-          </RootScope>
+          </JournalScope>
         </FirstRunGate>
       </FeedbackContext.Provider>
     </SourcesProvider>

@@ -1,0 +1,238 @@
+/* The Merge dialog: a picker of tags with their counts, and a preview of what changes. */
+.confirm.tags-dialog {
+  width: min(30rem, calc(100vw - 2rem));
+  max-width: none;
+}
+
+.tags-merge-grid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.tags-merge-label {
+  padding-top: 0.4rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  font-weight: 600;
+}
+
+.tags-merge-source {
+  padding-top: 0.35rem;
+  font-size: var(--pm-text-sm);
+  font-weight: 600;
+}
+
+.tags-merge-source .muted {
+  font-size: var(--pm-text-xs);
+  font-weight: 400;
+}
+
+.tags-merge-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.tags-merge-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 14rem;
+  margin-bottom: 0.75rem;
+  overflow-y: auto;
+  border: 1px solid var(--pm-border-soft);
+}
+
+.tags-merge-pick .tags-merge-list {
+  margin-bottom: 0;
+}
+
+.tags-merge-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--pm-control);
+  padding: 0 0.5rem;
+  font-size: var(--pm-text-sm);
+  cursor: pointer;
+}
+
+.tags-merge-option:hover {
+  background: var(--pm-hover);
+}
+
+.tags-merge-option[data-on='true'] {
+  background: var(--pm-accent-softer);
+}
+
+.tags-merge-tag {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.tags-merge-option .muted {
+  font-size: var(--pm-text-xs);
+}
+
+.tags-merge-option > .input {
+  height: var(--pm-control-sm);
+}
+
+.confirm .tags-merge-none {
+  margin: 0;
+  padding: 0.5rem;
+}
+
+.confirm .tags-merge-preview {
+  color: var(--pm-fg);
+}
+
+/* A phone: the description under the tag, across the row. */
+@media (max-width: 40rem) {
+  .tags-page {
+    --tags-gutter: 1rem;
+  }
+
+  .tags-page-top {
+    padding-top: 1.5rem;
+  }
+
+  .tags-page-scroll {
+    padding-bottom: 3rem;
+  }
+
+  .tags-row {
+    grid-template-columns: 2rem minmax(0, 1fr) 2.5rem var(--pm-control);
+  }
+
+  .tags-row > .tags-desc-cell {
+    grid-column: 2 / -1;
+    grid-row: 2;
+  }
+
+  .tags-head > [role='columnheader']:nth-child(4) {
+    display: none;
+  }
+
+  .tags-strip {
+    padding-left: 0.5rem;
+  }
+}
+
+.trash-list {
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trash-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  padding: 0.75rem 0.75rem 0.75rem 1rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  box-shadow: var(--pm-shadow-1);
+}
+
+/*
+ * A row's icon in a column of its own (A988): every title and line under it on one edge, a
+ * note's as a folder's. A folder's icon sat in its title, 20px right of its line and of notes.
+ */
+.trash-info {
+  display: grid;
+  flex: 1 1 18rem;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  gap: 0.15rem 0.6rem;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+
+.trash-info > .i {
+  align-self: center;
+  color: var(--pm-muted);
+}
+
+.trash-info > :not(.i) {
+  grid-column: 2;
+}
+
+.trash-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+/* Who moved it to Trash (T42, A574): an agent's name carries ✦ on the accent tint, as in History. */
+.trash-by {
+  color: var(--pm-fg);
+}
+
+.trash-by[data-kind='agent'] {
+  padding: 0 0.35rem;
+  border-radius: 0;
+  background: color-mix(in oklab, var(--pm-accent) 18%, transparent);
+}
+
+.trash-agent {
+  margin-inline-start: 0.2rem;
+}
+
+.trash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.trash-warning {
+  color: var(--pm-danger);
+  font-size: 0.8rem;
+}
+
+.app-shell .row .btn {
+  margin-top: 0.5rem;
+}
+
+/* Loading (T36): a small ring beside the words. */
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.graph-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.spinner {
+  flex: none;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid var(--pm-border);
+  border-top-color: var(--pm-accent);
+  border-radius: 50%;
+  animation: pm-spin 0.8s linear infinite;
+}
+
+@keyframes pm-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2.4s;
+  }
+}

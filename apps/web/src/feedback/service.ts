@@ -193,6 +193,13 @@ export function useFeedback(): FeedbackService | null {
   return useContext(FeedbackContext);
 }
 
+/** The window's feedback service, for views that only show under it (the Send Feedback form). */
+export function useFeedbackService(): FeedbackService {
+  const feedback = useContext(FeedbackContext);
+  if (!feedback) throw new Error('useFeedbackService outside FeedbackContext');
+  return feedback;
+}
+
 /** The outbox's entries (re-renders when they change). */
 export function useOutbox(service: FeedbackService): readonly OutboxEntry[] {
   return useSyncExternalStore(

@@ -1,13 +1,14 @@
 /**
- * Phone layout (T36, A181): one breakpoint, the prototype's. At 700 px and
- * narrower the sidebar becomes a drawer behind a top app bar, note actions
- * move into a sheet, and a formatting bar sits above the keyboard. CSS uses
- * the same query (styles.css, `--pm-phone`); components read it here for
- * what CSS alone cannot do (focus, `inert`, rendering phone-only controls).
+ * The narrow window's layout (T36, A181, A727): one breakpoint, the prototype's. A Mac window
+ * 700 px wide or narrower (it can be 480 px) gets the layout once made for phones, which the
+ * CSS and some names still call the phone layout: the sidebar becomes a drawer behind a top app
+ * bar, note actions move into a sheet, and a formatting bar sits along the bottom. CSS uses the
+ * same query (shell/narrow.css and the other `max-width: 700px` rules); components read it here
+ * for what CSS alone cannot do (focus, `inert`, rendering its own controls).
  */
 import { useSyncExternalStore } from 'react';
 
-export const PHONE_QUERY = '(max-width: 700px)';
+export const NARROW_QUERY = '(max-width: 700px)';
 
 type MatchMedia = (
   query: string,
@@ -31,9 +32,9 @@ const browserMatch: MatchMedia | undefined =
     ? (query) => window.matchMedia(query)
     : undefined;
 
-const phone = mediaStore(PHONE_QUERY, browserMatch);
+const narrow = mediaStore(NARROW_QUERY, browserMatch);
 
-/** Whether the phone layout is showing (re-renders when the window crosses the breakpoint). */
-export function usePhone(): boolean {
-  return useSyncExternalStore(phone.subscribe, phone.getSnapshot, () => false);
+/** Whether the narrow layout is showing (re-renders when the window crosses the breakpoint). */
+export function useNarrowWindow(): boolean {
+  return useSyncExternalStore(narrow.subscribe, narrow.getSnapshot, () => false);
 }

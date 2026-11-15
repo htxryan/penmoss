@@ -5,7 +5,7 @@
  *   top's tick, the pin button and the `window.keepOnTop` command all read it here, so they
  *   stay in step per window.
  * - **Compact title bar (A722, A723):** in a compact window `<html data-titlebar="compact">`
- *   leaves room for the traffic lights in the first row (styles.css) and makes the rows drag
+ *   leaves room for the traffic lights in the first row (titlebar.css) and makes the rows drag
  *   the window (`no-drag.ts` lists what never does); out of full screen only, as the lights
  *   hide in it. Double-clicking a row is Chromium's, not the page's (A723): a drag region gives
  *   the page no mouse events on a Mac.

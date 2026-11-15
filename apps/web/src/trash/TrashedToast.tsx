@@ -11,6 +11,7 @@ import {
   useTrashedNote,
   type Trashed,
 } from './trashed';
+import { ActionToast } from '../toasts/ActionToast';
 import { ToastSlot } from '../toasts/ToastSlot';
 
 /**
@@ -87,58 +88,37 @@ export function TrashedToast() {
   return (
     <ToastSlot>
       {trashed ? (
-        <div
-          ref={toast}
-          className="toast toast-with-action"
-          data-tone="info"
-          data-testid="trashed-toast"
-          onPointerEnter={() => setHeld(true)}
-          onPointerLeave={() => setHeld(false)}
-          onFocus={() => setHeld(true)}
-          onBlur={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget)) setHeld(false);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              event.stopPropagation();
-              dismiss();
-            }
-          }}
+        <ActionToast
+          toastRef={toast}
+          tone="info"
+          testId="trashed-toast"
+          icon={<Icon name="trash" />}
+          actions={
+            <button
+              ref={setUndo}
+              type="button"
+              className="toast-action"
+              data-ui="submit"
+              onClick={() => void restore()}
+              data-testid="trashed-undo"
+            >
+              Undo
+            </button>
+          }
+          onDismiss={() => dismiss()}
+          onHold={setHeld}
         >
-          <Icon name="trash" />
-          <span>
-            {failed?.for === trashed ? (
-              failed.message
-            ) : trashed.notes.length === 1 ? (
-              <>
-                Moved “
-                <bdi data-testid="trashed-title">{trashedTitle(trashed.notes[0]!.title)}</bdi>” to
-                Trash
-              </>
-            ) : (
-              trashedText(trashed.notes.map((note) => note.title))
-            )}
-          </span>
-          <button
-            ref={setUndo}
-            type="button"
-            className="toast-action"
-            data-ui="submit"
-            onClick={() => void restore()}
-            data-testid="trashed-undo"
-          >
-            Undo
-          </button>
-          <button
-            type="button"
-            className="toast-close"
-            data-ui="dismiss"
-            aria-label="Dismiss"
-            onClick={() => dismiss()}
-          >
-            <Icon name="close" size={14} />
-          </button>
-        </div>
+          {failed?.for === trashed ? (
+            failed.message
+          ) : trashed.notes.length === 1 ? (
+            <>
+              Moved “<bdi data-testid="trashed-title">{trashedTitle(trashed.notes[0]!.title)}</bdi>”
+              to Trash
+            </>
+          ) : (
+            trashedText(trashed.notes.map((note) => note.title))
+          )}
+        </ActionToast>
       ) : null}
     </ToastSlot>
   );

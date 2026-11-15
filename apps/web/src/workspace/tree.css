@@ -1,0 +1,545 @@
+/* Folder tree (T7): after the prototype's sidebar tree. */
+/* Grows to fill the sidebar (a large drop target for the top level), above the calendar and tags. */
+.folders {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+}
+
+/*
+ * A notebook's actions on its name's row (T53 item 4): hidden until the pointer is over the row,
+ * focus is in it or the sort menu is open, then before the sync dot (which stays at the far
+ * right), the name giving up the room it needs. Each is as tall as the dot's target, so the row
+ * keeps its height. Touch has no hover: they show there always.
+ */
+.tree-actions {
+  display: none;
+  flex: none;
+  align-items: center;
+  gap: 1px;
+}
+
+.sb-section-head:hover .tree-actions,
+.sb-section-head:focus-within .tree-actions,
+.tree-actions[data-open] {
+  display: flex;
+}
+
+@media (hover: none) {
+  .tree-actions {
+    display: flex;
+  }
+}
+
+.icon-btn {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--pm-control);
+  height: var(--pm-control);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--pm-muted);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--pm-fast),
+    color var(--pm-fast);
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: var(--pm-hover);
+  color: var(--pm-fg);
+}
+
+.icon-btn:active:not(:disabled),
+.icon-btn[aria-pressed='true'],
+.icon-btn[aria-expanded='true'] {
+  background: var(--pm-active);
+  color: var(--pm-fg);
+}
+
+.icon-btn.danger:hover:not(:disabled) {
+  background: var(--pm-danger-soft);
+  color: var(--pm-danger);
+}
+
+.tree-actions .icon-btn {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.tree-actions .icon-btn[aria-current='page'] {
+  background: var(--pm-active);
+  color: var(--pm-fg);
+}
+
+.tree {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  border-radius: 0;
+}
+
+.tree-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: var(--pm-control-sm);
+  padding: 0 0.3rem 0 calc(0.25rem + var(--depth, 0) * var(--tree-indent, 0.9rem));
+  border-radius: 0;
+  color: var(--pm-fg);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tree-row:hover {
+  background: var(--pm-hover);
+}
+
+.tree-row:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: -2px;
+}
+
+.folder-row[aria-selected='true'] {
+  background: var(--pm-active);
+  font-weight: 600;
+}
+
+.folder-row[aria-selected='true'] .tree-icon {
+  color: var(--pm-accent);
+}
+
+.twisty {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  color: var(--pm-muted);
+  transition: transform 120ms ease;
+}
+
+.twisty[data-open='true'] {
+  transform: rotate(90deg);
+}
+
+.twisty[data-empty] {
+  visibility: hidden;
+}
+
+/* An open folder with nothing in it (#231): a quiet line where its first row would be. */
+.tree-empty-row {
+  color: var(--pm-muted);
+  font-style: italic;
+  cursor: default;
+}
+
+.tree-empty-row:hover {
+  background: transparent;
+}
+
+.chevron {
+  width: 12px;
+  height: 12px;
+}
+
+.tree-icon {
+  flex: none;
+  color: var(--pm-muted);
+}
+
+.tree-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-link {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.tree-link[aria-current='page'] {
+  font-weight: 600;
+}
+
+.note-row:has([aria-current='page']) {
+  background: var(--pm-raised);
+  box-shadow: inset 2px 0 0 var(--pm-accent);
+}
+
+.tree-link[data-untitled] {
+  color: var(--pm-muted);
+}
+
+.sort-badge {
+  flex: none;
+  padding: 0 0.35rem;
+  border-radius: 0;
+  background: var(--pm-hover);
+  color: var(--pm-muted);
+  font-size: 0.68rem;
+  font-weight: 500;
+}
+
+.row-actions {
+  display: none;
+  flex: none;
+}
+
+.folder-row:hover .row-actions,
+.folder-row:focus-visible .row-actions {
+  display: flex;
+}
+
+.row-actions .icon-btn {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+/*
+ * With a pointer, a folder's actions lie over its row's end, on the row's colour, and show by
+ * visibility (A989): shown in the row's flow, each row the tree scrolled under a resting pointer
+ * laid out the whole tree again, and a long tree's scrolling stuttered. Touch keeps them in the
+ * flow, always shown (below).
+ */
+@media (hover: hover) {
+  /* Flush with the row's end and as tall as it, as a notebook's buttons are (finding 20). */
+  .row-actions {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    display: flex;
+    visibility: hidden;
+    background: var(--pm-sidebar);
+  }
+
+  /* Inside the focus ring (2px, drawn within the row) while it shows. */
+  .folder-row:focus-visible .row-actions {
+    inset-block: 2px;
+    inset-inline-end: 2px;
+  }
+
+  .folder-row:hover .row-actions,
+  .folder-row:focus-visible .row-actions {
+    visibility: visible;
+  }
+
+  .folder-row:hover .row-actions {
+    background: linear-gradient(var(--pm-hover), var(--pm-hover)), var(--pm-sidebar);
+  }
+
+  .folder-row[aria-selected='true'] .row-actions {
+    background: linear-gradient(var(--pm-active), var(--pm-active)), var(--pm-sidebar);
+  }
+}
+
+.tree-input {
+  flex: 1;
+  min-width: 0;
+  height: 1.4rem;
+  padding: 0 0.3rem;
+  border: 1px solid var(--pm-accent);
+  border-radius: 0;
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+  font: inherit;
+}
+
+.tree-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--pm-accent) 30%, transparent);
+}
+
+.tree-row[data-drop='before']::before,
+.tree-row[data-drop='after']::after {
+  content: '';
+  position: absolute;
+  left: calc(0.25rem + var(--depth, 0) * 0.9rem);
+  right: 0.25rem;
+  height: 2px;
+  border-radius: 0;
+  background: var(--pm-accent);
+  pointer-events: none;
+}
+
+.tree-row[data-drop='before']::before {
+  top: -1px;
+}
+
+.tree-row[data-drop='after']::after {
+  bottom: -1px;
+}
+
+.tree-row[data-drop='inside'],
+.tree[data-drop] .tree-end {
+  background: var(--pm-drop);
+  box-shadow: inset 0 0 0 1px var(--pm-accent);
+}
+
+.tree-end {
+  flex: 1;
+  min-height: 2.5rem;
+  border-radius: 0;
+}
+
+/*
+ * With two or more notebooks each tree ends in a sliver, not 2.5rem: that dead space sat between
+ * one notebook's last row and the next notebook's name (T62 item 8). It opens to its full height
+ * while something dragged is over the tree, to take a drop at the top level.
+ */
+.sb-section .tree-end {
+  flex: none;
+  min-height: 0.25rem;
+}
+
+.sb-section .tree[data-drop] .tree-end {
+  min-height: 2.5rem;
+}
+
+.confirm {
+  max-width: 24rem;
+  padding: 1.1rem 1.25rem 1rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+  box-shadow: 0 18px 48px color-mix(in oklab, var(--pm-shadow-color) 20%, transparent);
+}
+
+.confirm::backdrop {
+  background: color-mix(in oklab, var(--pm-shadow-color) 30%, transparent);
+}
+
+.confirm h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.confirm p {
+  margin: 0 0 1rem;
+  color: var(--pm-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.btn.danger-fill {
+  border-color: var(--pm-danger);
+  background: var(--pm-danger);
+  color: var(--pm-on-accent);
+}
+
+/*
+ * Settings and Feedback as icons (T51, A935), flush with the row's start and as tall as the row,
+ * square, with no margin or gap, as a notebook's buttons and a section's tools are (T63; Quanta
+ * feedback 2, A1121).
+ */
+.sb-foot {
+  --sb-foot-height: 2.25rem;
+  /* The update notice's action and ✕ (PEN-135 item 10). */
+  --sb-update-hit: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0 0 env(safe-area-inset-bottom);
+  border-top: 1px solid var(--pm-border);
+}
+
+.sb-foot .icon-btn {
+  flex: none;
+  width: var(--sb-foot-height);
+  height: var(--sb-foot-height);
+}
+
+/*
+ * The update notice in the bottom panel, above Settings and Feedback (PEN-135 item 10; it was a
+ * toast, A1305): the refresh icon in the accent, what it says in the small size and ✕ on the first
+ * line, its action in the accent under the text, flush like the row below (A1121).
+ */
+.sb-update {
+  display: grid;
+  flex: 1 0 100%;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.4rem;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 0.25rem 0 0.25rem 0.6rem;
+  border-bottom: 1px solid var(--pm-border-soft);
+  color: var(--pm-fg);
+  font-size: var(--pm-text-sm);
+  line-height: 1.3;
+}
+
+.sb-update > .i {
+  grid-area: 1 / 1;
+  color: var(--pm-accent);
+}
+
+.sb-update-text {
+  grid-area: 1 / 2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sb-update-action {
+  grid-area: 2 / 2;
+  justify-self: start;
+  min-height: var(--sb-update-hit);
+  margin-inline-start: -0.4rem;
+  padding: 0 0.4rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--pm-accent);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sb-update-action:hover {
+  background: var(--pm-hover);
+}
+
+.sb-update-action:focus-visible {
+  outline: none;
+  box-shadow: var(--pm-ring);
+}
+
+.sb-foot .sb-update .sb-update-close {
+  grid-area: 1 / 3;
+  width: 2rem;
+  height: var(--sb-update-hit);
+  color: var(--pm-muted);
+}
+
+/* On the rail: the icon, with a dot in the accent at its corner. */
+.sb-update-dot {
+  position: relative;
+  color: var(--pm-accent);
+}
+
+.sb-update-badge {
+  position: absolute;
+  top: 22%;
+  right: 22%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--pm-accent);
+  box-shadow: 0 0 0 2px var(--pm-sidebar);
+}
+
+@media (max-width: 700px), (pointer: coarse) {
+  .sb-foot {
+    --sb-foot-height: var(--pm-hit);
+    --sb-update-hit: var(--pm-hit);
+  }
+}
+
+.back {
+  margin: 0 0 1rem;
+}
+
+/* "← Notes": the way back from Settings and the sign-in pages. */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: var(--pm-control);
+  margin-left: -0.5rem;
+  padding: 0 0.5rem;
+  border-radius: 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  background: var(--pm-hover);
+  color: var(--pm-fg);
+}
+
+.note-main {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.empty-state {
+  max-width: 28rem;
+  margin: 16vh auto 0;
+  padding: 0 1.5rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  line-height: 1.55;
+  text-align: center;
+}
+
+.empty-state h2,
+.empty-state h3 {
+  margin: 0.25rem 0 0.4rem;
+  color: var(--pm-fg);
+  font-size: var(--pm-text-lg);
+}
+
+.empty-state p {
+  margin: 0;
+}
+
+.empty-state.compact {
+  margin: 2.5rem auto;
+}
+
+.empty-art {
+  width: 72px;
+  height: 72px;
+}
+
+.empty-art .art-page {
+  fill: var(--pm-raised);
+  stroke: var(--pm-border-strong);
+}
+
+.empty-art .art-lines {
+  fill: none;
+  stroke: var(--pm-border-strong);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.empty-art .art-moss {
+  fill: var(--pm-accent-soft);
+}
+
+.empty-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 0;
+  background: var(--pm-hover);
+  color: var(--pm-muted);
+}

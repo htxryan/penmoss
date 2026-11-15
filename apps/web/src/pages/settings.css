@@ -1,0 +1,397 @@
+/* Settings (T36 layout): back to the notes, the sections beside the open one. */
+.settings-shell {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: max(1rem, env(safe-area-inset-top)) 1.5rem 4rem;
+}
+
+.settings-bar {
+  display: flex;
+  align-items: center;
+  min-height: var(--pm-bar);
+}
+
+.settings-page h1 {
+  margin: 0.5rem 0 1.25rem;
+  color: var(--pm-fg);
+  font-size: 1.5rem;
+  letter-spacing: -0.015em;
+}
+
+.settings-layout {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: start;
+}
+
+.settings-nav {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  gap: 2px;
+}
+
+.settings-nav a {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: var(--pm-control);
+  padding: 0 0.6rem;
+  border-radius: 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+  text-decoration: none;
+}
+
+.settings-nav a:hover {
+  background: var(--pm-hover);
+  color: var(--pm-fg);
+}
+
+.settings-nav a[aria-current='page'] {
+  background: var(--pm-active);
+  color: var(--pm-fg);
+  font-weight: 600;
+}
+
+.settings-nav a[aria-current='page'] .i {
+  color: var(--pm-accent);
+}
+
+.settings-content {
+  min-width: 0;
+}
+
+/* Back and Forward before "← Notes" (T51, A943). */
+.settings-bar {
+  gap: 0.75rem;
+}
+
+/*
+ * Settings scrolls only its content (T51, A942): the bar, the heading and the sections' list
+ * stay put, and the list scrolls on its own only in a short window. The page fills the window
+ * under anything above it (#root is a column the window's height); the content column scrolls,
+ * its scrollbar at the window's edge, and the 64rem column stays centred by its gutters. A phone
+ * keeps its sticky bar and its row of tabs over a page that scrolls (below).
+ */
+@media (min-width: 701px) {
+  .settings-shell {
+    --settings-gutter: max(1.5rem, calc((100vw - 64rem) / 2 + 1.5rem));
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-height: 0;
+    max-width: none;
+    margin: 0;
+    padding: max(1rem, env(safe-area-inset-top)) 0 0;
+  }
+
+  /* The heading lives in .settings-title since A1136; this rule targeted the bare h1 and
+     stopped matching when it moved (PEN-64). Move it with the markup. */
+  .settings-bar,
+  .settings-page > .settings-title {
+    flex: none;
+    padding-inline: var(--settings-gutter);
+  }
+
+  .settings-page {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .settings-layout {
+    flex: 1 1 0;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
+    min-height: 0;
+    padding-left: var(--settings-gutter);
+  }
+
+  .settings-nav {
+    position: static;
+    align-self: start;
+    max-height: 100%;
+    box-sizing: border-box;
+    overflow-y: auto;
+    padding: 2px 2px 1rem;
+  }
+
+  .settings-content {
+    min-height: 0;
+    overflow-y: auto;
+    /* Room for focus rings at its left edge, which the scroll box would clip. */
+    margin-left: -4px;
+    padding: 0 var(--settings-gutter) 4rem 4px;
+  }
+}
+
+.settings-section h2,
+.settings > h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+}
+
+.settings-section > p {
+  margin: 0 0 0.8rem;
+}
+
+/* A section's explanations read the same in every section (T36). */
+.settings-content :is(.settings, .settings-section) > p {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-md);
+  line-height: 1.55;
+}
+
+/*
+ * One rhythm for a section's controls (A988): each field, list of toggles or group of choices
+ * starts 1.5rem under what is above it, and a hint sits 0.5rem under its control, in the
+ * hint's size on every page. They were 13, 16 or 24px apart by kind, and a hint was 13 or 14px
+ * and 0 to 16px under its control.
+ */
+.settings-content
+  :is(.settings, .settings-section)
+  > :is(.settings-field, .display-toggles, .display-toggle, .appearance-group) {
+  margin: 1.5rem 0 0;
+}
+
+.settings-content :is(.settings, .settings-section) > p.settings-help {
+  margin: 0.5rem 0 0;
+  font-size: var(--pm-text-sm);
+  line-height: 1.5;
+}
+
+/* Sections stacked on one page (Status, Devices) stand as far apart; one touched the next. */
+.settings-content > section + section {
+  margin-top: 2rem;
+}
+
+.input,
+.app-shell input:not([type]) {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--pm-control);
+  padding: 0 0.65rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: var(--pm-text-sm);
+  font-weight: 400;
+  transition:
+    border-color var(--pm-fast),
+    box-shadow var(--pm-fast);
+}
+
+.input:focus,
+.app-shell input:not([type]):focus {
+  border-color: var(--pm-accent-line);
+  outline: none;
+  box-shadow: var(--pm-ring);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 0;
+}
+
+/*
+ * The one select (T51 item 13, A941; packages/ui/src/controls/Select.tsx): a native select
+ * with a text field's box and a chevron of its own, drawn as two strokes in the muted colour
+ * so it follows the theme. `.pm-select-sm` for toolbars and filters; `.pm-select-quiet` shows
+ * its frame only on hover and focus, inside something already framed.
+ */
+.pm-select {
+  --pm-select-chevron: var(--pm-muted);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: var(--pm-control);
+  margin: 0;
+  padding: 0 1.75rem 0 0.65rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background-color: var(--pm-raised);
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent calc(50% - 0.75px),
+      var(--pm-select-chevron) calc(50% - 0.75px) calc(50% + 0.75px),
+      transparent calc(50% + 0.75px)
+    ),
+    linear-gradient(
+      135deg,
+      transparent calc(50% - 0.75px),
+      var(--pm-select-chevron) calc(50% - 0.75px) calc(50% + 0.75px),
+      transparent calc(50% + 0.75px)
+    );
+  background-position:
+    right 15px center,
+    right 10px center;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: var(--pm-text-sm);
+  font-weight: 400;
+  line-height: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition:
+    background-color var(--pm-fast),
+    border-color var(--pm-fast),
+    box-shadow var(--pm-fast);
+}
+
+.pm-select:hover:not(:disabled) {
+  --pm-select-chevron: var(--pm-fg);
+  border-color: var(--pm-border-strong);
+}
+
+.pm-select:focus {
+  border-color: var(--pm-accent-line);
+  outline: none;
+  box-shadow: var(--pm-ring);
+}
+
+.pm-select:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 0;
+}
+
+.pm-select:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pm-select option,
+.pm-select optgroup {
+  background: var(--pm-raised);
+  color: var(--pm-fg);
+}
+
+.pm-select-sm {
+  width: auto;
+  height: var(--pm-control-sm);
+  padding: 0 1.5rem 0 0.5rem;
+  background-position:
+    right 12px center,
+    right 7px center;
+}
+
+.pm-select-quiet {
+  border-color: transparent;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.pm-select-quiet:hover:not(:disabled),
+.pm-select-quiet:focus {
+  border-color: var(--pm-border);
+  background-color: var(--pm-raised);
+}
+
+.kb-table {
+  width: 100%;
+  margin-top: 0.75rem;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.kb-table th,
+.kb-table td {
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--pm-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.kb-table thead th {
+  color: var(--pm-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.kb-table tbody th {
+  font-weight: 500;
+}
+
+.kb-table .area {
+  color: var(--pm-muted);
+  white-space: nowrap;
+}
+
+.kb-table .kb-keys {
+  white-space: nowrap;
+}
+
+.kb-table .kb-keys .keys + .keys {
+  margin-left: 0.4rem;
+}
+
+.kb-table .act {
+  /* Change always starts the cell, so it lines up whether Remove and Reset show or not. */
+  width: 6.5rem;
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+  white-space: nowrap;
+}
+
+.kb-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.kb-table tbody th,
+.kb-table tbody td {
+  vertical-align: middle;
+}
+
+.kb-table tr.capturing {
+  background: var(--pm-accent-soft);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: var(--pm-accent-softer);
+  color: var(--pm-fg);
+  font-size: var(--pm-text-xs);
+  font-weight: 500;
+}
+
+.kb-conflict,
+.kb-error,
+.kb-done {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.kb-conflict,
+.kb-error {
+  color: var(--pm-danger);
+}
+
+.kb-done {
+  color: var(--pm-muted);
+}
+
+.kb-conflict .btn {
+  height: 1.6rem;
+}

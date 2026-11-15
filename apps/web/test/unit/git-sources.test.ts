@@ -18,10 +18,9 @@ import { testNotebook } from '../../../../packages/git-notebook/test/support/not
 import type { DesktopGit, GitAnswer, GitNotebookInfo } from '../../src/desktop/bridge';
 import { NoteDirectory } from '../../src/notes/directory';
 import type { LocalNotes, Notes } from '../../src/notes/service';
-import { memoryEngineKv } from '../../src/sources/engine-store';
-import { describe as describeFailure } from '../../src/sources/engine-host';
+import { GitRefused, memoryEngineKv } from '@penmoss/git-notebook/host';
+import { describeMacFailure as describeFailure } from '../../src/sources/engine-host';
 import { GitSource, type EngineLocks, type StatusChannel } from '../../src/sources/git-source';
-import { GitRefused } from '../../src/sources/ipc-transport';
 import { gitHistory } from '../../src/history/source';
 import { isOpen, JOURNAL_KEY, routeChanged, Sources } from '../../src/sources/registry';
 import type { Workspace } from '../../src/workspace/service';
@@ -821,20 +820,13 @@ describe('sources side by side, git notebooks only (A820, A826, A827, T59)', () 
     expect(registry.getState().all.map((source) => source.id)).toEqual(['NB1', 'NB2']);
   });
 
-  it('has no personal source: the Journal notebook is the root, and holds unknown ids', async () => {
+  it('has no personal source: the Journal notebook holds unknown ids', async () => {
     const { registry } = sources({ listed: () => ['NB1'] });
     await registry.load();
     const state = registry.getState();
-    expect(Object.keys(state).sort()).toEqual([
-      'all',
-      'journal',
-      'journalPicked',
-      'loaded',
-      'root',
-    ]);
+    expect(Object.keys(state).sort()).toEqual(['all', 'journal', 'journalPicked', 'loaded']);
     expect(state.all.map((source) => source.id)).toEqual(['NB1']);
     expect(state.journal?.id).toBe('NB1');
-    expect(state.root?.id).toBe('NB1');
     expect(isOpen(state)).toBe(true);
     // An unknown id opens in the Journal notebook: there is no other store to look in.
     expect(registry.sourceOfNote('nowhere')?.id).toBe('NB1');
@@ -846,19 +838,19 @@ describe('sources side by side, git notebooks only (A820, A826, A827, T59)', () 
     expect(registry.getState().loaded).toBe(false);
     await registry.load();
     const empty = registry.getState();
-    expect(empty).toMatchObject({ all: [], journal: null, root: null, loaded: true });
+    expect(empty).toMatchObject({ all: [], journal: null, loaded: true });
     expect(isOpen(empty)).toBe(false);
     expect(registry.sourceOfNote('anything')).toBeNull();
     // The first one added opens the app.
     listed = ['NB1'];
     changed();
     await vi.waitFor(() => expect(isOpen(registry.getState())).toBe(true));
-    expect(registry.getState().root?.id).toBe('NB1');
+    expect(registry.getState().journal?.id).toBe('NB1');
   });
 
   it('without the Mac app’s git, has nothing to load and no notebook', () => {
     const registry = new Sources({ git: null });
-    expect(registry.getState()).toMatchObject({ all: [], journal: null, root: null, loaded: true });
+    expect(registry.getState()).toMatchObject({ all: [], journal: null, loaded: true });
   });
 
   it('keeps the Journal notebook this device chose, and falls back when it goes (A827)', async () => {
@@ -871,7 +863,6 @@ describe('sources side by side, git notebooks only (A820, A826, A827, T59)', () 
     registry.setJournal('NB2');
     expect(storage.getItem(JOURNAL_KEY)).toBe('NB2');
     expect(registry.getState().journal?.id).toBe('NB2');
-    expect(registry.getState().root?.id).toBe('NB2');
     expect(registry.getState().journalPicked).toBe(true);
     listed = ['NB1'];
     await registry.refresh();

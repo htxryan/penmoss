@@ -48,8 +48,6 @@ export function FirstRunGate({
   const state = useAllSources();
   /** A notebook is being set up (7.1): the first run stays until its first sync. */
   const [held, setHeld] = useState(false);
-  // Without a registry (tests that render one source), there is nothing to wait for.
-  if (!state) return children;
   if (isOpen(state) && !held) return children;
   if (!state.loaded) {
     return (

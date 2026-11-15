@@ -13,25 +13,15 @@
  * - **The penmoss Command** (A992): writes `~/.local/bin/penmoss`, which runs this app as the CLI,
  *   and says how to put its folder on PATH.
  */
+import { copyText } from '@penmoss/editor';
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useId, useState } from 'react';
 import {
-  desktop,
   type CliInfo,
   type DesktopGit,
   type GitAnswer,
   type LocalAgentInfo,
 } from '../desktop/bridge';
-
-/** Copies `text` (the click is the gesture the Mac app's clipboard needs). */
-async function copy(text: string): Promise<boolean> {
-  const app = desktop();
-  if (app) return app.clipboard.write({ text });
-  return navigator.clipboard.writeText(text).then(
-    () => true,
-    () => false,
-  );
-}
 
 function CopyBlock({ label, text, testId }: { label: string; text: string; testId: string }) {
   const [copied, setCopied] = useState<boolean | null>(null);
@@ -45,7 +35,7 @@ function CopyBlock({ label, text, testId }: { label: string; text: string; testI
         data-ui="item"
         type="button"
         className="btn"
-        onClick={() => void copy(text).then(setCopied)}
+        onClick={() => void copyText(document, text).then(setCopied)}
       >
         <Icon name={copied ? 'check' : 'copy'} size={14} />
         {copied === null ? 'Copy' : copied ? 'Copied' : 'Select and copy it'}

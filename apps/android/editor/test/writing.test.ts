@@ -926,10 +926,15 @@ describe('normaliseHref', () => {
 describe('the title against a first heading (T39 pass 3, A554)', () => {
   // Read from the stylesheets themselves: happy-dom lays nothing out. The note's text is 1rem.
   const css = (path: string) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8');
+  /** The web's stylesheet as the page gets it: `styles.css` lists its files in cascade order. */
+  const webCss = () =>
+    [...css('../../../web/src/styles.css').matchAll(/^@import '\.\/([^']+)';/gm)]
+      .map((match) => css(`../../../web/src/${match[1]!}`))
+      .join('\n');
   const size = (sheet: string, rule: RegExp) => Number(rule.exec(sheet)?.[1] ?? Number.NaN);
 
   it('sets the title a step above a first heading on the phone and on a narrow web page', () => {
-    const web = css('../../../web/src/styles.css');
+    const web = webCss();
     const phone = css('../src/android.css');
     const heading = size(web, /\.note-body h1 \{\s*font-size: ([\d.]+)em;/);
     const wide = size(web, /\.doc-title \{[^}]*font: 700 ([\d.]+)rem/);
@@ -941,7 +946,7 @@ describe('the title against a first heading (T39 pass 3, A554)', () => {
   });
 
   it('gives a picture its own line with no empty line under it, as the web does (PEN-66, A1283)', () => {
-    const web = css('../../../web/src/styles.css');
+    const web = webCss();
     const phone = css('../src/android.css');
     // The page loads the web's stylesheet (main.ts), whose picture rules lay a picture out: the
     // node inline, its frame (the picture) an inline grid its own size, so ProseMirror's cursor
@@ -976,7 +981,7 @@ describe('the title against a first heading (T39 pass 3, A554)', () => {
   });
 
   it('sets the title in the Note Font, as the web does, not the interface font (T51, A944)', () => {
-    const web = css('../../../web/src/styles.css');
+    const web = webCss();
     const phone = css('../src/android.css');
     const family = (sheet: string, rule: RegExp) => rule.exec(sheet)?.[1]?.trim();
     const webTitle = family(web, /\.doc-title \{[^}]*font: 700 [\d.]+rem\/[\d.]+ ([^;]+);/);

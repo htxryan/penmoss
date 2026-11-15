@@ -10,6 +10,7 @@ import { navigate } from '../router';
 import { UPDATES_PATH, type UpdateNoticeModel } from './notice';
 import { ReleaseNotes } from './ReleaseNotes';
 import { nameOf, updateStatus, useUpdates } from './updates';
+import { ActionToast } from '../toasts/ActionToast';
 import { ToastSlot } from '../toasts/ToastSlot';
 
 const CHANNELS: ReadonlyArray<{ value: DesktopUpdateChannel; label: string }> = [
@@ -161,11 +162,12 @@ export function UpdateNotice({ notice: shown }: { readonly notice: UpdateNoticeM
   return (
     <ToastSlot>
       {shown?.kind === 'offered' ? (
-        <div className="toast toast-with-action" data-tone="info" data-testid="update-notice">
-          <Icon name="refresh" />
-          <span>{shown.text}</span>
-          {shown.dismiss ? (
-            <>
+        <ActionToast
+          tone="info"
+          testId="update-notice"
+          icon={<Icon name="refresh" />}
+          actions={
+            shown.dismiss ? (
               <button
                 type="button"
                 className="btn primary"
@@ -175,42 +177,33 @@ export function UpdateNotice({ notice: shown }: { readonly notice: UpdateNoticeM
               >
                 Install and Restart
               </button>
-              <button
-                type="button"
-                className="toast-close"
-                data-ui="dismiss"
-                aria-label="Dismiss"
-                onClick={shown.dismiss}
-              >
-                <Icon name="close" size={14} />
-              </button>
-            </>
-          ) : null}
-        </div>
+            ) : null
+          }
+          onDismiss={shown.dismiss ?? undefined}
+        >
+          {shown.text}
+        </ActionToast>
       ) : shown?.kind === 'updated' ? (
-        <div className="toast toast-with-action" data-tone="info" data-testid="updated-notice">
-          <Icon name="refresh" />
-          <span>Updated to {shown.version}.</span>
-          <button
-            type="button"
-            className="btn primary"
-            data-ui="submit"
-            onClick={shown.whatsNew}
-            data-testid="updated-whats-new"
-          >
-            What's New
-          </button>
-          <button
-            type="button"
-            className="toast-close"
-            data-ui="dismiss"
-            aria-label="Dismiss"
-            onClick={shown.dismiss}
-            data-testid="updated-dismiss"
-          >
-            <Icon name="close" size={14} />
-          </button>
-        </div>
+        <ActionToast
+          tone="info"
+          testId="updated-notice"
+          icon={<Icon name="refresh" />}
+          actions={
+            <button
+              type="button"
+              className="btn primary"
+              data-ui="submit"
+              onClick={shown.whatsNew}
+              data-testid="updated-whats-new"
+            >
+              What's New
+            </button>
+          }
+          onDismiss={shown.dismiss}
+          dismissTestId="updated-dismiss"
+        >
+          Updated to {shown.version}.
+        </ActionToast>
       ) : null}
     </ToastSlot>
   );

@@ -20,6 +20,7 @@
     "./note-text": "./src/search/note-text.ts",
     "./wikilinks": "./src/markdown/wikilink-syntax.ts",
     "./workspace": "./src/workspace/index.ts",
+    "./settings": "./src/settings.ts",
     "./tags": "./src/tags.ts",
     "./periodic": "./src/periodic.ts",
     "./diff": "./src/diff.ts",

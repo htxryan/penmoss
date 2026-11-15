@@ -9,7 +9,7 @@
  * - With no git notebook the app shows its first run (A1030): there is no other kind of notebook.
  * - The Journal notebook (A827) is this device's choice, otherwise the first git notebook; a
  *   removed one falls back to that default. The app's own services (settings, the palette, the
- *   theme) are the Journal notebook's (`root`).
+ *   theme) are the Journal notebook's too.
  */
 import type { DesktopGit, GitNotebookInfo } from '../desktop/bridge';
 import type { ChangedRecords, StoreSync } from '../window/store-sync';
@@ -20,12 +20,13 @@ export type Source = GitSource;
 export interface SourcesState {
   /** Every git notebook this window holds, in the order they were added. */
   readonly all: readonly Source[];
-  /** Whose Journal, Calendar and Inbox the app shows (A827); null with no notebook. */
+  /**
+   * Whose Journal, Calendar and Inbox the app shows (A827), and whose services the app's own are
+   * (settings, the palette, the theme); null with no notebook.
+   */
   readonly journal: Source | null;
   /** The Journal notebook is this device's choice, not the fallback (A888: capture says so). */
   readonly journalPicked: boolean;
-  /** The app's own services: settings, the palette, the theme (the Journal's); null with none. */
-  readonly root: Source | null;
   /** The git notebooks are read (until then, routes wait). */
   readonly loaded: boolean;
 }
@@ -33,12 +34,11 @@ export interface SourcesState {
 /** The state once there is a notebook: the app is mounted only then (A1030). */
 export interface OpenSourcesState extends SourcesState {
   readonly journal: Source;
-  readonly root: Source;
 }
 
 /** Whether there is a notebook to open (the first run shows until there is). */
 export function isOpen(state: SourcesState): state is OpenSourcesState {
-  return state.root !== null && state.journal !== null;
+  return state.journal !== null;
 }
 
 /** This device's Journal notebook (A827). */
@@ -245,7 +245,6 @@ export class Sources {
       all: [...git],
       journal,
       journalPicked: picked !== undefined,
-      root: journal,
       loaded: this.loaded,
     };
   }

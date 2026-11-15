@@ -6,20 +6,16 @@
  * comes up on the laptop too.
  */
 import type { NoteListEntry } from './list';
+import type { KeyValueStore } from '../shell/key-value';
 
 export const RECENT_STORAGE_KEY = 'penmoss.recent';
 /** How many opened notes this device remembers. */
 const MAX_REMEMBERED = 50;
 
-export interface KeyValueStorage {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-}
-
 /** Note id → when this device last opened it (ms). */
 export type OpenedAt = ReadonlyMap<string, number>;
 
-export function readOpened(storage: KeyValueStorage | null): Map<string, number> {
+export function readOpened(storage: KeyValueStore | null): Map<string, number> {
   try {
     const parsed: unknown = JSON.parse(storage?.getItem(RECENT_STORAGE_KEY) ?? '[]');
     if (!Array.isArray(parsed)) return new Map();
@@ -36,7 +32,7 @@ export function readOpened(storage: KeyValueStorage | null): Map<string, number>
 }
 
 /** Records that this device opened `id` at `at`, keeping the newest MAX_REMEMBERED. */
-export function rememberOpened(storage: KeyValueStorage | null, id: string, at: number): void {
+export function rememberOpened(storage: KeyValueStore | null, id: string, at: number): void {
   if (!storage) return;
   const opened = readOpened(storage);
   opened.set(id, at);
@@ -81,12 +77,4 @@ export function lastOpenedNote(list: readonly NoteListEntry[], opened: OpenedAt)
     if (listed.has(id) && at > lastAt) [last, lastAt] = [id, at];
   }
   return last;
-}
-
-export function browserStorage(): KeyValueStorage | null {
-  try {
-    return typeof localStorage === 'undefined' ? null : localStorage;
-  } catch {
-    return null;
-  }
 }

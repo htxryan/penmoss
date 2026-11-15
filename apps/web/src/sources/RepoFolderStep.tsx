@@ -6,7 +6,7 @@
  */
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useId, useMemo, useState } from 'react';
-import { fuzzy } from '../commands/fuzzy';
+import { fuzzyMatch } from '@penmoss/core/fuzzy';
 import type { DesktopGitHubBrowse, GitHubRepo, RepoFolder, RepoFolders } from '../desktop/bridge';
 import { folderNameProblem, listKeys } from './repo-words';
 
@@ -80,7 +80,12 @@ export function RepoFolderStep({
     ];
     all.sort((a, b) => (a.path === '' ? -1 : b.path === '' ? 1 : a.path.localeCompare(b.path)));
     const q = query.trim();
-    return q ? all.filter((folder) => folder.path === '' || fuzzy(q, folder.path) !== null) : all;
+    return q
+      ? all.filter(
+          (folder) =>
+            folder.path === '' || fuzzyMatch(q, folder.path, { scattered: false }) !== null,
+        )
+      : all;
   }, [load, made, query]);
 
   if (load.state === 'loading') {

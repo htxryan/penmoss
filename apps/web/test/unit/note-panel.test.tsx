@@ -3,9 +3,6 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../../src/App';
-import { NotesProvider } from '../../src/notes/context';
-import { NoteDirectory } from '../../src/notes/directory';
-import { DirectoryProvider } from '../../src/notes/links-context';
 import {
   MAX_NOTE_MODES,
   paneIsWide,
@@ -14,9 +11,7 @@ import {
   readNotePanelMode,
   rememberPanelMode,
 } from '../../src/notes/panel-mode';
-import { WorkspaceProvider } from '../../src/workspace/context';
-import { memoryNotes } from './support/memory-notes';
-import { testNotes, testWorkspace } from './support/local-sources';
+import { InSources, oneSource, type OneSource } from './support/one-source';
 
 // T51 items 5–7 (A936, A937): the note's side panel as four icon tabs and the ⋯ menu in three
 // groups. T53 item 9 (A985): the tabs' icons always down the note's right edge as vertical tabs,
@@ -45,37 +40,28 @@ function pane(width: number) {
 }
 
 let unmount = () => undefined as void;
-beforeEach(() => {
+let one: OneSource;
+beforeEach(async () => {
   localStorage.clear();
   pane(1200);
+  one = await oneSource();
 });
-afterEach(() => unmount());
+afterEach(() => {
+  unmount();
+  one.stop();
+});
 
 function mount(pathname = `/notes/${NOTE}`) {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-  const store = memoryNotes();
-  const notes = testNotes(store);
-  notes.knows = () => true;
-  const workspace = testWorkspace(store);
-  const directory = new NoteDirectory({
-    notes,
-    folderOf: () => null,
-    folderName: () => null,
-    register: () => undefined,
-    navigate: () => undefined,
-  });
+  one.source.notes.knows = () => true;
   const container = document.createElement('div');
   document.body.append(container);
   const root = createRoot(container);
   act(() =>
     root.render(
-      <NotesProvider notes={notes}>
-        <WorkspaceProvider workspace={workspace}>
-          <DirectoryProvider directory={directory}>
-            <App location={{ pathname, search: '' }} />
-          </DirectoryProvider>
-        </WorkspaceProvider>
-      </NotesProvider>,
+      <InSources sources={one.sources}>
+        <App location={{ pathname, search: '' }} />
+      </InSources>,
     ),
   );
   unmount = () => {

@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { bindingsFromSettings, settingsBindings } from '../../src/commands/bindings';
 import { CommandCenter, memoryBindings, type ActiveEditor } from '../../src/commands/center';
 import { COMMANDS } from '../../src/commands/definitions';
-import { fuzzy, highlightRuns } from '../../src/commands/fuzzy';
 
 /** A keydown as the dispatcher reads it (Ctrl is Mod off Apple platforms). */
 function key(
@@ -353,30 +352,6 @@ describe('bindings in synced settings', () => {
     expect(center.keysOf('note.new')).toEqual([]);
     center.reset('app.recent');
     expect(settings).toEqual({ 'keys.note.new': [] });
-  });
-});
-
-describe('fuzzy search', () => {
-  it('matches characters in order and ranks word starts and runs higher', () => {
-    expect(fuzzy('tdy', 'Open today’s note')).not.toBeNull();
-    expect(fuzzy('xyz', 'Open today’s note')).toBeNull();
-    const start = fuzzy('new', 'New note')!.score;
-    const middle = fuzzy('new', 'Rename the newest')!.score;
-    expect(start).toBeGreaterThan(middle);
-  });
-
-  it('rejects letters scattered across a long title', () => {
-    expect(fuzzy('ae', 'a long title that eventually ends')).toBeNull();
-  });
-
-  it('splits text into highlighted runs', () => {
-    const match = fuzzy('nn', 'New note')!;
-    expect(highlightRuns('New note', match.indices)).toEqual([
-      { text: 'N', match: true },
-      { text: 'ew ', match: false },
-      { text: 'n', match: true },
-      { text: 'ote', match: false },
-    ]);
   });
 });
 

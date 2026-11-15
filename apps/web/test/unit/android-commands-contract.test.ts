@@ -18,7 +18,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { COMMANDS } from '../../src/commands/definitions';
-import { fuzzy } from '../../src/commands/fuzzy';
+import { fuzzyMatch } from '@penmoss/core/fuzzy';
 
 const FILE = fileURLToPath(new URL('../../../android/contract/commands-v1.json', import.meta.url));
 const PARITY = fileURLToPath(
@@ -60,7 +60,7 @@ function read(): Contract | null {
 function ranked(entries: readonly Entry[], query: string): string[] {
   return entries
     .filter((entry) => entry.android !== null && 'search' in entry.android)
-    .map((entry) => ({ entry, match: fuzzy(query, entry.title) }))
+    .map((entry) => ({ entry, match: fuzzyMatch(query, entry.title, { scattered: false }) }))
     .filter((found) => found.match !== null)
     .sort((a, b) => b.match!.score - a.match!.score)
     .map((found) => found.entry.id);

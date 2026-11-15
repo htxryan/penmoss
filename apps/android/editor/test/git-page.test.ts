@@ -20,7 +20,7 @@ import { recordAgentSession, sessionKey } from '@penmoss/sync-client/agent-sessi
 import { fromBase64, toBase64 } from 'lib0/buffer';
 import * as Y from '@y/y';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { memoryEngineKv } from '../../../web/src/sources/engine-store';
+import { memoryEngineKv } from '@penmoss/git-notebook/host';
 import { Channel, ChannelError, type FramePort } from '../src/git/channel';
 import { decodeFrame, encodeFrame, FrameError } from '../src/git/frames';
 import { serveEngine, serveGuard } from '../src/git/page';
@@ -29,7 +29,11 @@ import { setBody } from '@penmoss/sync-client/history';
 import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import { parseMarkdown } from '@penmoss/core';
 import { docToDelta } from '@y/prosemirror';
-import { AndroidGitHost, describe as describeFailure, type GitSyncStatus } from '../src/git/host';
+import {
+  AndroidGitHost,
+  describeAndroidFailure as describeFailure,
+  type GitSyncStatus,
+} from '../src/git/host';
 import { captureNoteId } from '../src/git/server';
 import contract from '../../contract/git-engine-v1.json';
 import settingsContract from '../../contract/settings-v1.json';

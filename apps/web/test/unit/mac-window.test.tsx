@@ -14,11 +14,9 @@ import type {
 } from '../../src/desktop/bridge';
 import { DesktopIntegration } from '../../src/desktop/DesktopIntegration';
 import { KeepOnTopButton } from '../../src/desktop/KeepOnTopButton';
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { macWindowStore, startTitleBar } from '../../src/desktop/mac-window';
 import { menuOf } from '../../src/desktop/menu';
+import { appCss } from './support/app-css';
 import {
   NO_DRAG_CONTROLS,
   NO_DRAG_SURFACES,
@@ -199,12 +197,9 @@ describe('the compact title bar in the page (T47, A722, A723)', () => {
     expect(document.documentElement.dataset['titlebar']).toBeUndefined();
   });
 
-  /** The selectors of the compact rule in styles.css that sets `value`. */
+  /** The selectors of the compact rule in the app's styles that sets `value`. */
   function cssList(value: 'drag' | 'no-drag'): string[][] {
-    const css = readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), '../../src/styles.css'),
-      'utf8',
-    );
+    const css = appCss();
     const rules = [
       ...css.matchAll(
         /:root\[data-titlebar='compact'\]\s*:is\(([^{]*)\)\s*\{\s*-webkit-app-region: ([a-z-]+);/g,
@@ -232,10 +227,7 @@ describe('the compact title bar in the page (T47, A722, A723)', () => {
   });
 
   it('gives what scrolls under a row no region, but its floating surfaces (A1123)', () => {
-    const css = readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), '../../src/styles.css'),
-      'utf8',
-    );
+    const css = appCss();
     const rule =
       /:root\[data-titlebar='compact'\]\s*:is\(([^)]*)\)\s*:is\(([^{]*?)\):not\(([^{]*)\)\s*\{\s*-webkit-app-region: unset;/.exec(
         css,

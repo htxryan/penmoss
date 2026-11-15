@@ -10,6 +10,7 @@ import {
   type GitTransport,
   type PushOutcome,
 } from '@penmoss/git-notebook';
+import { GitRefused } from '@penmoss/git-notebook/host';
 import { ChannelError, type Channel } from './channel';
 
 const GIT_CODES: ReadonlySet<string> = new Set<GitErrorCode>([
@@ -26,21 +27,6 @@ const GIT_CODES: ReadonlySet<string> = new Set<GitErrorCode>([
   'redirected',
   'git',
 ]);
-
-/**
- * A refusal from the app's own checks (a public repository, Delete for good nobody confirmed):
- * not git's, so the engine host shows it as it is and stops until the person acts.
- */
-export class GitRefused extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-    readonly hostMessage?: string,
-  ) {
-    super(message);
-    this.name = 'GitRefused';
-  }
-}
 
 /** Reads go in parts of at most this many bytes, so no frame gets large. */
 export const READ_PART_BYTES = 8 * 1024 * 1024;

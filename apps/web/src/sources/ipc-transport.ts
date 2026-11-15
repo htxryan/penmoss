@@ -11,6 +11,7 @@ import {
   type GitTransport,
   type PushOutcome,
 } from '@penmoss/git-notebook';
+import { GitRefused } from '@penmoss/git-notebook/host';
 import type { DesktopGit, GitRefusal } from '../desktop/bridge';
 
 const GIT_CODES: ReadonlySet<string> = new Set<GitErrorCode>([
@@ -28,19 +29,10 @@ const GIT_CODES: ReadonlySet<string> = new Set<GitErrorCode>([
   'git',
 ]);
 
-/** A refusal that is not git's: a remote with a credential in it, or a notebook main did not know. */
-export class GitRefused extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-    readonly hostMessage?: string,
-  ) {
-    super(message);
-    this.name = 'GitRefused';
-  }
-}
-
-/** The error for a refusal from main: git's own as a GitTransportError (A824), else GitRefused. */
+/**
+ * The error for a refusal from main: git's own as a GitTransportError (A824), else `GitRefused`
+ * (a remote with a credential in it, or a notebook main did not know).
+ */
 export function refusalError(refusal: GitRefusal): Error {
   return GIT_CODES.has(refusal.code)
     ? new GitTransportError(refusal.code as GitErrorCode, refusal.message, refusal.hostMessage)

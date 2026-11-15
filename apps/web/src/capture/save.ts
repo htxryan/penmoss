@@ -11,18 +11,10 @@
  * and syncs when the network is back. A save resolves once the note and the
  * workspace (Inbox) are stored on this device.
  */
-import { templateOf, timeZoneOf, today } from '../journal/journal';
+import { templateOf, timeZoneOf, type CaptureDestination } from '@penmoss/core/settings';
+import { today } from '../journal/journal';
 import type { Notes } from '../notes/service';
 import type { Workspace } from '../workspace/service';
-
-export type CaptureDestination = 'daily' | 'inbox';
-
-export const DESTINATION_SETTING = 'capture.destination';
-
-/** Where the form starts (A947): `capture.destination`, today's note while unset. */
-export function destinationOf(settings: Record<string, unknown>): CaptureDestination {
-  return settings[DESTINATION_SETTING] === 'inbox' ? 'inbox' : 'daily';
-}
 
 export interface SavedCapture {
   readonly noteId: string;

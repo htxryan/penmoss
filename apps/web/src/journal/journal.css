@@ -1,0 +1,304 @@
+/* Daily and weekly notes (T19): the sidebar calendar, the period bar above a note, settings. */
+.calendar {
+  margin: 0;
+}
+
+/*
+ * The month and its buttons, under the section's title row (A988): the month's name where the
+ * notes under the other sections' titles start, Previous, Today and Next at the row's end.
+ */
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0 0 0 var(--sb-icon-inset);
+}
+
+.calendar-month {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--pm-fg);
+  font-size: var(--pm-text-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-nav .icon-btn {
+  width: var(--pm-control-sm);
+  height: var(--pm-control-sm);
+}
+
+.calendar-today {
+  padding: 0.1rem 0.45rem;
+  font-size: 0.75rem;
+}
+
+.calendar-grid {
+  width: 100%;
+  margin-top: 0.2rem;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  table-layout: fixed;
+}
+
+.calendar-grid th {
+  padding: 0.15rem 0;
+  color: var(--pm-muted);
+  font-weight: 500;
+  text-align: center;
+}
+
+.calendar-grid abbr {
+  text-decoration: none;
+}
+
+.calendar-grid td {
+  padding: 1px;
+  text-align: center;
+}
+
+.calendar-day,
+.calendar-week {
+  position: relative;
+  width: 100%;
+  height: 1.6rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--pm-fg);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.calendar-week {
+  color: var(--pm-muted);
+  font-size: 0.68rem;
+}
+
+.calendar-day:hover,
+.calendar-week:hover {
+  background: var(--pm-hover);
+}
+
+/* Days of the months either side: muted, never faded below 4.5:1. */
+.calendar-day[data-outside='true'] {
+  color: var(--pm-muted);
+  font-weight: 400;
+}
+
+.calendar-day[aria-current='date'] {
+  box-shadow: inset 0 0 0 1px var(--pm-accent-line);
+  font-weight: 700;
+}
+
+.calendar-day[aria-pressed='true'],
+.calendar-week[aria-pressed='true'] {
+  background: var(--pm-accent);
+  color: var(--pm-on-accent);
+}
+
+/* A dot under days and weeks that have a note. */
+.calendar-day[data-has-note='true']::after,
+.calendar-week[data-has-note='true']::after {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--pm-accent);
+  content: '';
+}
+
+.calendar-day[aria-pressed='true']::after,
+.calendar-week[aria-pressed='true']::after {
+  background: var(--pm-on-accent);
+}
+
+/* A container, so the bar can change its layout by its own width (A988, below). */
+.period-nav {
+  container-type: inline-size;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.4rem;
+  color: var(--pm-muted);
+  font-size: 0.8rem;
+}
+
+/*
+ * A note narrower than the bar (the panel open beside it, a note window): it wrapped item by item,
+ * a week's next week alone on a third line under the days, a day's under its date (A988). Now a
+ * day's date gives way, ending in an ellipsis, so its bar stays one line; a week's previous and
+ * next weeks share the first line, at its ends, and the days take the second. A phone has its
+ * own grid (below).
+ */
+@container (max-width: 38.5rem) {
+  .period-nav > .period-label {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .period-nav > [data-command='journal.next'] {
+    order: 1;
+    margin-left: auto;
+  }
+
+  .period-nav > .period-days {
+    order: 2;
+    flex-basis: 100%;
+  }
+}
+
+.period-nav .btn {
+  gap: 0.25rem;
+  padding: 0 0.45rem;
+  font-size: var(--pm-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.period-label {
+  margin: 0 0.25rem;
+}
+
+.period-nav [data-has-note='true'] {
+  color: var(--pm-fg);
+  font-weight: 600;
+}
+
+.period-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.period-day {
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: none;
+  color: var(--pm-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.period-day:hover {
+  border-color: var(--pm-accent-line);
+  color: var(--pm-fg);
+}
+
+/* Settings → Display (A576): one row per sidebar shortcut. */
+.display-toggles {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  border: 0;
+}
+
+/*
+ * A group's label is a field's label (A988): one size and gap over its control on every Settings
+ * page, where it was 13, 14 or 14.4px and 6 or 10px over it.
+ */
+.display-toggles legend {
+  margin-bottom: 0.35rem;
+  padding: 0;
+  font-size: var(--pm-text-md);
+  font-weight: 600;
+}
+
+/* A toggle's help under it, as a section's help reads (Settings → Updates, the menu bar icon). */
+.display-toggles > .settings-help {
+  margin: 0;
+  font-size: var(--pm-text-sm);
+  line-height: 1.5;
+}
+
+.display-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: var(--pm-control);
+  font-size: var(--pm-text-md);
+  cursor: pointer;
+}
+
+.display-toggle input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--pm-accent);
+}
+
+.display-toggle .i {
+  color: var(--pm-muted);
+}
+
+.display-toggle[data-locked] {
+  cursor: default;
+}
+
+.display-toggle .muted {
+  font-size: var(--pm-text-xs);
+}
+
+.settings-field {
+  display: grid;
+  gap: 0.35rem;
+  margin: 1rem 0;
+  font-size: var(--pm-text-md);
+}
+
+.settings-field > span,
+.settings-field > label {
+  font-weight: 600;
+}
+
+/* A small number (Notes in Recent Notes): a field its size, not the column's width (T53 pass). */
+.settings-field > .settings-count {
+  width: 6rem;
+}
+
+/* A short choice (Show Tooltips After, PEN-70): as wide as its longest option needs. */
+.settings-field > .settings-choice {
+  width: 13rem;
+}
+
+.template-input {
+  width: 100%;
+  height: auto;
+  min-height: 7.5rem;
+  padding: 0.5rem 0.6rem;
+  font-family: var(--pm-mono);
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.settings-actions .btn {
+  width: auto;
+  flex: none;
+}
+
+.settings-help code {
+  font-family: var(--pm-mono);
+  font-size: 0.85em;
+}

@@ -2,9 +2,17 @@ import { DEFAULT_TIME_ZONE, type PeriodKind } from '@penmoss/core/periodic';
 import { Icon } from '@penmoss/ui/icons';
 import { Select } from '@penmoss/ui/controls/Select';
 import { useId, useState } from 'react';
-import { DESTINATION_SETTING, destinationOf, type CaptureDestination } from '../capture/save';
+import {
+  CAPTURE_DESTINATION_SETTING,
+  captureDestinationOf,
+  templateOf,
+  templateSetting,
+  TIME_ZONE_SETTING,
+  timeZoneOf,
+  type CaptureDestination,
+} from '@penmoss/core/settings';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
-import { TIME_ZONE_SETTING, templateOf, templateSetting, timeZoneOf, today } from './journal';
+import { today } from './journal';
 
 /** Every IANA zone this browser knows, or the default alone where it cannot list them. */
 function timeZones(): string[] {
@@ -76,8 +84,8 @@ export function JournalSettings() {
                 type="radio"
                 name={`${zoneId}-capture`}
                 value={item.value}
-                checked={destinationOf(settings) === item.value}
-                onChange={() => workspace.setSetting(DESTINATION_SETTING, item.value)}
+                checked={captureDestinationOf(settings) === item.value}
+                onChange={() => workspace.setSetting(CAPTURE_DESTINATION_SETTING, item.value)}
               />
               <span className="bold-steady" data-label={item.label}>
                 {item.label}

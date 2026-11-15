@@ -4,8 +4,11 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DisplaySettings } from '../../src/shell/DisplaySettings';
 import { TooltipLayer } from '../../src/shell/Tooltip';
+import type { Notes } from '../../src/notes/service';
+import { SourcesProvider } from '../../src/sources/context';
 import { WorkspaceContext } from '../../src/workspace/hooks';
 import type { Workspace } from '../../src/workspace/service';
+import { standInSources } from './support/one-source';
 
 // PEN-70 (A1247): tooltips wait as long as Settings → Display → Show Tooltips After says
 // (1000 ms unset, never on hover with Never); keyboard focus still shows one at once.
@@ -43,10 +46,15 @@ const synced = (key: string, value: unknown) =>
     notify();
   });
 
+/** The window's sources: one notebook, whose settings are the app's own. */
+const { sources } = standInSources({ notes: {} as Notes, workspace });
+
 function render(children: React.ReactNode) {
   act(() =>
     root!.render(
-      <WorkspaceContext.Provider value={workspace}>{children}</WorkspaceContext.Provider>,
+      <SourcesProvider sources={sources}>
+        <WorkspaceContext.Provider value={workspace}>{children}</WorkspaceContext.Provider>
+      </SourcesProvider>,
     ),
   );
 }

@@ -32,6 +32,7 @@ import {
   type GoneFolder,
   type SortMode,
 } from '@penmoss/core/workspace';
+import { isNotebookSetting } from '@penmoss/core/settings';
 import { cleanTagDescription, normaliseTag } from '@penmoss/core/tags';
 import * as Y from '@y/y';
 
@@ -692,6 +693,35 @@ export function setSetting(
     if (value === undefined) settings.deleteAttr(settingKey(userId, key));
     else settings.setAttr(settingKey(userId, key), value);
   }, origin);
+}
+
+/** Where a git notebook keeps its own settings (A827: `timeZone`, `template.*`). */
+export const NOTEBOOK_MAP = 'notebook';
+/** Where a git notebook keeps the settings of the devices that use it (A827, A1014). */
+export const DEVICE_MAP = 'device';
+
+/** The device map, without the notebook's own keys (a client may once have put one there). */
+export function deviceSettings(doc: Y.Doc): Record<string, unknown> {
+  const device = readSettings(doc, DEVICE_MAP);
+  for (const key of Object.keys(device)) if (isNotebookSetting(key)) delete device[key];
+  return device;
+}
+
+/** The settings as every client reads them: the device's, with the notebook's own over them. */
+export function mergedSettings(doc: Y.Doc): Record<string, unknown> {
+  const notebook = readSettings(doc, NOTEBOOK_MAP);
+  for (const key of Object.keys(notebook)) if (!isNotebookSetting(key)) delete notebook[key];
+  return { ...deviceSettings(doc), ...notebook };
+}
+
+/** Sets one setting in the map it belongs to (undefined removes it). */
+export function writeSetting(
+  doc: Y.Doc,
+  key: string,
+  value: unknown,
+  origin: unknown = null,
+): void {
+  setSetting(doc, isNotebookSetting(key) ? NOTEBOOK_MAP : DEVICE_MAP, key, value, origin);
 }
 
 function requireFolder(doc: Y.Doc, id: string): Y.Node {

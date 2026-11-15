@@ -1,0 +1,116 @@
+/* Quick capture (T30): the app's Capture dialog, the /capture page and the Mac capture window. */
+.capture {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem 1rem;
+}
+
+.capture-title {
+  margin: 0;
+  font-size: var(--pm-text-md, 0.95rem);
+}
+
+.capture-text {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 6.5rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--pm-border);
+  border-radius: 0;
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+  font: inherit;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.capture-text:focus {
+  border-color: var(--pm-accent);
+  outline: none;
+  box-shadow: var(--pm-ring);
+}
+
+.capture-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.capture-dest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm, 0.85rem);
+}
+
+.capture-dest label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.capture-dest input {
+  accent-color: var(--pm-accent);
+}
+
+/* Which notebook a capture goes into, when there is more than one (A888, A914). */
+.capture-into {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm, 0.85rem);
+}
+
+.capture-into .pm-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.capture-error {
+  margin: 0;
+  color: var(--pm-danger);
+  font-size: var(--pm-text-sm, 0.85rem);
+}
+
+.capture-dlg {
+  width: min(34rem, 100%);
+}
+
+/*
+ * The Mac capture window is the form alone, filling a small frameless window exactly: the
+ * text takes the room the title and the buttons leave, so nothing scrolls and no scrollbar
+ * shows (T39: the 100vh minimum plus the form's own height overflowed the 300 px window).
+ */
+.capture-window {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--pm-raised);
+  -webkit-app-region: drag;
+}
+
+.capture-window .capture {
+  flex: 1;
+  min-height: 0;
+  -webkit-app-region: no-drag;
+}
+
+.capture-window .capture-text {
+  flex: 1;
+  min-height: 4.5rem;
+  resize: none;
+}
+
+/*
+ * T41: Mac app feedback round 1.
+ */

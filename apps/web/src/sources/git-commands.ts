@@ -79,8 +79,8 @@ export function useGitNotebookCommands(
   const state = useSourcesState();
   const git = desktop()?.git ?? null;
   const target = (): GitSource | null => {
-    if (!git || !state) return null;
-    const noteSource = currentNoteId ? (registry?.sourceOfNote(currentNoteId) ?? null) : null;
+    if (!git) return null;
+    const noteSource = currentNoteId ? registry.sourceOfNote(currentNoteId) : null;
     return gitTarget(state.all, noteSource);
   };
   const toControl = (control: GitControl) => {
@@ -96,7 +96,7 @@ export function useGitNotebookCommands(
     if (!result) report('This window cannot change git notebooks.', false);
     else if (result.ok) report(done, true);
     else report(result.error.message, false);
-    void registry?.refresh();
+    void registry.refresh();
   };
 
   useCommand(

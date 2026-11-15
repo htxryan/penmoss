@@ -46,11 +46,3 @@ export function localFoldState(noteId: string, storage: FoldStorage | null): Fol
     },
   };
 }
-
-export function browserFoldStorage(): Storage | null {
-  try {
-    return typeof localStorage === 'undefined' ? null : localStorage;
-  } catch {
-    return null;
-  }
-}

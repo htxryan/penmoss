@@ -1,27 +1,19 @@
 import { BUILT_IN_THEMES, COLOUR_TOKENS, duplicateAndChoose, NORD } from '@penmoss/ui/theme';
 import { renderToString } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../../src/App';
-import { NotesProvider } from '../../src/notes/context';
-import { NoteDirectory } from '../../src/notes/directory';
-import { DirectoryProvider } from '../../src/notes/links-context';
 import { ThemeController } from '../../src/theme/controller';
 import { ThemeProvider } from '../../src/theme/ThemeProvider';
-import { WorkspaceProvider } from '../../src/workspace/context';
-import { memoryNotes } from './support/memory-notes';
-import { testNotes, testWorkspace } from './support/local-sources';
+import { InSources, oneSource, type OneSource } from './support/one-source';
+
+let one: OneSource;
+beforeEach(async () => {
+  one = await oneSource();
+});
+afterEach(() => one.stop());
 
 function setup() {
-  const store = memoryNotes();
-  const notes = testNotes(store);
-  const workspace = testWorkspace(store);
-  const directory = new NoteDirectory({
-    notes,
-    folderOf: () => null,
-    folderName: () => null,
-    register: () => undefined,
-    navigate: () => undefined,
-  });
+  const { workspace } = one.source;
   const controller = new ThemeController({
     root: {
       style: { colorScheme: '', setProperty: () => undefined },
@@ -32,15 +24,11 @@ function setup() {
   });
   const render = (pathname: string) =>
     renderToString(
-      <NotesProvider notes={notes}>
-        <WorkspaceProvider workspace={workspace}>
-          <ThemeProvider controller={controller}>
-            <DirectoryProvider directory={directory}>
-              <App location={{ pathname, search: '' }} />
-            </DirectoryProvider>
-          </ThemeProvider>
-        </WorkspaceProvider>
-      </NotesProvider>,
+      <InSources sources={one.sources}>
+        <ThemeProvider controller={controller}>
+          <App location={{ pathname, search: '' }} />
+        </ThemeProvider>
+      </InSources>,
     );
   return { render, workspace, controller };
 }

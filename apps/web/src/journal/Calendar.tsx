@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNod
 import { useCommand, useCommands } from '../commands/hooks';
 import { useNoteList, useNotes } from '../notes/hooks';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
+import { devicePref, useDevicePref } from '../shell/device-pref';
 import { SectionHead } from '../shell/SectionHead';
 import { openPeriodic, today as todayOf } from './journal';
 import {
@@ -40,13 +41,11 @@ const MONTHS = [
 const DAY_HEADS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 const OPEN_KEY = 'penmoss.calendar.open';
 
-function readOpen(): boolean {
-  try {
-    return localStorage.getItem(OPEN_KEY) !== 'false';
-  } catch {
-    return true;
-  }
-}
+/** Whether the calendar is open on this device (open until it is closed). */
+const calendarOpen = devicePref(OPEN_KEY, {
+  parse: (stored) => stored !== 'false',
+  serialise: (open) => String(open),
+});
 
 /** The six Monday-first weeks shown for a month. */
 function monthGrid(year: number, month: number): PlainDate[][] {
@@ -86,7 +85,7 @@ export function Calendar({
     setShownFor(todayMonth);
     setShown({ year: today.year, month: today.month });
   }
-  const [open, setOpen] = useState(readOpen);
+  const [open, setOpen] = useDevicePref(calendarOpen);
   const grid = useRef<HTMLTableElement>(null);
   const ids = useMemo(() => new Set(list.map((entry) => entry.id)), [list]);
   /** The cell the keyboard is on (A523): the calendar's one Tab stop. */
@@ -96,11 +95,6 @@ export function Calendar({
 
   const toggle = (next: boolean) => {
     setOpen(next);
-    try {
-      localStorage.setItem(OPEN_KEY, String(next));
-    } catch {
-      // Private windows may refuse storage; the calendar still works.
-    }
   };
 
   useCommand('journal.calendar', () => {

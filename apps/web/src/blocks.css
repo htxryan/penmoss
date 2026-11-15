@@ -407,7 +407,7 @@
 
 /* Both controls are at least 24 px tall (WCAG 2.2 target size, A266): with a smaller fallback
    font they were shorter, and side by side neither had room around it. */
-/* The select is the shared small, quiet one (T51 item 13, A941; styles.css `.pm-select`). */
+/* The select is the shared small, quiet one (T51 item 13, A941; pages/settings.css `.pm-select`). */
 .pm-callout-type {
   --pm-select-chevron: var(--pm-callout-accent);
   min-height: 1.5rem;

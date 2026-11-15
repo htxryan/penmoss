@@ -1,8 +1,8 @@
 /**
  * A note holding node types a later version of Penmoss wrote (A158). The
  * editor cannot bind to it without failing or overwriting them, so its text
- * shows read-only, and nothing is written: the server keeps the note as it
- * is for the version that knows those types.
+ * shows read-only, and nothing is written: the notebook keeps the note as
+ * it is for the version that knows those types.
  */
 export function UnsupportedNote({
   types,

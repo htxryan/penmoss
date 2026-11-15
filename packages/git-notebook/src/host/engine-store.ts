@@ -1,11 +1,11 @@
 /**
- * Where a git notebook's engine keeps its own copy of the notebook in the Mac app (T50 G3, A860):
- * an IndexedDB database of its own, `penmoss-git-engine-<id>`, beside the notes store the
- * windows edit (`penmoss-git-<id>`). Its copy is what the engine has taken in, so a change a
+ * Where a git notebook's engine keeps its own copy of the notebook in the Mac app and the Android
+ * editor's engine page (T50 G3, G7; A860): an IndexedDB database of its own,
+ * `penmoss-git-engine-<id>`, beside the notes store the windows edit (`penmoss-git-<id>`). Its copy is what the engine has taken in, so a change a
  * window stored while no engine ran is still new to it at the next start, and is adopted then as
  * a local change (A851) rather than read in as if it had come from git.
  */
-import type { NotebookChange, NotebookSnapshot, NotebookStorage } from '@penmoss/git-notebook';
+import type { NotebookChange, NotebookSnapshot, NotebookStorage } from '../replica';
 
 /** A small key-value store (IndexedDB in the app; memory in tests). */
 export interface EngineKv {

@@ -1,3 +1,4 @@
+import { copyText } from '@penmoss/editor';
 import { Icon } from '@penmoss/ui/icons';
 import {
   useCallback,
@@ -11,7 +12,6 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { useCommand, useCommands } from '../commands/hooks';
-import { desktop } from '../desktop/bridge';
 import { useNotes } from '../notes/hooks';
 import { PaneResizer } from '../shell/PaneResizer';
 import { PANE_LIMITS, usePaneSize } from '../shell/pane-widths';
@@ -46,16 +46,6 @@ const REASONS: Record<string, string> = {
   // Agent edit engine (T24): the summary names the operation.
   edit: '',
 };
-
-/** Copies `text` (the click is the gesture the Mac app's clipboard needs). */
-async function copy(text: string): Promise<boolean> {
-  const app = desktop();
-  if (app) return app.clipboard.write({ text });
-  return navigator.clipboard.writeText(text).then(
-    () => true,
-    () => false,
-  );
-}
 
 /** Versions whose summaries are read first: about the rows on screen; the rest follow in one read. */
 const FIRST_SUMMARIES = 20;
@@ -275,9 +265,9 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
     setSelected(Number(row.dataset['version']));
   };
 
-  const copyText = () => {
+  const copyVersion = () => {
     if (!shown) return;
-    void copy(bodyOf(shown.markdown)).then((done) =>
+    void copyText(document, bodyOf(shown.markdown)).then((done) =>
       setStatus(done ? 'Copied the text of this version.' : 'Could not copy the text.'),
     );
   };
@@ -546,7 +536,7 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                     aria-label="Copy Text"
                     data-tip="Copy Text"
                     disabled={!shown}
-                    onClick={copyText}
+                    onClick={copyVersion}
                   >
                     <Icon name="copy" />
                     <span className="history-action-word">Copy</span>

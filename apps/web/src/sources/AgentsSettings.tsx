@@ -25,7 +25,7 @@ export function AgentsSettings({ item }: { item?: string | undefined }) {
   const git = desktop()?.git;
   const state = useAllSources();
   const id = useId();
-  if (!git || !state) return null;
+  if (!git) return null;
   const sources = state.all;
   if (item !== undefined) {
     const source = sources.find((each) => each.id === item);

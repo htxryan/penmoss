@@ -9,7 +9,7 @@ import { defaultRepoName } from '@penmoss/git-notebook/github-browse';
 import { Icon } from '@penmoss/ui/icons';
 import { Select } from '@penmoss/ui/controls/Select';
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
-import { fuzzy, highlightRuns } from '../commands/fuzzy';
+import { fuzzyMatch, highlightRuns } from '@penmoss/core/fuzzy';
 import type {
   DesktopGitHubBrowse,
   GitHubRepo,
@@ -264,7 +264,7 @@ export function CreateRepo({
 
 /** Text with what the filter matched marked (4.3). */
 function Marked({ text, query }: { text: string; query: string }) {
-  const match = query ? fuzzy(query, text) : null;
+  const match = query ? fuzzyMatch(query, text, { scattered: false }) : null;
   if (!match || match.indices.length === 0) return text;
   return highlightRuns(text, match.indices).map((run, index) =>
     run.match ? <mark key={index}>{run.text}</mark> : run.text,
@@ -386,8 +386,10 @@ export function RepoTree({
       const loaded = reads.get(repo.fullName);
       const notebooks = loaded?.state === 'ready' ? notebooksIn(loaded.folders) : [];
       if (!q) return [{ repo, notebooks }];
-      const repoMatch = fuzzy(q, repo.fullName) !== null;
-      const matching = notebooks.filter((each) => fuzzy(q, each.notebook.name) !== null);
+      const repoMatch = fuzzyMatch(q, repo.fullName, { scattered: false }) !== null;
+      const matching = notebooks.filter(
+        (each) => fuzzyMatch(q, each.notebook.name, { scattered: false }) !== null,
+      );
       if (!repoMatch && matching.length === 0) return [];
       return [{ repo, notebooks: repoMatch ? notebooks : matching }];
     });

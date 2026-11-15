@@ -3,10 +3,10 @@
  * region wins over anything painted on top of it unless that thing is `no-drag`, so every
  * control anywhere in the page, and every surface that can float over a title-bar row (a
  * panel, a menu, a dialog, a scrim), is `no-drag` while `data-titlebar="compact"` is set.
- * `styles.css` holds the same lists (a unit test checks them) and the Electron suite checks
+ * `desktop/titlebar.css` holds the same lists (a unit test checks them) and the Electron suite checks
  * every visible element against them, and, without them, everything in a drag region that takes
  * a click. A surface before a row in the DOM stops the row dragging while it is open
- * (styles.css). No imports: the desktop suite reads it too.
+ * (desktop/titlebar.css). No imports: the desktop suite reads it too.
  */
 
 /** Controls: whatever takes a click or a key. */

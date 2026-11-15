@@ -275,7 +275,7 @@ export function InfoPanel({
   const id = useId();
   const entry = useNoteList().find((item) => item.id === noteId);
   const notebookName = useNoteNotebookName();
-  const gitNotebooks = useAllSources()?.all.length ?? 0;
+  const gitNotebooks = useAllSources().all.length;
   const details = useNoteDetails(noteId, replica);
   const { doc, tokens } = useNoteCounts(stats);
   const fields = details?.fields ?? {};
