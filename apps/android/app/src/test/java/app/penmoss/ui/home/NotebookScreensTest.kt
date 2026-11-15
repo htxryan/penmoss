@@ -58,6 +58,7 @@ class NotebookScreensTest {
                         folders = top,
                         status = "",
                         syncing = false,
+                        notebook = "Garden",
                     ),
                     HomeActions(
                         onFolder = { opened = it },
@@ -67,8 +68,8 @@ class NotebookScreensTest {
         }
         compose.onNodeWithText("Notebooks").assertIsDisplayed()
         compose.onNodeWithTag("homeFoldersTitle").assertIsDisplayed()
-        compose.onNodeWithText("Personal").assertIsDisplayed()
-        // The notes' sync dot is on their heading, as the web's Personal (T51, A933), never on Notebooks.
+        compose.onNodeWithText("Garden").assertIsDisplayed()
+        // The notes' sync dot is on their heading, as the web's notebook heading (T51, A933), never on Notebooks.
         compose.onAllNodes(hasTestTag("syncDot") and hasAnyAncestor(hasTestTag("homeFoldersTitle")), useUnmergedTree = true).assertCountEquals(1)
         compose.onNodeWithTag("homeNotebooksTitle").assertTextEquals("Notebooks")
         compose.onAllNodes(hasTestTag("syncDot") and hasAnyAncestor(hasTestTag("homeNotebooksTitle")), useUnmergedTree = true).assertCountEquals(0)

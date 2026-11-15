@@ -84,11 +84,12 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
         HomeScreen(
             HomeUi(
                 title = graph.name,
+                notebook = graph.name,
                 quickAccess = quickAccess,
                 // The sidebar's sections and Quick Access (T53 items 8 and 10), synced settings.
                 layout = layout,
                 // Every pin is this notebook's note, named as its heading is (T53 item 10).
-                quickAccessNotebooks = quickAccess.associate { it.id to app.penmoss.ui.home.HOME_NOTEBOOK_NAME },
+                quickAccessNotebooks = quickAccess.associate { it.id to graph.name },
                 recent = home.recent,
                 folders = home.folders,
                 status = sync.text,
