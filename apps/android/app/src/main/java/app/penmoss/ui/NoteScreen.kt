@@ -3,16 +3,10 @@ package app.penmoss.ui
 import app.penmoss.engine.notes.Tags
 import kotlinx.coroutines.flow.combine
 import android.view.View
-import android.view.inputmethod.InputMethodManager
 import android.webkit.WebView
 import app.penmoss.ui.keys.NoteActions
 import app.penmoss.ui.keys.NoteCommands
-import app.penmoss.ui.keys.saveVersionNow
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
@@ -20,9 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,8 +46,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.DisposableEffect
-import app.penmoss.engine.settings.QuickAccess
-import app.penmoss.engine.settings.SettingKeys
 import kotlinx.coroutines.flow.flowOn
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
@@ -67,15 +56,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -86,23 +70,15 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.penmoss.NotebookGraph
-import app.penmoss.editor.EditorPageServices
 import app.penmoss.editor.EditorUiState
 import app.penmoss.editor.EditorWebView
 import app.penmoss.editor.FormatState
-import app.penmoss.editor.LinkedNotes
 import app.penmoss.editor.NewNoteRequest
 import app.penmoss.editor.NoteEditorController
 import app.penmoss.editor.NotePages
 import app.penmoss.editor.PeriodicNoteRequest
-import app.penmoss.editor.NoteClipboard
-import app.penmoss.editor.PickedPictures
-import app.penmoss.editor.SelectionHooks
 import app.penmoss.editor.SelectionWebView
 import app.penmoss.engine.bridge.BlockPurpose
 import app.penmoss.engine.bridge.CopyFormat
@@ -110,19 +86,11 @@ import app.penmoss.engine.bridge.CopyScope
 import app.penmoss.engine.bridge.FormatCommand
 import app.penmoss.engine.bridge.BridgeProtocol
 import app.penmoss.engine.bridge.FromEditor
-import app.penmoss.engine.bridge.PageNote
 import app.penmoss.engine.bridge.ToEditor
-import app.penmoss.engine.settings.LineSymbols
 import app.penmoss.ui.screens.CenteredMessage
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-
-/** Pictures one trip to the photo picker may bring. */
-private const val MAX_PICKED = 10
 
 /**
  * An open note (T32; the writing screen, T33): the native top bar, the editor
@@ -133,8 +101,9 @@ private const val MAX_PICKED = 10
  *
  * The top bar's menu (T38) moves the note to another folder and shows its tags;
  * with [create], the screen opens on a new note the editor makes, offline too.
+ * What it shows and does is [NoteScreenState]'s (A6); this draws it.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteRoute(
     graph: NotebookGraph,
@@ -175,347 +144,66 @@ fun NoteRoute(
      */
     onLocalGraph: () -> Unit = {},
 ) {
-    val channel = remember(noteId) { EditorWebView.Channel() }
-    val controller = remember(noteId) {
-        NoteEditorController(
-            noteId,
-            graph.store,
-            graph.sync,
-            graph.scope,
-            channel::send,
-            onOpenNote,
-            onOpenTag = onOpenTag,
-            pictures = graph.attachments,
-            openEditors = graph.openEditors,
-            create = create,
-            onCreated = {
-                onMade()
-                graph.sync.requestSync()
-            },
-            periodic = periodic,
-            onPeriodicMade = onPeriodicMade,
-            onPageError = { graph.errors.report(it) },
-            folds = graph.folds,
-            files = graph.attachments,
-            webPictures = graph.webPictures::mode,
-            onOpenAt = onOpenNoteAt,
-            heading = heading,
-            // Send to… (T60, A1078): the notebook syncs at once, no push delay.
-            onCommentSent = graph::syncNotebookNow,
-        )
-    }
-    /** Other notes for the page's `[[Title#` headings and live embeds (T40 P7, LK2, LK4). */
-    val linked = remember(noteId) { LinkedNotes(graph.store, graph.sync, graph.scope, channel::send) }
-    val copies = remember(noteId) { MutableSharedFlow<Pair<PageNote, Boolean>>(extraBufferCapacity = 4) }
-    /** A copy of this note's own edits (NT21, A434): said on the note until dismissed or left. */
-    var ownCopy by remember(noteId) { mutableStateOf<PageNote?>(null) }
-    val services = remember(noteId) {
-        EditorPageServices(
-            graph.store,
-            graph.scope,
-            channel::send,
-            onCopied = { source, copy, merged ->
-                graph.sync.noteEdited(copy.id)
-                if (source == noteId) ownCopy = copy else copies.tryEmit(copy to merged)
-            },
-            openEditors = graph.openEditors,
-        )
-    }
-    val holder = remember(noteId) { arrayOfNulls<View>(1) }
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    DisposableEffect(noteId, lifecycle) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE) controller.flush()
-        }
-        lifecycle.addObserver(observer)
-        onDispose {
-            lifecycle.removeObserver(observer)
-            services.stop()
-            linked.stop()
-            // The page's last edits are stored before the WebView goes (NoteEditorController.close).
-            graph.scope.launch {
-                controller.close()
-                (holder[0] as? WebView)?.let(EditorWebView::destroy)
-            }
-        }
-    }
-
-    // The theme chosen in Settings → Appearance, on the page too (A305).
-    val appearance by graph.appearance.collectAsStateWithLifecycle()
-    // Never beside the theme editor's preview (A418): the note's WebView waits for it to go.
-    val previewOpen by EditorWebView.previewOpen.collectAsStateWithLifecycle()
-    val dark = appearance.isDark(isSystemInDarkTheme())
-    LaunchedEffect(services, appearance.theme, dark) {
-        // With the text colours the screens read in (A498), so the note reads as they do.
-        appearance.theme?.let { services.setTheme(ToEditor.Theme(readableTheme(it), if (dark) "dark" else "light")) }
-    }
-    // Full-width notes (A501), which a tablet or an unfolded phone shows (A413).
-    val fullWidth by remember { graph.device.settings.map { it.settings.fullWidth }.distinctUntilChanged() }.collectAsStateWithLifecycle(false)
-    LaunchedEffect(services, fullWidth) { services.setWidth(ToEditor.Width(fullWidth)) }
-    // The person's fonts (T51, A944): the note's font and size over the theme's, and the page's own interface font.
-    val fonts by remember {
-        graph.device.settings.map { ToEditor.Fonts(it.settings.interfaceFont, it.settings.noteFont, it.settings.noteFontSize) }.distinctUntilChanged()
-    }.collectAsStateWithLifecycle(DEFAULT_FONTS)
-    LaunchedEffect(services, fonts) { services.setFonts(fonts) }
-    // The person's line symbols (T44, A747): the note's margin and the bar's symbol sheet.
-    val appCommands = app.penmoss.ui.keys.LocalAppCommands.current
-    val symbols by remember { graph.device.settings.map { it.settings.symbols }.distinctUntilChanged() }
-        .collectAsStateWithLifecycle(LineSymbols.DEFAULTS)
-    LaunchedEffect(services, symbols) { services.setSymbols(ToEditor.Symbols(symbols)) }
-    // Whether the person is typing (A469, review S8, R3): the soft keyboard is up, or a hardware
-    // keyboard is connected (the soft one then stays down while typing). A tag tapped otherwise opens.
-    val imeVisible = WindowInsets.isImeVisible
-    val configuration = LocalConfiguration.current
-    val typing = imeVisible || hasHardwareKeyboard(configuration)
-    LaunchedEffect(services, typing) { services.setIme(ToEditor.Ime(typing)) }
-
-    val state by controller.state.collectAsStateWithLifecycle()
-    val format by controller.format.collectAsStateWithLifecycle()
+    val note = rememberNoteScreenState(graph, noteId, onOpenNote, onOpenTag, create, onMade, focusTitle, periodic, onPeriodicMade, heading, onOpenNoteAt)
+    val controller = note.controller
+    val tools = note.tools
+    val state = note.editor
+    val format = note.format
+    val source = note.source
     // Back closes the editor's own menu first, as Escape does on the web (A302).
     BackHandler(enabled = format.menu && state.phase == EditorUiState.Phase.READY) { controller.dismissMenu() }
-
-    val context = LocalContext.current
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(MAX_PICKED)) { uris ->
-        if (uris.isEmpty()) {
-            controller.refocus()
-            return@rememberLauncherForActivityResult
-        }
-        graph.scope.launch {
-            val pictures = withContext(Dispatchers.IO) { uris.map { PickedPictures.read(context.contentResolver, it) } }
-            if (pictures.any { it == null }) controller.notify("A picture could not be read, or is over 50 MB.")
-            holder[0]?.requestFocus()
-            controller.insertPictures(pictures.filterNotNull())
-        }
-    }
-    val pickPictures = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
-
-    val snackbar = remember { SnackbarHostState() }
-    LaunchedEffect(controller) { controller.notices.collect { snackbar.showSnackbar(it) } }
-    // Files through the app (T40 P8, ED12): the document picker, and a chip's Open and Save a copy.
-    val pickFiles = rememberNoteFiles(controller.files, graph.scope, snackbar, onRefocus = { holder[0]?.requestFocus() })
-    LaunchedEffect(services) {
-        copies.collect { (copy, merged) ->
-            val shown = snackbar.showSnackbar(
-                if (merged) "More edits this phone could not sync were added to “${copy.title}”."
-                else "Edits this phone could not sync are kept in “${copy.title}”.",
-                actionLabel = "Open",
-                duration = SnackbarDuration.Long,
-            )
-            if (shown == SnackbarResult.ActionPerformed) onOpenNote(copy.id)
-        }
-    }
-
-    // This note's pictures given up on (AC8, A428): said each time one more fails, with Retry.
-    val picturesFailed by remember(noteId) { graph.attachments.observeFailed(noteId) }.collectAsStateWithLifecycle(null as Int?)
-    val retryPictures: () -> Unit = {
-        graph.scope.launch {
-            graph.attachments.retryFailed()
-            graph.sync.requestSync()
-        }
-    }
-    PicturesFailedNotice(picturesFailed, snackbar, onRetry = retryPictures)
-
-    // Where this note stands with the server (PL10, A429), from the phone's own state.
-    val syncStatus by graph.sync.status.collectAsStateWithLifecycle()
-    val unsent by remember(noteId) { graph.store.observeUnsentCount(noteId) }.collectAsStateWithLifecycle(0)
-    val picturesWaiting by remember(noteId) { graph.attachments.observeWaiting(noteId) }.collectAsStateWithLifecycle(0)
-    val noteSync = noteSyncState(syncStatus, unsent, picturesWaiting, picturesFailed ?: 0)
-    var explaining by rememberSaveable(noteId) { mutableStateOf(false) }
-
-    // The note's folder path (T40 P4, NT11): from the folders in Room, root first.
-    val folders by remember { graph.store.observeFolders() }.collectAsStateWithLifecycle(emptyList())
-    val placed by remember(noteId) { graph.store.observeNote(noteId) }.collectAsStateWithLifecycle(null)
-    val crumbs = remember(folders, placed) { Items.folderPath(folders, placed?.folderId) }
-    // Its notebook's name when not the default (T43, A752): a link into a closed one still opens it.
-    val notebookName = remember(folders, placed) { noteNotebookName(folders, placed?.folderId) }
-    // Copy Agent Reference (T52 item 4; PEN-69): the MCP call that reads the note by its short id.
-    val copyAgentReference: (() -> Unit)? = placed?.let { _ ->
-        {
-            graph.scope.launch {
-                val reference = agentReferenceIn(graph, noteId)
-                controller.notify(reference?.let { AgentReference.copy(context, it) } ?: "This note isn't on this phone any more")
-            }
-        }
-    }
-
-    /** The open note's period and neighbours, for the row under its top bar (T40 P5, JR4). */
-    val periodicNav by controller.periodicNav.collectAsStateWithLifecycle()
-    // A periodic screen is transient: the page makes the note, then the note itself opens.
-    val makingPeriodic = periodic != null
-
-    var linking by rememberSaveable(noteId) { mutableStateOf(false) }
-    var menu by remember(noteId) { mutableStateOf(false) }
-    /**
-     * The note panel's tab, or null while it is closed (T51, A936): Metadata, Comments, Version
-     * History and Local Graph, over the note, so the editor stays open for flush and exchange.
-     */
-    var panelName by rememberSaveable(noteId) { mutableStateOf<String?>(null) }
-    val panel = panelName?.let { name -> PanelTab.entries.firstOrNull { it.name == name } }
-    val openPanel = { tab: PanelTab ->
-        panelName = tab.name
-        PanelMemory.remember(context, tab)
-    }
-    // Each command opens its tab, or closes the panel when its tab shows, as on the web.
-    val togglePanel = { tab: PanelTab -> if (panel == tab) panelName = null else openPanel(tab) }
-    /** The move picker, open on the folder the note is in (or going to). */
-    var moving by remember(noteId) { mutableStateOf<MovePick?>(null) }
-    var tagging by rememberSaveable(noteId) { mutableStateOf(false) }
-    val tags by controller.tags.collectAsStateWithLifecycle()
-    val info by controller.info.collectAsStateWithLifecycle()
-    // The notes linking here, offline from Room (LK5): the Info button's badge and the sheet's list.
-    val linkingHere by remember(noteId) { graph.store.observeBacklinkSources(noteId) }.collectAsStateWithLifecycle(emptyList())
-    val backlinks = remember(noteId) {
-        BacklinksModel(noteId, graph.store, graph.api, graph.scope)
-    }
-    // Notes edited here the index may not have: Room alone says whether they link here (S3).
-    val recentLinkers by remember { graph.store.observeRecentLinkers() }.collectAsStateWithLifecycle(emptySet())
-    LaunchedEffect(backlinks, linkingHere, recentLinkers) { backlinks.localChanged(linkingHere, recentLinkers) }
-    // A new note opens with the caret in its title (A356) and, since the page cannot raise the
-    // keyboard by itself, the app raises it once the note is made (T39).
-    val isNew = remember(noteId) { create != null }
-    var keyboardRaised by rememberSaveable(noteId) { mutableStateOf(false) }
-    LaunchedEffect(state.phase) {
-        if (!isNew || keyboardRaised || state.phase != EditorUiState.Phase.READY || state.readOnly) return@LaunchedEffect
-        val view = holder[0] ?: return@LaunchedEffect
-        keyboardRaised = true
-        view.requestFocus()
-        view.context.getSystemService(InputMethodManager::class.java)?.showSoftInput(view, 0)
-    }
-    // Rename from a list (T40 P4, NT10): the caret goes in the title once the note is open.
-    var titleFocused by rememberSaveable(noteId) { mutableStateOf(false) }
-    LaunchedEffect(state.phase, focusTitle) {
-        if (!focusTitle || titleFocused || state.phase != EditorUiState.Phase.READY || state.readOnly) return@LaunchedEffect
-        titleFocused = true
-        controller.focusTitle()
-    }
-    // The editor's parity with the web (T40 P8): copies, the source, find, the + sheet, counts.
-    val tools = controller.tools
-    val source by tools.source.collectAsStateWithLifecycle()
-    val counts by tools.counts.collectAsStateWithLifecycle()
-    val choices by tools.choices.collectAsStateWithLifecycle()
-    var finding by rememberSaveable(noteId) { mutableStateOf(false) }
-    var counting by rememberSaveable(noteId) { mutableStateOf(false) }
-    var sheet by remember(noteId) { mutableStateOf<BlockPurpose?>(null) }
-    // Comment threads (T48): the Comments sheet, from the ⋮ menu, a tapped highlight or Comment.
-    val comments = controller.comments
-    val commentsState by comments.state.collectAsStateWithLifecycle()
-    LaunchedEffect(comments) { comments.requests.collect { openPanel(PanelTab.COMMENTS) } }
-    // Quick Access (T51, A946): the device's pins, synced; in a git notebook only when the pins live
-    // in the Journal notebook (no account, A1014), as on the Mac where a pin is any note's id.
-    val quickAccess by remember { graph.device.settings.map { it.settings.quickAccess }.distinctUntilChanged() }
-        .collectAsStateWithLifecycle(emptyList())
-    val pin = {
-        val now = graph.device.settings.value
-        val next = QuickAccess.toggled(now.settings.quickAccess, noteId)
-        when {
-            !now.known -> controller.notify("Quick Access can be changed once the phone has synced with Penmoss.")
-            next == null -> controller.notify("Quick Access holds up to ${QuickAccess.MAX} notes. Unpin one to pin this one.")
-            else -> {
-                graph.device.changeSetting(SettingKeys.QUICK_ACCESS, QuickAccess.toJson(next))
-                controller.notify(if (noteId in next) "Pinned to Quick Access." else "Unpinned from Quick Access.")
-            }
-        }
-    }
-    // The snackbar runs on its own: a second copy is written at once, not after the first's
-    // snackbar goes (review S2).
-    LaunchedEffect(tools) { tools.clips.collect { clip -> NoteClipboard.write(context, clip)?.let { launch { snackbar.showSnackbar(it) } } } }
-    // Delete block took a whole list or table with one tap: offer Undo (review S4).
-    LaunchedEffect(tools) {
-        tools.deleted.collect { label ->
-            launch {
-                val shown = snackbar.showSnackbar("$label deleted", actionLabel = "Undo", duration = SnackbarDuration.Long)
-                if (shown == SnackbarResult.ActionPerformed) tools.undoDelete()
-            }
-        }
-    }
-    val menuScope = rememberCoroutineScope()
-    BackHandler(enabled = finding) { finding = false }
+    BackHandler(enabled = note.finding) { note.finding = false }
+    BackHandler(enabled = note.lightbox && !note.rendererGone) { note.channel.send(BridgeProtocol.encode(ToEditor.CloseLightbox)) }
+    val appCommands = app.penmoss.ui.keys.LocalAppCommands.current
     // A hardware keyboard's commands for this note, and the page's dispatcher (T40 P9, A493, A494).
     NoteCommands(
         controller,
-        ready = state.phase == EditorUiState.Phase.READY,
-        editable = state.phase == EditorUiState.Phase.READY && !state.readOnly,
-        launcherNote = if (!makingPeriodic && state.phase == EditorUiState.Phase.READY) noteId to state.title else null,
-        nav = if (makingPeriodic) null else periodicNav,
+        ready = note.ready,
+        editable = note.editable,
+        launcherNote = if (!note.makingPeriodic && note.ready) noteId to state.title else null,
+        nav = if (note.makingPeriodic) null else note.periodicNav,
         actions = NoteActions(
-            trash = { graph.scope.trashAfterClosing(controller::close, onTrash) },
-            move = { graph.scope.launch { moving = MovePick(graph.store.folderOf(noteId)) } },
-            history = { togglePanel(PanelTab.HISTORY) },
-            saveVersion = {
-                graph.scope.launch {
-                    controller.notify(
-                        saveVersionNow(
-                            flush = controller::flushAndWait,
-                            exchange = { graph.sync.syncNote(noteId) },
-                            save = { graph.api.saveVersion(noteId) },
-                            failure = { historyFailure(it) },
-                        ),
-                    )
-                }
-            },
-            tags = { tagging = true },
+            trash = { note.trash(onTrash) },
+            move = note::startMove,
+            history = { note.togglePanel(PanelTab.HISTORY) },
+            saveVersion = note::saveVersion,
+            tags = { note.tagging = true },
             openPeriodic = onOpenPeriodic,
             copyMarkdown = { tools.copy(CopyFormat.MARKDOWN, CopyScope.NOTE) },
             copyRich = { tools.copy(CopyFormat.RICH, CopyScope.NOTE) },
             toggleSource = { tools.setSource(!source) },
-            info = { togglePanel(PanelTab.METADATA) },
-            localGraph = { togglePanel(PanelTab.GRAPH) },
-            comments = { togglePanel(PanelTab.COMMENTS) },
-            pinQuickAccess = pin,
-            copyAgentReference = copyAgentReference,
+            info = { note.togglePanel(PanelTab.METADATA) },
+            localGraph = { note.togglePanel(PanelTab.GRAPH) },
+            comments = { note.togglePanel(PanelTab.COMMENTS) },
+            pinQuickAccess = note::pin,
+            copyAgentReference = note.copyAgentReference,
             addNoteComment = {
-                openPanel(PanelTab.COMMENTS)
-                comments.startDraft(app.penmoss.engine.bridge.DraftSource.NOTE)
+                note.openPanel(PanelTab.COMMENTS)
+                note.comments.startDraft(app.penmoss.engine.bridge.DraftSource.NOTE)
             },
         ),
     )
     val background = MaterialTheme.colorScheme.background.toArgb()
-    /** The page's renderer died (A312): that WebView can't be used again, so it leaves the screen. */
-    var rendererGone by remember(noteId) { mutableStateOf(false) }
-    /**
-     * The page's image lightbox is open (T51, A948): the note's bars step aside so it has the
-     * screen, and the back gesture closes it, not the note.
-     */
-    var lightbox by remember(noteId) { mutableStateOf(false) }
-    BackHandler(enabled = lightbox && !rendererGone) { channel.send(BridgeProtocol.encode(ToEditor.CloseLightbox)) }
-    val editable = state.phase == EditorUiState.Phase.READY && !state.readOnly
-    val canPaste by rememberUpdatedState(editable && !source)
-    val hooks = remember(noteId) {
-        object : SelectionHooks {
-            override fun copyAs(format: CopyFormat) = tools.copy(format, CopyScope.SELECTION)
-            // Read off the main thread: a clip can be large (review S3).
-            override fun pastePlain() {
-                menuScope.launch { tools.pastePlain(withContext(Dispatchers.IO) { NoteClipboard.text(context) }) }
-            }
-
-            override fun menuShown() = tools.capture()
-            override fun comment() = comments.startDraft(app.penmoss.engine.bridge.DraftSource.SELECTION)
-            override val canComment: Boolean get() = canPaste
-            override fun find() {
-                finding = true
-            }
-            override val editable: Boolean get() = canPaste
-        }
-    }
+    val commentsState by note.comments.state.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
-            if (!lightbox) TopAppBar(
+            if (!note.lightbox) TopAppBar(
                 title = {
                     // A periodic screen names what it makes; a note shows its folder path (T40 P4,
                     // NT11): a tap opens the folder, a long press lists levels.
-                    if (makingPeriodic) {
+                    if (note.makingPeriodic) {
                         Text(periodicTitle(periodic))
                     } else {
                         androidx.compose.foundation.layout.Column {
                             // A top-level note names its notebook (T52, as the web's phone app bar):
                             // the git notebook's.
                             BreadcrumbBar(
-                                path = crumbs,
+                                path = note.crumbs,
                                 onOpenFolder = onOpenFolder,
                                 notebook = graph.name,
                             )
-                            if (notebookName != null) NoteNotebookLine(notebookName)
+                            note.notebookName?.let { NoteNotebookLine(it) }
                         }
                     }
                 },
@@ -523,94 +211,89 @@ fun NoteRoute(
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
                 },
                 actions = {
-                    if (!makingPeriodic) {
-                        InfoButton(linked = linkingHere.size, onClick = { openPanel(PanelTab.METADATA) })
+                    if (!note.makingPeriodic) {
+                        InfoButton(linked = note.linkingHere.size, onClick = { note.openPanel(PanelTab.METADATA) })
                         // Comments left the bar (T53 item 9, A985): the ⋮ menu and the panel's strip open it.
-                        NoteSyncIcon(noteSync, onClick = { explaining = true })
-                        val ready = state.phase == EditorUiState.Phase.READY
+                        NoteSyncIcon(note.noteSync, onClick = { note.explaining = true })
+                        val ready = note.ready
                         NoteMenu(
-                            open = menu,
-                            onOpen = { menu = it },
+                            open = note.menu,
+                            onOpen = { note.menu = it },
                             ready = ready,
-                            onPanel = openPanel,
+                            onPanel = note::openPanel,
                             source = source,
                             onSource = tools::setSource,
                             onCopy = { tools.copy(it, CopyScope.NOTE) },
-                            onFind = { finding = true },
-                            onCount = { counting = true },
-                            pinned = noteId in quickAccess,
-                            onPin = pin,
+                            onFind = { note.finding = true },
+                            onCount = { note.counting = true },
+                            pinned = note.pinned,
+                            onPin = note::pin,
                             // A new note can be moved once it is made (until then it is nowhere).
                             canMove = state.phase != EditorUiState.Phase.GONE && (create == null || ready),
-                            onMove = {
-                                graph.scope.launch { moving = MovePick(graph.store.folderOf(noteId)) }
-                            },
-                            // The note is closed first: the page's last edits are stored (waited for,
-                            // as leaving does), so they go before the Trash request (A432). On the
-                            // app's scope: Back meanwhile leaves the screen but keeps the move.
-                            onTrash = { graph.scope.trashAfterClosing(controller::close, onTrash) },
+                            onMove = note::startMove,
+                            onTrash = { note.trash(onTrash) },
                             openComments = commentsState.open.takeIf { commentsState.known },
-                            onCopyAgentReference = copyAgentReference,
+                            onCopyAgentReference = note.copyAgentReference,
                         )
                     }
                 },
             )
         },
-        snackbarHost = { SnackbarHost(snackbar) { PenmossSnackbar(it) } },
+        snackbarHost = { SnackbarHost(note.snackbar) { PenmossSnackbar(it) } },
     ) { padding ->
         // The keyboard pushes the bar up and shrinks the editor above it (the T2 spike's layout).
         Column(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding()) {
-            ownCopy?.let { copy ->
-                CopyNotice(copy.title, onOpen = { onOpenNote(copy.id) }, onDismiss = { ownCopy = null })
+            note.ownCopy?.let { copy ->
+                CopyNotice(copy.title, onOpen = { onOpenNote(copy.id) }, onDismiss = { note.ownCopy = null })
             }
             // On a periodic note, the row under the top bar: the previous and next, the period's
             // name, and the week (or the week's days), as the web shows them (T40 P5, JR4).
-            val nav = periodicNav
-            if (!makingPeriodic && nav != null && !lightbox) {
+            val nav = note.periodicNav
+            if (!note.makingPeriodic && nav != null && !note.lightbox) {
                 // Its Week and day chips marked where the phone holds the note (T40 P9, N4).
                 val marks by remember { graph.store.observeJournalMarks().map(::journalMarksOf).distinctUntilChanged() }
                     .collectAsStateWithLifecycle(JournalMarks())
                 PeriodNavRow(nav, onOpenPeriodic = onOpenPeriodic, marks = marks)
             }
-            if (finding) {
-                FindBar(remember(noteId) { WebViewFind { holder[0] as? WebView } }, onClose = { finding = false }, refresh = counts)
+            if (note.finding) {
+                FindBar(remember(noteId) { WebViewFind { note.webView() } }, onClose = { note.finding = false }, refresh = note.counts)
             }
             Box(Modifier.weight(1f).fillMaxWidth()) {
-                NoteBody(state, editorAlive = !rendererGone, onRetry = controller::retry, previewOpen = previewOpen) { visible ->
+                NoteBody(state, editorAlive = !note.rendererGone, onRetry = controller::retry, previewOpen = note.previewOpen) { visible ->
                     AndroidView(
                         factory = { context ->
                             graph.notePages.create(
                                 context,
                                 noteId,
-                                channel,
+                                note.channel,
                                 NotePages.Hooks(
                                     onMessage = { raw ->
                                         if (raw.contains("\"lightbox\"")) {
-                                            (BridgeProtocol.decodeFromEditor(raw) as? FromEditor.Lightbox)?.let { lightbox = it.open }
+                                            (BridgeProtocol.decodeFromEditor(raw) as? FromEditor.Lightbox)?.let { note.lightbox = it.open }
                                         }
                                         controller.onPageMessage(raw)
-                                        services.onPageMessage(raw)
-                                        linked.onPageMessage(raw)
+                                        note.services.onPageMessage(raw)
+                                        note.linked.onPageMessage(raw)
                                     },
                                     onRendererGone = {
-                                        rendererGone = true
-                                        lightbox = false
-                                        services.stop()
-                                        linked.stop()
+                                        note.rendererGone = true
+                                        note.lightbox = false
+                                        note.services.stop()
+                                        note.linked.stop()
                                         controller.pageGone()
                                     },
                                     onBytes = controller::onPageBytes,
                                     picture = { sha, ext ->
                                         graph.attachments.fileFor(sha, ext)?.let { EditorWebView.pictureResponse(it, ext) }
                                     },
-                                    onPickImages = pickPictures,
-                                    onPickFiles = pickFiles,
+                                    onPickImages = note.pickPictures,
+                                    onPickFiles = note.pickFiles,
                                     remote = graph.webPictures::respond,
                                 ),
                             ).also {
                                 it.setBackgroundColor(background)
-                                (it as? SelectionWebView)?.hooks = hooks
-                                holder[0] = it
+                                (it as? SelectionWebView)?.hooks = note.hooks
+                                note.holder[0] = it
                             }
                         },
                         update = {
@@ -621,17 +304,17 @@ fun NoteRoute(
                     )
                 }
             }
-            if (!lightbox && showsFormatBar(editable, source, format)) {
+            if (!note.lightbox && showsFormatBar(note.editable, source, format)) {
                 FormatBar(
                     format,
                     onCommand = controller::format,
-                    onLink = { linking = true },
-                    onPicture = pickPictures,
-                    onAttach = pickFiles,
-                    onInsert = { sheet = BlockPurpose.INSERT },
+                    onLink = { note.linking = true },
+                    onPicture = note.pickPictures,
+                    onAttach = note.pickFiles,
+                    onInsert = { note.sheet = BlockPurpose.INSERT },
                     onBlock = tools::block,
-                    onTurnInto = { sheet = BlockPurpose.TURN_INTO },
-                    symbols = symbols,
+                    onTurnInto = { note.sheet = BlockPurpose.TURN_INTO },
+                    symbols = note.symbols,
                     onSymbol = controller::toggleSymbol,
                     // Settings → Symbols, as the web picker's Edit symbols… (T44, A747).
                     onEditSymbols = { appCommands.run("app.symbols") },
@@ -640,39 +323,52 @@ fun NoteRoute(
         }
     }
 
-    if (counting) WordCountDialog(counts, onDismiss = { counting = false })
-    sheet?.let { purpose ->
+    NoteDialogs(note, onSyncStorage)
+    note.panel?.let { tab ->
+        NotePanelHost(note, tab, openComments = if (commentsState.known) commentsState.open else 0, onOpenNote = onOpenNote, onLocalGraph = onLocalGraph)
+    }
+}
+
+/** What opens over the note (A6): Word Count, the block sheet, the sync icon's explanation, the move picker, tags and a link. */
+@Composable
+private fun NoteDialogs(note: NoteScreenState, onSyncStorage: () -> Unit) {
+    val graph = note.graph
+    val noteId = note.noteId
+    val controller = note.controller
+    val tools = note.tools
+    if (note.counting) WordCountDialog(note.counts, onDismiss = { note.counting = false })
+    note.sheet?.let { purpose ->
         BlockSheet(
             purpose,
-            choices,
+            note.choices,
             onQuery = { tools.requestBlocks(purpose, it) },
             onPick = { entry ->
-                sheet = null
-                holder[0]?.requestFocus()
+                note.sheet = null
+                note.focusPage()
                 if (purpose == BlockPurpose.INSERT) tools.insert(entry.id) else tools.turnInto(entry.id)
             },
             onDismiss = {
-                sheet = null
-                holder[0]?.requestFocus()
+                note.sheet = null
+                note.focusPage()
                 controller.refocus()
             },
         )
     }
-    if (explaining) NoteSyncExplanation(noteSync, onSyncStorage, onRetryPictures = retryPictures, onDismiss = { explaining = false })
-    moving?.let { pick ->
+    if (note.explaining) NoteSyncExplanation(note.noteSync, onSyncStorage, onRetryPictures = note::retryPictures, onDismiss = { note.explaining = false })
+    note.moving?.let { pick ->
         FolderPickerFor(
             graph,
-            title = "Move “${state.title.ifBlank { Items.UNTITLED }}” to…",
+            title = "Move “${note.editor.title.ifBlank { Items.UNTITLED }}” to…",
             current = pick.current,
             onPick = { folder ->
-                moving = null
-                graph.scope.launch { controller.notify(moveNoteAndSay(graph, noteId, folder)) }
+                note.moving = null
+                note.moveTo(folder)
             },
-            onDismiss = { moving = null },
+            onDismiss = { note.moving = null },
         )
     }
 
-    if (tagging) {
+    if (note.tagging) {
         // Every tag on any note (A577, A656): the phone's index, then what `/api/tags` adds; never
         // the note's own, frontmatter or inline.
         val known by remember(noteId) {
@@ -683,107 +379,120 @@ fun NoteRoute(
         }.collectAsStateWithLifecycle(emptyList())
         LaunchedEffect(Unit) { refreshTagList(graph) }
         TagSheet(
-            tags = tags,
-            editable = editable,
+            tags = note.tags,
+            editable = note.editable,
             known = known,
             onAdd = { tag -> tagRefused(controller.setTag(tag, on = true))?.let(controller::notify) },
             onRemove = { tag -> tagRefused(controller.setTag(tag, on = false))?.let(controller::notify) },
-            onDismiss = { tagging = false },
+            onDismiss = { note.tagging = false },
         )
     }
 
-    if (linking) {
+    if (note.linking) {
         LinkDialog(
-            current = format.href,
+            current = note.format.href,
             onApply = { address ->
-                linking = false
-                holder[0]?.requestFocus()
+                note.linking = false
+                note.focusPage()
                 controller.format(FormatCommand.LINK, address)
             },
             onDismiss = {
-                linking = false
-                holder[0]?.requestFocus()
+                note.linking = false
+                note.focusPage()
                 controller.refocus()
             },
         )
     }
+}
 
-    panel?.let { tab ->
-        NotePanel(
-            tab = tab,
-            onTab = openPanel,
-            onClose = { panelName = null },
-            openComments = if (commentsState.known) commentsState.open else 0,
-        ) { shown ->
-            when (shown) {
-                PanelTab.METADATA -> {
-                    val backlinksUi by backlinks.ui.collectAsStateWithLifecycle()
-                    val directory by remember { graph.store.observeDirectory() }.collectAsStateWithLifecycle(emptyList())
-                    val titles = remember(directory) { directory.associate { it.id to it.title.ifBlank { Items.UNTITLED } } }
-                    // Read again each time the tab shows, with the title as the phone has it (LK6).
-                    LaunchedEffect(Unit) { backlinks.load(state.title) }
-                    // Its tags as Room has them, frontmatter and inline (A656): the inline ones listed apart (A502).
-                    val allTags by remember(noteId) { graph.store.observeTagsOf(noteId) }.collectAsStateWithLifecycle(emptyList())
-                    InfoSheet(
-                        noteId = noteId,
-                        rows = infoRows(crumbs.map { it.name }, info, placed?.updatedAt, saved = noteSync, counts = counts),
-                        kind = infoKind(info),
-                        tags = tags,
-                        inline = remember(allTags, tags) { inlineTags(allTags, tags) },
-                        canTag = state.phase == EditorUiState.Phase.READY,
-                        fields = info?.fields,
-                        backlinks = backlinksUi,
-                        titleOf = { titles[it] },
-                        onTags = { tagging = true },
-                        onOpen = { id ->
-                            panelName = null
-                            onOpenNote(id)
-                        },
-                        onDismiss = { panelName = null },
-                        embedded = true,
-                    )
-                }
-                PanelTab.COMMENTS -> {
-                    // Leaving the tab ends a draft and the highlight, as closing the sheet did.
-                    DisposableEffect(comments) {
-                        onDispose {
-                            comments.cancelDraft()
-                            comments.setActive(null)
-                        }
+/** The note panel over the note (T51, A936): its Metadata (the Info sheet), Comments, Version History and Local Graph. */
+@Composable
+private fun NotePanelHost(note: NoteScreenState, tab: PanelTab, openComments: Int, onOpenNote: (String) -> Unit, onLocalGraph: () -> Unit) {
+    val graph = note.graph
+    val noteId = note.noteId
+    NotePanel(
+        tab = tab,
+        onTab = note::openPanel,
+        onClose = note::closePanel,
+        openComments = openComments,
+    ) { shown ->
+        when (shown) {
+            PanelTab.METADATA -> NoteInfoTab(note, onOpenNote)
+            PanelTab.COMMENTS -> {
+                val comments = note.comments
+                // Leaving the tab ends a draft and the highlight, as closing the sheet did.
+                DisposableEffect(comments) {
+                    onDispose {
+                        comments.cancelDraft()
+                        comments.setActive(null)
                     }
-                    NoteCommentsSheet(graph, noteId, comments, editable = editable, onDismiss = { panelName = null }, embedded = true)
                 }
-                // Back leaves the panel, not the note; history actions flush the editor first, then
-                // the exchange reaches the same page (T40 P3b, NT18–NT20).
-                PanelTab.HISTORY -> HistoryRoute(
-                    graph,
-                    noteId,
-                    flushEditor = { controller.flushAndWait() },
-                    exchangeNow = { graph.sync.syncNote(noteId) },
-                    onBack = { panelName = null },
-                    embedded = true,
+                NoteCommentsSheet(graph, noteId, comments, editable = note.editable, onDismiss = note::closePanel, embedded = true)
+            }
+            // Back leaves the panel, not the note; history actions flush the editor first, then
+            // the exchange reaches the same page (T40 P3b, NT18–NT20).
+            PanelTab.HISTORY -> HistoryRoute(
+                graph,
+                noteId,
+                flushEditor = { note.controller.flushAndWait() },
+                exchangeNow = { graph.sync.syncNote(noteId) },
+                onBack = note::closePanel,
+                embedded = true,
+            )
+            PanelTab.GRAPH -> {
+                val model by remember {
+                    graph.store.observeGraph().atMostEvery(GRAPH_BATCH_MS).map(GraphInput::model).flowOn(Dispatchers.Default)
+                }.collectAsStateWithLifecycle(null)
+                LocalGraphPanel(
+                    title = note.editor.title,
+                    neighbours = remember(model, noteId) { model?.let { neighbours(it, noteId) } },
+                    onOpen = { id ->
+                        note.closePanel()
+                        onOpenNote(id)
+                    },
+                    // The whole local graph, on its own screen (the note's page closes for it, A418).
+                    onOpenGraph = {
+                        note.closePanel()
+                        onLocalGraph()
+                    },
                 )
-                PanelTab.GRAPH -> {
-                    val model by remember {
-                        graph.store.observeGraph().atMostEvery(GRAPH_BATCH_MS).map(GraphInput::model).flowOn(Dispatchers.Default)
-                    }.collectAsStateWithLifecycle(null)
-                    LocalGraphPanel(
-                        title = state.title,
-                        neighbours = remember(model, noteId) { model?.let { neighbours(it, noteId) } },
-                        onOpen = { id ->
-                            panelName = null
-                            onOpenNote(id)
-                        },
-                        // The whole local graph, on its own screen (the note's page closes for it, A418).
-                        onOpenGraph = {
-                            panelName = null
-                            onLocalGraph()
-                        },
-                    )
-                }
             }
         }
     }
+}
+
+/** The panel's Metadata tab (LK5, LK6, A502, A656): the note's details, its tags and the notes linking here. */
+@Composable
+private fun NoteInfoTab(note: NoteScreenState, onOpenNote: (String) -> Unit) {
+    val graph = note.graph
+    val noteId = note.noteId
+    val backlinksUi by note.backlinks.ui.collectAsStateWithLifecycle()
+    val directory by remember { graph.store.observeDirectory() }.collectAsStateWithLifecycle(emptyList())
+    val titles = remember(directory) { directory.associate { it.id to it.title.ifBlank { Items.UNTITLED } } }
+    // Read again each time the tab shows, with the title as the phone has it (LK6).
+    LaunchedEffect(Unit) { note.backlinks.load(note.editor.title) }
+    // Its tags as Room has them, frontmatter and inline (A656): the inline ones listed apart (A502).
+    val allTags by remember(noteId) { graph.store.observeTagsOf(noteId) }.collectAsStateWithLifecycle(emptyList())
+    val tags = note.tags
+    val info = note.info
+    InfoSheet(
+        noteId = noteId,
+        rows = infoRows(note.crumbs.map { it.name }, info, note.placed?.updatedAt, saved = note.noteSync, counts = note.counts),
+        kind = infoKind(info),
+        tags = tags,
+        inline = remember(allTags, tags) { inlineTags(allTags, tags) },
+        canTag = note.ready,
+        fields = info?.fields,
+        backlinks = backlinksUi,
+        titleOf = { titles[it] },
+        onTags = { note.tagging = true },
+        onOpen = { id ->
+            note.closePanel()
+            onOpenNote(id)
+        },
+        onDismiss = note::closePanel,
+        embedded = true,
+    )
 }
 
 /**
@@ -839,9 +548,6 @@ internal fun NoteBody(
         }
     }
 }
-
-/** Where the move picker starts: the folder the note is in or going to (null: the top level). */
-private data class MovePick(val current: String?)
 
 /**
  * The note's ⋮ menu (T51, A937), in the web's groups with the phone's own tools: the panel's
@@ -1140,10 +846,3 @@ private fun PeriodChip(target: FromEditor.NavTarget, held: Boolean, tag: String,
         },
     )
 }
-
-/** The fonts until the settings are read: the theme's own, at the default size (A944). */
-private val DEFAULT_FONTS = ToEditor.Fonts(
-    app.penmoss.engine.settings.FontSettings.THEME,
-    app.penmoss.engine.settings.FontSettings.THEME,
-    app.penmoss.engine.settings.FontSettings.SIZE_DEFAULT,
-)
