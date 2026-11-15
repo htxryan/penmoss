@@ -69,7 +69,7 @@ import {
   showFirst,
 } from './windows/capture-window';
 import { createMainWindow, openInMain } from './windows/main-window';
-import { applyBackground, applyMode } from './windows/window-common';
+import { applyBackground, applyMode, startQuitting } from './windows/window-common';
 
 // --- IPC: only from the app's own pages ---
 
@@ -201,6 +201,8 @@ if (!app.requestSingleInstanceLock()) {
   // back, and the others stay minimized; otherwise the main window, made again when only note
   // windows are open. Electron tells macOS not to restore one itself when none is visible.
   app.on('activate', (_event, hasVisibleWindows) => {
+    // Quitting, the windows are going (A1577): none comes back or is made.
+    if (state.quitting) return;
     const minimized = hasVisibleWindows ? null : windows.lastMinimized();
     if (minimized) {
       minimized.restore();
@@ -211,6 +213,8 @@ if (!app.requestSingleInstanceLock()) {
   });
   app.on('before-quit', () => {
     state.quitting = true;
+    // Every window off the screen at once, storing side by side (A1577).
+    startQuitting();
   });
   // Install and Restart (PEN-120, A1337): Electron's quitAndInstall closes every window before
   // `before-quit`, so the quit starts here, or the capture window would only hide, the app would
@@ -219,6 +223,7 @@ if (!app.requestSingleInstanceLock()) {
   autoUpdater.on('before-quit-for-update', () => {
     state.quitting = true;
     state.updating = true;
+    startQuitting();
   });
   app.on('will-quit', () => {
     // No git outlives the app (A853): a sync still running is stopped, the notebook keeps it.

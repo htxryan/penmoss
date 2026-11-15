@@ -121,7 +121,7 @@ Some changes ask macOS to check that it is you first, with **Touch ID or your Ma
 
 ## Quitting
 
-When you quit, or close a window, Penmoss saves what you typed and pushes the changes waiting, for up to 10 seconds; the notebook says **Pushing…** meanwhile. A push that cannot finish in time goes first at the next launch.
+When you quit, or close a window, it goes from the screen at once. Out of sight, Penmoss still saves what you typed and pushes the changes waiting, for up to 10 seconds, before the window or the app ends. A push that cannot finish in time goes first at the next launch.
 
 ## Where it keeps things
 

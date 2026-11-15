@@ -12,6 +12,9 @@
  * - **Note windows:** `/window/notes/<id>`, one note with no sidebar. They open 720×800,
  *   cascading from the window in front, are never saved in `window-state.json`, and are not
  *   restored after a relaunch.
+ * - **Closing windows:** off the screen at once, while their pages store and push (A1577).
+ *   Their IPC is still answered, but they are no longer the main window, a note window, in front
+ *   or minimized: a new main window can open beside one, and nothing is sent to one.
  *
  * The capture window is not in it: it never gets menus, menu commands or the main and note
  * windows' IPC (A503).
@@ -77,6 +80,8 @@ interface Entry {
   readonly kind: WindowKind;
   /** The menus this window's page sent last (A222), shown while it is in front. */
   menus: readonly MenuModel[] | null;
+  /** Closing (A1577): hidden, its page storing, gone once it has. */
+  closing: boolean;
 }
 
 /**
@@ -96,8 +101,26 @@ export class WindowRegistry<
     if (kind === 'main' && this.main && this.main !== window) {
       throw new Error('There is one main window');
     }
-    this.entries.set(window, { kind, menus: null });
+    this.entries.set(window, { kind, menus: null, closing: false });
     this.order.push(window);
+  }
+
+  /**
+   * `window` started closing (A1577): hidden, its page still storing. Its IPC is answered
+   * until it is removed, but it is no longer main, a note window, in front or minimized.
+   */
+  closing(window: W): void {
+    const entry = this.entries.get(window);
+    if (!entry) return;
+    entry.closing = true;
+    this.order = this.order.filter((other) => other !== window);
+    this.minimizedOrder = this.minimizedOrder.filter((other) => other !== window);
+  }
+
+  /** Whether `window` is a main or note window that is not closing. */
+  isOpen(window: W): boolean {
+    const entry = this.entries.get(window);
+    return entry !== undefined && !entry.closing && window.isDestroyed?.() !== true;
   }
 
   remove(window: W): void {
@@ -119,32 +142,40 @@ export class WindowRegistry<
     return window ? this.entries.get(window)!.kind : null;
   }
 
-  /** The main window; one destroyed but not yet removed (its `closed` still to come) is not. */
+  /**
+   * The main window; one destroyed but not yet removed (its `closed` still to come) is not,
+   * nor one closing (A1577).
+   */
   get main(): W | null {
     for (const [window, entry] of this.entries) {
-      if (entry.kind === 'main' && window.isDestroyed?.() !== true) return window;
+      if (entry.kind === 'main' && !entry.closing && window.isDestroyed?.() !== true) {
+        return window;
+      }
     }
     return null;
   }
 
+  /** The note windows, none closing. */
   notes(): W[] {
-    return [...this.entries].filter(([, entry]) => entry.kind === 'note').map(([w]) => w);
+    return [...this.entries]
+      .filter(([, entry]) => entry.kind === 'note' && !entry.closing)
+      .map(([w]) => w);
   }
 
-  /** Every main and note window. */
+  /** Every main and note window, none closing. */
   all(): W[] {
-    return [...this.entries.keys()];
+    return [...this.entries].filter(([, entry]) => !entry.closing).map(([w]) => w);
   }
 
   /** `window` came to the front (its `focus` event). */
   focused(window: W): void {
-    if (!this.entries.has(window)) return;
+    if (!this.entries.has(window) || this.entries.get(window)!.closing) return;
     this.order = [...this.order.filter((other) => other !== window), window];
   }
 
   /** `window` was minimized (its `minimize` event). */
   minimized(window: W): void {
-    if (!this.entries.has(window)) return;
+    if (!this.entries.has(window) || this.entries.get(window)!.closing) return;
     this.minimizedOrder = [...this.minimizedOrder.filter((other) => other !== window), window];
   }
 
