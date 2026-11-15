@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.history
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4

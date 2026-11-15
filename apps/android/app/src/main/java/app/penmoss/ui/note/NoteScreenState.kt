@@ -73,7 +73,7 @@ import kotlinx.coroutines.withContext
 import app.penmoss.ui.common.FolderItem
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.readableTheme
-import app.penmoss.ui.historyFailure
+import app.penmoss.ui.history.historyFailure
 import app.penmoss.ui.folders.moveNoteAndSay
 import app.penmoss.ui.trash.trashAfterClosing
 
