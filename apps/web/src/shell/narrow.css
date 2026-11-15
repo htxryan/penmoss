@@ -479,7 +479,9 @@
   }
 
   .settings-nav {
-    position: static;
+    /* Relative, not static: a notebook entry's sr-only label is absolute and would escape the
+       row's scroller, widening the page (PEN-146). */
+    position: relative;
     display: flex;
     gap: 0.4rem;
     margin: 0 -1rem;

@@ -78,7 +78,7 @@ test('Back and Forward step through the app’s pages, greyed out at either end 
   await expect(page).toHaveURL(TRASH);
   await forward.click();
   await forward.click();
-  await expect(page).toHaveURL(/\/settings\/display$/);
+  await expect(page).toHaveURL(/\/settings\/sidebar$/);
   await expect(forward).toBeDisabled();
 
   // The browser's own Back agrees: one history.

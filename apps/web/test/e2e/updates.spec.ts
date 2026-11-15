@@ -314,7 +314,7 @@ test('an Alpha build switched to Stable says it moves to Stable with the next st
   host.appVersion = '0.2.1-alpha.12';
   await page.goto('/settings/updates');
   const settings = page.getByTestId('updates-settings');
-  await expect(settings).toContainText('This is version 0.2.1-alpha.12.');
+  await expect(settings.getByTestId('updates-version')).toContainText('Penmoss build 12');
   await channel(page).getByText('Alpha', { exact: true }).click();
   await expect(settings.getByTestId('updates-status')).toHaveText('Penmoss is up to date.');
 
