@@ -50,6 +50,13 @@ val releaseForSideload = providers.environmentVariable("PENMOSS_RELEASE_SIGNING"
 val versionCodeFromEnv = providers.environmentVariable("PENMOSS_VERSION_CODE").orNull?.toIntOrNull() ?: 1
 val versionNameFromEnv = providers.environmentVariable("PENMOSS_VERSION_NAME").orNull?.takeIf { it.isNotBlank() } ?: "0.1.0"
 
+/**
+ * The app's Robolectric tests run in forks (A1523): half the machine's CPUs, from 1 to 4, so 2 on
+ * CI's hosted runner and 4 on this Mac, whose 18 are shared (W12). PENMOSS_TEST_FORKS sets it.
+ */
+val testForks: Int = providers.environmentVariable("PENMOSS_TEST_FORKS").orNull?.toIntOrNull()?.coerceAtLeast(1)
+    ?: (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
+
 android {
     namespace = "app.penmoss"
     compileSdk = 37
@@ -131,6 +138,7 @@ android {
             isIncludeAndroidResources = true
             all { test ->
                 test.maxHeapSize = "1g"
+                test.maxParallelForks = testForks
                 test.systemProperty("robolectric.logging.enabled", "false")
                 // Robolectric's Android 16 sets up shared memory through JDK internals.
                 test.jvmArgs("--add-opens=java.base/jdk.internal.access=ALL-UNNAMED", "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")
