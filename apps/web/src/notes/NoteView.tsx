@@ -267,7 +267,7 @@ export function NoteView({
   const [error, setError] = useState<string | null>(null);
   /**
    * The note holds node types a later version of Penmoss wrote (A158): it shows
-   * read-only, as text, and stays as it is on the server for that version.
+   * read-only, as text, and stays as it is in the notebook for that version.
    */
   const [unsupported, setUnsupported] = useState<{
     readonly types: readonly string[];
@@ -275,7 +275,6 @@ export function NoteView({
   } | null>(null);
   /** Why a pasted or dropped file was not added; cleared after a while. */
   const [notice, setNotice] = useState<string | null>(null);
-  /** The conflict copy made when this note was restored on the server (A525), until dismissed. */
   /** Bumped when the server's copy replaced the local one (A5), to reopen the note. */
   const [generation, setGeneration] = useState(0);
   /** The read-only markdown source view (T11): null while the editor shows. */
