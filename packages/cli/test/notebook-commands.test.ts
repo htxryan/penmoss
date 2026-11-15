@@ -32,6 +32,7 @@ import {
   machine as machineAt,
   MemoryHosts,
   rpc,
+  SERVER_PUSH_DELAY_MS,
   testRoot,
   type MachineOptions,
   type McpReply,
@@ -389,6 +390,142 @@ describe('penmoss notebook', () => {
   });
 });
 
+describe('penmoss mcp, every notebook (PEN-151)', () => {
+  const call = (id: number, name: string, args: Record<string, unknown>) =>
+    rpc(id, 'tools/call', { name, arguments: args });
+  const replies = (stdout: string) =>
+    stdout
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line) as McpReply);
+
+  /** Two notebooks, Personal and Work, each with a person's clone and an agent copy. */
+  async function twoNotebooks(cli: ReturnType<typeof machine>) {
+    const personal = remote('personal');
+    const work = remote('work');
+    expect((await cli(['notebook', 'add', personal, '--name', 'Personal'])).code).toBe(0);
+    expect((await cli(['notebook', 'add', work, '--name', 'Work'])).code).toBe(0);
+    await cli(['notebook', 'add', personal, '--name', 'personal-agent', '--agent', 'Agent']);
+    await cli(['notebook', 'add', work, '--name', 'work-agent', '--agent', 'Agent']);
+    return { personal, work };
+  }
+
+  it('serves every notebook with an agent copy, routing each call to its notebook', async () => {
+    const cli = machine('m');
+    const { personal, work } = await twoNotebooks(cli);
+    // A notebook with only a person's clone is not served.
+    await cli(['notebook', 'add', remote('diary'), '--name', 'Diary']);
+    const served = await cli(['mcp'], {
+      lines: [
+        ...HANDSHAKE,
+        rpc(2, 'tools/list'),
+        call(3, 'create_note', { title: 'Nowhere yet' }),
+        call(4, 'create_note', { notebook: 'Personal', title: 'Groceries', markdown: 'Eggs' }),
+        call(5, 'create_note', { notebook: 'work', title: 'Standup', markdown: 'Eggs too' }),
+        call(6, 'search_notes', { query: 'eggs' }),
+      ],
+    });
+    expect(served.code, served.stderr).toBe(0);
+    const [init, list, refused, groceries, standup, found] = replies(served.stdout);
+    const instructions = (init!.result as unknown as { instructions: string }).instructions;
+    expect(instructions).toContain('served together: Personal');
+    expect(instructions).toContain('Work');
+    expect(instructions).not.toContain('Diary');
+    expect(list!.result.tools).toHaveLength(35);
+    expect(refused!.result.isError).toBe(true);
+    expect(JSON.stringify(refused!.result)).toContain('create_note needs notebook here');
+    expect(groceries!.result.structuredContent).toMatchObject({ notebook: 'Personal' });
+    expect(standup!.result.structuredContent).toMatchObject({ notebook: 'Work' });
+    const results = found!.result.structuredContent?.results as unknown as Array<{
+      notebook: string;
+    }>;
+    expect(results.map((hit) => hit.notebook).sort()).toEqual(['Personal', 'Work']);
+    // Each edit went to its own notebook, as its agent copy's writer.
+    expect(hosts.files(personal)).toContain('Groceries.md');
+    expect(hosts.files(personal)).not.toContain('Standup.md');
+    expect(hosts.files(work)).toContain('Standup.md');
+    expect(hosts.log(personal)[0]!.author).toBe('Agent');
+    expect(hosts.log(work)[0]!.author).toBe('Agent');
+  });
+
+  it('serves a notebook added while it runs, from the next call', async () => {
+    const cli = machine('m');
+    await twoNotebooks(cli);
+    const garden = remote('garden');
+    const served = await cli(['mcp'], {
+      lines: [
+        ...HANDSHAKE,
+        call(2, 'create_note', { notebook: 'Garden', title: 'Too soon' }),
+        async () => {
+          expect((await cli(['notebook', 'add', garden, '--name', 'Garden'])).code).toBe(0);
+          await cli(['notebook', 'add', garden, '--name', 'garden-agent', '--agent', 'Agent']);
+        },
+        call(3, 'create_note', { notebook: 'Garden', title: 'Tomatoes' }),
+      ],
+    });
+    expect(served.code, served.stderr).toBe(0);
+    const [, early, made] = replies(served.stdout);
+    expect(JSON.stringify(early!.result)).toContain('No notebook here is called “Garden”');
+    expect(made!.result.structuredContent).toMatchObject({ notebook: 'Garden', created: true });
+    expect(hosts.files(garden)).toContain('Tomatoes.md');
+  });
+
+  it('two servers at once share the clones, and every edit lands', async () => {
+    const cli = machine('m', { pushDelayMs: SERVER_PUSH_DELAY_MS });
+    const { personal, work } = await twoNotebooks(cli);
+    const edits = (session: string) => [
+      ...HANDSHAKE,
+      ...[1, 2, 3].flatMap((n) => [
+        call(10 + n, 'create_note', { notebook: 'Personal', title: `${session} P${n}` }),
+        call(20 + n, 'create_note', { notebook: 'Work', title: `${session} W${n}` }),
+      ]),
+    ];
+    const [a, b] = await Promise.all([
+      cli(['mcp'], { lines: edits('A') }),
+      cli(['mcp'], { lines: edits('B') }),
+    ]);
+    expect(a.code, a.stderr).toBe(0);
+    expect(b.code, b.stderr).toBe(0);
+    for (const reply of [...replies(a.stdout), ...replies(b.stdout)].slice(1)) {
+      expect(reply.result.isError, JSON.stringify(reply.result)).toBeUndefined();
+    }
+    for (const session of ['A', 'B']) {
+      for (const n of [1, 2, 3]) {
+        expect(hosts.files(personal)).toContain(`${session} P${n}.md`);
+        expect(hosts.files(work)).toContain(`${session} W${n}.md`);
+      }
+    }
+  });
+
+  it('gives each notebook with edits left its own detached sync when it stops', async () => {
+    const cli = machine('m', { pushDelayMs: SERVER_PUSH_DELAY_MS });
+    const { personal, work } = await twoNotebooks(cli);
+    await cli(['notebook', 'add', remote('quiet'), '--name', 'Quiet']);
+    await cli(['notebook', 'add', remote('quiet'), '--name', 'quiet-agent', '--agent', 'Agent']);
+    const detached: string[][] = [];
+    const served = await cli(['mcp'], {
+      lines: [
+        ...HANDSHAKE,
+        call(2, 'create_note', { notebook: 'Personal', title: 'Left for later' }),
+        call(3, 'create_note', { notebook: 'Work', title: 'Also later' }),
+        call(4, 'list_recent', { notebook: 'Quiet' }),
+      ],
+      signal: 'SIGTERM',
+      detached,
+    });
+    expect(served.code, served.stderr).toBe(0);
+    expect(served.stderr).toContain('stopped by SIGTERM: syncing Personal in the background');
+    expect(detached.sort()).toEqual([
+      ['notebook', 'sync', 'personal-agent', '--wait', '120'],
+      ['notebook', 'sync', 'work-agent', '--wait', '120'],
+    ]);
+    expect(hosts.files(personal)).not.toContain('Left for later.md');
+    for (const args of detached) expect((await cli(args)).code).toBe(0);
+    expect(hosts.files(personal)).toContain('Left for later.md');
+    expect(hosts.files(work)).toContain('Also later.md');
+  });
+});
+
 describe('penmoss mcp --notebook', () => {
   it('serves the tools over stdio, and pushes what was written when it stops', async () => {
     const url = remote('mcp');
@@ -542,11 +679,11 @@ describe('penmoss mcp --notebook', () => {
     expect(hosts.head(url)).toBeNull();
   });
 
-  it('needs --notebook', async () => {
+  it('needs --notebook for a channel, and --channel for --name', async () => {
     const cli = machine('m');
-    const usage = await cli(['mcp']);
+    const usage = await cli(['mcp', '--channel']);
     expect(usage.code).toBe(2);
-    expect(usage.stderr).toContain('missing --notebook: name the git notebook to serve');
+    expect(usage.stderr).toContain('--channel needs --notebook for now');
     const named = await cli(['mcp', '--notebook', 'nb', '--name', 'x']);
     expect(named.code).toBe(2);
     expect(named.stderr).toContain('--name names a channel session: add --channel');
