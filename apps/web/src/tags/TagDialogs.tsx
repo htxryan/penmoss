@@ -1,6 +1,7 @@
 import { normaliseTag, tagMatches } from '@penmoss/core/tags';
 import { Icon } from '@penmoss/ui/icons';
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useId, useMemo, useState } from 'react';
+import { ConfirmDialog } from '../shell/ConfirmDialog';
 import {
   deleteCount,
   filterKey,
@@ -11,53 +12,6 @@ import {
   tagList,
   type TagRow,
 } from './manage';
-
-/** A modal confirm (`dialog.confirm`), open while mounted; Escape cancels. */
-function ConfirmDialog({
-  title,
-  testId,
-  wide = false,
-  onCancel,
-  onSubmit,
-  children,
-}: {
-  readonly title: string;
-  readonly testId: string;
-  readonly wide?: boolean;
-  readonly onCancel: () => void;
-  readonly onSubmit: () => void;
-  readonly children: ReactNode;
-}) {
-  const ref = useRef<HTMLDialogElement>(null);
-  const titleId = useId();
-  useEffect(() => {
-    const dialog = ref.current;
-    if (dialog && !dialog.open) dialog.showModal();
-  }, []);
-  return (
-    <dialog
-      ref={ref}
-      className={wide ? 'confirm tags-dialog' : 'confirm'}
-      aria-labelledby={titleId}
-      data-testid={testId}
-      onCancel={(event) => {
-        event.preventDefault();
-        onCancel();
-      }}
-    >
-      <form
-        method="dialog"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSubmit();
-        }}
-      >
-        <h2 id={titleId}>{title}</h2>
-        {children}
-      </form>
-    </dialog>
-  );
-}
 
 /** The tag with the most notes (the first of those tied): the one a merge keeps at first. */
 function mostNotes(tags: readonly string[], rows: readonly TagRow[]): string | null {
@@ -168,7 +122,7 @@ export function MergeDialog({
     <ConfirmDialog
       title={title}
       testId="tags-merge-dialog"
-      wide
+      className="confirm tags-dialog"
       onCancel={onCancel}
       onSubmit={() => {
         if (ready) run();

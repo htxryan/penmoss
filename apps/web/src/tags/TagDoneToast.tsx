@@ -1,6 +1,7 @@
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useState } from 'react';
 import { showToast } from '../toasts/toasts';
+import { ActionToast } from '../toasts/ActionToast';
 import { ToastSlot } from '../toasts/ToastSlot';
 
 /** What a rename, merge or delete did (the Tags page, the sidebar's Tags), with its Undo. */
@@ -61,45 +62,27 @@ export function TagDoneToast({
   return (
     <ToastSlot>
       {done ? (
-        <div
-          className="toast toast-with-action"
-          data-tone="done"
-          data-testid="tag-done-toast"
-          onPointerEnter={() => setHeld(true)}
-          onPointerLeave={() => setHeld(false)}
-          onFocus={() => setHeld(true)}
-          onBlur={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget)) setHeld(false);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              event.stopPropagation();
-              onClose();
-            }
-          }}
+        <ActionToast
+          tone="done"
+          testId="tag-done-toast"
+          icon={<Icon name="check" className="toast-glyph" />}
+          actions={
+            <button
+              type="button"
+              className="toast-action"
+              data-ui="submit"
+              disabled={busy}
+              onClick={() => void undo()}
+              data-testid="tag-undo"
+            >
+              Undo
+            </button>
+          }
+          onDismiss={onClose}
+          onHold={setHeld}
         >
-          <Icon name="check" className="toast-glyph" />
-          <span className="toast-text">{done.text}</span>
-          <button
-            type="button"
-            className="toast-action"
-            data-ui="submit"
-            disabled={busy}
-            onClick={() => void undo()}
-            data-testid="tag-undo"
-          >
-            Undo
-          </button>
-          <button
-            type="button"
-            className="toast-close"
-            data-ui="dismiss"
-            aria-label="Dismiss"
-            onClick={onClose}
-          >
-            <Icon name="close" size={14} />
-          </button>
-        </div>
+          {done.text}
+        </ActionToast>
       ) : null}
     </ToastSlot>
   );

@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useNoteList } from '../notes/hooks';
-import { Menu } from '../shell/Menu';
+import { Menu, MenuItem } from '../shell/Menu';
 import { SourceScope } from '../sources/context';
 import { useSourcesState } from '../sources/hooks';
 import type { Source } from '../sources/registry';
@@ -576,32 +576,6 @@ function TagRowView({
       <span className="tags-name-parent">#{marked(row.parent, 0, at, filter)}</span>
       {marked(row.name, row.parent.length, at, filter)}
     </button>,
-  );
-}
-
-function MenuItem({
-  icon,
-  danger = false,
-  onClick,
-  children,
-}: {
-  readonly icon: 'search' | 'pencil' | 'branch' | 'trash';
-  readonly danger?: boolean;
-  readonly onClick: () => void;
-  readonly children: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="menuitem"
-      tabIndex={-1}
-      className={danger ? 'menu-item danger' : 'menu-item'}
-      data-ui="item"
-      onClick={onClick}
-    >
-      <Icon name={icon} />
-      <span className="menu-label">{children}</span>
-    </button>
   );
 }
 

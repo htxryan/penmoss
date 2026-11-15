@@ -2,6 +2,7 @@ import { Icon } from '@penmoss/ui/icons';
 import { useState } from 'react';
 import { useWorkspaceState } from './hooks';
 import { recoveredText } from './recovered';
+import { ActionToast } from '../toasts/ActionToast';
 import { ToastSlot } from '../toasts/ToastSlot';
 
 /**
@@ -16,19 +17,14 @@ export function RecoveredNotice() {
   return (
     <ToastSlot>
       {shown ? (
-        <div className="toast toast-with-action" data-tone="info" data-testid="folders-recovered">
-          <Icon name="folder" />
-          <span>{recoveredText(shown)}</span>
-          <button
-            type="button"
-            className="toast-close"
-            data-ui="dismiss"
-            aria-label="Dismiss"
-            onClick={() => setDismissed(shown.at)}
-          >
-            <Icon name="close" size={14} />
-          </button>
-        </div>
+        <ActionToast
+          tone="info"
+          testId="folders-recovered"
+          icon={<Icon name="folder" />}
+          onDismiss={() => setDismissed(shown.at)}
+        >
+          {recoveredText(shown)}
+        </ActionToast>
       ) : null}
     </ToastSlot>
   );

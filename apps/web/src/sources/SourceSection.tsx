@@ -2,6 +2,7 @@ import { Icon } from '@penmoss/ui/icons';
 import { useId, useRef, useState, type MouseEvent } from 'react';
 import { gitNotebookPath, linkHandler, navigate, useLocation } from '../router';
 import { ContextMenu } from '../shell/ContextMenu';
+import { MenuItem } from '../shell/Menu';
 import { devicePref, useDevicePref } from '../shell/device-pref';
 import { TIME_MACHINE_PATH, timeMachinePath } from '../time-machine/path';
 import { FolderTree } from '../workspace/FolderTree';
@@ -208,36 +209,26 @@ export function SourceSection({
       </header>
       {menu ? (
         <ContextMenu label={`Notebook ${source.name}`} x={menu.x} y={menu.y} onClose={closeMenu}>
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            className="menu-item"
-            data-ui="item"
+          <MenuItem
+            icon="pencil"
             data-testid="notebook-rename"
             onClick={() => {
               setMenu(null);
               setRenaming(true);
             }}
           >
-            <Icon name="pencil" />
-            <span className="menu-label">Rename Notebook</span>
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            className="menu-item"
-            data-ui="item"
+            Rename Notebook
+          </MenuItem>
+          <MenuItem
+            icon="settings"
             data-testid="notebook-settings"
             onClick={() => {
               setMenu(null);
               navigate(gitNotebookPath(source.id));
             }}
           >
-            <Icon name="settings" />
-            <span className="menu-label">Notebook Settings</span>
-          </button>
+            Notebook Settings
+          </MenuItem>
         </ContextMenu>
       ) : null}
       {renaming ? (
