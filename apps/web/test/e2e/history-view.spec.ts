@@ -107,11 +107,14 @@ test('View shows a version beside the note as it is now, and restores it', async
     side(page, 'right').locator('p', { hasText: 'Banner when sync stops' }),
   ).not.toHaveAttribute('data-change');
   // The top actions: short names, full ones as their names; Revert on every version (A1575).
-  // The first switches Diff, the default, to Full File (A1572).
+  // Wrap Lines first, on; then the switch from Diff, the default, to Full File (A1572).
   const actions = view(page).locator('.history-view-head > button');
-  await expect(actions).toHaveText(['Show Full File', 'Restore', 'Revert', 'Copy', ''], {
-    useInnerText: true,
-  });
+  await expect(actions).toHaveText(
+    ['Wrap Lines', 'Show Full File', 'Restore', 'Revert', 'Copy', ''],
+    {
+      useInnerText: true,
+    },
+  );
   // Close is the app's × for a dialog, its name and tooltip in words.
   const close = view(page).getByRole('button', { name: 'Close', exact: true });
   await expect(close.locator('svg[data-icon="close"]')).toBeVisible();

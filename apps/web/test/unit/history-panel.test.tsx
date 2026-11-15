@@ -507,33 +507,45 @@ describe('Version History as a list over a docked preview (Ryan’s review of #1
     // Each block's line in the markdown, in its side's gutter; the gap's is empty.
     expect(numbers('left')).toEqual(['2', '5', '']);
     expect(numbers('right')).toEqual(['2', '5', '7']);
-    // The top actions keep the short names; the first switches Diff (the default) to Full File.
+    // The top actions keep the short names: Wrap Lines, on; then the switch from Diff (the
+    // default) to Full File.
     const actions = [...dialog.querySelectorAll<HTMLButtonElement>('.history-view-head button')];
+    expect(actions[0]!.getAttribute('aria-pressed')).toBe('true');
     expect(actions.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Wrap Lines',
       'Show Full File',
       'Restore This Version',
       'Revert This Edit',
       'Copy Text',
       'Close',
     ]);
-    expect(actions[0]!.querySelector('.history-view-long')!.textContent).toBe('Show Full File');
-    expect(actions[0]!.querySelector('.history-view-short')!.textContent).toBe('Full File');
-    expect(actions.slice(1, 4).map((button) => button.textContent)).toEqual([
+    expect(actions[0]!.textContent).toBe('Wrap Lines');
+    expect(actions[1]!.querySelector('.history-view-long')!.textContent).toBe('Show Full File');
+    expect(actions[1]!.querySelector('.history-view-short')!.textContent).toBe('Full File');
+    expect(actions.slice(2, 5).map((button) => button.textContent)).toEqual([
       'Restore',
       'Revert',
       'Copy',
     ]);
     // Close is the app's × for a dialog (DialogClose), with no words of its own.
-    expect(actions[4]!.textContent).toBe('');
-    expect(actions[4]!.querySelector('svg[data-icon="close"]')).not.toBeNull();
-    expect(actions[4]!.dataset['tip']).toBe('Close (Esc)');
+    expect(actions[5]!.textContent).toBe('');
+    expect(actions[5]!.querySelector('svg[data-icon="close"]')).not.toBeNull();
+    expect(actions[5]!.dataset['tip']).toBe('Close (Esc)');
     // The toggle flips, and this device remembers it.
-    act(() => actions[0]!.click());
-    expect(actions[0]!.getAttribute('aria-label')).toBe('Show Diff');
+    act(() => actions[1]!.click());
+    expect(actions[1]!.getAttribute('aria-label')).toBe('Show Diff');
     expect(localStorage.getItem('penmoss.historyView.mode')).toBe('full');
-    act(() => actions[0]!.click());
-    expect(actions[0]!.getAttribute('aria-label')).toBe('Show Full File');
+    act(() => actions[1]!.click());
+    expect(actions[1]!.getAttribute('aria-label')).toBe('Show Full File');
     expect(localStorage.getItem('penmoss.historyView.mode')).toBeNull();
+    // Wrap Lines turns off, and this device remembers that too.
+    act(() => actions[0]!.click());
+    expect(actions[0]!.getAttribute('aria-pressed')).toBe('false');
+    expect(dialog.querySelector('.history-view-grid')!.getAttribute('data-wrap')).toBe('off');
+    expect(localStorage.getItem('penmoss.historyView.wrap')).toBe('off');
+    act(() => actions[0]!.click());
+    expect(dialog.querySelector('.history-view-grid')!.hasAttribute('data-wrap')).toBe(false);
+    expect(localStorage.getItem('penmoss.historyView.wrap')).toBeNull();
 
     // Another version from the list: only the left side changes. A phone's can be reverted too
     // (A1575).

@@ -64,6 +64,13 @@ const viewMode = devicePref<ViewMode>(VIEW_MODE_KEY, {
   serialise: (mode) => (mode === 'diff' ? null : mode),
 });
 
+/** Wrap Lines, as last chosen on this device: on unless it was turned off (Ryan's review of #210). */
+export const VIEW_WRAP_KEY = 'penmoss.historyView.wrap';
+const viewWrap = devicePref<boolean>(VIEW_WRAP_KEY, {
+  parse: (stored) => stored !== 'off',
+  serialise: (wrap) => (wrap ? null : 'off'),
+});
+
 /** The toggle's names, for what it switches to: in full, and short for a narrow head. */
 const MODE_NAMES: Record<ViewMode, { readonly long: string; readonly short: string }> = {
   diff: { long: 'Show Diff', short: 'Diff' },
@@ -360,6 +367,7 @@ export function VersionView({
   const same = rows !== null && rows !== undefined && !different;
 
   const [mode, setMode] = useDevicePref(viewMode);
+  const [wrap, setWrap] = useDevicePref(viewWrap);
   /** The folds opened, by their first row, for these rows: another version's start closed. */
   const [opened, setOpened] = useState<{
     readonly rows: readonly CompareRow[] | null;
@@ -377,7 +385,7 @@ export function VersionView({
   const next: ViewMode = mode === 'diff' ? 'full' : 'diff';
 
   // A head too narrow for every word: the toggle's short name, then words drop (as History's).
-  const [fit, headRef] = useFit(3, canRevert);
+  const [fit, headRef] = useFit(3, `${canRevert} ${same}`);
 
   /** A link in either side does not leave: the sides are to read. */
   const keepLinks = (event: MouseEvent<HTMLElement>) => {
@@ -415,6 +423,21 @@ export function VersionView({
           <span className="history-view-space" />
           {/* Named for what it switches to; short in a narrow head (`data-fit`). None when the
               version is the note as it is now: both modes show the one placeholder. */}
+          {same ? null : (
+            <button
+              type="button"
+              className="btn"
+              data-ui="option"
+              aria-pressed={wrap}
+              aria-label="Wrap Lines"
+              data-tip="Wrap Lines"
+              data-testid="history-view-wrap"
+              onClick={() => setWrap(!wrap)}
+            >
+              <Icon name="wrap" />
+              <span className="history-action-word">Wrap Lines</span>
+            </button>
+          )}
           {same ? null : (
             <button
               type="button"
@@ -544,6 +567,7 @@ export function VersionView({
             <div
               className="note-body history-view-grid"
               data-mode={mode}
+              data-wrap={wrap ? undefined : 'off'}
               style={{ '--history-gutter': gutterDigits(rows) } as CSSProperties}
               onClick={keepLinks}
             >

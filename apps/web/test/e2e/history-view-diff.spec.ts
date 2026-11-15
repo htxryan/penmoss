@@ -15,6 +15,9 @@ const panel = (page: Page) => page.getByTestId('history-panel');
 const view = (page: Page) => page.getByRole('dialog', { name: /^Version of / });
 const side = (page: Page, which: 'left' | 'right') => page.getByTestId(`history-view-${which}`);
 
+/** What the agent makes of Point 25: a line too long for a side. */
+const LONG = `Point twenty-five, ${'which runs on and on '.repeat(12).trim()}.`;
+
 /** A note of 30 short paragraphs, `Point 1.` to `Point 30.`, the nth on line 2n + 3. */
 const POINTS = Array.from({ length: 30 }, (_, i) => `Point ${i + 1}.`).join('\n\n');
 
@@ -37,7 +40,7 @@ test('Diff shows the changes with context and folds, Full File every block, line
   await asAgent(host, remote, `Claude ${RUN}`, (local) => {
     for (const [find, replace] of [
       ['Point 10.', 'Point ten.'],
-      ['Point 25.', 'Point twenty-five.'],
+      ['Point 25.', LONG],
     ] as const) {
       local.edit(id, { op: 'replace', find, replace, all: false, scope: 'markdown' }, null);
     }
@@ -144,6 +147,38 @@ test('Diff shows the changes with context and folds, Full File every block, line
   await expect(points('right')).toHaveCount(30);
   await expect(numbers('right').last()).toHaveText('63');
 
+  // Wrap Lines, on at first: the long point wraps in its side. Off, it is one line, and each side
+  // scrolls sideways on its own under its gutter, which stays put.
+  const wrap = view(page).getByTestId('history-view-wrap');
+  await expect(wrap).toHaveAccessibleName('Wrap Lines');
+  await expect(wrap).toHaveAttribute('aria-pressed', 'true');
+  const long = side(page, 'right').locator('p', { hasText: 'Point twenty-five' });
+  const height = () => long.evaluate((element) => element.getBoundingClientRect().height);
+  const wrapped = await height();
+  await wrap.click();
+  await expect(wrap).toHaveAttribute('aria-pressed', 'false');
+  await expect.poll(height).toBeLessThan(wrapped / 2);
+  const right = side(page, 'right');
+  expect(await right.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+  const number = numbers('right').first();
+  const numberX = () => number.evaluate((element) => element.getBoundingClientRect().x);
+  const before = await numberX();
+  await right.evaluate((element) => element.scrollBy(240, 0));
+  await expect.poll(() => right.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  expect(Math.abs((await numberX()) - before)).toBeLessThan(1);
+  expect(await side(page, 'left').evaluate((element) => element.scrollLeft)).toBe(0);
+  // The sides stay level.
+  const [leftTen, rightTen] = await Promise.all([
+    side(page, 'left').locator('p', { hasText: 'Point 11.' }).boundingBox(),
+    right.locator('p', { hasText: 'Point 11.' }).boundingBox(),
+  ]);
+  expect(Math.abs(leftTen!.y - rightTen!.y)).toBeLessThan(1);
+  if (SHOTS) {
+    await long.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${SHOTS}/history-view-nowrap.png` });
+  }
+  await right.evaluate((element) => element.scrollTo(0, 0));
+
   // The line between the sides' names and the one between the sides are one, to half a pixel,
   // with a scrollbar beside them, at any width.
   const scroll = view(page).getByTestId('history-view-scroll');
@@ -180,6 +215,7 @@ test('Diff shows the changes with context and folds, Full File every block, line
     await expect(empty).toContainText('is the same as the note is now');
     await expect(empty).toContainText(/[0-9a-f]{7}, /);
     await expect(toggle).toHaveCount(0);
+    await expect(wrap).toHaveCount(0);
     await expect(side(page, 'left')).toHaveCount(0);
     await expect(side(page, 'right')).toHaveCount(0);
     await expect(view(page).getByTestId('history-view-sides-head')).toHaveCount(0);
@@ -213,5 +249,10 @@ test('Diff shows the changes with context and folds, Full File every block, line
   await panel(page).getByRole('button', { name: 'View This Version' }).click();
   await expect(toggle).toHaveAccessibleName('Show Diff');
   await expect(folds).toHaveCount(0);
+  // Wrap Lines stays off, and back on with a click.
+  await expect(wrap).toHaveAttribute('aria-pressed', 'false');
+  await wrap.click();
+  await expect(wrap).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(height).toBeGreaterThan(wrapped - 1);
   expect(errors).toEqual([]);
 });

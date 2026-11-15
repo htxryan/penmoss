@@ -89,6 +89,8 @@ const PATHS = {
       <circle cx="12" cy="12" r="2.8" />
     </>
   ),
+  // History's View: Wrap Lines (Lucide's wrap-text).
+  wrap: <path d="M3 5h18M3 19h6M3 12h14.5a3.5 3.5 0 0 1 0 7H13m3-3-3 3 3 3" />,
   file: (
     <path d="M6.5 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5zM13.5 3.5V8H18M8.5 12.5h7M8.5 16h5" />
   ),

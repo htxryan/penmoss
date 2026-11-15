@@ -860,3 +860,43 @@ html:root[data-resizing='rows'] * {
   background: var(--pm-sidebar);
   color: var(--pm-muted);
 }
+
+/* Wrap Lines (on unless turned off): pressed, as the note's own toggles are. */
+.history-view-head > .btn[aria-pressed='true'] {
+  background: var(--pm-active);
+  color: var(--pm-fg);
+}
+
+/*
+ * Wrap Lines off: each block keeps its lines as written, and each side scrolls sideways on its
+ * own, under its gutter, which stays put. The rows stay shared, so the sides stay level.
+ */
+.history-view-grid[data-wrap='off'] .history-view-side {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+}
+
+.history-view-grid[data-wrap='off'].note-body
+  .ProseMirror.history-view-side
+  > :not(.history-view-line, .history-view-gap, .history-view-gutter) {
+  width: max-content;
+  min-width: 100%;
+  white-space: pre;
+}
+
+.history-view-grid[data-wrap='off'] .history-view-side > .history-view-gutter,
+.history-view-grid[data-wrap='off'] .history-view-side > .history-view-line {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+/* The gutter's band also covers the gap after it, so text scrolled under it is hidden. */
+.history-view-grid[data-wrap='off'] .history-view-side > .history-view-gutter {
+  box-shadow: calc(1rem + 1px) 0 0 var(--pm-bg);
+}
+
+.history-view-grid[data-wrap='off'] .history-view-side > .history-view-line {
+  z-index: 2;
+}
