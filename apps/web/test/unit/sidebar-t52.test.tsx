@@ -5,13 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommandCenter, memoryBindings } from '../../src/commands/center';
 import { COMMANDS } from '../../src/commands/definitions';
 import { CommandsContext } from '../../src/commands/hooks';
-import { NotesProvider } from '../../src/notes/context';
 import { FolderTree } from '../../src/workspace/FolderTree';
 import { TreeActions } from '../../src/workspace/TreeActions';
-import { WorkspaceProvider } from '../../src/workspace/context';
 import { memoryNotes } from './support/memory-notes';
 import { memoryStorage } from './support/memory-storage';
 import { testNotes, testWorkspace } from './support/local-sources';
+import { InStandIn } from './support/one-source';
 import type { Notes } from '../../src/notes/service';
 import type { Workspace } from '../../src/workspace/service';
 
@@ -43,20 +42,18 @@ beforeEach(async () => {
   await act(async () => {
     root.render(
       <CommandsContext.Provider value={new CommandCenter(COMMANDS, memoryBindings())}>
-        <NotesProvider notes={notes}>
-          <WorkspaceProvider workspace={workspace}>
-            <TreeActions
-              currentFolder={null}
-              onCurrentFolderChange={(id) => chosen.push(id)}
-              trash={{ href: '/trash', testId: 'sidebar-trash', current: false }}
-            />
-            <FolderTree
-              activeId={null}
-              currentFolder={null}
-              onCurrentFolderChange={(id) => chosen.push(id)}
-            />
-          </WorkspaceProvider>
-        </NotesProvider>
+        <InStandIn notes={notes} workspace={workspace}>
+          <TreeActions
+            currentFolder={null}
+            onCurrentFolderChange={(id) => chosen.push(id)}
+            trash={{ href: '/trash', testId: 'sidebar-trash', current: false }}
+          />
+          <FolderTree
+            activeId={null}
+            currentFolder={null}
+            onCurrentFolderChange={(id) => chosen.push(id)}
+          />
+        </InStandIn>
       </CommandsContext.Provider>,
     );
     await Promise.resolve();

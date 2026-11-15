@@ -182,7 +182,7 @@ export function FolderTree({
   // The other open notebooks, which a note or folder can move or be copied to (T68, #230).
   const source = useSource();
   const sourcesState = useSourcesState();
-  const others = (sourcesState?.all ?? []).filter((each) => each !== source);
+  const others = sourcesState.all.filter((each) => each !== source);
   /** The sort order's menu (T52), open under its button. */
   // Another note opened: the selection starts afresh unless a click just chose it (S1).
   const [selectionFor, setSelectionFor] = useState(activeId);

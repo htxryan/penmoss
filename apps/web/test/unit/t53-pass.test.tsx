@@ -2,36 +2,23 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { renderToString } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from '../../src/App';
-import { NotesProvider } from '../../src/notes/context';
-import { NoteDirectory } from '../../src/notes/directory';
-import { DirectoryProvider } from '../../src/notes/links-context';
-import { WorkspaceProvider } from '../../src/workspace/context';
-import { memoryNotes } from './support/memory-notes';
-import { testNotes, testWorkspace } from './support/local-sources';
+import { InSources, oneSource, type OneSource } from './support/one-source';
 
 // What T53's manual pass found on the web and the Mac app (docs/evidence/t53/web-mac.md).
 
+let one: OneSource;
+beforeEach(async () => {
+  one = await oneSource();
+});
+afterEach(() => one.stop());
+
 function render(pathname: string): string {
-  const store = memoryNotes();
-  const notes = testNotes(store);
-  const workspace = testWorkspace(store);
-  const directory = new NoteDirectory({
-    notes,
-    folderOf: () => null,
-    folderName: () => null,
-    register: () => undefined,
-    navigate: () => undefined,
-  });
   return renderToString(
-    <NotesProvider notes={notes}>
-      <WorkspaceProvider workspace={workspace}>
-        <DirectoryProvider directory={directory}>
-          <App location={{ pathname, search: '' }} />
-        </DirectoryProvider>
-      </WorkspaceProvider>
-    </NotesProvider>,
+    <InSources sources={one.sources}>
+      <App location={{ pathname, search: '' }} />
+    </InSources>,
   );
 }
 

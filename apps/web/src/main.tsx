@@ -7,7 +7,7 @@ import { startTitleBar } from './desktop/mac-window';
 import { NoteDirectory } from './notes/directory';
 import type { Notes } from './notes/service';
 import { FirstRunGate } from './sources/FirstRun';
-import { RootScope } from './sources/RootScope';
+import { JournalScope } from './sources/JournalScope';
 import { SourcesProvider } from './sources/context';
 import { GIT_STATUS_CHANNEL } from './sources/git-source';
 import { Sources } from './sources/registry';
@@ -110,7 +110,7 @@ bridge?.onBeforeClose(async (reason) => {
 
 // Send feedback (T49): its outbox sends what waits, here and when back online. Its sync facts
 // are the Journal notebook's (the app's own, A827).
-const rootNotes = () => sources.getState().root?.notes ?? null;
+const rootNotes = () => sources.getState().journal?.notes ?? null;
 const feedback = new FeedbackService({
   syncState: () => rootNotes()?.syncState() ?? { phase: 'syncing', pending: 0, detail: null },
   subscribeSync: (listener) => {
@@ -134,11 +134,11 @@ createRoot(container).render(
     <SourcesProvider sources={sources}>
       <FeedbackContext.Provider value={feedback}>
         <FirstRunGate capture={capture}>
-          <RootScope>
+          <JournalScope>
             <ThemeProvider controller={theme}>
               {capture ? <CaptureWindow /> : <App />}
             </ThemeProvider>
-          </RootScope>
+          </JournalScope>
         </FirstRunGate>
       </FeedbackContext.Provider>
     </SourcesProvider>

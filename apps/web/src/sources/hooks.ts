@@ -13,50 +13,46 @@ import {
 import type { GitNotebookInfo } from '../desktop/bridge';
 import type { GitSyncStatus } from './engine-host';
 import type { GitSource } from './git-source';
+import type { Workspace } from '../workspace/service';
 
 export const SourcesContext = createContext<Sources | null>(null);
 export const SourceContext = createContext<Source | null>(null);
 
-/** The window's sources; null where there are none (tests that render one source). */
-export function useSourcesRegistry(): Sources | null {
-  return useContext(SourcesContext);
-}
-
-const NO_SOURCES = (): (() => void) => () => undefined;
-
-const openState = (sources: Sources | null): OpenSourcesState | null => {
-  const state = sources?.getState() ?? null;
-  return state && isOpen(state) ? state : null;
-};
-
-/**
- * The sources' state once there is a notebook, re-rendering when it changes; null without a
- * registry (tests that render one source) or with no notebook yet (the first run shows then,
- * A1030, so the app's views never see it).
- */
-export function useSourcesState(): OpenSourcesState | null {
-  const sources = useSourcesRegistry();
-  return useSyncExternalStore(
-    sources?.subscribe ?? NO_SOURCES,
-    () => openState(sources),
-    () => openState(sources),
-  );
+/** The window's sources (`main.tsx` provides them around everything it renders). */
+export function useSourcesRegistry(): Sources {
+  const sources = useContext(SourcesContext);
+  if (!sources) throw new Error('useSourcesRegistry outside SourcesProvider');
+  return sources;
 }
 
 /**
  * The sources' state as it is, a notebook or not (the first run and Settings → Notebooks,
- * which list what there is); null without a registry.
+ * which list what there is).
  */
-export function useAllSources(): SourcesState | null {
+export function useAllSources(): SourcesState {
   const sources = useSourcesRegistry();
-  return useSyncExternalStore(
-    sources?.subscribe ?? NO_SOURCES,
-    () => sources?.getState() ?? null,
-    () => sources?.getState() ?? null,
-  );
+  return useSyncExternalStore(sources.subscribe, sources.getState, sources.getState);
 }
 
-/** The source of the view in context (null outside any scope: a single-source page). */
+/**
+ * The sources' state with a notebook open, re-rendering when it changes. `FirstRunGate` mounts
+ * the app only then (A1030), so the views under it never see a window without one.
+ */
+export function useSourcesState(): OpenSourcesState {
+  const state = useAllSources();
+  if (!isOpen(state)) throw new Error('useSourcesState with no notebook open (A1030)');
+  return state;
+}
+
+/**
+ * The app's own settings (the Journal notebook's, A827): the theme, the sidebar, the note bar and
+ * the rest, whichever notebook the view in context is in.
+ */
+export function useAppWorkspace(): Workspace {
+  return useSourcesState().journal.workspace;
+}
+
+/** The source of the view in context (null outside any scope: `main.tsx` puts the app in one). */
 export function useSource(): Source | null {
   return useContext(SourceContext);
 }
@@ -68,22 +64,21 @@ export function useIsGitSource(): boolean {
 
 /**
  * The source a note is in, kept current as the sources' lists load and change (A820); null
- * while it can't be told yet. Without a registry, the source in context.
+ * while it can't be told yet.
  */
 export function useNoteSource(noteId: string): Source | null {
   const sources = useSourcesRegistry();
-  const inScope = useSource();
-  const state = useSourcesState();
-  const subscribe = useMemo(() => {
-    if (!sources || !state) return NO_SOURCES;
-    return (listener: () => void) => {
-      const offs = state.all.map((source) => source.notes.subscribe(listener));
+  const { all } = useAllSources();
+  const subscribe = useMemo(
+    () => (listener: () => void) => {
+      const offs = all.map((source) => source.notes.subscribe(listener));
       return () => {
         for (const off of offs) off();
       };
-    };
-  }, [sources, state]);
-  const read = () => (sources ? sources.sourceOfNote(noteId) : inScope);
+    },
+    [all],
+  );
+  const read = () => sources.sourceOfNote(noteId);
   return useSyncExternalStore(subscribe, read, read);
 }
 

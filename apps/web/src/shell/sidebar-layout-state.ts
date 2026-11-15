@@ -12,9 +12,7 @@ import {
   type SidebarSection,
 } from '@penmoss/core/sidebar-layout';
 import { useSyncExternalStore } from 'react';
-import { useSourcesState } from '../sources/hooks';
-import { useWorkspace } from '../workspace/hooks';
-import type { Workspace } from '../workspace/service';
+import { useAppWorkspace } from '../sources/hooks';
 
 export interface SidebarLayout {
   /** Every section in the order shown, hidden ones included. */
@@ -39,9 +37,7 @@ export interface SidebarLayout {
  * Quick Access's are).
  */
 export function useSidebarLayout(): SidebarLayout {
-  const inScope = useWorkspace();
-  const sources = useSourcesState();
-  const workspace: Workspace = sources?.root.workspace ?? inScope;
+  const workspace = useAppWorkspace();
   // Re-renders when the settings change, here or by sync.
   const { loaded } = useSyncExternalStore(
     workspace.subscribe,

@@ -1,50 +1,37 @@
 import { QUICK_ACCESS_SETTING } from '@penmoss/core/quick-access';
 import { renderToString } from 'react-dom/server';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../src/App';
 import { CommandCenter, memoryBindings } from '../../src/commands/center';
 import { COMMANDS } from '../../src/commands/definitions';
 import { CommandsContext } from '../../src/commands/hooks';
-import { NotesProvider } from '../../src/notes/context';
-import { NoteDirectory } from '../../src/notes/directory';
-import { DirectoryProvider } from '../../src/notes/links-context';
 import type { NoteListEntry } from '../../src/notes/list';
 import { pinToggled, useQuickAccess, type QuickAccess } from '../../src/notes/quick-access';
 import { QUICK_ACCESS_COLLAPSED_KEY, QuickAccessSection } from '../../src/notes/QuickAccessSection';
 import { mouseStep } from '../../src/shell/history';
 import { HistoryNav } from '../../src/shell/HistoryNav';
 import { TagPane, TAGS_COLLAPSED_KEY } from '../../src/tags/TagPane';
-import { WorkspaceProvider } from '../../src/workspace/context';
-import { memoryNotes } from './support/memory-notes';
 import { memoryStorage } from './support/memory-storage';
-import { testNotes, testWorkspace } from './support/local-sources';
+import { InSources, InStandIn, oneSource, type OneSource } from './support/one-source';
 import type { Notes } from '../../src/notes/service';
 import type { Workspace } from '../../src/workspace/service';
 
 // T51 items 1–4, 15 and 18 (A932, A933, A934, A935, A943, A946): the sidebar's shell.
 
+let one: OneSource;
+beforeEach(async () => {
+  one = await oneSource();
+});
+afterEach(() => one.stop());
+
 function setup() {
-  const store = memoryNotes();
-  const notes = testNotes(store);
-  const workspace = testWorkspace(store);
-  const directory = new NoteDirectory({
-    notes,
-    folderOf: () => null,
-    folderName: () => null,
-    register: () => undefined,
-    navigate: () => undefined,
-  });
   const render = (pathname: string) =>
     renderToString(
-      <NotesProvider notes={notes}>
-        <WorkspaceProvider workspace={workspace}>
-          <DirectoryProvider directory={directory}>
-            <App location={{ pathname, search: '' }} />
-          </DirectoryProvider>
-        </WorkspaceProvider>
-      </NotesProvider>,
+      <InSources sources={one.sources}>
+        <App location={{ pathname, search: '' }} />
+      </InSources>,
     );
-  return { render, workspace };
+  return { render, workspace: one.source.workspace };
 }
 
 /** The HTML from `start` up to `end`. */
@@ -152,11 +139,9 @@ describe('the sidebar (T51)', () => {
 describe('the Tags panel (T51, A934)', () => {
   const renderPane = () =>
     renderToString(
-      <NotesProvider notes={fakeNotes([])}>
-        <WorkspaceProvider workspace={fakeWorkspace({}).workspace}>
-          <TagPane />
-        </WorkspaceProvider>
-      </NotesProvider>,
+      <InStandIn notes={fakeNotes([])} workspace={fakeWorkspace({}).workspace}>
+        <TagPane />
+      </InStandIn>,
     );
 
   it('has a toggle for a heading, open by default', () => {
@@ -190,11 +175,9 @@ describe('Quick Access (T51, A946)', () => {
 
   const renderSection = (settings: Record<string, unknown>, activeId: string | null = null) =>
     renderToString(
-      <NotesProvider notes={fakeNotes(list)}>
-        <WorkspaceProvider workspace={fakeWorkspace(settings).workspace}>
-          <QuickAccessSection activeId={activeId} />
-        </WorkspaceProvider>
-      </NotesProvider>,
+      <InStandIn notes={fakeNotes(list)} workspace={fakeWorkspace(settings).workspace}>
+        <QuickAccessSection activeId={activeId} />
+      </InStandIn>,
     );
 
   it('lists the pinned notes in pin order, leaving out any not in the list (trashed)', () => {
@@ -237,11 +220,9 @@ describe('Quick Access (T51, A946)', () => {
     const known = (id: string) => /^(n|p)\d+$/.test(id);
     const renderProbe = () =>
       renderToString(
-        <NotesProvider notes={fakeNotes(list, known)}>
-          <WorkspaceProvider workspace={workspace}>
-            <Probe />
-          </WorkspaceProvider>
-        </NotesProvider>,
+        <InStandIn notes={fakeNotes(list, known)} workspace={workspace}>
+          <Probe />
+        </InStandIn>,
       );
     renderProbe();
     expect(quick!.toggle('n1')).toBe(true);
@@ -289,11 +270,9 @@ describe('Quick Access (T51, A946)', () => {
       return null;
     };
     renderToString(
-      <NotesProvider notes={fakeNotes(list, (id) => id !== 'gone')}>
-        <WorkspaceProvider workspace={workspace}>
-          <Probe />
-        </WorkspaceProvider>
-      </NotesProvider>,
+      <InStandIn notes={fakeNotes(list, (id) => id !== 'gone')} workspace={workspace}>
+        <Probe />
+      </InStandIn>,
     );
     expect(quick!.toggle('fresh')).toBe(true);
     expect(settings[QUICK_ACCESS_SETTING]).toHaveLength(20);

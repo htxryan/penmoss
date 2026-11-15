@@ -4,10 +4,8 @@ import { Icon, type IconName } from '@penmoss/ui/icons';
 import { useCommands, useKeys } from '../commands/hooks';
 import { graphPath } from '../graph/path';
 import { thisWeek, today } from '../journal/journal';
-import { useNotes } from '../notes/hooks';
 import { linkHandler } from '../router';
 import { useSourcesState } from '../sources/hooks';
-import { useWorkspace } from '../workspace/hooks';
 import { useSidebarDisplay } from './display';
 import { withKeys } from './drawer';
 
@@ -107,11 +105,8 @@ function NewNoteButton() {
  * opens each; the ids are the same on every device, made or not.
  */
 function useCurrentJournal(): Readonly<Record<string, string>> {
-  const source = useSourcesState()?.journal ?? null;
-  const notes = useNotes();
-  const workspace = useWorkspace();
-  const journal = source?.notes ?? notes;
-  const settings = (source?.workspace ?? workspace).settings();
+  const { notes: journal, workspace } = useSourcesState().journal;
+  const settings = workspace.settings();
   return {
     'journal.today': journal.periodicId('daily', today(settings).toString()),
     'journal.thisWeek': journal.periodicId('weekly', thisWeek(settings)),

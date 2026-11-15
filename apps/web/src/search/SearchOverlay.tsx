@@ -81,7 +81,7 @@ function useFilterNotebooks(sources: readonly Source[]): FilterNotebook[] {
     [sources, revision],
   );
 }
-/** Bumped when any notebook's notes change (or the notes in context, without a registry). */
+/** Bumped when any notebook's notes change. */
 function useNotesChanges(sources: readonly Source[], list: unknown): number {
   const [revision, bump] = useReducer((count: number) => count + 1, 0);
   useEffect(() => {
@@ -90,7 +90,7 @@ function useNotesChanges(sources: readonly Source[], list: unknown): number {
       for (const off of offs) off();
     };
   }, [sources]);
-  // The notes in context are one of `sources`, or the only ones: their list counts too.
+  // The notes in context are one of `sources`: their list, as this render has it, counts too.
   const [seen, setSeen] = useState(list);
   if (seen !== list) {
     setSeen(list);
@@ -159,7 +159,7 @@ export function SearchOverlay({
   // All Notebooks, Folder lists every notebook's folders grouped by notebook and Tag every
   // notebook's tags; with one chosen, that notebook's (PEN-71, A1290).
   const sourcesState = useSourcesState();
-  const sources = useMemo(() => sourcesState?.all ?? NO_SOURCES, [sourcesState]);
+  const sources = sourcesState.all;
   const changes = useNotesChanges(sources, list);
   const several = sources.length > 1;
   const notebooks = useFilterNotebooks(several ? sources : NO_SOURCES);

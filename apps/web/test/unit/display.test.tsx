@@ -1,38 +1,28 @@
 import { renderToString } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { App } from '../../src/App';
-import { NotesProvider } from '../../src/notes/context';
-import { NoteDirectory } from '../../src/notes/directory';
-import { DirectoryProvider } from '../../src/notes/links-context';
-import { WorkspaceProvider } from '../../src/workspace/context';
-import { memoryNotes } from './support/memory-notes';
-import { testNotes, testWorkspace } from './support/local-sources';
+import { InSources, oneSource, type OneSource } from './support/one-source';
 
 // T42 item 7 (A576): Settings → Display hides Today, This week, Graph or Commands from the
 // sidebar (and its rail, the same buttons); Search always shows.
 
-function setup() {
-  const store = memoryNotes();
-  const notes = testNotes(store);
-  const workspace = testWorkspace(store);
-  const directory = new NoteDirectory({
-    notes,
-    folderOf: () => null,
-    folderName: () => null,
-    register: () => undefined,
-    navigate: () => undefined,
-  });
+let one: OneSource | null = null;
+afterEach(() => {
+  one?.stop();
+  one = null;
+});
+
+/** The app over one notebook; with `opened`, its store opens (and its settings read) then. */
+async function setup(opened?: Promise<void>) {
+  const source = await oneSource(opened ? { opened } : {});
+  one = source;
   const render = (pathname: string) =>
     renderToString(
-      <NotesProvider notes={notes}>
-        <WorkspaceProvider workspace={workspace}>
-          <DirectoryProvider directory={directory}>
-            <App location={{ pathname, search: '' }} />
-          </DirectoryProvider>
-        </WorkspaceProvider>
-      </NotesProvider>,
+      <InSources sources={source.sources}>
+        <App location={{ pathname, search: '' }} />
+      </InSources>,
     );
-  return { render, workspace };
+  return { render, workspace: source.source.workspace };
 }
 
 /** The `<input>` tag holding `marker` (a test id, or the Search row's description). */
@@ -44,8 +34,8 @@ const shortcuts = (html: string) =>
   html.slice(html.indexOf('class="sb-actions"'), html.indexOf('class="sb-list"'));
 
 describe('Settings → Display (T42, A576)', () => {
-  it('shows every shortcut by default', () => {
-    const html = shortcuts(setup().render('/'));
+  it('shows every shortcut by default', async () => {
+    const html = shortcuts((await setup()).render('/'));
     for (const command of [
       'app.search',
       'journal.today',
@@ -57,8 +47,9 @@ describe('Settings → Display (T42, A576)', () => {
     }
   });
 
-  it('hides the shortcuts the user turned off, never Search', () => {
-    const { render, workspace } = setup();
+  it('hides the shortcuts the user turned off, never Search', async () => {
+    const { render, workspace } = await setup();
+    await workspace.start();
     workspace.setSetting('sidebar.today', false);
     workspace.setSetting('sidebar.graph', false);
     workspace.setSetting('sidebar.commands', true);
@@ -71,11 +62,12 @@ describe('Settings → Display (T42, A576)', () => {
   });
 
   it('is a Settings section with a toggle for each shortcut but Search', async () => {
-    const { render, workspace } = setup();
+    let open = () => undefined as void;
+    const { render, workspace } = await setup(new Promise<void>((resolve) => (open = resolve)));
     // This device's copy read: the toggles can change (not before, A576).
     expect(inputWith(render('/settings/display'), 'display-today')).toContain('disabled=""');
+    open();
     await workspace.start();
-    workspace.stop();
     workspace.setSetting('sidebar.thisWeek', false);
     const html = render('/settings/display');
     expect(html).toContain('href="/settings/display"');

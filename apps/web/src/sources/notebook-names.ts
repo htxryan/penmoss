@@ -31,7 +31,7 @@ export function freeName(name: string, others: readonly string[]): string {
 
 /** The names of the notebooks on this Mac, but `except`'s (the one being renamed). */
 export function useOtherNotebookNames(except?: string): readonly string[] {
-  const all = useAllSources()?.all ?? [];
+  const { all } = useAllSources();
   return all.filter((source) => source.id !== except).map((source) => source.name);
 }
 

@@ -36,8 +36,6 @@ import { TagDoneToast, type TagDone } from './TagDoneToast';
 /** What choosing a tag's name does: what choosing it in the sidebar does, in its notebook. */
 export type ShowTag = (sourceId: string | null, tag: string) => void;
 
-const NO_SOURCES = (): (() => void) => () => undefined;
-
 /**
  * The Tags page (PEN-68, `/tags`; finding 8 of Ryan's review of #192, design "Tags D"): one
  * compact table per notebook, a tag (with its note count) on the left and what it means on the
@@ -48,16 +46,15 @@ const NO_SOURCES = (): (() => void) => () => undefined;
  * notebook's notes only, and its toast offers Undo. Choosing a tag's name opens Search on it.
  */
 export function TagsPage({ onShowTag }: { readonly onShowTag: ShowTag }) {
-  const state = useSourcesState();
-  const sources = state?.all ?? null;
+  const sources = useSourcesState().all;
   const anyTags = useAnyTags(sources);
   const [query, setQuery] = useState('');
   const [done, setDone] = useState<TagDone | null>(null);
   const closeDone = useCallback(() => setDone(null), []);
-  const section = (source: Source | null) => (
+  const section = (source: Source) => (
     <NotebookTags
-      name={source ? source.name : null}
-      sourceId={source ? source.id : null}
+      name={source.name}
+      sourceId={source.id}
       query={query}
       onShowTag={onShowTag}
       onDone={setDone}
@@ -97,8 +94,6 @@ export function TagsPage({ onShowTag }: { readonly onShowTag: ShowTag }) {
             <h3>No tags yet</h3>
             <p>Tag a note, with #name in its text or under its title, and the tag shows here.</p>
           </div>
-        ) : sources === null ? (
-          section(null)
         ) : (
           sources.map((source) => (
             <SourceScope key={source.id} source={source}>
@@ -112,19 +107,18 @@ export function TagsPage({ onShowTag }: { readonly onShowTag: ShowTag }) {
   );
 }
 
-/** Whether any notebook has a tag; null without the sources (one notebook in context). */
-function useAnyTags(sources: readonly Source[] | null): boolean | null {
-  const subscribe = useMemo(() => {
-    if (!sources) return NO_SOURCES;
-    return (listener: () => void) => {
+/** Whether any notebook has a tag. */
+function useAnyTags(sources: readonly Source[]): boolean {
+  const subscribe = useMemo(
+    () => (listener: () => void) => {
       const offs = sources.map((source) => source.notes.subscribe(listener));
       return () => {
         for (const off of offs) off();
       };
-    };
-  }, [sources]);
-  const read = () =>
-    sources ? sources.some((source) => source.notes.list().some((n) => n.tags.length > 0)) : null;
+    },
+    [sources],
+  );
+  const read = () => sources.some((source) => source.notes.list().some((n) => n.tags.length > 0));
   return useSyncExternalStore(subscribe, read, read);
 }
 
@@ -138,9 +132,9 @@ function NotebookTags({
   onShowTag,
   onDone,
 }: {
-  /** The notebook's name, as its section's heading; null outside the sources (tests). */
-  readonly name: string | null;
-  readonly sourceId: string | null;
+  /** The notebook's name, as its section's heading. */
+  readonly name: string;
+  readonly sourceId: string;
   readonly query: string;
   readonly onShowTag: ShowTag;
   readonly onDone: (done: TagDone) => void;
@@ -221,7 +215,7 @@ function NotebookTags({
     setDeleting(null);
   };
 
-  const headingId = sourceId ? `tags-page-${sourceId}` : 'tags-page-notebook';
+  const headingId = `tags-page-${sourceId}`;
   const count = `${key ? `${shown.length} of ` : ''}${rows.length} ${rows.length === 1 ? 'Tag' : 'Tags'}`;
   return (
     <section

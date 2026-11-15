@@ -29,12 +29,12 @@ export function useSettingsInStepChoice(): boolean {
 }
 
 /** Copies the primary's settings to the others while the choice is on. */
-export function useSettingsInStep(state: OpenSourcesState | null): void {
+export function useSettingsInStep(state: OpenSourcesState): void {
   const on = useSettingsInStepChoice();
   useEffect(() => {
-    if (!on || !state || state.all.length < 2) return;
-    const root = state.root.workspace;
-    const others = state.all.filter((source) => source.id !== state.root.id);
+    if (!on || state.all.length < 2) return;
+    const root = state.journal.workspace;
+    const others = state.all.filter((source) => source.id !== state.journal.id);
     let timer: ReturnType<typeof setTimeout> | null = null;
     const push = () => {
       timer = null;

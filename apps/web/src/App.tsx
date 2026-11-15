@@ -7,13 +7,11 @@ import {
   type CSSProperties,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
-import { desktop } from './desktop/bridge';
 import { DesktopIntegration } from './desktop/DesktopIntegration';
 import { KeepOnTopButton } from './desktop/KeepOnTopButton';
 import { CommandOverlays, CommandsProvider } from './commands/CommandsRoot';
@@ -53,13 +51,10 @@ import { TrashView } from './trash/TrashView';
 import { TagPane, TagsPageLink } from './tags/TagPane';
 import { TagsPage, type ShowTag } from './tags/TagsPage';
 import { TimeMachinePage } from './time-machine/TimeMachinePage';
-import { FolderTree } from './workspace/FolderTree';
-import { TreeActions } from './workspace/TreeActions';
 import { RecentSection } from './notes/RecentSection';
 import { NotebooksSection } from './sources/NotebooksSection';
 import { SidebarSections } from './shell/sidebar-layout';
 import { useSidebarLayout } from './shell/sidebar-layout-state';
-import { useWorkspace } from './workspace/hooks';
 import { RecoveredNotice } from './workspace/RecoveredNotice';
 import { SidebarUpdateNotice, UpdateNotice } from './updates/UpdatesSettings';
 import { useUpdateNotice } from './updates/notice';
@@ -83,12 +78,12 @@ export function App({ location }: { location?: RouteLocation | undefined }) {
   const { pathname, search } = location ?? current;
   const route = parseRoute(pathname);
   const params = new URLSearchParams(search);
-  // The Mac app opens where it was: launched, or its window reopened, on the
-  // home page, it goes to the note this device opened last, once the list has
+  // The app opens where it was (it runs only in the Mac app, A1030): launched, or its window
+  // reopened, on the home page, it goes to the note this device opened last, once the list has
   // loaded. Only at that start, so "Close the note" still reaches home. Every notebook's
   // notes, as the last one may be in any (T62 item 10).
   const list = useEveryOpenNoteList();
-  const resumed = useRef(!desktop() || route.name !== 'home');
+  const resumed = useRef(route.name !== 'home');
   useEffect(() => {
     if (resumed.current) return;
     if (route.name !== 'home') {
@@ -115,7 +110,7 @@ export function App({ location }: { location?: RouteLocation | undefined }) {
     );
   return (
     <CommandsProvider>
-      {desktop() ? <DesktopIntegration /> : null}
+      <DesktopIntegration />
       {/* Back and Forward in the main window (T51, A943); a note window has its own (T45). */}
       {route.name === 'window' ? null : <HistoryCommands />}
       <FullWidthCommand />
@@ -164,7 +159,6 @@ function NotesShell({
   const heading = params.get('heading');
   const graphNote = route.name === 'graph' ? params.get('note') : null;
   const notes = useNotes();
-  const workspace = useWorkspace();
   const commands = useCommands();
   const phone = usePhone();
   const sidebarKeys = useKeys('app.toggleSidebar');
@@ -200,10 +194,11 @@ function NotesShell({
   // Journal notebook's, takes new notes and answers the tree commands.
   const sourcesState = useSourcesState();
   const sourcesRegistry = useSourcesRegistry();
-  const shownSources = sourcesState?.all ?? [];
-  // A section per notebook, even alone (A828): its name and sync state. Without a registry
-  // (tests that render one source), the source in context's tree alone.
-  const multi = shownSources.length > 0;
+  // A section per notebook, even alone (A828): its name and sync state.
+  const shownSources = sourcesState.all;
+  // Each source has its own Trash (A862): `/trash?source=<id>`, the app's own without one.
+  const trashSource =
+    route.name === 'trash' ? sourcesRegistry.sourceById(params.get('source') ?? '') : null;
   const [currentSource, setCurrentSource] = useState<string | null>(null);
   const openNoteSource = useNoteSource(route.name === 'note' ? route.id : '');
   // A note opened from elsewhere (Quick open, a link) in another source: that source leads.
@@ -215,19 +210,13 @@ function NotesShell({
       setCurrentSource(null);
     }
   }
-  const activeSource: Source | null = multi
-    ? (shownSources.find((source) => source.id === currentSource) ??
-      (route.name === 'note' ? openNoteSource : null) ??
-      sourcesState?.journal ??
-      null)
-    : null;
-  const target = useMemo(
-    () => activeSource ?? { notes, workspace },
-    [activeSource, notes, workspace],
-  );
-  const targetFolder = activeSource && activeSource.id !== currentSource ? null : currentFolder;
+  const activeSource: Source =
+    shownSources.find((source) => source.id === currentSource) ??
+    (route.name === 'note' ? openNoteSource : null) ??
+    sourcesState.journal;
+  const targetFolder = activeSource.id !== currentSource ? null : currentFolder;
   const inActive = (element: ReactNode) => (
-    <SourceScopeOr source={activeSource}>{element}</SourceScopeOr>
+    <SourceScope source={activeSource}>{element}</SourceScope>
   );
 
   // The drawer is open for one screen: opening a note, the graph or Trash closes it.
@@ -291,7 +280,7 @@ function NotesShell({
             id: open.id,
             // From the source that holds it (A826).
             title:
-              (sourcesRegistry?.sourceOfNote(open.id)?.notes ?? notes)
+              (sourcesRegistry.sourceOfNote(open.id)?.notes ?? notes)
                 .list()
                 .find((entry) => entry.id === open.id)?.title ?? '',
           }
@@ -302,11 +291,11 @@ function NotesShell({
       commands.run('note.focusTitle');
       return;
     }
-    const id = target.notes.create(new Date());
+    const id = activeSource.notes.create(new Date());
     lastCreated.current = { id, at: Date.now() };
-    target.workspace.registerNote(id, targetFolder);
+    activeSource.workspace.registerNote(id, targetFolder);
     navigate(notePath(id));
-  }, [notes, sourcesRegistry, target, targetFolder, commands]);
+  }, [notes, sourcesRegistry, activeSource, targetFolder, commands]);
 
   // ⌘⌥N on a Mac, Alt+N elsewhere, by default (T20 registry, A90; customisable in Settings).
   useCommand('note.new', (context) => {
@@ -420,47 +409,26 @@ function NotesShell({
                 ),
                 notebooks: (tools) => (
                   <NotebooksSection tools={tools}>
-                    {multi ? (
-                      shownSources.map((source) => (
-                        <SourceScope key={source.id} source={source}>
-                          <SourceSection
-                            source={source}
-                            activeId={route.name === 'note' ? route.id : null}
-                            currentFolder={currentSource === source.id ? currentFolder : null}
-                            onCurrentFolderChange={(folderId) => {
-                              setCurrentSource(source.id);
-                              setCurrentFolder(folderId);
-                            }}
-                            active={activeSource?.id === source.id}
-                            onActivate={() => {
-                              if (currentSource === source.id) return;
-                              setCurrentSource(source.id);
-                              setCurrentFolder(null);
-                            }}
-                            shown={!rail}
-                          />
-                        </SourceScope>
-                      ))
-                    ) : (
-                      <>
-                        {/* Trash at the end of the tree's actions (T52). */}
-                        <TreeActions
-                          currentFolder={currentFolder}
-                          onCurrentFolderChange={setCurrentFolder}
-                          trash={{
-                            href: '/trash',
-                            testId: 'sidebar-trash',
-                            current: route.name === 'trash',
-                          }}
-                        />
-                        <FolderTree
+                    {shownSources.map((source) => (
+                      <SourceScope key={source.id} source={source}>
+                        <SourceSection
+                          source={source}
                           activeId={route.name === 'note' ? route.id : null}
-                          currentFolder={currentFolder}
-                          onCurrentFolderChange={setCurrentFolder}
+                          currentFolder={currentSource === source.id ? currentFolder : null}
+                          onCurrentFolderChange={(folderId) => {
+                            setCurrentSource(source.id);
+                            setCurrentFolder(folderId);
+                          }}
+                          active={activeSource.id === source.id}
+                          onActivate={() => {
+                            if (currentSource === source.id) return;
+                            setCurrentSource(source.id);
+                            setCurrentFolder(null);
+                          }}
                           shown={!rail}
                         />
-                      </>
-                    )}
+                      </SourceScope>
+                    ))}
                   </NotebooksSection>
                 ),
                 // The Journal notebook's calendar (A827), whichever note is open.
@@ -530,8 +498,8 @@ function NotesShell({
           ) : route.name === 'graph' ? (
             <InSource
               source={
-                sourcesRegistry?.sourceById(params.get('source') ?? '') ??
-                (graphNote ? (sourcesRegistry?.sourceOfNote(graphNote) ?? null) : null)
+                sourcesRegistry.sourceById(params.get('source') ?? '') ??
+                (graphNote ? sourcesRegistry.sourceOfNote(graphNote) : null)
               }
             >
               <AppBar title="Graph" />
@@ -547,15 +515,8 @@ function NotesShell({
               </Suspense>
             </InSource>
           ) : route.name === 'trash' ? (
-            // Each source has its own Trash (A862): `/trash?source=<id>`.
-            <InSource source={sourcesRegistry?.sourceById(params.get('source') ?? '') ?? null}>
-              <AppBar
-                title={
-                  multi
-                    ? `Trash · ${sourcesRegistry?.sourceById(params.get('source') ?? '')?.name ?? sourcesState?.root.name ?? ''}`
-                    : 'Trash'
-                }
-              />
+            <InSource source={trashSource}>
+              <AppBar title={`Trash · ${(trashSource ?? sourcesState.journal).name}`} />
               <TrashView />
             </InSource>
           ) : route.name === 'tags' ? (
@@ -567,9 +528,7 @@ function NotesShell({
             // A git notebook's past (PEN-21): `/time-machine?source=<id>`, the Journal's without.
             <InSource
               source={
-                sourcesRegistry?.sourceById(params.get('source') ?? '') ??
-                sourcesState?.journal ??
-                null
+                sourcesRegistry.sourceById(params.get('source') ?? '') ?? sourcesState.journal
               }
             >
               <AppBar title="Time Machine" />

@@ -283,7 +283,7 @@ export function GitNotebooksSettings({ item }: { item?: string | undefined }) {
       off();
     };
   }, [git]);
-  if (!git || !state) return null;
+  if (!git) return null;
   const sources = state.all;
   if (item !== undefined) {
     const source = sources.find((each) => each.id === item);
@@ -386,7 +386,7 @@ function CopyToNotebookSettings() {
 
 /** A notebook in the list: its name, repository and sync state, opening its own page (A1098). */
 function GitNotebookRow({ source }: { source: GitSource }) {
-  const primary = useSourcesState()?.journal.id === source.id;
+  const primary = useSourcesState().journal.id === source.id;
   const status = useGitStatus(source);
   const info = useGitInfo(source);
   const path = gitNotebookPath(source.id);
@@ -473,7 +473,7 @@ function GitNotebookCard({
     return onGitControl(show);
   }, [source.id]);
   const registry = useSourcesRegistry();
-  const primary = useSourcesState()?.journal.id === source.id;
+  const primary = useSourcesState().journal.id === source.id;
   const [message, setMessage] = useState<string | null>(null);
   const [token, setToken] = useState('');
   const [busy, setBusy] = useState(false);
@@ -499,7 +499,7 @@ function GitNotebookCard({
             ? `${result.error.message} The host said: ${result.error.hostMessage}`
             : result.error.message,
         );
-      await registry?.refresh();
+      await registry.refresh();
     } finally {
       setBusy(false);
     }
@@ -522,7 +522,7 @@ function GitNotebookCard({
     ).then(() => {
       setRemoving(null);
       // Its source has stopped (the list was read again): its local data goes too, and its page.
-      if (!registry?.gitSource(source.id)) {
+      if (!registry.gitSource(source.id)) {
         void forgetGitStores(source.id);
         navigate('/settings/git-notebooks');
       }
@@ -965,7 +965,6 @@ function PrimaryNotebook({ source }: { source: GitSource }) {
   const registry = useSourcesRegistry();
   const state = useSourcesState();
   const id = useId();
-  if (!registry || !state) return null;
   const primary = state.journal.id === source.id;
   return (
     <section className="git-notebook-group" aria-labelledby={`${id}-h`} data-testid="git-primary">
@@ -1012,20 +1011,20 @@ function NotebookSettingsCopy({ source }: { source: GitSource }) {
   const state = useSourcesState();
   const inStep = useSettingsInStepChoice();
   const [done, setDone] = useState<string | null>(null);
-  if (!state || state.all.length < 2) return null;
-  const primary = state.root.id === source.id;
-  const others = state.all.filter((each) => each.id !== state.root.id);
+  if (state.all.length < 2) return null;
+  const primary = state.journal.id === source.id;
+  const others = state.all.filter((each) => each.id !== state.journal.id);
   const copy = () => {
     const targets = primary ? others : [source];
     const changed = targets.reduce(
-      (sum, target) => sum + copySettings(state.root.workspace, target.workspace),
+      (sum, target) => sum + copySettings(state.journal.workspace, target.workspace),
       0,
     );
     const where = primary ? 'the other notebooks' : source.name;
     setDone(
       changed === 0
         ? `${primary ? 'The other notebooks' : source.name} already had these settings.`
-        : `Copied ${state.root.name}’s settings to ${where}.`,
+        : `Copied ${state.journal.name}’s settings to ${where}.`,
     );
   };
   return (
@@ -1033,7 +1032,7 @@ function NotebookSettingsCopy({ source }: { source: GitSource }) {
       <p className="git-notebook-note">
         {primary
           ? 'Copy these settings to your other notebooks, so any of them reads the same as the primary one, here or on another device.'
-          : `Copy the settings of ${state.root.name}, your primary notebook, into this one, replacing its own.`}{' '}
+          : `Copy the settings of ${state.journal.name}, your primary notebook, into this one, replacing its own.`}{' '}
         Quick Access stays as it is.
       </p>
       <div className="settings-actions">
@@ -1046,7 +1045,9 @@ function NotebookSettingsCopy({ source }: { source: GitSource }) {
           onClick={copy}
         >
           <Icon name="copy" size={14} />
-          {primary ? 'Copy Settings to Other Notebooks' : `Copy Settings from ${state.root.name}`}
+          {primary
+            ? 'Copy Settings to Other Notebooks'
+            : `Copy Settings from ${state.journal.name}`}
         </button>
       </div>
       {primary ? (
@@ -1255,7 +1256,7 @@ export function AddGitNotebook({ git }: { git: DesktopGit }) {
             ? ` Another notebook on this Mac is named “${twin}” too: rename one in its settings (such as to “${freeName(value.notebook.name, others)}”), so agents can tell them apart.`
             : ''),
       );
-      await registry?.refresh();
+      await registry.refresh();
     } finally {
       setBusy(false);
     }

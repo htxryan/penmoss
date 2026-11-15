@@ -250,8 +250,7 @@ export function NoteView({
   const topNotebook = noteSource?.name;
   // With two notebooks or more open, the breadcrumb starts with the note's (T64 item 5).
   const openSources = useSourcesState();
-  const sourceCrumb =
-    openSources && openSources.all.length > 1 && noteSource ? noteSource.name : null;
+  const sourceCrumb = openSources.all.length > 1 && noteSource ? noteSource.name : null;
   const titleRef = useRef<HTMLTextAreaElement>(null);
   /** The note body: the note's editor brings its own element into it (kept-editors.ts). */
   const slotRef = useRef<HTMLDivElement>(null);

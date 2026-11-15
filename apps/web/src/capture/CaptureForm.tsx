@@ -44,8 +44,8 @@ export function CaptureForm({
   const scopedWorkspace = useWorkspace();
   // Which notebook it goes into (A888, A914): chosen here when there is more than one.
   const sources = useSourcesState();
-  const places = sources && sources.all.length > 1 ? sources.all : null;
-  const [into, setInto] = useState<string | null>(() => (sources ? captureStart(sources) : null));
+  const places = sources.all.length > 1 ? sources.all : null;
+  const [into, setInto] = useState<string | null>(() => captureStart(sources));
   const target = places ? (places.find((place) => place.id === into) ?? null) : null;
   const notes = target?.notes ?? scopedNotes;
   const workspace = target?.workspace ?? scopedWorkspace;
@@ -70,7 +70,7 @@ export function CaptureForm({
     // default destination again (A947); only a new show starts the notebook afresh, and never
     // one picked for this capture (A914).
     if (text === '') {
-      const start = shown && !picked ? (sources ? captureStart(sources) : null) : into;
+      const start = shown && !picked ? captureStart(sources) : into;
       if (start !== into) setInto(start);
       const place = places?.find((one) => one.id === start);
       setDestination(captureDestinationOf((place?.workspace ?? workspace).settings()));

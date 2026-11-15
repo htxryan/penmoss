@@ -39,7 +39,7 @@ export const tagSearch = new TagSearchRequest();
  */
 export function useShowTag(): (tag: string) => void {
   const source = useSource();
-  const several = (useSourcesState()?.all.length ?? 0) > 1;
+  const several = useSourcesState().all.length > 1;
   const notebookId = several ? (source?.id ?? null) : null;
   return useCallback((tag: string) => tagSearch.set({ tag, notebookId }), [notebookId]);
 }

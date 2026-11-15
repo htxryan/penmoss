@@ -1,9 +1,7 @@
 import { noteBarSetting } from '@penmoss/core/settings';
 import type { IconName } from '@penmoss/ui/icons';
 import { useSyncExternalStore } from 'react';
-import { useSourcesState } from '../sources/hooks';
-import { useWorkspace } from '../workspace/hooks';
-import type { Workspace } from '../workspace/service';
+import { useAppWorkspace } from '../sources/hooks';
 
 /**
  * The buttons the note's title bar can show (Quanta feedback 3, item 5; A1134), chosen in
@@ -71,9 +69,7 @@ export function useNoteBar(): {
   readonly canChange: boolean;
 } {
   // The app's own settings (the Journal notebook's, A827), whichever notebook the note is in.
-  const inScope = useWorkspace();
-  const sources = useSourcesState();
-  const workspace: Workspace = sources?.root.workspace ?? inScope;
+  const workspace = useAppWorkspace();
   const { loaded } = useSyncExternalStore(
     workspace.subscribe,
     workspace.getState,

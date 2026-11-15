@@ -69,7 +69,7 @@ export function TimeMachinePage({ params }: { params: URLSearchParams }) {
   const state = useSourcesState();
   const tab: TimeMachineTab = params.get('tab') === 'changes' ? 'changes' : 'then';
   const source = scope?.kind === 'git' ? scope : null;
-  const sources = state?.all ?? [];
+  const sources = state.all;
   const heading = useId();
   const go = (next: { source?: string; tab?: TimeMachineTab }) =>
     navigate(

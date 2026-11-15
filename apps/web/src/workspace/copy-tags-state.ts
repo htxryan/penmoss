@@ -1,8 +1,6 @@
 import { COPY_TAGS_SETTING, copiesTags } from '@penmoss/core/copy-to-notebook';
 import { useSyncExternalStore } from 'react';
-import { useSourcesState } from '../sources/hooks';
-import { useWorkspace } from './hooks';
-import type { Workspace } from './service';
+import { useAppWorkspace } from '../sources/hooks';
 
 /**
  * Copy Tags by Default (A1353): whether Copy to Notebook's Copy Tags checkbox starts ticked,
@@ -15,9 +13,7 @@ export function useCopyTagsDefault(): {
   /** Settings can change now: this device's copy is read (until then they are only defaults). */
   readonly canChange: boolean;
 } {
-  const inScope = useWorkspace();
-  const sources = useSourcesState();
-  const workspace: Workspace = sources?.root.workspace ?? inScope;
+  const workspace = useAppWorkspace();
   // Re-renders when the settings change, here or by sync.
   const { loaded } = useSyncExternalStore(
     workspace.subscribe,

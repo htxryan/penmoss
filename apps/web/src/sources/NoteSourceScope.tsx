@@ -2,7 +2,7 @@ import { isShortNoteRef } from '@penmoss/core/note-ref';
 import { useEffect, useState, type ReactNode } from 'react';
 import { navigate, notePath } from '../router';
 import { SourceScope } from './context';
-import { useAllSources, useNoteSource, useSourcesRegistry } from './hooks';
+import { useAllSources, useNoteSource } from './hooks';
 import { noteOfShortRef, type ShortRefTarget } from './short-ref';
 
 /**
@@ -17,9 +17,7 @@ export function NoteSourceScope({ id, children }: { id: string; children: ReactN
 }
 
 function ById({ id, children }: { id: string; children: ReactNode }) {
-  const sources = useSourcesRegistry();
   const source = useNoteSource(id);
-  if (!sources) return children;
   if (!source) return <Opening />;
   return <SourceScope source={source}>{children}</SourceScope>;
 }
@@ -38,7 +36,7 @@ function ShortRef({ id }: { id: string }) {
   const state = useAllSources();
   const [target, setTarget] = useState<ShortRefTarget | null>(null);
   useEffect(() => {
-    const all = state?.all ?? [];
+    const { all } = state;
     const check = () => setTarget(noteOfShortRef(id, all));
     check();
     // A notebook's notes are read after it opens: check again as they come.
@@ -48,7 +46,7 @@ function ShortRef({ id }: { id: string }) {
   useEffect(() => {
     if (target?.kind === 'note') navigate(notePath(target.id), { replace: true });
   }, [target]);
-  if (state?.loaded && target?.kind === 'no-notebook') {
+  if (state.loaded && target?.kind === 'no-notebook') {
     return (
       <p className="graph-loading" role="status">
         No notebook on this Mac holds the note {id}.
