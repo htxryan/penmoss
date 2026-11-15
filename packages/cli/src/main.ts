@@ -108,7 +108,7 @@ const EXIT_HELP = [
   '  2  the command line does not fit the command, or no notebook was named where one must be',
   '  3  not allowed (403), the host refused the credentials, or they are unsafe to read',
   '  4  no such note, folder, heading, text, version or notebook',
-  '  5  conflict: the note changed since the version the edit is based on (409)',
+  '  5  conflict: the note changed since the edit’s base version, or holds content from a newer Penmoss (409)',
   '  6  ambiguous: a title, heading or text matches more than once',
   '  7  refused for another reason (400, 413, 422, 428), or by the repository’s host',
 ];

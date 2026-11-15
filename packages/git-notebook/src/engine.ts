@@ -18,7 +18,7 @@
  */
 import { ulid } from '@penmoss/core/ids';
 import { gitBlobSha } from '@penmoss/core/mirror';
-import { attachmentFiles, noteBody } from '@penmoss/editor/markdown';
+import { attachmentFiles, noteBodyForDisplay } from '@penmoss/editor/markdown';
 import { NOTE_META, readTitle } from '@penmoss/sync-client/note';
 import { readWorkspace } from '@penmoss/sync-client/workspace';
 import * as Y from '@y/y';
@@ -43,7 +43,7 @@ import {
   unregisterCopy,
   WORKSPACE_PURGED_FROM,
 } from './purge';
-import { CHANGED_AT_PREFIX, renderNoteFile, renderSet } from './render';
+import { CHANGED_AT_PREFIX, renderNoteFile, renderSet, UNSUPPORTED_RENDER } from './render';
 import {
   NotebookReplica,
   type GitChanges,
@@ -1042,11 +1042,21 @@ export class GitNotebookEngine {
         : new Set<string>();
       const wanted = new Set<string>();
       for (const [id, path] of named.paths) {
+        if (set && !set.has(id) && headPath.get(id) === path) {
+          wanted.add(path);
+          continue;
+        }
+        const markdown = renderNoteFile(replica.note(id)!, id, path, named, layout.root);
+        if (markdown === null) {
+          // A body from a newer Penmoss (A1493): its file at head stays as it is, where it is,
+          // and none is written for it, never one rendered from the part this build can read.
+          const atHead = headPath.get(id);
+          if (atHead !== undefined) wanted.add(atHead);
+          skipped.set(atHead ?? path, UNSUPPORTED_RENDER);
+          continue;
+        }
         wanted.add(path);
-        if (set && !set.has(id) && headPath.get(id) === path) continue;
-        const bytes = new TextEncoder().encode(
-          renderNoteFile(replica.note(id)!, id, path, named, layout.root),
-        );
+        const bytes = new TextEncoder().encode(markdown);
         const blob = files.get(path);
         if (blob !== undefined && blob === (await gitBlobSha(bytes))) continue;
         changes.set(path, bytes);
@@ -1119,7 +1129,7 @@ export class GitNotebookEngine {
     for (const id of touchedNotes) {
       const doc = replica.note(id);
       if (!doc) continue;
-      for (const file of attachmentFiles(noteBody(doc))) {
+      for (const file of attachmentFiles(noteBodyForDisplay(doc))) {
         const path = layout.attachment(`${file.sha256}.${file.ext}`);
         if (files.has(path) || changes.has(path)) continue;
         const bytes = await this.options.storage.readAttachment(`${file.sha256}.${file.ext}`);
@@ -1281,9 +1291,18 @@ export class GitNotebookEngine {
       foreign,
       root: layout.root,
     });
+    const headPath = new Map([...foreign.penmoss].map(([path, id]) => [id, path]));
     const wanted = new Map<string, string>();
     for (const [id, path] of named.paths) {
-      wanted.set(path, renderNoteFile(replica.note(id)!, id, path, named, layout.root));
+      const markdown = renderNoteFile(replica.note(id)!, id, path, named, layout.root);
+      if (markdown !== null) {
+        wanted.set(path, markdown);
+        continue;
+      }
+      // Content from a newer Penmoss (A1493): the file at head is kept as it is, as a sync keeps it.
+      const atHead = headPath.get(id);
+      const bytes = atHead === undefined ? undefined : read.get(atHead);
+      if (atHead !== undefined && bytes) wanted.set(atHead, new TextDecoder().decode(bytes));
     }
     return { wanted, penmoss: foreign.penmoss, foreign: foreign.paths };
   }

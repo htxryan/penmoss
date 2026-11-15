@@ -448,6 +448,7 @@ export const daily: Command = {
     const label = note.kind === 'daily' ? `daily note ${note.date}` : `weekly note ${note.week}`;
     if (markdown === undefined) {
       if (note.created && !context.json) context.note(`(Created the ${label} from your template.)`);
+      if (note.notice && !context.json) context.note(note.notice);
       context.emit(
         noteJson(note, {
           kind: note.kind,

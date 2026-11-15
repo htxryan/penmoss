@@ -159,6 +159,8 @@ export interface NoteContent {
   readonly headings: string[];
   readonly baseVersion: number;
   readonly deleted: boolean;
+  /** Content from a newer Penmoss (A1493): `markdown` and `body` are then only its text. */
+  readonly notice?: string;
 }
 
 /** A note as `cat --json` and `daily --json` give it. */
@@ -169,6 +171,7 @@ export const noteJson = (note: NoteContent, extra: Record<string, unknown> = {})
   headings: note.headings,
   baseVersion: note.baseVersion,
   ...(note.deleted ? { deleted: true } : {}),
+  ...(note.notice === undefined ? {} : { notice: note.notice }),
   ...extra,
   markdown: note.markdown,
   body: note.body,
@@ -203,6 +206,7 @@ export const cat: Command = {
     const [ref] = context.args([NOTE]);
     const note = await readContent(context, ref!);
     if (note.deleted && !context.json) context.note(`(“${note.title}” is in Trash.)`);
+    if (note.notice && !context.json) context.note(note.notice);
     context.emit(noteJson(note), () => (context.bool('body') ? note.body : note.markdown));
   },
 };

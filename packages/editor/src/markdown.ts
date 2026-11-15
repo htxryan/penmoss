@@ -19,6 +19,10 @@ import { frontmatterTags, noteTags } from '@penmoss/sync-client/tags';
 import type * as Y from '@y/y';
 import { pmnodeToDelta, ynodeToPmnode } from '@y/prosemirror';
 import type { Node as PMNode } from '@tiptap/pm/model';
+import { UnsupportedContentError } from './collab/unsupported';
+
+/** Thrown where a body this build cannot read would be written from (A158, A1493). */
+export { UnsupportedContentError };
 
 export interface RenderedNote {
   readonly title: string;
@@ -37,8 +41,16 @@ export interface RenderedNote {
 export interface NoteState {
   readonly identity: ReturnType<typeof readIdentity>;
   readonly title: string;
-  /** `noteBody(doc)`. */
+  /**
+   * `noteBodyForDisplay(doc)`: the body or, when `unsupported` is set, only its text. Never
+   * written back or rendered over a note's file while `unsupported` is set (A1493).
+   */
   readonly body: PMNode;
+  /**
+   * Null when this build reads the body. Otherwise the body holds content from a newer Penmoss,
+   * and these are the node types this build lacks, sorted (empty when the misfit is no type).
+   */
+  readonly unsupported: readonly string[] | null;
   /** Tags set in frontmatter only (`frontmatterTags`); inline tags stay in the body (T18). */
   readonly listedTags: string[];
   /** Every tag, frontmatter and inline (`noteTags`, T18). */
@@ -46,10 +58,12 @@ export interface NoteState {
 }
 
 export function readNoteState(doc: Y.Doc): NoteState {
+  const body = noteBody(doc);
   return {
     identity: readIdentity(doc),
     title: readTitle(doc),
-    body: noteBody(doc),
+    body: body ?? noteBodyForDisplay(doc),
+    unsupported: body ? null : unsupportedTypes(doc),
     listedTags: frontmatterTags(doc),
     tags: noteTags(doc),
   };
@@ -155,12 +169,15 @@ export function versionMarkdown(doc: Y.Doc): string {
     ...(title ? { title } : {}),
     ...(tags.length > 0 ? { tags } : {}),
   });
-  return serializeMarkdown({ frontmatter, doc: noteBody(doc) });
+  return serializeMarkdown({ frontmatter, doc: noteBodyForDisplay(doc) });
 }
 
-/** The body alone as markdown (T21's three-way revert works on its lines). */
+/**
+ * The body alone as markdown (T21's three-way revert works on its lines). A body this build
+ * cannot read gives its text only (`noteBodyForDisplay`); revert refuses such a note first.
+ */
 export function bodyMarkdown(doc: Y.Doc): string {
-  return serializeMarkdown({ frontmatter: null, doc: noteBody(doc) });
+  return serializeMarkdown({ frontmatter: null, doc: noteBodyForDisplay(doc) });
 }
 
 /**
@@ -176,7 +193,12 @@ export function mergedBodyDelta(
   markdown: string,
   sources: readonly Y.Doc[],
 ): ReturnType<Y.Node['toDeltaDeep']> {
-  const bodies = sources.map(noteBody);
+  const bodies = sources.map((source) => {
+    const body = noteBody(source);
+    // Never merged from text standing in for content this build cannot read (A1493).
+    if (!body) throw new UnsupportedContentError(unsupportedTypes(source));
+    return body;
+  });
   const targets = new Map<string, string>();
   for (const body of bodies) {
     body.descendants((node) => {
@@ -258,17 +280,78 @@ export function localAttachment(url: string): { sha256: string; ext: string } | 
   return parseAttachmentPath(url);
 }
 
-/** The body as a core-schema document; an empty body is one empty paragraph. */
-export function noteBody(doc: Y.Doc): PMNode {
+/**
+ * The body as a core-schema document (an empty body is one empty paragraph), or null when this
+ * build cannot read it: it holds content from a newer Penmoss, such as a node type core's schema
+ * lacks (A158). Null is never an empty note (A1493): a path that writes refuses the note, and one
+ * that only shows it uses `noteBodyForDisplay`. The Yjs state is left as it is either way.
+ */
+export function noteBody(doc: Y.Doc): PMNode | null {
   const root = doc.get(NOTE_ROOT);
   if (root.length === 0) return emptyDoc();
   try {
     return ynodeToPmnode(root, schema);
-  } catch (error) {
-    // Content the core schema rejects at the top level: logged, and read as an empty body.
-    console.error('[markdown] body does not fit the core schema', error);
-    return emptyDoc();
+  } catch {
+    return null;
   }
+}
+
+/**
+ * The body for reading only: `noteBody`, or, for a body this build cannot read, its text as
+ * plain paragraphs, a line of a text block each (A1493). Lossy by design: never write it back.
+ */
+export function noteBodyForDisplay(doc: Y.Doc): PMNode {
+  const body = noteBody(doc);
+  if (body) return body;
+  const lines: string[] = [];
+  textLines(doc.get(NOTE_ROOT).toDeltaDeep().toJSON() as JsonDeltaNode, lines);
+  const paragraphs = lines
+    .flatMap((line) => line.split('\n'))
+    .filter((line) => line.trim())
+    .map((line) => schema.node('paragraph', null, [schema.text(line)]));
+  return paragraphs.length > 0 ? schema.node('doc', null, paragraphs) : emptyDoc();
+}
+
+/** The node types in a note's body that core's schema lacks, sorted (A158, A1493). */
+export function unsupportedTypes(doc: Y.Doc): string[] {
+  const found = new Set<string>();
+  const walk = (node: JsonDeltaNode) => {
+    if (typeof node.name === 'string' && !Object.hasOwn(schema.nodes, node.name)) {
+      found.add(node.name);
+    }
+    for (const op of node.children ?? []) {
+      if (Array.isArray(op.insert)) for (const child of op.insert) walk(child);
+    }
+  };
+  walk(doc.get(NOTE_ROOT).toDeltaDeep().toJSON() as JsonDeltaNode);
+  return [...found].sort();
+}
+
+/** A deep delta as `toDeltaDeep().toJSON()` gives it: a node and its inserts. */
+interface JsonDeltaNode {
+  readonly name?: unknown;
+  readonly children?: ReadonlyArray<{ readonly insert?: string | JsonDeltaNode[] }>;
+}
+
+/** The text of each block that holds text (its inline nodes' text with it), in order. */
+function textLines(node: JsonDeltaNode, out: string[]): void {
+  const ops = node.children ?? [];
+  if (ops.some((op) => typeof op.insert === 'string')) {
+    out.push(textOf(node));
+    return;
+  }
+  for (const op of ops) {
+    if (Array.isArray(op.insert)) for (const child of op.insert) textLines(child, out);
+  }
+}
+
+function textOf(node: JsonDeltaNode): string {
+  let text = '';
+  for (const op of node.children ?? []) {
+    if (typeof op.insert === 'string') text += op.insert;
+    else if (Array.isArray(op.insert)) for (const child of op.insert) text += textOf(child);
+  }
+  return text;
 }
 
 function emptyDoc(): PMNode {

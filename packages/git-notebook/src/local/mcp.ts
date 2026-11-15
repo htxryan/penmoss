@@ -212,6 +212,8 @@ function noteOutcome(note: ReturnType<LocalNotebook['view']>, extra: Args = {}):
     ...(note.heading === undefined ? {} : { heading: note.heading }),
     ...(partial ? { offset: note.offset, length: note.length } : {}),
     ...(note.nextOffset === null ? {} : { truncated: true, nextOffset: note.nextOffset }),
+    // Content from a newer Penmoss: the body is only its text (A1493).
+    ...(note.notice === undefined ? {} : { notice: note.notice }),
     ...extra,
   };
   return { data: { ...meta, body: note.text }, text: [JSON.stringify(meta), note.text] };
