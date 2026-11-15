@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { FuzzyMatcher, fuzzyFilter, fuzzyScore } from '../src/fuzzy';
+import { FuzzyMatcher, fuzzyFilter, fuzzyMatch, fuzzyScore, highlightRuns } from '../src/fuzzy';
 
 const titles = [
   'Penmoss — sync design',
@@ -33,6 +33,53 @@ describe('fuzzy matching', () => {
 
   it('keeps every item for an empty query, in order, up to the limit', () => {
     expect(fuzzyFilter(titles, '', (t) => t, 2)).toEqual(titles.slice(0, 2));
+  });
+});
+
+// The palette, Quick Open and the pickers (T20): the same ranking, with where it matched.
+describe('a fuzzy match with its positions', () => {
+  it('scores as fuzzyScore does, and ranks word starts and runs higher', () => {
+    expect(fuzzyMatch('tdy', 'Open today’s note')).not.toBeNull();
+    expect(fuzzyMatch('xyz', 'Open today’s note')).toBeNull();
+    expect(fuzzyMatch('sync', 'Sync benchmarks')!.score).toBe(
+      fuzzyScore('sync', 'Sync benchmarks'),
+    );
+    const start = fuzzyMatch('new', 'New note')!.score;
+    const middle = fuzzyMatch('new', 'Rename the newest')!.score;
+    expect(start).toBeGreaterThan(middle);
+    expect(fuzzyMatch('', 'New note')).toEqual({ score: 0, indices: [] });
+  });
+
+  it('with scattered false, rejects letters scattered across a long title', () => {
+    const long = 'a long title that eventually ends';
+    expect(fuzzyMatch('ae', long, { scattered: false })).toBeNull();
+    expect(fuzzyMatch('ae', long)).not.toBeNull();
+    // The query as it is, however far apart its ends.
+    expect(fuzzyMatch('a long title', long, { scattered: false })).not.toBeNull();
+  });
+
+  it('matches accents and gives the positions in the text as written', () => {
+    expect(fuzzyMatch('cafe', 'Café notes')!.indices).toEqual([0, 1, 2, 3]);
+    // An accent typed as its own mark: the folded text is shorter, the positions are not.
+    const decomposed = 'Café notes';
+    expect(fuzzyMatch('n', decomposed)!.indices).toEqual([6]);
+    expect(fuzzyMatch('Shopping list', 'Shopping list')!.indices).toHaveLength(12);
+  });
+
+  it('splits text into highlighted runs', () => {
+    const match = fuzzyMatch('nn', 'New note')!;
+    expect(highlightRuns('New note', match.indices)).toEqual([
+      { text: 'N', match: true },
+      { text: 'ew ', match: false },
+      { text: 'n', match: true },
+      { text: 'ote', match: false },
+    ]);
+    // A character outside the BMP stays whole.
+    expect(highlightRuns('🌱 bed', fuzzyMatch('b', '🌱 bed')!.indices)).toEqual([
+      { text: '🌱 ', match: false },
+      { text: 'b', match: true },
+      { text: 'ed', match: false },
+    ]);
   });
 });
 

@@ -1321,7 +1321,7 @@
     },
     {
       "query": "theme",
-      "ids": ["app.appearance", "theme.switch"]
+      "ids": ["theme.switch", "app.appearance"]
     },
     {
       "query": "nw",

@@ -3,7 +3,7 @@ import { DialogClose } from '../shell/DialogClose';
 import { useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { displayTitle, type NoteListEntry } from '../notes/list';
 import type { CommandDefinition } from './definitions';
-import { fuzzy, highlightRuns, type FuzzyMatch } from './fuzzy';
+import { fuzzyMatch, highlightRuns, type FuzzyMatch } from '@penmoss/core/fuzzy';
 import { useCommands, useCommandsVersion } from './hooks';
 import { Kbd } from './Kbd';
 
@@ -82,7 +82,7 @@ export function Palette({ mode, notes, onRunCommand, onOpenNote, onClose }: Pale
     }
     const found: Item[] = [];
     for (const command of runnable) {
-      const match = fuzzy(q, command.title);
+      const match = fuzzyMatch(q, command.title, { scattered: false });
       if (match) {
         found.push({
           kind: 'command',
@@ -94,7 +94,7 @@ export function Palette({ mode, notes, onRunCommand, onOpenNote, onClose }: Pale
       }
     }
     for (const note of notes) {
-      const match = fuzzy(q, displayTitle(note.title));
+      const match = fuzzyMatch(q, displayTitle(note.title), { scattered: false });
       if (match) found.push({ kind: 'note', key: `note:${note.id}`, note, match, group: 'Notes' });
     }
     return found.sort((a, b) => b.match.score - a.match.score).slice(0, MAX_RESULTS);

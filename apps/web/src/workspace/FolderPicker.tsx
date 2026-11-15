@@ -9,7 +9,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
-import { fuzzy, highlightRuns } from '../commands/fuzzy';
+import { fuzzyMatch, highlightRuns } from '@penmoss/core/fuzzy';
 import { DialogClose } from '../shell/DialogClose';
 import type { FolderChoice } from './model';
 
@@ -65,7 +65,7 @@ export function FolderPicker({
     const q = query.trim();
     return choices.flatMap((choice) => {
       if (!q) return [{ choice, indices: [] as readonly number[], filtered: false }];
-      const match = fuzzy(q, choice.path);
+      const match = fuzzyMatch(q, choice.path, { scattered: false });
       return match ? [{ choice, indices: match.indices, filtered: true }] : [];
     });
   }, [choices, query]);

@@ -10,7 +10,7 @@ import {
   useState,
   type KeyboardEvent,
 } from 'react';
-import { fuzzy, highlightRuns } from '../commands/fuzzy';
+import { fuzzyMatch, highlightRuns } from '@penmoss/core/fuzzy';
 import { useThemeController } from './hooks';
 
 export interface ThemePickerProps {
@@ -41,7 +41,7 @@ export function ThemePicker({ themes, currentId, onChoose, onClose }: ThemePicke
     const q = query.trim();
     return themes.flatMap((theme) => {
       if (!q) return [{ theme, indices: [] as readonly number[] }];
-      const match = fuzzy(q, theme.name);
+      const match = fuzzyMatch(q, theme.name, { scattered: false });
       return match ? [{ theme, indices: match.indices }] : [];
     });
   }, [themes, query]);
