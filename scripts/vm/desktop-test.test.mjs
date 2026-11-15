@@ -199,10 +199,12 @@ test('--check: 75 while another run holds the VM, without waiting for it', async
   t.after(() => holder.kill());
   // The lock is taken once lockf runs its command. Wait for that by a deadline, not a count of
   // tries: under `task check`'s load the holder can take seconds to start, and a run that went
-  // ahead with the lock still free would find the VM free (as a gate run once did).
+  // ahead with the lock still free would find the VM free (as a gate run once did). The probe keeps
+  // the file (-k): without it, a probe that wins the race unlinks the file the holder is waiting on,
+  // the holder locks the unlinked file, and every later probe finds a new, free one.
   let held = false;
   for (const deadline = Date.now() + 20_000; !held && Date.now() < deadline;) {
-    held = spawnSync('lockf', ['-s', '-t', '0', lockFile, 'true']).status !== 0;
+    held = spawnSync('lockf', ['-k', '-s', '-t', '0', lockFile, 'true']).status !== 0;
     if (!held) await new Promise((resolve) => setTimeout(resolve, 20));
   }
   assert.ok(held, 'the holder never took the lock');
