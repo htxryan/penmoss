@@ -202,7 +202,12 @@ function SideBlocks({
       cell.style.gridRow = gridRow;
       cells.push(number, cell);
     });
-    host.replaceChildren(...cells);
+    // The gutter's band, under the numbers in every row (Ryan's review of #210).
+    const band = document.createElement('div');
+    band.className = 'history-view-gutter';
+    band.setAttribute('aria-hidden', 'true');
+    band.style.gridRow = '1 / -1';
+    host.replaceChildren(band, ...cells);
     return showImages(host, images);
   }, [rows, items, side, images]);
   return (
