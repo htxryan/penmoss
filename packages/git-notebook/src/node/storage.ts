@@ -34,14 +34,14 @@ export class FileStorage implements NotebookStorage {
   }
 
   async load(): Promise<NotebookSnapshot | null> {
-    const metaText = await readFile(join(this.state, 'meta.json'), 'utf8').catch(() => null);
+    const metaText = await ifMissing(readFile(join(this.state, 'meta.json'), 'utf8'), null);
     if (metaText === null) return null;
     const parsed = JSON.parse(metaText) as { meta: NotebookMeta; saves?: number };
     this.meta = { ...EMPTY_META, ...parsed.meta };
     this.saves = parsed.saves ?? 0;
-    const workspace = await readFile(join(this.state, 'workspace.yjs')).catch(() => null);
+    const workspace = await ifMissing(readFile(join(this.state, 'workspace.yjs')), null);
     const notes = new Map<string, Uint8Array>();
-    const names = await readdir(join(this.state, 'notes')).catch(() => [] as string[]);
+    const names = await ifMissing(readdir(join(this.state, 'notes')), [] as string[]);
     for (const name of names.sort()) {
       const id = NOTE_FILE.exec(name)?.[1];
       if (!id) continue;
@@ -95,14 +95,14 @@ export class FileStorage implements NotebookStorage {
 
   /** How many saves the files hold: another process changed them when it moves. */
   async generation(): Promise<number> {
-    const text = await readFile(join(this.state, 'meta.json'), 'utf8').catch(() => null);
+    const text = await ifMissing(readFile(join(this.state, 'meta.json'), 'utf8'), null);
     if (text === null) return 0;
     return (JSON.parse(text) as { saves?: number }).saves ?? 0;
   }
 
   async readAttachment(file: string): Promise<Uint8Array | null> {
     if (!ATTACHMENT_FILE.test(file)) return null;
-    const bytes = await readFile(join(this.dir, 'attachments', file)).catch(() => null);
+    const bytes = await ifMissing(readFile(join(this.dir, 'attachments', file)), null);
     return bytes ? new Uint8Array(bytes) : null;
   }
 
@@ -126,6 +126,20 @@ export class FileStorage implements NotebookStorage {
     await walk(this.state);
     await walk(join(this.dir, 'attachments'));
     return total;
+  }
+}
+
+/**
+ * What `read` gives, or `fallback` when the file isn't there. Every other error (a permission,
+ * an I/O error, too many open files) is thrown: read as "nothing stored", it would open a fresh
+ * replica whose first save writes over the store, and every change not yet pushed would go.
+ */
+async function ifMissing<T, F>(read: Promise<T>, fallback: F): Promise<T | F> {
+  try {
+    return await read;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return fallback;
+    throw error;
   }
 }
 

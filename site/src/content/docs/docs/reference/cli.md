@@ -95,6 +95,8 @@ git log --oneline -5 | penmoss append "Release notes" - --heading "This week"
 
 `append` and `daily --append` send no base: adding at the end never conflicts.
 
+A note holding content only a newer Penmoss knows, such as a new kind of block, prints its text only, with a line on stderr that says so (`notice` in `--json`). An edit to its body (`append`, `edit`, `attach`, `history --revert`) is refused with `unsupported_content`, nothing changes, and the CLI exits 5. Its title and tags can still be set. Update Penmoss to edit it.
+
 ### Syncing
 
 `search`, `cat`, `ls` and `open` sync first; the others sync before and after their change. `--no-sync` skips it. A failed sync only warns: the change is kept on this machine, and the next sync pushes it. Each sync waits at most 15 seconds for the host (`PENMOSS_NOTEBOOK_SYNC_TIMEOUT=<seconds>` changes it); after that the change is made here and pushed in the background.
@@ -110,7 +112,7 @@ The CLI prints short lines for people. With `--json` it prints one JSON document
 | 2    | The command line does not fit the command, or no notebook was named where one must be                                                                                      |
 | 3    | Not allowed (a setting of the apps), the host refused the credentials, or the credentials file is unsafe to read                                                           |
 | 4    | No such note, folder, heading, text, version, notebook or repository                                                                                                       |
-| 5    | Conflict: the note changed since the base version, or it is in Trash; another `penmoss` is using the clone; `remove` would lose unpushed changes                           |
+| 5    | Conflict: the note changed since the base version, is in Trash or holds newer content; another `penmoss` is using the clone; `remove` would lose unpushed changes          |
 | 6    | Ambiguous: a title, heading or text matches more than once                                                                                                                 |
 | 7    | Refused for another reason, or by the repository's host: a refused push (branch protection, a hook, GitHub's GH007), a git rewrite of the remote, or a branch that is gone |
 

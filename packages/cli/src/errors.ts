@@ -1,8 +1,9 @@
 /**
  * Exit codes (documented in `penmoss --help` and docs/cli.md) and the errors
- * that carry them. A refusal from a notebook's local API keeps its code,
+ * that carry them. A refusal from a notebook's notes API keeps its code,
  * message and details, so `--json` can pass them on to an agent.
  */
+import { LocalError } from '@penmoss/git-notebook/local';
 
 export const EXIT = {
   /** Done. */
@@ -15,7 +16,7 @@ export const EXIT = {
   AUTH: 3,
   /** No such note, folder, heading, text or version. */
   NOT_FOUND: 4,
-  /** The note changed since the version the edit is based on, or it is in Trash (409). */
+  /** The note changed since the edit's base version, is in Trash, or holds newer content (409). */
   CONFLICT: 5,
   /** A title, heading or text matches more than once. */
   AMBIGUOUS: 6,
@@ -38,7 +39,7 @@ export class CliError extends Error {
   }
 }
 
-/** The exit code for a refusal from a notebook's local API. */
+/** The exit code for a refusal from a notebook's notes API. */
 export function exitCodeFor(status: number, code: string): ExitCode {
   if (status === 401 || status === 403) return EXIT.AUTH;
   if (code.endsWith('_ambiguous')) return EXIT.AMBIGUOUS;
@@ -48,7 +49,7 @@ export function exitCodeFor(status: number, code: string): ExitCode {
   return EXIT.ERROR;
 }
 
-/** A refusal from a notebook's local API: `{ error: { code, message, details? } }` with its status. */
+/** A refusal from a notebook's notes API (a `LocalError`): its status, code, message and details. */
 export class ApiError extends CliError {
   constructor(
     readonly status: number,
@@ -59,4 +60,18 @@ export class ApiError extends CliError {
   ) {
     super(exitCodeFor(status, code), message, code, details, hints);
   }
+}
+
+/**
+ * The notes API's refusals as the CLI's: every other error is left as it is. What in the markdown
+ * the notebook could not store (A172) is also said for people; `--json` carries it in details.
+ */
+export function apiErrorOf(error: unknown): unknown {
+  if (!(error instanceof LocalError)) return error;
+  const details = error.details;
+  const hints =
+    error.code === 'unsupported_markdown' && typeof details?.['problem'] === 'string'
+      ? [details['problem']]
+      : [];
+  return new ApiError(error.status, error.code, error.message, details, hints);
 }

@@ -4,7 +4,7 @@
  * one, since a profile cannot prove another device lacks its clocks); a writer that has used many
  * retires for a new writer, so the file stays small.
  */
-import { bodyMarkdown } from '@penmoss/editor/markdown';
+import { bodyMarkdown } from '@penmoss/sync-client/markdown';
 import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import * as Y from '@y/y';
 import { describe, expect, it } from 'vitest';

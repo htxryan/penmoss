@@ -1,4 +1,5 @@
 /** search, cat, ls, open and history: reading notes. */
+import { LocalError, type LocalNoteContent, type LocalNotebook } from '@penmoss/git-notebook/local';
 import { UsageError } from '../args';
 import type { Command, Context } from '../command';
 import { ApiError, CliError, EXIT } from '../errors';
@@ -12,17 +13,6 @@ const NOTE_HELP =
   'A note is its id or its exact title, ignoring the case of A–Z only; a title several notes share is an error listing their ids.';
 
 // --- search ---
-
-interface SearchHit {
-  readonly id: string;
-  readonly title: string;
-  readonly titleHighlighted: string;
-  readonly snippet: string;
-  readonly heading: string | null;
-  readonly tags: string[];
-  readonly updatedAt: number;
-  readonly sources: string[];
-}
 
 const MODES = ['hybrid', 'full-text', 'semantic'];
 
@@ -98,21 +88,19 @@ export const search: Command = {
     if (limit > 50) throw new UsageError('--limit must be at most 50');
     const after = epoch(context, 'after');
     const before = epoch(context, 'before');
-    if (mode !== 'full-text') await context.notebook?.useMeaning?.();
-    const api = await context.api();
+    if (mode !== 'full-text') await context.session?.useMeaning?.();
     const folderRef = context.string('folder');
-    const folder = folderRef === undefined ? undefined : await resolveFolder(api, folderRef);
-    const found = await api.get<{ mode: string; results: SearchHit[]; notice?: string }>(
-      '/api/search',
-      {
+    const folder = folderRef === undefined ? undefined : await resolveFolder(context, folderRef);
+    const found = await context.read((notebook) =>
+      notebook.search({
         q: query,
         mode,
         limit,
-        tag: context.string('tag')?.replace(/^#/, ''),
-        folder: folder ?? undefined,
-        after,
-        before,
-      },
+        tag: context.string('tag')?.replace(/^#/, '') ?? null,
+        folderId: folder ?? null,
+        after: after ?? null,
+        before: before ?? null,
+      }),
     );
     if (found.notice && !context.json) context.note(found.notice);
     context.emit(
@@ -149,36 +137,24 @@ export const search: Command = {
 
 // --- cat ---
 
-/** `GET /api/notes/:id/content` (A121). */
-export interface NoteContent {
-  readonly id: string;
-  readonly title: string;
-  readonly tags: string[];
-  readonly markdown: string;
-  readonly body: string;
-  readonly headings: string[];
-  readonly baseVersion: number;
-  readonly deleted: boolean;
-}
-
 /** A note as `cat --json` and `daily --json` give it. */
-export const noteJson = (note: NoteContent, extra: Record<string, unknown> = {}) => ({
+export const noteJson = (note: LocalNoteContent, extra: Record<string, unknown> = {}) => ({
   id: note.id,
   title: note.title,
   tags: note.tags,
   headings: note.headings,
   baseVersion: note.baseVersion,
   ...(note.deleted ? { deleted: true } : {}),
+  ...(note.notice === undefined ? {} : { notice: note.notice }),
   ...extra,
   markdown: note.markdown,
   body: note.body,
 });
 
-export async function readContent(context: Context, ref: string): Promise<NoteContent> {
-  const api = await context.api();
-  const note = await resolveNote(api, ref);
+export async function readContent(context: Context, ref: string): Promise<LocalNoteContent> {
+  const note = await resolveNote(context, ref);
   try {
-    return await api.get<NoteContent>(`/api/notes/${encodeURIComponent(note.id)}/content`);
+    return await context.read((notebook) => notebook.content(note.id));
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       throw new CliError(EXIT.NOT_FOUND, `No note with id ${note.id}.`, 'not_found', undefined, [
@@ -203,20 +179,12 @@ export const cat: Command = {
     const [ref] = context.args([NOTE]);
     const note = await readContent(context, ref!);
     if (note.deleted && !context.json) context.note(`(“${note.title}” is in Trash.)`);
+    if (note.notice && !context.json) context.note(note.notice);
     context.emit(noteJson(note), () => (context.bool('body') ? note.body : note.markdown));
   },
 };
 
 // --- ls ---
-
-interface Listed {
-  readonly id: string;
-  readonly title: string;
-  readonly kind?: string;
-  readonly tags?: string[];
-  readonly excerpt?: string;
-  readonly updatedAt: number;
-}
 
 const NOTE_ROW = (id: string, title: string | null, updatedAt: number | null, color: boolean) =>
   `${id.padEnd(26)}  ${title ?? '(untitled)'}  ${dim(when(updatedAt), color)}`;
@@ -256,11 +224,10 @@ export const ls: Command = {
       throw new UsageError(`--limit must be at most ${MAX_RECENT}`);
     }
     const { color } = context;
-    const api = await context.api();
     if (context.bool('recent')) {
       context.args([]);
       const limit = context.number('limit') ?? 20;
-      const { notes } = await api.get<{ notes: Listed[] }>('/api/notes', { limit });
+      const { notes } = await context.read((notebook) => notebook.listNotes({ limit }));
       context.emit(
         {
           notes: notes.map((note) => ({
@@ -278,7 +245,7 @@ export const ls: Command = {
     }
     if (context.bool('tags')) {
       context.args([]);
-      const { tags } = await api.get<{ tags: Array<{ name: string; notes: number }> }>('/api/tags');
+      const { tags } = await context.read((notebook) => notebook.tags());
       context.emit({ tags }, () =>
         tags.length > 0
           ? tags.map((tag) => `#${tag.name}  ${dim(String(tag.notes), color)}`)
@@ -289,9 +256,7 @@ export const ls: Command = {
     const tag = context.string('tag');
     if (tag !== undefined) {
       context.args([]);
-      const listed = await api.get<{ tag: string; notes: Listed[] }>('/api/tags', {
-        tag: tag.replace(/^#/, ''),
-      });
+      const listed = await context.read((notebook) => notebook.tagged(tag.replace(/^#/, '')));
       context.emit(
         {
           tag: listed.tag,
@@ -309,7 +274,7 @@ export const ls: Command = {
       return;
     }
     const [ref] = context.args(['folder'], 1);
-    const listing = await listFolder(api, ref);
+    const listing = await listFolder(context, ref);
     context.emit(
       {
         folder: listing.folder,
@@ -344,7 +309,7 @@ export const open: Command = {
   flags: [{ name: 'print', type: 'boolean', description: 'Only print the link' }],
   async run(context) {
     const [ref] = context.args([NOTE]);
-    const note = await resolveNote(await context.api(), ref!);
+    const note = await resolveNote(context, ref!);
     // The Mac app's deep link (apps/desktop/src/deep-link.ts): it opens /notes/<id>.
     const url = `penmoss://note/${encodeURIComponent(note.id)}`;
     const shouldOpen = !context.bool('print') && !context.json;
@@ -358,24 +323,6 @@ export const open: Command = {
 interface Author {
   readonly label: string;
   readonly kind: string;
-}
-
-interface History {
-  readonly versions: Array<{
-    id: number;
-    createdAt: number;
-    reason: string;
-    summary: string;
-    authors: Author[];
-  }>;
-  readonly unversioned: { authors: Author[]; since: number } | null;
-}
-
-interface VersionDetail {
-  readonly id: number;
-  readonly previousId: number | null;
-  readonly markdown: string;
-  readonly diff: Array<{ op: 'same' | 'add' | 'remove'; line: string }>;
 }
 
 export const history: Command = {
@@ -407,9 +354,7 @@ export const history: Command = {
   ],
   async run(context) {
     const [ref] = context.args([NOTE]);
-    const api = await context.api();
-    const note = await resolveNote(api, ref!);
-    const base = `/api/notes/${encodeURIComponent(note.id)}/versions`;
+    const note = await resolveNote(context, ref!);
     const restoreId = context.number('restore');
     const revertId = context.number('revert');
     const actions = [context.bool('save'), restoreId !== undefined, revertId !== undefined];
@@ -417,8 +362,11 @@ export const history: Command = {
       throw new UsageError('give one of --version, --save, --restore and --revert');
     }
     if (context.bool('save')) {
-      const version = await api.request<{ id: number; summary: string }>('POST', base, {
-        body: {},
+      const version = await context.write(async (notebook) => {
+        // The answer is the version itself: the one just saved, or the latest.
+        const done = await notebook.saveVersion(note.id);
+        if (!done.version) throw new LocalError(404, 'not_found', 'Nothing committed yet');
+        return done.version;
       });
       context.emit(
         { id: note.id, version },
@@ -431,7 +379,14 @@ export const history: Command = {
       const what = restoreId !== undefined ? 'restore' : 'revert';
       let reply: { changed: boolean; conflicts?: Array<{ part: string }> };
       try {
-        reply = await api.request('POST', `${base}/${changeId}/${what}`, { body: {} });
+        reply = await context.write(async (notebook) => {
+          if (what === 'restore') {
+            const { changed } = await notebook.restoreVersion(note.id, changeId);
+            return { version: null, changed };
+          }
+          const { changed, conflicts } = await notebook.revertVersion(note.id, changeId);
+          return { version: null, changed, conflicts };
+        });
       } catch (error) {
         if (error instanceof ApiError && error.status === 404) {
           throw new CliError(
@@ -461,9 +416,9 @@ export const history: Command = {
     }
     const versionId = context.number('version');
     if (versionId !== undefined) {
-      let detail: VersionDetail;
+      let detail: Awaited<ReturnType<LocalNotebook['versionDetail']>>;
       try {
-        detail = await api.get<VersionDetail>(`${base}/${versionId}`);
+        detail = await context.read((notebook) => notebook.versionDetail(note.id, versionId));
       } catch (error) {
         if (error instanceof ApiError && error.status === 404) {
           throw new CliError(
@@ -495,7 +450,7 @@ export const history: Command = {
       return;
     }
     const limit = context.number('limit') ?? 20;
-    const listed = await api.get<History>(base);
+    const listed = await context.read((notebook) => notebook.versions(note.id));
     if (listed.versions.length === 0 && !listed.unversioned) {
       throw new CliError(EXIT.NOT_FOUND, `No note with id ${note.id}.`, 'not_found');
     }

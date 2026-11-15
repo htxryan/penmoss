@@ -1,9 +1,8 @@
 /**
- * The JSON Schema subset the MCP tools declare (T25), and a checker for it.
- * Tool arguments are checked against the very schema `tools/list` sends, by
- * a few dozen lines rather than a schema library: a call costs microseconds
- * of the Worker's 10 ms of CPU (D20), and the deeper checks (sizes, ids,
- * tags) are the REST API's own (agents/commands.ts).
+ * The JSON Schema subset the MCP tools declare (T25), and a checker for it. Tool arguments are
+ * checked against the very schema `tools/list` sends, by a few dozen lines rather than a schema
+ * library: a call costs microseconds, in the relay's Worker too (D20), and the deeper checks
+ * (sizes, ids, tags) are `LocalNotebook`'s own.
  */
 export type Schema =
   | {

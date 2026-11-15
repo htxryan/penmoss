@@ -2,8 +2,7 @@
  * The graph view (T17): the whole vault, or the notes within a few links of
  * one note, with filters (top-level folder, tag, orphans, tags as nodes) and
  * a legend of folder colours. Loaded lazily with d3-force; the app passes the
- * notes and links from its local index, so the graph works offline and costs
- * the Worker nothing.
+ * notes and links from its local index.
  */
 import { useMemo, useState } from 'react';
 import { GraphCanvas } from './GraphCanvas';

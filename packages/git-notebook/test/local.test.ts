@@ -2,7 +2,7 @@
  * The notes API on this device (T50 G2): the REST routes the CLI's `--notebook` calls and the
  * local MCP server's tools, over a notebook in memory. Shapes and codes are the server's.
  */
-import { commentToolDefinitions, toolDefinitions } from '@penmoss/core/mcp';
+import { commentToolDefinitions, toolDefinitions } from '../src/local/tools';
 import { periodicNoteId } from '@penmoss/core/periodic';
 import { describe, expect, it } from 'vitest';
 import {

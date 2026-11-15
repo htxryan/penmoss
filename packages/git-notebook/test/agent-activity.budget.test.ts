@@ -6,7 +6,7 @@
  * 500 ms, on the worker. A wall-clock budget (A1244): `task budgets` runs
  * it, never `task check`; agent-activity.test.ts covers what the list and undo do.
  */
-import { readNoteState } from '@penmoss/editor/markdown';
+import { readNoteState } from '@penmoss/sync-client/markdown';
 import { readWorkspace } from '@penmoss/sync-client/workspace';
 import { describe, expect, it } from 'vitest';
 import { AgentActivity } from '../src';

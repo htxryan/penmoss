@@ -16,7 +16,7 @@ import { ariaKeyShortcuts, isApplePlatform } from '@penmoss/editor/keys';
 import { useKeys } from '../commands/hooks';
 import { setTitle } from '@penmoss/sync-client/note';
 import { useNotes } from '../notes/hooks';
-import { oneLineTitle } from '@penmoss/editor/title';
+import { oneLineTitle } from '@penmoss/sync-client/title';
 import { isPlainLeftClick, isWindowClick, navigate, notePath } from '../router';
 import { openNoteWindow } from '../window/open';
 import { COPIED_AGENT_REFERENCE, useCopyAgentReference } from '../notes/agent-reference';

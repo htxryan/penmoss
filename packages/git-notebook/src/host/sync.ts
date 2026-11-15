@@ -5,7 +5,7 @@
  * transport, store and status; this is the part that does not depend on the platform.
  */
 import { NotebookError, type GitNotebookEngine } from '../engine';
-import { GitTransportError, privateEmailAdvice } from '../transport';
+import { GitRefused, GitTransportError, privateEmailAdvice } from '../transport';
 
 /** The longest one sync may take before it is stopped and counted as offline (A859). */
 export const SYNC_LIMIT_MS = 90_000;
@@ -39,21 +39,6 @@ export class SyncTimeout extends Error {
   constructor(ms: number) {
     super(`The git host did not answer within ${Math.round(ms / 1000)} s.`);
     this.name = 'SyncTimeout';
-  }
-}
-
-/**
- * A refusal from the client's own git (the Mac's main process, Android's JGit) that is not git's
- * error itself (A824): its code, and its words as the app says them.
- */
-export class GitRefused extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-    readonly hostMessage?: string,
-  ) {
-    super(message);
-    this.name = 'GitRefused';
   }
 }
 

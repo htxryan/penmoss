@@ -7,9 +7,9 @@
  * as it starts (A1350); without the lease it keeps trying. Off stops it all and removes the
  * model and vectors.
  */
-import { LeaseKeeper, MeaningIndex, type MeaningHit, type MeaningNote } from '@penmoss/core/search';
+import { MeaningIndex, type MeaningHit, type MeaningNote } from '@penmoss/core/search';
 import type { NoteSection } from '@penmoss/core/search';
-import { ModelError } from './model-store';
+import { LeaseKeeper } from './lease-keeper';
 import type { NodeMeaning, OpenedMeaning } from './node-meaning';
 
 /** What the service needs of `NodeMeaning` (tests give it a fake embedder). */
@@ -298,8 +298,7 @@ export class MeaningService {
       this.download = null;
       if (!this.enabled || this.stopped) return;
       this.state = 'failed';
-      this.error =
-        error instanceof ModelError || error instanceof Error ? error.message : String(error);
+      this.error = error instanceof Error ? error.message : String(error);
       this.options.log?.(`[meaning] ${this.error}`);
       await this.emitStatus();
     }

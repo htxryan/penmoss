@@ -57,8 +57,8 @@ import {
   setSetting,
 } from '@penmoss/sync-client/workspace';
 import { parseMarkdown } from '@penmoss/core';
-import { appendCapture, captureTime, splitCapture } from '@penmoss/editor/capture';
-import { mirrorMarkdown, readNoteState } from '@penmoss/editor/markdown';
+import { appendCapture, captureTime, splitCapture } from '@penmoss/sync-client/capture';
+import { mirrorMarkdown, readNoteState } from '@penmoss/sync-client/markdown';
 import { fromBase64, toBase64 } from 'lib0/buffer';
 import * as Y from '@y/y';
 

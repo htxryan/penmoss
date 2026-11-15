@@ -30,7 +30,7 @@ export const NOTE_COMMENTS = 'comments';
 export const MAX_COMMENT_CHARS = 20_000;
 /** The longest quote kept with a thread; longer selections keep their start and an ellipsis. */
 export const MAX_QUOTE_CHARS = 2_000;
-/** At most this many threads in one note, and comments in one thread (the NoteDoc's size). */
+/** At most this many threads in one note, and comments in one thread (a note's size stays bounded). */
 export const MAX_THREADS = 500;
 export const MAX_COMMENTS_PER_THREAD = 200;
 

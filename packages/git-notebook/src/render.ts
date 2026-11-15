@@ -5,7 +5,7 @@
  * bytes. The format is the mirror's (A204, A205): it renders through the same `mirrorMarkdown`.
  */
 import { assetPrefix } from '@penmoss/core/mirror';
-import { mirrorMarkdown, readNoteState } from '@penmoss/editor/markdown';
+import { mirrorMarkdown, readNoteState } from '@penmoss/sync-client/markdown';
 import { NOTE_META } from '@penmoss/sync-client/note';
 import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import * as Y from '@y/y';
@@ -46,19 +46,28 @@ export function linkTargets(doc: Y.Doc): Set<string> {
   return out;
 }
 
-/** One note's markdown, as the mirror writes it. */
+/** Why the render leaves a note's file as it is (A1493), as `SyncReport.skipped` says it. */
+export const UNSUPPORTED_RENDER =
+  'holds content from a newer Penmoss, so its file is left as it is; update Penmoss to render it';
+
+/**
+ * One note's markdown, as the mirror writes it; null when this build cannot read its body
+ * (content from a newer Penmoss, A1493): its file is then never rewritten from what it can read.
+ */
 export function renderNoteFile(
   doc: Y.Doc,
   noteId: string,
   path: string,
   named: Named,
   root: string,
-): string {
+): string | null {
   const link = (id: string) => {
     const name = named.paths.has(id) ? named.names.get(id) : undefined;
     return name ? { name: name.name, title: name.title } : null;
   };
-  return mirrorMarkdown(readNoteState(doc), noteId, changedAtOf(doc), {
+  const state = readNoteState(doc);
+  if (state.unsupported) return null;
+  return mirrorMarkdown(state, noteId, changedAtOf(doc), {
     link,
     assetPrefix: assetPrefix(path.slice(root.length)),
   }).markdown;

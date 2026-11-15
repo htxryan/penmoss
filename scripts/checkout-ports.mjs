@@ -1,4 +1,3 @@
-/// <reference types="node" />
 /**
  * The local test servers' ports for this checkout (A1177), for the web and Electron Playwright
  * configs. Each worktree gets its own, so two sessions' suites never collide on one port (the
@@ -6,21 +5,24 @@
  * run). The ports come from a hash of the checkout's path, in 20000–59999, so the same checkout
  * always gets the same ones.
  *
- * `PENMOSS_PORT_BLOCK=n` (the factory's slots, scripts/ports.mjs) uses that block's ports instead
- * of the hash. An environment variable still wins (CI's `mac-runner.sh pick-ports` sets the e2e ones):
+ * `PENMOSS_PORT_BLOCK=n` (the factory's slots, ports.mjs) uses that block's ports instead of the
+ * hash. An environment variable still wins (CI's `mac-runner.sh pick-ports` sets the e2e ones):
  * `PENMOSS_E2E_PORT`, `PENMOSS_E2E_PREVIEW_PORT`, `PENMOSS_DESKTOP_FAKE_GITHUB_PORT`. Each is set
  * here when missing, so specs and fixtures read the same number in Playwright's workers.
  *
  * Node-only.
  */
 import { fileURLToPath } from 'node:url';
-import { parseBlock, portsFor, type PortName } from '../../../../scripts/ports.mjs';
+import { parseBlock, portsFor } from './ports.mjs';
 
-/** The repository root: this file is packages/core/test/support/. */
-const root = fileURLToPath(new URL('../../../../', import.meta.url));
+/** The repository root: this file is scripts/. */
+const root = fileURLToPath(new URL('../', import.meta.url));
 
-/** FNV-1a, 32 bits. */
-function fnv1a(text: string): number {
+/**
+ * FNV-1a, 32 bits.
+ * @param {string} text
+ */
+function fnv1a(text) {
   let h = 0x811c9dc5;
   for (let i = 0; i < text.length; i += 1) {
     h ^= text.charCodeAt(i);
@@ -29,12 +31,21 @@ function fnv1a(text: string): number {
   return h;
 }
 
-/** The first of this checkout's ten ports. */
-export function checkoutPortBase(path: string = root): number {
+/**
+ * The first of this checkout's ten ports.
+ * @param {string} [path]
+ * @returns {number}
+ */
+export function checkoutPortBase(path = root) {
   return 20000 + (fnv1a(path) % 4000) * 10;
 }
 
-function pick(name: string, offset: number, inBlock: PortName): number {
+/**
+ * @param {string} name
+ * @param {number} offset
+ * @param {import('./ports.mjs').PortName} inBlock
+ */
+function pick(name, offset, inBlock) {
   const set = Number(process.env[name]);
   const block = parseBlock(process.env['PENMOSS_PORT_BLOCK']);
   const port =
@@ -48,16 +59,16 @@ function pick(name: string, offset: number, inBlock: PortName): number {
 }
 
 /** Vite's dev server for the web suite. */
-export function webE2ePort(): number {
+export function webE2ePort() {
   return pick('PENMOSS_E2E_PORT', 0, 'vite');
 }
 
 /** `vite preview` for the web suite's CSP specs and budgets. */
-export function webPreviewPort(): number {
+export function webPreviewPort() {
   return pick('PENMOSS_E2E_PREVIEW_PORT', 1, 'preview');
 }
 
 /** The Electron suite's fake GitHub (Send feedback). */
-export function desktopFakeGitHubPort(): number {
+export function desktopFakeGitHubPort() {
   return pick('PENMOSS_DESKTOP_FAKE_GITHUB_PORT', 2, 'fakeGithub');
 }

@@ -13,6 +13,7 @@ import {
   type ResolvedPos,
   type Schema,
 } from '@tiptap/pm/model';
+import type { NoteFields } from '@penmoss/sync-client/note-fields';
 import { safeHref } from './sanitize';
 
 type Core = typeof import('@penmoss/core');
@@ -21,8 +22,7 @@ export type Codec = Pick<
   Core,
   'parseMarkdown' | 'serializeMarkdown' | 'schema' | 'createFrontmatter'
 >;
-/** Fields for a whole note's frontmatter (Copy as Markdown with nothing selected). */
-export type NoteFields = Parameters<Core['createFrontmatter']>[0];
+export type { NoteFields };
 
 let loaded: Codec | null = null;
 let loading: Promise<Codec> | null = null;

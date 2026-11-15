@@ -1,9 +1,8 @@
 /**
  * Wikilinks and embeds as data (T16, T13): what a note links to, with the
- * text around each link, for the D1 `links` index, the Backlinks panel, the
- * graph and embeds. DOM-free and Yjs-free: it reads ProseMirror JSON, which
- * the server gets from `PMNode.toJSON()` and clients from the replica's delta
- * (sync-client `yjs14.ts`).
+ * text around each link, for the Backlinks panel, the graph and embeds.
+ * DOM-free and Yjs-free: it reads ProseMirror JSON, from `PMNode.toJSON()` or
+ * from the replica's delta (sync-client `yjs14.ts`).
  *
  * A link's context keeps each wikilink in it as a reference, not as text, so
  * the Backlinks panel shows every link with its target's current title, even

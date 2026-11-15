@@ -1,7 +1,7 @@
 import { Schema, type AttributeSpec, type MarkSpec, type NodeSpec } from 'prosemirror-model';
 
 /**
- * The single Penmoss document schema (A9). The markdown codec, the server-side
+ * The single Penmoss document schema (A9). The markdown codec, the headless
  * edit engine and the editor all use these specs; `packages/editor` builds its
  * TipTap extensions from them and compares `describeSchema()` output in CI.
  *

@@ -21,7 +21,7 @@ import {
   type DrawingServices,
 } from '../src/extensions/drawing';
 import type { ImageServices } from '../src/extensions/image';
-import { noteBody } from '../src/markdown';
+import { noteBody } from '@penmoss/sync-client/markdown';
 import { openEditor, press, type } from './support/editor';
 
 const pair = (svg: string, scene: string): DrawingFiles => ({
@@ -58,7 +58,7 @@ const markdownOf = (collab: CollabEditor) =>
 const replicaMarkdown = (collab: CollabEditor) =>
   serializeMarkdown({
     frontmatter: null,
-    doc: noteBody((collab.replica as unknown as { doc: Parameters<typeof noteBody>[0] }).doc),
+    doc: noteBody((collab.replica as unknown as { doc: Parameters<typeof noteBody>[0] }).doc)!,
   });
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));

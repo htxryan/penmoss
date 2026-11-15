@@ -4,7 +4,7 @@
  * grows with its text: CSS `field-sizing: content` where the browser has it,
  * otherwise by setting its height here whenever its text or width changes.
  */
-import { oneLineTitle, type TitleField } from '@penmoss/editor/title';
+import { oneLineTitle, type TitleField } from '@penmoss/sync-client/title';
 
 /** The parts of a `<textarea>` the title needs (a fake in unit tests). */
 export interface GrowingField {

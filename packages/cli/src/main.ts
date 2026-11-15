@@ -108,7 +108,7 @@ const EXIT_HELP = [
   '  2  the command line does not fit the command, or no notebook was named where one must be',
   '  3  not allowed (403), the host refused the credentials, or they are unsafe to read',
   '  4  no such note, folder, heading, text, version or notebook',
-  '  5  conflict: the note changed since the version the edit is based on (409)',
+  '  5  conflict: the note changed since the edit’s base version, or holds content from a newer Penmoss (409)',
   '  6  ambiguous: a title, heading or text matches more than once',
   '  7  refused for another reason (400, 413, 422, 428), or by the repository’s host',
 ];
@@ -181,7 +181,7 @@ function notebooksOf(io: Io): NotebookIo {
  * The notebook a note command runs on without `--notebook` (A1050): the only git notebook on
  * this machine. With none, or several, it is a usage error that names them.
  */
-export async function onlyNotebook(notebooks: NotebookIo): Promise<string> {
+async function onlyNotebook(notebooks: NotebookIo): Promise<string> {
   const names = (await notebooks.list()).map((entry) => entry.name);
   if (names.length === 1) return names[0]!;
   if (names.length === 0) {
@@ -199,7 +199,7 @@ export async function onlyNotebook(notebooks: NotebookIo): Promise<string> {
  * reference (PEN-69): the notebook the reference's first 4 characters name, among this machine's
  * (a device's clone before an agent's). Null when no argument is a short reference.
  */
-export async function notebookOfRefs(
+async function notebookOfRefs(
   notebooks: NotebookIo,
   positionals: readonly string[],
 ): Promise<string | null> {
@@ -221,7 +221,7 @@ export async function notebookOfRefs(
   );
 }
 
-/** A command on a git notebook (T50): its local API, under the clone's lock, and one sync. */
+/** A command on a git notebook (T50): its notes API, under the clone's lock, and one sync. */
 async function onNotebook(
   io: Io,
   notebooks: NotebookIo,
@@ -277,7 +277,7 @@ async function onNotebook(
 }
 
 /** How long a note command's own sync may wait for the host (A852): 15 s unless set. */
-export function notebookSyncTimeout(env: Readonly<Record<string, string | undefined>>): number {
+function notebookSyncTimeout(env: Readonly<Record<string, string | undefined>>): number {
   const seconds = Number(env['PENMOSS_NOTEBOOK_SYNC_TIMEOUT'] ?? '');
   return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 15_000;
 }

@@ -34,13 +34,13 @@ import {
   type TrashedFolder,
   type WorkspaceSnapshot,
 } from '@penmoss/sync-client/workspace';
-import { readTitle } from '@penmoss/sync-client/note';
 import * as Y from '@y/y';
+import { titleAt } from './at-commit';
 import { commitWriter } from './history';
 import type { Layout } from './layout';
 import { isPurged, purgedIds } from './purge';
 import type { CommitInfo, GitTransport } from './transport';
-import { contentIds, grownBy, isUpdate, mergeUpdates } from './yjs';
+import { contentIds, grownBy } from './yjs';
 
 /** How long an entry is listed (A561). */
 export const ACTIVITY_DAYS = 30;
@@ -754,7 +754,7 @@ export class AgentActivity {
   }
 
   constructor(
-    private readonly transport: Pick<GitTransport, 'log' | 'list' | 'read'>,
+    private readonly transport: Pick<GitTransport, 'log' | 'list' | 'read' | 'readDir'>,
     private readonly layout: Layout,
     /** A note's title for the summaries (the live replica's); null: "Untitled". */
     private readonly titleOf: (noteId: string) => string | null = () => null,
@@ -828,21 +828,9 @@ export class AgentActivity {
 
   /** A note's title: the live replica's, else as the branch had it at `commit`. */
   private async titleAt(commit: string, noteId: string): Promise<string | null> {
-    const known = this.titleOf(noteId);
-    if (known !== null) return known;
-    const dir = this.layout.noteDir(noteId);
-    const files = await this.transport.list(commit);
-    const paths = [...files.keys()].filter((path) => path.startsWith(dir));
-    if (paths.length === 0) return null;
-    const parts = [...(await this.transport.read(commit, paths)).values()].filter(isUpdate);
-    if (parts.length === 0) return null;
-    const doc = new Y.Doc();
-    try {
-      Y.applyUpdate(doc, mergeUpdates(parts));
-      return readTitle(doc) || null;
-    } finally {
-      doc.destroy();
-    }
+    return (
+      this.titleOf(noteId) ?? ((await titleAt(this.transport, this.layout, noteId, commit)) || null)
+    );
   }
 
   /**
@@ -901,27 +889,11 @@ export class AgentActivity {
       return old && (old.folderId !== note.folderId || old.position !== note.position);
     });
     const titles = new Map<string, string>();
-    let files: ReadonlyMap<string, string> | null = null;
     for (const note of moved) {
-      const known = this.titleOf(note.id);
-      if (known !== null) {
-        titles.set(note.id, known);
-        continue;
-      }
       // Not here (deleted for good since, or never opened): as the branch had it then.
-      const dir = this.layout.noteDir(note.id);
-      files ??= await this.transport.list(commit);
-      const paths = [...files.keys()].filter((path) => path.startsWith(dir));
-      if (paths.length === 0) continue;
-      const parts = [...(await this.transport.read(commit, paths)).values()].filter(isUpdate);
-      if (parts.length === 0) continue;
-      const doc = new Y.Doc();
-      try {
-        Y.applyUpdate(doc, mergeUpdates(parts));
-        titles.set(note.id, readTitle(doc));
-      } finally {
-        doc.destroy();
-      }
+      const title =
+        this.titleOf(note.id) ?? (await titleAt(this.transport, this.layout, note.id, commit));
+      if (title !== null) titles.set(note.id, title);
     }
     return titles;
   }

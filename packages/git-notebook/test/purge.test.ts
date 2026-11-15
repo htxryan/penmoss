@@ -5,7 +5,15 @@
 import { createFolder, readWorkspace, registerNote } from '@penmoss/sync-client/workspace';
 import * as Y from '@y/y';
 import { describe, expect, it } from 'vitest';
-import { isPurged, markPurged, markRecoveredFrom, recoveredFromOf, unmarkPurged } from '../src';
+import {
+  GitRefused,
+  isPurged,
+  markPurged,
+  markRecoveredFrom,
+  MemoryTransport,
+  recoveredFromOf,
+  unmarkPurged,
+} from '../src';
 import { readTitle } from '@penmoss/sync-client/note';
 import { testNotebook } from './support/notebooks';
 
@@ -102,5 +110,51 @@ describe('copies brought back after a store was cleared (A886)', () => {
     const atHead = await workspaceAtHead(nb);
     expect(recoveredFromOf(atHead).has(copy)).toBe(false);
     expect(readWorkspace(atHead).notes.map((note) => note.id)).toEqual([origin]);
+  });
+
+  it('a Keep and sync main refuses (purge_raced) is withheld again at the next sync', async () => {
+    const nb = testNotebook();
+    const mac = await nb.open('Mac', { create: true });
+    const origin = mac.ops.createNote({ title: 'Passwords', markdown: 'hunter2' });
+    await mac.engine.sync();
+    // Main refuses a copy whose original is deleted for good unless the person confirmed it.
+    let refuse = false;
+    const transport = new (class extends MemoryTransport {
+      override commit(...args: Parameters<MemoryTransport['commit']>) {
+        if (refuse) {
+          return Promise.reject(new GitRefused('purge_raced', 'A copy of a note deleted for good'));
+        }
+        return super.commit(...args);
+      }
+    })({
+      remote: nb.remote,
+      branch: nb.branch,
+      root: nb.root,
+      author: { name: 'Penmoss Phone', email: 'phone@example.invalid' },
+      clock: nb.clock,
+    });
+    const phone = await nb.open('Phone', { transport });
+    await phone.engine.sync();
+    const copy = phone.ops.createNote({ title: 'Passwords (recovered)', markdown: 'more' });
+    markRecoveredFrom(phone.engine.replica.workspace, copy, origin);
+    mac.ops.purge(origin);
+    await mac.engine.sync();
+    await phone.engine.sync();
+    const kept = phone.engine.withheld()[copy]!;
+    // Keep and sync: the caller puts the copy back, with its link, and the engine pushes it.
+    Y.applyUpdate(
+      phone.engine.replica.ensureNote(copy),
+      Uint8Array.from(atob(kept.update!), (c) => c.charCodeAt(0)),
+    );
+    registerNote(phone.engine.replica.workspace, { id: copy, folderId: null });
+    markRecoveredFrom(phone.engine.replica.workspace, copy, origin);
+    phone.engine.keepCopy(copy);
+    refuse = true;
+    await expect(phone.engine.sync()).rejects.toMatchObject({ code: 'purge_raced' });
+    refuse = false;
+    await phone.engine.sync();
+    expect(phone.engine.replica.note(copy)).toBeUndefined();
+    expect(phone.engine.withheld()[copy]).toMatchObject({ origin });
+    expect(nb.files().some((path) => path.includes(copy))).toBe(false);
   });
 });

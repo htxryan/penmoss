@@ -18,6 +18,7 @@ import * as Y from '@y/y';
 import { NOTE_META, readTitle, setTitle } from './note';
 import { NOTE_ROOT } from './replica';
 import { META_TAG_PREFIX } from './tags';
+import { isEmptyUpdate } from './yjs14';
 
 type AnyDelta = ReturnType<Y.Node['toDeltaDeep']>;
 
@@ -58,7 +59,7 @@ export function setTagKeys(doc: Y.Doc, keys: ReadonlySet<string>): void {
 export function restoreContent(doc: Y.Doc, version: Y.Doc, origin: unknown = null): boolean {
   let changed = false;
   const off = (update: Uint8Array) => {
-    if (update.byteLength > 2) changed = true;
+    if (!isEmptyUpdate(update)) changed = true;
   };
   doc.on('update', off);
   try {

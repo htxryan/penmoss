@@ -97,9 +97,9 @@ import {
   openLightboxNow,
 } from '@penmoss/editor';
 import { formatCombo } from '@penmoss/editor/keys';
-import { noteFields } from '@penmoss/editor/note-fields';
-import { docText, textStats } from '@penmoss/editor/stats';
-import { bindTitleField, oneLineTitle } from '@penmoss/editor/title';
+import { noteFields } from '@penmoss/sync-client/note-fields';
+import { docText, textStats } from '@penmoss/sync-client/stats';
+import { bindTitleField, oneLineTitle } from '@penmoss/sync-client/title';
 import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import { initNote, isoWithOffset, readIdentity, readTitle } from '@penmoss/sync-client/note';
 import type { LinkResolver } from '@penmoss/core';
@@ -254,7 +254,7 @@ const blockEntry = (item: BlockItem): BlockEntry => ({
 });
 
 /** The note's frontmatter fields, as the web writes them (shared, so the two cannot drift). */
-export { noteFields } from '@penmoss/editor/note-fields';
+export { noteFields } from '@penmoss/sync-client/note-fields';
 
 /**
  * The Info sheet's details are read at most this often while the note changes (T40 P7, NT23):
@@ -1268,7 +1268,7 @@ export class EditorHost {
       const period = kind === 'daily' ? atDay.toString() : isoWeek(atDay).toString();
       const date = kind === 'daily' ? atDay.toString() : weekMonday(isoWeek(atDay)).toString();
       const [{ periodicNote }, codec] = await Promise.all([
-        import('@penmoss/editor/periodic'),
+        import('@penmoss/sync-client/periodic'),
         import('@penmoss/core'),
       ]);
       const note = periodicNote(codec, kind, period, template);

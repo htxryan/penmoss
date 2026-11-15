@@ -5,4 +5,4 @@
 export { run, COMMANDS } from './main';
 export { memoryTokenStore } from './memory-store';
 export { EXIT, type ExitCode } from './errors';
-export type { FetchLike, FetchResponse, Io, StdioIo, TokenLocation, TokenStore } from './io';
+export type { Io, StdioIo, TokenLocation, TokenStore } from './io';

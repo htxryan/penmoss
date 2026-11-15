@@ -4,8 +4,8 @@
  * this way, in the apps and the local MCP.
  */
 import { merge3, splitLines, type MergeConflict } from '@penmoss/core/diff';
-import { frontmatterTagKeys, setBody, setTagKeys } from '@penmoss/sync-client/history';
-import { readTitle, setTitle } from '@penmoss/sync-client/note';
+import { frontmatterTagKeys, setBody, setTagKeys } from './history';
+import { readTitle, setTitle } from './note';
 import type * as Y from '@y/y';
 import { bodyMarkdown, mergedBodyDelta } from './markdown';
 

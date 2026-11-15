@@ -59,6 +59,10 @@ Each tag can have a description you write on the [Tags page](/docs/organise/#the
 
 `read_note` returns a `baseVersion`. Pass it to an edit, and the edit goes ahead only if that part of the note is still as it was read. If it changed, nothing changes, and the result says so with the text as it was and as it is now. Read the note again and redo the edit on the new text; never resend the old edit. The server remembers the last 8 versions of each note it read.
 
+### Notes from a newer Penmoss
+
+A note can hold content that only a newer Penmoss knows, such as a new kind of block. Reading it gives its text only, with a `notice` that says so, and no headings to edit by. An edit to its body (`append_to_note`, `update_section`, `replace_text`, `attach_file`, `revert_edit`) is refused with `unsupported_content`, and nothing changes. You can still set its title and tags. Update Penmoss to edit it.
+
 ## Folders
 
 | Tool              | What it does                                             | Arguments                                                       |

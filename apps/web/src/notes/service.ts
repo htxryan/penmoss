@@ -1125,7 +1125,7 @@ export class Notes {
       return id;
     }
     const [{ periodicNote }, codec] = await Promise.all([
-      import('@penmoss/editor/periodic'),
+      import('@penmoss/sync-client/periodic'),
       import('@penmoss/core'),
     ]);
     const note = periodicNote(codec, kind, period, template, salt);

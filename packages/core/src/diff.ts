@@ -1,7 +1,7 @@
 /**
  * Line diffs and three-way merges of markdown (T21): the history panel's
- * "what this version changed" and reverting an agent's edit (A3), which runs
- * in the NoteDoc. No dependencies, no DOM.
+ * "what this version changed" and reverting an agent's edit (A3). No
+ * dependencies, no DOM.
  *
  * `diffLines` is Myers' O((N+M)·D) algorithm after the common prefix and
  * suffix are trimmed, so an edit to a long note costs little.

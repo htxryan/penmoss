@@ -18,11 +18,11 @@
 import { isEmptyBody, findSection, replaceBlocks } from '@penmoss/core/diff-apply';
 import { parseMarkdown } from '@penmoss/core';
 import { schema } from '@penmoss/core/schema';
-import { setBody } from '@penmoss/sync-client/history';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { setBody } from './history';
+import { NOTE_ROOT } from './replica';
 import { pmnodeToDelta, ynodeToPmnode } from '@y/prosemirror';
 import type * as Y from '@y/y';
-import type { Node as PMNode } from '@tiptap/pm/model';
+import type { Node as PMNode } from 'prosemirror-model';
 
 export const CAPTURES_HEADING = 'Captures';
 /** Headings above this level would end the Captures section (`##`). */

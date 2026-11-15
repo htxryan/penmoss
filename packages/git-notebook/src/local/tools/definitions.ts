@@ -1,14 +1,11 @@
 /**
- * The MCP tools' definitions (T25; shared since T50, A830): each tool's name, title, description
- * for agents, the JSON Schema of its arguments and its annotations. The remote server on
- * `/mcp` (apps/server/src/mcp/tools.ts) and the local server over a git notebook
- * (`penmoss mcp --notebook`, @penmoss/git-notebook/local) both advertise these, each with its own
- * handlers, so a tool means the same everywhere. Also the advice both give with a refusal.
+ * The MCP tools' definitions (T25, A830): each tool's name, title, description for agents, the
+ * JSON Schema of its arguments and its annotations, as the local server over a git notebook
+ * (`penmoss mcp --notebook`, and the relay) advertises them. They kept the deleted server's names
+ * and schemas, so an agent's tool calls still mean the same. Also the advice given with a refusal.
  */
+import { SEARCH_MODES } from '@penmoss/core/search';
 import type { ObjectSchema, Schema } from './schema';
-
-/** How the search tool's modes are named (the server's search route takes the same). */
-export const SEARCH_MODES = ['full-text', 'semantic', 'hybrid'] as const;
 
 /** What a tool is, without what it does. */
 export interface ToolDefinition {
@@ -16,7 +13,7 @@ export interface ToolDefinition {
   readonly title: string;
   readonly description: string;
   readonly inputSchema: ObjectSchema;
-  /** Changes notes (the local server counts these as writes). */
+  /** Changes notes: the server saves the clone after it and pushes soon (A825). */
   readonly write: boolean;
   readonly annotations: {
     readonly title?: string;
@@ -29,11 +26,11 @@ export interface ToolDefinition {
   readonly hint?: string;
 }
 
-/** What differs between servers in what the tools say. */
+/** What the tools say that depends on who serves them. */
 export interface ToolOptions {
   /** The largest file attach_file takes, in bytes. */
   readonly attachmentMaxBytes: number;
-  /** Advice per refusal code that replaces this server's (a local server's own). */
+  /** Advice per refusal code that replaces the default (a git notebook's own). */
   readonly advice?: Readonly<Record<string, string>>;
 }
 
@@ -176,7 +173,7 @@ export function conflictAdvice(details: Record<string, unknown>): string {
 }
 
 /**
- * A refusal (the REST API's `{ code, message, details }`) as tool error text: what went wrong
+ * A refusal (a `LocalError`'s `{ code, message, details }`) as tool error text: what went wrong
  * and what to do next, so an agent can correct itself.
  */
 export function describeRefusal(
@@ -849,10 +846,9 @@ export const COMMENT_TOOL_NAMES = [
 ] as const;
 
 /**
- * The five comment tools (A775), as the remote server had them, now the local MCP server's
- * (`penmoss mcp`, A1064): the names and arguments are the server's; "sent to me" means sent to
- * this agent's writer, not to a token. Not in `toolDefinitions`, so a server lists them only
- * when it has them (the relay does not, D50).
+ * The five comment tools (A775, A1064), with the names and arguments the deleted server gave
+ * them: "sent to me" means sent to this agent's writer. Not in `toolDefinitions`, so a server
+ * lists them only when it has them (`penmoss mcp` does; the relay does not, D50).
  */
 export function commentToolDefinitions(): readonly ToolDefinition[] {
   return [

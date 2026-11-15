@@ -27,8 +27,8 @@ import {
   weekMonday,
   type PeriodKind,
 } from '@penmoss/core/periodic';
-import { initNote } from '@penmoss/sync-client/note';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { initNote } from './note';
+import { NOTE_ROOT } from './replica';
 import { docToDelta } from '@y/prosemirror';
 import * as Y from '@y/y';
 

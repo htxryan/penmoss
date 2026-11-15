@@ -6,7 +6,7 @@
  * read-only instead, and the content stays as it is for the version that
  * knows it. Core's own types always open: the editor has every one (A157).
  */
-import type { Schema } from '@tiptap/pm/model';
+import type { Schema } from 'prosemirror-model';
 
 export class UnsupportedContentError extends Error {
   /** The unknown node types, sorted. */
