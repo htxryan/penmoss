@@ -11,7 +11,7 @@ import {
   type MeaningSource,
   type ServiceNote,
   type ServiceStatus,
-} from '../../../../../packages/embed/src/meaning-service';
+} from '@penmoss/embed/service';
 import type { DesktopMeaningStatus } from '../../../src/desktop/bridge';
 
 /** Words by concept: power cuts, baking, travel in Japan. */

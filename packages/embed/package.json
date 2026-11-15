@@ -7,7 +7,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./eval": "./src/eval-embedder.ts",
-    "./lease-keeper": "./src/lease-keeper.ts"
+    "./lease-keeper": "./src/lease-keeper.ts",
+    "./service": "./src/service.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",

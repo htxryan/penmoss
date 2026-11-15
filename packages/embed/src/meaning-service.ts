@@ -10,7 +10,6 @@
 import { MeaningIndex, type MeaningHit, type MeaningNote } from '@penmoss/core/search';
 import type { NoteSection } from '@penmoss/core/search';
 import { LeaseKeeper } from './lease-keeper';
-import { ModelError } from './model-store';
 import type { NodeMeaning, OpenedMeaning } from './node-meaning';
 
 /** What the service needs of `NodeMeaning` (tests give it a fake embedder). */
@@ -299,8 +298,7 @@ export class MeaningService {
       this.download = null;
       if (!this.enabled || this.stopped) return;
       this.state = 'failed';
-      this.error =
-        error instanceof ModelError || error instanceof Error ? error.message : String(error);
+      this.error = error instanceof Error ? error.message : String(error);
       this.options.log?.(`[meaning] ${this.error}`);
       await this.emitStatus();
     }
