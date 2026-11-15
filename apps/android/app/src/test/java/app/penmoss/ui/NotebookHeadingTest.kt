@@ -1,5 +1,7 @@
 package app.penmoss.ui
 
+import app.penmoss.ui.screens.HomeUi
+import app.penmoss.ui.screens.HomeActions
 import android.graphics.Bitmap
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.Row
@@ -42,23 +44,20 @@ class NotebookHeadingTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = emptyList(),
-                    folders = listOf(FolderItem("a", "A")),
-                    status = "Synced at 3:42 PM",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
-                    onNotebookNewNote = { events += "note" },
-                    onNewFolder = { events += "folder" },
-                    onTrash = { events += "trash" },
-                    sortMode = sortMode,
-                    onSort = { events += "sort:$it" },
-                    defaultNotebook = "Personal",
+                    HomeUi(
+                        recent = emptyList(),
+                        folders = listOf(FolderItem("a", "A")),
+                        status = "Synced at 3:42 PM",
+                        syncing = false,
+                        sortMode = sortMode,
+                        defaultNotebook = "Personal",
+                    ),
+                    HomeActions(
+                        onNotebookNewNote = { events += "note" },
+                        onNewFolder = { events += "folder" },
+                        onTrash = { events += "trash" },
+                        onSort = { events += "sort:$it" },
+                    ),
                 )
             }
         }

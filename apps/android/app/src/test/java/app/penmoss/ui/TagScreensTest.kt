@@ -1,5 +1,8 @@
 package app.penmoss.ui
 
+import app.penmoss.ui.screens.HomeScreen
+import app.penmoss.ui.screens.HomeUi
+import app.penmoss.ui.screens.HomeActions
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
@@ -219,19 +222,16 @@ class TagScreensTest {
         var tags = 0
         compose.setContent {
             PenmossTheme {
-                app.penmoss.ui.screens.HomeScreen(
-                    recent = emptyList(),
-                    folders = emptyList(),
-                    status = "",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
-                    onTags = { tags++ },
+                HomeScreen(
+                    HomeUi(
+                        recent = emptyList(),
+                        folders = emptyList(),
+                        status = "",
+                        syncing = false,
+                    ),
+                    HomeActions(
+                        onTags = { tags++ },
+                    ),
                 )
             }
         }

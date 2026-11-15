@@ -1,5 +1,7 @@
 package app.penmoss.ui
 
+import app.penmoss.ui.screens.HomeUi
+import app.penmoss.ui.screens.HomeActions
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -69,9 +71,17 @@ class NotebookScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = emptyList(), folders = top, status = "", syncing = false,
-                    onSearch = {}, onSettings = {}, onAllNotes = {}, onFolder = { opened = it }, onOpen = {}, onToday = {}, onNewNote = {},
-                    notebooks = notebooks, defaultNotebook = "Home",
+                    HomeUi(
+                        recent = emptyList(),
+                        folders = top,
+                        status = "",
+                        syncing = false,
+                        notebooks = notebooks,
+                        defaultNotebook = "Home",
+                    ),
+                    HomeActions(
+                        onFolder = { opened = it },
+                    ),
                 )
             }
         }

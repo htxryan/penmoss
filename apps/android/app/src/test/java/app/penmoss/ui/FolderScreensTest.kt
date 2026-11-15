@@ -1,5 +1,7 @@
 package app.penmoss.ui
 
+import app.penmoss.ui.screens.HomeUi
+import app.penmoss.ui.screens.HomeActions
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -283,20 +285,17 @@ class FolderScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = emptyList(),
-                    folders = folders(),
-                    status = "Synced",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
-                    onNewFolder = { events += "new" },
-                    sortMode = "manual",
-                    onSort = { events += "sort:$it" },
+                    HomeUi(
+                        recent = emptyList(),
+                        folders = folders(),
+                        status = "Synced",
+                        syncing = false,
+                        sortMode = "manual",
+                    ),
+                    HomeActions(
+                        onNewFolder = { events += "new" },
+                        onSort = { events += "sort:$it" },
+                    ),
                 )
             }
         }
@@ -317,19 +316,16 @@ class FolderScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = emptyList(),
-                    folders = folders(),
-                    status = "Synced",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
-                    reordering = reordering,
-                    onReorder = { reordering = it },
+                    HomeUi(
+                        recent = emptyList(),
+                        folders = folders(),
+                        status = "Synced",
+                        syncing = false,
+                        reordering = reordering,
+                    ),
+                    HomeActions(
+                        onReorder = { reordering = it },
+                    ),
                 )
             }
         }
@@ -373,20 +369,16 @@ class FolderScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = emptyList(),
-                    folders = folders(),
-                    status = "Synced",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
-                    reordering = true,
-                    onReorder = {},
-                    onMoveFolder = { id, before, after -> commits += Triple(id, before, after) },
+                    HomeUi(
+                        recent = emptyList(),
+                        folders = folders(),
+                        status = "Synced",
+                        syncing = false,
+                        reordering = true,
+                    ),
+                    HomeActions(
+                        onMoveFolder = { id, before, after -> commits += Triple(id, before, after) },
+                    ),
                 )
             }
         }

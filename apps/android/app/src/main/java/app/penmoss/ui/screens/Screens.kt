@@ -62,6 +62,7 @@ import androidx.compose.material3.Text
 import app.penmoss.ui.square.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -110,111 +111,118 @@ private fun BackButton(onBack: () -> Unit) {
     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun HomeScreen(
-    recent: List<NoteItem>,
-    folders: List<FolderItem>,
-    status: String,
-    syncing: Boolean,
-    onSearch: () -> Unit,
-    onSettings: () -> Unit,
-    onAllNotes: () -> Unit,
-    onFolder: (String) -> Unit,
-    onOpen: (String) -> Unit,
-    onToday: () -> Unit,
-    /** This week's note, made from the template offline too (T40 P5, JR2). */
-    onThisWeek: () -> Unit = {},
-    onNewNote: () -> Unit,
+/** What Home shows (A6): its lists, the sync state and the person's layout. */
+@Immutable
+data class HomeUi(
+    val recent: List<NoteItem> = emptyList(),
+    val folders: List<FolderItem> = emptyList(),
+    val status: String = "",
+    val syncing: Boolean = false,
     /** Notes holding edits kept apart that wait for a conflict copy (A323). */
-    keptApart: Int = 0,
+    val keptApart: Int = 0,
     /** Captures saved on the phone and not sent yet, and those Penmoss refused (A337). */
-    capturesWaiting: Int = 0,
-    capturesRefused: Int = 0,
+    val capturesWaiting: Int = 0,
+    val capturesRefused: Int = 0,
     /** Why captures still wait, when it is worth saying (A345): their age, or the server. */
-    capturesWaitingWhy: String? = null,
-    /** Opens the list of refused captures (A345). */
-    onRefusedCaptures: () -> Unit = {},
-    /** A long press on a note: its actions, Move to folder… and Move to Trash (T38, T40 P3a). */
-    onNoteLongPress: ((NoteItem) -> Unit)? = null,
-    /**
-     * Pulling the list down, or Sync now, asks for a sync now (T39), and returns once the pass
-     * it asked for has ended (SyncCoordinator.syncNow).
-     */
-    onRefresh: suspend () -> Unit = {},
+    val capturesWaitingWhy: String? = null,
     /**
      * The status needs attention (offline, or the server failing): TalkBack reads it out when it
      * changes. "Synced at …" changes after every pass and is not read out (A530).
      */
-    statusAlert: Boolean = false,
-    /** Opens Trash (T40 P3a, NT13), from the top bar's overflow menu. */
-    onTrash: () -> Unit = {},
-    /** Opens the Journal calendar (T40 P5, JR3), from the top bar's overflow menu. */
-    onJournal: () -> Unit = {},
-    /** Opens the graph (T40 P7, LK7), from the top bar's overflow menu. */
-    onGraph: () -> Unit = {},
-    /** Opens Tags (T40 P6, TG1), from the top bar's overflow menu. */
-    onTags: () -> Unit = {},
-    /** Makes a folder at the top level (T40 P4, NT2), from the overflow menu. */
-    onNewFolder: () -> Unit = {},
+    val statusAlert: Boolean = false,
     /** The top level's sort order (T40 P4, NT6), from the Sort icon. */
-    sortMode: String = "manual",
-    onSort: (String) -> Unit = {},
+    val sortMode: String = "manual",
     /** Manual order (T40 P4, NT7): the folders list becomes handles to drag. */
-    reordering: Boolean = false,
-    onReorder: (Boolean) -> Unit = {},
-    onMoveFolder: (id: String, before: String?, after: String?) -> Unit = { _, _, _ -> },
-    /** A long press on a folder (T40 P4, NT3–NT5): rename it, make a subfolder, move or delete it. */
-    onFolderLongPress: ((FolderItem) -> Unit)? = null,
-    /** Quick capture inside the app (T40 P9, PL1): the sheet the tile and widget open. */
-    onCapture: () -> Unit = {},
+    val reordering: Boolean = false,
     /** Which of Home's shortcuts show (T42 on Android, ST12, A650): Settings → Display. */
-    shortcuts: HomeShortcuts = HomeShortcuts(),
-    /** Search with every action listed, the web's Commands (FD6), from the overflow menu. */
-    onCommands: () -> Unit = {},
+    val shortcuts: HomeShortcuts = HomeShortcuts(),
     /** Sync has stopped (T42 on Android, AC12, A651): the status line is a link to what resolves it. */
-    stopped: Boolean = false,
-    onStatus: () -> Unit = {},
-    /** Send feedback (T49, D41), last in the overflow menu; none when null. */
-    onFeedback: (() -> Unit)? = null,
+    val stopped: Boolean = false,
     /**
      * The folders flagged notebooks, at the top (T43, A750); [folders] are then the default
      * notebook's, under its name ([defaultNotebook]).
      */
-    notebooks: List<FolderItem> = emptyList(),
-    defaultNotebook: String = "Personal",
+    val notebooks: List<FolderItem> = emptyList(),
+    val defaultNotebook: String = "Personal",
     /** The top bar's title: Penmoss, or a git notebook's name (T50 G7, A880). */
-    title: String = "Penmoss",
-    /** The git notebooks on this phone, each its own section that opens its screens (A826). */
-    /** A git notebook's stopped dot opens Settings → Git notebooks (T51, A933). */
+    val title: String = "Penmoss",
     /** The notes pinned to Quick Access (T51, A946); the section shows with none too, saying No Notes. */
-    quickAccess: List<NoteItem> = emptyList(),
+    val quickAccess: List<NoteItem> = emptyList(),
     /** Home's sections, their order and which show (T53 item 8, A983): the synced settings. */
-    layout: HomeLayout = HomeLayout(),
-    /** Hides or shows a section (its title's long press, or the ⋮ menu). */
-    onSectionHidden: (section: String, hide: Boolean) -> Unit = { _, _ -> },
-    /** Moves a section to an index among every section (its title's Move Up and Move Down). */
-    onSectionMove: (section: String, index: Int) -> Unit = { _, _ -> },
+    val layout: HomeLayout = HomeLayout(),
     /** Each Quick Access note's notebook, by note id, when Settings shows it (T53 item 10). */
-    quickAccessNotebooks: Map<String, String> = emptyMap(),
+    val quickAccessNotebooks: Map<String, String> = emptyMap(),
+)
+
+/** What Home's taps, presses and pulls do (A6). */
+class HomeActions(
+    val onSearch: () -> Unit = {},
+    val onSettings: () -> Unit = {},
+    val onAllNotes: () -> Unit = {},
+    val onFolder: (String) -> Unit = {},
+    val onOpen: (String) -> Unit = {},
+    val onToday: () -> Unit = {},
+    /** This week's note, made from the template offline too (T40 P5, JR2). */
+    val onThisWeek: () -> Unit = {},
+    val onNewNote: () -> Unit = {},
+    /** Opens the list of refused captures (A345). */
+    val onRefusedCaptures: () -> Unit = {},
+    /** A long press on a note: its actions, Move to folder… and Move to Trash (T38, T40 P3a). */
+    val onNoteLongPress: ((NoteItem) -> Unit)? = null,
+    /**
+     * Pulling the list down, or Sync now, asks for a sync now (T39), and returns once the pass
+     * it asked for has ended (SyncCoordinator.syncNow).
+     */
+    val onRefresh: suspend () -> Unit = {},
+    /** Opens Trash (T40 P3a, NT13), from the top bar's overflow menu. */
+    val onTrash: () -> Unit = {},
+    /** Opens the Journal calendar (T40 P5, JR3), from the top bar's overflow menu. */
+    val onJournal: () -> Unit = {},
+    /** Opens the graph (T40 P7, LK7), from the top bar's overflow menu. */
+    val onGraph: () -> Unit = {},
+    /** Opens Tags (T40 P6, TG1), from the top bar's overflow menu. */
+    val onTags: () -> Unit = {},
+    /** Makes a folder at the top level (T40 P4, NT2), from the overflow menu. */
+    val onNewFolder: () -> Unit = {},
+    val onSort: (String) -> Unit = {},
+    val onReorder: (Boolean) -> Unit = {},
+    val onMoveFolder: (id: String, before: String?, after: String?) -> Unit = { _, _, _ -> },
+    /** A long press on a folder (T40 P4, NT3–NT5): rename it, make a subfolder, move or delete it. */
+    val onFolderLongPress: ((FolderItem) -> Unit)? = null,
+    /** Quick capture inside the app (T40 P9, PL1): the sheet the tile and widget open. */
+    val onCapture: () -> Unit = {},
+    /** Search with every action listed, the web's Commands (FD6), from the overflow menu. */
+    val onCommands: () -> Unit = {},
+    /** A stopped sync's dot opens what resolves it (T42 on Android, AC12, A651). */
+    val onStatus: () -> Unit = {},
+    /** Send feedback (T49, D41), last in the overflow menu; none when null. */
+    val onFeedback: (() -> Unit)? = null,
+    /** Hides or shows a section (its title's long press, or the ⋮ menu). */
+    val onSectionHidden: (section: String, hide: Boolean) -> Unit = { _, _ -> },
+    /** Moves a section to an index among every section (its title's Move Up and Move Down). */
+    val onSectionMove: (section: String, index: Int) -> Unit = { _, _ -> },
     /** A Quick Access note's long press: Remove from Quick Access (T53 item 10). */
-    onQuickAccessRemove: (String) -> Unit = {},
+    val onQuickAccessRemove: (String) -> Unit = {},
     /** Moves a pinned note to an index in Quick Access (its Move Up and Move Down). */
-    onQuickAccessMove: (id: String, index: Int) -> Unit = { _, _ -> },
+    val onQuickAccessMove: (id: String, index: Int) -> Unit = { _, _ -> },
     /** A new note at the notebook's top level, from its heading's long press (T53 item 4). */
-    onNotebookNewNote: () -> Unit = onNewNote,
-) {
+    val onNotebookNewNote: () -> Unit = onNewNote,
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeScreen(ui: HomeUi, actions: HomeActions) {
     // The spinner shows until the pass asked for ends: not one already running, and not 3 s
     // more when the pass fails at once (T39 review).
     var pulled by remember { mutableStateOf(false) }
     // System Back ends Reorder mode first, instead of leaving Home (T40 P4 review S6).
-    BackHandler(enabled = reordering) { onReorder(false) }
-    val refresh by rememberUpdatedState(onRefresh)
+    BackHandler(enabled = ui.reordering) { actions.onReorder(false) }
+    val refresh by rememberUpdatedState(actions.onRefresh)
     val pull = { pulled = true }
     // The minute's pass usually takes well under a second: the bar shows only for a longer one,
     // so Home does not flicker every minute (T39).
-    val slowSync by produceState(false, syncing) {
-        if (syncing) {
+    val slowSync by produceState(false, ui.syncing) {
+        if (ui.syncing) {
             delay(SLOW_SYNC_MS)
             value = true
         } else {
@@ -227,33 +235,33 @@ fun HomeScreen(
         pulled = false
     }
     // A chosen note Home stops listing is no longer chosen (A652, review S2).
-    if (onNoteLongPress != null) KeepSelectionShown(recent)
+    if (actions.onNoteLongPress != null) KeepSelectionShown(ui.recent)
     // The notebook's sync state as a dot (T51, A933), with the status line's words.
     val personalDot = when {
-        stopped -> SyncDot(DotState.STOPPED, status, onStatus)
-        statusAlert -> SyncDot(DotState.OFFLINE, status)
+        ui.stopped -> SyncDot(DotState.STOPPED, ui.status, actions.onStatus)
+        ui.statusAlert -> SyncDot(DotState.OFFLINE, ui.status)
         slowSync || pulled -> SyncDot(DotState.SYNCING, "Syncing…")
-        status.isEmpty() -> SyncDot(DotState.IDLE, "Not synced yet")
-        else -> SyncDot(DotState.SYNCED, status)
+        ui.status.isEmpty() -> SyncDot(DotState.IDLE, "Not synced yet")
+        else -> SyncDot(DotState.SYNCED, ui.status)
     }
     Scaffold(
         topBar = {
             TopAppBar(
                 // Under the selection bar while notes are chosen: out of TalkBack's reach (review S4).
                 modifier = Modifier.underSelectionBar(),
-                title = { Text(if (reordering) "Reorder Folders" else title) },
+                title = { Text(if (ui.reordering) "Reorder Folders" else ui.title) },
                 navigationIcon = {
-                    if (reordering) BackButton { onReorder(false) }
+                    if (ui.reordering) BackButton { actions.onReorder(false) }
                 },
                 actions = {
-                    if (reordering) {
-                        TextButton(onClick = { onReorder(false) }, modifier = Modifier.testTag("reorderDone")) { Text("Done") }
+                    if (ui.reordering) {
+                        TextButton(onClick = { actions.onReorder(false) }, modifier = Modifier.testTag("reorderDone")) { Text("Done") }
                     } else {
                         // Pull to refresh as a button, for TalkBack, Switch Access and anyone who doesn't pull.
                         TipIconButton(Icons.Default.Refresh, "Sync Now", onClick = pull, enabled = !pulled, modifier = Modifier.testTag("homeSyncNow"))
                         // Sort moved to the notebook's heading, beside New Folder and Trash (T52 item 10).
                         // The gear, as the sidebar's footer has it (T51, A935).
-                        TipIconButton(SettingsIcons.Gear, "Settings", onClick = onSettings, modifier = Modifier.testTag("homeSettings"))
+                        TipIconButton(SettingsIcons.Gear, "Settings", onClick = actions.onSettings, modifier = Modifier.testTag("homeSettings"))
                         var more by remember { mutableStateOf(false) }
                         Box {
                             TipIconButton(Icons.Default.MoreVert, "More Options", onClick = { more = true }, modifier = Modifier.testTag("homeMore"))
@@ -262,7 +270,7 @@ fun HomeScreen(
                                     text = { Text("Quick Capture") },
                                     onClick = {
                                         more = false
-                                        onCapture()
+                                        actions.onCapture()
                                     },
                                     modifier = Modifier.testTag("homeCapture"),
                                 )
@@ -270,7 +278,7 @@ fun HomeScreen(
                                     text = { Text("All Notes") },
                                     onClick = {
                                         more = false
-                                        onAllNotes()
+                                        actions.onAllNotes()
                                     },
                                     modifier = Modifier.testTag("homeAllNotes"),
                                 )
@@ -278,7 +286,7 @@ fun HomeScreen(
                                     text = { Text("Journal") },
                                     onClick = {
                                         more = false
-                                        onJournal()
+                                        actions.onJournal()
                                     },
                                     modifier = Modifier.testTag("homeJournal"),
                                 )
@@ -286,7 +294,7 @@ fun HomeScreen(
                                     text = { Text("Tags") },
                                     onClick = {
                                         more = false
-                                        onTags()
+                                        actions.onTags()
                                     },
                                     modifier = Modifier.testTag("homeTags"),
                                 )
@@ -294,16 +302,16 @@ fun HomeScreen(
                                     text = { Text("New Folder") },
                                     onClick = {
                                         more = false
-                                        onNewFolder()
+                                        actions.onNewFolder()
                                     },
                                     modifier = Modifier.testTag("homeNewFolder"),
                                 )
-                                if (sortMode == "manual") {
+                                if (ui.sortMode == "manual") {
                                     DropdownMenuItem(
                                         text = { Text("Reorder Folders") },
                                         onClick = {
                                             more = false
-                                            onReorder(true)
+                                            actions.onReorder(true)
                                         },
                                         modifier = Modifier.testTag("homeReorder"),
                                     )
@@ -312,16 +320,16 @@ fun HomeScreen(
                                     text = { Text("Trash") },
                                     onClick = {
                                         more = false
-                                        onTrash()
+                                        actions.onTrash()
                                     },
                                     modifier = Modifier.testTag("openTrash"),
                                 )
-                                if (onFeedback != null) {
+                                if (actions.onFeedback != null) {
                                     DropdownMenuItem(
                                         text = { Text("Send Feedback") },
                                         onClick = {
                                             more = false
-                                            onFeedback()
+                                            actions.onFeedback()
                                         },
                                         modifier = Modifier.testTag("homeFeedback"),
                                     )
@@ -329,12 +337,12 @@ fun HomeScreen(
                                 HorizontalDivider()
                                 // Show or Hide each of Home's sections, by name A to Z (T53 item 8),
                                 // after the actions, as the web's ⋯ menu holds them.
-                                for ((section, label) in SidebarLayout.toggles(layout.hidden, HomeLayout.HOME_SECTIONS)) {
+                                for ((section, label) in SidebarLayout.toggles(ui.layout.hidden, HomeLayout.HOME_SECTIONS)) {
                                     DropdownMenuItem(
                                         text = { Text(label) },
                                         onClick = {
                                             more = false
-                                            onSectionHidden(section, section !in layout.hidden)
+                                            actions.onSectionHidden(section, section !in ui.layout.hidden)
                                         },
                                         modifier = Modifier.testTag("homeSection-$section"),
                                     )
@@ -346,8 +354,8 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            if (!reordering) {
-                FloatingActionButton(onClick = onNewNote) { Icon(Icons.Default.Add, contentDescription = "New Note") }
+            if (!ui.reordering) {
+                FloatingActionButton(onClick = actions.onNewNote) { Icon(Icons.Default.Add, contentDescription = "New Note") }
             }
         },
     ) { padding ->
@@ -359,7 +367,7 @@ fun HomeScreen(
             Column(Modifier.fillMaxSize()) {
                 if (slowSync && !pulled) LinearProgressIndicator(Modifier.fillMaxWidth().testTag("syncProgress"))
                 // The sidebar's shortcuts as one row of icons (T51, A932); Display hides any but Search.
-                if (!reordering) HomeShortcutRow(shortcuts, onSearch, onToday, onThisWeek, onGraph, onCommands)
+                if (!ui.reordering) HomeShortcutRow(ui.shortcuts, actions.onSearch, actions.onToday, actions.onThisWeek, actions.onGraph, actions.onCommands)
                 // The status line became a dot on the section titles (T51, A933). Going offline or
                 // stopping is still announced, from above the list, which a dot in it scrolled
                 // away would not be (A530).
@@ -368,30 +376,30 @@ fun HomeScreen(
                         .size(1.dp)
                         .testTag("syncStatus")
                         .semantics {
-                            contentDescription = status
-                            if (statusAlert || stopped) liveRegion = LiveRegionMode.Polite
+                            contentDescription = ui.status
+                            if (ui.statusAlert || ui.stopped) liveRegion = LiveRegionMode.Polite
                         },
                 )
-                if (reordering) {
+                if (ui.reordering) {
                     ReorderList(
-                        folders = folders,
+                        folders = ui.folders,
                         notes = emptyList(),
-                        onCommitFolder = { id, before, after -> onMoveFolder(id, before, after) },
+                        onCommitFolder = { id, before, after -> actions.onMoveFolder(id, before, after) },
                         onCommitNote = { _, _, _ -> },
                         modifier = Modifier.fillMaxSize(),
                     )
                 } else {
                 // The sections in the person's order (T53 item 8, A983), a line between each two
                 // running the screen's width; each title's long press moves or hides it.
-                val choosing = onNoteLongPress != null && LocalNoteSelection.current?.active == true
+                val choosing = actions.onNoteLongPress != null && LocalNoteSelection.current?.active == true
                 val homeList = rememberLazyListState()
-                val shown = layout.shown
+                val shown = ui.layout.shown
                 // A section shown again or moved first while Home is at its top stays in view (T53
                 // pass): the list keeps its first item in place by key, so the section would land
                 // above the screen and Home would look unchanged. Asked before the next measure,
                 // while the scroll position is still the one before the change. So does a notice
                 // at the top coming or going (kept-apart edits, captures waiting).
-                val top = Pair(shown, listOf(keptApart > 0, capturesWaiting > 0 || capturesRefused > 0))
+                val top = Pair(shown, listOf(ui.keptApart > 0, ui.capturesWaiting > 0 || ui.capturesRefused > 0))
                 val topBefore = remember { arrayOf(top) }
                 SideEffect {
                     if (top != topBefore[0]) {
@@ -417,9 +425,9 @@ fun HomeScreen(
                 }
                 fun moveSection(section: String, by: Int) {
                     val target = shown.getOrNull(sectionAt(section) + by) ?: return
-                    val rest = layout.order - section
+                    val rest = ui.layout.order - section
                     following = section
-                    onSectionMove(section, rest.indexOf(target) + if (by > 0) 1 else 0)
+                    actions.onSectionMove(section, rest.indexOf(target) + if (by > 0) 1 else 0)
                 }
                 val sectionTitle: @Composable (String, Modifier) -> Unit = { section, modifier ->
                     HomeSectionTitle(
@@ -427,27 +435,27 @@ fun HomeScreen(
                         canMoveUp = sectionAt(section) > 0,
                         canMoveDown = sectionAt(section) < shown.size - 1,
                         onMove = { moveSection(section, it) },
-                        onHide = { onSectionHidden(section, true) },
+                        onHide = { actions.onSectionHidden(section, true) },
                         modifier = modifier,
                     )
                 }
                 NoteList(
                     notes = emptyList(),
-                    onOpen = onOpen,
+                    onOpen = actions.onOpen,
                     state = homeList,
                     contentPadding = PaddingValues(bottom = FAB_CLEARANCE),
                     header = {
                         item(key = "actions", contentType = "actions") {
-                            if (keptApart > 0) KeptApartNotice(keptApart)
-                            if (capturesWaiting > 0 || capturesRefused > 0) {
-                                CapturesNotice(capturesWaiting, capturesRefused, capturesWaitingWhy, onRefusedCaptures)
+                            if (ui.keptApart > 0) KeptApartNotice(ui.keptApart)
+                            if (ui.capturesWaiting > 0 || ui.capturesRefused > 0) {
+                                CapturesNotice(ui.capturesWaiting, ui.capturesRefused, ui.capturesWaitingWhy, actions.onRefusedCaptures)
                             }
                         }
                         var first = true
                         var count = 1
                         for (section in shown) {
                             val has = when (section) {
-                                SidebarLayout.RECENT -> recent.isNotEmpty()
+                                SidebarLayout.RECENT -> ui.recent.isNotEmpty()
                                 else -> true
                             }
                             if (!has) continue
@@ -462,8 +470,8 @@ fun HomeScreen(
                                 // on the web (T53 pass).
                                 SidebarLayout.QUICK_ACCESS -> {
                                     item(key = "quickAccessTitle", contentType = "title") { sectionTitle(section, Modifier.testTag("homeQuickAccessTitle")) }
-                                    count += 1 + maxOf(quickAccess.size, 1)
-                                    if (quickAccess.isEmpty()) {
+                                    count += 1 + maxOf(ui.quickAccess.size, 1)
+                                    if (ui.quickAccess.isEmpty()) {
                                         item(key = "quickAccessEmpty", contentType = "hint") {
                                             Text(
                                                 // No drag to pin here, so not the web's "Drag Here to Pin"; as quiet.
@@ -474,45 +482,45 @@ fun HomeScreen(
                                             )
                                         }
                                     }
-                                    items(quickAccess, key = { "quick:${it.id}" }, contentType = { "pin" }) { note ->
-                                        val at = quickAccess.indexOf(note)
+                                    items(ui.quickAccess, key = { "quick:${it.id}" }, contentType = { "pin" }) { note ->
+                                        val at = ui.quickAccess.indexOf(note)
                                         QuickAccessRow(
                                             note = note,
-                                            notebook = quickAccessNotebooks[note.id].takeIf { layout.quickAccessNotebook },
-                                            onOpen = onOpen,
-                                            onRemove = { onQuickAccessRemove(note.id) },
-                                            onMoveUp = if (at > 0) ({ onQuickAccessMove(note.id, at - 1) }) else null,
-                                            onMoveDown = if (at < quickAccess.size - 1) ({ onQuickAccessMove(note.id, at + 1) }) else null,
+                                            notebook = ui.quickAccessNotebooks[note.id].takeIf { ui.layout.quickAccessNotebook },
+                                            onOpen = actions.onOpen,
+                                            onRemove = { actions.onQuickAccessRemove(note.id) },
+                                            onMoveUp = if (at > 0) ({ actions.onQuickAccessMove(note.id, at - 1) }) else null,
+                                            onMoveDown = if (at < ui.quickAccess.size - 1) ({ actions.onQuickAccessMove(note.id, at + 1) }) else null,
                                             modifier = Modifier.testTag("homeQuickAccess-${note.id}"),
                                         )
                                     }
                                 }
                                 SidebarLayout.NOTEBOOKS -> {
                                     item(key = "notebooksTitle", contentType = "title") { sectionTitle(section, Modifier.testTag("homeNotebooksTitle")) }
-                                    count += 1 + notebooks.size + 1 + folders.size
+                                    count += 1 + ui.notebooks.size + 1 + ui.folders.size
                                     // The open notebooks first (T43, A750): each opens its folder's screen.
-                                    items(notebooks, key = { "notebook:${it.id}" }, contentType = { "folder" }) { notebook ->
-                                        FolderRowView(notebook, onFolder, onLongPress = onFolderLongPress, enabled = !choosing)
+                                    items(ui.notebooks, key = { "notebook:${it.id}" }, contentType = { "folder" }) { notebook ->
+                                        FolderRowView(notebook, actions.onFolder, onLongPress = actions.onFolderLongPress, enabled = !choosing)
                                     }
                                     // The notebook's heading with its sync dot (T51, A933), as the web's
                                     // Personal heading: its actions on a long press (T53 item 4).
                                     item(key = "foldersTitle", contentType = "title") {
-                                        NotebookHeading(defaultNotebook, personalDot, sortMode, onSort, onNotebookNewNote, onNewFolder, onTrash)
+                                        NotebookHeading(ui.defaultNotebook, personalDot, ui.sortMode, actions.onSort, actions.onNotebookNewNote, actions.onNewFolder, actions.onTrash)
                                     }
-                                    items(folders, key = { "folder:${it.id}" }, contentType = { "folder" }) { folder ->
-                                        FolderRowView(folder, onFolder, onLongPress = onFolderLongPress, enabled = !choosing)
+                                    items(ui.folders, key = { "folder:${it.id}" }, contentType = { "folder" }) { folder ->
+                                        FolderRowView(folder, actions.onFolder, onLongPress = actions.onFolderLongPress, enabled = !choosing)
                                     }
                                 }
                                 SidebarLayout.RECENT -> {
                                     item(key = "notesTitle", contentType = "title") { sectionTitle(section, Modifier.testTag("homeRecentTitle")) }
-                                    count += 1 + recent.take(layout.recentCount).size
-                                    items(recent.take(layout.recentCount), key = { it.id }, contentType = { "note" }) { note ->
-                                        NoteRowView(note, onOpen, onLongPress = onNoteLongPress, selectable = true)
+                                    count += 1 + ui.recent.take(ui.layout.recentCount).size
+                                    items(ui.recent.take(ui.layout.recentCount), key = { it.id }, contentType = { "note" }) { note ->
+                                        NoteRowView(note, actions.onOpen, onLongPress = actions.onNoteLongPress, selectable = true)
                                     }
                                 }
                             }
                         }
-                        if (folders.isEmpty() && recent.isEmpty() && notebooks.isEmpty()) {
+                        if (ui.folders.isEmpty() && ui.recent.isEmpty() && ui.notebooks.isEmpty()) {
                             item(key = "empty") { EmptyMessage("No notes yet. They appear here once the phone has synced.") }
                         }
                     },

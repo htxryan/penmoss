@@ -1,5 +1,7 @@
 package app.penmoss.ui
 
+import app.penmoss.ui.screens.HomeUi
+import app.penmoss.ui.screens.HomeActions
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -68,18 +70,14 @@ class ScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = listOf(note("n1", "Groceries")),
-                    folders = listOf(FolderItem("f1", "Projects")),
-                    status = status,
-                    statusAlert = alert,
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
+                    HomeUi(
+                        recent = listOf(note("n1", "Groceries")),
+                        folders = listOf(FolderItem("f1", "Projects")),
+                        status = status,
+                        statusAlert = alert,
+                        syncing = false,
+                    ),
+                    HomeActions(),
                 )
             }
         }
@@ -98,20 +96,16 @@ class ScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = (1..60).map { note("n$it", "Note $it") },
-                    folders = listOf(FolderItem("f1", "Projects")),
-                    // Recent Notes at its longest (T53 item 8): 50 of them.
-                    layout = HomeLayout(recentCount = SidebarLayout.RECENT_MAX),
-                    status = status,
-                    statusAlert = alert,
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
+                    HomeUi(
+                        recent = (1..60).map { note("n$it", "Note $it") },
+                        folders = listOf(FolderItem("f1", "Projects")),
+                        // Recent Notes at its longest (T53 item 8): 50 of them.
+                        layout = HomeLayout(recentCount = SidebarLayout.RECENT_MAX),
+                        status = status,
+                        statusAlert = alert,
+                        syncing = false,
+                    ),
+                    HomeActions(),
                 )
             }
         }
@@ -131,21 +125,25 @@ class ScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = listOf(note("n1", "Groceries", "eggs, milk"), note("n2", "Untitled")),
-                    folders = listOf(FolderItem("f1", "Projects")),
-                    status = "Synced at 3:42 PM",
-                    syncing = false,
-                    onSearch = { events += "search" },
-                    onSettings = { events += "settings" },
-                    onAllNotes = { events += "all" },
-                    onFolder = { events += "folder:$it" },
-                    onOpen = { opened += it },
-                    onToday = { events += "today" },
-                    onThisWeek = { events += "week" },
-                    onJournal = { events += "journal" },
-                    onNewNote = { events += "new" },
-                    onCapture = { events += "capture" },
-                    onFeedback = { events += "feedback" },
+                    HomeUi(
+                        recent = listOf(note("n1", "Groceries", "eggs, milk"), note("n2", "Untitled")),
+                        folders = listOf(FolderItem("f1", "Projects")),
+                        status = "Synced at 3:42 PM",
+                        syncing = false,
+                    ),
+                    HomeActions(
+                        onSearch = { events += "search" },
+                        onSettings = { events += "settings" },
+                        onAllNotes = { events += "all" },
+                        onFolder = { events += "folder:$it" },
+                        onOpen = { opened += it },
+                        onToday = { events += "today" },
+                        onThisWeek = { events += "week" },
+                        onJournal = { events += "journal" },
+                        onNewNote = { events += "new" },
+                        onCapture = { events += "capture" },
+                        onFeedback = { events += "feedback" },
+                    ),
                 )
             }
         }
@@ -184,18 +182,16 @@ class ScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = listOf(note("n1", "Groceries")),
-                    folders = emptyList(),
-                    status = "Synced at 3:42 PM",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = { opened += it },
-                    onToday = {},
-                    onNewNote = {},
-                    quickAccess = pinned,
+                    HomeUi(
+                        recent = listOf(note("n1", "Groceries")),
+                        folders = emptyList(),
+                        status = "Synced at 3:42 PM",
+                        syncing = false,
+                        quickAccess = pinned,
+                    ),
+                    HomeActions(
+                        onOpen = { opened += it },
+                    ),
                 )
             }
         }
@@ -218,19 +214,15 @@ class ScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = emptyList(),
-                    folders = emptyList(),
-                    status = "",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
-                    capturesWaiting = waiting,
-                    capturesRefused = refused,
+                    HomeUi(
+                        recent = emptyList(),
+                        folders = emptyList(),
+                        status = "",
+                        syncing = false,
+                        capturesWaiting = waiting,
+                        capturesRefused = refused,
+                    ),
+                    HomeActions(),
                 )
             }
         }
@@ -251,21 +243,18 @@ class ScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = emptyList(),
-                    folders = emptyList(),
-                    status = "",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
-                    capturesWaiting = 1,
-                    capturesRefused = 2,
-                    capturesWaitingWhy = capturesWhy(CapturesWaiting(1, now - 3 * day), now),
-                    onRefusedCaptures = { events += "refused" },
+                    HomeUi(
+                        recent = emptyList(),
+                        folders = emptyList(),
+                        status = "",
+                        syncing = false,
+                        capturesWaiting = 1,
+                        capturesRefused = 2,
+                        capturesWaitingWhy = capturesWhy(CapturesWaiting(1, now - 3 * day), now),
+                    ),
+                    HomeActions(
+                        onRefusedCaptures = { events += "refused" },
+                    ),
                 )
             }
         }
@@ -350,18 +339,14 @@ class ScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = listOf(note("n1", "Groceries")),
-                    folders = emptyList(),
-                    status = "",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
-                    keptApart = kept,
+                    HomeUi(
+                        recent = listOf(note("n1", "Groceries")),
+                        folders = emptyList(),
+                        status = "",
+                        syncing = false,
+                        keptApart = kept,
+                    ),
+                    HomeActions(),
                 )
             }
         }
@@ -415,21 +400,18 @@ class ScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = emptyList(),
-                    folders = emptyList(),
-                    status = "Synced at 3:42 PM",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
-                    onRefresh = {
-                        asked++
-                        pass.await()
-                    },
+                    HomeUi(
+                        recent = emptyList(),
+                        folders = emptyList(),
+                        status = "Synced at 3:42 PM",
+                        syncing = false,
+                    ),
+                    HomeActions(
+                        onRefresh = {
+                            asked++
+                            pass.await()
+                        },
+                    ),
                 )
             }
         }
@@ -454,17 +436,13 @@ class ScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = emptyList(),
-                    folders = emptyList(),
-                    status = "Synced at 3:42 PM",
-                    syncing = syncing,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
+                    HomeUi(
+                        recent = emptyList(),
+                        folders = emptyList(),
+                        status = "Synced at 3:42 PM",
+                        syncing = syncing,
+                    ),
+                    HomeActions(),
                 )
             }
         }
@@ -507,21 +485,18 @@ class ScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = listOf(note("n1", "Groceries")),
-                    folders = listOf(FolderItem("f1", "Projects")),
-                    status = "Synced",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
-                    quickAccess = listOf(note("p1", "Garden plan")),
-                    layout = layout,
-                    onSectionHidden = { section, hide -> events += "${if (hide) "hide" else "show"} $section" },
-                    onSectionMove = { section, index -> events += "move $section $index" },
+                    HomeUi(
+                        recent = listOf(note("n1", "Groceries")),
+                        folders = listOf(FolderItem("f1", "Projects")),
+                        status = "Synced",
+                        syncing = false,
+                        quickAccess = listOf(note("p1", "Garden plan")),
+                        layout = layout,
+                    ),
+                    HomeActions(
+                        onSectionHidden = { section, hide -> events += "${if (hide) "hide" else "show"} $section" },
+                        onSectionMove = { section, index -> events += "move $section $index" },
+                    ),
                 )
             }
         }
@@ -555,22 +530,19 @@ class ScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = emptyList(),
-                    folders = emptyList(),
-                    status = "Synced",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
-                    quickAccess = listOf(note("p1", "Garden plan"), note("p2", "Reading list")),
-                    layout = layout,
-                    quickAccessNotebooks = mapOf("p1" to "Personal", "p2" to "Work"),
-                    onQuickAccessRemove = { events += "remove $it" },
-                    onQuickAccessMove = { id, index -> events += "move $id $index" },
+                    HomeUi(
+                        recent = emptyList(),
+                        folders = emptyList(),
+                        status = "Synced",
+                        syncing = false,
+                        quickAccess = listOf(note("p1", "Garden plan"), note("p2", "Reading list")),
+                        layout = layout,
+                        quickAccessNotebooks = mapOf("p1" to "Personal", "p2" to "Work"),
+                    ),
+                    HomeActions(
+                        onQuickAccessRemove = { events += "remove $it" },
+                        onQuickAccessMove = { id, index -> events += "move $id $index" },
+                    ),
                 )
             }
         }
@@ -599,19 +571,15 @@ class ScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = listOf(note("n1", "Groceries")),
-                    folders = (1..40).map { FolderItem("f$it", "Folder $it") },
-                    status = "Synced",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
-                    quickAccess = listOf(note("p1", "Garden plan")),
-                    layout = layout,
+                    HomeUi(
+                        recent = listOf(note("n1", "Groceries")),
+                        folders = (1..40).map { FolderItem("f$it", "Folder $it") },
+                        status = "Synced",
+                        syncing = false,
+                        quickAccess = listOf(note("p1", "Garden plan")),
+                        layout = layout,
+                    ),
+                    HomeActions(),
                 )
             }
         }
@@ -631,22 +599,19 @@ class ScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = listOf(note("n1", "Groceries")),
-                    folders = (1..40).map { FolderItem("f$it", "Folder $it") },
-                    status = "Synced",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
-                    quickAccess = listOf(note("p1", "Garden plan")),
-                    layout = layout,
-                    onSectionMove = { section, index ->
-                        layout = layout.copy(order = (layout.order - section).toMutableList().apply { add(index, section) })
-                    },
+                    HomeUi(
+                        recent = listOf(note("n1", "Groceries")),
+                        folders = (1..40).map { FolderItem("f$it", "Folder $it") },
+                        status = "Synced",
+                        syncing = false,
+                        quickAccess = listOf(note("p1", "Garden plan")),
+                        layout = layout,
+                    ),
+                    HomeActions(
+                        onSectionMove = { section, index ->
+                            layout = layout.copy(order = (layout.order - section).toMutableList().apply { add(index, section) })
+                        },
+                    ),
                 )
             }
         }

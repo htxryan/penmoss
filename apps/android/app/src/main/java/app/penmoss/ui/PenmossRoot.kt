@@ -1,5 +1,7 @@
 package app.penmoss.ui
 
+import app.penmoss.ui.screens.HomeUi
+import app.penmoss.ui.screens.HomeActions
 import app.penmoss.engine.settings.QuickAccess
 import app.penmoss.engine.settings.SettingKeys
 import android.content.ClipData
@@ -339,77 +341,81 @@ private fun Screens(graph: NotebookGraph, deepLinks: DeepLinkInbox) {
                     if (graph.device.settings.value.known) graph.device.changeSetting(key, value)
                 }
                 HomeScreen(
-                    title = graph.name,
-                    quickAccess = quickAccess,
-                    // The sidebar's sections and Quick Access (T53 items 8 and 10), synced settings.
-                    layout = layout,
-                    onSectionHidden = { section, hide ->
-                        val hidden = graph.device.settings.value.settings.hiddenSections
-                        changeLayout(SettingKeys.HIDDEN_SECTIONS, app.penmoss.engine.settings.SidebarLayout.toJson(app.penmoss.engine.settings.SidebarLayout.withHidden(hidden, section, hide)))
-                    },
-                    onSectionMove = { section, index ->
-                        val order = graph.device.settings.value.settings.sectionOrder
-                        changeLayout(SettingKeys.SECTION_ORDER, app.penmoss.engine.settings.SidebarLayout.toJson(app.penmoss.engine.settings.SidebarLayout.moved(order, section, index)))
-                    },
-                    quickAccessNotebooks = quickAccessNotebooks,
-                    onQuickAccessRemove = { id ->
-                        val pins = graph.device.settings.value.settings.quickAccess
-                        QuickAccess.toggled(pins, id)?.let { changeLayout(SettingKeys.QUICK_ACCESS, QuickAccess.toJson(it)) }
-                    },
-                    onQuickAccessMove = { id, index ->
-                        val pins = graph.device.settings.value.settings.quickAccess
-                        val shown = quickAccess.map { it.id }
-                        // The index among the pins shown; trashed pins keep their places around them.
-                        val target = shown.getOrNull(index)
-                        if (target != null) {
-                            val rest = pins - id
-                            val at = rest.indexOf(target) + if (index > shown.indexOf(id)) 1 else 0
-                            changeLayout(SettingKeys.QUICK_ACCESS, QuickAccess.toJson(QuickAccess.moved(pins, id, at)))
-                        }
-                    },
-                    onNotebookNewNote = { newNote(null) },
-                    recent = home.recent,
-                    folders = home.folders,
-                    notebooks = home.notebooks,
-                    status = statusText,
-                    statusAlert = (if (status is SyncStatus.Syncing) settled else status) is SyncStatus.Offline,
-                    syncing = status is SyncStatus.Syncing,
-                    onSearch = { nav.open("search") },
-                    onSettings = { nav.open("settings") },
-                    onAllNotes = { nav.open("notes") },
-                    onFolder = { nav.open("folder/$it") },
-                    onOpen = openNote,
-                    onToday = { openPeriodic(ToEditor.PeriodKind.DAILY, null) },
-                    onThisWeek = { openPeriodic(ToEditor.PeriodKind.WEEKLY, null) },
-                    onJournal = { nav.open("journal") },
-                    onGraph = { nav.open(graphRoute(null)) },
-                    // From Home, the top level unless another folder is picked (T38).
-                    onNewNote = { choosing = Choosing.NewNote(null) },
-                    keptApart = keptApart,
-                    capturesWaiting = capturesWaiting.count,
-                    capturesRefused = capturesRefused,
-                    capturesWaitingWhy = capturesWhy(capturesWaiting, System.currentTimeMillis()),
-                    onRefusedCaptures = { nav.open("captures") },
-                    onNoteLongPress = noteActions,
-                    onRefresh = { graph.sync.syncNow() },
-                    onTrash = { nav.open(TrashRoutes.TRASH) },
-                    onTags = { nav.open("tags") },
-                    // Folders at the top level (T40 P4, NT2–NT7).
-                    onNewFolder = { folderNaming = FolderNaming.Create(null) },
-                    sortMode = rootSort,
-                    onSort = { sortFolder(null, it) },
-                    reordering = homeReordering,
-                    onReorder = { homeReordering = it },
-                    onMoveFolder = { id, before, after ->
-                        graph.scope.launch { reorderFolderAndSay(graph, id, before, after) }
-                    },
-                    onFolderLongPress = { folderActing = it },
-                    onCapture = { openCapture(context) },
-                    shortcuts = HomeShortcuts.of(settingsNow.settings),
-                    onCommands = { nav.open("search?actions=true") },
-                    stopped = stop != null,
-                    onStatus = { nav.open(SettingsRoutes.SYNC) },
-                    onFeedback = { openFeedback("Home's ⋮ menu", null, null, null, 0) },
+                    HomeUi(
+                        title = graph.name,
+                        quickAccess = quickAccess,
+                        // The sidebar's sections and Quick Access (T53 items 8 and 10), synced settings.
+                        layout = layout,
+                        quickAccessNotebooks = quickAccessNotebooks,
+                        recent = home.recent,
+                        folders = home.folders,
+                        notebooks = home.notebooks,
+                        status = statusText,
+                        statusAlert = (if (status is SyncStatus.Syncing) settled else status) is SyncStatus.Offline,
+                        syncing = status is SyncStatus.Syncing,
+                        keptApart = keptApart,
+                        capturesWaiting = capturesWaiting.count,
+                        capturesRefused = capturesRefused,
+                        capturesWaitingWhy = capturesWhy(capturesWaiting, System.currentTimeMillis()),
+                        sortMode = rootSort,
+                        reordering = homeReordering,
+                        shortcuts = HomeShortcuts.of(settingsNow.settings),
+                        stopped = stop != null,
+                    ),
+                    HomeActions(
+                        onSectionHidden = { section, hide ->
+                            val hidden = graph.device.settings.value.settings.hiddenSections
+                            changeLayout(SettingKeys.HIDDEN_SECTIONS, app.penmoss.engine.settings.SidebarLayout.toJson(app.penmoss.engine.settings.SidebarLayout.withHidden(hidden, section, hide)))
+                        },
+                        onSectionMove = { section, index ->
+                            val order = graph.device.settings.value.settings.sectionOrder
+                            changeLayout(SettingKeys.SECTION_ORDER, app.penmoss.engine.settings.SidebarLayout.toJson(app.penmoss.engine.settings.SidebarLayout.moved(order, section, index)))
+                        },
+                        onQuickAccessRemove = { id ->
+                            val pins = graph.device.settings.value.settings.quickAccess
+                            QuickAccess.toggled(pins, id)?.let { changeLayout(SettingKeys.QUICK_ACCESS, QuickAccess.toJson(it)) }
+                        },
+                        onQuickAccessMove = { id, index ->
+                            val pins = graph.device.settings.value.settings.quickAccess
+                            val shown = quickAccess.map { it.id }
+                            // The index among the pins shown; trashed pins keep their places around them.
+                            val target = shown.getOrNull(index)
+                            if (target != null) {
+                                val rest = pins - id
+                                val at = rest.indexOf(target) + if (index > shown.indexOf(id)) 1 else 0
+                                changeLayout(SettingKeys.QUICK_ACCESS, QuickAccess.toJson(QuickAccess.moved(pins, id, at)))
+                            }
+                        },
+                        onNotebookNewNote = { newNote(null) },
+                        onSearch = { nav.open("search") },
+                        onSettings = { nav.open("settings") },
+                        onAllNotes = { nav.open("notes") },
+                        onFolder = { nav.open("folder/$it") },
+                        onOpen = openNote,
+                        onToday = { openPeriodic(ToEditor.PeriodKind.DAILY, null) },
+                        onThisWeek = { openPeriodic(ToEditor.PeriodKind.WEEKLY, null) },
+                        onJournal = { nav.open("journal") },
+                        onGraph = { nav.open(graphRoute(null)) },
+                        // From Home, the top level unless another folder is picked (T38).
+                        onNewNote = { choosing = Choosing.NewNote(null) },
+                        onRefusedCaptures = { nav.open("captures") },
+                        onNoteLongPress = noteActions,
+                        onRefresh = { graph.sync.syncNow() },
+                        onTrash = { nav.open(TrashRoutes.TRASH) },
+                        onTags = { nav.open("tags") },
+                        // Folders at the top level (T40 P4, NT2–NT7).
+                        onNewFolder = { folderNaming = FolderNaming.Create(null) },
+                        onSort = { sortFolder(null, it) },
+                        onReorder = { homeReordering = it },
+                        onMoveFolder = { id, before, after ->
+                            graph.scope.launch { reorderFolderAndSay(graph, id, before, after) }
+                        },
+                        onFolderLongPress = { folderActing = it },
+                        onCapture = { openCapture(context) },
+                        onCommands = { nav.open("search?actions=true") },
+                        onStatus = { nav.open(SettingsRoutes.SYNC) },
+                        onFeedback = { openFeedback("Home's ⋮ menu", null, null, null, 0) },
+                    ),
                 )
             }
             composable("folder/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entry ->

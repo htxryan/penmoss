@@ -1,5 +1,7 @@
 package app.penmoss.ui
 
+import app.penmoss.ui.screens.HomeUi
+import app.penmoss.ui.screens.HomeActions
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -153,18 +155,15 @@ class TrashScreensTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = emptyList(),
-                    folders = emptyList(),
-                    status = "",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
-                    onTrash = { events += "trash" },
+                    HomeUi(
+                        recent = emptyList(),
+                        folders = emptyList(),
+                        status = "",
+                        syncing = false,
+                    ),
+                    HomeActions(
+                        onTrash = { events += "trash" },
+                    ),
                 )
             }
         }

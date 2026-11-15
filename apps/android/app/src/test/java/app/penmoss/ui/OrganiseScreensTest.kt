@@ -1,5 +1,7 @@
 package app.penmoss.ui
 
+import app.penmoss.ui.screens.HomeUi
+import app.penmoss.ui.screens.HomeActions
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -335,18 +337,16 @@ class OrganiseScreensTest {
             PenmossTheme {
                 if (screen == "home") {
                     HomeScreen(
-                        recent = listOf(NoteItem("n1", "Groceries", "", "")),
-                        folders = emptyList(),
-                        status = "",
-                        syncing = false,
-                        onSearch = {},
-                        onSettings = {},
-                        onAllNotes = {},
-                        onFolder = {},
-                        onOpen = { opened += it },
-                        onToday = {},
-                        onNewNote = {},
-                        onNoteLongPress = { moved += it.id },
+                        HomeUi(
+                            recent = listOf(NoteItem("n1", "Groceries", "", "")),
+                            folders = emptyList(),
+                            status = "",
+                            syncing = false,
+                        ),
+                        HomeActions(
+                            onOpen = { opened += it },
+                            onNoteLongPress = { moved += it.id },
+                        ),
                     )
                 } else {
                     AllNotesScreen(listOf(NoteItem("n2", "Taxes", "", "")), onBack = {}, onOpen = { opened += it }, onNoteLongPress = { moved += it.id })

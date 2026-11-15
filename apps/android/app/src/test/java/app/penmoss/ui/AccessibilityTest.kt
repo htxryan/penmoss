@@ -1,5 +1,7 @@
 package app.penmoss.ui
 
+import app.penmoss.ui.screens.HomeUi
+import app.penmoss.ui.screens.HomeActions
 import android.content.Context
 import android.provider.Settings
 import androidx.compose.ui.semantics.SemanticsActions
@@ -39,21 +41,16 @@ class AccessibilityTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = listOf(NoteItem("n1", "Groceries", "eggs, milk", "Oct 21")),
-                    folders = listOf(FolderItem("f1", "Projects")),
-                    status = "Synced at 3:42 PM",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onThisWeek = {},
-                    onJournal = {},
-                    onNewNote = {},
-                    onNoteLongPress = {},
-                    onFolderLongPress = {},
+                    HomeUi(
+                        recent = listOf(NoteItem("n1", "Groceries", "eggs, milk", "Oct 21")),
+                        folders = listOf(FolderItem("f1", "Projects")),
+                        status = "Synced at 3:42 PM",
+                        syncing = false,
+                    ),
+                    HomeActions(
+                        onNoteLongPress = {},
+                        onFolderLongPress = {},
+                    ),
                 )
             }
         }

@@ -1,5 +1,7 @@
 package app.penmoss.ui
 
+import app.penmoss.ui.screens.HomeUi
+import app.penmoss.ui.screens.HomeActions
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -55,11 +57,20 @@ class DisplayAndSyncStopTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = emptyList(), folders = emptyList(), status = "", syncing = false,
-                    onSearch = { ran += "search" }, onSettings = {}, onAllNotes = {}, onFolder = {}, onOpen = {},
-                    onToday = { ran += "today" }, onThisWeek = { ran += "week" }, onNewNote = {},
-                    onGraph = { ran += "graph" }, onCommands = { ran += "commands" },
-                    shortcuts = shortcuts,
+                    HomeUi(
+                        recent = emptyList(),
+                        folders = emptyList(),
+                        status = "",
+                        syncing = false,
+                        shortcuts = shortcuts,
+                    ),
+                    HomeActions(
+                        onSearch = { ran += "search" },
+                        onToday = { ran += "today" },
+                        onThisWeek = { ran += "week" },
+                        onGraph = { ran += "graph" },
+                        onCommands = { ran += "commands" },
+                    ),
                 )
             }
         }
@@ -152,9 +163,16 @@ class DisplayAndSyncStopTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = emptyList(), folders = emptyList(), status = status, syncing = false,
-                    onSearch = {}, onSettings = {}, onAllNotes = {}, onFolder = {}, onOpen = {}, onToday = {}, onNewNote = {},
-                    stopped = stopped, onStatus = { opened++ },
+                    HomeUi(
+                        recent = emptyList(),
+                        folders = emptyList(),
+                        status = status,
+                        syncing = false,
+                        stopped = stopped,
+                    ),
+                    HomeActions(
+                        onStatus = { opened++ },
+                    ),
                 )
             }
         }

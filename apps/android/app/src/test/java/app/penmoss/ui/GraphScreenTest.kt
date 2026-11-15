@@ -1,5 +1,8 @@
 package app.penmoss.ui
 
+import app.penmoss.ui.screens.HomeScreen
+import app.penmoss.ui.screens.HomeUi
+import app.penmoss.ui.screens.HomeActions
 import android.content.Context
 import android.view.View
 import androidx.compose.runtime.getValue
@@ -252,19 +255,16 @@ class GraphScreenTest {
         var graphs = 0
         compose.setContent {
             PenmossTheme {
-                app.penmoss.ui.screens.HomeScreen(
-                    recent = emptyList(),
-                    folders = emptyList(),
-                    status = "Synced",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onNewNote = {},
-                    onGraph = { graphs++ },
+                HomeScreen(
+                    HomeUi(
+                        recent = emptyList(),
+                        folders = emptyList(),
+                        status = "Synced",
+                        syncing = false,
+                    ),
+                    HomeActions(
+                        onGraph = { graphs++ },
+                    ),
                 )
             }
         }
