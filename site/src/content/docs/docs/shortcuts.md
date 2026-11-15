@@ -62,7 +62,7 @@ In the Mac app's main window ([tabs](/docs/install/mac/#tabs)).
 
 | Action                     | Keys          |
 | -------------------------- | ------------- |
-| New Tab                    | ⌘T            |
+| New Tab…                   | ⌘T            |
 | Close Tab                  | ⌘W            |
 | Reopen Closed Tab          | ⌘⇧T           |
 | Show Next Tab              | ⌃Tab          |

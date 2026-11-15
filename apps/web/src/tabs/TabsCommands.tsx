@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useCommand, useCommands } from '../commands/hooks';
 import { useSourcesRegistry } from '../sources/hooks';
 import { openInMain, openNoteWindow } from '../window/open';
@@ -19,15 +20,28 @@ export function TabsCommands() {
   const active = state && !isBareHome(state) ? activeTab(state) : null;
 
   const commands = useCommands();
-  // A new tab is Home with the cursor in Search, as a browser's is in its address bar (AC2).
+  // New Tab asks which note (A1594): a pick opens a new tab, a cancel leaves the tabs as they were.
+  // A note window asks the main window, whose picker opens.
   useCommand('tab.new', () => {
     if (!tabs) {
       openInMain(NEW_TAB_PATH);
       return;
     }
-    tabs.newTab();
-    commands.run('app.search', { source: 'menu' });
+    commands.run('app.newTabPicker', { source: 'menu' });
   });
+  useEffect(() => {
+    if (!tabs) return;
+    const asked = () => {
+      if (tabs.takeNewTabAsk()) commands.run('app.newTabPicker', { source: 'menu' });
+    };
+    // A launch at /?tab=new asks before the picker's own command is there: after this render.
+    const first = window.setTimeout(asked, 0);
+    const stop = tabs.subscribe(asked);
+    return () => {
+      window.clearTimeout(first);
+      stop();
+    };
+  }, [tabs, commands]);
   // ⌘W leaves a pinned tab open (A1499).
   useCommand(
     'tab.close',

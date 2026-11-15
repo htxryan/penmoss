@@ -10,7 +10,8 @@ import { fuzzyMatch, highlightRuns, type FuzzyMatch } from '@penmoss/core/fuzzy'
 import { useCommands, useCommandsVersion } from './hooks';
 import { Kbd } from './Kbd';
 
-export type PaletteMode = 'all' | 'notes';
+/** The palette (⌘K), Quick Open (⌘P), or New Tab's picker (⌘T, A1594): notes, New Note first. */
+export type PaletteMode = 'all' | 'notes' | 'newTab';
 
 type Item =
   | {
@@ -60,26 +61,31 @@ export function Palette({ mode, notes, onRunCommand, onOpenNote, onClose }: Pale
         ? [...commands.definitions.values()].filter(
             (command) => !command.hidden && commands.available(command.id),
           )
-        : [];
+        : mode === 'newTab'
+          ? [commands.definitions.get('note.new')].filter(
+              (command): command is CommandDefinition =>
+                command !== undefined && commands.available(command.id),
+            )
+          : [];
     const q = query.trim();
     if (!q) {
       const recent = notes.slice(0, mode === 'all' ? RECENT_IN_PALETTE : MAX_RESULTS);
-      return [
-        ...recent.map((note): Item => ({
-          kind: 'note',
-          key: `note:${note.id}`,
-          note,
-          match: { score: 0, indices: [] },
-          group: 'Recent notes',
-        })),
-        ...runnable.map((command): Item => ({
-          kind: 'command',
-          key: `command:${command.id}`,
-          command,
-          match: { score: 0, indices: [] },
-          group: command.area,
-        })),
-      ];
+      const noteItems = recent.map((note): Item => ({
+        kind: 'note',
+        key: `note:${note.id}`,
+        note,
+        match: { score: 0, indices: [] },
+        group: 'Recent notes',
+      }));
+      const commandItems = runnable.map((command): Item => ({
+        kind: 'command',
+        key: `command:${command.id}`,
+        command,
+        match: { score: 0, indices: [] },
+        group: command.area,
+      }));
+      // New Tab's picker leads with New Note.
+      return mode === 'newTab' ? [...commandItems, ...noteItems] : [...noteItems, ...commandItems];
     }
     const found: Item[] = [];
     for (const command of runnable) {
@@ -105,6 +111,8 @@ export function Palette({ mode, notes, onRunCommand, onOpenNote, onClose }: Pale
     if (!item) return;
     if (item.kind === 'command') onRunCommand(item.command.id);
     else if (where) onOpenNote(item.note.id, where);
+    // New Tab's picker opens a new tab in front unless ⌘↩ asks for one behind (A1594).
+    else if (mode === 'newTab') onOpenNote(item.note.id, 'foreground');
     else onOpenNote(item.note.id);
   };
   const picker = usePickerList({
@@ -115,11 +123,11 @@ export function Palette({ mode, notes, onRunCommand, onOpenNote, onClose }: Pale
     onClose,
   });
 
-  const label = mode === 'all' ? 'Command Palette' : 'Quick Open';
+  const label = mode === 'all' ? 'Command Palette' : mode === 'newTab' ? 'New Tab' : 'Quick Open';
   let lastGroup: string | null = null;
   return (
     <PickerOverlay
-      testId={mode === 'all' ? 'palette' : 'quick-open'}
+      testId={mode === 'all' ? 'palette' : mode === 'newTab' ? 'new-tab-picker' : 'quick-open'}
       className="palette"
       label={label}
       onClose={onClose}
@@ -128,7 +136,13 @@ export function Palette({ mode, notes, onRunCommand, onOpenNote, onClose }: Pale
         <PickerField
           picker={picker}
           aria-label={label}
-          placeholder={mode === 'all' ? 'Type a command or a note…' : 'Open a note by title…'}
+          placeholder={
+            mode === 'all'
+              ? 'Type a command or a note…'
+              : mode === 'newTab'
+                ? 'Open a note in a new tab…'
+                : 'Open a note by title…'
+          }
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
@@ -136,7 +150,13 @@ export function Palette({ mode, notes, onRunCommand, onOpenNote, onClose }: Pale
           }}
         />
         <DialogClose
-          label={mode === 'all' ? 'Close the Palette' : 'Close Quick Open'}
+          label={
+            mode === 'all'
+              ? 'Close the Palette'
+              : mode === 'newTab'
+                ? 'Cancel New Tab'
+                : 'Close Quick Open'
+          }
           onClose={onClose}
         />
       </div>

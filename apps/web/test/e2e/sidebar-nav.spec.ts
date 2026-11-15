@@ -40,10 +40,12 @@ test('Back and Forward step through the app’s pages, greyed out at either end 
   await expect(back).toHaveAccessibleName('Back');
   await expect(forward).toHaveAccessibleName('Forward');
 
+  // The first note takes the empty window's place: Home is in no tab's history (A1594).
   const id = await newNote(page, `Back ${RUN}`, 'Somewhere to come back to.');
-  await expect(back).toBeEnabled();
+  await expect(back).toBeDisabled();
   await page.getByTestId('open-graph').click();
   await expect(page).toHaveURL(/\/graph/);
+  await expect(back).toBeEnabled();
   // The notebook's Trash, in its row's ⋯ (T53 item 4, R2-21).
   const trash = await notebookMenuItem(page, 'Trash');
   await expect(trash).toHaveAttribute('data-testid', /^(sidebar|section)-trash$/);

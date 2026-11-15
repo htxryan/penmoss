@@ -49,6 +49,8 @@ import {
   showInTab,
   step,
   stepTarget,
+  isHomePath,
+  withoutHome,
   switchToTab,
   tabShowing,
   updateEntry,
@@ -98,12 +100,15 @@ export class TabsController implements HistoryDriver {
   constructor(options: TabsOptions) {
     this.ids = options.ids ?? randomId;
     this.storage = options.storage;
-    const saved = load(options.storage);
+    // A session saved before A1594 can hold Home tabs: they go.
+    const loaded = load(options.storage);
+    const saved = loaded ? withoutHome(loaded, this.ids) : null;
     this.restored = saved !== null;
     this.launchNote = noteIdOfPath(options.location ?? HOME_PATH);
     const at = options.location ?? HOME_PATH;
     const location = at === NEW_TAB_PATH ? HOME_PATH : at;
     this.state = saved ? startFrom(saved, at, this.ids) : initialState(this.ids, location);
+    if (at === NEW_TAB_PATH) this.newTabAsked = true;
   }
 
   getState = (): TabsState => this.state;
@@ -157,6 +162,9 @@ export class TabsController implements HistoryDriver {
   }
 
   private skip = (entry: Entry): boolean => {
+    // Home is no tab's page (A1594): only the empty window's, under Settings opened there. Beside
+    // other tabs it is passed over; so is a note in Trash (A1501).
+    if (isHomePath(entry.path)) return this.state.tabs.length > 1;
     const note = noteIdOfPath(entry.path);
     return note !== null && this.gone(note);
   };
@@ -288,9 +296,21 @@ export class TabsController implements HistoryDriver {
     return true;
   }
 
-  /** ⌘T and +: a new tab on Home, in front. */
-  newTab(): void {
-    this.commit(openTab(this.state, HOME_PATH, { background: false, ids: this.ids }));
+  /**
+   * A new tab asked for from outside the window (a note window's ⌘T, `/?tab=new` at launch): the
+   * window's New Tab picker opens for it (A1594). Taken once by whoever shows the picker.
+   */
+  private newTabAsked = false;
+
+  askNewTab(): void {
+    this.newTabAsked = true;
+    for (const listener of [...this.listeners]) listener();
+  }
+
+  takeNewTabAsk(): boolean {
+    const asked = this.newTabAsked;
+    this.newTabAsked = false;
+    return asked;
   }
 
   /** Opens `path` in a new tab dropped at `at` in the strip (a note dragged onto it), in front. */
@@ -393,7 +413,8 @@ function startFrom(saved: TabsState, location: string, ids: IdMaker): TabsState 
   if (location === HOME_PATH || location === '') {
     return leaveSettings(saved) ?? navigateActive(saved, HOME_PATH, { ids });
   }
-  if (location === NEW_TAB_PATH) return openTab(saved, HOME_PATH, { background: false, ids });
+  // A note window's ⌘T as the window loads: the tabs as they were, and the picker (A1594).
+  if (location === NEW_TAB_PATH) return leaveSettings(saved) ?? saved;
   if (currentEntry(activeTab(saved)).path === location) return saved;
   // A note opened from outside as the window loads (a deep link): its tab, or a new one, its
   // panel as the note itself remembers it (A985).

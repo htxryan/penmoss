@@ -291,6 +291,11 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
     if (overlay?.kind === 'palette' && overlay.mode === 'all') close();
     else open({ kind: 'palette', mode: 'all' });
   });
+  // New Tab's picker (A1594): a note, or New Note, in a new tab; Esc leaves the tabs as they were.
+  useCommand('app.newTabPicker', () => {
+    if (overlay?.kind === 'palette' && overlay.mode === 'newTab') close();
+    else open({ kind: 'palette', mode: 'newTab' });
+  });
   useCommand('app.quickOpen', () => {
     if (overlay?.kind === 'palette' && overlay.mode === 'notes') close();
     else open({ kind: 'palette', mode: 'notes' });
@@ -489,9 +494,27 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
             key={overlay.mode}
             mode={overlay.mode}
             notes={recentNotes(openList, readOpened(deviceStorage()), null, openList.length)}
-            onClose={() => close()}
+            onClose={() => {
+              // New Tab cancelled from +: focus back on the tab on screen, the tabs as they were.
+              if (
+                overlay.mode === 'newTab' &&
+                returnFocus.current?.dataset['testid'] === 'tab-new'
+              ) {
+                const tab = document.querySelector<HTMLElement>(
+                  '.tab-strip [role="tab"][aria-selected="true"]',
+                );
+                if (tab) returnFocus.current = tab;
+              }
+              close();
+            }}
             onOpenNote={openNote}
             onRunCommand={(id) => {
+              // New Tab's New Note: the note in a new tab, which takes focus (A1594).
+              if (overlay.mode === 'newTab') {
+                close(false);
+                commands.run(id, { source: 'palette', newTab: 'foreground' });
+                return;
+              }
               close();
               commands.run(id, { source: 'palette' });
             }}

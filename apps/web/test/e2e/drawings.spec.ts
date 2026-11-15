@@ -102,6 +102,9 @@ test('PEN-28: draw in a note, save it as files in git, open it again and edit it
   test.setTimeout(150_000);
   const errors = collectErrors(page, /WebSocket|net::/);
   await page.goto('/');
+  // A page before the note, for the editor's Back to go to: Home is in no tab's history (A1594).
+  await page.getByTestId('open-graph').click();
+  await expect(page).toHaveURL(/\/graph/);
   const id = await createNote(page, `Sketches ${TAG}`);
   await page.keyboard.type('The garden beds, drawn:');
   await page.keyboard.press('Enter');

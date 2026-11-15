@@ -391,7 +391,9 @@ test('a context menu on notes, a selection and folders: Move, Trash with Undo, R
   await expect(two).toBeVisible();
 
   // A selection never lingers once a note is opened another way (back, search, a link): the
-  // next Move or Trash cannot reach notes chosen earlier (review S1).
+  // next Move or Trash cannot reach notes chosen earlier (review S1). Trash closed their tab, so
+  // the tab starts again at three: Home is in no tab's history to go back to (A1594).
+  await three.click();
   await one.click();
   await two.click({ modifiers: ['Shift'] });
   await expect(two).toHaveAttribute('aria-selected', 'true');

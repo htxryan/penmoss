@@ -28,6 +28,7 @@ import {
   selectLast,
   selectNth,
   setPinned,
+  withoutHome,
   settle,
   showInTab,
   shownNotes,
@@ -80,7 +81,8 @@ describe('opening notes', () => {
     state = navigateActive(state, note(A), { ids });
     state = navigateActive(state, note(B), { ids });
     expect(strip(state)).toEqual([`*${note(B)}`]);
-    expect(activeTab(state).entries.map((entry) => entry.path)).toEqual(['/', note(A), note(B)]);
+    // The first note takes the bare Home's place (A1594).
+    expect(activeTab(state).entries.map((entry) => entry.path)).toEqual([note(A), note(B)]);
   });
 
   it('replaces the current entry when told to, and ignores the same page', () => {
@@ -174,7 +176,7 @@ describe('closing, reopening and switching', () => {
     expect(shownTabCount(state)).toBe(0);
     // Closing that Home does nothing, and puts nothing on the closed list.
     expect(closeTab(state, state.active, ids)).toBe(state);
-    // A new tab's Home is bare too; Home beside a note, or pinned, is a tab like any other.
+    // A new tab's Home is bare too; a pinned one is a tab like any other.
     expect(isBareHome(initialState(ids, '/?tab=new'))).toBe(true);
     // A tab opened from it, behind or in front, takes its place: the bare Home never shows.
     for (const background of [true, false]) {
@@ -184,15 +186,63 @@ describe('closing, reopening and switching', () => {
       expect(activeTab(opened).opener).toBeUndefined();
     }
     expect(strip(showInTab(state, note(C), ids))).toEqual([`*${note(C)}`]);
-    // A Home beside a note (⌘T) is a tab like any other.
-    const beside = openTab(initialState(ids, note(A)), '/', { background: false, ids });
-    expect(isBareHome(beside)).toBe(false);
-    expect(shownTabCount(beside)).toBe(2);
+    // No tab opens on Home (A1594): New Tab asks for a note instead.
+    const one = initialState(ids, note(A));
+    expect(openTab(one, '/', { background: false, ids })).toBe(one);
     expect(isBareHome(setPinned(state, state.active, true))).toBe(false);
-    // A note opened in it makes it the first tab.
+    // A note opened in it makes it the first tab, with no Home in its history.
     const opened = navigateActive(state, note(B), { ids });
     expect(strip(opened)).toEqual([`*${note(B)}`]);
+    expect(activeTab(opened).entries.map((entry) => entry.path)).toEqual([note(B)]);
     expect(shownTabCount(opened)).toBe(1);
+  });
+
+  it('never makes Home a tab’s page (A1594)', () => {
+    const ids = counter();
+    // Going Home from a note closes its tab; from the last one, the window is bare.
+    let state = tabsOn([note(A), note(B)], ids);
+    state = navigateActive(state, '/', { ids });
+    expect(strip(state)).toEqual([`*${note(B)}`]);
+    state = navigateActive(state, '/', { ids });
+    expect(isBareHome(state)).toBe(true);
+    // A Home tab is never remembered for Reopen Closed Tab.
+    expect(closeTab(state, state.active, ids)).toBe(state);
+  });
+
+  it('takes Home out of a saved session (A1594)', () => {
+    const ids = counter();
+    const saved: TabsState = {
+      tabs: [
+        { id: 'a', pinned: false, entries: [{ path: note(A), scrollTop: 0 }], index: 0 },
+        { id: 'home', pinned: false, entries: [{ path: '/', scrollTop: 0 }], index: 0 },
+        {
+          id: 'b',
+          pinned: false,
+          entries: [
+            { path: '/', scrollTop: 0 },
+            { path: note(B), scrollTop: 0 },
+            { path: '/?tab=new', scrollTop: 0 },
+            { path: note(C), scrollTop: 0 },
+          ],
+          index: 2,
+        },
+      ],
+      active: 'home',
+      closed: [
+        {
+          tab: { id: 'c', pinned: false, entries: [{ path: '/', scrollTop: 0 }], index: 0 },
+          position: 0,
+        },
+      ],
+    };
+    const kept = withoutHome(saved, ids);
+    expect(kept.tabs.map((tab) => tab.id)).toEqual(['a', 'b']);
+    expect(kept.tabs[1]!.entries.map((entry) => entry.path)).toEqual([note(B), note(C)]);
+    expect(currentEntry(kept.tabs[1]!).path).toBe(note(B));
+    expect(kept.active).toBe('a');
+    expect(kept.closed).toEqual([]);
+    const bare = withoutHome({ ...saved, tabs: [saved.tabs[1]!] }, ids);
+    expect(isBareHome(bare)).toBe(true);
   });
 
   it('reopens the last closed tab where it was, with its history, scroll, panel and pin', () => {

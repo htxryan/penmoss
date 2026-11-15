@@ -137,24 +137,36 @@ test('tabs in the Mac app: the File menu, the keys, the title bar, and a relaunc
   const b = `Mac tab B ${RUN}`;
   const c = `Mac tab C ${RUN}`;
   await newNote(page, a, 'The first tab.');
-  // File → New Tab: Home, then a new note in it; and once more.
+  // File → New Tab… asks which note (A1594): Escape makes no tab; its New Note, at the top,
+  // makes a note in a new tab; and once more.
+  const picker = page.getByRole('dialog', { name: 'New Tab' });
   await chooseMenu(app, 'tab.new');
-  await expect(strip(page).getByRole('tab')).toHaveCount(2);
-  // A new tab opens with the cursor in Search; Escape leaves Home.
-  await expect(page.getByTestId('search')).toBeVisible();
+  await expect(picker.getByRole('combobox', { name: 'New Tab' })).toBeFocused();
   await page.keyboard.press('Escape');
-  await expect(page.getByTestId('search')).toBeHidden();
-  const bId = await newNote(page, b, 'The second tab.');
-  await chooseMenu(app, 'tab.new');
-  await expect(page.getByTestId('search')).toBeVisible();
-  await page.keyboard.press('Escape');
-  await newNote(page, c, 'The third tab.');
+  await expect(picker).toBeHidden();
+  expect(await titles(page)).toEqual([`*${a}`]);
+  const pickNewNote = async (title: string, text: string): Promise<string> => {
+    await chooseMenu(app, 'tab.new');
+    await expect(picker.getByRole('option').first()).toContainText('New Note');
+    await page.keyboard.press('Enter');
+    await expect(picker).toBeHidden();
+    await expect(page).toHaveURL(ULID);
+    await expect(page.getByTestId('note-title')).toBeFocused();
+    await page.keyboard.type(title);
+    await page.keyboard.press('Enter');
+    await page.keyboard.type(text);
+    await expect(body(page)).toContainText(text);
+    return ULID.exec(new URL(page.url()).pathname)![1]!;
+  };
+  const bId = await pickNewNote(b, 'The second tab.');
+  expect(await titles(page)).toEqual([a, `*${b}`]);
+  await pickNewNote(c, 'The third tab.');
   expect(await titles(page)).toEqual([a, b, `*${c}`]);
 
   // The File menu's tab items, with their keys; Close Window takes ⇧⌘W (AC3).
   const file = await fileMenu(app);
   const item = (id: string) => file.find((entry) => entry.id === id);
-  expect(item('tab.new')).toMatchObject({ label: 'New Tab', accelerator: 'CommandOrControl+T' });
+  expect(item('tab.new')).toMatchObject({ label: 'New Tab…', accelerator: 'CommandOrControl+T' });
   expect(item('tab.reopenClosed')).toMatchObject({
     label: 'Reopen Closed Tab',
     accelerator: 'CommandOrControl+Shift+T',
