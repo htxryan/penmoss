@@ -143,6 +143,8 @@ data class HomeUi(
      * notebook's, as the web's sidebar names its section (A1538).
      */
     val notebook: String = "",
+    /** The notebook's badge (A1579), before its name on that heading, as the Mac's sidebar has it. */
+    val badge: app.penmoss.engine.settings.NotebookBadge? = null,
     /** The top bar's title: Penmoss, or a git notebook's name (T50 G7, A880). */
     val title: String = "Penmoss",
     /** The notes pinned to Quick Access (T51, A946); the section shows with none too, saying No Notes. */
@@ -500,7 +502,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                     // The notebook's heading with its sync dot (T51, A933), as the web's
                                     // notebook heading: its actions on a long press (T53 item 4).
                                     item(key = "foldersTitle", contentType = "title") {
-                                        NotebookHeading(ui.notebook, personalDot, ui.sortMode, actions.onSort, actions.onNotebookNewNote, actions.onNewFolder, actions.onTrash)
+                                        NotebookHeading(ui.notebook, personalDot, ui.sortMode, actions.onSort, actions.onNotebookNewNote, actions.onNewFolder, actions.onTrash, ui.badge)
                                     }
                                     items(ui.folders, key = { "folder:${it.id}" }, contentType = { "folder" }) { folder ->
                                         FolderRowView(folder, actions.onFolder, onLongPress = actions.onFolderLongPress, enabled = !choosing)
@@ -894,6 +896,7 @@ private fun NotebookHeading(
     onNewNote: () -> Unit,
     onNewFolder: () -> Unit,
     onTrash: () -> Unit,
+    badge: app.penmoss.engine.settings.NotebookBadge? = null,
 ) {
     var menu by remember { mutableStateOf(false) }
     var sorting by remember { mutableStateOf(false) }
@@ -913,6 +916,7 @@ private fun NotebookHeading(
                     },
                 ) {}
                 .testTag("homeFoldersTitle"),
+            lead = badge?.let { { app.penmoss.ui.common.NotebookBadgeView(it, name, decorative = true) } },
         )
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
             DropdownMenuItem(text = { Text("New Note in This Notebook") }, onClick = { menu = false; onNewNote() }, modifier = Modifier.testTag("homeNotebookNewNote"))

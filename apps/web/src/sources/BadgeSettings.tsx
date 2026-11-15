@@ -2,10 +2,9 @@ import { Icon } from '@penmoss/ui/icons';
 import { useId, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { ColourPicker } from '../shell/ColourPicker';
 import { SettingRow } from '../theme/look-rows';
-import { onGridKeyDown } from '../shell/popover';
 import {
-  BADGE_ICONS,
   BADGE_PRESETS,
+  FIRST_BADGE_ICON,
   defaultBadge,
   glyphInk,
   setNotebookBadge,
@@ -13,6 +12,7 @@ import {
   type BadgeGlyph,
   type BadgeGlyphKind,
 } from './badge';
+import { BadgeIconChooser } from './BadgeIconChooser';
 import type { GitSource } from './git-source';
 import { BadgeView } from './NotebookBadge';
 import { PreviewCommands } from '../commands/CommandsRoot';
@@ -28,9 +28,6 @@ const KINDS: ReadonlyArray<{ readonly kind: BadgeGlyphKind; readonly label: stri
   { kind: 'number', label: 'Number' },
   { kind: 'icon', label: 'Icon' },
 ];
-
-/** Icons per row in the grid: the arrow keys move by this many up and down. */
-const ICON_COLUMNS = 8;
 
 /** Arrow keys along a one-row radio group (the presets): focus and choose, as radios do. */
 function onRowKeyDown(event: KeyboardEvent<HTMLElement>): void {
@@ -52,9 +49,9 @@ function onRowKeyDown(event: KeyboardEvent<HTMLElement>): void {
 
 /**
  * A notebook's Badge (PEN-140, ac17), rows in the first group of its page's Overview in Settings:
- * a preview (alone, then on the sidebar's own row and the strip's own tab, A1564) with Reset to Default, its colour (ten presets,
- * or Custom… with the colour picker), and what it shows (a letter, a number from 0 to 99, or one
- * of 24 icons) with its field or grid.
+ * a preview (alone, then on the sidebar's own row and the strip's own tab, A1564) with Reset to
+ * Default, its colour (ten presets, or Custom… with the colour picker), and what it shows (a
+ * letter, a number from 0 to 99, or an icon from the icon picker, A1568) with its field or its icon.
  * Each change is written at once to the notebook's own settings, so it syncs with it (A827).
  */
 export function BadgeSettings({ source }: { source: GitSource }) {
@@ -78,7 +75,7 @@ export function BadgeSettings({ source }: { source: GitSource }) {
     if (kind === fallback.glyph.kind) setGlyph(fallback.glyph);
     else if (kind === 'letter') setGlyph({ kind, value: fallback.glyph.value });
     else if (kind === 'number') setGlyph({ kind, value: '1' });
-    else setGlyph({ kind, value: BADGE_ICONS[0] });
+    else setGlyph({ kind, value: FIRST_BADGE_ICON });
   };
   const preset = BADGE_PRESETS.find((each) => each.id === badge.preset) ?? null;
   const name = source.name;
@@ -263,44 +260,15 @@ export function BadgeSettings({ source }: { source: GitSource }) {
         </SettingRow>
       ) : (
         <SettingRow setting="badge-icon" label="Icon" labelId={`${id}-icon`}>
-          <div
-            className="badge-icons"
-            role="radiogroup"
-            aria-labelledby={`${id}-icon`}
-            data-testid="badge-icons"
-            onKeyDown={(event) => onGridKeyDown(event, ICON_COLUMNS)}
-          >
-            {BADGE_ICONS.map((icon) => {
-              const checked = glyph.value === icon;
-              return (
-                <button
-                  key={icon}
-                  type="button"
-                  role="radio"
-                  className="badge-icon"
-                  data-ui="option"
-                  aria-checked={checked}
-                  aria-label={iconLabel(icon)}
-                  data-tip={iconLabel(icon)}
-                  data-grid-item=""
-                  tabIndex={checked ? 0 : -1}
-                  data-testid={`badge-icon-${icon}`}
-                  onClick={() => setGlyph({ kind: 'icon', value: icon })}
-                >
-                  <Icon name={icon} size={16} />
-                </button>
-              );
-            })}
-          </div>
+          <BadgeIconChooser
+            value={glyph.value}
+            labelledBy={`${id}-icon`}
+            onChoose={(value) => setGlyph({ kind: 'icon', value })}
+          />
         </SettingRow>
       )}
     </>
   );
-}
-
-/** An icon's name in Title Case ("Checklist", "Terminal"). */
-function iconLabel(icon: string): string {
-  return icon.charAt(0).toUpperCase() + icon.slice(1);
 }
 
 const ignore = () => undefined;

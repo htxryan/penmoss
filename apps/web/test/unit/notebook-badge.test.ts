@@ -1,4 +1,3 @@
-import { ICON_NAMES } from '@penmoss/ui/icons';
 import { describe, expect, it } from 'vitest';
 import {
   BADGE_COLOR_SETTING,
@@ -123,10 +122,9 @@ describe('stored badges', () => {
     expect(renamed.color).toBe('#b23a3a');
   });
 
-  it('offers 24 icons, all from the app’s set', () => {
+  it('still reads the 24 icons from before Lucide', () => {
     expect(BADGE_ICONS).toHaveLength(24);
     expect(new Set(BADGE_ICONS).size).toBe(24);
-    for (const icon of BADGE_ICONS) expect(ICON_NAMES).toContain(icon);
   });
 
   it('is written to the notebook’s own settings, and a reset removes it', () => {

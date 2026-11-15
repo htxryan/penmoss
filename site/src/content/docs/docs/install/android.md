@@ -50,7 +50,7 @@ The first screen lists your notebooks; each opens in a screen of its own, with i
 
 Under **Notebooks**, each notebook has a row with its sync state; tap it for the notebook's page, which has three tabs:
 
-- **Overview:** its sync state with **Sync Now**, **Open Notebook**, **Make Primary**, how many **Notes** it has, **Copy Settings…** (with two notebooks or more), and **Remove from This Phone…**, which asks for your fingerprint, face or screen lock first.
+- **Overview:** its sync state with **Sync Now**, **Open Notebook**, its **Badge** (its colour, and a letter, a number or an icon from **Choose Icon…**, as on the Mac; see [Notebook badges](/docs/organise/#notebook-badges)), **Make Primary**, how many **Notes** it has, **Copy Settings…** (with two notebooks or more), and **Remove from This Phone…**, which asks for your fingerprint, face or screen lock first.
 - **Sync:** what the last sync said, **Wi-Fi Only**, how soon it pushes (**Push After**, 12 seconds by default) and how often it pulls (**Pull Every**, 1 minute by default).
 - **Git:** the **Personal Access Token** (**Save Token**, **Forget Token**), **Sign Commits**, and a **Commit Name** and **Commit Email** for this notebook.
 
@@ -107,7 +107,7 @@ Removing a notebook, Delete for Good and restoring a version first ask for your 
 
 ## What's new
 
-**Settings → What’s New** names the version you have and how it updates (by Google Play, or with a newer `Penmoss.apk`), then shows what changed in it and, under **Earlier Versions**, in earlier ones, grouped as **New**, **Improved** and **Fixed**. Only changes that reach Android are listed. An Alpha build lists every change since the last stable release, each with its build. The phone fetches the notes from GitHub when you open the screen and after an update, at most once an hour, and keeps them for offline. Until it has them, the screen links to the [Releases page](https://github.com/htxryan/penmoss/releases).
+**Settings → What’s New** names the version you have and how it updates (by Google Play, or with a newer `Penmoss.apk`), with **Open Source Notices**, the licences of the open source software Penmoss includes, then shows what changed in it and, under **Earlier Versions**, in earlier ones, grouped as **New**, **Improved** and **Fixed**. Only changes that reach Android are listed. An Alpha build lists every change since the last stable release, each with its build. The phone fetches the notes from GitHub when you open the screen and after an update, at most once an hour, and keeps them for offline. Until it has them, the screen links to the [Releases page](https://github.com/htxryan/penmoss/releases).
 
 After you install a newer version, a message at the foot of the screen says **Updated to …** once, with **What’s New**, if that version has notes for Android.
 

@@ -4,7 +4,7 @@
  * the current colour. Icons are always decorative here: the button or link
  * around one carries its name (`aria-label`, or visible text beside it).
  */
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 const dot = (cx: number, cy: number, r: number) => (
   <circle cx={cx} cy={cy} r={r} fill="currentColor" stroke="none" />
@@ -241,8 +241,6 @@ const PATHS = {
   ),
   plus: <path d="M12 5v14M5 12h14" />,
   minus: <path d="M5 12h14" />,
-  // A pulse, for Settings → Status (T39 pass 3, A902): Android's; `info` is the Info panel's.
-  pulse: <path d="M3.5 12.5h4l2-5 3.5 10 2.5-6.5 1.5 1.5h3.5" />,
   redo: <path d="m15 14 5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13" />,
   refresh: (
     <path d="M19.5 11A7.6 7.6 0 0 0 6 7.3L4.5 9M4.5 4.5V9H9M4.5 13A7.6 7.6 0 0 0 18 16.7l1.5-1.7M19.5 19.5V15H15" />
@@ -307,14 +305,18 @@ export function Icon({
   name,
   size = 16,
   className,
+  style,
 }: {
   readonly name: IconName;
   readonly size?: number;
   readonly className?: string;
+  /** Inline style, for an icon whose look no container may change (a notebook's badge). */
+  readonly style?: CSSProperties;
 }) {
   return (
     <svg
       className={className ? `i ${className}` : 'i'}
+      style={style}
       viewBox="0 0 24 24"
       width={size}
       height={size}

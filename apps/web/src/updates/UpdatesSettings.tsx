@@ -2,7 +2,8 @@
  * Settings → Updates (PEN-108, PEN-146): a card with this version, whether it is current, the
  * channel and the last check, and Check Now (or Install and Restart); then Update Automatically
  * and Update Channel as rows with their help; then What's New, the release notes, folded away
- * until opened (T64 item 2, A1112, A1196, A1567). Also the notice a newer build brings, in the sidebar or as a toast (PEN-135; its
+ * until opened (T64 item 2, A1112, A1196, A1567). Open Source Notices sits under the version
+ * (A1580). Also the notice a newer build brings, in the sidebar or as a toast (PEN-135; its
  * model is notice.ts). The Mac app only.
  */
 import { Icon } from '@penmoss/ui/icons';
@@ -12,6 +13,7 @@ import { navigate } from '../router';
 import { SettingRow, Switch } from '../theme/look-rows';
 import { UPDATES_PATH, type UpdateNoticeModel } from './notice';
 import { versionLabel } from './notes';
+import { OpenSourceNotices } from './OpenSourceNotices';
 import { WhatsNew } from './ReleaseNotes';
 import { checkedLine, updateChip, updateStatus, useUpdates } from './updates';
 import { ActionToast } from '../toasts/ActionToast';
@@ -125,6 +127,7 @@ export function UpdatesSettings() {
           </p>
         ) : null}
       </div>
+      <OpenSourceNotices />
       <div className="lf-group">
         <SettingRow
           setting="update-automatically"

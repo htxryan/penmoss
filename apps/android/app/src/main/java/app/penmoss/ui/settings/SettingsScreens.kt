@@ -133,6 +133,8 @@ data class SettingsSection(
     val icon: ImageVector? = null,
     val route: String = "settings/$id",
     val dot: DotState? = null,
+    /** A notebook's badge (A1579), before its name. */
+    val badge: app.penmoss.engine.settings.NotebookBadge? = null,
 )
 
 /** A captioned group of rows (PEN-146): Look and Feel, Writing, Notebooks, Agents, This Phone. */
@@ -216,7 +218,17 @@ fun SettingsHome(
                 item(key = "group-${group.title}") { GroupTitle(group.title) }
                 items(group.sections, key = { it.id }) { section ->
                     ListItem(
-                        headlineContent = { Text(section.title) },
+                        headlineContent = {
+                            val badge = section.badge
+                            if (badge == null) {
+                                Text(section.title)
+                            } else {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    app.penmoss.ui.common.NotebookBadgeView(badge, section.title, decorative = true)
+                                    Text(section.title)
+                                }
+                            }
+                        },
                         supportingContent = { Text(section.summary, maxLines = 2, overflow = TextOverflow.Ellipsis) },
                         leadingContent = {
                             when {
@@ -265,6 +277,8 @@ internal fun SectionScreen(
     notice: String? = null,
     info: Boolean = true,
     actions: @Composable RowScope.() -> Unit = {},
+    /** Before the title: a notebook's page has its badge there (A1579). */
+    titleLead: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
@@ -272,7 +286,17 @@ internal fun SectionScreen(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                title = {
+                    val text = @Composable { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    if (titleLead == null) {
+                        text()
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            titleLead()
+                            text()
+                        }
+                    }
+                },
                 navigationIcon = { if (onBack != null) BackButton(onBack) },
                 actions = {
                     if (info) SettingsInfoButton()

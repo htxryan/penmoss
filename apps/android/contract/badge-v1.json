@@ -1,0 +1,2134 @@
+{
+  "$comment": "The web's notebook badges (apps/web/src/sources/badge.ts) and Lucide, for the phone's (A1579). Written by apps/web/test/unit/android-badge-contract.test.ts; read by the Kotlin NotebookBadgesTest.",
+  "version": 1,
+  "keys": {
+    "color": "badge.color",
+    "glyph": "badge.glyph"
+  },
+  "lucidePrefix": "lucide:",
+  "firstIcon": "lucide:notebook",
+  "ink": {
+    "light": "#ffffff",
+    "dark": "#1b1d1f"
+  },
+  "presets": [
+    {
+      "id": "moss",
+      "label": "Moss",
+      "hex": "#3c7a4b"
+    },
+    {
+      "id": "teal",
+      "label": "Teal",
+      "hex": "#1f7a7a"
+    },
+    {
+      "id": "blue",
+      "label": "Blue",
+      "hex": "#2f5d8a"
+    },
+    {
+      "id": "indigo",
+      "label": "Indigo",
+      "hex": "#4a4fa3"
+    },
+    {
+      "id": "violet",
+      "label": "Violet",
+      "hex": "#7448a0"
+    },
+    {
+      "id": "rose",
+      "label": "Rose",
+      "hex": "#a8436b"
+    },
+    {
+      "id": "red",
+      "label": "Red",
+      "hex": "#b23a3a"
+    },
+    {
+      "id": "orange",
+      "label": "Orange",
+      "hex": "#a8541a"
+    },
+    {
+      "id": "ochre",
+      "label": "Ochre",
+      "hex": "#8a6d12"
+    },
+    {
+      "id": "slate",
+      "label": "Slate",
+      "hex": "#4f5966"
+    }
+  ],
+  "oldIcons": {
+    "notebook": "notebook",
+    "journal": "book-text",
+    "calendar": "calendar",
+    "inbox": "inbox",
+    "folder": "folder",
+    "file": "file",
+    "star": "star",
+    "pin": "pin",
+    "globe": "globe",
+    "code": "code",
+    "terminal": "terminal",
+    "branch": "git-branch",
+    "brush": "brush",
+    "palette": "palette",
+    "pencil": "pencil",
+    "checklist": "list-checks",
+    "comment": "message-square",
+    "graph": "waypoints",
+    "key": "key",
+    "laptop": "laptop",
+    "phone": "smartphone",
+    "sun": "sun",
+    "moon": "moon",
+    "pulse": "activity"
+  },
+  "defaults": [
+    {
+      "id": "01JD0000000000000000000001",
+      "name": "Personal",
+      "color": "#a8436b",
+      "preset": "rose",
+      "glyph": {
+        "kind": "letter",
+        "value": "P"
+      },
+      "custom": false
+    },
+    {
+      "id": "01JD0000000000000000000002",
+      "name": "penmoss",
+      "color": "#7448a0",
+      "preset": "violet",
+      "glyph": {
+        "kind": "letter",
+        "value": "P"
+      },
+      "custom": false
+    },
+    {
+      "id": "01JD0000000000000000000003",
+      "name": "2026 Plans",
+      "color": "#4a4fa3",
+      "preset": "indigo",
+      "glyph": {
+        "kind": "number",
+        "value": "2"
+      },
+      "custom": false
+    },
+    {
+      "id": "01JD0000000000000000000004",
+      "name": "  — notes",
+      "color": "#3c7a4b",
+      "preset": "moss",
+      "glyph": {
+        "kind": "letter",
+        "value": "N"
+      },
+      "custom": false
+    },
+    {
+      "id": "01JD0000000000000000000005",
+      "name": "!!!",
+      "color": "#4f5966",
+      "preset": "slate",
+      "glyph": {
+        "kind": "letter",
+        "value": "#"
+      },
+      "custom": false
+    },
+    {
+      "id": "notebook-1",
+      "name": "Work",
+      "color": "#b23a3a",
+      "preset": "red",
+      "glyph": {
+        "kind": "letter",
+        "value": "W"
+      },
+      "custom": false
+    },
+    {
+      "id": "ab",
+      "name": "éclair",
+      "color": "#b23a3a",
+      "preset": "red",
+      "glyph": {
+        "kind": "letter",
+        "value": "É"
+      },
+      "custom": false
+    },
+    {
+      "id": "ab",
+      "name": "ßtraße",
+      "color": "#b23a3a",
+      "preset": "red",
+      "glyph": {
+        "kind": "letter",
+        "value": "SS"
+      },
+      "custom": false
+    },
+    {
+      "id": "",
+      "name": "Ωmega",
+      "color": "#1f7a7a",
+      "preset": "teal",
+      "glyph": {
+        "kind": "letter",
+        "value": "Ω"
+      },
+      "custom": false
+    },
+    {
+      "id": "1f9b6d2c-0e1a-4c55-9a3b-7d1c2e3f4a5b",
+      "name": "日本語",
+      "color": "#2f5d8a",
+      "preset": "blue",
+      "glyph": {
+        "kind": "letter",
+        "value": "日"
+      },
+      "custom": false
+    },
+    {
+      "id": "x",
+      "name": "١٢ Arabic digits",
+      "color": "#a8436b",
+      "preset": "rose",
+      "glyph": {
+        "kind": "number",
+        "value": "١"
+      },
+      "custom": false
+    },
+    {
+      "id": "y",
+      "name": "½ half",
+      "color": "#b23a3a",
+      "preset": "red",
+      "glyph": {
+        "kind": "letter",
+        "value": "½"
+      },
+      "custom": false
+    }
+  ],
+  "stored": {
+    "id": "01JD0000000000000000000001",
+    "name": "Personal",
+    "cases": [
+      {
+        "settings": {},
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "letter",
+            "value": "P"
+          },
+          "custom": false
+        }
+      },
+      {
+        "settings": {
+          "badge.color": "teal"
+        },
+        "badge": {
+          "color": "#1f7a7a",
+          "preset": "teal",
+          "glyph": {
+            "kind": "letter",
+            "value": "P"
+          },
+          "custom": true
+        }
+      },
+      {
+        "settings": {
+          "badge.color": "#1F7A7A"
+        },
+        "badge": {
+          "color": "#1f7a7a",
+          "preset": "teal",
+          "glyph": {
+            "kind": "letter",
+            "value": "P"
+          },
+          "custom": true
+        }
+      },
+      {
+        "settings": {
+          "badge.color": "#123456"
+        },
+        "badge": {
+          "color": "#123456",
+          "preset": null,
+          "glyph": {
+            "kind": "letter",
+            "value": "P"
+          },
+          "custom": true
+        }
+      },
+      {
+        "settings": {
+          "badge.color": "#12345"
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "letter",
+            "value": "P"
+          },
+          "custom": false
+        }
+      },
+      {
+        "settings": {
+          "badge.color": "plum"
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "letter",
+            "value": "P"
+          },
+          "custom": false
+        }
+      },
+      {
+        "settings": {
+          "badge.color": 7
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "letter",
+            "value": "P"
+          },
+          "custom": false
+        }
+      },
+      {
+        "settings": {
+          "badge.glyph": {
+            "kind": "letter",
+            "value": "Q"
+          }
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "letter",
+            "value": "Q"
+          },
+          "custom": true
+        }
+      },
+      {
+        "settings": {
+          "badge.glyph": {
+            "kind": "letter",
+            "value": "QR"
+          }
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "letter",
+            "value": "P"
+          },
+          "custom": false
+        }
+      },
+      {
+        "settings": {
+          "badge.glyph": {
+            "kind": "letter",
+            "value": " "
+          }
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "letter",
+            "value": "P"
+          },
+          "custom": false
+        }
+      },
+      {
+        "settings": {
+          "badge.glyph": {
+            "kind": "letter",
+            "value": "★"
+          }
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "letter",
+            "value": "★"
+          },
+          "custom": true
+        }
+      },
+      {
+        "settings": {
+          "badge.glyph": {
+            "kind": "letter",
+            "value": "🦊"
+          }
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "letter",
+            "value": "🦊"
+          },
+          "custom": true
+        }
+      },
+      {
+        "settings": {
+          "badge.glyph": {
+            "kind": "letter",
+            "value": "​"
+          }
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "letter",
+            "value": "P"
+          },
+          "custom": false
+        }
+      },
+      {
+        "settings": {
+          "badge.glyph": {
+            "kind": "number",
+            "value": "7"
+          }
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "number",
+            "value": "7"
+          },
+          "custom": true
+        }
+      },
+      {
+        "settings": {
+          "badge.glyph": {
+            "kind": "number",
+            "value": "99"
+          }
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "number",
+            "value": "99"
+          },
+          "custom": true
+        }
+      },
+      {
+        "settings": {
+          "badge.glyph": {
+            "kind": "number",
+            "value": "100"
+          }
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "letter",
+            "value": "P"
+          },
+          "custom": false
+        }
+      },
+      {
+        "settings": {
+          "badge.glyph": {
+            "kind": "number",
+            "value": "07"
+          }
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "letter",
+            "value": "P"
+          },
+          "custom": false
+        }
+      },
+      {
+        "settings": {
+          "badge.glyph": {
+            "kind": "icon",
+            "value": "lucide:rocket"
+          }
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "icon",
+            "value": "lucide:rocket"
+          },
+          "custom": true
+        }
+      },
+      {
+        "settings": {
+          "badge.glyph": {
+            "kind": "icon",
+            "value": "star"
+          }
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "icon",
+            "value": "star"
+          },
+          "custom": true
+        }
+      },
+      {
+        "settings": {
+          "badge.glyph": {
+            "kind": "icon",
+            "value": "rocket"
+          }
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "letter",
+            "value": "P"
+          },
+          "custom": false
+        }
+      },
+      {
+        "settings": {
+          "badge.glyph": {
+            "kind": "icon",
+            "value": "lucide:Rocket"
+          }
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "letter",
+            "value": "P"
+          },
+          "custom": false
+        }
+      },
+      {
+        "settings": {
+          "badge.glyph": {
+            "kind": "icon",
+            "value": "lucide:from-a-later-lucide"
+          }
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "icon",
+            "value": "lucide:from-a-later-lucide"
+          },
+          "custom": true
+        }
+      },
+      {
+        "settings": {
+          "badge.glyph": {
+            "kind": "emoji",
+            "value": "🦊"
+          }
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "letter",
+            "value": "P"
+          },
+          "custom": false
+        }
+      },
+      {
+        "settings": {
+          "badge.glyph": "P"
+        },
+        "badge": {
+          "color": "#a8436b",
+          "preset": "rose",
+          "glyph": {
+            "kind": "letter",
+            "value": "P"
+          },
+          "custom": false
+        }
+      },
+      {
+        "settings": {
+          "badge.color": "red",
+          "badge.glyph": {
+            "kind": "icon",
+            "value": "branch"
+          }
+        },
+        "badge": {
+          "color": "#b23a3a",
+          "preset": "red",
+          "glyph": {
+            "kind": "icon",
+            "value": "branch"
+          },
+          "custom": true
+        }
+      }
+    ]
+  },
+  "inks": [
+    {
+      "hex": "#3c7a4b",
+      "ink": "#ffffff"
+    },
+    {
+      "hex": "#1f7a7a",
+      "ink": "#ffffff"
+    },
+    {
+      "hex": "#2f5d8a",
+      "ink": "#ffffff"
+    },
+    {
+      "hex": "#4a4fa3",
+      "ink": "#ffffff"
+    },
+    {
+      "hex": "#7448a0",
+      "ink": "#ffffff"
+    },
+    {
+      "hex": "#a8436b",
+      "ink": "#ffffff"
+    },
+    {
+      "hex": "#b23a3a",
+      "ink": "#ffffff"
+    },
+    {
+      "hex": "#a8541a",
+      "ink": "#ffffff"
+    },
+    {
+      "hex": "#8a6d12",
+      "ink": "#ffffff"
+    },
+    {
+      "hex": "#4f5966",
+      "ink": "#ffffff"
+    },
+    {
+      "hex": "#ffffff",
+      "ink": "#1b1d1f"
+    },
+    {
+      "hex": "#000000",
+      "ink": "#ffffff"
+    },
+    {
+      "hex": "#f5d76e",
+      "ink": "#1b1d1f"
+    },
+    {
+      "hex": "#777777",
+      "ink": "#ffffff"
+    },
+    {
+      "hex": "#7a7a7a",
+      "ink": "#ffffff"
+    },
+    {
+      "hex": "#808080",
+      "ink": "#1b1d1f"
+    }
+  ],
+  "draws": [
+    {
+      "value": "notebook",
+      "valid": true,
+      "icon": "notebook"
+    },
+    {
+      "value": "journal",
+      "valid": true,
+      "icon": "book-text"
+    },
+    {
+      "value": "calendar",
+      "valid": true,
+      "icon": "calendar"
+    },
+    {
+      "value": "inbox",
+      "valid": true,
+      "icon": "inbox"
+    },
+    {
+      "value": "folder",
+      "valid": true,
+      "icon": "folder"
+    },
+    {
+      "value": "file",
+      "valid": true,
+      "icon": "file"
+    },
+    {
+      "value": "star",
+      "valid": true,
+      "icon": "star"
+    },
+    {
+      "value": "pin",
+      "valid": true,
+      "icon": "pin"
+    },
+    {
+      "value": "globe",
+      "valid": true,
+      "icon": "globe"
+    },
+    {
+      "value": "code",
+      "valid": true,
+      "icon": "code"
+    },
+    {
+      "value": "terminal",
+      "valid": true,
+      "icon": "terminal"
+    },
+    {
+      "value": "branch",
+      "valid": true,
+      "icon": "git-branch"
+    },
+    {
+      "value": "brush",
+      "valid": true,
+      "icon": "brush"
+    },
+    {
+      "value": "palette",
+      "valid": true,
+      "icon": "palette"
+    },
+    {
+      "value": "pencil",
+      "valid": true,
+      "icon": "pencil"
+    },
+    {
+      "value": "checklist",
+      "valid": true,
+      "icon": "list-checks"
+    },
+    {
+      "value": "comment",
+      "valid": true,
+      "icon": "message-square"
+    },
+    {
+      "value": "graph",
+      "valid": true,
+      "icon": "waypoints"
+    },
+    {
+      "value": "key",
+      "valid": true,
+      "icon": "key"
+    },
+    {
+      "value": "laptop",
+      "valid": true,
+      "icon": "laptop"
+    },
+    {
+      "value": "phone",
+      "valid": true,
+      "icon": "smartphone"
+    },
+    {
+      "value": "sun",
+      "valid": true,
+      "icon": "sun"
+    },
+    {
+      "value": "moon",
+      "valid": true,
+      "icon": "moon"
+    },
+    {
+      "value": "pulse",
+      "valid": true,
+      "icon": "activity"
+    },
+    {
+      "value": "lucide:rocket",
+      "valid": true,
+      "icon": "rocket"
+    },
+    {
+      "value": "lucide:notebook-pen",
+      "valid": true,
+      "icon": "notebook-pen"
+    },
+    {
+      "value": "lucide:alarm-check",
+      "valid": true,
+      "icon": "alarm-clock-check"
+    },
+    {
+      "value": "lucide:from-a-later-lucide",
+      "valid": true,
+      "icon": null
+    },
+    {
+      "value": "lucide:",
+      "valid": false,
+      "icon": null
+    },
+    {
+      "value": "lucide:-star",
+      "valid": false,
+      "icon": null
+    },
+    {
+      "value": "rocket",
+      "valid": false,
+      "icon": null
+    }
+  ],
+  "lucide": {
+    "version": "1.70.0",
+    "icons": 2029,
+    "namesSha256": "eb6b12f6ffdd775f3e69c75e952fad20bdb896e69b001b4eb3c982ac1668ff8c",
+    "aliases": {
+      "activity-square": "square-activity",
+      "alarm-check": "alarm-clock-check",
+      "alarm-minus": "alarm-clock-minus",
+      "alarm-plus": "alarm-clock-plus",
+      "album": "square-bookmark",
+      "alert-circle": "circle-exclamation-point",
+      "alert-octagon": "octagon-exclamation-point",
+      "alert-triangle": "triangle-exclamation-point",
+      "align-center": "text-align-center",
+      "align-justify": "text-align-justify",
+      "align-left": "text-align-start",
+      "align-right": "text-align-end",
+      "angry": "face-angry",
+      "annoyed": "face-expressionless",
+      "archive-restore": "archive-arrow-up",
+      "area-chart": "chart-area",
+      "arrow-down-01": "arrow-down-0-1",
+      "arrow-down-10": "arrow-down-1-0",
+      "arrow-down-az": "arrow-down-a-z",
+      "arrow-down-circle": "circle-arrow-down",
+      "arrow-down-left-from-circle": "circle-arrow-out-down-left",
+      "arrow-down-left-from-square": "square-arrow-out-down-left",
+      "arrow-down-left-square": "square-arrow-down-left",
+      "arrow-down-right-from-circle": "circle-arrow-out-down-right",
+      "arrow-down-right-from-square": "square-arrow-out-down-right",
+      "arrow-down-right-square": "square-arrow-down-right",
+      "arrow-down-square": "square-arrow-down",
+      "arrow-down-za": "arrow-down-z-a",
+      "arrow-left-circle": "circle-arrow-left",
+      "arrow-left-square": "square-arrow-left",
+      "arrow-right-circle": "circle-arrow-right",
+      "arrow-right-square": "square-arrow-right",
+      "arrow-up-01": "arrow-up-0-1",
+      "arrow-up-10": "arrow-up-1-0",
+      "arrow-up-az": "arrow-up-a-z",
+      "arrow-up-circle": "circle-arrow-up",
+      "arrow-up-left-from-circle": "circle-arrow-out-up-left",
+      "arrow-up-left-from-square": "square-arrow-out-up-left",
+      "arrow-up-left-square": "square-arrow-up-left",
+      "arrow-up-right-from-circle": "circle-arrow-out-up-right",
+      "arrow-up-right-from-square": "square-arrow-out-up-right",
+      "arrow-up-right-square": "square-arrow-up-right",
+      "arrow-up-square": "square-arrow-up",
+      "arrow-up-za": "arrow-up-z-a",
+      "asterisk-square": "square-asterisk",
+      "axis-3-d": "axis-3d",
+      "badge-alert": "badge-exclamation-point",
+      "badge-help": "badge-question-mark",
+      "bar-chart": "chart-no-axes-column-increasing",
+      "bar-chart-2": "chart-no-axes-column",
+      "bar-chart-3": "chart-column",
+      "bar-chart-4": "chart-column-increasing",
+      "bar-chart-big": "chart-column-big",
+      "bar-chart-horizontal": "chart-bar",
+      "bar-chart-horizontal-big": "chart-bar-big",
+      "battery-warning": "battery-exclamation-point",
+      "between-horizonal-end": "between-horizontal-end",
+      "between-horizonal-start": "between-horizontal-start",
+      "bold": "letter-b",
+      "book-alert": "book-exclamation-point",
+      "book-marked": "book-bookmark",
+      "book-template": "book-dashed",
+      "box-select": "square-dashed",
+      "building-2": "building-complex",
+      "candlestick-chart": "chart-candlestick",
+      "check-circle": "circle-check-big",
+      "check-circle-2": "circle-check",
+      "check-square": "square-check-big",
+      "check-square-2": "square-check",
+      "chevron-down-circle": "circle-chevron-down",
+      "chevron-down-square": "square-chevron-down",
+      "chevron-left-circle": "circle-chevron-left",
+      "chevron-left-square": "square-chevron-left",
+      "chevron-right-circle": "circle-chevron-right",
+      "chevron-right-square": "square-chevron-right",
+      "chevron-up-circle": "circle-chevron-up",
+      "chevron-up-square": "square-chevron-up",
+      "circle-alert": "circle-exclamation-point",
+      "circle-help": "circle-question-mark",
+      "circle-parking": "circle-letter-p",
+      "circle-parking-off": "circle-letter-p-off",
+      "circle-slashed": "circle-slash-2",
+      "clipboard-edit": "clipboard-pen",
+      "clipboard-signature": "clipboard-pen-line",
+      "clock-alert": "clock-exclamation-point",
+      "cloud-alert": "cloud-exclamation-point",
+      "code-2": "code-xml",
+      "code-square": "square-code",
+      "columns": "columns-2",
+      "columns-settings": "columns-3-cog",
+      "contact-2": "contact-round",
+      "copyright": "circle-letter-c",
+      "curly-braces": "braces",
+      "divide-circle": "circle-divide",
+      "divide-square": "square-divide",
+      "dot-square": "square-dot",
+      "download-cloud": "cloud-download",
+      "edit": "square-pen",
+      "edit-2": "pen",
+      "edit-3": "pen-line",
+      "equal-square": "square-equal",
+      "file-audio": "file-headphone",
+      "file-audio-2": "file-headphone",
+      "file-axis-3-d": "file-axis-3d",
+      "file-badge-2": "file-badge",
+      "file-bar-chart": "file-chart-column-increasing",
+      "file-bar-chart-2": "file-chart-column",
+      "file-check-2": "file-check-corner",
+      "file-code-2": "file-code-corner",
+      "file-cog-2": "file-cog",
+      "file-edit": "file-pen",
+      "file-json": "file-braces",
+      "file-json-2": "file-braces-corner",
+      "file-key-2": "file-key",
+      "file-line-chart": "file-chart-line",
+      "file-lock-2": "file-lock",
+      "file-minus-2": "file-minus-corner",
+      "file-pie-chart": "file-chart-pie",
+      "file-plus-2": "file-plus-corner",
+      "file-question": "file-question-mark",
+      "file-search-2": "file-search-corner",
+      "file-signature": "file-pen-line",
+      "file-type-2": "file-type-corner",
+      "file-video": "file-play",
+      "file-video-2": "file-video-camera",
+      "file-volume-2": "file-signal",
+      "file-warning": "file-exclamation-point",
+      "file-x-2": "file-x-corner",
+      "filter": "funnel",
+      "filter-x": "funnel-x",
+      "fingerprint": "fingerprint-pattern",
+      "flip-horizontal": "square-centerline-dashed-horizontal",
+      "flip-horizontal-2": "triangles-centerline-dashed-horizontal",
+      "flip-vertical": "square-centerline-dashed-vertical",
+      "flip-vertical-2": "triangles-centerline-dashed-vertical",
+      "folder-cog-2": "folder-cog",
+      "folder-edit": "folder-pen",
+      "fork-knife": "utensils",
+      "fork-knife-crossed": "utensils-crossed",
+      "form-input": "rectangle-ellipsis",
+      "frown": "face-slightly-frowning",
+      "function-square": "square-function",
+      "gantt-chart": "chart-no-axes-gantt",
+      "gantt-chart-square": "square-chart-gantt",
+      "gauge-circle": "circle-gauge",
+      "git-commit": "git-commit-horizontal",
+      "globe-2": "earth",
+      "grab": "hand-grab",
+      "grid": "grid-3x3",
+      "grid-2-x-2": "grid-2x2",
+      "grid-2-x-2-check": "grid-2x2-check",
+      "grid-2-x-2-plus": "grid-2x2-plus",
+      "grid-2-x-2-x": "grid-2x2-x",
+      "grid-3-x-3": "grid-3x3",
+      "heading": "letter-h",
+      "help-circle": "circle-question-mark",
+      "helping-hand": "hand-helping",
+      "history": "rotate-ccw-clock",
+      "home": "house",
+      "ice-cream": "ice-cream-cone",
+      "ice-cream-2": "ice-cream-bowl",
+      "indent": "list-indent-increase",
+      "indent-decrease": "list-indent-decrease",
+      "indent-increase": "list-indent-increase",
+      "inspect": "square-mouse-pointer",
+      "kanban-square": "square-kanban",
+      "kanban-square-dashed": "square-dashed-kanban",
+      "laptop-2": "laptop-minimal",
+      "laugh": "face-grinning",
+      "layers-3": "layers",
+      "layout": "panels-top-left",
+      "letter-text": "text-initial",
+      "library-square": "square-library",
+      "line-chart": "chart-line",
+      "loader-2": "loader-circle",
+      "location-edit": "map-pin-pen",
+      "m-square": "square-letter-m",
+      "mail-alert": "mail-exclamation-point",
+      "mail-question": "mail-question-mark",
+      "mail-warning": "mail-exclamation-point",
+      "meh": "face-neutral",
+      "menu-square": "square-menu",
+      "message-circle-alert": "message-circle-exclamation-point",
+      "message-circle-question": "message-circle-question-mark",
+      "message-circle-warning": "message-circle-exclamation-point",
+      "message-square-alert": "message-square-exclamation-point",
+      "message-square-warning": "message-square-exclamation-point",
+      "mic-2": "mic-vocal",
+      "minus-circle": "circle-minus",
+      "minus-square": "square-minus",
+      "more-horizontal": "ellipsis",
+      "more-vertical": "ellipsis-vertical",
+      "mouse-pointer-square-dashed": "square-dashed-mouse-pointer",
+      "move-3-d": "move-3d",
+      "music": "eighth-notes",
+      "music-2": "eighth-note",
+      "music-3": "half-note",
+      "music-4": "sixteenth-notes",
+      "octagon-alert": "octagon-exclamation-point",
+      "outdent": "list-indent-decrease",
+      "paintbrush-2": "paintbrush-vertical",
+      "palmtree": "tree-palm",
+      "panel-bottom-inactive": "panel-bottom-dashed",
+      "panel-left-inactive": "panel-left-dashed",
+      "panel-right-inactive": "panel-right-dashed",
+      "panel-top-inactive": "panel-top-dashed",
+      "panels-left-right": "columns-3",
+      "panels-top-bottom": "rows-3",
+      "parking-circle": "circle-letter-p",
+      "parking-circle-off": "circle-letter-p-off",
+      "parking-square": "square-letter-p",
+      "parking-square-off": "square-letter-p-off",
+      "pause-circle": "circle-pause",
+      "pause-octagon": "octagon-pause",
+      "pen-box": "square-pen",
+      "pen-square": "square-pen",
+      "percent-circle": "circle-percent",
+      "percent-diamond": "diamond-percent",
+      "percent-square": "square-percent",
+      "pi-square": "square-pi",
+      "pie-chart": "chart-pie",
+      "pilcrow-square": "square-pilcrow",
+      "play-circle": "circle-play",
+      "play-square": "square-play",
+      "plug-zap-2": "plug-zap",
+      "plus-circle": "circle-plus",
+      "plus-square": "square-plus",
+      "podcast": "mic-signal",
+      "power-circle": "circle-power",
+      "power-square": "square-power",
+      "rotate-3-d": "rotate-3d",
+      "rows": "rows-2",
+      "scale-3-d": "scale-3d",
+      "scatter-chart": "chart-scatter",
+      "school-2": "university",
+      "scissors-square": "square-scissors",
+      "scissors-square-dashed-bottom": "square-bottom-dashed-scissors",
+      "search-alert": "search-exclamation-point",
+      "send-horizonal": "send-horizontal",
+      "shield-alert": "shield-exclamation-point",
+      "shield-close": "shield-x",
+      "shield-question": "shield-question-mark",
+      "sidebar": "panel-left",
+      "sidebar-close": "panel-left-close",
+      "sidebar-open": "panel-left-open",
+      "sigma-square": "square-sigma",
+      "slash-square": "square-slash",
+      "sliders": "sliders-vertical",
+      "smile": "face-slightly-smiling",
+      "smile-plus": "face-slightly-smiling-plus",
+      "sort-asc": "arrow-up-narrow-wide",
+      "sort-desc": "arrow-down-wide-narrow",
+      "split-square-horizontal": "square-split-horizontal",
+      "split-square-vertical": "square-split-vertical",
+      "square-gantt-chart": "square-chart-gantt",
+      "square-m": "square-letter-m",
+      "square-parking": "square-letter-p",
+      "square-parking-off": "square-letter-p-off",
+      "stars": "sparkles",
+      "stop-circle": "circle-stop",
+      "subtitles": "captions",
+      "table-config": "columns-3-cog",
+      "terminal-square": "square-terminal",
+      "test-tube-2": "test-tube-diagonal",
+      "text": "text-align-start",
+      "text-select": "square-dashed-text",
+      "text-selection": "square-dashed-text",
+      "train": "tram-front",
+      "trash-2": "trash",
+      "triangle-alert": "triangle-exclamation-point",
+      "tv-2": "tv-minimal",
+      "unlock": "lock-open",
+      "unlock-keyhole": "lock-keyhole-open",
+      "upload-cloud": "cloud-upload",
+      "user-2": "user-round",
+      "user-check-2": "user-round-check",
+      "user-circle": "circle-user",
+      "user-circle-2": "circle-user-round",
+      "user-cog-2": "user-round-cog",
+      "user-minus-2": "user-round-minus",
+      "user-plus-2": "user-round-plus",
+      "user-square": "square-user",
+      "user-square-2": "square-user-round",
+      "user-x-2": "user-round-x",
+      "users-2": "users-round",
+      "verified": "badge-check",
+      "wallet-2": "wallet-minimal",
+      "wand-2": "wand-sparkles",
+      "waves": "waves-horizontal",
+      "wrap-text": "text-wrap",
+      "x-circle": "circle-x",
+      "x-octagon": "octagon-x",
+      "x-square": "square-x"
+    },
+    "shapes": {
+      "notebook": [
+        [
+          "path",
+          {
+            "d": "M2 6h4"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M2 10h4"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M2 14h4"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M2 18h4"
+          }
+        ],
+        [
+          "rect",
+          {
+            "width": "16",
+            "height": "20",
+            "x": "4",
+            "y": "2",
+            "rx": "2"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M16 2v20"
+          }
+        ]
+      ],
+      "book-text": [
+        [
+          "path",
+          {
+            "d": "M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M8 11h8"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M8 7h6"
+          }
+        ]
+      ],
+      "calendar": [
+        [
+          "path",
+          {
+            "d": "M8 2v3"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M16 2v3"
+          }
+        ],
+        [
+          "rect",
+          {
+            "x": "3",
+            "y": "3",
+            "width": "18",
+            "height": "18",
+            "rx": "2"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M3 9h18"
+          }
+        ]
+      ],
+      "inbox": [
+        [
+          "polyline",
+          {
+            "points": "22 12 16 12 14 15 10 15 8 12 2 12"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"
+          }
+        ]
+      ],
+      "folder": [
+        [
+          "path",
+          {
+            "d": "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"
+          }
+        ]
+      ],
+      "file": [
+        [
+          "path",
+          {
+            "d": "M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M14 2v5a1 1 0 0 0 1 1h5"
+          }
+        ]
+      ],
+      "star": [
+        [
+          "path",
+          {
+            "d": "M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"
+          }
+        ]
+      ],
+      "pin": [
+        [
+          "path",
+          {
+            "d": "M12 17v5"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"
+          }
+        ]
+      ],
+      "globe": [
+        [
+          "circle",
+          {
+            "cx": "12",
+            "cy": "12",
+            "r": "10"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M2 12h20"
+          }
+        ]
+      ],
+      "code": [
+        [
+          "path",
+          {
+            "d": "m16 18 6-6-6-6"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m8 6-6 6 6 6"
+          }
+        ]
+      ],
+      "terminal": [
+        [
+          "path",
+          {
+            "d": "M12 19h8"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m4 17 6-6-6-6"
+          }
+        ]
+      ],
+      "git-branch": [
+        [
+          "path",
+          {
+            "d": "M15 6a9 9 0 0 0-9 9V3"
+          }
+        ],
+        [
+          "circle",
+          {
+            "cx": "18",
+            "cy": "6",
+            "r": "3"
+          }
+        ],
+        [
+          "circle",
+          {
+            "cx": "6",
+            "cy": "18",
+            "r": "3"
+          }
+        ]
+      ],
+      "brush": [
+        [
+          "path",
+          {
+            "d": "m11 10 3 3"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M6.5 21A3.5 3.5 0 1 0 3 17.5a2.62 2.62 0 0 1-.708 1.792A1 1 0 0 0 3 21z"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M9.969 17.031 21.378 5.624a1 1 0 0 0-3.002-3.002L6.967 14.031"
+          }
+        ]
+      ],
+      "palette": [
+        [
+          "path",
+          {
+            "d": "M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z"
+          }
+        ],
+        [
+          "circle",
+          {
+            "cx": "13.5",
+            "cy": "6.5",
+            "r": ".5",
+            "fill": "currentColor"
+          }
+        ],
+        [
+          "circle",
+          {
+            "cx": "17.5",
+            "cy": "10.5",
+            "r": ".5",
+            "fill": "currentColor"
+          }
+        ],
+        [
+          "circle",
+          {
+            "cx": "6.5",
+            "cy": "12.5",
+            "r": ".5",
+            "fill": "currentColor"
+          }
+        ],
+        [
+          "circle",
+          {
+            "cx": "8.5",
+            "cy": "7.5",
+            "r": ".5",
+            "fill": "currentColor"
+          }
+        ]
+      ],
+      "pencil": [
+        [
+          "path",
+          {
+            "d": "M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m15 5 4 4"
+          }
+        ]
+      ],
+      "list-checks": [
+        [
+          "path",
+          {
+            "d": "M13 5h8"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M13 12h8"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M13 19h8"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m3 17 2 2 4-4"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m3 7 2 2 4-4"
+          }
+        ]
+      ],
+      "message-square": [
+        [
+          "path",
+          {
+            "d": "M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"
+          }
+        ]
+      ],
+      "waypoints": [
+        [
+          "path",
+          {
+            "d": "m10.586 5.414-5.172 5.172"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m18.586 13.414-5.172 5.172"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M6 12h12"
+          }
+        ],
+        [
+          "circle",
+          {
+            "cx": "12",
+            "cy": "20",
+            "r": "2"
+          }
+        ],
+        [
+          "circle",
+          {
+            "cx": "12",
+            "cy": "4",
+            "r": "2"
+          }
+        ],
+        [
+          "circle",
+          {
+            "cx": "20",
+            "cy": "12",
+            "r": "2"
+          }
+        ],
+        [
+          "circle",
+          {
+            "cx": "4",
+            "cy": "12",
+            "r": "2"
+          }
+        ]
+      ],
+      "key": [
+        [
+          "path",
+          {
+            "d": "m2 21 9.6-9.6"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m7.5 15.5 2.3 2.3a1 1 0 0 1 0 1.4l-2.1 2.1a1 1 0 0 1-1.4 0L4 19"
+          }
+        ],
+        [
+          "circle",
+          {
+            "cx": "15.5",
+            "cy": "7.5",
+            "r": "5.5"
+          }
+        ]
+      ],
+      "laptop": [
+        [
+          "path",
+          {
+            "d": "M18 5a2 2 0 0 1 2 2v8.526a2 2 0 0 0 .212.897l1.068 2.127a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45l1.068-2.127A2 2 0 0 0 4 15.526V7a2 2 0 0 1 2-2z"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M20.054 15.987H3.946"
+          }
+        ]
+      ],
+      "smartphone": [
+        [
+          "rect",
+          {
+            "width": "14",
+            "height": "20",
+            "x": "5",
+            "y": "2",
+            "rx": "2",
+            "ry": "2"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M12 18h.01"
+          }
+        ]
+      ],
+      "sun": [
+        [
+          "circle",
+          {
+            "cx": "12",
+            "cy": "12",
+            "r": "4"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M12 2v2"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M12 20v2"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m4.93 4.93 1.41 1.41"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m17.66 17.66 1.41 1.41"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M2 12h2"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M20 12h2"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m6.34 17.66-1.41 1.41"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m19.07 4.93-1.41 1.41"
+          }
+        ]
+      ],
+      "moon": [
+        [
+          "path",
+          {
+            "d": "M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"
+          }
+        ]
+      ],
+      "activity": [
+        [
+          "path",
+          {
+            "d": "M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"
+          }
+        ]
+      ],
+      "rocket": [
+        [
+          "path",
+          {
+            "d": "M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M9 12a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.4 22.4 0 0 1-4 2z"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M9 12H4s.55-3.03 2-4c1.62-1.08 5 .05 5 .05"
+          }
+        ]
+      ],
+      "alarm-clock-check": [
+        [
+          "circle",
+          {
+            "cx": "12",
+            "cy": "13",
+            "r": "8"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M5 3 2 6"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m22 6-3-3"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M6.38 18.7 4 21"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M17.64 18.67 20 21"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m9 13 2 2 4-4"
+          }
+        ]
+      ],
+      "badge-info": [
+        [
+          "path",
+          {
+            "d": "M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"
+          }
+        ],
+        [
+          "line",
+          {
+            "x1": "12",
+            "x2": "12",
+            "y1": "16",
+            "y2": "12"
+          }
+        ],
+        [
+          "line",
+          {
+            "x1": "12",
+            "x2": "12.01",
+            "y1": "8",
+            "y2": "8"
+          }
+        ]
+      ],
+      "brain-circuit": [
+        [
+          "path",
+          {
+            "d": "M12 13h4"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M12 18h6a2 2 0 012 2v1"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M12 8h8"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M12 9a4.17 4.17 0 01-3 4"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M16 8V5a2 2 0 012-2"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M6 18a4 4 0 01-2-7.465"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M6.004 5.125a4 4 0 00-2.526 5.77"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M6.294 6.294A3 3 0 1112 5v13a4 4 0 11-7.967-.518"
+          }
+        ],
+        [
+          "circle",
+          {
+            "cx": "16",
+            "cy": "13",
+            "r": "0.5",
+            "fill": "currentColor"
+          }
+        ],
+        [
+          "circle",
+          {
+            "cx": "18",
+            "cy": "3",
+            "r": "0.5",
+            "fill": "currentColor"
+          }
+        ],
+        [
+          "circle",
+          {
+            "cx": "20",
+            "cy": "21",
+            "r": "0.5",
+            "fill": "currentColor"
+          }
+        ],
+        [
+          "circle",
+          {
+            "cx": "20",
+            "cy": "8",
+            "r": "0.5",
+            "fill": "currentColor"
+          }
+        ]
+      ],
+      "clipboard-check": [
+        [
+          "rect",
+          {
+            "width": "8",
+            "height": "4",
+            "x": "8",
+            "y": "2",
+            "rx": "1",
+            "ry": "1"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m9 14 2 2 4-4"
+          }
+        ]
+      ],
+      "arrow-down-0-1": [
+        [
+          "path",
+          {
+            "d": "m3 16 4 4 4-4"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M7 20V4"
+          }
+        ],
+        [
+          "rect",
+          {
+            "x": "15",
+            "y": "4",
+            "width": "4",
+            "height": "6",
+            "ry": "2"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M17 20v-6h-2"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M15 20h4"
+          }
+        ]
+      ],
+      "spray-can": [
+        [
+          "path",
+          {
+            "d": "M3 3h.01"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M7 5h.01"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M11 7h.01"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M3 7h.01"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M7 9h.01"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M3 11h.01"
+          }
+        ],
+        [
+          "rect",
+          {
+            "width": "4",
+            "height": "4",
+            "x": "15",
+            "y": "5"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m19 9 2 2v10c0 .6-.4 1-1 1h-6c-.6 0-1-.4-1-1V11l2-2"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m13 14 8-2"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "m13 19 8-2"
+          }
+        ]
+      ],
+      "cylinder": [
+        [
+          "ellipse",
+          {
+            "cx": "12",
+            "cy": "5",
+            "rx": "9",
+            "ry": "3"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M3 5v14a9 3 0 0 0 18 0V5"
+          }
+        ]
+      ],
+      "mailbox": [
+        [
+          "path",
+          {
+            "d": "M22 17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9.5C2 7 4 5 6.5 5H18c2.2 0 4 1.8 4 4v8Z"
+          }
+        ],
+        [
+          "polyline",
+          {
+            "points": "15,9 18,9 18,11"
+          }
+        ],
+        [
+          "path",
+          {
+            "d": "M6.5 5C9 5 11 7 11 9.5V17a2 2 0 0 1-2 2"
+          }
+        ],
+        [
+          "line",
+          {
+            "x1": "6",
+            "x2": "7",
+            "y1": "10",
+            "y2": "10"
+          }
+        ]
+      ],
+      "navigation": [
+        [
+          "polygon",
+          {
+            "points": "3 11 22 2 13 21 11 13 3 11"
+          }
+        ]
+      ]
+    }
+  },
+  "search": [
+    {
+      "query": "",
+      "count": 2029,
+      "first": [
+        "a-arrow-down",
+        "a-arrow-up",
+        "a-large-small",
+        "accessibility",
+        "activity",
+        "ad",
+        "air-vent",
+        "airplay"
+      ]
+    },
+    {
+      "query": "star",
+      "count": 92,
+      "first": [
+        "star",
+        "star-check",
+        "star-half",
+        "star-minus",
+        "star-off",
+        "star-plus",
+        "star-x",
+        "circle-star"
+      ]
+    },
+    {
+      "query": "book",
+      "count": 64,
+      "first": [
+        "book",
+        "book-a",
+        "book-audio",
+        "book-bookmark",
+        "book-check",
+        "book-copy",
+        "book-dashed",
+        "book-down"
+      ]
+    },
+    {
+      "query": "git branch",
+      "count": 3,
+      "first": ["git-branch", "git-branch-minus", "git-branch-plus"]
+    },
+    {
+      "query": "arrow right",
+      "count": 40,
+      "first": [
+        "arrow-right",
+        "arrow-right-from-line",
+        "arrow-right-left",
+        "arrow-right-to-line",
+        "arrow-big-right",
+        "arrow-big-right-dash",
+        "arrow-down-right",
+        "arrow-left-right"
+      ]
+    },
+    {
+      "query": "favourite",
+      "count": 30,
+      "first": [
+        "book-heart",
+        "bookmark",
+        "bookmark-check",
+        "bookmark-minus",
+        "bookmark-off",
+        "bookmark-plus",
+        "bookmark-x",
+        "calendar-heart"
+      ]
+    },
+    {
+      "query": "note",
+      "count": 79,
+      "first": [
+        "notebook",
+        "notebook-dot",
+        "notebook-pen",
+        "notebook-tabs",
+        "notebook-text",
+        "notepad-text",
+        "notepad-text-dashed",
+        "eighth-note"
+      ]
+    },
+    {
+      "query": "zzqqxx",
+      "count": 0,
+      "first": []
+    }
+  ]
+}

@@ -66,6 +66,8 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
         val capturesWaiting by remember { graph.captures.observeWaitingSummary().distinctUntilChanged() }.collectAsStateWithLifecycle(CapturesWaiting())
         val capturesRefused by remember { graph.captures.observeRefused().distinctUntilChanged() }.collectAsStateWithLifecycle(0)
         val settingsNow by graph.device.settings.collectAsStateWithLifecycle()
+        // The notebook's own settings: its badge (A1579).
+        val own by graph.settings.collectAsStateWithLifecycle()
         // Quick Access (T51, A946): the notes pinned, in pin order.
         val quickAccess by remember {
             // The device's pins (A1014), this notebook's notes.
@@ -80,6 +82,7 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
             HomeUi(
                 title = graph.name,
                 notebook = graph.name,
+                badge = app.penmoss.engine.settings.NotebookBadges.badgeOf(graph.notebookId, graph.name, own.settings.values),
                 quickAccess = quickAccess,
                 // The sidebar's sections and Quick Access (T53 items 8 and 10), synced settings.
                 layout = layout,

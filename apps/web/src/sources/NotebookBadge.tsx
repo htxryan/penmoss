@@ -1,7 +1,26 @@
-import { Icon, type IconName } from '@penmoss/ui/icons';
 import type { CSSProperties } from 'react';
-import { glyphInk, useNotebookBadge, type NotebookBadgeValue } from './badge';
+import { LucideSvg, useLucideIcon } from '../shell/lucide';
+import {
+  badgeIconInLucide,
+  defaultGlyph,
+  glyphInk,
+  useNotebookBadge,
+  type BadgeGlyph,
+  type NotebookBadgeValue,
+} from './badge';
 import type { Source } from './registry';
+
+/**
+ * The glyph's ink and size, inline on the glyph itself: the badge's own, whatever its row's state.
+ * A selected row's rule for its icons (Settings' nav, `a[aria-current] .i { color: accent }`), a
+ * menu's muted icons or a sheet's bigger ones reached the badge's icon and drew it in the accent
+ * on the badge's colour, unreadable. An inline style beats every such rule.
+ */
+const GLYPH_INK: CSSProperties = { color: 'var(--nb-badge-ink)', opacity: 1 };
+
+function glyphStyle(px: number): CSSProperties {
+  return { ...GLYPH_INK, width: `${px}px`, height: `${px}px` };
+}
 
 /** The sizes a badge comes in (PEN-140): tabs and lists, the sidebar's row, Settings' heading. */
 export type BadgeSize = 16 | 18 | 26;
@@ -30,6 +49,12 @@ export function BadgeView({
     '--nb-badge-size': `${size / 16}rem`,
   } as CSSProperties;
   const { glyph } = badge;
+  // Every icon is Lucide's, an old one (`star`) its twin's (A1568).
+  const lucide = glyph.kind === 'icon' ? badgeIconInLucide(glyph.value) : null;
+  const node = useLucideIcon(lucide);
+  // A Lucide name this build has no icon for shows the badge's letter (A1568).
+  const shown: BadgeGlyph = lucide !== null && node === null ? defaultGlyph(name) : glyph;
+  const iconSize = Math.round(size * 0.72);
   return (
     <span
       className={className ? `nb-badge ${className}` : 'nb-badge'}
@@ -38,14 +63,28 @@ export function BadgeView({
       data-size={size}
       data-glyph={`${glyph.kind}:${glyph.value}`}
       data-color={badge.color}
-      data-kind={glyph.kind}
+      data-kind={shown.kind}
       {...(decorative ? { 'aria-hidden': true } : { role: 'img', 'aria-label': name })}
     >
-      {glyph.kind === 'icon' ? (
-        <Icon name={glyph.value as IconName} size={Math.round(size * 0.72)} />
+      {shown.kind === 'icon' ? (
+        // Lucide's, once its chunk is in (an instant at most): the square alone until then.
+        node && lucide ? (
+          <LucideSvg
+            node={node}
+            name={lucide}
+            size={iconSize}
+            className="nb-badge-icon"
+            style={glyphStyle(iconSize)}
+          />
+        ) : null
       ) : (
         // Drawn from the attribute, so the name beside it (a heading, a tab) keeps its own text.
-        <span className="nb-badge-text" aria-hidden="true" data-text={glyph.value} />
+        <span
+          className="nb-badge-text"
+          aria-hidden="true"
+          data-text={shown.value}
+          style={GLYPH_INK}
+        />
       )}
     </span>
   );
