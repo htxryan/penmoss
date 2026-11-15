@@ -1,0 +1,162 @@
+import AxeBuilder from '@axe-core/playwright';
+import { expect, type Page, seeded, test } from './fixtures';
+import { LINE_END, VERSION_HISTORY } from './keys';
+import { asAgent, syncNow } from './support/sync';
+import { body, collectErrors } from './support/app';
+
+// View This Version (A1572; Ryan's pick, design C "Side by Side with Now"): the version picked in
+// History beside the note as it is now, in a modal over the window but the panel, what differs
+// tinted on each side; the list picks what it shows; Restore from it; Esc goes back to View.
+
+const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+/** Where to save the light and dark screenshots, when a run asks for them. */
+const SHOTS = process.env['PENMOSS_HISTORY_VIEW_SHOTS'];
+
+const panel = (page: Page) => page.getByTestId('history-panel');
+const view = (page: Page) => page.getByRole('dialog', { name: /^Version of / });
+const side = (page: Page, which: 'left' | 'right') => page.getByTestId(`history-view-${which}`);
+
+/** Puts the caret at the end of the line holding `text`. */
+async function endOf(page: Page, text: string) {
+  await body(page).getByText(text, { exact: true }).click();
+  await page.keyboard.press(LINE_END);
+}
+
+// Two versions made elsewhere, so this Mac's own pushes (on a timer) never split them: the
+// note as seeded, then an agent's line added.
+test.use({
+  seed: {
+    name: 'Notes',
+    notes: [{ title: 'Roadmap', markdown: 'Tags page\n\nHistory by day\n\nWidget\n' }],
+  },
+});
+
+test('View shows a version beside the note as it is now, and restores it', async ({
+  page,
+  host,
+  notebook,
+}) => {
+  test.setTimeout(150_000);
+  const errors = collectErrors(page);
+  const { remote, noteIds } = seeded(notebook);
+  const id = noteIds[0]!;
+  await asAgent(host, remote, `Claude ${RUN}`, (local) => {
+    local.edit(id, { op: 'append', markdown: 'Banner when sync stops' }, null);
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/notes/${id}`);
+  await expect(async () => {
+    await syncNow(page);
+    await expect(body(page)).toContainText('Banner when sync stops', { timeout: 2_000 });
+  }).toPass({ timeout: 40_000 });
+
+  // Now: the first line changed here (a push may make it a version too; it is never picked).
+  await endOf(page, 'Tags page');
+  await page.keyboard.type(': compact rows');
+
+  await page.keyboard.press(VERSION_HISTORY);
+  const rows = panel(page).getByRole('list', { name: 'Versions' }).locator('.history-entry');
+  // The agent's version, and the one before it: the note as seeded, the oldest.
+  const second = rows.and(panel(page).getByRole('button', { name: new RegExp(`Claude ${RUN}`) }));
+  const first = rows.last();
+  await expect(second).toBeVisible({ timeout: 15_000 });
+  await second.click();
+  const open = panel(page).getByRole('button', { name: 'View This Version' });
+  // First of the preview's actions: an icon and "View".
+  await expect(panel(page).locator('.history-actions > button').first()).toHaveText('View');
+  await open.click();
+
+  // A modal; the panel stays beside it, its preview folded away.
+  await expect(view(page)).toBeVisible();
+  await expect(panel(page)).toBeVisible();
+  await expect(panel(page).getByTestId('history-viewing')).toBeVisible();
+  await expect(panel(page).getByRole('button', { name: 'Restore This Version' })).toHaveCount(0);
+  // Focus is on the version in the list, where ↑ and ↓ move.
+  await expect(second).toBeFocused();
+  await expect(side(page, 'right')).toHaveAccessibleName('Now');
+  const latest = await view(page).locator('.history-view-when').textContent();
+  await expect(side(page, 'left')).toHaveAccessibleName(latest!);
+  // Rendered as the note is; the line changed since is tinted on both sides, the rest not.
+  await expect(side(page, 'left').locator('h1')).toHaveText('Roadmap');
+  await expect(side(page, 'left').locator('[data-change="removed"]')).toHaveText(
+    'Not in now: Tags page',
+  );
+  await expect(side(page, 'right').locator('[data-change="added"]')).toHaveText(
+    'Added since: Tags page: compact rows',
+  );
+  await expect(
+    side(page, 'right').locator('p', { hasText: 'Banner when sync stops' }),
+  ).not.toHaveAttribute('data-change');
+  // The top actions: short names, full ones as their names; Revert on every version (A1575).
+  const actions = view(page).locator('.history-view-head > button');
+  await expect(actions).toHaveText(['Restore', 'Revert', 'Copy', /^Close/]);
+  await expect(view(page).getByRole('button', { name: 'Restore This Version' })).toBeVisible();
+  await expect(view(page).getByRole('button', { name: 'Revert This Edit' })).toBeVisible();
+  await expect(view(page).getByRole('button', { name: 'Copy Text' })).toBeVisible();
+
+  const violations = await new AxeBuilder({ page })
+    .include('[data-testid="history-view"]')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+    .analyze();
+  expect(
+    violations.violations
+      .filter((violation) => violation.impact === 'serious' || violation.impact === 'critical')
+      .map(
+        (violation) =>
+          `${violation.id}: ${violation.nodes.map((node) => node.target.join(' ')).join(', ')}`,
+      ),
+  ).toEqual([]);
+
+  // ↓ in the list: the version before, on the left only; now's added line has a gap beside it.
+  await page.keyboard.press('ArrowDown');
+  await expect(first).toBeFocused();
+  await expect(side(page, 'left').locator('[data-change="removed"]')).toHaveText([
+    'Not in now: Tags page',
+  ]);
+  await expect(side(page, 'right').locator('[data-change="added"]')).toHaveText([
+    'Added since: Tags page: compact rows',
+    'Added since: Banner when sync stops',
+  ]);
+  await expect(side(page, 'left').locator('.history-view-gap')).toHaveCount(1);
+  // The gap holds the row open: the two sides stay level.
+  const leftLast = await side(page, 'left').locator('.history-view-gap').boundingBox();
+  const rightLast = await side(page, 'right')
+    .locator('p', { hasText: 'Banner when sync stops' })
+    .boundingBox();
+  expect(Math.abs(leftLast!.y - rightLast!.y)).toBeLessThan(1);
+  // A click in the list picks too.
+  await second.click();
+  await expect(side(page, 'left').locator('.history-view-gap')).toHaveCount(0);
+  await first.click();
+  await expect(side(page, 'left').locator('.history-view-gap')).toHaveCount(1);
+
+  if (SHOTS) {
+    for (const scheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await expect(page.locator('html')).toHaveAttribute('data-mode', scheme);
+      await page.mouse.move(0, 0);
+      // The colours' transitions end before the picture is taken.
+      await page.evaluate(() => Promise.all(document.getAnimations().map((each) => each.finished)));
+      await page.screenshot({ path: `${SHOTS}/history-view-${scheme}.png` });
+    }
+    await page.emulateMedia({ colorScheme: 'light' });
+  }
+
+  // Esc closes it, and focus goes back to View.
+  await page.keyboard.press('Escape');
+  await expect(view(page)).toHaveCount(0);
+  await expect(panel(page)).toBeVisible();
+  await expect(open).toBeFocused();
+
+  // Restore from it: the version comes back in the note, and the modal closes.
+  await open.click();
+  await expect(view(page)).toBeVisible();
+  await view(page).getByRole('button', { name: 'Restore This Version' }).click();
+  await expect(view(page)).toHaveCount(0);
+  await expect(panel(page).getByTestId('history-status')).toContainText('as a new change');
+  await expect(body(page)).toContainText('Widget');
+  await expect(body(page)).not.toContainText('Banner when sync stops');
+  await expect(body(page)).not.toContainText('compact rows');
+  await expect(open).toBeFocused();
+  expect(errors).toEqual([]);
+});

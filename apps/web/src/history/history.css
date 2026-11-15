@@ -580,6 +580,11 @@ html:root[data-resizing='rows'] * {
   flex: none;
 }
 
+/* Close's Esc at full strength: a button's key is faded, which falls under 4.5:1 here. */
+.history-view-head kbd {
+  opacity: 1;
+}
+
 .history-view-sep {
   flex: none;
   width: 1px;
@@ -640,23 +645,23 @@ html:root[data-resizing='rows'] * {
  * The two sides share one grid's rows (each side a subgrid), so a block and what is beside it
  * stay level. Each side is laid out as the note's text is (`.note-body .ProseMirror`).
  */
+/* Rows as tall as their blocks (not stretched to the scroll's height); the line between the
+ * sides runs to the bottom. */
 .history-view-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
   min-height: 100%;
+  background: linear-gradient(var(--pm-border), var(--pm-border)) center / 1px 100% no-repeat;
 }
 
 .note-body .history-view-side {
   display: grid;
   grid-template-rows: subgrid;
   grid-template-columns: minmax(0, 1fr);
-  align-content: start;
+  align-items: start;
   min-height: 0;
   padding: 1.75rem 2rem 3rem 2rem;
-}
-
-.note-body .history-view-side[data-side='left'] {
-  border-right: 1px solid var(--pm-border);
 }
 
 /* A gap held open beside a block the other side has alone. */
