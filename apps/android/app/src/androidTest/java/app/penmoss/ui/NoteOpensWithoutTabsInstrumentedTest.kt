@@ -30,7 +30,13 @@ import androidx.test.platform.app.InstrumentationRegistry
 import app.penmoss.data.NoteListRow
 import app.penmoss.editor.EditorUiState
 import app.penmoss.proof.ProofShot
-import app.penmoss.ui.square.IconButton
+import app.penmoss.ui.common.IconButton
+import app.penmoss.ui.common.Items
+import app.penmoss.ui.common.NoteList
+import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.folders.BreadcrumbBar
+import app.penmoss.ui.note.InfoButton
+import app.penmoss.ui.note.NoteBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -77,12 +83,8 @@ class NoteOpensWithoutTabsInstrumentedTest {
                             Scaffold(
                                 topBar = {
                                     TopAppBar(
-                                        title = {
-                                            androidx.compose.foundation.layout.Column {
-                                                BreadcrumbBar(path = emptyList(), onOpenFolder = {}, notebook = "Personal")
-                                                NoteNotebookLine("Personal")
-                                            }
-                                        },
+                                        // A top-level note names its notebook, as NoteRoute's bar does (T52).
+                                        title = { BreadcrumbBar(path = emptyList(), onOpenFolder = {}, notebook = "Personal") },
                                         navigationIcon = {
                                             IconButton(onClick = { open = null }) {
                                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
