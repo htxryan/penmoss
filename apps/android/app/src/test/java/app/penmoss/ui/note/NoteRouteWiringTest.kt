@@ -44,6 +44,7 @@ import app.penmoss.stopMainScope
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -181,10 +182,15 @@ class NoteRouteWiringTest {
         compose.onNodeWithTag("noteInfo").performClick()
         await { compose.onAllNodes(hasTestTag("infoRow-Length")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("infoRow-Length").assert(hasAnyChild(hasText("1,204 words · 6,780 characters · 5 min read")))
-        // The save status beside it, in the sync icon's words (NT24).
-        val icon = compose.onNode(hasContentDescription("Sync: ", substring = true)).fetchSemanticsNode()
-            .config.getOrNull(SemanticsProperties.ContentDescription)!!.single().removePrefix("Sync: ")
-        compose.onNodeWithTag("infoRow-Saved").assert(hasAnyChild(hasText(icon)))
+        // The save status beside it, in the sync icon's words (NT24). Both from one read of the
+        // screen: the status can change between two (it did on CI), and the row and the icon
+        // change together.
+        val (icons, rows) = compose.onAllNodes(hasContentDescription("Sync: ", substring = true) or hasTestTag("infoRow-Saved"))
+            .fetchSemanticsNodes()
+            .partition { it.config.getOrNull(SemanticsProperties.TestTag) != "infoRow-Saved" }
+        val icon = icons.single().config.getOrNull(SemanticsProperties.ContentDescription)!!.single().removePrefix("Sync: ")
+        val saved = rows.single().children.flatMap { child -> child.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text } }
+        assertTrue("The Saved row says $saved, the sync icon $icon", icon in saved)
     }
 
     /** Review R3: the page hears the person is typing while the soft keyboard is down but a hardware one is in use. */

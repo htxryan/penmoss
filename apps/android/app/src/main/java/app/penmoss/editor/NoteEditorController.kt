@@ -168,7 +168,7 @@ class NoteEditorController(
         files,
         webPictures,
         // As for pictures: not while reloading, or reopening on a restored copy.
-        showing = { opened && openEpochs.isEmpty() },
+        showing = { showsNote },
         notify = { _notices.tryEmit(it) },
     )
 
@@ -263,6 +263,14 @@ class NoteEditorController(
 
     /** The epoch of each `open` sent, until the page says `opened` (A291). */
     private val openEpochs = ArrayDeque<String?>()
+
+    /**
+     * Whether the page shows the note, for what goes in at its selection (picked files and
+     * pictures): an open was sent, and none is being read or waits for `opened`. A reloaded page's
+     * open is under way from its `ready` on, before its epoch is known (PEN-145): a file picked
+     * then went to a page that held nothing.
+     */
+    private val showsNote: Boolean get() = opened && !opening && openEpochs.isEmpty()
 
     /** The epoch of the copy the page is editing: its edits are stored against it. */
     private var editorEpoch: String? = null
@@ -640,7 +648,7 @@ class NoteEditorController(
         }
         if (paths.isEmpty()) return
         // Not showing the note (reloading, or reopening on a restored copy): inserted once it is.
-        if (opened && openEpochs.isEmpty()) send(BridgeProtocol.encode(ToEditor.InsertImages(noteId, paths)))
+        if (showsNote) send(BridgeProtocol.encode(ToEditor.InsertImages(noteId, paths)))
         else waitingPictures += paths
     }
 
