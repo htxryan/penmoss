@@ -33,6 +33,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
 
 /**
  * The app's first screen since T59 (A1040): the git notebooks on the phone, with no sign-in. The
@@ -41,6 +42,7 @@ import org.robolectric.Shadows.shadowOf
  * and a launcher shortcut's Today, This week, New note and Search open the Journal notebook.
  */
 @RunWith(AndroidJUnit4::class)
+@Config(application = PenmossApp::class)
 class DeepLinkActivityTest {
     @get:Rule
     val compose = createEmptyComposeRule()

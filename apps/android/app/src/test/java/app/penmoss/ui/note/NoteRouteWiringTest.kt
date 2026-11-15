@@ -53,6 +53,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import app.penmoss.ui.open
+import org.robolectric.annotation.Config
 
 /**
  * The note screen's own wiring for links (T40 P7 review S7, LK4, LK5), through the app with a
@@ -60,6 +61,7 @@ import app.penmoss.ui.open
  * button counts the notes Room says link here.
  */
 @RunWith(AndroidJUnit4::class)
+@Config(application = PenmossApp::class)
 class NoteRouteWiringTest {
     @get:Rule
     val compose = createEmptyComposeRule()
