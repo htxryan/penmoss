@@ -9,7 +9,9 @@ Open Settings with ⌘, on the Mac, or from the gear on the first screen on Andr
 
 ## On the Mac
 
-Settings lists its pages in five groups: **Look and Feel**, **Writing**, **Notebooks**, **Agents** and **This Mac**. Nothing under This Mac is synced; the heading says so once, so its pages don't repeat it.
+Settings lists its pages in five groups: **Look and Feel**, **Writing**, **Notebooks**, **Agents** and **This Mac**, with **Search Settings** at the top of the list. Nothing under This Mac is synced; the heading says so once, so its pages don't repeat it.
+
+Each page opens with a small **Settings ⓘ** over its title and a line about it. Hover over the ⓘ, or focus it, to see which notebook your settings are synced through, with a link to its page. As you scroll down, the title moves into a bar pinned at the top: **Settings ⓘ / Appearance**.
 
 ### Search Settings
 
@@ -128,7 +130,7 @@ A card with the version you're running, whether it's up to date, the channel and
 
 ## On Android
 
-Open Settings from the gear on the first screen. The same five groups as the Mac, with **This Phone** in place of This Mac, and a **Search Settings** field at the top that opens the screen a setting is on, scrolled to the setting and marked for a moment. On **All Notebooks**, **Between Notebooks** starts with **Primary Notebook**, then has **Keep Settings in Step** and **Copy Settings…** as on the Mac (with two notebooks or more), and Keep Settings in Step is this phone's own choice.
+Open Settings from the gear on the first screen. Each screen's title is large at the top and shrinks into the bar as you scroll; the ⓘ in the bar says which notebook your settings are synced through. The same five groups as the Mac, with **This Phone** in place of This Mac, and a **Search Settings** field at the top that opens the screen a setting is on, scrolled to the setting and marked for a moment. On **All Notebooks**, **Between Notebooks** starts with **Primary Notebook**, then has **Keep Settings in Step** and **Copy Settings…** as on the Mac (with two notebooks or more), and Keep Settings in Step is this phone's own choice.
 
 | Group         | Screen             | What it holds                                                                                                                      |
 | ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |

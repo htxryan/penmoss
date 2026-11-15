@@ -18,6 +18,7 @@ import { useThemeState } from './hooks';
 import { FontSettings } from './FontSettings';
 import { GroupHead, SettingRow } from './look-rows';
 import { ThemeEditor } from './ThemeEditor';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 const MODES: ReadonlyArray<{ mode: ThemeMode; label: string; icon: IconName }> = [
   { mode: 'light', label: 'Light', icon: 'sun' },
@@ -56,7 +57,7 @@ export function AppearanceSettings() {
         aria-labelledby={`${id}-h`}
         data-testid="appearance-settings"
       >
-        <h2 id={`${id}-h`}>Appearance</h2>
+        <SettingsHeader id={`${id}-h`} title="Appearance" intro="Customize a theme of your own." />
         <ThemeEditor theme={state.theme} themes={themes} onDone={() => setEditing(null)} />
       </section>
     );
@@ -84,12 +85,11 @@ export function AppearanceSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="appearance-settings"
     >
-      <h2 id={`${id}-h`}>Appearance</h2>
-      <p>
-        Kept in your Primary Notebook, so it syncs to your other devices
-        {mac ? ', except what’s marked with the laptop' : ''}. Every theme has a light and a dark
-        variant.
-      </p>
+      <SettingsHeader
+        id={`${id}-h`}
+        title="Appearance"
+        intro="The theme, fonts and tooltips. Every theme has a light and a dark variant."
+      />
 
       <div className="lf-split">
         <div className="lf-controls">

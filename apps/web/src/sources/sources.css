@@ -441,22 +441,6 @@
   background: var(--pm-danger);
 }
 
-/* A notebook's page (T62 item 1; PEN-146): its name, chip, state and Sync Now on one row. */
-.git-notebook-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem 0.75rem;
-  margin: 0.25rem 0 0;
-}
-
-.git-notebook-head > h2 {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0;
-}
-
 .git-message:empty {
   display: none;
 }

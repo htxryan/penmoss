@@ -237,6 +237,8 @@ fun GitNotebooksScreen(ui: GitNotebooksUi, actions: GitNotebooksActions, onBack:
         if (ui.home) "Penmoss" else "All Notebooks",
         onBack,
         notice = null,
+        // The app's home is not a Settings screen: no (i) there.
+        info = !ui.home,
         actions = {
             if (onSettings != null) {
                 app.penmoss.ui.common.IconButton(onClick = onSettings, modifier = Modifier.testTag("homeSettingsGear")) {

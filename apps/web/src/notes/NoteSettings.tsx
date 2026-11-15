@@ -14,6 +14,7 @@ import { useNoteMetadataSettings } from './metadata-state';
 import { NOTE_BAR_BUTTON_INFO, NOTE_BAR_BUTTONS, useNoteBar, type NoteBarButton } from './note-bar';
 import { NOTE_PANEL_MODES, useDefaultPanelMode, type NotePanelMode } from './panel-mode';
 import { useFullWidth } from './width';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 /**
  * Settings → Note (PEN-146, the other half of Display, with Note Width and Note Panel from
@@ -34,8 +35,11 @@ export function NoteSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="note-settings"
     >
-      <h2 id={`${id}-h`}>Note</h2>
-      <p>How a note is laid out and what its bars show. Changes sync to your other devices.</p>
+      <SettingsHeader
+        id={`${id}-h`}
+        title="Note"
+        intro="How a note is laid out and what its bars show."
+      />
       <div className="lf-split lf-split-narrow">
         <div className="lf-controls">
           <GroupHead id={`${id}-layout`}>Layout</GroupHead>

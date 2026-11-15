@@ -11,6 +11,7 @@ import { GroupHead, SettingRow, Switch } from '../theme/look-rows';
 import { useSidebarDisplay } from './display';
 import { useReorder } from './reorder';
 import { useSidebarLayout, type SidebarLayout } from './sidebar-layout-state';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 const ITEMS: ReadonlyArray<{
   readonly item: SidebarItem;
@@ -52,11 +53,11 @@ export function SidebarSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="settings-sidebar"
     >
-      <h2 id={`${id}-h`}>Sidebar</h2>
-      <p>
-        A hidden shortcut still works from its keys and the command palette. Changes sync to your
-        other devices.
-      </p>
+      <SettingsHeader
+        id={`${id}-h`}
+        title="Sidebar"
+        intro="What the sidebar shows, and in what order."
+      />
       <div className="lf-split lf-split-narrow">
         <div className="lf-controls">
           <GroupHead id={`${id}-shortcuts`}>Shortcuts</GroupHead>
@@ -101,7 +102,8 @@ export function SidebarSettings() {
             ))}
           </div>
           <p className="lf-help">
-            New Note, Settings, Feedback and Trash are always on the sidebar.
+            New Note, Settings, Feedback and Trash are always on the sidebar. A hidden shortcut
+            still works from its keys and the command palette.
           </p>
 
           <SectionSettings layout={layout} />

@@ -21,6 +21,7 @@ import { useReorder } from '../shell/reorder';
 import '../theme/look-settings.css';
 import { GlyphPicker } from './GlyphPicker';
 import { SPACES_CLASH, symbolKeysMayClash, useLineSymbols } from './symbols';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 /** The glyph a new symbol gets: the first preset the list does not have yet (A939). */
 function nextGlyph(symbols: readonly LineSymbol[]): string {
@@ -104,13 +105,11 @@ export function SymbolsSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="symbols-settings"
     >
-      <h2 id={`${id}-h`}>Symbols</h2>
-      <p>
-        Type a symbol at the start of a line to mark it as important, a question, a follow-up, an
-        idea or next. It is plain text in the note (<code>★ Call the bank</code>), so agents see it
-        too. Up to {MAX_SYMBOLS}; each one&rsquo;s shortcut follows its place in the list. Changes
-        sync to your other devices.
-      </p>
+      <SettingsHeader
+        id={`${id}-h`}
+        title="Symbols"
+        intro="A symbol at the start of a line marks it: important, a question, a follow-up, an idea."
+      />
       <ol className="symbol-list lf-group" aria-label="Your Symbols" data-setting="symbols">
         {symbols.map((symbol, index) => (
           <li
@@ -232,6 +231,10 @@ export function SymbolsSettings() {
           {SPACES_CLASH}
         </p>
       ) : null}
+      <p className="muted settings-help" data-testid="symbols-plain-text">
+        A symbol is plain text in the note (<code>★ Call the bank</code>), so agents see it too. Up
+        to {MAX_SYMBOLS}; each one&rsquo;s shortcut follows its place in the list.
+      </p>
       <p role="status" className="muted settings-help" data-testid="symbols-notice">
         {notice ??
           'Drag a row, or press Alt+↑ or Alt+↓ on it, to change its key. A glyph is a symbol or emoji without letters, digits or markdown characters. Removing a symbol leaves it as text in your notes.'}

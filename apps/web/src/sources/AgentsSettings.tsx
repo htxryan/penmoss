@@ -22,6 +22,7 @@ import { useAllSources, useGitInfo } from './hooks';
 import type { GitSource } from './git-source';
 import './sources.css';
 import './notebook-settings.css';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 const ACTIVITY_PATH = '/settings/agent-activity';
 
@@ -53,11 +54,11 @@ export function AgentsSettings({ item }: { item?: string | undefined }) {
       aria-labelledby={`${id}-h`}
       data-testid="agents-settings"
     >
-      <h2 id={`${id}-h`}>Agents</h2>
-      <p>
-        Agents such as Claude Code and Codex read and edit your notes through Penmoss’s MCP server,
-        which runs on this Mac from this app: no account and no agent token.
-      </p>
+      <SettingsHeader
+        id={`${id}-h`}
+        title="Agents"
+        intro="Claude Code, Codex and other agents read and edit your notes through Penmoss on this Mac."
+      />
       <CommandLine git={git} />
       <GroupHead scope>Connected Agents</GroupHead>
       {missing ? (

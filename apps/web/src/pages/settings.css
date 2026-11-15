@@ -11,13 +11,6 @@
   min-height: var(--pm-bar);
 }
 
-.settings-page h1 {
-  margin: 0.5rem 0 1.25rem;
-  color: var(--pm-fg);
-  font-size: 1.5rem;
-  letter-spacing: -0.015em;
-}
-
 .settings-layout {
   display: grid;
   grid-template-columns: 14rem minmax(0, 1fr);
@@ -291,10 +284,7 @@
     padding: max(1rem, env(safe-area-inset-top)) 0 0;
   }
 
-  /* The heading lives in .settings-title since A1136; this rule targeted the bare h1 and
-     stopped matching when it moved (PEN-64). Move it with the markup. */
-  .settings-bar,
-  .settings-page > .settings-title {
+  .settings-bar {
     flex: none;
     padding-inline: var(--settings-gutter);
   }
@@ -349,6 +339,182 @@
     /* Room for focus rings at its left edge, which the scroll box would clip. */
     margin-left: -4px;
     padding: 0 var(--settings-gutter) 4rem 4px;
+  }
+
+  /* The pinned row runs to the content column's edges, its words where the page's are. */
+  .settings-head-bar {
+    margin-inline: -4px calc(-1 * var(--settings-gutter));
+    padding-inline: 4px var(--settings-gutter);
+  }
+}
+
+/*
+ * Every page's header (A1560): "Settings (i)" in a row that pins to the top of the content
+ * column, the page's title large under it, and one line. Scrolled past the title, the row takes
+ * a hairline, a soft shadow and the title, small, after a slash. The row is the same height
+ * either way, so nothing below it moves; only the crumb fades in.
+ */
+.settings-head,
+.settings-head-bar {
+  --settings-page-title: var(--pm-text-page-title, calc(var(--pm-text-lg) * 2));
+  --settings-bar-title: var(--pm-text-bar-title, calc(var(--pm-text-lg) * 1.125));
+}
+
+.settings-head-bar {
+  position: sticky;
+  z-index: 4;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: var(--pm-hit);
+  border-bottom: 1px solid transparent;
+  background: var(--pm-bg);
+  transition:
+    border-color var(--pm-medium) var(--pm-ease),
+    box-shadow var(--pm-medium) var(--pm-ease);
+}
+
+.settings-head-bar[data-pinned] {
+  border-bottom-color: var(--pm-border-soft);
+  box-shadow: 0 2px 8px color-mix(in oklab, var(--pm-shadow-color) 6%, transparent);
+}
+
+.settings-head-root {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-md);
+}
+
+.settings-head-crumb {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--pm-fg);
+  font-size: var(--settings-bar-title);
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(0.3rem);
+  transition:
+    opacity var(--pm-medium) var(--pm-ease),
+    transform var(--pm-medium) var(--pm-ease),
+    visibility 0s linear var(--pm-medium);
+}
+
+.settings-head-bar[data-pinned] .settings-head-crumb {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--pm-medium) var(--pm-ease),
+    transform var(--pm-medium) var(--pm-ease),
+    visibility 0s;
+}
+
+.settings-head-slash {
+  color: var(--pm-border-strong);
+  font-weight: 400;
+}
+
+.settings-head {
+  margin: 0 0 1.25rem;
+}
+
+.settings-head-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.settings-head-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  margin: 0.15rem 0 0;
+  color: var(--pm-fg);
+  font-size: var(--settings-page-title);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.settings-head-actions {
+  display: flex;
+  margin-left: auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.settings-head-intro {
+  margin: 0.35rem 0 0;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-md);
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-head-bar,
+  .settings-head-crumb,
+  .settings-head-bar[data-pinned] .settings-head-crumb {
+    transition: none;
+  }
+
+  .settings-head-crumb {
+    transform: none;
+  }
+}
+
+/* The (i): where settings are kept, in the tooltip's own colours, with a link that works. */
+.settings-info {
+  position: relative;
+  display: inline-flex;
+}
+
+.settings-info-button {
+  color: var(--pm-muted);
+}
+
+.settings-info-tip {
+  position: absolute;
+  z-index: 6;
+  top: calc(100% + 0.35rem);
+  left: -0.5rem;
+  width: max-content;
+  max-width: min(19rem, calc(100vw - 2rem));
+  padding: 0.55rem 0.7rem;
+  background: var(--pm-fg);
+  box-shadow: var(--pm-popover-shadow);
+  color: var(--pm-bg);
+  font: 500 var(--pm-text-sm) / 1.45 var(--pm-font);
+  animation: pm-fade var(--pm-fast) var(--pm-ease);
+}
+
+.settings-info-tip[hidden] {
+  display: none;
+}
+
+.settings-info-tip a {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.settings-info-laptop {
+  display: inline-flex;
+  vertical-align: -0.15em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-info-tip {
+    animation: none;
   }
 }
 

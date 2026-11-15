@@ -149,6 +149,6 @@
 
 /* The badge before a notebook's name: in Settings' list and on its page. */
 .git-notebook-row > .nb-badge,
-.git-notebook-title > .nb-badge {
+.settings-head-title > .nb-badge {
   margin-inline-end: 0.15rem;
 }

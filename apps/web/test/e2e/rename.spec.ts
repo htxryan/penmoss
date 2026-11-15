@@ -69,7 +69,7 @@ test('renames from Settings, and follows a rename made on another device', async
   await expect(page.getByTestId('git-rename-message')).toHaveText(
     'Renamed to “Personal (old)” on every device that syncs it.',
   );
-  await expect(page.getByRole('heading', { name: 'Personal (old)', level: 2 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Personal (old)', level: 1 })).toBeVisible();
   await expect
     .poll(() => nameAtHead(host, seeded.remote), { timeout: 40_000 })
     .toBe('Personal (old)');
@@ -80,7 +80,7 @@ test('renames from Settings, and follows a rename made on another device', async
   phone.engine.rename('From the Phone');
   await phone.engine.sync();
   await page.getByTestId('git-sync-now').click();
-  await expect(page.getByRole('heading', { name: 'From the Phone', level: 2 })).toBeVisible({
+  await expect(page.getByRole('heading', { name: 'From the Phone', level: 1 })).toBeVisible({
     timeout: 40_000,
   });
   await expect(field).toHaveValue('From the Phone');

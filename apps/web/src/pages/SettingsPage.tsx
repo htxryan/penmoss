@@ -11,11 +11,9 @@ import { AgentActivitySettings } from '../sources/AgentActivitySettings';
 import { AgentsSettings } from '../sources/AgentsSettings';
 import { JournalScope } from '../sources/JournalScope';
 import { NotebookNavEntries } from '../sources/NotebookNavEntries';
-import { useSourcesState } from '../sources/hooks';
 import { mainTabs } from '../tabs/controller';
 import { lastOpenedNote, readOpened } from '../notes/recent';
 import {
-  gitNotebookPath,
   isPlainLeftClick,
   linkHandler,
   navigate,
@@ -33,6 +31,7 @@ import { MeaningSettings } from '../search/MeaningSettings';
 import { UpdatesSettings } from '../updates/UpdatesSettings';
 import { AppearanceSettings } from '../theme/AppearanceSettings';
 import { SETTINGS_GROUPS, SETTINGS_PAGES, type SettingEntry } from './settings-index';
+import { SettingsHomeProvider } from './SettingsHeader';
 import { SettingsSearch, SettingsSearchResults } from './SettingsSearch';
 import { revealSetting, useSettingsSearch } from './settings-search';
 
@@ -77,10 +76,11 @@ function availableSections(): SettingsSection[] {
 }
 
 /**
- * Settings (T20 onwards, T36 layout; PEN-146): a header with the way back to the notes, Search
+ * Settings (T20 onwards, T36 layout; PEN-146): a bar with the way back to the notes, Search
  * Settings over the sections, the sections as a side list in five groups (a row of tabs on a
- * narrow window), and one section at a time. While there is a query, its results stand in for
- * the section.
+ * narrow window), and one section at a time, which opens with the one header every page has
+ * (`SettingsHeader`, A1560: "Settings (i)", where they are kept, then the page's title). While
+ * there is a query, its results stand in for the section.
  */
 export function SettingsPage({
   section,
@@ -153,10 +153,6 @@ export function SettingsPage({
         </a>
       </header>
       <div className="settings-page" data-testid="settings">
-        <div className="settings-title">
-          <h1>Settings</h1>
-          <SettingsHome />
-        </div>
         <div className="settings-layout">
           <div className="settings-side">
             <SettingsSearch search={search} onOpen={open} />
@@ -211,11 +207,13 @@ export function SettingsPage({
             </nav>
           </div>
           <div ref={content} className="settings-content">
-            {search.query ? (
-              <SettingsSearchResults search={search} onOpen={open} />
-            ) : (
-              <SectionContent section={section} item={item} />
-            )}
+            <SettingsHomeProvider>
+              {search.query ? (
+                <SettingsSearchResults search={search} onOpen={open} />
+              ) : (
+                <SectionContent section={section} item={item} />
+              )}
+            </SettingsHomeProvider>
           </div>
         </div>
       </div>
@@ -263,31 +261,4 @@ function SectionContent({
     case 'updates':
       return <UpdatesSettings />;
   }
-}
-
-/**
- * Where the settings are kept (Quanta feedback 3, item 9; A1136): the primary notebook, named
- * under the heading on every section, a link to its page. With one notebook it is still named,
- * so the place is never a guess. A sentence of its own under the heading, not a note beside it
- * (PEN-135 item 11). This Mac's pages say in the nav that they are not synced (PEN-146).
- */
-function SettingsHome() {
-  const state = useSourcesState();
-  const path = gitNotebookPath(state.journal.id);
-  return (
-    <p className="settings-home muted" data-testid="settings-home">
-      Settings are synced through your primary notebook,{' '}
-      <a
-        href={path}
-        data-ui="item"
-        // Named apart from "← Notes" when the notebook is called Notes.
-        aria-label={`${state.journal.name}, your primary notebook`}
-        onClick={linkHandler(path)}
-        data-testid="settings-home-link"
-      >
-        {state.journal.name}
-      </a>
-      .
-    </p>
-  );
 }

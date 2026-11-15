@@ -18,6 +18,7 @@ import type { CommandArea, CommandDefinition } from './definitions';
 import { useCommands, useCommandsVersion } from './hooks';
 import { Kbd } from './Kbd';
 import { searchesByKeys, useKeyRecorder } from './recorder';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 type Notice =
   | {
@@ -317,11 +318,11 @@ export function ShortcutsSettings() {
       data-testid="shortcuts-settings"
       data-bindings={bindings}
     >
-      <h2 id={`${id}-title`}>Keyboard Shortcuts</h2>
-      <p>
-        Changes sync to your other devices. Shortcuts need ⌘, Ctrl or Alt so typing never runs a
-        command.
-      </p>
+      <SettingsHeader
+        id={`${id}-title`}
+        title="Keyboard Shortcuts"
+        intro="A shortcut needs ⌘, Ctrl or Alt, so typing never runs a command."
+      />
       {clashes.length > 0 ? (
         <p className="kb-error" role="alert" data-testid="shortcut-clashes">
           {clashes

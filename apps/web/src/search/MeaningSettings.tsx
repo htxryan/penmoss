@@ -16,6 +16,7 @@ import {
   useMeaningStatus,
   waitingText,
 } from './meaning-status';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 /** The model's size as its rows and the question say it. */
 const sizeOf = (status: DesktopMeaningStatus | null) =>
@@ -46,11 +47,16 @@ export function MeaningSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="meaning-settings"
     >
-      <h2 id={`${id}-h`}>Search by Meaning</h2>
-      <p className="muted">
-        Search finds notes by what they mean as well as by their words, here and for agents’{' '}
-        <code>penmoss</code> on this Mac.
-      </p>
+      <SettingsHeader
+        id={`${id}-h`}
+        title="Search by Meaning"
+        intro={
+          <>
+            Search finds notes by what they mean as well as by their words, here and for agents’{' '}
+            <code>penmoss</code>.
+          </>
+        }
+      />
       <div className="lf-group">
         <SettingRow
           setting="find-notes-by-meaning"

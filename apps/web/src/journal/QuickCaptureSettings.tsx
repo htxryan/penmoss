@@ -14,6 +14,7 @@ import type { SourcesState } from '../sources/registry';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import { GroupHead, SettingRow } from '../theme/look-rows';
 import './writing.css';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 /** Where Quick Capture saves (T51 item 19, A947), in the order Settings offers them. */
 const DESTINATIONS: ReadonlyArray<{
@@ -58,11 +59,11 @@ export function QuickCaptureSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="quick-capture-settings"
     >
-      <h2 id={`${id}-h`}>Quick Capture</h2>
-      <p>
-        Jot something down from anywhere without opening a note. The capture window can choose the
-        other place for a single capture.
-      </p>
+      <SettingsHeader
+        id={`${id}-h`}
+        title="Quick Capture"
+        intro="Jot something down from anywhere without opening a note."
+      />
       <GroupHead id={`${id}-saves`}>Saves To</GroupHead>
       <div
         className="lf-group"
@@ -98,6 +99,7 @@ export function QuickCaptureSettings() {
           </label>
         ))}
       </div>
+      <p className="lf-help">The capture window can choose the other place for a single capture.</p>
       <PrimaryNotebookRow />
       {desktop() ? (
         <>

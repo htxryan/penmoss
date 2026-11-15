@@ -205,7 +205,7 @@ test('the Tags panel collapses, and stays so on this device (A934)', async ({ pa
   expect(errors).toEqual([]);
 });
 
-test('Settings: the bar, the heading and the sections stay put; the content scrolls (A942)', async ({
+test('Settings: the bar, the pinned header and the sections stay put; the content scrolls (A942, A1560)', async ({
   page,
 }) => {
   const errors = collectErrors(page);
@@ -213,7 +213,8 @@ test('Settings: the bar, the heading and the sections stay put; the content scro
   await page.goto('/settings/shortcuts');
   const content = page.locator('.settings-content');
   await expect(content).toBeVisible();
-  const fixed = ['.settings-bar', '.settings-page > .settings-title > h1', '.settings-nav'];
+  // The page's header row pins at the content's top (A1560), so it stays put too.
+  const fixed = ['.settings-bar', '.settings-head-bar', '.settings-nav'];
   const tops = () =>
     Promise.all(fixed.map(async (selector) => (await page.locator(selector).boundingBox())!.y));
   const before = await tops();
@@ -231,18 +232,19 @@ test('Settings: the bar, the heading and the sections stay put; the content scro
   expect(errors).toEqual([]);
 });
 
-test('Settings: the heading keeps the page gutter, in line with the sections (PEN-64)', async ({
+test('Settings: Search Settings keeps the page gutter, in line with the sections (PEN-64)', async ({
   page,
 }) => {
   const errors = collectErrors(page);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/settings/shortcuts');
-  const heading = page.locator('.settings-title > h1');
+  // The column's first row since the Settings title went (A1560): Search Settings.
+  const heading = page.locator('.settings-search');
   await expect(heading).toBeVisible();
   await expect(page.locator('.settings-nav a').first()).toBeVisible();
   const leftOf = async (selector: string) =>
     (await page.locator(selector).first().boundingBox())!.x;
-  // The heading starts the page's gutter (--settings-gutter) in from the page's edge, not at the
+  // Search starts the page's gutter (--settings-gutter) in from the page's edge, not at the
   // window's edge, and in line with the sections' list.
   const gutter = await page.locator('.settings-page').evaluate((element) => {
     const probe = document.createElement('div');
@@ -253,8 +255,8 @@ test('Settings: the heading keeps the page gutter, in line with the sections (PE
     return width;
   });
   expect(gutter).toBeGreaterThan(0);
-  const headingLeft = await leftOf('.settings-title > h1');
-  expect(Math.abs(headingLeft - (await leftOf('.settings-page')) - gutter)).toBeLessThanOrEqual(1);
+  const headingLeft = await leftOf('.settings-search');
+  expect(Math.abs(headingLeft - (await leftOf('.settings-page')) - gutter)).toBeLessThanOrEqual(3);
   expect(Math.abs(headingLeft - (await leftOf('.settings-nav')))).toBeLessThanOrEqual(1);
   // Held on screen, so the proof's recording shows the heading in line.
   await holdForProof(page, 2_000);

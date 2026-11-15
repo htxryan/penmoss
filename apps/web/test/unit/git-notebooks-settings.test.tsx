@@ -144,7 +144,7 @@ afterEach(() => {
 describe('All Notebooks (PEN-146)', () => {
   it('lists the notebooks, then one Primary picker, Between Notebooks and this Mac’s commits', async () => {
     const root = await mount(setUp(), <GitNotebooksSettings />);
-    expect(root.querySelector('h2')?.textContent).toBe('All Notebooks');
+    expect(root.querySelector('h1')?.textContent).toBe('All Notebooks');
     const rows = [...root.querySelectorAll<HTMLElement>('[data-testid="git-notebook-row"]')];
     expect(rows.map((row) => row.getAttribute('href'))).toEqual([
       `/settings/git-notebooks/${A}`,
@@ -213,7 +213,8 @@ describe('A notebook’s page (PEN-146)', () => {
     history.replaceState(null, '', `/settings/git-notebooks/${A}`);
     const root = await mount(setUp(), <GitNotebooksSettings item={A} />);
     const page = find(root, 'git-notebook')!;
-    expect(page.querySelector('h2')?.textContent).toBe('Personal');
+    // The chip beside the title, not in it: the heading is the notebook's name (A1560).
+    expect(page.querySelector('h1')?.textContent).toBe('Personal');
     expect(find(page, 'git-primary-chip')?.textContent).toBe('Primary');
     expect(find(page, 'git-status')?.textContent).toBe('Synced 2 min ago');
     expect(

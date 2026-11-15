@@ -318,13 +318,3 @@ body {
     width: var(--pm-hit);
   }
 }
-
-/* Settings' heading, and where they are kept under it (A1136, PEN-135 item 11). */
-.settings-title:has(.settings-home) h1 {
-  margin-bottom: 0.3rem;
-}
-
-.settings-home {
-  margin: 0 0 1.25rem;
-  font-size: var(--pm-text-sm, 0.86rem);
-}

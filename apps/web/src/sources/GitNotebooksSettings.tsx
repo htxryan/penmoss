@@ -88,6 +88,7 @@ import {
 } from './notebook-tabs';
 import './sources.css';
 import './notebook-settings.css';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 const when = (at: number | null) =>
   at === null
@@ -357,7 +358,7 @@ export function GitNotebooksSettings({ item }: { item?: string | undefined }) {
           />
         ) : (
           <>
-            <h2 id={`${id}-h`}>Notebook</h2>
+            <SettingsHeader id={`${id}-h`} title="Notebook" />
             <p className="muted" data-testid="git-notebook-missing">
               That notebook isn’t on this Mac.{' '}
               <a
@@ -400,22 +401,26 @@ function AllNotebooks({
       aria-labelledby={headingId}
       data-testid="git-notebooks-settings"
     >
-      <div className="nset-title">
-        <h2 id={headingId}>All Notebooks</h2>
-        {open ? null : (
-          <button
-            data-ui="item"
-            type="button"
-            className="btn primary"
-            data-testid="git-add-open"
-            data-setting="add-notebook"
-            onClick={() => setAdding(true)}
-          >
-            <Icon name="plus" size={14} />
-            Add Notebook…
-          </button>
-        )}
-      </div>
+      <SettingsHeader
+        id={headingId}
+        title="All Notebooks"
+        intro="The notebooks on this Mac, and what goes between them."
+        actions={
+          open ? null : (
+            <button
+              data-ui="item"
+              type="button"
+              className="btn primary"
+              data-testid="git-add-open"
+              data-setting="add-notebook"
+              onClick={() => setAdding(true)}
+            >
+              <Icon name="plus" size={14} />
+              Add Notebook…
+            </button>
+          )
+        }
+      />
       {sources.length === 0 ? (
         <p className="muted">No notebooks on this Mac yet.</p>
       ) : (
@@ -837,40 +842,50 @@ function GitNotebookCard({
       aria-labelledby={headingId}
     >
       {/* A page on the settings' own background (T62 item 1), its header over three tabs. */}
-      <header className="git-notebook-head">
-        <h2 id={headingId} className="git-notebook-title">
-          <NotebookBadge source={source} size={26} decorative />
-          {info.name}
-        </h2>
-        {primary ? (
-          <span className="chip" data-testid="git-primary-chip">
-            Primary
+      <SettingsHeader
+        id={headingId}
+        title={
+          <>
+            <NotebookBadge source={source} size={26} decorative />
+            {info.name}
+          </>
+        }
+        barTitle={info.name}
+        beside={
+          primary ? (
+            <span className="chip" data-testid="git-primary-chip">
+              Primary
+            </span>
+          ) : null
+        }
+        intro={
+          <span
+            className="git-notebook-row-state nset-head-state"
+            data-testid="git-status"
+            data-phase={status.phase}
+          >
+            <span className="nset-dot" data-state={dotState(status)} aria-hidden="true" />
+            {syncLine(status, now)}
+            {waiting > 0 ? ` · ${waiting} waiting` : ''}
           </span>
-        ) : null}
-        <span
-          className="git-notebook-row-state nset-head-state"
-          data-testid="git-status"
-          data-phase={status.phase}
-        >
-          <span className="nset-dot" data-state={dotState(status)} aria-hidden="true" />
-          {syncLine(status, now)}
-          {waiting > 0 ? ` · ${waiting} waiting` : ''}
-        </span>
-        <button
-          data-ui="item"
-          type="button"
-          className="btn nset-head-action"
-          data-testid="git-sync-now"
-          data-setting="sync-now"
-          onClick={() => {
-            source.syncNow();
-            setMessage('Syncing now.');
-          }}
-        >
-          <Icon name="refresh" size={14} />
-          Sync Now
-        </button>
-      </header>
+        }
+        actions={
+          <button
+            data-ui="item"
+            type="button"
+            className="btn"
+            data-testid="git-sync-now"
+            data-setting="sync-now"
+            onClick={() => {
+              source.syncNow();
+              setMessage('Syncing now.');
+            }}
+          >
+            <Icon name="refresh" size={14} />
+            Sync Now
+          </button>
+        }
+      />
       <p role="status" className="git-message muted" data-testid="git-message">
         {message}
       </p>

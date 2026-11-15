@@ -917,11 +917,11 @@ test('nothing that clicks drags the window: Version history, scrolled Settings a
   expect(await regionAt(page, actions.x + 10, empty.y)).toBe('no-drag');
   await clicksEverywhere(page, 'note scrolled');
 
-  // Settings scrolled: only its content scrolls; the bar, the heading and the sections' list
-  // stay put (T51, A942).
+  // Settings scrolled: only its content scrolls; the bar, the page's pinned header row and the
+  // sections' list stay put (T51, A942, A1560).
   await chooseMenu(app, 'app.shortcuts');
   await expect(page.locator('.settings-content')).toBeVisible();
-  const fixed = ['.settings-bar', '.settings-title > h1', '.settings-nav'];
+  const fixed = ['.settings-bar', '.settings-head-bar', '.settings-nav'];
   const tops = async () =>
     Promise.all(fixed.map(async (selector) => (await page.locator(selector).boundingBox())!.y));
   const before = await tops();
@@ -1055,19 +1055,20 @@ const stallSaves = (app: ElectronApplication, which: Which, stalled: boolean) =>
     }, stalled),
   );
 
-test('Settings: the heading keeps the page gutter, in line with Back and the sections (PEN-64)', async () => {
+test('Settings: Search Settings keeps the page gutter, in line with Back and the sections (PEN-64)', async () => {
   const launched = await start();
   const { app, page } = launched;
   await gitNotebook(launched);
   await mainBounds(app, { x: 0, y: 0, width: 1280, height: 720 });
   await chooseMenu(app, 'app.shortcuts');
-  const heading = page.locator('.settings-title > h1');
+  // The column's first row since the Settings title went (A1560): Search Settings.
+  const heading = page.locator('.settings-search');
   await expect(heading).toBeVisible();
   await expect(page.locator('.settings-nav a').first()).toBeVisible();
   const leftOf = async (selector: string) =>
     (await page.locator(selector).first().boundingBox())!.x;
-  // The heading starts at the sections' gutter, clear of the window's edge and the lights.
-  const headingLeft = await leftOf('.settings-title > h1');
+  // Search starts at the sections' gutter, clear of the window's edge and the lights.
+  const headingLeft = await leftOf('.settings-search');
   expect(headingLeft).toBeGreaterThan(TITLE_BAR_INSET - 1);
   expect(Math.abs(headingLeft - (await leftOf('.settings-nav')))).toBeLessThanOrEqual(1);
   // Held on screen, so the proof's recording shows the heading in line.

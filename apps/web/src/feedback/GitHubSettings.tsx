@@ -19,6 +19,7 @@ import {
 import { GitHubSignIn } from '../sources/GitHubSignIn';
 import { GroupHead, SettingRow } from '../theme/look-rows';
 import { useFeedback, useOutbox, type FeedbackService } from './service';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 const REPO = `${FEEDBACK_REPO.owner}/${FEEDBACK_REPO.repo}`;
 
@@ -87,10 +88,11 @@ function GitHubSection({
 
   return (
     <section className="settings-section" aria-labelledby={`${id}-h`} data-testid="github-token">
-      <h2 id={`${id}-h`}>GitHub</h2>
-      <p className="muted">
-        One GitHub sign-in for adding notebooks and sending feedback, kept in this Mac’s Keychain.
-      </p>
+      <SettingsHeader
+        id={`${id}-h`}
+        title="GitHub"
+        intro="One GitHub sign-in for adding notebooks and sending feedback, kept in this Mac’s Keychain."
+      />
       <div className="lf-group">
         {status === null ? null : status.saved ? (
           <SettingRow

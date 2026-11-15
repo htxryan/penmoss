@@ -270,7 +270,7 @@ test('Settings → Search by Meaning: a removed notebook leaves its count (A1373
   await expect(rows).toHaveCount(2);
   await rows.filter({ has: page.locator('.git-notebook-row-name', { hasText: /^Notes/ }) }).click();
   const card = page.getByTestId('git-notebook');
-  await expect(card.locator('.git-notebook-title')).toHaveText('Notes');
+  await expect(card.getByTestId('settings-title')).toHaveText('Notes');
   await card.getByTestId('git-remove').click();
   // Should the welcome note not be pushed yet, it says so: push first, then remove.
   const confirm = card.getByTestId('git-remove-confirm');

@@ -16,6 +16,7 @@ import { ReleaseNotes } from './ReleaseNotes';
 import { checkedLine, updateChip, updateStatus, useUpdates } from './updates';
 import { ActionToast } from '../toasts/ActionToast';
 import { ToastSlot } from '../toasts/ToastSlot';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 const CHANNELS: ReadonlyArray<{ value: DesktopUpdateChannel; label: string }> = [
   { value: 'stable', label: 'Stable' },
@@ -61,7 +62,11 @@ export function UpdatesSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="updates-settings"
     >
-      <h2 id={`${id}-h`}>Updates</h2>
+      <SettingsHeader
+        id={`${id}-h`}
+        title="Updates"
+        intro="The version you have, and how it updates."
+      />
       <div className="updates-card" data-setting="version" data-testid="updates-version">
         <div className="updates-card-head">
           <strong className="updates-card-name">

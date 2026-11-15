@@ -73,10 +73,6 @@
   gap: 0.4rem;
 }
 
-.nset-head-action {
-  margin-left: auto;
-}
-
 .nset-error {
   display: grid;
   gap: 0.5rem;

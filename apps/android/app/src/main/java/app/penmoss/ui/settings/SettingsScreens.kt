@@ -151,7 +151,14 @@ fun SettingsHome(
     val mark = LocalSettingMark.current
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
-        topBar = { LargeTopAppBar(title = { Text("Settings") }, navigationIcon = { BackButton(onBack) }, scrollBehavior = scroll) },
+        topBar = {
+            LargeTopAppBar(
+                title = { Text("Settings") },
+                navigationIcon = { BackButton(onBack) },
+                actions = { SettingsInfoButton() },
+                scrollBehavior = scroll,
+            )
+        },
     ) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding().testTag("settingsSections")) {
             item(key = "search") {
@@ -236,17 +243,38 @@ internal fun DotMarkOf(state: DotState, modifier: Modifier = Modifier) {
     }
 }
 
-/** A section's screen: its title in the top bar, [actions] at its end, and its content scrolling below. */
+/**
+ * A section's screen (A1560): its title large in a collapsing top app bar, which shrinks into the
+ * bar's own row as the content scrolls; Settings' (i) and [actions] at its end; the content
+ * scrolling below. [info] false leaves the (i) out, on a screen that is not Settings' (the app's
+ * home).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SectionScreen(
     title: String,
     onBack: (() -> Unit)?,
     notice: String? = null,
+    info: Boolean = true,
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable () -> Unit,
 ) {
-    Scaffold(topBar = { TopAppBar(title = { Text(title) }, navigationIcon = { if (onBack != null) BackButton(onBack) }, actions = actions) }) { padding ->
+    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    Scaffold(
+        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
+        topBar = {
+            LargeTopAppBar(
+                title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                navigationIcon = { if (onBack != null) BackButton(onBack) },
+                actions = {
+                    if (info) SettingsInfoButton()
+                    actions()
+                },
+                scrollBehavior = scroll,
+                modifier = Modifier.testTag("sectionTopBar"),
+            )
+        },
+    ) { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(vertical = 8.dp),
         ) {

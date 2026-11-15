@@ -47,7 +47,16 @@
   margin-top: 0;
 }
 
-.lf-sub-name {
+/*
+ * The group's name, a heading inside the subhead (A1559). The subhead keeps the place and size
+ * `.settings-section h3` gave it while it was the heading itself; the name inside only inherits.
+ */
+.settings-section .lf-sub {
+  margin: 2rem 0 0.5rem;
+  font-size: var(--pm-text-lg);
+}
+
+.lf-sub > .lf-sub-name {
   margin: 0;
   font: inherit;
 }

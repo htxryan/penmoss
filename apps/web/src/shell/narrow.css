@@ -468,9 +468,11 @@
     background: var(--pm-bg);
   }
 
-  .settings-page h1 {
-    margin: 1rem 0 0.75rem;
-    font-size: 1.375rem;
+  /* The pinned row under the phone's own bar, across the screen. */
+  .settings-head-bar {
+    top: calc(var(--pm-bar) + 1px);
+    margin-inline: -1rem;
+    padding-inline: 1rem;
   }
 
   .settings-layout {
