@@ -7,7 +7,7 @@
 import { join } from 'node:path';
 import { app, protocol, type BrowserWindow } from 'electron';
 import { APP_SCHEME, desktopConfig } from './config';
-import { savePreferences, type Preferences } from './hotkey';
+import { savePreferences, type Preferences } from './preferences';
 import { macWindowsOn, type TitleBarStyle } from './mac-window';
 import { MainInbox } from './main-inbox';
 import type { MenuModel } from './menu';
@@ -61,7 +61,7 @@ export const preferencesFile = () => dataFile('preferences.json');
 
 /** The app's flags and this Mac's preferences, changed as it runs. */
 export const state = {
-  /** This Mac's preferences (hotkey.ts), read before the first window. */
+  /** This Mac's preferences (preferences.ts), read before the first window. */
   preferences: {} as Preferences,
   /** The main window's menus as it last sent them: the menu bar's once no window is in front. */
   mainMenus: null as readonly MenuModel[] | null,

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { NORD, PENMOSS } from '@penmoss/ui/theme';
-import { loadPreferences, savePreferences } from '../../src/hotkey';
+import { loadPreferences, savePreferences } from '../../src/preferences';
 import { debouncedWriter, parseWindowTheme, windowBackground } from '../../src/theme';
 
 // T28 + T29: the window behind the page is the page's own theme background, so

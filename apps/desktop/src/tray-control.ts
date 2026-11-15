@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { Menu, nativeImage, Tray, type MenuItemConstructorOptions } from 'electron';
 import { log, mac, macWindows, preferencesFile, state } from './app-state';
 import { currentHotkey } from './capture-hotkey';
-import { savePreferences } from './hotkey';
+import { savePreferences } from './preferences';
 import { pinPath, TRAY_ICON, TRAY_TOOLTIP, trayMenuTemplate, type QuickAccessPin } from './tray';
 import { deliverToMain, openInMain } from './windows/main-window';
 import { showCapture } from './windows/capture-window';

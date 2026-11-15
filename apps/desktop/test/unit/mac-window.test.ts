@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
 import { desktopConfig } from '../../src/config';
-import { loadPreferences, savePreferences } from '../../src/hotkey';
+import { loadPreferences, savePreferences } from '../../src/preferences';
 import {
   captureWindowOptions,
   macWindowsOn,

@@ -4,7 +4,7 @@
  */
 import { BrowserWindow, dialog } from 'electron';
 import { fullScreens, log, preferencesFile, state, windows } from './app-state';
-import { savePreferences } from './hotkey';
+import { savePreferences } from './preferences';
 import { sendEvent } from './ipc';
 import { mayReopen, setKeepOnTop, type MacWindowState } from './mac-window';
 import { appPath } from './security';

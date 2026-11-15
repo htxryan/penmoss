@@ -8,11 +8,11 @@ import { deepLinkFromArgv, parseDeepLink } from '../../src/deep-link';
 import {
   afterCapture,
   defaultCaptureHotkey,
-  launchLog,
   HotkeyChangeGate,
   normaliseHotkey,
   registrationCertain,
 } from '../../src/hotkey';
+import { launchLog } from '../../src/launch-log';
 import {
   MENU_LIMITS,
   menuTemplate,

@@ -6,8 +6,8 @@ import {
   HotkeyChangeGate,
   normaliseHotkey,
   registrationCertain,
-  savePreferences,
 } from './hotkey';
+import { savePreferences } from './preferences';
 import { refreshTray } from './tray-control';
 import { showCapture } from './windows/capture-window';
 
