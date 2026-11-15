@@ -375,7 +375,6 @@ export class LocalServer {
       );
       return json(200, { id: reply.id, created: reply.created });
     }
-    if (path === '/api/search' && method === 'GET') return json(200, await this.search(query));
     if (path === '/api/trash' && method === 'GET') return json(200, { notes: this.trashList() });
     if (path === '/api/folders/trash' && method === 'GET') {
       return json(200, { folders: this.folderTrash() });
@@ -1005,25 +1004,6 @@ export class LocalServer {
         ...(place ? { place } : {}),
       }),
     );
-  }
-
-  /** `GET /api/search`: keyword only (A101), in the phone's shape. */
-  private async search(query: URLSearchParams) {
-    const number = (name: string) => (query.has(name) ? Number(query.get(name)) : null);
-    const mode = query.get('mode') === 'semantic' ? 'full-text' : (query.get('mode') ?? 'hybrid');
-    const found = (await this.notebook.search({
-      q: query.get('q') ?? '',
-      mode,
-      limit: number('limit') ?? 10,
-      tag: query.get('tag'),
-      folderId: query.get('folder'),
-      after: number('after'),
-      before: number('before'),
-    })) as { results?: unknown[]; notice?: string };
-    return {
-      results: found.results ?? [],
-      notice: 'A git notebook searches words only (A101).',
-    };
   }
 
   /**

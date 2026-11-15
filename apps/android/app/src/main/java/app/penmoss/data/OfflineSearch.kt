@@ -305,25 +305,6 @@ class OfflineSearch(
         }
     }
 
-    /**
-     * Whether the last word of [input] is still being typed (A111, as the web's `unfinished`):
-     * the start of a word this phone's notes hold without being one. The server then embeds
-     * the words before it only.
-     */
-    suspend fun unfinished(input: String): Boolean = withContext(work) { unfinishedHere(input) }
-
-    private suspend fun unfinishedHere(input: String): Boolean {
-        val last = Regex("(?:^|\\s)([^\\s\"]+)$").find(input)?.groupValues?.get(1) ?: return false
-        val word = Query.words(last).singleOrNull() ?: return false
-        if (word.length < Query.MIN_PREFIX_LENGTH) return false
-        // As core's `unfinished`: not a whole (stemmed) term, but the start of one, or of a word
-        // as written (`happin`, A680).
-        return runCatching {
-            idsMatching("\"${SearchStem.stem(word)}\"", 1).isEmpty() &&
-                (idsMatching("\"$word*\"", 1).isNotEmpty() || wordsStarting(word, 1).isNotEmpty())
-        }.getOrDefault(false)
-    }
-
     private suspend fun idsMatching(match: String, limit: Int? = null): Set<String> = dao.ids(
         SimpleSQLiteQuery(
             "SELECT t.noteId FROM note_text_fts JOIN note_texts t ON t.rowid = note_text_fts.rowid " +

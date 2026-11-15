@@ -76,7 +76,6 @@ import app.penmoss.AppGraph
 import app.penmoss.engine.api.SearchFilters
 import app.penmoss.search.SearchAction
 import app.penmoss.search.SearchActions
-import app.penmoss.search.SearchOutcome
 import app.penmoss.search.SearchRequest
 import app.penmoss.search.SearchResult
 import app.penmoss.search.SearchService
@@ -124,29 +123,24 @@ data class SearchFilterUi(
         /** Kept across a rotation (review nit): the chips stay as chosen. */
         val Saver: Saver<SearchFilterUi, Any> = listSaver(save = { parts(it) }, restore = { of(it) })
 
-        /** The query and filters Enter asked for, kept with them. */
-        val SubmittedSaver: Saver<Pair<String, SearchFilterUi>?, Any> = listSaver(
-            save = { value -> if (value == null) emptyList() else listOf<Any?>(value.first) + parts(value.second) },
-            restore = { saved -> if (saved.isEmpty()) null else saved[0] as String to of(saved.drop(1)) },
-        )
     }
 }
 
-/** What the result list shows: the answer, whether it is still coming, and what to say. */
+/** What the result list shows: the answer, and whether the next one is on its way. */
 @Immutable
 data class SearchView(
     val results: List<SearchResult> = emptyList(),
     val searching: Boolean = false,
-    val outcome: SearchOutcome? = null,
+    /** An answer has come for something typed (none yet: the status says it is searching). */
+    val answered: Boolean = false,
 )
 
 /** The status line under the filters, as the web's (`search-status`). */
 internal fun searchStatus(query: String, view: SearchView): String {
     if (query.isBlank()) return "Type to search every note."
-    val outcome = view.outcome ?: return if (view.searching) "Searching…" else ""
-    val count = outcome.results.size
-    val counted = if (count == 0) "No results" else "$count ${if (count == 1) "result" else "results"}"
-    return counted + if (outcome.source == SearchOutcome.Source.DEVICE && !outcome.preview) " on this device" else ""
+    if (!view.answered) return if (view.searching) "Searching…" else ""
+    val count = view.results.size
+    return if (count == 0) "No results" else "$count ${if (count == 1) "result" else "results"}"
 }
 
 /**
@@ -164,9 +158,8 @@ internal fun tagOptions(tags: Collection<String>): List<String> {
 
 /**
  * Search (T32; T40 P6, FD1–FD4): the field is the bar; under it the filters (Folder, Tag,
- * Updated) as chips, a status line (with "Words only" when meaning could not answer, T42), then
- * the results with the matched words painted as the web marks them. One search, Hybrid always
- * (A460): no mode to pick.
+ * Updated) as chips, a status line, then the results with the matched words painted as the web
+ * marks them. One keyword search (A101): no mode to pick.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -180,7 +173,6 @@ fun SearchScreen(
     onFilters: (SearchFilterUi) -> Unit = {},
     folderChoices: List<FolderChoice> = emptyList(),
     tags: List<String> = emptyList(),
-    onSubmit: () -> Unit = {},
     onNoteLongPress: ((NoteItem) -> Unit)? = null,
     dateOf: (Long) -> String = { "" },
     now: () -> Long = System::currentTimeMillis,
@@ -205,10 +197,8 @@ fun SearchScreen(
                         placeholder = { Text("Search notes") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = {
-                            keyboard?.hide()
-                            onSubmit()
-                        }),
+                        // Enter only puts the keyboard away: the answer is already there (A1466).
+                        keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }),
                         trailingIcon = {
                             if (query.isNotEmpty()) {
                                 IconButton(onClick = {
@@ -263,21 +253,8 @@ fun SearchScreen(
                     }
                     Text(searchStatus(query, view), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                view.outcome?.notice?.takeIf { query.isNotBlank() }?.let {
-                    Text(it, Modifier.testTag("searchNotice"), style = MaterialTheme.typography.bodyMedium)
-                }
-                // Quietly, as the web's (T42): the reason is its description, for TalkBack too.
-                view.outcome?.takeIf { query.isNotBlank() && it.notice == null }?.wordsOnly?.let { reason ->
-                    Text(
-                        SearchService.WORDS_ONLY,
-                        Modifier.semantics { contentDescription = "${SearchService.WORDS_ONLY}. $reason" }.testTag("searchWordsOnly"),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
-            val outcome = view.outcome
-            if (query.isNotBlank() && outcome != null && !view.searching && view.results.isEmpty() && actions.isEmpty()) {
+            if (query.isNotBlank() && view.answered && !view.searching && view.results.isEmpty() && actions.isEmpty()) {
                 EmptyMessage("No notes match “${query.trim()}”")
             }
             // The last results fade while the answer to what was typed is on its way.
@@ -420,30 +397,17 @@ private fun SearchResultRow(result: SearchResult, onOpen: (String) -> Unit, onLo
             overflow = TextOverflow.Ellipsis,
         )
         val meta = listOfNotNull(
-            result.heading?.let { "› $it" },
             result.tags.takeIf { it.isNotEmpty() }?.joinToString(" ") { "#$it" },
             item.date.takeIf { it.isNotEmpty() },
         )
-        if (meta.isNotEmpty() || result.semantic) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    meta.joinToString("  "),
-                    Modifier.weight(1f, fill = false),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (result.semantic) {
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        "≈",
-                        Modifier.semantics { contentDescription = "Found by meaning" },
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
+        if (meta.isNotEmpty()) {
+            Text(
+                meta.joinToString("  "),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
         val body = if (result.snippet.isNotBlank()) markedText(result.snippet, mark) else AnnotatedString(result.excerpt)
         if (body.isNotEmpty()) {
@@ -459,9 +423,8 @@ private fun SearchResultRow(result: SearchResult, onOpen: (String) -> Unit, onLo
 }
 
 /**
- * Search's route (T40 P6): the phone answers each keystroke at once, the server after a pause or
- * on Enter (A111), Hybrid always, with the filters chosen (kept across a rotation). Offline, no
- * pause: the phone's answer is the only one.
+ * Search's route (T40 P6): the phone's index answers as soon as typing pauses (A111), offline
+ * too, with the filters chosen (kept across a rotation).
  */
 @Composable
 internal fun SearchRoute(
@@ -475,11 +438,7 @@ internal fun SearchRoute(
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var filters by rememberSaveable(stateSaver = SearchFilterUi.Saver) { mutableStateOf(SearchFilterUi()) }
-    /** The request Enter asked the server to answer now (A111). */
-    var submitted by rememberSaveable(stateSaver = SearchFilterUi.SubmittedSaver) { mutableStateOf<Pair<String, SearchFilterUi>?>(null) }
-    val service = remember(graph) {
-        SearchService(graph.api, graph.offlineSearch, { graph.onlineAgain.online.value })
-    }
+    val service = remember(graph) { SearchService(graph.offlineSearch) }
     val choices by remember {
         combine(graph.store.observeRootSortMode(), graph.store.observeFolders()) { sort, folders -> Items.folderChoices(sort, folders) }
             .distinctUntilChanged()
@@ -491,34 +450,14 @@ internal fun SearchRoute(
         }.conflate().distinctUntilChanged().flowOn(Dispatchers.Default)
     }.collectAsStateWithLifecycle(emptyList())
     val key = query to filters
-    val view by produceState(SearchView(), key, submitted) {
-        val text = query.trim()
-        if (text.isEmpty()) {
+    val view by produceState(SearchView(), key) {
+        if (query.isBlank()) {
             value = SearchView()
             return@produceState
         }
-        val request = SearchRequest(query, filters.filters(), submitted = submitted == key)
         value = value.copy(searching = true)
-        // The phone answers while typing; a preview the server will replace waits for it, to a
-        // point (T53 item 2), so the results never shift under a finger. Offline, the phone's
-        // answer is final and shows at once.
-        var typed: SearchOutcome? = null
-        if (!request.submitted) {
-            delay(SearchService.TYPING_MS)
-            typed = service.typing(request).also { if (!it.preview) value = SearchView(it.results, searching = true, outcome = it) }
-        }
-        val outcome = coroutineScope {
-            val answer = async {
-                if (!request.submitted) delay(SearchService.pauseMs(graph.onlineAgain.online.value) - SearchService.TYPING_MS)
-                service.search(request)
-            }
-            val preview = typed?.takeIf { it.preview }
-            if (preview != null && withTimeoutOrNull(SearchService.PREVIEW_HOLD_MS - SearchService.TYPING_MS) { answer.await() } == null) {
-                value = SearchView(preview.results, searching = true, outcome = preview)
-            }
-            answer.await()
-        }
-        value = SearchView(outcome.results, searching = false, outcome = outcome)
+        delay(SearchService.TYPING_MS)
+        value = SearchView(service.search(SearchRequest(query, filters.filters())), searching = false, answered = true)
     }
     val dates = remember { DateLabels(System.currentTimeMillis(), java.time.ZoneId.systemDefault()) }
     SearchScreen(
@@ -531,7 +470,6 @@ internal fun SearchRoute(
         onFilters = { filters = it },
         folderChoices = choices,
         tags = tags,
-        onSubmit = { submitted = key },
         onNoteLongPress = onLongPress,
         dateOf = { if (it > 0) dates.label(it) else "" },
         actions = searchActionsFor(query, actionsFirst),

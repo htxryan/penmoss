@@ -15,7 +15,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.penmoss.search.SearchOutcome
 import app.penmoss.search.SearchResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -33,8 +32,7 @@ class SearchScreensTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private fun answer(vararg results: SearchResult, source: SearchOutcome.Source = SearchOutcome.Source.SERVER, notice: String? = null) =
-        SearchView(results.toList(), searching = false, outcome = SearchOutcome(source, results.toList(), notice))
+    private fun answer(vararg results: SearchResult) = SearchView(results.toList(), searching = false, answered = true)
 
     @Test
     fun searchSendsWhatIsTypedAndOpensAResult() {
@@ -64,28 +62,18 @@ class SearchScreensTest {
         compose.setContent { PenmossTheme { SearchScreen("zzz", {}, view, onBack = {}, onOpen = {}) } }
         compose.onNodeWithText("No notes match “zzz”").assertIsDisplayed()
         compose.onNodeWithText("No results").assertIsDisplayed()
-        view = answer(SearchResult("a", "One", "", ""), SearchResult("b", "Two", "", ""), source = SearchOutcome.Source.DEVICE)
-        compose.onNodeWithText("2 results on this device").assertIsDisplayed()
+        view = answer(SearchResult("a", "One", "", ""), SearchResult("b", "Two", "", ""))
+        compose.onNodeWithText("2 results").assertIsDisplayed()
     }
 
+    /** A1466: every search is the phone's keyword search, so nothing says meaning was missing. */
     @Test
-    fun saysWordsOnlyQuietlyWhenMeaningCouldNotAnswer() {
-        val reason = app.penmoss.search.SearchService.WORDS_ONLY_OFFLINE
-        compose.setContent {
-            PenmossTheme {
-                SearchScreen(
-                    "otters",
-                    {},
-                    SearchView(emptyList(), outcome = SearchOutcome(SearchOutcome.Source.DEVICE, emptyList(), wordsOnly = reason)),
-                    onBack = {},
-                    onOpen = {},
-                )
-            }
-        }
-        // T42's wording: the label, with the reason as its description (review S1).
-        compose.onNodeWithTag("searchWordsOnly").assertIsDisplayed()
-        compose.onNodeWithText("Words only").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Words only. $reason").assertIsDisplayed()
+    fun neverSaysWordsOnlyOrThatMeaningIsUnavailable() {
+        compose.setContent { PenmossTheme { SearchScreen("otters", {}, answer(SearchResult("r", "River", "", "otters")), onBack = {}, onOpen = {}) } }
+        compose.onNodeWithText("1 result").assertIsDisplayed()
+        compose.onNodeWithText("Words only", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("meaning", substring = true).assertDoesNotExist()
+        compose.onNodeWithTag("searchWordsOnly").assertDoesNotExist()
         compose.onNodeWithTag("searchNotice").assertDoesNotExist()
     }
 
@@ -121,34 +109,29 @@ class SearchScreensTest {
     }
 
     @Test
-    fun showsASemanticResultsSectionTagsAndThatItWasFoundByMeaning() {
+    fun showsAResultsTagsAndDate() {
         compose.setContent {
             PenmossTheme {
                 SearchScreen(
                     "otters",
                     {},
-                    answer(SearchResult("r", "River trip", "", "we saw them", heading = "Wildlife", tags = listOf("travel"), semantic = true)),
+                    answer(SearchResult("r", "River trip", "", "we saw them", tags = listOf("travel"))),
                     onBack = {},
                     onOpen = {},
                     dateOf = { "Oct 21" },
                 )
             }
         }
-        compose.onNodeWithText("› Wildlife  #travel", substring = true).assertIsDisplayed()
-        compose.onNodeWithContentDescription("Found by meaning").assertIsDisplayed()
+        compose.onNodeWithText("#travel  Oct 21").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Found by meaning").assertDoesNotExist()
     }
 
     @Test
-    fun theFiltersAndWhatEnterAskedForOutliveARotation() {
+    fun theFiltersOutliveARotation() {
         val scope = androidx.compose.runtime.saveable.SaverScope { true }
         val filters = SearchFilterUi(folderId = "f", folderName = "Garden", tag = "area/kitchen", range = 2, updatedAfter = 9)
         val saved = with(SearchFilterUi.Saver) { scope.save(filters) }!!
         assertEquals(filters, SearchFilterUi.Saver.restore(saved))
-        val submitted = "otters" to filters
-        val again = with(SearchFilterUi.SubmittedSaver) { scope.save(submitted) }!!
-        assertEquals(submitted, SearchFilterUi.SubmittedSaver.restore(again))
-        // Nothing asked: nothing saved, so it comes back as nothing.
-        assertEquals(null, with(SearchFilterUi.SubmittedSaver) { scope.save(null) })
     }
 
     @Test
@@ -200,10 +183,9 @@ class SearchScreensTest {
         assertEquals("Searching…", searchStatus("x", SearchView(searching = true)))
         val one = SearchResult("a", "A", "", "")
         assertEquals("1 result", searchStatus("x", answer(one)))
-        // The phone's answer while typing is a preview: not "on this device" until final.
-        val preview = SearchView(listOf(one), searching = true, outcome = SearchOutcome(SearchOutcome.Source.DEVICE, listOf(one), preview = true))
-        assertEquals("1 result", searchStatus("x", preview))
-        assertEquals("1 result on this device", searchStatus("x", answer(one, source = SearchOutcome.Source.DEVICE)))
+        // While the next answer comes, the last one's count stays.
+        assertEquals("1 result", searchStatus("x", SearchView(listOf(one), searching = true, answered = true)))
+        assertEquals("No results", searchStatus("x", answer()))
     }
 
     @Test

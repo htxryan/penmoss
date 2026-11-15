@@ -11,7 +11,6 @@ import app.penmoss.engine.api.InFolder
 import app.penmoss.engine.api.NotePlace
 import app.penmoss.engine.api.DailyNoteRef
 import app.penmoss.engine.api.PenmossApi
-import app.penmoss.engine.api.SearchReply
 import app.penmoss.engine.api.SettingsChange
 import app.penmoss.engine.api.SettingsReply
 import app.penmoss.engine.api.SyncTree
@@ -229,7 +228,6 @@ open class FakeApi : PenmossApi {
     override suspend fun changes(since: Long): ChangesPage = error("not used")
     override suspend fun batch(notes: List<BatchEntry>): BatchReply = error("not used")
     override suspend fun tree(since: String?): SyncTree = error("not used")
-    override suspend fun search(query: String, limit: Int, mode: app.penmoss.engine.api.SearchMode, filters: app.penmoss.engine.api.SearchFilters, partial: Boolean): SearchReply = error("not used")
     override suspend fun dailyNote(date: String?, period: String): DailyNoteRef {
         dailyCalls += date to period
         return onDaily(date, period)

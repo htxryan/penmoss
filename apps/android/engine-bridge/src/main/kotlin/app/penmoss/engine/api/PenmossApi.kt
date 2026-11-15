@@ -41,18 +41,6 @@ interface PenmossApi {
     suspend fun tree(since: String?): SyncTree
 
     /**
-     * `GET /api/search` (T22, T23): [mode], [filters] (T40 P6, FD2, FD3), the last word a
-     * prefix (search as you type), and [partial] when that word is still being typed.
-     */
-    suspend fun search(
-        query: String,
-        limit: Int = 30,
-        mode: SearchMode = SearchMode.FULL_TEXT,
-        filters: SearchFilters = SearchFilters(),
-        partial: Boolean = false,
-    ): SearchReply
-
-    /**
      * Files a daily or weekly note in the Journal (`POST /api/daily`, T40 P5): `{ date?, period }`,
      * where `date` is an explicit day (a calendar tap) or null for today in the user's time
      * zone setting, and `period` is `daily` or `weekly`. The server files it under
@@ -307,22 +295,6 @@ class HttpPenmossApi(
 
     override suspend fun tree(since: String?): SyncTree =
         get(url("sync/tree") { if (since != null) addQueryParameter("since", since) }, SyncTree.serializer())
-
-    override suspend fun search(query: String, limit: Int, mode: SearchMode, filters: SearchFilters, partial: Boolean): SearchReply =
-        get(
-            url("api/search") {
-                addQueryParameter("q", query)
-                addQueryParameter("limit", limit.toString())
-                addQueryParameter("mode", mode.wire)
-                addQueryParameter("prefix", "1")
-                if (partial) addQueryParameter("partial", "1")
-                filters.folderId?.let { addQueryParameter("folder", it) }
-                filters.tag?.let { addQueryParameter("tag", it) }
-                filters.updatedAfter?.let { addQueryParameter("after", it.toString()) }
-                filters.notebooks?.let { addQueryParameter("notebooks", it.joinToString(",")) }
-            },
-            SearchReply.serializer(),
-        )
 
     override suspend fun dailyNote(date: String?, period: String): DailyNoteRef =
         send(

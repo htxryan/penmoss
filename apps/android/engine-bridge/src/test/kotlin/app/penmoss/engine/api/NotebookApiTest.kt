@@ -68,19 +68,6 @@ class NotebookApiTest {
     }
 
     @Test
-    fun searchSendsTheOpenNotebooksAndReadsEachResultsNotebook() = runTest {
-        respond("""{"results":[{"id":"n1","title":"Plan","notebook":{"id":"default","name":"Personal"}},{"id":"n2","title":"Old"}]}""")
-        val reply = api.search("plan", filters = SearchFilters(notebooks = listOf("default", "w")))
-        assertEquals("default,w", server.takeRequest().url.queryParameter("notebooks"))
-        assertEquals(SearchNotebook("default", "Personal"), reply.results[0].notebook)
-        assertNull(reply.results[1].notebook)
-        // With every notebook open, nothing is sent.
-        respond("""{"results":[]}""")
-        api.search("plan")
-        assertNull(server.takeRequest().url.queryParameter("notebooks"))
-    }
-
-    @Test
     fun trashMarksNotesThatWentWithANotebookAndTheNotebookItself() {
         val notes = PenmossJson.decodeFromString(TrashList.serializer(), """{"notes":[{"id":"n1","withNotebook":true},{"id":"n2"}]}""").notes
         assertEquals(listOf(true, false), notes.map { it.withNotebook })

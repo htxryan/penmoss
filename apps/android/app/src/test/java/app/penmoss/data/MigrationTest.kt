@@ -472,7 +472,6 @@ class MigrationTest {
         try {
             val search = OfflineSearch(db)
             assertEquals(listOf("joy"), search.search("happin").map { it.noteId })
-            assertTrue(search.unfinished("happin"))
             assertEquals("happiness notes on", db.search().text("joy")!!.fwords)
             // Still found by its stems, and kept current as the text changes.
             assertEquals(listOf("joy"), search.search("happiness", prefixLast = false).map { it.noteId })

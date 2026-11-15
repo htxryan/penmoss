@@ -562,7 +562,7 @@ class OnlineAgain(private val onBack: () -> Unit) : ConnectivityManager.NetworkC
 
     /**
      * Whether a validated network is up, as far as the app has seen while in front (true until
-     * it knows): Search skips its pause offline (T40 P6, review nit).
+     * it knows).
      */
     val online: kotlinx.coroutines.flow.StateFlow<Boolean> = up
 

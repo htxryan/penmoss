@@ -192,41 +192,7 @@ data class TreeNote(
     val period: String? = null,
 )
 
-/** One hit of `GET /api/search`. Matched words sit between U+0002 and U+0003. */
-@Serializable
-data class SearchHit(
-    val id: String,
-    val title: String = "",
-    val snippet: String = "",
-    val updatedAt: Long = 0,
-    /** The title with its matched words marked (T40 P6, FD1). */
-    val titleHighlighted: String = "",
-    /** The section that matched (semantic results). */
-    val heading: String? = null,
-    val tags: List<String> = emptyList(),
-    /** `full-text`, `semantic`, or both (T23). */
-    val sources: List<String> = emptyList(),
-    /** The notebook the note is in (T43, A752). */
-    val notebook: SearchNotebook? = null,
-)
-
-/** A search result's notebook (T43): its id (`default` for the default notebook) and name. */
-@Serializable
-data class SearchNotebook(val id: String, val name: String = "")
-
-/** The search modes (T23), as the route and the web name them. */
-enum class SearchMode(val wire: String, val label: String) {
-    FULL_TEXT("full-text", "Full-text"),
-    SEMANTIC("semantic", "Semantic"),
-    HYBRID("hybrid", "Hybrid"),
-    ;
-
-    companion object {
-        fun of(wire: String?): SearchMode = entries.firstOrNull { it.wire == wire } ?: FULL_TEXT
-    }
-}
-
-/** The filters of a search (T40 P6, FD3), as the route takes them; null: no filter. */
+/** The filters of a search on the phone (T40 P6, FD3); null: no filter. */
 data class SearchFilters(
     /** A folder, with its subfolders. */
     val folderId: String? = null,
@@ -234,17 +200,9 @@ data class SearchFilters(
     val tag: String? = null,
     /** Updated at or after this time (epoch ms). */
     val updatedAfter: Long? = null,
-    /**
-     * The notebooks open on this phone (T43, A752), sent as `notebooks=`: null sends none (every
-     * notebook open). Not a filter the person sets, so [none] leaves it out.
-     */
-    val notebooks: List<String>? = null,
 ) {
     val none: Boolean get() = folderId == null && tag == null && updatedAfter == null
 }
-
-@Serializable
-data class SearchReply(val results: List<SearchHit> = emptyList(), val notice: String? = null)
 
 /** The id of a note the server made or found (`POST /api/daily`). */
 @Serializable
