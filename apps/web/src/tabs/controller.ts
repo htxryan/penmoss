@@ -78,6 +78,8 @@ export class TabsController implements HistoryDriver {
   private readonly ids: IdMaker;
   private readonly storage: KeyValueStore | null;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  /** Closing (`closeWindow`): saves nothing more. */
+  private closed = false;
   /** The browser entry the address is at (`history.state.penmossIndex`). */
   private browserIndex = 0;
   private placeCache: HistoryPlace = { back: false, forward: false };
@@ -130,7 +132,21 @@ export class TabsController implements HistoryDriver {
   flush(): void {
     if (this.timer !== null) clearTimeout(this.timer);
     this.timer = null;
-    save(this.storage, this.state);
+    this.persist();
+  }
+
+  /**
+   * The window is closing (A1577): saves now, and never again. It goes from the screen at once
+   * while its page still pushes, and a main window opened meanwhile has the tabs from here on;
+   * this page's later saves (its `pagehide` as it goes) would write over them.
+   */
+  closeWindow(): void {
+    this.flush();
+    this.closed = true;
+  }
+
+  private persist(): void {
+    if (!this.closed) save(this.storage, this.state);
   }
 
   /** Which notes Back and Forward pass over (a note in Trash deeper in a tab's history). */
@@ -166,7 +182,7 @@ export class TabsController implements HistoryDriver {
     for (const listener of [...this.listeners]) listener();
     this.timer ??= setTimeout(() => {
       this.timer = null;
-      save(this.storage, this.state);
+      this.persist();
     }, SAVE_MS);
   }
 
@@ -242,7 +258,7 @@ export class TabsController implements HistoryDriver {
   private scheduleSave(): void {
     this.timer ??= setTimeout(() => {
       this.timer = null;
-      save(this.storage, this.state);
+      this.persist();
     }, SAVE_MS);
   }
 
@@ -324,7 +340,7 @@ export class TabsController implements HistoryDriver {
     this.state = next;
     this.timer ??= setTimeout(() => {
       this.timer = null;
-      save(this.storage, this.state);
+      this.persist();
     }, SAVE_MS);
   }
 

@@ -111,8 +111,10 @@ window.addEventListener('pagehide', () => windows.flush());
 // notebook has synced once if it can (A825). Main asks for `flush` before the capture window
 // reads the store or a title bar change: then nothing syncs (#174 review).
 bridge?.onBeforeClose(async (reason) => {
-  // The tabs as they are, for the next launch (A228, A626).
-  tabs?.flush();
+  // The tabs as they are, for the next launch (A228, A626). As the window closes, the last
+  // time: a main window opened while this one still pushes keeps its own (A1577).
+  if (reason === 'close') tabs?.closeWindow();
+  else tabs?.flush();
   await sources.store(reason);
   // The other windows hear this window's last writes before it goes (before `saved`).
   windows.flush();

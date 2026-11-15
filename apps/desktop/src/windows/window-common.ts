@@ -5,7 +5,7 @@
  */
 import { join } from 'node:path';
 import { app, BrowserWindow, ipcMain, nativeTheme, type IpcMainEvent } from 'electron';
-import { config, macWindows, state, storeRequests, titleBars, windows } from '../app-state';
+import { config, mac, macWindows, state, storeRequests, titleBars, windows } from '../app-state';
 import { setMenus } from '../app-menu';
 import { sendEvent } from '../ipc';
 import { SEND, TITLE_BAR_ARG, VERSION_ARG, WINDOW_ARG } from '../ipc-contract';
@@ -127,16 +127,22 @@ export function track(
   window.on('restore', () => windows.restored(window));
   window.on('closed', () => {
     windows.remove(window);
-    // No window came to the front (the last one closed, or the rest are minimized): the menu
-    // bar leaves the closed window's menus, with what it greyed out, for the window menu
-    // commands now go to, else the main window's last.
-    setImmediate(() => {
-      const front = BrowserWindow.getFocusedWindow();
-      if (front && windows.kindOf(front.webContents)) return;
-      const next = windows.active;
-      const menus = (next && windows.menusOf(next)) ?? state.mainMenus;
-      if (menus) setMenus(menus);
-    });
+    menusAfterClose();
+  });
+}
+
+/**
+ * No window came to the front (the last one closed, or the rest are minimized): the menu bar
+ * leaves the closed window's menus, with what it greyed out, for the window menu commands now
+ * go to, else the main window's last.
+ */
+function menusAfterClose(): void {
+  setImmediate(() => {
+    const front = BrowserWindow.getFocusedWindow();
+    if (front && windows.isOpen(front)) return;
+    const next = windows.active;
+    const menus = (next && windows.menusOf(next)) ?? state.mainMenus;
+    if (menus) setMenus(menus);
   });
 }
 
@@ -149,22 +155,85 @@ export async function closingWait(): Promise<number> {
   return any ? SAVE_BEFORE_CLOSE_MS + GIT_PUSH_BEFORE_CLOSE_MS : SAVE_BEFORE_CLOSE_MS;
 }
 
-/** The last keystrokes go to IndexedDB before the page is torn down (⌘W, ⌘Q). */
+/** How a main or note window starts closing (`storeBeforeClose`), for the quit to start them all. */
+const closers = new WeakMap<BrowserWindow, () => Promise<void>>();
+
+/**
+ * Takes a closing window off the screen at once (A1577). Its page lives on, out of sight, to
+ * store its notes and push, at full speed: hidden, Chromium would slow its timers. A window in
+ * full screen goes clear at once and leaves full screen before it hides, so its Space goes too.
+ */
+function hideForClose(window: BrowserWindow): void {
+  if (window.isDestroyed()) return;
+  window.webContents.setBackgroundThrottling(false);
+  if (window.isFullScreen()) {
+    window.setOpacity(0);
+    const hide = () => {
+      clearTimeout(timer);
+      if (!window.isDestroyed()) window.hide();
+    };
+    const timer = setTimeout(hide, 2000);
+    window.once('leave-full-screen', hide);
+    window.setFullScreen(false);
+    return;
+  }
+  window.hide();
+}
+
+/**
+ * The last keystrokes go to IndexedDB before the page is torn down (⌘W, the red button, ⌘Q),
+ * and its git notebooks push (A825, A927), with the window already gone from the screen
+ * (A1577): it hides at once, its page stores and pushes out of sight, and the window is
+ * destroyed once that is done or its time is up. Unsaved text is kept either way: the store
+ * comes first, and a push that cannot finish is owed to the next start.
+ * `closing` runs once, as the window starts closing, before it hides (the main window saves
+ * its size and place then).
+ */
 export function storeBeforeClose(window: BrowserWindow, closing?: () => void): void {
   let stored = false;
+  let run: Promise<void> | null = null;
+  let quitAfter = false;
+  let continuing = false;
+  const start = (): Promise<void> => {
+    run ??= (async () => {
+      try {
+        closing?.();
+        windows.closing(window);
+        hideForClose(window);
+        menusAfterClose();
+        await storeNow(window, await closingWait(), 'close');
+      } finally {
+        // Never hidden for good: whatever happened, the window goes.
+        stored = true;
+      }
+    })();
+    return run;
+  };
+  closers.set(window, start);
   window.on('close', (event) => {
-    closing?.();
     if (stored) return;
     event.preventDefault();
-    const wasQuitting = state.quitting;
-    void closingWait()
-      .then((waitMs) => storeNow(window, waitMs, 'close'))
-      .then(() => {
-        stored = true;
-        if (window.isDestroyed()) return;
-        // A prevented close also stops the quit it was part of: carry on with it.
-        if (wasQuitting && !state.updating) app.quit();
-        else window.close();
-      });
+    // A prevented close also stops the quit it was part of: carry on with it once stored.
+    quitAfter ||= state.quitting;
+    if (continuing) return;
+    continuing = true;
+    void start().then(() => {
+      if (window.isDestroyed()) return;
+      if (quitAfter && !state.updating) app.quit();
+      else window.close();
+    });
   });
+}
+
+/**
+ * The quit (⌘Q, the Dock's Quit, an update's restart) takes every main and note window off the
+ * screen at once, and each stores and pushes side by side (A1577): the windows' own closes,
+ * which macOS makes one after another, then only wait for them. The app hides too, so the Mac
+ * goes back to the app before it while the last push runs.
+ */
+export function startQuitting(): void {
+  for (const window of windows.all()) {
+    if (!window.isDestroyed()) void closers.get(window)?.();
+  }
+  if (mac) app.hide();
 }

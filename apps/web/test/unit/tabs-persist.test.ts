@@ -204,4 +204,24 @@ describe('the address and the browser’s history (A1497)', () => {
       vi.useRealTimers();
     }
   });
+
+  it('saves once more as its window closes, then never again (A1577)', () => {
+    vi.useFakeTimers();
+    try {
+      const store = memory();
+      const tabs = installMainTabs({ storage: store, ids: counter(), location: '/' });
+      navigate(note(A));
+      tabs.closeWindow();
+      expect(load(store)?.tabs[0]?.entries.at(-1)?.path).toBe(note(A));
+      // A main window opened while this one still pushes, out of sight, saves its own tabs:
+      // this page's later changes and its `pagehide` never write over them.
+      store.values.set(TABS_KEY, 'the new window’s');
+      tabs.newTab();
+      vi.advanceTimersByTime(400);
+      window.dispatchEvent(new Event('pagehide'));
+      expect(store.values.get(TABS_KEY)).toBe('the new window’s');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

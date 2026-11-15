@@ -73,6 +73,38 @@ describe('the window registry (A712)', () => {
     expect(windows.main).toBe(next);
   });
 
+  it('leaves a closing window out, but still answers its page, until it is removed (A1577)', () => {
+    const windows = new WindowRegistry<ReturnType<typeof fakeWindow>>();
+    const main = fakeWindow('main');
+    const note = fakeWindow('note');
+    windows.add(main, 'main');
+    windows.add(note, 'note');
+    windows.minimized(note);
+    windows.closing(main);
+    windows.closing(note);
+    // Its page still stores and pushes over IPC as it closes.
+    expect(windows.kindOf(main.webContents)).toBe('main');
+    expect(windows.windowOf(note.webContents)).toBe(note);
+    // But nothing goes to it, and it is never in front or brought back from the Dock.
+    expect(windows.main).toBeNull();
+    expect(windows.notes()).toEqual([]);
+    expect(windows.all()).toEqual([]);
+    expect(windows.active).toBeNull();
+    expect(windows.lastMinimized()).toBeNull();
+    expect(windows.isOpen(main)).toBe(false);
+    windows.focused(main);
+    expect(windows.active).toBeNull();
+    expect(windows.setMenus(main, menus('closing'))).toBe(false);
+    // A new main window opens beside it (the Dock icon, Window → Penmoss).
+    const next = fakeWindow('next');
+    windows.add(next, 'main');
+    expect(windows.main).toBe(next);
+    expect(windows.isOpen(next)).toBe(true);
+    windows.remove(main);
+    expect(windows.kindOf(main.webContents)).toBeNull();
+    expect(windows.main).toBe(next);
+  });
+
   it('sends menu commands to the window in front, else the main window, else a note window', () => {
     const windows = new WindowRegistry<ReturnType<typeof fakeWindow>>();
     expect(windows.active).toBeNull(); // none: the main window is made again
