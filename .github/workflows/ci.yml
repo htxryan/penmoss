@@ -66,6 +66,7 @@ jobs:
       android-app: ${{ steps.changes.outputs.android }}
       desktop: ${{ steps.changes.outputs.desktop }}
       site: ${{ steps.changes.outputs.site }}
+      factory: ${{ steps.changes.outputs.factory }}
       ships: ${{ steps.changes.outputs.ships }}
     steps:
       # Only the classifier, .github/scripts/changed-parts.sh (A1349): the file list itself
@@ -122,10 +123,11 @@ jobs:
             echo "android=$android"
             echo "desktop=$desktop"
             echo "site=$site"
+            echo "factory=$factory"
             echo "ships=$ships"
           } >> "$GITHUB_OUTPUT"
           {
-            echo "Changed parts (A1095): check=$check web=$web android=$android desktop=$desktop site=$site ships=$ships (all=$all)"
+            echo "Changed parts (A1095): check=$check web=$web android=$android desktop=$desktop site=$site factory=$factory ships=$ships (all=$all)"
             [ -s "$files" ] && { echo; echo '```'; head -50 "$files"; echo '```'; }
           } >> "$GITHUB_STEP_SUMMARY" || true
 
@@ -180,6 +182,44 @@ jobs:
           PENMOSS_SITE_PORT="$(python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
           export PENMOSS_SITE_PORT
           task site:test
+
+  factory-ui:
+    name: Factory UI (headless Chromium)
+    if: needs.pick.outputs.factory == 'true'
+    # A1519 (amends A1234): the Factory UI's page check, tools/factory/e2e, against a fake state
+    # folder on the UI's own server and a free port. No daemon, no Linear. Its own job, so Check
+    # installs no browser. Not a required check (A1181).
+    needs: pick
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        with:
+          playwright-cache: 'true'
+
+      - name: Install Chromium, and its system libraries if the image lacks any
+        timeout-minutes: 10
+        uses: ./.github/actions/playwright
+        with:
+          package: '@penmoss/factory'
+
+      - name: The Factory UI's page check
+        timeout-minutes: 5
+        run: pnpm --filter @penmoss/factory e2e
+
+      - name: Upload the traces of what failed
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: factory-ui-test-results
+          path: tools/factory/test-results/e2e/
+          retention-days: 7
 
   e2e-shard:
     name: E2E smoke (shard ${{ matrix.shard }} of 3)

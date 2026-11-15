@@ -41,7 +41,7 @@ Signing moved to hosted runners on 12 Nov (A1348), with its secrets in the same 
 | the rest of `apps/android` (Kotlin, Gradle)                      | no      | no               | yes                           | no                      |
 | anything else (`apps/relay`, `scripts/`, …)                      | yes     | no               | no                            | no                      |
 
-A change under `site/`, or to a shared file, also runs the `site` job on a pull request (A1201).
+A change under `site/`, or to a shared file, also runs the `site` job on a pull request (A1201). A change under `tools/factory/`, or to a shared file, also runs `factory-ui`: the Factory UI's page check in headless Chromium (`pnpm --filter @penmoss/factory e2e`, A1519).
 
 **What ships (A1349, PEN-128).** `pick` also reports `ships`: whether the Mac app or the APK is built from something that changed. That means app and package source (`apps/web`, `apps/desktop`, `apps/android` but not its Play script, and the packages the apps bundle), their build configuration, and the lockfile. Tests (`test/`, `e2e/`, `androidTest/`, `*.test.*`, `*.spec.*`, test configs and fixtures), `.github/`, `Taskfile.yml`, root and lint configs, docs, the site, the factory and scripts never ship. On main, `android-release` and `mac-release` publish only when `ships` is true. A merge of only CI, tests or docs still runs every job it touches, the signed `mac` and `android-sideload` builds included, so a CI change is proved; it publishes nothing, and `alpha` keeps its build. Its pull requests' notes go out with the next build that ships, because `publish-notes` collects everything since the last commit it published. `.github/scripts/changed-parts.sh` is the classifier, and `changed-parts.test.mjs` (`task workflows:test`) covers it.
 
@@ -170,7 +170,7 @@ A pull request merges, and GitHub's auto-merge (`gh pr merge --auto --squash`) a
 
 `E2E smoke` is a small job, `e2e`, that needs the three `e2e-shard` jobs (`E2E smoke (shard n of 3)`, Playwright's `--shard`) and passes only when all three passed: it fails when any shard failed or was cancelled, and is skipped with them when `pick` turns the web suite off (A1482). The shards aren't required by name, so their number can change without touching the ruleset. Repository admins can bypass the rule, for an emergency only.
 
-`Site (penmoss.app and its docs)` (A1201), `Android app on an emulator (instrumented tests)` (A1227) and `Mac app (Electron under xvfb)` (back on with A1235) run on pull requests but are not required. The emulator and Electron jobs are new on hosted runners: each joins the ruleset once it has passed steadily for a while (add it there under that name).
+`Site (penmoss.app and its docs)` (A1201), `Factory UI (headless Chromium)` (A1519), `Android app on an emulator (instrumented tests)` (A1227) and `Mac app (Electron under xvfb)` (back on with A1235) run on pull requests but are not required. The emulator and Electron jobs are new on hosted runners: each joins the ruleset once it has passed steadily for a while (add it there under that name).
 
 The first five replace A1178's single `CI result` job. That job only summed the others, but it needed a Mac runner of its own. So a pull request whose tests had passed queued again for it, behind every other run's tests.
 

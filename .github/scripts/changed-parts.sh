@@ -3,20 +3,23 @@
 # (A1349). CI's `pick` job lists the changed files (a pull request's files, or a push's
 # compare) and pipes them here, one per line; each test job runs only for its part.
 #
-#   changed-parts.sh [--all] < files     prints check=, web=, android=, desktop=, site=, ships=
+#   changed-parts.sh [--all] < files     prints check=, web=, android=, desktop=, site=, factory=,
+#                                        ships=
 #
-# `--all` (a list GitHub couldn't give or truncated) turns every part on. `ships` says whether
-# the Mac app or the APK is built from something that changed: app and package source, their
-# build configuration, or the lockfile. CI, Taskfile and lint changes, tests and docs never
-# ship, so a merge of only those builds and tests but publishes no new Alpha build (PEN-128).
+# `factory` is the software factory (tools/factory), whose Factory UI job runs its page check in
+# headless Chromium (A1519). `--all` (a list GitHub couldn't give or truncated) turns every part
+# on. `ships` says whether the Mac app or the APK is built from something that changed: app and
+# package source, their build configuration, or the lockfile. CI, Taskfile and lint changes,
+# tests and docs never ship, so a merge of only those builds and tests but publishes no new
+# Alpha build (PEN-128).
 set -euo pipefail
 
 all=false
 [ "${1:-}" = --all ] && all=true
 
-check=false web=false android=false desktop=false site=false ships=false
+check=false web=false android=false desktop=false site=false factory=false ships=false
 if [ "$all" = true ]; then
-  check=true web=true android=true desktop=true site=true ships=true
+  check=true web=true android=true desktop=true site=true factory=true ships=true
 else
   while IFS= read -r f; do
     [ -n "$f" ] || continue
@@ -34,11 +37,11 @@ else
     case "$f" in
       # Shared: everything builds from these. Only the lockfile changes what ships.
       pnpm-lock.yaml)
-        check=true web=true android=true desktop=true site=true ships=true ;;
+        check=true web=true android=true desktop=true site=true factory=true ships=true ;;
       .github/* | package.json | pnpm-workspace.yaml | Taskfile.yml | \
         tsconfig.base.json | .node-version | .npmrc | eslint.config.js | stylelint.config.js | \
         .prettierrc* | .prettierignore)
-        check=true web=true android=true desktop=true site=true ;;
+        check=true web=true android=true desktop=true site=true factory=true ;;
       # Packages the web app, the Android editor and the Mac app all bundle.
       packages/core/* | packages/editor/* | packages/git-notebook/* | packages/sync-client/* | packages/ui/*)
         check=true web=true android=true desktop=true ;;
@@ -51,6 +54,8 @@ else
       apps/android/editor/* | apps/android/play/*) check=true android=true ;;
       # Kotlin and Gradle: only the Android job.
       apps/android/*) android=true ;;
+      # The software factory: Check, and the Factory UI's page check (A1519).
+      tools/factory/*) check=true factory=true ;;
       # The relay, scripts and anything else: Check alone.
       *) check=true ;;
     esac
@@ -72,4 +77,5 @@ echo "web=$web"
 echo "android=$android"
 echo "desktop=$desktop"
 echo "site=$site"
+echo "factory=$factory"
 echo "ships=$ships"
