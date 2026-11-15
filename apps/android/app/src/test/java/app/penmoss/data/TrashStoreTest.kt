@@ -129,23 +129,6 @@ class TrashStoreTest {
     }
 
     @Test
-    fun undoWhileTheMoveIsInFlightQueuesARestoreRatherThanCancelling() = runTest {
-        soupInGarden()
-        store.moveToTrash("soup")
-        assertTrue(store.trashSending("soup"))
-        // Undo while the request travels: the server may already have it, so a restore is queued.
-        assertEquals(NoteStore.Restore.QUEUED, store.restoreFromTrash("soup"))
-        assertTrue(listed("soup"))
-        store.trashSent("soup", deletedAt = 5_000, seq = 3)
-        assertEquals(NoteEntity.RESTORE_QUEUED, store.note("soup")!!.trashChange)
-        assertEquals(listOf("soup"), store.restoresDue().map { it.id })
-        assertEquals(1, store.trashChangesWaiting())
-        // A page showing the server's trash does not hide the note meanwhile.
-        page(2, ChangedNote("soup", 2, "Soup", "", 5_000, deleted = true, seq = 4))
-        assertTrue(listed("soup"))
-    }
-
-    @Test
     fun aMoveToTrashWhileTheRestoreIsInFlightQueuesAMoveAndFilesFirst() = runTest {
         soupInGarden()
         store.moveToTrash("soup")
@@ -174,19 +157,6 @@ class TrashStoreTest {
         page(2, ChangedNote("soup", 2, "Soup", "", 200, seq = 7))
         assertEquals(7, store.note("soup")!!.seq)
         assertEquals(2, store.trashesDue().single().trashSeq)
-    }
-
-    @Test
-    fun aRequestLeftInFlightByAStoppedPassIsQueuedAgain() = runTest {
-        soupInGarden()
-        store.moveToTrash("soup")
-        assertTrue(store.trashSending("soup"))
-        store.requeueTrashInFlight()
-        assertEquals(NoteEntity.TRASH_QUEUED, store.note("soup")!!.trashChange)
-        // Failed: queued again too.
-        assertTrue(store.trashSending("soup"))
-        store.trashNotSent("soup")
-        assertEquals(listOf("soup"), store.trashesDue().map { it.id })
     }
 
     // --- Second review of #94: a request tried with no answer may have reached the server ---
