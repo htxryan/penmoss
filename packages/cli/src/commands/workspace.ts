@@ -3,6 +3,7 @@
  * notes, each through the notebook's notes API the MCP tools use, attributed to the clone's
  * writer. Deleting a note for good stays the apps' (A15).
  */
+import { MAX_ATTACHMENT_BYTES } from '@penmoss/core/attachments';
 import { UsageError } from '../args';
 import type { Command } from '../command';
 import { ApiError, CliError, EXIT } from '../errors';
@@ -36,8 +37,8 @@ export const restore: Command = {
   },
 };
 
-/** The largest file an agent sends (as the MCP tools' attach_file). */
-const MAX_KB = 700;
+/** The largest file Penmoss keeps, in MB: the app's, attach_file's and this command's (A1533). */
+const MAX_MB = MAX_ATTACHMENT_BYTES / 1024 / 1024;
 
 /** Base64 of `bytes`, a chunk at a time (one call per byte would overflow the stack). */
 function base64(bytes: Uint8Array): string {
@@ -53,7 +54,7 @@ export const attach: Command = {
   summary: 'Attach a file or picture to a note',
   usage: ['attach <note> <file> [--alt <text>] [--heading <heading>]'],
   description: [
-    'Stores the file and adds it at the end of the note, or of the section under --heading: a picture (PNG, JPEG, GIF, WebP, AVIF) shows in the note, any other file is a link. At most 700 KB. A file the note already has is not added twice.',
+    `Stores the file and adds it at the end of the note, or of the section under --heading: a picture (PNG, JPEG, GIF, WebP, AVIF) shows in the note, any other file is a link. At most ${MAX_MB} MB. A file the note already has is not added twice.`,
     NOTE_HELP,
   ],
   flags: [
@@ -72,19 +73,19 @@ export const attach: Command = {
     const tooLarge = (size: number) =>
       new CliError(
         EXIT.REFUSED,
-        `${file} is ${Math.ceil(size / 1024)} KB; penmoss attach sends files of at most ${MAX_KB} KB. Attach larger ones in the app.`,
+        `${file} is ${Math.ceil(size / 1024)} KB; Penmoss keeps files of at most ${MAX_MB} MB.`,
         'file_too_large',
       );
     // Its size first, so a large file is refused without reading it (T42 review N9).
     const size = await context.io.fileSize?.(file!).catch(() => undefined);
-    if (size !== undefined && size > MAX_KB * 1024) throw tooLarge(size);
+    if (size !== undefined && size > MAX_ATTACHMENT_BYTES) throw tooLarge(size);
     let bytes: Uint8Array;
     try {
       bytes = await context.io.readFile(file!);
     } catch {
       throw new UsageError(`cannot read the file “${file}”`);
     }
-    if (bytes.length > MAX_KB * 1024) throw tooLarge(bytes.length);
+    if (bytes.length > MAX_ATTACHMENT_BYTES) throw tooLarge(bytes.length);
     const note = await resolveNote(context, ref!);
     const name = file!.split(/[\\/]/).pop() ?? file!;
     const alt = context.string('alt');

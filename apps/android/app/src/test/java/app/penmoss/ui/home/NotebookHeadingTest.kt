@@ -56,7 +56,7 @@ class NotebookHeadingTest {
                         status = "Synced at 3:42 PM",
                         syncing = false,
                         sortMode = sortMode,
-                        defaultNotebook = "Personal",
+                        notebook = "Garden",
                     ),
                     HomeActions(
                         onNotebookNewNote = { events += "note" },

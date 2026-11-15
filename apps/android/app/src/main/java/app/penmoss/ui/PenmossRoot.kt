@@ -97,6 +97,7 @@ private fun Screens(graph: NotebookGraph, deepLinks: DeepLinkInbox) {
     RootCommands(
         rootActions(
             graph, nav, root.context, root::openPeriodic, root::newNote,
+            sort = { root.sortFolder(null, it) },
             feedback = { root.openFeedback("a keyboard shortcut", noteOpen(nav), null, null, 0) },
         ) {
             root.folderNaming = FolderNaming.Create(null)

@@ -13,16 +13,15 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * A git notebook has no notebooks inside it (A912), so Room's T43 columns are kept for schema 19
- * but never read or written: a folder an older row flags is a plain folder, and no move or note
- * made here records a notebook. A note the tree does not place is still never written into it.
+ * A git notebook has no notebooks inside it (A912): every folder is a plain folder, moved and
+ * deleted with no notebook rule (Room's T43 columns are gone, A1536). A note the tree does not
+ * place is still never written into it.
  */
 @RunWith(AndroidJUnit4::class)
 class NoNotebooksInsideTest {
@@ -64,11 +63,10 @@ class NoNotebooksInsideTest {
         store.saveTree(tree)
     }
 
-    /** A folder an older row flags a notebook is deleted as any folder is: its notes move up, none to Trash. */
+    /** A top-level folder is moved and deleted as any folder is: its notes move up, none to Trash. */
     @Test
-    fun aFolderFlaggedByAnOlderRowIsAPlainFolder() = runTest {
+    fun aTopLevelFolderIsAPlainFolder() = runTest {
         synced()
-        db.openHelper.writableDatabase.execSQL("UPDATE folders SET notebook = 1 WHERE id = 'w'")
         // Moved like any folder: into another, with no notebook rule.
         assertEquals(NoteStore.FolderMove.MOVED, store.moveFolder("w", "p"))
         assertTrue(store.deleteFolder("w"))
@@ -81,12 +79,11 @@ class NoNotebooksInsideTest {
         assertEquals("p", store.note("n1")!!.folderId)
         // The delete replaces the move still queued for it, as for any folder.
         assertEquals(listOf(FolderOpEntity.DELETE), db.folderOps().all().map { it.kind })
-        assertTrue(db.folderOps().all().all { it.fromNotebook == null && !it.notebook })
     }
 
-    /** No move, reorder or note made here records a notebook; a note the tree does not place is never filed here. */
+    /** Moves, a reorder and a note made here are filed; a note the tree does not place is never filed here. */
     @Test
-    fun noMoveRecordsANotebookAndAnUnplacedNoteIsNeverFiled() = runTest {
+    fun movesAreFiledAndAnUnplacedNoteIsNeverFiled() = runTest {
         synced()
         assertTrue(store.addLocalNote(PageNote("made", "", "WHOLE"), "c"))
         assertEquals(NoteStore.Move.MOVED, store.moveNote("n3", "c"))
@@ -94,7 +91,6 @@ class NoNotebooksInsideTest {
         // A reorder files the note where it is.
         assertTrue(store.reorderNote("n4", null, null))
         assertTrue(store.note("n4")!!.toFile)
-        for (id in listOf("made", "n3", "n1", "n4")) assertNull(id, store.note(id)!!.moveNotebook)
 
         // A note the server's changes list and its tree does not place: listed, never filed here.
         store.saveChanges(ChangesPage(5, notes = listOf(ChangedNote("n5", 5, "Stray", "", 50, seq = 9))))

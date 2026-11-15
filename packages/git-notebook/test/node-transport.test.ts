@@ -80,8 +80,10 @@ describe('NodeGitTransport', () => {
 
     const log = await a.log({ paths: ['notes/'] });
     expect(log.map((c) => c.message)).toEqual(['b', 'Penmoss: 1 note [skip ci]']);
-    expect(decoder.decode((await a.readAt(commit!, 'notes/a.md'))!)).toBe('a\n');
-    expect(await a.readAt(commit!, 'notes/none.md')).toBeNull();
+    // An old commit reads as History reads it where there is no readDir (at-commit.ts).
+    const old = await a.read(commit!, ['notes/a.md', 'notes/b.md']);
+    expect(decoder.decode(old.get('notes/a.md'))).toBe('a\n');
+    expect(old.has('notes/b.md')).toBe(false);
     await a.maintain();
   });
 
@@ -348,10 +350,10 @@ describe('reads beside a sync (#174 review)', () => {
     return { gitPath: wrapper, hold, held };
   }
 
-  it('History and Status read while a fetch runs: log, readAt, head and storeBytes never queue', async () => {
+  it('History and Status read while a fetch runs: log, readDir, head and storeBytes never queue', async () => {
     const sb = box();
     const remote = sb.bare('notes');
-    sb.colleague(remote.url).commit({ 'README.md': '# Notes\n' });
+    sb.colleague(remote.url).commit({ 'README.md': '# Notes\n', 'notes/a.md': 'a\n' });
     const slow = heldFetchGit(sb.dir);
     const t = new NodeGitTransport({
       gitDir: join(sb.dir, 'clone.git'),
@@ -364,7 +366,7 @@ describe('reads beside a sync (#174 review)', () => {
     });
     await t.init();
     const head = (await t.fetch())!;
-    await t.read(head, ['README.md']);
+    await t.read(head, ['README.md', 'notes/a.md']);
     // The next fetch is held inside git until the reads are done.
     writeFileSync(slow.hold, '');
     let fetched = false;
@@ -373,14 +375,15 @@ describe('reads beside a sync (#174 review)', () => {
     const started = Date.now();
     const [log, at, now, bytes] = await Promise.all([
       t.log({}),
-      t.readAt(head, 'README.md'),
+      t.readDir([head], 'notes/'),
       t.head(),
       t.storeBytes(),
     ]);
     expect(Date.now() - started).toBeLessThan(1500);
     expect(fetched).toBe(false);
     expect(log.map((commit) => commit.id)).toEqual([head]);
-    expect(new TextDecoder().decode(at!)).toBe('# Notes\n');
+    const blob = at.files.get(head)!.get('notes/a.md')!;
+    expect(new TextDecoder().decode(at.blobs.get(blob))).toBe('a\n');
     expect(now).toBe(head);
     expect(bytes).toBeGreaterThan(0);
     rmSync(slow.hold);

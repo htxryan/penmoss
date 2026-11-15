@@ -4,7 +4,6 @@
  * shrink), as the Mac's main process does for its page (`IpcGitTransport`). Bytes cross as bytes.
  */
 import {
-  GitRefused,
   refusalError,
   type CommitInfo,
   type GitTransport,
@@ -144,14 +143,6 @@ export class BridgeTransport implements GitTransport {
         },
       ];
     });
-  }
-
-  /**
-   * No caller reads a file at a commit, and the app no longer answers it (architecture review,
-   * editor-git §3): kept only while `GitTransport` still declares it; it goes with that member.
-   */
-  readAt(): Promise<Uint8Array | null> {
-    return Promise.reject(new GitRefused('unsupported', 'The app does not read files at a commit'));
   }
 
   async maintain(): Promise<void> {

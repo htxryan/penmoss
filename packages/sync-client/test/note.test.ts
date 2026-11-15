@@ -1,14 +1,6 @@
 import * as Y from '@y/y';
 import { describe, expect, it } from 'vitest';
-import {
-  initNote,
-  isoWithOffset,
-  readIdentity,
-  readNoteNotebook,
-  readTitle,
-  setNoteNotebook,
-  setTitle,
-} from '../src/note';
+import { initNote, isoWithOffset, readIdentity, readTitle, setTitle } from '../src/note';
 
 function sync(a: Y.Doc, b: Y.Doc) {
   Y.applyUpdate(b, Y.encodeStateAsUpdate(a, Y.encodeStateVector(b)));
@@ -68,38 +60,5 @@ describe('note layout', () => {
     expect(isoWithOffset(new Date(2026, 9, 22, 9, 5, 7))).toMatch(
       /^2026-10-22T09:05:07[+-]\d{2}:\d{2}$/,
     );
-  });
-});
-
-describe('the notebook a note records (T43, A766)', () => {
-  it('is set at creation, changed by a move, and a no-op when unchanged', () => {
-    const doc = new Y.Doc();
-    expect(readNoteNotebook(doc)).toBeNull();
-    initNote(doc, {
-      id: 'n1',
-      created: '2026-10-22T09:00:00-05:00',
-      kind: 'note',
-      notebook: 'work',
-    });
-    expect(readNoteNotebook(doc)).toBe('work');
-    expect(readIdentity(doc)).not.toHaveProperty('notebook');
-    let changes = 0;
-    doc.on('update', () => changes++);
-    setNoteNotebook(doc, 'work');
-    expect(changes).toBe(0);
-    setNoteNotebook(doc, 'default');
-    expect(changes).toBe(1);
-    expect(readNoteNotebook(doc)).toBe('default');
-  });
-
-  it('merges as one value: the later move wins on both replicas', () => {
-    const a = new Y.Doc();
-    initNote(a, { id: 'n1', created: '2026-10-22T09:00:00-05:00', kind: 'note', notebook: 'work' });
-    const b = new Y.Doc();
-    sync(a, b);
-    setNoteNotebook(a, 'default');
-    setNoteNotebook(b, 'home');
-    sync(a, b);
-    expect(readNoteNotebook(a)).toBe(readNoteNotebook(b));
   });
 });

@@ -53,7 +53,7 @@ Each tag can have a description you write on the [Tags page](/docs/organise/#the
 | `move_note`      | Moves a note to a folder, or the top level (`null`)                 | `id`\*, `folderId`\*                                                                          |
 | `trash_note`     | Moves a note to Trash                                               | `id`\*                                                                                        |
 | `restore_note`   | Takes a note out of Trash                                           | `id`\*                                                                                        |
-| `attach_file`    | Adds a file of at most 10 MB, sent as base64                        | `id`\*, `name`\*, `data`\*, `alt`, `heading`                                                  |
+| `attach_file`    | Adds a file of at most 50 MB, sent as base64                        | `id`\*, `name`\*, `data`\*, `alt`, `heading`                                                  |
 
 ### Edits and conflicts
 

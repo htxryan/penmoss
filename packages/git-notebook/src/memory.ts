@@ -277,10 +277,6 @@ export class MemoryTransport implements GitTransport {
     return Promise.resolve(out);
   }
 
-  readAt(commit: string, path: string): Promise<Uint8Array | null> {
-    return Promise.resolve(this.options.remote.read(commit, path));
-  }
-
   private commitOf(id: string): StoredCommit {
     const commit = this.options.remote.commits.get(id);
     if (!commit) throw new GitTransportError('git', `Unknown commit ${id}`);

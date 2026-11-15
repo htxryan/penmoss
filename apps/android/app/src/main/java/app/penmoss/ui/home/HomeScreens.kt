@@ -138,8 +138,11 @@ data class HomeUi(
     val shortcuts: HomeShortcuts = HomeShortcuts(),
     /** Sync has stopped (T42 on Android, AC12, A651): the status line is a link to what resolves it. */
     val stopped: Boolean = false,
-    /** The name on the heading over [folders] and under Quick Access's notes ([HOME_NOTEBOOK_NAME]). */
-    val defaultNotebook: String = HOME_NOTEBOOK_NAME,
+    /**
+     * The notebook's name, on the heading over [folders] and under Quick Access's notes: the git
+     * notebook's, as the web's sidebar names its section (A1538).
+     */
+    val notebook: String = "",
     /** The top bar's title: Penmoss, or a git notebook's name (T50 G7, A880). */
     val title: String = "Penmoss",
     /** The notes pinned to Quick Access (T51, A946); the section shows with none too, saying No Notes. */
@@ -149,9 +152,6 @@ data class HomeUi(
     /** Each Quick Access note's notebook, by note id, when Settings shows it (T53 item 10). */
     val quickAccessNotebooks: Map<String, String> = emptyMap(),
 )
-
-/** The name Home's notebook heading shows (A1463: the default notebook is always called Personal). */
-const val HOME_NOTEBOOK_NAME = "Personal"
 
 /** What Home's taps, presses and pulls do (A6). */
 class HomeActions(
@@ -498,9 +498,9 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                     item(key = "notebooksTitle", contentType = "title") { sectionTitle(section, Modifier.testTag("homeNotebooksTitle")) }
                                     count += 1 + 1 + ui.folders.size
                                     // The notebook's heading with its sync dot (T51, A933), as the web's
-                                    // Personal heading: its actions on a long press (T53 item 4).
+                                    // notebook heading: its actions on a long press (T53 item 4).
                                     item(key = "foldersTitle", contentType = "title") {
-                                        NotebookHeading(ui.defaultNotebook, personalDot, ui.sortMode, actions.onSort, actions.onNotebookNewNote, actions.onNewFolder, actions.onTrash)
+                                        NotebookHeading(ui.notebook, personalDot, ui.sortMode, actions.onSort, actions.onNotebookNewNote, actions.onNewFolder, actions.onTrash)
                                     }
                                     items(ui.folders, key = { "folder:${it.id}" }, contentType = { "folder" }) { folder ->
                                         FolderRowView(folder, actions.onFolder, onLongPress = actions.onFolderLongPress, enabled = !choosing)

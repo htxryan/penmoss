@@ -59,6 +59,12 @@ data class PenmossSnackbarVisuals(
     override val duration: SnackbarDuration = if (actionLabel == null) SnackbarDuration.Short else SnackbarDuration.Indefinite,
 ) : SnackbarVisuals
 
+/**
+ * What an action says once it is done (A1535): a short sentence and its tone, for the snackbar.
+ * Feedback in the app is a snackbar, never a Toast, wherever a screen can host one.
+ */
+data class Said(val text: String, val tone: SnackbarTone)
+
 /** Shows [message] with [tone]'s leading glyph, as `showSnackbar` does otherwise. */
 suspend fun SnackbarHostState.say(
     message: String,
