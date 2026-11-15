@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import { createHash } from 'node:crypto';
 import { expect, type Page, seeded, test } from './fixtures';
 import { LINE_END, VERSION_HISTORY } from './keys';
 import { asAgent, syncNow } from './support/sync';
@@ -159,4 +160,85 @@ test('View shows a version beside the note as it is now, and restores it', async
   await expect(body(page)).not.toContainText('compact rows');
   await expect(open).toBeFocused();
   expect(errors).toEqual([]);
+});
+
+/** Two small pictures: the one the note had, and the one an agent put in its place. */
+const RED = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGM4YWMDRwzEcQAREhQBbrqBkwAAAABJRU5ErkJggg==',
+  'base64',
+);
+const BLUE = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGOwiToBRwzEcQAwUhXhDEmnwQAAAABJRU5ErkJggg==',
+  'base64',
+);
+const sha = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
+
+test.describe('images', () => {
+  test.use({
+    seed: {
+      name: 'Notes',
+      images: [new Uint8Array(RED), new Uint8Array(BLUE)],
+      notes: [
+        { title: 'Diagram', markdown: `The plan:\n\n![Plan|120](attachments/${sha(RED)}.png)\n` },
+        // The notebook keeps a picture a note shows: this one keeps the blue one.
+        { title: 'Palette', markdown: `![Blue](attachments/${sha(BLUE)}.png)\n` },
+      ],
+    },
+  });
+
+  test('View shows each side’s images, a version’s as it had them', async ({
+    page,
+    host,
+    notebook,
+  }) => {
+    test.setTimeout(120_000);
+    const errors = collectErrors(page);
+    const { remote, noteIds } = seeded(notebook);
+    const id = noteIds[0]!;
+    // An agent puts the blue picture in the red one's place.
+    await asAgent(host, remote, `Claude ${RUN}`, (local) => {
+      local.edit(
+        id,
+        {
+          op: 'replace',
+          find: `attachments/${sha(RED)}.png`,
+          replace: `attachments/${sha(BLUE)}.png`,
+          all: false,
+          scope: 'markdown',
+        },
+        null,
+      );
+    });
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/notes/${id}`);
+    await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+    await page.getByTestId('note-tab-history').click();
+    const rows = panel(page).getByRole('list', { name: 'Versions' }).locator('.history-entry');
+    await expect(async () => {
+      await syncNow(page);
+      await expect(rows).toHaveCount(2, { timeout: 2_000 });
+    }).toPass({ timeout: 40_000 });
+
+    // The note as seeded, beside now: the red picture on the left, the blue one on the right.
+    await rows.last().click();
+    await panel(page).getByRole('button', { name: 'View This Version' }).click();
+    await expect(view(page)).toBeVisible();
+    const picture = (which: 'left' | 'right') => side(page, which).locator('img');
+    await expect(picture('left')).toHaveAttribute('data-src', `attachments/${sha(RED)}.png`);
+    await expect(picture('right')).toHaveAttribute('data-src', `attachments/${sha(BLUE)}.png`);
+    // Each loaded, as the editor loads them (this device's attachments), and drawn.
+    for (const which of ['left', 'right'] as const) {
+      await expect
+        .poll(() =>
+          picture(which).evaluate((img: HTMLImageElement) => (img.complete ? img.naturalWidth : 0)),
+        )
+        .toBe(4);
+      await expect(picture(which)).toHaveJSProperty('width', 120);
+    }
+    // Each in its side's tinted block: the picture is what changed.
+    await expect(side(page, 'left').locator('[data-change="removed"] img')).toHaveCount(1);
+    await expect(side(page, 'right').locator('[data-change="added"] img')).toHaveCount(1);
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/history-view-images.png` });
+    expect(errors).toEqual([]);
+  });
 });

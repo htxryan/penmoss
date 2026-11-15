@@ -11,7 +11,7 @@
  * this window's copy of the note (`HistorySource.current`).
  */
 import type { DocJson } from '@penmoss/core/links';
-import { renderBlocks } from '@penmoss/editor';
+import { renderBlocks, type ImageServices } from '@penmoss/editor';
 import { editorSchema } from '@penmoss/editor/schema';
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
@@ -30,6 +30,43 @@ import { AuthorMark } from './parts';
 import type { HistoryDetail, HistorySource, HistoryVersion } from './source';
 
 type Side = 'left' | 'right';
+
+/** Where the sides' images come from: the editor's own (this device's attachments, A1032). */
+export type ViewImages = Pick<ImageServices, 'resolve' | 'release'>;
+
+const WEB_IMAGE = /^https?:\/\//i;
+
+/**
+ * Shows the images in `host` (rendered with their path in `data-src`) as the editor does: a web
+ * address as it is, an attachment from this device's store or the notebook. An attachment's path
+ * names its bytes (`attachments/<sha256>.<ext>`), so a version's image is the one it had then.
+ * Returns the way to let them go.
+ */
+function showImages(host: HTMLElement, images: ViewImages | undefined): () => void {
+  const controller = new AbortController();
+  const held: string[] = [];
+  for (const img of host.querySelectorAll<HTMLImageElement>('img[data-src]')) {
+    const src = img.dataset['src'] ?? '';
+    if (WEB_IMAGE.test(src)) {
+      img.src = src;
+      continue;
+    }
+    if (!images) continue;
+    void images.resolve(src, controller.signal).then((url) => {
+      if (!url) return;
+      if (controller.signal.aborted) {
+        images.release?.(src);
+        return;
+      }
+      held.push(src);
+      img.src = url;
+    });
+  }
+  return () => {
+    controller.abort();
+    for (const src of held.splice(0)) images?.release?.(src);
+  };
+}
 
 /** What a tinted block is, for a screen reader: the tint says it to the eye. */
 const CHANGE_WORDS: Record<Side, string> = { left: 'Not in now: ', right: 'Added since: ' };
@@ -93,17 +130,20 @@ function SideBlocks({
   rows,
   side,
   label,
+  images,
 }: {
   rows: readonly CompareRow[];
   side: Side;
   label: string;
+  images: ViewImages | undefined;
 }) {
   const ref = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
     const host = ref.current;
     if (!host) return;
     host.replaceChildren(...rows.map((row) => cellOf(row, side, host.ownerDocument)));
-  }, [rows, side]);
+    return showImages(host, images);
+  }, [rows, side, images]);
   return (
     <article
       ref={ref}
@@ -129,6 +169,7 @@ export function VersionView({
   nowKey,
   synced,
   panel,
+  images,
   canRevert,
   busy,
   onRestore,
@@ -146,6 +187,8 @@ export function VersionView({
   synced: boolean;
   /** History's panel, beside the modal: it owns it (`aria-owns`), and Tab goes round both. */
   panel: HTMLElement | null;
+  /** The editor's images: each side shows its own, a version's as it had them. */
+  images?: ViewImages;
   canRevert: boolean;
   busy: boolean;
   onRestore: () => void;
@@ -356,8 +399,8 @@ export function VersionView({
         >
           {rows ? (
             <div className="note-body history-view-grid" onClick={keepLinks}>
-              <SideBlocks rows={rows} side="left" label={when} />
-              <SideBlocks rows={rows} side="right" label="Now" />
+              <SideBlocks rows={rows} side="left" label={when} images={images} />
+              <SideBlocks rows={rows} side="right" label="Now" images={images} />
             </div>
           ) : now === 'missing' ? (
             <p className="muted history-view-loading" role="status">

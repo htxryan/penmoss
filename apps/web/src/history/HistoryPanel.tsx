@@ -33,7 +33,7 @@ import {
   type HistorySummary,
   type HistoryVersion,
 } from './source';
-import { VersionView } from './VersionView';
+import { VersionView, type ViewImages } from './VersionView';
 
 type History = HistoryList;
 type Detail = HistoryDetail;
@@ -79,6 +79,14 @@ function loadFailure(caught: unknown, source: HistorySource): string {
  */
 export function HistoryPanel({ noteId }: { noteId: string }) {
   const notes = useNotes();
+  /** View's images, from this device's attachments, as the editor's (A1032). */
+  const images = useMemo<ViewImages>(
+    () => ({
+      resolve: (src, signal) => notes.attachments.url(src, signal),
+      release: (src) => notes.attachments.release(src),
+    }),
+    [notes],
+  );
   const scope = useSource();
   // A note is always a git notebook's (D49); without one in scope (a test's lone source) there
   // is no history to read.
@@ -491,6 +499,7 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
                 nowKey={history}
                 synced={!history.unversioned}
                 panel={viewPanel}
+                images={images}
                 canRevert={canRevert}
                 busy={busy}
                 onRestore={() => void restoreVersion(version).then(closeView)}

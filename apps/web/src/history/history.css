@@ -683,6 +683,12 @@ html:root[data-resizing='rows'] * {
   box-shadow: 0 0 0 0.35rem var(--history-tint);
 }
 
+/* An image keeps to its side, at the width the note gave it or less. */
+.history-view-side img {
+  max-width: 100%;
+  height: auto;
+}
+
 /* The title, as the note's own title field shows it over the text. */
 .note-body .history-view-side > .history-view-title {
   margin: 0 0 0.85em;

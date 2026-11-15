@@ -32,7 +32,7 @@ Your repository's git history keeps every version, so you can also read it with 
 
 ### View a version beside now
 
-**View** opens the version over the rest of the window, with History still beside it. The version is on the left and the note as it is now on the right, both read-only, laid out as the note is, and scrolling together. What differs is tinted on each side: on the left, what is not in the note now; on the right, what was added since. That is what **Restore** would change.
+**View** opens the version over the rest of the window, with History still beside it. The version is on the left and the note as it is now on the right, both read-only, laid out as the note is, pictures included, and scrolling together. What differs is tinted on each side: on the left, what is not in the note now; on the right, what was added since. That is what **Restore** would change.
 
 - Pick another version in History, or move with ↑ and ↓, and the left side shows that one instead.
 - **Restore**, **Revert** and **Copy** are at the top too. Restore and Revert close the view and show the result in the note.
