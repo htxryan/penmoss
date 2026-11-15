@@ -144,7 +144,9 @@ test('no account: the one MCP server Settings → Agents gives writes the notebo
   await expect(row).toHaveAttribute('data-path', `/settings/agents/${notebookId}`);
   await row.getByTestId('agents-notebook-fold').click();
   const agentsPage = page.getByTestId('agents-settings');
-  const notebookAgents = agentsPage.getByTestId('notebook-agents').filter({ hasText: name });
+  const notebookAgents = agentsPage.locator(
+    `[data-testid="notebook-agents"][data-notebook-id="${notebookId}"]`,
+  );
   const agents = notebookAgents.getByTestId('git-local-agents');
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const automatic = agents.locator(`[data-testid="git-local-agent"][data-name="${slug}-agent"]`);
