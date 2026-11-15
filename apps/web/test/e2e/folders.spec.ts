@@ -473,7 +473,8 @@ test('New Note on a notebook and a folder; New Folder Here and New Note Here bes
   await expect(folderMenu.getByRole('menuitem').nth(1)).toHaveText(/New Folder Here/);
   await page.keyboard.press('Escape');
 
-  // A note's menu starts with New Note Here and New Folder Here, beside it in its folder.
+  // A note's menu has New Note Here and New Folder Here, under its open group (A1571), beside it
+  // in its folder.
   await row(page, inside).click({ button: 'right' });
   await page.getByTestId('note-new-folder').click();
   const sibling = `Sibling ${RUN}`;

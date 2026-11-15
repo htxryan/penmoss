@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from './fixtures';
-import { noteAction } from './note-menu';
+import { menuLayout, noteAction } from './note-menu';
 
 // PEN-140 (web): note tabs in the main window. Notes open in the tab on screen, or in a new one
 // behind (⌘-click, a middle click, ⌘↩ in Search) or in front (⇧⌘-click); ⌃Tab, ⇧⌃Tab and ⌘2
@@ -122,22 +122,32 @@ test('notes open in the tab on screen or in new tabs, and the keys switch betwee
   expect(await titles(page)).toEqual([`*${BETA}`, GAMMA, LONG]);
   await shows(page, BETA);
 
-  // Open in New Tab from a tree row's menu, then ⇧⌘-click from Recent Notes: in front. The menu's
-  // open group leads with Open in New Tab and its ⌘-Click (a tab there too, A1570), above Open
-  // in New Window and its ⌥-Click (mockup ac2).
+  // Open in New Tab from a tree row's menu, then ⇧⌘-click from Recent Notes: in front. The menu
+  // leads with its open group, Open in New Tab and its ⌘-Click (a tab there too, A1570) above
+  // Open in New Window and its ⌥-Click (mockup ac2), then a separator, New Note Here and New
+  // Folder Here, the copy and pin, and the edits (A1571).
   await row(page, ALPHA).click({ button: 'right' });
   const rowMenu = page.getByRole('menu', { name: `“${ALPHA}”` });
   const openTab = rowMenu.getByTestId('note-open-tab');
-  const openWindow = rowMenu.getByRole('menuitem', { name: 'Open in New Window' });
+  const openWindow = rowMenu.getByTestId('note-open-window');
   await expect(openTab).toHaveAccessibleName('Open in New Tab');
   await expect(openTab.getByTestId('menu-click-hint')).toHaveText(/^(⌘|Ctrl)-Click$/);
   await expect(openWindow.getByTestId('menu-click-hint')).toHaveText(/^(⌥|Alt)-Click$/);
-  const items = await rowMenu
-    .getByRole('menuitem')
-    .evaluateAll((all) => all.map((each) => each.getAttribute('data-testid') ?? each.textContent));
-  expect(items.indexOf('note-open-tab')).toBe(
-    items.findIndex((each) => /Open in New Window/.test(each ?? '')) - 1,
-  );
+  await expect(openWindow).toHaveAccessibleName('Open in New Window');
+  expect((await menuLayout(rowMenu)).slice(0, 12)).toEqual([
+    'note-open-tab',
+    'note-open-window',
+    '—',
+    'note-new-note',
+    'note-new-folder',
+    '—',
+    'note-menu-copy-agent-reference',
+    'note-menu-quick-access',
+    '—',
+    'note-menu-rename',
+    'note-menu-duplicate',
+    'Move to Folder…',
+  ]);
   await page.waitForTimeout(2_000);
   await openTab.click();
   expect(await titles(page)).toEqual([`*${BETA}`, GAMMA, LONG, ALPHA]);

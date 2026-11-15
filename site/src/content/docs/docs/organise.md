@@ -85,7 +85,7 @@ Android shows tags as before and keeps their descriptions when it syncs; describ
 
 ## Quick Access
 
-Quick Access holds up to 20 notes you want at hand. **Pin to Quick Access** in a note's ⋯ menu adds it, or drag a note onto the section. Right-click one for **Remove from Quick Access** or **Open in New Tab**. On the Mac the [menu bar icon](/docs/install/mac/#the-menu-bar-icon) lists them too.
+Quick Access holds up to 20 notes you want at hand. **Pin to Quick Access** in a note's ⋯ menu adds it, or drag a note onto the section. Right-click one for **Open in New Tab**, **Open in New Window** or **Remove from Quick Access**. A note's right-click menu in your notebooks' tree starts with the same two Open items. On the Mac the [menu bar icon](/docs/install/mac/#the-menu-bar-icon) lists them too.
 
 Quick Access is not the same as a pinned [tab](/docs/install/mac/#tabs): Quick Access is one list for all your devices, and a pinned tab belongs to the window it is in. A tab's right-click menu has **Pin to Quick Access**, and dragging a tab onto Quick Access pins its note; neither pins the tab.
 

@@ -25,7 +25,7 @@ import { useQuickAccess } from '../notes/quick-access';
 import { MAX_QUICK_ACCESS } from '@penmoss/core/quick-access';
 import { ConfirmDialog } from '../shell/ConfirmDialog';
 import { ContextMenu } from '../shell/ContextMenu';
-import { ClickHint } from '../shell/ClickHint';
+import { OpenNoteItems } from '../shell/OpenNoteItems';
 import { MenuItem } from '../shell/Menu';
 import { trashAll, trashedNote } from '../trash/trashed';
 import { moveRequest } from './move-request';
@@ -865,6 +865,12 @@ function NoteMenuItems({
     <>
       {only ? (
         <>
+          {/* The open group leads, then New Note Here and New Folder Here (Ryan, A1571). */}
+          <OpenNoteItems
+            testIdPrefix="note"
+            onTab={onTab ? () => onTab(only) : null}
+            onWindow={() => onWindow(only)}
+          />
           <MenuItem icon="plus" data-testid="note-new-note" onClick={() => onNewNote(only)}>
             New Note Here
           </MenuItem>
@@ -876,25 +882,6 @@ function NoteMenuItems({
             New Folder Here
           </MenuItem>
           <div className="menu-sep" role="separator" />
-          {/* The open group: Open in New Tab leads it, above Open in New Window, each with its
-              click (PEN-140, mockup ac2): ⌘-click opens a tab here too (A1570). */}
-          {onTab ? (
-            <MenuItem
-              icon="plus"
-              data-testid="note-open-tab"
-              hint={<ClickHint modifier="mod" />}
-              onClick={() => onTab(only)}
-            >
-              Open in New Tab
-            </MenuItem>
-          ) : null}
-          <MenuItem
-            icon="windowNew"
-            hint={<ClickHint modifier="alt" />}
-            onClick={() => onWindow(only)}
-          >
-            Open in New Window
-          </MenuItem>
           <MenuItem
             icon="agentRef"
             onClick={() => onCopyReference(only)}

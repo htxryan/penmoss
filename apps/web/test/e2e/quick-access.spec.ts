@@ -1,7 +1,7 @@
 // Quick Access: pins, its menu, its order, and No notes.
 import { expect, type Page, test } from './fixtures';
 import { collectErrors, newNote } from './support/app';
-import { noteAction } from './note-menu';
+import { menuLayout, noteAction } from './note-menu';
 import { storedSetting } from './stored';
 
 const RUN = `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
@@ -39,12 +39,19 @@ test('Quick Access removes from its menu, reorders, and names the notebook when 
     page.getByTestId('quick-access').locator(`[data-note-id="${a}"] .sb-item-notebook`),
   ).toHaveText('Notes');
 
-  // Right-click: Remove from Quick Access, for both.
+  // Right-click: the open group leads, as on the tree's notes (A1571), then Remove from Quick
+  // Access, for both.
   for (const id of [a, b]) {
     await page
       .getByTestId('quick-access')
       .locator(`[data-note-id="${id}"]`)
       .click({ button: 'right' });
+    expect(await menuLayout(page.getByRole('menu'))).toEqual([
+      'quick-access-open-tab',
+      'quick-access-open-window',
+      '—',
+      'quick-access-remove',
+    ]);
     await page.getByTestId('quick-access-remove').click();
     await expect(page.locator(`[data-testid="quick-access"] [data-note-id="${id}"]`)).toHaveCount(
       0,
