@@ -1,11 +1,13 @@
 package app.penmoss.ui.home
 
 import android.graphics.Bitmap
+import android.view.View
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.captureToImage
@@ -113,15 +115,21 @@ class NotebookHeadingTest {
 
     private val drawnStates = listOf(DotState.SYNCED, DotState.OFFLINE, DotState.STOPPED)
     private val colours = mutableMapOf<DotState, Color>()
+    private var composeView: View? = null
 
     /**
      * The dot drawn for [state]. All three are drawn side by side once, so no capture waits on a
      * state change to recompose (a stale frame there made CI read the ring of the state before).
+     * The view is then drawn again before the capture: after an editable TagSheet earlier in the
+     * same Robolectric sandbox (OrganiseScreensTest), the capture rendered the view's display list
+     * from before the dots were composed, the background alone. Two test forks put the classes in
+     * that order (A1523).
      */
     private fun drawn(state: DotState): Pair<Bitmap, Color> {
         if (colours.isEmpty()) {
             compose.setContent {
                 PenmossTheme {
+                    composeView = LocalView.current
                     val scheme = MaterialTheme.colorScheme
                     colours[DotState.SYNCED] = scheme.primary
                     colours[DotState.OFFLINE] = scheme.onSurfaceVariant
@@ -129,6 +137,8 @@ class NotebookHeadingTest {
                     Row { drawnStates.forEach { SyncStateDot(SyncDot(it, "words")) } }
                 }
             }
+            compose.waitForIdle()
+            compose.runOnUiThread { composeView!!.invalidate() }
             compose.waitForIdle()
         }
         val node = compose.onAllNodesWithTag("syncDotMark", useUnmergedTree = true)[drawnStates.indexOf(state)]
