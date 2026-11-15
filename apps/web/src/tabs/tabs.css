@@ -334,10 +334,25 @@
   padding: 0.35rem;
 }
 
+/* The filter is the pickers' search field (.dlg-search): no box of its own, a rule under it. */
 .all-tabs-filter {
   box-sizing: border-box;
   width: 100%;
-  margin-bottom: 0.35rem;
+  height: 2.5rem;
+  margin: 0 0 0.35rem;
+  padding: 0 0.6rem;
+  border: 0;
+  border-bottom: 1px solid var(--pm-border);
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: var(--pm-fg);
+  font: inherit;
+  font-size: var(--pm-text-field);
+}
+
+.all-tabs-filter::placeholder {
+  color: var(--pm-muted);
 }
 
 .all-tabs-list {

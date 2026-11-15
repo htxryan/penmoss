@@ -597,6 +597,15 @@ test('many tabs scroll sideways, and All Tabs lists them (AC12)', async ({ page 
   await all.click();
   const list = page.getByTestId('all-tabs');
   await expect(list.getByTestId('all-tabs-item')).toHaveCount(14);
+  // Its filter is the pickers' search field: no box or focus outline, only a rule under it.
+  const filter = list.getByTestId('all-tabs-filter');
+  await expect(filter).toBeFocused();
+  expect(
+    await filter.evaluate((input) => {
+      const style = getComputedStyle(input);
+      return [style.borderTopWidth, style.outlineStyle, style.borderBottomWidth];
+    }),
+  ).toEqual(['0px', 'none', '1px']);
   // The pinned tab first, with its pin and a rule under the pinned group (ac12).
   const items = list.getByTestId('all-tabs-item');
   await expect(items.first()).toContainText(ALPHA);
