@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { createHash } from 'node:crypto';
+import { crc32, deflateSync } from 'node:zlib';
 import { expect, type Page, seeded, test } from './fixtures';
 import { LINE_END, VERSION_HISTORY } from './keys';
 import { asAgent, syncNow } from './support/sync';
@@ -208,15 +209,43 @@ const BLUE = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGOwiToBRwzEcQAwUhXhDEmnwQAAAABJRU5ErkJggg==',
   'base64',
 );
+/** A PNG of one colour, `width` × `height`, made here so the test needs no file. */
+function png(width: number, height: number, [r, g, b]: readonly number[]): Buffer {
+  const chunk = (type: string, data: Buffer) => {
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const named = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(named));
+    return Buffer.concat([length, named, crc]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header.set([8, 2, 0, 0, 0], 8);
+  const row = Buffer.alloc(1 + width * 3);
+  for (let x = 0; x < width; x++) row.set([r!, g!, b!], 1 + x * 3);
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', header),
+    chunk('IDAT', deflateSync(Buffer.concat(Array.from({ length: height }, () => row)))),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+/** A screenshot wider than a side, at no size of its own: the side's width draws it. */
+const WIDE = png(1600, 40, [40, 120, 60]);
 const sha = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 
 test.describe('images', () => {
   test.use({
     seed: {
       name: 'Notes',
-      images: [new Uint8Array(RED), new Uint8Array(BLUE)],
+      images: [new Uint8Array(RED), new Uint8Array(BLUE), new Uint8Array(WIDE)],
       notes: [
-        { title: 'Diagram', markdown: `The plan:\n\n![Plan|120](attachments/${sha(RED)}.png)\n` },
+        {
+          title: 'Diagram',
+          markdown: `The plan:\n\n![Plan|120](attachments/${sha(RED)}.png)\n\n![Wide](attachments/${sha(WIDE)}.png)\n`,
+        },
         // The notebook keeps a picture a note shows: this one keeps the blue one.
         { title: 'Palette', markdown: `![Blue](attachments/${sha(BLUE)}.png)\n` },
       ],
@@ -260,7 +289,9 @@ test.describe('images', () => {
     await rows.last().click();
     await panel(page).getByRole('button', { name: 'View This Version' }).click();
     await expect(view(page)).toBeVisible();
-    const picture = (which: 'left' | 'right') => side(page, which).locator('img');
+    const picture = (which: 'left' | 'right') => side(page, which).locator('img').first();
+    const wide = (which: 'left' | 'right') =>
+      side(page, which).locator(`img[data-src="attachments/${sha(WIDE)}.png"]`);
     await expect(picture('left')).toHaveAttribute('data-src', `attachments/${sha(RED)}.png`);
     await expect(picture('right')).toHaveAttribute('data-src', `attachments/${sha(BLUE)}.png`);
     // Each loaded, as the editor loads them (this device's attachments), and drawn.
@@ -276,6 +307,27 @@ test.describe('images', () => {
     await expect(side(page, 'left').locator('[data-change="removed"] img')).toHaveCount(1);
     await expect(side(page, 'right').locator('[data-change="added"] img')).toHaveCount(1);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/history-view-images.png` });
+    // Wrap Lines off: the pictures keep their size, the wide one its side's width, not its own.
+    const widths = () =>
+      Promise.all(
+        (['left', 'right'] as const).flatMap((which) =>
+          [picture(which), wide(which)].map((img) =>
+            img.evaluate((element) => Math.round(element.getBoundingClientRect().width)),
+          ),
+        ),
+      );
+    await expect
+      .poll(() => wide('right').evaluate((img: HTMLImageElement) => img.naturalWidth))
+      .toBe(1600);
+    const wrapped = await widths();
+    expect(wrapped[3]).toBeGreaterThan(200);
+    expect(wrapped[3]).toBeLessThan(800);
+    await view(page).getByTestId('history-view-wrap').click();
+    await expect(view(page).getByTestId('history-view-wrap')).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    expect(await widths()).toEqual(wrapped);
     expect(errors).toEqual([]);
   });
 });

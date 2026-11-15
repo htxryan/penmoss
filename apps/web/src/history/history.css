@@ -869,7 +869,9 @@ html:root[data-resizing='rows'] * {
 
 /*
  * Wrap Lines off: each block keeps its lines as written, and each side scrolls sideways on its
- * own, under its gutter, which stays put. The rows stay shared, so the sides stay level.
+ * own, under its gutter, which stays put. The rows stay shared, so the sides stay level. A block
+ * with a picture keeps its side's width, so the picture keeps its size (as wide as its block
+ * would make it as wide as the picture itself).
  */
 .history-view-grid[data-wrap='off'] .history-view-side {
   overflow-x: auto;
@@ -879,7 +881,9 @@ html:root[data-resizing='rows'] * {
 
 .history-view-grid[data-wrap='off'].note-body
   .ProseMirror.history-view-side
-  > :not(.history-view-line, .history-view-gap, .history-view-gutter) {
+  > :not(.history-view-line, .history-view-gap, .history-view-gutter):not(
+    :has(img, video, iframe, canvas)
+  ) {
   width: max-content;
   min-width: 100%;
   white-space: pre;
