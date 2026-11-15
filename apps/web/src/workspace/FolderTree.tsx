@@ -50,9 +50,8 @@ import { useFolderTree } from './tree';
 import { revealNotebooks } from '../shell/reveal-notebooks';
 import { showToast, type ToastTone } from '../toasts/toasts';
 import { NOTE_DRAG_TYPE } from '../notes/note-drag';
-import { useIsGitSource, useSource, useSourcesState } from '../sources/hooks';
+import { useSource, useSourcesState } from '../sources/hooks';
 import type { Source } from '../sources/registry';
-import { setNotebookOpen, useClosedNotebooks } from './notebooks';
 import {
   ancestors,
   dropZone,
@@ -72,15 +71,11 @@ import {
   type MovePlan,
   type NoteRow,
   type Row,
-  withoutClosed,
 } from './model';
 
 type Draft =
-  | { readonly mode: 'create'; readonly parentId: string | null; readonly notebook?: true }
+  | { readonly mode: 'create'; readonly parentId: string | null }
   | { readonly mode: 'rename'; readonly id: string };
-
-/** A notebook change that asks first (T43): turning it back into a folder, or deleting it. */
-type NotebookConfirm = { readonly kind: 'unflag' | 'delete'; readonly id: string };
 
 type DropHint = { readonly key: string; readonly zone: DropZone } | 'root' | null;
 
@@ -160,14 +155,8 @@ export function FolderTree({
   const renameKeys = useKeys('folder.rename');
   const deleteKeys = useKeys('folder.delete');
   const { snapshot, loaded } = useWorkspaceState();
-  // A git notebook is one notebook (T39 pass 3 review, A912): no notebooks inside it, so no Turn
-  // into notebook, New notebook or Close on this device there.
-  const git = useIsGitSource();
   const [expanded, setExpanded] = useExpanded();
-  const { tree: everything } = useFolderTree(true);
-  // Notebooks closed on this device leave the tree (T43, A752).
-  const closed = useClosedNotebooks();
-  const tree = useMemo(() => withoutClosed(everything, closed), [everything, closed]);
+  const { tree } = useFolderTree(true);
   const rows = useMemo(() => visibleRows(tree, expanded), [tree, expanded]);
   const current = currentFolder !== null && tree.byId.has(currentFolder) ? currentFolder : null;
 
@@ -176,7 +165,6 @@ export function FolderTree({
   /** The note renamed in place, from its menu's Rename (T62 item 13). */
   const [renamingNote, setRenamingNote] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState<NotebookConfirm | null>(null);
   const [dropHint, setDropHint] = useState<DropHint>(null);
   /** Selected notes (A570), in the order chosen; `anchor` is where a Shift range starts. */
   const [selection, setSelection] = useState<readonly string[]>([]);
@@ -212,8 +200,7 @@ export function FolderTree({
   const scrollToActive = useRef(false);
 
   // Notes the registry does not know yet only show at the top level (T43 review B2, A767): this
-  // window never files a note it did not make. A phone's new note may be on its way into a
-  // notebook; the app that made it files it, or the server does once its notebook is known.
+  // window never files a note it did not make; the app that made it files it.
 
   // Open the folders around the open note, once per note and place (so they can still be
   // closed, and open again when it moves), once the workspace says where it is, and bring
@@ -292,67 +279,8 @@ export function FolderTree({
     setDraft({ mode: 'create', parentId: current });
   }, [current, setExpanded]);
 
-  /** Asks to delete a folder: a notebook goes to Trash with its notes, so it says so (T43). */
-  const askDelete = useCallback(
-    (id: string) => {
-      if (tree.byId.get(id)?.notebook === true) setConfirming({ kind: 'delete', id });
-      else setDeleting(id);
-    },
-    [tree],
-  );
-
-  /** Turns a top-level folder into a notebook, or (after asking) back (T43, A756). */
-  const flagNotebook = (id: string, on: boolean) => {
-    const name = tree.byId.get(id)?.name ?? '';
-    try {
-      workspace.setNotebook(id, on);
-    } catch (error) {
-      if (!(error instanceof WorkspaceError)) throw error;
-      say(`${error.message}.`, 'error');
-      return;
-    }
-    say(
-      on
-        ? `“${name}” is a notebook. Choose where it is mirrored in Settings → Git Mirror.`
-        : `“${name}” is a folder again; its notes publish with the default notebook, and its own repository’s mirroring is paused.`,
-    );
-  };
-
-  /** Deletes a notebook: it and its notes go to Trash, never into the default notebook (A755). */
-  const deleteNotebook = (id: string) => {
-    const node = tree.byId.get(id);
-    if (!node) return;
-    const folderOf = new Map(snapshot.notes.map((note) => [note.id, note.folderId]));
-    let trashed: readonly string[];
-    try {
-      trashed = workspace.deleteFolder(id).trashed;
-    } catch (error) {
-      if (!(error instanceof WorkspaceError)) throw error;
-      say(`${error.message}.`, 'error');
-      return;
-    }
-    if (activeId !== null && trashed.includes(activeId)) navigate('/');
-    if (current === id) onCurrentFolderChange(null);
-    for (const noteId of trashed) {
-      void notes.deleteNote(noteId, { folderId: folderOf.get(noteId) ?? null });
-    }
-    say(
-      `Moved the notebook “${node.name}” and ${trashed.length === 1 ? 'its note' : `its ${trashed.length} notes`} to Trash.`,
-    );
-  };
-
-  /** Closes a notebook on this device (A752): it leaves the sidebar, search and Recent here. */
-  const closeNotebook = (id: string) => {
-    const name = tree.byId.get(id)?.name ?? '';
-    if (
-      current === id ||
-      (current !== null && ancestors(tree, { kind: 'folder', id: current }).includes(id))
-    ) {
-      onCurrentFolderChange(null);
-    }
-    setNotebookOpen(id, false);
-    say(`Closed “${name}” on this device. Open it again in Settings → Notebooks.`);
-  };
+  /** Asks to delete a folder (ConfirmDelete). */
+  const askDelete = useCallback((id: string) => setDeleting(id), []);
 
   // Commands (T20): ⌘⌥⇧N (Alt+Shift+N off a Mac, A90) makes a folder in the current folder; the rest have no keys.
   // With several sources side by side, the tree in use answers; the others yield (A862).
@@ -426,9 +354,7 @@ export function FolderTree({
     try {
       if (active.mode === 'create') {
         if (!trimmed) return;
-        const id = active.notebook
-          ? workspace.createNotebook(trimmed)
-          : workspace.createFolder(trimmed, active.parentId);
+        const id = workspace.createFolder(trimmed, active.parentId);
         onCurrentFolderChange(id);
         focusRow(rowKey({ kind: 'folder', id }));
       } else {
@@ -549,7 +475,7 @@ export function FolderTree({
     setMenu(null);
     onCurrentFolderChange(id);
     if (id !== null) setExpanded([id], true);
-    const noteId = notes.create(new Date(), { folderId: id });
+    const noteId = notes.create(new Date());
     workspace.registerNote(noteId, id);
     navigate(notePath(noteId));
   };
@@ -580,14 +506,14 @@ export function FolderTree({
 
   /** Every note's title in this notebook, for Duplicate's "(copy N)" (T68, #227). */
   const allTitles = () => [
-    ...everything.notes.map((note) => note.title),
-    ...[...everything.byId.values()].flatMap((folder) => folder.notes.map((note) => note.title)),
+    ...tree.notes.map((note) => note.title),
+    ...[...tree.byId.values()].flatMap((folder) => folder.notes.map((note) => note.title)),
   ];
 
   /** Duplicate (T68, #227): the copy just after the note, opened. */
   const duplicate = (id: string) => {
     setMenu(null);
-    void duplicateNote({ notes, workspace }, everything, id, allTitles()).then((copyId) => {
+    void duplicateNote({ notes, workspace }, tree, id, allTitles()).then((copyId) => {
       if (copyId === null) {
         say('That note has not loaded on this Mac yet, so it was not duplicated.', 'error');
         return;
@@ -623,7 +549,7 @@ export function FolderTree({
     void transfer({
       from: { notes, workspace },
       to: { notes: target.notes, workspace: target.workspace },
-      tree: everything,
+      tree,
       items: job.items,
       folderId,
       mode: job.mode,
@@ -926,9 +852,9 @@ export function FolderTree({
         style={depth(level)}
       >
         <span className="twisty" data-empty="" aria-hidden="true" />
-        {draft.notebook ? <NotebookIcon /> : <FolderIcon />}
+        <FolderIcon />
         <NameInput
-          label={draft.notebook ? 'New notebook name' : 'New folder name'}
+          label="New folder name"
           initial=""
           onCommit={commitDraft}
           onCancel={cancelDraft}
@@ -944,11 +870,9 @@ export function FolderTree({
         <div
           key={row.key}
           {...common(row)}
-          className={row.notebook ? 'tree-row folder-row notebook-row' : 'tree-row folder-row'}
-          data-notebook={row.notebook ? '' : undefined}
-          data-section-start={row.sectionStart ? '' : undefined}
+          className="tree-row folder-row"
           data-picked={pickedFolders.includes(row.id) ? '' : undefined}
-          aria-label={row.notebook ? `${row.name} (notebook)` : row.name}
+          aria-label={row.name}
           aria-expanded={row.expanded}
           aria-selected={row.id === current}
           aria-keyshortcuts={folderKeys || undefined}
@@ -956,10 +880,10 @@ export function FolderTree({
           <span className="twisty" data-open={row.expanded} aria-hidden="true">
             <ChevronIcon />
           </span>
-          {row.notebook ? <NotebookIcon /> : <FolderIcon />}
+          <FolderIcon />
           {renaming ? (
             <NameInput
-              label={`Rename ${row.notebook ? 'notebook' : 'folder'} ${row.name}`}
+              label={`Rename folder ${row.name}`}
               initial={row.name}
               onCommit={commitDraft}
               onCancel={cancelDraft}
@@ -1095,7 +1019,7 @@ export function FolderTree({
                     menu.target.items.filter((item) => item.kind === 'note').length,
                     menu.target.items.filter((item) => item.kind === 'folder').length,
                   )
-                : `${tree.byId.get(menu.target.id)?.notebook ? 'Notebook' : 'Folder'} ${tree.byId.get(menu.target.id)?.name ?? ''}`
+                : `Folder ${tree.byId.get(menu.target.id)?.name ?? ''}`
           }
           caption={
             // Several notes: named, as some may be scrolled out of sight (review S1).
@@ -1162,19 +1086,10 @@ export function FolderTree({
           ) : (
             <FolderMenuItems
               id={menu.target.id}
-              kind={
-                tree.byId.get(menu.target.id)?.notebook === true
-                  ? 'notebook'
-                  : tree.byId.get(menu.target.id)?.effectiveParentId === null && !git
-                    ? 'top'
-                    : 'folder'
-              }
               onNewNote={newNoteIn}
               onNewFolder={newFolderIn}
               onTransfer={
-                others.length > 0 && tree.byId.get(menu.target.id)?.notebook !== true
-                  ? (id, mode) => askTransfer([{ kind: 'folder', id }], mode)
-                  : null
+                others.length > 0 ? (id, mode) => askTransfer([{ kind: 'folder', id }], mode) : null
               }
               onRename={(id) => {
                 setMenu(null);
@@ -1184,19 +1099,6 @@ export function FolderTree({
                 setMenu(null);
                 askDelete(id);
               }}
-              onNotebook={(id, on) => {
-                closeMenu();
-                if (on) flagNotebook(id, true);
-                else setConfirming({ kind: 'unflag', id });
-              }}
-              onCloseNotebook={
-                git
-                  ? null
-                  : (id) => {
-                      setMenu(null);
-                      closeNotebook(id);
-                    }
-              }
             />
           )}
         </ContextMenu>
@@ -1219,24 +1121,6 @@ export function FolderTree({
           onClose={() => {
             setTransferring(null);
             focusRow(transferring.rowKey);
-          }}
-        />
-      ) : null}
-      {confirming && tree.byId.get(confirming.id) ? (
-        <ConfirmNotebook
-          kind={confirming.kind}
-          folder={tree.byId.get(confirming.id)!}
-          onCancel={() => {
-            setConfirming(null);
-            focusRow(rowKey({ kind: 'folder', id: confirming.id }));
-          }}
-          onConfirm={() => {
-            setConfirming(null);
-            if (confirming.kind === 'delete') deleteNotebook(confirming.id);
-            else {
-              flagNotebook(confirming.id, false);
-              focusRow(rowKey({ kind: 'folder', id: confirming.id }));
-            }
           }}
         />
       ) : null}
@@ -1439,23 +1323,17 @@ function NoteMenuItems({
 
 /**
  * The context menu's items for a folder (A570): New Note Here (T52) and New Folder Here (T53),
- * the row's Rename and Delete,
- * and for a top-level folder Turn into notebook, or for a notebook Close and Turn back into a
- * folder (T43, A756).
+ * the row's Rename and Delete.
  */
 function FolderMenuItems({
   id,
-  kind,
   onNewNote,
   onNewFolder,
   onTransfer,
   onRename,
   onDelete,
-  onNotebook,
-  onCloseNotebook,
 }: {
   id: string;
-  kind: 'folder' | 'top' | 'notebook';
   onNewNote: (id: string) => void;
   /** A folder inside it (T53 item 12). */
   onNewFolder: (id: string) => void;
@@ -1463,9 +1341,6 @@ function FolderMenuItems({
   onTransfer: ((id: string, mode: 'move' | 'copy') => void) | null;
   onRename: (id: string) => void;
   onDelete: (id: string) => void;
-  onNotebook: (id: string, on: boolean) => void;
-  /** Null in a git notebook, which has no Settings → Notebooks to open it again (A912). */
-  onCloseNotebook: ((id: string) => void) | null;
 }) {
   return (
     <>
@@ -1500,51 +1375,6 @@ function FolderMenuItems({
         </>
       ) : null}
       <div className="menu-sep" role="separator" />
-      {kind === 'top' ? (
-        <>
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            className="menu-item"
-            data-ui="item"
-            onClick={() => onNotebook(id, true)}
-          >
-            <Icon name="notebook" />
-            <span className="menu-label">Turn into Notebook</span>
-          </button>
-          <div className="menu-sep" role="separator" />
-        </>
-      ) : null}
-      {kind === 'notebook' ? (
-        <>
-          {onCloseNotebook ? (
-            <button
-              type="button"
-              role="menuitem"
-              tabIndex={-1}
-              className="menu-item"
-              data-ui="item"
-              onClick={() => onCloseNotebook(id)}
-            >
-              <Icon name="close" />
-              <span className="menu-label">Close on This Device</span>
-            </button>
-          ) : null}
-          <button
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            className="menu-item"
-            data-ui="item"
-            onClick={() => onNotebook(id, false)}
-          >
-            <Icon name="folder" />
-            <span className="menu-label">Turn Back into a Folder…</span>
-          </button>
-          <div className="menu-sep" role="separator" />
-        </>
-      ) : null}
       <button
         type="button"
         role="menuitem"
@@ -1567,9 +1397,7 @@ function FolderMenuItems({
         onClick={() => onDelete(id)}
       >
         <Icon name="trash" />
-        <span className="menu-label">
-          {kind === 'notebook' ? 'Delete Notebook…' : 'Delete Folder…'}
-        </span>
+        <span className="menu-label">Delete Folder…</span>
       </button>
     </>
   );
@@ -1686,72 +1514,7 @@ function ConfirmDelete({
   );
 }
 
-/** Asks before a notebook goes back to being a folder, or to Trash with its notes (T43). */
-function ConfirmNotebook({
-  kind,
-  folder,
-  onConfirm,
-  onCancel,
-}: {
-  kind: 'unflag' | 'delete';
-  folder: FolderNode;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const dialog = ref.current;
-    if (dialog && !dialog.open) dialog.showModal();
-  }, []);
-  const notes = countNotes(folder);
-  const deleting = kind === 'delete';
-  return (
-    <dialog
-      ref={ref}
-      className="confirm"
-      aria-labelledby="confirm-notebook-title"
-      data-testid="confirm-notebook"
-      onCancel={(event) => {
-        event.preventDefault();
-        onCancel();
-      }}
-    >
-      <form
-        method="dialog"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onConfirm();
-        }}
-      >
-        <h2 id="confirm-notebook-title">
-          {deleting
-            ? `Delete the notebook “${folder.name}”?`
-            : `Turn “${folder.name}” back into a folder?`}
-        </h2>
-        <p>
-          {deleting
-            ? `${notes === 0 ? 'It holds no notes.' : notes === 1 ? 'Its note goes to Trash with it.' : `Its ${notes} notes go to Trash with it.`} You can restore the notebook, notes and all, from Trash for 30 days.`
-            : `Its ${notes === 1 ? 'note' : `${notes} notes`} will publish with the default notebook’s git mirror. Its own repository keeps every file: its mirroring pauses (Settings → Git Mirror), and nothing there is deleted.`}
-        </p>
-        <div className="confirm-actions">
-          <button type="button" className="btn" data-ui="dismiss" onClick={onCancel} autoFocus>
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className={deleting ? 'btn danger-fill' : 'btn primary'}
-            data-ui="submit"
-          >
-            {deleting ? 'Delete Notebook' : 'Turn into a Folder'}
-          </button>
-        </div>
-      </form>
-    </dialog>
-  );
-}
-
 const FolderIcon = () => <Icon name="folder" className="tree-icon" />;
-const NotebookIcon = () => <Icon name="notebook" className="tree-icon" />;
 const NoteIcon = () => <Icon name="file" className="tree-icon" />;
 const ChevronIcon = () => <Icon name="chevR" size={12} className="chevron" />;
 const PlusIcon = () => <Icon name="plus" size={14} />;

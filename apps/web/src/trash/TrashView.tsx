@@ -1,5 +1,5 @@
 import { Icon } from '@penmoss/ui/icons';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNoteList, useNotes } from '../notes/hooks';
 import { RestoreNeedsFolder, TRASH_DAYS, trashDaysLeft, type TrashEntry } from '../notes/service';
 import { useIsGitSource } from '../sources/hooks';
@@ -8,7 +8,6 @@ import { FolderPicker } from '../workspace/FolderPicker';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import { folderChoices } from '../workspace/model';
 import { useFolderTree } from '../workspace/tree';
-import { restoredMessage } from './deleted-folders';
 import { DeletedFolders } from './DeletedFolders';
 import { deletedForGoodText } from './trashed';
 
@@ -28,22 +27,12 @@ export function TrashView() {
   const { snapshot } = useWorkspaceState();
   const workspace = useWorkspace();
   const foldersInTrash = workspace.folderTrash().length;
-  const [listed, setEntries] = useState<TrashEntry[]>(() => notes.localTrash());
-  // A deleted notebook's notes come back with it (T43, A755): Trash lists the notebook only.
-  // Read from the document again whenever it changes (`snapshot`).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const withNotebook = useMemo(() => workspace.notebookTrashNotes(), [workspace, snapshot]);
-  const entries = useMemo(
-    () =>
-      withNotebook.size === 0 ? listed : listed.filter((entry) => !withNotebook.has(entry.id)),
-    [listed, withNotebook],
-  );
+  const [entries, setEntries] = useState<TrashEntry[]>(() => notes.localTrash());
   const [confirming, setConfirming] = useState<string | null>(null);
   // A note with no safe place to come back to (T43 review B2): the person chooses.
   const [needsPlace, setNeedsPlace] = useState<{
     readonly id: string;
     readonly title: string;
-    readonly notebook: { readonly id: string; readonly name: string } | null;
   } | null>(null);
   const [picking, setPicking] = useState<{ readonly id: string; readonly title: string } | null>(
     null,
@@ -82,7 +71,7 @@ export function TrashView() {
     } catch (error) {
       if (error instanceof RestoreNeedsFolder) {
         const title = entries.find((entry) => entry.id === id)?.title || 'Untitled';
-        setNeedsPlace({ id, title, notebook: error.notebook });
+        setNeedsPlace({ id, title });
       }
       setStatus(error instanceof Error ? error.message : String(error));
     } finally {
@@ -173,32 +162,6 @@ export function TrashView() {
                     aria-label={`Where to restore ${title}`}
                     data-testid="restore-needs-folder"
                   >
-                    {needsPlace.notebook &&
-                    workspace
-                      .folderTrash()
-                      .some((folder) => folder.id === needsPlace.notebook!.id) ? (
-                      <button
-                        type="button"
-                        className="btn"
-                        data-ui="item"
-                        disabled={busy !== null}
-                        onClick={() =>
-                          void run(entry.id, async () => {
-                            const notebook = needsPlace.notebook!;
-                            const result = workspace.restoreFolder(notebook.id);
-                            for (const id of result.filed) {
-                              void notes.restoreFromTrash(id).catch(() => undefined);
-                            }
-                            setNeedsPlace(null);
-                            await notes.restoreFromTrash(entry.id);
-                            return `${restoredMessage(notebook.name, result)} Restored “${title}”.`;
-                          })
-                        }
-                      >
-                        <Icon name="undo" />
-                        Restore the Notebook “{needsPlace.notebook.name}”
-                      </button>
-                    ) : null}
                     <button
                       type="button"
                       className="btn"

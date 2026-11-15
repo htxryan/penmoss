@@ -1,6 +1,6 @@
 import { isUlid } from '@penmoss/core/ids';
 import { periodicNoteId } from '@penmoss/core/periodic';
-import { readNoteNotebook, readIdentity, readTitle, setTitle } from '@penmoss/sync-client/note';
+import { readIdentity, readTitle, setTitle } from '@penmoss/sync-client/note';
 import { frontmatterTags, setFrontmatterTag } from '@penmoss/sync-client/tags';
 import { createThread } from '@penmoss/sync-client/comments';
 import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
@@ -721,12 +721,9 @@ describe('Notes: offline-first replica (T8)', () => {
     expect(notes.list().map((entry) => entry.id)).toContain(id);
   });
 
-  it('asks where a note goes when its notebook is in Trash, and files it where the person chose (T43 review B2)', async () => {
+  it('asks where a note goes when Trash forgets its folder, and files it where the person chose (T43 review B2)', async () => {
     const restore = vi.fn();
-    const restorePlace = vi.fn(() => ({
-      refused: true as const,
-      notebook: { id: 'nb-1', name: 'Work' },
-    }));
+    const restorePlace = vi.fn(() => ({ refused: true as const }));
     const registry = { unregister: vi.fn(), folderOf: () => 'folder-7', restore, restorePlace };
     const { notes, store } = setup({ registry });
     await notes.start();
@@ -737,7 +734,10 @@ describe('Notes: offline-first replica (T8)', () => {
 
     const refused = await notes.restoreFromTrash(id).catch((error: unknown) => error);
     expect(refused).toBeInstanceOf(RestoreNeedsFolder);
-    expect(refused).toMatchObject({ noteId: id, notebook: { id: 'nb-1', name: 'Work' } });
+    expect(refused).toMatchObject({
+      noteId: id,
+      message: 'The folder the note was in is gone. Choose a folder for it.',
+    });
     expect(restorePlace).toHaveBeenCalledWith(id, 'folder-7');
     // Nothing moved: still in Trash, filed nowhere.
     expect(restore).not.toHaveBeenCalled();
@@ -748,44 +748,6 @@ describe('Notes: offline-first replica (T8)', () => {
     expect(store.records.get(id)?.deleted).toBeUndefined();
   });
 
-  it('records each note’s notebook in its own document: at creation, and on a move or a chosen restore (A766)', async () => {
-    const restore = vi.fn();
-    const notebookOf = (folderId: string | null) =>
-      folderId === 'work-folder' ? 'work' : folderId === 'gone' ? null : 'default';
-    const registry = { unregister: vi.fn(), folderOf: () => 'work-folder', restore, notebookOf };
-    const { notes, store } = setup({ registry });
-    await notes.start();
-    const recorded = (id: string) => {
-      const replica = createYjs14Replica();
-      replica.applyUpdate(store.records.get(id)!.update);
-      return readNoteNotebook(replica.doc);
-    };
-    const inWork = notes.create(new Date('2026-10-22T15:00:00Z'), { folderId: 'work-folder' });
-    const atTop = notes.create(new Date('2026-10-22T15:00:01Z'), { folderId: null });
-    const capture = notes.create(new Date('2026-10-22T15:00:02Z'), { notebook: 'default' });
-    const unknown = notes.create(new Date('2026-10-22T15:00:03Z'), { folderId: 'gone' });
-    const unplaced = notes.create(new Date('2026-10-22T15:00:04Z'));
-    for (const id of [inWork, atTop, capture, unknown, unplaced]) await notes.settled(id);
-    expect(recorded(inWork)).toBe('work');
-    expect(recorded(atTop)).toBe('default');
-    expect(recorded(capture)).toBe('default');
-    // Where it goes isn't known: no record, so every mirror holds it until one is written.
-    expect(recorded(unknown)).toBeNull();
-    expect(recorded(unplaced)).toBeNull();
-
-    await notes.recordNotebook(atTop, 'work');
-    expect(recorded(atTop)).toBe('work');
-    expect(store.records.get(atTop)?.unsynced).toBe(true);
-
-    await notes.deleteNote(inWork);
-    await notes.refreshLocal();
-    await notes.restoreFromTrash(inWork, { folderId: null });
-    expect(restore).toHaveBeenCalledWith(inWork, null);
-    expect(recorded(inWork)).toBe('default');
-  });
-});
-
-describe('Notes: a git notebook, with no server (A860)', () => {
   it('asks no server: create, open, edit, Trash, rename a tag, journal and purge', async () => {
     const fetch = vi.spyOn(globalThis, 'fetch');
     const git = gitBackend();

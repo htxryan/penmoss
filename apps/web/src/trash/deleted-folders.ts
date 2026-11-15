@@ -17,22 +17,15 @@ export function restoredMessage(
     restored: boolean;
     parentGone: boolean;
     parentId?: string | null;
-    refused?: { readonly notebook: string | null };
+    refused?: true;
     notes: number;
     skipped: readonly string[];
-    notebook?: boolean;
-    filed?: readonly string[];
   },
 ): string {
   if (result.refused) {
-    return `“${name}” was in a notebook that is in Trash: restore the notebook first.`;
+    return `“${name}” can’t be restored: the folder it was in is gone, and Trash no longer knows where that was.`;
   }
   if (!result.restored) return `“${name}” is not in Trash any more.`;
-  if (result.notebook) {
-    // A notebook comes back at the top level with its notes (T43, A755).
-    const filed = result.filed?.length ?? 0;
-    return `Restored the notebook “${name}” with ${count(filed, 'note', 'notes')}.`;
-  }
   const above = result.parentGone && result.parentId != null;
   const parts = [
     `Restored “${name}”${result.parentGone ? (above ? ' in the folder above' : ' at the top level') : ''}.`,

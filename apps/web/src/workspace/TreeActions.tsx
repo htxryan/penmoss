@@ -1,15 +1,14 @@
 import { SORT_MODES } from '@penmoss/core/workspace';
 import { ariaKeyShortcuts } from '@penmoss/editor/keys';
 import { Icon } from '@penmoss/ui/icons';
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useCommands, useKeys } from '../commands/hooks';
 import { useNotes } from '../notes/hooks';
 import { navigate, notePath } from '../router';
 import { ContextMenu } from '../shell/ContextMenu';
 import { withKeys } from '../shell/drawer';
 import { useWorkspace } from './hooks';
-import { SORT_LABELS, sortModeOf, withoutClosed } from './model';
-import { useClosedNotebooks } from './notebooks';
+import { SORT_LABELS, sortModeOf } from './model';
 import { useFolderTree } from './tree';
 
 /** A notebook's Trash: where it is, its test id, and whether it is the page showing. */
@@ -53,9 +52,7 @@ export function TreeActions({
   const workspace = useWorkspace();
   const commands = useCommands();
   const newFolderKeys = useKeys('folder.new');
-  const { tree: everything } = useFolderTree(true);
-  const closed = useClosedNotebooks();
-  const tree = useMemo(() => withoutClosed(everything, closed), [everything, closed]);
+  const { tree } = useFolderTree(true);
   const current = currentFolder !== null && tree.byId.has(currentFolder) ? currentFolder : null;
   const currentName = current === null ? 'the Top Level' : (tree.byId.get(current)?.name ?? '');
   const sortMode = sortModeOf(tree, current);
@@ -81,7 +78,7 @@ export function TreeActions({
   /** A new note at the notebook's top level, opened; new notes go there next. */
   const newNote = () => {
     onCurrentFolderChange(null);
-    const id = notes.create(new Date(), { folderId: null });
+    const id = notes.create(new Date());
     workspace.registerNote(id, null);
     navigate(notePath(id));
   };

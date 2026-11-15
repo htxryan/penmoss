@@ -1,9 +1,8 @@
 import { Icon } from '@penmoss/ui/icons';
 import { normaliseTag, tagTree, type TagNode } from '@penmoss/core/tags';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { useNotes } from '../notes/hooks';
+import { useNoteList, useNotes } from '../notes/hooks';
 import { useStoredCollapse } from '../shell/collapsed';
-import { useOpenNoteList } from '../workspace/notebooks';
 import { useShowTag } from '../search/show-tag';
 import { SectionHead } from '../shell/SectionHead';
 import { linkHandler } from '../router';
@@ -20,8 +19,7 @@ export const TAGS_COLLAPSED_KEY = 'penmoss.sidebar.tags';
  * changes in.
  */
 export function TagPane({ tools }: { readonly tools?: ReactNode } = {}) {
-  // Tags of the open notebooks only (T43, A752).
-  const list = useOpenNoteList();
+  const list = useNoteList();
   const showTag = useShowTag();
   const tree = useMemo(() => tagTree(list.map((entry) => entry.tags)), [list]);
   const known = useMemo(() => new Set(list.flatMap((entry) => entry.tags)), [list]);

@@ -288,9 +288,7 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
       description:
         'List the folders and notes in a folder, in the order the app shows them. ' +
         'Give folderId, or path (folder names from the top, e.g. "Journal/2026"), or neither for the top level. ' +
-        'Folder ids are what create_note, move_note and search_notes take. ' +
-        'Every folder and note names its notebook (a top-level folder whose notes Ryan mirrors to a git repository of its own; "default" is the rest). ' +
-        "At the top level, notebooks have isNotebook: true. You may work inside a notebook, but not create, rename or delete one, or move notes or folders between notebooks: those are Ryan's.",
+        'Folder ids are what create_note, move_note and search_notes take.',
       inputSchema: object({
         folderId: { type: 'string', maxLength: 80, description: 'The folder id.' },
         path: {

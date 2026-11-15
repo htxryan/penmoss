@@ -7,7 +7,6 @@
 import {
   buildTree,
   effectiveParents,
-  openNotebookFilter,
   type FolderRecord,
   type SortMode,
 } from '@penmoss/core/workspace';
@@ -20,8 +19,6 @@ export interface GraphSource {
   readonly folders: readonly FolderRecord[];
   readonly registry: readonly { readonly id: string; readonly folderId: string | null }[];
   readonly rootSortMode: SortMode;
-  /** Notebooks closed on this device (T43, A752): their notes, links and groups leave the graph. */
-  readonly closed?: ReadonlySet<string>;
 }
 
 /** Each folder's top-level ancestor (itself at the top level). */
@@ -48,12 +45,7 @@ export function graphInput(
 ): { notes: GraphNoteInput[]; groups: GraphGroup[] } {
   const top = topLevelOf(source.folders);
   const folderOf = new Map(source.registry.map((entry) => [entry.id, entry.folderId]));
-  const closed = source.closed ?? new Set<string>();
-  const inOpen = openNotebookFilter(source.folders, closed);
-  const shown =
-    closed.size === 0 ? local : local.filter((note) => inOpen(folderOf.get(note.id) ?? null));
-  const ids = new Set(shown.map((note) => note.id));
-  const notes = shown.map((note) => {
+  const notes = local.map((note) => {
     const folder = folderOf.get(note.id) ?? null;
     return {
       id: note.id,
@@ -61,21 +53,13 @@ export function graphInput(
       group: (folder !== null ? top.get(folder) : null) ?? null,
       // Tags arrive with T18; the graph's tag filter and tag nodes appear once notes have them.
       tags: [],
-      links: [
-        ...new Set(
-          note.links.flatMap((link) =>
-            link.noteId && (closed.size === 0 || ids.has(link.noteId)) ? [link.noteId] : [],
-          ),
-        ),
-      ],
+      links: [...new Set(note.links.flatMap((link) => (link.noteId ? [link.noteId] : [])))],
     };
   });
   // Folders in sidebar order, then the top level.
   const tree = buildTree(source.folders, [], source.rootSortMode);
   const groups: GraphGroup[] = [
-    ...tree.folders
-      .filter((folder) => !closed.has(folder.id))
-      .map((folder) => ({ id: folder.id, name: folder.name })),
+    ...tree.folders.map((folder) => ({ id: folder.id, name: folder.name })),
     { id: null, name: 'Top level' },
   ];
   return { notes, groups };

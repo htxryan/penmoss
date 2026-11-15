@@ -13,7 +13,6 @@ import { useId, useMemo, useState } from 'react';
 import { useNoteList, useNotes } from '../notes/hooks';
 import { displayTitle } from '../notes/list';
 import { navigate, notePath } from '../router';
-import { useClosedNotebooks } from '../workspace/notebooks';
 import { useWorkspaceState } from '../workspace/hooks';
 import { GraphInputCache } from './data';
 import { graphPath } from './path';
@@ -45,7 +44,6 @@ export function NoteGraph({ noteId }: { readonly noteId: string }) {
   // The list changes whenever a note's title or content does; links are read with it.
   const list = useNoteList();
   const { snapshot } = useWorkspaceState();
-  const closed = useClosedNotebooks();
   const [cache] = useState(() => new GraphInputCache());
   const [depth, setDepth] = useState(readDepth);
   const depthId = useId();
@@ -55,11 +53,10 @@ export function NoteGraph({ noteId }: { readonly noteId: string }) {
         folders: snapshot.folders,
         registry: snapshot.notes,
         rootSortMode: snapshot.rootSortMode,
-        closed,
       }),
     // As GraphPage: `list` stands for the note store's state, which localLinks reads.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [notes, list, snapshot, cache, closed],
+    [notes, list, snapshot, cache],
   );
   const data = useMemo(
     () => buildGraph(input.notes, { kind: 'local', id: noteId, depth }),

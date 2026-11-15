@@ -12,7 +12,6 @@ import { FeedbackToasts } from '../feedback/FeedbackToasts';
 import { captureWindow, openedFromLabel, openingFacts } from '../feedback/open';
 import { useFeedback } from '../feedback/service';
 import { useNoteList, useNotes } from '../notes/hooks';
-import { closedNotebooks } from '../workspace/notebooks';
 import { RESERVED_KEYS } from '../notes/service';
 import { browserStorage, readOpened, recentNotes } from '../notes/recent';
 import { desktop } from '../desktop/bridge';
@@ -125,8 +124,7 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
   const notes = useNotes();
   const workspace = useWorkspace();
   const theme = useThemeController();
-  // The switchers and quick open cover the open notebooks only (T43, A752), of every source
-  // this window shows (A862).
+  // The switchers and quick open cover every source this window shows (A862).
   const openList = useEveryOpenNoteList();
   // One search service for the session: its index outlives the overlay (T22). The source in
   // context's alone without a registry (tests that render one source).
@@ -136,7 +134,6 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
         store: () => notes.openLocal(),
         list: () => notes.list(),
         workspace: () => workspace.getState().snapshot,
-        closed: closedNotebooks,
         reserved: RESERVED_KEYS,
       }),
     [notes, workspace],

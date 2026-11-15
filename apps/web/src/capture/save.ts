@@ -54,8 +54,7 @@ export async function saveCapture(
   }
   // A capture of pictures only is titled by the day it was made (A343).
   const { title, body } = capture.splitCapture(text, today(settings, now).toString());
-  // Captures stay in the default notebook (the Inbox never goes into one, A753, A766).
-  const noteId = notes.create(now, { title, focus: false, notebook: 'default' });
+  const noteId = notes.create(now, { title, focus: false });
   workspace.fileInInbox(noteId);
   await Promise.all([
     body

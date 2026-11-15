@@ -14,20 +14,4 @@ export {
   type SortMode,
   type WorkspaceTree,
 } from './tree';
-export {
-  DEFAULT_NOTEBOOK,
-  DEFAULT_NOTEBOOK_NAME,
-  folderMoveRefusal,
-  isJournalOrInbox,
-  notebookFlagRefusal,
-  notebookIndex,
-  notebookKey,
-  notebookLineage,
-  openNotebookFilter,
-  type Notebook,
-  type NotebookIndex,
-  type Fallback,
-  type GoneFolder,
-  type NotebookLineage,
-  type Placement,
-} from './notebooks';
+export { folderFallback, type Fallback, type GoneFolder } from './fallback';

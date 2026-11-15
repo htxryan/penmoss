@@ -214,7 +214,6 @@ describe('workspace document', () => {
           deletedBy: { label: 'Claude Code', kind: 'agent' },
           folders: 2,
           notes: 3,
-          notebook: false,
         },
       ]);
 
@@ -224,8 +223,6 @@ describe('workspace document', () => {
         parentId: 'home',
         notes: 3,
         skipped: [],
-        notebook: false,
-        filed: [],
       });
       const after = readWorkspace(doc);
       const sorted = <T extends { id: string }>(items: readonly T[]) =>

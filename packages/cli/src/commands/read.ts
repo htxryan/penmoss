@@ -323,11 +323,7 @@ export const ls: Command = {
       },
       () => {
         const lines = [
-          // A notebook says so (T43): its notes are mirrored to a repository of its own.
-          ...listing.folders.map(
-            (folder) =>
-              `${folder.id.padEnd(26)}  ${folder.name}/${folder.isNotebook ? dim('  notebook', color) : ''}`,
-          ),
+          ...listing.folders.map((folder) => `${folder.id.padEnd(26)}  ${folder.name}/`),
           ...listing.notes.map((note) => NOTE_ROW(note.id, note.title, note.updatedAt, color)),
         ];
         if (listing.truncated) lines.push('… (more notes not shown)');

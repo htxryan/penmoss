@@ -84,10 +84,6 @@ export interface FolderRow extends RowBase {
   readonly expanded: boolean;
   readonly hasChildren: boolean;
   readonly sortMode: SortMode;
-  /** A notebook's folder (T43, A750): its own icon and menu. */
-  readonly notebook: boolean;
-  /** The default notebook's first top-level folder after the notebooks (T43): a rule above it. */
-  readonly sectionStart?: true;
 }
 
 export interface NoteRow extends RowBase {
@@ -194,37 +190,12 @@ export function visibleRows(tree: WorkspaceTree, expanded: ReadonlySet<string>):
         expanded: isOpen,
         hasChildren: folder.folders.length + folder.notes.length > 0,
         sortMode: folder.sortMode,
-        notebook: folder.notebook === true,
-        ...(level === 1 &&
-        folder.notebook !== true &&
-        folders.some((other) => other.notebook === true)
-          ? folders.find((other) => other.notebook !== true) === folder
-            ? { sectionStart: true as const }
-            : {}
-          : {}),
       });
       if (isOpen) walk(folder.folders, folder.notes, folder.id, level + 1);
     }
   };
   walk(tree.folders, tree.notes, null, 1);
   return rows;
-}
-
-/**
- * The sidebar's tree (T43, A752): the notebooks open on this device head the top level, in their
- * own order, then the default notebook's folders; closed notebooks leave it, so neither the
- * sidebar nor its moves see them. `byId` still knows them, so a note in one still finds its
- * place. A tree without notebooks comes back as it is.
- */
-export function withoutClosed(tree: WorkspaceTree, closed: ReadonlySet<string>): WorkspaceTree {
-  const top = tree.folders;
-  const notebooks = top.filter((folder) => folder.notebook === true && !closed.has(folder.id));
-  const others = top.filter((folder) => folder.notebook !== true);
-  const folders = [...notebooks, ...others];
-  if (folders.length === top.length && folders.every((folder, i) => folder === top[i])) {
-    return tree;
-  }
-  return { ...tree, folders };
 }
 
 /** The folders a note or folder shows inside, nearest first. */
@@ -379,8 +350,6 @@ export interface FolderChoice {
   readonly path: string;
   /** 0 for the top level, 1 for a top-level folder. */
   readonly depth: number;
-  /** A notebook's own folder (T43): moving there moves the note to another notebook. */
-  readonly notebook?: true;
 }
 
 /** The top level, then every folder in the tree's own order, each before its subfolders. */
@@ -394,7 +363,6 @@ export function folderChoices(tree: WorkspaceTree): FolderChoice[] {
         name: folder.name,
         path: path.join(' / '),
         depth,
-        ...(folder.notebook === true ? { notebook: true as const } : {}),
       });
       walk(folder.folders, path, depth + 1);
     }

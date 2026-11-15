@@ -11,13 +11,12 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import { useNotes } from '../notes/hooks';
+import { useNoteList, useNotes } from '../notes/hooks';
 import { Menu } from '../shell/Menu';
 import { SourceScope } from '../sources/context';
 import { useSourcesState } from '../sources/hooks';
 import type { Source } from '../sources/registry';
 import type { Workspace } from '../workspace/service';
-import { useOpenNoteList } from '../workspace/notebooks';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import {
   describedAfter,
@@ -148,7 +147,7 @@ function NotebookTags({
 }) {
   const notes = useNotes();
   const workspace = useWorkspace();
-  const list = useOpenNoteList();
+  const list = useNoteList();
   const noteTags = useMemo(() => list.map((entry) => entry.tags), [list]);
   const rows = useMemo(() => tagRows(noteTags), [noteTags]);
   const stored = useWorkspaceState().snapshot.tagDescriptions;
