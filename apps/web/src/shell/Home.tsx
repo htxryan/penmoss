@@ -1,5 +1,8 @@
 import { isoWeek, longDate } from '@penmoss/core/periodic';
+import { useState } from 'react';
+import { DAD_JOKES } from './dad-jokes';
 import { deviceStorage } from './device-pref';
+import { drawJoke } from './joke-deck';
 import { formatCombo } from '@penmoss/editor/keys';
 import { Icon } from '@penmoss/ui/icons';
 import { useCommands, useKeys } from '../commands/hooks';
@@ -23,7 +26,7 @@ const when = (time: number) =>
 /**
  * With no note open. On a phone, the prototype's home screen (T36): search,
  * today's and this week's notes, the graph and recent notes, one tap each.
- * Everywhere, a short note on where to start.
+ * Elsewhere, a dad joke and two lines on where to start (A1576).
  */
 export function Home({ phone }: { readonly phone: boolean }) {
   const commands = useCommands();
@@ -34,6 +37,8 @@ export function Home({ phone }: { readonly phone: boolean }) {
   const paletteKeys = useKeys('app.palette');
   const day = today(workspace.settings());
   const recent = phone ? recentNotes(list, readOpened(deviceStorage()), null, RECENT_ON_PHONE) : [];
+  // Dealt once as the empty state appears, not on each render.
+  const [joke] = useState(() => drawJoke(DAD_JOKES, deviceStorage()));
   return (
     <div className="home">
       {phone ? (
@@ -120,11 +125,17 @@ export function Home({ phone }: { readonly phone: boolean }) {
           <path d="M24 26h24M24 34h18M24 42h21" className="art-lines" />
           <path d="M14 60c6-8 12-10 22-10s14 4 22 10" className="art-moss" />
         </svg>
-        <h2>No note open</h2>
-        <p>
-          Pick a note from the list, or create one with <strong>New Note</strong>
-          {newNoteKeys[0] ? ` (${formatCombo(newNoteKeys[0])})` : ''}. Every action is in the
-          command palette{paletteKeys[0] ? ` (${formatCombo(paletteKeys[0])})` : ''}.
+        {/* A dad joke where "No note open" was, a new one each time this shows (A1576). */}
+        <h2 className="empty-joke" data-testid="empty-joke">
+          {joke}
+        </h2>
+        <p data-testid="empty-hint">
+          Open a note or create one with <strong>New Note</strong>
+          {newNoteKeys[0] ? ` (${formatCombo(newNoteKeys[0])})` : ''}.
+        </p>
+        <p data-testid="empty-hint">
+          Or open the <strong>Command Palette</strong>
+          {paletteKeys[0] ? ` (${formatCombo(paletteKeys[0])})` : ''}.
         </p>
       </div>
     </div>

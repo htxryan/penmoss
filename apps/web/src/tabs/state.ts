@@ -110,6 +110,20 @@ export function activeTab(state: TabsState): Tab {
   return state.tabs.find((tab) => tab.id === state.active) ?? state.tabs[0]!;
 }
 
+/**
+ * The window has no note open (A1576): its one tab, unpinned, is on Home (or a new tab's Home).
+ * The strip then shows no tab, only +, and closing that tab does nothing.
+ */
+export function isBareHome(state: TabsState): boolean {
+  if (state.tabs.length !== 1) return false;
+  const tab = state.tabs[0]!;
+  return !tab.pinned && currentEntry(tab).path.split('?')[0] === HOME_PATH;
+}
+
+/** How many tabs the strip shows: none while the window is on a bare Home (A1576). */
+export const shownTabCount = (state: TabsState): number =>
+  isBareHome(state) ? 0 : state.tabs.length;
+
 /** The page the window shows now: the active tab's entry. */
 export const activePath = (state: TabsState): string => currentEntry(activeTab(state)).path;
 
@@ -262,12 +276,13 @@ function remember(closed: readonly ClosedTab[], tab: Tab, position: number): Clo
 
 /**
  * Closes tab `id`: the tab to its right becomes active, else the one to its left. Closing the
- * only tab leaves a Home tab, and the window stays open. Pinned or not: the commands decide
- * whether a pinned tab closes (⌘W leaves it).
+ * only tab leaves a Home tab, which the strip does not show, and the window stays open; with
+ * only that Home, nothing closes (A1576). Pinned or not: the commands decide whether a pinned
+ * tab closes (⌘W leaves it).
  */
 export function closeTab(state: TabsState, id: string, ids: IdMaker = randomId): TabsState {
   const position = state.tabs.findIndex((tab) => tab.id === id);
-  if (position < 0) return state;
+  if (position < 0 || isBareHome(state)) return state;
   const tab = state.tabs[position]!;
   const tabs = state.tabs.filter((item) => item.id !== id);
   const closed = remember(state.closed, tab, position);

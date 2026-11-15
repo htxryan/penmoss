@@ -2,7 +2,7 @@ import { useCommand, useCommands } from '../commands/hooks';
 import { useSourcesRegistry } from '../sources/hooks';
 import { openInMain, openNoteWindow } from '../window/open';
 import { useTabs, useTabsState } from './hooks';
-import { activeTab, currentEntry, noteIdOfPath, NEW_TAB_PATH } from './state';
+import { activeTab, currentEntry, isBareHome, noteIdOfPath, NEW_TAB_PATH } from './state';
 
 /**
  * The tab commands (PEN-140, A1503): New Tab, Close Tab, Reopen Closed Tab, the others, and
@@ -15,7 +15,8 @@ export function TabsCommands() {
   const registry = useSourcesRegistry();
   const has = () => tabs !== null;
   const count = state?.tabs.length ?? 0;
-  const active = state ? activeTab(state) : null;
+  // A bare Home is no tab to close (A1576).
+  const active = state && !isBareHome(state) ? activeTab(state) : null;
 
   const commands = useCommands();
   // A new tab is Home with the cursor in Search, as a browser's is in its address bar (AC2).

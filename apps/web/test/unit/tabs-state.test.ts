@@ -14,6 +14,7 @@ import {
   historyPlaceOf,
   stepTarget,
   initialState,
+  isBareHome,
   MAX_CLOSED,
   MAX_ENTRIES,
   moveTab,
@@ -30,6 +31,7 @@ import {
   settle,
   showInTab,
   shownNotes,
+  shownTabCount,
   step,
   switchToTab,
   tabShowing,
@@ -161,12 +163,27 @@ describe('closing, reopening and switching', () => {
     expect(strip(state)).toEqual([`*${note(A)}`]);
   });
 
-  it('leaves a Home tab when the only tab closes (AC4)', () => {
+  it('leaves a Home tab when the only tab closes (AC4), which the strip does not show (A1576)', () => {
     const ids = counter();
     let state = initialState(ids, note(A));
+    expect(isBareHome(state)).toBe(false);
     state = closeTab(state, state.active, ids);
     expect(strip(state)).toEqual(['*/']);
     expect(state.closed).toHaveLength(1);
+    expect(isBareHome(state)).toBe(true);
+    expect(shownTabCount(state)).toBe(0);
+    // Closing that Home does nothing, and puts nothing on the closed list.
+    expect(closeTab(state, state.active, ids)).toBe(state);
+    // A new tab's Home is bare too; Home beside a note, or pinned, is a tab like any other.
+    expect(isBareHome(initialState(ids, '/?tab=new'))).toBe(true);
+    const beside = openTab(state, note(B), { background: true, ids });
+    expect(isBareHome(beside)).toBe(false);
+    expect(shownTabCount(beside)).toBe(2);
+    expect(isBareHome(setPinned(state, state.active, true))).toBe(false);
+    // A note opened in it makes it the first tab.
+    const opened = navigateActive(state, note(B), { ids });
+    expect(strip(opened)).toEqual([`*${note(B)}`]);
+    expect(shownTabCount(opened)).toBe(1);
   });
 
   it('reopens the last closed tab where it was, with its history, scroll, panel and pin', () => {

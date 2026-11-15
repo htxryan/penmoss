@@ -509,6 +509,13 @@
   margin: 0;
 }
 
+/* The dad joke (A1576): the heading, which wraps however long it runs. */
+.empty-state .empty-joke {
+  margin-bottom: 0.75rem;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
 .empty-state.compact {
   margin: 2.5rem auto;
 }

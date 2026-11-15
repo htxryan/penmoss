@@ -223,11 +223,11 @@ test('notes open in the tab on screen or in new tabs, and the keys switch betwee
   await page.keyboard.press('Escape');
   await expect(search).toBeHidden();
   await expect(page.getByTestId('empty-state')).toBeVisible();
-  // Closing the only tab leaves Home, and the window stays (AC4).
+  // Closing every other tab leaves Home alone, which shows no tab, only + (AC4, A1576).
   await palette(page, 'Close Other Tabs');
-  expect(await titles(page)).toEqual(['*Home']);
-  await palette(page, 'Close Tab');
-  expect(await titles(page)).toEqual(['*Home']);
+  await expect(tabs(page)).toHaveCount(0);
+  await expect(page.getByTestId('tab-new')).toBeVisible();
+  await expect(page.getByTestId('empty-state')).toBeVisible();
 
   // The proof ends on a strip of tabs.
   await open(page, ALPHA);
@@ -318,6 +318,40 @@ test('⌘-click on a sidebar note opens a tab behind the one on screen, which st
   await expect(item(ALPHA)).toHaveAttribute('aria-selected', 'true');
   await expect(tabs(page)).toHaveCount(5);
   await unchanged();
+  expect(errors).toEqual([]);
+});
+
+test('with no note open there is no tab, only +, and a dad joke over two lines of hints (A1576)', async ({
+  page,
+}) => {
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/');
+  await expect(row(page, ALPHA)).toBeVisible({ timeout: 40_000 });
+  await expect(page.getByTestId('tab-strip')).toBeVisible();
+  await expect(tabs(page)).toHaveCount(0);
+  await expect(page.getByTestId('tab-new')).toBeVisible();
+  const empty = page.getByTestId('empty-state');
+  const joke = empty.getByRole('heading', { level: 2 });
+  await expect(joke).toHaveText(/\S/);
+  await expect(empty).not.toContainText('No note open');
+  const hints = empty.getByTestId('empty-hint');
+  await expect(hints).toHaveText([
+    /^Open a note or create one with New Note \((⌥⌘N|Ctrl\+Alt\+N|.+)\)\.$/,
+    /^Or open the Command Palette \(.+\)\.$/,
+  ]);
+  const first = await joke.textContent();
+  // ⌘1 does nothing here.
+  await page.keyboard.press('ControlOrMeta+Digit1');
+  await expect(tabs(page)).toHaveCount(0);
+
+  // A note opened is the first tab; closing it brings back no tab, and another joke.
+  await open(page, ALPHA);
+  expect(await titles(page)).toEqual([`*${ALPHA}`]);
+  await tab(page, ALPHA).getByTestId('tab-close').click();
+  await expect(tabs(page)).toHaveCount(0);
+  await expect(joke).toHaveText(/\S/);
+  expect(await joke.textContent()).not.toBe(first);
   expect(errors).toEqual([]);
 });
 
