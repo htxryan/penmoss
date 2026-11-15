@@ -1,6 +1,6 @@
 # T42 on Android · Items 1–9 on the phone
 
-Evidence for bringing the Android app to parity with T42's web and Mac UI ([issue #104](https://github.com/htxryan/penmoss/issues/104) items 1–9, merged as #119, `ed60f22`). The rows are ST12, AC12, NT26–NT30, TG6 and PL19 of the [T40 parity matrix](../t40/parity-matrix.md), which A579 added; item 2 (one search, always Hybrid) is FD2, present on Android since P6.
+Evidence for bringing the Android app to parity with T42's web and Mac UI ([issue #104](https://github.com/htxryan/penmoss/issues/104) items 1–9, merged as #119, `ed60f22`). The rows are ST12, AC12, NT26–NT30, TG6 and PL19 of the [T40 parity matrix](../../../apps/android/contract/parity-matrix.md), which A579 added; item 2 (one search, always Hybrid) is FD2, present on Android since P6.
 
 Decisions A650–A657 are in [`decisions.md`](../../decisions.md). No Room schema change (main is at 16, from #133). No server change: the Display keys and the hybrid floor are #119's server halves, already deployed with it (main `ed60f22`, Worker `b373a29c`).
 
