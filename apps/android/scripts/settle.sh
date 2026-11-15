@@ -7,6 +7,13 @@
 SETTLE_SECONDS="${PENMOSS_EMULATOR_SETTLE_SECONDS:-240}"
 QUIET_SECONDS="${PENMOSS_EMULATOR_QUIET_SECONDS:-10}"
 SETTLE_TAG="${SETTLE_TAG:-[emulator]}"
+# How long one second of these scripts' waiting lasts: 1. Their tests, against a stub adb, set a
+# fraction (PENMOSS_EMULATOR_TICK, A1518), so the fixed waits don't add up to seconds per test.
+# Every count and bound (waited, the *_SECONDS) stays in ticks, so the logic is the same.
+TICK="${PENMOSS_EMULATOR_TICK:-1}"
+pause() {
+  sleep "$(awk -v n="$1" -v t="$TICK" 'BEGIN { print n * t }')"
+}
 waited=0
 pressed=-10
 focus=''
@@ -52,7 +59,7 @@ settle_device() {
   waited=0
   pressed=-10
   while kill -0 "$idle" 2>/dev/null && [ "$waited" -lt "$SETTLE_SECONDS" ]; do
-    sleep 1
+    pause 1
     waited=$((waited + 1))
   done
   kill "$idle" 2>/dev/null || true
@@ -70,7 +77,7 @@ settle_device() {
       *Launcher*) quiet=$((quiet + 1)) ;;
       *) quiet=0 ;;
     esac
-    sleep 1
+    pause 1
     waited=$((waited + 1))
   done
   echo "$SETTLE_TAG settled in ${waited}s"
@@ -85,7 +92,7 @@ watch_dialogs() {
   while :; do
     focus="$(focus_now)"
     case "$focus" in *'Not Responding'*) press_wait "during $1" ;; esac
-    sleep 3
+    pause 3
     waited=$((waited + 3))
   done
 }

@@ -56,8 +56,12 @@ test('every package with a budget runs it in `budgets` and leaves it out of `tes
     const { scripts = {} } = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
     assert.equal(scripts.budgets, 'PENMOSS_BUDGETS=1 vitest run', `${name}: the budgets script`);
     const config = readFileSync(join(dir, 'vitest.config.ts'), 'utf8');
-    assert.match(config, /process\.env\.PENMOSS_BUDGETS === '1'/, `${name}: the config's switch`);
-    assert.match(config, /exclude: .*budget\.test/, `${name}: the unit run leaves budgets out`);
+    assert.match(
+      config,
+      /scripts\/vitest-shared\.mjs'/,
+      `${name}: the config starts from the shared one`,
+    );
+    assert.match(config, /\.\.\.sharedTest\(|test: sharedTest\(/, `${name}: the shared test block`);
   }
 });
 
@@ -75,4 +79,13 @@ test('a package runs `budgets` only when it has a budget to run', () => {
     .map((dir) => relative(root, dir));
   // vitest finds no files and exits 1, failing `task budgets` (A1244).
   assert.deepEqual(idle, [], 'a `budgets` script with no *.budget.test.ts file');
+});
+
+test('the shared vitest config runs budgets alone and leaves them out of the unit run', async () => {
+  const shared = readFileSync(join(root, 'scripts', 'vitest-shared.mjs'), 'utf8');
+  assert.match(shared, /process\.env\.PENMOSS_BUDGETS === '1'/, 'the switch');
+  const { sharedTest } = await import('./vitest-shared.mjs');
+  const unit = sharedTest({ include: ['test/**/*.test.ts'], exclude: ['x'] });
+  assert.deepEqual(unit.include, ['test/**/*.test.ts']);
+  assert.deepEqual(unit.exclude, ['x', 'test/**/*.budget.test.ts']);
 });

@@ -1,9 +1,10 @@
 /**
- * Real git for the transport's tests (T50 G2): temporary bare repositories (`file://`, with
- * filters allowed, as #150's verification says), a host over HTTP (`git http-backend` behind a
- * Node server with Basic auth), and a colleague who commits with plain git. No network: every
- * host is on this machine. git's own configuration is shut out (`GIT_CONFIG_GLOBAL=/dev/null`,
- * `GIT_CONFIG_NOSYSTEM=1`), so the runner's settings never leak in.
+ * Real git for every test that runs it (T50 G2; one module, tests.md 6.3): temporary bare
+ * repositories (`file://`, with filters allowed, as #150's verification says), a host over HTTP
+ * (`git http-backend` behind a Node server with Basic auth), and a colleague who commits with
+ * plain git. No network: every host is on this machine. git's own configuration is shut out
+ * (`GIT_CONFIG_GLOBAL=/dev/null`, `GIT_CONFIG_NOSYSTEM=1`), so the runner's settings never leak
+ * in. On a Mac the shared vitest config puts the real git ahead of `/usr/bin/git` (A1513).
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -11,19 +12,33 @@ import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+/** git's own configuration shut out: what a test passes as the product's `gitEnv`. */
+export const GIT_ENV = { GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' } as const;
+
+/** GIT_ENV, and no dates a runner set, for a transport's `env`. */
 export const ISOLATED = {
-  GIT_CONFIG_GLOBAL: '/dev/null',
-  GIT_CONFIG_NOSYSTEM: '1',
+  ...GIT_ENV,
   GIT_AUTHOR_DATE: undefined,
   GIT_COMMITTER_DATE: undefined,
 } as const;
 
-const env = () => ({
+/** This process's environment with GIT_ENV, and git never prompts: for a test's own git. */
+export const gitEnv = (): NodeJS.ProcessEnv => ({
   ...process.env,
-  GIT_CONFIG_GLOBAL: '/dev/null',
-  GIT_CONFIG_NOSYSTEM: '1',
+  ...GIT_ENV,
   GIT_TERMINAL_PROMPT: '0',
 });
+const env = gitEnv;
+
+/** Makes `path` an empty bare repository whose default branch is `main`, as a host has. */
+export function bareRepository(path: string): string {
+  mkdirSync(path, { recursive: true });
+  git(path, ['init', '--bare', '--quiet', '--initial-branch=main']);
+  git(path, ['config', 'uploadpack.allowFilter', 'true']);
+  git(path, ['config', 'uploadpack.allowAnySHA1InWant', 'true']);
+  git(path, ['config', 'http.receivepack', 'true']);
+  return path;
+}
 
 /** Runs git synchronously (setup only), failing the test on a non-zero exit. */
 export function git(cwd: string, args: readonly string[], input?: string): string {
@@ -60,12 +75,7 @@ export function sandbox(): Sandbox {
   return {
     dir,
     bare(name) {
-      const path = join(dir, `${name}.git`);
-      mkdirSync(path, { recursive: true });
-      git(path, ['init', '--bare', '--quiet', '--initial-branch=main']);
-      git(path, ['config', 'uploadpack.allowFilter', 'true']);
-      git(path, ['config', 'uploadpack.allowAnySHA1InWant', 'true']);
-      git(path, ['config', 'http.receivepack', 'true']);
+      const path = bareRepository(join(dir, `${name}.git`));
       return { path, url: `file://${path}` };
     },
     colleague(url, name = 'A Colleague') {

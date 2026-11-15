@@ -119,9 +119,11 @@ export function ColourPicker({
     setHexText(null);
     setHexProblem(null);
     setOpen(true);
-    // Focus the chosen swatch, else the first, once the panel is drawn.
+    // Focus the chosen swatch, else the first, once the panel is drawn: unless focus is in the
+    // panel already, as when the hex field was clicked and typed in before a late frame.
     requestAnimationFrame(() => {
       const drawn = panel.current;
+      if (drawn?.contains(document.activeElement)) return;
       (
         drawn?.querySelector<HTMLElement>('[data-grid-item][aria-checked="true"]') ??
         drawn?.querySelector<HTMLElement>('[data-grid-item]')

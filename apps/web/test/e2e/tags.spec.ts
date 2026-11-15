@@ -1,6 +1,6 @@
-import { anotherMac, expect, seeded, test, type Page } from './fixtures';
-import { NEW_NOTE } from './keys';
+import { anotherMac, expect, type Page, seeded, test } from './fixtures';
 import { carried, syncNow } from './support/sync';
+import { body, collectErrors, newNote, ULID } from './support/app';
 
 // T18: tags from text (#inline, nested a/b) and from the chips under the title (frontmatter),
 // the tag pane and Search on a tag's notes, rename and merge through each note's document (offline too),
@@ -8,22 +8,8 @@ import { carried, syncNow } from './support/sync';
 // pushes 12 s after edits settle and pulls every minute, A1013, so the server's 5 s is gone;
 // Sync Now on both sides carries it here).
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    // Requests made while the context is offline fail by design (as in offline.spec.ts).
-    if (message.type() === 'error' && !/ERR_INTERNET_DISCONNECTED/.test(message.text())) {
-      errors.push(message.text());
-    }
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const pane = (page: Page) => page.getByTestId('tag-pane');
 /** The pane's button for a tag with its note count. */
 const tagButton = (page: Page, tag: string, count: number) =>
@@ -35,22 +21,10 @@ const tagButton = (page: Page, tag: string, count: number) =>
 const anyTag = (page: Page, tag: string) =>
   pane(page).getByRole('button', { name: new RegExp(`^#${tag}(/|,)`) });
 
-async function newNote(page: Page, title: string, text: string): Promise<string> {
-  await expect(page.locator('button[data-command="note.new"]')).toBeVisible();
-  await page.keyboard.press(NEW_NOTE);
-  await expect(page).toHaveURL(ULID);
-  await expect(page.getByTestId('note-title')).toBeFocused();
-  await page.keyboard.type(title);
-  await page.keyboard.press('Enter');
-  await page.keyboard.type(text);
-  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
-  return ULID.exec(new URL(page.url()).pathname)![1]!;
-}
-
 test('a tag opens Search on its notes, inline and frontmatter tags, nested levels included', async ({
   page,
 }) => {
-  const errors = collectErrors(page);
+  const errors = collectErrors(page, /ERR_INTERNET_DISCONNECTED/);
   const garden = `garden${RUN}`;
   await page.goto('/');
   await newNote(page, `Herbs ${RUN}`, `Sow basil #${garden}/herbs today`);
@@ -148,7 +122,7 @@ test('renaming a tag offline changes every note through its document, and syncs'
   notebook,
 }) => {
   test.setTimeout(120_000);
-  const errors = collectErrors(page);
+  const errors = collectErrors(page, /ERR_INTERNET_DISCONNECTED/);
   const old = `chore${RUN}`;
   const merged = `home${RUN}`;
   await page.goto('/');
@@ -206,7 +180,7 @@ test("another Mac's tag pane follows a tag change once git carries it", async ({
   notebook,
 }) => {
   test.setTimeout(180_000);
-  const errors = collectErrors(page);
+  const errors = collectErrors(page, /ERR_INTERNET_DISCONNECTED/);
   const fresh = `fresh${RUN}`;
   // This Mac makes the notebook on its first sync: pushed before the other Mac adds it.
   await page.goto('/');
@@ -232,5 +206,155 @@ test("another Mac's tag pane follows a tag change once git carries it", async ({
   } finally {
     await other.context.close();
   }
+  expect(errors).toEqual([]);
+});
+
+const info = (page: Page) => page.getByRole('complementary', { name: 'Metadata' });
+
+async function openInfo(page: Page) {
+  // Metadata's tab icon down the note's edge (T53 item 9): it opens the tab, or closes the panel
+  // while that tab shows.
+  const tab = page.getByTestId('note-tab-info');
+  if ((await tab.getAttribute('aria-selected')) !== 'true') await tab.click();
+  await expect(info(page)).toBeVisible();
+}
+// T42, item 8.
+test('Add a tag suggests every tag on any note, by keyboard too', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  const tag = `sug${RUN}`;
+  // A third tag the open note never gets, so the list still has something to offer at the
+  // end, on a fresh workspace too.
+  await newNote(page, `Tagged ${RUN}`, `Seeds #${tag}/beans, #${tag}x and #${tag}zz`);
+  // The tag pane has the tags once the note's text is read.
+  await expect(page.getByRole('button', { name: new RegExp(`^#${tag}x,`) })).toBeVisible();
+  // The open note's own inline tag is on it already: never suggested (N6).
+  await newNote(page, `Untagged ${RUN}`, `No tags yet but #${tag}inline here.`);
+  await openInfo(page);
+  const panel = info(page);
+  await expect(panel.getByTestId('info-inline-tags')).toContainText(`#${tag}inline`);
+  await panel.getByRole('button', { name: 'Add a Tag', exact: true }).click();
+  const field = panel.getByRole('combobox', { name: 'Add a tag' });
+  await expect(field).toBeFocused();
+  // The browser's own form history never shows over it.
+  await expect(field).toHaveAttribute('autocomplete', 'off');
+  await expect(field).toHaveAttribute('aria-expanded', 'false');
+
+  await field.pressSequentially(tag.slice(0, -2));
+  const list = panel.getByRole('listbox', { name: 'Tags' });
+  await expect(field).toHaveAttribute('aria-expanded', 'true');
+  await expect(list.getByRole('option')).toHaveText([`#${tag}/beans`, `#${tag}x`, `#${tag}zz`]);
+
+  // ↓ chooses the first, ↓ the next, ↑ back; Enter adds the chosen one.
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await expect(list.getByRole('option', { name: `#${tag}x` })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await page.keyboard.press('ArrowUp');
+  await expect(list.getByRole('option', { name: `#${tag}/beans` })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(field).toHaveAttribute('aria-activedescendant', /.+/);
+  await page.keyboard.press('Enter');
+  await expect(panel.getByRole('button', { name: `#${tag}/beans`, exact: true })).toBeVisible();
+  await expect(field).toHaveValue('');
+  await expect(field).toBeFocused();
+
+  // A note's own tags are not suggested again; a click adds one.
+  await field.pressSequentially(tag);
+  await expect(list.getByRole('option')).toHaveText([`#${tag}x`, `#${tag}zz`]);
+  await list.getByRole('option', { name: `#${tag}x` }).click();
+  await expect(panel.getByRole('button', { name: `#${tag}x`, exact: true })).toBeVisible();
+
+  // Escape closes the list first, then the field.
+  await field.pressSequentially(tag);
+  await expect(list.getByRole('option')).toHaveText([`#${tag}zz`]);
+  await expect(field).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Escape');
+  await expect(field).toHaveAttribute('aria-expanded', 'false');
+  await expect(field).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(field).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test.describe('in Quanta, with notes of links, lists and headings', () => {
+  test.use({
+    seed: {
+      name: 'Quanta',
+      notes: [
+        { title: 'Links', markdown: 'See the docs here.\n' },
+        {
+          title: 'Outline',
+          markdown: '1. one\n   1. two\n      1. three\n         1. four\n2. five\n',
+        },
+        { title: 'Lists', markdown: '1. one\n2. two\n3. three\n' },
+        { title: 'Heading', markdown: 'first line\n\nsecond line\n' },
+      ],
+    },
+  });
+
+  // Ryan’s feedback of 6 Nov 2026 (Quanta), item 3.
+  test('an empty Tags section says "No tags", centred and muted as "No notes" is', async ({
+    page,
+  }) => {
+    const errors = collectErrors(page);
+    await page.goto('/');
+    const empty = page.locator('#tag-pane-body');
+    await expect(empty).toHaveText('No tags', { timeout: 30_000 });
+    const style = await empty.evaluate((element) => {
+      const s = getComputedStyle(element);
+      return { align: s.textAlign, color: s.color };
+    });
+    const muted = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--pm-muted)';
+      document.body.append(probe);
+      const color = getComputedStyle(probe).color;
+      probe.remove();
+      return color;
+    });
+    expect(style).toEqual({ align: 'center', color: muted });
+    expect(errors).toEqual([]);
+  });
+});
+
+async function newNoteFromButtonAndEnter(page: Page, title: string, text = ''): Promise<string> {
+  await page
+    .getByRole('button', { name: /^New Note/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(ULID);
+  await expect(page.getByTestId('note-title')).toBeFocused();
+  await page.keyboard.type(title);
+  await page.keyboard.press('Enter');
+  if (text) await page.keyboard.type(text);
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+  return ULID.exec(new URL(page.url()).pathname)![1]!;
+}
+
+// T39 pass 2.
+test('Escape in the tag field gives focus back to Add a tag', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await newNoteFromButtonAndEnter(page, `Tags ${RUN}`, 'Text.');
+  const info = page.getByRole('complementary', { name: 'Metadata' });
+  if (!(await info.isVisible())) {
+    // Metadata's tab icon down the note's edge opens it (T53 item 9).
+    await page.getByTestId('note-tab-info').click();
+  }
+  await info.getByRole('button', { name: 'Add a Tag' }).click();
+  const field = info.getByRole('combobox', { name: 'Add a tag' });
+  await expect(field).toBeFocused();
+  // Matches no tag, so no suggestions are open for Escape to close first (A577).
+  await page.keyboard.type(`half${RUN}`);
+  await page.keyboard.press('Escape');
+  await expect(field).toBeHidden();
+  await expect(info.getByRole('button', { name: 'Add a Tag' })).toBeFocused();
   expect(errors).toEqual([]);
 });

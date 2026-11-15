@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.penmoss.ScreenTree
 import app.penmoss.engine.notes.TagTree
 import app.penmoss.proof.ProofShot
 import app.penmoss.ui.common.PenmossTheme
@@ -65,13 +66,7 @@ class TagsUnchangedInstrumentedTest {
     private fun nodes(): List<AccessibilityNodeInfo> {
         instrumentation.waitForIdleSync()
         val root = instrumentation.uiAutomation.rootInActiveWindow ?: return emptyList()
-        val found = mutableListOf<AccessibilityNodeInfo>()
-        fun walk(node: AccessibilityNodeInfo) {
-            found += node
-            for (i in 0 until node.childCount) node.getChild(i)?.let(::walk)
-        }
-        walk(root)
-        return found
+        return ScreenTree.accessibilityNodes(listOf(root))
     }
 
     private fun find(text: String): List<AccessibilityNodeInfo> =

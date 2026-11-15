@@ -1,17 +1,12 @@
 package app.penmoss.ui.common
 
 import android.os.SystemClock
-import android.view.View
-import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.ui.platform.ViewRootForTest
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getAllSemanticsNodes
-import androidx.compose.ui.semantics.getOrNull
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.penmoss.ScreenTree
 import app.penmoss.engine.settings.Settings
 import app.penmoss.proof.ProofShot
 import app.penmoss.ui.settings.DisplayScreen
@@ -62,7 +57,7 @@ class TooltipDelayInstrumentedTest {
             val deadline = SystemClock.uptimeMillis() + 30_000
             do {
                 instrumentation.waitForIdleSync()
-                scenario.onActivity { activity -> texts = screenTexts(activity.window.decorView) }
+                scenario.onActivity { activity -> texts = ScreenTree.texts(activity.window.decorView) }
                 if ("Today" in texts && "Show Notebook Names in Quick Access" in texts) break
                 SystemClock.sleep(250)
             } while (SystemClock.uptimeMillis() < deadline)
@@ -77,22 +72,6 @@ class TooltipDelayInstrumentedTest {
             ProofShot.take()
             // Held on screen a moment, so the proof's recording shows Display.
             SystemClock.sleep(2_000)
-        }
-    }
-
-    /** Every text in the Compose roots under [view], whether scrolled into view or not;
-     * none before the first Compose root is attached. */
-    private fun screenTexts(view: View): List<String> {
-        val roots = mutableListOf<ViewRootForTest>()
-        fun walk(v: View) {
-            if (v is ViewRootForTest) roots += v
-            if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
-        }
-        walk(view)
-        return roots.flatMap { root ->
-            root.semanticsOwner.getAllSemanticsNodes(mergingEnabled = false).flatMap { node ->
-                node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text }
-            }
         }
     }
 }

@@ -1,8 +1,9 @@
 import { anotherMac, expect, seeded, test, type Page } from './fixtures';
-import { NEW_NOTE, DOC_END, LINE_START } from './keys';
+import { DOC_END, LINE_START } from './keys';
 import { noteAction } from './note-menu';
 import { notebookMenuItem } from './notebook-actions';
-import { asAgent, carried, syncNow } from './support/sync';
+import { asAgent, carried, pushed, syncNow } from './support/sync';
+import { body, collectErrors, newNote } from './support/app';
 
 // T31: the editors of the notes shown last are kept (apps/web/src/notes/kept-editors.ts), so
 // switching back to one shows it at once. A kept editor must stay what a freshly opened one
@@ -13,38 +14,9 @@ import { asAgent, carried, syncNow } from './support/sync';
 // the mark coming back means the kept editor was shown again, no mark means the note was
 // opened afresh.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const tree = (page: Page) => page.getByTestId('note-list');
-
-async function synced(page: Page) {
-  const dot = page.getByTestId('section-sync');
-  await expect(dot).toHaveAttribute('data-state', 'synced', { timeout: 40_000 });
-  await expect(dot).toHaveAttribute('data-pending', '0', { timeout: 40_000 });
-}
-
-async function newNote(page: Page, title: string, text: string): Promise<string> {
-  await expect(page.locator('button[data-command="note.new"]')).toBeVisible();
-  await page.keyboard.press(NEW_NOTE);
-  await expect(page).toHaveURL(ULID);
-  await expect(page.getByTestId('note-title')).toBeFocused();
-  await page.keyboard.type(title);
-  await page.keyboard.press('Enter');
-  await page.keyboard.type(text);
-  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
-  return ULID.exec(new URL(page.url()).pathname)![1]!;
-}
 
 /** Switches to a note from the sidebar and waits until it shows. */
 async function show(page: Page, title: string) {
@@ -79,8 +51,7 @@ test('a kept note shows changes made while it was hidden, and keeps its own undo
   const b = `Kept other ${RUN}`;
   const idA = await newNote(page, a, 'Alpha line');
   await newNote(page, b, 'Beta line');
-  await syncNow(page);
-  await synced(page);
+  await pushed(page);
   await show(page, a);
   await mark(page, 'a');
   await show(page, b);
@@ -95,8 +66,7 @@ test('a kept note shows changes made while it was hidden, and keeps its own undo
     await deviceBody.click();
     await device.keyboard.press(DOC_END);
     await device.keyboard.type(' and from elsewhere');
-    await syncNow(device);
-    await synced(device);
+    await pushed(device);
   } finally {
     await other.context.close();
   }
@@ -131,7 +101,7 @@ test('a kept note shows changes made while it was hidden, and keeps its own undo
   await expect(body(page)).toContainText(`Agent line ${RUN}`);
   await show(page, b);
   await expect(body(page)).toContainText('Beta line typed in B');
-  await synced(page);
+  await pushed(page);
   expect(errors).toEqual([]);
 });
 
@@ -176,7 +146,7 @@ test('a kept note keeps its caret, and focus moves as when it opened afresh', as
   await body(page).getByText('YoneX two three').click();
   await page.keyboard.type('Z');
   await expect(body(page)).toHaveText('YoneX two threeZ');
-  await synced(page);
+  await pushed(page);
   expect(errors).toEqual([]);
 });
 
@@ -191,7 +161,7 @@ test('at most two notes are kept, and none for a note gone from the list', async
   const titles = [1, 2, 3, 4].map((n) => `Kept bound ${n} ${RUN}`);
   const ids: string[] = [];
   for (const title of titles) ids.push(await newNote(page, title, `Text of ${title}`));
-  await synced(page);
+  await pushed(page);
   const [a, b, c, d] = titles as [string, string, string, string];
 
   // Two kept: after A, B, C and D, A is no longer kept, C is.

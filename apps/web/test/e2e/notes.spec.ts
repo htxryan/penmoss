@@ -2,22 +2,10 @@ import { anotherMac, expect, seeded, test, type Page } from './fixtures';
 import { NEW_NOTE } from './keys';
 import { storedRecord } from './stored';
 import { readRemote, remoteMarkdown } from './support/remote';
+import { ULID, body, collectErrors } from './support/app';
 
 // T6 on a git notebook (T59): create a note, edit it, reload it from IndexedDB before git
 // answers, open it on a second Mac from the remote, and read its rendered markdown there.
-
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 
 /** Creates a note through the UI and types a title and paragraphs; returns its id. */
 async function createNote(

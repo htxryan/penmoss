@@ -1,6 +1,7 @@
 import { expect, GitHost, macContext, PREVIEW, test, type Page } from './fixtures';
 import { LINE_END } from './keys';
 import { noteAction } from './note-menu';
+import { ULID, body } from './support/app';
 
 // T31: the performance budgets (docs/architecture.md, "Requirements every change keeps"), measured in Chromium on the real
 // app with a 10,000-word note:
@@ -15,7 +16,6 @@ import { noteAction } from './note-menu';
 // switches; the budgets themselves are never loosened here, and a budget
 // test is never retried (a retry would pass a breach as "flaky").
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `b${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 const LONG_TITLE = `Budget long ${RUN}`;
 const SHORT_TITLE = `Budget short ${RUN}`;
@@ -32,8 +32,6 @@ const SAMPLES = 20;
 
 const TYPING_BUDGET_MS = 16;
 const SWITCH_BUDGET_MS = 150;
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 
 function collectErrors(page: Page, errors: string[] = []): string[] {
   page.on('console', (message) => {

@@ -1,4 +1,5 @@
-import { expect, test, type Page } from './fixtures';
+import { expect, type Page, test } from './fixtures';
+import { body, collectErrors, ULID } from './support/app';
 
 // PEN-135 (A1360): ↓ on the title's last line goes to the start of the note's first line, and ↑
 // on the first line comes back to the end of the title. And moving the caret between the title
@@ -35,16 +36,7 @@ const NOTES = {
   ].join('\n\n'),
 };
 
-test.use({
-  seed: {
-    name: 'Caret',
-    notes: Object.entries(NOTES).map(([title, markdown]) => ({ title, markdown })),
-  },
-});
-
 const title = (page: Page) => page.getByTestId('note-title');
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
-
 async function openNote(page: Page, name: string): Promise<void> {
   await page.goto('/');
   await page.getByTestId('note-list').getByRole('link', { name, exact: true }).click();
@@ -63,95 +55,6 @@ async function titleCaret(page: Page, at?: number): Promise<void> {
 
 const titleSelection = (page: Page) =>
   title(page).evaluate((field: HTMLTextAreaElement) => [field.selectionStart, field.selectionEnd]);
-
-test('↓ in the title goes to the start of the note’s first line', async ({ page }) => {
-  await openNote(page, 'Plain');
-  await titleCaret(page, 2);
-  await page.keyboard.press('ArrowDown');
-  await expect(body(page)).toBeFocused();
-  await page.keyboard.type('>');
-  await expect(body(page).locator('p').first()).toHaveText('>First line of the note');
-  await expect(title(page)).toHaveValue('Plain');
-});
-
-test('↓ in a wrapped title moves down its lines first, then to the note', async ({ page }) => {
-  await openNote(page, LONG_TITLE);
-  const lines = await title(page).evaluate((field) => {
-    const style = getComputedStyle(field);
-    return Math.round(
-      (field.clientHeight - parseFloat(style.paddingBottom)) / parseFloat(style.lineHeight),
-    );
-  });
-  expect(lines).toBeGreaterThanOrEqual(2);
-  // From the first line, each ↓ but the last stays in the title, a line further down.
-  await titleCaret(page, 0);
-  let before = 0;
-  for (let line = 1; line < lines; line++) {
-    await page.keyboard.press('ArrowDown');
-    await expect(title(page)).toBeFocused();
-    const [start] = await titleSelection(page);
-    expect(start).toBeGreaterThan(before);
-    before = start!;
-  }
-  // On the last line, ↓ goes to the start of the note.
-  await page.keyboard.press('ArrowDown');
-  await expect(body(page)).toBeFocused();
-  await page.keyboard.type('>');
-  await expect(body(page).locator('p').first()).toHaveText('>First line under a long title');
-  await expect(title(page)).toHaveValue(LONG_TITLE);
-});
-
-test('Shift+↓ in the title selects in the title, and leaves the caret there', async ({ page }) => {
-  await openNote(page, 'Plain');
-  await titleCaret(page, 0);
-  await page.keyboard.press('Shift+ArrowDown');
-  await expect(title(page)).toBeFocused();
-  expect(await titleSelection(page)).toEqual([0, 'Plain'.length]);
-});
-
-test('↑ on the note’s first line goes to the end of the title', async ({ page }) => {
-  await openNote(page, 'Plain');
-  await titleCaret(page);
-  await page.keyboard.press('Enter');
-  await expect(body(page)).toBeFocused();
-  await page.keyboard.press('ArrowRight');
-  await page.keyboard.press('ArrowUp');
-  await expect(title(page)).toBeFocused();
-  expect(await titleSelection(page)).toEqual(['Plain'.length, 'Plain'.length]);
-  // And ↓ goes back down, to the start of the first line.
-  await page.keyboard.press('ArrowDown');
-  await expect(body(page)).toBeFocused();
-  await page.keyboard.type('>');
-  await expect(body(page).locator('p').first()).toHaveText('>First line of the note');
-});
-
-test('↑ on a wrapped first line’s second line stays in the note', async ({ page }) => {
-  await openNote(page, 'Wrapped');
-  const first = body(page).locator('p').first();
-  // Two lines: taller than one line of 1.7 × 16 px. Waited for: until its first layout, the
-  // unfocused editor's block has the height it is given ahead of it, one line (notes/note.css).
-  await expect.poll(() => first.evaluate((p: HTMLElement) => p.offsetHeight)).toBeGreaterThan(40);
-  /** Where the page's caret is: in the first paragraph's text, at which character. */
-  const caret = () =>
-    page.evaluate(() => {
-      const selection = getSelection()!;
-      const p = document.querySelector('[data-testid="note-body"] .ProseMirror > p');
-      return p?.contains(selection.focusNode) ? selection.focusOffset : -1;
-    });
-  // To the start of the note, then down to the first paragraph's second line.
-  await titleCaret(page);
-  await page.keyboard.press('ArrowDown');
-  await expect(body(page)).toBeFocused();
-  await expect.poll(caret).toBe(0);
-  await page.keyboard.press('ArrowDown');
-  await expect.poll(caret).toBeGreaterThan(20);
-  // ↑ goes up to the first line, in the note; one more goes to the title.
-  await page.keyboard.press('ArrowUp');
-  await expect(body(page)).toBeFocused();
-  await expect.poll(caret).toBe(0);
-  await page.keyboard.press('ArrowUp');
-  await expect(title(page)).toBeFocused();
-});
 
 /**
  * Every line of text in the note and the title, and every block, where it is now; then, for 30
@@ -204,22 +107,184 @@ async function moves(page: Page, act: () => Promise<void>): Promise<string[]> {
   return (await seen()).filter((line) => line !== 'done');
 }
 
-test('moving the caret between the title and the note moves no text', async ({ page }) => {
-  // Tall enough for the whole note: a click below the fold would scroll it.
-  await page.setViewportSize({ width: 1280, height: 1400 });
-  await openNote(page, 'Nested');
-  await titleCaret(page);
-  // Settled in the title.
-  await page.evaluate(() => new Promise((done) => setTimeout(done, 300)));
-  expect(await moves(page, () => page.keyboard.press('ArrowDown'))).toEqual([]);
-  await expect(body(page)).toBeFocused();
-  expect(await moves(page, () => page.keyboard.press('ArrowUp'))).toEqual([]);
-  await expect(title(page)).toBeFocused();
-  expect(await moves(page, () => page.keyboard.press('Enter'))).toEqual([]);
-  await expect(body(page)).toBeFocused();
-  // By the mouse: a click on the title, then on the last line.
-  expect(await moves(page, () => title(page).click())).toEqual([]);
-  await expect(title(page)).toBeFocused();
-  expect(await moves(page, () => body(page).getByText('Last line').click())).toEqual([]);
-  await expect(body(page)).toBeFocused();
+test.describe('in Caret, with its notes', () => {
+  test.use({
+    seed: {
+      name: 'Caret',
+      notes: Object.entries(NOTES).map(([title, markdown]) => ({ title, markdown })),
+    },
+  });
+
+  test('↓ in the title goes to the start of the note’s first line', async ({ page }) => {
+    await openNote(page, 'Plain');
+    await titleCaret(page, 2);
+    await page.keyboard.press('ArrowDown');
+    await expect(body(page)).toBeFocused();
+    await page.keyboard.type('>');
+    await expect(body(page).locator('p').first()).toHaveText('>First line of the note');
+    await expect(title(page)).toHaveValue('Plain');
+  });
+
+  test('↓ in a wrapped title moves down its lines first, then to the note', async ({ page }) => {
+    await openNote(page, LONG_TITLE);
+    const lines = await title(page).evaluate((field) => {
+      const style = getComputedStyle(field);
+      return Math.round(
+        (field.clientHeight - parseFloat(style.paddingBottom)) / parseFloat(style.lineHeight),
+      );
+    });
+    expect(lines).toBeGreaterThanOrEqual(2);
+    // From the first line, each ↓ but the last stays in the title, a line further down.
+    await titleCaret(page, 0);
+    let before = 0;
+    for (let line = 1; line < lines; line++) {
+      await page.keyboard.press('ArrowDown');
+      await expect(title(page)).toBeFocused();
+      const [start] = await titleSelection(page);
+      expect(start).toBeGreaterThan(before);
+      before = start!;
+    }
+    // On the last line, ↓ goes to the start of the note.
+    await page.keyboard.press('ArrowDown');
+    await expect(body(page)).toBeFocused();
+    await page.keyboard.type('>');
+    await expect(body(page).locator('p').first()).toHaveText('>First line under a long title');
+    await expect(title(page)).toHaveValue(LONG_TITLE);
+  });
+
+  test('Shift+↓ in the title selects in the title, and leaves the caret there', async ({
+    page,
+  }) => {
+    await openNote(page, 'Plain');
+    await titleCaret(page, 0);
+    await page.keyboard.press('Shift+ArrowDown');
+    await expect(title(page)).toBeFocused();
+    expect(await titleSelection(page)).toEqual([0, 'Plain'.length]);
+  });
+
+  test('↑ on the note’s first line goes to the end of the title', async ({ page }) => {
+    await openNote(page, 'Plain');
+    await titleCaret(page);
+    await page.keyboard.press('Enter');
+    await expect(body(page)).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowUp');
+    await expect(title(page)).toBeFocused();
+    expect(await titleSelection(page)).toEqual(['Plain'.length, 'Plain'.length]);
+    // And ↓ goes back down, to the start of the first line.
+    await page.keyboard.press('ArrowDown');
+    await expect(body(page)).toBeFocused();
+    await page.keyboard.type('>');
+    await expect(body(page).locator('p').first()).toHaveText('>First line of the note');
+  });
+
+  test('↑ on a wrapped first line’s second line stays in the note', async ({ page }) => {
+    await openNote(page, 'Wrapped');
+    const first = body(page).locator('p').first();
+    // Two lines: taller than one line of 1.7 × 16 px. Waited for: until its first layout, the
+    // unfocused editor's block has the height it is given ahead of it, one line (notes/note.css).
+    await expect.poll(() => first.evaluate((p: HTMLElement) => p.offsetHeight)).toBeGreaterThan(40);
+    /** Where the page's caret is: in the first paragraph's text, at which character. */
+    const caret = () =>
+      page.evaluate(() => {
+        const selection = getSelection()!;
+        const p = document.querySelector('[data-testid="note-body"] .ProseMirror > p');
+        return p?.contains(selection.focusNode) ? selection.focusOffset : -1;
+      });
+    // To the start of the note, then down to the first paragraph's second line.
+    await titleCaret(page);
+    await page.keyboard.press('ArrowDown');
+    await expect(body(page)).toBeFocused();
+    await expect.poll(caret).toBe(0);
+    await page.keyboard.press('ArrowDown');
+    await expect.poll(caret).toBeGreaterThan(20);
+    // ↑ goes up to the first line, in the note; one more goes to the title.
+    await page.keyboard.press('ArrowUp');
+    await expect(body(page)).toBeFocused();
+    await expect.poll(caret).toBe(0);
+    await page.keyboard.press('ArrowUp');
+    await expect(title(page)).toBeFocused();
+  });
+
+  test('moving the caret between the title and the note moves no text', async ({ page }) => {
+    // Tall enough for the whole note: a click below the fold would scroll it.
+    await page.setViewportSize({ width: 1280, height: 1400 });
+    await openNote(page, 'Nested');
+    await titleCaret(page);
+    // Settled in the title.
+    await page.evaluate(() => new Promise((done) => setTimeout(done, 300)));
+    expect(await moves(page, () => page.keyboard.press('ArrowDown'))).toEqual([]);
+    await expect(body(page)).toBeFocused();
+    expect(await moves(page, () => page.keyboard.press('ArrowUp'))).toEqual([]);
+    await expect(title(page)).toBeFocused();
+    expect(await moves(page, () => page.keyboard.press('Enter'))).toEqual([]);
+    await expect(body(page)).toBeFocused();
+    // By the mouse: a click on the title, then on the last line.
+    expect(await moves(page, () => title(page).click())).toEqual([]);
+    await expect(title(page)).toBeFocused();
+    expect(await moves(page, () => body(page).getByText('Last line').click())).toEqual([]);
+    await expect(body(page)).toBeFocused();
+  });
+});
+
+const tree = (page: Page) => page.getByRole('tree', { name: 'Folders and notes' });
+
+const noteViewBody = (page: Page) => page.getByTestId('note-view').locator('.ProseMirror');
+
+async function openNoteFromTree(page: Page, title: string): Promise<void> {
+  await tree(page).getByRole('link', { name: title, exact: true }).click();
+  await expect(page).toHaveURL(ULID);
+  await expect(page.getByTestId('note-title')).toHaveValue(title);
+}
+test.describe('in Personal, with nested folders', () => {
+  test.use({
+    seed: {
+      name: 'Personal',
+      folders: ['Penmoss', 'Penmoss/Feedback Archive', 'Penmoss/Work/Deep'],
+      notes: [
+        { title: 'Links', markdown: 'See the docs here.\n' },
+        { title: 'Penmoss Feedback', markdown: 'Feedback.\n', folder: 'Penmoss' },
+        { title: 'In Deep', markdown: 'Deep down.\n', folder: 'Penmoss/Work/Deep' },
+      ],
+    },
+  });
+
+  // T67, item #224.
+  test('a selection a key moves as the note takes focus is kept', async ({ page }) => {
+    const errors = collectErrors(page);
+    await page.goto('/');
+    await openNoteFromTree(page, 'Links');
+    await noteViewBody(page).getByText('See the docs here.').click();
+    await page.keyboard.press('Home');
+    await expect.poll(() => page.evaluate(() => getSelection()?.anchorOffset)).toBe(0);
+    // Focus leaves the note, then comes back with a key straight after, which moves the page's
+    // selection. Under load the browser reports that (`selectionchange`) after ProseMirror's
+    // 20 ms restore on focus has run; holding the report back for the moment makes that so.
+    await page.getByTestId('note-title').focus();
+    const selected = await page.evaluate(async () => {
+      const editor = document.querySelector<HTMLElement>('[data-testid="note-view"] .ProseMirror')!;
+      const late = (event: Event) => event.stopImmediatePropagation();
+      document.addEventListener('selectionchange', late, true);
+      editor.focus();
+      editor.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true, bubbles: true }),
+      );
+      for (let i = 0; i < 3; i++) getSelection()!.modify('extend', 'forward', 'character');
+      await new Promise((done) => setTimeout(done, 120));
+      document.removeEventListener('selectionchange', late, true);
+      return getSelection()?.toString();
+    });
+    expect(selected).toBe('See');
+    // And the editor took it: typing replaces those three letters.
+    await page.keyboard.type('Read');
+    await expect(noteViewBody(page).locator('p').first()).toHaveText('Read the docs here.');
+
+    // Typed fast after a click, Shift+→ selects every letter (the case the issue found under load).
+    await noteViewBody(page).locator('p').first().click();
+    await page.keyboard.press('Home');
+    for (let i = 0; i < 'Read '.length; i++) await page.keyboard.press('ArrowRight');
+    for (let i = 0; i < 'the docs'.length; i++) await page.keyboard.press('Shift+ArrowRight');
+    await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe('the docs');
+    expect(errors).toEqual([]);
+  });
 });

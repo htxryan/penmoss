@@ -116,7 +116,9 @@ test('AC1: the Dock icon brings back the minimized main window', async () => {
   await gitNotebook(launched); // A fresh launch shows Welcome; open a notebook first.
   await expect(page.locator('button[data-command="note.new"]')).toBeVisible();
   await minimize(app, 'main');
-  await page.waitForTimeout(1500); // Ryan sees the window gone into the Dock.
+  // Ryan sees the window gone into the Dock, and macOS finishes minimizing it: restored while it
+  // still animates, the window stays minimized (A1520).
+  await page.waitForTimeout(1500);
 
   await clickDock(app, false);
   await expect

@@ -3,7 +3,7 @@ import { chmod, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from '
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { nodeTokenStore, toolMessage } from '../src/token-store';
+import { LOOKUP_TIMEOUT_MS, nodeTokenStore, toolMessage } from '../src/token-store';
 
 // Git notebooks' secrets (T50): a notebook's token and its writer secret, each under its own key.
 const API = 'token:01JB8Y0V5TQ0QW8KZ9C7N3F2XA';
@@ -30,13 +30,18 @@ afterEach(async () => {
 const mode = async (path: string) => (await lstat(path)).mode & 0o777;
 const configPath = () => join(home, '.penmoss', 'credentials.json');
 
-function store(platform: NodeJS.Platform = 'linux', extra: Record<string, string> = {}) {
+function store(
+  platform: NodeJS.Platform = 'linux',
+  extra: Record<string, string> = {},
+  lookupTimeoutMs?: number,
+) {
   return nodeTokenStore({
     platform,
     env: { PATH: bin, FAKE_DIR: root, ...extra },
     service: 'penmoss-git',
     file: configPath(),
     accepts: (secret) => /^[A-Za-z0-9_.~+/=-]{8,1000}$/.test(secret),
+    ...(lookupTimeoutMs === undefined ? {} : { lookupTimeoutMs }),
   });
 }
 
@@ -168,12 +173,14 @@ describe('keychain tools that misbehave (A169, A171)', () => {
     await expect(readFile(join(root, 'argv.log'), 'utf8')).rejects.toThrow();
   });
 
-  it('gives up on a lookup after about 2 s, and does not ask again in the same run', async () => {
+  it('gives up on a lookup after its bound (2 s), and does not ask again in the same run', async () => {
+    expect(LOOKUP_TIMEOUT_MS).toBe(2_000);
     await fakeTool('secret-tool', 'sleep 30');
-    const tokens = store();
+    // The bound is the store's own; 200 ms here, so the test need not wait out 2 s.
+    const tokens = store('linux', {}, 200);
     let started = Date.now();
     expect(await tokens.get(API)).toBeNull();
-    expect(Date.now() - started).toBeLessThan(3_500);
+    expect(Date.now() - started).toBeLessThan(1_700);
     started = Date.now();
     expect(await tokens.get(LOCAL)).toBeNull();
     expect(Date.now() - started).toBeLessThan(200);

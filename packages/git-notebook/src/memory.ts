@@ -87,7 +87,10 @@ export interface MemoryTransportOptions {
   readonly remote: MemoryRemote;
   readonly branch: string;
   readonly root: string;
-  readonly author?: { readonly name: string; readonly email: string };
+  /** Who commits: fixed, or asked before each commit, as `NodeGitTransport`'s is. */
+  readonly author?:
+    | { readonly name: string; readonly email: string }
+    | (() => Promise<{ readonly name: string; readonly email: string }>);
   readonly clock?: () => number;
 }
 
@@ -210,11 +213,12 @@ export class MemoryTransport implements GitTransport {
       else tree.set(path, await this.options.remote.putBlob(bytes));
     }
     if (head && sameTree(before, tree)) return null;
+    const author = this.options.author;
     const id = await this.options.remote.putCommit(
       head,
       tree,
       message,
-      this.options.author,
+      typeof author === 'function' ? await author() : author,
       this.options.clock?.() ?? 0,
     );
     this.known.add(id);

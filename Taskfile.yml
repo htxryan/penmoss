@@ -50,9 +50,9 @@ tasks:
     cmds:
       - node --test scripts/ports.test.mjs
   budgets:test:
-    desc: 'Wall-clock budgets stay out of the unit run (A1244): only a *.budget.test.ts file times itself, and each package with one runs it in `budgets`'
+    desc: 'Wall-clock budgets stay out of the unit run (A1244): only a *.budget.test.ts file times itself, and each package with one runs it in `budgets`; and the shared vitest config they start from (A1513)'
     cmds:
-      - node --test scripts/budgets.test.mjs
+      - node --test scripts/budgets.test.mjs scripts/vitest-shared.test.mjs
   check-changed:test:
     desc: 'What `task check:changed` checks (A1224): the change about to be committed, or the last commit, never the whole branch'
     cmds:
@@ -420,6 +420,14 @@ tasks:
     env: *android-env
     cmds:
       - ./gradlew --console=plain :engine-bridge:test :engine-git:test :app:testDebugUnitTest :app:assembleDebugAndroidTest {{.CLI_ARGS}}
+
+  android:budgets:
+    desc: 'Android: the wall-clock budgets (*BudgetTest, A1244, A1539) alone, in one fork, never in `android:test`'
+    deps: [android:editor]
+    dir: apps/android
+    env: *android-env
+    cmds:
+      - PENMOSS_BUDGETS=1 ./gradlew --console=plain :app:testDebugUnitTest {{.CLI_ARGS}}
 
   android:release:
     desc: 'Android: the signed App Bundle for Play internal testing (needs the PENMOSS_KEY* signing settings; docs/android.md)'

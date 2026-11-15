@@ -50,6 +50,20 @@ val releaseForSideload = providers.environmentVariable("PENMOSS_RELEASE_SIGNING"
 val versionCodeFromEnv = providers.environmentVariable("PENMOSS_VERSION_CODE").orNull?.toIntOrNull() ?: 1
 val versionNameFromEnv = providers.environmentVariable("PENMOSS_VERSION_NAME").orNull?.takeIf { it.isNotBlank() } ?: "0.1.0"
 
+/**
+ * The app's Robolectric tests run in forks (A1523): half the machine's CPUs, from 1 to 4, so 2 on
+ * CI's hosted runner and 4 on this Mac, whose 18 are shared (W12). PENMOSS_TEST_FORKS sets it.
+ */
+val testForks: Int = providers.environmentVariable("PENMOSS_TEST_FORKS").orNull?.toIntOrNull()?.coerceAtLeast(1)
+    ?: (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 4)
+
+/**
+ * Wall-clock budgets run alone, never in the unit run (A1244, A1539): a `*BudgetTest` class keeps
+ * the timing and its unit twin every correctness check. PENMOSS_BUDGETS=1 runs only the budgets,
+ * in one fork, after the rest of the job, so other forks never skew their numbers.
+ */
+val budgetsOnly: Boolean = providers.environmentVariable("PENMOSS_BUDGETS").orNull == "1"
+
 android {
     namespace = "app.penmoss"
     compileSdk = 37
@@ -131,6 +145,17 @@ android {
             isIncludeAndroidResources = true
             all { test ->
                 test.maxHeapSize = "1g"
+                test.inputs.property("budgetsOnly", budgetsOnly)
+                if (budgetsOnly) {
+                    test.filter.includeTestsMatching("*BudgetTest")
+                    test.maxParallelForks = 1
+                    // A budget is a measurement: never a cached or up-to-date pass.
+                    test.outputs.cacheIf { false }
+                    test.outputs.upToDateWhen { false }
+                } else {
+                    test.exclude("**/*BudgetTest.class")
+                    test.maxParallelForks = testForks
+                }
                 test.systemProperty("robolectric.logging.enabled", "false")
                 // Robolectric's Android 16 sets up shared memory through JDK internals.
                 test.jvmArgs("--add-opens=java.base/jdk.internal.access=ALL-UNNAMED", "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED")

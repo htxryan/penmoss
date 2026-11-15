@@ -41,6 +41,7 @@ import org.junit.runner.RunWith
 import org.robolectric.Shadows.shadowOf
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import org.robolectric.annotation.Config
 
 /**
  * Selection mode through the app (T42 on Android, NT26, A652; review S2–S4): the root's bar moves
@@ -48,6 +49,7 @@ import java.util.concurrent.TimeUnit
  * off the screen's own bar under it, and lets go of a chosen note a pass takes off the list.
  */
 @RunWith(AndroidJUnit4::class)
+@Config(application = PenmossApp::class)
 class SelectionRootTest {
     @get:Rule
     val compose = createEmptyComposeRule()

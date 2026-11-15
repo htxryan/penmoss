@@ -26,7 +26,7 @@ To run the CLI without installing it, use `task cli -- search "garden plan"`. It
 
 ## 2. Tests
 
-`pnpm --filter @penmoss/cli test`. They cover argument parsing, the implied `--notebook`, the keychain and file stores for git tokens (with fake `security` and `secret-tool`), file modes, the `--json` shapes, exit codes and help. `test/notebook.test.ts` runs commands on real git notebooks over bare repositories on this machine, and `test/process.test.ts` runs the built CLI as a process: stdin at `/dev/null` or an open pipe, and the Node version check.
+`pnpm --filter @penmoss/cli test`. They cover argument parsing, the implied `--notebook`, the keychain and file stores for git tokens (with fake `security` and `secret-tool`), file modes, the `--json` shapes, exit codes and help. The notebook commands are in four files (A1516). `test/notebook-commands.test.ts` runs the commands, the registry, the names and `penmoss mcp`'s tools and channel over an in-memory host (`MemoryHosts` in `test/support/machine.ts`), with the registry, the clone's state and its lock on disk as ever. `test/notebook-git.test.ts` and `test/notebook-mcp.test.ts` run what git decides over bare repositories on this machine: convergence with no merges, a code repository's directory, the host's refusals, tokens over HTTP, SSH, rewrites, the commit identity, a hung fetch and the detached syncs. `test/notebook-bundle.test.ts` and `test/process.test.ts` run the built CLI as a process: credentials with no keychain, piped requests, a kill during a sync, stdin at `/dev/null` or an open pipe, and the Node version check.
 
 ## 3. How it fits together
 

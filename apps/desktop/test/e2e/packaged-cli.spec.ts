@@ -25,7 +25,15 @@ import { checkoutPortBase } from '../../../../scripts/checkout-ports.mjs';
 import { parseBlock } from '../../../../scripts/ports.mjs';
 import { cliScript } from '../../src/local-agents';
 import { inVirtualMachine, refuseOnMacHost } from './host-guard';
-import { bareRepository, dataDir, DESKTOP, firstRunPasteUrl, go, removeDataDirs } from './support';
+import {
+  bareRepository,
+  dataDir,
+  DESKTOP,
+  firstRunPasteUrl,
+  go,
+  holdForProof,
+  removeDataDirs,
+} from './support';
 
 refuseOnMacHost('The packaged app’s spec');
 test.skip(process.platform !== 'darwin', 'Needs a packaged Mac app and LaunchServices');
@@ -584,7 +592,7 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   const direct = cliCard.getByTestId('git-cli-direct');
   await direct.scrollIntoViewIfNeeded();
   await expect(direct).toContainText(`'${CLI_EXE}' --penmoss-cli`);
-  await page.waitForTimeout(2_000);
+  await holdForProof(page);
 
   // The notebook's automatic agent: claude mcp add and the Codex lines name the CLI bundle.
   const row = page.getByTestId('agents-notebook-row').filter({ hasText: 'Notes' });
@@ -604,7 +612,7 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   await expect(automatic.getByTestId('git-local-agent-codex')).toContainText(
     `command = "${CLI_EXE}"`,
   );
-  await page.waitForTimeout(2_000);
+  await holdForProof(page);
 
   // The agent runs the command it was given: the MCP server answers, and LaunchServices knows it
   // only as the CLI, never as Penmoss.
@@ -671,7 +679,7 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   }));
   if (page !== recorded) await shots.record(page);
   // AC3: the one app's main window, in front with its notebook.
-  await page.waitForTimeout(2_000);
+  await holdForProof(page);
   await attachText(
     'lsappinfo: at the end',
     registered()
@@ -690,7 +698,7 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   await card.scrollIntoViewIfNeeded();
   await expect(card.getByTestId('git-cli-state')).toContainText('runs another copy of Penmoss');
   expect(readFileSync(SCRIPT, 'utf8')).toBe(another);
-  await page.waitForTimeout(2_000);
+  await holdForProof(page);
   // Someone else's file is shown as theirs, and left as it is.
   const theirs = '#!/bin/sh\necho someone else\n';
   writeFileSync(SCRIPT, theirs, { mode: 0o755 });
@@ -699,7 +707,7 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   await expect(card).toHaveAttribute('data-state', 'other', { timeout: 30_000 });
   await card.scrollIntoViewIfNeeded();
   expect(readFileSync(SCRIPT, 'utf8')).toBe(theirs);
-  await page.waitForTimeout(2_000);
+  await holdForProof(page);
 
   // Running the CLI bundle crashed none of its helpers (they'd fill DiagnosticReports).
   await page.waitForTimeout(3_000);
@@ -712,7 +720,7 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   await expect(shown).toBeVisible({ timeout: 30_000 });
   await shown.getByTestId('git-local-agent-claude').scrollIntoViewIfNeeded();
   await expect(shown.getByTestId('git-local-agent-claude')).toContainText('Penmoss CLI.app');
-  await page.waitForTimeout(2_000);
+  await holdForProof(page);
   await shots.finish();
   await browser.close().catch(() => undefined);
 });

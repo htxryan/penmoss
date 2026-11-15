@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { expect, macContext, PREVIEW, test, type Page } from './fixtures';
 import { DOC_END, LINE_END } from './keys';
 import { noteAction } from './note-menu';
+import { ULID, body, collectErrors } from './support/app';
 
 // T15: copy and paste through the real clipboard in Chromium (clipboard permissions
 // granted): Penmoss → Penmoss, Copy as Markdown, paste and match style, pasted HTML
@@ -11,7 +12,6 @@ import { noteAction } from './note-menu';
 
 test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const TAG = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const FIXTURES = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -40,17 +40,6 @@ async function pasteAndMatchStyle(page: Page) {
   await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', ...key });
   await cdp.detach();
 }
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 
 async function newNote(page: Page, title: string): Promise<string> {
   await page

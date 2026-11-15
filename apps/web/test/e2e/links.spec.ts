@@ -4,6 +4,7 @@ import { DOC_END } from './keys';
 import { noteAction } from './note-menu';
 import { syncNow } from './support/sync';
 import { readRemote, remoteMarkdown } from './support/remote';
+import { body, collectErrors } from './support/app';
 
 // T16: [[ completion from the local registry (offline included), links that follow
 // renames in the editor, the markdown and (on a git notebook, T59) the notebook's rendered
@@ -16,22 +17,6 @@ const BETA = `Beta ${TAG}`;
 const GAMMA = `Gamma ${TAG}`;
 const RENAMED = `Allotment ${TAG}`;
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    // Refused sockets and fetches are expected while offline.
-    if (
-      message.type() === 'error' &&
-      !/ERR_INTERNET_DISCONNECTED|WebSocket|Failed to fetch|net::/.test(message.text())
-    ) {
-      errors.push(message.text());
-    }
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const menu = (page: Page) => page.getByTestId('link-menu');
 
 async function createNote(page: Page, title: string): Promise<string> {
@@ -69,7 +54,7 @@ test('links notes by id through [[ completion, follows renames, and lists backli
 }) => {
   test.setTimeout(120_000);
   const { remote } = seeded(notebook);
-  const errors = collectErrors(page);
+  const errors = collectErrors(page, /ERR_INTERNET_DISCONNECTED|WebSocket|Failed to fetch|net::/);
   await page.goto('/');
   await expect(page.getByTestId('empty-state')).toBeVisible();
 

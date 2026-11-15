@@ -139,20 +139,20 @@ describe('ci.yml', () => {
   it("asks apt for Chromium's libraries only through system-deps.sh", () => {
     assert.doesNotMatch(ci, /--with-deps/);
     assert.doesNotMatch(ci, /playwright install-deps/);
-    // site, the e2e shards and budgets through the playwright action (A1481), desktop itself
-    // (A1348 put the budgets on Ubuntu).
+    // site, the Factory UI (A1519), the e2e shards and budgets through the playwright action
+    // (A1481), desktop itself (A1348 put the budgets on Ubuntu).
     const action = readFileSync(
       path.join(here, '..', 'actions', 'playwright', 'action.yml'),
       'utf8',
     );
     assert.doesNotMatch(action, /--with-deps|install-deps/);
     assert.equal(action.match(/sh \.github\/scripts\/system-deps\.sh /g)?.length, 1);
-    assert.equal(ci.match(/uses: \.\/\.github\/actions\/playwright\n/g)?.length, 3);
+    assert.equal(ci.match(/uses: \.\/\.github\/actions\/playwright\n/g)?.length, 4);
     assert.equal(ci.match(/sh \.github\/scripts\/system-deps\.sh /g)?.length, 1);
   });
 
   it("caches the Electron job's tool packages, and fetches Electron before checking its libraries", () => {
-    const desktop = ci.slice(ci.indexOf('\n  desktop:'), ci.indexOf('\n  android:'));
+    const desktop = ci.slice(ci.indexOf('\n  desktop-shard:'), ci.indexOf('\n  desktop:'));
     const cache = desktop.indexOf('path: ~/.cache/penmoss-ci/debs');
     const electron = desktop.indexOf(`exec node -e "require('electron')"`);
     const deps = desktop.indexOf('sh .github/scripts/system-deps.sh');
@@ -163,7 +163,7 @@ describe('ci.yml', () => {
     // `env.ImageOS` is empty in an expression (the runner sets it, not the workflow), so the
     // first run's key was `debs-desktop-Linux--`, the same for every image.
     assert.doesNotMatch(ci, /env\.Image(OS|Version)/);
-    const desktop = ci.slice(ci.indexOf('\n  desktop:'), ci.indexOf('\n  android:'));
+    const desktop = ci.slice(ci.indexOf('\n  desktop-shard:'), ci.indexOf('\n  desktop:'));
     assert.match(desktop, /\$\{ImageOS:\?\}/);
     assert.match(desktop, /\$\{ImageVersion:\?\}/);
     assert.match(

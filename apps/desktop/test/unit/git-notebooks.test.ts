@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it as base, vi } from 'vitest';
 import {
   checkWords,
   commitAuthor,
@@ -47,15 +47,14 @@ function git(cwd: string, args: readonly string[]): string {
   return result.stdout.trim();
 }
 
-let dir: string;
-beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'penmoss-desktop-git-'));
-});
-afterEach(() => {
-  rmSync(dir, { recursive: true, force: true });
+/** Each test's own folder, named after it, so the real-git tests can run side by side. */
+const it = base.extend('dir', ({ task }, { onCleanup }) => {
+  const dir = mkdtempSync(join(tmpdir(), `penmoss-desktop-git-${task.id}-`));
+  onCleanup(() => rmSync(dir, { recursive: true, force: true }));
+  return dir;
 });
 
-function bare(name: string): string {
+function bare(dir: string, name: string): string {
   const path = join(dir, `${name}.git`);
   git(dir, ['init', '--bare', '--quiet', '-b', 'main', path]);
   git(path, ['config', 'uploadpack.allowFilter', 'true']);
@@ -71,6 +70,7 @@ const unseal = (sealed: string) =>
   );
 
 function service(
+  dir: string,
   overrides: Partial<GitNotebooksOptions> & { owner?: OwnerCheck } = {},
 ): GitNotebooks & { asked: string[] } {
   const asked: string[] = [];
@@ -90,10 +90,12 @@ function service(
   return Object.assign(notebooks, { asked });
 }
 
-describe('adding a git notebook (A856)', { timeout: 30_000 }, () => {
-  it('asks for a name when the target holds none, then makes the notebook there', async () => {
-    const remote = bare('notes');
-    const notebooks = service();
+describe.concurrent('adding a git notebook (A856)', { timeout: 30_000 }, () => {
+  it('asks for a name when the target holds none, then makes the notebook there', async ({
+    dir,
+  }) => {
+    const remote = bare(dir, 'notes');
+    const notebooks = service(dir);
     // Nobody is asked about the repository, and nor is GitHub (D61).
     const first = await notebooks.add({ remote, branch: 'main', dir: '' });
     expect(first).toEqual({ ok: true, value: { kind: 'needs-name' } });
@@ -133,8 +135,8 @@ describe('adding a git notebook (A856)', { timeout: 30_000 }, () => {
     expect(again).toMatchObject({ ok: false, error: { code: 'notebook_exists' } });
   });
 
-  it('joins the notebook the target holds, under its own id and name', async () => {
-    const remote = bare('shared');
+  it('joins the notebook the target holds, under its own id and name', async ({ dir }) => {
+    const remote = bare(dir, 'shared');
     const work = join(dir, 'work');
     git(dir, ['clone', '--quiet', remote, work]);
     git(work, ['checkout', '-q', '-b', 'main']);
@@ -148,7 +150,7 @@ describe('adding a git notebook (A856)', { timeout: 30_000 }, () => {
     git(work, ['add', '.']);
     git(work, ['-c', 'user.name=T', '-c', 'user.email=t@example.invalid', 'commit', '-qm', 'nb']);
     git(work, ['push', '-q', 'origin', 'main']);
-    const notebooks = service();
+    const notebooks = service(dir);
     const added = await notebooks.add({
       remote,
       branch: 'main',
@@ -164,8 +166,10 @@ describe('adding a git notebook (A856)', { timeout: 30_000 }, () => {
     });
   });
 
-  it('refuses a remote with credentials in it, a bad branch or a directory outside', async () => {
-    const notebooks = service();
+  it('refuses a remote with credentials in it, a bad branch or a directory outside', async ({
+    dir,
+  }) => {
+    const notebooks = service(dir);
     await expect(
       notebooks.add({
         remote: 'https://me:secret@github.com/me/notes.git',
@@ -177,10 +181,10 @@ describe('adding a git notebook (A856)', { timeout: 30_000 }, () => {
       notebooks.add({ remote: 'not a remote', branch: 'main', dir: '' }),
     ).resolves.toMatchObject({ ok: false, error: { code: 'invalid_remote' } });
     await expect(
-      notebooks.add({ remote: bare('b'), branch: '--upload-pack=evil', dir: '' }),
+      notebooks.add({ remote: bare(dir, 'b'), branch: '--upload-pack=evil', dir: '' }),
     ).resolves.toMatchObject({ ok: false, error: { code: 'invalid_branch' } });
     await expect(
-      notebooks.add({ remote: bare('c'), branch: 'main', dir: '../up' }),
+      notebooks.add({ remote: bare(dir, 'c'), branch: 'main', dir: '../up' }),
     ).resolves.toMatchObject({ ok: false, error: { code: 'invalid_dir' } });
   });
 });
@@ -189,12 +193,12 @@ describe(
   'no privacy check: any repository syncs, and GitHub is never asked (D61)',
   { timeout: 30_000 },
   () => {
-    it('adds and fetches any repository without a request to GitHub', async () => {
-      const remote = bare('anything');
+    it('adds and fetches any repository without a request to GitHub', async ({ dir }) => {
+      const remote = bare(dir, 'anything');
       const fetch = vi.fn(() => Promise.reject(new Error('no network in tests')));
       vi.stubGlobal('fetch', fetch);
       try {
-        const notebooks = service();
+        const notebooks = service(dir);
         const added = await notebooks.add({ remote, branch: 'main', dir: '', name: 'Work' });
         expect(added).toMatchObject({ ok: true, value: { kind: 'added' } });
         if (!added.ok || added.value.kind !== 'added') return;
@@ -212,9 +216,11 @@ describe(
       }
     });
 
-    it('an old registry with a stored confirmation still loads, and the next write drops it', async () => {
-      const remote = bare('old');
-      const notebooks = service();
+    it('an old registry with a stored confirmation still loads, and the next write drops it', async ({
+      dir,
+    }) => {
+      const remote = bare(dir, 'old');
+      const notebooks = service(dir);
       const added = await notebooks.add({ remote, branch: 'main', dir: '', name: 'Old' });
       if (!added.ok || added.value.kind !== 'added') throw new Error('not added');
       const id = added.value.notebook.localId;
@@ -227,7 +233,7 @@ describe(
         JSON.stringify({ localId: id, remote, at: 1_700_000_000_000 }),
       );
       writeFileSync(path, JSON.stringify(registry));
-      const fresh = service();
+      const fresh = service(dir);
       const listed = await fresh.list();
       expect(listed).toHaveLength(1);
       expect(listed[0]).toMatchObject({ localId: id, name: 'Old' });
@@ -242,10 +248,10 @@ describe(
   },
 );
 
-describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () => {
-  async function added(notebooks: GitNotebooks, name = 'Home') {
+describe.concurrent('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () => {
+  async function added(dir: string, notebooks: GitNotebooks, name = 'Home') {
     const result = await notebooks.add({
-      remote: bare(name.toLowerCase()),
+      remote: bare(dir, name.toLowerCase()),
       branch: 'main',
       dir: '',
       name,
@@ -254,9 +260,9 @@ describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () =
     return result.value.notebook;
   }
 
-  it('keeps a token sealed and never gives it back', async () => {
-    const notebooks = service();
-    const notebook = await added(notebooks);
+  it('keeps a token sealed and never gives it back', async ({ dir }) => {
+    const notebooks = service(dir);
+    const notebook = await added(dir, notebooks);
     await expect(notebooks.setToken(notebook.localId, 'ghp_secretsecret123')).resolves.toEqual({
       ok: true,
       value: null,
@@ -274,9 +280,11 @@ describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () =
     expect((await notebooks.list())[0]!.hasToken).toBe(false);
   });
 
-  it('a notebook added with Penmoss’s GitHub sign-in has its token from the start (T82, A1171)', async () => {
-    const notebooks = service();
-    const remote = bare('signed-in');
+  it('a notebook added with Penmoss’s GitHub sign-in has its token from the start (T82, A1171)', async ({
+    dir,
+  }) => {
+    const notebooks = service(dir);
+    const remote = bare(dir, 'signed-in');
     const token = 'gho_signedin0token0000000000000000000';
     // The target holds no notebook yet: nothing is kept for one that was not added.
     const first = await notebooks.add({ remote, branch: 'main', dir: '', token });
@@ -290,7 +298,7 @@ describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () =
     expect(kept()).not.toContain(token);
     // One that is not a token is not kept, and the notebook is added without one.
     const plain = await notebooks.add({
-      remote: bare('plain'),
+      remote: bare(dir, 'plain'),
       branch: 'main',
       dir: '',
       name: 'Plain',
@@ -299,13 +307,13 @@ describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () =
     expect(plain.ok && plain.value.kind === 'added' && plain.value.notebook.hasToken).toBe(false);
   });
 
-  it('keeps nothing when the Keychain cannot seal', async () => {
+  it('keeps nothing when the Keychain cannot seal', async ({ dir }) => {
     // The Keychain is there at add, then is gone.
     let keychain = true;
-    const notebooks = service({
+    const notebooks = service(dir, {
       seal: (plain) => (keychain ? seal(plain) : Promise.resolve(null)),
     });
-    const notebook = await added(notebooks);
+    const notebook = await added(dir, notebooks);
     keychain = false;
     await expect(
       notebooks.setToken(notebook.localId, 'ghp_secretsecret123'),
@@ -315,9 +323,11 @@ describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () =
     });
   });
 
-  it('removes only after the owner check, and then forgets the clone and its secrets', async () => {
+  it('removes only after the owner check, and then forgets the clone and its secrets', async ({
+    dir,
+  }) => {
     let yes = true;
-    const notebooks = service({
+    const notebooks = service(dir, {
       owner: () =>
         Promise.resolve(
           yes
@@ -325,7 +335,7 @@ describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () =
             : { ok: false, message: 'Not done: this Mac did not confirm it was you.' },
         ),
     });
-    const notebook = await added(notebooks, 'Diary');
+    const notebook = await added(dir, notebooks, 'Diary');
     yes = false;
     await notebooks.setToken(notebook.localId, 'ghp_secretsecret123');
     await expect(notebooks.remove(notebook.localId)).resolves.toMatchObject({
@@ -347,9 +357,9 @@ describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () =
     expect(readFileSync(join(dir, 'userData', 'git-secrets.json'), 'utf8')).not.toContain('token:');
   });
 
-  it('runs the engine’s calls: commit, push, list, read and log', async () => {
-    const notebooks = service();
-    const notebook = await added(notebooks);
+  it('runs the engine’s calls: commit, push, list, read and log', async ({ dir }) => {
+    const notebooks = service(dir);
+    const notebook = await added(dir, notebooks);
     const id = notebook.localId;
     const bytes = new TextEncoder().encode('{"format":1}');
     const commit = await notebooks.op(id, 'commit', [
@@ -372,9 +382,9 @@ describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () =
     const log = await notebooks.op(id, 'log', [{ limit: 5 }]);
     expect(log.ok && (log.value as Array<{ message: string }>)[0]!.message).toBe('Penmoss: first');
     // History's reads (Ryan's review of #192): a directory at many commits, each blob once.
-    const dir = await notebooks.op(id, 'readDir', [[sha, sha], '.penmoss/']);
-    expect(dir.ok).toBe(true);
-    const value = (dir.ok ? dir.value : null) as {
+    const atCommits = await notebooks.op(id, 'readDir', [[sha, sha], '.penmoss/']);
+    expect(atCommits.ok).toBe(true);
+    const value = (atCommits.ok ? atCommits.value : null) as {
       files: Array<[string, Array<[string, string]>]>;
       blobs: Array<[string, Uint8Array]>;
     };
@@ -382,9 +392,11 @@ describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () =
     expect(new TextDecoder().decode(value.blobs[0]![1])).toBe('{"format":1}');
   });
 
-  it('refuses calls it does not know and arguments that are not what git takes', async () => {
-    const notebooks = service();
-    const notebook = await added(notebooks);
+  it('refuses calls it does not know and arguments that are not what git takes', async ({
+    dir,
+  }) => {
+    const notebooks = service(dir);
+    const notebook = await added(dir, notebooks);
     await expect(notebooks.op(notebook.localId, 'gc', [])).resolves.toMatchObject({
       ok: false,
       error: { code: 'invalid_request' },
@@ -414,9 +426,11 @@ describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () =
     }
   });
 
-  it('moves a notebook still on the old defaults to the new cadence once (A1013)', async () => {
-    const notebooks = service();
-    const notebook = await added(notebooks);
+  it('moves a notebook still on the old defaults to the new cadence once (A1013)', async ({
+    dir,
+  }) => {
+    const notebooks = service(dir);
+    const notebook = await added(dir, notebooks);
     // A registry from before T57: the old defaults, and one set by hand.
     const path = join(dir, 'userData', 'git-notebooks.json');
     const registry = JSON.parse(readFileSync(path, 'utf8')) as { notebooks: GitNotebookEntry[] };
@@ -432,10 +446,12 @@ describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () =
     expect(withCadence(own)).toMatchObject({ pushDelayS: 30, pullEveryMin: 2, cadence: 2 });
   });
 
-  it('renames a notebook here, until a sync reports that name at the branch (Ryan’s review of PR #192)', async () => {
+  it('renames a notebook here, until a sync reports that name at the branch (Ryan’s review of PR #192)', async ({
+    dir,
+  }) => {
     let changes = 0;
-    const notebooks = service({ onChange: () => void changes++ });
-    const notebook = await added(notebooks);
+    const notebooks = service(dir, { onChange: () => void changes++ });
+    const notebook = await added(dir, notebooks);
     const id = notebook.localId;
     await expect(notebooks.update(id, { name: '  ' })).resolves.toMatchObject({ ok: false });
     await expect(notebooks.update(id, { name: ' Personal\n(old) ' })).resolves.toMatchObject({
@@ -466,9 +482,9 @@ describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () =
     expect(changes).toBe(before);
   });
 
-  it('keeps the cadence in range', async () => {
-    const notebooks = service();
-    const notebook = await added(notebooks);
+  it('keeps the cadence in range', async ({ dir }) => {
+    const notebooks = service(dir);
+    const notebook = await added(dir, notebooks);
     await expect(
       notebooks.update(notebook.localId, { pushDelayS: 30, pullEveryMin: 5, sign: false }),
     ).resolves.toMatchObject({ ok: true, value: { pushDelayS: 30, pullEveryMin: 5, sign: false } });
@@ -481,7 +497,7 @@ describe('tokens, removing, and the engine’s calls', { timeout: 30_000 }, () =
   });
 });
 
-describe(
+describe.concurrent(
   'Delete for good only for a note the owner confirmed (A828, A855)',
   { timeout: 30_000 },
   () => {
@@ -501,10 +517,12 @@ describe(
       return { engine, storage, ops: new NotebookOps(engine) };
     }
 
-    it('a commit that adds a copy of a note deleted for good is refused (A886)', async () => {
-      const notebooks = service();
+    it('a commit that adds a copy of a note deleted for good is refused (A886)', async ({
+      dir,
+    }) => {
+      const notebooks = service(dir);
       const result = await notebooks.add({
-        remote: bare('raced'),
+        remote: bare(dir, 'raced'),
         branch: 'main',
         dir: '',
         name: 'Home',
@@ -550,10 +568,10 @@ describe(
       expect(spawnSync('git', ['grep', '-q', 'hunter2', 'main'], { cwd: remote }).status).toBe(1);
     }, 30_000);
 
-    it('a commit that takes back a Delete for good that landed is refused', async () => {
-      const notebooks = service();
+    it('a commit that takes back a Delete for good that landed is refused', async ({ dir }) => {
+      const notebooks = service(dir);
       const result = await notebooks.add({
-        remote: bare('reverse'),
+        remote: bare(dir, 'reverse'),
         branch: 'main',
         dir: '',
         name: 'Home',
@@ -584,13 +602,15 @@ describe(
       expect(git(remote, ['ls-tree', '-r', '--name-only', 'main'])).not.toContain('Secret.md');
     }, 30_000);
 
-    it('History’s restore and revert ask the owner, naming the note from the branch, as Android does (A901)', async () => {
+    it('History’s restore and revert ask the owner, naming the note from the branch, as Android does (A901)', async ({
+      dir,
+    }) => {
       let answer = true;
-      const notebooks = service({
+      const notebooks = service(dir, {
         owner: () => Promise.resolve(answer ? { ok: true } : { ok: false, message: 'Not done.' }),
       });
       const result = await notebooks.add({
-        remote: bare('restore'),
+        remote: bare(dir, 'restore'),
         branch: 'main',
         dir: '',
         name: 'Home',
@@ -625,10 +645,12 @@ describe(
       });
     });
 
-    it('a sync that deletes a note for good is refused until Touch ID confirmed that note', async () => {
-      const notebooks = service();
+    it('a sync that deletes a note for good is refused until Touch ID confirmed that note', async ({
+      dir,
+    }) => {
+      const notebooks = service(dir);
       const result = await notebooks.add({
-        remote: bare('purge'),
+        remote: bare(dir, 'purge'),
         branch: 'main',
         dir: '',
         name: 'Home',
@@ -677,7 +699,7 @@ describe(
         `on this Mac: an untitled note (…${unsynced.slice(-6)})`,
       );
       // A refused owner check confirms nothing.
-      const refusing = service({
+      const refusing = service(dir, {
         owner: () => Promise.resolve({ ok: false, message: 'Not done.' }),
       });
       await expect(refusing.purgeCheck(localId, keep)).resolves.toMatchObject({
@@ -751,12 +773,14 @@ describe('the note an owner check names (A855)', () => {
   });
 });
 
-describe('a Delete for good confirmation runs out (A855)', { timeout: 30_000 }, () => {
-  it('after 10 minutes a sync is refused; confirming again, for what has not landed, lets it go', async () => {
+describe.concurrent('a Delete for good confirmation runs out (A855)', { timeout: 30_000 }, () => {
+  it('after 10 minutes a sync is refused; confirming again, for what has not landed, lets it go', async ({
+    dir,
+  }) => {
     let now = Date.parse('2026-10-29T12:00:00Z');
-    const notebooks = service({ now: () => now });
+    const notebooks = service(dir, { now: () => now });
     const result = await notebooks.add({
-      remote: bare('ttl'),
+      remote: bare(dir, 'ttl'),
       branch: 'main',
       dir: '',
       name: 'Home',
@@ -825,10 +849,10 @@ describe('a Delete for good confirmation runs out (A855)', { timeout: 30_000 }, 
     );
   }, 30_000);
 
-  it('a page that empties another writer’s log is refused', async () => {
-    const notebooks = service();
+  it('a page that empties another writer’s log is refused', async ({ dir }) => {
+    const notebooks = service(dir);
     const result = await notebooks.add({
-      remote: bare('wipe'),
+      remote: bare(dir, 'wipe'),
       branch: 'main',
       dir: '',
       name: 'Home',
@@ -860,11 +884,13 @@ describe('a Delete for good confirmation runs out (A855)', { timeout: 30_000 }, 
   }, 30_000);
 });
 
-describe('an agent writer never marks a change undone (#174 delta review)', () => {
-  it('main refuses an agent’s commit that adds an undo mark; a person’s goes through', async () => {
-    const notebooks = service();
+describe.concurrent('an agent writer never marks a change undone (#174 delta review)', () => {
+  it('main refuses an agent’s commit that adds an undo mark; a person’s goes through', async ({
+    dir,
+  }) => {
+    const notebooks = service(dir);
     const result = await notebooks.add({
-      remote: bare('marks'),
+      remote: bare(dir, 'marks'),
       branch: 'main',
       dir: '',
       name: 'Home',
@@ -913,10 +939,12 @@ describe('an agent writer never marks a change undone (#174 delta review)', () =
   }, 30_000);
 });
 
-describe('Remove says what would be lost (A856)', { timeout: 30_000 }, () => {
-  it('names the changes never pushed, or that it cannot tell, in the owner check', async () => {
+describe.concurrent('Remove says what would be lost (A856)', { timeout: 30_000 }, () => {
+  it('names the changes never pushed, or that it cannot tell, in the owner check', async ({
+    dir,
+  }) => {
     const answers: string[] = [];
-    const notebooks = service({
+    const notebooks = service(dir, {
       owner: (words) => {
         answers.push(words);
         return Promise.resolve(
@@ -925,7 +953,7 @@ describe('Remove says what would be lost (A856)', { timeout: 30_000 }, () => {
       },
     });
     const result = await notebooks.add({
-      remote: bare('lose'),
+      remote: bare(dir, 'lose'),
       branch: 'main',
       dir: '',
       name: 'Lose',
@@ -958,55 +986,63 @@ describe('Remove says what would be lost (A856)', { timeout: 30_000 }, () => {
   }, 30_000);
 });
 
-describe('git follows its own configuration, rewrites included (D62)', { timeout: 30_000 }, () => {
-  it('adds and pushes where git’s configuration sends the pushes (pushInsteadOf)', async () => {
-    const elsewhere = bare('elsewhere');
-    const notebooks = service({
-      gitEnv: {
-        ...GIT_ENV,
-        GIT_CONFIG_COUNT: '1',
-        GIT_CONFIG_KEY_0: `url.${elsewhere}.pushInsteadOf`,
-        GIT_CONFIG_VALUE_0: bare('mine'),
-      },
-    });
-    const result = await notebooks.add({
-      remote: `file://${join(dir, 'mine.git')}`,
-      branch: 'main',
-      dir: '',
-      name: 'Mine',
-    });
-    // Once refused as `redirected`; now added like any other.
-    expect(result).toMatchObject({ ok: true, value: { kind: 'added', created: true } });
-    expect(notebooks.asked).toEqual([]);
-  }, 30_000);
+describe.concurrent(
+  'git follows its own configuration, rewrites included (D62)',
+  { timeout: 30_000 },
+  () => {
+    it('adds and pushes where git’s configuration sends the pushes (pushInsteadOf)', async ({
+      dir,
+    }) => {
+      const elsewhere = bare(dir, 'elsewhere');
+      const notebooks = service(dir, {
+        gitEnv: {
+          ...GIT_ENV,
+          GIT_CONFIG_COUNT: '1',
+          GIT_CONFIG_KEY_0: `url.${elsewhere}.pushInsteadOf`,
+          GIT_CONFIG_VALUE_0: bare(dir, 'mine'),
+        },
+      });
+      const result = await notebooks.add({
+        remote: `file://${join(dir, 'mine.git')}`,
+        branch: 'main',
+        dir: '',
+        name: 'Mine',
+      });
+      // Once refused as `redirected`; now added like any other.
+      expect(result).toMatchObject({ ok: true, value: { kind: 'added', created: true } });
+      expect(notebooks.asked).toEqual([]);
+    }, 30_000);
 
-  it('adds a notebook whose remote git rewrites to another address (insteadOf)', async () => {
-    const real = bare('real');
-    const notebooks = service({
-      gitEnv: {
-        ...GIT_ENV,
-        GIT_CONFIG_COUNT: '1',
-        GIT_CONFIG_KEY_0: `url.${real}.insteadOf`,
-        GIT_CONFIG_VALUE_0: 'https://git.example.com/me/notes.git',
-      },
-    });
-    const added = await notebooks.add({
-      remote: 'https://git.example.com/me/notes.git',
-      branch: 'main',
-      dir: '',
-      name: 'Notes',
-    });
-    expect(added).toMatchObject({ ok: true, value: { kind: 'added' } });
-    if (!added.ok || added.value.kind !== 'added') return;
-    // The notebook keeps the address it was given; git rewrites it on every call, so the fetch
-    // reaches the bare repository and not git.example.com.
-    expect(added.value.notebook.remote).toBe('https://git.example.com/me/notes.git');
-    await expect(notebooks.op(added.value.notebook.localId, 'fetch', [])).resolves.toEqual({
-      ok: true,
-      value: null,
-    });
-  }, 30_000);
-});
+    it('adds a notebook whose remote git rewrites to another address (insteadOf)', async ({
+      dir,
+    }) => {
+      const real = bare(dir, 'real');
+      const notebooks = service(dir, {
+        gitEnv: {
+          ...GIT_ENV,
+          GIT_CONFIG_COUNT: '1',
+          GIT_CONFIG_KEY_0: `url.${real}.insteadOf`,
+          GIT_CONFIG_VALUE_0: 'https://git.example.com/me/notes.git',
+        },
+      });
+      const added = await notebooks.add({
+        remote: 'https://git.example.com/me/notes.git',
+        branch: 'main',
+        dir: '',
+        name: 'Notes',
+      });
+      expect(added).toMatchObject({ ok: true, value: { kind: 'added' } });
+      if (!added.ok || added.value.kind !== 'added') return;
+      // The notebook keeps the address it was given; git rewrites it on every call, so the fetch
+      // reaches the bare repository and not git.example.com.
+      expect(added.value.notebook.remote).toBe('https://git.example.com/me/notes.git');
+      await expect(notebooks.op(added.value.notebook.localId, 'fetch', [])).resolves.toEqual({
+        ok: true,
+        value: null,
+      });
+    }, 30_000);
+  },
+);
 
 describe('a commit identity is plain text (#174 review)', () => {
   it('refuses NUL, control, bidi and other format characters in the name and the email', () => {
@@ -1028,17 +1064,19 @@ describe('a commit identity is plain text (#174 review)', () => {
   });
 });
 
-describe('who commits (#170 F3, F6)', { timeout: 30_000 }, () => {
-  it('reads git’s identity again for each commit, and a notebook’s own name and email win', async () => {
+describe.concurrent('who commits (#170 F3, F6)', { timeout: 30_000 }, () => {
+  it('reads git’s identity again for each commit, and a notebook’s own name and email win', async ({
+    dir,
+  }) => {
     const global = join(dir, 'gitconfig');
     const identity = (name: string, email: string) =>
       writeFileSync(global, `[user]\n\tname = ${name}\n\temail = ${email}\n`);
     identity('Ryan', 'ryan@example.invalid');
-    const notebooks = service({
+    const notebooks = service(dir, {
       gitEnv: { GIT_CONFIG_GLOBAL: global, GIT_CONFIG_NOSYSTEM: '1' },
     });
     const added = await notebooks.add({
-      remote: bare('who'),
+      remote: bare(dir, 'who'),
       branch: 'main',
       dir: '',
       name: 'Who',
@@ -1107,7 +1145,7 @@ describe('helpers', () => {
 });
 
 describe('no git outlives the app (A853)', () => {
-  it('kills only what is still a git process group a crashed run left', () => {
+  it('kills only what is still a git process group a crashed run left', ({ dir }) => {
     const path = join(dir, 'git-processes.json');
     const at = Date.parse('2026-10-29T09:00:00Z');
     writeFileSync(

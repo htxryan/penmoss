@@ -296,7 +296,11 @@ class TrashSyncTest {
         assertEquals(PassOutcome.SYNCED, pass())
         penmoss.onTrashAnswered = null
         assertTrue(listed("soup"))
-        runBlocking { assertEquals(NoteEntity.RESTORE_QUEUED, store.note("soup")!!.trashChange) }
+        runBlocking {
+            assertEquals(NoteEntity.RESTORE_QUEUED, store.note("soup")!!.trashChange)
+            // Waiting to be sent: Settings counts it, and signing out keeps it.
+            assertEquals(1, store.trashChangesWaiting())
+        }
         // The next pass sends the restore: the server has the note back, in its folder.
         assertEquals(PassOutcome.SYNCED, pass())
         assertEquals(listOf("trash:soup", "restore:soup"), penmoss.trashCalls.toList())

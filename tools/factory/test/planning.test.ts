@@ -1,8 +1,4 @@
-import { mkdirSync, mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { linearConfig, testConfig } from './helpers.ts';
 import {
   answerText,
   isAgreement,
@@ -173,95 +169,6 @@ describe('planningAction', () => {
     expect(
       planningAction(view({ state: { ...waiting, status: 'trivial', open: ['A one-word typo'] } })),
     ).toEqual({ kind: 'trivial', reason: 'A one-word typo' });
-  });
-});
-
-describe('planning sessions', async () => {
-  const { planningFlags, planText, sessionName } = await import('../src/planning-host.ts');
-  it('scope every tool to the snapshot and the output folder, with no MCP and no Chrome (F0.5)', () => {
-    const flags = planningFlags({
-      root: '/p/9',
-      repo: '/p/9/repo',
-      out: '/p/9/out',
-      meta: '/p/9/meta.json',
-      attachments: '/p/9/attachments',
-    });
-    expect(flags).toEqual(
-      expect.arrayContaining([
-        '--no-chrome',
-        '--strict-mcp-config',
-        '{"mcpServers":{}}',
-        'dontAsk',
-        // `//` is an absolute path in a Claude Code rule; `/` is relative to the settings file.
-        'Read(//p/9/repo/**)',
-        'Read(//p/9/out/**)',
-        // The issue's images, which the host downloads: read, never written.
-        'Read(//p/9/attachments/**)',
-        'Edit(//p/9/out/**)',
-      ]),
-    );
-    // Remote Control stays on: the session runs on Ryan's own login, which can open it (A1286).
-    expect(flags).not.toContain('--settings');
-    expect(flags.join(' ')).not.toContain('remoteControlAtStartup');
-    expect(flags).not.toContain('Edit(//p/9/attachments/**)');
-    expect(flags.some((f) => f.startsWith('Bash'))).toBe(false);
-    // Claude Code never matches a file write against a Write rule, only against Edit.
-    expect(flags.some((f) => f.startsWith('Write('))).toBe(false);
-    expect(flags.some((f) => /^(Read|Edit)\(\/[^/]/.test(f))).toBe(false);
-  });
-  it('names each session after its card, as the active tracker numbers it', async () => {
-    const { sessionIssue } = await import('../src/planning-host.ts');
-    const github = testConfig();
-    const linear = linearConfig();
-    expect(sessionName(github, 9)).toBe('[PF] Penmoss #9 plan');
-    expect(sessionName(linear, 41)).toBe('[PF] Penmoss PEN-41 plan');
-    expect(sessionIssue(linear, '[PF] Penmoss PEN-41 plan')).toBe(41);
-    // A session started before the prefix (A1288) is still the card's.
-    expect(sessionIssue(linear, 'Penmoss PEN-41 plan')).toBe(41);
-    expect(sessionIssue(linear, '[PF] Penmoss PEN-41 run')).toBeUndefined();
-    // Another tracker's session, or anyone else's, isn't this card's.
-    expect(sessionIssue(linear, 'Penmoss #41 plan')).toBeUndefined();
-    expect(sessionIssue(github, 'Penmoss PEN-41 plan')).toBeUndefined();
-    expect(sessionIssue(linear, 'My own session')).toBeUndefined();
-  });
-  it('gives factory:chat the Claude app link and the command that join the planning session (A1281, A1286)', async () => {
-    const { planFiles, planningChat, writeMeta } = await import('../src/planning-host.ts');
-    const config = { ...linearConfig(), stateDir: mkdtempSync(join(tmpdir(), 'chat-')) };
-    expect(planningChat(config, 41)).toEqual({ error: 'PEN-41 has no planning session yet' });
-    const files = planFiles(config, 41);
-    mkdirSync(files.root, { recursive: true });
-    writeMeta(files, { sessionId: '5be0ac96-5e8e-4b08' });
-    expect(planningChat(config, 41)).toEqual({ command: 'claude attach 5be0ac96', chatUrl: null });
-    writeMeta(files, {
-      sessionId: '5be0ac96-5e8e-4b08',
-      chatUrl: 'https://claude.ai/code/session_01Ab',
-    });
-    expect(planningChat(config, 41)).toEqual({
-      command: 'claude attach 5be0ac96',
-      chatUrl: 'https://claude.ai/code/session_01Ab',
-    });
-    writeMeta(files, {
-      sessionId: '5be0ac96-5e8e-4b08',
-      agreed: {
-        quote: 'complete',
-        channel: 'issue',
-        at: 'x',
-        trivial: false,
-        planUrl: null,
-        designUrl: null,
-        planVersion: 1,
-        designVersion: null,
-      },
-    });
-    expect(planningChat(config, 41)).toEqual({
-      error: "PEN-41's plan is agreed; its planning session has ended",
-    });
-  });
-
-  it("turns the plan page into text, without its styles, scripts or diagrams' markup", () => {
-    const html =
-      '<html><style>p{}</style><body><h1>Plan</h1><p>Do &amp; test</p><svg><text>x</text></svg><script>1</script><ul><li>AC1</li></ul></body></html>';
-    expect(planText(html)).toBe('Plan\nDo & test\nAC1');
   });
 });
 

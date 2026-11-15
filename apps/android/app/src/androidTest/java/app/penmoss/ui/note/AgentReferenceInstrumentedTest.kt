@@ -1,8 +1,6 @@
 package app.penmoss.ui.note
 
 import android.os.SystemClock
-import android.view.View
-import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -21,15 +19,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ViewRootForTest
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getAllSemanticsNodes
-import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.penmoss.ScreenTree
 import app.penmoss.data.NoteEntity
 import app.penmoss.data.NoteStore
 import app.penmoss.data.PenmossDatabase
@@ -115,22 +110,10 @@ class AgentReferenceInstrumentedTest {
         val deadline = SystemClock.uptimeMillis() + 30_000
         do {
             instrumentation.waitForIdleSync()
-            scenario.onActivity { activity -> texts = textsOn(activity.window.decorView) }
+            scenario.onActivity { activity -> texts = ScreenTree.texts(activity.window.decorView) }
             if (done(texts)) break
             SystemClock.sleep(250)
         } while (SystemClock.uptimeMillis() < deadline)
         return texts
-    }
-
-    private fun textsOn(view: View): List<String> {
-        val roots = mutableListOf<ViewRootForTest>()
-        fun walk(v: View) {
-            if (v is ViewRootForTest) roots += v
-            if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
-        }
-        walk(view)
-        return roots
-            .flatMap { it.semanticsOwner.getAllSemanticsNodes(mergingEnabled = false) }
-            .flatMap { node -> node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text } }
     }
 }

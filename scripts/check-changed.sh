@@ -14,7 +14,7 @@
 #     depends on one (pnpm's `...[<ref>]` filter);
 #   - the release-page and Play upload script tests when their folders changed.
 # A change to shared config (lockfile, root package.json, tsconfig.base.json, the lint and format
-# configs, the Taskfile) can affect any package, so it runs the whole `task check` instead.
+# configs, the Taskfile, the vitest config every package starts from) can affect any package, so it runs the whole `task check` instead.
 #
 # Only heavy work waits for one of the Mac's heavy-job slots (scripts/heavy.sh, W12): that whole
 # `task check`, and unit tests that select more than PENMOSS_CHECK_LIGHT_PACKAGES packages
@@ -53,7 +53,7 @@ if [ -z "$changed" ]; then
   exit 0
 fi
 
-if echo "$changed" | grep -qE '^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.base\.json|eslint\.config\.js|stylelint\.config\.js|\.prettierrc[^/]*|\.prettierignore|Taskfile\.yml)$'; then
+if echo "$changed" | grep -qE '^(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|tsconfig\.base\.json|eslint\.config\.js|stylelint\.config\.js|\.prettierrc[^/]*|\.prettierignore|Taskfile\.yml|scripts/vitest-shared\.mjs)$'; then
   plan 'full'
   echo '[check:changed] shared config changed: running the whole `task check`'
   exec task check

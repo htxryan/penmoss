@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { EXIT, memoryTokenStore } from '@penmoss/cli';
 import { CliError, nodeNotebooks } from '@penmoss/cli/node';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it as base } from 'vitest';
 import { desktopConfig } from '../../src/config';
 import type { GitNotebookEntry } from '../../src/git-notebooks';
 import {
@@ -35,15 +35,14 @@ function git(cwd: string, args: readonly string[]): string {
   return result.stdout.trim();
 }
 
-let dir: string;
-beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'penmoss-local-agents-'));
-});
-afterEach(() => {
-  rmSync(dir, { recursive: true, force: true });
+/** Each test's own folder, named after it, so the real-git tests can run side by side. */
+const it = base.extend('dir', ({ task }, { onCleanup }) => {
+  const dir = mkdtempSync(join(tmpdir(), `penmoss-local-agents-${task.id}-`));
+  onCleanup(() => rmSync(dir, { recursive: true, force: true }));
+  return dir;
 });
 
-function bare(name: string): string {
+function bare(dir: string, name: string): string {
   const path = join(dir, `${name}.git`);
   git(dir, ['init', '--bare', '--quiet', '-b', 'main', path]);
   git(path, ['config', 'uploadpack.allowFilter', 'true']);
@@ -64,7 +63,7 @@ function cliNotebooks(home: string, secrets = memoryTokenStore()) {
 }
 
 /** A notebook in `remote`, as the app would have made it: from another machine's clone. */
-async function seeded(remote: string): Promise<void> {
+async function seeded(dir: string, remote: string): Promise<void> {
   await cliNotebooks(join(dir, 'elsewhere')).add({
     remote,
     branch: 'main',
@@ -90,6 +89,7 @@ function appEntry(remote: string, extra: Partial<GitNotebookEntry> = {}): GitNot
 }
 
 function agents(
+  dir: string,
   options: {
     entry?: GitNotebookEntry | null;
     token?: string | null;
@@ -130,142 +130,160 @@ function agents(
   return { service, asked, home, secrets, registry: join(home, '.penmoss', 'notebooks.json') };
 }
 
-describe('connecting an agent to a git notebook (A993, A994)', { timeout: 60_000 }, () => {
-  it('makes the agent its own clone after Touch ID, with its MCP command', async () => {
-    const remote = bare('notes');
-    await seeded(remote);
-    const { service, asked, registry } = agents({ entry: appEntry(remote) });
-    const answer = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', '  Claude   Code ');
-    if (!answer.ok) throw new Error(answer.error.message);
-    expect(answer.value).toMatchObject({
-      name: 'notes-claude-code',
-      label: 'Claude Code',
-      server: 'penmoss-notes-claude-code',
+describe.concurrent(
+  'connecting an agent to a git notebook (A993, A994)',
+  { timeout: 60_000 },
+  () => {
+    it('makes the agent its own clone after Touch ID, with its MCP command', async ({ dir }) => {
+      const remote = bare(dir, 'notes');
+      await seeded(dir, remote);
+      const { service, asked, registry } = agents(dir, { entry: appEntry(remote) });
+      const answer = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', '  Claude   Code ');
+      if (!answer.ok) throw new Error(answer.error.message);
+      expect(answer.value).toMatchObject({
+        name: 'notes-claude-code',
+        label: 'Claude Code',
+        server: 'penmoss-notes-claude-code',
+      });
+      expect(answer.value.claude).toBe(
+        `claude mcp add penmoss-notes-claude-code -- ${EXE} --penmoss-cli mcp --notebook notes-claude-code`,
+      );
+      // With the switch on (T60, A1073): the channel, and how Claude Code starts with it.
+      expect(answer.value.claudeChannel).toBe(
+        `claude mcp add penmoss-notes-claude-code -- ${EXE} --penmoss-cli mcp --notebook notes-claude-code --channel`,
+      );
+      expect(answer.value.claudeLaunch).toBe(
+        'claude --dangerously-load-development-channels server:penmoss-notes-claude-code',
+      );
+      expect(answer.value.codex).toBe(
+        [
+          '[mcp_servers."penmoss-notes-claude-code"]',
+          `command = "${EXE}"`,
+          'args = ["--penmoss-cli", "mcp", "--notebook", "notes-claude-code"]',
+        ].join('\n'),
+      );
+      expect(asked).toHaveLength(1);
+      expect(asked[0]).toContain('let the agent “Claude Code” edit');
+      // The CLI's own registry: an agent's clone, and no confirmation of any kind (D51).
+      const text = readFileSync(registry, 'utf8');
+      const stored = JSON.parse(text) as {
+        notebooks: { name: string; writer: { kind: string; label: string } }[];
+      };
+      expect(stored.notebooks).toHaveLength(1);
+      expect(stored.notebooks[0]).toMatchObject({
+        name: 'notes-claude-code',
+        writer: { kind: 'agent', label: 'Claude Code' },
+      });
+      expect(text).not.toMatch(/confirm/i);
+      // It syncs as the agent: the CLI's code finds the notebook the app made.
+      const listed = await service.list('01M6AAAAAAAAAAAAAAAAAAAAAA');
+      expect(listed.ok && listed.value.map((each) => each.name)).toEqual(['notes-claude-code']);
     });
-    expect(answer.value.claude).toBe(
-      `claude mcp add penmoss-notes-claude-code -- ${EXE} --penmoss-cli mcp --notebook notes-claude-code`,
-    );
-    // With the switch on (T60, A1073): the channel, and how Claude Code starts with it.
-    expect(answer.value.claudeChannel).toBe(
-      `claude mcp add penmoss-notes-claude-code -- ${EXE} --penmoss-cli mcp --notebook notes-claude-code --channel`,
-    );
-    expect(answer.value.claudeLaunch).toBe(
-      'claude --dangerously-load-development-channels server:penmoss-notes-claude-code',
-    );
-    expect(answer.value.codex).toBe(
-      [
-        '[mcp_servers."penmoss-notes-claude-code"]',
-        `command = "${EXE}"`,
-        'args = ["--penmoss-cli", "mcp", "--notebook", "notes-claude-code"]',
-      ].join('\n'),
-    );
-    expect(asked).toHaveLength(1);
-    expect(asked[0]).toContain('let the agent “Claude Code” edit');
-    // The CLI's own registry: an agent's clone, and no confirmation of any kind (D51).
-    const text = readFileSync(registry, 'utf8');
-    const stored = JSON.parse(text) as {
-      notebooks: { name: string; writer: { kind: string; label: string } }[];
-    };
-    expect(stored.notebooks).toHaveLength(1);
-    expect(stored.notebooks[0]).toMatchObject({
-      name: 'notes-claude-code',
-      writer: { kind: 'agent', label: 'Claude Code' },
+
+    it('refuses without Touch ID, and leaves nothing behind', async ({ dir }) => {
+      const remote = bare(dir, 'notes');
+      await seeded(dir, remote);
+      const { service, registry } = agents(dir, {
+        entry: appEntry(remote),
+        owner: () => Promise.resolve({ ok: false, message: 'Cancelled.' }),
+      });
+      const answer = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Claude Code');
+      expect(answer).toEqual({
+        ok: false,
+        error: { code: 'not_confirmed', message: 'Cancelled.' },
+      });
+      expect(() => readFileSync(registry)).toThrow();
     });
-    expect(text).not.toMatch(/confirm/i);
-    // It syncs as the agent: the CLI's code finds the notebook the app made.
-    const listed = await service.list('01M6AAAAAAAAAAAAAAAAAAAAAA');
-    expect(listed.ok && listed.value.map((each) => each.name)).toEqual(['notes-claude-code']);
-  });
 
-  it('refuses without Touch ID, and leaves nothing behind', async () => {
-    const remote = bare('notes');
-    await seeded(remote);
-    const { service, registry } = agents({
-      entry: appEntry(remote),
-      owner: () => Promise.resolve({ ok: false, message: 'Cancelled.' }),
+    it('leaves nothing behind when the add fails', async ({ dir }) => {
+      // A repository that is not there: the CLI's add rolls back, and no agent is listed.
+      const { service, registry } = agents(dir, {
+        entry: appEntry(`file://${join(dir, 'missing.git')}`),
+      });
+      const answer = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Codex');
+      expect(answer.ok).toBe(false);
+      expect(await service.list('01M6AAAAAAAAAAAAAAAAAAAAAA')).toEqual({ ok: true, value: [] });
+      expect(() => readFileSync(registry)).toThrow();
     });
-    const answer = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Claude Code');
-    expect(answer).toEqual({ ok: false, error: { code: 'not_confirmed', message: 'Cancelled.' } });
-    expect(() => readFileSync(registry)).toThrow();
-  });
 
-  it('leaves nothing behind when the add fails', async () => {
-    // A repository that is not there: the CLI's add rolls back, and no agent is listed.
-    const { service, registry } = agents({ entry: appEntry(`file://${join(dir, 'missing.git')}`) });
-    const answer = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Codex');
-    expect(answer.ok).toBe(false);
-    expect(await service.list('01M6AAAAAAAAAAAAAAAAAAAAAA')).toEqual({ ok: true, value: [] });
-    expect(() => readFileSync(registry)).toThrow();
-  });
-
-  it('carries the token, signing and commit identity over to the clone', async () => {
-    const remote = bare('notes');
-    await seeded(remote);
-    const author = { name: 'Ryan', email: 'ryan@users.noreply.github.com' };
-    const { service, registry, secrets } = agents({
-      entry: appEntry(remote, { sign: false, author }),
-      token: 'ghp_example0token0for0tests',
+    it('carries the token, signing and commit identity over to the clone', async ({ dir }) => {
+      const remote = bare(dir, 'notes');
+      await seeded(dir, remote);
+      const author = { name: 'Ryan', email: 'ryan@users.noreply.github.com' };
+      const { service, registry, secrets } = agents(dir, {
+        entry: appEntry(remote, { sign: false, author }),
+        token: 'ghp_example0token0for0tests',
+      });
+      const answer = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Codex');
+      if (!answer.ok) throw new Error(answer.error.message);
+      const stored = JSON.parse(readFileSync(registry, 'utf8')) as {
+        notebooks: { localId: string; sign?: boolean; identity?: unknown }[];
+      };
+      expect(stored.notebooks[0]).toMatchObject({ sign: false, identity: author });
+      const saved = await secrets.get(`token:${stored.notebooks[0]!.localId}`);
+      expect(saved?.token).toBe('ghp_example0token0for0tests');
     });
-    const answer = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Codex');
-    if (!answer.ok) throw new Error(answer.error.message);
-    const stored = JSON.parse(readFileSync(registry, 'utf8')) as {
-      notebooks: { localId: string; sign?: boolean; identity?: unknown }[];
-    };
-    expect(stored.notebooks[0]).toMatchObject({ sign: false, identity: author });
-    const saved = await secrets.get(`token:${stored.notebooks[0]!.localId}`);
-    expect(saved?.token).toBe('ghp_example0token0for0tests');
-  });
 
-  it('refuses a second agent of the same name, and a name it cannot use', async () => {
-    const remote = bare('notes');
-    await seeded(remote);
-    const { service } = agents({ entry: appEntry(remote) });
-    expect((await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Claude Code')).ok).toBe(true);
-    const again = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Claude Code');
-    expect(!again.ok && again.error.code).toBe('agent_exists');
-    for (const bad of ['', '   ', 'x'.repeat(41), 'say "hi"']) {
-      const answer = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', bad);
-      expect(!answer.ok && answer.error.code).toBe('invalid_label');
-    }
-    const missing = agents({ entry: null }).service;
-    expect(await missing.connect('nope', 'Codex')).toMatchObject({ ok: false });
-  });
-
-  it('disconnects an agent, never a person’s clone; losing changes asks Touch ID', async () => {
-    const remote = bare('notes');
-    await seeded(remote);
-    const { service, asked, home } = agents({ entry: appEntry(remote) });
-    const connected = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Codex');
-    if (!connected.ok) throw new Error(connected.error.message);
-    // A person's own clone in the same ~/.penmoss is not the page's to remove.
-    await cliNotebooks(join(home, '.penmoss')).add({
-      remote,
-      branch: 'main',
-      dir: '',
-      name: 'mine',
+    it('refuses a second agent of the same name, and a name it cannot use', async ({ dir }) => {
+      const remote = bare(dir, 'notes');
+      await seeded(dir, remote);
+      const { service } = agents(dir, { entry: appEntry(remote) });
+      expect((await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Claude Code')).ok).toBe(true);
+      const again = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Claude Code');
+      expect(!again.ok && again.error.code).toBe('agent_exists');
+      for (const bad of ['', '   ', 'x'.repeat(41), 'say "hi"']) {
+        const answer = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', bad);
+        expect(!answer.ok && answer.error.code).toBe('invalid_label');
+      }
+      const missing = agents(dir, { entry: null }).service;
+      expect(await missing.connect('nope', 'Codex')).toMatchObject({ ok: false });
     });
-    expect(await service.disconnect('mine', false)).toMatchObject({
-      ok: false,
-      error: { code: 'not_found' },
-    });
-    asked.length = 0;
-    expect(await service.disconnect(connected.value.name, true)).toEqual({ ok: true, value: null });
-    expect(asked).toEqual(['disconnect the agent “Codex” and lose the changes it has not pushed']);
-    const listed = await service.list('01M6AAAAAAAAAAAAAAAAAAAAAA');
-    expect(listed).toEqual({ ok: true, value: [] });
-  });
-});
 
-describe(
+    it('disconnects an agent, never a person’s clone; losing changes asks Touch ID', async ({
+      dir,
+    }) => {
+      const remote = bare(dir, 'notes');
+      await seeded(dir, remote);
+      const { service, asked, home } = agents(dir, { entry: appEntry(remote) });
+      const connected = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Codex');
+      if (!connected.ok) throw new Error(connected.error.message);
+      // A person's own clone in the same ~/.penmoss is not the page's to remove.
+      await cliNotebooks(join(home, '.penmoss')).add({
+        remote,
+        branch: 'main',
+        dir: '',
+        name: 'mine',
+      });
+      expect(await service.disconnect('mine', false)).toMatchObject({
+        ok: false,
+        error: { code: 'not_found' },
+      });
+      asked.length = 0;
+      expect(await service.disconnect(connected.value.name, true)).toEqual({
+        ok: true,
+        value: null,
+      });
+      expect(asked).toEqual([
+        'disconnect the agent “Codex” and lose the changes it has not pushed',
+      ]);
+      const listed = await service.list('01M6AAAAAAAAAAAAAAAAAAAAAA');
+      expect(listed).toEqual({ ok: true, value: [] });
+    });
+  },
+);
+
+describe.concurrent(
   'every agent on this Mac reaches every notebook in the app (D52)',
   { timeout: 60_000 },
   () => {
-    it('gives each notebook an automatic agent clone, with its token, and no owner check', async () => {
-      const remote = bare('notes');
-      await seeded(remote);
+    it('gives each notebook an automatic agent clone, with its token, and no owner check', async ({
+      dir,
+    }) => {
+      const remote = bare(dir, 'notes');
+      await seeded(dir, remote);
       const entry = appEntry(remote, { name: 'Quanta' });
       let token: string | null = 'ghp_example0token0for0tests';
-      const { service, asked, home, secrets } = agents({
+      const { service, asked, home, secrets } = agents(dir, {
         entry,
         all: () => [{ entry, token }],
       });
@@ -302,11 +320,16 @@ describe(
       });
     });
 
-    it('a notebook renamed in the app: its clone keeps its folder and name, and takes both names (Ryan’s review of PR #192)', async () => {
-      const remote = bare('notes');
-      await seeded(remote);
+    it('a notebook renamed in the app: its clone keeps its folder and name, and takes both names (Ryan’s review of PR #192)', async ({
+      dir,
+    }) => {
+      const remote = bare(dir, 'notes');
+      await seeded(dir, remote);
       let entry = appEntry(remote, { name: 'notes' });
-      const { service, home, secrets } = agents({ entry, all: () => [{ entry, token: null }] });
+      const { service, home, secrets } = agents(dir, {
+        entry,
+        all: () => [{ entry, token: null }],
+      });
       await service.ensureAll();
       const cli = cliNotebooks(join(home, '.penmoss'), secrets);
       const [before] = await cli.list();
@@ -324,11 +347,11 @@ describe(
       expect(await cli.list()).toHaveLength(1);
     });
 
-    it('waits for the app’s first push rather than make a notebook of its own', async () => {
-      const remote = bare('new');
+    it('waits for the app’s first push rather than make a notebook of its own', async ({ dir }) => {
+      const remote = bare(dir, 'new');
       const entry = appEntry(remote, { create: true });
       let now = 1_000_000;
-      const { service, home } = agents({
+      const { service, home } = agents(dir, {
         entry,
         all: () => [{ entry, token: null }],
         now: () => now,
@@ -338,7 +361,7 @@ describe(
       expect(await cli.list()).toEqual([]);
       expect(git(remote.replace('file://', ''), ['branch', '--list'])).toBe('');
       // The app pushes its notebook; the next try, once its wait is over, connects.
-      await seeded(remote);
+      await seeded(dir, remote);
       await service.ensureAll();
       expect(await cli.list()).toEqual([]);
       now += 20_000;
@@ -346,9 +369,11 @@ describe(
       expect((await cli.list()).map((each) => each.name)).toEqual(['notes-agent']);
     });
 
-    it('tries again at once when the notebook’s settings change, not only after its wait', async () => {
-      const remote = bare('private-email');
-      await seeded(remote);
+    it('tries again at once when the notebook’s settings change, not only after its wait', async ({
+      dir,
+    }) => {
+      const remote = bare(dir, 'private-email');
+      await seeded(dir, remote);
       const home = join(dir, 'home');
       const secrets = memoryTokenStore();
       const tried: (string | undefined)[] = [];
@@ -394,10 +419,12 @@ describe(
       expect((await notebooks().list()).map((each) => each.name)).toEqual(['notes-agent']);
     });
 
-    it('leaves a notebook with an agent of its own, and removes its automatic clone with it', async () => {
-      const remote = bare('notes');
-      await seeded(remote);
-      const other = bare('other');
+    it('leaves a notebook with an agent of its own, and removes its automatic clone with it', async ({
+      dir,
+    }) => {
+      const remote = bare(dir, 'notes');
+      await seeded(dir, remote);
+      const other = bare(dir, 'other');
       await cliNotebooks(join(dir, 'elsewhere-too')).add({
         remote: other,
         branch: 'main',
@@ -407,7 +434,7 @@ describe(
       const first = appEntry(remote);
       const second = appEntry(other, { localId: '01M6CCCCCCCCCCCCCCCCCCCCCC', name: 'Other' });
       let all = [first, second];
-      const { service, home } = agents({
+      const { service, home } = agents(dir, {
         entry: first,
         all: () => all.map((entry) => ({ entry, token: null })),
       });
@@ -426,8 +453,10 @@ describe(
 );
 
 describe('the penmoss command (A992)', () => {
-  it('writes ~/.local/bin/penmoss that runs this app, and says when its folder is not on PATH', async () => {
-    const { service, home } = agents();
+  it('writes ~/.local/bin/penmoss that runs this app, and says when its folder is not on PATH', async ({
+    dir,
+  }) => {
+    const { service, home } = agents(dir);
     expect(await service.cliStatus()).toMatchObject({ state: 'missing', onPath: false });
     const installed = await service.installCli();
     if (!installed.ok) throw new Error(installed.error.message);
@@ -441,14 +470,16 @@ describe('the penmoss command (A992)', () => {
     const script = readFileSync(join(home, '.local', 'bin', 'penmoss'), 'utf8');
     expect(script).toContain(`exec ${EXE} --penmoss-cli "$@"`);
     expect(statSync(join(home, '.local', 'bin', 'penmoss')).mode & 0o777).toBe(0o755);
-    const onPath = agents({ loginPath: `${join(home, '.local', 'bin')}:/usr/bin` }).service;
+    const onPath = agents(dir, { loginPath: `${join(home, '.local', 'bin')}:/usr/bin` }).service;
     expect((await onPath.cliStatus()).onPath).toBe(true);
-    expect((await agents({ loginPath: null }).service.cliStatus()).onPath).toBe(null);
+    expect((await agents(dir, { loginPath: null }).service.cliStatus()).onPath).toBe(null);
     expect(await service.removeCli()).toMatchObject({ ok: true, value: { state: 'missing' } });
   });
 
-  it('never overwrites a penmoss it did not write, and knows its own for another copy of the app', async () => {
-    const { service, home } = agents();
+  it('never overwrites a penmoss it did not write, and knows its own for another copy of the app', async ({
+    dir,
+  }) => {
+    const { service, home } = agents(dir);
     mkdirSync(join(home, '.local', 'bin'), { recursive: true });
     writeFileSync(join(home, '.local', 'bin', 'penmoss'), '#!/bin/sh\necho mine\n');
     expect((await service.cliStatus()).state).toBe('other');
@@ -470,7 +501,7 @@ describe('the penmoss command (A992)', () => {
   });
 });
 
-describe('the CLI bundle (PEN-121)', () => {
+describe.concurrent('the CLI bundle (PEN-121)', () => {
   const BUNDLED =
     '/Applications/Penmoss.app/Contents/Helpers/Penmoss CLI.app/Contents/MacOS/Penmoss';
   const script = (words: string) =>
@@ -506,27 +537,31 @@ describe('the CLI bundle (PEN-121)', () => {
     ).toEqual({ cli: ['/e/Electron', '/src/apps/desktop', '--penmoss-cli'], old: null });
   });
 
-  it('gives agents and the penmoss command the CLI bundle', { timeout: 60_000 }, async () => {
-    const remote = bare('bundle');
-    await seeded(remote);
-    const { service } = agents({ entry: appEntry(remote), cli: [BUNDLED, '--penmoss-cli'] });
-    const connected = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Codex');
-    if (!connected.ok) throw new Error(connected.error.message);
-    const quoted = `'${BUNDLED}' --penmoss-cli`;
-    expect(connected.value.claude).toBe(
-      `claude mcp add penmoss-notes-codex -- ${quoted} mcp --notebook notes-codex`,
-    );
-    expect(connected.value.codex).toContain(`command = "${BUNDLED}"`);
-    expect(connected.value.codex).toContain(
-      'args = ["--penmoss-cli", "mcp", "--notebook", "notes-codex"]',
-    );
-    expect((await service.cliStatus()).direct).toBe(quoted);
-    await service.installCli();
-    expect((await service.cliStatus()).state).toBe('installed');
-  });
+  it(
+    'gives agents and the penmoss command the CLI bundle',
+    { timeout: 60_000 },
+    async ({ dir }) => {
+      const remote = bare(dir, 'bundle');
+      await seeded(dir, remote);
+      const { service } = agents(dir, { entry: appEntry(remote), cli: [BUNDLED, '--penmoss-cli'] });
+      const connected = await service.connect('01M6AAAAAAAAAAAAAAAAAAAAAA', 'Codex');
+      if (!connected.ok) throw new Error(connected.error.message);
+      const quoted = `'${BUNDLED}' --penmoss-cli`;
+      expect(connected.value.claude).toBe(
+        `claude mcp add penmoss-notes-codex -- ${quoted} mcp --notebook notes-codex`,
+      );
+      expect(connected.value.codex).toContain(`command = "${BUNDLED}"`);
+      expect(connected.value.codex).toContain(
+        'args = ["--penmoss-cli", "mcp", "--notebook", "notes-codex"]',
+      );
+      expect((await service.cliStatus()).direct).toBe(quoted);
+      await service.installCli();
+      expect((await service.cliStatus()).state).toBe('installed');
+    },
+  );
 
-  it('rewrites only its own script for this same app’s old path', async () => {
-    const { service, home } = agents({
+  it('rewrites only its own script for this same app’s old path', async ({ dir }) => {
+    const { service, home } = agents(dir, {
       cli: [BUNDLED, '--penmoss-cli'],
       oldCli: [EXE, '--penmoss-cli'],
     });
@@ -561,7 +596,7 @@ describe('the CLI bundle (PEN-121)', () => {
 
     // An app with no old path (development, Linux) never rewrites.
     writeFileSync(file, script(`${EXE} --penmoss-cli`));
-    expect(await agents({ cli: [BUNDLED, '--penmoss-cli'] }).service.refreshCli()).toBe(false);
+    expect(await agents(dir, { cli: [BUNDLED, '--penmoss-cli'] }).service.refreshCli()).toBe(false);
   });
 });
 

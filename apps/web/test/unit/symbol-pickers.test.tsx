@@ -32,6 +32,19 @@ const key = (target: Element, name: string, init: KeyboardEventInit = {}) =>
     target.dispatchEvent(new KeyboardEvent('keyup', { key: name, bubbles: true, ...init }));
   });
 
+/**
+ * Frames that run only when `run` is called: a page so loaded that the panel's first frame comes
+ * after a click and some typing in it (symbols.spec.ts's T44 colour check, once under load).
+ */
+function lateFrames() {
+  const frames: FrameRequestCallback[] = [];
+  vi.stubGlobal('requestAnimationFrame', (frame: FrameRequestCallback) => frames.push(frame));
+  return { run: () => act(() => frames.splice(0).forEach((frame) => frame(0))) };
+}
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe('the glyph picker (item 9)', () => {
   function render(onChoose = vi.fn(() => null as string | null)) {
     act(() =>
@@ -119,6 +132,22 @@ describe('the glyph picker (item 9)', () => {
     act(() => $('[data-testid="symbol-glyph-1-use"]').click());
     expect(onChoose).toHaveBeenCalledWith('🦊');
   });
+
+  it('focuses the current preset once drawn, but never takes focus from the field', () => {
+    const frames = lateFrames();
+    render();
+    const button = $('[data-testid="symbol-glyph-1"]');
+    act(() => button.click());
+    const field = $<HTMLInputElement>('[data-testid="symbol-glyph-1-custom"]');
+    act(() => field.focus());
+    frames.run();
+    expect(document.activeElement).toBe(field);
+    // Opened with focus outside it: the current preset takes it.
+    key(field, 'Escape');
+    act(() => button.click());
+    frames.run();
+    expect(document.activeElement?.getAttribute('data-glyph')).toBe('★');
+  });
 });
 
 describe('the colour picker (item 10)', () => {
@@ -201,6 +230,29 @@ describe('the colour picker (item 10)', () => {
     });
     key(alpha, 'ArrowLeft');
     expect(onChange).toHaveBeenLastCalledWith('#3366cc80');
+  });
+
+  it('focuses the chosen swatch once drawn, but never takes focus from the hex field', () => {
+    const frames = lateFrames();
+    const onChange = render('danger');
+    const hex = $<HTMLInputElement>('[data-testid="symbol-colour-1-hex"]');
+    act(() => hex.focus());
+    frames.run();
+    expect(document.activeElement).toBe(hex);
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+        hex,
+        '#3366CC80',
+      );
+      hex.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    key(hex, 'Enter');
+    expect(onChange).toHaveBeenLastCalledWith('#3366cc80');
+    // Opened with focus outside it: the chosen swatch takes it.
+    key(hex, 'Escape');
+    act(() => $('[data-testid="symbol-colour-1"]').click());
+    frames.run();
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Red');
   });
 
   it('closes on Escape and on a press outside', () => {

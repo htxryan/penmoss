@@ -232,4 +232,4 @@ The token is kept in the state folder (`ui-token`, mode 600), so the link stays 
 
 There is no pause button for the whole factory yet: pause one card with Blocked, or stop the daemon (Turning it off). The page shows a run's folder as a path to copy rather than revealing it in Finder.
 
-The page's own check runs headless Chromium against a fake state folder: `pnpm --filter @penmoss/factory e2e` (A1234). It never opens a window on the Mac.
+The page's own check runs headless Chromium against a fake state folder: `pnpm --filter @penmoss/factory e2e` (A1234). It never opens a window on the Mac. CI runs it in its `factory-ui` job whenever the factory changes (A1519).

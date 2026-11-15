@@ -129,6 +129,8 @@ function fixture() {
           PENMOSS_EMULATOR_LOCK: lock,
           // One look at the launcher is enough here; CI waits for 10 s of it.
           PENMOSS_EMULATOR_QUIET_SECONDS: '1',
+          // Every fixed wait at a tenth: the counts and bounds stay in ticks (A1518).
+          PENMOSS_EMULATOR_TICK: '0.1',
           ...env,
         },
       });

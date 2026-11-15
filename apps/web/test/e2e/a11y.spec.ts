@@ -1,37 +1,29 @@
 import AxeBuilder from '@axe-core/playwright';
+import { BUILT_IN_THEMES } from '@penmoss/ui/theme';
 import {
-  expect,
-  GitHost,
-  macContext,
-  test,
   type Browser,
   type BrowserContext,
+  expect,
+  GitHost,
   type Locator,
+  macContext,
   type Page,
+  test,
 } from './fixtures';
-import { BUILT_IN_THEMES } from '@penmoss/ui/theme';
-import { NEW_FOLDER, NEW_NOTE, VERSION_HISTORY, LINE_END, SELECT_TO_LINE_START } from './keys';
+import { LINE_END, NEW_FOLDER, NEW_NOTE, SELECT_TO_LINE_START, VERSION_HISTORY } from './keys';
 import { noteAction } from './note-menu';
+import { pushed } from './support/sync';
+import { body, collectErrors, ULID } from './support/app';
 
 // T36, extended by T31: no serious or critical axe violations (WCAG 2.0, 2.1 and 2.2 A and AA)
 // on every main screen, light and dark, at desktop and phone widths; every built-in theme on a
 // note and Settings (T28); and the icon buttons' tooltips. On a git notebook (T59): the screens
 // the Mac app has without a server.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 const PHONE = { width: 390, height: 844 };
 const DESKTOP = { width: 1280, height: 720 };
 const SEARCH = 'ControlOrMeta+Shift+KeyF';
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 /**
  * The slash and link menus are listboxes the note drives with aria-activedescendant: focus stays
@@ -125,7 +117,6 @@ async function newNote(page: Page, title: string, text: string): Promise<string>
 
 const NOTE_TEXT = 'Raised beds by the fence. #garden';
 
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const tree = (page: Page) => page.getByRole('tree', { name: 'Folders and notes' });
 const treeItem = (page: Page, name: string) =>
   tree(page).getByRole('treeitem', { name, exact: true });
@@ -147,13 +138,6 @@ async function suiteMac(browser: Browser, viewport?: { width: number; height: nu
   await host.seed();
   const context = await macContext(browser, host, viewport ? { viewport } : {});
   return { host, context, page: await context.newPage() };
-}
-
-/** The notebook's sync dot: synced, nothing waiting to be pushed (A860). */
-async function synced(page: Page) {
-  const dot = page.getByTestId('section-sync');
-  await expect(dot).toHaveAttribute('data-state', 'synced', { timeout: 40_000 });
-  await expect(dot).toHaveAttribute('data-pending', '0', { timeout: 40_000 });
 }
 
 async function newFolder(page: Page, name: string): Promise<Locator> {
@@ -278,7 +262,7 @@ test.describe.serial('no serious axe violations on any main screen', () => {
     await expect(treeItem(page, `Axe deleted ${RUN}`)).toHaveCount(0);
 
     // Each pass reloads the app: leave only once the notebook is stored and pushed.
-    await synced(page);
+    await pushed(page);
   });
 
   test.afterAll(async () => {
@@ -531,7 +515,7 @@ test.describe.serial('no serious axe violations in every built-in theme', () => 
     await page.keyboard.type("const beds = 4; // by the fence\nplant('tomato');");
     await expect(page.locator('.hljs-keyword').first()).toBeVisible();
     // Each check reloads the app: leave only once the notebook is stored and pushed.
-    await synced(page);
+    await pushed(page);
   });
 
   test.afterAll(async () => {
@@ -608,5 +592,49 @@ test('icon buttons show their name and shortcut as a tooltip on hover and keyboa
   await expect(tooltip).toBeHidden();
   // The tooltip repeats the accessible name: assistive technology does not read it twice.
   await expect(info).toHaveAccessibleName('Copy Agent Reference');
+  expect(errors).toEqual([]);
+});
+
+const PALETTE = 'ControlOrMeta+KeyK';
+
+async function newNoteFromButton(page: Page, title: string, text = ''): Promise<string> {
+  await page
+    .getByRole('button', { name: /^New Note/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(ULID);
+  await expect(page.getByTestId('note-title')).toBeFocused();
+  await page.keyboard.type(title);
+  if (text) {
+    await page.keyboard.press('Enter');
+    await page.keyboard.type(text);
+  }
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+  return ULID.exec(new URL(page.url()).pathname)![1]!;
+}
+
+// T39 pass 1.
+test('Tab stays in a modal dialog, and its close button closes it', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/');
+  await newNoteFromButton(page, `Dialog note ${RUN}`, 'Text.');
+  for (const [keys, name, close] of [
+    [PALETTE, 'Command Palette', 'Close the Palette'],
+    [SEARCH, 'Search', 'Close Search'],
+  ] as const) {
+    await page.keyboard.press(keys);
+    const dialog = page.getByRole('dialog', { name });
+    await expect(dialog).toBeVisible();
+    // However often Tab is pressed, forwards or back, focus stays in the dialog.
+    for (const key of ['Tab', 'Tab', 'Tab', 'Tab', 'Tab', 'Shift+Tab', 'Shift+Tab']) {
+      await page.keyboard.press(key);
+      expect(
+        await dialog.evaluate((element) => element.contains(document.activeElement)),
+        `${name}: ${key}`,
+      ).toBe(true);
+    }
+    await dialog.getByRole('button', { name: close }).click();
+    await expect(dialog).toBeHidden();
+  }
   expect(errors).toEqual([]);
 });

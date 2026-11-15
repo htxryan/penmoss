@@ -2,24 +2,13 @@ import { anotherMac, expect, seeded, test, type Page } from './fixtures';
 import { NEW_NOTE } from './keys';
 import { storedSetting } from './stored';
 import { readRemote } from './support/remote';
+import { ULID, body, collectErrors } from './support/app';
 
 // T20: the command palette (⌘K, respecting A42), quick open, the ⌘E recent-notes switcher,
 // the cheat sheet, and rebinding a shortcut in Settings (conflicts, immediate effect, and on
 // another Mac through the git notebook, whose `device` map holds the bindings, A827).
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const TAG = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 
 const idOf = (page: Page) => ULID.exec(new URL(page.url()).pathname)![1]!;
 

@@ -1,24 +1,15 @@
-import { expect, test, type Locator, type Page } from './fixtures';
+import { expect, type Locator, type Page, test } from './fixtures';
+import { body, collectErrors, ULID } from './support/app';
 
 // T36: the phone layout. Every screen is reachable on a phone-sized screen without the desktop
 // site: the app bar's menu opens the sidebar as a drawer (Settings, Trash, folders, journal,
 // tags), the ⋮ sheet holds the note's actions, and nothing scrolls sideways. The local Worker
 // keeps one workspace: names carry a per-run tag.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 const PHONE = { width: 390, height: 844 };
 
 test.use({ viewport: PHONE, isMobile: true, hasTouch: true });
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 const appBar = (page: Page) => page.getByTestId('app-bar');
 const drawer = (page: Page) => page.getByRole('complementary', { name: 'Notes' });
@@ -286,4 +277,78 @@ test('phone controls are at least 44 px and nothing scrolls sideways', async ({ 
     }
   }
   expect(errors).toEqual([]);
+});
+
+const treeOf = (page: Page) => page.getByRole('tree', { name: 'Folders and notes' });
+
+const row = (page: Page, name: string) => treeOf(page).getByRole('treeitem', { name, exact: true });
+
+// T39 pass 1.
+test.describe('on a phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test('the note sheet moves a note, and search has a close button', async ({ page }) => {
+    const errors = collectErrors(page);
+    await page.goto('/');
+    const title = `Phone filing ${RUN}`;
+    await page.getByRole('button', { name: 'New Note', exact: true }).tap();
+    await expect(page).toHaveURL(ULID);
+    await page.keyboard.type(title);
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Filed from a phone.');
+    await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+
+    // A folder to move it to, made in the drawer.
+    const folder = `Phone folder ${RUN}`;
+    const appBar = page.getByTestId('app-bar');
+    await appBar.getByRole('button', { name: 'Open Navigation' }).tap();
+    const drawer = page.getByRole('complementary', { name: 'Notes' });
+    await expect(drawer).toBeVisible();
+    await drawer.getByRole('button', { name: 'New Folder' }).tap();
+    const input = page.getByRole('textbox', { name: 'New folder name' });
+    await input.fill(folder);
+    await input.press('Enter');
+    await expect(row(page, folder)).toBeVisible();
+    await expect(row(page, title)).toHaveAttribute('aria-level', '1');
+    await page.getByRole('button', { name: 'Close Navigation' }).tap();
+    await expect(drawer).toBeHidden();
+
+    // The picker's close button is a touch target and closes it.
+    await appBar.getByRole('button', { name: 'Note Actions' }).tap();
+    await page.getByRole('menuitem', { name: 'Move to Folder…' }).tap();
+    const picker = page.getByRole('dialog', { name: `Move “${title}” to a folder` });
+    await expect(picker).toBeVisible();
+    const close = picker.getByRole('button', { name: 'Close the Folder Picker' });
+    const box = await close.boundingBox();
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    // No keyboard hints on a touch screen.
+    await expect(picker.locator('.dlg-foot')).toBeHidden();
+    await close.tap();
+    await expect(picker).toBeHidden();
+
+    // Moved by touch: the toast says where, and the note has focus again.
+    await appBar.getByRole('button', { name: 'Note Actions' }).tap();
+    await page.getByRole('menuitem', { name: 'Move to Folder…' }).tap();
+    await expect(picker).toBeVisible();
+    await picker.getByRole('option', { name: folder }).tap();
+    await expect(picker).toBeHidden();
+    await expect(page.getByTestId('move-status')).toHaveText(`Moved to ${folder}`);
+    await expect(body(page)).toBeFocused();
+    // The app bar shows where the note is now (T39 pass 3, A907).
+    await expect(appBar.getByTestId('app-bar-path')).toHaveText(folder);
+    // Each part isolated, so a name with a bidi override can't reorder the others (review).
+    await expect(appBar.getByTestId('app-bar-path').locator('bdi')).toHaveText([folder]);
+    await appBar.getByRole('button', { name: 'Open Navigation' }).tap();
+    await expect(row(page, title)).toHaveAttribute('aria-level', '2');
+    await page.getByRole('button', { name: 'Close Navigation' }).tap();
+    await expect(drawer).toBeHidden();
+
+    await page.getByTestId('app-bar').getByRole('button', { name: 'Search Notes' }).tap();
+    const search = page.getByRole('dialog', { name: 'Search' });
+    await expect(search).toBeVisible();
+    await search.getByRole('button', { name: 'Close Search' }).tap();
+    await expect(search).toBeHidden();
+    expect(errors).toEqual([]);
+  });
 });

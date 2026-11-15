@@ -1,23 +1,12 @@
 import { expect, macContext, PREVIEW, test, type Page } from './fixtures';
 import { LINE_END, LINE_START } from './keys';
 import { noteAction } from './note-menu';
+import { ULID, body, collectErrors } from './support/app';
 
 // Phase 2 blocks: code blocks (T9), tables, checklists, callouts and toggles (T11),
 // Mermaid and math (T12), each created by typing in a real note.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const TAG = `b${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 
 /** Creates a note with a title and leaves the caret in its empty body. */
 async function newNote(page: Page, title: string): Promise<string> {
