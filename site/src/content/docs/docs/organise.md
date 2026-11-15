@@ -28,7 +28,7 @@ Two notebooks with one name can't be told apart by agents, so Penmoss warns when
 Each notebook has a badge: a small square in a colour, holding a letter, a number or an icon. It shows at the start of the notebook's row in the sidebar, at the start of each of its notes' [tabs](/docs/install/mac/#tabs), and in Settings (its entry under **All Notebooks**, its row in the list and its page's heading), so you can tell notebooks apart at a glance.
 
 - **By default** a notebook's badge shows the first letter (or digit) of its name in one of ten colours, picked from the notebook itself, so it is the same on every Mac. Two notebooks can have the same badge: Personal and Penmoss are both **P** until you change one.
-- **To change it**, open Settings, choose the notebook under **All Notebooks**, and use the **Badge** rows on its **Overview**, after its name: pick a colour (Moss, Teal, Blue, Indigo, Violet, Rose, Red, Orange, Ochre, Slate, or **Custom…** for any colour), then what it **Shows**: a **Letter**, a **Number** from 0 to 99, or one of 24 **Icons**. The preview shows it alone, on a sidebar row and on a tab, and the change applies at once.
+- **To change it**, open Settings, choose the notebook under **All Notebooks**, and use the **Badge** rows on its **Overview**, after its name: pick a colour (Moss, Teal, Blue, Indigo, Violet, Rose, Red, Orange, Ochre, Slate, or **Custom…** for any colour), then what it **Shows**: a **Letter**, a **Number** from 0 to 99, or one of 24 **Icons**. The preview shows it alone, then on the notebook's own row in the sidebar and on a tab of one of its notes, and the change applies at once.
 - **Reset to Default** brings back the first letter and the colour it started with. A default letter follows the notebook's name when you rename it; one you chose stays.
 - The badge belongs to the notebook and syncs with it to your other Macs. **Copy Settings…** and **Keep Settings in Step** leave each notebook's badge its own. Android doesn't show badges yet.
 
@@ -96,7 +96,7 @@ Quick Access is not the same as a pinned [tab](/docs/install/mac/#tabs): Quick A
 
 ## The sidebar
 
-**Settings → Sidebar** (**Sidebar Settings** in the command palette) shows a small sidebar beside its settings that changes as you change them:
+**Settings → Sidebar** (**Sidebar Settings** in the command palette) shows your sidebar itself, made small, beside its settings, and it changes as you change them:
 
 - **Shortcuts**: which buttons the sidebar's top row shows. Search is always there; **Tags**, **Today**, **This Week**, **Graph** and **Commands** show unless you switch them off. A hidden shortcut still works from its keys and the command palette.
 - **Sections**: **Quick Access** (with **Show Notebook Names**, which labels each pinned note with its notebook), **Recent Notes** (with how many notes it lists), **Notebooks**, **Calendar** and **Tags**, each with a switch to show or hide it. Drag a section by its handle to move it, or press Alt+↑ or Alt+↓ on its row. You can also drag a section by the handle on its title in the sidebar.
@@ -105,7 +105,7 @@ Quick Access is not the same as a pinned [tab](/docs/install/mac/#tabs): Quick A
 
 ## The note in Settings
 
-**Settings → Note** shows a small note beside its settings that changes as you change them:
+**Settings → Note** shows the note you opened last, made small, beside its settings, and it changes as you change them:
 
 - **Layout**: **Note Width**, the theme's width or **Full Window**, and **Note Panel**, whether a note's panel starts **Closed** or **Open** (marked **This Mac**, as it is kept on each device). Each note then remembers its own.
 - **Title Bar Buttons**: which of Full Width, Markdown Source, the two copies, Copy Agent Reference, Pin to Quick Access, Open in New Window, Move to Folder and Move to Trash have a button at the end of the tab strip (beside the title in a note window). Each is also in the note's ⋯ menu.

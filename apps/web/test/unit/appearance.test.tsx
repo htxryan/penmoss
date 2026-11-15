@@ -119,7 +119,9 @@ describe('Settings → Appearance (T28)', () => {
     expect(html).toContain('data-testid="custom-theme-editor"');
     // Beside the same preview Appearance shows (one renderer).
     expect(html).toContain('data-testid="theme-preview"');
-    expect(html).toContain('Garden Plan');
+    // The app itself in miniature (A1564): its own window, sidebar and note pane.
+    expect(html).toContain('class="notes-app app-preview-window"');
+    expect(html).toContain('<aside class="sidebar">');
     expect(html).toContain('value="Nord copy"');
     expect(html.match(/type="color"/g)).toHaveLength(COLOUR_TOKENS.length);
     for (const label of ['Interface Font', 'Note Font', 'Code Font', 'Note Width']) {

@@ -5,7 +5,7 @@ description: Choose light or dark, a built-in theme or one of your own, the font
 
 This page shows you how to change how Penmoss looks: light or dark, the theme, the fonts and the width of your notes.
 
-Most of it is in **Settings → Appearance** (**Appearance and Themes** in the command palette). Its settings are in three groups, **Theme**, **Text** and, on the Mac, **Window**, beside a **Preview**: a small copy of Penmoss, with a sidebar and a note, that changes as you change the mode, the theme, the fonts or the text size. On a narrow window the preview is under the settings. Appearance is kept in your [Primary Notebook](/docs/organise/#the-primary-notebook), so your other devices get it too, except what is marked **This Mac**.
+Most of it is in **Settings → Appearance** (**Appearance and Themes** in the command palette). Its settings are in three groups, **Theme**, **Text** and, on the Mac, **Window**, beside a **Preview**: Penmoss itself, made small, with your sidebar and the note you opened last, that changes as you change the mode, the theme, the fonts or the text size. Nothing in it takes a click. On a narrow window the preview is under the settings, and shows the note as a phone does. On Android the preview is Home's own row of shortcuts above a note. Appearance is kept in your [Primary Notebook](/docs/organise/#the-primary-notebook), so your other devices get it too, except what is marked **This Mac**.
 
 ## Light and dark
 

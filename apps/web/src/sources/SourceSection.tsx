@@ -96,6 +96,7 @@ export function SourceSection({
   active,
   onActivate,
   shown,
+  headOnly = false,
 }: {
   source: Source;
   activeId: string | null;
@@ -109,6 +110,8 @@ export function SourceSection({
    */
   onActivate?: () => void;
   shown: boolean;
+  /** Its name's row alone, without its tree (the badge's preview in Settings, A1564). */
+  headOnly?: boolean;
 }) {
   const [collapsedIds, setCollapsedIds] = useDevicePref(collapsedSections);
   const collapsed = collapsedIds.has(source.id);
@@ -255,7 +258,7 @@ export function SourceSection({
           {message}
         </p>
       ) : null}
-      {collapsed ? null : (
+      {collapsed || headOnly ? null : (
         <div id={`${id}-body`} className="sb-section-body">
           <FolderTree
             activeId={activeId}

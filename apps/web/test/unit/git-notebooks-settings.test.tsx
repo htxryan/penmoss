@@ -36,7 +36,8 @@ const info = (id: string, name: string): GitNotebookInfo => ({
 
 function workspace() {
   const settings: Record<string, unknown> = {};
-  const state = { loaded: true };
+  // An empty tree: the badge's preview draws the notebook's own sidebar row (A1564).
+  const state = { loaded: true, snapshot: { folders: [], notes: [], rootSortMode: 'manual' } };
   return {
     settings: () => settings,
     setSetting: (key: string, value: unknown) => {
@@ -62,6 +63,7 @@ function notebook(id: string, name: string, notes: number) {
     head: null,
     here: true,
   };
+  const list = Array.from({ length: notes }, (_, at) => ({ id: `${id}${at}` }));
   return {
     id,
     name,
@@ -71,7 +73,8 @@ function notebook(id: string, name: string, notes: number) {
     feed: { subscribe: () => () => undefined, status, shown: status },
     notes: {
       subscribe: () => () => undefined,
-      list: () => Array.from({ length: notes }, (_, at) => ({ id: `${id}${at}` })),
+      // One list until it changes, as the real one is (the views read it in a store).
+      list: () => list,
     },
     workspace: workspace(),
     syncNow: () => undefined,
@@ -240,6 +243,18 @@ describe('A notebook’s page (PEN-146)', () => {
       'remove-from-this-mac',
     ]);
     expect(find(page, 'git-note-count')?.textContent).toContain('2,140 notes');
+    // The badge where it shows (A1564): the sidebar's own row for this notebook and a tab drawn
+    // by the strip's own component, inert.
+    const preview = find(page, 'badge-preview')!;
+    const places = preview.querySelector<HTMLElement>('.badge-preview-places')!;
+    expect(places.hasAttribute('inert')).toBe(true);
+    const row = places.querySelector('.sidebar [data-testid="source-section"]')!;
+    expect(row.getAttribute('data-source')).toBe(A);
+    expect(row.querySelector('.sb-section-name')?.textContent).toBe('Personal');
+    expect(row.querySelector('.sb-section-body')).toBeNull();
+    const tab = places.querySelector('.tab-strip .tab')!;
+    expect(tab.querySelector('.tab-mark [data-testid="notebook-badge"]')).not.toBeNull();
+    expect(tab.querySelector('.tab-title')?.textContent).toBe('Untitled');
     expect(find(page, 'git-repository-link')?.textContent).toBe('Open on GitHub');
     expect(find(page, 'git-remove')?.textContent).toBe('Remove from This Mac…');
     // No agents here: they are Settings → Agents, and what they did Agent Activity.

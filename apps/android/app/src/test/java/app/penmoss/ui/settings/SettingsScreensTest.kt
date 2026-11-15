@@ -2,6 +2,11 @@ package app.penmoss.ui.settings
 
 import android.content.Context
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.click
+import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -189,6 +194,32 @@ class SettingsScreensTest {
         compose.onNodeWithTag("mode-light").assertIsSelected()
         compose.onNodeWithTag("mode-system").assertIsNotSelected()
         compose.onNodeWithText("Always light, whatever the phone’s setting.").assertIsDisplayed()
+    }
+
+    /** A1564: the preview is the app itself (Home's own shortcut row and the note page), inert. */
+    @Test
+    fun thePreviewIsTheAppItselfAndTakesNoTouchOrFocus() {
+        var touched = false
+        compose.setContent {
+            PenmossTheme {
+                AppearanceScreen(
+                    "system", systemDark = false, themes = cards, chosen = "penmoss", fullWidth = false, editorWidth = 52,
+                    enabled = true, onMode = {}, onTheme = {}, onFullWidth = {}, onBack = {},
+                    notePreview = { modifier -> Box(modifier.clickable { touched = true }.testTag("previewNote")) },
+                    homeShortcuts = HomeShortcuts(graph = false),
+                )
+            }
+        }
+        compose.onNodeWithTag("appearancePreviewApp").assertIsDisplayed()
+        // Its buttons and its note are drawn but out of reach: TalkBack and a test find none.
+        compose.onNodeWithTag("homeShortcuts").assertDoesNotExist()
+        compose.onNodeWithTag("homeSearch").assertDoesNotExist()
+        compose.onNodeWithTag("previewNote").assertDoesNotExist()
+        // A tap on the note in it reaches nothing.
+        compose.onNodeWithTag("appearancePreviewApp").performTouchInput { click(center) }
+        compose.waitForIdle()
+        assertFalse(touched)
+        compose.onNodeWithText("Preview: redraws as you change these.").assertIsDisplayed()
     }
 
     @Test

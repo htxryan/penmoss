@@ -82,6 +82,16 @@
       visibility 0s linear var(--pm-medium);
   }
 
+  /* Settings → Sidebar's preview is the sidebar drawn in place (A1564), never a drawer. */
+  .lf-sidebar-preview > .sidebar {
+    position: static;
+    width: var(--lf-sidebar-width);
+    padding: 0;
+    transform: none;
+    visibility: visible;
+    transition: none;
+  }
+
   .notes-app[data-drawer='open'] .sidebar {
     transform: none;
     visibility: visible;
