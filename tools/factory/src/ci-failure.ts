@@ -16,7 +16,7 @@
  */
 import { runIdOf, type CheckRun } from './checks.ts';
 import type { RunJob } from './merge.ts';
-import { issueOf, parseLedger } from './ui/model.ts';
+import { issueOf, parseLedger } from './ledger.ts';
 
 /**
  * The log lines that mean the runner or a hosted service failed, not the code. A failed job

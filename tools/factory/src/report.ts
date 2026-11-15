@@ -3,7 +3,7 @@
  * Throughput (issues to In review, merged), rounds (gate fixes and CI repairs per issue), time
  * from claim to In review, and the share of issues that ended a run Blocked.
  */
-import { issueOf, parseLedger, type LedgerEvent } from './ui/model.ts';
+import { issueOf, parseLedger, type LedgerEvent } from './ledger.ts';
 
 export interface Report {
   readonly from: string;

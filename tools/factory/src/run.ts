@@ -10,54 +10,59 @@
 import type { Board, BoardItem } from './board.ts';
 import type { FactoryConfig, Platform, SlotConfig } from './config.ts';
 import type { IssueSpec } from './labels.ts';
-import { runIdOf, summarizeChecks, type CheckRun } from './checks.ts';
+import { type CheckRun, runIdOf, summarizeChecks } from './checks.ts';
 import {
+  type CiHistory,
   flakeCandidate,
   infraFailure,
+  type InfraFailure,
   MAX_FLAKE_RERUNS,
   MAX_INFRA_RERUNS,
   passedOnMain,
   touchedBy,
-  type CiHistory,
-  type InfraFailure,
 } from './ci-failure.ts';
 import type { RunJob } from './merge.ts';
 import { classify, proofPlatforms, type Scope } from './platforms.ts';
 import {
   criterionLabel,
   fidelityFeedback,
+  type FidelityRow,
   renderFidelity,
   settle,
-  type FidelityRow,
 } from './fidelity.ts';
 import {
+  type Finding,
   scanWeakenedTests,
   weakenedFeedback,
   workflowChanges,
   workflowFeedback,
-  type Finding,
 } from './gate.ts';
 import { USAGE_LIMIT_WAIT, usageLimitReset } from './limits.ts';
 import { validate } from './validate.ts';
-import { renderPrBody, type AttachedProof } from './proof/body.ts';
+import { type AttachedProof, renderPrBody } from './proof/body.ts';
 import { failedProof, missingProof, type ProofItem } from './proof/manifest.ts';
-import { VmUnavailable, type VmCheck } from './proof/mac.ts';
+import { type VmCheck, VmUnavailable } from './proof/mac.ts';
 import { formatMarker } from './pick.ts';
-import { DECISIONS, sandboxNumbering, type RebaseOutcome } from './rebase.ts';
+import { DECISIONS, type RebaseOutcome, sandboxNumbering } from './rebase.ts';
 import { numberText } from './decisions.ts';
 import { settleRisks } from './risks.ts';
 import {
   carriedOver,
   diffPrint,
   PROVEN,
-  validationKey,
   type Proven,
+  validationKey,
   type Wanted,
 } from './carry.ts';
 import type { AgentResult } from './result.ts';
 import type { IssueComment } from './issue.ts';
 import { formatNote, parseReleaseNote } from '../../../.github/scripts/release-note.mjs';
 import type { WalkOutcome, WalkPlatform } from './walk.ts';
+import { branchName, prTitle } from './pr-title.ts';
+import { excerpt, tail } from './gate-log.ts';
+export { excerpt, playwrightFailures } from './gate-log.ts';
+
+export { AGENT_TITLE_MAX, TITLE_MAX, branchName, prTitle, shortenTitle } from './pr-title.ts';
 
 export type RunEvent =
   | 'claimed'
@@ -427,114 +432,6 @@ export async function runAndRead(
   } else deps.log('agent-continued', { ...at, how: 'new session' });
   await runAgentPatiently(deps, sandbox, `${prompt}\n\n${CONTINUE_NOTE}`);
   return deps.readResult(sandbox);
-}
-
-export function branchName(config: FactoryConfig, item: BoardItem): string {
-  const slug = item.title
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, '-')
-    .replaceAll(/^-|-$/g, '')
-    .split('-')
-    .slice(0, 6)
-    .join('-');
-  return `${config.branchPrefix}${item.number}-${slug || 'issue'}`;
-}
-
-/** GitHub shows about this much of a title in its lists; git's own advice for a subject. */
-export const TITLE_MAX = 72;
-
-/** The longest title the agent may give in `result.json` (A1345). */
-export const AGENT_TITLE_MAX = 60;
-
-/**
- * Where a long title can end: before a clause that explains or adds to the change (", so …",
- * "; …", ": …" after the area prefix, a dash), and failing that before a comma.
- */
-const CLAUSE_BREAKS = [
-  /, so (?:that )?/g,
-  /, which /g,
-  /, because /g,
-  /, but /g,
-  /, and /g,
-  /; /g,
-  /: /g,
-  / [—–] /g,
-  / - /g,
-  / so that /g,
-  / because /g,
-];
-const COMMA_BREAK = /, /g;
-
-/** Words a title shouldn't end on once it is cut. */
-const DANGLING =
-  /(?:\s+(?:a|an|the|and|or|but|so|to|of|in|on|at|by|for|from|with|without|into|onto|as|that|which|when|while|its|their|his|her|this|these|those|is|are|was|were|be|it))+$/i;
-
-/**
- * `title` cut to `TITLE_MAX` without an ellipsis (A1345): at the last clause break that fits
- * after the area prefix (`Mac: `), else a comma, else at a word, with no dangling article,
- * preposition or conjunction at the end. PEN-121's PR was `Mac: agents' MCP servers run from
- * Penmoss CLI.app, so opening Penmoss…`; it is now `Mac: agents' MCP servers run from Penmoss
- * CLI.app`.
- */
-export function shortenTitle(title: string): string {
-  if (title.length <= TITLE_MAX) return title;
-  const prefix = /^[A-Z][\w ./+-]{0,24}: /.exec(title)?.[0].length ?? 0;
-  // A cut leaves at least the prefix and a few words.
-  const least = prefix + 16;
-  const lastBreak = (patterns: readonly RegExp[]) => {
-    let at = -1;
-    for (const pattern of patterns)
-      for (const m of title.matchAll(pattern))
-        if (m.index >= least && m.index <= TITLE_MAX && m.index > at) at = m.index;
-    return at;
-  };
-  const tidy = (text: string) => text.replace(/[\s:;,.–—-]+$/, '').replace(DANGLING, '');
-  for (const patterns of [CLAUSE_BREAKS, [COMMA_BREAK]]) {
-    const at = lastBreak(patterns);
-    if (at > 0) return tidy(title.slice(0, at));
-  }
-  const words = title.slice(0, TITLE_MAX + 1).split(' ');
-  if (words.length > 1) words.pop();
-  const cut = tidy(words.join(' '));
-  return cut.length >= least ? cut : tidy(title.slice(0, TITLE_MAX));
-}
-
-/**
- * The PR's title: the agent's own `title` from `result.json` when it is a usable one (at most
- * `AGENT_TITLE_MAX` characters, naming no card), else the branch's first commit subject (the
- * agent writes it as a change's title), else the first sentence of the agent's summary, either
- * cut to `TITLE_MAX` at a clause or a word (`shortenTitle`). It never names the card: Linear's
- * GitHub integration moves a card named in a PR's title (it closed PEN-75 when #62 merged), and
- * the factory owns the card's status (A1221). The body's "Part of" links it.
- */
-export function prTitle(input: {
-  readonly title?: string | undefined;
-  readonly subject?: string | undefined;
-  readonly summary: string;
-  readonly key: string;
-}): string {
-  const team = /^([A-Za-z][A-Za-z0-9]*)-\d+$/.exec(input.key)?.[1];
-  const clean = (text: string) => {
-    let t = text.split('\n')[0] ?? '';
-    if (team) t = t.replaceAll(new RegExp(`[([]?\\b${team}-\\d+\\b[)\\]]?:?`, 'gi'), ' ');
-    return t
-      .replaceAll(/\(\s*\)|\[\s*\]/g, ' ')
-      .replaceAll(/\s+/g, ' ')
-      .replaceAll(/^[\s:;,–-]+|[\s:;,–-]+$/g, '');
-  };
-  const own = input.title?.trim().replace(/\.$/, '') ?? '';
-  const usable =
-    own !== '' &&
-    !own.includes('\n') &&
-    own.length <= AGENT_TITLE_MAX &&
-    !(team && new RegExp(`\\b${team}-\\d+\\b`, 'i').test(own));
-  if (usable) return own;
-  const subject =
-    input.subject && !input.subject.startsWith('Number the new decisions')
-      ? clean(input.subject)
-      : '';
-  const sentence = clean(input.summary.split(/(?<=[.!?])\s/)[0] ?? '').replace(/\.$/, '');
-  return shortenTitle(subject || sentence || 'The factory’s change');
 }
 
 /** What the gate runs for a scope (Platform scope in the plan). */
@@ -1777,109 +1674,6 @@ async function bringUpToDate(
     rebase: gated.rebase,
     ...(gated.numbering ? { numbering: gated.numbering } : {}),
   };
-}
-
-function tail(text: string): string {
-  return text.trim().split('\n').slice(-30).join('\n');
-}
-
-const ERROR_LINE = /\berror\b|✖|✘|×|\bFAIL\b|\bfailed\b/i;
-
-/** A terminal colour code (ESC, then `[…m` and the like). */
-const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;?]*[A-Za-z]`, 'g');
-/** A failure's heading in Playwright's list reporter: `  1) [chromium] › a.spec.ts:12:3 › title`. */
-const PW_FAILURE = /^ {2}(\d+)\) (\S.*(›|:\d+:\d+).*)$/;
-/** The line that ends a failure's own block: its first attachment or its error context. */
-const PW_BLOCK_END = /^\s+(attachment #\d+:|Error Context:)/;
-/** The line after Playwright's failures: its summary, `  1 failed` and the like. */
-const PW_SUMMARY = /^ {2}\d+ (failed|flaky|passed|skipped|interrupted|did not run)\b/;
-/** A failing test's retry: the same failure again. */
-const PW_RETRY = /^\s+Retry #\d+\b/;
-/** A failure's block, and all of them, at most. */
-const BLOCK_LINES = 60;
-const BLOCKS_CHARS = 12_000;
-
-/** A line as the excerpt shows it: no colour codes, no box-drawing rule at its end. */
-function plain(line: string): string {
-  return line
-    .replaceAll(ANSI, '')
-    .replace(/\s*─+\s*$/, '')
-    .trimEnd();
-}
-
-/**
- * Each Playwright failure in a test run's output: from its `  1) <title>` heading through its
- * first `attachment #` or `Error Context:` line, so the error, its call log, the code frame with
- * its `>` line and the `at file:line` lines, without colour codes. A failing test's retry is the
- * same failure again and is left out, as is a heading seen before. `span` is the lines the
- * failures take, from the first heading up to the summary.
- */
-export function playwrightFailures(text: string): {
-  blocks: string[];
-  span?: { from: number; to: number };
-} {
-  const lines = text.split('\n').map(plain);
-  const blocks: string[] = [];
-  const seen = new Set<string>();
-  let chars = 0;
-  let more = 0;
-  let from: number | undefined;
-  let to = lines.length;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i] ?? '';
-    if (from !== undefined && PW_SUMMARY.test(line)) {
-      to = i;
-      break;
-    }
-    const heading = PW_FAILURE.exec(line);
-    if (!heading) continue;
-    from ??= i;
-    const block = [line];
-    let j = i + 1;
-    for (; j < lines.length && block.length < BLOCK_LINES; j++) {
-      const next = lines[j] ?? '';
-      if (PW_FAILURE.test(next) || PW_RETRY.test(next) || PW_SUMMARY.test(next)) break;
-      block.push(next);
-      if (PW_BLOCK_END.test(next)) break;
-    }
-    const title = (heading[2] ?? '').trim();
-    if (seen.has(title)) continue;
-    seen.add(title);
-    while (block.length > 1 && !block.at(-1)?.trim()) block.pop();
-    const shown = block.join('\n');
-    if (blocks.length > 0 && chars + shown.length > BLOCKS_CHARS) {
-      more++;
-      continue;
-    }
-    chars += shown.length;
-    blocks.push(shown);
-  }
-  if (more > 0) blocks.push(`… and ${more} more failures, in the whole output`);
-  return from === undefined ? { blocks } : { blocks, span: { from, to } };
-}
-
-/**
- * A failed check's or proof's Playwright failures (each one's error, call log and code frame),
- * then its other lines that name an error (up to 40), then its last lines. The tail alone stopped
- * before ESLint's errors in PEN-70's gate, so neither the agent nor the log said what failed; the
- * whole output is kept in the run folder too (`gate.log`, A1250). In a Playwright run the tail is
- * retries and attachments, and its error lines alone lose the call log and the code frame:
- * PEN-121's agent guessed the wrong assertion (A1343). The error lines leave out the failures'
- * own span, which their blocks show.
- */
-export function excerpt(text: string): string {
-  const last = tail(text);
-  const { blocks, span } = playwrightFailures(text);
-  const shown = new Set(last.split('\n'));
-  const errors = text
-    .split('\n')
-    .filter(
-      (line, i) =>
-        ERROR_LINE.test(line) && !shown.has(line) && !(span && i >= span.from && i < span.to),
-    )
-    .slice(0, 40);
-  const before = [...blocks, ...(errors.length ? [errors.join('\n')] : [])];
-  return before.length ? `${before.join('\n\n')}\n…\n${last}` : last;
 }
 
 /**
