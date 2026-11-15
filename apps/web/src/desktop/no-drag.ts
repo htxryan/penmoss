@@ -95,4 +95,7 @@ export const TITLE_BAR_ROWS = [
   '.home',
   '.tags-page-top',
   '.drawing-editor-bar',
+  // View This Version's head (A1572): its modal covers the rows beside the History panel, so its
+  // head is the first row there; its buttons click.
+  '.history-view-head',
 ] as const;
