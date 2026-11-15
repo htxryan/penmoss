@@ -53,6 +53,8 @@ function notebook(
     kind: 'git',
     info: { localId: `local-${id}`, name },
     onInfo: () => () => undefined,
+    // Its own settings, which its badge (PEN-140) reads: none set, so the default.
+    workspace: { settings: () => ({}), subscribe: () => () => undefined },
     feed: { subscribe: () => () => undefined, status, shown: status },
     agentActivity: () => Promise.resolve(activity),
     undoAgentActivity: (entryId: number) => {
@@ -230,5 +232,11 @@ describe('Each notebook in Settings’ nav (PEN-146)', () => {
     expect(entries.map((each) => each.dataset['state'])).toEqual(['ok', 'error']);
     expect(entries.map((each) => each.getAttribute('aria-current'))).toEqual([null, 'page']);
     expect(entries[1]!.textContent).toContain('Penmoss Docs, Sync Stopped');
+    // Each starts with its notebook's badge (PEN-140), its default letter, beside the dot.
+    expect(
+      entries.map((each) =>
+        each.querySelector('[data-testid="notebook-badge"]')?.getAttribute('data-glyph'),
+      ),
+    ).toEqual(['letter:P', 'letter:P']);
   });
 });
