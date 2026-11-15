@@ -947,6 +947,44 @@ describe('Add Notebook from Settings: the same screens (A1562)', () => {
     expect($$('first-run-tree-repo').map((each) => each.dataset['repo'])).toEqual(['ryan/notes']);
     expect(calls).toContainEqual(['repos']);
   });
+
+  it('says when GitHub cut the folder list short, and only then', async () => {
+    const folders = (truncated: boolean) => ({
+      empty: false,
+      truncated,
+      folders: [
+        { path: '', notebook: null },
+        { path: 'docs', notebook: null },
+      ],
+    });
+    const { browse } = github({
+      repos: {
+        ok: true,
+        via: 'git',
+        value: { more: false, repos: [repo('big'), repo('small')] },
+      },
+      folders: { 'ryan/big': folders(true), 'ryan/small': folders(false) },
+    });
+    await openAdd(browse);
+    await press('first-run-continue');
+    await choose('first-run-way-existing');
+    await press('first-run-continue');
+    await vi.waitFor(() => expect(screen()).toBe('list'));
+    const pick = (fullName: string) =>
+      host.querySelector<HTMLElement>(
+        `[data-repo="${fullName}"] [data-testid="first-run-repo-pick"]`,
+      )!;
+    // A repository too big for GitHub's whole tree: Pick Folder says some aren't shown.
+    await press(pick('ryan/big'));
+    expect(host.querySelector('h2')?.textContent).toBe('Pick Folder');
+    expect(host.textContent).toContain(
+      'Some folders aren’t shown: Paste a URL to give the folder.',
+    );
+    await press('first-run-back');
+    await press(pick('ryan/small'));
+    expect(host.querySelector('h2')?.textContent).toBe('Pick Folder');
+    expect(host.textContent).not.toContain('Some folders aren’t shown');
+  });
 });
 
 describe('the words the first run takes from a repository', () => {
