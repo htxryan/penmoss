@@ -54,6 +54,7 @@ const state = (patch: Partial<DesktopUpdateState>): DesktopUpdateState => ({
   percent: null,
   message: null,
   checkedAt: null,
+  updatedFrom: null,
   ...patch,
 });
 

@@ -197,6 +197,20 @@ function fakeGit(transport: MemoryTransport): DesktopGit & { secrets: Map<string
     installCli: () => Promise.resolve(null),
     removeCli: () => Promise.resolve(null),
     onChange: () => () => undefined,
+    // No GitHub to browse: every call answers null, as to a window that may not browse.
+    github: {
+      repos: () => Promise.resolve(null),
+      folders: () => Promise.resolve(null),
+      owners: () => Promise.resolve(null),
+      create: () => Promise.resolve(null),
+      // No sign-in here: its status is null, as from a window that may not sign in.
+      signIn: {
+        status: () => Promise.resolve(null),
+        start: () => Promise.resolve(null),
+        cancel: () => Promise.resolve(null),
+        onChange: () => () => undefined,
+      },
+    },
   };
 }
 
@@ -979,6 +993,20 @@ describe('Delete for good confirmed again from Settings (A855)', () => {
       installCli: () => Promise.resolve(null),
       removeCli: () => Promise.resolve(null),
       onChange: () => () => undefined,
+      // No GitHub to browse: every call answers null, as to a window that may not browse.
+      github: {
+        repos: () => Promise.resolve(null),
+        folders: () => Promise.resolve(null),
+        owners: () => Promise.resolve(null),
+        create: () => Promise.resolve(null),
+        // No sign-in here: its status is null, as from a window that may not sign in.
+        signIn: {
+          status: () => Promise.resolve(null),
+          start: () => Promise.resolve(null),
+          cancel: () => Promise.resolve(null),
+          onChange: () => () => undefined,
+        },
+      },
     };
     const store = connection(memoryNotes());
     const kv = memoryEngineKv();

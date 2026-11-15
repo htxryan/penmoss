@@ -237,6 +237,7 @@ export function installFakeBridge(config: {
       // The notice after an update (PEN-110) and its release notes (PEN-108).
       acknowledge: () => host('updatesAcknowledge'),
       notes: () => host('updatesNotes'),
+      onNotes: () => () => undefined,
       onChange: (listener) => listen(updateListeners, listener as (state: unknown) => void),
     },
     // Search by meaning (T77): main's relay to the stand-in Mac's service, when it has one.

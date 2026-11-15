@@ -19,6 +19,7 @@
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ulid } from '@penmoss/core/ids';
+import type { GitTransport } from '@penmoss/git-notebook';
 import {
   GitTransportError,
   gitRunner,
@@ -118,7 +119,11 @@ export interface GitRefusal {
 export type GitAnswer<T> =
   { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: GitRefusal };
 
-/** The transport calls the page's engine makes (GitTransport, A836). */
+/**
+ * The transport calls the page's engine makes (GitTransport, A836): every GitTransport method
+ * but `remoteHead`, which only the CLI's sync asks. A method added to GitTransport fails to
+ * compile here until it is listed, or named as one the page never calls.
+ */
 export const TRANSPORT_OPS = [
   'fetch',
   'list',
@@ -131,8 +136,12 @@ export const TRANSPORT_OPS = [
   'readAt',
   'readDir',
   'maintain',
-] as const;
+] as const satisfies readonly TransportMethod[];
 export type TransportOp = (typeof TRANSPORT_OPS)[number];
+type TransportMethod = Exclude<keyof GitTransport, 'root' | 'remoteHead'>;
+const EVERY_METHOD_LISTED: Exclude<TransportMethod, TransportOp> extends never ? true : never =
+  true;
+void EVERY_METHOD_LISTED;
 
 export interface OwnerCheck {
   /** Asks the Mac's owner (Touch ID, or the password) with these words (main's own). */

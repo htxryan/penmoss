@@ -1,5 +1,5 @@
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
-import { CHANNELS } from '../../src/channels';
+import { EVENT } from '../../src/ipc-contract';
 import {
   body,
   launch,
@@ -62,7 +62,7 @@ const openPath = (app: ElectronApplication, path: string) =>
       (globalThis as unknown as Hooks).penmossDesktop
         .mainWindow()!
         .webContents.send(channel, target),
-    [CHANNELS.openPath, path] as const,
+    [EVENT.openPath, path] as const,
   );
 
 /** Runs a page command in the main window, as its menu item would. */
@@ -72,7 +72,7 @@ const runCommand = (app: ElectronApplication, id: string) =>
       (globalThis as unknown as Hooks).penmossDesktop
         .mainWindow()!
         .webContents.send(channel, { id: command, accelerator: null }),
-    [CHANNELS.menuCommand, id] as const,
+    [EVENT.menuCommand, id] as const,
   );
 
 async function newNote(page: Page, title: string, text: string): Promise<string> {

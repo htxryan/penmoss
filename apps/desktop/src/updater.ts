@@ -31,6 +31,11 @@
  * build is signed, electron-builder.config.cjs): Squirrel.Mac refuses unsigned updates, so an
  * unsigned build never checks.
  */
+import type {
+  DesktopUpdateChannel,
+  DesktopUpdatePhase,
+  DesktopUpdateState,
+} from '../../web/src/desktop/bridge';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -45,7 +50,7 @@ export function updateMode(packaged: boolean, resourcesPath: string): UpdateMode
   return existsSync(join(resourcesPath, 'app-update.yml')) ? 'enabled' : 'unsigned';
 }
 
-export type UpdateChannel = 'stable' | 'alpha';
+export type UpdateChannel = DesktopUpdateChannel;
 
 /** Where each channel's feed and zips are (P6). */
 export const FEED_URLS: Readonly<Record<UpdateChannel, string>> = {
@@ -75,34 +80,10 @@ export function point(updater: Updater, channel: UpdateChannel): void {
   updater.allowDowngrade = false;
 }
 
-export type UpdatePhase =
-  'idle' | 'checking' | 'current' | 'available' | 'downloading' | 'ready' | 'error';
+export type UpdatePhase = DesktopUpdatePhase;
 
-/** What Settings → Updates and the update notice show (the bridge's `DesktopUpdateState`). */
-export interface UpdateState {
-  /** A signed build: it can check and install (otherwise nothing here works). */
-  readonly supported: boolean;
-  /** Auto-Update is on: checks at launch and every hour. */
-  readonly auto: boolean;
-  /** The update channel: Stable (the default) or Alpha. */
-  readonly channel: UpdateChannel;
-  /** This app's version (`X.Y.Z`, `X.Y.Z-alpha.<run>`, or `0.1.<run>` from before P5). */
-  readonly current: string;
-  readonly phase: UpdatePhase;
-  /** The newer build's version, once one is found. */
-  readonly version: string | null;
-  /** How much of it is downloaded, 0–100, while downloading. */
-  readonly percent: number | null;
-  /** Why the last check or download failed. */
-  readonly message: string | null;
-  /** When the last check finished (ms since the epoch). */
-  readonly checkedAt: number | null;
-  /**
-   * The version Penmoss ran before this one, when this is a newer version whose notice has not
-   * been answered yet (PEN-110); null otherwise.
-   */
-  readonly updatedFrom: string | null;
-}
+/** What Settings → Updates and the update notice show: the page's own type (ipc-contract.ts). */
+export type UpdateState = DesktopUpdateState;
 
 /** `X.Y.Z` or `X.Y.Z-pre.N` as numbers; a prerelease sorts before its release. */
 function versionParts(version: string): number[] | null {

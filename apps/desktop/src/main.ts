@@ -49,7 +49,15 @@ import { GitHubBrowseHost } from './github-browse-host';
 import { DeviceSignIn } from './github-device-sign-in';
 import { chromiumInit, GitHubToken, screenshotsOf } from './github-token';
 import { GitProcessFile } from './git-processes';
-import { CHANNELS, TITLE_BAR_ARG, VERSION_ARG, WINDOW_ARG } from './channels';
+import {
+  NEEDS_A_PERSON,
+  SEND,
+  TITLE_BAR_ARG,
+  VERSION_ARG,
+  WINDOW_ARG,
+  type EventName,
+} from './ipc-contract';
+import { IpcHandlers, sendEvent, type EventValue } from './ipc';
 import { EmbeddingService, parseSearchOptions, parseServiceNotes } from './embedding-service';
 import { APP_SCHEME, DEEP_LINK_SCHEME, desktopConfig, PAGE_ORIGIN } from './config';
 import { deepLinkFromArgv, parseDeepLink } from './deep-link';
@@ -185,17 +193,21 @@ const fullScreens = new WeakMap<BrowserWindow, boolean>();
 /** Writes the main window's state now (its pin, A721), once it has a window. */
 let saveMainState: (() => void) | null = null;
 
-function broadcast(channel: string, value?: unknown): void {
+function broadcast<K extends EventName>(name: K, ...value: EventValue<K>): void {
   for (const window of BrowserWindow.getAllWindows()) {
-    if (!window.isDestroyed()) window.webContents.send(channel, value);
+    if (!window.isDestroyed()) sendEvent(window.webContents, name, ...value);
   }
 }
 
-/** Sends `channel` to every window but `except` (the one whose news it is). */
-function notifyOthers(channel: string, except: WebContents | null, value?: unknown): void {
+/** Sends `name` to every window but `except` (the one whose news it is). */
+function notifyOthers<K extends EventName>(
+  except: WebContents | null,
+  name: K,
+  ...value: EventValue<K>
+): void {
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed() && window.webContents !== except) {
-      window.webContents.send(channel, value);
+      sendEvent(window.webContents, name, ...value);
     }
   }
 }
@@ -229,7 +241,7 @@ function storeNow(
     const contents = window.webContents;
     const finish = (result: StoreResult) => {
       clearTimeout(timer);
-      ipcMain.removeListener(CHANNELS.saved, onSaved);
+      ipcMain.removeListener(SEND.saved.channel, onSaved);
       resolve(result);
     };
     // Only this ask's own reply (#174 delta review): a quick flush's never ends a close.
@@ -240,9 +252,9 @@ function storeNow(
       if (StoreRequests.answers(request, reply)) finish(reply!.ok ? 'saved' : 'failed');
     };
     const timer = setTimeout(() => finish('timeout'), waitMs);
-    ipcMain.on(CHANNELS.saved, onSaved);
+    ipcMain.on(SEND.saved.channel, onSaved);
     if (contents.isDestroyed() || contents.isCrashed()) finish('gone');
-    else contents.send(CHANNELS.save, request);
+    else sendEvent(contents, 'save', request);
   });
 }
 
@@ -480,8 +492,8 @@ function deliverToMain(window: BrowserWindow, item: MainDelivery): void {
   const contents = window.webContents;
   if (mainInbox.deliver(contents.id, item) === 'held') return;
   if (item.kind === 'command')
-    contents.send(CHANNELS.menuCommand, { id: item.id, accelerator: null });
-  else contents.send(CHANNELS.openPath, item.path);
+    sendEvent(contents, 'menuCommand', { id: item.id, accelerator: null });
+  else sendEvent(contents, 'openPath', item.path);
 }
 
 /** Shows the main window at `path` (a deep link, a menu command after the window was closed). */
@@ -576,13 +588,13 @@ function showCapture(): void {
     window.show();
     window.focus();
     // The page reads the shared replica again (settings, folders), keeping its draft.
-    window.webContents.send(CHANNELS.captureShow);
+    sendEvent(window.webContents, 'captureShow');
     // What the main and note windows changed a moment ago (a time zone, an Inbox folder) may
     // not be stored yet: they store it now, and the capture window reads it again.
     const open = windows.all().filter((other) => !other.isDestroyed());
     if (open.length > 0) {
       void Promise.all(open.map((window) => storeNow(window))).then(() => {
-        if (!window.isDestroyed()) window.webContents.send(CHANNELS.storeChanged);
+        if (!window.isDestroyed()) sendEvent(window.webContents, 'storeChanged');
       });
     }
   };
@@ -619,7 +631,7 @@ function windowState(window: BrowserWindow): MacWindowState {
 /** Tells a window's page its state: the pin button, the menu's tick and the title bar follow. */
 function sendWindowState(window: BrowserWindow): void {
   if (!window.isDestroyed()) {
-    window.webContents.send(CHANNELS.windowStateChanged, windowState(window));
+    sendEvent(window.webContents, 'windowStateChanged', windowState(window));
   }
 }
 
@@ -917,6 +929,9 @@ const fromAppWindow = (event: IpcMainEvent | IpcMainInvokeEvent): boolean =>
 /** From the main window's page alone: Settings (T54). */
 const fromMainWindow = (event: IpcMainEvent | IpcMainInvokeEvent): boolean =>
   fromAppWindow(event) && windows.kindOf(event.sender) === 'main';
+/** A main or note window with keep on top and the compact title bar (T46, T47; A720–A724). */
+const macWindowOf = (event: IpcMainEvent | IpcMainInvokeEvent) =>
+  macWindows && fromAppWindow(event) ? windows.windowOf(event.sender) : null;
 const clipboardGate = new ClipboardGate();
 
 /**
@@ -961,7 +976,7 @@ const gitNotebooks = new GitNotebooks({
   ...(config.gitEnv ? { gitEnv: config.gitEnv } : {}),
   log,
   onChange: () => {
-    broadcast(CHANNELS.gitChanged);
+    broadcast('gitChanged');
     // Every agent on this Mac reaches every notebook in the app (D52).
     void localAgents.ensureAll();
   },
@@ -974,7 +989,7 @@ const releaseNotes = new ReleaseNotes({
   mode: () => updateMode(app.isPackaged, process.resourcesPath),
   dir: app.getPath('userData'),
   log,
-  onChange: (file) => broadcast(CHANNELS.updatesNotesChanged, file),
+  onChange: (file) => broadcast('updatesNotesChanged', file),
 });
 /** Auto-Update from GitHub Releases, Stable or Alpha (T64 item 2, A1112, A1196): no token. */
 const updates = new Updates({
@@ -984,7 +999,7 @@ const updates = new Updates({
   log,
   onChange: (state) => {
     if (state.phase === 'checking') void releaseNotes.refresh(state.channel);
-    broadcast(CHANNELS.updatesChanged, state);
+    broadcast('updatesChanged', state);
   },
 });
 /** The CLI's `~/.penmoss` (A992): agents' clones, and search by meaning's model and vectors. */
@@ -1022,7 +1037,7 @@ const meaning =
           child.stderr?.on('data', forward);
           return child;
         },
-        onStatus: (status) => broadcast(CHANNELS.meaningChanged, status),
+        onStatus: (status) => broadcast('meaningChanged', status),
         log,
       });
 /**
@@ -1041,7 +1056,7 @@ const githubToken = new GitHubToken({
   api: config.githubApi,
   log,
   onChange: () => {
-    broadcast(CHANNELS.githubTokenChanged);
+    broadcast('githubTokenChanged');
   },
 });
 /**
@@ -1071,7 +1086,7 @@ const githubSignIn = new DeviceSignIn({
     const login = await githubBrowse.loginOf(token);
     return { kept: await githubToken.saveSignedIn(token, login), login };
   },
-  onChange: (state) => broadcast(CHANNELS.githubSignInChanged, state),
+  onChange: (state) => broadcast('githubSignInChanged', state),
   log,
 });
 /**
@@ -1112,11 +1127,6 @@ const localAgents = new LocalAgents({
 });
 /** Every git a git notebook runs, so a crashed run's leftovers die at the next launch (A853). */
 const gitProcesses = new GitProcessFile(dataFile('git-processes.json'), { log });
-/** The owner checks need a person behind them: refused without a key press or click (A855). */
-const NEEDS_A_PERSON = {
-  ok: false,
-  error: { code: 'not_confirmed', message: 'Not done: confirm with a click or a key press.' },
-} as const;
 
 const MAX_CLIPBOARD_CHARS = 64 * 1024 * 1024;
 const MARKDOWN_FORMAT: Partial<Record<NodeJS.Platform, string>> = {
@@ -1153,7 +1163,7 @@ function sendMenuCommand(id: string, accelerator: string | null): void {
   if (window.isMinimized()) window.restore();
   window.show();
   window.focus();
-  const send = () => window.webContents.send(CHANNELS.menuCommand, { id, accelerator });
+  const send = () => sendEvent(window.webContents, 'menuCommand', { id, accelerator });
   if (window.webContents.isLoading()) window.webContents.once('did-finish-load', send);
   else send();
 }
@@ -1173,9 +1183,21 @@ function setMenus(menus: readonly MenuModel[]): void {
 }
 
 function registerIpc(): void {
+  // Who may call what, and which calls need a key press or click: ipc-contract.ts.
+  const ipc = new IpcHandlers(ipcMain, (from, event) => {
+    switch (from) {
+      case 'app':
+        return fromApp(event);
+      case 'window':
+        return fromAppWindow(event);
+      case 'main':
+        return fromMainWindow(event);
+      case 'mac':
+        return macWindowOf(event) !== null;
+    }
+  });
   // The theme on screen (T28): kept for the next launch, and painted behind every window.
-  ipcMain.on(CHANNELS.themeSet, (event, value: unknown) => {
-    if (!fromAppWindow(event)) return;
+  ipc.on('themeSet', (_call, value) => {
     const theme = parseWindowTheme(value);
     if (!theme) return;
     const before = preferences.windowTheme;
@@ -1188,87 +1210,77 @@ function registerIpc(): void {
     applyBackground();
   });
   // Each window sends its own menus; the menu bar shows those of the window in front (A712).
-  ipcMain.on(CHANNELS.menuSet, (event, value: unknown) => {
-    const window = fromAppWindow(event) ? windows.windowOf(event.sender) : null;
+  ipc.on('menuSet', ({ event }, value) => {
+    const window = windows.windowOf(event.sender);
     const menus = window ? parseMenus(value) : null;
     if (!window || !menus) return;
     if (window === windows.main) mainMenus = menus;
     if (windows.setMenus(window, menus)) setMenus(menus);
   });
   // `gesture`: the preload's `navigator.userActivation.isActive`, which page scripts cannot set.
-  ipcMain.handle(CHANNELS.clipboardWrite, (event, data: unknown, gesture: unknown) =>
-    fromApp(event) && clipboardGate.allows({ gesture: gesture === true, now: Date.now() })
-      ? writeClipboard(data)
-      : false,
+  ipc.handle('clipboardWrite', ({ gesture }, data) =>
+    clipboardGate.allows({ gesture, now: Date.now() }) ? writeClipboard(data) : false,
   );
-  ipcMain.on(CHANNELS.captureDone, (event, saved: unknown) => {
-    if (!fromApp(event) || event.sender !== captureWindow?.webContents) return;
+  ipc.on('captureDone', ({ event }, saved) => {
+    if (event.sender !== captureWindow?.webContents) return;
     hideCapture();
     // The other windows read the capture from IndexedDB now, not on their next write.
-    if (saved === true) notifyOthers(CHANNELS.storeChanged, event.sender);
+    if (saved === true) notifyOthers(event.sender, 'storeChanged');
   });
   // A page stored records (T45, A711): every other window reads them now, offline too.
-  ipcMain.on(CHANNELS.stored, (event, ids: unknown) => {
-    if (!fromApp(event)) return;
+  ipc.on('stored', ({ event }, ids) => {
     // The main and note windows only: the hidden capture window reads the store again as it
     // shows (showCapture), and reading each write would have it upload them a second time.
     const changed = parseStoredIds(ids);
     for (const window of windows.all()) {
       if (!window.isDestroyed() && window.webContents !== event.sender) {
-        window.webContents.send(CHANNELS.storeChanged, changed);
+        sendEvent(window.webContents, 'storeChanged', changed);
       }
     }
   });
   // Keep on top and the compact title bar (T46, T47): a main or note window's own (A720–A724).
-  const macWindowOf = (event: IpcMainEvent | IpcMainInvokeEvent) =>
-    macWindows && fromAppWindow(event) ? windows.windowOf(event.sender) : null;
-  ipcMain.handle(CHANNELS.windowState, (event) => {
+  ipc.handle('windowState', ({ event }) => {
     const window = macWindowOf(event);
     return window ? windowState(window) : null;
   });
-  ipcMain.handle(CHANNELS.keepOnTop, (event, value: unknown) => {
+  ipc.handle('keepOnTop', ({ event }, value) => {
     const window = macWindowOf(event);
     const on = parseKeepOnTop(value);
     if (!window || on === null) return null;
     return keepOnTop(window, on);
   });
   // Only just after a key press or click in the page (the preload's user activation).
-  ipcMain.handle(CHANNELS.compactTitleBar, (event, value: unknown, gesture: unknown) => {
+  ipc.handle('compactTitleBar', ({ event }, value) => {
     const window = macWindowOf(event);
-    if (!window || typeof value !== 'boolean' || gesture !== true) return null;
+    if (!window || typeof value !== 'boolean') return null;
     return setCompactTitleBar(window, value);
   });
   // The menu bar icon (T51 item 17, A945): read by Settings → Display in a main or note window,
   // changed only just after a key press or click there.
-  ipcMain.handle(CHANNELS.menuBarIconGet, (event) =>
-    macWindowOf(event) ? preferences.menuBarIcon !== false : null,
+  ipc.handle('menuBarIconGet', () => preferences.menuBarIcon !== false);
+  ipc.handle('menuBarIconSet', (_call, value) =>
+    typeof value === 'boolean' ? setMenuBarIcon(value) : null,
   );
-  ipcMain.handle(CHANNELS.menuBarIconSet, (event, value: unknown, gesture: unknown) => {
-    if (!macWindowOf(event) || typeof value !== 'boolean' || gesture !== true) return null;
-    return setMenuBarIcon(value);
-  });
   // A command held for the main window while it loaded (A945): its page asks once it listens.
   // Asking says the page listens now: later ones are sent to it straight away.
-  ipcMain.handle(CHANNELS.menuCommandPending, (event) => {
-    if (!fromApp(event) || !windows.main || event.sender !== windows.main.webContents) return null;
+  ipc.handle('menuCommandPending', ({ event }) => {
+    if (!windows.main || event.sender !== windows.main.webContents) return null;
     const item = mainInbox.take(event.sender.id);
     if (!item) return null;
     return item.kind === 'command' ? item.id : { path: item.path };
   });
   // Its Quick Access notes (A946): from the main window's page only, checked.
-  ipcMain.on(CHANNELS.quickAccessSet, (event, value: unknown) => {
-    const window = macWindowOf(event);
-    const pins = window && window === windows.main ? parseQuickAccess(value) : null;
+  ipc.on('quickAccessSet', ({ event }, value) => {
+    const pins = macWindowOf(event) === windows.main ? parseQuickAccess(value) : null;
     if (!pins) return;
     quickAccessPins = pins;
     refreshTray();
   });
-  // Send feedback (T49, A798): the asking window's own page, never another window's, as PNG.
   // Git notebooks (T50, A853–A857): main and note windows only. Main checks every argument.
   // Listed to the capture window too, which files captures in the Journal notebook (A827).
-  ipcMain.handle(CHANNELS.gitList, (event) => (fromApp(event) ? gitNotebooks.list() : []));
-  ipcMain.handle(CHANNELS.gitAdd, async (event, input: unknown) => {
-    if (!fromAppWindow(event) || typeof input !== 'object' || input === null) return null;
+  ipc.handle('gitList', () => gitNotebooks.list());
+  ipc.handle('gitAdd', async ({ event }, input) => {
+    if (typeof input !== 'object' || input === null) return null;
     const fields = input as Record<string, unknown>;
     // A repository picked through Penmoss's sign-in gets its token (A1171): from the main
     // window's Add, and only for a github.com address over HTTPS.
@@ -1285,199 +1297,101 @@ function registerIpc(): void {
       token: signedIn ? await githubToken.token() : null,
     });
   });
-  ipcMain.handle(
-    CHANNELS.gitRemove,
-    (event, localId: unknown, unpushed: unknown, gesture: unknown) => {
-      if (!fromAppWindow(event)) return null;
-      return gesture === true ? gitNotebooks.remove(localId, unpushed) : NEEDS_A_PERSON;
-    },
+  ipc.handle('gitRemove', (_call, localId, unpushed) => gitNotebooks.remove(localId, unpushed));
+  ipc.handle('gitUpdate', ({ gesture }, localId, patch) => {
+    // Who commits is the person's to set (#174 review), and so is the notebook's name on every
+    // device (Rename, Ryan's review of PR #192): after a click or a key press in the app.
+    const personal =
+      typeof patch === 'object' && patch !== null && ('author' in patch || 'name' in patch);
+    if (personal && !gesture) return NEEDS_A_PERSON;
+    return gitNotebooks.update(localId, patch);
+  });
+  ipc.handle('gitToken', (_call, localId, token) => gitNotebooks.setToken(localId, token));
+  ipc.handle('gitPurgeCheck', (_call, localId, noteId) => gitNotebooks.purgeCheck(localId, noteId));
+  ipc.handle('gitRestoreCheck', (_call, localId, noteId, revert) =>
+    gitNotebooks.restoreCheck(localId, noteId, revert),
   );
-  ipcMain.handle(
-    CHANNELS.gitUpdate,
-    (event, localId: unknown, patch: unknown, gesture: unknown) => {
-      if (!fromAppWindow(event)) return null;
-      // Who commits is the person's to set (#174 review), and so is the notebook's name on every
-      // device (Rename, Ryan's review of PR #192): after a click or a key press in the app.
-      const personal =
-        typeof patch === 'object' && patch !== null && ('author' in patch || 'name' in patch);
-      if (personal && gesture !== true) return NEEDS_A_PERSON;
-      return gitNotebooks.update(localId, patch);
-    },
+  ipc.handle('gitPurgesToConfirm', (_call, localId, also) =>
+    gitNotebooks.purgesToConfirm(localId, also ?? []),
   );
-  ipcMain.handle(CHANNELS.gitToken, (event, localId: unknown, token: unknown) =>
-    fromAppWindow(event) ? gitNotebooks.setToken(localId, token) : null,
-  );
-  ipcMain.handle(
-    CHANNELS.gitPurgeCheck,
-    (event, localId: unknown, noteId: unknown, gesture: unknown) => {
-      if (!fromAppWindow(event)) return null;
-      return gesture === true ? gitNotebooks.purgeCheck(localId, noteId) : NEEDS_A_PERSON;
-    },
-  );
-  ipcMain.handle(
-    CHANNELS.gitRestoreCheck,
-    (event, localId: unknown, noteId: unknown, revert: unknown, gesture: unknown) => {
-      if (!fromAppWindow(event)) return null;
-      return gesture === true ? gitNotebooks.restoreCheck(localId, noteId, revert) : NEEDS_A_PERSON;
-    },
-  );
-  ipcMain.handle(CHANNELS.gitPurgesToConfirm, (event, localId: unknown, also: unknown) =>
-    fromAppWindow(event) ? gitNotebooks.purgesToConfirm(localId, also ?? []) : null,
-  );
-  ipcMain.handle(CHANNELS.gitSecret, (event, localId: unknown, value: unknown) =>
-    fromAppWindow(event) ? gitNotebooks.writerSecret(localId, value) : null,
-  );
-  ipcMain.handle(CHANNELS.gitOp, (event, localId: unknown, op: unknown, args: unknown) =>
-    fromAppWindow(event) ? gitNotebooks.op(localId, op, args) : null,
-  );
+  ipc.handle('gitSecret', (_call, localId, value) => gitNotebooks.writerSecret(localId, value));
+  ipc.handle('gitOp', (_call, localId, op, args) => gitNotebooks.op(localId, op, args));
   // Answered once main has stopped them, so the page counts a sync stopped only when it is.
-  ipcMain.handle(CHANNELS.gitCancel, (event, localId: unknown) => {
-    if (fromAppWindow(event) && typeof localId === 'string') gitNotebooks.cancel(localId);
+  ipc.handle('gitCancel', (_call, localId) => {
+    if (typeof localId === 'string') gitNotebooks.cancel(localId);
     return null;
   });
-  ipcMain.handle(CHANNELS.gitIdentity, (event) =>
-    fromAppWindow(event) ? gitNotebooks.identity() : null,
-  );
+  ipc.handle('gitIdentity', () => gitNotebooks.identity());
   // Browsing GitHub in Add a Git Notebook (T81, A1165): the main window only, where adding is.
-  ipcMain.handle(CHANNELS.gitGithubRepos, (event) =>
-    fromMainWindow(event) ? githubBrowse.repos() : null,
+  ipc.handle('gitGithubRepos', () => githubBrowse.repos());
+  ipc.handle('gitGithubFolders', (_call, fullName, branch) =>
+    githubBrowse.folders(fullName, branch),
   );
-  ipcMain.handle(CHANNELS.gitGithubFolders, (event, fullName: unknown, branch: unknown) =>
-    fromMainWindow(event) ? githubBrowse.folders(fullName, branch) : null,
-  );
-  ipcMain.handle(CHANNELS.gitGithubOwners, (event) =>
-    fromMainWindow(event) ? githubBrowse.owners() : null,
-  );
-  ipcMain.handle(
-    CHANNELS.gitGithubCreate,
-    (event, owner: unknown, name: unknown, gesture: unknown) => {
-      if (!fromMainWindow(event)) return null;
-      return gesture === true ? githubBrowse.create(owner, name) : NEEDS_A_PERSON;
-    },
-  );
+  ipc.handle('gitGithubOwners', () => githubBrowse.owners());
+  ipc.handle('gitGithubCreate', (_call, owner, name) => githubBrowse.create(owner, name));
   // Sign in with GitHub (T82, A1170): the main window only; starting it is the person's.
-  ipcMain.handle(CHANNELS.githubSignInStatus, async (event) =>
-    fromMainWindow(event)
-      ? {
-          available: githubSignIn.available,
-          state: githubSignIn.state(),
-          login: (await githubToken.status()).login,
-        }
-      : null,
-  );
-  ipcMain.handle(CHANNELS.githubSignInStart, (event, gesture: unknown) => {
-    if (!fromMainWindow(event)) return null;
-    return gesture === true ? githubSignIn.start() : NEEDS_A_PERSON;
-  });
-  ipcMain.handle(CHANNELS.githubSignInCancel, (event) => {
-    if (fromMainWindow(event)) githubSignIn.cancel();
+  ipc.handle('githubSignInStatus', async () => ({
+    available: githubSignIn.available,
+    state: githubSignIn.state(),
+    login: (await githubToken.status()).login,
+  }));
+  ipc.handle('githubSignInStart', () => githubSignIn.start());
+  ipc.handle('githubSignInCancel', () => {
+    githubSignIn.cancel();
     return null;
   });
   // Agents on this Mac (T54, A992, A993): the main window's Settings only.
-  ipcMain.handle(CHANNELS.agentsList, (event, localId: unknown) =>
-    fromMainWindow(event) ? localAgents.list(localId) : null,
-  );
-  ipcMain.handle(
-    CHANNELS.agentsConnect,
-    (event, localId: unknown, label: unknown, gesture: unknown) => {
-      if (!fromMainWindow(event)) return null;
-      return gesture === true ? localAgents.connect(localId, label) : NEEDS_A_PERSON;
-    },
-  );
-  ipcMain.handle(
-    CHANNELS.agentsDisconnect,
-    (event, name: unknown, force: unknown, gesture: unknown) => {
-      if (!fromMainWindow(event)) return null;
-      return gesture === true ? localAgents.disconnect(name, force) : NEEDS_A_PERSON;
-    },
-  );
-  ipcMain.handle(CHANNELS.cliStatus, (event) =>
-    fromMainWindow(event) ? localAgents.cliStatus() : null,
-  );
-  ipcMain.handle(CHANNELS.cliInstall, (event, gesture: unknown) => {
-    if (!fromMainWindow(event)) return null;
-    return gesture === true ? localAgents.installCli() : NEEDS_A_PERSON;
-  });
-  ipcMain.handle(CHANNELS.cliRemove, (event, gesture: unknown) => {
-    if (!fromMainWindow(event)) return null;
-    return gesture === true ? localAgents.removeCli() : NEEDS_A_PERSON;
-  });
+  ipc.handle('agentsList', (_call, localId) => localAgents.list(localId));
+  ipc.handle('agentsConnect', (_call, localId, label) => localAgents.connect(localId, label));
+  ipc.handle('agentsDisconnect', (_call, name, force) => localAgents.disconnect(name, force));
+  ipc.handle('cliStatus', () => localAgents.cliStatus());
+  ipc.handle('cliInstall', () => localAgents.installCli());
+  ipc.handle('cliRemove', () => localAgents.removeCli());
   // Search by meaning (T76): main and note windows search; the switch is the main window's,
   // after a click or key press (A1158). The page's notes and options are checked first.
-  ipcMain.handle(CHANNELS.meaningStatus, (event) =>
-    fromAppWindow(event) ? (meaning?.status() ?? null) : null,
-  );
-  ipcMain.handle(CHANNELS.meaningUpdate, (event, notebookId: unknown, notes: unknown) => {
+  ipc.handle('meaningStatus', () => meaning?.status() ?? null);
+  ipc.handle('meaningUpdate', (_call, notebookId, notes) => {
     const parsed = parseServiceNotes(notes);
-    if (!fromAppWindow(event) || typeof notebookId !== 'string' || !parsed) return [];
+    if (typeof notebookId !== 'string' || !parsed) return [];
     return meaning?.update(notebookId, parsed) ?? [];
   });
-  ipcMain.handle(CHANNELS.meaningClose, (event, notebookId: unknown) => {
-    if (!fromAppWindow(event) || typeof notebookId !== 'string') return null;
-    return meaning?.close(notebookId) ?? null;
+  ipc.handle('meaningClose', async (_call, notebookId) => {
+    if (typeof notebookId === 'string') await meaning?.close(notebookId);
   });
-  ipcMain.handle(
-    CHANNELS.meaningSearch,
-    (event, notebookId: unknown, query: unknown, options: unknown) => {
-      const parsed = parseSearchOptions(options);
-      if (!fromAppWindow(event) || typeof notebookId !== 'string') return null;
-      if (typeof query !== 'string' || query.length > 2_000 || !parsed) return null;
-      return meaning?.search(notebookId, query, parsed) ?? null;
-    },
+  ipc.handle('meaningSearch', (_call, notebookId, query, options) => {
+    const parsed = parseSearchOptions(options);
+    if (typeof notebookId !== 'string') return null;
+    if (typeof query !== 'string' || query.length > 2_000 || !parsed) return null;
+    return meaning?.search(notebookId, query, parsed) ?? null;
+  });
+  ipc.handle('meaningSetEnabled', (_call, on) =>
+    typeof on === 'boolean' ? (meaning?.setEnabled(on) ?? null) : null,
   );
-  ipcMain.handle(CHANNELS.meaningSetEnabled, (event, on: unknown, gesture: unknown) => {
-    if (!fromMainWindow(event) || typeof on !== 'boolean' || gesture !== true) return null;
-    return meaning?.setEnabled(on) ?? null;
-  });
   // Auto-Update (A1112, A1196): anyone may read the state and check; the switch, the channel and
   // Install and Restart are the person's, after a click or key press (main window only).
-  ipcMain.handle(CHANNELS.updatesState, (event) =>
-    fromAppWindow(event) ? updates.current() : null,
+  ipc.handle('updatesState', () => updates.current());
+  ipc.handle('updatesCheck', () => updates.check());
+  ipc.handle('updatesSetAuto', (_call, on) =>
+    typeof on === 'boolean' ? updates.setAuto(on) : null,
   );
-  ipcMain.handle(CHANNELS.updatesCheck, (event) => (fromAppWindow(event) ? updates.check() : null));
-  ipcMain.handle(CHANNELS.updatesSetAuto, (event, on: unknown, gesture: unknown) => {
-    if (!fromMainWindow(event) || typeof on !== 'boolean') return null;
-    return gesture === true ? updates.setAuto(on) : null;
-  });
-  ipcMain.handle(CHANNELS.updatesSetChannel, (event, channel: unknown, gesture: unknown) => {
-    if (!fromMainWindow(event) || (channel !== 'stable' && channel !== 'alpha')) return null;
-    return gesture === true ? updates.setChannel(channel) : null;
-  });
-  ipcMain.handle(CHANNELS.updatesInstall, (event, gesture: unknown) => {
-    if (!fromMainWindow(event)) return null;
-    return gesture === true ? updates.install() : null;
-  });
+  ipc.handle('updatesSetChannel', (_call, channel) =>
+    channel === 'stable' || channel === 'alpha' ? updates.setChannel(channel) : null,
+  );
+  ipc.handle('updatesInstall', () => updates.install());
   // The notice after an update (PEN-110): answered after a click, in the main window.
-  ipcMain.handle(CHANNELS.updatesAcknowledge, (event, gesture: unknown) => {
-    if (!fromMainWindow(event)) return null;
-    return gesture === true ? updates.acknowledge() : null;
-  });
+  ipc.handle('updatesAcknowledge', () => updates.acknowledge());
   // Release notes (PEN-108): the cached file at once; a newer one follows as a change.
-  ipcMain.handle(CHANNELS.updatesNotes, async (event) => {
-    if (!fromAppWindow(event)) return null;
+  ipc.handle('updatesNotes', () => {
     void updates.current().then((state) => releaseNotes.refresh(state.channel));
     return releaseNotes.current();
   });
   // The GitHub token (A1012): what it is is never sent back; saving and removing it are the
   // person's, after a click or key press in Settings (main window only).
-  ipcMain.handle(CHANNELS.githubTokenStatus, (event) =>
-    fromAppWindow(event) ? githubToken.status() : null,
-  );
-  ipcMain.handle(CHANNELS.githubTokenSave, (event, token: unknown, gesture: unknown) => {
-    if (!fromMainWindow(event)) return null;
-    return gesture === true
-      ? githubToken.save(token)
-      : { ok: false, message: NEEDS_A_PERSON.error.message };
-  });
-  ipcMain.handle(CHANNELS.githubTokenRemove, async (event, gesture: unknown) => {
-    if (!fromMainWindow(event)) return null;
-    return gesture === true
-      ? { ok: true, status: await githubToken.remove() }
-      : { ok: false, message: NEEDS_A_PERSON.error.message };
-  });
+  ipc.handle('githubTokenStatus', () => githubToken.status());
+  ipc.handle('githubTokenSave', (_call, token) => githubToken.save(token));
+  ipc.handle('githubTokenRemove', async () => ({ ok: true, status: await githubToken.remove() }));
   // Send feedback filed here with that token (A1010, A1011): the outbox's entry, as it was sent.
-  ipcMain.handle(CHANNELS.feedbackFile, (event, payload: unknown, screenshots: unknown) => {
-    if (!fromAppWindow(event)) return null;
+  ipc.handle('feedbackFile', (_call, payload, screenshots) => {
     const shots = screenshotsOf(screenshots);
     if (!shots) {
       return {
@@ -1487,8 +1401,8 @@ function registerIpc(): void {
     }
     return githubToken.file(payload, shots);
   });
-  ipcMain.handle(CHANNELS.feedbackCapture, async (event) => {
-    if (!fromAppWindow(event)) return null;
+  // Send feedback (T49, A798): the asking window's own page, never another window's, as PNG.
+  ipc.handle('feedbackCapture', async ({ event }) => {
     try {
       const image = await event.sender.capturePage();
       return image.isEmpty() ? null : new Uint8Array(image.toPNG());
@@ -1496,15 +1410,14 @@ function registerIpc(): void {
       return null;
     }
   });
-  ipcMain.handle(CHANNELS.captureHotkey, (event) => (fromApp(event) ? hotkey : null));
+  ipc.handle('captureHotkey', () => hotkey);
   // Only Settings → Keyboard Shortcuts, after a key press or click: from a main or note
   // window's app frame (A712; Settings shows in the main window), never the capture window.
-  ipcMain.handle(CHANNELS.captureSetHotkey, (event, value: unknown, gesture: unknown) => {
-    if (!fromAppWindow(event)) return null;
+  ipc.handle('captureSetHotkey', ({ event, gesture }, value) => {
     if (typeof value !== 'string' || value.length > 100) return null;
     const refused = hotkeyGate.check({
       url: event.senderFrame?.url ?? '',
-      gesture: gesture === true,
+      gesture,
       now: Date.now(),
     });
     return refused ? { ...hotkey, error: refused } : setHotkey(value);
