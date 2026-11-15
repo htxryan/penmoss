@@ -12,7 +12,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { CliError, type NotebookEntry, type NotebookIo } from '@penmoss/cli/node';
 import type { GitAnswer, GitNotebookEntry, GitRefusal } from './git-notebooks';
-import { fitWords, repositoryWords } from './git-notebooks';
+import { fitWords, repositoryWords } from './owner-words';
 
 /** The switch that makes this binary the CLI (A992). */
 export const CLI_FLAG = '--penmoss-cli';
