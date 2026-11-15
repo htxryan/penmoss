@@ -71,7 +71,9 @@ function install(mac: MacWindow | undefined) {
           menuCommand = null;
         };
       },
+      takePending: () => Promise.resolve(null),
     },
+    theme: { set: () => undefined },
     onOpenPath: () => () => undefined,
     clipboard: { write: () => Promise.resolve(true) },
     ...(mac ? { macWindow: mac } : {}),
@@ -164,7 +166,7 @@ describe('keep on top in the page (T46, A720)', () => {
     expect(menuItem('window.keepOnTop')?.checked).toBe(true);
   });
 
-  it('is not offered where the window cannot do it: a browser, or a Mac app before T46', async () => {
+  it('is not offered where the window cannot do it: a browser, or the capture window', async () => {
     install(undefined);
     await show();
     expect(pin()).toBeNull();

@@ -33,7 +33,7 @@ function sortAnswer(ok: boolean, status: number, body: AnswerBody, after: number
   };
 }
 
-type FileFeedback = NonNullable<NonNullable<PenmossDesktop['feedback']>['file']>;
+type FileFeedback = NonNullable<PenmossDesktop['feedback']>['file'];
 
 /**
  * Sends `entry` through the Mac app's main process, which files it with the person's own GitHub
@@ -45,7 +45,8 @@ export async function sendFeedbackOnMac(
   entry: OutboxEntry,
 ): Promise<SendResult> {
   if (!file) {
-    // Outside the Mac app nothing can file it: it waits in the outbox.
+    // A window without the bridge's filer (the capture window's) can't file it: it waits in the
+    // outbox.
     return {
       ok: false,
       retryable: true,

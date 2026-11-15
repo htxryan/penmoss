@@ -108,7 +108,7 @@ export function RepoPicker({
 
   const viaPenmoss = load.state === 'ready' && load.via === 'penmoss';
   useEffect(() => {
-    if (!viaPenmoss || !github.signIn) return;
+    if (!viaPenmoss) return;
     let live = true;
     void github.signIn
       .status()

@@ -114,8 +114,8 @@ function github(
   return { browse, calls };
 }
 
-/** The Mac's git, with no notebook until `add` makes one; a GitHub stand-in when given one. */
-function macGit(browse?: DesktopGitHubBrowse) {
+/** The Mac's git, with no notebook until `add` makes one, and a GitHub stand-in. */
+function macGit(browse: DesktopGitHubBrowse = github().browse) {
   const listed: GitNotebookInfo[] = [];
   const listeners = new Set<() => void>();
   const add = vi.fn(
@@ -139,7 +139,7 @@ function macGit(browse?: DesktopGitHubBrowse) {
       return () => listeners.delete(listener);
     },
     add,
-    ...(browse ? { github: browse } : {}),
+    github: browse,
   } as unknown as DesktopGit;
   return { git, add };
 }
@@ -339,11 +339,12 @@ describe('the first run (A1030, First Run C)', () => {
     expect(screen()).toBe('welcome');
   });
 
-  it('without GitHub, a new notebook is a pasted address, named, then the app opens it', async () => {
+  it('Paste a URL: a new notebook is a pasted address, named, then the app opens it', async () => {
     const { add } = await start();
     await press('first-run-start');
     await press('first-run-continue');
-    // No GitHub browsing in this window: straight to Paste a URL.
+    await choose('first-run-way-url');
+    await press('first-run-continue');
     expect(screen()).toBe('url');
     expect(host.textContent).toContain('Step 2 of 3');
     await type('first-run-url-input', 'git@github.com:me/field-notes.git');
@@ -371,6 +372,8 @@ describe('the first run (A1030, First Run C)', () => {
     } as never);
     await press('first-run-start');
     await press('first-run-continue');
+    await choose('first-run-way-url');
+    await press('first-run-continue');
     await type('first-run-url-input', 'git@example.com:me/notes.git');
     await press('first-run-continue');
     expect($('first-run-url-problem')?.textContent).toBe(
@@ -389,6 +392,8 @@ describe('the first run (A1030, First Run C)', () => {
     } as never);
     await press('first-run-start');
     await press('first-run-continue');
+    await choose('first-run-way-url');
+    await press('first-run-continue');
     await type('first-run-url-input', 'git@example.com:me/notes.git');
     await press('first-run-continue');
     expect(screen()).toBe('git-missing');
@@ -402,6 +407,9 @@ describe('the first run (A1030, First Run C)', () => {
     await press('first-run-start');
     await choose('first-run-existing');
     await press('first-run-continue');
+    // Your repositories, then Paste a URL Instead.
+    await vi.waitFor(() => expect(screen()).toBe('list'));
+    await press('first-run-url-instead');
     await type('first-run-url-input', 'git@github.com:me/kept.git');
     await press('first-run-continue');
     await vi.waitFor(() => expect($('the-app')?.textContent).toBe('NB1'));
@@ -731,6 +739,8 @@ describe('the first run (A1030, First Run C)', () => {
     await sources.load();
     render(sources);
     await press('first-run-start');
+    await press('first-run-continue');
+    await choose('first-run-way-url');
     await press('first-run-continue');
     await type('first-run-url-input', 'git@github.com:me/notes.git');
     await press('first-run-continue');

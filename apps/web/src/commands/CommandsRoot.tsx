@@ -310,7 +310,7 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
       navigate('/settings/git-notebooks');
     },
     // The Mac app's git only (D48).
-    () => Boolean(desktop()?.git),
+    () => desktop() !== null,
   );
   useCommand(
     'app.checkForUpdates',

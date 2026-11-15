@@ -32,7 +32,7 @@ export interface StoreSync {
 export function storeSync(bridge: PenmossDesktop | null): StoreSync {
   let pending = new Set<string>();
   let timer: ReturnType<typeof setTimeout> | null = null;
-  const send = bridge?.stored ? bridge.stored.bind(bridge) : null;
+  const send = bridge ? bridge.stored.bind(bridge) : null;
 
   const flush = () => {
     if (timer) clearTimeout(timer);

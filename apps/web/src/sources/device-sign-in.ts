@@ -32,10 +32,7 @@ export interface DeviceSignIn {
  * GitHub's device sign-in (T82), for Settings' form and the first run: `onSignedIn` runs when a
  * sign-in started here, or one still waiting from before, is approved.
  */
-export function useDeviceSignIn(
-  signIn: DesktopGitHubSignIn | undefined,
-  onSignedIn: () => void,
-): DeviceSignIn {
+export function useDeviceSignIn(signIn: DesktopGitHubSignIn, onSignedIn: () => void): DeviceSignIn {
   const [available, setAvailable] = useState(false);
   const [state, setState] = useState<GitHubSignInState>({ state: 'idle' });
   const [started, setStarted] = useState(false);
@@ -48,7 +45,6 @@ export function useDeviceSignIn(
   });
 
   useEffect(() => {
-    if (!signIn) return;
     let live = true;
     void signIn
       .status()
@@ -72,7 +68,7 @@ export function useDeviceSignIn(
 
   const start = async () => {
     // One start at a time: a second click would ask GitHub for a second code (review).
-    if (asking || !signIn) return;
+    if (asking) return;
     setAsking(true);
     setProblem(null);
     setCopied(false);
@@ -96,13 +92,13 @@ export function useDeviceSignIn(
       ? null
       : (problem ?? (state.state === 'failed' ? state.message : (ENDED[state.state] ?? null)));
   return {
-    available: available && signIn !== undefined,
+    available,
     state,
     ended,
     asking,
     copied,
     start,
-    cancel: () => void signIn?.cancel(),
+    cancel: () => void signIn.cancel(),
     copy: () => {
       if (state.state !== 'waiting') return;
       void copyText(document, state.userCode).then(setCopied);

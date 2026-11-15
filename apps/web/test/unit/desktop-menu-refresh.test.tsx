@@ -47,7 +47,9 @@ beforeEach(() => {
     menu: {
       set: (menus: readonly DesktopMenu[]) => sent.push(menus),
       onCommand: () => () => undefined,
+      takePending: () => Promise.resolve(null),
     },
+    theme: { set: () => undefined },
     onOpenPath: () => () => undefined,
     clipboard: { write: () => Promise.resolve(true) },
   } as unknown as PenmossDesktop;

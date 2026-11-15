@@ -1177,8 +1177,8 @@ export function AddGitNotebook({ git }: { git: DesktopGit }) {
   const [needsName, setNeedsName] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // T81 (B9): the repository step opens on Your Repositories where main can browse GitHub.
-  const [way, setWay] = useState<'browse' | 'type'>(github ? 'browse' : 'type');
+  // T81 (B9): the repository step opens on Your Repositories.
+  const [way, setWay] = useState<'browse' | 'type'>('browse');
   const [picked, setPicked] = useState<GitHubRepo | null>(null);
   /** The sign-in the pick was listed with (T82): Penmoss's gives the notebook its token. */
   const [pickedVia, setPickedVia] = useState<GitHubVia | null>(null);
@@ -1345,7 +1345,7 @@ export function AddGitNotebook({ git }: { git: DesktopGit }) {
     </span>
   );
 
-  const browsing = github !== undefined && way === 'browse';
+  const browsing = way === 'browse';
   const opensNotebook = browsing && picked !== null && folder.notebook !== null;
 
   let body: ReactNode;
@@ -1424,7 +1424,7 @@ export function AddGitNotebook({ git }: { git: DesktopGit }) {
   } else {
     body = (
       <>
-        {github && signedOut ? (
+        {signedOut ? (
           <div
             className="repo-signed-out"
             data-testid="git-add-signin"
@@ -1435,16 +1435,14 @@ export function AddGitNotebook({ git }: { git: DesktopGit }) {
                 ? 'Git on this Mac isn’t signed in to GitHub. Type the repository’s address below, or sign in to pick it from your repositories.'
                 : `${signedOut.message} Type the repository’s address instead.`}
             </p>
-            {github.signIn ? (
-              <GitHubSignIn
-                signIn={github.signIn}
-                again={signedOut.reason === 'unauthorized'}
-                onSignedIn={() => {
-                  setSignedOut(null);
-                  setWay('browse');
-                }}
-              />
-            ) : null}
+            <GitHubSignIn
+              signIn={github.signIn}
+              again={signedOut.reason === 'unauthorized'}
+              onSignedIn={() => {
+                setSignedOut(null);
+                setWay('browse');
+              }}
+            />
             <p className="muted">
               To pick from your repositories, run <code>gh auth login</code> in Terminal, then{' '}
               <code>gh auth setup-git</code>, then Try Again.
@@ -1510,33 +1508,31 @@ export function AddGitNotebook({ git }: { git: DesktopGit }) {
       }}
     >
       <h3 id={`${id}-h`}>Add a git notebook</h3>
-      {github ? (
-        <div className="repo-way" role="group" aria-label="How to choose the repository">
-          <button
-            type="button"
-            className="btn"
-            data-ui="item"
-            aria-pressed={way === 'browse'}
-            data-testid="git-add-way-browse"
-            onClick={() => {
-              setSignedOut(null);
-              setWay('browse');
-            }}
-          >
-            Your Repositories
-          </button>
-          <button
-            type="button"
-            className="btn"
-            data-ui="item"
-            aria-pressed={way === 'type'}
-            data-testid="git-add-way-type"
-            onClick={() => setWay('type')}
-          >
-            Type an Address
-          </button>
-        </div>
-      ) : null}
+      <div className="repo-way" role="group" aria-label="How to choose the repository">
+        <button
+          type="button"
+          className="btn"
+          data-ui="item"
+          aria-pressed={way === 'browse'}
+          data-testid="git-add-way-browse"
+          onClick={() => {
+            setSignedOut(null);
+            setWay('browse');
+          }}
+        >
+          Your Repositories
+        </button>
+        <button
+          type="button"
+          className="btn"
+          data-ui="item"
+          aria-pressed={way === 'type'}
+          data-testid="git-add-way-type"
+          onClick={() => setWay('type')}
+        >
+          Type an Address
+        </button>
+      </div>
       {body}
     </form>
   );

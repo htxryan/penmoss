@@ -105,14 +105,14 @@ export class FeedbackService {
     this.errors = options.ring ?? errorRing;
     this.presence = options.presence ?? new Presence();
     const online = options.online ?? (() => typeof navigator === 'undefined' || navigator.onLine);
-    // The Mac app files it itself with the person's GitHub token (T57, A1010). Outside it there
-    // is no filer, and entries wait in the outbox.
+    // The Mac app files it itself with the person's GitHub token (T57, A1010). The capture
+    // window has no filer, and entries wait in the outbox.
     const bridge = desktop()?.feedback;
     const file =
       options.file !== undefined
         ? options.file
-        : bridge?.file
-          ? (payload: string, shots: Parameters<NonNullable<typeof bridge.file>>[1]) =>
+        : bridge
+          ? (payload: string, shots: Parameters<typeof bridge.file>[1]) =>
               bridge.file(payload, shots)
           : null;
     this.outbox = new FeedbackOutbox({
