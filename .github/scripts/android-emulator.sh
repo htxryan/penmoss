@@ -43,6 +43,10 @@ LOCK="${PENMOSS_EMULATOR_LOCK:-/tmp/penmoss-ci-emulator-$PORT.lock}"
 LOCK_SECONDS="${PENMOSS_EMULATOR_LOCK_SECONDS:-1500}"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 LOG="${PENMOSS_EMULATOR_LOG:-${RUNNER_TEMP:-${TMPDIR:-/tmp}}/emulator.log}"
+# Settling the emulator, answering "isn't responding" dialogs, and `pause`, every fixed wait here,
+# in PENMOSS_EMULATOR_TICK's seconds (A1518).
+# shellcheck source=apps/android/scripts/settle.sh
+. "$ROOT/apps/android/scripts/settle.sh"
 
 say() { echo "[emulator] $*"; }
 fail() {
@@ -101,7 +105,7 @@ stop_started() {
     "$ADB" -s "$SERIAL" emu kill > /dev/null 2>&1 || true
     local waited=0
     while kill -0 "$emulator_pid" 2> /dev/null && [ "$waited" -lt 20 ]; do
-      sleep 1
+      pause 1
       waited=$((waited + 1))
     done
     kill -KILL "$emulator_pid" 2> /dev/null || true
@@ -154,7 +158,7 @@ run_tests() {
       break
     fi
     kill -0 "$emulator_pid" 2> /dev/null || fail "the emulator exited; see $LOG"
-    sleep 1
+    pause 1
     waited=$((waited + 1))
   done
 
@@ -162,7 +166,7 @@ run_tests() {
   until booted; do
     kill -0 "$emulator_pid" 2> /dev/null || fail "the emulator exited; see $LOG"
     [ "$waited" -lt "$BOOT_SECONDS" ] || fail "$SERIAL didn't boot in ${BOOT_SECONDS}s; see $LOG"
-    sleep 3
+    pause 3
     waited=$((waited + 3))
   done
   say "booted in ${waited}s"
@@ -173,8 +177,6 @@ run_tests() {
   "$ADB" -s "$SERIAL" shell wm dismiss-keyguard || true
   # Booted isn't idle: wait for the launcher to hold the focus with no "isn't responding" dialog
   # in front, as the factory's proof does (PEN-97: a test timed out waiting for window focus).
-  # shellcheck source=apps/android/scripts/settle.sh
-  . "$ROOT/apps/android/scripts/settle.sh"
   settle_device
   # The AVD keeps the last run's app. This runner's debug key signed it, but a removed app
   # can't fail the install.
@@ -220,7 +222,7 @@ stop() {
   for pattern in "$ANDROID_HOME/emulator/" "$ANDROID_HOME/platform-tools/adb"; do
     if pkill -TERM -f "$pattern" 2> /dev/null; then
       say "stopped what was left of $pattern"
-      sleep 2
+      pause 2
       pkill -KILL -f "$pattern" 2> /dev/null || true
     fi
   done

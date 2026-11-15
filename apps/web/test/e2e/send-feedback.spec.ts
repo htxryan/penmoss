@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, GITHUB_TOKEN, test, type GitHost, type Page } from './fixtures';
 import { crc32, deflateSync } from 'node:zlib';
-import { NEW_NOTE } from './keys';
+import { collectErrors, newNote } from './support/app';
 
 // T49: Send feedback files a GitHub issue. On the Mac (T57, A1010–A1012) main files it with the
 // person's own GitHub token: here apps/desktop's GitHubToken against core's fake GitHub, in the
@@ -12,7 +12,6 @@ import { NEW_NOTE } from './keys';
 // must reach neither what the page hands main nor the issue (A791). The Mac app's own suite
 // covers the window captured by main (apps/desktop/test/e2e/send-feedback.spec.ts).
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 const MARKER = `QUIETMARKER${RUN}`;
 const PHONE = { width: 390, height: 844 };
@@ -56,27 +55,6 @@ test.beforeEach(async ({ host }, info) => {
   if (info.title.startsWith('with no GitHub token')) return;
   expect(await host.githubToken.save(GITHUB_TOKEN)).toMatchObject({ ok: true });
 });
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-async function newNote(page: Page, title: string, text: string): Promise<string> {
-  await expect(page.locator('button[data-command="note.new"]')).toBeVisible();
-  await page.keyboard.press(NEW_NOTE);
-  await expect(page).toHaveURL(ULID);
-  await expect(page.getByTestId('note-title')).toBeFocused();
-  await page.keyboard.type(title);
-  await page.keyboard.press('Enter');
-  await page.keyboard.type(text);
-  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
-  return ULID.exec(new URL(page.url()).pathname)![1]!;
-}
 
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Send Feedback' });
 

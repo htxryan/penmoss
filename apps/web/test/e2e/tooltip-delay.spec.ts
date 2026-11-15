@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from './fixtures';
 import { storedSetting } from './stored';
+import { collectErrors } from './support/app';
 
 // PEN-70 (A1247), in the web app (the Mac app runs the same page): tooltips wait 1 second by
 // default, and Settings → Appearance → Show Tooltips After (on Display until PEN-146) chooses 0.5, 1, 1.5 or 2 seconds, or
@@ -7,15 +8,6 @@ import { storedSetting } from './stored';
 // hover, with no reload, and is stored as the synced `tooltip.delay`.
 
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 /**
  * How long, in ms, from the pointer reaching `target` to its tooltip showing, as the page's own
@@ -98,14 +90,11 @@ test('Show Tooltips After sets how long a hover waits, Never stops it, focus sho
   expect(half).toBeGreaterThanOrEqual(495);
   expect(half).toBeLessThan(1000);
 
-  // AC5: Never shows no tooltip on hover, however long the pointer rests.
+  // AC5: Never is stored as the setting the tooltip layer reads; that it then shows no tooltip
+  // however long the pointer rests is tooltip-delay.test.tsx's, on a fake clock.
   await page.mouse.move(900, 700);
   await field.selectOption({ label: 'Never' });
   await expect.poll(() => storedSetting(page, 'tooltip.delay')).toBe('never');
-  await back.hover();
-  await page.waitForTimeout(2500);
-  await expect(tooltip).toBeHidden();
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/tooltip-delay-never.png` });
 
   // AC6: keyboard focus still shows it at once.
   await page.mouse.move(900, 700);

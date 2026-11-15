@@ -100,6 +100,9 @@ class GitAskTimeTest {
         private val fromApp = LinkedBlockingQueue<GitFrame>()
         val marked = CopyOnWriteArrayList<String>()
 
+        /** Each note whose owner check came back to the page, confirmed or not: the event a test waits for, never a sleep. */
+        val answered = LinkedBlockingQueue<String>()
+
         override fun send(frame: ByteArray) {
             fromApp += GitFrame.decode(frame)
         }
@@ -128,6 +131,7 @@ class GitAskTimeTest {
                     val owner = answers.poll(30, TimeUnit.SECONDS) ?: return@thread
                     val ok = owner.header["k"]!!.jsonPrimitive.content == "ok"
                     if (ok) marked += noteId
+                    answered += noteId
                     val status = if (ok) 204 else 403
                     app(frame(mapOf("k" to JsonPrimitive("ok"), "id" to JsonPrimitive(id), "v" to JsonObject(mapOf("status" to JsonPrimitive(status), "headers" to JsonObject(emptyMap()), "body" to JsonNull)))))
                 }
@@ -170,7 +174,7 @@ class GitAskTimeTest {
             // The app says it failed.
         }
         // The person confirms after: nothing is kept, nothing marked.
-        delay(promptMs + 500)
+        assertEquals(note, page.answered.poll(30, TimeUnit.SECONDS))
         assertEquals(1, asked.size)
         assertTrue(page.marked.isEmpty())
         assertTrue(notebooks.entries().single().purges.isEmpty())
@@ -187,7 +191,8 @@ class GitAskTimeTest {
         } catch (expected: Exception) {
             // The app says it failed.
         }
-        delay(titlesMs + 500)
+        // Once the branch named it, the owner check comes back to the page without a prompt.
+        assertEquals(note, page.answered.poll(30, TimeUnit.SECONDS))
         // No prompt was shown for a request already withdrawn; nothing marked, nothing kept.
         assertTrue(asked.toString(), asked.isEmpty())
         assertTrue(page.marked.isEmpty())

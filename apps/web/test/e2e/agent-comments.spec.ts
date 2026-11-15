@@ -17,14 +17,13 @@ import {
   type ThreadData,
 } from '@penmoss/sync-client/comments';
 import { expect, seeded, test, type GitHost, type Page } from './fixtures';
-import { NEW_NOTE } from './keys';
+import { body, collectErrors, newNote } from './support/app';
 
 // T60 (D50, A1060–A1065, A1070–A1074): Send to… in a git notebook. The agent here is a second
 // clone of the notebook's bare repository, of kind agent, playing what the channel and the local
 // MCP's tools write: its session entry in the WorkspaceDoc, then `sent`, a reply and `replied`.
 // The page is the Mac app's (its engine syncs through the stand-in main process's git).
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 /**
  * Where screenshots go: the folder EVIDENCE_DIR names, else the test's output. Evidence goes
@@ -32,15 +31,6 @@ const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}
  */
 const EVIDENCE_DIR = process.env['EVIDENCE_DIR'];
 const DAY = 24 * 60 * 60_000;
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 /** The agent's own clone (T54): its own git directory and writer, of kind agent. */
 async function agentClone(host: GitHost, remote: string, label: string) {
@@ -79,21 +69,8 @@ async function agentClone(host: GitHost, remote: string, label: string) {
   };
 }
 
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const popover = (page: Page) => page.getByTestId('comment-popover');
 const panel = (page: Page) => page.getByTestId('comments-panel');
-
-async function newNote(page: Page, title: string, text: string): Promise<string> {
-  await expect(page.locator('button[data-command="note.new"]')).toBeVisible();
-  await page.keyboard.press(NEW_NOTE);
-  await expect(page).toHaveURL(ULID);
-  await expect(page.getByTestId('note-title')).toBeFocused();
-  await page.keyboard.type(title);
-  await page.keyboard.press('Enter');
-  await page.keyboard.type(text);
-  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
-  return ULID.exec(new URL(page.url()).pathname)![1]!;
-}
 
 async function selectText(page: Page, text: string): Promise<void> {
   await expect(async () => {

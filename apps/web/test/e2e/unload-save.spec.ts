@@ -2,6 +2,7 @@ import { expect, test, type GitHost, type Page } from './fixtures';
 import { NEW_NOTE } from './keys';
 import { storedDocumentText, storedRecord, storedSetting } from './stored';
 import { syncNow } from './support/sync';
+import { ULID, body } from './support/app';
 
 // A626: a change made just before the page goes (reload, tab closed) is kept on this device,
 // even with the server out of reach. Until A626 the page-hide write read the record first and
@@ -17,10 +18,7 @@ import { syncNow } from './support/sync';
 // the push delay (12 s): a test that waited for it twice spent most of its 30 s on the two
 // waits, and under the parallel suite's load ran out of time in the second.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `u${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 
 /** A new note, its title ready for typing (A1179: at once, no wait for its focus); its id. */
 async function newNote(page: Page): Promise<string> {

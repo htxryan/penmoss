@@ -1138,18 +1138,17 @@ describe('runImplement', () => {
     );
   });
 
-  it('blocks when the agent leaves uncommitted changes', async () => {
-    const f = fake({ dirty: true });
-    expect(await runImplement(f.deps, { item: card, spec, prompt: 'p' })).toEqual({
+  it.each([
+    ['leaves uncommitted changes', { dirty: true }, 'gate-failed'],
+    ['commits nothing', { commits: 0 }, 'no-commits'],
+  ] as const)('blocks when the agent %s', async (_, options, reason) => {
+    expect(await runImplement(fake(options).deps, { item: card, spec, prompt: 'p' })).toEqual({
       kind: 'blocked',
-      reason: 'gate-failed',
+      reason,
     });
   });
 
-  it('blocks when the agent commits nothing or writes no result', async () => {
-    expect(
-      await runImplement(fake({ commits: 0 }).deps, { item: card, spec, prompt: 'p' }),
-    ).toEqual({ kind: 'blocked', reason: 'no-commits' });
+  it('blocks when the agent writes no result', async () => {
     const f = fake({ result: { error: 'the agent wrote no .factory/result.json', missing: true } });
     expect(await runImplement(f.deps, { item: card, spec, prompt: 'p' })).toEqual({
       kind: 'blocked',

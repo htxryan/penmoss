@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { expect, macContext, PREVIEW, seeded, test, type Page } from './fixtures';
+import { expect, macContext, type Page, PREVIEW, seeded, test } from './fixtures';
 import { DOC_END, LINE_END } from './keys';
 import { remoteFiles, remoteMarkdown } from './support/remote';
-import { remoteBytes } from './support/sync';
+import { pushedUntil, remoteBytes } from './support/sync';
+import { body, collectErrors, newNote, ULID } from './support/app';
 
 // T13: files attached through the slash menu (a PDF with a preview, any other file to
 // download) go into the git notebook's repository (T59, A828: `attachments/<sha256>.<ext>`);
@@ -11,25 +12,12 @@ import { remoteBytes } from './support/sync';
 // render the section read-only, follow edits made elsewhere, show a cycle as a link,
 // stay searchable only in their source note, and survive copy and paste between notes.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const TAG = `e${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const SOURCE = `Garden ${TAG}`;
 const HOST = `Weekly ${TAG}`;
 const TARGET = `Pasted ${TAG}`;
 const WORD = `marigold${TAG}`;
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error' && !/WebSocket|net::/.test(message.text())) {
-      errors.push(message.text());
-    }
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const menu = (page: Page) => page.getByTestId('link-menu');
 const notice = (page: Page) => page.getByTestId('note-notice');
 
@@ -80,7 +68,7 @@ test('T13: attach files, embed a live section, cycles as links, copy and paste',
   notebook,
 }) => {
   test.setTimeout(150_000);
-  const errors = collectErrors(page);
+  const errors = collectErrors(page, /WebSocket|net::/);
   await page.goto('/');
 
   // The source: a section to embed.
@@ -108,7 +96,7 @@ test('T13: attach files, embed a live section, cycles as links, copy and paste',
 
   // Edited in another tab: the embed follows, live.
   const other = await context.newPage();
-  const otherErrors = collectErrors(other);
+  const otherErrors = collectErrors(other, /WebSocket|net::/);
   await other.goto(`/notes/${source}`);
   await body(other).getByText(`Dig the beds in March`).click();
   await other.keyboard.press(LINE_END);
@@ -154,13 +142,13 @@ test('T13: attach files, embed a live section, cycles as links, copy and paste',
   await pdfChip.getByRole('button', { name: 'Close the Preview of Field guide.pdf' }).click();
   await expect(pdfChip.getByTestId('attachment-preview')).toHaveCount(0);
 
-  // Pushed into the repository beside the notes, byte for byte (A828).
+  // Pushed into the repository beside the notes, byte for byte (A828), with Sync Now (A1013).
   const { remote } = seeded(notebook);
   const pdfPath = `attachments/${sha(PDF)}.pdf`;
   const csvPath = `attachments/${sha(CSV)}.csv`;
-  await expect
-    .poll(() => remoteFiles(mac, remote), { timeout: 60_000, intervals: [2_000] })
-    .toEqual(expect.arrayContaining([pdfPath, csvPath]));
+  await pushedUntil(page, () =>
+    expect(remoteFiles(mac, remote)).toEqual(expect.arrayContaining([pdfPath, csvPath])),
+  );
   expect(remoteBytes(mac, remote, pdfPath)).toEqual(PDF);
   expect(remoteBytes(mac, remote, csvPath)).toEqual(CSV);
 
@@ -180,15 +168,13 @@ test('T13: attach files, embed a live section, cycles as links, copy and paste',
   // embedded text; search finds that text only in the source.
   const embedRef = `![[${SOURCE}#Plan]]`;
   const pdfLink = `[Field guide.pdf](${pdfPath})`;
-  await expect
-    .poll(
-      () => {
-        const text = remoteMarkdown(mac, remote, host) ?? '';
-        return { embed: text.includes(embedRef), pdf: text.includes(pdfLink) };
-      },
-      { timeout: 60_000, intervals: [2_000] },
-    )
-    .toEqual({ embed: true, pdf: true });
+  await pushedUntil(page, () => {
+    const text = remoteMarkdown(mac, remote, host) ?? '';
+    expect({ embed: text.includes(embedRef), pdf: text.includes(pdfLink) }).toEqual({
+      embed: true,
+      pdf: true,
+    });
+  });
   expect(remoteMarkdown(mac, remote, host)).not.toContain(WORD);
   await page.keyboard.press('ControlOrMeta+Shift+KeyF');
   const search = page.getByTestId('search');
@@ -262,4 +248,76 @@ test('T13: the production build previews an attached PDF under the app CSP', asy
   } finally {
     await context.close();
   }
+});
+
+const RUN = `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+
+// T41.
+test('a note another writer filed with pictures shows them, its markdown as written', async ({
+  page,
+  host,
+  notebook,
+}) => {
+  test.setTimeout(90_000);
+  const errors = collectErrors(page);
+  const { info, remote } = seeded(notebook);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await expect(page.getByTestId('app-root')).toBeVisible();
+  // A small picture, pasted into a note here, so this Mac holds its bytes. (A picture only
+  // another writer added does not load on this Mac yet: its bytes are fetched from the server.)
+  await newNote(page, `Scratch ${RUN}`, '');
+  const png = await page.evaluate(async () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 120;
+    canvas.height = 60;
+    const context = canvas.getContext('2d')!;
+    context.fillStyle = '#3a6';
+    context.fillRect(0, 0, 120, 60);
+    const blob = await new Promise<Blob>((resolve) =>
+      canvas.toBlob((b) => resolve(b!), 'image/png'),
+    );
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([bytes], 'Picture.png', { type: 'image/png' }));
+    const editor = document.querySelector<HTMLElement>('[data-testid="note-body"] .ProseMirror')!;
+    editor.focus();
+    editor.dispatchEvent(
+      new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }),
+    );
+    return [...bytes];
+  });
+  await expect(body(page).locator('.pm-image')).toHaveAttribute('data-state', 'ready');
+  // Another writer (an agent, say) files the note with the picture as an attachment, and pushes.
+  const { engine, ops } = await host.writer(info);
+  const { sha256 } = await ops.keepAttachment(new Uint8Array(png), 'png');
+  const markdown =
+    `1. The default content width needs to be wider![|100](attachments/${sha256}.png)\n` +
+    `2. The next item\n\nA paragraph ![](attachments/${sha256}.png) with text after it.\n`;
+  const id = ops.createNote({ title: `Pictures ${RUN}`, markdown });
+  await engine.save();
+  await engine.sync();
+  const listed = page.getByRole('tree', { name: 'Folders and notes' }).getByRole('treeitem', {
+    name: `Pictures ${RUN}`,
+  });
+  // The window pulls when it is focused (A1013).
+  await expect(async () => {
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await expect(listed).toBeVisible({ timeout: 5_000 });
+  }).toPass({ timeout: 60_000 });
+  await page.goto(`/notes/${id}`);
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+  const images = body(page).locator('.pm-image img');
+  await expect(images).toHaveCount(2);
+  await expect(body(page).locator('.pm-image').first()).toHaveAttribute('data-state', 'ready', {
+    timeout: 30_000,
+  });
+  await expect(images.first()).toBeVisible();
+  await expect(body(page).locator('.pm-image').nth(1)).toHaveAttribute('data-state', 'ready');
+
+  // The markdown in the repository is as written: the picture stays inline in its item.
+  await expect
+    .poll(() => remoteMarkdown(host, remote, id) ?? '')
+    .toContain(`wider![|100](attachments/${sha256}.png)`);
+  expect(errors).toEqual([]);
 });

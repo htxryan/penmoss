@@ -3,6 +3,7 @@ import { NEW_FOLDER } from './keys';
 import { notebookAction } from './notebook-actions';
 import { syncNow } from './support/sync';
 import { readRemote } from './support/remote';
+import { ULID } from './support/app';
 
 // A674 end to end on a git notebook (T59): one Mac deletes a folder while another, offline
 // too, files a note into it. Each delete moves only the notes it knew of, so the merge leaves
@@ -11,8 +12,6 @@ import { readRemote } from './support/remote';
 // top level on both Macs, and restoring the folder puts it back.
 
 const PALETTE = 'ControlOrMeta+KeyK';
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
-
 const treeOf = (page: Page) => page.getByRole('tree', { name: 'Folders and notes' });
 const item = (page: Page, name: string) =>
   treeOf(page).getByRole('treeitem', { name, exact: true });

@@ -6,6 +6,7 @@ import {
   body,
   collectErrors,
   gitNotebook,
+  holdForProof,
   launch,
   mainBounds,
   removeDataDirs,
@@ -263,6 +264,6 @@ test('a drawing made from the slash menu shows in the note and is kept as files 
   // The proof's last frame: the drawing in the note.
   await drawing.scrollIntoViewIfNeeded();
   await expect(drawing).toHaveAttribute('data-state', 'ready');
-  await page.waitForTimeout(2_000);
+  await holdForProof(page);
   expect(errors).toEqual([]);
 });

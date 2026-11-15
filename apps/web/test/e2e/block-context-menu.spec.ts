@@ -1,29 +1,16 @@
-import { expect, test, type Page } from './fixtures';
+import { expect, test } from './fixtures';
+import { ULID, body, collectErrors } from './support/app';
 
 // A right-click in a note with nothing selected opens the slash menu's blocks at the click, with
 // no `/` typed (Ryan's review of PR #192, finding 17): typing filters the menu, Enter inserts the
 // block there. With text selected the page keeps its own menu.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const TAG = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error' && !/WebSocket|net::/.test(message.text())) {
-      errors.push(message.text());
-    }
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 test('a right-click with nothing selected opens the block menu there, no / typed', async ({
   page,
 }) => {
-  const errors = collectErrors(page);
+  const errors = collectErrors(page, /WebSocket|net::/);
   await page.goto('/');
   await page
     .getByTestId('sidebar-shortcuts')

@@ -885,39 +885,40 @@ describe('sources side by side, git notebooks only (A820, A826, A827, T59)', () 
 });
 
 describe('what Status says when a sync fails (A824, A859)', () => {
-  it('auth: “Can’t sign in to <host>”, with the token way out; a refused push: the host’s words', () => {
-    expect(
-      describeFailure(new GitTransportError('auth', 'Authentication failed'), 'github.com').status,
-    ).toMatchObject({
+  it.each([
+    {
+      failure: 'auth: “Can’t sign in to <host>”, with the token way out',
+      error: new GitTransportError('auth', 'Authentication failed'),
       phase: 'stopped',
-      code: 'auth',
-      detail: expect.stringContaining("Can't sign in to github.com") as string,
-    });
-    expect(
-      describeFailure(
-        new GitTransportError('protected', 'refused', 'GH006: Protected branch update failed'),
-        'github.com',
-      ).status,
-    ).toMatchObject({
+      words: "Can't sign in to github.com",
+      also: { code: 'auth' },
+    },
+    {
+      failure: 'a refused push: the host’s words',
+      error: new GitTransportError('protected', 'refused', 'GH006: Protected branch update failed'),
       phase: 'stopped',
-      detail: expect.stringContaining('GH006: Protected branch update failed') as string,
-      hostMessage: 'GH006: Protected branch update failed',
-    });
-    expect(
-      describeFailure(new GitTransportError('network', 'x'), 'github.com').status,
-    ).toMatchObject({
+      words: 'GH006: Protected branch update failed',
+      also: { hostMessage: 'GH006: Protected branch update failed' },
+    },
+    {
+      failure: 'no network: “Can’t reach <host>”',
+      error: new GitTransportError('network', 'x'),
       phase: 'offline',
-      detail: expect.stringContaining("Can't reach github.com") as string,
-    });
-    expect(
-      describeFailure(
-        new GitRefused('remote_credentials', 'The remote has a user name or password in it.'),
-        'github.com',
-      ).status,
-    ).toMatchObject({
+      words: "Can't reach github.com",
+      also: {},
+    },
+    {
+      failure: 'a remote with a password in it, refused',
+      error: new GitRefused('remote_credentials', 'The remote has a user name or password in it.'),
       phase: 'stopped',
-      code: 'remote_credentials',
-      detail: expect.stringContaining('user name or password') as string,
+      words: 'user name or password',
+      also: { code: 'remote_credentials' },
+    },
+  ])('$failure', ({ error, phase, words, also }) => {
+    expect(describeFailure(error, 'github.com').status).toMatchObject({
+      phase,
+      detail: expect.stringContaining(words) as string,
+      ...also,
     });
   });
 });

@@ -58,6 +58,8 @@ export interface NodeTokenStoreOptions {
   readonly file: string;
   /** The shape its secrets have: anything else is refused before it is saved. */
   readonly accepts: (secret: string) => boolean;
+  /** How long a lookup or removal may take: LOOKUP_TIMEOUT_MS, or a test's shorter bound. */
+  readonly lookupTimeoutMs?: number;
 }
 
 interface Keychain {
@@ -150,17 +152,18 @@ export function nodeTokenStore(options: NodeTokenStoreOptions): TokenStore {
 
 function findKeychain(options: NodeTokenStoreOptions, exec: Exec): Keychain | null {
   const service = options.service;
+  const lookupMs = options.lookupTimeoutMs ?? LOOKUP_TIMEOUT_MS;
   if (options.platform === 'darwin' && onPath('security', options.env)) {
-    return macKeychain(exec, service);
+    return macKeychain(exec, service, lookupMs);
   }
   if (options.platform === 'linux' && onPath('secret-tool', options.env)) {
-    return libsecret(exec, service);
+    return libsecret(exec, service, lookupMs);
   }
   return null;
 }
 
 /** The macOS login keychain: a generic password, service `penmoss`, account the API origin. */
-function macKeychain(exec: Exec, SERVICE: string): Keychain {
+function macKeychain(exec: Exec, SERVICE: string, lookupMs: number): Keychain {
   const keychain: Keychain = {
     name: 'the macOS keychain',
     async get(api) {
@@ -168,7 +171,7 @@ function macKeychain(exec: Exec, SERVICE: string): Keychain {
         'security',
         ['find-generic-password', '-s', SERVICE, '-a', api, '-w'],
         null,
-        LOOKUP_TIMEOUT_MS,
+        lookupMs,
       );
       return found.code === 0 && found.stdout.trim() ? found.stdout.trim() : null;
     },
@@ -187,7 +190,7 @@ function macKeychain(exec: Exec, SERVICE: string): Keychain {
             'security',
             ['delete-generic-password', '-s', SERVICE, '-a', api],
             null,
-            LOOKUP_TIMEOUT_MS,
+            lookupMs,
           )
         ).code === 0
       );
@@ -197,17 +200,12 @@ function macKeychain(exec: Exec, SERVICE: string): Keychain {
 }
 
 /** The Secret Service (GNOME Keyring, KWallet) through libsecret's secret-tool. */
-function libsecret(exec: Exec, SERVICE: string): Keychain {
+function libsecret(exec: Exec, SERVICE: string, lookupMs: number): Keychain {
   const attributes = (api: string) => ['service', SERVICE, 'account', api];
   const keychain: Keychain = {
     name: 'the Secret Service keyring',
     async get(api) {
-      const found = await exec(
-        'secret-tool',
-        ['lookup', ...attributes(api)],
-        null,
-        LOOKUP_TIMEOUT_MS,
-      );
+      const found = await exec('secret-tool', ['lookup', ...attributes(api)], null, lookupMs);
       return found.code === 0 && found.stdout.trim() ? found.stdout.trim() : null;
     },
     async set(api, token) {
@@ -224,7 +222,7 @@ function libsecret(exec: Exec, SERVICE: string): Keychain {
     },
     async delete(api) {
       const had = (await keychain.get(api)) !== null;
-      await exec('secret-tool', ['clear', ...attributes(api)], null, LOOKUP_TIMEOUT_MS);
+      await exec('secret-tool', ['clear', ...attributes(api)], null, lookupMs);
       return had;
     },
   };

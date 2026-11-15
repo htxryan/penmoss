@@ -121,7 +121,7 @@ function fixture() {
   stub(join(bin, 'ffmpeg'), FFMPEG);
   const withFfmpeg = `${bin}:/usr/bin:/bin`;
   const log = join(dir, 'calls.log');
-  // Async, so the tests run side by side: the script's own waits add up to seconds.
+  // Async, so the tests run side by side.
   const run = (args: string[], env: Record<string, string> = {}) =>
     new Promise<{ status: number | null; stdout: string; stderr: string; calls: string[] }>(
       (resolve, reject) => {
@@ -135,6 +135,8 @@ function fixture() {
             PENMOSS_AVD: 'penmoss37-slot1',
             PENMOSS_EMULATOR_PORT: '5560',
             PENMOSS_EMULATOR_QUIET_SECONDS: '2',
+            // Every fixed wait at a tenth: the counts and bounds stay in ticks (A1518).
+            PENMOSS_EMULATOR_TICK: '0.1',
             ...env,
           },
         });

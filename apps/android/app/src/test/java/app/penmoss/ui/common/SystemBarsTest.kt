@@ -34,6 +34,7 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(application = PenmossApp::class)
 class SystemBarsTest {
     @get:Rule
     val compose = createEmptyComposeRule()

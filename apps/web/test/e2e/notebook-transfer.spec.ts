@@ -1,54 +1,25 @@
-import { createHash } from 'node:crypto';
-import { expect, test, type Page } from './fixtures';
 import { isDeleted } from '@penmoss/sync-client/note';
+import { createHash } from 'node:crypto';
+import { expect, type Page, test } from './fixtures';
+import { collectErrors, ULID } from './support/app';
 import { readRemote, remoteFiles } from './support/remote';
 
-// T68 (D58), in the web app (the Mac app runs the same page): Duplicate in a note's menu, named
-// "(copy)", "(copy 2)" and so on (#227, A1144); moving or copying notes and folders to another
-// open notebook, from a note's or a folder's menu or a Shift-click selection of both (#230,
-// A1145).
-
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
+
 /** A 1×1 PNG, kept in the first notebook and shown by one of its notes. */
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
   'base64',
 );
+
 const SHA = createHash('sha256').update(PNG).digest('hex');
-
-test.use({
-  seed: {
-    name: 'Personal',
-    folders: ['Projects', 'Projects/Designs', 'Archive'],
-    images: [new Uint8Array(PNG)],
-    notes: [
-      { title: 'Plan', markdown: 'The plan for the week.\n' },
-      { title: 'Loose', markdown: 'A loose note.\n' },
-      { title: 'Spec', markdown: 'What to build.\n', folder: 'Projects' },
-      {
-        title: 'Sketch',
-        markdown: `A sketch.\n\n![](attachments/${SHA}.png)\n`,
-        folder: 'Projects/Designs',
-      },
-      { title: 'Old', markdown: 'Done with.\n', folder: 'Archive' },
-    ],
-  },
-});
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 const section = (page: Page, name: string) =>
   page.getByTestId('source-section').and(page.getByRole('region', { name, exact: true }));
+
 const treeIn = (page: Page, name: string) =>
   section(page, name).getByRole('tree', { name: 'Folders and notes' });
+
 const rowIn = (page: Page, notebook: string, name: string) =>
   treeIn(page, notebook).getByRole('treeitem', { name, exact: true });
 
@@ -73,6 +44,24 @@ async function pickIn(page: Page, path: string): Promise<void> {
   await picker.getByRole('combobox').press('Enter');
   await expect(picker).toBeHidden();
 }
+test.use({
+  seed: {
+    name: 'Personal',
+    folders: ['Projects', 'Projects/Designs', 'Archive'],
+    images: [new Uint8Array(PNG)],
+    notes: [
+      { title: 'Plan', markdown: 'The plan for the week.\n' },
+      { title: 'Loose', markdown: 'A loose note.\n' },
+      { title: 'Spec', markdown: 'What to build.\n', folder: 'Projects' },
+      {
+        title: 'Sketch',
+        markdown: `A sketch.\n\n![](attachments/${SHA}.png)\n`,
+        folder: 'Projects/Designs',
+      },
+      { title: 'Old', markdown: 'Done with.\n', folder: 'Archive' },
+    ],
+  },
+});
 
 test('#227: Duplicate makes "(copy)", then "(copy 2)", just after the note, and opens it', async ({
   page,

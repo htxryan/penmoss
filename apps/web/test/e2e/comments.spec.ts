@@ -1,26 +1,16 @@
 import { readThreads } from '@penmoss/sync-client/comments';
 import { expect, seeded, test, type Page } from './fixtures';
-import { COMMENT, NEW_NOTE } from './keys';
+import { COMMENT } from './keys';
 import { readRemote, remoteMarkdown } from './support/remote';
 import { syncNow } from './support/sync';
+import { body, collectErrors, newNote } from './support/app';
 
 // T48: comment threads in the app, on a git notebook (T59): kept in the note's document, so
 // they reach the repository with it, and never in its markdown. Sending a thread to a Claude Code
 // session through the repository (T60, #193) is in agent-comments.spec.ts.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const panel = (page: Page) => page.getByTestId('comments-panel');
 const threads = (page: Page) => panel(page).getByTestId('comment-thread');
 /** A comment floating over the note at its passage (T52 item 5). */
@@ -37,18 +27,6 @@ async function besidePassage(page: Page, passage: ReturnType<Page['locator']>) {
   const at = (await passage.boundingBox())!;
   const box = (await popover(page).boundingBox())!;
   return box.y >= at.y + at.height - 1 || box.y + box.height <= at.y + 1;
-}
-
-async function newNote(page: Page, title: string, text: string): Promise<string> {
-  await expect(page.locator('button[data-command="note.new"]')).toBeVisible();
-  await page.keyboard.press(NEW_NOTE);
-  await expect(page).toHaveURL(ULID);
-  await expect(page.getByTestId('note-title')).toBeFocused();
-  await page.keyboard.type(title);
-  await page.keyboard.press('Enter');
-  await page.keyboard.type(text);
-  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
-  return ULID.exec(new URL(page.url()).pathname)![1]!;
 }
 
 /**

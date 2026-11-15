@@ -1,14 +1,11 @@
-import { expect, test, type Page } from './fixtures';
-import { NEW_NOTE } from './keys';
+import { expect, type Page, test } from './fixtures';
+import { NEW_FOLDER, NEW_NOTE } from './keys';
 import { storedDocumentText } from './stored';
+import { body, collectErrors, ULID } from './support/app';
 
 // A1179: keys typed at once after New Note all land in the note, on a slow machine too. ⌘⌥N
 // pressed as the window showed made the note, but the note view came a task later, and the keys
 // typed meanwhile went to the page: the title and body stayed empty, or kept the last letters.
-
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 
 test('keys typed straight after the new-note shortcut all land in the new note', async ({
   page,
@@ -82,4 +79,42 @@ test('Enter in the title before the body has opened waits for it, with what was 
   await expect(title).toHaveValue('Kept title');
   await expect(body(page)).toHaveText('New first words Old line');
   await expect(body(page)).toBeFocused();
+});
+
+const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+
+const treeOf = (page: Page) => page.getByRole('tree', { name: 'Folders and notes' });
+
+const row = (page: Page, name: string) => treeOf(page).getByRole('treeitem', { name, exact: true });
+
+async function newFolder(page: Page, name: string) {
+  await page.keyboard.press(NEW_FOLDER);
+  const input = page.getByRole('textbox', { name: 'New folder name' });
+  await expect(input).toBeFocused();
+  await input.fill(name);
+  await input.press('Enter');
+  await expect(row(page, name)).toBeVisible();
+}
+
+// T39 pass 1.
+test('a double click on New note makes one note', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/');
+  await expect(treeOf(page)).toBeVisible();
+  await page.getByTestId('tree-root-drop').click();
+  const folder = `Double ${RUN}`;
+  await newFolder(page, folder);
+  await page
+    .getByRole('button', { name: /^New Note/ })
+    .first()
+    .dblclick();
+  await expect(page).toHaveURL(ULID);
+  await expect(page.getByTestId('note-title')).toBeFocused();
+  const title = `Once ${RUN}`;
+  await page.keyboard.type(title);
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+  // The new folder holds this note and nothing else: no empty "Untitled" beside it.
+  await expect(row(page, title)).toHaveAttribute('aria-level', '2');
+  await expect(row(page, title)).toHaveAttribute('aria-setsize', '1');
+  expect(errors).toEqual([]);
 });

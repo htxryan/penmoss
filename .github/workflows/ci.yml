@@ -66,6 +66,7 @@ jobs:
       android-app: ${{ steps.changes.outputs.android }}
       desktop: ${{ steps.changes.outputs.desktop }}
       site: ${{ steps.changes.outputs.site }}
+      factory: ${{ steps.changes.outputs.factory }}
       ships: ${{ steps.changes.outputs.ships }}
     steps:
       # Only the classifier, .github/scripts/changed-parts.sh (A1349): the file list itself
@@ -122,10 +123,11 @@ jobs:
             echo "android=$android"
             echo "desktop=$desktop"
             echo "site=$site"
+            echo "factory=$factory"
             echo "ships=$ships"
           } >> "$GITHUB_OUTPUT"
           {
-            echo "Changed parts (A1095): check=$check web=$web android=$android desktop=$desktop site=$site ships=$ships (all=$all)"
+            echo "Changed parts (A1095): check=$check web=$web android=$android desktop=$desktop site=$site factory=$factory ships=$ships (all=$all)"
             [ -s "$files" ] && { echo; echo '```'; head -50 "$files"; echo '```'; }
           } >> "$GITHUB_STEP_SUMMARY" || true
 
@@ -180,6 +182,44 @@ jobs:
           PENMOSS_SITE_PORT="$(python3 -c 'import socket; s = socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
           export PENMOSS_SITE_PORT
           task site:test
+
+  factory-ui:
+    name: Factory UI (headless Chromium)
+    if: needs.pick.outputs.factory == 'true'
+    # A1519 (amends A1234): the Factory UI's page check, tools/factory/e2e, against a fake state
+    # folder on the UI's own server and a free port. No daemon, no Linear. Its own job, so Check
+    # installs no browser. Not a required check (A1181).
+    needs: pick
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        with:
+          playwright-cache: 'true'
+
+      - name: Install Chromium, and its system libraries if the image lacks any
+        timeout-minutes: 10
+        uses: ./.github/actions/playwright
+        with:
+          package: '@penmoss/factory'
+
+      - name: The Factory UI's page check
+        timeout-minutes: 5
+        run: pnpm --filter @penmoss/factory e2e
+
+      - name: Upload the traces of what failed
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: factory-ui-test-results
+          path: tools/factory/test-results/e2e/
+          retention-days: 7
 
   e2e-shard:
     name: E2E smoke (shard ${{ matrix.shard }} of 3)
@@ -301,19 +341,24 @@ jobs:
           path: apps/web/playwright-report/
           retention-days: 7
 
-  desktop:
-    name: Mac app (Electron under xvfb)
+  desktop-shard:
+    name: Mac app (Electron under xvfb, shard ${{ matrix.shard }} of 2)
     # Its own job, so the web E2E job is not slowed: Electron's Playwright suite (T29, T30) runs
     # the bundled app under xvfb, with xdotool for the global hotkey. Off from A702 (no free Linux
     # runner) until A1235 put it back on a hosted runner. On a Mac the same suite runs only in
-    # the Tart VM (`task desktop:test`, W10). Not a required check (A1181) until it has passed
-    # steadily for a while.
+    # the Tart VM (`task desktop:test`, W10). In two shards, each on a fresh hosted machine
+    # (A1521): one took 7.5 minutes, the longest job of a pull request that changes the Mac app.
+    # The check is the `desktop` job below, which needs both.
     needs: pick
     if: needs.pick.outputs.desktop == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -358,18 +403,40 @@ jobs:
           # allow them rather than running Electron with --no-sandbox.
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
-      - name: Mac app tests
+      - name: Mac app tests, this shard
+        env:
+          SHARD: ${{ matrix.shard }}
         run: |
           export PENMOSS_TEST_MODELS="$HOME/.cache/penmoss-ci/models"
-          task desktop:test
+          task desktop:test -- --shard="$SHARD/2"
 
-      - name: Upload the Electron Playwright report
+      - name: Upload this shard's Electron Playwright report
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: desktop-playwright-report
+          name: desktop-playwright-report-${{ matrix.shard }}
           path: apps/desktop/playwright-report/
           retention-days: 7
+
+  desktop:
+    name: Mac app (Electron under xvfb)
+    # The Mac app's check, by the name it always had (A1521): it passes only when both shards
+    # passed, and is skipped with them when the change can't affect the Mac app (A1095). Not a
+    # required check (A1181) until it has passed steadily for a while.
+    needs: [pick, desktop-shard]
+    if: always() && needs.pick.outputs.desktop == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Every shard passed
+        env:
+          RESULT: ${{ needs.desktop-shard.result }}
+        run: |
+          if [ "$RESULT" != success ]; then
+            echo "::error::The Mac app's shards ended $RESULT: each failed shard's report is its desktop-playwright-report-<n> artifact."
+            exit 1
+          fi
 
   android:
     name: Android app (JVM and Robolectric tests, debug APK)
@@ -390,19 +457,21 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      # The wrapper checked, Java, the SDK, and Gradle's and Robolectric's downloads (~/.m2),
-      # which this job saves for the others.
+      # The wrapper checked, Java, the SDK, Gradle's and Robolectric's downloads (~/.m2) and
+      # Gradle's build cache, which this job saves for the others.
       - uses: ./.github/actions/android-toolchain
         with:
           robolectric: 'true'
 
-      - name: Android tests
-        run: task android:test
+      # The tests, and every run's debug APK (app.penmoss.debug), signed with the runner's own debug
+      # key: the run's artifact, never published (P8). One Gradle run (A1524): a second one would
+      # build the editor page and configure the project again.
+      - name: Android tests and the debug APK
+        run: task android:test -- :app:assembleDebug
 
-      # Every run's debug APK (app.penmoss.debug), signed with the runner's own debug key: the
-      # run's artifact, never published (P8).
-      - name: Debug APK
-        run: task android:build
+      # The budgets after the rest, alone in one fork, so the other forks never skew them (A1539).
+      - name: Android budgets
+        run: task android:budgets
 
       - name: Upload the debug APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

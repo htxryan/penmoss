@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.penmoss.ScreenTree
 import app.penmoss.proof.ProofShot
 import app.penmoss.ui.common.FolderChoice
 import app.penmoss.ui.common.PenmossTheme
@@ -81,13 +82,7 @@ class SearchFolderFilterInstrumentedTest {
             automation.serviceInfo = info
         }
         val roots = automation.windows.mapNotNull { it.root } + listOfNotNull(automation.rootInActiveWindow)
-        val found = mutableListOf<AccessibilityNodeInfo>()
-        fun walk(node: AccessibilityNodeInfo) {
-            if (node.text?.toString() == text || node.contentDescription?.toString() == text) found += node
-            for (i in 0 until node.childCount) node.getChild(i)?.let(::walk)
-        }
-        roots.forEach(::walk)
-        return found
+        return ScreenTree.accessibilityNodes(roots).filter { it.text?.toString() == text || it.contentDescription?.toString() == text }
     }
 
     /** [node] itself if it can be clicked, or its nearest ancestor that can. */

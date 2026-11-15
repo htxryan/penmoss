@@ -10,9 +10,11 @@ import { openEditor, paragraph, press, type } from './support/editor';
 import { fakeScreen } from './support/screen';
 import { fakeLinks } from './support/links';
 
-// Embeds follow notes only while on screen: here they are, unless a test says otherwise.
+// Embeds follow notes only while on screen: here they are, unless a test says otherwise. The
+// embed's render debounce runs on fake timers, so a test moves time on instead of waiting.
 beforeEach(() => {
   fakeScreen();
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -46,8 +48,8 @@ const garden = doc(
   para(text('Late summer.')),
 );
 
-/** Lets the embed's async render (and its debounce) finish. */
-const settle = () => new Promise((resolve) => setTimeout(resolve, 200));
+/** Lets the embed's async render (and its 120 ms debounce) finish: 200 ms on, on fake timers. */
+const settle = () => vi.advanceTimersByTimeAsync(200);
 
 describe('resolveEmbed', () => {
   const titles: Record<string, string> = { g: 'Garden', s: 'Shopping' };

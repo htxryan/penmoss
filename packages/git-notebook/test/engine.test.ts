@@ -1,6 +1,6 @@
 /**
  * The engine's acceptance criteria one by one (T50 G1, #149), over the in-memory transport. The
- * property runs (converge.test.ts) mix all of these at random; here each has a test of its own.
+ * property runs (converge.test.ts, converge-2.test.ts) mix all of these at random; here each has a test of its own.
  */
 import { MAX_PATH_CHARS } from '@penmoss/core/mirror';
 import { periodicNoteId } from '@penmoss/core/periodic';

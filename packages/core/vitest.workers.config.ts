@@ -1,8 +1,12 @@
 import { cloudflareTest } from '@cloudflare/vitest-plugin';
 import { defineConfig } from 'vitest/config';
+import { sharedTest } from '../../scripts/vitest-shared.mjs';
 
-// Runs the core suite inside workerd (no DOM, no Node file system) to prove the
-// schema and markdown codec work in a Worker or Durable Object (A9).
+// Inside workerd (no DOM, no Node file system), only what the runtime provides differently (A9,
+// A1514): the codec with no DOM, Web Crypto (ids, sha256Hex, chunk keys), DigestStream
+// (gitBlobSha) and Intl's time zones (periodic notes). The rest of core is the same JavaScript on
+// the same V8, proved once in Node; the relay's own workerd test loads the real bundle, so a
+// Node-only import anywhere in it still fails there.
 export default defineConfig({
   plugins: [
     cloudflareTest({
@@ -11,16 +15,16 @@ export default defineConfig({
     }),
   ],
   test: {
-    // A timeout is for a hang, not a slow machine: on this shared Mac (W12) a run starved of CPU,
-    // as a throttled background job is, runs 10–30× slower than alone, well past vitest's 5 s
-    // and 10 s. Wall-clock budgets live in *.budget.test.ts (A1244).
-    testTimeout: 30_000,
-    hookTimeout: 30_000,
-    include: ['test/**/*.test.ts'],
-    // Node-only tests, and the wall-clock budgets: those run in Node, in `pnpm budgets`
-    // (A1244), since workerd freezes timers during synchronous work.
-    exclude: ['test/**/*.node.test.ts', 'test/**/*.budget.test.ts'],
-    maxWorkers: 2,
+    ...sharedTest({
+      include: [
+        'test/workers/**/*.test.ts',
+        'test/attachments.test.ts',
+        'test/ids.test.ts',
+        'test/periodic.test.ts',
+        'test/search-semantic.test.ts',
+      ],
+      env: false,
+    }),
     fsModuleCache: false,
   },
 });

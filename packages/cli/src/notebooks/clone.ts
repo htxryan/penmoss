@@ -3,7 +3,12 @@
  * clone (`repo.git`) and the notebook's state, under a lock shared by the CLI and the local MCP
  * server. Its token and writer secret are in the keychain or `~/.penmoss/credentials.json`.
  */
-import { GitNotebookEngine, type SyncReport, type WriterSecrets } from '@penmoss/git-notebook';
+import {
+  GitNotebookEngine,
+  type GitTransport,
+  type SyncReport,
+  type WriterSecrets,
+} from '@penmoss/git-notebook';
 import {
   FileStorage,
   gitUserIdentity,
@@ -11,6 +16,7 @@ import {
   NodeGitTransport,
   redactRemote,
   remoteParts,
+  type GitAuthor,
 } from '@penmoss/git-notebook/node';
 import { join } from 'node:path';
 import { CliError, EXIT } from '../errors';
@@ -21,10 +27,27 @@ import { renamedTo, type NotebookRegistry, type StoredNotebook } from './registr
 /** How long signing may wait where nobody can answer it (the local MCP, a detached sync). */
 const SIGN_UNATTENDED_MS = 5_000;
 
+/** What the CLI asks of a clone's transport beyond the engine's: `NodeGitTransport`'s. */
+export interface CloneTransport extends GitTransport {
+  init(): Promise<void>;
+  readonly notes: { readonly filterIgnored: boolean };
+  remoteHead(): Promise<string | null>;
+  storeBytes(): Promise<number>;
+  cancel(): void;
+}
+
+/** Where a clone's transport points, and who commits, for `ClonesOptions.transport`. */
+export interface CloneTarget {
+  readonly remote: string;
+  readonly branch: string;
+  readonly root: string;
+  readonly author: () => Promise<GitAuthor>;
+}
+
 /** A clone opened: its engine over system git, and its state on disk. */
 export interface OpenedClone {
   readonly engine: GitNotebookEngine;
-  readonly transport: NodeGitTransport;
+  readonly transport: CloneTransport;
   readonly storage: FileStorage;
 }
 
@@ -35,6 +58,11 @@ export interface ClonesOptions {
   readonly lockWaitMs?: number;
   /** Whether a person is at this machine's terminal: only then does signing get its full minute. */
   readonly terminal?: () => boolean;
+  /**
+   * For the tests of what is the CLI's, not git's: each clone over another transport (an
+   * in-memory one, A1516). Absent, system git.
+   */
+  readonly transport?: (target: CloneTarget) => CloneTransport;
 }
 
 /** The clones under `home`, and what opening, syncing and locking one takes. */
@@ -97,9 +125,8 @@ export class Clones {
 
   transportFor(
     entry: StoredNotebook | (NotebookEntry & { author: StoredNotebook['author'] }),
-  ): NodeGitTransport {
-    return new NodeGitTransport({
-      gitDir: this.gitDir(entry),
+  ): CloneTransport {
+    const target: CloneTarget = {
       remote: entry.remote,
       branch: entry.branch,
       root: entry.dir ? `${entry.dir}/` : '',
@@ -113,6 +140,11 @@ export class Clones {
         const identity = now ? now.identity : 'identity' in entry ? entry.identity : undefined;
         return identity ?? this.gitIdentity(entry.writer.label);
       },
+    };
+    if (this.options.transport) return this.options.transport(target);
+    return new NodeGitTransport({
+      ...target,
+      gitDir: this.gitDir(entry),
       token: () => this.tokenOf(entry),
       ...('tokenUser' in entry && entry.tokenUser ? { tokenUser: entry.tokenUser } : {}),
       ...('sign' in entry && entry.sign === false ? { sign: false } : {}),
@@ -144,7 +176,7 @@ export class Clones {
    */
   async sync(
     entry: StoredNotebook,
-    opened: { engine: GitNotebookEngine; transport: NodeGitTransport },
+    opened: { engine: GitNotebookEngine; transport: CloneTransport },
     full = false,
     signal?: AbortSignal,
     adding = false,
@@ -209,11 +241,7 @@ function checkRemote(entry: StoredNotebook): void {
 }
 
 /** What one sync did, for people and `--json`. */
-function summary(
-  name: string,
-  report: SyncReport,
-  transport: NodeGitTransport,
-): NotebookSyncSummary {
+function summary(name: string, report: SyncReport, transport: CloneTransport): NotebookSyncSummary {
   return {
     name,
     commit: report.commit,

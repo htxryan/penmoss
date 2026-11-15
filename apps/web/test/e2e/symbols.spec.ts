@@ -2,26 +2,15 @@ import { expect, seeded, test, type Locator, type Page } from './fixtures';
 import { LINE_END, LINE_START, NEW_NOTE, NOTE_WINDOW, SYMBOL, SYMBOL_PICKER } from './keys';
 import { storedDocumentText, storedSetting } from './stored';
 import { readRemote } from './support/remote';
+import { ULID, body, collectErrors } from './support/app';
 
 // T44 (#107, D36, A740–A746): line symbols. A line's leading glyphs (★ ? ! 💡 →) are plain
 // text, drawn in the margin, toggled by slot keys, the picker, the slash menu and the palette;
 // the markdown is the glyph and a space. Settings → Symbols edits the synced list. The Mac
 // app's suite checks the keys and the menus there (apps/desktop/test/e2e/symbols.spec.ts).
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const WINDOW = /\/window\/notes\/([0-9A-HJKMNP-TV-Z]{26})(\?.*)?$/;
 const RUN = `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 
 async function newNote(page: Page, title: string): Promise<string> {
   await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();

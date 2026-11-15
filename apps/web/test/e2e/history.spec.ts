@@ -1,42 +1,20 @@
-import { anotherMac, expect, seeded, test, type GitHost, type Page } from './fixtures';
-import { NEW_FOLDER, NEW_NOTE, VERSION_HISTORY, LINE_END } from './keys';
+import { anotherMac, expect, type GitHost, type Page, seeded, test } from './fixtures';
+import { LINE_END, NEW_FOLDER, VERSION_HISTORY } from './keys';
 import { noteAction } from './note-menu';
 import { notebookMenuItem } from './notebook-actions';
 import { asAgent, syncNow } from './support/sync';
 import { readRemote, remoteFiles, remoteMarkdown } from './support/remote';
+import { body, collectErrors, newNote } from './support/app';
 
 // T21 on a git notebook (T59, A858): version history (each sync is a commit, attributed to its
 // writer; a diff; restore as a new change that reaches another Mac), reverting an agent's
 // commit, and Trash (restore into the folder it was deleted from, and delete for good after
 // Touch ID). "Save a Version Now" is "Sync Now" here: a version is a commit.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const panel = (page: Page) => page.getByTestId('history-panel');
 const tree = (page: Page) => page.getByRole('tree', { name: 'Folders and notes' });
-
-async function newNote(page: Page, title: string, text: string): Promise<string> {
-  await expect(page.locator('button[data-command="note.new"]')).toBeVisible();
-  await page.keyboard.press(NEW_NOTE);
-  await expect(page).toHaveURL(ULID);
-  await expect(page.getByTestId('note-title')).toBeFocused();
-  await page.keyboard.type(title);
-  await page.keyboard.press('Enter');
-  await page.keyboard.type(text);
-  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
-  return ULID.exec(new URL(page.url()).pathname)![1]!;
-}
 
 /** Pushes, then waits until the remote's rendered markdown of the note holds `text`. */
 async function pushed(page: Page, host: GitHost, remote: string, id: string, text: string) {
@@ -360,4 +338,41 @@ test.describe('a note with many versions (Ryan’s review of #193)', () => {
     await expect(buttons).toHaveText(['Restore', 'Revert', 'Copy']);
     expect(errors).toEqual([]);
   });
+});
+
+// T42, item 5.
+test('version history says versions are automatic; saving one now is secondary', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await newNote(page, `Versions ${RUN}`, 'Some text to keep.');
+  // The tab strip's Version History (the ⋯ menu leaves the tabs to it, A991).
+  await page.getByTestId('note-tab-history').click();
+  const panel = page.getByTestId('history-panel');
+  // A git notebook's versions are its commits (A858): each sync is one, and Save is Sync Now.
+  // The head's ⓘ says so (Ryan's review of #192, finding 13), with a link to the docs.
+  await page.getByTestId('history-about').click();
+  const about = page.getByTestId('history-about-text');
+  await expect(about).toContainText(
+    'Each sync with git is a version: this Mac commits its changes when it pushes',
+  );
+  await expect(about.getByRole('link', { name: 'Learn More' })).toHaveAttribute(
+    'href',
+    'https://penmoss.app/docs/history/#version-history',
+  );
+  await page.getByTestId('history-about').click();
+  await expect(about).toHaveCount(0);
+  await expect(panel.getByRole('button', { name: 'Save version', exact: true })).toHaveCount(0);
+  const save = panel.getByRole('button', { name: 'Sync Now' });
+  // A quiet button, not the panel's main action, described by the explanation.
+  await expect(save).toHaveClass(/\bquiet\b/);
+  await expect(save).toHaveAccessibleDescription(/Each sync with git is a version/);
+  await save.click();
+  await expect(panel.getByTestId('history-status')).toContainText('Saved a version', {
+    timeout: 40_000,
+  });
+  expect(errors).toEqual([]);
 });

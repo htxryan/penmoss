@@ -11,11 +11,12 @@ import { TITLE_BAR_INSET, TITLE_BAR_ROW, TRAFFIC_LIGHTS } from '../../src/mac-wi
 import {
   body,
   capturePage,
+  gitNotebook,
   go,
+  holdForProof,
   launch,
   mainBounds,
   removeDataDirs,
-  gitNotebook,
   ULID,
   type Launched,
 } from './support';
@@ -1048,7 +1049,7 @@ test('Settings: the heading keeps the page gutter, in line with Back and the sec
   expect(headingLeft).toBeGreaterThan(TITLE_BAR_INSET - 1);
   expect(Math.abs(headingLeft - (await leftOf('.settings-nav')))).toBeLessThanOrEqual(1);
   // Held on screen, so the proof's recording shows the heading in line.
-  await page.waitForTimeout(2_000);
+  await holdForProof(page);
   await expect(heading).toBeInViewport();
 });
 

@@ -61,6 +61,7 @@ import java.util.concurrent.TimeUnit
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(application = PenmossApp::class)
 class CaptureActivityTest {
     @get:Rule
     val compose = createEmptyComposeRule()

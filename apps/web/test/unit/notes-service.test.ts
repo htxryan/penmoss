@@ -455,14 +455,19 @@ describe('Notes: offline-first replica (T8)', () => {
     store.update = (noteId, fn) =>
       failures-- > 0 ? Promise.reject(new Error('QuotaExceededError')) : update(noteId, fn);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    open.close();
-    const reopened = notes.openNote(id); // from memory while the write is retried
-    await reopened.ready;
-    expect(readTitle(reopened.replica.doc)).toBe('Precious');
-    reopened.close();
-    await vi.waitFor(() => expect(store.records.get(id)?.title).toBe('Precious'), {
-      timeout: 5000,
-    });
+    // The retries' backoff on the fake clock.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      open.close();
+      const reopened = notes.openNote(id); // from memory while the write is retried
+      await reopened.ready;
+      expect(readTitle(reopened.replica.doc)).toBe('Precious');
+      reopened.close();
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(store.records.get(id)?.title).toBe('Precious');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('does not overwrite edits with a retried creation write', async () => {
@@ -494,10 +499,20 @@ describe('Notes: offline-first replica (T8)', () => {
     const { notes } = setup();
     await notes.start();
     const id = notes.create();
-    const open = notes.openNote(id);
-    await open.ready;
-    setFrontmatterTag(open.replica.doc, 'inbox', true);
-    await vi.waitFor(() => expect(notes.list()[0]).toMatchObject({ id, tags: ['inbox'] }));
+    // The moment (400 ms) on the fake clock.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    let open: ReturnType<typeof notes.openNote>;
+    try {
+      open = notes.openNote(id);
+      await open.ready;
+      setFrontmatterTag(open.replica.doc, 'inbox', true);
+      await vi.advanceTimersByTimeAsync(399);
+      expect(notes.list()[0]?.tags).toEqual([]);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(notes.list()[0]).toMatchObject({ id, tags: ['inbox'] });
+    } finally {
+      vi.useRealTimers();
+    }
     open.close();
     await vi.waitFor(() => expect(notes.list()[0]?.tags).toEqual(['inbox']));
   });
@@ -514,12 +529,18 @@ describe('Notes: offline-first replica (T8)', () => {
     await notes.refreshLocal();
 
     const id = notes.create();
-    const open = notes.openNote(id);
-    await open.ready;
-    setFrontmatterTag(open.replica.doc, 'chores/yard', true);
-    await vi.waitFor(() =>
-      expect(notes.list().find((entry) => entry.id === id)?.tags).toEqual(['chores/yard']),
-    );
+    // An open note's tags reach the list a moment (400 ms) after typing, on the fake clock.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    let open: ReturnType<typeof notes.openNote>;
+    try {
+      open = notes.openNote(id);
+      await open.ready;
+      setFrontmatterTag(open.replica.doc, 'chores/yard', true);
+      await vi.advanceTimersByTimeAsync(400);
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(notes.list().find((entry) => entry.id === id)?.tags).toEqual(['chores/yard']);
 
     const changed = await renameTag(notes, 'chores', 'home');
     expect(changed.sort()).toEqual([id, stored].sort());
@@ -596,14 +617,18 @@ describe('Notes: offline-first replica (T8)', () => {
       expect(made.store.records.get(stored)?.tags).toEqual([...tags.stored].sort()),
     );
     const id = made.notes.create();
-    const open = made.notes.openNote(id);
-    await open.ready;
-    for (const tag of tags.open) setFrontmatterTag(open.replica.doc, tag, true);
-    await vi.waitFor(() =>
-      expect(made.notes.list().find((entry) => entry.id === id)?.tags).toEqual(
-        [...tags.open].sort(),
-      ),
-    );
+    // An open note's tags reach the list a moment (400 ms) after typing, on the fake clock.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    let open: ReturnType<typeof made.notes.openNote>;
+    try {
+      open = made.notes.openNote(id);
+      await open.ready;
+      for (const tag of tags.open) setFrontmatterTag(open.replica.doc, tag, true);
+      await vi.advanceTimersByTimeAsync(400);
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(made.notes.list().find((entry) => entry.id === id)?.tags).toEqual([...tags.open].sort());
     await made.notes.refreshLocal();
     return { ...made, stored, id, open };
   }

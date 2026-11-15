@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { expect, seeded, test, type Page } from './fixtures';
 import { MEANING_NOT_READY } from '../../src/search/meaning';
 import { CONCEPTS } from './support/meaning-host';
+import { collectErrors } from './support/app';
 
 // T77 (A1155, A1156): the Mac app's search box finds by meaning. The stand-in Mac runs the app's
 // own embedding service (MeaningService) with a concept embedder (support/meaning-host.ts): the
@@ -67,15 +68,6 @@ async function openSearch(page: Page): Promise<void> {
     await input(page).fill('taxes');
     await expect(results(page).filter({ hasText: 'Taxes' })).toBeVisible({ timeout: 1_000 });
   }).toPass({ timeout: 30_000 });
-}
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
 }
 
 async function shoot(page: Page, name: string, dir: string) {

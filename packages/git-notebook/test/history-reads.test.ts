@@ -7,7 +7,7 @@
  */
 import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import * as Y from '@y/y';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { GitTransportError, Layout, NotebookHistory, type GitTransport } from '../src';
 import { longHistory, type LongHistory } from './support/long-history';
 import { testNotebook } from './support/notebooks';
@@ -136,15 +136,15 @@ describe('History reads in batches (in memory)', () => {
 });
 
 describe('History over system git on a partial clone', () => {
-  let fixture: LongHistory | null = null;
-  afterEach(() => {
-    fixture?.box.cleanup();
-    fixture = null;
+  // One notebook for both: it is only read, and each reader is a fresh partial clone of it.
+  let fixture: LongHistory;
+  beforeAll(async () => {
+    fixture = await longHistory({ notes: 40, edits: 8 });
   });
+  afterAll(() => fixture.box.cleanup());
 
   it('reads a note’s directory at many commits in one go, with the blobs it lacked', async () => {
-    fixture = await longHistory({ notes: 40, edits: 6 });
-    const reader = await fixture.reader();
+    const reader = await fixture.reader('dir');
     const layout = new Layout('');
     const dir = layout.noteDir(fixture.noteId);
     const commits = (await reader.log({ paths: [dir] })).map((c) => c.id);
@@ -174,7 +174,6 @@ describe('History over system git on a partial clone', () => {
   });
 
   it('lists, summarises and details as reading each commit does', async () => {
-    fixture = await longHistory({ notes: 40, edits: 8 });
     const layout = new Layout('');
     const batchedClone = await fixture.reader('batched');
     const singleClone = await fixture.reader('single');

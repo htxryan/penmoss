@@ -3,6 +3,7 @@
  * call after the cancel), and a push that landed after all is shown as synced, not offline.
  */
 import {
+  GitNotebookEngine,
   GitTransportError,
   MemorySecrets,
   NotebookReplica,
@@ -35,6 +36,23 @@ const hosts: GitEngineHost[] = [];
 afterEach(() => {
   for (const host of hosts.splice(0)) host.stop();
 });
+
+/** The real clock, taken before any test fakes `performance`. */
+const realNow = performance.now.bind(performance);
+
+/**
+ * On fake timers: waits, with the clock stopped, until `done`. Timers already due run, and real
+ * work runs: the memory transport hashes with `crypto.subtle`, which no fake clock drives, so on
+ * a loaded Mac a sync takes real time however the fake clock moves. Gives up after `limitMs` of
+ * real time.
+ */
+async function until(done: () => boolean, limitMs = 10_000): Promise<void> {
+  const start = realNow();
+  while (!done()) {
+    if (realNow() - start > limitMs) throw new Error(`still waiting after ${limitMs} ms`);
+    await vi.advanceTimersByTimeAsync(0);
+  }
+}
 
 /** A transport whose calls can be held: `hold(op)` makes that op wait until `cancel`. */
 function controlled(inner: MemoryTransport) {
@@ -168,13 +186,26 @@ describe('a sync out of time (A852, A859)', () => {
   it('is stopped for good: a call that ends after the cancel is the last git call', async () => {
     const { git, host } = await setup({ syncLimitMs: 200 });
     // The fetch outlasts the limit and ends anyway (the cancel came between two calls).
-    git.slowOp('fetch', 400);
-    await host.start();
-    await vi.waitFor(() => expect(host.status.phase).toBe('offline'), { timeout: 3000 });
-    expect(host.status.code).toBe('timeout');
-    expect(git.cancels()).toBe(1);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    expect(git.calls).toEqual(['fetch']);
+    const end = git.gate('fetch');
+    const syncs = vi.spyOn(GitNotebookEngine.prototype, 'sync');
+    // On the fake clock, so the limit runs out while the fetch is held, however long a loaded
+    // Mac takes to get there.
+    vi.useFakeTimers();
+    try {
+      await host.start();
+      await until(() => git.calls.includes('fetch'));
+      await vi.advanceTimersByTimeAsync(200);
+      await until(() => host.status.phase === 'offline');
+      expect(host.status.code).toBe('timeout');
+      expect(git.cancels()).toBe(1);
+      end();
+      // The stopped sync has run to its end: nothing after its fetch reached git.
+      await (syncs.mock.results[0]!.value as Promise<unknown>).catch(() => undefined);
+      expect(git.calls).toEqual(['fetch']);
+    } finally {
+      vi.useRealTimers();
+      syncs.mockRestore();
+    }
   });
 
   it('a push that landed after the time ran out shows as synced, not offline', async () => {
@@ -182,14 +213,22 @@ describe('a sync out of time (A852, A859)', () => {
     const { git, host } = await setup({ syncLimitMs: 1000 });
     await host.start();
     await vi.waitFor(() => expect(host.status.phase).toBe('synced'), { timeout: 3000 });
-    // An edit, pushed by a push that takes longer than the limit and lands anyway.
-    const land = git.slow();
-    setTitle(host.engineForTests!.replica.ensureNote('01JBNOTEMAC000000000000001'), 'On the Mac');
-    void host.syncNow('push');
-    await vi.waitFor(() => expect(host.status.phase).toBe('offline'), { timeout: 3000 });
-    land();
-    await vi.waitFor(() => expect(host.status.phase).toBe('synced'), { timeout: 3000 });
-    expect(host.status.nextRetryAt).toBeNull();
+    vi.useFakeTimers();
+    try {
+      // An edit, pushed by a push that takes longer than the limit and lands anyway.
+      const land = git.slow();
+      setTitle(host.engineForTests!.replica.ensureNote('01JBNOTEMAC000000000000001'), 'On the Mac');
+      void host.syncNow('push');
+      // The push has begun; the limit runs out on the fake clock while it is held.
+      await until(() => git.calls.includes('push'));
+      await vi.advanceTimersByTimeAsync(1000);
+      await until(() => host.status.phase === 'offline');
+      land();
+      await until(() => host.status.phase === 'synced');
+      expect(host.status.nextRetryAt).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -206,6 +245,12 @@ describe('Push after and Pull every (A825)', () => {
       host.setCadence(3600, 1);
       await vi.advanceTimersByTimeAsync(61_000);
       expect(syncs).toHaveBeenCalledWith('pull');
+      // That pull ends first. A sync clears the push timer as it starts, and the memory
+      // transport hashes in real time, so on a loaded Mac the pull could still be running when
+      // the edit below came in, and no push waited for the new delay to move.
+      let idle = false;
+      void host.idle().then(() => (idle = true));
+      await until(() => idle);
       syncs.mockClear();
       // A push waiting at an hour's delay goes at the new 5 seconds.
       host.setCadence(3600, 60);
@@ -218,7 +263,9 @@ describe('Push after and Pull every (A825)', () => {
       );
       await store.put(recordFromDoc(NOTE, replica.doc, { unsynced: true, updatedAt: 1 }));
       host.changed([NOTE]);
-      await vi.advanceTimersByTimeAsync(10);
+      // Taken in, so its push waits (the hour's delay) before the cadence changes.
+      await until(() => host.status.pending.includes(NOTE));
+      expect(syncs).not.toHaveBeenCalledWith('push');
       host.setCadence(5, 60);
       await vi.advanceTimersByTimeAsync(6_000);
       expect(syncs).toHaveBeenCalledWith('push');
@@ -299,12 +346,13 @@ describe('the default cadence: 12 s after edits settle, every minute while shown
     // The last pull may still be running on a slow runner: a pull asked for during it only
     // follows it, and leaves lastPullAt as it was, so the focus below would pull again.
     // Let it finish first, so the shown window's pull is the one the focus is measured from.
-    // idle() resolves once no sync runs; the fake clock moves on until it does.
+    // idle() resolves once no sync runs. The clock stays where it is meanwhile: moved on, it
+    // could run out a slow sync's limit, and that sync's retry would pull.
     let idle = false;
     void host.idle().then(() => (idle = true));
-    while (!idle) await vi.advanceTimersByTimeAsync(100);
-    // However long that took, the last sync began more than FRONT_PULL_GAP_MS ago, as it would
-    // after three hidden minutes on a fast machine.
+    await until(() => idle);
+    // The last sync began more than FRONT_PULL_GAP_MS ago, as it would after three hidden
+    // minutes on a fast machine.
     await vi.advanceTimersByTimeAsync(FRONT_PULL_GAP_MS);
     expect(pulls()).toBe(2);
     doc.hidden = false;
@@ -328,9 +376,8 @@ describe('the default cadence: 12 s after edits settle, every minute while shown
       if (reason === 'push') pushedAt.push(Date.now());
       return GitEngineHost.prototype.syncNow.call(this, reason);
     });
-    const settled = async () => {
-      while (host.status.phase !== 'synced') await vi.advanceTimersByTimeAsync(100);
-    };
+    // With the clock stopped, so a slow push never runs out its limit on the fake clock.
+    const settled = () => until(() => host.status.phase === 'synced');
     const NOTE = '01JBNOTEMAC000000000000010';
     const edited = Date.now();
     await storeEdit(store, NOTE, 'One', 2);
@@ -627,7 +674,8 @@ describe('quitting waits for the push (#170 F8)', () => {
     await host.start();
     await vi.waitFor(() => expect(host.status.phase).toBe('synced'), { timeout: 3000 });
     const fetches = git.calls.filter((call) => call === 'fetch').length;
-    git.slowOp('fetch', 800);
+    // The pull's fetch lasts until the app has quit, well past the closing time.
+    const end = git.gate('fetch');
     void host.syncNow('pull');
     await vi.waitFor(
       () => expect(git.calls.filter((call) => call === 'fetch').length).toBe(fetches + 1),
@@ -635,6 +683,7 @@ describe('quitting waits for the push (#170 F8)', () => {
     );
     await host.beforeClose();
     expect(git.cancels()).toBe(0);
+    end();
     await host.idle();
   });
 
@@ -688,7 +737,8 @@ describe('offline, said at once (#170 F9)', () => {
       },
     });
     try {
-      const { git, host, store } = await setup();
+      // A short settle: that the network's return syncs is the point, not how long it must stay.
+      const { git, host, store } = await setup({ onlineSettleMs: 50 });
       await host.start();
       await vi.waitFor(() => expect(host.status.phase).toBe('synced'), { timeout: 3000 });
       online = false;
@@ -766,6 +816,7 @@ describe('offline, and what it is not (#174 review)', () => {
       const { git, host } = await setup({ onlineSettleMs: 300 });
       await host.start();
       await vi.waitFor(() => expect(host.status.phase).toBe('synced'), { timeout: 3000 });
+      vi.useFakeTimers();
       net.online = false;
       events.dispatchEvent(new Event('offline'));
       expect(host.status.phase).toBe('offline');
@@ -774,18 +825,22 @@ describe('offline, and what it is not (#174 review)', () => {
       for (let flap = 0; flap < 3; flap++) {
         net.online = true;
         events.dispatchEvent(new Event('online'));
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await vi.advanceTimersByTimeAsync(50);
         net.online = false;
         events.dispatchEvent(new Event('offline'));
       }
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await vi.advanceTimersByTimeAsync(500);
       expect(git.calls.length).toBe(before);
-      // Up for good: one sync.
+      // Up for good: one sync, once the moment has passed.
       net.online = true;
       events.dispatchEvent(new Event('online'));
-      await vi.waitFor(() => expect(host.status.phase).toBe('synced'), { timeout: 3000 });
+      await vi.advanceTimersByTimeAsync(299);
+      expect(git.calls.length).toBe(before);
+      await vi.advanceTimersByTimeAsync(1);
+      await until(() => host.status.phase === 'synced');
       expect(git.calls.length).toBeGreaterThan(before);
     } finally {
+      vi.useRealTimers();
       vi.unstubAllGlobals();
     }
   });
@@ -805,20 +860,22 @@ describe('Sync now pressed while a sync runs (#174 delta review)', () => {
       const { git, host } = await setup({ syncLimitMs: 5000 });
       await host.start();
       await vi.waitFor(() => expect(host.status.phase).toBe('synced'), { timeout: 3000 });
-      git.slowOp('fetch', 300);
+      const fetches = () => git.calls.filter((call) => call === 'fetch').length;
+      // Counted before the first press: on a loaded Mac its sync may not have reached its fetch
+      // 50 ms later, which counted that fetch as the second's (a factory run's 3 for 2).
+      const before = fetches();
+      // The first sync's fetch lasts until the second press is in.
+      const end = git.gate('fetch');
       const first = host.syncNow('now');
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await vi.waitFor(() => expect(fetches()).toBe(before + 1), { timeout: 3000 });
       // The browser now says offline (it may be wrong), and the person presses Sync now again.
       net.online = false;
       const second = host.syncNow('now');
-      const fetches = git.calls.filter((call) => call === 'fetch').length;
+      end();
+      // The second press answers once the sync it asked for, after the first, has run.
       await Promise.all([first, second]);
-      await vi.waitFor(
-        () => expect(git.calls.filter((call) => call === 'fetch').length).toBe(fetches + 1),
-        { timeout: 3000 },
-      );
-      await vi.waitFor(() => expect(host.status.phase).toBe('synced'), { timeout: 3000 });
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(fetches()).toBe(before + 2);
+      await host.idle();
       expect(host.status.phase).toBe('synced');
     } finally {
       vi.unstubAllGlobals();

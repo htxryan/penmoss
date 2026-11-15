@@ -1,24 +1,15 @@
 import { expect, test, type Page } from './fixtures';
+import { ULID, collectErrors } from './support/app';
 
 // T17: the graph from the local link index. Opens from the sidebar and a note, shows the
 // local graph by depth, opens a note by click and by keyboard, and filters unlinked notes.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 // Titles start with the tag: type-ahead in the graph jumps to them.
 const TAG = `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 const HUB = `${TAG} hub`;
 const SUN = `${TAG} sun`;
 const MOON = `${TAG} moon`;
 const LONE = `${TAG} lone`;
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 async function createNote(page: Page, title: string): Promise<string> {
   await page

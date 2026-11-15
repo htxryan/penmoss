@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { expect, macContext, PREVIEW, seeded, test, type Locator, type Page } from './fixtures';
 import { remoteFiles, remoteMarkdown } from './support/remote';
-import { remoteBytes } from './support/sync';
+import { pushedUntil, remoteBytes } from './support/sync';
+import { ULID, body, collectErrors, holdForProof } from './support/app';
 
 // PEN-28: drawings. The slash menu's Diagram: Excalidraw opens Excalidraw over the window; Done
 // stores the scene as `attachments/<sha256>.excalidraw` and its picture as
@@ -10,24 +11,11 @@ import { remoteBytes } from './support/sync';
 // opens it again, with its shapes, and its Delete button removes it. Each edit is a new pair of
 // files.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const TAG = `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const DRAWING =
   /\[!\[Excalidraw Diagram\]\(attachments\/([0-9a-f]{64})\.svg\)\]\(attachments\/([0-9a-f]{64})\.excalidraw\)/;
 
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const editor = (page: Page) => page.getByTestId('drawing-editor');
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error' && !/WebSocket|net::/.test(message.text())) {
-      errors.push(message.text());
-    }
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 /** Whether `button`'s background, in whatever colour syntax it computes to, is fully opaque. */
 async function opaque(button: Locator): Promise<boolean> {
@@ -112,7 +100,7 @@ test('PEN-28: draw in a note, save it as files in git, open it again and edit it
   notebook,
 }) => {
   test.setTimeout(150_000);
-  const errors = collectErrors(page);
+  const errors = collectErrors(page, /WebSocket|net::/);
   await page.goto('/');
   const id = await createNote(page, `Sketches ${TAG}`);
   await page.keyboard.type('The garden beds, drawn:');
@@ -139,20 +127,15 @@ test('PEN-28: draw in a note, save it as files in git, open it again and edit it
   ).toBeGreaterThan(100);
 
   // The repository holds both files, and the markdown names both: the SVG as a picture,
-  // linked to its scene.
+  // linked to its scene. Pushed with Sync Now (A1013).
   const { remote } = seeded(notebook);
-  await expect
-    .poll(() => DRAWING.test(remoteMarkdown(host, remote, id) ?? ''), {
-      timeout: 60_000,
-      intervals: [2_000],
-    })
-    .toBe(true);
+  await pushedUntil(page, () => expect(remoteMarkdown(host, remote, id) ?? '').toMatch(DRAWING));
   const [, svgSha, sceneSha] = DRAWING.exec(remoteMarkdown(host, remote, id)!)!;
   const firstSvg = `attachments/${svgSha}.svg`;
   const firstScene = `attachments/${sceneSha}.excalidraw`;
-  await expect
-    .poll(() => remoteFiles(host, remote), { timeout: 60_000, intervals: [2_000] })
-    .toEqual(expect.arrayContaining([firstSvg, firstScene]));
+  await pushedUntil(page, () =>
+    expect(remoteFiles(host, remote)).toEqual(expect.arrayContaining([firstSvg, firstScene])),
+  );
   expect(shapes(remoteBytes(host, remote, firstScene))).toEqual(['rectangle']);
   const svg = remoteBytes(host, remote, firstSvg).toString('utf8');
   expect(svg).toMatch(/^<svg[^>]* xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
@@ -185,19 +168,16 @@ test('PEN-28: draw in a note, save it as files in git, open it again and edit it
   await editor(page).getByRole('button', { name: 'Done' }).click();
   await expect(editor(page)).toBeHidden();
   await expect(drawing).toHaveAttribute('data-state', 'ready');
-  await expect
-    .poll(
-      () => {
-        const found = DRAWING.exec(remoteMarkdown(host, remote, id) ?? '');
-        return found ? `attachments/${found[2]}.excalidraw` : null;
-      },
-      { timeout: 60_000, intervals: [2_000] },
-    )
-    .not.toBe(firstScene);
+  await pushedUntil(page, () => {
+    const found = DRAWING.exec(remoteMarkdown(host, remote, id) ?? '');
+    expect(found ? `attachments/${found[2]}.excalidraw` : null).not.toBe(firstScene);
+  });
   const [, , secondSha] = DRAWING.exec(remoteMarkdown(host, remote, id)!)!;
-  await expect
-    .poll(() => remoteFiles(host, remote), { timeout: 60_000, intervals: [2_000] })
-    .toEqual(expect.arrayContaining([`attachments/${secondSha}.excalidraw`]));
+  await pushedUntil(page, () =>
+    expect(remoteFiles(host, remote)).toEqual(
+      expect.arrayContaining([`attachments/${secondSha}.excalidraw`]),
+    ),
+  );
   expect(shapes(remoteBytes(host, remote, `attachments/${secondSha}.excalidraw`)).sort()).toEqual([
     'ellipse',
     'rectangle',
@@ -209,7 +189,7 @@ test('PEN-28: draw in a note, save it as files in git, open it again and edit it
   await page.keyboard.press('Enter');
   await expect(editor(page)).toBeVisible();
   await expect(editor(page)).toHaveAttribute('data-shapes', '2');
-  await page.waitForTimeout(2_000);
+  await holdForProof(page, 2_000);
   await editor(page).getByRole('button', { name: 'Cancel' }).click();
   await expect(editor(page)).toBeHidden();
 
@@ -257,26 +237,19 @@ test('PEN-28: draw in a note, save it as files in git, open it again and edit it
   await page.goForward();
   await expect(page).toHaveURL(new RegExp(id));
   await expect(drawing).toHaveAttribute('data-state', 'ready');
-  await expect
-    .poll(
-      () => {
-        const found = DRAWING.exec(remoteMarkdown(host, remote, id) ?? '');
-        if (!found) return null;
-        try {
-          return shapes(remoteBytes(host, remote, `attachments/${found[2]}.excalidraw`)).length;
-        } catch {
-          return null;
-        }
-      },
-      { timeout: 60_000, intervals: [2_000] },
-    )
-    .toBe(3);
+  await pushedUntil(page, () => {
+    const found = DRAWING.exec(remoteMarkdown(host, remote, id) ?? '');
+    expect(found).not.toBeNull();
+    expect(shapes(remoteBytes(host, remote, `attachments/${found![2]}.excalidraw`))).toHaveLength(
+      3,
+    );
+  });
 
   // The proof's last frame: the drawing back in the note, its buttons on hover.
   await drawing.scrollIntoViewIfNeeded();
   await drawing.hover();
   await expect(editButton).toBeVisible();
-  await page.waitForTimeout(2_000);
+  await holdForProof(page, 2_000);
   expect(errors).toEqual([]);
 });
 
@@ -284,7 +257,7 @@ test('R2-19: Save To… saves the scene, and Export Image… its picture, as dow
   page,
 }) => {
   test.setTimeout(120_000);
-  const errors = collectErrors(page);
+  const errors = collectErrors(page, /WebSocket|net::/);
   await page.goto('/');
   await createNote(page, `Exports ${TAG}`);
   await newDrawing(page);
@@ -338,7 +311,7 @@ test('PEN-28: the production build draws offline under the app CSP, its fonts bu
   const context = await macContext(browser, host, { baseURL: PREVIEW });
   try {
     const page = await context.newPage();
-    const errors = collectErrors(page);
+    const errors = collectErrors(page, /WebSocket|net::/);
     // Nothing the drawing editor needs comes from anywhere but the app (no CDN fonts).
     const elsewhere: string[] = [];
     page.on('request', (request) => {

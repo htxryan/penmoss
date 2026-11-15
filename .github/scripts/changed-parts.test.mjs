@@ -121,6 +121,7 @@ describe('what ships', () => {
       android: true,
       desktop: true,
       site: true,
+      factory: true,
       ships: true,
     });
   });
@@ -137,6 +138,7 @@ describe('what ships', () => {
       android: true,
       desktop: false,
       site: false,
+      factory: false,
       ships: true,
     });
     assert.deepEqual(parts(['site/src/pages/index.astro']), {
@@ -145,6 +147,7 @@ describe('what ships', () => {
       android: false,
       desktop: false,
       site: true,
+      factory: false,
       ships: false,
     });
     assert.deepEqual(parts(['packages/cli/src/cli.ts']), {
@@ -153,8 +156,24 @@ describe('what ships', () => {
       android: false,
       desktop: true,
       site: false,
+      factory: false,
       ships: true,
     });
+    // The factory: Check and the Factory UI's page check, and nothing ships (A1519).
+    assert.deepEqual(parts(['tools/factory/src/ui/page.ts']), {
+      check: true,
+      web: false,
+      android: false,
+      desktop: false,
+      site: false,
+      factory: true,
+      ships: false,
+    });
+    // What every job builds from runs the Factory UI too; an app's source doesn't.
+    for (const file of ['pnpm-lock.yaml', '.github/workflows/ci.yml', 'Taskfile.yml'])
+      assert.equal(parts([file]).factory, true, file);
+    for (const file of ['apps/web/src/App.tsx', 'packages/core/src/ids.ts', 'scripts/ports.mjs'])
+      assert.equal(parts([file]).factory, false, file);
   });
 });
 
@@ -172,6 +191,15 @@ describe('ci.yml', () => {
     assert.match(pick, /bash \.github\/scripts\/changed-parts\.sh/);
     assert.match(pick, /ships: \$\{\{ steps\.changes\.outputs\.ships \}\}/);
     assert.match(pick, /sparse-checkout: \.github\/scripts/);
+  });
+
+  it('runs the Factory UI page check, headless on a hosted runner, when the factory changed (A1519)', () => {
+    assert.match(job('pick'), /factory: \$\{\{ steps\.changes\.outputs\.factory \}\}/);
+    const ui = job('factory-ui');
+    assert.match(ui, /\n {4}if: needs\.pick\.outputs\.factory == 'true'\n/);
+    assert.match(ui, /\n {4}runs-on: ubuntu-latest\n/);
+    assert.match(ui, /package: '@penmoss\/factory'/);
+    assert.match(ui, /run: pnpm --filter @penmoss\/factory e2e\n/);
   });
 
   it('main publishes a build only when it ships', () => {

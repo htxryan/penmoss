@@ -160,20 +160,25 @@ fs.writeFileSync(transcript, JSON.stringify({ type: 'user', message: { content: 
 hook({ hook_event_name: 'SessionStart', session_id: 's1', transcript_path: transcript });
 fs.writeFileSync(argv[argv.indexOf('--debug-file') + 1], '[remote-bridge] Created session cse_TEST123\n');
 const user = (content) => fs.appendFileSync(transcript, JSON.stringify({ type: 'user', message: { content } }) + '\n');
+const stopped = path.join(env.FACTORY_RC_DIR, 'Stop.json');
 if (env.FAKE_BACKGROUND) setTimeout(() => {
   // A turn that starts a command in the background and ends to wait for it.
   user([{ type: 'tool_result', content: 'Command running in background with ID: b1. Output is being written to: /t/b1.output' }]);
   say('Waiting for the test run.'); hook({ hook_event_name: 'Stop', session_id: 's1' });
   if (env.FAKE_BACKGROUND === 'never') return;
-  setTimeout(() => {
+  // The command ends once the runner has set that Stop aside to wait for it: had it ended the
+  // session there, nothing comes after.
+  const next = setInterval(() => {
+    if (fs.existsSync(stopped)) return;
+    clearInterval(next);
     user('<task-notification>\n<task-id>b1</task-id>\n<output-file>/t/b1.output</output-file>\n<status>completed</status>\n</task-notification>');
     say('FINISHED'); hook({ hook_event_name: 'Stop', session_id: 's1' });
-  }, 2500);
-}, 1200);
+  }, 20);
+}, 100);
 else setTimeout(() => {
   if (env.FAKE_FAIL) { say("You've hit your limit · resets 3pm"); hook({ hook_event_name: 'StopFailure', error: 'rate_limit' }); }
   else { say('FINISHED'); hook({ hook_event_name: 'Stop', session_id: 's1' }); }
-}, 1200);
+}, 100);
 setInterval(() => {}, 1000);
 `;
 
@@ -220,6 +225,9 @@ function runner(fail: boolean, extra: Record<string, string> = {}) {
         HOME: home,
         FACTORY_CLAUDE_LOGIN: login,
         CLAUDE_CODE_OAUTH_TOKEN: 'setup-token',
+        // Its looks a tenth apart, and as little wait after the last hook (A1518).
+        FACTORY_RC_POLL_MS: '50',
+        FACTORY_RC_SETTLE_MS: '50',
         FAKE_RECORD: record,
         ...(fail ? { FAKE_FAIL: '1' } : {}),
         ...extra,
@@ -280,7 +288,7 @@ describe.skipIf(process.platform !== 'darwin')(
     it("ends after its bound when the background command's notification never comes", () => {
       const { r, lines } = runner(false, {
         FAKE_BACKGROUND: 'never',
-        FACTORY_RC_BACKGROUND_MS: '3000',
+        FACTORY_RC_BACKGROUND_MS: '300',
       });
       expect(r.status).toBe(0);
       expect(lines.at(-1)).toMatchObject({ result: 'Waiting for the test run.' });

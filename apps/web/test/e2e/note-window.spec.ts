@@ -1,6 +1,7 @@
 import { expect, test, type BrowserContext, type Page } from './fixtures';
-import { DOC_END, NEW_NOTE, NOTE_WINDOW } from './keys';
+import { DOC_END, NOTE_WINDOW } from './keys';
 import { noteAction } from './note-menu';
+import { body, newNote } from './support/app';
 
 // T45 (#108, D37, A710, A711): a note in a window of its own. Every entry point opens one;
 // links navigate inside it with Back and Forward; ⌥-click opens another; edits show live in
@@ -10,7 +11,6 @@ import { noteAction } from './note-menu';
 // browser app (the Mac makes its windows itself). The Mac app's suite covers its own windows
 // (apps/desktop/test/e2e/note-window.spec.ts).
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const WINDOW = /\/window\/notes\/([0-9A-HJKMNP-TV-Z]{26})(\?.*)?$/;
 const RUN = `w${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
@@ -24,20 +24,6 @@ function collectErrors(page: Page, offline = false): string[] {
   });
   page.on('pageerror', (error) => errors.push(error.message));
   return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
-
-async function newNote(page: Page, title: string, text: string): Promise<string> {
-  await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();
-  await page.keyboard.press(NEW_NOTE);
-  await expect(page).toHaveURL(ULID);
-  await expect(page.getByTestId('note-title')).toBeFocused();
-  await page.keyboard.type(title);
-  await page.keyboard.press('Enter');
-  await page.keyboard.type(text);
-  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
-  return ULID.exec(new URL(page.url()).pathname)![1]!;
 }
 
 /** Runs `open` and returns the note window it opened, once its note shows. */

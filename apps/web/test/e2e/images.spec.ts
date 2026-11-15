@@ -1,32 +1,16 @@
 import { createHash } from 'node:crypto';
 import { anotherMac, expect, seeded, test, type Page } from './fixtures';
-import { remoteBytes } from './support/sync';
+import { pushedUntil, remoteBytes } from './support/sync';
 import { remoteFiles, remoteMarkdown } from './support/remote';
+import { ULID, body, collectErrors } from './support/app';
 
 // T10 on a git notebook (T59, A828): a screenshot pasted offline shows at once, is stored on
 // the device, is committed into the repository (`attachments/<sha256>.png`) when the network
 // returns, and another Mac takes it from there. The server's R2 uploads, their token check and
 // their Retry went with the server: a git notebook's pictures travel in its pushes.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const TAG = `i${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    // Refused sockets and fetches are expected while offline.
-    if (
-      message.type() === 'error' &&
-      !/ERR_INTERNET_DISCONNECTED|WebSocket|Failed to fetch|net::/.test(message.text())
-    ) {
-      errors.push(message.text());
-    }
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const dot = (page: Page) => page.getByTestId('section-sync');
 
 async function createNote(page: Page, title: string): Promise<string> {
@@ -88,7 +72,7 @@ test('pastes an image offline, commits it into the repository when back online, 
   notebook,
 }) => {
   test.setTimeout(120_000);
-  const errors = collectErrors(page);
+  const errors = collectErrors(page, /ERR_INTERNET_DISCONNECTED|WebSocket|Failed to fetch|net::/);
   const { remote } = seeded(notebook);
   await page.goto('/');
   const title = `Screenshot note ${TAG}`;
@@ -128,9 +112,10 @@ test('pastes an image offline, commits it into the repository when back online, 
   await width.fill('240');
   await width.press('Enter');
   await expect(image).toHaveCSS('width', '240px');
-  await expect
-    .poll(() => remoteMarkdown(host, remote, id) ?? '', { timeout: 60_000, intervals: [1000] })
-    .toContain(`![|240](attachments/${sha256}.png)`);
+  // Pushed with Sync Now (A1013): the push after an outage is the point above, not here.
+  await pushedUntil(page, () =>
+    expect(remoteMarkdown(host, remote, id) ?? '').toContain(`![|240](attachments/${sha256}.png)`),
+  );
 
   // After a reload the image comes from IndexedDB, still at its width.
   await page.reload();
@@ -140,7 +125,10 @@ test('pastes an image offline, commits it into the repository when back online, 
   // Another Mac takes it from the repository.
   const other = await anotherMac(browser, { remote });
   const second = other.page;
-  const secondErrors = collectErrors(second);
+  const secondErrors = collectErrors(
+    second,
+    /ERR_INTERNET_DISCONNECTED|WebSocket|Failed to fetch|net::/,
+  );
   await second.goto(`/notes/${id}`);
   await expect(second.getByTestId('note-title')).toHaveValue(title, { timeout: 40_000 });
   await expect(body(second).locator('.pm-image')).toHaveAttribute('data-state', 'ready', {

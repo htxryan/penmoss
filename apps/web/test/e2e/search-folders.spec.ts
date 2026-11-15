@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from './fixtures';
+import { holdForProof } from './support/app';
 
 // PEN-71 (A1290, amending A1127): with two notebooks open and Notebook on All Notebooks, the
 // search dialog's Folder list has every notebook's folders grouped under its name (AC1), picking
@@ -138,7 +139,7 @@ test('Folder lists every notebook’s folders by notebook; a pick switches Noteb
   await expect.poll(() => groupsOf(folder)).toEqual([]);
   if (SHOTS) await search.screenshot({ path: `${SHOTS}/search-folders-picked.png` });
   // Held on the result for the recording.
-  await page.waitForTimeout(2000);
+  await holdForProof(page, 2000);
   await expect(hits.first()).toContainText('Parser Moss');
 
   // After the pick, Folder offers every folder of Work, or of every notebook.

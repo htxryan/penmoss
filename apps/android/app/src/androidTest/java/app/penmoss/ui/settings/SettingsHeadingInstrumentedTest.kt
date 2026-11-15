@@ -2,17 +2,15 @@ package app.penmoss.ui.settings
 
 import android.os.SystemClock
 import android.view.View
-import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.platform.ViewRootForTest
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getAllSemanticsNodes
 import androidx.compose.ui.semantics.getOrNull
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.penmoss.ScreenTree
 import app.penmoss.proof.ProofShot
 import app.penmoss.ui.common.PenmossTheme
 import app.penmoss.ui.common.TooltipDelayInstrumentedTest
@@ -76,18 +74,9 @@ class SettingsHeadingInstrumentedTest {
     }
 
     /** The window bounds of every laid-out Compose text node under [view] that reads [text]. */
-    private fun boundsOf(view: View, text: String): List<Rect> {
-        val roots = mutableListOf<ViewRootForTest>()
-        fun walk(v: View) {
-            if (v is ViewRootForTest) roots += v
-            if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
-        }
-        walk(view)
-        return roots.flatMap { root ->
-            root.semanticsOwner.getAllSemanticsNodes(mergingEnabled = false)
-                .filter { node -> node.config.getOrNull(SemanticsProperties.Text).orEmpty().any { it.text == text } }
-                .map { it.boundsInWindow }
-                .filter { it.width > 0f }
-        }
-    }
+    private fun boundsOf(view: View, text: String): List<Rect> =
+        ScreenTree.nodes(view)
+            .filter { node -> node.config.getOrNull(SemanticsProperties.Text).orEmpty().any { it.text == text } }
+            .map { it.boundsInWindow }
+            .filter { it.width > 0f }
 }

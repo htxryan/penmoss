@@ -7,10 +7,10 @@
  * descend from the main the run was given is never pushed. Nothing planted here runs a command:
  * the plants are URL rewrites and push URLs that point at a decoy bare repository.
  */
-import { cpSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, relative } from 'node:path';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { codeDir, commitOf, ownCheckout, syncCode } from '../src/code.ts';
 import type { FactoryConfig } from '../src/config.ts';
 import { nodeExec, type Exec, type ExecOptions } from '../src/exec.ts';
@@ -242,8 +242,11 @@ describe("the host's publish path, with real git (A1230)", { timeout: 30_000 }, 
   let decoy: string;
   let clone: string;
   let https: string;
+  let template: string;
 
-  beforeEach(async () => {
+  // The repositories are made once, then each test gets a fresh copy at the same path, so
+  // every absolute path in their configs still holds.
+  beforeAll(async () => {
     root = mkdtempSync(join(tmpdir(), 'factory-publish-'));
     config = { ...testConfig(), stateDir: join(root, 'state') };
     https = `https://github.com/${config.repo}.git`;
@@ -265,6 +268,12 @@ describe("the host's publish path, with real git (A1230)", { timeout: 30_000 }, 
     // The agent's work, committed in its sandbox.
     await git(clone, 'checkout', '-q', '-b', BRANCH);
     await git(clone, 'commit', '-q', '--allow-empty', '-m', 'the agent');
+    template = `${root}-template`;
+    renameSync(root, template);
+  });
+  beforeEach(() => {
+    rmSync(root, { recursive: true, force: true });
+    cpSync(template, root, { recursive: true });
   });
 
   const refs = (repo: string) => git(repo, 'for-each-ref', '--format=%(refname)');

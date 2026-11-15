@@ -1,11 +1,11 @@
 name: Android toolchain
 description: >-
   What every Android job needs after .github/actions/setup: the committed gradle-wrapper.jar
-  checked against Gradle's published ones, Java 21 (Temurin), Gradle's downloads from
-  actions/cache, and the Android SDK (.github/actions/android-sdk).
+  checked against Gradle's published ones, Java 21 (Temurin), Gradle's downloads and its build
+  cache from actions/cache, and the Android SDK (.github/actions/android-sdk).
 inputs:
   cache:
-    description: "`save` restores Gradle's downloads and saves them after the job; `restore` only restores them (the android job saves them)"
+    description: "`save` restores Gradle's downloads and build cache and saves them after the job; `restore` only restores them (the android job saves them)"
     default: save
   robolectric:
     description: "'true': Robolectric's Android jars (~/.m2) are cached with Gradle's"
@@ -24,13 +24,16 @@ runs:
         java-version: '21'
 
     # The key names only the build files; the paths are part of the cache's version, so a job
-    # with Robolectric's jars and one without keep separate entries.
+    # with Robolectric's jars and one without keep separate entries. Gradle's build cache is not
+    # part of it (A1524): an entry is never saved again once its key exists, so a build cache kept
+    # in it stayed as the first run under that key left it.
     - name: Cache Gradle's downloads
       if: inputs.cache == 'save'
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: |
           ~/.gradle/caches
+          !~/.gradle/caches/build-cache-1
           ~/.gradle/wrapper
           ${{ inputs.robolectric == 'true' && '~/.m2/repository' || '' }}
         key: gradle-${{ runner.os }}-${{ hashFiles('apps/android/**/*.gradle.kts', 'apps/android/gradle/libs.versions.toml', 'apps/android/gradle/wrapper/gradle-wrapper.properties') }}
@@ -42,10 +45,34 @@ runs:
       with:
         path: |
           ~/.gradle/caches
+          !~/.gradle/caches/build-cache-1
           ~/.gradle/wrapper
           ${{ inputs.robolectric == 'true' && '~/.m2/repository' || '' }}
         key: gradle-${{ runner.os }}-${{ hashFiles('apps/android/**/*.gradle.kts', 'apps/android/gradle/libs.versions.toml', 'apps/android/gradle/wrapper/gradle-wrapper.properties') }}
         restore-keys: gradle-${{ runner.os }}-
+
+    # Gradle's build cache (A1524): the classes and test results of the newest run, saved by every
+    # run under a key of its own, so a pull request that leaves the Kotlin alone compiles nothing,
+    # and a test whose inputs (its classes, the contracts, the engine page: A8) are unchanged comes
+    # from the cache. A run restores its own job's newest entry, else the android job's. Gradle
+    # drops entries no build has used for 7 days.
+    - name: Cache Gradle's build cache
+      if: inputs.cache == 'save'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.gradle/caches/build-cache-1
+        key: gradle-build-${{ runner.os }}-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |
+          gradle-build-${{ runner.os }}-${{ github.job }}-
+          gradle-build-${{ runner.os }}-android-
+
+    - name: Restore Gradle's build cache
+      if: inputs.cache == 'restore'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.gradle/caches/build-cache-1
+        key: gradle-build-${{ runner.os }}-android-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: gradle-build-${{ runner.os }}-android-
 
     - uses: ./.github/actions/android-sdk
       with:
