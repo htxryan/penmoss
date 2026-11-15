@@ -162,13 +162,13 @@ function TabsSheet({ onClose }: { readonly onClose: () => void }) {
           data-command="tab.new"
           data-testid="tabs-sheet-new"
           onClick={() => {
-            // Closed without giving focus back to the Tabs button: Search takes it.
+            // Closed without giving focus back to the Tabs button: New Tab’s picker takes it.
             sheet.set(false);
             commands.run('tab.new');
           }}
         >
           <Icon name="plus" size={16} />
-          New Tab
+          New Tab…
         </button>
       </div>
     </>

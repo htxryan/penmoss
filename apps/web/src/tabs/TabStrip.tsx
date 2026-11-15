@@ -363,7 +363,7 @@ export function TabStrip({
         className="icon-btn tab-new"
         data-command="tab.new"
         aria-label="New Tab"
-        data-tip={withKeys('New Tab', newKeys)}
+        data-tip={withKeys('New Tab…', newKeys)}
         data-testid="tab-new"
         onClick={() => commands.run('tab.new')}
       >

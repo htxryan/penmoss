@@ -215,16 +215,10 @@ test('notes open in the tab on screen or in new tabs, and the keys switch betwee
   await palette(page, 'Close Tab');
   expect(await titles(page)).toEqual([BETA, GAMMA, GAMMA, `*${ALPHA}`]);
 
-  // New Tab: Home, with the cursor in Search.
-  await page.getByTestId('tab-new').click();
-  expect(await titles(page)).toEqual([BETA, GAMMA, GAMMA, ALPHA, '*Home']);
-  await expect(page).toHaveURL(/\/$/);
-  await expect(search.getByRole('combobox', { name: 'Search notes' })).toBeFocused();
-  await page.keyboard.press('Escape');
-  await expect(search).toBeHidden();
-  await expect(page.getByTestId('empty-state')).toBeVisible();
-  // Closing every other tab leaves Home alone, which shows no tab, only + (AC4, A1576).
+  // Closing every tab leaves Home, which shows no tab, only + (AC4, A1576, A1594).
   await palette(page, 'Close Other Tabs');
+  expect(await titles(page)).toEqual([`*${ALPHA}`]);
+  await palette(page, 'Close Tab');
   await expect(tabs(page)).toHaveCount(0);
   await expect(page.getByTestId('tab-new')).toBeVisible();
   await expect(page.getByTestId('empty-state')).toBeVisible();
@@ -439,6 +433,125 @@ test('a sidebar note already open in a tab is gone to there, never opened twice 
   await shows(page, BETA);
   expect(await titles(page)).toEqual([ALPHA, `*${BETA}`]);
   expect(errors).toEqual([]);
+});
+
+// Ryan, 15 Nov 2026: "we should NEVER see this weird 'Home' pseudo-tab". New Tab (+, ⌘T) asks
+// which note (A1594): a pick opens it in a new tab after this one, in front; New Note makes one
+// there; Escape or a click outside leaves the tabs as they were, focus where it was.
+test('New Tab asks which note, and makes no tab when cancelled', async ({ page, context }) => {
+  test.setTimeout(150_000);
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/');
+  await expect(row(page, ALPHA)).toBeVisible({ timeout: 40_000 });
+  const picker = page.getByRole('dialog', { name: 'New Tab' });
+  const field = picker.getByRole('combobox', { name: 'New Tab' });
+
+  // The empty window: + asks, and the pick is the first tab.
+  await expect(tabs(page)).toHaveCount(0);
+  await page.getByTestId('tab-new').click();
+  await expect(field).toBeFocused();
+  // New Note leads the list, before the notes.
+  await expect(picker.getByRole('option').first()).toContainText('New Note');
+  await page.keyboard.press('Escape');
+  await expect(picker).toBeHidden();
+  await expect(tabs(page)).toHaveCount(0);
+  await expect(page.getByTestId('tab-new')).toBeFocused();
+  await page.getByTestId('tab-new').click();
+  await field.fill(ALPHA);
+  await expect(picker.getByRole('option').first()).toContainText(ALPHA);
+  await page.keyboard.press('Enter');
+  await expect(picker).toBeHidden();
+  await shows(page, ALPHA);
+  expect(await titles(page)).toEqual([`*${ALPHA}`]);
+  await row(page, BETA).click({ button: 'middle' });
+  await row(page, GAMMA).click({ button: 'middle' });
+  expect(await titles(page)).toEqual([`*${ALPHA}`, BETA, GAMMA]);
+
+  // + then Escape: the same tabs, and focus on the tab on screen.
+  await page.getByTestId('tab-new').click();
+  await expect(field).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(picker).toBeHidden();
+  expect(await titles(page)).toEqual([`*${ALPHA}`, BETA, GAMMA]);
+  await expect(tab(page, ALPHA)).toBeFocused();
+  await expect(page).toHaveURL(/\/notes\//);
+  // A click outside cancels it too.
+  await page.getByTestId('tab-new').click();
+  await expect(field).toBeFocused();
+  await page.mouse.click(8, 790);
+  await expect(picker).toBeHidden();
+  expect(await titles(page)).toEqual([`*${ALPHA}`, BETA, GAMMA]);
+
+  // + then a pick: a new tab right after this one, in front.
+  await page.getByTestId('tab-new').click();
+  await field.fill(EXTRAS[0]!);
+  await expect(picker.getByRole('option').first()).toContainText(EXTRAS[0]!);
+  await page.keyboard.press('Enter');
+  await shows(page, EXTRAS[0]!);
+  expect(await titles(page)).toEqual([ALPHA, `*${EXTRAS[0]}`, BETA, GAMMA]);
+
+  // ⌘T the same, from the note's text.
+  await page.keyboard.press('ControlOrMeta+KeyT');
+  await expect(field).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(picker).toBeHidden();
+  expect(await titles(page)).toEqual([ALPHA, `*${EXTRAS[0]}`, BETA, GAMMA]);
+  await page.keyboard.press('ControlOrMeta+KeyT');
+  await field.fill(EXTRAS[1]!);
+  await expect(picker.getByRole('option').first()).toContainText(EXTRAS[1]!);
+  await page.keyboard.press('Enter');
+  await shows(page, EXTRAS[1]!);
+  expect(await titles(page)).toEqual([ALPHA, EXTRAS[0]!, `*${EXTRAS[1]}`, BETA, GAMMA]);
+
+  // New Note: a new note, in a new tab in front.
+  await page.getByTestId('tab-new').click();
+  await expect(picker.getByRole('option').first()).toContainText('New Note');
+  await page.keyboard.press('Enter');
+  await expect(picker).toBeHidden();
+  await expect(tabs(page)).toHaveCount(6);
+  await expect(tabs(page).nth(3)).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+  // Its title takes the cursor, as New Note's does anywhere.
+  await expect(page.getByTestId('note-title')).toBeFocused();
+  await expect(page).toHaveURL(/\/notes\//);
+
+  // A note window's ⌘T reaches this window as /?tab=new: the picker, over the same tabs.
+  await page.goto('/?tab=new');
+  await expect(field).toBeFocused({ timeout: 40_000 });
+  await expect(tabs(page)).toHaveCount(6);
+  await page.keyboard.press('Escape');
+  await expect(picker).toBeHidden();
+  await expect(tabs(page)).toHaveCount(6);
+  expect(await titles(page)).not.toContain('Home');
+  expect(errors).toEqual([]);
+
+  // A session saved with a Home tab (before A1594) comes back without it.
+  await page.close();
+  const next = await context.newPage();
+  await next.addInitScript(() => {
+    const key = 'penmoss.tabs.main';
+    const saved = JSON.parse(localStorage.getItem(key) ?? '{}') as {
+      tabs?: { id: string }[];
+      active?: string;
+    };
+    if (!saved.tabs || saved.tabs.some((item) => item.id === 'home')) return;
+    saved.tabs.splice(1, 0, {
+      id: 'home',
+      pinned: false,
+      index: 0,
+      entries: [{ path: '/', scrollTop: 0 }],
+    } as never);
+    saved.active = 'home';
+    localStorage.setItem(key, JSON.stringify(saved));
+    (window as { homeSeeded?: boolean }).homeSeeded = true;
+  });
+  await next.goto('/');
+  await expect(tabs(next)).toHaveCount(6, { timeout: 40_000 });
+  expect(await next.evaluate(() => (window as { homeSeeded?: boolean }).homeSeeded)).toBe(true);
+  expect(await titles(next)).not.toContain('Home');
+  expect(await titles(next)).not.toContain('*Home');
+  await expect(next.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
 });
 
 test('each tab keeps its own Back, scroll and panel, and a reload brings the tabs back', async ({

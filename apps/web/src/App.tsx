@@ -29,6 +29,7 @@ import {
   linkHandler,
   navigate,
   notePath,
+  openPath,
   parseRoute,
   useLocation,
   type Route,
@@ -272,35 +273,40 @@ function NotesShell({
 
   // A double click, double tap or held key makes one note, not several (T39).
   const lastCreated = useRef<LastCreated | null>(null);
-  const createNote = useCallback(() => {
-    // The address now, not this render's: the second click can come before React renders.
-    const open = parseRoute(window.location.pathname);
-    const openNote =
-      open.name === 'note'
-        ? {
-            id: open.id,
-            // From the source that holds it (A826).
-            title:
-              (sourcesRegistry.sourceOfNote(open.id)?.notes ?? notes)
-                .list()
-                .find((entry) => entry.id === open.id)?.title ?? '',
-          }
-        : null;
-    if (isRepeatedNewNote(lastCreated.current, openNote, Date.now())) {
-      // The repeated click focused the button: give the title its focus back, so typing
-      // still names the note. Before the note view mounts, its own title focus does this.
-      commands.run('note.focusTitle');
-      return;
-    }
-    const id = activeSource.notes.create(new Date());
-    lastCreated.current = { id, at: Date.now() };
-    activeSource.workspace.registerNote(id, targetFolder);
-    navigate(notePath(id));
-  }, [notes, sourcesRegistry, activeSource, targetFolder, commands]);
+  /** New Note; `newTab`: in a new tab (New Tab's picker, A1594) rather than the one on screen. */
+  const createNote = useCallback(
+    (newTab?: 'background' | 'foreground') => {
+      // The address now, not this render's: the second click can come before React renders.
+      const open = parseRoute(window.location.pathname);
+      const openNote =
+        open.name === 'note'
+          ? {
+              id: open.id,
+              // From the source that holds it (A826).
+              title:
+                (sourcesRegistry.sourceOfNote(open.id)?.notes ?? notes)
+                  .list()
+                  .find((entry) => entry.id === open.id)?.title ?? '',
+            }
+          : null;
+      if (isRepeatedNewNote(lastCreated.current, openNote, Date.now())) {
+        // The repeated click focused the button: give the title its focus back, so typing
+        // still names the note. Before the note view mounts, its own title focus does this.
+        commands.run('note.focusTitle');
+        return;
+      }
+      const id = activeSource.notes.create(new Date());
+      lastCreated.current = { id, at: Date.now() };
+      activeSource.workspace.registerNote(id, targetFolder);
+      if (newTab) openPath(notePath(id), newTab);
+      else navigate(notePath(id));
+    },
+    [notes, sourcesRegistry, activeSource, targetFolder, commands],
+  );
 
   // ⌘⌥N on a Mac, Alt+N elsewhere, by default (T20 registry, A90; customisable in Settings).
   useCommand('note.new', (context) => {
-    if (!isKeyRepeat(context)) createNote();
+    if (!isKeyRepeat(context)) createNote(context.newTab);
   });
 
   // The open note, for the graph command: the graph opens around it (T17).

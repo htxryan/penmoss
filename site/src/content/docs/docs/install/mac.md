@@ -48,7 +48,7 @@ The main window opens several notes at once, as tabs in the strip above the note
 - **Open a note in the tab you are in:** click it, as before. A pinned tab keeps its note, so a click there opens a new tab.
 - **A note that is open in a tab already:** click it in the sidebar, or choose it in [Search](/docs/search/), the command palette or Quick Open, to switch to its tab; the tab you were in keeps its note. ⌘-clicking it in the sidebar opens no second tab, and its tab blinks. Links in a note still open it where you are, and ⌘↩ or ⇧⌘↩ in Search or **Duplicate Tab** open it again in a tab of its own, so you can have a note in two tabs.
 - **Open a note in a new tab:** ⌘-click it (or middle-click) anywhere in the sidebar (your notebooks' tree, Quick Access, Recent Notes, Today and This Week), in a tag's notes, Backlinks, the graph or a link, press ⌘↩ on a result in [Search](/docs/search/) or the palette, or choose **Open in New Tab** from a note's right-click menu in the sidebar. The tab opens behind the one you are in, which stays just as it was; ⇧⌘-click or ⇧⌘↩ opens it in front. While you have [several notes selected](/docs/organise/#moving-notes) in the tree, ⌘-click adds or removes one instead. You can also drag a note from the sidebar onto the strip.
-- **New Tab** (⌘T, or + after the last tab) opens Home with Search open and the cursor in it; Escape leaves Home.
+- **New Tab…** (⌘T, or + after the last tab) asks which note to open: type to find one, or choose **New Note** at the top. The note opens in a new tab after the one you are in (⌘↩ opens it behind). Press Escape or click outside to cancel: no tab opens, and you are back where you were. With no tab open, + does the same, and the note you choose is your first tab.
 - **Today's Note** (⌘D), **This Week's Note**, the menu bar icon's **Open Today's Journal**, its Quick Access notes and `penmoss://` links never replace the page you are on: they switch to the tab already showing that note, or open it in a new tab.
 - **Close a tab:** its ×, a middle click on it, or ⌘W. Closing the last tab leaves no tab, only +, over a dad joke (a new one each time, none twice until you have seen them all) and where to start: New Note, or the Command Palette. A window that opens with no note looks the same. **Reopen Closed Tab** (⇧⌘T) brings back the last 20 you closed, each where it was.
 - **Switch tabs:** click one, ⌃Tab and ⇧⌃Tab for the next and previous, ⌘1 to ⌘8 for the first eight and ⌘9 for the last.
@@ -57,7 +57,7 @@ The main window opens several notes at once, as tabs in the strip above the note
 
 Each note's tab starts with its notebook's badge. When two tabs have the same title and their notebooks' badges look alike, each also names its notebook; a tab's tooltip shows its notebook, its folders and its ⌘ number. A note moved to Trash closes its tabs, wherever it was moved from, and a message offers **Restore**. When the tabs no longer fit, they scroll sideways and **All Tabs**, with the count, lists them all, pinned tabs first with their pin.
 
-In a window 700 points wide or narrower the strip hides, and the **Tabs** button in the top bar, with the count, lists your tabs (pinned ones first, marked Pinned) and has **New Tab**. Settings opens over the whole window, and closing it brings back your tabs as they were.
+In a window 700 points wide or narrower the strip hides, and the **Tabs** button in the top bar, with the count, lists your tabs (pinned ones first, marked Pinned) and has **New Tab…**. Settings opens over the whole window, and closing it brings back your tabs as they were.
 
 As in other Mac apps, Penmoss's own words (buttons, labels, headings, the sidebar) can't be selected, and the pointer stays an arrow over them. What you might copy can: your notes, every field, code and paths, comments, History, release notes, a notebook's details in Settings, and error messages.
 
@@ -94,7 +94,7 @@ Turn it off to use macOS's own title bar: Penmoss asks, then reopens its windows
 Every command is in the menus, with its current shortcut:
 
 - **Penmoss:** About Penmoss, Settings (⌘,) and **Check for Updates…**.
-- **File:** New Note, then New Tab (⌘T), new folders, quick capture, moving, history, Open in New Window, then Reopen Closed Tab (⇧⌘T), Move to Trash, sort order, the git notebook's actions (Sync This Git Notebook Now, its token, commit name and email, Remove This Git Notebook from This Mac…), and last Close Tab (⌘W), Close Other Tabs and Close Window (⇧⌘W; in a note window, ⌘W).
+- **File:** New Note, then New Tab… (⌘T), new folders, quick capture, moving, history, Open in New Window, then Reopen Closed Tab (⇧⌘T), Move to Trash, sort order, the git notebook's actions (Sync This Git Notebook Now, its token, commit name and email, Remove This Git Notebook from This Mac…), and last Close Tab (⌘W), Close Other Tabs and Close Window (⇧⌘W; in a note window, ⌘W).
 - **Edit:** undo, the clipboard, Copy Note as Markdown or Rich Text, Copy Agent Reference, and Search Notes….
 - **Format:** text formatting, headings, lists, blocks and line symbols.
 - **Insert:** every block from the slash menu.
