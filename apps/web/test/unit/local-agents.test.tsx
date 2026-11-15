@@ -3,10 +3,10 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { CliInfo, DesktopGit, GitAnswer, LocalAgentInfo } from '../../src/desktop/bridge';
-import { CommandLine, GitLocalAgents } from '../../src/sources/LocalAgents';
+import { AgentServer, CommandLine, GitLocalAgents } from '../../src/sources/LocalAgents';
 
-// T54 (A992, A993): Settings → Notebooks connects an agent on this Mac through the local MCP
-// server, and installs the penmoss command, with no account and no agent token.
+// T54 (A992, A993; PEN-155): Settings → Agents gives every agent the one local MCP server, lists
+// each notebook's agent copies, and installs the penmoss command, with no account and no token.
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -29,6 +29,13 @@ const cliInfo = (state: CliInfo['state'], onPath: boolean | null = false): CliIn
   pathLine: 'export PATH="$HOME/.local/bin:$PATH"',
   profile: '~/.zshrc',
   direct: `${EXE} --penmoss-cli`,
+  server: {
+    server: 'penmoss',
+    claude: `claude mcp add penmoss -- ${EXE} --penmoss-cli mcp`,
+    claudeChannel: `claude mcp add penmoss -- ${EXE} --penmoss-cli mcp --channel`,
+    claudeLaunch: 'claude --dangerously-load-development-channels server:penmoss',
+    codex: `[mcp_servers."penmoss"]\ncommand = "${EXE}"\nargs = ["--penmoss-cli", "mcp"]`,
+  },
 });
 
 /** A bridge with only the agents and command calls, recording them. */
@@ -103,66 +110,52 @@ const click = async (element: HTMLElement | null) => {
   await settle();
 };
 
-describe('Agents on This Mac (A993)', () => {
-  it('connects an agent by name and shows its Claude Code command and Codex configuration', async () => {
-    const { git, calls } = bridge();
-    const root = await mount(<GitLocalAgents git={git} localId="nb1" />);
-    await settle();
-    expect(root.querySelectorAll('[data-testid="git-local-agent"]')).toHaveLength(0);
-    expect((find(root, 'git-local-agent-label') as HTMLInputElement).value).toBe('Claude Code');
-    const form = find(root, 'git-local-agent-connect')!.closest('form')!;
-    act(() => form.requestSubmit());
-    await settle();
-    expect(calls).toContainEqual(['connect', 'nb1', 'Claude Code']);
-    expect(find(root, 'git-local-agent-message')?.textContent).toContain('Connected “Claude Code”');
-    const listed = root.querySelectorAll('[data-testid="git-local-agent"]');
-    expect(listed).toHaveLength(1);
-    expect(find(root, 'git-local-agent-claude')?.textContent).toContain(
-      `claude mcp add penmoss-notes-x -- ${EXE} --penmoss-cli mcp --notebook notes-x`,
-    );
-    expect(find(root, 'git-local-agent-codex')?.textContent).toContain(
-      '[mcp_servers."penmoss-notes-x"]',
-    );
-  });
-
-  it('Receive comments sent to this agent adds the channel and its launch line (T60, A1073)', async () => {
-    const { git } = bridge({ agents: [agent('Claude Code', 'notes-claude-code')] });
-    const root = await mount(<GitLocalAgents git={git} localId="nb1" />);
-    const command = () => find(root, 'git-local-agent-claude')?.querySelector('code')?.textContent;
-    const toggle = find(root, 'git-local-agent-channel') as HTMLInputElement;
-    expect(toggle.checked).toBe(false);
-    expect(command()).toBe(
-      `claude mcp add penmoss-notes-claude-code -- ${EXE} --penmoss-cli mcp --notebook notes-claude-code`,
-    );
-    expect(find(root, 'git-local-agent-launch')).toBeNull();
+describe('The MCP Server (PEN-155)', () => {
+  it('gives Claude Code and Codex the one server, with the channel when asked, and asks no name', async () => {
+    const { git } = bridge();
+    const root = await mount(<AgentServer git={git} />);
+    const command = () => find(root, 'agents-server-claude')?.querySelector('code')?.textContent;
+    expect(command()).toBe(`claude mcp add penmoss -- ${EXE} --penmoss-cli mcp`);
+    expect(find(root, 'agents-server-codex')?.textContent).toContain('[mcp_servers."penmoss"]');
+    expect(find(root, 'agents-server-launch')).toBeNull();
+    expect(root.querySelector('input:not([role="switch"])')).toBeNull();
+    const toggle = find(root, 'agents-server-channel') as HTMLInputElement;
     await click(toggle);
-    expect(toggle.checked).toBe(true);
-    expect(command()).toBe(
-      `claude mcp add penmoss-notes-claude-code -- ${EXE} --penmoss-cli mcp --notebook notes-claude-code --channel`,
-    );
-    expect(find(root, 'git-local-agent-launch')?.querySelector('code')?.textContent).toBe(
-      'claude --dangerously-load-development-channels server:penmoss-notes-claude-code',
+    expect(command()).toBe(`claude mcp add penmoss -- ${EXE} --penmoss-cli mcp --channel`);
+    expect(find(root, 'agents-server-launch')?.querySelector('code')?.textContent).toBe(
+      'claude --dangerously-load-development-channels server:penmoss',
     );
     // Codex has no channels: its configuration is as it was.
-    expect(find(root, 'git-local-agent-codex')?.textContent).not.toContain('--channel');
+    expect(find(root, 'agents-server-codex')?.textContent).not.toContain('--channel');
     await click(toggle);
     expect(command()).not.toContain('--channel');
-    expect(find(root, 'git-local-agent-launch')).toBeNull();
   });
 
-  it('says why a connection was refused', async () => {
-    const { git } = bridge({
-      connect: () => ({ ok: false, error: { code: 'not_confirmed', message: 'Cancelled.' } }),
-    });
+  it('shows nothing when main gives no server lines', async () => {
+    const { path, state, onPath, pathLine, profile, direct } = cliInfo('missing');
+    const { git } = bridge({ cli: { path, state, onPath, pathLine, profile, direct } });
+    const root = await mount(<AgentServer git={git} />);
+    expect(find(root, 'agents-server')).toBeNull();
+  });
+});
+
+describe('Agent copies on this Mac (A993, PEN-155)', () => {
+  it('lists the copy Penmoss made, with no Remove, and an older named copy with Remove', async () => {
+    const automatic = { ...agent('Agent', 'notes-agent'), automatic: true };
+    const { git } = bridge({ agents: [automatic, agent('Codex', 'notes-codex')] });
     const root = await mount(<GitLocalAgents git={git} localId="nb1" />);
-    const form = find(root, 'git-local-agent-connect')!.closest('form')!;
-    act(() => form.requestSubmit());
-    await settle();
-    expect(find(root, 'git-local-agent-message')?.textContent).toBe('Cancelled.');
-    expect(root.querySelectorAll('[data-testid="git-local-agent"]')).toHaveLength(0);
+    const rows = root.querySelectorAll<HTMLElement>('[data-testid="git-local-agent"]');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.querySelector('[data-testid="git-local-agent-automatic"]')).not.toBeNull();
+    expect(rows[0]!.querySelector('[data-testid="git-local-agent-remove"]')).toBeNull();
+    expect(rows[1]!.querySelector('[data-testid="git-local-agent-older"]')).not.toBeNull();
+    expect(rows[1]!.querySelector('[data-testid="git-local-agent-remove"]')).not.toBeNull();
+    // Nothing connects an agent by name any more.
+    expect(find(root, 'git-local-agent-label')).toBeNull();
+    expect(find(root, 'git-local-agent-connect')).toBeNull();
   });
 
-  it('asks before losing changes an agent has not pushed', async () => {
+  it('asks before losing changes an older copy has not pushed', async () => {
     const { git, calls } = bridge({
       agents: [agent('Codex', 'notes-codex')],
       disconnect: (_name, force) =>
@@ -172,11 +165,11 @@ describe('Agents on This Mac (A993)', () => {
     });
     const root = await mount(<GitLocalAgents git={git} localId="nb1" />);
     await settle();
-    await click(find(root, 'git-local-agent-disconnect'));
+    await click(find(root, 'git-local-agent-remove'));
     expect(find(root, 'git-local-agent-unsynced')?.textContent).toContain(
       '“Codex” has changes it has not pushed yet',
     );
-    await click(find(root, 'git-local-agent-disconnect-anyway'));
+    await click(find(root, 'git-local-agent-remove-anyway'));
     expect(calls).toEqual(
       expect.arrayContaining([
         ['disconnect', 'notes-codex', false],
@@ -184,7 +177,7 @@ describe('Agents on This Mac (A993)', () => {
       ]),
     );
     expect(root.querySelectorAll('[data-testid="git-local-agent"]')).toHaveLength(0);
-    expect(find(root, 'git-local-agent-message')?.textContent).toContain('Disconnected “Codex”');
+    expect(find(root, 'git-local-agent-message')?.textContent).toContain('Removed “Codex”');
   });
 });
 

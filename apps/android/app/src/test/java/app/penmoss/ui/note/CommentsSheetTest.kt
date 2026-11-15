@@ -198,7 +198,7 @@ class CommentsSheetTest {
         show(sendTo = SendToUi(sessions = AgentSessionList(now, synced = true, sessions = listOf(old))))
         compose.onNodeWithTag("commentSendTo-T1").performClick()
         compose.onNodeWithTag("sendToEmpty")
-            .assertTextEquals("No agent sessions yet: start one with penmoss mcp --notebook … --channel.")
+            .assertTextEquals("No agent sessions yet: start one with penmoss mcp --channel.")
     }
 
     @Test

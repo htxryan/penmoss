@@ -150,7 +150,7 @@ Commits carry your git identity (read for each commit), or the notebook's own (`
 
 The CLI suits agents that run shell commands. For most agents the [MCP server](/docs/agents/) is simpler.
 
-1. **Give the agent its own clone**, with **Connect an Agent…** in **Settings → Agents**, or `penmoss notebook add <remote> --name notes-<agent> --agent "<Agent name>"`, and have it pass `--notebook` with that name.
+1. **Give the agent its own clone** with `penmoss notebook add <remote> --name notes-<agent> --agent "<Agent name>"`, and have it pass `--notebook` with that name, so its edits are never named as yours.
 2. **Tell the agent how to use it**, for example in the project's `CLAUDE.md` or `AGENTS.md`:
 
    ```md

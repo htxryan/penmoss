@@ -179,8 +179,8 @@ function SendTo({
       </Select>
       {sessions.length === 0 ? (
         <span className="comment-send-error" data-testid={`${testId}-none`}>
-          No agent sessions yet: start one with <code>penmoss mcp --notebook … --channel</code>{' '}
-          (Settings → Agents).
+          No agent sessions yet: start one with <code>penmoss mcp --channel</code> (Settings →
+          Agents).
         </span>
       ) : null}
     </span>

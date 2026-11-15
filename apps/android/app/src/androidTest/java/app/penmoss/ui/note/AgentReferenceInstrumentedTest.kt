@@ -62,12 +62,12 @@ class AgentReferenceInstrumentedTest {
         val reference = try {
             runBlocking {
                 db.notes().insert(NoteEntity(id, title = "Penmoss Roadmap (LATEST)"))
-                agentReferenceOf(NoteStore(db), id, "Personal", notebook)
+                agentReferenceOf(NoteStore(db), id, notebook)
             }
         } finally {
             db.close()
         }!!
-        val expected = "Reference note via Penmoss MCP (penmoss mcp --notebook \"Personal\") tool read_note {\"id\":\"ETD7-SXF7SQ9W\"}"
+        val expected = "Reference note via Penmoss MCP tool read_note {\"id\":\"ETD7-SXF7SQ9W\"}"
         assertEquals(expected, reference)
         assertFalse(reference.contains(id))
 

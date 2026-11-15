@@ -317,6 +317,20 @@ export interface DesktopGitHubSignIn {
   onChange(listener: (state: GitHubSignInState) => void): () => void;
 }
 
+/** How to give an agent an MCP server: Claude Code's commands and Codex's lines. */
+export interface AgentServerInfo {
+  /** The MCP server's name in the agent's configuration. */
+  readonly server: string;
+  /** `claude mcp add …`, for a terminal. */
+  readonly claude: string;
+  /** The same with `--channel`: it also brings the comments sent to this session (T60, A1073). */
+  readonly claudeChannel: string;
+  /** `claude --dangerously-load-development-channels server:<server>`, to start Claude Code. */
+  readonly claudeLaunch: string;
+  /** The lines for Codex's `~/.codex/config.toml`. */
+  readonly codex: string;
+}
+
 /** An agent connected to a git notebook on this Mac, and how to give it the MCP server (A993). */
 export interface LocalAgentInfo {
   /** Its clone's name: `penmoss … --notebook <name>`. */
@@ -347,6 +361,8 @@ export interface CliInfo {
   readonly profile: string;
   /** The app's binary with the switch: runs the CLI without the script. */
   readonly direct: string;
+  /** The one MCP server for every notebook (PEN-155): `penmoss mcp`. Absent from older mains. */
+  readonly server?: AgentServerInfo;
 }
 
 export interface PenmossDesktop {

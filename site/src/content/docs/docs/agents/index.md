@@ -12,27 +12,27 @@ This page explains how an AI agent on your Mac reads and edits your notes, and w
 
 Both run on your Mac, from the Penmoss app itself, and need no account, token or server. They work on a copy of the notebook on your Mac and sync it through your repository, just as the app does.
 
-## Each agent has its own copy
+## One server, every notebook
 
-When you connect an agent, Penmoss makes it its own copy (a clone) of the notebook, in `~/.penmoss`, that writes as that agent. So:
+Agents reach your notes through one MCP server, `penmoss mcp`, which serves every notebook on your Mac ([Connect an agent](/docs/agents/connect/)). It works on the copy (a clone) of each notebook that Penmoss makes for agents in `~/.penmoss`, so agents' edits are never mistaken for yours. Each edit names the app and the session that made it, such as **Claude Code · 7736c5e9**. So:
 
-- [History](/docs/history/) shows which agent made each edit, marked with a star, and **Revert This Edit** undoes one without losing later edits.
+- [History](/docs/history/) shows which agent session made each edit, marked with a star, and **Revert This Edit** undoes one without losing later edits.
 - [Agent activity](/docs/agents/activity/) lists what each agent moved, made or renamed, with **Undo**.
-- Comments you [send to an agent](/docs/agents/comments/) reach its session.
+- Comments you [send to an agent](/docs/agents/comments/) reach its session, from any notebook.
 
-Connect each agent in **Settings → Agents**: choose **Connect an Agent…** on the notebook's row, type the agent's name, and choose **Connect**. The copy is named after both, such as `notes-claude-code`. Penmoss also makes one copy for every agent by itself, marked **Made by Penmoss for every agent on this Mac**, but its edits are all named "Agent".
+Agents connected by name in earlier versions keep their own copies and servers until you remove them in **Settings → Agents**.
 
 ## Point an agent at a note
 
 **Copy Agent Reference**, in a note's ⋯ menu (⋮ on Android), its title bar or its right-click menu in the sidebar, copies one line to paste into an agent's conversation:
 
 ```text
-Reference note via Penmoss MCP (penmoss mcp --notebook "Personal") tool read_note {"id":"K7QD-9HTF2CXA"}
+Reference note via Penmoss MCP tool read_note {"id":"K7QD-9HTF2CXA"}
 ```
 
 `K7QD-9HTF2CXA` is the note's **short id**. The first 4 characters name its notebook and are the same on every Mac and phone that has it. The last 8 are the end of the note's own 26-character id. If two notes in a notebook ever end the same way, the newer one's short id holds its whole id instead, so a short id never names two notes.
 
-The note keeps its 26-character id, and everything that takes an id takes both: every MCP tool, every `penmoss` command and `penmoss://note/` links. Short ids ignore case. A notebook's MCP server refuses a short id from another notebook, and says which notebook it is from if your Mac has it. `search_notes`, `list_recent` and `list_folder` give each note's `shortId` beside its `id`.
+The note keeps its 26-character id, and everything that takes an id takes both: every MCP tool, every `penmoss` command and `penmoss://note/` links. Short ids ignore case. The MCP server finds the note's notebook from its short id. A server for one notebook (`penmoss mcp --notebook`) refuses a short id from another notebook, and says which notebook it is from if your Mac has it. `search_notes`, `list_recent` and `list_folder` give each note's `shortId` beside its `id`.
 
 ## Safe edits
 

@@ -107,11 +107,8 @@ internal fun sessionLabel(session: AgentSession): String =
 internal fun sessionRow(session: AgentSession, now: Long): String =
     if (session.active) sessionLabel(session) else "${sessionLabel(session)} (last seen ${shortWhen(session.lastSeen, now)})"
 
-/**
- * What Send to… says with no session to offer: how to start one, in the Mac's words. `--notebook`
- * takes the name the notebook was added under on the agent's machine, which the phone cannot know.
- */
-internal const val NO_SESSIONS_HINT = "No agent sessions yet: start one with penmoss mcp --notebook … --channel."
+/** What Send to… says with no session to offer: how to start one, in the Mac's words (PEN-155). */
+internal const val NO_SESSIONS_HINT = "No agent sessions yet: start one with penmoss mcp --channel."
 
 /**
  * Send to…'s list, read from the notebook's notes server (A1076). [onListed] has every list read:
