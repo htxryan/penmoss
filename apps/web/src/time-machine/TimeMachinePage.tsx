@@ -26,7 +26,7 @@ import type { FolderNode, NoteEntry } from '@penmoss/core/workspace';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { readerOf, restoreToCommit, HistoryError } from '../history/source';
 import { Authors, DiffLines } from '../history/parts';
-import { timeZoneOf } from '../journal/journal';
+import { timeZoneOf } from '@penmoss/core/settings';
 import { linkHandler, navigate, notePath } from '../router';
 import type { GitSource } from '../sources/git-source';
 import { useGitStatus, useSource, useSourcesState } from '../sources/hooks';

@@ -7,21 +7,15 @@
  * choice still works while signed out (when synced settings cannot change). A
  * choice made while signed out is sent as the synced setting once it can be.
  */
+import { FULL_WIDTH_SETTING, fullWidthOf } from '@penmoss/core/settings';
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { useCommand } from '../commands/hooks';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import type { KeyValueStore } from '../shell/key-value';
 
-export const FULL_WIDTH_SETTING = 'note.fullWidth';
 export const FULL_WIDTH_KEY = 'penmoss.fullWidth';
 /** Set while a choice made here has not reached the synced setting yet (signed out). */
 export const FULL_WIDTH_PENDING_KEY = 'penmoss.fullWidth.pending';
-
-/** The synced value: true only for `true` (anything else is the theme's width). */
-export function fullWidthOf(settings: Readonly<Record<string, unknown>>): boolean | null {
-  const value = settings[FULL_WIDTH_SETTING];
-  return value === undefined ? null : value === true;
-}
 
 /**
  * What the note shows and what to write, from the synced value (null: none, or it cannot be

@@ -27,6 +27,7 @@ import {
   deleteFolder,
   moveFolder,
   moveNote,
+  NOTEBOOK_MAP,
   readSettings,
   readWorkspace,
   registerNote,
@@ -41,7 +42,7 @@ import { notebookSalt } from './layout';
 import { isPurged, markPurged } from './purge';
 
 /** A git notebook's own settings live under this user id in the WorkspaceDoc (A827). */
-export const NOTEBOOK_SETTINGS = 'notebook';
+export const NOTEBOOK_SETTINGS = NOTEBOOK_MAP;
 /** Attachments in the repository are refused over this (A828; A213's cap, no R2 here). */
 export const NOTEBOOK_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
 

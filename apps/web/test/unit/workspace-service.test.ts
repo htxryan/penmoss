@@ -7,16 +7,13 @@ import {
   deleteFolder,
   readSettings,
   readWorkspace,
+  DEVICE_MAP,
+  NOTEBOOK_MAP,
   WORKSPACE_RECORD_KEY,
 } from '@penmoss/sync-client/workspace';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { planDrop } from '../../src/workspace/model';
-import {
-  GIT_DEVICE_SETTINGS,
-  GIT_NOTEBOOK_SETTINGS,
-  Workspace,
-  type WorkspaceOptions,
-} from '../../src/workspace/service';
+import { Workspace, type WorkspaceOptions } from '../../src/workspace/service';
 import { memoryNotes } from './support/memory-notes';
 import { testNotes, testWorkspace } from './support/local-sources';
 
@@ -175,10 +172,10 @@ describe('Workspace', () => {
     workspace.setSetting('timeZone', 'America/Chicago');
     workspace.setSetting('theme', 'dark');
     expect(workspace.settings()).toEqual({ timeZone: 'America/Chicago', theme: 'dark' });
-    expect(readSettings(workspace.doc, GIT_NOTEBOOK_SETTINGS)).toEqual({
+    expect(readSettings(workspace.doc, NOTEBOOK_MAP)).toEqual({
       timeZone: 'America/Chicago',
     });
-    expect(readSettings(workspace.doc, GIT_DEVICE_SETTINGS)).toEqual({ theme: 'dark' });
+    expect(readSettings(workspace.doc, DEVICE_MAP)).toEqual({ theme: 'dark' });
     workspace.setSetting('timeZone', undefined);
     expect(workspace.settings()).toEqual({ theme: 'dark' });
   });

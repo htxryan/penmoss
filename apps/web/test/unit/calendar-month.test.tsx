@@ -6,7 +6,7 @@ import { CommandCenter, memoryBindings } from '../../src/commands/center';
 import { COMMANDS } from '../../src/commands/definitions';
 import { CommandsContext } from '../../src/commands/hooks';
 import { Calendar } from '../../src/journal/Calendar';
-import { TIME_ZONE_SETTING } from '../../src/journal/journal';
+import { TIME_ZONE_SETTING } from '@penmoss/core/settings';
 import { NotesContext } from '../../src/notes/hooks';
 import type { Notes } from '../../src/notes/service';
 import { WorkspaceContext } from '../../src/workspace/hooks';

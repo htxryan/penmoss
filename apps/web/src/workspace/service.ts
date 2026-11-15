@@ -19,17 +19,17 @@ import {
   moveFolder,
   moveNote,
   readFolderTrash,
-  readSettings,
+  mergedSettings,
   readWorkspace,
   registerNote,
   renameFolder,
   restoreFolder,
-  setSetting,
   setSortMode,
   setTagDescription,
   setTogether,
   unregisterNote,
   WORKSPACE_RECORD_KEY,
+  writeSetting,
   type FolderRestore,
   type TrashedFolder,
   type WorkspaceSnapshot,
@@ -61,15 +61,6 @@ export interface WorkspaceOptions {
    */
   readonly notices?: boolean;
 }
-
-/** A git notebook's own settings (A827): the same in every client of the notebook. */
-export function isNotebookSetting(key: string): boolean {
-  return key === 'timeZone' || key.startsWith('template.');
-}
-
-/** Where a git notebook keeps the notebook's settings and the device's (A827). */
-export const GIT_NOTEBOOK_SETTINGS = 'notebook';
-export const GIT_DEVICE_SETTINGS = 'device';
 
 export interface WorkspaceState {
   readonly snapshot: WorkspaceSnapshot;
@@ -380,21 +371,12 @@ export class Workspace {
 
   /** The settings: the device's, with the notebook's own over them (A827). */
   settings(): Record<string, unknown> {
-    const device = readSettings(this.doc, GIT_DEVICE_SETTINGS);
-    const notebook = readSettings(this.doc, GIT_NOTEBOOK_SETTINGS);
-    for (const key of Object.keys(device)) if (isNotebookSetting(key)) delete device[key];
-    for (const key of Object.keys(notebook)) if (!isNotebookSetting(key)) delete notebook[key];
-    return { ...device, ...notebook };
+    return mergedSettings(this.doc);
   }
 
   /** Sets one setting (undefined removes it), straight in: the engine commits it (A827). */
   setSetting(key: string, value: unknown): void {
-    setSetting(
-      this.doc,
-      isNotebookSetting(key) ? GIT_NOTEBOOK_SETTINGS : GIT_DEVICE_SETTINGS,
-      key,
-      value,
-    );
+    writeSetting(this.doc, key, value);
   }
 
   /** The salt of derived folder ids (A820): a git notebook's id, or its own (A1021). */

@@ -1,3 +1,4 @@
+import { noteBarSetting } from '@penmoss/core/settings';
 import type { IconName } from '@penmoss/ui/icons';
 import { useSyncExternalStore } from 'react';
 import { useSourcesState } from '../sources/hooks';
@@ -52,9 +53,6 @@ export const NOTE_BAR_BUTTON_INFO: Readonly<Record<NoteBarButton, NoteBarButtonI
 };
 
 const SHOWN_FIRST: ReadonlySet<NoteBarButton> = new Set(['fullWidth', 'copyAgentReference']);
-
-/** The setting that holds whether `button` shows in the note's title bar. */
-export const noteBarSetting = (button: NoteBarButton): string => `noteBar.${button}`;
 
 /** Whether `button` shows, from the user's settings. */
 export function noteBarShows(

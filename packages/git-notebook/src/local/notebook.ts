@@ -9,6 +9,7 @@
  * Search is by words unless the caller gives meaning (an embedder, a cache and an index, A1156); `baseVersion` is the note's local change counter, and a base this process never read is
  * `base_unknown`; agent limits, folder scopes and T43 notebooks do not exist here.
  */
+import { templateSetting, TIME_ZONE_SETTING } from '@penmoss/core/settings';
 import { type LinkResolver } from '@penmoss/core';
 import { isUlid } from '@penmoss/core/ids';
 import { attachmentPath, filePath, isImageType, sniffFileType } from '@penmoss/core/attachments';
@@ -196,7 +197,11 @@ const MAX_LISTED = 200;
 const MAX_BASES = 8;
 
 /** The settings a git notebook keeps (A827): its time zone and templates. */
-export const NOTEBOOK_SETTING_KEYS = ['timeZone', 'template.daily', 'template.weekly'] as const;
+export const NOTEBOOK_SETTING_KEYS = [
+  TIME_ZONE_SETTING,
+  templateSetting('daily'),
+  templateSetting('weekly'),
+] as const;
 const TEMPLATE_MAX_CHARS = 10_000;
 
 const encoder = new TextEncoder();

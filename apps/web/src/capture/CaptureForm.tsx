@@ -5,7 +5,8 @@ import { useNotes } from '../notes/hooks';
 import { useSourcesState } from '../sources/hooks';
 import { useWorkspace } from '../workspace/hooks';
 import { captureStart } from './into';
-import { destinationOf, saveCapture, type CaptureDestination, type SavedCapture } from './save';
+import { captureDestinationOf, type CaptureDestination } from '@penmoss/core/settings';
+import { saveCapture, type SavedCapture } from './save';
 
 const SAVE_KEYS = 'Mod+Enter';
 
@@ -52,7 +53,7 @@ export function CaptureForm({
   const field = useRef<HTMLTextAreaElement>(null);
   const [text, setText] = useState('');
   const [destination, setDestination] = useState<CaptureDestination>(() =>
-    destinationOf(workspace.settings()),
+    captureDestinationOf(workspace.settings()),
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +73,7 @@ export function CaptureForm({
       const start = shown && !picked ? (sources ? captureStart(sources) : null) : into;
       if (start !== into) setInto(start);
       const place = places?.find((one) => one.id === start);
-      setDestination(destinationOf((place?.workspace ?? workspace).settings()));
+      setDestination(captureDestinationOf((place?.workspace ?? workspace).settings()));
     }
   }
   useLayoutEffect(() => field.current?.focus(), [focusKey]);
@@ -81,7 +82,7 @@ export function CaptureForm({
   const reset = () => {
     setText('');
     setPicked(false);
-    setDestination(destinationOf(workspace.settings()));
+    setDestination(captureDestinationOf(workspace.settings()));
   };
 
   const cancel = () => {
@@ -157,7 +158,7 @@ export function CaptureForm({
               setInto(event.target.value);
               setPicked(true);
               const place = places.find((one) => one.id === event.target.value);
-              if (place) setDestination(destinationOf(place.workspace.settings()));
+              if (place) setDestination(captureDestinationOf(place.workspace.settings()));
             }}
           >
             {target === null ? (
