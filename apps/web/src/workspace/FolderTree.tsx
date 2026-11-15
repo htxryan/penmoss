@@ -1,4 +1,3 @@
-import { Icon } from '@penmoss/ui/icons';
 import type { FolderNode } from '@penmoss/core/workspace';
 import { WorkspaceError } from '@penmoss/sync-client/workspace';
 import {
@@ -8,15 +7,13 @@ import {
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
-  type DragEvent,
   type FocusEvent,
   type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
 } from 'react';
 import { ariaKeyShortcuts, isApplePlatform } from '@penmoss/editor/keys';
-import { useCommand, useKeys } from '../commands/hooks';
+import { useKeys } from '../commands/hooks';
 import { setTitle } from '@penmoss/sync-client/note';
 import { useNotes } from '../notes/hooks';
 import { oneLineTitle } from '@penmoss/editor/title';
@@ -30,18 +27,7 @@ import { ContextMenu } from '../shell/ContextMenu';
 import { MenuItem } from '../shell/Menu';
 import { trashAll, trashedNote } from '../trash/trashed';
 import { moveRequest } from './move-request';
-import {
-  isToggleClick,
-  menuTargets,
-  noteRange,
-  notesLabel,
-  notesNamed,
-  rowRange,
-  selectionAfterOpen,
-  toggled,
-  visibleFolders,
-  visibleSelection,
-} from './selection';
+import { isToggleClick, notesLabel, notesNamed, toggled } from './selection';
 import { duplicateNote, itemsCount, transfer, type TransferResult } from './transfer';
 import { useExpanded } from './expanded';
 import {
@@ -52,24 +38,22 @@ import {
 } from './TreeTransfer';
 import { useWorkspace, useWorkspaceState } from './hooks';
 import { useFolderTree } from './tree';
+import { useTreeCommands } from './tree-commands';
+import { useTreeDrop } from './tree-drop';
+import { onTreeKeyDown } from './tree-keys';
+import { useTreeSelection } from './tree-selection';
+import { findRow, rowElement } from './tree-dom';
+import { EmptyFolderRow, FolderTreeRow, NewFolderRow, NoteTreeRow, type RowPlace } from './TreeRow';
 import { revealNotebooks } from '../shell/reveal-notebooks';
 import { showToast, type ToastTone } from '../toasts/toasts';
-import { NOTE_DRAG_TYPE } from '../notes/note-drag';
 import { useSource, useSourcesState } from '../sources/hooks';
 import type { Source } from '../sources/registry';
 import {
   ancestors,
-  dropZone,
   folderLabel,
-  planDrop,
-  planStep,
-  sortModeOf,
   revealFolders,
   rowKey,
-  SORT_LABELS,
   visibleRows,
-  type DropTarget,
-  type DropZone,
   type FolderRow,
   type ItemRef,
   type MovePlan,
@@ -81,29 +65,7 @@ type Draft =
   | { readonly mode: 'create'; readonly parentId: string | null }
   | { readonly mode: 'rename'; readonly id: string };
 
-type DropHint = { readonly key: string; readonly zone: DropZone } | 'root' | null;
-
-/** The open context menu (A570): where, on what, and the row focus goes back to. */
-type ContextTarget =
-  | { readonly kind: 'notes'; readonly ids: readonly string[] }
-  | { readonly kind: 'folder'; readonly id: string }
-  /** Folders and notes picked together (T68, #230): what goes to another notebook at once. */
-  | { readonly kind: 'items'; readonly items: readonly ItemRef[] };
-
-interface MenuState {
-  readonly x: number;
-  readonly y: number;
-  readonly target: ContextTarget;
-  readonly rowKey: string;
-}
-
 const MESSAGE_MS = 6000;
-
-const depth = (level: number) => ({ '--depth': level - 1 }) as CSSProperties;
-
-/** The row element an event came from (null: the tree's empty space). */
-const rowElement = (event: { target: EventTarget }) =>
-  (event.target as HTMLElement).closest<HTMLElement>('[data-key]');
 
 export interface FolderTreeProps {
   /** The open note. */
@@ -158,35 +120,24 @@ export function FolderTree({
   /** The note renamed in place, from its menu's Rename (T62 item 13). */
   const [renamingNote, setRenamingNote] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [dropHint, setDropHint] = useState<DropHint>(null);
-  /** Selected notes (A570), in the order chosen; `anchor` is where a Shift range starts. */
-  const [selection, setSelection] = useState<readonly string[]>([]);
-  const [anchor, setAnchor] = useState<string | null>(null);
-  /**
-   * Folders picked with Shift- or ⌘-click (T68, #230), beside the selected notes, and the row
-   * a Shift range with a folder in it starts from.
-   */
-  const [picked, setPicked] = useState<readonly string[]>([]);
-  const [pickAnchor, setPickAnchor] = useState<string | null>(null);
   const [transferring, setTransferring] = useState<Transferring | null>(null);
-  const [menu, setMenu] = useState<MenuState | null>(null);
   // The other open notebooks, which a note or folder can move or be copied to (T68, #230).
   const source = useSource();
   const sourcesState = useSourcesState();
   const others = sourcesState.all.filter((each) => each !== source);
-  /** The sort order's menu (T52), open under its button. */
-  // Another note opened: the selection starts afresh unless a click just chose it (S1).
-  const [selectionFor, setSelectionFor] = useState(activeId);
-  if (selectionFor !== activeId) {
-    setSelectionFor(activeId);
-    const next = selectionAfterOpen(selection, activeId);
-    if (next.length !== selection.length) {
-      setSelection(next);
-      setAnchor(activeId);
-    }
-  }
+  const selection = useTreeSelection(rows, activeId);
+  const {
+    selected,
+    setSelection,
+    setAnchor,
+    pickedFolders,
+    setPicked,
+    pickAnchor,
+    setPickAnchor,
+    menu,
+    setMenu,
+  } = selection;
   const treeRef = useRef<HTMLDivElement>(null);
-  const dragged = useRef<ItemRef | null>(null);
   const pendingFocus = useRef<string | null>(null);
   const revealed = useRef<string | null>(null);
   /** The open note was just revealed: its row scrolls into view once it shows. */
@@ -275,69 +226,20 @@ export function FolderTree({
   /** Asks to delete a folder (ConfirmDelete). */
   const askDelete = useCallback((id: string) => setDeleting(id), []);
 
-  // Commands (T20): ⌘⌥⇧N (Alt+Shift+N off a Mac, A90) makes a folder in the current folder; the rest have no keys.
-  // With several sources side by side, the tree in use answers; the others yield (A862).
-  const inUse = () => active;
-  const yields = { yields: true } as const;
-  useCommand('folder.new', startCreate, inUse, yields);
-  useCommand('folder.topLevel', () => onCurrentFolderChange(null), inUse, yields);
-  useCommand('folder.sortManual', () => workspace.setSortMode(current, 'manual'), inUse, yields);
-  useCommand('folder.sortAlpha', () => workspace.setSortMode(current, 'alpha'), inUse, yields);
-  useCommand(
-    'folder.sortModified',
-    () => workspace.setSortMode(current, 'modified'),
-    inUse,
-    yields,
-  );
-
-  /** The tree row with focus (not its rename field), for the row commands. */
-  const focusedRow = (): Row | undefined => {
-    const active = document.activeElement;
-    if (!(active instanceof HTMLElement) || !treeRef.current?.contains(active)) return undefined;
-    if (active.closest('input')) return undefined;
-    return rowOf(active.closest<HTMLElement>('[data-key]'));
-  };
-  const focusedFolder = () => {
-    const row = focusedRow();
-    return row?.kind === 'folder' ? row : undefined;
-  };
-  // Alt+↑/↓, F2 and Delete by default; they act on the focused row only (scope "tree").
-  const moveFocused = (delta: -1 | 1) => {
-    const row = focusedRow();
-    if (!row) return false;
-    if (run(planStep(tree, row, delta))) focusRow(row.key);
-    return true;
-  };
-  useCommand(
-    'folder.moveUp',
-    () => moveFocused(-1),
-    () => focusedRow() !== undefined,
-    yields,
-  );
-  useCommand(
-    'folder.moveDown',
-    () => moveFocused(1),
-    () => focusedRow() !== undefined,
-    yields,
-  );
-  useCommand(
-    'folder.rename',
-    () => {
-      const row = focusedFolder();
-      if (row) setDraft({ mode: 'rename', id: row.id });
-    },
-    () => focusedFolder() !== undefined,
-    yields,
-  );
-  useCommand(
-    'folder.delete',
-    () => {
-      const row = focusedFolder();
-      if (row) askDelete(row.id);
-    },
-    () => focusedFolder() !== undefined,
-    yields,
-  );
+  useTreeCommands({
+    active,
+    tree,
+    treeRef,
+    rowOf,
+    run,
+    focusRow,
+    current,
+    workspace,
+    startCreate,
+    onCurrentFolderChange,
+    startRename: (id) => setDraft({ mode: 'rename', id }),
+    askDelete,
+  });
 
   const commitDraft = (name: string) => {
     const active = draft;
@@ -394,59 +296,10 @@ export function FolderTree({
     navigate(notePath(row.id));
   };
 
-  // --- selection and the context menu (A570) ---
+  // --- the context menu (A570) ---
 
-  const selected = visibleSelection(rows, selection);
-  const pickedFolders = visibleFolders(rows, picked);
-
-  /** Shift-click with a folder at either end: the notes and folders between (T68, #230). */
-  const pickRange = (row: Row) => {
-    const from = pickAnchor ?? (activeId === null ? null : rowKey({ kind: 'note', id: activeId }));
-    const between = rowRange(rows, from, row.key);
-    setSelection(between.filter((each) => each.kind === 'note').map((each) => each.id));
-    setPicked(between.filter((each) => each.kind === 'folder').map((each) => each.id));
-    if (from === null) setPickAnchor(row.key);
-  };
   const titleOf = (id: string) =>
     rows.find((row): row is NoteRow => row.kind === 'note' && row.id === id)?.title ?? '';
-
-  /** Shift: the notes from the anchor (or the open note) to `row`. */
-  const selectRange = (row: NoteRow) => {
-    const from = anchor ?? activeId;
-    setSelection(noteRange(rows, from, row.id));
-    if (from === null) setAnchor(row.id);
-  };
-  const toggleSelected = (row: NoteRow) => {
-    // Only what was chosen here: the open note is not added unseen (review S1).
-    setSelection(toggled(selected, row.id));
-    setAnchor(row.id);
-  };
-
-  const openMenu = (row: Row, x: number, y: number) => {
-    const inPicks =
-      pickedFolders.length > 0 &&
-      (row.kind === 'folder' ? pickedFolders.includes(row.id) : selected.includes(row.id));
-    if (inPicks && pickedFolders.length + selected.length > 1) {
-      // Folders and notes picked together: in the tree's order.
-      const chosen = new Set([...pickedFolders, ...selected]);
-      const items = rows
-        .filter((each) => chosen.has(each.id))
-        .map((each): ItemRef => ({ kind: each.kind, id: each.id }));
-      setMenu({ x, y, target: { kind: 'items', items }, rowKey: row.key });
-      return;
-    }
-    if (pickedFolders.length > 0 && !inPicks) setPicked([]);
-    if (row.kind === 'note') {
-      const ids = menuTargets(selected, row.id);
-      if (ids.length === 1) {
-        setSelection([row.id]);
-        setAnchor(row.id);
-      }
-      setMenu({ x, y, target: { kind: 'notes', ids }, rowKey: row.key });
-    } else {
-      setMenu({ x, y, target: { kind: 'folder', id: row.id }, rowKey: row.key });
-    }
-  };
 
   /** Closes the menu, focus back on its row (where the picker gives it back too). */
   const closeMenu = () => {
@@ -583,89 +436,18 @@ export function FolderTree({
     if (!row.expanded) setExpanded([row.id], true);
   };
 
-  // --- keyboard ---
+  // --- keyboard (tree-keys.ts) ---
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if ((event.target as HTMLElement).closest('input')) return;
-    const row = rowOf(rowElement(event));
-    if (!row) return;
-    const index = rows.indexOf(row);
-    const handled = () => {
-      event.preventDefault();
-      event.stopPropagation();
-    };
-    switch (event.key) {
-      case 'ArrowDown':
-      case 'ArrowUp': {
-        // Alt+↑/↓ (moving the row) is a command (T20): rebound, the keys do nothing here.
-        if (event.altKey || event.metaKey || event.ctrlKey) return;
-        handled();
-        const delta = event.key === 'ArrowDown' ? 1 : -1;
-        const next = rows[index + delta];
-        if (!next) return;
-        focusRow(next.key);
-        // Shift+↑/↓: the selection grows from where it started (A570).
-        if (event.shiftKey && next.kind === 'note') {
-          const from = anchor ?? (row.kind === 'note' ? row.id : null);
-          setSelection(noteRange(rows, from, next.id));
-          if (anchor === null) setAnchor(from ?? next.id);
-        }
-        return;
-      }
-      case ' ':
-        // Space: a note in or out of the selection (A570).
-        if (row.kind !== 'note' || event.altKey || event.metaKey || event.ctrlKey) return;
-        handled();
-        toggleSelected(row);
-        return;
-      case 'ContextMenu':
-      case 'F10': {
-        if (event.key === 'F10' && !event.shiftKey) return;
-        handled();
-        const rect = (event.target as HTMLElement).getBoundingClientRect();
-        openMenu(row, rect.left + 24, rect.bottom);
-        return;
-      }
-      case 'Escape':
-        if (selected.length < 2) return;
-        handled();
-        setSelection(row.kind === 'note' ? [row.id] : []);
-        return;
-      case 'Home':
-      case 'End': {
-        handled();
-        const edge = event.key === 'Home' ? rows[0] : rows.at(-1);
-        if (edge) focusRow(edge.key);
-        return;
-      }
-      case 'ArrowRight': {
-        handled();
-        if (row.kind !== 'folder') return;
-        const next = rows[index + 1];
-        // Every folder opens, an empty one too (#231): it shows that it is empty.
-        if (!row.expanded) setExpanded([row.id], true);
-        else if (row.expanded && next?.parentId === row.id) focusRow(next.key);
-        return;
-      }
-      case 'ArrowLeft':
-        handled();
-        if (row.kind === 'folder' && row.expanded) {
-          setExpanded([row.id], false);
-        } else if (row.parentId !== null) {
-          focusRow(rowKey({ kind: 'folder', id: row.parentId }));
-        }
-        return;
-      case 'Enter':
-        handled();
-        if (row.kind === 'note') {
-          // As a click: the note opened is the one chosen.
-          setSelection([row.id]);
-          setAnchor(row.id);
-          openNote(row);
-        } else activateFolder(row);
-        return;
-    }
-  };
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) =>
+    onTreeKeyDown(event, {
+      rows,
+      rowOf,
+      selection,
+      focusRow,
+      setExpanded,
+      openNote,
+      activateFolder,
+    });
 
   const onFocus = (event: FocusEvent<HTMLDivElement>) => {
     if ((event.target as HTMLElement).closest('input')) return;
@@ -694,7 +476,7 @@ export function FolderTree({
       // Folders are picked like notes (T68, #230): Shift for a range, ⌘ (Ctrl) for one more.
       if (event.button === 0 && event.shiftKey && !event.altKey) {
         event.preventDefault();
-        pickRange(row);
+        selection.pickRange(row);
         return;
       }
       if (event.button === 0 && isToggleClick(event, isApplePlatform()) && !event.altKey) {
@@ -714,12 +496,12 @@ export function FolderTree({
     } else if (event.button === 0 && event.shiftKey && !event.altKey) {
       // A range, not a new window (A570); with a folder at its start, folders too (T68).
       event.preventDefault();
-      if (pickedFolders.length > 0 || pickAnchor?.startsWith('folder:')) pickRange(row);
-      else selectRange(row);
+      if (pickedFolders.length > 0 || pickAnchor?.startsWith('folder:')) selection.pickRange(row);
+      else selection.selectRange(row);
     } else if (event.button === 0 && isToggleClick(event, isApplePlatform()) && !event.altKey) {
       // One more, not a new tab: ⌘ on a Mac, where Ctrl-click is a right-click (A570).
       event.preventDefault();
-      toggleSelected(row);
+      selection.toggleSelected(row);
       setPickAnchor(row.key);
     } else if (isPlainLeftClick(event)) {
       event.preventDefault();
@@ -738,7 +520,7 @@ export function FolderTree({
     if (!row || !element) return;
     event.preventDefault();
     element.focus();
-    openMenu(row, event.clientX, event.clientY);
+    selection.openMenu(row, event.clientX, event.clientY);
   };
 
   const onDoubleClick = (event: MouseEvent<HTMLDivElement>) => {
@@ -747,165 +529,46 @@ export function FolderTree({
     if (row?.kind === 'folder') setDraft({ mode: 'rename', id: row.id });
   };
 
-  // --- drag and drop: a drop on a row goes beside or into it; on empty space, to the top level ---
+  // --- drag and drop (tree-drop.ts) ---
 
-  const dropTarget = (event: DragEvent<HTMLElement>): DropTarget => {
-    const element = rowElement(event);
-    const row = rowOf(element);
-    if (!element || !row) return { kind: 'root' };
-    const rect = element.getBoundingClientRect();
-    const zone = dropZone(row.kind, event.clientY - rect.top, rect.height);
-    // A note dropped on a folder goes into it, unless the folder's own folder is sorted Manual:
-    // there its top and bottom quarters place the note above or below it (T62 item 6).
-    const into =
-      row.kind === 'folder' &&
-      dragged.current?.kind === 'note' &&
-      sortModeOf(tree, row.parentId) !== 'manual';
-    return { kind: row.kind, id: row.id, zone: into ? 'inside' : zone };
-  };
-
-  const onDragStart = (event: DragEvent<HTMLDivElement>) => {
-    const row = rowOf(rowElement(event));
-    if (!row) return;
-    dragged.current = { kind: row.kind, id: row.id };
-    // A drag moves the row dragged, alone: a highlighted selection must not suggest otherwise
-    // (review N5); the menu's Move takes a selection.
-    if (selected.length > 1) setSelection(row.kind === 'note' ? [row.id] : []);
-    // Copy too: a note dropped on Quick Access is pinned there, not moved (T53 item 10).
-    event.dataTransfer.effectAllowed = row.kind === 'note' ? 'copyMove' : 'move';
-    event.dataTransfer.setData('text/plain', row.kind === 'folder' ? row.name : row.title);
-    if (row.kind === 'note') event.dataTransfer.setData(NOTE_DRAG_TYPE, row.id);
-  };
-
-  const onDragEnd = () => {
-    dragged.current = null;
-    setDropHint(null);
-  };
-
-  const onDragOver = (event: DragEvent<HTMLElement>) => {
-    if (!dragged.current) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-    const target = dropTarget(event);
-    const hint: DropHint =
-      target.kind === 'root' ? 'root' : { key: rowKey(target), zone: target.zone };
-    setDropHint((previous) =>
-      previous === hint ||
-      (previous !== null &&
-        previous !== 'root' &&
-        hint !== 'root' &&
-        previous.key === hint.key &&
-        previous.zone === hint.zone)
-        ? previous
-        : hint,
-    );
-  };
-
-  const onDrop = (event: DragEvent<HTMLElement>) => {
-    const item = dragged.current;
-    if (!item) return;
-    event.preventDefault();
-    const target = dropTarget(event);
-    onDragEnd();
-    if (run(planDrop(tree, item, target))) focusRow(rowKey(item));
-  };
-
-  const onDragLeave = (event: DragEvent<HTMLElement>) => {
-    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropHint(null);
-  };
+  const drop = useTreeDrop({ tree, rowOf, selected, setSelection, run, focusRow });
+  const { dropHint } = drop;
 
   // --- rendering ---
 
   const tabStop = rows.some((row) => row.key === focusKey) ? focusKey : (rows[0]?.key ?? null);
   const folderKeys = ariaKeyShortcuts([...renameKeys, ...deleteKeys]);
   const deletingNode = deleting === null ? undefined : tree.byId.get(deleting);
-  const common = (row: Row) => ({
-    'data-key': row.key,
-    'data-drop':
+  const place = (row: Row): RowPlace => ({
+    drop:
       dropHint !== null && dropHint !== 'root' && dropHint.key === row.key
         ? dropHint.zone
         : undefined,
-    role: 'treeitem',
-    'aria-level': row.level,
-    'aria-setsize': row.setSize,
-    'aria-posinset': row.posInSet,
-    tabIndex: row.key === tabStop ? 0 : -1,
+    tabStop: row.key === tabStop,
     draggable: draft === null && renamingNote === null,
-    style: depth(row.level),
   });
 
   const draftRow = (parentId: string | null, level: number) =>
     draft?.mode === 'create' && draft.parentId === parentId ? (
-      <div
-        key="draft"
-        role="treeitem"
-        aria-level={level}
-        aria-selected={false}
-        className="tree-row draft-row"
-        style={depth(level)}
-      >
-        <span className="twisty" data-empty="" aria-hidden="true" />
-        <FolderIcon />
-        <NameInput
-          label="New folder name"
-          initial=""
-          onCommit={commitDraft}
-          onCancel={cancelDraft}
-        />
-      </div>
+      <NewFolderRow key="draft" level={level} onCommit={commitDraft} onCancel={cancelDraft} />
     ) : null;
 
   const content: ReactNode[] = [draftRow(null, 1)];
   for (const row of rows) {
     if (row.kind === 'folder') {
-      const renaming = draft?.mode === 'rename' && draft.id === row.id;
       content.push(
-        <div
+        <FolderTreeRow
           key={row.key}
-          {...common(row)}
-          className="tree-row folder-row"
-          data-picked={pickedFolders.includes(row.id) ? '' : undefined}
-          aria-label={row.name}
-          aria-expanded={row.expanded}
-          aria-selected={row.id === current}
-          aria-keyshortcuts={folderKeys || undefined}
-        >
-          <span className="twisty" data-open={row.expanded} aria-hidden="true">
-            <ChevronIcon />
-          </span>
-          <FolderIcon />
-          {renaming ? (
-            <NameInput
-              label={`Rename folder ${row.name}`}
-              initial={row.name}
-              onCommit={commitDraft}
-              onCancel={cancelDraft}
-            />
-          ) : (
-            <span className="tree-label">{row.name}</span>
-          )}
-          {row.sortMode !== 'manual' && !renaming ? (
-            <span className="sort-badge">{SORT_LABELS[row.sortMode]}</span>
-          ) : null}
-          {renaming ? null : (
-            <span className="row-actions row-end">
-              {/* A new note in it (T53 item 5), as its menu's New Note Here. Rename and Delete are
-                  in its menu only (Quanta feedback 2, A1120). */}
-              <button
-                type="button"
-                tabIndex={-1}
-                className="icon-btn"
-                data-ui="item"
-                aria-label={`New Note in ${row.name}`}
-                data-tip="New Note Here"
-                data-testid="folder-row-new-note"
-                onClick={() => newNoteIn(row.id)}
-              >
-                <PlusIcon />
-              </button>
-            </span>
-          )}
-        </div>,
+          row={row}
+          place={place(row)}
+          picked={pickedFolders.includes(row.id)}
+          chosen={row.id === current}
+          keyShortcuts={folderKeys}
+          renaming={draft?.mode === 'rename' && draft.id === row.id}
+          onRename={commitDraft}
+          onCancelRename={cancelDraft}
+          onNewNote={() => newNoteIn(row.id)}
+        />,
       );
       content.push(draftRow(row.id, row.level + 1));
       // An open folder with nothing in it says so (#231), where its first row would be.
@@ -914,56 +577,20 @@ export function FolderTree({
         !row.hasChildren &&
         !(draft?.mode === 'create' && draft.parentId === row.id)
       ) {
-        content.push(
-          <div
-            key={`${row.key}:empty`}
-            className="tree-row tree-empty-row"
-            style={depth(row.level + 1)}
-            aria-hidden="true"
-            data-testid="tree-empty-folder"
-          >
-            <span className="twisty" data-empty="" />
-            <span className="tree-label">Empty</span>
-          </div>,
-        );
+        content.push(<EmptyFolderRow key={`${row.key}:empty`} level={row.level + 1} />);
       }
     } else {
       content.push(
-        <div
+        <NoteTreeRow
           key={row.key}
-          {...common(row)}
-          className="tree-row note-row"
-          aria-label={row.title}
-          aria-selected={selected.includes(row.id)}
-          // No tooltip (A1119): the tree shows where the note is, and the time it was last edited
-          // covered the rows below.
-        >
-          <span className="twisty" data-empty="" aria-hidden="true" />
-          {renamingNote === row.id ? (
-            <span className="tree-link">
-              <NoteIcon />
-              <NameInput
-                label={`Rename note ${row.title}`}
-                initial={row.untitled ? '' : row.title}
-                placeholder="Untitled"
-                onCommit={(name) => commitNoteRename(row.id, name)}
-                onCancel={cancelNoteRename}
-              />
-            </span>
-          ) : (
-            <a
-              className="tree-link"
-              href={notePath(row.id)}
-              tabIndex={-1}
-              draggable={false}
-              aria-current={row.id === activeId ? 'page' : undefined}
-              data-untitled={row.untitled ? '' : undefined}
-            >
-              <NoteIcon />
-              <span className="tree-label">{row.title}</span>
-            </a>
-          )}
-        </div>,
+          row={row}
+          place={place(row)}
+          selected={selected.includes(row.id)}
+          open={row.id === activeId}
+          renaming={renamingNote === row.id}
+          onRename={(name) => commitNoteRename(row.id, name)}
+          onCancelRename={cancelNoteRename}
+        />,
       );
     }
   }
@@ -992,11 +619,11 @@ export function FolderTree({
           onClick={onClick}
           onDoubleClick={onDoubleClick}
           onContextMenu={onContextMenu}
-          onDragStart={onDragStart}
-          onDragEnd={onDragEnd}
-          onDragOver={onDragOver}
-          onDragLeave={onDragLeave}
-          onDrop={onDrop}
+          onDragStart={drop.onDragStart}
+          onDragEnd={drop.onDragEnd}
+          onDragOver={drop.onDragOver}
+          onDragLeave={drop.onDragLeave}
+          onDrop={drop.onDrop}
         >
           {empty ? <p className="list-empty">No notes yet.</p> : content}
           <div className="tree-end" data-testid="tree-root-drop" aria-hidden="true" />
@@ -1290,54 +917,6 @@ function FolderMenuItems({
   );
 }
 
-function findRow(tree: HTMLElement | null, key: string): HTMLElement | null {
-  return tree?.querySelector<HTMLElement>(`[data-key="${CSS.escape(key)}"]`) ?? null;
-}
-
-function NameInput({
-  label,
-  initial,
-  placeholder = 'Folder name',
-  onCommit,
-  onCancel,
-}: {
-  label: string;
-  initial: string;
-  placeholder?: string;
-  onCommit: (name: string) => void;
-  onCancel: () => void;
-}) {
-  const done = useRef(false);
-  return (
-    <input
-      className="tree-input"
-      aria-label={label}
-      defaultValue={initial}
-      placeholder={placeholder}
-      autoFocus
-      maxLength={200}
-      onFocus={(event) => event.currentTarget.select()}
-      onKeyDown={(event) => {
-        event.stopPropagation();
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          done.current = true;
-          onCommit(event.currentTarget.value);
-        } else if (event.key === 'Escape') {
-          event.preventDefault();
-          done.current = true;
-          onCancel();
-        }
-      }}
-      onBlur={(event) => {
-        if (done.current) return;
-        done.current = true;
-        onCommit(event.currentTarget.value);
-      }}
-    />
-  );
-}
-
 function countNotes(folder: FolderNode): number {
   return folder.notes.length + folder.folders.reduce((sum, child) => sum + countNotes(child), 0);
 }
@@ -1378,8 +957,3 @@ function ConfirmDelete({
     </ConfirmDialog>
   );
 }
-
-const FolderIcon = () => <Icon name="folder" className="tree-icon" />;
-const NoteIcon = () => <Icon name="file" className="tree-icon" />;
-const ChevronIcon = () => <Icon name="chevR" size={12} className="chevron" />;
-const PlusIcon = () => <Icon name="plus" size={14} />;
