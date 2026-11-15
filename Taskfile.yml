@@ -74,7 +74,7 @@ tasks:
   releases:test:
     desc: 'The Releases page rules CI follows (A403, A1188, A1189): .github/scripts/releases.mjs against an in-memory page, and the checks of `task release` against a fake git'
     cmds:
-      - node --test .github/scripts/releases.test.mjs .github/scripts/release-tag.test.mjs .github/scripts/release-notes.test.mjs
+      - node --test .github/scripts/release-builds.test.mjs .github/scripts/release-alpha.test.mjs .github/scripts/release-stable.test.mjs .github/scripts/release-versions.test.mjs .github/scripts/release-tag.test.mjs .github/scripts/release-notes.test.mjs
 
   release-notes:fix:
     desc: "Re-read a merged pull request's Release note and put it in place of the one captured at merge, in release-notes.json on alpha and the release pages (A1301; needs gh signed in with write access): `task release-notes:fix -- 140`"
