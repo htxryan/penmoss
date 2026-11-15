@@ -5,7 +5,6 @@
  * is a draft kept on this device; a sent one goes through the outbox, so offline it waits
  * (A796).
  */
-import { ulid } from '@penmoss/core/ids';
 import {
   contextMarkdown,
   FEEDBACK_GROUP_TITLES,
@@ -15,10 +14,6 @@ import {
   FEEDBACK_TYPE_LABELS,
   FEEDBACK_TYPES,
   withoutGroups,
-  type FeedbackContext,
-  type FeedbackGroupId,
-  type FeedbackPriority,
-  type FeedbackType,
 } from '@penmoss/core/feedback';
 import {
   createFeedbackEditor,
@@ -27,7 +22,6 @@ import {
   FEEDBACK_FORMATS,
   setFeedbackLink,
   type FeedbackEditor,
-  type JSONContent,
 } from '@penmoss/editor/feedback';
 import { ariaKeyShortcuts, formatCombo } from '@penmoss/editor/keys';
 import { Icon, type IconName } from '@penmoss/ui/icons';
@@ -49,14 +43,9 @@ import { checkImage, nameFor, outputType, prepareImage, type Screenshot } from '
 import { appVersion } from './open';
 import type { Attempt } from './outbox';
 import { problemsOf, sizeProblem, type Problems } from './problems';
-import { useFeedbackService, type FeedbackService } from './service';
-import type { FeedbackDraftText, OutboxEntry, OutboxError } from './store';
-
-function writeDraft(feedback: FeedbackService, draft: FeedbackDraftText): void {
-  void feedback.store
-    .writeDraft(draft)
-    .catch((error: unknown) => console.error('[feedback] could not keep the draft', error));
-}
+import { useFeedbackDraft } from './draft';
+import { useFeedbackService } from './service';
+import type { OutboxEntry, OutboxError } from './store';
 
 const SEND_KEYS = 'Mod+Enter';
 
@@ -112,18 +101,27 @@ function FeedbackForm({
   const id = useId();
   const { facts } = snapshot;
 
-  const [loaded, setLoaded] = useState(false);
-  const [submissionId, setSubmissionId] = useState(() => ulid());
-  const [type, setType] = useState<FeedbackType | null>(null);
-  const [priority, setPriority] = useState<FeedbackPriority | null>(null);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState<JSONContent | null>(null);
-  const [shots, setShots] = useState<Screenshot[]>([]);
-  const [omitted, setOmitted] = useState<ReadonlySet<FeedbackGroupId>>(new Set());
-  /** A report taken back by Edit: the context it was captured with, not this screen's. */
-  const [kept, setKept] = useState<FeedbackContext | null>(null);
-  const [problems, setProblems] = useState<Problems>({});
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
+  const draft = useFeedbackDraft(feedback, snapshot.capture, status.kind === 'idle');
+  const {
+    loaded,
+    submissionId,
+    type,
+    setType,
+    priority,
+    setPriority,
+    title,
+    setTitle,
+    description,
+    setDescription,
+    initialDescription,
+    shots,
+    setShots,
+    omitted,
+    setOmitted,
+    kept,
+  } = draft;
+  const [problems, setProblems] = useState<Problems>({});
   const [imageError, setImageError] = useState<string | null>(null);
   const [linkHref, setLinkHref] = useState<string | null>(null);
   /** Which formats the selection has, for the toolbar's pressed states (read on each change). */
@@ -131,8 +129,6 @@ function FeedbackForm({
   const dialog = useRef<HTMLDivElement>(null);
   const editorHost = useRef<HTMLDivElement>(null);
   const editorRef = useRef<FeedbackEditor | null>(null);
-  /** The description the editor opens with: the draft's, as read. */
-  const initialDescription = useRef<JSONContent | null>(null);
   const firstField = useRef<HTMLInputElement>(null);
   const titleField = useRef<HTMLInputElement>(null);
   const priorityField = useRef<HTMLInputElement>(null);
@@ -146,47 +142,6 @@ function FeedbackForm({
   useEffect(() => {
     loadFeedbackMarkdown().catch(() => undefined);
   }, []);
-
-  // The draft, if one waits; the Mac's capture of the window behind is offered unticked.
-  useEffect(() => {
-    let live = true;
-    void feedback.store
-      .readDraft()
-      .catch(() => null)
-      .then((draft) => {
-        if (!live) return;
-        // A ticked capture, and every chosen image, stays with the draft; the window behind is
-        // captured afresh each time the form opens.
-        const kept = draft?.screenshots ?? [];
-        const capture: Screenshot[] = snapshot.capture
-          ? [
-              {
-                id: `capture-${Date.now()}`,
-                name: 'This window.png',
-                type: 'image/png',
-                blob: snapshot.capture,
-                included: false,
-                source: 'window',
-              },
-            ]
-          : [];
-        if (draft) {
-          setSubmissionId(draft.submissionId);
-          setType(draft.type);
-          setPriority(draft.priority);
-          setTitle(draft.title);
-          setDescription(draft.description);
-          initialDescription.current = draft.description;
-          setOmitted(new Set(draft.omitted));
-          setKept(draft.context ?? null);
-        }
-        setShots([...capture, ...kept]);
-        setLoaded(true);
-      });
-    return () => {
-      live = false;
-    };
-  }, [feedback, snapshot.capture]);
 
   // The description editor, once the draft is read.
   useEffect(() => {
@@ -212,8 +167,9 @@ function FeedbackForm({
       editor.destroy();
       editorRef.current = null;
     };
-    // Made once, from the draft as read; the editor holds the description after that.
-  }, [loaded, id]);
+    // Made once, from the draft as read; the editor holds the description after that (the ref
+    // and the setter never change).
+  }, [loaded, id, initialDescription, setDescription]);
 
   // Focus is in the form from the moment it shows, so Escape closes it even before the draft is
   // read (on a slow disk Escape did nothing, and the button behind kept focus); the first field
@@ -224,57 +180,6 @@ function FeedbackForm({
   useLayoutEffect(() => {
     if (loaded) firstField.current?.focus();
   }, [loaded]);
-
-  // The draft is written once typing pauses, and as the form closes, until it is sent.
-  const unsaved = useRef<FeedbackDraftText | null>(null);
-  const keepDraft = useRef(true);
-  useEffect(() => {
-    if (!loaded || status.kind !== 'idle') {
-      unsaved.current = null;
-      return;
-    }
-    unsaved.current = {
-      submissionId,
-      type,
-      priority,
-      title,
-      description,
-      omitted: [...omitted],
-      ...(kept ? { context: kept } : {}),
-      updatedAt: Date.now(),
-    };
-    const timer = setTimeout(() => {
-      const draft = unsaved.current;
-      unsaved.current = null;
-      if (draft) writeDraft(feedback, draft);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [
-    feedback,
-    loaded,
-    status.kind,
-    submissionId,
-    type,
-    priority,
-    title,
-    description,
-    shots,
-    omitted,
-    kept,
-  ]);
-  // The screenshots, only when they change (not with every keystroke's save).
-  useEffect(() => {
-    if (!loaded || status.kind !== 'idle' || !keepDraft.current) return;
-    void feedback.store
-      .writeDraftScreenshots(shots)
-      .catch((error: unknown) => console.error('[feedback] could not keep the screenshots', error));
-  }, [feedback, loaded, status.kind, shots]);
-  useEffect(
-    () => () => {
-      if (keepDraft.current && unsaved.current) writeDraft(feedback, unsaved.current);
-    },
-    [feedback],
-  );
 
   const context = useMemo(() => kept ?? buildContext(facts), [kept, facts]);
   const sent = useMemo(() => withoutGroups(context, omitted), [context, omitted]);
@@ -423,22 +328,22 @@ function FeedbackForm({
           updatedAt: Date.now(),
         },
       };
-      keepDraft.current = false;
+      draft.keeping(false);
       const attempt = await feedback.outbox.enqueue(entry);
       // The entry holds the report now, with the form as sent; the form's draft can go.
-      await feedback.store.writeDraft(null).catch(() => undefined);
+      await draft.clear();
       answer(attempt);
     } catch (error) {
       console.error('[feedback] could not send', error);
-      keepDraft.current = true;
+      draft.keeping(true);
       setStatus({ kind: 'idle' });
       setImageError(error instanceof Error ? error.message : 'Could not prepare the feedback.');
     }
   };
 
   const discardDraft = async () => {
-    keepDraft.current = false;
-    await feedback.store.writeDraft(null).catch(() => undefined);
+    draft.keeping(false);
+    await draft.clear();
     onClose();
   };
 
