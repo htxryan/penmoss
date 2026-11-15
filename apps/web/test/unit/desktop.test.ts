@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { CommandCenter, memoryBindings, type ActiveEditor } from '../../src/commands/center';
 import { COMMANDS } from '../../src/commands/definitions';
 import { menuModel, menuOf } from '../../src/desktop/menu';
-import { parseRoute } from '../../src/router';
 
 // T29: the web app's side of the Mac app: the menus it describes from the command registry,
 // and menu shortcuts dispatched without running twice. Its session, sign-in and admin requests
@@ -186,11 +185,5 @@ describe('shortcuts a native menu took (T29)', () => {
     expect(center.dispatchMenuShortcut('Mod+B', null)).toBe(false);
     expect(center.dispatchMenuShortcut('Mod+B', inside)).toBe(true);
     expect(calls).toEqual(['bold']);
-  });
-});
-
-describe('the capture route (T30)', () => {
-  it('is its own page', () => {
-    expect(parseRoute('/capture')).toEqual({ name: 'capture' });
   });
 });

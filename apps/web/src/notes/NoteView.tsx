@@ -52,12 +52,13 @@ import { HistoryPanel } from '../history/HistoryPanel';
 import { browserFoldStorage, localFoldState } from './folds';
 import { useNoteList, useNotes } from './hooks';
 import { useDirectory } from './directory-hooks';
-import { markdownDoc, noteFields, noteMarkdown } from './markdown';
+import { noteFields } from '@penmoss/editor/note-fields';
+import { markdownDoc, noteMarkdown } from './markdown';
 import { MarkdownSource } from './MarkdownSource';
 import { NoteBarButtonView } from './NoteBarButton';
 import { useNoteBar } from './note-bar';
 import { browserStorage, rememberOpened } from './recent';
-import { bindTitleField, pastedTitle } from './title';
+import { bindTitleField, pastedTitle } from '@penmoss/editor/title';
 import {
   caretOnLastLine,
   fitHeight,

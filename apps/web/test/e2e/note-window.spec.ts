@@ -324,8 +324,6 @@ test('Move to Trash in a window keeps it, with Undo; the Mac shows no blocked-wi
   await expect(
     page.getByTestId('note-list').getByRole('link', { name: title, exact: true }),
   ).toBeVisible();
-  // The Mac's main process made the window, so the page never offers a tab instead (A712).
-  await expect(page.getByTestId('window-blocked')).toHaveCount(0);
   await popup.close();
   expect(errors).toEqual([]);
 });

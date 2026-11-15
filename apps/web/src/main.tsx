@@ -23,7 +23,7 @@ import './feedback/feedback.css';
 import './theme/theme.css';
 import { isNoteWindowPath, navigate, startHistory } from './router';
 import { openNoteWindow } from './window/open';
-import { browserChannel, StorePuller, storeSync } from './window/store-sync';
+import { StorePuller, storeSync } from './window/store-sync';
 import { browserThemeEnvironment, ThemeController } from './theme/controller';
 import { ThemeProvider } from './theme/ThemeProvider';
 import type { Workspace } from './workspace/service';
@@ -55,7 +55,7 @@ errorRing.install(window);
 const noteWindow = bridge?.window === 'note' || isNoteWindowPath(window.location.pathname);
 // What another window stores shows here at once, offline too: a capture saved in the Mac app's
 // capture window (T30), an edit in a note window (T45, A711).
-const windows = storeSync({ bridge, channel: browserChannel() });
+const windows = storeSync(bridge);
 
 // Wikilinks (T16): the registry as links see it, offline included; each source has its own.
 const makeDirectory = (notes: Notes, workspace: Workspace) =>

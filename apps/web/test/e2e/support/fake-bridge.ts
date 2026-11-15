@@ -161,7 +161,8 @@ export function installFakeBridge(config: {
     const at = new URL(String(url ?? ''), window.location.href);
     if (at.origin !== window.location.origin) return open(url, target, features);
     if (at.pathname.startsWith('/window/')) {
-      open(at.href, '_blank', `${features ? `${features},` : ''}noopener`);
+      // Sized as main makes it (720×800, `createNoteWindow`).
+      open(at.href, '_blank', 'popup,width=720,height=800,noopener');
     } else {
       opener?.postMessage({ path: `${at.pathname}${at.search}` });
     }

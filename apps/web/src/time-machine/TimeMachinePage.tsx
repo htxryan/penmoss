@@ -24,7 +24,7 @@ import { copyNote } from '@penmoss/sync-client/records';
 import { Icon } from '@penmoss/ui/icons';
 import type { FolderNode, NoteEntry } from '@penmoss/core/workspace';
 import { useEffect, useId, useMemo, useState } from 'react';
-import { readerOf, restoreToCommit, HistoryRefused } from '../history/source';
+import { readerOf, restoreToCommit, HistoryError } from '../history/source';
 import { Authors, DiffLines } from '../history/parts';
 import { timeZoneOf } from '../journal/journal';
 import { linkHandler, navigate, notePath } from '../router';
@@ -50,9 +50,7 @@ function moment(ms: number, zone: string): string {
 const dayOf = (ms: number, zone: string): PlainDate => todayIn(zone, new Date(ms));
 
 function failure(caught: unknown): string {
-  if (caught instanceof HistoryRefused && caught.message !== `HTTP ${caught.status}`) {
-    return caught.message;
-  }
+  if (caught instanceof HistoryError) return caught.message;
   return caught instanceof Error && caught.message
     ? `That did not work: ${caught.message}`
     : 'That did not work. Try again in a moment.';

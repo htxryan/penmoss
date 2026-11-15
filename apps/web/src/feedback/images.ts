@@ -100,37 +100,3 @@ export async function prepareImage(blob: Blob): Promise<Blob> {
     bitmap.close();
   }
 }
-
-/**
- * One frame of this tab, for Capture this window on the web: the browser asks first
- * (`getDisplayMedia` with `preferCurrentTab`), and the stream stops after the frame.
- * `hide` runs while the frame is taken, so the form is not in it.
- */
-export async function captureThisTab(hide: (hidden: boolean) => void): Promise<Blob | null> {
-  const media = navigator.mediaDevices as MediaDevices | undefined;
-  if (!media?.getDisplayMedia) return null;
-  const stream = await media.getDisplayMedia({
-    video: true,
-    audio: false,
-    preferCurrentTab: true,
-    selfBrowserSurface: 'include',
-  } as DisplayMediaStreamOptions);
-  try {
-    const video = document.createElement('video');
-    video.muted = true;
-    video.srcObject = stream;
-    await video.play();
-    hide(true);
-    // Two frames for the page to paint without the form.
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    await new Promise((resolve) => setTimeout(resolve, 150));
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d')?.drawImage(video, 0, 0);
-    return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-  } finally {
-    hide(false);
-    for (const track of stream.getTracks()) track.stop();
-  }
-}

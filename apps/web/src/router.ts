@@ -13,8 +13,6 @@ import { isShortNoteRef } from '@penmoss/core/note-ref';
 import { useLayoutEffect, useReducer, useSyncExternalStore, type MouseEvent } from 'react';
 import { noteWindowPath, openInMain, openNoteWindow } from './window/open';
 
-export { noteWindowPath } from './window/open';
-
 export type Route =
   | { readonly name: 'home' }
   | { readonly name: 'note'; readonly id: string }
@@ -32,7 +30,6 @@ export type Route =
       /** One git notebook's own page under Notebooks (its source id; A1098). */
       readonly item?: string;
     }
-  | { readonly name: 'capture' }
   | { readonly name: 'not-found' };
 
 /**
@@ -87,8 +84,6 @@ export function parseRoute(pathname: string): Route {
     case '/settings':
     case '/settings/':
       return { name: 'settings', section: SETTINGS_SECTIONS[0] };
-    case '/capture':
-      return { name: 'capture' };
     case '/graph':
       return { name: 'graph' };
   }

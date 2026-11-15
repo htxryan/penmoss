@@ -2,21 +2,6 @@ import type { AppSyncState } from './service';
 
 const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
 
-/** A source's sync state in words: `Offline · 3 pending` → `Syncing` → `Synced`. */
-export function syncLabel(state: AppSyncState): string {
-  const pending = state.pending > 0 ? ` · ${state.pending} pending` : '';
-  switch (state.phase) {
-    case 'offline':
-      return `Offline${pending}`;
-    case 'syncing':
-      return 'Syncing';
-    case 'synced':
-      return 'Synced';
-    case 'stopped':
-      return `Sync Stopped${pending}`;
-  }
-}
-
 /** What the state means, read out when sync needs attention (A522). */
 export function syncHint(state: AppSyncState): string {
   const waiting = plural(state.pending, 'note');

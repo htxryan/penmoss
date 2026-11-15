@@ -199,11 +199,6 @@ export function usePaneWidth(
   return state;
 }
 
-/** Whether the note's pane has room for the side panel (`usePaneWidth`'s answer). */
-export function usePaneWide(ref: RefObject<HTMLElement | null>): boolean {
-  return usePaneWidth(ref).wide;
-}
-
 /**
  * The note's state (its own, else the default) and a way to change it, which remembers it for
  * this note. Read once per note: the view is mounted afresh for each note. A note with no state
