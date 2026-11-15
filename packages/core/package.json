@@ -17,6 +17,7 @@
     "./line-symbols": "./src/line-symbols.ts",
     "./characters": "./src/characters.ts",
     "./glyph-search": "./src/glyph-search.ts",
+    "./colour-lock": "./src/colour-lock.ts",
     "./schema": "./src/schema.ts",
     "./search": "./src/search/index.ts",
     "./note-text": "./src/search/note-text.ts",

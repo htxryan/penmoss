@@ -257,6 +257,11 @@ describe('drawing symbols (T44, A741, A745)', () => {
     expect(drawn(view)).toEqual(['★', '?', '!★', '?', '💡']);
     const star = view.dom.querySelector<HTMLElement>('.pm-symbol')!;
     expect(star.style.color).toBe('var(--pm-callout-warning)');
+    // An emoji is drawn in its own colours, not its symbol's (A1588).
+    const idea = [...view.dom.querySelectorAll<HTMLElement>('.pm-symbol')].find(
+      (each) => each.textContent === '💡',
+    )!;
+    expect(idea.style.color).toBe('');
     expect(star.getAttribute('aria-hidden')).toBe('true');
     // The glyphs are read once before the line (A940); the drawn ones are hidden. The default
     // symbols keep their older names, read beside the glyph: "?" alone may be read as nothing.

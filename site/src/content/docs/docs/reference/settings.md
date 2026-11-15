@@ -53,7 +53,7 @@ Old links still work: Settings → Display opens Sidebar, and Settings → Statu
 
 ### Symbols
 
-The [line symbols](/docs/editor/#line-symbols): each one's key, glyph (from the symbol picker: symbols and emoji, searched by name) and colour, their order (drag a row, or Alt+↑ and Alt+↓, which changes its key), **Add a Symbol** (up to nine) and **Restore Defaults**.
+The [line symbols](/docs/editor/#line-symbols): each one's key, glyph (from the symbol picker: symbols and emoji, searched by name) and colour (an emoji keeps its own colours, so its colour can't be changed), their order (drag a row, or Alt+↑ and Alt+↓, which changes its key), **Add a Symbol** (up to nine) and **Restore Defaults**.
 
 ## Writing
 

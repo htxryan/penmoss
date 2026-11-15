@@ -22,8 +22,11 @@ export function GlyphPicker({
   readonly glyph: string;
   /** The button's accessible name ("Glyph ★"). */
   readonly label: string;
-  /** The glyph's colour as CSS, so the button shows the symbol as the margin does. */
-  readonly colour: string;
+  /**
+   * The glyph's colour as CSS, so the button shows the symbol as the margin does; null for an
+   * emoji, drawn in its own colours (A1588).
+   */
+  readonly colour: string | null;
   /** The other symbol using a glyph, or null: such a character is marked and refused. */
   readonly takenBy: (glyph: string) => string | null;
   /** Why a glyph cannot be this symbol's, as a sentence, or null. */
@@ -49,7 +52,7 @@ export function GlyphPicker({
         data-tip={label}
         disabled={disabled}
         data-testid={testId}
-        style={{ color: colour }}
+        style={colour ? { color: colour } : undefined}
         onClick={() => setOpen(true)}
       >
         {glyph}

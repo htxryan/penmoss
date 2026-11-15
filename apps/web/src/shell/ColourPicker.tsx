@@ -66,6 +66,7 @@ export function ColourPicker({
   swatches,
   onChange,
   disabled = false,
+  describedBy,
   testId,
 }: {
   /** The button's and the popover's accessible name ("Colour of ★"). */
@@ -79,6 +80,8 @@ export function ColourPicker({
   readonly swatches: readonly ColourSwatch[];
   readonly onChange: (value: string) => void;
   readonly disabled?: boolean;
+  /** A note on the colour the button is described by (why it is disabled, A1588). */
+  readonly describedBy?: string | undefined;
   readonly testId?: string;
 }) {
   const id = useId();
@@ -195,6 +198,7 @@ export function ColourPicker({
         aria-controls={open ? `${id}-panel` : undefined}
         data-tip={label}
         disabled={disabled}
+        aria-describedby={describedBy}
         data-testid={testId}
         onClick={() => (open ? close(false) : openPanel())}
       >

@@ -7,7 +7,7 @@
  * goes back to the note. Nothing here writes to the note except the toggle it runs.
  */
 import { computePosition, flip, offset, shift } from '@floating-ui/dom';
-import { symbolColourVar, type LineSymbol } from '@penmoss/core/line-symbols';
+import { symbolInk, type LineSymbol } from '@penmoss/core/line-symbols';
 import type { Editor } from '@tiptap/core';
 
 export interface SymbolPickerServices {
@@ -96,7 +96,9 @@ export class SymbolPicker {
       item.dataset['label'] = symbol.glyph;
       const glyph = doc.createElement('span');
       glyph.className = 'pm-symbol-item-glyph';
-      glyph.style.color = symbolColourVar(symbol.colour);
+      // An emoji keeps its own colours (A1588).
+      const ink = symbolInk(symbol);
+      if (ink) glyph.style.color = ink;
       glyph.textContent = symbol.glyph;
       const tick = doc.createElement('span');
       tick.className = 'pm-symbol-item-tick';

@@ -1,3 +1,4 @@
+import { COLOUR_LOCKED_NOTE, isColourLocked } from '@penmoss/core/colour-lock';
 import {
   DEFAULT_SYMBOLS,
   MAX_SYMBOLS,
@@ -8,6 +9,7 @@ import {
   glyphProblem,
   symbolColourLabel,
   symbolColourVar,
+  symbolInk,
   symbolSpokenName,
   type LineSymbol,
   type SymbolColour,
@@ -59,7 +61,8 @@ function SlotKeys({ slot }: { slot: number }) {
  * there are no names to give (A940), and a new or changed glyph is stored as its own name, so
  * older builds still read the list. Each row shows its slot's keys, read from the bindings, so a
  * rebound key shows as rebound; a row moves by its handle (drag, or Alt+↑ and Alt+↓), which
- * changes its keys (PEN-146, Show the Keys).
+ * changes its keys (PEN-146, Show the Keys). An emoji comes in its own colours, so its row's
+ * colour is disabled with a note saying so; the colour is kept for a glyph that takes one (A1588).
  */
 export function SymbolsSettings() {
   const { symbols, custom, save, reset, canChange } = useLineSymbols();
@@ -111,71 +114,84 @@ export function SymbolsSettings() {
         intro="A symbol at the start of a line marks it: important, a question, a follow-up, an idea."
       />
       <ol className="symbol-list lf-group" aria-label="Your Symbols" data-setting="symbols">
-        {symbols.map((symbol, index) => (
-          <li
-            key={ids[index]}
-            className="symbol-row"
-            data-testid="symbol-row"
-            {...reorder.rowProps(ids[index]!)}
-          >
-            <button
-              type="button"
-              className="icon-btn lf-grip"
-              data-ui="item"
-              aria-label={`Move ${symbolSpokenName(symbol)}, symbol ${index + 1} of ${symbols.length}`}
-              aria-description="Drag, or press Alt and the up or down arrow"
-              data-tip={`Drag to Move ${symbol.glyph}`}
-              data-testid={`symbol-move-${index + 1}`}
-              disabled={disabled}
-              {...reorder.handleProps(ids[index]!)}
+        {symbols.map((symbol, index) => {
+          const locked = isColourLocked(symbol.glyph);
+          return (
+            <li
+              key={ids[index]}
+              className="symbol-row"
+              data-testid="symbol-row"
+              {...reorder.rowProps(ids[index]!)}
             >
-              <Icon name="grip" size={14} />
-            </button>
-            <SlotKeys slot={index} />
-            <GlyphPicker
-              glyph={symbol.glyph}
-              label={`Glyph ${symbol.glyph}`}
-              colour={symbolColourVar(symbol.colour)}
-              testId={`symbol-glyph-${index + 1}`}
-              disabled={disabled}
-              takenBy={takenBy(index)}
-              problemOf={(glyph) =>
-                sentence(glyphProblem(glyph)) ??
-                (takenBy(index)(glyph) ? `${glyph} is already in the list.` : null)
-              }
-              // The glyph is its name too (A940), for builds that still show names.
-              onChoose={(glyph) => update(index, { glyph, name: glyph })}
-            />
-            <ColourPicker
-              label={`Colour of ${symbol.glyph}`}
-              value={symbol.colour}
-              valueLabel={symbolColourLabel(symbol.colour)}
-              css={symbolColourVar(symbol.colour)}
-              swatches={SWATCHES}
-              disabled={disabled}
-              testId={`symbol-colour-${index + 1}`}
-              onChange={(colour) => update(index, { colour: colour as SymbolColour })}
-            />
-            <span className="symbol-actions">
               <button
                 type="button"
-                className="btn quiet danger"
+                className="icon-btn lf-grip"
                 data-ui="item"
-                aria-label={`Remove ${symbolSpokenName(symbol)}`}
-                data-tip={`Remove ${symbol.glyph}`}
+                aria-label={`Move ${symbolSpokenName(symbol)}, symbol ${index + 1} of ${symbols.length}`}
+                aria-description="Drag, or press Alt and the up or down arrow"
+                data-tip={`Drag to Move ${symbol.glyph}`}
+                data-testid={`symbol-move-${index + 1}`}
                 disabled={disabled}
-                onClick={() =>
-                  change(
-                    symbols.filter((_, at) => at !== index),
-                    `Removed ${symbol.glyph}. Lines with ${symbol.glyph} show it as text.`,
-                  )
-                }
+                {...reorder.handleProps(ids[index]!)}
               >
-                <Icon name="close" />
+                <Icon name="grip" size={14} />
               </button>
-            </span>
-          </li>
-        ))}
+              <SlotKeys slot={index} />
+              <GlyphPicker
+                glyph={symbol.glyph}
+                label={`Glyph ${symbol.glyph}`}
+                colour={symbolInk(symbol)}
+                testId={`symbol-glyph-${index + 1}`}
+                disabled={disabled}
+                takenBy={takenBy(index)}
+                problemOf={(glyph) =>
+                  sentence(glyphProblem(glyph)) ??
+                  (takenBy(index)(glyph) ? `${glyph} is already in the list.` : null)
+                }
+                // The glyph is its name too (A940), for builds that still show names.
+                onChoose={(glyph) => update(index, { glyph, name: glyph })}
+              />
+              <ColourPicker
+                label={`Colour of ${symbol.glyph}`}
+                value={symbol.colour}
+                valueLabel={symbolColourLabel(symbol.colour)}
+                css={symbolColourVar(symbol.colour)}
+                swatches={SWATCHES}
+                disabled={disabled || locked}
+                describedBy={locked ? `${id}-locked-${index + 1}` : undefined}
+                testId={`symbol-colour-${index + 1}`}
+                onChange={(colour) => update(index, { colour: colour as SymbolColour })}
+              />
+              {locked ? (
+                <span
+                  id={`${id}-locked-${index + 1}`}
+                  className="lf-help symbol-colour-note"
+                  data-testid={`symbol-colour-note-${index + 1}`}
+                >
+                  {COLOUR_LOCKED_NOTE}
+                </span>
+              ) : null}
+              <span className="symbol-actions">
+                <button
+                  type="button"
+                  className="btn quiet danger"
+                  data-ui="item"
+                  aria-label={`Remove ${symbolSpokenName(symbol)}`}
+                  data-tip={`Remove ${symbol.glyph}`}
+                  disabled={disabled}
+                  onClick={() =>
+                    change(
+                      symbols.filter((_, at) => at !== index),
+                      `Removed ${symbol.glyph}. Lines with ${symbol.glyph} show it as text.`,
+                    )
+                  }
+                >
+                  <Icon name="close" />
+                </button>
+              </span>
+            </li>
+          );
+        })}
       </ol>
       {symbols.length === 0 ? (
         <p className="muted">No symbols: add one, or restore the defaults.</p>

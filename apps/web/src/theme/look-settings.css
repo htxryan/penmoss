@@ -499,6 +499,13 @@
   width: 9.5rem;
 }
 
+/* An emoji's colour can't be changed (A1588): the note beside its disabled colour. */
+.symbol-row .symbol-colour-note {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
 .symbol-row .symbol-actions {
   margin-left: auto;
 }
