@@ -18,7 +18,7 @@ The changes have line numbers down the left: the line's number in that version, 
 Under the changes are three buttons. Each shows an icon and one word, and its full name when you hover over it. In a narrow panel the words drop to keep the buttons on one line, Revert's and Copy's first.
 
 - **Restore** (Restore This Version) brings back the whole note as it was then, as a new change. Nothing is lost: the versions after it stay in the history.
-- **Revert** (Revert This Edit), on an agent's version, undoes only what that version changed and keeps every edit made since. If a later edit changed the same lines, it says so.
+- **Revert** (Revert This Edit) undoes only what that version changed and keeps every edit made since. It works on any version, yours or an agent's, except a move to Trash or back out of it, which Trash undoes. If a later edit changed the same lines, it says so.
 - **Copy** (Copy Text) copies the note's text as it was in that version.
 
 On Android, History is a screen of its own that lists the same versions, with Restore and Revert.

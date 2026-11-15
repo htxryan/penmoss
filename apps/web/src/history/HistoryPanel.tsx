@@ -64,7 +64,7 @@ function loadFailure(caught: unknown, source: HistorySource): string {
  * Version history of the open note (T21): the versions the NoteDoc keeps
  * (newest first, each naming the devices and agents behind it), what each
  * changed as a line diff of its markdown, Restore (the old content comes back
- * as a new change that syncs everywhere) and, for an agent's edit, Revert (a
+ * as a new change that syncs everywhere) and Revert (a
  * three-way merge that keeps later edits and reports overlaps). The versions
  * are the note's git notebook's commits (A858), read through the Mac app.
  * Since T51 (A936) it is the History tab of the note's side panel, not an
@@ -283,7 +283,7 @@ export function HistoryPanel({ noteId }: { noteId: string }) {
           } changed again since, and kept.`;
         }
         return result.changed
-          ? 'Reverted the agent’s edit; later edits are kept.'
+          ? 'Reverted this edit; later edits are kept.'
           : 'Nothing to revert: the note no longer has this edit.';
       },
     );

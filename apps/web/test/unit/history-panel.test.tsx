@@ -496,7 +496,7 @@ describe('Version History as a list over a docked preview (Ryan’s review of #1
     expect(changes('left')).toEqual(['same', 'removed', 'gap']);
     expect(changes('right')).toEqual(['same', 'added', 'added']);
     expect(side('left').children[1]!.textContent).toBe('Not in now: version 5');
-    // The top actions keep the short names; an agent's version can be reverted.
+    // The top actions keep the short names.
     const actions = [...dialog.querySelectorAll<HTMLButtonElement>('.history-view-head button')];
     expect(actions.map((button) => button.getAttribute('aria-label'))).toEqual([
       'Restore This Version',
@@ -510,12 +510,13 @@ describe('Version History as a list over a docked preview (Ryan’s review of #1
       'Copy',
     ]);
 
-    // Another version from the list: only the left side changes. A device's: no Revert.
+    // Another version from the list: only the left side changes. A phone's can be reverted too
+    // (A1575).
     const rows = [...container.querySelectorAll<HTMLElement>('.history-list .history-entry')];
     act(() => rows[2]!.click());
     await vi.waitFor(() => expect(side('left').children[1]?.textContent).toBe('version 3'));
     expect(changes('left')).toEqual(['same', 'same', 'gap']);
-    expect(dialog.querySelector('[aria-label="Revert This Edit"]')).toBeNull();
+    expect(dialog.querySelector('[aria-label="Revert This Edit"]')).not.toBeNull();
 
     // Esc closes it, and focus goes back to View.
     act(() => {

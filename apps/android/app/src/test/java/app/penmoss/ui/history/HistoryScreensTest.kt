@@ -162,7 +162,7 @@ class HistoryScreensTest {
     }
 
     @Test
-    fun revertIsOnlyOnAnAgentsVersion() {
+    fun revertIsOnEveryWritersVersion() {
         var selected by mutableStateOf<Long?>(2)
         compose.setContent {
             PenmossTheme {
@@ -182,7 +182,8 @@ class HistoryScreensTest {
                 )
             }
         }
-        compose.onAllNodesWithTag("revertVersion").assertCountEquals(0)
+        // This phone's own version as well as an agent's (A1575).
+        compose.onNodeWithTag("revertVersion").assertIsDisplayed()
         selected = 3
         compose.onNodeWithTag("revertVersion").assertIsDisplayed()
         // The web's name (T39 pass 3, A896).
@@ -224,14 +225,14 @@ class HistoryScreensTest {
         assert(events.single() == "save")
     }
 
-    /** An agent's move to Trash or its restore has no edit to take back: Restore only (A574, N7, A654). */
+    /** A move to Trash or its restore has no edit to take back: Restore only (A574, N7, A654). */
     @Test
     fun anAgentsMoveToTrashOffersNoRevert() {
         for (summary in listOf("Moved to Trash", "Restored from Trash", " Moved to Trash ")) {
             assertFalse(summary, revertible(agent.copy(summary = summary)))
         }
         assertTrue(revertible(agent))
-        assertFalse(revertible(device))
+        assertTrue(revertible(device))
         var selected by mutableStateOf<Long?>(4)
         val trashed = agent.copy(id = 4, summary = "Moved to Trash")
         compose.setContent {

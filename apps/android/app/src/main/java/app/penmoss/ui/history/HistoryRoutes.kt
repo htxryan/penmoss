@@ -46,18 +46,15 @@ private val REASONS = mapOf(
 fun versionLine(version: NoteVersion): String =
     listOf(REASONS[version.reason] ?: version.reason, version.summary).filter { it.isNotBlank() }.joinToString(" · ")
 
-/** Whether the version has an agent among its authors: it offers Revert this edit (NT19). */
-fun isAgentVersion(version: NoteVersion): Boolean = version.authors.any { it.kind == "agent" }
-
-/** The versions an agent's move to Trash or its restore cut (#113): no edit of the text to take back. */
+/** The versions a move to Trash or its restore cut (#113): no edit of the text to take back. */
 private val TRASH_MOVES = setOf("Moved to Trash", "Restored from Trash")
 
 /**
- * Whether the version offers Revert this edit (T42, A574, N7; T40 NT30, A654), as the web's
- * `revertible`: an agent's edit, but never an agent's "Moved to Trash" or "Restored from Trash",
- * which Trash and its Restore undo. Restore this version stays on every version.
+ * Whether the version offers Revert This Edit (T42, A574, N7; T40 NT30, A654; A1575), as the web's
+ * `revertible`: every writer's edit (an agent's, this phone's, a Mac's), but never a "Moved to
+ * Trash" or "Restored from Trash", which Trash and its Restore undo. Restore stays on every version.
  */
-fun revertible(version: NoteVersion): Boolean = version.summary.trim() !in TRASH_MOVES && isAgentVersion(version)
+fun revertible(version: NoteVersion): Boolean = version.summary.trim() !in TRASH_MOVES
 
 /** What History says under its title (A574, A79): versions are automatic. */
 const val VERSIONS_EXPLAINED =
@@ -285,7 +282,7 @@ class HistoryModel(
                 val n = conflicts.size
                 when {
                     n > 0 -> "Reverted what did not overlap later edits. $n ${if (n == 1) "part was" else "parts were"} changed again since, and kept."
-                    result.changed -> "Reverted the agent’s edit; later edits are kept."
+                    result.changed -> "Reverted this edit; later edits are kept."
                     else -> "Nothing to revert: the note no longer has this edit."
                 }
             } catch (error: CancellationException) {

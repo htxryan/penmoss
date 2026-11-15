@@ -146,6 +146,47 @@ test("reverts an agent's edit, keeping a later edit by the user", async ({
   expect(errors).toEqual([]);
 });
 
+test('reverts one of your own versions too, keeping a later edit (A1575)', async ({
+  page,
+  host,
+  notebook,
+}) => {
+  test.setTimeout(120_000);
+  const errors = collectErrors(page);
+  const { remote } = seeded(notebook);
+  await page.goto('/');
+  const id = await newNote(page, `Own ${RUN}`, 'First line');
+  await pushed(page, host, remote, id, 'First line');
+
+  // This Mac's own version: a paragraph added, then pushed.
+  await body(page).getByText('First line').click();
+  await page.keyboard.press(LINE_END);
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Second thought');
+  await pushed(page, host, remote, id, 'Second thought');
+
+  // A later edit, in the first paragraph, pushed as a version of its own.
+  await body(page).getByText('First line').click();
+  await page.keyboard.press(LINE_END);
+  await page.keyboard.type(', then edited');
+  await pushed(page, host, remote, id, 'First line, then edited');
+
+  await page.getByTestId('note-tab-history').click();
+  const own = panel(page)
+    .getByRole('list', { name: 'Versions' })
+    .getByRole('button', { name: /Added “Second thought”/ });
+  await expect(own).toBeVisible({ timeout: 15_000 });
+  await expect(own).toHaveAccessibleName(/Penmoss for Mac/);
+  await own.click();
+  await panel(page).getByRole('button', { name: 'Revert This Edit' }).click();
+  await expect(panel(page).getByTestId('history-status')).toContainText(
+    'Reverted this edit; later edits are kept.',
+  );
+  await expect(body(page)).not.toContainText('Second thought');
+  await expect(body(page)).toContainText('First line, then edited');
+  expect(errors).toEqual([]);
+});
+
 test('Trash restores a note into its folder, and deletes it for good', async ({
   page,
   host,
