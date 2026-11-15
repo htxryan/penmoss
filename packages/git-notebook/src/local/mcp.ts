@@ -1,6 +1,6 @@
 /**
  * The local MCP server over a git notebook (T50 G2, #150; A830): `penmoss mcp --notebook <name>`
- * speaks JSON-RPC over stdio with the shared tool names and schemas (`@penmoss/core/mcp`),
+ * speaks JSON-RPC over stdio with the tool names and schemas in `./tools`,
  * implemented over a `LocalNotebook` as the clone's own writer. Nothing leaves the device but
  * the notebook's own git sync.
  *
@@ -23,7 +23,7 @@ import {
   describeRefusal,
   toolDefinitions,
   type ToolDefinition,
-} from '@penmoss/core/mcp';
+} from './tools';
 import { normaliseTag } from '@penmoss/core/tags';
 import type { SortMode } from '@penmoss/core/workspace';
 import type { EditOp, SectionMode } from '@penmoss/editor/edit-engine';

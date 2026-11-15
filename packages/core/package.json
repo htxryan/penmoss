@@ -35,8 +35,7 @@
     "./diff-apply": "./src/markdown/diff-apply.ts",
     "./feedback": "./src/feedback.ts",
     "./feedback-github": "./src/feedback-github.ts",
-    "./mirror": "./src/mirror/index.ts",
-    "./mcp": "./src/mcp/index.ts"
+    "./mirror": "./src/mirror/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",

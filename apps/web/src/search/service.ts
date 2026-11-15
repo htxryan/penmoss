@@ -10,7 +10,13 @@
  * fields. It is then kept up to date from the notes' list metadata (only notes whose record
  * changed are read again) and saved a moment after it changes.
  */
-import { HYBRID_DEPTH, fuseHybrid, parseQuery, type NoteSection } from '@penmoss/core/search';
+import {
+  HYBRID_DEPTH,
+  fuseHybrid,
+  parseQuery,
+  type NoteSection,
+  type SearchMode,
+} from '@penmoss/core/search';
 import { tagMatches } from '@penmoss/core/tags';
 import { folderSubtree, type FolderRecord } from '@penmoss/core/workspace';
 import type { NoteText } from '../store/idb';
@@ -24,8 +30,7 @@ import type { RegistryEntry } from '@penmoss/sync-client/workspace';
 import type { NoteListEntry } from '../notes/list';
 import { MEANING_ELSEWHERE, sectionsOfRecord, type NotebookMeaning } from './meaning';
 
-export const SEARCH_MODES = ['full-text', 'semantic', 'hybrid'] as const;
-export type SearchMode = (typeof SEARCH_MODES)[number];
+export { SEARCH_MODES, type SearchMode } from '@penmoss/core/search';
 
 /**
  * The app always searches Hybrid (T42, #104 item 2, A571), with no picker: by meaning too in the

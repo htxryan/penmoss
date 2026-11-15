@@ -8,3 +8,5 @@ export * from './rest';
 export * from './mcp';
 export * from './comment-tools';
 export * from './channel';
+export { COMMENT_TOOL_NAMES, commentToolDefinitions, toolDefinitions } from './tools';
+export type { ToolDefinition, ToolOptions } from './tools';
