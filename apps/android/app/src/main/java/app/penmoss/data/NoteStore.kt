@@ -681,6 +681,7 @@ class NoteStore(
     /** The settings changed here and not sent yet, by key. */
     suspend fun pendingSettings(): List<PendingSettingEntity> = pendingSettings.all()
 
+    @androidx.annotation.VisibleForTesting
     suspend fun pendingSettingsCount(): Int = pendingSettings.count()
 
     /**
@@ -732,7 +733,8 @@ class NoteStore(
 
     suspend fun dismissSettingsRefusal() = db.withTransaction { settings.delete(SETTINGS_REFUSED) }
 
-    /** Drops these changes without a word (tests, and a sign-in to another account). */
+    /** Drops these changes without a word. */
+    @androidx.annotation.VisibleForTesting
     suspend fun dropSettings(keys: Collection<String>) = db.withTransaction {
         for (key in keys) pendingSettings.delete(key)
     }

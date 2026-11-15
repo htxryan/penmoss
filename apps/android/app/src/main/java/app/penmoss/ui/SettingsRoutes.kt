@@ -297,11 +297,6 @@ internal fun QuickCaptureRoute(graph: AppGraph, onBack: () -> Unit) {
     )
 }
 
-/** The app's version, for This phone. */
-internal val APP_VERSION: String get() = appVersion(BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE)
-
-/** "0.4.0 (build 17)" (AC1): the build is Play's versionCode, so a report names the exact upload. */
-internal fun appVersion(name: String, code: Int) = "$name (build $code)"
 
 /** Settings → What's New (PEN-109): the cached notes at once, and a fetch at most hourly. */
 @Composable

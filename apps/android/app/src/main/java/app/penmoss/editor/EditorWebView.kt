@@ -120,9 +120,6 @@ object EditorWebView {
         destroyed()
     }
 
-    /** A debug build loads the page with `?debug`, which exposes the editor to chrome://inspect. */
-    val pageUrl: String get() = urlOf("index.html")
-
     /** One of the APK's pages by file name, with `?debug` on a debug build. */
     fun urlOf(page: String): String = "$ORIGIN$ASSET_PATH$page" + if (BuildConfig.DEBUG) "?debug" else ""
 

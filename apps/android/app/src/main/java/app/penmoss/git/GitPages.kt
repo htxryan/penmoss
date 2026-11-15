@@ -37,6 +37,7 @@ object GitPages {
 
     /** The commit check's own origin, apart from every engine page's. */
     const val GUARD_HOST = "git-guard.penmoss.invalid"
+    @androidx.annotation.VisibleForTesting
     const val GUARD_ORIGIN = "https://$GUARD_HOST"
 
     /** The host a page of [role] is served from. */

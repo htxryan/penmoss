@@ -84,9 +84,8 @@ object SettingsIcons {
         "M5.5 5h13A1.5 1.5 0 0 1 20 6.5v8.5a1.5 1.5 0 0 1-1.5 1.5H11l-4.5 3.5v-3.5h-1A1.5 1.5 0 0 1 4 15V6.5A1.5 1.5 0 0 1 5.5 5z",
     )
     val History = icon("Version History", "M3.8 12a8.2 8.2 0 1 0 2.5-5.9M3.8 4.2v4h4M12 7.5V12l3 2")
-    /** A notebook's heading on Home (T52 items 8, 10): the web's `sort`, `folderPlus`, `trash` and `plus`. */
+    /** A notebook's heading on Home (T52 items 8, 10): the web's `sort`, `trash` and `plus`. */
     val Sort = icon("Sort Order", "M7.5 4.5v15m0 0-3-3m3 3 3-3M16.5 19.5v-15m0 0-3 3m3-3 3 3")
-    val FolderPlus = icon("New Folder", "M3.5 7.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2zM12 10.5v5M9.5 13h5")
     val Trash = icon("Trash", "M5 7h14M10 4h4M7 7l.8 12a1.5 1.5 0 0 0 1.5 1.4h5.4a1.5 1.5 0 0 0 1.5-1.4L17 7")
     val Plus = icon("New Note", "M12 5v14M5 12h14")
     val Pin = icon("Pin", "M9 4h6M10 4v5.5L6.5 13h11L14 9.5V4M12 13v7")

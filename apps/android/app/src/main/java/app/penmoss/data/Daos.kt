@@ -124,9 +124,6 @@ interface NoteDao {
     @Query("SELECT * FROM notes WHERE contentClock < 0 AND deleted = 0 AND gone = 0 ORDER BY updatedAt DESC LIMIT :limit")
     suspend fun missing(limit: Int): List<NoteEntity>
 
-    @Query("SELECT COUNT(*) FROM notes WHERE deleted = 0 AND gone = 0")
-    suspend fun liveCount(): Int
-
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(note: NoteEntity)
 

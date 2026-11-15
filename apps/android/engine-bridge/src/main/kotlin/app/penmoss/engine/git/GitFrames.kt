@@ -88,9 +88,4 @@ class FrameBuilder {
     }
 }
 
-/** A blob reference's index, for tests. */
-internal fun blobIndex(value: JsonElement): Int? = ((value as? JsonObject)?.get("\$b") as? JsonPrimitive)?.let { runCatching { it.int }.getOrNull() }
-
-internal val JsonElement.textOrNull: String? get() = (this as? JsonPrimitive)?.takeIf { it.isString }?.content
-
 internal fun JsonElement?.text(): String? = this?.let { if (it is JsonPrimitive && it.isString) it.jsonPrimitive.content else null }

@@ -456,9 +456,6 @@ class GitNotebookHub(
     /** The graph of a notebook, for its screens and captures. */
     fun graph(localId: String): AppGraph = source(localId).graph
 
-    /** The titles and folder names of the notebooks whose screens were opened, for error reports (A826). */
-    suspend fun openedNames(): Collection<String> = sources.values.flatMap { it.names() }
-
     /** Whether the notebook's page is open now (Settings shows its status only then). */
     fun opened(localId: String): Source? = sources[localId]
 
@@ -650,9 +647,6 @@ class GitNotebookHub(
             val engine = opened() ?: return oldCopiesMap.value[localId]?.total ?: 0
             return runCatching { countOldCopies(engine); oldCopiesMap.value[localId]?.total ?: 0 }.getOrDefault(oldCopiesMap.value[localId]?.total ?: 0)
         }
-
-        /** Its titles and folder names, once its graph is made; its id too (A826). */
-        suspend fun names(): Collection<String> = (made?.store?.names().orEmpty()) + localId
 
         suspend fun pending(): List<String> = opened()?.pending().orEmpty()
 

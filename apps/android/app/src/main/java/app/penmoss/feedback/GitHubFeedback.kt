@@ -201,17 +201,6 @@ class PrefsFeedbackLedger(private val prefs: SharedPreferences, private val now:
     }
 }
 
-/** An in-memory ledger (tests). */
-class MemoryFeedbackLedger : FeedbackLedger {
-    val rows = ConcurrentHashMap<String, FeedbackLedgerEntry>()
-
-    override fun get(submissionId: String) = rows[submissionId]
-
-    override fun set(submissionId: String, entry: FeedbackLedgerEntry) {
-        rows[submissionId] = entry
-    }
-}
-
 /** A failed GitHub call; its message never holds the token (core's FeedbackGitHubError). */
 class GitHubFeedbackError(
     message: String,

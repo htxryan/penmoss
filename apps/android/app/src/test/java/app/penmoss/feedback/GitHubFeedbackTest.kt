@@ -432,3 +432,14 @@ class GitHubFeedbackTest {
         const val SECOND = "01JBFEEDBACK0000000000000B"
     }
 }
+
+/** An in-memory ledger. */
+class MemoryFeedbackLedger : FeedbackLedger {
+    val rows = java.util.concurrent.ConcurrentHashMap<String, FeedbackLedgerEntry>()
+
+    override fun get(submissionId: String) = rows[submissionId]
+
+    override fun set(submissionId: String, entry: FeedbackLedgerEntry) {
+        rows[submissionId] = entry
+    }
+}

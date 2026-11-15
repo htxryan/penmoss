@@ -17,7 +17,6 @@ object ThemeEdits {
     const val NAME_MAX = 60
     const val UNTITLED = "Untitled theme"
     private val CUSTOM_ID = Regex("^custom-[a-z0-9]{1,32}$")
-    val FONT_KEYS = listOf("ui", "body", "mono")
 
     fun isCustomId(id: String?): Boolean = id != null && CUSTOM_ID.matches(id)
 

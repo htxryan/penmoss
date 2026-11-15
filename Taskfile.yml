@@ -402,7 +402,7 @@ tasks:
     desc: 'Android: the debug APK, app.penmoss.debug, for local and pull-request builds (apps/android/app/build/outputs/apk/debug/app-debug.apk; docs/android.md)'
     deps: [android:editor]
     dir: apps/android
-    env: &android-env # The agent worker's toolchain (W5); CI and other machines set their own.
+    env: &android-env # The toolchain's usual paths; CI and other machines set their own.
       ANDROID_HOME: '{{.ANDROID_HOME | default (print .HOME "/Android/sdk")}}'
       JAVA_HOME: '{{.JAVA_HOME | default (print .HOME "/opt/jdk-21")}}'
     cmds:
