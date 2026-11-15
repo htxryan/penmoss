@@ -988,6 +988,88 @@ test('nothing that clicks drags the window: Version history, scrolled Settings a
   expect(launched.errors).toEqual([]);
 });
 
+/** Opens View This Version (A1572) on the note's newest version, from its History tab. */
+async function openView(app: ElectronApplication, page: Page): Promise<void> {
+  const panel = page.getByTestId('history-panel');
+  // A reopened window may bring its tab's panel back open (A1497): the command would close it.
+  if (!(await panel.isVisible())) await chooseMenu(app, 'note.history');
+  await expect(panel).toBeVisible();
+  const version = panel.getByRole('list', { name: 'Versions' }).locator('.history-entry').first();
+  await expect(version).toBeVisible({ timeout: 40_000 });
+  await version.click();
+  await panel.getByRole('button', { name: 'View This Version' }).click();
+  await expect(page.getByTestId('history-view')).toBeVisible();
+  await expect(page.getByTestId('history-view-left')).toBeVisible();
+}
+
+test('View This Version: its head drags the window as the title bar does, its buttons click (A1572)', async () => {
+  const launched = await start();
+  const { app, page } = launched;
+  await gitNotebook(launched);
+  const id = await newNote(page, `Viewed ${RUN}`, `What it said ${RUN}.`);
+  // A version: History's Sync Now.
+  await chooseMenu(app, 'note.history');
+  const history = page.getByTestId('history-panel');
+  await history.getByTestId('history-now').getByRole('button', { name: 'Sync Now' }).click();
+  await expect(
+    history.getByRole('list', { name: 'Versions' }).locator('.history-entry'),
+  ).not.toHaveCount(0, { timeout: 40_000 });
+  await chooseMenu(app, 'note.history');
+  await expect(history).toHaveCount(0);
+
+  // The compact title bar: the modal covers the rows beside the panel, so its head is the row.
+  await openView(app, page);
+  expect(await compactNow(page)).toBe('compact');
+  const head = page.locator('.history-view-head');
+  const box = (await head.boundingBox())!;
+  expect(box.y).toBe(0);
+  expect(box.height).toBe(TITLE_BAR_ROW);
+  const middle = box.y + box.height / 2;
+  expect(await region(page, '.history-view-head')).toBe('drag');
+  // Its empty stretch, and beside the time, drag; past the lights' room.
+  const restore = (await head.getByRole('button', { name: 'Restore This Version' }).boundingBox())!;
+  expect(await regionAt(page, restore.x - 12, middle)).toBe('drag');
+  const when = (await head.locator('.history-view-when').boundingBox())!;
+  expect(when.x).toBeGreaterThanOrEqual(TITLE_BAR_INSET);
+  expect(await regionAt(page, when.x + when.width / 2, middle)).toBe('drag');
+  // Its buttons click.
+  for (const name of ['Restore This Version', 'Copy Text', 'Close']) {
+    const button = (await head.getByRole('button', { name, exact: true }).boundingBox())!;
+    expect(await regionAt(page, button.x + button.width / 2, middle), name).toBe('no-drag');
+  }
+  // Above History's panel, the cap over the tab strip leaves the strip's own regions: its empty
+  // part still drags.
+  const panel = (await page.locator('.note-side').boundingBox())!;
+  const above: string[] = [];
+  for (let x = panel.x + 4; x < panel.x + panel.width; x += 8) {
+    above.push(await regionAt(page, x, middle));
+  }
+  expect(above).toContain('drag');
+  expect(await overLights(page)).toEqual([]);
+  await clicksEverywhere(page, 'view this version');
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('history-view')).toHaveCount(0);
+
+  // The standard title bar (Settings → Appearance, the windows reopen): the window's own frame
+  // drags, above the page, and nothing in the page sets a region.
+  await chooseMenu(app, 'app.appearance');
+  await answerDialog(app, 0);
+  await page.getByTestId('compact-title-bar').click();
+  await expect.poll(() => page.isClosed()).toBe(true);
+  const [main] = await shownWindows(app, 1);
+  expect(await titleBarOf(app, 'main')).toBe('native');
+  await go(main!, `/notes/${id}`);
+  await expect(main!.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+  await openView(app, main!);
+  expect(await compactNow(main!)).toBeNull();
+  expect(await region(main!, '.history-view-head')).not.toBe('drag');
+  const standardHead = (await main!.locator('.history-view-head').boundingBox())!;
+  expect(await regionAt(main!, standardHead.x + standardHead.width / 2, standardHead.y + 10)).toBe(
+    'none',
+  );
+  expect(launched.errors).toEqual([]);
+});
+
 test('the Tags page: its title and filter drag the window, and its tables scroll under them (R2-4, R2-8)', async () => {
   const launched = await start();
   const { app, page } = launched;

@@ -23,5 +23,12 @@ export {
   type NoteMeta,
 } from './frontmatter';
 export { unresolvedLinks, type CodecContext, type LinkResolver } from './markdown/context';
-export { parseMarkdown, type ParsedNote } from './markdown/parse';
+export {
+  parseMarkdown,
+  parseMarkdownWithLines,
+  type BlockLines,
+  type LinedNote,
+  type LineSpan,
+  type ParsedNote,
+} from './markdown/parse';
 export { serializeMarkdown, type NoteContent } from './markdown/serialize';

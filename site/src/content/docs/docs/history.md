@@ -34,9 +34,13 @@ Your repository's git history keeps every version, so you can also read it with 
 
 **View** opens the version over the rest of the window, with History still beside it. The version is on the left and the note as it is now on the right, both read-only, laid out as the note is, pictures included, and scrolling together. What differs is tinted on each side: on the left, what is not in the note now; on the right, what was added since. That is what **Restore** would change.
 
-- Pick another version in History, or move with ↑ and ↓, and the left side shows that one instead.
+Each side numbers its blocks by their lines in the note's markdown, and the left side is headed by the version's commit, shortened to 7 characters, and its time. Click the commit to copy it whole.
+
+- **Show Diff** shows just the blocks that changed, each with 3 unchanged blocks around it, as a code review does. A row such as **⋯ 12 unchanged lines** stands for the rest: click it to show them. **Show Full File** shows every block again. Diff is the first choice, and this device remembers the one you pick.
+- When the version and the note now are the same, Diff says **No changes from now**.
+- Pick another version in History, or move with ↑ and ↓, and the left side shows that one instead, in Diff or Full File as before.
 - **Restore**, **Revert** and **Copy** are at the top too. Restore and Revert close the view and show the result in the note.
-- **Close** or Esc goes back to History.
+- **×** (Close) or Esc goes back to History.
 
 View is not there in a narrow window, which has no room for two sides.
 

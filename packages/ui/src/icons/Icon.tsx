@@ -78,6 +78,10 @@ const PATHS = {
       <rect x="16" y="9" width="6" height="11" rx="1.5" />
     </>
   ),
+  /** Just the changes (History's View, A1572): a file with a line added and one taken out. */
+  diff: (
+    <path d="M6.5 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5zM13.5 3.5V8H18M11 9.5v5M8.5 12h5M8.5 17h5" />
+  ),
   // History's View This Version (A1572): an eye.
   eye: (
     <>

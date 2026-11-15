@@ -107,8 +107,15 @@ test('View shows a version beside the note as it is now, and restores it', async
     side(page, 'right').locator('p', { hasText: 'Banner when sync stops' }),
   ).not.toHaveAttribute('data-change');
   // The top actions: short names, full ones as their names; Revert on every version (A1575).
+  // The first switches Diff, the default, to Full File (A1572).
   const actions = view(page).locator('.history-view-head > button');
-  await expect(actions).toHaveText(['Restore', 'Revert', 'Copy', /^Close/]);
+  await expect(actions).toHaveText(['Show Full File', 'Restore', 'Revert', 'Copy', ''], {
+    useInnerText: true,
+  });
+  // Close is the app's × for a dialog, its name and tooltip in words.
+  const close = view(page).getByRole('button', { name: 'Close', exact: true });
+  await expect(close.locator('svg[data-icon="close"]')).toBeVisible();
+  await expect(close).toHaveAttribute('data-tip', 'Close (Esc)');
   await expect(view(page).getByRole('button', { name: 'Restore This Version' })).toBeVisible();
   await expect(view(page).getByRole('button', { name: 'Revert This Edit' })).toBeVisible();
   await expect(view(page).getByRole('button', { name: 'Copy Text' })).toBeVisible();
@@ -159,10 +166,13 @@ test('View shows a version beside the note as it is now, and restores it', async
     const contrast = await sidesContrast(page);
     expect(contrast.failed).toEqual([]);
     expect(contrast.unsure).toEqual([]);
-    expect(contrast.passed.filter((html) => html.includes('data-change="removed"'))).toHaveLength(
-      1,
-    );
-    expect(contrast.passed.filter((html) => html.includes('data-change="added"'))).toHaveLength(2);
+    // The blocks, not the key over each side, which is in the scroll too.
+    const blocks = (change: string) =>
+      contrast.passed.filter(
+        (html) => html.includes(`data-change="${change}"`) && !html.includes('history-view-key'),
+      );
+    expect(blocks('removed')).toHaveLength(1);
+    expect(blocks('added')).toHaveLength(2);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/history-view-${scheme}.png` });
   }
   await page.emulateMedia({ colorScheme: 'light' });
