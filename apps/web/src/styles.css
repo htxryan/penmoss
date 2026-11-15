@@ -3121,14 +3121,9 @@ a {
   gap: 0.35rem;
 }
 
-.tag-empty,
-.tag-status {
+.tag-empty {
   margin: 0.25rem 0.35rem;
   font-size: 0.8rem;
-}
-
-.tag-status:empty {
-  display: none;
 }
 
 .tag-mini {
@@ -6110,7 +6105,7 @@ a.save-status[data-state='stopped']:hover {
 }
 
 /* An empty section's words start where its rows would. */
-.sb-part :is(.list-empty, .tag-status) {
+.sb-part .list-empty {
   margin: 0.25rem calc(var(--sb-gutter) + 0.3rem) 0.25rem var(--sb-icon-inset);
 }
 

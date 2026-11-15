@@ -11,7 +11,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import { useNoteList, useNotes } from '../notes/hooks';
+import { useNoteList } from '../notes/hooks';
 import { Menu } from '../shell/Menu';
 import { SourceScope } from '../sources/context';
 import { useSourcesState } from '../sources/hooks';
@@ -19,7 +19,6 @@ import type { Source } from '../sources/registry';
 import type { Workspace } from '../workspace/service';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import {
-  describedAfter,
   filterKey,
   mergeChanges,
   mergeCounts,
@@ -31,6 +30,7 @@ import {
   type TagRow,
 } from './manage';
 import { DeleteDialog, MergeDialog } from './TagDialogs';
+import { useTagChanges } from './tag-changes';
 import { TagDoneToast, type TagDone } from './TagDoneToast';
 
 /** What choosing a tag's name does: what choosing it in the sidebar does, in its notebook. */
@@ -145,7 +145,6 @@ function NotebookTags({
   readonly onShowTag: ShowTag;
   readonly onDone: (done: TagDone) => void;
 }) {
-  const notes = useNotes();
   const workspace = useWorkspace();
   const list = useNoteList();
   const noteTags = useMemo(() => list.map((entry) => entry.tags), [list]);
@@ -188,26 +187,12 @@ function NotebookTags({
    * Makes `changes` in this notebook's notes and moves the descriptions with them; the toast
    * says `text` and offers Undo, which puts back the notes and the descriptions.
    */
+  const change = useTagChanges();
   const run = async (changes: readonly TagChange[], text: (notes: number) => string) => {
-    const before = descriptions;
-    const moved = describedAfter(before, changes);
-    const result = await notes.changeTags(changes);
-    for (const [tag, description] of Object.entries(moved)) {
-      workspace.setTagDescription(tag, description);
-    }
-    void workspace.flush().catch(() => undefined);
+    onDone(await change(changes, text));
     // The tags it changed leave the selection; a merge's target too, as the selection was its.
-    const touched = new Set(changes.flatMap((change) => [change.from, change.to ?? change.from]));
+    const touched = new Set(changes.flatMap((each) => [each.from, each.to ?? each.from]));
     setSelected((current) => new Set([...current].filter((tag) => !touched.has(tag))));
-    onDone({
-      text: text(result.notes.length),
-      undo: async () => {
-        const back = await result.undo();
-        for (const tag of Object.keys(moved)) workspace.setTagDescription(tag, before[tag] ?? '');
-        void workspace.flush().catch(() => undefined);
-        return back.length;
-      },
-    });
   };
 
   const rename = async (from: string, to: string, nested: boolean) => {

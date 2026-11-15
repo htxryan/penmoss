@@ -1245,23 +1245,14 @@ export class Notes {
   }
 
   /**
-   * Renames a tag, or merges it into one that exists (T18, T24), in every note that has it (and
-   * the levels nested under it), notes in Trash included, through each note's own document:
-   * open notes in their editor's replica, the rest in the local store. The rename is journalled
-   * first, so one cut short (the window closed) completes the next time the app starts. Returns
-   * the notes covered.
-   */
-  async renameTag(from: string, to: string): Promise<string[]> {
-    return [...(await this.changeTags([{ from, to }])).notes];
-  }
-
-  /**
-   * Tag changes in order, as `renameTag` makes a rename (the Tags page, finding 8 of Ryan's
-   * review of #192): renames and merges, one level only when `nested` is false, and deletes
-   * (`to` null), in every note in this notebook that has the tag, Trash included, so a restore
-   * never brings an old tag back. Journalled first, so a batch cut short completes at the next
-   * start. Returns the notes changed and an Undo that puts back what each change did in each
-   * note (not journalled: it lasts while the page that offers it is open).
+   * Tag changes in order (T18, T24; the Tags page and the sidebar's Tags, finding 8 of Ryan's
+   * review of #192, A1508): renames and merges (a rename to a tag that exists), with the levels
+   * nested under the tag unless `nested` is false, and deletes (`to` null), in every note in this
+   * notebook that has the tag, Trash included, so a restore never brings an old tag back. Each
+   * note changes through its own document: open notes in their editor's replica, the rest in the
+   * local store. Journalled first, so a batch cut short (the window closed) completes at the next
+   * start. Returns the notes changed and an Undo that puts back what each change did in each note
+   * (not journalled: it lasts while the page that offers it is open).
    */
   changeTags(changes: readonly TagChange[]): Promise<TagChangeResult> {
     const run = this.renaming.then(async () => {

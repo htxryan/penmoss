@@ -1,11 +1,22 @@
 import { Icon } from '@penmoss/ui/icons';
 import { normaliseTag, tagTree, type TagNode } from '@penmoss/core/tags';
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { useNoteList, useNotes } from '../notes/hooks';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react';
+import { useNoteList } from '../notes/hooks';
 import { useStoredCollapse } from '../shell/collapsed';
 import { useShowTag } from '../search/show-tag';
 import { SectionHead } from '../shell/SectionHead';
 import { linkHandler } from '../router';
+import { notesText, renameProblem } from './manage';
+import { useTagChanges } from './tag-changes';
+import { TagDoneToast, type TagDone } from './TagDoneToast';
 
 /** Whether the Tags panel is collapsed on this device (T51, A934). */
 export const TAGS_COLLAPSED_KEY = 'penmoss.sidebar.tags';
@@ -13,8 +24,9 @@ export const TAGS_COLLAPSED_KEY = 'penmoss.sidebar.tags';
 /**
  * The tag pane (T18): every tag in the notes on this device, nested by `/`,
  * with how many notes carry it (or a tag under it). Choosing a tag opens
- * Search on its notes (finding 9 of Ryan's review of #192); Rename changes the tag in every note that has it, and merges
- * when the new name is already a tag. Built from the local replica, so it
+ * Search on its notes (finding 9 of Ryan's review of #192); Rename changes the tag in every note
+ * that has it, and merges when the new name is already a tag, by the Tags page's rules and with
+ * its Undo (A1508). Built from the local replica, so it
  * works offline, and it follows other devices as catch-up sync brings their
  * changes in.
  */
@@ -25,7 +37,8 @@ export function TagPane({ tools }: { readonly tools?: ReactNode } = {}) {
   const known = useMemo(() => new Set(list.flatMap((entry) => entry.tags)), [list]);
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
   const [renaming, setRenaming] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
+  const [done, setDone] = useState<TagDone | null>(null);
+  const closeDone = useCallback(() => setDone(null), []);
   const [collapsed, toggleCollapsed] = useStoredCollapse(TAGS_COLLAPSED_KEY);
 
   const expanded = (tag: string) => open.has(tag);
@@ -77,10 +90,7 @@ export function TagPane({ tools }: { readonly tools?: ReactNode } = {}) {
             data-ui="item"
             aria-label={`Rename #${node.tag}`}
             data-tip="Rename or Merge"
-            onClick={() => {
-              setStatus(null);
-              setRenaming(renaming === node.tag ? null : node.tag);
-            }}
+            onClick={() => setRenaming(renaming === node.tag ? null : node.tag)}
           >
             <Icon name="pencil" size={14} />
           </button>
@@ -89,9 +99,9 @@ export function TagPane({ tools }: { readonly tools?: ReactNode } = {}) {
           <RenameTag
             from={node.tag}
             known={known}
-            onDone={(message) => {
+            onDone={(changed) => {
               setRenaming(null);
-              setStatus(message);
+              if (changed) setDone(changed);
             }}
           />
         ) : null}
@@ -129,9 +139,7 @@ export function TagPane({ tools }: { readonly tools?: ReactNode } = {}) {
           {rows(tree, 0)}
         </ul>
       )}
-      <p className="tag-status" role="status">
-        {status}
-      </p>
+      <TagDoneToast done={done} onClose={closeDone} />
     </section>
   );
 }
@@ -143,9 +151,8 @@ function RenameTag({
 }: {
   from: string;
   known: ReadonlySet<string>;
-  onDone: (message: string | null) => void;
+  onDone: (done: TagDone | null) => void;
 }) {
-  const notes = useNotes();
   const [value, setValue] = useState(from);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -156,29 +163,24 @@ function RenameTag({
   }, []);
   const to = normaliseTag(value);
   const merge = to !== null && to !== from && known.has(to);
+  const change = useTagChanges();
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!to) {
-      setError('A tag is letters, digits, - and _, with / for levels, and no spaces.');
-      return;
-    }
     if (to === from) return onDone(null);
-    if (to.startsWith(`${from}/`)) {
-      setError(`#${from} cannot move inside itself.`);
+    const problem = renameProblem(from, value);
+    // The Tags page's rules (renameProblem): a name with no tag in it has one.
+    if (problem || !to) {
+      setError(problem);
       return;
     }
     setBusy(true);
-    notes
-      .renameTag(from, to)
-      .then((changed) => {
-        const count = `${changed.length} ${changed.length === 1 ? 'note' : 'notes'}`;
-        onDone(
-          merge
-            ? `Merged #${from} into #${to} in ${count}`
-            : `Renamed #${from} to #${to} in ${count}`,
-        );
-      })
+    change([{ from, to }], (n) =>
+      merge
+        ? `Merged #${from} into #${to} in ${notesText(n)}.`
+        : `Renamed #${from} to #${to} in ${notesText(n)}.`,
+    )
+      .then(onDone)
       .catch((caught: unknown) => {
         setBusy(false);
         setError(caught instanceof Error ? caught.message : String(caught));

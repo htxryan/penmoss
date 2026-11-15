@@ -18,6 +18,11 @@ import { TEST_NOTEBOOK } from './support/local-sources';
 import { memoryNotes } from './support/memory-notes';
 
 const notesToStop: Notes[] = [];
+
+/** A rename (or merge), as the sidebar's Tags makes one: the notes it changed. */
+const renameTag = async (notes: Notes, from: string, to: string): Promise<string[]> => [
+  ...(await notes.changeTags([{ from, to }])).notes,
+];
 afterEach(() => {
   for (const notes of notesToStop.splice(0)) notes.stop();
   vi.restoreAllMocks();
@@ -516,7 +521,7 @@ describe('Notes: offline-first replica (T8)', () => {
       expect(notes.list().find((entry) => entry.id === id)?.tags).toEqual(['chores/yard']),
     );
 
-    const changed = await notes.renameTag('chores', 'home');
+    const changed = await renameTag(notes, 'chores', 'home');
     expect(changed.sort()).toEqual([id, stored].sort());
     expect(frontmatterTags(open.replica.doc)).toEqual(['home/yard']);
     expect(store.records.get(stored)).toMatchObject({ tags: ['home'], unsynced: true });
@@ -536,7 +541,7 @@ describe('Notes: offline-first replica (T8)', () => {
     await notes.refreshLocal();
     expect(notes.list().map((entry) => entry.id)).not.toContain(id);
 
-    expect(await notes.renameTag('chores', 'home')).toEqual([id]);
+    expect(await renameTag(notes, 'chores', 'home')).toEqual([id]);
     expect(store.records.get(id)).toMatchObject({ tags: ['home'], deleted: true, unsynced: true });
   });
 
@@ -559,7 +564,7 @@ describe('Notes: offline-first replica (T8)', () => {
     const update = store.update.bind(store);
     store.update = (noteId, fn) =>
       noteId === ids[1] ? Promise.reject(new Error('The tab closed')) : update(noteId, fn);
-    await expect(first.notes.renameTag('chores', 'home')).rejects.toThrow('The tab closed');
+    await expect(renameTag(first.notes, 'chores', 'home')).rejects.toThrow('The tab closed');
     first.notes.stop();
     store.update = update;
     expect(store.records.get(ids[1]!)?.tags).toEqual(['chores']);
@@ -761,7 +766,7 @@ describe('Notes: offline-first replica (T8)', () => {
     open.close();
     await notes.deleteNote(id);
     expect((await notes.trash()).map((entry) => entry.id)).toEqual([id]);
-    await notes.renameTag('a', 'b');
+    await renameTag(notes, 'a', 'b');
     const daily = await notes.ensurePeriodic('daily', '2026-10-29', '## Plan\n');
     // Salted with the notebook's id, as the CLI makes it (A820).
     expect(daily).toBe(periodicNoteId('daily', '2026-10-29', salt));

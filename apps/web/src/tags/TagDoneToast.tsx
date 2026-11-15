@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { showToast } from '../toasts/toasts';
 import { ToastSlot } from '../toasts/ToastSlot';
 
-/** What a rename, merge or delete on the Tags page did, with its Undo. */
+/** What a rename, merge or delete did (the Tags page, the sidebar's Tags), with its Undo. */
 export interface TagDone {
   /** `Renamed #a to #b in 3 notes.` */
   readonly text: string;
@@ -15,7 +15,8 @@ export interface TagDone {
 export const TAG_DONE_MS = 8000;
 
 /**
- * A tag change's toast on the Tags page (finding 8 of Ryan's review of #192): what it did, with
+ * A tag change's toast, on the Tags page and the sidebar's Tags (finding 8 of Ryan's review of
+ * #192; A1508): what it did, with
  * Undo in place of a confirm before a rename. It waits while pointed at or focused, as Trash's
  * Undo does (A524), so a keyboard user has no time limit.
  */
