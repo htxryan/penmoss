@@ -3,6 +3,7 @@
  * is the deleted remote server's list for a write token (comment tools aside), with the note id's
  * description naming short ids since PEN-69: agents' calls mean what they meant there.
  */
+import { MAX_ATTACHMENT_BYTES } from '@penmoss/core/attachments';
 import { describe, expect, it } from 'vitest';
 import {
   adviceFor,
@@ -29,9 +30,9 @@ describe('shared MCP tool definitions', () => {
   });
 
   it('say what each server takes, and give the same advice', () => {
-    const local = toolDefinitions({ attachmentMaxBytes: 10 * 1024 * 1024 });
+    const local = toolDefinitions({ attachmentMaxBytes: MAX_ATTACHMENT_BYTES });
     expect(local.find((tool) => tool.name === 'attach_file')!.description).toContain(
-      'at most 10240 KB',
+      'at most 51200 KB',
     );
     expect(adviceFor('file_too_large', SERVER)).toContain('at most 700 KB');
     expect(

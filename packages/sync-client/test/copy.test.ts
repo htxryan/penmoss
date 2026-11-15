@@ -1,9 +1,15 @@
 import * as Y from '@y/y';
 import { describe, expect, it } from 'vitest';
 import { createNoteThread, readThreads } from '../src/comments';
-import { initNote, readIdentity, readNoteNotebook, readTitle } from '../src/note';
+import { initNote, NOTE_META, readIdentity, readTitle } from '../src/note';
 import { NOTE_ROOT } from '../src/replica';
-import { copyNote, noteAttachmentPaths, recordFromDoc } from '../src/records';
+import {
+  CONFLICT_SUFFIX,
+  conflictCopy,
+  copyNote,
+  noteAttachmentPaths,
+  recordFromDoc,
+} from '../src/records';
 import { frontmatterTags, setFrontmatterTag } from '../src/tags';
 import { bodyJson, createYjs14Replica } from '../src/yjs14';
 import { appendEmbed, appendLinkParagraph, appendParagraph } from './support/editing';
@@ -12,11 +18,9 @@ const IMAGE = `attachments/${'a'.repeat(64)}.png`;
 
 function original() {
   const replica = createYjs14Replica();
-  initNote(
-    replica.doc,
-    { id: 'orig', created: '2026-11-01T09:00:00-05:00', kind: 'note', notebook: 'nb1' },
-    'Plan',
-  );
+  initNote(replica.doc, { id: 'orig', created: '2026-11-01T09:00:00-05:00', kind: 'note' }, 'Plan');
+  // A note made before A1449 records its notebook (T43, A766); nothing reads it now.
+  replica.doc.transact(() => replica.doc.get(NOTE_META).setAttr('notebook', 'nb1'));
   appendParagraph(replica, 'First line');
   appendLinkParagraph(replica, 'See ', { noteId: 'other', target: 'Other' }, '.');
   appendLinkParagraph(replica, 'And ', { noteId: 'outside', target: 'Outside' }, '.');
@@ -59,7 +63,7 @@ describe('copyNote (T68: Duplicate, #227; another notebook, #230)', () => {
     expect(readTitle(doc)).toBe('Plan (copy)');
     expect(readIdentity(doc)).toMatchObject({ id: 'copy1', kind: 'note' });
     expect(readIdentity(doc).created).toMatch(/^2026-11-06T/);
-    expect(readNoteNotebook(doc)).toBe('nb1');
+    expect(doc.get(NOTE_META).getAttr('notebook')).toBeUndefined();
     expect(frontmatterTags(doc)).toEqual(['work/plans']);
     expect(readThreads(doc)).toEqual([]);
     expect(bodyJson(doc)).toEqual(bodyJson(read(state)));
@@ -69,7 +73,7 @@ describe('copyNote (T68: Duplicate, #227; another notebook, #230)', () => {
 
   it('leaves the frontmatter tags behind when told to, and the body as it is (A1353)', () => {
     const state = original();
-    const doc = read(copyNote(state, { title: 'Plan', notebook: null, tags: false }).update);
+    const doc = read(copyNote(state, { title: 'Plan', tags: false }).update);
     expect(frontmatterTags(doc)).toEqual([]);
     expect(bodyJson(doc)).toEqual(bodyJson(read(state)));
     // tags: true is the default's behaviour.
@@ -80,13 +84,23 @@ describe('copyNote (T68: Duplicate, #227; another notebook, #230)', () => {
   it('points links to notes copied with it at their copies, and leaves the rest', () => {
     const record = copyNote(original(), {
       title: 'Plan',
-      notebook: null,
       links: new Map([['other', 'other-copy']]),
     });
-    const doc = read(record.update);
-    expect(readNoteNotebook(doc)).toBeNull();
     const ids = record.links?.map((link) => link.noteId);
     expect(ids).toEqual(['other-copy', 'outside', 'other-copy']);
+  });
+
+  it('a conflict copy keeps the body under a new id and a marked title, and not the old notebook (A640)', () => {
+    const state = original();
+    const record = conflictCopy(state, { id: 'copy2', now: new Date(2026, 10, 6) });
+    const doc = read(record.update);
+    expect(record.noteId).toBe('copy2');
+    expect(readTitle(doc)).toBe(`Plan${CONFLICT_SUFFIX}`);
+    expect(readIdentity(doc)).toMatchObject({ id: 'copy2', kind: 'note' });
+    expect(readIdentity(doc).created).toMatch(/^2026-11-06T/);
+    expect(bodyJson(doc)).toEqual(bodyJson(read(state)));
+    expect(doc.get(NOTE_META).getAttr('notebook')).toBeUndefined();
+    expect(record.unsynced).toBe(true);
   });
 
   it('lists the attachments the body shows', () => {

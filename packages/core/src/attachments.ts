@@ -18,18 +18,12 @@ export const IMAGE_TYPES = {
 export type ImageType = keyof typeof IMAGE_TYPES;
 
 /**
- * The largest file the app takes, pasted, dropped or picked, on the Mac and on Android (A64,
- * A486); the engine commits what the app's store holds.
+ * The largest file Penmoss keeps, on every path (A1533): pasted, dropped or picked in the app on
+ * the Mac and on Android (A64, A486), and sent by agents through MCP, the CLI and Android's
+ * `/api` (A828). The engine commits what the store holds; GitHub refuses files over 100 MB.
+ * Android's Kotlin has the same number (`Attachments.MAX_BYTES`).
  */
 export const MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024;
-/**
- * The largest file the headless paths add to a note (A828): agents through MCP (the local
- * server and the relay), the CLI and Android's `/api`, where a file comes whole in one call
- * (base64, for MCP). It is not the app's `MAX_ATTACHMENT_BYTES` because A828 took A213's 10 MB
- * cap for git notebooks, and nothing has made the two one since; A213's own reason (a Durable
- * Object's memory) went with the server.
- */
-export const AGENT_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
 
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 /** `attachments/<sha256>.<ext>` at the end of a path, after any folder prefix (`../../`). */

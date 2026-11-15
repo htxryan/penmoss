@@ -103,7 +103,7 @@ Select a picture to resize it with its handle, and to set its **Alt text** and *
 
 Add any other file by dropping or pasting it, or with **File** in the slash menu. It shows as a chip with its name, size and type, with **Preview** for a PDF and a way to open or save a copy.
 
-The Mac app takes pictures and files up to 50 MB. The Android app, the `penmoss` CLI and agents keep files of at most 10 MB in a notebook (the CLI's `attach`, at most 700 KB).
+A picture or file can be up to 50 MB, however it is added: in the Mac or Android app, with `penmoss attach`, or by an agent.
 
 Pictures and files are saved on the device first, so this works offline, and go to the repository with the next sync, in its `attachments/` folder. See [Notebooks on disk](/docs/reference/notebook-format/#attachments).
 

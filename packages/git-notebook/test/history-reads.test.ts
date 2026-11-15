@@ -31,7 +31,6 @@ function counted(transport: GitTransport, batched = true) {
     commit: (head, changes, message) => transport.commit(head, changes, message),
     push: (commit) => transport.push(commit),
     log: (options) => (count('log'), transport.log(options)),
-    readAt: (commit, path) => (count('readAt'), transport.readAt(commit, path)),
     ...(batched && transport.readDir
       ? {
           readDir: (commits: readonly string[], dir: string) => {

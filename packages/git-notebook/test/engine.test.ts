@@ -2,6 +2,7 @@
  * The engine's acceptance criteria one by one (T50 G1, #149), over the in-memory transport. The
  * property runs (converge.test.ts, converge-2.test.ts) mix all of these at random; here each has a test of its own.
  */
+import { MAX_ATTACHMENT_BYTES } from '@penmoss/core/attachments';
 import { MAX_PATH_CHARS } from '@penmoss/core/mirror';
 import { periodicNoteId } from '@penmoss/core/periodic';
 import { bodyMarkdown } from '@penmoss/sync-client/markdown';
@@ -700,7 +701,7 @@ describe('the Journal (A820, A827)', () => {
 });
 
 describe('attachments (A828)', () => {
-  it('commits the files notes use, once, and refuses files over 10 MB', async () => {
+  it('commits the files notes use, once, and refuses files over 50 MB (A1533)', async () => {
     const nb = testNotebook();
     const a = await nb.open('A', { create: true });
     const bytes = new TextEncoder().encode('png bytes');
@@ -710,7 +711,7 @@ describe('attachments (A828)', () => {
     expect(nb.files()).toContain(`attachments/${sha256}.png`);
     expect(nb.remote.read(nb.head()!, `attachments/${sha256}.png`)).toEqual(bytes);
     await expect(
-      a.ops.keepAttachment(new Uint8Array(10 * 1024 * 1024 + 1), 'bin'),
+      a.ops.keepAttachment(new Uint8Array(MAX_ATTACHMENT_BYTES + 1), 'bin'),
     ).rejects.toMatchObject({
       code: 'file_too_large',
     });

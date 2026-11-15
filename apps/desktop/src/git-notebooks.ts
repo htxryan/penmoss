@@ -100,7 +100,6 @@ export const TRANSPORT_OPS = [
   'commit',
   'push',
   'log',
-  'readAt',
   'readDir',
   'maintain',
 ] as const satisfies readonly TransportMethod[];
@@ -984,10 +983,6 @@ export class GitNotebooks {
             ? { limit: Math.min(options.limit, 10_000) }
             : {}),
         });
-      }
-      case 'readAt': {
-        const [path] = paths([args[1]]);
-        return transport.readAt(sha(args[0]), path!);
       }
       case 'readDir': {
         // History's reads: a note's directory at many commits (Ryan's review of #192). The
