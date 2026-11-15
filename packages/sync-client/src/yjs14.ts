@@ -20,6 +20,27 @@ interface DeltaJson {
   readonly children?: DeltaJson[];
 }
 
+/**
+ * An update that changes nothing: no structs and an empty delete set, which Yjs encodes in two
+ * bytes. A transaction that wrote nothing new still emits one.
+ */
+export function isEmptyUpdate(update: Uint8Array): boolean {
+  return update.byteLength <= 2;
+}
+
+/**
+ * Whether Yjs holds back content for `doc` it cannot apply yet: structs whose dependency is
+ * missing and, with `deletes` (the default), deletions of content not received.
+ *
+ * The git engine asks about structs only (`deletes: false`, A1148). Its question is whether to
+ * apply a doc's files at head again: @y/y rc.29 can lose a pending struct when its dependency
+ * arrives in a later update, and only that struct's own file brings it back. A pending deletion
+ * is not lost that way, so it is no reason to read the files again.
+ */
+export function hasPending(doc: Y.Doc, { deletes = true }: { deletes?: boolean } = {}): boolean {
+  return doc.store.pendingStructs != null || (deletes && doc.store.pendingDs != null);
+}
+
 export function createYjs14Replica(doc: Y.Doc = new Y.Doc()): Yjs14Replica {
   const root = () => doc.get(NOTE_ROOT);
   return {

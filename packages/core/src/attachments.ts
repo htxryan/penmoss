@@ -157,3 +157,9 @@ export async function sha256Hex(bytes: Uint8Array<ArrayBuffer>): Promise<string>
   for (const byte of digest) hex += byte.toString(16).padStart(2, '0');
   return hex;
 }
+
+/** Lower-case hex SHA-256 of `text`'s UTF-8. */
+export function sha256HexText(text: string): Promise<string> {
+  // Copied: the Workers types give the encoder's bytes any ArrayBufferLike, not an ArrayBuffer.
+  return sha256Hex(new Uint8Array(new TextEncoder().encode(text)));
+}

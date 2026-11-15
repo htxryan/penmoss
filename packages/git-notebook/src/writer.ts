@@ -4,6 +4,7 @@
  * CLI's credential store): a copied profile (a restored backup, a cloned data folder) has the
  * docs but not the secret, so it gets a new id and never writes into another writer's files.
  */
+import { sha256HexText } from '@penmoss/core/attachments';
 import { ulid } from '@penmoss/core/ids';
 
 export type WriterKind = 'device' | 'agent';
@@ -46,10 +47,8 @@ export class MemorySecrets implements WriterSecrets {
   }
 }
 
-export async function sha256Hex(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
-}
+/** The SHA-256 of a writer's secret, as `writers.json` keeps it (core's `sha256HexText`). */
+export const sha256Hex = sha256HexText;
 
 function newSecret(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));

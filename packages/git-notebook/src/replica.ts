@@ -7,6 +7,7 @@
 import * as Y from '@y/y';
 import type { NotebookInfo } from './layout';
 import type { WriterRecord } from './writer';
+import { isEmptyUpdate } from '@penmoss/sync-client/yjs14';
 import { applyKeepingId, ENGINE_ORIGIN, GIT_ORIGIN, newDoc, LOCAL_STORE_ORIGIN } from './yjs';
 
 /** The engine's bookkeeping, saved with the docs. */
@@ -296,7 +297,7 @@ export class NotebookReplica {
     const doc = id === null ? this.workspace : this.ensureNote(id);
     let changed = false;
     const off = (bytes: Uint8Array) => {
-      if (bytes.byteLength > 2) changed = true;
+      if (!isEmptyUpdate(bytes)) changed = true;
     };
     doc.on('update', off);
     try {
@@ -429,7 +430,7 @@ export class NotebookReplica {
 
   private watch(doc: Y.Doc, id: string | null): void {
     doc.on('update', (update: Uint8Array, origin: unknown) => {
-      if (update.byteLength <= 2) return;
+      if (isEmptyUpdate(update)) return;
       const local = origin !== GIT_ORIGIN && origin !== ENGINE_ORIGIN;
       // Whoever wrote what did not come from the repository is this writer (A829): the replica's
       // own id, or a window's that the engine adopts from the store (A851).
