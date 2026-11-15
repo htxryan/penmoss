@@ -6,7 +6,7 @@
  */
 import { parseMarkdown } from '@penmoss/core';
 import { ulid } from '@penmoss/core/ids';
-import { isSha256 } from '@penmoss/core/attachments';
+import { AGENT_ATTACHMENT_MAX_BYTES, isSha256 } from '@penmoss/core/attachments';
 import {
   DEFAULT_DAILY_TEMPLATE,
   DEFAULT_TIME_ZONE,
@@ -42,8 +42,6 @@ import { isPurged, markPurged } from './purge';
 
 /** A git notebook's own settings live under this user id in the WorkspaceDoc (A827). */
 export const NOTEBOOK_SETTINGS = 'notebook';
-/** Attachments in the repository are refused over this (A828; A213's cap, no R2 here). */
-export const NOTEBOOK_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
 
 export class NotebookOpError extends Error {
   constructor(
@@ -330,10 +328,10 @@ export class NotebookOps {
    * and returns its path as notes write it. Refused over 10 MB.
    */
   async keepAttachment(bytes: Uint8Array, ext: string): Promise<{ sha256: string; path: string }> {
-    if (bytes.byteLength > NOTEBOOK_ATTACHMENT_MAX_BYTES) {
+    if (bytes.byteLength > AGENT_ATTACHMENT_MAX_BYTES) {
       throw new NotebookOpError(
         'file_too_large',
-        `Files in a git notebook are at most ${NOTEBOOK_ATTACHMENT_MAX_BYTES / 1024 / 1024} MB`,
+        `Files in a git notebook are at most ${AGENT_ATTACHMENT_MAX_BYTES / 1024 / 1024} MB`,
         413,
       );
     }

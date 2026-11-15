@@ -15,6 +15,7 @@
  * falls back to keyword search and semantic is refused, as on the relay. The history tools (G6, A831, A858) read the git log: a version is a
  * commit that touched the note.
  */
+import { AGENT_ATTACHMENT_MAX_BYTES } from '@penmoss/core/attachments';
 import { ulid } from '@penmoss/core/ids';
 import {
   checkArguments,
@@ -27,7 +28,6 @@ import {
 import { normaliseTag } from '@penmoss/core/tags';
 import type { SortMode } from '@penmoss/core/workspace';
 import type { EditOp, SectionMode } from '@penmoss/editor/edit-engine';
-import { NOTEBOOK_ATTACHMENT_MAX_BYTES } from '../ops';
 import { COMMENT_HANDLERS } from './comment-tools';
 import {
   CREATE_RETRY_WINDOW_MS,
@@ -71,7 +71,7 @@ const LOCAL_ADVICE: Readonly<Record<string, string>> = {
   in_trash:
     'The note is in Trash. Restore it with restore_note first; it cannot be changed until then.',
   version_not_found: NO_VERSION,
-  file_too_large: `Send a file of at most ${NOTEBOOK_ATTACHMENT_MAX_BYTES / (1024 * 1024)} MB: larger files do not go into a git notebook.`,
+  file_too_large: `Send a file of at most ${AGENT_ATTACHMENT_MAX_BYTES / (1024 * 1024)} MB: larger files do not go into a git notebook.`,
   setting_not_allowed:
     'A git notebook keeps only its time zone and its daily and weekly templates (timeZone, template.daily, template.weekly).',
   invalid_setting:
@@ -80,7 +80,7 @@ const LOCAL_ADVICE: Readonly<Record<string, string>> = {
   semantic_unavailable: 'Search with mode "full-text" (or "hybrid", which is the same here).',
 };
 
-const OPTIONS = { attachmentMaxBytes: NOTEBOOK_ATTACHMENT_MAX_BYTES, advice: LOCAL_ADVICE };
+const OPTIONS = { attachmentMaxBytes: AGENT_ATTACHMENT_MAX_BYTES, advice: LOCAL_ADVICE };
 
 /** Where what a remote tool says is not true of a git notebook. The schemas never change. */
 /** search_notes where the notebook has meaning (A1156): hybrid fuses words with meaning. */
@@ -110,7 +110,7 @@ const DESCRIPTIONS: Readonly<Record<string, string>> = {
     'The folder goes to Trash, where Ryan can restore it with its subfolders and notes. Deleting a folder that is already gone changes nothing (deleted: false).',
   attach_file:
     'Store a file in this git notebook (committed under attachments/) and add it at the end of a note (or of the section under heading): a picture (PNG, JPEG, GIF, WebP, AVIF) shows in the note, any other file is a link. ' +
-    `Send the file in base64 as data, at most ${NOTEBOOK_ATTACHMENT_MAX_BYTES / 1024 / 1024} MB (file_too_large). Attaching the same file to a note that already has it changes nothing (added: false).`,
+    `Send the file in base64 as data, at most ${AGENT_ATTACHMENT_MAX_BYTES / 1024 / 1024} MB (file_too_large). Attaching the same file to a note that already has it changes nothing (added: false).`,
   get_settings:
     'This git notebook’s own settings: timeZone, template.daily and template.weekly (how its daily and weekly notes are made). A setting not listed has its default.',
   set_settings:

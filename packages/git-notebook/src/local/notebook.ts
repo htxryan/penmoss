@@ -16,7 +16,13 @@
  * `base_unknown`; agent limits and folder scopes do not exist here.
  */
 import { MATCH_END, MATCH_START, type MeaningNote } from '@penmoss/core/search';
-import { attachmentPath, filePath, isImageType, sniffFileType } from '@penmoss/core/attachments';
+import {
+  AGENT_ATTACHMENT_MAX_BYTES,
+  attachmentPath,
+  filePath,
+  isImageType,
+  sniffFileType,
+} from '@penmoss/core/attachments';
 import { findSection } from '@penmoss/core/diff-apply';
 import { summarise } from '@penmoss/core/diff';
 import { matchNoteRef, notebookTag, noteRefNamer, parseNoteRef } from '@penmoss/core/note-ref';
@@ -45,7 +51,7 @@ import * as Y from '@y/y';
 import type { ActivityEntry } from '../agent-activity';
 import type { GitNotebookEngine } from '../engine';
 import type { GitHistory, GitVersion } from '../history';
-import { NOTEBOOK_ATTACHMENT_MAX_BYTES, type NotebookOps } from '../ops';
+import type { NotebookOps } from '../ops';
 import { isPurged } from '../purge';
 import { changedAtOf } from '../render';
 import { LocalError, NoteCatalog, fail, type NoteInfo } from './catalog';
@@ -699,11 +705,11 @@ export class LocalNotebook {
       throw new LocalError(400, 'invalid_request', 'data must be the file in base64');
     }
     if (bytes.length === 0) throw new LocalError(400, 'invalid_request', 'The file is empty');
-    if (bytes.length > NOTEBOOK_ATTACHMENT_MAX_BYTES) {
+    if (bytes.length > AGENT_ATTACHMENT_MAX_BYTES) {
       throw new LocalError(
         413,
         'file_too_large',
-        `The file is ${Math.ceil(bytes.length / 1024)} KB; a git notebook keeps files of at most ${NOTEBOOK_ATTACHMENT_MAX_BYTES / 1024 / 1024} MB`,
+        `The file is ${Math.ceil(bytes.length / 1024)} KB; a git notebook keeps files of at most ${AGENT_ATTACHMENT_MAX_BYTES / 1024 / 1024} MB`,
       );
     }
     const contentType = sniffFileType(bytes.subarray(0, 64));
