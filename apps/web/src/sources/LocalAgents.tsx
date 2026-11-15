@@ -1,16 +1,12 @@
 /**
- * Agents on this Mac with no account (T54, D47), in Settings → Agents (A1098; PEN-146: each
- * notebook folds open there, AgentsSettings.tsx):
+ * Agents on this Mac with no account (T54, D47), in Settings → Agents (A1098; PEN-146; PEN-155):
  *
- * - **Each notebook's agents** (A993, D52): the app's own agent clone of every notebook
- *   (“Agent”), made by itself, which every agent on this Mac can use and which goes only with
- *   the notebook; and Connect an Agent (a name, then Touch ID) makes the
- *   agent's own clone of the notebook in the CLI's `~/.penmoss`, and shows how to give it Penmoss's
- *   MCP server, which runs on this Mac from the app: Claude Code's command and Codex's
- *   configuration, each with Copy. No account and no agent token: the agent syncs through the
- *   notebook's repository, as itself. Disconnect removes its clone. "Receive comments sent to this
- *   agent" (T60, A1073) shows the Claude Code command with `--channel`, and how to start Claude
- *   Code so it loads that channel, for the threads Ryan sends it with Send to….
+ * - **The MCP Server** (PEN-155, A1585): the one `penmoss mcp` for every notebook, with Claude
+ *   Code's command (and its channel, T60, A1073) and Codex's lines, each with Copy. Nothing asks
+ *   for an agent's name: each edit names its client and session (A1586).
+ * - **Each notebook's agent copies** (A993, D52): the app's own copy of every notebook, which the
+ *   one server uses, and older copies connected by name, which keep working with
+ *   `penmoss mcp --notebook <name>` until Remove removes them.
  * - **The penmoss Command** (A992): writes `~/.local/bin/penmoss`, which runs this app as the CLI,
  *   and says how to put its folder on PATH. Installed and on PATH, it is one line with Manage…,
  *   which opens the card (PEN-146).
@@ -19,6 +15,7 @@ import { copyText } from '@penmoss/editor';
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useId, useRef, useState } from 'react';
 import {
+  type AgentServerInfo,
   type CliInfo,
   type DesktopGit,
   type GitAnswer,
@@ -52,45 +49,98 @@ function said<T>(result: GitAnswer<T> | null): string | null {
   return result.ok ? null : result.error.message;
 }
 
+/**
+ * Settings → Agents → The MCP Server (PEN-155): the one server for every notebook, and how to
+ * give it to Claude Code (with its channel, if wanted) and Codex.
+ */
+export function AgentServer({ git }: { git: DesktopGit }) {
+  const id = useId();
+  const [server, setServer] = useState<AgentServerInfo | null>(null);
+  const [channel, setChannel] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void git.cli().then(
+      (cli) => !cancelled && setServer(cli?.server ?? null),
+      () => undefined,
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [git]);
+  if (!server) return null;
+  return (
+    <section
+      className="settings-card"
+      aria-labelledby={`${id}-h`}
+      data-testid="agents-server"
+      data-setting="mcp-server"
+    >
+      <h3 id={`${id}-h`}>
+        <Icon name="agentRef" />
+        The MCP Server
+      </h3>
+      <p>
+        One server reaches every notebook on this Mac. Add it once to each agent; its edits are
+        named in History by the app and session that made them.
+      </p>
+      <label className="local-agent-channel">
+        <input
+          type="checkbox"
+          role="switch"
+          checked={channel}
+          data-testid="agents-server-channel"
+          onChange={(event) => setChannel(event.target.checked)}
+        />
+        <span>Receive comments sent to Claude Code sessions</span>
+      </label>
+      <CopyBlock
+        label="Claude Code: run in a terminal"
+        text={channel ? server.claudeChannel : server.claude}
+        testId="agents-server-claude"
+      />
+      {channel ? (
+        <>
+          <CopyBlock
+            label="Then start Claude Code with its channel"
+            text={server.claudeLaunch}
+            testId="agents-server-launch"
+          />
+          <p className="muted" data-testid="agents-server-channel-note">
+            Comments you send to its session with Send to…, from any notebook, arrive in it. Added{' '}
+            <code>{server.server}</code> before? Run <code>claude mcp remove {server.server}</code>{' '}
+            first.
+          </p>
+        </>
+      ) : null}
+      <CopyBlock
+        label="Codex: add to ~/.codex/config.toml"
+        text={server.codex}
+        testId="agents-server-codex"
+      />
+    </section>
+  );
+}
+
 export function GitLocalAgents({
   git,
   localId,
-  focus = 0,
   onAgents,
 }: {
   git: DesktopGit;
   localId: string;
-  /** Bumped by the row's Connect an Agent…: the agent's name field takes the focus. */
-  focus?: number;
-  /** The agents connected, each time they are read. */
+  /** The agent copies, each time they are read. */
   onAgents?: (agents: readonly LocalAgentInfo[]) => void;
 }) {
   const id = useId();
-  const labelField = useRef<HTMLInputElement>(null);
   const told = useRef(onAgents);
   useEffect(() => {
     told.current = onAgents;
   });
-  useEffect(() => {
-    if (focus === 0) return;
-    labelField.current?.focus();
-    labelField.current?.select();
-  }, [focus]);
   const [agents, setAgents] = useState<readonly LocalAgentInfo[] | null>(null);
-  const [label, setLabel] = useState('Claude Code');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  /** The agent whose clone has changes not pushed, after Disconnect. */
+  /** The copy with changes not pushed, after Remove. */
   const [unsynced, setUnsynced] = useState<LocalAgentInfo | null>(null);
-  /** The agents whose Claude Code command is shown with the channel (A1073). */
-  const [channels, setChannels] = useState<ReadonlySet<string>>(new Set());
-  const setChannel = (name: string, on: boolean) =>
-    setChannels((current) => {
-      const next = new Set(current);
-      if (on) next.add(name);
-      else next.delete(name);
-      return next;
-    });
   const [version, setVersion] = useState(0);
 
   useEffect(() => {
@@ -113,25 +163,7 @@ export function GitLocalAgents({
     };
   }, [git, localId, version]);
 
-  const connect = async () => {
-    setBusy(true);
-    setMessage(null);
-    try {
-      const result = await git.connectAgent(localId, label);
-      const refused = said(result);
-      if (refused) setMessage(refused);
-      else if (result?.ok) {
-        setMessage(
-          `Connected “${result.value.label}”. Give it the MCP server below, then start a new session in it.`,
-        );
-      }
-      setVersion((at) => at + 1);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const disconnect = async (agent: LocalAgentInfo, force: boolean) => {
+  const remove = async (agent: LocalAgentInfo, force: boolean) => {
     setBusy(true);
     setMessage(null);
     try {
@@ -143,7 +175,7 @@ export function GitLocalAgents({
       setUnsynced(null);
       setMessage(
         said(result) ??
-          `Disconnected “${agent.label}”. Remove ${agent.server} from its MCP servers too.`,
+          `Removed “${agent.label}”. Remove ${agent.server} from its MCP servers too.`,
       );
       setVersion((at) => at + 1);
     } finally {
@@ -154,7 +186,7 @@ export function GitLocalAgents({
   return (
     <section className="local-agents" aria-labelledby={`${id}-h`} data-testid="git-local-agents">
       <h4 id={`${id}-h`} className="sr-only">
-        Agents
+        Agent Copies
       </h4>
       {agents && agents.length > 0 ? (
         <ul className="local-agent-list" data-testid="git-local-agent-list">
@@ -167,55 +199,27 @@ export function GitLocalAgents({
                 </span>
                 {agent.automatic ? (
                   <span className="muted" data-testid="git-local-agent-automatic">
-                    Made by Penmoss for every agent on this Mac
+                    Made by Penmoss: the MCP server reaches this notebook through it
                   </span>
                 ) : (
-                  <button
-                    data-ui="item"
-                    type="button"
-                    className="btn"
-                    data-testid="git-local-agent-disconnect"
-                    disabled={busy}
-                    onClick={() => void disconnect(agent, false)}
-                  >
-                    Disconnect
-                  </button>
+                  <>
+                    <span className="muted" data-testid="git-local-agent-older">
+                      An older copy connected by name: it works with its own server until you remove
+                      it
+                    </span>
+                    <button
+                      data-ui="item"
+                      type="button"
+                      className="btn"
+                      data-testid="git-local-agent-remove"
+                      disabled={busy}
+                      onClick={() => void remove(agent, false)}
+                    >
+                      Remove
+                    </button>
+                  </>
                 )}
               </div>
-              <label className="local-agent-channel">
-                <input
-                  type="checkbox"
-                  role="switch"
-                  checked={channels.has(agent.name)}
-                  data-testid="git-local-agent-channel"
-                  onChange={(event) => setChannel(agent.name, event.target.checked)}
-                />
-                <span>Receive comments sent to this agent</span>
-              </label>
-              <CopyBlock
-                label="Claude Code: run in a terminal"
-                text={channels.has(agent.name) ? agent.claudeChannel : agent.claude}
-                testId="git-local-agent-claude"
-              />
-              {channels.has(agent.name) ? (
-                <>
-                  <CopyBlock
-                    label="Then start Claude Code with its channel"
-                    text={agent.claudeLaunch}
-                    testId="git-local-agent-launch"
-                  />
-                  <p className="muted" data-testid="git-local-agent-channel-note">
-                    Comments you send to its session with Send to… arrive in it. Added{' '}
-                    <code>{agent.server}</code> before? Run{' '}
-                    <code>claude mcp remove {agent.server}</code> first.
-                  </p>
-                </>
-              ) : null}
-              <CopyBlock
-                label="Codex: add to ~/.codex/config.toml"
-                text={agent.codex}
-                testId="git-local-agent-codex"
-              />
               {unsynced?.name === agent.name ? (
                 <div
                   className="git-remove-confirm"
@@ -223,7 +227,7 @@ export function GitLocalAgents({
                   data-testid="git-local-agent-unsynced"
                 >
                   <p>
-                    “{agent.label}” has changes it has not pushed yet: disconnecting now loses them.
+                    “{agent.label}” has changes it has not pushed yet: removing it now loses them.
                     Its MCP server pushes them when the agent next runs.
                   </p>
                   <div className="settings-actions">
@@ -231,11 +235,11 @@ export function GitLocalAgents({
                       data-ui="item"
                       type="button"
                       className="btn danger"
-                      data-testid="git-local-agent-disconnect-anyway"
+                      data-testid="git-local-agent-remove-anyway"
                       disabled={busy}
-                      onClick={() => void disconnect(agent, true)}
+                      onClick={() => void remove(agent, true)}
                     >
-                      Disconnect Anyway
+                      Remove Anyway
                     </button>
                     <button
                       data-ui="item"
@@ -252,37 +256,6 @@ export function GitLocalAgents({
           ))}
         </ul>
       ) : null}
-      <form
-        className="settings-row"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void connect();
-        }}
-      >
-        <label className="settings-field">
-          <span>
-            Agent Name <span className="muted">(its own copy, named in History)</span>
-          </span>
-          <input
-            ref={labelField}
-            className="input"
-            maxLength={40}
-            value={label}
-            data-testid="git-local-agent-label"
-            onChange={(event) => setLabel(event.target.value)}
-          />
-        </label>
-        <button
-          type="submit"
-          className="btn"
-          data-ui="submit"
-          data-testid="git-local-agent-connect"
-          disabled={busy || label.trim() === ''}
-        >
-          <Icon name="key" size={14} />
-          Connect
-        </button>
-      </form>
       <p role="status" className="muted" data-testid="git-local-agent-message">
         {message}
       </p>
@@ -349,8 +322,8 @@ export function CommandLine({ git }: { git: DesktopGit }) {
       </h3>
       <p>
         <code>penmoss</code> reads and edits git notebooks from a terminal, and serves them to
-        agents (<code>penmoss mcp --notebook …</code>). It is this app, so it needs no Node, no
-        account and no agent token.
+        agents (<code>penmoss mcp</code>). It is this app, so it needs no Node, no account and no
+        agent token.
       </p>
     </>
   );

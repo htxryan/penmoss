@@ -380,7 +380,7 @@ test('T52: Copy Agent Reference from the top bar, the ⋯ menu and the sidebar',
   // id, the notebook's 4 characters and the id's last 8 (core's agentReference, the same on every
   // client).
   const expected = new RegExp(
-    `^Reference note via Penmoss MCP \\(penmoss mcp --notebook "[^"]+"\\) tool read_note \\{"id":"[0-9A-HJKMNP-TV-Z]{4}-${id.slice(-8)}"\\}$`,
+    `^Reference note via Penmoss MCP tool read_note \\{"id":"[0-9A-HJKMNP-TV-Z]{4}-${id.slice(-8)}"\\}$`,
   );
   await page.getByTestId('copy-agent-reference').click();
   await expect(page.getByTestId('copy-status')).toHaveText('Copied Agent Reference');

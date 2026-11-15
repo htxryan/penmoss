@@ -452,6 +452,19 @@ describe.concurrent(
   },
 );
 
+describe('the one MCP server (PEN-155)', () => {
+  it('gives every agent penmoss mcp for every notebook, named penmoss', async ({ dir }) => {
+    const { service } = agents(dir);
+    expect((await service.cliStatus()).server).toEqual({
+      server: 'penmoss',
+      claude: `claude mcp add penmoss -- ${EXE} --penmoss-cli mcp`,
+      claudeChannel: `claude mcp add penmoss -- ${EXE} --penmoss-cli mcp --channel`,
+      claudeLaunch: 'claude --dangerously-load-development-channels server:penmoss',
+      codex: `[mcp_servers."penmoss"]\ncommand = "${EXE}"\nargs = ["--penmoss-cli", "mcp"]`,
+    });
+  });
+});
+
 describe('the penmoss command (A992)', () => {
   it('writes ~/.local/bin/penmoss that runs this app, and says when its folder is not on PATH', async ({
     dir,

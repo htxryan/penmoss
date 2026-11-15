@@ -16,10 +16,10 @@ import {
   type Launched,
 } from './support';
 
-// T54 (D47; A992–A994): everything on one Mac with no account. The app is the CLI
-// (`--penmoss-cli`), writes the `penmoss` command, and connects an agent to a git notebook: the
-// agent's own clone in `~/.penmoss`, made after Touch ID (the suite's stand-in owner check),
-// served by the local MCP server the Settings page shows how to run.
+// T54 (D47; A992–A994; PEN-155): everything on one Mac with no account. The app is the CLI
+// (`--penmoss-cli`), writes the `penmoss` command, and Settings → Agents gives every agent the
+// one MCP server (`penmoss mcp`), which reaches each notebook through the agent copy the app made.
+// An older copy connected by name is listed with Remove.
 // Only git on PATH: no keychain tool, so the CLI keeps its secrets in `~/.penmoss` here.
 
 /** The Electron binary the suite runs, as Playwright finds it. */
@@ -102,7 +102,7 @@ test('the app is the CLI: --penmoss-cli runs penmoss, with no window and no Node
   expect(unknown.status).toBe(4);
 });
 
-test('no account: connect an agent on this Mac; its MCP server writes the notebook through git', async () => {
+test('no account: the one MCP server Settings → Agents gives writes the notebook through git', async () => {
   test.setTimeout(240_000);
   const w = world();
   const launched = await launch({
@@ -136,7 +136,7 @@ test('no account: connect an agent on this Mac; its MCP server writes the notebo
   const notebookId = (await card.getAttribute('data-notebook-id'))!;
 
   // Settings → Agents (A1098): every notebook has an agent copy the app made by itself (D52),
-  // which no Disconnect removes, and `penmoss mcp --notebook <the notebook's name>` serves it.
+  // which no Remove removes, and the one server reaches the notebook through it.
   // The page lists the notebooks, each folding open in place to its agents (PEN-146), and
   // `/settings/agents/<id>` opens with that one unfolded.
   await go(page, '/settings/agents');
@@ -155,8 +155,7 @@ test('no account: connect an agent on this Mac; its MCP server writes the notebo
     await expect(automatic).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 60_000 });
   await expect(automatic.getByTestId('git-local-agent-automatic')).toBeVisible();
-  await expect(automatic.getByTestId('git-local-agent-disconnect')).toHaveCount(0);
-  await expect(notebookAgents).toContainText(`penmoss mcp --notebook "${name}"`);
+  await expect(automatic.getByTestId('git-local-agent-remove')).toHaveCount(0);
 
   // The penmoss command, on the same page: written under the suite's home, running this app.
   const command = agentsPage.getByTestId('git-cli');
@@ -174,35 +173,25 @@ test('no account: connect an agent on this Mac; its MCP server writes the notebo
   expect(byName.status, byName.stderr).toBe(0);
   expect(JSON.parse(byName.stdout)).toMatchObject({ name: `${slug}-agent` });
 
-  // Connect an Agent…, on the notebook's row: Touch ID, then its own clone, and the commands to
-  // give it the server.
-  await row.getByTestId('agents-connect-open').click();
-  await expect(agents.getByTestId('git-local-agent-label')).toBeFocused();
-  await agents.getByTestId('git-local-agent-label').fill('Codex');
-  await agents.getByTestId('git-local-agent-connect').click();
-  await expect(agents.getByTestId('git-local-agent-message')).toContainText('Connected “Codex”');
-  const clone = `notes-${RUN}-codex`;
-  const codex = agents.locator(`[data-testid="git-local-agent"][data-name="${clone}"]`);
-  const claude = await codex.getByTestId('git-local-agent-claude').locator('code').textContent();
+  // The MCP Server (PEN-155): one command for every notebook, and nothing asks for a name.
+  const server = agentsPage.getByTestId('agents-server');
+  const claude = await server.getByTestId('agents-server-claude').locator('code').textContent();
   expect(claude).toBe(
-    `claude mcp add penmoss-${clone} -- ${ELECTRON} ${DESKTOP.replace(/\/$/, '')} --penmoss-cli mcp --notebook ${clone}`,
+    `claude mcp add penmoss -- ${ELECTRON} ${DESKTOP.replace(/\/$/, '')} --penmoss-cli mcp`,
   );
-  await expect(codex.getByTestId('git-local-agent-codex')).toContainText(
-    `[mcp_servers."penmoss-${clone}"]`,
-  );
-  // Receive comments sent to this agent (T60, A1073): the channel, and how to start Claude Code.
-  await codex.getByTestId('git-local-agent-channel').check();
-  await expect(codex.getByTestId('git-local-agent-claude').locator('code')).toHaveText(
+  await expect(server.getByTestId('agents-server-codex')).toContainText('[mcp_servers."penmoss"]');
+  await expect(agentsPage.getByTestId('git-local-agent-label')).toHaveCount(0);
+  await expect(agentsPage.getByTestId('agents-connect-open')).toHaveCount(0);
+  // Receive comments sent to Claude Code sessions (T60, A1073): the channel, and how to start it.
+  await server.getByTestId('agents-server-channel').check();
+  await expect(server.getByTestId('agents-server-claude').locator('code')).toHaveText(
     `${claude} --channel`,
   );
-  await expect(codex.getByTestId('git-local-agent-launch').locator('code')).toHaveText(
-    `claude --dangerously-load-development-channels server:penmoss-${clone}`,
+  await expect(server.getByTestId('agents-server-launch').locator('code')).toHaveText(
+    'claude --dangerously-load-development-channels server:penmoss',
   );
-  await codex.getByTestId('git-local-agent-channel').uncheck();
-  await expect(codex.getByTestId('git-local-agent-claude').locator('code')).toHaveText(claude!);
-  const listed = spawnSync(script, ['notebook', 'ls'], { env: w.env, encoding: 'utf8' });
-  expect(listed.status, listed.stderr).toBe(0);
-  expect(listed.stdout).toContain(clone);
+  await server.getByTestId('agents-server-channel').uncheck();
+  await expect(server.getByTestId('agents-server-claude').locator('code')).toHaveText(claude!);
 
   // The agent runs the command Settings gave it: the MCP server answers over stdio, writes the
   // note, and syncs it as the agent once its client is gone.
@@ -214,7 +203,7 @@ test('no account: connect an agent on this Mac; its MCP server writes the notebo
       params: {
         protocolVersion: '2025-06-18',
         capabilities: {},
-        clientInfo: { name: 'c', version: '1' },
+        clientInfo: { name: 'codex-mcp-client', title: 'Codex', version: '1' },
       },
     },
     { id: 2, method: 'tools/list', params: {} },
@@ -257,10 +246,22 @@ test('no account: connect an agent on this Mac; its MCP server writes the notebo
   await expect(section.getByText('From Codex')).toBeVisible({ timeout: 15_000 });
   await go(page, `/settings/agents/${notebookId}`);
 
-  // Disconnect removes the agent's clone, and only that: the automatic copy stays.
-  await codex.getByTestId('git-local-agent-disconnect').click();
-  await expect(agents.getByTestId('git-local-agent-message')).toContainText('Disconnected “Codex”');
-  await expect(codex).toHaveCount(0);
+  // An older copy connected by name (before PEN-155) is listed with Remove, and Remove removes
+  // only it: the automatic copy stays.
+  const clone = `notes-${RUN}-codex`;
+  const added = spawnSync(
+    script,
+    ['notebook', 'add', `file://${w.remote}`, '--name', clone, '--agent', 'Codex'],
+    { env: w.env, encoding: 'utf8', timeout: 60_000 },
+  );
+  expect(added.status, added.stderr).toBe(0);
+  await go(page, '/settings/git-notebooks');
+  await go(page, `/settings/agents/${notebookId}`);
+  const older = agents.locator(`[data-testid="git-local-agent"][data-name="${clone}"]`);
+  await expect(older.getByTestId('git-local-agent-older')).toBeVisible({ timeout: 15_000 });
+  await older.getByTestId('git-local-agent-remove').click();
+  await expect(agents.getByTestId('git-local-agent-message')).toContainText('Removed “Codex”');
+  await expect(older).toHaveCount(0);
   await expect(automatic).toBeVisible();
   expect(existsSync(join(w.home, '.penmoss', 'git'))).toBe(true);
   const after = spawnSync(script, ['notebook', 'ls'], { env: w.env, encoding: 'utf8' });

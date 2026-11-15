@@ -563,6 +563,17 @@ export class GitHost {
           pathLine: 'export PATH="$HOME/.local/bin:$PATH"',
           profile: '~/.zshrc',
           direct: '/Applications/Penmoss.app/Contents/MacOS/Penmoss --cli',
+          // The one MCP server for every notebook (PEN-155), as main's serverLines writes it.
+          server: {
+            server: 'penmoss',
+            claude:
+              'claude mcp add penmoss -- /Applications/Penmoss.app/Contents/MacOS/Penmoss --cli mcp',
+            claudeChannel:
+              'claude mcp add penmoss -- /Applications/Penmoss.app/Contents/MacOS/Penmoss --cli mcp --channel',
+            claudeLaunch: 'claude --dangerously-load-development-channels server:penmoss',
+            codex:
+              '[mcp_servers."penmoss"]\ncommand = "/Applications/Penmoss.app/Contents/MacOS/Penmoss"\nargs = ["--cli", "mcp"]',
+          },
         };
       }
     }

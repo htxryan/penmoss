@@ -25,7 +25,7 @@ class AgentReferenceContractTest {
 
     @Test
     fun everyCaseReadsAsCoreWritesIt() {
-        assertEquals(2, contract.getValue("version").jsonPrimitive.content.toInt())
+        assertEquals(3, contract.getValue("version").jsonPrimitive.content.toInt())
         val cases = contract.getValue("cases").jsonArray
         assertTrue("the fixture has cases", cases.size >= 5)
         for (case in cases) {
@@ -33,7 +33,6 @@ class AgentReferenceContractTest {
             val input = case.jsonObject.getValue("input").jsonObject
             val text = AgentReference.text(
                 id = input.getValue("id").jsonPrimitive.content,
-                gitNotebook = input["gitNotebook"]?.jsonPrimitive?.content,
                 notebookId = input["notebookId"]?.jsonPrimitive?.content,
                 noteIds = input["noteIds"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
             )
@@ -60,13 +59,13 @@ class AgentReferenceContractTest {
             db.notes().insert(app.penmoss.data.NoteEntity(id, title = "Q3 review"))
             db.notes().insert(app.penmoss.data.NoteEntity("gone", title = "Old", deleted = true))
             assertEquals(
-                "Reference note via Penmoss MCP (penmoss mcp --notebook \"Work\") tool read_note {\"id\":\"ETD7-SXF7SQ9W\"}",
-                agentReferenceOf(store, id, "Work", notebook),
+                "Reference note via Penmoss MCP tool read_note {\"id\":\"ETD7-SXF7SQ9W\"}",
+                agentReferenceOf(store, id, notebook),
             )
             // An older note the phone holds ends the same way: the whole id.
             db.notes().insert(app.penmoss.data.NoteEntity("01AAAAAAAAAAAAAAAASXF7SQ9W", title = "Older"))
-            assertEquals(AgentReference.text(id, "Work", notebook, listOf("01AAAAAAAAAAAAAAAASXF7SQ9W")), agentReferenceOf(store, id, "Work", notebook))
-            assertTrue(agentReferenceOf(store, id, "Work", notebook)!!.contains("ETD7-$id"))
+            assertEquals(AgentReference.text(id, notebook, listOf("01AAAAAAAAAAAAAAAASXF7SQ9W")), agentReferenceOf(store, id, notebook))
+            assertTrue(agentReferenceOf(store, id, notebook)!!.contains("ETD7-$id"))
             assertEquals("Reference note via Penmoss MCP tool read_note {\"id\":\"$id\"}", agentReferenceOf(store, id))
             assertEquals(null, agentReferenceOf(store, "gone"))
             assertEquals(null, agentReferenceOf(store, "missing"))

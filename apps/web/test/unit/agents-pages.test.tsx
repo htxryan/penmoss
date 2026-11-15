@@ -135,6 +135,15 @@ const healthy: CliInfo = {
   pathLine: 'export PATH="$HOME/.local/bin:$PATH"',
   profile: '~/.zshrc',
   direct: '/Applications/Penmoss.app/Contents/MacOS/Penmoss --penmoss-cli',
+  server: {
+    server: 'penmoss',
+    claude:
+      'claude mcp add penmoss -- /Applications/Penmoss.app/Contents/MacOS/Penmoss --penmoss-cli mcp',
+    claudeChannel:
+      'claude mcp add penmoss -- /Applications/Penmoss.app/Contents/MacOS/Penmoss --penmoss-cli mcp --channel',
+    claudeLaunch: 'claude --dangerously-load-development-channels server:penmoss',
+    codex: '[mcp_servers."penmoss"]',
+  },
 };
 
 beforeEach(() => {
@@ -157,7 +166,7 @@ describe('Settings → Agents, one page, folded (PEN-146)', () => {
     expect(all(root, 'notebook-agents')).toHaveLength(1);
     expect(find(rows[0]!, 'git-local-agent')?.textContent).toContain('Claude Code');
     expect(find(rows[0]!, 'agents-notebook-count')?.textContent).toBe('Claude Code');
-    expect(find(rows[1]!, 'agents-notebook-count')?.textContent).toBe('No agents');
+    expect(find(rows[1]!, 'agents-notebook-count')?.textContent).toBe('No agent copies');
     expect(rows[1]!.dataset['path']).toBe(`/settings/agents/${B}`);
     // A fold folds and unfolds in place.
     await click(find(rows[0]!, 'agents-notebook-fold'));
@@ -165,13 +174,14 @@ describe('Settings → Agents, one page, folded (PEN-146)', () => {
     expect(find(rows[0]!, 'agents-notebook-fold')?.getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('Connect an Agent… unfolds the notebook and puts the cursor in the agent’s name', async () => {
+  it('offers the one MCP server for every notebook, and nothing asks for an agent’s name (PEN-155)', async () => {
     const root = await mount(setUp(healthy), <AgentsSettings />);
-    expect(all(root, 'notebook-agents')).toHaveLength(0);
-    const docs = all(root, 'agents-notebook-row')[1]!;
-    await click(find(docs, 'agents-connect-open'));
-    expect(docs.dataset['open']).toBe('true');
-    expect(document.activeElement).toBe(find(docs, 'git-local-agent-label'));
+    expect(find(root, 'agents-server-claude')?.textContent).toContain(
+      'claude mcp add penmoss -- /Applications/Penmoss.app/Contents/MacOS/Penmoss --penmoss-cli mcp',
+    );
+    expect(find(root, 'agents-connect-open')).toBeNull();
+    await click(find(all(root, 'agents-notebook-row')[1]!, 'agents-notebook-fold'));
+    expect(find(root, 'git-local-agent-label')).toBeNull();
   });
 
   it('shows the penmoss command on one line when it works, and the card behind Manage…', async () => {

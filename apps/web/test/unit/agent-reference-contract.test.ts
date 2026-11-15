@@ -27,22 +27,21 @@ type ContractInput = Omit<AgentReferenceInput, 'noteIds'> & {
 
 const CASES: ReadonlyArray<{ readonly name: string; readonly input: ContractInput }> = [
   {
-    name: 'a git notebook’s note: its local MCP server, and its short id',
-    input: { id: NOTE, gitNotebook: 'Personal', notebookId: '01JQ7M1WQ3R4ZK3V8N2C5D6E7F' },
+    name: 'a git notebook’s note: its short id, which finds its notebook',
+    input: { id: NOTE, notebookId: '01JQ7M1WQ3R4ZK3V8N2C5D6E7F' },
   },
   {
     name: 'another notebook id gives another 4 characters',
-    input: { id: NOTE, gitNotebook: 'Work', notebookId: '01JBNOTEBOOK00000000000001' },
+    input: { id: NOTE, notebookId: '01JBNOTEBOOK00000000000001' },
   },
   {
     name: 'the hash covers the whole notebook id',
-    input: { id: NOTE, gitNotebook: 'Work', notebookId: '01JBNOTEBOOK00000000000002' },
+    input: { id: NOTE, notebookId: '01JBNOTEBOOK00000000000002' },
   },
   {
     name: 'an older note ending the same way: the whole id after the notebook’s 4 characters',
     input: {
       id: NOTE,
-      gitNotebook: 'Personal',
       notebookId: '01JQ7M1WQ3R4ZK3V8N2C5D6E7F',
       noteIds: ['01AAAAAAAAAAAAAAAASXF7SQ9W', NOTE],
     },
@@ -51,32 +50,23 @@ const CASES: ReadonlyArray<{ readonly name: string; readonly input: ContractInpu
     name: 'a later note ending the same way changes nothing',
     input: {
       id: NOTE,
-      gitNotebook: 'Personal',
       notebookId: '01JQ7M1WQ3R4ZK3V8N2C5D6E7F',
       noteIds: ['01ZZZZZZZZZZZZZZZZSXF7SQ9W'],
     },
   },
   {
-    name: 'double quotes, backslashes and line breaks in the notebook’s name',
-    input: {
-      id: ID,
-      gitNotebook: '  The "big"\nC:\\ book ',
-      notebookId: '01JQ7M1WQ3R4ZK3V8N2C5D6E7F',
-    },
+    name: 'line breaks and spaces around the id: one line',
+    input: { id: ` ${NOTE}\n`, notebookId: '01JQ7M1WQ3R4ZK3V8N2C5D6E7F' },
   },
   {
     name: 'without a notebook id: the whole id',
-    input: { id: ID, gitNotebook: 'Personal' },
-  },
-  {
-    name: 'a note not in a git notebook: no --notebook, and its whole id',
     input: { id: ID },
   },
 ];
 
 interface Contract {
   readonly $comment: string;
-  readonly version: 2;
+  readonly version: 3;
   readonly cases: ReadonlyArray<{
     readonly name: string;
     readonly input: ContractInput;
@@ -85,11 +75,11 @@ interface Contract {
 }
 
 const COMMENT =
-  'Copy Agent Reference (T52 item 4, PEN-69): each case is the input (id: the note’s ULID; gitNotebook: the git notebook’s name, whose local MCP server reads it; notebookId: its notebook.json id, which gives the note its short id; noteIds: the notebook’s other notes, an older one ending as this one does making the short id the whole ULID) and the exact one line every client copies. Written from core’s agentReference by apps/web/test/unit/agent-reference-contract.test.ts; read by the Android app’s contract test.';
+  'Copy Agent Reference (T52 item 4, PEN-69; version 3, PEN-155: no server or notebook named, since one penmoss mcp serves every notebook): each case is the input (id: the note’s ULID; notebookId: its notebook.json id, which gives the note its short id; noteIds: the notebook’s other notes, an older one ending as this one does making the short id the whole ULID) and the exact one line every client copies. Written from core’s agentReference by apps/web/test/unit/agent-reference-contract.test.ts; read by the Android app’s contract test.';
 
 const contract = (): Contract => ({
   $comment: COMMENT,
-  version: 2,
+  version: 3,
   cases: CASES.map((each) => ({ ...each, expected: agentReference(each.input) })),
 });
 
@@ -97,7 +87,7 @@ const text = (value: Contract) => `${JSON.stringify(value, null, 2)}\n`;
 
 if (process.env['PENMOSS_WRITE_CONTRACTS'] === '1') writeFileSync(FILE, text(contract()));
 
-describe('apps/android/contract/agent-reference-v1.json (T52 item 4, PEN-69)', () => {
+describe('apps/android/contract/agent-reference-v1.json (T52 item 4, PEN-69, PEN-155)', () => {
   it('holds every case with the text agentReference makes', () => {
     const stored = JSON.parse(readFileSync(FILE, 'utf8')) as Contract;
     expect(stored).toEqual(contract());
@@ -105,7 +95,7 @@ describe('apps/android/contract/agent-reference-v1.json (T52 item 4, PEN-69)', (
 
   it('is the one line of Ryan’s example (PEN-69)', () => {
     expect(agentReference(CASES[0]!.input)).toMatch(
-      /^Reference note via Penmoss MCP \(penmoss mcp --notebook "Personal"\) tool read_note \{"id":"[0-9A-HJKMNP-TV-Z]{4}-SXF7SQ9W"\}$/,
+      /^Reference note via Penmoss MCP tool read_note \{"id":"[0-9A-HJKMNP-TV-Z]{4}-SXF7SQ9W"\}$/,
     );
   });
 });

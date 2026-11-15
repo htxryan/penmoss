@@ -71,22 +71,17 @@ test.describe('in Quanta, with two notes', () => {
     await expect(agentRows).toHaveCount(2);
     await expect(agents.getByTestId('git-local-agents')).toHaveCount(0);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/agents.png` });
-    // …each unfolding in place to its agents and the name agents reach it by.
+    // …each unfolding in place to its agent copies.
     const work = agentRows.filter({ hasText: 'Work' });
     await work.getByTestId('agents-notebook-fold').click();
     await expect(page).toHaveURL(/\/settings\/agents$/);
     await expect(agents.getByTestId('notebook-agents')).toHaveCount(1);
-    await expect(agents.getByTestId('notebook-agents')).toContainText(
-      'penmoss mcp --notebook Work',
-    );
     await expect(agents.getByTestId('git-local-agents')).toHaveCount(1);
     await work.getByTestId('agents-notebook-fold').click();
     await expect(agents.getByTestId('notebook-agents')).toHaveCount(0);
     // Its own address opens the page with it unfolded.
     await page.goto((await work.getAttribute('data-path'))!);
-    await expect(agents.getByTestId('notebook-agents')).toContainText(
-      'penmoss mcp --notebook Work',
-    );
+    await expect(agents.getByTestId('notebook-agents')).toBeVisible();
     await expect(agentRows).toHaveCount(2);
     // A page that is not a notebook here says so.
     await page.goto('/settings/git-notebooks/01M6AAAAAAAAAAAAAAAAAAAAAA');
@@ -211,13 +206,26 @@ test.describe('in Quanta, with a folder and a long note', () => {
       timeout: 1000,
     });
 
+    // The one MCP server for every notebook (PEN-155): its lines, and nothing asks for a name.
+    const server = agents.getByTestId('agents-server');
+    await expect(server.getByTestId('agents-server-claude')).toContainText(
+      'claude mcp add penmoss -- ',
+    );
+    await server.getByTestId('agents-server-channel').check();
+    await expect(server.getByTestId('agents-server-claude')).toContainText('mcp --channel');
+    await expect(server.getByTestId('agents-server-launch')).toContainText('server:penmoss');
+    await expect(server.getByTestId('agents-server-codex')).toContainText(
+      '[mcp_servers."penmoss"]',
+    );
+    await expect(agents.getByTestId('git-local-agent-label')).toHaveCount(0);
+    await expect(agents.getByTestId('agents-connect-open')).toHaveCount(0);
+
     // A notebook's agents, unfolded in place (PEN-146: one page, folded, amending A1125).
     const row = agents.getByTestId('agents-notebook-row');
     await row.getByTestId('agents-notebook-fold').click();
     await expect(row.getByTestId('agents-notebook-fold')).toHaveAttribute('aria-expanded', 'true');
     const notebook = agents.getByTestId('notebook-agents');
     await expect(row).toContainText('Quanta');
-    await expect(notebook).toContainText('penmoss mcp --notebook Quanta');
     await expect(notebook.getByTestId('git-local-agents')).toBeVisible();
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/agents-notebook.png` });
     // Its address opens the page with it unfolded; Agent Activity is the page beside it.

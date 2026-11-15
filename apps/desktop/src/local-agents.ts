@@ -64,14 +64,8 @@ const RETRY_MS = 5 * 60_000;
 /** The same while the target holds no notebook yet: the app's first push is on its way. */
 const NOT_THERE_RETRY_MS = 15_000;
 
-/** One agent connected to a git notebook: its clone's name and how to give it the MCP server. */
-export interface LocalAgentView {
-  /** The clone's name in `~/.penmoss` (`penmoss … --notebook <name>`). */
-  readonly name: string;
-  /** The agent's name, as History and Agent activity show it. */
-  readonly label: string;
-  /** The app made it by itself, for every agent on this Mac (D52): it goes with the notebook. */
-  readonly automatic: boolean;
+/** How to give an agent an MCP server: Claude Code's commands and Codex's lines. */
+export interface AgentServerLines {
   /** The MCP server's name in the agent's configuration. */
   readonly server: string;
   /** `claude mcp add …`, to paste into a terminal. */
@@ -85,6 +79,16 @@ export interface LocalAgentView {
   readonly claudeLaunch: string;
   /** The lines for Codex's `~/.codex/config.toml`. */
   readonly codex: string;
+}
+
+/** One agent connected to a git notebook: its clone's name and how to give it the MCP server. */
+export interface LocalAgentView extends AgentServerLines {
+  /** The clone's name in `~/.penmoss` (`penmoss … --notebook <name>`). */
+  readonly name: string;
+  /** The agent's name, as History and Agent activity show it. */
+  readonly label: string;
+  /** The app made it by itself, for every agent on this Mac (D52): it goes with the notebook. */
+  readonly automatic: boolean;
 }
 
 /** The `penmoss` command on this Mac. */
@@ -103,6 +107,11 @@ export interface CliView {
   readonly profile: string;
   /** The command that runs the CLI without the script: the app's binary and the switch. */
   readonly direct: string;
+  /**
+   * The one MCP server for every notebook on this Mac (PEN-155, A1585): `penmoss mcp`, named
+   * `penmoss`, as Settings → Agents gives it to every agent.
+   */
+  readonly server: AgentServerLines;
 }
 
 /** Answers yes or no for the person, with words main makes (Touch ID or the password). */
@@ -222,35 +231,11 @@ export class LocalAgents {
   }
 
   private view(entry: NotebookEntry): LocalAgentView {
-    const server = `penmoss-${entry.name}`;
-    const [command = '', ...args] = this.mcpCommand(entry.name);
     return {
       name: entry.name,
       label: entry.writer.label,
       automatic: entry.automatic === true,
-      server,
-      claude: ['claude', 'mcp', 'add', server, '--', ...this.mcpCommand(entry.name)]
-        .map(shellWord)
-        .join(' '),
-      claudeChannel: [
-        'claude',
-        'mcp',
-        'add',
-        server,
-        '--',
-        ...this.mcpCommand(entry.name),
-        '--channel',
-      ]
-        .map(shellWord)
-        .join(' '),
-      claudeLaunch: ['claude', '--dangerously-load-development-channels', `server:${server}`]
-        .map(shellWord)
-        .join(' '),
-      codex: [
-        `[mcp_servers.${tomlString(server)}]`,
-        `command = ${tomlString(command)}`,
-        `args = [${args.map(tomlString).join(', ')}]`,
-      ].join('\n'),
+      ...serverLines(`penmoss-${entry.name}`, this.mcpCommand(entry.name)),
     };
   }
 
@@ -280,6 +265,7 @@ export class LocalAgents {
           ? '~/.bash_profile'
           : '~/.profile',
       direct: [...this.options.cli].map(shellWord).join(' '),
+      server: serverLines('penmoss', [...this.options.cli, 'mcp']),
     };
   }
 
@@ -569,6 +555,26 @@ export class LocalAgents {
       );
     }
   }
+}
+
+/** The lines that give an agent the MCP server `server`, run as `words` (the app's binary first). */
+export function serverLines(server: string, words: readonly string[]): AgentServerLines {
+  const [command = '', ...args] = words;
+  const claude = (extra: readonly string[]) =>
+    ['claude', 'mcp', 'add', server, '--', ...words, ...extra].map(shellWord).join(' ');
+  return {
+    server,
+    claude: claude([]),
+    claudeChannel: claude(['--channel']),
+    claudeLaunch: ['claude', '--dangerously-load-development-channels', `server:${server}`]
+      .map(shellWord)
+      .join(' '),
+    codex: [
+      `[mcp_servers.${tomlString(server)}]`,
+      `command = ${tomlString(command)}`,
+      `args = [${args.map(tomlString).join(', ')}]`,
+    ].join('\n'),
+  };
 }
 
 /** A CLI error's message with its hints, or any other error's. */

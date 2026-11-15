@@ -5,10 +5,11 @@
  *
  * - **The penmoss command** (A992): one line when it is installed and on PATH ("penmoss command
  *   installed", its path, Manage…); the full card otherwise, or once Manage… opens it.
- * - **Connected on This Mac** (A993, D52): each notebook a row that folds open in place, with its
- *   agents (the copy Penmoss makes for every agent, and each agent connected by name, with
- *   Disconnect and the lines to give it) and Connect an Agent… on each row.
- *   `/settings/agents/<notebook id>` opens with that notebook unfolded.
+ * - **The MCP Server** (PEN-155): the one `penmoss mcp` for every notebook, with Claude Code's
+ *   and Codex's lines. No agent is named by hand (A1586).
+ * - **Agent Copies on This Mac** (A993, D52): each notebook a row that folds open in place, with
+ *   its agent copies: the one Penmoss makes, which the server uses, and older copies connected by
+ *   name, with Remove. `/settings/agents/<notebook id>` opens with that notebook unfolded.
  * - What agents changed, in every notebook, is the page beside this one: Agent Activity.
  */
 import { Icon } from '@penmoss/ui/icons';
@@ -16,8 +17,7 @@ import { useEffect, useId, useState } from 'react';
 import { desktop, type DesktopGit, type LocalAgentInfo } from '../desktop/bridge';
 import { linkHandler, notebookAgentsPath } from '../router';
 import { GroupHead } from '../theme/look-rows';
-import { mcpName } from './agent-words';
-import { CommandLine, GitLocalAgents } from './LocalAgents';
+import { AgentServer, CommandLine, GitLocalAgents } from './LocalAgents';
 import { useAllSources, useGitInfo } from './hooks';
 import type { GitSource } from './git-source';
 import './sources.css';
@@ -59,7 +59,8 @@ export function AgentsSettings({ item }: { item?: string | undefined }) {
         which runs on this Mac from this app: no account and no agent token.
       </p>
       <CommandLine git={git} />
-      <GroupHead scope>Connected on This Mac</GroupHead>
+      <AgentServer git={git} />
+      <GroupHead scope>Agent Copies on This Mac</GroupHead>
       {missing ? (
         <p className="muted" data-testid="agents-notebook-missing">
           That notebook isn’t on this Mac.
@@ -110,7 +111,7 @@ export function AgentsSettings({ item }: { item?: string | undefined }) {
   );
 }
 
-/** How many agents are connected to a notebook, once main has said (null until then). */
+/** How many agent copies a notebook has, once main has said (null until then). */
 function useAgentCount(
   git: DesktopGit,
   localId: string,
@@ -134,13 +135,10 @@ function useAgentCount(
 const countWords = (agents: readonly LocalAgentInfo[] | null, count: number | null) => {
   if (agents && agents.length > 0) return agents.map((agent) => agent.label).join(', ');
   if (count === null) return '';
-  return count === 0 ? 'No agents' : count === 1 ? '1 agent' : `${count} agents`;
+  return count === 0 ? 'No agent copies' : count === 1 ? '1 agent copy' : `${count} agent copies`;
 };
 
-/**
- * A notebook's row: its name and its agents' names, folding open in place to its agents, with
- * Connect an Agent…, which unfolds it and puts the cursor in the agent's name.
- */
+/** A notebook's row: its name and its agent copies' names, folding open in place to them. */
 function NotebookAgentsRow({
   source,
   git,
@@ -155,8 +153,6 @@ function NotebookAgentsRow({
   const info = useGitInfo(source);
   const [count, setCount] = useAgentCount(git, info.localId);
   const [agents, setAgents] = useState<readonly LocalAgentInfo[] | null>(null);
-  /** Bumped by Connect an Agent…: the name field takes the focus. */
-  const [connect, setConnect] = useState(0);
   const id = useId();
   return (
     <li
@@ -183,19 +179,6 @@ function NotebookAgentsRow({
             </span>
           </span>
         </button>
-        <button
-          type="button"
-          className="btn"
-          data-ui="item"
-          data-testid="agents-connect-open"
-          onClick={() => {
-            onFold(true);
-            setConnect((at) => at + 1);
-          }}
-        >
-          <Icon name="plus" size={14} />
-          Connect an Agent…
-        </button>
       </div>
       {open ? (
         <div
@@ -204,13 +187,9 @@ function NotebookAgentsRow({
           data-testid="notebook-agents"
           data-notebook-id={source.id}
         >
-          <p className="muted">
-            Agents reach it as <code>penmoss mcp --notebook {mcpName(info.name)}</code>
-          </p>
           <GitLocalAgents
             git={git}
             localId={info.localId}
-            focus={connect}
             onAgents={(list) => {
               setAgents(list);
               setCount(list.length);

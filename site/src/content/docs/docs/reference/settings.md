@@ -106,7 +106,7 @@ On All Notebooks:
 
 ### Agents
 
-For each notebook, the agents connected to it, **Connect an Agent** and **Disconnect**, and the commands to give each agent ([How agents work](/docs/agents/)). **The penmoss Command** installs the CLI ([Install](/docs/reference/cli/#install)).
+**The MCP Server**: the one command for every notebook, for Claude Code (with **Receive comments sent to Claude Code sessions**) and Codex, with **Copy** ([Connect an agent](/docs/agents/connect/)). For each notebook, its agent copies: the one Penmoss made, which the server uses, and older copies connected by name, with **Remove**. **The penmoss Command** installs the CLI ([Install](/docs/reference/cli/#install)).
 
 ### Agent Activity
 
