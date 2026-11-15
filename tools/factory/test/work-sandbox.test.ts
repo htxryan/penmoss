@@ -19,17 +19,11 @@ import { basename, dirname, join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FactoryConfig } from '../src/config.ts';
 import { nodeExec, type Exec } from '../src/exec.ts';
-import {
-  AGENT_STREAM,
-  AgentNotInstalled,
-  agentMissing,
-  hostDeps,
-  repoDir,
-  execPastRefLocks,
-  SANDBOX_READY,
-  sandboxStartCommand,
-  type HostOptions,
-} from '../src/host.ts';
+import { AGENT_STREAM, AgentNotInstalled, agentMissing } from '../src/agent-stream.ts';
+import { hostDeps } from '../src/host.ts';
+import { repoDir } from '../src/clone.ts';
+import { execPastRefLocks, SANDBOX_READY, sandboxStartCommand } from '../src/sandbox-commands.ts';
+import type { HostOptions } from '../src/host-context.ts';
 import { stoppedText } from '../src/start.ts';
 import { testConfig } from './helpers.ts';
 

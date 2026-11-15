@@ -18,7 +18,7 @@ import { join } from 'node:path';
 import type { Platform } from './config.ts';
 import type { FidelityRow, Verdict } from './fidelity.ts';
 import type { AttachedProof } from './proof/body.ts';
-import type { RunSandbox } from './run.ts';
+import type { RunSandbox } from './run-deps.ts';
 
 /** The file in the run folder that holds what passed. */
 export const PROVEN = 'proven.json';

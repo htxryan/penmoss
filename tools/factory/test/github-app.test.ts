@@ -12,7 +12,7 @@ import {
   type Fetcher,
 } from '../src/github-app.ts';
 import { createGh } from '../src/github.ts';
-import { TOKEN_HELPER } from '../src/host.ts';
+import { TOKEN_HELPER } from '../src/git.ts';
 import { botless } from '../src/review.ts';
 
 const { privateKey, publicKey } = generateKeyPairSync('rsa', {

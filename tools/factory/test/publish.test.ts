@@ -15,18 +15,15 @@ import { codeDir, commitOf, ownCheckout, syncCode } from '../src/code.ts';
 import type { FactoryConfig } from '../src/config.ts';
 import { nodeExec, type Exec, type ExecOptions } from '../src/exec.ts';
 import { GIT_HARDENING, GIT_TIMEOUT_MS, hostGit, TOKEN_HELPER } from '../src/git.ts';
-import {
-  ensureClone,
-  hostDeps,
-  repoDir,
-  sandboxTakeCommand,
-  type HostOptions,
-} from '../src/host.ts';
+import { ensureClone, repoDir } from '../src/clone.ts';
+import { hostDeps } from '../src/host.ts';
+import { sandboxTakeCommand } from '../src/sandbox-commands.ts';
+import type { HostOptions } from '../src/host-context.ts';
 import { adoptRemoteHead, remoteBranch, resumablePr, unchangedSincePush } from '../src/publish.ts';
 import { sweep } from '../src/janitor.ts';
 import { prepareSnapshot, planFiles } from '../src/planning-host.ts';
 import { checkMacVm, runMacProof } from '../src/proof/mac.ts';
-import type { RunSandbox } from '../src/run.ts';
+import type { RunSandbox } from '../src/run-deps.ts';
 import { testConfig } from './helpers.ts';
 
 const BRANCH = 'factory/42-fix-the-typo';

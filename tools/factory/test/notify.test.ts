@@ -9,7 +9,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { FactoryConfig } from '../src/config.ts';
 import type { Exec } from '../src/exec.ts';
-import { hostDeps, type HostOptions } from '../src/host.ts';
+import { hostDeps } from '../src/host.ts';
+import type { HostOptions } from '../src/host-context.ts';
 import { uiLinkPath } from '../src/ui/link.ts';
 import { testConfig } from './helpers.ts';
 

@@ -54,7 +54,7 @@ export function guardEffects<T extends object>(
 
 /** The steps of a run (RunDeps) as a stop names them. */
 export const RUN_STEPS = {
-  // The run's own step boundaries (run.ts calls step('the gate') before it).
+  // The run's own step boundaries (gate-run.ts calls step('the gate') before it).
   step: (name: string) => name,
   comment: 'a comment on the card',
   setStatus: 'moving the card',

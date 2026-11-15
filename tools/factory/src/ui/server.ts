@@ -7,7 +7,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { parseAction, type Writer } from './actions.ts';
-import type { FactoryView } from './model.ts';
+import type { FactoryView } from './view.ts';
 
 export interface UiOptions {
   readonly port: number;

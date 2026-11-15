@@ -16,7 +16,7 @@ import {
 import { nodeExec } from '../src/exec.ts';
 import { hostDeps } from '../src/host.ts';
 import { rebaseOntoMain } from '../src/rebase.ts';
-import type { RunSandbox } from '../src/run.ts';
+import type { RunSandbox } from '../src/run-deps.ts';
 import { testConfig } from './helpers.ts';
 
 const env: Record<string, string> = {

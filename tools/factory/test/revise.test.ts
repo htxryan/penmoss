@@ -6,7 +6,7 @@ import type { ProofItem } from '../src/proof/manifest.ts';
 import type { RebaseOutcome } from '../src/rebase.ts';
 import type { AgentResult } from '../src/result.ts';
 import { runRebase, runRevise, type ReviseDeps } from '../src/revise.ts';
-import type { RunSandbox } from '../src/run.ts';
+import type { RunSandbox } from '../src/run-deps.ts';
 import { item, testConfig } from './helpers.ts';
 
 const config = testConfig();

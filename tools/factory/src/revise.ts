@@ -15,14 +15,11 @@ import { formatMarker } from './pick.ts';
 import type { AttachedProof } from './proof/body.ts';
 import type { AgentResult } from './result.ts';
 import type { RoundItem } from './review.ts';
-import {
-  gateAndProve,
-  refreshBranch,
-  runAndRead,
-  STALE_MAIN,
-  watchCi,
-  type RunDeps,
-} from './run.ts';
+import { gateAndProve } from './gate-run.ts';
+import { refreshBranch } from './refresh.ts';
+import { runAndRead, STALE_MAIN } from './agent-round.ts';
+import { watchCi } from './ci-watch.ts';
+import type { RunDeps } from './run-deps.ts';
 
 /** A PR GitHub says conflicts with main: it gets no CI, so it waits for Ryan (A1311). */
 const CONFLICTS = (pr: string) =>
