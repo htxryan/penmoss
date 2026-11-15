@@ -468,7 +468,7 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
       // An agent's server: nobody can answer a signer here.
       clones.unattended = true;
       if (asked === undefined) {
-        await new McpNotebooks(clones, registry, home, io, options).serve();
+        await new McpNotebooks(clones, registry, home, io, options, serveOptions.channel).serve();
         return;
       }
       const entry = await registry.resolve(asked, 'agent');

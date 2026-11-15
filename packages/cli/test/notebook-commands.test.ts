@@ -679,11 +679,8 @@ describe('penmoss mcp --notebook', () => {
     expect(hosts.head(url)).toBeNull();
   });
 
-  it('needs --notebook for a channel, and --channel for --name', async () => {
+  it('needs --channel for --name', async () => {
     const cli = machine('m');
-    const usage = await cli(['mcp', '--channel']);
-    expect(usage.code).toBe(2);
-    expect(usage.stderr).toContain('--channel needs --notebook for now');
     const named = await cli(['mcp', '--notebook', 'nb', '--name', 'x']);
     expect(named.code).toBe(2);
     expect(named.stderr).toContain('--name names a channel session: add --channel');
@@ -796,5 +793,138 @@ describe('penmoss mcp --notebook', () => {
     // A restart sends nothing again.
     expect(read.stdout).not.toContain('notifications/claude/channel');
     expect(read.stdout).toContain('"delivery":"seen"');
+  });
+
+  it('is one channel for every notebook: each thread arrives naming its notebook, once, and replies go to its own (PEN-154)', async () => {
+    const cli = machine('m', { channelCheckMs: 50 });
+    const macs: Array<{
+      name: string;
+      ops: NotebookOps;
+      engine: GitNotebookEngine;
+      noteId: string;
+    }> = [];
+    for (const name of ['Personal', 'Work']) {
+      const url = remote(`channel-${name.toLowerCase()}`);
+      await cli(['notebook', 'add', url, '--name', name]);
+      await cli([
+        'notebook',
+        'add',
+        url,
+        '--name',
+        `${name.toLowerCase()}-agent`,
+        '--agent',
+        'Claude Code',
+      ]);
+      const engine = await GitNotebookEngine.open({
+        transport: new MemoryTransport({
+          remote: hosts.remote(url),
+          branch: 'main',
+          root: '',
+          author: { name: 'Ryan', email: 'ryan@example.invalid' },
+        }),
+        storage: new MemoryStorage(),
+        secrets: new MemorySecrets(),
+        writer: { kind: 'device', label: 'Mac' },
+      });
+      const ops = new NotebookOps(engine);
+      await engine.sync();
+      const noteId = ops.createNote({
+        title: `${name} plan`,
+        markdown: 'Plant the garden in May.',
+      });
+      await engine.sync();
+      macs.push({ name, ops, engine, noteId });
+    }
+    const sessionsOf = async (mac: (typeof macs)[number]) => {
+      await mac.engine.sync();
+      return readAgentSessions(mac.engine.replica.workspace);
+    };
+    const threads = new Map<string, string>();
+    const lines = [
+      rpc(1, 'initialize', { protocolVersion: '2025-06-18', capabilities: {} }),
+      JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }),
+      // The session is listed in both notebooks; each Mac sends a thread to it.
+      async () => {
+        for (const mac of macs) {
+          await vi.waitFor(async () => expect(await sessionsOf(mac)).toHaveLength(1), {
+            timeout: 20_000,
+            interval: 100,
+          });
+          const [session] = await sessionsOf(mac);
+          expect(session).toMatchObject({ name: 'laptop:/garden' });
+          const sent = await sendFromMac(mac, mac.noteId, 'garden', {
+            writer: session!.writer,
+            session: session!.key,
+            label: session!.label,
+          });
+          threads.set(mac.name, sent.threadId);
+        }
+        for (const mac of macs) {
+          await vi.waitFor(
+            async () => {
+              await mac.engine.sync();
+              expect(deliveryOn(mac, mac.noteId, threads.get(mac.name)!)).toBe('sent');
+            },
+            { timeout: 20_000, interval: 100 },
+          );
+        }
+      },
+    ];
+    const served = await cli(['mcp', '--channel', '--name', 'laptop:/garden'], { lines });
+    expect(served.code, served.stderr).toBe(0);
+    const messages = served.stdout
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    expect(messages[0]).toMatchObject({
+      id: 1,
+      result: {
+        capabilities: { experimental: { 'claude/channel': {} } },
+        instructions: expect.stringContaining('read_comment_thread with its note_id') as string,
+      },
+    });
+    const notified = messages.filter((m) => m['method'] === 'notifications/claude/channel');
+    expect(notified.map((m) => (m['params'] as { meta: Record<string, string> }).meta)).toEqual(
+      expect.arrayContaining(
+        macs.map((mac) => ({
+          thread_id: threads.get(mac.name),
+          note_id: mac.noteId,
+          comment_id: `${threads.get(mac.name)}c1`,
+          notebook: mac.name,
+        })),
+      ),
+    );
+    expect(notified).toHaveLength(2);
+
+    // A new run: the agent reads and answers Work's thread; nothing is sent again.
+    const work = macs[1]!;
+    const workThread = threads.get('Work')!;
+    const replied = await cli(['mcp', '--channel', '--name', 'laptop:/garden'], {
+      lines: [
+        rpc(1, 'initialize', { protocolVersion: '2025-06-18', capabilities: {} }),
+        JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }),
+        rpc(2, 'tools/call', {
+          name: 'read_comment_thread',
+          arguments: { id: work.noteId, threadId: workThread },
+        }),
+        rpc(3, 'tools/call', {
+          name: 'reply_to_comment_thread',
+          arguments: { id: work.noteId, threadId: workThread, body: 'Tightened it.' },
+        }),
+        // Pushed at once, in channel mode: the Mac sees the reply without the server stopping.
+        async () => {
+          await vi.waitFor(
+            async () => {
+              await work.engine.sync();
+              expect(deliveryOn(work, work.noteId, workThread)).toBe('seen');
+            },
+            { timeout: 20_000, interval: 100 },
+          );
+        },
+      ],
+    });
+    expect(replied.code, replied.stderr).toBe(0);
+    expect(replied.stdout).not.toContain('notifications/claude/channel');
+    expect(replied.stdout).toContain('"notebook":"Work"');
   });
 });

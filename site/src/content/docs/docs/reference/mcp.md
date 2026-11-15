@@ -19,7 +19,7 @@ Without `--notebook`, the server reaches every notebook at once, and each tool a
 
 - **Semantic search covers every notebook** when it's on in Settings → Semantic Search. The model opens once for the whole server. While no other Penmoss process is indexing, the server indexes every notebook it serves, a little at a time, each in turn, and `coverage` says how far each notebook has got.
 
-Comments sent to a session (`--channel`) need `--notebook` for now.
+- **One channel for every notebook.** With `--channel`, the session is listed in every notebook, so **Send to…** offers it in each one. A thread arrives naming its notebook (`notebook`), and the agent's reply goes back to that notebook at once.
 
 ## Search and read
 
