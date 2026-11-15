@@ -2,23 +2,13 @@ package app.penmoss.data
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.penmoss.FakeApi
 import app.penmoss.engine.api.ChangedNote
 import app.penmoss.engine.api.ChangesPage
-import app.penmoss.engine.api.SearchFilters
-import app.penmoss.engine.api.SearchHit
-import app.penmoss.engine.api.SearchMode
-import app.penmoss.engine.api.SearchNotebook
-import app.penmoss.engine.api.SearchReply
 import app.penmoss.engine.api.SyncTree
 import app.penmoss.engine.api.TreeFolder
 import app.penmoss.engine.api.TreeNote
 import app.penmoss.engine.bridge.PageNote
-import app.penmoss.search.SearchRequest
-import app.penmoss.search.SearchService
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -30,9 +20,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Notebooks in Room (T43, A750–A756): the tree's flags and the default notebook's name, which
- * notebook each folder is in, the lists without closed notebooks (A752), Turn into notebook and
- * back, a notebook's delete sending its notes to Trash (A755), and the moves the rules refuse.
+ * Notebooks in Room (T43, A750–A756): the tree's flags, which notebook each folder is in, Turn
+ * back into a folder, a notebook's delete sending its notes to Trash (A755), and the moves the
+ * rules refuse.
  */
 @RunWith(AndroidJUnit4::class)
 class NotebookStoreTest {
@@ -52,7 +42,6 @@ class NotebookStoreTest {
     private val tree = SyncTree(
         hash = "h1",
         rootSortMode = "manual",
-        defaultNotebook = "Home",
         folders = listOf(
             TreeFolder("w", "Work", position = "a0", notebook = true),
             TreeFolder("c", "Clients", "w", position = "a0"),
@@ -78,12 +67,11 @@ class NotebookStoreTest {
     }
 
     @Test
-    fun theTreeStoresEachNotebooksFlagAndTheDefaultNotebooksName() = runTest {
+    fun theTreeStoresEachNotebooksFlag() = runTest {
         synced()
         val folders = store.observeFolders().first().associateBy { it.id }
         assertTrue(folders.getValue("w").notebook)
         assertFalse(folders.getValue("c").notebook)
-        assertEquals("Home", store.observeDefaultNotebookName().first())
         val index = Notebooks.index(folders.values.toList())
         assertEquals(listOf("w"), index.notebooks.map { it.id })
         assertEquals("w", index.ofFolder("c"))
@@ -92,59 +80,6 @@ class NotebookStoreTest {
         assertNull(index.ofFolder(null))
         assertEquals("Work", store.notebookOf("n2")?.name)
         assertNull(store.notebookOf("n3"))
-        // A tree from before notebooks, or with the name taken away: "Personal".
-        store.saveTree(tree.copy(hash = "h2", defaultNotebook = null))
-        assertEquals(Notebooks.DEFAULT_NAME, store.defaultNotebookName())
-    }
-
-    @Test
-    fun aClosedNotebooksNotesLeaveRecentTagsTheGraphAndSearch() = runTest {
-        synced()
-        store.savePageText("n2", "acme contract", tags = listOf("work"))
-        store.savePageText("n3", "acme garden", tags = listOf("home"))
-        val closed = MutableStateFlow(emptySet<String>())
-        val hidden = store.observeHiddenFolders(closed)
-        assertEquals(setOf("n1", "n2", "n3", "n4"), store.observeRecent(30, hidden).first().map { it.id }.toSet())
-
-        closed.value = setOf("w")
-        assertEquals(setOf("w", "c"), hidden.first())
-        assertEquals(setOf("n3", "n4"), store.observeRecent(30, hidden).first().map { it.id }.toSet())
-        assertEquals(listOf("home"), store.observeTagCounts(hidden).first().map { it.tag })
-        assertEquals(listOf(listOf("home")), store.observeNoteTags(hidden).first())
-        assertTrue(store.observeTagged("work", hidden).first().isEmpty())
-        val graph = store.observeGraph(hidden).first()
-        assertEquals(setOf("n3", "n4"), graph.notes.map { it.id }.toSet())
-        assertFalse(graph.folders.any { it.id == "w" || it.id == "c" })
-
-        // The offline index too, and the server's results by the notebook they name.
-        val scope = store.notebookScope(closed.value)
-        assertEquals(listOf(Notebooks.DEFAULT), scope.open)
-        assertEquals(listOf("n3"), OfflineSearch(db).search("acme", hidden = scope.hiddenFolders).map { it.noteId })
-        val sent = mutableListOf<SearchFilters>()
-        val api = object : FakeApi() {
-            override suspend fun search(query: String, limit: Int, mode: SearchMode, filters: SearchFilters, partial: Boolean): SearchReply {
-                sent += filters
-                return SearchReply(
-                    listOf(
-                        SearchHit("n2", "Acme", notebook = SearchNotebook("w", "Work")),
-                        SearchHit("n3", "Garden", notebook = SearchNotebook("default", "Home")),
-                        // An older server names no notebook: the phone's folder decides.
-                        SearchHit("n1", "Plan"),
-                    ),
-                )
-            }
-        }
-        val service = SearchService(api, OfflineSearch(db), notebooks = { store.notebookScope(closed.value) }, folderOf = store::folderOf)
-        val outcome = service.search(SearchRequest("acme", submitted = true))
-        assertEquals(listOf("default"), sent.single().notebooks)
-        assertEquals(listOf("n3"), outcome.results.map { it.id })
-
-        // Opened again: everything, and nothing extra sent.
-        closed.value = emptySet()
-        assertEquals(4, store.observeRecent(30, hidden).first().size)
-        service.search(SearchRequest("acme", submitted = true))
-        assertNull(sent.last().notebooks)
-        assertEquals(4, store.observeRecent(30, flowOf(emptySet())).first().size)
     }
 
     @Test
@@ -202,27 +137,6 @@ class NotebookStoreTest {
         assertEquals(Notebooks.ONLY_TOP_LEVEL, store.setNotebook("c", true).refusal)
         assertEquals(Notebooks.JOURNAL_STAYS, store.setNotebook(Notebooks.JOURNAL_FOLDER, true).refusal)
         assertFalse(db.folders().get(Notebooks.JOURNAL_FOLDER)!!.notebook)
-    }
-
-    @Test
-    fun aNotebookMadeHereAndTheDefaultsNewNameShowAtOnceAndOverAnOlderTree() = runTest {
-        synced()
-        val id = store.createNotebook("Ideas")
-        val made = db.folders().get(id)!!
-        assertTrue(made.notebook)
-        assertNull(made.parentId)
-        val create = db.folderOps().all().single()
-        assertEquals(FolderOpEntity.CREATE, create.kind)
-        assertTrue(create.notebook)
-        store.renameDefaultNotebook("Life")
-        assertEquals("Life", store.observeDefaultNotebookName().first())
-        store.saveTree(tree.copy(hash = "h3"))
-        assertTrue(db.folders().get(id)!!.notebook)
-        assertEquals("Life", store.defaultNotebookName())
-        // Blank gives back "Personal", sent as an empty name.
-        store.renameDefaultNotebook("  ")
-        assertEquals(Notebooks.DEFAULT_NAME, store.defaultNotebookName())
-        assertEquals("", db.folderOps().all().last { it.kind == FolderOpEntity.ROOT_NAME }.name)
     }
 
     @Test

@@ -19,10 +19,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Notebook changes made on the phone reach the server through the folder routes (T43, A750,
- * A751, A755, A756): a notebook's create with `notebook: true`, Turn into notebook and back as
- * `PATCH { notebook }`, the default notebook's name on the root, and a notebook's delete. A change
- * the notebook rules refuse (422 `notebook_rule`) is dropped and the server's words said.
+ * Notebook changes made on the phone reach the notes server through the folder routes (T43, A755,
+ * A756): Turn into notebook and back as `PATCH { notebook }`, and a notebook's delete. A change the
+ * notebook rules refuse (422 `notebook_rule`) is dropped and the server's words said.
  */
 @RunWith(AndroidJUnit4::class)
 class NotebookSenderTest {
@@ -47,16 +46,11 @@ class NotebookSenderTest {
 
     @Test
     fun eachNotebookChangeIsSentInOrder() = runTest {
-        val id = store.createNotebook("Ideas")
         store.setNotebook("p", true)
         store.setNotebook("w", false)
-        store.renameDefaultNotebook("Home")
         FolderSender(store, api).sendDue()
 
-        assertEquals(listOf(id), api.createdNotebooks)
-        assertEquals(listOf(null), api.createdFolders.map { it.third })
         assertEquals(listOf("p" to true, "w" to false), api.patchedFolders.map { it.first to it.second.notebook })
-        assertEquals(listOf("Home"), api.notebookNames)
         assertTrue(store.folderOpsDue().isEmpty())
     }
 
@@ -204,13 +198,13 @@ class NotebookSenderTest {
         assertTrue(store.folderOpsDue().isEmpty())
     }
 
+    /** A rename of the default notebook an older version queued is dropped unsent (A912): a git notebook has none. */
     @Test
-    fun theDefaultNotebooksNameWaitsForAServerBeforeNotebooks() = runTest {
-        store.renameDefaultNotebook("Home")
-        val old = object : FakeApi() {
-            override suspend fun setDefaultNotebookName(name: String): String = throw ApiException(404, null, "Not Found")
-        }
-        FolderSender(store, old).sendDue()
-        assertEquals(1, store.folderOpsDue().size)
+    fun aDefaultNotebookRenameLeftQueuedIsDroppedUnsent() = runTest {
+        db.folderOps().insert(app.penmoss.data.FolderOpEntity(folderId = null, kind = app.penmoss.data.FolderOpEntity.ROOT_NAME, name = "Home"))
+        store.setNotebook("w", false)
+        FolderSender(store, api).sendDue()
+        assertEquals(listOf("w" to false), api.patchedFolders.map { it.first to it.second.notebook })
+        assertTrue(store.folderOpsDue().isEmpty())
     }
 }

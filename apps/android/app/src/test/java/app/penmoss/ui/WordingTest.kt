@@ -47,7 +47,7 @@ class WordingTest {
             FeedbackFormModel.failedMessage(null, "Refused"),
             handEditsText(listOf("a.md")),
             notebookDeleteText(1),
-            notebookClosedMessage("Work"),
+            notebookTurnBackText("Personal"),
         )
         for (line in said) assertFalse(line, line.contains('\''))
     }

@@ -42,7 +42,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Notebooks on the phone's screens (T43, A750–A760): Home's Notebooks at the top, a notebook's
- * actions, the Move sheet grouped by notebook, Settings → Notebooks and Trash.
+ * actions, the Move sheet grouped by notebook and Trash. A git notebook makes, closes and flags
+ * none (A912): only a folder already flagged has a notebook's actions.
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -60,20 +61,17 @@ class NotebookScreensTest {
     )
 
     @Test
-    fun homeListsTheOpenNotebooksFirstThenTheDefaultNotebooksFolders() {
-        val (notebooks, top) = Items.home("manual", folders, closed = setOf("i"), now = 0)
-        assertEquals(listOf("w"), notebooks.map { it.id })
+    fun homeListsTheNotebooksFirstThenTheDefaultNotebooksFolders() {
+        val (notebooks, top) = Items.home("manual", folders, now = 0)
+        assertEquals(listOf("w", "i"), notebooks.map { it.id })
         assertEquals(listOf("p", Notebooks.JOURNAL_FOLDER), top.map { it.id })
-        // Projects may become a notebook; Journal may not.
-        assertEquals(listOf(true, false), top.map { it.canBeNotebook })
         var opened: String? = null
-        var newNotebook = 0
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
                     recent = emptyList(), folders = top, status = "", syncing = false,
                     onSearch = {}, onSettings = {}, onAllNotes = {}, onFolder = { opened = it }, onOpen = {}, onToday = {}, onNewNote = {},
-                    notebooks = notebooks, defaultNotebook = "Home", onNewNotebook = { newNotebook++ },
+                    notebooks = notebooks, defaultNotebook = "Home",
                 )
             }
         }
@@ -87,9 +85,10 @@ class NotebookScreensTest {
         compose.onAllNodesWithTag("syncDot", useUnmergedTree = true).assertCountEquals(1)
         compose.onNodeWithText("Work").performClick()
         assertEquals("w", opened)
+        // No New Notebook in a git notebook (A912).
         compose.onNodeWithTag("homeMore").performClick()
-        compose.onNodeWithTag("homeNewNotebook").performClick()
-        assertEquals(1, newNotebook)
+        compose.onNodeWithTag("homeNewFolder").assertIsDisplayed()
+        compose.onNodeWithTag("homeNewNotebook").assertDoesNotExist()
     }
 
     @Test
@@ -105,26 +104,35 @@ class NotebookScreensTest {
         }
         compose.onNodeWithTag("folderAction-move").assertDoesNotExist()
         compose.onNodeWithTag("folderAction-turnIntoNotebook").assertDoesNotExist()
+        compose.onNodeWithTag("folderAction-close").assertDoesNotExist()
         compose.onNodeWithText("Turn Back into a Folder…").performClick()
         compose.onNodeWithText("Delete Notebook…").performClick()
         assertEquals(listOf("back", "delete"), ran)
     }
 
+    /**
+     * T39 pass 3 review (A912): a git notebook is one notebook, so a top-level folder's menu and
+     * sheet offer Move but never Turn into notebook, and nothing offers Close.
+     */
     @Test
-    fun aTopLevelFoldersSheetAndMenuOfferTurnIntoNotebook() {
-        var turned = 0
+    fun aTopLevelFoldersSheetAndMenuOfferNoTurnIntoNotebook() {
+        var step by mutableStateOf(0)
         compose.setContent {
             PenmossTheme {
-                FolderScreen(
-                    title = "Projects", folders = emptyList(), notes = emptyList(), onBack = {}, onFolder = {}, onOpen = {},
-                    onTurnIntoNotebook = { turned++ },
-                )
+                if (step == 0) {
+                    FolderScreen(title = "Projects", folders = emptyList(), notes = emptyList(), onBack = {}, onFolder = {}, onOpen = {})
+                } else {
+                    FolderSheet("Projects", onRename = {}, onNewSubfolder = {}, onMove = {}, onDelete = {}, onDismiss = {})
+                }
             }
         }
         compose.onNodeWithTag("folderMore").performClick()
         compose.onNodeWithTag("folderMoveTo").assertIsDisplayed()
-        compose.onNodeWithTag("folderTurnIntoNotebook").performClick()
-        assertEquals(1, turned)
+        compose.onNodeWithTag("folderTurnIntoNotebook").assertDoesNotExist()
+        step = 1
+        compose.onNodeWithTag("folderAction-move").assertIsDisplayed()
+        compose.onNodeWithTag("folderAction-turnIntoNotebook").assertDoesNotExist()
+        compose.onNodeWithTag("folderAction-close").assertDoesNotExist()
     }
 
     @Test
@@ -160,33 +168,6 @@ class NotebookScreensTest {
         compose.onNodeWithText("Its 3 notes go to Trash with it. You can restore the notebook, notes and all, from Trash for 30 days.").assertIsDisplayed()
         compose.onNodeWithTag("notebookDeleteConfirm").performClick()
         assertEquals(1, deleted)
-    }
-
-    /** T39 pass 3 (A897): a notebook closes from its sheet, and Settings → Notebooks makes one, as on the web. */
-    @Test
-    fun aNotebookClosesFromItsSheetAndSettingsMakesANewOne() {
-        val ran = mutableListOf<String>()
-        var step by mutableStateOf(0)
-        compose.setContent {
-            PenmossTheme {
-                if (step == 0) {
-                    FolderSheet("Work", onRename = {}, onNewSubfolder = {}, onMove = {}, onDelete = {}, onDismiss = {}, notebook = true, onClose = { ran += "close" })
-                } else {
-                    NotebooksScreen(
-                        rows = listOf(NotebookRowUi(app.penmoss.data.Notebooks.DEFAULT, "Personal", open = true)),
-                        defaultName = "Personal", onOpen = { _, _ -> }, onRenameDefault = {}, onBack = {},
-                        onNewNotebook = { ran += "new $it" },
-                    )
-                }
-            }
-        }
-        compose.onNodeWithText("Close on This Phone").performClick()
-        step = 1
-        compose.onNodeWithTag("settingsNewNotebook").performScrollTo().performClick()
-        compose.onNodeWithTag("folderNameField").performTextInput("Recipes")
-        compose.onNodeWithTag("folderNameSave").performClick()
-        assertEquals(listOf("close", "new Recipes"), ran)
-        assertEquals("Closed “Work” on this phone. Open it again in Settings → Notebooks.", notebookClosedMessage("Work"))
     }
 
     /** T39 pass 3 (A891): the web's names, with "…" where something asks first. */
@@ -259,27 +240,6 @@ class NotebookScreensTest {
     }
 
     @Test
-    fun settingsOpensAndClosesEachNotebookButNeverTheDefault() {
-        val rows = notebookRows(folders, closed = setOf("i"), defaultName = "Home")
-        assertEquals(listOf(Notebooks.DEFAULT to true, "w" to true, "i" to false), rows.map { it.id to it.open })
-        assertEquals("Home and 1 of 2 notebooks open on this phone", notebooksSummary("Home", 2, 1))
-        assertEquals("Personal · no other notebooks", notebooksSummary("Personal", 0, 0))
-        val changes = mutableListOf<Pair<String, Boolean>>()
-        var renamed: String? = null
-        compose.setContent {
-            PenmossTheme { NotebooksScreen(rows, "Home", onOpen = { id, open -> changes += id to open }, onRenameDefault = { renamed = it }, onBack = {}) }
-        }
-        compose.onNodeWithTag("notebookOpen-default").assertIsOn().assertIsNotEnabled()
-        compose.onNodeWithTag("notebookOpen-i").assertIsOff().performClick()
-        compose.onNodeWithTag("notebookOpen-w").performClick()
-        assertEquals(listOf("i" to true, "w" to false), changes)
-        compose.onNodeWithTag("renameDefaultNotebook").performScrollTo().performClick()
-        compose.onNodeWithTag("defaultNotebookField").performTextReplacement("Life")
-        compose.onNodeWithTag("defaultNotebookSave").performClick()
-        assertEquals("Life", renamed)
-    }
-
-    @Test
     fun trashListsANotebookWithItsNotesRatherThanEachNote() {
         val local = listOf(
             TrashRow("n1", "Plan", 10, NoteEntity.TRASH_WITH_NOTEBOOK, 5),
@@ -289,20 +249,6 @@ class NotebookScreensTest {
         assertEquals(listOf("n8", "n9"), trashEntries(local, remote, now = 100).map { it.id }.sorted())
         assertEquals("Notebook · 4 notes", folderContents(TrashedFolderListed("w", "Work", notebook = true, notes = 4)))
         assertEquals("4 notes", folderContents(TrashedFolderListed("p", "Projects", notes = 4)))
-    }
-
-    /**
-     * T39 pass 3 review (A912): a git notebook is one notebook, with no Settings → Notebooks to open
-     * a closed one again, so its folders offer neither Turn into notebook nor Close.
-     */
-    @Test
-    fun aGitNotebooksFoldersOfferNoNotebookActions() {
-        val top = FolderItem("t", "Ideas", canBeNotebook = true)
-        val work = FolderItem("w", "Work", notebook = true)
-        assertEquals(NotebookOffers(turnInto = true, close = false), notebookOffers(top, git = false))
-        assertEquals(NotebookOffers(turnInto = false, close = true), notebookOffers(work, git = false))
-        assertEquals(NotebookOffers(turnInto = false, close = false), notebookOffers(top, git = true))
-        assertEquals(NotebookOffers(turnInto = false, close = false), notebookOffers(work, git = true))
     }
 
     @Test

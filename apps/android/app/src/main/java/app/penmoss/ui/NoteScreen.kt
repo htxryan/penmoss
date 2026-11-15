@@ -328,7 +328,6 @@ fun NoteRoute(
     val crumbs = remember(folders, placed) { Items.folderPath(folders, placed?.folderId) }
     // Its notebook's name when not the default (T43, A752): a link into a closed one still opens it.
     val notebookName = remember(folders, placed) { noteNotebookName(folders, placed?.folderId) }
-    val defaultNotebook by remember { graph.store.observeDefaultNotebookName() }.collectAsStateWithLifecycle(app.penmoss.data.Notebooks.defaultName(null))
     // Copy Agent Reference (T52 item 4; PEN-69): the MCP call that reads the note by its short id.
     val copyAgentReference: (() -> Unit)? = placed?.let { _ ->
         {
@@ -510,11 +509,11 @@ fun NoteRoute(
                     } else {
                         androidx.compose.foundation.layout.Column {
                             // A top-level note names its notebook (T52, as the web's phone app bar):
-                            // the git notebook's name, or the default notebook's current one.
+                            // the git notebook's.
                             BreadcrumbBar(
                                 path = crumbs,
                                 onOpenFolder = onOpenFolder,
-                                notebook = (graph.source as? app.penmoss.git.GraphSource.Git)?.name ?: defaultNotebook,
+                                notebook = (graph.source as? app.penmoss.git.GraphSource.Git)?.name ?: app.penmoss.data.Notebooks.DEFAULT_NAME,
                             )
                             if (notebookName != null) NoteNotebookLine(notebookName)
                         }
@@ -725,10 +724,9 @@ fun NoteRoute(
                     LaunchedEffect(Unit) { backlinks.load(state.title) }
                     // Its tags as Room has them, frontmatter and inline (A656): the inline ones listed apart (A502).
                     val allTags by remember(noteId) { graph.store.observeTagsOf(noteId) }.collectAsStateWithLifecycle(emptyList())
-                    val notebook = rememberInfoNotebook(graph, folders, placed?.folderId)
                     InfoSheet(
                         noteId = noteId,
-                        rows = infoRows(crumbs.map { it.name }, info, placed?.updatedAt, saved = noteSync, counts = counts, notebook = notebook),
+                        rows = infoRows(crumbs.map { it.name }, info, placed?.updatedAt, saved = noteSync, counts = counts),
                         kind = infoKind(info),
                         tags = tags,
                         inline = remember(allTags, tags) { inlineTags(allTags, tags) },
@@ -767,7 +765,7 @@ fun NoteRoute(
                 )
                 PanelTab.GRAPH -> {
                     val model by remember {
-                        graph.store.observeGraph(graph.hiddenFolders).atMostEvery(GRAPH_BATCH_MS).map(GraphInput::model).flowOn(Dispatchers.Default)
+                        graph.store.observeGraph().atMostEvery(GRAPH_BATCH_MS).map(GraphInput::model).flowOn(Dispatchers.Default)
                     }.collectAsStateWithLifecycle(null)
                     LocalGraphPanel(
                         title = state.title,

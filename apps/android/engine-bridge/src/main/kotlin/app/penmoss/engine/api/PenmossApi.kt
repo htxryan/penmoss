@@ -121,12 +121,6 @@ interface PenmossApi {
     suspend fun setRootSortMode(sortMode: String)
 
     /**
-     * Renames the default notebook (`PATCH /api/folders/root { notebookName }`, T43, A751): an
-     * empty name gives back "Personal". Answers the name the server now has.
-     */
-    suspend fun setDefaultNotebookName(name: String): String
-
-    /**
      * Deletes a folder and its subfolders (`DELETE /api/folders/:id`, T40 P4, NT4): their notes
      * move up. A notebook goes to Trash with its notes instead (T43, A755). Idempotent: a missing
      * folder answers false.
@@ -435,14 +429,6 @@ class HttpPenmossApi(
         val body = buildJsonObject { put("sortMode", sortMode) }
         sendEmpty(request(url("api/folders/root")).method("PATCH", body.toString().toRequestBody(JSON_TYPE)).build())
     }
-
-    override suspend fun setDefaultNotebookName(name: String): String {
-        val body = buildJsonObject { put("notebookName", name) }
-        return send("PATCH", url("api/folders/root"), body.toString().toRequestBody(JSON_TYPE), RootReply.serializer()).notebookName ?: name
-    }
-
-    @Serializable
-    private data class RootReply(val notebookName: String? = null)
 
     override suspend fun deleteFolder(id: String): Boolean {
         val reply = send("DELETE", url("api/folders/$id"), "{}".toRequestBody(JSON_TYPE), FolderDeleted.serializer())

@@ -546,7 +546,6 @@ class MigrationTest {
             assertEquals(listOf(FolderOpEntity.RENAME), ops.map { it.kind })
             assertEquals(false, ops.single().notebook)
             assertNull(store.treeHash())
-            assertEquals(Notebooks.DEFAULT_NAME, store.defaultNotebookName())
             assertEquals(true, store.setNotebook("w", true).changed)
             assertEquals(true, db.folders().get("w")!!.notebook)
             assertEquals(listOf(FolderOpEntity.RENAME, FolderOpEntity.NOTEBOOK), db.folderOps().all().map { it.kind })

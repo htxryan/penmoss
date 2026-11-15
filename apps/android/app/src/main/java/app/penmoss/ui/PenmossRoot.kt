@@ -187,8 +187,8 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
     var folderDeleting by remember { mutableStateOf<FolderItem?>(null) }
     /** Turning a notebook back into a folder (T43, A756): asked first. */
     var notebookTurningBack by remember { mutableStateOf<FolderItem?>(null) }
-    val setNotebook: (FolderItem, Boolean) -> Unit = { folder, on ->
-        graph.scope.launch { Toast.makeText(context, setNotebookAndSay(graph, folder.id, folder.name, on), Toast.LENGTH_SHORT).show() }
+    val turnBack: (FolderItem) -> Unit = { folder ->
+        graph.scope.launch { Toast.makeText(context, setNotebookAndSay(graph, folder.id, folder.name, on = false), Toast.LENGTH_SHORT).show() }
     }
     /** Reordering the top level's folders (T40 P4, NT7). */
     var homeReordering by remember { mutableStateOf(false) }
@@ -208,9 +208,6 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
     val deleteFolder: (String) -> Unit = { id ->
         graph.scope.launch { sayFolder(deleteFolderAndSay(graph, id)) }
     }
-    val createNotebook: (String) -> Unit = { name ->
-        graph.scope.launch { sayFolder(createNotebookAndSay(graph, name)) }
-    }
     val sortFolder: (String?, String) -> Unit = { id, mode ->
         graph.scope.launch { sayFolder(sortFolderAndSay(graph, id, mode)) }
     }
@@ -226,16 +223,7 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
     /** Opens Today, a calendar day or a week's note: made by the editor page, offline too (T40 P5). */
     val openPeriodic: (ToEditor.PeriodKind, String?) -> Unit = { kind, day ->
         // Today and This week go to the Journal notebook (T50 G7, A827): a git one opens there.
-        val journal = (graph.journalGraph()?.source as? app.penmoss.git.GraphSource.Git)?.takeIf { day == null && !graph.isGit }
-        if (journal != null) {
-            app.penmoss.git.GitNotebookActivity.open(
-                context,
-                journal.localId,
-                if (kind == ToEditor.PeriodKind.DAILY) app.penmoss.ui.keys.LauncherAction.Today else app.penmoss.ui.keys.LauncherAction.ThisWeek,
-            )
-        } else {
-            nav.open(periodicNoteRoute(kind.wire, day))
-        }
+        nav.open(periodicNoteRoute(kind.wire, day))
     }
     /** A tag's notes (T40 P6, TG2): from Tags, and from a `#tag` tapped in a note (TG5). */
     val openTag: (String) -> Unit = { tag -> nav.open("tag/${Uri.encode(tag)}") }
@@ -320,14 +308,11 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
             composable("home") {
                 val home by remember {
                     // Recent: opened here or edited anywhere, whichever is later (T40 P6, FD7).
-                    // Open notebooks only (T43, A752); the open notebooks at the top (A750).
-                    combine(
-                        graph.store.observeRecent(RECENT, graph.hiddenFolders), graph.store.observeFolders(), graph.store.observeRootSortMode(),
-                        graph.closedNotebooks.closed, graph.store.observeDefaultNotebookName(),
-                    ) { notes, folders, mode, closed, notebookName ->
+                    // The notebooks at the top (T43, A750).
+                    combine(graph.store.observeRecent(RECENT), graph.store.observeFolders(), graph.store.observeRootSortMode()) { notes, folders, mode ->
                         val now = System.currentTimeMillis()
-                        val (notebooks, topFolders) = Items.home(mode, folders, closed, now)
-                        HomeView(Items.notes(notes, now), notebooks, topFolders, notebookName)
+                        val (notebooks, topFolders) = Items.home(mode, folders, now)
+                        HomeView(Items.notes(notes, now), notebooks, topFolders)
                     }.distinctUntilChanged().flowOn(Dispatchers.Default)
                 }.collectAsStateWithLifecycle(HomeView())
                 val rootSort by remember { graph.store.observeRootSortMode().distinctUntilChanged() }.collectAsStateWithLifecycle("manual")
@@ -342,10 +327,10 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
                 }.collectAsStateWithLifecycle(emptyList())
                 // Each pinned note's notebook, for Quick Access's notebook names (T53 item 10).
                 val quickAccessNotebooks by remember {
-                    combine(graph.store.observeQuickAccess(graph.device.settings.map { it.settings.quickAccess }), graph.store.observeFolders(), graph.store.observeDefaultNotebookName()) { pins, folders, defaultName ->
+                    combine(graph.store.observeQuickAccess(graph.device.settings.map { it.settings.quickAccess }), graph.store.observeFolders()) { pins, folders ->
                         val index = app.penmoss.data.Notebooks.index(folders)
                         val names = folders.associate { it.id to it.name }
-                        pins.associate { pin -> pin.id to (index.ofFolder(pin.folderId)?.let(names::get) ?: defaultName) }
+                        pins.associate { pin -> pin.id to (index.ofFolder(pin.folderId)?.let(names::get) ?: app.penmoss.data.Notebooks.DEFAULT_NAME) }
                     }.distinctUntilChanged().flowOn(Dispatchers.Default)
                 }.collectAsStateWithLifecycle(emptyMap())
                 val layout = HomeLayout.of(settingsNow.settings)
@@ -386,8 +371,6 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
                     recent = home.recent,
                     folders = home.folders,
                     notebooks = home.notebooks,
-                    defaultNotebook = home.defaultNotebook,
-                    onNewNotebook = { folderNaming = FolderNaming.CreateNotebook }.takeUnless { graph.isGit },
                     status = statusText,
                     statusAlert = (if (status is SyncStatus.Syncing) settled else status) is SyncStatus.Offline,
                     syncing = status is SyncStatus.Syncing,
@@ -443,7 +426,7 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
                         val name = folder?.name ?: "Folder"
                         val (subfolders, filed) = Items.folder(folderId, mode, folders, notes, System.currentTimeMillis())
                         val above = Items.folderPath(folders, folder?.parentId)
-                        val item = folder?.let { Items.item(it, folders) }
+                        val item = folder?.let(Items::item)
                         FolderView(
                             name = name,
                             folders = subfolders,
@@ -452,7 +435,6 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
                             subtitle = Items.pathText(above.map { it.name }).takeIf { above.isNotEmpty() }
                                 ?: "Notebook".takeIf { item?.notebook == true },
                             notebook = item?.notebook == true,
-                            canBeNotebook = item?.canBeNotebook == true,
                         )
                     }.distinctUntilChanged().flowOn(Dispatchers.Default)
                 }.collectAsStateWithLifecycle(FolderView("", emptyList(), emptyList(), "manual", null))
@@ -483,11 +465,6 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
                     },
                     // Notebooks (T43, A750, A756).
                     notebook = contents.notebook,
-                    onTurnIntoNotebook = if (folderId != null && notebookOffers(FolderItem(folderId, contents.name, canBeNotebook = contents.canBeNotebook), graph.isGit).turnInto) {
-                        { setNotebook(FolderItem(folderId, contents.name), true) }
-                    } else {
-                        null
-                    },
                     onTurnBack = { if (folderId != null) notebookTurningBack = FolderItem(folderId, contents.name, notebook = true) },
                     onFolderLongPress = { folderActing = it },
                     reordering = folderReordering == folderId,
@@ -635,8 +612,6 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
             }
             // What agents changed, with Undo (T42, A561; T40 P9, AC11).
             composable(AgentActivityRoutes.ACTIVITY) { entry -> AgentActivityRoute(graph, onBack = { nav.leave(entry) }) }
-            // Which notebooks are open on this phone, and the default notebook's name (T43, A751, A752).
-            composable(NotebookRoutes.SETTINGS) { entry -> NotebooksRoute(graph, onBack = { nav.leave(entry) }) }
             // Settings → Git notebooks (T50 G7, A856): the app's hub, from a git notebook's screens too.
             composable(app.penmoss.ui.keys.CommandRoutes.GIT_NOTEBOOKS) { entry ->
                 app.penmoss.git.GitNotebooksRoute(
@@ -780,38 +755,19 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
                 newNote(folder.id)
             },
             notebook = folder.notebook,
-            onTurnIntoNotebook = if (notebookOffers(folder, graph.isGit).turnInto) {
-                {
-                    setNotebook(folder, true)
-                    folderActing = null
-                }
-            } else {
-                null
-            },
             onTurnBack = {
                 notebookTurningBack = folder
                 folderActing = null
-            },
-            // As the web's (A752): it leaves the lists, search and Recent here; Settings opens it again.
-            onClose = if (notebookOffers(folder, graph.isGit).close) {
-                {
-                    graph.closedNotebooks.setOpen(folder.id, false)
-                    sayFolder(notebookClosedMessage(folder.name))
-                    folderActing = null
-                }
-            } else {
-                null
             },
         )
     }
 
     notebookTurningBack?.let { folder ->
-        val defaultName by remember { graph.store.observeDefaultNotebookName() }.collectAsStateWithLifecycle(app.penmoss.data.Notebooks.DEFAULT_NAME)
         NotebookTurnBackDialog(
             name = folder.name,
-            defaultName = defaultName,
+            defaultName = app.penmoss.data.Notebooks.DEFAULT_NAME,
             onConfirm = {
-                setNotebook(folder, false)
+                turnBack(folder)
                 notebookTurningBack = null
             },
             onDismiss = { notebookTurningBack = null },
@@ -823,14 +779,6 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
             is FolderNaming.Create -> NewFolderDialog(
                 onConfirm = { name ->
                     createFolder(name, naming.parentId)
-                    folderNaming = null
-                },
-                onDismiss = { folderNaming = null },
-            )
-            FolderNaming.CreateNotebook -> FolderNameDialog(
-                title = "New Notebook",
-                onConfirm = { name ->
-                    createNotebook(name)
                     folderNaming = null
                 },
                 onDismiss = { folderNaming = null },
@@ -939,9 +887,6 @@ private sealed interface FolderNaming {
 
     /** A new name for [id], starting from [current]; [notebook]: a notebook's (T43). */
     data class Rename(val id: String, val current: String, val notebook: Boolean = false) : FolderNaming
-
-    /** A notebook at the top level (T43, A750). */
-    data object CreateNotebook : FolderNaming
 }
 
 /** Deletes a folder after saying what moves up (T40 P4, NT4); gone meanwhile: nothing to ask. */
@@ -990,15 +935,13 @@ private data class FolderView(
     val sortMode: String,
     val subtitle: String?,
     val notebook: Boolean = false,
-    val canBeNotebook: Boolean = false,
 )
 
-/** Home's lists (T43): Recent, the open notebooks, and the default notebook's top-level folders. */
+/** Home's lists (T43): Recent, the notebooks, and the default notebook's top-level folders. */
 private data class HomeView(
     val recent: List<NoteItem> = emptyList(),
     val notebooks: List<FolderItem> = emptyList(),
     val folders: List<FolderItem> = emptyList(),
-    val defaultNotebook: String = app.penmoss.data.Notebooks.DEFAULT_NAME,
 )
 
 /** The route of a new note's screen (T38): its id, and the folder it goes in when there is one. */

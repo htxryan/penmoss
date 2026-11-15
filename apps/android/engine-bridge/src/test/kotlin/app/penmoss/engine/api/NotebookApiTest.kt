@@ -42,20 +42,14 @@ class NotebookApiTest {
     private fun body(): JsonObject = Json.parseToJsonElement(server.takeRequest().body!!.utf8()).jsonObject
 
     @Test
-    fun theTreeCarriesEachNotebooksFlagAndTheDefaultNotebooksName() = runTest {
-        respond("""{"hash":"h1","defaultNotebook":"Home","folders":[{"id":"w","name":"Work","notebook":true},{"id":"p","name":"Projects"}]}""")
+    fun theTreeCarriesEachNotebooksFlag() = runTest {
+        respond("""{"hash":"h1","folders":[{"id":"w","name":"Work","notebook":true},{"id":"p","name":"Projects"}]}""")
         val tree = api.tree(null)
-        assertEquals("Home", tree.defaultNotebook)
         assertEquals(listOf(true, false), tree.folders.map { it.notebook })
-        // An older server sends neither.
-        respond("""{"hash":"h2","folders":[{"id":"p","name":"Projects"}]}""")
-        val old = api.tree("h1")
-        assertNull(old.defaultNotebook)
-        assertFalse(old.folders.single().notebook)
     }
 
     @Test
-    fun aNotebookIsMadeTurnedBackAndTheDefaultRenamedThroughTheFolderRoutes() = runTest {
+    fun aNotebookIsMadeAndTurnedBackThroughTheFolderRoutes() = runTest {
         respond("""{"id":"w","name":"Work"}""", 201)
         api.createFolder("w", "Work", null, notebook = true)
         val made = body()
@@ -71,13 +65,6 @@ class NotebookApiTest {
         val patched = server.takeRequest()
         assertEquals("/api/folders/w", patched.url.encodedPath)
         assertEquals("""{"notebook":false}""", patched.body!!.utf8())
-
-        respond("""{"sortMode":"manual","notebookName":"Home"}""")
-        assertEquals("Home", api.setDefaultNotebookName("Home"))
-        val root = server.takeRequest()
-        assertEquals("PATCH", root.method)
-        assertEquals("/api/folders/root", root.url.encodedPath)
-        assertEquals("""{"notebookName":"Home"}""", root.body!!.utf8())
     }
 
     @Test

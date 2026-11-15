@@ -205,7 +205,6 @@ open class FakeApi : PenmossApi {
 
     /** The notebooks made (T43): their ids. */
     val createdNotebooks = CopyOnWriteArrayList<String>()
-    val notebookNames = CopyOnWriteArrayList<String>()
 
     override suspend fun createFolder(id: String, name: String, parentId: String?, notebook: Boolean): FolderRef {
         createdFolders += Triple(id, name, parentId)
@@ -220,11 +219,6 @@ open class FakeApi : PenmossApi {
 
     override suspend fun setRootSortMode(sortMode: String) {
         rootSorts += sortMode
-    }
-
-    override suspend fun setDefaultNotebookName(name: String): String {
-        notebookNames += name
-        return name.ifEmpty { "Personal" }
     }
 
     override suspend fun deleteFolder(id: String): Boolean {

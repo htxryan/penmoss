@@ -17,8 +17,8 @@ import java.io.IOException
 @Composable
 fun FolderPickerFor(graph: AppGraph, title: String, current: String?, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
     val choices by remember {
-        combine(graph.store.observeFolders(), graph.store.observeRootSortMode(), graph.store.observeDefaultNotebookName()) { folders, mode, name ->
-            Items.folderChoices(mode, folders, name)
+        combine(graph.store.observeFolders(), graph.store.observeRootSortMode()) { folders, mode ->
+            Items.folderChoices(mode, folders)
         }.flowOn(Dispatchers.Default)
     }.collectAsStateWithLifecycle(listOf(FolderChoice(null, Items.TOP_LEVEL, 0)))
     FolderPickerSheet(title, choices, current, onPick, onDismiss)
@@ -28,8 +28,8 @@ fun FolderPickerFor(graph: AppGraph, title: String, current: String?, onPick: (S
 @Composable
 fun FolderPickerForMove(graph: AppGraph, title: String, current: String?, exclude: String, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
     val choices by remember(exclude) {
-        combine(graph.store.observeFolders(), graph.store.observeRootSortMode(), graph.store.observeDefaultNotebookName()) { folders, mode, name ->
-            Items.folderChoicesExcluding(mode, folders, exclude, name)
+        combine(graph.store.observeFolders(), graph.store.observeRootSortMode()) { folders, mode ->
+            Items.folderChoicesExcluding(mode, folders, exclude)
         }.flowOn(Dispatchers.Default)
     }.collectAsStateWithLifecycle(listOf(FolderChoice(null, Items.TOP_LEVEL, 0)))
     FolderPickerSheet(title, choices, current?.takeIf { id -> choices.any { it.id == id } }, onPick, onDismiss)

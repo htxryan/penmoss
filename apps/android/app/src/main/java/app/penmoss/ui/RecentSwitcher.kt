@@ -192,7 +192,7 @@ internal fun RecentSwitcherHost(graph: app.penmoss.AppGraph, currentNote: String
     val switch = androidx.compose.runtime.remember { RecentSwitch() }
     val recent by androidx.compose.runtime.remember(graph) {
         // Open notebooks only (T43, A752).
-        graph.store.observeRecent(RECENT_SWITCHER_NOTES + 1, graph.hiddenFolders)
+        graph.store.observeRecent(RECENT_SWITCHER_NOTES + 1)
             .map { Items.notes(it, System.currentTimeMillis()) }
             .distinctUntilChanged()
     }.collectAsStateWithLifecycle(emptyList())

@@ -118,25 +118,6 @@ class NoteInfoTest {
     }
 
     @Test
-    fun theNotebookRowNamesTheNotesNotebookAsTheWebs() {
-        val work = FolderEntity("nb1", "Work", null, "a", "manual", notebook = true)
-        val plans = FolderEntity("f1", "Plans", "nb1", "a", "manual")
-        val garden = FolderEntity("f2", "Garden", null, "b", "manual")
-        val folders = listOf(work, plans, garden)
-        // One notebook only, as the web: no row.
-        assertNull(infoNotebook(listOf(garden), "f2", "Personal"))
-        assertEquals(listOf("Folder", "Created", "Edited", "Saved", "Length"), infoRows(emptyList(), info, NOW, NOW, notebook = null).map { it.label })
-        // With another notebook: the default's name at the top level and in its folders, else the notebook's.
-        assertEquals("Personal", infoNotebook(folders, null, "Personal"))
-        assertEquals("Home", infoNotebook(folders, "f2", "Home"))
-        assertEquals("Work", infoNotebook(folders, "f1", "Personal"))
-        assertEquals("Work (closed on this phone)", infoNotebook(folders, "nb1", "Personal", closed = setOf("nb1")))
-        val rows = infoRows(listOf("Plans"), info, NOW, NOW, notebook = "Work")
-        assertEquals(listOf("Notebook", "Folder", "Created", "Edited", "Saved", "Length"), rows.map { it.label })
-        assertEquals("Work", rows[0].value)
-    }
-
-    @Test
     fun inlineTagsAreTheNotesTagsItsFrontmatterDoesNotHave() {
         assertEquals(listOf("t51test"), inlineTags(listOf("t51test"), emptyList()))
         assertEquals(listOf("idea", "zz"), inlineTags(listOf("zz", "garden", "idea", "idea"), listOf("garden", "plans")))
@@ -162,7 +143,8 @@ class NoteInfoTest {
                     Box(Modifier.width(width)) {
                         InfoSheet(
                             noteId = noteId,
-                            rows = infoRows(listOf("Plans"), info, NOW, NOW, notebook = "Personal"),
+                            // The longest label a row may have, as a Notebook row's on the web.
+                            rows = listOf(InfoRow("Notebook", "Personal")) + infoRows(listOf("Plans"), info, NOW, NOW),
                             tags = emptyList(),
                             canTag = false,
                             fields = listOf(InfoField("lastReviewed", "2026-10-01")),
@@ -192,7 +174,7 @@ class NoteInfoTest {
             PenmossTheme {
                 InfoSheet(
                     noteId = noteId,
-                    rows = infoRows(emptyList(), info, NOW, NOW, notebook = "Personal"),
+                    rows = infoRows(emptyList(), info, NOW, NOW),
                     tags = emptyList(),
                     canTag = true,
                     fields = emptyList(),
@@ -206,8 +188,6 @@ class NoteInfoTest {
                 )
             }
         }
-        compose.onNodeWithTag("infoRow-Notebook").assertExists()
-        compose.onNodeWithText("Personal").assertExists()
         compose.onNodeWithText("No tags yet.").assertDoesNotExist()
         // Under the tags, scrolled into the half-height sheet's view first.
         compose.onNodeWithTag("infoList").performScrollToNode(hasTestTag("infoInlineTags"))

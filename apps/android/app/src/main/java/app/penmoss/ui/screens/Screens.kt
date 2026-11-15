@@ -178,13 +178,11 @@ fun HomeScreen(
     /** Send feedback (T49, D41), last in the overflow menu; none when null. */
     onFeedback: (() -> Unit)? = null,
     /**
-     * The notebooks open on this phone, at the top (T43, A750, A752); [folders] are then the
-     * default notebook's, under its name ([defaultNotebook]).
+     * The folders flagged notebooks, at the top (T43, A750); [folders] are then the default
+     * notebook's, under its name ([defaultNotebook]).
      */
     notebooks: List<FolderItem> = emptyList(),
     defaultNotebook: String = "Personal",
-    /** Makes a notebook (T43, A750), from the overflow menu; none when null. */
-    onNewNotebook: (() -> Unit)? = null,
     /** The top bar's title: Penmoss, or a git notebook's name (T50 G7, A880). */
     title: String = "Penmoss",
     /** The git notebooks on this phone, each its own section that opens its screens (A826). */
@@ -300,16 +298,6 @@ fun HomeScreen(
                                     },
                                     modifier = Modifier.testTag("homeNewFolder"),
                                 )
-                                if (onNewNotebook != null) {
-                                    DropdownMenuItem(
-                                        text = { Text("New Notebook") },
-                                        onClick = {
-                                            more = false
-                                            onNewNotebook()
-                                        },
-                                        modifier = Modifier.testTag("homeNewNotebook"),
-                                    )
-                                }
                                 if (sortMode == "manual") {
                                     DropdownMenuItem(
                                         text = { Text("Reorder Folders") },
@@ -724,11 +712,9 @@ fun FolderScreen(
     onMoveNote: (id: String, before: String?, after: String?) -> Unit = { _, _, _ -> },
     /**
      * Notebooks (T43, A750, A756): this folder is a notebook ([notebook]: Rename, Turn back into a
-     * folder and Delete notebook, never Move to…), or a top-level folder that may become one
-     * ([onTurnIntoNotebook] set).
+     * folder and Delete notebook, never Move to…). No folder becomes one here (A912).
      */
     notebook: Boolean = false,
-    onTurnIntoNotebook: (() -> Unit)? = null,
     onTurnBack: () -> Unit = {},
 ) {
     var menu by remember { mutableStateOf(false) }
@@ -804,16 +790,6 @@ fun FolderScreen(
                                             onMoveFolderTo()
                                         },
                                         modifier = Modifier.testTag("folderMoveTo"),
-                                    )
-                                }
-                                if (onTurnIntoNotebook != null && !notebook) {
-                                    DropdownMenuItem(
-                                        text = { Text("Turn into Notebook") },
-                                        onClick = {
-                                            menu = false
-                                            onTurnIntoNotebook()
-                                        },
-                                        modifier = Modifier.testTag("folderTurnIntoNotebook"),
                                     )
                                 }
                                 if (notebook) {

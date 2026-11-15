@@ -177,7 +177,7 @@ data class FolderOpEntity(
     val folderId: String?,
     /** CREATE, RENAME, MOVE, SORT, REORDER, DELETE, ROOT_SORT, NOTEBOOK or ROOT_NAME. */
     val kind: String,
-    /** The new name (CREATE, RENAME), or the default notebook's (ROOT_NAME, T43). */
+    /** The new name (CREATE, RENAME). */
     val name: String? = null,
     /** Precondition for RENAME when [checkName]: the name seen when it was asked. */
     val fromName: String? = null,
@@ -224,7 +224,10 @@ data class FolderOpEntity(
         /** Turn a top-level folder into a notebook, or a notebook back into a folder (T43, A756). */
         const val NOTEBOOK = "NOTEBOOK"
 
-        /** The default notebook's name (T43, A751): `PATCH /api/folders/root { notebookName }`. */
+        /**
+         * The default notebook's name (T43, A751), which an older version could queue. Dropped
+         * unsent: a git notebook has no default notebook to name (A912).
+         */
         const val ROOT_NAME = "ROOT_NAME"
     }
 }

@@ -113,10 +113,6 @@ class NoteStore(
         // The top level's sort, which lives in settings rather than the folders table, is
         // re-applied after the tree's own (T40 P4, NT6).
         settings.put(SettingEntity(ROOT_SORT_MODE, tree.rootSortMode))
-        // The default notebook's name (T43, A751), absent while unnamed: "Personal". A rename
-        // made here and not sent yet is laid over it next, as the top level's sort is.
-        val notebookName = tree.defaultNotebook?.takeIf { it.isNotBlank() }
-        if (notebookName != null) settings.put(SettingEntity(DEFAULT_NOTEBOOK, notebookName)) else settings.delete(DEFAULT_NOTEBOOK)
         reapplyFolderOps(folderIds)
         // The theme chosen in Settings → Appearance, as the server resolved it (A305).
         tree.appearance?.let { settings.put(SettingEntity(APPEARANCE, it.toString())) }
@@ -410,64 +406,12 @@ class NoteStore(
 
     // --- notebooks (T43, A750–A756) ---
 
-    /**
-     * The folders of the notebooks [closed] on this phone (A752): Recent, the switcher, search,
-     * tags and the graph leave their notes out. The default notebook is never closed.
-     */
-    fun observeHiddenFolders(closed: Flow<Set<String>>): Flow<Set<String>> =
-        combine(db.folders().observeAll(), closed) { folders, shut -> Notebooks.hiddenFolders(folders, shut) }.distinctUntilChanged()
-
-    /** Recent, without the notes of notebooks closed here (A752). */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    fun observeRecent(limit: Int, hidden: Flow<Set<String>>): Flow<List<NoteListRow>> =
-        hidden.flatMapLatest { if (it.isEmpty()) notes.observeRecent(limit) else notes.observeRecentOutside(limit, it.toList()) }
-
-    /** Each live note's tags, without closed notebooks' notes (A752). */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    fun observeNoteTags(hidden: Flow<Set<String>>): Flow<List<List<String>>> = hidden.flatMapLatest { shut ->
-        (if (shut.isEmpty()) search.observeNoteTags() else search.observeNoteTagsOutside(shut.toList())).map { rows ->
-            rows.groupBy({ it.noteId }, { it.tag }).values.toList()
-        }
-    }
-
-    /** Every tag with its count, without closed notebooks' notes (A752). */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    fun observeTagCounts(hidden: Flow<Set<String>>): Flow<List<TagCountRow>> =
-        hidden.flatMapLatest { if (it.isEmpty()) search.observeTagCounts() else search.observeTagCountsOutside(it.toList()) }
-
-    /** A tag's notes, without closed notebooks' (A752). */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    fun observeTagged(tag: String, hidden: Flow<Set<String>>): Flow<List<NoteListRow>> =
-        hidden.flatMapLatest { if (it.isEmpty()) search.observeTagged(tag) else search.observeTaggedOutside(tag, it.toList()) }
-
-    /** What a search leaves out with notebooks [closed] here (A752): from the folders now. */
-    suspend fun notebookScope(closed: Set<String>): NotebookScope =
-        if (closed.isEmpty()) NotebookScope.ALL else Notebooks.scope(db.folders().all(), closed)
-
-    /** The default notebook's name (A751): as the tree last said, or a rename made here; "Personal" unnamed. */
-    fun observeDefaultNotebookName(): Flow<String> = settings.observe(DEFAULT_NOTEBOOK).map(Notebooks::defaultName)
-
-    suspend fun defaultNotebookName(): String = Notebooks.defaultName(settings.get(DEFAULT_NOTEBOOK))
-
     /** The notebook a note is in, by name (A752): null for the default notebook or a note not held. */
     suspend fun notebookOf(noteId: String): FolderEntity? {
         val folderId = notes.note(noteId)?.folderId ?: return null
         val folders = db.folders().all()
         val notebook = Notebooks.index(folders).ofFolder(folderId) ?: return null
         return folders.firstOrNull { it.id == notebook }
-    }
-
-    /**
-     * Makes a notebook here (A750): a top-level folder flagged at once, queued as one create
-     * (`POST /api/folders { notebook: true }`), offline too. Returns its id.
-     */
-    suspend fun createNotebook(name: String): String = db.withTransaction {
-        val id = Ulid.next()
-        db.folders().put(FolderEntity(id, name, null, endFolderPosition(null), FolderTree.MANUAL, notebook = true))
-        db.folderOps().insert(
-            FolderOpEntity(folderId = id, kind = FolderOpEntity.CREATE, name = name, parentId = null, label = name, notebook = true),
-        )
-        id
     }
 
     /** What [setNotebook] did: [refusal] says why not, in the server's words. */
@@ -492,17 +436,6 @@ class NoteStore(
             db.folderOps().insert(FolderOpEntity(folderId = id, kind = FolderOpEntity.NOTEBOOK, notebook = on, label = folder.name))
         }
         NotebookFlag(true)
-    }
-
-    /**
-     * Renames the default notebook here (A751): shown at once, queued as
-     * `PATCH /api/folders/root { notebookName }`; a blank name gives back "Personal".
-     */
-    suspend fun renameDefaultNotebook(name: String) = db.withTransaction {
-        val trimmed = name.trim()
-        if (trimmed.isEmpty()) settings.delete(DEFAULT_NOTEBOOK) else settings.put(SettingEntity(DEFAULT_NOTEBOOK, trimmed))
-        db.folderOps().deleteKind(null, FolderOpEntity.ROOT_NAME)
-        db.folderOps().insert(FolderOpEntity(folderId = null, kind = FolderOpEntity.ROOT_NAME, name = trimmed))
     }
 
     // --- the editor ---
@@ -1050,22 +983,6 @@ class NoteStore(
     /** What the graph is drawn from (T40 P7, LK7, LK8; A478): live notes, their links, the folders. */
     fun observeGraph(): Flow<GraphSource> =
         combine(notes.observeDirectory(), db.noteLinks().observeAll(), db.folders().observeAll(), observeRootSortMode(), ::GraphSource)
-
-    /** The graph without closed notebooks (T43, A752): their notes, links and folders left out. */
-    fun observeGraph(hidden: Flow<Set<String>>): Flow<GraphSource> = combine(observeGraph(), hidden) { source, shut ->
-        if (shut.isEmpty()) {
-            source
-        } else {
-            val notes = source.notes.filter { it.folderId == null || it.folderId !in shut }
-            val live = notes.mapTo(HashSet()) { it.id }
-            GraphSource(
-                notes,
-                source.links.filter { it.sourceId in live && it.targetId in live },
-                source.folders.filter { it.id !in shut },
-                source.rootSortMode,
-            )
-        }
-    }
 
     /** The live notes linking to [noteId], most recently edited first (LK5), offline. */
     fun observeBacklinkSources(noteId: String): Flow<List<BacklinkSource>> = db.noteLinks().observeSources(noteId)
@@ -1671,10 +1588,6 @@ class NoteStore(
                     if (folder == null) dropFolderOpsFor(op.folderId!!, op.label)
                     else db.folders().put(folder.copy(notebook = op.notebook))
                 }
-                FolderOpEntity.ROOT_NAME -> {
-                    val name = op.name?.trim().orEmpty()
-                    if (name.isEmpty()) settings.delete(DEFAULT_NOTEBOOK) else settings.put(SettingEntity(DEFAULT_NOTEBOOK, name))
-                }
             }
         }
     }
@@ -1843,7 +1756,6 @@ class NoteStore(
         const val ROOT_SORT_MODE = "rootSortMode"
 
         /** The default notebook's name (T43, A751), from the tree or renamed here; absent: "Personal". */
-        const val DEFAULT_NOTEBOOK = Notebooks.NAME_SETTING
 
         /** How long after a change the server's index may still lag, as the web's `INDEX_LAG_MS`. */
         const val INDEX_LAG_MS = 60_000L

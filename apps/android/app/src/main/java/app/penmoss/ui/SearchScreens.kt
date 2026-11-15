@@ -478,10 +478,7 @@ internal fun SearchRoute(
     /** The request Enter asked the server to answer now (A111). */
     var submitted by rememberSaveable(stateSaver = SearchFilterUi.SubmittedSaver) { mutableStateOf<Pair<String, SearchFilterUi>?>(null) }
     val service = remember(graph) {
-        SearchService(
-            graph.api, graph.offlineSearch, { graph.onlineAgain.online.value },
-            notebooks = graph::notebookScope, folderOf = graph.store::folderOf,
-        )
+        SearchService(graph.api, graph.offlineSearch, { graph.onlineAgain.online.value })
     }
     val choices by remember {
         combine(graph.store.observeRootSortMode(), graph.store.observeFolders()) { sort, folders -> Items.folderChoices(sort, folders) }
@@ -489,8 +486,7 @@ internal fun SearchRoute(
     }.collectAsStateWithLifecycle(emptyList())
     val tags by remember {
         // Coalesced while a first fill writes notes many times a second (review nit).
-        // The tags of open notebooks' notes (T43, A752).
-        combine(graph.store.observeTagCounts(graph.hiddenFolders).conflate(), graph.store.observeTagList()) { local, known ->
+        combine(graph.store.observeTagCounts().conflate(), graph.store.observeTagList()) { local, known ->
             tagOptions(local.map { it.tag } + known.map { it.name })
         }.conflate().distinctUntilChanged().flowOn(Dispatchers.Default)
     }.collectAsStateWithLifecycle(emptyList())

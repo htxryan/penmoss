@@ -320,22 +320,20 @@ internal const val RENAME_RESYNC_MS = 5_000L
 @Composable
 internal fun TagsRoute(graph: AppGraph, onBack: () -> Unit, onOpenTag: (String) -> Unit) {
     val renamer = remember(graph) { GraphTagRenamer(graph) }
-    TagsRoute(graph.store, renamer, onBack, onOpenTag, graph.hiddenFolders)
+    TagsRoute(graph.store, renamer, onBack, onOpenTag)
 }
 
-/** [hidden]: the folders of notebooks closed here, whose notes' tags are left out (T43, A752). */
 @Composable
 internal fun TagsRoute(
     store: NoteStore,
     renamer: TagRenamer,
     onBack: () -> Unit,
     onOpenTag: (String) -> Unit,
-    hidden: kotlinx.coroutines.flow.Flow<Set<String>> = kotlinx.coroutines.flow.flowOf(emptySet()),
 ) {
     // One Room read for both the tree and the dialog's known tags, coalesced while a first fill writes (review nit).
     val scope = rememberCoroutineScope()
     val shared = remember(store) {
-        store.observeNoteTags(hidden).conflate().distinctUntilChanged().shareIn(scope, SharingStarted.WhileSubscribed(), replay = 1)
+        store.observeNoteTags().conflate().distinctUntilChanged().shareIn(scope, SharingStarted.WhileSubscribed(), replay = 1)
     }
     val noteTags by shared.collectAsStateWithLifecycle(emptyList())
     val tree by remember(shared) { shared.map { TagTree.build(it) }.flowOn(Dispatchers.Default) }.collectAsStateWithLifecycle(emptyList())
@@ -390,7 +388,7 @@ private suspend fun renameTag(store: NoteStore, renamer: TagRenamer, from: Strin
 @Composable
 internal fun TaggedRoute(graph: AppGraph, tag: String, onBack: () -> Unit, onOpen: (String) -> Unit, onNoteLongPress: (NoteItem) -> Unit) {
     val notes by remember(graph, tag) {
-        graph.store.observeTagged(tag, graph.hiddenFolders).map { Items.notes(it, System.currentTimeMillis()) }.distinctUntilChanged().flowOn(Dispatchers.Default)
+        graph.store.observeTagged(tag).map { Items.notes(it, System.currentTimeMillis()) }.distinctUntilChanged().flowOn(Dispatchers.Default)
     }.collectAsStateWithLifecycle(emptyList())
     TaggedNotesScreen(tag, notes, onBack, onOpen, onNoteLongPress)
 }

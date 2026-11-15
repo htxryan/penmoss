@@ -109,8 +109,8 @@ internal fun createdLabel(iso: String?, now: Long = System.currentTimeMillis()):
 }
 
 /**
- * The details as the web's Info panel lists them: notebook, folder, created, edited, saved and
- * length. [notebook] is [infoNotebook]'s (no row when null); [saved] is the note's sync state, in
+ * The details as the web's Info panel lists them: folder, created, edited, saved and length (a
+ * git notebook has no Notebook row, A912). [saved] is the note's sync state, in
  * the top bar's sync icon's words (NT24); [counts] the page's (T40 P8), an ellipsis until it has
  * counted.
  */
@@ -121,45 +121,15 @@ internal fun infoRows(
     now: Long = System.currentTimeMillis(),
     saved: NoteSync? = null,
     counts: NoteCounts? = null,
-    notebook: String? = null,
 ): List<InfoRow> {
     // No Kind row: a periodic note's label is at the top of the sheet (A572, A653).
     return listOfNotNull(
-        notebook?.let { InfoRow("Notebook", it) },
         InfoRow("Folder", if (folders.isEmpty()) "Top level" else folders.joinToString(" / ")),
         InfoRow("Created", if (info == null) "…" else createdLabel(info.created, now)),
         InfoRow("Edited", if (editedAt == null || editedAt == 0L) "—" else shortWhen(editedAt, now)),
         InfoRow("Saved", saved?.label ?: "…"),
         InfoRow("Length", counts?.label ?: "…"),
     )
-}
-
-/**
- * The Notebook row's value (T43, as the web's Info panel), or null for no row: the notebook the
- * note's folder is in, or the default notebook's name ([defaultName], "Personal" unnamed), with
- * "(closed on this phone)" when it is closed here (A752). Shown, as on the web, only when one of
- * [folders] is a notebook; a git notebook's graph has none (A912).
- */
-internal fun infoNotebook(
-    folders: List<FolderEntity>,
-    folderId: String?,
-    defaultName: String,
-    closed: Set<String> = emptySet(),
-): String? {
-    val index = Notebooks.index(folders)
-    if (index.notebooks.isEmpty()) return null
-    val id = index.ofFolder(folderId) ?: return defaultName
-    val name = folders.firstOrNull { it.id == id }?.name?.ifBlank { "Untitled folder" } ?: "Notebook"
-    return if (id in closed) "$name (closed on this phone)" else name
-}
-
-/** [infoNotebook] for the open note in [graph]: none in a git notebook's graph, as on the web. */
-@Composable
-internal fun rememberInfoNotebook(graph: AppGraph, folders: List<FolderEntity>, folderId: String?): String? {
-    val defaultName by remember(graph) { graph.store.observeDefaultNotebookName() }.collectAsStateWithLifecycle(Notebooks.DEFAULT_NAME)
-    val closed by graph.closedNotebooks.closed.collectAsStateWithLifecycle()
-    if (graph.source is GraphSource.Git) return null
-    return remember(folders, folderId, defaultName, closed) { infoNotebook(folders, folderId, defaultName, closed) }
 }
 
 /**

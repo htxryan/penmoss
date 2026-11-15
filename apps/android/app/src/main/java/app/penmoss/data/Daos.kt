@@ -109,14 +109,6 @@ interface NoteDao {
     )
     fun observeRecent(limit: Int): Flow<List<NoteListRow>>
 
-    /** [observeRecent] without the notes filed in [hidden]: the folders of notebooks closed here (T43, A752). */
-    @Query(
-        "SELECT id, title, excerpt, updatedAt, folderId, position FROM notes " +
-            "WHERE deleted = 0 AND gone = 0 AND (folderId IS NULL OR folderId NOT IN (:hidden)) " +
-            "ORDER BY MAX(openedAt, updatedAt) DESC, id DESC LIMIT :limit",
-    )
-    fun observeRecentOutside(limit: Int, hidden: List<String>): Flow<List<NoteListRow>>
-
     /**
      * Notes that went to Trash with a notebook deleted here (T43, A755): out of every list at once,
      * with nothing to send (the server's delete trashes them), held as a sent move is until an

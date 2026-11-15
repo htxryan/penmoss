@@ -129,11 +129,6 @@ data class SyncTree(
      */
     val settings: JsonObject? = null,
     /**
-     * The default notebook's name (T43, A751): absent from a server before notebooks, or while
-     * the person has not named it, which reads as "Personal".
-     */
-    val defaultNotebook: String? = null,
-    /**
      * A git notebook's device map (A1014): every `device/<key>` setting in its WorkspaceDoc, as
      * the Mac writes them. The device's settings when this is the Journal notebook and there is no
      * account. Never from the Penmoss server.

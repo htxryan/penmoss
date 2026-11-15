@@ -94,9 +94,7 @@ class AppGraph(
 
     companion object {}
 
-    /** A git notebook's preferences and files are its own (A826): under its local id. */
-    private val prefsPrefix = (source as? app.penmoss.git.GraphSource.Git)?.let { "git.${it.localId}." } ?: ""
-    private val prefsOf: (String) -> android.content.SharedPreferences = { name -> context.getSharedPreferences(prefsPrefix + name, Context.MODE_PRIVATE) }
+    /** A git notebook's files are its own (A826): under its local id. */
     private val filesRoot: File = (source as? app.penmoss.git.GraphSource.Git)?.let { File(context.filesDir, "git-graphs/${it.localId}") } ?: context.filesDir
     private val cacheRoot: File = (source as? app.penmoss.git.GraphSource.Git)?.let { File(context.cacheDir, "git-graphs/${it.localId}") } ?: context.cacheDir
 
@@ -140,13 +138,6 @@ class AppGraph(
     /** Delete for good (T40 P3a): in a git notebook the page asks the person first (A877). */
     val purge: app.penmoss.engine.api.PenmossPurgeApi = httpApi
 
-    /** The notebooks closed on this phone (T43, A752): none in a git notebook (A912). */
-    val closedNotebooks: app.penmoss.data.ClosedNotebooks = app.penmoss.data.ClosedNotebooks(
-        prefsOf(app.penmoss.data.ClosedNotebooks.PREFS),
-        workspace = { (source as? app.penmoss.git.GraphSource.Git)?.notebookId },
-        inGitNotebook = isGit,
-    )
-
     /** Each note's toggles as this phone left them (T40 P8, ED8): cleared with the cache. */
     val folds = app.penmoss.data.FoldStore(database.folds())
 
@@ -176,12 +167,6 @@ class AppGraph(
     )
 
     val store: NoteStore = NoteStore(database)
-
-    /** The folders of the notebooks closed here (T43, A752): what the lists leave out. */
-    val hiddenFolders: kotlinx.coroutines.flow.Flow<Set<String>> = store.observeHiddenFolders(closedNotebooks.closed)
-
-    /** What a search covers with the notebooks closed here (T43, A752). */
-    suspend fun notebookScope(): app.penmoss.data.NotebookScope = store.notebookScope(closedNotebooks.closed.value)
 
     init {
         // A token saved or replaced in Settings → About → GitHub Token sends what waited (A1012).
@@ -508,11 +493,11 @@ fun AppGraph.Companion.forGit(
 )
 
 /**
- * A git notebook graph's preference files, deleted with it: its closed notebooks, and those an
- * older version made for it (its sign-in, mirror and background files, never used).
+ * A git notebook graph's preference files, deleted with it: those an older version made for it
+ * (its sign-in, mirror, closed notebooks and background files, never used).
  */
 fun AppGraph.Companion.gitPrefs(localId: String): List<String> =
-    listOf("penmoss.vault", "penmoss.mirror", app.penmoss.data.ClosedNotebooks.PREFS, "penmoss.session", "penmoss.background").map { "git.$localId.$it" }
+    listOf("penmoss.vault", "penmoss.mirror", "penmoss.notebooks", "penmoss.session", "penmoss.background").map { "git.$localId.$it" }
 
 class PenmossApp : Application(), Configuration.Provider {
     lateinit var graph: AppGraph

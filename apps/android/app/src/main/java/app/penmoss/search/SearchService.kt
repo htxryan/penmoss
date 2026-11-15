@@ -1,8 +1,6 @@
 package app.penmoss.search
 
-import app.penmoss.data.NotebookScope
 import app.penmoss.data.OfflineSearch
-import app.penmoss.engine.api.SearchHit
 import app.penmoss.engine.api.ApiException
 import app.penmoss.engine.api.PenmossApi
 import app.penmoss.engine.api.SearchFilters
@@ -62,10 +60,6 @@ class SearchService(
     private val local: OfflineSearch,
     /** Whether a network is up; offline, the typing answer says it is words only. */
     private val online: () -> Boolean = { true },
-    /** The notebooks open on this phone (T43, A752): what every search covers. */
-    private val notebooks: suspend () -> NotebookScope = { NotebookScope.ALL },
-    /** A note's folder as the phone has it, for a result an older server names no notebook for. */
-    private val folderOf: suspend (String) -> String? = { null },
 ) {
     /** The answer while typing: the phone's full-text results. */
     suspend fun typing(request: SearchRequest): SearchOutcome {
@@ -74,18 +68,17 @@ class SearchService(
     }
 
     suspend fun search(request: SearchRequest): SearchOutcome {
-        val scope = notebooks()
         try {
             val reply = api.search(
                 request.input,
                 request.limit,
                 SearchMode.HYBRID,
-                scope.open?.let { request.filters.copy(notebooks = it) } ?: request.filters,
+                request.filters,
                 partial = !request.submitted && local.unfinished(request.input),
             )
             return SearchOutcome(
                 SearchOutcome.Source.SERVER,
-                reply.results.filter { open(it, scope) }.map {
+                reply.results.map {
                     SearchResult(
                         id = it.id,
                         title = it.title,
@@ -107,21 +100,11 @@ class SearchService(
         } catch (_: Exception) {
             // Offline, or the server could not answer: the phone's own index answers.
         }
-        return SearchOutcome(SearchOutcome.Source.DEVICE, device(request, scope), wordsOnly = WORDS_ONLY_OFFLINE)
+        return SearchOutcome(SearchOutcome.Source.DEVICE, device(request), wordsOnly = WORDS_ONLY_OFFLINE)
     }
 
-    /**
-     * A result in a notebook open here (A752): as the server names it, or, from a server before
-     * notebooks, by the folder the phone has the note in.
-     */
-    private suspend fun open(hit: SearchHit, scope: NotebookScope): Boolean {
-        if (scope.closed.isEmpty()) return true
-        hit.notebook?.let { return it.id !in scope.closed }
-        return folderOf(hit.id)?.let { it !in scope.hiddenFolders } ?: true
-    }
-
-    private suspend fun device(request: SearchRequest, scope: NotebookScope? = null): List<SearchResult> =
-        local.search(request.input, request.filters, request.limit, hidden = (scope ?: notebooks()).hiddenFolders).map {
+    private suspend fun device(request: SearchRequest): List<SearchResult> =
+        local.search(request.input, request.filters, request.limit).map {
             SearchResult(it.noteId, it.title, it.titleMarked, it.snippet, updatedAt = it.updatedAt, excerpt = it.excerpt)
         }
 

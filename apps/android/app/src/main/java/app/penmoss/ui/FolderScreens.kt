@@ -67,8 +67,8 @@ import androidx.compose.ui.zIndex
 /**
  * What a long press on a folder row offers (T40 P4, NT3–NT5): make a folder inside it (New Folder
  * Here, T53 item 12), rename it, move it, or delete it (with what moves up). For a notebook (T43,
- * A750, A756): New Folder Here, Rename, Turn back into a folder and Delete notebook, never Move; a top-level folder that may
- * become one also offers Turn into notebook ([onTurnIntoNotebook]). New Note Here comes first
+ * A750, A756): New Folder Here, Rename, Turn back into a folder and Delete notebook, never Move. No
+ * folder is turned into a notebook here, and none is closed (A912). New Note Here comes first
  * ([onNewNoteHere], T52 item 1), as the sidebar's right-click menu has it: a note made in this
  * folder (or at this notebook's top), opened at once.
  */
@@ -82,10 +82,7 @@ fun FolderSheet(
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
     notebook: Boolean = false,
-    onTurnIntoNotebook: (() -> Unit)? = null,
     onTurnBack: () -> Unit = {},
-    /** A notebook: close it on this phone, as the web's Close on this device (T39 pass 3, A897). */
-    onClose: (() -> Unit)? = null,
     /** Makes a note in this folder and opens it (T52 item 1); none offered when null. */
     onNewNoteHere: (() -> Unit)? = null,
 ) {
@@ -105,12 +102,10 @@ fun FolderSheet(
                 FolderSheetAction("New Folder Here", "folderAction-subfolder", onNewSubfolder)
                 FolderSheetAction("Rename", "folderAction-rename", onRename)
                 if (notebook) {
-                    onClose?.let { FolderSheetAction("Close on This Phone", "folderAction-close", it) }
                     FolderSheetAction("Turn Back into a Folder…", "folderAction-turnBack", onTurnBack)
                     FolderSheetAction("Delete Notebook…", "folderAction-delete", onDelete)
                 } else {
                     FolderSheetAction("Move to…", "folderAction-move", onMove)
-                    onTurnIntoNotebook?.let { FolderSheetAction("Turn into Notebook", "folderAction-turnIntoNotebook", it) }
                     // The web's names, with "…" for what asks first (T39 pass 3, A891).
                     FolderSheetAction("Delete Folder…", "folderAction-delete", onDelete)
                 }

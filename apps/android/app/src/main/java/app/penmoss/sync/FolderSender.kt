@@ -38,7 +38,8 @@ class FolderSender(private val store: NoteStore, private val api: PenmossApi) {
                 FolderOpEntity.CREATE -> sendCreate(op)
                 FolderOpEntity.DELETE -> sendDelete(op)
                 FolderOpEntity.ROOT_SORT -> sendRootSort(op)
-                FolderOpEntity.ROOT_NAME -> sendRootName(op)
+                // A rename of the default notebook an older version queued: a git notebook has none (A912).
+                FolderOpEntity.ROOT_NAME -> true.also { store.dropFolderOp(op.rowId) }
                 else -> sendPatch(op)
             }
             if (done != true) return
@@ -173,30 +174,6 @@ class FolderSender(private val store: NoteStore, private val api: PenmossApi) {
             return when {
                 error.unauthorized -> throw error
                 // A 404 is a server from before this route: the sort waits (A449).
-                error.status == 404 || error.status >= 500 || error.status == 429 -> null
-                else -> {
-                    store.dropFolderOp(op.rowId)
-                    true
-                }
-            }
-        } catch (error: IOException) {
-            return null
-        }
-        store.dropFolderOp(op.rowId)
-        return true
-    }
-
-    /**
-     * The default notebook's name (T43, A751). A 404 is a server from before notebooks: the
-     * rename waits (A449), as the top level's sort does.
-     */
-    private suspend fun sendRootName(op: FolderOpEntity): Boolean? {
-        store.markFolderOpTried(op.rowId)
-        try {
-            api.setDefaultNotebookName(op.name.orEmpty())
-        } catch (error: ApiException) {
-            return when {
-                error.unauthorized -> throw error
                 error.status == 404 || error.status >= 500 || error.status == 429 -> null
                 else -> {
                     store.dropFolderOp(op.rowId)

@@ -68,7 +68,7 @@ class FeedbackCollector(
                 title = it.title,
                 folderPath = folderPath(it.folderId) ?: "Top level",
                 tags = extras?.tags ?: dao.tags(it.id),
-                notebook = notebookName(it.folderId) ?: Notebooks.defaultName(db.settings().get(Notebooks.NAME_SETTING)),
+                notebook = notebookName(it.folderId) ?: Notebooks.DEFAULT_NAME,
                 created = extras?.created,
                 updated = it.updatedAt,
                 words = extras?.words ?: text.split(Regex("\\s+")).count(String::isNotEmpty),

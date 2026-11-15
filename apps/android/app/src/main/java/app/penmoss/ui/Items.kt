@@ -18,12 +18,9 @@ import java.util.Locale
 @Immutable
 data class NoteItem(val id: String, val title: String, val excerpt: String, val date: String)
 
-/**
- * A folder as the lists show it. [notebook]: a notebook's own folder (T43, A750); [canBeNotebook]:
- * a top-level folder that Turn into notebook may flag (not one holding Journal or the Inbox).
- */
+/** A folder as the lists show it. [notebook]: a notebook's own folder (T43, A750). */
 @Immutable
-data class FolderItem(val id: String, val name: String, val notebook: Boolean = false, val canBeNotebook: Boolean = false)
+data class FolderItem(val id: String, val name: String, val notebook: Boolean = false)
 
 /**
  * A row of the folder picker (T38): the top level (null id), or a folder at its depth in the tree,
@@ -74,7 +71,7 @@ object Items {
             { NoteRow(it.id, it.folderId, it.position, it.title, it.updatedAt) },
         )
         val dates = DateLabels(now, zone)
-        return contents.folders.map { item(it, folders) } to contents.notes.map { note(it, dates) }
+        return contents.folders.map(::item) to contents.notes.map { note(it, dates) }
     }
 
     /**
@@ -84,21 +81,16 @@ object Items {
     fun pathText(names: List<String>): String =
         if (names.isEmpty()) TOP_LEVEL else names.joinToString(" › ") { "\u2068${it.ifBlank { "Untitled folder" }}\u2069" }
 
-    /** A folder's row, with what notebooks need of it (T43). */
-    fun item(folder: FolderEntity, folders: List<FolderEntity>): FolderItem = FolderItem(
-        folder.id,
-        folder.name.ifBlank { "Untitled folder" },
-        notebook = folder.notebook,
-        canBeNotebook = !folder.notebook && folder.parentId == null && !app.penmoss.data.Notebooks.holdsJournal(folders, folder.id),
-    )
+    /** A folder's row, marked when it is a notebook (T43). */
+    fun item(folder: FolderEntity): FolderItem = FolderItem(folder.id, folder.name.ifBlank { "Untitled folder" }, notebook = folder.notebook)
 
     /**
-     * Home's top (T43, A750): the notebooks open on this phone, in the top level's order, and the
-     * default notebook's top-level folders. A closed notebook is not listed (A752).
+     * Home's top (T43, A750): the notebooks, in the top level's order, and the default notebook's
+     * top-level folders.
      */
-    fun home(rootSortMode: String, folders: List<FolderEntity>, closed: Set<String>, now: Long): Pair<List<FolderItem>, List<FolderItem>> {
+    fun home(rootSortMode: String, folders: List<FolderEntity>, now: Long): Pair<List<FolderItem>, List<FolderItem>> {
         val (top, _) = folder(null, rootSortMode, folders, emptyList(), now)
-        return top.filter { it.notebook && it.id !in closed } to top.filterNot { it.notebook }
+        return top.filter { it.notebook } to top.filterNot { it.notebook }
     }
 
     /**

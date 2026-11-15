@@ -11,10 +11,7 @@ object Notebooks {
     /** The default notebook's id wherever a notebook is named by id (`notebooks=`, targets). */
     const val DEFAULT = "default"
 
-    /** The setting the phone keeps the default notebook's name in (NoteStore). */
-    const val NAME_SETTING = "defaultNotebook"
-
-    /** The default notebook's name until the person names it (A751). */
+    /** The default notebook's name (A751): a git notebook has nothing to rename it with (A912). */
     const val DEFAULT_NAME = "Personal"
 
     /** core's `journalFolderId('Journal')`: the same id on every device. */
@@ -27,9 +24,6 @@ object Notebooks {
     const val STAYS_AT_TOP = "A notebook stays at the top level: notebooks cannot go inside folders"
     const val JOURNAL_STAYS = "Journal and the Inbox stay in the default notebook"
     const val ONLY_TOP_LEVEL = "Only a top-level folder can be a notebook"
-
-    /** The default notebook's name as shown: what the person named it, or "Personal". */
-    fun defaultName(name: String?): String = name?.trim()?.takeIf { it.isNotEmpty() } ?: DEFAULT_NAME
 
     fun index(folders: List<FolderEntity>): NotebookIndex = NotebookIndex(folders)
 
@@ -97,33 +91,6 @@ object Notebooks {
         if (folder.parentId != null) return ONLY_TOP_LEVEL
         if (holdsJournal(folders, folderId)) return JOURNAL_STAYS
         return null
-    }
-
-    /** The folders whose notes the lists leave out (A752): every folder of a notebook in [closed]. */
-    fun hiddenFolders(folders: List<FolderEntity>, closed: Set<String>): Set<String> {
-        if (closed.isEmpty()) return emptySet()
-        val index = index(folders)
-        return folders.mapNotNullTo(HashSet()) { folder -> folder.id.takeIf { index.ofFolder(it) in closed } }
-    }
-
-    /** What search and its offline index need to leave closed notebooks out (A752). */
-    fun scope(folders: List<FolderEntity>, closed: Set<String>): NotebookScope {
-        val index = index(folders)
-        val shut = closed.filterTo(HashSet()) { index.isNotebook(it) }
-        if (shut.isEmpty()) return NotebookScope.ALL
-        val open = listOf(DEFAULT) + index.notebooks.map { it.id }.filter { it !in shut }
-        return NotebookScope(open, shut, hiddenFolders(folders, shut))
-    }
-}
-
-/**
- * Which notebooks a search covers (T43, A752): [open] is sent as `notebooks=` (null: every one,
- * nothing sent), [closed] leaves out a result the server names in one, and [hiddenFolders] one
- * filed in their folders (the offline index, and an older server's results).
- */
-data class NotebookScope(val open: List<String>?, val closed: Set<String>, val hiddenFolders: Set<String>) {
-    companion object {
-        val ALL = NotebookScope(null, emptySet(), emptySet())
     }
 }
 
