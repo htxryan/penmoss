@@ -33,6 +33,9 @@ import app.penmoss.sync.SyncStatus
 import app.penmoss.ui.common.LocalNoteSelection
 import app.penmoss.ui.common.NoteSelection
 import app.penmoss.ui.common.PenmossSnackbar
+import app.penmoss.ui.home.SyncLine
+import app.penmoss.ui.home.homeRoutes
+import app.penmoss.ui.home.stoppedLine
 import app.penmoss.ui.keys.RootCommands
 import app.penmoss.ui.keys.rootActions
 import app.penmoss.ui.note.noteRoutes

@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.home
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -16,14 +16,20 @@ import app.penmoss.data.CapturesWaiting
 import app.penmoss.engine.bridge.ToEditor
 import app.penmoss.engine.settings.QuickAccess
 import app.penmoss.engine.settings.SettingKeys
+import app.penmoss.ui.Choosing
+import app.penmoss.ui.FolderNaming
+import app.penmoss.ui.HomeLayout
+import app.penmoss.ui.HomeShortcuts
+import app.penmoss.ui.RootUi
+import app.penmoss.ui.SettingsRoutes
+import app.penmoss.ui.TrashRoutes
 import app.penmoss.ui.common.FolderItem
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.NoteItem
+import app.penmoss.ui.graphRoute
 import app.penmoss.ui.keys.openCapture
-import app.penmoss.ui.screens.AllNotesScreen
-import app.penmoss.ui.screens.HomeActions
-import app.penmoss.ui.screens.HomeScreen
-import app.penmoss.ui.screens.HomeUi
+import app.penmoss.ui.leave
+import app.penmoss.ui.open
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -82,7 +88,7 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
                 // The sidebar's sections and Quick Access (T53 items 8 and 10), synced settings.
                 layout = layout,
                 // Every pin is this notebook's note, named as its heading is (T53 item 10).
-                quickAccessNotebooks = quickAccess.associate { it.id to app.penmoss.ui.screens.HOME_NOTEBOOK_NAME },
+                quickAccessNotebooks = quickAccess.associate { it.id to app.penmoss.ui.home.HOME_NOTEBOOK_NAME },
                 recent = home.recent,
                 folders = home.folders,
                 status = sync.text,

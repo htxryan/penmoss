@@ -1,7 +1,7 @@
 package app.penmoss.ui
 
-import app.penmoss.ui.screens.HomeUi
-import app.penmoss.ui.screens.HomeActions
+import app.penmoss.ui.home.HomeUi
+import app.penmoss.ui.home.HomeActions
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,8 +23,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.performTextInput
-import app.penmoss.ui.screens.FolderScreen
-import app.penmoss.ui.screens.HomeScreen
+import app.penmoss.ui.home.FolderScreen
+import app.penmoss.ui.home.HomeScreen
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule

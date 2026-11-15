@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.home
 
 import app.penmoss.sync.SyncStop
 

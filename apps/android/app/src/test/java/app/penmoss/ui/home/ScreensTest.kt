@@ -1,7 +1,5 @@
-package app.penmoss.ui
+package app.penmoss.ui.home
 
-import app.penmoss.ui.screens.HomeUi
-import app.penmoss.ui.screens.HomeActions
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -36,10 +34,6 @@ import app.penmoss.capture.RefusedCapturesScreen
 import app.penmoss.data.CapturesWaiting
 import app.penmoss.engine.api.CaptureRequest
 import app.penmoss.engine.settings.SidebarLayout
-import app.penmoss.ui.screens.CenteredMessage
-import app.penmoss.ui.screens.FolderScreen
-import app.penmoss.ui.screens.HomeScreen
-import app.penmoss.ui.screens.SLOW_SYNC_MS
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -57,6 +51,7 @@ import app.penmoss.ui.common.FolderItem
 import app.penmoss.ui.common.NoteItem
 import app.penmoss.ui.common.NoteList
 import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.HomeLayout
 
 /** Compose UI tests of the native screens (T32), on Robolectric: no emulator on the worker. */
 @RunWith(AndroidJUnit4::class)

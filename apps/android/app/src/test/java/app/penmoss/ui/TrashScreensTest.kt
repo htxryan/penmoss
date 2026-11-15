@@ -1,7 +1,7 @@
 package app.penmoss.ui
 
-import app.penmoss.ui.screens.HomeUi
-import app.penmoss.ui.screens.HomeActions
+import app.penmoss.ui.home.HomeUi
+import app.penmoss.ui.home.HomeActions
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,7 +21,7 @@ import app.penmoss.data.NoteStore
 import app.penmoss.data.PenmossDatabase
 import app.penmoss.engine.api.ChangedNote
 import app.penmoss.engine.api.ChangesPage
-import app.penmoss.ui.screens.HomeScreen
+import app.penmoss.ui.home.HomeScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay

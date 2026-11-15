@@ -1,7 +1,7 @@
 package app.penmoss.ui
 
-import app.penmoss.ui.screens.HomeUi
-import app.penmoss.ui.screens.HomeActions
+import app.penmoss.ui.home.HomeUi
+import app.penmoss.ui.home.HomeActions
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -37,9 +37,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.data.FolderEntity
 import app.penmoss.editor.NewNoteRequest
 import app.penmoss.engine.notes.Tags
-import app.penmoss.ui.screens.AllNotesScreen
-import app.penmoss.ui.screens.FolderScreen
-import app.penmoss.ui.screens.HomeScreen
+import app.penmoss.ui.home.AllNotesScreen
+import app.penmoss.ui.home.FolderScreen
+import app.penmoss.ui.home.HomeScreen
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule

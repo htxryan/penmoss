@@ -31,7 +31,7 @@ import app.penmoss.engine.api.TreeFolder
 import app.penmoss.engine.api.TreeNote
 import app.penmoss.engine.api.ChangedNote
 import app.penmoss.engine.api.ChangesPage
-import app.penmoss.ui.screens.AllNotesScreen
+import app.penmoss.ui.home.AllNotesScreen
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay

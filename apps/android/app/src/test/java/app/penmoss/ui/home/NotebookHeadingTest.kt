@@ -1,7 +1,5 @@
-package app.penmoss.ui
+package app.penmoss.ui.home
 
-import app.penmoss.ui.screens.HomeUi
-import app.penmoss.ui.screens.HomeActions
 import android.graphics.Bitmap
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.Row
@@ -22,7 +20,6 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.penmoss.ui.screens.HomeScreen
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule

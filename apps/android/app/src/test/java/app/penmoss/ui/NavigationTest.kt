@@ -13,7 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.ui.common.NoteItem
 import app.penmoss.ui.common.PenmossTheme
-import app.penmoss.ui.screens.FolderScreen
+import app.penmoss.ui.home.FolderScreen
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test

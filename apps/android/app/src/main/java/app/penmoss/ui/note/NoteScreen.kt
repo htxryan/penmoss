@@ -87,7 +87,7 @@ import app.penmoss.engine.bridge.FormatCommand
 import app.penmoss.engine.bridge.BridgeProtocol
 import app.penmoss.engine.bridge.FromEditor
 import app.penmoss.engine.bridge.ToEditor
-import app.penmoss.ui.screens.CenteredMessage
+import app.penmoss.ui.home.CenteredMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map

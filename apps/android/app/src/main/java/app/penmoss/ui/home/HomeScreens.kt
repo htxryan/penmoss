@@ -1,4 +1,4 @@
-package app.penmoss.ui.screens
+package app.penmoss.ui.home
 
 import androidx.activity.compose.BackHandler
 import app.penmoss.ui.HomeLayout

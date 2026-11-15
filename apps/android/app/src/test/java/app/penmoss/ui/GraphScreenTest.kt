@@ -1,8 +1,8 @@
 package app.penmoss.ui
 
-import app.penmoss.ui.screens.HomeScreen
-import app.penmoss.ui.screens.HomeUi
-import app.penmoss.ui.screens.HomeActions
+import app.penmoss.ui.home.HomeScreen
+import app.penmoss.ui.home.HomeUi
+import app.penmoss.ui.home.HomeActions
 import android.content.Context
 import android.view.View
 import androidx.compose.runtime.getValue

@@ -5,7 +5,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import app.penmoss.ui.keys.FolderCommands
-import app.penmoss.ui.screens.FolderScreen
+import app.penmoss.ui.home.FolderScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged

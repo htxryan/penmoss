@@ -45,6 +45,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.coroutines.launch
 import java.time.ZoneId
+import app.penmoss.ui.home.SyncLine
 
 /*
  * The Settings screens' data (T40 P1): each reads the settings as the phone shows them

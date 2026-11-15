@@ -1,7 +1,7 @@
 package app.penmoss.ui
 
-import app.penmoss.ui.screens.HomeUi
-import app.penmoss.ui.screens.HomeActions
+import app.penmoss.ui.home.HomeUi
+import app.penmoss.ui.home.HomeActions
 import android.content.Context
 import android.provider.Settings
 import androidx.compose.ui.semantics.SemanticsActions
@@ -16,7 +16,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.penmoss.ui.screens.HomeScreen
+import app.penmoss.ui.home.HomeScreen
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

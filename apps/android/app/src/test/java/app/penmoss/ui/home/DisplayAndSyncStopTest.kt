@@ -1,7 +1,5 @@
-package app.penmoss.ui
+package app.penmoss.ui.home
 
-import app.penmoss.ui.screens.HomeUi
-import app.penmoss.ui.screens.HomeActions
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -25,7 +23,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.engine.settings.DisplayKeys
 import app.penmoss.engine.settings.Settings
 import app.penmoss.sync.SyncStop
-import app.penmoss.ui.screens.HomeScreen
 import app.penmoss.ui.settings.DisplayScreen
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -37,6 +34,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
 import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.HomeLayout
+import app.penmoss.ui.HomeShortcuts
+import app.penmoss.ui.displayChoices
+import app.penmoss.ui.displaySummary
+import app.penmoss.ui.settingsSections
 
 /**
  * T42's Display and "Sync stopped" on the phone (T40 ST12, AC12; A650, A651): Home hides the
