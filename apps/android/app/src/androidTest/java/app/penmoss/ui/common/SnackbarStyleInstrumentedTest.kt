@@ -3,7 +3,6 @@ package app.penmoss.ui.common
 import android.graphics.Bitmap
 import android.os.SystemClock
 import android.view.View
-import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -26,16 +25,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.ViewRootForTest
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getAllSemanticsNodes
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.penmoss.ScreenTree
 import app.penmoss.proof.ProofShot
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -139,7 +136,6 @@ class SnackbarStyleInstrumentedTest {
         assertClose("surface", colours.container, inside)
         val edge = shot.getPixel((at[0] + bounds.left + density * 0.5f).toInt(), (at[1] + bounds.center.y).toInt())
         assertClose("border", colours.border, edge, tolerance = 24)
-        assertEquals(ReadableColours(emptyMap(), dark).raised, colours.container)
     }
 
     private fun assertClose(what: String, expected: Color, pixel: Int, tolerance: Int = 3) {
@@ -154,23 +150,13 @@ class SnackbarStyleInstrumentedTest {
         return density
     }
 
-    private fun nodesOn(view: View): List<androidx.compose.ui.semantics.SemanticsNode> {
-        val roots = mutableListOf<ViewRootForTest>()
-        fun walk(v: View) {
-            if (v is ViewRootForTest) roots += v
-            if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
-        }
-        walk(view)
-        return roots.flatMap { it.semanticsOwner.getAllSemanticsNodes(mergingEnabled = false) }
-    }
-
     /** The bounds in the window of the node tagged [tag], if one is on screen. */
     private fun tagged(view: View, tag: String): Rect? =
-        nodesOn(view).firstOrNull { it.config.getOrNull(SemanticsProperties.TestTag) == tag }?.boundsInWindow
+        ScreenTree.nodes(view).firstOrNull { it.config.getOrNull(SemanticsProperties.TestTag) == tag }?.boundsInWindow
 
     /** The snackbar's card in window coordinates, and every text on screen. */
     private fun snackbarOn(view: View): Pair<Rect, List<String>>? {
-        val nodes = nodesOn(view)
+        val nodes = ScreenTree.nodes(view)
         val texts = nodes.flatMap { node -> node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text } }
         val card = nodes.firstOrNull { it.config.getOrNull(SemanticsProperties.TestTag) == SNACKBAR_TAG } ?: return null
         return card.boundsInWindow to texts

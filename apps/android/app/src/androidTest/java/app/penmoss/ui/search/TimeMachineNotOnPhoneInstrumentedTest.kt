@@ -2,16 +2,14 @@ package app.penmoss.ui.search
 
 import android.os.SystemClock
 import android.view.View
-import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.ui.platform.ViewRootForTest
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getAllSemanticsNodes
 import androidx.compose.ui.semantics.getOrNull
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import app.penmoss.ScreenTree
 import app.penmoss.proof.ProofShot
 import app.penmoss.search.SearchActions
 import app.penmoss.ui.common.PenmossTheme
@@ -70,7 +68,7 @@ class TimeMachineNotOnPhoneInstrumentedTest {
             } while (SystemClock.uptimeMillis() < deadline)
             assertTrue("no Search field reading \"$query\"", field)
             var shown = emptyList<String>()
-            scenario.onActivity { activity -> shown = texts(activity.window.decorView) }
+            scenario.onActivity { activity -> shown = ScreenTree.texts(activity.window.decorView) }
             for (action in actions) {
                 assertTrue("Search's ${action.title} is not on screen", shown.contains(action.title))
             }
@@ -81,25 +79,7 @@ class TimeMachineNotOnPhoneInstrumentedTest {
         }
     }
 
-    private fun roots(view: View): List<ViewRootForTest> {
-        val found = mutableListOf<ViewRootForTest>()
-        fun walk(v: View) {
-            if (v is ViewRootForTest) found += v
-            if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
-        }
-        walk(view)
-        return found
-    }
-
-    /** Every Compose text on screen under [view]. */
-    private fun texts(view: View): List<String> = roots(view).flatMap { root ->
-        root.semanticsOwner.getAllSemanticsNodes(mergingEnabled = false)
-            .flatMap { node -> node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text } }
-    }
-
     /** Whether a text field under [view] reads [text]. */
-    private fun editableShows(view: View, text: String): Boolean = roots(view).any { root ->
-        root.semanticsOwner.getAllSemanticsNodes(mergingEnabled = false)
-            .any { node -> node.config.getOrNull(SemanticsProperties.EditableText)?.text == text }
-    }
+    private fun editableShows(view: View, text: String): Boolean =
+        ScreenTree.nodes(view).any { node -> node.config.getOrNull(SemanticsProperties.EditableText)?.text == text }
 }
