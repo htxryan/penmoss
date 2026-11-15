@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.graph
 
 import androidx.compose.runtime.Immutable
 import app.penmoss.data.DirectoryRow

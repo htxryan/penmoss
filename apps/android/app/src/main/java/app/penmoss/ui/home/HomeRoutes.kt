@@ -25,7 +25,7 @@ import app.penmoss.ui.SettingsRoutes
 import app.penmoss.ui.common.FolderItem
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.NoteItem
-import app.penmoss.ui.graphRoute
+import app.penmoss.ui.graph.graphRoute
 import app.penmoss.ui.keys.openCapture
 import app.penmoss.ui.leave
 import app.penmoss.ui.open

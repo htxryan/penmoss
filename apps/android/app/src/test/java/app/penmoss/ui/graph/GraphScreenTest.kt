@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.graph
 
 import app.penmoss.ui.home.HomeScreen
 import app.penmoss.ui.home.HomeUi

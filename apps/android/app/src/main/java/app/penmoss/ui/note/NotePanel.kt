@@ -77,7 +77,7 @@ import kotlin.math.min
 import kotlin.math.sin
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.TipIconButton
-import app.penmoss.ui.GraphModel
+import app.penmoss.ui.graph.GraphModel
 import app.penmoss.ui.trash.titleOf
 
 /*

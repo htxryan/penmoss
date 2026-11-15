@@ -96,12 +96,12 @@ import app.penmoss.ui.common.PenmossSnackbar
 import app.penmoss.ui.common.TipIconButton
 import app.penmoss.ui.folders.BreadcrumbBar
 import app.penmoss.ui.folders.FolderPickerFor
-import app.penmoss.ui.GRAPH_BATCH_MS
-import app.penmoss.ui.GraphInput
+import app.penmoss.ui.graph.GRAPH_BATCH_MS
+import app.penmoss.ui.graph.GraphInput
 import app.penmoss.ui.history.HistoryRoute
 import app.penmoss.ui.journal.JournalMarks
 import app.penmoss.ui.folders.TagSheet
-import app.penmoss.ui.atMostEvery
+import app.penmoss.ui.graph.atMostEvery
 import app.penmoss.ui.journal.journalMarksOf
 import app.penmoss.ui.open
 import app.penmoss.ui.folders.refreshTagList

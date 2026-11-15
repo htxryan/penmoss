@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.graph
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -71,6 +71,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transform
 import kotlinx.serialization.json.JsonObject
 import app.penmoss.ui.trash.titleOf
+import app.penmoss.ui.RootUi
+import app.penmoss.ui.leave
 
 /** The graph's route (T40 P7): every note, or `graph?note=<id>` for that note's local graph. */
 internal const val GRAPH_ROUTE = "graph?note={note}"

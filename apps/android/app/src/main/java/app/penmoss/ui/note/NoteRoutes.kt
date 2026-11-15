@@ -8,7 +8,7 @@ import app.penmoss.ui.NOTE_ROUTE
 import app.penmoss.ui.PERIODIC_ROUTE
 import app.penmoss.ui.RootUi
 import app.penmoss.ui.SettingsRoutes
-import app.penmoss.ui.graphRoute
+import app.penmoss.ui.graph.graphRoute
 import app.penmoss.ui.leave
 import app.penmoss.ui.markNoteMade
 import app.penmoss.ui.newNoteRequest

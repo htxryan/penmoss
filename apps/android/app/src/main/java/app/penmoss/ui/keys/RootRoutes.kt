@@ -8,9 +8,9 @@ import app.penmoss.NotebookGraph
 import app.penmoss.capture.CaptureTileService
 import app.penmoss.engine.bridge.ToEditor
 import app.penmoss.engine.settings.SettingKeys
-import app.penmoss.ui.GRAPH_ROUTE
+import app.penmoss.ui.graph.GRAPH_ROUTE
 import app.penmoss.ui.SEARCH_ROUTE
-import app.penmoss.ui.graphRoute
+import app.penmoss.ui.graph.graphRoute
 import app.penmoss.ui.open
 import app.penmoss.ui.folders.sortFolderAndSay
 import androidx.lifecycle.Lifecycle
