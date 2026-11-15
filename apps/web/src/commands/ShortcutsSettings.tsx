@@ -57,8 +57,8 @@ const keysText = (combos: readonly string[]) =>
  * finds commands by name, area or keys, and takes a combination pressed while it has the focus
  * ("what is ⌥⌘M?"). A filter shows All, only the Changed ones (with their count, as Android's
  * summary has) or the ones with None Set. A changed row says what it replaced and has Reset;
- * Reset All Changed… asks first. Changes are the user's synced settings, so they apply at once
- * here and on their other devices. The Mac app's capture hotkey is on Quick Capture.
+ * Reset to Defaults…, at the top of the page and at the end of the list, asks first. Changes
+ * are the user's synced settings, so they apply at once here and on their other devices. The Mac app's capture hotkey is on Quick Capture.
  */
 export function ShortcutsSettings() {
   const commands = useCommands();
@@ -311,6 +311,23 @@ export function ShortcutsSettings() {
     ['changed', `Changed · ${changed.length}`],
     ['none', 'None Set'],
   ];
+  /**
+   * Reset to Defaults… (Ryan's review, 15 Nov 2026): at the top of the page and at the end of the
+   * list, the same button and the same question, off while nothing has changed.
+   */
+  const resetToDefaults = (where: 'top' | 'foot') => (
+    <button
+      type="button"
+      className="btn"
+      data-ui="item"
+      data-testid={`shortcuts-reset-${where}`}
+      disabled={changed.length === 0}
+      onClick={() => setConfirmReset(true)}
+    >
+      <Icon name="undo" size={14} />
+      Reset to Defaults…
+    </button>
+  );
   return (
     <section
       className="settings-section"
@@ -322,6 +339,7 @@ export function ShortcutsSettings() {
         id={`${id}-title`}
         title="Keyboard Shortcuts"
         intro="A shortcut needs ⌘, Ctrl or Alt, so typing never runs a command."
+        actions={resetToDefaults('top')}
       />
       {clashes.length > 0 ? (
         <p className="kb-error" role="alert" data-testid="shortcut-clashes">
@@ -417,16 +435,7 @@ export function ShortcutsSettings() {
         </div>
       ))}
       <div className="kb-foot">
-        <button
-          type="button"
-          className="btn"
-          data-ui="item"
-          disabled={changed.length === 0}
-          onClick={() => setConfirmReset(true)}
-        >
-          <Icon name="undo" size={14} />
-          Reset All Changed…
-        </button>
+        {resetToDefaults('foot')}
         {desktop() ? (
           <span className="muted">
             The capture shortcut from any app is on{' '}
@@ -469,7 +478,7 @@ export function ShortcutsSettings() {
               Cancel
             </button>
             <button type="submit" className="btn danger-fill" data-ui="submit">
-              Reset All Changed
+              Reset to Defaults
             </button>
           </div>
         </ConfirmDialog>

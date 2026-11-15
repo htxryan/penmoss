@@ -161,7 +161,7 @@ describe('Settings → Keyboard Shortcuts', () => {
     store.write('note.new', ['Mod+Shift+L']);
     render();
     const resetAll = [...host.querySelectorAll('button')].find(
-      (button) => button.textContent === 'Reset All Changed…',
+      (button) => button.textContent === 'Reset to Defaults…',
     )!;
     act(() => resetAll.click());
     const dialog = document.querySelector('[data-testid="shortcuts-reset-all"]')!;
@@ -170,6 +170,35 @@ describe('Settings → Keyboard Shortcuts', () => {
     act(() => dialog.querySelector<HTMLFormElement>('form')!.requestSubmit());
     expect(store.read()).toEqual({});
     expect(resetAll.disabled).toBe(true);
+  });
+
+  it('has Reset to Defaults at the top of the page and at the end, both asking the same', () => {
+    store.write('nav.recent', ['Mod+Shift+E']);
+    render();
+    const buttons = [...host.querySelectorAll('button')].filter(
+      (button) => button.textContent === 'Reset to Defaults…',
+    );
+    expect(buttons.map((button) => button.dataset['testid'])).toEqual([
+      'shortcuts-reset-top',
+      'shortcuts-reset-foot',
+    ]);
+    // The top one is in the page's header, beside its title.
+    expect(buttons[0]!.closest('.settings-head-actions')).not.toBeNull();
+    const dialog = () => document.querySelector('[data-testid="shortcuts-reset-all"]');
+    for (const button of buttons) {
+      act(() => button.click());
+      expect(dialog()?.textContent).toContain('Reset One Shortcut?');
+      expect(dialog()?.querySelector('button[type="submit"]')?.textContent).toBe(
+        'Reset to Defaults',
+      );
+      act(() => dialog()!.querySelector<HTMLButtonElement>('[data-ui="dismiss"]')!.click());
+      expect(dialog()).toBeNull();
+    }
+    expect(store.read()['nav.recent']).toEqual(['Mod+Shift+E']);
+    // Both are off once nothing has changed.
+    act(() => buttons[1]!.click());
+    act(() => dialog()!.querySelector<HTMLFormElement>('form')!.requestSubmit());
+    expect(buttons.every((button) => button.disabled)).toBe(true);
   });
 });
 
