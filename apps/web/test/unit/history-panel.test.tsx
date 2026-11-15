@@ -488,7 +488,11 @@ describe('Version History as a list over a docked preview (Ryan’s review of #1
     expect(side('left').getAttribute('aria-label')).toBe(dialog.querySelector('h2')!.textContent);
     // The title is the same; the version's line was replaced; now's last line has a gap beside it.
     const cells = (which: string) =>
-      [...side(which).children].filter((cell) => !cell.classList.contains('history-view-line'));
+      [...side(which).children].filter(
+        (cell) =>
+          !cell.classList.contains('history-view-line') &&
+          !cell.classList.contains('history-view-gutter'),
+      );
     const numbers = (which: string) =>
       [...side(which).querySelectorAll('.history-view-line')].map((cell) => cell.textContent);
     const changes = (which: string) =>
