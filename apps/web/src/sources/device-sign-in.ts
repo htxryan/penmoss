@@ -2,6 +2,7 @@
  * GitHub's device sign-in as a page shows it (T82, D63, A1170): Settings' Add form
  * (GitHubSignIn.tsx) and the first run's GitHub Access screens (FirstRunGitHub.tsx) share it.
  */
+import { copyText } from '@penmoss/editor';
 import { useEffect, useEffectEvent, useState } from 'react';
 import type { DesktopGitHubSignIn, GitHubSignInState } from '../desktop/bridge';
 
@@ -104,10 +105,7 @@ export function useDeviceSignIn(
     cancel: () => void signIn?.cancel(),
     copy: () => {
       if (state.state !== 'waiting') return;
-      void navigator.clipboard
-        .writeText(state.userCode)
-        .then(() => setCopied(true))
-        .catch(() => setCopied(false));
+      void copyText(document, state.userCode).then(setCopied);
     },
   };
 }
