@@ -2536,11 +2536,11 @@
   ],
   "request": {
     "set": {
-      "theme.mode": "dark",
+      "timeZone": "Asia/Tokyo",
       "template.daily": null
     },
     "base": {
-      "theme.mode": "system",
+      "timeZone": null,
       "template.daily": "## Today\n"
     }
   },
@@ -2549,11 +2549,8 @@
     "body": {
       "error": {
         "code": "setting_changed",
-        "message": "Changed on another device since: theme.mode",
-        "keys": ["theme.mode"]
-      },
-      "settings": {
-        "theme.mode": "light"
+        "message": "Changed on another device since: timeZone, template.daily",
+        "keys": ["timeZone", "template.daily"]
       }
     }
   },

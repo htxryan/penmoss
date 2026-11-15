@@ -43,9 +43,10 @@ object OwnerWords {
     /**
      * [INVISIBLE] as spaces, but what draws something stays (#174 review, as the Mac's
      * `stripInvisible`): the non-joiner, a joiner between two emoji, and the tags of a
-     * subdivision flag (U+1F3F4, tag letters or digits, the cancel tag).
+     * subdivision flag (U+1F3F4, tag letters or digits, the cancel tag). Held to core's by
+     * `contract/invisible-v1.json` (architecture review A12).
      */
-    private fun visible(text: String): String {
+    internal fun visible(text: String): String {
         val points = text.codePoints().toArray()
         val out = StringBuilder()
         var i = 0

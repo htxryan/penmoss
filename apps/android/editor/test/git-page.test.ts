@@ -32,6 +32,7 @@ import { docToDelta } from '@y/prosemirror';
 import { AndroidGitHost, describe as describeFailure, type GitSyncStatus } from '../src/git/host';
 import { captureNoteId } from '../src/git/server';
 import contract from '../../contract/git-engine-v1.json';
+import settingsContract from '../../contract/settings-v1.json';
 
 // The engine's real git work (hashing, packing, two engines over one remote) takes about 0.2 s a
 // test alone and several seconds when the gate's other suites share the CPUs, past vitest's 5 s
@@ -1345,6 +1346,34 @@ describe('the device settings in the Journal notebook (A1014)', () => {
     await phone.http('PUT', '/android/device-settings', { set: { 'theme.id': null } });
     const read = await phone.http('GET', '/android/device-settings');
     expect(read.json?.['device']).not.toHaveProperty('theme.id');
+  });
+
+  /**
+   * Architecture review A12: `contract/settings-v1.json`'s request and 409 are this page's, so
+   * Kotlin's `SettingsContractTest`, which sends the one and reads the other, holds to what the
+   * page takes and answers, not to the deleted server's.
+   */
+  it('takes the settings contract’s change and answers it sent again with the contract’s 409', async () => {
+    const phone = fakeApp({ remote: new MemoryRemote() });
+    await phone.app.call('open', {
+      notebookId: NOTEBOOK,
+      name: 'Work',
+      create: true,
+      host: 'github.com',
+    });
+    await settle(phone.app);
+    const { request, conflict } = settingsContract;
+    // What the request's base says the notebook held.
+    const before = await phone.http('PUT', '/api/settings', {
+      set: { 'template.daily': request.base['template.daily'] },
+      base: { 'template.daily': null },
+    });
+    expect(before.status).toBe(200);
+    const taken = await phone.http('PUT', '/api/settings', request);
+    expect(taken.status).toBe(200);
+    expect(taken.json).toMatchObject({ changed: true });
+    const refused = await phone.http('PUT', '/api/settings', request);
+    expect({ status: refused.status, body: refused.json }).toEqual(conflict);
   });
 
   it('keeps the notebook’s own settings out, and agents’ settings route still refuses the device’s', async () => {

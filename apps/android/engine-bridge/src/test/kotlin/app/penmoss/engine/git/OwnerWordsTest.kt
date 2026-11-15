@@ -1,5 +1,8 @@
 package app.penmoss.engine.git
 
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -8,6 +11,21 @@ import org.junit.Test
 /** The owner check's words for a git notebook (A855, A877): as the Mac's tests of the same words. */
 class OwnerWordsTest {
     private val id = "01JBN0000000000000000000P1"
+
+    /**
+     * What it takes out is core's `stripInvisible` exactly (architecture review A12): the editor
+     * page's vitest writes `contract/invisible-v1.json` from core and fails when it differs.
+     */
+    @Test
+    fun takesOutWhatCoresStripInvisibleTakesOut() {
+        val file = System.getProperty("penmoss.contract")?.let { java.io.File(it).resolveSibling("invisible-v1.json") } ?: java.io.File("../contract/invisible-v1.json")
+        val vectors = kotlinx.serialization.json.Json.parseToJsonElement(file.readText()).jsonObject.getValue("vectors").jsonArray
+        assertTrue(vectors.size >= 15)
+        for (vector in vectors.map { it.jsonObject }) {
+            val text = vector.getValue("text").jsonPrimitive.content
+            assertEquals(text, vector.getValue("visible").jsonPrimitive.content, OwnerWords.visible(text))
+        }
+    }
 
     @Test
     fun aTitleIsBracketedIsolatedAndCleanedSoItCannotFakeTheWordsAroundIt() {
