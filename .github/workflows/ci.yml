@@ -457,19 +457,17 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      # The wrapper checked, Java, the SDK, and Gradle's and Robolectric's downloads (~/.m2),
-      # which this job saves for the others.
+      # The wrapper checked, Java, the SDK, Gradle's and Robolectric's downloads (~/.m2) and
+      # Gradle's build cache, which this job saves for the others.
       - uses: ./.github/actions/android-toolchain
         with:
           robolectric: 'true'
 
-      - name: Android tests
-        run: task android:test
-
-      # Every run's debug APK (app.penmoss.debug), signed with the runner's own debug key: the
-      # run's artifact, never published (P8).
-      - name: Debug APK
-        run: task android:build
+      # The tests, and every run's debug APK (app.penmoss.debug), signed with the runner's own debug
+      # key: the run's artifact, never published (P8). One Gradle run (A1524): a second one would
+      # build the editor page and configure the project again.
+      - name: Android tests and the debug APK
+        run: task android:test -- :app:assembleDebug
 
       - name: Upload the debug APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
