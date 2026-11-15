@@ -459,9 +459,9 @@ describe('the notebook a note command runs on (A1050)', () => {
     const work = [await memoryNotebook('work')];
     expect((await penmoss(['cat', '--help'])).code).toBe(0);
     expect((await penmoss(['--version'])).code).toBe(0);
-    const mcp = await penmoss(['mcp', '--channel'], '', work);
+    const mcp = await penmoss(['mcp', '--name', 'x'], '', work);
     expect(mcp.code).toBe(EXIT.USAGE);
-    expect(mcp.stderr).toMatch(/--channel needs --notebook/);
+    expect(mcp.stderr).toMatch(/--name names a channel session/);
   });
 
   it('opens a note in the Mac app by its penmoss:// link', async () => {

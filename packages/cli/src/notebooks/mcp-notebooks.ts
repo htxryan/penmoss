@@ -12,6 +12,9 @@
 import { notebookTag } from '@penmoss/core/note-ref';
 import { NotebookOps } from '@penmoss/git-notebook';
 import {
+  CHANNEL_CHECK_MS,
+  CommentChannel,
+  HEARTBEAT_MS,
   LocalMcpServer,
   LocalNotebook,
   NotebookBusy,
@@ -21,7 +24,8 @@ import {
 } from '@penmoss/git-notebook/local';
 import { FileStorage } from '@penmoss/git-notebook/node';
 import { stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { hostname } from 'node:os';
+import { basename, join } from 'node:path';
 import { CliError } from '../errors';
 import type { NotebookSyncSummary } from '../io';
 import type { Clones, OpenedClone } from './clone';
@@ -105,6 +109,10 @@ class Slot implements MeaningTarget {
   private push: ReturnType<typeof setTimeout> | null = null;
   /** When an agent's call last used it. */
   lastUsed = 0;
+  /** A sync went through: only then is the remote asked for its head (the channel). */
+  syncedOnce = false;
+  /** Comments sent to the session from this notebook (PEN-154), with --channel. */
+  channel: CommentChannel | null = null;
 
   constructor(
     readonly name: string,
@@ -252,6 +260,7 @@ class Slot implements MeaningTarget {
     const { io, clones } = this.host;
     return this.exclusive(`penmoss mcp (${why})`, async (current) => {
       const done = await clones.sync(this.entry, current);
+      this.syncedOnce = true;
       const meta = current.engine.replica.state;
       this.pending = Object.keys(meta.dirty).length > 0 || meta.workspaceDirty;
       for (const warning of done.warnings) io.log(`penmoss: ${this.name}: ${warning}`);
@@ -280,6 +289,7 @@ class Slot implements MeaningTarget {
   stopTimers(): void {
     if (this.push) clearTimeout(this.push);
     this.push = null;
+    this.channel?.stop();
   }
 
   /** Waits for its first sync and what is queued: a call, a sync. */
@@ -305,11 +315,14 @@ export class McpNotebooks {
     private readonly home: string,
     private readonly io: McpIo,
     private readonly options: McpSessionOptions,
+    /** `--channel` (PEN-154): comments sent to this session from any served notebook. */
+    private readonly channelOptions?: { readonly name?: string },
   ) {
     this.host = {
       clones,
       io,
-      pushDelayMs: options.pushDelayMs ?? 60_000,
+      // In channel mode a notebook's own writes go at once (A1063): a reply is waited for.
+      pushDelayMs: channelOptions !== undefined ? 0 : (options.pushDelayMs ?? 60_000),
       pullEveryMs: options.pullEveryMs ?? 120_000,
       now: Date.now,
     };
@@ -326,11 +339,16 @@ export class McpNotebooks {
       let slot = this.slots.get(entry.localId);
       if (!slot || slot.name !== name) {
         const before = slot;
-        slot = new Slot(name, entry, this.host);
-        this.slots.set(entry.localId, slot);
+        before?.channel?.stop();
+        const made = new Slot(name, entry, this.host);
+        slot = made;
+        made.channel = this.openChannel(made);
+        this.slots.set(entry.localId, made);
         // Synced at once, as `--notebook`'s server syncs its one (#165), after what the slot
-        // of its former name still had queued.
-        void (before?.idle() ?? Promise.resolve()).then(() => slot!.start());
+        // of its former name still had queued; a channel then lists its session (A1060).
+        void (before?.idle() ?? Promise.resolve())
+          .then(() => made.start())
+          .then(() => this.heartbeat(made));
       }
       next.push(slot);
     }
@@ -338,6 +356,62 @@ export class McpNotebooks {
     this.meaning?.served();
     return next;
   }
+
+  /** Whether the client said `notifications/initialized`: channels deliver from then on. */
+  private initialized = false;
+
+  /**
+   * The notebook's channel (PEN-154, amends A1063): the session listed under this server's one
+   * name, the head checked every 10 s, and each comment sent as an event naming the notebook.
+   */
+  private openChannel(slot: Slot): CommentChannel | null {
+    if (!this.channelOptions) return null;
+    const cwd = process.cwd();
+    const name = this.channelOptions.name ?? `${hostname()}:${cwd}`;
+    const heads = this.clones.transportFor(slot.entry);
+    const io = this.io;
+    const channel = new CommentChannel(
+      {
+        use: (write, run) => this.use(slot, write, run),
+        remoteHead: () =>
+          slot.syncedOnce
+            ? heads.remoteHead()
+            : Promise.reject(new Error('the notebook has not synced yet')),
+        sync: (why) => slot.sync(why),
+        notify: (note) => io.write(JSON.stringify(withNotebook(note, slot.name))),
+        log: (text) => io.log(text.replace(/^penmoss: /, `penmoss: ${slot.name}: `)),
+      },
+      {
+        name,
+        label: `${slot.entry.writer.label} · ${this.channelOptions.name ?? (basename(cwd) || cwd)}`,
+        host: hostname(),
+      },
+    );
+    if (this.initialized) channel.start();
+    return channel;
+  }
+
+  private async heartbeat(slot: Slot): Promise<void> {
+    await slot.channel?.heartbeat().catch((error: unknown) => {
+      this.io.log(`penmoss: could not list this session in ${slot.name}: ${message(error)}`);
+    });
+  }
+
+  /** A call on one notebook: the model first, then the slot; an edit is indexed soon after. */
+  private async use<T>(
+    slot: Slot,
+    write: boolean,
+    run: (notebook: LocalNotebook) => Promise<T> | T,
+    waitMs?: number,
+  ): Promise<T> {
+    await this.modelOpened;
+    await this.meaning?.stillOn();
+    const out = await slot.use(write, run, waitMs);
+    if (write) this.meaning?.edited(slot.key);
+    return out;
+  }
+
+  private modelOpened: Promise<void> = Promise.resolve();
 
   private slotNamed(name: string): Slot {
     const slot = this.served.find((each) => each.name === name);
@@ -352,7 +426,6 @@ export class McpNotebooks {
       ? await this.options.meaning.status().catch(() => null)
       : null;
     const meaningOn = status?.enabled === true && status.state === 'ready';
-    let modelOpened: Promise<void> = Promise.resolve();
     if (meaningOn && this.options.meaning) {
       this.meaning = new SharedMeaning(
         this.options.meaning,
@@ -360,28 +433,48 @@ export class McpNotebooks {
         (text) => io.log(text),
         this.options,
       );
-      modelOpened = this.meaning.open();
+      this.modelOpened = this.meaning.open();
     }
     const set: NotebookSet = {
       notebooks: async (): Promise<ServedNotebook[]> =>
         (await this.refresh()).map((slot) => ({ name: slot.name, tag: slot.tag })),
-      use: async (name, write, run, use = {}) => {
-        // Calls wait for the model to open (once), so meaning answers from the first.
-        await modelOpened;
-        await this.meaning?.stillOn();
-        const slot = this.slotNamed(name);
-        const out = await slot.use(write, run, use.waitMs);
-        if (write) this.meaning?.edited(slot.key);
-        return out;
-      },
+      // Calls wait for the model to open (once), so meaning answers from the first.
+      use: (name, write, run, use = {}) => this.use(this.slotNamed(name), write, run, use.waitMs),
     };
+    const channels = this.channelOptions !== undefined;
     const server = new LocalMcpServer(set, 'penmoss', (text) => io.log(text), {
       env: this.options.env ?? {},
       meaning: meaningOn,
+      ...(channels
+        ? {
+            channel: true,
+            onInitialized: () => {
+              this.initialized = true;
+              for (const slot of this.served) {
+                slot.channel?.start();
+                void slot.channel?.tick();
+              }
+            },
+          }
+        : {}),
     });
     const pulls = setInterval(() => {
       for (const slot of this.served) void slot.pull();
     }, this.host.pullEveryMs);
+    const ticks = channels
+      ? setInterval(() => {
+          for (const slot of this.served) {
+            void slot.channel
+              ?.tick()
+              .catch((error: unknown) => io.log(`penmoss: ${String(error)}`));
+          }
+        }, this.options.channelCheckMs ?? CHANNEL_CHECK_MS)
+      : null;
+    const heartbeats = channels
+      ? setInterval(() => {
+          for (const slot of this.served) void this.heartbeat(slot);
+        }, this.options.heartbeatMs ?? HEARTBEAT_MS)
+      : null;
     // Set by the signal's callback, so not narrowed to its first value.
     let stoppedBy = null as string | null;
     const stop = io.stopped?.then((signal) => {
@@ -400,6 +493,8 @@ export class McpNotebooks {
     } finally {
       if (stoppedBy !== null) void lines.return?.();
       clearInterval(pulls);
+      if (ticks) clearInterval(ticks);
+      if (heartbeats) clearInterval(heartbeats);
       for (const slot of this.slots.values()) slot.stopTimers();
       await this.meaning?.close();
     }
@@ -421,4 +516,11 @@ export class McpNotebooks {
     await Promise.all([...this.slots.values()].map((slot) => slot.idle()));
     for (const slot of left) if (slot.pending) await slot.sync('exit');
   }
+}
+
+/** A channel event names the notebook its thread is in (PEN-154): `notebook` in its meta. */
+function withNotebook(note: Record<string, unknown>, notebook: string): Record<string, unknown> {
+  const params = note['params'] as { content: string; meta: Record<string, string> } | undefined;
+  if (!params) return note;
+  return { ...note, params: { ...params, meta: { ...params.meta, notebook } } };
 }
