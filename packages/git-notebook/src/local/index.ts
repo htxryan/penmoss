@@ -6,6 +6,7 @@
 export * from './notebook';
 export * from './rest';
 export * from './mcp';
+export * from './router';
 export * from './comment-tools';
 export * from './channel';
 export { COMMENT_TOOL_NAMES, commentToolDefinitions, toolDefinitions } from './tools';

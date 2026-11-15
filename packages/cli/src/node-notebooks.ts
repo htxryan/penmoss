@@ -28,6 +28,7 @@ import { CliError, EXIT } from './errors';
 import type { MeaningIo, NotebookIo, NotebookStatus, OpenedMeaning, TokenStore } from './io';
 import { Clones, type ClonesOptions } from './notebooks/clone';
 import { cliError } from './notebooks/errors';
+import { McpNotebooks } from './notebooks/mcp-notebooks';
 import { McpSession } from './notebooks/mcp-session';
 import {
   NotebookRegistry,
@@ -466,6 +467,10 @@ export function nodeNotebooks(options: NodeNotebooksOptions): NotebookIo {
     async serveMcp(asked, io, serveOptions = {}) {
       // An agent's server: nobody can answer a signer here.
       clones.unattended = true;
+      if (asked === undefined) {
+        await new McpNotebooks(clones, registry, home, io, options).serve();
+        return;
+      }
       const entry = await registry.resolve(asked, 'agent');
       await new McpSession(entry, clones, registry, io, options, serveOptions.channel).serve();
     },
