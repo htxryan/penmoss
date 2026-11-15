@@ -111,9 +111,8 @@ class JGitTransportTest {
         val one = git.commit(null, mapOf("a.md" to bytes("a")), "one")!!
         git.push(one)
         assertNull(git.changed("0123456789abcdef0123456789abcdef01234567", one))
-        assertNull(git.readAt(one, "nope.md"))
-        assertEquals("a", git.readAt(one, "a.md")!!.toString(Charsets.UTF_8))
         assertTrue(git.read(one, listOf("nope.md")).isEmpty())
+        assertEquals("a", git.read(one, listOf("a.md")).getValue("a.md").toString(Charsets.UTF_8))
     }
 
     @Test
@@ -169,7 +168,7 @@ class JGitTransportTest {
         assertEquals(head, phone.fetch())
         val versions = phone.log(listOf(".penmoss/notes/01JNOTE0000000000000000000/"), 100)
         assertEquals(listOf("commit 5", "commit 3", "commit 1"), versions.map { it.message })
-        assertEquals("v1", phone.readAt(versions.last().id, note)!!.toString(Charsets.UTF_8))
+        assertEquals("v1", phone.read(versions.last().id, listOf(note)).getValue(note).toString(Charsets.UTF_8))
         assertEquals(6, phone.log(null, null).size)
     }
 

@@ -787,7 +787,6 @@ class GitNotebooks(
                     },
                 )
             }
-            "readAt" -> transport.readAt(sha(args.getOrNull(0)), paths(JsonArray(listOfNotNull(args.getOrNull(1)))).single())?.let(reply::blob) ?: JsonNull
             "maintain" -> {
                 transport.maintain()
                 JsonNull
@@ -897,10 +896,10 @@ class GitNotebooks(
         const val MAX_PURGES = 1000
         const val MAX_NAME = 80
 
-        val OPS = setOf("fetch", "list", "sizes", "changed", "read", "commit", "push", "log", "readAt", "maintain")
+        val OPS = setOf("fetch", "list", "sizes", "changed", "read", "commit", "push", "log", "maintain")
 
         /** Ops that may reach the host (fetch, push, a deepening log; reads after a deepening). */
-        val NETWORK_OPS = setOf("fetch", "push", "read", "sizes", "readAt", "log")
+        val NETWORK_OPS = setOf("fetch", "push", "read", "sizes", "log")
 
         private val SECRET = Regex("^[A-Za-z0-9_.~+/=-]{8,1000}$")
         private val TOKEN_USER = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")

@@ -493,19 +493,6 @@ class JGitTransport(
         listed = null
     }
 
-    /** A file's bytes at any commit this clone has (History). */
-    fun readAt(commit: String, path: String): ByteArray? = exclusive {
-        val repo = repo()
-        val at = try {
-            commitOf(repo, commit)
-        } catch (error: GitException) {
-            return@exclusive null
-        }
-        TreeWalk.forPath(repo, path, at.tree)?.use { walk ->
-            readBlobs(listOf(path to walk.getObjectId(0).name))[path]
-        }
-    }
-
     /** Housekeeping after a sync: past [maxStoreBytes], the clone is made again, shallow (G0). */
     fun maintain() = exclusive {
         if (storeBytes() <= maxStoreBytes) return@exclusive
