@@ -328,7 +328,7 @@ export class GitNotebookEngine {
 
   /** The name Rename gave it here, until a sync lands it in `notebook.json`; null: none. */
   get pendingName(): string | null {
-    return this.replica.state.pendingName ?? null;
+    return this.replica.state.pendingName;
   }
 
   /**
@@ -408,7 +408,7 @@ export class GitNotebookEngine {
 
   /** Copies withheld from the push (A886), by copy id: kept on this device only. */
   withheld(): Readonly<Record<string, WithheldCopy>> {
-    return this.replica.state.withheld ?? {};
+    return this.replica.state.withheld;
   }
 
   /**
@@ -419,7 +419,7 @@ export class GitNotebookEngine {
   keepCopy(id: string): void {
     const withheld = { ...this.withheld() };
     delete withheld[id];
-    const kept = new Set(this.replica.state.keptCopies ?? []);
+    const kept = new Set(this.replica.state.keptCopies);
     kept.add(id);
     this.replica.update({ withheld, keptCopies: [...kept].sort() });
   }
@@ -702,7 +702,7 @@ export class GitNotebookEngine {
       writeInfo = true;
     }
     // A Rename made here (Ryan's review of PR #192) goes into notebook.json with this commit.
-    const pendingName = replica.state.pendingName ?? null;
+    const pendingName = replica.state.pendingName;
     if (pendingName !== null && pendingName !== info.name) {
       info = { ...info, name: pendingName };
       writeInfo = true;
@@ -798,8 +798,8 @@ export class GitNotebookEngine {
     // stays, whatever later happens to the original; one the person confirmed (Keep and sync) is
     // pushed as it is.
     const links = recoveredFromOf(replica.workspace);
-    const keptCopies = (replica.state.keptCopies ?? []).filter((id) => !byDoc.has(id));
-    if (keptCopies.length !== (replica.state.keptCopies ?? []).length) {
+    const keptCopies = replica.state.keptCopies.filter((id) => !byDoc.has(id));
+    if (keptCopies.length !== replica.state.keptCopies.length) {
       replica.update({ keptCopies });
     }
     const raced = racedCopies(replica.workspace, {
@@ -822,7 +822,7 @@ export class GitNotebookEngine {
       }));
       const at = (this.options.clock ?? Date.now)();
       await this.options.withhold?.(copies);
-      const withheld = { ...(replica.state.withheld ?? {}) };
+      const withheld = { ...replica.state.withheld };
       for (const copy of copies) {
         withheld[copy.id] = {
           origin: copy.origin,
