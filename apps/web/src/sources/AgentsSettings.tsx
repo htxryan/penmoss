@@ -57,7 +57,7 @@ export function AgentsSettings({ item }: { item?: string | undefined }) {
       <SettingsHeader
         id={`${id}-h`}
         title="Agents"
-        intro="Agents such as Claude Code and Codex read and edit your notes through Penmoss’s MCP server, which runs on this Mac from this app: no account and no agent token."
+        intro="Claude Code, Codex and other agents read and edit your notes through Penmoss on this Mac."
       />
       <CommandLine git={git} />
       <AgentServer git={git} />
