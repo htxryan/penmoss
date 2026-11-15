@@ -4,7 +4,7 @@
  */
 import { MAX_PATH_CHARS } from '@penmoss/core/mirror';
 import { periodicNoteId } from '@penmoss/core/periodic';
-import { bodyMarkdown } from '@penmoss/editor/markdown';
+import { bodyMarkdown } from '@penmoss/sync-client/markdown';
 import { isDeleted, readTitle, setTitle } from '@penmoss/sync-client/note';
 import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import { readWorkspace } from '@penmoss/sync-client/workspace';

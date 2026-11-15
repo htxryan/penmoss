@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test';
 
-import { checkoutPortBase } from '../../packages/core/test/support/checkout-ports';
+import { checkoutPortBase } from '../../scripts/checkout-ports.mjs';
 
 /**
  * penmoss.app's screenshots (T80.9, A1210), run by `node scripts/screenshots.mjs` (`task

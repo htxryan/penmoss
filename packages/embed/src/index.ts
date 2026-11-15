@@ -29,6 +29,12 @@ export {
 } from './file-cache';
 export { Lease, leaseHolder, leasePath, type LeaseHolder, type LeaseOptions } from './lease';
 export {
+  LEASE_RETRY_MS,
+  LeaseKeeper,
+  type HeldLease,
+  type LeaseKeeperOptions,
+} from './lease-keeper';
+export {
   NodeMeaning,
   meaningEnabled,
   setMeaningEnabled,

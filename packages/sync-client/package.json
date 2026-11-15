@@ -18,7 +18,16 @@
     "./comment-delivery": "./src/comment-delivery.ts",
     "./local-index": "./src/local-index.ts",
     "./record": "./src/record.ts",
-    "./protocol": "./src/protocol.ts"
+    "./protocol": "./src/protocol.ts",
+    "./markdown": "./src/markdown.ts",
+    "./edit-engine": "./src/edit-engine.ts",
+    "./revert": "./src/revert.ts",
+    "./capture": "./src/capture.ts",
+    "./periodic": "./src/periodic.ts",
+    "./title": "./src/title.ts",
+    "./stats": "./src/stats.ts",
+    "./note-fields": "./src/note-fields.ts",
+    "./unsupported": "./src/unsupported.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
@@ -31,8 +40,10 @@
   },
   "dependencies": {
     "@penmoss/core": "workspace:*",
+    "@y/prosemirror": "2.0.0-15",
     "@y/y": "14.0.0-rc.29",
     "lib0": "1.0.0-rc.36",
-    "minisearch": "7.2.0"
+    "minisearch": "7.2.0",
+    "prosemirror-model": "1.25.12"
   }
 }

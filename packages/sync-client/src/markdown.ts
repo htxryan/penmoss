@@ -13,13 +13,13 @@ import { parseAttachmentPath } from '@penmoss/core/attachments';
 import { blocksOf, reuseBlocks } from '@penmoss/core/diff-apply';
 import type { DocJson } from '@penmoss/core/links';
 import { noteHeadings, noteSections, type NoteSection } from '@penmoss/core/search';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
-import { readIdentity, readTitle } from '@penmoss/sync-client/note';
-import { frontmatterTags, noteTags } from '@penmoss/sync-client/tags';
+import { NOTE_ROOT } from './replica';
+import { readIdentity, readTitle } from './note';
+import { frontmatterTags, noteTags } from './tags';
 import type * as Y from '@y/y';
 import { pmnodeToDelta, ynodeToPmnode } from '@y/prosemirror';
-import type { Node as PMNode } from '@tiptap/pm/model';
-import { UnsupportedContentError } from './collab/unsupported';
+import type { Node as PMNode } from 'prosemirror-model';
+import { UnsupportedContentError } from './unsupported';
 
 /** Thrown where a body this build cannot read would be written from (A158, A1493). */
 export { UnsupportedContentError };

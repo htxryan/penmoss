@@ -10,6 +10,7 @@ import {
   isSha256,
   parseAttachmentPath,
   sha256Hex,
+  sha256HexText,
   sniffFileType,
   sniffImageType,
 } from '../src/attachments';
@@ -19,6 +20,11 @@ const HASH = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
 describe('attachments', () => {
   it('hashes bytes to lower-case hex SHA-256', async () => {
     expect(await sha256Hex(new TextEncoder().encode('abc'))).toBe(HASH);
+  });
+
+  it('hashes text by its UTF-8', async () => {
+    expect(await sha256HexText('abc')).toBe(HASH);
+    expect(await sha256HexText('é')).toBe(await sha256Hex(new Uint8Array([0xc3, 0xa9])));
   });
 
   it('names an image by its hash and type', () => {

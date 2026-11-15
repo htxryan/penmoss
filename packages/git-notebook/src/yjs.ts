@@ -1,4 +1,5 @@
 /** Yjs helpers the engine shares (T50). */
+import { hasPending as holdsBack } from '@penmoss/sync-client/yjs14';
 import * as Y from '@y/y';
 
 /** Updates applied from the repository: never a local change, so never marked dirty. */
@@ -142,10 +143,10 @@ export function applyKeepingId(doc: Y.Doc, update: Uint8Array, origin: unknown):
  * Whether Yjs holds content for `doc` it has not applied: a struct whose dependency is missing.
  * @y/y rc.29 can drop such a struct when the dependency comes in a later update (A1148), and then
  * only that struct's own update brings it back, so the engine applies the doc's files again.
+ * Pending deletions do not count (sync-client's `hasPending` says why).
  */
 export function hasPending(doc: Y.Doc): boolean {
-  const store = (doc as unknown as { store?: { pendingStructs?: unknown } }).store;
-  return store?.pendingStructs != null;
+  return holdsBack(doc, { deletes: false });
 }
 
 export function isUpdate(bytes: Uint8Array): boolean {

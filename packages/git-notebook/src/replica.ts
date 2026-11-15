@@ -7,6 +7,7 @@
 import * as Y from '@y/y';
 import type { NotebookInfo } from './layout';
 import type { WriterRecord } from './writer';
+import { isEmptyUpdate } from '@penmoss/sync-client/yjs14';
 import { applyKeepingId, ENGINE_ORIGIN, GIT_ORIGIN, newDoc, LOCAL_STORE_ORIGIN } from './yjs';
 
 /** The engine's bookkeeping, saved with the docs. */
@@ -43,23 +44,23 @@ export interface NotebookMeta {
   /**
    * What the repository changed here that the client has not confirmed it showed
    * (`takeGitChanges`, `confirmGitChanges`): saved with the docs, so a window that closes or
-   * crashes between a fetch and showing it leaves it to the next engine. Absent: nothing.
+   * crashes between a fetch and showing it leaves it to the next engine. Null: nothing.
    */
-  readonly undelivered?: GitChanges | null;
+  readonly undelivered: GitChanges | null;
   /**
    * Copies withheld from the push (A886): brought back after a store was cleared, their original
    * deleted for good on another device before they first reached the branch. Kept on this device
    * only, by copy id: never pushed until the person confirms Keep and sync. `update` is the copy's
    * whole doc (base64) where nothing else keeps it; Android's Room keeps it there instead.
    */
-  readonly withheld?: Readonly<Record<string, WithheldCopy>>;
+  readonly withheld: Readonly<Record<string, WithheldCopy>>;
   /** Withheld copies the person confirmed keeping and syncing: pushed, until on the branch. */
-  readonly keptCopies?: readonly string[];
+  readonly keptCopies: readonly string[];
   /**
    * The name Rename gave the notebook on this device, until a sync lands it in `notebook.json`
-   * (Ryan's review of PR #192). `info.name` is already this name. Absent or null: none.
+   * (Ryan's review of PR #192). `info.name` is already this name. Null: none.
    */
-  readonly pendingName?: string | null;
+  readonly pendingName: string | null;
 }
 
 /** A copy withheld from the push (A886), as this device keeps it. */
@@ -88,6 +89,9 @@ export const EMPTY_META: NotebookMeta = {
   revs: {},
   mdIds: {},
   undelivered: null,
+  withheld: {},
+  keptCopies: [],
+  pendingName: null,
 };
 
 /** A whole saved notebook. */
@@ -222,7 +226,7 @@ export class NotebookReplica {
       this.watch(doc, id);
     }
     // What a previous engine fetched and no client confirmed showing: given again.
-    const undelivered = snapshot?.meta.undelivered;
+    const undelivered = this.meta.undelivered;
     for (const id of undelivered?.changed ?? []) this.fromGit.add(id);
     for (const id of undelivered?.purged ?? []) this.droppedByGit.add(id);
     if (undelivered?.workspaceChanged) this.workspaceFromGit = true;
@@ -296,7 +300,7 @@ export class NotebookReplica {
     const doc = id === null ? this.workspace : this.ensureNote(id);
     let changed = false;
     const off = (bytes: Uint8Array) => {
-      if (bytes.byteLength > 2) changed = true;
+      if (!isEmptyUpdate(bytes)) changed = true;
     };
     doc.on('update', off);
     try {
@@ -409,7 +413,7 @@ export class NotebookReplica {
   /** Writes what changed since the last save. */
   async save(storage: NotebookStorage): Promise<void> {
     const undelivered = this.undelivered();
-    if (JSON.stringify(undelivered) !== JSON.stringify(this.meta.undelivered ?? null)) {
+    if (JSON.stringify(undelivered) !== JSON.stringify(this.meta.undelivered)) {
       this.update({ undelivered });
     }
     if (!this.workspaceUnsaved && this.unsaved.size === 0 && !this.metaUnsaved) return;
@@ -429,7 +433,7 @@ export class NotebookReplica {
 
   private watch(doc: Y.Doc, id: string | null): void {
     doc.on('update', (update: Uint8Array, origin: unknown) => {
-      if (update.byteLength <= 2) return;
+      if (isEmptyUpdate(update)) return;
       const local = origin !== GIT_ORIGIN && origin !== ENGINE_ORIGIN;
       // Whoever wrote what did not come from the repository is this writer (A829): the replica's
       // own id, or a window's that the engine adopts from the store (A851).

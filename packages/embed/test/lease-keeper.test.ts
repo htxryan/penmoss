@@ -1,10 +1,10 @@
 /**
  * The indexing lease's keeper (A1157, A1350): a process that lost the race keeps trying, so a
  * holder that dies or quits is replaced, and a holder that loses the lease hears of it. Fake timers
- * and a fake lease; the file lease itself is tested in `@penmoss/embed`.
+ * and a fake lease; the file lease itself is tested in `lease.test.ts`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { LeaseKeeper, type HeldLease } from '../src/search';
+import { LeaseKeeper, type HeldLease } from '../src/lease-keeper';
 
 /** The lease file as these tests control it: free, or held by someone else. */
 function fakeLeases() {

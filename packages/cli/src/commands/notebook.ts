@@ -55,10 +55,7 @@ function syncLines(done: NotebookSyncSummary): string[] {
 }
 
 /** A token from stdin (`-`), never from the command line, where other users could see it. */
-export async function tokenFrom(
-  context: Context,
-  value: string | undefined,
-): Promise<string | undefined> {
+async function tokenFrom(context: Context, value: string | undefined): Promise<string | undefined> {
   if (value === undefined) return undefined;
   if (value !== '-') {
     throw new UsageError(

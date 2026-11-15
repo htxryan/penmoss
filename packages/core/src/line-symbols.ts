@@ -351,7 +351,7 @@ export function symbolEdits(
 /**
  * A heading's text without its leading symbols, for matching it (A741, A748): any leading run
  * of tokens without letters or digits, each followed by a space, whatever the person's list
- * (the server has no list), so `## ? Open questions` is found as "Open questions". A heading
+ * (a reader may not know it), so `## ? Open questions` is found as "Open questions". A heading
  * that is only such tokens keeps its text.
  */
 export function withoutLeadingSymbols(text: string): string {

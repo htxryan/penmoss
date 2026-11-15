@@ -1,6 +1,6 @@
 /**
  * restore, attach, settings and retag (T42 item 12, A568): what the CLI may do beyond editing
- * notes, each through the notebook's local route the MCP tools use, attributed to the clone's
+ * notes, each through the notebook's notes API the MCP tools use, attributed to the clone's
  * writer. Deleting a note for good stays the apps' (A15).
  */
 import { UsageError } from '../args';
@@ -11,7 +11,6 @@ import { resolveNote } from '../refs';
 
 const NOTE_HELP =
   'A note is its id or its exact title, ignoring the case of A–Z only; a note in Trash is named by its id.';
-const notePath = (id: string, action = '') => `/api/notes/${encodeURIComponent(id)}${action}`;
 
 export const restore: Command = {
   name: 'restore',
@@ -25,15 +24,10 @@ export const restore: Command = {
   examples: ['penmoss restore 01JABCDEFGHJKMNPQRSTVWXYZ0'],
   async run(context) {
     const [ref] = context.args(['note']);
-    const api = await context.api();
-    const note = await resolveNote(api, ref!);
+    const note = await resolveNote(context, ref!);
     // The notebook files it in the same change (restore_note's command): never a note out of
     // Trash and out of every folder.
-    const reply = await api.request<{ id: string; restored: boolean; folderId: string | null }>(
-      'POST',
-      notePath(note.id, '/restore'),
-      { body: {} },
-    );
+    const reply = await context.write((notebook) => notebook.restore(note.id));
     context.emit({ id: note.id, restored: reply.restored, folderId: reply.folderId }, () =>
       reply.restored
         ? `Restored ${named(note.title, note.id)} from Trash.`
@@ -91,22 +85,18 @@ export const attach: Command = {
       throw new UsageError(`cannot read the file “${file}”`);
     }
     if (bytes.length > MAX_KB * 1024) throw tooLarge(bytes.length);
-    const api = await context.api();
-    const note = await resolveNote(api, ref!);
+    const note = await resolveNote(context, ref!);
     const name = file!.split(/[\\/]/).pop() ?? file!;
     const alt = context.string('alt');
     const heading = context.string('heading');
-    const reply = await api.request<{ path: string; added: boolean; markdown: string }>(
-      'POST',
-      notePath(note.id, '/attachments'),
-      {
-        body: {
-          name,
-          data: base64(bytes),
-          ...(alt === undefined ? {} : { alt }),
-          ...(heading === undefined ? {} : { heading }),
-        },
-      },
+    const reply = await context.write((notebook) =>
+      notebook.attach({
+        id: note.id,
+        name,
+        data: base64(bytes),
+        ...(alt === undefined ? {} : { alt }),
+        ...(heading === undefined ? {} : { heading }),
+      }),
     );
     context.emit(reply, () =>
       reply.added
@@ -140,8 +130,7 @@ export const settings: Command = {
   async run(context) {
     const [key, value] = context.args(['key', 'value'], 2);
     const reset = context.bool('reset');
-    const api = await context.api();
-    const now = (await api.get<{ settings: Record<string, unknown> }>('/api/settings')).settings;
+    const now = (await context.read((notebook) => notebook.settings())).settings;
     if (key === undefined) {
       if (reset) throw new UsageError('--reset needs a key');
       context.emit({ settings: now }, () =>
@@ -162,10 +151,8 @@ export const settings: Command = {
     if (value !== undefined && reset) throw new UsageError('give a value or --reset, not both');
     const next = reset ? null : settingValue(value!);
     try {
-      const reply = await api.request<{ settings: Record<string, unknown>; changed: boolean }>(
-        'PUT',
-        '/api/settings',
-        { body: { set: { [key]: next }, base: { [key]: now[key] ?? null } } },
+      const reply = await context.write((notebook) =>
+        notebook.changeSettings({ set: { [key]: next }, base: { [key]: now[key] ?? null } }),
       );
       context.emit({ key, value: reply.settings[key] ?? null, changed: reply.changed }, () =>
         reset ? `${key} has its default again.` : `${key} is ${JSON.stringify(next)}.`,
@@ -191,13 +178,8 @@ export const retag: Command = {
   async run(context) {
     const [from, to] = context.args(['from', 'to']);
     const tag = (text: string) => text.trim().replace(/^#/, '');
-    const api = await context.api();
-    const reply = await api.request<{ from: string; to: string; notes: string[] }>(
-      'POST',
-      '/api/tags/rename',
-      {
-        body: { from: tag(from!), to: tag(to!), ...(context.bool('merge') ? { merge: true } : {}) },
-      },
+    const reply = await context.write((notebook) =>
+      notebook.renameTag({ from: tag(from!), to: tag(to!), merge: context.bool('merge') }),
     );
     context.emit(
       reply,

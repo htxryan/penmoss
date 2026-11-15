@@ -1,7 +1,7 @@
 /**
  * Tags (T18, FR-ORG-2): from frontmatter `tags:` and from inline `#tags` in
- * the body, nested with `/` (`#area/cooking`). One set of rules for the
- * client (tag pane, filters, offline) and the indexer (D1 `note_tags`).
+ * the body, nested with `/` (`#area/cooking`). One set of rules for every
+ * reader: the tag pane, filters, the search indexes and the engine's frontmatter.
  *
  * Inline rules follow Obsidian: `#` at the start of the text or after
  * whitespace or an opening bracket, then letters, digits, `_`, `-` and `/`,

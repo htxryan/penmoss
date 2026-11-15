@@ -282,8 +282,8 @@ function deterministicUlid(time: number, name: string): string {
  * It sorts by the period's start (UTC midnight).
  *
  * `salt` is a git notebook's id (T50, A820): its periodic notes and Journal folders are its own,
- * never the personal workspace's, though both derive them from the same period. Without a salt
- * the ids are exactly the server workspace's, as before.
+ * never another notebook's, though all derive them from the same period. Without a salt the ids
+ * are the unsalted ones the first workspaces used.
  */
 export function periodicNoteId(kind: PeriodKind, period: string, salt?: string): string {
   const start = kind === 'daily' ? parsePlainDate(period) : parseIsoWeek(period);

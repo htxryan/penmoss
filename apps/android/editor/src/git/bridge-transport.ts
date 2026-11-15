@@ -4,29 +4,13 @@
  * shrink), as the Mac's main process does for its page (`IpcGitTransport`). Bytes cross as bytes.
  */
 import {
-  GitTransportError,
+  GitRefused,
+  refusalError,
   type CommitInfo,
-  type GitErrorCode,
   type GitTransport,
   type PushOutcome,
 } from '@penmoss/git-notebook';
-import { GitRefused } from '@penmoss/git-notebook/host';
 import { ChannelError, type Channel } from './channel';
-
-const GIT_CODES: ReadonlySet<string> = new Set<GitErrorCode>([
-  'auth',
-  'network',
-  'not_found',
-  'host_key',
-  'signing',
-  'protected',
-  'rules',
-  'refused',
-  'git_missing',
-  'timeout',
-  'redirected',
-  'git',
-]);
 
 /** Reads go in parts of at most this many bytes, so no frame gets large. */
 export const READ_PART_BYTES = 8 * 1024 * 1024;
@@ -37,12 +21,9 @@ export const READ_PART_FILES = 400;
 const CALL_LIMIT_MS = 5 * 60_000;
 
 function translated(error: unknown): Error {
-  if (error instanceof ChannelError) {
-    if (GIT_CODES.has(error.code)) {
-      return new GitTransportError(error.code as GitErrorCode, error.message, error.hostMessage);
-    }
-    return new GitRefused(error.code, error.message, error.hostMessage);
-  }
+  // git's own refusal as a GitTransportError (A824); the app's own checks' as GitRefused.
+  if (error instanceof ChannelError)
+    return refusalError(error.code, error.message, error.hostMessage);
   return error instanceof Error ? error : new Error(String(error));
 }
 

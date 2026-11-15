@@ -4,8 +4,8 @@
  * hidden; Search never can. One
  * synced per-user setting each (`sidebar.<item>`, true or false; unset shows it), so a choice
  * follows the user to every device like the theme, and two devices hiding different items
- * never overwrite each other. The web app writes them in the WorkspaceDoc; the Android app
- * will through `PUT /api/settings`, whose server checks them with these same rules.
+ * never overwrite each other. The apps write them in the WorkspaceDoc and check them with these
+ * same rules.
  */
 
 /** The sidebar shortcuts that may be hidden, in the sidebar's order. Search is not one. */

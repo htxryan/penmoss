@@ -21,7 +21,7 @@ import {
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { chromium, expect, test, type Browser, type Page } from '@playwright/test';
-import { checkoutPortBase } from '../../../../packages/core/test/support/checkout-ports';
+import { checkoutPortBase } from '../../../../scripts/checkout-ports.mjs';
 import { parseBlock } from '../../../../scripts/ports.mjs';
 import { cliScript } from '../../src/local-agents';
 import { inVirtualMachine, refuseOnMacHost } from './host-guard';

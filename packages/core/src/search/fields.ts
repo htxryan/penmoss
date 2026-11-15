@@ -1,8 +1,9 @@
 /**
- * The full-text index's columns and their bm25 weights (T22), shared by the
- * server's `notes_fts` (migration 0006 stores the same weights as its rank)
- * and the client's offline index, so both rank alike. A title match counts
- * ten body matches; tags and headings sit between.
+ * The full-text index's columns and their bm25 weights (T22), shared by every
+ * words index (sync-client's `local-index.ts`, which the page and
+ * `LocalNotebook` use), so all rank alike, as FTS5's bm25 would with these
+ * weights. A title match counts ten body matches; tags and headings sit
+ * between.
  */
 export const FTS_COLUMNS = ['title', 'body', 'tags', 'headings'] as const;
 export type FtsColumn = (typeof FTS_COLUMNS)[number];

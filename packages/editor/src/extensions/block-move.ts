@@ -11,6 +11,7 @@
  * the drag is cancelled and nothing is inserted. No move runs while a peer's
  * update is waiting for content it builds on (`hasPendingUpdates`).
  */
+import { hasPending } from '@penmoss/sync-client/yjs14';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import {
   NodeSelection,
@@ -23,6 +24,7 @@ import {
 } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import { ySyncPluginKey, yUndoPluginKey } from '@y/prosemirror';
+import type * as Y from '@y/y';
 import { BLOCK_MOVE_META, type BlockMoveMeta } from './comments';
 
 export interface TopLevelBlock {
@@ -119,10 +121,9 @@ export function latestUndoStep(state: EditorState): object | null {
  */
 export function hasPendingUpdates(state: EditorState): boolean {
   const sync = ySyncPluginKey.getState(state) as
-    | { ytype?: { doc?: { store: { pendingStructs: unknown; pendingDs: unknown } } | null } | null }
-    | undefined;
-  const store = sync?.ytype?.doc?.store;
-  return store != null && (store.pendingStructs != null || store.pendingDs != null);
+    { ytype?: { doc?: Y.Doc | null } | null } | undefined;
+  const doc = sync?.ytype?.doc;
+  return doc != null && hasPending(doc);
 }
 
 /**

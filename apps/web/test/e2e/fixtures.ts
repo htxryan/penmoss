@@ -37,7 +37,7 @@ import {
   type SeedNote,
   type SeededNotebook,
 } from './support/git-host';
-import { webPreviewPort } from '../../../../packages/core/test/support/checkout-ports';
+import { webPreviewPort } from '../../../../scripts/checkout-ports.mjs';
 
 // Everything else of Playwright's, so a spec imports from here only.
 export * from '@playwright/test';

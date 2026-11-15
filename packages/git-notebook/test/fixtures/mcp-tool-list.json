@@ -13,11 +13,7 @@
         },
         "mode": {
           "type": "string",
-          "enum": [
-            "full-text",
-            "semantic",
-            "hybrid"
-          ],
+          "enum": ["full-text", "semantic", "hybrid"],
           "description": "hybrid (default), full-text or semantic."
         },
         "folderId": {
@@ -45,9 +41,7 @@
           "description": "At most this many (10)."
         }
       },
-      "required": [
-        "query"
-      ],
+      "required": ["query"],
       "additionalProperties": false
     },
     "annotations": {
@@ -79,9 +73,7 @@
           "description": "Start here: the nextOffset of the previous part of a long note."
         }
       },
-      "required": [
-        "id"
-      ],
+      "required": ["id"],
       "additionalProperties": false
     },
     "annotations": {
@@ -175,9 +167,7 @@
           "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         }
       },
-      "required": [
-        "id"
-      ],
+      "required": ["id"],
       "additionalProperties": false
     },
     "annotations": {
@@ -232,9 +222,7 @@
           "description": "At most this many (20)."
         }
       },
-      "required": [
-        "id"
-      ],
+      "required": ["id"],
       "additionalProperties": false
     },
     "annotations": {
@@ -257,10 +245,7 @@
         },
         "period": {
           "type": "string",
-          "enum": [
-            "daily",
-            "weekly"
-          ],
+          "enum": ["daily", "weekly"],
           "description": "daily (default) or weekly."
         }
       },
@@ -346,10 +331,7 @@
           "description": "The baseVersion your last read_note (or last edit of this note) returned: the version your edit is based on."
         }
       },
-      "required": [
-        "id",
-        "markdown"
-      ],
+      "required": ["id", "markdown"],
       "additionalProperties": false
     },
     "annotations": {
@@ -382,11 +364,7 @@
         },
         "mode": {
           "type": "string",
-          "enum": [
-            "replace",
-            "prepend",
-            "append"
-          ],
+          "enum": ["replace", "prepend", "append"],
           "description": "replace (default), prepend or append."
         },
         "baseVersion": {
@@ -395,12 +373,7 @@
           "description": "The baseVersion your last read_note (or last edit of this note) returned: the version your edit is based on."
         }
       },
-      "required": [
-        "id",
-        "heading",
-        "markdown",
-        "baseVersion"
-      ],
+      "required": ["id", "heading", "markdown", "baseVersion"],
       "additionalProperties": false
     },
     "annotations": {
@@ -436,10 +409,7 @@
         },
         "scope": {
           "type": "string",
-          "enum": [
-            "text",
-            "markdown"
-          ],
+          "enum": ["text", "markdown"],
           "description": "text (default: prose only) or markdown."
         },
         "baseVersion": {
@@ -448,12 +418,7 @@
           "description": "The baseVersion your last read_note (or last edit of this note) returned: the version your edit is based on."
         }
       },
-      "required": [
-        "id",
-        "find",
-        "replace",
-        "baseVersion"
-      ],
+      "required": ["id", "find", "replace", "baseVersion"],
       "additionalProperties": false
     },
     "annotations": {
@@ -495,9 +460,7 @@
           "description": "The baseVersion your last read_note (or last edit of this note) returned: the version your edit is based on."
         }
       },
-      "required": [
-        "id"
-      ],
+      "required": ["id"],
       "additionalProperties": false
     },
     "annotations": {
@@ -520,17 +483,11 @@
           "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         },
         "folderId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "The folder to move it to; null for the top level."
         }
       },
-      "required": [
-        "id",
-        "folderId"
-      ],
+      "required": ["id", "folderId"],
       "additionalProperties": false
     },
     "annotations": {
@@ -554,9 +511,7 @@
           "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         }
       },
-      "required": [
-        "id"
-      ],
+      "required": ["id"],
       "additionalProperties": false
     },
     "annotations": {
@@ -580,9 +535,7 @@
           "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         }
       },
-      "required": [
-        "id"
-      ],
+      "required": ["id"],
       "additionalProperties": false
     },
     "annotations": {
@@ -616,9 +569,7 @@
           "description": "The parent folder’s path, e.g. \"Projects/Garden\" (instead of parentId)."
         }
       },
-      "required": [
-        "name"
-      ],
+      "required": ["name"],
       "additionalProperties": false
     },
     "annotations": {
@@ -652,10 +603,7 @@
           "description": "The name you saw."
         }
       },
-      "required": [
-        "folderId",
-        "name"
-      ],
+      "required": ["folderId", "name"],
       "additionalProperties": false
     },
     "annotations": {
@@ -679,17 +627,11 @@
           "description": "The folder id, from list_folder."
         },
         "parentId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "The new parent; null for the top level."
         },
         "expectedParentId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "The parent you saw it in; null for the top level."
         },
         "before": {
@@ -703,9 +645,7 @@
           "description": "Put it just after this sibling folder."
         }
       },
-      "required": [
-        "folderId"
-      ],
+      "required": ["folderId"],
       "additionalProperties": false
     },
     "annotations": {
@@ -724,26 +664,16 @@
       "type": "object",
       "properties": {
         "folderId": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "description": "The folder; null for the top level."
         },
         "sortMode": {
           "type": "string",
-          "enum": [
-            "manual",
-            "alpha",
-            "modified"
-          ],
+          "enum": ["manual", "alpha", "modified"],
           "description": "The order."
         }
       },
-      "required": [
-        "folderId",
-        "sortMode"
-      ],
+      "required": ["folderId", "sortMode"],
       "additionalProperties": false
     },
     "annotations": {
@@ -767,9 +697,7 @@
           "description": "The folder id, from list_folder."
         }
       },
-      "required": [
-        "folderId"
-      ],
+      "required": ["folderId"],
       "additionalProperties": false
     },
     "annotations": {
@@ -793,9 +721,7 @@
           "description": "The note id (26 characters) or its short id (e.g. K7QD-9HTF2CXA), from search_notes, list_recent or list_folder."
         }
       },
-      "required": [
-        "id"
-      ],
+      "required": ["id"],
       "additionalProperties": false
     },
     "annotations": {
@@ -824,10 +750,7 @@
           "description": "A version id from get_history."
         }
       },
-      "required": [
-        "id",
-        "versionId"
-      ],
+      "required": ["id", "versionId"],
       "additionalProperties": false
     },
     "annotations": {
@@ -856,10 +779,7 @@
           "description": "A version id from get_history."
         }
       },
-      "required": [
-        "id",
-        "versionId"
-      ],
+      "required": ["id", "versionId"],
       "additionalProperties": false
     },
     "annotations": {
@@ -902,11 +822,7 @@
           "description": "Add it under this heading."
         }
       },
-      "required": [
-        "id",
-        "name",
-        "data"
-      ],
+      "required": ["id", "name", "data"],
       "additionalProperties": false
     },
     "annotations": {
@@ -948,9 +864,7 @@
           "description": "The values you saw, for the same keys."
         }
       },
-      "required": [
-        "set"
-      ],
+      "required": ["set"],
       "additionalProperties": false
     },
     "annotations": {
@@ -983,10 +897,7 @@
           "description": "Merge into a tag that exists already (required when it does)."
         }
       },
-      "required": [
-        "from",
-        "to"
-      ],
+      "required": ["from", "to"],
       "additionalProperties": false
     },
     "annotations": {
@@ -1032,9 +943,7 @@
           "description": "The baseVersion your last read_note (or last edit of this note) returned: the version your edit is based on."
         }
       },
-      "required": [
-        "id"
-      ],
+      "required": ["id"],
       "additionalProperties": false
     },
     "annotations": {

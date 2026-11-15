@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "Shared React components, commands, themes, search UI, graph",
+  "description": "Shared React components: the theme model, the graph, Backlinks, icons and controls",
   "exports": {
     "./panels/Backlinks": "./src/panels/Backlinks.tsx",
     "./controls/Select": "./src/controls/Select.tsx",

@@ -7,7 +7,7 @@ const encoder = new TextEncoder();
 
 /**
  * The Web Crypto this needs, typed here: core's code is DOM-free and runs in workerd (which adds
- * `DigestStream`), in Node 24 and in browsers (T50 G1: moved from the server, A832).
+ * `DigestStream`), in Node 24 and in browsers (T50 G1, A832).
  */
 interface DigestStreamLike {
   getWriter(): {

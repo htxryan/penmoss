@@ -15,6 +15,7 @@ import { PluginKey, TextSelection, type EditorState, type Plugin } from '@tiptap
 import { Suggestion, type SuggestionMatch, type SuggestionProps } from '@tiptap/suggestion';
 import { isBindingTransaction } from '../collab/binding';
 import { MENU_FLOATING_UI } from './slash-menu';
+import { SuggestionListbox } from './suggestion-listbox';
 import type { LinkServices } from './wikilink';
 
 export const linkMenuKey = new PluginKey('penmossLinkMenu');
@@ -43,7 +44,7 @@ export interface LinkQuery {
   readonly alias: string | null;
 }
 
-export function parseLinkQuery(text: string): LinkQuery {
+function parseLinkQuery(text: string): LinkQuery {
   const embed = text.startsWith('!');
   const ref = parseWikiReference(text.replace(/^!?\[\[/, ''));
   return {
@@ -58,7 +59,7 @@ export function parseLinkQuery(text: string): LinkQuery {
  * `[[query` (or `![[query`) before the caret in this textblock, with no `]]`
  * after it: the range to replace and the query. Null when there is none.
  */
-export function findLinkQuery({ $position }: { $position: ResolvedPos }): SuggestionMatch {
+function findLinkQuery({ $position }: { $position: ResolvedPos }): SuggestionMatch {
   const text = $position.parent.textBetween(0, $position.parentOffset, undefined, LEAF);
   const open = text.lastIndexOf('[[');
   if (open === -1) return null;
@@ -77,7 +78,7 @@ function inCode(state: EditorState): boolean {
 }
 
 /** The options for `query`; headings come later (they are read from the note), so `refresh` re-asks. */
-export function linkOptions(
+function linkOptions(
   query: LinkQuery,
   services: LinkServices,
   headings: ReadonlyMap<string, readonly string[] | 'loading'>,
@@ -119,15 +120,9 @@ export function linkOptions(
 let menus = 0;
 const menusByEditor = new WeakMap<Editor, LinkMenu>();
 
-/** The menu's DOM and keyboard handling; one per editor. */
+/** The menu's options and keyboard handling; one per editor. */
 export class LinkMenu {
-  readonly element: HTMLDivElement;
-  private readonly heading: HTMLDivElement;
-  private readonly list: HTMLDivElement;
-  private readonly empty: HTMLParagraphElement;
-  private readonly id: string;
-  private options: LinkOption[] = [];
-  private index = 0;
+  private readonly listbox: SuggestionListbox<LinkOption>;
   private query: LinkQuery | null = null;
   private range: Range | null = null;
   private unmount: (() => void) | null = null;
@@ -138,33 +133,21 @@ export class LinkMenu {
     private readonly editor: Editor,
     private readonly services: LinkServices,
   ) {
-    const doc = editor.view.dom.ownerDocument;
-    this.id = `pm-link-${(menus += 1)}`;
-    this.element = doc.createElement('div');
-    this.element.className = 'pm-slash-menu pm-link-menu';
-    this.element.dataset['testid'] = 'link-menu';
-    this.heading = doc.createElement('div');
-    this.heading.className = 'pm-slash-heading';
-    this.heading.setAttribute('aria-hidden', 'true');
-    this.list = doc.createElement('div');
-    this.list.id = this.id;
-    this.list.className = 'pm-slash-list';
-    this.list.setAttribute('role', 'listbox');
-    this.list.setAttribute('aria-label', 'Link to note');
-    this.empty = doc.createElement('p');
-    this.empty.className = 'pm-slash-empty';
-    this.empty.setAttribute('role', 'status');
-    this.element.append(this.heading, this.list, this.empty);
-    this.element.addEventListener('mousedown', (event) => event.preventDefault());
-    this.element.addEventListener('click', (event) => {
-      const option = (event.target as Element | null)?.closest<HTMLElement>('[role="option"]');
-      const index = Number(option?.dataset['index']);
-      if (option && Number.isInteger(index)) this.pick(index);
+    this.listbox = new SuggestionListbox(editor, {
+      id: `pm-link-${(menus += 1)}`,
+      className: 'pm-slash-menu pm-link-menu',
+      testId: 'link-menu',
+      label: 'Link to note',
+      pick: (option) => this.pick(option),
     });
     // A note renamed or synced while the menu is open shows at once.
     this.offTitles = services.subscribe(() => {
       if (this.isOpen) this.refresh();
     });
+  }
+
+  get element(): HTMLDivElement {
+    return this.listbox.element;
   }
 
   get isOpen(): boolean {
@@ -173,15 +156,12 @@ export class LinkMenu {
 
   /** The options shown (tests). */
   get shown(): readonly LinkOption[] {
-    return this.options;
+    return this.listbox.items;
   }
 
   open(props: SuggestionProps<LinkOption, LinkOption>): void {
     this.unmount ??= props.mount(this.element);
-    const dom = this.editor.view.dom;
-    dom.setAttribute('aria-haspopup', 'listbox');
-    dom.setAttribute('aria-controls', this.id);
-    dom.setAttribute('aria-autocomplete', 'list');
+    this.listbox.attach();
     this.update(props);
   }
 
@@ -196,15 +176,7 @@ export class LinkMenu {
     this.unmount = null;
     this.query = null;
     this.range = null;
-    const dom = this.editor.view.dom;
-    for (const name of [
-      'aria-haspopup',
-      'aria-controls',
-      'aria-autocomplete',
-      'aria-activedescendant',
-    ]) {
-      dom.removeAttribute(name);
-    }
+    this.listbox.detach();
   }
 
   destroy(): void {
@@ -213,36 +185,20 @@ export class LinkMenu {
   }
 
   keydown(event: KeyboardEvent): boolean {
-    if (event.isComposing) return false;
-    switch (event.key) {
-      case 'ArrowDown':
-      case 'ArrowUp': {
-        if (this.options.length === 0) return false;
-        const step = event.key === 'ArrowDown' ? 1 : -1;
-        this.highlight((this.index + step + this.options.length) % this.options.length);
-        return true;
-      }
-      case 'Enter':
-      case 'Tab':
-        if (event.shiftKey || this.options.length === 0) return false;
-        this.pick(this.index);
-        return true;
-      default:
-        return false;
-    }
+    return this.listbox.keydown(event);
   }
 
   private refresh(): void {
     const query = this.query;
     if (!query) return;
-    const previous = this.options[this.index];
-    this.options = linkOptions(query, this.services, this.headings);
+    const previous = this.listbox.selected;
+    // First, so the options say what is known of the note's headings now ('loading', or none).
     if (query.heading !== null) this.loadHeadings(query);
+    const options = linkOptions(query, this.services, this.headings);
     const same = previous
-      ? this.options.findIndex((option) => JSON.stringify(option) === JSON.stringify(previous))
+      ? options.findIndex((option) => JSON.stringify(option) === JSON.stringify(previous))
       : -1;
-    this.index = same === -1 ? 0 : same;
-    this.render(query);
+    this.render(query, options, same === -1 ? 0 : same);
   }
 
   private loadHeadings(query: LinkQuery): void {
@@ -267,11 +223,10 @@ export class LinkMenu {
     );
   }
 
-  private pick(index: number): void {
-    const option = this.options[index];
+  private pick(option: LinkOption): void {
     const query = this.query;
     const range = this.range;
-    if (!option || !query || !range || option.kind === 'loading') return;
+    if (!query || !range || option.kind === 'loading') return;
     let noteId: string | null;
     let title: string;
     let heading = query.heading?.trim() || null;
@@ -293,30 +248,22 @@ export class LinkMenu {
     });
   }
 
-  private render(query: LinkQuery): void {
-    const doc = this.element.ownerDocument;
-    this.heading.textContent = query.embed
+  private render(query: LinkQuery, options: readonly LinkOption[], index: number): void {
+    this.listbox.heading.textContent = query.embed
       ? 'Embed note'
       : query.heading !== null
         ? 'Link to heading'
         : 'Link to note';
-    const none = this.options.length === 0;
-    this.empty.hidden = !none;
-    this.empty.textContent = none
-      ? query.heading !== null
-        ? 'No matching note'
-        : query.target.trim()
-          ? `No notes match “${query.target.trim()}”`
-          : 'No notes yet'
-      : '';
-    this.list.replaceChildren(
-      ...this.options.map((option, index) => {
-        const element = doc.createElement('div');
-        element.id = `${this.id}-${index}`;
-        element.className = 'pm-slash-option';
-        element.setAttribute('role', 'option');
-        element.setAttribute('aria-selected', 'false');
-        element.dataset['index'] = String(index);
+    this.listbox.show(options, {
+      index,
+      empty:
+        query.heading !== null
+          ? 'No matching note'
+          : query.target.trim()
+            ? `No notes match “${query.target.trim()}”`
+            : 'No notes yet',
+      key: (_option, at) => String(at),
+      fill: (element, option, doc) => {
         const icon = doc.createElement('span');
         icon.className = 'pm-slash-icon';
         icon.setAttribute('aria-hidden', 'true');
@@ -345,25 +292,8 @@ export class LinkMenu {
             element.setAttribute('aria-disabled', 'true');
             break;
         }
-        return element;
-      }),
-    );
-    this.highlight(Math.min(this.index, Math.max(0, this.options.length - 1)));
-  }
-
-  private highlight(index: number): void {
-    const options = this.list.children;
-    options[this.index]?.setAttribute('aria-selected', 'false');
-    this.index = index;
-    const selected = options[index] as HTMLElement | undefined;
-    const dom = this.editor.view.dom;
-    if (selected) {
-      selected.setAttribute('aria-selected', 'true');
-      dom.setAttribute('aria-activedescendant', selected.id);
-      selected.scrollIntoView?.({ block: 'nearest' });
-    } else {
-      dom.removeAttribute('aria-activedescendant');
-    }
+      },
+    });
   }
 }
 

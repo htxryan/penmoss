@@ -16,16 +16,16 @@
  */
 import { diffLines, splitLines, type DiffOp } from '@penmoss/core/diff';
 import { buildTree, folderPath, type FolderRecord, type SortMode } from '@penmoss/core/workspace';
-import { bodyMarkdown, versionMarkdown } from '@penmoss/editor/markdown';
+import { bodyMarkdown, versionMarkdown } from '@penmoss/sync-client/markdown';
 import { isDeleted, readTitle } from '@penmoss/sync-client/note';
 import { readWorkspace } from '@penmoss/sync-client/workspace';
 import * as Y from '@y/y';
 import { parseActor } from './actors';
+import { docOfLogs } from './at-commit';
 import { commitAuthor, type HistoryAuthor } from './history';
 import { Layout } from './layout';
 import { Lru } from './lru';
 import type { CommitInfo, GitTransport } from './transport';
-import { isUpdate } from './yjs';
 
 /** The most commits the Time Machine reads (main's own cap on a log, A855). */
 export const MAX_TIMELINE_COMMITS = 10_000;
@@ -208,17 +208,12 @@ export class NotebookTimeline {
     commit: string,
     files: ReadonlyArray<readonly [string, string]>,
   ): Promise<Y.Doc> {
-    const doc = new Y.Doc();
-    if (files.length === 0) return doc;
+    if (files.length === 0) return new Y.Doc();
     const read = await this.transport.read(
       commit,
       files.map(([path]) => path),
     );
-    for (const [path] of files) {
-      const bytes = read.get(path);
-      if (bytes && isUpdate(bytes)) Y.applyUpdate(doc, bytes);
-    }
-    return doc;
+    return docOfLogs(files.map(([path]) => read.get(path)));
   }
 
   private async workspaceAt(commit: string | null, listing: Listing): Promise<WorkspaceState> {
@@ -269,12 +264,8 @@ export class NotebookTimeline {
         missing.flatMap(([, files]) => files.map(([path]) => path)),
       );
       for (const [noteId, files, key] of missing) {
-        const doc = new Y.Doc();
+        const doc = docOfLogs(files.map(([path]) => read.get(path)));
         try {
-          for (const [path] of files) {
-            const bytes = read.get(path);
-            if (bytes && isUpdate(bytes)) Y.applyUpdate(doc, bytes);
-          }
           const state = { title: readTitle(doc), deleted: isDeleted(doc) };
           this.noteStates.set(key, state);
           out.set(noteId, state);
@@ -330,12 +321,8 @@ export class NotebookTimeline {
         missing.flatMap((files) => files.map(([path]) => path)),
       );
       for (const files of missing) {
-        const doc = new Y.Doc();
+        const doc = docOfLogs(files.map(([path]) => read.get(path)));
         try {
-          for (const [path] of files) {
-            const bytes = read.get(path);
-            if (bytes && isUpdate(bytes)) Y.applyUpdate(doc, bytes);
-          }
           const key = keyOf(files);
           this.noteTexts.set(key, { markdown: versionMarkdown(doc), body: bodyMarkdown(doc) });
           this.noteStates.set(key, { title: readTitle(doc), deleted: isDeleted(doc) });

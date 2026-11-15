@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "description": "Schema, markdown codec, frontmatter, IDs, tags, periodic notes, templates",
+  "description": "Schema, markdown codec, frontmatter, IDs, tags, periodic notes, search and feedback rules",
   "exports": {
     ".": "./src/index.ts",
     "./agent-reference": "./src/agent-reference.ts",
@@ -36,8 +36,7 @@
     "./diff-apply": "./src/markdown/diff-apply.ts",
     "./feedback": "./src/feedback.ts",
     "./feedback-github": "./src/feedback-github.ts",
-    "./mirror": "./src/mirror/index.ts",
-    "./mcp": "./src/mcp/index.ts"
+    "./mirror": "./src/mirror/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",

@@ -5,7 +5,7 @@
  * source view do not download it.
  */
 import type { LinkResolver } from '@penmoss/core';
-import { noteFields } from '@penmoss/editor/note-fields';
+import { noteFields } from '@penmoss/sync-client/note-fields';
 import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
 
 /**

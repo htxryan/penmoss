@@ -1,9 +1,9 @@
 /**
  * Content-addressed attachments (T10, A10). A file is named by the SHA-256 of
  * its bytes, so the same image pasted twice, or on two devices, is one file.
- * Notes reference it as `attachments/<sha256>.<ext>`; the git mirror (T27)
- * rewrites that path relative to each note's folder on export. DOM-free: the
- * Worker, the sync client and the editor share these rules.
+ * Notes reference it as `attachments/<sha256>.<ext>`; a git notebook's render
+ * (T27, T50) rewrites that path relative to each note's folder. DOM-free: the
+ * engine, the apps and the editor share these rules.
  */
 
 /** Image types T10 accepts, with their file extensions. SVG is excluded: it can carry script. */
@@ -17,14 +17,19 @@ export const IMAGE_TYPES = {
 
 export type ImageType = keyof typeof IMAGE_TYPES;
 
-/** Files over this size are refused (A10). */
+/**
+ * The largest file the app takes, pasted, dropped or picked, on the Mac and on Android (A64,
+ * A486); the engine commits what the app's store holds.
+ */
 export const MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024;
 /**
- * Files over this size are stored in R2 but kept out of the git mirror (A10,
- * T27). 10 MB, not A10's 20, so an upload fits a Durable Object's memory with
- * room to spare (A213).
+ * The largest file the headless paths add to a note (A828): agents through MCP (the local
+ * server and the relay), the CLI and Android's `/api`, where a file comes whole in one call
+ * (base64, for MCP). It is not the app's `MAX_ATTACHMENT_BYTES` because A828 took A213's 10 MB
+ * cap for git notebooks, and nothing has made the two one since; A213's own reason (a Durable
+ * Object's memory) went with the server.
  */
-export const GIT_MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+export const AGENT_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
 
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 /** `attachments/<sha256>.<ext>` at the end of a path, after any folder prefix (`../../`). */
@@ -156,4 +161,10 @@ export async function sha256Hex(bytes: Uint8Array<ArrayBuffer>): Promise<string>
   let hex = '';
   for (const byte of digest) hex += byte.toString(16).padStart(2, '0');
   return hex;
+}
+
+/** Lower-case hex SHA-256 of `text`'s UTF-8. */
+export function sha256HexText(text: string): Promise<string> {
+  // Copied: the Workers types give the encoder's bytes any ArrayBufferLike, not an ArrayBuffer.
+  return sha256Hex(new Uint8Array(new TextEncoder().encode(text)));
 }

@@ -10,18 +10,9 @@
     "./collab": "./src/collab/index.ts",
     "./extensions": "./src/extensions.ts",
     "./schema": "./src/schema.ts",
-    "./spike/schema": "./src/spike/schema.ts",
     "./keys": "./src/keys.ts",
     "./commands": "./src/commands.ts",
-    "./periodic": "./src/periodic.ts",
-    "./capture": "./src/capture.ts",
-    "./title": "./src/title.ts",
-    "./stats": "./src/stats.ts",
-    "./note-fields": "./src/note-fields.ts",
-    "./feedback": "./src/feedback.ts",
-    "./markdown": "./src/markdown.ts",
-    "./edit-engine": "./src/edit-engine.ts",
-    "./revert": "./src/revert.ts"
+    "./feedback": "./src/feedback.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",

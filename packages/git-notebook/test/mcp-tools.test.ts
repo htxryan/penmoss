@@ -1,8 +1,7 @@
 /**
- * The MCP tool definitions shared by the remote server and the local one (T50, A830): what
- * `tools/list` advertises must not change by moving them. The fixture is the remote server's
- * list for a write token as it was before the move (comment tools aside, which stay there), with the
- * note id's description naming short ids since PEN-69.
+ * The MCP tool definitions (T50, A830): what `tools/list` advertises must not change. The fixture
+ * is the deleted remote server's list for a write token (comment tools aside), with the note id's
+ * description naming short ids since PEN-69: agents' calls mean what they meant there.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -12,7 +11,7 @@ import {
   commentToolDefinitions,
   describeRefusal,
   toolDefinitions,
-} from '../src/mcp';
+} from '../src/local/tools';
 import fixture from './fixtures/mcp-tool-list.json';
 
 const SERVER = { attachmentMaxBytes: 700 * 1024 };

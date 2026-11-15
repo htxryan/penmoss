@@ -12,7 +12,7 @@ import {
   NotebookOps,
   commitWriter,
 } from '@penmoss/git-notebook';
-import { COMMENT_TOOL_NAMES } from '@penmoss/core/mcp';
+import { COMMENT_TOOL_NAMES } from '@penmoss/git-notebook/local';
 import { localTools, RELAY_ABSENT_TOOLS } from '@penmoss/git-notebook/local';
 import { readTitle } from '@penmoss/sync-client/note';
 import { describe, expect, it } from 'vitest';

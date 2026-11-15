@@ -6,7 +6,7 @@
 import { markSpecs, nodeSpecs } from '@penmoss/core/schema';
 import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import { setBody } from '@penmoss/sync-client/history';
-import { Schema, type Node as PMNode } from '@tiptap/pm/model';
+import { Schema, type Node as PMNode } from 'prosemirror-model';
 import { pmnodeToDelta } from '@y/prosemirror';
 import * as Y from '@y/y';
 import { describe, expect, it } from 'vitest';

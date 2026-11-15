@@ -40,7 +40,7 @@ export async function addWelcomeNote(
   if (source.workspace.getState().snapshot.notes.length > 0) return null;
   const [codec, { markdownNote }] = await Promise.all([
     import('@penmoss/core'),
-    import('@penmoss/editor/periodic'),
+    import('@penmoss/sync-client/periodic'),
   ]);
   const id = ulid(now.getTime());
   const update = markdownNote(codec, {

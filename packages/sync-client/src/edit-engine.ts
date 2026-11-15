@@ -32,17 +32,12 @@ import {
 } from '@penmoss/core/diff-apply';
 import { cleanTags, normaliseTag } from '@penmoss/core/tags';
 import { withCapture, withMarkdown } from './capture';
-import { reanchorAcrossEdit } from '@penmoss/sync-client/comments';
-import { setBody } from '@penmoss/sync-client/history';
-import { readTitle, setTitle } from '@penmoss/sync-client/note';
-import {
-  changeTagInDoc,
-  frontmatterTags,
-  renameTagInDoc,
-  setFrontmatterTag,
-} from '@penmoss/sync-client/tags';
+import { reanchorAcrossEdit } from './comments';
+import { setBody } from './history';
+import { readTitle, setTitle } from './note';
+import { changeTagInDoc, frontmatterTags, renameTagInDoc, setFrontmatterTag } from './tags';
 import type * as Y from '@y/y';
-import type { Node as PMNode } from '@tiptap/pm/model';
+import type { Node as PMNode } from 'prosemirror-model';
 import { bodyDelta, noteBody, noteBodyForDisplay, unfitBody, unsupportedTypes } from './markdown';
 
 /** What find-and-replace may match: prose only (the default), or the whole markdown. */
@@ -87,7 +82,7 @@ export type EditOp =
   | {
       /**
        * A quick capture from a client that never reads Yjs (the Android app, T34, A335): added
-       * as the apps add one (`@penmoss/editor/capture`, T30), at the end of `## Captures` led
+       * as the apps add one (`./capture`, T30), at the end of `## Captures` led
        * by its time, or, with no time, at the end of the note (a new Inbox note's text).
        */
       readonly op: 'capture';

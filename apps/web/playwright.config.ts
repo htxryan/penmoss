@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { defineConfig, devices } from '@playwright/test';
 
-import { webE2ePort, webPreviewPort } from '../../packages/core/test/support/checkout-ports';
+import { webE2ePort, webPreviewPort } from '../../scripts/checkout-ports.mjs';
 
 /**
  * The web suite runs the page as the Mac app's (T59, D48, D49): Vite serves it, and each test
