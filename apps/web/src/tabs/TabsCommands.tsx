@@ -124,7 +124,7 @@ export function TabsCommands() {
   useCommand(
     'tab.all',
     () => {
-      // The strip's All Tabs button when the tabs overflow; else the first tab takes focus.
+      // The strip's All Tabs button (always there while a tab is, A1592); else the first tab takes focus.
       const all = document.querySelector<HTMLButtonElement>('[data-testid="tab-all"]');
       if (all) {
         all.click();

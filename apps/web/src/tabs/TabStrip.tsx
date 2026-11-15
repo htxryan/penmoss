@@ -369,7 +369,7 @@ export function TabStrip({
       >
         <Icon name="plus" size={16} />
       </button>
-      {overflow.any ? (
+      {faces.length > 0 ? (
         <button
           ref={allButton}
           type="button"

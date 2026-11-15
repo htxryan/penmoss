@@ -331,6 +331,7 @@ test('with no note open there is no tab, only +, and a dad joke over two lines o
   await expect(page.getByTestId('tab-strip')).toBeVisible();
   await expect(tabs(page)).toHaveCount(0);
   await expect(page.getByTestId('tab-new')).toBeVisible();
+  await expect(page.getByTestId('tab-all')).toHaveCount(0);
   const empty = page.getByTestId('empty-state');
   const joke = empty.getByRole('heading', { level: 2 });
   await expect(joke).toHaveText(/\S/);
@@ -675,6 +676,21 @@ for (const scheme of ['light', 'dark'] as const) {
       expect(box.y).toBe(bar.y);
       expect(box.height).toBeGreaterThanOrEqual(bar.height - 1);
     }
+
+    // + and All Tabs are bar controls (A1592): top to bottom of the strip, no margin, + against
+    // the last tab; All Tabs is there with three tabs, though nothing overflows.
+    const stripBox = (await page.locator('.tab-strip').boundingBox())!;
+    const last = (await tabs(page).last().boundingBox())!;
+    const plus = (await page.getByTestId('tab-new').boundingBox())!;
+    const all = page.getByTestId('tab-all');
+    await expect(all).toBeVisible();
+    await expect(all).toHaveAccessibleName('All Tabs, 3');
+    const allBox = (await all.boundingBox())!;
+    for (const box of [plus, allBox]) {
+      expect(Math.abs(box.y - stripBox.y)).toBeLessThanOrEqual(1);
+      expect(box.height).toBeGreaterThanOrEqual(stripBox.height - 1);
+    }
+    expect(Math.abs(plus.x - (last.x + last.width))).toBeLessThanOrEqual(1);
 
     // An inactive tab draws a divider on its right, in a colour that reads on the strip.
     const colours = await strip(page).evaluate((list) => {
