@@ -575,13 +575,13 @@ test.describe('the docs', () => {
         'OpenCode',
         'Other MCP clients',
       ]);
-      await expect(page.getByText('claude mcp add penmoss-notes-claude-code')).toBeVisible();
-      await expect(page.getByText('[mcp_servers."penmoss-notes-codex"]')).toBeHidden();
+      await expect(page.getByText('claude mcp add penmoss -- ')).toBeVisible();
+      await expect(page.getByText('[mcp_servers."penmoss"]')).toBeHidden();
       await tabs.getByRole('tab', { name: 'Codex' }).click();
-      await expect(page.getByText('[mcp_servers."penmoss-notes-codex"]')).toBeVisible();
-      await expect(page.getByText('claude mcp add penmoss-notes-claude-code')).toBeHidden();
+      await expect(page.getByText('[mcp_servers."penmoss"]')).toBeVisible();
+      await expect(page.getByText('claude mcp add penmoss -- ')).toBeHidden();
       await page.reload();
-      await expect(page.getByText('[mcp_servers."penmoss-notes-codex"]')).toBeVisible();
+      await expect(page.getByText('[mcp_servers."penmoss"]')).toBeVisible();
     });
     expect(errors).toEqual([]);
   });
