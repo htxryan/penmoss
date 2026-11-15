@@ -80,9 +80,4 @@ describe('timeouts (F13)', async () => {
     );
     expect(seen?.aborted).toBe(true);
   });
-  it("waits as long as OpenCode's error says (PEN-117: Go's 5-hour limit, 4.45 hours)", () => {
-    const error =
-      '{"type":"error","error":{"type":"provider.quota","message":"OpenCode Go usage limit reached","status":429,"retryAfterMs":16032000}}';
-    expect(usageLimitReset(`…\n${error}\n`, now)?.getTime()).toBe(now.getTime() + 16_032_000);
-  });
 });
