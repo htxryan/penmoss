@@ -137,6 +137,35 @@ class JournalDeviceSettingsTest {
         assertEquals(listOf(other, note), shows { it.quickAccess.size == 2 }.settings.quickAccess)
     }
 
+    /**
+     * A custom theme made, edited and deleted on the phone (T40 P1b, A417), as Settings →
+     * Appearance and the theme editor change it: each a device key in the notebook, written
+     * whole, with no queue and no merge (the Mac writes them the same way).
+     */
+    @Test
+    fun aCustomThemeIsMadeChosenEditedAndDeletedInTheNotebook(): Unit = runBlocking {
+        scope.launch { settings.follow() }
+        pass("h1")
+        shows { true }
+        val catalogue = app.penmoss.engine.settings.ThemeCatalogue.bundled
+        val copy = app.penmoss.engine.settings.ThemeEdits.duplicate(catalogue.builtIn("nord")!!, "custom-abc", "Nord copy", catalogue)
+        val key = app.penmoss.engine.settings.ThemeEdits.key("custom-abc")
+        assertTrue(settings.change(mapOf(key to copy, SettingKeys.THEME to JsonPrimitive("custom-abc"))))
+        assertEquals(copy, notebook[key])
+        assertEquals("custom-abc", catalogue.resolve(shows { it.themeId == "custom-abc" }.settings).id)
+
+        val renamed = app.penmoss.engine.settings.ThemeEdits.withName(copy, "Night")
+        assertTrue(settings.change(mapOf(key to renamed)))
+        assertEquals(renamed, notebook[key])
+        shows { it.customThemes.any { theme -> (theme["name"] as? JsonPrimitive)?.content == "Night" } }
+
+        val deletion = app.penmoss.engine.settings.ThemeEdits.deletion(renamed, catalogue)
+        assertTrue(settings.change(mapOf(key to deletion, SettingKeys.THEME to deletion["base"])))
+        assertEquals(deletion, notebook[key])
+        assertEquals(JsonPrimitive("nord"), notebook[SettingKeys.THEME])
+        assertTrue(shows { it.themeId == "nord" }.settings.customThemes.none { (it["id"] as? JsonPrimitive)?.content == "custom-abc" })
+    }
+
     @Test
     fun aChangeTheNotebookCannotTakeIsNotKept(): Unit = runBlocking {
         notebook[SettingKeys.MODE] = JsonPrimitive("dark")

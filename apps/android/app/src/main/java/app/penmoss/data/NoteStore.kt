@@ -126,8 +126,6 @@ class NoteStore(
                 when {
                     now == jsonOf(row.base) -> Unit
                     now in sentOf(row) -> landed(row, now)
-                    ownNewTheme(row, now) -> basedOnOwnTheme(row)
-                    themeEditStands(row, now) -> Unit
                     else -> pendingSettings.delete(row.key)
                 }
             }
@@ -648,69 +646,22 @@ class NoteStore(
     }
 
     /**
-     * The settings to send now, at most [limit] (the server takes 20 at once; the rest go in the
-     * next request), each marked as sent with its value until the server answers: if the answer is
-     * lost, a tree or a 409 that shows that value is known for this phone's own. Custom themes go
-     * first, so a new theme lands no later than the `theme.id` that chooses it (A416).
+     * The settings to send now, at most [limit] (the notes server takes 20 at once; the rest go in
+     * the next request), each marked as sent with its value until the server answers: if the
+     * answer is lost, a tree or a 409 that shows that value is known for this phone's own. Only a
+     * notebook's own settings are queued (Daily notes' templates and time zone): the device's,
+     * themes among them, are written to the Journal notebook at once (A1014).
      */
     suspend fun settingsToSend(limit: Int = SettingLimits.PER_REQUEST): List<PendingSettingEntity> = db.withTransaction {
-        pendingSettings.all().sortedBy { !it.key.startsWith(SettingKeys.CUSTOM_THEME_PREFIX) }.take(limit).onEach { row ->
+        pendingSettings.all().take(limit).onEach { row ->
             val value = jsonOf(row.value)
             val sent = sentOf(row)
             if (value !in sent) pendingSettings.put(row.copy(sent = JsonArray(sent + value).toString()))
         }
     }
 
-    /**
-     * A custom theme's change survives a tree showing another version of it (T40 P1b, A417): the
-     * server merges an edit onto whatever is stored, field by field, so another device's edit to
-     * the theme is not a conflict, and a deletion always goes. Only an edit of a theme deleted
-     * since (or a new theme whose id is taken) is dropped, as the server would refuse it.
-     */
-    private fun themeEditStands(row: PendingSettingEntity, now: JsonElement): Boolean {
-        if (!row.key.startsWith(SettingKeys.CUSTOM_THEME_PREFIX)) return false
-        val value = jsonOf(row.value) as? JsonObject ?: return false
-        if (isDeletion(value)) return true
-        val live = (now as? JsonObject)?.takeUnless(::isDeletion)
-        return live != null && row.base != null
-    }
-
-    private fun isDeletion(theme: JsonObject) = (theme["deleted"] as? JsonPrimitive)?.content == "true"
-
-    /**
-     * A theme this phone made (its row has no base) and sent without an answer, which the server
-     * now holds in another form than any sent (another device edited it since): this phone's own,
-     * landed (A417). What was changed here since is not dropped but goes next.
-     */
-    private fun ownNewTheme(row: PendingSettingEntity, now: JsonElement): Boolean =
-        row.key.startsWith(SettingKeys.CUSTOM_THEME_PREFIX) && row.base == null && madeHere(row) != null &&
-            (now as? JsonObject)?.takeUnless(::isDeletion) != null
-
-    /** The theme as this phone first sent it, made here. */
-    private fun madeHere(row: PendingSettingEntity): JsonObject? =
-        sentOf(row).firstNotNullOfOrNull { (it as? JsonObject)?.takeUnless(::isDeletion) }
-
-    /**
-     * Bases [row] on the theme as this phone made it, which the server holds: the server merges
-     * the edit made since onto its copy, keeping the other device's edits (A416). The versions
-     * sent stay known, for `baseToSend`.
-     */
-    private suspend fun basedOnOwnTheme(row: PendingSettingEntity) {
-        pendingSettings.put(row.copy(base = madeHere(row).toString()))
-    }
-
-    /**
-     * The base to send for [row]: what the phone saw before its change, or for a custom theme
-     * with versions sent without an answer, one the server's merge cannot mistake for no change
-     * (`ThemeEdits.sendingBase`, A416).
-     */
-    fun baseToSend(row: PendingSettingEntity): JsonElement {
-        val base = jsonOf(row.base)
-        val value = jsonOf(row.value) as? JsonObject
-        if (!row.key.startsWith(SettingKeys.CUSTOM_THEME_PREFIX) || base !is JsonObject || value == null || isDeletion(value)) return base
-        val sent = sentOf(row).mapNotNull { it as? JsonObject }.filterNot(::isDeletion)
-        return ThemeEdits.sendingBase(base, value, sent)
-    }
+    /** The base to send for [row]: what the phone saw before its change. */
+    fun baseToSend(row: PendingSettingEntity): JsonElement = jsonOf(row.base)
 
     private fun sentOf(row: PendingSettingEntity): List<JsonElement> =
         row.sent?.let { runCatching { PenmossJson.parseToJsonElement(it) as? JsonArray }.getOrNull() }.orEmpty()
@@ -762,9 +713,6 @@ class NoteStore(
             if (now != null && now in sentOf(row)) {
                 landed(row, now)
                 if (pendingSettings.get(key) != null) rebased++
-            } else if (now != null && ownNewTheme(row, now)) {
-                basedOnOwnTheme(row)
-                rebased++
             } else {
                 pendingSettings.delete(key)
             }
