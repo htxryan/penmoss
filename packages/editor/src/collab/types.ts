@@ -1,5 +1,5 @@
 import type { Editor } from '@tiptap/core';
-import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import type { Yjs14Replica } from '@penmoss/model/yjs14';
 
 /** A TipTap editor bound to a note replica, with Yjs-aware undo. */
 export interface CollabEditor {

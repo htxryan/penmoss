@@ -24,8 +24,8 @@ import { run } from '../../../../packages/cli/src/main';
 import { nodeNotebooks } from '../../../../packages/cli/src/node-notebooks';
 import type { Io, TokenLocation, TokenStore } from '../../../../packages/cli/src/io';
 import { parseMarkdown } from '@penmoss/core';
-import { initNote, setTitle } from '@penmoss/sync-client/note';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { initNote, setTitle } from '@penmoss/model/note';
+import { NOTE_ROOT } from '@penmoss/model/replica';
 import { docToDelta } from '@y/prosemirror';
 import { toBase64 } from 'lib0/buffer';
 import * as Y from '@y/y';
@@ -37,7 +37,7 @@ import {
 } from '@penmoss/git-notebook';
 import { LocalNotebook } from '@penmoss/git-notebook/local';
 import { NodeGitTransport } from '@penmoss/git-notebook/node';
-import { setTagDescription } from '@penmoss/sync-client/workspace';
+import { setTagDescription } from '@penmoss/model/workspace';
 
 function stdioPort(): FramePort {
   let buffered: Buffer = Buffer.alloc(0);

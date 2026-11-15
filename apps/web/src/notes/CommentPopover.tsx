@@ -6,8 +6,8 @@
  * text changes. Escape (or Cancel, or ×) closes it and gives the editor its focus back; the
  * Comments tab still lists every thread.
  */
-import type { PlacedThread } from '@penmoss/sync-client/comments';
-import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import type { PlacedThread } from '@penmoss/model/comments';
+import type { Yjs14Replica } from '@penmoss/model/yjs14';
 import {
   anchorRange,
   rangeRect,

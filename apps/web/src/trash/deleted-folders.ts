@@ -1,5 +1,5 @@
 /** How Trash words a deleted folder and its restore (T42, A560), apart from its components. */
-import type { TrashedFolder } from '@penmoss/sync-client/workspace';
+import type { TrashedFolder } from '@penmoss/model/workspace';
 
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 

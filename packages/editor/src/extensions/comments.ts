@@ -5,7 +5,7 @@
  *
  * The app hands in the threads to show (`showCommentThreads`, from the note's `comments` root)
  * and which is active. Each is placed from its anchor's Yjs relative positions, through the same
- * delta positions the server reads (`@penmoss/sync-client/comments`), so a quote an agent's
+ * delta positions the server reads (`@penmoss/model/comments`), so a quote an agent's
  * thread was made from lights up the same text here. Typing maps the decorations; a remote change
  * places them again from the anchors. Where the editor's mapping and the anchor in Yjs part
  * after typing next to a thread, the editor's wins and is written back: the binding diffs text,
@@ -31,7 +31,7 @@ import {
   resolveAnchor,
   setThreadAnchor,
   type CommentAnchor,
-} from '@penmoss/sync-client/comments';
+} from '@penmoss/model/comments';
 import { Extension, type Editor } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';

@@ -5,7 +5,7 @@
  * history, never a reversed purge). Over real engines and the in-memory transport: offline, with
  * no server; the shapes are the server's (`/api/agent-activity`), so the apps read them unchanged.
  */
-import { createFolder, readSettings, readWorkspace } from '@penmoss/sync-client/workspace';
+import { createFolder, readSettings, readWorkspace } from '@penmoss/model/workspace';
 import { describe, expect, it } from 'vitest';
 import { AgentActivity, isPurged, NOTEBOOK_SETTINGS, purgedIds } from '../src';
 import { commitPurges } from '../src/purge-check';

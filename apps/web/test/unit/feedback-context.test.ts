@@ -8,8 +8,8 @@
  */
 import { contextMarkdown, withoutGroups, type FeedbackContext } from '@penmoss/core/feedback';
 import { parseMarkdown } from '@penmoss/core';
-import { initNote } from '@penmoss/sync-client/note';
-import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
+import { initNote } from '@penmoss/model/note';
+import { createYjs14Replica } from '@penmoss/model/yjs14';
 import { describe, expect, it } from 'vitest';
 import { buildContext, GIT_NOTICE } from '../../src/feedback/context';
 import { appFrames, ErrorRing, loggedError } from '../../src/feedback/errors';

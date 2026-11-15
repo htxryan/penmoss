@@ -13,7 +13,7 @@ import {
   type ResolvedPos,
   type Schema,
 } from '@tiptap/pm/model';
-import type { NoteFields } from '@penmoss/sync-client/note-fields';
+import type { NoteFields } from '@penmoss/model/note-fields';
 import { safeHref } from './sanitize';
 
 type Core = typeof import('@penmoss/core');

@@ -14,7 +14,7 @@
     "@penmoss/core": "workspace:*",
     "@penmoss/editor": "workspace:*",
     "@penmoss/git-notebook": "workspace:*",
-    "@penmoss/sync-client": "workspace:*",
+    "@penmoss/model": "workspace:*",
     "@penmoss/ui": "workspace:*",
     "@tiptap/core": "3.32.0",
     "@y/prosemirror": "2.0.0-15",

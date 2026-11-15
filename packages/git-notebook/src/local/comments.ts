@@ -9,7 +9,7 @@ import {
   setThreadDelivery,
   type CommentAuthor,
   type ThreadData,
-} from '@penmoss/sync-client/comments';
+} from '@penmoss/model/comments';
 import {
   planCommentChange,
   repliedDelivery,
@@ -19,7 +19,7 @@ import {
   viewThreads,
   type CommentChange,
   type StatusFilter,
-} from '@penmoss/sync-client/comment-delivery';
+} from '@penmoss/model/comment-delivery';
 import { LocalError, type NoteCatalog } from './catalog';
 
 /** The most threads one list across the notebook returns. */

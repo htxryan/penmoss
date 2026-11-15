@@ -7,7 +7,7 @@
  */
 import { cpSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { NOTE_ROOT } from '@penmoss/model/replica';
 import * as Y from '@y/y';
 import { GitNotebookEngine, MemorySecrets, MemoryStorage, NotebookOps } from '../../src';
 import { NodeGitTransport } from '../../src/node/transport';

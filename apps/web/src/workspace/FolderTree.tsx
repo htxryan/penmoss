@@ -1,5 +1,5 @@
 import type { FolderNode } from '@penmoss/core/workspace';
-import { WorkspaceError } from '@penmoss/sync-client/workspace';
+import { WorkspaceError } from '@penmoss/model/workspace';
 import {
   useCallback,
   useEffect,
@@ -14,9 +14,9 @@ import {
 } from 'react';
 import { ariaKeyShortcuts, isApplePlatform } from '@penmoss/editor/keys';
 import { useKeys } from '../commands/hooks';
-import { setTitle } from '@penmoss/sync-client/note';
+import { setTitle } from '@penmoss/model/note';
 import { useNotes } from '../notes/hooks';
-import { oneLineTitle } from '@penmoss/sync-client/title';
+import { oneLineTitle } from '@penmoss/model/title';
 import { isPlainLeftClick, isWindowClick, navigate, notePath } from '../router';
 import { openNoteWindow } from '../window/open';
 import { COPIED_AGENT_REFERENCE, useCopyAgentReference } from '../notes/agent-reference';

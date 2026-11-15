@@ -7,8 +7,8 @@ import {
   registerNote,
   setSortMode,
   setTogether,
-} from '@penmoss/sync-client/workspace';
-import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
+} from '@penmoss/model/workspace';
+import { createYjs14Replica } from '@penmoss/model/yjs14';
 import { describe, expect, it } from 'vitest';
 import type { NoteListEntry } from '../../src/notes/list';
 import {

@@ -2,7 +2,7 @@
  * Delete for good's mark in the WorkspaceDoc (A828), and Keep note taking it back before it lands
  * (A855): the note goes back where it was filed, and marking it again undoes that.
  */
-import { createFolder, readWorkspace, registerNote } from '@penmoss/sync-client/workspace';
+import { createFolder, readWorkspace, registerNote } from '@penmoss/model/workspace';
 import * as Y from '@y/y';
 import { describe, expect, it } from 'vitest';
 import {
@@ -14,7 +14,7 @@ import {
   recoveredFromOf,
   unmarkPurged,
 } from '../src';
-import { readTitle } from '@penmoss/sync-client/note';
+import { readTitle } from '@penmoss/model/note';
 import { testNotebook } from './support/notebooks';
 
 const NOTE = '01JBN0000000000000000000A1';

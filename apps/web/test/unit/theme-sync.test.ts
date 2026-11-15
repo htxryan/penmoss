@@ -4,8 +4,8 @@
  * update is handed straight across); a theme duplicated, edited and chosen on one is chosen and
  * identical on the other.
  */
-import { setSetting } from '@penmoss/sync-client/workspace';
-import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
+import { setSetting } from '@penmoss/model/workspace';
+import { createYjs14Replica } from '@penmoss/model/yjs14';
 import {
   CUSTOM_THEME_PREFIX,
   deleteCustomTheme,
@@ -17,7 +17,7 @@ import {
   SLATE,
 } from '@penmoss/ui/theme';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DEVICE_MAP } from '@penmoss/sync-client/workspace';
+import { DEVICE_MAP } from '@penmoss/model/workspace';
 import type { Workspace } from '../../src/workspace/service';
 import { testWorkspace } from './support/local-sources';
 import { memoryNotes } from './support/memory-notes';

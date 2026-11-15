@@ -4,7 +4,7 @@
  * context, the descriptions moved with their tags, and what its toast says, with an Undo that
  * puts the notes and the descriptions back.
  */
-import type { TagChange } from '@penmoss/sync-client/tags';
+import type { TagChange } from '@penmoss/model/tags';
 import { useCallback } from 'react';
 import { useNotes } from '../notes/hooks';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';

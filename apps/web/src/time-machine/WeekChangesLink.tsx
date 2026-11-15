@@ -1,5 +1,5 @@
 import { Icon } from '@penmoss/ui/icons';
-import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import type { Yjs14Replica } from '@penmoss/model/yjs14';
 import { usePeriod } from '../journal/period';
 import { linkHandler } from '../router';
 import { useSource } from '../sources/hooks';

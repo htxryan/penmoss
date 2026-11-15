@@ -4,7 +4,7 @@
  * person's does. The server's actors, learned from each note's socket, went with the server
  * (T59).
  */
-import type { CommentAuthor } from '@penmoss/sync-client/comments';
+import type { CommentAuthor } from '@penmoss/model/comments';
 
 /** The author this device writes comments as. */
 export function deviceAuthor(): CommentAuthor {

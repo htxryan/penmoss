@@ -1,7 +1,7 @@
 import * as core from '@penmoss/core';
 import { serializeMarkdown } from '@penmoss/core';
 import { schema } from '@penmoss/core/schema';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { NOTE_ROOT } from '@penmoss/model/replica';
 import { ynodeToPmnode } from '@y/prosemirror';
 import * as Y from '@y/y';
 import { describe, expect, it } from 'vitest';

@@ -6,10 +6,10 @@
  */
 import { schema as coreSchema } from '@penmoss/core/schema';
 import { markSpecs, nodeSpecs } from '@penmoss/core/schema';
-import { setBody } from '@penmoss/sync-client/history';
-import { initNote, NOTE_META, readTitle } from '@penmoss/sync-client/note';
-import { frontmatterTags, setFrontmatterTag } from '@penmoss/sync-client/tags';
-import { createYjs14Replica, type Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import { setBody } from '@penmoss/model/history';
+import { initNote, NOTE_META, readTitle } from '@penmoss/model/note';
+import { frontmatterTags, setFrontmatterTag } from '@penmoss/model/tags';
+import { createYjs14Replica, type Yjs14Replica } from '@penmoss/model/yjs14';
 import { pmnodeToDelta } from '@y/prosemirror';
 import * as Y from '@y/y';
 import { fromBase64, toBase64 } from 'lib0/buffer';

@@ -43,7 +43,7 @@ import { MarkdownSource } from './MarkdownSource';
 import { NoteBarButtonView } from './NoteBarButton';
 import { useNoteBar } from './note-bar';
 import { rememberOpened } from './recent';
-import { pastedTitle } from '@penmoss/sync-client/title';
+import { pastedTitle } from '@penmoss/model/title';
 import { caretOnLastLine, fitHeight, isLineBreak } from './title-field';
 import { useNoteEditor } from './note-editor';
 import { PeriodNav } from '../journal/PeriodNav';

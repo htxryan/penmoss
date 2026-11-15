@@ -13,7 +13,7 @@ import { useNoteList } from '../notes/hooks';
 import type { NoteListEntry } from '../notes/list';
 import { useWorkspaceState } from './hooks';
 import { mergeRegistry, type MergedNotes } from './model';
-import type { WorkspaceSnapshot } from '@penmoss/sync-client/workspace';
+import type { WorkspaceSnapshot } from '@penmoss/model/workspace';
 
 export interface FolderTreeData {
   /** The registry and the note list merged (notes the registry does not know yet included). */

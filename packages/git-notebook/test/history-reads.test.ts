@@ -5,7 +5,7 @@
  * commit on its own (a transport without `readDir`), over the in-memory transport and system git
  * on a fresh partial clone.
  */
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { NOTE_ROOT } from '@penmoss/model/replica';
 import * as Y from '@y/y';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { GitTransportError, Layout, NotebookHistory, type GitTransport } from '../src';

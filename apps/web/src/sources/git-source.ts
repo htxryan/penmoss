@@ -8,7 +8,7 @@
 import { AgentActivity, Layout, type ActivityEntry, type UndoResult } from '@penmoss/git-notebook';
 import type { AttachmentsElsewhere } from '../store/attachments';
 import { NoteStore } from '../store/idb';
-import { WORKSPACE_RECORD_KEY } from '@penmoss/sync-client/workspace';
+import { WORKSPACE_RECORD_KEY } from '@penmoss/model/workspace';
 import type { DesktopGit, GitNotebookInfo, GitPendingPurge } from '../desktop/bridge';
 import type { NoteDirectory } from '../notes/directory';
 import {

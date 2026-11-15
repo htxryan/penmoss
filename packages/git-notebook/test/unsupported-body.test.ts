@@ -4,7 +4,7 @@
  * refusing edits to its body. Before A1493 such a note read as empty: the render wrote an empty
  * `.md`, and an agent's append replaced the whole note.
  */
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { NOTE_ROOT } from '@penmoss/model/replica';
 import * as Y from '@y/y';
 import { describe, expect, it } from 'vitest';
 import { LocalError, LocalMcpServer, LocalNotebook } from '../src/local';

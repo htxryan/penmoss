@@ -2,7 +2,7 @@
  * What the files at head say about names (A823), as a sync's render and `renderAll` both read
  * them: which rendered files are Penmoss's and whose, which are foreign, and every note's name.
  */
-import { readWorkspace } from '@penmoss/sync-client/workspace';
+import { readWorkspace } from '@penmoss/model/workspace';
 import type * as Y from '@y/y';
 import type { Layout } from '../layout';
 import { assignNames, foreignOf, storedNotePath, type Foreign, type Named } from '../names';

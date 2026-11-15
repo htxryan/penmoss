@@ -20,13 +20,13 @@ import {
 import { tagMatches } from '@penmoss/core/tags';
 import { folderSubtree, type FolderRecord } from '@penmoss/core/workspace';
 import type { NoteText } from '../store/idb';
-import type { NoteMeta, NoteRecord } from '@penmoss/sync-client/record';
+import type { NoteMeta, NoteRecord } from '@penmoss/model/record';
 import {
   LocalSearchIndex,
   type LocalSearchDocument,
   type SliceOptions,
-} from '@penmoss/sync-client/local-index';
-import type { RegistryEntry } from '@penmoss/sync-client/workspace';
+} from '@penmoss/model/local-index';
+import type { RegistryEntry } from '@penmoss/model/workspace';
 import type { NoteListEntry } from '../notes/list';
 import { MEANING_ELSEWHERE, sectionsOfRecord, type NotebookMeaning } from './meaning';
 

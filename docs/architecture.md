@@ -137,7 +137,7 @@ Dependencies point one way: `core` at the bottom, the apps on top.
 | ----------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `packages/core`         | The markdown codec at its root; schema, ids, links, tags, periodic notes and the rest by subpath (pure)      |
 | `packages/editor`       | TipTap extensions, clipboard, slash menu, the editor's collaboration binding                                 |
-| `packages/sync-client`  | Yjs documents, records, comments, tags, history, search index, a note as markdown and its edits (subpaths)   |
+| `packages/model`        | Yjs documents, records, comments, tags, history, search index, a note as markdown and its edits (subpaths)   |
 | `packages/git-notebook` | The git-notebook engine, History and the Time Machine, the local notes API and MCP tools, the transports     |
 | `packages/ui`           | Shared React components and themes                                                                           |
 | `packages/embed`        | Search by meaning on the Mac: the model store, the ONNX embedder, the vector cache and the embedding service |

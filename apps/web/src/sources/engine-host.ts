@@ -14,10 +14,10 @@
  * and every failure says when it tries again. Edits are never lost: they stay marked until a push
  * lands (A822).
  */
-import { readThread } from '@penmoss/sync-client/comments';
-import { WORKSPACE_RECORD_KEY } from '@penmoss/sync-client/workspace';
-import { recordFromDoc } from '@penmoss/sync-client/records';
-import type { NoteRecord } from '@penmoss/sync-client/record';
+import { readThread } from '@penmoss/model/comments';
+import { WORKSPACE_RECORD_KEY } from '@penmoss/model/workspace';
+import { recordFromDoc } from '@penmoss/model/records';
+import type { NoteRecord } from '@penmoss/model/record';
 import {
   GitNotebookEngine,
   isLocalRemote,

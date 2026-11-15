@@ -5,10 +5,10 @@
 import { MAX_ATTACHMENT_BYTES } from '@penmoss/core/attachments';
 import { MAX_PATH_CHARS } from '@penmoss/core/mirror';
 import { periodicNoteId } from '@penmoss/core/periodic';
-import { bodyMarkdown } from '@penmoss/sync-client/markdown';
-import { isDeleted, readTitle, setTitle } from '@penmoss/sync-client/note';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
-import { readWorkspace } from '@penmoss/sync-client/workspace';
+import { bodyMarkdown } from '@penmoss/model/markdown';
+import { isDeleted, readTitle, setTitle } from '@penmoss/model/note';
+import { NOTE_ROOT } from '@penmoss/model/replica';
+import { readWorkspace } from '@penmoss/model/workspace';
 import * as Y from '@y/y';
 import { describe, expect, it, vi } from 'vitest';
 import {

@@ -1,4 +1,4 @@
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { NOTE_ROOT } from '@penmoss/model/replica';
 import { describe, expect, it } from 'vitest';
 import { codeBlock, openEditor, paragraph, select, type } from './support/editor';
 

@@ -29,7 +29,7 @@ task dev               # the Mac app from this checkout
 | -------------------- | --------------------------------------------------------------------------------------------------- |
 | `task check:changed` | Lint and format the changed files; typecheck and unit-test the changed packages; before each commit |
 | `task check`         | Lint (ESLint + Prettier), typecheck and unit tests for every package; before pushing                |
-| `task test -- core`  | One package's unit tests (`core`, `editor`, `git-notebook`, `sync-client`, `cli`, `web`, `relay`)   |
+| `task test -- core`  | One package's unit tests (`core`, `editor`, `git-notebook`, `model`, `cli`, `web`, `relay`)         |
 | `task e2e`           | Playwright web suite on git notebooks; `task e2e -- smoke.spec.ts` for one spec                     |
 | `task site:dev`      | penmoss.app and its docs, with live reload                                                          |
 | `task --list`        | All commands, including the Mac and Android apps                                                    |
@@ -44,7 +44,7 @@ apps/relay/            The relay: claude.ai to git notebooks over remote MCP (Cl
 packages/core/         Schema, markdown codec, IDs, periodic notes (pure functions)
 packages/editor/       TipTap extensions
 packages/git-notebook/ The git-notebook engine, local MCP server and transports
-packages/sync-client/  Yjs documents, IndexedDB replica, attachments, local search index
+packages/model/        The notes' and workspace's Yjs documents, records, comments, local search index (platform-free)
 packages/ui/           Shared React components and themes
 packages/cli/          penmoss CLI
 site/                  penmoss.app: the brochure and the user docs

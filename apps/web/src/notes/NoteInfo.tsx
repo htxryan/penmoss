@@ -14,8 +14,8 @@
  * typing pauses, off the keystroke (`NoteStats`), and only this bar and the
  * panel re-render for it, never the note view (the T31 typing budget).
  */
-import { readIdentity } from '@penmoss/sync-client/note';
-import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import { readIdentity } from '@penmoss/model/note';
+import type { Yjs14Replica } from '@penmoss/model/yjs14';
 import type { MetadataField } from '@penmoss/core/note-metadata';
 import { useEffect, useId, useState } from 'react';
 import { shortWhen } from '../shell/when';
@@ -25,13 +25,13 @@ import { useAllSources, useSource } from '../sources/hooks';
 import { useNoteMetadataSettings } from './metadata-state';
 import { useNoteList } from './hooks';
 import { useNoteCounts, useSaveStatus, type NoteStats } from './note-stats';
-import { noteFields } from '@penmoss/sync-client/note-fields';
+import { noteFields } from '@penmoss/model/note-fields';
 import type { SaveStatus } from './save-status';
 import type { OpenNote } from './service';
 import { kindLabel } from './kind';
 import { Icon } from '@penmoss/ui/icons';
 import { gitNotebookPath, linkHandler } from '../router';
-import { charactersLabel, readingLabel, wordsLabel } from '@penmoss/sync-client/stats';
+import { charactersLabel, readingLabel, wordsLabel } from '@penmoss/model/stats';
 import { tokensLabel } from './tokens';
 
 function SaveStatusLabel({ status }: { status: SaveStatus | null }) {

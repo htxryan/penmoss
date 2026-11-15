@@ -29,7 +29,7 @@ import {
   parseQuery,
   type Embedder,
 } from '@penmoss/core/search';
-import { LocalSearchIndex } from '@penmoss/sync-client/local-index';
+import { LocalSearchIndex } from '@penmoss/model/local-index';
 import { expect, it } from 'vitest';
 import {
   EVAL_DISTRACTORS,

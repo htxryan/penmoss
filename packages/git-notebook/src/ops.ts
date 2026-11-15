@@ -19,9 +19,9 @@ import {
   type PeriodKind,
 } from '@penmoss/core/periodic';
 import { keyBetween } from '@penmoss/core/workspace';
-import { periodicNote } from '@penmoss/sync-client/periodic';
-import { initNote, isDeleted, setDeleted, type NoteKind } from '@penmoss/sync-client/note';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { periodicNote } from '@penmoss/model/periodic';
+import { initNote, isDeleted, setDeleted, type NoteKind } from '@penmoss/model/note';
+import { NOTE_ROOT } from '@penmoss/model/replica';
 import {
   createFolder,
   deleteFolder,
@@ -34,7 +34,7 @@ import {
   renameFolder,
   restoreFolder,
   setSetting,
-} from '@penmoss/sync-client/workspace';
+} from '@penmoss/model/workspace';
 import { docToDelta } from '@y/prosemirror';
 import * as Y from '@y/y';
 import type { GitNotebookEngine } from './engine';

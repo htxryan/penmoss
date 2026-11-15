@@ -6,7 +6,7 @@ import {
   setThreadDelivery,
   type CommentAuthor,
   type CommentTarget,
-} from '@penmoss/sync-client/comments';
+} from '@penmoss/model/comments';
 import { LocalMcpServer, LocalNotebook, type LocalServerPresentation } from '../../src/local';
 import type { GitNotebookEngine, NotebookOps } from '../../src';
 import { testNotebook } from './notebooks';
@@ -24,7 +24,7 @@ export interface Clone {
   readonly engine: GitNotebookEngine;
 }
 
-export { readAgentSessions } from '@penmoss/sync-client/agent-sessions';
+export { readAgentSessions } from '@penmoss/model/agent-sessions';
 
 export const RYAN: CommentAuthor = { id: 'device:mac', kind: 'device', label: 'Ryan' };
 

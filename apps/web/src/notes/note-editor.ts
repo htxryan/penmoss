@@ -14,9 +14,9 @@ import {
   type SymbolSource,
 } from '@penmoss/editor';
 import { formatCombo } from '@penmoss/editor/keys';
-import { noteFields } from '@penmoss/sync-client/note-fields';
-import { bindTitleField } from '@penmoss/sync-client/title';
-import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import { noteFields } from '@penmoss/model/note-fields';
+import { bindTitleField } from '@penmoss/model/title';
+import type { Yjs14Replica } from '@penmoss/model/yjs14';
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { useCommands } from '../commands/hooks';
 import { drawingServices } from '../drawing/drawings';

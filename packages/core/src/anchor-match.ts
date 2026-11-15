@@ -2,7 +2,7 @@
  * Finding a comment's passage again by its text (T52 item 5): when a thread's Yjs anchor is lost
  * (its text was deleted and written again, pasted over, or the note was rebuilt), its quote and
  * the text around it when it was made (`prefix`, `suffix`) find where it is now, even after small
- * edits. Plain text in, offsets out: the caller (`@penmoss/sync-client/comments`) maps them to
+ * edits. Plain text in, offsets out: the caller (`@penmoss/model/comments`) maps them to
  * the note's body, and every reader finds the same place.
  *
  * In order: the quote exactly (the one whose surroundings match best, when there are several);
