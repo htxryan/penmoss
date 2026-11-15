@@ -15,6 +15,7 @@ import {
   LocalMcpServer,
   LocalNotebook,
   NotebookBusy,
+  type LocalMeaning,
   type NotebookSet,
   type ServedNotebook,
 } from '@penmoss/git-notebook/local';
@@ -24,6 +25,7 @@ import { join } from 'node:path';
 import { CliError } from '../errors';
 import type { NotebookSyncSummary } from '../io';
 import type { Clones, OpenedClone } from './clone';
+import { SharedMeaning, type MeaningTarget } from './mcp-meaning';
 import type { McpIo, McpSessionOptions } from './mcp-session';
 import type { NotebookRegistry, StoredNotebook } from './registry';
 
@@ -90,8 +92,10 @@ const late = (ms: number) =>
   });
 
 /** One notebook of the server: its clone, queue, pending edits and timers. */
-class Slot {
+class Slot implements MeaningTarget {
   private held: Held | null = null;
+  /** Search by meaning, given to every clone it opens (PEN-153). */
+  private meaning: LocalMeaning | null = null;
   /** Edits not pushed yet: this server's, or a stopped one's left on disk. */
   pending = false;
   private queue: Promise<unknown> = Promise.resolve();
@@ -107,6 +111,24 @@ class Slot {
     readonly entry: StoredNotebook,
     private readonly host: SlotHost,
   ) {}
+
+  get key(): string {
+    return this.entry.localId;
+  }
+
+  get owner(): string {
+    return this.host.clones.dir(this.entry);
+  }
+
+  /** Reads under the clone's lock for indexing: not an agent's use, so no pull follows. */
+  read<T>(run: (notebook: LocalNotebook) => T | Promise<T>): Promise<T> {
+    return this.exclusive('penmoss mcp (meaning)', async (current) => run(current.notebook));
+  }
+
+  give(meaning: LocalMeaning | null): void {
+    this.meaning = meaning;
+    this.held?.notebook.useMeaning(meaning);
+  }
 
   get tag(): string | null {
     const id = this.held?.notebook.notebookId ?? this.entry.notebookId;
@@ -199,6 +221,7 @@ class Slot {
                 ),
                 generation,
               };
+              if (this.meaning) this.held.notebook.useMeaning(this.meaning);
             }
             const current = this.held;
             try {
@@ -273,6 +296,8 @@ export class McpNotebooks {
   private served: readonly Slot[] = [];
   private registryStamp: number | null = -1;
   private readonly host: SlotHost;
+  /** The model, once for every notebook (PEN-153), while Search by Meaning is on. */
+  private meaning: SharedMeaning | null = null;
 
   constructor(
     private readonly clones: Clones,
@@ -310,6 +335,7 @@ export class McpNotebooks {
       next.push(slot);
     }
     this.served = next;
+    this.meaning?.served();
     return next;
   }
 
@@ -322,13 +348,36 @@ export class McpNotebooks {
   async serve(): Promise<void> {
     const io = this.io;
     await this.refresh();
+    const status = this.options.meaning
+      ? await this.options.meaning.status().catch(() => null)
+      : null;
+    const meaningOn = status?.enabled === true && status.state === 'ready';
+    let modelOpened: Promise<void> = Promise.resolve();
+    if (meaningOn && this.options.meaning) {
+      this.meaning = new SharedMeaning(
+        this.options.meaning,
+        () => this.served,
+        (text) => io.log(text),
+        this.options,
+      );
+      modelOpened = this.meaning.open();
+    }
     const set: NotebookSet = {
       notebooks: async (): Promise<ServedNotebook[]> =>
         (await this.refresh()).map((slot) => ({ name: slot.name, tag: slot.tag })),
-      use: (name, write, run, use = {}) => this.slotNamed(name).use(write, run, use.waitMs),
+      use: async (name, write, run, use = {}) => {
+        // Calls wait for the model to open (once), so meaning answers from the first.
+        await modelOpened;
+        await this.meaning?.stillOn();
+        const slot = this.slotNamed(name);
+        const out = await slot.use(write, run, use.waitMs);
+        if (write) this.meaning?.edited(slot.key);
+        return out;
+      },
     };
     const server = new LocalMcpServer(set, 'penmoss', (text) => io.log(text), {
       env: this.options.env ?? {},
+      meaning: meaningOn,
     });
     const pulls = setInterval(() => {
       for (const slot of this.served) void slot.pull();
@@ -352,6 +401,7 @@ export class McpNotebooks {
       if (stoppedBy !== null) void lines.return?.();
       clearInterval(pulls);
       for (const slot of this.slots.values()) slot.stopTimers();
+      await this.meaning?.close();
     }
     // On exit, what is left goes (A825, A847): each notebook's edits to a detached sync of its
     // own, since the client kills this process moments after stopping it. The edits are on disk
