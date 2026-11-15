@@ -5,9 +5,10 @@
 
 /*
  * Note tabs (PEN-140, A1502): the main window's strip, layout A, the note pane's first row in
- * the sidebar's colour, 48 px, with a rule below. Tabs are 36 px tall, 120 to 184 px wide, square
- * (A976): the active one takes the note's background and a 2 px accent line on top and opens
- * onto the note. The note's bar buttons sit at its right end (A1505).
+ * the sidebar's colour, 48 px, with a rule below. Tabs fill the row from its top edge to its rule
+ * (A1573), 120 to 184 px wide, square (A976), a divider between them: the active one takes the
+ * note's background, a 2 px accent line on top and edges of its own, and opens onto the note.
+ * The note's bar buttons sit at its right end (A1505).
  */
 .note-main:has(> .tab-strip) {
   display: flex;
@@ -34,6 +35,8 @@
 }
 
 .tab-strip {
+  /* The line between two tabs (A1573): strong enough to read on the strip in either mode. */
+  --pm-tab-divider: var(--pm-border-strong);
   position: relative;
   z-index: 3;
   display: flex;
@@ -82,14 +85,14 @@
 .tab-list {
   display: flex;
   flex: 0 1 auto;
-  align-items: flex-end;
+  align-items: stretch;
   align-self: stretch;
   min-width: 0;
 }
 
 .tab-group {
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   align-self: stretch;
 }
 
@@ -136,20 +139,14 @@
   box-sizing: border-box;
   width: 11.5rem;
   min-width: 7.5rem;
-  height: 2.25rem;
+  /* The row's full height, from its top edge (A1573): the strip's empty part still drags. */
   padding: 0 0.35rem 0 0.6rem;
-  border-right: 1px solid var(--pm-border-soft);
+  /* A divider on its right, inset from the top and bottom as a Mac's tabs are (A1573). */
+  background: linear-gradient(var(--pm-tab-divider), var(--pm-tab-divider)) right center / 1px 50%
+    no-repeat;
   color: var(--pm-muted);
   font-size: var(--pm-text-sm);
   cursor: default;
-}
-
-.tab:first-child {
-  border-left: 1px solid var(--pm-border-soft);
-}
-
-.tab-group-pinned + .tab-group-scroll > .tab:first-child {
-  border-left: 0;
 }
 
 .tab:hover {
@@ -157,13 +154,22 @@
   color: var(--pm-fg);
 }
 
+/* No divider beside the active or hovered tab, which shows its own edges (A1573). */
+.tab:has(+ .tab:is(:hover, [aria-selected='true'])),
+.tab-group-pinned:has(+ .tab-group-scroll > .tab:first-child:is(:hover, [aria-selected='true']))
+  > .tab:last-child {
+  background-image: none;
+}
+
 .tab[aria-selected='true'] {
-  /* Opens straight onto the note: its background, over the strip's rule. */
-  height: calc(2.25rem + 1px);
+  /* Opens straight onto the note: its background, over the strip's rule, and its own edges. */
   margin-bottom: -1px;
   background: var(--pm-bg);
   color: var(--pm-fg);
-  box-shadow: inset 0 2px 0 var(--pm-accent);
+  box-shadow:
+    inset 0 2px 0 var(--pm-accent),
+    inset 1px 0 0 var(--pm-border),
+    inset -1px 0 0 var(--pm-border);
 }
 
 .tab:focus-visible {

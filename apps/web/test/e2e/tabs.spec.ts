@@ -485,3 +485,85 @@ test('many tabs scroll sideways, and All Tabs lists them (AC12)', async ({ page 
   await page.waitForTimeout(2_000);
   expect(errors).toEqual([]);
 });
+
+/** A CSS colour as sRGB 0–255 and alpha 0–1, through a canvas, so oklab and color-mix resolve. */
+async function rgba(page: Page, css: string): Promise<[number, number, number, number]> {
+  return page.evaluate((colour) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    const context = canvas.getContext('2d', { willReadFrequently: true })!;
+    context.fillStyle = colour;
+    context.fillRect(0, 0, 1, 1);
+    const [r, g, b, a] = context.getImageData(0, 0, 1, 1).data;
+    return [r!, g!, b!, a! / 255] as [number, number, number, number];
+  }, css);
+}
+
+/** WCAG contrast between two opaque sRGB colours. */
+function contrast(a: readonly number[], b: readonly number[]): number {
+  const luminance = (rgb: readonly number[]) => {
+    const [r, g, bl] = rgb.slice(0, 3).map((value) => {
+      const c = value / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    }) as [number, number, number];
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+  };
+  const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
+  return (high + 0.05) / (low + 0.05);
+}
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`tabs fill the strip from its top edge, and inactive tabs show their edges (A1573, ${scheme})`, async ({
+    page,
+  }) => {
+    const errors = collectErrors(page);
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/');
+    await expect(row(page, ALPHA)).toBeVisible({ timeout: 40_000 });
+    await open(page, ALPHA);
+    await row(page, BETA).click({ button: 'middle' });
+    await row(page, GAMMA).click({ button: 'middle' });
+    expect(await titles(page)).toEqual([`*${ALPHA}`, BETA, GAMMA]);
+    await page.mouse.move(640, 600);
+
+    // Every tab spans the row, from its top edge down to the rule (the active one over it).
+    const bar = (await strip(page).boundingBox())!;
+    for (const each of await tabs(page).all()) {
+      const box = (await each.boundingBox())!;
+      expect(box.y).toBe(bar.y);
+      expect(box.height).toBeGreaterThanOrEqual(bar.height - 1);
+    }
+
+    // An inactive tab draws a divider on its right, in a colour that reads on the strip.
+    const colours = await strip(page).evaluate((list) => {
+      const bar = list.closest('.tab-strip')!;
+      const probe = document.createElement('span');
+      probe.style.backgroundColor = 'var(--pm-tab-divider)';
+      list.append(probe);
+      const divider = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return { divider, bar: getComputedStyle(bar).backgroundColor };
+    });
+    const line = await rgba(page, colours.divider);
+    const ground = await rgba(page, colours.bar);
+    expect(line[3]).toBeGreaterThan(0.9);
+    expect(contrast(line, ground)).toBeGreaterThanOrEqual(1.4);
+    const image = (title: string) =>
+      tab(page, title).evaluate((element) => getComputedStyle(element).backgroundImage);
+    expect(await image(BETA)).toMatch(/gradient/);
+    // None beside the active tab or the hovered one, which show their own edges.
+    expect(await image(ALPHA)).toBe('none');
+    await tab(page, GAMMA).hover();
+    await expect.poll(() => image(BETA)).toBe('none');
+    await page.mouse.move(640, 600);
+    await expect.poll(() => image(BETA)).toMatch(/gradient/);
+    // The active tab: the accent line on top and an edge either side.
+    const active = await tab(page, ALPHA).evaluate(
+      (element) => getComputedStyle(element).boxShadow,
+    );
+    expect(active.match(/inset/g)?.length).toBe(3);
+    expect(errors).toEqual([]);
+  });
+}
