@@ -18,6 +18,7 @@ import {
   remoteParts,
   type GitAuthor,
 } from '@penmoss/git-notebook/node';
+import { stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { CliError, EXIT } from '../errors';
 import type { NotebookEntry, NotebookSyncSummary, TokenStore } from '../io';
@@ -184,6 +185,10 @@ export class Clones {
     checkRemote(entry);
     try {
       const report = await opened.engine.sync({ full, ...(signal ? { signal } : {}) });
+      // When any process last synced this clone: `penmoss mcp` skips a pull it would repeat.
+      await writeFile(this.syncedAtPath(entry), `${new Date().toISOString()}\n`).catch(
+        () => undefined,
+      );
       const info = opened.engine.info;
       const filterIgnored = opened.transport.notes.filterIgnored;
       if (
@@ -202,6 +207,15 @@ export class Clones {
     } catch (error) {
       throw cliError(error, entry.name, adding);
     }
+  }
+
+  private syncedAtPath(entry: { localId: string }): string {
+    return join(this.dir(entry), 'synced-at');
+  }
+
+  /** When any process last synced this clone, in ms, or null if none has here. */
+  async syncedAt(entry: { localId: string }): Promise<number | null> {
+    return (await stat(this.syncedAtPath(entry)).catch(() => null))?.mtimeMs ?? null;
   }
 
   /** Runs `run` holding the clone's lock. */

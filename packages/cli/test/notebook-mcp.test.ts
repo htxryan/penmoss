@@ -124,6 +124,52 @@ describe('penmoss mcp --notebook over system git', () => {
     expect(git(remote, ['ls-tree', '-r', '--name-only', 'main'])).toContain('Offline.md');
   });
 
+  it('serves two notebooks over git at once, and leaves each its own detached sync (PEN-151)', async () => {
+    const personal = bare('mcp-personal');
+    const work = bare('mcp-work');
+    const cli = machine('m', { pushDelayMs: SERVER_PUSH_DELAY_MS });
+    for (const [url, name] of [
+      [personal, 'Personal'],
+      [work, 'Work'],
+    ] as const) {
+      expect((await cli(['notebook', 'add', `file://${url}`, '--name', name])).code).toBe(0);
+      const agent = ['notebook', 'add', `file://${url}`, '--name', `${name.toLowerCase()}-agent`];
+      expect((await cli([...agent, '--agent', 'Agent'])).code).toBe(0);
+    }
+    const create = (id: number, notebook: string, title: string) =>
+      rpc(id, 'tools/call', { name: 'create_note', arguments: { notebook, title, markdown: 'x' } });
+    const detachedA: string[][] = [];
+    const detachedB: string[][] = [];
+    const [a, b] = await Promise.all([
+      cli(['mcp'], {
+        lines: [...HANDSHAKE, create(2, 'Personal', 'From A'), create(3, 'Work', 'Work from A')],
+        detached: detachedA,
+      }),
+      cli(['mcp'], {
+        lines: [...HANDSHAKE, create(2, 'Personal', 'From B'), create(3, 'Work', 'Work from B')],
+        detached: detachedB,
+      }),
+    ]);
+    expect(a.code, a.stderr).toBe(0);
+    expect(b.code, b.stderr).toBe(0);
+    expect(a.stdout).not.toContain('"isError":true');
+    expect(b.stdout).not.toContain('"isError":true');
+    const wanted = [
+      ['notebook', 'sync', 'personal-agent', '--wait', '120'],
+      ['notebook', 'sync', 'work-agent', '--wait', '120'],
+    ];
+    expect([...detachedA].sort()).toEqual(wanted);
+    expect([...detachedB].sort()).toEqual(wanted);
+    for (const args of [...detachedA, ...detachedB]) expect((await cli(args)).code).toBe(0);
+    const files = (url: string) => git(url, ['ls-tree', '-r', '--name-only', 'main']);
+    expect(files(personal)).toContain('From A.md');
+    expect(files(personal)).toContain('From B.md');
+    expect(files(personal)).not.toContain('Work from A.md');
+    expect(files(work)).toContain('Work from A.md');
+    expect(files(work)).toContain('Work from B.md');
+    expect(git(work, ['log', '-1', '--format=%an', 'main'])).toBe('Agent');
+  });
+
   it('commits as the identity set while it runs, from its next commit (#174 review)', async () => {
     const remote = bare('mcp-who');
     const global = join(root.path, 'gitconfig-mcp');

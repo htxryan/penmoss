@@ -192,10 +192,11 @@ export interface NotebookIo {
   session(name: string, what: string): Promise<NotebookSession>;
   /**
    * Serves the local MCP server (A830) on `lines` until they end, then syncs once more. Stopped
-   * by a signal instead, it leaves that sync to a detached `penmoss notebook sync` (A847).
+   * by a signal instead, it leaves that sync to a detached `penmoss notebook sync` (A847). With
+   * no name, it serves every notebook with an agent copy (PEN-151).
    */
   serveMcp(
-    name: string,
+    name: string | undefined,
     io: {
       readonly lines: AsyncIterable<string>;
       write(line: string): void;

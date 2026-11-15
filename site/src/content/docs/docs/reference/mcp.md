@@ -5,7 +5,19 @@ description: The 35 tools Penmoss's local MCP server gives an agent, with their 
 
 This page lists every tool the MCP server gives an agent, what each one does and the arguments it takes. To connect an agent, see [How agents work](/docs/agents/).
 
-`penmoss mcp --notebook <name>` is an MCP server over stdio for one notebook. It has 35 tools, no resources and no prompts. It works on the notebook's clone on your Mac, as that clone's writer. Required arguments are marked \*.
+`penmoss mcp` is an MCP server over stdio for every notebook on your Mac that has an agent copy, and `penmoss mcp --notebook <name>` is one for a single notebook. It has 35 tools, no resources and no prompts. It works on each notebook's copy on your Mac, as that copy's writer. Required arguments are marked \*.
+
+## More than one notebook
+
+Without `--notebook`, the server reaches every notebook at once, and each tool also takes `notebook`: the notebook's name as Penmoss shows it, or the 4 characters its short ids start with.
+
+- **A note or folder id finds its notebook.** Tools that take an `id` or a folder id need no `notebook`. A `notebook` that doesn't match the id is refused.
+- **Searches and lists cover every notebook.** `search_notes`, `list_recent`, `list_folder`, `list_tags`, `describe_tags`, `list_comment_threads` and `get_settings` give results from every notebook, and each result names its `notebook`. Pass `notebook` to look in one. A notebook that stays busy syncing for 5 seconds is left out and listed under `skipped`.
+- **A new note, folder or daily note needs `notebook`** when there's more than one: `create_note` without a `folderId`, `get_daily_note`, `create_folder` without a `parentId`, `set_settings`, `rename_tag`, and `set_folder_sort` for the top level. Without it, the server says which notebooks there are.
+- **Nothing moves between notebooks.** Moving a note or folder into another notebook's folder is refused with `cross_notebook`. Make it in the other notebook and trash this one.
+- **Each notebook syncs on its own.** It syncs when it's first used, pushes a minute after its edits settle, and is pulled every two minutes while it's in use. A notebook added while the server runs is served from the next call.
+
+Search by meaning and comments sent to a session (`--channel`) need `--notebook` for now.
 
 ## Search and read
 
