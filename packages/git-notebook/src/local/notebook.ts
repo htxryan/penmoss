@@ -233,6 +233,16 @@ export class LocalNotebook {
     return id;
   }
 
+  /** Whether this notebook holds the note (in Trash or not): how one server finds its notebook. */
+  holdsNote(id: string): boolean {
+    return this.notes.heldIds().includes(id);
+  }
+
+  /** Whether this notebook has the folder. */
+  holdsFolder(id: string): boolean {
+    return this.notes.folder(id) !== undefined;
+  }
+
   /** Names this notebook's notes by their short references (PEN-69), for one list. */
   refNamer(): (id: string) => string {
     const own = this.notebookId;
