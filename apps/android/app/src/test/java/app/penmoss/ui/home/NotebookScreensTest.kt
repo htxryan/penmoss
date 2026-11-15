@@ -15,10 +15,10 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.data.FolderEntity
-import app.penmoss.ui.FolderDeleteDialog
-import app.penmoss.ui.FolderSheet
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.folders.FolderDeleteDialog
+import app.penmoss.ui.folders.FolderSheet
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule

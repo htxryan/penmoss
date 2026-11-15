@@ -48,6 +48,21 @@ import app.penmoss.ui.common.say
 import app.penmoss.ui.note.AgentReference
 import app.penmoss.ui.note.agentReferenceIn
 import app.penmoss.ui.home.homeRoutes
+import app.penmoss.ui.folders.FolderDeleteDialog
+import app.penmoss.ui.folders.FolderNameDialog
+import app.penmoss.ui.folders.FolderPickerFor
+import app.penmoss.ui.folders.FolderPickerForMove
+import app.penmoss.ui.folders.FolderSheet
+import app.penmoss.ui.folders.NewFolderDialog
+import app.penmoss.ui.folders.createFolderAndSay
+import app.penmoss.ui.folders.deleteFolderAndSay
+import app.penmoss.ui.folders.folderRoutes
+import app.penmoss.ui.folders.moveFolderAndSay
+import app.penmoss.ui.folders.moveNoteAndSay
+import app.penmoss.ui.folders.renameFolderAndSay
+import app.penmoss.ui.folders.reorderFolderAndSay
+import app.penmoss.ui.folders.reorderNoteAndSay
+import app.penmoss.ui.folders.sortFolderAndSay
 
 /**
  * What a git notebook's screens share (A6): the navigation, the snackbar over every screen, the

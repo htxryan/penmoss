@@ -95,9 +95,9 @@ import app.penmoss.ui.common.NoteList
 import app.penmoss.ui.common.KeepSelectionShown
 import app.penmoss.ui.common.NoteRowView
 import app.penmoss.ui.common.underSelectionBar
-import app.penmoss.ui.ReorderList
+import app.penmoss.ui.folders.ReorderList
 import app.penmoss.ui.common.SectionTitle
-import app.penmoss.ui.SortMenu
+import app.penmoss.ui.folders.SortMenu
 import app.penmoss.ui.common.DotState
 import app.penmoss.ui.common.SectionTitleWithDot
 import app.penmoss.ui.common.SyncDot

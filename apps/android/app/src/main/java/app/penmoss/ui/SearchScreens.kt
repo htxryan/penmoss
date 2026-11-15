@@ -101,6 +101,7 @@ import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.LocalSearchMatch
 import app.penmoss.ui.common.NoteItem
 import app.penmoss.ui.common.mark
+import app.penmoss.ui.folders.FolderPickerSheet
 
 /** The Updated filter's choices, in the web's words (T40 P6, FD3): a label and its days back. */
 internal val DATE_RANGES: List<Pair<String, Int?>> = listOf(

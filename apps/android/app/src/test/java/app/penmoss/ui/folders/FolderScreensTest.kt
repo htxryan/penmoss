@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.folders
 
 import app.penmoss.ui.home.HomeUi
 import app.penmoss.ui.home.HomeActions

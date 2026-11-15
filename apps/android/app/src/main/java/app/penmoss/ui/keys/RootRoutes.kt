@@ -12,7 +12,7 @@ import app.penmoss.ui.GRAPH_ROUTE
 import app.penmoss.ui.SEARCH_ROUTE
 import app.penmoss.ui.graphRoute
 import app.penmoss.ui.open
-import app.penmoss.ui.sortFolderAndSay
+import app.penmoss.ui.folders.sortFolderAndSay
 import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull

@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.folders
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable

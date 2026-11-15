@@ -74,7 +74,7 @@ import app.penmoss.ui.common.FolderItem
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.readableTheme
 import app.penmoss.ui.historyFailure
-import app.penmoss.ui.moveNoteAndSay
+import app.penmoss.ui.folders.moveNoteAndSay
 import app.penmoss.ui.trashAfterClosing
 
 /** Pictures one trip to the photo picker may bring. */

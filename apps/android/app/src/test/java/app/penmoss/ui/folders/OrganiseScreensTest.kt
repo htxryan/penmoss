@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.folders
 
 import app.penmoss.ui.home.HomeUi
 import app.penmoss.ui.home.HomeActions
@@ -51,6 +51,13 @@ import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.NoteItem
 import app.penmoss.ui.common.NoteList
 import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.NOTE_ROUTE
+import app.penmoss.ui.markNoteMade
+import app.penmoss.ui.newNoteRequest
+import app.penmoss.ui.newNoteRoute
+import app.penmoss.ui.noteArguments
+import app.penmoss.ui.open
+import app.penmoss.ui.startNewNote
 
 /** The folder picker, the tag sheet and New note in a folder (T38), on Robolectric. */
 @RunWith(AndroidJUnit4::class)

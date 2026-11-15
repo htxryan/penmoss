@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.folders
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
@@ -76,6 +76,11 @@ import androidx.compose.ui.zIndex
 import app.penmoss.ui.common.FolderItem
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.NoteItem
+import app.penmoss.ui.Choosing
+import app.penmoss.ui.FolderNaming
+import app.penmoss.ui.RootUi
+import app.penmoss.ui.leave
+import app.penmoss.ui.open
 
 /**
  * What a long press on a folder row offers (T40 P4, NT3–NT5): make a folder inside it (New Folder
