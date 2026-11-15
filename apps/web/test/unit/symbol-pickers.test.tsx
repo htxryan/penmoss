@@ -45,7 +45,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('the glyph picker (item 9)', () => {
+describe('the glyph picker (item 9; the icon picker’s Characters since A1568)', () => {
   function render(onChoose = vi.fn(() => null as string | null)) {
     act(() =>
       root!.render(
@@ -64,89 +64,111 @@ describe('the glyph picker (item 9)', () => {
     return onChoose;
   }
 
-  it('shows the glyph and opens a grid of presets, the current one pressed', () => {
+  const cell = (glyph: string) =>
+    $(`[data-testid="symbol-glyph-1-picker-cell"][data-value="${glyph}"]`);
+  const search = () => $<HTMLInputElement>('[data-testid="symbol-glyph-1-picker-search"]');
+  /** Opens the picker and waits for its chunk and the Characters. */
+  async function open() {
+    act(() => $('[data-testid="symbol-glyph-1"]').click());
+    await vi.waitFor(() => expect(host.querySelector('[data-value="★"]')).not.toBeNull(), {
+      timeout: 5_000,
+    });
+  }
+  const type = (text: string) =>
+    act(() => {
+      const field = search();
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(field, text);
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+  it('shows the glyph and opens the Characters, the old presets first, the current one marked', async () => {
     render();
     const button = $('[data-testid="symbol-glyph-1"]');
     expect(button.textContent).toBe('★');
     expect(button.getAttribute('aria-label')).toBe('Glyph ★');
     expect(button.getAttribute('aria-expanded')).toBe('false');
-    act(() => button.click());
+    await open();
     expect(button.getAttribute('aria-expanded')).toBe('true');
-    const options = [...host.querySelectorAll<HTMLButtonElement>('.glyph-option')];
-    expect(options.map((option) => option.textContent)).toEqual([...SYMBOL_GLYPH_PRESETS]);
-    expect($('[data-glyph="★"]').getAttribute('aria-pressed')).toBe('true');
-    // Only the current one is in the tab order; arrows move across the grid.
-    expect(options.filter((option) => option.tabIndex === 0)).toHaveLength(1);
+    const dialog = $('[role="dialog"]');
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    // Characters only: a line symbol is text, so there is no Icons tab here.
+    expect(host.querySelector('[role="tab"]')).toBeNull();
+    expect(document.activeElement).toBe(search());
+    const shown = [...host.querySelectorAll<HTMLElement>('[role="option"]')].map(
+      (option) => option.dataset['value'],
+    );
+    expect(shown.slice(0, 8)).toEqual(SYMBOL_GLYPH_PRESETS.slice(0, 8));
+    expect(cell('★').getAttribute('aria-current')).toBe('true');
+    expect(cell('★').getAttribute('aria-selected')).toBe('true');
+    expect(cell('★').getAttribute('aria-label')).toBe('Star');
   });
 
-  it('marks a preset another symbol uses and refuses it', () => {
+  it('marks a character another symbol uses and refuses it', async () => {
     const onChoose = render();
-    act(() => $('[data-testid="symbol-glyph-1"]').click());
-    const taken = $('[data-glyph="?"]');
+    await open();
+    const taken = cell('?');
     expect(taken.getAttribute('aria-disabled')).toBe('true');
-    expect(taken.getAttribute('aria-label')).toBe('?, Already symbol 2');
+    expect(taken.getAttribute('aria-label')).toBe('Question Mark, Already symbol 2');
     act(() => taken.click());
     expect(onChoose).not.toHaveBeenCalled();
+    expect($('[data-testid="symbol-glyph-1-picker-problem"]').textContent).toBe('Already symbol 2');
   });
 
-  it('chooses a preset and closes', () => {
+  it('chooses a character and closes, focus back on the button', async () => {
     const onChoose = render();
-    act(() => $('[data-testid="symbol-glyph-1"]').click());
-    act(() => $('[data-glyph="⚑"]').click());
+    await open();
+    act(() => cell('⚑').click());
     expect(onChoose).toHaveBeenCalledWith('⚑');
-    expect(host.querySelector('.glyph-popover')).toBeNull();
-  });
-
-  it('moves with the arrow keys and closes on Escape', () => {
-    render();
-    act(() => $('[data-testid="symbol-glyph-1"]').click());
-    const star = $('[data-glyph="★"]');
-    act(() => star.focus());
-    key(star, 'ArrowRight');
-    expect(document.activeElement?.getAttribute('data-glyph')).toBe(SYMBOL_GLYPH_PRESETS[1]);
-    key(document.activeElement!, 'ArrowDown');
-    expect(document.activeElement?.getAttribute('data-glyph')).toBe(SYMBOL_GLYPH_PRESETS[8]);
-    key(document.activeElement!, 'Escape');
-    expect(host.querySelector('.glyph-popover')).toBeNull();
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
     expect(document.activeElement).toBe($('[data-testid="symbol-glyph-1"]'));
   });
 
-  it('takes a pasted glyph, and says why one cannot be', () => {
+  it('finds by name or keyword, moves with the arrow keys, picks with Return', async () => {
     const onChoose = render();
-    act(() => $('[data-testid="symbol-glyph-1"]').click());
-    const field = $<HTMLInputElement>('[data-testid="symbol-glyph-1-custom"]');
-    const type = (text: string) =>
-      act(() => {
-        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
-          field,
-          text,
-        );
-        field.dispatchEvent(new Event('input', { bubbles: true }));
-      });
-    type('ab');
-    act(() => $('[data-testid="symbol-glyph-1-use"]').click());
-    expect($('.glyph-problem').textContent).toBe(glyphProblem('ab'));
-    expect(field.getAttribute('aria-invalid')).toBe('true');
-    expect(onChoose).not.toHaveBeenCalled();
-    type('🦊');
-    act(() => $('[data-testid="symbol-glyph-1-use"]').click());
-    expect(onChoose).toHaveBeenCalledWith('🦊');
+    await open();
+    type('bulb');
+    expect(host.querySelector('[role="option"]')!.getAttribute('data-value')).toBe('💡');
+    type('arrow');
+    const options = [...host.querySelectorAll<HTMLElement>('[role="option"]')];
+    expect(options[0]!.getAttribute('aria-selected')).toBe('true');
+    key(search(), 'ArrowRight');
+    expect(options[1]!.getAttribute('aria-selected')).toBe('true');
+    expect(search().getAttribute('aria-activedescendant')).toBe(options[1]!.id);
+    key(search(), 'Enter');
+    expect(onChoose).toHaveBeenCalledWith(options[1]!.dataset['value']);
   });
 
-  it('focuses the current preset once drawn, but never takes focus from the field', () => {
-    const frames = lateFrames();
+  it('closes on Escape without a change, focus back on the button', async () => {
+    const onChoose = render();
+    await open();
+    key(search(), 'Escape');
+    expect(host.querySelector('[role="dialog"]')).toBeNull();
+    expect(onChoose).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe($('[data-testid="symbol-glyph-1"]'));
+  });
+
+  it('takes a pasted glyph that is not in the list, and says why one cannot be', async () => {
+    const onChoose = render();
+    await open();
+    type('#');
+    expect($('[data-testid="symbol-glyph-1-picker-problem"]').textContent).toBe(glyphProblem('#'));
+    expect(host.querySelector('[data-value="#"]')).toBeNull();
+    // ⸙ is no preset and no emoji: offered as it is.
+    type('⸙');
+    const own = cell('⸙');
+    expect(own.getAttribute('aria-label')).toBe('Use ⸙');
+    key(search(), 'Enter');
+    expect(onChoose).toHaveBeenCalledWith('⸙');
+  });
+
+  it('finds nothing for a word nothing has', async () => {
     render();
-    const button = $('[data-testid="symbol-glyph-1"]');
-    act(() => button.click());
-    const field = $<HTMLInputElement>('[data-testid="symbol-glyph-1-custom"]');
-    act(() => field.focus());
-    frames.run();
-    expect(document.activeElement).toBe(field);
-    // Opened with focus outside it: the current preset takes it.
-    key(field, 'Escape');
-    act(() => button.click());
-    frames.run();
-    expect(document.activeElement?.getAttribute('data-glyph')).toBe('★');
+    await open();
+    type('zzqqxx');
+    expect(host.querySelectorAll('[role="option"]')).toHaveLength(0);
+    expect($('[data-testid="symbol-glyph-1-picker-empty"]').textContent).toBe(
+      'No characters match “zzqqxx”.',
+    );
   });
 });
 

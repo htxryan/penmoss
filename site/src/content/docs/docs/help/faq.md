@@ -7,7 +7,7 @@ This page answers the questions people ask most about Penmoss.
 
 ## Is Penmoss free?
 
-Yes. It is open source under the MIT licence, with no account and no subscription. Your git host may charge for its own plans; GitHub's free plan includes private repositories.
+Yes. It is open source under the MIT licence, with no account and no subscription. Your git host may charge for its own plans; GitHub's free plan includes private repositories. It includes [Lucide](https://lucide.dev)'s icons (ISC licence) and emoji names from [emojibase](https://emojibase.dev) and Unicode's CLDR; their licences ship with the app, in `third-party-notices.txt`.
 
 ## Do I need GitHub?
 

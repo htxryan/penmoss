@@ -1,0 +1,126 @@
+/* The icon and symbol picker (A1568): a modal over the page, its grid drawn a row at a time. */
+
+.dialog.icon-picker {
+  width: min(36rem, 100%);
+}
+
+.icon-picker-tabs {
+  display: flex;
+  flex: none;
+  gap: 0.25rem;
+  padding: 0.4rem 0.9rem 0;
+  border-bottom: 1px solid var(--pm-border);
+}
+
+.icon-picker-tab {
+  padding: 0.35rem 0.7rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--pm-muted);
+  font: inherit;
+  font-size: var(--pm-text-sm);
+  cursor: pointer;
+}
+
+.icon-picker-tab[aria-selected='true'] {
+  border-bottom-color: var(--pm-accent);
+  color: var(--pm-fg);
+  font-weight: 600;
+}
+
+.icon-picker-tab:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: -2px;
+}
+
+.icon-picker-scroll {
+  position: relative;
+  flex: none;
+  block-size: min(22.5rem, 50vh);
+  overflow-y: auto;
+  padding: 0 0.9rem;
+  overscroll-behavior: contain;
+}
+
+.icon-picker-grid {
+  position: relative;
+}
+
+.icon-picker-head,
+.icon-picker-row {
+  position: absolute;
+  inset-inline: 0;
+}
+
+.icon-picker-head {
+  display: flex;
+  align-items: flex-end;
+  block-size: 30px;
+  padding-block-end: 0.3rem;
+  color: var(--pm-muted);
+  font-size: var(--pm-text-xs);
+  font-weight: 600;
+}
+
+.icon-picker-row {
+  display: flex;
+  block-size: 40px;
+}
+
+.icon-picker-cell {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 40px;
+  block-size: 40px;
+  border: 1px solid transparent;
+  color: var(--pm-fg);
+  cursor: pointer;
+}
+
+.icon-picker-cell[aria-selected='true'] {
+  border-color: var(--pm-accent);
+  background: var(--pm-hover);
+}
+
+/* The current choice: the accent's tint, kept when the active cell moves on. */
+.icon-picker-cell[aria-current='true'] {
+  background: color-mix(in oklab, var(--pm-accent), transparent 82%);
+  color: var(--pm-accent);
+}
+
+.icon-picker-cell[aria-disabled='true'] {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.icon-picker-glyph {
+  font-size: var(--pm-text-lg);
+  line-height: 1;
+}
+
+.icon-picker-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.icon-picker-problem {
+  flex: none;
+  margin: 0;
+  padding: 0.4rem 0.9rem;
+  border-top: 1px solid var(--pm-border);
+  color: var(--pm-danger);
+  font-size: var(--pm-text-sm);
+}
+
+.icon-picker-name {
+  overflow: hidden;
+  color: var(--pm-fg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

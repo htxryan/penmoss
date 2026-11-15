@@ -1,6 +1,14 @@
-import { Icon, type IconName } from '@penmoss/ui/icons';
+import { Icon } from '@penmoss/ui/icons';
 import type { CSSProperties } from 'react';
-import { glyphInk, useNotebookBadge, type NotebookBadgeValue } from './badge';
+import { LucideSvg, lucideName, useLucideIcon } from '../shell/lucide';
+import {
+  appBadgeIcon,
+  defaultGlyph,
+  glyphInk,
+  useNotebookBadge,
+  type BadgeGlyph,
+  type NotebookBadgeValue,
+} from './badge';
 import type { Source } from './registry';
 
 /**
@@ -42,7 +50,12 @@ export function BadgeView({
     '--nb-badge-size': `${size / 16}rem`,
   } as CSSProperties;
   const { glyph } = badge;
+  const lucide = glyph.kind === 'icon' ? lucideName(glyph.value) : null;
+  const node = useLucideIcon(lucide);
+  // A Lucide name this build has no icon for shows the badge's letter (A1568).
+  const shown: BadgeGlyph = lucide !== null && node === null ? defaultGlyph(name) : glyph;
   const iconSize = Math.round(size * 0.72);
+  const appIcon = shown.kind === 'icon' ? appBadgeIcon(shown.value) : null;
   return (
     <span
       className={className ? `nb-badge ${className}` : 'nb-badge'}
@@ -51,22 +64,34 @@ export function BadgeView({
       data-size={size}
       data-glyph={`${glyph.kind}:${glyph.value}`}
       data-color={badge.color}
-      data-kind={glyph.kind}
+      data-kind={shown.kind}
       {...(decorative ? { 'aria-hidden': true } : { role: 'img', 'aria-label': name })}
     >
-      {glyph.kind === 'icon' ? (
+      {appIcon ? (
+        // The app's own icons, as badges had before Lucide: drawn as they were.
         <Icon
-          name={glyph.value as IconName}
+          name={appIcon}
           size={iconSize}
           className="nb-badge-icon"
           style={glyphStyle(iconSize)}
         />
+      ) : shown.kind === 'icon' ? (
+        // Lucide's, once its chunk is in (an instant at most): the square alone until then.
+        node && lucide ? (
+          <LucideSvg
+            node={node}
+            name={lucide}
+            size={iconSize}
+            className="nb-badge-icon"
+            style={glyphStyle(iconSize)}
+          />
+        ) : null
       ) : (
         // Drawn from the attribute, so the name beside it (a heading, a tab) keeps its own text.
         <span
           className="nb-badge-text"
           aria-hidden="true"
-          data-text={glyph.value}
+          data-text={shown.value}
           style={GLYPH_INK}
         />
       )}

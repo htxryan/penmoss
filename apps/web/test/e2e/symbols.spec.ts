@@ -343,21 +343,25 @@ test('T44: Settings → Symbols edits the synced list; a removed glyph shows as 
     // Its 3 px focus ring included.
     expect(lastBox.y + lastBox.height + 3).toBeLessThanOrEqual(addBox.y);
 
-    // The glyph picker (T51 item 9): a preset another symbol has is marked; a pasted glyph that
-    // is markdown is refused; a preset is chosen.
+    // The glyph picker (T51 item 9; A1568's Characters): a modal, its search focused, Characters
+    // only; one another symbol has is marked; a pasted glyph that is markdown is refused; one is
+    // found by name and chosen.
     await settings.getByTestId('symbol-glyph-1').click();
-    const glyphs = settings.getByTestId('symbol-glyph-1-picker');
-    await expect(glyphs).toBeVisible();
-    await expect(glyphs.getByRole('button', { name: '?, Already symbol 2' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-    await glyphs.getByTestId('symbol-glyph-1-custom').fill('#');
-    await glyphs.getByTestId('symbol-glyph-1-custom').press('Enter');
+    const glyphs = page.getByTestId('symbol-glyph-1-picker');
+    await expect(glyphs.getByRole('dialog', { name: 'Choose a Symbol' })).toBeVisible();
+    const glyphSearch = glyphs.getByTestId('symbol-glyph-1-picker-search');
+    await expect(glyphSearch).toBeFocused();
+    await expect(glyphs.getByRole('tab')).toHaveCount(0);
+    await expect(
+      glyphs.getByRole('option', { name: 'Question Mark, Already symbol 2' }),
+    ).toHaveAttribute('aria-disabled', 'true');
+    await glyphSearch.fill('#');
     await expect(glyphs.getByRole('alert')).toContainText('Glyph cannot hold #');
-    await glyphs.getByRole('button', { name: '⚑', exact: true }).click();
+    await glyphSearch.fill('flag');
+    await glyphs.getByRole('option', { name: 'Flag', exact: true }).click();
     await expect(glyphs).toBeHidden();
     await expect(settings.getByTestId('symbol-glyph-1')).toHaveText('⚑');
+    await expect(settings.getByTestId('symbol-glyph-1')).toBeFocused();
 
     // The colour picker (T51 item 10): a theme colour, then a colour of one's own by hex.
     await settings.getByTestId('symbol-colour-1').click();

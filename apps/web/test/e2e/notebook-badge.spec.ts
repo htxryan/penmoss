@@ -59,6 +59,20 @@ export async function openNotebookSettings(page: Page, name: string): Promise<vo
   await expect(page.getByTestId('git-notebook')).toBeVisible();
 }
 
+/**
+ * Picks an icon in the open notebook page's picker (A1568): Choose Icon…, the search focused,
+ * `query` typed, the icon clicked; the picker closes.
+ */
+async function chooseIcon(page: Page, query: string, name: string): Promise<void> {
+  await page.getByTestId('git-panel-overview').getByTestId('badge-icon-choose').click();
+  const picker = page.getByTestId('icon-picker');
+  const search = picker.getByTestId('icon-picker-search');
+  await expect(search).toBeFocused();
+  await search.fill(query);
+  await picker.locator(`[data-value="lucide:${name}"]`).click();
+  await expect(picker).toHaveCount(0);
+}
+
 test('notebooks get default badges, and one is changed in Settings (PEN-140, AC17, AC18)', async ({
   page,
   host,
@@ -136,10 +150,14 @@ test('notebooks get default badges, and one is changed in Settings (PEN-140, AC1
   ];
   // Side by side, touching: one control, not three loose radios.
   expect(Math.abs(letterBox.x + letterBox.width - 1 - numberBox.x)).toBeLessThanOrEqual(1);
-  await expect(group.getByTestId('badge-icons').getByRole('radio')).toHaveCount(24);
-  await group.getByTestId('badge-icon-star').click();
+  // Icon starts as Lucide's notebook; Choose Icon… opens the picker (A1568).
+  await expect(group.getByTestId('badge-icon-current')).toHaveAttribute(
+    'data-value',
+    'lucide:notebook',
+  );
+  await chooseIcon(page, 'star', 'star');
   const preview = group.getByTestId('badge-preview').getByTestId('notebook-badge').first();
-  await expect(preview).toHaveAttribute('data-glyph', 'icon:star');
+  await expect(preview).toHaveAttribute('data-glyph', 'icon:lucide:star');
   await expect(preview).toHaveAttribute('data-color', hex);
   await expect(preview).toHaveAccessibleName('Penmoss');
   await expect(group.getByTestId('badge-reset')).toBeEnabled();
@@ -147,14 +165,15 @@ test('notebooks get default badges, and one is changed in Settings (PEN-140, AC1
   // Back to the notes: the sidebar's row has changed at once, the other notebook's has not.
   await page.locator('.settings-bar .back-link').click();
   const penmoss = sidebarBadge(page, 'Penmoss');
-  await expect(penmoss).toHaveAttribute('data-glyph', 'icon:star');
+  await expect(penmoss).toHaveAttribute('data-glyph', 'icon:lucide:star');
   await expect(penmoss).toHaveAttribute('data-color', hex);
-  await expect(penmoss.locator('svg[data-icon="star"]')).toBeVisible();
+  await expect(penmoss.locator('svg[data-lucide="star"]')).toBeVisible();
   await expect(sidebarBadge(page, 'Personal')).toHaveAttribute('data-glyph', 'letter:P');
 
   // Kept in the notebook's own settings: a reload shows it the same.
   await page.reload();
-  await expect(sidebarBadge(page, 'Penmoss')).toHaveAttribute('data-glyph', 'icon:star');
+  await expect(sidebarBadge(page, 'Penmoss')).toHaveAttribute('data-glyph', 'icon:lucide:star');
+  await expect(sidebarBadge(page, 'Penmoss').locator('svg[data-lucide="star"]')).toBeVisible();
   await expect(sidebarBadge(page, 'Penmoss')).toHaveAttribute('data-color', hex);
   await expect(sidebarBadge(page, 'Personal')).toHaveAttribute('data-glyph', 'letter:P');
 
@@ -170,7 +189,7 @@ test('notebooks get default badges, and one is changed in Settings (PEN-140, AC1
   await page.waitForTimeout(2_000);
   await page.locator('.settings-bar .back-link').click();
   await expect(sidebarBadge(page, 'Personal')).toHaveAttribute('data-glyph', 'number:42');
-  await expect(sidebarBadge(page, 'Penmoss')).toHaveAttribute('data-glyph', 'icon:star');
+  await expect(sidebarBadge(page, 'Penmoss')).toHaveAttribute('data-glyph', 'icon:lucide:star');
   await page.waitForTimeout(2_000);
   await expect(sidebarBadge(page, 'Personal')).toBeVisible();
   expect(errors).toEqual([]);
@@ -287,10 +306,14 @@ test('each note’s tab starts with its notebook’s badge, and the note has no 
   // A badge changed in Settings changes on its tabs at once (AC17).
   await openNotebookSettings(page, 'Penmoss');
   await page.getByTestId('git-panel-overview').getByTestId('badge-kind-icon').check();
-  await page.getByTestId('git-panel-overview').getByTestId('badge-icon-star').click();
+  await chooseIcon(page, 'star', 'star');
   await page.locator('.settings-bar .back-link').click();
   const penmossTab = strip.getByRole('tab', { name: new RegExp(`^${meeting}, Penmoss`) });
-  await expect(penmossTab.getByTestId('notebook-badge')).toHaveAttribute('data-glyph', 'icon:star');
+  await expect(penmossTab.getByTestId('notebook-badge')).toHaveAttribute(
+    'data-glyph',
+    'icon:lucide:star',
+  );
+  await expect(penmossTab.locator('svg[data-lucide="star"]')).toBeVisible();
   await expect(strip.getByTestId('tab-notebook')).toHaveCount(0);
   await page.mouse.move(640, 500);
   await page.waitForTimeout(2_000);
@@ -414,14 +437,17 @@ test('an icon badge keeps its own ink on a selected or hovered row (Ryan, 15 Nov
   const group = page.getByTestId('git-panel-overview');
   await group.getByTestId('badge-preset-red').click();
   await group.getByTestId('badge-kind-icon').check();
-  await group.getByTestId('badge-icon-star').click();
+  await chooseIcon(page, 'star', 'star');
 
   // Its entry in Settings' nav is the selected one: the star stays in the badge's ink.
   const entry = page
     .getByTestId('settings-notebook-entry')
     .filter({ hasText: 'Penmoss' })
     .and(page.locator('[aria-current="page"]'));
-  await expect(entry.getByTestId('notebook-badge')).toHaveAttribute('data-glyph', 'icon:star');
+  await expect(entry.getByTestId('notebook-badge')).toHaveAttribute(
+    'data-glyph',
+    'icon:lucide:star',
+  );
   const [selected] = await iconInks(entry.getByTestId('notebook-badge'));
   expect(selected!.drawn).toBe(selected!.ink);
   expect(selected!.drawn).not.toBe(accent);
@@ -440,10 +466,110 @@ test('an icon badge keeps its own ink on a selected or hovered row (Ryan, 15 Nov
   await expect(row).toBeVisible({ timeout: 40_000 });
   await row.click();
   const tab = page.getByRole('tablist', { name: 'Open Tabs' }).getByRole('tab', { selected: true });
-  await expect(tab.getByTestId('notebook-badge')).toHaveAttribute('data-glyph', 'icon:star');
+  await expect(tab.getByTestId('notebook-badge')).toHaveAttribute('data-glyph', 'icon:lucide:star');
   await sidebarBadge(page, 'Penmoss').hover();
   const drawn = await iconInks(page.getByTestId('notebook-badge'));
   expect(drawn.length).toBeGreaterThanOrEqual(2);
   for (const each of drawn) expect(each.drawn).toBe(each.ink);
+  expect(errors).toEqual([]);
+});
+
+test('the icon picker: filtered by name and tag, picked by keyboard alone, recently used (A1568)', async ({
+  page,
+  host,
+}) => {
+  test.setTimeout(120_000);
+  const errors = collectErrors(page);
+  await host.seed({ name: 'Penmoss', notes: [{ title: `Roadmap ${RUN}`, markdown: 'Tabs.' }] });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/');
+  await openNotebookSettings(page, 'Penmoss');
+  const group = page.getByTestId('git-panel-overview');
+  await group.getByTestId('badge-kind-icon').check();
+
+  // Opened from Choose Icon…: a modal dialog, its search focused, the current icon marked.
+  await group.getByTestId('badge-icon-choose').click();
+  const picker = page.getByTestId('icon-picker');
+  const dialog = picker.getByRole('dialog', { name: 'Choose an Icon' });
+  await expect(dialog).toHaveAttribute('aria-modal', 'true');
+  const search = picker.getByTestId('icon-picker-search');
+  await expect(search).toBeFocused();
+  const grid = picker.getByRole('listbox', { name: 'Icons' });
+  await expect(grid.locator('[data-value="lucide:notebook"]')).toHaveAttribute(
+    'aria-current',
+    'true',
+  );
+  // Thousands of icons, a few rows of them drawn.
+  const count = (await picker.locator('.dlg-foot').textContent())!.match(/([\d,]+) icons/)![1]!;
+  expect(Number(count.replace(',', ''))).toBeGreaterThan(1500);
+  expect(await grid.getByRole('option').count()).toBeLessThan(400);
+
+  // By name: the whole name first.
+  await search.fill('notebook pen');
+  await expect(grid.getByRole('option').first()).toHaveAttribute(
+    'data-value',
+    'lucide:notebook-pen',
+  );
+  await expect(grid.getByRole('option', { name: 'Notebook Pen', exact: true })).toBeVisible();
+  // By a tag the name does not have: "favourite" finds the star.
+  await search.fill('favourite');
+  await expect(grid.locator('[data-value="lucide:star"]')).toBeVisible();
+  // Nothing found.
+  await search.fill('zzqqxx');
+  await expect(picker.getByTestId('icon-picker-empty')).toHaveText('No icons match “zzqqxx”.');
+  await expect(grid.getByRole('option')).toHaveCount(0);
+
+  // The keyboard alone: type, → twice to the third result, its name in the footer, Return.
+  await search.fill('rocket');
+  const options = grid.getByRole('option');
+  await expect(options.first()).toHaveAttribute('data-value', 'lucide:rocket');
+  await expect(options.first()).toHaveAttribute('aria-selected', 'true');
+  const third = (await options.nth(2).getAttribute('data-value'))!;
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(options.nth(2)).toHaveAttribute('aria-selected', 'true');
+  await expect(search).toHaveAttribute(
+    'aria-activedescendant',
+    (await options.nth(2).getAttribute('id'))!,
+  );
+  await expect(picker.getByTestId('icon-picker-active')).toHaveText(
+    (await options.nth(2).getAttribute('aria-label'))!,
+  );
+  await page.keyboard.press('Enter');
+  await expect(picker).toHaveCount(0);
+  // Focus is back on Choose Icon…, and the row shows the pick.
+  await expect(group.getByTestId('badge-icon-choose')).toBeFocused();
+  await expect(group.getByTestId('badge-icon-current')).toHaveAttribute('data-value', third);
+
+  // Space on Choose Icon… opens it again: Recently Used first, the last pick in it.
+  await page.keyboard.press('Space');
+  await expect(search).toBeFocused();
+  await expect(picker.locator('.icon-picker-head').first()).toHaveText('Recently Used');
+  await expect(grid.getByRole('option').first()).toHaveAttribute('data-value', third);
+  // Escape closes it with nothing changed.
+  await page.keyboard.press('Escape');
+  await expect(picker).toHaveCount(0);
+  await expect(group.getByTestId('badge-icon-current')).toHaveAttribute('data-value', third);
+
+  // ↓ moves a row down: to the cell below the first result.
+  await page.keyboard.press('Enter');
+  await search.fill('arrow');
+  await expect(grid.getByRole('option').first()).toHaveAttribute('data-value', /^lucide:.*arrow/);
+  const columns = await grid.locator('.icon-picker-row').first().getByRole('option').count();
+  expect(columns).toBeGreaterThan(5);
+  await page.keyboard.press('ArrowDown');
+  const below = grid.getByRole('option').nth(columns);
+  await expect(below).toHaveAttribute('aria-selected', 'true');
+  const belowValue = (await below.getAttribute('data-value'))!;
+  await page.keyboard.press('Enter');
+  await expect(picker).toHaveCount(0);
+
+  // The sidebar's badge draws it.
+  await page.locator('.settings-bar .back-link').click();
+  const badge = sidebarBadge(page, 'Penmoss');
+  await expect(badge).toHaveAttribute('data-glyph', `icon:${belowValue}`);
+  await expect(
+    badge.locator(`svg[data-lucide="${belowValue.slice('lucide:'.length)}"]`),
+  ).toBeVisible();
   expect(errors).toEqual([]);
 });
