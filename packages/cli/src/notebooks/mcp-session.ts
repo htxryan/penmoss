@@ -30,14 +30,14 @@ import type { NotebookRegistry, StoredNotebook } from './registry';
 /** How long a detached exit sync waits for the stopping server's lock (A847). */
 const DETACHED_SYNC_WAIT_S = 120;
 /** A search without the lease embeds at most this long of the chunks the cache lacks (A1157). */
-const MCP_MEANING_BUDGET_MS = 300;
+export const MCP_MEANING_BUDGET_MS = 300;
 /** The holder indexes a slice at a time, so a query waits for one small batch at most (A1160). */
-const INDEX_SLICE_MS = 5_000;
+export const INDEX_SLICE_MS = 5_000;
 /** How long after an agent's edit the holder indexes it. */
-const EDIT_INDEX_DELAY_MS = 1_000;
-const INDEX_EVERY_MS = 30_000;
+export const EDIT_INDEX_DELAY_MS = 1_000;
+export const INDEX_EVERY_MS = 30_000;
 /** How often an MCP server renews its notebook's claim on the vectors it uses (PEN-134). */
-const CLAIM_EVERY_MS = 10 * 60_000;
+export const CLAIM_EVERY_MS = 10 * 60_000;
 
 /** What `serveMcp` is given: the stdio and the signal, as `NotebookIo.serveMcp` takes them. */
 export type McpIo = Parameters<NotebookIo['serveMcp']>[1];
@@ -73,7 +73,7 @@ interface Meaning {
 }
 
 /** Timers by name: setting one replaces the last of that name, and `clear` stops them all. */
-class Timers {
+export class Timers {
   private readonly timers = new Map<string, { stop(): void }>();
 
   later(name: string, ms: number, run: () => void, unref = false): void {
