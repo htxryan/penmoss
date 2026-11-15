@@ -20,6 +20,7 @@ import { recordFromDoc } from '@penmoss/sync-client/records';
 import type { NoteRecord } from '@penmoss/sync-client/record';
 import {
   GitNotebookEngine,
+  GitRefused,
   GitTransportError,
   isLocalRemote,
   isPurged,
@@ -32,7 +33,6 @@ import {
 } from '@penmoss/git-notebook';
 import type { LocalNotes } from '../notes/service';
 import { EngineStorage } from './engine-store';
-import { GitRefused } from './ipc-transport';
 
 /** What Settings → Notebooks and the pill show of a notebook's sync (A860). */
 export interface GitSyncStatus {

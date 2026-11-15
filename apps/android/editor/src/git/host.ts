@@ -12,6 +12,7 @@
  */
 import {
   GitNotebookEngine,
+  GitRefused,
   GitTransportError,
   isLoopbackHost,
   privateEmailAdvice,
@@ -23,7 +24,7 @@ import {
 } from '@penmoss/git-notebook';
 import { LocalNotebook } from '@penmoss/git-notebook/local';
 import { EngineStorage, type EngineKv } from '../../../../web/src/sources/engine-store';
-import { GitRefused, type BridgeTransport } from './bridge-transport';
+import type { BridgeTransport } from './bridge-transport';
 import {
   emptyState,
   LocalServer,

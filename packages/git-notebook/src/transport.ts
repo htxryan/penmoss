@@ -116,6 +116,50 @@ export class GitTransportError extends Error {
   }
 }
 
+/** Every `GitErrorCode`: a host app's refusal with one of these is git's own (A824). */
+export const GIT_ERROR_CODES: ReadonlySet<string> = new Set<GitErrorCode>([
+  'auth',
+  'network',
+  'not_found',
+  'host_key',
+  'signing',
+  'protected',
+  'rules',
+  'refused',
+  'git_missing',
+  'timeout',
+  'redirected',
+  'git',
+]);
+
+/**
+ * A refusal from the checks the app runs around git (the Mac's main process, Android's app), not
+ * git's: a remote with a credential in it, a notebook main does not know, Delete for good nobody
+ * confirmed, or `purge_raced`, a copy of a note deleted for good that the person did not confirm
+ * keeping (A886). The engine host shows it as it is and stops until the person acts.
+ */
+export class GitRefused extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+    readonly hostMessage?: string,
+  ) {
+    super(message);
+    this.name = 'GitRefused';
+  }
+}
+
+/** The error for a refusal a host app sent: git's own as a GitTransportError (A824), else GitRefused. */
+export function refusalError(
+  code: string,
+  message: string,
+  hostMessage?: string,
+): GitTransportError | GitRefused {
+  return GIT_ERROR_CODES.has(code)
+    ? new GitTransportError(code as GitErrorCode, message, hostMessage)
+    : new GitRefused(code, message, hostMessage);
+}
+
 /**
  * A remote on this device (#174 review, F9): a path, `file://`, or a host that is the loopback
  * (`localhost`, `127.x.x.x`, `::1`). The network being down says nothing about reaching it, so

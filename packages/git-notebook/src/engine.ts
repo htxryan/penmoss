@@ -51,7 +51,7 @@ import {
   type WithheldCopy,
 } from './replica';
 import { commitPurges } from './purge-check';
-import { GitTransportError, type GitTransport } from './transport';
+import { GitRefused, GitTransportError, type GitTransport } from './transport';
 import {
   ensureWriter,
   sha256Hex,
@@ -1235,7 +1235,7 @@ export class GitNotebookEngine {
     } catch (error) {
       // Main refused a copy whose original is deleted for good (A886): a Keep and sync whose
       // confirmation ran out. The copy is withheld again at the next sync, for the person.
-      if ((error as { code?: unknown }).code === 'purge_raced' && keptCopies.length > 0) {
+      if (error instanceof GitRefused && error.code === 'purge_raced' && keptCopies.length > 0) {
         replica.update({ keptCopies: [] });
       }
       throw error;

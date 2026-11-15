@@ -4,48 +4,14 @@
  * arguments (A855). The page never reaches a git host and never holds a token.
  */
 import {
-  GitTransportError,
+  GitRefused,
+  refusalError,
   type CommitInfo,
   type DirSnapshots,
-  type GitErrorCode,
   type GitTransport,
   type PushOutcome,
 } from '@penmoss/git-notebook';
-import type { DesktopGit, GitRefusal } from '../desktop/bridge';
-
-const GIT_CODES: ReadonlySet<string> = new Set<GitErrorCode>([
-  'auth',
-  'network',
-  'not_found',
-  'host_key',
-  'signing',
-  'protected',
-  'rules',
-  'refused',
-  'git_missing',
-  'timeout',
-  'redirected',
-  'git',
-]);
-
-/** A refusal that is not git's: a remote with a credential in it, or a notebook main did not know. */
-export class GitRefused extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-    readonly hostMessage?: string,
-  ) {
-    super(message);
-    this.name = 'GitRefused';
-  }
-}
-
-/** The error for a refusal from main: git's own as a GitTransportError (A824), else GitRefused. */
-export function refusalError(refusal: GitRefusal): Error {
-  return GIT_CODES.has(refusal.code)
-    ? new GitTransportError(refusal.code as GitErrorCode, refusal.message, refusal.hostMessage)
-    : new GitRefused(refusal.code, refusal.message, refusal.hostMessage);
-}
+import type { DesktopGit } from '../desktop/bridge';
 
 export class IpcGitTransport implements GitTransport {
   constructor(
@@ -58,7 +24,10 @@ export class IpcGitTransport implements GitTransport {
   private async call<T>(op: string, ...args: unknown[]): Promise<T> {
     const answer = await this.git.op(this.localId, op, args);
     if (!answer) throw new GitRefused('unavailable', 'This window cannot reach git.');
-    if (!answer.ok) throw refusalError(answer.error);
+    // git's own refusal as a GitTransportError (A824), main's checks' as GitRefused.
+    if (!answer.ok) {
+      throw refusalError(answer.error.code, answer.error.message, answer.error.hostMessage);
+    }
     return answer.value as T;
   }
 
