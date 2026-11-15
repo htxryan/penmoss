@@ -4,6 +4,8 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
+    // InMemorySyncStore, the sync store engine-git's cross-engine tests also run on (A10).
+    `java-test-fixtures`
 }
 
 kotlin {
@@ -37,8 +39,6 @@ dependencies {
     api(libs.coroutines.core)
     api(libs.serialization.json)
     api(libs.okhttp)
-    // Git notebooks on Android (T50 G7, A824, A870).
-    implementation(libs.jgit)
 
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
@@ -47,10 +47,10 @@ dependencies {
 
 /**
  * What the tests read beyond their classpath (architecture review A8), declared so the build cache
- * never hands back a pass from before a change: the contracts the TypeScript side writes, every
- * Kotlin source `NoYjsInKotlinTest` scans (the app module's too), and the engine page and CLI the
- * cross-engine tests run. Their contents are the inputs; their paths are not, so another
- * worktree's checkout hits the same cache entry.
+ * never hands back a pass from before a change: the contracts the TypeScript side writes and every
+ * Kotlin source `NoYjsInKotlinTest` scans (the app's and engine-git's too). Their contents are the
+ * inputs; their paths are not, so another worktree's checkout hits the same cache entry. The engine
+ * page and CLI the cross-engine tests run are engine-git's inputs (A10).
  */
 abstract class EngineTestArguments : CommandLineArgumentProvider {
     @get:InputDirectory
@@ -61,16 +61,9 @@ abstract class EngineTestArguments : CommandLineArgumentProvider {
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val kotlinSources: ConfigurableFileCollection
 
-    @get:InputFiles
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val gitRunner: ConfigurableFileCollection
-
     /** Where the scanned sources are found: their contents are the input, not this path. */
     @get:Internal
     abstract val androidRoot: DirectoryProperty
-
-    @get:Internal
-    abstract val runner: RegularFileProperty
 
     /** Test repositories go under build/, not the shared machine's /tmp (never fill /tmp). */
     @get:Internal
@@ -82,9 +75,6 @@ abstract class EngineTestArguments : CommandLineArgumentProvider {
         "-Dpenmoss.contract=${contracts.get().file("bridge-v1.json").asFile.absolutePath}",
         // The Kotlin sources the "never reads Yjs" check scans.
         "-Dpenmoss.androidRoot=${androidRoot.get().asFile.absolutePath}",
-        // The engine page and the CLI under Node, for the cross-engine tests (T50 G7, A878): built
-        // by `task android:editor` from the page's and the CLI's own sources.
-        "-Dpenmoss.gitRunner=${runner.get().asFile.absolutePath}",
     )
 }
 
@@ -101,10 +91,7 @@ tasks.test {
                     exclude("**/build/**", "**/.gradle/**", "**/node_modules/**")
                 },
             )
-            // A page changed alone runs the tests again, never "up to date" on the old one.
-            gitRunner.from(root.dir("build/git-runner"))
             androidRoot.set(root)
-            runner.set(root.file("build/git-runner/git-runner.mjs"))
             this.scratch.set(scratch)
         },
     )

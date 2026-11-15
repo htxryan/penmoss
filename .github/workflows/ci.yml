@@ -413,6 +413,7 @@ jobs:
           name: android-test-reports
           path: |
             apps/android/engine-bridge/build/reports/tests/
+            apps/android/engine-git/build/reports/tests/
             apps/android/app/build/reports/tests/
           retention-days: 7
 

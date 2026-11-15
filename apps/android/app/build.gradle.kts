@@ -237,6 +237,7 @@ tasks.matching { it.name == "bundleRelease" || it.name == "assembleRelease" }.co
 
 dependencies {
     implementation(project(":engine-bridge"))
+    implementation(project(":engine-git"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.foundation)

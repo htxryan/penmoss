@@ -425,12 +425,12 @@ tasks:
       - sh scripts/proof.sh {{.CLI_ARGS}}
 
   android:test:
-    desc: 'Android: JVM tests of the sync engine and bridge, and Robolectric tests of the app (Room, Compose UI)'
+    desc: 'Android: JVM tests of the sync engine and bridge and of the git engine, and Robolectric tests of the app (Room, Compose UI)'
     deps: [android:editor]
     dir: apps/android
     env: *android-env
     cmds:
-      - ./gradlew --console=plain :engine-bridge:test :app:testDebugUnitTest :app:assembleDebugAndroidTest {{.CLI_ARGS}}
+      - ./gradlew --console=plain :engine-bridge:test :engine-git:test :app:testDebugUnitTest :app:assembleDebugAndroidTest {{.CLI_ARGS}}
 
   android:release:
     desc: 'Android: the signed App Bundle for Play internal testing (needs the PENMOSS_KEY* signing settings; docs/android.md)'
