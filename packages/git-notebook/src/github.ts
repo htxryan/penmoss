@@ -45,7 +45,6 @@ export const COMPARE_FILE_LIMIT = 300;
 /** Commits one `log` call reads at most when it is given no limit. */
 export const LOG_MAX_COMMITS = 1000;
 const PAGE = 100;
-const OLD_TREES = 16;
 
 interface TreeEntry {
   readonly path: string;
@@ -85,8 +84,6 @@ export class GitHubTransport implements GitTransport {
   private readonly blobs = new Map<string, Uint8Array>();
   private listed: Listed | null = null;
   private readonly trees = new Map<string, string>();
-  /** Recent trees History read (tree id → path → blob id), newest last. */
-  private readonly oldTrees = new Map<string, ReadonlyMap<string, string>>();
   readonly stats = { requests: 0, blobReads: 0 };
 
   constructor(private readonly options: GitHubTransportOptions) {
@@ -411,18 +408,5 @@ export class GitHubTransport implements GitTransport {
       }
     }
     return [...seen.values()].sort((a, b) => b.at - a.at).slice(0, limit);
-  }
-
-  async readAt(commit: string, path: string): Promise<Uint8Array | null> {
-    const tree = await this.treeOf(commit);
-    let files = this.oldTrees.get(tree);
-    if (!files) {
-      const data = await this.json<{ tree: TreeEntry[] }>(`/git/trees/${tree}?recursive=1`);
-      files = new Map(data.tree.filter((e) => e.type === 'blob').map((e) => [e.path, e.sha]));
-      this.oldTrees.set(tree, files);
-      if (this.oldTrees.size > OLD_TREES) this.oldTrees.delete(this.oldTrees.keys().next().value!);
-    }
-    const sha = files.get(path);
-    return sha ? this.blob(sha) : null;
   }
 }

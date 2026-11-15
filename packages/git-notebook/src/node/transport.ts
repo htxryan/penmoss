@@ -130,7 +130,7 @@ export class NodeGitTransport implements GitTransport {
    * clone's config (`config.lock`), and on its refs, refuses a second writer rather than waiting,
    * so two at once could fail. The calls that write the clone's refs or config (init, fetch,
    * commit, push, gc, the target check) queue per clone, across transports in this process; a
-   * `cancel` stops the queued ones too. Reads (list, read, sizes, changed, log, readAt, head,
+   * `cancel` stops the queued ones too. Reads (list, read, sizes, changed, log, readDir, head,
    * storeBytes) never queue (#174 review): History and Status do not wait for a fetch. A blob a
    * read lacks is fetched into the object store, which never touches a ref or the config.
    */
@@ -667,19 +667,6 @@ export class NodeGitTransport implements GitTransport {
           message: message.join('\x1f').trimEnd(),
         };
       });
-  }
-
-  readAt(commit: string, path: string): Promise<Uint8Array | null> {
-    return this.readAtNow(commit, path);
-  }
-
-  private async readAtNow(commit: string, path: string): Promise<Uint8Array | null> {
-    const result = await this.git(['rev-parse', '--verify', '--quiet', `${commit}:${path}`], {
-      ok: [0, 1, 128],
-    });
-    if (result.code !== 0) return null;
-    const id = result.stdout.toString('utf8').trim();
-    return (await this.blobs([id])).get(id) ?? null;
   }
 
   /** Housekeeping after a sync (G0: a clone grew to 91 MB unpacked over 1,000 commits). */

@@ -15,6 +15,7 @@ import {
   NotebookOps,
 } from '@penmoss/git-notebook';
 import { lockNotebook } from '@penmoss/git-notebook/node';
+import { MAX_ATTACHMENT_BYTES } from '@penmoss/core/attachments';
 import { notebookTag, shortNoteRef } from '@penmoss/core/note-ref';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { memoryTokenStore } from '../src/memory-store';
@@ -186,6 +187,26 @@ describe('penmoss notebook', () => {
     expect(history.code).toBe(0);
     expect((history.json()['versions'] as unknown[]).length).toBeGreaterThan(0);
     expect((await cli(['ls', '--notebook', 'nope'])).code).toBe(4);
+  });
+
+  it('attaches a file of 50 MB, as the app does, and refuses one byte more (A1533)', async () => {
+    const cli = machine('m');
+    await cli(['notebook', 'add', remote('big'), '--name', 'nb']);
+    const nb = ['--notebook', 'nb', '--no-sync'];
+    expect((await cli(['new', 'Scans', '--text', 'x', ...nb])).code).toBe(0);
+    // A PDF's first bytes, then zeros: the largest file Penmoss keeps.
+    const file = Buffer.alloc(MAX_ATTACHMENT_BYTES);
+    file.write('%PDF-1.7\n');
+    const largest = join(root.path, 'scan.pdf');
+    writeFileSync(largest, file);
+    const kept = await cli(['attach', 'Scans', largest, ...nb, '--json']);
+    expect(kept.code, kept.stderr).toBe(0);
+    expect(kept.json()).toMatchObject({ added: true, bytes: MAX_ATTACHMENT_BYTES });
+    const over = join(root.path, 'over.pdf');
+    writeFileSync(over, Buffer.concat([file, Buffer.from([1])]));
+    const refused = await cli(['attach', 'Scans', over, ...nb]);
+    expect(refused.code).toBe(7);
+    expect(refused.stderr).toContain('Penmoss keeps files of at most 50 MB');
   });
 
   it('takes a token only from stdin, and says so when one is put on the command line', async () => {

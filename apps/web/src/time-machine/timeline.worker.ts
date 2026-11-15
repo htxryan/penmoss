@@ -43,7 +43,6 @@ function transportFor(root: string): GitTransport {
     changed: refused,
     commit: refused,
     push: refused,
-    readAt: refused,
   };
 }
 
