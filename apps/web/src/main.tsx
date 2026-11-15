@@ -26,7 +26,7 @@ import './search/search.css';
 import './feedback/feedback.css';
 import './theme/theme.css';
 import { hasTabs, isNoteWindowPath, navigate, openPath, startHistory } from './router';
-import { openNoteWindow } from './window/open';
+import { openNoteWindow, setStoreBeforeNoteWindow } from './window/open';
 import { StorePuller, storeSync } from './window/store-sync';
 import { browserThemeEnvironment, ThemeController } from './theme/controller';
 import { ThemeProvider } from './theme/ThemeProvider';
@@ -119,6 +119,15 @@ bridge?.onBeforeClose(async (reason) => {
   // The other windows hear this window's last writes before it goes (before `saved`).
   windows.flush();
 });
+
+// A note window reads its note from the store: this window's last keystrokes go there first,
+// and the other windows hear of them (A1591).
+if (bridge) {
+  setStoreBeforeNoteWindow(async () => {
+    await sources.store('flush');
+    windows.flush();
+  });
+}
 
 // Send feedback (T49): its outbox sends what waits, here and when back online. Its sync facts
 // are the Journal notebook's (the app's own, A827).

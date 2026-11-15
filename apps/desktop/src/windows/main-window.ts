@@ -92,8 +92,9 @@ export function createMainWindow(path = '/'): BrowserWindow {
   window.on('closed', () => {
     if (state.saveMainState === saveNow) state.saveMainState = null;
     // Note windows stay open (A712). Elsewhere the app ends with its last window; a Mac keeps
-    // it running (the capture hotkey). Not while the windows open again (A724).
-    if (!mac && !state.reopening && windows.notes().length === 0) app.quit();
+    // it running (the capture hotkey). Not while the windows open again (A724), nor when a new
+    // main window opened while this one stored and pushed out of sight (A1577): it is not the last.
+    if (!mac && !state.reopening && !windows.main && windows.notes().length === 0) app.quit();
   });
   void window.loadURL(`${PAGE_ORIGIN}${path}`);
   return window;
