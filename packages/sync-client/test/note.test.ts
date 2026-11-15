@@ -1,13 +1,6 @@
 import * as Y from '@y/y';
 import { describe, expect, it } from 'vitest';
-import {
-  initNote,
-  isoWithOffset,
-  readIdentity,
-  readNoteNotebook,
-  readTitle,
-  setTitle,
-} from '../src/note';
+import { initNote, isoWithOffset, readIdentity, readTitle, setTitle } from '../src/note';
 
 function sync(a: Y.Doc, b: Y.Doc) {
   Y.applyUpdate(b, Y.encodeStateAsUpdate(a, Y.encodeStateVector(b)));
@@ -67,20 +60,5 @@ describe('note layout', () => {
     expect(isoWithOffset(new Date(2026, 9, 22, 9, 5, 7))).toMatch(
       /^2026-10-22T09:05:07[+-]\d{2}:\d{2}$/,
     );
-  });
-});
-
-describe('the notebook a note records (T43, A766)', () => {
-  it('is read from what creation set, and is not part of the identity', () => {
-    const doc = new Y.Doc();
-    expect(readNoteNotebook(doc)).toBeNull();
-    initNote(doc, {
-      id: 'n1',
-      created: '2026-10-22T09:00:00-05:00',
-      kind: 'note',
-      notebook: 'work',
-    });
-    expect(readNoteNotebook(doc)).toBe('work');
-    expect(readIdentity(doc)).not.toHaveProperty('notebook');
   });
 });

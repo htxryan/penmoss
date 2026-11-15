@@ -207,8 +207,6 @@ export async function transfer(options: {
       id: note.copyId,
       title: note.title,
       now: now(),
-      // Another git notebook's folders say nothing of the original's notebook record.
-      notebook: null,
       links,
       tags,
     });

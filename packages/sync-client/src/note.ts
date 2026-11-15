@@ -5,8 +5,8 @@
  * - `title`: the title as plain text, so concurrent title edits merge by character.
  * - `meta`: attributes `id`, `created` (ISO 8601), `kind`, for periodic
  *   notes `period`, and `deleted` (soft delete, restorable). Later tasks add
- *   tags and aliases here. `notebook` (T43, A766) is the notebook a note made
- *   before A1449 recorded; nothing sets it now, and a copy carries it.
+ *   tags and aliases here. A note made before A1449 may also hold `notebook`
+ *   (T43, A766), which nothing reads and a copy leaves behind.
  *
  * `updated` is not stored in the document (it would change on every
  * keystroke); a record keeps it beside the document.
@@ -15,8 +15,6 @@ import * as Y from '@y/y';
 
 export const NOTE_TITLE = 'title';
 export const NOTE_META = 'meta';
-/** The meta attribute holding the note's notebook (T43, A766). */
-export const NOTE_NOTEBOOK = 'notebook';
 
 export type NoteKind = 'note' | 'daily' | 'weekly';
 
@@ -26,14 +24,6 @@ export interface NoteIdentity {
   readonly created: string;
   readonly kind: NoteKind;
   readonly period?: string | undefined;
-  /** The note's notebook (T43, A766): its folder id, or `default`. */
-  readonly notebook?: string | undefined;
-}
-
-/** The note's own record of its notebook (T43, A766), or null for a note made before it. */
-export function readNoteNotebook(doc: Y.Doc): string | null {
-  const value: unknown = doc.get(NOTE_META).getAttr(NOTE_NOTEBOOK);
-  return typeof value === 'string' && value !== '' ? value : null;
 }
 
 /** The title as plain text (no line breaks). */
@@ -92,7 +82,6 @@ export function initNote(
     meta.setAttr('created', identity.created);
     meta.setAttr('kind', identity.kind);
     if (identity.period) meta.setAttr('period', identity.period);
-    if (identity.notebook) meta.setAttr(NOTE_NOTEBOOK, identity.notebook);
     if (title) setTitle(doc, title);
   }, origin);
 }

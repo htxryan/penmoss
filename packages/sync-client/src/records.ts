@@ -12,7 +12,6 @@ import {
   initNote,
   isDeleted,
   isoWithOffset,
-  readNoteNotebook,
   readTitle,
   readTrashInfo,
   setDeleted,
@@ -140,13 +139,7 @@ export function conflictCopy(
   try {
     const title = (readTitle(source).trim() || 'Untitled') + CONFLICT_SUFFIX;
     copy.transact(() => {
-      // In the original's notebook (T43, A766): its record goes with it.
-      const notebook = readNoteNotebook(source);
-      initNote(
-        copy,
-        { id, created: isoWithOffset(now), kind: 'note', ...(notebook ? { notebook } : {}) },
-        title,
-      );
+      initNote(copy, { id, created: isoWithOffset(now), kind: 'note' }, title);
       copy.get(NOTE_ROOT).applyDelta(source.get(NOTE_ROOT).toDeltaDeep());
     });
     return recordFromDoc(id, copy, { unsynced: true, updatedAt: now.getTime() });
@@ -161,11 +154,6 @@ export interface NoteCopyOptions {
   readonly title: string;
   readonly id?: string;
   readonly now?: Date;
-  /**
-   * The copy's notebook record (T43, A766): undefined keeps the original's, null leaves none,
-   * as for a note going to another git notebook, whose folders say nothing of the original's.
-   */
-  readonly notebook?: string | null;
   /** Links to notes copied with it: each original id to its copy's (T68, #230). */
   readonly links?: ReadonlyMap<string, string>;
   /**
@@ -218,13 +206,8 @@ export function copyNote(state: Uint8Array, options: NoteCopyOptions): NoteRecor
   const source = docOf([state]);
   const copy = new Y.Doc();
   try {
-    const notebook = options.notebook === undefined ? readNoteNotebook(source) : options.notebook;
     copy.transact(() => {
-      initNote(
-        copy,
-        { id, created: isoWithOffset(now), kind: 'note', ...(notebook ? { notebook } : {}) },
-        options.title,
-      );
+      initNote(copy, { id, created: isoWithOffset(now), kind: 'note' }, options.title);
       const meta = copy.get(NOTE_META);
       if (options.tags !== false) {
         for (const [key, value] of source.get(NOTE_META).attrEntries()) {
