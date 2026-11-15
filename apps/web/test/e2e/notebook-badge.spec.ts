@@ -374,3 +374,76 @@ test('a tab’s tooltip names its notebook and folders, and a notebook removed i
   await expect(left).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+/** Each icon badge's glyph colour beside its badge's own ink, both as computed `rgb()`. */
+async function iconInks(badges: Locator): Promise<Array<{ ink: string; drawn: string }>> {
+  return badges.evaluateAll((elements) =>
+    elements
+      .filter((badge) => badge.querySelector('svg'))
+      .map((badge) => {
+        const probe = document.createElement('span');
+        probe.style.color = 'var(--nb-badge-ink)';
+        badge.append(probe);
+        const ink = getComputedStyle(probe).color;
+        probe.remove();
+        return { ink, drawn: getComputedStyle(badge.querySelector('svg')!).color };
+      }),
+  );
+}
+
+test('an icon badge keeps its own ink on a selected or hovered row (Ryan, 15 Nov 2026)', async ({
+  page,
+  host,
+}) => {
+  test.setTimeout(120_000);
+  const errors = collectErrors(page);
+  await host.seed({ name: 'Penmoss', notes: [{ title: `Roadmap ${RUN}`, markdown: 'Tabs.' }] });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/');
+  const accent = await page.evaluate(() => {
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--pm-accent)';
+    document.body.append(probe);
+    const colour = getComputedStyle(probe).color;
+    probe.remove();
+    return colour;
+  });
+
+  // Penmoss: a star on red, as Ryan's Personal notebook had it.
+  await openNotebookSettings(page, 'Penmoss');
+  const group = page.getByTestId('git-panel-overview');
+  await group.getByTestId('badge-preset-red').click();
+  await group.getByTestId('badge-kind-icon').check();
+  await group.getByTestId('badge-icon-star').click();
+
+  // Its entry in Settings' nav is the selected one: the star stays in the badge's ink.
+  const entry = page
+    .getByTestId('settings-notebook-entry')
+    .filter({ hasText: 'Penmoss' })
+    .and(page.locator('[aria-current="page"]'));
+  await expect(entry.getByTestId('notebook-badge')).toHaveAttribute('data-glyph', 'icon:star');
+  const [selected] = await iconInks(entry.getByTestId('notebook-badge'));
+  expect(selected!.drawn).toBe(selected!.ink);
+  expect(selected!.drawn).not.toBe(accent);
+  // Hovered too, and every other badge on the page (the list's row, the heading, the preview).
+  await entry.hover();
+  for (const each of await iconInks(page.getByTestId('notebook-badge'))) {
+    expect(each.drawn).toBe(each.ink);
+  }
+
+  // The sidebar's row and the note's tab, selected.
+  await page.locator('.settings-bar .back-link').click();
+  const row = sidebarSection(page, 'Penmoss').getByRole('link', {
+    name: `Roadmap ${RUN}`,
+    exact: true,
+  });
+  await expect(row).toBeVisible({ timeout: 40_000 });
+  await row.click();
+  const tab = page.getByRole('tablist', { name: 'Open Tabs' }).getByRole('tab', { selected: true });
+  await expect(tab.getByTestId('notebook-badge')).toHaveAttribute('data-glyph', 'icon:star');
+  await sidebarBadge(page, 'Penmoss').hover();
+  const drawn = await iconInks(page.getByTestId('notebook-badge'));
+  expect(drawn.length).toBeGreaterThanOrEqual(2);
+  for (const each of drawn) expect(each.drawn).toBe(each.ink);
+  expect(errors).toEqual([]);
+});

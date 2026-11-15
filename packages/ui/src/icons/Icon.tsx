@@ -4,7 +4,7 @@
  * the current colour. Icons are always decorative here: the button or link
  * around one carries its name (`aria-label`, or visible text beside it).
  */
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 const dot = (cx: number, cy: number, r: number) => (
   <circle cx={cx} cy={cy} r={r} fill="currentColor" stroke="none" />
@@ -293,14 +293,18 @@ export function Icon({
   name,
   size = 16,
   className,
+  style,
 }: {
   readonly name: IconName;
   readonly size?: number;
   readonly className?: string;
+  /** Inline style, for an icon whose look no container may change (a notebook's badge). */
+  readonly style?: CSSProperties;
 }) {
   return (
     <svg
       className={className ? `i ${className}` : 'i'}
+      style={style}
       viewBox="0 0 24 24"
       width={size}
       height={size}
