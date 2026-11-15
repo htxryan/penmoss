@@ -47,9 +47,6 @@ export class MemorySecrets implements WriterSecrets {
   }
 }
 
-/** The SHA-256 of a writer's secret, as `writers.json` keeps it (core's `sha256HexText`). */
-export const sha256Hex = sha256HexText;
-
 function newSecret(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
@@ -66,7 +63,7 @@ export async function ensureWriter(
   newId: () => string = ulid,
 ): Promise<{ writer: WriterRecord; fresh: boolean; previous: string | null }> {
   const secret = await secrets.get();
-  if (current && secret && current.secretHash === (await sha256Hex(secret))) {
+  if (current && secret && current.secretHash === (await sha256HexText(secret))) {
     const writer =
       current.label === who.label && current.kind === who.kind
         ? current
@@ -76,7 +73,12 @@ export async function ensureWriter(
   const next = newSecret();
   await secrets.set(next);
   return {
-    writer: { id: newId(), secretHash: await sha256Hex(next), kind: who.kind, label: who.label },
+    writer: {
+      id: newId(),
+      secretHash: await sha256HexText(next),
+      kind: who.kind,
+      label: who.label,
+    },
     fresh: true,
     previous: current?.id ?? null,
   };
