@@ -30,7 +30,7 @@ import app.penmoss.ui.settings.SectionScreen
 import kotlinx.coroutines.launch
 
 /**
- * Settings → About → GitHub Token (A1012): the person's own token, which Send feedback files the
+ * Settings → GitHub → Use a Token Instead… (A1012; PEN-146): the person's own token, which Send feedback files the
  * issue with. Saving checks it with GitHub first and says plainly what it found; a token GitHub
  * does not accept is not kept. Never shown again once saved, never logged.
  */
@@ -73,7 +73,7 @@ class GitHubTokenModel(
 }
 
 @Composable
-fun GitHubTokenRoute(graph: NotebookGraph, onBack: () -> Unit) {
+fun GitHubTokenRoute(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
     val store = graph.githubToken
     val model = remember(store) { GitHubTokenModel(store, graph.githubFeedback::checkToken, graph.githubFeedback.repo) }
     GitHubTokenScreen(
@@ -103,8 +103,8 @@ fun GitHubTokenScreen(
     val scope = rememberCoroutineScope()
     SectionScreen("GitHub Token", onBack) {
         Help(
-            "Send Feedback files the issue in $repo with your own GitHub token: a classic token with the public_repo scope or, as a collaborator, " +
-                "a fine-grained token for $repo with Issues and Contents (read and write). It stays on this phone, encrypted by the Android Keystore, and is kept when you sign out.",
+            "Instead of signing in, give Penmoss a token of your own. Send Feedback files the issue in $repo with it: a classic token with the public_repo scope or, as a collaborator, " +
+                "a fine-grained token for $repo with Issues and Contents (read and write). It stays on this phone, encrypted by the Android Keystore.",
         )
         Text(
             when {

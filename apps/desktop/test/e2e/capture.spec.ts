@@ -213,10 +213,10 @@ test('captures to a new Inbox note offline and syncs it later; the default is Se
   const tag = `i${Date.now().toString(36)}`;
   const first = await start();
   const { remote } = await gitNotebook(first);
-  // Settings → Daily Notes chooses the default (A947; kept in the notebook's device settings,
-  // A827, so the app's dialog starts there too).
+  // Settings → Quick Capture chooses the default (A947, its own page since PEN-146; kept in the
+  // notebook's device settings, A827, so the app's dialog starts there too).
   const chooseDefault = async (page: Page, name: string) => {
-    await page.evaluate(() => window.history.pushState(null, '', '/settings/journal'));
+    await page.evaluate(() => window.history.pushState(null, '', '/settings/quick-capture'));
     await page.evaluate(() => window.dispatchEvent(new PopStateEvent('popstate')));
     const quick = page.getByTestId('capture-default-setting');
     await quick.getByText(name, { exact: true }).click();
@@ -413,8 +413,13 @@ test('a settings change made offline in the main window counts in the next captu
   await page.evaluate(() => window.history.pushState(null, '', '/settings/journal'));
   await page.evaluate(() => window.dispatchEvent(new PopStateEvent('popstate')));
   const settings = page.getByTestId('journal-settings');
-  await settings.getByLabel('Time zone').selectOption(zone);
-  await expect(settings).toContainText(`Today is ${day} in ${zone}`);
+  // The time zone picker (PEN-146): searched by the zone's name, Return chooses it.
+  await settings.getByRole('button', { name: /^Time Zone/ }).click();
+  const picker = page.getByTestId('time-zone-picker');
+  await picker.getByRole('combobox', { name: 'Time Zone' }).fill(zone);
+  await expect(picker.getByRole('option').first()).toHaveAttribute('data-zone', zone);
+  await page.keyboard.press('Enter');
+  await expect(settings.getByTestId('time-zone-setting')).toHaveAttribute('data-today', day);
 
   // At once, from the hotkey: the capture goes to that day's note.
   const next = await openCapture(app);
@@ -450,10 +455,11 @@ test('the capture hotkey changes only from Settings, and only to one A90 allows'
       .poll(() => runInMainPage(app, `document.querySelector('${selector}') !== null`, false))
       .toBe(true);
   await shows('button[data-command="note.new"]');
-  // To Settings → Keyboard shortcuts as a script would, with no key press or click yet.
+  // To Settings → Quick Capture as a script would, with no key press or click yet (PEN-146: the
+  // hotkey moved there from Keyboard Shortcuts).
   await runInMainPage(
     app,
-    `history.pushState(null, '', '/settings/shortcuts'); dispatchEvent(new PopStateEvent('popstate'))`,
+    `history.pushState(null, '', '/settings/quick-capture'); dispatchEvent(new PopStateEvent('popstate'))`,
     false,
   );
   await shows('[data-testid="capture-hotkey"]');
@@ -470,25 +476,29 @@ test('the capture hotkey changes only from Settings, and only to one A90 allows'
   expect(scripted).toMatchObject({ accelerator: original, error: /Settings/ });
   expect((await hooks(app)).accelerator).toBe(original);
 
-  const form = page.getByTestId('capture-hotkey');
-  const field = form.getByLabel('Quick capture from any app');
-  await expect(field).toHaveValue(original);
+  // Recorded by pressing the keys, as every shortcut in Settings is (PEN-146): Change, then keys.
+  const row = page.getByTestId('capture-hotkey');
+  await expect(row).toHaveAttribute('data-accelerator', original);
+  const record = async (keys: string) => {
+    await row.getByRole('button', { name: 'Change', exact: true }).click();
+    await expect(row.getByRole('status')).toContainText('Press keys');
+    await page.keyboard.press(keys);
+  };
   // Redo in every app (⌘⇧Z on a Mac, where ⌃⇧Z is free; Ctrl+Shift+Z elsewhere): refused.
-  await field.fill(mac ? 'Command+Shift+Z' : 'Control+Shift+Z');
-  await form.getByRole('button', { name: 'Save' }).click();
-  await expect(form.getByRole('status')).toContainText('Penmoss keeps it free');
+  await record(mac ? 'Meta+Shift+KeyZ' : 'Control+Shift+KeyZ');
+  await expect(row.getByRole('alert')).toContainText('Penmoss keeps it free');
+  await expect(row).toHaveAttribute('data-accelerator', original);
   expect((await hooks(app)).accelerator).toBe(original);
   // A free one with an F-key (A90 allows them): taken.
-  await field.fill('Control+Shift+F9');
-  await form.getByRole('button', { name: 'Save' }).click();
-  await expect(form.getByRole('status')).toContainText('Control+Shift+F9');
+  await record('Control+Shift+F9');
+  await expect(row).toHaveAttribute('data-accelerator', 'Control+Shift+F9');
+  await expect(row.getByRole('status')).toContainText('Quick Capture now opens with');
   expect(await hooks(app)).toMatchObject({ accelerator: 'Control+Shift+F9', registered: true });
   // And a free one with a letter, the one pressed below: xvfb on ubuntu-26.04 never hands an
   // F-key that xdotool presses to the hotkey's grab (Control+Shift+F8 and F9 never fired there,
   // Control+Shift+K and Space did, all registered the same way), so the real press is a letter's.
-  await field.fill('Control+Shift+J');
-  await form.getByRole('button', { name: 'Save' }).click();
-  await expect(form.getByRole('status')).toContainText('Control+Shift+J');
+  await record('Control+Shift+KeyJ');
+  await expect(row).toHaveAttribute('data-accelerator', 'Control+Shift+J');
   expect(await hooks(app)).toMatchObject({ accelerator: 'Control+Shift+J', registered: true });
 
   // Nor can the capture window, gesture or not.

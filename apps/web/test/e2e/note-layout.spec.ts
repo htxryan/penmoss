@@ -64,14 +64,14 @@ test('the note column: 52rem by default, the full window when asked, remembered'
     expect(strip).toBeGreaterThan(0);
     expect(await docWidth(page)).toBeGreaterThan(main - strip - 20);
 
-    // A synced setting: in the notebook's remote, after a reload, and in Settings → Appearance.
+    // A synced setting: in the notebook's remote, after a reload, and in Settings → Note.
     await widthStored(page, true);
     await widthSynced(host, seeded(notebook).remote, true);
     await page.reload();
     await expect(page.getByTestId('note-view')).toHaveAttribute('data-width', 'full');
-    await page.goto('/settings/appearance');
+    await page.goto('/settings/note');
     const setting = page.getByTestId('note-width-setting');
-    await expect(setting.getByRole('radio', { name: /Full Window Width/ })).toBeChecked();
+    await expect(setting.getByRole('radio', { name: /Full Window/ })).toBeChecked();
     // The segmented control's radios are hidden behind their labels: choose as a person would.
     await setting.locator('label', { hasText: 'The Theme’s' }).click();
     await expect(setting.getByRole('radio', { name: /The Theme’s/ })).toBeChecked();

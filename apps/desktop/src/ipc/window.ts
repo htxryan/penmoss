@@ -84,7 +84,7 @@ export function registerWindowIpc(
     if (!window || typeof value !== 'boolean') return null;
     return setCompactTitleBar(window, value);
   });
-  // The menu bar icon (T51 item 17, A945): read by Settings → Display in a main or note window,
+  // The menu bar icon (T51 item 17, A945): read by Settings → Quick Capture in a main or note window,
   // changed only just after a key press or click there.
   ipc.handle('menuBarIconGet', () => state.preferences.menuBarIcon !== false);
   ipc.handle('menuBarIconSet', (_call, value) =>
@@ -104,7 +104,7 @@ export function registerWindowIpc(
     if (pins) setQuickAccess(pins);
   });
   ipc.handle('captureHotkey', () => currentHotkey());
-  // Only Settings → Keyboard Shortcuts, after a key press or click: from a main or note
+  // Only Settings → Quick Capture, after a key press or click: from a main or note
   // window's app frame (A712; Settings shows in the main window), never the capture window.
   ipc.handle('captureSetHotkey', ({ event, gesture }, value) => {
     if (typeof value !== 'string' || value.length > 100) return null;

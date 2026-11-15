@@ -44,6 +44,7 @@ import { appVersion } from './open';
 import type { Attempt } from './outbox';
 import { problemsOf, sizeProblem, type Problems } from './problems';
 import { useFeedbackDraft } from './draft';
+import { FeedbackOutbox } from './FeedbackOutbox';
 import { useFeedbackService } from './service';
 import type { OutboxEntry, OutboxError } from './store';
 
@@ -420,6 +421,18 @@ function FeedbackForm({
                 Files an issue on the Penmoss board for Ryan. It says where you are in the app and
                 what is on screen, never what your notes say.
               </p>
+              {/* Reports not sent yet wait here, where they were written (PEN-146). */}
+              <FeedbackOutbox
+                feedback={feedback}
+                onEdit={async (entryId) => {
+                  // The form's own draft must not be written over the one Edit reads back.
+                  draft.keeping(false);
+                  const result = await feedback.editEntry(entryId);
+                  if (result === 'ok') onReopen();
+                  else draft.keeping(true);
+                  return result;
+                }}
+              />
               <fieldset
                 className="feedback-choice"
                 aria-describedby={problems.type ? `${id}-type-error` : undefined}
@@ -853,8 +866,8 @@ function FeedbackOutcome({
         </p>
       ) : status.kind === 'failed' ? (
         <p role="alert" data-testid="feedback-failed">
-          Not sent: {status.error.message.replace(/\.$/, '')}. It’s kept in Settings → Status, where
-          you can edit, retry or discard it.
+          Not sent: {status.error.message.replace(/\.$/, '')}. It waits under Waiting to Send in
+          this form, where you can edit, retry or discard it.
         </p>
       ) : null}
       <div className="row">

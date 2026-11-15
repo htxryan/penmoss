@@ -1,0 +1,70 @@
+package app.penmoss.ui.settings
+
+import app.penmoss.ui.keys.CommandRoutes
+
+/**
+ * Settings → Search Settings on the phone (PEN-146): every setting a person can look for, by its
+ * label, its help or another word for it ("dark", "token", "hotkey"), and the screen it is on.
+ * The ids are the rows' labels in kebab case, as the Mac's `data-setting` ids are.
+ */
+data class SettingEntry(
+    val id: String,
+    val label: String,
+    /** The screen's name, as its row in Settings says it. */
+    val section: String,
+    val route: String,
+    val help: String? = null,
+    val aliases: List<String> = emptyList(),
+)
+
+private fun entry(label: String, section: String, route: String, help: String? = null, vararg aliases: String) =
+    SettingEntry(label.lowercase().replace('’', '-').replace(Regex("[^a-z0-9]+"), "-").trim('-'), label, section, route, help, aliases.toList())
+
+/** Every setting on the phone's Settings, screen by screen in the list's order. */
+val SETTINGS_INDEX: List<SettingEntry> = listOf(
+    entry("Mode", "Appearance", SettingsRoutes.APPEARANCE, "Light, dark or the phone’s own", "dark", "light", "night", "system"),
+    entry("Theme", "Appearance", SettingsRoutes.APPEARANCE, "Penmoss, Paper, Slate, Nord and your own", "colours", "colors", "palette"),
+    entry("Customize Theme", "Appearance", SettingsRoutes.APPEARANCE, "Your own copy of a theme, its colours and fonts", "theme editor", "custom theme", "duplicate"),
+    entry("Interface Font", "Appearance", SettingsRoutes.APPEARANCE, "The app’s own text", "typeface"),
+    entry("Note Font", "Appearance", SettingsRoutes.APPEARANCE, "Your notes’ text", "typeface"),
+    entry("Note Font Size", "Appearance", SettingsRoutes.APPEARANCE, "12 to 28 px", "text size", "bigger", "smaller"),
+    entry("Note Width", "Appearance", SettingsRoutes.APPEARANCE, "The theme’s width or the full width", "full width", "wide"),
+    entry("Shortcuts on Home", "Home", SettingsRoutes.DISPLAY, "Tags, Today, This Week, Graph and Commands", "hide", "sidebar", "buttons"),
+    entry("Sections", "Home", SettingsRoutes.DISPLAY, "Quick Access, Recent Notes and Notebooks, in your order", "reorder", "sidebar"),
+    entry("Show Notebook Names", "Home", SettingsRoutes.DISPLAY, "In Quick Access", "quick access"),
+    entry("Recent Notes", "Home", SettingsRoutes.DISPLAY, "How many Home lists", "recent count"),
+    entry("Symbols", "Symbols", SettingsRoutes.SYMBOLS, "Mark a line with a symbol at its start", "line symbols", "glyph", "emoji", "star"),
+    entry("Restore Default Symbols", "Symbols", SettingsRoutes.SYMBOLS, null, "reset symbols"),
+    entry("Time Zone", "Daily Notes", SettingsRoutes.DAILY, "Which day today is", "timezone", "zone", "clock"),
+    entry("Daily Template", "Daily Notes", SettingsRoutes.DAILY, "What a new daily note starts with", "journal", "today"),
+    entry("Weekly Template", "Daily Notes", SettingsRoutes.DAILY, "What a new weekly note starts with", "journal", "week"),
+    entry("Saves To", "Quick Capture", SettingsRoutes.CAPTURE, "Today’s note or a new note in Inbox", "capture", "inbox", "share", "widget", "tile"),
+    entry("Keyboard Shortcuts", "Keyboard Shortcuts", CommandRoutes.SHORTCUTS, "For a hardware keyboard", "keys", "hotkey", "keybindings"),
+    entry("All Notebooks", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "The notebooks on this phone", "git", "repository", "repo"),
+    entry("Add Notebook", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "From a private GitHub repository", "new notebook", "clone", "repository"),
+    entry("Primary Notebook", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "Holds your journal, Inbox and these settings", "journal notebook", "default notebook"),
+    entry("Copy Tags When Copying Notes", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "Copy to Notebook’s starting choice", "between notebooks"),
+    entry("Commits From This Phone", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "Your commit name, email and signing key", "git identity", "author", "email", "signing key", "ssh"),
+    entry("Background Sync", "All Notebooks", CommandRoutes.GIT_NOTEBOOKS, "About every 15 minutes while the app is closed", "battery", "doze"),
+    entry("Agent Activity", "Agent Activity", SettingsRoutes.AGENT_ACTIVITY, "What agents changed, with Undo", "agents", "undo", "mcp", "cli"),
+    entry("Files and Pictures in Notes", "Storage", SettingsRoutes.STORAGE, "The space they take on this phone", "attachments", "space", "disk"),
+    entry("Pictures From the Web", "Storage", SettingsRoutes.STORAGE, "Kept to show again; Clear empties them", "cache", "images"),
+    entry("Load Pictures From the Web", "Storage", SettingsRoutes.STORAGE, "Always, On Wi-Fi or Never", "privacy", "images", "mobile data", "wifi"),
+    entry("GitHub", "GitHub", SettingsRoutes.GITHUB, "Your GitHub account on this phone", "account", "sign in", "sign out", "login"),
+    entry("GitHub Token", "GitHub", SettingsRoutes.GITHUB, "Use a token instead of signing in", "token", "personal access token", "pat"),
+    entry("Send Feedback", "GitHub", SettingsRoutes.GITHUB, "Files an issue with your GitHub account", "bug", "report", "feature request", "outbox"),
+    entry("What’s New", "What’s New", SettingsRoutes.WHATS_NEW, "This version and earlier ones", "version", "release notes", "changelog", "update"),
+)
+
+/**
+ * What a search finds (PEN-146): every word typed must be in the label, the help, the screen's
+ * name or another word for it. A label's matches come first, then the rest in the list's order.
+ */
+fun searchSettings(index: List<SettingEntry>, query: String): List<SettingEntry> {
+    val words = query.trim().lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
+    if (words.isEmpty()) return emptyList()
+    fun haystack(entry: SettingEntry) = (listOf(entry.label, entry.section, entry.help.orEmpty()) + entry.aliases).joinToString(" ").lowercase().replace('’', '\'')
+    val found = index.filter { entry -> val text = haystack(entry); words.all { it.replace('’', '\'') in text } }
+    val (labelled, rest) = found.partition { entry -> words.all { it in entry.label.lowercase() } }
+    return labelled + rest
+}

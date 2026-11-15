@@ -7,7 +7,7 @@ import { FontSettings } from '../../src/theme/FontSettings';
 import { WorkspaceContext } from '../../src/workspace/hooks';
 import type { Workspace } from '../../src/workspace/service';
 
-// T51 item 16 (A944): Settings → Appearance → Fonts writes font.interface, font.note and
+// T51 item 16 (A944): Settings → Appearance → Text writes font.interface, font.note and
 // font.noteSize through the workspace's settings, as the other synced settings do.
 
 let root: Root | null = null;
@@ -60,7 +60,7 @@ const setValue = (element: HTMLInputElement | HTMLSelectElement, value: string) 
     );
   });
 
-describe('Settings → Appearance → Fonts', () => {
+describe('Settings → Appearance → Text', () => {
   it('offers every preset, each in its own font, and Custom…, in the shared select', () => {
     render();
     const select = $<HTMLSelectElement>('[data-testid="interface-font"] select');
@@ -74,7 +74,11 @@ describe('Settings → Appearance → Fonts', () => {
       'ui-serif',
     );
     expect(select.value).toBe('theme');
-    expect($('[data-testid="note-font"] .font-sample').textContent).toContain('quick brown fox');
+    // Rows Search Settings finds, by their labels.
+    expect(
+      [...host.querySelectorAll('[data-setting]')].map((row) => row.getAttribute('data-setting')),
+    ).toEqual(['interface-font', 'note-font', 'note-font-size']);
+    expect(select.labels[0]!.textContent).toBe('Interface Font');
   });
 
   it('stores a preset, and the theme’s own as no setting', () => {
@@ -119,9 +123,25 @@ describe('Settings → Appearance → Fonts', () => {
     act(() => [...host.querySelectorAll<HTMLButtonElement>('button')].at(-1)!.click());
     expect(writes.at(-1)).toEqual(['font.noteSize', undefined]);
     expect($('[data-testid="note-size-value"]').textContent).toBe('16 px');
-    // The sample line is drawn at the size.
-    expect($<HTMLElement>('[data-testid="note-size-setting"] .font-sample').style.fontSize).toBe(
-      '16px',
+  });
+
+  it('tells the page the size while it is dragged, for the preview, and stores it once', () => {
+    const drafts: Array<number | null> = [];
+    act(() =>
+      root!.render(
+        <WorkspaceContext.Provider value={workspace}>
+          <FontSettings onSizeDraft={(size) => drafts.push(size)} />
+        </WorkspaceContext.Provider>,
+      ),
     );
+    const range = $<HTMLInputElement>('[data-testid="note-size"]');
+    setValue(range, '20');
+    expect(drafts).toEqual([20]);
+    expect(writes).toEqual([]);
+    act(() => {
+      range.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+    });
+    expect(writes).toEqual([['font.noteSize', 20]]);
+    expect(drafts).toEqual([20, null]);
   });
 });

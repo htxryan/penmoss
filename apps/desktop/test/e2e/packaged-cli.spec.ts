@@ -588,6 +588,9 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   const cliCard = page.getByTestId('git-cli');
   await expect(cliCard).toHaveAttribute('data-state', 'installed', { timeout: 30_000 });
   expect(readFileSync(SCRIPT, 'utf8')).toBe(cliScript([CLI_EXE, '--penmoss-cli']));
+  // On PATH, it is one line (PEN-146): Manage… opens the card.
+  const manage = cliCard.getByTestId('git-cli-manage');
+  if (await manage.isVisible()) await manage.click();
   await cliCard.locator('summary', { hasText: 'Without the command' }).click();
   const direct = cliCard.getByTestId('git-cli-direct');
   await direct.scrollIntoViewIfNeeded();
@@ -597,7 +600,8 @@ test('agents run the CLI bundle; Penmoss opens from the Dock and Finder while on
   // The notebook's automatic agent: claude mcp add and the Codex lines name the CLI bundle.
   const row = page.getByTestId('agents-notebook-row').filter({ hasText: 'Notes' });
   await expect(row).toBeVisible({ timeout: 30_000 });
-  const href = (await row.getAttribute('href'))!;
+  // Its address opens Agents with it unfolded (PEN-146).
+  const href = (await row.getAttribute('data-path'))!;
   const automatic = page.locator('[data-testid="git-local-agent"][data-name="notes-agent"]');
   await expect(async () => {
     // The list is read when the page opens: open it again until the app has made the copy.

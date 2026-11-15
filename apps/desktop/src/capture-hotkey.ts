@@ -26,7 +26,7 @@ let hotkey: HotkeyState = {
   certain,
 };
 
-/** Only Settings → Keyboard Shortcuts may change it, just after a key press or click. */
+/** Only Settings → Quick Capture may change it, just after a key press or click. */
 export const hotkeyGate = new HotkeyChangeGate();
 
 /** The hotkey as it is now. */

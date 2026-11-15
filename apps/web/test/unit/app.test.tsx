@@ -125,19 +125,51 @@ describe('App', () => {
   });
 
   it('lays Settings out with a way back and every section', () => {
-    for (const path of ['/settings', '/settings/journal', '/settings/status']) {
+    for (const path of ['/settings', '/settings/journal', '/settings/sidebar']) {
       const html = render(path);
       expect(html, path).toContain('data-command="app.home"');
       expect(html, path).toContain('aria-label="Settings sections"');
-      for (const href of ['/settings/shortcuts', '/settings/journal', '/settings/status']) {
+      expect(html, path).toContain('aria-label="Search Settings"');
+      for (const href of [
+        '/settings/appearance',
+        '/settings/sidebar',
+        '/settings/note',
+        '/settings/symbols',
+        '/settings/journal',
+        '/settings/quick-capture',
+        '/settings/shortcuts',
+      ]) {
         expect(html, path).toContain(`href="${href}"`);
       }
-      for (const gone of ['/settings/devices', '/settings/sync', '/settings/git-mirror']) {
+      for (const gone of [
+        '/settings/devices',
+        '/settings/sync',
+        '/settings/git-mirror',
+        '/settings/display',
+        '/settings/status',
+      ]) {
         expect(html, path).not.toContain(`href="${gone}"`);
       }
     }
-    expect(render('/settings/status')).toMatch(
-      /href="\/settings\/status" data-command="app.status" aria-current="page"/,
+    expect(render('/settings/sidebar')).toMatch(
+      /href="\/settings\/sidebar" data-command="app.display" aria-current="page"/,
+    );
+  });
+
+  // PEN-146: the nav in groups, each under its heading; without the Mac app's git, updates,
+  // meaning and GitHub sign-in, only Look and Feel and Writing.
+  it('groups the sections under their headings', () => {
+    const html = render('/settings');
+    const groups = [...html.matchAll(/class="settings-nav-heading">([^<]+)</g)].map(
+      ([, label]) => label,
+    );
+    expect(groups).toEqual(['Look and Feel', 'Writing']);
+  });
+
+  // PEN-146: Display became Sidebar and Status became GitHub; old links still land.
+  it('opens a renamed section’s old address on the new one', () => {
+    expect(render('/settings/display')).toMatch(
+      /href="\/settings\/sidebar" data-command="app.display" aria-current="page"/,
     );
   });
 
@@ -149,8 +181,8 @@ describe('App', () => {
     );
     expect(Object.fromEntries(icons)).toMatchObject({
       appearance: 'palette',
+      sidebar: 'panelL',
       journal: 'journal',
-      status: 'pulse',
     });
     expect(new Set(icons.map(([, icon]) => icon)).size).toBe(icons.length);
   });

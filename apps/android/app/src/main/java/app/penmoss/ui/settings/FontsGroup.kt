@@ -55,7 +55,6 @@ data class FontsUi(
 @Composable
 internal fun FontsGroup(fonts: FontsUi, enabled: Boolean) {
     var choosing by rememberSaveable { mutableStateOf<String?>(null) }
-    GroupTitle("Fonts")
     ListItem(
         headlineContent = { Text("Interface Font") },
         supportingContent = { Text(FontSettings.label(fonts.interfaceFont)) },

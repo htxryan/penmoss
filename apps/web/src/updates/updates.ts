@@ -3,6 +3,7 @@
  * reads. Main does the work (apps/desktop/src/updater.ts); UpdatesSettings.tsx shows it.
  */
 import { useEffect, useState } from 'react';
+import { pushedWords } from '../sources/repo-words';
 import {
   desktop,
   type DesktopReleaseNotes,
@@ -105,4 +106,30 @@ export function updateStatus(state: DesktopUpdateState): string {
         ? 'Penmoss checks for updates when it starts and every hour.'
         : 'Not checked yet.';
   }
+}
+
+/** The version card's chip: how this version stands, in two or three words. */
+export function updateChip(state: DesktopUpdateState): string | null {
+  switch (state.phase) {
+    case 'current':
+      return 'Up to Date';
+    case 'available':
+    case 'ready':
+      return 'Update Available';
+    case 'downloading':
+      return 'Downloading';
+    case 'checking':
+      return 'Checking';
+    case 'error':
+      return 'Couldn’t Check';
+    case 'idle':
+      return null;
+  }
+}
+
+/** "Stable · checked 5 minutes ago": the channel, and when main last asked. */
+export function checkedLine(state: DesktopUpdateState, now = Date.now()): string {
+  const channel = state.channel === 'alpha' ? 'Alpha' : 'Stable';
+  if (!state.checkedAt) return `${channel} · not checked yet`;
+  return `${channel} · checked ${pushedWords(new Date(state.checkedAt).toISOString(), now)}`;
 }

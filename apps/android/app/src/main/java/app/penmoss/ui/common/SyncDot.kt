@@ -97,7 +97,7 @@ fun SyncStateDot(dot: SyncDot, modifier: Modifier = Modifier) {
         Box(
             modifier
                 .minimumInteractiveComponentSize()
-                .clickable(onClickLabel = if (dot.onStopped != null) "Open Sync and Storage" else "Show Sync State") {
+                .clickable(onClickLabel = if (dot.onStopped != null) "Open the Notebook’s Sync" else "Show Sync State") {
                     val stopped = dot.onStopped
                     if (stopped != null) stopped() else scope.launch { tip.show() }
                 }

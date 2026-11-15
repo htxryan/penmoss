@@ -203,6 +203,6 @@ class FeedbackFormModel(
 
         fun failedMessage(status: Int?, message: String): String =
             // The web's words (T39 pass 3, A892).
-            "Not sent: ${message.trimEnd('.')}${status?.let { " ($it)" }.orEmpty()}. It’s kept in Settings → About, where you can edit, retry or discard it."
+            "Not sent: ${message.trimEnd('.')}${status?.let { " ($it)" }.orEmpty()}. It’s kept in Settings → GitHub, where you can edit, retry or discard it."
     }
 }

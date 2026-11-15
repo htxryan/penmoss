@@ -16,10 +16,10 @@ An agent's edits to a note are in that note's [Version History](/docs/history/) 
 
 ## Everything else: Agent Activity
 
-**Agent Activity** lists what agents changed outside the notes' text in the last 30 days: folders they made, renamed or moved, notes they moved, and settings they changed. Each entry names the agent and when, newest first, with **Undo**.
+**Agent Activity** lists what agents changed outside the notes' text in the last 30 days: folders they made, renamed or moved, notes they moved, and settings they changed. Each entry names the agent, the notebook and when, newest first, with **Undo**.
 
-- **On the Mac:** **Settings → Notebooks**, choose the notebook, then **Agent Activity**.
-- **On Android:** open the notebook's **Sync** screen and tap **Agent Activity**.
+- **On the Mac:** open **Settings → Agent Activity**, beside **Agents**. It lists every notebook's changes together. Use the two menus by the title to show one notebook (**All Notebooks** by default) or one agent (**All Agents**).
+- **On Android:** open **Settings → Agent Activity**. It lists every notebook's changes together, with a filter for one notebook, one agent or one kind of change.
 
 **Undo** is a change of your own, made on this device and synced like any other; the entry then says **Undone by** you. If something else changed the same thing since, such as a folder renamed again, Undo says so and changes nothing.
 

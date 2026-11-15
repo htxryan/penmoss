@@ -22,9 +22,8 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -60,13 +59,20 @@ import app.penmoss.engine.settings.LineSymbols
 import app.penmoss.ui.common.LocalSymbolColours
 import app.penmoss.ui.common.symbolColour
 
+/** A slot's key as the phone shows it (A747): its binding, or Alt+Shift+N; null with none. */
+fun symbolKeys(settings: kotlinx.serialization.json.JsonObject): List<String?> {
+    val bindings = app.penmoss.engine.keys.Bindings.of(app.penmoss.engine.keys.ShortcutCatalogue.bundled, settings)
+    return (1..LineSymbols.MAX).map { slot -> bindings.keysOf("editor.symbol$slot").firstOrNull()?.let(app.penmoss.engine.keys.Combos::format) }
+}
+
 /**
- * Settings → Symbols (T44, ST13, A747; T51, A939, A940): the person's line symbols, in shortcut
- * order, each its glyph in its colour. A row opens its glyph and colour to change; its arrows
- * move it to another slot; Add, Restore defaults and the keyboard shortcuts are below. Symbols go
- * by their glyph: Settings neither shows nor asks for a name, and a new one stores its glyph as
- * its name, so older builds still read the list. Every change is the web's rule-checked list,
- * synced like the theme. Nothing changes before the first sync has sent the settings.
+ * Settings → Symbols (T44, ST13, A747; T51, A939, A940; PEN-146 option A): the person's line
+ * symbols in shortcut order, each row its drag handle, its glyph in its colour in a box of one
+ * size, its colour's name and its keyboard key (rebound keys show as rebound), and Remove. A row
+ * opens its glyph and colour to change; dragging moves it to another slot (and so another key).
+ * Add with "N of 9" beside it, and Restore Defaults. Symbols go by their glyph: a new one stores
+ * its glyph as its name, so older builds still read the list. Every change is the web's
+ * rule-checked list, synced like the theme. Nothing changes before the settings are read.
  */
 @Composable
 fun SymbolsScreen(
@@ -78,6 +84,8 @@ fun SymbolsScreen(
     onReset: () -> Unit,
     onShortcuts: () -> Unit,
     onBack: () -> Unit,
+    /** Each slot's key, from the bindings; Alt+Shift+N where none is given. */
+    keys: List<String?> = (1..LineSymbols.MAX).map { "Alt+Shift+$it" },
 ) {
     // The slot being edited (a new one is `symbols.size`), or null.
     var editing by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -88,37 +96,36 @@ fun SymbolsScreen(
         return problem
     }
     SectionScreen("Symbols", onBack, notice = if (enabled) null else SETTINGS_WAIT) {
-        Help(
-            "Mark a line as important, a question, a follow-up, an idea or next with a symbol before it. " +
-                "Each is plain text at the start of the line (★ Call the bank), so the git mirror and agents see it too. " +
-                "Changes sync to your other devices.",
-        )
-        GroupTitle("Your symbols")
-        symbols.forEachIndexed { index, symbol ->
+        Help("Type a symbol at the start of a line to mark it, as plain text (★ Call the bank), so agents and the repository see it too. Up to ${LineSymbols.MAX}. Changes sync to your other devices.")
+        ReorderableColumn(
+            items = symbols.mapIndexed { index, symbol -> index to symbol },
+            key = { (_, symbol) -> symbol.glyph },
+            name = { (_, symbol) -> symbol.glyph },
+            enabled = enabled,
+            onMove = { from, to -> change(symbols.movedTo(from, to), "${symbols[from].glyph} is now symbol ${to + 1}.") },
+            modifier = Modifier.testTag("symbolList"),
+        ) { (index, symbol), _, handle ->
             ListItem(
                 leadingContent = {
-                    Text(
-                        symbol.glyph,
-                        color = symbolColour(symbol.colour),
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.width(36.dp).testTag("symbol-glyph-$index"),
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        handle()
+                        // One size for every glyph, so the column lines up (PEN-146).
+                        Box(
+                            Modifier.size(40.dp).border(1.dp, MaterialTheme.colorScheme.outlineVariant).testTag("symbol-glyph-$index"),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(symbol.glyph, color = symbolColour(symbol.colour), style = MaterialTheme.typography.titleLarge, maxLines = 1)
+                        }
+                    }
                 },
                 headlineContent = { Text(LineSymbols.colourLabel(symbol.colour)) },
-                supportingContent = { Text("Symbol ${index + 1}") },
+                supportingContent = { Text(keys.getOrNull(index) ?: "No key", Modifier.testTag("symbol-key-$index")) },
                 trailingContent = {
-                    Row {
-                        IconButton(
-                            onClick = { change(symbols.moved(index, -1), "${symbol.glyph} is now symbol $index.") },
-                            enabled = enabled && index > 0,
-                            modifier = Modifier.testTag("symbol-up-$index"),
-                        ) { Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move ${symbol.glyph} Up") }
-                        IconButton(
-                            onClick = { change(symbols.moved(index, 1), "${symbol.glyph} is now symbol ${index + 2}.") },
-                            enabled = enabled && index < symbols.size - 1,
-                            modifier = Modifier.testTag("symbol-down-$index"),
-                        ) { Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move ${symbol.glyph} Down") }
-                    }
+                    IconButton(
+                        onClick = { change(symbols.filterIndexed { at, _ -> at != index }, "Removed ${symbol.glyph}. Lines with ${symbol.glyph} show it as text.") },
+                        enabled = enabled,
+                        modifier = Modifier.testTag("symbol-delete-$index"),
+                    ) { Icon(Icons.Default.Close, contentDescription = "Remove ${symbol.glyph}") }
                 },
                 modifier = Modifier
                     .testTag("symbol-row-$index")
@@ -128,14 +135,19 @@ fun SymbolsScreen(
         if (symbols.isEmpty()) Help("No symbols: add one, or restore the defaults.")
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             OutlinedButton(
                 onClick = { editing = symbols.size },
                 enabled = enabled && symbols.size < LineSymbols.MAX,
                 modifier = Modifier.testTag("symbol-add"),
-            ) { Text("Add a Symbol") }
-            OutlinedButton(
+            ) { Text("+ Add a Symbol") }
+            Text("${symbols.size} of ${LineSymbols.MAX}", Modifier.testTag("symbol-count"), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Row(Modifier.padding(horizontal = 8.dp)) {
+            // Quiet, since it replaces the list (PEN-146).
+            TextButton(
                 onClick = {
                     onReset()
                     said = "Restored " + LineSymbols.DEFAULTS.joinToString(" ") { it.glyph } + "."
@@ -143,14 +155,10 @@ fun SymbolsScreen(
                 enabled = enabled && custom,
                 modifier = Modifier.testTag("symbol-reset"),
             ) { Text("Restore Defaults") }
+            TextButton(onClick = onShortcuts, modifier = Modifier.testTag("symbol-shortcuts")) { Text("Change Their Keys…") }
         }
-        ListItem(
-            headlineContent = { Text("Keyboard Shortcuts") },
-            supportingContent = { Text("With a hardware keyboard, Alt+Shift+1 to 9 toggle them; change their keys here") },
-            modifier = Modifier.testTag("symbol-shortcuts").clickable(onClick = onShortcuts),
-        )
         Text(
-            said ?: "Up to ${LineSymbols.MAX}. A glyph is a symbol or emoji without letters, digits or markdown characters.",
+            said ?: "A glyph is a symbol or emoji without letters, digits or markdown characters.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
@@ -182,9 +190,6 @@ fun SymbolsScreen(
         )
     }
 }
-
-private fun List<LineSymbol>.moved(index: Int, by: Int): List<LineSymbol> =
-    toMutableList().also { list -> list.add(index + by, list.removeAt(index)) }
 
 /** The colour chips' value for "any colour", until one is picked. */
 private const val CUSTOM = "custom"

@@ -24,6 +24,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
@@ -63,7 +64,7 @@ import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
 import app.penmoss.ui.common.PenmossTheme
 
-/** Settings on the phone (T40 P1): the home's sections, Appearance, Daily notes and Quick capture. */
+/** Settings on the phone (T40 P1; PEN-146): the list's groups and search, Appearance, Daily Notes and Quick Capture. */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class SettingsScreensTest {
@@ -72,52 +73,104 @@ class SettingsScreensTest {
 
     private val cards = ThemeCatalogue.bundled.builtIns.map { themeCard(it, custom = false) }
 
+    /** PEN-146: five captioned groups, each row with what it holds now (A415), the version once. */
     @Test
-    fun theHomeListsEverySectionWithWhatItHoldsNow() {
+    fun theHomeListsEveryGroupWithWhatEachRowHoldsNow() {
         val opened = mutableListOf<String>()
         val settings = Settings(JsonObject(mapOf(SettingKeys.MODE to JsonPrimitive("dark"), SettingKeys.CAPTURE to JsonPrimitive("inbox"))))
+        val notebooks = listOf(
+            NotebookEntry("n1", "Personal", primary = true, status = "Synced at 4:12 PM", dot = app.penmoss.ui.common.DotState.SYNCED),
+            NotebookEntry("n2", "Quanta", primary = false, status = "Synced at 4:09 PM", dot = app.penmoss.ui.common.DotState.OFFLINE),
+        )
         compose.setContent {
             PenmossTheme {
-                SettingsHome(settingsSections(settings, "Nord", "Synced at 3:42 PM", unsent = 1, version = "0.31 (build 431425)"), onOpen = { opened += it }, onBack = {})
+                SettingsHome(
+                    settingsGroups(settings, "Nord", notebooks = notebooks, storage = "79 MB", github = "htxryan", version = "0.9.3"),
+                    onOpen = { opened += it },
+                    onBack = {},
+                )
             }
         }
+        val list = compose.onNodeWithTag("settingsSections")
+        compose.onNodeWithText("Look and Feel").assertIsDisplayed()
         compose.onNodeWithText("Nord · Dark").assertIsDisplayed()
-        // Display, right after Appearance (T42 on Android, A650).
         compose.onNodeWithText("Every shortcut on Home").assertIsDisplayed()
-        // Then Symbols, its glyphs in order (T44, A747).
         compose.onNodeWithText("★ ? ! 💡 →").assertIsDisplayed()
         compose.onNodeWithTag("section-appearance").performClick()
-        compose.onNodeWithTag("section-display").performClick()
+        compose.onNodeWithTag("section-home").performClick()
         compose.onNodeWithTag("section-symbols").performClick()
-        val list = compose.onNodeWithTag("settingsSections")
-        // Then Git notebooks (T50 G7, A856).
-        list.performScrollToNode(hasText("Notes in a private GitHub repository"))
-        compose.onNodeWithTag("section-git").performClick()
+        list.performScrollToNode(hasText("Writing"))
         list.performScrollToNode(hasText("America/Chicago"))
-        compose.onNodeWithText("America/Chicago").assertIsDisplayed()
         list.performScrollToNode(hasText("New Note in Inbox"))
-        compose.onNodeWithText("New Note in Inbox").assertIsDisplayed()
-        // One row lower since Display: scrolled to on the test's small screen.
-        list.performScrollToNode(hasText("Synced at 3:42 PM · 1 setting to send"))
-        compose.onNodeWithText("Synced at 3:42 PM · 1 setting to send").assertIsDisplayed()
-        // A hardware keyboard's shortcuts (T40 P9, ST8).
         list.performScrollToNode(hasText("For a hardware keyboard"))
         compose.onNodeWithTag("section-shortcuts").performClick()
-        // The Penmoss account's sections went with the server (T59, A1040).
-        for (gone in listOf("notebooks", "mirror", "status", "devices", "phone")) compose.onNodeWithTag("section-$gone").assertDoesNotExist()
-        // About, last (T49): the version, and Send feedback.
-        list.performScrollToNode(hasText("Version 0.31 (build 431425) · Send Feedback"))
-        compose.onNodeWithTag("section-about").performClick()
-        assertEquals(listOf("appearance", "display", "symbols", "git", "shortcuts", "about"), opened)
+        // Each notebook with its dot, the primary first, then All Notebooks.
+        list.performScrollToNode(hasText("Primary · synced at 4:12 PM"))
+        compose.onNodeWithTag("section-notebook-n1").performClick()
+        list.performScrollToNode(hasText("Add, Primary Notebook, Between Notebooks"))
+        compose.onNodeWithTag("section-git").performClick()
+        list.performScrollToNode(hasText("What agents changed, with Undo"))
+        compose.onNodeWithTag("section-agent-activity").performClick()
+        list.performScrollToNode(hasText("79 MB"))
+        list.performScrollToNode(hasText("htxryan"))
+        compose.onNodeWithTag("section-github").performClick()
+        // The version once, on What's New; About and Sync and Storage are gone.
+        list.performScrollToNode(hasText("0.9.3"))
+        assertEquals(1, compose.onAllNodesWithText("0.9.3", substring = true).fetchSemanticsNodes().size)
+        for (gone in listOf("about", "sync", "display")) compose.onNodeWithTag("section-$gone").assertDoesNotExist()
+        assertEquals(
+            listOf(
+                SettingsRoutes.APPEARANCE, SettingsRoutes.DISPLAY, SettingsRoutes.SYMBOLS, app.penmoss.ui.keys.CommandRoutes.SHORTCUTS,
+                "settings/git/n1", app.penmoss.ui.keys.CommandRoutes.GIT_NOTEBOOKS, SettingsRoutes.AGENT_ACTIVITY, SettingsRoutes.GITHUB,
+            ),
+            opened,
+        )
     }
 
-    /** T39 pass 3 (A902): one icon per section, the web's: Git notebooks no longer shares Git mirror's. */
+    @Test
+    fun theGroupsAreTheFiveOfTheDesignInOrder() {
+        val groups = settingsGroups(Settings(), "Penmoss")
+        assertEquals(listOf("Look and Feel", "Writing", "Notebooks", "Agents", "This Phone"), groups.map { it.title })
+        assertEquals(listOf("appearance", "home", "symbols"), groups[0].sections.map { it.id })
+        assertEquals(listOf("daily", "capture", "shortcuts"), groups[1].sections.map { it.id })
+        assertEquals(listOf("git"), groups[2].sections.map { it.id })
+        assertEquals(listOf("agent-activity"), groups[3].sections.map { it.id })
+        assertEquals(listOf("storage", "github", "whatsnew"), groups[4].sections.map { it.id })
+    }
+
+    /** PEN-146: Search Settings finds a setting by its label, its help or another word, and opens its screen. */
+    @Test
+    fun searchSettingsFindsASettingAndOpensItsScreen() {
+        val opened = mutableListOf<String>()
+        compose.setContent { PenmossTheme { SettingsHome(settingsGroups(Settings(), "Penmoss"), onOpen = { opened += it }, onBack = {}) } }
+        compose.onNodeWithTag("settingsSearch").performTextInput("dark")
+        compose.onNodeWithTag("found-mode").assertIsDisplayed().performClick()
+        assertEquals(listOf(SettingsRoutes.APPEARANCE), opened)
+        compose.onNodeWithTag("section-appearance").assertDoesNotExist()
+        compose.onNodeWithTag("settingsSearch").performTextReplacement("zzzz")
+        compose.onNodeWithTag("settingsSearchNone").assertIsDisplayed()
+        compose.onNodeWithTag("settingsSearch").performTextReplacement("")
+        compose.onNodeWithTag("section-appearance").assertIsDisplayed()
+    }
+
+    @Test
+    fun theSearchMatchesEveryWordAndPutsLabelsFirst() {
+        assertEquals("time-zone", searchSettings(SETTINGS_INDEX, "zone").first().id)
+        assertTrue(searchSettings(SETTINGS_INDEX, "personal access token").any { it.id == "github-token" })
+        assertTrue(searchSettings(SETTINGS_INDEX, "token").first().label.contains("Token"))
+        assertEquals(emptyList<SettingEntry>(), searchSettings(SETTINGS_INDEX, "   "))
+        assertTrue(searchSettings(SETTINGS_INDEX, "hotkey").any { it.route == app.penmoss.ui.keys.CommandRoutes.SHORTCUTS })
+        // Every id is unique, and every route is one of Settings' own.
+        assertEquals(SETTINGS_INDEX.size, SETTINGS_INDEX.map { it.id }.toSet().size)
+        assertTrue(SETTINGS_INDEX.all { it.route.startsWith("settings") })
+    }
+
+    /** T39 pass 3 (A902): one icon per screen row, each its own. */
     @Test
     fun eachSectionHasItsOwnIconAsOnTheWeb() {
-        val sections = settingsSections(Settings(), "Penmoss", "", unsent = 0)
+        val sections = settingsGroups(Settings(), "Penmoss").flatMap { it.sections }
         val icon = sections.associate { it.id to it.icon }
         assertEquals(app.penmoss.ui.settings.SettingsIcons.Terminal, icon["git"])
-        assertEquals(app.penmoss.ui.settings.SettingsIcons.Refresh, icon["sync"])
         assertEquals(sections.size, sections.map { it.icon }.toSet().size)
     }
 
@@ -156,7 +209,8 @@ class SettingsScreensTest {
         compose.onNodeWithTag("theme-nord").assertIsSelected()
         compose.onNodeWithTag("theme-penmoss").assertIsNotSelected()
         // Note width: the theme's, or the whole screen (ST11).
-        compose.onNodeWithText("The theme’s (52 rem)").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("The Theme’s Width").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("appearancePreview").assertExists()
         compose.onNodeWithTag("width-full").performScrollTo().performClick()
         assertTrue(full)
         compose.onNodeWithTag("width-full").assertIsSelected()
@@ -174,38 +228,86 @@ class SettingsScreensTest {
         compose.onNodeWithTag("theme-nord").performScrollTo().assertIsNotEnabled()
     }
 
+    /** PEN-146 option B: the template saves itself once typing rests, says Saved, and Use the Default removes it. */
     @Test
-    fun aTemplateSavesWhenChangedAndResetToDefaultRemovesIt() {
+    fun aTemplateSavesAsYouTypeAndUseTheDefaultRemovesIt() {
         val saved = mutableListOf<Pair<String, String?>>()
-        var daily by mutableStateOf(TemplateField(SettingKeys.DAILY_TEMPLATE, "Daily template", "## Plan\n\n## Notes\n", custom = false))
+        var daily by mutableStateOf(TemplateField(SettingKeys.DAILY_TEMPLATE, "Daily Template", "## Plan\n\n## Notes\n", custom = false))
         compose.setContent {
             PenmossTheme {
                 DailyNotesScreen(
                     timeZone = "America/Chicago",
-                    today = "2026-10-24",
-                    templates = listOf(daily),
+                    today = java.time.LocalDate.of(2026, 11, 15),
+                    templates = listOf(daily, TemplateField(SettingKeys.WEEKLY_TEMPLATE, "Weekly Template", "## Goals\n", custom = false)),
                     enabled = true,
                     onTimeZone = {},
                     onSave = { key, value ->
                         saved += key to value
-                        daily = daily.copy(saved = value ?: "## Plan\n\n## Notes\n", custom = value != null)
+                        if (key == SettingKeys.DAILY_TEMPLATE) daily = daily.copy(saved = value ?: "## Plan\n\n## Notes\n", custom = value != null)
                     },
+                    onBack = {},
+                    phoneZone = "Europe/London",
+                )
+            }
+        }
+        compose.onNodeWithText("America/Chicago · today is Sunday 15 November").assertIsDisplayed()
+        compose.onNodeWithTag("dailyUsePhoneZone").assertIsDisplayed()
+        // Nothing custom: Use the Default does nothing yet.
+        compose.onNodeWithTag("reset-template.daily").performScrollTo().assertIsNotEnabled()
+        compose.mainClock.autoAdvance = false
+        compose.onNodeWithTag("template-template.daily").performTextReplacement("# {{longDate}}\n## Plan\n")
+        // Not until typing rests.
+        compose.mainClock.advanceTimeBy(TEMPLATE_SAVE_MS / 2)
+        assertTrue(saved.isEmpty())
+        compose.mainClock.advanceTimeBy(TEMPLATE_SAVE_MS)
+        compose.mainClock.autoAdvance = true
+        compose.waitForIdle()
+        assertEquals(listOf(SettingKeys.DAILY_TEMPLATE to "# {{longDate}}\n## Plan\n"), saved)
+        compose.onNodeWithTag("templateStatus", useUnmergedTree = true).assertTextEquals("✓ Saved")
+        // Today's note, as the template makes it, under the editor.
+        compose.onNodeWithTag("templatePreviewText", useUnmergedTree = true).performScrollTo().assertTextEquals("# Sunday 15 November 2026\n## Plan\n")
+        compose.onNodeWithTag("reset-template.daily").performScrollTo().assertIsEnabled().performClick()
+        assertEquals(SettingKeys.DAILY_TEMPLATE to null, saved.last())
+        compose.onNodeWithText("Back to the default").assertIsDisplayed()
+        // The weekly template is the other tab, over the same editor.
+        compose.onNodeWithTag("tab-template.weekly").performScrollTo().performClick()
+        compose.onNodeWithTag("template-template.weekly").assertExists()
+        compose.onNodeWithTag("template-template.daily").assertDoesNotExist()
+    }
+
+    @Test
+    fun aPlaceholderGoesInAtTheCursor() {
+        val saved = mutableListOf<Pair<String, String?>>()
+        compose.setContent {
+            PenmossTheme {
+                DailyNotesScreen(
+                    timeZone = "UTC",
+                    today = java.time.LocalDate.of(2026, 10, 21),
+                    templates = listOf(TemplateField(SettingKeys.DAILY_TEMPLATE, "Daily Template", "", custom = false)),
+                    enabled = true,
+                    onTimeZone = {},
+                    onSave = { key, value -> saved += key to value },
                     onBack = {},
                 )
             }
         }
-        compose.onNodeWithText("Today is 2026-10-24 in America/Chicago. Changes sync to your other devices.").assertIsDisplayed()
-        // Nothing changed, nothing custom: neither button does anything yet.
-        compose.onNodeWithTag("save-template.daily").assertIsNotEnabled()
-        compose.onNodeWithTag("reset-template.daily").assertIsNotEnabled()
-        compose.onNodeWithTag("template-template.daily").performTextReplacement("## Today\n{{longDate}}\n")
-        compose.onNodeWithTag("save-template.daily").assertIsEnabled().performClick()
-        assertEquals(listOf(SettingKeys.DAILY_TEMPLATE to "## Today\n{{longDate}}\n"), saved)
-        compose.onNodeWithText("Saved").assertIsDisplayed()
-        compose.onNodeWithTag("reset-template.daily").assertIsEnabled().performClick()
-        assertEquals(SettingKeys.DAILY_TEMPLATE to null, saved.last())
-        compose.onNodeWithText("Back to the default").assertIsDisplayed()
-        compose.onNodeWithTag("reset-template.daily").assertIsNotEnabled()
+        compose.onNodeWithTag("placeholder-template.daily").performScrollTo().performClick()
+        compose.onNodeWithTag("insert-{{weekday}}").performClick()
+        compose.waitUntil(3_000) { saved.isNotEmpty() }
+        assertEquals(SettingKeys.DAILY_TEMPLATE to "{{weekday}}", saved.last())
+        compose.onNodeWithTag("templatePreviewText", useUnmergedTree = true).performScrollTo().assertTextEquals("Wednesday")
+    }
+
+    @Test
+    fun aTemplateFillsAsCoresFillTemplateDoes() {
+        val day = java.time.LocalDate.of(2026, 10, 21)
+        assertEquals(
+            "2026-10-21 Wednesday 21 October 2026 Wednesday 2026-W43 2026 10 {{other}}",
+            fillTemplate("{{date}} {{longDate}} {{weekday}} {{week}} {{year}} {{month}} {{other}}", weekly = false, date = day),
+        )
+        // A week's from its Monday; its year is the ISO week's.
+        assertEquals("2026-10-19 2026-W43", fillTemplate("{{date}} {{ week }}", weekly = true, date = day))
+        assertEquals("2026-W53 2026", fillTemplate("{{week}} {{year}}", weekly = true, date = java.time.LocalDate.of(2027, 1, 1)))
     }
 
     @Test
@@ -236,13 +338,20 @@ class SettingsScreensTest {
     }
 
     @Test
-    fun quickCaptureChoosesWhereCapturesGo() {
+    fun quickCaptureChoosesWhereCapturesGoAndNamesTheNotebook() {
         var destination by mutableStateOf("daily")
-        compose.setContent { PenmossTheme { QuickCaptureScreen(destination, enabled = true, onChoose = { destination = it }, onBack = {}) } }
+        var notebooks = 0
+        compose.setContent {
+            PenmossTheme { QuickCaptureScreen(destination, enabled = true, onChoose = { destination = it }, onBack = {}, notebook = "Personal", onNotebook = { notebooks++ }) }
+        }
+        compose.onNodeWithText("Saves To").assertIsDisplayed()
         compose.onNodeWithTag("capture-daily").assertIsSelected()
         compose.onNodeWithTag("capture-inbox").performClick()
         assertEquals("inbox", destination)
         compose.onNodeWithTag("capture-inbox").assertIsSelected()
+        compose.onNodeWithText("Your primary notebook · change it on All Notebooks").assertIsDisplayed()
+        compose.onNodeWithTag("captureNotebook").performClick()
+        assertEquals(1, notebooks)
     }
 
     private fun await(condition: () -> Boolean) = runBlocking {
@@ -255,14 +364,14 @@ class SettingsScreensTest {
     }
 
     @Test
-    fun aTemplateOverTheServersLimitIsCountedAndCannotBeSaved() {
+    fun aTemplateOverTheLimitIsCountedAndNeverSaved() {
         val saved = mutableListOf<Pair<String, String?>>()
         compose.setContent {
             PenmossTheme {
                 DailyNotesScreen(
                     timeZone = "America/Chicago",
-                    today = "2026-10-24",
-                    templates = listOf(TemplateField(SettingKeys.DAILY_TEMPLATE, "Daily template", "## Plan\n", custom = false)),
+                    today = java.time.LocalDate.of(2026, 10, 24),
+                    templates = listOf(TemplateField(SettingKeys.DAILY_TEMPLATE, "Daily Template", "## Plan\n", custom = false)),
                     enabled = true,
                     onTimeZone = {},
                     onSave = { key, value -> saved += key to value },
@@ -272,14 +381,15 @@ class SettingsScreensTest {
         }
         val field = compose.onNodeWithTag("template-${SettingKeys.DAILY_TEMPLATE}")
         compose.onNodeWithTag("count-${SettingKeys.DAILY_TEMPLATE}", useUnmergedTree = true).assertTextEquals("8 / 10,000")
-        // One character over the server's limit (A410): said, and Save is off.
+        // One character over the limit (A410): said, and nothing is saved.
         field.performTextReplacement("x".repeat(SettingLimits.TEMPLATE_MAX_CHARS + 1))
         compose.onNodeWithTag("count-${SettingKeys.DAILY_TEMPLATE}", useUnmergedTree = true)
             .assertTextEquals("Too long: at most 10,000 characters (10,001 now)")
-        compose.onNodeWithTag("save-${SettingKeys.DAILY_TEMPLATE}").performScrollTo().assertIsNotEnabled()
-        // At the limit it can be saved.
+        compose.mainClock.advanceTimeBy(TEMPLATE_SAVE_MS * 2)
+        assertTrue(saved.isEmpty())
+        // At the limit it saves.
         field.performTextReplacement("x".repeat(SettingLimits.TEMPLATE_MAX_CHARS))
-        compose.onNodeWithTag("save-${SettingKeys.DAILY_TEMPLATE}").performScrollTo().assertIsEnabled().performClick()
+        compose.waitUntil(3_000) { saved.isNotEmpty() }
         assertEquals(listOf(SettingKeys.DAILY_TEMPLATE to "x".repeat(SettingLimits.TEMPLATE_MAX_CHARS)), saved)
     }
 
@@ -291,7 +401,7 @@ class SettingsScreensTest {
         compose.setContent {
             PenmossTheme {
                 SettingsHome(
-                    settingsSections(Settings(), "Penmoss", "", unsent = 0),
+                    settingsGroups(Settings(), "Penmoss"),
                     onOpen = {},
                     onBack = {},
                     refusal = refusal,
@@ -310,7 +420,7 @@ class SettingsScreensTest {
         compose.setContent {
             PenmossTheme {
                 Column {
-                    SettingsHome(settingsSections(Settings(), "Penmoss", "", unsent = 0), onOpen = {}, onBack = {})
+                    SettingsHome(settingsGroups(Settings(), "Penmoss"), onOpen = {}, onBack = {})
                 }
             }
         }

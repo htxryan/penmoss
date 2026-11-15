@@ -36,7 +36,7 @@ internal fun NavGraphBuilder.noteRoutes(root: RootUi) {
             onOpenTag = root::openTag,
             create = newNoteRequest(entry),
             onMade = entry::markNoteMade,
-            onSyncStorage = { nav.open(SettingsRoutes.SYNC) },
+            onSyncStorage = { nav.open(SettingsRoutes.notebook(graph.localId, app.penmoss.git.NotebookTab.SYNC)) },
             // Leaves the note (its last edits are stored as it goes), then moves it to Trash.
             onTrash = {
                 nav.leave(entry)
@@ -64,7 +64,7 @@ internal fun NavGraphBuilder.noteRoutes(root: RootUi) {
                 if (nav.replaceWithNote(entry, id)) graph.sync.requestSync()
             },
             onOpenPeriodic = { next, date -> root.openPeriodic(next, date) },
-            onSyncStorage = { nav.open(SettingsRoutes.SYNC) },
+            onSyncStorage = { nav.open(SettingsRoutes.notebook(graph.localId, app.penmoss.git.NotebookTab.SYNC)) },
             onOpenFolder = root::openFolderFromNote,
         )
     }

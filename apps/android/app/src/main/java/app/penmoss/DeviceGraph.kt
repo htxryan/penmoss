@@ -102,6 +102,17 @@ class DeviceGraph(
         ledger = app.penmoss.feedback.PrefsFeedbackLedger(context.getSharedPreferences(app.penmoss.feedback.PrefsFeedbackLedger.PREFS, Context.MODE_PRIVATE)),
     )
 
+    /**
+     * Settings → GitHub's Sign In with GitHub (PEN-146): GitHub's device flow, its token checked and
+     * kept in [githubToken] as a typed one is (A1012).
+     */
+    val githubSignIn: app.penmoss.feedback.GitHubDeviceSignIn = app.penmoss.feedback.GitHubDeviceSignIn(
+        app.penmoss.feedback.okHttpSignInPost(http),
+        keep = { token ->
+            app.penmoss.feedback.GitHubTokenModel(githubToken, githubFeedback::checkToken, githubFeedback.repo).save(token)
+        },
+    )
+
     /** Whether the network in use is metered (mobile data); true when unknown. */
     val metered: () -> Boolean = {
         context.getSystemService(android.net.ConnectivityManager::class.java)?.isActiveNetworkMetered ?: true
@@ -212,7 +223,7 @@ class DeviceGraph(
     )
 
     init {
-        // A token saved or replaced in Settings → About → GitHub Token sends what waited (A1012).
+        // A token saved or replaced in Settings → GitHub sends what waited (A1012).
         githubToken.onChange { if (githubToken.hasToken) githubTokenSaved() }
     }
 

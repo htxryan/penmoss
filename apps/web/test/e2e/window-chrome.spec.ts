@@ -221,7 +221,7 @@ test.describe('with a notebook', () => {
     await page.goto('/settings/git-notebooks');
     await page.getByTestId('git-notebook-row').first().click();
     await expect(page.getByTestId('git-repository')).toBeVisible();
-    expect(await cursor('.settings-facts dt')).toBe('default');
+    expect(await cursor('[data-setting="repository"] .lf-row-label')).toBe('default');
     await page.getByTestId('git-repository').dblclick({ position: { x: 4, y: 6 } });
     expect(await selected()).not.toBe('');
     expect(errors).toEqual([]);

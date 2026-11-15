@@ -19,6 +19,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
@@ -121,6 +123,36 @@ class ShortcutsScreenTest {
         compose.onNodeWithTag("shortcutsNone").assertTextEquals("No commands match “ctrl+dzzz”.")
     }
 
+    /** PEN-146: All, Changed · N and None Set, and a changed shortcut says what it replaced. */
+    @Test
+    fun theViewsShowTheChangedOnesAndThoseWithNoShortcut() {
+        show(start = mapOf("app.search" to listOf("Mod+Shift+J"), "journal.today" to emptyList()))
+        compose.onNodeWithTag("shortcutView-changed").assertTextEquals("Changed · 2").performClick()
+        row("app.search")
+        compose.onNodeWithTag("changedFrom-app.search", useUnmergedTree = true).assertTextEquals("Changed from Ctrl+Shift+F")
+        compose.onNodeWithTag("shortcut-app.quickOpen").assertDoesNotExist()
+        compose.onNodeWithTag("shortcutList").performScrollToNode(hasTestTag("shortcutViews"))
+        compose.onNodeWithTag("shortcutView-none").performClick()
+        row("journal.today")
+        compose.onNodeWithTag("shortcut-app.search").assertDoesNotExist()
+        compose.onNodeWithTag("shortcutList").performScrollToNode(hasTestTag("shortcutViews"))
+        compose.onNodeWithTag("shortcutView-all").performClick()
+        row("app.quickOpen")
+        compose.onNodeWithTag("changedFrom-app.quickOpen", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    /** PEN-146: keys pressed in the search field, with Ctrl or Alt held, find what they do. */
+    @Test
+    fun keysPressedInTheSearchFindTheCommandBoundToThem() {
+        show()
+        compose.onNodeWithTag("shortcutSearch").performClick()
+        compose.onNodeWithTag("shortcutSearch").performKeyInput { withKeyDown(Key.CtrlLeft) { pressKey(Key.D) } }
+        compose.waitForIdle()
+        compose.onNodeWithTag("shortcutSearch").assertTextContains("Ctrl+D")
+        compose.onNodeWithTag("shortcut-journal.today").assertExists()
+        compose.onNodeWithTag("shortcut-app.search").assertDoesNotExist()
+    }
+
     @Test
     fun recordsANewShortcutFromTheKeyboard() {
         show()
@@ -146,7 +178,7 @@ class ShortcutsScreenTest {
         record("app.search") { withKeyDown(Key.CtrlLeft) { pressKey(Key.D) } }
         assertEquals(emptyList<Any>(), writes)
         compose.onNodeWithText("Ctrl+D is used by “Today's Note”.").assertExists()
-        compose.onNodeWithTag("useHere").performClick()
+        compose.onNodeWithTag("useHere").performScrollTo().performClick()
         assertEquals(listOf("journal.today" to emptyList<String>(), "app.search" to listOf("Mod+D")), writes)
         row("app.search")
         compose.onNodeWithTag("keys-app.search", useUnmergedTree = true).assertTextEquals("Ctrl+D")
@@ -198,7 +230,7 @@ class ShortcutsScreenTest {
     @Test
     fun beforeTheFirstSyncNothingCanChange() {
         show(canChange = false)
-        compose.onNodeWithText("Shortcuts can be changed here once the phone has synced with Penmoss.").assertExists()
+        compose.onNodeWithText("Shortcuts can be changed once Penmoss has read your settings from your primary notebook.").assertExists()
         row("app.search")
         compose.onNodeWithTag("change-app.search").assertDoesNotExist()
         compose.onNodeWithTag("remove-app.search").assertDoesNotExist()

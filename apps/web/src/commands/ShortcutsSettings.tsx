@@ -1,18 +1,22 @@
 import {
   BROWSER_RESERVED,
   bindingProblem,
-  comboFromEvent,
   formatCombo,
   isApplePlatform,
   normaliseCombo,
 } from '@penmoss/editor/keys';
 import { Icon } from '@penmoss/ui/icons';
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { CaptureHotkeySetting } from '../desktop/CaptureHotkeySetting';
-import type { CommandDefinition } from './definitions';
+import { useId, useRef, useState, useSyncExternalStore } from 'react';
+import { desktop } from '../desktop/bridge';
+import { WritingGroup, WritingSubhead } from '../journal/writing-rows';
+import { settingId } from '../pages/settings-index';
+import { linkHandler, settingsPath } from '../router';
+import { ConfirmDialog } from '../shell/ConfirmDialog';
 import { useWorkspace } from '../workspace/hooks';
+import type { CommandArea, CommandDefinition } from './definitions';
 import { useCommands, useCommandsVersion } from './hooks';
 import { Kbd } from './Kbd';
+import { searchesByKeys, useKeyRecorder } from './recorder';
 
 type Notice =
   | {
@@ -24,12 +28,35 @@ type Notice =
   | { readonly kind: 'error'; readonly id: string; readonly text: string }
   | { readonly kind: 'done'; readonly id: string; readonly text: string };
 
+type Show = 'all' | 'changed' | 'none';
+
+/** The areas in the order their groups show, each as its subhead says it (Title Case). */
+const AREAS: ReadonlyArray<readonly [CommandArea, string]> = [
+  ['General', 'General'],
+  ['Navigation', 'Navigation'],
+  ['Daily notes', 'Daily Notes'],
+  ['Note', 'Note'],
+  ['Editor', 'Editor'],
+  ['Insert', 'Insert'],
+  ['Symbols', 'Symbols'],
+  ['Folders', 'Folders'],
+  ['Tags', 'Tags'],
+  ['Appearance', 'Appearance'],
+  ['Sync', 'Sync'],
+];
+
+const keysText = (combos: readonly string[]) =>
+  combos.length === 0 ? 'no shortcut' : combos.map((combo) => formatCombo(combo)).join(' or ');
+
 /**
- * Settings → Keyboard Shortcuts (T20): every command, its keys, and an editor
- * that records a new combination. A combination another command uses (in an
- * overlapping scope) is a conflict: the editor says which command has it and
- * offers to move it. Changes are the user's synced settings, so they apply at
- * once here and on their other devices.
+ * Settings → Keyboard Shortcuts (T20; PEN-146 option B): every command, grouped by area under a
+ * subhead, with its keys. Clicking the keys records new ones; a combination another command
+ * uses (in an overlapping scope) is a conflict, named, with the offer to move it. A search field
+ * finds commands by name, area or keys, and takes a combination pressed while it has the focus
+ * ("what is ⌥⌘M?"). A filter shows All, only the Changed ones (with their count, as Android's
+ * summary has) or the ones with None Set. A changed row says what it replaced and has Reset;
+ * Reset All Changed… asks first. Changes are the user's synced settings, so they apply at once
+ * here and on their other devices. The Mac app's capture hotkey is on Quick Capture.
  */
 export function ShortcutsSettings() {
   const commands = useCommands();
@@ -38,107 +65,151 @@ export function ShortcutsSettings() {
   // device's copy of the notebook (D49). Tests wait on it before reading or resetting a row.
   const workspace = useWorkspace();
   const bindingsState = () => (workspace.getState().loaded ? 'local' : 'loading');
-  // Only this flag: not every folder or registry change re-renders the table.
+  // Only this flag: not every folder or registry change re-renders the list.
   const bindings = useSyncExternalStore(workspace.subscribe, bindingsState, bindingsState);
+  const id = useId();
   const [filter, setFilter] = useState('');
+  /** A combination pressed in the search field: the commands that have it. */
+  const [keyFilter, setKeyFilter] = useState<string | null>(null);
+  const [show, setShow] = useState<Show>('all');
+  const [searchFocused, setSearchFocused] = useState(false);
   const [capturing, setCapturing] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
   const editButtons = useRef(new Map<string, HTMLButtonElement>());
+  const search = useRef<HTMLInputElement>(null);
 
-  const title = (id: string) => commands.definitions.get(id)?.title ?? id;
+  const title = (commandId: string) => commands.definitions.get(commandId)?.title ?? commandId;
 
-  const assign = (id: string, combo: string, replace: boolean) => {
+  const assign = (commandId: string, combo: string, replace: boolean) => {
     try {
       if (replace) {
-        for (const other of commands.conflicts(id, combo)) {
+        for (const other of commands.conflicts(commandId, combo)) {
           commands.rebind(
             other.id,
             commands.keysOf(other.id).filter((key) => normaliseCombo(key) !== combo),
           );
         }
       }
-      commands.rebind(id, [combo]);
-      setNotice({ kind: 'done', id, text: `${title(id)} is now ${formatCombo(combo)}.` });
+      commands.rebind(commandId, [combo]);
+      setNotice({
+        kind: 'done',
+        id: commandId,
+        text: `${title(commandId)} is now ${formatCombo(combo)}.`,
+      });
     } catch (error) {
       setNotice({
         kind: 'error',
-        id,
+        id: commandId,
         text: error instanceof Error ? error.message : 'Could not save the shortcut',
       });
     }
   };
 
   // Records the next combination while a row is listening (the dispatcher stands aside).
-  useEffect(() => {
-    if (!capturing) return;
-    const resume = commands.suspend();
-    const onKeyDown = (event: KeyboardEvent) => {
-      const combo = comboFromEvent(event);
-      if (!combo) return; // A lone modifier: keep listening.
-      event.preventDefault();
-      event.stopPropagation();
-      const id = capturing;
-      setCapturing(null);
-      editButtons.current.get(id)?.focus();
-      if (combo === 'Escape') return;
-      // A command's own default is always fine (Undo keeps ⌘Z); otherwise the rules of A90.
-      const problem = commands.definitions.get(id)?.keys.includes(combo)
-        ? null
-        : bindingProblem(combo);
-      if (problem) {
-        const shown = formatCombo(combo);
-        const text = {
-          types: `${shown} would type a character: add ${isApplePlatform() ? '⌘ or ⌃' : 'Ctrl or Alt'}.`,
-          altgr: `${shown} is AltGr on many keyboards, which types a character: use Ctrl+Shift or Alt without Ctrl.`,
-          reserved: `${shown} is kept for copying, pasting, finding and editing text.`,
-        }[problem];
-        setNotice({ kind: 'error', id, text });
-        return;
-      }
-      if (BROWSER_RESERVED.has(combo)) {
-        setNotice({ kind: 'error', id, text: `${formatCombo(combo)} is kept by the browser.` });
-        return;
-      }
-      const others = commands.conflicts(id, combo).map((other) => other.id);
-      if (others.length > 0) {
-        setNotice({ kind: 'conflict', id, combo, others });
-        return;
-      }
-      assign(id, combo, false);
-    };
-    window.addEventListener('keydown', onKeyDown, true);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown, true);
-      resume();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- assign reads the latest bindings when called.
-  }, [capturing, commands]);
+  useKeyRecorder(capturing !== null, (combo) => {
+    const commandId = capturing!;
+    setCapturing(null);
+    editButtons.current.get(commandId)?.focus();
+    if (combo === 'Escape') return;
+    // A command's own default is always fine (Undo keeps ⌘Z); otherwise the rules of A90.
+    const problem = commands.definitions.get(commandId)?.keys.includes(combo)
+      ? null
+      : bindingProblem(combo);
+    if (problem) {
+      const shown = formatCombo(combo);
+      const text = {
+        types: `${shown} would type a character: add ${isApplePlatform() ? '⌘ or ⌃' : 'Ctrl or Alt'}.`,
+        altgr: `${shown} is AltGr on many keyboards, which types a character: use Ctrl+Shift or Alt without Ctrl.`,
+        reserved: `${shown} is kept for copying, pasting, finding and editing text.`,
+      }[problem];
+      setNotice({ kind: 'error', id: commandId, text });
+      return;
+    }
+    if (BROWSER_RESERVED.has(combo)) {
+      setNotice({
+        kind: 'error',
+        id: commandId,
+        text: `${formatCombo(combo)} is kept by the browser.`,
+      });
+      return;
+    }
+    const others = commands.conflicts(commandId, combo).map((other) => other.id);
+    if (others.length > 0) {
+      setNotice({ kind: 'conflict', id: commandId, combo, others });
+      return;
+    }
+    assign(commandId, combo, false);
+  });
 
+  // While the search field has the focus, a combination a command could have searches for it;
+  // typing, editing and moving in the field go on as usual. It stands aside while a row records.
+  useKeyRecorder(searchFocused && capturing === null, (combo) => {
+    if (!searchesByKeys(combo)) return false;
+    setKeyFilter(normaliseCombo(combo));
+    setFilter('');
+    return true;
+  });
+
+  const all = [...commands.definitions.values()];
+  const changed = all.filter((command) => commands.isCustom(command.id));
   const query = filter.trim().toLowerCase();
-  const rows = [...commands.definitions.values()].filter(
-    (command) =>
+  const rows = all.filter((command) => {
+    const keys = commands.keysOf(command.id);
+    if (show === 'changed' && !commands.isCustom(command.id)) return false;
+    if (show === 'none' && keys.length > 0) return false;
+    if (keyFilter && !keys.some((combo) => normaliseCombo(combo) === keyFilter)) return false;
+    return (
       !query ||
       command.title.toLowerCase().includes(query) ||
       command.area.toLowerCase().includes(query) ||
-      commands.keysOf(command.id).some((combo) => formatCombo(combo).toLowerCase().includes(query)),
-  );
+      keys.some((combo) => formatCombo(combo).toLowerCase().includes(query))
+    );
+  });
+  const known = new Set(AREAS.map(([area]) => area));
+  const groups = [
+    ...AREAS,
+    ...[...new Set(all.map((command) => command.area))]
+      .filter((area) => !known.has(area))
+      .map((area) => [area, area] as const),
+  ]
+    .map(([area, label]) => ({
+      area,
+      label,
+      rows: rows.filter((command) => command.area === area),
+    }))
+    .filter((group) => group.rows.length > 0);
   const clashes = commands.allConflicts();
 
   const row = (command: CommandDefinition) => {
     const keys = commands.keysOf(command.id);
+    const custom = commands.isCustom(command.id);
     const listening = capturing === command.id;
     const rowNotice = notice?.id === command.id ? notice : null;
+    const help = custom
+      ? `Changed from ${keysText(command.keys)}`
+      : keys.length === 0
+        ? 'No shortcut'
+        : undefined;
     return (
-      <tr key={command.id} data-command-row={command.id} className={listening ? 'capturing' : ''}>
-        <th scope="row">
-          {command.title}
-          {command.pending ? (
-            <span className="muted"> · arrives with {command.pending}</span>
-          ) : null}
+      <div
+        key={command.id}
+        className={`wr-row kb-row${listening ? ' capturing' : ''}${custom ? ' changed' : ''}`}
+        data-command-row={command.id}
+        data-setting={settingId(command.title)}
+      >
+        <div className="wr-row-text">
+          <span className="wr-row-label">
+            {command.title}
+            {command.pending ? (
+              <span className="muted"> · arrives with {command.pending}</span>
+            ) : null}
+          </span>
+          {help ? <span className="wr-row-help">{help}</span> : null}
           {rowNotice?.kind === 'conflict' ? (
             <div className="kb-conflict" role="alert" data-testid="shortcut-conflict">
               <Kbd combo={rowNotice.combo} /> is used by{' '}
-              {rowNotice.others.map((id) => `“${title(id)}”`).join(' and ')}.
+              {rowNotice.others.map((other) => `“${title(other)}”`).join(' and ')}.
               <button
                 type="button"
                 className="btn"
@@ -167,88 +238,89 @@ export function ShortcutsSettings() {
               {rowNotice.text}
             </div>
           ) : null}
-        </th>
-        <td className="area">{command.area}</td>
-        <td className="kb-keys" data-testid={`keys-${command.id}`}>
-          {listening ? (
-            <span className="chip" role="status">
-              Press keys… Esc cancels
-            </span>
-          ) : keys.length > 0 ? (
-            keys.map((combo) => <Kbd key={combo} combo={combo} />)
-          ) : (
-            <span className="muted">—</span>
-          )}
-        </td>
-        <td className="act">
-          <div className="kb-actions">
+        </div>
+        <div className="wr-row-control">
+          {keys.length > 0 && !listening ? (
             <button
               type="button"
-              className="icon-btn"
+              className="btn quiet kb-remove"
+              data-ui="item"
+              aria-label={`Remove the Shortcut for ${command.title}`}
+              onClick={() => {
+                setNotice(null);
+                commands.rebind(command.id, []);
+              }}
+            >
+              Remove
+            </button>
+          ) : null}
+          {custom ? (
+            <button
+              type="button"
+              className="btn quiet"
+              data-ui="item"
+              aria-label={`Reset the Shortcut for ${command.title}`}
+              onClick={() => {
+                setNotice(null);
+                commands.reset(command.id);
+              }}
+            >
+              Reset
+            </button>
+          ) : null}
+          <span className="kb-row-keys" data-testid={`keys-${command.id}`}>
+            <button
+              type="button"
+              className={keys.length > 0 || listening ? 'kb-key-btn' : 'btn quiet'}
               data-ui="item"
               ref={(element) => {
                 if (element) editButtons.current.set(command.id, element);
                 else editButtons.current.delete(command.id);
               }}
-              aria-label={`Change the Shortcut for ${command.title}`}
+              aria-label={
+                keys.length > 0
+                  ? `Change the Shortcut for ${command.title}, ${keysText(keys)}`
+                  : `Add Shortcut for ${command.title}`
+              }
               aria-pressed={listening}
-              data-tip={listening ? 'Listening: press the new keys' : 'Change'}
               onClick={() => {
                 setNotice(null);
                 setCapturing(listening ? null : command.id);
               }}
             >
-              <Icon name={listening ? 'keyboard' : 'pencil'} />
+              {listening ? (
+                <span className="chip" role="status">
+                  Press keys… Esc cancels
+                </span>
+              ) : keys.length > 0 ? (
+                keys.map((combo) => <Kbd key={combo} combo={combo} />)
+              ) : (
+                'Add Shortcut'
+              )}
             </button>
-            {keys.length > 0 ? (
-              <button
-                type="button"
-                className="icon-btn danger"
-                data-ui="item"
-                aria-label={`Remove the Shortcut for ${command.title}`}
-                data-tip="Remove"
-                onClick={() => {
-                  setNotice(null);
-                  commands.rebind(command.id, []);
-                }}
-              >
-                <Icon name="close" />
-              </button>
-            ) : null}
-            {commands.isCustom(command.id) ? (
-              <button
-                type="button"
-                className="icon-btn"
-                data-ui="item"
-                aria-label={`Reset the Shortcut for ${command.title}`}
-                data-tip="Reset to the Default"
-                onClick={() => {
-                  setNotice(null);
-                  commands.reset(command.id);
-                }}
-              >
-                <Icon name="undo" />
-              </button>
-            ) : null}
-          </div>
-        </td>
-      </tr>
+          </span>
+        </div>
+      </div>
     );
   };
 
+  const counted: ReadonlyArray<readonly [Show, string]> = [
+    ['all', 'All'],
+    ['changed', `Changed · ${changed.length}`],
+    ['none', 'None Set'],
+  ];
   return (
     <section
       className="settings-section"
-      aria-labelledby="shortcuts-title"
+      aria-labelledby={`${id}-title`}
       data-testid="shortcuts-settings"
       data-bindings={bindings}
     >
-      <h2 id="shortcuts-title">Keyboard Shortcuts</h2>
-      <p className="muted">
+      <h2 id={`${id}-title`}>Keyboard Shortcuts</h2>
+      <p>
         Changes sync to your other devices. Shortcuts need ⌘, Ctrl or Alt so typing never runs a
         command.
       </p>
-      <CaptureHotkeySetting />
       {clashes.length > 0 ? (
         <p className="kb-error" role="alert" data-testid="shortcut-clashes">
           {clashes
@@ -260,27 +332,142 @@ export function ShortcutsSettings() {
           .
         </p>
       ) : null}
-      <input
-        className="input"
-        type="search"
-        placeholder={`Search ${commands.definitions.size} commands`}
-        aria-label="Search shortcuts"
-        value={filter}
-        onChange={(event) => setFilter(event.target.value)}
-      />
-      <table className="kb-table">
-        <thead>
-          <tr>
-            <th scope="col">Command</th>
-            <th scope="col">Area</th>
-            <th scope="col">Shortcut</th>
-            <th scope="col">
-              <span className="sr-only">Actions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>{rows.map(row)}</tbody>
-      </table>
+      <div className="kb-tools" data-setting="keyboard-shortcuts">
+        <div className="kb-search">
+          {keyFilter ? (
+            <span className="kb-key-filter" data-testid="shortcut-key-filter">
+              <Kbd combo={keyFilter} />
+              <button
+                type="button"
+                className="icon-btn"
+                data-ui="dismiss"
+                aria-label="Clear the Keys"
+                data-tip="Clear the Keys"
+                onClick={() => {
+                  setKeyFilter(null);
+                  search.current?.focus();
+                }}
+              >
+                <Icon name="close" size={12} />
+              </button>
+            </span>
+          ) : null}
+          <input
+            ref={search}
+            className="input"
+            type="search"
+            placeholder={`Search ${commands.definitions.size} commands, or press keys`}
+            aria-label="Search shortcuts"
+            aria-describedby={`${id}-found`}
+            value={filter}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+            onChange={(event) => setFilter(event.target.value)}
+            onKeyDown={(event) => {
+              // Escape clears the keys first, then the words (the field's own Escape).
+              if (event.key === 'Escape' && keyFilter) {
+                event.preventDefault();
+                setKeyFilter(null);
+              } else if (event.key === 'Backspace' && keyFilter && !filter) {
+                setKeyFilter(null);
+              }
+            }}
+          />
+        </div>
+        <div className="seg" role="radiogroup" aria-label="Show" data-testid="shortcut-filter">
+          {counted.map(([value, label]) => (
+            <label key={value} className="seg-option">
+              <input
+                type="radio"
+                name={`${id}-show`}
+                value={value}
+                checked={show === value}
+                onChange={() => setShow(value)}
+              />
+              <span className="bold-steady" data-label={label}>
+                {label}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+      <p className="kb-found" id={`${id}-found`} role="status">
+        {rows.length === 0
+          ? keyFilter
+            ? `No command uses ${formatCombo(keyFilter)}.`
+            : show === 'changed' && changed.length === 0
+              ? 'You haven’t changed any shortcuts.'
+              : 'No command matches.'
+          : keyFilter
+            ? `${rows.length === 1 ? 'One command uses' : `${rows.length} commands use`} ${formatCombo(keyFilter)}.`
+            : null}
+      </p>
+      {groups.map((group) => (
+        <div key={group.area} data-area={group.area}>
+          <WritingSubhead id={`${id}-${settingId(group.label)}`}>{group.label}</WritingSubhead>
+          <WritingGroup role="group" aria-labelledby={`${id}-${settingId(group.label)}`}>
+            {group.rows.map(row)}
+          </WritingGroup>
+        </div>
+      ))}
+      <div className="kb-foot">
+        <button
+          type="button"
+          className="btn"
+          data-ui="item"
+          disabled={changed.length === 0}
+          onClick={() => setConfirmReset(true)}
+        >
+          <Icon name="undo" size={14} />
+          Reset All Changed…
+        </button>
+        {desktop() ? (
+          <span className="muted">
+            The capture shortcut from any app is on{' '}
+            <a
+              data-ui="item"
+              href={settingsPath('quick-capture')}
+              onClick={linkHandler(settingsPath('quick-capture'))}
+            >
+              Quick Capture
+            </a>
+            .
+          </span>
+        ) : null}
+      </div>
+      {confirmReset ? (
+        <ConfirmDialog
+          title={`Reset ${changed.length === 1 ? 'One Shortcut' : `${changed.length} Shortcuts`}?`}
+          testId="shortcuts-reset-all"
+          onCancel={() => setConfirmReset(false)}
+          onSubmit={() => {
+            for (const command of changed) commands.reset(command.id);
+            setNotice(null);
+            setConfirmReset(false);
+          }}
+        >
+          <p>
+            {changed.length === 1
+              ? 'The shortcut you changed goes'
+              : 'The shortcuts you changed go'}{' '}
+            back to the default, here and on your other devices.
+          </p>
+          <div className="confirm-actions">
+            <button
+              type="button"
+              className="btn"
+              data-ui="dismiss"
+              onClick={() => setConfirmReset(false)}
+              autoFocus
+            >
+              Cancel
+            </button>
+            <button type="submit" className="btn danger-fill" data-ui="submit">
+              Reset All Changed
+            </button>
+          </div>
+        </ConfirmDialog>
+      ) : null}
     </section>
   );
 }

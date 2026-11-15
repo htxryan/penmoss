@@ -25,6 +25,9 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import app.penmoss.ui.common.TextButton
 import androidx.compose.material3.TopAppBar
@@ -166,15 +169,31 @@ fun ShortcutsScreen(
     coverage: (id: String, scope: String) -> Coverage? = AndroidCommands::coverage,
 ) {
     var filter by rememberSaveable { mutableStateOf("") }
+    // A combination pressed in the search field (PEN-146): the commands bound to it exactly.
+    var pressed by rememberSaveable { mutableStateOf<String?>(null) }
+    // All, Changed or None Set (PEN-146).
+    var view by rememberSaveable { mutableStateOf("all") }
     var recording by rememberSaveable { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<RowNotice?>(null) }
     val catalogue = bindings.catalogue
     val title = { id: String -> catalogue.command(id)?.title ?: id }
     val shown = catalogue.commands.filter { !it.hidden && coverage(it.id, it.scope).let { c -> c != null && c !is Coverage.NotHere } }
     val query = filter.trim().lowercase()
+    val changed = shown.count { bindings.isCustom(it.id) }
     val rows = shown.filter { command ->
-        query.isEmpty() || command.title.lowercase().contains(query) || command.area.lowercase().contains(query) ||
-            bindings.keysOf(command.id).any { Combos.format(it).lowercase().contains(query) }
+        val keys = bindings.keysOf(command.id)
+        val inView = when (view) {
+            "changed" -> bindings.isCustom(command.id)
+            "none" -> keys.isEmpty()
+            else -> true
+        }
+        val combo = pressed
+        inView && when {
+            combo != null -> keys.any { Combos.normalise(it) == combo }
+            query.isEmpty() -> true
+            else -> command.title.lowercase().contains(query) || command.area.lowercase().contains(query) ||
+                keys.any { Combos.format(it).lowercase().contains(query) }
+        }
     }
     val clashes = bindings.clashes()
     // A default or synced combination this keyboard types with never runs here (review S5, A557).
@@ -198,7 +217,7 @@ fun ShortcutsScreen(
             item(key = "intro") {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "Changes sync to your other devices. Shortcuts need Ctrl or Alt so typing never runs a command. " +
+                        "For a hardware keyboard. Changes sync to your other devices. Shortcuts need Ctrl or Alt so typing never runs a command. " +
                             "Meta+/ lists the ones that work where you are.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -212,7 +231,7 @@ fun ShortcutsScreen(
                     }
                     if (!canChange) {
                         Text(
-                            "Shortcuts can be changed here once the phone has synced with Penmoss.",
+                            "Shortcuts can be changed once Penmoss has read your settings from your primary notebook.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -229,17 +248,33 @@ fun ShortcutsScreen(
                     }
                     OutlinedTextField(
                         value = filter,
-                        onValueChange = { filter = it },
-                        label = { Text("Search ${shown.size} commands") },
+                        onValueChange = {
+                            filter = it
+                            pressed = null
+                        },
+                        label = { Text("Search, or Press Keys") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth().testTag("shortcutSearch"),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("shortcutSearch")
+                            // With Ctrl or Alt held, the keys pressed are the search (PEN-146): "what does Ctrl+K do?"
+                            .onPreviewKeyEvent { event ->
+                                if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                                val native = event.nativeKeyEvent
+                                if (!native.isCtrlPressed && !native.isAltPressed) return@onPreviewKeyEvent false
+                                val combo = KeyNames.comboOf(native) ?: return@onPreviewKeyEvent false
+                                pressed = Combos.normalise(combo)
+                                filter = Combos.format(combo)
+                                true
+                            },
                     )
+                    ShortcutViews(view, changed) { view = it }
                 }
             }
             if (rows.isEmpty()) {
                 item(key = "none") {
                     Text(
-                        "No commands match “${filter.trim()}”.",
+                        if (filter.isBlank()) "No commands here." else "No commands match “${filter.trim()}”.",
                         Modifier.padding(16.dp).testTag("shortcutsNone"),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -259,6 +294,7 @@ fun ShortcutsScreen(
                         command = command,
                         later = (coverage(command.id, command.scope) as? Coverage.Later)?.slice?.substringBefore(" ("),
                         keys = bindings.keysOf(command.id),
+                        defaults = command.keys,
                         types = types,
                         custom = bindings.isCustom(command.id),
                         canRecord = keyboard && canChange,
@@ -309,12 +345,30 @@ fun ShortcutsScreen(
     }
 }
 
+/** All, Changed · N and None Set (PEN-146): what the list shows. */
+@Composable
+private fun ShortcutViews(view: String, changed: Int, onView: (String) -> Unit) {
+    val options = listOf("all" to "All", "changed" to "Changed · $changed", "none" to "None Set")
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().testTag("shortcutViews")) {
+        options.forEachIndexed { index, (value, label) ->
+            SegmentedButton(
+                selected = view == value,
+                onClick = { onView(value) },
+                shape = SegmentedButtonDefaults.itemShape(index, options.size, app.penmoss.ui.common.SQUARE),
+                modifier = Modifier.testTag("shortcutView-$value"),
+            ) { Text(label, maxLines = 1) }
+        }
+    }
+}
+
 @Composable
 private fun ShortcutRow(
     command: ShortcutCommand,
     /** The slice that brings this command to Android, while it does nothing here (review S4). */
     later: String?,
     keys: List<String>,
+    /** The command's own keys, which a changed one says it replaced (PEN-146). */
+    defaults: List<String>,
     /** Whether a combination types a character on this keyboard, so never runs (A557). */
     types: (String) -> Boolean,
     custom: Boolean,
@@ -339,7 +393,19 @@ private fun ShortcutRow(
             headlineContent = {
                 Text(if (command.pending != null) "${command.title} · arrives with ${command.pending}" else command.title)
             },
-            supportingContent = { Text(keysText, Modifier.testTag("keys-${command.id}")) },
+            supportingContent = {
+                Column {
+                    Text(keysText, Modifier.testTag("keys-${command.id}"))
+                    if (custom && later == null) {
+                        Text(
+                            "Changed from " + (defaults.joinToString(" or ") { Combos.format(it) }.ifEmpty { "no shortcut" }),
+                            Modifier.testTag("changedFrom-${command.id}"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            },
             trailingContent = {
                 if (later == null) Row {
                     if (canRecord) {
@@ -415,7 +481,7 @@ private fun RecordDialog(title: String, chars: KeyChars, onCombo: (combo: String
     val focus = remember { FocusRequester() }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Change the shortcut") },
+        title = { Text("Change the Shortcut") },
         text = {
             Text(
                 "Press the new keys for “$title”. Esc cancels.",

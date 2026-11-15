@@ -2556,8 +2556,15 @@
   },
   "display": {
     "about": "Settings → Display (T42, A576): sidebar shortcuts the user hides. Sent in /sync/tree and taken by PUT /api/settings; the Android app reads this block for Settings → Display (T40 matrix ST12, A650), kept apart from `keys` for its own rule and `refused` list. Only false hides one: the web stores true when it is shown again, and a PUT with null removes the key; both show it. Agents cannot write these keys (A564).",
-    "keys": ["sidebar.today", "sidebar.thisWeek", "sidebar.graph", "sidebar.commands"],
+    "keys": [
+      "sidebar.tags",
+      "sidebar.today",
+      "sidebar.thisWeek",
+      "sidebar.graph",
+      "sidebar.commands"
+    ],
     "defaults": {
+      "sidebar.tags": true,
       "sidebar.today": true,
       "sidebar.thisWeek": true,
       "sidebar.graph": true,

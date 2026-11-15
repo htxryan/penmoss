@@ -218,6 +218,17 @@
   margin-top: 0;
 }
 
+/* A card's title with its icon (Agents → The penmoss Command), and its words at the rows' size. */
+.settings-card > h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.settings-card > p {
+  font-size: var(--pm-text-md);
+}
+
 .settings-facts {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
@@ -412,16 +423,7 @@
   background: var(--pm-danger);
 }
 
-.git-notebook-back {
-  margin-bottom: 0.5rem;
-}
-
-/*
- * A notebook's page (T62 item 1): on the settings' own background, not a raised card, with its
- * name, state and actions on top, then groups (About, Primary Notebook, Sync, Commits, Access,
- * Agent Activity), each under a quiet heading and a line, its fields one under another at one
- * width.
- */
+/* A notebook's page (T62 item 1; PEN-146): its name, chip, state and Sync Now on one row. */
 .git-notebook-head {
   display: flex;
   flex-wrap: wrap;
@@ -437,13 +439,6 @@
   margin: 0;
 }
 
-.git-notebook-page > .settings-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0.85rem 0 0;
-}
-
 .git-message:empty {
   display: none;
 }
@@ -451,42 +446,6 @@
 .git-message {
   margin: 0.5rem 0 0;
   font-size: var(--pm-text-sm);
-}
-
-.git-notebook-group {
-  margin: 1.75rem 0 0;
-  padding: 1rem 0 0;
-  border-top: 1px solid var(--pm-border);
-}
-
-:is(.git-notebook, .git-notebook-group) .settings-subhead {
-  margin: 0 0 0.75rem;
-  color: var(--pm-fg);
-  font-size: var(--pm-text-md);
-  font-weight: 650;
-}
-
-.git-notebook-group .settings-facts {
-  margin: 0;
-}
-
-.git-notebook-note {
-  max-width: 40rem;
-  margin: 0 0 0.6rem;
-  font-size: var(--pm-text-md);
-  line-height: 1.5;
-}
-
-/* Sync's two numbers side by side, each a field its size. */
-.git-notebook-fields {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 1.5rem;
-}
-
-.git-notebook-fields > .settings-field {
-  width: 11rem;
-  margin: 0 0 0.75rem;
 }
 
 /* Commits and Access: each field a line of its own, one width, its buttons under it. */
@@ -499,7 +458,7 @@
   margin: 0 0 0.75rem;
 }
 
-.git-notebook-group :is(.git-notebook-form, .agent-activity) .settings-actions {
+.git-notebook-form .settings-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
@@ -517,25 +476,10 @@
   gap: 0.5rem;
 }
 
-/*
- * Settings → Agents (A1098): the command, then the notebooks as a list, each opening a page of
- * its own on the settings' background, as a git notebook's does (Quanta feedback 2, item 5;
- * A1125).
- */
-.agents-list-heading {
-  margin: 1.5rem 0 0.4rem;
-}
-
-.notebook-agents > h2 {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0.25rem 0 0.25rem;
-}
-
+/* Settings → Agents (PEN-146): a notebook unfolded, its agents under its row. */
 .notebook-agents .local-agents {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
 }
 
 /* Agents on This Mac and the penmoss command (T54, A992, A993). */
@@ -1383,13 +1327,6 @@
   .settings-facts dd {
     margin-bottom: 0.4rem;
   }
-}
-
-/* Copying settings between notebooks (A1137). */
-.git-settings-copy {
-  display: grid;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
 }
 
 /* Add a Git Notebook: picking a GitHub repository and folder (T81, A1166, A1167, B10). */

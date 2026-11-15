@@ -32,7 +32,7 @@ class WordingTest {
         assertEquals("Queued today, will send when you’re online.", outboxLine(queued) { "today" })
         assertEquals("Queued, will send when you’re online.", FeedbackFormModel.queuedMessage(FeedbackOutbox.OFFLINE))
         assertEquals(
-            "Not sent: Devices only (403). It’s kept in Settings → About, where you can edit, retry or discard it.",
+            "Not sent: Devices only (403). It’s kept in Settings → GitHub, where you can edit, retry or discard it.",
             FeedbackFormModel.failedMessage(403, "Devices only."),
         )
     }

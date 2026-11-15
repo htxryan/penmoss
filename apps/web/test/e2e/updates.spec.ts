@@ -1,4 +1,4 @@
-// Updates: the channel, Auto-Update, the notice after an update and a build on offer.
+// Updates: the channel, Update Automatically, the notice after an update and a build on offer.
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, type Page, test } from './fixtures';
@@ -23,14 +23,15 @@ test.describe('in Quanta, with notes of links, lists and headings', () => {
   });
 
   // Ryan’s feedback of 6 Nov 2026 (Quanta), item 2.
-  test('Auto-Update is a switch in Settings → Updates; a newer build is offered, then installed', async ({
+  test('Update Automatically is a switch in Settings → Updates; a newer build is offered, then installed', async ({
     page,
     host,
   }) => {
     const errors = collectErrors(page);
     await page.goto('/settings/updates');
     const settings = page.getByTestId('updates-settings');
-    await expect(settings).toContainText('This is build 435.');
+    // PEN-146: the version card first, then the two settings as rows.
+    await expect(settings.getByTestId('updates-version')).toContainText('Penmoss 0.1.435');
     const auto = settings.getByTestId('updates-auto');
     await expect(auto).not.toBeChecked();
     await expect(auto).toBeEnabled();
@@ -240,13 +241,13 @@ test('Update Channel is Stable by default; Alpha is kept, checks at once and onl
   host.updateFeed.offeredAlpha = '0.2.1-alpha.12';
   await page.goto('/settings/updates');
   const settings = page.getByTestId('updates-settings');
-  await expect(settings).toContainText('This is version 0.2.0.');
-  await expect(settings).toContainText('New builds come from GitHub Releases.');
+  // PEN-146: the version card first, then the two settings as rows.
+  await expect(settings.getByTestId('updates-version')).toContainText('Penmoss 0.2.0');
   await expect(settings.getByRole('group', { name: 'Update Channel' })).toBeVisible();
   await expect(channel(page).getByRole('radio', { name: 'Stable' })).toBeChecked();
   await expect(channel(page).getByRole('radio', { name: 'Alpha' })).not.toBeChecked();
   await expect(channel(page).getByRole('radio', { name: 'Alpha' })).toHaveAccessibleDescription(
-    'Alpha: Every build from main. Newest features, may break.',
+    'Alpha gets every build from main: newest features, may break.',
   );
   await expect(settings.getByTestId('updates-auto')).not.toBeChecked();
   expect(host.updateFeed.checks).toBe(0);
@@ -258,7 +259,7 @@ test('Update Channel is Stable by default; Alpha is kept, checks at once and onl
     await page.emulateMedia({ colorScheme: 'light' });
   }
 
-  // Alpha, with Auto-Update off: checks the Alpha feed at once and offers its build.
+  // Alpha, with Update Automatically off: checks the Alpha feed at once and offers its build.
   await channel(page).getByText('Alpha', { exact: true }).click();
   await expect(channel(page).getByRole('radio', { name: 'Alpha' })).toBeChecked();
   await expect(settings.getByTestId('updates-status')).toHaveText(
@@ -288,6 +289,8 @@ test('Update Channel is Stable by default; Alpha is kept, checks at once and onl
   // Back to Stable: nothing newer there, and what Alpha offered is gone.
   await channel(page).getByText('Stable', { exact: true }).click();
   await expect(settings.getByTestId('updates-status')).toHaveText('Penmoss is up to date.');
+  await expect(settings.getByTestId('updates-chip')).toHaveText('Up to Date');
+  await expect(settings.getByTestId('updates-checked')).toHaveText(/^Stable · checked /);
   await expect(settings.getByTestId('updates-install')).toBeHidden();
   expect(host.updateFeed.checked).toEqual([ALPHA, STABLE]);
   expect(host.updateFeed.channel).toBe('latest');
@@ -311,7 +314,7 @@ test('an Alpha build switched to Stable says it moves to Stable with the next st
   host.appVersion = '0.2.1-alpha.12';
   await page.goto('/settings/updates');
   const settings = page.getByTestId('updates-settings');
-  await expect(settings).toContainText('This is version 0.2.1-alpha.12.');
+  await expect(settings.getByTestId('updates-version')).toContainText('Penmoss build 12');
   await channel(page).getByText('Alpha', { exact: true }).click();
   await expect(settings.getByTestId('updates-status')).toHaveText('Penmoss is up to date.');
 

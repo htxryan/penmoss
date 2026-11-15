@@ -33,27 +33,51 @@ export type Route =
   | { readonly name: 'not-found' };
 
 /**
- * Sections of Settings (T20 onwards). In every client's order
- * (T39 pass 3, A551): Appearance first, so `/settings` opens there, as the phone's Settings
- * lists it first.
+ * Sections of Settings (T20 onwards), in the nav's order (PEN-146): five groups, Look and Feel,
+ * Writing, Notebooks, Agents and This Mac. Appearance first, so `/settings` opens there, as the
+ * phone's Settings lists it first (T39 pass 3, A551).
  */
 export const SETTINGS_SECTIONS = [
+  // Look and Feel.
   'appearance',
-  'display',
+  'sidebar',
+  'note',
   'symbols',
-  // T50 (A856): the Mac app's git notebooks, and the agents that reach them (A1098).
-  'git-notebooks',
-  'agents',
+  // Writing.
   'journal',
+  'quick-capture',
   'shortcuts',
-  // Search by meaning on this Mac (T78, A1158).
+  // Notebooks: the Mac app's git notebooks (T50, A856), each with a page of its own (A1098).
+  'git-notebooks',
+  // Agents: the agents that reach them (A1098), and what they changed.
+  'agents',
+  'agent-activity',
+  // This Mac: search by meaning (T78, A1158), the GitHub sign-in (T57, T82) and Auto-Update
+  // (T64 item 2, A1112).
   'meaning',
-  // Auto-Update, in the Mac app (T64 item 2, A1112).
+  'github',
   'updates',
-  // Send feedback's GitHub token and outbox (T49, T57).
-  'status',
 ] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
+
+/**
+ * Sections that were renamed (PEN-146): an old link, bookmark or command still lands. Display
+ * became Sidebar (its note rows moved to Note), and Status became GitHub.
+ */
+export const SETTINGS_REDIRECTS: ReadonlyMap<string, SettingsSection> = new Map([
+  ['display', 'sidebar'],
+  ['status', 'github'],
+]);
+
+/** The path `pathname` should be shown at, when it is a renamed section's (PEN-146); else null. */
+export function settingsRedirect(pathname: string): string | null {
+  const match = SETTINGS_PATH.exec(pathname);
+  const to = match ? SETTINGS_REDIRECTS.get(match[1]!) : undefined;
+  return to && match?.[2] === undefined ? `/settings/${to}` : null;
+}
+
+/** A section's path in Settings. */
+export const settingsPath = (section: SettingsSection) => `/settings/${section}`;
 
 export interface RouteLocation {
   readonly pathname: string;
@@ -88,8 +112,9 @@ export function parseRoute(pathname: string): Route {
       return { name: 'graph' };
   }
   const settings = SETTINGS_PATH.exec(pathname);
-  if (settings && (SETTINGS_SECTIONS as readonly string[]).includes(settings[1]!)) {
-    const section = settings[1] as SettingsSection;
+  const named = settings ? (SETTINGS_REDIRECTS.get(settings[1]!) ?? settings[1]!) : null;
+  if (settings && named && (SETTINGS_SECTIONS as readonly string[]).includes(named)) {
+    const section = named as SettingsSection;
     if (settings[2] === undefined) return { name: 'settings', section };
     if (section === 'git-notebooks' || section === 'agents') {
       return { name: 'settings', section, item: settings[2] };

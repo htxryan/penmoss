@@ -146,7 +146,7 @@ The default symbols are ★ Important, ? Question, ! Follow-up, 💡 Idea and �
 - **Elsewhere:** Alt+Shift+1 to Alt+Shift+9, and Alt+Shift+0 for the picker.
 - **Anywhere:** **Symbol** in the slash menu, or click a line's symbols.
 
-In the picker, ↑ and ↓ move, Enter or Space toggles, a digit toggles that symbol, and Escape closes. **Edit Symbols…** at its foot opens **Settings → Symbols**, where you can change each symbol's glyph and colour, reorder them, **Add a Symbol** (up to nine) or **Restore Defaults**.
+In the picker, ↑ and ↓ move, Enter or Space toggles, a digit toggles that symbol, and Escape closes. **Edit Symbols…** at its foot opens **Settings → Symbols**. Each row there shows its symbol's key (⌃1 for the first on a Mac, or the key you gave it in Keyboard Shortcuts), then its glyph and colour, which you can change. A symbol's key follows its place in the list, so moving a row changes its key: drag the row by its handle, or press Alt+↑ or Alt+↓ on it. **Add a Symbol** adds one, up to nine (the count shows beside it), and **Restore Defaults** puts back the five above. Removing a symbol leaves its glyph as plain text in your notes.
 
 In markdown a symbol is plain text: the glyph and a space after the list marker, checkbox or `#`, as in `- [ ] ★ Send the form` or `## ? Open questions`.
 

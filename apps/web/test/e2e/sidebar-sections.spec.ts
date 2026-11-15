@@ -6,10 +6,13 @@ import { NEW_FOLDER } from './keys';
 
 const RUN = `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
-/** Shows or hides a sidebar section in Settings → Display (T62 item 11), then goes back. */
+/** Shows or hides a sidebar section in Settings → Sidebar (T62 item 11), then goes back. */
 async function toggleSection(page: Page, section: string): Promise<void> {
   await page.getByTestId('sidebar-settings').click();
-  await page.getByRole('navigation', { name: 'Settings sections' }).getByText('Display').click();
+  await page
+    .getByRole('navigation', { name: 'Settings sections' })
+    .getByRole('link', { name: 'Sidebar', exact: true })
+    .click();
   await page.getByTestId(`display-section-${section}`).click();
   await page.goBack();
   await page.goBack();
@@ -34,7 +37,7 @@ test('sections hide, show and move from their titles and the ⋯ menu; Recent No
     'Notebooks',
   );
 
-  // Settings → Display shows or hides each (the sidebar's ⋯ menu moved there, T62 item 11).
+  // Settings → Sidebar shows or hides each (the sidebar's ⋯ menu moved there, T62 item 11).
   await expect(page.getByTestId('sidebar-more')).toHaveCount(0);
   await toggleSection(page, 'recent');
   await expect(page.getByTestId('sidebar-section-recent')).toHaveCount(0);

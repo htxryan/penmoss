@@ -232,7 +232,7 @@ export const INVOKE = {
     from: 'mac',
     gesture: { refused: null },
   },
-  // The menu bar icon (T51 item 17, A945): this Mac's preference, set from Settings → Display.
+  // The menu bar icon (T51 item 17, A945): this Mac's preference, set from Settings → Quick Capture.
   menuBarIconGet: { channel: 'penmoss:menu-bar-icon:get', from: 'mac' },
   menuBarIconSet: { channel: 'penmoss:menu-bar-icon:set', from: 'mac', gesture: { refused: null } },
   // Send feedback (T49, A798): a PNG of the asking window; filed with the person's GitHub token
@@ -342,7 +342,7 @@ export const INVOKE = {
     gesture: { refused: NEEDS_A_PERSON },
   },
   cliRemove: { channel: 'penmoss:cli:remove', from: 'main', gesture: { refused: NEEDS_A_PERSON } },
-  // The capture hotkey (T30): read by any page; changed only from Settings → Keyboard Shortcuts
+  // The capture hotkey (T30): read by any page; changed only from Settings → Quick Capture
   // in a main or note window, after a key press or click (HotkeyChangeGate decides).
   captureHotkey: { channel: 'penmoss:capture:hotkey', from: 'app' },
   captureSetHotkey: { channel: 'penmoss:capture:set-hotkey', from: 'window', gesture: 'handler' },

@@ -1,11 +1,22 @@
 package app.penmoss.ui.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import app.penmoss.ui.common.OutlinedButton
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.heading
@@ -16,14 +27,19 @@ import app.penmoss.updates.NotesView
 import app.penmoss.updates.noteLine
 
 /*
- * Settings → What's New (PEN-109): this version's notes and earlier versions', grouped New,
- * Improved and Fixed. Each block and each kind is a heading, so TalkBack can move between them;
- * each note is its own line. Without notes yet, it says so and links to GitHub.
+ * Settings → What's New (PEN-109; PEN-146): a version card first (the only place Settings names
+ * the version; the phone never updates itself, so it has no update controls: a newer
+ * Penmoss.apk installs over it, as install/android.md says), then this version's
+ * notes and, behind Earlier Versions, the earlier ones', grouped New, Improved and Fixed. Each
+ * block and each kind is a heading, so TalkBack can move between them; each note is its own line.
+ * Without notes yet, it says so and links to GitHub.
  */
 
 @Composable
-fun WhatsNewScreen(view: NotesView, onOpenReleases: () -> Unit, onBack: () -> Unit) {
+fun WhatsNewScreen(view: NotesView, onOpenReleases: () -> Unit, onBack: () -> Unit, version: String? = null) {
+    var earlier by rememberSaveable { mutableStateOf(false) }
     SectionScreen("What’s New", onBack) {
+        if (version != null) VersionCard(version)
         when (view) {
             NotesView.None -> Missing(
                 "Release notes show once the phone has been online with Penmoss open. Until then, they’re on GitHub.",
@@ -33,14 +49,41 @@ fun WhatsNewScreen(view: NotesView, onOpenReleases: () -> Unit, onBack: () -> Un
             is NotesView.Ok -> {
                 view.current?.let { Block(it, "whatsNewCurrent") }
                 if (view.earlier.isNotEmpty()) {
-                    Heading("Earlier versions", MaterialTheme.typography.titleLarge, Modifier.testTag("whatsNewEarlier"))
-                    view.earlier.forEach { Block(it, "whatsNewRelease") }
+                    OutlinedButton(
+                        onClick = { earlier = !earlier },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("whatsNewEarlierToggle"),
+                    ) { Text(if (earlier) "Hide Earlier Versions" else "Earlier Versions") }
+                    if (earlier) {
+                        Heading("Earlier Versions", MaterialTheme.typography.titleLarge, Modifier.testTag("whatsNewEarlier"))
+                        view.earlier.forEach { Block(it, "whatsNewRelease") }
+                    }
                 }
                 if (view.current == null && view.earlier.isEmpty()) {
                     Help("No release notes yet.")
                 }
             }
         }
+    }
+}
+
+/** The version card (PEN-146): this build's version, Current, and where updates come from. */
+@Composable
+private fun VersionCard(version: String) {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant).padding(16.dp).testTag("whatsNewVersion"),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Penmoss $version", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Current",
+                Modifier.background(MaterialTheme.colorScheme.primaryContainer).padding(horizontal = 8.dp, vertical = 2.dp),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+        Text(VERSION_UPDATES, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -63,7 +106,7 @@ private fun Heading(text: String, style: androidx.compose.ui.text.TextStyle, mod
 
 @Composable
 private fun Block(block: NotesBlock, tag: String) {
-    Heading(block.title, MaterialTheme.typography.titleMedium, Modifier.testTag(tag))
+    Heading(headingCase(block.title), MaterialTheme.typography.titleMedium, Modifier.testTag(tag))
     if (block.groups.isEmpty()) {
         Help("Nothing that people using Penmoss would notice.")
         return
@@ -80,3 +123,13 @@ private fun Block(block: NotesBlock, tag: String) {
         }
     }
 }
+
+/**
+ * A release block's title as a heading (PEN-146): the shared model's "In this version (since
+ * 0.2.0)", which the Mac's contract fixes, in Title Case on the screen. A version stays as it is.
+ */
+internal fun headingCase(title: String): String =
+    title.replace("In this version", "In This Version").replace("(since ", "(Since ")
+
+/** The version card's line (PEN-146): Penmoss isn't in Google Play, and the phone never updates itself. */
+internal const val VERSION_UPDATES = "Penmoss doesn’t update itself on Android: install a newer Penmoss.apk from GitHub over this one."

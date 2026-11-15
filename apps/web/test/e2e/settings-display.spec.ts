@@ -1,21 +1,23 @@
-// Settings → Display: the sidebar’s shortcuts and the title bar’s buttons.
+// Settings → Sidebar and Note (Display until PEN-146): the sidebar’s shortcuts and the title bar’s
+// buttons.
 import { expect, type Page, test } from './fixtures';
 import { collectErrors, ULID } from './support/app';
 import { pushed } from './support/sync';
 
 // T42, item 7.
-test('Settings → Display hides sidebar shortcuts, on the rail too; Search stays', async ({
+test('Settings → Sidebar hides sidebar shortcuts, on the rail too; Search stays', async ({
   page,
 }) => {
   const errors = collectErrors(page);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/settings/display');
+  await page.goto('/settings/sidebar');
   const settings = page.getByTestId('display-settings');
   await expect(settings).toBeVisible();
-  const today = settings.getByRole('checkbox', { name: 'Today' });
-  const graph = settings.getByRole('checkbox', { name: 'Graph' });
-  await expect(settings.getByRole('checkbox', { name: /Search/ })).toBeDisabled();
-  await expect(settings.getByRole('checkbox', { name: /Search/ })).toBeChecked();
+  // Switches since PEN-146.
+  const today = settings.getByRole('switch', { name: 'Today' });
+  const graph = settings.getByRole('switch', { name: 'Graph' });
+  await expect(settings.getByRole('switch', { name: /Search/ })).toBeDisabled();
+  await expect(settings.getByRole('switch', { name: /Search/ })).toBeChecked();
   // Tags may be hidden too, and shows unless it is (R2-9).
   await expect(settings.getByTestId('display-tags')).toBeChecked();
   // Enabled once this device's copy of the settings is read: before, they are only defaults.
@@ -56,7 +58,7 @@ test('Settings → Display hides sidebar shortcuts, on the rail too; Search stay
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/\/graph/);
   } finally {
-    await page.goto('/settings/display');
+    await page.goto('/settings/sidebar');
     await expect(today).toBeEnabled();
     for (const box of [today, graph]) if (!(await box.isChecked())) await box.check();
     await expect(today).toBeChecked();
@@ -128,9 +130,9 @@ test.describe('in Quanta, with a folder, a long note and a source', () => {
     }
     await page.keyboard.press('Escape');
 
-    await page.goto('/settings/display');
+    await page.goto('/settings/note');
     const settings = page.getByTestId('note-bar-settings');
-    await expect(settings.getByRole('checkbox')).toHaveCount(9);
+    await expect(settings.getByRole('switch')).toHaveCount(9);
     await settings.getByTestId('display-note-bar-copyAgentReference').uncheck();
     await settings.getByTestId('display-note-bar-toggleSource').check();
     await settings.getByTestId('display-note-bar-pinQuickAccess').check();

@@ -32,7 +32,7 @@ export function useMeaningStatus(): {
   return meaning ? { meaning, status } : null;
 }
 
-const megabytes = (bytes: number) => `${Math.round(bytes / 1_000_000)} MB`;
+export const megabytes = (bytes: number) => `${Math.round(bytes / 1_000_000)} MB`;
 
 /** `embeddinggemma-300m-q4@5090578d/768/p1` as people read it. */
 export function modelName(model: string | undefined): string {
@@ -87,4 +87,26 @@ export function waitingText(status: DesktopMeaningStatus): string | null {
   return ` Another copy of Penmoss on this Mac is indexing, so ${waiting} ${
     waiting === 1 ? 'note waits' : 'notes wait'
   } here; search by meaning can miss ${waiting === 1 ? 'it' : 'them'} until then.`;
+}
+
+/** How far along the service is, 0–100, with its words; null when nothing is under way. */
+export function meaningProgress(
+  status: DesktopMeaningStatus,
+): { readonly percent: number; readonly text: string } | null {
+  if (status.state === 'downloading') {
+    const received = status.received ?? status.modelBytes ?? 0;
+    const total = status.totalBytes ?? 0;
+    if (total <= 0) return null;
+    const percent = Math.min(100, Math.floor((received / total) * 100));
+    return { percent, text: `${megabytes(received)} of ${megabytes(total)}` };
+  }
+  if (status.state === 'indexing' || status.state === 'ready') {
+    if (status.total <= 0) return null;
+    const percent = Math.min(100, Math.floor((status.indexed / status.total) * 100));
+    return {
+      percent,
+      text: `${status.indexed.toLocaleString('en-GB')} of ${status.total.toLocaleString('en-GB')} notes`,
+    };
+  }
+  return null;
 }

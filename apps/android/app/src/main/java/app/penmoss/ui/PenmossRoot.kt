@@ -120,7 +120,20 @@ private fun Screens(graph: NotebookGraph, deepLinks: DeepLinkInbox) {
             noteRoutes(root)
             graphRoutes(root)
             journalRoutes(root)
-            settingsRoutes(root, sync)
+            // Settings over this notebook's screens (PEN-146): the same screens as the app's first screen's.
+            settingsRoutes(
+                app.penmoss.ui.settings.SettingsHost(
+                    graph.device,
+                    nav,
+                    root.context,
+                    notebook = graph,
+                    openFeedback = { from -> root.openFeedback(from, null, null, from, 0) },
+                    syncPass = sync.pass,
+                    openNotebook = { id ->
+                        if (id == graph.localId) nav.popBackStack("home", false) else app.penmoss.git.GitNotebookActivity.open(root.context, id)
+                    },
+                ),
+            )
             feedbackRoutes(root)
         }
 

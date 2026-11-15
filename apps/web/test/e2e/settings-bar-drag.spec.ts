@@ -41,21 +41,22 @@ test('PEN-65: Settings’ bar still drags the Mac window once its sections scrol
   // The Mac app's compact title bar, as mac-window.ts sets it.
   await page.evaluate(() => (document.documentElement.dataset['titlebar'] = 'compact'));
   const bar = await box(page, '.settings-bar');
-  const control = page.locator('.settings-content select').first();
+  // The page's first control: Appearance's fonts sit too far down to scroll up under the bar.
+  const control = page.locator('.settings-content :is(button, select, input)').first();
   await expect(control).toBeVisible();
   const before = (await control.boundingBox())!;
   // The bar's empty part, over the column the control is in.
   const point = { x: before.x + before.width / 2, y: bar.y + bar.height / 2 };
   expect(await regionAt(page, point.x, point.y)).toBe('drag');
 
-  // Scroll the control up under the bar, as reading down to it does.
+  // Scroll the control up under the bar, its middle at the point, as reading down to it does.
   const scroller = page.locator('.settings-content');
   const scrolled = await scroller.evaluate(
     (element, by) => {
       element.scrollTop += by;
       return element.scrollTop;
     },
-    Math.ceil(before.y - point.y) + 4,
+    Math.round(before.y + before.height / 2 - point.y),
   );
   expect(scrolled).toBeGreaterThan(0);
   expect(await box(page, '.settings-bar')).toEqual(bar);

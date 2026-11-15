@@ -1,15 +1,19 @@
 /**
- * Settings → Updates (the switch, the channel, Check Now and Install and Restart, then the release
- * notes, PEN-108) and the notice a newer build brings (T64 item 2, A1112, A1196), in the sidebar or
- * as a toast (PEN-135; its model is notice.ts). The Mac app only.
+ * Settings → Updates (PEN-108, PEN-146): a card with this version, whether it is current, the
+ * channel and the last check, and Check Now (or Install and Restart); then Update Automatically
+ * and Update Channel as rows with their help; then What's New, the release notes (T64 item 2,
+ * A1112, A1196). Also the notice a newer build brings, in the sidebar or as a toast (PEN-135; its
+ * model is notice.ts). The Mac app only.
  */
 import { Icon } from '@penmoss/ui/icons';
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { DesktopUpdateChannel } from '../desktop/bridge';
 import { navigate } from '../router';
+import { GroupHead, SettingRow, Switch } from '../theme/look-rows';
 import { UPDATES_PATH, type UpdateNoticeModel } from './notice';
+import { versionLabel } from './notes';
 import { ReleaseNotes } from './ReleaseNotes';
-import { nameOf, updateStatus, useUpdates } from './updates';
+import { checkedLine, updateChip, updateStatus, useUpdates } from './updates';
 import { ActionToast } from '../toasts/ActionToast';
 import { ToastSlot } from '../toasts/ToastSlot';
 
@@ -18,9 +22,20 @@ const CHANNELS: ReadonlyArray<{ value: DesktopUpdateChannel; label: string }> = 
   { value: 'alpha', label: 'Alpha' },
 ];
 
+/** Now, again each minute, so "checked 5 minutes ago" keeps true while the page is open. */
+function useMinute(): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+  return now;
+}
+
 export function UpdatesSettings() {
   const found = useUpdates();
   const id = useId();
+  const now = useMinute();
   const [busy, setBusy] = useState(false);
   /** The switch as just clicked, until main answers. */
   const [wanted, setWanted] = useState<boolean | null>(null);
@@ -31,6 +46,7 @@ export function UpdatesSettings() {
   const offered = state?.phase === 'available' || state?.phase === 'ready';
   const working = state?.phase === 'checking' || state?.phase === 'downloading';
   const channel = chosen ?? state?.channel ?? 'stable';
+  const chip = state ? updateChip(state) : null;
   const run = async (act: () => Promise<unknown>) => {
     setBusy(true);
     try {
@@ -46,21 +62,74 @@ export function UpdatesSettings() {
       data-testid="updates-settings"
     >
       <h2 id={`${id}-h`}>Updates</h2>
-      <p className="muted">
-        {state?.current ? `This is ${nameOf(state.current)}. ` : null}
-        New builds come from GitHub Releases.
-      </p>
-      {state && !state.supported ? (
-        <p className="muted" data-testid="updates-unsupported">
-          This build is not signed, so it cannot update itself: install new builds by hand.
-        </p>
-      ) : null}
-      <fieldset className="display-toggles">
-        <legend className="sr-only">Auto-Update</legend>
-        <label className="display-toggle" htmlFor={`${id}-auto`}>
-          <input
+      <div className="updates-card" data-setting="version" data-testid="updates-version">
+        <div className="updates-card-head">
+          <strong className="updates-card-name">
+            Penmoss{state?.current ? ` ${versionLabel(state.current)}` : ''}
+          </strong>
+          {chip ? (
+            <span className="chip" data-phase={state?.phase} data-testid="updates-chip">
+              {chip}
+            </span>
+          ) : null}
+          <span className="updates-card-actions">
+            {offered ? (
+              <button
+                type="button"
+                className="btn primary"
+                data-ui="submit"
+                disabled={busy}
+                onClick={() => void run(() => updates.install())}
+                data-testid="updates-install"
+              >
+                <Icon name="arrowR" size={14} />
+                Install and Restart
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="btn"
+              disabled={busy || working || !state?.supported}
+              data-ui="submit"
+              onClick={() => void run(() => updates.check())}
+              data-testid="updates-check"
+            >
+              <Icon name="refresh" size={14} />
+              Check Now
+            </button>
+          </span>
+        </div>
+        {state ? (
+          <p className="muted updates-card-line" data-testid="updates-checked">
+            {checkedLine(state, now)}
+          </p>
+        ) : null}
+        {state ? (
+          <p
+            role="status"
+            className="updates-status"
+            data-testid="updates-status"
+            data-phase={state.phase}
+          >
+            {updateStatus(state)}
+          </p>
+        ) : null}
+        {state && !state.supported ? (
+          <p className="muted updates-card-line" data-testid="updates-unsupported">
+            This build is not signed, so it cannot update itself: install new builds by hand.
+          </p>
+        ) : null}
+      </div>
+      <div className="lf-group">
+        <SettingRow
+          setting="update-automatically"
+          label="Update Automatically"
+          labelFor={`${id}-auto`}
+          help="Checks at launch and every hour, and tells you when there is a new build. Nothing downloads until you choose Install and Restart."
+          helpId={`${id}-help`}
+        >
+          <Switch
             id={`${id}-auto`}
-            type="checkbox"
             checked={wanted ?? state?.auto === true}
             disabled={busy || !state?.supported}
             aria-describedby={`${id}-help`}
@@ -71,84 +140,51 @@ export function UpdatesSettings() {
               void run(() => updates.setAuto(next)).finally(() => setWanted(null));
             }}
           />
-          <span>Auto-Update</span>
-        </label>
-        <p id={`${id}-help`} className="muted settings-help">
-          Checks for a new build when Penmoss starts and every hour, and tells you when there is
-          one. Nothing downloads until you choose Install and Restart. This Mac only.
-        </p>
-      </fieldset>
-      <fieldset
-        className="appearance-group"
-        disabled={busy || working || state?.phase === 'ready' || !state?.supported}
-        data-testid="updates-channel-setting"
-      >
-        <legend>Update Channel</legend>
-        <div className="seg" data-testid="updates-channel">
-          {CHANNELS.map((item) => (
-            <label key={item.value} className="seg-option">
-              <input
-                type="radio"
-                name={`${id}-channel`}
-                value={item.value}
-                checked={channel === item.value}
-                aria-describedby={item.value === 'alpha' ? `${id}-alpha` : undefined}
-                onChange={() => {
-                  setChosen(item.value);
-                  void run(() => updates.setChannel(item.value)).finally(() => setChosen(null));
-                }}
-              />
-              <span className="bold-steady" data-label={item.label}>
-                {item.label}
-              </span>
-            </label>
-          ))}
-        </div>
-        <p id={`${id}-alpha`} className="muted appearance-note">
-          Alpha: Every build from main. Newest features, may break.
-        </p>
-      </fieldset>
-      {state ? (
-        <p
-          role="status"
-          className="updates-status"
-          data-testid="updates-status"
-          data-phase={state.phase}
+        </SettingRow>
+        <SettingRow
+          setting="update-channel"
+          label="Update Channel"
+          labelId={`${id}-channel-label`}
+          help="Alpha gets every build from main: newest features, may break."
+          helpId={`${id}-alpha`}
+          testId="updates-channel-setting"
         >
-          {updateStatus(state)}
-        </p>
-      ) : null}
-      <div className="row">
-        <button
-          type="button"
-          className="btn"
-          disabled={busy || working || !state?.supported}
-          data-ui="submit"
-          onClick={() => void run(() => updates.check())}
-          data-testid="updates-check"
-        >
-          <Icon name="refresh" size={14} />
-          Check Now
-        </button>
-        {offered ? (
-          <button
-            type="button"
-            className="btn primary"
-            data-ui="submit"
-            disabled={busy}
-            onClick={() => void run(() => updates.install())}
-            data-testid="updates-install"
+          <fieldset
+            className="seg-field"
+            disabled={busy || working || state?.phase === 'ready' || !state?.supported}
+            aria-labelledby={`${id}-channel-label`}
           >
-            <Icon name="arrowR" size={14} />
-            Install and Restart
-          </button>
-        ) : null}
+            <div className="seg" data-testid="updates-channel">
+              {CHANNELS.map((item) => (
+                <label key={item.value} className="seg-option">
+                  <input
+                    type="radio"
+                    name={`${id}-channel`}
+                    value={item.value}
+                    checked={channel === item.value}
+                    aria-describedby={item.value === 'alpha' ? `${id}-alpha` : undefined}
+                    onChange={() => {
+                      setChosen(item.value);
+                      void run(() => updates.setChannel(item.value)).finally(() => setChosen(null));
+                    }}
+                  />
+                  <span className="bold-steady" data-label={item.label}>
+                    {item.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        </SettingRow>
       </div>
       {state ? (
-        <ReleaseNotes
-          current={state.current}
-          offered={offered || state.phase === 'downloading' ? state.version : null}
-        />
+        <div data-setting="whats-new" className="updates-whats-new">
+          <GroupHead>What’s New</GroupHead>
+          <ReleaseNotes
+            current={state.current}
+            offered={offered || state.phase === 'downloading' ? state.version : null}
+          />
+        </div>
       ) : null}
     </section>
   );

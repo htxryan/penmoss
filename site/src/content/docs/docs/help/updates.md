@@ -14,21 +14,22 @@ This page shows you how to keep Penmoss up to date, and how to try Alpha builds 
 
 Penmoss can check for a newer build and offer it. It never installs one until you say so.
 
-- **Settings → Updates → Auto-Update** (off until you turn it on) checks when Penmoss starts and every hour after.
-- **Check Now** in the same place, or **Penmoss → Check for Updates…**, checks at any time, with Auto-Update on or off.
+- **Settings → Updates** starts with a card: the version you're running, whether it's **Up to Date**, the channel, and when Penmoss last checked.
+- **Update Automatically** (off until you turn it on) checks when Penmoss starts and every hour after.
+- **Check Now** on the card, or **Penmoss → Check for Updates…**, checks at any time, with Update Automatically on or off.
 - **Update Channel** chooses what it offers: **Stable** (the default) or **Alpha**. Changing it checks at once, and Penmoss still only offers the update.
-- When a newer build is found, Settings and a notice at the bottom of the sidebar, above Settings and Send Feedback, offer it. **Install and Restart** downloads it and restarts Penmoss into it. With the sidebar folded to a rail, the notice is an icon with a dot at the rail's foot, which opens Settings → Updates; in a narrow window it shows at the foot of the window.
+- When a newer build is found, the card and a notice at the bottom of the sidebar, above Settings and Send Feedback, offer it. **Install and Restart** downloads it and restarts Penmoss into it. With the sidebar folded to a rail, the notice is an icon with a dot at the rail's foot, which opens Settings → Updates; in a narrow window it shows at the foot of the window.
 - Penmoss always updates to the newest build, never one step at a time. Install and Restart checks again first, so a build published since the offer is the one you get, however many came out since your last update. If a newer build appears after one has downloaded, Penmoss downloads it in its place.
 
 **About Penmoss** shows the version you have.
 
 ### What's new
 
-**Settings → Updates** also shows what changed, below its buttons:
+**Settings → Updates** also shows what changed, under **What's New**:
 
 - **What's new in …**, while a newer build is offered: what it brings, since the version you have.
 - **In this version**: what your version brought. On Alpha, that's everything since the last stable release, each change with its build.
-- **Earlier versions**, folded away: each stable release's changes, newest first.
+- **Earlier Versions**, folded away: each stable release's changes, newest first.
 
 After Penmoss restarts into a newer version, a notice at the bottom of the sidebar says **Updated to …** once, if that version has notes. **What's New** opens them in Settings → Updates; it and ✕ put the notice away for good. On the rail the notice is an icon with a dot, which opens What's New.
 

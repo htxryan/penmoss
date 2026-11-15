@@ -99,7 +99,7 @@ export function GitHubAccess({
           )}
         </p>
         <p className="fr-lead fr-small">
-          Kept in this Mac’s Keychain. Sign out in Settings → Status.
+          Kept in this Mac’s Keychain. Sign out in Settings → GitHub.
         </p>
       </Frame>
     );

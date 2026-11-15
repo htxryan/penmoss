@@ -2,15 +2,15 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DisplaySettings } from '../../src/shell/DisplaySettings';
 import { TooltipLayer } from '../../src/shell/Tooltip';
+import { TooltipDelaySetting } from '../../src/shell/TooltipDelaySetting';
 import type { Notes } from '../../src/notes/service';
 import { SourcesProvider } from '../../src/sources/context';
 import { WorkspaceContext } from '../../src/workspace/hooks';
 import type { Workspace } from '../../src/workspace/service';
 import { standInSources } from './support/one-source';
 
-// PEN-70 (A1247): tooltips wait as long as Settings → Display → Show Tooltips After says
+// PEN-70 (A1247): tooltips wait as long as Settings → Appearance → Show Tooltips After says
 // (1000 ms unset, never on hover with Never); keyboard focus still shows one at once.
 
 let root: Root | null = null;
@@ -176,11 +176,11 @@ describe('the tooltip layer (PEN-70)', () => {
   }
 });
 
-describe('Settings → Display → Show Tooltips After (PEN-70)', () => {
+describe('Settings → Appearance → Show Tooltips After (PEN-70, PEN-146)', () => {
   const select = () => document.querySelector<HTMLSelectElement>('[data-testid="tooltip-delay"]')!;
 
-  it('offers the choices after the title bar’s buttons, 1 Second (Default) when unset (AC3)', () => {
-    render(<DisplaySettings />);
+  it('offers the choices in a row of the Text group, 1 Second (Default) when unset (AC3)', () => {
+    render(<TooltipDelaySetting />);
     expect([...select().options].map((option) => option.textContent)).toEqual([
       '0.5 Seconds',
       '1 Second (Default)',
@@ -191,27 +191,24 @@ describe('Settings → Display → Show Tooltips After (PEN-70)', () => {
     expect(select().selectedOptions[0]!.textContent).toBe('1 Second (Default)');
     expect(select().className).toContain('pm-select');
     expect(select().labels[0]!.textContent).toContain('Show Tooltips After');
-    // Right after "Buttons in the note's title bar".
-    const noteBar = document.querySelector('[data-testid="note-bar-settings"]')!;
-    const field = select().closest('.settings-field')!;
-    expect(noteBar.nextElementSibling!.nextElementSibling).toBe(field);
-    // The help line under it, styled like the other Display help lines, describes the select.
-    const help = field.nextElementSibling!;
-    expect(help.className).toBe('muted settings-help');
+    // A row Search Settings finds, its help line under the label describing the select.
+    const row = select().closest('.lf-row')!;
+    expect(row.getAttribute('data-setting')).toBe('show-tooltips-after');
+    const help = row.querySelector('.lf-row-help')!;
     expect(help.textContent).toMatch(
-      /^How long the pointer rests on a button before its name shows\. Tabbing to a button shows it\s+at once\. Changes sync to your other devices\.$/,
+      /^How long the pointer rests on a button before its name shows\. Tabbing to a button shows\s+it at once\.$/,
     );
     expect(select().getAttribute('aria-describedby')).toBe(help.id);
   });
 
   it('shows 1 Second (Default) for a value it does not know (AC9)', () => {
     settings['tooltip.delay'] = 'soon';
-    render(<DisplaySettings />);
+    render(<TooltipDelaySetting />);
     expect(select().value).toBe('1000');
   });
 
   it('writes tooltip.delay when a choice is picked (AC4)', () => {
-    render(<DisplaySettings />);
+    render(<TooltipDelaySetting />);
     const pick = (value: string) =>
       act(() => {
         select().value = value;
@@ -228,7 +225,7 @@ describe('Settings → Display → Show Tooltips After (PEN-70)', () => {
 
   it('is disabled until this device’s settings are read (AC8)', () => {
     state = { loaded: false };
-    render(<DisplaySettings />);
+    render(<TooltipDelaySetting />);
     expect(select().disabled).toBe(true);
     act(() => {
       state = { loaded: true };

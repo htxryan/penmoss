@@ -196,7 +196,7 @@ const macWindow = (style: 'compact' | 'native') =>
 
 /**
  * The menu bar icon (T51 item 17, A945): on a Mac (or the suite standing in for one), in main
- * and note windows. Settings → Display turns it on or off, after a key press or click; the
+ * and note windows. Settings → Quick Capture turns it on or off, after a key press or click; the
  * main window's page sends the Quick Access notes its menu lists (A946), ids and titles only.
  */
 const menuBar = {

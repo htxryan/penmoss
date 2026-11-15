@@ -8,7 +8,7 @@ import { QuickAccessMenuBar } from '../../src/desktop/QuickAccessMenuBar';
 import type { QuickAccessNote } from '../../src/notes/quick-access';
 
 // T51 item 17 (A945, A946) in the page: the main window tells the Mac app the Quick Access
-// notes and their titles as they change, and Settings → Display shows the per-Mac toggle. The
+// notes and their titles as they change, and Settings → Quick Capture shows the per-Mac switch. The
 // Electron suite (apps/desktop/test/e2e/menu-bar.spec.ts) checks the menu in the app.
 
 let pinned: readonly Omit<QuickAccessNote, 'notebook'>[] = [];
@@ -116,7 +116,7 @@ describe('the Quick Access notes for the menu bar icon', () => {
   });
 });
 
-describe('Settings → Display → Show Penmoss in the Menu Bar', () => {
+describe('Settings → Quick Capture → Show in the Menu Bar', () => {
   const box = () => host.querySelector<HTMLInputElement>('[data-testid="menu-bar-icon"]');
 
   it('shows only in the Mac app', () => {
@@ -132,7 +132,9 @@ describe('Settings → Display → Show Penmoss in the Menu Bar', () => {
     });
     install('main', { shown: () => Promise.resolve(shown), setShown });
     await settle(() => root.render(<MenuBarIconSetting />));
-    expect(host.textContent).toContain('Show Penmoss in the Menu Bar');
+    expect(host.textContent).toContain('Show in the Menu Bar');
+    expect(host.querySelector('[data-setting="show-in-the-menu-bar"]')).not.toBeNull();
+    expect(box()?.getAttribute('role')).toBe('switch');
     expect(box()?.checked).toBe(false);
     await settle(() => box()?.click());
     expect(setShown).toHaveBeenCalledWith(true);

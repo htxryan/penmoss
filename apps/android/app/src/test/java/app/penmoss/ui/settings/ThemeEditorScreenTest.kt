@@ -168,7 +168,7 @@ class ThemeEditorScreenTest {
     }
 
     @Test
-    fun appearanceOffersToDuplicateABuiltInAndToEditYourOwn() {
+    fun appearanceOffersToCustomizeABuiltInAndYourOwn() {
         var opened = 0
         var entry by mutableStateOf(ThemeEditorEntry("Nord", builtIn = true) { opened++ })
         compose.setContent {
@@ -179,11 +179,12 @@ class ThemeEditorScreenTest {
                 )
             }
         }
-        compose.onNodeWithText("Built-in themes can’t be changed. Duplicate Nord to edit its colours, fonts and note width; your copy syncs to your other devices.")
+        // One Customize… button for both (PEN-146): a built-in is copied first, your own opens.
+        compose.onNodeWithText("Built-in themes can’t be changed: Customize makes your own copy of Nord to change its colours, fonts and note width. It syncs to your other devices.")
             .performScrollTo().assertIsDisplayed()
-        compose.onNodeWithTag("duplicateTheme").performScrollTo().performClick()
+        compose.onNodeWithTag("customizeTheme").performScrollTo().assertTextContains("Customize Nord…").performClick()
         entry = ThemeEditorEntry("Nord copy", builtIn = false) { opened++ }
-        compose.onNodeWithTag("editTheme").performScrollTo().assertTextContains("Edit Nord copy").performClick()
+        compose.onNodeWithTag("customizeTheme").performScrollTo().assertTextContains("Customize Nord copy…").performClick()
         assertEquals(2, opened)
     }
 
