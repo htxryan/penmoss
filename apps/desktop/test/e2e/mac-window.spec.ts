@@ -699,6 +699,10 @@ test('the compact title bar: room for the lights in every layout, rows that drag
   await page.keyboard.press('Escape');
   await mainBounds(app, { x: 0, y: 0, width: 1100, height: 760 });
   await expect(page.locator('.tab-strip')).toBeVisible();
+  // The tab shows Home now (PEN-140 keeps the page each tab was on), so open the note in it
+  // again: Open in New Window below opens the note the main window shows.
+  await page.getByRole('treeitem', { name: new RegExp(title) }).click();
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
 
   // Full screen hides the lights, and the room for them goes too.
   await emit(app, 'main', 'enter-full-screen');
