@@ -2,7 +2,6 @@ package app.penmoss.ui.keys
 
 import android.content.Context
 import android.content.res.Configuration
-import android.widget.Toast
 import androidx.navigation.NavHostController
 import app.penmoss.NotebookGraph
 import app.penmoss.capture.CaptureTileService
@@ -12,7 +11,6 @@ import app.penmoss.ui.graph.GRAPH_ROUTE
 import app.penmoss.ui.SEARCH_ROUTE
 import app.penmoss.ui.graph.graphRoute
 import app.penmoss.ui.open
-import app.penmoss.ui.folders.sortFolderAndSay
 import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
@@ -34,6 +32,8 @@ internal fun rootActions(
     context: Context,
     openPeriodic: (ToEditor.PeriodKind, String?) -> Unit,
     newNote: (String?) -> Unit,
+    /** The top level's sort order, set and said as Home's Sort Order… does. */
+    sort: (String) -> Unit,
     /** Send feedback (T49): from the screen in front. */
     feedback: () -> Unit = {},
     newFolder: () -> Unit,
@@ -48,10 +48,7 @@ internal fun rootActions(
     thisWeek = { openPeriodic(ToEditor.PeriodKind.WEEKLY, null) },
     newNote = { newNote(null) },
     newFolder = newFolder,
-    sort = { mode ->
-        // Outlives the screen: the top level's sort order, written for the person.
-        graph.launchReporting(kotlinx.coroutines.Dispatchers.Main.immediate) { Toast.makeText(context, sortFolderAndSay(graph, null, mode), Toast.LENGTH_SHORT).show() }
-    },
+    sort = sort,
     capture = { openCapture(context) },
     // The opposite of the variant shown, as the web's `toggleDarkMode` does.
     toggleDark = {

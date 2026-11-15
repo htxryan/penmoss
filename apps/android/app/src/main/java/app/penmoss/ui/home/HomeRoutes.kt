@@ -1,16 +1,11 @@
 package app.penmoss.ui.home
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.widget.Toast
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import app.penmoss.capture.Captures
 import app.penmoss.capture.RefusedCapturesScreen
 import app.penmoss.data.CapturesWaiting
 import app.penmoss.engine.bridge.ToEditor
@@ -84,11 +79,12 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
         HomeScreen(
             HomeUi(
                 title = graph.name,
+                notebook = graph.name,
                 quickAccess = quickAccess,
                 // The sidebar's sections and Quick Access (T53 items 8 and 10), synced settings.
                 layout = layout,
                 // Every pin is this notebook's note, named as its heading is (T53 item 10).
-                quickAccessNotebooks = quickAccess.associate { it.id to app.penmoss.ui.home.HOME_NOTEBOOK_NAME },
+                quickAccessNotebooks = quickAccess.associate { it.id to graph.name },
                 recent = home.recent,
                 folders = home.folders,
                 status = sync.text,
@@ -170,7 +166,7 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
             captures = refused,
             dateOf = { format.format(Date(it)) },
             onBack = { nav.leave(entry) },
-            onCopy = { copyCaptures(root.context, listOf(it)) },
+            onCopy = { root.copyCaptures(listOf(it)) },
             // Each outlives the screen: a capture sent again, or discarded, as the person asked.
             onRetry = { graph.launchReporting(Dispatchers.Main.immediate) { graph.captures.retry(it.id) } },
             onWithoutPictures = { graph.launchReporting(Dispatchers.Main.immediate) { graph.captures.sendWithoutMissingPictures(it.id) } },
@@ -184,13 +180,6 @@ private data class HomeView(
     val recent: List<NoteItem> = emptyList(),
     val folders: List<FolderItem> = emptyList(),
 )
-
-/** Puts captures' text on the clipboard, one after another (A345). */
-private fun copyCaptures(context: Context, captures: List<Captures.Refused>) {
-    val text = captures.joinToString("\n\n---\n\n") { it.text }
-    context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Penmoss captures", text))
-    Toast.makeText(context, if (captures.size == 1) "Copied." else "Copied ${captures.size} captures.", Toast.LENGTH_SHORT).show()
-}
 
 /** Why captures still wait, when worth saying (A345): their age. */
 internal fun capturesWhy(waiting: CapturesWaiting, now: Long): String? {

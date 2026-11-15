@@ -116,11 +116,6 @@ data class NoteEntity(
     @ColumnInfo(defaultValue = "1") val textDue: Boolean = true,
     /** The SHA-256 of the text in the offline index, sent so the server sends text only when it differs. */
     val textHash: String? = null,
-    /**
-     * Unused: T43's `fromNotebook` for a move (A766), gone with notebooks inside a notebook
-     * (A912). Kept so the schema stays 19; nothing reads or writes it.
-     */
-    val moveNotebook: String? = null,
 ) {
     companion object {
         /** Moved to Trash here, not sent yet: Restore cancels it, unless [trashTried]. */
@@ -151,11 +146,6 @@ data class FolderEntity(
     val parentId: String?,
     val position: String,
     val sortMode: String,
-    /**
-     * Unused: T43's notebook flag (A750), which a git notebook's tree never sets (A912). Kept so
-     * the schema stays 19; nothing reads or writes it.
-     */
-    @ColumnInfo(defaultValue = "0") val notebook: Boolean = false,
 )
 
 /**
@@ -196,10 +186,6 @@ data class FolderOpEntity(
      * sends the delete instead of cancelling both, so the folder does not reappear.
      */
     @ColumnInfo(defaultValue = "0") val tried: Boolean = false,
-    /** Unused: T43's notebook flag on a CREATE or NOTEBOOK change (A756). Kept for schema 19. */
-    @ColumnInfo(defaultValue = "0") val notebook: Boolean = false,
-    /** Unused: T43's `fromNotebook` on a MOVE (A766). Kept for schema 19. */
-    val fromNotebook: String? = null,
 ) {
     companion object {
         const val CREATE = "CREATE"
@@ -368,8 +354,6 @@ data class PendingSettingEntity(
      * while the setting still has this value, so a newer choice made elsewhere wins (A410).
      */
     val base: String?,
-    /** Epoch ms of the latest change. */
-    val changedAt: Long = 0,
     /**
      * The values sent for it whose outcome the phone does not know (a reply lost, or still on its
      * way), as a JSON array; null when none. The server may hold any of them: a tree or a 409

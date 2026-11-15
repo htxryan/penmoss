@@ -214,7 +214,7 @@ fun SelectionBar(
  * notes already there count as neither moved nor refused (review N1), and a folder gone from the
  * phone is named as the reason, not the notes (#137, A658).
  */
-internal suspend fun moveNotesAndSay(store: NoteStore, ids: List<String>, folderId: String?, folderName: String, requestSync: () -> Unit): String {
+internal suspend fun moveNotesAndSay(store: NoteStore, ids: List<String>, folderId: String?, folderName: String, requestSync: () -> Unit): Said {
     val results = ids.map { store.moveNote(it, folderId) }
     if (NoteStore.Move.MOVED in results) requestSync()
     val moved = results.count { it == NoteStore.Move.MOVED }
@@ -231,12 +231,12 @@ internal suspend fun moveNotesAndSay(store: NoteStore, ids: List<String>, folder
         else -> "$folderGone, and $gone of them aren't either"
     }
     return when {
-        noFolder == ids.size -> folderGone
-        refused == 0 && moved == 0 -> "Already in $folderName"
-        refused == 0 -> "Moved ${pickedCount(moved)} to $folderName"
-        refused == ids.size -> if (ids.size == 1) "This note can't be moved" else "None of the ${ids.size} notes could move to $folderName"
-        moved == 0 -> "$already already in $folderName; $why"
-        else -> "Moved $moved of ${ids.size} notes to $folderName; $why"
+        noFolder == ids.size -> Said("$folderGone.", SnackbarTone.Error)
+        refused == 0 && moved == 0 -> Said("Already in $folderName.", SnackbarTone.Info)
+        refused == 0 -> Said("Moved ${pickedCount(moved)} to $folderName.", SnackbarTone.Done)
+        refused == ids.size -> Said(if (ids.size == 1) "This note can't be moved." else "None of the ${ids.size} notes could move to $folderName.", SnackbarTone.Error)
+        moved == 0 -> Said("$already already in $folderName; $why.", SnackbarTone.Error)
+        else -> Said("Moved $moved of ${ids.size} notes to $folderName; $why.", SnackbarTone.Error)
     }
 }
 
