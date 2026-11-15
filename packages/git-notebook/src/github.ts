@@ -425,10 +425,4 @@ export class GitHubTransport implements GitTransport {
     const sha = files.get(path);
     return sha ? this.blob(sha) : null;
   }
-
-  /** Whether GitHub says the repository is private (A841: a public one is never written to). */
-  async isPrivate(): Promise<boolean> {
-    const data = await this.json<{ private?: unknown }>('');
-    return data.private === true;
-  }
 }

@@ -5,7 +5,7 @@
  *
  * Reads pull first when the last sync is older than `PULL_AFTER_MS`, so claude.ai sees what the
  * Mac pushed. Writes are saved at once and pushed `PUSH_AFTER_MS` after they settle (the Durable
- * Object's alarm), and `save_version` pushes at once. A public repository is never synced (A841).
+ * Object's alarm), and `save_version` pushes at once. Public and private repositories sync alike (D61).
  */
 import {
   GitNotebookEngine,
@@ -28,8 +28,6 @@ import { BlobSecrets, BlobStorage, type Blobs } from './storage';
 export const PULL_AFTER_MS = 15_000;
 export const PUSH_AFTER_MS = 5_000;
 export const RETRY_AFTER_MS = 60_000;
-/** How long a "private" answer from GitHub is trusted (A841: a public one is never cached). */
-export const PRIVATE_FOR_MS = 60 * 60_000;
 /**
  * The repository no longer holds the copy's notebook: its history was replaced (an import that
  * starts the branch again) or another notebook is there. The copy is a cache (A821), so the relay
@@ -37,7 +35,7 @@ export const PRIVATE_FOR_MS = 60 * 60_000;
  */
 const STALE_COPY: ReadonlySet<NotebookErrorCode> = new Set(['branch_gone', 'other_notebook']);
 
-export const RELAY_INSTRUCTIONS = `This is Ryan's Penmoss notebook, reached through his relay: notes kept in a private git repository. Markdown with a title, tags (nested with /), headings, [[wikilinks]] between notes, folders, and a daily and weekly journal.
+export const RELAY_INSTRUCTIONS = `This is Ryan's Penmoss notebook, reached through his relay: notes kept in a git repository. Markdown with a title, tags (nested with /), headings, [[wikilinks]] between notes, folders, and a daily and weekly journal.
 - Find notes with search_notes (words only here), list_recent, list_folder or list_tags; read one with read_note.
 - Ryan describes what some tags mean: describe_tags gives each tag's description, and its parents'. Read them before choosing tags for a note or to know what a tag is for.
 - Every read returns a baseVersion. Pass it to your next edit of that note; update_section and replace_text require it. Each edit returns the next baseVersion.
@@ -57,7 +55,7 @@ export interface RelayOptions {
   readonly fetch?: typeof fetch;
   readonly clock?: () => number;
   /** Tests: the transport to use instead of GitHub's. */
-  readonly transport?: GitTransport & { isPrivate?: () => Promise<boolean> };
+  readonly transport?: GitTransport;
 }
 
 interface Open {
@@ -75,9 +73,8 @@ export class Relay {
   private open: Open | null = null;
   private queue: Promise<unknown> = Promise.resolve();
   private lastSync = 0;
-  private privateUntil = 0;
   private readonly server: LocalMcpServer;
-  private readonly transport: GitTransport & { isPrivate?: () => Promise<boolean> };
+  private readonly transport: GitTransport;
   private readonly clock: () => number;
 
   constructor(
@@ -149,18 +146,7 @@ export class Relay {
     return this.open;
   }
 
-  private async checkPrivate(): Promise<void> {
-    if (this.clock() < this.privateUntil || !this.transport.isPrivate) return;
-    if (!(await this.transport.isPrivate())) {
-      throw new Error(
-        `${this.config.repository} is public. The relay never syncs a public repository: make it private on GitHub.`,
-      );
-    }
-    this.privateUntil = this.clock() + PRIVATE_FOR_MS;
-  }
-
   private async syncNow(engine: GitNotebookEngine) {
-    await this.checkPrivate();
     const report = await engine.sync();
     await engine.save();
     this.lastSync = this.clock();
