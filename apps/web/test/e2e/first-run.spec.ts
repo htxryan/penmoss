@@ -1,14 +1,148 @@
+// The first run: no notebook yet, the welcome, and a notebook made or opened from it.
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { expect, test, type GitHost } from './fixtures';
+import { tmpdir } from 'node:os';
+import { expect, type GitHost, test } from './fixtures';
 import { collectErrors } from './support/app';
-
-// T81 (#229, D60–D62, A1163–A1168): Add a Git Notebook lists the GitHub repositories git's
-// credential reaches, then the chosen one's folders. Each repository here is a bare repository
-// on the stand-in Mac, so Add clones exactly what the folder step showed.
+import { NEW_NOTE } from './keys';
+import { pushedUntil } from './support/sync';
+import { GITHUB_WEB } from './support/git-host';
 
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
+// T69 (D58, #228, A1146) as First Run C (Ryan's review of #192, findings 2–4): the first run with
+// no git notebook is one step per screen. A short welcome, Create or Open Notebook, Pick
+// Repository, then Name Your Notebook when a new one is made, each with the "Step n of 3" bar and
+// Back. Branch and folder wait under More Options. A notebook made here starts with a welcome
+// note, which opens; one that exists opens with no name asked.
+
+test.use({ seed: null });
+
+test('the welcome, then a new notebook made in an empty repository, with its welcome note', async ({
+  page,
+  host,
+}) => {
+  test.setTimeout(90_000);
+  const errors = collectErrors(page);
+  await page.goto('/');
+  const firstRun = page.getByTestId('first-run');
+  // The welcome is a line, not a page (finding 2), with Learn More to the user docs.
+  await expect(firstRun.getByRole('heading', { name: 'Welcome to Penmoss' })).toBeFocused();
+  await expect(firstRun.getByTestId('first-run-welcome')).toContainText(
+    'Notes in a git repository you own. Three short steps and you’re writing.',
+  );
+  await expect(firstRun.getByRole('link', { name: 'Learn More' })).toHaveAttribute(
+    'href',
+    'https://penmoss.app/docs/first-notebook/',
+  );
+  await expect(firstRun.getByTestId('first-run-back')).toHaveCount(0);
+  // No notebook to show yet: no notes tree, no sign-in.
+  await expect(page.getByRole('tree', { name: 'Folders and notes' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /sign in/i })).toHaveCount(0);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/welcome.png` });
+
+  // Create or Open Notebook: Step 1 of 3, Start a New Notebook picked; Back and on again.
+  await firstRun.getByTestId('first-run-start').click();
+  await expect(firstRun.getByRole('heading', { name: 'Create or Open Notebook' })).toBeFocused();
+  await expect(firstRun).toContainText('Step 1 of 3');
+  await expect(firstRun.getByRole('radio', { name: /Start a New Notebook/ })).toBeChecked();
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/create-or-open.png` });
+  await firstRun.getByTestId('first-run-back').click();
+  await expect(firstRun.getByRole('heading', { name: 'Welcome to Penmoss' })).toBeVisible();
+  await firstRun.getByTestId('first-run-start').click();
+  await firstRun.getByTestId('first-run-continue').click();
+
+  // Pick Repository: Create New Repo (Recommended), Use Existing Repo, Paste a URL.
+  await expect(firstRun.getByRole('heading', { name: 'Pick Repository' })).toBeVisible();
+  await expect(firstRun).toContainText('Step 2 of 3');
+  await expect(firstRun.getByTestId('first-run-way-create')).toContainText('Recommended');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/pick-repository.png` });
+  await firstRun.getByTestId('first-run-way-url').click();
+  await firstRun.getByTestId('first-run-continue').click();
+
+  // Paste a URL, branch and folder under More Options, filled in already.
+  await expect(firstRun.getByRole('heading', { name: 'Paste a URL' })).toBeVisible();
+  await expect(firstRun.getByTestId('first-run-branch')).toBeHidden();
+  await firstRun.getByTestId('first-run-more').getByText('More Options').click();
+  await expect(firstRun.getByTestId('first-run-branch')).toHaveValue('main');
+  const remote = host.bare('fresh');
+  await firstRun.getByTestId('first-run-url-input').fill(remote);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/paste-url.png` });
+  await firstRun.getByTestId('first-run-continue').click();
+
+  // Name Your Notebook: offered from the repository's name, Make Notebook waits for one.
+  await expect(firstRun.getByRole('heading', { name: 'Name Your Notebook' })).toBeVisible();
+  const name = firstRun.getByTestId('first-run-name-input');
+  await expect(name).toHaveValue('Fresh');
+  await name.fill('');
+  await expect(firstRun.getByTestId('first-run-make')).toBeDisabled();
+  await name.fill('Field Notes');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/name.png` });
+  await firstRun.getByTestId('first-run-make').click();
+
+  // The app opens on the new notebook's welcome note, once the first sync is done.
+  await expect(page.getByTestId('first-run')).toHaveCount(0, { timeout: 30_000 });
+  await expect(page.getByTestId('note-title')).toHaveValue('Welcome to Penmoss', {
+    timeout: 20_000,
+  });
+  await expect(page.getByTestId('note-view').locator('.ProseMirror')).toContainText(
+    'Your notes live in this notebook',
+  );
+  await expect(
+    page
+      .getByRole('tree', { name: 'Folders and notes' })
+      .getByRole('treeitem', { name: 'Welcome to Penmoss', exact: true }),
+  ).toBeVisible();
+  // Its tag examples are code, not tags.
+  await expect(page.getByTestId('note-view').locator('code', { hasText: '#ideas' })).toBeVisible();
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/welcome-note.png` });
+  expect((await host.notebooks.list()).map((notebook) => notebook.name)).toEqual(['Field Notes']);
+
+  // A note made in it reaches the repository.
+  await page.keyboard.press(NEW_NOTE);
+  await expect(page).toHaveURL(/\/notes\/[0-9A-HJKMNP-TV-Z]{26}$/);
+  await page.keyboard.type('First of many');
+  const bare = remote.replace('file://', '');
+  await pushedUntil(page, () =>
+    expect(host.git(bare, ['ls-tree', '-r', '--name-only', 'main'])).toContain('First of many.md'),
+  );
+  expect(errors).toEqual([]);
+});
+
+test('opening a notebook that exists asks for no name, and adds no welcome note', async ({
+  page,
+  host,
+}) => {
+  test.setTimeout(90_000);
+  const errors = collectErrors(page);
+  // A notebook another Mac made and pushed, not yet on this one.
+  const remote = host.bare('kept');
+  const other = await host.seed({
+    name: 'Kept',
+    remote,
+    notes: [{ title: 'Already here', markdown: 'From another Mac.\n' }],
+  });
+  await host.notebooks.remove(other.info.localId);
+  await page.goto('/');
+  const firstRun = page.getByTestId('first-run');
+  await firstRun.getByTestId('first-run-start').click();
+  await firstRun.getByTestId('first-run-existing').click();
+  await firstRun.getByTestId('first-run-continue').click();
+  // No GitHub sign-in in git: Sign In to GitHub, or Paste a URL Instead.
+  await expect(firstRun.getByRole('heading', { name: 'Sign In to GitHub' })).toBeVisible();
+  await expect(firstRun.getByTestId('first-run-gh-hint')).toContainText('gh auth login');
+  await firstRun.getByTestId('first-run-url-instead').click();
+  await firstRun.getByTestId('first-run-url-input').fill(remote);
+  await firstRun.getByTestId('first-run-continue').click();
+  await expect(firstRun.getByTestId('first-run-name-input')).toHaveCount(0);
+  const tree = page.getByRole('tree', { name: 'Folders and notes' });
+  await expect(tree.getByRole('treeitem', { name: 'Already here', exact: true })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(tree.getByRole('treeitem', { name: 'Welcome to Penmoss', exact: true })).toHaveCount(
+    0,
+  );
+  expect(errors).toEqual([]);
+});
 
 /** Commits `files` to a bare repository's main, as another person's git would. */
 function pushFiles(host: GitHost, remote: string, files: Record<string, string>): void {
@@ -24,8 +158,6 @@ function pushFiles(host: GitHost, remote: string, files: Record<string, string>)
   host.git(tree, ['commit', '-qm', 'files']);
   host.git(tree, ['push', '-q', 'origin', 'main']);
 }
-
-const notebookJson = (id: string, name: string) => JSON.stringify({ format: 1, id, name });
 
 test.describe('the first run', () => {
   test.use({ seed: null });
@@ -215,128 +347,40 @@ test.describe('the first run', () => {
   });
 });
 
-test.describe('Settings', () => {
-  test('a new folder in a code repository; dot-folders and a notebook’s folders are not listed', async ({
-    page,
-    host,
-  }) => {
-    test.setTimeout(90_000);
-    const errors = collectErrors(page);
-    host.signInGit();
-    const code = host.githubRepo('code', { pushedAt: '2026-11-06T10:00:00Z' });
-    pushFiles(host, code.remote, {
-      'src/app.ts': 'export {};\n',
-      'docs/guide/intro.md': '# Intro\n',
-      '.github/workflows/ci.yml': 'on: push\n',
-      'wiki/.penmoss/notebook.json': notebookJson('01JBNOTEBOOK00000000000042', 'Team wiki'),
-      'wiki/Inbox/Call.md': 'call\n',
-    });
+test.describe('the first run', () => {
+  test.use({ seed: null });
 
-    await page.goto('/settings/git-notebooks');
-    await page.getByTestId('git-add-open').click();
-    const form = page.getByTestId('git-add');
-    await form.getByTestId('repo-row').filter({ hasText: 'code' }).click();
-    const folders = form.getByTestId('repo-folder');
-    await expect(folders).toHaveCount(5);
-    expect(
-      await folders.evaluateAll((all) => all.map((each) => each.getAttribute('data-path'))),
-    ).toEqual(['', 'docs', 'docs/guide', 'src', 'wiki']);
-    await expect(folders.filter({ hasText: 'wiki' })).toContainText('Notebook · Team wiki');
-    // A notebook's folder opens it; another branch drops that choice and asks for a name (review).
-    await folders.filter({ hasText: 'wiki' }).click();
-    await expect(form.getByTestId('git-add-opens')).toBeVisible();
-    await form.getByTestId('git-add-branch').fill('dev');
-    await expect(form.getByTestId('git-add-opens')).toHaveCount(0);
-    await expect(form.getByTestId('git-add-name')).toBeVisible();
-    await expect(form.getByTestId('git-add-dir')).toHaveValue('');
-    await form.getByTestId('git-add-branch').fill('main');
-    await expect(folders).toHaveCount(5);
-    await folders.filter({ hasText: /^docs$/ }).click();
-    // A bad name is refused in place; a good one is added under the selected folder and chosen.
-    await form.getByTestId('repo-new-folder').fill('a/b');
-    await form.getByTestId('repo-new-folder-add').click();
-    await expect(form.getByTestId('repo-new-folder-message')).toContainText('no slashes');
-    await form.getByTestId('repo-new-folder').fill('notes');
-    await form.getByTestId('repo-new-folder-add').click();
-    await expect(form.locator('[data-path="docs/notes"]')).toHaveAttribute('aria-selected', 'true');
-    await expect(form.getByTestId('git-add-dir')).toHaveValue('docs/notes');
-    const make = form.getByRole('button', { name: 'Make Notebook', exact: true });
-    await expect(make).toBeDisabled();
-    await form.getByTestId('git-add-name').fill('Code Notes');
-    if (SHOTS) await page.screenshot({ path: `${SHOTS}/new-folder.png` });
-    await make.click();
-    await expect(form.getByTestId('git-add-message')).toContainText(
-      'Made the notebook “Code Notes”',
-      {
-        timeout: 30_000,
-      },
-    );
-    const listed = await host.notebooks.list();
-    expect(listed.find((each) => each.name === 'Code Notes')).toMatchObject({
-      remote: code.remote,
-      dir: 'docs/notes',
-    });
-    expect(errors).toEqual([]);
-  });
-
-  test('a notebook already in Penmoss shows Already Added and can’t be picked', async ({
-    page,
-    host,
-  }) => {
-    test.setTimeout(90_000);
-    host.signInGit();
-    const home = host.githubRepo('home', { pushedAt: '2026-11-06T10:00:00Z' });
-    await host.seed({ name: 'Home', remote: home.remote });
-    await page.goto('/settings/git-notebooks');
-    await page.getByTestId('git-add-open').click();
-    const form = page.getByTestId('git-add');
-    await form.getByTestId('repo-row').filter({ hasText: 'home' }).click();
-    const root = form.getByTestId('repo-folder').first();
-    await expect(root).toContainText('Notebook · Home');
-    await expect(root).toContainText('Already Added');
-    await expect(root).toHaveAttribute('aria-disabled', 'true');
-  });
-
-  test('with no GitHub sign-in it opens on Type an Address; Try Again lists them; the switch keeps what was typed', async ({
+  test('signs in with GitHub on its own screens: the code, then Signed In, then the repositories', async ({
     page,
     host,
   }) => {
     test.setTimeout(60_000);
     const errors = collectErrors(page);
+    host.offerSignIn = true;
     host.githubRepo('notes', { pushedAt: '2026-11-06T10:00:00Z' });
-    await page.goto('/settings/git-notebooks');
-    await page.getByTestId('git-add-open').click();
-    const form = page.getByTestId('git-add');
-    const signin = form.getByTestId('git-add-signin');
-    await expect(signin).toContainText('isn’t signed in to GitHub');
-    await expect(signin).toContainText('gh auth setup-git');
-    await expect(form.getByTestId('git-add-way-type')).toHaveAttribute('aria-pressed', 'true');
-    await form.getByTestId('git-add-remote').fill('git@example.com:me/typed.git');
-    if (SHOTS) await page.screenshot({ path: `${SHOTS}/signed-out.png` });
-    expect(host.githubRepos.requests).toEqual([]);
-
-    host.signInGit();
-    await signin.getByTestId('git-add-signin-retry').click();
-    await expect(form.getByTestId('repo-row')).toHaveCount(1);
-    await form.getByTestId('git-add-way-type').click();
-    await expect(form.getByTestId('git-add-remote')).toHaveValue('git@example.com:me/typed.git');
-    await expect(form.getByTestId('git-add-signin')).toHaveCount(0);
+    await page.goto('/');
+    const firstRun = page.getByTestId('first-run');
+    await firstRun.getByTestId('first-run-start').click();
+    await firstRun.getByTestId('first-run-existing').click();
+    await firstRun.getByTestId('first-run-continue').click();
+    // 2.3: git has no GitHub sign-in.
+    await expect(firstRun.getByRole('heading', { name: 'Sign In to GitHub' })).toBeVisible();
+    await expect(firstRun.getByTestId('first-run-url-instead')).toBeVisible();
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/first-run-sign-in.png` });
+    await firstRun.getByTestId('first-run-signin').click();
+    // 2.4: the code, large, with Copy Code.
+    await expect(
+      firstRun.getByRole('heading', { name: 'Enter This Code on GitHub' }),
+    ).toBeVisible();
+    await expect(firstRun.getByTestId('github-signin-code')).toHaveText('WDJB-MJHT');
+    expect(host.opened).toEqual([`${GITHUB_WEB}/login/device`]);
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/first-run-code.png` });
+    host.githubRepos.approve();
+    // 2.5: Signed In, then Continue lists the repositories with it.
+    await expect(firstRun.getByTestId('first-run-signed-in')).toContainText('Signed in as ryan');
+    await firstRun.getByTestId('first-run-continue').click();
+    await expect(firstRun.getByTestId('first-run-tree-repo')).toHaveCount(1);
+    await expect(firstRun.getByTestId('first-run-via')).toContainText('Signed in as ryan');
     expect(errors).toEqual([]);
-  });
-
-  test('the picker fits a narrow window without scrolling sideways', async ({ page, host }) => {
-    host.signInGit();
-    host.githubRepo('a-repository-with-a-rather-long-name-for-a-narrow-window', {
-      pushedAt: '2026-11-06T10:00:00Z',
-    });
-    await page.setViewportSize({ width: 375, height: 800 });
-    await page.goto('/settings/git-notebooks');
-    await page.getByTestId('git-add-open').click();
-    await expect(page.getByTestId('repo-row')).toHaveCount(1);
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    );
-    expect(overflow).toBeLessThanOrEqual(0);
-    if (SHOTS) await page.screenshot({ path: `${SHOTS}/narrow.png` });
   });
 });

@@ -1,5 +1,5 @@
-import { anotherMac, expect, seeded, test, type GitHost, type Page } from './fixtures';
-import { NEW_FOLDER, VERSION_HISTORY, LINE_END } from './keys';
+import { anotherMac, expect, type GitHost, type Page, seeded, test } from './fixtures';
+import { LINE_END, NEW_FOLDER, VERSION_HISTORY } from './keys';
 import { noteAction } from './note-menu';
 import { notebookMenuItem } from './notebook-actions';
 import { asAgent, syncNow } from './support/sync';
@@ -338,4 +338,41 @@ test.describe('a note with many versions (Ryan’s review of #193)', () => {
     await expect(buttons).toHaveText(['Restore', 'Revert', 'Copy']);
     expect(errors).toEqual([]);
   });
+});
+
+// T42, item 5.
+test('version history says versions are automatic; saving one now is secondary', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await newNote(page, `Versions ${RUN}`, 'Some text to keep.');
+  // The tab strip's Version History (the ⋯ menu leaves the tabs to it, A991).
+  await page.getByTestId('note-tab-history').click();
+  const panel = page.getByTestId('history-panel');
+  // A git notebook's versions are its commits (A858): each sync is one, and Save is Sync Now.
+  // The head's ⓘ says so (Ryan's review of #192, finding 13), with a link to the docs.
+  await page.getByTestId('history-about').click();
+  const about = page.getByTestId('history-about-text');
+  await expect(about).toContainText(
+    'Each sync with git is a version: this Mac commits its changes when it pushes',
+  );
+  await expect(about.getByRole('link', { name: 'Learn More' })).toHaveAttribute(
+    'href',
+    'https://penmoss.app/docs/history/#version-history',
+  );
+  await page.getByTestId('history-about').click();
+  await expect(about).toHaveCount(0);
+  await expect(panel.getByRole('button', { name: 'Save version', exact: true })).toHaveCount(0);
+  const save = panel.getByRole('button', { name: 'Sync Now' });
+  // A quiet button, not the panel's main action, described by the explanation.
+  await expect(save).toHaveClass(/\bquiet\b/);
+  await expect(save).toHaveAccessibleDescription(/Each sync with git is a version/);
+  await save.click();
+  await expect(panel.getByTestId('history-status')).toContainText('Saved a version', {
+    timeout: 40_000,
+  });
+  expect(errors).toEqual([]);
 });

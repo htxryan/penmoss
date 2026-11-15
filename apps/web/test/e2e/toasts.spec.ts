@@ -1,8 +1,8 @@
-import { expect, test, type Locator, type Page } from './fixtures';
+import { expect, type Locator, type Page, test } from './fixtures';
 import { NEW_FOLDER } from './keys';
 import { noteAction } from './note-menu';
 import { notebookAction } from './notebook-actions';
-import { ULID, collectErrors } from './support/app';
+import { body, collectErrors, ULID } from './support/app';
 
 // PEN-63: every toast shows in one stack at the bottom centre of the window, drawn on the
 // theme's raised surface with its border, text and glyph colours, light or dark, in any theme.
@@ -262,4 +262,63 @@ test('with reduced motion a toast shows and goes without moving', async ({ page 
   expect(await toast.evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
   await expect(page.locator('[role="status"]:has([data-testid="copy-status"])')).toHaveCount(1);
   await expect(toast).toBeHidden();
+});
+
+const tree = (page: Page) => page.getByRole('tree', { name: 'Folders and notes' });
+
+async function newNoteFromButtonAndEnter(page: Page, title: string, text = ''): Promise<string> {
+  await page
+    .getByRole('button', { name: /^New Note/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(ULID);
+  await expect(page.getByTestId('note-title')).toBeFocused();
+  await page.keyboard.type(title);
+  await page.keyboard.press('Enter');
+  if (text) await page.keyboard.type(text);
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+  return ULID.exec(new URL(page.url()).pathname)![1]!;
+}
+
+// T39 pass 2.
+test('Move to Trash offers Undo, which brings the note back where it was', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/');
+  const title = `Trashed ${RUN}`;
+  const id = await newNoteFromButtonAndEnter(page, title, 'Not for the bin.');
+  await expect(tree(page).getByRole('treeitem', { name: title, exact: true })).toBeVisible();
+
+  await noteAction(page, 'delete-note');
+  await expect(page).toHaveURL(/\/$/);
+  const toast = page.getByTestId('trashed-toast');
+  await expect(toast).toContainText(`Moved “${title}” to Trash`);
+  // The note it was in has gone: focus is on Undo, not lost to the page.
+  const undo = toast.getByRole('button', { name: 'Undo' });
+  await expect(undo).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(new RegExp(`/notes/${id}$`));
+  await expect(body(page)).toHaveText('Not for the bin.');
+  // The toast held focus and has gone: the restored note's body has it.
+  await expect(body(page)).toBeFocused();
+  await expect(tree(page).getByRole('treeitem', { name: title, exact: true })).toBeVisible();
+  await expect(toast).toBeHidden();
+
+  // Escape dismisses it; focus goes to the main column.
+  await noteAction(page, 'delete-note');
+  await expect(undo).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(toast).toBeHidden();
+  await expect(page.locator('.note-main')).toBeFocused();
+  await expect(tree(page).getByRole('treeitem', { name: title, exact: true })).toHaveCount(0);
+
+  // The close button too, reached from Undo with Tab.
+  await newNoteFromButtonAndEnter(page, `Trashed too ${RUN}`, 'Also going.');
+  await noteAction(page, 'delete-note');
+  await expect(undo).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(toast.getByRole('button', { name: 'Dismiss' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(toast).toBeHidden();
+  await expect(page.locator('.note-main')).toBeFocused();
+  expect(errors).toEqual([]);
 });

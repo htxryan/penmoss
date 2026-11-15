@@ -1,19 +1,17 @@
-import { deflateSync, crc32 } from 'node:zlib';
-
-import { expect, test, type Page } from './fixtures';
-import { COMMENT } from './keys';
+import { crc32, deflateSync } from 'node:zlib';
+import { expect, type Page, test } from './fixtures';
 import { body } from './support/app';
-
-// PEN-66 (A1283): a picture keeps its own line (A506), and leaves no empty line under it. The
-// block a picture ends is as tall as its text and the picture, so the next line or block starts at
-// its normal distance below the picture, as it would below a line of text. Measured in the page
-// with getBoundingClientRect, at the default 16 px note font, to ±1 px.
+import { COMMENT } from './keys';
 
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
+
 const URL_A = 'https://img.example/a.png';
+
 const URL_B = 'https://img.example/b.png';
+
 /** A phone screenshot, taller than the page, and a wide screen's, wider than the column. */
 const URL_TALL = 'https://img.example/tall.png';
+
 const URL_WIDE = 'https://img.example/wide.png';
 
 /** A 200×100 PNG of one colour, made here so the page needs no file. */
@@ -95,13 +93,6 @@ const NOTES = {
     '',
   ].join('\n\n'),
 } as const;
-
-test.use({
-  seed: {
-    name: 'Pictures',
-    notes: Object.entries(NOTES).map(([title, markdown]) => ({ title, markdown })),
-  },
-});
 
 async function serveImages(page: Page): Promise<void> {
   const images: Record<string, Buffer> = {
@@ -256,12 +247,16 @@ async function pictures(page: Page): Promise<Picture[]> {
 
 /** ±1 px, with room for sub-pixel rounding (a collapsed table border is half a pixel). */
 const PX = 1.05;
+
 /** 0.85 em between top-level blocks at the 16 px note font. */
 const BLOCK_GAP = 13.6;
+
 /** 0.15 em between list items. */
 const LIST_GAP = 2.4;
+
 /** A line of text at the 16 px note font (line-height 1.7). */
 const LINE = 27.2;
+
 /** From the top of a block whose text comes first to its picture: a line, then 0.4 em. */
 const TEXT_ABOVE = LINE + 6.4;
 
@@ -352,6 +347,75 @@ async function caretBox(page: Page): Promise<Box> {
     );
   }
 }
+
+const LONE = [
+  'plain',
+  'sized',
+  'linked',
+  'bold',
+  'highlighted',
+  'list item',
+  'quote',
+  'table cell',
+  'heading',
+];
+
+/**
+ * From a picture's bottom to the top of the text after it (the glyphs' box: the line's own
+ * half-leading below the line's top).
+ */
+async function textAfter(page: Page, nth: number, text: string): Promise<number> {
+  const picture = body(page).locator('.pm-image').nth(nth);
+  await picture.scrollIntoViewIfNeeded();
+  return picture.evaluate(async (element, text) => {
+    for (let i = 0; i < 2; i++) await new Promise(requestAnimationFrame);
+    const block = element.closest('p, td, th')!;
+    const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const at = node.textContent!.indexOf(text);
+      if (at < 0) continue;
+      const range = document.createRange();
+      range.setStart(node, at);
+      range.setEnd(node, at + text.length);
+      const picture = element.querySelector('img')!.getBoundingClientRect();
+      return range.getBoundingClientRect().top - picture.bottom;
+    }
+    throw new Error(`No “${text}” in the picture’s block`);
+  }, text);
+}
+
+/** A click just right of the end of some text in the note. */
+async function clickAfterText(page: Page, text: string): Promise<void> {
+  const { x, y } = await body(page).evaluate((editor, text) => {
+    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const at = node.textContent!.indexOf(text);
+      if (at < 0) continue;
+      const range = document.createRange();
+      range.setStart(node, at);
+      range.setEnd(node, at + text.length);
+      const { right, top, bottom } = range.getBoundingClientRect();
+      return { x: right + 10, y: (top + bottom) / 2 };
+    }
+    throw new Error(`No “${text}” in the note`);
+  }, text);
+  await page.mouse.click(x, y);
+}
+
+/**
+ * The line after a picture starts at the picture's bottom: its text there, under half a line
+ * below (as in AC4), not a whole empty line (27 px) further down.
+ */
+function expectNextLine(gap: number, which: string): void {
+  expect(gap, `the line after ${which} below it`).toBeGreaterThanOrEqual(-PX);
+  expect(gap, `no empty line after ${which}`).toBeLessThan(0.5 * 16);
+}
+test.use({
+  seed: {
+    name: 'Pictures',
+    notes: Object.entries(NOTES).map(([title, markdown]) => ({ title, markdown })),
+  },
+});
 
 test.beforeEach(async ({ page }) => {
   await serveImages(page);
@@ -457,18 +521,6 @@ test('AC2: a bulleted, numbered or checklist item that ends with a picture keeps
   await body(page).locator('.pm-image').nth(1).scrollIntoViewIfNeeded();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/pen-66-ac2.png` });
 });
-
-const LONE = [
-  'plain',
-  'sized',
-  'linked',
-  'bold',
-  'highlighted',
-  'list item',
-  'quote',
-  'table cell',
-  'heading',
-];
 
 test('AC3: a block that holds only a picture is exactly as tall as the picture', async ({
   page,
@@ -659,57 +711,6 @@ test('AC6: on a phone-sized page, a paragraph and a list item that end with a pi
   await body(page).locator('.pm-image').first().scrollIntoViewIfNeeded();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/pen-66-ac6.png` });
 });
-
-/**
- * From a picture's bottom to the top of the text after it (the glyphs' box: the line's own
- * half-leading below the line's top).
- */
-async function textAfter(page: Page, nth: number, text: string): Promise<number> {
-  const picture = body(page).locator('.pm-image').nth(nth);
-  await picture.scrollIntoViewIfNeeded();
-  return picture.evaluate(async (element, text) => {
-    for (let i = 0; i < 2; i++) await new Promise(requestAnimationFrame);
-    const block = element.closest('p, td, th')!;
-    const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      const at = node.textContent!.indexOf(text);
-      if (at < 0) continue;
-      const range = document.createRange();
-      range.setStart(node, at);
-      range.setEnd(node, at + text.length);
-      const picture = element.querySelector('img')!.getBoundingClientRect();
-      return range.getBoundingClientRect().top - picture.bottom;
-    }
-    throw new Error(`No “${text}” in the picture’s block`);
-  }, text);
-}
-
-/** A click just right of the end of some text in the note. */
-async function clickAfterText(page: Page, text: string): Promise<void> {
-  const { x, y } = await body(page).evaluate((editor, text) => {
-    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      const at = node.textContent!.indexOf(text);
-      if (at < 0) continue;
-      const range = document.createRange();
-      range.setStart(node, at);
-      range.setEnd(node, at + text.length);
-      const { right, top, bottom } = range.getBoundingClientRect();
-      return { x: right + 10, y: (top + bottom) / 2 };
-    }
-    throw new Error(`No “${text}” in the note`);
-  }, text);
-  await page.mouse.click(x, y);
-}
-
-/**
- * The line after a picture starts at the picture's bottom: its text there, under half a line
- * below (as in AC4), not a whole empty line (27 px) further down.
- */
-function expectNextLine(gap: number, which: string): void {
-  expect(gap, `the line after ${which} below it`).toBeGreaterThanOrEqual(-PX);
-  expect(gap, `no empty line after ${which}`).toBeLessThan(0.5 * 16);
-}
 
 test('A1354: a line break after a picture puts the next line right under it, at any size', async ({
   page,

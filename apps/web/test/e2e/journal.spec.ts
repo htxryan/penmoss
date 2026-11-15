@@ -1,9 +1,9 @@
-import { expect, seeded, test, type Page } from './fixtures';
-import { THIS_WEEK, LINE_END } from './keys';
+import { expect, type Page, seeded, test } from './fixtures';
+import { LINE_END, THIS_WEEK } from './keys';
 import { storedSetting } from './stored';
 import { syncNow } from './support/sync';
 import { readRemote } from './support/remote';
-import { ULID, body, collectErrors } from './support/app';
+import { body, collectErrors, newNote, ULID } from './support/app';
 
 // T19: daily and weekly notes. ⌘D and ⌘⌥W open the note for today and this week (in the
 // synced time zone, America/Chicago by default), creating it from its template; the sidebar
@@ -244,5 +244,82 @@ test('Quick Capture starts on the default from Settings every time', async ({ pa
       .poll(() => storedSetting(page, 'capture.destination'), { timeout: 10_000 })
       .toBe('daily');
   }
+  expect(errors).toEqual([]);
+});
+
+const RUN = `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+
+const info = (page: Page) => page.getByRole('complementary', { name: 'Metadata' });
+
+async function openInfo(page: Page) {
+  // Metadata's tab icon down the note's edge (T53 item 9): it opens the tab, or closes the panel
+  // while that tab shows.
+  const tab = page.getByTestId('note-tab-info');
+  if ((await tab.getAttribute('aria-selected')) !== 'true') await tab.click();
+  await expect(info(page)).toBeVisible();
+}
+// T42, item 3.
+test('Kind is a label on periodic notes only', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await newNote(page, `Kind ${RUN}`, 'An ordinary note.');
+  await openInfo(page);
+  const details = info(page).getByTestId('note-details');
+  await expect(details).toContainText('Folder');
+  await expect(details).not.toContainText('Kind');
+  await expect(info(page).getByTestId('info-kind')).toHaveCount(0);
+
+  await page.locator('button[data-command="journal.today"]').first().click();
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+  await openInfo(page);
+  await expect(info(page).getByTestId('info-kind')).toContainText('Daily note');
+  await expect(info(page).getByTestId('note-details')).not.toContainText('Kind');
+  expect(errors).toEqual([]);
+});
+
+// T39 pass 2.
+test('the calendar is one Tab stop, moved around with the arrow keys', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+  const calendar = page.getByTestId('calendar');
+  await expect(calendar).toBeVisible();
+  // Announced as a grid, whose keys move within it.
+  await expect(calendar.getByRole('grid')).toBeVisible();
+  await expect(calendar.getByRole('gridcell').first()).toBeVisible();
+  const today = calendar.locator('[aria-current="date"]');
+  const todayDate = (await today.getAttribute('data-date'))!;
+  // The section's Move and Hide follow its title (T53 item 8, A988), before the month buttons;
+  // from the last of those, Next Month, Tab reaches today's cell, and the next Tab leaves.
+  await calendar.locator('.sb-section-toggle').focus();
+  await page.keyboard.press('Tab');
+  await expect(calendar.getByTestId('section-move')).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(calendar.getByTestId('section-hide')).toBeFocused();
+  await calendar.getByRole('button', { name: 'Next Month' }).focus();
+  await page.keyboard.press('Tab');
+  await expect(today).toBeFocused();
+  expect(await calendar.locator('table [tabindex="0"]').count()).toBe(1);
+  await page.keyboard.press('Tab');
+  expect(await page.evaluate(() => document.activeElement?.closest('.calendar-grid'))).toBeNull();
+
+  // The arrows move by a day; Home goes to Monday, and Left from Monday to its week.
+  await page.keyboard.press('Shift+Tab');
+  await expect(today).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  const next = new Date(`${todayDate}T12:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  await expect(calendar.locator(`[data-date="${next.toISOString().slice(0, 10)}"]`)).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(page.locator(':focus')).toHaveAttribute('data-cell', /^d:/);
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator(':focus')).toHaveClass(/calendar-week/);
+  // Page Down shows the next month, focus on the same week.
+  const heading = calendar.locator('#calendar-heading');
+  const month = await heading.innerText();
+  await page.keyboard.press('PageDown');
+  await expect(heading).not.toHaveText(month);
+  await expect(page.locator(':focus')).toHaveClass(/calendar-week/);
   expect(errors).toEqual([]);
 });

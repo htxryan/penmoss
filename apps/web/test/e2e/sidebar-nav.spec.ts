@@ -1,6 +1,6 @@
-import { expect, test, type Page } from './fixtures';
+import { expect, type Page, test } from './fixtures';
 import { notebookMenuItem } from './notebook-actions';
-import { ULID, collectErrors } from './support/app';
+import { collectErrors, ULID } from './support/app';
 
 // T51 (web): the sidebar's shell and the app's navigation. Back and Forward through the app's own
 // pages (A943); the shortcuts as one row of icons (A932); each source's sync state as a dot
@@ -260,4 +260,49 @@ test('Settings: the heading keeps the page gutter, in line with the sections (PE
   await page.waitForTimeout(2_000);
   await expect(heading).toBeInViewport();
   expect(errors).toEqual([]);
+});
+
+const section = (page: Page, name: string) =>
+  page.getByTestId('source-section').and(page.getByRole('region', { name, exact: true }));
+
+const tree = (page: Page, name: string) =>
+  section(page, name).getByRole('tree', { name: 'Folders and notes' });
+
+async function openNote(page: Page, notebook: string, title: string): Promise<string> {
+  await tree(page, notebook).getByRole('link', { name: title, exact: true }).click();
+  await expect(page).toHaveURL(ULID);
+  await expect(page.getByTestId('note-title')).toHaveValue(title);
+  return ULID.exec(new URL(page.url()).pathname)![1]!;
+}
+test.describe('in Quanta, with two folders and two notes', () => {
+  test.use({
+    seed: {
+      name: 'Quanta',
+      folders: ['Substation', 'Geotech'],
+      notes: [{ title: 'Alpha' }, { title: 'Penmoss Feedback' }],
+    },
+  });
+
+  // Ryan’s feedback of 5 Nov 2026 (Personal), item 10.
+  test('← Notes from Settings returns to the last note, in whichever notebook', async ({
+    page,
+    host,
+  }) => {
+    test.setTimeout(120_000);
+    const errors = collectErrors(page);
+    await host.seed({ name: 'Personal', notes: [{ title: 'Test' }] });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/');
+    await expect(tree(page, 'Personal').getByRole('treeitem', { name: 'Test' })).toBeVisible({
+      timeout: 30_000,
+    });
+    // A note in the notebook that is not the primary one.
+    const id = await openNote(page, 'Personal', 'Test');
+    await page.getByTestId('sidebar-settings').click();
+    await expect(page).toHaveURL(/\/settings/);
+    await page.getByRole('link', { name: 'Notes', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/notes/${id}$`));
+    await expect(page.getByTestId('note-title')).toHaveValue('Test');
+    expect(errors).toEqual([]);
+  });
 });

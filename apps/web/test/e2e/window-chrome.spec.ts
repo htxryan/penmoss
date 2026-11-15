@@ -1,5 +1,5 @@
-import { expect, test, type Page } from './fixtures';
-import { collectErrors } from './support/app';
+import { expect, type Page, test } from './fixtures';
+import { collectErrors, ULID } from './support/app';
 
 // Ryan's review of #192 (14 Nov 2026), the window and its chrome, in the web app with the Mac
 // app's window (`macWindow`: the compact title bar): the first run's window drags by a strip
@@ -419,4 +419,219 @@ test.describe('with a notebook', () => {
     await expect(page).toHaveURL(/\/notes\/[0-9A-HJKMNP-TV-Z]{26}$/);
     expect(errors).toEqual([]);
   });
+});
+
+const LONG = Array.from({ length: 80 }, (_, n) => `Line ${n + 1} of a long note.`).join('\n\n');
+
+const tree = (page: Page) =>
+  page
+    .getByTestId('source-section')
+    .and(page.getByRole('region', { name: 'Quanta', exact: true }))
+    .getByRole('tree', { name: 'Folders and notes' });
+
+async function openNote(page: Page, title: string): Promise<void> {
+  await tree(page).getByRole('link', { name: title, exact: true }).click();
+  await expect(page).toHaveURL(ULID);
+  await expect(page.getByTestId('note-title')).toHaveValue(title);
+}
+test.describe('in Quanta, with a folder and a long note', () => {
+  test.use({
+    seed: {
+      name: 'Quanta',
+      folders: ['Miscellaneous'],
+      notes: [{ title: 'Josh Onboarding' }, { title: 'Long', markdown: `${LONG}\n` }],
+    },
+  });
+
+  // T65, item 6.
+  test('a scrolled note’s top bar still drags the Mac window by its empty part', async ({
+    page,
+  }) => {
+    const errors = collectErrors(page);
+    await page.setViewportSize({ width: 1400, height: 800 });
+    await page.goto('/');
+    await openNote(page, 'Long');
+    // The Mac app's compact title bar, as mac-window.ts sets it.
+    await page.evaluate(() => (document.documentElement.dataset['titlebar'] = 'compact'));
+    const bar = await box(page, '.note-top');
+    const actions = await box(page, '.note-top .note-actions');
+    const crumbs = await box(page, '.note-top .crumbs li[aria-current="page"]');
+    const text = await box(page, '.note-body');
+    // Over the text's column, past the breadcrumb's words and short of the buttons: the bar's
+    // empty part, where the title and the text pass under it.
+    const empty = { x: text.x + text.width / 2, y: bar.y + bar.height / 2 };
+    expect(empty.x).toBeGreaterThan(crumbs.x + crumbs.width);
+    expect(empty.x).toBeLessThan(actions.x);
+    const words = { x: crumbs.x + 4, y: empty.y };
+    expect(await regionAt(page, empty.x, empty.y)).toBe('drag');
+
+    // Scrolled: the title and the text go up under the bar, which still drags; its buttons click.
+    // The text scrolls in its own column since A1132.
+    const scroller = page.getByTestId('note-scroll');
+    await scroller.evaluate((element) => (element.scrollTop = 900));
+    await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBe(900);
+    expect(await box(page, '.note-top')).toEqual(bar);
+    const under = await box(page, '.note-body .ProseMirror');
+    expect(under.y).toBeLessThan(bar.y);
+    expect(under.x).toBeLessThan(empty.x);
+    expect(under.x + under.width).toBeGreaterThan(empty.x);
+    expect(await regionAt(page, empty.x, empty.y)).toBe('drag');
+    expect(await regionAt(page, words.x, words.y)).toBe('drag');
+    expect(await regionAt(page, actions.x + 10, empty.y)).toBe('no-drag');
+    // The editor's own surfaces stay clickable over the bar: the selection toolbar is one.
+    expect(
+      await page.evaluate(() => {
+        const probe = document.createElement('div');
+        probe.setAttribute('role', 'toolbar');
+        const button = document.createElement('button');
+        probe.append(button);
+        document.querySelector('.note-columns')!.append(probe);
+        const regions = [probe, button].map((element) =>
+          getComputedStyle(element).getPropertyValue('-webkit-app-region'),
+        );
+        probe.remove();
+        return regions;
+      }),
+    ).toEqual(['no-drag', 'no-drag']);
+    expect(errors).toEqual([]);
+  });
+});
+
+/** The traffic lights' room in a compact window (`--pm-titlebar-inset`, A722). */
+const INSET = 88;
+
+async function collapse(page: Page): Promise<void> {
+  await page.getByTestId('toggle-sidebar').click();
+  await expect(page.getByTestId('app-root')).toHaveAttribute('data-sidebar', 'collapsed');
+}
+
+async function expand(page: Page): Promise<void> {
+  await page.getByTestId('toggle-sidebar').click();
+  await expect(page.getByTestId('app-root')).not.toHaveAttribute('data-sidebar', 'collapsed');
+}
+
+async function chooseMode(page: Page, mode: 'Light' | 'Dark'): Promise<void> {
+  await page.goto('/settings/appearance');
+  await page.getByTestId('theme-mode').getByText(mode).click();
+  await expect(page.locator('html')).toHaveAttribute('data-mode', mode.toLowerCase());
+  await page.goto('/');
+  await expect(tree(page)).toBeVisible({ timeout: 30_000 });
+}
+
+/** The computed background colour of the first element `selector` matches. */
+const background = (page: Page, selector: string) =>
+  page
+    .locator(selector)
+    .first()
+    .evaluate((element) => getComputedStyle(element).backgroundColor);
+test.describe('in the Mac window, in Quanta with two notes', () => {
+  test.use({
+    macWindow: true,
+    seed: {
+      name: 'Quanta',
+      notes: [
+        { title: 'Alpha', markdown: 'The first note.\n' },
+        { title: 'Bravo', markdown: 'The second note.\n' },
+      ],
+    },
+  });
+
+  // PEN-135, item 6.
+  test('beside the rail, Back, Forward and the pin start the note’s title bar, after the lights', async ({
+    page,
+  }) => {
+    const errors = collectErrors(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/');
+    await expect(tree(page)).toBeVisible({ timeout: 30_000 });
+    await compact(page);
+    await openNote(page, 'Alpha');
+    await openNote(page, 'Bravo');
+    // Open: in the sidebar's head.
+    const head = page.locator('.sb-head');
+    await expect(head.getByTestId('app-back')).toBeVisible();
+    await expect(head.getByTestId('keep-on-top')).toBeVisible();
+
+    await collapse(page);
+    const lead = page.locator('.note-top > .note-top-lead');
+    for (const id of ['app-back', 'app-forward', 'keep-on-top']) {
+      await expect(lead.getByTestId(id), id).toBeVisible();
+      await expect(page.locator('.sidebar').getByTestId(id), id).toHaveCount(0);
+    }
+    // The rail keeps the toggle, below the lights' row.
+    const toggle = await box(page, '[data-testid="toggle-sidebar"]');
+    expect(toggle.y).toBeGreaterThanOrEqual(48);
+    // At the bar's start, after the lights' room, then the crumbs.
+    const back = await box(page, '.note-top [data-testid="app-back"]');
+    const forward = await box(page, '.note-top [data-testid="app-forward"]');
+    const pin = await box(page, '.note-top [data-testid="keep-on-top"]');
+    const crumbs = await box(page, '.note-top .crumbs');
+    const bar = await box(page, '.note-top');
+    expect(back.x).toBeGreaterThanOrEqual(INSET);
+    expect(back.x).toBeLessThan(INSET + 4);
+    expect(forward.x).toBeGreaterThan(back.x);
+    expect(pin.x).toBeGreaterThanOrEqual(forward.x + forward.width - 1);
+    expect(crumbs.x).toBeGreaterThan(pin.x + pin.width);
+    // As tall as the row, flush with it.
+    for (const button of [back, forward, pin]) {
+      expect(button.y).toBeCloseTo(bar.y, 0);
+      expect(button.height).toBeCloseTo(bar.height - 1, 0);
+    }
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/pen-135-6-compact.png` });
+    // They work there: Back to Alpha, Forward to Bravo, the pin pins the window.
+    await page.locator('.note-top').getByTestId('app-back').click();
+    await expect(page.getByTestId('note-title')).toHaveValue('Alpha');
+    await page.locator('.note-top').getByTestId('app-forward').click();
+    await expect(page.getByTestId('note-title')).toHaveValue('Bravo');
+    const pinButton = page.locator('.note-top').getByTestId('keep-on-top');
+    await pinButton.click();
+    await expect(pinButton).toHaveAttribute('aria-pressed', 'true');
+    await pinButton.click();
+    await expect(pinButton).toHaveAttribute('aria-pressed', 'false');
+
+    // Without the compact title bar (a browser, the native title bar, full screen): from the
+    // rail's edge.
+    await page.evaluate(() => delete document.documentElement.dataset['titlebar']);
+    const rail = await box(page, '.sidebar');
+    const flush = await box(page, '.note-top [data-testid="app-back"]');
+    expect(flush.x).toBeCloseTo(rail.x + rail.width, 0);
+    if (SHOTS) await page.screenshot({ path: `${SHOTS}/pen-135-6-browser.png` });
+
+    // The graph (as Home and Trash) has no note's title bar: there the rail keeps them.
+    await page.locator('.sidebar [data-command="app.graph"]').click();
+    await expect(page.locator('.graph-page')).toBeVisible();
+    await expect(page.locator('.sidebar').getByTestId('app-back')).toBeVisible();
+    await expect(page.locator('.note-top')).toHaveCount(0);
+    // A note that is not there still has the bar, with them.
+    await page.goto('/notes/01ZZZZZZZZZZZZZZZZZZZZZZZZ');
+    await expect(page.getByTestId('note-not-found')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('.note-top').getByTestId('app-back')).toBeVisible();
+    await expect(page.locator('.sidebar').getByTestId('app-back')).toHaveCount(0);
+    await expand(page);
+    await expect(head.getByTestId('app-back')).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+  // PEN-135, item 7.
+  for (const mode of ['Light', 'Dark'] as const) {
+    test(`the note’s title bar is in the sidebar’s colour, apart from the text (${mode})`, async ({
+      page,
+    }) => {
+      const errors = collectErrors(page);
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await chooseMode(page, mode);
+      await openNote(page, 'Alpha');
+      const sidebar = await background(page, '.sidebar');
+      expect(await background(page, '.note-top')).toBe(sidebar);
+      expect(await background(page, 'body')).not.toBe(sidebar);
+      if (SHOTS) await page.screenshot({ path: `${SHOTS}/pen-135-7-${mode.toLowerCase()}.png` });
+      // Beside the rail in the compact window, the row over the rail's column takes it too.
+      await collapse(page);
+      if (SHOTS) {
+        await page.screenshot({ path: `${SHOTS}/pen-135-7-${mode.toLowerCase()}-rail.png` });
+      }
+      await expand(page);
+      expect(errors).toEqual([]);
+    });
+  }
 });

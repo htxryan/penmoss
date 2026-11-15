@@ -1,6 +1,6 @@
-import { expect, test, type Page } from './fixtures';
-import { NEW_NOTE, LINE_END } from './keys';
-import { ULID, body, collectErrors } from './support/app';
+import { expect, type Page, test } from './fixtures';
+import { LINE_END, NEW_NOTE } from './keys';
+import { body, collectErrors, newNote, ULID } from './support/app';
 
 // T14: the slash menu, markdown shortcuts, selection toolbar and block moves,
 // driven from the keyboard (and the mouse for the drag handle) in a real note.
@@ -288,5 +288,284 @@ test('T14: dragging a block by its handle moves it, and one undo puts it back', 
   await expect(page.getByTestId('note-markdown')).toContainText(
     'Charlie\n\nAlpha\n\nBravo\n\nDelta',
   );
+  expect(errors).toEqual([]);
+});
+
+const RUN = `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+// T53, item 11.
+test('lists and quotes keep their place when the cursor leaves the body', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1280, height: 860 });
+  await page.goto('/');
+  await newNote(page, `Steady text ${RUN}`, 'Intro');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('1. one');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('two');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('> quoted');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('end');
+  const boxes = () =>
+    page.locator('.note-body .ProseMirror > *').evaluateAll((blocks) =>
+      blocks.map((block) => {
+        const rect = block.getBoundingClientRect();
+        return `${block.tagName} ${rect.top.toFixed(1)} ${rect.height.toFixed(1)}`;
+      }),
+    );
+  const editing = await boxes();
+  expect(editing.some((box) => box.startsWith('BLOCKQUOTE'))).toBe(true);
+  await page.getByTestId('note-title').click();
+  await expect(page.locator('.note-body .ProseMirror')).not.toHaveClass(/ProseMirror-focused/);
+  expect(await boxes()).toEqual(editing);
+  expect(errors).toEqual([]);
+});
+
+const SHOTS = process.env['PENMOSS_EVIDENCE'];
+
+const section = (page: Page, name: string) =>
+  page.getByTestId('source-section').and(page.getByRole('region', { name, exact: true }));
+
+async function openNote(page: Page, title: string, notebook = 'Quanta'): Promise<void> {
+  await section(page, notebook)
+    .getByRole('tree', { name: 'Folders and notes' })
+    .getByRole('link', { name: title, exact: true })
+    .click();
+  await expect(page).toHaveURL(ULID);
+  await expect(page.getByTestId('note-title')).toHaveValue(title);
+}
+
+const noteViewBody = (page: Page) => page.getByTestId('note-view').locator('.ProseMirror');
+
+/** Puts the caret at the start of the `index`th paragraph of the note body. */
+async function caretAtStart(page: Page, selector: string, index = 0): Promise<void> {
+  await noteViewBody(page).locator(selector).nth(index).click();
+  await page.keyboard.press('Home');
+}
+test.describe('in Quanta, with notes of links, lists and headings', () => {
+  test.use({
+    seed: {
+      name: 'Quanta',
+      notes: [
+        { title: 'Links', markdown: 'See the docs here.\n' },
+        {
+          title: 'Outline',
+          markdown: '1. one\n   1. two\n      1. three\n         1. four\n2. five\n',
+        },
+        { title: 'Lists', markdown: '1. one\n2. two\n3. three\n' },
+        { title: 'Heading', markdown: 'first line\n\nsecond line\n' },
+      ],
+    },
+  });
+
+  // Ryan’s feedback of 6 Nov 2026 (Quanta), item 4.
+  test('numbered lists read as an outline, 1, A, i, a', async ({ page }) => {
+    const errors = collectErrors(page);
+    await page.goto('/');
+    await openNote(page, 'Outline');
+    const types = await noteViewBody(page)
+      .locator('ol')
+      .evaluateAll((lists) => lists.map((list) => getComputedStyle(list).listStyleType));
+    expect(types).toEqual(['decimal', 'upper-alpha', 'lower-roman', 'lower-alpha']);
+    if (SHOTS)
+      await page
+        .getByTestId('note-view')
+        .locator('.doc')
+        .screenshot({ path: `${SHOTS}/outline.png` });
+    expect(errors).toEqual([]);
+  });
+  // Ryan’s feedback of 6 Nov 2026 (Quanta), item 6.
+  test('Backspace at the start of the first line joins it to the title', async ({ page }) => {
+    const errors = collectErrors(page);
+    await page.goto('/');
+    await openNote(page, 'Heading');
+    const title = page.getByTestId('note-title');
+    await caretAtStart(page, 'p', 0);
+    await page.keyboard.press('Backspace');
+    await expect(title).toHaveValue('Headingfirst line');
+    await expect(title).toBeFocused();
+    // The caret is at the join: typing goes there.
+    await page.keyboard.type(' — ');
+    await expect(title).toHaveValue('Heading — first line');
+    await expect(noteViewBody(page).locator('p').first()).toHaveText('second line');
+    // An empty first line just goes, and the caret lands at the title's end. Enter in the title
+    // moves to the text: the next keys wait until it is there.
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.note-body .ProseMirror')).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(noteViewBody(page).locator('p')).toHaveCount(2);
+    // Onto the new empty first line by a click, as the first case: ArrowUp from the line below
+    // left the caret off it at times, on Linux CI and on a busy Mac (A1235).
+    await caretAtStart(page, 'p', 0);
+    // The caret is on the new empty first line before Backspace.
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const node = getSelection()?.anchorNode;
+          const first = document.querySelector('.note-body .ProseMirror > p');
+          return Boolean(node && first && (node === first || first.contains(node)));
+        }),
+      )
+      .toBe(true);
+    await page.keyboard.press('Backspace');
+    await expect(title).toHaveValue('Heading — first line');
+    await expect(title).toBeFocused();
+    await expect(noteViewBody(page).locator('p').first()).toHaveText('second line');
+    expect(errors).toEqual([]);
+  });
+  // Ryan’s feedback of 6 Nov 2026 (Quanta), item 7.
+  test('Backspace twice at a numbered item keeps the items below in the same list', async ({
+    page,
+  }) => {
+    const errors = collectErrors(page);
+    await page.goto('/');
+    await openNote(page, 'Lists');
+    await caretAtStart(page, 'li p', 1);
+    await page.keyboard.press('Backspace');
+    await expect(noteViewBody(page).locator('ol')).toHaveCount(2);
+    await page.keyboard.press('Backspace');
+    await expect(noteViewBody(page).locator('ol')).toHaveCount(1);
+    await expect(noteViewBody(page).locator('ol > li')).toHaveText(['onetwo', 'three']);
+    expect(errors).toEqual([]);
+  });
+});
+
+const LONG = Array.from({ length: 80 }, (_, n) => `Line ${n + 1} of a long note.`).join('\n\n');
+test.describe('in Quanta, with a folder, a long note and a source', () => {
+  test.use({
+    seed: {
+      name: 'Quanta',
+      folders: ['Miscellaneous'],
+      notes: [
+        { title: 'Penmoss Roadmap', markdown: 'Plans for Penmoss.\n' },
+        { title: 'Long', markdown: `${LONG}\n` },
+        { title: 'Source', markdown: '## Plan\n\nFirst line.\n' },
+      ],
+    },
+  });
+
+  // T66, item 4.
+  test('the markdown source’s body is edited in place; its frontmatter is not', async ({
+    page,
+  }) => {
+    const errors = collectErrors(page);
+    await page.goto('/');
+    await openNote(page, 'Source');
+    await page.keyboard.press('ControlOrMeta+Shift+KeyM');
+    const source = page.getByTestId('note-markdown');
+    await expect(source).toContainText('title: Source');
+    const front = page.getByTestId('note-markdown-frontmatter');
+    const body = page.getByTestId('note-markdown-body');
+    await expect(front).toContainText('title: Source');
+    await expect(front).not.toHaveAttribute('contenteditable', /true|plaintext-only/);
+    await expect(body).toHaveAttribute('contenteditable', 'plaintext-only');
+    await expect(body).toHaveText('## Plan\n\nFirst line.\n');
+
+    // Typed at the body's end: a new paragraph with bold text, applied after a pause.
+    await body.click();
+    await body.evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      range.collapse(false);
+      getSelection()!.removeAllRanges();
+      getSelection()!.addRange(range);
+    });
+    await page.keyboard.type('\n\nSecond **bold** line.');
+    await expect(body).toContainText('Second **bold** line.');
+    // Back in the editor, the note has it.
+    await page.keyboard.press('ControlOrMeta+Shift+KeyM');
+    const editor = page.locator('.note-body .ProseMirror');
+    await expect(editor.locator('p strong')).toHaveText('bold');
+    await expect(editor.locator('p').last()).toHaveText('Second bold line.');
+    await expect(editor.locator('h2')).toHaveText('Plan');
+
+    // Edited again and left by a click elsewhere: applied at once.
+    await page.keyboard.press('ControlOrMeta+Shift+KeyM');
+    await body.click();
+    // The caret at the start (⌘↑ on a Mac, Ctrl+Home elsewhere): set directly.
+    await body.evaluate((element) => {
+      const range = document.createRange();
+      range.setStart(element.firstChild!, 0);
+      range.collapse(true);
+      getSelection()!.removeAllRanges();
+      getSelection()!.addRange(range);
+    });
+    await page.keyboard.type('# Top\n\n');
+    await page.getByTestId('note-markdown-hint').click();
+    await expect(body).toHaveText(/^# Top\n\n## Plan/);
+    if (SHOTS) await page.locator('.note-source').screenshot({ path: `${SHOTS}/source.png` });
+    await page.keyboard.press('ControlOrMeta+Shift+KeyM');
+    await expect(editor.locator('h1')).toHaveText('Top');
+    // The title stays the note's own: the frontmatter was not touched.
+    await expect(page.getByTestId('note-title')).toHaveValue('Source');
+    expect(errors).toEqual([]);
+  });
+  // T66, item 7.
+  test('every button of the selection toolbar is an icon', async ({ page }) => {
+    const errors = collectErrors(page);
+    await page.goto('/');
+    await openNote(page, 'Source');
+    await page.locator('.note-body .ProseMirror p').first().click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Shift+Home');
+    const toolbar = page.getByRole('toolbar', { name: 'Format selection' });
+    await expect(toolbar).toBeVisible();
+    const buttons = toolbar.locator('button:visible');
+    const count = await buttons.count();
+    expect(count).toBeGreaterThan(6);
+    for (let index = 0; index < count; index += 1) {
+      const button = buttons.nth(index);
+      // An icon, and no words on the button itself: its name is its label.
+      await expect(button.locator('svg').first()).toBeVisible();
+      expect(((await button.innerText()) ?? '').replace(/[¶\s]/g, '')).toMatch(/^[A-Za-z0-9]?$/);
+      await expect(button).toHaveAttribute('aria-label', /.+/);
+    }
+    if (SHOTS) await toolbar.screenshot({ path: `${SHOTS}/toolbar.png` });
+    expect(errors).toEqual([]);
+  });
+});
+
+const UNDO = 'ControlOrMeta+KeyZ';
+
+const REDO = 'ControlOrMeta+Shift+KeyZ';
+
+async function newNoteFromButtonAndEnter(page: Page, title: string, text = ''): Promise<string> {
+  await page
+    .getByRole('button', { name: /^New Note/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(ULID);
+  await expect(page.getByTestId('note-title')).toBeFocused();
+  await page.keyboard.type(title);
+  await page.keyboard.press('Enter');
+  if (text) await page.keyboard.type(text);
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+  return ULID.exec(new URL(page.url()).pathname)![1]!;
+}
+
+// T39 pass 2.
+test('Undo and Redo in a new note: one Redo brings the words back, with no stray line', async ({
+  page,
+}) => {
+  const errors = collectErrors(page);
+  await page.goto('/');
+  await newNoteFromButtonAndEnter(page, `Undo ${RUN}`, 'First words');
+  // A pause in typing ends an undo step.
+  await page.waitForTimeout(800);
+  await page.keyboard.type(' and more');
+  await expect(body(page)).toHaveText('First words and more');
+
+  await page.keyboard.press(UNDO);
+  await expect(body(page)).toHaveText('First words');
+  await page.keyboard.press(UNDO);
+  await expect(body(page)).toHaveText('');
+  await page.keyboard.press(REDO);
+  await expect(body(page)).toHaveText('First words');
+  await page.keyboard.press(REDO);
+  await expect(body(page)).toHaveText('First words and more');
+  // One paragraph, as typed: nothing was added around the steps.
+  await expect(body(page).locator(':scope > *')).toHaveCount(1);
   expect(errors).toEqual([]);
 });

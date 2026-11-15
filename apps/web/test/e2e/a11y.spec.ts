@@ -1,19 +1,19 @@
 import AxeBuilder from '@axe-core/playwright';
+import { BUILT_IN_THEMES } from '@penmoss/ui/theme';
 import {
-  expect,
-  GitHost,
-  macContext,
-  test,
   type Browser,
   type BrowserContext,
+  expect,
+  GitHost,
   type Locator,
+  macContext,
   type Page,
+  test,
 } from './fixtures';
-import { BUILT_IN_THEMES } from '@penmoss/ui/theme';
-import { NEW_FOLDER, NEW_NOTE, VERSION_HISTORY, LINE_END, SELECT_TO_LINE_START } from './keys';
+import { LINE_END, NEW_FOLDER, NEW_NOTE, SELECT_TO_LINE_START, VERSION_HISTORY } from './keys';
 import { noteAction } from './note-menu';
 import { pushed } from './support/sync';
-import { ULID, body, collectErrors } from './support/app';
+import { body, collectErrors, ULID } from './support/app';
 
 // T36, extended by T31: no serious or critical axe violations (WCAG 2.0, 2.1 and 2.2 A and AA)
 // on every main screen, light and dark, at desktop and phone widths; every built-in theme on a
@@ -592,5 +592,49 @@ test('icon buttons show their name and shortcut as a tooltip on hover and keyboa
   await expect(tooltip).toBeHidden();
   // The tooltip repeats the accessible name: assistive technology does not read it twice.
   await expect(info).toHaveAccessibleName('Copy Agent Reference');
+  expect(errors).toEqual([]);
+});
+
+const PALETTE = 'ControlOrMeta+KeyK';
+
+async function newNoteFromButton(page: Page, title: string, text = ''): Promise<string> {
+  await page
+    .getByRole('button', { name: /^New Note/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(ULID);
+  await expect(page.getByTestId('note-title')).toBeFocused();
+  await page.keyboard.type(title);
+  if (text) {
+    await page.keyboard.press('Enter');
+    await page.keyboard.type(text);
+  }
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+  return ULID.exec(new URL(page.url()).pathname)![1]!;
+}
+
+// T39 pass 1.
+test('Tab stays in a modal dialog, and its close button closes it', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/');
+  await newNoteFromButton(page, `Dialog note ${RUN}`, 'Text.');
+  for (const [keys, name, close] of [
+    [PALETTE, 'Command Palette', 'Close the Palette'],
+    [SEARCH, 'Search', 'Close Search'],
+  ] as const) {
+    await page.keyboard.press(keys);
+    const dialog = page.getByRole('dialog', { name });
+    await expect(dialog).toBeVisible();
+    // However often Tab is pressed, forwards or back, focus stays in the dialog.
+    for (const key of ['Tab', 'Tab', 'Tab', 'Tab', 'Tab', 'Shift+Tab', 'Shift+Tab']) {
+      await page.keyboard.press(key);
+      expect(
+        await dialog.evaluate((element) => element.contains(document.activeElement)),
+        `${name}: ${key}`,
+      ).toBe(true);
+    }
+    await dialog.getByRole('button', { name: close }).click();
+    await expect(dialog).toBeHidden();
+  }
   expect(errors).toEqual([]);
 });
