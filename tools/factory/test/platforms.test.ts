@@ -1,3 +1,5 @@
+import { spawnSync } from 'node:child_process';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { classify, proofPlatforms, ruleFor, SCOPE_RULES, scopeText } from '../src/platforms.ts';
 
@@ -121,5 +123,86 @@ describe("the build prompt's scope (A1254)", () => {
   });
   it('names the labelled platforms as the only ones', () => {
     expect(scopeText(['web', 'mac'])).toContain('labelled for web, mac');
+  });
+});
+
+/** CI's classifier, .github/scripts/changed-parts.sh, on these paths: which jobs run, and ships. */
+function ciParts(paths: readonly string[]): Record<string, boolean> {
+  const script = join(import.meta.dirname, '../../../.github/scripts/changed-parts.sh');
+  const r = spawnSync('bash', [script], { input: `${paths.join('\n')}\n`, encoding: 'utf8' });
+  expect(r.status, r.stderr).toBe(0);
+  return Object.fromEntries(
+    r.stdout
+      .trim()
+      .split('\n')
+      .map((line) => {
+        const [key, value] = line.split('=');
+        return [key ?? '', value === 'true'];
+      }),
+  );
+}
+
+/** The platforms CI tests for these paths, in the factory's names. */
+const ciPlatforms = (parts: Record<string, boolean>) =>
+  ALL.filter((p) => parts[{ web: 'web', mac: 'desktop', android: 'android' }[p] ?? p]);
+
+// A9 (A1483): the factory's classifier decides which platforms need product proof, CI's which
+// jobs run. They answer different questions, but must agree where both have an answer.
+describe("the factory's classifier and CI's agree", { timeout: 30_000 }, () => {
+  it.each([
+    ['pnpm-lock.yaml'],
+    ['package.json'],
+    ['pnpm-workspace.yaml'],
+    ['Taskfile.yml'],
+    ['tsconfig.base.json'],
+    ['eslint.config.js'],
+    ['.node-version'],
+    ['.prettierrc'],
+  ])('shared config %s puts every platform in scope, and CI runs every job', (path) => {
+    expect(classify([path])).toEqual({ kind: 'product', platforms: ALL });
+    expect(ciPlatforms(ciParts([path]))).toEqual(ALL);
+  });
+
+  it.each([['docs/ci.md'], ['README.md'], ['apps/web/README.md'], ['docs/architecture.md']])(
+    'docs %s need no proof, and CI runs no job',
+    (path) => {
+      expect(classify([path]).kind).toBe('docs-only');
+      const parts = ciParts([path]);
+      expect(Object.values(parts).some(Boolean)).toBe(false);
+    },
+  );
+
+  it.each([
+    ['apps/web/test/unit/editor.test.ts'],
+    ['apps/desktop/test/e2e/menu-bar.spec.ts'],
+    ['packages/core/src/note.test.ts'],
+    ['apps/android/app/src/androidTest/java/app/penmoss/NoteTest.kt'],
+  ])('test %s ships nothing: no product proof, and no release', (path) => {
+    expect(classify([path]).kind).toBe('ci-only');
+    expect(ciParts([path])['ships']).toBe(false);
+  });
+
+  it.each([
+    ['apps/web/src/editor.tsx', ALL],
+    ['packages/core/src/note.ts', ALL],
+    ['apps/desktop/src/main.ts', ['mac']],
+    ['apps/android/app/src/main/java/app/penmoss/Main.kt', ['android']],
+  ])("an app's source %s: the same platforms, and it ships", (path, platforms) => {
+    expect(classify([path])).toEqual({ kind: 'product', platforms });
+    const parts = ciParts([path]);
+    expect(ciPlatforms(parts)).toEqual(platforms);
+    expect(parts['ships']).toBe(true);
+  });
+
+  it('differs on the relay on purpose: proof on every client, CI tests it in Check alone', () => {
+    expect(classify(['apps/relay/src/index.ts'])).toEqual({ kind: 'product', platforms: ALL });
+    expect(ciParts(['apps/relay/src/index.ts'])).toEqual({
+      check: true,
+      web: false,
+      android: false,
+      desktop: false,
+      site: false,
+      ships: false,
+    });
   });
 });

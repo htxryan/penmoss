@@ -1,8 +1,10 @@
 /**
  * The path classifier (Platform scope in the factory plan): which platforms a
  * set of changed paths can affect, and so which need product proof. The
- * harness gate uses it; CI's `pick` job (ci.yml) has its own path rules, which
- * still run a test-only change's tests. It errs wide: a path no rule
+ * harness gate uses it; CI's `pick` job (ci.yml) has its own path rules
+ * (.github/scripts/changed-parts.sh), which still run a test-only change's
+ * tests. test/platforms.test.ts holds the two to agreeing on shared config, docs,
+ * tests and each app; the relay is where they differ on purpose (A1483). It errs wide: a path no rule
  * recognises puts all three platforms in scope. A path only tests read, and
  * the root `scripts/`, change nothing that ships, so they are CI's alone
  * (A1329).
@@ -34,7 +36,7 @@ const ROOT_CONFIG = new Set([
   'stylelint.config.js',
   'Taskfile.yml',
   '.npmrc',
-  '.nvmrc',
+  '.node-version',
   '.prettierrc',
   '.prettierignore',
 ]);
@@ -65,7 +67,7 @@ export function ruleFor(path: string): Rule {
   if (ROOT_CONFIG.has(p) || under(p, 'packages')) return 'all';
   // The Mac app bundles the web build, and the Android editor imports the web app's styles.
   if (under(p, 'apps/web')) return 'all';
-  // Every client syncs through the relay.
+  // Every client syncs through the relay, so each is proved; CI only tests it, in Check (A1483).
   if (under(p, 'apps/relay')) return 'all';
   if (under(p, 'apps/desktop')) return 'mac';
   if (under(p, 'apps/android')) return 'android';
