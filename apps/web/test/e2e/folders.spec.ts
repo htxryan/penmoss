@@ -1,7 +1,7 @@
 import { anotherMac, expect, seeded, test, type Locator, type Page } from './fixtures';
 import { NEW_FOLDER } from './keys';
 import { notebookAction, notebookMenuItem } from './notebook-actions';
-import { carried } from './support/sync';
+import { carried, pushed } from './support/sync';
 
 // T7 on a git notebook (T59): nested folders, manual order (drag and Alt+↑/↓), per-folder sort
 // modes, and a second Mac on the same remote that follows along once git carries each change
@@ -303,12 +303,7 @@ test('the folder tree shows offline from the local copy', async ({ page, host })
   await expect.poll(() => rows(page, tag)).toEqual(['Offline', 'Kept']);
   // "Synced" means the remote and this device's own copy both hold every change; then git's
   // network stops answering and the page reloads.
-  await expect(page.getByTestId('section-sync')).toHaveAttribute('data-state', 'synced', {
-    timeout: 40_000,
-  });
-  await expect(page.getByTestId('section-sync')).toHaveAttribute('data-pending', '0', {
-    timeout: 40_000,
-  });
+  await pushed(page);
   host.network = 'held';
   await page.reload();
   await expect.poll(() => rows(page, tag)).toEqual(['Offline', 'Kept']);

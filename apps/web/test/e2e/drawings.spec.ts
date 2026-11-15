@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, macContext, PREVIEW, seeded, test, type Locator, type Page } from './fixtures';
 import { remoteFiles, remoteMarkdown } from './support/remote';
-import { remoteBytes } from './support/sync';
+import { pushedUntil, remoteBytes } from './support/sync';
 
 // PEN-28: drawings. The slash menu's Diagram: Excalidraw opens Excalidraw over the window; Done
 // stores the scene as `attachments/<sha256>.excalidraw` and its picture as
@@ -139,20 +139,15 @@ test('PEN-28: draw in a note, save it as files in git, open it again and edit it
   ).toBeGreaterThan(100);
 
   // The repository holds both files, and the markdown names both: the SVG as a picture,
-  // linked to its scene.
+  // linked to its scene. Pushed with Sync Now (A1013).
   const { remote } = seeded(notebook);
-  await expect
-    .poll(() => DRAWING.test(remoteMarkdown(host, remote, id) ?? ''), {
-      timeout: 60_000,
-      intervals: [2_000],
-    })
-    .toBe(true);
+  await pushedUntil(page, () => expect(remoteMarkdown(host, remote, id) ?? '').toMatch(DRAWING));
   const [, svgSha, sceneSha] = DRAWING.exec(remoteMarkdown(host, remote, id)!)!;
   const firstSvg = `attachments/${svgSha}.svg`;
   const firstScene = `attachments/${sceneSha}.excalidraw`;
-  await expect
-    .poll(() => remoteFiles(host, remote), { timeout: 60_000, intervals: [2_000] })
-    .toEqual(expect.arrayContaining([firstSvg, firstScene]));
+  await pushedUntil(page, () =>
+    expect(remoteFiles(host, remote)).toEqual(expect.arrayContaining([firstSvg, firstScene])),
+  );
   expect(shapes(remoteBytes(host, remote, firstScene))).toEqual(['rectangle']);
   const svg = remoteBytes(host, remote, firstSvg).toString('utf8');
   expect(svg).toMatch(/^<svg[^>]* xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
@@ -185,19 +180,16 @@ test('PEN-28: draw in a note, save it as files in git, open it again and edit it
   await editor(page).getByRole('button', { name: 'Done' }).click();
   await expect(editor(page)).toBeHidden();
   await expect(drawing).toHaveAttribute('data-state', 'ready');
-  await expect
-    .poll(
-      () => {
-        const found = DRAWING.exec(remoteMarkdown(host, remote, id) ?? '');
-        return found ? `attachments/${found[2]}.excalidraw` : null;
-      },
-      { timeout: 60_000, intervals: [2_000] },
-    )
-    .not.toBe(firstScene);
+  await pushedUntil(page, () => {
+    const found = DRAWING.exec(remoteMarkdown(host, remote, id) ?? '');
+    expect(found ? `attachments/${found[2]}.excalidraw` : null).not.toBe(firstScene);
+  });
   const [, , secondSha] = DRAWING.exec(remoteMarkdown(host, remote, id)!)!;
-  await expect
-    .poll(() => remoteFiles(host, remote), { timeout: 60_000, intervals: [2_000] })
-    .toEqual(expect.arrayContaining([`attachments/${secondSha}.excalidraw`]));
+  await pushedUntil(page, () =>
+    expect(remoteFiles(host, remote)).toEqual(
+      expect.arrayContaining([`attachments/${secondSha}.excalidraw`]),
+    ),
+  );
   expect(shapes(remoteBytes(host, remote, `attachments/${secondSha}.excalidraw`)).sort()).toEqual([
     'ellipse',
     'rectangle',
@@ -257,20 +249,13 @@ test('PEN-28: draw in a note, save it as files in git, open it again and edit it
   await page.goForward();
   await expect(page).toHaveURL(new RegExp(id));
   await expect(drawing).toHaveAttribute('data-state', 'ready');
-  await expect
-    .poll(
-      () => {
-        const found = DRAWING.exec(remoteMarkdown(host, remote, id) ?? '');
-        if (!found) return null;
-        try {
-          return shapes(remoteBytes(host, remote, `attachments/${found[2]}.excalidraw`)).length;
-        } catch {
-          return null;
-        }
-      },
-      { timeout: 60_000, intervals: [2_000] },
-    )
-    .toBe(3);
+  await pushedUntil(page, () => {
+    const found = DRAWING.exec(remoteMarkdown(host, remote, id) ?? '');
+    expect(found).not.toBeNull();
+    expect(shapes(remoteBytes(host, remote, `attachments/${found![2]}.excalidraw`))).toHaveLength(
+      3,
+    );
+  });
 
   // The proof's last frame: the drawing back in the note, its buttons on hover.
   await drawing.scrollIntoViewIfNeeded();

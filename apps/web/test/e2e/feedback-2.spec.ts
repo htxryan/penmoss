@@ -2,6 +2,7 @@ import { expect, test, type Page } from './fixtures';
 import { storedRecord } from './stored';
 import { NEW_NOTE } from './keys';
 import { notebookAction } from './notebook-actions';
+import { pushed } from './support/sync';
 
 // T42 (#104 items 1–9): Ryan's second round of feedback, in the web app (the Mac app runs the
 // same page; its own suite covers what differs there). On a git notebook (T59): search is this
@@ -286,12 +287,7 @@ test('7: Settings → Display hides sidebar shortcuts, on the rail too; Search s
     // expanded and as a rail. Back to the notes in the app, so the change is not cut off by a load.
     await page.locator('.settings-bar .back-link').click();
     await expect(actions.locator('[data-command="journal.today"]')).toHaveCount(0);
-    await expect(page.getByTestId('section-sync')).toHaveAttribute('data-state', 'synced', {
-      timeout: 40_000,
-    });
-    await expect(page.getByTestId('section-sync')).toHaveAttribute('data-pending', '0', {
-      timeout: 40_000,
-    });
+    await pushed(page);
     await page.reload();
     await expect(actions.locator('[data-command="app.search"]')).toBeVisible();
     await expect(actions.locator('[data-command="journal.thisWeek"]')).toBeVisible();

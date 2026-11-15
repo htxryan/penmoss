@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { anotherMac, expect, seeded, test, type Page } from './fixtures';
-import { remoteBytes } from './support/sync';
+import { pushedUntil, remoteBytes } from './support/sync';
 import { remoteFiles, remoteMarkdown } from './support/remote';
 
 // T10 on a git notebook (T59, A828): a screenshot pasted offline shows at once, is stored on
@@ -128,9 +128,10 @@ test('pastes an image offline, commits it into the repository when back online, 
   await width.fill('240');
   await width.press('Enter');
   await expect(image).toHaveCSS('width', '240px');
-  await expect
-    .poll(() => remoteMarkdown(host, remote, id) ?? '', { timeout: 60_000, intervals: [1000] })
-    .toContain(`![|240](attachments/${sha256}.png)`);
+  // Pushed with Sync Now (A1013): the push after an outage is the point above, not here.
+  await pushedUntil(page, () =>
+    expect(remoteMarkdown(host, remote, id) ?? '').toContain(`![|240](attachments/${sha256}.png)`),
+  );
 
   // After a reload the image comes from IndexedDB, still at its width.
   await page.reload();

@@ -12,6 +12,7 @@ import {
   type Page,
 } from './fixtures';
 import { BUILT_IN_THEMES, NORD, PENMOSS, themeVariables } from '@penmoss/ui/theme';
+import { carried, pushed } from './support/sync';
 
 // T28: every built-in theme in light and dark (a screenshot of each), switched from the
 // palette's "Switch theme…" and "Toggle dark mode"; a custom theme duplicated, edited and
@@ -80,9 +81,7 @@ async function sampleNote(page: Page): Promise<string> {
   await expect(body(page).locator('.pm-math-inline .katex')).toBeVisible();
   await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
   // The tests reload the app: leave only once the notebook has the note, pushed.
-  const dot = page.getByTestId('section-sync');
-  await expect(dot).toHaveAttribute('data-state', 'synced', { timeout: 40_000 });
-  await expect(dot).toHaveAttribute('data-pending', '0', { timeout: 40_000 });
+  await pushed(page);
   return ULID.exec(new URL(page.url()).pathname)![1]!;
 }
 
@@ -266,14 +265,18 @@ test.describe.serial('T28: a custom theme', () => {
 
   test('syncs to another device', async ({ browser }) => {
     test.setTimeout(120_000);
-    // Another Mac on the notebook's remote: the theme reaches it once pushed.
+    // Another Mac on the notebook's remote: the theme reaches it once pushed and pulled, with
+    // Sync Now on both from the notes page (A1013), not after the push delay and the minute's pull.
     const other = await anotherMac(browser, { remote });
     const device = other.page;
     try {
+      await page.goto('/');
+      await device.goto('/');
+      await carried(page, device, () =>
+        expect(device.locator('html')).toHaveAttribute('data-theme', customId),
+      );
       await device.goto('/settings/appearance');
-      await expect(device.locator('html')).toHaveAttribute('data-theme', customId, {
-        timeout: 90_000,
-      });
+      await expect(device.locator('html')).toHaveAttribute('data-theme', customId);
       await expect(device.locator('html')).toHaveAttribute('data-mode', 'light');
       await expect
         .poll(() =>
@@ -285,6 +288,8 @@ test.describe.serial('T28: a custom theme', () => {
       ).toHaveValue(name);
     } finally {
       await other.context.close();
+      // Where the next test starts, as the one before left it.
+      await page.goto('/settings/appearance');
     }
   });
 

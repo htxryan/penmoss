@@ -3,6 +3,7 @@ import { NEW_FOLDER, NEW_NOTE } from './keys';
 import { noteAction } from './note-menu';
 import { notebookAction } from './notebook-actions';
 import { storedSetting } from './stored';
+import { pushed } from './support/sync';
 
 // T53: Ryan's feedback of 1 Nov 2026 ("Penmoss Feedback 2026-11-01"), in the web app (the Mac
 // app runs the same page; its own suite covers what differs there). On a git notebook (T59) the
@@ -689,12 +690,7 @@ test('9, fidelity: the note panel keeps one set of columns, rows and gaps on eve
   await expect(page.getByTestId('comment-popover')).toHaveCount(0);
   await expect(page.getByTestId('comments-count')).toHaveText('1');
   // Pushed, so the Metadata tab's sync line does not change while it is measured.
-  await expect(page.getByTestId('section-sync')).toHaveAttribute('data-state', 'synced', {
-    timeout: 40_000,
-  });
-  await expect(page.getByTestId('section-sync')).toHaveAttribute('data-pending', '0', {
-    timeout: 40_000,
-  });
+  await pushed(page);
 
   // One digit's count is square, not wider than it is tall.
   const count = await box('[data-testid="comments-count"]');

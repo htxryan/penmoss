@@ -12,6 +12,7 @@ import {
 import { BUILT_IN_THEMES } from '@penmoss/ui/theme';
 import { NEW_FOLDER, NEW_NOTE, VERSION_HISTORY, LINE_END, SELECT_TO_LINE_START } from './keys';
 import { noteAction } from './note-menu';
+import { pushed } from './support/sync';
 
 // T36, extended by T31: no serious or critical axe violations (WCAG 2.0, 2.1 and 2.2 A and AA)
 // on every main screen, light and dark, at desktop and phone widths; every built-in theme on a
@@ -149,13 +150,6 @@ async function suiteMac(browser: Browser, viewport?: { width: number; height: nu
   return { host, context, page: await context.newPage() };
 }
 
-/** The notebook's sync dot: synced, nothing waiting to be pushed (A860). */
-async function synced(page: Page) {
-  const dot = page.getByTestId('section-sync');
-  await expect(dot).toHaveAttribute('data-state', 'synced', { timeout: 40_000 });
-  await expect(dot).toHaveAttribute('data-pending', '0', { timeout: 40_000 });
-}
-
 async function newFolder(page: Page, name: string): Promise<Locator> {
   await page.keyboard.press(NEW_FOLDER);
   const input = page.getByRole('textbox', { name: 'New folder name' });
@@ -278,7 +272,7 @@ test.describe.serial('no serious axe violations on any main screen', () => {
     await expect(treeItem(page, `Axe deleted ${RUN}`)).toHaveCount(0);
 
     // Each pass reloads the app: leave only once the notebook is stored and pushed.
-    await synced(page);
+    await pushed(page);
   });
 
   test.afterAll(async () => {
@@ -531,7 +525,7 @@ test.describe.serial('no serious axe violations in every built-in theme', () => 
     await page.keyboard.type("const beds = 4; // by the fence\nplant('tomato');");
     await expect(page.locator('.hljs-keyword').first()).toBeVisible();
     // Each check reloads the app: leave only once the notebook is stored and pushed.
-    await synced(page);
+    await pushed(page);
   });
 
   test.afterAll(async () => {

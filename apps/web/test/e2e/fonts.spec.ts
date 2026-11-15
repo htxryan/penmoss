@@ -3,6 +3,7 @@ import { expect, seeded, test, type GitHost, type Page } from './fixtures';
 import { NEW_NOTE } from './keys';
 import { storedSetting } from './stored';
 import { readRemote } from './support/remote';
+import { pushedUntil } from './support/sync';
 
 // T51 item 16 (A944): Settings → Appearance → Fonts. The Interface Font, the Note Font and the
 // Note Font Size are synced settings laid over the theme's fonts: the interface takes the
@@ -60,9 +61,15 @@ async function resetFonts(page: Page, host: GitHost, remote: string) {
   for (const key of FONT_KEYS) {
     await expect.poll(() => storedSetting(page, key), { timeout: 10_000 }).toBeUndefined();
   }
-  await expect
-    .poll(() => pushedFonts(host, remote), { timeout: 90_000 })
-    .toEqual({ 'font.interface': undefined, 'font.note': undefined, 'font.noteSize': undefined });
+  // Pushed with Sync Now, from the notes page (A1013).
+  await page.goto('/');
+  await pushedUntil(page, async () =>
+    expect(await pushedFonts(host, remote)).toEqual({
+      'font.interface': undefined,
+      'font.note': undefined,
+      'font.noteSize': undefined,
+    }),
+  );
 }
 
 test('the interface font, the note font and the note size apply over the theme’s', async ({
@@ -134,9 +141,12 @@ test('the interface font, the note font and the note size apply over the theme�
 
   // The notebook keeps them, and pushes them to its remote.
   expect(await storedSetting(page, 'font.note')).toBe('mono');
-  await expect
-    .poll(() => pushedFonts(host, remote), { timeout: 90_000 })
-    .toMatchObject({ 'font.note': 'mono', 'font.noteSize': 20 });
+  await pushedUntil(page, async () =>
+    expect(await pushedFonts(host, remote)).toMatchObject({
+      'font.note': 'mono',
+      'font.noteSize': 20,
+    }),
+  );
   await resetFonts(page, host, remote);
   expect(errors).toEqual([]);
 });

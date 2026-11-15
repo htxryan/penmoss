@@ -52,6 +52,35 @@ export async function syncNow(page: Page): Promise<void> {
 }
 
 /**
+ * Pushes with Sync Now until `check`, a look at the remote, passes: what reaches git, without
+ * waiting out the 12 s push delay (A1013; engine-host.test.ts proves the schedule on a fake
+ * clock). Again until it passes, for a change stored a moment after the first push (a picture's
+ * file, a drawing's scene). `page` must show the sidebar's sync dot (a notes page).
+ */
+export async function pushedUntil(
+  page: Page,
+  check: () => unknown,
+  timeout = 60_000,
+): Promise<void> {
+  await expect(async () => {
+    await syncNow(page);
+    await check();
+  }).toPass({ timeout, intervals: [500, 1_000, 2_000] });
+}
+
+/**
+ * Pushes with Sync Now until the dot says nothing waits to be pushed: the remote and this device
+ * both hold every change (A860), without waiting out the push delay. `page` must show the
+ * sidebar's sync dot.
+ */
+export async function pushed(page: Page): Promise<void> {
+  const dot = page.getByTestId('section-sync').first();
+  await pushedUntil(page, () =>
+    expect(dot).toHaveAttribute('data-pending', '0', { timeout: 2_000 }),
+  );
+}
+
+/**
  * Pushes `from`'s changes, then pulls on `to` until `check` passes there: what a second device
  * shows once git has carried the change.
  */

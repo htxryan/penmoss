@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { expect, macContext, PREVIEW, seeded, test, type Page } from './fixtures';
 import { DOC_END, LINE_END } from './keys';
 import { remoteFiles, remoteMarkdown } from './support/remote';
-import { remoteBytes } from './support/sync';
+import { pushedUntil, remoteBytes } from './support/sync';
 
 // T13: files attached through the slash menu (a PDF with a preview, any other file to
 // download) go into the git notebook's repository (T59, A828: `attachments/<sha256>.<ext>`);
@@ -154,13 +154,13 @@ test('T13: attach files, embed a live section, cycles as links, copy and paste',
   await pdfChip.getByRole('button', { name: 'Close the Preview of Field guide.pdf' }).click();
   await expect(pdfChip.getByTestId('attachment-preview')).toHaveCount(0);
 
-  // Pushed into the repository beside the notes, byte for byte (A828).
+  // Pushed into the repository beside the notes, byte for byte (A828), with Sync Now (A1013).
   const { remote } = seeded(notebook);
   const pdfPath = `attachments/${sha(PDF)}.pdf`;
   const csvPath = `attachments/${sha(CSV)}.csv`;
-  await expect
-    .poll(() => remoteFiles(mac, remote), { timeout: 60_000, intervals: [2_000] })
-    .toEqual(expect.arrayContaining([pdfPath, csvPath]));
+  await pushedUntil(page, () =>
+    expect(remoteFiles(mac, remote)).toEqual(expect.arrayContaining([pdfPath, csvPath])),
+  );
   expect(remoteBytes(mac, remote, pdfPath)).toEqual(PDF);
   expect(remoteBytes(mac, remote, csvPath)).toEqual(CSV);
 
@@ -180,15 +180,13 @@ test('T13: attach files, embed a live section, cycles as links, copy and paste',
   // embedded text; search finds that text only in the source.
   const embedRef = `![[${SOURCE}#Plan]]`;
   const pdfLink = `[Field guide.pdf](${pdfPath})`;
-  await expect
-    .poll(
-      () => {
-        const text = remoteMarkdown(mac, remote, host) ?? '';
-        return { embed: text.includes(embedRef), pdf: text.includes(pdfLink) };
-      },
-      { timeout: 60_000, intervals: [2_000] },
-    )
-    .toEqual({ embed: true, pdf: true });
+  await pushedUntil(page, () => {
+    const text = remoteMarkdown(mac, remote, host) ?? '';
+    expect({ embed: text.includes(embedRef), pdf: text.includes(pdfLink) }).toEqual({
+      embed: true,
+      pdf: true,
+    });
+  });
   expect(remoteMarkdown(mac, remote, host)).not.toContain(WORD);
   await page.keyboard.press('ControlOrMeta+Shift+KeyF');
   const search = page.getByTestId('search');

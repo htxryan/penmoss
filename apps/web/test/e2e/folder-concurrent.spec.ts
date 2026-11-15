@@ -1,7 +1,7 @@
 import { anotherMac, expect, seeded, test, type GitHost, type Page } from './fixtures';
 import { NEW_FOLDER } from './keys';
 import { notebookAction } from './notebook-actions';
-import { syncNow } from './support/sync';
+import { pushed, syncNow } from './support/sync';
 import { readRemote } from './support/remote';
 
 // A674 end to end on a git notebook (T59): one Mac deletes a folder while another, offline
@@ -21,12 +21,6 @@ function collectErrors(page: Page): string[] {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   return errors;
-}
-
-async function synced(page: Page) {
-  const dot = page.getByTestId('section-sync');
-  await expect(dot).toHaveAttribute('data-state', 'synced', { timeout: 40_000 });
-  await expect(dot).toHaveAttribute('data-pending', '0', { timeout: 40_000 });
 }
 
 async function newFolder(page: Page, name: string, via: 'button' | 'shortcut') {
@@ -75,8 +69,7 @@ test('a note filed into a folder another Mac deleted meanwhile shows at the top 
   const noteId = ULID.exec(page.url())![1]!;
   await page.keyboard.type(stray);
   await expect(item(page, stray)).toHaveAttribute('aria-level', '1');
-  await syncNow(page);
-  await synced(page);
+  await pushed(page);
 
   // The second Mac has it all, then both go offline.
   const other = await anotherMac(browser, { remote });
@@ -85,7 +78,7 @@ test('a note filed into a folder another Mac deleted meanwhile shows at the top 
   try {
     await device.goto(`/notes/${noteId}`);
     await expect(item(device, stray)).toBeVisible({ timeout: 40_000 });
-    await synced(device);
+    await pushed(device);
     for (const [view, mac] of [
       [page, host],
       [device, other.host],
@@ -123,8 +116,7 @@ test('a note filed into a folder another Mac deleted meanwhile shows at the top 
     ] as const) {
       mac.network = 'up';
       await view.context().setOffline(false);
-      await syncNow(view);
-      await synced(view);
+      await pushed(view);
     }
     await syncNow(page);
     // Unlike the server, which repaired the tree after every change (A674: the note moved to
