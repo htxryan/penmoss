@@ -3,10 +3,10 @@ package app.penmoss.feedback
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.penmoss.auth.SecretBox
 import app.penmoss.data.PenmossDatabase
 import app.penmoss.engine.api.FeedbackAnswer
 import app.penmoss.engine.api.FeedbackImage
+import app.penmoss.security.SecretBox
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -430,5 +430,16 @@ class GitHubFeedbackTest {
         const val TOKEN = "ghp_PersonalToken0123456789abcdefABCDEF"
         const val SUBMISSION = "01JBFEEDBACK0000000000000A"
         const val SECOND = "01JBFEEDBACK0000000000000B"
+    }
+}
+
+/** An in-memory ledger. */
+class MemoryFeedbackLedger : FeedbackLedger {
+    val rows = java.util.concurrent.ConcurrentHashMap<String, FeedbackLedgerEntry>()
+
+    override fun get(submissionId: String) = rows[submissionId]
+
+    override fun set(submissionId: String, entry: FeedbackLedgerEntry) {
+        rows[submissionId] = entry
     }
 }

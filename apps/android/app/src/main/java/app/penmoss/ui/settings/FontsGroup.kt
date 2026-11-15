@@ -16,7 +16,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import app.penmoss.ui.square.TextButton
+import app.penmoss.ui.common.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,7 +34,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import app.penmoss.engine.settings.FontSettings
-import app.penmoss.ui.interfaceFontFamily
+import app.penmoss.ui.common.interfaceFontFamily
 import kotlin.math.roundToInt
 
 /** Settings → Appearance's fonts (T51, A944): the three synced settings and how to change them. */

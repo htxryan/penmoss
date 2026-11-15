@@ -1,6 +1,6 @@
 package app.penmoss.git
 
-import app.penmoss.data.NoteStore
+import app.penmoss.data.SettingsStore
 import kotlinx.coroutines.flow.combine
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -19,10 +19,10 @@ import java.util.concurrent.atomic.AtomicInteger
  * Journal notebook through its notes server, shown at once.
  */
 class JournalDeviceSettings(
-    /** The device graph's store: where the screens read the settings. */
-    private val device: NoteStore,
-    /** The Journal notebook's store: its tree's device map. */
-    private val journal: NoteStore,
+    /** The device graph's settings: where the screens read them. */
+    private val device: SettingsStore,
+    /** The Journal notebook's settings: its tree's device map. */
+    private val journal: SettingsStore,
     /** Writes `{ key: value | null }` to the Journal notebook's device map; answers the map after. */
     private val write: suspend (JsonObject) -> JsonObject,
 ) {

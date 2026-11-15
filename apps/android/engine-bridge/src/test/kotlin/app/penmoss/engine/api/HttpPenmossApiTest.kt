@@ -73,36 +73,6 @@ class HttpPenmossApiTest {
     }
 
     @Test
-    fun searchesWithTheModeAndFiltersAndReadsTheMarkedTitle() = runTest {
-        respond(
-            """{"results":[{"id":"n1","title":"Lemon tart","titleHighlighted":"\u0002Lemon\u0003 tart",""" +
-                """"snippet":"a \u0002lemon\u0003","updatedAt":5,"heading":"Method","tags":["baking"],"sources":["full-text","semantic"]}],"notice":null}""",
-        )
-        val reply = api.search("lemon ta", 30, SearchMode.HYBRID, SearchFilters(folderId = "f1", tag = "baking", updatedAfter = 1000), partial = true)
-        val hit = reply.results.single()
-        assertEquals("\u0002Lemon\u0003 tart", hit.titleHighlighted)
-        assertEquals("Method", hit.heading)
-        assertEquals(listOf("baking"), hit.tags)
-        assertEquals(listOf("full-text", "semantic"), hit.sources)
-        val url = server.takeRequest().url
-        assertEquals("/api/search", url.encodedPath)
-        assertEquals("lemon ta", url.queryParameter("q"))
-        assertEquals("hybrid", url.queryParameter("mode"))
-        assertEquals("1", url.queryParameter("prefix"))
-        assertEquals("1", url.queryParameter("partial"))
-        assertEquals("f1", url.queryParameter("folder"))
-        assertEquals("baking", url.queryParameter("tag"))
-        assertEquals("1000", url.queryParameter("after"))
-        // No filters: none sent.
-        respond("""{"results":[]}""")
-        api.search("x")
-        val plain = server.takeRequest().url
-        assertEquals("full-text", plain.queryParameter("mode"))
-        assertNull(plain.queryParameter("folder"))
-        assertNull(plain.queryParameter("partial"))
-    }
-
-    @Test
     fun asksForTextInABatchOnlyWhenTheEntrySaysAndReadsIt() = runTest {
         respond("""{"notes":[{"id":"n1","epoch":"e","update":"","stateVector":"SV","error":null,"text":"body","textHash":"H"}]}""")
         val reply = api.batch(listOf(BatchEntry("n1", "SV", text = true, textHash = "OLD"), BatchEntry("n2")))
@@ -117,11 +87,11 @@ class HttpPenmossApiTest {
     }
 
     @Test
-    fun readsEachChangedNotesTagsAndToleratesAnOlderServer() = runTest {
-        respond("""{"clock":3,"notes":[{"id":"a","clock":2,"tags":["area/garden","cooking"]},{"id":"b","clock":3}]}""")
+    fun readsEachChangedNotesTags() = runTest {
+        respond("""{"clock":3,"notes":[{"id":"a","clock":2,"tags":["area/garden","cooking"]},{"id":"b","clock":3,"tags":[]}]}""")
         val page = api.changes(0)
         assertEquals(listOf("area/garden", "cooking"), page.notes[0].tags)
-        assertNull(page.notes[1].tags)
+        assertEquals(emptyList<String>(), page.notes[1].tags)
     }
 
     @Test

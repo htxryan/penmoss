@@ -36,7 +36,6 @@ import {
   initNote,
   isDeleted,
   isoWithOffset,
-  readNoteNotebook,
   readTitle,
   readTrashInfo,
   setDeleted,
@@ -375,16 +374,12 @@ export class LocalServer {
       );
       return json(200, { id: reply.id, created: reply.created });
     }
-    if (path === '/api/search' && method === 'GET') return json(200, await this.search(query));
     if (path === '/api/trash' && method === 'GET') return json(200, { notes: this.trashList() });
     if (path === '/api/folders/trash' && method === 'GET') {
       return json(200, { folders: this.folderTrash() });
     }
     if (path === '/api/folders' && method === 'POST') return this.createFolder(body);
     if (path === '/api/folders/root' && method === 'PATCH') {
-      if (body['notebookName'] !== undefined) {
-        return refusal(404, 'not_available', 'A git notebook has no default notebook to name');
-      }
       return json(
         200,
         await this.write(() => this.notebook.patchRoot(sortModeOf(body['sortMode']))),
@@ -968,9 +963,6 @@ export class LocalServer {
   }
 
   private async createFolder(body: Body): Promise<LocalReply> {
-    if (body['notebook'] === true) {
-      return refusal(422, 'not_available', 'A git notebook has no notebooks inside it');
-    }
     const parentId = body['parentId'] ?? null;
     if (parentId !== null && typeof parentId !== 'string') {
       return refusal(400, 'invalid_request', 'parentId must be a folder id or null');
@@ -982,9 +974,6 @@ export class LocalServer {
   }
 
   private async patchFolder(id: string, body: Body) {
-    if (body['notebook'] !== undefined) {
-      throw new LocalError(422, 'not_available', 'A git notebook has no notebooks inside it');
-    }
     const from = (
       typeof body['from'] === 'object' && body['from'] !== null ? body['from'] : {}
     ) as Body;
@@ -1005,25 +994,6 @@ export class LocalServer {
         ...(place ? { place } : {}),
       }),
     );
-  }
-
-  /** `GET /api/search`: keyword only (A101), in the phone's shape. */
-  private async search(query: URLSearchParams) {
-    const number = (name: string) => (query.has(name) ? Number(query.get(name)) : null);
-    const mode = query.get('mode') === 'semantic' ? 'full-text' : (query.get('mode') ?? 'hybrid');
-    const found = (await this.notebook.search({
-      q: query.get('q') ?? '',
-      mode,
-      limit: number('limit') ?? 10,
-      tag: query.get('tag'),
-      folderId: query.get('folder'),
-      after: number('after'),
-      before: number('before'),
-    })) as { results?: unknown[]; notice?: string };
-    return {
-      results: found.results ?? [],
-      notice: 'A git notebook searches words only (A101).',
-    };
   }
 
   /**
@@ -1110,7 +1080,6 @@ export class LocalServer {
         const now = new Date(this.hooks.now());
         const id = ulid(now.getTime());
         const title = `${readTitle(old).trim() || 'Untitled'} (recovered)`;
-        const notebook = readNoteNotebook(old);
         const trashedAt = readTrashInfo(old).at ?? now.getTime();
         let folderId =
           input.folderId !== null && FOLDER_ID.test(input.folderId) ? input.folderId : null;
@@ -1122,11 +1091,7 @@ export class LocalServer {
           folderId = 'folderId' in place ? place.folderId : null;
         }
         copy.transact(() => {
-          initNote(
-            copy,
-            { id, created: isoWithOffset(now), kind: 'note', ...(notebook ? { notebook } : {}) },
-            title,
-          );
+          initNote(copy, { id, created: isoWithOffset(now), kind: 'note' }, title);
           copy.get(NOTE_ROOT).applyDelta(old.get(NOTE_ROOT).toDeltaDeep());
         });
         // In Trash it stays in Trash, never in a live folder.

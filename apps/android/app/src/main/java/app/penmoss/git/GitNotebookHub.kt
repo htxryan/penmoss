@@ -4,10 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
 import androidx.core.content.edit
-import app.penmoss.AppGraph
-import app.penmoss.forGit
-import app.penmoss.gitPrefs
-import app.penmoss.auth.SecretBox
+import app.penmoss.NotebookGraph
 import app.penmoss.data.PenmossDatabase
 import app.penmoss.engine.git.AddResult
 import app.penmoss.engine.git.CommitPurges
@@ -25,6 +22,7 @@ import app.penmoss.engine.git.OwnerConfirm
 import app.penmoss.engine.git.PageGuard
 import app.penmoss.engine.git.PendingPurge
 import app.penmoss.engine.git.SecretSeal
+import app.penmoss.security.SecretBox
 import app.penmoss.sync.PassOutcome
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -45,7 +43,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Git notebooks on this phone (T50 G7, G8; A870–A889): the registry and its checks
- * ([GitNotebooks], with JGit), each open notebook's engine page and its own [AppGraph] (its own
+ * ([GitNotebooks], with JGit), each open notebook's engine page and its own [NotebookGraph] (its own
  * Room database, its notes server through [LocalGitApi]), the commit check page, and the runs the
  * app and WorkManager make.
  *
@@ -55,8 +53,8 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class GitNotebookHub(
     private val context: Context,
-    /** The app's graph: every notebook's graph is built beside it, and the main one is told of changes. */
-    private val main: () -> AppGraph,
+    /** The app's graph: every notebook's graph is built beside it and shares its settings and errors. */
+    private val main: () -> app.penmoss.DeviceGraph,
     box: SecretBox,
     owner: OwnerConfirm,
     /** This phone's git notebook choices: the git identity, the Journal notebook (not secret). */
@@ -67,10 +65,10 @@ class GitNotebookHub(
     /** This phone's commit-signing key (#172, A921): the Keystore's; tests give a software one. */
     private val signingKeys: app.penmoss.engine.git.CommitKeyStore? = KeystoreCommitKeys(),
     /**
-     * Builds a notebook's graph from its local id, notebook id and name; null builds the app's
-     * own (its database file, its page's notes server). Tests give one in memory and offline.
+     * Builds a notebook's graph from its local id, notebook id and name; null builds the real
+     * one (its database file, its page's notes server). Tests give one in memory and offline.
      */
-    private val makeGraph: ((localId: String, notebookId: String, name: String) -> AppGraph)? = null,
+    private val makeGraph: ((localId: String, notebookId: String, name: String) -> NotebookGraph)? = null,
 ) : GitBackgroundHost {
     /** Makes the engine and guard pages: the app's WebViews, or a test's stand-in. */
     fun interface Pages {
@@ -86,7 +84,16 @@ class GitNotebookHub(
      * threw) is logged and stays there: the supervisor keeps the others, and the handler keeps it
      * from the thread's uncaught handler, which would end the app.
      */
-    private val io = CoroutineScope(SupervisorJob() + Dispatchers.IO + LOGGED)
+    /**
+     * The hub's own work (syncs it starts, recovery reads): a failure is logged and reported to the
+     * app's errors, which feedback's context lists (A791, review A11), and ends no other task.
+     */
+    private val io = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO + kotlinx.coroutines.CoroutineExceptionHandler { context, error ->
+            LOGGED.handleException(context, error)
+            runCatching { main().reportUnlessOffline(error) }
+        },
+    )
     val label: String = deviceLabel(Build.MODEL ?: "")
 
     /** The token and writer secrets, sealed with a Keystore key of their own (A857). */
@@ -193,7 +200,7 @@ class GitNotebookHub(
         // The page has it whole now: Room's rows of it go, and Room lists it afresh.
         RoomOldCopies(source.graph.database).drop(noteId)
         readWithheld(localId)
-        io.launch { runCatching { source.syncNow() } }
+        io.launch { source.syncNow() }
     }
 
     private fun readRecoveries(): Map<String, GitRecoveryNotice> =
@@ -304,9 +311,9 @@ class GitNotebookHub(
         val parts = ref.uppercase().split('-')
         if (parts.size != 2) return null
         val (tag, end) = parts
-        val entry = notebooks.entries().firstOrNull { app.penmoss.ui.NoteRef.notebookTag(it.notebookId) == tag } ?: return null
+        val entry = notebooks.entries().firstOrNull { app.penmoss.ui.note.NoteRef.notebookTag(it.notebookId) == tag } ?: return null
         val ids = runCatching { idsEndingWith(entry.localId, end) }.getOrDefault(emptyList())
-        val id = if (end.length > app.penmoss.ui.NoteRef.NOTE_LENGTH) ids.firstOrNull { it == end } else ids.filter { it.length == 26 }.minOrNull()
+        val id = if (end.length > app.penmoss.ui.note.NoteRef.NOTE_LENGTH) ids.firstOrNull { it == end } else ids.filter { it.length == 26 }.minOrNull()
         return id?.let { entry.localId to it }
     }
 
@@ -354,7 +361,7 @@ class GitNotebookHub(
         val result = notebooks.add(remote, branch, dir, name, token)
         refresh()
         if (result is AddResult.Added) {
-            io.launch { runCatching { source(result.notebook.localId).syncNow() } }
+            io.launch { source(result.notebook.localId).syncNow() }
             scheduleWork()
         }
         return result
@@ -389,7 +396,7 @@ class GitNotebookHub(
     /** Confirm Delete for good again (only notes confirmed here once; A855), then sync. */
     suspend fun confirmPurgesAgain(localId: String, ids: List<String>) {
         notebooks.confirmPurgesAgain(localId, ids)
-        io.launch { runCatching { source(localId).syncNow() } }
+        io.launch { source(localId).syncNow() }
     }
 
     /**
@@ -398,7 +405,7 @@ class GitNotebookHub(
      */
     suspend fun confirmPurge(localId: String, noteId: String) {
         notebooks.confirmPurge(localId, noteId)
-        io.launch { runCatching { source(localId).syncNow() } }
+        io.launch { source(localId).syncNow() }
     }
 
     /**
@@ -410,7 +417,7 @@ class GitNotebookHub(
             return "This note is already deleted for good in the repository, so Keep note did nothing."
         }
         source(localId).engine().keep(noteId, keep)
-        io.launch { runCatching { source(localId).syncNow() } }
+        io.launch { source(localId).syncNow() }
         return null
     }
 
@@ -454,16 +461,13 @@ class GitNotebookHub(
     }
 
     /** The graph of a notebook, for its screens and captures. */
-    fun graph(localId: String): AppGraph = source(localId).graph
-
-    /** The titles and folder names of the notebooks whose screens were opened, for error reports (A826). */
-    suspend fun openedNames(): Collection<String> = sources.values.flatMap { it.names() }
+    fun graph(localId: String): NotebookGraph = source(localId).graph
 
     /** Whether the notebook's page is open now (Settings shows its status only then). */
     fun opened(localId: String): Source? = sources[localId]
 
     /** The git notebooks' graphs made in this process (their screens, outboxes and stores). */
-    fun madeGraphs(): List<AppGraph> = sources.values.mapNotNull { it.madeGraph }
+    fun madeGraphs(): List<NotebookGraph> = sources.values.mapNotNull { it.madeGraph }
 
     // --- runs ---
 
@@ -545,7 +549,7 @@ class GitNotebookHub(
         private val shown = MutableStateFlow(GitEngineStatus())
         private val asks = OwnerAsks()
         @Volatile
-        private var made: AppGraph? = null
+        private var made: NotebookGraph? = null
 
         /** Room still holds copies from before the page's epoch (A886): tried again after each sync. */
         @Volatile
@@ -574,17 +578,17 @@ class GitNotebookHub(
         val status: StateFlow<GitEngineStatus> = shown.asStateFlow()
 
         /** Its graph if made already; null makes nothing. */
-        val madeGraph: AppGraph? get() = made
+        val madeGraph: NotebookGraph? get() = made
 
         /** The notebook's own graph: its Room database, its notes server, its sync loop. */
-        val graph: AppGraph
+        val graph: NotebookGraph
             get() = made ?: synchronized(this) {
                 made ?: run {
                     val entry = notebooks.entry(localId) ?: throw GitRefusal("not_found", "No such git notebook.")
                     (
                         makeGraph?.invoke(localId, entry.notebookId, entry.name) ?: run {
                             val api = LocalGitApi.api(localId, OkHttpClient(), asks) { engine() }
-                            AppGraph.forGit(context, main(), PenmossDatabase.open(context, databaseName(localId)), localId, entry.notebookId, entry.name, api)
+                            NotebookGraph(context, main(), PenmossDatabase.open(context, databaseName(localId)), localId, entry.notebookId, entry.name, api)
                         }
                     ).also { graph ->
                             graph.sync.start()
@@ -632,7 +636,7 @@ class GitNotebookHub(
             current = engine to port
             recoveryDue = true
             recovery.soon()
-            io.launch { runCatching { readWithheld(localId) } }
+            io.launch { readWithheld(localId) }
             engine
         }
 
@@ -650,9 +654,6 @@ class GitNotebookHub(
             val engine = opened() ?: return oldCopiesMap.value[localId]?.total ?: 0
             return runCatching { countOldCopies(engine); oldCopiesMap.value[localId]?.total ?: 0 }.getOrDefault(oldCopiesMap.value[localId]?.total ?: 0)
         }
-
-        /** Its titles and folder names, once its graph is made; its id too (A826). */
-        suspend fun names(): Collection<String> = (made?.store?.names().orEmpty()) + localId
 
         suspend fun pending(): List<String> = opened()?.pending().orEmpty()
 
@@ -716,7 +717,7 @@ class GitNotebookHub(
             }
             made = null
             context.deleteDatabase(databaseName(localId))
-            for (name in AppGraph.gitPrefs(localId)) context.deleteSharedPreferences(name)
+            for (name in NotebookGraph.gitPrefs(localId)) context.deleteSharedPreferences(name)
         }
     }
 

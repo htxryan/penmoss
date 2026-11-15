@@ -2,10 +2,10 @@ package app.penmoss.feedback
 
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import app.penmoss.auth.SecretBox
 import app.penmoss.engine.api.FeedbackAnswer
 import app.penmoss.engine.api.FeedbackImage
 import app.penmoss.engine.api.PenmossFeedbackApi
+import app.penmoss.security.SecretBox
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -198,17 +198,6 @@ class PrefsFeedbackLedger(private val prefs: SharedPreferences, private val now:
         const val PREFS = "penmoss.feedback-ledger"
         private const val KEY = "s."
         const val KEEP_MS = 90L * 24 * 60 * 60_000
-    }
-}
-
-/** An in-memory ledger (tests). */
-class MemoryFeedbackLedger : FeedbackLedger {
-    val rows = ConcurrentHashMap<String, FeedbackLedgerEntry>()
-
-    override fun get(submissionId: String) = rows[submissionId]
-
-    override fun set(submissionId: String, entry: FeedbackLedgerEntry) {
-        rows[submissionId] = entry
     }
 }
 

@@ -1,5 +1,6 @@
 package app.penmoss.feedback
 
+import kotlinx.coroutines.Dispatchers
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -21,7 +22,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import app.penmoss.ui.square.TextButton
+import app.penmoss.ui.common.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,7 +43,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.ui.settings.BackButton
 import kotlinx.coroutines.launch
 import java.text.DateFormat
@@ -66,7 +67,7 @@ object FeedbackRoutes {
 
 /** The Send feedback form over the screen it was opened from, captured as it opened (A801). */
 @Composable
-fun FeedbackRoute(graph: AppGraph, onClose: () -> Unit) {
+fun FeedbackRoute(graph: NotebookGraph, onClose: () -> Unit) {
     val service = graph.feedback
     val opening by service.opening.collectAsStateWithLifecycle()
     // Opened again by the system after the app was closed on it: the context as it is now.
@@ -247,18 +248,20 @@ fun FeedbackOutboxList(
 
 /** [FeedbackOutboxList] from the app's outbox; Edit [openForm]s the report taken back. */
 @Composable
-fun FeedbackOutboxRoute(graph: AppGraph, openForm: () -> Unit = {}) {
+fun FeedbackOutboxRoute(graph: NotebookGraph, openForm: () -> Unit = {}) {
     val rows by remember { graph.feedbackOutbox.observe() }.collectAsStateWithLifecycle(emptyList())
     val format = remember { DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT) }
     var notice by rememberSaveable { mutableStateOf<String?>(null) }
     FeedbackOutboxList(
         rows,
-        onRetry = { id -> graph.scope.launch { graph.feedbackOutbox.retry(id) } },
-        onDiscard = { id -> graph.scope.launch { graph.feedbackOutbox.discard(id) } },
+        // Each outlives the screen: a feedback send the person asked for, or its discard.
+        onRetry = { id -> graph.launchReporting(Dispatchers.Main.immediate) { graph.feedbackOutbox.retry(id) } },
+        onDiscard = { id -> graph.launchReporting(Dispatchers.Main.immediate) { graph.feedbackOutbox.discard(id) } },
         dateOf = { format.format(Date(it)) },
         onEdit = { id ->
             notice = null
-            graph.scope.launch {
+            // Outlives the screen: the report moves from the outbox back into the form's draft.
+            graph.launchReporting(Dispatchers.Main.immediate) {
                 if (graph.feedback.edit(id, openForm) == FeedbackService.Edit.DRAFT_IN_THE_WAY) notice = DRAFT_IN_THE_WAY
             }
         },

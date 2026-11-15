@@ -1,8 +1,7 @@
 package app.penmoss.ui.settings
 
-import app.penmoss.ui.square.TextButton
+import app.penmoss.ui.common.TextButton
 import androidx.compose.foundation.layout.Row
-import app.penmoss.ui.HomeLayout
 import app.penmoss.engine.settings.SidebarLayout
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.ListItem
@@ -14,7 +13,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
-import app.penmoss.ui.DisplayChoice
 
 /**
  * Settings → Display (T42, A576; T40 ST12, A650): a switch for each of Home's shortcuts, synced

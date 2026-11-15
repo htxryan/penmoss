@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import app.penmoss.ui.square.Button
-import app.penmoss.ui.square.FilledTonalButton
+import app.penmoss.ui.common.Button
+import app.penmoss.ui.common.FilledTonalButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,11 +27,11 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.penmoss.AppGraph
-import app.penmoss.ui.DotState
-import app.penmoss.ui.SectionTitle
-import app.penmoss.ui.SyncDot
-import app.penmoss.ui.SyncStateDot
+import app.penmoss.NotebookGraph
+import app.penmoss.ui.common.DotState
+import app.penmoss.ui.common.SectionTitle
+import app.penmoss.ui.common.SyncDot
+import app.penmoss.ui.common.SyncStateDot
 import app.penmoss.ui.settings.GroupTitle
 import app.penmoss.ui.settings.Help
 import app.penmoss.ui.settings.SectionScreen
@@ -43,7 +43,7 @@ import kotlinx.coroutines.launch
  * and no personal notes.
  */
 @Composable
-fun NotebooksHome(graph: AppGraph, onBack: () -> Unit) {
+fun NotebooksHome(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
     val context = LocalContext.current
     GitNotebooksRoute(graph.git, onOpen = { GitNotebookActivity.open(context, it) }, onBack = onBack, home = true)
 }
@@ -54,8 +54,8 @@ fun NotebooksHome(graph: AppGraph, onBack: () -> Unit) {
  * what only the person can do (a token, Delete for good again, Keep note).
  */
 @Composable
-fun GitSyncRoute(graph: AppGraph, passText: String, onGitNotebooks: () -> Unit, onBack: () -> Unit, onAgentActivity: () -> Unit = {}) {
-    val source = graph.source as? GraphSource.Git ?: return
+fun GitSyncRoute(graph: NotebookGraph, passText: String, onGitNotebooks: () -> Unit, onBack: () -> Unit, onAgentActivity: () -> Unit = {}) {
+    val source = graph
     val hub = graph.git
     val statuses by hub.statuses.collectAsStateWithLifecycle()
     val views by hub.list.collectAsStateWithLifecycle()
@@ -138,7 +138,7 @@ fun GitSyncRoute(graph: AppGraph, passText: String, onGitNotebooks: () -> Unit, 
         }
         // Storage on this phone and pictures from the web (T40 P8, ED12, ED13): here since the
         // account's Sync and storage went with the server (T59).
-        app.penmoss.ui.StorageRoute(graph)
+        app.penmoss.ui.settings.StorageRoute(graph)
     }
 }
 

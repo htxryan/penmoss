@@ -7,13 +7,7 @@
  */
 import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import type { JSONContent } from '@tiptap/core';
-import {
-  initNote,
-  readNoteNotebook,
-  readTitle,
-  setNoteNotebook,
-  setTitle,
-} from '@penmoss/sync-client/note';
+import { initNote, readTitle, setTitle } from '@penmoss/sync-client/note';
 import { CONFLICT_SUFFIX } from '@penmoss/sync-client/records';
 import { createYjs14Replica, type Yjs14Replica } from '@penmoss/sync-client/yjs14';
 import { NORD, PENMOSS } from '@penmoss/ui/theme';
@@ -28,8 +22,6 @@ import { parseToEditor, type FormatCommand, type FromEditor, type ToEditor } fro
 
 const NOTE = '01JD2Z7Q8R4T6Y8W0E2R4T6YB1';
 const OTHER = '01JD2Z7Q8R4T6Y8W0E2R4T6YB2';
-/** A notebook's folder id (T43). */
-const WORK = '01JD2Z7Q8R4T6Y8W0E2R4T6YW1';
 const NOW = new Date('2026-10-23T15:00:00Z');
 
 const hosts: EditorHost[] = [];
@@ -76,7 +68,7 @@ function note(title: string, text = ''): Yjs14Replica {
   return replica;
 }
 
-function opened(text = '', notebook?: string) {
+function opened(text = '') {
   const parts = page();
   const server = note('Writing', text);
   parts.host.handle({
@@ -86,7 +78,6 @@ function opened(text = '', notebook?: string) {
     synced: [{ id: '1', update: toBase64(server.encodeStateAsUpdate()) }],
     pending: [],
     editable: true,
-    ...(notebook ? { notebook } : {}),
   });
   const { editor } = parts.host.editor!;
   return { ...parts, server, editor, view: editor.view };
@@ -353,26 +344,8 @@ describe('wikilinks from the phone’s notes (A303)', () => {
     expect(JSON.stringify(editor.getJSON())).toContain(`"noteId":"${made.note.id}"`);
     // Following it opens it through the app.
     expect(editor.view.dom.querySelector('a.pm-wikilink')!.textContent).toBe('Holiday ideas');
-    // Opened with no notebook said (an older app): the new note records none.
+    // No notebook inside a git notebook (A912): the new note records none.
     expect(replica.doc.get('meta').getAttr('notebook')).toBeUndefined();
-  });
-
-  it('records the open note’s notebook in a note made from a link in it (T43, A766)', async () => {
-    const { host, view, sent } = opened('', WORK);
-    host.handle(directory([{ id: OTHER, title: 'Garden plan' }]));
-    type(view, '[[Client brief');
-    await vi.waitFor(() => expect(document.querySelector('.pm-link-menu')).not.toBeNull());
-    const options = [...document.querySelectorAll('.pm-link-menu .pm-slash-option')];
-    const create = options.findIndex((option) => option.textContent?.includes('Client brief'));
-    for (let i = 0; i < create; i++) press(view, 'ArrowDown');
-    expect(press(view, 'Enter')).toBe(true);
-    const made = sent.find((message) => message.type === 'newNote') as Extract<
-      FromEditor,
-      { type: 'newNote' }
-    >;
-    const replica = createYjs14Replica();
-    replica.applyUpdate(fromBase64(made.note.update));
-    expect(readNoteNotebook(replica.doc)).toBe(WORK);
   });
 });
 
@@ -703,34 +676,6 @@ describe('conflict copies (A306)', () => {
     expect(copy.plainText()).toContain('before the restore');
     expect(readTitle(copy.doc)).toBe(`Trip to Austin${CONFLICT_SUFFIX}`);
     expect(copy.doc.get('meta').getAttr('id')).toBe(reply.note.id);
-  });
-
-  it('files the copy in its original’s notebook: the note’s own record, else the app’s (T43, A766)', () => {
-    const copyOf = (server: Yjs14Replica, notebook?: string) => {
-      const { host, sent } = page();
-      const base = toBase64(server.encodeStateAsUpdate());
-      const before = server.encodeStateVector();
-      setTitle(server.doc, 'Trip to Austin');
-      host.handle({
-        v: 1,
-        type: 'copyConflicts',
-        noteId: NOTE,
-        base: [{ id: '7', update: base }],
-        edits: [{ id: '9', update: toBase64(Y.encodeStateAsUpdate(server.doc, before)) }],
-        ...(notebook ? { notebook } : {}),
-      });
-      const reply = sent.at(-1) as Extract<FromEditor, { type: 'conflictCopy' }>;
-      const copy = createYjs14Replica();
-      copy.applyUpdate(fromBase64(reply.note.update));
-      return readNoteNotebook(copy.doc);
-    };
-    // The original says nothing (made before notebooks): where the app sees it.
-    expect(copyOf(note('Trip', 'x'), WORK)).toBe(WORK);
-    expect(copyOf(note('Trip', 'x'))).toBeNull();
-    // The original says: its own record wins.
-    const recorded = note('Trip', 'x');
-    setNoteNotebook(recorded.doc, 'default');
-    expect(copyOf(recorded, WORK)).toBe('default');
   });
 
   it('reports bytes it cannot read instead of making a copy', () => {

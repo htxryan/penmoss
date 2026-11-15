@@ -23,9 +23,9 @@ class SettingsSender(private val store: NoteStore, private val api: PenmossApi) 
     /** Sends what is due; returns how many settings the server took. */
     suspend fun sendDue(): Int {
         var taken = 0
-        // Each round sends, drops or rebases at most the 20 settings the server takes at once
-        // (custom themes first); the rest, and a rebased one (a choice made while its request was
-        // out), go in the next. The bound is only a guard.
+        // Each round sends, drops or rebases at most the 20 settings the server takes at once; the
+        // rest, and a rebased one (a choice made while its request was out), go in the next. The
+        // bound is only a guard.
         repeat(MAX_ROUNDS) {
             val rows = store.settingsToSend()
             if (rows.isEmpty()) return taken
@@ -52,7 +52,7 @@ class SettingsSender(private val store: NoteStore, private val api: PenmossApi) 
                         store.settingsRefused(all, error.message ?: "This phone may not change settings")
                         return taken
                     }
-                    // A server without the route yet, or a busy one: the next pass tries again.
+                    // A busy notes server, or the page not answering: the next pass tries again.
                     else -> return taken
                 }
             } catch (offline: IOException) {

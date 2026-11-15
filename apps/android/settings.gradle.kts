@@ -1,4 +1,5 @@
-// The Penmoss Android app (T32): the Compose shell (app) and its sync engine (engine-bridge).
+// The Penmoss Android app (T32): the Compose shell (app), its sync engine (engine-bridge) and its
+// git engine over JGit (engine-git, A10).
 // See docs/android.md.
 pluginManagement {
     repositories {
@@ -17,4 +18,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "penmoss-android"
-include(":engine-bridge", ":app")
+include(":engine-bridge", ":engine-git", ":app")

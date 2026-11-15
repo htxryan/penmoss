@@ -17,15 +17,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import app.penmoss.editor.PickedPictures
 import app.penmoss.engine.api.CaptureRequest
-import app.penmoss.AppGraph
+import app.penmoss.NotebookGraph
 import app.penmoss.graph
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import app.penmoss.ui.MainActivity
-import app.penmoss.ui.PenmossTheme
-import app.penmoss.ui.followShownVariant
+import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.common.followShownVariant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -49,7 +49,7 @@ class CaptureActivity : ComponentActivity() {
     private lateinit var draftId: String
 
     /** The graph of a git notebook the sheet offers (A888, G8; A1040). */
-    private fun graphOf(key: String?): AppGraph? =
+    private fun graphOf(key: String?): NotebookGraph? =
         key?.let { graph.gitIfAny?.let { hub -> runCatching { hub.graph(key) }.getOrNull() } }
 
     /** What the person chose on this sheet (kept through rotation), or null. */
@@ -77,7 +77,7 @@ class CaptureActivity : ComponentActivity() {
         val chosen = savedInstanceState?.getString(DESTINATION)
         lifecycleScope.launch {
             // Read first: `ui` is copied once it is known, never a copy from before the read.
-            val destination = chosen ?: graph.captures.destination()
+            val destination = chosen ?: graph.store.captureDestination()
             ui = ui.copy(destination = destination)
         }
         // Which notebook (A888): named on the sheet, changeable; with several git notebooks and
@@ -168,11 +168,12 @@ class CaptureActivity : ComponentActivity() {
         val named = ui.notebooks.size > 1
         val resolver = applicationContext.contentResolver
         val app = applicationContext
-        // The app's scope: the capture is stored even if this sheet is gone by then.
-        graph.scope.launch {
+        // The app's scope: the capture is stored even if this sheet is gone by then, and a
+        // failure is reported (A1467).
+        graph.launchReporting(Dispatchers.Main.immediate) {
             // Each picture read only when the one before is stored (A348).
             val sources = uris.map { uri -> suspend { withContext(Dispatchers.IO) { PickedPictures.read(resolver, uri) } } }
-            val saved = graph.captures.saveDraft(draftId, text, sources, destination) ?: return@launch
+            val saved = graph.captures.saveDraft(draftId, text, sources, destination) ?: return@launchReporting
             val into = if (named && name != null) " in $name" else ""
             val where = if (saved.destination == CaptureRequest.INBOX) "Saved as a new note in Inbox$into" else "Saved to today’s note$into"
             val unread = saved.refusedPictures

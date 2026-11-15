@@ -153,7 +153,6 @@ class MigrationTest {
             assertEquals("inbox", store.captureDestination())
             // Until a tree with settings comes, nothing is known to change.
             assertFalse(store.settingsNow().known)
-            assertEquals("{\"mode\":\"dark\"}", store.observeAppearance().first())
         } finally {
             db.close()
         }
@@ -473,7 +472,6 @@ class MigrationTest {
         try {
             val search = OfflineSearch(db)
             assertEquals(listOf("joy"), search.search("happin").map { it.noteId })
-            assertTrue(search.unfinished("happin"))
             assertEquals("happiness notes on", db.search().text("joy")!!.fwords)
             // Still found by its stems, and kept current as the text changes.
             assertEquals(listOf("joy"), search.search("happiness", prefixLast = false).map { it.noteId })
@@ -546,10 +544,6 @@ class MigrationTest {
             assertEquals(listOf(FolderOpEntity.RENAME), ops.map { it.kind })
             assertEquals(false, ops.single().notebook)
             assertNull(store.treeHash())
-            assertEquals(Notebooks.DEFAULT_NAME, store.defaultNotebookName())
-            assertEquals(true, store.setNotebook("w", true).changed)
-            assertEquals(true, db.folders().get("w")!!.notebook)
-            assertEquals(listOf(FolderOpEntity.RENAME, FolderOpEntity.NOTEBOOK), db.folderOps().all().map { it.kind })
         } finally {
             db.close()
         }
@@ -557,8 +551,8 @@ class MigrationTest {
 
     /**
      * A schema 18 database opens at 19 (T43, fix c): a note waiting to be filed and a folder move
-     * waiting to be sent are kept, neither with a notebook recorded, so the senders name the
-     * notebook the phone sees now; a move queued after the upgrade records the one it saw.
+     * waiting to be sent are kept, neither with a notebook recorded; a move queued after the upgrade
+     * records none either, since a git notebook has no notebooks inside it (A912).
      */
     @Test
     fun aSchema18OpensAt19WithQueuedMovesKeptAndNoNotebookRecordedForThem() = runTest {
@@ -579,10 +573,8 @@ class MigrationTest {
             assertEquals(true, note.toFile)
             assertNull(note.moveNotebook)
             assertNull(db.folderOps().all().single().fromNotebook)
-            assertEquals("w", store.notebookOfFolder("p"))
-            assertEquals(Notebooks.DEFAULT, store.notebookOfFolder(null))
             assertEquals(NoteStore.FolderMove.MOVED, store.moveFolder("p", "q"))
-            assertEquals(listOf(null, "w"), db.folderOps().all().map { it.fromNotebook })
+            assertEquals(listOf(null, null), db.folderOps().all().map { it.fromNotebook })
         } finally {
             db.close()
         }

@@ -50,16 +50,14 @@ class OfflineSearch(
         val score: Double = 0.0,
     )
 
-    /** [hidden]: the folders of notebooks closed on this phone, whose notes are left out (T43, A752). */
     suspend fun search(
         input: String,
         filters: SearchFilters = SearchFilters(),
         limit: Int = DEFAULT_LIMIT,
         prefixLast: Boolean = true,
-        hidden: Set<String> = emptySet(),
-    ): List<Hit> = withContext(work) { searchHere(input, filters, limit, prefixLast, hidden) }
+    ): List<Hit> = withContext(work) { searchHere(input, filters, limit, prefixLast) }
 
-    private suspend fun searchHere(input: String, filters: SearchFilters, limit: Int, prefixLast: Boolean, hidden: Set<String>): List<Hit> {
+    private suspend fun searchHere(input: String, filters: SearchFilters, limit: Int, prefixLast: Boolean): List<Hit> {
         val query = complete(Query.parse(input, prefixLast))
         val wanted = query.clauses.filter { !it.negated }
         if (wanted.isEmpty()) return emptyList()
@@ -69,7 +67,7 @@ class OfflineSearch(
         val folderIds = filters.folderId?.let { folderSubtree(it) }
         val where = StringBuilder()
         val args = mutableListOf<Any>(match)
-        filterSql(filters, folderIds, where, args, hidden)
+        filterSql(filters, folderIds, where, args)
         val rows = try {
             dao.matches(
                 SimpleSQLiteQuery(
@@ -88,7 +86,7 @@ class OfflineSearch(
         val hits = if (kept.isEmpty()) emptyList() else rank(kept, units, match, limit)
         if (hits.size >= limit) return hits
         // Notes the index has no text for yet (not fetched): their titles and first lines, as before.
-        return hits + unindexed(input, filters, folderIds, limit - hits.size, hits.map { it.noteId }.toSet(), hidden)
+        return hits + unindexed(input, filters, folderIds, limit - hits.size, hits.map { it.noteId }.toSet())
     }
 
     /**
@@ -307,25 +305,6 @@ class OfflineSearch(
         }
     }
 
-    /**
-     * Whether the last word of [input] is still being typed (A111, as the web's `unfinished`):
-     * the start of a word this phone's notes hold without being one. The server then embeds
-     * the words before it only.
-     */
-    suspend fun unfinished(input: String): Boolean = withContext(work) { unfinishedHere(input) }
-
-    private suspend fun unfinishedHere(input: String): Boolean {
-        val last = Regex("(?:^|\\s)([^\\s\"]+)$").find(input)?.groupValues?.get(1) ?: return false
-        val word = Query.words(last).singleOrNull() ?: return false
-        if (word.length < Query.MIN_PREFIX_LENGTH) return false
-        // As core's `unfinished`: not a whole (stemmed) term, but the start of one, or of a word
-        // as written (`happin`, A680).
-        return runCatching {
-            idsMatching("\"${SearchStem.stem(word)}\"", 1).isEmpty() &&
-                (idsMatching("\"$word*\"", 1).isNotEmpty() || wordsStarting(word, 1).isNotEmpty())
-        }.getOrDefault(false)
-    }
-
     private suspend fun idsMatching(match: String, limit: Int? = null): Set<String> = dao.ids(
         SimpleSQLiteQuery(
             "SELECT t.noteId FROM note_text_fts JOIN note_texts t ON t.rowid = note_text_fts.rowid " +
@@ -334,12 +313,12 @@ class OfflineSearch(
         ),
     ).toSet()
 
-    private suspend fun unindexed(input: String, filters: SearchFilters, folderIds: Set<String>?, limit: Int, skip: Set<String>, hidden: Set<String>): List<Hit> {
+    private suspend fun unindexed(input: String, filters: SearchFilters, folderIds: Set<String>?, limit: Int, skip: Set<String>): List<Hit> {
         val escaped = input.trim().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         if (escaped.isEmpty() || limit <= 0) return emptyList()
         val where = StringBuilder()
         val args = mutableListOf<Any>("%$escaped%", "%$escaped%")
-        filterSql(filters, folderIds, where, args, hidden)
+        filterSql(filters, folderIds, where, args)
         args += limit + skip.size
         return dao.unindexed(
             SimpleSQLiteQuery(
@@ -354,12 +333,7 @@ class OfflineSearch(
     }
 
     /** The filters on notes aliased `n` (T40 P6, FD3): applied in Room, offline. */
-    private fun filterSql(filters: SearchFilters, folderIds: Set<String>?, where: StringBuilder, args: MutableList<Any>, hidden: Set<String> = emptySet()) {
-        if (hidden.isNotEmpty()) {
-            // Closed notebooks' folders (T43, A752); a note at the top level is the default notebook's.
-            where.append(" AND (n.folderId IS NULL OR n.folderId NOT IN (${hidden.joinToString(",") { "?" }}))")
-            args.addAll(hidden)
-        }
+    private fun filterSql(filters: SearchFilters, folderIds: Set<String>?, where: StringBuilder, args: MutableList<Any>) {
         if (folderIds != null) {
             where.append(" AND n.folderId IN (${folderIds.joinToString(",") { "?" }})")
             args.addAll(folderIds)

@@ -41,18 +41,6 @@ interface PenmossApi {
     suspend fun tree(since: String?): SyncTree
 
     /**
-     * `GET /api/search` (T22, T23): [mode], [filters] (T40 P6, FD2, FD3), the last word a
-     * prefix (search as you type), and [partial] when that word is still being typed.
-     */
-    suspend fun search(
-        query: String,
-        limit: Int = 30,
-        mode: SearchMode = SearchMode.FULL_TEXT,
-        filters: SearchFilters = SearchFilters(),
-        partial: Boolean = false,
-    ): SearchReply
-
-    /**
      * Files a daily or weekly note in the Journal (`POST /api/daily`, T40 P5): `{ date?, period }`,
      * where `date` is an explicit day (a calendar tap) or null for today in the user's time
      * zone setting, and `period` is `daily` or `weekly`. The server files it under
@@ -84,36 +72,29 @@ interface PenmossApi {
      * [from], only if the note is still in that folder (or already in [folderId]): one moved
      * since is refused, 409 `note_moved` (A359). With [place] (T40 P4, NT7), the note also
      * takes its manual order from the server's live document; a missing anchor means the end.
-     * A note in Trash is refused, 409 `in_trash`. A folder gone since (T43, A757: fail closed):
-     * the server files it in the nearest folder above it within its notebook and answers that
-     * folder ([FiledNote.folderId]), never the default notebook's top level for a notebook's
-     * note; a note already filed with no safe place is 422 `folder_not_found` and stays put.
+     * A note in Trash is refused, 409 `in_trash`. A folder gone since (A757): the notes server
+     * files it in the nearest folder above it and answers that folder ([FiledNote.folderId]); a
+     * note already filed with no safe place is 422 `folder_not_found` and stays put.
      */
     suspend fun moveNote(
         noteId: String,
         folderId: String?,
         from: InFolder? = null,
         place: NotePlace? = null,
-        /** The notebook the phone saw the note in when it was moved, `default` for the default (T43, A766). */
-        fromNotebook: String? = null,
     ): FiledNote
 
     /**
      * Makes a folder (`POST /api/folders`, T40 P4, NT2): [id] is this phone's ULID, so a retry
-     * answers the folder it made. A parent gone since (A352, T43 A757: fail closed): the server
-     * makes it in the nearest folder above within the same notebook (the reply's `parentId`), or
-     * in Trash with its deleted notebook ([FolderRef.inTrash]); 422 `folder_not_found` only when
-     * there is no safe place, and the phone drops it. [notebook] makes a notebook (T43, A750): at
-     * the top level only (422 otherwise).
+     * answers the folder it made. A parent gone since is 422 `folder_not_found`, and the phone
+     * drops it.
      */
-    suspend fun createFolder(id: String, name: String, parentId: String?, notebook: Boolean = false): FolderRef
+    suspend fun createFolder(id: String, name: String, parentId: String?): FolderRef
 
     /**
      * Renames, moves, sorts and reorders a folder (`PATCH /api/folders/:id`, T40 P4, NT3–NT7).
      * A change overtaken elsewhere is refused (409 `folder_changed` or `folder_moved`), and a
      * move into the folder itself or a subfolder is 422 `folder_cycle`. A move into a parent
-     * gone since goes to the nearest folder above it within its notebook (the reply's
-     * `parentId`, T43 A757), or is 422 `folder_not_found` with no safe place: the folder stays.
+     * gone since is 422 `folder_not_found`: the folder stays.
      */
     suspend fun patchFolder(id: String, patch: FolderPatch): FolderRef
 
@@ -121,15 +102,8 @@ interface PenmossApi {
     suspend fun setRootSortMode(sortMode: String)
 
     /**
-     * Renames the default notebook (`PATCH /api/folders/root { notebookName }`, T43, A751): an
-     * empty name gives back "Personal". Answers the name the server now has.
-     */
-    suspend fun setDefaultNotebookName(name: String): String
-
-    /**
      * Deletes a folder and its subfolders (`DELETE /api/folders/:id`, T40 P4, NT4): their notes
-     * move up. A notebook goes to Trash with its notes instead (T43, A755). Idempotent: a missing
-     * folder answers false.
+     * move up. Idempotent: a missing folder answers false.
      */
     suspend fun deleteFolder(id: String): Boolean
 
@@ -145,13 +119,9 @@ interface PenmossApi {
     /**
      * Takes a note out of Trash (`POST /api/notes/:id/restore`, T21): the folder it was deleted
      * from, which the phone files it back in (null: the top level, or not recorded), whether it
-     * was in Trash, and the index seq the restore was made after. [into] is the person's choice
-     * of folder (T43, A757; `InFolder(null)`: the top level), sent as `{ folderId }`. Without it,
-     * a note whose folder is gone and whose way up passes a deleted notebook (or one Trash forgot)
-     * is not restored: 409 `restore_needs_folder`, with the notebook in [ApiException.notebook],
-     * and the app asks where it goes.
+     * was in Trash, and the index seq the restore was made after.
      */
-    suspend fun restoreNote(noteId: String, into: InFolder? = null): RestoredNote
+    suspend fun restoreNote(noteId: String): RestoredNote
 
     /** Notes in Trash, newest deletion first (`GET /api/trash`, T21). */
     suspend fun trash(): List<TrashListed>
@@ -161,9 +131,7 @@ interface PenmossApi {
 
     /**
      * Restores a folder from Trash with its subfolders and notes (`POST /api/folders/:id/restore`).
-     * Its parent gone, it comes back in the nearest folder above within its notebook; when the
-     * way up passes a deleted notebook nothing is restored: 409 `restore_needs_folder` with that
-     * notebook in [ApiException.notebook] (T43, A757), to restore first.
+     * Its parent gone, it comes back in the nearest folder above that still exists (A757).
      */
     suspend fun restoreFolder(id: String): RestoredFolder
 
@@ -265,11 +233,6 @@ class ApiException(
     val keys: List<String> = emptyList(),
     /** The settings as the server holds them, sent with a refused settings change (A410). */
     val settings: JsonObject? = null,
-    /**
-     * The notebook a 409 `restore_needs_folder` names (T43, A757): the deleted notebook the note
-     * or folder was in, to restore first; null when Trash no longer knows it.
-     */
-    val notebook: NotebookRef? = null,
 ) : IOException(message) {
     /** A 401: the sync stops its pass and tries again later (no notes server on the phone asks for one). */
     val unauthorized: Boolean get() = status == 401
@@ -313,22 +276,6 @@ class HttpPenmossApi(
 
     override suspend fun tree(since: String?): SyncTree =
         get(url("sync/tree") { if (since != null) addQueryParameter("since", since) }, SyncTree.serializer())
-
-    override suspend fun search(query: String, limit: Int, mode: SearchMode, filters: SearchFilters, partial: Boolean): SearchReply =
-        get(
-            url("api/search") {
-                addQueryParameter("q", query)
-                addQueryParameter("limit", limit.toString())
-                addQueryParameter("mode", mode.wire)
-                addQueryParameter("prefix", "1")
-                if (partial) addQueryParameter("partial", "1")
-                filters.folderId?.let { addQueryParameter("folder", it) }
-                filters.tag?.let { addQueryParameter("tag", it) }
-                filters.updatedAfter?.let { addQueryParameter("after", it.toString()) }
-                filters.notebooks?.let { addQueryParameter("notebooks", it.joinToString(",")) }
-            },
-            SearchReply.serializer(),
-        )
 
     override suspend fun dailyNote(date: String?, period: String): DailyNoteRef =
         send(
@@ -378,13 +325,12 @@ class HttpPenmossApi(
      */
     override suspend fun agentSessions(): AgentSessionList = get(url("android/agent-sessions"), AgentSessionList.serializer())
 
-    override suspend fun moveNote(noteId: String, folderId: String?, from: InFolder?, place: NotePlace?, fromNotebook: String?): FiledNote {
+    override suspend fun moveNote(noteId: String, folderId: String?, from: InFolder?, place: NotePlace?): FiledNote {
         // `folderId` is sent even when null, which files the note at the top level; so is
         // `fromFolderId` when there is one, null meaning the top level.
         val body = buildJsonObject {
             put("folderId", folderId?.let(::JsonPrimitive) ?: JsonNull)
             if (from != null) put("fromFolderId", from.folderId?.let(::JsonPrimitive) ?: JsonNull)
-            fromNotebook?.let { put("fromNotebook", it) }
             if (place != null) {
                 put("place", buildJsonObject {
                     place.before?.let { put("before", it) }
@@ -393,18 +339,17 @@ class HttpPenmossApi(
             }
         }
         val reply = send("POST", url("api/notes/$noteId/move"), body.toString().toRequestBody(JSON_TYPE), JsonObject.serializer())
-        // The folder the server filed it in (a gone folder's safe place, T43 A757); an older
+        // The folder the server filed it in (a gone folder's safe place, A757); an older
         // server does not say, and filed it where asked.
         val used = reply["folderId"] ?: return FiledNote(folderId)
         return FiledNote(if (used is JsonNull) null else used.jsonPrimitive.content)
     }
 
-    override suspend fun createFolder(id: String, name: String, parentId: String?, notebook: Boolean): FolderRef {
+    override suspend fun createFolder(id: String, name: String, parentId: String?): FolderRef {
         val body = buildJsonObject {
             put("id", id)
             put("name", name)
             put("parentId", parentId?.let(::JsonPrimitive) ?: JsonNull)
-            if (notebook) put("notebook", true)
         }
         return send("POST", url("api/folders"), body.toString().toRequestBody(JSON_TYPE), FolderRef.serializer())
     }
@@ -417,9 +362,7 @@ class HttpPenmossApi(
         val body = buildJsonObject {
             patch.name?.let { put("name", it) }
             if (patch.changeParent) put("parentId", patch.parentId?.let(::JsonPrimitive) ?: JsonNull)
-            if (patch.changeParent) patch.fromNotebook?.let { put("fromNotebook", it) }
             patch.sortMode?.let { put("sortMode", it) }
-            patch.notebook?.let { put("notebook", it) }
             if (from.isNotEmpty()) put("from", from)
             patch.place?.let { place ->
                 put("place", buildJsonObject {
@@ -436,14 +379,6 @@ class HttpPenmossApi(
         sendEmpty(request(url("api/folders/root")).method("PATCH", body.toString().toRequestBody(JSON_TYPE)).build())
     }
 
-    override suspend fun setDefaultNotebookName(name: String): String {
-        val body = buildJsonObject { put("notebookName", name) }
-        return send("PATCH", url("api/folders/root"), body.toString().toRequestBody(JSON_TYPE), RootReply.serializer()).notebookName ?: name
-    }
-
-    @Serializable
-    private data class RootReply(val notebookName: String? = null)
-
     override suspend fun deleteFolder(id: String): Boolean {
         val reply = send("DELETE", url("api/folders/$id"), "{}".toRequestBody(JSON_TYPE), FolderDeleted.serializer())
         return reply.deleted
@@ -455,10 +390,8 @@ class HttpPenmossApi(
     override suspend fun trashNote(noteId: String, knownSeq: Long): TrashedNote =
         send("POST", url("api/notes/$noteId/trash"), json(TrashRequest.serializer(), TrashRequest(knownSeq)), TrashedNote.serializer())
 
-    override suspend fun restoreNote(noteId: String, into: InFolder?): RestoredNote {
-        val body = if (into == null) "{}" else buildJsonObject { put("folderId", into.folderId?.let(::JsonPrimitive) ?: JsonNull) }.toString()
-        return send("POST", url("api/notes/$noteId/restore"), body.toRequestBody(JSON_TYPE), RestoredNote.serializer())
-    }
+    override suspend fun restoreNote(noteId: String): RestoredNote =
+        send("POST", url("api/notes/$noteId/restore"), "{}".toRequestBody(JSON_TYPE), RestoredNote.serializer())
 
     override suspend fun trash(): List<TrashListed> = get(url("api/trash"), TrashList.serializer()).notes
 
@@ -603,8 +536,7 @@ class HttpPenmossApi(
         val message = error?.get("message")?.jsonPrimitive?.content ?: "HTTP $status"
         val keys = runCatching { error?.get("keys")?.jsonArray?.map { it.jsonPrimitive.content } }.getOrNull().orEmpty()
         val settings = body?.get("settings") as? JsonObject
-        val notebook = runCatching { (body?.get("notebook") as? JsonObject)?.let { PenmossJson.decodeFromJsonElement(NotebookRef.serializer(), it) } }.getOrNull()
-        return ApiException(status, code, message, keys, settings, notebook)
+        return ApiException(status, code, message, keys, settings)
     }
 
     private companion object {

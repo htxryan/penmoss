@@ -1,5 +1,7 @@
 package app.penmoss.ui
 
+import app.penmoss.ui.home.HomeUi
+import app.penmoss.ui.home.HomeActions
 import android.content.Context
 import android.provider.Settings
 import androidx.compose.ui.semantics.SemanticsActions
@@ -14,7 +16,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import app.penmoss.ui.screens.HomeScreen
+import app.penmoss.ui.home.HomeScreen
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -22,6 +24,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
+import app.penmoss.ui.common.FolderItem
+import app.penmoss.ui.common.NoteItem
+import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.common.SectionTitle
 
 /**
  * The accessibility pass (T40 P9, PL14, A498), as far as Robolectric reaches: headings for
@@ -39,21 +45,16 @@ class AccessibilityTest {
         compose.setContent {
             PenmossTheme {
                 HomeScreen(
-                    recent = listOf(NoteItem("n1", "Groceries", "eggs, milk", "Oct 21")),
-                    folders = listOf(FolderItem("f1", "Projects")),
-                    status = "Synced at 3:42 PM",
-                    syncing = false,
-                    onSearch = {},
-                    onSettings = {},
-                    onAllNotes = {},
-                    onFolder = {},
-                    onOpen = {},
-                    onToday = {},
-                    onThisWeek = {},
-                    onJournal = {},
-                    onNewNote = {},
-                    onNoteLongPress = {},
-                    onFolderLongPress = {},
+                    HomeUi(
+                        recent = listOf(NoteItem("n1", "Groceries", "eggs, milk", "Oct 21")),
+                        folders = listOf(FolderItem("f1", "Projects")),
+                        status = "Synced at 3:42 PM",
+                        syncing = false,
+                    ),
+                    HomeActions(
+                        onNoteLongPress = {},
+                        onFolderLongPress = {},
+                    ),
                 )
             }
         }

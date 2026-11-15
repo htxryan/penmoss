@@ -31,6 +31,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.penmoss.ui.common.Items
+import app.penmoss.ui.common.NoteItem
 import app.penmoss.ui.keys.KeyNames
 import app.penmoss.ui.keys.LocalAppCommands
 import app.penmoss.ui.keys.RegisterCommand
@@ -188,11 +190,10 @@ internal const val RECENT_SWITCHER_NOTES = 9
  * chosen. The command itself, from Search or the page, opens it without Ctrl held.
  */
 @Composable
-internal fun RecentSwitcherHost(graph: app.penmoss.AppGraph, currentNote: String?, openNote: (String) -> Unit) {
+internal fun RecentSwitcherHost(graph: app.penmoss.NotebookGraph, currentNote: String?, openNote: (String) -> Unit) {
     val switch = androidx.compose.runtime.remember { RecentSwitch() }
     val recent by androidx.compose.runtime.remember(graph) {
-        // Open notebooks only (T43, A752).
-        graph.store.observeRecent(RECENT_SWITCHER_NOTES + 1, graph.hiddenFolders)
+        graph.store.observeRecent(RECENT_SWITCHER_NOTES + 1)
             .map { Items.notes(it, System.currentTimeMillis()) }
             .distinctUntilChanged()
     }.collectAsStateWithLifecycle(emptyList())

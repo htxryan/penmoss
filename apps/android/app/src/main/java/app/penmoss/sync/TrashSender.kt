@@ -11,8 +11,7 @@ import java.io.IOException
  * phone never reads Yjs, so it asks the server, as it files notes (A303, A352).
  *
  * - **Restores** go before the notes are exchanged, so the same pass reads the note back and
- *   files it where it was deleted from. One the server cannot place (409
- *   `restore_needs_folder`, T43 A757) goes back to Trash, and Trash asks where it goes.
+ *   files it where it was deleted from.
  * - **Moves to Trash** go after, once the note's own edits and its move to file have gone
  *   (`trashesDue`): delete wins, the edits are in Trash with it, and the server records the
  *   folder this phone had it in.
@@ -25,10 +24,6 @@ import java.io.IOException
  * Signing out keeps them.
  */
 class TrashSender(private val store: NoteStore, private val api: PenmossApi) {
-    private companion object {
-        const val RESTORE_NEEDS_FOLDER = "restore_needs_folder"
-    }
-
     suspend fun sendRestores() {
         // A pass that ended with a request in flight (the process stopped) left it marked.
         store.requeueTrashInFlight()
@@ -37,13 +32,6 @@ class TrashSender(private val store: NoteStore, private val api: PenmossApi) {
             val restored = try {
                 api.restoreNote(note.id)
             } catch (error: ApiException) {
-                if (error.code == RESTORE_NEEDS_FOLDER) {
-                    // Nothing restored (T43, A757: fail closed): its folder is gone and no place
-                    // for it is safe, so it is never put in the default notebook. Back in Trash
-                    // here, and Trash asks the person where it goes.
-                    store.restoreNeedsFolder(note.id, error.notebook?.id, error.notebook?.name, error.message.orEmpty())
-                    continue
-                }
                 store.restoreNotSent(note.id)
                 when {
                     error.unauthorized -> throw error
@@ -86,14 +74,6 @@ class TrashSender(private val store: NoteStore, private val api: PenmossApi) {
                         store.trashGone(note.id)
                         continue
                     }
-                    // Any other 404: most likely a server from before the route, which answers
-                    // a plain "404 Not Found" (a proxy's page looks the same). Every move waits,
-                    // nothing is dropped, and Trash says why.
-                    error.status == 404 -> {
-                        store.trashNotSent(note.id)
-                        store.setTrashRouteMissing(true)
-                        return
-                    }
                     else -> {
                         store.trashNotSent(note.id)
                         return
@@ -103,7 +83,6 @@ class TrashSender(private val store: NoteStore, private val api: PenmossApi) {
                 store.trashNotSent(note.id)
                 return
             }
-            store.setTrashRouteMissing(false)
             store.trashSent(note.id, trashed.deletedAt, trashed.seq)
         }
     }

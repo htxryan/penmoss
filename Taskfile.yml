@@ -391,9 +391,9 @@ tasks:
     desc: 'Android: the debug APK, app.penmoss.debug, for local and pull-request builds (apps/android/app/build/outputs/apk/debug/app-debug.apk; docs/android.md)'
     deps: [android:editor]
     dir: apps/android
-    env: &android-env # This Mac's toolchain, unless the environment names one; CI sets its own.
-      ANDROID_HOME: '{{.ANDROID_HOME | default (print .HOME "/Android/sdk")}}'
-      JAVA_HOME: '{{.JAVA_HOME | default (print .HOME "/opt/jdk-21")}}'
+    env: &android-env # The toolchain's usual paths for this OS; CI and other machines set their own.
+      ANDROID_HOME: '{{.ANDROID_HOME | default (print .HOME (if eq OS "darwin" "/Library/Android/sdk" "/Android/sdk"))}}'
+      JAVA_HOME: '{{.JAVA_HOME | default (if eq OS "darwin" "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home" (print .HOME "/opt/jdk-21"))}}'
     cmds:
       - ./gradlew --console=plain :app:assembleDebug {{.CLI_ARGS}}
 
@@ -414,12 +414,12 @@ tasks:
       - sh scripts/proof.sh {{.CLI_ARGS}}
 
   android:test:
-    desc: 'Android: JVM tests of the sync engine and bridge, and Robolectric tests of the app (Room, Compose UI)'
+    desc: 'Android: JVM tests of the sync engine and bridge and of the git engine, and Robolectric tests of the app (Room, Compose UI)'
     deps: [android:editor]
     dir: apps/android
     env: *android-env
     cmds:
-      - ./gradlew --console=plain :engine-bridge:test :app:testDebugUnitTest :app:assembleDebugAndroidTest {{.CLI_ARGS}}
+      - ./gradlew --console=plain :engine-bridge:test :engine-git:test :app:testDebugUnitTest :app:assembleDebugAndroidTest {{.CLI_ARGS}}
 
   android:release:
     desc: 'Android: the signed App Bundle for Play internal testing (needs the PENMOSS_KEY* signing settings; docs/android.md)'

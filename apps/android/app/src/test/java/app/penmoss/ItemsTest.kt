@@ -2,8 +2,8 @@ package app.penmoss
 
 import app.penmoss.data.FolderEntity
 import app.penmoss.data.NoteListRow
-import app.penmoss.ui.DateLabels
-import app.penmoss.ui.Items
+import app.penmoss.ui.common.DateLabels
+import app.penmoss.ui.common.Items
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDateTime

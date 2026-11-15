@@ -3,7 +3,6 @@ package app.penmoss.editor
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.data.NoteStore
-import app.penmoss.data.Notebooks
 import app.penmoss.data.PenmossDatabase
 import app.penmoss.data.UpdateEntity
 import app.penmoss.editor.NoteEditorController.TagChange
@@ -91,7 +90,7 @@ class OrganiseControllerTest {
         page(controller, FromEditor.Ready)
         waitFor { sent.isNotEmpty() }
         // The page makes it: no request to the server, which may be out of reach.
-        assertEquals(listOf<ToEditor>(ToEditor.Create("new", Notebooks.DEFAULT)), sent.toList())
+        assertEquals(listOf<ToEditor>(ToEditor.Create("new")), sent.toList())
         page(controller, FromEditor.Created("new", PageNote("new", "", "WHOLE")))
         waitFor { sent.size == 2 }
         val open = sent[1] as ToEditor.Open
@@ -108,25 +107,6 @@ class OrganiseControllerTest {
         assertEquals(emptyList<String>(), sync.synced.toList())
     }
 
-    /**
-     * A note made in a notebook's folder records that notebook (T43, A766, fix c): the page is told
-     * it with the create, and again with the note when it opens, for the notes its links make.
-     */
-    @Test
-    fun aNewNoteInANotebookIsToldItsNotebook() {
-        runBlocking {
-            store.saveTree(SyncTree("h2", folders = listOf(TreeFolder("w", "Work", notebook = true), TreeFolder("plans", "Plans", "w"))))
-        }
-        val controller = controller("new", NewNoteRequest("plans"))
-        page(controller, FromEditor.Ready)
-        waitFor { sent.isNotEmpty() }
-        assertEquals(ToEditor.Create("new", "w"), sent.single())
-        page(controller, FromEditor.Created("new", PageNote("new", "", "WHOLE")))
-        waitFor { sent.size == 2 }
-        assertEquals("w", (sent[1] as ToEditor.Open).notebook)
-        assertEquals("w", runBlocking { store.note("new")!!.moveNotebook })
-    }
-
     @Test
     fun aPageThatReloadsBeforeMakingTheNoteIsAskedAgain() {
         val controller = controller("new", NewNoteRequest(null))
@@ -135,7 +115,7 @@ class OrganiseControllerTest {
         controller.pageGone()
         page(controller, FromEditor.Ready)
         waitFor { sent.size == 2 }
-        assertEquals(ToEditor.Create("new", Notebooks.DEFAULT), sent[1])
+        assertEquals(ToEditor.Create("new"), sent[1])
         page(controller, FromEditor.Created("new", PageNote("new", "", "WHOLE")))
         waitFor { sent.any { it is ToEditor.Open } }
         // A late answer from the first page changes nothing: the note is stored once.

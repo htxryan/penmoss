@@ -20,13 +20,13 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import app.penmoss.ui.square.OutlinedButton
+import app.penmoss.ui.common.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import app.penmoss.ui.square.TextButton
+import app.penmoss.ui.common.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,11 +42,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.penmoss.engine.api.AgentActivityEntry
-import app.penmoss.ui.ACTIVITY_GROUPS
-import app.penmoss.ui.PenmossSnackbar
-import app.penmoss.ui.AgentActivityUi
-import app.penmoss.ui.activityAgents
-import app.penmoss.ui.activityDetail
+import app.penmoss.ui.common.PenmossSnackbar
 
 /** The web's words for an empty list (`ActivityList`). */
 internal const val NO_AGENT_ACTIVITY = "No agent has moved notes or changed folders, settings or tags in the last 30 days."

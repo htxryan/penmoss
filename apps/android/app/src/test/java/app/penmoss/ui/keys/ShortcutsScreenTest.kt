@@ -26,7 +26,7 @@ import androidx.compose.ui.test.withKeyDown
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.engine.keys.Bindings
 import app.penmoss.engine.keys.ShortcutCatalogue
-import app.penmoss.ui.PenmossTheme
+import app.penmoss.ui.common.PenmossTheme
 import app.penmoss.ui.assertTouchTarget
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement

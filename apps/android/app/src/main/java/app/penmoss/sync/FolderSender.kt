@@ -17,15 +17,12 @@ import java.io.IOException
  * elsewhere), and a 404 for its folder drops them with a notice (deleted
  * elsewhere). Signing out keeps them.
  *
- * A parent gone since is the server's to place (A352, T43 A757: fail closed): it makes or moves
- * the folder into the nearest live folder above it within the same notebook, or (a create)
- * into Trash with its deleted notebook. Its 422 `folder_not_found` means there is no safe place:
- * the change is dropped with a notice, never sent again at the top level, which is the default
- * notebook (whose mirror may publish to a public repository).
+ * A parent gone since is the notes server's to place (A352, A757): it makes or moves the folder
+ * into the nearest live folder above it. Its 422 `folder_not_found` means there is no safe place:
+ * the change is dropped with a notice, never sent again at the top level.
  */
 class FolderSender(private val store: NoteStore, private val api: PenmossApi) {
     private companion object {
-        const val NOTEBOOK_RULE = "notebook_rule"
         const val FOLDER_NOT_FOUND = "folder_not_found"
     }
 
@@ -38,7 +35,9 @@ class FolderSender(private val store: NoteStore, private val api: PenmossApi) {
                 FolderOpEntity.CREATE -> sendCreate(op)
                 FolderOpEntity.DELETE -> sendDelete(op)
                 FolderOpEntity.ROOT_SORT -> sendRootSort(op)
-                FolderOpEntity.ROOT_NAME -> sendRootName(op)
+                // A rename of the default notebook, or a notebook flag, an older version queued: a
+                // git notebook has neither (A912).
+                FolderOpEntity.ROOT_NAME, FolderOpEntity.NOTEBOOK -> true.also { store.dropFolderOp(op.rowId) }
                 else -> sendPatch(op)
             }
             if (done != true) return
@@ -51,11 +50,10 @@ class FolderSender(private val store: NoteStore, private val api: PenmossApi) {
         // instead of cancelling both (T40 P4 review B3). Marked before sending, so a pass
         // stopped mid-request counts as tried too, as a move to Trash does (A430).
         store.markFolderOpTried(op.rowId)
-        val made = try {
-            api.createFolder(id, op.name ?: "Untitled folder", op.parentId, notebook = op.notebook && op.parentId == null)
+        try {
+            api.createFolder(id, op.name ?: "Untitled folder", op.parentId)
         } catch (error: ApiException) {
             if (error.unauthorized) throw error
-            if (refusedByNotebookRule(op, error)) return true
             if (error.code == FOLDER_NOT_FOUND && op.parentId != null) {
                 // No safe place for it (A757): dropped with the folder's other changes, said once.
                 store.dropFolderOpsFor(id, op.label, NoteStore.FolderDropReason.PARENT_GONE)
@@ -66,12 +64,6 @@ class FolderSender(private val store: NoteStore, private val api: PenmossApi) {
             return true
         } catch (error: IOException) {
             return null
-        }
-        if (made.inTrash) {
-            // Made in Trash with its notebook, deleted on another device (A757): the rest of its
-            // changes have nothing to change, and the person is told where it went.
-            store.dropFolderOpsFor(id, op.label, NoteStore.FolderDropReason.IN_TRASH, notebook = made.notebook?.name)
-            return true
         }
         store.dropFolderOp(op.rowId)
         return true
@@ -88,21 +80,15 @@ class FolderSender(private val store: NoteStore, private val api: PenmossApi) {
                 changeParent = true,
                 fromParentId = op.fromParentId,
                 checkParent = op.checkParent,
-                // The notebook the phone saw it in when the move was made (T43, A766); for one
-                // queued before that was kept, where it sees the folder it moved from.
-                fromNotebook = op.fromNotebook ?: store.notebookOfFolder(op.fromParentId),
             )
             FolderOpEntity.SORT -> FolderPatch(sortMode = op.sortMode)
             FolderOpEntity.REORDER -> FolderPatch(place = placeOf(op))
-            // Turn into notebook, or back into a folder (T43, A756).
-            FolderOpEntity.NOTEBOOK -> FolderPatch(notebook = op.notebook)
             else -> return true
         }
         try {
             api.patchFolder(id, patch)
         } catch (error: ApiException) {
             if (error.unauthorized) throw error
-            if (refusedByNotebookRule(op, error)) return true
             if (error.status == 422 && error.code == FOLDER_NOT_FOUND && op.kind == FolderOpEntity.MOVE && patch.parentId != null) {
                 // A move into a parent gone since with no safe place for it (A757): the server
                 // already tried the nearest folder above. The move is dropped, said once, and the
@@ -125,8 +111,7 @@ class FolderSender(private val store: NoteStore, private val api: PenmossApi) {
             if (error.status == 404 && error.code == FOLDER_NOT_FOUND) {
                 // Gone there (404 `folder_not_found`): the tree's place
                 // stands (A359). The rest of the folder's changes are based on this one, so
-                // they go with it. Any other 404 is a server from before these routes, which
-                // answers its plain "No such endpoint": the change waits (A449).
+                // they go with it. Any other 404 names no folder: the change waits (A449).
                 store.dropFolderOpsFor(id, op.label)
                 return true
             }
@@ -140,8 +125,7 @@ class FolderSender(private val store: NoteStore, private val api: PenmossApi) {
         return true
     }
 
-    // The server's delete is idempotent, so a retry is always safe; a 404 only ever means
-    // a server from before this route, which never applied it: it waits (A449).
+    // The notes server's delete is idempotent, so a retry is always safe: a 404 waits (A449).
     private suspend fun sendDelete(op: FolderOpEntity): Boolean? {
         val id = op.folderId ?: return true
         // As a create: tried with no answer, the server may hold it (T40 P4 review B3).
@@ -172,7 +156,7 @@ class FolderSender(private val store: NoteStore, private val api: PenmossApi) {
         } catch (error: ApiException) {
             return when {
                 error.unauthorized -> throw error
-                // A 404 is a server from before this route: the sort waits (A449).
+                // A 404 waits, as the folders' changes do (A449).
                 error.status == 404 || error.status >= 500 || error.status == 429 -> null
                 else -> {
                     store.dropFolderOp(op.rowId)
@@ -183,43 +167,6 @@ class FolderSender(private val store: NoteStore, private val api: PenmossApi) {
             return null
         }
         store.dropFolderOp(op.rowId)
-        return true
-    }
-
-    /**
-     * The default notebook's name (T43, A751). A 404 is a server from before notebooks: the
-     * rename waits (A449), as the top level's sort does.
-     */
-    private suspend fun sendRootName(op: FolderOpEntity): Boolean? {
-        store.markFolderOpTried(op.rowId)
-        try {
-            api.setDefaultNotebookName(op.name.orEmpty())
-        } catch (error: ApiException) {
-            return when {
-                error.unauthorized -> throw error
-                error.status == 404 || error.status >= 500 || error.status == 429 -> null
-                else -> {
-                    store.dropFolderOp(op.rowId)
-                    true
-                }
-            }
-        } catch (error: IOException) {
-            return null
-        }
-        store.dropFolderOp(op.rowId)
-        return true
-    }
-
-    /**
-     * A change the notebook rules refuse (422 `notebook_rule`, T43, A750): a notebook into a
-     * folder, Journal or the Inbox into a notebook. The phone refuses these itself; one that still
-     * reaches the server (the tree changed elsewhere meanwhile) is dropped with the folder's other
-     * changes, the server's words said once, and the tree's place stands.
-     */
-    private suspend fun refusedByNotebookRule(op: FolderOpEntity, error: ApiException): Boolean {
-        if (error.code != NOTEBOOK_RULE) return false
-        val id = op.folderId ?: return false
-        store.refuseFolderOpsFor(id, error.message ?: "Penmoss refused the change")
         return true
     }
 

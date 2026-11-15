@@ -23,9 +23,11 @@ import org.junit.Test
 import java.io.File
 
 /**
- * The settings channel's contract (T40 P1, A410, A412): `contract/settings-v1.json`, which the
- * server's vitest checks against the web's rules, and `contract/themes-v1.json`, which the editor
- * page's vitest checks against `@penmoss/ui`. Kotlin reads both the same way here.
+ * The settings channel's contract (T40 P1, A410, A412): `contract/settings-v1.json`, whose
+ * change and 409 the editor page's vitest holds to the page's own route (architecture review
+ * A12; its keys, defaults and values have had no TypeScript check since the server went), and
+ * `contract/themes-v1.json`, which the page's vitest checks against `@penmoss/ui`. Kotlin reads
+ * both the same way here.
  */
 class SettingsContractTest {
     private fun contract(name: String): JsonObject {
@@ -206,9 +208,9 @@ class SettingsContractTest {
             server.start()
             val api = HttpPenmossApi(server.url("/").toString(), OkHttpClient())
             val request = settings.getValue("request").jsonObject
-            server.enqueue(json("""{"settings":{"theme.mode":"dark"},"changed":true}"""))
+            server.enqueue(json("""{"settings":{"timeZone":"Asia/Tokyo"},"changed":true}"""))
             val reply = api.putSettings(SettingsChange(request.getValue("set").jsonObject, request.getValue("base").jsonObject))
-            assertEquals(JsonObject(mapOf(SettingKeys.MODE to JsonPrimitive("dark"))), reply.settings)
+            assertEquals(JsonObject(mapOf(SettingKeys.TIME_ZONE to JsonPrimitive("Asia/Tokyo"))), reply.settings)
             val sent = server.takeRequest()
             assertEquals("PUT", sent.method)
             assertEquals("/api/settings", sent.url.encodedPath)
@@ -220,7 +222,7 @@ class SettingsContractTest {
                 .exceptionOrNull() as ApiException
             assertEquals(409, refused.status)
             assertEquals("setting_changed", refused.code)
-            assertEquals(listOf(SettingKeys.MODE), refused.keys)
+            assertEquals(listOf(SettingKeys.TIME_ZONE, SettingKeys.DAILY_TEMPLATE), refused.keys)
         }
     }
 

@@ -43,29 +43,6 @@ interface SearchDao {
     @Query("SELECT t.noteId AS noteId, t.tag AS tag FROM note_tags t JOIN notes n ON n.id = t.noteId WHERE n.deleted = 0 AND n.gone = 0")
     fun observeNoteTags(): Flow<List<NoteTagEntity>>
 
-    /** [observeNoteTags] without the notes filed in [hidden]: closed notebooks' (T43, A752). */
-    @Query(
-        "SELECT t.noteId AS noteId, t.tag AS tag FROM note_tags t JOIN notes n ON n.id = t.noteId " +
-            "WHERE n.deleted = 0 AND n.gone = 0 AND (n.folderId IS NULL OR n.folderId NOT IN (:hidden))",
-    )
-    fun observeNoteTagsOutside(hidden: List<String>): Flow<List<NoteTagEntity>>
-
-    /** [observeTagCounts] without the notes filed in [hidden] (T43, A752). */
-    @Query(
-        "SELECT t.tag AS tag, COUNT(*) AS notes FROM note_tags t JOIN notes n ON n.id = t.noteId " +
-            "WHERE n.deleted = 0 AND n.gone = 0 AND (n.folderId IS NULL OR n.folderId NOT IN (:hidden)) GROUP BY t.tag ORDER BY t.tag",
-    )
-    fun observeTagCountsOutside(hidden: List<String>): Flow<List<TagCountRow>>
-
-    /** [observeTagged] without the notes filed in [hidden] (T43, A752). */
-    @Query(
-        "SELECT id, title, excerpt, updatedAt, folderId, position FROM notes WHERE deleted = 0 AND gone = 0 " +
-            "AND (folderId IS NULL OR folderId NOT IN (:hidden)) AND id IN " +
-            "(SELECT noteId FROM note_tags WHERE tag = :tag OR substr(tag, 1, length(:tag) + 1) = :tag || '/') " +
-            "ORDER BY updatedAt DESC, id",
-    )
-    fun observeTaggedOutside(tag: String, hidden: List<String>): Flow<List<NoteListRow>>
-
     /**
      * The live notes tagged [tag] or a tag nested under it (TG2), newest first. `substr` rather
      * than LIKE: `_` is a letter in a tag and a wildcard in LIKE.

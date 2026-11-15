@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.vector.PathNode
 import androidx.compose.ui.graphics.vector.VectorGroup
 import androidx.compose.ui.graphics.vector.VectorNode
 import androidx.compose.ui.graphics.vector.VectorPath
+import app.penmoss.ui.note.EditorIcons
 import app.penmoss.ui.settings.SettingsIcons
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

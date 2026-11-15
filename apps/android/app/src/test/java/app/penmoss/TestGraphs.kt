@@ -3,7 +3,6 @@ package app.penmoss
 import android.content.Context
 import android.content.Intent
 import androidx.work.WorkManager
-import app.penmoss.auth.SecretBox
 import app.penmoss.data.PenmossDatabase
 import app.penmoss.editor.NotePages
 import app.penmoss.engine.api.HttpPenmossApi
@@ -14,13 +13,14 @@ import app.penmoss.engine.git.OwnerConfirm
 import app.penmoss.git.GitNotebookActivity
 import app.penmoss.git.GitNotebookHub
 import app.penmoss.git.GitScheduler
+import app.penmoss.security.SecretBox
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals
 import java.io.File
 
 /**
- * The graphs the app's screens are tested on since T59 (A1040): the app's own graph, with no
+ * The graphs the app's screens are tested on since T59 (A1040, A1469): the device's graph, with no
  * notes, and a git notebook's beside it, offline (its notes server unreachable, as a phone in
  * airplane mode). A hub with stand-in pages (no WebView in a JVM test) adds notebooks from bare
  * repositories on the machine.
@@ -51,14 +51,14 @@ object TestGraphs {
     }
 
     /**
-     * The app's own graph: an in-memory database, the stand-in box, and a hub of stand-in pages
+     * The device's graph: an in-memory database, the stand-in box, and a hub of stand-in pages
      * whose notebooks' graphs are offline, each on a database from [notebookDatabase].
      */
     fun app(
         context: Context,
         notePages: NotePages = NotePages.Editor,
         notebookDatabase: () -> PenmossDatabase = { PenmossDatabase.inMemory(context) },
-    ): AppGraph = AppGraph(
+    ): DeviceGraph = DeviceGraph(
         context,
         database = PenmossDatabase.inMemory(context),
         box = box,
@@ -74,21 +74,21 @@ object TestGraphs {
                 scheduler = GitScheduler { WorkManager.getInstance(context) },
                 signingKeys = null,
                 makeGraph = { localId, notebookId, name ->
-                    AppGraph.forGit(context, main, notebookDatabase(), localId, notebookId, name, offline())
+                    NotebookGraph(context, main, notebookDatabase(), localId, notebookId, name, offline())
                 },
             )
         },
     )
 
     /** A git notebook's graph beside [main], offline, with a database of its own in memory. */
-    fun notebook(context: Context, main: AppGraph, name: String = "Notes"): AppGraph = AppGraph.forGit(
+    fun notebook(context: Context, main: DeviceGraph, name: String = "Notes"): NotebookGraph = NotebookGraph(
         context,
         main,
         PenmossDatabase.inMemory(context),
         localId = "local-test",
         notebookId = "01JBN00000000000000000TEST",
         name = name,
-        api = offline(),
+        notesServer = offline(),
     )
 
     /** A notes server nothing answers at, as a phone in airplane mode. */
@@ -101,7 +101,7 @@ object TestGraphs {
             .apply { if (note != null) putExtra(GitNotebookActivity.EXTRA_NOTE, note) }
 
     /** Adds a git notebook named [name] to [main]'s hub, from a new bare repository; its local id. */
-    fun addNotebook(context: Context, main: AppGraph, name: String): String = runBlocking {
+    fun addNotebook(context: Context, main: DeviceGraph, name: String): String = runBlocking {
         val dir = File(context.cacheDir, "remote-${System.nanoTime()}.git")
         val made = ProcessBuilder("git", "init", "--bare", "--initial-branch=main", dir.absolutePath).redirectErrorStream(true).start()
         assertEquals(made.inputStream.readBytes().toString(Charsets.UTF_8), 0, made.waitFor())

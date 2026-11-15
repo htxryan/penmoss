@@ -17,7 +17,6 @@ object ThemeEdits {
     const val NAME_MAX = 60
     const val UNTITLED = "Untitled theme"
     private val CUSTOM_ID = Regex("^custom-[a-z0-9]{1,32}$")
-    val FONT_KEYS = listOf("ui", "body", "mono")
 
     fun isCustomId(id: String?): Boolean = id != null && CUSTOM_ID.matches(id)
 
@@ -85,27 +84,6 @@ object ThemeEdits {
     fun font(theme: JsonObject, key: String): String = (theme["fonts"] as? JsonObject)?.string(key).orEmpty()
 
     fun width(theme: JsonObject): Int = (theme["editorWidth"] as? JsonPrimitive)?.let { it.intOrNull ?: it.content.toDoubleOrNull()?.toInt() } ?: 52
-
-    /**
-     * The base to send with [value], an edit of a custom theme begun from [base], when versions of
-     * it went out without an answer ([sent]). The server writes only the fields that differ from
-     * the base sent (A416), so a field put back to the base's value would be skipped, though the
-     * server may hold a sent value there whose reply was lost. For such a field the base sent is
-     * that sent value, so the server writes it back. Every other field keeps the true base.
-     */
-    fun sendingBase(base: JsonObject, value: JsonObject, sent: List<JsonObject>): JsonObject {
-        val out = base.toMutableMap()
-        for ((key, was) in base) {
-            if (key == "id") continue
-            val now = value[key]
-            if (was is JsonObject && now is JsonObject) {
-                out[key] = sendingBase(was, now, sent.mapNotNull { it[key] as? JsonObject })
-            } else if (now == was) {
-                sent.firstNotNullOfOrNull { version -> version[key]?.takeIf { it != was && it !is JsonObject } }?.let { out[key] = it }
-            }
-        }
-        return JsonObject(out)
-    }
 
     private fun JsonObject.with(key: String, value: JsonElement) = JsonObject(this + (key to value))
 }
