@@ -21,7 +21,7 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, extname, join } from 'node:path';
+import { dirname, join } from 'node:path';
 import type {
   AgentProvider,
   AgentStreamEvent,
@@ -34,7 +34,6 @@ import { ATTACHMENTS, stageAttachments } from './attachments.ts';
 import { withHeavySlot } from './heavy.ts';
 import { usageLimitReset } from './limits.ts';
 import { cardLink } from './ui/link.ts';
-import { CHAT_SUBTYPE } from '../sandbox/remote-claude.ts';
 import {
   account,
   clearStaged,
@@ -46,7 +45,7 @@ import {
 import { expandHome, type FactoryConfig, type SlotConfig } from './config.ts';
 import type { Exec } from './exec.ts';
 import { ensureConfig, mustGit } from './git.ts';
-import { failedLines, jobIdOf, runIdOf, type CheckRun } from './checks.ts';
+import { type CheckRun, failedLines, jobIdOf, runIdOf } from './checks.ts';
 import { ciHistory, MAIN_RUNS_READ, rerunWhenDone } from './ci-failure.ts';
 import { findProven } from './carry.ts';
 import type { MainRun, RunJob } from './merge.ts';
@@ -56,16 +55,11 @@ import {
   numberLines,
   reserveDecisionNumbers,
 } from './decisions.ts';
-import { GhError, type Gh } from './github.ts';
+import { type Gh, GhError } from './github.ts';
 import { proofFiles, type AttachedProof } from './proof/body.ts';
-import { publishRefs, type ProofStore } from './proof/store.ts';
+import { type ProofStore, publishRefs } from './proof/store.ts';
 import { fromPlaywrightReport, type ProofItem, type PwReport } from './proof/manifest.ts';
-import {
-  androidFailures,
-  keepFailures,
-  playwrightFailures,
-  type FailedTest,
-} from './proof/evidence.ts';
+import { androidFailures, type FailedTest, playwrightFailures } from './proof/evidence.ts';
 import { checkMedia, framesToMp4, framesWithin, toMp4, within } from './proof/media.ts';
 import { addedLines, DECISIONS, newRows, rebaseOntoMain } from './rebase.ts';
 import { checkMacVm, runMacProof, runMacWalk } from './proof/mac.ts';
@@ -77,14 +71,14 @@ import {
   fetchRunBranch,
   githubUrl,
   MAIN,
+  type OpenPr,
   publishDir,
   publishRun,
   pushedHead,
-  resumablePr,
-  type OpenPr,
-  unchangedSincePush,
   remoteBranch,
+  resumablePr,
   runRef,
+  unchangedSincePush,
 } from './publish.ts';
 import { parseAgentResult, RESULT_PATH } from './result.ts';
 import type { RunDeps, RunEvent, RunSandbox } from './run.ts';
@@ -94,6 +88,61 @@ import { ANDROID_WALK_CLASS, MAC_WALK_SPEC, WALK_SHOT, walkFile, walkTail } from
 import type { Secrets } from './secrets.ts';
 import type { Tracker } from './tracker/port.ts';
 import { leftoversLine, signal, stopLeftovers } from './leftovers.ts';
+import {
+  execPastRefLocks,
+  SANDBOX_READY,
+  sandboxMainCommand,
+  sandboxStartCommand,
+  sandboxTakeCommand,
+} from './sandbox-commands.ts';
+import {
+  clearProofFiles,
+  fromVm,
+  keepProofFiles,
+  macFailures,
+  newestReport,
+  stageLastProof,
+} from './host-proof.ts';
+import {
+  AGENT_STREAM,
+  agentMissing,
+  AgentNotInstalled,
+  CHAT_URL,
+  chatUrlOf,
+  explainCompletion,
+  keepFiles,
+  lastErrorEvent,
+  lastResultEvent,
+} from './agent-stream.ts';
+export {
+  AGENT_STREAM,
+  AgentNotInstalled,
+  CHAT_URL,
+  agentMissing,
+  chatUrlOf,
+  explainCompletion,
+  keepFiles,
+  lastErrorEvent,
+  lastResultEvent,
+} from './agent-stream.ts';
+
+export {
+  LAST_PROOF,
+  clearProofFiles,
+  fromVm,
+  keepProofFiles,
+  macFailures,
+  stageLastProof,
+} from './host-proof.ts';
+
+export {
+  REF_LOCK,
+  SANDBOX_READY,
+  execPastRefLocks,
+  sandboxMainCommand,
+  sandboxStartCommand,
+  sandboxTakeCommand,
+} from './sandbox-commands.ts';
 
 export const DEAD_END_PUSH_URL = 'no-push://the-factory-harness-pushes';
 
@@ -198,251 +247,6 @@ export async function ensureClone(
   }
   await ensurePublishRepo(config, exec, identity);
   return dir;
-}
-
-/**
- * The gate sandbox's fetch of main into the runs' clone, with the sandbox's read-only token, and
- * main put at `base`: the commit the host fetched into the publish repo, which the push then
- * checks the branch descends from. The host never fetches into the clone itself.
- */
-export function sandboxMainCommand(base: string): string {
-  if (!/^[0-9a-f]{40,64}$/.test(base)) throw new Error(`not a commit: ${base}`);
-  return [
-    `git -c credential.helper= -c 'credential.helper=!f() { test "$1" = get || exit 0; echo username=x-access-token; echo "password=$GH_TOKEN"; }; f'`,
-    'fetch --quiet --no-tags origin main',
-    `&& git update-ref refs/remotes/origin/main ${base}`,
-  ].join(' ');
-}
-
-/**
- * The first command in every sandbox the host opens: main fetched and put at `base`, as for the
- * gate, then a branch with no commits of its own (one Sandcastle has just made from the clone's
- * main, which only the last gate moved) fast-forwarded onto `base`. A branch with commits of its
- * own (a restarted run's, R12, or a fix or review round's) is rebased onto `base` when its
- * tracked files are clean and the rebase goes through, so the agent works on today's main
- * rather than re-reporting what main has fixed since (PEN-75's restarted run); otherwise it is
- * left where it is, and the gate's rebase, which resolves decision rows, deals with it.
- */
-export function sandboxStartCommand(base: string): string {
-  return [
-    `${sandboxMainCommand(base)} && if git merge-base --is-ancestor HEAD ${base}; then git merge --ff-only --quiet ${base};`,
-    `elif test -z "$(git status --porcelain --untracked-files=no)"; then git rebase --quiet ${base} >/dev/null 2>&1 || git rebase --abort; fi`,
-  ].join(' ');
-}
-
-/**
- * Gets a new sandbox ready before its agent starts, so the agent goes straight to the work
- * (A1289). Past runs lost their first minutes to these:
- *
- * - the workspace's dependencies, which a new worktree doesn't have (PEN-64, PEN-71, and two
- *   more ran `task setup` or failed on missing modules first): installed from the factory's pnpm
- *   store, offline and frozen, in seconds;
- * - zsh's here-documents, which it writes to `/tmp` (TMPPREFIX), outside the sandbox: 17 of the
- *   agents' heredocs failed, and each fell back to another way. The sandbox's own temp folder
- *   instead;
- * - Java's temp folder and home (KSP, Robolectric, the debug keystore in `~/.android`), which an
- *   agent had to remember to export before Gradle: set for every shell.
- *
- * `$HOME/.zshenv` is read by every zsh, which is the shell Claude Code's and OpenCode's Bash
- * tools run. A failed install doesn't stop the run: the agent sees it and can install itself.
- */
-export const SANDBOX_READY = [
-  `printf '%s\\n' '# The factory writes this when the sandbox starts (A1289).' 'export TMPPREFIX="$TMPDIR/zsh"' 'export JAVA_TOOL_OPTIONS="-Djava.io.tmpdir=$TMPDIR -Duser.home=$HOME"' > "$HOME/.zshenv"`,
-  'corepack pnpm install --frozen-lockfile --prefer-offline --reporter=silent',
-].join(' && ');
-
-/**
- * Takes the commits someone pushed on top of the factory's last push to `branch` (PEN-101): the
- * sandbox fetches the branch, checks GitHub still has `to`, and fast-forwards onto it, or, when
- * the run's branch has commits GitHub doesn't (a rebase, a round that didn't push), cherry-picks
- * `from..to` onto them. A pick that conflicts is undone, and the command fails (exit 3).
- */
-export function sandboxTakeCommand(branch: string, from: string, to: string): string {
-  if (!/^[\w.][\w./-]*$/.test(branch) || branch.includes('..'))
-    throw new Error(`not a branch the factory makes: ${branch}`);
-  for (const sha of [from, to])
-    if (!/^[0-9a-f]{40,64}$/.test(sha)) throw new Error(`not a commit: ${sha}`);
-  return [
-    `git -c credential.helper= -c 'credential.helper=!f() { test "$1" = get || exit 0; echo username=x-access-token; echo "password=$GH_TOKEN"; }; f'`,
-    `fetch --quiet --no-tags origin refs/heads/${branch}`,
-    `&& test "$(git rev-parse FETCH_HEAD)" = ${to}`,
-    `&& if git merge-base --is-ancestor HEAD ${to}; then git merge --ff-only --quiet ${to};`,
-    `elif git cherry-pick --allow-empty ${from}..${to} >/dev/null 2>&1; then :;`,
-    'else git cherry-pick --abort >/dev/null 2>&1; exit 3; fi',
-  ].join(' ');
-}
-
-/**
- * Both slots' sandboxes are worktrees of one clone, so two starting together both fetch main into
- * its `refs/remotes/origin/main`, and one can lose the ref's lock ("cannot lock ref"): PEN-79 and
- * PEN-80 were picked in the same second. A start that lost it goes again (A1267).
- */
-export const REF_LOCK = /cannot lock ref|unable to update local ref|\.lock': File exists/;
-
-export async function execPastRefLocks(
-  handle: Pick<RunSandbox, 'exec'>,
-  command: string,
-  pause: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
-): Promise<{ exitCode: number; stdout: string; stderr: string }> {
-  for (let attempt = 1; ; attempt++) {
-    const ran = await handle.exec(command);
-    if (ran.exitCode === 0 || attempt >= 4 || !REF_LOCK.test(ran.stderr)) return ran;
-    await pause(500 * attempt + Math.floor(Math.random() * 500));
-  }
-}
-
-/** The agent's raw output stream in the run folder, beside Sandcastle's `agent.log`. */
-export const AGENT_STREAM = 'agent.stream.jsonl';
-
-/** Where a run's sandbox finds the last proof's screenshots and failures (`stageLastProof`). */
-export const LAST_PROOF = '.factory/last-proof';
-
-/**
- * The last proof's files the agent gets: each test's screenshot (`<platform>-<n>-screenshot.png`,
- * or `.jpg` for the Mac window's last frame), and a failing test's error context, attachments and
- * logs with their index, `<platform>-failures.md` (proof/evidence.ts). Never a video.
- */
-const STAGED = /^[a-z]+-(failures\.md|\d+-[a-z0-9-]+\.(png|jpg|md|txt|log|json|logcat))$/;
-
-/** Copies the last proof's screenshots and failures into the worktree, in place of older ones. */
-export function stageLastProof(raw: string, worktree: string): string[] {
-  const to = join(worktree, LAST_PROOF);
-  rmSync(to, { recursive: true, force: true });
-  if (!existsSync(raw)) return [];
-  const files = readdirSync(raw).filter((f) => STAGED.test(f));
-  if (files.length === 0) return [];
-  mkdirSync(to, { recursive: true });
-  for (const f of files) copyFileSync(join(raw, f), join(to, f));
-  return files;
-}
-
-/** The current session's chat link, in the run folder while the session runs (the UI reads it). */
-export const CHAT_URL = 'chat-url';
-
-/** The chat link the in-sandbox runner reports (sandbox/remote-claude.ts), from a stream line. */
-export function chatUrlOf(line: string): string | undefined {
-  if (!line.includes(CHAT_SUBTYPE)) return undefined;
-  try {
-    const event = JSON.parse(line) as { type?: unknown; subtype?: unknown; url?: unknown };
-    if (event.type !== 'system' || event.subtype !== CHAT_SUBTYPE) return undefined;
-    return typeof event.url === 'string' &&
-      /^https:\/\/claude\.ai\/code\/session_[A-Za-z0-9]+$/.test(event.url)
-      ? event.url
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-/** The last `result` event a session added to the agent's stream after `from`, if any. */
-export function lastResultEvent(
-  streamFile: string,
-  from: number,
-): { readonly is_error?: unknown; readonly result?: unknown } | null {
-  let text: string;
-  try {
-    text = readFileSync(streamFile).subarray(from).toString('utf8');
-  } catch {
-    return null;
-  }
-  for (const line of text.split('\n').reverse()) {
-    if (!line.includes('"result"')) continue;
-    try {
-      const event = JSON.parse(line) as { type?: unknown; is_error?: unknown; result?: unknown };
-      if (event.type === 'result') return event;
-    } catch {
-      // A partial line: the stream is written as the agent goes.
-    }
-  }
-  return null;
-}
-
-/**
- * The last `error` event in an OpenCode stream from `from`, as JSON, or null. OpenCode ends a
- * session refused by its provider with one, and only it carries the wait: OpenCode Go's limit
- * says `"retryAfterMs":11504000`, while agent.log says only "usage limit reached" (PEN-117).
- */
-export function lastErrorEvent(streamFile: string, from: number): string | null {
-  let text: string;
-  try {
-    text = readFileSync(streamFile).subarray(from).toString('utf8');
-  } catch {
-    return null;
-  }
-  for (const line of text.split('\n').reverse()) {
-    if (!line.includes('"error"')) continue;
-    try {
-      const event = JSON.parse(line) as { type?: unknown; error?: unknown };
-      if (event.type === 'error' && event.error) return JSON.stringify(event.error);
-    } catch {
-      // A partial line: the stream is written as the agent goes.
-    }
-  }
-  return null;
-}
-
-/**
- * Copies the plain files directly in `from` (validation's review.json, captures.json and each
- * criterion's screenshot and mockup) into `to`, before the sandbox's worktree is gone (A1256).
- * Never through a symlink or into a subfolder: the agent wrote `from`. Returns the names copied.
- */
-export function keepFiles(from: string, to: string): string[] {
-  if (!existsSync(from) || !lstatSync(from).isDirectory()) return [];
-  const names = readdirSync(from).filter((n) => lstatSync(join(from, n)).isFile());
-  if (names.length === 0) return [];
-  mkdirSync(to, { recursive: true });
-  for (const n of names) copyFileSync(join(from, n), join(to, n));
-  return names;
-}
-
-/**
- * The command a shell couldn't find, from an agent's failure: `sh`'s "claude: command not found"
- * or exit 127, zsh's "command not found: claude". Undefined for any other failure.
- */
-export function agentMissing(message: string): string | undefined {
-  const named =
-    /command not found: (\S+)/.exec(message)?.[1] ??
-    /([^\s:/]+): command not found/.exec(message)?.[1];
-  if (named) return named;
-  if (!/exited with code 127\b/.test(message)) return undefined;
-  // dash: "sh: 1: claude: not found", only with the shell's own exit code.
-  return /([^\s:/]+): not found/.exec(message)?.[1] ?? "the agent's command";
-}
-
-/**
- * The agent CLI isn't where the factory looks: an installation problem, not the card's. The run
- * says so plainly (start.ts), with the PATH the sandbox had (the LaunchAgent's, A1226).
- */
-export class AgentNotInstalled extends Error {
-  readonly command: string;
-
-  constructor(command: string, path: string) {
-    super(
-      `the factory can't find \`${command}\` on its PATH (${path}). That is the factory's installation, not this card: install it on that PATH, or set its full path as the agent's \`bin\` in tools/factory/factory.config.json, then task factory:install (task factory:doctor checks it)`,
-    );
-    this.name = 'AgentNotInstalled';
-    this.command = command;
-  }
-}
-
-/**
- * Sandcastle ends its log with "reached 1 iteration(s) without completion signal" after every
- * run: the factory never gives the agent Sandcastle's completion signal (it reads
- * `.factory/result.json` instead, and one iteration is all it asks for), so that line is
- * expected. The log says so beneath it, so it doesn't read as a failure.
- */
-export function explainCompletion(logFile: string): void {
-  let text: string;
-  try {
-    text = readFileSync(logFile, 'utf8');
-  } catch {
-    return;
-  }
-  if (!/without completion signal\.?\s*$/.test(text)) return;
-  appendFileSync(
-    logFile,
-    "(The factory: that is expected. It doesn't use Sandcastle's completion signal; the agent's .factory/result.json says how the round ended.)\n",
-  );
 }
 
 export interface HostOptions {
@@ -632,71 +436,81 @@ export function hostDeps(options: HostOptions): HostDeps {
       await leftovers('by an earlier session');
       const handle: RunSandbox = {
         worktreePath: sandbox.worktreePath,
-        exec: async (command) => {
-          const r = await sandbox.exec(command);
-          return { exitCode: r.exitCode, stdout: r.stdout, stderr: r.stderr };
+        exec: async (command, execOptions = {}) => {
+          // Out of time (F2): whatever runs in the worktree is stopped, so the command ends.
+          const stop = () => void leftovers('when its command ran out of time');
+          execOptions.signal?.addEventListener('abort', stop, { once: true });
+          try {
+            const r = await sandbox.exec(command);
+            return { exitCode: r.exitCode, stdout: r.stdout, stderr: r.stderr };
+          } finally {
+            execOptions.signal?.removeEventListener('abort', stop);
+          }
         },
         close: async () => {
           await sandbox.close();
           await leftovers('when the sandbox closed');
         },
       };
-      // Commits someone pushed to the PR's branch by hand come first, so the agent builds on
-      // them and the push keeps them (PEN-101). A branch rewritten under the factory stops here.
-      const remote = await remoteBranch(
-        exec,
-        publish,
-        githubUrl(config),
-        branch,
-        await options.pushToken(),
-      );
-      if (remote.kind === 'rewritten') {
-        await handle.close();
-        throw new Error(
-          `the PR's branch \`${branch}\` was rewritten on GitHub (it is at ${remote.head.slice(0, 10)}, which no longer holds the factory's last push, ${remote.ours.slice(0, 10)}), so the factory won't build on it or push over it. Push your commits on top of ${remote.ours.slice(0, 10)} instead, or close the PR and clear Blocked to start the card again`,
+      // Whatever stops the sandbox from opening closes it (F1): no worktree or seatbelt is left.
+      try {
+        // Commits someone pushed to the PR's branch by hand come first, so the agent builds on
+        // them and the push keeps them (PEN-101). A branch rewritten under the factory stops here.
+        const remote = await remoteBranch(
+          exec,
+          publish,
+          githubUrl(config),
+          branch,
+          await options.pushToken(),
         );
-      }
-      if (remote.kind === 'ahead') {
-        const took = await handle.exec(sandboxTakeCommand(branch, remote.from, remote.to));
-        if (took.exitCode !== 0) {
-          await handle.close();
+        if (remote.kind === 'rewritten') {
           throw new Error(
-            `the commits pushed to \`${branch}\` on GitHub (${remote.from.slice(0, 10)}..${remote.to.slice(0, 10)}) don't apply to the run's branch: ${took.stderr.trim() || `exit ${took.exitCode}`}`,
+            `the PR's branch \`${branch}\` was rewritten on GitHub (it is at ${remote.head.slice(0, 10)}, which no longer holds the factory's last push, ${remote.ours.slice(0, 10)}), so the factory won't build on it or push over it. Push your commits on top of ${remote.ours.slice(0, 10)} instead, or close the PR and clear Blocked to start the card again`,
           );
         }
-        await adoptRemoteHead(exec, publish, branch, remote.to);
-        options.log(
-          `took the commits pushed to ${branch} on GitHub, up to ${remote.to.slice(0, 10)}`,
-        );
-      }
-      // Sandcastle makes a new branch from the clone's origin/main, which only the last gate
-      // moved: the sandbox starts from the main the host fetched instead (A1232).
-      base ??= await fetchMainInto(exec, publish);
-      const started = await execPastRefLocks(handle, sandboxStartCommand(base));
-      if (started.exitCode !== 0) {
-        await handle.close();
-        throw new Error(
-          `the sandbox couldn't start from main's ${base.slice(0, 10)}: ${started.stderr.trim()}`,
-        );
-      }
-      const ready = await handle.exec(SANDBOX_READY);
-      if (ready.exitCode !== 0)
-        options.log(
-          `the sandbox's dependencies didn't install (exit ${ready.exitCode}); the agent starts without them: ${(ready.stderr || ready.stdout).trim().split('\n').slice(-3).join(' ')}`,
-        );
-      // The last proof's screenshots, so an agent sent back by a failed proof can see where it
-      // stopped (A1291): the Mac proof runs in the VM, which the sandbox can't reach.
-      try {
-        stageLastProof(join(runDir, 'raw'), handle.worktreePath);
-      } catch {
-        // The agent then has the proof's output only.
-      }
-      // The issue's images, which the host downloaded into the run folder (attachments.ts). A
-      // copy that fails leaves the agent without them; it never stops the run.
-      try {
-        stageAttachments(join(runDir, ATTACHMENTS), handle.worktreePath);
-      } catch {
-        // The agent then finds no file where the prompt says; the run goes on.
+        if (remote.kind === 'ahead') {
+          const took = await handle.exec(sandboxTakeCommand(branch, remote.from, remote.to));
+          if (took.exitCode !== 0) {
+            throw new Error(
+              `the commits pushed to \`${branch}\` on GitHub (${remote.from.slice(0, 10)}..${remote.to.slice(0, 10)}) don't apply to the run's branch: ${took.stderr.trim() || `exit ${took.exitCode}`}`,
+            );
+          }
+          await adoptRemoteHead(exec, publish, branch, remote.to);
+          options.log(
+            `took the commits pushed to ${branch} on GitHub, up to ${remote.to.slice(0, 10)}`,
+          );
+        }
+        // Sandcastle makes a new branch from the clone's origin/main, which only the last gate
+        // moved: the sandbox starts from the main the host fetched instead (A1232).
+        base ??= await fetchMainInto(exec, publish);
+        const started = await execPastRefLocks(handle, sandboxStartCommand(base));
+        if (started.exitCode !== 0) {
+          throw new Error(
+            `the sandbox couldn't start from main's ${base.slice(0, 10)}: ${started.stderr.trim()}`,
+          );
+        }
+        const ready = await handle.exec(SANDBOX_READY);
+        if (ready.exitCode !== 0)
+          options.log(
+            `the sandbox's dependencies didn't install (exit ${ready.exitCode}); the agent starts without them: ${(ready.stderr || ready.stdout).trim().split('\n').slice(-3).join(' ')}`,
+          );
+        // The last proof's screenshots, so an agent sent back by a failed proof can see where it
+        // stopped (A1291): the Mac proof runs in the VM, which the sandbox can't reach.
+        try {
+          stageLastProof(join(runDir, 'raw'), handle.worktreePath);
+        } catch {
+          // The agent then has the proof's output only.
+        }
+        // The issue's images, which the host downloaded into the run folder (attachments.ts). A
+        // copy that fails leaves the agent without them; it never stops the run.
+        try {
+          stageAttachments(join(runDir, ATTACHMENTS), handle.worktreePath);
+        } catch {
+          // The agent then finds no file where the prompt says; the run goes on.
+        }
+      } catch (error) {
+        await handle.close().catch(() => undefined);
+        throw error;
       }
       sandboxes.set(handle, sandbox);
       return handle;
@@ -1189,67 +1003,4 @@ export function hostDeps(options: HostOptions): HostDeps {
       options.log(`${event}${Object.keys(detail).length ? ` ${JSON.stringify(detail)}` : ''}`);
     },
   };
-}
-
-/** Removes a platform's files from an earlier round of the proof from the run folder's `raw/`. */
-export function clearProofFiles(raw: string, platform: string): void {
-  if (!existsSync(raw)) return;
-  for (const f of readdirSync(raw))
-    if (f.startsWith(`${platform}-`)) rmSync(join(raw, f), { force: true });
-}
-
-/**
- * Copies a proof's recordings into the run folder's `raw/` as `<platform>-<n>-video…` and
- * `<platform>-<n>-screenshot.png`, then what each failing test left (proof/evidence.ts), and
- * returns the items with the copies' paths. Only the run's own files: the agent's tests write the
- * report that names them.
- */
-export function keepProofFiles(
-  items: readonly ProofItem[],
-  failed: readonly FailedTest[],
-  platform: string,
-  raw: string,
-  worktree: string,
-): ProofItem[] {
-  mkdirSync(raw, { recursive: true });
-  const kept = items.map((item, i) => {
-    const keep = (path: string | undefined, name: string) => {
-      if (!path || !within(path, worktree)) return undefined;
-      const to = join(raw, `${platform}-${i + 1}-${name}`);
-      copyFileSync(path, to);
-      return to;
-    };
-    const video = keep(item.video, `video${extname(item.video ?? '') || '.webm'}`);
-    const screenshot = keep(item.screenshot, 'screenshot.png');
-    return {
-      ...item,
-      ...(video ? { video } : {}),
-      ...(screenshot ? { screenshot } : {}),
-    };
-  });
-  keepFailures(failed, platform, raw, worktree);
-  return kept;
-}
-
-/** The Mac proof's failing tests, with the VM's paths as the copies under `out` (`fromVm`). */
-export function macFailures(report: PwReport, out: string): FailedTest[] {
-  return playwrightFailures(report, (path) => fromVm(path, out));
-}
-
-/** A path in the VM's `apps/desktop/test-results/…` as the copy under `<out>/test-results/…`. */
-export function fromVm(path: string, out: string): string {
-  const i = path.indexOf('/apps/desktop/test-results/');
-  return i < 0
-    ? path
-    : join(out, 'test-results', path.slice(i + '/apps/desktop/test-results/'.length));
-}
-
-/** The newest proof report under the web app's test results (its folder is named by port). */
-function newestReport(results: string): string | undefined {
-  if (!existsSync(results)) return undefined;
-  return readdirSync(results)
-    .filter((d) => d.startsWith('proof-'))
-    .map((d) => join(results, d, 'report.json'))
-    .filter((p) => existsSync(p))
-    .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0];
 }

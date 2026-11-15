@@ -18,6 +18,9 @@ import { attachCommand, type PlanQuestion, type PlanState } from '../planning.ts
 import type { DoctorSummary } from '../doctor-summary.ts';
 import type { DaemonStatus } from '../status.ts';
 import { hasBlockedSet } from '../tracker/port.ts';
+import { issueOf, type LedgerEvent, parseLedger } from '../ledger.ts';
+export { issueOf, parseLedger } from '../ledger.ts';
+export type { LedgerEvent } from '../ledger.ts';
 
 export interface Link {
   readonly label: string;
@@ -218,13 +221,6 @@ export interface FactoryView {
   };
 }
 
-export interface LedgerEvent {
-  readonly at: string;
-  readonly run: string;
-  readonly event: string;
-  readonly [detail: string]: unknown;
-}
-
 export interface PlanInfo {
   readonly meta: PlanMeta;
   readonly state: PlanState | null;
@@ -258,23 +254,6 @@ export interface ViewInput {
   /** How far back the timeline and outcomes reach (default 12 h). */
   readonly windowHours?: number;
 }
-
-export function parseLedger(text: string): LedgerEvent[] {
-  const events: LedgerEvent[] = [];
-  for (const line of text.split('\n')) {
-    if (!line.trim()) continue;
-    try {
-      const e = JSON.parse(line) as Partial<LedgerEvent>;
-      if (typeof e.at === 'string' && typeof e.run === 'string' && typeof e.event === 'string')
-        events.push(e as LedgerEvent);
-    } catch {
-      // A torn line from a crash.
-    }
-  }
-  return events;
-}
-
-export const issueOf = (e: LedgerEvent) => Number(e.run.split('-')[0]);
 
 const str = (v: unknown) => (typeof v === 'string' && v !== '' ? v : null);
 const num = (v: unknown) => (typeof v === 'number' ? v : null);

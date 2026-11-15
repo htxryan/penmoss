@@ -39,6 +39,31 @@ describe('nodeExec', { timeout: 30_000 }, () => {
     expect(r).toEqual({ code: 3, stdout: 'hi', stderr: 'err\n' });
   });
 
+  it('stops the whole group at timeoutMs, with no signal (F2)', async () => {
+    const d = dir();
+    const pids = join(d, 'pids');
+    const r = await nodeExec('sh', ['-c', `sleep 30 & echo $! >"${pids}"; sleep 30; wait`], {
+      timeoutMs: 300,
+      killGraceMs: 200,
+    });
+    expect(r.aborted).toBe(true);
+    expect(r.timedOut).toBe(true);
+    expect(r.stderr).toMatch(/took longer than 300 ms/);
+    await until(() => !alive(Number(readFileSync(pids, 'utf8').trim())));
+  });
+
+  it('answers at exit with timeoutMs, though a grandchild holds its pipe (F2)', async () => {
+    const t0 = Date.now();
+    const r = await nodeExec('sh', ['-c', 'sleep 30 & echo $!'], { timeoutMs: 20_000 });
+    expect(r.code).toBe(0);
+    expect(r.timedOut).toBeUndefined();
+    expect(Date.now() - t0).toBeLessThan(5_000);
+    // What it left running after a normal exit is left alone, as git's credential cache is.
+    const left = Number(r.stdout.trim());
+    expect(alive(left)).toBe(true);
+    process.kill(left, 'SIGKILL');
+  });
+
   it('stops the whole process group when the signal aborts', async () => {
     const d = dir();
     const pids = join(d, 'pids');

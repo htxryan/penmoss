@@ -65,11 +65,11 @@ tasks:
       # exist only there. CI's Check job runs on Linux, so these run in `task check` on a Mac.
       - '{{if eq OS "darwin"}}node --test scripts/vm/desktop-test.test.mjs{{else}}echo "vm:test: skipped on {{OS}}: the test VM runs only on macOS"{{end}}'
   ci:lint:
-    desc: "Where CI's jobs run (A1235, A1348): every runs-on is ubuntu-latest, ubuntu-24.04, macos-latest or the self-hosted Mac labels, never a larger runner or an expression, and no fork's pull request reaches a Mac job; then actionlint, pinned (scripts/actionlint.sh)"
+    desc: "Where CI's jobs run (A1235, A1348): every runs-on is ubuntu-latest, ubuntu-24.04, macos-latest or the self-hosted Mac labels, never a larger runner or an expression; no fork's pull request reaches a Mac job (P10, A1183); no pull_request_target or workflow_run, and read-only default permissions; then actionlint, pinned (scripts/pinned-tool.sh)"
     cmds:
       - node --test .github/scripts/runner-policy.test.mjs
       - node .github/scripts/runner-policy.mjs
-      - bash scripts/actionlint.sh
+      - bash scripts/pinned-tool.sh actionlint
 
   releases:test:
     desc: 'The Releases page rules CI follows (A403, A1188, A1189): .github/scripts/releases.mjs against an in-memory page, and the checks of `task release` against a fake git'
@@ -87,16 +87,16 @@ tasks:
       - node .github/scripts/release-tag.mjs {{.CLI_ARGS}}
 
   workflows:test:
-    desc: "The fork guard (P10, A1183): no self-hosted job runs for a pull request from a fork; which parts a change touches and whether it ships (A1095, PEN-128); GitHub intake into Linear (D66) against a fake Linear API; and CI's Android emulator (A1227) against a stub adb and emulator; and the pull request's Release note (A1294)"
+    desc: "Which parts a change touches and whether it ships (A1095, PEN-128); GitHub intake into Linear (D66) against a fake Linear API; CI's Android emulator (A1227) against a stub adb and emulator; Chromium's system libraries; and the pull request's Release note (A1294). The fork guard is `task ci:lint`'s (A1481)"
     cmds:
-      - node --test .github/scripts/workflow-guard.test.mjs .github/scripts/changed-parts.test.mjs .github/scripts/linear-intake.test.mjs .github/scripts/android-emulator.test.mjs .github/scripts/system-deps.test.mjs .github/scripts/release-note.test.mjs
+      - node --test .github/scripts/changed-parts.test.mjs .github/scripts/linear-intake.test.mjs .github/scripts/android-emulator.test.mjs .github/scripts/system-deps.test.mjs .github/scripts/release-note.test.mjs
 
   audit:secrets:
     desc: 'gitleaks over the tree, or every commit with `-- --history` (T80.1, A1185; docs/qa/public-release-audit.md)'
     cmds:
       - |
         if [ "{{.CLI_ARGS}}" = "--history" ]; then
-          scripts/gitleaks.sh git --no-banner --redact --config .gitleaks.toml --log-opts=--all .
+          scripts/pinned-tool.sh gitleaks git --no-banner --redact --config .gitleaks.toml --log-opts=--all .
         else
           # The files git tracks or would add, not node_modules or build output.
           # In $TMPDIR, which macOS's mktemp ignores without a template: the factory's sandbox
@@ -105,7 +105,7 @@ tasks:
           git ls-files -z --cached --others --exclude-standard |
             perl -0 -ne 'print if -e substr($_, 0, -1)' |
             tar --null -T - -cf - | tar -xf - -C "$tmp"
-          scripts/gitleaks.sh dir --no-banner --redact --config .gitleaks.toml "$tmp"
+          scripts/pinned-tool.sh gitleaks dir --no-banner --redact --config .gitleaks.toml "$tmp"
         fi
 
   audit:test:
@@ -133,9 +133,10 @@ tasks:
       - pnpm exec prettier --write .
 
   typecheck:
-    desc: Type-check every package with tsc
+    desc: "Type-check every package with tsc, and the JavaScript tooling's JSDoc (tsconfig.tooling.json, A1484)"
     cmds:
       - pnpm -r --workspace-concurrency=2 typecheck
+      - pnpm exec tsc -p tsconfig.tooling.json
 
   test:
     desc: 'Unit tests: every package, or one with `task test -- core` (package name without @penmoss/)'
@@ -234,10 +235,7 @@ tasks:
   factory:stop:
     desc: 'The software factory: stop the daemon (runs in progress restart next time, R12)'
     cmds:
-      # `-- --help` prints the usage and stops here, as the CLI's commands do (A1272).
-      - |
-        for a in {{.CLI_ARGS}}; do case "$a" in --help|-h) echo 'Usage: task factory:stop'; echo '  Stop the daemon (runs in progress restart next time, R12)'; exit 0;; esac; done
-        launchctl bootout gui/$(id -u)/app.penmoss.factory || true
+      - node tools/factory/src/cli.ts stop {{.CLI_ARGS}}
 
   factory:status:
     desc: 'The software factory: what the daemon is running (and at which commit) and waiting on'
@@ -247,9 +245,7 @@ tasks:
   factory:logs:
     desc: 'The software factory: follow the daemon log'
     cmds:
-      - |
-        for a in {{.CLI_ARGS}}; do case "$a" in --help|-h) echo 'Usage: task factory:logs'; echo '  Follow the daemon log (daemon.log in the state folder)'; exit 0;; esac; done
-        tail -n 100 -f "$HOME/Library/Application Support/penmoss-factory/daemon.log"
+      - node tools/factory/src/cli.ts logs {{.CLI_ARGS}}
 
   factory:report:
     desc: 'The software factory (F14): throughput, rounds, time to In review and the share Blocked: `task factory:report -- --from 2026-11-01 --to 2026-11-08`'
@@ -264,19 +260,12 @@ tasks:
   factory:ui:open:
     desc: 'Open the Factory UI in the browser (the link, with its token, that the running UI wrote)'
     cmds:
-      - |
-        for a in {{.CLI_ARGS}}; do case "$a" in --help|-h) echo 'Usage: task factory:ui:open'; echo '  Open the Factory UI in the browser, with the link in ui.url'; exit 0;; esac; done
-        open "$(cat "$HOME/Library/Application Support/penmoss-factory/ui.url")"
+      - node tools/factory/src/cli.ts ui-open {{.CLI_ARGS}}
 
   factory:ui:tailnet:
     desc: 'Serve the Factory UI on your tailnet (https://<this Mac>.<tailnet>.ts.net:8443, never Funnel), then restart the UI so it accepts that name (A1246)'
     cmds:
-      - |
-        for a in {{.CLI_ARGS}}; do case "$a" in --help|-h) echo 'Usage: task factory:ui:tailnet'; echo '  Serve the Factory UI on your tailnet (port 8443, never Funnel) and restart the UI'; exit 0;; esac; done
-        set -e
-        tailscale serve --bg --https=8443 http://127.0.0.1:7878
-        launchctl kickstart -k "gui/$(id -u)/app.penmoss.factory-ui"
-        sleep 2 && grep 'on the tailnet' "$HOME/Library/Application Support/penmoss-factory/ui.log" | tail -1
+      - node tools/factory/src/cli.ts ui-tailnet {{.CLI_ARGS}}
 
   factory:doctor:
     desc: "The software factory (F17): check a slot's sandbox (`-- --slot 2`, `-- --full` for task check, e2e and Android)"
@@ -302,7 +291,7 @@ tasks:
       - pnpm --filter @penmoss/web exec playwright test --project=timed --pass-with-no-tests {{.CLI_ARGS}}
 
   budgets:
-    desc: "Wall-clock budgets (A1244): every package's *.budget.test.ts, one package and one file at a time, then the offline search budget. Never part of `task check`; CI's budgets job doesn't run them yet. Waits for a free heavy-job slot"
+    desc: "Wall-clock budgets (A1244): every package's *.budget.test.ts, one package and one file at a time, then the offline search budget. Never part of `task check`; CI's budgets job runs them. Waits for a free heavy-job slot"
     cmds:
       - sh scripts/heavy.sh budgets {{.TASK_EXE}} budgets:run
 
@@ -353,7 +342,7 @@ tasks:
       - pnpm --filter @penmoss/desktop exec electron . {{.CLI_ARGS}}
 
   desktop:test:
-    desc: 'Mac app: unit tests, then Playwright for Electron. On a Mac it runs in the test VM, never on this screen (W10); xvfb on Linux'
+    desc: "Mac app: Playwright for Electron (its unit tests are `task test`'s). On a Mac it runs in the test VM, never on this screen (W10); xvfb on Linux"
     vars:
       IN_VM:
         sh: sysctl -n kern.hv_vmm_present 2>/dev/null || echo 0
@@ -375,7 +364,7 @@ tasks:
   desktop:test:here:
     deps: [desktop:build]
     cmds:
-      - pnpm --filter @penmoss/desktop test
+      # The unit tests run once, in `task test` (CI's Check job), not again here.
       # The VM's screen size (docs/ci.md §8), larger than the windows the suite asks for; xvfb-run's
       # own default is 1280 × 1024.
       - '{{if eq OS "linux"}}xvfb-run -a -s "-screen 0 1920x1200x24" {{end}}pnpm --filter @penmoss/desktop exec playwright test {{.CLI_ARGS}}'
@@ -402,7 +391,7 @@ tasks:
     desc: 'Android: the debug APK, app.penmoss.debug, for local and pull-request builds (apps/android/app/build/outputs/apk/debug/app-debug.apk; docs/android.md)'
     deps: [android:editor]
     dir: apps/android
-    env: &android-env # The agent worker's toolchain (W5); CI and other machines set their own.
+    env: &android-env # This Mac's toolchain, unless the environment names one; CI sets its own.
       ANDROID_HOME: '{{.ANDROID_HOME | default (print .HOME "/Android/sdk")}}'
       JAVA_HOME: '{{.JAVA_HOME | default (print .HOME "/opt/jdk-21")}}'
     cmds:

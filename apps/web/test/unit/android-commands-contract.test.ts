@@ -22,7 +22,7 @@ import { fuzzy } from '../../src/commands/fuzzy';
 
 const FILE = fileURLToPath(new URL('../../../android/contract/commands-v1.json', import.meta.url));
 const PARITY = fileURLToPath(
-  new URL('../../../../docs/evidence/t40/parity-matrix.md', import.meta.url),
+  new URL('../../../android/contract/parity-matrix.md', import.meta.url),
 );
 
 /** Queries whose ranking the phone must match: the plan's examples, and some edges. */

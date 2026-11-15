@@ -28,6 +28,13 @@ export const COMMANDS: Readonly<Record<string, Command>> = {
     args: '',
     text: "Start the LaunchAgents (the daemon, the UI, the updater) if they aren't running",
   },
+  stop: { args: '', text: 'Stop the daemon (runs in progress restart next time, R12)' },
+  logs: { args: '', text: 'Follow the daemon log (daemon.log in the state folder)' },
+  'ui-open': { args: '', text: 'Open the Factory UI in the browser, with the link in ui.url' },
+  'ui-tailnet': {
+    args: '',
+    text: 'Serve the Factory UI on your tailnet (port 8443, never Funnel) and restart\nthe UI so it accepts that name (A1246)',
+  },
   status: {
     args: '',
     text: 'What the daemon is running (and at which commit), waiting on and\npassing over',

@@ -8,11 +8,11 @@ import { deepLinkFromArgv, parseDeepLink } from '../../src/deep-link';
 import {
   afterCapture,
   defaultCaptureHotkey,
-  launchLog,
   HotkeyChangeGate,
   normaliseHotkey,
   registrationCertain,
 } from '../../src/hotkey';
+import { launchLog } from '../../src/launch-log';
 import {
   MENU_LIMITS,
   menuTemplate,
@@ -20,6 +20,7 @@ import {
   toAccelerator,
   type MenuModel,
 } from '../../src/menu';
+import { contentSecurityPolicy } from '../../../web/csp';
 import { resolveAsset, serveAsset } from '../../src/protocol';
 import {
   ALLOWED_PERMISSIONS,
@@ -358,6 +359,8 @@ describe('the bundled app on app://penmoss', () => {
     expect(csp).toContain("connect-src 'self' blob:;");
     expect(csp).not.toMatch(/penmoss\.app|wss?:/);
     expect(csp).toContain("frame-ancestors 'none'");
+    // One policy (A12): the page's own, the one the web suite runs the build under.
+    expect(csp).toBe(contentSecurityPolicy());
   });
 
   it('refuses missing files, other hosts and writes', async () => {

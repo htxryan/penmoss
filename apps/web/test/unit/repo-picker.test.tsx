@@ -61,6 +61,13 @@ function github(
       calls.push(['create', owner, name]);
       return Promise.resolve({ ok: true, via: 'git', value: repo(name, { empty: true }) });
     },
+    // No sign-in here: its status is null, as from a window that may not sign in.
+    signIn: {
+      status: () => Promise.resolve(null),
+      start: () => Promise.resolve(null),
+      cancel: () => Promise.resolve(null),
+      onChange: () => () => undefined,
+    },
   };
   return { browse, calls };
 }

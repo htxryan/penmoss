@@ -1,6 +1,6 @@
 # Architecture
 
-Penmoss as it is built today: git notebooks only, with no server and no account (D48, D49). The decisions behind each piece are in [`decisions.md`](decisions.md). The history of how it got here is in the closed GitHub issues and in [`evidence/`](evidence/).
+Penmoss as it is built today: git notebooks only, with no server and no account (D48, D49). The decisions behind each piece are in [`decisions.md`](decisions.md). The history of how it got here is in the closed GitHub issues and in [`evidence/`](evidence/), whose screenshots are in the history at [`f072e31`](https://github.com/htxryan/penmoss/tree/f072e31/docs/evidence) (A1478).
 
 ## Product
 

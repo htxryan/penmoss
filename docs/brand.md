@@ -47,4 +47,4 @@ These are the logo's own colours. They are not theme tokens, and they do not cha
 
 `task brand` writes all of these, then renders the Mac PNG with Electron (`apps/desktop/scripts/render-icon.mjs`, under `xvfb-run` on Linux). The web app has no web manifest, `apple-touch-icon` or PNG favicon, so none of those are made.
 
-Before and after screenshots are in [`docs/evidence/logo/`](evidence/logo/).
+Before and after screenshots are in [`docs/evidence/logo/`](https://github.com/htxryan/penmoss/tree/f072e31/docs/evidence/logo).

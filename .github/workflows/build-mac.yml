@@ -1,0 +1,163 @@
+name: Build the Mac app
+
+# The Mac app's dmg and zip, packaged on GitHub's hosted Mac (A1348), checked and uploaded as one
+# artifact (A1481). ci.yml calls it for every merge to main and for a dispatch (A403), signed with
+# the Developer ID only on main (A405, A406); release.yml calls it for a stable release, which must
+# be signed and notarised (A1189). It runs only when called, and the caller says which
+# environment's secrets it gets (`secrets: inherit`).
+on:
+  workflow_call:
+    inputs:
+      build:
+        description: The build number (CFBundleVersion); default, this ci.yml run's (D65)
+        type: string
+        default: ''
+      version:
+        description: The app version; default, X.Y.(Z+1)-alpha.<build> from the newest v* tag (P5)
+        type: string
+        default: ''
+      release:
+        description: A stable release (A1189), which fails unless it is signed and notarised
+        type: boolean
+        default: false
+      environment:
+        description: The environment whose signing secrets the build gets ('' for none)
+        type: string
+        default: ''
+      artifact-name:
+        description: The name of the artifact with the dmg, the zip, the update feed and version.txt
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
+
+jobs:
+  mac:
+    name: Package, check and upload
+    runs-on: macos-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      - name: The build number
+        if: inputs.build == ''
+        uses: ./.github/actions/build-number
+
+      # P5 (A1188): X.Y.(Z+1)-alpha.<build> counted from the newest v* tag (0.2.0-alpha.<build>
+      # before any), unless the caller names it. About Penmoss shows it, and the feed names it.
+      - name: The build number and the app version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BUILD: ${{ inputs.build }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          build="${BUILD:-$PENMOSS_RUN}"
+          version="${VERSION:-$(node .github/scripts/releases.mjs version --run "$build")}"
+          {
+            echo "PENMOSS_RUN=$build"
+            echo "PENMOSS_APP_VERSION=$version"
+          } >> "$GITHUB_ENV"
+          echo "Build $build, version $version"
+
+      # A Developer ID certificate only ever comes from these secrets, never from Ryan's
+      # keychain. Without one the app is signed ad hoc (electron-builder.config.cjs), except for a
+      # stable release, which needs both. They live in environments only main and v* tags can use
+      # (docs/desktop.md §3, docs/ci.md §10).
+      - name: Signing and notarisation credentials
+        env:
+          HAS_CERTIFICATE: ${{ secrets.PENMOSS_MAC_CSC_LINK != '' }}
+          NOTARY_KEY: ${{ secrets.PENMOSS_MAC_APPLE_API_KEY }}
+          RELEASE: ${{ inputs.release }}
+        run: |
+          if [ "$RELEASE" = true ] && { [ "$HAS_CERTIFICATE" != true ] || [ -z "$NOTARY_KEY" ]; }; then
+            echo "::error::A stable release must be signed and notarised: the mac-signing environment gave no certificate or notary key (is v* allowed? docs/ci.md §10)."
+            exit 1
+          fi
+          if [ "$HAS_CERTIFICATE" = true ]; then
+            echo "Signing with the Developer ID certificate in PENMOSS_MAC_CSC_LINK."
+          else
+            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+            echo "No certificate secret: signing ad hoc."
+          fi
+          if [ -n "$NOTARY_KEY" ]; then
+            umask 077
+            printf '%s\n' "$NOTARY_KEY" > "$RUNNER_TEMP/penmoss-notary.p8"
+            echo "APPLE_API_KEY=$RUNNER_TEMP/penmoss-notary.p8" >> "$GITHUB_ENV"
+          fi
+
+      - name: Package the app (task desktop:build, then electron-builder)
+        env:
+          CSC_LINK: ${{ secrets.PENMOSS_MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.PENMOSS_MAC_CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_ID: ${{ secrets.PENMOSS_MAC_APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.PENMOSS_MAC_APPLE_API_ISSUER }}
+          # P7 (A1186): every Mac build CI makes runs on Apple Silicon and Intel Macs alike.
+          PENMOSS_MAC_ARCH: universal
+        run: |
+          export PENMOSS_BUILD_NUMBER="$PENMOSS_RUN"
+          # electron-builder reads an empty CSC_LINK as a path; a missing secret must be unset.
+          for name in CSC_LINK CSC_KEY_PASSWORD APPLE_API_KEY_ID APPLE_API_ISSUER; do
+            if [ -z "${!name}" ]; then unset "$name"; fi
+          done
+          unset CSC_NAME
+          rm -rf apps/desktop/dist apps/desktop/release
+          task desktop:package
+
+      # The signature, Gatekeeper's verdict, the owner check, both architectures in every binary
+      # (P7, A1186), the update feed and the dmg (.github/scripts/mac-check.sh). For a stable
+      # release, NOTARISED=true also fails unless spctl calls the app and the dmg's copy
+      # "Notarized Developer ID" and the ticket is stapled.
+      - name: Check the signature, notarisation, the architectures, the feed and the dmg
+        env:
+          HAS_CERTIFICATE: ${{ secrets.PENMOSS_MAC_CSC_LINK != '' }}
+          NOTARISED: ${{ inputs.release }}
+        run: |
+          RUN="$PENMOSS_RUN" VERSION="$PENMOSS_APP_VERSION" bash .github/scripts/mac-check.sh
+          echo "$PENMOSS_APP_VERSION" > apps/desktop/release/version.txt
+
+      # The pinned model, kept between builds (packages/embed/src/manifest.ts pins it).
+      - name: Cache the pinned model
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/Library/Caches/penmoss-ci/models
+          key: penmoss-models-${{ hashFiles('packages/embed/src/manifest.ts') }}
+
+      # T75 (A1152): the app's binary as the CLI finds a note by meaning with the pinned model,
+      # and refuses semantic search without it.
+      - name: Search by meaning in the packaged app
+        run: |
+          shopt -s nullglob
+          apps=(apps/desktop/release/mac*/Penmoss.app)
+          bash .github/scripts/meaning-check.sh "${apps[0]}"
+
+      # The dmg (penmoss-mac-<build>.dmg), the zip (named for the build, or a stable release's
+      # version), a signed build's update feed (alpha-mac.yml or latest-mac.yml; A1015, A1188)
+      # and version.txt. The release folder holds only this build's: it was emptied above.
+      - name: Upload the dmg, the zip, the update feed and the version
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: |
+            apps/desktop/release/penmoss-mac-*.dmg
+            apps/desktop/release/penmoss-mac-*.zip
+            apps/desktop/release/*-mac.yml
+            apps/desktop/release/version.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Remove the notarisation key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/penmoss-notary.p8"

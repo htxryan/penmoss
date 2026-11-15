@@ -139,8 +139,16 @@ describe('ci.yml', () => {
   it("asks apt for Chromium's libraries only through system-deps.sh", () => {
     assert.doesNotMatch(ci, /--with-deps/);
     assert.doesNotMatch(ci, /playwright install-deps/);
-    // site, e2e, budgets and desktop (A1348 put the budgets on Ubuntu).
-    assert.equal(ci.match(/sh \.github\/scripts\/system-deps\.sh /g)?.length, 4);
+    // site, the e2e shards and budgets through the playwright action (A1481), desktop itself
+    // (A1348 put the budgets on Ubuntu).
+    const action = readFileSync(
+      path.join(here, '..', 'actions', 'playwright', 'action.yml'),
+      'utf8',
+    );
+    assert.doesNotMatch(action, /--with-deps|install-deps/);
+    assert.equal(action.match(/sh \.github\/scripts\/system-deps\.sh /g)?.length, 1);
+    assert.equal(ci.match(/uses: \.\/\.github\/actions\/playwright\n/g)?.length, 3);
+    assert.equal(ci.match(/sh \.github\/scripts\/system-deps\.sh /g)?.length, 1);
   });
 
   it("caches the Electron job's tool packages, and fetches Electron before checking its libraries", () => {

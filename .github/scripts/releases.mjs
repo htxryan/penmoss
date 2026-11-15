@@ -999,9 +999,9 @@ async function main() {
   if (!repo) throw new Error('Set REPO (owner/name).');
   const gh = cliGh({ repo, dryRun: values['dry-run'] });
   const [command] = positionals;
-  /** @param {string | undefined} file */
+  /** @param {string} file */
   const exists = (file) => {
-    if (file !== undefined && !existsSync(file)) throw new Error(`No such file: ${file}`);
+    if (!existsSync(file)) throw new Error(`No such file: ${file}`);
     return file;
   };
   if (command === 'publish-apk' && values.run && values.sha && values.apk) {
@@ -1058,10 +1058,10 @@ async function main() {
       build: Number(values.build),
       repo,
       previous: values.previous || null,
-      dmg: /** @type {string} */ (exists(values.dmg)),
-      apk: /** @type {string} */ (exists(values.apk)),
-      zip: /** @type {string} */ (exists(values.zip)),
-      feed: /** @type {string} */ (exists(values.feed)),
+      dmg: exists(values.dmg),
+      apk: exists(values.apk),
+      zip: exists(values.zip),
+      feed: exists(values.feed),
     });
   } else {
     throw new Error(
