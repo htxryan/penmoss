@@ -57,8 +57,6 @@ export interface GitTransport {
     readonly paths?: readonly string[];
     readonly limit?: number;
   }): Promise<CommitInfo[]>;
-  /** A file's bytes at any commit (History, G6). */
-  readAt(commit: string, path: string): Promise<Uint8Array | null>;
   /**
    * The files under `dir` (under `root`, ending in `/`: a note's `.penmoss/notes/<id>/`) at each
    * of `commits`, with their bytes, in one go (History; Ryan's review of #192): only that

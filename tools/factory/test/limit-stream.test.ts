@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { lastErrorEvent } from '../src/host.ts';
+import { lastErrorEvent } from '../src/agent-stream.ts';
 import { usageLimitReset } from '../src/limits.ts';
 
 // PEN-117's second session, as OpenCode wrote it: refused at once by OpenCode Go's 5-hour limit.

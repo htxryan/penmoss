@@ -14,9 +14,9 @@ import {
   NotebookOps,
   type GitTransport,
 } from '@penmoss/git-notebook';
-import { readTitle, initNote, setTitle } from '@penmoss/sync-client/note';
-import { readSettings, readWorkspace, setSetting } from '@penmoss/sync-client/workspace';
-import { recordAgentSession, sessionKey } from '@penmoss/sync-client/agent-sessions';
+import { readTitle, initNote, setTitle } from '@penmoss/model/note';
+import { readSettings, readWorkspace, setSetting } from '@penmoss/model/workspace';
+import { recordAgentSession, sessionKey } from '@penmoss/model/agent-sessions';
 import { fromBase64, toBase64 } from 'lib0/buffer';
 import * as Y from '@y/y';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -25,8 +25,8 @@ import { Channel, ChannelError, type FramePort } from '../src/git/channel';
 import { decodeFrame, encodeFrame, FrameError } from '../src/git/frames';
 import { serveEngine, serveGuard } from '../src/git/page';
 import { commitPurges } from '@penmoss/git-notebook/purge-check';
-import { setBody } from '@penmoss/sync-client/history';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { setBody } from '@penmoss/model/history';
+import { NOTE_ROOT } from '@penmoss/model/replica';
 import { parseMarkdown } from '@penmoss/core';
 import { docToDelta } from '@y/prosemirror';
 import {

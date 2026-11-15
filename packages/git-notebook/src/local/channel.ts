@@ -19,21 +19,21 @@ import {
   recordAgentSession,
   sessionKey,
   type AgentSession,
-} from '@penmoss/sync-client/agent-sessions';
+} from '@penmoss/model/agent-sessions';
 import {
   readThread,
   readThreads,
   setThreadDelivery,
   type CommentDelivery,
-} from '@penmoss/sync-client/comments';
+} from '@penmoss/model/comments';
 import {
   deliveryAdvances,
   deliveryPayload,
   dueComments,
   type DeliveryPayload,
-} from '@penmoss/sync-client/comment-delivery';
-import { isDeleted, readTitle } from '@penmoss/sync-client/note';
-import { readWorkspace } from '@penmoss/sync-client/workspace';
+} from '@penmoss/model/comment-delivery';
+import { isDeleted, readTitle } from '@penmoss/model/note';
+import { readWorkspace } from '@penmoss/model/workspace';
 import { isPurged } from '../purge';
 import type { NotebookAccess } from './mcp';
 import type { LocalNotebook } from './notebook';

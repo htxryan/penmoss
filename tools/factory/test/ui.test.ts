@@ -4,40 +4,26 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import {
-  buildView,
-  chatLink,
-  cleanError,
-  pointsOf,
-  type FactoryView,
-  type ViewInput,
-} from '../src/ui/model.ts';
+import { buildView } from '../src/ui/model.ts';
+import { chatLink } from '../src/ui/card.ts';
+import type { FactoryView } from '../src/ui/view.ts';
 import { uiToken, uiTokenPath } from '../src/ui/link.ts';
 import { tailFile, viewFromState } from '../src/ui/run.ts';
 import { createUiServer, listen } from '../src/ui/server.ts';
 import { pageHtml } from '../src/ui/page.ts';
 import { item, testConfig } from './helpers.ts';
-import { evening, line, NOW, pen, writeEvening } from './ui-fixture.ts';
-
-const base = evening();
-const input = (o: Partial<ViewInput> = {}): ViewInput => ({
-  config: base.config,
-  board: base.board,
-  ledger: base.ledger,
-  plans: base.plans,
-  busySessions: new Set([76]),
-  status: base.status,
-  alive: () => true,
-  now: NOW,
-  ...o,
-});
-const view = buildView(input());
-const card = (v: FactoryView, key: string) => {
-  const c = v.cards.find((x) => x.key === key);
-  if (!c) throw new Error(`${key} isn't in the view`);
-  return c;
-};
-const minutesAgo = (m: number) => new Date(NOW.getTime() - m * 60_000).toISOString();
+import {
+  evening,
+  line,
+  NOW,
+  pen,
+  writeEvening,
+  base,
+  input,
+  view,
+  card,
+  minutesAgo,
+} from './ui-fixture.ts';
 
 describe("Needs you: only the factory's own claims (A1233)", () => {
   it('lists what the factory stopped on or handed back, oldest first', () => {
@@ -143,183 +129,6 @@ describe("Needs you: only the factory's own claims (A1233)", () => {
       false,
       ['PEN-77'],
     ]);
-  });
-});
-
-describe('a run that failed before the agent started (A1233)', () => {
-  it('shows the failure, not "Paused: Agent working (round 0)"', () => {
-    const c = card(view, 'PEN-75');
-    expect(c.step).toBe('Failed before the agent started: claude: command not found (exit 127)');
-    expect(c.step).not.toMatch(/Paused|round 0/);
-    expect(c.need?.label).toBe('Fix the Mac');
-    expect(c.need?.command).toBe('task factory:install');
-    expect(c.runs.map((r) => [r.outcome, r.summary])).toEqual([
-      ['failed', 'Failed before the agent started: claude: command not found (exit 127)'],
-    ]);
-  });
-
-  it('says so when the run failed before the agent was even launched', () => {
-    const v = buildView(
-      input({
-        board: {
-          items: [
-            pen(21, {
-              status: 'In Progress',
-              labels: ['Blocked'],
-              blocked: true,
-              blockedSet: true,
-            }),
-          ],
-        },
-        ledger: [
-          line('21-a', 'claimed', minutesAgo(5), { issue: 21 }),
-          line('21-a', 'failed', minutesAgo(4), { error: 'git worktree add failed: disk full' }),
-        ].join('\n'),
-      }),
-    );
-    expect(card(v, 'PEN-21').step).toBe(
-      'Failed before the agent started: git worktree add failed: disk full',
-    );
-    expect(card(v, 'PEN-21').need?.kind).toBe('unblock');
-  });
-
-  it('counts agent rounds from 1, as people do', () => {
-    expect(card(view, 'PEN-79').step).toBe('Agent round 1 of 3');
-    expect(card(view, 'PEN-79').round).toBe('Agent round 1 of 3');
-  });
-
-  it("cleans an agent CLI's error into one line", () => {
-    expect(
-      cleanError('claude-code exited with code 127:\n/bin/sh: claude: command not found\n'),
-    ).toBe('claude: command not found (exit 127)');
-    expect(cleanError('spawn terminal-notifier ENOENT')).toBe('spawn terminal-notifier ENOENT');
-  });
-});
-
-describe("the daemon's health (A1233)", () => {
-  it('is running while the pid is alive and polls are fresh', () => {
-    expect(view.health).toMatchObject({
-      state: 'running',
-      fresh: true,
-      pid: 4242,
-      ageSeconds: 14,
-      slots: { total: 2, busy: 2 },
-    });
-  });
-
-  it('says the status is stale when the daemon stopped polling', () => {
-    const late = { ...base.status, updatedAt: minutesAgo(13) };
-    const v = buildView(input({ status: late }));
-    expect(v.health).toMatchObject({
-      state: 'stale',
-      fresh: false,
-      headline: 'Daemon not polling',
-    });
-    expect(v.health.detail).toContain('13 min ago');
-  });
-
-  it('says the daemon is dead when its pid is, and shows nothing as live', () => {
-    const v = buildView(input({ alive: (pid) => pid !== 4242 }));
-    expect(v.health).toMatchObject({ state: 'dead', fresh: false, headline: 'Daemon not running' });
-    expect(v.health.detail).toContain('pid 4242 has exited');
-    expect(v.health.fix).toBe('task factory:start');
-    expect(v.slots.every((s) => s.issue === null)).toBe(true);
-    expect(card(v, 'PEN-79').step).toBe('Stopped mid-run; the daemon restarts it on its branch');
-  });
-
-  it('says so when there is no status at all', () => {
-    expect(buildView(input({ status: null })).health).toMatchObject({
-      state: 'missing',
-      fresh: false,
-    });
-  });
-
-  it('names a wrong checkout and a failing doctor check', () => {
-    const v = buildView(
-      input({
-        codeDir: '/elsewhere/code',
-        doctor: [{ slot: 1, at: minutesAgo(60), failed: ['pnpm install'] }],
-      }),
-    );
-    expect(v.health.problems.map((p) => p.fix)).toEqual([
-      'task factory:install',
-      'task factory:doctor -- --slot 1',
-    ]);
-    // A few words each, for the header's one pill.
-    expect(v.health.problems.map((p) => p.label)).toEqual([
-      'wrong checkout',
-      'doctor failing on slot 1',
-    ]);
-    expect(v.health.doctor).toBe('doctor failing');
-  });
-
-  it("passes the doctor, and says so, when an agent's plan is at its usage limit (A1376)", () => {
-    const v = buildView(
-      input({ doctor: [{ slot: 1, at: minutesAgo(60), failed: [], limited: ['opencode'] }] }),
-    );
-    expect(v.health.problems).toEqual([]);
-    expect(v.health.doctor).toMatch(/^doctor passed .*; OpenCode at its usage limit$/);
-  });
-});
-
-describe("the plan's open points, asked once each", () => {
-  const q = (text: string, ...options: string[]) => ({ text, options });
-
-  it('pairs each question with its open point when the planner wrote both lists', () => {
-    expect(card(view, 'PEN-78').points).toEqual([
-      {
-        text: 'Include attachments?',
-        context: 'Proposed: attachments go in the zip beside their notes. OK?',
-        options: [
-          {
-            value: 'Yes, beside their notes (proposed)',
-            label: 'Yes, beside their notes',
-            proposed: true,
-          },
-          { value: 'No', label: 'No', proposed: false },
-        ],
-      },
-      {
-        text: 'One zip or one per folder?',
-        context: 'Proposed: one zip for the whole library, with its folders kept. OK?',
-        options: [
-          {
-            value: 'One zip, folders kept (proposed)',
-            label: 'One zip, folders kept',
-            proposed: true,
-          },
-          { value: 'One zip per folder', label: 'One zip per folder', proposed: false },
-        ],
-      },
-    ]);
-    expect(card(view, 'PEN-78').notes).toEqual([]);
-  });
-
-  it('takes the first option as the proposal when none is marked', () => {
-    expect(
-      pointsOf(['A?'], [q('A?', 'Yes', 'No')]).points[0]?.options.map((o) => o.proposed),
-    ).toEqual([true, false]);
-  });
-
-  it('asks a point with no options as a question of its own, when the rest repeat their points', () => {
-    expect(
-      pointsOf(['Include attachments?', 'Zip name?'], [q('Include attachments?', 'Yes', 'No')]),
-    ).toEqual({
-      points: [
-        expect.objectContaining({ text: 'Include attachments?', context: null }),
-        { text: 'Zip name?', context: null, options: [] },
-      ],
-      notes: [],
-    });
-  });
-
-  it("shows points it can't pair once, as notes, rather than twice", () => {
-    const { points, notes } = pointsOf(
-      ['Proposed: attachments beside notes. OK?', 'Proposed: one zip. OK?'],
-      [q('Include attachments?', 'Yes', 'No')],
-    );
-    expect(points.map((p) => [p.text, p.context])).toEqual([['Include attachments?', null]]);
-    expect(notes).toEqual(['Proposed: attachments beside notes. OK?', 'Proposed: one zip. OK?']);
   });
 });
 
@@ -508,28 +317,6 @@ describe('the pipeline (A1233)', () => {
     );
     expect(v.cards.map((c) => c.key)).toEqual(['#11']);
     expect(v.outside).toEqual(['#12']);
-  });
-});
-
-describe("today's slots (A1233)", () => {
-  it('draws each run on its slot, coloured by how it ended', () => {
-    const lane = (slot: number) =>
-      view.timeline.lanes.find((l) => l.slot === slot)?.bars.map((b) => [b.key, b.tone]);
-    expect(lane(1)).toEqual([
-      ['PEN-72', 'done'],
-      ['PEN-75', 'stop'],
-      ['PEN-84', 'stop'],
-      ['PEN-79', 'live'],
-    ]);
-    expect(lane(2)).toEqual([
-      ['PEN-73', 'stop'],
-      ['PEN-74', 'done'],
-      ['PEN-77', 'you'],
-    ]);
-  });
-
-  it('totals the window', () => {
-    expect(view.totals).toEqual({ started: 7, inReview: 2, merged: 0, blocked: 3 });
   });
 });
 

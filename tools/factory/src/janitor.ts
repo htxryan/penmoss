@@ -22,7 +22,7 @@ import {
 import { join, relative, isAbsolute } from 'node:path';
 import { expandHome, type FactoryConfig } from './config.ts';
 import type { Exec } from './exec.ts';
-import { repoDir } from './host.ts';
+import { repoDir } from './clone.ts';
 
 /** Run folders are kept this long: the PR has its own copies of the proof. */
 export const KEEP_RUN_DAYS = 14;

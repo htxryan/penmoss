@@ -19,7 +19,7 @@
     "@penmoss/core": "workspace:*",
     "@penmoss/editor": "workspace:*",
     "@penmoss/git-notebook": "workspace:*",
-    "@penmoss/sync-client": "workspace:*",
+    "@penmoss/model": "workspace:*",
     "@penmoss/ui": "workspace:*",
     "@y/y": "14.0.0-rc.29",
     "gpt-tokenizer": "4.1.0",

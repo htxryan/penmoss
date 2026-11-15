@@ -3,13 +3,13 @@
  * a batch cut short completes at the next start, one batch at a time, with an Undo. The `Notes`
  * service owns one and says which notes are open and stored (`TagChangesHost`).
  */
-import { changeRecord } from '@penmoss/sync-client/records';
+import { changeRecord } from '@penmoss/model/records';
 import {
   changeTagInDoc,
   revertTagEdit,
   type TagChange,
   type TagEditLog,
-} from '@penmoss/sync-client/tags';
+} from '@penmoss/model/tags';
 import type { LocalNotes, TagChangeResult } from './service';
 
 /** Where tag changes (renames, merges, deletes) wait until every note on this device has them (T18). */

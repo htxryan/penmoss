@@ -73,11 +73,6 @@ export class IpcGitTransport implements GitTransport {
     });
   }
 
-  async readAt(commit: string, path: string): Promise<Uint8Array | null> {
-    const bytes = await this.call<Uint8Array | null>('readAt', commit, path);
-    return bytes ? new Uint8Array(bytes) : null;
-  }
-
   /** History's reads (Ryan's review of #192): one call for the note's directory at many commits. */
   async readDir(commits: readonly string[], dir: string): Promise<DirSnapshots> {
     const answer = await this.call<{

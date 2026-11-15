@@ -8,7 +8,8 @@ import { join } from 'node:path';
 import type { Board, BoardItem } from '../src/board.ts';
 import type { FactoryConfig } from '../src/config.ts';
 import type { DaemonStatus } from '../src/status.ts';
-import type { PlanInfo } from '../src/ui/model.ts';
+import type { PlanInfo, FactoryView, ViewInput } from '../src/ui/view.ts';
+import { buildView } from '../src/ui/model.ts';
 import { item, linearConfig } from './helpers.ts';
 
 export const NOW = new Date('2026-11-09T02:30:00Z');
@@ -28,7 +29,7 @@ export const pen = (
     ...o,
   });
 
-/** A ledger line as `host.ts` writes it. */
+/** A ledger line as `appendLedger` (ledger.ts) writes it. */
 export const line = (run: string, event: string, at: string, extra: object = {}, slot = 1) =>
   JSON.stringify({ at, run, slot, event, ...extra });
 
@@ -225,3 +226,24 @@ export function writeEvening(stateDir: string, e = evening(stateDir)): void {
     JSON.stringify({ at: new Date(NOW.getTime() - 3 * 3_600_000).toISOString(), failed: [] }),
   );
 }
+
+// A view of the evening, and the helpers the UI tests read it with.
+export const base = evening();
+export const input = (o: Partial<ViewInput> = {}): ViewInput => ({
+  config: base.config,
+  board: base.board,
+  ledger: base.ledger,
+  plans: base.plans,
+  busySessions: new Set([76]),
+  status: base.status,
+  alive: () => true,
+  now: NOW,
+  ...o,
+});
+export const view = buildView(input());
+export const card = (v: FactoryView, key: string) => {
+  const c = v.cards.find((x) => x.key === key);
+  if (!c) throw new Error(`${key} isn't in the view`);
+  return c;
+};
+export const minutesAgo = (m: number) => new Date(NOW.getTime() - m * 60_000).toISOString();

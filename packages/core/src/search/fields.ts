@@ -1,6 +1,6 @@
 /**
  * The full-text index's columns and their bm25 weights (T22), shared by every
- * words index (sync-client's `local-index.ts`, which the page and
+ * words index (`@penmoss/model`'s `local-index.ts`, which the page and
  * `LocalNotebook` use), so all rank alike, as FTS5's bm25 would with these
  * weights. A title match counts ten body matches; tags and headings sit
  * between.

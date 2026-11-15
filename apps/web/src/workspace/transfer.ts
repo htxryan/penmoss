@@ -8,7 +8,7 @@
  */
 import { ulid } from '@penmoss/core/ids';
 import type { FolderNode, WorkspaceTree } from '@penmoss/core/workspace';
-import { copyNote, noteAttachmentPaths } from '@penmoss/sync-client/records';
+import { copyNote, noteAttachmentPaths } from '@penmoss/model/records';
 import type { Notes } from '../notes/service';
 import { childrenOf, planDrop, type ItemRef } from './model';
 import type { Workspace } from './service';
@@ -207,8 +207,6 @@ export async function transfer(options: {
       id: note.copyId,
       title: note.title,
       now: now(),
-      // Another git notebook's folders say nothing of the original's notebook record.
-      notebook: null,
       links,
       tags,
     });

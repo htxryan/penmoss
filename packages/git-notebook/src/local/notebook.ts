@@ -1,8 +1,8 @@
 /**
  * A git notebook's notes API, on this device (T50 G2, #150; A830): what the CLI, the local MCP
  * server, Android's local notes server and the relay run, in the shapes, codes and statuses they
- * read. Every answer comes from the local engine: the shared edit engine (`@penmoss/sync-client/edit-engine`), the
- * offline search index (`@penmoss/sync-client/local-index`), core's links for backlinks, and the
+ * read. Every answer comes from the local engine: the shared edit engine (`@penmoss/model/edit-engine`), the
+ * offline search index (`@penmoss/model/local-index`), core's links for backlinks, and the
  * notebook's own settings and salted periodic notes. Nothing here reaches the network; the next
  * sync carries every change.
  *
@@ -18,10 +18,10 @@
 import { templateSetting, TIME_ZONE_SETTING } from '@penmoss/core/settings';
 import { MATCH_END, MATCH_START, type MeaningNote } from '@penmoss/core/search';
 import {
-  AGENT_ATTACHMENT_MAX_BYTES,
   attachmentPath,
   filePath,
   isImageType,
+  MAX_ATTACHMENT_BYTES,
   sniffFileType,
 } from '@penmoss/core/attachments';
 import { findSection } from '@penmoss/core/diff-apply';
@@ -42,17 +42,12 @@ import {
   unknownProperties,
   unsupportedNotice,
   type EditOp,
-} from '@penmoss/sync-client/edit-engine';
-import {
-  bodyDelta,
-  readNoteState,
-  renderNote,
-  versionMarkdown,
-} from '@penmoss/sync-client/markdown';
-import type { CommentChange, StatusFilter } from '@penmoss/sync-client/comment-delivery';
-import { setBody } from '@penmoss/sync-client/history';
-import { setFrontmatterTag } from '@penmoss/sync-client/tags';
-import { readWorkspace } from '@penmoss/sync-client/workspace';
+} from '@penmoss/model/edit-engine';
+import { bodyDelta, readNoteState, renderNote, versionMarkdown } from '@penmoss/model/markdown';
+import type { CommentChange, StatusFilter } from '@penmoss/model/comment-delivery';
+import { setBody } from '@penmoss/model/history';
+import { setFrontmatterTag } from '@penmoss/model/tags';
+import { readWorkspace } from '@penmoss/model/workspace';
 import * as Y from '@y/y';
 import type { ActivityEntry } from '../agent-activity';
 import type { GitNotebookEngine } from '../engine';
@@ -715,11 +710,11 @@ export class LocalNotebook {
       throw new LocalError(400, 'invalid_request', 'data must be the file in base64');
     }
     if (bytes.length === 0) throw new LocalError(400, 'invalid_request', 'The file is empty');
-    if (bytes.length > AGENT_ATTACHMENT_MAX_BYTES) {
+    if (bytes.length > MAX_ATTACHMENT_BYTES) {
       throw new LocalError(
         413,
         'file_too_large',
-        `The file is ${Math.ceil(bytes.length / 1024)} KB; a git notebook keeps files of at most ${AGENT_ATTACHMENT_MAX_BYTES / 1024 / 1024} MB`,
+        `The file is ${Math.ceil(bytes.length / 1024)} KB; a git notebook keeps files of at most ${MAX_ATTACHMENT_BYTES / 1024 / 1024} MB`,
       );
     }
     const contentType = sniffFileType(bytes.subarray(0, 64));

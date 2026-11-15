@@ -4,8 +4,8 @@
  * threads, where a thread is, Trash, and "sent to me" with seen and replied (A1061), between a
  * Mac and an agent's clone over one in-memory remote.
  */
-import { readThread } from '@penmoss/sync-client/comments';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { readThread } from '@penmoss/model/comments';
+import { NOTE_ROOT } from '@penmoss/model/replica';
 import * as Y from '@y/y';
 import { describe, expect, it } from 'vitest';
 import { deliveryOn, macAndAgent, sendFromMac } from './support/comments';

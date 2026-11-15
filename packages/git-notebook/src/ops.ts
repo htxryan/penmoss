@@ -6,7 +6,7 @@
  */
 import { parseMarkdown } from '@penmoss/core';
 import { ulid } from '@penmoss/core/ids';
-import { AGENT_ATTACHMENT_MAX_BYTES, isSha256 } from '@penmoss/core/attachments';
+import { isSha256, MAX_ATTACHMENT_BYTES } from '@penmoss/core/attachments';
 import {
   DEFAULT_DAILY_TEMPLATE,
   DEFAULT_TIME_ZONE,
@@ -19,9 +19,9 @@ import {
   type PeriodKind,
 } from '@penmoss/core/periodic';
 import { keyBetween } from '@penmoss/core/workspace';
-import { periodicNote } from '@penmoss/sync-client/periodic';
-import { initNote, isDeleted, setDeleted, type NoteKind } from '@penmoss/sync-client/note';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { periodicNote } from '@penmoss/model/periodic';
+import { initNote, isDeleted, setDeleted, type NoteKind } from '@penmoss/model/note';
+import { NOTE_ROOT } from '@penmoss/model/replica';
 import {
   createFolder,
   deleteFolder,
@@ -34,7 +34,7 @@ import {
   renameFolder,
   restoreFolder,
   setSetting,
-} from '@penmoss/sync-client/workspace';
+} from '@penmoss/model/workspace';
 import { docToDelta } from '@y/prosemirror';
 import * as Y from '@y/y';
 import type { GitNotebookEngine } from './engine';
@@ -326,13 +326,13 @@ export class NotebookOps {
 
   /**
    * Keeps an attachment's bytes for the next sync, which commits it under `attachments/` (A828),
-   * and returns its path as notes write it. Refused over 10 MB.
+   * and returns its path as notes write it. Refused over 50 MB (A1533).
    */
   async keepAttachment(bytes: Uint8Array, ext: string): Promise<{ sha256: string; path: string }> {
-    if (bytes.byteLength > AGENT_ATTACHMENT_MAX_BYTES) {
+    if (bytes.byteLength > MAX_ATTACHMENT_BYTES) {
       throw new NotebookOpError(
         'file_too_large',
-        `Files in a git notebook are at most ${AGENT_ATTACHMENT_MAX_BYTES / 1024 / 1024} MB`,
+        `Files in a git notebook are at most ${MAX_ATTACHMENT_BYTES / 1024 / 1024} MB`,
         413,
       );
     }

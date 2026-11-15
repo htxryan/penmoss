@@ -1,7 +1,7 @@
 import { parseMarkdown } from '@penmoss/core';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
-import { setBody } from '@penmoss/sync-client/history';
-import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
+import { NOTE_ROOT } from '@penmoss/model/replica';
+import { setBody } from '@penmoss/model/history';
+import { createYjs14Replica } from '@penmoss/model/yjs14';
 import { pmnodeToDelta, yUndoPluginKey } from '@y/prosemirror';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createCollabEditor, type CollabEditor } from '../src/collab';

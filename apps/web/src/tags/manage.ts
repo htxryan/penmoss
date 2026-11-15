@@ -4,7 +4,7 @@
  * delete makes. Pure, so the page and its tests share it.
  */
 import { normaliseTag, tagMatches, tagTree, type TagNode } from '@penmoss/core/tags';
-import type { TagChange } from '@penmoss/sync-client/tags';
+import type { TagChange } from '@penmoss/model/tags';
 
 /** One row of the table: a tag, or a level other tags are nested under. */
 export interface TagRow {

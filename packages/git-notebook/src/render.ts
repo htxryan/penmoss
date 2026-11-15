@@ -5,9 +5,9 @@
  * bytes. The format is the mirror's (A204, A205): it renders through the same `mirrorMarkdown`.
  */
 import { assetPrefix } from '@penmoss/core/mirror';
-import { mirrorMarkdown, readNoteState } from '@penmoss/sync-client/markdown';
-import { NOTE_META } from '@penmoss/sync-client/note';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { mirrorMarkdown, readNoteState } from '@penmoss/model/markdown';
+import { NOTE_META } from '@penmoss/model/note';
+import { NOTE_ROOT } from '@penmoss/model/replica';
 import * as Y from '@y/y';
 import type { Named } from './names';
 

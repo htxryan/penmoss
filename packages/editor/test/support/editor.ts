@@ -1,4 +1,4 @@
-import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
+import { createYjs14Replica } from '@penmoss/model/yjs14';
 import type { JSONContent } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';

@@ -1,5 +1,5 @@
 /** Yjs helpers the engine shares (T50). */
-import { hasPending as holdsBack } from '@penmoss/sync-client/yjs14';
+import { hasPending as holdsBack } from '@penmoss/model/yjs14';
 import * as Y from '@y/y';
 
 /** Updates applied from the repository: never a local change, so never marked dirty. */
@@ -34,7 +34,7 @@ export function mergeUpdates(parts: readonly Uint8Array[]): Uint8Array {
  * the same difference. Null when the head lacks nothing.
  */
 // @y/y rc.29's declarations use ContentIds in updates.d.ts without importing it (as in
-// sync-client's yjs14.ts): restate the type.
+// @penmoss/model's yjs14.ts): restate the type.
 type ContentIdsOf = (update: Uint8Array) => Y.ContentIds;
 const contentIdsOf = Y.createContentIdsFromUpdate as ContentIdsOf;
 const intersect = Y.intersectUpdateWithContentIds as (
@@ -143,7 +143,7 @@ export function applyKeepingId(doc: Y.Doc, update: Uint8Array, origin: unknown):
  * Whether Yjs holds content for `doc` it has not applied: a struct whose dependency is missing.
  * @y/y rc.29 can drop such a struct when the dependency comes in a later update (A1148), and then
  * only that struct's own update brings it back, so the engine applies the doc's files again.
- * Pending deletions do not count (sync-client's `hasPending` says why).
+ * Pending deletions do not count (@penmoss/model's `hasPending` says why).
  */
 export function hasPending(doc: Y.Doc): boolean {
   return holdsBack(doc, { deletes: false });

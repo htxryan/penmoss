@@ -2,7 +2,7 @@
  * A note as the branch had it at a commit: its directory's files, every writer's log merged, and
  * its title. History, the Time Machine and agent activity all read old notes this one way.
  */
-import { readTitle } from '@penmoss/sync-client/note';
+import { readTitle } from '@penmoss/model/note';
 import * as Y from '@y/y';
 import type { Layout } from './layout';
 import type { GitTransport } from './transport';

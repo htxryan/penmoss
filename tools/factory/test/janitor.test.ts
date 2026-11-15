@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Exec } from '../src/exec.ts';
-import { repoDir } from '../src/host.ts';
+import { repoDir } from '../src/clone.ts';
 import {
   factoryWorktrees,
   issueOfBranch,

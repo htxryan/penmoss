@@ -3,7 +3,7 @@
  * that render views over one source: a sync backend whose state a test sets, and the services
  * over an in-memory store.
  */
-import type { ReplicaStore } from '@penmoss/sync-client/record';
+import type { ReplicaStore } from '@penmoss/model/record';
 import {
   Notes,
   type LocalNotes,

@@ -22,8 +22,8 @@ export {
   type FolderName,
   type MirrorFolder,
 } from '../../../packages/core/src/mirror/paths';
-export { NOTE_ROOT } from '@penmoss/sync-client/replica';
-export { initNote, isDeleted, readIdentity, readTitle, setDeleted, setTitle } from '@penmoss/sync-client/note';
+export { NOTE_ROOT } from '@penmoss/model/replica';
+export { initNote, isDeleted, readIdentity, readTitle, setDeleted, setTitle } from '@penmoss/model/note';
 export {
   createFolder,
   moveFolder,
@@ -31,5 +31,5 @@ export {
   readWorkspace,
   registerNote,
   renameFolder,
-} from '@penmoss/sync-client/workspace';
+} from '@penmoss/model/workspace';
 export { periodicNote } from '../../../packages/editor/src/periodic';

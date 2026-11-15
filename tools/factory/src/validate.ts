@@ -10,13 +10,10 @@ import type { Platform } from './config.ts';
 import { parseReview, type FidelityRow } from './fidelity.ts';
 import { renderMockups } from './mockups.ts';
 import { fill, promptTemplate } from './prompt.ts';
-import {
-  runAgentPatiently,
-  whenVmFree,
-  withTimeout,
-  type RunDeps,
-  type RunSandbox,
-} from './run.ts';
+import { runAgentPatiently } from './agent-round.ts';
+import { whenVmFree } from './vm-wait.ts';
+import { withTimeout } from './timeout.ts';
+import type { RunDeps, RunSandbox } from './run-deps.ts';
 import { walkFile, walksText, type WalkOutcome, type WalkPlatform } from './walk.ts';
 
 export interface ValidateDeps extends Pick<

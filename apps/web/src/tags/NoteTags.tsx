@@ -1,7 +1,7 @@
 import { Icon } from '@penmoss/ui/icons';
 import { normaliseTag } from '@penmoss/core/tags';
-import { frontmatterTags, setFrontmatterTag } from '@penmoss/sync-client/tags';
-import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import { frontmatterTags, setFrontmatterTag } from '@penmoss/model/tags';
+import type { Yjs14Replica } from '@penmoss/model/yjs14';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useCommands } from '../commands/hooks';
 import { useNoteList } from '../notes/hooks';

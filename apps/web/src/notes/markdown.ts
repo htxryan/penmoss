@@ -5,8 +5,8 @@
  * source view do not download it.
  */
 import type { LinkResolver } from '@penmoss/core';
-import { noteFields } from '@penmoss/sync-client/note-fields';
-import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import { noteFields } from '@penmoss/model/note-fields';
+import type { Yjs14Replica } from '@penmoss/model/yjs14';
 
 /**
  * `body` is the editor's document as JSON (`editor.getJSON()`), which fits the

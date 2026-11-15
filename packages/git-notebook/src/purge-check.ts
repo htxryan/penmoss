@@ -16,7 +16,7 @@ import { isUpdate } from './yjs';
 
 /** Who made a commit (its `Penmoss-Writer` trailer), for main and the guard. */
 export { commitWriter } from './writer';
-import { readTitle } from '@penmoss/sync-client/note';
+import { readTitle } from '@penmoss/model/note';
 
 export interface CommitPurges {
   /** Notes the commit deletes for good that the head had not. */

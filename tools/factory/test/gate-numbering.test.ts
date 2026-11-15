@@ -10,8 +10,10 @@ import { dirname, join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { FactoryConfig } from '../src/config.ts';
 import { nodeExec } from '../src/exec.ts';
-import { ensureClone, hostDeps, repoDir, type HostOptions } from '../src/host.ts';
-import type { RunSandbox } from '../src/run.ts';
+import { ensureClone, repoDir } from '../src/clone.ts';
+import { hostDeps } from '../src/host.ts';
+import type { HostOptions } from '../src/host-context.ts';
+import type { RunSandbox } from '../src/run-deps.ts';
 import { testConfig } from './helpers.ts';
 
 const env: Record<string, string> = {

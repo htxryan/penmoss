@@ -8,9 +8,9 @@
 import { ulid } from '@penmoss/core/ids';
 import { journalFolderId, type PeriodKind } from '@penmoss/core/periodic';
 import { type SortMode } from '@penmoss/core/workspace';
-import type { ReplicaStore } from '@penmoss/sync-client/record';
+import type { ReplicaStore } from '@penmoss/model/record';
 import { ReplicaKeeper } from '../store/keeper';
-import { mergeRecords } from '@penmoss/sync-client/records';
+import { mergeRecords } from '@penmoss/model/records';
 import {
   createFolder,
   deleteFolder,
@@ -33,9 +33,9 @@ import {
   type FolderRestore,
   type TrashedFolder,
   type WorkspaceSnapshot,
-} from '@penmoss/sync-client/workspace';
+} from '@penmoss/model/workspace';
 import { isPurged, markPurged, unmarkPurged } from '@penmoss/git-notebook';
-import { createYjs14Replica, type Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import { createYjs14Replica, type Yjs14Replica } from '@penmoss/model/yjs14';
 import type { MovePlan } from './model';
 
 /** Where captures filed as new notes go (T30). */

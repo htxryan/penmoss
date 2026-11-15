@@ -5,8 +5,8 @@
  * which tab shows and whether the panel is open, since its commands and menus change them.
  */
 import { ariaKeyShortcuts } from '@penmoss/editor/keys';
-import type { PlacedThread } from '@penmoss/sync-client/comments';
-import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import type { PlacedThread } from '@penmoss/model/comments';
+import type { Yjs14Replica } from '@penmoss/model/yjs14';
 import { Icon } from '@penmoss/ui/icons';
 import { lazy, Suspense, useEffect, useRef, type KeyboardEvent, type RefObject } from 'react';
 import { useKeys } from '../commands/hooks';

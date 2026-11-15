@@ -3,6 +3,7 @@
  * local MCP server's tools, over a notebook in memory. Shapes and codes are the server's.
  */
 import { commentToolDefinitions, toolDefinitions } from '../src/local/tools';
+import { MAX_ATTACHMENT_BYTES } from '@penmoss/core/attachments';
 import { periodicNoteId } from '@penmoss/core/periodic';
 import { describe, expect, it } from 'vitest';
 import {
@@ -13,7 +14,7 @@ import {
   localFetch,
   LOCAL_ORIGIN,
 } from '../src/local';
-import { setTagDescription } from '@penmoss/sync-client/workspace';
+import { setTagDescription } from '@penmoss/model/workspace';
 import { NOTEBOOK_ID, testNotebook } from './support/notebooks';
 
 /** A route's JSON reply: the fields these tests read past `toMatchObject` are typed. */
@@ -628,5 +629,41 @@ describe('the local MCP server', () => {
     const backlinks = await tool('get_backlinks', { id });
     expect(backlinks.structuredContent).toMatchObject({ id, title: 'Standup', linked: [] });
     expect(saves()).toBeGreaterThanOrEqual(4);
+  });
+
+  it('attach_file takes a file of 50 MB, as the app does, and refuses one byte more (A1533)', async () => {
+    const { tool, rpc, clone, nb } = await server();
+    const { tools } = (await rpc('tools/list')).result as {
+      tools: Array<{ name: string; description: string }>;
+    };
+    expect(tools.find((each) => each.name === 'attach_file')!.description).toContain(
+      'at most 50 MB (file_too_large)',
+    );
+    const id = (await tool('create_note', { title: 'Scans', markdown: 'x' })).structuredContent
+      .id as string;
+    // A PDF's first bytes, then zeros: the largest file Penmoss keeps.
+    const file = new Uint8Array(MAX_ATTACHMENT_BYTES);
+    file.set(new TextEncoder().encode('%PDF-1.7\n'));
+    const kept = await tool('attach_file', {
+      id,
+      name: 'scan.pdf',
+      data: Buffer.from(file).toString('base64'),
+    });
+    expect(kept.isError).toBeUndefined();
+    expect(kept.structuredContent).toMatchObject({
+      added: true,
+      bytes: MAX_ATTACHMENT_BYTES,
+      contentType: 'application/pdf',
+    });
+    const over = await tool('attach_file', {
+      id,
+      name: 'big.pdf',
+      data: Buffer.concat([Buffer.from(file), Buffer.from([1])]).toString('base64'),
+    });
+    expect(over.isError).toBe(true);
+    expect(over.content[0]!.text).toContain('file_too_large');
+    expect(over.content[0]!.text).toContain('at most 50 MB');
+    await clone.engine.sync();
+    expect(nb.files()).toContain(kept.structuredContent['path']);
   });
 });

@@ -4,4 +4,4 @@ export {
   skipRepairsOfBindingChanges,
   type Yjs14EditorOptions as CollabEditorOptions,
 } from './yjs14';
-export { UnsupportedContentError, unknownNodeTypes } from '@penmoss/sync-client/unsupported';
+export { UnsupportedContentError, unknownNodeTypes } from '@penmoss/model/unsupported';

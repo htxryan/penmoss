@@ -5,8 +5,8 @@
  * server gave: its quote, its place now and when it was made (T52 item 5), its state and every
  * comment.
  */
-import type { ThreadView } from '@penmoss/sync-client/comment-delivery';
-import type { StatusFilter } from '@penmoss/sync-client/comment-delivery';
+import type { ThreadView } from '@penmoss/model/comment-delivery';
+import type { StatusFilter } from '@penmoss/model/comment-delivery';
 import type { LocalNotebook } from './notebook';
 
 type Args = Record<string, unknown>;

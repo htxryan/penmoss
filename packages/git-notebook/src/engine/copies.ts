@@ -8,8 +8,8 @@
  * branch stays, whatever later happens to the original; one the person confirmed (Keep and sync)
  * is pushed as it is.
  */
-import { readTitle } from '@penmoss/sync-client/note';
-import { readWorkspace } from '@penmoss/sync-client/workspace';
+import { readTitle } from '@penmoss/model/note';
+import { readWorkspace } from '@penmoss/model/workspace';
 import * as Y from '@y/y';
 import { racedCopies, recoveredFromOf, unregisterCopy } from '../purge';
 import type { NotebookReplica, WithheldCopy } from '../replica';

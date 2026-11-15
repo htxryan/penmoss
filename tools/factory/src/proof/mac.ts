@@ -3,7 +3,7 @@
  * only the host can start (W10). Before a Mac proof the host asks the VM script whether a run
  * can start now (`--check`: tart installed, the VM made, no other run on it, no VM started some
  * other way); the script says no, and a run that couldn't boot the VM ends, with exit 75. The
- * run then waits and asks again (run.ts), rather than failing or using a round.
+ * run then waits and asks again (vm-wait.ts), rather than failing or using a round.
  */
 import { join } from 'node:path';
 import { ownCheckout } from '../code.ts';

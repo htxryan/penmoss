@@ -15,10 +15,10 @@ import {
   readThread,
   setThreadDelivery,
   setThreadTarget,
-} from '@penmoss/sync-client/comments';
-import { initNote, readTitle, setTitle } from '@penmoss/sync-client/note';
-import { recordFromDoc } from '@penmoss/sync-client/records';
-import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
+} from '@penmoss/model/comments';
+import { initNote, readTitle, setTitle } from '@penmoss/model/note';
+import { recordFromDoc } from '@penmoss/model/records';
+import { createYjs14Replica } from '@penmoss/model/yjs14';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { testNotebook } from '../../../../packages/git-notebook/test/support/notebooks';
 import { FRONT_PULL_GAP_MS, memoryEngineKv } from '@penmoss/git-notebook/host';
