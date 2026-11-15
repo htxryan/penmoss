@@ -743,7 +743,7 @@ function noteContent(doc: Y.Doc): string {
   return canonical({
     title: readTitle(doc),
     meta: doc.get('meta').getAttrs() as Record<string, unknown>,
-    body: noteBody(doc).toJSON() as unknown,
+    body: (noteBody(doc)?.toJSON() ?? null) as unknown,
   });
 }
 

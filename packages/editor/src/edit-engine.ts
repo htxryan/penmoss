@@ -43,7 +43,7 @@ import {
 } from '@penmoss/sync-client/tags';
 import type * as Y from '@y/y';
 import type { Node as PMNode } from '@tiptap/pm/model';
-import { bodyDelta, noteBody, unfitBody } from './markdown';
+import { bodyDelta, noteBody, noteBodyForDisplay, unfitBody, unsupportedTypes } from './markdown';
 
 /** What find-and-replace may match: prose only (the default), or the whole markdown. */
 export type ReplaceScope = 'text' | 'markdown';
@@ -228,6 +228,29 @@ export function unopenableBody(body: PMNode): EditFailure | null {
 }
 
 /**
+ * 409 for an edit to the body of a note this build cannot read (A1493): content from a newer
+ * Penmoss. Planned on what this build can read, the edit would write that over the note, so it
+ * is refused and nothing changes. Its title and tags can still be set.
+ */
+export function unsupportedContent(live: Y.Doc): EditFailure {
+  return fail(
+    409,
+    'unsupported_content',
+    'This note holds content from a newer Penmoss; update Penmoss to edit it. Nothing was changed.',
+    { nodeTypes: unsupportedTypes(live) },
+  );
+}
+
+/**
+ * What a read of such a note tells an agent (A1493): the text it is given is only the text, so
+ * it is never mistaken for the note and written back.
+ */
+export function unsupportedNotice(nodeTypes: readonly string[]): string {
+  const types = nodeTypes.length > 0 ? ` (${nodeTypes.join(', ')})` : '';
+  return `This note holds content from a newer Penmoss${types}, so only its text is shown. Update Penmoss to edit it; until then edits to its body are refused, and its title and tags can still be set.`;
+}
+
+/**
  * Works out what `op` does to `live` (nothing is written). `links` resolves
  * wikilinks in the incoming markdown and writes the live ones the way agents
  * read them, so find-and-replace matches the markdown an agent was shown.
@@ -241,6 +264,7 @@ function planOp(live: Y.Doc, op: EditOp, links: LinkResolver): EditPlan | EditFa
   switch (op.op) {
     case 'append': {
       const body = noteBody(live);
+      if (!body) return unsupportedContent(live);
       const blocks = parseBody(op.markdown, links);
       if (!Array.isArray(blocks)) return blocks;
       if (blocks.length === 0) return fail(400, 'invalid_request', 'Nothing to append');
@@ -263,6 +287,7 @@ function planOp(live: Y.Doc, op: EditOp, links: LinkResolver): EditPlan | EditFa
     }
     case 'section': {
       const body = noteBody(live);
+      if (!body) return unsupportedContent(live);
       const lookup = findSection(body, op.heading);
       if (!lookup.ok) return sectionFailure(lookup, op.heading);
       const blocks = parseBody(op.markdown, links);
@@ -293,6 +318,7 @@ function planOp(live: Y.Doc, op: EditOp, links: LinkResolver): EditPlan | EditFa
     case 'replace': {
       if (!op.find) return fail(400, 'invalid_request', 'find must not be empty');
       const body = noteBody(live);
+      if (!body) return unsupportedContent(live);
       const text = bodyText(body, links);
       const textOnly = (op.scope ?? 'text') === 'text';
       const found = markdownOccurrences(text, op.find, { textOnly });
@@ -363,6 +389,7 @@ function planOp(live: Y.Doc, op: EditOp, links: LinkResolver): EditPlan | EditFa
     }
     case 'capture': {
       const current = noteBody(live);
+      if (!current) return unsupportedContent(live);
       const body =
         op.time === null
           ? withMarkdown(current, op.markdown)
@@ -439,9 +466,13 @@ export function baseConflict(
         : {}),
     });
   const heading = op.op === 'section' ? op.heading : op.op === 'append' ? op.heading : undefined;
+  const touchesBody = heading !== undefined || op.op === 'replace';
+  // Planning refuses an edit to a body this build cannot read (A1493); a base it cannot read
+  // is compared by its text, so a change since then shows as one.
+  if (touchesBody && !noteBody(live)) return null;
   if (heading !== undefined) {
-    const now = noteBody(live);
-    const was = noteBody(base);
+    const now = noteBodyForDisplay(live);
+    const was = noteBodyForDisplay(base);
     const current = findSection(now, heading);
     const before = findSection(was, heading);
     if (!current.ok) return null; // Planning reports the missing heading.
@@ -454,7 +485,9 @@ export function baseConflict(
   if (op.op === 'replace') {
     const scope = { textOnly: (op.scope ?? 'text') === 'text' };
     const lines = (doc: Y.Doc) =>
-      markdownOccurrences(bodyText(noteBody(doc), links), op.find, scope).map((o) => o.lines);
+      markdownOccurrences(bodyText(noteBodyForDisplay(doc), links), op.find, scope).map(
+        (o) => o.lines,
+      );
     const now = lines(live);
     const was = lines(base);
     return now.join('\n\u0000') === was.join('\n\u0000')
