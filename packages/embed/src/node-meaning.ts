@@ -4,7 +4,7 @@
  * folder, the vector cache and the lease in `~/.penmoss`, and the per-Mac setting
  * (`~/.penmoss/meaning.json`, on unless it says `"enabled": false`).
  */
-import { readFile, rm, writeFile } from 'node:fs/promises';
+import { readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import type { Embedder, VectorCache } from '@penmoss/core/search';
@@ -41,6 +41,8 @@ export interface OpenedMeaning {
     compact(keep: ReadonlySet<string>): Promise<number>;
     /** Records the keys a notebook uses, so the app's compaction keeps them (PEN-134). */
     claim(owner: string, keys: ReadonlySet<string>): Promise<void>;
+    /** Lets go of the vectors read so far, the files gone (Recreate Index…, A1595). */
+    forget(): void;
   };
   /** The indexer lease (A1157), or undefined while another process holds it. */
   lease(): Promise<MeaningLease | undefined>;
@@ -129,6 +131,16 @@ export class NodeMeaning {
     await rm(vectorsDir(this.home, modelId(this.manifest)), { recursive: true, force: true });
   }
 
+  /** Deletes this model's vectors, the index, and keeps the model (A1595). */
+  async removeIndex(): Promise<void> {
+    await rm(vectorsDir(this.home, modelId(this.manifest)), { recursive: true, force: true });
+  }
+
+  /** The bytes this model's vectors take on disk: its segments, base and claims. */
+  async indexBytes(): Promise<number> {
+    return folderBytes(vectorsDir(this.home, modelId(this.manifest)));
+  }
+
   /**
    * The model and vectors for `writer`, or null when Search by Meaning is off or the model is not
    * here. Throws `ModelError('corrupt')` when a file fails its checksum (it is deleted, so a fetch
@@ -204,4 +216,16 @@ export class NodeMeaning {
       },
     };
   }
+}
+
+/** The bytes of the files in `dir` and the folders in it; none when it is not there. */
+async function folderBytes(dir: string): Promise<number> {
+  const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+  let bytes = 0;
+  for (const entry of entries) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) bytes += await folderBytes(path);
+    else bytes += (await stat(path).catch(() => ({ size: 0 }))).size;
+  }
+  return bytes;
 }

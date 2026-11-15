@@ -34,6 +34,10 @@ export function useMeaningStatus(): {
 
 export const megabytes = (bytes: number) => `${Math.round(bytes / 1_000_000)} MB`;
 
+/** The index's size on disk, in KB under a megabyte (a few notes' vectors are small). */
+export const indexSize = (bytes: number) =>
+  bytes >= 1_000_000 ? megabytes(bytes) : `${Math.max(1, Math.round(bytes / 1_000))} KB`;
+
 /** `embeddinggemma-300m-q4@5090578d/768/p1` as people read it. */
 export function modelName(model: string | undefined): string {
   if (!model) return 'the model';

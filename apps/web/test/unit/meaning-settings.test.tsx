@@ -61,6 +61,7 @@ describe('Settings → Semantic Search (T78)', () => {
   let listeners: Array<(status: DesktopMeaningStatus) => void>;
   let asked: boolean[];
   let removed: number;
+  let removedIndex: number;
 
   const meaning: DesktopMeaning = {
     status: () => Promise.resolve(status),
@@ -84,6 +85,15 @@ describe('Settings → Semantic Search (T78)', () => {
       for (const listener of listeners) listener(status);
       return Promise.resolve(status);
     },
+    // Recreate on, Delete off (A1595): the index goes; on, it is built again.
+    removeIndex: () => {
+      removedIndex++;
+      status = status.enabled
+        ? { ...status, state: 'indexing', indexed: 0, indexBytes: 0 }
+        : { ...status, indexBytes: 0 };
+      for (const listener of listeners) listener(status);
+      return Promise.resolve(status);
+    },
     onChange: (listener) => {
       listeners.push(listener);
       return () => undefined;
@@ -99,6 +109,7 @@ describe('Settings → Semantic Search (T78)', () => {
     listeners = [];
     asked = [];
     removed = 0;
+    removedIndex = 0;
     (window as { penmossDesktop?: Partial<PenmossDesktop> }).penmossDesktop = { meaning };
     host = document.createElement('div');
     document.body.append(host);
@@ -160,6 +171,70 @@ describe('Settings → Semantic Search (T78)', () => {
     });
     expect(asked).toEqual([false, true]);
     expect(shown()).toMatch(/^Ready:/);
+  });
+
+  it('offers Recreate Index… while on and Delete Index… while off, never both (A1595)', async () => {
+    status = { ...base, indexBytes: 2_400_000 };
+    await act(async () => {
+      root!.render(<MeaningSettings />);
+      await Promise.resolve();
+    });
+    const recreate = () =>
+      host.querySelector<HTMLButtonElement>('[data-testid="meaning-recreate-index"]');
+    const remove = () =>
+      host.querySelector<HTMLButtonElement>('[data-testid="meaning-delete-index"]');
+    const ask = () => host.querySelector('[data-testid="meaning-index-ask"]');
+    const size = () => host.querySelector('[data-testid="meaning-index-state"]')?.textContent;
+    // Delete Model… is the solid red button.
+    expect(
+      host.querySelector('[data-testid="meaning-delete-model"]')?.classList.contains('danger-fill'),
+    ).toBe(true);
+    // On: Recreate, asked first; Cancel keeps the index.
+    expect(size()).toBe('2 MB on this Mac, from your notes');
+    expect(recreate()?.textContent).toBe('Recreate Index…');
+    expect(remove()).toBeNull();
+    act(() => recreate()!.click());
+    expect(ask()?.textContent).toContain('Recreate the Index?');
+    expect(ask()?.textContent).toContain('is deleted and built again from your notes');
+    act(() =>
+      host.querySelector<HTMLButtonElement>('[data-testid="meaning-index-cancel"]')!.click(),
+    );
+    expect(ask()).toBeNull();
+    expect(removedIndex).toBe(0);
+    act(() => recreate()!.click());
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[data-testid="meaning-index-confirm"]')!.click();
+      await Promise.resolve();
+    });
+    expect(removedIndex).toBe(1);
+    expect(shown()).toMatch(/^Indexing/);
+    expect(size()).toBe('No index');
+
+    // Off with an index: Delete Index…, in red; Recreate gone.
+    await act(async () => {
+      status = { ...base, state: 'off', enabled: false, indexed: 0, total: 0, indexBytes: 800 };
+      for (const listener of listeners) listener(status);
+      await Promise.resolve();
+    });
+    expect(recreate()).toBeNull();
+    expect(remove()?.textContent).toBe('Delete Index…');
+    expect(remove()?.classList.contains('danger-fill')).toBe(true);
+    expect(size()).toBe('1 KB on this Mac, from your notes');
+    act(() => remove()!.click());
+    expect(ask()?.textContent).toContain('Delete the Index?');
+    expect(ask()?.textContent).toContain('The model stays');
+    const confirm = host.querySelector<HTMLButtonElement>('[data-testid="meaning-index-confirm"]')!;
+    expect(confirm.classList.contains('danger-fill')).toBe(true);
+    await act(async () => {
+      confirm.click();
+      await Promise.resolve();
+    });
+    expect(removedIndex).toBe(2);
+    // Nothing left to delete: no button, and the row says so.
+    expect(remove()).toBeNull();
+    expect(recreate()).toBeNull();
+    expect(size()).toBe('No index');
+    expect(asked).toEqual([]);
   });
 
   it('deletes the model after asking, naming its size, and then says it is not downloaded (A1566)', async () => {

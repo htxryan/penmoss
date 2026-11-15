@@ -55,6 +55,10 @@ function fakeSource(options: { embedder?: Embedder; ready?: boolean } = {}) {
       return Promise.resolve(0);
     },
     claim: () => Promise.resolve(),
+    forgot: 0,
+    forget() {
+      this.forgot += 1;
+    },
   });
   const embedder = options.embedder ?? fakeEmbedder();
   const opens: string[] = [];
@@ -82,6 +86,11 @@ function fakeSource(options: { embedder?: Embedder; ready?: boolean } = {}) {
       ready = false;
       return Promise.resolve();
     },
+    removeIndex: () => {
+      cache.vectors.clear();
+      return Promise.resolve();
+    },
+    indexBytes: () => Promise.resolve(cache.vectors.size * 100),
     setEnabled: (value) => {
       enabled = value;
       return Promise.resolve();
@@ -395,6 +404,76 @@ describe('the embedding service (T76)', () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
     // Nothing is written after the vectors are removed.
     expect(order.at(-1)).toBe('remove');
+    await service.stop();
+  });
+
+  it('Recreate Index deletes the vectors after the run under way, and indexes again (A1595)', async () => {
+    const inner = fakeEmbedder();
+    let release = () => undefined as void;
+    let gate = new Promise<void>((resolve) => (release = resolve));
+    let embedding = false;
+    const embedder: Embedder = {
+      ...inner,
+      embedDocuments: async (texts) => {
+        embedding = true;
+        await gate;
+        return inner.embedDocuments(texts);
+      },
+    };
+    const { source, cache } = fakeSource({ embedder });
+    const order: string[] = [];
+    const put = cache.put.bind(cache);
+    cache.put = (entries) => {
+      order.push('put');
+      return put(entries);
+    };
+    const removeIndex = source.removeIndex;
+    source.removeIndex = () => {
+      order.push('remove index');
+      return removeIndex();
+    };
+    const statuses: ServiceStatus[] = [];
+    const service = new MeaningService(source, (status) => statuses.push(status), { sliceMs: 50 });
+    await service.start();
+    await service.update('nb', NOTES);
+    await vi.waitFor(() => expect(embedding).toBe(true), { timeout: 5_000 });
+    // Asked mid-run: the chunk being embedded is written, then the vectors go, nothing between.
+    const recreating = service.removeIndex();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(order).not.toContain('remove index');
+    release();
+    const recreated = await recreating;
+    expect(order.at(-1)).toBe('remove index');
+    expect(cache.forgot).toBe(1);
+    expect(recreated).toMatchObject({
+      state: 'indexing',
+      enabled: true,
+      indexed: 0,
+      indexBytes: 0,
+    });
+    // On: the notes are indexed again from the start, the model kept.
+    gate = Promise.resolve();
+    await until(statuses, (status) => status.indexed === 3 && status.state === 'ready');
+    expect(statuses.at(-1)!.indexBytes).toBeGreaterThan(0);
+    expect(order.slice(order.indexOf('remove index'))).toContain('put');
+    expect((await source.status()).state).toBe('ready');
+    expect((await service.search('nb', 'bread'))?.[0]?.id).toBe('bread');
+    await service.stop();
+  });
+
+  it('Delete Index while off deletes the vectors and keeps the model (A1595)', async () => {
+    const { source, cache } = fakeSource();
+    const statuses: ServiceStatus[] = [];
+    const service = new MeaningService(source, (status) => statuses.push(status), { sliceMs: 50 });
+    await service.start();
+    await service.update('nb', NOTES);
+    await until(statuses, (status) => status.indexed === 3);
+    const off = await service.setEnabled(false);
+    expect(off.indexBytes).toBeGreaterThan(0);
+    const deleted = await service.removeIndex();
+    expect(deleted).toMatchObject({ state: 'off', enabled: false, indexBytes: 0 });
+    expect(cache.vectors.size).toBe(0);
+    expect((await source.status()).state).toBe('ready');
     await service.stop();
   });
 

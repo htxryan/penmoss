@@ -6,6 +6,7 @@
  * process that compacts the shared cache, and it takes the lease from an agent's `penmoss mcp`
  * as it starts (A1350); without the lease it keeps trying. Off stops it all and keeps the
  * model and vectors, so On is quick again; Delete Model removes them and switches it off (A1566).
+ * Recreate Index… and Delete Index… remove the vectors alone (A1595).
  */
 import { MeaningIndex, type MeaningHit, type MeaningNote } from '@penmoss/core/search';
 import type { NoteSection } from '@penmoss/core/search';
@@ -15,7 +16,7 @@ import type { NodeMeaning, OpenedMeaning } from './node-meaning';
 /** What the service needs of `NodeMeaning` (tests give it a fake embedder). */
 export type MeaningSource = Pick<
   NodeMeaning,
-  'status' | 'fetch' | 'remove' | 'open' | 'setEnabled'
+  'status' | 'fetch' | 'remove' | 'open' | 'setEnabled' | 'removeIndex' | 'indexBytes'
 >;
 
 export type ServiceState =
@@ -34,6 +35,8 @@ export interface ServiceStatus {
   readonly received?: number;
   /** Notes with vectors, of the open notebooks' notes. */
   readonly indexed: number;
+  /** The bytes this model's vectors take on this Mac (the index Delete Index… removes, A1595). */
+  readonly indexBytes: number;
   readonly total: number;
   /**
    * Another app on this Mac holds the lease, so this one only searches: notes it has not indexed
@@ -91,6 +94,8 @@ export class MeaningService {
   private lastCompaction = Date.now();
   private download: AbortController | null = null;
   private stopped = false;
+  /** Recreate Index… or Delete Index… under way: no indexing run starts (A1595). */
+  private removing = false;
 
   constructor(
     private readonly node: MeaningSource,
@@ -126,6 +131,7 @@ export class MeaningService {
     const disk = await this.node.status();
     return {
       ...now,
+      indexBytes: await this.node.indexBytes(),
       model: disk.model,
       modelBytes: disk.bytes,
       totalBytes: disk.totalBytes,
@@ -228,6 +234,33 @@ export class MeaningService {
     await this.node.setEnabled(false);
     await this.switchOff();
     await this.node.remove();
+    return this.emitStatus();
+  }
+
+  /**
+   * Settings → Semantic Search → Recreate Index… (on) and Delete Index… (off) (A1595): the
+   * indexing run under way stops after the chunk it is embedding and its writes, and no other
+   * starts; then this model's vectors go from disk and every notebook's index with them, so no
+   * half-written index is left. The model stays. On, the notes are indexed again from the start;
+   * off, that is all.
+   */
+  async removeIndex(): Promise<ServiceStatus> {
+    this.removing = true;
+    try {
+      if (this.indexTimer) clearTimeout(this.indexTimer);
+      this.indexTimer = null;
+      await this.slice?.catch(() => undefined);
+      this.slice = null;
+      await this.node.removeIndex();
+      this.opened?.cache.forget();
+      for (const notebook of this.notebooks.values()) notebook.index = null;
+    } finally {
+      this.removing = false;
+    }
+    if (this.enabled && this.opened) {
+      this.state = 'indexing';
+      this.indexSoon(0);
+    }
     return this.emitStatus();
   }
 
@@ -344,7 +377,7 @@ export class MeaningService {
   }
 
   private indexSoon(ms: number): void {
-    if (!this.opened || !this.keeper?.held || this.stopped) return;
+    if (!this.opened || !this.keeper?.held || this.stopped || this.removing) return;
     if (this.indexTimer) clearTimeout(this.indexTimer);
     this.indexTimer = setTimeout(() => {
       this.slice = this.indexSlice();
@@ -361,7 +394,8 @@ export class MeaningService {
       if (!(await this.keeper.check())) return;
       let waiting = 0;
       for (const notebook of this.notebooks.values()) {
-        if (!this.opened) return;
+        // Off, or the index being removed: stop between notebooks, its writes done.
+        if (!this.opened || this.removing) return;
         const index = this.indexOf(notebook);
         await index.update(notebook.notes.values(), {
           budgetMs: this.options.sliceMs ?? 5_000,

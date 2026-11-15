@@ -63,6 +63,7 @@ function scriptedBridge(initial: DesktopMeaningStatus = READY) {
     },
     setEnabled: () => Promise.resolve(null),
     removeModel: () => Promise.resolve(null),
+    removeIndex: () => Promise.resolve(null),
     onChange: (listener) => {
       listeners.push(listener);
       return () => {
