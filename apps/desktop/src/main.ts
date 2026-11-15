@@ -42,6 +42,7 @@ import {
 } from 'electron';
 import { killLiveGit, watchGitProcesses } from '@penmoss/git-notebook/system-git';
 import { setMenus } from './app-menu';
+import { killBoundedGroups } from './bounded-exec';
 import { currentHotkey, startHotkey } from './capture-hotkey';
 import { APP_SCHEME, DEEP_LINK_SCHEME } from './config';
 import { deepLinkFromArgv, parseDeepLink } from './deep-link';
@@ -221,6 +222,8 @@ if (!app.requestSingleInstanceLock()) {
   app.on('will-quit', () => {
     // No git outlives the app (A853): a sync still running is stopped, the notebook keeps it.
     killLiveGit();
+    // Nor does any other program main started and is waiting for (A1480).
+    killBoundedGroups();
     meaning?.stop();
     themeWriter.flush();
     // What pages kept in local storage as they went (A626) reaches the disk before the app ends.
@@ -235,6 +238,7 @@ if (!app.requestSingleInstanceLock()) {
   for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
     process.on(signal, () => {
       killLiveGit();
+      killBoundedGroups();
       app.quit();
     });
   }

@@ -42,14 +42,26 @@ export interface GhOptions {
   /** A token for every call, as `GH_TOKEN`: the publisher's installation token. */
   readonly token?: () => Promise<string>;
   readonly bin?: string;
+  /** Each call's time limit (default GH_TIMEOUT_MS). */
+  readonly timeoutMs?: number;
 }
 
-export function createGh({ exec, env, token, bin = 'gh' }: GhOptions): Gh {
+/** How long one `gh` call may take before it is stopped (F2): GitHub's API answers in seconds. */
+export const GH_TIMEOUT_MS = 5 * 60_000;
+
+export function createGh({
+  exec,
+  env,
+  token,
+  bin = 'gh',
+  timeoutMs = GH_TIMEOUT_MS,
+}: GhOptions): Gh {
   const run = async (args: readonly string[], input?: string): Promise<string> => {
     const withToken = token ? { ...env, GH_TOKEN: await token() } : env;
     const result = await exec(bin, args, {
       ...(withToken ? { env: withToken } : {}),
       ...(input === undefined ? {} : { input }),
+      timeoutMs,
     });
     if (result.code !== 0) throw new GhError(args, result.code, result.stderr);
     return result.stdout;

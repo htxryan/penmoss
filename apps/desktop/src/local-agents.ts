@@ -6,7 +6,7 @@
  * Everything here stays on this Mac and on the notebook's git host: nothing reaches the Penmoss
  * server. The page sees names, commands and refusals, never a token.
  */
-import { spawn } from 'node:child_process';
+import { boundedExec } from './bounded-exec';
 import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -618,34 +618,15 @@ export function keptLoginPath(
  * The PATH a terminal would have: the app, opened from the Finder, has launchd's. Asks the
  * person's login shell, for at most 4 seconds; null when it cannot say.
  */
-export function loginShellPath(shell: string): Promise<string | null> {
-  return new Promise((resolve) => {
-    let out = '';
-    let done = false;
-    const finish = (value: string | null) => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      resolve(value);
-    };
-    let child;
-    try {
-      child = spawn(shell || '/bin/zsh', ['-ilc', 'printf "\\n__PENMOSS_PATH__%s" "$PATH"'], {
-        stdio: ['ignore', 'pipe', 'ignore'],
-      });
-    } catch {
-      resolve(null);
-      return;
-    }
-    const timer = setTimeout(() => {
-      child.kill('SIGKILL');
-      finish(null);
-    }, 4000);
-    child.stdout.on('data', (chunk: Buffer) => (out += chunk.toString('utf8')));
-    child.on('error', () => finish(null));
-    child.on('close', () => {
-      const at = out.lastIndexOf('__PENMOSS_PATH__');
-      finish(at === -1 ? null : out.slice(at + '__PENMOSS_PATH__'.length).trim());
-    });
+export async function loginShellPath(shell: string): Promise<string | null> {
+  // An interactive login shell may start daemons of its own: out of time, its whole group goes.
+  const ran = await boundedExec({
+    command: shell || '/bin/zsh',
+    args: ['-ilc', 'printf "\\n__PENMOSS_PATH__%s" "$PATH"'],
+    timeoutMs: 4000,
+    onStderr: () => undefined,
   });
+  if (ran.kind !== 'exit') return null;
+  const at = ran.stdout.lastIndexOf('__PENMOSS_PATH__');
+  return at === -1 ? null : ran.stdout.slice(at + '__PENMOSS_PATH__'.length).trim();
 }

@@ -64,7 +64,8 @@
   "timeouts": {
     "agentMinutes": 90,
     "proofMinutes": 40,
-    "ciMinutes": 60
+    "ciMinutes": 60,
+    "gateMinutes": 60
   },
   "slots": [
     {

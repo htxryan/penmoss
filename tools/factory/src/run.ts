@@ -99,8 +99,10 @@ export type ResultRead =
 
 export interface RunSandbox {
   readonly worktreePath: string;
+  /** Runs `command` in the sandbox; aborting `signal` stops everything running in it (F2). */
   exec(
     command: string,
+    options?: { readonly signal?: AbortSignal },
   ): Promise<{ readonly exitCode: number; readonly stdout: string; readonly stderr: string }>;
   close(): Promise<void>;
 }
@@ -544,6 +546,18 @@ export function prTitle(input: {
  */
 export const GATE_INSTALL = 'pnpm install --frozen-lockfile --prefer-offline';
 
+/**
+ * One of the gate's long commands, within `gateMinutes` (F2): out of time, what runs in the
+ * sandbox is stopped and the run fails with the timeout, instead of holding its heavy-job slot.
+ */
+export function gateExec(
+  gate: RunSandbox,
+  command: string,
+  minutes: number,
+): ReturnType<RunSandbox['exec']> {
+  return withTimeout((signal) => gate.exec(command, { signal }), minutes, `\`${command}\``);
+}
+
 function installFeedback(installed: { readonly stdout: string; readonly stderr: string }): string {
   return `\`${GATE_INSTALL}\` failed after the rebase onto \`origin/main\`:\n\n\`\`\`\n${excerpt(installed.stdout + installed.stderr)}\n\`\`\``;
 }
@@ -918,7 +932,7 @@ export async function gateAndProve(
     noteRebase(deps, rebased);
     const numbered = await deps.numberDecisions(gate, branch);
     if (Object.keys(numbered).length > 0) deps.log('decisions-numbered', numbered);
-    const installed = await gate.exec(GATE_INSTALL);
+    const installed = await gateExec(gate, GATE_INSTALL, deps.config.timeouts.gateMinutes);
     if (installed.exitCode !== 0)
       return { ok: false, reason: INSTALL_REASON, feedback: installFeedback(installed) };
     const patch = (await gate.exec('git diff origin/main...HEAD')).stdout;
@@ -934,7 +948,9 @@ export async function gateAndProve(
         feedback: workflowFeedback(workflows),
       };
     const command = gateCommand(scope);
-    const checked = await deps.heavy(`factory gate ${branch}`, () => gate.exec(command));
+    const checked = await deps.heavy(`factory gate ${branch}`, () =>
+      gateExec(gate, command, deps.config.timeouts.gateMinutes),
+    );
     if (checked.exitCode !== 0) {
       deps.keep?.('gate.log', checked.stdout + checked.stderr);
       return {
@@ -1640,7 +1656,7 @@ async function regate(
         return { ok: true, rebase: rebased, ...(await numbering()) };
       }
     }
-    const installed = await gate.exec(GATE_INSTALL);
+    const installed = await gateExec(gate, GATE_INSTALL, deps.config.timeouts.gateMinutes);
     if (installed.exitCode !== 0)
       return { ok: false, why: installFeedback(installed), reason: INSTALL_REASON };
     const patch = (await gate.exec('git diff origin/main...HEAD')).stdout;
@@ -1655,7 +1671,9 @@ async function regate(
         reason: `workflow change: ${workflows.join(', ')}`,
       };
     const command = gateCommand(scope);
-    const checked = await deps.heavy(`factory gate ${branch}`, () => gate.exec(command));
+    const checked = await deps.heavy(`factory gate ${branch}`, () =>
+      gateExec(gate, command, deps.config.timeouts.gateMinutes),
+    );
     if (checked.exitCode !== 0) {
       deps.keep?.('gate.log', checked.stdout + checked.stderr);
       return {

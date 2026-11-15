@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { codeDir, commitOf, ownCheckout, syncCode } from '../src/code.ts';
 import type { FactoryConfig } from '../src/config.ts';
 import { nodeExec, type Exec, type ExecOptions } from '../src/exec.ts';
-import { GIT_HARDENING, TOKEN_HELPER } from '../src/git.ts';
+import { GIT_HARDENING, GIT_TIMEOUT_MS, hostGit, TOKEN_HELPER } from '../src/git.ts';
 import {
   ensureClone,
   hostDeps,
@@ -415,6 +415,19 @@ describe("the host's publish path, with real git (A1230)", { timeout: 30_000 }, 
       await expect(publish(BRANCH)).rejects.toThrow(/stale info|rejected/);
       expect(await git(github, 'rev-parse', `refs/heads/${BRANCH}`)).toBe(head);
     });
+  });
+});
+
+describe("the host's git has a time limit (F2)", () => {
+  it('gives every host git GIT_TIMEOUT_MS, or the one asked for', async () => {
+    const seen: (number | undefined)[] = [];
+    const exec: Exec = (_cmd, _args, options) => {
+      seen.push(options?.timeoutMs);
+      return Promise.resolve({ code: 0, stdout: '', stderr: '' });
+    };
+    await hostGit(exec, '/repo', ['status']);
+    await hostGit(exec, '/repo', ['clone'], { timeoutMs: 60_000 });
+    expect(seen).toEqual([GIT_TIMEOUT_MS, 60_000]);
   });
 });
 

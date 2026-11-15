@@ -51,7 +51,15 @@ export interface GitOptions {
   readonly token?: string;
   /** More environment, such as a committer identity in a test. */
   readonly env?: Readonly<Record<string, string>>;
+  /** Its time limit (default GIT_TIMEOUT_MS). */
+  readonly timeoutMs?: number;
 }
+
+/**
+ * How long one host git may take before it is stopped (F2): a clone of the repository over a slow
+ * connection is the longest, and it takes a few minutes.
+ */
+export const GIT_TIMEOUT_MS = 15 * 60_000;
 
 /** The arguments for `git <args>` in `dir`, hardened. */
 export function gitArgs(dir: string, args: readonly string[], token = false): string[] {
@@ -68,6 +76,7 @@ export function hostGit(
   const token = options.token !== undefined;
   return exec('git', gitArgs(dir, args, token), {
     env: gitEnv({ ...options.env, ...(token ? { GH_TOKEN: options.token ?? '' } : {}) }),
+    timeoutMs: options.timeoutMs ?? GIT_TIMEOUT_MS,
   });
 }
 
