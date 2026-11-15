@@ -398,6 +398,39 @@ test('a sidebar note already open in a tab is gone to there, never opened twice 
   await shows(page, BETA);
   expect(await titles(page)).toEqual([ALPHA, `*${BETA}`]);
 
+  // Search, then the palette and Quick Open: a note open in a tab already is that tab (A1581).
+  await shows(page, BETA);
+  await page
+    .getByTestId('sidebar-shortcuts')
+    .getByRole('button', { name: 'Search', exact: true })
+    .click();
+  const search = page.getByTestId('search');
+  await search.getByRole('combobox', { name: 'Search notes' }).fill(ALPHA);
+  const hits = search.getByRole('listbox', { name: 'Search results' }).getByRole('option');
+  await expect(hits.first()).toContainText(ALPHA, { timeout: 20_000 });
+  await page.keyboard.press('Enter');
+  await expect(search).toBeHidden();
+  await shows(page, ALPHA);
+  expect(await titles(page)).toEqual([`*${ALPHA}`, BETA]);
+  for (const [keys, name] of [
+    ['ControlOrMeta+KeyK', 'Command Palette'],
+    ['ControlOrMeta+KeyP', 'Quick Open'],
+  ] as const) {
+    const target = (await page.getByTestId('note-title').inputValue()) === ALPHA ? BETA : ALPHA;
+    await page.keyboard.press(keys);
+    const dialog = page.getByRole('dialog', { name });
+    await dialog.getByRole('combobox').fill(target);
+    await expect(dialog.getByRole('option').first()).toContainText(target);
+    await page.keyboard.press('Enter');
+    await expect(dialog).toBeHidden();
+    await shows(page, target);
+    expect(await titles(page)).toEqual(
+      target === ALPHA ? [`*${ALPHA}`, BETA] : [ALPHA, `*${BETA}`],
+    );
+  }
+  await row(page, BETA).click();
+  await shows(page, BETA);
+
   // A note in no tab opens in the tab on screen, as before; Back steps that tab, never jumps.
   await open(page, GAMMA);
   expect(await titles(page)).toEqual([ALPHA, `*${GAMMA}`]);

@@ -16,7 +16,7 @@ import { useNoteList, useNotes } from '../notes/hooks';
 import { RESERVED_KEYS } from '../notes/service';
 import { readOpened, recentNotes } from '../notes/recent';
 import { desktop } from '../desktop/bridge';
-import { hasTabs, navigate, notePath, openPath, useLocation } from '../router';
+import { REVEAL, hasTabs, navigate, notePath, openPath, useLocation } from '../router';
 import { SearchOverlay } from '../search/SearchOverlay';
 import { NotebookMeaning } from '../search/meaning';
 import { SearchService } from '../search/service';
@@ -243,8 +243,9 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
       openPath(notePath(id), where);
       return;
     }
+    // A note open in a tab already: that tab (A1581).
     notes.requestBodyFocus(id);
-    navigate(notePath(id));
+    openPath(notePath(id), 'current', REVEAL);
   };
 
   useCommand('app.palette', () => {
@@ -488,8 +489,9 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
                 openPath(path, where);
                 return;
               }
+              // A note open in a tab already: that tab (A1581).
               notes.requestBodyFocus(id);
-              navigate(path);
+              openPath(path, 'current', REVEAL);
             }}
             onClose={() => close()}
           />

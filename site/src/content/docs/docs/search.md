@@ -9,7 +9,7 @@ Open search with **Search Notes…** (⌘⇧F), or **Search** in the sidebar. To
 
 Search runs on your device, over every notebook you have open, offline too. The status line says how many results it found.
 
-Press Enter on a result, or click it, to open it in the tab you are in. In the Mac app, ⌘↩ (or ⌘-click) opens it in a [new tab](/docs/install/mac/#tabs) behind that one, and ⇧⌘↩ in a new tab in front; Quick Open and the command palette do the same.
+Press Enter on a result, or click it, to open it in the tab you are in; in the Mac app, a note open in another tab already switches to that tab. There, ⌘↩ (or ⌘-click) opens it in a [new tab](/docs/install/mac/#tabs) behind that one, and ⇧⌘↩ in a new tab in front; Quick Open and the command palette do the same.
 
 ## Search by words
 
