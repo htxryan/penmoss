@@ -1,7 +1,7 @@
 /**
  * A git notebook's notes API, on this device (T50 G2, #150; A830): what the CLI, the local MCP
  * server, Android's local notes server and the relay run, in the shapes, codes and statuses they
- * read. Every answer comes from the local engine: the shared edit engine (`@penmoss/editor`), the
+ * read. Every answer comes from the local engine: the shared edit engine (`@penmoss/sync-client/edit-engine`), the
  * offline search index (`@penmoss/sync-client/local-index`), core's links for backlinks, and the
  * notebook's own settings and salted periodic notes. Nothing here reaches the network; the next
  * sync carries every change.
@@ -41,8 +41,13 @@ import {
   unknownProperties,
   unsupportedNotice,
   type EditOp,
-} from '@penmoss/editor/edit-engine';
-import { bodyDelta, readNoteState, renderNote, versionMarkdown } from '@penmoss/editor/markdown';
+} from '@penmoss/sync-client/edit-engine';
+import {
+  bodyDelta,
+  readNoteState,
+  renderNote,
+  versionMarkdown,
+} from '@penmoss/sync-client/markdown';
 import type { CommentChange, StatusFilter } from '@penmoss/sync-client/comment-delivery';
 import { setBody } from '@penmoss/sync-client/history';
 import { setFrontmatterTag } from '@penmoss/sync-client/tags';

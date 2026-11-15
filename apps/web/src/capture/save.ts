@@ -37,7 +37,7 @@ export async function saveCapture(
   destination: CaptureDestination,
   now: Date = new Date(),
 ): Promise<SavedCapture> {
-  const capture = await import('@penmoss/editor/capture');
+  const capture = await import('@penmoss/sync-client/capture');
   const settings = workspace.settings();
   // The destination is this capture's only: the default is Settings' to change (A947).
   if (destination === 'daily') {

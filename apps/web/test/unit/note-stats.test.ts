@@ -6,7 +6,7 @@ import {
   readingLabel,
   textStats,
   wordsLabel,
-} from '@penmoss/editor/stats';
+} from '@penmoss/sync-client/stats';
 import { loadTokenCounter, tokensLabel } from '../../src/notes/tokens';
 
 // T41 (A505): the status bar's counts and the open note's save status.

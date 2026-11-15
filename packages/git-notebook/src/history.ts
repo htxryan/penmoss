@@ -19,7 +19,7 @@ import {
   type ChangeDescription,
   type DiffOp,
 } from '@penmoss/core/diff';
-import { versionMarkdown } from '@penmoss/editor/markdown';
+import { versionMarkdown } from '@penmoss/sync-client/markdown';
 import type * as Y from '@y/y';
 import { docOfState, mergedLogs, noteFilesAt } from './at-commit';
 import type { Layout } from './layout';

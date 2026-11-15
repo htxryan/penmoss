@@ -12,7 +12,7 @@ import { AgentActivity, type MemoryTransport } from '@penmoss/git-notebook';
 import type { NoteRecord } from '@penmoss/sync-client/record';
 import { readTitle, setTitle } from '@penmoss/sync-client/note';
 import { readWorkspace } from '@penmoss/sync-client/workspace';
-import { appendMarkdown } from '@penmoss/editor/capture';
+import { appendMarkdown } from '@penmoss/sync-client/capture';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { testNotebook } from '../../../../packages/git-notebook/test/support/notebooks';
 import type { DesktopGit, GitAnswer, GitNotebookInfo } from '../../src/desktop/bridge';

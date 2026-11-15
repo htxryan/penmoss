@@ -4,7 +4,7 @@
  * `/api/*` with it (`apps/android/editor/src/git/server.ts`). The CLI and the MCP tools call
  * `LocalNotebook` itself. Nothing leaves the process.
  */
-import type { EditOp, SectionMode } from '@penmoss/editor/edit-engine';
+import type { EditOp, SectionMode } from '@penmoss/sync-client/edit-engine';
 import type { SortMode } from '@penmoss/core/workspace';
 import { LocalError, propertiesOp, type LocalNotebook } from './notebook';
 

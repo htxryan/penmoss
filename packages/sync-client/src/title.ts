@@ -4,8 +4,8 @@
  * another part of the title merges; a remote change rewrites the field and
  * keeps the caret on the same characters.
  */
-import { readTitle, setTitle } from '@penmoss/sync-client/note';
-import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import { readTitle, setTitle } from './note';
+import type { Yjs14Replica } from './yjs14';
 
 /** The part of an `<input>` the binding uses (a fake in unit tests). */
 export interface TitleField {

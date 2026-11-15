@@ -25,13 +25,13 @@ import { useAllSources, useSource } from '../sources/hooks';
 import { useNoteMetadataSettings } from './metadata-state';
 import { useNoteList } from './hooks';
 import { useNoteCounts, useSaveStatus, type NoteStats } from './note-stats';
-import { noteFields } from '@penmoss/editor/note-fields';
+import { noteFields } from '@penmoss/sync-client/note-fields';
 import type { SaveStatus } from './save-status';
 import type { OpenNote } from './service';
 import { kindLabel } from './kind';
 import { Icon } from '@penmoss/ui/icons';
 import { gitNotebookPath, linkHandler } from '../router';
-import { charactersLabel, readingLabel, wordsLabel } from '@penmoss/editor/stats';
+import { charactersLabel, readingLabel, wordsLabel } from '@penmoss/sync-client/stats';
 import { tokensLabel } from './tokens';
 
 function SaveStatusLabel({ status }: { status: SaveStatus | null }) {

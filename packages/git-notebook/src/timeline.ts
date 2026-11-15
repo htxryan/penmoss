@@ -16,7 +16,7 @@
  */
 import { diffLines, splitLines, type DiffOp } from '@penmoss/core/diff';
 import { buildTree, folderPath, type FolderRecord, type SortMode } from '@penmoss/core/workspace';
-import { bodyMarkdown, versionMarkdown } from '@penmoss/editor/markdown';
+import { bodyMarkdown, versionMarkdown } from '@penmoss/sync-client/markdown';
 import { isDeleted, readTitle } from '@penmoss/sync-client/note';
 import { readWorkspace } from '@penmoss/sync-client/workspace';
 import * as Y from '@y/y';

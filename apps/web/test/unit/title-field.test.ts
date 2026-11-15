@@ -1,7 +1,7 @@
 import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
 import { readTitle, setTitle } from '@penmoss/sync-client/note';
 import { describe, expect, it } from 'vitest';
-import { bindTitleField } from '@penmoss/editor/title';
+import { bindTitleField } from '@penmoss/sync-client/title';
 import {
   fitHeight,
   growingTitle,

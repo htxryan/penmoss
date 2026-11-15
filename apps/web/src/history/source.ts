@@ -6,7 +6,7 @@
  * other edit does, so an agent's change stays undoable on the Mac too.
  */
 import { Layout, NotebookHistory, type GitVersion } from '@penmoss/git-notebook';
-import { revertChange } from '@penmoss/editor/revert';
+import { revertChange } from '@penmoss/sync-client/revert';
 import { restoreContent } from '@penmoss/sync-client/history';
 import type { Notes } from '../notes/service';
 import type { GitSource } from '../sources/git-source';

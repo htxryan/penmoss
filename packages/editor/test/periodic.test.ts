@@ -16,7 +16,7 @@ import * as Y from '@y/y';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createCollabEditor } from '../src/collab';
 import { noteExtensions } from '../src/extensions';
-import { periodicNote } from '../src/periodic';
+import { periodicNote } from '@penmoss/sync-client/periodic';
 import fixture from '../../../apps/android/contract/periodic-fixture.json';
 
 const zone = process.env.TZ;

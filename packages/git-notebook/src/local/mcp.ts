@@ -27,7 +27,7 @@ import {
 } from './tools';
 import { normaliseTag } from '@penmoss/core/tags';
 import type { SortMode } from '@penmoss/core/workspace';
-import type { EditOp, SectionMode } from '@penmoss/editor/edit-engine';
+import type { EditOp, SectionMode } from '@penmoss/sync-client/edit-engine';
 import { COMMENT_HANDLERS } from './comment-tools';
 import {
   CREATE_RETRY_WINDOW_MS,

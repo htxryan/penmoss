@@ -19,7 +19,11 @@ import {
 } from '@y/prosemirror';
 import { isBindingTransaction } from './binding';
 import type { CollabEditor } from './types';
-import { UnsupportedContentError, unknownNodeTypes, type DeltaNode } from './unsupported';
+import {
+  UnsupportedContentError,
+  unknownNodeTypes,
+  type DeltaNode,
+} from '@penmoss/sync-client/unsupported';
 
 export interface Yjs14EditorOptions {
   readonly element: HTMLElement;

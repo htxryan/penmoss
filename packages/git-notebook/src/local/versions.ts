@@ -3,9 +3,9 @@
  * that touched its logs. Saving one commits now; restoring or reverting one first saves what it
  * replaces. Agent activity (#172, A920) is read from the same commits, for the people only.
  */
-import { unsupportedContent } from '@penmoss/editor/edit-engine';
-import { readNoteState, UnsupportedContentError } from '@penmoss/editor/markdown';
-import { revertChange } from '@penmoss/editor/revert';
+import { unsupportedContent } from '@penmoss/sync-client/edit-engine';
+import { readNoteState, UnsupportedContentError } from '@penmoss/sync-client/markdown';
+import { revertChange } from '@penmoss/sync-client/revert';
 import { restoreContent } from '@penmoss/sync-client/history';
 import { AgentActivity, type ActivityEntry } from '../agent-activity';
 import { NotebookHistory, type GitHistory, type GitVersion } from '../history';

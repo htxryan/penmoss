@@ -19,7 +19,7 @@ import {
   type PeriodKind,
 } from '@penmoss/core/periodic';
 import { keyBetween } from '@penmoss/core/workspace';
-import { periodicNote } from '@penmoss/editor/periodic';
+import { periodicNote } from '@penmoss/sync-client/periodic';
 import { initNote, isDeleted, setDeleted, type NoteKind } from '@penmoss/sync-client/note';
 import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import {

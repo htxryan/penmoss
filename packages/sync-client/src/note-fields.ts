@@ -4,10 +4,13 @@
  * whole note, so a copy matches the source. Shared by the web app and the
  * Android editor page (T40 P8), so the two cannot drift.
  */
-import { readIdentity, readTitle } from '@penmoss/sync-client/note';
-import { frontmatterTags } from '@penmoss/sync-client/tags';
-import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
-import type { NoteFields } from './clipboard/markdown';
+import { readIdentity, readTitle } from './note';
+import { frontmatterTags } from './tags';
+import type { Yjs14Replica } from './yjs14';
+import type { createFrontmatter } from '@penmoss/core';
+
+/** Fields for a whole note's frontmatter (Copy as Markdown with nothing selected). */
+export type NoteFields = Parameters<typeof createFrontmatter>[0];
 
 export function noteFields(noteId: string, replica: Yjs14Replica): NoteFields {
   const identity = readIdentity(replica.doc);

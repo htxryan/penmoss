@@ -92,7 +92,7 @@ A git notebook is a repository, a branch and a directory (`packages/git-notebook
 
 - **Writers.** A writer is one install of one notebook: each device's app, each CLI clone, each agent. It writes only its own files, so two writers never conflict in git.
 - **Merging.** Notes and the folder tree are Yjs 14 documents ([ADR 0003](adr/0003-crdt-yjs-version.md)). A client merges every writer's log, so concurrent edits from the Mac, the phone and an agent all survive.
-- **The engine** (`packages/git-notebook`) is platform-free and reaches git only through a `GitTransport` (fetch, list, read, commit, push, log, readAt). System git backs it in Node (`src/node`), JGit on Android, GitHub's API in the relay, and an in-memory transport in tests. A push refused as non-fast-forward makes the engine fetch and rebuild (A822).
+- **The engine** (`packages/git-notebook`, `src/engine/`: one `Build` per attempt, a method per step of A822) is platform-free and reaches git only through a `GitTransport` (fetch, list, read, commit, push, log, readAt). System git backs it in Node (`src/node`), JGit on Android, GitHub's API in the relay, and an in-memory transport in tests. A push refused as non-fast-forward makes the engine fetch and rebuild (A822).
 - **Rendered markdown** is a pure function of the merged state, so every writer writes the same bytes (A823). `renderVersion` keeps clients of different ages from rewriting each other's files.
 
 ## Note format
@@ -135,8 +135,8 @@ Dependencies point one way: `core` at the bottom, the apps on top.
 | Package                 | Holds                                                                                                        |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `packages/core`         | The markdown codec at its root; schema, ids, links, tags, periodic notes and the rest by subpath (pure)      |
-| `packages/editor`       | TipTap extensions, clipboard, slash menu, the markdown rendering of a note                                   |
-| `packages/sync-client`  | Yjs documents and their records, comments, tags, history, the local search index (platform-free, by subpath) |
+| `packages/editor`       | TipTap extensions, clipboard, slash menu, the editor's collaboration binding                                 |
+| `packages/sync-client`  | Yjs documents, records, comments, tags, history, search index, a note as markdown and its edits (subpaths)   |
 | `packages/git-notebook` | The git-notebook engine, History and the Time Machine, the local notes API and MCP tools, the transports     |
 | `packages/ui`           | Shared React components and themes                                                                           |
 | `packages/embed`        | Search by meaning on the Mac: the model store, the ONNX embedder, the vector cache and the embedding service |

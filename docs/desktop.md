@@ -4,7 +4,7 @@
 
 The Mac app is an Electron shell around the Penmoss web app, bundled inside it. Its notes live in git notebooks: git repositories you choose, which this Mac's own git syncs (D43, T50). Since D49 (T59) there is no Penmoss server, so the app has no sign-in, account or devices: it starts into your git notebooks, and opens and edits them offline.
 
-- **Code:** `apps/desktop/` (main process and preload) and `apps/web/src/desktop/` (the web app's side). Quick capture: `apps/web/src/capture/` and `packages/editor/src/capture.ts`.
+- **Code:** `apps/desktop/` (main process and preload) and `apps/web/src/desktop/` (the web app's side). Quick capture: `apps/web/src/capture/` and `packages/sync-client/src/capture.ts`.
 - **Design:** decisions A220–A229, A850–A869 and A1051 in [`decisions.md`](decisions.md). Builds on the Releases page: A403.
 - **Tasks:** T29 (the app), T30 (quick capture), T50 (git notebooks) and T59 (no server) (issues #29, #30, #147 and #191).
 

@@ -25,7 +25,6 @@
   },
   "dependencies": {
     "@penmoss/core": "workspace:*",
-    "@penmoss/editor": "workspace:*",
     "@penmoss/sync-client": "workspace:*",
     "@y/prosemirror": "2.0.0-15",
     "@y/y": "14.0.0-rc.29"

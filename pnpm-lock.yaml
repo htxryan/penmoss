@@ -605,9 +605,6 @@ importers:
       '@penmoss/core':
         specifier: workspace:*
         version: link:../core
-      '@penmoss/editor':
-        specifier: workspace:*
-        version: link:../editor
       '@penmoss/sync-client':
         specifier: workspace:*
         version: link:../sync-client
@@ -636,6 +633,9 @@ importers:
       '@penmoss/core':
         specifier: workspace:*
         version: link:../core
+      '@y/prosemirror':
+        specifier: 2.0.0-15
+        version: 2.0.0-15(@y/protocols@1.0.6-rc.1(@y/y@14.0.0-rc.29))(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.2)(prosemirror-view@1.42.6)
       '@y/y':
         specifier: 14.0.0-rc.29
         version: 14.0.0-rc.29
@@ -645,6 +645,9 @@ importers:
       minisearch:
         specifier: 7.2.0
         version: 7.2.0
+      prosemirror-model:
+        specifier: 1.25.12
+        version: 1.25.12
     devDependencies:
       vitest:
         specifier: 5.0.5

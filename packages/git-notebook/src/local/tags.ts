@@ -3,7 +3,7 @@
  * renaming or deleting one in every note at once (A125).
  */
 import { describeTags, normaliseTag, tagMatches, type DescribedTag } from '@penmoss/core/tags';
-import type { EditOp } from '@penmoss/editor/edit-engine';
+import type { EditOp } from '@penmoss/sync-client/edit-engine';
 import { readTagDescriptions } from '@penmoss/sync-client/workspace';
 import { LocalError, type NoteCatalog } from './catalog';
 
