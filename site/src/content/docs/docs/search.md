@@ -33,7 +33,7 @@ With more than one notebook and Notebook on **All Notebooks**, Folder lists ever
 
 With one notebook chosen, Folder lists that notebook's folders after two choices: **All Folders (This Notebook)** searches every folder of the chosen notebook, and **All Folders (All Notebooks)** puts Notebook back to All Notebooks and searches every folder of every notebook.
 
-## Search by meaning
+## Semantic search
 
 On the Mac, search also finds notes by what they are about, not only the words they use: a search for `holiday plans` can find a note about a trip to Lisbon.
 
@@ -44,8 +44,8 @@ On the Mac, search also finds notes by what they are about, not only the words t
 
 It uses EmbeddingGemma, a small language model that runs on your Mac. Penmoss downloads it once, about 219 MB from Hugging Face, the first time it starts. Your notes never leave the Mac: the model and its index of your notes stay in `~/.penmoss`. The Gemma Terms of Use apply to the model.
 
-**Settings → Search by Meaning** has the switch, **Find Notes by Meaning**, then what it is doing (Not downloaded, Downloading, Indexing, Ready) with a progress bar and how many notes of your open notebooks it has read, then the model, its size and its licence. A notebook you remove from the Mac leaves that count. Turning it off asks first, then removes the model and its index, and search goes back to words only. The same setting applies to agents' `penmoss` on this Mac: see [MCP tools](/docs/reference/mcp/#search_notes).
+**Settings → Semantic Search** (once called Search by Meaning) has the switch, **Semantic Search**, then what it is doing (Not downloaded, Downloading, Indexing, Ready) with a progress bar and how many notes of your open notebooks it has read, then the model, its size and its licence. A notebook you remove from the Mac leaves that count. Turning it off stops it at once, and search goes back to words only; the model stays on the Mac, so turning it on again needs no download. **Delete Model…**, in the model's row, frees the space: it asks first, naming the size, then deletes the model and its index from the Mac and turns Semantic Search off. Turning it on again downloads the model again. The same setting applies to agents' `penmoss` on this Mac: see [MCP tools](/docs/reference/mcp/#search_notes).
 
-One program at a time reads your notes for meaning, normally the Mac app, which reads every notebook it has open. While the app is closed, an agent's `penmoss mcp` reads its own notebook instead, and the app takes over again when it opens. If another copy of Penmoss on the Mac is doing it, Settings → Search by Meaning says how many notes wait, since search by meaning can miss them until then.
+One program at a time reads your notes for meaning, normally the Mac app, which reads every notebook it has open. While the app is closed, an agent's `penmoss mcp` reads its own notebook instead, and the app takes over again when it opens. If another copy of Penmoss on the Mac is doing it, Settings → Semantic Search says how many notes wait, since Semantic Search can miss them until then.
 
 The Android app searches by words only.

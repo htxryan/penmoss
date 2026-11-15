@@ -156,7 +156,7 @@
   transition: background-color var(--pm-fast);
 }
 
-/* This Mac's pages (GitHub, Search by Meaning, Updates): their groups and cards apart. */
+/* This Mac's pages (GitHub, Semantic Search, Updates): their groups and cards apart. */
 .settings-content .settings-section > :is(.lf-group, .updates-card, .github-token) {
   margin-top: 1rem;
 }
@@ -169,7 +169,7 @@
   margin-top: 1rem;
 }
 
-/* A progress bar (Search by Meaning's indexing): a track, its fill, and the percentage. */
+/* A progress bar (Semantic Search's indexing): a track, its fill, and the percentage. */
 .settings-progress {
   display: inline-flex;
   align-items: center;
@@ -197,24 +197,6 @@
   color: var(--pm-muted);
   font-size: var(--pm-text-xs);
   font-variant-numeric: tabular-nums;
-}
-
-/* A question before something that removes a lot (Search by Meaning's Turn Off). */
-.settings-confirm {
-  margin: 1rem 0 0;
-  padding: 0.65rem 0.8rem;
-  border: 1px solid var(--pm-danger);
-}
-
-.settings-confirm p {
-  margin: 0;
-}
-
-.settings-confirm .settings-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0.6rem 0 0;
 }
 
 /* Updates' version card: the version, its chip and Check Now, then the channel and last check. */

@@ -65,7 +65,7 @@ describe('searchSettings (PEN-146)', () => {
     expect(labels('auto-update')).toEqual(['Update Automatically']);
     expect(labels('keychain')).toContain('GitHub Account');
     // Help: the model never leaves this Mac.
-    expect(labels('never leave')).toEqual(['Find Notes by Meaning']);
+    expect(labels('never leave')).toEqual(['Semantic Search']);
   });
 
   it('ranks a label that starts with the query first', () => {

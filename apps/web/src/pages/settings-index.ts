@@ -39,7 +39,7 @@ export const SETTINGS_PAGES: ReadonlyArray<{
   { id: 'git-notebooks', label: 'All Notebooks', group: 'notebooks' },
   { id: 'agents', label: 'Agents', group: 'agents' },
   { id: 'agent-activity', label: 'Agent Activity', group: 'agents' },
-  { id: 'meaning', label: 'Search by Meaning', group: 'mac' },
+  { id: 'meaning', label: 'Semantic Search', group: 'mac' },
   { id: 'github', label: 'GitHub', group: 'mac' },
   { id: 'updates', label: 'Updates', group: 'mac' },
 ];
@@ -215,13 +215,30 @@ export const SETTINGS_INDEX: readonly SettingEntry[] = [
     help: 'What agents changed, in every notebook',
     aliases: ['undo', 'history', 'changes'],
   }),
-  // Search by Meaning.
-  at('meaning')('Find Notes by Meaning', {
+  // Semantic Search (A1566; once Search by Meaning).
+  at('meaning')('Semantic Search', {
     help: 'Runs on this Mac. Your notes never leave it.',
-    aliases: ['semantic search', 'embeddings', 'ai search', 'similar notes'],
+    aliases: [
+      'search by meaning',
+      'find notes by meaning',
+      'embeddings',
+      'ai search',
+      'similar notes',
+    ],
   }),
   at('meaning')('Indexing', { aliases: ['progress', 'download'] }),
-  at('meaning')('Model', { aliases: ['embeddinggemma', 'licence', 'license', 'size'] }),
+  at('meaning')('Model', {
+    help: 'Delete Model… frees its space on this Mac',
+    aliases: [
+      'embeddinggemma',
+      'licence',
+      'license',
+      'size',
+      'delete model',
+      'remove model',
+      'disk space',
+    ],
+  }),
   // GitHub.
   at('github')('GitHub Account', {
     help: 'Sign in with GitHub, kept in this Mac’s Keychain',

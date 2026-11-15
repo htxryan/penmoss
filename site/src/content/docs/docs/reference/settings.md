@@ -117,9 +117,9 @@ What agents changed, in every notebook, with Undo ([Agent activity](/docs/agents
 
 ## This Mac
 
-### Search by Meaning
+### Semantic Search
 
-**Find Notes by Meaning**, on by default; then what it's doing, with a progress bar while the model downloads or your notes are indexed, and the model with its size and licence. Turning it off asks first, as it removes the model and its index. See [Search](/docs/search/#search-by-meaning).
+**Semantic Search**, on by default; then what it's doing, with a progress bar while the model downloads or your notes are indexed, and the model with its size and licence. Turning it off stops it and keeps the model. **Delete Model…** asks first, then deletes the model and its index from this Mac and turns it off; turning it on again downloads the model again. See [Search](/docs/search/#semantic-search).
 
 ### GitHub
 

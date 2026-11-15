@@ -109,6 +109,7 @@ export const MEANING_CALLS = [
   'meaningClose',
   'meaningSearch',
   'meaningSetEnabled',
+  'meaningRemoveModel',
 ] as const;
 export type HostCall =
   | (typeof GITHUB_CALLS)[number]
@@ -539,6 +540,8 @@ export class GitHost {
           : null;
       case 'meaningSetEnabled':
         return this.meaning && typeof a === 'boolean' ? this.meaning.setEnabled(a) : null;
+      case 'meaningRemoveModel':
+        return this.meaning ? this.meaning.removeModel() : null;
       case 'updatesState':
         return this.updates.current();
       case 'updatesCheck':

@@ -18,6 +18,8 @@ export interface ServiceCalls {
     options?: { readonly limit?: number; readonly ids?: readonly string[] },
   ): Promise<{ readonly floor: number; readonly hits: MeaningHit[] } | null>;
   setEnabled(enabled: boolean): Promise<ServiceStatus>;
+  /** Delete Model… (A1566): off, then the model and its vectors deleted. */
+  removeModel(): Promise<ServiceStatus>;
 }
 
 export type ServiceMethod = keyof ServiceCalls;
@@ -27,6 +29,7 @@ const METHODS: ReadonlySet<string> = new Set<ServiceMethod>([
   'close',
   'search',
   'setEnabled',
+  'removeModel',
 ]);
 
 export interface ServiceRequest {
@@ -65,6 +68,7 @@ export function serviceCalls(service: MeaningService): ServiceCalls {
       return hits && floor !== null ? { floor, hits } : null;
     },
     setEnabled: (enabled) => service.setEnabled(enabled),
+    removeModel: () => service.removeModel(),
   };
 }
 
@@ -82,6 +86,8 @@ function dispatch(calls: ServiceCalls, request: ServiceRequest): Promise<unknown
       return calls.search(...(args as Parameters<ServiceCalls['search']>));
     case 'setEnabled':
       return calls.setEnabled(...(args as Parameters<ServiceCalls['setEnabled']>));
+    case 'removeModel':
+      return calls.removeModel();
   }
 }
 
@@ -138,6 +144,7 @@ export function serviceClient(
     close: (notebookId) => call('close', notebookId),
     search: (notebookId, query, options) => call('search', notebookId, query, options ?? {}),
     setEnabled: (enabled) => call('setEnabled', enabled),
+    removeModel: () => call('removeModel'),
     failAll: (why) => {
       for (const { reject } of waiting.values()) reject(new Error(why));
       waiting.clear();

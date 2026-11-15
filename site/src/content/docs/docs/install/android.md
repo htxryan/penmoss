@@ -113,7 +113,7 @@ After you install a newer version, a message at the foot of the screen says **Up
 
 ## What the phone does not have
 
-Compared with the Mac: note windows, Keep on Top, the menu bar icon and hotkey, the repository picker (Sign In with GitHub on the phone is for Send Feedback), SSH remotes, search by meaning, and the sidebar's Calendar and Tags sections. Agents connect on a Mac, not on the phone.
+Compared with the Mac: note windows, Keep on Top, the menu bar icon and hotkey, the repository picker (Sign In with GitHub on the phone is for Send Feedback), SSH remotes, semantic search, and the sidebar's Calendar and Tags sections. Agents connect on a Mac, not on the phone.
 
 ## Uninstall
 

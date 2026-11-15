@@ -4,8 +4,8 @@
  * indexing lease, keeps one `MeaningIndex` per open notebook from the notes the page sends, and
  * answers the page's queries. As the lease holder that sees every open notebook, it is the one
  * process that compacts the shared cache, and it takes the lease from an agent's `penmoss mcp`
- * as it starts (A1350); without the lease it keeps trying. Off stops it all and removes the
- * model and vectors.
+ * as it starts (A1350); without the lease it keeps trying. Off stops it all and keeps the
+ * model and vectors, so On is quick again; Delete Model removes them and switches it off (A1566).
  */
 import { MeaningIndex, type MeaningHit, type MeaningNote } from '@penmoss/core/search';
 import type { NoteSection } from '@penmoss/core/search';
@@ -203,23 +203,44 @@ export class MeaningService {
     return this.opened?.embedder.floor ?? null;
   }
 
-  /** Settings → Search by Meaning (A1158): Off stops everything and removes the model and vectors. */
+  /**
+   * Settings → Semantic Search (A1158, A1566): Off stops everything (the download, the indexing,
+   * the model and the lease) and search goes by words; the model and the vectors stay, so On opens
+   * them again without a download. On starts again.
+   */
   async setEnabled(enabled: boolean): Promise<ServiceStatus> {
     await this.node.setEnabled(enabled);
     if (!enabled) {
-      this.enabled = false;
-      this.download?.abort();
-      await this.starting?.catch(() => undefined);
-      await this.shut();
-      await this.node.remove();
-      this.notebooks.clear();
-      this.state = 'off';
-      this.error = undefined;
+      await this.switchOff();
     } else {
       this.enabled = true;
       void this.start();
     }
     return this.emitStatus();
+  }
+
+  /**
+   * Settings → Semantic Search → Delete Model… (A1566): switches it off, then deletes the model
+   * this Mac downloaded and the vectors made with it, and nothing else in `~/.penmoss`. On again
+   * downloads the model again.
+   */
+  async removeModel(): Promise<ServiceStatus> {
+    await this.node.setEnabled(false);
+    await this.switchOff();
+    await this.node.remove();
+    return this.emitStatus();
+  }
+
+  /** Off: the download stops, the indexing run under way finishes, the model closes. */
+  private async switchOff(): Promise<void> {
+    this.enabled = false;
+    this.download?.abort();
+    await this.starting?.catch(() => undefined);
+    await this.shut();
+    this.notebooks.clear();
+    this.state = 'off';
+    this.error = undefined;
+    this.received = undefined;
   }
 
   /** Lets go of the model and the lease (the app quitting). */

@@ -627,6 +627,11 @@ export interface DesktopMeaning {
   ): Promise<{ readonly floor: number; readonly hits: DesktopMeaningHit[] } | null>;
   /** After a key press or click only, main window only (null otherwise; A1158). */
   setEnabled(on: boolean): Promise<DesktopMeaningStatus | null>;
+  /**
+   * Delete Model… (A1566): off, then the downloaded model and its vectors deleted from this Mac.
+   * After a click, main window only (null otherwise).
+   */
+  removeModel(): Promise<DesktopMeaningStatus | null>;
   onChange(listener: (status: DesktopMeaningStatus) => void): () => void;
 }
 

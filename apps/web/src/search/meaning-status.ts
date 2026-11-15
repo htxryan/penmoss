@@ -1,6 +1,6 @@
 /**
- * Search by meaning's status in the page (T78, A1158): main's, kept current, and how it reads.
- * Settings → Search by Meaning (MeaningSettings.tsx) shows it.
+ * Semantic Search's status in the page (T78, A1158): main's, kept current, and how it reads.
+ * Settings → Semantic Search (MeaningSettings.tsx) shows it.
  */
 import { useEffect, useState } from 'react';
 import { desktop, type DesktopMeaning, type DesktopMeaningStatus } from '../desktop/bridge';
@@ -46,7 +46,10 @@ export function meaningStatusText(status: DesktopMeaningStatus): string {
   const size = status.totalBytes ? megabytes(status.totalBytes) : 'about 219 MB';
   switch (status.state) {
     case 'off':
-      return `Off. Search matches your words. Turning it on downloads ${modelName(status.model)} (${size}) once.`;
+      // The model stays when it is switched off; Delete Model… removes it (A1566).
+      return (status.modelBytes ?? 0) > 0 && status.modelBytes === status.totalBytes
+        ? 'Off. Search matches your words. The model stays on this Mac for when you turn it on.'
+        : `Off. Search matches your words. Turning it on downloads ${modelName(status.model)} (${size}) once.`;
     case 'absent':
       return `Not downloaded. ${modelName(status.model)} (${size}) downloads when Penmoss starts.`;
     case 'downloading': {
@@ -67,17 +70,17 @@ export function meaningStatusText(status: DesktopMeaningStatus): string {
         status.total > 0 ? ` All ${status.total} notes are indexed.` : ''
       }`;
     case 'restarting':
-      return 'Search by meaning stopped unexpectedly. Starting it again…';
+      return 'Semantic Search stopped unexpectedly. Starting it again…';
     case 'stopped':
       return 'Stopped.';
     case 'failed':
-      return `Search by meaning could not start: ${status.error ?? 'unknown error'}.`;
+      return `Semantic Search could not start: ${status.error ?? 'unknown error'}.`;
   }
 }
 
 /**
  * Another Penmoss app on this Mac holds the indexing lease (A1350): this one searches with what is
- * indexed, so it says how many notes wait and that search by meaning can miss them. Nothing once
+ * indexed, so it says how many notes wait and that Semantic Search can miss them. Nothing once
  * every note is indexed.
  */
 export function waitingText(status: DesktopMeaningStatus): string | null {
@@ -86,7 +89,7 @@ export function waitingText(status: DesktopMeaningStatus): string | null {
   if (waiting <= 0) return null;
   return ` Another copy of Penmoss on this Mac is indexing, so ${waiting} ${
     waiting === 1 ? 'note waits' : 'notes wait'
-  } here; search by meaning can miss ${waiting === 1 ? 'it' : 'them'} until then.`;
+  } here; Semantic Search can miss ${waiting === 1 ? 'it' : 'them'} until then.`;
 }
 
 /** How far along the service is, 0–100, with its words; null when nothing is under way. */

@@ -114,7 +114,7 @@ export const meaning =
         },
         fork: () => {
           const child = utilityProcess.fork(join(__dirname, 'embed-utility.cjs'), [], {
-            serviceName: 'Penmoss Search by Meaning',
+            serviceName: 'Penmoss Semantic Search',
             stdio: ['ignore', 'pipe', 'pipe'],
             env: {
               ...process.env,
