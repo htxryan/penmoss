@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@excalidraw/excalidraw": "0.18.1",
+    "@lucide/icons": "1.70.0",
     "@penmoss/core": "workspace:*",
     "@penmoss/editor": "workspace:*",
     "@penmoss/git-notebook": "workspace:*",
@@ -24,6 +25,7 @@
     "@y/y": "14.0.0-rc.29",
     "gpt-tokenizer": "4.1.0",
     "lib0": "1.0.0-rc.36",
+    "lucide-static": "1.70.0",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },

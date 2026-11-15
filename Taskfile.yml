@@ -382,6 +382,11 @@ tasks:
       - '{{if eq OS "linux"}}xvfb-run -a {{end}}pnpm --filter @penmoss/desktop exec electron scripts/render-icon.mjs'
       - '{{if eq OS "linux"}}xvfb-run -a {{end}}pnpm --filter @penmoss/desktop exec electron scripts/render-tray-icon.mjs'
 
+  characters:
+    desc: "The icon picker's Characters (A1568): write packages/core/data/characters.json from scripts/characters.mjs and emojibase-data"
+    cmds:
+      - node scripts/characters.mjs
+
   android:editor:
     desc: 'Android: build the editor page (Vite) into the app assets (apps/android/app/src/main/assets/editor)'
     cmds:
