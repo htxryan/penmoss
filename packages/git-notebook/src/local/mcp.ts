@@ -28,6 +28,7 @@ import {
 import { normaliseTag } from '@penmoss/core/tags';
 import type { SortMode } from '@penmoss/core/workspace';
 import type { EditOp, SectionMode } from '@penmoss/model/edit-engine';
+import { callSession, type AgentSession } from '../sessions';
 import { COMMENT_HANDLERS } from './comment-tools';
 import {
   NotebookBusy,
@@ -638,6 +639,11 @@ export interface LocalServerPresentation {
   /** The client said `notifications/initialized`: a channel may notify from now on. */
   readonly onInitialized?: () => void;
   /**
+   * The server's environment (PEN-152): Claude Code's `CLAUDE_CODE_SESSION_ID` names the session
+   * of a call when its request carries none. Absent: no environment is read.
+   */
+  readonly env?: Readonly<Record<string, string | undefined>>;
+  /**
    * The name of the notebook on this machine whose short references (PEN-69) start with `tag`,
    * or null: a reference of another notebook is refused with the server that reads it.
    */
@@ -649,6 +655,10 @@ export class LocalMcpServer {
   private readonly absent: ReadonlyMap<string, string>;
   /** Several notebooks (PEN-150): calls go to the notebook their ids or `notebook` name. */
   private readonly router: NotebookRouter | null;
+  /** What the client said it is at `initialize` (PEN-152). */
+  private clientInfo: { readonly name?: unknown; readonly title?: unknown } | null = null;
+  /** This process's own session id, for a client that names none (A1583). */
+  private readonly ownSession = `penmoss-${ulid()}`;
 
   /** One notebook: `penmoss mcp --notebook`, the relay. */
   constructor(
@@ -674,12 +684,13 @@ export class LocalMcpServer {
     const several = 'notebooks' in access;
     this.router =
       'notebooks' in access
-        ? new NotebookRouter(access, (notebook, tool, args, waitMs) =>
+        ? new NotebookRouter(access, (notebook, tool, args, waitMs, session) =>
             this.run(
               (write, run) =>
                 access.use(notebook, write, run, waitMs === undefined ? {} : { waitMs }),
               tool,
               args,
+              session ?? null,
             ),
           )
         : null;
@@ -730,6 +741,8 @@ export class LocalMcpServer {
     switch (method) {
       case 'initialize': {
         const asked = params['protocolVersion'];
+        const info = params['clientInfo'];
+        this.clientInfo = typeof info === 'object' && info !== null ? info : null;
         return {
           protocolVersion:
             typeof asked === 'string' && LOCAL_PROTOCOL_VERSIONS.includes(asked)
@@ -778,25 +791,38 @@ export class LocalMcpServer {
         }
         const tool = typeof name === 'string' ? this.tools.get(name) : undefined;
         if (!tool) throw new RpcError(INVALID_PARAMS, `Unknown tool: ${String(name)}`);
-        return result(await this.call(tool, params['arguments']));
+        const meta = params['_meta'];
+        const session = callSession({
+          clientInfo: this.clientInfo,
+          meta:
+            typeof meta === 'object' && meta !== null ? (meta as Record<string, unknown>) : null,
+          env: this.presentation.env ?? {},
+          own: this.ownSession,
+        });
+        return result(await this.call(tool, params['arguments'], session));
       }
       default:
         throw new RpcError(METHOD_NOT_FOUND, `Method not found: ${method}`);
     }
   }
 
-  private async call(tool: ToolDefinition, args: unknown): Promise<LocalToolOutcome> {
+  private async call(
+    tool: ToolDefinition,
+    args: unknown,
+    session: AgentSession | null = null,
+  ): Promise<LocalToolOutcome> {
     const checked = checkArguments(tool.inputSchema, args ?? {});
     if ('problem' in checked) {
       return {
         error: `Invalid arguments for ${tool.name}: ${checked.problem}.${tool.hint ? ` ${tool.hint}` : ''}`,
       };
     }
-    if (this.router) return this.router.call(tool, checked.args);
+    if (this.router) return this.router.call(tool, checked.args, session);
     return this.run(
       (write, run) => (this.access as NotebookAccess).use(write, run),
       tool,
       checked.args,
+      session,
     );
   }
 
@@ -805,6 +831,7 @@ export class LocalMcpServer {
     use: NotebookAccess['use'],
     tool: ToolDefinition,
     args: Record<string, unknown>,
+    session: AgentSession | null,
   ): Promise<LocalToolOutcome> {
     const handler = HANDLERS[tool.name]!;
     const ref = args['id'];
@@ -812,15 +839,18 @@ export class LocalMcpServer {
       // get_daily_note may make the day's note, read_comment_thread mark a thread seen: they
       // save and sync like a write.
       const writes = tool.write || WRITES_TOO.has(tool.name);
-      return await use(writes, (notebook) =>
-        handler(
-          notebook,
-          // A note named by its short reference (PEN-69) is named by its id from here on.
-          typeof ref === 'string' && 'id' in tool.inputSchema.properties
-            ? { ...args, id: notebook.noteIdOf(ref) }
-            : args,
-        ),
-      );
+      return await use(writes, (notebook) => {
+        const edit = () =>
+          handler(
+            notebook,
+            // A note named by its short reference (PEN-69) is named by its id from here on.
+            typeof ref === 'string' && 'id' in tool.inputSchema.properties
+              ? { ...args, id: notebook.noteIdOf(ref) }
+              : args,
+          );
+        // A write names the client and session that made it (PEN-152).
+        return writes && session ? notebook.attributed(session, edit) : edit();
+      });
     } catch (error) {
       // A read across notebooks leaves a busy one out (PEN-150): the router says so.
       if (error instanceof NotebookBusy) throw error;

@@ -11,12 +11,14 @@ Every agent writes as itself (see [How agents work](/docs/agents/#each-agent-has
 
 An agent's edits to a note are in that note's [Version History](/docs/history/) (⌘⌥⇧H), marked with a star and the agent's name.
 
+An edit made through `penmoss mcp` names the app and its session: **Claude Code · 7736c5e9** is the Claude Code session whose id starts 7736c5e9, and **Codex · 019a8c3e** a Codex thread. Find the session in the app (Claude Code's `/status`, or Codex's `codex resume` list) to see what it was asked to do. An app that gives no session id is named with an id Penmoss made for that run of the server, marked **(Penmoss’s id)**.
+
 - **Revert This Edit** undoes what that one version changed and keeps every edit made since, by you or anyone else. If a later edit changed the same lines, it says so.
 - **Restore This Version** brings back the whole note as it was.
 
 ## Everything else: Agent Activity
 
-**Agent Activity** lists what agents changed outside the notes' text in the last 30 days: folders they made, renamed or moved, notes they moved, and settings they changed. Each entry names the agent, the notebook and when, newest first, with **Undo**.
+**Agent Activity** lists what agents changed outside the notes' text in the last 30 days: folders they made, renamed or moved, notes they moved, and settings they changed. Each entry names the agent (the app and its session, as in History), the notebook and when, newest first, with **Undo**.
 
 - **On the Mac:** open **Settings → Agent Activity**, beside **Agents**. It lists every notebook's changes together. Use the two menus by the title to show one notebook (**All Notebooks** by default) or one agent (**All Agents**).
 - **On Android:** open **Settings → Agent Activity**. It lists every notebook's changes together, with a filter for one notebook, one agent or one kind of change.
