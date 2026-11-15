@@ -251,6 +251,13 @@ const PATHS = {
       <path d="m20 20-4.2-4.2" />
     </>
   ),
+  // A1589: a Settings preview opens larger; Search's glass with a plus.
+  'zoom-in': (
+    <>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m20 20-4.2-4.2M11 8.5v5M8.5 11h5" />
+    </>
+  ),
   sort: <path d="M7.5 4.5v15m0 0-3-3m3 3 3-3M16.5 19.5v-15m0 0-3 3m3-3 3 3" />,
   // T51 (A935): Settings, in the sidebar's footer; eight teeth round a hub.
   gear: (

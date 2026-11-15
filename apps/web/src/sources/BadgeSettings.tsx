@@ -2,6 +2,7 @@ import { Icon } from '@penmoss/ui/icons';
 import { useId, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { ColourPicker } from '../shell/ColourPicker';
 import { SettingRow } from '../theme/look-rows';
+import { PreviewZoom } from '../theme/PreviewZoom';
 import {
   BADGE_PRESETS,
   FIRST_BADGE_ICON,
@@ -94,7 +95,9 @@ export function BadgeSettings({ source }: { source: GitSource }) {
           data-testid="badge-preview"
         >
           <BadgeView badge={badge} name={name} size={26} />
-          <BadgePlaces source={source} />
+          <PreviewZoom name="Badge" testId="badge-preview-zoom">
+            {(enlarged) => <BadgePlaces source={source} enlarged={enlarged} />}
+          </PreviewZoom>
         </div>
         <button
           data-ui="item"
@@ -278,10 +281,22 @@ const ignore = () => undefined;
  * name's row alone) and a tab of one of its notes (`TabFaceView`), each the app's component,
  * inert, so a change shows exactly as the app will show it.
  */
-function BadgePlaces({ source }: { readonly source: GitSource }) {
+function BadgePlaces({
+  source,
+  enlarged = false,
+}: {
+  readonly source: GitSource;
+  /** In the larger preview's dialog (A1589): twice the size, to see the badge's detail. */
+  readonly enlarged?: boolean;
+}) {
   return (
     <PreviewCommands>
-      <span className="badge-preview-places" inert aria-hidden="true">
+      <span
+        className={enlarged ? 'badge-preview-places large' : 'badge-preview-places'}
+        data-testid={enlarged ? 'badge-preview-large' : 'badge-preview-places'}
+        inert
+        aria-hidden="true"
+      >
         <span className="sidebar badge-preview-sidebar">
           <SourceScope source={source}>
             <SourceSection

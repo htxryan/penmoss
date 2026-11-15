@@ -2,6 +2,8 @@ package app.penmoss.ui.settings
 
 import android.content.Context
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.click
 import androidx.compose.ui.platform.testTag
@@ -236,11 +238,18 @@ class SettingsScreensTest {
         compose.onNodeWithTag("homeShortcuts").assertDoesNotExist()
         compose.onNodeWithTag("homeSearch").assertDoesNotExist()
         compose.onNodeWithTag("previewNote").assertDoesNotExist()
-        // A tap on the note in it reaches nothing.
+        compose.onNodeWithText("Preview: redraws as you change these. Tap to see it larger.").assertIsDisplayed()
+        // A1589: the whole preview is one button that opens it full screen, the note inert there too.
+        compose.onNodeWithContentDescription("Enlarge Appearance Preview").assertHasClickAction()
         compose.onNodeWithTag("appearancePreviewApp").performTouchInput { click(center) }
+        compose.onNodeWithText("Appearance Preview").assertIsDisplayed()
+        compose.onNodeWithTag("appearancePreviewLarge").assertIsDisplayed().performTouchInput { click(center) }
         compose.waitForIdle()
         assertFalse(touched)
-        compose.onNodeWithText("Preview: redraws as you change these.").assertIsDisplayed()
+        compose.onNodeWithTag("previewNote").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Close").performClick()
+        compose.onNodeWithText("Appearance Preview").assertDoesNotExist()
+        compose.onNodeWithTag("appearancePreviewApp").assertIsDisplayed()
     }
 
     @Test
