@@ -305,12 +305,14 @@ private class GraphTagRenamer(private val graph: NotebookGraph) : TagRenamer {
         graph.api.renameTag(from, to, noteIds).notes
 
     override fun syncNow() {
-        graph.scope.launch { graph.sync.syncNow() }
+        // Outlives the screen: a sync the person asked for.
+        graph.launchReporting(Dispatchers.Main.immediate) { graph.sync.syncNow() }
     }
 
     override fun syncAfterRename() {
         graph.sync.requestSync()
-        graph.scope.launch {
+        // Outlives the screen: the rename's second sync, once the server has rewritten the notes.
+        graph.launchReporting(Dispatchers.Main.immediate) {
             delay(RENAME_RESYNC_MS)
             graph.sync.requestSync()
         }

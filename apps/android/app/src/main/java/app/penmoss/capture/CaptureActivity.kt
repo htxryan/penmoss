@@ -168,11 +168,12 @@ class CaptureActivity : ComponentActivity() {
         val named = ui.notebooks.size > 1
         val resolver = applicationContext.contentResolver
         val app = applicationContext
-        // The app's scope: the capture is stored even if this sheet is gone by then.
-        graph.scope.launch {
+        // The app's scope: the capture is stored even if this sheet is gone by then, and a
+        // failure is reported (A1467).
+        graph.launchReporting(Dispatchers.Main.immediate) {
             // Each picture read only when the one before is stored (A348).
             val sources = uris.map { uri -> suspend { withContext(Dispatchers.IO) { PickedPictures.read(resolver, uri) } } }
-            val saved = graph.captures.saveDraft(draftId, text, sources, destination) ?: return@launch
+            val saved = graph.captures.saveDraft(draftId, text, sources, destination) ?: return@launchReporting
             val into = if (named && name != null) " in $name" else ""
             val where = if (saved.destination == CaptureRequest.INBOX) "Saved as a new note in Inbox$into" else "Saved to today’s note$into"
             val unread = saved.refusedPictures

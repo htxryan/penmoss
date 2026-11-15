@@ -15,7 +15,6 @@ import app.penmoss.ui.open
 import app.penmoss.ui.sortFolderAndSay
 import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -50,7 +49,8 @@ internal fun rootActions(
     newNote = { newNote(null) },
     newFolder = newFolder,
     sort = { mode ->
-        graph.scope.launch { Toast.makeText(context, sortFolderAndSay(graph, null, mode), Toast.LENGTH_SHORT).show() }
+        // Outlives the screen: the top level's sort order, written for the person.
+        graph.launchReporting(kotlinx.coroutines.Dispatchers.Main.immediate) { Toast.makeText(context, sortFolderAndSay(graph, null, mode), Toast.LENGTH_SHORT).show() }
     },
     capture = { openCapture(context) },
     // The opposite of the variant shown, as the web's `toggleDarkMode` does.

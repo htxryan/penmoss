@@ -1,5 +1,6 @@
 package app.penmoss.ui
 
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,9 +28,11 @@ internal fun NoteCommentsSheet(
 ) {
     val state by comments.state.collectAsStateWithLifecycle()
     val draft by comments.draft.collectAsStateWithLifecycle()
+    // The sessions are read only to show them: the read ends with the sheet.
+    val sheetScope = rememberCoroutineScope()
     val sendTo = remember(noteId) {
         // Once a sync has landed, the list says which sessions are gone (A1062, A1077).
-        SendToModel(graph.comments, graph.scope, onListed = { listed -> if (listed.synced) comments.sessions(listed.sessions) })
+        SendToModel(graph.comments, sheetScope, onListed = { listed -> if (listed.synced) comments.sessions(listed.sessions) })
     }
     val sendToUi by sendTo.ui.collectAsStateWithLifecycle()
     // The note's comments are shown: read the sessions, which fails deliveries to one gone.

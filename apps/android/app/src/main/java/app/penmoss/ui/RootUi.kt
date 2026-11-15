@@ -1,5 +1,7 @@
 package app.penmoss.ui
 
+import kotlinx.coroutines.CoroutineScope
+import androidx.compose.runtime.rememberCoroutineScope
 import android.content.Context
 import android.net.Uri
 import android.view.Window
@@ -31,7 +33,6 @@ import app.penmoss.feedback.feedbackActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * What a git notebook's screens share (A6): the navigation, the snackbar over every screen, the
@@ -48,6 +49,12 @@ internal class RootUi(
     val selection: NoteSelection,
     /** The window feedback captures (A801). */
     private val window: Window?,
+    /**
+     * The screens' own scope (A6): work they start only to show something (a folder looked up for
+     * the picker, a copy, feedback's context) ends with them. Work the person asked for that must
+     * finish if they leave meanwhile goes on the notebook's process scope ([keep]).
+     */
+    private val screenScope: CoroutineScope,
 ) {
     /** Says what happened to a note over every screen, with Undo (Move to Trash, NT12). */
     val snackbar = SnackbarHostState()
@@ -76,6 +83,13 @@ internal class RootUi(
     /** Reordering inside a folder (T40 P4, NT7): the folder, or null when not. */
     var folderReordering by mutableStateOf<String?>(null)
 
+    /**
+     * A write the person asked for, which finishes even if they leave the screen meanwhile: on
+     * the notebook's process scope with its failure reported (A1467), on the main thread as
+     * before, so its Toast shows.
+     */
+    private fun keep(block: suspend CoroutineScope.() -> Unit) = graph.launchReporting(Dispatchers.Main.immediate, block)
+
     fun openNote(id: String) = nav.open("note/$id")
 
     /** A link followed to a heading (T40 P7, LK3): the note opens there. */
@@ -102,15 +116,28 @@ internal class RootUi(
     /** A long press on a note in a list starts selection mode (T42 on Android, NT26, A652). */
     fun startSelection(note: NoteItem) = selection.start(note)
 
+    /** Opens the folder picker on the folder [note] is in. */
     fun moveFromList(note: NoteItem) {
-        graph.scope.launch { choosing = Choosing.Move(note.id, note.title, graph.store.folderOf(note.id)) }
+        screenScope.launch { choosing = Choosing.Move(note.id, note.title, graph.store.folderOf(note.id)) }
     }
 
+    /** Opens the folder picker for the notes chosen, marking the folder they share. */
+    fun moveSelected(picked: List<Picked>) {
+        screenScope.launch {
+            val folders = picked.map { graph.store.folderOf(it.id) }.distinct()
+            choosing = Choosing.MoveMany(picked, folders.toSet())
+        }
+    }
+
+    // Outlives the screen: the move to Trash the person asked for, and its Undo, over every screen.
     fun trashNote(id: String) = graph.scope.moveToTrashWithUndo(graph.store, { graph.sync.requestSync() }, snackbar, id)
+
+    // Outlives the screen, as one note's move to Trash does.
+    fun trashNotes(ids: List<String>) = graph.scope.moveNotesToTrashWithUndo(graph.store, { graph.sync.requestSync() }, snackbar, ids)
 
     /** Copy Agent Reference from a list (T52 item 4): read from Room, said over every screen. */
     fun copyAgentReference(id: String) {
-        graph.scope.launch {
+        screenScope.launch {
             val said = agentReferenceIn(graph, id)?.let { AgentReference.copy(context, it) }
                 ?: "This note isn't on this phone any more"
             snackbar.currentSnackbarData?.dismiss()
@@ -120,48 +147,77 @@ internal class RootUi(
 
     /** A new note beside [noteId], in its folder (T53 item 12). */
     fun newNoteBeside(noteId: String) {
-        graph.scope.launch { val folder = graph.store.folderOf(noteId); withContext(Dispatchers.Main) { newNote(folder) } }
+        screenScope.launch { newNote(graph.store.folderOf(noteId)) }
     }
 
     /** A new folder beside [noteId], in its folder (T53 item 12). */
     fun newFolderBeside(noteId: String) {
-        graph.scope.launch { val folder = graph.store.folderOf(noteId); withContext(Dispatchers.Main) { folderNaming = FolderNaming.Create(folder) } }
+        screenScope.launch { folderNaming = FolderNaming.Create(graph.store.folderOf(noteId)) }
     }
 
     /** Says what a folder action did, over every screen. */
     fun toast(message: String) = Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 
     fun turnBack(folder: FolderItem) {
-        graph.scope.launch { toast(setNotebookAndSay(graph, folder.id, folder.name, on = false)) }
+        // Outlives the screen: a folder write the person asked for.
+        keep { toast(setNotebookAndSay(graph, folder.id, folder.name, on = false)) }
     }
 
     fun createFolder(name: String, parent: String?) {
-        graph.scope.launch { toast(createFolderAndSay(graph, name, parent)) }
+        // Outlives the screen: a folder write the person asked for.
+        keep { toast(createFolderAndSay(graph, name, parent)) }
     }
 
     fun renameFolder(id: String, name: String) {
-        graph.scope.launch { toast(renameFolderAndSay(graph, id, name)) }
+        // Outlives the screen: a folder write the person asked for.
+        keep { toast(renameFolderAndSay(graph, id, name)) }
     }
 
     fun moveFolder(id: String, parent: String?) {
-        graph.scope.launch { toast(moveFolderAndSay(graph, id, parent)) }
+        // Outlives the screen: a folder write the person asked for.
+        keep { toast(moveFolderAndSay(graph, id, parent)) }
     }
 
     fun sortFolder(id: String?, mode: String) {
-        graph.scope.launch { toast(sortFolderAndSay(graph, id, mode)) }
+        // Outlives the screen: a folder's sort order, written for the person.
+        keep { toast(sortFolderAndSay(graph, id, mode)) }
     }
 
     fun reorderFolder(id: String, before: String?, after: String?) {
-        graph.scope.launch { reorderFolderAndSay(graph, id, before, after) }
+        // Outlives the screen: the order dragged, written for the person.
+        keep { reorderFolderAndSay(graph, id, before, after) }
     }
 
     fun reorderNote(id: String, before: String?, after: String?) {
-        graph.scope.launch { reorderNoteAndSay(graph, id, before, after) }
+        // Outlives the screen: the order dragged, written for the person.
+        keep { reorderNoteAndSay(graph, id, before, after) }
+    }
+
+    /** Deletes [folder] once the person has confirmed it (T40 P4, NT4): a notebook goes to Trash with its notes (T43, A755). */
+    fun deleteFolder(folder: FolderItem, notebook: Boolean) {
+        // Outlives the screen: a delete the person confirmed.
+        keep { toast(if (notebook) deleteFolderAndSay(graph, folder.id, folder.name, notebook = true) else deleteFolderAndSay(graph, folder.id, folder.name)) }
+    }
+
+    /** Moves one note to [folder] (null: the top level), and says so. */
+    fun moveNote(noteId: String, folder: String?) {
+        // Outlives the screen: a move the person asked for.
+        keep { toast(moveNoteAndSay(graph, noteId, folder)) }
+    }
+
+    /** Moves the notes chosen to [folder] (null: the top level) in one pick (A652), and says so. */
+    fun moveNotes(picked: List<Picked>, folder: String?) {
+        // Outlives the screen: a move the person asked for.
+        keep {
+            val name = folder?.let { id -> graph.store.observeFolders().first().firstOrNull { it.id == id }?.name?.ifBlank { null } }
+                ?: if (folder == null) Items.TOP_LEVEL else "the folder"
+            toast(moveNotesAndSay(graph.store, picked.map { it.id }, folder, name) { graph.sync.requestSync() })
+        }
     }
 
     /** Asks before deleting [folderId] (T40 P4, NT4), as Room has it now. */
     fun askDeleteFolder(folderId: String) {
-        graph.scope.launch {
+        screenScope.launch {
             folderDeleting = graph.store.observeFolders().first()
                 .firstOrNull { it.id == folderId }
                 ?.let { FolderItem(it.id, it.name, notebook = it.notebook) }
@@ -170,10 +226,11 @@ internal class RootUi(
 
     /**
      * Send feedback (T49, D41): the screen in front and its context are captured first, then
-     * the form opens over it (A801). [settle] waits for a screen closing to go first.
+     * the form opens over it (A801). [settle] waits for a screen closing to go first. On the
+     * screens' scope: the form opens over them, so with them gone there is nothing to open.
      */
     fun openFeedback(from: String, noteId: String?, extras: NoteExtras?, panel: String?, settle: Long) {
-        graph.scope.launch {
+        screenScope.launch {
             if (settle > 0) kotlinx.coroutines.delay(settle)
             val entry = nav.currentBackStackEntry
             val pattern = entry?.destination?.route
@@ -197,7 +254,8 @@ internal class RootUi(
 internal fun rememberRootUi(graph: NotebookGraph, nav: NavHostController): RootUi {
     val context = LocalContext.current
     val selection = LocalNoteSelection.current ?: remember { NoteSelection() }
-    return remember(graph, nav, context, selection) { RootUi(graph, nav, context, selection, context.feedbackActivity()?.window) }
+    val screenScope = rememberCoroutineScope()
+    return remember(graph, nav, context, selection) { RootUi(graph, nav, context, selection, context.feedbackActivity()?.window, screenScope) }
 }
 
 /** What the folder picker over the screens is choosing (T38). */
@@ -285,23 +343,16 @@ internal fun RootNotices(root: RootUi) {
 internal fun RootSelectionBar(root: RootUi, modifier: Modifier = Modifier) {
     val selection = root.selection
     if (!selection.active) return
-    val graph = root.graph
     BackHandler { selection.clear() }
     SelectionBar(
         picked = selection.picked,
         onClose = selection::clear,
-        onMove = {
-            val picked = selection.picked
-            graph.scope.launch {
-                val folders = picked.map { graph.store.folderOf(it.id) }.distinct()
-                root.choosing = Choosing.MoveMany(picked, folders.toSet())
-            }
-        },
+        onMove = { root.moveSelected(selection.picked) },
         onTrash = {
             val picked = selection.picked
             selection.clear()
             if (picked.size == 1) root.trashNote(picked.single().id)
-            else graph.scope.moveNotesToTrashWithUndo(graph.store, { graph.sync.requestSync() }, root.snackbar, picked.map { it.id })
+            else root.trashNotes(picked.map { it.id })
         },
         onRename = {
             val note = selection.picked.single()
@@ -431,7 +482,7 @@ internal fun RootDialogs(root: RootUi) {
     }
 
     root.folderDeleting?.let { folder ->
-        FolderDeleteHost(graph, folder) { root.folderDeleting = null }
+        FolderDeleteHost(root, folder) { root.folderDeleting = null }
     }
 
     when (val choice = root.choosing) {
@@ -452,9 +503,7 @@ internal fun RootDialogs(root: RootUi) {
             current = choice.current,
             onPick = { folder ->
                 root.choosing = null
-                graph.scope.launch {
-                    root.toast(moveNoteAndSay(graph, choice.noteId, folder))
-                }
+                root.moveNote(choice.noteId, folder)
             },
             onDismiss = { root.choosing = null },
         )
@@ -466,12 +515,7 @@ internal fun RootDialogs(root: RootUi) {
             onPick = { folder ->
                 root.choosing = null
                 root.selection.clear()
-                graph.scope.launch {
-                    val name = folder?.let { id -> graph.store.observeFolders().first().firstOrNull { it.id == id }?.name?.ifBlank { null } }
-                        ?: if (folder == null) Items.TOP_LEVEL else "the folder"
-                    val said = moveNotesAndSay(graph.store, choice.picked.map { it.id }, folder, name) { graph.sync.requestSync() }
-                    root.toast(said)
-                }
+                root.moveNotes(choice.picked, folder)
             },
             onDismiss = { root.choosing = null },
         )
@@ -496,10 +540,9 @@ internal fun RootDialogs(root: RootUi) {
 
 /** Deletes a folder after saying what moves up (T40 P4, NT4); gone meanwhile: nothing to ask. */
 @Composable
-private fun FolderDeleteHost(graph: NotebookGraph, folder: FolderItem, onDone: () -> Unit) {
-    val context = LocalContext.current
+private fun FolderDeleteHost(root: RootUi, folder: FolderItem, onDone: () -> Unit) {
     val summary by produceState<NoteStore.FolderDeleteSummary?>(initialValue = null, folder.id) {
-        value = graph.store.folderDeleteSummary(folder.id)
+        value = root.graph.store.folderDeleteSummary(folder.id)
     }
     val counted = summary ?: return
     if (counted.notebook) {
@@ -508,9 +551,7 @@ private fun FolderDeleteHost(graph: NotebookGraph, folder: FolderItem, onDone: (
             name = folder.name,
             notes = counted.notes,
             onConfirm = {
-                graph.scope.launch {
-                    Toast.makeText(context, deleteFolderAndSay(graph, folder.id, folder.name, notebook = true), Toast.LENGTH_SHORT).show()
-                }
+                root.deleteFolder(folder, notebook = true)
                 onDone()
             },
             onDismiss = onDone,
@@ -523,9 +564,7 @@ private fun FolderDeleteHost(graph: NotebookGraph, folder: FolderItem, onDone: (
         subfolders = counted.subfolders,
         destination = counted.destination,
         onConfirm = {
-            graph.scope.launch {
-                Toast.makeText(context, deleteFolderAndSay(graph, folder.id, folder.name), Toast.LENGTH_SHORT).show()
-            }
+            root.deleteFolder(folder, notebook = false)
             onDone()
         },
         onDismiss = onDone,

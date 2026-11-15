@@ -1,5 +1,6 @@
 package app.penmoss.ui
 
+import kotlinx.coroutines.Dispatchers
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.compose.runtime.Composable
@@ -422,7 +423,8 @@ internal fun TrashRoute(graph: NotebookGraph, onOpen: (String) -> Unit, onBack: 
             current = null,
             onPick = { folder ->
                 choosingFor = null
-                graph.scope.launch {
+                // Outlives the screen: a restore the person asked for.
+                graph.launchReporting(Dispatchers.Main.immediate) {
                     val name = folder?.let { id -> graph.store.observeFolders().first().firstOrNull { it.id == id }?.name?.ifBlank { null } }
                         ?: if (folder == null) Items.TOP_LEVEL else "the folder"
                     model.restoreInto(picking, folder, name)

@@ -26,7 +26,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
 
@@ -173,9 +172,10 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
             dateOf = { format.format(Date(it)) },
             onBack = { nav.leave(entry) },
             onCopy = { copyCaptures(root.context, listOf(it)) },
-            onRetry = { graph.scope.launch { graph.captures.retry(it.id) } },
-            onWithoutPictures = { graph.scope.launch { graph.captures.sendWithoutMissingPictures(it.id) } },
-            onDiscard = { graph.scope.launch { graph.captures.discard(it.id) } },
+            // Each outlives the screen: a capture sent again, or discarded, as the person asked.
+            onRetry = { graph.launchReporting(Dispatchers.Main.immediate) { graph.captures.retry(it.id) } },
+            onWithoutPictures = { graph.launchReporting(Dispatchers.Main.immediate) { graph.captures.sendWithoutMissingPictures(it.id) } },
+            onDiscard = { graph.launchReporting(Dispatchers.Main.immediate) { graph.captures.discard(it.id) } },
         )
     }
 }

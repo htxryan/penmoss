@@ -1,5 +1,6 @@
 package app.penmoss.ui
 
+import kotlinx.coroutines.CoroutineScope
 import android.content.Context
 import android.view.View
 import android.view.inputmethod.InputMethodManager
@@ -87,6 +88,12 @@ internal class NoteScreenState(
     val graph: NotebookGraph,
     val noteId: String,
     private val context: Context,
+    /**
+     * The note screen's own scope (A6): what it starts only to show (a folder looked up for the
+     * move picker, a copy) ends with it. A write the person asked for (a move, a version, the
+     * last edits) goes on the notebook's process scope and finishes if they leave meanwhile.
+     */
+    private val screenScope: CoroutineScope,
     val channel: EditorWebView.Channel,
     val controller: NoteEditorController,
     val services: EditorPageServices,
@@ -231,7 +238,8 @@ internal class NoteScreenState(
     fun webView(): WebView? = holder[0] as? WebView
 
     fun retryPictures() {
-        graph.scope.launch {
+        // Outlives the screen: the pictures' upload the person asked for again.
+        graph.launchReporting(Dispatchers.Main.immediate) {
             graph.attachments.retryFailed()
             graph.sync.requestSync()
         }
@@ -241,7 +249,7 @@ internal class NoteScreenState(
     val copyAgentReference: (() -> Unit)? get() = if (placed == null) null else ::copyReference
 
     private fun copyReference() {
-        graph.scope.launch {
+        screenScope.launch {
             val reference = agentReferenceIn(graph, noteId)
             controller.notify(reference?.let { AgentReference.copy(context, it) } ?: "This note isn't on this phone any more")
         }
@@ -249,12 +257,13 @@ internal class NoteScreenState(
 
     /** Opens the move picker on the folder the note is in. */
     fun startMove() {
-        graph.scope.launch { moving = MovePick(graph.store.folderOf(noteId)) }
+        screenScope.launch { moving = MovePick(graph.store.folderOf(noteId)) }
     }
 
     /** Moves the note to [folder] (null: the top level), and says so. */
     fun moveTo(folder: String?) {
-        graph.scope.launch { controller.notify(moveNoteAndSay(graph, noteId, folder)) }
+        // Outlives the screen: a move the person asked for.
+        graph.launchReporting(Dispatchers.Main.immediate) { controller.notify(moveNoteAndSay(graph, noteId, folder)) }
     }
 
     /**
@@ -265,7 +274,8 @@ internal class NoteScreenState(
     fun trash(onTrash: () -> Unit) = graph.scope.trashAfterClosing(controller::close, onTrash)
 
     fun saveVersion() {
-        graph.scope.launch {
+        // Outlives the screen: the version the person asked for, after the last edits are stored.
+        graph.launchReporting(Dispatchers.Main.immediate) {
             controller.notify(
                 saveVersionNow(
                     flush = controller::flushAndWait,
@@ -317,6 +327,8 @@ internal fun rememberNoteScreenState(
     onOpenNoteAt: (String, String?) -> Unit,
 ): NoteScreenState {
     val channel = remember(noteId) { EditorWebView.Channel() }
+    // The controller, the page's services and its files work on the notebook's process scope: the
+    // note's last edits, its conflict copies and the files picked are stored even as the screen goes.
     val controller = remember(noteId) {
         NoteEditorController(
             noteId,
@@ -372,8 +384,9 @@ internal fun rememberNoteScreenState(
             lifecycle.removeObserver(observer)
             services.stop()
             linked.stop()
-            // The page's last edits are stored before the WebView goes (NoteEditorController.close).
-            graph.scope.launch {
+            // The page's last edits are stored before the WebView goes (NoteEditorController.close):
+            // outlives the screen, which is going.
+            graph.launchReporting(Dispatchers.Main.immediate) {
                 controller.close()
                 (holder[0] as? WebView)?.let(EditorWebView::destroy)
             }
@@ -417,7 +430,8 @@ internal fun rememberNoteScreenState(
             controller.refocus()
             return@rememberLauncherForActivityResult
         }
-        graph.scope.launch {
+        // Outlives the screen: the pictures the person picked are stored even if they leave meanwhile.
+        graph.launchReporting(Dispatchers.Main.immediate) {
             val pictures = withContext(Dispatchers.IO) { uris.map { PickedPictures.read(context.contentResolver, it) } }
             if (pictures.any { it == null }) controller.notify("A picture could not be read, or is over 50 MB.")
             holder[0]?.requestFocus()
@@ -459,8 +473,10 @@ internal fun rememberNoteScreenState(
     val info = controller.info.collectAsStateWithLifecycle()
     // The notes linking here, offline from Room (LK5): the Info button's badge and the sheet's list.
     val linkingHere = remember(noteId) { graph.store.observeBacklinkSources(noteId) }.collectAsStateWithLifecycle(emptyList())
+    // The screen's own scope: the backlinks are read only to show them.
+    val screenScope = rememberCoroutineScope()
     val backlinks = remember(noteId) {
-        BacklinksModel(noteId, graph.store, graph.api, graph.scope)
+        BacklinksModel(noteId, graph.store, graph.api, screenScope)
     }
     // Notes edited here the index may not have: Room alone says whether they link here (S3).
     val recentLinkers by remember { graph.store.observeRecentLinkers() }.collectAsStateWithLifecycle(emptySet())
@@ -504,7 +520,6 @@ internal fun rememberNoteScreenState(
             }
         }
     }
-    val menuScope = rememberCoroutineScope()
     val editable = state.phase == EditorUiState.Phase.READY && !state.readOnly
     val canPaste by rememberUpdatedState(editable && !source.value)
     val hooks = remember(noteId) {
@@ -512,7 +527,7 @@ internal fun rememberNoteScreenState(
             override fun copyAs(format: CopyFormat) = tools.copy(format, CopyScope.SELECTION)
             // Read off the main thread: a clip can be large (review S3).
             override fun pastePlain() {
-                menuScope.launch { tools.pastePlain(withContext(Dispatchers.IO) { NoteClipboard.text(context) }) }
+                screenScope.launch { tools.pastePlain(withContext(Dispatchers.IO) { NoteClipboard.text(context) }) }
             }
 
             override fun menuShown() = tools.capture()
@@ -530,6 +545,7 @@ internal fun rememberNoteScreenState(
             graph = graph,
             noteId = noteId,
             context = context,
+            screenScope = screenScope,
             channel = channel,
             controller = controller,
             services = services,

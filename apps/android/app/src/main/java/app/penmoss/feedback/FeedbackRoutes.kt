@@ -1,5 +1,6 @@
 package app.penmoss.feedback
 
+import kotlinx.coroutines.Dispatchers
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -253,12 +254,14 @@ fun FeedbackOutboxRoute(graph: NotebookGraph, openForm: () -> Unit = {}) {
     var notice by rememberSaveable { mutableStateOf<String?>(null) }
     FeedbackOutboxList(
         rows,
-        onRetry = { id -> graph.scope.launch { graph.feedbackOutbox.retry(id) } },
-        onDiscard = { id -> graph.scope.launch { graph.feedbackOutbox.discard(id) } },
+        // Each outlives the screen: a feedback send the person asked for, or its discard.
+        onRetry = { id -> graph.launchReporting(Dispatchers.Main.immediate) { graph.feedbackOutbox.retry(id) } },
+        onDiscard = { id -> graph.launchReporting(Dispatchers.Main.immediate) { graph.feedbackOutbox.discard(id) } },
         dateOf = { format.format(Date(it)) },
         onEdit = { id ->
             notice = null
-            graph.scope.launch {
+            // Outlives the screen: the report moves from the outbox back into the form's draft.
+            graph.launchReporting(Dispatchers.Main.immediate) {
                 if (graph.feedback.edit(id, openForm) == FeedbackService.Edit.DRAFT_IN_THE_WAY) notice = DRAFT_IN_THE_WAY
             }
         },
