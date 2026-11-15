@@ -833,3 +833,30 @@ html:root[data-resizing='rows'] * {
 .note-body .history-view-side > .history-view-title {
   margin: 0 0 0.85em;
 }
+
+/*
+ * The version is the note as it is now: one placeholder in the middle of the view, as Home's,
+ * in Diff and Full File alike, instead of two identical sides.
+ */
+.empty-state.history-view-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.history-view-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--pm-border-soft);
+  border-radius: 50%;
+  background: var(--pm-sidebar);
+  color: var(--pm-muted);
+}

@@ -172,15 +172,36 @@ test('Diff shows the changes with context and folds, Full File every block, line
   await expect.poll(dividers).toBeLessThanOrEqual(0.5);
   await page.setViewportSize({ width: 1440, height: 900 });
 
-  // Another version keeps the choice. The agent's is the note now: Diff has nothing to show.
+  // The agent's version is the note now: one placeholder in the middle of the view, in Full File
+  // and in Diff alike, with no sides and no toggle.
+  const empty = view(page).getByTestId('history-view-no-changes');
+  const placeholder = async () => {
+    await expect(empty.getByRole('heading', { name: 'No Changes' })).toBeVisible();
+    await expect(empty).toContainText('is the same as the note is now');
+    await expect(empty).toContainText(/[0-9a-f]{7}, /);
+    await expect(toggle).toHaveCount(0);
+    await expect(side(page, 'left')).toHaveCount(0);
+    await expect(side(page, 'right')).toHaveCount(0);
+    await expect(view(page).getByTestId('history-view-sides-head')).toHaveCount(0);
+    const [box, area] = await Promise.all([
+      empty.locator('h2').boundingBox(),
+      scroll.boundingBox(),
+    ]);
+    expect(Math.abs(box!.x + box!.width / 2 - (area!.x + area!.width / 2))).toBeLessThan(2);
+    expect(Math.abs(box!.y + box!.height / 2 - (area!.y + area!.height / 2))).toBeLessThan(48);
+  };
   await rows.first().click();
+  await placeholder();
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/history-view-same.png` });
+  // Another version keeps the choice; Diff shows the same placeholder.
+  await rows.last().click();
   await expect(toggle).toHaveAccessibleName('Show Diff');
   await expect(points('left')).toHaveCount(30);
   await toggle.click();
-  await expect(view(page).getByTestId('history-view-no-changes')).toHaveText(
-    'No changes from now.',
-  );
-  await expect(view(page).getByTestId('history-view-same')).toBeVisible();
+  await expect(toggle).toHaveAccessibleName('Show Full File');
+  await rows.first().click();
+  await placeholder();
+  await rows.last().click();
 
   // This device remembers it: Full File again, after a reload.
   await toggle.click();

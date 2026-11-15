@@ -356,6 +356,8 @@ export function VersionView({
   );
   const when = time(version.createdAt);
   const different = rows ? differs(rows) : false;
+  /** Read, and the same as now: one placeholder, in Diff and Full File alike (Ryan's review of #210). */
+  const same = rows !== null && rows !== undefined && !different;
 
   const [mode, setMode] = useDevicePref(viewMode);
   /** The folds opened, by their first row, for these rows: another version's start closed. */
@@ -411,21 +413,26 @@ export function VersionView({
             Read Only
           </span>
           <span className="history-view-space" />
-          {/* Named for what it switches to; short in a narrow head (`data-fit`). */}
-          <button
-            type="button"
-            className="btn"
-            data-ui="option"
-            aria-label={MODE_NAMES[next].long}
-            data-tip={MODE_NAMES[next].long}
-            data-testid="history-view-mode"
-            onClick={() => setMode(next)}
-          >
-            <Icon name={next === 'diff' ? 'diff' : 'file'} />
-            <span className="history-action-word history-view-long">{MODE_NAMES[next].long}</span>
-            <span className="history-action-word history-view-short">{MODE_NAMES[next].short}</span>
-          </button>
-          <span className="history-view-sep" aria-hidden="true" />
+          {/* Named for what it switches to; short in a narrow head (`data-fit`). None when the
+              version is the note as it is now: both modes show the one placeholder. */}
+          {same ? null : (
+            <button
+              type="button"
+              className="btn"
+              data-ui="option"
+              aria-label={MODE_NAMES[next].long}
+              data-tip={MODE_NAMES[next].long}
+              data-testid="history-view-mode"
+              onClick={() => setMode(next)}
+            >
+              <Icon name={next === 'diff' ? 'diff' : 'file'} />
+              <span className="history-action-word history-view-long">{MODE_NAMES[next].long}</span>
+              <span className="history-action-word history-view-short">
+                {MODE_NAMES[next].short}
+              </span>
+            </button>
+          )}
+          {same ? null : <span className="history-view-sep" aria-hidden="true" />}
           {/* The short names, as in the docked preview, the full ones in tooltips (Ryan). */}
           <button
             type="button"
@@ -478,56 +485,61 @@ export function VersionView({
           tabIndex={0}
           data-testid="history-view-scroll"
         >
-          <div className="history-view-sides-head" data-testid="history-view-sides-head">
-            <span className="history-view-divider" aria-hidden="true" />
-            <div>
-              {version.commit ? (
-                <>
-                  <button
-                    type="button"
-                    className="history-view-sha"
-                    data-ui="submit"
-                    aria-label={`Copy Commit SHA ${shortSha(version.commit)}`}
-                    data-tip="Copy Commit SHA"
-                    data-testid="history-view-sha"
-                    onClick={() => version.commit && onCopySha(version.commit)}
-                  >
-                    {shortSha(version.commit)}
-                  </button>
-                  <span className="muted" aria-hidden="true">
-                    ·
+          {same ? null : (
+            <div className="history-view-sides-head" data-testid="history-view-sides-head">
+              <span className="history-view-divider" aria-hidden="true" />
+              <div>
+                {version.commit ? (
+                  <>
+                    <button
+                      type="button"
+                      className="history-view-sha"
+                      data-ui="submit"
+                      aria-label={`Copy Commit SHA ${shortSha(version.commit)}`}
+                      data-tip="Copy Commit SHA"
+                      data-testid="history-view-sha"
+                      onClick={() => version.commit && onCopySha(version.commit)}
+                    >
+                      {shortSha(version.commit)}
+                    </button>
+                    <span className="muted" aria-hidden="true">
+                      ·
+                    </span>
+                  </>
+                ) : (
+                  <strong>This Version</strong>
+                )}
+                <span className="muted">{when}</span>
+                <span className="history-view-space" />
+                {different ? (
+                  <span className="history-view-key" data-change="removed">
+                    Not in Now
                   </span>
-                </>
-              ) : (
-                <strong>This Version</strong>
-              )}
-              <span className="muted">{when}</span>
-              <span className="history-view-space" />
-              {different ? (
-                <span className="history-view-key" data-change="removed">
-                  Not in Now
-                </span>
-              ) : null}
+                ) : null}
+              </div>
+              <div>
+                <strong>Now</strong>
+                <span className="muted">{synced ? 'Synced' : 'Not synced yet'}</span>
+                <span className="history-view-space" />
+                {different ? (
+                  <span className="history-view-key" data-change="added">
+                    Added Since
+                  </span>
+                ) : null}
+              </div>
             </div>
-            <div>
-              <strong>Now</strong>
-              <span className="muted">{synced ? 'Synced' : 'Not synced yet'}</span>
-              <span className="history-view-space" />
-              {different ? (
-                <span className="history-view-key" data-change="added">
-                  Added Since
-                </span>
-              ) : rows ? (
-                <span className="muted" data-testid="history-view-same">
-                  The Same as This Version
-                </span>
-              ) : null}
+          )}
+          {same ? (
+            <div className="empty-state history-view-empty" data-testid="history-view-no-changes">
+              <span className="history-view-empty-icon" aria-hidden="true">
+                <Icon name="check" size={28} />
+              </span>
+              <h2>No Changes</h2>
+              <p>
+                {version.commit ? `${shortSha(version.commit)}, ${when}` : `This version, ${when}`},
+                is the same as the note is now. Pick another version to see what changed.
+              </p>
             </div>
-          </div>
-          {rows && items && items.length === 0 ? (
-            <p className="muted history-view-loading" data-testid="history-view-no-changes">
-              No changes from now.
-            </p>
           ) : rows && items ? (
             <div
               className="note-body history-view-grid"
