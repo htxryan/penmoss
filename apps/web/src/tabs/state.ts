@@ -195,6 +195,12 @@ export function openTab(
     readonly at?: number | undefined;
   } = {},
 ): TabsState {
+  // A bare Home is no tab to keep (A1576): the new one takes its place, and with nothing else
+  // to show it is the tab on screen, behind or not.
+  if (isBareHome(state)) {
+    const only = makeTab((options.ids ?? randomId)(), path);
+    return { ...state, tabs: [only], active: only.id };
+  }
   const background = options.background ?? false;
   const tab = makeTab(
     (options.ids ?? randomId)(),

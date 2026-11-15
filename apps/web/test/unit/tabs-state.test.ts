@@ -95,17 +95,17 @@ describe('opening notes', () => {
 
   it('opens a ⌘-clicked note behind, right of the active tab and after the others opened from it', () => {
     const ids = counter();
-    let state = tabsOn(['/', note(D)], ids);
+    let state = tabsOn([note(C), note(D)], ids);
     state = openTab(state, note(A), { background: true, ids });
     state = openTab(state, note(B), { background: true, ids });
-    expect(strip(state)).toEqual(['*/', note(A), note(B), note(D)]);
+    expect(strip(state)).toEqual([`*${note(C)}`, note(A), note(B), note(D)]);
   });
 
   it('opens a ⇧⌘-clicked note in front, right of the active tab', () => {
     const ids = counter();
-    let state = tabsOn(['/', note(D)], ids);
+    let state = tabsOn([note(C), note(D)], ids);
     state = openTab(state, note(A), { ids });
-    expect(strip(state)).toEqual(['/', `*${note(A)}`, note(D)]);
+    expect(strip(state)).toEqual([note(C), `*${note(A)}`, note(D)]);
   });
 
   it('opens a plain click from a pinned tab in a new tab, leaving the pinned one', () => {
@@ -176,7 +176,16 @@ describe('closing, reopening and switching', () => {
     expect(closeTab(state, state.active, ids)).toBe(state);
     // A new tab's Home is bare too; Home beside a note, or pinned, is a tab like any other.
     expect(isBareHome(initialState(ids, '/?tab=new'))).toBe(true);
-    const beside = openTab(state, note(B), { background: true, ids });
+    // A tab opened from it, behind or in front, takes its place: the bare Home never shows.
+    for (const background of [true, false]) {
+      const opened = openTab(state, note(B), { background, ids });
+      expect(strip(opened)).toEqual([`*${note(B)}`]);
+      expect(opened.closed).toBe(state.closed);
+      expect(activeTab(opened).opener).toBeUndefined();
+    }
+    expect(strip(showInTab(state, note(C), ids))).toEqual([`*${note(C)}`]);
+    // A Home beside a note (⌘T) is a tab like any other.
+    const beside = openTab(initialState(ids, note(A)), '/', { background: false, ids });
     expect(isBareHome(beside)).toBe(false);
     expect(shownTabCount(beside)).toBe(2);
     expect(isBareHome(setPinned(state, state.active, true))).toBe(false);

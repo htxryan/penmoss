@@ -352,6 +352,16 @@ test('with no note open there is no tab, only +, and a dad joke over two lines o
   await expect(tabs(page)).toHaveCount(0);
   await expect(joke).toHaveText(/\S/);
   expect(await joke.textContent()).not.toBe(first);
+
+  // A tab opened from here, ⌘-click or a middle click, takes the hidden Home's place: just it.
+  await row(page, BETA).click({ modifiers: ['ControlOrMeta'] });
+  expect(await titles(page)).toEqual([`*${BETA}`]);
+  await shows(page, BETA);
+  await tab(page, BETA).getByTestId('tab-close').click();
+  await expect(tabs(page)).toHaveCount(0);
+  await row(page, GAMMA).click({ button: 'middle' });
+  expect(await titles(page)).toEqual([`*${GAMMA}`]);
+  await shows(page, GAMMA);
   expect(errors).toEqual([]);
 });
 
