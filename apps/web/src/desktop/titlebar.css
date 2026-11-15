@@ -32,7 +32,8 @@
     .home,
     .tags-page-top,
     .drawing-editor-bar
-  ) {
+  ):not(.preview-zoom *, .preview-zoom-body *) {
+  /* A Settings preview draws the app's real rows (A1564), but they're a picture: never a drag. */
   -webkit-app-region: drag;
 }
 
