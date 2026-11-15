@@ -16,8 +16,10 @@ import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import { AppPreview } from './AppPreview';
 import { useThemeState } from './hooks';
 import { FontSettings } from './FontSettings';
+import { TypeSpecimen } from './TypeSpecimen';
 import { GroupHead, SettingRow } from './look-rows';
 import { ThemeEditor } from './ThemeEditor';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 const MODES: ReadonlyArray<{ mode: ThemeMode; label: string; icon: IconName }> = [
   { mode: 'light', label: 'Light', icon: 'sun' },
@@ -56,7 +58,7 @@ export function AppearanceSettings() {
         aria-labelledby={`${id}-h`}
         data-testid="appearance-settings"
       >
-        <h2 id={`${id}-h`}>Appearance</h2>
+        <SettingsHeader id={`${id}-h`} title="Appearance" intro="Customize a theme of your own." />
         <ThemeEditor theme={state.theme} themes={themes} onDone={() => setEditing(null)} />
       </section>
     );
@@ -84,11 +86,11 @@ export function AppearanceSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="appearance-settings"
     >
-      <h2 id={`${id}-h`}>Appearance</h2>
-      <p>
-        Kept in your Primary Notebook, so it syncs to your other devices
-        {mac ? ', except what says This Mac' : ''}. Every theme has a light and a dark variant.
-      </p>
+      <SettingsHeader
+        id={`${id}-h`}
+        title="Appearance"
+        intro="The theme, fonts and tooltips. Every theme has a light and a dark variant."
+      />
 
       <div className="lf-split">
         <div className="lf-controls">
@@ -194,6 +196,8 @@ export function AppearanceSettings() {
           <p className="lf-label">Preview</p>
           <AppPreview style={previewStyle} />
           <p className="lf-help">Redraws as you change the mode, theme, fonts or size.</p>
+          {/* The fonts at the size the app draws them, beside the shrunk window (A1582). */}
+          <TypeSpecimen style={previewStyle} />
         </aside>
       </div>
     </section>

@@ -7,10 +7,15 @@
  * when a new one is made; then Setting Up, until the first sync. Every screen but the first and
  * the last has the "Step n of 3" bar and a footer with Back and its button. The app's views are
  * mounted only once a notebook is set up, so their root and Journal notebook are never missing.
+ *
+ * Settings → All Notebooks → Add Notebook… (A1562) is this same flow, its screens and their state,
+ * in a sheet over Settings (`AddNotebook`): it starts at Create or Open Notebook with Cancel in
+ * Back's place, writes no welcome note, and ends on the notebook's page in Settings.
  */
 import { BrandMark } from '@penmoss/ui/icons';
-import { Fragment, useCallback, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { desktop, type DesktopGit, type GitHubRepo } from '../desktop/bridge';
+import { gitNotebookPath, navigate } from '../router';
 import {
   FIRST_RUN_DOCS,
   placeIn,
@@ -135,27 +140,87 @@ export function FirstRun({ onHold }: { onHold?: (hold: boolean) => void }) {
       </main>
     );
   }
-  return <FirstRunSteps git={git} onHold={onHold} />;
+  return (
+    <main className="first-run" data-testid="first-run" data-flow="first-run">
+      <NotebookSteps git={git} firstRun onHold={onHold} />
+    </main>
+  );
 }
 
 /**
- * The first run's screens, as a stack: each step goes on to the next, Back goes to the one before.
- * `onHold` keeps the first run on screen while a notebook is set up, past the moment the list has
- * it, until its first sync.
+ * Add Notebook from Settings (A1562): the first run's own screens and state, in a sheet over
+ * Settings. Cancel (on its first screen) or Escape closes it, back on All Notebooks; once the
+ * notebook is set up it closes on the notebook's page.
  */
-function FirstRunSteps({
+export function AddNotebook({ git, onClose }: { git: DesktopGit; onClose: () => void }) {
+  useEffect(() => {
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      event.preventDefault();
+      onClose();
+    };
+    window.addEventListener('keydown', escape);
+    return () => window.removeEventListener('keydown', escape);
+  }, [onClose]);
+  return (
+    <div className="fr-sheet" role="dialog" aria-modal="true" aria-label="Add Notebook">
+      <div className="first-run" data-testid="add-notebook" data-flow="add">
+        <NotebookSteps
+          git={git}
+          firstRun={false}
+          onCancel={onClose}
+          onDone={(notebookId) => {
+            onClose();
+            if (notebookId) navigate(gitNotebookPath(notebookId));
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The flow's screens, as a stack: each step goes on to the next, Back goes to the one before. On
+ * the first run it starts at the welcome, and `onHold` keeps it on screen while a notebook is set
+ * up, past the moment the list has it, until its first sync. From Settings (`firstRun` false) it
+ * starts at Create or Open Notebook, whose Cancel is `onCancel`, and `onDone` ends it.
+ */
+function NotebookSteps({
   git,
+  firstRun,
   onHold,
+  onCancel,
+  onDone,
 }: {
   git: DesktopGit;
-  onHold: ((hold: boolean) => void) | undefined;
+  /** The first run: the welcome, the welcome note, and the first notebook's words. */
+  firstRun: boolean;
+  onHold?: ((hold: boolean) => void) | undefined;
+  onCancel?: (() => void) | undefined;
+  onDone?: ((notebookId: string | null) => void) | undefined;
 }) {
   const github = git.github;
-  const [stack, setStack] = useState<readonly Screen[]>([{ at: 'welcome' }]);
+  const [stack, setStack] = useState<readonly Screen[]>([
+    firstRun ? { at: 'welcome' } : { at: 'goal' },
+  ]);
   const [goal, setGoal] = useState<Goal>('new');
   const [way, setWay] = useState<Way>('create');
   const [hub, setHub] = useState<Hub | null>(null);
   const [reads, setReads] = useState<ReadonlyMap<string, RepoRead>>(() => new Map());
+  /** The notebooks on this Mac already (none on the first run): shown Already Added. */
+  const [added, setAdded] = useState<ReadonlySet<string>>(() => new Set());
+  useEffect(() => {
+    let live = true;
+    void git
+      .list()
+      .then((list) => {
+        if (live) setAdded(new Set(list.map((each) => each.notebookId)));
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [git]);
   const asked = useRef(new Set<string>());
   const screen = stack[stack.length - 1]!;
   const go = (next: Screen) => setStack((now) => [...now, next]);
@@ -230,7 +295,8 @@ function FirstRunSteps({
           name="goal"
           step={1}
           title="Create or Open Notebook"
-          back={back}
+          back={firstRun ? back : undefined}
+          cancel={onCancel}
           actions={
             <Action
               primary
@@ -249,7 +315,7 @@ function FirstRunSteps({
               {
                 value: 'new',
                 title: 'Start a New Notebook',
-                line: 'Your first Penmoss notebook',
+                line: firstRun ? 'Your first Penmoss notebook' : 'A new, empty notebook',
                 testId: 'first-run-new',
               },
               {
@@ -340,6 +406,7 @@ function FirstRunSteps({
         <RepoTree
           hub={hub}
           goal={goal}
+          added={added}
           reads={reads}
           read={read}
           onRepo={(repo) => go({ at: 'repo', repo })}
@@ -370,6 +437,7 @@ function FirstRunSteps({
         <RepoPicked
           repo={screen.repo}
           via={hub.via}
+          added={added}
           loaded={reads.get(screen.repo.fullName)}
           read={read}
           onOpen={(place, name) => go({ at: 'setup', setup: { kind: 'open', place, name } })}
@@ -423,7 +491,11 @@ function FirstRunSteps({
         <SettingUp
           setup={screen.setup}
           add={add}
-          onDone={() => onHold?.(false)}
+          welcomeNote={firstRun}
+          onDone={(notebookId) => {
+            onHold?.(false);
+            onDone?.(notebookId);
+          }}
           onNeedsName={(place) => replace({ at: 'name', place })}
           back={back}
         />
@@ -432,10 +504,10 @@ function FirstRunSteps({
   }
 
   return (
-    <main className="first-run" data-testid="first-run" data-step={screen.at}>
+    <div className="fr-steps" data-step={screen.at}>
       {/* A new step is a new screen: its own fields, and its title takes focus. */}
       <Fragment key={stack.length}>{body}</Fragment>
-    </main>
+    </div>
   );
 }
 

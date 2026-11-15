@@ -36,6 +36,7 @@ tasks:
       - task: ports:test
       - task: budgets:test
       - task: check-changed:test
+      - task: stylelint:test
       - task: vm:test
       - task: ci:lint
       - task: android:publish:test
@@ -57,6 +58,10 @@ tasks:
     desc: 'What `task check:changed` checks (A1224): the change about to be committed, or the last commit, never the whole branch'
     cmds:
       - node --test scripts/check-changed.test.mjs
+  stylelint:test:
+    desc: 'The type rule (A1561): a raw font size, weight or line height fails stylelint outside apps/web/src/shell/type.css'
+    cmds:
+      - node --test scripts/stylelint-type.test.mjs
 
   vm:test:
     desc: "Sharing the test VM (A1174): scripts/vm/desktop-test.sh against a fake tart; a VM it didn't start is waited for, never stopped"
@@ -114,7 +119,7 @@ tasks:
       - node --test scripts/audit-secrets.test.mjs
 
   lint:
-    desc: ESLint, stylelint (no literal colours, T28) and Prettier check across the repo
+    desc: ESLint, stylelint (no literal colours, T28; no literal type sizes, A1561) and Prettier check across the repo
     cmds:
       # Type-aware linting of the whole repo outgrew Node's default heap on an 11 GB machine
       # (about 2 GB there; T39 pass 3): it ran out of memory on the agent worker.

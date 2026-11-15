@@ -57,6 +57,8 @@ export class EmbeddingService {
   private stopped = false;
   /** The switch, clicked while no service ran: the next one is told as it starts. */
   private pending: boolean | null = null;
+  /** Delete Model…, clicked while no service ran (A1566). */
+  private pendingRemove = false;
   private last: DesktopMeaningStatus = {
     state: 'starting',
     generation: 0,
@@ -79,7 +81,15 @@ export class EmbeddingService {
       this.publish({ ...status, generation });
     });
     this.client = client;
-    if (this.pending !== null) {
+    if (this.pendingRemove) {
+      // Delete Model… asked while the service was not running (A1566).
+      this.pendingRemove = false;
+      this.pending = null;
+      void client
+        .removeModel()
+        .then((status) => this.child === child && this.publish({ ...status, generation }))
+        .catch(this.failed(undefined));
+    } else if (this.pending !== null) {
       const enabled = this.pending;
       this.pending = null;
       void client
@@ -149,20 +159,16 @@ export class EmbeddingService {
     return (await this.client?.search(notebookId, query, options).catch(this.failed(null))) ?? null;
   }
 
-  /** Settings → Search by Meaning (A1158). */
+  /** Settings → Semantic Search (A1158, A1566): Off stops it and keeps the model. */
   async setEnabled(enabled: boolean): Promise<DesktopMeaningStatus> {
     const client = this.client;
     if (!client) {
       // Not running (just launched, or waiting to restart after a crash): the setting is written
-      // now, and the service applies it (Off removes the model and the vectors) once it starts,
-      // which a restart does at once. Off also keeps a crashing model from being opened again.
+      // now, and the service applies it once it starts, which a restart does at once. Off also
+      // keeps a crashing model from being opened again.
       await this.options.writeSetting?.(enabled);
       this.pending = enabled;
-      if (this.restartTimer) {
-        clearTimeout(this.restartTimer);
-        this.restartTimer = null;
-        this.start();
-      }
+      this.restartNow();
       return this.publish(
         enabled
           ? { ...this.last, enabled }
@@ -171,6 +177,37 @@ export class EmbeddingService {
     }
     const status = await client.setEnabled(enabled);
     return this.publish({ ...status, generation: this.generation });
+  }
+
+  /**
+   * Settings → Semantic Search → Delete Model… (A1566): off, and the model and its vectors
+   * deleted, by the service, which is the one that has them open.
+   */
+  async removeModel(): Promise<DesktopMeaningStatus> {
+    const client = this.client;
+    if (!client) {
+      // Not running: off now, and the files go once it starts, which a restart does at once.
+      await this.options.writeSetting?.(false);
+      this.pendingRemove = true;
+      this.restartNow();
+      return this.publish({
+        state: 'off',
+        generation: this.last.generation,
+        enabled: false,
+        indexed: 0,
+        total: 0,
+      });
+    }
+    const status = await client.removeModel();
+    return this.publish({ ...status, generation: this.generation });
+  }
+
+  /** A restart waiting out a crash's delay starts now. */
+  private restartNow(): void {
+    if (!this.restartTimer) return;
+    clearTimeout(this.restartTimer);
+    this.restartTimer = null;
+    this.start();
   }
 
   /** For the Electron suite: the service's process id, to kill it. */

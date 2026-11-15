@@ -56,8 +56,7 @@ Under **Notebooks**, each notebook has a row with its sync state; tap it for the
 
 **All Notebooks** lists them all, with **+ Add Notebook**, and:
 
-- **Primary Notebook:** where Today, This Week and captures go on this phone, and where your app settings are kept.
-- **Between Notebooks:** **Keep Settings in Step** (each change to the Primary Notebook's settings goes to your other notebooks a moment later; this phone's choice), **Copy Tags When Copying Notes**, and **Copy Settings…**: pick **From** and **To** and choose **Copy Settings** to replace the other notebook's settings, once. Quick Access stays as it is. Keep Settings in Step and Copy Settings… show with two notebooks or more.
+- **Between Notebooks:** **Primary Notebook** first (where Today, This Week and captures go on this phone, and where your app settings are kept), then **Keep Settings in Step** (each change to the Primary Notebook's settings goes to your other notebooks a moment later; this phone's choice), **Copy Tags When Copying Notes**, and **Copy Settings…**: pick **From** and **To** and choose **Copy Settings** to replace the other notebook's settings, once. Quick Access stays as it is. Keep Settings in Step and Copy Settings… show with two notebooks or more.
 - **Commits From This Phone:** the name and email the phone commits as, and its signing key.
 - **Background Sync:** the last background sync and the next.
 
@@ -114,7 +113,7 @@ After you install a newer version, a message at the foot of the screen says **Up
 
 ## What the phone does not have
 
-Compared with the Mac: note windows, Keep on Top, the menu bar icon and hotkey, the repository picker (Sign In with GitHub on the phone is for Send Feedback), SSH remotes, search by meaning, and the sidebar's Calendar and Tags sections. Agents connect on a Mac, not on the phone.
+Compared with the Mac: note windows, Keep on Top, the menu bar icon and hotkey, the repository picker (Sign In with GitHub on the phone is for Send Feedback), SSH remotes, semantic search, and the sidebar's Calendar and Tags sections. Agents connect on a Mac, not on the phone.
 
 ## Uninstall
 

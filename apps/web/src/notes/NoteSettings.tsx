@@ -2,40 +2,43 @@ import {
   METADATA_FIELD_NAMES,
   METADATA_FIELDS,
   STATUS_BAR_FIELDS,
-  type MetadataField,
 } from '@penmoss/core/note-metadata';
 import { Icon } from '@penmoss/ui/icons';
 import { useId } from 'react';
 import { useKeys } from '../commands/hooks';
 import { Kbd } from '../commands/Kbd';
+import { AppPreview } from '../theme/AppPreview';
+import { TypeSpecimen } from '../theme/TypeSpecimen';
 import { GroupHead, SettingRow, Switch } from '../theme/look-rows';
 import { useThemeState } from '../theme/hooks';
 import { useNoteMetadataSettings } from './metadata-state';
-import { NOTE_BAR_BUTTON_INFO, NOTE_BAR_BUTTONS, useNoteBar, type NoteBarButton } from './note-bar';
-import { NOTE_PANEL_MODES, useDefaultPanelMode, type NotePanelMode } from './panel-mode';
+import { NOTE_BAR_BUTTON_INFO, NOTE_BAR_BUTTONS, useNoteBar } from './note-bar';
+import { NOTE_PANEL_MODES, useDefaultPanelMode } from './panel-mode';
 import { useFullWidth } from './width';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 /**
  * Settings → Note (PEN-146, the other half of Display, with Note Width and Note Panel from
  * Appearance): how a note is laid out, the buttons its title bar shows (A1134), and the details
- * under its title and in its status bar (T62 item 4), beside a miniature note frame that redraws
- * with them. All synced through the Primary Notebook (A827) but Note Panel, which is this
- * device's own (A985).
+ * under its title and in its status bar (T62 item 4), beside the note itself in miniature
+ * (`AppPreview`, A1564), which redraws with them. All synced through the Primary Notebook (A827)
+ * but Note Panel, which is this device's own (A985).
  */
 export function NoteSettings() {
   const id = useId();
   const bar = useNoteBar();
   const metadata = useNoteMetadataSettings();
-  const [full] = useFullWidth();
-  const [panel] = useDefaultPanelMode();
   return (
     <section
       className="settings-section note-settings lf-page"
       aria-labelledby={`${id}-h`}
       data-testid="note-settings"
     >
-      <h2 id={`${id}-h`}>Note</h2>
-      <p>How a note is laid out and what its bars show. Changes sync to your other devices.</p>
+      <SettingsHeader
+        id={`${id}-h`}
+        title="Note"
+        intro="How a note is laid out and what its bars show."
+      />
       <div className="lf-split lf-split-narrow">
         <div className="lf-controls">
           <GroupHead id={`${id}-layout`}>Layout</GroupHead>
@@ -126,13 +129,11 @@ export function NoteSettings() {
 
         <aside className="lf-preview-col" aria-label="Preview">
           <p className="lf-label">Preview</p>
-          <NotePreview
-            buttons={NOTE_BAR_BUTTONS.filter((button) => bar.shows(button))}
-            underTitle={metadata.underTitle}
-            statusBar={metadata.statusBar}
-            full={full}
-            panel={panel}
-          />
+          {/* The note itself (A1564): its title bar, the details under its title, its width,
+              its panel as it starts and its status bar, as these settings make them. */}
+          <AppPreview sidebar={false} testId="note-preview" />
+          {/* The note's text at its real size: its title, headings, text and code (A1582). */}
+          <TypeSpecimen interfaceText={false} testId="note-type-specimen" />
         </aside>
       </div>
     </section>
@@ -257,73 +258,5 @@ function NotePanelSetting({ name }: { name: string }) {
         ))}
       </div>
     </SettingRow>
-  );
-}
-
-/** What each detail reads as in the preview. */
-const SAMPLE: Readonly<Record<MetadataField, string>> = {
-  notebook: 'Personal',
-  folder: 'Projects',
-  created: 'Created 12 Oct',
-  edited: 'Edited 4:02 PM',
-  tags: '#garden',
-  words: '412 words',
-  characters: '2,190 characters',
-  reading: '2 min',
-  tokens: '560 tokens',
-};
-
-/** A miniature note frame: its title bar's buttons, title, details, text and status bar. */
-function NotePreview({
-  buttons,
-  underTitle,
-  statusBar,
-  full,
-  panel,
-}: {
-  readonly buttons: readonly NoteBarButton[];
-  readonly underTitle: readonly MetadataField[];
-  readonly statusBar: readonly MetadataField[];
-  readonly full: boolean;
-  readonly panel: NotePanelMode;
-}) {
-  return (
-    <div
-      className="lf-preview lf-note-preview"
-      data-testid="note-preview"
-      data-full={full ? '' : undefined}
-      data-panel={panel}
-      aria-hidden="true"
-    >
-      <div className="lf-np-bar">
-        {buttons.map((button) => (
-          <span key={button} className="lf-np-button" data-button={button}>
-            <Icon name={NOTE_BAR_BUTTON_INFO[button].icon} size={12} />
-          </span>
-        ))}
-        <span className="lf-np-button">
-          <Icon name="more" size={12} />
-        </span>
-      </div>
-      <div className="lf-np-body">
-        <div className="lf-np-page">
-          <span className="lf-np-title">Garden Plan</span>
-          {underTitle.length ? (
-            <span className="lf-np-meta" data-testid="note-preview-under-title">
-              {underTitle.map((field) => SAMPLE[field]).join(' · ')}
-            </span>
-          ) : null}
-          <span className="lf-line" />
-          <span className="lf-line" />
-          <span className="lf-line lf-short" />
-          <span className="lf-line" />
-          <span className="lf-line lf-short" />
-        </div>
-        {panel === 'open' ? <span className="lf-np-panel" /> : null}
-      </div>
-      <div className="lf-np-status" data-testid="note-preview-status-bar">
-        {['Saved', ...statusBar.map((field) => SAMPLE[field])].join(' · ')}
-      </div>
-    </div>
   );
 }

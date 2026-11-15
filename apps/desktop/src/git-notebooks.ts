@@ -64,7 +64,13 @@ export interface GitNotebookView {
   readonly remote: string;
   /** `github.com/owner/repo`, or the host and path: how Status names the repository. */
   readonly repository: string;
+  /** The host as the remote names it (an SSH alias stays the alias); 'this Mac' for a path. */
   readonly host: string;
+  /**
+   * The host's real name, where its pages are on the web (A1565): an SSH alias resolved to the
+   * `HostName` SSH uses for it, else `host`; '' for a repository on this Mac.
+   */
+  readonly webHost: string;
   readonly branch: string;
   readonly dir: string;
   readonly pushDelayS: number;
@@ -130,6 +136,11 @@ export interface GitNotebooksOptions {
   readonly log?: (message: string) => void;
   /** Told when the list changes, so every window reads it again. */
   readonly onChange?: () => void;
+  /**
+   * An SSH remote's host as SSH resolves it (`ssh -G`, ssh-host.ts): `github-quanta`, a `Host`
+   * in `~/.ssh/config`, is `github.com` (A1565). Absent: the host as the remote says it.
+   */
+  readonly resolveSshHost?: (host: string) => Promise<string>;
 }
 
 const SECRET = /^[A-Za-z0-9_.~+/=-]{8,1000}$/;
@@ -173,6 +184,8 @@ export class GitNotebooks {
   /** The confirmations of Delete for good as commits use them (git-notebook-guards.ts). */
   private readonly guard: PurgeGuard;
   private readonly now: () => number;
+  /** SSH hosts as SSH resolves them (A1565), learnt before a view names them. */
+  private readonly webHosts = new Map<string, string>();
 
   constructor(private readonly options: GitNotebooksOptions) {
     this.store = new GitNotebookStore({
@@ -218,7 +231,26 @@ export class GitNotebooks {
   async list(): Promise<GitNotebookView[]> {
     const registry = await this.store.registry();
     const secrets = await this.store.secrets();
+    await this.learnHosts(registry.notebooks);
     return registry.notebooks.map((entry) => this.view(entry, `token:${entry.localId}` in secrets));
+  }
+
+  /** Resolves the SSH hosts of these notebooks' remotes, for `view`'s `webHost` (A1565). */
+  private async learnHosts(entries: readonly GitNotebookEntry[]): Promise<void> {
+    const resolve = this.options.resolveSshHost;
+    if (!resolve) return;
+    const hosts = new Set<string>();
+    for (const entry of entries) {
+      const parts = remoteParts(entry.remote);
+      if (parts?.protocol === 'ssh' && parts.host && !this.webHosts.has(parts.host)) {
+        hosts.add(parts.host);
+      }
+    }
+    await Promise.all(
+      [...hosts].map(async (host) => {
+        this.webHosts.set(host, await resolve(host).catch(() => host));
+      }),
+    );
   }
 
   private view(entry: GitNotebookEntry, hasToken: boolean): GitNotebookView {
@@ -233,6 +265,10 @@ export class GitNotebooks {
       remote: redactRemote(entry.remote),
       repository: repositoryName(entry.remote),
       host: parts?.host || 'this Mac',
+      webHost:
+        parts?.protocol === 'ssh'
+          ? (this.webHosts.get(parts.host) ?? parts.host)
+          : (parts?.host ?? ''),
       branch: entry.branch,
       dir: entry.dir,
       pushDelayS: entry.pushDelayS,
@@ -416,6 +452,7 @@ export class GitNotebooks {
         version: 1,
         notebooks: [...current.notebooks, entry],
       }));
+      await this.learnHosts([entry]);
       return {
         ok: true,
         value: { kind: 'added', notebook: this.view(entry, token !== null), created: create },
@@ -659,6 +696,7 @@ export class GitNotebooks {
     });
     if (!answer.ok) return answer;
     const secrets = await this.store.secrets();
+    await this.learnHosts([answer.value]);
     return { ok: true, value: this.view(answer.value, `token:${answer.value.localId}` in secrets) };
   }
 

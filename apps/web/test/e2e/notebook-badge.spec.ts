@@ -95,7 +95,7 @@ test('notebooks get default badges, and one is changed in Settings (PEN-140, AC1
   await openNotebookSettings(page, 'Penmoss');
   // Its badge in the list's row and the page's heading too.
   await expect(
-    page.getByTestId('git-notebook').locator('h2').getByTestId('notebook-badge'),
+    page.getByTestId('git-notebook').locator('h1').getByTestId('notebook-badge'),
   ).toBeVisible();
   const group = page.getByTestId('git-panel-overview');
   await group.getByTestId('badge-row').scrollIntoViewIfNeeded();

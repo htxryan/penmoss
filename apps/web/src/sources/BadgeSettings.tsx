@@ -15,6 +15,13 @@ import {
 } from './badge';
 import type { GitSource } from './git-source';
 import { BadgeView } from './NotebookBadge';
+import { PreviewCommands } from '../commands/CommandsRoot';
+import { useNoteList } from '../notes/hooks';
+import { displayTitle } from '../notes/list';
+import type { TabFace } from '../tabs/describe';
+import { TabFaceView } from '../tabs/TabStrip';
+import { SourceScope } from './context';
+import { SourceSection } from './SourceSection';
 
 const KINDS: ReadonlyArray<{ readonly kind: BadgeGlyphKind; readonly label: string }> = [
   { kind: 'letter', label: 'Letter' },
@@ -45,7 +52,7 @@ function onRowKeyDown(event: KeyboardEvent<HTMLElement>): void {
 
 /**
  * A notebook's Badge (PEN-140, ac17), rows in the first group of its page's Overview in Settings:
- * a preview (alone, on a sidebar row and on a tab) with Reset to Default, its colour (ten presets,
+ * a preview (alone, then on the sidebar's own row and the strip's own tab, A1564) with Reset to Default, its colour (ten presets,
  * or Custom… with the colour picker), and what it shows (a letter, a number from 0 to 99, or one
  * of 24 icons) with its field or grid.
  * Each change is written at once to the notebook's own settings, so it syncs with it (A827).
@@ -90,14 +97,7 @@ export function BadgeSettings({ source }: { source: GitSource }) {
           data-testid="badge-preview"
         >
           <BadgeView badge={badge} name={name} size={26} />
-          <span className="badge-preview-row" aria-hidden="true">
-            <BadgeView badge={badge} name={name} size={18} decorative />
-            {name}
-          </span>
-          <span className="badge-preview-tab" aria-hidden="true">
-            <BadgeView badge={badge} name={name} size={16} decorative />
-            Note Title
-          </span>
+          <BadgePlaces source={source} />
         </div>
         <button
           data-ui="item"
@@ -301,4 +301,59 @@ export function BadgeSettings({ source }: { source: GitSource }) {
 /** An icon's name in Title Case ("Checklist", "Terminal"). */
 function iconLabel(icon: string): string {
   return icon.charAt(0).toUpperCase() + icon.slice(1);
+}
+
+const ignore = () => undefined;
+
+/**
+ * The badge where it shows (A1564): the notebook's own row in the sidebar (`SourceSection`, its
+ * name's row alone) and a tab of one of its notes (`TabFaceView`), each the app's component,
+ * inert, so a change shows exactly as the app will show it.
+ */
+function BadgePlaces({ source }: { readonly source: GitSource }) {
+  return (
+    <PreviewCommands>
+      <span className="badge-preview-places" inert aria-hidden="true">
+        <span className="sidebar badge-preview-sidebar">
+          <SourceScope source={source}>
+            <SourceSection
+              source={source}
+              activeId={null}
+              currentFolder={null}
+              onCurrentFolderChange={ignore}
+              active={false}
+              shown={false}
+              headOnly
+            />
+          </SourceScope>
+        </span>
+        <span className="tab-strip badge-preview-strip">
+          <SourceScope source={source}>
+            <PreviewTab source={source} />
+          </SourceScope>
+        </span>
+      </span>
+    </PreviewCommands>
+  );
+}
+
+/** A tab of the notebook's first note, as the strip draws it (active). */
+function PreviewTab({ source }: { readonly source: GitSource }) {
+  const first = useNoteList()[0];
+  const face: TabFace = {
+    id: 'badge-preview',
+    kind: 'note',
+    title: displayTitle(first?.title ?? ''),
+    source,
+    folders: [],
+    suffix: null,
+    number: null,
+    pinned: false,
+    active: true,
+  };
+  return (
+    <span className="tab" aria-selected="true" data-kind="note">
+      <TabFaceView face={face} />
+    </span>
+  );
 }

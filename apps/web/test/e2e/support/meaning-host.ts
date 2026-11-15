@@ -139,6 +139,10 @@ export class MeaningHost {
     return this.withGeneration(await this.service.setEnabled(enabled));
   }
 
+  async removeModel(): Promise<DesktopMeaningStatus> {
+    return this.withGeneration(await this.service.removeModel());
+  }
+
   stop(): Promise<void> {
     return this.service.stop();
   }

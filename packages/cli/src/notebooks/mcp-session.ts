@@ -369,7 +369,7 @@ export class McpSession {
     // The background indexing stops with it: its next slice finds no model.
     this.meaning = null;
     this.held?.notebook.useMeaning(null);
-    this.io.log(`penmoss: Search by Meaning is off: searching ${this.name} by words only`);
+    this.io.log(`penmoss: Semantic Search is off: searching ${this.name} by words only`);
     await current.keeper.stop();
     await current.opened.close();
   }

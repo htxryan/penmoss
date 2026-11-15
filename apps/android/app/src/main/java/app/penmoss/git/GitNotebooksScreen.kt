@@ -53,6 +53,7 @@ import app.penmoss.engine.git.GitRefusal
 import app.penmoss.engine.git.OwnerWords
 import app.penmoss.engine.git.PendingPurge
 import app.penmoss.ui.settings.ChoiceRow
+import app.penmoss.ui.settings.DeviceOnlyHeadline
 import app.penmoss.ui.settings.GroupTitle
 import app.penmoss.ui.settings.Help
 import app.penmoss.ui.settings.SectionScreen
@@ -218,7 +219,7 @@ class GitNotebooksActions(
 /**
  * Settings → All Notebooks (T50 G7, G8; A856, A825, A855; PEN-146): the notebooks on this phone, one
  * row each with its sync dot (a tap opens its page), Add Notebook (its form shows only after Add),
- * the Primary Notebook, Between Notebooks, Commits From This Phone and the background runs. It is
+ * Between Notebooks (the Primary Notebook first), Commits From This Phone and the background runs. It is
  * also the app's home (A828, A1040), titled Penmoss with Settings in its bar, where a row opens the
  * notebook: with no notebook yet, the first run asks to add or create one.
  */
@@ -236,6 +237,8 @@ fun GitNotebooksScreen(ui: GitNotebooksUi, actions: GitNotebooksActions, onBack:
         if (ui.home) "Penmoss" else "All Notebooks",
         onBack,
         notice = null,
+        // The app's home is not a Settings screen: no (i) there.
+        info = !ui.home,
         actions = {
             if (onSettings != null) {
                 app.penmoss.ui.common.IconButton(onClick = onSettings, modifier = Modifier.testTag("homeSettingsGear")) {
@@ -269,16 +272,7 @@ fun GitNotebooksScreen(ui: GitNotebooksUi, actions: GitNotebooksActions, onBack:
             Button(onClick = { adding = true }, Modifier.settingRow("add-notebook").padding(horizontal = 16.dp, vertical = 8.dp).testTag("gitAddOpen")) { Text("+ Add Notebook") }
         }
         if (ui.home) return@SectionScreen
-        if (ui.rows.isNotEmpty()) {
-            val primary = ui.rows.firstOrNull { it.view.localId == ui.journal }
-            ListItem(
-                headlineContent = { Text("Primary Notebook") },
-                supportingContent = { Text("Holds your journal, Inbox and these settings") },
-                trailingContent = { Text("${primary?.view?.name ?: "None"} ›", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                modifier = Modifier.settingRow("primary-notebook").testTag("gitPrimary").clickable(role = Role.Button) { picking = true },
-            )
-        }
-        BetweenNotebooks(ui, actions)
+        BetweenNotebooks(ui, actions, onPickPrimary = { picking = true })
         CommitsFromThisPhone(ui, actions)
         if (ui.rows.isNotEmpty()) {
             GroupTitle("Background Sync", Modifier.settingRow("background-sync"))
@@ -313,22 +307,30 @@ fun GitNotebooksScreen(ui: GitNotebooksUi, actions: GitNotebooksActions, onBack:
 }
 
 /**
- * Between Notebooks (A1137, A1353, A1550; PEN-148), as the Mac's: Keep Settings in Step (this
+ * Between Notebooks (A1137, A1353, A1550; PEN-148), as the Mac's: the Primary Notebook first
+ * (A1558; this phone's choice, [onPickPrimary] opens its picker), then Keep Settings in Step (this
  * phone's choice: each change to the primary notebook's settings goes to the others), Copy Tags
  * When Copying Notes (synced) and Copy Settings… (from one notebook to another, once). Keep
  * Settings in Step and Copy Settings… show only with two notebooks or more.
  */
 @Composable
-private fun BetweenNotebooks(ui: GitNotebooksUi, actions: GitNotebooksActions) {
+private fun BetweenNotebooks(ui: GitNotebooksUi, actions: GitNotebooksActions, onPickPrimary: () -> Unit) {
+    if (ui.rows.isEmpty()) return
     val several = ui.rows.size > 1
-    if (ui.copyTags == null && !several) return
     var copying by rememberSaveable { mutableStateOf(false) }
     GroupTitle("Between Notebooks")
+    val chosen = ui.rows.firstOrNull { it.view.localId == ui.journal }
+    ListItem(
+        headlineContent = { DeviceOnlyHeadline("Primary Notebook") },
+        supportingContent = { Text("Holds your journal, Inbox and these settings") },
+        trailingContent = { Text("${chosen?.view?.name ?: "None"} ›", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+        modifier = Modifier.settingRow("primary-notebook").testTag("gitPrimary").clickable(role = Role.Button, onClick = onPickPrimary),
+    )
     if (several) {
         val primary = ui.rows.firstOrNull { it.view.localId == ui.journal } ?: ui.rows.first()
         ListItem(
-            headlineContent = { Text("Keep Settings in Step") },
-            supportingContent = { Text("A change to ${primary.view.name}’s settings goes to the other notebooks. This phone’s choice.") },
+            headlineContent = { DeviceOnlyHeadline("Keep Settings in Step") },
+            supportingContent = { Text("A change to ${primary.view.name}’s settings goes to the other notebooks") },
             trailingContent = { Switch(checked = ui.inStep, onCheckedChange = null) },
             modifier = Modifier.settingRow("keep-settings-in-step").testTag("gitSettingsInStep")
                 .toggleable(value = ui.inStep, role = Role.Switch, onValueChange = actions.onInStep),

@@ -111,30 +111,33 @@ private fun Screens(graph: NotebookGraph, deepLinks: DeepLinkInbox) {
 
     // Screens slide sideways like the rest of Android (A351, PenmossNavHost).
     Box(Modifier.fillMaxSize()) {
-        PenmossNavHost(nav, startDestination = "home") {
-            homeRoutes(root, sync)
-            folderRoutes(root)
-            searchRoutes(root, targets)
-            tagRoutes(root)
-            trashRoutes(root)
-            noteRoutes(root)
-            graphRoutes(root)
-            journalRoutes(root)
-            // Settings over this notebook's screens (PEN-146): the same screens as the app's first screen's.
-            settingsRoutes(
-                app.penmoss.ui.settings.SettingsHost(
-                    graph.device,
-                    nav,
-                    root.context,
-                    notebook = graph,
-                    openFeedback = { from -> root.openFeedback(from, null, null, from, 0) },
-                    syncPass = sync.pass,
-                    openNotebook = { id ->
-                        if (id == graph.localId) nav.popBackStack("home", false) else app.penmoss.git.GitNotebookActivity.open(root.context, id)
-                    },
-                ),
-            )
-            feedbackRoutes(root)
+        // Settings' (i) names the primary notebook on every Settings screen (A1560).
+        CompositionLocalProvider(app.penmoss.ui.settings.LocalPrimaryNotebookName provides app.penmoss.ui.settings.rememberPrimaryName(graph.device)) {
+            PenmossNavHost(nav, startDestination = "home") {
+                homeRoutes(root, sync)
+                folderRoutes(root)
+                searchRoutes(root, targets)
+                tagRoutes(root)
+                trashRoutes(root)
+                noteRoutes(root)
+                graphRoutes(root)
+                journalRoutes(root)
+                // Settings over this notebook's screens (PEN-146): the same screens as the app's first screen's.
+                settingsRoutes(
+                    app.penmoss.ui.settings.SettingsHost(
+                        graph.device,
+                        nav,
+                        root.context,
+                        notebook = graph,
+                        openFeedback = { from -> root.openFeedback(from, null, null, from, 0) },
+                        syncPass = sync.pass,
+                        openNotebook = { id ->
+                            if (id == graph.localId) nav.popBackStack("home", false) else app.penmoss.git.GitNotebookActivity.open(root.context, id)
+                        },
+                    ),
+                )
+                feedbackRoutes(root)
+            }
         }
 
         RootSelectionBar(root, Modifier.align(Alignment.TopCenter))

@@ -5,7 +5,7 @@
  *
  * - **The penmoss command** (A992): one line when it is installed and on PATH ("penmoss command
  *   installed", its path, Manage…); the full card otherwise, or once Manage… opens it.
- * - **Connected on This Mac** (A993, D52): each notebook a row that folds open in place, with its
+ * - **Connected Agents** (A993, D52; A1559): each notebook a row that folds open in place, with its
  *   agents (the copy Penmoss makes for every agent, and each agent connected by name, with
  *   Disconnect and the lines to give it) and Connect an Agent… on each row.
  *   `/settings/agents/<notebook id>` opens with that notebook unfolded.
@@ -22,6 +22,7 @@ import { useAllSources, useGitInfo } from './hooks';
 import type { GitSource } from './git-source';
 import './sources.css';
 import './notebook-settings.css';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 const ACTIVITY_PATH = '/settings/agent-activity';
 
@@ -53,13 +54,13 @@ export function AgentsSettings({ item }: { item?: string | undefined }) {
       aria-labelledby={`${id}-h`}
       data-testid="agents-settings"
     >
-      <h2 id={`${id}-h`}>Agents</h2>
-      <p>
-        Agents such as Claude Code and Codex read and edit your notes through Penmoss’s MCP server,
-        which runs on this Mac from this app: no account and no agent token.
-      </p>
+      <SettingsHeader
+        id={`${id}-h`}
+        title="Agents"
+        intro="Claude Code, Codex and other agents read and edit your notes through Penmoss on this Mac."
+      />
       <CommandLine git={git} />
-      <GroupHead scope>Connected on This Mac</GroupHead>
+      <GroupHead scope>Connected Agents</GroupHead>
       {missing ? (
         <p className="muted" data-testid="agents-notebook-missing">
           That notebook isn’t on this Mac.
@@ -81,7 +82,7 @@ export function AgentsSettings({ item }: { item?: string | undefined }) {
         <ul
           className="nset-fold-list"
           data-testid="agents-notebook-list"
-          data-setting="connected-on-this-mac"
+          data-setting="connected-agents"
         >
           {sources.map((source) => (
             <NotebookAgentsRow
@@ -204,7 +205,7 @@ function NotebookAgentsRow({
           data-testid="notebook-agents"
           data-notebook-id={source.id}
         >
-          <p className="muted">
+          <p className="t-help">
             Agents reach it as <code>penmoss mcp --notebook {mcpName(info.name)}</code>
           </p>
           <GitLocalAgents

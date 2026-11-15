@@ -39,7 +39,7 @@
   border-top: 1px solid var(--pm-border-soft);
   background: var(--pm-bg);
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -107,7 +107,7 @@
   border-radius: 0;
   background: var(--pm-danger);
   color: var(--pm-bg);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
   text-decoration: none;
 }
 
@@ -134,7 +134,13 @@ a.save-status[data-state='stopped']:hover {
   border-radius: 0;
   background: var(--pm-accent);
   color: var(--pm-on-accent);
-  font: 600 0.6rem / 0.9rem var(--pm-font);
+  display: grid;
+  place-items: center;
+  block-size: 0.9rem;
+  font-family: var(--pm-font);
+  font-size: var(--pm-text-micro);
+  font-weight: var(--pm-weight-micro);
+  line-height: var(--pm-leading-none);
   text-align: center;
 }
 
@@ -148,7 +154,7 @@ a.save-status[data-state='stopped']:hover {
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 .note-graph .info-heading {
@@ -165,7 +171,7 @@ a.save-status[data-state='stopped']:hover {
 
 .note-graph-count {
   margin-left: auto;
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -196,7 +202,7 @@ a.save-status[data-state='stopped']:hover {
 .note-info {
   border-top: 1px solid var(--pm-border);
   padding-top: 1rem;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 /* Backlinks is a heading like Tags and Frontmatter, the same space above it and no line (A988). */
@@ -210,8 +216,8 @@ a.save-status[data-state='stopped']:hover {
 .info-subheading {
   margin: 0 0 0.5rem;
   color: var(--pm-muted);
-  font-size: 0.8rem;
-  font-weight: 650;
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -265,7 +271,7 @@ a.save-status[data-state='stopped']:hover {
 .info-frontmatter dt,
 .info-frontmatter dd {
   font-family: var(--pm-mono);
-  font-size: 0.78rem;
+  font-size: var(--pm-text-code);
 }
 
 .info-frontmatter dt {

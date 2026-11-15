@@ -24,18 +24,18 @@ export interface MeaningUnavailable {
 const AND_WORDS = 'Full-text and Hybrid search match your words.';
 /** Where search by meaning cannot run at all (A1156): the web app, Android. */
 export const MEANING_ELSEWHERE: MeaningUnavailable = {
-  wordsOnly: 'Search by meaning is in the Mac app. Here, results match your words.',
-  semantic: `Search by meaning is in the Mac app. ${AND_WORDS}`,
+  wordsOnly: 'Semantic Search is in the Mac app. Here, results match your words.',
+  semantic: `Semantic Search is in the Mac app. ${AND_WORDS}`,
 };
 /** On a Mac whose model is not ready, or is off. */
 export const MEANING_NOT_READY: MeaningUnavailable = {
   wordsOnly:
-    'Search by meaning is not ready on this Mac (Settings → Search by Meaning). Results match your words.',
-  semantic: `Search by meaning is not ready on this Mac (Settings → Search by Meaning). ${AND_WORDS}`,
+    'Semantic Search is not ready on this Mac (Settings → Semantic Search). Results match your words.',
+  semantic: `Semantic Search is not ready on this Mac (Settings → Semantic Search). ${AND_WORDS}`,
 };
 export const MEANING_DOWNLOADING: MeaningUnavailable = {
-  wordsOnly: 'Search by meaning is downloading its model. Until then, results match your words.',
-  semantic: `Search by meaning is downloading its model. ${AND_WORDS}`,
+  wordsOnly: 'Semantic Search is downloading its model. Until then, results match your words.',
+  semantic: `Semantic Search is downloading its model. ${AND_WORDS}`,
 };
 
 /** While some notes have no vectors yet (A1156). */

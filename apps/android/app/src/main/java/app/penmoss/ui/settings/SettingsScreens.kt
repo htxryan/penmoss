@@ -5,6 +5,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.ListItem
@@ -67,6 +69,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -75,9 +78,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -99,6 +105,8 @@ import app.penmoss.ui.common.OutlinedButton
 import app.penmoss.ui.common.SQUARE
 import app.penmoss.ui.common.TextButton
 import app.penmoss.ui.common.mark
+import app.penmoss.ui.common.roles
+import app.penmoss.ui.home.HomeShortcutRow
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 
@@ -151,7 +159,14 @@ fun SettingsHome(
     val mark = LocalSettingMark.current
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
-        topBar = { LargeTopAppBar(title = { Text("Settings") }, navigationIcon = { BackButton(onBack) }, scrollBehavior = scroll) },
+        topBar = {
+            LargeTopAppBar(
+                title = { Text("Settings") },
+                navigationIcon = { BackButton(onBack) },
+                actions = { SettingsInfoButton() },
+                scrollBehavior = scroll,
+            )
+        },
     ) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding().testTag("settingsSections")) {
             item(key = "search") {
@@ -236,17 +251,38 @@ internal fun DotMarkOf(state: DotState, modifier: Modifier = Modifier) {
     }
 }
 
-/** A section's screen: its title in the top bar, [actions] at its end, and its content scrolling below. */
+/**
+ * A section's screen (A1560): its title large in a collapsing top app bar, which shrinks into the
+ * bar's own row as the content scrolls; Settings' (i) and [actions] at its end; the content
+ * scrolling below. [info] false leaves the (i) out, on a screen that is not Settings' (the app's
+ * home).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SectionScreen(
     title: String,
     onBack: (() -> Unit)?,
     notice: String? = null,
+    info: Boolean = true,
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable () -> Unit,
 ) {
-    Scaffold(topBar = { TopAppBar(title = { Text(title) }, navigationIcon = { if (onBack != null) BackButton(onBack) }, actions = actions) }) { padding ->
+    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    Scaffold(
+        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
+        topBar = {
+            LargeTopAppBar(
+                title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                navigationIcon = { if (onBack != null) BackButton(onBack) },
+                actions = {
+                    if (info) SettingsInfoButton()
+                    actions()
+                },
+                scrollBehavior = scroll,
+                modifier = Modifier.testTag("sectionTopBar"),
+            )
+        },
+    ) { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(vertical = 8.dp),
         ) {
@@ -268,7 +304,8 @@ internal fun GroupTitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
         modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp).semantics { heading() },
-        style = MaterialTheme.typography.titleSmall,
+        // At least the size of the rows under it (A1561): titleSmall was smaller than their names.
+        style = MaterialTheme.roles.groupHead,
         color = MaterialTheme.colorScheme.primary,
     )
 }
@@ -278,7 +315,7 @@ internal fun Help(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
         modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        style = MaterialTheme.typography.bodyMedium,
+        style = MaterialTheme.roles.help,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
@@ -358,8 +395,9 @@ private val MODES = listOf("light" to "Light", "dark" to "Dark", "system" to "Sy
 private val MODE_ICONS = mapOf("light" to SettingsIcons.Sun, "dark" to SettingsIcons.Moon, "system" to SettingsIcons.Monitor)
 
 /**
- * Appearance (ST3, ST4, ST11; PEN-146 option C): a live preview at the top (a strip of Home and a
- * note, redrawn as each choice changes), then Theme (the mode, the theme cards and Customize…),
+ * Appearance (ST3, ST4, ST11; PEN-146 option C): a live preview at the top (Home's own shortcut
+ * row and the note's own editor page, inert, redrawn as each choice changes, A1564), then Theme
+ * (the mode, the theme cards and Customize…),
  * Text (the fonts and size) and Note (its width, here since Android has no Note page). A choice
  * applies at once, to the native screens, the system bars, the editor and every other device.
  */
@@ -383,9 +421,13 @@ fun AppearanceScreen(
     fonts: FontsUi? = null,
     /** The note in the preview: the editor page itself (ThemePreview, A418); none in tests. */
     notePreview: (@Composable (Modifier) -> Unit)? = null,
+    /** Which of Home's shortcuts the preview's row shows, as Settings → Home leaves them. */
+    homeShortcuts: HomeShortcuts = HomeShortcuts(),
 ) {
     SectionScreen("Appearance", onBack, notice = SETTINGS_WAIT.takeIf { !enabled }) {
-        AppearancePreview(notePreview)
+        AppearancePreview(homeShortcuts, notePreview)
+        // The interface's text at its real size, beside the preview (A1582).
+        if (fonts != null) FontsAtSize(fonts)
         GroupTitle("Theme", Modifier.settingRow("theme"))
         Segments(MODES, mode, enabled, "themeMode", Modifier.settingRow("mode"), icons = MODE_ICONS, itemTag = { "mode-$it" }, onChoose = onMode)
         Help(
@@ -420,46 +462,49 @@ fun AppearanceScreen(
 }
 
 /**
- * Appearance's preview (PEN-146 option C): a strip of Home (its shortcuts and Inbox) beside a note,
- * in the theme shown now, so a change of mode, theme or font shows as it is made. The note is the
- * editor page's own sample when [note] is given (the theme editor's preview, A418).
+ * Appearance's preview (PEN-146 option C, A1564): the app itself, not a drawing of it. Home's own
+ * shortcut row ([HomeShortcutRow], the shortcuts Settings → Home shows) above the note's own editor
+ * page when [note] is given (the theme editor's preview, A418), in the theme shown now, so a change
+ * of mode, theme or font shows as the app will show it. It is inert: no touch, focus or semantics
+ * reach it, so TalkBack reads the caption and never the buttons in it.
  */
 @Composable
-private fun AppearancePreview(note: (@Composable (Modifier) -> Unit)?) {
+private fun AppearancePreview(shortcuts: HomeShortcuts, note: (@Composable (Modifier) -> Unit)?) {
     val colours = MaterialTheme.colorScheme
     Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("appearancePreview")) {
-        Row(
-            Modifier.fillMaxWidth().height(168.dp).border(1.dp, colours.outlineVariant),
-        ) {
-            // The sidebar strip: Home's rows in the interface font and colours.
-            Column(
-                Modifier.width(96.dp).fillMaxSize().background(colours.surfaceContainer).padding(8.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text("Today", style = MaterialTheme.typography.labelMedium, color = colours.onPrimary, modifier = Modifier.background(colours.primary).padding(horizontal = 6.dp, vertical = 2.dp))
-                Text("Inbox · 3", style = MaterialTheme.typography.labelMedium, color = colours.onSurface)
-                Text("Garden Plan", style = MaterialTheme.typography.labelMedium, color = colours.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Column(Modifier.testTag("appearancePreviewApp").fillMaxWidth().border(1.dp, colours.outlineVariant).inert()) {
+            Box(Modifier.fillMaxWidth().background(colours.surface)) {
+                HomeShortcutRow(shortcuts, onSearch = {}, onToday = {}, onThisWeek = {}, onGraph = {}, onCommands = {})
             }
-            Box(Modifier.weight(1f).fillMaxSize().background(colours.surface)) {
-                if (note != null) {
+            if (note != null) {
+                HorizontalDivider(color = colours.outlineVariant)
+                Box(Modifier.fillMaxWidth().height(168.dp).background(colours.surface)) {
                     note(Modifier.fillMaxSize())
-                } else {
-                    Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Garden Plan", style = MaterialTheme.typography.titleMedium, color = colours.onSurface)
-                        Text("- [ ] Tomatoes", style = MaterialTheme.typography.bodyMedium, color = colours.onSurface)
-                        Text("Plant after the last frost.", style = MaterialTheme.typography.bodyMedium, color = colours.onSurfaceVariant)
-                    }
                 }
             }
         }
         Text(
             "Preview: redraws as you change these.",
             Modifier.padding(top = 4.dp),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.roles.help,
             color = colours.onSurfaceVariant,
         )
     }
 }
+
+/**
+ * Shows what is inside and takes nothing (A1564): every touch is consumed before it reaches the
+ * content, focus never enters it, and its semantics are cleared, as the web's `inert` does.
+ */
+private fun Modifier.inert(): Modifier = this
+    .clearAndSetSemantics {}
+    .focusProperties { onEnter = { cancelFocusChange() } }
+    .focusGroup()
+    .pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+        }
+    }
 
 /** The theme editor's way in from Appearance: the chosen theme's name, and what the button does. */
 data class ThemeEditorEntry(val name: String, val builtIn: Boolean, val onOpen: () -> Unit)

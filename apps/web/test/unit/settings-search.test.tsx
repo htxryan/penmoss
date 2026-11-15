@@ -65,7 +65,7 @@ describe('searchSettings (PEN-146)', () => {
     expect(labels('auto-update')).toEqual(['Update Automatically']);
     expect(labels('keychain')).toContain('GitHub Account');
     // Help: the model never leaves this Mac.
-    expect(labels('never leave')).toEqual(['Find Notes by Meaning']);
+    expect(labels('never leave')).toEqual(['Semantic Search']);
   });
 
   it('ranks a label that starts with the query first', () => {
@@ -152,7 +152,11 @@ describe('the Search Settings field (PEN-146)', () => {
     expect(field().getAttribute('aria-label')).toBe('Search Settings');
     expect(content().textContent).toBe('the page');
     type('font');
-    expect(content().querySelector('h2')?.textContent).toBe('3 Settings Match “font”');
+    // One header for every page (A1560): Search Results, and the count read out as it changes.
+    expect(content().querySelector('h1')?.textContent).toBe('Search Results');
+    const count = content().querySelector('[data-testid="settings-intro"]')!;
+    expect(count.textContent).toBe('3 settings match “font”.');
+    expect(count.getAttribute('aria-live')).toBe('polite');
     const results = [...content().querySelectorAll('[data-testid="settings-search-result"]')];
     expect(results.map((link) => link.getAttribute('href'))).toEqual([
       '/settings/appearance',
@@ -162,7 +166,9 @@ describe('the Search Settings field (PEN-146)', () => {
     expect(results[0]!.querySelector('mark')?.textContent).toBe('Font');
     expect(results[0]!.textContent).toContain('Appearance › Text');
     type('zzz');
-    expect(content().querySelector('h2')?.textContent).toBe('No Settings Match “zzz”');
+    expect(content().querySelector('[data-testid="settings-intro"]')?.textContent).toBe(
+      'No settings match “zzz”.',
+    );
   });
 
   it('opens the first result with Enter', () => {

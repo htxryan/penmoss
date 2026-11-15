@@ -21,6 +21,19 @@ export function isExternalUrl(url: string): boolean {
   }
 }
 
+/**
+ * Where a link a page opens in a new window goes (`target="_blank"`, `window.open`), but a note
+ * window's (`noteWindowPath`): an app page to the main window, a web or mail link to the default
+ * browser (Settings → a notebook → Open on GitHub, A1565), anything else nowhere.
+ */
+export function openedLink(
+  url: string,
+): { readonly kind: 'app'; readonly path: string } | { readonly kind: 'browser' } | null {
+  const path = appPath(url);
+  if (path) return { kind: 'app', path };
+  return isExternalUrl(url) ? { kind: 'browser' } : null;
+}
+
 /** The in-app path of an app URL (`/notes/…?heading=…`), or null. */
 export function appPath(url: string): string | null {
   if (!isAppUrl(url)) return null;

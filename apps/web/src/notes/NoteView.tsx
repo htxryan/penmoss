@@ -55,7 +55,7 @@ import { NoteTopBar } from './NoteTopBar';
 import { NoteSidePanel } from './NoteSidePanel';
 import { panelTabPref } from './panel-tabs';
 import { useNotePanelInTab } from './panel-in-tab';
-import { usePaneWidth } from './panel-mode';
+import { useDefaultPanelMode, usePaneWidth } from './panel-mode';
 import { usePaneSize } from '../shell/pane-widths';
 import { useQuickAccess } from './quick-access';
 import { MAX_QUICK_ACCESS } from '@penmoss/core/quick-access';
@@ -90,12 +90,16 @@ type CopyFormat = 'markdown' | 'rich';
  * without waiting for the network (A7). Pasted and dropped images are stored
  * on this device first and upload in the background (T10).
  */
+/** A preview's panel stays as Settings says (A1564). */
+const ignorePanelMode = () => undefined;
+
 export function NoteView({
   id,
   heading = null,
   nav,
   actions,
   onDeleted,
+  preview = false,
 }: {
   id: string;
   heading?: string | null;
@@ -105,6 +109,13 @@ export function NoteView({
   actions?: ReactNode;
   /** After Move to Trash; by default the app goes home (a note window stays, T45). */
   onDeleted?: () => void;
+  /**
+   * Drawn in a Settings preview (A1564), inert: the note as it shows, but its showing is not
+   * the person's. It is not marked as opened, names no window, takes no title focus, and its
+   * panel starts as Settings → Note → Note Panel says, whatever this note last had, writing no
+   * memory of its own.
+   */
+  preview?: boolean;
 }) {
   const notes = useNotes();
   const directory = useDirectory();
@@ -126,10 +137,11 @@ export function NoteView({
   if (pane.measured && startedWide === null) setStartedWide(pane.wide);
   // In a tab (PEN-140, A1500): its own panel and scroll position, seeded from this note's and
   // this device's memory the first time the note shows in it, and written back to both.
-  const { tabPage, panelMode, setPanelMode, panelTab, setPanelTab } = useNotePanelInTab(
-    id,
-    startedWide ?? true,
-  );
+  const inTab = useNotePanelInTab(id, startedWide ?? true);
+  const [defaultPanel] = useDefaultPanelMode();
+  const { tabPage, panelTab, setPanelTab } = inTab;
+  const panelMode = preview ? defaultPanel : inTab.panelMode;
+  const setPanelMode = preview ? ignorePanelMode : inTab.setPanelMode;
   const showPanel = panelMode === 'open';
   /** The open panel lies over the note's text: a narrow pane has no room beside it. */
   const panelOver = showPanel && !wide;
@@ -211,20 +223,23 @@ export function NoteView({
   // A note created here takes focus in its title at once, before it has loaded,
   // so typing never lands on the New note button (and creates another note).
   useLayoutEffect(() => {
-    if (notes.takeTitleFocus(id)) titleRef.current?.focus();
-  }, [id, notes, titleRef]);
+    if (!preview && notes.takeTitleFocus(id)) titleRef.current?.focus();
+  }, [id, notes, titleRef, preview]);
 
   // The recent-notes switcher (T20) orders notes by when this device last opened them.
-  useEffect(() => rememberOpened(deviceStorage(), id, Date.now()), [id]);
+  useEffect(() => {
+    if (!preview) rememberOpened(deviceStorage(), id, Date.now());
+  }, [id, preview]);
 
   // The window (or tab) is named after the note, so Mission Control and the
   // Window menu can tell notes apart.
   useEffect(() => {
+    if (preview) return;
     document.title = `${title.trim() || 'Untitled'} – Penmoss`;
     return () => {
       document.title = 'Penmoss';
     };
-  }, [title]);
+  }, [title, preview]);
 
   /** Opens the panel on a tab; set below, after the commands. */
   const openTabRef = useRef<(tab: NotePanelTab) => void>(() => undefined);

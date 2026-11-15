@@ -45,8 +45,8 @@
   background: none;
   color: var(--pm-muted);
   font: inherit;
-  font-size: 0.72rem;
-  font-weight: 650;
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
@@ -102,7 +102,7 @@
   .sb-source > .sb-section-head .nb-badge.sb-source-badge {
     inline-size: 1rem;
     block-size: 1rem;
-    font-size: 0.62rem;
+    font-size: var(--pm-text-2xs);
   }
 }
 
@@ -244,7 +244,7 @@
 }
 
 .settings-card > p {
-  font-size: var(--pm-text-md);
+  font-size: var(--pm-text-body);
 }
 
 .settings-facts {
@@ -252,7 +252,7 @@
   grid-template-columns: max-content minmax(0, 1fr);
   gap: 0.35rem 1.25rem;
   margin: 0 0 0.85rem;
-  font-size: var(--pm-text-md);
+  font-size: var(--pm-text-body);
 }
 
 .settings-facts dt {
@@ -298,7 +298,7 @@
 /* What Rename says under the row: that it renames it everywhere, or a name already in use. */
 .sb-section-clash {
   margin: 0.25rem 0.5rem 0.4rem;
-  font-size: 0.8rem;
+  font-size: var(--pm-text-meta);
 }
 
 /* A name another notebook on this Mac has (add and Rename): a free one to use instead. */
@@ -402,12 +402,13 @@
 }
 
 .git-notebook-row-name {
-  font-weight: 600;
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
 }
 
 .git-notebook-row-repo {
   overflow: hidden;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-meta);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -418,7 +419,7 @@
   align-items: center;
   gap: 0.35rem;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-meta);
 }
 
 .git-notebook-row-state .dot {
@@ -441,29 +442,13 @@
   background: var(--pm-danger);
 }
 
-/* A notebook's page (T62 item 1; PEN-146): its name, chip, state and Sync Now on one row. */
-.git-notebook-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem 0.75rem;
-  margin: 0.25rem 0 0;
-}
-
-.git-notebook-head > h2 {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0;
-}
-
 .git-message:empty {
   display: none;
 }
 
 .git-message {
   margin: 0.5rem 0 0;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-help);
 }
 
 /* Commits and Access: each field a line of its own, one width, its buttons under it. */
@@ -485,7 +470,7 @@
 
 .git-notebook-form > [data-testid='git-author-now'] {
   margin: 0.6rem 0 0;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-help);
 }
 
 .git-notebook-row-name {
@@ -540,7 +525,7 @@
   align-items: center;
   gap: 0.45rem;
   margin: 0.45rem 0 0;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 .local-agent-copy {
@@ -553,7 +538,7 @@
 
 .local-agent-copy > span {
   grid-column: 1 / -1;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 .local-agent-copy > span:empty {
@@ -567,8 +552,8 @@
   border: 1px solid var(--pm-border);
   background: var(--pm-raised);
   font-family: var(--pm-mono);
-  font-size: 0.8rem;
-  line-height: 1.45;
+  font-size: var(--pm-text-code);
+  line-height: var(--pm-leading-code);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   user-select: text;
@@ -580,6 +565,7 @@
 
 .local-agent-direct summary {
   color: var(--pm-muted);
+  font-size: var(--pm-text-item);
   cursor: default;
 }
 
@@ -602,6 +588,27 @@
   max-width: 34rem;
 }
 
+/* The flow's screen stack: the screen itself is the column's child. */
+.fr-steps {
+  display: contents;
+}
+
+/*
+ * Add Notebook from Settings (A1562): the first run's screens over Settings, on the dialogs' scrim,
+ * the card in the middle as on the first run. It scrolls itself when the window is short.
+ */
+.fr-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow: auto;
+  background: var(--pm-scrim);
+}
+
+.fr-sheet > .first-run {
+  min-height: 100%;
+}
+
 .fr-screen {
   display: flex;
   box-sizing: border-box;
@@ -611,7 +618,9 @@
   border: 1px solid var(--pm-border);
   background: var(--pm-raised);
   box-shadow: var(--pm-shadow);
-  font-size: var(--pm-text-md);
+  font-size: var(--pm-text-body);
+  /* A page's title in a card this size is a step smaller, as on a phone (A1561). */
+  --pm-text-page-title: var(--pm-text-3xl);
 }
 
 .fr-body {
@@ -631,14 +640,10 @@
 
 .fr-screen h2 {
   margin: 0;
-  font-size: 1.4rem;
-  font-weight: 650;
+  font-size: var(--pm-text-page-title);
+  font-weight: var(--pm-weight-page-title);
   letter-spacing: -0.01em;
-  line-height: 1.25;
-}
-
-.fr-centered h2 {
-  font-size: 1.6rem;
+  line-height: var(--pm-leading-page-title);
 }
 
 .fr-screen h2:focus {
@@ -676,8 +681,8 @@
 .fr-step {
   margin: 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
-  font-weight: 650;
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -700,15 +705,15 @@
 .fr-lead {
   margin: 0;
   color: var(--pm-muted);
-  line-height: 1.45;
+  line-height: var(--pm-leading-body);
 }
 
 .fr-welcome {
-  font-size: var(--pm-text-md);
+  font-size: var(--pm-text-body);
 }
 
 .fr-small {
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-help);
 }
 
 /* A button that reads as a link (Try Again, Use field-notes-2, Start One Here). */
@@ -727,7 +732,7 @@
 .fr-learn,
 .fr-link {
   color: var(--pm-link);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 /* Inside a line of words, a link is the line's size. */
@@ -786,12 +791,12 @@
 }
 
 .fr-option-text strong {
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .fr-option-text > span {
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-help);
 }
 
 /* Work going on, and what went wrong. */
@@ -801,7 +806,7 @@
   gap: 0.5rem;
   margin: 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-meta);
 }
 
 .fr-spin {
@@ -844,7 +849,7 @@
   padding: 0.6rem 0.75rem;
   border: 1px solid color-mix(in oklab, var(--pm-danger) 35%, transparent);
   background: var(--pm-danger-soft);
-  line-height: 1.45;
+  line-height: var(--pm-leading-snug);
 }
 
 .fr-error > .i {
@@ -874,7 +879,10 @@
   padding: 1rem;
   border: 1px solid var(--pm-border);
   background: var(--pm-bg);
-  font: 600 1.75rem/1 var(--pm-mono);
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-display);
+  font-weight: var(--pm-weight-display);
+  line-height: var(--pm-leading-none);
   letter-spacing: 0.12em;
   text-align: center;
   user-select: all;
@@ -943,7 +951,7 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-weight: 400;
+  font-weight: var(--pm-weight-regular);
 }
 
 .fr-facts {
@@ -951,12 +959,12 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  font-size: var(--pm-text-sm);
-  font-weight: 400;
+  font-size: var(--pm-text-meta);
+  font-weight: var(--pm-weight-regular);
 }
 
 .fr-owner {
-  font-weight: 400;
+  font-weight: var(--pm-weight-regular);
 }
 
 .input.fr-invalid {
@@ -965,20 +973,20 @@
 
 .fr-invalid-words {
   color: var(--pm-danger);
-  font-size: var(--pm-text-sm);
-  font-weight: 400;
+  font-size: var(--pm-text-help);
+  font-weight: var(--pm-weight-regular);
 }
 
 .fr-warn {
   padding: 0.4rem 0.5rem;
   background: var(--pm-warn-bg);
-  font-size: var(--pm-text-sm);
-  font-weight: 400;
+  font-size: var(--pm-text-help);
+  font-weight: var(--pm-weight-regular);
 }
 
 .fr-more > summary {
   color: var(--pm-link);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
   cursor: pointer;
 }
 
@@ -993,8 +1001,8 @@
   align-items: center;
   gap: 0.6rem;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
-  font-weight: 400;
+  font-size: var(--pm-text-meta);
+  font-weight: var(--pm-weight-regular);
 }
 
 .fr-loc > span {
@@ -1031,7 +1039,7 @@
 }
 
 .fr-card-title {
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .fr-or {
@@ -1040,7 +1048,7 @@
   gap: 0.6rem;
   margin: 0.2rem 0 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-meta);
 }
 
 .fr-or > span {
@@ -1112,7 +1120,7 @@
   min-height: 2rem;
   padding: 0 0.6rem 0 0.25rem;
   background: var(--pm-bg);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 .fr-tree-toggle {
@@ -1154,7 +1162,7 @@
 }
 
 .fr-tree-name strong {
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 /* What the filter matched (4.3). */
@@ -1173,7 +1181,7 @@
   flex: none;
   margin-inline-start: auto;
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
   white-space: nowrap;
 }
 
@@ -1191,7 +1199,7 @@
 .fr-tree-notebook > strong {
   min-width: 0;
   overflow: hidden;
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1209,7 +1217,7 @@
   min-height: 1.9rem;
   padding: 0 0.6rem 0 2rem;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-help);
 }
 
 .fr-tree-none > span:not(.fr-spin) {
@@ -1228,7 +1236,7 @@
   gap: 0.6rem;
   min-height: 2.5rem;
   padding: 0.35rem 0.75rem;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
   border-bottom: 1px solid var(--pm-border-soft);
   cursor: pointer;
 }
@@ -1251,11 +1259,11 @@
 }
 
 .fr-choice-text strong {
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .fr-choice-text .muted {
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-help);
 }
 
 /* Setting Up (7.1, 7.3): each part of the work, done, going or failed. */
@@ -1333,7 +1341,7 @@
   border-radius: 0;
   background: var(--pm-raised);
   color: var(--pm-fg);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 @media (max-width: 640px) {
@@ -1345,167 +1353,6 @@
   .settings-facts dd {
     margin-bottom: 0.4rem;
   }
-}
-
-/* Add a Git Notebook: picking a GitHub repository and folder (T81, A1166, A1167, B10). */
-.repo-way {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin: 0 0 0.8rem;
-}
-
-.repo-way .btn[aria-pressed='true'] {
-  border-color: var(--pm-accent);
-  background: var(--pm-accent-softer);
-}
-
-.repo-picker,
-.repo-folders {
-  display: grid;
-  gap: 0.6rem;
-  min-width: 0;
-}
-
-.repo-signed-in {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0;
-}
-
-.repo-inline {
-  padding-block: 0.1rem;
-  font-size: var(--pm-text-sm);
-}
-
-.repo-list {
-  display: grid;
-  max-height: 18rem;
-  overflow-y: auto;
-  border: 1px solid var(--pm-border);
-  background: var(--pm-raised);
-}
-
-.repo-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.25rem 0.75rem;
-  min-width: 0;
-  padding: 0.45rem 0.6rem;
-  border: 0;
-  border-bottom: 1px solid var(--pm-border-soft);
-  background: transparent;
-  color: var(--pm-fg);
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-}
-
-.repo-row:last-child {
-  border-bottom: 0;
-}
-
-.repo-row:hover {
-  background: var(--pm-hover);
-}
-
-.repo-row:focus-visible {
-  outline: 2px solid var(--pm-focus);
-  outline-offset: -2px;
-}
-
-.repo-row[aria-selected='true'] {
-  background: var(--pm-accent-soft);
-}
-
-.repo-row[aria-disabled='true'] {
-  color: var(--pm-muted);
-  cursor: not-allowed;
-}
-
-.repo-row-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.repo-row-facts {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: var(--pm-text-sm);
-}
-
-.repo-public,
-.repo-internal,
-.repo-readonly {
-  background: var(--pm-warn-bg);
-}
-
-.repo-notebook {
-  background: var(--pm-accent-soft);
-}
-
-.repo-none,
-.repo-list-note {
-  margin: 0;
-  padding: 0.5rem 0.6rem;
-}
-
-.repo-list-note {
-  padding: 0;
-  font-size: var(--pm-text-sm);
-}
-
-.repo-create {
-  display: grid;
-  gap: 0.5rem;
-  min-width: 0;
-  margin: 0;
-  padding: 0.75rem;
-  border: 1px solid var(--pm-border);
-}
-
-.repo-create > legend {
-  padding: 0 0.3rem;
-  font-weight: 600;
-}
-
-.repo-create > p {
-  margin: 0;
-}
-
-.repo-picked {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.6rem;
-  min-width: 0;
-  margin-bottom: 0.6rem;
-  overflow-wrap: anywhere;
-}
-
-.repo-new-folder {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 0.5rem;
-}
-
-.repo-new-folder .settings-field {
-  flex: 1 1 12rem;
-  min-width: 0;
-}
-
-.repo-new-folder [role='status'] {
-  flex-basis: 100%;
 }
 
 /* Sign in with GitHub (T82, A1170): the code to enter, large enough to read across a desk. */
@@ -1530,8 +1377,8 @@
 }
 
 .repo-sign-in-code code {
-  font-size: 1.6em;
-  font-weight: 600;
+  font-size: var(--pm-text-display);
+  font-weight: var(--pm-weight-display);
   letter-spacing: 0.12em;
   user-select: all;
 }

@@ -49,9 +49,9 @@ An agent can move a note to Trash, which you can undo. Only you can delete a not
 
 They are not end-to-end encrypted: your git host can read the files in your repository, as it can any file there. Keep the repository private. See [Privacy and security](/docs/help/privacy/).
 
-## Why does search by meaning download a model?
+## Why does semantic search download a model?
 
-The model runs on your Mac so that your notes never leave it. It is downloaded once, about 219 MB. You can turn it off in **Settings → Search by Meaning**.
+The model runs on your Mac so that your notes never leave it. It is downloaded once, about 219 MB. You can turn it off in **Settings → Semantic Search**, and **Delete Model…** there deletes it to free the space.
 
 ## My daily note has the wrong date
 

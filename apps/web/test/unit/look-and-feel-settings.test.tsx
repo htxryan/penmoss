@@ -9,7 +9,6 @@ import { CommandCenter, memoryBindings } from '../../src/commands/center';
 import { COMMANDS } from '../../src/commands/definitions';
 import { CommandsContext } from '../../src/commands/hooks';
 import { NoteSettings } from '../../src/notes/NoteSettings';
-import type { Notes } from '../../src/notes/service';
 import { SymbolsSettings } from '../../src/notes/SymbolsSettings';
 import { AppearanceSettings } from '../../src/theme/AppearanceSettings';
 import { ThemeController } from '../../src/theme/controller';
@@ -18,7 +17,7 @@ import { SidebarSettings } from '../../src/shell/SidebarSettings';
 import { SourcesProvider } from '../../src/sources/context';
 import { WorkspaceContext } from '../../src/workspace/hooks';
 import type { Workspace } from '../../src/workspace/service';
-import { standInSources } from './support/one-source';
+import { oneSource, type OneSource } from './support/one-source';
 
 // PEN-146: Settings → Sidebar and Note (split from Display) and Symbols. Each row is findable
 // by Search Settings (`data-setting`), sections and symbols reorder by Alt+↑ and Alt+↓ as well
@@ -26,39 +25,28 @@ import { standInSources } from './support/one-source';
 
 let root: Root | null = null;
 let host: HTMLDivElement;
-let settings: Record<string, unknown>;
 let writes: Array<[string, unknown]>;
-let state: { loaded: boolean };
-const listeners = new Set<() => void>();
 
-const notify = () => {
-  state = { ...state };
-  for (const listener of listeners) listener();
-};
+// A real notebook (its notes in memory), as the previews draw the app's own sidebar and note
+// (A1564). Its workspace holds the settings; each write is recorded.
+let one: OneSource;
+let workspace: Workspace;
+/** The settings now. */
+const settings = () => workspace.settings();
+/** A setting set as another device would, before or while the page shows. */
+const preset = (key: string, value: unknown) =>
+  act(() => {
+    workspace.setSetting(key, value);
+    writes.pop();
+  });
 
-const workspace = {
-  settings: () => ({ ...settings }),
-  setSetting: (key: string, value: unknown) => {
-    writes.push([key, value]);
-    if (value === undefined) delete settings[key];
-    else settings[key] = value;
-    notify();
-  },
-  subscribe: (listener: () => void) => {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
-  },
-  getState: () => state,
-} as unknown as Workspace;
-
-const { sources } = standInSources({ notes: {} as Notes, workspace });
 const center = new CommandCenter(COMMANDS, memoryBindings());
 
 function render(children: React.ReactNode) {
   act(() =>
     root!.render(
       <CommandsContext.Provider value={center}>
-        <SourcesProvider sources={sources}>
+        <SourcesProvider sources={one.sources}>
           <WorkspaceContext.Provider value={workspace}>{children}</WorkspaceContext.Provider>
         </SourcesProvider>
       </CommandsContext.Provider>,
@@ -66,11 +54,16 @@ function render(children: React.ReactNode) {
   );
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  one = await oneSource();
+  workspace = one.source.workspace;
+  const set = workspace.setSetting.bind(workspace);
+  workspace.setSetting = (key: string, value: unknown) => {
+    writes.push([key, value]);
+    set(key, value);
+  };
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-  settings = {};
   writes = [];
-  state = { loaded: true };
   host = document.createElement('div');
   document.body.append(host);
   root = createRoot(host);
@@ -80,6 +73,7 @@ afterEach(() => {
   act(() => root?.unmount());
   root = null;
   host.remove();
+  one.stop();
 });
 
 const $ = <T extends Element = HTMLElement>(selector: string) => host.querySelector<T>(selector)!;
@@ -121,14 +115,13 @@ describe('Settings → Sidebar (PEN-146)', () => {
   });
 
   it('steps Recent Notes within 1 to 50', () => {
-    settings['sidebar.recentCount'] = 49;
+    preset('sidebar.recentCount', 49);
     render(<SidebarSettings />);
     expect(byTest('recent-count').textContent).toBe('49');
     click(byTest('recent-count-more'));
     expect(writes.at(-1)).toEqual(['sidebar.recentCount', 50]);
     expect(byTest<HTMLButtonElement>('recent-count-more').disabled).toBe(true);
-    settings['sidebar.recentCount'] = 1;
-    act(() => notify());
+    preset('sidebar.recentCount', 1);
     expect(byTest<HTMLButtonElement>('recent-count-fewer').disabled).toBe(true);
     click(byTest('recent-count-more'));
     expect(writes.at(-1)).toEqual(['sidebar.recentCount', 2]);
@@ -154,8 +147,17 @@ describe('Settings → Sidebar (PEN-146)', () => {
     expect(writes).toHaveLength(1);
   });
 
-  it('draws a sidebar that hides and moves with the switches', () => {
+  it('draws the app’s own sidebar, which hides and moves with the switches (A1564)', () => {
     render(<SidebarSettings />);
+    // The sidebar itself, inert: its row of shortcuts, then its sections, the app's own.
+    const frame = byTest('sidebar-preview');
+    expect(frame.hasAttribute('inert')).toBe(true);
+    expect(frame.getAttribute('aria-hidden')).toBe('true');
+    expect(
+      frame.querySelector('.sidebar > .sb-actions [data-testid="sidebar-shortcuts"]'),
+    ).not.toBeNull();
+    expect(frame.querySelector('.sidebar > nav.sb-list')).not.toBeNull();
+    expect(frame.querySelector('[data-testid="source-section"]')?.textContent).toContain('Notes');
     const preview = () =>
       [...byTest('sidebar-preview').querySelectorAll('[data-section]')].map((part) =>
         part.getAttribute('data-section'),
@@ -164,7 +166,8 @@ describe('Settings → Sidebar (PEN-146)', () => {
     click(byTest('display-section-recent'));
     expect(writes.at(-1)![0]).toBe('sidebar.hiddenSections');
     expect(preview()).toEqual(['quickAccess', 'notebooks', 'calendar', 'tags']);
-    const icons = () => byTest('sidebar-preview-shortcuts').querySelectorAll('svg').length;
+    const icons = () =>
+      byTest('sidebar-preview').querySelectorAll('[data-testid="sidebar-shortcuts"] svg').length;
     const before = icons();
     click(byTest('display-graph'));
     expect(writes.at(-1)).toEqual(['sidebar.graph', false]);
@@ -187,10 +190,18 @@ describe('Settings → Note (PEN-146)', () => {
       expect(ids(), id).toContain(id);
     }
     expect(host.querySelectorAll('[data-testid^="display-note-bar-"]')).toHaveLength(9);
-    // Note Panel is this device's own.
-    expect(byTest('note-panel-setting').querySelector('.lf-scope')!.textContent).toBe(
-      'This Device',
-    );
+    // Note Panel is this device's own: a laptop, its sentence its name and its tooltip (A1559),
+    // beside the label, so the radios' group keeps the label alone as its name.
+    const mark = byTest('note-panel-setting').querySelector<HTMLElement>('.lf-scope')!;
+    const sentence =
+      'Unlike other settings, this setting is kept only on this device and isn’t synced through your primary notebook.';
+    expect(mark.querySelector('[data-icon="laptop"]')).not.toBeNull();
+    expect(mark.getAttribute('role')).toBe('img');
+    expect(mark.getAttribute('aria-label')).toBe(sentence);
+    expect(mark.dataset['tip']).toBe(sentence);
+    expect(mark.tabIndex).toBe(0);
+    expect(mark.textContent).toBe('');
+    expect(mark.closest('label, .lf-row-label')).toBeNull();
     // The status bar never offers Tags.
     expect(host.querySelector('[data-testid="metadata-status-tags"]')).toBeNull();
   });
@@ -219,27 +230,29 @@ describe('Settings → Note (PEN-146)', () => {
     expect(css).toMatch(/\.lf-group-two > \.lf-row \{\s*flex-wrap: nowrap;/);
   });
 
-  it('turns a detail on as a chip, and the preview shows it', () => {
+  it('turns a detail on as a chip', () => {
     render(<NoteSettings />);
-    expect(host.querySelector('[data-testid="note-preview-under-title"]')).toBeNull();
     click(byTest('metadata-title-edited'));
     expect(writes.at(-1)).toEqual(['metadata.underTitle', ['edited']]);
-    expect(byTest('note-preview-under-title').textContent).toBe('Edited 4:02 PM');
-    expect(byTest('note-preview-status-bar').textContent).toBe(
-      'Saved · 412 words · 2,190 characters · 2 min',
-    );
   });
 
-  it('shows the title bar’s buttons that are on, and ⋯', () => {
+  it('turns a title bar button on', () => {
     render(<NoteSettings />);
-    const buttons = () =>
-      [...byTest('note-preview').querySelectorAll('[data-button]')].map((button) =>
-        button.getAttribute('data-button'),
-      );
-    expect(buttons()).toEqual(['fullWidth', 'copyAgentReference']);
     click(byTest('display-note-bar-delete'));
     expect(writes.at(-1)).toEqual(['noteBar.delete', true]);
-    expect(buttons()).toEqual(['fullWidth', 'copyAgentReference', 'delete']);
+  });
+
+  // The preview is the app's own note view (A1564), so what it shows of a note's details and
+  // bar buttons is proved with a note in it: settings-previews.spec.ts. Here, with no note yet,
+  // it is the app's own page for no note open, inert.
+  it('previews the app itself, inert, not a picture of it', () => {
+    render(<NoteSettings />);
+    const preview = byTest('note-preview');
+    expect(preview.hasAttribute('inert')).toBe(true);
+    expect(preview.getAttribute('aria-hidden')).toBe('true');
+    expect(preview.querySelector('.notes-app > main.note-main')).not.toBeNull();
+    expect(preview.querySelector('.sidebar')).toBeNull();
+    expect(preview.querySelector('[data-testid="empty-state"]')).not.toBeNull();
   });
 });
 
@@ -274,7 +287,7 @@ describe('Settings → Symbols (PEN-146, Show the Keys)', () => {
     const first = DEFAULT_SYMBOLS[0]!.glyph;
     const second = DEFAULT_SYMBOLS[1]!.glyph;
     altKey(byTest('symbol-glyph-1'), 'ArrowDown');
-    const stored = settings['symbols.list'] as Array<{ glyph: string }>;
+    const stored = settings()['symbols.list'] as Array<{ glyph: string }>;
     expect(stored.slice(0, 2).map((symbol) => symbol.glyph)).toEqual([second, first]);
     expect(byTest('symbols-notice').textContent).toMatch(
       new RegExp(`^${first} is now symbol 2, .+2\\.$`),
@@ -314,10 +327,10 @@ describe('Settings → Appearance (PEN-146, Live Preview Studio)', () => {
     themed();
     expect(host.querySelector('[data-testid="theme-editor"]')).toBeNull();
     click(byTest('theme-customize'));
-    expect(String(settings['theme.id'])).not.toBe('penmoss');
-    expect(settings['theme.id']).toBeTruthy();
+    expect(String(settings()['theme.id'])).not.toBe('penmoss');
+    expect(settings()['theme.id']).toBeTruthy();
     expect(byTest('custom-theme-editor')).not.toBeNull();
-    expect(byTest('theme-preview').className).toBe('theme-preview');
+    expect(byTest('theme-preview').className).toBe('app-preview');
     expect(host.querySelector('[data-testid="theme-grid"]')).toBeNull();
     click(byTest('theme-editor-done'));
     expect(host.querySelector('[data-testid="theme-editor"]')).toBeNull();

@@ -316,6 +316,7 @@ internal fun AppearanceRoute(graph: DeviceGraph, onEditTheme: (String) -> Unit, 
         ),
         // The note in the preview is the editor page itself, as the theme editor's (A418).
         notePreview = { modifier -> ThemePreview(resolved.theme, variant, modifier) },
+        homeShortcuts = HomeShortcuts.of(settings),
     )
 }
 

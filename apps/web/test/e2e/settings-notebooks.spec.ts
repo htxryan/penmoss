@@ -1,5 +1,5 @@
 // Settings → Notebooks and Agents: the list, a notebook’s page, the primary notebook.
-import { expect, type Page, test } from './fixtures';
+import { expect, type Locator, type Page, test } from './fixtures';
 import { collectErrors, ULID } from './support/app';
 import { SLOW_SHELL_MS } from './support/git-host';
 
@@ -29,10 +29,13 @@ test.describe('in Quanta, with two notes', () => {
     await expect(settings.getByTestId('git-notebook')).toHaveCount(0);
     await expect(settings.getByTestId('git-sync-now')).toHaveCount(0);
     await expect(page.getByTestId('git-local-agents')).toHaveCount(0);
-    await expect(page.getByTestId('git-add')).toHaveCount(0);
+    await expect(page.getByTestId('add-notebook')).toHaveCount(0);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/git-notebooks.png` });
+    // Add Notebook… is the first run's own screens, in a sheet (A1562); Cancel closes it.
     await settings.getByTestId('git-add-open').click();
-    await expect(page.getByTestId('git-add')).toBeVisible();
+    await expect(page.getByTestId('add-notebook')).toBeVisible();
+    await page.getByTestId('first-run-cancel').click();
+    await expect(page.getByTestId('add-notebook')).toHaveCount(0);
 
     // A row opens that notebook's page, at its own address, in three tabs (PEN-146); All
     // Notebooks in the nav returns to the list.
@@ -49,7 +52,7 @@ test.describe('in Quanta, with two notes', () => {
     // It is a page of its own: a reload keeps it.
     await page.reload();
     await expect(
-      settings.getByTestId('git-notebook').getByRole('heading', { level: 2 }),
+      settings.getByTestId('git-notebook').getByRole('heading', { level: 1 }),
     ).toHaveText('Quanta');
     await page
       .getByRole('navigation', { name: 'Settings sections' })
@@ -130,7 +133,7 @@ test.describe('in Quanta, with two folders and two notes', () => {
 
     await rows.filter({ hasText: 'Personal' }).click();
     const page1 = settings.getByTestId('git-notebook');
-    await expect(page1.getByRole('heading', { level: 2 })).toHaveText('Personal');
+    await expect(page1.getByRole('heading', { level: 1 })).toHaveText('Personal');
     // No card: the page's background shows through.
     expect(await page1.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
       'rgba(0, 0, 0, 0)',
@@ -138,7 +141,7 @@ test.describe('in Quanta, with two folders and two notes', () => {
     expect(await page1.evaluate((element) => getComputedStyle(element).borderTopWidth)).toBe('0px');
     // Its badge (PEN-140, A1504): in its heading, and on Overview right after its name.
     await expect(
-      page1.getByRole('heading', { level: 2 }).getByTestId('notebook-badge'),
+      page1.getByRole('heading', { level: 1 }).getByTestId('notebook-badge'),
     ).toBeVisible();
     const overview = page1.getByTestId('git-panel-overview').locator('.lf-group').first();
     await expect(overview.locator('> .lf-row').nth(0)).toHaveAttribute(
@@ -263,13 +266,18 @@ test.describe('in Quanta, with a folder, a long note and a source', () => {
     await host.seed({ name: 'Work', notes: [{ title: 'Parser' }] });
     await expect(section(page, 'Work')).toBeVisible({ timeout: 40_000 });
     await page.goto('/settings/note');
+    // Behind the header's (i) since A1560.
     const home = page.getByTestId('settings-home');
-    await expect(home).toHaveText('Settings are synced through your primary notebook, Quanta.');
+    await page.getByTestId('settings-info').click();
+    await expect(home).toHaveText(
+      'Settings are synced through your primary notebook, Quanta. Those marked stay on this Mac only.',
+    );
     if (SHOTS)
-      await page.locator('.settings-title').screenshot({ path: `${SHOTS}/settings-home.png` });
+      await page.locator('.settings-head-bar').screenshot({ path: `${SHOTS}/settings-home.png` });
 
     // A setting in the primary notebook, copied into Work from Work's page.
     await page.getByTestId('display-note-bar-delete').check();
+    await page.getByTestId('settings-info').click();
     await page.getByTestId('settings-home-link').click();
     await expect(page.getByTestId('git-primary-chip')).toBeVisible();
     // Item 12: no Private line.
@@ -281,6 +289,21 @@ test.describe('in Quanta, with a folder, a long note and a source', () => {
     const copy = page.getByTestId('git-settings-copy');
     await expect(copy.getByTestId('git-copy-from').locator('option:checked')).toHaveText('Quanta');
     await expect(copy.getByTestId('git-copy-to').locator('option:checked')).toHaveText('Work');
+    // Its note is help text, as a row's is (A1561): it took the page's body size, larger than
+    // the rows' help above it (Ryan's finding 4).
+    const type = (locator: Locator) =>
+      locator.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return [style.fontSize, style.fontWeight, style.lineHeight, style.color].join(' ');
+      });
+    const note = copy.getByText(/^Replaces Work’s settings with Quanta’s/);
+    const help = page.locator('.settings-content .lf-row-help').first();
+    await expect(help).toBeVisible();
+    expect(await type(note)).toBe(await type(help));
+    const label = page.locator('.settings-content .lf-row-label').first();
+    const px = async (locator: Locator) =>
+      parseFloat(await locator.evaluate((element) => getComputedStyle(element).fontSize));
+    expect(await px(note)).toBeLessThan(await px(label));
     await copy.getByTestId('git-copy-settings').click();
     await expect(copy.getByTestId('git-copy-settings-done')).toHaveText(
       'Copied Quanta’s settings to Work.',
@@ -300,7 +323,7 @@ test.describe('in Quanta, with a folder, a long note and a source', () => {
         .filter({ hasText: 'Work' })
         .getByTestId('git-row-primary'),
     ).toBeVisible();
-    await expect(page.getByTestId('settings-home')).toHaveText(
+    await expect(page.getByTestId('settings-home')).toContainText(
       'Settings are synced through your primary notebook, Work.',
     );
     await page.goto('/settings/note');

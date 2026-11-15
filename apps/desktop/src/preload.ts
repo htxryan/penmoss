@@ -162,6 +162,7 @@ const appWindow = {
     search: (notebookId, query, options) =>
       invoke('meaningSearch', String(notebookId), String(query), options),
     setEnabled: (value) => invoke('meaningSetEnabled', value === true),
+    removeModel: () => invoke('meaningRemoveModel'),
     onChange: (listener) => on('meaningChanged', (status) => listener(status)),
   },
   // Auto-Update (T64 item 2, A1112, A1196): the switch, the channel and Install and Restart

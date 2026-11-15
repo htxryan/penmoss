@@ -164,12 +164,12 @@ test('an edit reaches meaning a moment after it settles', async ({ page, noteboo
   expect(errors).toEqual([]);
 });
 
-test('with Search by Meaning off, the Mac says Words only and why', async ({ page }) => {
+test('with Semantic Search off, the Mac says Words only and why', async ({ page }) => {
   test.setTimeout(120_000);
   const errors = collectErrors(page);
   await page.goto('/');
   await openSearch(page);
-  // Off, as Settings does it: the model and the vectors go, and the page hears so.
+  // Off, as Settings does it: it stops, and the page hears so.
   await page.evaluate(() => window.penmossDesktop?.meaning?.setEnabled(false));
   await input(page).fill('');
   await input(page).fill('blackout');
@@ -184,6 +184,55 @@ test('with Search by Meaning off, the Mac says Words only and why', async ({ pag
   // Words still answer.
   await input(page).fill('sourdough');
   await expect(results(page).filter({ hasText: 'Sourdough' })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('Settings → Semantic Search deletes the model after asking, and search goes by words (A1566)', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const errors = collectErrors(page);
+  await page.goto('/');
+  await openSearch(page);
+  await page.keyboard.press('Escape');
+  await page.goto('/settings/meaning');
+  const section = page.getByTestId('meaning-settings');
+  // Its name is Semantic Search: the page, its switch and the Settings list (once Search by Meaning).
+  await expect(section.getByRole('heading', { level: 1 })).toHaveText('Semantic Search');
+  await expect(section.getByRole('switch', { name: 'Semantic Search' })).toBeChecked();
+  await expect(
+    page.getByRole('navigation').getByRole('link', { name: 'Semantic Search' }),
+  ).toBeVisible();
+  // The stand-in's model, with its size.
+  await expect(section.getByTestId('meaning-model-state')).toHaveText(/ · 219 MB$/);
+  // Delete Model… asks first; Cancel keeps it.
+  await section.getByRole('button', { name: 'Delete Model…' }).click();
+  const ask = page.getByRole('dialog', { name: 'Delete the Model?' });
+  await expect(ask).toContainText('Semantic Search turns off');
+  await expect(ask).toContainText('Turning it on again downloads the model again.');
+  await ask.getByRole('button', { name: 'Cancel' }).click();
+  await expect(ask).toBeHidden();
+  await expect(section.getByRole('switch', { name: 'Semantic Search' })).toBeChecked();
+  // Delete Model: off, and the model is not here.
+  await section.getByRole('button', { name: 'Delete Model…' }).click();
+  await ask.getByRole('button', { name: 'Delete Model' }).click();
+  await expect(ask).toBeHidden();
+  await expect(section.getByTestId('meaning-model-state')).toHaveText(/ · Not downloaded$/);
+  await expect(section.getByRole('switch', { name: 'Semantic Search' })).not.toBeChecked();
+  await expect(section.getByRole('button', { name: 'Delete Model…' })).toHaveCount(0);
+  await expect(section.getByTestId('meaning-status')).toHaveAttribute('data-state', 'off');
+  // Search goes by words.
+  await page.goto('/');
+  await expect(page.locator('button[data-command="note.new"]').first()).toBeAttached({
+    timeout: 30_000,
+  });
+  await page.keyboard.press(SEARCH);
+  await input(page).fill('blackout');
+  await expect(overlay(page).getByTestId('search-words-only')).toHaveAttribute(
+    'data-tip',
+    MEANING_NOT_READY.wordsOnly,
+    { timeout: 10_000 },
+  );
   expect(errors).toEqual([]);
 });
 

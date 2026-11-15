@@ -2,6 +2,11 @@ package app.penmoss.ui.settings
 
 import android.content.Context
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.click
+import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -189,6 +194,53 @@ class SettingsScreensTest {
         compose.onNodeWithTag("mode-light").assertIsSelected()
         compose.onNodeWithTag("mode-system").assertIsNotSelected()
         compose.onNodeWithText("Always light, whatever the phone’s setting.").assertIsDisplayed()
+    }
+
+    /** A1582: beside the preview, the interface's text at its real size, labelled, and the note's font and size. */
+    @Test
+    fun appearanceShowsTheFontsAtTheirRealSizeAndFollowsAChange() {
+        var fonts by mutableStateOf(FontsUi("theme", "theme", 16, {}, {}, {}))
+        compose.setContent {
+            PenmossTheme {
+                AppearanceScreen(
+                    "system", systemDark = false, themes = cards, chosen = "penmoss", fullWidth = false, editorWidth = 52,
+                    enabled = true, onMode = {}, onTheme = {}, onFullWidth = {}, onBack = {}, fonts = fonts,
+                )
+            }
+        }
+        compose.onNodeWithTag("fontsAtSize").assertIsDisplayed()
+        compose.onNodeWithText("Setting · Theme Default · 16 sp").assertExists()
+        compose.onNodeWithText("Page Title · Theme Default · 24 sp").assertExists()
+        compose.onNodeWithText("Note · Theme Default · 16 px: the note in the preview is at its real size.").assertExists()
+        fonts = FontsUi("serif", "mono", 20, {}, {}, {})
+        compose.onNodeWithText("Setting · Serif · 16 sp").assertExists()
+        compose.onNodeWithText("Note · Monospace · 20 px: the note in the preview is at its real size.").assertExists()
+    }
+
+    /** A1564: the preview is the app itself (Home's own shortcut row and the note page), inert. */
+    @Test
+    fun thePreviewIsTheAppItselfAndTakesNoTouchOrFocus() {
+        var touched = false
+        compose.setContent {
+            PenmossTheme {
+                AppearanceScreen(
+                    "system", systemDark = false, themes = cards, chosen = "penmoss", fullWidth = false, editorWidth = 52,
+                    enabled = true, onMode = {}, onTheme = {}, onFullWidth = {}, onBack = {},
+                    notePreview = { modifier -> Box(modifier.clickable { touched = true }.testTag("previewNote")) },
+                    homeShortcuts = HomeShortcuts(graph = false),
+                )
+            }
+        }
+        compose.onNodeWithTag("appearancePreviewApp").assertIsDisplayed()
+        // Its buttons and its note are drawn but out of reach: TalkBack and a test find none.
+        compose.onNodeWithTag("homeShortcuts").assertDoesNotExist()
+        compose.onNodeWithTag("homeSearch").assertDoesNotExist()
+        compose.onNodeWithTag("previewNote").assertDoesNotExist()
+        // A tap on the note in it reaches nothing.
+        compose.onNodeWithTag("appearancePreviewApp").performTouchInput { click(center) }
+        compose.waitForIdle()
+        assertFalse(touched)
+        compose.onNodeWithText("Preview: redraws as you change these.").assertIsDisplayed()
     }
 
     @Test

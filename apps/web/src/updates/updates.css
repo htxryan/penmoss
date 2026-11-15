@@ -14,15 +14,50 @@
   margin-top: 0.5rem;
 }
 
+/*
+ * What's New, folded away until opened (A1567): its summary is the section's group head, a
+ * chevron first that turns as it opens, the version and its count of changes after the name.
+ */
+.updates-whats-new-summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.updates-whats-new-summary::-webkit-details-marker {
+  display: none;
+}
+
+.updates-whats-new-summary:focus-visible {
+  outline: 2px solid var(--pm-focus);
+  outline-offset: 2px;
+}
+
+.updates-whats-new-chevron {
+  flex: none;
+  color: var(--pm-muted);
+  transition: transform var(--pm-fast) var(--pm-ease);
+}
+
+.updates-whats-new[open] .updates-whats-new-chevron {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .updates-whats-new-chevron {
+    transition: none;
+  }
+}
+
 .release-notes-block h3 {
-  font-size: var(--pm-text-lg);
+  font-size: var(--pm-text-group-head);
+  font-weight: var(--pm-weight-group-head);
 }
 
 .release-notes-group h4 {
   margin: 0.75rem 0 0.25rem;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
-  font-weight: 600;
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
 }
 
 .release-notes-group ul {
@@ -33,8 +68,8 @@
 .release-notes-group li,
 .release-notes-block > p {
   color: var(--pm-muted);
-  font-size: var(--pm-text-md);
-  line-height: 1.55;
+  font-size: var(--pm-text-body);
+  line-height: var(--pm-leading-body);
 }
 
 .release-notes-block > p {
@@ -51,8 +86,8 @@
 
 .release-notes-earlier > summary {
   cursor: pointer;
-  font-size: var(--pm-text-lg);
-  font-weight: 600;
+  font-size: var(--pm-text-group-head);
+  font-weight: var(--pm-weight-group-head);
 }
 
 .release-notes-earlier .release-notes-block h3 {
@@ -317,14 +352,4 @@ body {
   .note-columns .note-rail-icons .note-rail-btn {
     width: var(--pm-hit);
   }
-}
-
-/* Settings' heading, and where they are kept under it (A1136, PEN-135 item 11). */
-.settings-title:has(.settings-home) h1 {
-  margin-bottom: 0.3rem;
-}
-
-.settings-home {
-  margin: 0 0 1.25rem;
-  font-size: var(--pm-text-sm, 0.86rem);
 }

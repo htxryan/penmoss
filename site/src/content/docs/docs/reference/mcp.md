@@ -17,7 +17,7 @@ Searches the notebook. Arguments: `query`\*, `mode` (`hybrid`, `full-text` or `s
 - **`full-text`** finds notes by their words.
 - **`semantic`** finds notes by meaning alone.
 
-Meaning needs the model on this Mac, and **Settings → Search by Meaning** on when the server starts (or `penmoss models fetch`). Without it, `hybrid` searches words only and says so, and `semantic` is refused with `semantic_unavailable`.
+Meaning needs the model on this Mac, and **Settings → Semantic Search** on when the server starts (or `penmoss models fetch`). Without it, `hybrid` searches words only and says so, and `semantic` is refused with `semantic_unavailable`.
 
 ### Note ids
 

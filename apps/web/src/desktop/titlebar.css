@@ -305,7 +305,10 @@
   flex: none;
   min-width: 3.2rem;
   color: var(--pm-muted);
-  font: 0.75rem var(--pm-mono);
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-meta);
+  font-weight: var(--pm-weight-regular);
+  line-height: normal;
 }
 
 .symbol-actions {

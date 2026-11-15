@@ -16,7 +16,7 @@ function meaningOf(context: Context): MeaningIo {
   if (!meaning) {
     throw new CliError(
       EXIT.ERROR,
-      'This penmoss has no search by meaning: it comes with the Penmoss app (run the app’s penmoss).',
+      'This penmoss has no semantic search: it comes with the Penmoss app (run the app’s penmoss).',
       'unsupported',
     );
   }
@@ -31,7 +31,7 @@ function describe(status: MeaningStatus): string[] {
         ? `partly downloaded (${megabytes(status.bytes)} of ${megabytes(status.totalBytes)}): run penmoss models fetch`
         : `not downloaded (${megabytes(status.totalBytes)}): run penmoss models fetch`;
   return [
-    `Search by meaning: ${status.enabled ? 'on' : 'off (Settings → Search by Meaning in the app)'}`,
+    `Semantic search: ${status.enabled ? 'on' : 'off (Settings → Semantic Search in the app)'}`,
     `Model: ${status.model}, ${state}`,
     `From: huggingface.co/${status.repository} at ${status.revision.slice(0, 8)}`,
     `Folder: ${status.dir}`,
@@ -41,11 +41,11 @@ function describe(status: MeaningStatus): string[] {
 
 export const models: Command = {
   name: 'models',
-  summary: 'Download, check or remove the model for search by meaning',
+  summary: 'Download, check or remove the model for semantic search',
   usage: ['models status', 'models fetch', 'models remove'],
   description: [
-    'Search by meaning runs on this Mac with EmbeddingGemma, a model of about 219 MB downloaded once from Hugging Face (the Gemma Terms of Use apply) into ~/.penmoss/models. Your notes never leave the Mac: their vectors are kept in ~/.penmoss/vectors.',
-    'status says whether the model is here and search by meaning is on. fetch downloads it (resuming a download that stopped, checking every file’s checksum); the app’s Settings → Search by Meaning does the same. remove deletes the model and its vectors; search goes back to words only.',
+    'Semantic search runs on this Mac with EmbeddingGemma, a model of about 219 MB downloaded once from Hugging Face (the Gemma Terms of Use apply) into ~/.penmoss/models. Your notes never leave the Mac: their vectors are kept in ~/.penmoss/vectors.',
+    'status says whether the model is here and semantic search is on. fetch downloads it (resuming a download that stopped, checking every file’s checksum); the app’s Settings → Semantic Search does the same. remove deletes the model and its vectors; search goes back to words only.',
     'With the model, penmoss search --mode hybrid (the default) finds notes by their words and their meaning, --mode semantic by meaning alone, and penmoss mcp gives agents the same.',
   ],
   flags: [],

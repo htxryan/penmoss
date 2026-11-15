@@ -130,7 +130,7 @@ export class LocalSearch {
       throw new LocalError(
         422,
         'semantic_unavailable',
-        'Search by meaning is not set up here (on a Mac: Settings → Search by Meaning in the app, or penmoss models fetch): search with mode full-text or hybrid',
+        'Semantic search is not set up here (on a Mac: Settings → Semantic Search in the app, or penmoss models fetch): search with mode full-text or hybrid',
       );
     }
     if (mode !== 'hybrid' && mode !== 'full-text' && mode !== 'semantic') {

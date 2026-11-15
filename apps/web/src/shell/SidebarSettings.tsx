@@ -6,11 +6,16 @@ import {
   type SidebarSection,
 } from '@penmoss/core/sidebar-layout';
 import { Icon, type IconName } from '@penmoss/ui/icons';
-import { useId } from 'react';
+import { useId, type CSSProperties } from 'react';
+import { PreviewCommands } from '../commands/CommandsRoot';
+import { useSourcesState } from '../sources/hooks';
 import { GroupHead, SettingRow, Switch } from '../theme/look-rows';
 import { useSidebarDisplay } from './display';
+import { usePaneSize } from './pane-widths';
 import { useReorder } from './reorder';
+import { SidebarBody, type SidebarPlace } from './SidebarBody';
 import { useSidebarLayout, type SidebarLayout } from './sidebar-layout-state';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 const ITEMS: ReadonlyArray<{
   readonly item: SidebarItem;
@@ -39,8 +44,8 @@ const SECTION_SETTING: Readonly<Record<SidebarSection, string>> = {
  * icons and its collapsed rail (T42, A576; Search always shows), and its sections (T53 item 8,
  * A983): which show, in what order (dragged by a row's handle, or Alt+↑ and Alt+↓, here as in
  * the sidebar), how many notes Recent Notes shows and whether Quick Access names each note's
- * notebook. A small sidebar beside them hides and moves with the switches. Synced through the
- * Primary Notebook (A827).
+ * notebook. The sidebar itself beside them (A1564) hides and moves with the switches. Synced
+ * through the Primary Notebook (A827).
  */
 export function SidebarSettings() {
   const display = useSidebarDisplay();
@@ -52,11 +57,11 @@ export function SidebarSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="settings-sidebar"
     >
-      <h2 id={`${id}-h`}>Sidebar</h2>
-      <p>
-        A hidden shortcut still works from its keys and the command palette. Changes sync to your
-        other devices.
-      </p>
+      <SettingsHeader
+        id={`${id}-h`}
+        title="Sidebar"
+        intro="What the sidebar shows, and in what order."
+      />
       <div className="lf-split lf-split-narrow">
         <div className="lf-controls">
           <GroupHead id={`${id}-shortcuts`}>Shortcuts</GroupHead>
@@ -101,7 +106,8 @@ export function SidebarSettings() {
             ))}
           </div>
           <p className="lf-help">
-            New Note, Settings, Feedback and Trash are always on the sidebar.
+            New Note, Settings, Feedback and Trash are always on the sidebar. A hidden shortcut
+            still works from its keys and the command palette.
           </p>
 
           <SectionSettings layout={layout} />
@@ -109,10 +115,7 @@ export function SidebarSettings() {
 
         <aside className="lf-preview-col" aria-label="Preview">
           <p className="lf-label">Preview</p>
-          <SidebarPreview
-            shortcuts={ITEMS.filter(({ item }) => display.shows(item)).map(({ icon }) => icon)}
-            layout={layout}
-          />
+          <SidebarPreview layout={layout} />
         </aside>
       </div>
     </section>
@@ -247,48 +250,49 @@ function RecentCount({ layout }: { readonly layout: SidebarLayout }) {
   );
 }
 
-/** A small sidebar: New Note, the shortcuts shown, and the sections shown, in order. */
-function SidebarPreview({
-  shortcuts,
-  layout,
-}: {
-  readonly shortcuts: readonly IconName[];
-  readonly layout: SidebarLayout;
-}) {
-  const lines = (count: number) =>
-    Array.from({ length: count }, (_, at) => (
-      <span key={at} className={at % 2 ? 'lf-line lf-short' : 'lf-line'} />
-    ));
+/** Nowhere in particular: no note open, nor the graph nor Tags. */
+const NOWHERE: SidebarPlace = { activeId: null, openNote: null, graphOpen: false, tagsOpen: false };
+
+const ignore = () => undefined;
+
+/** The preview column's width (`.lf-split-narrow`). */
+const PREVIEW_REM = 16;
+
+/**
+ * The sidebar itself (A1564): the main window's `SidebarBody`, New Note, the shortcuts and the
+ * sections in order with their notes, notebooks, calendar and tags, as this device's settings
+ * show it, at the sidebar's own width, scaled to the column. Inert: nothing in it can be clicked,
+ * focused or read out, and its commands are registered apart (`PreviewCommands`).
+ */
+function SidebarPreview({ layout }: { readonly layout: SidebarLayout }) {
+  const sources = useSourcesState();
+  const [width] = usePaneSize('sidebar');
   return (
-    <div className="lf-preview lf-sidebar-preview" data-testid="sidebar-preview" aria-hidden="true">
-      <span className="lf-sp-new">
-        <Icon name="plus" size={12} />
-        New Note
-      </span>
-      <span className="lf-sp-icons" data-testid="sidebar-preview-shortcuts">
-        {(['search', ...shortcuts] as IconName[]).map((icon) => (
-          <Icon key={icon} name={icon} size={12} />
-        ))}
-      </span>
-      {layout.shown.map((section) => (
-        <span key={section} className="lf-sp-section" data-section={section}>
-          <b>{SIDEBAR_SECTION_NAMES[section]}</b>
-          {section === 'recent' ? (
-            lines(Math.min(layout.recentCount, 5))
-          ) : section === 'quickAccess' ? (
-            [0, 1].map((at) => (
-              <span key={at} className="lf-sp-note">
-                <span className={at ? 'lf-line lf-short' : 'lf-line'} />
-                {layout.quickAccessNotebook ? <small>Personal</small> : null}
-              </span>
-            ))
-          ) : section === 'calendar' ? (
-            <span className="lf-sp-calendar" />
-          ) : (
-            lines(2)
-          )}
-        </span>
-      ))}
-    </div>
+    <PreviewCommands>
+      <div
+        className="lf-preview lf-sidebar-preview"
+        data-testid="sidebar-preview"
+        style={{ '--lf-sidebar-width': `${width}rem` } as CSSProperties}
+        inert
+        aria-hidden="true"
+      >
+        {/* Its own width, scaled to the 16rem column: the shortcuts fit as they do there. */}
+        <div className="sidebar" style={{ zoom: Math.min(1, PREVIEW_REM / width) }}>
+          <SidebarBody
+            layout={layout}
+            place={NOWHERE}
+            notebooks={{
+              shown: sources.all,
+              active: sources.journal,
+              current: null,
+              currentFolder: null,
+              onCurrentFolderChange: ignore,
+              onActivate: ignore,
+            }}
+            rail={false}
+          />
+        </div>
+      </div>
+    </PreviewCommands>
   );
 }

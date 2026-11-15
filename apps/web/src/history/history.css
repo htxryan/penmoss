@@ -5,7 +5,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 /* The panel holds History's list and its docked changes at its own height: the list scrolls,
@@ -70,8 +70,8 @@
   margin: 0;
   padding: 0.65rem 1rem 0.2rem;
   color: var(--pm-muted);
-  font-size: 0.72rem;
-  font-weight: 650;
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -96,7 +96,7 @@
   background: none;
   color: var(--pm-fg);
   font: inherit;
-  font-size: 0.8rem;
+  font-size: var(--pm-text-item);
   text-align: left;
 }
 
@@ -135,7 +135,7 @@ button.history-entry:focus-visible {
   min-height: 1.75rem;
   padding: 0.3rem 1rem;
   color: var(--pm-muted);
-  font-size: 0.8rem;
+  font-size: var(--pm-text-item);
 }
 
 .history-now[data-pending] .history-summary {
@@ -146,7 +146,7 @@ button.history-entry:focus-visible {
   height: 1.5rem;
   padding: 0 0.4rem;
   color: var(--pm-accent);
-  font-size: 0.78rem;
+  font-size: var(--pm-text-item);
 }
 
 /* The writer's icon; the tooltip names them (finding 13). */
@@ -175,7 +175,7 @@ button.history-entry:focus-visible {
 .history-lines {
   display: inline-flex;
   gap: 0.3rem;
-  font-size: 0.75rem;
+  font-size: var(--pm-text-meta);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -201,7 +201,7 @@ button.history-entry:focus-visible {
   padding: 0 0.4rem;
   border-radius: 0;
   background: var(--pm-hover);
-  font-size: 0.75rem;
+  font-size: var(--pm-text-meta);
 }
 
 .history-author[data-kind='agent'] {
@@ -288,12 +288,12 @@ html:root[data-resizing='rows'] * {
 .history-detail-head h3 {
   flex: 1;
   margin: 0;
-  font-size: 0.875rem;
-  font-weight: 650;
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
 }
 
 .history-detail-head .muted {
-  font-size: 0.75rem;
+  font-size: var(--pm-text-meta);
 }
 
 .history-detail .history-diff {
@@ -311,7 +311,7 @@ html:root[data-resizing='rows'] * {
 .history-diff-loading {
   margin: 0;
   padding: 0.5rem 0.6rem;
-  font-size: 0.78rem;
+  font-size: var(--pm-text-help);
 }
 
 /*
@@ -343,7 +343,7 @@ html:root[data-resizing='rows'] * {
 
 .history-status {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--pm-text-help);
 }
 
 .history-scroll > .history-status {
@@ -353,7 +353,7 @@ html:root[data-resizing='rows'] * {
 .history-conflicts {
   margin: 0;
   padding-left: 1.1rem;
-  font-size: 0.8rem;
+  font-size: var(--pm-text-help);
 }
 
 .history-conflicts code {
@@ -375,8 +375,8 @@ html:root[data-resizing='rows'] * {
   border: 1px solid var(--pm-border);
   background: var(--pm-raised);
   box-shadow: var(--pm-shadow);
-  font-size: var(--pm-text-sm);
-  font-weight: 400;
+  font-size: var(--pm-text-item);
+  font-weight: var(--pm-weight-regular);
   letter-spacing: normal;
   text-transform: none;
 }
@@ -392,7 +392,10 @@ html:root[data-resizing='rows'] * {
   border: 1px solid var(--pm-border);
   border-radius: 0;
   background: var(--pm-bg);
-  font: 0.78rem/1.55 var(--pm-mono);
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-code);
+  font-weight: var(--pm-weight-regular);
+  line-height: var(--pm-leading-code);
 }
 
 .history-diff pre > span {

@@ -3,7 +3,10 @@ package app.penmoss.git
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertTextEquals
@@ -15,6 +18,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.engine.git.GitNotebookView
 import app.penmoss.ui.common.PenmossTheme
+import app.penmoss.ui.settings.DEVICE_ONLY_TIP
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -73,7 +77,10 @@ class BetweenNotebooksScreenTest {
             }
         }
         compose.onNodeWithTag("gitSettingsInStep").performScrollTo().assertIsOff()
-        compose.onNodeWithText("A change to Work’s settings goes to the other notebooks. This phone’s choice.").assertIsDisplayed()
+        compose.onNodeWithText("A change to Work’s settings goes to the other notebooks").assertIsDisplayed()
+        // This phone's own: the laptop mark, its sentence its content description (A1559).
+        compose.onNode(hasTestTag("deviceOnly") and hasAnyAncestor(hasTestTag("gitSettingsInStep")), useUnmergedTree = true)
+            .assertContentDescriptionEquals(DEVICE_ONLY_TIP)
         compose.onNodeWithTag("gitSettingsInStep").performClick()
         assertEquals(listOf(true), turned)
     }
@@ -84,7 +91,7 @@ class BetweenNotebooksScreenTest {
             PenmossTheme { GitNotebooksScreen(GitNotebooksUi(rows = listOf(work, home), journal = "h", copyTags = true, inStep = true), GitNotebooksActions(), onBack = {}) }
         }
         compose.onNodeWithTag("gitSettingsInStep").performScrollTo().assertIsOn()
-        compose.onNodeWithText("A change to Home’s settings goes to the other notebooks. This phone’s choice.").assertIsDisplayed()
+        compose.onNodeWithText("A change to Home’s settings goes to the other notebooks").assertIsDisplayed()
     }
 
     @Test

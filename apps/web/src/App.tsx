@@ -20,7 +20,6 @@ import { graphPath } from './graph/path';
 import { useNotes } from './notes/hooks';
 import { lastOpenedNote, readOpened } from './notes/recent';
 import { NoteRoute } from './notes/NoteRoute';
-import { QuickAccessSection } from './notes/QuickAccessSection';
 import { SyncAnnouncer } from './notes/SyncAnnouncer';
 import { FullWidthCommand } from './notes/width';
 import { SettingsPage } from './pages/SettingsPage';
@@ -39,33 +38,27 @@ import { AppBar } from './shell/AppBar';
 import { DrawerContext, withKeys, type DrawerControl } from './shell/drawer';
 import { HistoryCommands, HistoryNav } from './shell/HistoryNav';
 import { Home } from './shell/Home';
-import { SidebarShortcuts } from './shell/SidebarShortcuts';
 import { TooltipLayer } from './shell/Tooltip';
 import { useNarrowWindow } from './shell/media';
 import { useSidebarCollapsed } from './shell/sidebar';
 import { isKeyRepeat, isRepeatedNewNote, type LastCreated } from './notes/new-note';
-import { Calendar } from './journal/Calendar';
 import { JournalCommands } from './journal/PeriodNav';
 import { tagSearch } from './search/show-tag';
 import { TrashView } from './trash/TrashView';
-import { TagPane, TagsPageLink } from './tags/TagPane';
 import { TagsPage, type ShowTag } from './tags/TagsPage';
 import { TimeMachinePage } from './time-machine/TimeMachinePage';
-import { RecentSection } from './notes/RecentSection';
-import { NotebooksSection } from './sources/NotebooksSection';
-import { SidebarSections } from './shell/sidebar-layout';
 import { useSidebarLayout } from './shell/sidebar-layout-state';
+import { SidebarBody } from './shell/SidebarBody';
 import { RecoveredNotice } from './workspace/RecoveredNotice';
 import { SidebarUpdateNotice, UpdateNotice } from './updates/UpdatesSettings';
 import { useUpdateNotice } from './updates/notice';
 import { TitleBarLead } from './shell/title-lead';
-import { SourceScope, SourceScopeOr } from './sources/context';
+import { SourceScopeOr } from './sources/context';
 import { useNoteSource, useSourcesRegistry, useSourcesState } from './sources/hooks';
 import { useEveryOpenNoteList } from './sources/lists';
 import type { Source } from './sources/registry';
 import { JournalScope } from './sources/JournalScope';
 import { NoteSourceScope } from './sources/NoteSourceScope';
-import { SourceSection } from './sources/SourceSection';
 import { ToastStack } from './toasts/ToastStack';
 import { NoteWindow } from './window/NoteWindow';
 import { mainTabs } from './tabs/controller';
@@ -226,9 +219,6 @@ function NotesShell({
     (route.name === 'note' ? openNoteSource : null) ??
     sourcesState.journal;
   const targetFolder = activeSource.id !== currentSource ? null : currentFolder;
-  const inActive = (element: ReactNode) => (
-    <SourceScope source={activeSource}>{element}</SourceScope>
-  );
 
   // The drawer is open for one screen: opening a note, the graph or Trash closes it.
   const screen = screenKey(route, params);
@@ -403,70 +393,31 @@ function NotesShell({
           </div>
           {/* Read out when sync needs attention; the state itself is each section's dot (A933). */}
           <SyncAnnouncer />
-          <div className="sb-actions">
-            {/* New Note first, in the accent, then the shortcuts: one row of icons (T52). */}
-            <SidebarShortcuts
-              openNote={openNote}
-              graphOpen={route.name === 'graph'}
-              tagsOpen={route.name === 'tags'}
-              shownNote={route.name === 'note' ? route.id : null}
-            />
-          </div>
-          <nav className="sb-list" aria-label="All notes">
-            {/* The sections in the person's order, each hidden or shown (T53 item 8, A983). */}
-            <SidebarSections
-              layout={layout}
-              // The Tags page from the Tags section's title row (PEN-68).
-              leads={{ tags: <TagsPageLink current={route.name === 'tags'} /> }}
-              render={{
-                // The pinned notes (T51, A946).
-                quickAccess: (tools) => (
-                  <QuickAccessSection
-                    activeId={route.name === 'note' ? route.id : null}
-                    tools={tools}
-                  />
-                ),
-                recent: (tools) => (
-                  <RecentSection
-                    activeId={route.name === 'note' ? route.id : null}
-                    count={layout.recentCount}
-                    tools={tools}
-                  />
-                ),
-                notebooks: (tools) => (
-                  <NotebooksSection tools={tools}>
-                    {shownSources.map((source) => (
-                      <SourceScope key={source.id} source={source}>
-                        <SourceSection
-                          source={source}
-                          activeId={route.name === 'note' ? route.id : null}
-                          currentFolder={currentSource === source.id ? currentFolder : null}
-                          onCurrentFolderChange={(folderId) => {
-                            setCurrentSource(source.id);
-                            setCurrentFolder(folderId);
-                          }}
-                          active={activeSource.id === source.id}
-                          onActivate={() => {
-                            if (currentSource === source.id) return;
-                            setCurrentSource(source.id);
-                            setCurrentFolder(null);
-                          }}
-                          shown={!rail}
-                        />
-                      </SourceScope>
-                    ))}
-                  </NotebooksSection>
-                ),
-                // The Journal notebook's calendar (A827), whichever note is open.
-                calendar: (tools) => (
-                  <JournalScope>
-                    <Calendar activeId={route.name === 'note' ? route.id : null} tools={tools} />
-                  </JournalScope>
-                ),
-                tags: (tools) => inActive(<TagPane tools={tools} />),
-              }}
-            />
-          </nav>
+          <SidebarBody
+            layout={layout}
+            place={{
+              activeId: route.name === 'note' ? route.id : null,
+              openNote,
+              graphOpen: route.name === 'graph',
+              tagsOpen: route.name === 'tags',
+            }}
+            notebooks={{
+              shown: shownSources,
+              active: activeSource,
+              current: currentSource,
+              currentFolder,
+              onCurrentFolderChange: (sourceId, folderId) => {
+                setCurrentSource(sourceId);
+                setCurrentFolder(folderId);
+              },
+              onActivate: (sourceId) => {
+                if (currentSource === sourceId) return;
+                setCurrentSource(sourceId);
+                setCurrentFolder(null);
+              },
+            }}
+            rail={rail}
+          />
           {/* Icons with their names as tooltips (T51, A935); Trash is on the notebook's bar (T52).
               The update notice above them (PEN-135 item 10); on the rail, all at its foot (item 4),
               Settings last, at the very bottom (Ryan's review of #192, finding 18). In the DOM in

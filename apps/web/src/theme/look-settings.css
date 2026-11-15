@@ -32,8 +32,8 @@
   gap: 0.35rem 0.5rem;
   margin: 1.5rem 0 0.5rem;
   color: var(--pm-fg);
-  font-size: var(--pm-text-sm);
-  font-weight: 600;
+  font-size: var(--pm-text-group-head);
+  font-weight: var(--pm-weight-group-head);
 }
 
 .lf-sub::after {
@@ -47,23 +47,48 @@
   margin-top: 0;
 }
 
-.lf-sub-hint {
-  color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
-  font-weight: 400;
+/*
+ * The group's name, a heading inside the subhead (A1559). The subhead keeps the place and size
+ * `.settings-section h3` gave it while it was the heading itself; the name inside only inherits.
+ */
+.settings-section .lf-sub {
+  margin: 2rem 0 0.5rem;
+  font-size: var(--pm-text-lg);
 }
 
-/* This Mac (or This Device): a setting kept on this device alone. */
+.lf-sub > .lf-sub-name {
+  margin: 0;
+  font: inherit;
+}
+
+.lf-sub-hint {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-help);
+  font-weight: var(--pm-weight-help);
+}
+
+/*
+ * A setting kept on this device alone (A1559): a laptop, its words in the tooltip. Beside the
+ * row's label (`lf-row-name`) or after a group's name.
+ */
+.lf-row-name {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .lf-scope {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  padding: 0.05rem 0.4rem;
-  border: 1px solid var(--pm-border-strong);
+  justify-content: center;
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
-  font-weight: 600;
-  line-height: 1.4;
-  white-space: nowrap;
+  cursor: help;
+}
+
+.lf-scope:hover {
+  color: var(--pm-fg);
 }
 
 /* A bordered list of rows. */
@@ -144,8 +169,8 @@
   align-items: center;
   gap: 0.4rem;
   color: var(--pm-fg);
-  font-size: var(--pm-text-sm);
-  font-weight: 600;
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
 }
 
 .lf-row-label .i {
@@ -154,8 +179,8 @@
 
 .lf-row-help {
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
-  line-height: 1.45;
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-help);
 }
 
 .lf-row-control {
@@ -177,7 +202,8 @@
 .lf-row-note {
   margin: 0.2rem 0 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-help);
 }
 
 .lf-row-note[role='alert'] {
@@ -187,7 +213,7 @@
 /* A control's empty value (no hotkey). */
 .lf-none {
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 /* A choice that fills its row (Quick Capture's Saves To): the whole row is the radio's label. */
@@ -213,8 +239,8 @@
 .lf-help {
   margin: 0.5rem 0 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
-  line-height: 1.5;
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-help);
 }
 
 .lf-actions {
@@ -300,7 +326,7 @@
 
 .lf-stepper-value {
   min-width: 1.75rem;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
@@ -322,7 +348,7 @@
   border: 1px solid var(--pm-border);
   background: var(--pm-raised);
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
   transition:
     background var(--pm-fast),
     border-color var(--pm-fast),
@@ -394,10 +420,10 @@
   padding-left: 0.35rem;
 }
 
-/* The preview beside the controls, in sight as the page scrolls. */
+/* The preview beside the controls, in sight as the page scrolls, under the pinned header. */
 .lf-preview-col {
   position: sticky;
-  top: 0;
+  top: calc(var(--pm-hit) + 0.75rem);
   display: grid;
   gap: 0.5rem;
   min-width: 0;
@@ -406,16 +432,16 @@
 .lf-label {
   margin: 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
-  font-weight: 600;
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
 }
 
 .lf-preview-col > .lf-help {
   margin: 0;
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-help);
 }
 
-.lf-preview-col .theme-preview,
+.lf-preview-col .app-preview,
 .lf-preview-col .theme-contrast {
   margin: 0;
 }
@@ -425,143 +451,30 @@
   margin-top: 0.75rem;
 }
 
-/* The Sidebar's and the Note's previews: blocks and lines in the theme's colours. */
+/* The Sidebar's preview's frame (the Note's is AppPreview's), in the theme's colours. */
 .lf-preview {
-  display: grid;
-  align-content: start;
-  gap: 0.4rem;
   overflow: hidden;
-  padding: 0.75rem;
   border: 1px solid var(--pm-border);
   background: var(--pm-bg);
   color: var(--pm-fg);
   font-family: var(--pm-font);
-  font-size: var(--pm-text-xs);
 }
 
-.lf-line {
-  display: block;
-  width: 90%;
-  height: 5px;
-  background: color-mix(in oklab, var(--pm-muted) 35%, transparent);
-}
-
-.lf-line.lf-short {
-  width: 60%;
-}
-
+/*
+ * Settings → Sidebar's preview (A1564): the sidebar itself, at its own width and scaled down to
+ * the column, cut off at a height with its foot fading out, as a window's sidebar runs on.
+ */
 .lf-sidebar-preview {
-  background: var(--pm-sidebar);
-}
-
-.lf-sp-new {
-  display: inline-flex;
-  align-items: center;
-  justify-self: start;
-  gap: 0.25rem;
-  padding: 0.2rem 0.5rem;
-  background: var(--pm-accent);
-  color: var(--pm-on-accent);
-  font-weight: 600;
-}
-
-.lf-sp-icons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0.2rem 0;
-  color: var(--pm-muted);
-}
-
-.lf-sp-section {
-  display: grid;
-  gap: 0.3rem;
-  padding-top: 0.45rem;
-  border-top: 1px solid var(--pm-border-soft);
-}
-
-.lf-sp-note {
-  display: grid;
-  gap: 0.1rem;
-}
-
-.lf-sp-note small {
-  color: var(--pm-muted);
-  font-size: 0.6rem;
-}
-
-.lf-sp-calendar {
   display: block;
-  height: 2.5rem;
-  background-image: radial-gradient(var(--pm-muted) 1px, transparent 1.5px);
-  background-size: 14.28% 33.3%;
-}
-
-.lf-note-preview {
-  gap: 0;
+  max-height: min(34rem, calc(100vh - 14rem));
   padding: 0;
-}
-
-.lf-np-bar {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.3rem;
-  padding: 0.4rem 0.5rem;
-  border-bottom: 1px solid var(--pm-border-soft);
-  color: var(--pm-muted);
-}
-
-.lf-np-button {
-  display: inline-grid;
-  place-items: center;
-  width: 1.3rem;
-  height: 1.3rem;
-  border: 1px solid var(--pm-border-soft);
-}
-
-.lf-np-body {
-  display: flex;
-  min-height: 9rem;
-}
-
-.lf-np-page {
-  display: grid;
-  flex: 1 1 auto;
-  align-content: start;
-  gap: 0.35rem;
-  max-width: 72%;
-  margin-inline: auto;
-  padding: 0.75rem 0.5rem;
-}
-
-.lf-note-preview[data-full] .lf-np-page {
-  max-width: none;
-  margin-inline: 0;
-  padding-inline: 0.75rem;
-}
-
-.lf-np-title {
-  font: 700 0.95rem/1.2 var(--pm-font-body, var(--pm-font));
-}
-
-.lf-np-meta {
-  color: var(--pm-muted);
-  font-size: 0.65rem;
-}
-
-.lf-np-panel {
-  flex: none;
-  width: 28%;
-  border-left: 1px solid var(--pm-border-soft);
   background: var(--pm-sidebar);
+  mask-image: linear-gradient(to bottom, currentcolor 85%, transparent);
 }
 
-.lf-np-status {
-  padding: 0.3rem 0.6rem;
-  border-top: 1px solid var(--pm-border-soft);
-  color: var(--pm-muted);
-  font-size: 0.65rem;
+.lf-sidebar-preview > .sidebar {
+  width: var(--lf-sidebar-width);
+  border-right: 0;
 }
 
 /* Settings → Symbols (Show the Keys): each row its handle, keys, glyph, colour and Remove. */
@@ -662,4 +575,68 @@
   .lf-chip {
     min-height: var(--pm-hit);
   }
+}
+
+/*
+ * The fonts at their real size (A1582), under a preview: each sample is the app's own text (a
+ * type role's class, or the note's `.note-body .ProseMirror` and `.doc-title`), its label under
+ * it. Nothing here sets a size: the samples take theirs from the roles and the note's scale.
+ */
+.type-specimen {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--pm-border-soft);
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+}
+
+.type-specimen-group {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.type-specimen-row {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.type-specimen-row > :first-child {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.type-specimen-row [data-specimen-label] {
+  color: var(--pm-muted);
+}
+
+/* The sidebar's rows' size (the touch layout's step larger, A1561). */
+.type-specimen-sidebar {
+  font-size: var(--pm-text-sidebar-item);
+}
+
+/* The note's samples in the note's own rules, without a note's height or margins. */
+.type-specimen-note .ProseMirror {
+  display: grid;
+  gap: 0.5rem;
+  min-height: 0;
+}
+
+.type-specimen-note .ProseMirror > .type-specimen-row {
+  margin: 0;
+}
+
+.type-specimen-note .ProseMirror > .type-specimen-row > :first-child,
+.type-specimen-note .ProseMirror p {
+  margin: 0;
+}
+
+.type-specimen-note .doc-title {
+  field-sizing: initial;
 }

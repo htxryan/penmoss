@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
-import { readdir, rm, writeFile } from 'node:fs/promises';
+import { readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MessageChannel } from 'node:worker_threads';
@@ -310,7 +310,7 @@ describe('the embedding service (T76)', () => {
     await service.stop();
   });
 
-  it('stops everything when switched off, and starts again when switched on (A1158)', async () => {
+  it('stops everything when switched off, keeping the model, and starts again when switched on (A1158, A1566)', async () => {
     const { source, opens } = fakeSource();
     const statuses: ServiceStatus[] = [];
     const service = new MeaningService(source, (status) => statuses.push(status));
@@ -319,15 +319,47 @@ describe('the embedding service (T76)', () => {
     await until(statuses, (status) => status.indexed === 3);
     const off = await service.setEnabled(false);
     expect(off).toMatchObject({ state: 'off', enabled: false, indexed: 0, total: 0 });
+    // Search goes by words: meaning answers nothing, and the notes the page sends are not indexed.
     expect(await service.search('nb', 'bread')).toBeNull();
-    expect((await source.status()).state).toBe('absent');
+    expect(await service.update('nb', NOTES)).toEqual([]);
+    expect((await service.status()).total).toBe(0);
+    // The model stays for On (Delete Model… removes it).
+    expect((await source.status()).state).toBe('ready');
     await service.setEnabled(true);
     await until(statuses, (status) => status.enabled && status.state !== 'off' && status !== off);
     await vi.waitFor(() => expect(opens).toHaveLength(2));
     await service.stop();
   });
 
-  it('lets an indexing run finish before Off removes the vectors', async () => {
+  it('Delete Model switches it off, then deletes the model and its vectors (A1566)', async () => {
+    const { source } = fakeSource();
+    const order: string[] = [];
+    const setEnabled = source.setEnabled;
+    source.setEnabled = (enabled) => {
+      order.push(`enabled ${enabled}`);
+      return setEnabled(enabled);
+    };
+    const remove = source.remove;
+    source.remove = () => {
+      order.push('remove');
+      return remove();
+    };
+    const statuses: ServiceStatus[] = [];
+    const service = new MeaningService(source, (status) => statuses.push(status));
+    await service.start();
+    await service.update('nb', NOTES);
+    await until(statuses, (status) => status.indexed === 3);
+    const removed = await service.removeModel();
+    expect(order).toEqual(['enabled false', 'remove']);
+    expect(removed).toMatchObject({ state: 'off', enabled: false, indexed: 0, total: 0 });
+    expect(removed.modelBytes).toBe(0);
+    expect(statuses.at(-1)).toEqual(removed);
+    expect((await source.status()).state).toBe('absent');
+    expect(await service.search('nb', 'bread')).toBeNull();
+    await service.stop();
+  });
+
+  it('lets an indexing run finish before Delete Model removes the vectors', async () => {
     const inner = fakeEmbedder();
     let release = () => undefined as void;
     const gate = new Promise<void>((resolve) => (release = resolve));
@@ -356,7 +388,7 @@ describe('the embedding service (T76)', () => {
     await service.start();
     await service.update('nb', NOTES);
     await vi.waitFor(() => expect(embedding).toBe(true), { timeout: 5_000 });
-    const off = service.setEnabled(false);
+    const off = service.removeModel();
     await new Promise((resolve) => setTimeout(resolve, 50));
     release();
     await off;
@@ -385,7 +417,7 @@ describe('the embedding service with the real model store (T76)', () => {
     await server.close();
   });
 
-  it('downloads under a temporary home, indexes, and removes it all when switched off', async () => {
+  it('downloads under a temporary home, indexes, keeps it when switched off, and Delete Model removes exactly the model and its vectors', async () => {
     const node = new NodeMeaning({ home, manifest: TINY, baseUrl: server.url, threads: 1 });
     const statuses: ServiceStatus[] = [];
     const service = new MeaningService(node, (status) => statuses.push(status), { sliceMs: 50 });
@@ -396,8 +428,16 @@ describe('the embedding service with the real model store (T76)', () => {
     expect(await readdir(join(home, 'vectors'))).not.toHaveLength(0);
     await service.setEnabled(false);
     expect(await meaningEnabled(home)).toBe(false);
+    expect((await node.status()).state).toBe('ready');
+    expect(await readdir(join(home, 'vectors'))).not.toHaveLength(0);
+    // Something else of ~/.penmoss's, which Delete Model leaves alone.
+    await writeFile(join(home, 'keep.txt'), 'agents’ clones and the rest');
+    await service.setEnabled(true);
+    await service.removeModel();
+    expect(await meaningEnabled(home)).toBe(false);
     expect((await node.status()).state).toBe('absent');
     expect(await readdir(join(home, 'vectors'))).toHaveLength(0);
+    expect(await readFile(join(home, 'keep.txt'), 'utf8')).toBe('agents’ clones and the rest');
     await service.stop();
   });
 });

@@ -5,11 +5,13 @@ description: Every section of Settings in the Mac and Android apps, what each se
 
 This page lists every setting, page by page, so you can find one and see what it does.
 
-Open Settings with ⌘, on the Mac, or from the gear on the first screen on Android. Most settings are kept in your [Primary Notebook](/docs/organise/#the-primary-notebook) and so reach your other devices; the ones marked **this Mac** or **this device** stay where they are set. Settings that belong to a notebook itself (its time zone and templates) are the same on every device and agent that opens it.
+Open Settings with ⌘, on the Mac, or from the gear on the first screen on Android. Most settings are kept in your [Primary Notebook](/docs/organise/#the-primary-notebook) and so reach your other devices; the ones marked with a laptop stay on the device where you set them (hover over the laptop, or focus it, to read why). Settings that belong to a notebook itself (its time zone and templates) are the same on every device and agent that opens it.
 
 ## On the Mac
 
-Settings lists its pages in five groups: **Look and Feel**, **Writing**, **Notebooks**, **Agents** and **This Mac**. Nothing under This Mac is synced; the heading says so once, so its pages don't repeat it.
+Settings lists its pages in five groups: **Look and Feel**, **Writing**, **Notebooks**, **Agents** and **This Mac**, with **Search Settings** at the top of the list. Nothing under This Mac is synced; the heading says so once, so its pages don't repeat it.
+
+Each page opens with a small **Settings ⓘ** over its title and a line about it. Hover over the ⓘ, or focus it, to see which notebook your settings are synced through, with a link to its page. As you scroll down, the title moves into a bar pinned at the top: **Settings ⓘ / Appearance**.
 
 ### Search Settings
 
@@ -80,13 +82,14 @@ Every command's shortcut, to change, remove or reset ([Keyboard shortcuts](/docs
 
 ## Notebooks
 
-**All Notebooks** lists every notebook with **Add Notebook…**, then each notebook has an entry of its own in the list, with its [badge](/docs/organise/#notebook-badges) and a dot for how its sync is going. A notebook's page, in its **Overview**, **Sync** and **Git** tabs:
+**All Notebooks** lists every notebook with **Add Notebook…** (the same steps as [your first notebook](/docs/first-notebook/#more-notebooks-on-this-mac)), then each notebook has an entry of its own in the list, with its [badge](/docs/organise/#notebook-badges) and a dot for how its sync is going. A notebook's page, in its **Overview**, **Sync** and **Git** tabs:
 
 | Setting                              | What it does                                                                                                                                                                                                       |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Sync Now                             | Syncs at once                                                                                                                                                                                                      |
 | Notebook Name, Rename                | Renames it on every device that syncs it ([Rename a notebook](/docs/organise/#rename-a-notebook))                                                                                                                  |
 | Badge                                | On **Overview**, after its name: its colour (ten presets or **Custom…**), what it shows (a letter, a number from 0 to 99 or an icon) and **Reset to Default** ([Notebook badges](/docs/organise/#notebook-badges)) |
+| Repository                           | Where it syncs, as its remote names it. **Open on GitHub** (or **Open in Browser**) opens it, an SSH host alias from `~/.ssh/config` included                                                                      |
 | Push after (seconds)                 | How long after your edits settle it pushes: 12 by default                                                                                                                                                          |
 | Pull every (minutes)                 | How often it pulls while Penmoss is open: 1 by default                                                                                                                                                             |
 | Sign commits as git is configured to | Untick to never sign this notebook's commits                                                                                                                                                                       |
@@ -94,7 +97,7 @@ Every command's shortcut, to change, remove or reset ([Keyboard shortcuts](/docs
 | Access                               | **Save Token** and **Forget Token**, for an HTTPS host that needs a token                                                                                                                                          |
 | Remove from This Mac                 | Removes this Mac's copy, after Touch ID; the repository keeps everything pushed                                                                                                                                    |
 
-On All Notebooks:
+On All Notebooks, under **Between Notebooks**, with **Primary Notebook** first:
 
 | Setting                                          | What it does                                                                                                  |
 | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
@@ -114,9 +117,9 @@ What agents changed, in every notebook, with Undo ([Agent activity](/docs/agents
 
 ## This Mac
 
-### Search by Meaning
+### Semantic Search
 
-**Find Notes by Meaning**, on by default; then what it's doing, with a progress bar while the model downloads or your notes are indexed, and the model with its size and licence. Turning it off asks first, as it removes the model and its index. See [Search](/docs/search/#search-by-meaning).
+**Semantic Search**, on by default; then what it's doing, with a progress bar while the model downloads or your notes are indexed, and the model with its size and licence. Turning it off stops it and keeps the model. **Delete Model…** asks first, then deletes the model and its index from this Mac and turns it off; turning it on again downloads the model again. See [Search](/docs/search/#semantic-search).
 
 ### GitHub
 
@@ -124,11 +127,11 @@ The GitHub account Penmoss uses, kept in this Mac's Keychain: **Sign In with Git
 
 ### Updates
 
-A card with the version you're running, whether it's up to date, the channel and when Penmoss last checked, and **Check Now** (or **Install and Restart**). Then **Update Automatically** (off by default) and **Update Channel** (Stable or Alpha), and **What's New**: what an offered update brings, what this version brought, and earlier versions. See [Updates](/docs/help/updates/#whats-new).
+A card with the version you're running, whether it's up to date, the channel and when Penmoss last checked, and **Check Now** (or **Install and Restart**). Then **Update Automatically** (off by default) and **Update Channel** (Stable or Alpha), and **What's New**, folded away until you open it (open by itself for an offered update or after one): what an offered update brings, what this version brought, and earlier versions. See [Updates](/docs/help/updates/#whats-new).
 
 ## On Android
 
-Open Settings from the gear on the first screen. The same five groups as the Mac, with **This Phone** in place of This Mac, and a **Search Settings** field at the top that opens the screen a setting is on, scrolled to the setting and marked for a moment. On **All Notebooks**, **Between Notebooks** has **Keep Settings in Step** and **Copy Settings…** as on the Mac (with two notebooks or more), and Keep Settings in Step is this phone's own choice.
+Open Settings from the gear on the first screen. Each screen's title is large at the top and shrinks into the bar as you scroll; the ⓘ in the bar says which notebook your settings are synced through. The same five groups as the Mac, with **This Phone** in place of This Mac, and a **Search Settings** field at the top that opens the screen a setting is on, scrolled to the setting and marked for a moment. On **All Notebooks**, **Between Notebooks** starts with **Primary Notebook**, then has **Keep Settings in Step** and **Copy Settings…** as on the Mac (with two notebooks or more), and Keep Settings in Step is this phone's own choice.
 
 | Group         | Screen             | What it holds                                                                                                                      |
 | ------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
@@ -139,7 +142,7 @@ Open Settings from the gear on the first screen. The same five groups as the Mac
 | Writing       | Quick Capture      | Where a capture goes by default, and which notebook                                                                                |
 | Writing       | Keyboard Shortcuts | Shortcuts for a hardware keyboard                                                                                                  |
 | Notebooks     | Each notebook      | Its page: **Overview** (its notes, **Copy Settings…**), **Sync** and **Git** ([The Android app](/docs/install/android/#notebooks)) |
-| Notebooks     | All Notebooks      | **Add Notebook**, **Primary Notebook**, Between Notebooks, **Commits From This Phone**, the signing key and background sync        |
+| Notebooks     | All Notebooks      | **Add Notebook**, Between Notebooks (**Primary Notebook** first), **Commits From This Phone**, the signing key and background sync |
 | Agents        | Agent Activity     | What agents changed, in every notebook, with **Undo**                                                                              |
 | This Phone    | Storage            | Files and pictures in notes, pictures from the web and **Clear…**, and whether to load pictures from the web                       |
 | This Phone    | GitHub             | **Sign In with GitHub** (or a token), and what the account is used for, such as **Send Feedback**                                  |

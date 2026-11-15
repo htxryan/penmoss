@@ -18,15 +18,15 @@
   /* As far over its control as every Settings field's label (pages/settings.css, A988). */
   margin-bottom: 0.35rem;
   color: var(--pm-fg);
-  font-size: var(--pm-text-md);
-  font-weight: 600;
+  font-size: var(--pm-text-group-head);
+  font-weight: var(--pm-weight-group-head);
 }
 
 /* A hint, as `.settings-help` is under the other Settings controls (A988). */
 .appearance-note {
   margin: 0.5rem 0 0;
-  font-size: var(--pm-text-sm);
-  line-height: 1.5;
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-help);
 }
 
 /* Settings → Appearance → Fonts (T51 item 16, A944). */
@@ -44,8 +44,8 @@
 }
 
 .font-field > label {
-  font-size: var(--pm-text-sm);
-  font-weight: 600;
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
 }
 
 .font-custom {
@@ -55,7 +55,7 @@
 
 .font-problem {
   color: var(--pm-danger);
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-help);
 }
 
 /* Each choice as it will look, a line of it. */
@@ -64,7 +64,7 @@
   overflow: hidden;
   color: var(--pm-muted);
   font-size: var(--pm-text-md);
-  line-height: 1.4;
+  line-height: var(--pm-leading-snug);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -84,7 +84,7 @@
 
 .font-size-value {
   min-width: 3.2rem;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
   font-variant-numeric: tabular-nums;
 }
 
@@ -107,7 +107,7 @@
   padding: 0 0.75rem;
   border-radius: 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
   cursor: pointer;
   transition:
     background var(--pm-fast),
@@ -133,7 +133,7 @@
   background: var(--pm-raised);
   box-shadow: var(--pm-shadow-1);
   color: var(--pm-fg);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .seg-option:has(input:focus-visible),
@@ -185,8 +185,8 @@ fieldset:disabled .theme-card {
   gap: 0.5rem;
   padding: 0.5rem 0.65rem 0.55rem;
   color: var(--pm-fg);
-  font-size: var(--pm-text-sm);
-  font-weight: 600;
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
 }
 
 .theme-card-foot .i {
@@ -197,8 +197,8 @@ fieldset:disabled .theme-card {
 .theme-card-note {
   display: block;
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
-  font-weight: 400;
+  font-size: var(--pm-text-meta);
+  font-weight: var(--pm-weight-meta);
 }
 
 /* A theme's two variants in miniature: sidebar, title, text, code and a button. */
@@ -292,7 +292,7 @@ fieldset:disabled .theme-card {
 
 .theme-editor h3 {
   margin: 0;
-  font-size: var(--pm-text-lg);
+  font-size: var(--pm-text-group-head);
 }
 
 .theme-editor-empty {
@@ -308,8 +308,8 @@ fieldset:disabled .theme-card {
 .theme-editor-empty p {
   margin: 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-md);
-  line-height: 1.55;
+  font-size: var(--pm-text-body);
+  line-height: var(--pm-leading-body);
 }
 
 .theme-editor-head {
@@ -329,182 +329,33 @@ fieldset:disabled .theme-card {
 }
 
 /*
- * The miniature of Penmoss (AppPreview), on Appearance and in the theme editor. The editor sets
- * the edited variant's tokens on it; everything inside reads them, and the note's text follows
- * the Note Font Size (`--pm-note-size`), scaled down.
+ * Penmoss in miniature (AppPreview, A1564), on Appearance, in the theme editor and on Settings →
+ * Note: the app's own sidebar and note view in a window of fixed size, scaled to the column
+ * (`zoom`, set on the window). The editor sets the edited variant's tokens on the frame, and
+ * everything inside reads them.
  */
-.theme-preview {
-  display: grid;
-  grid-template-columns: 8.5rem minmax(0, 1fr);
+.app-preview {
   overflow: hidden;
   margin: 1rem 0 0.75rem;
   border: 1px solid var(--pm-border);
-  border-radius: 0;
   background: var(--pm-bg);
   color: var(--pm-fg);
   font-family: var(--pm-font);
 }
 
-.tp-side {
-  display: grid;
-  align-content: start;
-  gap: 2px;
-  padding: 0.6rem 0.4rem;
-  border-right: 1px solid var(--pm-border);
-  background: var(--pm-sidebar);
-  font-size: var(--pm-text-sm);
-}
-
-.tp-item {
-  padding: 0.25rem 0.45rem;
-  border-radius: 0;
-}
-
-.tp-current {
-  background: color-mix(in oklab, var(--pm-fg) 9%, transparent);
-  font-weight: 600;
-}
-
-.tp-main {
-  min-width: 0;
-  padding: 0.85rem 1rem;
-}
-
-.tp-main p {
-  margin: 0 0 0.5rem;
-}
-
-.tp-title {
-  font: 700 calc(var(--pm-note-size, 16px) * 1.15) / 1.25 var(--pm-font-body);
-}
-
-.tp-main .tp-meta {
-  font-size: var(--pm-text-xs);
-}
-
-.tp-text {
-  font-family: var(--pm-font-body);
-  font-size: calc(var(--pm-note-size, 16px) * 0.875);
-  line-height: 1.6;
-}
-
-.tp-task {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.tp-box {
-  flex: none;
-  width: 0.8em;
-  height: 0.8em;
-  border: 1.5px solid var(--pm-border-strong);
-}
-
-.tp-link {
-  color: var(--pm-link);
-  text-decoration: underline;
-}
-
-.tp-text mark {
-  padding: 0 0.1em;
-  border-radius: 0;
-  background: var(--pm-highlight-bg);
-  color: inherit;
-}
-
-.tp-text code,
-.tp-code {
-  background: color-mix(in oklab, var(--pm-bg), var(--pm-fg) 6%);
-  font-family: var(--pm-mono);
-  font-size: 0.85em;
-}
-
-.tp-text code {
-  padding: 0.1em 0.3em;
-  border-radius: 0;
-}
-
-.tp-main .tp-muted,
-.tp-side .tp-muted {
-  color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
-}
-
-.tp-callout {
-  margin: 0.25rem 0 0.6rem;
-  padding: 0.45rem 0.65rem;
-  border: 1px solid color-mix(in oklab, var(--pm-callout-tip) 28%, transparent);
-  border-radius: 0;
-  background: color-mix(in oklab, var(--pm-callout-tip) 7%, var(--pm-bg));
-  font-size: var(--pm-text-md);
-}
-
-.tp-callout b {
-  margin-right: 0.35rem;
-  color: var(--pm-callout-tip);
-}
-
-.tp-code {
-  margin: 0 0 0.6rem;
-  padding: 0.5rem 0.65rem;
-  overflow-x: auto;
-  border-radius: 0;
-  color: var(--pm-fg);
-  white-space: pre;
-}
-
-.tp-k {
-  color: var(--pm-code-keyword);
-}
-
-.tp-f {
-  color: var(--pm-code-function);
-}
-
-.tp-n {
-  color: var(--pm-code-number);
-}
-
-.tp-s {
-  color: var(--pm-code-string);
-}
-
-.tp-c {
-  color: var(--pm-code-comment);
-}
-
-.tp-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 0.75rem;
-  font-size: var(--pm-text-sm);
-}
-
-.tp-button {
-  padding: 0.25rem 0.7rem;
-  border-radius: 0;
-  background: var(--pm-accent);
-  color: var(--pm-on-accent);
-  font-weight: 600;
-}
-
-.tp-plain {
-  padding: 0.25rem 0.7rem;
-  border: 1px solid var(--pm-border);
-  background: var(--pm-raised);
-}
-
-.tp-danger {
-  color: var(--pm-danger);
+.app-preview > .app-preview-window {
+  /* The window's own height, not the viewport's (`.notes-app` is the window's height). */
+  overflow: hidden;
+  background: var(--pm-bg);
+  /* What the app pins to the window (a phone's formatting bar) stays inside the miniature. */
+  contain: layout paint;
 }
 
 .theme-contrast {
   margin: 0 0 1rem;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
-  line-height: 1.5;
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-help);
 }
 
 .theme-contrast.warn {
@@ -537,7 +388,7 @@ fieldset:disabled .theme-card {
   gap: 0.5rem;
   min-height: var(--pm-control);
   color: var(--pm-fg);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 .token-row > select {
@@ -575,7 +426,7 @@ fieldset:disabled .theme-card {
 .theme-editor-actions {
   flex-wrap: wrap;
   margin-top: 1rem;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 @media (max-width: 700px) {
@@ -595,14 +446,6 @@ fieldset:disabled .theme-card {
   .seg-option {
     flex: 1;
     justify-content: center;
-  }
-
-  .theme-preview {
-    grid-template-columns: 1fr;
-  }
-
-  .tp-side {
-    display: none;
   }
 
   .token-group {

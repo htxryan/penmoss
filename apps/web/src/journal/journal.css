@@ -19,8 +19,8 @@
   min-width: 0;
   overflow: hidden;
   color: var(--pm-fg);
-  font-size: var(--pm-text-sm);
-  font-weight: 600;
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -32,21 +32,21 @@
 
 .calendar-today {
   padding: 0.1rem 0.45rem;
-  font-size: 0.75rem;
+  font-size: var(--pm-text-meta);
 }
 
 .calendar-grid {
   width: 100%;
   margin-top: 0.2rem;
   border-collapse: collapse;
-  font-size: 0.75rem;
+  font-size: var(--pm-text-meta);
   table-layout: fixed;
 }
 
 .calendar-grid th {
   padding: 0.15rem 0;
   color: var(--pm-muted);
-  font-weight: 500;
+  font-weight: var(--pm-weight-medium);
   text-align: center;
 }
 
@@ -76,7 +76,7 @@
 
 .calendar-week {
   color: var(--pm-muted);
-  font-size: 0.68rem;
+  font-size: var(--pm-text-micro);
 }
 
 .calendar-day:hover,
@@ -87,12 +87,12 @@
 /* Days of the months either side: muted, never faded below 4.5:1. */
 .calendar-day[data-outside='true'] {
   color: var(--pm-muted);
-  font-weight: 400;
+  font-weight: var(--pm-weight-regular);
 }
 
 .calendar-day[aria-current='date'] {
   box-shadow: inset 0 0 0 1px var(--pm-accent-line);
-  font-weight: 700;
+  font-weight: var(--pm-weight-bold);
 }
 
 .calendar-day[aria-pressed='true'],
@@ -129,7 +129,7 @@
   gap: 0.35rem;
   margin: 0 0 0.4rem;
   color: var(--pm-muted);
-  font-size: 0.8rem;
+  font-size: var(--pm-text-item);
 }
 
 /*
@@ -162,7 +162,7 @@
 .period-nav .btn {
   gap: 0.25rem;
   padding: 0 0.45rem;
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -172,7 +172,7 @@
 
 .period-nav [data-has-note='true'] {
   color: var(--pm-fg);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .period-days {
@@ -191,7 +191,7 @@
   background: none;
   color: var(--pm-muted);
   font: inherit;
-  font-size: 0.78rem;
+  font-size: var(--pm-text-meta);
   cursor: pointer;
 }
 
@@ -216,15 +216,15 @@
 .display-toggles legend {
   margin-bottom: 0.35rem;
   padding: 0;
-  font-size: var(--pm-text-md);
-  font-weight: 600;
+  font-size: var(--pm-text-group-head);
+  font-weight: var(--pm-weight-group-head);
 }
 
 /* A toggle's help under it, as a section's help reads (Settings → Updates, the menu bar icon). */
 .display-toggles > .settings-help {
   margin: 0;
-  font-size: var(--pm-text-sm);
-  line-height: 1.5;
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-help);
 }
 
 .display-toggle {
@@ -232,7 +232,7 @@
   align-items: center;
   gap: 0.6rem;
   min-height: var(--pm-control);
-  font-size: var(--pm-text-md);
+  font-size: var(--pm-text-item);
   cursor: pointer;
 }
 
@@ -252,19 +252,19 @@
 }
 
 .display-toggle .muted {
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-help);
 }
 
 .settings-field {
   display: grid;
   gap: 0.35rem;
   margin: 1rem 0;
-  font-size: var(--pm-text-md);
+  font-size: var(--pm-text-row-label);
 }
 
 .settings-field > span,
 .settings-field > label {
-  font-weight: 600;
+  font-weight: var(--pm-weight-row-label);
 }
 
 /* A small number (Notes in Recent Notes): a field its size, not the column's width (T53 pass). */
@@ -283,7 +283,7 @@
   min-height: 7.5rem;
   padding: 0.5rem 0.6rem;
   font-family: var(--pm-mono);
-  font-size: 0.85rem;
+  font-size: var(--pm-text-field);
   resize: vertical;
 }
 
@@ -300,5 +300,5 @@
 
 .settings-help code {
   font-family: var(--pm-mono);
-  font-size: 0.85em;
+  font-size: var(--pm-text-code-inline);
 }

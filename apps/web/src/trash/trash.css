@@ -8,13 +8,14 @@
 
 .trash h2 {
   margin: 0 0 0.25rem;
-  font-size: 1.5rem;
+  font-size: var(--pm-text-page-title);
+  line-height: var(--pm-leading-page-title);
   letter-spacing: -0.015em;
 }
 
 .trash-lede {
   margin: 0;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-body);
 }
 
 .trash-status:empty {
@@ -56,7 +57,8 @@
 
 .tags-page h2 {
   margin: 0 0 0.75rem;
-  font-size: 1.5rem;
+  font-size: var(--pm-text-page-title);
+  line-height: var(--pm-leading-page-title);
   letter-spacing: -0.015em;
 }
 
@@ -114,11 +116,12 @@
   align-items: center;
   gap: 0.4rem;
   margin: 0;
-  font-size: var(--pm-text-md);
+  font-size: var(--pm-text-group-head);
+  font-weight: var(--pm-weight-group-head);
 }
 
 .tags-page-count {
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
 }
 
 .tags-page-actions {
@@ -131,12 +134,12 @@
 
 .tags-page-selected {
   margin-right: 0.25rem;
-  font-size: var(--pm-text-sm);
-  font-weight: 600;
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
 }
 
 .tags-table {
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 .tags-row {
@@ -181,8 +184,8 @@
   border-top: 1px solid var(--pm-border);
   background: var(--pm-bg);
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
-  font-weight: 600;
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
 }
 
 .tags-check {
@@ -222,7 +225,7 @@
   background: none;
   color: var(--pm-fg);
   font: inherit;
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
   text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -236,7 +239,7 @@
 
 .tags-name-parent {
   color: var(--pm-muted);
-  font-weight: 400;
+  font-weight: var(--pm-weight-regular);
 }
 
 .tags-name mark {
@@ -250,7 +253,7 @@
   align-items: center;
   gap: 0.15rem;
   min-width: 0;
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .tags-name-edit > .input {
@@ -305,7 +308,7 @@
   padding: 0.25rem 0.5rem;
   resize: none;
   overflow: hidden;
-  line-height: 1.45;
+  line-height: var(--pm-leading-snug);
 }
 
 .tags-save {
@@ -315,7 +318,7 @@
   gap: 0.3rem;
   min-height: var(--pm-control-sm);
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
   white-space: nowrap;
 }
 
@@ -343,7 +346,7 @@
 
 .tags-save-failed {
   color: var(--pm-danger);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .tags-save .btn {
@@ -359,7 +362,7 @@
   padding: 0.4rem 0.5rem 0.5rem 2.5rem;
   border-bottom: 1px solid var(--pm-border-soft);
   background: var(--pm-accent-softer);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 .tags-strip[data-tone='offer'] {
@@ -382,12 +385,12 @@
 }
 
 .tags-strip-hint {
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-help);
 }
 
 .tags-strip-hint kbd {
   font: inherit;
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .tags-strip-check {
@@ -406,5 +409,5 @@
 
 .tags-page-none {
   margin: 0.5rem 0 0;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-help);
 }

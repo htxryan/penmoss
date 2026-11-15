@@ -5,7 +5,7 @@ description: Choose light or dark, a built-in theme or one of your own, the font
 
 This page shows you how to change how Penmoss looks: light or dark, the theme, the fonts and the width of your notes.
 
-Most of it is in **Settings → Appearance** (**Appearance and Themes** in the command palette). Its settings are in three groups, **Theme**, **Text** and, on the Mac, **Window**, beside a **Preview**: a small copy of Penmoss, with a sidebar and a note, that changes as you change the mode, the theme, the fonts or the text size. On a narrow window the preview is under the settings. Appearance is kept in your [Primary Notebook](/docs/organise/#the-primary-notebook), so your other devices get it too, except what is marked **This Mac**.
+Most of it is in **Settings → Appearance** (**Appearance and Themes** in the command palette). Its settings are in three groups, **Theme**, **Text** and, on the Mac, **Window**, beside a **Preview**: Penmoss itself, made small, with your sidebar and the note you opened last, that changes as you change the mode, the theme, the fonts or the text size. Nothing in it takes a click. Under it, **Fonts at Real Size** shows your text at the size Penmoss draws it: the interface's page titles, sidebar, settings, body and help text, and a note's title, headings, text and code, each labelled with what it is, its font and its size (for example, Text · Inter · 16 px). It changes as you change a font or the size. On a narrow window the preview is under the settings, and shows the note as a phone does. On Android the preview is Home's own row of shortcuts above a note, with the interface's text at its real size under it. Appearance is kept in your [Primary Notebook](/docs/organise/#the-primary-notebook), so your other devices get it too, except what is marked **This Mac**.
 
 ## Light and dark
 
@@ -20,7 +20,7 @@ Penmoss comes with eight themes, each in a light and a dark version: **Penmoss**
 The built-in themes cannot be changed, but you can copy one and change the copy:
 
 1. Choose a theme and click **Customize** under the themes (it reads **Customize Nord…**, for example). For a built-in theme, Penmoss makes a copy named "… copy", chooses it and opens the **Theme Editor** on it. For a theme of your own, it opens the editor on that theme.
-2. Change its name, its light and dark colours, and under **Type and Layout** its interface, note and code fonts and its note width (32 to 72 rem). The preview beside the editor shows the variant you are editing as you change it.
+2. Change its name, its light and dark colours, and under **Type and Layout** its interface, note and code fonts and its note width (32 to 72 rem). The preview beside the editor shows the variant you are editing as you change it, with its fonts at their real size under it.
 3. Changes save as you make them. **← Appearance** goes back.
 
 If a pair of colours is too close for comfortable reading (below WCAG AA contrast), the editor says which. **Delete This Theme** deletes it on every device.

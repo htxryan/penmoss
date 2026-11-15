@@ -11,6 +11,7 @@ import { utcOffset, zoneName } from './time-zones';
 import { TimeZonePicker } from './TimeZonePicker';
 import { SettingRow } from '../theme/look-rows';
 import './writing.css';
+import { SettingsHeader } from '../pages/SettingsHeader';
 
 /** Half a second after the last key, as the theme editor saves (A417). */
 const SAVE_DELAY_MS = 500;
@@ -50,12 +51,11 @@ export function JournalSettings() {
       aria-labelledby={`${id}-h`}
       data-testid="journal-settings"
     >
-      <h2 id={`${id}-h`}>Daily Notes</h2>
-      <p>
-        A note for each day and each week, made from these templates. The time zone and the
-        templates are kept in your Primary Notebook, chosen in Settings → All Notebooks, and sync to
-        your other devices.
-      </p>
+      <SettingsHeader
+        id={`${id}-h`}
+        title="Daily Notes"
+        intro="A note for each day and each week, made from these templates."
+      />
       <div className="lf-group">
         <TimeZoneRow settings={settings} />
       </div>

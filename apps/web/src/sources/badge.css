@@ -12,9 +12,9 @@
   border-radius: 0;
   background: var(--nb-badge-bg);
   color: var(--nb-badge-ink);
-  font-size: calc(var(--nb-badge-size, 1rem) * 0.62);
-  font-weight: 700;
-  line-height: 1;
+  font-size: calc(var(--nb-badge-size, 1rem) * var(--pm-badge-glyph-ratio));
+  font-weight: var(--pm-weight-bold);
+  line-height: var(--pm-leading-none);
   font-variant-numeric: tabular-nums;
   overflow: hidden;
   user-select: none;
@@ -30,7 +30,7 @@
 }
 
 .nb-badge[data-size='26'] {
-  font-size: 0.95rem;
+  font-size: var(--pm-text-md);
 }
 
 /* Two digits fit a small square. */
@@ -46,21 +46,23 @@
   gap: 1rem;
 }
 
-.badge-preview-row,
-.badge-preview-tab {
+/* The badge on the sidebar's own row and the strip's own tab (A1564), framed as they sit. */
+.badge-preview-places {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.425rem;
-  padding: 0.3rem 0.6rem;
-  border: 1px solid var(--pm-border-soft);
-  background: var(--pm-sidebar);
-  font-size: 0.85rem;
+  gap: 1rem;
 }
 
-.badge-preview-tab {
-  min-inline-size: 7.5rem;
-  border-top: 2px solid var(--pm-accent);
-  background: var(--pm-bg);
+.badge-preview-sidebar {
+  display: block;
+  width: 14rem;
+  border: 1px solid var(--pm-border-soft);
+}
+
+.badge-preview-strip {
+  display: inline-flex;
+  border: 1px solid var(--pm-border-soft);
 }
 
 .badge-swatches {
@@ -149,6 +151,6 @@
 
 /* The badge before a notebook's name: in Settings' list and on its page. */
 .git-notebook-row > .nb-badge,
-.git-notebook-title > .nb-badge {
+.settings-head-title > .nb-badge {
   margin-inline-end: 0.15rem;
 }
