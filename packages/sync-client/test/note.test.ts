@@ -6,7 +6,6 @@ import {
   readIdentity,
   readNoteNotebook,
   readTitle,
-  setNoteNotebook,
   setTitle,
 } from '../src/note';
 
@@ -72,7 +71,7 @@ describe('note layout', () => {
 });
 
 describe('the notebook a note records (T43, A766)', () => {
-  it('is set at creation, changed by a move, and a no-op when unchanged', () => {
+  it('is read from what creation set, and is not part of the identity', () => {
     const doc = new Y.Doc();
     expect(readNoteNotebook(doc)).toBeNull();
     initNote(doc, {
@@ -83,23 +82,5 @@ describe('the notebook a note records (T43, A766)', () => {
     });
     expect(readNoteNotebook(doc)).toBe('work');
     expect(readIdentity(doc)).not.toHaveProperty('notebook');
-    let changes = 0;
-    doc.on('update', () => changes++);
-    setNoteNotebook(doc, 'work');
-    expect(changes).toBe(0);
-    setNoteNotebook(doc, 'default');
-    expect(changes).toBe(1);
-    expect(readNoteNotebook(doc)).toBe('default');
-  });
-
-  it('merges as one value: the later move wins on both replicas', () => {
-    const a = new Y.Doc();
-    initNote(a, { id: 'n1', created: '2026-10-22T09:00:00-05:00', kind: 'note', notebook: 'work' });
-    const b = new Y.Doc();
-    sync(a, b);
-    setNoteNotebook(a, 'default');
-    setNoteNotebook(b, 'home');
-    sync(a, b);
-    expect(readNoteNotebook(a)).toBe(readNoteNotebook(b));
   });
 });

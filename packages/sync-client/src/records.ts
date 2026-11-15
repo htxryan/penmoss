@@ -16,7 +16,6 @@ import {
   readTitle,
   readTrashInfo,
   setDeleted,
-  setNoteNotebook,
   type TrashInfo,
 } from './note';
 import { linksField, withoutLinks, type NoteMeta, type NoteRecord } from './record';
@@ -122,17 +121,6 @@ export function changeRecord(record: NoteRecord, change: (doc: Y.Doc) => void): 
 /** Soft-deletes (or restores) a stored note, recording when and from where (T21). */
 export function deleteRecord(record: NoteRecord, deleted = true, info?: TrashInfo): NoteRecord {
   return changeRecord(record, (doc) => setDeleted(doc, deleted, null, info));
-}
-
-/** The record with the note's notebook recorded (T43, A766); unchanged when it already says so. */
-export function notebookRecord(record: NoteRecord, notebook: string): NoteRecord {
-  const doc = docOf([record.update]);
-  try {
-    if (readNoteNotebook(doc) === notebook) return record;
-  } finally {
-    doc.destroy();
-  }
-  return changeRecord(record, (next) => setNoteNotebook(next, notebook));
 }
 
 /**

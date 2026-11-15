@@ -5,10 +5,8 @@
  * - `title`: the title as plain text, so concurrent title edits merge by character.
  * - `meta`: attributes `id`, `created` (ISO 8601), `kind`, for periodic
  *   notes `period`, and `deleted` (soft delete, restorable). Later tasks add
- *   tags and aliases here. `notebook` (T43, A766) is the notebook the note
- *   belongs to as the client that made or last moved it saw it: a notebook's
- *   folder id, or `default`. The git mirror writes a note only where the folder
- *   tree and this record agree.
+ *   tags and aliases here. `notebook` (T43, A766) is the notebook a note made
+ *   before A1449 recorded; nothing sets it now, and a copy carries it.
  *
  * `updated` is not stored in the document (it would change on every
  * keystroke); a record keeps it beside the document.
@@ -36,15 +34,6 @@ export interface NoteIdentity {
 export function readNoteNotebook(doc: Y.Doc): string | null {
   const value: unknown = doc.get(NOTE_META).getAttr(NOTE_NOTEBOOK);
   return typeof value === 'string' && value !== '' ? value : null;
-}
-
-/**
- * Records the note's notebook (T43, A766): set by the client that makes a note, and by whoever
- * moves it to another notebook, from what that client sees. No change when it already says so.
- */
-export function setNoteNotebook(doc: Y.Doc, notebook: string, origin: unknown = null): void {
-  if (readNoteNotebook(doc) === notebook) return;
-  doc.transact(() => doc.get(NOTE_META).setAttr(NOTE_NOTEBOOK, notebook), origin);
 }
 
 /** The title as plain text (no line breaks). */
