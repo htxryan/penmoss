@@ -1,62 +1,67 @@
 package app.penmoss.ui.settings
 
 import androidx.compose.foundation.BorderStroke
-import app.penmoss.ui.common.SQUARE
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import app.penmoss.ui.common.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import app.penmoss.ui.common.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import app.penmoss.ui.common.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import app.penmoss.ui.common.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -67,25 +72,41 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.SettingLimits
+import app.penmoss.ui.common.DotState
+import app.penmoss.ui.common.DotMark
+import app.penmoss.ui.common.FilledTonalButton
+import app.penmoss.ui.common.IconButton
+import app.penmoss.ui.common.OutlinedButton
+import app.penmoss.ui.common.SQUARE
+import app.penmoss.ui.common.TextButton
+import app.penmoss.ui.common.mark
+import kotlinx.coroutines.delay
+import java.time.LocalDate
 
 /*
- * Settings on the phone (T40 P1, ST1–ST7, ST11): a list of sections, each its own screen, as
- * Android's own Settings is laid out, with the same choices as the web's Settings. Every change
- * shows at once and syncs through the settings channel (A410, A411), offline too.
+ * Settings on the phone (T40 P1; PEN-146): one list in five groups (Look and Feel, Writing,
+ * Notebooks, Agents, This Phone) under a Search Settings field, each row a screen of its own as
+ * Android's own Settings is laid out, with the same choices as the Mac's. Every change shows at
+ * once and syncs through the primary notebook (A1014), offline too.
  */
 
 @Composable
@@ -93,26 +114,59 @@ internal fun BackButton(onBack: () -> Unit) {
     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
 }
 
-/** One row of the Settings home: a section and a line saying what it holds now. */
-data class SettingsSection(val id: String, val title: String, val summary: String, val icon: ImageVector)
+/**
+ * One row of the Settings list (A415): a screen, a line saying what it holds now, and the route
+ * it opens. A notebook's row leads with its sync dot ([dot]) instead of an icon.
+ */
+data class SettingsSection(
+    val id: String,
+    val title: String,
+    val summary: String,
+    val icon: ImageVector? = null,
+    val route: String = "settings/$id",
+    val dot: DotState? = null,
+)
 
-/** The Settings home (ST1): every section, with a summary under each, under a large top bar. */
+/** A captioned group of rows (PEN-146): Look and Feel, Writing, Notebooks, Agents, This Phone. */
+data class SettingsGroup(val title: String, val sections: List<SettingsSection>)
+
+/**
+ * The Settings list (PEN-146): a Search Settings field, then the groups, each row with its summary
+ * under a large top bar. Typing in the field lists the settings it finds instead (their label,
+ * help or another word for them), each opening its screen.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsHome(
-    sections: List<SettingsSection>,
-    onOpen: (String) -> Unit,
+    groups: List<SettingsGroup>,
+    onOpen: (route: String) -> Unit,
     onBack: () -> Unit,
     refusal: String? = null,
     onDismissRefusal: () -> Unit = {},
+    index: List<SettingEntry> = SETTINGS_INDEX,
 ) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    var query by rememberSaveable { mutableStateOf("") }
+    val found = remember(query, index) { searchSettings(index, query) }
     Scaffold(
         modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = { LargeTopAppBar(title = { Text("Settings") }, navigationIcon = { BackButton(onBack) }, scrollBehavior = scroll) },
     ) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding).testTag("settingsSections")) {
-            // A change the server would not take was dropped: said here, never silently (A411).
+        LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding().testTag("settingsSections")) {
+            item(key = "search") {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("settingsSearch"),
+                    placeholder = { Text("Search Settings") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    trailingIcon = {
+                        if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, contentDescription = "Clear the Search") }
+                    },
+                )
+            }
+            // A change the notebook would not take was dropped: said here, never silently (A411).
             if (refusal != null) {
                 item(key = "refused") {
                     ListItem(
@@ -123,25 +177,71 @@ fun SettingsHome(
                     )
                 }
             }
-            items(sections, key = { it.id }) { section ->
-                ListItem(
-                    headlineContent = { Text(section.title) },
-                    supportingContent = { Text(section.summary, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                    leadingContent = { Icon(section.icon, contentDescription = null) },
-                    modifier = Modifier
-                        .testTag("section-${section.id}")
-                        .clickable(role = Role.Button, onClick = { onOpen(section.id) }),
-                )
+            if (query.isNotBlank()) {
+                if (found.isEmpty()) {
+                    item(key = "none") { Help("No setting matches “${query.trim()}”.", Modifier.testTag("settingsSearchNone")) }
+                }
+                items(found, key = { "found-${it.id}" }) { entry ->
+                    ListItem(
+                        headlineContent = { Text(entry.label) },
+                        supportingContent = { Text(listOfNotNull(entry.section, entry.help).joinToString(" · "), maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                        modifier = Modifier
+                            .testTag("found-${entry.id}")
+                            .clickable(role = Role.Button, onClick = { onOpen(entry.route) }),
+                    )
+                }
+                return@LazyColumn
+            }
+            for (group in groups) {
+                item(key = "group-${group.title}") { GroupTitle(group.title) }
+                items(group.sections, key = { it.id }) { section ->
+                    ListItem(
+                        headlineContent = { Text(section.title) },
+                        supportingContent = { Text(section.summary, maxLines = 2, overflow = TextOverflow.Ellipsis) },
+                        leadingContent = {
+                            when {
+                                section.dot != null -> Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) { DotMarkOf(section.dot) }
+                                section.icon != null -> Icon(section.icon, contentDescription = null)
+                            }
+                        },
+                        modifier = Modifier
+                            .testTag("section-${section.id}")
+                            .clickable(role = Role.Button, onClick = { onOpen(section.route) }),
+                    )
+                }
             }
         }
     }
 }
 
-/** A section's screen: its title in the top bar and its content scrolling below. */
+/** A notebook's sync dot as a row draws it, the same marks as Home's (A933), not a button of its own. */
+@Composable
+internal fun DotMarkOf(state: DotState, modifier: Modifier = Modifier) {
+    val colours = MaterialTheme.colorScheme
+    val colour = when (state) {
+        DotState.SYNCED, DotState.SYNCING -> colours.primary
+        DotState.OFFLINE, DotState.IDLE -> colours.onSurfaceVariant
+        DotState.STOPPED -> colours.error
+    }
+    val shape = modifier.size(10.dp).testTag("rowDot-${state.name.lowercase()}")
+    when (state.mark()) {
+        DotMark.SOLID -> Box(shape.background(colour, CircleShape))
+        DotMark.RING -> Box(shape.border(1.5.dp, colour, CircleShape))
+        DotMark.BULLSEYE -> Box(shape.border(1.5.dp, colour, CircleShape).padding(3.dp)) { Box(Modifier.fillMaxSize().background(colour, CircleShape)) }
+    }
+}
+
+/** A section's screen: its title in the top bar, [actions] at its end, and its content scrolling below. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun SectionScreen(title: String, onBack: () -> Unit, notice: String? = null, content: @Composable () -> Unit) {
-    Scaffold(topBar = { TopAppBar(title = { Text(title) }, navigationIcon = { BackButton(onBack) }) }) { padding ->
+internal fun SectionScreen(
+    title: String,
+    onBack: (() -> Unit)?,
+    notice: String? = null,
+    actions: @Composable RowScope.() -> Unit = {},
+    content: @Composable () -> Unit,
+) {
+    Scaffold(topBar = { TopAppBar(title = { Text(title) }, navigationIcon = { if (onBack != null) BackButton(onBack) }, actions = actions) }) { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(vertical = 8.dp),
         ) {
@@ -158,10 +258,10 @@ internal fun SectionScreen(title: String, onBack: () -> Unit, notice: String? = 
 }
 
 @Composable
-internal fun GroupTitle(text: String) {
+internal fun GroupTitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
-        Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp).semantics { heading() },
+        modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp).semantics { heading() },
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
     )
@@ -177,9 +277,14 @@ internal fun Help(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** Shown in a section while the server has not sent settings yet (an older server): nothing can change. */
-const val SETTINGS_WAIT = "These settings can be changed here once Penmoss on the server is updated. " +
-    "Until then the phone follows what you choose on the web."
+/** Shown on a screen while its settings are not read yet from the primary notebook, where they live (A1014). */
+const val SETTINGS_WAIT = "These settings can be changed once Penmoss has read them from your primary notebook."
+
+/** Shown instead while there is no notebook on the phone, so nothing holds them yet (PEN-146). */
+const val SETTINGS_NO_NOTEBOOK = "These settings are kept in your primary notebook. Add a notebook to change them."
+
+/** What a screen whose settings cannot be changed yet says: no notebook, or not read yet. */
+internal fun settingsWait(noNotebook: Boolean) = if (noNotebook) SETTINGS_NO_NOTEBOOK else SETTINGS_WAIT
 
 /** A radio choice as a whole row, so the label is the target and TalkBack reads one control. */
 @Composable
@@ -192,7 +297,33 @@ internal fun ChoiceRow(label: String, supporting: String?, selected: Boolean, en
     )
 }
 
-// --- Appearance (ST3, ST4, ST11) ---
+/** A segmented choice of a few options (Mode, Note Width, Load Pictures From the Web), each tagged `<tag>-<value>`. */
+@Composable
+internal fun Segments(
+    options: List<Pair<String, String>>,
+    selected: String,
+    enabled: Boolean,
+    tag: String,
+    modifier: Modifier = Modifier,
+    icons: Map<String, ImageVector> = emptyMap(),
+    itemTag: (String) -> String = { "$tag-$it" },
+    onChoose: (String) -> Unit,
+) {
+    SingleChoiceSegmentedButtonRow(modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag(tag)) {
+        options.forEachIndexed { index, (value, label) ->
+            SegmentedButton(
+                selected = selected == value,
+                onClick = { onChoose(value) },
+                enabled = enabled,
+                shape = SegmentedButtonDefaults.itemShape(index, options.size, SQUARE),
+                icon = { icons[value]?.let { Icon(it, contentDescription = null, Modifier.size(18.dp)) } ?: SegmentedButtonDefaults.Icon(selected == value) },
+                modifier = Modifier.testTag(itemTag(value)),
+            ) { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        }
+    }
+}
+
+// --- Appearance (ST3, ST4, ST11; PEN-146 option C) ---
 
 /** A theme as a card shows it: its name, what it is, and the colours of its miniature. */
 data class ThemeCard(
@@ -217,11 +348,14 @@ data class Swatch(
     val function: Color,
 )
 
-private val MODES = listOf(Triple("light", "Light", SettingsIcons.Sun), Triple("dark", "Dark", SettingsIcons.Moon), Triple("system", "System", SettingsIcons.Monitor))
+private val MODES = listOf("light" to "Light", "dark" to "Dark", "system" to "System")
+private val MODE_ICONS = mapOf("light" to SettingsIcons.Sun, "dark" to SettingsIcons.Moon, "system" to SettingsIcons.Monitor)
 
 /**
- * Appearance (ST3, ST4, ST11): the mode, the theme, and the note width. A choice applies at once,
- * to the native screens, the system bars, the editor, and (once sent) every other device.
+ * Appearance (ST3, ST4, ST11; PEN-146 option C): a live preview at the top (a strip of Home and a
+ * note, redrawn as each choice changes), then Theme (the mode, the theme cards and Customize…),
+ * Text (the fonts and size) and Note (its width, here since Android has no Note page). A choice
+ * applies at once, to the native screens, the system bars, the editor and every other device.
  */
 @Composable
 fun AppearanceScreen(
@@ -241,49 +375,83 @@ fun AppearanceScreen(
     editor: ThemeEditorEntry? = null,
     /** Interface Font, Note Font and Note Font Size (T51, A944); none when null. */
     fonts: FontsUi? = null,
+    /** The note in the preview: the editor page itself (ThemePreview, A418); none in tests. */
+    notePreview: (@Composable (Modifier) -> Unit)? = null,
 ) {
     SectionScreen("Appearance", onBack, notice = SETTINGS_WAIT.takeIf { !enabled }) {
-        Help("Your theme and mode sync to your other devices. Every theme has a light and a dark variant.")
-        GroupTitle("Mode")
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("themeMode")) {
-            MODES.forEachIndexed { index, (value, label, icon) ->
-                SegmentedButton(
-                    selected = mode == value,
-                    onClick = { onMode(value) },
-                    enabled = enabled,
-                    shape = SegmentedButtonDefaults.itemShape(index, MODES.size, SQUARE),
-                    icon = { Icon(icon, contentDescription = null, Modifier.size(18.dp)) },
-                    modifier = Modifier.testTag("mode-$value"),
-                ) { Text(label) }
-            }
-        }
+        AppearancePreview(notePreview)
+        GroupTitle("Theme")
+        Segments(MODES, mode, enabled, "themeMode", icons = MODE_ICONS, itemTag = { "mode-$it" }, onChoose = onMode)
         Help(
             if (mode == "system") "System follows this phone’s setting: ${if (systemDark) "dark" else "light"} right now."
             else "Always $mode, whatever the phone’s setting.",
         )
-        GroupTitle("Theme")
         ThemeGrid(themes, chosen, enabled, onTheme)
-        GroupTitle("Note width")
-        Column(Modifier.selectableGroup()) {
-            ChoiceRow("The theme’s ($editorWidth rem)", null, !fullWidth, enabled, "width-theme") { onFullWidth(false) }
-            ChoiceRow("Full window width", null, fullWidth, enabled, "width-full") { onFullWidth(true) }
-        }
-        Help("A phone already uses its whole width; this shows on a tablet, an unfolded phone, and your other devices.")
-        if (fonts != null) FontsGroup(fonts, enabled)
         if (editor != null) {
-            GroupTitle("Theme editor")
-            if (editor.builtIn) {
-                Help("Built-in themes can’t be changed. Duplicate ${editor.name} to edit its colours, fonts and note width; your copy syncs to your other devices.")
-                FilledTonalButton(onClick = editor.onOpen, enabled = enabled, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("duplicateTheme")) {
-                    Text("Duplicate ${editor.name}")
-                }
-            } else {
-                Help("Change ${editor.name}’s colours, fonts and note width. Your changes sync to your other devices.")
-                FilledTonalButton(onClick = editor.onOpen, enabled = enabled, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("editTheme")) {
-                    Text("Edit ${editor.name}")
+            // One button for both (PEN-146): a built-in is duplicated first, your own opens as it is.
+            FilledTonalButton(onClick = editor.onOpen, enabled = enabled, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("customizeTheme")) {
+                Text("Customize ${editor.name}…")
+            }
+            Help(
+                if (editor.builtIn) "Built-in themes can’t be changed: Customize makes your own copy of ${editor.name} to change its colours, fonts and note width. It syncs to your other devices."
+                else "Change ${editor.name}’s colours, fonts and note width. Your changes sync to your other devices.",
+            )
+        }
+        if (fonts != null) {
+            GroupTitle("Text")
+            FontsGroup(fonts, enabled)
+        }
+        GroupTitle("Note")
+        Text("Note Width", Modifier.padding(horizontal = 16.dp, vertical = 4.dp), style = MaterialTheme.typography.bodyLarge)
+        Segments(
+            listOf("theme" to "The Theme’s Width", "full" to "Full Width"),
+            if (fullWidth) "full" else "theme",
+            enabled,
+            "width",
+        ) { onFullWidth(it == "full") }
+        Help("The theme’s is $editorWidth rem. A phone already uses its whole width; this shows on a tablet, an unfolded phone and your other devices.")
+    }
+}
+
+/**
+ * Appearance's preview (PEN-146 option C): a strip of Home (its shortcuts and Inbox) beside a note,
+ * in the theme shown now, so a change of mode, theme or font shows as it is made. The note is the
+ * editor page's own sample when [note] is given (the theme editor's preview, A418).
+ */
+@Composable
+private fun AppearancePreview(note: (@Composable (Modifier) -> Unit)?) {
+    val colours = MaterialTheme.colorScheme
+    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("appearancePreview")) {
+        Row(
+            Modifier.fillMaxWidth().height(168.dp).border(1.dp, colours.outlineVariant),
+        ) {
+            // The sidebar strip: Home's rows in the interface font and colours.
+            Column(
+                Modifier.width(96.dp).fillMaxSize().background(colours.surfaceContainer).padding(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text("Today", style = MaterialTheme.typography.labelMedium, color = colours.onPrimary, modifier = Modifier.background(colours.primary).padding(horizontal = 6.dp, vertical = 2.dp))
+                Text("Inbox · 3", style = MaterialTheme.typography.labelMedium, color = colours.onSurface)
+                Text("Garden Plan", style = MaterialTheme.typography.labelMedium, color = colours.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Box(Modifier.weight(1f).fillMaxSize().background(colours.surface)) {
+                if (note != null) {
+                    note(Modifier.fillMaxSize())
+                } else {
+                    Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Garden Plan", style = MaterialTheme.typography.titleMedium, color = colours.onSurface)
+                        Text("- [ ] Tomatoes", style = MaterialTheme.typography.bodyMedium, color = colours.onSurface)
+                        Text("Plant after the last frost.", style = MaterialTheme.typography.bodyMedium, color = colours.onSurfaceVariant)
+                    }
                 }
             }
         }
+        Text(
+            "Preview: redraws as you change these.",
+            Modifier.padding(top = 4.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = colours.onSurfaceVariant,
+        )
     }
 }
 
@@ -293,7 +461,7 @@ data class ThemeEditorEntry(val name: String, val builtIn: Boolean, val onOpen: 
 /** Two cards to a row, the built-ins first and then the user's own, as the web lists them (ST4). */
 @Composable
 private fun ThemeGrid(themes: List<ThemeCard>, chosen: String, enabled: Boolean, onTheme: (String) -> Unit) {
-    Column(Modifier.padding(horizontal = 12.dp).selectableGroup().testTag("themeGrid"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.padding(horizontal = 12.dp, vertical = 4.dp).selectableGroup().testTag("themeGrid"), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         for (row in themes.chunked(2)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (theme in row) ThemeCardView(theme, theme.id == chosen, enabled, Modifier.weight(1f)) { onTheme(theme.id) }
@@ -361,62 +529,141 @@ private fun Miniature(swatch: Swatch, modifier: Modifier) {
     }
 }
 
-// --- Daily notes (ST6) ---
+// --- Daily Notes (ST6; PEN-146 option B) ---
 
 /** The keys of the two templates (the web's `template.daily` and `template.weekly`). */
 data class TemplateField(val key: String, val label: String, val saved: String, val custom: Boolean)
 
+/** The placeholders a template can hold (core's `fillTemplate`), with what each writes. */
+internal val PLACEHOLDERS = listOf(
+    "{{date}}" to "2026-10-21",
+    "{{longDate}}" to "Wednesday 21 October 2026",
+    "{{weekday}}" to "Wednesday",
+    "{{week}}" to "2026-W43",
+    "{{year}}" to "2026",
+    "{{month}}" to "10",
+)
+
+/** How long typing rests before a template saves itself (PEN-146): no Save button. */
+internal const val TEMPLATE_SAVE_MS = 700L
+
+private val WEEKDAY_NAMES = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
 /**
- * Daily notes (ST6): the time zone that decides which day today is, and the daily and weekly
- * templates. Each template is saved with Save, or put back with Reset to default, which removes
- * it, as the web's Use the default does. Changes affect notes made afterwards.
+ * A template with its placeholders filled in for [date], as core's `fillTemplate` fills them: a
+ * weekly one for [date]'s ISO week, from its Monday. Unknown placeholders stay as typed.
+ */
+fun fillTemplate(template: String, weekly: Boolean, date: LocalDate): String {
+    val fields = java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR
+    val weekYear = date.get(java.time.temporal.IsoFields.WEEK_BASED_YEAR)
+    val weekNumber = date.get(fields)
+    val day = if (weekly) date.with(java.time.DayOfWeek.MONDAY) else date
+    val values = mapOf(
+        "date" to day.toString(),
+        "longDate" to app.penmoss.ui.journal.journalLongDate(day),
+        "weekday" to WEEKDAY_NAMES[day.dayOfWeek.value - 1],
+        "week" to "%d-W%02d".format(weekYear, weekNumber),
+        "year" to (if (weekly) weekYear else day.year).toString(),
+        "month" to "%02d".format(day.monthValue),
+    )
+    return Regex("\\{\\{\\s*(\\w+)\\s*\\}\\}").replace(template) { match -> values[match.groupValues[1]] ?: match.value }
+}
+
+/**
+ * Daily Notes (ST6; PEN-146 option B): the time zone that decides which day today is (with this
+ * phone's own one tap away), then the daily and weekly templates as tabs over one editor that
+ * saves as you type, with + Placeholder and a preview of today's note under it. They belong to the
+ * primary notebook, which holds the journal (A827), and affect notes made afterwards (A78).
  */
 @Composable
 fun DailyNotesScreen(
     timeZone: String,
-    today: String,
+    today: LocalDate,
     templates: List<TemplateField>,
     enabled: Boolean,
     onTimeZone: () -> Unit,
     onSave: (key: String, value: String?) -> Unit,
     onBack: () -> Unit,
+    /** This phone's own zone; Use This Phone's Zone shows when it differs. */
+    phoneZone: String = timeZone,
+    onUsePhoneZone: (String) -> Unit = {},
+    /** The primary notebook's name, which these belong to. */
+    notebook: String? = null,
+    /** No notebook on the phone: nothing holds these yet. */
+    noNotebook: Boolean = false,
 ) {
-    SectionScreen("Daily Notes", onBack, notice = SETTINGS_WAIT.takeIf { !enabled }) {
-        Help("Today is $today in $timeZone. Changes sync to your other devices.")
+    var tab by rememberSaveable { mutableStateOf(0) }
+    SectionScreen("Daily Notes", onBack, notice = settingsWait(noNotebook).takeIf { !enabled }) {
         ListItem(
             headlineContent = { Text("Time Zone") },
-            supportingContent = { Text(timeZone) },
+            supportingContent = { Text("$timeZone · today is ${app.penmoss.ui.journal.journalLongDate(today).substringBeforeLast(' ')}") },
+            trailingContent = { Text("›", style = MaterialTheme.typography.titleMedium) },
             modifier = Modifier.testTag("timeZone").clickable(enabled = enabled, role = Role.Button, onClick = onTimeZone),
         )
-        for (field in templates) TemplateEditor(field, enabled, onSave)
+        if (phoneZone != timeZone) {
+            TextButton(onClick = { onUsePhoneZone(phoneZone) }, enabled = enabled, modifier = Modifier.padding(horizontal = 8.dp).testTag("dailyUsePhoneZone")) {
+                Text("Use This Phone’s Zone ($phoneZone)")
+            }
+        }
+        if (templates.isNotEmpty()) {
+            val shown = tab.coerceIn(0, templates.size - 1)
+            PrimaryTabRow(selectedTabIndex = shown, modifier = Modifier.padding(top = 8.dp).testTag("templateTabs")) {
+                templates.forEachIndexed { index, field ->
+                    Tab(selected = index == shown, onClick = { tab = index }, text = { Text(field.label) }, modifier = Modifier.testTag("tab-${field.key}"))
+                }
+            }
+            val field = templates[shown]
+            key(field.key) { TemplateEditor(field, enabled, today, onSave) }
+        }
         Help(
-            "Placeholders: {{date}} 2026-10-21, {{longDate}} Wednesday 21 October 2026, {{weekday}}, " +
-                "{{week}} 2026-W43, {{year}}, {{month}}.",
+            (notebook?.let { "These belong to $it, your primary notebook. " } ?: "") +
+                "Changes apply to notes made afterwards and sync to your other devices.",
         )
     }
 }
 
 @Composable
-private fun TemplateEditor(field: TemplateField, enabled: Boolean, onSave: (String, String?) -> Unit) {
-    var draft by rememberSaveable(field.key, field.saved) { mutableStateOf(field.saved) }
-    var status by rememberSaveable(field.key) { mutableStateOf<String?>(null) }
-    val tooLong = draft.length > SettingLimits.TEMPLATE_MAX_CHARS
-    GroupTitle(field.label)
+private fun TemplateEditor(field: TemplateField, enabled: Boolean, today: LocalDate, onSave: (String, String?) -> Unit) {
+    var draft by remember(field.key) { mutableStateOf(TextFieldValue(field.saved)) }
+    // The saved text changed elsewhere (a sync, Use the Default) while nothing is being typed.
+    var typed by remember(field.key) { mutableStateOf(false) }
+    LaunchedEffect(field.saved) { if (!typed && field.saved != draft.text) draft = TextFieldValue(field.saved, TextRange(field.saved.length)) }
+    var status by remember(field.key) { mutableStateOf<String?>(null) }
+    var placing by remember { mutableStateOf(false) }
+    val text = draft.text
+    val tooLong = text.length > SettingLimits.TEMPLATE_MAX_CHARS
+    val save by rememberUpdatedState {
+        if (text != field.saved && !tooLong) {
+            onSave(field.key, text)
+            status = "Saved"
+        }
+        typed = false
+    }
+    // Saves once typing rests (PEN-146), and on leaving with a change not saved yet.
+    LaunchedEffect(text) {
+        if (!typed) return@LaunchedEffect
+        delay(TEMPLATE_SAVE_MS)
+        save()
+    }
+    DisposableEffect(field.key) { onDispose { if (typed) save() } }
     OutlinedTextField(
         value = draft,
         onValueChange = {
+            if (it.text != draft.text) {
+                typed = true
+                status = null
+            }
             draft = it
-            status = null
         },
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).testTag("template-${field.key}"),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).testTag("template-${field.key}"),
         enabled = enabled,
         label = { Text(field.label) },
-        // The server's limit (A410), counted here so a template too long is never "Saved".
+        // The notebook's limit (A410), counted here so a template too long is never "Saved".
         isError = tooLong,
         supportingText = {
             Text(
-                if (tooLong) "Too long: at most ${"%,d".format(SettingLimits.TEMPLATE_MAX_CHARS)} characters (${"%,d".format(draft.length)} now)"
-                else "${"%,d".format(draft.length)} / ${"%,d".format(SettingLimits.TEMPLATE_MAX_CHARS)}",
+                if (tooLong) "Too long: at most ${"%,d".format(SettingLimits.TEMPLATE_MAX_CHARS)} characters (${"%,d".format(text.length)} now)"
+                else "${"%,d".format(text.length)} / ${"%,d".format(SettingLimits.TEMPLATE_MAX_CHARS)}",
                 Modifier.testTag("count-${field.key}"),
             )
         },
@@ -424,26 +671,58 @@ private fun TemplateEditor(field: TemplateField, enabled: Boolean, onSave: (Stri
         minLines = 4,
         maxLines = 12,
     )
-    Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        FilledTonalButton(
+    Row(Modifier.padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box {
+            TextButton(onClick = { placing = true }, enabled = enabled, modifier = Modifier.testTag("placeholder-${field.key}")) { Text("+ Placeholder") }
+            DropdownMenu(expanded = placing, onDismissRequest = { placing = false }) {
+                for ((placeholder, example) in PLACEHOLDERS) {
+                    DropdownMenuItem(
+                        text = { Text("$placeholder  $example") },
+                        onClick = {
+                            placing = false
+                            // At the cursor, or over the selection.
+                            val at = draft.selection
+                            val next = draft.text.replaceRange(at.min, at.max, placeholder)
+                            draft = TextFieldValue(next, TextRange(at.min + placeholder.length))
+                            typed = true
+                            status = null
+                        },
+                        modifier = Modifier.testTag("insert-$placeholder"),
+                    )
+                }
+            }
+        }
+        TextButton(
             onClick = {
-                onSave(field.key, draft)
-                status = "Saved"
-            },
-            enabled = enabled && draft != field.saved && !tooLong,
-            modifier = Modifier.testTag("save-${field.key}"),
-        ) { Text("Save") }
-        OutlinedButton(
-            onClick = {
+                typed = false
                 onSave(field.key, null)
                 status = "Back to the default"
             },
             enabled = enabled && field.custom,
             modifier = Modifier.testTag("reset-${field.key}"),
-        ) { Text("Reset to Default") }
+        ) { Text("Use the Default") }
+        Spacer(Modifier.weight(1f))
         status?.let {
-            Text(it, Modifier.semantics { liveRegion = LiveRegionMode.Polite }, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                if (it == "Saved") "✓ Saved" else it,
+                Modifier.padding(end = 8.dp).testTag("templateStatus").semantics { liveRegion = LiveRegionMode.Polite; contentDescription = it },
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
+    }
+    // Today's note (this week's for the weekly one) as the template makes it, under the editor.
+    val weekly = field.key == SettingKeys.WEEKLY_TEMPLATE
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).border(1.dp, MaterialTheme.colorScheme.outlineVariant).padding(12.dp).testTag("templatePreview"),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(if (weekly) "This Week’s Note" else "Today’s Note", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            fillTemplate(text, weekly, today).ifBlank { "(empty)" },
+            Modifier.testTag("templatePreviewText"),
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 
@@ -480,7 +759,7 @@ fun TimeZonePicker(current: String, phoneZone: String, zones: List<String>, onPi
                         value = query,
                         onValueChange = { query = it },
                         modifier = Modifier.fillMaxWidth().focusRequester(focus).testTag("zoneSearch"),
-                        placeholder = { Text("Search time zones") },
+                        placeholder = { Text("Search Time Zones") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         trailingIcon = {
@@ -521,16 +800,37 @@ fun TimeZonePicker(current: String, phoneZone: String, zones: List<String>, onPi
     }
 }
 
-// --- Quick capture (ST7) ---
+// --- Quick Capture (ST7; PEN-146) ---
 
-/** Quick capture (ST7): where the capture sheet, the tile, the widget and sharing start, as on the web and Mac. */
+/**
+ * Quick Capture (ST7; PEN-146): where the capture sheet, the tile, the widget and sharing start,
+ * and the notebook they file in, the primary one (A1101), which All Notebooks changes.
+ */
 @Composable
-fun QuickCaptureScreen(destination: String, enabled: Boolean, onChoose: (String) -> Unit, onBack: () -> Unit) {
-    SectionScreen("Quick Capture", onBack, notice = SETTINGS_WAIT.takeIf { !enabled }) {
-        Help("Where a capture goes unless you pick the other in the capture sheet. The web and Mac apps start on the same choice.")
+fun QuickCaptureScreen(
+    destination: String,
+    enabled: Boolean,
+    onChoose: (String) -> Unit,
+    onBack: () -> Unit,
+    /** The primary notebook's name, where captures go; null with no notebook yet. */
+    notebook: String? = null,
+    onNotebook: () -> Unit = {},
+    /** No notebook on the phone: nothing holds these yet. */
+    noNotebook: Boolean = false,
+) {
+    SectionScreen("Quick Capture", onBack, notice = settingsWait(noNotebook).takeIf { !enabled }) {
+        GroupTitle("Saves To")
         Column(Modifier.selectableGroup()) {
             ChoiceRow("Today’s Note", "At the end of ## Captures, with the time", destination == "daily", enabled, "capture-daily") { onChoose("daily") }
             ChoiceRow("New Note in Inbox", "Titled by its first line", destination == "inbox", enabled, "capture-inbox") { onChoose("inbox") }
         }
+        Help("The capture sheet starts on this, and lets you pick the other for one capture.")
+        GroupTitle("Notebook")
+        ListItem(
+            headlineContent = { Text(notebook ?: "No notebook yet") },
+            supportingContent = { Text(if (notebook != null) "Your primary notebook · change it on All Notebooks" else "Add one on All Notebooks") },
+            trailingContent = { Text("›", style = MaterialTheme.typography.titleMedium) },
+            modifier = Modifier.testTag("captureNotebook").clickable(role = Role.Button, onClick = onNotebook),
+        )
     }
 }

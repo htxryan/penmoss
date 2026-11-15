@@ -1,77 +1,73 @@
 /**
- * Settings → Agents (Ryan's feedback, 5 Nov 2026; A1098), in the Mac app: how agents such as
- * Claude Code and Codex reach the git notebooks on this Mac, out of Notebooks' own pages.
+ * Settings → Agents (A1098; One Page, Folded in PEN-146, amending A1125), in the Mac app: how
+ * agents such as Claude Code and Codex reach the git notebooks on this Mac. A page of its own,
+ * not a notebook's, since the MCP server is to work across notebooks.
  *
- * - **The penmoss Command** (A992): the CLI, which is this app, on the terminal's PATH.
- * - **Each notebook's agents** (A993, D52): the agent copy the app makes of every notebook by
- *   itself, so `penmoss mcp --notebook <its name>` serves it, and any agent connected by name.
- *   A list of the notebooks, each opening a page of its own with its agents, as Notebooks has
- *   it (Quanta feedback 2, item 5; A1125): with several notebooks, every notebook's agents on one
- *   page were too much at once.
+ * - **The penmoss command** (A992): one line when it is installed and on PATH ("penmoss command
+ *   installed", its path, Manage…); the full card otherwise, or once Manage… opens it.
+ * - **Connected on This Mac** (A993, D52): each notebook a row that folds open in place, with its
+ *   agents (the copy Penmoss makes for every agent, and each agent connected by name, with
+ *   Disconnect and the lines to give it) and Connect an Agent… on each row.
+ *   `/settings/agents/<notebook id>` opens with that notebook unfolded.
+ * - What agents changed, in every notebook, is the page beside this one: Agent Activity.
  */
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useId, useState } from 'react';
-import { desktop, type DesktopGit } from '../desktop/bridge';
-import { gitNotebookPath, linkHandler, notebookAgentsPath } from '../router';
+import { desktop, type DesktopGit, type LocalAgentInfo } from '../desktop/bridge';
+import { linkHandler, notebookAgentsPath } from '../router';
+import { GroupHead } from '../theme/look-rows';
 import { mcpName } from './agent-words';
 import { CommandLine, GitLocalAgents } from './LocalAgents';
 import { useAllSources, useGitInfo } from './hooks';
 import type { GitSource } from './git-source';
 import './sources.css';
+import './notebook-settings.css';
 
-const AGENTS_PATH = '/settings/agents';
+const ACTIVITY_PATH = '/settings/agent-activity';
 
 export function AgentsSettings({ item }: { item?: string | undefined }) {
   const git = desktop()?.git;
   const state = useAllSources();
   const id = useId();
+  /** The notebooks unfolded: the one the address names, then whichever the person opens. */
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set(item ? [item] : []));
+  // Another notebook's address while the page is open (a link, Back): it unfolds too.
+  const [named, setNamed] = useState(item);
+  if (named !== item) {
+    setNamed(item);
+    if (item && !open.has(item)) setOpen(new Set([...open, item]));
+  }
   if (!git) return null;
   const sources = state.all;
-  if (item !== undefined) {
-    const source = sources.find((each) => each.id === item);
-    return (
-      <section
-        className="settings-section"
-        aria-labelledby={`${id}-h`}
-        data-testid="agents-settings"
-      >
-        <a
-          href={AGENTS_PATH}
-          data-ui="item"
-          className="back-link git-notebook-back"
-          data-testid="agents-back"
-          onClick={linkHandler(AGENTS_PATH)}
-        >
-          <Icon name="arrowL" size={14} />
-          Agents
-        </a>
-        {source ? (
-          <NotebookAgents key={source.id} source={source} git={git} headingId={`${id}-h`} />
-        ) : (
-          <>
-            <h2 id={`${id}-h`}>Agents</h2>
-            <p className="muted" data-testid="agents-notebook-missing">
-              That notebook isn’t on this Mac.
-            </p>
-          </>
-        )}
-      </section>
-    );
-  }
+  const missing = item !== undefined && !sources.some((each) => each.id === item);
+  const fold = (sourceId: string, unfolded: boolean) =>
+    setOpen((was) => {
+      const next = new Set(was);
+      if (unfolded) next.add(sourceId);
+      else next.delete(sourceId);
+      return next;
+    });
   return (
-    <section className="settings-section" aria-labelledby={`${id}-h`} data-testid="agents-settings">
+    <section
+      className="settings-section nset-page"
+      aria-labelledby={`${id}-h`}
+      data-testid="agents-settings"
+    >
       <h2 id={`${id}-h`}>Agents</h2>
       <p>
-        Agents such as Claude Code and Codex reach your git notebooks through Penmoss’s MCP server,
-        which runs on this Mac from this app: no account and no agent token. Every notebook has an
-        agent copy of its own, made by Penmoss, so <code>penmoss mcp --notebook</code> and the
-        notebook’s name serve it to any agent, as Copy Agent Reference says.
+        Agents such as Claude Code and Codex read and edit your notes through Penmoss’s MCP server,
+        which runs on this Mac from this app: no account and no agent token.
       </p>
       <CommandLine git={git} />
-      <h3 className="agents-list-heading">Notebooks</h3>
+      <GroupHead scope>Connected on This Mac</GroupHead>
+      {missing ? (
+        <p className="muted" data-testid="agents-notebook-missing">
+          That notebook isn’t on this Mac.
+        </p>
+      ) : null}
       {sources.length === 0 ? (
         <p className="muted">
-          No git notebooks on this Mac yet:{' '}
+          No notebooks on this Mac yet:{' '}
           <a
             href="/settings/git-notebooks"
             data-command="app.gitNotebooks"
@@ -82,18 +78,43 @@ export function AgentsSettings({ item }: { item?: string | undefined }) {
           .
         </p>
       ) : (
-        <ul className="git-notebook-list" data-testid="agents-notebook-list">
+        <ul
+          className="nset-fold-list"
+          data-testid="agents-notebook-list"
+          data-setting="connected-on-this-mac"
+        >
           {sources.map((source) => (
-            <NotebookAgentsRow key={source.id} source={source} git={git} />
+            <NotebookAgentsRow
+              key={source.id}
+              source={source}
+              git={git}
+              open={open.has(source.id)}
+              onFold={(unfolded) => fold(source.id, unfolded)}
+            />
           ))}
         </ul>
       )}
+      <p className="muted nset-pointer">
+        What agents changed, in every notebook, is on{' '}
+        <a
+          href={ACTIVITY_PATH}
+          data-ui="item"
+          data-testid="agents-activity-link"
+          onClick={linkHandler(ACTIVITY_PATH)}
+        >
+          Agent Activity
+        </a>
+        .
+      </p>
     </section>
   );
 }
 
 /** How many agents are connected to a notebook, once main has said (null until then). */
-function useAgentCount(git: DesktopGit, localId: string): number | null {
+function useAgentCount(
+  git: DesktopGit,
+  localId: string,
+): readonly [number | null, (n: number) => void] {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -107,76 +128,96 @@ function useAgentCount(git: DesktopGit, localId: string): number | null {
       cancelled = true;
     };
   }, [git, localId]);
-  return count;
+  return [count, setCount];
 }
 
-/** A notebook in the list: its name, the name agents reach it by, and its agents (A1125). */
-function NotebookAgentsRow({ source, git }: { source: GitSource; git: DesktopGit }) {
-  const info = useGitInfo(source);
-  const count = useAgentCount(git, info.localId);
-  const path = notebookAgentsPath(source.id);
-  return (
-    <li>
-      <a
-        href={path}
-        data-ui="item"
-        className="git-notebook-row"
-        data-testid="agents-notebook-row"
-        data-notebook-id={source.id}
-        onClick={linkHandler(path)}
-      >
-        <Icon name="notebook" />
-        <span className="git-notebook-row-text">
-          <span className="git-notebook-row-name">{info.name}</span>
-          <span className="git-notebook-row-repo muted">
-            <code>penmoss mcp --notebook {mcpName(info.name)}</code>
-          </span>
-        </span>
-        <span className="git-notebook-row-state" data-testid="agents-notebook-count">
-          {count === null
-            ? ''
-            : count === 0
-              ? 'No agents connected'
-              : count === 1
-                ? '1 agent connected'
-                : `${count} agents connected`}
-        </span>
-        <Icon name="chevR" size={14} />
-      </a>
-    </li>
-  );
-}
+const countWords = (agents: readonly LocalAgentInfo[] | null, count: number | null) => {
+  if (agents && agents.length > 0) return agents.map((agent) => agent.label).join(', ');
+  if (count === null) return '';
+  return count === 0 ? 'No agents' : count === 1 ? '1 agent' : `${count} agents`;
+};
 
-/** One notebook's agents, on its own page: the MCP command, and Connect an Agent. */
-function NotebookAgents({
+/**
+ * A notebook's row: its name and its agents' names, folding open in place to its agents, with
+ * Connect an Agent…, which unfolds it and puts the cursor in the agent's name.
+ */
+function NotebookAgentsRow({
   source,
   git,
-  headingId,
+  open,
+  onFold,
 }: {
   source: GitSource;
   git: DesktopGit;
-  headingId: string;
+  open: boolean;
+  onFold: (unfolded: boolean) => void;
 }) {
   const info = useGitInfo(source);
-  const path = gitNotebookPath(source.id);
+  const [count, setCount] = useAgentCount(git, info.localId);
+  const [agents, setAgents] = useState<readonly LocalAgentInfo[] | null>(null);
+  /** Bumped by Connect an Agent…: the name field takes the focus. */
+  const [connect, setConnect] = useState(0);
+  const id = useId();
   return (
-    <article
-      className="notebook-agents"
-      aria-labelledby={headingId}
-      data-testid="notebook-agents"
+    <li
+      data-testid="agents-notebook-row"
       data-notebook-id={source.id}
+      data-path={notebookAgentsPath(source.id)}
+      data-open={open ? 'true' : undefined}
     >
-      <h2 id={headingId}>
-        <Icon name="notebook" />
-        {info.name}
-      </h2>
-      <p className="muted">
-        <code>penmoss mcp --notebook {mcpName(info.name)}</code> ·{' '}
-        <a href={path} data-ui="item" data-testid="agents-notebook-git" onClick={linkHandler(path)}>
-          Its git notebook settings
-        </a>
-      </p>
-      <GitLocalAgents git={git} localId={info.localId} />
-    </article>
+      <div className="nset-fold-head">
+        <button
+          type="button"
+          className="nset-fold-toggle"
+          data-ui="item"
+          aria-expanded={open}
+          aria-controls={`${id}-body`}
+          data-testid="agents-notebook-fold"
+          onClick={() => onFold(!open)}
+        >
+          <Icon name={open ? 'chevD' : 'chevR'} size={14} />
+          <span className="nset-fold-text">
+            <span className="nset-fold-name">{info.name}</span>
+            <span className="nset-fold-count" data-testid="agents-notebook-count">
+              {countWords(agents, count)}
+            </span>
+          </span>
+        </button>
+        <button
+          type="button"
+          className="btn"
+          data-ui="item"
+          data-testid="agents-connect-open"
+          onClick={() => {
+            onFold(true);
+            setConnect((at) => at + 1);
+          }}
+        >
+          <Icon name="plus" size={14} />
+          Connect an Agent…
+        </button>
+      </div>
+      {open ? (
+        <div
+          id={`${id}-body`}
+          className="nset-fold-body notebook-agents"
+          data-testid="notebook-agents"
+          data-notebook-id={source.id}
+        >
+          <p className="muted">
+            Agents reach it as <code>penmoss mcp --notebook {mcpName(info.name)}</code>
+          </p>
+          <GitLocalAgents
+            git={git}
+            localId={info.localId}
+            focus={connect}
+            onAgents={(list) => {
+              setAgents(list);
+              setCount(list.length);
+            }}
+          />
+        </div>
+      ) : null}
+    </li>
   );
 }

@@ -1,11 +1,13 @@
 import { useEffect, useId, useState } from 'react';
+import { WritingRow, WritingSwitch } from '../journal/writing-rows';
 import { desktop } from './bridge';
 
 /**
- * Settings → Display → Show Penmoss in the Menu Bar (T51 item 17, A945): an icon in the Mac's
- * menu bar whose menu holds Quick Capture, Open Today's Journal and the Quick Access notes. On
- * by default (T53 item 6). It is this Mac's own choice (the desktop app's preferences), not a synced setting,
- * and shows only in the Mac app.
+ * Settings → Quick Capture → Show in the Menu Bar (T51 item 17, A945; on Quick Capture since
+ * PEN-146, where it was on Display): an icon in the Mac's menu bar whose menu holds Quick
+ * Capture, Open Today's Journal and the Quick Access notes. On by default (T53 item 6). It is
+ * this Mac's own choice (the desktop app's preferences), not a synced setting, and shows only in
+ * the Mac app.
  */
 export function MenuBarIconSetting() {
   const menuBar = desktop()?.menuBar;
@@ -35,24 +37,22 @@ export function MenuBarIconSetting() {
     setBusy(false);
   };
   return (
-    <fieldset className="display-toggles" data-testid="menu-bar-icon-setting">
-      <legend>Menu bar</legend>
-      <label className="display-toggle" htmlFor={id}>
-        <input
-          id={id}
-          type="checkbox"
-          checked={shown === true}
-          disabled={busy || shown === null}
-          aria-describedby={`${id}-help`}
-          data-testid="menu-bar-icon"
-          onChange={(event) => void change(event.target.checked)}
-        />
-        <span>Show Penmoss in the Menu Bar</span>
-      </label>
-      <p id={`${id}-help`} className="muted settings-help">
-        An icon in the Mac’s menu bar with Quick Capture, Open Today’s Journal and your Quick Access
-        notes, a click away from any app. This Mac only.
-      </p>
-    </fieldset>
+    <WritingRow
+      setting="show-in-the-menu-bar"
+      label="Show in the Menu Bar"
+      labelFor={id}
+      help="Quick Capture, Open Today’s Journal and your Quick Access notes, a click away from any app."
+      helpId={`${id}-help`}
+      testId="menu-bar-icon-setting"
+    >
+      <WritingSwitch
+        id={id}
+        checked={shown === true}
+        disabled={busy || shown === null}
+        aria-describedby={`${id}-help`}
+        data-testid="menu-bar-icon"
+        onChange={(event) => void change(event.target.checked)}
+      />
+    </WritingRow>
   );
 }

@@ -3,44 +3,84 @@ title: Settings
 description: Every section of Settings in the Mac and Android apps, what each setting does, and where it is kept.
 ---
 
-This page lists every setting, section by section, so you can find one and see what it does.
+This page lists every setting, page by page, so you can find one and see what it does.
 
-Open Settings with ⌘, on the Mac, or from a notebook's menu on Android. Most settings are kept in your [Primary Notebook](/docs/organise/#the-primary-notebook) and so reach your other devices; the ones marked **this device** stay where they are set. Settings that belong to a notebook itself (its time zone and templates) are the same on every device and agent that opens it.
+Open Settings with ⌘, on the Mac, or from the gear on the first screen on Android. Most settings are kept in your [Primary Notebook](/docs/organise/#the-primary-notebook) and so reach your other devices; the ones marked **this Mac** or **this device** stay where they are set. Settings that belong to a notebook itself (its time zone and templates) are the same on every device and agent that opens it.
 
 ## On the Mac
 
+Settings lists its pages in five groups: **Look and Feel**, **Writing**, **Notebooks**, **Agents** and **This Mac**. Nothing under This Mac is synced; the heading says so once, so its pages don't repeat it.
+
+### Search Settings
+
+The field over the list finds a setting by its name, its help, or another word for it ("typeface" or "text size" for the fonts). While it has words in it, the matches take the page's place, each with the page and group it's on. Click one, or press Return for the first, to open its page with the setting marked; press Esc to clear the field. ↓ and ↑ move between the field and the matches.
+
+Old links still work: Settings → Display opens Sidebar, and Settings → Status opens GitHub.
+
+## Look and Feel
+
 ### Appearance
 
-| Setting           | What it does                                                                      |
-| ----------------- | --------------------------------------------------------------------------------- |
-| Mode              | Light, Dark, or System (the default), which follows macOS                         |
-| Theme             | The theme; **Duplicate** one to make your own ([Themes and fonts](/docs/themes/)) |
-| Note width        | The theme's width, or Full Window Width                                           |
-| Note Panel        | Whether the note panel starts Closed or Open (this device)                        |
-| Fonts             | Interface Font, Note Font and Note Font Size                                      |
-| Compact Title Bar | The window's buttons in Penmoss's own top row; on by default (this device)        |
+| Setting                   | What it does                                                                                                                                                      |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mode                      | Light, Dark, or System (the default), which follows macOS                                                                                                         |
+| Theme                     | The theme; **Customize…** copies one to make your own ([Themes and fonts](/docs/themes/))                                                                         |
+| Interface Font, Note Font | The fonts over the theme's own                                                                                                                                    |
+| Note Font Size            | 12 to 28 px                                                                                                                                                       |
+| Show Tooltips After       | How long the pointer rests on a control before its tooltip shows: 0.5, 1 (the default), 1.5 or 2 seconds, or Never. Keyboard focus always shows a tooltip at once |
+| Compact Title Bar         | The window's buttons in Penmoss's own top row; on by default (this Mac)                                                                                           |
 
-### Display
+### Sidebar
 
-| Setting                             | What it does                                                                                                                                                      |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Show in the sidebar                 | Which of Tags, Today, This Week, Graph and Commands the sidebar's top row shows (Search always shows); all are on by default                                      |
-| Sections                            | The order of Quick Access, Recent Notes, Notebooks, Calendar and Tags                                                                                             |
-| Notes in Recent Notes               | 1 to 50, 10 by default                                                                                                                                            |
-| Show Notebook Names in Quick Access | Labels each pinned note with its notebook                                                                                                                         |
-| Buttons in the note's title bar     | Which actions have a button beside the note's title: Full Width and Copy Agent Reference by default                                                               |
-| Show Tooltips After                 | How long the pointer rests on a control before its tooltip shows: 0.5, 1 (the default), 1.5 or 2 seconds, or Never. Keyboard focus always shows a tooltip at once |
-| Note Metadata Under the Title       | Which of notebook, folder, dates, tags, words, characters, reading time and token count show under the title                                                      |
-| Note Metadata in the Status Bar     | The same for the status bar; words, characters and reading time by default                                                                                        |
-| Show Penmoss in the Menu Bar        | The [menu bar icon](/docs/install/mac/#the-menu-bar-icon); on by default (this device)                                                                            |
+| Setting                             | What it does                                                                                                                 |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Shortcuts                           | Which of Tags, Today, This Week, Graph and Commands the sidebar's top row shows (Search always shows); all are on by default |
+| Sections                            | The order of Quick Access, Recent Notes, Notebooks, Calendar and Tags                                                        |
+| Notes in Recent Notes               | 1 to 50, 10 by default                                                                                                       |
+| Show Notebook Names in Quick Access | Labels each pinned note with its notebook                                                                                    |
+
+### Note
+
+| Setting           | What it does                                                                                        |
+| ----------------- | --------------------------------------------------------------------------------------------------- |
+| Note Width        | The theme's width, or Full Window                                                                   |
+| Note Panel        | Whether the note panel starts Closed or Open (this Mac)                                             |
+| Title Bar Buttons | Which actions have a button beside the note's title: Full Width and Copy Agent Reference by default |
+| Under the Title   | Which of notebook, folder, dates, tags, words, characters, reading time and token count show there  |
+| In the Status Bar | The same for the status bar; words, characters and reading time by default                          |
 
 ### Symbols
 
-The [line symbols](/docs/editor/#line-symbols): each one's glyph and colour, their order, **Add a Symbol** (up to nine) and **Restore Defaults**.
+The [line symbols](/docs/editor/#line-symbols): each one's key, glyph and colour, their order (drag a row, or Alt+↑ and Alt+↓, which changes its key), **Add a Symbol** (up to nine) and **Restore Defaults**.
 
-### Notebooks
+## Writing
 
-**Add a Git Notebook…**, then for each notebook:
+### Daily Notes
+
+| Setting                         | What it does                                                                |
+| ------------------------------- | --------------------------------------------------------------------------- |
+| Time Zone                       | The day "today" is, for this notebook (America/Chicago until you change it) |
+| Daily Template, Weekly Template | What a new daily or weekly note starts with; **Use the Default** goes back  |
+
+See [Daily and weekly notes](/docs/journal/).
+
+### Quick Capture
+
+| Setting               | What it does                                                                        |
+| --------------------- | ----------------------------------------------------------------------------------- |
+| Saves To              | Where a capture goes by default: Today's Note or New Note in Inbox                  |
+| Shortcut From Any App | The capture hotkey (this Mac)                                                       |
+| Show in the Menu Bar  | The [menu bar icon](/docs/install/mac/#the-menu-bar-icon); on by default (this Mac) |
+
+See [Quick capture](/docs/quick-capture/).
+
+### Keyboard Shortcuts
+
+Every command's shortcut, to change, remove or reset ([Keyboard shortcuts](/docs/shortcuts/#change-a-shortcut)).
+
+## Notebooks
+
+**All Notebooks** lists every notebook with **Add Notebook…**, then each notebook has an entry of its own in the list, with a dot for how its sync is going. A notebook's page:
 
 | Setting                              | What it does                                                                                      |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------- |
@@ -51,61 +91,58 @@ The [line symbols](/docs/editor/#line-symbols): each one's glyph and colour, the
 | Sign commits as git is configured to | Untick to never sign this notebook's commits                                                      |
 | Commit name, Commit email            | This notebook's own commit identity, over git's (a GitHub no-reply address keeps yours private)   |
 | Access                               | **Save Token** and **Forget Token**, for an HTTPS host that needs a token                         |
-| Agent Activity                       | What agents changed, with Undo ([Agent activity](/docs/agents/activity/))                         |
-| Primary Notebook                     | **Make Primary Notebook** (this device)                                                           |
-| Copy Settings to Other Notebooks     | Copies your app settings to your other notebooks; you can keep them in step on this Mac           |
 | Remove from This Mac                 | Removes this Mac's copy, after Touch ID; the repository keeps everything pushed                   |
 
-Under the list of notebooks:
+On All Notebooks:
 
 | Setting                                          | What it does                                                                                                  |
 | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Primary Notebook                                 | The notebook that holds your journal, Inbox and these settings (this Mac)                                     |
+| Keep Settings in Step, Copy Settings…            | Copies your app settings to your other notebooks, once or every time they change                              |
 | Copy Tags When Copying Notes to Another Notebook | Whether **Copy Tags** starts ticked in [Copy to Notebook…](/docs/organise/#notebooks)'s picker; on by default |
+
+## Agents
 
 ### Agents
 
 For each notebook, the agents connected to it, **Connect an Agent** and **Disconnect**, and the commands to give each agent ([How agents work](/docs/agents/)). **The penmoss Command** installs the CLI ([Install](/docs/reference/cli/#install)).
 
-### Daily Notes
+### Agent Activity
 
-| Setting                         | What it does                                                                |
-| ------------------------------- | --------------------------------------------------------------------------- |
-| Time zone                       | The day "today" is, for this notebook (America/Chicago until you change it) |
-| Daily template, Weekly template | What a new daily or weekly note starts with; **Use the Default** goes back  |
-| Quick Capture                   | Where a capture goes by default: Today's Note or New Note in Inbox          |
+What agents changed, in every notebook, with Undo ([Agent activity](/docs/agents/activity/)).
 
-See [Daily and weekly notes](/docs/journal/).
-
-### Keyboard Shortcuts
-
-Every command's shortcut, to change, remove or reset ([Keyboard shortcuts](/docs/shortcuts/#change-a-shortcut)), and **Quick capture from any app**, the capture hotkey (this device).
+## This Mac
 
 ### Search by Meaning
 
-What search by meaning is doing, and the switch: on by default. Off removes the model and its index (this device). See [Search](/docs/search/#search-by-meaning).
+**Find Notes by Meaning**, on by default; then what it's doing, with a progress bar while the model downloads or your notes are indexed, and the model with its size and licence. Turning it off asks first, as it removes the model and its index. See [Search](/docs/search/#search-by-meaning).
+
+### GitHub
+
+The GitHub account Penmoss uses, kept in this Mac's Keychain: **Sign In with GitHub**, or **Use a Token Instead…** to paste a token, and **Sign Out**. Under **Used For**: adding notebooks from your repositories, and **Send Feedback**, with how many reports are waiting and **Open**. See [Send feedback](/docs/help/feedback/).
 
 ### Updates
 
-**Auto-Update** (off by default, this device), **Update Channel** (Stable or Alpha, this Mac), **Check Now** and **Install and Restart**. Below them, the release notes: what an offered update brings, what this version brought, and earlier versions. See [Updates](/docs/help/updates/#whats-new).
-
-### Status
-
-**GitHub Token**, for sending feedback (**Save**, **Sign Out**), and the **Feedback outbox**: reports waiting to send, with **Edit**, **Retry** and **Discard**. See [Send feedback](/docs/help/feedback/).
+A card with the version you're running, whether it's up to date, the channel and when Penmoss last checked, and **Check Now** (or **Install and Restart**). Then **Update Automatically** (off by default) and **Update Channel** (Stable or Alpha), and **What's New**: what an offered update brings, what this version brought, and earlier versions. See [Updates](/docs/help/updates/#whats-new).
 
 ## On Android
 
-| Section            | What it holds                                                                                                                                                                                                                                                                           |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Appearance         | Mode, theme, note width, fonts and the theme editor                                                                                                                                                                                                                                     |
-| Display            | Shortcuts on Home, the order of the sections, Notes in Recent Notes, Show Notebook Names in Quick Access                                                                                                                                                                                |
-| Symbols            | The line symbols, and their keys on a hardware keyboard                                                                                                                                                                                                                                 |
-| Notebooks          | Each notebook's sync, Wi-Fi only, signing, push and pull timing, token, commit identity and **Remove from This Phone**; then **Commits from this phone**, the **Signing key**, the **Journal notebook** and **In the background** ([The Android app](/docs/install/android/#notebooks)) |
-| Daily Notes        | Time zone and templates                                                                                                                                                                                                                                                                 |
-| Quick Capture      | Where a capture goes by default                                                                                                                                                                                                                                                         |
-| Keyboard Shortcuts | Shortcuts for a hardware keyboard                                                                                                                                                                                                                                                       |
-| Sync and Storage   | Storage on this phone, and whether to load pictures from the web                                                                                                                                                                                                                        |
-| What’s New         | What changed in this version, and in earlier ones ([The Android app](/docs/install/android/#whats-new))                                                                                                                                                                                 |
-| About              | The version, **Send Feedback**, **GitHub Token** and the feedback outbox                                                                                                                                                                                                                |
+Open Settings from the gear on the first screen. The same five groups as the Mac, with **This Phone** in place of This Mac, and a **Search Settings** field at the top that opens the screen a setting is on.
+
+| Group         | Screen             | What it holds                                                                                                                                   |
+| ------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Look and Feel | Appearance         | A live preview, then mode, theme and **Customize Penmoss…**, fonts, and note width                                                              |
+| Look and Feel | Home               | Shortcuts on Home, the order of the sections, Notes in Recent Notes, Show Notebook Names in Quick Access                                        |
+| Look and Feel | Symbols            | The line symbols, and their keys on a hardware keyboard                                                                                         |
+| Writing       | Daily Notes        | Time zone, and the daily and weekly templates beside a preview of today's note                                                                  |
+| Writing       | Quick Capture      | Where a capture goes by default, and which notebook                                                                                             |
+| Writing       | Keyboard Shortcuts | Shortcuts for a hardware keyboard                                                                                                               |
+| Notebooks     | Each notebook      | Its own page with **Overview**, **Sync** and **Git** tabs, and **Remove from This Phone** ([The Android app](/docs/install/android/#notebooks)) |
+| Notebooks     | All Notebooks      | **Add Notebook**, the **Primary Notebook**, Copy Tags When Copying Notes, **Commits From This Phone**, the signing key and background sync      |
+| Agents        | Agent Activity     | What agents changed, in every notebook, with **Undo**                                                                                           |
+| This Phone    | Storage            | Files and pictures in notes, pictures from the web and **Clear…**, and whether to load pictures from the web                                    |
+| This Phone    | GitHub             | **Sign In with GitHub** (or a token), and what the account is used for, such as **Send Feedback**                                               |
+| This Phone    | What’s New         | The version, what changed in it, and in earlier ones ([The Android app](/docs/install/android/#whats-new))                                      |
 
 ## For a notebook, from the CLI or an agent
 

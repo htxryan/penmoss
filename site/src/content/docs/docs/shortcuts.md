@@ -18,15 +18,23 @@ Two more ways to get around:
 
 ## Change a shortcut
 
-Open **Settings → Keyboard Shortcuts** (or **Customise** on the shortcut sheet):
+Open **Settings → Keyboard Shortcuts** (or **Customise** on the shortcut sheet). The commands are grouped by area, such as **General**, **Navigation** and **Editor**.
 
-1. Click a command's shortcut.
+1. Click a command's shortcut, or **Add Shortcut** for a command that has none.
 2. Press the keys you want. Escape cancels.
 3. If another command already has them, Penmoss says which, and **Use It Here Instead** moves them.
 
-**Remove** takes a shortcut away, and **Reset to the Default** brings back the original. A shortcut needs ⌘, Ctrl or ⌥ (on a Mac, not ⌥ alone with a letter, which types a character). A few keys are kept for the system and text editing, such as ⌘C, ⌘V, ⌘Z, ⌘F, ⌘W and ⌘Q. Your shortcuts sync to your other devices.
+A shortcut you changed says what it was, such as "Changed from ⌘⌥N", and has **Reset** to bring the original back. **Remove** (when you point at a row) takes a shortcut away. **Reset All Changed…** at the end of the list asks first, then puts every shortcut you changed back to its default.
 
-The [quick capture hotkey](/docs/quick-capture/#change-the-hotkey) is set on the same page.
+A shortcut needs ⌘, Ctrl or ⌥ (on a Mac, not ⌥ alone with a letter, which types a character). A few keys are kept for the system and text editing, such as ⌘C, ⌘V, ⌘Z, ⌘F, ⌘W and ⌘Q. Your shortcuts sync to your other devices.
+
+### Find a shortcut
+
+- **Search:** type part of a command's name, its area or its keys.
+- **What does this key do?** With the search field selected, press the keys, such as ⌥⌘M: the list shows the command that has them, or says none does. Escape clears them.
+- **All, Changed and None Set:** show every command, only the ones you changed (with how many), or the ones without a shortcut.
+
+The [quick capture hotkey](/docs/quick-capture/#change-the-hotkey) is on **Settings → Quick Capture**.
 
 ## Default shortcuts on the Mac
 
@@ -55,7 +63,7 @@ On Android with a hardware keyboard, Ctrl takes the place of ⌘; **Settings →
 | New Note                         | ⌘⌥N  |
 | New Folder                       | ⌘⌥⇧N |
 | Quick Capture… (in Penmoss)      | ⌘⇧K  |
-| Quick capture from any app       | ⌃⌥⌘N |
+| Quick Capture from any app       | ⌃⌥⌘N |
 | Open in New Window               | ⌘⌥O  |
 | Toggle Markdown Source           | ⌘⇧M  |
 | Version History                  | ⌘⌥⇧H |

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { App } from '../../src/App';
 import { InSources, oneSource, type OneSource } from './support/one-source';
 
-// T42 item 7 (A576): Settings → Display hides Today, This week, Graph or Commands from the
+// T42 item 7 (A576): Settings → Sidebar (Display until PEN-146) hides Today, This week, Graph or Commands from the
 // sidebar (and its rail, the same buttons); Search always shows.
 
 let one: OneSource | null = null;
@@ -33,7 +33,7 @@ const inputWith = (html: string, marker: string) =>
 const shortcuts = (html: string) =>
   html.slice(html.indexOf('class="sb-actions"'), html.indexOf('class="sb-list"'));
 
-describe('Settings → Display (T42, A576)', () => {
+describe('Settings → Sidebar (T42, A576, PEN-146)', () => {
   it('shows every shortcut by default', async () => {
     const html = shortcuts((await setup()).render('/'));
     for (const command of [
@@ -65,18 +65,20 @@ describe('Settings → Display (T42, A576)', () => {
     let open = () => undefined as void;
     const { render, workspace } = await setup(new Promise<void>((resolve) => (open = resolve)));
     // This device's copy read: the toggles can change (not before, A576).
-    expect(inputWith(render('/settings/display'), 'display-today')).toContain('disabled=""');
+    expect(inputWith(render('/settings/sidebar'), 'display-today')).toContain('disabled=""');
     open();
     await workspace.start();
     workspace.setSetting('sidebar.thisWeek', false);
-    const html = render('/settings/display');
-    expect(html).toContain('href="/settings/display"');
+    const html = render('/settings/sidebar');
+    expect(html).toContain('href="/settings/sidebar"');
+    expect(html).toContain('data-testid="settings-sidebar"');
     expect(html).toContain('data-testid="display-settings"');
     for (const item of ['today', 'thisWeek', 'graph', 'commands']) {
       expect(html, item).toContain(`data-testid="display-${item}"`);
     }
     expect(html).not.toContain('data-testid="display-search"');
-    const search = inputWith(html, '-search"');
+    const search = inputWith(html, 'aria-label="Search"');
+    expect(search).toContain('role="switch"');
     expect(search).toContain('checked=""');
     expect(search).toContain('disabled=""');
     expect(inputWith(html, 'display-thisWeek')).not.toContain('checked');

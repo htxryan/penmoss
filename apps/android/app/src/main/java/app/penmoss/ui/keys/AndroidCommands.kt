@@ -29,7 +29,7 @@ object AndroidCommands {
     private const val NOTE = "a note"
     private const val PERIODIC = "a daily or weekly note"
     private const val FOLDERS = "Home or a folder"
-    private const val GIT_CARD = "The Mac app's git notebook commands (#170 F5): on the phone each is on the notebook's card in Settings → Git notebooks, where it keeps its BiometricPrompt."
+    private const val GIT_CARD = "The Mac app's git notebook commands (#170 F5): on the phone each is on the notebook's page in Settings (its Overview, Sync and Git tabs), where it keeps its BiometricPrompt."
 
     private val APP: Map<String, Coverage> = mapOf(
         // Search is where actions are found on the phone (FD6, adapted): P6 adds them to it.

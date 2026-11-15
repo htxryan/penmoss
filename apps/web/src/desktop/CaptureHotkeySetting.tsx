@@ -1,74 +1,110 @@
+import { formatCombo } from '@penmoss/editor/keys';
 import { useEffect, useId, useState } from 'react';
+import { Kbd } from '../commands/Kbd';
+import { useKeyRecorder } from '../commands/recorder';
+import { WritingRow } from '../journal/writing-rows';
 import { desktop, type CaptureHotkey } from './bridge';
+import { acceleratorToCombo, comboToAccelerator } from './hotkey-keys';
 
 /**
- * The Mac app's system-wide capture hotkey (T30, A226), under Settings →
- * Keyboard shortcuts. It belongs to this Mac (another may have it taken),
- * so it is not a synced setting; the main process checks and registers it.
+ * Settings → Quick Capture → Shortcut From Any App (T30, A226; PEN-146): the Mac app's
+ * system-wide capture hotkey, recorded by pressing the keys like every other shortcut in
+ * Settings (`useKeyRecorder`), where it was a typed field. It belongs to this Mac (another may
+ * have the keys taken), so it is not a synced setting; the main process checks it (two
+ * modifiers, one of them ⌘ or ⌃, and A90's rules), registers it, and says why when it refuses.
  */
 export function CaptureHotkeySetting() {
   const bridge = desktop();
   const id = useId();
   const [current, setCurrent] = useState<CaptureHotkey | null>(null);
-  const [draft, setDraft] = useState('');
-  const [message, setMessage] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [message, setMessage] = useState<{ readonly text: string; readonly error: boolean } | null>(
+    null,
+  );
 
   useEffect(() => {
     void bridge?.capture.hotkey().then((hotkey) => {
-      if (!hotkey) return;
-      setCurrent(hotkey);
-      setDraft(hotkey.accelerator);
+      if (hotkey) setCurrent(hotkey);
     });
   }, [bridge]);
 
-  if (!bridge || !current) return null;
-  const save = async () => {
-    const result = await bridge.capture.setHotkey(draft);
-    // Refused outright (a shortcut too long to be one): the old one stays, and the form says so.
+  const save = async (accelerator: string) => {
+    if (!bridge || !current) return;
+    const result = await bridge.capture.setHotkey(accelerator);
+    const shown = (hotkey: CaptureHotkey) => formatCombo(acceleratorToCombo(hotkey.accelerator));
+    // Refused outright (a shortcut too long to be one): the old one stays, and the row says so.
     if (!result) {
-      setMessage(
-        `That shortcut wasn’t saved: quick capture still opens with ${current.accelerator}.`,
-      );
+      setMessage({
+        text: `That shortcut wasn’t saved: Quick Capture still opens with ${shown(current)}.`,
+        error: true,
+      });
       return;
     }
     setCurrent(result);
-    setDraft(result.accelerator);
-    setMessage(result.error ?? `Quick capture now opens with ${result.accelerator}.`);
+    setMessage(
+      result.error
+        ? { text: result.error, error: true }
+        : { text: `Quick Capture now opens with ${shown(result)}.`, error: false },
+    );
   };
+
+  useKeyRecorder(recording, (combo) => {
+    setRecording(false);
+    if (combo === 'Escape') return;
+    void save(comboToAccelerator(combo));
+  });
+
+  if (!bridge || !current) return null;
+  const unset = !current.accelerator;
+  const help = unset
+    ? ' None is set.'
+    : current.registered
+      ? current.certain
+        ? null
+        : ' If nothing happens when you press it, another app may have it: choose another.'
+      : ' Another app has this one, so it does nothing now.';
   return (
-    <form
-      className="settings-field"
-      data-testid="capture-hotkey"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void save();
-      }}
+    <WritingRow
+      setting="shortcut-from-any-app"
+      label="Shortcut From Any App"
+      labelId={`${id}-label`}
+      help={`Opens Quick Capture over any app. Press Change, then the keys: ⌘ or ⌃ and one more modifier.${help ?? ''}`}
+      helpId={`${id}-help`}
+      testId="capture-hotkey"
+      data-accelerator={current.accelerator}
+      extra={
+        message ? (
+          <p className="wr-row-note" role={message.error ? 'alert' : 'status'}>
+            {message.text}
+          </p>
+        ) : null
+      }
     >
-      <label htmlFor={id}>Quick capture from any app</label>
-      <p className="muted settings-help">
-        A system-wide shortcut for the capture window, such as <code>Control+Alt+Command+N</code>.
-        Two modifiers or more, one of them Command or Control, and not one that copies, pastes,
-        undoes or edits text.
-        {current.registered
-          ? current.certain
-            ? null
-            : ' If nothing happens when you press it, it may be in use by another app: choose another.'
-          : ' Another app has this one, so it does nothing now.'}
-      </p>
-      <div className="settings-actions">
-        <input
-          id={id}
-          className="input"
-          value={draft}
-          spellCheck={false}
-          autoComplete="off"
-          onChange={(event) => setDraft(event.target.value)}
-        />
-        <button type="submit" className="btn" data-ui="submit">
-          Save
-        </button>
-      </div>
-      {message ? <p role="status">{message}</p> : null}
-    </form>
+      {recording ? (
+        <span className="chip" role="status">
+          Press keys… Esc cancels
+        </span>
+      ) : (
+        <span data-testid="capture-hotkey-keys">
+          {unset ? (
+            <span className="wr-none">None</span>
+          ) : (
+            <Kbd combo={acceleratorToCombo(current.accelerator)} />
+          )}
+        </span>
+      )}
+      <button
+        type="button"
+        className="btn quiet"
+        data-ui="item"
+        aria-describedby={`${id}-label`}
+        onClick={() => {
+          setMessage(null);
+          setRecording((value) => !value);
+        }}
+      >
+        {recording ? 'Cancel' : 'Change'}
+      </button>
+    </WritingRow>
   );
 }

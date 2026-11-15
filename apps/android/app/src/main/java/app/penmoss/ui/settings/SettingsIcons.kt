@@ -88,6 +88,18 @@ object SettingsIcons {
     val Plus = icon("New Note", "M12 5v14M5 12h14")
     val Pin = icon("Pin", "M9 4h6M10 4v5.5L6.5 13h11L14 9.5V4M12 13v7")
 
+    /** Home's Tags shortcut (A1438; PEN-146): the web's `tag`. */
+    val Tag = icon("Tags", "M3.5 11.6V4.5a1 1 0 0 1 1-1h7.1l8.9 8.9a1.4 1.4 0 0 1 0 2l-6.1 6.1a1.4 1.4 0 0 1-2 0z" + circle(8f, 8f, 1.4f))
+
+    /** Settings → Storage (PEN-146): a drive, the web's `hard-drive`. */
+    val Storage = icon("Storage", rect(3.5f, 13f, 17f, 6.5f, 1.5f) + "M3.5 14.5 6.5 5.5h11l3 9M7.5 16.3h.01M10.5 16.3h.01")
+
+    /** Settings → GitHub (PEN-146): a person, signed in or not. */
+    val Account = icon("GitHub", circle(12f, 8.5f, 3.5f) + "M5 19.5a7 7 0 0 1 14 0")
+
+    /** A row's drag handle (PEN-146): two columns of dots. */
+    val Drag = icon("Drag", "M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01")
+
     /*
      * A shape closes its subpath, so a path after one starts with an absolute M: a relative m
      * would move from the shape's start, not from the origin as in the web's own <path> (T51).

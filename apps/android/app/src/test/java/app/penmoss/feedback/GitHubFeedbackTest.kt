@@ -308,9 +308,9 @@ class GitHubFeedbackTest {
             val row = db.feedback().get(SUBMISSION)!!
             assertEquals(FeedbackOutboxEntity.QUEUED, row.state)
             assertEquals(0, row.attempts)
-            assertEquals("Add your GitHub token in Settings → About → GitHub Token to send it.", row.lastError)
-            assertEquals("Queued Nov 1. Add your GitHub token in Settings → About → GitHub Token to send it.", outboxLine(row) { "Nov 1" })
-            assertEquals("Queued. Add your GitHub token in Settings → About → GitHub Token to send it.", FeedbackFormModel.queuedMessage((outcome as FeedbackOutbox.Outcome.Queued).why))
+            assertEquals("Add your GitHub token in Settings → GitHub to send it.", row.lastError)
+            assertEquals("Queued Nov 1. Add your GitHub token in Settings → GitHub to send it.", outboxLine(row) { "Nov 1" })
+            assertEquals("Queued. Add your GitHub token in Settings → GitHub to send it.", FeedbackFormModel.queuedMessage((outcome as FeedbackOutbox.Outcome.Queued).why))
             assertEquals(0, github.calls.size)
 
             // A token is saved: what waited goes.
@@ -404,7 +404,7 @@ class GitHubFeedbackTest {
 
         assertEquals("Removed. Feedback waits on this phone until you add a token again.", model.remove())
         assertNull(store.token())
-        assertEquals(FeedbackRoutes.tokenSummary(false, null), "Not set: Send Feedback needs it to file the issue")
+        assertEquals(FeedbackRoutes.tokenSummary(false, null), "Not signed in")
     }
 
     @Test

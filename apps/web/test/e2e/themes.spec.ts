@@ -206,8 +206,9 @@ test.describe.serial('T28: a custom theme', () => {
     await settings.locator('label.theme-card[data-theme-id="nord"]').click();
     await expect(html(page)).toHaveAttribute('data-theme', 'nord');
 
-    // Built-ins are read-only: duplicate Nord, and the copy is chosen and editable.
-    await settings.getByRole('button', { name: 'Duplicate Nord' }).click();
+    // Built-ins are read-only: Customize… duplicates Nord, and the copy is chosen and open in
+    // the editor, beside the same preview Appearance shows (PEN-146).
+    await settings.getByRole('button', { name: 'Customize Nord…' }).click();
     const editor = page.getByTestId('custom-theme-editor');
     await expect(editor).toBeVisible();
     await expect(html(page)).toHaveAttribute('data-theme', /^custom-/);
@@ -235,15 +236,23 @@ test.describe.serial('T28: a custom theme', () => {
     await muted.fill(NORD.light.muted);
     await expect(report).toContainText('passes WCAG AA');
 
-    // The theme is a card like the built-ins.
+    // Back to Appearance: the theme is a card like the built-ins, and Customize… opens it again.
+    await editor.screenshot({ path: join(dir, 'theme-editor-desktop.png') });
+    await page.getByTestId('theme-editor-done').click();
+    await expect(editor).toBeHidden();
     await expect(settings.locator(`label.theme-card[data-theme-id="${customId}"]`)).toContainText(
       name,
+    );
+    await expect(settings.getByTestId('app-preview').locator('.tp-button')).toHaveCSS(
+      'background-color',
+      rgb('#7a3e9d'),
     );
     await page.mouse.move(0, 0);
     // On a desktop only Settings' content scrolls (T51, A942).
     await page.evaluate(() => document.querySelector('.settings-content')?.scrollTo(0, 0));
     await page.screenshot({ path: join(dir, 'appearance-desktop.png') });
-    await editor.screenshot({ path: join(dir, 'theme-editor-desktop.png') });
+    await settings.getByRole('button', { name: `Customize ${name}…` }).click();
+    await expect(editor).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: join(dir, 'appearance-phone.png') });
@@ -273,6 +282,7 @@ test.describe.serial('T28: a custom theme', () => {
           device.evaluate(() => document.documentElement.style.getPropertyValue('--pm-accent')),
         )
         .toBe('#7a3e9d');
+      await device.getByTestId('theme-customize').click();
       await expect(
         device.getByTestId('custom-theme-editor').getByLabel('Name', { exact: true }),
       ).toHaveValue(name);
@@ -287,6 +297,7 @@ test.describe.serial('T28: a custom theme', () => {
     // Shown before the workspace is read: this device remembers the last theme.
     await page.reload();
     await expect(html(page)).toHaveAttribute('data-theme', customId);
+    await page.getByTestId('theme-customize').click();
     await page.getByRole('button', { name: 'Delete This Theme' }).click();
     await page.getByRole('button', { name: 'Delete Theme' }).click();
     await expect(html(page)).toHaveAttribute('data-theme', 'nord');

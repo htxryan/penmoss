@@ -325,17 +325,19 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
     () => Boolean(desktop()?.updates),
   );
   useGitNotebookCommands(currentNoteId, (text, ok) => setMoved({ text, ok }));
+  // Settings → GitHub, which was Status (PEN-146): the id stays, so keys bound to it still work.
   useCommand('app.status', () => {
     if (overlay) close(false);
-    navigate('/settings/status');
+    navigate('/settings/github');
   });
   useCommand('app.appearance', () => {
     if (overlay) close(false);
     navigate('/settings/appearance');
   });
+  // Settings → Sidebar, which was Display (PEN-146): the id stays for the keys bound to it.
   useCommand('app.display', () => {
     if (overlay) close(false);
-    navigate('/settings/display');
+    navigate('/settings/sidebar');
   });
   useCommand('app.symbols', () => {
     if (overlay) close(false);

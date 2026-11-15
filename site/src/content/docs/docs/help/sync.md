@@ -16,7 +16,7 @@ Each device keeps a full copy of its notebooks and works on that copy. Sync is a
 | Android, app closed | Soon after you leave the app                                               | About every 15 minutes ([The Android app](/docs/install/android/#syncing-in-the-background)) |
 | Agents (MCP server) | A minute after the agent's edits settle, and when it stops                 | Every two minutes                                                                            |
 
-**Sync Now** syncs at once. Each notebook's timing can be changed in **Settings → Notebooks**.
+**Sync Now** syncs at once. Each notebook's timing can be changed on the Mac on the **Sync** tab of its page in Settings: **Push Changes** (**After 12 Seconds** by default, up to **After 10 Minutes**) and **Pull Changes** (**Every Minute** by default, up to **Every Hour**). **Details**, at the foot of the tab, shows the remote, the branch and folder, and anything that needs a look, such as files edited by hand.
 
 Each notebook's section in the sidebar shows its state with a dot; its tooltip says **Synced**, **Offline**, **Pushing…** or why it stopped.
 
@@ -40,9 +40,9 @@ Agents are careful in one more way: an agent's edit is refused if the part of th
 
 ## When sync stops
 
-If the host refuses a push, the notebook says **Sync Stopped** with the host's own words, and your changes wait on the device. Nothing is lost. The notebook's row in the sidebar turns red, with a (!) at its end, and the open note's status bar shows **Sync Stopped** in red; click either to open the notebook's page in **Settings → Notebooks**, which says why and has **Sync Now**. Penmoss keeps trying, and the status bar and the notebook's row in the sidebar stay **Sync Stopped** while it does: they go back to normal only once a sync gets further than the one that stopped, or lands. The notebook's page shows each try as **Syncing**. Common reasons:
+If the host refuses a push, the notebook says **Sync Stopped** with the host's own words, and your changes wait on the device. Nothing is lost. The notebook's row in the sidebar turns red, with a (!) at its end, and the open note's status bar shows **Sync Stopped** in red; click either to open the notebook's page in Settings, which says why above its tabs and has **Sync Now**. **All Notebooks** shows it too, in red, and the notebook's entry in Settings' list has a red dot. Penmoss keeps trying, and the status bar and the notebook's row in the sidebar stay **Sync Stopped** while it does: they go back to normal only once a sync gets further than the one that stopped, or lands. The notebook's page shows each try as **Syncing**. Common reasons:
 
-- **The token expired or was revoked.** Save a new one in **Settings → Notebooks**.
+- **The token expired or was revoked.** Save a new one on the **Git** tab of the notebook's page in Settings.
 - **GitHub refused your email (GH007).** Set the notebook's **Commit email** to your GitHub no-reply address. See [Commits and your email](/docs/first-notebook/#commits-and-your-email).
 - **The branch is protected**, or requires signed commits. Allow pushes to it, or turn on signing.
 - **The branch was deleted.** Penmoss will not start it again by itself.

@@ -95,6 +95,6 @@ class FeedbackFormTest {
     @Test
     fun theFormSaysQueuedAndRefusedInItsWords() {
         assertEquals("Queued, will send when you’re online.", FeedbackFormModel.queuedMessage(FeedbackOutbox.OFFLINE))
-        assertTrue(FeedbackFormModel.failedMessage(403, "Feedback comes from the Penmoss apps only.").endsWith("kept in Settings → About, where you can edit, retry or discard it."))
+        assertTrue(FeedbackFormModel.failedMessage(403, "Feedback comes from the Penmoss apps only.").endsWith("kept in Settings → GitHub, where you can edit, retry or discard it."))
     }
 }

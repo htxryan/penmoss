@@ -20,7 +20,7 @@ When you connect an agent, Penmoss makes it its own copy (a clone) of the notebo
 - [Agent activity](/docs/agents/activity/) lists what each agent moved, made or renamed, with **Undo**.
 - Comments you [send to an agent](/docs/agents/comments/) reach its session.
 
-Connect each agent in **Settings → Agents**: choose the notebook, type the agent's name, and choose **Connect an Agent**. The copy is named after both, such as `notes-claude-code`. Penmoss also makes one copy for every agent by itself, marked **Made by Penmoss for every agent on this Mac**, but its edits are all named "Agent".
+Connect each agent in **Settings → Agents**: choose **Connect an Agent…** on the notebook's row, type the agent's name, and choose **Connect**. The copy is named after both, such as `notes-claude-code`. Penmoss also makes one copy for every agent by itself, marked **Made by Penmoss for every agent on this Mac**, but its edits are all named "Agent".
 
 ## Point an agent at a note
 
@@ -52,7 +52,7 @@ The setup commands Penmoss gives you run the CLI inside the app (`'/Applications
 
 :::note[Agents connected before November 2026]
 Their commands name `/Applications/Penmoss.app/Contents/MacOS/Penmoss` instead. They still work, but while one runs, opening Penmoss can take a moment longer. Copy the new command from **Settings → Agents** once and add the server again (in Claude Code, `claude mcp remove` the old one first).
-::: To type `penmoss` in a terminal, install the command: **Settings → Agents → The penmoss Command → Install Command**. See [Install the CLI](/docs/reference/cli/#install).
+::: To type `penmoss` in a terminal, install the command: **Settings → Agents → The penmoss Command → Install Command**. Once it is installed and on your PATH, Agents shows it on one line, **penmoss command installed**; choose **Manage…** to reinstall or remove it. See [Install the CLI](/docs/reference/cli/#install).
 
 ## When agents sync
 
@@ -60,7 +60,7 @@ The MCP server syncs when it starts, pushes a minute after the agent's edits set
 
 ## Disconnect an agent
 
-In **Settings → Agents**, choose the notebook and **Disconnect** the agent. Penmoss removes its copy, never your repository. If the copy has changes it has not pushed, Penmoss says so and offers **Disconnect Anyway** (with Touch ID) or **Keep It**. Then remove its server from the agent too, for example with `claude mcp remove penmoss-notes-claude-code`.
+In **Settings → Agents**, open the notebook's row and choose **Disconnect** by the agent. Penmoss removes its copy, never your repository. If the copy has changes it has not pushed, Penmoss says so and offers **Disconnect Anyway** (with Touch ID) or **Keep It**. Then remove its server from the agent too, for example with `claude mcp remove penmoss-notes-claude-code`.
 
 ## Claude on the web and phone
 

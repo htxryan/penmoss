@@ -120,7 +120,7 @@ describe('Settings → Updates: release notes', () => {
     ]);
     const earlier = block('release-notes-earlier') as HTMLDetailsElement;
     expect(earlier.open).toBe(false);
-    expect(earlier.querySelector('summary')?.textContent).toBe('Earlier versions');
+    expect(earlier.querySelector('summary')?.textContent).toBe('Earlier Versions');
     expect(headings(earlier)).toEqual(['0.2.0', 'New']);
   });
 

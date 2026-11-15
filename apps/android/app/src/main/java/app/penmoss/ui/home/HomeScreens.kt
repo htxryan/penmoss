@@ -366,7 +366,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
             Column(Modifier.fillMaxSize()) {
                 if (slowSync && !pulled) LinearProgressIndicator(Modifier.fillMaxWidth().testTag("syncProgress"))
                 // The sidebar's shortcuts as one row of icons (T51, A932); Display hides any but Search.
-                if (!ui.reordering) HomeShortcutRow(ui.shortcuts, actions.onSearch, actions.onToday, actions.onThisWeek, actions.onGraph, actions.onCommands)
+                if (!ui.reordering) HomeShortcutRow(ui.shortcuts, actions.onSearch, actions.onToday, actions.onThisWeek, actions.onGraph, actions.onCommands, actions.onTags)
                 // The status line became a dot on the section titles (T51, A933). Going offline or
                 // stopping is still announced, from above the list, which a dot in it scrolled
                 // away would not be (A530).
@@ -931,9 +931,9 @@ internal const val SLOW_SYNC_MS = 1_000L
 internal val FAB_CLEARANCE = 88.dp
 
 /**
- * Home's shortcuts as one row of icons (T51, A932), the sidebar's: Search, Today, This Week, Graph
- * and Commands, each with its name as a tooltip and content description. Settings → Display hides
- * any but Search; hidden, they still run from their keys and Search's actions (A576).
+ * Home's shortcuts as one row of icons (T51, A932), the sidebar's: Search, Tags (A1438), Today,
+ * This Week, Graph and Commands, each with its name as a tooltip and content description.
+ * Settings → Home hides any but Search; hidden, they still run from their keys and Search's actions (A576).
  */
 @Composable
 internal fun HomeShortcutRow(
@@ -943,9 +943,12 @@ internal fun HomeShortcutRow(
     onThisWeek: () -> Unit,
     onGraph: () -> Unit,
     onCommands: () -> Unit,
+    onTags: () -> Unit = {},
 ) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp).testTag("homeShortcuts"), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    // Six 48dp targets fit a 320dp phone with no gap between them (each icon is 24dp in its 48).
+    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp).testTag("homeShortcuts")) {
         TipIconButton(SettingsIcons.Search, "Search", onClick = onSearch, modifier = Modifier.testTag("homeSearch"))
+        if (shortcuts.tags) TipIconButton(SettingsIcons.Tag, "Tags", onClick = onTags, modifier = Modifier.testTag("homeTagsShortcut"))
         if (shortcuts.today) TipIconButton(SettingsIcons.Today, "Today", onClick = onToday, modifier = Modifier.testTag("homeToday"))
         if (shortcuts.thisWeek) TipIconButton(SettingsIcons.Week, "This Week", onClick = onThisWeek, modifier = Modifier.testTag("homeThisWeek"))
         if (shortcuts.graph) TipIconButton(SettingsIcons.Graph, "Graph", onClick = onGraph, modifier = Modifier.testTag("homeGraph"))

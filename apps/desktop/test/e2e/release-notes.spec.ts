@@ -88,7 +88,7 @@ for (const mode of ['light', 'dark'] as const) {
 
     const earlier = page.getByTestId('release-notes-earlier');
     await expect(earlier.getByText('Quick capture from the menu bar.')).toBeHidden();
-    await earlier.getByText('Earlier versions').click();
+    await earlier.getByText('Earlier Versions').click();
     await expect(earlier.getByRole('heading', { level: 3 })).toHaveText(['0.2.0', '0.1.9']);
     await expect(earlier.getByText('Quick capture from the menu bar.')).toBeVisible();
 
@@ -101,7 +101,8 @@ for (const mode of ['light', 'dark'] as const) {
         const style = getComputedStyle(element);
         return { size: style.fontSize, color: style.color, leading: style.lineHeight };
       });
-    const intro = await text(settings.locator(':scope > p').first());
+    // The page's own explanation went with PEN-146's version card: the first note sets the bar.
+    const intro = await text(settings.getByRole('listitem').first());
     expect(intro.size).toBe('14px');
     for (const note of await settings.getByRole('listitem').all()) {
       expect(await text(note)).toEqual(intro);

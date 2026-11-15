@@ -194,12 +194,15 @@ test('signs in with GitHub, lists the repositories with it, and adds a notebook 
   expect(host.addInputs.at(-1)).toMatchObject({ githubSignIn: true });
   expect(JSON.stringify(host.addInputs)).not.toContain(host.githubRepos.options.token);
 
-  // Settings → Status → GitHub Token: whose it is, and Sign Out.
-  await page.goto('/settings/status');
-  await expect(page.getByTestId('github-token-saved')).toContainText(
-    'Signed in to GitHub as ryan.',
+  // Settings → GitHub (PEN-146): whose it is, and Sign Out; no second sign-in on offer.
+  await page.goto('/settings/github');
+  await expect(page.getByTestId('github-account')).toContainText('ryan');
+  await expect(page.getByTestId('github-token-saved')).toHaveText(
+    'Signed in with GitHub · kept in this Mac’s Keychain',
   );
   await expect(page.getByTestId('github-token-remove')).toHaveText('Sign Out');
+  await expect(page.getByTestId('github-token').getByTestId('github-signin')).toHaveCount(0);
+  await expect(page.getByTestId('github-token-open')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
@@ -244,7 +247,7 @@ test('a sign-in still waiting when the form is opened again lists the repositori
   await page.getByTestId('github-signin-start').click();
   await expect(page.getByTestId('github-signin-code')).toBeVisible();
   // Away and back: the form is new, the sign-in is still waiting in main.
-  await page.goto('/settings/status');
+  await page.goto('/settings/agents');
   await page.goto('/settings/git-notebooks');
   await page.getByTestId('git-add-open').click();
   await expect(page.getByTestId('github-signin-code')).toHaveText('WDJB-MJHT');
@@ -270,8 +273,14 @@ test('a sign-in GitHub refuses later asks to sign in again, and Settings says so
     'GitHub refused Penmoss’s sign-in',
   );
   await expect(form.getByTestId('github-signin-start')).toHaveText('Sign In to GitHub Again');
-  await page.goto('/settings/status');
+  // Settings → GitHub says so, and offers the sign-in again, and the token (PEN-146).
+  await page.goto('/settings/github');
   await expect(page.getByTestId('github-token-problem')).toContainText('Sign in again');
+  const github = page.getByTestId('github-token');
+  await expect(github.getByTestId('github-signin-start')).toHaveText('Sign In to GitHub Again');
+  await expect(github.getByTestId('github-token-open')).toHaveText('Use a Token Instead…');
+  await github.getByTestId('github-token-open').click();
+  await expect(github.getByTestId('github-token-input')).toBeFocused();
 });
 
 test('a build without Penmoss’s GitHub app offers no sign-in', async ({ page, host }) => {
@@ -296,4 +305,39 @@ test('the sign-in code fits a narrow window', async ({ page, host }) => {
   expect(overflow).toBeLessThanOrEqual(0);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/sign-in-narrow.png` });
   await page.getByTestId('github-signin-cancel').click();
+});
+
+test('Settings → GitHub signs in with the same device sign-in, and Sign Out forgets it (PEN-146)', async ({
+  page,
+  host,
+}) => {
+  test.setTimeout(60_000);
+  const errors = collectErrors(page);
+  host.offerSignIn = true;
+  await page.goto('/settings/github');
+  const github = page.getByTestId('github-token');
+  await expect(github.getByTestId('github-account')).toContainText('Not Signed In');
+  // Sign In with GitHub first; the token is the other way, behind Use a Token Instead….
+  await expect(github.getByTestId('github-signin-start')).toHaveText('Sign In with GitHub');
+  await expect(github.getByTestId('github-token-input')).toHaveCount(0);
+  await expect(github.getByTestId('github-token-open')).toHaveText('Use a Token Instead…');
+  // What the sign-in is for.
+  await expect(github.locator('[data-setting="adding-notebooks"]')).toContainText(
+    'Adding Notebooks',
+  );
+  await expect(github.locator('[data-setting="send-feedback"]')).toContainText(
+    'Opens issues in htxryan/penmoss',
+  );
+
+  await github.getByTestId('github-signin-start').click();
+  await expect(github.getByTestId('github-signin-code')).toHaveText('WDJB-MJHT');
+  host.githubRepos.approve();
+  await expect(github.getByTestId('github-account')).toContainText('ryan');
+  await expect(github.getByTestId('github-token-saved')).toContainText('Signed in with GitHub');
+  await expect(github.getByTestId('github-signin-start')).toHaveCount(0);
+
+  await github.getByTestId('github-token-remove').click();
+  await expect(github.getByTestId('github-account')).toContainText('Not Signed In');
+  expect(await host.githubToken.status()).toMatchObject({ saved: false });
+  expect(errors).toEqual([]);
 });

@@ -28,8 +28,8 @@ test('Quick Access removes from its menu, reorders, and names the notebook when 
   await page.keyboard.press('Alt+ArrowUp');
   await expect.poll(async () => (await ids()).slice(-2)).toEqual([b, a]);
 
-  // Settings → Display: each pin's notebook under its title.
-  await page.goto('/settings/display');
+  // Settings → Sidebar: each pin's notebook under its title.
+  await page.goto('/settings/sidebar');
   await expect(page.getByTestId('quick-access-notebook')).not.toBeChecked();
   await page.getByTestId('quick-access-notebook').check();
   await expect.poll(() => storedSetting(page, 'quickAccess.showNotebook')).toBe(true);
@@ -50,7 +50,7 @@ test('Quick Access removes from its menu, reorders, and names the notebook when 
       0,
     );
   }
-  await page.goto('/settings/display');
+  await page.goto('/settings/sidebar');
   await expect(page.getByTestId('quick-access-notebook')).toBeChecked();
   await page.getByTestId('quick-access-notebook').uncheck();
   await expect.poll(() => storedSetting(page, 'quickAccess.showNotebook')).toBe(false);

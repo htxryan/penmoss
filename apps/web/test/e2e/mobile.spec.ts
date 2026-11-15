@@ -136,15 +136,17 @@ test('a phone reaches Settings → Notebooks, History and Trash from a note', as
   await expect(page.locator('aside.note-side')).toHaveCount(0);
   await expect(rail).toBeHidden();
 
-  // Settings → Notebooks (the notebooks on this Mac, T59), from the drawer.
+  // Settings → All Notebooks (the notebooks on this Mac, T59), from the drawer.
   await openDrawer(page);
   await drawer(page).getByRole('link', { name: 'Settings', exact: true }).tap();
   await expect(page).toHaveURL(/\/settings$/);
   const sections = page.getByRole('navigation', { name: 'Settings sections' });
-  await sections.getByRole('link', { name: 'Notebooks', exact: true }).tap();
+  await sections.getByRole('link', { name: 'All Notebooks', exact: true }).tap();
   await expect(page).toHaveURL(/\/settings\/git-notebooks$/);
   const gitSettings = page.getByTestId('git-notebooks-settings');
-  await expect(gitSettings.getByRole('heading', { name: 'Notebooks', exact: true })).toBeVisible();
+  await expect(
+    gitSettings.getByRole('heading', { name: 'All Notebooks', exact: true }),
+  ).toBeVisible();
   // The list, then the notebook's own page (A1098).
   await expect(gitSettings.getByTestId('git-notebook-row')).toHaveCount(1);
   await expectNoSideScroll(page, 'git notebooks');
@@ -247,9 +249,9 @@ test('phone controls are at least 44 px and nothing scrolls sideways', async ({ 
   await expectNoSideScroll(page, 'drawer');
   await page.keyboard.press('Escape');
 
-  // Settings → Keyboard shortcuts: one compact row per command, its icon buttons side by side.
+  // Settings → Keyboard Shortcuts: one compact row per command, its keys and Remove side by side.
   await page.goto('/settings/shortcuts');
-  const row = page.locator('tr[data-command-row="app.palette"]');
+  const row = page.locator('[data-command-row="app.palette"]');
   const change = row.getByRole('button', { name: 'Change the Shortcut for Command Palette' });
   const remove = row.getByRole('button', { name: 'Remove the Shortcut for Command Palette' });
   await expectTouchSize(change, 'Change');

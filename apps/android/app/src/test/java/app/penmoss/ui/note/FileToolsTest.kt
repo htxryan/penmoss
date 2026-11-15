@@ -14,6 +14,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
@@ -25,7 +26,7 @@ import app.penmoss.editor.WebPictureSetting
 import app.penmoss.engine.bridge.FileAction
 import app.penmoss.ui.common.PenmossTheme
 import app.penmoss.ui.open
-import app.penmoss.ui.settings.StorageSection
+import app.penmoss.ui.settings.StorageScreen
 import app.penmoss.ui.settings.StorageUse
 import app.penmoss.ui.settings.formatBytes
 import org.junit.Assert.assertEquals
@@ -185,6 +186,7 @@ class FileToolsTest {
         assertEquals(1, attached)
     }
 
+    /** Settings → Storage (PEN-146 option B): its own screen, Clear… asks first, the choice in plain words. */
     @Test
     fun storageShowsTheSpaceUsedAndTheWebPicturesSetting() {
         val chosen = mutableListOf<WebPictureSetting>()
@@ -193,26 +195,29 @@ class FileToolsTest {
         var setting by mutableStateOf(WebPictureSetting.ON)
         compose.setContent {
             PenmossTheme {
-                androidx.compose.foundation.layout.Column(
-                    androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
-                ) {
-                    StorageSection(use, setting, onWebPictures = { chosen += it }, onClearWebPictures = { cleared++ })
-                }
+                StorageScreen(use, setting, onWebPictures = { chosen += it }, onClearWebPictures = { cleared++ }, onBack = {})
             }
         }
-        compose.onNodeWithTag("storageFiles", useUnmergedTree = true).assertTextEquals("Counting…")
+        compose.onNodeWithTag("storageFiles", useUnmergedTree = true).assertTextEquals("Counting… · files over 10 MB upload on Wi-Fi")
         compose.onNodeWithTag("clearWebPictures").assertIsNotEnabled()
-        use = StorageUse(files = 12L * 1024 * 1024, webPictures = 1536)
-        compose.onNodeWithTag("storageFiles", useUnmergedTree = true).assertTextEquals("12 MB")
-        compose.onNodeWithTag("storageWebPictures", useUnmergedTree = true).assertTextEquals("1.5 KB kept to show again")
+        use = StorageUse(files = 12L * 1024 * 1024, webPictures = 1536, webPictureCount = 3)
+        compose.onNodeWithTag("storageFiles", useUnmergedTree = true).assertTextEquals("12 MB · files over 10 MB upload on Wi-Fi")
+        compose.onNodeWithTag("storageWebPictures", useUnmergedTree = true).assertTextEquals("3 kept to show again · 1.5 KB")
+        // Clear… asks first: Cancel clears nothing.
         compose.onNodeWithTag("clearWebPictures").performClick()
+        compose.onNodeWithText("Cancel").performClick()
+        assertEquals(0, cleared)
+        compose.onNodeWithTag("clearWebPictures").performClick()
+        compose.onNodeWithTag("confirmClearWebPictures").performClick()
         assertEquals(1, cleared)
         compose.onNodeWithTag("webPictures-on").assert(SemanticsMatcher.expectValue(SemanticsProperties.Selected, true))
+        compose.onNodeWithText("Always").assertExists()
         compose.onNodeWithTag("webPictures-wifi").performScrollTo().performClick()
         compose.onNodeWithTag("webPictures-off").performScrollTo().performClick()
         assertEquals(listOf(WebPictureSetting.WIFI_ONLY, WebPictureSetting.OFF), chosen)
         setting = WebPictureSetting.WIFI_ONLY
         compose.onNodeWithTag("webPictures-wifi").assert(SemanticsMatcher.expectValue(SemanticsProperties.Selected, true))
+        compose.onNodeWithText("Sites can tell a note was opened when a picture loads.", substring = true).assertExists()
     }
 
     @Test

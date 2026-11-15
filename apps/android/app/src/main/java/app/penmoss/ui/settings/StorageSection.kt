@@ -1,12 +1,16 @@
 package app.penmoss.ui.settings
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import app.penmoss.ui.common.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -25,45 +29,75 @@ fun formatBytes(bytes: Long): String {
     return "$shown ${units[unit]}"
 }
 
-/** What files and pictures take on this phone (ED12, ED13); null while it is counted. */
-data class StorageUse(val files: Long, val webPictures: Long)
+/** What files and pictures take on this phone (ED12, ED13): every notebook's files, and the web pictures kept. */
+data class StorageUse(val files: Long, val webPictures: Long, val webPictureCount: Int = 0) {
+    val total: Long get() = files + webPictures
+}
+
+/** Load Pictures From the Web's choices (PEN-146), in plain words, as Mode's are. */
+internal val WEB_PICTURE_CHOICES = listOf(
+    WebPictureSetting.ON.key to "Always",
+    WebPictureSetting.WIFI_ONLY.key to "On Wi-Fi",
+    WebPictureSetting.OFF.key to "Never",
+)
 
 /**
- * Sync and storage's storage (T40 P8): the space notes' files and pictures take on this phone,
- * and pictures from web addresses: the per-device Load pictures from the web (On · Wi-Fi only ·
- * Off) and the cache they are kept in, which can be cleared.
+ * Settings → Storage (T40 P8, ED12, ED13; PEN-146 option B): this phone's storage, apart from any
+ * notebook's sync. The space notes' files and pictures take in every notebook here; the pictures
+ * from web addresses kept to show again, with Clear… (which asks first); and Load Pictures From
+ * the Web, per device (A489).
  */
 @Composable
-fun StorageSection(
+fun StorageScreen(
     use: StorageUse?,
     webPictures: WebPictureSetting,
     onWebPictures: (WebPictureSetting) -> Unit,
     onClearWebPictures: () -> Unit,
+    onBack: () -> Unit,
 ) {
-    GroupTitle("Storage on this phone")
-    ListItem(
-        headlineContent = { Text("Files and pictures in notes") },
-        supportingContent = { Text(use?.let { formatBytes(it.files) } ?: "Counting…", Modifier.testTag("storageFiles")) },
-    )
-    // The upload queue's own rule (review PS2): a large file is not sent over mobile data.
-    Help("Files over 10 MB upload on Wi-Fi only.")
-    ListItem(
-        headlineContent = { Text("Pictures from the web") },
-        supportingContent = { Text(use?.let { "${formatBytes(it.webPictures)} kept to show again" } ?: "Counting…", Modifier.testTag("storageWebPictures")) },
-        trailingContent = {
-            TextButton(onClick = onClearWebPictures, enabled = (use?.webPictures ?: 0) > 0, modifier = Modifier.testTag("clearWebPictures")) {
-                Text("Clear")
-            }
-        },
-    )
-    GroupTitle("Load pictures from the web")
-    Help(
-        "Pictures in notes from web addresses are fetched by this phone, without your account. " +
-            "Their sites can tell a note was opened, as on the web. With Wi-Fi only, they wait for a tap on mobile data.",
-    )
-    Column(Modifier.selectableGroup().padding(bottom = 8.dp)) {
-        for (choice in WebPictureSetting.entries) {
-            ChoiceRow(choice.label, null, webPictures == choice, enabled = true, tag = "webPictures-${choice.key}") { onWebPictures(choice) }
+    var clearing by rememberSaveable { mutableStateOf(false) }
+    SectionScreen("Storage", onBack) {
+        ListItem(
+            headlineContent = { Text("Files and Pictures in Notes") },
+            // The upload queue's own rule (review PS2): a large file is not sent over mobile data.
+            supportingContent = { Text((use?.let { formatBytes(it.files) } ?: "Counting…") + " · files over 10 MB upload on Wi-Fi", Modifier.testTag("storageFiles")) },
+        )
+        ListItem(
+            headlineContent = { Text("Pictures From the Web") },
+            supportingContent = {
+                Text(
+                    use?.let { "${it.webPictureCount} kept to show again · ${formatBytes(it.webPictures)}" } ?: "Counting…",
+                    Modifier.testTag("storageWebPictures"),
+                )
+            },
+            trailingContent = {
+                TextButton(onClick = { clearing = true }, enabled = (use?.webPictures ?: 0) > 0, modifier = Modifier.testTag("clearWebPictures")) {
+                    Text("Clear…")
+                }
+            },
+        )
+        GroupTitle("Load Pictures From the Web")
+        Segments(WEB_PICTURE_CHOICES, webPictures.key, enabled = true, tag = "webPictures") { key ->
+            WebPictureSetting.entries.firstOrNull { it.key == key }?.let(onWebPictures)
         }
+        Help(
+            "Sites can tell a note was opened when a picture loads. Pictures in notes from web addresses are fetched by this phone; " +
+                "with On Wi-Fi, they wait for a tap on mobile data.",
+            Modifier.padding(top = 4.dp),
+        )
+    }
+    if (clearing) {
+        AlertDialog(
+            onDismissRequest = { clearing = false },
+            title = { Text("Clear Pictures From the Web?") },
+            text = { Text("Penmoss fetches each one again the next time a note shows it. Your notes and their own files stay as they are.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    clearing = false
+                    onClearWebPictures()
+                }, modifier = Modifier.testTag("confirmClearWebPictures")) { Text("Clear", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { clearing = false }) { Text("Cancel") } },
+        )
     }
 }

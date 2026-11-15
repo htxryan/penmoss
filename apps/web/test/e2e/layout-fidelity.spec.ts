@@ -83,12 +83,10 @@ test('Settings, menus, Trash and search keep their columns, and choosing moves n
         return [b.x, b.y, b.width, b.height].map((n) => Math.round(n * 10) / 10);
       }),
     );
-  // Settings → Display: a group's label and a field's label in one type, as far over their
-  // controls, each group as far under what is above it (A988).
-  await page.goto('/settings/display');
-  const labels = page.locator(
-    '.settings-content :is(.display-toggles > legend, .settings-field > span:first-child)',
-  );
+  // Settings → Sidebar: every row's label in one type, and each group as far under its
+  // subhead (A988, in PEN-146's rows).
+  await page.goto('/settings/sidebar');
+  const labels = page.locator('.settings-content .lf-row-label');
   await expect(labels.first()).toBeVisible();
   const type = await labels.evaluateAll((all) =>
     all.map((el) => {
@@ -98,25 +96,25 @@ test('Settings, menus, Trash and search keep their columns, and choosing moves n
   );
   expect(type.length).toBeGreaterThan(2);
   expect(new Set(type).size).toBe(1);
-  const above = await page
-    .locator('.settings-content .settings-section > :is(.display-toggles, .settings-field)')
-    .evaluateAll((all) =>
-      all.map((el) => {
-        const prev = el.previousElementSibling!.getBoundingClientRect();
-        return Math.round(el.getBoundingClientRect().top - prev.bottom);
-      }),
-    );
+  const above = await page.locator('.settings-content .lf-sub + .lf-group').evaluateAll((all) =>
+    all.map((el) => {
+      const prev = el.previousElementSibling!.getBoundingClientRect();
+      return Math.round(el.getBoundingClientRect().top - prev.bottom);
+    }),
+  );
+  expect(above.length).toBe(2);
   expect(new Set(above).size).toBe(1);
   // A section's actions are one height. (Settings → Notebooks, whose link drawn as a button this
-  // measured, went with the server's notebooks, A912: the git notebook's card has the actions.)
+  // measured, went with the server's notebooks, A912: the git notebook's page has the actions,
+  // Sync Now in its header and its Overview's, PEN-146.)
   await page.goto('/settings/git-notebooks');
   await page.getByTestId('git-notebook-row').first().click();
   await expect(page.getByTestId('git-sync-now')).toBeVisible();
-  const buttons = await box('[data-testid="git-notebook"] .settings-actions .btn');
+  const buttons = await box('[data-testid="git-notebook"] .btn');
   expect(buttons.length).toBeGreaterThan(1);
   expect(new Set(buttons.map((each) => each[3])).size).toBe(1);
-  // Appearance → Note Panel (this device's own): choosing a segment moves none of them.
-  await page.goto('/settings/appearance');
+  // Note → Note Panel (this device's own): choosing a segment moves none of them.
+  await page.goto('/settings/note');
   const panel = page.getByTestId('note-panel-setting');
   await expect(panel).toBeVisible();
   const options = '[data-testid="note-panel-setting"] .seg-option';

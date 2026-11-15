@@ -28,27 +28,30 @@ function rule(selector: string): string {
   return new RegExp(`(?:^|\\n)${escaped}\\s*\\{([^}]*)\\}`).exec(css)?.[1] ?? '';
 }
 
-describe('Settings → Display after the T53 pass', () => {
+describe('Settings → Sidebar (Display until PEN-146) after the T53 pass', () => {
   it('names the Quick Access setting as A984 does', () => {
-    const html = render('/settings/display');
-    expect(html).toContain('Show Notebook Names in Quick Access');
+    const html = render('/settings/sidebar');
+    // Under Quick Access, on its own row (PEN-146).
+    const row = html.slice(html.indexOf('data-setting="quick-access"'));
+    expect(row.slice(0, row.indexOf('</li>'))).toContain('Show Notebook Names');
     expect(html).not.toContain('notebook under its title');
   });
 
   // Open or Close Notebooks went with the server's notebooks (T59, D49).
   it('names the shortcuts always on the sidebar (A979)', () => {
-    expect(render('/settings/display')).toContain(
+    expect(render('/settings/sidebar')).toContain(
       'New Note, Settings, Feedback and Trash are always on the sidebar.',
     );
   });
 
-  it('draws the Recent Notes count as a field, its own size', () => {
-    const tag =
-      render('/settings/display')
-        .match(/<input[^>]*>/g)
-        ?.find((input) => input.includes('data-testid="recent-count"')) ?? '';
-    expect(tag).toContain('class="input settings-count"');
-    expect(rule('.settings-field > .settings-count')).toMatch(/width:\s*6rem/);
+  it('draws the Recent Notes count as a − and + stepper on its row, as on Android (PEN-146)', () => {
+    const html = render('/settings/sidebar');
+    const row = html.slice(html.indexOf('data-setting="recent-notes"'));
+    const recent = row.slice(0, row.indexOf('</li>'));
+    expect(recent).toContain('Shows 10 notes');
+    expect(recent).toMatch(/<output[^>]*data-testid="recent-count"[^>]*>10<\/output>/);
+    expect(recent).toContain('aria-label="Fewer Recent Notes"');
+    expect(recent).toContain('aria-label="More Recent Notes"');
   });
 });
 

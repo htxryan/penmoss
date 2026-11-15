@@ -11,8 +11,8 @@ You need Penmoss on your Mac with the notebook added, and the agent installed: [
 
 ## Connect it
 
-1. In Penmoss, open **Settings → Agents** and choose the notebook.
-2. In **Another agent's name**, type the agent's name (Penmoss suggests **Claude Code**), and choose **Connect an Agent**.
+1. In Penmoss, open **Settings → Agents**. Under **Connected on This Mac**, find the notebook and choose **Connect an Agent…** on its row. The notebook opens to show its agents.
+2. In **Agent Name**, type the agent's name (Penmoss suggests **Claude Code**), and choose **Connect**.
 3. Confirm with Touch ID or your password. Penmoss makes the agent its own copy of the notebook, named after both, such as `notes-claude-code`, and shows how to add it.
 4. Add the server to the agent:
 
@@ -102,7 +102,7 @@ Restart the client after you change it.
 
 Claude Code can also receive the [comments](/docs/comments/) you send it from a note, read the thread, edit the note and reply. This uses Claude Code's channels, a research preview.
 
-1. In **Settings → Agents**, turn on **Receive comments sent to this agent** for Claude Code.
+1. In **Settings → Agents**, open the notebook and turn on **Receive comments sent to this agent** for Claude Code.
 2. Copy and run the new **Claude Code: run in a terminal** command, which adds `--channel`. If you added the server before, run `claude mcp remove penmoss-notes-claude-code` first.
 3. Start Claude Code with the command under **Then start Claude Code with its channel**:
 

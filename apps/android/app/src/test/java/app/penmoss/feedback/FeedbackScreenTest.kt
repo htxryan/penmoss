@@ -3,12 +3,15 @@ package app.penmoss.feedback
 import app.penmoss.stopScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -300,13 +303,60 @@ class FeedbackScreenTest {
         assertEquals("", FeedbackFormModel(service, scope).draft.value.title)
     }
 
+    /** Settings → GitHub (PEN-146, was About): the account, Sign Out once confirmed, the token path and Send Feedback. */
     @Test
-    fun aboutShowsTheVersionAndSendsFeedback() {
+    fun gitHubShowsTheAccountSignsOutOnceConfirmedAndSendsFeedback() {
         var opened = 0
-        compose.setContent { PenmossTheme { AboutScreen("0.31 (build 431425)", onSendFeedback = { opened++ }, onBack = {}) } }
-        compose.onNodeWithText("Version 0.31 (build 431425)").assertIsDisplayed()
-        compose.onNodeWithTag("aboutSendFeedback").assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, androidx.compose.ui.semantics.Role.Button)).performClick()
+        var signedOut = 0
+        var token = 0
+        compose.setContent {
+            PenmossTheme {
+                GitHubScreen(
+                    login = "htxryan", signedIn = true, signIn = SignInState.Idle, canSignIn = true,
+                    onSignIn = {}, onCancelSignIn = {}, onSignOut = { signedOut++ }, onToken = { token++ }, onBack = {},
+                    onSendFeedback = { opened++ },
+                )
+            }
+        }
+        compose.onNodeWithTag("githubLogin", useUnmergedTree = true).assertTextEquals("htxryan")
+        compose.onNodeWithText("Used For").assertIsDisplayed()
+        compose.onNodeWithTag("githubSignIn").assertTextEquals("Sign In Again")
+        compose.onNodeWithTag("githubSignOut").performClick()
+        assertEquals(0, signedOut)
+        compose.onNodeWithTag("githubSignOutConfirm").performClick()
+        assertEquals(1, signedOut)
+        compose.onNodeWithTag("githubUseToken").performClick()
+        assertEquals(1, token)
+        compose.onNodeWithTag("githubSendFeedback").performScrollTo()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, androidx.compose.ui.semantics.Role.Button)).performClick()
         assertEquals(1, opened)
+        // No version here: it is What's New's.
+        compose.onNodeWithText("Version", substring = true).assertDoesNotExist()
+    }
+
+    /** Sign In with GitHub (PEN-146): the code to enter while it waits, with Cancel; how it ended, after. */
+    @Test
+    fun signInShowsTheCodeWhileItWaitsAndHowItEnded() {
+        var state by mutableStateOf<SignInState>(SignInState.Waiting("WDJB-MJHT", "https://github.com/login/device", expiresAt = 0))
+        var cancelled = 0
+        compose.setContent {
+            PenmossTheme {
+                GitHubScreen(
+                    login = null, signedIn = false, signIn = state, canSignIn = true,
+                    onSignIn = {}, onCancelSignIn = { cancelled++ }, onSignOut = {}, onToken = {}, onBack = {},
+                )
+            }
+        }
+        compose.onNodeWithTag("githubLogin", useUnmergedTree = true).assertTextEquals("Not signed in")
+        compose.onNodeWithTag("githubUserCode").assertTextEquals("WDJB-MJHT")
+        compose.onNodeWithTag("githubSignIn").assertDoesNotExist()
+        compose.onNodeWithTag("githubSignInCancel").performClick()
+        assertEquals(1, cancelled)
+        state = SignInState.Denied
+        compose.onNodeWithTag("githubSignInMessage").assertTextEquals("GitHub says the sign-in was declined. Nothing was kept.")
+        compose.onNodeWithTag("githubSignIn").assertTextEquals("Sign In with GitHub")
+        // Without Send Feedback's form (the app's home), it says where to send it from.
+        compose.onNodeWithText("Send it from a notebook’s ⋮ menu.", substring = true).performScrollTo().assertIsDisplayed()
     }
 
     @Test

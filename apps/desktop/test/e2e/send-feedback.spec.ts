@@ -15,7 +15,7 @@ import {
 // (capturePage) before the form is drawn and offered unticked, the context naming the Mac app
 // and the window it was sent from. T57 (A1010–A1012): the main process files it with the
 // person's own GitHub token, against the fake GitHub on this checkout's port (A1177; PENMOSS_TEST_GITHUB_API): it
-// waits in the outbox until a token is saved in Settings → Status → GitHub Token, a token
+// waits in the outbox until a token is saved in Settings → GitHub (PEN-146), a token
 // GitHub refuses is said plainly and not kept, and the issue is filed once one is saved. The
 // web suite (apps/web/test/e2e/send-feedback.spec.ts) covers the form.
 
@@ -133,16 +133,22 @@ test('Help → Send feedback in a note window: the window offered unticked, file
   await form.getByTestId('feedback-send').click();
   // No GitHub token yet: it waits in the outbox, and says where to add one.
   await expect(form.getByTestId('feedback-queued')).toContainText(
-    'Add your GitHub token in Settings → Status → GitHub Token to send it.',
+    'Sign in to GitHub in Settings → GitHub to send it.',
     { timeout: 20_000 },
   );
   expect(await fakeIssue(issueTitle)).toBeUndefined();
   await form.getByTestId('feedback-close').click();
 
-  // Settings → Status → GitHub Token, in the main window.
-  await go(page, '/settings/status');
+  // Settings → GitHub, in the main window (PEN-146): the report waiting is counted there. With
+  // Penmoss's GitHub app in the build, the token's field is behind Use a Token Instead….
+  await go(page, '/settings/github');
   const section = page.getByTestId('github-token');
   await expect(section.getByTestId('github-token-none')).toBeVisible();
+  await expect(section.getByTestId('github-feedback-waiting')).toHaveText('· 1 report waiting');
+  const field = section.getByTestId('github-token-input');
+  const open = section.getByTestId('github-token-open');
+  await expect(field.or(open)).toBeVisible();
+  if (await open.isVisible()) await open.click();
   // A token GitHub does not accept is refused in plain words, and not kept.
   await section.getByTestId('github-token-input').fill('ghp_notthefaketoken000000000000000000000');
   await section.getByTestId('github-token-save').click();
@@ -153,8 +159,10 @@ test('Help → Send feedback in a note window: the window offered unticked, file
   // The fake's token: kept, its account named, and the report waiting for it is filed.
   await section.getByTestId('github-token-input').fill('fake-local-token');
   await section.getByTestId('github-token-save').click();
-  await expect(section.getByTestId('github-token-saved')).toHaveText('Saved for htxryan.');
-  await expect(section.getByTestId('github-token-input')).toHaveValue('');
+  await expect(section.getByTestId('github-account')).toContainText('htxryan');
+  await expect(section.getByTestId('github-token-saved')).toHaveText(
+    'Token saved · kept in this Mac’s Keychain',
+  );
   await expect(page.getByText('fake-local-token')).toHaveCount(0);
 
   // The note window's outbox holds it, and sends it once the token is saved (A1012).

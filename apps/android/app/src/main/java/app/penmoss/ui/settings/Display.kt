@@ -13,14 +13,15 @@ import app.penmoss.ui.settings.DisplayScreen
 import kotlinx.serialization.json.JsonPrimitive
 
 /*
- * Settings → Display on the phone (T42, A576; T40 ST12, A650): the web's synced `sidebar.*`
- * settings, read by Home. The phone's shortcuts are Home's row of icons (T51, A932): Search,
- * which always shows, then Today, This Week, Graph and Commands. A hidden shortcut still runs
- * from its keys, Search's actions and the launcher, as on the web.
+ * Settings → Home on the phone (T42, A576; T40 ST12, A650; PEN-146): the Mac's Sidebar page, the
+ * synced `sidebar.*` settings Home reads. The phone's shortcuts are Home's row of icons (T51,
+ * A932): Search, which always shows, then Tags (A1438), Today, This Week, Graph and Commands. A
+ * hidden shortcut still runs from its keys, Search's actions and the launcher, as on the Mac.
  */
 
 /** Which of Home's shortcuts show. */
 data class HomeShortcuts(
+    val tags: Boolean = true,
     val today: Boolean = true,
     val thisWeek: Boolean = true,
     val graph: Boolean = true,
@@ -28,6 +29,7 @@ data class HomeShortcuts(
 ) {
     companion object {
         fun of(settings: Settings) = HomeShortcuts(
+            tags = settings.shows(DisplayKeys.TAGS),
             today = settings.shows(DisplayKeys.TODAY),
             thisWeek = settings.shows(DisplayKeys.THIS_WEEK),
             graph = settings.shows(DisplayKeys.GRAPH),
@@ -36,18 +38,19 @@ data class HomeShortcuts(
     }
 }
 
-/** One Display switch: its setting, its name, and where it shows on the phone. */
-data class DisplayChoice(val key: String, val label: String, val where: String, val shown: Boolean)
+/** One of Home's shortcut switches: its setting, its name, and whether it shows. */
+data class DisplayChoice(val key: String, val label: String, val shown: Boolean)
 
-/** The Display switches, in the web's order, with where each shortcut is on the phone. */
+/** Home's shortcut switches, in the Mac's sidebar order (core's `SIDEBAR_ITEMS`). */
 fun displayChoices(settings: Settings): List<DisplayChoice> = listOf(
-    DisplayChoice(DisplayKeys.TODAY, "Today", "An icon in Home’s row", settings.shows(DisplayKeys.TODAY)),
-    DisplayChoice(DisplayKeys.THIS_WEEK, "This Week", "An icon in Home’s row", settings.shows(DisplayKeys.THIS_WEEK)),
-    DisplayChoice(DisplayKeys.GRAPH, "Graph", "An icon in Home’s row", settings.shows(DisplayKeys.GRAPH)),
-    DisplayChoice(DisplayKeys.COMMANDS, "Commands", "An icon in Home’s row: Search with every action", settings.shows(DisplayKeys.COMMANDS)),
+    DisplayChoice(DisplayKeys.TAGS, "Tags", settings.shows(DisplayKeys.TAGS)),
+    DisplayChoice(DisplayKeys.TODAY, "Today", settings.shows(DisplayKeys.TODAY)),
+    DisplayChoice(DisplayKeys.THIS_WEEK, "This Week", settings.shows(DisplayKeys.THIS_WEEK)),
+    DisplayChoice(DisplayKeys.GRAPH, "Graph", settings.shows(DisplayKeys.GRAPH)),
+    DisplayChoice(DisplayKeys.COMMANDS, "Commands", settings.shows(DisplayKeys.COMMANDS)),
 )
 
-/** What the Settings home says of Display: which shortcuts are hidden. */
+/** What the Settings list says of Home: which shortcuts are hidden. */
 fun displaySummary(settings: Settings): String {
     val hidden = displayChoices(settings).filterNot { it.shown }.map { it.label }
     return if (hidden.isEmpty()) "Every shortcut on Home" else "Hidden: ${hidden.joinToString(", ")}"
@@ -66,9 +69,19 @@ internal fun DisplayRoute(graph: app.penmoss.DeviceGraph, onBack: () -> Unit) {
         onSectionHidden = { section, hide ->
             graph.changeSetting(SettingKeys.HIDDEN_SECTIONS, SidebarLayout.toJson(SidebarLayout.withHidden(state.settings.hiddenSections, section, hide)))
         },
+        onSectionOrder = { home -> graph.changeSetting(SettingKeys.SECTION_ORDER, SidebarLayout.toJson(withHomeOrder(state.settings.sectionOrder, home))) },
         onRecentCount = { graph.changeSetting(SettingKeys.RECENT_COUNT, JsonPrimitive(it)) },
         onQuickAccessNotebook = { graph.changeSetting(SettingKeys.QUICK_ACCESS_NOTEBOOK, JsonPrimitive(it)) },
     )
+}
+
+/**
+ * Every section in order with Home's ([home], dragged into a new order) put back in their places:
+ * the Mac's Calendar and Tags keep their slots among them (PEN-146).
+ */
+fun withHomeOrder(order: List<String>, home: List<String>): List<String> {
+    val next = home.iterator()
+    return order.map { if (it in home && next.hasNext()) next.next() else it }
 }
 
 /**

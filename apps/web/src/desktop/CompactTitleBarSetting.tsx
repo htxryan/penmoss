@@ -1,8 +1,9 @@
 import { useId, useState } from 'react';
+import { SettingRow, Switch } from '../theme/look-rows';
 import { desktop } from './bridge';
 
 /**
- * Settings → Appearance → Compact title bar (T47, D39, A724): the traffic lights in the app's
+ * Settings → Appearance → Window → Compact Title Bar (T47, D39, A724; a row since PEN-146): the traffic lights in the app's
  * own top row, or macOS's title bar. On by default. It is this Mac's own choice (the desktop
  * app's preferences), not a synced setting, and shows only in the Mac app. Electron cannot
  * restyle an open window, so the app asks first, then reopens its windows; Cancel leaves it.
@@ -22,23 +23,20 @@ export function CompactTitleBarSetting() {
     setBusy(false);
   };
   return (
-    <fieldset className="appearance-group" data-testid="compact-title-bar-setting">
-      <legend>Title bar</legend>
-      <label className="display-toggle" htmlFor={id}>
-        <input
-          id={id}
-          type="checkbox"
-          checked={compact}
-          disabled={busy}
-          data-testid="compact-title-bar"
-          onChange={(event) => void change(event.target.checked)}
-        />
-        <span>Compact Title Bar</span>
-      </label>
-      <p className="muted appearance-note">
-        The window buttons sit in Penmoss’s own top row, which you drag to move the window. This Mac
-        only. Changing it reopens the windows; your notes are saved first.
-      </p>
-    </fieldset>
+    <SettingRow
+      setting="compact-title-bar"
+      label="Compact Title Bar"
+      labelFor={id}
+      help="The window buttons sit in Penmoss’s own top row, which you drag to move the window. Changing it reopens the windows; your notes are saved first."
+      testId="compact-title-bar-setting"
+    >
+      <Switch
+        id={id}
+        checked={compact}
+        disabled={busy}
+        data-testid="compact-title-bar"
+        onChange={(event) => void change(event.target.checked)}
+      />
+    </SettingRow>
   );
 }

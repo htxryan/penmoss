@@ -309,14 +309,17 @@ test('T44: Settings → Symbols edits the synced list; a removed glyph shows as 
   await page.goto('/settings/symbols');
   const settings = page.getByTestId('symbols-settings');
   await expect(settings).toBeVisible();
-  // Appearance first, then Display and Symbols (A551); Notebooks before Daily Notes and
-  // Keyboard Shortcuts; nothing of the server's (T59: no Git Mirror, no Devices and tokens).
+  // Look and Feel first: Appearance, Sidebar, Note and Symbols (A551, PEN-146); then Writing,
+  // then the notebooks; nothing of the server's (T59: no Git Mirror, no Devices and tokens).
+  const nav = page.getByRole('navigation', { name: 'Settings sections' });
+  await expect(nav.getByRole('group', { name: 'Look and Feel' })).toBeVisible();
+  await expect(nav.getByRole('group', { name: 'Writing' })).toBeVisible();
   const links = page.getByRole('navigation', { name: 'Settings sections' }).getByRole('link');
   await expect(links.first()).toHaveText('Appearance');
   const sections = await links.allTextContents();
-  expect(sections.slice(0, 3)).toEqual(['Appearance', 'Display', 'Symbols']);
-  const order = ['Notebooks', 'Daily Notes', 'Keyboard Shortcuts'].map((name) =>
-    sections.indexOf(name),
+  expect(sections.slice(0, 4)).toEqual(['Appearance', 'Sidebar', 'Note', 'Symbols']);
+  const order = ['Daily Notes', 'Quick Capture', 'Keyboard Shortcuts', 'All Notebooks'].map(
+    (name) => sections.indexOf(name),
   );
   expect(order.every((index) => index >= 0)).toBe(true);
   expect([...order].sort((a, b) => a - b)).toEqual(order);
@@ -368,6 +371,17 @@ test('T44: Settings → Symbols edits the synced list; a removed glyph shows as 
     await settings.getByTestId('symbol-colour-3-hex').press('Enter');
     await page.keyboard.press('Escape');
     await expect(settings.getByTestId('symbol-colour-3')).toContainText('#3366CC80');
+
+    // Show the Keys (PEN-146): the count against the limit, and a row moved by its handle from
+    // the keyboard, which keeps focus, says its new place, and back again.
+    await expect(settings.getByTestId('symbols-count')).toHaveText('5 of 9');
+    await settings.getByTestId('symbol-move-1').focus();
+    await page.keyboard.press('Alt+ArrowDown');
+    await expect(settings.getByTestId('symbol-glyph-2')).toHaveText('⚑');
+    await expect(settings.getByTestId('symbols-notice')).toContainText('⚑ is now symbol 2');
+    await expect(settings.getByTestId('symbol-move-2')).toBeFocused();
+    await page.keyboard.press('Alt+ArrowUp');
+    await expect(settings.getByTestId('symbol-glyph-1')).toHaveText('⚑');
 
     await settings.getByRole('button', { name: 'Remove ?' }).click();
     await expect(rows).toHaveCount(4);

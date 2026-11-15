@@ -9,7 +9,7 @@ import { pushed } from './support/sync';
 // command opening its tab or closing the panel; Version History and the Local Graph inside it.
 // T53 item 9 (A985, superseding T52 item 6's Hidden, Compact and Expanded): the four tabs' icons
 // always run down the note's right edge as vertical tabs; the panel is open on one or closed, per
-// note, with a default in Settings → Appearance; in a narrow pane it lies over the text.
+// note, with a default in Settings → Note; in a narrow pane it lies over the text.
 
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
@@ -260,11 +260,11 @@ test.describe('in a 1440 × 900 window', () => {
     expect(errors).toEqual([]);
   });
 
-  test('the default from Settings → Appearance; in a narrow pane the panel lies over the text', async ({
+  test('the default from Settings → Note; in a narrow pane the panel lies over the text', async ({
     page,
   }) => {
     const errors = collectErrors(page);
-    await page.goto('/settings/appearance');
+    await page.goto('/settings/note');
     const setting = page.getByTestId('note-panel-setting');
     await expect(setting.getByRole('radio')).toHaveCount(2);
     await expect(setting.getByRole('radio', { name: 'Open' })).toBeChecked();
@@ -277,7 +277,7 @@ test.describe('in a 1440 × 900 window', () => {
     await expect(columns(page)).toHaveAttribute('data-panel', 'closed');
     await expect(side(page)).toHaveCount(0);
 
-    await page.goto('/settings/appearance');
+    await page.goto('/settings/note');
     await setting.getByText('Open', { exact: true }).click();
     await expect(setting.getByRole('radio', { name: 'Open' })).toBeChecked();
     await page.goto('/');
@@ -748,9 +748,9 @@ test.describe('in Quanta, with two folders and two notes', () => {
     await expect(details).not.toContainText('Length');
     await expect(page.getByTestId('info-words')).toHaveText('3');
 
-    // Settings → Display pins Edited and Tags under the title, and Edited in the status bar for
+    // Settings → Note pins Edited and Tags under the title, and Edited in the status bar for
     // the counts.
-    await page.goto('/settings/display');
+    await page.goto('/settings/note');
     await page.getByTestId('metadata-title-edited').check();
     await page.getByTestId('metadata-title-tags').check();
     await page.getByTestId('metadata-status-edited').check();
@@ -813,7 +813,7 @@ test.describe('in Quanta, with a folder and two notes', () => {
     // Not in the status bar until pinned there.
     await expect(page.getByTestId('note-counts')).not.toContainText('tokens');
 
-    await page.goto('/settings/display');
+    await page.goto('/settings/note');
     await page.getByTestId('metadata-title-tokens').check();
     await page.getByTestId('metadata-status-tokens').check();
     await expect.poll(() => storedSetting(page, 'metadata.underTitle')).toEqual(['tokens']);

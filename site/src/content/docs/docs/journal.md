@@ -26,7 +26,7 @@ Daily notes are `Journal/2026/11/2026-11-07.md` and weekly notes `Journal/2026/W
 
 ## Time zone
 
-"Today" is the day in the notebook's time zone, so a note made on a trip, or by an agent on a server, still lands on the right day. Set it in **Settings → Daily Notes → Time zone**.
+"Today" is the day in the notebook's time zone, so a note made on a trip, or by an agent on a server, still lands on the right day. Set it in **Settings → Daily Notes → Time Zone**: click the zone, then type part of a city's name or an offset, such as `Chicago` or `UTC+1`, and press Return. **Use This Mac's Zone** at the top of the list picks the zone your Mac is set to. The row says which day today is in the zone you chose.
 
 :::caution
 A new notebook starts on the America/Chicago time zone. Set your own in **Settings → Daily Notes** before you start your journal.
@@ -34,9 +34,11 @@ A new notebook starts on the America/Chicago time zone. Set your own in **Settin
 
 ## Templates
 
-**Settings → Daily Notes** has a **Daily template** and a **Weekly template**: the markdown a new note starts with. **Save** keeps a change and **Use the Default** goes back to the default (`## Plan` and `## Notes` for a day, `## Goals` and `## Review` for a week). A change applies to the notes made after it.
+**Settings → Daily Notes** has a **Daily Template** and a **Weekly Template** tab: the markdown a new note starts with. Beside the template is a preview of today's note, or this week's, with the placeholders filled in, so you can see what the next note will look like.
 
-Templates can use these placeholders:
+Changes save as you type, and **Saved** shows under the template. **Reset to Default** goes back to the default (`## Plan` and `## Notes` for a day, `## Goals` and `## Review` for a week). A change applies to the notes made after it; notes that exist already keep what they have.
+
+Templates can use these placeholders. **+ Placeholder** over the template puts one where the cursor is, or type it yourself:
 
 | Placeholder    | Becomes                     |
 | -------------- | --------------------------- |

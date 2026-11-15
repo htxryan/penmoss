@@ -148,7 +148,7 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
                 onFolderLongPress = { root.folderActing = it },
                 onCapture = { openCapture(root.context) },
                 onCommands = { nav.open("search?actions=true") },
-                onStatus = { nav.open(SettingsRoutes.SYNC) },
+                onStatus = { nav.open(SettingsRoutes.notebook(graph.localId, app.penmoss.git.NotebookTab.SYNC)) },
                 onFeedback = { root.openFeedback("Home's ⋮ menu", null, null, null, 0) },
             ),
         )
