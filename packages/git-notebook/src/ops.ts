@@ -6,7 +6,7 @@
  */
 import { parseMarkdown } from '@penmoss/core';
 import { ulid } from '@penmoss/core/ids';
-import { AGENT_ATTACHMENT_MAX_BYTES, isSha256 } from '@penmoss/core/attachments';
+import { isSha256, MAX_ATTACHMENT_BYTES } from '@penmoss/core/attachments';
 import {
   DEFAULT_DAILY_TEMPLATE,
   DEFAULT_TIME_ZONE,
@@ -326,13 +326,13 @@ export class NotebookOps {
 
   /**
    * Keeps an attachment's bytes for the next sync, which commits it under `attachments/` (A828),
-   * and returns its path as notes write it. Refused over 10 MB.
+   * and returns its path as notes write it. Refused over 50 MB (A1533).
    */
   async keepAttachment(bytes: Uint8Array, ext: string): Promise<{ sha256: string; path: string }> {
-    if (bytes.byteLength > AGENT_ATTACHMENT_MAX_BYTES) {
+    if (bytes.byteLength > MAX_ATTACHMENT_BYTES) {
       throw new NotebookOpError(
         'file_too_large',
-        `Files in a git notebook are at most ${AGENT_ATTACHMENT_MAX_BYTES / 1024 / 1024} MB`,
+        `Files in a git notebook are at most ${MAX_ATTACHMENT_BYTES / 1024 / 1024} MB`,
         413,
       );
     }
