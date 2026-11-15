@@ -83,8 +83,6 @@ data class TrashUi(
     val restored: String? = null,
     /** A delete for good under way. */
     val busy: Boolean = false,
-    /** Penmoss's server is from before moves to Trash from the phone: they wait (A430). */
-    val routeMissing: Boolean = false,
 )
 
 /**
@@ -141,16 +139,6 @@ fun TrashScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                }
-                if (ui.routeMissing && ui.entries.any { it.waiting }) {
-                    item {
-                        Text(
-                            app.penmoss.ui.settings.TRASH_BLOCKED,
-                            Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("trashRouteMissing"),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
                 }
                 ui.problem?.let { problem ->
                     item {

@@ -276,24 +276,6 @@ class TrashModelTest {
     }
 
     @Test
-    fun aServerWithoutTheTrashRouteIsSaidWithTheWayOut() = withModel {
-        store.saveChanges(ChangesPage(1, notes = listOf(ChangedNote("soup", 1, "Soup", "", 5))))
-        store.moveToTrash("soup")
-        store.setTrashRouteMissing(true)
-        val ui = until { it.routeMissing && it.entries.isNotEmpty() }
-        assertEquals("Moved to Trash on this phone · Penmoss can’t take it until its server is updated", ui.entries.single().detail)
-        model.deleteForGood(ui.entries.single())
-        assertEquals(
-            "Penmoss can’t take moves to Trash until its server is updated, so “Soup” can’t be deleted for good yet. Restore it to keep it on this phone.",
-            until { it.message != null }.message,
-        )
-        // Nothing to sync for: it would not help.
-        assertEquals(0, syncs)
-        assertEquals(0, server.requestCount)
-        assertEquals("“Soup” was restored on another device, so it was left out of Trash.", trashRefusedMessage("Soup"))
-    }
-
-    @Test
     fun theServersAnswersSayWhatHappened() = withModel {
         inTrash("old", now - day, "Old")
         inTrash("gone", now - 2 * day, "Gone")

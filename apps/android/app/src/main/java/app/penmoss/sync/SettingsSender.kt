@@ -52,7 +52,7 @@ class SettingsSender(private val store: NoteStore, private val api: PenmossApi) 
                         store.settingsRefused(all, error.message ?: "This phone may not change settings")
                         return taken
                     }
-                    // A server without the route yet, or a busy one: the next pass tries again.
+                    // A busy notes server, or the page not answering: the next pass tries again.
                     else -> return taken
                 }
             } catch (offline: IOException) {

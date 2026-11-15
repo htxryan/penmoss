@@ -319,29 +319,6 @@ class TrashSyncTest {
         runBlocking { assertTrue(store.note("soup")!!.cursor != null) }
     }
 
-    @Test
-    fun aServerWithoutTheTrashRouteLeavesTheMoveWaitingAndTheNoteKept() {
-        soupInGarden()
-        penmoss.trashRouteMissing = true
-        runBlocking { store.moveToTrash("soup") }
-        assertEquals(PassOutcome.SYNCED, pass())
-        assertEquals(listOf("trash:soup"), penmoss.trashCalls.toList())
-        // Nothing is dropped: the note is still in Trash here, its move still waits, and the
-        // phone knows why.
-        assertTrue(inTrashHere("soup"))
-        assertTrue(runBlocking { store.observeTrashRouteMissing().first() })
-        runBlocking {
-            assertEquals(NoteEntity.TRASH_QUEUED, store.note("soup")!!.trashChange)
-            assertEquals(1, store.unsentCount())
-        }
-        // Once the server has the route, the next pass sends it.
-        penmoss.trashRouteMissing = false
-        assertEquals(PassOutcome.SYNCED, pass())
-        assertTrue(penmoss.inTrash("soup"))
-        assertFalse(runBlocking { store.observeTrashRouteMissing().first() })
-        runBlocking { assertEquals(0, store.unsentCount()) }
-    }
-
     // --- Review of #94 ---
 
     @Test
@@ -457,7 +434,6 @@ class TrashSyncTest {
         runBlocking {
             assertNull(store.note("soup"))
             assertEquals(0, store.unsentCount())
-            assertFalse(store.observeTrashRouteMissing().first())
         }
     }
 
@@ -584,15 +560,12 @@ class TrashSyncTest {
         penmoss.proxyNotFound = true
         runBlocking { store.moveToTrash("soup") }
         pass()
-        // Not "No such note": nothing is dropped, and the move waits for the next pass, said
-        // as a server that cannot take it yet (what an older server's 404 looks like too).
+        // Not "No such note": nothing is dropped, and the move waits for the next pass.
         runBlocking { assertEquals(NoteEntity.TRASH_QUEUED, store.note("soup")!!.trashChange) }
         assertTrue(inTrashHere("soup"))
-        assertTrue(runBlocking { store.observeTrashRouteMissing().first() })
         assertEquals(PassOutcome.SYNCED, pass())
         assertEquals(listOf("trash:soup (proxy 404)", "trash:soup"), penmoss.trashCalls.toList())
         assertTrue(penmoss.inTrash("soup"))
-        assertFalse(runBlocking { store.observeTrashRouteMissing().first() })
         runBlocking { assertEquals(0, store.unsentCount()) }
     }
 

@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonElement
@@ -181,16 +182,11 @@ class AppGraph(
         .stateIn(scope, SharingStarted.Eagerly, NoteStore.SettingsState())
 
     /**
-     * The theme chosen in Settings → Appearance (A305): resolved here from the settings, so a
-     * choice made on the phone shows at once (A412); from a server without the settings channel,
-     * as the last pass brought it.
+     * The theme chosen in Settings → Appearance (A305): resolved here from the device's settings,
+     * so a choice made on the phone shows at once (A412); the defaults until they are read.
      */
-    val appearance: StateFlow<Appearance> = main?.appearance ?: combine(store.observeAppearance(), store.observeSettings()) { stored, state ->
-        if (state.known) {
-            Appearance.of(ThemeCatalogue.bundled.resolve(state.settings)).copy(interfaceFont = state.settings.interfaceFont)
-        } else {
-            Appearance.parse(stored)
-        }
+    val appearance: StateFlow<Appearance> = main?.appearance ?: store.observeSettings().map { state ->
+        Appearance.of(ThemeCatalogue.bundled.resolve(state.settings)).copy(interfaceFont = state.settings.interfaceFont)
     }.stateIn(scope, SharingStarted.Eagerly, Appearance())
 
     /**

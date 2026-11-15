@@ -126,8 +126,7 @@ class FolderSender(private val store: NoteStore, private val api: PenmossApi) {
             if (error.status == 404 && error.code == FOLDER_NOT_FOUND) {
                 // Gone there (404 `folder_not_found`): the tree's place
                 // stands (A359). The rest of the folder's changes are based on this one, so
-                // they go with it. Any other 404 is a server from before these routes, which
-                // answers its plain "No such endpoint": the change waits (A449).
+                // they go with it. Any other 404 names no folder: the change waits (A449).
                 store.dropFolderOpsFor(id, op.label)
                 return true
             }
@@ -141,8 +140,7 @@ class FolderSender(private val store: NoteStore, private val api: PenmossApi) {
         return true
     }
 
-    // The server's delete is idempotent, so a retry is always safe; a 404 only ever means
-    // a server from before this route, which never applied it: it waits (A449).
+    // The notes server's delete is idempotent, so a retry is always safe: a 404 waits (A449).
     private suspend fun sendDelete(op: FolderOpEntity): Boolean? {
         val id = op.folderId ?: return true
         // As a create: tried with no answer, the server may hold it (T40 P4 review B3).
@@ -173,7 +171,7 @@ class FolderSender(private val store: NoteStore, private val api: PenmossApi) {
         } catch (error: ApiException) {
             return when {
                 error.unauthorized -> throw error
-                // A 404 is a server from before this route: the sort waits (A449).
+                // A 404 waits, as the folders' changes do (A449).
                 error.status == 404 || error.status >= 500 || error.status == 429 -> null
                 else -> {
                     store.dropFolderOp(op.rowId)

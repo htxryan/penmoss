@@ -136,18 +136,11 @@ class NotebookApiTest {
         respond("""{"id":"h","name":"Drafts","parentId":"gone","inTrash":true,"notebook":{"name":"Work"}}""", 201)
         assertEquals(FolderNotebook(null, "Work"), api.createFolder("h", "Drafts", "gone").notebook)
 
-        // A folder's restore says where it came back; an older server does not.
+        // A folder's restore says where it came back.
         respond("""{"id":"f","restored":true,"parentGone":true,"parentId":"w"}""")
-        val back = api.restoreFolder("f")
-        assertTrue(back.parentKnown)
-        assertEquals("w", back.parentId)
+        assertEquals("w", api.restoreFolder("f").parentId)
         respond("""{"id":"f","restored":true,"parentGone":true,"parentId":null}""")
-        val top = api.restoreFolder("f")
-        assertTrue(top.parentKnown)
-        assertNull(top.parentId)
-        respond("""{"id":"f","restored":true,"parentGone":true}""")
-        assertFalse(api.restoreFolder("f").parentKnown)
-
+        assertNull(api.restoreFolder("f").parentId)
     }
 
     /** T43 round 3 (A766, fix c): the first upload's folder and a move's notebook. */

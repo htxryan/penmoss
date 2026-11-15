@@ -608,7 +608,7 @@ interface CaptureDao {
     fun observeRefusedList(): Flow<List<CaptureEntity>>
 
     @Query(
-        "SELECT COUNT(*) AS count, MIN(capturedAt) AS oldest, COALESCE(MAX(lastStatus = 404), 0) AS serverOutdated " +
+        "SELECT COUNT(*) AS count, MIN(capturedAt) AS oldest " +
             "FROM captures WHERE refused IS NULL",
     )
     fun observeWaitingSummary(): Flow<CapturesWaiting>

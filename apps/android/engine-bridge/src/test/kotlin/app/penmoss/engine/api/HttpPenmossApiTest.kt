@@ -117,11 +117,11 @@ class HttpPenmossApiTest {
     }
 
     @Test
-    fun readsEachChangedNotesTagsAndToleratesAnOlderServer() = runTest {
-        respond("""{"clock":3,"notes":[{"id":"a","clock":2,"tags":["area/garden","cooking"]},{"id":"b","clock":3}]}""")
+    fun readsEachChangedNotesTags() = runTest {
+        respond("""{"clock":3,"notes":[{"id":"a","clock":2,"tags":["area/garden","cooking"]},{"id":"b","clock":3,"tags":[]}]}""")
         val page = api.changes(0)
         assertEquals(listOf("area/garden", "cooking"), page.notes[0].tags)
-        assertNull(page.notes[1].tags)
+        assertEquals(emptyList<String>(), page.notes[1].tags)
     }
 
     @Test

@@ -73,8 +73,6 @@ internal fun trashEntries(
     local: List<TrashRow>,
     remote: List<TrashListed>,
     now: Long,
-    /** The server is from before moves to Trash from the phone: those waiting say so (A430). */
-    routeMissing: Boolean = false,
 ): List<TrashEntryUi> {
     // Notes that went to Trash with a notebook come back with it (T43, A755): the folder list
     // shows the notebook, so they are not listed here on their own.
@@ -87,10 +85,10 @@ internal fun trashEntries(
             waiting || row.trashChange == NoteEntity.TRASH_SENT -> row.trashChangeAt
             else -> row.updatedAt
         }
-        entry(row.id, row.title.ifBlank { listed[row.id]?.title.orEmpty() }, deletedAt, waiting, now, routeMissing, listed[row.id]?.deletedBy)
+        entry(row.id, row.title.ifBlank { listed[row.id]?.title.orEmpty() }, deletedAt, waiting, now, listed[row.id]?.deletedBy)
     }
     val known = local.mapTo(HashSet()) { it.id }
-    val theirs = remote.filter { it.id !in known && it.id !in withNotebook }.map { entry(it.id, it.title, it.deletedAt, waiting = false, now, routeMissing, it.deletedBy) }
+    val theirs = remote.filter { it.id !in known && it.id !in withNotebook }.map { entry(it.id, it.title, it.deletedAt, waiting = false, now, it.deletedBy) }
     return (ours + theirs).sortedWith(compareByDescending<TrashEntryUi> { it.deletedAt }.thenBy { it.id })
 }
 
@@ -119,11 +117,10 @@ private fun deleter(by: FolderDeleter?): Deleter? {
     return if (plain.isEmpty()) Deleter(if (agent) "an agent" else "a device", agent, named = false) else Deleter(plain, agent, named = true)
 }
 
-private fun entry(id: String, title: String, deletedAt: Long, waiting: Boolean, now: Long, routeMissing: Boolean, deletedBy: FolderDeleter? = null): TrashEntryUi {
+private fun entry(id: String, title: String, deletedAt: Long, waiting: Boolean, now: Long, deletedBy: FolderDeleter? = null): TrashEntryUi {
     val left = deletedAt + TRASH_RETENTION_MS - now
     val days = ((left + TimeUnit.DAYS.toMillis(1) - 1) / TimeUnit.DAYS.toMillis(1)).coerceAtLeast(0)
     fun detail(by: String) = when {
-        waiting && routeMissing -> "Moved to Trash on this phone · Penmoss can’t take it until its server is updated"
         waiting -> "Moved to Trash on this phone · not sent yet"
         deletedAt <= 0 -> "In Trash$by"
         days == 0L -> "Deleted ${shortWhen(deletedAt, now)}$by · goes for good today"
@@ -152,8 +149,8 @@ class TrashModel(
     private val remote = MutableStateFlow<List<TrashListed>>(emptyList())
     private val state = MutableStateFlow(TrashUi())
 
-    val ui: StateFlow<TrashUi> = combine(store.observeTrash(), remote, state, store.observeTrashRouteMissing()) { local, listed, current, missing ->
-        current.copy(entries = trashEntries(local, listed, now(), missing), routeMissing = missing)
+    val ui: StateFlow<TrashUi> = combine(store.observeTrash(), remote, state) { local, listed, current ->
+        current.copy(entries = trashEntries(local, listed, now()))
     }.stateIn(work, SharingStarted.Eagerly, TrashUi())
 
     /** Reads the server's Trash; offline, the phone's rows alone, and it says so. */
@@ -196,13 +193,8 @@ class TrashModel(
     fun deleteForGood(entry: TrashEntryUi) {
         if (state.value.busy) return
         if (entry.waiting) {
-            val said = if (ui.value.routeMissing) {
-                "Penmoss can’t take moves to Trash until its server is updated, so “${entry.title}” can’t be deleted for good yet. Restore it to keep it on this phone."
-            } else {
-                requestSync()
-                "Its move to Trash hasn’t reached Penmoss yet. Try again once the phone has synced."
-            }
-            state.update { it.copy(message = said) }
+            requestSync()
+            state.update { it.copy(message = "Its move to Trash hasn’t reached Penmoss yet. Try again once the phone has synced.") }
             return
         }
         state.update { it.copy(busy = true, message = null) }
@@ -531,7 +523,7 @@ internal fun folderRestoreAskText(name: String, notebook: String?): String =
 /**
  * What a folder's Restore says, in the web's words (`restoredMessage`). Its parent gone, it says
  * where it came back (T43, A757): [folderName] names that folder as this phone has it; the top
- * level; or, unknown here or unsaid by an older server, "the nearest folder above it".
+ * level; or, unknown here, "the nearest folder above it".
  */
 internal fun restoredFolderMessage(name: String, result: RestoredFolder, folderName: (String) -> String? = { null }): String {
     if (!result.restored) return "“$name” is not in Trash any more."
@@ -541,7 +533,6 @@ internal fun restoredFolderMessage(name: String, result: RestoredFolder, folderN
     // Its parent gone, it came back in the nearest folder above it within its notebook (A757).
     if (result.parentGone) {
         val where = when {
-            !result.parentKnown -> null
             result.parentId == null -> "at the top level"
             else -> folderName(result.parentId!!)?.ifBlank { "Untitled folder" }?.let { "in “$it”" }
         }

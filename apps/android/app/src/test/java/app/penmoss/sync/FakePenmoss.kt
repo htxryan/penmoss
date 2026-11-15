@@ -99,10 +99,6 @@ internal class FakePenmoss : Dispatcher() {
     /** Every `POST /api/notes/:id/trash` and `/restore`, as "trash:id" and "restore:id", in order (T40 P3a). */
     val trashCalls = CopyOnWriteArrayList<String>()
 
-    /** A server from before T40 P3a: `POST /api/notes/:id/trash` is an unknown endpoint, 404. */
-    @Volatile
-    var trashRouteMissing = false
-
     /** How many of a note's edits the server had when its move to Trash arrived. */
     val updatesWhenTrashed = java.util.concurrent.ConcurrentHashMap<String, Int>()
 
@@ -201,10 +197,6 @@ internal class FakePenmoss : Dispatcher() {
     /** The top level's sort mode (T40 P4, NT6). */
     @Volatile
     var rootSortMode = "manual"
-
-    /** Whether the tree carries settings: false is a server without the settings channel. */
-    @Volatile
-    var settingsChannel = true
 
     /** Runs while a `PUT /api/settings` is with the server, before it is answered (a tap meanwhile). */
     @Volatile
@@ -414,7 +406,7 @@ internal class FakePenmoss : Dispatcher() {
                     settingsChanges += JSONObject(request.body!!.utf8())
                     whileSettingsOut?.invoke()
                     val refusal = refuseSettings?.also { refuseSettings = null }
-                    if (refusal != null) json(refusal.second, refusal.first) else if (settingsDown) json(JSONObject().put("error", JSONObject().put("code", "unavailable")), 503) else if (settingsChannel) putSettings(JSONObject(request.body!!.utf8())) else json(JSONObject().put("error", JSONObject().put("code", "not_found")), 404)
+                    if (refusal != null) json(refusal.second, refusal.first) else if (settingsDown) json(JSONObject().put("error", JSONObject().put("code", "unavailable")), 503) else putSettings(JSONObject(request.body!!.utf8()))
                 }
                 "/api/capture" -> {
                     val capture = JSONObject(request.body!!.utf8())
@@ -486,7 +478,7 @@ internal class FakePenmoss : Dispatcher() {
             }
         }
         val reply = JSONObject().put("hash", hash).put("rootSortMode", rootSortMode).put("folders", tree).put("notes", placed)
-        if (settingsChannel) reply.put("settings", settingsJson())
+        reply.put("settings", settingsJson())
         return json(reply)
     }
 
@@ -834,10 +826,6 @@ internal class FakePenmoss : Dispatcher() {
     @Synchronized
     private fun trashHere(id: String, body: JSONObject): MockResponse {
         trashCalls += "trash:$id"
-        if (trashRouteMissing) {
-            // What the real server answers for a route it does not have (trash-route.test.ts).
-            return MockResponse.Builder().code(404).addHeader("Content-Type", "text/plain; charset=UTF-8").body("404 Not Found").build()
-        }
         // The route's own code for a note it does not have (second review of #94).
         val note = notes[id] ?: return json(JSONObject().put("error", JSONObject().put("code", "note_not_found").put("message", "No such note")), 404)
         updatesWhenTrashed[id] = note.updates.size

@@ -262,15 +262,6 @@ class SettingsSyncTest {
     }
 
     @Test
-    fun aServerWithoutTheSettingsChannelTakesNoChangesAndNothingIsLost() {
-        penmoss.settingsChannel = false
-        assertEquals(PassOutcome.SYNCED, pass())
-        assertFalse(shown().known)
-        assertFalse(change(SettingKeys.MODE, "dark"))
-        assertEquals(0, runBlocking { store.unsentCount() })
-    }
-
-    @Test
     fun aChoiceMadeBackToWhatTheServerHadWhileTheChangeIsOutStillWins() {
         penmoss.setOnWeb(SettingKeys.MODE, "system")
         assertEquals(PassOutcome.SYNCED, pass())

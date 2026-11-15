@@ -74,13 +74,6 @@ class TrashScreensTest {
     }
 
     @Test
-    fun aServerWithoutTheRouteIsSaidAboveTheWaitingMoves() {
-        trash(TrashUi(entries = listOf(waiting, sent), routeMissing = true))
-        compose.onNodeWithTag("trashRouteMissing").assertIsDisplayed()
-        compose.onNodeWithTag("restore-soup").assertIsEnabled()
-    }
-
-    @Test
     fun deleteForGoodAsksFirstAndCancelSendsNothing() {
         trash(TrashUi(entries = listOf(sent)))
         compose.onNodeWithTag("deleteForGood-old").performClick()

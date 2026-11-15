@@ -404,17 +404,6 @@ class NoteStoreTest {
         )
     }
 
-    @Test
-    fun keepsTheAppearanceTheTreeCameWith() = runTest {
-        assertNull(store.observeAppearance().first())
-        val appearance = buildJsonObject { put("mode", JsonPrimitive("dark")) }
-        store.saveTree(SyncTree(hash = "h", rootSortMode = "manual", appearance = appearance))
-        assertEquals("""{"mode":"dark"}""", store.observeAppearance().first())
-        // A tree from an older server leaves it as it was.
-        store.saveTree(SyncTree(hash = "h2", rootSortMode = "manual"))
-        assertEquals("""{"mode":"dark"}""", store.observeAppearance().first())
-    }
-
     // --- review B1 and S5: conflict copies keep every edit (A309, A310) ---
 
     /** Synced at e1, edited, then the server restored it (e2): the edits kept apart, and their base. */

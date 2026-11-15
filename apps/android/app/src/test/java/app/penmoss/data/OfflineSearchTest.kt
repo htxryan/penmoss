@@ -188,11 +188,10 @@ class OfflineSearchTest {
         note("a", "Tagged", "body", tags = listOf("project", "area/cooking", "project"))
         assertEquals(listOf("area/cooking", "project"), db.search().tagsOf("a"))
         assertEquals(listOf(TagCountRow("area/cooking", 1), TagCountRow("project", 1)), store.observeTagCounts().first())
-        // An older server sends no tags: they stay as they were.
+        // A newer row with the same tags, then an older row: it never replaces the newer one's.
         clock++
-        store.saveChanges(ChangesPage(clock, notes = listOf(ChangedNote("a", clock, "Tagged", "", 200))))
+        store.saveChanges(ChangesPage(clock, notes = listOf(ChangedNote("a", clock, "Tagged", "", 200, tags = listOf("project", "area/cooking")))))
         assertEquals(listOf("area/cooking", "project"), db.search().tagsOf("a"))
-        // An older row never replaces a newer one's tags.
         store.saveChanges(ChangesPage(clock, notes = listOf(ChangedNote("a", 1, "Tagged", "", 200, tags = listOf("stale")))))
         assertEquals(listOf("area/cooking", "project"), db.search().tagsOf("a"))
         // In Trash: the server sends none, and the note leaves search and the counts.

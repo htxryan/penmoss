@@ -41,6 +41,7 @@ import app.penmoss.ui.screens.SLOW_SYNC_MS
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.Assert.assertEquals
@@ -263,15 +264,15 @@ class ScreensTest {
                     onNewNote = {},
                     capturesWaiting = 1,
                     capturesRefused = 2,
-                    capturesWaitingWhy = capturesWhy(CapturesWaiting(1, now - 3 * day, serverOutdated = true), now),
+                    capturesWaitingWhy = capturesWhy(CapturesWaiting(1, now - 3 * day), now),
                     onRefusedCaptures = { events += "refused" },
                 )
             }
         }
-        compose.onNodeWithTag("capturesWaitingWhy").assertTextEquals("Penmoss on the server has not been updated to take captures yet.")
+        compose.onNodeWithTag("capturesWaitingWhy").assertTextContains("The oldest is from ", substring = true)
         compose.onNodeWithText("See Them").performClick()
         assertEquals(listOf("refused"), events)
-        // Why is said only when it helps: a day old, or a server without captures (S2).
+        // Why is said only when it helps: a day old (S2).
         assertEquals(null, capturesWhy(CapturesWaiting(0), now))
         assertEquals(null, capturesWhy(CapturesWaiting(2, now - 60_000L), now))
         assertTrue(capturesWhy(CapturesWaiting(2, now - 2 * day), now)!!.startsWith("The oldest is from "))

@@ -153,7 +153,6 @@ class MigrationTest {
             assertEquals("inbox", store.captureDestination())
             // Until a tree with settings comes, nothing is known to change.
             assertFalse(store.settingsNow().known)
-            assertEquals("{\"mode\":\"dark\"}", store.observeAppearance().first())
         } finally {
             db.close()
         }

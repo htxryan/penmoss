@@ -114,14 +114,12 @@ class NoteStore(
         // re-applied after the tree's own (T40 P4, NT6).
         settings.put(SettingEntity(ROOT_SORT_MODE, tree.rootSortMode))
         reapplyFolderOps(folderIds)
-        // The theme chosen in Settings → Appearance, as the server resolved it (A305).
-        tree.appearance?.let { settings.put(SettingEntity(APPEARANCE, it.toString())) }
         // The settings the phone shows and changes (T40 P1, A410, A411). A change made here that
         // the tree shows overtaken (the setting is no longer what it was when changed here) was
         // beaten by a newer one made elsewhere: it is dropped and the tree's value stands.
         // A tree showing a value this phone sent and has no answer for is its own change landing:
         // the change is done, or what was chosen since is based on it (A411).
-        tree.settings?.let { sent ->
+        tree.settings.let { sent ->
             settings.put(SettingEntity(SYNCED_SETTINGS, sent.toString()))
             for (row in pendingSettings.all()) {
                 val now = sent[row.key] ?: JsonNull
@@ -174,10 +172,9 @@ class NoteStore(
                 saveTags(changed.id, changed.tags)
             }
             settleTrashChange(changed.id, changed.deleted, changed.seq)
-            // Which notes it links to (T40 P7, A473), from D1's index; an older server sends
-            // none, leaving what the phone has. A note with edits not sent yet keeps what the page
-            // reported of it: the index has not seen those edits.
-            changed.links?.let { links -> if (updates.ids(changed.id, UpdateEntity.PENDING).isEmpty()) replaceLinks(changed.id, links) }
+            // Which notes it links to (T40 P7, A473). A note with edits not sent yet keeps what the
+            // page reported of it: the index has not seen those edits.
+            if (updates.ids(changed.id, UpdateEntity.PENDING).isEmpty()) replaceLinks(changed.id, changed.links)
             // Moved to Trash elsewhere: a move made here is dropped, never applied on a restore (T38).
             if (notes.note(changed.id)?.deleted == true) notes.dropMoveIfDeleted(changed.id)
         }
@@ -336,10 +333,10 @@ class NoteStore(
         if (hash != note.textHash) notes.setText(noteId, hash, due = note.textDue)
     }
 
-    /** The note's tags ([tags] null: an older server, which leaves them), and its index row refolded with its title and tags. */
-    private suspend fun saveTags(noteId: String, tags: List<String>?) {
-        val now = tags?.distinct()?.sorted() ?: search.tagsOf(noteId)
-        if (tags != null && search.tagsOf(noteId) != now) {
+    /** The note's tags, and its index row refolded with its title and tags. */
+    private suspend fun saveTags(noteId: String, tags: List<String>) {
+        val now = tags.distinct().sorted()
+        if (search.tagsOf(noteId) != now) {
             search.clearTags(noteId)
             search.addTags(now.map { NoteTagEntity(noteId, it) })
         }
@@ -546,11 +543,6 @@ class NoteStore(
 
     /** Edits waiting to be sent, on every note (not those kept apart, which wait for an editor). */
     suspend fun pendingCount(): Int = updates.pendingCount()
-
-    // --- the theme (A305) ---
-
-    /** The theme and mode `/sync/tree` last sent, as JSON text; null until the first pass. */
-    fun observeAppearance(): Flow<String?> = settings.observe(APPEARANCE)
 
     // --- quick capture (A336) ---
 
@@ -1122,18 +1114,6 @@ class NoteStore(
         notes.trashChanged(noteId, note.trashChange, 0)
         dropPurged(noteId)
     }
-
-    /**
-     * Penmoss answered a move to Trash with a 404 that does not say the note is gone: most
-     * likely its server is from before `POST /api/notes/:id/trash` (A431), which answers a plain
-     * "404 Not Found". Moves to Trash wait, and Trash and Sync and storage
-     * say why. Cleared by the first move it takes.
-     */
-    suspend fun setTrashRouteMissing(missing: Boolean) {
-        if (missing) settings.put(SettingEntity(TRASH_ROUTE_MISSING, "1")) else settings.delete(TRASH_ROUTE_MISSING)
-    }
-
-    fun observeTrashRouteMissing(): Flow<Boolean> = settings.observe(TRASH_ROUTE_MISSING).map { it == "1" }
 
     /** Trash as the phone holds it, newest first (NT13). */
     fun observeTrash(): Flow<List<TrashRow>> = notes.observeTrash()
@@ -1751,7 +1731,6 @@ class NoteStore(
 
     private companion object {
         const val CHANGES_CLOCK = "changesClock"
-        const val TRASH_ROUTE_MISSING = "trashRouteMissing"
         const val TREE_HASH = "treeHash"
         const val ROOT_SORT_MODE = "rootSortMode"
 

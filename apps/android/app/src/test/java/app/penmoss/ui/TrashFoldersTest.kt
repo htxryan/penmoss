@@ -90,7 +90,7 @@ class TrashFoldersTest {
         assertEquals("Restored “Projects”.", restoredFolderMessage("Projects", RestoredFolder("projects", restored = true, notes = 3)))
         assertEquals(
             "Restored “Projects”. The folder it was in is gone, so it is in the nearest folder above it. 2 notes were moved or deleted since, so they stay where they are.",
-            restoredFolderMessage("Projects", RestoredFolder("projects", restored = true, parentGone = true, notes = 1, skipped = listOf("a", "b"))),
+            restoredFolderMessage("Projects", RestoredFolder("projects", restored = true, parentGone = true, notes = 1, skipped = listOf("a", "b"), parentId = "elsewhere")),
         )
         assertEquals(
             "Restored “Projects”. 1 note was moved or deleted since, so it stays where it is.",
@@ -220,21 +220,19 @@ class TrashFoldersTest {
 
     /**
      * A folder back with its parent gone says where it came back (T43, A757): that folder's name
-     * as this phone has it, the top level, or "the nearest folder above it" when unknown here or
-     * unsaid by an older server.
+     * as this phone has it, the top level, or "the nearest folder above it" when unknown here.
      */
     @Test
     fun aRestoreWithItsParentGoneSaysWhereItCameBack() = withModel { model ->
         store.saveTree(SyncTree(hash = "h1", folders = listOf(TreeFolder("home", "Home", position = "a0"))))
-        fun back(parent: kotlinx.serialization.json.JsonElement = RestoredFolder.NOT_SAID) = RestoredFolder("projects", restored = true, parentGone = true, parent = parent)
+        fun back(parent: String?) = RestoredFolder("projects", restored = true, parentGone = true, parentId = parent)
         val names = mapOf("home" to "Home")
-        assertEquals("Restored “Projects”. The folder it was in is gone, so it is in “Home”.", restoredFolderMessage("Projects", back(kotlinx.serialization.json.JsonPrimitive("home")), names::get))
-        assertEquals("Restored “Projects”. The folder it was in is gone, so it is at the top level.", restoredFolderMessage("Projects", back(kotlinx.serialization.json.JsonNull), names::get))
-        assertEquals("Restored “Projects”. The folder it was in is gone, so it is in the nearest folder above it.", restoredFolderMessage("Projects", back(kotlinx.serialization.json.JsonPrimitive("elsewhere")), names::get))
-        assertEquals("Restored “Projects”. The folder it was in is gone, so it is in the nearest folder above it.", restoredFolderMessage("Projects", back(), names::get))
+        assertEquals("Restored “Projects”. The folder it was in is gone, so it is in “Home”.", restoredFolderMessage("Projects", back("home"), names::get))
+        assertEquals("Restored “Projects”. The folder it was in is gone, so it is at the top level.", restoredFolderMessage("Projects", back(null), names::get))
+        assertEquals("Restored “Projects”. The folder it was in is gone, so it is in the nearest folder above it.", restoredFolderMessage("Projects", back("elsewhere"), names::get))
         // Through the model, named from the phone's tree.
         api.folderTrashList = { listOf(projects) }
-        api.onRestoreFolder = { back(kotlinx.serialization.json.JsonPrimitive("home")) }
+        api.onRestoreFolder = { back("home") }
         model.load()
         val listed = model.until { it.folders.isNotEmpty() }
         model.restore(listed.folders[0])

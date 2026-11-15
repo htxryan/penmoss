@@ -1069,10 +1069,9 @@ private fun copyCaptures(context: Context, captures: List<Captures.Refused>) {
     Toast.makeText(context, if (captures.size == 1) "Copied." else "Copied ${captures.size} captures.", Toast.LENGTH_SHORT).show()
 }
 
-/** Why captures still wait, when worth saying (A345): a server not updated yet, or their age. */
+/** Why captures still wait, when worth saying (A345): their age. */
 internal fun capturesWhy(waiting: CapturesWaiting, now: Long): String? {
     if (waiting.count == 0) return null
-    if (waiting.serverOutdated) return "Penmoss on the server has not been updated to take captures yet."
     val oldest = waiting.oldest ?: return null
     if (now - oldest < 24 * 60 * 60_000L) return null
     return "The oldest is from ${DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(oldest))}."

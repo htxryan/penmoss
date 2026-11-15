@@ -86,14 +86,6 @@ class TrashSender(private val store: NoteStore, private val api: PenmossApi) {
                         store.trashGone(note.id)
                         continue
                     }
-                    // Any other 404: most likely a server from before the route, which answers
-                    // a plain "404 Not Found" (a proxy's page looks the same). Every move waits,
-                    // nothing is dropped, and Trash says why.
-                    error.status == 404 -> {
-                        store.trashNotSent(note.id)
-                        store.setTrashRouteMissing(true)
-                        return
-                    }
                     else -> {
                         store.trashNotSent(note.id)
                         return
@@ -103,7 +95,6 @@ class TrashSender(private val store: NoteStore, private val api: PenmossApi) {
                 store.trashNotSent(note.id)
                 return
             }
-            store.setTrashRouteMissing(false)
             store.trashSent(note.id, trashed.deletedAt, trashed.seq)
         }
     }

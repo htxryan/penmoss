@@ -356,8 +356,6 @@ data class CapturesWaiting(
     val count: Int = 0,
     /** When the oldest was made (epoch ms). */
     val oldest: Long? = null,
-    /** The server answered that it has no capture route: it is waiting for a deploy (A342). */
-    val serverOutdated: Boolean = false,
 )
 
 @Entity(tableName = "settings")

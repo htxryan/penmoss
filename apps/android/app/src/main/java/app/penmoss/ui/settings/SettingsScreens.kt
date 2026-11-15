@@ -534,9 +534,3 @@ fun QuickCaptureScreen(destination: String, enabled: Boolean, onChoose: (String)
         }
     }
 }
-
-// --- Trash ---
-
-/** Why moves to Trash wait on a server from before them, and the way out (A430). */
-internal const val TRASH_BLOCKED =
-    "Penmoss can’t take moves to Trash from this phone until its server is updated. They wait here; to keep one of these notes instead, restore it from Trash."

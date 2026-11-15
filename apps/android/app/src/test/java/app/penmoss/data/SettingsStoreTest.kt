@@ -79,9 +79,6 @@ class SettingsStoreTest {
 
     @Test
     fun nothingCanBeChangedBeforeTheServerHasSentAnySettings() = runTest {
-        assertFalse(store.changeSetting(SettingKeys.MODE, JsonPrimitive("dark")))
-        // A tree from a server without the channel says nothing of settings.
-        store.saveTree(SyncTree(hash = "h1"))
         assertFalse(store.settingsNow().known)
         assertFalse(store.changeSetting(SettingKeys.MODE, JsonPrimitive("dark")))
         assertEquals(0, store.unsentCount())
