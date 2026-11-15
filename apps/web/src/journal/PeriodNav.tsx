@@ -137,14 +137,16 @@ export function PeriodNav({ replica }: { replica: Yjs14Replica | null }) {
 export function JournalCommands() {
   const notes = useNotes();
   const workspace = useWorkspace();
-  useCommand('journal.today', () => {
+  useCommand('journal.today', ({ newTab }) => {
     void openPeriodic(notes, workspace, 'daily', today(workspace.settings()).toString(), {
       inTab: true,
+      newTab,
     });
   });
-  useCommand('journal.thisWeek', () => {
+  useCommand('journal.thisWeek', ({ newTab }) => {
     void openPeriodic(notes, workspace, 'weekly', thisWeek(workspace.settings()), {
       inTab: true,
+      newTab,
     });
   });
   return null;

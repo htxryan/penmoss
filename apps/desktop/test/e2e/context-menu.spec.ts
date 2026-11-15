@@ -77,8 +77,9 @@ test('a right-click opens the page’s own menu; the note’s ⋯ menu; Display 
   const one = tree.getByRole('treeitem', { name: `Mac ctx one ${RUN}`, exact: true });
   const two = tree.getByRole('treeitem', { name: `Mac ctx two ${RUN}`, exact: true });
   await one.click();
-  // One more: ⌘ on a Mac, where Ctrl-click is a right-click; Ctrl elsewhere.
-  await two.click({ modifiers: [mac ? 'Meta' : 'Control'] });
+  // Two notes picked with Shift-click: ⌘-click on one row opens a tab (A1570), and ⌘ (Ctrl off a
+  // Mac, where Ctrl-click is a right-click) adds or takes out one only once several are picked.
+  await two.click({ modifiers: ['Shift'] });
   await expect(one).toHaveAttribute('aria-selected', 'true');
   await expect(two).toHaveAttribute('aria-selected', 'true');
   await two.click({ button: 'right' });

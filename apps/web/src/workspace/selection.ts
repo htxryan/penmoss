@@ -3,9 +3,11 @@
  *
  * Shift-click selects the notes between the last one chosen and this one (folders in between
  * are skipped); the toggle modifier adds or removes one: ⌘ on a Mac, where Ctrl-click is a
- * right-click, and Ctrl elsewhere. A plain click opens a note and leaves one selected. Right-
- * clicking a selected note acts on the whole selection; any other row, on that row alone.
+ * right-click, and Ctrl elsewhere, once several rows are picked (A1570; on one row it opens a
+ * tab). A plain click opens a note and leaves one selected. Right-clicking a selected note acts
+ * on the whole selection; any other row, on that row alone.
  */
+import { isPlainLeftClick, isWindowClick, openIntent, type OpenIntent } from '../router';
 import type { Row } from './model';
 
 /** The modifier that adds a note to the selection or takes it out. */
@@ -14,6 +16,32 @@ export function isToggleClick(
   apple: boolean,
 ): boolean {
   return apple ? event.metaKey : event.ctrlKey;
+}
+
+/** What a click on a note's row in the tree does: opens it (as `openIntent` says), or picks. */
+export type TreeNoteClick = OpenIntent | 'range' | 'toggle';
+
+/**
+ * A click on a note's row in the tree (A570, A1570). ⌘-click (Ctrl-click off a Mac) opens the
+ * note in a new tab behind this one, ⇧⌘-click in front, as everywhere else (A1498), unless a
+ * selection of several rows (notes and folders) is under way: then it adds the note or takes it
+ * out. Shift-click picks a range; ⌥-click opens a note window; a plain click opens it here.
+ * Without tabs (a note window) ⌘-click always picks. Null for a click the tree leaves alone.
+ */
+export function treeNoteClick(
+  event: Pick<
+    MouseEvent,
+    'button' | 'metaKey' | 'ctrlKey' | 'shiftKey' | 'altKey' | 'defaultPrevented'
+  >,
+  context: { readonly apple: boolean; readonly tabs: boolean; readonly picked: number },
+): TreeNoteClick | null {
+  if (isWindowClick(event)) return 'window';
+  if (event.button !== 0 || event.altKey) return null;
+  const toggle = isToggleClick(event, context.apple);
+  if (toggle && context.tabs && context.picked < 2) return openIntent(event);
+  if (event.shiftKey) return 'range';
+  if (toggle) return 'toggle';
+  return isPlainLeftClick(event) ? 'current' : null;
 }
 
 /** The notes from `fromId` to `toId` in the tree's visible order, inclusive (either way round). */

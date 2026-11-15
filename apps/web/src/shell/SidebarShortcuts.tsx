@@ -4,7 +4,7 @@ import { Icon, type IconName } from '@penmoss/ui/icons';
 import { useCommands, useKeys } from '../commands/hooks';
 import { graphPath } from '../graph/path';
 import { thisWeek, today } from '../journal/journal';
-import { linkHandler } from '../router';
+import { hasTabs, linkHandler, openIntent } from '../router';
 import { useSourcesState } from '../sources/hooks';
 import { useSidebarDisplay } from './display';
 import { withKeys } from './drawer';
@@ -113,6 +113,10 @@ function useCurrentJournal(): Readonly<Record<string, string>> {
   };
 }
 
+/** Today and This Week open a note, so a ⌘-click opens it in a new tab (A1570). */
+const opensNote = (shortcut: Shortcut): boolean =>
+  shortcut.command === 'journal.today' || shortcut.command === 'journal.thisWeek';
+
 function ShortcutButton({ shortcut, current }: { shortcut: Shortcut; current: boolean }) {
   const commands = useCommands();
   const keys = useKeys(shortcut.command);
@@ -122,7 +126,12 @@ function ShortcutButton({ shortcut, current }: { shortcut: Shortcut; current: bo
       className="icon-btn sb-shortcut"
       data-command={shortcut.command}
       data-testid={shortcut.testId}
-      onClick={() => commands.run(shortcut.command)}
+      onClick={(event) => {
+        // Today and This Week ⌘-clicked: their note in a new tab behind this one (A1570).
+        const intent = opensNote(shortcut) && hasTabs() ? openIntent(event) : null;
+        const newTab = intent === 'background' || intent === 'foreground' ? intent : undefined;
+        commands.run(shortcut.command, { source: 'button', newTab });
+      }}
       aria-label={shortcut.label}
       aria-current={current ? 'page' : undefined}
       aria-keyshortcuts={ariaKeyShortcuts(keys) || undefined}

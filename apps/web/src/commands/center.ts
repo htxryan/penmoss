@@ -29,6 +29,11 @@ export type RunSource = 'key' | 'palette' | 'button' | 'menu';
 export interface RunContext {
   readonly source: RunSource;
   readonly event?: KeyboardEvent;
+  /**
+   * A sidebar button ⌘-clicked (Ctrl-clicked), or ⇧⌘-clicked: the page it opens goes in a new
+   * tab behind the one on screen, or in front (A1570). Commands that open no page ignore it.
+   */
+  readonly newTab?: 'background' | 'foreground' | undefined;
 }
 
 export interface CommandHandler {

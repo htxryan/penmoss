@@ -398,8 +398,15 @@ test('a context menu on notes, a selection and folders: Move, Trash with Undo, R
   await page.goBack();
   await expect(one).toHaveAttribute('aria-selected', 'false');
   await expect(two).toHaveAttribute('aria-selected', 'false');
-  // ⌘ or Ctrl-click with nothing chosen takes only that note, not the open one unseen.
+  // ⌘ or Ctrl-click with nothing chosen opens a tab and picks nothing (A1570); Space then takes
+  // only that note, not the open one unseen.
   await two.click({ modifiers: [process.platform === 'darwin' ? 'Meta' : 'Control'] });
+  await expect(two).toHaveAttribute('aria-selected', 'false');
+  await expect(one).toHaveAttribute('aria-selected', 'false');
+  await two.focus();
+  await page.keyboard.press('Space');
+  await expect(two).toHaveAttribute('aria-selected', 'true');
+  await expect(one).toHaveAttribute('aria-selected', 'false');
   await two.click({ button: 'right' });
   await expect(page.getByRole('menu', { name: `“Ctx two ${RUN}”` })).toBeVisible();
   await page.keyboard.press('Escape');

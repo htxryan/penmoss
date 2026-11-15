@@ -17,7 +17,7 @@ import { useKeys } from '../commands/hooks';
 import { setTitle } from '@penmoss/model/note';
 import { useNotes } from '../notes/hooks';
 import { oneLineTitle } from '@penmoss/model/title';
-import { hasTabs, isPlainLeftClick, isWindowClick, navigate, notePath, openPath } from '../router';
+import { hasTabs, navigate, notePath, openPath } from '../router';
 import { closeTabsOfTrashed } from '../tabs/trash';
 import { openNoteWindow } from '../window/open';
 import { COPIED_AGENT_REFERENCE, useCopyAgentReference } from '../notes/agent-reference';
@@ -29,7 +29,7 @@ import { ClickHint } from '../shell/ClickHint';
 import { MenuItem } from '../shell/Menu';
 import { trashAll, trashedNote } from '../trash/trashed';
 import { moveRequest } from './move-request';
-import { isToggleClick, notesLabel, notesNamed, toggled } from './selection';
+import { isToggleClick, notesLabel, notesNamed, toggled, treeNoteClick } from './selection';
 import { duplicateNote, itemsCount, transfer, type TransferResult } from './transfer';
 import { useExpanded } from './expanded';
 import {
@@ -500,35 +500,46 @@ export function FolderTree({
       setPicked([]);
       setPickAnchor(row.key);
       activateFolder(row);
-    } else if (isWindowClick(event)) {
-      // ⌥-click (Alt-click): the note in a new window (T45, A710). Not the browser's own
-      // ⌥-click on the row's link, which downloads it.
-      event.preventDefault();
-      openNoteWindow(row.id);
-    } else if (event.button === 0 && event.shiftKey && !event.altKey) {
-      // A range, not a new window (A570); with a folder at its start, folders too (T68).
-      event.preventDefault();
-      if (pickedFolders.length > 0 || pickAnchor?.startsWith('folder:')) selection.pickRange(row);
-      else selection.selectRange(row);
-    } else if (event.button === 0 && isToggleClick(event, isApplePlatform()) && !event.altKey) {
-      // One more, not a new tab: ⌘ on a Mac, where Ctrl-click is a right-click (A570).
-      event.preventDefault();
-      selection.toggleSelected(row);
-      setPickAnchor(row.key);
-    } else if (isPlainLeftClick(event)) {
-      event.preventDefault();
-      setSelection([row.id]);
-      setAnchor(row.id);
-      setPicked([]);
-      setPickAnchor(row.key);
-      openNote(row);
+      return;
+    }
+    const click = treeNoteClick(event, {
+      apple: isApplePlatform(),
+      tabs: hasTabs(),
+      picked: selected.length + pickedFolders.length,
+    });
+    if (click === null) return;
+    event.preventDefault();
+    switch (click) {
+      case 'window':
+        // ⌥-click (Alt-click): the note in a new window (T45, A710). Not the browser's own
+        // ⌥-click on the row's link, which downloads it.
+        openNoteWindow(row.id);
+        return;
+      case 'background':
+      case 'foreground':
+        // ⌘-click (Ctrl-click) on one row: a new tab, the selection as it was (A1570).
+        openPath(notePath(row.id), click);
+        return;
+      case 'range':
+        // A range, not a new window (A570); with a folder at its start, folders too (T68).
+        if (pickedFolders.length > 0 || pickAnchor?.startsWith('folder:')) selection.pickRange(row);
+        else selection.selectRange(row);
+        return;
+      case 'toggle':
+        // One more, or one fewer, while several rows are picked (A570, A1570).
+        selection.toggleSelected(row);
+        setPickAnchor(row.key);
+        return;
+      case 'current':
+        setSelection([row.id]);
+        setAnchor(row.id);
+        setPicked([]);
+        setPickAnchor(row.key);
+        openNote(row);
     }
   };
 
-  /**
-   * A middle click on a note opens it in a new tab behind this one (PEN-140, A1498). ⌘-click
-   * stays the tree's own, one more row picked (A570); its menu has Open in New Tab.
-   */
+  /** A middle click on a note opens it in a new tab behind this one (PEN-140, A1498). */
   const onAuxClick = (event: MouseEvent<HTMLDivElement>) => {
     if (event.button !== 1 || !hasTabs()) return;
     const row = rowOf(rowElement(event));
@@ -866,13 +877,12 @@ function NoteMenuItems({
           </MenuItem>
           <div className="menu-sep" role="separator" />
           {/* The open group: Open in New Tab leads it, above Open in New Window, each with its
-              click (PEN-140, mockup ac2). The tree's ⌘-click picks a row (A570), so a tab is
-              its middle click. */}
+              click (PEN-140, mockup ac2): ⌘-click opens a tab here too (A1570). */}
           {onTab ? (
             <MenuItem
               icon="plus"
               data-testid="note-open-tab"
-              hint={<ClickHint modifier="middle" />}
+              hint={<ClickHint modifier="mod" />}
               onClick={() => onTab(only)}
             >
               Open in New Tab

@@ -53,7 +53,7 @@ Each folder sorts its notes in its own way: **Manual** (the default: drag to reo
 
 - **Drag** a note to a folder in the sidebar.
 - **Move to Folder…**, in the note's ⋯ menu, the File menu or the command palette, opens a picker: choose the folder and **Move here**.
-- **Several at once:** Shift-click selects a range, ⌘-click adds or removes one. Then right-click (or Ctrl-click, or Shift+F10) for **Move N Notes…** or **Move N Notes to Trash**, with one Undo.
+- **Several at once:** Shift-click selects a range; once several are selected, ⌘-click adds or removes one, and Space adds or removes the note you are on. On a single note, ⌘-click opens it in a [new tab](/docs/install/mac/#tabs) instead. Then right-click (or Ctrl-click, or Shift+F10) for **Move N Notes…** or **Move N Notes to Trash**, with one Undo.
 
 What a move or copy did, or why it could not be done, shows in a message at the bottom centre of the window, with a check when it worked and a warning sign when it did not. Up to three messages show at once, newest at the bottom. On Android the same messages show at the bottom of the screen.
 

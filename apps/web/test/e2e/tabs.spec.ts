@@ -123,14 +123,14 @@ test('notes open in the tab on screen or in new tabs, and the keys switch betwee
   await shows(page, BETA);
 
   // Open in New Tab from a tree row's menu, then ⇧⌘-click from Recent Notes: in front. The menu's
-  // open group leads with Open in New Tab and its Middle-Click (⌘-click picks a row there, A570),
-  // above Open in New Window and its ⌥-Click (mockup ac2).
+  // open group leads with Open in New Tab and its ⌘-Click (a tab there too, A1570), above Open
+  // in New Window and its ⌥-Click (mockup ac2).
   await row(page, ALPHA).click({ button: 'right' });
   const rowMenu = page.getByRole('menu', { name: `“${ALPHA}”` });
   const openTab = rowMenu.getByTestId('note-open-tab');
   const openWindow = rowMenu.getByRole('menuitem', { name: 'Open in New Window' });
   await expect(openTab).toHaveAccessibleName('Open in New Tab');
-  await expect(openTab.getByTestId('menu-click-hint')).toHaveText('Middle-Click');
+  await expect(openTab.getByTestId('menu-click-hint')).toHaveText(/^(⌘|Ctrl)-Click$/);
   await expect(openWindow.getByTestId('menu-click-hint')).toHaveText(/^(⌥|Alt)-Click$/);
   const items = await rowMenu
     .getByRole('menuitem')
@@ -218,6 +218,87 @@ test('notes open in the tab on screen or in new tabs, and the keys switch betwee
   expect(errors).toEqual([]);
 });
 
+test('⌘-click on a sidebar note opens a tab behind the one on screen, which stays as it was (A1570)', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/');
+  await expect(row(page, ALPHA)).toBeVisible({ timeout: 40_000 });
+  const item = (title: string) => tree(page).getByRole('treeitem', { name: title, exact: true });
+
+  // Beta in Recent Notes and Alpha in Quick Access, then Long on screen, scrolled down.
+  await open(page, BETA);
+  await rightClick(item(ALPHA), 'note-menu-quick-access');
+  const pin = page
+    .getByTestId('quick-access')
+    .getByTestId('quick-access-note')
+    .filter({ hasText: ALPHA });
+  await expect(pin).toBeVisible();
+  await open(page, LONG);
+  expect(await titles(page)).toEqual([`*${LONG}`]);
+  const scroller = page.getByTestId('note-scroll');
+  await scroller.evaluate((element) => {
+    element.scrollTop = 900;
+  });
+  await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBeGreaterThan(800);
+  const scrolled = await scroller.evaluate((element) => element.scrollTop);
+  const address = page.url();
+  await expect(item(LONG)).toHaveAttribute('aria-selected', 'true');
+
+  /** Long's tab is still the one on screen, at the same place, its row the one selected. */
+  async function unchanged(): Promise<void> {
+    await shows(page, LONG);
+    await expect(tab(page, LONG)).toHaveAttribute('aria-selected', 'true');
+    expect(page.url()).toBe(address);
+    expect(await scroller.evaluate((element) => element.scrollTop)).toBe(scrolled);
+    await expect(item(LONG)).toHaveAttribute('aria-selected', 'true');
+    await expect(item(LONG).getByRole('link')).toHaveAttribute('aria-current', 'page');
+  }
+
+  // The tree: ⌘-click (Ctrl-click) opens Gamma behind and picks nothing.
+  await row(page, GAMMA).click({ modifiers: ['ControlOrMeta'] });
+  await expect(tabs(page)).toHaveCount(2);
+  expect(await titles(page)).toEqual([`*${LONG}`, GAMMA]);
+  await expect(item(GAMMA)).toHaveAttribute('aria-selected', 'false');
+  await unchanged();
+
+  // Quick Access and Recent Notes: the same, each after the tabs opened from this one.
+  await pin.click({ modifiers: ['ControlOrMeta'] });
+  await expect(tabs(page)).toHaveCount(3);
+  await page
+    .getByTestId('recent-note')
+    .filter({ hasText: BETA })
+    .first()
+    .click({ modifiers: ['ControlOrMeta'] });
+  await expect(tabs(page)).toHaveCount(4);
+  expect(await titles(page)).toEqual([`*${LONG}`, GAMMA, ALPHA, BETA]);
+  await unchanged();
+
+  // Today in the sidebar's shortcuts: its note behind too.
+  await page
+    .getByTestId('sidebar-shortcuts')
+    .getByRole('button', { name: 'Today', exact: true })
+    .click({ modifiers: ['ControlOrMeta'] });
+  await expect(tabs(page)).toHaveCount(5);
+  await unchanged();
+
+  // In the tree, once several rows are picked (Shift-click), ⌘-click adds a note or takes one
+  // out, and opens no tab (A570, A1570).
+  await item(GAMMA).click({ modifiers: ['Shift'] });
+  await expect(item(GAMMA)).toHaveAttribute('aria-selected', 'true');
+  await expect(item(LONG)).toHaveAttribute('aria-selected', 'true');
+  await item(ALPHA).click({ modifiers: ['ControlOrMeta'] });
+  await expect(item(ALPHA)).toHaveAttribute('aria-selected', 'true');
+  await item(GAMMA).click({ modifiers: ['ControlOrMeta'] });
+  await expect(item(GAMMA)).toHaveAttribute('aria-selected', 'false');
+  await expect(item(ALPHA)).toHaveAttribute('aria-selected', 'true');
+  await expect(tabs(page)).toHaveCount(5);
+  await unchanged();
+  expect(errors).toEqual([]);
+});
+
 test('each tab keeps its own Back, scroll and panel, and a reload brings the tabs back', async ({
   page,
 }) => {
@@ -235,8 +316,7 @@ test('each tab keeps its own Back, scroll and panel, and a reload brings the tab
     element.scrollTop = 900;
   });
   await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBeGreaterThan(800);
-  // Tab 2: Beta, with Version History open. (In the tree ⌘-click picks rows, A570: its menu
-  // opens the tab, then ⌘2 shows it.)
+  // Tab 2: Beta, with Version History open: its row's menu opens the tab, then ⌘2 shows it.
   await rightClick(row(page, BETA), 'note-open-tab');
   await page.keyboard.press('ControlOrMeta+Digit2');
   await shows(page, BETA);
