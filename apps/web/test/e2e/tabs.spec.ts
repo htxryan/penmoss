@@ -17,6 +17,8 @@ const longText = Array.from(
   { length: 120 },
   (_, n) => `Line ${n + 1} of a note long enough to scroll.`,
 ).join('\n\n');
+/** Ten more notes, for a strip of tabs each showing a note of its own (A1574: none twice). */
+const EXTRAS = Array.from({ length: 10 }, (_, n) => `Extra ${n + 1} ${RUN}`);
 
 test.use({
   seed: {
@@ -26,6 +28,7 @@ test.use({
       { title: BETA, markdown: 'The second note.' },
       { title: GAMMA, markdown: 'The third note.' },
       { title: LONG, markdown: longText },
+      ...EXTRAS.map((title) => ({ title, markdown: 'One more note.' })),
     ],
   },
 });
@@ -122,7 +125,7 @@ test('notes open in the tab on screen or in new tabs, and the keys switch betwee
   expect(await titles(page)).toEqual([`*${BETA}`, GAMMA, LONG]);
   await shows(page, BETA);
 
-  // Open in New Tab from a tree row's menu, then ⇧⌘-click from Recent Notes: in front. The menu
+  // Open in New Tab from a tree row's menu, then ⇧⌘-click in the tree. The menu
   // leads with its open group, Open in New Tab and its ⌘-Click (a tab there too, A1570) above
   // Open in New Window and its ⌥-Click (mockup ac2), then a separator, New Note Here and New
   // Folder Here, the copy and pin, and the edits (A1571).
@@ -151,11 +154,20 @@ test('notes open in the tab on screen or in new tabs, and the keys switch betwee
   await page.waitForTimeout(2_000);
   await openTab.click();
   expect(await titles(page)).toEqual([`*${BETA}`, GAMMA, LONG, ALPHA]);
+  // Gamma is open in a tab already: ⇧⌘-click in the sidebar goes to that tab (A1574).
+  await row(page, GAMMA).click({ modifiers: ['ControlOrMeta', 'Shift'] });
+  expect(await titles(page)).toEqual([BETA, `*${GAMMA}`, LONG, ALPHA]);
+  // Search's ⇧⌘↩ opens it again, in front: Search opens as asked.
   await page
-    .getByTestId('recent-note')
-    .filter({ hasText: GAMMA })
-    .first()
-    .click({ modifiers: ['ControlOrMeta', 'Shift'] });
+    .getByTestId('sidebar-shortcuts')
+    .getByRole('button', { name: 'Search', exact: true })
+    .click();
+  await search.getByRole('combobox', { name: 'Search notes' }).fill(GAMMA);
+  await expect(hits.first()).toContainText(GAMMA, { timeout: 20_000 });
+  await page.keyboard.press('ControlOrMeta+Shift+Enter');
+  await expect(search).toBeHidden();
+  expect(await titles(page)).toEqual([BETA, GAMMA, `*${GAMMA}`, LONG, ALPHA]);
+  await page.keyboard.press('Control+Shift+Tab');
   expect(await titles(page)).toEqual([BETA, `*${GAMMA}`, GAMMA, LONG, ALPHA]);
   await shows(page, GAMMA);
 
@@ -309,6 +321,48 @@ test('⌘-click on a sidebar note opens a tab behind the one on screen, which st
   expect(errors).toEqual([]);
 });
 
+test('a sidebar note already open in a tab is gone to there, never opened twice (A1574)', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/');
+  await expect(row(page, ALPHA)).toBeVisible({ timeout: 40_000 });
+  await open(page, ALPHA);
+  await row(page, BETA).click({ button: 'middle' });
+  expect(await titles(page)).toEqual([`*${ALPHA}`, BETA]);
+
+  // A click on Beta in the tree, open behind: its tab comes in front, Alpha's keeps Alpha.
+  await row(page, BETA).click();
+  await shows(page, BETA);
+  expect(await titles(page)).toEqual([ALPHA, `*${BETA}`]);
+
+  // ⌘-click on Alpha, open already: no second tab, Beta stays on screen, Alpha's tab blinks.
+  await row(page, ALPHA).click({ modifiers: ['ControlOrMeta'] });
+  expect(await tab(page, ALPHA).evaluate((element) => element.getAnimations().length)).toBe(1);
+  await page.waitForTimeout(300);
+  expect(await titles(page)).toEqual([ALPHA, `*${BETA}`]);
+  await shows(page, BETA);
+  // ⇧⌘-click on it: its tab.
+  await row(page, ALPHA).click({ modifiers: ['ControlOrMeta', 'Shift'] });
+  await shows(page, ALPHA);
+  expect(await titles(page)).toEqual([`*${ALPHA}`, BETA]);
+
+  // Recent Notes: the same.
+  await page.getByTestId('recent-note').filter({ hasText: BETA }).first().click();
+  await shows(page, BETA);
+  expect(await titles(page)).toEqual([ALPHA, `*${BETA}`]);
+
+  // A note in no tab opens in the tab on screen, as before; Back steps that tab, never jumps.
+  await open(page, GAMMA);
+  expect(await titles(page)).toEqual([ALPHA, `*${GAMMA}`]);
+  await page.goBack();
+  await shows(page, BETA);
+  expect(await titles(page)).toEqual([ALPHA, `*${BETA}`]);
+  expect(errors).toEqual([]);
+});
+
 test('each tab keeps its own Back, scroll and panel, and a reload brings the tabs back', async ({
   page,
 }) => {
@@ -448,8 +502,8 @@ test('many tabs scroll sideways, and All Tabs lists them (AC12)', async ({ page 
   await page.goto('/');
   await expect(row(page, ALPHA)).toBeVisible({ timeout: 40_000 });
   await open(page, ALPHA);
-  for (let n = 0; n < 13; n++) {
-    await row(page, [BETA, GAMMA, LONG][n % 3]!).click({ button: 'middle' });
+  for (const title of [BETA, GAMMA, LONG, ...EXTRAS]) {
+    await row(page, title).click({ button: 'middle' });
   }
   await expect(tabs(page)).toHaveCount(14);
   // Alpha pinned: it stays at the start as the rest scroll.

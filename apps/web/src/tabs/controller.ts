@@ -49,6 +49,8 @@ import {
   showInTab,
   step,
   stepTarget,
+  switchToTab,
+  tabShowing,
   updateEntry,
   HOME_PATH,
   NEW_TAB_PATH,
@@ -204,6 +206,20 @@ export class TabsController implements HistoryDriver {
 
   show(path: string): void {
     this.commit(showInTab(this.state, path, this.ids));
+  }
+
+  reveal(path: string, intent: 'current' | 'background' | 'foreground'): boolean {
+    const id = tabShowing(this.state, path);
+    if (id === null) return false;
+    // Behind: no second tab of it; the tab that has it is pointed out.
+    if (intent === 'background') {
+      flashTab(id);
+      return true;
+    }
+    // The tab on screen has it already: a plain click goes there as it always did.
+    if (id === this.state.active) return intent !== 'current';
+    this.commit(switchToTab(this.state, id, path));
+    return true;
   }
 
   /** The browser went back or forward (its buttons, `history.go`): the active tab follows. */
@@ -388,4 +404,19 @@ export function uninstallMainTabs(): void {
   detach?.();
   detach = null;
   main = null;
+}
+
+/**
+ * Points out a tab that already has the note a ⌘-click asked for (A1574): a short pulse of the
+ * hover colour, none with Reduce Motion. Only where the strip is drawn.
+ */
+function flashTab(id: string): void {
+  if (typeof document === 'undefined') return;
+  const tab = document.querySelector<HTMLElement>(`.tab-strip [data-tab-id="${CSS.escape(id)}"]`);
+  if (!tab || typeof tab.animate !== 'function') return;
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  tab.animate(
+    [{ backgroundColor: 'var(--pm-active)' }, { backgroundColor: 'var(--pm-active)' }, {}],
+    { duration: 700, easing: 'ease-out' },
+  );
 }

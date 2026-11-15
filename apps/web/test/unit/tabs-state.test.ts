@@ -31,6 +31,8 @@ import {
   showInTab,
   shownNotes,
   step,
+  switchToTab,
+  tabShowing,
   updateEntry,
   type TabsState,
 } from '../../src/tabs/state';
@@ -126,6 +128,25 @@ describe('opening notes', () => {
     expect(strip(state)).toEqual([note(A), note(B), `*${note(C)}`]);
     // Never in place of the page on screen.
     expect(activeTab(state).entries).toHaveLength(1);
+  });
+
+  it('finds the tab showing a note, the active one first, and switches to it (A1574)', () => {
+    const ids = counter();
+    let state = tabsOn([note(A), note(B), note(A)], ids);
+    state = activate(state, state.tabs[2]!.id);
+    expect(tabShowing(state, note(A))).toBe(state.tabs[2]!.id);
+    expect(tabShowing(state, `${note(B)}?heading=Plan`)).toBe(state.tabs[1]!.id);
+    expect(tabShowing(state, note(C))).toBeNull();
+    expect(tabShowing(state, '/tags')).toBeNull();
+    // Switching keeps the tab on screen as it was; a heading replaces the page it switches to.
+    const before = state.tabs[2]!;
+    let next = switchToTab(state, state.tabs[1]!.id, note(B));
+    expect(strip(next)).toEqual([note(A), `*${note(B)}`, note(A)]);
+    expect(next.tabs[2]).toBe(before);
+    expect(activeTab(next).entries).toHaveLength(1);
+    next = switchToTab(state, state.tabs[1]!.id, `${note(B)}?heading=Plan`);
+    expect(strip(next)).toEqual([note(A), `*${note(B)}?heading=Plan`, note(A)]);
+    expect(activeTab(next).entries).toHaveLength(1);
   });
 });
 

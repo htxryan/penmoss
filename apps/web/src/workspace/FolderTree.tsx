@@ -17,7 +17,7 @@ import { useKeys } from '../commands/hooks';
 import { setTitle } from '@penmoss/model/note';
 import { useNotes } from '../notes/hooks';
 import { oneLineTitle } from '@penmoss/model/title';
-import { hasTabs, navigate, notePath, openPath } from '../router';
+import { REVEAL, hasTabs, navigate, notePath, openPath } from '../router';
 import { closeTabsOfTrashed } from '../tabs/trash';
 import { openNoteWindow } from '../window/open';
 import { COPIED_AGENT_REFERENCE, useCopyAgentReference } from '../notes/agent-reference';
@@ -302,9 +302,10 @@ export function FolderTree({
     if (id) focusRow(rowKey({ kind: 'note', id }));
   };
 
+  /** A click or Enter: the note here, or in the tab that has it already (A1574). */
   const openNote = (row: NoteRow) => {
     onCurrentFolderChange(row.parentId);
-    navigate(notePath(row.id));
+    openPath(notePath(row.id), 'current', REVEAL);
   };
 
   // --- the context menu (A570) ---
@@ -518,7 +519,7 @@ export function FolderTree({
       case 'background':
       case 'foreground':
         // ⌘-click (Ctrl-click) on one row: a new tab, the selection as it was (A1570).
-        openPath(notePath(row.id), click);
+        openPath(notePath(row.id), click, REVEAL);
         return;
       case 'range':
         // A range, not a new window (A570); with a folder at its start, folders too (T68).
@@ -545,7 +546,7 @@ export function FolderTree({
     const row = rowOf(rowElement(event));
     if (row?.kind !== 'note') return;
     event.preventDefault();
-    openPath(notePath(row.id), 'background');
+    openPath(notePath(row.id), 'background', REVEAL);
   };
 
   const onContextMenu = (event: MouseEvent<HTMLDivElement>) => {
@@ -721,7 +722,7 @@ export function FolderTree({
                 hasTabs()
                   ? (id) => {
                       closeMenu();
-                      openPath(notePath(id), 'background');
+                      openPath(notePath(id), 'background', REVEAL);
                     }
                   : null
               }

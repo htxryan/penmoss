@@ -6,7 +6,7 @@
 import { isoWeek, todayIn, type PeriodKind, type PlainDate } from '@penmoss/core/periodic';
 import { templateOf, timeZoneOf } from '@penmoss/core/settings';
 import type { Notes } from '../notes/service';
-import { navigate, notePath, openPath, showPath } from '../router';
+import { REVEAL, navigate, notePath, openPath, showPath } from '../router';
 import type { Workspace } from '../workspace/service';
 
 export function today(settings: Record<string, unknown>, now: Date = new Date()): PlainDate {
@@ -42,7 +42,7 @@ export async function openPeriodic(
   const id = await notes.ensurePeriodic(kind, period, templateOf(settings, kind));
   if (options.newTab) {
     if (options.newTab === 'foreground') notes.requestBodyFocus(id);
-    openPath(notePath(id), options.newTab);
+    openPath(notePath(id), options.newTab, REVEAL);
     return id;
   }
   notes.requestBodyFocus(id);

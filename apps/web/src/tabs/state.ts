@@ -209,18 +209,29 @@ function clearOpener(tab: Tab): Tab {
  * tab shows it. It never replaces the page on screen (A1498).
  */
 export function showInTab(state: TabsState, path: string, ids: IdMaker = randomId): TabsState {
-  const note = noteIdOfPath(path);
-  if (note === null) return navigateActive(state, path, { ids });
-  const active = activeTab(state);
-  if (noteIdOfPath(currentEntry(active).path) === note) {
-    return navigateActive(state, path, { replace: true });
-  }
-  const showing = state.tabs.find((tab) => noteIdOfPath(currentEntry(tab).path) === note);
-  if (showing) {
-    const activated = activate(state, showing.id);
-    return navigateActive(activated, path, { replace: true });
-  }
+  if (noteIdOfPath(path) === null) return navigateActive(state, path, { ids });
+  const showing = tabShowing(state, path);
+  if (showing !== null) return switchToTab(state, showing, path);
   return openTab(state, path, { background: false, ids });
+}
+
+/**
+ * The tab whose page is the note `path` opens, the active one first; null for a page that is no
+ * note, or a note no tab shows (A1498, A1574).
+ */
+export function tabShowing(state: TabsState, path: string): string | null {
+  const note = noteIdOfPath(path);
+  if (note === null) return null;
+  const shows = (tab: Tab) => noteIdOfPath(currentEntry(tab).path) === note;
+  if (shows(activeTab(state))) return state.active;
+  return state.tabs.find(shows)?.id ?? null;
+}
+
+/** Tab `id` made active, showing `path` in place of its page (a heading, say) when it differs. */
+export function switchToTab(state: TabsState, id: string, path: string): TabsState {
+  const activated = activate(state, id);
+  if (currentEntry(activeTab(activated)).path === path) return activated;
+  return navigateActive(activated, path, { replace: true });
 }
 
 export function activate(state: TabsState, id: string): TabsState {
