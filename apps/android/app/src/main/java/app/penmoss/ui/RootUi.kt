@@ -119,8 +119,8 @@ internal class RootUi(
 
     /**
      * A write the person asked for, which finishes even if they leave the screen meanwhile: on
-     * the notebook's process scope with its failure reported (A1467), on the main thread, where
-     * it says what it did on the snackbar ([say]).
+     * the notebook's process scope with its failure reported (A1467), on the main thread. What
+     * it did is said on the screens' snackbar ([say]).
      */
     private fun keep(block: suspend CoroutineScope.() -> Unit) = graph.launchReporting(Dispatchers.Main.immediate, block)
 
@@ -191,18 +191,21 @@ internal class RootUi(
 
     /**
      * Says what an action did on the snackbar over every screen (A1535), in place of the one
-     * showing, as the web's toasts replace each other.
+     * showing, as the web's toasts replace each other. On the screens' scope: with the screens
+     * gone there is no snackbar to show, and nothing waits on one.
      */
-    suspend fun say(said: Said) {
-        snackbar.currentSnackbarData?.dismiss()
-        snackbar.say(said.text, said.tone)
+    fun say(said: Said) {
+        screenScope.launch {
+            snackbar.currentSnackbarData?.dismiss()
+            snackbar.say(said.text, said.tone)
+        }
     }
 
     /** Puts refused captures' text on the clipboard, one after another (A345), and says so. */
     fun copyCaptures(captures: List<Captures.Refused>) {
         val text = captures.joinToString("\n\n---\n\n") { it.text }
         context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Penmoss captures", text))
-        screenScope.launch { say(Said(if (captures.size == 1) "Copied the capture." else "Copied ${captures.size} captures.", SnackbarTone.Done)) }
+        say(Said(if (captures.size == 1) "Copied the capture." else "Copied ${captures.size} captures.", SnackbarTone.Done))
     }
 
     fun createFolder(name: String, parent: String?) {
