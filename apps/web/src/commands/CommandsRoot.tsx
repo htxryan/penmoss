@@ -287,6 +287,35 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
     openPath(notePath(id), 'current', REVEAL);
   };
 
+  /**
+   * New Tab's picker closing with the tabs on screen as they were (Escape, a click outside, ⌘↩):
+   * focus goes back where it was, and from + to the tab on screen (A1594).
+   */
+  const leaveNewTab = () => {
+    if (returnFocus.current?.dataset['testid'] === 'tab-new') {
+      const tab = document.querySelector<HTMLElement>(
+        '.tab-strip [role="tab"][aria-selected="true"]',
+      );
+      if (tab) returnFocus.current = tab;
+    }
+    close();
+  };
+
+  /**
+   * A note picked in New Tab's picker (A1594): a new tab in front, or behind with ⌘↩. A note open
+   * in a tab already gets no second one, as in the sidebar (A1574) and Search (A1581): a pick goes
+   * to its tab, and ⌘↩ points that tab out.
+   */
+  const openInNewTab = (id: string, where: TabIntent = 'foreground') => {
+    if (where === 'background') {
+      leaveNewTab();
+    } else {
+      close(false);
+      notes.requestBodyFocus(id);
+    }
+    openPath(notePath(id), where, REVEAL);
+  };
+
   useCommand('app.palette', () => {
     if (overlay?.kind === 'palette' && overlay.mode === 'all') close();
     else open({ kind: 'palette', mode: 'all' });
@@ -494,20 +523,8 @@ export function CommandOverlays({ currentNoteId }: { currentNoteId: string | nul
             key={overlay.mode}
             mode={overlay.mode}
             notes={recentNotes(openList, readOpened(deviceStorage()), null, openList.length)}
-            onClose={() => {
-              // New Tab cancelled from +: focus back on the tab on screen, the tabs as they were.
-              if (
-                overlay.mode === 'newTab' &&
-                returnFocus.current?.dataset['testid'] === 'tab-new'
-              ) {
-                const tab = document.querySelector<HTMLElement>(
-                  '.tab-strip [role="tab"][aria-selected="true"]',
-                );
-                if (tab) returnFocus.current = tab;
-              }
-              close();
-            }}
-            onOpenNote={openNote}
+            onClose={() => (overlay.mode === 'newTab' ? leaveNewTab() : close())}
+            onOpenNote={overlay.mode === 'newTab' ? openInNewTab : openNote}
             onRunCommand={(id) => {
               // New Tab's New Note: the note in a new tab, which takes focus (A1594).
               if (overlay.mode === 'newTab') {
