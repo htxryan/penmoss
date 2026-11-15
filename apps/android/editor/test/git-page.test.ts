@@ -62,6 +62,13 @@ function pipe(): [FramePort, FramePort] {
   return [port(0), port(1)];
 }
 
+/**
+ * Every fake app's channel, so each test stops its pages' hosts when it ends. A host left running
+ * keeps its push and pull timers, real ones, and they fire during a later test: into the sync
+ * cadence's spy on `AndroidGitHost.prototype.syncNow` they were a push 5 s in (CI, PR #201).
+ */
+const apps: Channel[] = [];
+
 /** The app's side: git over a MemoryTransport, the secret, the owner checks. */
 function fakeApp(options: {
   remote: MemoryRemote;
@@ -165,6 +172,7 @@ function fakeApp(options: {
       return null;
     },
   });
+  apps.push(app);
   app.on('status', (status) => statuses.push(status as GitSyncStatus));
   app.on('changed', () => changed.count++);
   const kv = memoryEngineKv();
@@ -197,8 +205,10 @@ async function settle(app: Channel) {
   return (await app.call('sync', { reason: 'now' })) as GitSyncStatus;
 }
 
-afterEach(() => {
+afterEach(async () => {
   vi.useRealTimers();
+  // A page with no host yet (none opened, or forgotten) answers too: stop is a no-op there.
+  await Promise.all(apps.splice(0).map((app) => app.call('stop', null, 5_000)));
 });
 
 describe('frames (A873)', () => {
