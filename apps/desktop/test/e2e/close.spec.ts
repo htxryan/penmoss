@@ -145,6 +145,12 @@ test('closing the main window takes it off the screen at once, and its last keys
     .poll(() => pushed(remote, title), { timeout: 30_000 })
     .toContain(`first words ${RUN} and the last ${RUN}`);
   await expect.poll(() => closingWindow(app), { timeout: 30_000 }).toBe('destroyed');
+  // The new main window stays, and the app with it: the old one was not the last (Linux, A1577).
+  await again.waitForTimeout(500);
+  expect(
+    await app.evaluate(() => (globalThis as unknown as Hooks).penmossDesktop.mainWindow() !== null),
+  ).toBe(true);
+  await expect(body(again)).toContainText(`first words ${RUN} and the last ${RUN}`);
   expect(launched.errors).toEqual([]);
 });
 
@@ -168,6 +174,10 @@ test('quitting takes every window off the screen at once, and both windows’ ke
   ]);
   await expect(window).toHaveURL(WINDOW);
   await expect(window.getByTestId('note-title')).toHaveValue(noteTitle);
+  // It opens on every keystroke typed in the main window, read once (A1591): from a store that
+  // lacked the last ones, both windows' new words merged side by side, interleaved.
+  await expect(window.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
+  expect(await body(window).textContent()).toBe(`in the note window ${RUN}`);
   await body(window).click();
   await window.keyboard.press(mac ? 'Meta+ArrowDown' : 'Control+End');
   await window.keyboard.type(` and typed last ${RUN}`);

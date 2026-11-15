@@ -12,9 +12,41 @@ export function noteWindowPath(id: string, heading: string | null = null): strin
   return heading ? `${path}?heading=${encodeURIComponent(heading)}` : path;
 }
 
-/** Opens the note in a new window (T45, A710): always a new one, so several can show one note. */
+/** The longest a new note window waits for this window to store its notes (A1591). */
+export const STORE_BEFORE_OPEN_MS = 1000;
+
+let storeFirst: (() => Promise<void>) | null = null;
+
+/**
+ * How this window stores its notes before it opens a note window (A1591): the Mac app sets it
+ * (main.tsx). The new window reads the note from the shared store, so without it a note window
+ * opened a moment after typing showed the note without its last keystrokes. Typed into there
+ * too, both windows' new text then merged side by side, interleaved.
+ */
+export function setStoreBeforeNoteWindow(store: (() => Promise<void>) | null): void {
+  storeFirst = store;
+}
+
+/**
+ * Opens the note in a new window (T45, A710): always a new one, so several can show one note.
+ * In the Mac app, once this window has stored its notes, or after STORE_BEFORE_OPEN_MS at most.
+ */
 export function openNoteWindow(id: string, heading: string | null = null): void {
-  window.open(noteWindowPath(id, heading), '_blank');
+  const path = noteWindowPath(id, heading);
+  const store = storeFirst;
+  if (!store) {
+    window.open(path, '_blank');
+    return;
+  }
+  let opened = false;
+  const open = () => {
+    if (opened) return;
+    opened = true;
+    clearTimeout(timer);
+    window.open(path, '_blank');
+  };
+  const timer = setTimeout(open, STORE_BEFORE_OPEN_MS);
+  void store().then(open, open);
 }
 
 /**
