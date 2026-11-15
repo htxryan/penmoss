@@ -2,8 +2,8 @@ import { expect, test, type Locator, type Page } from './fixtures';
 
 // PEN-140 (web): each notebook's badge, a colour and a letter, number or icon. With nothing
 // chosen it is a preset picked from the notebook's id and the first letter of its name, so
-// Personal and Penmoss are both P (duplicates are fine). Settings → Git Notebooks → a notebook's
-// page has its Badge group; a change shows at once on its sidebar row, and stays after a reload.
+// Personal and Penmoss are both P (duplicates are fine). A notebook's page in Settings has its
+// Badge rows on Overview; a change shows at once on its sidebar row, and stays after a reload.
 
 const RUN = `${Date.now().toString(36)}${100 + Math.floor(Math.random() * 900)}`;
 
@@ -42,7 +42,7 @@ export const sidebarSection = (page: Page, name: string): Locator =>
 export const sidebarBadge = (page: Page, name: string): Locator =>
   sidebarSection(page, name).locator('.sb-section-head').getByTestId('notebook-badge');
 
-/** Opens a notebook's page in Settings → Git Notebooks, from its row in the list. */
+/** Opens a notebook's page in Settings, from its row in All Notebooks. */
 export async function openNotebookSettings(page: Page, name: string): Promise<void> {
   await page.getByTestId('sidebar-settings').click();
   await page
