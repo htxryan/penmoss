@@ -29,9 +29,18 @@ val contractResources = tasks.register<Copy>("contractResources") {
     into(layout.buildDirectory.dir("generated/contract-resources"))
 }
 
+// The Characters a line symbol is chosen from (A1569): the web's own file, written by
+// scripts/characters.mjs, with the notice its data's licences ask for beside it.
+val characterResources = tasks.register<Copy>("characterResources") {
+    from(rootProject.file("../../packages/core/data/characters.json"))
+    from(rootProject.file("../../packages/core/data/NOTICE.txt")) { rename { "characters-NOTICE.txt" } }
+    into(layout.buildDirectory.dir("generated/character-resources"))
+}
+
 sourceSets {
     main {
         resources.srcDir(contractResources)
+        resources.srcDir(characterResources)
     }
 }
 
