@@ -87,7 +87,6 @@ function recordOf(doc: (typeof docs)[number], overrides: Partial<NoteRecord> = {
     title: doc.title,
     tags: doc.tags,
     headings: doc.headings,
-    epoch: 'e',
     updatedAt: doc.updatedAt,
     unsynced: false,
     ...overrides,

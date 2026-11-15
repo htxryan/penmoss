@@ -50,7 +50,7 @@ export async function addWelcomeNote(
     markdown: WELCOME_MARKDOWN,
   });
   source.notes.addCopy(
-    recordFromUpdates(id, [update], { epoch: null, unsynced: true, updatedAt: now.getTime() }),
+    recordFromUpdates(id, [update], { unsynced: true, updatedAt: now.getTime() }),
   );
   source.workspace.registerNote(id, null);
   await source.notes.settled(id);

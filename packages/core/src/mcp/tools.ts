@@ -16,7 +16,7 @@ export interface ToolDefinition {
   readonly title: string;
   readonly description: string;
   readonly inputSchema: ObjectSchema;
-  /** Changes notes: hidden from read-only tokens and refused for them. */
+  /** Changes notes (the local server counts these as writes). */
   readonly write: boolean;
   readonly annotations: {
     readonly title?: string;
@@ -27,13 +27,6 @@ export interface ToolDefinition {
   };
   /** Appended to an arguments error (what the agent should have sent). */
   readonly hint?: string;
-  /**
-   * Checks the note `id` itself: a folder-scoped token reaches a note it may restore, in Trash
-   * from inside its folder, although the tree no longer files it there (A566).
-   */
-  readonly ownIdCheck?: boolean;
-  /** Changes the whole workspace: hidden from folder-scoped tokens, which are refused it (N8). */
-  readonly workspaceWide?: boolean;
 }
 
 /** What differs between servers in what the tools say. */
@@ -554,7 +547,6 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
         'An agent moves at most 100 notes to Trash a day. You cannot delete a note for good: only Ryan can, in the app.',
       inputSchema: object({ id: ID }, ['id']),
       write: true,
-      ownIdCheck: true,
       annotations: {
         ...WRITE,
         destructiveHint: true,
@@ -571,7 +563,6 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
         'Calling it for a note not in Trash changes nothing (restored: false). Returns where the note is now.',
       inputSchema: object({ id: ID }, ['id']),
       write: true,
-      ownIdCheck: true,
       annotations: { ...WRITE, idempotentHint: true, title: 'Restore a note from Trash' },
     },
     // --- folders (T42, A567) ---
@@ -782,7 +773,6 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
         ['set'],
       ),
       write: true,
-      workspaceWide: true,
       annotations: { ...WRITE, idempotentHint: true, title: 'Change settings' },
     },
     {
@@ -805,7 +795,6 @@ export function toolDefinitions(options: ToolOptions): readonly ToolDefinition[]
         ['from', 'to'],
       ),
       write: true,
-      workspaceWide: true,
       annotations: { ...WRITE, destructiveHint: true, title: 'Rename or merge a tag' },
     },
     {

@@ -41,7 +41,7 @@ function openNoteWith(body: string): OpenNote {
     isLoaded: true,
     isClosed: false,
     replica,
-    keeper: { unsynced: true, currentEpoch: 'epoch-1', body },
+    keeper: { unsynced: true, body },
   } as unknown as OpenNote;
 }
 
@@ -199,7 +199,6 @@ describe('the captured context (A791)', () => {
     expect(field('note', 'Attachments')).toBe('1');
     expect(Number(field('note', 'Size in bytes'))).toBeGreaterThan(0);
     expect(field('note', 'Engine')).toBe('yjs14');
-    expect(field('note', 'Epoch')).toBe('epoch-1');
     expect(field('note', 'Unsynced')).toBe('yes');
     expect(field('note', 'In Trash')).toBe('no');
     expect(field('note', 'Backlinks')).toBe('1');
@@ -370,7 +369,7 @@ describe('from a git notebook’s note (A826, A828, A889)', () => {
   // What the Mac's main process files, as it is (A1010).
   const sent = JSON.stringify({ title: 'x', description: '', context });
 
-  it('sends none of the note’s id, title, folder, notebook, tags, dates or epoch', () => {
+  it('sends none of the note’s id, title, folder, notebook, tags or dates', () => {
     for (const text of [json, markdown, sent]) {
       for (const secret of [
         NOTE,
@@ -381,7 +380,6 @@ describe('from a git notebook’s note (A826, A828, A889)', () => {
         'Clients Zeta',
         '#home',
         'todo',
-        'epoch-1',
         '2026-10-20',
         MARKER,
       ]) {

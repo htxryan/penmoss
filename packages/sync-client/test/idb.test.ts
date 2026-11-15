@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import * as Y from '@y/y';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { PendingUpload, StoredAttachment } from '../src/attachment-store';
+import type { StoredAttachment } from '../src/attachment-store';
 import {
   ATTACHMENT_BYTES_STORE,
   ATTACHMENTS_STORE,
@@ -10,18 +10,17 @@ import {
   NOTES_STORE,
   NoteStore,
   STATE_STORE,
-  UPLOADS_STORE,
   toMeta,
   type NoteRecord,
   type UnloadWrite,
 } from '../src/idb';
-import { CONFLICT_SUFFIX, recordFromDoc } from '../src/records';
+import { recordFromDoc } from '../src/records';
 import { UNLOAD_MAX_CHARS } from '../src/unload';
-import { NOTE_ROOT } from '../src/replica';
 import { setDeleted } from '../src/note';
 import { setFrontmatterTag } from '../src/tags';
 import { createFolder, renameFolder, WORKSPACE_RECORD_KEY } from '../src/workspace';
 import { appendParagraph, createReplica } from './support/editing';
+import { seedRecords } from './support/seed';
 import { MemoryStorage } from './support/storage';
 
 let dbCount = 0;
@@ -37,6 +36,24 @@ afterEach(() => {
   for (const store of stores.splice(0)) store.close();
 });
 
+/** The keys of one object store, read from the database itself. */
+async function keysOf(name: string, storeName: string): Promise<IDBValidKey[]> {
+  const db = await new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open(name);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error ?? new Error('open failed'));
+  });
+  try {
+    return await new Promise((resolve, reject) => {
+      const request = db.transaction(storeName).objectStore(storeName).getAllKeys();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error ?? new Error('read failed'));
+    });
+  } finally {
+    db.close();
+  }
+}
+
 function record(noteId: string, overrides: Partial<NoteRecord> = {}): NoteRecord {
   return {
     noteId,
@@ -44,7 +61,6 @@ function record(noteId: string, overrides: Partial<NoteRecord> = {}): NoteRecord
     update: new Uint8Array([1, 2, 3]),
     stateVector: new Uint8Array([0]),
     text: `Title of ${noteId}\nbody`,
-    epoch: 'epoch-1',
     updatedAt: 1_700_000_000_000,
     unsynced: false,
     ...overrides,
@@ -55,85 +71,25 @@ describe('NoteStore', () => {
   it('keeps every note in one object store, next to a small state store', async () => {
     const store = await openFresh();
     expect(store.objectStoreNames().sort()).toEqual(
-      [
-        ATTACHMENT_BYTES_STORE,
-        ATTACHMENTS_STORE,
-        META_STORE,
-        NOTES_STORE,
-        STATE_STORE,
-        UPLOADS_STORE,
-      ].sort(),
+      [ATTACHMENT_BYTES_STORE, ATTACHMENTS_STORE, META_STORE, NOTES_STORE, STATE_STORE].sort(),
     );
   });
 
-  it('upgrades a version 1 database and keeps its notes', async () => {
-    const name = `penmoss-v1-${++dbCount}`;
-    await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open(name, 1);
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        db.createObjectStore(NOTES_STORE, { keyPath: 'noteId' }).put(record('old'));
-      };
-      request.onsuccess = () => {
-        request.result.close();
-        resolve();
-      };
-      request.onerror = () => reject(request.error ?? new Error('open failed'));
-    });
-    const store = await NoteStore.open(name);
-    stores.push(store);
-    expect(await store.keys()).toEqual(['old']);
-    expect(await store.getClock()).toBe(0);
-  });
-
-  it('stores the catch-up clock, which never goes back', async () => {
-    const store = await openFresh();
-    expect(await store.getClock()).toBe(0);
-    await store.setClock(42);
-    expect(await store.getClock()).toBe(42);
-    // A slower tab finishing an older pass must not rewind it.
-    await store.setClock(7);
-    expect(await store.getClock()).toBe(42);
-  });
-
-  it('keeps small state values beside the clock, and never lets them touch it', async () => {
+  it('keeps small state values beside the notes', async () => {
     const store = await openFresh();
     expect(await store.getState('tagRenames')).toBeUndefined();
     await store.setState('tagRenames', [{ from: 'a', to: 'b' }]);
     expect(await store.getState('tagRenames')).toEqual([{ from: 'a', to: 'b' }]);
     await store.setState('tagRenames', undefined);
     expect(await store.getState('tagRenames')).toBeUndefined();
-    await expect(store.setState('syncClock', 1)).rejects.toThrow(RangeError);
-    expect(await store.getClock()).toBe(0);
-  });
-
-  it('writes several records in one transaction, or none', async () => {
-    const store = await openFresh();
-    await store.put(record('n1', { text: 'old' }));
-    const written = await store.updateAll('n1', (current) => [
-      { ...current!, text: 'adopted' },
-      record('copy', { text: current!.text }),
-    ]);
-    expect(written?.map((r) => r.noteId)).toEqual(['n1', 'copy']);
-    expect((await store.get('n1'))?.text).toBe('adopted');
-    expect((await store.get('copy'))?.text).toBe('old');
-    expect(await store.updateAll('n1', () => null)).toBeNull();
-    await expect(
-      store.updateAll('n1', () =>
-        [record('n1', { text: 'x' }), record('bad', { engine: 'nope' as 'yjs14' })].map((r) => {
-          if (r.noteId === 'bad') throw new Error('boom');
-          return r;
-        }),
-      ),
-    ).rejects.toThrow('boom');
-    expect((await store.get('n1'))?.text).toBe('adopted');
   });
 
   it('keeps note metadata in its own store, in step with every write', async () => {
     const store = await openFresh();
     await store.put(record('n1', { update: new Uint8Array(10_000) }));
     await store.update('n1', (current) => ({ ...current!, unsynced: true }));
-    await store.updateAll('n2', () => [record('n2'), record('n3')]);
+    await store.update('n2', () => record('n2'));
+    await store.put(record('n3'));
     await store.delete('n3');
     const metas = await store.listMeta();
     expect(metas).toEqual([
@@ -141,139 +97,12 @@ describe('NoteStore', () => {
       toMeta(record('n2')),
     ]);
     // listMeta reads only the small store.
-    const metaKeys = await store.rawKeys(META_STORE);
-    expect(metaKeys).toEqual(['n1', 'n2']);
-  });
-
-  it('builds the metadata store when upgrading a version 2 database', async () => {
-    const name = `penmoss-v2-${++dbCount}`;
-    await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open(name, 2);
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        db.createObjectStore(NOTES_STORE, { keyPath: 'noteId' }).put(
-          record('kept', { unsynced: true }),
-        );
-        db.createObjectStore(STATE_STORE).put(9, 'syncClock');
-      };
-      request.onsuccess = () => {
-        request.result.close();
-        resolve();
-      };
-      request.onerror = () => reject(request.error ?? new Error('open failed'));
-    });
-    const store = await NoteStore.open(name);
-    stores.push(store);
-    expect(await store.listMeta()).toEqual([toMeta(record('kept', { unsynced: true }))]);
-    expect(await store.getClock()).toBe(9);
-  });
-
-  it('adds the attachment stores when upgrading a version 3 database, keeping everything else', async () => {
-    const name = `penmoss-v3-${++dbCount}`;
-    await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open(name, 3);
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        db.createObjectStore(NOTES_STORE, { keyPath: 'noteId' }).put(record('kept'));
-        db.createObjectStore(STATE_STORE).put(5, 'syncClock');
-        db.createObjectStore(META_STORE, { keyPath: 'noteId' }).put(toMeta(record('kept')));
-      };
-      request.onsuccess = () => {
-        request.result.close();
-        resolve();
-      };
-      request.onerror = () => reject(request.error ?? new Error('open failed'));
-    });
-    const store = await NoteStore.open(name);
-    stores.push(store);
-    expect(DB_VERSION).toBe(6);
-    expect(store.objectStoreNames()).toContain(ATTACHMENTS_STORE);
-    expect(store.objectStoreNames()).toContain(UPLOADS_STORE);
-    expect(store.objectStoreNames()).toContain(ATTACHMENT_BYTES_STORE);
-    expect(await store.listMeta()).toEqual([toMeta(record('kept'))]);
-    expect(await store.getClock()).toBe(5);
-    expect(await store.listUploads()).toEqual([]);
-  });
-
-  it('reads the tags of records from before T18 when upgrading a version 4 database', async () => {
-    const name = `penmoss-v4-${++dbCount}`;
-    const doc = new Y.Doc();
-    const paragraph = new Y.Node('paragraph');
-    doc.get(NOTE_ROOT).push([paragraph]);
-    paragraph.insert(0, 'Plan the #garden');
-    setFrontmatterTag(doc, 'project', true);
-    const old = record('tagged', { update: Y.encodeStateAsUpdate(doc) });
-    await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open(name, 4);
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        db.createObjectStore(NOTES_STORE, { keyPath: 'noteId' }).put(old);
-        db.createObjectStore(STATE_STORE);
-        db.createObjectStore(META_STORE, { keyPath: 'noteId' }).put(toMeta(old));
-        db.createObjectStore(ATTACHMENTS_STORE, { keyPath: 'sha256' });
-        db.createObjectStore(ATTACHMENT_BYTES_STORE, { keyPath: 'sha256' });
-        db.createObjectStore(UPLOADS_STORE, { keyPath: 'sha256' });
-      };
-      request.onsuccess = () => {
-        request.result.close();
-        resolve();
-      };
-      request.onerror = () => reject(request.error ?? new Error('open failed'));
-    });
-    const store = await NoteStore.open(name);
-    stores.push(store);
-    await store.backfillSearchFields();
-    expect((await store.get('tagged'))?.tags).toEqual(['garden', 'project']);
-    expect((await store.listMeta()).map((meta) => meta.tags)).toEqual([['garden', 'project']]);
-  });
-
-  it('reads the headings of records from before T22 when upgrading a version 5 database', async () => {
-    const name = `penmoss-v5-${++dbCount}`;
-    const doc = new Y.Doc();
-    const heading = new Y.Node('heading');
-    heading.setAttr('level', 1);
-    doc.get(NOTE_ROOT).push([heading]);
-    heading.insert(0, 'Seeds indoors');
-    const old = record('headed', { update: Y.encodeStateAsUpdate(doc), tags: [] });
-    await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open(name, 5);
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        db.createObjectStore(NOTES_STORE, { keyPath: 'noteId' }).put(old);
-        db.createObjectStore(STATE_STORE);
-        db.createObjectStore(META_STORE, { keyPath: 'noteId' }).put(toMeta(old));
-        db.createObjectStore(ATTACHMENTS_STORE, { keyPath: 'sha256' });
-        db.createObjectStore(ATTACHMENT_BYTES_STORE, { keyPath: 'sha256' });
-        db.createObjectStore(UPLOADS_STORE, { keyPath: 'sha256' });
-      };
-      request.onsuccess = () => {
-        request.result.close();
-        resolve();
-      };
-      request.onerror = () => reject(request.error ?? new Error('open failed'));
-    });
-    const store = await NoteStore.open(name, { backfill: 'manual' });
-    stores.push(store);
-    // The upgrade itself decodes nothing: it only lists the notes (A119).
-    expect((await store.get('headed'))?.headings).toBeUndefined();
-    expect((await store.listMeta()).map((meta) => meta.noteId)).toEqual(['headed']);
-    // Filled in afterwards, in ordinary transactions, keeping what changed meanwhile.
-    await store.put({ ...record('newer', { tags: ['x'] }), headings: 'Mine' });
-    await store.backfillSearchFields();
-    expect((await store.get('headed'))?.headings).toBe('Seeds indoors');
-    expect((await store.get('newer'))?.headings).toBe('Mine');
-    expect((await store.listTexts()).map((text) => text.headings)).toEqual([
-      'Seeds indoors',
-      'Mine',
-    ]);
-    // Once is enough: a second call finds nothing to do.
-    await store.backfillSearchFields();
+    expect(await keysOf(store.name, META_STORE)).toEqual(['n1', 'n2']);
   });
 
   describe('attachments', () => {
     const attachment = (
       sha256: string,
-      uploaded = false,
       extra: Partial<StoredAttachment> = {},
     ): StoredAttachment => ({
       sha256,
@@ -281,114 +110,23 @@ describe('NoteStore', () => {
       bytes: new Uint8Array([1, 2, 3]),
       size: 3,
       createdAt: 1,
-      uploaded,
       ...extra,
     });
-    const upload = (sha256: string): PendingUpload => ({
-      sha256,
-      noteId: 'n1',
-      attempts: 0,
-      nextAttemptAt: 0,
-      lastError: null,
-      failed: false,
-    });
 
-    it('stores an attachment and its upload together, and a duplicate once', async () => {
+    it('stores an attachment once, its bytes apart from its metadata', async () => {
       const store = await openFresh();
-      expect(await store.saveAttachment(attachment('a'), upload('a'))).toBe(true);
-      expect(await store.saveAttachment({ ...attachment('a'), createdAt: 2 }, upload('a'))).toBe(
-        false,
-      );
+      expect(await store.saveAttachment(attachment('a'))).toBe(true);
+      expect(await store.saveAttachment(attachment('a', { createdAt: 2 }))).toBe(false);
       expect(await store.getAttachment('a')).toEqual(attachment('a'));
-      expect(await store.listUploads()).toEqual([upload('a')]);
-      expect(await store.rawKeys(ATTACHMENTS_STORE)).toEqual(['a']);
+      expect(await keysOf(store.name, ATTACHMENTS_STORE)).toEqual(['a']);
+      expect(await keysOf(store.name, ATTACHMENT_BYTES_STORE)).toEqual(['a']);
     });
 
-    it('keeps the bytes apart from the metadata, so completing an upload writes only metadata', async () => {
+    it('replaces the bytes when the file is added again, so a damaged copy is repaired', async () => {
       const store = await openFresh();
-      await store.saveAttachment(attachment('a'), upload('a'));
-      expect(await store.rawKeys(ATTACHMENT_BYTES_STORE)).toEqual(['a']);
-      await store.completeUpload('a');
-      expect(await store.getAttachment('a')).toEqual(attachment('a', true));
-    });
-
-    it('resets a failed upload, and replaces bytes not yet uploaded, when the image is added again', async () => {
-      const store = await openFresh();
-      await store.saveAttachment(
-        attachment('a', false, { bytes: new Uint8Array([9, 9, 9]) }),
-        upload('a'),
-      );
-      await store.updateUpload('a', (current) =>
-        current ? { ...current, attempts: 4, failed: true, lastError: 'damaged' } : null,
-      );
-
-      expect(await store.saveAttachment(attachment('a'), upload('a'))).toBe(false);
-
-      expect(await store.listUploads()).toEqual([upload('a')]);
+      await store.saveAttachment(attachment('a', { bytes: new Uint8Array([9, 9, 9]) }));
+      expect(await store.saveAttachment(attachment('a'))).toBe(false);
       expect((await store.getAttachment('a'))?.bytes).toEqual(new Uint8Array([1, 2, 3]));
-      // An uploaded image is the server's copy too: it is left alone.
-      await store.completeUpload('a');
-      await store.saveAttachment(
-        attachment('a', false, { bytes: new Uint8Array([7]) }),
-        upload('a'),
-      );
-      expect(await store.getAttachment('a')).toEqual(attachment('a', true));
-      expect(await store.listUploads()).toEqual([]);
-    });
-
-    it('evicts downloaded images least recently used first, above a byte budget', async () => {
-      const store = await openFresh();
-      const downloaded = (sha: string, lastUsedAt: number) =>
-        attachment(sha, true, {
-          downloaded: true,
-          lastUsedAt,
-          size: 10,
-          bytes: new Uint8Array(10),
-        });
-      await store.saveAttachment(attachment('local', false, { size: 100 }), upload('local'));
-      await store.saveAttachment(attachment('mine', true, { size: 100, lastUsedAt: 0 }), null);
-      await store.saveAttachment(downloaded('old', 1), null);
-      await store.saveAttachment(downloaded('kept', 2), null);
-      await store.saveAttachment(downloaded('mid', 3), null);
-      await store.saveAttachment(downloaded('new', 4), null);
-      await store.touchAttachment('old', 5);
-
-      const evicted = await store.evictDownloads(20, new Set(['kept']));
-
-      // 40 bytes downloaded: drop LRU until at most 20, skipping the image on screen.
-      expect(evicted).toEqual(['mid', 'new']);
-      expect((await store.rawKeys(ATTACHMENTS_STORE)).sort()).toEqual([
-        'kept',
-        'local',
-        'mine',
-        'old',
-      ]);
-      expect((await store.rawKeys(ATTACHMENT_BYTES_STORE)).sort()).toEqual([
-        'kept',
-        'local',
-        'mine',
-        'old',
-      ]);
-      expect(await store.evictDownloads(1_000, new Set())).toEqual([]);
-    });
-
-    it('updates an upload record in one transaction, and completes it', async () => {
-      const store = await openFresh();
-      await store.saveAttachment(attachment('a'), upload('a'));
-      const bump = () =>
-        store.updateUpload('a', (current) =>
-          current ? { ...current, attempts: current.attempts + 1 } : null,
-        );
-      await Promise.all([bump(), bump()]);
-      expect((await store.listUploads())[0]?.attempts).toBe(2);
-      expect(await store.updateUpload('missing', () => null)).toBeNull();
-
-      await store.completeUpload('a');
-      expect(await store.listUploads()).toEqual([]);
-      expect((await store.getAttachment('a'))?.uploaded).toBe(true);
-      // A downloaded copy needs no upload.
-      expect(await store.saveAttachment(attachment('b', true), null)).toBe(true);
-      expect(await store.listUploads()).toEqual([]);
     });
   });
 
@@ -484,7 +222,6 @@ describe('NoteStore', () => {
         engine: 'yjs14',
         title: 'Title of n1',
         excerpt: 'body',
-        epoch: 'epoch-1',
         updatedAt: 1_700_000_000_000,
         unsynced: true,
         deleted: false,
@@ -516,7 +253,8 @@ describe('NoteStore', () => {
     const store = await openFresh();
     const writes: string[][] = [];
     const off = store.onWrite((ids) => writes.push([...ids]));
-    await store.putMany([record('n1'), record('n2')]);
+    await store.put(record('n1'));
+    await store.put(record('n2'));
     await store.update('n1', (current) => (current ? { ...current, text: 'Changed' } : null));
     // An update that writes nothing, or throws, says nothing.
     await store.update('n1', () => null);
@@ -528,7 +266,7 @@ describe('NoteStore', () => {
     await store.delete('n2');
     off();
     await store.put(record('n3'));
-    expect(writes).toEqual([['n1', 'n2'], ['n1'], ['n2']]);
+    expect(writes).toEqual([['n1'], ['n2'], ['n1'], ['n2']]);
   });
 
   it('reads one note’s metadata without its document', async () => {
@@ -542,15 +280,15 @@ describe('NoteStore', () => {
 
   it('opens a 5,000-note store and lists its metadata (its time is a budget: idb.budget.test.ts)', async () => {
     const name = `penmoss-bench-${++dbCount}`;
-    const seed = await NoteStore.open(name);
-    await seed.putMany(
+    (await NoteStore.open(name)).close();
+    await seedRecords(
+      name,
       Array.from({ length: 5000 }, (_, i) =>
         record(`note-${String(i).padStart(5, '0')}`, {
           update: new Uint8Array(1500).fill(i % 256),
         }),
       ),
     );
-    seed.close();
 
     const store = await NoteStore.open(name);
     stores.push(store);
@@ -572,10 +310,10 @@ describe('NoteStore', () => {
     }
 
     /** A document holding these paragraphs, and its record. */
-    function written(noteId: string, paragraphs: string[], epoch: string | null = 'e1') {
+    function written(noteId: string, paragraphs: string[]) {
       const replica = createReplica();
       for (const text of paragraphs) appendParagraph(replica, text);
-      return { replica, record: recordFromDoc(noteId, replica.doc, { epoch, unsynced: true }) };
+      return { replica, record: recordFromDoc(noteId, replica.doc, { unsynced: true }) };
     }
 
     /** What the page keeps: the replica's changes since `since` (a stored state vector). */
@@ -583,14 +321,12 @@ describe('NoteStore', () => {
       noteId: string,
       replica: ReturnType<typeof createReplica>,
       since: Uint8Array | null,
-      epoch: string | null = 'e1',
       extra: Partial<UnloadWrite> = {},
     ): UnloadWrite {
       return {
         noteId,
         engine: 'yjs14',
         source: 'editor',
-        epoch,
         update: since ? replica.encodeStateAsUpdate(since) : replica.encodeStateAsUpdate(),
         whole: since === null,
         unsynced: true,
@@ -601,10 +337,9 @@ describe('NoteStore', () => {
 
     /** Whether a stored update holds structs back for want of what they build on. */
     function pending(record: NoteRecord | undefined): boolean {
-      const replica = createReplica();
-      replica.applyUpdate(record!.update);
-      const { inserts, deletes } = replica.pending();
-      return inserts.size > 0 || deletes.size > 0;
+      const { doc } = createReplica();
+      Y.applyUpdate(doc, record!.update);
+      return doc.store.pendingStructs !== null || doc.store.pendingDs !== null;
     }
 
     const copiesIn = async (store: NoteStore, ...ids: string[]) =>
@@ -720,7 +455,7 @@ describe('NoteStore', () => {
       const theirs = createReplica();
       theirs.applyUpdate(base.update);
       appendParagraph(theirs, 'theirs');
-      await other.put(recordFromDoc('n1', theirs.doc, { epoch: 'e1', unsynced: true }));
+      await other.put(recordFromDoc('n1', theirs.doc, { unsynced: true }));
 
       const next = await named(name);
       expect(lines(await next.get('n1'))).toEqual(['base', 'mine', 'theirs']);
@@ -729,8 +464,8 @@ describe('NoteStore', () => {
     it('makes a note never stored from its whole document, and drops changes to one no longer here', async () => {
       const name = `penmoss-unload-${++dbCount}`;
       const page = await named(name);
-      const fresh = written('fresh', ['just typed'], null);
-      expect(page.putOnUnload(kept('fresh', fresh.replica, null, null))).toBe(true);
+      const fresh = written('fresh', ['just typed']);
+      expect(page.putOnUnload(kept('fresh', fresh.replica, null))).toBe(true);
       const gone = written('gone', ['stored once']);
       appendParagraph(gone.replica, 'then changed');
       expect(page.putOnUnload(kept('gone', gone.replica, gone.record.stateVector))).toBe(true);
@@ -767,37 +502,13 @@ describe('NoteStore', () => {
       expect(lines(await next.get('n1'))).toEqual(['and later', 'base', 'from one', 'from two']);
     });
 
-    it('never merges across a restore: a note becomes a conflict copy, the workspace is dropped', async () => {
-      const name = `penmoss-unload-${++dbCount}`;
-      const page = await named(name);
-      const other = await named(name);
-      const note = written('n1', ['before the restore']);
-      expect(page.putOnUnload(kept('n1', note.replica, null))).toBe(true);
-      const workspace = written(WORKSPACE_RECORD_KEY, ['old setting']);
-      expect(page.putOnUnload(kept(WORKSPACE_RECORD_KEY, workspace.replica, null))).toBe(true);
-      page.close();
-      // Meanwhile another tab took the restored server's documents (epoch e2).
-      await other.put(written('n1', ['restored'], 'e2').record);
-      await other.put(written(WORKSPACE_RECORD_KEY, ['restored workspace'], 'e2').record);
-
-      const next = await named(name);
-      expect((await next.get('n1'))?.text).toBe('restored');
-      expect((await next.get(WORKSPACE_RECORD_KEY))?.text).toBe('restored workspace');
-      const copies = (await next.listMeta()).filter(
-        (meta) => meta.noteId !== 'n1' && meta.noteId !== WORKSPACE_RECORD_KEY,
-      );
-      expect(copies).toHaveLength(1);
-      expect(copies[0]).toMatchObject({ title: `Untitled${CONFLICT_SUFFIX}`, unsynced: true });
-      expect((await next.get(copies[0]!.noteId))?.text).toContain('before the restore');
-    });
-
     it('describes a record again when an entry adds nothing but its text is of an older state (A695)', async () => {
       const name = `penmoss-unload-${++dbCount}`;
       const page = await named(name);
       const replica = createReplica();
       for (const text of ['typed', 'the last words']) appendParagraph(replica, text);
       setFrontmatterTag(replica.doc, 'kept', true);
-      const record = recordFromDoc('n1', replica.doc, { epoch: 'e1', unsynced: true });
+      const record = recordFromDoc('n1', replica.doc, { unsynced: true });
       expect(record.tags).toEqual(['kept']);
       // As a write between text refreshes stores it: the whole document, an older description.
       await page.put({ ...record, text: 'typed', tags: [] });
@@ -836,7 +547,7 @@ describe('NoteStore', () => {
       const gone = createReplica();
       appendParagraph(gone, 'typed, then deleted');
       setDeleted(gone.doc, true, null, { at: 1_700_000_000_500, folderId: 'f1' });
-      const deleted = recordFromDoc('n1', gone.doc, { epoch: 'e1', unsynced: true });
+      const deleted = recordFromDoc('n1', gone.doc, { unsynced: true });
       expect(deleted).toMatchObject({ deleted: true, deletedAt: 1_700_000_000_500 });
       const undeleted = Object.fromEntries(
         Object.entries(deleted).filter(([key]) => !key.startsWith('deleted')),
@@ -849,7 +560,7 @@ describe('NoteStore', () => {
       appendParagraph(back, 'deleted, then restored');
       setDeleted(back.doc, true, null, { at: 1_700_000_000_500, folderId: null });
       setDeleted(back.doc, false);
-      const restored = recordFromDoc('n2', back.doc, { epoch: 'e1', unsynced: true });
+      const restored = recordFromDoc('n2', back.doc, { unsynced: true });
       expect(restored.deleted).toBeUndefined();
       await page.put({
         ...restored,
@@ -941,13 +652,13 @@ describe('NoteStore', () => {
       const name = `penmoss-unload-${++dbCount}`;
       const page = await named(name);
       const other = await named(name);
-      // A daily note: stored, changed, then purged and made again (no epoch yet) elsewhere.
-      const old = written('daily', ['old daily'], null);
+      // A daily note: stored, changed, then purged and made again elsewhere.
+      const old = written('daily', ['old daily']);
       await page.put(old.record);
       appendParagraph(old.replica, 'typed last');
-      expect(page.putOnUnload(kept('daily', old.replica, old.record.stateVector, null))).toBe(true);
+      expect(page.putOnUnload(kept('daily', old.replica, old.record.stateVector))).toBe(true);
       page.close();
-      const fresh = written('daily', ['new daily'], null).record;
+      const fresh = written('daily', ['new daily']).record;
       await other.put(fresh);
 
       const next = await named(name);
@@ -958,33 +669,6 @@ describe('NoteStore', () => {
       expect(await copiesIn(next, 'daily')).toEqual([]);
     });
 
-    it('keeps a note the server said is gone as it is, and makes edits since a conflict copy (A640)', async () => {
-      const name = `penmoss-unload-${++dbCount}`;
-      const page = await named(name);
-      const other = await named(name);
-      const note = written('n1', ['before it went']);
-      await page.put(note.record);
-      appendParagraph(note.replica, 'typed as it went');
-      expect(page.putOnUnload(kept('n1', note.replica, note.record.stateVector))).toBe(true);
-      page.close();
-      // Another tab heard it is gone (A270): deleted, gone, its unsynced edits copied already.
-      const gone = {
-        ...note.record,
-        deleted: true,
-        gone: true,
-        goneCopy: 'copy1',
-        unsynced: false,
-      };
-      await other.put(gone);
-
-      const next = await named(name);
-      // Never merged: an upload of it would be refused as gone, and copied a second time.
-      expect(await next.get('n1')).toEqual(gone);
-      const copies = await copiesIn(next, 'n1');
-      expect(copies).toHaveLength(1);
-      expect((await next.get(copies[0]!.noteId))?.text).toContain('typed as it went');
-    });
-
     // PR #167's final check: every open window hears the same entry; one change, one copy.
     for (const [kind, prefix, claimed] of [
       ['the personal store', 'penmoss-unload-', true],
@@ -993,19 +677,19 @@ describe('NoteStore', () => {
       ['the personal store, unclaimed', 'penmoss-unload-', false],
       ['a git notebook store, unclaimed', 'penmoss-git-01JBNOTEBOOK0000000000000', false],
     ] as const) {
-      it(`makes one conflict copy when two windows merge one entry for a gone note (${kind})`, async () => {
+      it(`makes one conflict copy when two windows merge one entry that cannot join its record (${kind})`, async () => {
         if (!claimed) vi.stubGlobal('navigator', { ...navigator, locks: undefined });
         const request = claimed ? vi.spyOn(navigator.locks, 'request') : null;
         const name = `${prefix}${++dbCount}`;
         const first = await named(name);
         const second = await named(name);
         const note = written('n1', ['first']);
-        await first.put(note.record);
         appendParagraph(note.replica, 'typed as it went');
         const closing = await named(name);
-        expect(closing.putOnUnload(kept('n1', note.replica, note.record.stateVector))).toBe(true);
+        expect(closing.putOnUnload(kept('n1', note.replica, null))).toBe(true);
         closing.close();
-        await first.put({ ...note.record, deleted: true, gone: true, unsynced: false });
+        // Meanwhile a newer build stored the note under an engine this one cannot merge into.
+        await first.put({ ...note.record, engine: 'yjs15' as 'yjs14', unsynced: false });
         const [key] = storage.keys();
         const event = Object.assign(new Event('storage'), {
           key,
@@ -1039,32 +723,19 @@ describe('NoteStore', () => {
       });
     }
 
-    it('makes no copy of a gone note when the entry changes nothing', async () => {
-      const name = `penmoss-unload-${++dbCount}`;
-      const page = await named(name);
-      const note = written('n1', ['all stored']);
-      expect(page.putOnUnload(kept('n1', note.replica, note.record.stateVector))).toBe(true);
-      await page.put({ ...note.record, gone: true, goneCopy: 'copy1', unsynced: false });
-      page.close();
-      const next = await named(name);
-      expect((await next.get('n1'))?.gone).toBe(true);
-      expect(await copiesIn(next, 'n1')).toEqual([]);
-    });
-
-    it('makes no conflict copy of a whole document from another epoch with no unsynced edits (A640)', async () => {
+    it('makes no conflict copy of a whole document it cannot merge with no unsynced edits (A640)', async () => {
       const name = `penmoss-unload-${++dbCount}`;
       const page = await named(name);
       const other = await named(name);
-      // Downloaded and not written yet, so kept whole: the server had all of it.
-      const note = written('n1', ['as the server had it']);
-      expect(page.putOnUnload(kept('n1', note.replica, null, 'e1', { unsynced: false }))).toBe(
-        true,
-      );
+      // Read and not written yet, so kept whole: the engine had all of it.
+      const note = written('n1', ['as the engine had it']);
+      expect(page.putOnUnload(kept('n1', note.replica, null, { unsynced: false }))).toBe(true);
       page.close();
-      await other.put(written('n1', ['restored'], 'e2').record);
+      const newer = written('n1', ['a newer build’s']).record;
+      await other.put({ ...newer, engine: 'yjs15' as 'yjs14' });
 
       const next = await named(name);
-      expect((await next.get('n1'))?.text).toBe('restored');
+      expect((await next.get('n1'))?.text).toBe('a newer build’s');
       expect(await copiesIn(next, 'n1')).toEqual([]);
     });
 
@@ -1093,12 +764,12 @@ describe('NoteStore', () => {
       embed.applyUpdate(base.record.update);
       appendParagraph(embed, 'in the embed');
       const since = base.record.stateVector;
-      expect(page.putOnUnload(kept('n1', editor, since, 'e1', { source: 'replica-1' }))).toBe(true);
-      expect(page.putOnUnload(kept('n1', embed, since, 'e1', { source: 'replica-2' }))).toBe(true);
+      expect(page.putOnUnload(kept('n1', editor, since, { source: 'replica-1' }))).toBe(true);
+      expect(page.putOnUnload(kept('n1', embed, since, { source: 'replica-2' }))).toBe(true);
       // The embed's own write landed: only its entry is forgotten.
       page.forgetUnload('n1', 'replica-2');
       expect(storage.keys()).toHaveLength(1);
-      expect(page.putOnUnload(kept('n1', embed, since, 'e1', { source: 'replica-2' }))).toBe(true);
+      expect(page.putOnUnload(kept('n1', embed, since, { source: 'replica-2' }))).toBe(true);
       page.close();
 
       const next = await named(name);
@@ -1122,7 +793,7 @@ describe('NoteStore', () => {
       const page = await named(name);
       const mac = createReplica();
       createFolder(mac.doc, { id: 'f-unsent', name: 'Unsent', parentId: null });
-      const refused = recordFromDoc(WORKSPACE_RECORD_KEY, mac.doc, { epoch: 'e1', unsynced: true });
+      const refused = recordFromDoc(WORKSPACE_RECORD_KEY, mac.doc, { unsynced: true });
       await page.put(refused);
       // The lagging window renames the folder; meanwhile the other window's recovery replaced
       // the record with the server's tree and the folder made again under a new client id.
@@ -1131,12 +802,8 @@ describe('NoteStore', () => {
       renameFolder(lagging.doc, 'f-unsent', 'Renamed as the window went');
       const recovered = createReplica();
       createFolder(recovered.doc, { id: 'f-unsent', name: 'Unsent', parentId: null });
-      await page.put(
-        recordFromDoc(WORKSPACE_RECORD_KEY, recovered.doc, { epoch: 'e1', unsynced: true }),
-      );
-      expect(page.putOnUnload(kept(WORKSPACE_RECORD_KEY, lagging, refused.stateVector, 'e1'))).toBe(
-        true,
-      );
+      await page.put(recordFromDoc(WORKSPACE_RECORD_KEY, recovered.doc, { unsynced: true }));
+      expect(page.putOnUnload(kept(WORKSPACE_RECORD_KEY, lagging, refused.stateVector))).toBe(true);
       page.close();
 
       const next = await named(name);
@@ -1156,16 +823,15 @@ describe('NoteStore', () => {
     } {
       const mac = createReplica();
       createFolder(mac.doc, { id: 'f-unsent', name: 'Unsent', parentId: null });
-      const refused = recordFromDoc(WORKSPACE_RECORD_KEY, mac.doc, { epoch: 'e1', unsynced: true });
+      const refused = recordFromDoc(WORKSPACE_RECORD_KEY, mac.doc, { unsynced: true });
       const lagging = createReplica();
       lagging.applyUpdate(refused.update);
       renameFolder(lagging.doc, 'f-unsent', 'Renamed as the window went');
       const recovered = createReplica();
       createFolder(recovered.doc, { id: 'f-unsent', name: 'Unsent', parentId: null });
       return {
-        write: kept(WORKSPACE_RECORD_KEY, lagging, refused.stateVector, 'e1', { unsynced }),
+        write: kept(WORKSPACE_RECORD_KEY, lagging, refused.stateVector, { unsynced }),
         recovered: recordFromDoc(WORKSPACE_RECORD_KEY, recovered.doc, {
-          epoch: 'e1',
           unsynced: true,
         }),
       };

@@ -631,9 +631,6 @@ importers:
         specifier: 7.2.0
         version: 7.2.0
     devDependencies:
-      '@y/protocols':
-        specifier: 1.0.6-rc.1
-        version: 1.0.6-rc.1(@y/y@14.0.0-rc.29)
       fake-indexeddb:
         specifier: 6.2.6
         version: 6.2.6

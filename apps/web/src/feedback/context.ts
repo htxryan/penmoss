@@ -84,7 +84,6 @@ export interface NoteFacts {
   readonly attachments: number | null;
   readonly bytes: number | null;
   readonly engine: string | null;
-  readonly epoch: string | null;
   readonly unsynced: boolean;
   readonly inTrash: boolean;
   readonly backlinks: number;
@@ -196,7 +195,6 @@ export function buildContext(facts: ContextFacts): FeedbackContext {
         ['Attachments', note.attachments],
         ['Size in bytes', note.bytes],
         ['Engine', note.engine],
-        ['Epoch', note.epoch],
         ['Unsynced', note.unsynced],
         ['In Trash', note.inTrash],
         ['Backlinks', note.backlinks],

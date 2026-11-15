@@ -80,7 +80,7 @@ describe('attachments in a git notebook (A1032)', () => {
     expect(first).toBe('blob:1');
     expect(second).toBe('blob:1');
     expect(nb.fetch).toHaveBeenCalledTimes(1);
-    expect(store.kept.get(sha256)).toMatchObject({ type: 'image/png', uploaded: true });
+    expect(store.kept.get(sha256)).toMatchObject({ type: 'image/png' });
     expect(await attachments.info(src)).toEqual({ size: PNG.byteLength, type: 'image/png' });
     expect(nb.fetch).toHaveBeenCalledTimes(1);
   });

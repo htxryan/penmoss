@@ -130,7 +130,7 @@ test('a note filed into a folder another Mac deleted meanwhile shows at the top 
     // Unlike the server, which repaired the tree after every change (A674: the note moved to
     // the parent and was listed in the folder's Trash record), nothing repairs a git notebook's
     // tree: the remote keeps the note filed in the deleted folder, and every client shows it at
-    // the top level. (A gap reported with T59: `rehomeNotes` runs only on the server.)
+    // the top level (A1448).
     const doomedId = (await readRemote(host, remote)).workspace.notes.find(
       (note) => note.id === noteId,
     )?.folderId;

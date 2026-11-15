@@ -93,8 +93,8 @@ describe('copyNote (T68: Duplicate, #227; another notebook, #230)', () => {
     expect(noteAttachmentPaths(original())).toEqual([IMAGE]);
     const plain = createYjs14Replica();
     appendParagraph(plain, 'Nothing attached');
-    expect(
-      noteAttachmentPaths(recordFromDoc('p', plain.doc, { epoch: null, unsynced: false }).update),
-    ).toEqual([]);
+    expect(noteAttachmentPaths(recordFromDoc('p', plain.doc, { unsynced: false }).update)).toEqual(
+      [],
+    );
   });
 });

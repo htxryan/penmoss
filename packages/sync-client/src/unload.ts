@@ -10,8 +10,8 @@ import { WORKSPACE_RECORD_KEY } from './workspace';
 
 /**
  * The largest entry kept (characters of JSON; about 0.75 MB of Yjs update). Local storage holds
- * about 5M characters per origin, the session token among them (A640): a larger change is
- * written the ordinary way instead.
+ * about 5M characters per origin, shared with the app's other device preferences (A640): a
+ * larger change is written the ordinary way instead.
  */
 export const UNLOAD_MAX_CHARS = 1_000_000;
 
@@ -28,11 +28,9 @@ export function decodeUnloadWrite(raw: string): UnloadWrite | null {
       noteId: value.noteId,
       engine: value.engine,
       source: typeof value.source === 'string' ? value.source : '',
-      epoch: typeof value.epoch === 'string' ? value.epoch : null,
       update: fromBase64(value.update),
       whole: value.whole === true,
       unsynced: value.unsynced !== false,
-      ...(value.seeded === true ? { seeded: true } : {}),
       updatedAt: typeof value.updatedAt === 'number' ? value.updatedAt : Date.now(),
     };
   } catch {
@@ -73,9 +71,9 @@ export type UnloadOutcome =
    * page went after a write that reused them and before their refresh. Written again, described.
    */
   | 'described'
-  /** It could not join the record (another epoch, its base gone): its edits became a new note. */
+  /** It could not join the record (another engine, its base gone): its edits became a new note. */
   | 'copied'
-  /** It could not join the record, and held nothing the server lacks, or only changes alone. */
+  /** It could not join the record, and held no edits of this device, or only changes alone. */
   | 'dropped';
 
 function docOf(updates: readonly Uint8Array[]): Y.Doc {
@@ -108,12 +106,10 @@ function pendingIn(doc: Y.Doc): boolean {
 
 /**
  * The records to store for `write`, kept as a page went, given the stored record (A626, A640).
- * A union with the record when they are the same document at the same epoch (A7). Otherwise
- * never merged: another epoch (A5), or a base the record no longer holds (it was purged and made
- * again, or replaced by a recovery, A581), would add another document's structs. A note's whole
- * document with edits the server lacks then becomes a conflict copy, as catch-up does (A269);
- * anything else is dropped. A note the server said is gone keeps its record as it is (its gone
- * copy holds what it had): changes since become a conflict copy of their own.
+ * A union with the record when they are the same document (A7). Otherwise never merged: another
+ * engine, or a base the record no longer holds (it was purged and made again), would add another
+ * document's structs. A note's whole document with unsynced edits then becomes a conflict copy;
+ * anything else is dropped.
  */
 export function withUnloadWrite(
   stored: NoteRecord | undefined,
@@ -134,14 +130,11 @@ export function withUnloadWrite(
   if (!stored) {
     if (!write.whole) return { records: [], outcome: 'dropped' };
     const record = recordFromUpdates(write.noteId, [write.update], {
-      epoch: write.epoch,
       unsynced: write.unsynced,
-      seeded: write.seeded,
       updatedAt: write.updatedAt,
     });
     return { records: [record], outcome: 'merged' };
   }
-  if (stored.epoch && write.epoch && stored.epoch !== write.epoch) return copyOrDrop();
 
   const before = docOf([stored.update]);
   const merged = docOf([stored.update, write.update]);
@@ -149,11 +142,9 @@ export function withUnloadWrite(
     if (pendingIn(merged) && !pendingIn(before)) return copyOrDrop();
     if (Y.equalSnapshots(Y.snapshot(before), Y.snapshot(merged))) {
       // An entry with nothing new still says the page went with the description's refresh due.
-      if (!stored.gone && write.noteId !== WORKSPACE_RECORD_KEY) {
+      if (write.noteId !== WORKSPACE_RECORD_KEY) {
         const described = recordFromDoc(write.noteId, before, {
-          epoch: stored.epoch ?? write.epoch,
           unsynced: stored.unsynced,
-          seeded: write.seeded || stored.seeded,
           // Later than the stored record's, if only by 1 ms: what keeps a copy of the record by
           // its `updatedAt` (the saved offline search index) takes the new description.
           updatedAt: Math.max(write.updatedAt, stored.updatedAt + 1),
@@ -164,18 +155,8 @@ export function withUnloadWrite(
       }
       return { records: [], outcome: 'unchanged' };
     }
-    const update = Y.encodeStateAsUpdate(merged);
-    if (stored.gone) {
-      // Its record stays as the server left it: merged, the next upload would be refused as gone
-      // and copied again, beside the copy made when it went (A269, A5).
-      return write.unsynced && write.noteId !== WORKSPACE_RECORD_KEY
-        ? { records: [copyOf(update)], outcome: 'copied' }
-        : { records: [], outcome: 'dropped' };
-    }
-    const record = recordFromUpdates(write.noteId, [update], {
-      epoch: stored.epoch ?? write.epoch,
+    const record = recordFromUpdates(write.noteId, [Y.encodeStateAsUpdate(merged)], {
       unsynced: write.unsynced || stored.unsynced,
-      seeded: write.seeded || stored.seeded,
       updatedAt: Math.max(write.updatedAt, stored.updatedAt),
     });
     return { records: [record], outcome: 'merged' };

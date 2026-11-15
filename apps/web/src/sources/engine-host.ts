@@ -768,7 +768,6 @@ export class GitEngineHost {
         // A window's copy that could not be read stays as it is, never written over (A886).
         if (current && this.unreadable.has(id)) return null;
         wrote = recordFromDoc(id, doc, {
-          epoch: null,
           unsynced: current?.unsynced ?? false,
           updatedAt: this.now(),
         });

@@ -8,7 +8,7 @@
 import { ulid } from '@penmoss/core/ids';
 import { journalFolderId, type PeriodKind } from '@penmoss/core/periodic';
 import { type SortMode } from '@penmoss/core/workspace';
-import { NoteStore, type ReplicaStore } from '@penmoss/sync-client';
+import type { ReplicaStore } from '@penmoss/sync-client';
 import { ReplicaKeeper } from '@penmoss/sync-client/keeper';
 import { mergeRecords } from '@penmoss/sync-client/records';
 import {
@@ -64,7 +64,8 @@ export interface WorkspaceOptions {
    * personal workspace, A1021).
    */
   readonly gitNotebook: { readonly id: string; readonly salt?: string };
-  readonly openStore?: () => Promise<ReplicaStore>;
+  /** Opens the store the WorkspaceDoc is kept in (the notebook's own database). */
+  readonly openStore: () => Promise<ReplicaStore>;
   /**
    * Whether this window shows the folder notice (default true). One that does not (the Mac's
    * capture window) leaves the count of folder changes a closed window could not keep to the
@@ -114,7 +115,7 @@ export class Workspace {
     this.gitNotebookId = options.gitNotebook.id;
     this.gitSalt = options.gitNotebook.salt ?? options.gitNotebook.id;
     this.notices = options.notices ?? true;
-    const openStore = options.openStore ?? (() => NoteStore.open());
+    const { openStore } = options;
     let store: Promise<ReplicaStore> | null = null;
     // The store once open, for the page-hide write, which cannot wait for a promise (A626).
     let opened: ReplicaStore | null = null;

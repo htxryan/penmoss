@@ -213,7 +213,7 @@ export function markdownOccurrences(
  * `](address "title")` or reference label, and the whole of a wikilink,
  * embed, image, autolink or link definition.
  */
-export function linkRanges(markdown: string): Array<readonly [number, number]> {
+function linkRanges(markdown: string): Array<readonly [number, number]> {
   const tree = fromMarkdown(markdown, {
     extensions: micromarkExtensions,
     mdastExtensions: fromMarkdownExtensions,

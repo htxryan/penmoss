@@ -107,8 +107,6 @@ export interface SearchStore {
   /** Saved values (the offline index's snapshot, A119). */
   getState?(key: string): Promise<unknown>;
   setState?(key: string, value: unknown): Promise<void>;
-  /** Fills in older records' tags and headings (NoteStore, A119). */
-  backfillSearchFields?(): Promise<void>;
 }
 
 export interface SearchDeps {
@@ -376,8 +374,6 @@ export class SearchService {
   private async doRefresh(): Promise<void> {
     this.stale = false;
     const store = await this.deps.store();
-    // Records from before the search fields existed get them first (A119).
-    await store.backfillSearchFields?.();
     const reserved = this.deps.reserved ?? new Set<string>();
     const slices: SliceOptions = {
       ...(this.deps.yieldToPage ? { yield: this.deps.yieldToPage } : {}),

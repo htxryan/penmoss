@@ -410,7 +410,7 @@ describe('search fields in records (T22)', () => {
     root.push([heading, paragraph]);
     heading.insert(0, 'Restoring');
     paragraph.insert(0, 'Clone the #backup repository');
-    const record = recordFromDoc('n1', doc, { epoch: null, unsynced: false, updatedAt: 5 });
+    const record = recordFromDoc('n1', doc, { unsynced: false, updatedAt: 5 });
     expect(record.headings).toBe('Restoring');
     const store = await NoteStore.open(`penmoss-search-${Date.now()}`);
     try {

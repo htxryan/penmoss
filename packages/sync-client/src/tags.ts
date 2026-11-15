@@ -126,19 +126,6 @@ export function noteTags(doc: Y.Doc): string[] {
   return cleanTags([...frontmatterTags(doc), ...bodyTags(doc)]);
 }
 
-/** The tags of a stored note's merged update (records written before T18). */
-export function tagsOfUpdate(update: Uint8Array): string[] {
-  const doc = new Y.Doc();
-  try {
-    Y.applyUpdate(doc, update);
-    return noteTags(doc);
-  } catch {
-    return [];
-  } finally {
-    doc.destroy();
-  }
-}
-
 /**
  * Renames (or, when `to` already exists, merges) a tag in one note, in one
  * transaction: frontmatter attributes and inline `#from` / `#from/…` in the

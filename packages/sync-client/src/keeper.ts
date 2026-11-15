@@ -17,10 +17,7 @@ import type { Replica, UpdateInfo } from './replica';
 /** A note's state held in memory, e.g. while its last write is still in flight. */
 export interface ReplicaSnapshot {
   readonly update: Uint8Array;
-  readonly epoch: string | null;
   readonly unsynced: boolean;
-  /** Kept from records the Penmoss server once seeded (`NoteRecord.seeded`). */
-  readonly seeded?: boolean | undefined;
   readonly rev?: string | undefined;
   /** When its content last changed (the record's `updatedAt`). */
   readonly updatedAt?: number | undefined;
@@ -115,10 +112,6 @@ export class ReplicaKeeper {
   private localSeq = 0;
   /** localSeq covered by the newest stored write. */
   private savedLocalSeq = 0;
-  /** The epoch of the record read (a git notebook's are null); written back as it was. */
-  private epoch: string | null = null;
-  /** Kept from a record the server once seeded, written back as it was. */
-  private seeded = false;
   /** The `rev` of the record this keeper last loaded or wrote. */
   private lastRev: string | undefined;
   private described: {
@@ -173,8 +166,6 @@ export class ReplicaKeeper {
     // finds the record foreign and merges it as it lands.
     this.lastRev = record.rev;
     this.storedVector = record.stateVector;
-    if (this.epoch === null && record.epoch !== null) this.epoch = record.epoch;
-    if (record.seeded) this.seeded = true;
     if (record.unsynced) this.unsynced = true;
     return true;
   }
@@ -182,8 +173,6 @@ export class ReplicaKeeper {
   /** Restores the replica from a snapshot (a record, or state whose write is still in flight). */
   restore(snapshot: ReplicaSnapshot): void {
     this.options.replica.applyUpdate(snapshot.update, LOAD_ORIGIN);
-    this.epoch = snapshot.epoch;
-    this.seeded = snapshot.seeded === true;
     this.lastRev = snapshot.rev;
     if (snapshot.updatedAt !== undefined) this.contentAt = snapshot.updatedAt;
     this.unsynced = snapshot.unsynced;
@@ -192,16 +181,6 @@ export class ReplicaKeeper {
   /** Local edits not yet in the store. */
   get unsavedLocalEdits(): boolean {
     return this.localSeq > this.savedLocalSeq;
-  }
-
-  /** The epoch of the record read (null in a git notebook). */
-  get currentEpoch(): string | null {
-    return this.epoch;
-  }
-
-  /** Whether the record read was once seeded by the Penmoss server (kept as it was). */
-  get isSeeded(): boolean {
-    return this.seeded;
   }
 
   /** Called whenever `persistError` or `savedLocally` changes. */
@@ -297,11 +276,9 @@ export class ReplicaKeeper {
         noteId,
         engine: replica.engine,
         source: this.unloadSource,
-        epoch: this.epoch,
         update: since ? replica.encodeStateAsUpdate(since) : replica.encodeStateAsUpdate(),
         whole: since === null,
         unsynced: this.unsynced,
-        ...(this.seeded ? { seeded: true } : {}),
         updatedAt: this.contentAt ?? Date.now(),
       }) ?? false;
     if (kept) this.unloadSeq = this.changeSeq;
@@ -393,10 +370,8 @@ export class ReplicaKeeper {
       ...linksField(described.links),
       ...(described.deletedAt !== undefined ? { deletedAt: described.deletedAt } : {}),
       ...(described.deletedFrom !== undefined ? { deletedFrom: described.deletedFrom } : {}),
-      epoch: this.epoch,
       updatedAt: caughtUp ? now : (this.contentAt ?? now),
       unsynced: this.unsynced,
-      ...(this.seeded ? { seeded: true } : {}),
       rev: crypto.randomUUID(),
     };
   }
@@ -423,19 +398,13 @@ export class ReplicaKeeper {
       // A newer write of this keeper landed first (page hide): this one adds nothing.
       if (seq < this.storedSeq) return null;
       if (!current) return record;
-      if (current.rev === base || !mergeRecords) {
-        return record.epoch === null && current.epoch !== null
-          ? { ...record, epoch: current.epoch }
-          : record;
-      }
+      if (current.rev === base || !mergeRecords) return record;
       foreign = current;
       return mergeRecords(current, record);
     });
     if (!written) return false;
     this.stored(written, seq);
     this.lastRev = written.rev;
-    if (this.epoch === null && written.epoch !== null) this.epoch = written.epoch;
-    if (written.seeded) this.seeded = true;
     const merged = foreign as NoteRecord | null;
     if (merged && !this.finished) {
       // Bring the other writer's changes into this replica (and so to the editor).

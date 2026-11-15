@@ -3,6 +3,7 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import { NoteStore, type NoteRecord } from '../src/idb';
+import { seedRecords } from './support/seed';
 
 function record(noteId: string, update: Uint8Array): NoteRecord {
   return {
@@ -11,7 +12,6 @@ function record(noteId: string, update: Uint8Array): NoteRecord {
     update,
     stateVector: new Uint8Array([0]),
     text: `Title of ${noteId}\nbody`,
-    epoch: 'epoch-1',
     updatedAt: 1_700_000_000_000,
     unsynced: false,
   };
@@ -20,13 +20,13 @@ function record(noteId: string, update: Uint8Array): NoteRecord {
 describe('NoteStore', () => {
   it('opens a 5,000-note store and lists its metadata (indicative timing in Node)', async () => {
     const name = 'penmoss-budget-5000';
-    const seed = await NoteStore.open(name);
-    await seed.putMany(
+    (await NoteStore.open(name)).close();
+    await seedRecords(
+      name,
       Array.from({ length: 5000 }, (_, i) =>
         record(`note-${String(i).padStart(5, '0')}`, new Uint8Array(1500).fill(i % 256)),
       ),
     );
-    seed.close();
 
     const started = performance.now();
     const store = await NoteStore.open(name);

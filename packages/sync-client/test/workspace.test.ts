@@ -10,7 +10,6 @@ import {
   readFolderTrash,
   readWorkspace,
   registerNote,
-  rehomeNotes,
   restoreFolder,
   FOLDER_TRASH_DAYS,
   renameFolder,
@@ -316,121 +315,5 @@ describe('workspace document', () => {
     expect(readSettings(a, 'u1')).toEqual(expected);
     expect(readSettings(b, 'u1')).toEqual(expected);
     expect(readSettings(a, 'u')).toEqual({});
-  });
-});
-
-// A674: one device files a note into a folder while another deletes that folder. Each delete
-// moves only the notes it knew of, so the merge leaves the note filed in a folder that is gone.
-// `rehomeNotes` moves it up as any folder delete moves notes (A560), and the folder's Trash
-// record lists it, so Restore puts it back. The server runs it after each merge.
-describe('rehomeNotes', () => {
-  /** P > F, and a note at the top level; then a delete of F and a filing into F, concurrently. */
-  function concurrentFileAndDelete() {
-    const base = new Y.Doc();
-    createFolder(base, { id: 'p', name: 'Parent', parentId: null });
-    createFolder(base, { id: 'f', name: 'Doomed', parentId: 'p' });
-    registerNote(base, { id: 'n', folderId: null });
-    const deleter = new Y.Doc();
-    Y.applyUpdate(deleter, Y.encodeStateAsUpdate(base));
-    deleteFolder(deleter, 'f');
-    const filer = new Y.Doc();
-    Y.applyUpdate(filer, Y.encodeStateAsUpdate(base));
-    moveNote(filer, 'n', 'f', 'a5');
-    const merged = new Y.Doc();
-    Y.applyUpdate(merged, Y.encodeStateAsUpdate(deleter));
-    Y.applyUpdate(merged, Y.encodeStateAsUpdate(filer));
-    return merged;
-  }
-  const noteOf = (doc: Y.Doc) => readWorkspace(doc).notes.find((note) => note.id === 'n');
-
-  it('moves a note filed into a folder deleted meanwhile up to its parent, and Restore puts it back', () => {
-    const merged = concurrentFileAndDelete();
-    expect(noteOf(merged)?.folderId).toBe('f');
-
-    expect(rehomeNotes(merged)).toEqual({ moved: 1, untracked: 0, folders: 0 });
-
-    expect(noteOf(merged)?.folderId).toBe('p');
-    expect(readFolderTrash(merged)).toMatchObject([{ id: 'f', notes: 1 }]);
-    expect(restoreFolder(merged, 'f')).toMatchObject({ restored: true, notes: 1 });
-    expect(noteOf(merged)).toMatchObject({ folderId: 'f', position: 'a5' });
-  });
-
-  it('changes nothing the second time, and nothing when no note is in a missing folder', () => {
-    const merged = concurrentFileAndDelete();
-    rehomeNotes(merged);
-    const after = Y.encodeStateVector(merged);
-    expect(rehomeNotes(merged)).toEqual({ moved: 0, untracked: 0, folders: 0 });
-    expect(Y.encodeStateVector(merged)).toEqual(after);
-  });
-
-  it('gives the same result wherever it runs on the same state', () => {
-    const one = concurrentFileAndDelete();
-    const two = new Y.Doc();
-    Y.applyUpdate(two, Y.encodeStateAsUpdate(one));
-    rehomeNotes(one);
-    rehomeNotes(two);
-    expect(readWorkspace(two)).toEqual(readWorkspace(one));
-    expect(readFolderTrash(two)).toEqual(readFolderTrash(one));
-  });
-
-  // Fail closed (T43 review B1, A757): with no record of where the folder was, the note's notebook
-  // is unknown, so it stays where it is, held by every mirror, rather than go to the top level
-  // (the default notebook's, which its repository would publish).
-  it('keeps a note whose folder has no Trash record where it is, and says so', () => {
-    const doc = new Y.Doc();
-    registerNote(doc, { id: 'n', folderId: null });
-    doc.transact(() => (doc.get('notes').getAttr('n') as Y.Node).setAttr('folder', 'never-made'));
-    expect(rehomeNotes(doc)).toEqual({ moved: 0, untracked: 1, folders: 0 });
-    expect(noteOf(doc)?.folderId).toBe('never-made');
-  });
-
-  // Review of #132, N-c: two repairs of different notes into one Trash record, on two devices,
-  // keep both listings (one key per note, not one list each side replaces).
-  it('keeps both listings when two devices each move a note into one Trash record', () => {
-    const base = new Y.Doc();
-    createFolder(base, { id: 'f', name: 'Doomed', parentId: null });
-    registerNote(base, { id: 'n1', folderId: null });
-    registerNote(base, { id: 'n2', folderId: null });
-    deleteFolder(base, 'f');
-    const stray = (doc: Y.Doc, id: string) =>
-      doc.transact(() => (doc.get('notes').getAttr(id) as Y.Node).setAttr('folder', 'f'));
-    const one = new Y.Doc();
-    Y.applyUpdate(one, Y.encodeStateAsUpdate(base));
-    stray(one, 'n1');
-    rehomeNotes(one);
-    const two = new Y.Doc();
-    Y.applyUpdate(two, Y.encodeStateAsUpdate(base));
-    stray(two, 'n2');
-    rehomeNotes(two);
-    Y.applyUpdate(one, Y.encodeStateAsUpdate(two));
-
-    expect(readFolderTrash(one)).toMatchObject([{ id: 'f', notes: 2 }]);
-    expect(restoreFolder(one, 'f')).toMatchObject({ restored: true, notes: 2 });
-  });
-
-  it('still reads the notes an older record lists in its one list', () => {
-    const merged = concurrentFileAndDelete();
-    // As a record written before per-note keys: deleteFolder's own list holds them all.
-    expect(readFolderTrash(merged)).toMatchObject([{ id: 'f', notes: 0 }]);
-    rehomeNotes(merged);
-    expect(readFolderTrash(merged)).toMatchObject([{ id: 'f', notes: 1 }]);
-  });
-
-  // Review of #132, N-d: a folder id the tree keeps as a plain value is there, not missing.
-  it('never moves a note out of a folder held as a value rather than a node', () => {
-    const doc = new Y.Doc();
-    registerNote(doc, { id: 'n', folderId: null });
-    doc.transact(() => {
-      doc.get('folders').setAttr('odd', 'a folder written as a value' as never);
-      (doc.get('notes').getAttr('n') as Y.Node).setAttr('folder', 'odd');
-    });
-    expect(rehomeNotes(doc)).toEqual({ moved: 0, untracked: 0, folders: 0 });
-    expect(noteOf(doc)?.folderId).toBe('odd');
-  });
-
-  it('leaves notes `which` does not pick', () => {
-    const merged = concurrentFileAndDelete();
-    expect(rehomeNotes(merged, () => false)).toEqual({ moved: 0, untracked: 0, folders: 0 });
-    expect(noteOf(merged)?.folderId).toBe('f');
   });
 });

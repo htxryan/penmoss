@@ -416,23 +416,21 @@ describe('Notes: offline-first replica (T8)', () => {
     await vi.waitFor(() => expect(store.records.get(id)?.deleted).toBe(true));
   });
 
-  it('keeps the epoch and unsynced flag when reopening a note whose closing write is in flight', async () => {
+  it('keeps the unsynced flag when reopening a note whose closing write is in flight', async () => {
     const { notes, store } = setup();
     await notes.start();
     const id = notes.create();
     await notes.settled(id);
-    store.records.set(id, { ...store.records.get(id)!, epoch: 'epoch-1', unsynced: false });
+    store.records.set(id, { ...store.records.get(id)!, unsynced: false });
     const first = notes.openNote(id);
     await first.ready;
     first.close(); // nothing changed: the snapshot must not claim unsynced changes
     const second = notes.openNote(id);
     await second.ready;
-    expect(second.keeper.currentEpoch).toBe('epoch-1');
     expect(second.unsynced).toBe(false);
     setTitle(second.replica.doc, 'Edited');
     await second.flush();
     expect(store.records.get(id)).toMatchObject({
-      epoch: 'epoch-1',
       unsynced: true,
       title: 'Edited',
     });
@@ -670,7 +668,7 @@ describe('Notes: offline-first replica (T8)', () => {
     const id = await notes.ensurePeriodic('daily', '2026-10-21', '## Plan\n\n{{date}}\n');
     expect(id).toBe(periodicNoteId('daily', '2026-10-21', TEST_NOTEBOOK));
     const record = store.records.get(id)!;
-    expect(record).toMatchObject({ title: '2026-10-21', unsynced: true, epoch: null });
+    expect(record).toMatchObject({ title: '2026-10-21', unsynced: true });
     const replica = createYjs14Replica();
     replica.applyUpdate(record.update);
     expect(readIdentity(replica.doc)).toMatchObject({
@@ -699,7 +697,7 @@ describe('Notes: offline-first replica (T8)', () => {
     const { notes, store } = setup({ online: () => false });
     await notes.start();
     const id = await notes.ensurePeriodic('daily', '2026-10-18', '## Plan\n');
-    expect(store.records.get(id)).toMatchObject({ epoch: null, unsynced: true });
+    expect(store.records.get(id)).toMatchObject({ unsynced: true });
     expect(store.records.get(id)!.text).toContain('Plan');
   });
 

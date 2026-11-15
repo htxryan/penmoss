@@ -23,7 +23,6 @@ function recordOf(doc: (typeof docs)[number], overrides: Partial<NoteRecord> = {
     title: doc.title,
     tags: doc.tags,
     headings: doc.headings,
-    epoch: 'e',
     updatedAt: doc.updatedAt,
     unsynced: false,
     ...overrides,
@@ -233,23 +232,12 @@ describe('a search with no words', () => {
 });
 
 describe('the offline index at startup (A119)', () => {
-  it('fills older records’ fields first, builds in slices and saves the index', async () => {
+  it('builds in slices and saves the index', async () => {
     const turns = vi.fn(() => Promise.resolve());
     const { service, store } = setup({ yieldToPage: turns, indexSlice: 10, saveDelayMs: 0 });
-    const order: string[] = [];
-    const listTexts = store.listTexts!.bind(store);
-    Object.assign(store, {
-      backfillSearchFields: () => {
-        order.push('backfill');
-        return Promise.resolve();
-      },
-      listTexts: () => {
-        order.push('texts');
-        return listTexts();
-      },
-    });
+    const listTexts = vi.spyOn(store, 'listTexts');
     expect(ids((await service.search(request('backup'))).hits)).toHaveLength(3);
-    expect(order).toEqual(['backfill', 'texts']);
+    expect(listTexts).toHaveBeenCalledTimes(1);
     expect(turns.mock.calls.length).toBeGreaterThanOrEqual(5);
     await vi.waitFor(() => expect(store.state.get('searchIndex')).toBeDefined());
   });

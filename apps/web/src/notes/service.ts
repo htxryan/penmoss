@@ -15,7 +15,6 @@
 import { ulid } from '@penmoss/core/ids';
 import type { DocJson, NoteLink } from '@penmoss/core/links';
 import {
-  NoteStore,
   type AttachmentStore,
   toMeta,
   type NoteMeta,
@@ -72,8 +71,6 @@ export interface LocalNotes extends ReplicaStore, AttachmentStore {
   /** Small values kept with the notes (the tag-rename journal, T18). */
   getState?(key: string): Promise<unknown>;
   setState?(key: string, value: unknown): Promise<void>;
-  /** Fills in older records' tags and headings after an upgrade (search awaits it, A119). */
-  backfillSearchFields?(): Promise<void>;
   /**
    * Merges what another window keeps as it goes as soon as it is kept (A626, PR #167), telling
    * `onMerged` which records it wrote; returns the unsubscribe.
@@ -240,7 +237,8 @@ export interface NotesOptions {
   readonly periodicSalt: string;
   /** Whether a note id was deleted for good in this source (a git notebook's `purged`, A828). */
   readonly isPurged?: (id: string) => boolean;
-  readonly openStore?: (hooks: StoreHooks) => Promise<LocalNotes>;
+  /** Opens this device's store of the source's notes (a git notebook's own database). */
+  readonly openStore: (hooks: StoreHooks) => Promise<LocalNotes>;
   readonly registry?: NoteRegistry;
   /** Whether the browser thinks it is online (`navigator.onLine`). */
   readonly online?: () => boolean;
@@ -397,9 +395,7 @@ export class OpenNote {
     const snapshot: ReplicaSnapshot | null = this.loaded
       ? {
           update: this.replica.encodeStateAsUpdate(),
-          epoch: this.keeper.currentEpoch,
           unsynced: this.keeper.unsynced,
-          ...(this.keeper.isSeeded ? { seeded: true } : {}),
         }
       : null;
     // The keeper keeps retrying its final write; the replica stays until it lands.
@@ -522,7 +518,7 @@ export class Notes {
     this.backend = options.backend;
     this.periodicSalt = options.periodicSalt;
     this.isPurged = options.isPurged ?? (() => false);
-    this.openStore = options.openStore ?? ((hooks) => NoteStore.open(undefined, hooks));
+    this.openStore = options.openStore;
     this.registry = options.registry;
     this.online = options.online ?? browserOnline;
     this.persistStorage = options.persistStorage ?? browserPersist;
@@ -670,11 +666,9 @@ export class Notes {
         noteId: id,
         engine: 'yjs14',
         source: SNAPSHOT_SOURCE,
-        epoch: snapshot.epoch,
         update: snapshot.update,
         whole: true,
         unsynced: snapshot.unsynced,
-        ...(snapshot.seeded ? { seeded: true } : {}),
         updatedAt: snapshot.updatedAt ?? Date.now(),
       });
     }
@@ -857,7 +851,6 @@ export class Notes {
       text: '',
       title,
       ...linksField([]),
-      epoch: null,
       updatedAt: now.getTime(),
       unsynced: true,
       rev: newRev(),
@@ -1188,7 +1181,7 @@ export class Notes {
     ]);
     const note = periodicNote(codec, kind, period, template, salt);
     await store.update(id, (current) =>
-      current ? null : recordFromUpdates(id, [note.update], { epoch: null, unsynced: true }),
+      current ? null : recordFromUpdates(id, [note.update], { unsynced: true }),
     );
     this.deleted.delete(id);
     await this.refreshLocal();

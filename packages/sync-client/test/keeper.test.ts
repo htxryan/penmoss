@@ -41,7 +41,7 @@ describe('ReplicaKeeper', () => {
     const store = await openStore();
     const first = createReplica();
     appendParagraph(first, 'kept');
-    await store.put(recordFromDoc('n2', first.doc, { epoch: null, unsynced: false }));
+    await store.put(recordFromDoc('n2', first.doc, { unsynced: false }));
     const replica = createReplica();
     const keeper = new ReplicaKeeper({ noteId: 'n2', replica, store });
     await keeper.load();
@@ -64,7 +64,7 @@ describe('ReplicaKeeper', () => {
     const theirs = createReplica();
     theirs.applyUpdate(stored!.update);
     appendParagraph(theirs, 'theirs');
-    await store.put(recordFromDoc('n3', theirs.doc, { epoch: null, unsynced: true }));
+    await store.put(recordFromDoc('n3', theirs.doc, { unsynced: true }));
     expect(await keeper.pullStored()).toBe(true);
     expect(mine.plainText()).toContain('theirs');
     // Read already: nothing new to read.
