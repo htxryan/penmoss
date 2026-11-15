@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { expandHome, type FactoryConfig } from './config.ts';
 import type { Exec } from './exec.ts';
 import { hostGit, mustGit } from './git.ts';
-import { DEAD_END_PUSH_URL } from './host.ts';
+import { DEAD_END_PUSH_URL } from './clone.ts';
 import { githubUrl } from './publish.ts';
 import { LABEL, plistPath, renderPlist, UI_LABEL, UPDATER_LABEL } from './launchd.ts';
 import { formatStatus, readStatus, type Commit, type DaemonStatus } from './status.ts';

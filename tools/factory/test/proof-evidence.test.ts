@@ -17,7 +17,7 @@ import {
   LAST_PROOF,
   macFailures,
   stageLastProof,
-} from '../src/host.ts';
+} from '../src/host-proof.ts';
 import {
   androidFailures,
   EVIDENCE_TEXT_BYTES,

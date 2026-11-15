@@ -137,7 +137,7 @@ async function mergeUnpadded(sandbox: RunSandbox): Promise<string | null> {
   return text === null ? null : formatDecisions(text);
 }
 
-/** The subject of the factory's numbering commit (host.ts), and the numbers it gave. */
+/** The subject of the factory's numbering commit (host-git.ts), and the numbers it gave. */
 const NUMBERING = /^Number the new decisions: (.+)$/;
 
 export function numberingOf(subject: string): Record<string, string> | null {

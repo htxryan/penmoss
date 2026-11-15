@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { fromVm } from '../src/host.ts';
+import { fromVm } from '../src/host-proof.ts';
 import { proofFiles, renderPrBody } from '../src/proof/body.ts';
 import { parseReleaseNote } from '../../../.github/scripts/release-note.mjs';
 import { failedProof, fromPlaywrightReport, missingProof } from '../src/proof/manifest.ts';

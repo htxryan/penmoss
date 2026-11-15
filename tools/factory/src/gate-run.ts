@@ -400,7 +400,7 @@ export async function recordMacProof(
 }
 
 /**
- * What the agent's next sandbox has from the proof (`stageLastProof` in host.ts, and
+ * What the agent's next sandbox has from the proof (`stageLastProof` in host-proof.ts, and
  * proof/evidence.ts for what a failing test leaves), named as the files are.
  */
 export const LAST_PROOF_NOTE =

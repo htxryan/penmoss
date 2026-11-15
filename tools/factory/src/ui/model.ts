@@ -245,7 +245,7 @@ export interface ViewInput {
   readonly doctor?: readonly DoctorSummary[];
   /** The last lines of a run's agent log. */
   readonly logTail?: (run: string) => readonly string[];
-  /** The running session's chat link, while it runs (host.ts's CHAT_URL file). */
+  /** The running session's chat link, while it runs (host-agent.ts writes agent-stream.ts's CHAT_URL file). */
   readonly runChat?: (run: string) => string | undefined;
   /** Where a run's folder is. */
   readonly runFolder?: (run: string) => string;

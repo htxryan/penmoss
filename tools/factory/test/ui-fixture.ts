@@ -28,7 +28,7 @@ export const pen = (
     ...o,
   });
 
-/** A ledger line as `host.ts` writes it. */
+/** A ledger line as `appendLedger` (ledger.ts) writes it. */
 export const line = (run: string, event: string, at: string, extra: object = {}, slot = 1) =>
   JSON.stringify({ at, run, slot, event, ...extra });
 
