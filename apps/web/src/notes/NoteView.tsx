@@ -65,7 +65,6 @@ import { PhoneFormatBar } from './PhoneFormatBar';
 import { useShowTag } from '../search/show-tag';
 import { useFullWidth } from './width';
 import { trashedNote } from '../trash/trashed';
-import { useStripEnd } from '../tabs/hooks';
 import { useTabScroll } from '../tabs/page';
 import { closeTabsOfTrashed } from '../tabs/trash';
 import { openNoteWindow } from '../window/open';
@@ -156,8 +155,6 @@ export function NoteView({
   }, [layoutKey]);
   /** The note's text, scrolled on its own: its place is kept by the tab. */
   const scrollRef = useRef<HTMLDivElement>(null);
-  /** Where the note's bar buttons go in the main window: the tab strip's end (A1505). */
-  const stripEnd = useStripEnd();
   /** The thread picked in the panel or the note (T48). */
   const [activeThread, setActiveThread] = useState<string | null>(null);
   /**
@@ -790,19 +787,7 @@ export function NoteView({
         />
       </div>
       {phone ? null : (
-        <StatusBar
-          noteId={id}
-          note={shownNote}
-          replica={replica}
-          folder={trail}
-          stats={stats}
-          // The folder path, where the title row showed it (A1505): a click reveals the note.
-          place={
-            stripEnd && noteSource
-              ? { source: sourceCrumb, folders: trail, notebook: noteSource.name }
-              : null
-          }
-        />
+        <StatusBar noteId={id} note={shownNote} replica={replica} folder={trail} stats={stats} />
       )}
       {phone && ready && !unsupported && !showSource ? <PhoneFormatBar /> : null}
     </article>

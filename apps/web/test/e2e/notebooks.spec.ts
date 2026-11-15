@@ -274,8 +274,6 @@ test('Sync stopped opens Settings → Notebooks, where Sync Now starts it again'
   await expect(card.getByTestId('git-error')).toHaveCount(0);
 });
 
-const SHOTS = process.env['PENMOSS_EVIDENCE'];
-
 async function openNote(page: Page, title: string, notebook = 'Quanta'): Promise<void> {
   await section(page, notebook)
     .getByRole('tree', { name: 'Folders and notes' })
@@ -300,27 +298,27 @@ test.describe('in Quanta, with notes of links, lists and headings', () => {
     },
   });
 
-  // Ryan’s feedback of 6 Nov 2026 (Quanta), item 5.
-  test('with two notebooks open, the breadcrumb starts with the note’s notebook', async ({
+  // Ryan’s feedback of 6 Nov 2026 (Quanta), item 5: which notebook the note is in. Since A1587
+  // the status bar no longer says; the note's tab names its notebook, and its row is marked in
+  // that notebook's section of the sidebar.
+  test('with two notebooks open, the note’s tab and its sidebar row show its notebook', async ({
     page,
     host,
   }) => {
     const errors = collectErrors(page);
     await page.goto('/');
     await openNote(page, 'Links');
-    // One notebook: no notebook in the breadcrumb. Since PEN-140 (A1505) it is the status bar's
-    // place, the title being the tab's.
-    await expect(page.getByTestId('note-source-crumb')).toHaveCount(0);
+    const active = page.locator('.tab-strip').getByRole('tab', { selected: true });
+    await expect(active).toHaveAccessibleName(/^Links, Quanta$/);
+    await expect(section(page, 'Quanta').locator('[aria-current="page"]')).toContainText('Links');
     await host.seed({ name: 'Work', notes: [{ title: 'Parser' }] });
     await expect(section(page, 'Work')).toBeVisible({ timeout: 40_000 });
-    const crumbs = page.getByTestId('status-place');
-    await expect(crumbs.getByTestId('note-source-crumb')).toHaveText('Quanta');
     await openNote(page, 'Parser', 'Work');
-    await expect(crumbs.getByTestId('note-source-crumb')).toHaveText('Work');
-    await expect(
-      page.locator('.tab-strip').getByRole('tab', { selected: true }),
-    ).toHaveAccessibleName(/^Parser/);
-    if (SHOTS) await page.locator('.status-bar').screenshot({ path: `${SHOTS}/breadcrumb.png` });
+    await expect(active).toHaveAccessibleName(/^Parser, Work$/);
+    await expect(section(page, 'Work').locator('[aria-current="page"]')).toContainText('Parser');
+    await expect(section(page, 'Quanta').locator('[aria-current="page"]')).toHaveCount(0);
+    // The status bar names no place.
+    await expect(page.getByTestId('status-place')).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 });
