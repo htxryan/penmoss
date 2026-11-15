@@ -74,7 +74,7 @@ function imageAttributes(): Attributes {
 const MARKDOWN_IMAGE = /(?:^|[^\\])(!\[([^[\]\n]*)\]\((https?:\/\/[^\s()]+)\))$/;
 
 /**
- * Typing image markdown inserts the image, as the same markdown from the server
+ * Typing image markdown inserts the image, as the same markdown in a note's file
  * shows one. Pasted image markdown still becomes a link (A52): a typed address
  * is the writer's own choice, a pasted page's badges and pixels are not.
  */
@@ -187,7 +187,7 @@ export async function insertImageFiles(
   }
 }
 
-/** The image types the server accepts (A31). */
+/** The image types a note takes as images (A31). */
 export const IMAGE_TYPES = 'image/png,image/jpeg,image/gif,image/webp,image/avif';
 
 function imageInputPlugin(services: ImageServices): Plugin {

@@ -1,8 +1,8 @@
 /**
  * The local MCP server over a git notebook (T50 G2, #150; A830): `penmoss mcp --notebook <name>`
- * speaks JSON-RPC over stdio with the remote `/mcp` server's tool names and schemas (the shared
- * definitions in `@penmoss/core/mcp`), implemented over a `LocalNotebook` as the clone's own
- * writer. Nothing reaches the Penmoss server.
+ * speaks JSON-RPC over stdio with the shared tool names and schemas (`@penmoss/core/mcp`),
+ * implemented over a `LocalNotebook` as the clone's own writer. Nothing leaves the device but
+ * the notebook's own git sync.
  *
  * The comment tools (T60, A1064) work on the clone's own notes, as its writer: reading a thread
  * sent to this writer marks it seen, replying marks it replied (A1061). With `channel` (A1063,
@@ -64,7 +64,7 @@ const WRITES_TOO: ReadonlySet<string> = new Set([
   'read_comment_thread',
 ]);
 
-/** Advice on a refusal where the remote server's would not fit a git notebook. */
+/** Advice on a refusal, in a git notebook's terms. */
 const LOCAL_ADVICE: Readonly<Record<string, string>> = {
   not_found:
     'No note with this id in this git notebook. Find ids with search_notes, list_recent or list_folder.',
@@ -238,11 +238,11 @@ const edit =
     return edited(notebook.edit(args['id'] as string, op(args), base));
   };
 
-/** At most this many changed lines in get_history's version detail (as the server). */
+/** At most this many changed lines in get_history's version detail. */
 const MAX_CHANGES = 200;
 
 const HANDLERS: Readonly<Record<string, Handler>> = {
-  // --- History (G6): the server's shapes, from the git log ---
+  // --- History (G6), from the git log ---
   get_history: async (notebook, args) => {
     const id = args['id'] as string;
     const versionId = args['versionId'] as number | undefined;

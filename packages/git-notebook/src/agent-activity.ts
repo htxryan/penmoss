@@ -1,22 +1,21 @@
 /**
- * Agent activity for git notebooks (#172, A920): the server's Agent activity (T42, A561) without
- * a server. What an agent changed in the notebook's folders, note places and settings is read
+ * Agent activity for git notebooks (#172, A920; T42's A561): what an agent changed in the notebook's folders, note places and settings is read
  * from the branch: each commit whose `Penmoss-Writer` trailer names an agent writer (A825) and
  * that touched the workspace logs is one entry, as each of its syncs is one version in a note's
  * History (A858). Its change is the workspace merged from every writer's log at the commit
  * against the same at its parent: a commit only ever writes its own writer's log, and pushes are
  * fast-forwards, so that is exactly what the agent did.
  *
- * Undo is the server's inverse (`applyInverse`): each part is applied only while things are as
+ * Undo applies each change's inverse (`applyInverse`): each part is applied only while things are as
  * the agent left them, else 409 `changed_since` and nothing changes; all of an entry or none. It
  * is an ordinary change to the live WorkspaceDoc by the person, which the next sync commits:
  * history is never rewritten, and nothing of a purge is touched (a note deleted for good is "in
  * Trash or gone"; `purged` is never written). An entry undone is marked in the WorkspaceDoc
  * (`agentUndone`), so every device shows it undone. Notes' edits, their tags and Trash moves are
- * versions in each note's History, where Revert this edit undoes an agent's (A81, A858), as on
- * the server (A566, A574).
+ * versions in each note's History, where Revert this edit undoes an agent's (A81, A858; A566,
+ * A574).
  *
- * The answers have the server's shapes (`GET /api/agent-activity`, `POST …/:id/undo`); ids are
+ * The answers are `GET /api/agent-activity`'s and `POST …/:id/undo`'s shapes; ids are
  * whole numbers made from the commit (its first 13 hex digits), the same on every clone.
  */
 import { folderPath, isWithin, type FolderRecord, type SortMode } from '@penmoss/core/workspace';
@@ -43,7 +42,7 @@ import { isPurged, purgedIds } from './purge';
 import type { CommitInfo, GitTransport } from './transport';
 import { contentIds, grownBy, isUpdate, mergeUpdates } from './yjs';
 
-/** As the server keeps them (A561). */
+/** How long an entry is listed (A561). */
 export const ACTIVITY_DAYS = 30;
 export const ACTIVITY_LIST_MAX = 500;
 /** The most workspace commits read back for the list. */
@@ -65,7 +64,7 @@ export type ActivityKind =
   | 'note.reorder'
   | 'settings';
 
-/** `GET /api/agent-activity`'s entries, as the server's. */
+/** `GET /api/agent-activity`'s entries. */
 export interface ActivityEntry {
   readonly id: number;
   readonly at: number;
@@ -129,7 +128,7 @@ const changedSince = (message: string): UndoResult => ({
   message: `${message} Nothing was undone.`,
 });
 
-/** A setting's value for a summary: short and readable (the server's `shownValue`). */
+/** A setting's value for a summary: short and readable. */
 function shownValue(value: unknown): string {
   if (value === null || value === undefined) return 'its default';
   const text = typeof value === 'string' ? `“${value}”` : JSON.stringify(value);
@@ -217,7 +216,7 @@ interface Derived {
   readonly titles: ReadonlyMap<string, string>;
 }
 
-/** What one commit of an agent changed, as the server records it, with each part's inverse. */
+/** What one commit of an agent changed, with each part's inverse. */
 function changesOf(
   before: Reading,
   after: Reading,

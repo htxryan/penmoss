@@ -66,7 +66,6 @@ import {
   GIT_ORIGIN,
   hasPending,
   isUpdate,
-  mergeUpdates,
   freshClientId,
   ownFile,
   randomClientId,
@@ -1287,17 +1286,6 @@ export class GitNotebookEngine {
       wanted.set(path, renderNoteFile(replica.note(id)!, id, path, named, layout.root));
     }
     return { wanted, penmoss: foreign.penmoss, foreign: foreign.paths };
-  }
-
-  /** Every writer's logs of one note at `head`, merged (History reads it at older commits). */
-  async noteAt(commit: string, noteId: string): Promise<Y.Doc | null> {
-    const files = await this.options.transport.list(commit);
-    const paths = [...files.keys()].filter((path) => path.startsWith(this.layout.noteDir(noteId)));
-    if (paths.length === 0) return null;
-    const read = await this.options.transport.read(commit, paths);
-    const doc = new Y.Doc();
-    Y.applyUpdate(doc, mergeUpdates([...read.values()].filter(isUpdate)));
-    return doc;
   }
 }
 

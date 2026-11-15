@@ -1,7 +1,7 @@
 /**
  * Reverting one change of a note (T21, A3, A81): a three-way merge that undoes what a version
- * changed and keeps every later edit. Moved here from the server's `do/versions.ts` (T50 Mac lane,
- * A858) so git notebooks revert an agent's edit the same way, in the apps and the local MCP.
+ * changed and keeps every later edit (T50 Mac lane, A858): git notebooks revert an agent's edit
+ * this way, in the apps and the local MCP.
  */
 import { merge3, splitLines, type MergeConflict } from '@penmoss/core/diff';
 import { frontmatterTagKeys, setBody, setTagKeys } from '@penmoss/sync-client/history';

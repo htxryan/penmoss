@@ -1,8 +1,7 @@
 /**
  * The REST API's routes, answered on this device (T50 G2): a `fetch` the CLI's `Api` client
- * calls instead of the network when a command runs with `--notebook`. The CLI's commands are
- * unchanged: they ask `/api/...` and read the server's shapes and error codes, and this answers
- * them from a `LocalNotebook`. Nothing leaves the process.
+ * calls when a command runs with `--notebook`: the CLI asks `/api/...` and this answers from a
+ * `LocalNotebook`, in the shapes and error codes the CLI reads. Nothing leaves the process.
  */
 import type { EditOp, SectionMode } from '@penmoss/editor/edit-engine';
 import type { SortMode } from '@penmoss/core/workspace';
@@ -173,7 +172,7 @@ async function route(
     const action = versions[3];
     if (version === null && method === 'GET') return ok(await notebook.versions(id));
     if (version === null && method === 'POST') {
-      // The server answers with the version itself (MCP's save_version wraps it).
+      // The answer is the version itself (MCP's save_version wraps it).
       const done = await notebook.saveVersion(id);
       if (!done.version) throw new LocalError(404, 'not_found', 'Nothing committed yet');
       return ok(done.version, done.saved ? 201 : 200);
@@ -196,7 +195,7 @@ async function route(
     const id = notebook.noteIdOf(decodeURIComponent(note[1]!));
     const action = note[2];
     if (action === 'content' && method === 'GET') return ok(notebook.content(id));
-    // set_properties and `penmoss set-title` (#170 F10), as the server's PATCH.
+    // set_properties and `penmoss set-title` (#170 F10).
     if (action === 'properties' && method === 'PATCH') {
       return ok(
         notebook.edit(
@@ -360,7 +359,7 @@ async function route(
   }
   if (folder && method === 'DELETE')
     return ok(notebook.deleteFolder(decodeURIComponent(folder[1]!)));
-  // Agent activity (#172, A920): the server's routes, from the branch.
+  // Agent activity (#172, A920), read from the branch.
   if (path === '/api/agent-activity' && method === 'GET') return ok(await notebook.agentActivity());
   const undo = ACTIVITY_UNDO.exec(path);
   if (undo && method === 'POST') {

@@ -110,8 +110,7 @@ export function appendCapture(doc: Y.Doc, markdown: string, time: string): boole
 /**
  * The body with a capture added at the end of its `## Captures` section (the
  * heading added at the end the first time), or null for an empty capture.
- * Pure, so the server applies captures the Android app sends (T34) exactly
- * as the apps do.
+ * Pure, so every client applies a capture exactly alike (T34).
  */
 export function withCapture(body: PMNode, markdown: string, time: string): PMNode | null {
   const blocks = captureBlocks(markdown, time);

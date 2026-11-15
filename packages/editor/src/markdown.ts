@@ -1,8 +1,6 @@
 /**
- * Renders a note's Yjs document as markdown with frontmatter (T3 codec). On the
- * server it runs inside the NoteDoc, never in a Worker request (A13): a
- * 10,000-word note takes ~25 ms to serialise, more than a Free-plan request
- * may use. Shared since T50 G1 (A832): git notebooks render with it too.
+ * Renders a note's Yjs document as markdown with frontmatter (T3 codec): what a git notebook
+ * writes as the note's file (T50 G1, A832), and what Copy as Markdown and the source view show.
  */
 import {
   createFrontmatter,
@@ -230,23 +228,6 @@ export function bodyDelta(body: PMNode): ReturnType<typeof pmnodeToDelta> {
   return pmnodeToDelta(body);
 }
 
-/** The attachments a body uses (images and file links under `attachments/`), by SHA-256, sorted. */
-export function attachmentRefs(body: PMNode): string[] {
-  const found = new Set<string>();
-  body.descendants((node) => {
-    const path =
-      node.type.name === 'image'
-        ? (node.attrs['src'] as string)
-        : node.type.name === 'attachment'
-          ? (node.attrs['href'] as string)
-          : null;
-    const parsed = path ? parseAttachmentPath(path) : null;
-    if (parsed) found.add(parsed.sha256);
-    return true;
-  });
-  return [...found].sort();
-}
-
 /**
  * The attachment files a body uses, as the git mirror names them
  * (`attachments/<sha256>.<ext>`, T27): images, file links and links to them.
@@ -284,8 +265,7 @@ export function noteBody(doc: Y.Doc): PMNode {
   try {
     return ynodeToPmnode(root, schema);
   } catch (error) {
-    // Content the core schema rejects at the top level; surfaced in logs, never silently lost:
-    // the Durable Object still holds the Yjs state.
+    // Content the core schema rejects at the top level: logged, and read as an empty body.
     console.error('[markdown] body does not fit the core schema', error);
     return emptyDoc();
   }

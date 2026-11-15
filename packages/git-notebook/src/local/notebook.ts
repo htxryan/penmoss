@@ -1,14 +1,12 @@
 /**
  * A git notebook's notes API, on this device (T50 G2, #150; A830): what the CLI's `--notebook`
- * and the local MCP server run. It answers as the server's REST API and MCP tools do (the same
- * shapes, codes and statuses), so the CLI's commands and an agent's tool calls work unchanged,
- * but every answer comes from the local engine: the shared edit engine (`@penmoss/editor`), the
+ * and the local MCP server run, in the shapes, codes and statuses the CLI, Android and the MCP
+ * tools read. Every answer comes from the local engine: the shared edit engine (`@penmoss/editor`), the
  * offline search index (`@penmoss/sync-client/local-index`), core's links for backlinks, and the
  * notebook's own settings and salted periodic notes. Nothing here reaches the network; the next
  * sync carries every change.
  *
- * Differences from the server, all because there is no server: search is by words unless the
- * caller gives meaning (an embedder, a cache and an index, A1156); `baseVersion` is the note's local change counter, and a base this process never read is
+ * Search is by words unless the caller gives meaning (an embedder, a cache and an index, A1156); `baseVersion` is the note's local change counter, and a base this process never read is
  * `base_unknown`; agent limits, folder scopes and T43 notebooks do not exist here.
  */
 import { isUlid, type LinkResolver } from '@penmoss/core';
@@ -181,16 +179,16 @@ export const WORDS_ONLY_NOTICE = 'A git notebook searches words only: these are 
 export const coverageNotice = ({ indexed, total }: MeaningCoverage) =>
   `Meaning covers ${indexed} of ${total} notes so far.`;
 
-/** A note id as the REST API takes one (the server's NOTE_ID). */
+/** A note id as the REST API takes one. */
 const NOTE_ID = /^[A-Za-z0-9_-]{1,80}$/;
-/** What one read gives an agent at once (A150), as the server's READ_PART_BYTES. */
+/** What one read gives an agent at once (A150). */
 export const READ_PART_BYTES = 60_000;
-/** Markdown in one edit (the server's MAX_MARKDOWN_BYTES). */
+/** Markdown in one edit. */
 export const MAX_MARKDOWN_BYTES = 256 * 1024;
-/** A create replayed with the same derived key within this returns its note (as the server). */
+/** A create replayed with the same derived key within this returns its note. */
 export const CREATE_RETRY_WINDOW_MS = 10 * 60_000;
 const EXCERPT_LENGTH = 200;
-/** The most threads one list across the notebook returns (the server's MAX_LISTED_THREADS). */
+/** The most threads one list across the notebook returns. */
 export const MAX_LISTED_THREADS = 200;
 const MAX_LISTED = 200;
 /** How many earlier states of a note a process keeps as bases for edits (A121). */
@@ -237,8 +235,8 @@ export class LocalNotebook {
     readonly ops: NotebookOps,
     private readonly clock: () => number = Date.now,
     /**
-     * Commits what this writer has now (G6's `save_version`): a sync, through the caller's checks
-     * (the repository must be private, A841). Absent: a version is saved by the next sync.
+     * Commits what this writer has now (G6's `save_version`): a sync, through the caller's checks.
+     * Absent: a version is saved by the next sync.
      */
     private readonly commitNow?: () => Promise<void>,
     /**
@@ -1404,9 +1402,8 @@ export class LocalNotebook {
   }
 
   /**
-   * Before a restore or a revert, the note as it is now becomes a version, as the server saves
-   * one first (note-doc's restore): what the restore replaces stays in history, so the restore
-   * itself can be undone. An edit that cannot be committed (no sync here, or it did not land)
+   * Before a restore or a revert, the note as it is now becomes a version: what the restore
+   * replaces stays in history, so the restore itself can be undone. An edit that cannot be committed (no sync here, or it did not land)
    * refuses the restore: nothing is replaced that history would not keep.
    */
   private async saveCurrentFirst(id: string): Promise<void> {
@@ -1465,7 +1462,7 @@ export class LocalNotebook {
 
   // --- agent activity (#172, A920) ---
 
-  /** For the people using the apps: an agent's writer cannot read or undo it (as the server). */
+  /** For the people using the apps: an agent's writer cannot read or undo it. */
   private requirePerson(): void {
     if (this.engine.who.kind === 'agent' || (this.served.side ?? 'app') !== 'app') {
       throw new LocalError(
