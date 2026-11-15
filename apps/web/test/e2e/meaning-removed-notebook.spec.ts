@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './fixtures';
+import { collectErrors } from './support/app';
 
 // Search by meaning forgets a removed notebook (A1373): Settings → Notebooks removes one from
 // this Mac, and the stand-in Mac's embedding service (MeaningService, support/meaning-host.ts)
@@ -23,15 +24,6 @@ const go = (page: Page, path: string) =>
     window.history.pushState(null, '', to);
     window.dispatchEvent(new PopStateEvent('popstate'));
   }, path);
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 test('a removed notebook leaves Search by Meaning’s count (A1373)', async ({ page, host }) => {
   test.setTimeout(120_000);

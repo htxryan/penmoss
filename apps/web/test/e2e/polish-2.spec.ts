@@ -2,6 +2,7 @@ import { expect, test, type Page } from './fixtures';
 import { noteAction } from './note-menu';
 import { notebookAction } from './notebook-actions';
 import { storedRecord } from './stored';
+import { ULID, body, collectErrors } from './support/app';
 
 // T39 pass 2 (web): what a fresh look after pass 1 turned up. Undo and Redo in a new note,
 // the sidebar list's room, the calendar as one Tab stop, Undo after Move to Trash, focus
@@ -9,22 +10,11 @@ import { storedRecord } from './stored';
 // when it needs attention. On a git notebook (T59): search is this device's, and the notebook's
 // sync dot is the one read out.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 const UNDO = 'ControlOrMeta+KeyZ';
 const REDO = 'ControlOrMeta+Shift+KeyZ';
 const SEARCH = 'ControlOrMeta+Shift+KeyF';
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const tree = (page: Page) => page.getByRole('tree', { name: 'Folders and notes' });
 
 async function newNote(page: Page, title: string, text = ''): Promise<string> {

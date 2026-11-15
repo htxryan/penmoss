@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './fixtures';
+import { collectErrors } from './support/app';
 
 // Ryan's review of #192 (14 Nov 2026), the window and its chrome, in the web app with the Mac
 // app's window (`macWindow`: the compact title bar): the first run's window drags by a strip
@@ -41,15 +42,6 @@ const box = async (page: Page, selector: string) => {
 
 const compact = (page: Page) =>
   expect(page.locator('html')).toHaveAttribute('data-titlebar', 'compact');
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 test.describe('with no notebook', () => {
   test.use({ macWindow: true, seed: null });

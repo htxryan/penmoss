@@ -1,39 +1,17 @@
 import { expect, seeded, test, type GitHost, type Page } from './fixtures';
-import { FULL_WIDTH, INFO_PANEL, LINE_END, NEW_NOTE, SELECT_TO_LINE_START, SIDEBAR } from './keys';
+import { FULL_WIDTH, INFO_PANEL, LINE_END, SELECT_TO_LINE_START, SIDEBAR } from './keys';
 import { storedSetting } from './stored';
 import { readRemote, remoteMarkdown } from './support/remote';
+import { body, collectErrors, newNote } from './support/app';
 
 // T41: Ryan's Mac app feedback, round 1, in the web app (the Mac app runs the same page; its
 // own suite covers the OS check before Delete for good). On a git notebook (T59): full width is
 // the notebook's device setting (A827), pushed to its remote; a note with pictures comes from
 // another writer, its attachments in the repository.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const info = (page: Page) => page.getByRole('complementary', { name: 'Metadata' });
-
-async function newNote(page: Page, title: string, text: string): Promise<string> {
-  await expect(page.locator('button[data-command="note.new"]')).toBeVisible();
-  await page.keyboard.press(NEW_NOTE);
-  await expect(page).toHaveURL(ULID);
-  await expect(page.getByTestId('note-title')).toBeFocused();
-  await page.keyboard.type(title);
-  await page.keyboard.press('Enter');
-  await page.keyboard.type(text);
-  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
-  return ULID.exec(new URL(page.url()).pathname)![1]!;
-}
 
 /**
  * Waits until this device's stored workspace holds full width as `full`. A page that goes

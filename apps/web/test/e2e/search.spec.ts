@@ -1,44 +1,16 @@
 import { expect, test, type Page } from './fixtures';
-import { NEW_NOTE } from './keys';
 import { storedRecord } from './stored';
 import { MEANING_ELSEWHERE } from '../../src/search/meaning';
+import { collectErrors, newNote } from './support/app';
 
 // T22 on a git notebook (T59): search from the shortcut and the palette, highlighted snippets,
 // the tag filter, all from this device's index of the notebook (A826), the same offline. This
 // stand-in Mac has no search by meaning (search-meaning.spec.ts has it): results match words
 // and say Words only (A1156).
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 // Ends in digits, which the porter stemmer leaves alone, so prefixes of it stay prefixes.
 const RUN = `${Date.now().toString(36)}${100 + Math.floor(Math.random() * 900)}`;
 const SEARCH = 'ControlOrMeta+Shift+KeyF';
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    // Requests made while the context is offline fail by design (as in offline.spec.ts).
-    if (
-      message.type() === 'error' &&
-      !/ERR_INTERNET_DISCONNECTED|WebSocket|Failed to fetch|net::/.test(message.text())
-    ) {
-      errors.push(message.text());
-    }
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-async function newNote(page: Page, title: string, text: string): Promise<string> {
-  await expect(page.locator('button[data-command="note.new"]')).toBeVisible();
-  await page.keyboard.press(NEW_NOTE);
-  await expect(page).toHaveURL(ULID);
-  await expect(page.getByTestId('note-title')).toBeFocused();
-  await page.keyboard.type(title);
-  await page.keyboard.press('Enter');
-  await page.keyboard.type(text);
-  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
-  return ULID.exec(new URL(page.url()).pathname)![1]!;
-}
 
 /**
  * This device's index reads the notes as stored (A7): it holds a note's words once its record
@@ -59,7 +31,7 @@ test('searches every note online and offline, with highlights, filters and modes
   context,
 }) => {
   test.setTimeout(120_000);
-  const errors = collectErrors(page);
+  const errors = collectErrors(page, /ERR_INTERNET_DISCONNECTED|WebSocket|Failed to fetch|net::/);
   const word = `kelp${RUN}`;
   await page.goto('/');
   const mirror = await newNote(
@@ -138,7 +110,7 @@ test('searches every note online and offline, with highlights, filters and modes
 // finds the note at once from this device's index, online and offline.
 test('finds a word typed past its stem, online and offline', async ({ page, context }) => {
   test.setTimeout(120_000);
-  const errors = collectErrors(page);
+  const errors = collectErrors(page, /ERR_INTERNET_DISCONNECTED|WebSocket|Failed to fetch|net::/);
   // The run's suffix leads, so porter still cuts each word's ending.
   const conditioning = `${RUN}conditioning`;
   const generations = `${RUN}generations`;

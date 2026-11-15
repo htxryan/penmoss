@@ -1,6 +1,7 @@
-import { expect, test, type Page } from './fixtures';
+import { expect, test } from './fixtures';
 import { NEW_NOTE } from './keys';
 import { pushedUntil } from './support/sync';
+import { collectErrors } from './support/app';
 
 // T69 (D58, #228, A1146) as First Run C (Ryan's review of #192, findings 2–4): the first run with
 // no git notebook is one step per screen. A short welcome, Create or Open Notebook, Pick
@@ -11,15 +12,6 @@ import { pushedUntil } from './support/sync';
 test.use({ seed: null });
 
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 test('the welcome, then a new notebook made in an empty repository, with its welcome note', async ({
   page,

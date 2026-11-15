@@ -4,12 +4,9 @@
  * then the last 8 of the note's id). The proof pastes what was copied into the note, so it shows.
  */
 import { expect, test, type Page } from './fixtures';
+import { ULID, body } from './support/app';
 
 test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
-
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 
 async function newNote(page: Page, title: string): Promise<string> {
   await page

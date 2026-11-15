@@ -1,5 +1,6 @@
 import { expect, test, type Page } from './fixtures';
 import { notebookMenuItem } from './notebook-actions';
+import { ULID, collectErrors } from './support/app';
 
 // T51 (web): the sidebar's shell and the app's navigation. Back and Forward through the app's own
 // pages (A943); the shortcuts as one row of icons (A932); each source's sync state as a dot
@@ -7,19 +8,9 @@ import { notebookMenuItem } from './notebook-actions';
 // (A935); and Settings, whose content alone scrolls (A942). On a git notebook (T59): its own
 // Trash (`/trash?source=<id>`), its dot on its section's row, leading to Settings → Notebooks.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 /** A git notebook's own Trash. */
 const TRASH = /\/trash\?source=[0-9A-Z]{26}$/;
 const RUN = `sn${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 async function newNote(page: Page, title: string, text = ''): Promise<string> {
   await page

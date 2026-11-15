@@ -1,5 +1,6 @@
 import { expect, seeded, test, type Locator, type Page } from './fixtures';
 import { readAsAgent, syncNow } from './support/sync';
+import { collectErrors } from './support/app';
 
 // PEN-68 and finding 8 of Ryan's review of #192 (design "Tags D"): the Tags page. One compact
 // table per notebook, a tag and its note count on the left and what it means on the right, with
@@ -18,15 +19,6 @@ test.use({
     ],
   },
 });
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 const tagsPage = (page: Page) => page.getByTestId('tags-page');
 type Scope = ReturnType<typeof tagsPage>;

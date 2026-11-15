@@ -1,6 +1,6 @@
 import { anotherMac, expect, seeded, test, type Page } from './fixtures';
-import { NEW_NOTE } from './keys';
 import { carried, syncNow } from './support/sync';
+import { body, collectErrors, newNote } from './support/app';
 
 // T18: tags from text (#inline, nested a/b) and from the chips under the title (frontmatter),
 // the tag pane and Search on a tag's notes, rename and merge through each note's document (offline too),
@@ -8,22 +8,8 @@ import { carried, syncNow } from './support/sync';
 // pushes 12 s after edits settle and pulls every minute, A1013, so the server's 5 s is gone;
 // Sync Now on both sides carries it here).
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    // Requests made while the context is offline fail by design (as in offline.spec.ts).
-    if (message.type() === 'error' && !/ERR_INTERNET_DISCONNECTED/.test(message.text())) {
-      errors.push(message.text());
-    }
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const pane = (page: Page) => page.getByTestId('tag-pane');
 /** The pane's button for a tag with its note count. */
 const tagButton = (page: Page, tag: string, count: number) =>
@@ -35,22 +21,10 @@ const tagButton = (page: Page, tag: string, count: number) =>
 const anyTag = (page: Page, tag: string) =>
   pane(page).getByRole('button', { name: new RegExp(`^#${tag}(/|,)`) });
 
-async function newNote(page: Page, title: string, text: string): Promise<string> {
-  await expect(page.locator('button[data-command="note.new"]')).toBeVisible();
-  await page.keyboard.press(NEW_NOTE);
-  await expect(page).toHaveURL(ULID);
-  await expect(page.getByTestId('note-title')).toBeFocused();
-  await page.keyboard.type(title);
-  await page.keyboard.press('Enter');
-  await page.keyboard.type(text);
-  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
-  return ULID.exec(new URL(page.url()).pathname)![1]!;
-}
-
 test('a tag opens Search on its notes, inline and frontmatter tags, nested levels included', async ({
   page,
 }) => {
-  const errors = collectErrors(page);
+  const errors = collectErrors(page, /ERR_INTERNET_DISCONNECTED/);
   const garden = `garden${RUN}`;
   await page.goto('/');
   await newNote(page, `Herbs ${RUN}`, `Sow basil #${garden}/herbs today`);
@@ -148,7 +122,7 @@ test('renaming a tag offline changes every note through its document, and syncs'
   notebook,
 }) => {
   test.setTimeout(120_000);
-  const errors = collectErrors(page);
+  const errors = collectErrors(page, /ERR_INTERNET_DISCONNECTED/);
   const old = `chore${RUN}`;
   const merged = `home${RUN}`;
   await page.goto('/');
@@ -206,7 +180,7 @@ test("another Mac's tag pane follows a tag change once git carries it", async ({
   notebook,
 }) => {
   test.setTimeout(180_000);
-  const errors = collectErrors(page);
+  const errors = collectErrors(page, /ERR_INTERNET_DISCONNECTED/);
   const fresh = `fresh${RUN}`;
   // This Mac makes the notebook on its first sync: pushed before the other Mac adds it.
   await page.goto('/');

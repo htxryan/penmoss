@@ -1,5 +1,6 @@
 import { expect, test, type Page } from './fixtures';
 import { SLOW_SHELL_MS } from './support/git-host';
+import { ULID, collectErrors } from './support/app';
 
 // Ryan's feedback of 6 Nov 2026 ("Quanta Penmoss Feedback 2", Quanta), T65, in the web app (the
 // Mac app runs the same page): the sidebar's bottom row's buttons flush (item 1, A1121); a
@@ -9,7 +10,6 @@ import { SLOW_SHELL_MS } from './support/git-host';
 // bar dragging the window while the note is scrolled (6, A1123).
 
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const LONG = Array.from({ length: 80 }, (_, n) => `Line ${n + 1} of a long note.`).join('\n\n');
 
 test.use({
@@ -19,15 +19,6 @@ test.use({
     notes: [{ title: 'Josh Onboarding' }, { title: 'Long', markdown: `${LONG}\n` }],
   },
 });
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 const tree = (page: Page) =>
   page

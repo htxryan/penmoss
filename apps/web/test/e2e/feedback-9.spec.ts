@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './fixtures';
+import { ULID, collectErrors } from './support/app';
 
 // Ryan's feedback of 6 Nov 2026 ("Quanta Penmoss Feedback 3", Quanta), T66, in the web app (the
 // Mac app runs the same page): the note's scrollbar at the text's edge (item 1, A1132); search by
@@ -9,7 +10,6 @@ import { expect, test, type Page } from './fixtures';
 // room (11, A1130); the repository a link and no Private line (12, A1128).
 
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const LONG = Array.from({ length: 80 }, (_, n) => `Line ${n + 1} of a long note.`).join('\n\n');
 
 test.use({
@@ -23,15 +23,6 @@ test.use({
     ],
   },
 });
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 const section = (page: Page, name: string) =>
   page.getByTestId('source-section').and(page.getByRole('region', { name, exact: true }));

@@ -1,24 +1,15 @@
 import { expect, test, type Locator, type Page } from './fixtures';
+import { ULID, collectErrors } from './support/app';
 
 // T36: the phone layout. Every screen is reachable on a phone-sized screen without the desktop
 // site: the app bar's menu opens the sidebar as a drawer (Settings, Trash, folders, journal,
 // tags), the ⋮ sheet holds the note's actions, and nothing scrolls sideways. The local Worker
 // keeps one workspace: names carry a per-run tag.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 const PHONE = { width: 390, height: 844 };
 
 test.use({ viewport: PHONE, isMobile: true, hasTouch: true });
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 const appBar = (page: Page) => page.getByTestId('app-bar');
 const drawer = (page: Page) => page.getByRole('complementary', { name: 'Notes' });

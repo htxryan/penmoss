@@ -1,22 +1,14 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { expect, test, type GitHost, type Page } from './fixtures';
+import { expect, test, type GitHost } from './fixtures';
+import { collectErrors } from './support/app';
 
 // T81 (#229, D60–D62, A1163–A1168): Add a Git Notebook lists the GitHub repositories git's
 // credential reaches, then the chosen one's folders. Each repository here is a bare repository
 // on the stand-in Mac, so Add clones exactly what the folder step showed.
 
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 /** Commits `files` to a bare repository's main, as another person's git would. */
 function pushFiles(host: GitHost, remote: string, files: Record<string, string>): void {

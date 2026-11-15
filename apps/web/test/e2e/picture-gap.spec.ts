@@ -2,6 +2,7 @@ import { deflateSync, crc32 } from 'node:zlib';
 
 import { expect, test, type Page } from './fixtures';
 import { COMMENT } from './keys';
+import { body } from './support/app';
 
 // PEN-66 (A1283): a picture keeps its own line (A506), and leaves no empty line under it. The
 // block a picture ends is as tall as its text and the picture, so the next line or block starts at
@@ -101,8 +102,6 @@ test.use({
     notes: Object.entries(NOTES).map(([title, markdown]) => ({ title, markdown })),
   },
 });
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 
 async function serveImages(page: Page): Promise<void> {
   const images: Record<string, Buffer> = {

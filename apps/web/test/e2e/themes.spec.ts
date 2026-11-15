@@ -13,6 +13,7 @@ import {
 } from './fixtures';
 import { BUILT_IN_THEMES, NORD, PENMOSS, themeVariables } from '@penmoss/ui/theme';
 import { carried, pushed } from './support/sync';
+import { ULID, body, collectErrors } from './support/app';
 
 // T28: every built-in theme in light and dark (a screenshot of each), switched from the
 // palette's "Switch theme…" and "Toggle dark mode"; a custom theme duplicated, edited and
@@ -20,7 +21,6 @@ import { carried, pushed } from './support/sync';
 // (A827), which reach another Mac through its remote. The serial suites share one page, on a
 // stand-in Mac of their own (one notebook) made in beforeAll.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 /**
  * Where screenshots go: the folder EVIDENCE_DIR names, else the test's output. Evidence goes
@@ -28,16 +28,6 @@ const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}
  */
 const EVIDENCE_DIR = process.env['EVIDENCE_DIR'];
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const html = (page: Page) => page.locator('html');
 
 /** `#rrggbb` as getComputedStyle reports it. */

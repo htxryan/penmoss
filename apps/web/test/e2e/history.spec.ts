@@ -1,42 +1,20 @@
 import { anotherMac, expect, seeded, test, type GitHost, type Page } from './fixtures';
-import { NEW_FOLDER, NEW_NOTE, VERSION_HISTORY, LINE_END } from './keys';
+import { NEW_FOLDER, VERSION_HISTORY, LINE_END } from './keys';
 import { noteAction } from './note-menu';
 import { notebookMenuItem } from './notebook-actions';
 import { asAgent, syncNow } from './support/sync';
 import { readRemote, remoteFiles, remoteMarkdown } from './support/remote';
+import { body, collectErrors, newNote } from './support/app';
 
 // T21 on a git notebook (T59, A858): version history (each sync is a commit, attributed to its
 // writer; a diff; restore as a new change that reaches another Mac), reverting an agent's
 // commit, and Trash (restore into the folder it was deleted from, and delete for good after
 // Touch ID). "Save a Version Now" is "Sync Now" here: a version is a commit.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const panel = (page: Page) => page.getByTestId('history-panel');
 const tree = (page: Page) => page.getByRole('tree', { name: 'Folders and notes' });
-
-async function newNote(page: Page, title: string, text: string): Promise<string> {
-  await expect(page.locator('button[data-command="note.new"]')).toBeVisible();
-  await page.keyboard.press(NEW_NOTE);
-  await expect(page).toHaveURL(ULID);
-  await expect(page.getByTestId('note-title')).toBeFocused();
-  await page.keyboard.type(title);
-  await page.keyboard.press('Enter');
-  await page.keyboard.type(text);
-  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
-  return ULID.exec(new URL(page.url()).pathname)![1]!;
-}
 
 /** Pushes, then waits until the remote's rendered markdown of the note holds `text`. */
 async function pushed(page: Page, host: GitHost, remote: string, id: string, text: string) {

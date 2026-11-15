@@ -1,37 +1,16 @@
 import { expect, test, type Page } from './fixtures';
-import { NEW_FOLDER, NEW_NOTE } from './keys';
+import { NEW_FOLDER } from './keys';
 import { noteAction } from './note-menu';
 import { notebookAction } from './notebook-actions';
 import { storedSetting } from './stored';
 import { pushed } from './support/sync';
+import { ULID, collectErrors, newNote } from './support/app';
 
 // T53: Ryan's feedback of 1 Nov 2026 ("Penmoss Feedback 2026-11-01"), in the web app (the Mac
 // app runs the same page; its own suite covers what differs there). On a git notebook (T59) the
 // sidebar's layout and Quick Access are the notebook's device settings (A827), stored here.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-async function newNote(page: Page, title: string, text: string): Promise<string> {
-  await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();
-  await page.keyboard.press(NEW_NOTE);
-  await expect(page).toHaveURL(ULID);
-  await expect(page.getByTestId('note-title')).toBeFocused();
-  await page.keyboard.type(title);
-  await page.keyboard.press('Enter');
-  await page.keyboard.type(text);
-  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
-  return ULID.exec(new URL(page.url()).pathname)![1]!;
-}
 
 const radius = (page: Page, selector: string) =>
   page

@@ -1,4 +1,5 @@
-import { expect, test, type Page } from './fixtures';
+import { expect, test } from './fixtures';
+import { collectErrors } from './support/app';
 
 // Ryan's feedback of 5 Nov 2026 ("Penmoss Feedback", Quanta), in the web app (the Mac app runs
 // the same page): the sidebar's rows run its full width and each section's title row is boxed
@@ -10,15 +11,6 @@ const SHOTS = process.env['PENMOSS_EVIDENCE'];
 test.use({
   seed: { name: 'Quanta', notes: [{ title: 'Current' }, { title: 'Penmoss Feedback' }] },
 });
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 test('1, 2: sidebar rows run edge to edge, and each section’s title row is boxed', async ({
   page,

@@ -1,5 +1,6 @@
-import { expect, test, type Page } from './fixtures';
+import { expect, test } from './fixtures';
 import { GITHUB_WEB } from './support/git-host';
+import { collectErrors } from './support/app';
 
 // T82 (#229, D63, A1170–A1172): with no GitHub sign-in in git, Add a Git Notebook offers
 // Penmoss's own. Main runs GitHub's device flow (the code here, github.com/login/device in the
@@ -7,15 +8,6 @@ import { GITHUB_WEB } from './support/git-host';
 // to the notebook added with it. github.com is the fake's scripted device flow.
 
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 test('signs in with GitHub, lists the repositories with it, and adds a notebook with its token', async ({
   page,

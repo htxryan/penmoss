@@ -1,5 +1,6 @@
 import { expect, test, type Page } from './fixtures';
 import { storedSetting } from './stored';
+import { ULID, collectErrors } from './support/app';
 
 // Ryan's feedback of 5 Nov 2026 ("Penmoss Feedback 2026-11-05", Personal), in the web app (the
 // Mac app runs the same page), T62 and D53: a notebook's page readable and the Primary Notebook
@@ -10,8 +11,6 @@ import { storedSetting } from './stored';
 // Item 11 (the ⋯ menu's choices in Settings → Display) is in feedback-3.spec.ts.
 
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
-
 test.use({
   seed: {
     name: 'Quanta',
@@ -19,15 +18,6 @@ test.use({
     notes: [{ title: 'Alpha' }, { title: 'Penmoss Feedback' }],
   },
 });
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 const sidebar = (page: Page) => page.locator('#app-sidebar');
 const section = (page: Page, name: string) =>

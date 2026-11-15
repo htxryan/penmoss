@@ -1,38 +1,16 @@
 import { expect, test, type Page } from './fixtures';
-import { NEW_NOTE } from './keys';
 import { notebookAction } from './notebook-actions';
 import { pushed } from './support/sync';
+import { ULID, collectErrors, newNote } from './support/app';
 
 // T42 (#104 items 1–9): Ryan's second round of feedback, in the web app (the Mac app runs the
 // same page; its own suite covers what differs there). On a git notebook (T59): search is this
 // device's words, versions are git's commits, settings are the notebook's (A827), and a stopped
 // sync is fixed in Settings → Notebooks.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
 const info = (page: Page) => page.getByRole('complementary', { name: 'Metadata' });
-
-async function newNote(page: Page, title: string, text: string): Promise<string> {
-  await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();
-  await page.keyboard.press(NEW_NOTE);
-  await expect(page).toHaveURL(ULID);
-  await expect(page.getByTestId('note-title')).toBeFocused();
-  await page.keyboard.type(title);
-  await page.keyboard.press('Enter');
-  await page.keyboard.type(text);
-  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
-  return ULID.exec(new URL(page.url()).pathname)![1]!;
-}
 
 async function openInfo(page: Page) {
   // Metadata's tab icon down the note's edge (T53 item 9): it opens the tab, or closes the panel

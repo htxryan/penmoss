@@ -1,5 +1,6 @@
 import type { DesktopReleaseNotes } from '../../src/desktop/bridge';
 import { expect, test, type Page } from './fixtures';
+import { ULID, collectErrors } from './support/app';
 
 // PEN-135 (Ryan's feedback, items 4, 6, 7, 8 and 10), in the web app with the Mac app's window
 // (`macWindow`: Keep on Top's pin and the compact title bar): Settings and Send Feedback at the
@@ -8,7 +9,6 @@ import { expect, test, type Page } from './fixtures';
 // buttons (8); the update notice in the sidebar's bottom panel, an icon on the rail (10).
 
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 /** The traffic lights' room in a compact window (`--pm-titlebar-inset`, A722). */
 const INSET = 88;
 
@@ -22,15 +22,6 @@ test.use({
     ],
   },
 });
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 const tree = (page: Page) =>
   page

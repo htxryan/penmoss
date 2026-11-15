@@ -1,6 +1,7 @@
 import { expect, test, type Page } from './fixtures';
 import { BUILT_IN_THEMES } from '@penmoss/ui/theme';
 import { storedSetting } from './stored';
+import { ULID, collectErrors } from './support/app';
 
 // Ryan's feedback of 6 Nov 2026 ("Penmoss Feedback", Personal), in the web app (the Mac app runs
 // the same page), T63: Pin to and Unpin from Quick Access in a note's sidebar menu (item 1); a
@@ -9,8 +10,6 @@ import { storedSetting } from './stored';
 // an open, empty Quick Access (4).
 
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
-
 test.use({
   seed: {
     name: 'Quanta',
@@ -18,15 +17,6 @@ test.use({
     notes: [{ title: 'Alpha' }, { title: 'Beta' }],
   },
 });
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 const section = (page: Page, name: string) =>
   page.getByTestId('source-section').and(page.getByRole('region', { name, exact: true }));

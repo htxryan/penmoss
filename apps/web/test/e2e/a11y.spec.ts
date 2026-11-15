@@ -13,26 +13,17 @@ import { BUILT_IN_THEMES } from '@penmoss/ui/theme';
 import { NEW_FOLDER, NEW_NOTE, VERSION_HISTORY, LINE_END, SELECT_TO_LINE_START } from './keys';
 import { noteAction } from './note-menu';
 import { pushed } from './support/sync';
+import { ULID, body, collectErrors } from './support/app';
 
 // T36, extended by T31: no serious or critical axe violations (WCAG 2.0, 2.1 and 2.2 A and AA)
 // on every main screen, light and dark, at desktop and phone widths; every built-in theme on a
 // note and Settings (T28); and the icon buttons' tooltips. On a git notebook (T59): the screens
 // the Mac app has without a server.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 const PHONE = { width: 390, height: 844 };
 const DESKTOP = { width: 1280, height: 720 };
 const SEARCH = 'ControlOrMeta+Shift+KeyF';
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 /**
  * The slash and link menus are listboxes the note drives with aria-activedescendant: focus stays
@@ -126,7 +117,6 @@ async function newNote(page: Page, title: string, text: string): Promise<string>
 
 const NOTE_TEXT = 'Raised beds by the fence. #garden';
 
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const tree = (page: Page) => page.getByRole('tree', { name: 'Folders and notes' });
 const treeItem = (page: Page, name: string) =>
   tree(page).getByRole('treeitem', { name, exact: true });

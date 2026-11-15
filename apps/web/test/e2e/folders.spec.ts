@@ -2,22 +2,12 @@ import { anotherMac, expect, seeded, test, type Locator, type Page } from './fix
 import { NEW_FOLDER } from './keys';
 import { notebookAction, notebookMenuItem } from './notebook-actions';
 import { carried, pushed } from './support/sync';
+import { ULID, collectErrors } from './support/app';
 
 // T7 on a git notebook (T59): nested folders, manual order (drag and Alt+↑/↓), per-folder sort
 // modes, and a second Mac on the same remote that follows along once git carries each change
 // (Sync Now on both sides, as the File menu has it, instead of waiting for the push delay and
 // the minute's pull).
-
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 const treeOf = (page: Page) => page.getByRole('tree', { name: 'Folders and notes' });
 const item = (page: Page, name: string) =>

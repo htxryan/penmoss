@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './fixtures';
+import { body } from './support/app';
 
 // PEN-135 (A1360): ↓ on the title's last line goes to the start of the note's first line, and ↑
 // on the first line comes back to the end of the title. And moving the caret between the title
@@ -43,8 +44,6 @@ test.use({
 });
 
 const title = (page: Page) => page.getByTestId('note-title');
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
-
 async function openNote(page: Page, name: string): Promise<void> {
   await page.goto('/');
   await page.getByTestId('note-list').getByRole('link', { name, exact: true }).click();

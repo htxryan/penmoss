@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './fixtures';
+import { collectErrors } from './support/app';
 
 // T43 on the Mac without a server (T59, D48, A912): a notebook is a git notebook. Two of them
 // show side by side, each a section of the sidebar with its own tree and sync state; an open
@@ -20,15 +21,6 @@ test.use({
     notes: [{ title: `Errand ${RUN}`, markdown: `Buy ${WORD} ink.` }],
   },
 });
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 /** A notebook's section of the sidebar: a region named for it. */
 const section = (page: Page, name: string) =>

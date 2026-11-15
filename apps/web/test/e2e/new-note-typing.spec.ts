@@ -1,14 +1,11 @@
-import { expect, test, type Page } from './fixtures';
+import { expect, test } from './fixtures';
 import { NEW_NOTE } from './keys';
 import { storedDocumentText } from './stored';
+import { ULID, body } from './support/app';
 
 // A1179: keys typed at once after New Note all land in the note, on a slow machine too. ⌘⌥N
 // pressed as the window showed made the note, but the note view came a task later, and the keys
 // typed meanwhile went to the page: the title and body stayed empty, or kept the last letters.
-
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 
 test('keys typed straight after the new-note shortcut all land in the new note', async ({
   page,

@@ -3,6 +3,7 @@ import { THIS_WEEK, LINE_END } from './keys';
 import { storedSetting } from './stored';
 import { syncNow } from './support/sync';
 import { readRemote } from './support/remote';
+import { ULID, body, collectErrors } from './support/app';
 
 // T19: daily and weekly notes. ⌘D and ⌘⌥W open the note for today and this week (in the
 // synced time zone, America/Chicago by default), creating it from its template; the sidebar
@@ -11,18 +12,6 @@ import { readRemote } from './support/remote';
 // the time zone and the templates, which are the git notebook's own settings (A827), pushed
 // with it so every device builds the same daily notes (T59).
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const nav = (page: Page) => page.getByTestId('period-nav');
 const calendar = (page: Page) => page.getByTestId('calendar');
 const idOf = (page: Page) => ULID.exec(new URL(page.url()).pathname)![1]!;

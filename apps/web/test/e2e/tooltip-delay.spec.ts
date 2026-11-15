@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from './fixtures';
 import { storedSetting } from './stored';
+import { collectErrors } from './support/app';
 
 // PEN-70 (A1247), in the web app (the Mac app runs the same page): tooltips wait 1 second by
 // default, and Settings → Display → Show Tooltips After chooses 0.5, 1, 1.5 or 2 seconds, or
@@ -7,15 +8,6 @@ import { storedSetting } from './stored';
 // hover, with no reload, and is stored as the synced `tooltip.delay`.
 
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 /**
  * How long, in ms, from the pointer reaching `target` to its tooltip showing, as the page's own

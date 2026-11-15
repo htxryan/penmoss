@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test, type Page } from './fixtures';
+import { collectErrors } from './support/app';
 
 // T80.8 (#291, A1196): Settings → Updates on the Mac has Update Channel, Stable (the default) or
 // Alpha. Stable reads latest-mac.yml on GitHub's latest release, and Alpha alpha-mac.yml on the
@@ -11,15 +12,6 @@ import { expect, test, type Page } from './fixtures';
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
 const STABLE = 'https://github.com/htxryan/penmoss/releases/latest/download';
 const ALPHA = 'https://github.com/htxryan/penmoss/releases/download/alpha';
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 const channel = (page: Page) => page.getByTestId('updates-channel');
 

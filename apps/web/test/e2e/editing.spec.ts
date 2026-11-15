@@ -1,10 +1,10 @@
 import { expect, test, type Page } from './fixtures';
 import { NEW_NOTE, LINE_END } from './keys';
+import { ULID, body, collectErrors } from './support/app';
 
 // T14: the slash menu, markdown shortcuts, selection toolbar and block moves,
 // driven from the keyboard (and the mouse for the drag handle) in a real note.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const TAG = `e${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 /** A 1×1 PNG, enough for the image path (the server checks the magic number, A31). */
@@ -13,16 +13,6 @@ const PNG = Buffer.from(
   'base64',
 );
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const menu = (page: Page) => page.getByRole('listbox', { name: 'Insert block' });
 
 /** Creates a note from the keyboard (⌘⌥N, or Alt+N off a Mac), titles it, and leaves the caret in its body. */

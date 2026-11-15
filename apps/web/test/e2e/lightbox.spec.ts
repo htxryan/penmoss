@@ -1,23 +1,13 @@
 import { expect, test, type Page } from './fixtures';
 import { LINE_END } from './keys';
+import { ULID, body, collectErrors } from './support/app';
 
 // T51 item 20 (A948): every picture in a note opens in a lightbox, from Open in Lightbox in its
 // tools or a double click: fitted to the window, zoomed by the buttons, the keys and the wheel,
 // panned by a drag, stepped through with the arrow keys, closed by Escape, Close or the backdrop.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const TAG = `lb${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const lightbox = (page: Page) => page.getByTestId('lightbox');
 
 async function createNote(page: Page, title: string): Promise<string> {

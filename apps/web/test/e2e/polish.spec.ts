@@ -1,5 +1,6 @@
 import { expect, test, type Page } from './fixtures';
 import { LINE_END, NEW_FOLDER } from './keys';
+import { ULID, body, collectErrors } from './support/app';
 
 // T39 pass 1 (web): what using the app end to end turned up. A long title wraps instead of
 // being cut off; a note moves to another folder from the keyboard or a phone; Tab stays in a
@@ -7,24 +8,12 @@ import { LINE_END, NEW_FOLDER } from './keys';
 // double click on New note makes one note; the note column keeps its width beside the
 // Backlinks panel.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 const PALETTE = 'ControlOrMeta+KeyK';
 const SEARCH = 'ControlOrMeta+Shift+KeyF';
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
 const treeOf = (page: Page) => page.getByRole('tree', { name: 'Folders and notes' });
 const row = (page: Page, name: string) => treeOf(page).getByRole('treeitem', { name, exact: true });
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
-
 async function newNote(page: Page, title: string, text = ''): Promise<string> {
   await page
     .getByRole('button', { name: /^New Note/ })

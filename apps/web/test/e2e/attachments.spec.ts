@@ -4,6 +4,7 @@ import { expect, macContext, PREVIEW, seeded, test, type Page } from './fixtures
 import { DOC_END, LINE_END } from './keys';
 import { remoteFiles, remoteMarkdown } from './support/remote';
 import { pushedUntil, remoteBytes } from './support/sync';
+import { ULID, body, collectErrors } from './support/app';
 
 // T13: files attached through the slash menu (a PDF with a preview, any other file to
 // download) go into the git notebook's repository (T59, A828: `attachments/<sha256>.<ext>`);
@@ -11,25 +12,12 @@ import { pushedUntil, remoteBytes } from './support/sync';
 // render the section read-only, follow edits made elsewhere, show a cycle as a link,
 // stay searchable only in their source note, and survive copy and paste between notes.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const TAG = `e${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const SOURCE = `Garden ${TAG}`;
 const HOST = `Weekly ${TAG}`;
 const TARGET = `Pasted ${TAG}`;
 const WORD = `marigold${TAG}`;
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error' && !/WebSocket|net::/.test(message.text())) {
-      errors.push(message.text());
-    }
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const menu = (page: Page) => page.getByTestId('link-menu');
 const notice = (page: Page) => page.getByTestId('note-notice');
 
@@ -80,7 +68,7 @@ test('T13: attach files, embed a live section, cycles as links, copy and paste',
   notebook,
 }) => {
   test.setTimeout(150_000);
-  const errors = collectErrors(page);
+  const errors = collectErrors(page, /WebSocket|net::/);
   await page.goto('/');
 
   // The source: a section to embed.
@@ -108,7 +96,7 @@ test('T13: attach files, embed a live section, cycles as links, copy and paste',
 
   // Edited in another tab: the embed follows, live.
   const other = await context.newPage();
-  const otherErrors = collectErrors(other);
+  const otherErrors = collectErrors(other, /WebSocket|net::/);
   await other.goto(`/notes/${source}`);
   await body(other).getByText(`Dig the beds in March`).click();
   await other.keyboard.press(LINE_END);

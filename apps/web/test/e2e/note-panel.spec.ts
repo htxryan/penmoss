@@ -1,6 +1,7 @@
 import { expect, test, type Page } from './fixtures';
-import { COMMENTS_PANEL, INFO_PANEL, NEW_NOTE, VERSION_HISTORY } from './keys';
+import { COMMENTS_PANEL, INFO_PANEL, VERSION_HISTORY } from './keys';
 import { storedDocumentText } from './stored';
+import { body, collectErrors, newNote } from './support/app';
 
 // T51 items 5–7 (A936, A937): the note's side panel as four icon tabs (Metadata, Comments,
 // History, Local Graph), the last one remembered; each
@@ -9,36 +10,13 @@ import { storedDocumentText } from './stored';
 // always run down the note's right edge as vertical tabs; the panel is open on one or closed, per
 // note, with a default in Settings → Appearance; in a narrow pane it lies over the text.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
-
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const tab = (page: Page, name: 'info' | 'comments' | 'history' | 'graph') =>
   page.getByTestId(`note-tab-${name}`);
 const side = (page: Page) => page.locator('aside.note-side');
 const rail = (page: Page) => page.getByTestId('note-rail');
 const columns = (page: Page) => page.locator('.note-columns');
-
-async function newNote(page: Page, title: string, text: string): Promise<string> {
-  await expect(page.locator('button[data-command="note.new"]').first()).toBeVisible();
-  await page.keyboard.press(NEW_NOTE);
-  await expect(page).toHaveURL(ULID);
-  await expect(page.getByTestId('note-title')).toBeFocused();
-  await page.keyboard.type(title);
-  await page.keyboard.press('Enter');
-  await page.keyboard.type(text);
-  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
-  return ULID.exec(new URL(page.url()).pathname)![1]!;
-}
 
 /**
  * Double-clicks `word` itself in the note's body. A locator's centre is its whole paragraph's,

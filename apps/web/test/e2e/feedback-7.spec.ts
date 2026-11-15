@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './fixtures';
+import { ULID, collectErrors } from './support/app';
 
 // Ryan's feedback of 6 Nov 2026 ("Quanta Penmoss Feedback", Quanta), in the web app (the Mac app
 // runs the same page), T64: the link form's icon-and-text buttons above its Text and Link fields
@@ -8,8 +9,6 @@ import { expect, test, type Page } from './fixtures';
 // lists that end up side by side are one list again (7).
 
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
-
 test.use({
   seed: {
     name: 'Quanta',
@@ -24,15 +23,6 @@ test.use({
     ],
   },
 });
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 const section = (page: Page, name: string) =>
   page.getByTestId('source-section').and(page.getByRole('region', { name, exact: true }));

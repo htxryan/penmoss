@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { expect, macContext, PREVIEW, seeded, test, type Locator, type Page } from './fixtures';
 import { remoteFiles, remoteMarkdown } from './support/remote';
 import { pushedUntil, remoteBytes } from './support/sync';
+import { ULID, body, collectErrors } from './support/app';
 
 // PEN-28: drawings. The slash menu's Diagram: Excalidraw opens Excalidraw over the window; Done
 // stores the scene as `attachments/<sha256>.excalidraw` and its picture as
@@ -10,24 +11,11 @@ import { pushedUntil, remoteBytes } from './support/sync';
 // opens it again, with its shapes, and its Delete button removes it. Each edit is a new pair of
 // files.
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const TAG = `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 const DRAWING =
   /\[!\[Excalidraw Diagram\]\(attachments\/([0-9a-f]{64})\.svg\)\]\(attachments\/([0-9a-f]{64})\.excalidraw\)/;
 
-const body = (page: Page) => page.getByTestId('note-body').locator('.ProseMirror');
 const editor = (page: Page) => page.getByTestId('drawing-editor');
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error' && !/WebSocket|net::/.test(message.text())) {
-      errors.push(message.text());
-    }
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 /** Whether `button`'s background, in whatever colour syntax it computes to, is fully opaque. */
 async function opaque(button: Locator): Promise<boolean> {
@@ -112,7 +100,7 @@ test('PEN-28: draw in a note, save it as files in git, open it again and edit it
   notebook,
 }) => {
   test.setTimeout(150_000);
-  const errors = collectErrors(page);
+  const errors = collectErrors(page, /WebSocket|net::/);
   await page.goto('/');
   const id = await createNote(page, `Sketches ${TAG}`);
   await page.keyboard.type('The garden beds, drawn:');
@@ -269,7 +257,7 @@ test('R2-19: Save To… saves the scene, and Export Image… its picture, as dow
   page,
 }) => {
   test.setTimeout(120_000);
-  const errors = collectErrors(page);
+  const errors = collectErrors(page, /WebSocket|net::/);
   await page.goto('/');
   await createNote(page, `Exports ${TAG}`);
   await newDrawing(page);
@@ -323,7 +311,7 @@ test('PEN-28: the production build draws offline under the app CSP, its fonts bu
   const context = await macContext(browser, host, { baseURL: PREVIEW });
   try {
     const page = await context.newPage();
-    const errors = collectErrors(page);
+    const errors = collectErrors(page, /WebSocket|net::/);
     // Nothing the drawing editor needs comes from anywhere but the app (no CDN fonts).
     const elsewhere: string[] = [];
     page.on('request', (request) => {

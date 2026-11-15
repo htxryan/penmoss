@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { expect, test, type Page } from './fixtures';
 import { isDeleted } from '@penmoss/sync-client/note';
 import { readRemote, remoteFiles } from './support/remote';
+import { ULID, collectErrors } from './support/app';
 
 // T68 (D58), in the web app (the Mac app runs the same page): Duplicate in a note's menu, named
 // "(copy)", "(copy 2)" and so on (#227, A1144); moving or copying notes and folders to another
@@ -9,7 +10,6 @@ import { readRemote, remoteFiles } from './support/remote';
 // A1145).
 
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 /** A 1×1 PNG, kept in the first notebook and shown by one of its notes. */
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
@@ -35,15 +35,6 @@ test.use({
     ],
   },
 });
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 const section = (page: Page, name: string) =>
   page.getByTestId('source-section').and(page.getByRole('region', { name, exact: true }));

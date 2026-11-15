@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './fixtures';
+import { ULID, collectErrors } from './support/app';
 
 // T67, three bugs from the Penmoss board (6 Nov 2026), in the web app (the Mac app runs the same
 // page): a key pressed as the note takes focus keeps its selection (#224, A1141); the link form's
@@ -6,8 +7,6 @@ import { expect, test, type Page } from './fixtures';
 // (#231, A1143).
 
 const SHOTS = process.env['PENMOSS_EVIDENCE'];
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
-
 test.use({
   seed: {
     name: 'Personal',
@@ -19,15 +18,6 @@ test.use({
     ],
   },
 });
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 const tree = (page: Page) => page.getByRole('tree', { name: 'Folders and notes' });
 const row = (page: Page, name: string) => tree(page).getByRole('treeitem', { name, exact: true });

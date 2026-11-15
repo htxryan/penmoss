@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from './fixtures';
 import { NEW_FOLDER } from './keys';
 import { noteAction } from './note-menu';
 import { notebookAction } from './notebook-actions';
+import { ULID, collectErrors } from './support/app';
 
 // PEN-63: every toast shows in one stack at the bottom centre of the window, drawn on the
 // theme's raised surface with its border, text and glyph colours, light or dark, in any theme.
@@ -9,19 +10,9 @@ import { notebookAction } from './notebook-actions';
 
 test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
 
-const ULID = /\/notes\/([0-9A-HJKMNP-TV-Z]{26})$/;
 const RUN = `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 /** How long the proof video holds on each state. */
 const HOLD = 2000;
-
-function collectErrors(page: Page): string[] {
-  const errors: string[] = [];
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  page.on('pageerror', (error) => errors.push(error.message));
-  return errors;
-}
 
 const treeOf = (page: Page) => page.getByRole('tree', { name: 'Folders and notes' });
 const item = (page: Page, name: string) =>
