@@ -111,6 +111,17 @@
   flex: none;
 }
 
+/* A long name wraps beside its icon, never under it. */
+.lf-group-two .lf-row-label {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
+.lf-group-two .lf-row-label > .i {
+  flex: none;
+  margin-top: 0.15rem;
+}
+
 .lf-row {
   display: flex;
   flex-wrap: wrap;
