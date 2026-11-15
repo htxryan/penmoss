@@ -388,6 +388,9 @@ importers:
       '@penmoss/core':
         specifier: workspace:*
         version: link:../core
+      '@penmoss/embed':
+        specifier: workspace:*
+        version: link:../embed
       '@penmoss/git-notebook':
         specifier: workspace:*
         version: link:../git-notebook

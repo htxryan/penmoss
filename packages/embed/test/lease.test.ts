@@ -15,7 +15,7 @@ import {
 import { rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { LeaseKeeper } from '@penmoss/core/search';
+import { LeaseKeeper } from '../src/lease-keeper';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Lease, leaseHolder, leasePath, outranks, type LeaseOptions } from '../src/lease';
 

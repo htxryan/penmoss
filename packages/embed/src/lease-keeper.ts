@@ -6,7 +6,7 @@
  * still holds it. `onChange` hears each gain and loss.
  */
 
-/** The lease as the keeper uses it (`@penmoss/embed`'s `Lease`). */
+/** The lease as the keeper uses it (`Lease`, in `lease.ts`). */
 export interface HeldLease {
   held(): Promise<boolean>;
   release(): Promise<void>;

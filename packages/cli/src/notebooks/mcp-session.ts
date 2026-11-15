@@ -6,7 +6,8 @@
  * background. On exit what is left syncs, detached when it can be (A825, A847).
  */
 import { notebookTag } from '@penmoss/core/note-ref';
-import { LEASE_RETRY_MS, LeaseKeeper, MeaningIndex } from '@penmoss/core/search';
+import { MeaningIndex } from '@penmoss/core/search';
+import { LEASE_RETRY_MS, LeaseKeeper } from '@penmoss/embed/lease-keeper';
 import { NotebookOps } from '@penmoss/git-notebook';
 import {
   CHANNEL_CHECK_MS,

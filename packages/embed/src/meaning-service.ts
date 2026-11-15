@@ -7,8 +7,9 @@
  * as it starts (A1350); without the lease it keeps trying. Off stops it all and removes the
  * model and vectors.
  */
-import { LeaseKeeper, MeaningIndex, type MeaningHit, type MeaningNote } from '@penmoss/core/search';
+import { MeaningIndex, type MeaningHit, type MeaningNote } from '@penmoss/core/search';
 import type { NoteSection } from '@penmoss/core/search';
+import { LeaseKeeper } from './lease-keeper';
 import { ModelError } from './model-store';
 import type { NodeMeaning, OpenedMeaning } from './node-meaning';
 

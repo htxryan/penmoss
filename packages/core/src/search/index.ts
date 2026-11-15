@@ -73,9 +73,3 @@ export {
   capNoteText,
   noteTextKey,
 } from './note-text';
-export {
-  LEASE_RETRY_MS,
-  LeaseKeeper,
-  type HeldLease,
-  type LeaseKeeperOptions,
-} from './lease-keeper';

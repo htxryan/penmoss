@@ -6,7 +6,8 @@
   "description": "Search by meaning on the Mac (D59): the pinned model's store, the ONNX embedder and the file vector cache",
   "exports": {
     ".": "./src/index.ts",
-    "./eval": "./src/eval-embedder.ts"
+    "./eval": "./src/eval-embedder.ts",
+    "./lease-keeper": "./src/lease-keeper.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
