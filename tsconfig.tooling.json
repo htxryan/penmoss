@@ -1,0 +1,14 @@
+{
+  // A13: the JavaScript tooling's JSDoc types, checked (task typecheck). The scripts CI and the
+  // Taskfile run; their tests are not yet in it (A1484).
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "types": ["node"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
+  },
+  "include": [".github/scripts/*.mjs", "scripts/**/*.mjs"],
+  "exclude": ["**/*.test.mjs"]
+}

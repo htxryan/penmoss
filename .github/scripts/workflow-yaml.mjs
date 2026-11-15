@@ -24,10 +24,11 @@ const GITHUB_HOSTED = /^(ubuntu|macos|windows)-[\w.-]+$/;
  * @param {number} indent
  */
 function valueAt(lines, i, indent) {
-  const inline = lines[i].slice(lines[i].indexOf(':') + 1).trim();
+  const at = lines[i] ?? '';
+  const inline = at.slice(at.indexOf(':') + 1).trim();
   const parts = /^[>|][-+]?$/.test(inline) || inline === '' ? [] : [inline];
   for (let j = i + 1; j < lines.length; j++) {
-    const line = lines[j];
+    const line = lines[j] ?? '';
     if (line.trim() === '' || line.trim().startsWith('#')) continue;
     if (line.length - line.trimStart().length <= indent) break;
     parts.push(line.trim().replace(/^- /, ''));
@@ -44,7 +45,7 @@ function stripComment(line) {
       if (c === quote) quote = '';
     } else if (c === "'" || c === '"') {
       quote = c;
-    } else if (c === '#' && (k === 0 || /\s/.test(line[k - 1]))) {
+    } else if (c === '#' && (k === 0 || /\s/.test(line[k - 1] ?? ''))) {
       return line.slice(0, k).trimEnd();
     }
   }
@@ -66,15 +67,16 @@ export function parseWorkflow(text, file = '<workflow>') {
   /** @type {Job | null} */
   let job = null;
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
+    const line = lines[i] ?? '';
     if (line.trim() === '') continue;
     const top = /^([\w-]+|'on'|"on"):(.*)$/.exec(line);
     if (top) {
-      const key = top[1].replace(/['"]/g, '');
+      const key = (top[1] ?? '').replace(/['"]/g, '');
+      const rest = top[2] ?? '';
       section = key === 'on' ? 'on' : key === 'jobs' ? 'jobs' : null;
       job = null;
-      if (key === 'on' && top[2].trim()) {
-        workflow.triggers = top[2]
+      if (key === 'on' && rest.trim()) {
+        workflow.triggers = rest
           .replace(/[[\]]/g, '')
           .split(',')
           .map((t) => t.trim())
@@ -84,10 +86,12 @@ export function parseWorkflow(text, file = '<workflow>') {
       continue;
     }
     const second = /^ {2}([\w-]+):/.exec(line);
-    if (second && section === 'on') workflow.triggers.push(second[1]);
-    if (second && section === 'jobs') {
-      job = { name: second[1], runsOn: '', if: null, permissions: null };
-      workflow.jobs.push(job);
+    if (second?.[1] && section === 'on') workflow.triggers.push(second[1]);
+    if (second?.[1] && section === 'jobs') {
+      /** @type {Job} */
+      const created = { name: second[1], runsOn: '', if: null, permissions: null };
+      job = created;
+      workflow.jobs.push(created);
       continue;
     }
     const third = /^ {4}([\w-]+):/.exec(line);

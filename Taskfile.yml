@@ -133,9 +133,10 @@ tasks:
       - pnpm exec prettier --write .
 
   typecheck:
-    desc: Type-check every package with tsc
+    desc: "Type-check every package with tsc, and the JavaScript tooling's JSDoc (tsconfig.tooling.json, A1484)"
     cmds:
       - pnpm -r --workspace-concurrency=2 typecheck
+      - pnpm exec tsc -p tsconfig.tooling.json
 
   test:
     desc: 'Unit tests: every package, or one with `task test -- core` (package name without @penmoss/)'
