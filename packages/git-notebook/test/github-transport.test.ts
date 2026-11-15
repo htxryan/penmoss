@@ -149,8 +149,11 @@ describe('GitHubTransport', () => {
     expect(log.map((c) => c.message)).toEqual(['two', 'one']);
     expect(log[0]).toMatchObject({ id: two, parents: [one], author: { name: 'Penmoss relay' } });
     expect((await a.log({ paths: ['n/a.md'], limit: 1 })).map((c) => c.message)).toEqual(['two']);
-    expect(decoder.decode((await a.readAt(one!, 'n/a.md'))!)).toBe('one');
-    expect(await a.readAt(one!, 'n/missing.md')).toBeNull();
+    // An old commit reads as History reads it on GitHub, which has no readDir (at-commit.ts).
+    expect([...(await a.list(one!)).keys()]).toEqual(['n/a.md']);
+    const old = await a.read(one!, ['n/a.md', 'n/missing.md']);
+    expect(decoder.decode(old.get('n/a.md'))).toBe('one');
+    expect(old.has('n/missing.md')).toBe(false);
   });
 
   it('maps GitHub refusals to typed errors', async () => {

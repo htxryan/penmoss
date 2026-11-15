@@ -41,7 +41,6 @@ function transport(): GitTransport & { asked: string[] } {
       asked.push('push');
       return Promise.resolve('pushed');
     },
-    readAt: refused,
   };
 }
 
