@@ -96,3 +96,9 @@ export const TITLE_BAR_ROWS = [
   '.tags-page-top',
   '.drawing-editor-bar',
 ] as const;
+
+/**
+ * Pictures of the app (A1564): a Settings preview, small or enlarged, draws the app's real rows,
+ * which would drag the window from inside the page. In them no row drags (Ryan's review of #210).
+ */
+export const PICTURES = ['.preview-zoom', '.preview-zoom-body'] as const;

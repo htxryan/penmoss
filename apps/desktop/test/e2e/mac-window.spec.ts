@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import {
   NO_DRAG_CONTROLS,
   NO_DRAG_SURFACES,
+  PICTURES,
   TITLE_BAR_ROWS,
   UNDER_ROWS,
 } from '../../../web/src/desktop/no-drag';
@@ -513,16 +514,18 @@ async function clicksEverywhere(
   await transitionsEnded(page);
   expect(await draggable(page, true), where).toEqual([]);
   expect(await clicksThatDrag(page), where).toEqual([]);
-  // The rows themselves drag, but for those a surface before them in the DOM is open over.
+  // The rows themselves drag, but for those a surface before them in the DOM is open over, and
+  // those drawn in a picture of the app (a Settings preview, PICTURES).
   const rows = await page.evaluate(
-    ([selectors, except]) =>
+    ([selectors, except, pictures]) =>
       [...document.querySelectorAll<HTMLElement>(selectors.join(', '))]
         .filter((row) => row.getBoundingClientRect().height > 0)
         .map((row) => [
-          except.some((selector) => row.matches(selector)),
+          except.some((selector) => row.matches(selector)) ||
+            row.closest(pictures.join(', ')) !== null,
           getComputedStyle(row).getPropertyValue('-webkit-app-region'),
         ]),
-    [TITLE_BAR_ROWS, stopped] as const,
+    [TITLE_BAR_ROWS, stopped, PICTURES] as const,
   );
   for (const [still, region] of rows) {
     expect(region, where).toBe(still ? 'no-drag' : 'drag');

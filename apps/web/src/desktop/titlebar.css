@@ -32,9 +32,28 @@
     .home,
     .tags-page-top,
     .drawing-editor-bar
-  ):not(.preview-zoom *, .preview-zoom-body *) {
-  /* A Settings preview draws the app's real rows (A1564), but they're a picture: never a drag. */
+  ) {
   -webkit-app-region: drag;
+}
+
+/* Pictures of the app (PICTURES in no-drag.ts): a Settings preview draws the real rows (A1564),
+   which must not drag the window from inside the page. */
+:root[data-titlebar='compact']
+  :is(.preview-zoom, .preview-zoom-body)
+  :is(
+    .sb-head,
+    .note-top,
+    .tab-strip,
+    .pm-graph-bar,
+    .settings-bar,
+    .app-bar,
+    #root > .banner,
+    .window-drag,
+    .home,
+    .tags-page-top,
+    .drawing-editor-bar
+  ) {
+  -webkit-app-region: no-drag;
 }
 
 :root[data-titlebar='compact']
