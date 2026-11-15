@@ -202,6 +202,7 @@ describe("the factory's classifier and CI's agree", { timeout: 30_000 }, () => {
       android: false,
       desktop: false,
       site: false,
+      factory: false,
       ships: false,
     });
   });
