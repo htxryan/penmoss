@@ -26,6 +26,7 @@ import type { Layout } from './layout';
 import { Lru } from './lru';
 import type { CommitInfo, GitTransport } from './transport';
 import { commitWriter } from './writer';
+import { commitSessions, sessionLabel } from './sessions';
 import type { WriterKind } from './writer';
 
 export interface HistoryAuthor {
@@ -33,6 +34,8 @@ export interface HistoryAuthor {
   readonly id: string;
   readonly kind: WriterKind;
   readonly label: string;
+  /** The agent session that made the edit, when the commit names one (PEN-152). */
+  readonly session?: { readonly client: string; readonly id: string; readonly own: boolean };
 }
 
 /** A version as `GET /api/notes/:id/versions` lists it. */
@@ -69,6 +72,22 @@ export function commitAuthor(commit: CommitInfo): HistoryAuthor {
   if (named) return named;
   // A commit from before the trailer: the device's git identity.
   return { id: commit.author.email, kind: 'device', label: commit.author.name };
+}
+
+/**
+ * Who made a commit's change to one note (PEN-152): the agent sessions its `Penmoss-Session`
+ * trailers name for that note, else `commitAuthor`.
+ */
+export function noteAuthors(commit: CommitInfo, noteId: string): HistoryAuthor[] {
+  const author = commitAuthor(commit);
+  const sessions = commitSessions(commit.message).filter((each) => each.notes.includes(noteId));
+  if (author.kind !== 'agent' || sessions.length === 0) return [author];
+  return sessions.map((each) => ({
+    id: `${author.id}/${each.session}`,
+    kind: author.kind,
+    label: sessionLabel(each),
+    session: { client: each.client, id: each.session, own: each.own },
+  }));
 }
 
 /** The most versions listed, newest first. */
@@ -205,13 +224,14 @@ export class NotebookHistory {
     for (let index = commits.length - 1; index >= 0 && versions.length < limit; index--) {
       const commit = commits[index]!;
       const author = this.author(commit);
+      const authors = noteAuthors(commit, noteId);
       versions.push({
         id: index + 1,
         commit: commit.id,
         createdAt: commit.at,
         reason: author.kind === 'agent' ? 'edit' : 'auto',
         summary: this.summaryOf.get(`${noteId}:${commit.id}`)?.summary ?? '',
-        authors: [author],
+        authors,
       });
     }
     return {

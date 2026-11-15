@@ -53,6 +53,8 @@ export interface McpSessionOptions {
   readonly indexEveryMs?: number;
   readonly leaseRetryMs?: number;
   readonly claimEveryMs?: number;
+  /** The server's environment: Claude Code's `CLAUDE_CODE_SESSION_ID` names its session (PEN-152). */
+  readonly env?: Readonly<Record<string, string | undefined>>;
 }
 
 /** The clone as the server holds it: re-opened whenever another process changed it on disk. */
@@ -163,6 +165,7 @@ export class McpSession {
     const channel = this.channel;
     const server = new LocalMcpServer(this.access, this.name, (text) => io.log(text), {
       meaning: this.meaningOn,
+      env: this.options.env ?? {},
       // A short reference of another notebook on this machine (PEN-69): its name, for the
       // refusal to say which server reads it.
       notebookNamed: async (tag) => {

@@ -13,6 +13,7 @@
  * The router runs each tool exactly as the one-notebook server does (`RunOn`), so a tool's
  * behaviour on one notebook never differs between the two servers.
  */
+import type { AgentSession } from '../sessions';
 import { parseNoteRef } from '@penmoss/core/note-ref';
 import { reciprocalRankFusion } from '@penmoss/core/search';
 import type { ToolDefinition } from './tools';
@@ -60,6 +61,8 @@ export type RunOn = (
   tool: ToolDefinition,
   args: Args,
   waitMs?: number,
+  /** Who is calling (PEN-152): a write names them. */
+  session?: AgentSession | null,
 ) => Promise<Outcome>;
 
 /** How long a read across every notebook waits for one notebook before leaving it out. */
@@ -220,7 +223,11 @@ export class NotebookRouter {
     return [...(await this.set.notebooks())];
   }
 
-  async call(tool: ToolDefinition, checked: Args): Promise<Outcome> {
+  async call(
+    tool: ToolDefinition,
+    checked: Args,
+    session: AgentSession | null = null,
+  ): Promise<Outcome> {
     const served = await this.notebooks();
     if (served.length === 0) {
       return {
@@ -257,10 +264,10 @@ export class NotebookRouter {
     if (target) {
       const refused = await this.crossNotebook(tool.name, args, target, served);
       if (refused) return { error: refused };
-      return this.one(target, tool, args);
+      return this.one(target, tool, args, session);
     }
     if (SPANS.has(tool.name)) return this.span(tool, args, served);
-    if (served.length === 1) return this.one(served[0]!, tool, args);
+    if (served.length === 1) return this.one(served[0]!, tool, args, session);
     return {
       error: `${tool.name} needs notebook here, since this server serves ${served.length} notebooks: pass the notebook's name. ${listing(served)}`,
     };
@@ -349,9 +356,14 @@ export class NotebookRouter {
     return null;
   }
 
-  private async one(target: ServedNotebook, tool: ToolDefinition, args: Args): Promise<Outcome> {
+  private async one(
+    target: ServedNotebook,
+    tool: ToolDefinition,
+    args: Args,
+    session: AgentSession | null,
+  ): Promise<Outcome> {
     try {
-      return onNotebook(await this.runOn(target.name, tool, args), target.name);
+      return onNotebook(await this.runOn(target.name, tool, args, undefined, session), target.name);
     } catch (error) {
       if (error instanceof NotebookBusy) {
         return { error: `“${target.name}” is busy syncing. Try again in a moment.` };

@@ -53,6 +53,7 @@ import type { ActivityEntry } from '../agent-activity';
 import type { GitNotebookEngine } from '../engine';
 import type { GitHistory, GitVersion } from '../history';
 import type { NotebookOps } from '../ops';
+import type { AgentSession } from '../sessions';
 import { isPurged } from '../purge';
 import { changedAtOf } from '../render';
 import { LocalError, NoteCatalog, fail, type NoteInfo } from './catalog';
@@ -182,6 +183,25 @@ export class LocalNotebook {
 
   private get workspace(): Y.Doc {
     return this.ops.workspace;
+  }
+
+  /**
+   * Runs `edit` for an agent session (PEN-152), and records the notes it changed and whether it
+   * changed the workspace, so the commit that carries them names the session.
+   */
+  async attributed<T>(session: AgentSession, edit: () => T | Promise<T>): Promise<T> {
+    const replica = this.engine.replica;
+    const before = { ...replica.state.dirty };
+    const workspaceBefore = Y.encodeStateVector(replica.workspace);
+    const out = await edit();
+    const after = replica.state.dirty;
+    const notes = Object.keys(after).filter((id) => after[id] !== before[id]);
+    const workspaceAfter = Y.encodeStateVector(replica.workspace);
+    const workspace =
+      workspaceAfter.length !== workspaceBefore.length ||
+      workspaceAfter.some((byte, i) => byte !== workspaceBefore[i]);
+    if (notes.length > 0 || workspace) replica.recordSession(session, notes, workspace);
+    return out;
   }
 
   // --- what the notes are ---
