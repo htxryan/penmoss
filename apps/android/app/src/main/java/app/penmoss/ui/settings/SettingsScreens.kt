@@ -125,6 +125,8 @@ data class SettingsSection(
     val icon: ImageVector? = null,
     val route: String = "settings/$id",
     val dot: DotState? = null,
+    /** A notebook's badge (A1579), before its name. */
+    val badge: app.penmoss.engine.settings.NotebookBadge? = null,
 )
 
 /** A captioned group of rows (PEN-146): Look and Feel, Writing, Notebooks, Agents, This Phone. */
@@ -201,7 +203,17 @@ fun SettingsHome(
                 item(key = "group-${group.title}") { GroupTitle(group.title) }
                 items(group.sections, key = { it.id }) { section ->
                     ListItem(
-                        headlineContent = { Text(section.title) },
+                        headlineContent = {
+                            val badge = section.badge
+                            if (badge == null) {
+                                Text(section.title)
+                            } else {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    app.penmoss.ui.common.NotebookBadgeView(badge, section.title, decorative = true)
+                                    Text(section.title)
+                                }
+                            }
+                        },
                         supportingContent = { Text(section.summary, maxLines = 2, overflow = TextOverflow.Ellipsis) },
                         leadingContent = {
                             when {
@@ -244,9 +256,21 @@ internal fun SectionScreen(
     onBack: (() -> Unit)?,
     notice: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
+    /** Before the title: a notebook's page has its badge there (A1579). */
+    titleLead: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
-    Scaffold(topBar = { TopAppBar(title = { Text(title) }, navigationIcon = { if (onBack != null) BackButton(onBack) }, actions = actions) }) { padding ->
+    val heading: @Composable () -> Unit = {
+        if (titleLead == null) {
+            Text(title)
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                titleLead()
+                Text(title)
+            }
+        }
+    }
+    Scaffold(topBar = { TopAppBar(title = heading, navigationIcon = { if (onBack != null) BackButton(onBack) }, actions = actions) }) { padding ->
         Column(
             Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(vertical = 8.dp),
         ) {

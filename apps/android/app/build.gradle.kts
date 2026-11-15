@@ -224,8 +224,10 @@ androidComponents {
 val editorBundle = layout.projectDirectory.file("src/main/assets/editor/editor.js")
 val graphBundle = layout.projectDirectory.file("src/main/assets/editor/graph.js")
 val gitBundle = layout.projectDirectory.file("src/main/assets/editor/git.js")
+// The badges' Lucide icons (A1579), written beside it by scripts/lucide-android.mjs.
+val lucideIcons = layout.projectDirectory.file("src/main/assets/lucide/icons.txt")
 tasks.named("preBuild") {
-    val bundles = listOf(editorBundle.asFile, graphBundle.asFile, gitBundle.asFile)
+    val bundles = listOf(editorBundle.asFile, graphBundle.asFile, gitBundle.asFile, lucideIcons.asFile)
     doFirst {
         for (bundle in bundles) {
             if (!bundle.exists()) {

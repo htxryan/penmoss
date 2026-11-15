@@ -45,8 +45,9 @@ import org.junit.runner.RunWith
 /**
  * PEN-140's Android proof (AC15): the web and Mac apps' main window gained note tabs and notebook
  * badges, and the note lost its title row there. Android keeps its own screens and the system
- * Back (D44, A715), so nothing changes on the phone: a note opened from the list fills the screen
- * under its own top bar, with no tab strip, no Tabs button and no notebook badge. Run with
+ * Back (D44, A715), so a note opened from the list fills the screen under its own top bar, with no
+ * tab strip, no Tabs button and no notebook badge. The phone's badges (A1579) are on its notebooks'
+ * rows and pages, as the Mac's sidebar and Settings have them, not on a note's screen. Run with
  * `task proof:android -- app.penmoss.ui.NoteOpensWithoutTabsInstrumentedTest`.
  *
  * Built from the app's own pieces (the note list's rows, the note screen's top bar parts and its
@@ -133,7 +134,7 @@ class NoteOpensWithoutTabsInstrumentedTest {
             val screenWidth = instrumentation.targetContext.resources.displayMetrics.widthPixels
             assertTrue("the note is ${body.boundsInWindow.width}px of a $screenWidth px screen", body.boundsInWindow.right <= screenWidth + 1)
 
-            // No tabs and no badges on Android (PEN-140, open points 14 and 15).
+            // No tabs on Android (PEN-140, open points 14 and 15), and no badge on a note's screen (A1579).
             val all = nodes(scenario)
             for (word in listOf("New Tab", "Tabs", "Close Tab", "All Tabs")) {
                 assertEquals("“$word” shows on the phone", 0, all.count { word in it.texts() || word in it.descriptions() })

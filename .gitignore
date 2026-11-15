@@ -23,6 +23,8 @@ apps/android/.gradle/
 apps/android/.kotlin/
 apps/android/local.properties
 apps/android/app/src/main/assets/editor/
+# Lucide's icons for the badges (A1579), written by scripts/lucide-android.mjs.
+apps/android/app/src/main/assets/lucide/
 *.jks
 *.keystore
 

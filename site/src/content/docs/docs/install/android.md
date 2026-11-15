@@ -50,7 +50,7 @@ The first screen lists your notebooks; each opens in a screen of its own, with i
 
 Under **Notebooks**, each notebook has a row with its sync state; tap it for the notebook's page, which has three tabs:
 
-- **Overview:** its sync state with **Sync Now**, **Open Notebook**, **Make Primary**, how many **Notes** it has, **Copy Settings…** (with two notebooks or more), and **Remove from This Phone…**, which asks for your fingerprint, face or screen lock first.
+- **Overview:** its sync state with **Sync Now**, **Open Notebook**, its **Badge** (its colour, and a letter, a number or an icon from **Choose Icon…**, as on the Mac; see [Notebook badges](/docs/organise/#notebook-badges)), **Make Primary**, how many **Notes** it has, **Copy Settings…** (with two notebooks or more), and **Remove from This Phone…**, which asks for your fingerprint, face or screen lock first.
 - **Sync:** what the last sync said, **Wi-Fi Only**, how soon it pushes (**Push After**, 12 seconds by default) and how often it pulls (**Pull Every**, 1 minute by default).
 - **Git:** the **Personal Access Token** (**Save Token**, **Forget Token**), **Sign Commits**, and a **Commit Name** and **Commit Email** for this notebook.
 

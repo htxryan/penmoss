@@ -388,9 +388,10 @@ tasks:
       - node scripts/characters.mjs
 
   android:editor:
-    desc: 'Android: build the editor page (Vite) into the app assets (apps/android/app/src/main/assets/editor)'
+    desc: "Android: build the editor page (Vite) into the app assets (apps/android/app/src/main/assets/editor), and write the badges' Lucide icons beside it (assets/lucide, A1579)"
     cmds:
       - pnpm --filter @penmoss/android-editor build
+      - node scripts/lucide-android.mjs
 
   android:build:
     desc: 'Android: the debug APK, app.penmoss.debug, for local and pull-request builds (apps/android/app/build/outputs/apk/debug/app-debug.apk; docs/android.md)'

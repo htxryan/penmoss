@@ -33,10 +33,11 @@ object GlyphSearch {
     }
 
     /** An item's score for a normalised query (0: not found); [raw] is the query as typed. */
-    fun score(item: CharacterEntry, query: String, raw: String = query): Double {
-        if (raw.trim().isNotEmpty()) {
+    fun score(item: Findable, query: String, raw: String = query): Double {
+        val glyph = item.glyph
+        if (glyph != null && raw.trim().isNotEmpty()) {
             val pasted = raw.trim().replace(VARIATION_SELECTORS, "")
-            if (pasted == item.glyph.replace(VARIATION_SELECTORS, "")) return 1000.0
+            if (pasted == glyph.replace(VARIATION_SELECTORS, "")) return 1000.0
         }
         val terms = query.split(' ').filter { it.isNotEmpty() }
         if (terms.isEmpty()) return 0.0
@@ -58,15 +59,22 @@ object GlyphSearch {
     }
 
     /** What a query finds, best first; everything, in order, for an empty one. */
-    fun find(items: List<CharacterEntry>, query: String): List<CharacterEntry> {
+    fun <T : Findable> find(items: List<T>, query: String): List<T> {
         val normal = normalise(query)
         if (normal.isEmpty() && query.trim().isEmpty()) return items
         return items.mapIndexedNotNull { at, item ->
             val score = score(item, normal, query)
             if (score > 0.0) Triple(item, score, at) else null
-        }.sortedWith(compareByDescending<Triple<CharacterEntry, Double, Int>> { it.second }.thenBy { it.third })
+        }.sortedWith(compareByDescending<Triple<T, Double, Int>> { it.second }.thenBy { it.third })
             .map { it.first }
     }
+}
+
+/** What [GlyphSearch] finds: a name, other words for it, and the character itself, if it is one. */
+interface Findable {
+    val name: String
+    val keywords: List<String>
+    val glyph: String?
 }
 
 /**
@@ -76,11 +84,11 @@ object GlyphSearch {
  */
 @Serializable
 data class CharacterEntry(
-    val glyph: String,
-    val name: String,
-    val keywords: List<String> = emptyList(),
+    override val glyph: String,
+    override val name: String,
+    override val keywords: List<String> = emptyList(),
     val group: String,
-)
+) : Findable
 
 object Characters {
     private val json = Json { ignoreUnknownKeys = true }

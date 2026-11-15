@@ -124,6 +124,8 @@ data class GitRow(
     val withheld: List<WithheldView> = emptyList(),
     /** Notes taken back with Keep note while this screen is open, each with its Undo (A913). */
     val kept: List<PendingPurge> = emptyList(),
+    /** Its badge (A1579): the default until its settings are read. */
+    val badge: app.penmoss.engine.settings.NotebookBadge = app.penmoss.engine.settings.NotebookBadges.defaultBadge(view.notebookId, view.name),
 )
 
 /** A copy withheld from the push (A886), as Settings and Sync name it: its title as this phone keeps it. */
@@ -208,6 +210,8 @@ class GitNotebooksActions(
     val onPage: (String) -> Unit = {},
     /** Keep Settings in Step (A1137; PEN-148), this phone's choice. */
     val onInStep: (Boolean) -> Unit = {},
+    /** Changes a notebook's badge (A1579): `badge.color` or `badge.glyph`, null back to its default. */
+    val onBadge: (String, String, kotlinx.serialization.json.JsonElement?) -> Unit = { _, _, _ -> },
     /**
      * Copy Settings… (A1137; PEN-148): one notebook's settings into another's, or every other's
      * when the second is null, once. Answers what to say of it.
@@ -440,7 +444,7 @@ private fun Picker(label: String, shown: String, options: List<Pair<String?, Str
     }
 }
 
-/** A notebook's row (PEN-146): its dot, its name (Primary when it is), its repository and sync. */
+/** A notebook's row (PEN-146): its dot, its badge and name (Primary when it is), its repository and sync. */
 @Composable
 private fun NotebookRow(row: GitRow, primary: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val view = row.view
@@ -448,6 +452,8 @@ private fun NotebookRow(row: GitRow, primary: Boolean, modifier: Modifier = Modi
         leadingContent = { Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) { DotMarkOf(dotOf(row.status)) } },
         headlineContent = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Its badge before its name (A1579), as the Mac's sidebar and Settings show it.
+                app.penmoss.ui.common.NotebookBadgeView(row.badge, view.name, decorative = true)
                 Text(view.name)
                 if (primary) PrimaryChip()
             }
@@ -793,6 +799,7 @@ internal fun rememberGitNotebooks(
     val kept by hub.storageKept.collectAsStateWithLifecycle()
     val oldCopies by hub.oldCopies.collectAsStateWithLifecycle()
     val withheld by hub.withheld.collectAsStateWithLifecycle()
+    val badges by hub.badges.collectAsStateWithLifecycle(emptyMap())
     val saveUnrecovered = rememberSaveUnrecovered(hub) { message = it }
     val saveWithheld = rememberSaveUnrecovered(hub, withheld = true) { message = it }
     val (name, email) = remember(tick) { hub.identitySet() }
@@ -818,7 +825,10 @@ internal fun rememberGitNotebooks(
         }
     }
     val ui = GitNotebooksUi(
-        rows = views.map { GitRow(it, shownStatuses[it.localId], purges[it.localId], recoveries[it.localId], kept[it.localId], oldCopies[it.localId], withheld[it.localId].orEmpty(), keptNotes[it.localId].orEmpty()) },
+        rows = views.map { view ->
+            val row = GitRow(view, shownStatuses[view.localId], purges[view.localId], recoveries[view.localId], kept[view.localId], oldCopies[view.localId], withheld[view.localId].orEmpty(), keptNotes[view.localId].orEmpty())
+            badges[view.localId]?.let { row.copy(badge = it) } ?: row
+        },
         identityName = name,
         identityEmail = email,
         journal = hub.journal(),
@@ -912,6 +922,7 @@ internal fun rememberGitNotebooks(
         onCopyTags = onCopyTags,
         onPage = onPage,
         onInStep = hub::setSettingsInStep,
+        onBadge = { id, key, value -> runCatching { hub.setBadge(id, key, value) }.onFailure { message = it.message } },
         onCopySettings = { from, to ->
             fun name(id: String) = views.firstOrNull { it.localId == id }?.name ?: "the notebook"
             try {
@@ -959,6 +970,12 @@ fun NotebookPageRoute(
     passText: String? = null,
 ) {
     val (ui, actions) = rememberGitNotebooks(hub, onOpen)
+    // Its settings read and a change sent at once while the page shows (its badge, A1579), as the
+    // primary's are (rememberPrimary); its own screens, when open, sync it already.
+    androidx.compose.runtime.DisposableEffect(localId) {
+        val release = runCatching { hub.graph(localId).sync.watch() }.getOrNull()
+        onDispose { release?.invoke() }
+    }
     // Removed: nothing to show, so the page goes.
     val row = ui.rows.firstOrNull { it.view.localId == localId }
     LaunchedEffect(row == null, ui.rows.isEmpty()) { if (row == null && hub.list.value.none { it.localId == localId }) onBack() }

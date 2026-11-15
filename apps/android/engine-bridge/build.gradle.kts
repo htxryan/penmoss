@@ -112,4 +112,6 @@ tasks.test {
             this.scratch.set(scratch)
         },
     )
+    // The badges' Lucide icons the app ships (A1579), which NotebookBadgesTest checks.
+    inputs.files(root.file("app/src/main/assets/lucide/icons.txt")).withPropertyName("lucideIcons")
 }
