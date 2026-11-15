@@ -716,8 +716,9 @@ test('two git notebooks side by side, one over HTTP; two windows, History, a tag
     .getByRole('textbox', { name: `New name for #gitsecret${RUN}` })
     .fill(`gitrenamed${RUN}`);
   await tags.getByRole('button', { name: 'Rename', exact: true }).click();
-  await expect(tags.getByRole('status')).toHaveText(
-    `Renamed #gitsecret${RUN} to #gitrenamed${RUN} in 1 note`,
+  // The sidebar's rename is the Tags page's: its toast says what changed and offers Undo (A1508).
+  await expect(page.getByTestId('tag-done-toast')).toContainText(
+    `Renamed #gitsecret${RUN} to #gitrenamed${RUN} in 1 note.`,
   );
   await expect(body(page)).toContainText(`#gitrenamed${RUN}`);
 
