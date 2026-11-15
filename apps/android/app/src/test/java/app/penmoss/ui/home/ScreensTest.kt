@@ -51,7 +51,7 @@ import app.penmoss.ui.common.FolderItem
 import app.penmoss.ui.common.NoteItem
 import app.penmoss.ui.common.NoteList
 import app.penmoss.ui.common.PenmossTheme
-import app.penmoss.ui.HomeLayout
+import app.penmoss.ui.settings.HomeLayout
 
 /** Compose UI tests of the native screens (T32), on Robolectric: no emulator on the worker. */
 @RunWith(AndroidJUnit4::class)

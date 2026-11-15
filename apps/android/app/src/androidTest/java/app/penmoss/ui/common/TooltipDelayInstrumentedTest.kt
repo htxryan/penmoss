@@ -14,10 +14,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import app.penmoss.engine.settings.Settings
 import app.penmoss.proof.ProofShot
-import app.penmoss.ui.HomeLayout
-import app.penmoss.ui.displayChoices
-import app.penmoss.ui.displaySummary
 import app.penmoss.ui.settings.DisplayScreen
+import app.penmoss.ui.settings.HomeLayout
+import app.penmoss.ui.settings.displayChoices
+import app.penmoss.ui.settings.displaySummary
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

@@ -66,6 +66,7 @@ import app.penmoss.ui.folders.sortFolderAndSay
 import app.penmoss.ui.trash.NoteActionsSheet
 import app.penmoss.ui.trash.moveToTrashWithUndo
 import app.penmoss.ui.trash.trashRefusedMessage
+import app.penmoss.ui.settings.SettingsRoutes
 
 /**
  * What a git notebook's screens share (A6): the navigation, the snackbar over every screen, the

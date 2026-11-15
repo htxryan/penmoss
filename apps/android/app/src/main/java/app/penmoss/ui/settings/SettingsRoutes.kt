@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.settings
 
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -47,6 +47,9 @@ import kotlinx.coroutines.launch
 import java.time.ZoneId
 import app.penmoss.ui.home.SyncLine
 import app.penmoss.ui.journal.journalToday
+import app.penmoss.ui.RootUi
+import app.penmoss.ui.leave
+import app.penmoss.ui.open
 
 /*
  * The Settings screens' data (T40 P1): each reads the settings as the phone shows them

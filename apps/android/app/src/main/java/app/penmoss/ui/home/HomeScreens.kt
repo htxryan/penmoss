@@ -1,7 +1,7 @@
 package app.penmoss.ui.home
 
 import androidx.activity.compose.BackHandler
-import app.penmoss.ui.HomeLayout
+import app.penmoss.ui.settings.HomeLayout
 import app.penmoss.engine.settings.SidebarLayout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextDecoration
-import app.penmoss.ui.HomeShortcuts
+import app.penmoss.ui.settings.HomeShortcuts
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column

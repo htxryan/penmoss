@@ -18,7 +18,7 @@ import java.time.ZoneId
 import java.time.temporal.IsoFields
 import app.penmoss.ui.RootUi
 import app.penmoss.ui.leave
-import app.penmoss.ui.todayIn
+import app.penmoss.ui.settings.todayIn
 
 /**
  * The Journal calendar's month (T40 P5): which month grid shows, with the previous and next.

@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.settings
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue

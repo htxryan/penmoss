@@ -34,11 +34,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.GraphicsMode
 import app.penmoss.ui.common.PenmossTheme
-import app.penmoss.ui.HomeLayout
-import app.penmoss.ui.HomeShortcuts
-import app.penmoss.ui.displayChoices
-import app.penmoss.ui.displaySummary
-import app.penmoss.ui.settingsSections
+import app.penmoss.ui.settings.HomeLayout
+import app.penmoss.ui.settings.HomeShortcuts
+import app.penmoss.ui.settings.displayChoices
+import app.penmoss.ui.settings.displaySummary
+import app.penmoss.ui.settings.settingsSections
 
 /**
  * T42's Display and "Sync stopped" on the phone (T40 ST12, AC12; A650, A651): Home hides the

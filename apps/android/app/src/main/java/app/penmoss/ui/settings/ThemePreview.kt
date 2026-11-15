@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.settings
 
 import android.content.Context
 import android.view.View

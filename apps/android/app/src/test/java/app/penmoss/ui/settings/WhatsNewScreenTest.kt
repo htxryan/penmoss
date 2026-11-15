@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.settings
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule

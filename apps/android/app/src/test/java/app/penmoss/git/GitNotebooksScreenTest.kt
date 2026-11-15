@@ -22,7 +22,7 @@ import app.penmoss.engine.git.GitNotebookView
 import app.penmoss.engine.git.PendingPurge
 import app.penmoss.engine.settings.Settings
 import app.penmoss.ui.common.PenmossTheme
-import app.penmoss.ui.settingsSections
+import app.penmoss.ui.settings.settingsSections
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

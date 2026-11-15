@@ -1,9 +1,9 @@
 package app.penmoss.ui.search
 
 import app.penmoss.engine.bridge.ToEditor
-import app.penmoss.ui.SettingsRoutes
 import app.penmoss.ui.graph.graphRoute
 import app.penmoss.ui.open
+import app.penmoss.ui.settings.SettingsRoutes
 import app.penmoss.ui.trash.TrashRoutes
 
 /**

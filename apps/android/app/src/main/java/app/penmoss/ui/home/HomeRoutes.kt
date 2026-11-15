@@ -18,10 +18,7 @@ import app.penmoss.engine.settings.QuickAccess
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.ui.Choosing
 import app.penmoss.ui.FolderNaming
-import app.penmoss.ui.HomeLayout
-import app.penmoss.ui.HomeShortcuts
 import app.penmoss.ui.RootUi
-import app.penmoss.ui.SettingsRoutes
 import app.penmoss.ui.common.FolderItem
 import app.penmoss.ui.common.Items
 import app.penmoss.ui.common.NoteItem
@@ -29,6 +26,9 @@ import app.penmoss.ui.graph.graphRoute
 import app.penmoss.ui.keys.openCapture
 import app.penmoss.ui.leave
 import app.penmoss.ui.open
+import app.penmoss.ui.settings.HomeLayout
+import app.penmoss.ui.settings.HomeShortcuts
+import app.penmoss.ui.settings.SettingsRoutes
 import app.penmoss.ui.trash.TrashRoutes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine

@@ -42,11 +42,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.penmoss.engine.api.AgentActivityEntry
-import app.penmoss.ui.ACTIVITY_GROUPS
 import app.penmoss.ui.common.PenmossSnackbar
-import app.penmoss.ui.AgentActivityUi
-import app.penmoss.ui.activityAgents
-import app.penmoss.ui.activityDetail
 
 /** The web's words for an empty list (`ActivityList`). */
 internal const val NO_AGENT_ACTIVITY = "No agent has moved notes or changed folders, settings or tags in the last 30 days."

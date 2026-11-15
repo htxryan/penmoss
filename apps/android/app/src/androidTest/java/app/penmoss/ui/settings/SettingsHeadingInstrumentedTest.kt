@@ -1,4 +1,4 @@
-package app.penmoss.ui
+package app.penmoss.ui.settings
 
 import android.os.SystemClock
 import android.view.View
@@ -27,7 +27,7 @@ import org.junit.runner.RunWith
  * PEN-64's Android proof: the web and Mac apps' Settings heading lost its left gutter in a wide
  * window (a stale CSS selector). The phone's Settings is its own Compose screen, so it is
  * unaffected: its "Settings" heading keeps the top bar's start padding, never flush with the
- * screen's left edge. Run with `task proof:android -- app.penmoss.ui.SettingsHeadingInstrumentedTest`.
+ * screen's left edge. Run with `task proof:android -- app.penmoss.ui.settings.SettingsHeadingInstrumentedTest`.
  *
  * Reads the screen through Compose's semantics tree, not the Compose test rule (see
  * [TooltipDelayInstrumentedTest]).

@@ -138,7 +138,7 @@ fun GitSyncRoute(graph: NotebookGraph, passText: String, onGitNotebooks: () -> U
         }
         // Storage on this phone and pictures from the web (T40 P8, ED12, ED13): here since the
         // account's Sync and storage went with the server (T59).
-        app.penmoss.ui.StorageRoute(graph)
+        app.penmoss.ui.settings.StorageRoute(graph)
     }
 }
 
