@@ -6,7 +6,7 @@
  */
 import { agentReference, type AgentReferenceInput } from '@penmoss/core/agent-reference';
 import { copyText } from '@penmoss/editor';
-import type { WorkspaceSnapshot } from '@penmoss/sync-client/workspace';
+import type { WorkspaceSnapshot } from '@penmoss/model/workspace';
 import { useCallback } from 'react';
 import { useSource } from '../sources/hooks';
 import { useWorkspaceState } from '../workspace/hooks';

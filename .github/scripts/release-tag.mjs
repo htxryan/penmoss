@@ -10,7 +10,7 @@
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
-import { newestStable, parseReleaseTag } from './releases.mjs';
+import { newestStable, parseReleaseTag } from './release-versions.mjs';
 
 /**
  * @typedef {{

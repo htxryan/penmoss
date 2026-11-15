@@ -14,7 +14,7 @@ import {
 } from '@penmoss/core/search';
 import { tagMatches } from '@penmoss/core/tags';
 import { folderSubtree } from '@penmoss/core/workspace';
-import { LocalSearchIndex, type LocalSearchDocument } from '@penmoss/sync-client/local-index';
+import { LocalSearchIndex, type LocalSearchDocument } from '@penmoss/model/local-index';
 import { LocalError, type NoteCatalog } from './catalog';
 
 /** Search by meaning for this notebook (A1156): its own index, over a shared cache. */

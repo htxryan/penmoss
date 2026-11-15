@@ -5,11 +5,11 @@
  * pictures through the app (A304), the theme (A305), conflict copies
  * (A306), and the IME and caret care (A307).
  */
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { NOTE_ROOT } from '@penmoss/model/replica';
 import type { JSONContent } from '@tiptap/core';
-import { initNote, readTitle, setTitle } from '@penmoss/sync-client/note';
-import { CONFLICT_SUFFIX } from '@penmoss/sync-client/records';
-import { createYjs14Replica, type Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import { initNote, readTitle, setTitle } from '@penmoss/model/note';
+import { CONFLICT_SUFFIX } from '@penmoss/model/records';
+import { createYjs14Replica, type Yjs14Replica } from '@penmoss/model/yjs14';
 import { NORD, PENMOSS } from '@penmoss/ui/theme';
 import * as Y from '@y/y';
 import { fromBase64, toBase64 } from 'lib0/buffer';

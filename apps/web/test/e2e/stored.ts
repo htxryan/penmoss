@@ -1,5 +1,5 @@
-import { readSettings, readWorkspace, WORKSPACE_RECORD_KEY } from '@penmoss/sync-client/workspace';
-import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
+import { readSettings, readWorkspace, WORKSPACE_RECORD_KEY } from '@penmoss/model/workspace';
+import { createYjs14Replica } from '@penmoss/model/yjs14';
 import type { Page } from '@playwright/test';
 
 // What this browser has stored on the device (IndexedDB, A7), for tests that must not leave a

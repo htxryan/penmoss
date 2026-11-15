@@ -21,7 +21,7 @@ import {
   type DrawingServices,
 } from '../src/extensions/drawing';
 import type { ImageServices } from '../src/extensions/image';
-import { noteBody } from '@penmoss/sync-client/markdown';
+import { noteBody } from '@penmoss/model/markdown';
 import { openEditor, press, type } from './support/editor';
 
 const pair = (svg: string, scene: string): DrawingFiles => ({

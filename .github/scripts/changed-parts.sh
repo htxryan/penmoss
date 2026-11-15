@@ -43,7 +43,7 @@ else
         .prettierrc* | .prettierignore)
         check=true web=true android=true desktop=true site=true factory=true ;;
       # Packages the web app, the Android editor and the Mac app all bundle.
-      packages/core/* | packages/editor/* | packages/git-notebook/* | packages/sync-client/* | packages/ui/*)
+      packages/core/* | packages/editor/* | packages/git-notebook/* | packages/model/* | packages/ui/*)
         check=true web=true android=true desktop=true ;;
       # The web app's source is also the Android editor's and the Mac app's.
       apps/web/*) check=true web=true android=true desktop=true ;;
@@ -64,7 +64,7 @@ else
       */test/* | */tests/* | */e2e/* | */androidTest/* | */__tests__/* | */fixtures/* | \
         *.test.* | *.spec.* | */playwright.config.* | */vitest.config.* | */vitest.*.config.*) ;;
       apps/android/play/*) ;;
-      packages/core/* | packages/editor/* | packages/git-notebook/* | packages/sync-client/* | \
+      packages/core/* | packages/editor/* | packages/git-notebook/* | packages/model/* | \
         packages/ui/* | packages/cli/* | packages/embed/* | apps/web/* | apps/desktop/* | \
         apps/android/*)
         ships=true ;;

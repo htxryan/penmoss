@@ -1,9 +1,9 @@
 import { isUlid } from '@penmoss/core/ids';
 import { periodicNoteId } from '@penmoss/core/periodic';
-import { readIdentity, readTitle, setTitle } from '@penmoss/sync-client/note';
-import { frontmatterTags, setFrontmatterTag } from '@penmoss/sync-client/tags';
-import { createThread } from '@penmoss/sync-client/comments';
-import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
+import { readIdentity, readTitle, setTitle } from '@penmoss/model/note';
+import { frontmatterTags, setFrontmatterTag } from '@penmoss/model/tags';
+import { createThread } from '@penmoss/model/comments';
+import { createYjs14Replica } from '@penmoss/model/yjs14';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   Notes,
@@ -12,8 +12,8 @@ import {
   type LocalSyncState,
   type NoteRegistry,
 } from '../../src/notes/service';
-import type { UnloadWrite } from '@penmoss/sync-client/record';
-import { appendParagraph } from '../../../../packages/sync-client/test/support/editing';
+import type { UnloadWrite } from '@penmoss/model/record';
+import { appendParagraph } from '../../../../packages/model/test/support/editing';
 import { TEST_NOTEBOOK } from './support/local-sources';
 import { memoryNotes } from './support/memory-notes';
 

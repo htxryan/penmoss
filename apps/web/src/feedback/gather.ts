@@ -4,9 +4,9 @@
  * open note's text is read here for its counts and to drop errors that quote it; only the
  * counts are kept in what is returned (`private` is for redaction and never sent).
  */
-import { readIdentity, isDeleted } from '@penmoss/sync-client/note';
-import type { WorkspaceSnapshot } from '@penmoss/sync-client/workspace';
-import { docText, textStats } from '@penmoss/sync-client/stats';
+import { readIdentity, isDeleted } from '@penmoss/model/note';
+import type { WorkspaceSnapshot } from '@penmoss/model/workspace';
+import { docText, textStats } from '@penmoss/model/stats';
 import type { LocalLinks, OpenNote } from '../notes/service';
 import type { NoteListEntry } from '../notes/list';
 import { localLinked } from '../notes/backlinks';

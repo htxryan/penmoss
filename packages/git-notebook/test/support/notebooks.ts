@@ -1,6 +1,6 @@
 /** Small notebooks for the engine's unit tests: one in-memory remote, clones of it. */
-import { readTitle } from '@penmoss/sync-client/note';
-import { readWorkspace } from '@penmoss/sync-client/workspace';
+import { readTitle } from '@penmoss/model/note';
+import { readWorkspace } from '@penmoss/model/workspace';
 import {
   GitNotebookEngine,
   type EngineOptions,

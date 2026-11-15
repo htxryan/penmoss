@@ -6,7 +6,7 @@
  * PNGs are there, at what size, and renders only what the factory couldn't.
  */
 import { readFileSync } from 'node:fs';
-import type { RunSandbox } from './run.ts';
+import type { RunSandbox } from './run-deps.ts';
 
 /** Where the host stages the agreed mockups in the worktree (stageMockups). */
 export const MOCKUPS_DIR = '.factory/mockups';

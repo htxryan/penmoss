@@ -7,7 +7,7 @@ import {
   NotebookOps,
 } from '@penmoss/git-notebook';
 import { NodeGitTransport } from '@penmoss/git-notebook/node';
-import { recordAgentSession, sessionKey } from '@penmoss/sync-client/agent-sessions';
+import { recordAgentSession, sessionKey } from '@penmoss/model/agent-sessions';
 import {
   addComment,
   createNoteThread,
@@ -15,7 +15,7 @@ import {
   readThreads,
   setThreadDelivery,
   type ThreadData,
-} from '@penmoss/sync-client/comments';
+} from '@penmoss/model/comments';
 import { expect, seeded, test, type GitHost, type Page } from './fixtures';
 import { body, collectErrors, newNote } from './support/app';
 

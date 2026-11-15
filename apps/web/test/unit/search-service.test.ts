@@ -1,5 +1,5 @@
 import { MATCH_END, MATCH_START } from '@penmoss/core/search';
-import type { NoteRecord } from '@penmoss/sync-client/record';
+import type { NoteRecord } from '@penmoss/model/record';
 import { describe, expect, it, vi } from 'vitest';
 import { vaultDocuments } from '../../../../packages/core/test/support/search-vault-docs';
 import { MEANING_ELSEWHERE } from '../../src/search/meaning';

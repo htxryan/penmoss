@@ -97,16 +97,16 @@ import {
   openLightboxNow,
 } from '@penmoss/editor';
 import { formatCombo } from '@penmoss/editor/keys';
-import { noteFields } from '@penmoss/sync-client/note-fields';
-import { docText, textStats } from '@penmoss/sync-client/stats';
-import { bindTitleField, oneLineTitle } from '@penmoss/sync-client/title';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
-import { initNote, isoWithOffset, readIdentity, readTitle } from '@penmoss/sync-client/note';
+import { noteFields } from '@penmoss/model/note-fields';
+import { docText, textStats } from '@penmoss/model/stats';
+import { bindTitleField, oneLineTitle } from '@penmoss/model/title';
+import { NOTE_ROOT } from '@penmoss/model/replica';
+import { initNote, isoWithOffset, readIdentity, readTitle } from '@penmoss/model/note';
 import type { LinkResolver } from '@penmoss/core';
-import type { CommentAuthor } from '@penmoss/sync-client/comments';
-import { conflictCopy } from '@penmoss/sync-client/records';
-import { frontmatterTags, noteTags, setFrontmatterTag } from '@penmoss/sync-client/tags';
-import { bodyJson, createYjs14Replica, type Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import type { CommentAuthor } from '@penmoss/model/comments';
+import { conflictCopy } from '@penmoss/model/records';
+import { frontmatterTags, noteTags, setFrontmatterTag } from '@penmoss/model/tags';
+import { bodyJson, createYjs14Replica, type Yjs14Replica } from '@penmoss/model/yjs14';
 import {
   applyThemeTo,
   builtInTheme,
@@ -254,7 +254,7 @@ const blockEntry = (item: BlockItem): BlockEntry => ({
 });
 
 /** The note's frontmatter fields, as the web writes them (shared, so the two cannot drift). */
-export { noteFields } from '@penmoss/sync-client/note-fields';
+export { noteFields } from '@penmoss/model/note-fields';
 
 /**
  * The Info sheet's details are read at most this often while the note changes (T40 P7, NT23):
@@ -1268,7 +1268,7 @@ export class EditorHost {
       const period = kind === 'daily' ? atDay.toString() : isoWeek(atDay).toString();
       const date = kind === 'daily' ? atDay.toString() : weekMonday(isoWeek(atDay)).toString();
       const [{ periodicNote }, codec] = await Promise.all([
-        import('@penmoss/sync-client/periodic'),
+        import('@penmoss/model/periodic'),
         import('@penmoss/core'),
       ]);
       const note = periodicNote(codec, kind, period, template);

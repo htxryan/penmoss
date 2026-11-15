@@ -6,8 +6,8 @@
  * meaning. The page never embeds anything itself.
  */
 import { noteSections, type NoteSection } from '@penmoss/core/search';
-import type { NoteRecord } from '@penmoss/sync-client/record';
-import { bodyJson, createYjs14Replica } from '@penmoss/sync-client/yjs14';
+import type { NoteRecord } from '@penmoss/model/record';
+import { bodyJson, createYjs14Replica } from '@penmoss/model/yjs14';
 import type { DesktopMeaning, DesktopMeaningHit, DesktopMeaningStatus } from '../desktop/bridge';
 
 /** Notes changed: the service hears of it this long after they settle. */

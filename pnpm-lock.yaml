@@ -214,9 +214,9 @@ importers:
       '@penmoss/git-notebook':
         specifier: workspace:*
         version: link:../../../packages/git-notebook
-      '@penmoss/sync-client':
+      '@penmoss/model':
         specifier: workspace:*
-        version: link:../../../packages/sync-client
+        version: link:../../../packages/model
       '@penmoss/ui':
         specifier: workspace:*
         version: link:../../../packages/ui
@@ -303,9 +303,9 @@ importers:
       '@penmoss/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@penmoss/sync-client':
+      '@penmoss/model':
         specifier: workspace:*
-        version: link:../../packages/sync-client
+        version: link:../../packages/model
       '@types/node':
         specifier: 24.19.2
         version: 24.19.2
@@ -330,9 +330,9 @@ importers:
       '@penmoss/git-notebook':
         specifier: workspace:*
         version: link:../../packages/git-notebook
-      '@penmoss/sync-client':
+      '@penmoss/model':
         specifier: workspace:*
-        version: link:../../packages/sync-client
+        version: link:../../packages/model
       '@penmoss/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -498,9 +498,9 @@ importers:
       '@penmoss/core':
         specifier: workspace:*
         version: link:../core
-      '@penmoss/sync-client':
+      '@penmoss/model':
         specifier: workspace:*
-        version: link:../sync-client
+        version: link:../model
       '@tiptap/core':
         specifier: 3.32.0
         version: 3.32.0(@tiptap/pm@3.32.0)
@@ -605,9 +605,9 @@ importers:
       '@penmoss/core':
         specifier: workspace:*
         version: link:../core
-      '@penmoss/sync-client':
+      '@penmoss/model':
         specifier: workspace:*
-        version: link:../sync-client
+        version: link:../model
       '@y/prosemirror':
         specifier: 2.0.0-15
         version: 2.0.0-15(@y/protocols@1.0.6-rc.1(@y/y@14.0.0-rc.29))(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-transform@1.12.2)(prosemirror-view@1.42.6)
@@ -628,7 +628,7 @@ importers:
         specifier: 5.0.5
         version: 5.0.5(@types/node@24.19.2)(happy-dom@21.0.4)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
 
-  packages/sync-client:
+  packages/model:
     dependencies:
       '@penmoss/core':
         specifier: workspace:*

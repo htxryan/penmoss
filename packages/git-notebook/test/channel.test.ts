@@ -5,8 +5,8 @@
  * replying replied, which the Mac sees after its sync. A note in Trash holds its comments, and a
  * restarted channel sends nothing again.
  */
-import { offeredSessions, readAgentSession } from '@penmoss/sync-client/agent-sessions';
-import { addComment, readThread, setThreadDelivery } from '@penmoss/sync-client/comments';
+import { offeredSessions, readAgentSession } from '@penmoss/model/agent-sessions';
+import { addComment, readThread, setThreadDelivery } from '@penmoss/model/comments';
 import { describe, expect, it } from 'vitest';
 import { CHANNEL_METHOD, CommentChannel, LocalNotebook, type ChannelHost } from '../src/local';
 import { deliveryOn, macAndAgent, RYAN, sendFromMac } from './support/comments';

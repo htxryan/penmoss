@@ -74,7 +74,7 @@ tasks:
   releases:test:
     desc: 'The Releases page rules CI follows (A403, A1188, A1189): .github/scripts/releases.mjs against an in-memory page, and the checks of `task release` against a fake git'
     cmds:
-      - node --test .github/scripts/releases.test.mjs .github/scripts/release-tag.test.mjs .github/scripts/release-notes.test.mjs
+      - node --test .github/scripts/release-builds.test.mjs .github/scripts/release-alpha.test.mjs .github/scripts/release-stable.test.mjs .github/scripts/release-versions.test.mjs .github/scripts/release-tag.test.mjs .github/scripts/release-notes.test.mjs
 
   release-notes:fix:
     desc: "Re-read a merged pull request's Release note and put it in place of the one captured at merge, in release-notes.json on alpha and the release pages (A1301; needs gh signed in with write access): `task release-notes:fix -- 140`"
@@ -298,7 +298,7 @@ tasks:
   budgets:run:
     cmds:
       - pnpm -r --workspace-concurrency=1 --if-present budgets
-      - pnpm --filter @penmoss/sync-client perf
+      - pnpm --filter @penmoss/model perf
 
   proof:web:
     desc: "The software factory's web proof (F5): the given specs recorded on video with a final screenshot, `task proof:web -- comments.spec.ts`"

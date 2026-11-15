@@ -1,12 +1,7 @@
-import { readTitle, setTitle } from '@penmoss/sync-client/note';
-import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
+import { readTitle, setTitle } from '@penmoss/model/note';
+import { createYjs14Replica } from '@penmoss/model/yjs14';
 import { describe, expect, it } from 'vitest';
-import {
-  bindTitleField,
-  mapPosition,
-  pastedTitle,
-  type TitleField,
-} from '@penmoss/sync-client/title';
+import { bindTitleField, mapPosition, pastedTitle, type TitleField } from '@penmoss/model/title';
 
 /** An <input> stand-in: value, selection and input listeners. */
 function fakeField(): TitleField & { type(value: string, caret?: number): void } {

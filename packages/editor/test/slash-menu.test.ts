@@ -1,6 +1,6 @@
 import { serializeMarkdown } from '@penmoss/core';
 import { schema as coreSchema } from '@penmoss/core/schema';
-import type { Replica } from '@penmoss/sync-client/replica';
+import type { Replica } from '@penmoss/model/replica';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { describe, expect, it, vi } from 'vitest';
 import {

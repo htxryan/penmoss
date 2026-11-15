@@ -5,7 +5,7 @@
  * the one case where a writer removes other writers' files (G0's change 1). Git's history keeps
  * the content, and the app's confirmation says so.
  */
-import { registerNote, WORKSPACE_FOLDERS, WORKSPACE_NOTES } from '@penmoss/sync-client/workspace';
+import { registerNote, WORKSPACE_FOLDERS, WORKSPACE_NOTES } from '@penmoss/model/workspace';
 import * as Y from '@y/y';
 
 /** The WorkspaceDoc's root node of purged note ids (value: when, epoch ms). */

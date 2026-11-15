@@ -32,14 +32,14 @@ Signing moved to hosted runners on 12 Nov (A1348), with its secrets in the same 
 
 **Only what a change touches runs (A1095).** A change that touches only `docs/`, `site/`, `prototype/`, `spikes/`, `.claude/` or markdown outside `test/` directories starts no run on main. On a pull request it runs only `pick`; the test jobs report as skipped, so the required checks report (A1181). Otherwise `pick` lists the changed files and writes, in the run summary, which parts changed; each job then runs only for its part:
 
-| Changed                                                          | `check` | `e2e`, `budgets` | `android`, `android-emulator` | `desktop`, `mac` (main) |
-| ---------------------------------------------------------------- | ------- | ---------------- | ----------------------------- | ----------------------- |
-| `.github/`, the lockfile, `Taskfile.yml`, root configs           | yes     | yes              | yes                           | yes                     |
-| `apps/web`, `packages/{core,editor,git-notebook,sync-client,ui}` | yes     | yes              | yes                           | yes                     |
-| `packages/cli`, `apps/desktop`                                   | yes     | no               | on main                       | yes                     |
-| `apps/android/editor`, `apps/android/play`                       | yes     | no               | yes                           | no                      |
-| the rest of `apps/android` (Kotlin, Gradle)                      | no      | no               | yes                           | no                      |
-| anything else (`apps/relay`, `scripts/`, …)                      | yes     | no               | no                            | no                      |
+| Changed                                                    | `check` | `e2e`, `budgets` | `android`, `android-emulator` | `desktop`, `mac` (main) |
+| ---------------------------------------------------------- | ------- | ---------------- | ----------------------------- | ----------------------- |
+| `.github/`, the lockfile, `Taskfile.yml`, root configs     | yes     | yes              | yes                           | yes                     |
+| `apps/web`, `packages/{core,editor,git-notebook,model,ui}` | yes     | yes              | yes                           | yes                     |
+| `packages/cli`, `apps/desktop`                             | yes     | no               | on main                       | yes                     |
+| `apps/android/editor`, `apps/android/play`                 | yes     | no               | yes                           | no                      |
+| the rest of `apps/android` (Kotlin, Gradle)                | no      | no               | yes                           | no                      |
+| anything else (`apps/relay`, `scripts/`, …)                | yes     | no               | no                            | no                      |
 
 A change under `site/`, or to a shared file, also runs the `site` job on a pull request (A1201). A change under `tools/factory/`, or to a shared file, also runs `factory-ui`: the Factory UI's page check in headless Chromium (`pnpm --filter @penmoss/factory e2e`, A1519).
 
@@ -186,7 +186,7 @@ A pull request from a fork runs the hosted jobs, once a maintainer approves its 
 
 ## 10. Releases: Alpha and Stable
 
-**Alpha: every merge to main that ships (P3–P5, A1188, A1349).** The `android-release` and `mac-release` jobs publish each build whose change ships (above) as the prerelease `build-<run>` (never Latest; the last 10 are kept) and replace its files on the rolling `alpha` prerelease: `Penmoss.apk`, `Penmoss.dmg`, `penmoss-mac-<build>.zip`, `SHA256SUMS.txt` and `alpha-mac.yml`, the feed last, and the `alpha` tag moves to that build's commit. The version is `X.Y.(Z+1)-alpha.<build>` from the newest stable tag (`node .github/scripts/releases.mjs version --run <build>`). `.github/scripts/releases.mjs` holds the rules and `task releases:test` checks them against an in-memory Releases page; `--dry-run` prints what a command would change against the real repository without changing it.
+**Alpha: every merge to main that ships (P3–P5, A1188, A1349).** The `android-release` and `mac-release` jobs publish each build whose change ships (above) as the prerelease `build-<run>` (never Latest; the last 10 are kept) and replace its files on the rolling `alpha` prerelease: `Penmoss.apk`, `Penmoss.dmg`, `penmoss-mac-<build>.zip`, `SHA256SUMS.txt` and `alpha-mac.yml`, the feed last, and the `alpha` tag moves to that build's commit. The version is `X.Y.(Z+1)-alpha.<build>` from the newest stable tag (`node .github/scripts/releases.mjs version --run <build>`). `.github/scripts/releases.mjs` (the CLI) and its modules (`release-builds.mjs`, `release-alpha.mjs`, `release-stable.mjs` and the rest) hold the rules, and `task releases:test` checks them against an in-memory Releases page; `--dry-run` prints what a command would change against the real repository without changing it.
 
 **Release notes on every build (PEN-106, A1301).** After `publish-alpha`, the `android-release` job runs `releases.mjs publish-notes`. It lists the commits since the build the notes last saw (`head` in the file; the first time, the newest build release before this one), then the pull requests merged into `main` that each commit belongs to. It parses each one's `## Release note` (A1294). A pull request merged before the check, or with a note that doesn't parse, counts as `none` with a warning. The notes go to three places:
 

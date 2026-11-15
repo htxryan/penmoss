@@ -4,16 +4,11 @@
  * writes what the sheet asks for in the note's own document, which the app stores and uploads
  * as any other edit. A new thread takes its place first (`commentDraft`), then its comment.
  */
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
-import { readAgentSessions, recordAgentSession } from '@penmoss/sync-client/agent-sessions';
-import {
-  addComment,
-  readThread,
-  readThreads,
-  setThreadDelivery,
-} from '@penmoss/sync-client/comments';
-import { initNote } from '@penmoss/sync-client/note';
-import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
+import { NOTE_ROOT } from '@penmoss/model/replica';
+import { readAgentSessions, recordAgentSession } from '@penmoss/model/agent-sessions';
+import { addComment, readThread, readThreads, setThreadDelivery } from '@penmoss/model/comments';
+import { initNote } from '@penmoss/model/note';
+import { createYjs14Replica } from '@penmoss/model/yjs14';
 import type { JSONContent } from '@tiptap/core';
 import * as Y from '@y/y';
 import { fromBase64, toBase64 } from 'lib0/buffer';

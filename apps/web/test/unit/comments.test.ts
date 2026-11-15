@@ -1,4 +1,4 @@
-import type { ThreadData } from '@penmoss/sync-client/comments';
+import type { ThreadData } from '@penmoss/model/comments';
 import { describe, expect, it } from 'vitest';
 import { canEdit, deliveryText, deviceAuthor, floats, shownInNote } from '../../src/notes/comments';
 

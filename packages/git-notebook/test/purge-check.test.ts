@@ -4,7 +4,7 @@
  */
 import * as Y from '@y/y';
 import { describe, expect, it } from 'vitest';
-import { setTitle } from '@penmoss/sync-client/note';
+import { setTitle } from '@penmoss/model/note';
 import { commitPurges } from '../src/purge-check';
 import { Layout } from '../src/layout';
 import { markRecoveredFrom } from '../src/purge';

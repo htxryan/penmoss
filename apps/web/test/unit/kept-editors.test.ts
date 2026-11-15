@@ -12,7 +12,7 @@ import {
 import type { Notes } from '../../src/notes/service';
 
 const deleted = new Set<object>();
-vi.mock('@penmoss/sync-client/note', () => ({ isDeleted: (doc: object) => deleted.has(doc) }));
+vi.mock('@penmoss/model/note', () => ({ isDeleted: (doc: object) => deleted.has(doc) }));
 
 /** A source's notes: only their identity matters to the kept editors. */
 function fakeNotes() {

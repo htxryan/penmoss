@@ -1,4 +1,4 @@
-import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
+import { createYjs14Replica } from '@penmoss/model/yjs14';
 import { NodeSelection } from '@tiptap/pm/state';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createCollabEditor, type CollabEditor } from '../src/collab';

@@ -3,8 +3,8 @@
  * root of block nodes, each holding text.
  */
 import * as Y from '@y/y';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
-import { createYjs14Replica, type Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import { NOTE_ROOT } from '@penmoss/model/replica';
+import { createYjs14Replica, type Yjs14Replica } from '@penmoss/model/yjs14';
 
 export const createReplica = (): Yjs14Replica => createYjs14Replica();
 

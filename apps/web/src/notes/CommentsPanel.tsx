@@ -14,11 +14,11 @@
  * `CommentThread`). The list keeps every thread, threads on the note as a whole first; Add Note
  * Comment starts one of those here.
  */
-import type { CommentTarget, PlacedThread } from '@penmoss/sync-client/comments';
-import { isActive, offeredSessions, type AgentSession } from '@penmoss/sync-client/agent-sessions';
-import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import type { CommentTarget, PlacedThread } from '@penmoss/model/comments';
+import { isActive, offeredSessions, type AgentSession } from '@penmoss/model/agent-sessions';
+import type { Yjs14Replica } from '@penmoss/model/yjs14';
 import type { SelectionAnchor } from '@penmoss/editor';
-import { isNoteThread } from '@penmoss/sync-client/comments';
+import { isNoteThread } from '@penmoss/model/comments';
 import { Select } from '@penmoss/ui/controls/Select';
 import { Icon } from '@penmoss/ui/icons';
 import {

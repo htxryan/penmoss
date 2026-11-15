@@ -27,7 +27,7 @@ export interface AgentResult {
   readonly releaseNote?: string;
   /**
    * The PR's title, as the agent puts it (A1345): a statement of at most 60 characters naming
-   * no card. `prTitle` (run.ts) uses it when it is one, else the commit subject or the summary.
+   * no card. `prTitle` (pr-title.ts) uses it when it is one, else the commit subject or the summary.
    */
   readonly title?: string;
 }

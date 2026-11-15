@@ -15,7 +15,7 @@ import {
   type SortMode,
   type WorkspaceTree,
 } from '@penmoss/core/workspace';
-import type { WorkspaceSnapshot } from '@penmoss/sync-client/workspace';
+import type { WorkspaceSnapshot } from '@penmoss/model/workspace';
 import { displayTitle, type NoteListEntry } from '../notes/list';
 
 /**

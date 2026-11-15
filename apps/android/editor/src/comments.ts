@@ -1,6 +1,6 @@
 /**
  * Comment threads on the phone (T48, D40, A770–A784): the page's side of the Comments sheet.
- * Threads live in the open note's own Yjs document (`@penmoss/sync-client/comments`), which only
+ * Threads live in the open note's own Yjs document (`@penmoss/model/comments`), which only
  * the page reads, so every change the sheet asks for is written here, offline included, and
  * reaches the app as an ordinary `update` to store and upload. Comments are not edits (A770):
  * they leave the offline index's text alone.
@@ -19,7 +19,7 @@
  * session the WorkspaceDoc no longer shows as seen this week fails as `gone` when the app lists
  * the sessions (`commentSessions`, A1062).
  */
-import { failGoneDeliveriesSeen } from '@penmoss/sync-client/agent-sessions';
+import { failGoneDeliveriesSeen } from '@penmoss/model/agent-sessions';
 import { ulid } from '@penmoss/core/ids';
 import {
   COMMENT_ADD_EVENT,
@@ -50,8 +50,8 @@ import {
   type CommentDelivery,
   type CommentTarget,
   type ThreadData,
-} from '@penmoss/sync-client/comments';
-import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
+} from '@penmoss/model/comments';
+import type { Yjs14Replica } from '@penmoss/model/yjs14';
 import type { Editor } from '@tiptap/core';
 import {
   COMMENT_ID,

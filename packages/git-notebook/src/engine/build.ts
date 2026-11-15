@@ -5,8 +5,8 @@
  * pushes the commit, and builds again from a new fetch when the push is rejected.
  */
 import { gitBlobSha } from '@penmoss/core/mirror';
-import { attachmentFiles, noteBodyForDisplay } from '@penmoss/sync-client/markdown';
-import { NOTE_META } from '@penmoss/sync-client/note';
+import { attachmentFiles, noteBodyForDisplay } from '@penmoss/model/markdown';
+import { NOTE_META } from '@penmoss/model/note';
 import * as Y from '@y/y';
 import { actorFile, parseActor, type ActorFile } from '../actors';
 import {

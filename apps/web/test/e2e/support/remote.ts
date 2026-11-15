@@ -13,12 +13,8 @@ import {
   NotebookOps,
 } from '@penmoss/git-notebook';
 import { NodeGitTransport } from '@penmoss/git-notebook/node';
-import {
-  readSettings,
-  readWorkspace,
-  type WorkspaceSnapshot,
-} from '@penmoss/sync-client/workspace';
-import { readTitle } from '@penmoss/sync-client/note';
+import { readSettings, readWorkspace, type WorkspaceSnapshot } from '@penmoss/model/workspace';
+import { readTitle } from '@penmoss/model/note';
 import type { GitHost } from './git-host';
 
 /** Thrown before a reader's push: a reader never writes to the remote. */

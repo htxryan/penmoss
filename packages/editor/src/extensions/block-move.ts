@@ -11,7 +11,7 @@
  * the drag is cancelled and nothing is inserted. No move runs while a peer's
  * update is waiting for content it builds on (`hasPendingUpdates`).
  */
-import { hasPending } from '@penmoss/sync-client/yjs14';
+import { hasPending } from '@penmoss/model/yjs14';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import {
   NodeSelection,

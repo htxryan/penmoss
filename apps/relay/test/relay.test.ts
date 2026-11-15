@@ -14,7 +14,7 @@ import {
 } from '@penmoss/git-notebook';
 import { COMMENT_TOOL_NAMES } from '@penmoss/git-notebook/local';
 import { localTools, RELAY_ABSENT_TOOLS } from '@penmoss/git-notebook/local';
-import { readTitle } from '@penmoss/sync-client/note';
+import { readTitle } from '@penmoss/model/note';
 import { describe, expect, it } from 'vitest';
 import {
   FAKE_API,

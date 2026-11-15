@@ -292,7 +292,7 @@ export function keepFailures(
           left.push(`${file.label} (${Math.round(size / 1024)} KB)`);
           continue;
         }
-        // The proof's own copy of its screenshot is already there (host.ts).
+        // The proof's own copy of its screenshot is already there (host-proof.ts).
         const own = `${platform}-${test.n}-screenshot${ext}`;
         if (file.kind === 'screenshot' && existsSync(join(raw, own))) {
           lines.push(`- \`${own}\`: its last screenshot`);

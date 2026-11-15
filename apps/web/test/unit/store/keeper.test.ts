@@ -7,7 +7,7 @@ import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import { NoteStore } from '../../../src/store/idb';
 import { ReplicaKeeper } from '../../../src/store/keeper';
-import { recordFromDoc } from '@penmoss/sync-client/records';
+import { recordFromDoc } from '@penmoss/model/records';
 import { appendParagraph, createReplica } from './support/editing';
 
 let dbCount = 0;

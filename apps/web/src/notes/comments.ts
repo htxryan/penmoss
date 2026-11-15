@@ -23,9 +23,9 @@ import {
   type CommentTarget,
   type PlacedThread,
   type ThreadData,
-} from '@penmoss/sync-client/comments';
-import { failGoneDeliveries, type AgentSession } from '@penmoss/sync-client/agent-sessions';
-import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
+} from '@penmoss/model/comments';
+import { failGoneDeliveries, type AgentSession } from '@penmoss/model/agent-sessions';
+import type { Yjs14Replica } from '@penmoss/model/yjs14';
 import type { SelectionAnchor } from '@penmoss/editor';
 import { ulid } from '@penmoss/core/ids';
 import { useEffect, useState } from 'react';

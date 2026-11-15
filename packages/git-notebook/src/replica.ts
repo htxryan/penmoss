@@ -7,7 +7,7 @@
 import * as Y from '@y/y';
 import type { NotebookInfo } from './layout';
 import type { WriterRecord } from './writer';
-import { isEmptyUpdate } from '@penmoss/sync-client/yjs14';
+import { isEmptyUpdate } from '@penmoss/model/yjs14';
 import { applyKeepingId, ENGINE_ORIGIN, GIT_ORIGIN, newDoc, LOCAL_STORE_ORIGIN } from './yjs';
 
 /** The engine's bookkeeping, saved with the docs. */

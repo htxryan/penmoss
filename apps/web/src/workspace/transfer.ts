@@ -8,7 +8,7 @@
  */
 import { ulid } from '@penmoss/core/ids';
 import type { FolderNode, WorkspaceTree } from '@penmoss/core/workspace';
-import { copyNote, noteAttachmentPaths } from '@penmoss/sync-client/records';
+import { copyNote, noteAttachmentPaths } from '@penmoss/model/records';
 import type { Notes } from '../notes/service';
 import { childrenOf, planDrop, type ItemRef } from './model';
 import type { Workspace } from './service';

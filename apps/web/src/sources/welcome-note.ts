@@ -3,8 +3,8 @@
  * what Penmoss does, at the top of the new notebook, opened when the app opens.
  */
 import { ulid } from '@penmoss/core/ids';
-import { isoWithOffset } from '@penmoss/sync-client/note';
-import { recordFromUpdates } from '@penmoss/sync-client/records';
+import { isoWithOffset } from '@penmoss/model/note';
+import { recordFromUpdates } from '@penmoss/model/records';
 import type { Source } from './registry';
 
 export const WELCOME_TITLE = 'Welcome to Penmoss';
@@ -40,7 +40,7 @@ export async function addWelcomeNote(
   if (source.workspace.getState().snapshot.notes.length > 0) return null;
   const [codec, { markdownNote }] = await Promise.all([
     import('@penmoss/core'),
-    import('@penmoss/sync-client/periodic'),
+    import('@penmoss/model/periodic'),
   ]);
   const id = ulid(now.getTime());
   const update = markdownNote(codec, {

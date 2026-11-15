@@ -1,7 +1,7 @@
-import { initNote } from '@penmoss/sync-client/note';
-import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
+import { initNote } from '@penmoss/model/note';
+import { createYjs14Replica } from '@penmoss/model/yjs14';
 import { describe, expect, it } from 'vitest';
-import { noteFields } from '@penmoss/sync-client/note-fields';
+import { noteFields } from '@penmoss/model/note-fields';
 import { noteMarkdown } from '../../src/notes/markdown';
 
 const ID = '01JB7Q3V6M8K2T9RZ4XN5C1HPD';

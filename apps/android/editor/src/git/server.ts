@@ -40,9 +40,9 @@ import {
   readTitle,
   readTrashInfo,
   setDeleted,
-} from '@penmoss/sync-client/note';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
-import { isActive, offeredSessions, readAgentSessions } from '@penmoss/sync-client/agent-sessions';
+} from '@penmoss/model/note';
+import { NOTE_ROOT } from '@penmoss/model/replica';
+import { isActive, offeredSessions, readAgentSessions } from '@penmoss/model/agent-sessions';
 import { ulid } from '@penmoss/core/ids';
 import {
   createFolder,
@@ -55,10 +55,10 @@ import {
   readWorkspace,
   registerNote,
   setSetting,
-} from '@penmoss/sync-client/workspace';
+} from '@penmoss/model/workspace';
 import { parseMarkdown } from '@penmoss/core';
-import { appendCapture, captureTime, splitCapture } from '@penmoss/sync-client/capture';
-import { mirrorMarkdown, readNoteState } from '@penmoss/sync-client/markdown';
+import { appendCapture, captureTime, splitCapture } from '@penmoss/model/capture';
+import { mirrorMarkdown, readNoteState } from '@penmoss/model/markdown';
 import { fromBase64, toBase64 } from 'lib0/buffer';
 import * as Y from '@y/y';
 

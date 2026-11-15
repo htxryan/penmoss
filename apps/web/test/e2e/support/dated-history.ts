@@ -14,7 +14,7 @@ import {
 } from '@penmoss/git-notebook';
 import { LocalNotebook } from '@penmoss/git-notebook/local';
 import { NodeGitTransport } from '@penmoss/git-notebook/node';
-import { setTitle } from '@penmoss/sync-client/note';
+import { setTitle } from '@penmoss/model/note';
 
 /** A writer (a device or an agent) that commits and pushes a change on the day it is given. */
 export type DatedWriter = (iso: string, change: (ops: NotebookOps) => void) => Promise<void>;

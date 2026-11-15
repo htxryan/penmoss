@@ -33,7 +33,7 @@ import {
   FOLDER_TRASH_DAYS,
   type TrashedFolder,
   type WorkspaceSnapshot,
-} from '@penmoss/sync-client/workspace';
+} from '@penmoss/model/workspace';
 import * as Y from '@y/y';
 import { titleAt } from './at-commit';
 import { commitWriter } from './history';

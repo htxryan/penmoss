@@ -1,5 +1,5 @@
 import { normaliseTag, TAG_DESCRIPTION_MAX } from '@penmoss/core/tags';
-import type { TagChange } from '@penmoss/sync-client/tags';
+import type { TagChange } from '@penmoss/model/tags';
 import { Icon } from '@penmoss/ui/icons';
 import {
   useCallback,
