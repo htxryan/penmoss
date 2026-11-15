@@ -57,7 +57,7 @@ export class NotebookOpError extends Error {
 }
 
 /** ISO 8601 with the offset of `timeZone` at `at` (frontmatter `created`, A209). */
-export function isoInZone(at: number, timeZone: string): string {
+function isoInZone(at: number, timeZone: string): string {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone,
     hourCycle: 'h23',

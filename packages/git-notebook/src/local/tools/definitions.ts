@@ -173,7 +173,7 @@ export function conflictAdvice(details: Record<string, unknown>): string {
 }
 
 /**
- * A refusal (the REST API's `{ code, message, details }`) as tool error text: what went wrong
+ * A refusal (a `LocalError`'s `{ code, message, details }`) as tool error text: what went wrong
  * and what to do next, so an agent can correct itself.
  */
 export function describeRefusal(

@@ -263,7 +263,7 @@ export class LocalNotebook {
       id,
       title: state.title,
       tags: info.tags,
-      // `updated` as the note's file and the server write it (A1024): its last change, not the
+      // `updated` as the note's file has it (A1024): its last change, not the
       // list's time, which is never before `created` (a day's note made ahead of its day).
       markdown: renderNote(
         state,
