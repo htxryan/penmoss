@@ -1,6 +1,8 @@
 import { Icon } from '@penmoss/ui/icons';
 import { DialogClose } from '../shell/DialogClose';
-import { useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { PickerField, PickerListbox, PickerOverlay } from '../shell/picker';
+import { usePickerList } from '../shell/picker-list';
+import { useMemo, useState } from 'react';
 import { displayTitle, type NoteListEntry } from '../notes/list';
 import type { CommandDefinition } from './definitions';
 import { fuzzyMatch, highlightRuns, type FuzzyMatch } from '@penmoss/core/fuzzy';
@@ -48,9 +50,6 @@ export function Palette({ mode, notes, onRunCommand, onOpenNote, onClose }: Pale
   const version = useCommandsVersion();
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
-  const input = useRef<HTMLInputElement>(null);
-  const list = useRef<HTMLDivElement>(null);
-  const id = useId();
 
   const items = useMemo((): Item[] => {
     void version;
@@ -100,169 +99,108 @@ export function Palette({ mode, notes, onRunCommand, onOpenNote, onClose }: Pale
     return found.sort((a, b) => b.match.score - a.match.score).slice(0, MAX_RESULTS);
   }, [commands, version, mode, notes, query]);
 
-  const current = Math.min(active, Math.max(0, items.length - 1));
-
-  useLayoutEffect(() => {
-    input.current?.focus();
-  }, []);
-
-  useLayoutEffect(() => {
-    list.current
-      ?.querySelector<HTMLElement>(`[data-index="${current}"]`)
-      ?.scrollIntoView?.({ block: 'nearest' });
-  }, [current, items]);
-
   const choose = (item: Item | undefined) => {
     if (!item) return;
     if (item.kind === 'command') onRunCommand(item.command.id);
     else onOpenNote(item.note.id);
   };
-
-  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.nativeEvent.isComposing) return;
-    const count = Math.max(1, items.length);
-    switch (event.key) {
-      case 'ArrowDown':
-        event.preventDefault();
-        setActive((current + 1) % count);
-        break;
-      case 'ArrowUp':
-        event.preventDefault();
-        setActive((current - 1 + count) % count);
-        break;
-      case 'Home':
-      case 'End':
-        if (!event.ctrlKey && !event.metaKey) return;
-        event.preventDefault();
-        setActive(event.key === 'Home' ? 0 : count - 1);
-        break;
-      case 'Enter':
-        event.preventDefault();
-        choose(items[current]);
-        break;
-      case 'Escape':
-        event.preventDefault();
-        event.stopPropagation();
-        onClose();
-        break;
-    }
-  };
+  const picker = usePickerList({
+    items,
+    active,
+    setActive,
+    onChoose: (index) => choose(items[index]),
+    onClose,
+  });
 
   const label = mode === 'all' ? 'Command Palette' : 'Quick Open';
-  const option = (index: number) => `${id}-option-${index}`;
   let lastGroup: string | null = null;
   return (
-    <div
-      className="overlay"
-      data-testid={mode === 'all' ? 'palette' : 'quick-open'}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+    <PickerOverlay
+      testId={mode === 'all' ? 'palette' : 'quick-open'}
+      className="palette"
+      label={label}
+      onClose={onClose}
     >
-      <div className="dialog palette" role="dialog" aria-modal="true" aria-label={label}>
-        <div className="dlg-search">
-          <input
-            ref={input}
-            type="text"
-            role="combobox"
-            aria-expanded="true"
-            aria-controls={`${id}-list`}
-            aria-autocomplete="list"
-            aria-activedescendant={items.length > 0 ? option(current) : undefined}
-            aria-label={label}
-            placeholder={mode === 'all' ? 'Type a command or a note…' : 'Open a note by title…'}
-            autoComplete="off"
-            spellCheck={false}
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setActive(0);
-            }}
-            onKeyDown={onKeyDown}
-          />
-          <DialogClose
-            label={mode === 'all' ? 'Close the Palette' : 'Close Quick Open'}
-            onClose={onClose}
-          />
-        </div>
-        <div
-          ref={list}
-          className="dlg-list"
-          id={`${id}-list`}
-          role="listbox"
-          aria-label={`${label} results`}
-        >
-          {items.length === 0 ? (
-            <p className="dlg-empty" role="status">
-              No matches for “{query}”
-            </p>
-          ) : (
-            items.map((item, index) => {
-              const header =
-                item.group !== lastGroup ? (
-                  <div className="grp-h" role="presentation" key={`group:${item.group}:${index}`}>
-                    {item.group}
-                  </div>
-                ) : null;
-              lastGroup = item.group;
-              const title =
-                item.kind === 'command' ? item.command.title : displayTitle(item.note.title);
-              return [
-                header,
-                <div
-                  key={item.key}
-                  id={option(index)}
-                  role="option"
-                  className="opt"
-                  aria-selected={index === current}
-                  data-index={index}
-                  data-kind={item.kind}
-                  onMouseMove={() => {
-                    if (index !== current) setActive(index);
-                  }}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => choose(item)}
-                >
-                  <span className="oic" aria-hidden="true">
-                    <Icon name={item.kind === 'command' ? 'command' : 'file'} size={14} />
-                  </span>
-                  <span className="ot">
-                    {highlightRuns(title, item.match.indices).map((run, i) =>
-                      run.match ? <b key={i}>{run.text}</b> : <span key={i}>{run.text}</span>,
-                    )}
-                    {item.kind === 'command' && query.trim() ? (
-                      <span className="p">{item.command.area}</span>
-                    ) : null}
-                  </span>
-                  <span className="os">
-                    {item.kind === 'command' ? (
-                      <Kbd combo={commands.keysOf(item.command.id)[0]} />
-                    ) : (
-                      'Note'
-                    )}
-                  </span>
-                </div>,
-              ];
-            })
-          )}
-        </div>
-        <div className="dlg-foot" aria-hidden="true">
-          <span className="keys">
-            <kbd>↑</kbd>
-            <kbd>↓</kbd>
-          </span>
-          Navigate
-          <span className="keys">
-            <kbd>↵</kbd>
-          </span>
-          {mode === 'all' ? 'Run' : 'Open'}
-          <span className="grow" />
-          <span className="keys">
-            <kbd>Esc</kbd>
-          </span>
-          Close
-        </div>
+      <div className="dlg-search">
+        <PickerField
+          picker={picker}
+          aria-label={label}
+          placeholder={mode === 'all' ? 'Type a command or a note…' : 'Open a note by title…'}
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setActive(0);
+          }}
+        />
+        <DialogClose
+          label={mode === 'all' ? 'Close the Palette' : 'Close Quick Open'}
+          onClose={onClose}
+        />
       </div>
-    </div>
+      <PickerListbox picker={picker} label={`${label} results`}>
+        {items.length === 0 ? (
+          <p className="dlg-empty" role="status">
+            No matches for “{query}”
+          </p>
+        ) : (
+          items.map((item, index) => {
+            const header =
+              item.group !== lastGroup ? (
+                <div className="grp-h" role="presentation" key={`group:${item.group}:${index}`}>
+                  {item.group}
+                </div>
+              ) : null;
+            lastGroup = item.group;
+            const title =
+              item.kind === 'command' ? item.command.title : displayTitle(item.note.title);
+            return [
+              header,
+              <div
+                key={item.key}
+                {...picker.optionProps(index)}
+                className="opt"
+                data-kind={item.kind}
+                onClick={() => choose(item)}
+              >
+                <span className="oic" aria-hidden="true">
+                  <Icon name={item.kind === 'command' ? 'command' : 'file'} size={14} />
+                </span>
+                <span className="ot">
+                  {highlightRuns(title, item.match.indices).map((run, i) =>
+                    run.match ? <b key={i}>{run.text}</b> : <span key={i}>{run.text}</span>,
+                  )}
+                  {item.kind === 'command' && query.trim() ? (
+                    <span className="p">{item.command.area}</span>
+                  ) : null}
+                </span>
+                <span className="os">
+                  {item.kind === 'command' ? (
+                    <Kbd combo={commands.keysOf(item.command.id)[0]} />
+                  ) : (
+                    'Note'
+                  )}
+                </span>
+              </div>,
+            ];
+          })
+        )}
+      </PickerListbox>
+      <div className="dlg-foot" aria-hidden="true">
+        <span className="keys">
+          <kbd>↑</kbd>
+          <kbd>↓</kbd>
+        </span>
+        Navigate
+        <span className="keys">
+          <kbd>↵</kbd>
+        </span>
+        {mode === 'all' ? 'Run' : 'Open'}
+        <span className="grow" />
+        <span className="keys">
+          <kbd>Esc</kbd>
+        </span>
+        Close
+      </div>
+    </PickerOverlay>
   );
 }
