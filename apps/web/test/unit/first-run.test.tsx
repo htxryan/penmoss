@@ -917,6 +917,36 @@ describe('Add Notebook from Settings: the same screens (A1562)', () => {
     expect($('first-run-open')).toBeNull();
     expect(add).not.toHaveBeenCalled();
   });
+
+  it('says when it can’t reach GitHub, with Try Again and Paste a URL Instead', async () => {
+    const { browse, calls } = github({
+      repos: { ok: true, via: 'git', value: { more: false, repos: [repo('notes')] } },
+    });
+    const reachable = browse.repos.bind(browse);
+    let offline = true;
+    browse.repos = () =>
+      offline
+        ? Promise.resolve({
+            ok: false,
+            error: { reason: 'offline', message: 'Can’t reach github.com.' },
+          })
+        : reachable();
+    await openAdd(browse);
+    await choose('first-run-existing');
+    await press('first-run-continue');
+    await vi.waitFor(() => expect($('first-run-github')?.dataset['state']).toBe('unreachable'));
+    expect(host.querySelector('h2')?.textContent).toBe('Can’t Reach GitHub');
+    expect($('first-run-github-problem')?.textContent).toBe(
+      'Check the connection, then try again.',
+    );
+    expect($('first-run-url-instead')).not.toBeNull();
+    // Back on line, Try Again lists the repositories.
+    offline = false;
+    await press('first-run-retry');
+    await vi.waitFor(() => expect(screen()).toBe('list'));
+    expect($$('first-run-tree-repo').map((each) => each.dataset['repo'])).toEqual(['ryan/notes']);
+    expect(calls).toContainEqual(['repos']);
+  });
 });
 
 describe('the words the first run takes from a repository', () => {
