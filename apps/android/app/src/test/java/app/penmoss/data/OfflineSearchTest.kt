@@ -405,10 +405,10 @@ class OfflineSearchTest {
 
     /**
      * Review S-A (A610): 30 hits of about 30 KB each, every one marked, in the title and the
-     * snippet, where the words are; quickly, since this runs on each pause in typing.
+     * snippet, where the words are. How fast is OfflineSearchBudgetTest's (A1244, A1539).
      */
     @Test
-    fun marksThirtyLongHitsQuickly() = runTest {
+    fun marksThirtyLongHits() = runTest {
         val filler = listOf("happiness", "relational", "conditioning", "Café", "我们今天", "ørsteds", "running", "generations")
         db.withTransaction {
             (1..30).forEach { i ->
@@ -422,17 +422,12 @@ class OfflineSearchTest {
                 db.search().putText(NoteTextEntity.of(id, "Gardens $i", body, "", ""))
             }
         }
-        search.search("garden target") // warm up
-        val started = System.nanoTime()
         val hits = search.search("garden target")
-        val elapsedMs = (System.nanoTime() - started) / 1_000_000
         assertEquals(30, hits.size)
         hits.forEach { hit ->
             assertTrue(hit.titleMarked, hit.titleMarked.startsWith("\u0002Gardens\u0003 "))
             assertTrue(hit.snippet, hit.snippet.endsWith("the \u0002target\u0003 word at the end"))
         }
-        println("offline search, 30 hits of 30 KB: $elapsedMs ms")
-        assertTrue("took $elapsedMs ms", elapsedMs < 100)
     }
 
     /**
@@ -461,7 +456,7 @@ class OfflineSearchTest {
     }
 
     @Test
-    fun answersATwoLetterPrefixOverFiveThousandNotesQuickly() = runTest {
+    fun answersATwoLetterPrefixOverFiveThousandNotes() = runTest {
         val words = listOf("garden", "lemon", "basil", "train", "coast", "memory", "kitchen", "budget", "backup", "recipe", "gate", "gap")
         val ids = (1..5_000).map { "n%04d".format(it) }
         store.saveChanges(ChangesPage(1, notes = ids.mapIndexed { i, id -> ChangedNote(id, 1, "Note $i ${words[i % words.size]}", "", i.toLong()) }))
@@ -471,13 +466,8 @@ class OfflineSearchTest {
                 db.search().putText(NoteTextEntity.of(id, "Note $i ${words[i % words.size]}", body, "", ""))
             }
         }
-        search.search("ga", prefixLast = true) // warm up
-        val started = System.nanoTime()
         val hits = search.search("ga", prefixLast = true)
-        val elapsedMs = (System.nanoTime() - started) / 1_000_000
         assertEquals(OfflineSearch.DEFAULT_LIMIT, hits.size)
-        assertTrue("took $elapsedMs ms", elapsedMs < 300)
-        println("offline search, 5,000 notes, \"ga\" as typed: $elapsedMs ms")
     }
 
     private fun totalChanges(): Long = db.openHelper.writableDatabase.query("SELECT total_changes()").use { it.moveToFirst(); it.getLong(0) }
