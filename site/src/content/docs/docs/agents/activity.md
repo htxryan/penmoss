@@ -5,7 +5,7 @@ description: See what each agent changed in your notebook and undo it, note by n
 
 This page shows you how to see what your agents changed and how to undo it.
 
-Every agent writes as itself (see [How agents work](/docs/agents/#each-agent-has-its-own-copy)), so Penmoss can tell you what each one did.
+Every agent edit names the app and session that made it (see [How agents work](/docs/agents/#one-server-every-notebook)), so Penmoss can tell you what each one did.
 
 ## Edits to notes: History
 
