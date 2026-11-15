@@ -100,7 +100,12 @@ function fakeMeaning(initial: { state?: MeaningStatus['state']; leaseFree?: bool
   return { meaning, control };
 }
 
-function machine(meaning: MeaningIo | undefined, indexEveryMs = 20, leaseRetryMs = 60_000) {
+function machine(
+  meaning: MeaningIo | undefined,
+  indexEveryMs = 20,
+  leaseRetryMs = 60_000,
+  claimEveryMs?: number,
+) {
   const notebooks = nodeNotebooks({
     home: join(temp.path, 'home'),
     env: {},
@@ -113,6 +118,7 @@ function machine(meaning: MeaningIo | undefined, indexEveryMs = 20, leaseRetryMs
     lockWaitMs: 300,
     indexEveryMs,
     leaseRetryMs,
+    ...(claimEveryMs === undefined ? {} : { claimEveryMs }),
     ...(meaning ? { meaning } : {}),
   });
   /** stdin's lines; a function runs between two (it waits for something, or changes it). */
@@ -445,5 +451,127 @@ describe('penmoss mcp with meaning (T75, A1157)', () => {
     expect(tools.find((tool) => tool.name === 'search_notes')!.description).toMatch(
       /no meaning search/,
     );
+  });
+});
+
+describe('penmoss mcp over every notebook, with meaning (PEN-153)', () => {
+  const rpc = (id: number, method: string, params?: unknown) =>
+    JSON.stringify({ jsonrpc: '2.0', id, method, ...(params ? { params } : {}) });
+  const call = (id: number, name: string, args: Record<string, unknown>) =>
+    rpc(id, 'tools/call', { name, arguments: args });
+  const replies = (stdout: string) =>
+    stdout
+      .trim()
+      .split('\n')
+      .map(
+        (line) =>
+          JSON.parse(line) as {
+            result: { isError?: boolean; structuredContent: Record<string, unknown> };
+          },
+      );
+
+  /** Two notebooks with an agent copy each, and a note in each made through the server. */
+  async function twoNotebooks(cli: ReturnType<typeof machine>) {
+    for (const name of ['Personal', 'Work']) {
+      expect(
+        (await cli(['notebook', 'add', hosts.url(name.toLowerCase()), '--name', name])).code,
+      ).toBe(0);
+      expect(
+        (
+          await cli([
+            'notebook',
+            'add',
+            hosts.url(name.toLowerCase()),
+            '--name',
+            `${name.toLowerCase()}-agent`,
+            '--agent',
+            'Agent',
+          ])
+        ).code,
+      ).toBe(0);
+    }
+  }
+  const notes = [
+    call(1, 'create_note', {
+      notebook: 'Personal',
+      title: 'UPS shutdown',
+      markdown: 'When the power fails the battery keeps the rack up and the guests shut down.',
+    }),
+    call(2, 'create_note', {
+      notebook: 'Work',
+      title: 'Sourdough',
+      markdown: 'Feed the starter flour and water every morning.',
+    }),
+  ];
+
+  it('opens the model once, indexes every notebook as the holder, and searches them all', async () => {
+    const { meaning, control } = fakeMeaning();
+    const cli = machine(meaning);
+    await twoNotebooks(cli);
+    const served = await cli(
+      ['mcp'],
+      [
+        rpc(0, 'initialize', { protocolVersion: '2025-06-18' }),
+        ...notes,
+        until(() => control.embedded === 2),
+        call(3, 'search_notes', { query: 'battery rack', mode: 'semantic', limit: 5 }),
+      ],
+    );
+    expect(served.code, served.stderr).toBe(0);
+    const [init, , , found] = replies(served.stdout);
+    expect(JSON.stringify(init!.result)).toMatch(/by their words and their meaning/);
+    expect(control.opened).toBe(1);
+    expect(control.closed).toBe(1);
+    const search = found!.result.structuredContent as {
+      results: Array<{ title: string; notebook: string }>;
+      coverage: Array<{ notebook: string; indexed: number; total: number }>;
+    };
+    expect(search.results[0]).toMatchObject({ title: 'UPS shutdown', notebook: 'Personal' });
+    expect(search.coverage).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ notebook: 'Personal', indexed: 1, total: 1 }),
+        expect.objectContaining({ notebook: 'Work', indexed: 1, total: 1 }),
+      ]),
+    );
+    expect(served.stderr).toMatch(/indexing Personal, Work for meaning/);
+  });
+
+  it('claims each notebook’s vectors, and indexes every notebook once the holder is gone (A1350, A1355)', async () => {
+    const { meaning, control } = fakeMeaning({ leaseFree: false });
+    const cli = machine(meaning, 20, 20);
+    await twoNotebooks(cli);
+    let before = -1;
+    await cli(
+      ['mcp'],
+      [
+        ...notes,
+        until(() => new Set(control.claims.map((each) => each.owner)).size === 2),
+        until(() => control.takes > 2),
+        () => {
+          before = control.embedded;
+          control.leaseFree = true;
+        },
+        until(() => control.embedded === 2),
+        rpc(9, 'tools/list'),
+      ],
+    );
+    expect(before).toBe(0);
+    expect(control.opened).toBe(1);
+    // A claim of its own for each notebook, kept in its agent copy's directory.
+    const owners = [...new Set(control.claims.map((each) => each.owner))];
+    expect(owners).toHaveLength(2);
+  });
+
+  it('renews each notebook’s claim on its cadence (A1355)', async () => {
+    const { meaning, control } = fakeMeaning({ leaseFree: false });
+    const cli = machine(meaning, 20, 60_000, 20);
+    await twoNotebooks(cli);
+    const renewed = () => {
+      const counts = new Map<string, number>();
+      for (const each of control.claims) counts.set(each.owner, (counts.get(each.owner) ?? 0) + 1);
+      return counts.size === 2 && [...counts.values()].every((count) => count >= 3);
+    };
+    await cli(['mcp'], [...notes, until(renewed)]);
+    expect(renewed()).toBe(true);
   });
 });
