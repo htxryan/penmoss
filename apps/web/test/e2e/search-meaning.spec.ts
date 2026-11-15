@@ -130,7 +130,12 @@ test('a concept finds its note by meaning, marked ≈, and opens at its heading'
   await page.keyboard.type('outage');
   await page.keyboard.press('Enter');
   await expect(results(page).first()).toContainText('Server room');
-  // It opens at the section meaning matched.
+  // Once that answer is final (an Enter before it asks again rather than opening), it opens at
+  // the section meaning matched.
+  await expect(overlay(page).getByRole('listbox', { name: 'Search results' })).toHaveAttribute(
+    'aria-busy',
+    'false',
+  );
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(
     new RegExp(`/notes/${seeded(notebook).noteIds[0]}\\?heading=Power$`),

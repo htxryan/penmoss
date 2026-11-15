@@ -30,6 +30,7 @@ object AndroidCommands {
     private const val PERIODIC = "a daily or weekly note"
     private const val FOLDERS = "Home or a folder"
     private const val GIT_CARD = "The Mac app's git notebook commands (#170 F5): on the phone each is on the notebook's page in Settings (its Overview, Sync and Git tabs), where it keeps its BiometricPrompt."
+    private const val TABS = "The Mac app's note tabs (PEN-140, A1503): a phone shows one note at a time, full screen, with the system's Back, and Switch to a recent note (Ctrl+E) returns to one left behind."
 
     private val APP: Map<String, Coverage> = mapOf(
         // Search is where actions are found on the phone (FD6, adapted): P6 adds them to it.
@@ -119,6 +120,26 @@ object AndroidCommands {
         "theme.switch" to Coverage.Native(ANYWHERE),
         "theme.toggleDark" to Coverage.Native(ANYWHERE),
         "note.fullWidth" to Coverage.Native(ANYWHERE),
+        "tab.new" to Coverage.NotHere(TABS),
+        "tab.close" to Coverage.NotHere(TABS),
+        "tab.reopenClosed" to Coverage.NotHere(TABS),
+        "tab.closeOthers" to Coverage.NotHere(TABS),
+        "tab.closeRight" to Coverage.NotHere(TABS),
+        "tab.next" to Coverage.NotHere(TABS),
+        "tab.previous" to Coverage.NotHere(TABS),
+        "tab.select1" to Coverage.NotHere(TABS),
+        "tab.select2" to Coverage.NotHere(TABS),
+        "tab.select3" to Coverage.NotHere(TABS),
+        "tab.select4" to Coverage.NotHere(TABS),
+        "tab.select5" to Coverage.NotHere(TABS),
+        "tab.select6" to Coverage.NotHere(TABS),
+        "tab.select7" to Coverage.NotHere(TABS),
+        "tab.select8" to Coverage.NotHere(TABS),
+        "tab.selectLast" to Coverage.NotHere(TABS),
+        "tab.pin" to Coverage.NotHere(TABS),
+        "tab.duplicate" to Coverage.NotHere(TABS),
+        "tab.moveToWindow" to Coverage.NotHere(TABS),
+        "tab.all" to Coverage.NotHere(TABS),
     )
 
     /** Where [id] runs on Android, or null when it has no entry (the coverage test fails). */

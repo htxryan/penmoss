@@ -22,3 +22,30 @@ export function useOnRevealNotebooks(listener: () => void): void {
     return () => window.removeEventListener(REVEAL_NOTEBOOKS, on);
   }, []);
 }
+
+/**
+ * Reveal in Sidebar (PEN-140): the note's row in Notebooks, its folders opened, scrolled to and
+ * focused; the sidebar shows first if it was a rail or a closed drawer.
+ */
+const REVEAL_NOTE = 'penmoss:reveal-note';
+
+export function revealNote(id: string): void {
+  revealNotebooks();
+  window.dispatchEvent(new CustomEvent<string>(REVEAL_NOTE, { detail: id }));
+}
+
+/** Runs `listener` with the note's id whenever something asks for its row to show. */
+export function useOnRevealNote(listener: (id: string) => void): void {
+  const latest = useRef(listener);
+  useEffect(() => {
+    latest.current = listener;
+  });
+  useEffect(() => {
+    const on = (event: Event) => {
+      const id = (event as CustomEvent<unknown>).detail;
+      if (typeof id === 'string') latest.current(id);
+    };
+    window.addEventListener(REVEAL_NOTE, on);
+    return () => window.removeEventListener(REVEAL_NOTE, on);
+  }, []);
+}

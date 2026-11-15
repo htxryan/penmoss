@@ -86,7 +86,9 @@ describe('default keys on each platform (A90)', () => {
       expect(keysOf('note.new')).toEqual([apple ? 'Mod+Alt+N' : 'Alt+N']);
       expect(keysOf('folder.new')).toEqual([apple ? 'Mod+Alt+Shift+N' : 'Alt+Shift+N']);
       expect(keysOf('note.history')).toEqual([apple ? 'Mod+Alt+Shift+H' : 'Alt+Shift+H']);
-      expect(keysOf('journal.thisWeek')).toEqual(['Mod+Shift+W', apple ? 'Mod+Alt+W' : 'Alt+W']);
+      // On the Mac ⇧⌘W is Close Window since PEN-140 (A1503); Android keeps Ctrl+Shift+W.
+      expect(keysOf('journal.thisWeek')).toEqual(apple ? ['Mod+Alt+W'] : ['Mod+Shift+W', 'Alt+W']);
+      expect(keysOf('tab.close')).toEqual(['Mod+W']);
     }
   });
 });

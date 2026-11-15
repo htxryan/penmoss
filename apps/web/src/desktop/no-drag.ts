@@ -85,6 +85,8 @@ export const UNDER_ROWS = [
 export const TITLE_BAR_ROWS = [
   '.sb-head',
   '.note-top',
+  // The main window's tab strip (PEN-140, A1502): its first row beside the sidebar.
+  '.tab-strip',
   '.pm-graph-bar',
   '.settings-bar',
   '.app-bar',

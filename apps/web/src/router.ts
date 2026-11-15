@@ -213,7 +213,83 @@ export function startHistory(): void {
   writeLast(0);
 }
 
+/**
+ * Who keeps the main window's history (PEN-140, A1497): its tabs, each with its own Back and
+ * Forward. The address follows the active tab's page; a note window, and a test with no tabs,
+ * keep the browser's history (A710).
+ */
+export interface HistoryDriver {
+  navigate(path: string, replace: boolean): void;
+  back(): void;
+  forward(): void;
+  place(): HistoryPlace;
+  /** A new tab showing `path`: in the background (⌘-click), or in front (⇧⌘-click, ⌘T). */
+  open(path: string, background: boolean): void;
+  /** A page asked for from outside the window's pages: the tab showing it, else a new one. */
+  show(path: string): void;
+}
+
+let driver: HistoryDriver | null = null;
+
+/** Hands the main window's history to `next` (its tabs); null gives it back to the browser. */
+export function setHistoryDriver(next: HistoryDriver | null): void {
+  driver = next;
+}
+
+/** The entry's place in this window's browser history (`history.state.penmossIndex`). */
+export const browserEntryIndex = (state?: unknown): number =>
+  entryIndex(state === undefined ? window.history.state : state);
+
+/**
+ * Shows `path` as this window's address without a page load, as a new browser entry or in
+ * place of the current one, and tells whoever follows the location (the driver's way out).
+ */
+export function writeAddress(path: string, mode: 'push' | 'replace', index: number): void {
+  const current = window.location.pathname + window.location.search;
+  if (path !== current || mode === 'push') {
+    if (mode === 'push') window.history.pushState({ [INDEX_KEY]: index }, '', path);
+    else
+      window.history.replaceState(
+        { ...asRecord(window.history.state), [INDEX_KEY]: index },
+        '',
+        path,
+      );
+  }
+  notifyNavigated();
+}
+
+const asRecord = (value: unknown): Record<string, unknown> =>
+  typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+
+/** Tells the location's followers it may have changed (a tab switch keeps the address at times). */
+export function notifyNavigated(): void {
+  for (const listener of [...navigated]) {
+    try {
+      listener();
+    } catch (error) {
+      // As a DOM event's listener would: the others still hear it.
+      console.error('[router] a navigation listener failed', error);
+    }
+  }
+}
+
+/** Back in this window: the active tab's history in the main window, else the browser's. */
+export function goBack(): void {
+  if (driver) driver.back();
+  else window.history.back();
+}
+
+/** Forward in this window, as `goBack`. */
+export function goForward(): void {
+  if (driver) driver.forward();
+  else window.history.forward();
+}
+
 export function navigate(path: string, options: { readonly replace?: boolean } = {}): void {
+  if (driver && !isNoteWindowPath(window.location.pathname)) {
+    driver.navigate(path, options.replace === true);
+    return;
+  }
   if (isNoteWindowPath(window.location.pathname)) {
     // A note window shows notes; anything else opens in the main window (T45, A710).
     const inWindow = inWindowPath(path);
@@ -233,14 +309,7 @@ export function navigate(path: string, options: { readonly replace?: boolean } =
     window.history.pushState({ [INDEX_KEY]: index + 1 }, '', path);
     writeLast(index + 1);
   }
-  for (const listener of [...navigated]) {
-    try {
-      listener();
-    } catch (error) {
-      // As a DOM event's listener would: the others still hear it.
-      console.error('[router] a navigation listener failed', error);
-    }
-  }
+  notifyNavigated();
 }
 
 /** Whether Back and Forward have somewhere to go in this window (T45's note window). */
@@ -253,6 +322,7 @@ let place: HistoryPlace = { back: false, forward: false };
 
 /** Back and Forward's state in this window now (a stable reference between changes). */
 export function historyPlace(): HistoryPlace {
+  if (driver) return driver.place();
   const index = entryIndex();
   const last = Math.max(readLast(), index);
   const back = index > 0;
@@ -362,19 +432,87 @@ export function noteOfPath(
 }
 
 /**
- * onClick for in-app links: navigate without a page load. An ⌥-click on a link to a note opens
- * it in a new window (T45).
+ * Where a click opens a page (PEN-140, A1498): in the tab on screen (`current`), a new tab
+ * behind it (`background`: ⌘-click, Ctrl-click or a middle click), a new tab in front
+ * (`foreground`: ⇧⌘-click) or a note window (`window`: ⌥-click, T45). Null for a click the app
+ * leaves alone (a right click, one already handled, other modifiers).
  */
-export function linkHandler(path: string) {
-  return (event: MouseEvent<HTMLAnchorElement>) => {
-    const note = isWindowClick(event) ? noteOfPath(path) : null;
+export type OpenIntent = 'current' | 'background' | 'foreground' | 'window';
+
+export function openIntent(
+  event: Pick<
+    MouseEvent,
+    'button' | 'metaKey' | 'ctrlKey' | 'shiftKey' | 'altKey' | 'defaultPrevented'
+  >,
+): OpenIntent | null {
+  if (event.defaultPrevented) return null;
+  if (event.button === 1) return event.altKey ? null : 'background';
+  if (event.button !== 0) return null;
+  if (isWindowClick(event)) return 'window';
+  if (event.altKey) return null;
+  const mod = event.metaKey || event.ctrlKey;
+  if (mod) return event.shiftKey ? 'foreground' : 'background';
+  return event.shiftKey ? null : 'current';
+}
+
+/** Whether this window has tabs (the main window, PEN-140). */
+export const hasTabs = (): boolean =>
+  driver !== null && typeof window !== 'undefined' && !isNoteWindowPath(window.location.pathname);
+
+/**
+ * Opens `path` as `intent` says: where there are no tabs (a note window), a new tab is the main
+ * window's, and anything but a window shows here.
+ */
+export function openPath(path: string, intent: OpenIntent): void {
+  if (intent === 'window') {
+    const note = noteOfPath(path);
     if (note) {
-      event.preventDefault();
       openNoteWindow(note.id, note.heading);
       return;
     }
-    if (!isPlainLeftClick(event)) return;
-    event.preventDefault();
+    intent = 'current';
+  }
+  if (intent === 'current' || !driver) {
     navigate(path);
+    return;
+  }
+  if (!hasTabs()) {
+    // A note window's ⌘-click: a tab of the main window (A1498).
+    openInMain(path);
+    return;
+  }
+  driver.open(path, intent === 'background');
+}
+
+/**
+ * A page asked for from outside the window's own pages (the menu bar icon, a deep link, Open
+ * Today's Journal, a note window): the tab already showing it, else a new tab; never in place of
+ * the page on screen (A1498). Without tabs, as `navigate`.
+ */
+export function showPath(path: string): void {
+  if (hasTabs()) driver!.show(path);
+  else navigate(path);
+}
+
+/**
+ * onClick for in-app links: navigate without a page load. An ⌥-click on a link to a note opens
+ * it in a new window (T45); a ⌘-click, a new tab (PEN-140).
+ */
+export function linkHandler(path: string) {
+  return (event: MouseEvent<HTMLAnchorElement>) => {
+    const intent = openIntent(event);
+    if (intent === 'window' && !noteOfPath(path)) return;
+    if (intent === null || (intent !== 'current' && intent !== 'window' && !hasTabs())) return;
+    event.preventDefault();
+    openPath(path, intent);
+  };
+}
+
+/** onAuxClick for in-app links: a middle click opens a new tab behind this one (PEN-140). */
+export function linkAuxHandler(path: string) {
+  return (event: MouseEvent<HTMLElement>) => {
+    if (event.button !== 1 || !hasTabs()) return;
+    event.preventDefault();
+    openPath(path, 'background');
   };
 }

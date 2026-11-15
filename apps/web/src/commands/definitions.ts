@@ -21,7 +21,9 @@ export type CommandArea =
   | 'Folders'
   | 'Tags'
   | 'Appearance'
-  | 'Sync';
+  | 'Sync'
+  // PEN-140: the main window's note tabs.
+  | 'Tabs';
 
 /**
  * Where a command's keys act. `editor`: only while the note body has focus.
@@ -153,13 +155,17 @@ export const APP_COMMANDS: readonly CommandDefinition[] = [
   // T52 item 4: the note's title, id, notebook and folders and its read_note call, for an agent
   // conversation (core's agentReference, the same text on every client). No default keys.
   global('note.copyAgentReference', 'Copy Agent Reference', 'Note'),
-  // T19. Mod+Shift+W is the plan's key and stays for the Mac app; Chrome keeps it (it closes
-  // the window), so the web build also binds Mod+Alt+W (Alt+W off Apple platforms, A90).
+  // T19. Mod+Shift+W was the plan's key, and Mod+Alt+W the web build's (Alt+W off Apple
+  // platforms, A90).
   global('journal.today', "Today's Note", 'Daily notes', ['Mod+D']),
-  global('journal.thisWeek', "This Week's Note", 'Daily notes', [
-    'Mod+Shift+W',
-    applePlatformOr('Mod+Alt+W', 'Alt+W'),
-  ]),
+  // PEN-140 (A1503): on the Mac ⇧⌘W is Close Window now, as in every tabbed Mac app, and ⌥⌘W
+  // stays. Off Apple platforms (the Android app, which has no tabs) Ctrl+Shift+W stays too.
+  global(
+    'journal.thisWeek',
+    "This Week's Note",
+    'Daily notes',
+    applePlatformOr(['Mod+Alt+W'], ['Mod+Shift+W', 'Alt+W']),
+  ),
   global('journal.previous', 'Previous Day or Week', 'Daily notes'),
   global('journal.next', 'Next Day or Week', 'Daily notes'),
   global('journal.week', 'The Week of This Daily Note', 'Daily notes'),
@@ -198,6 +204,26 @@ export const APP_COMMANDS: readonly CommandDefinition[] = [
   global('theme.toggleDark', 'Toggle Dark Mode', 'Appearance'),
   // T41 (A501): the note column fills the window; in the Mac's View menu. ⌘⌥⇧W (Alt+Shift+W
   // elsewhere, A90).
+  // PEN-140 (A1503): the main window's tabs. ⌘T, ⌘W and ⇧⌘T are the browser's on the web
+  // (BROWSER_RESERVED): they reach the page as the Mac menu's accelerators. ⌃Tab, ⇧⌃Tab and
+  // ⌘1–⌘9 are the page's own.
+  global('tab.new', 'New Tab', 'Tabs', ['Mod+T']),
+  global('tab.close', 'Close Tab', 'Tabs', ['Mod+W']),
+  global('tab.reopenClosed', 'Reopen Closed Tab', 'Tabs', ['Mod+Shift+T']),
+  global('tab.closeOthers', 'Close Other Tabs', 'Tabs'),
+  global('tab.closeRight', 'Close Tabs to the Right', 'Tabs'),
+  global('tab.next', 'Show Next Tab', 'Tabs', [applePlatformOr('Ctrl+Tab', 'Mod+Tab')]),
+  global('tab.previous', 'Show Previous Tab', 'Tabs', [
+    applePlatformOr('Ctrl+Shift+Tab', 'Mod+Shift+Tab'),
+  ]),
+  ...[1, 2, 3, 4, 5, 6, 7, 8].map((n) =>
+    global(`tab.select${n}`, `Show Tab ${n}`, 'Tabs', [`Mod+${n}`]),
+  ),
+  global('tab.selectLast', 'Show the Last Tab', 'Tabs', ['Mod+9']),
+  global('tab.pin', 'Pin or Unpin Tab', 'Tabs'),
+  global('tab.duplicate', 'Duplicate Tab', 'Tabs'),
+  global('tab.moveToWindow', 'Move Tab to New Window', 'Tabs'),
+  global('tab.all', 'Show All Tabs', 'Tabs'),
   global('note.fullWidth', 'Toggle Full-Width Notes', 'Note', [
     applePlatformOr('Mod+Alt+Shift+W', 'Alt+Shift+W'),
   ]),

@@ -12,9 +12,11 @@ import { AgentsSettings } from '../sources/AgentsSettings';
 import { JournalScope } from '../sources/JournalScope';
 import { NotebookNavEntries } from '../sources/NotebookNavEntries';
 import { useSourcesState } from '../sources/hooks';
+import { mainTabs } from '../tabs/controller';
 import { lastOpenedNote, readOpened } from '../notes/recent';
 import {
   gitNotebookPath,
+  isPlainLeftClick,
   linkHandler,
   navigate,
   notePath,
@@ -135,7 +137,15 @@ export function SettingsPage({
           href={back}
           className="back-link"
           data-command={back === '/' ? 'app.home' : undefined}
-          onClick={linkHandler(back)}
+          onClick={(event) => {
+            // With tabs, back to the tab as it was before Settings (PEN-140, A1497).
+            const tabs = mainTabs();
+            if (tabs && isPlainLeftClick(event) && tabs.leaveSettings()) {
+              event.preventDefault();
+              return;
+            }
+            linkHandler(back)(event);
+          }}
           data-tip="Back to Your Notes"
         >
           <Icon name="arrowL" />

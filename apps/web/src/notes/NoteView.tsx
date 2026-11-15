@@ -11,7 +11,6 @@ import {
   type BackspaceIntoTitleDetail,
 } from '@penmoss/editor';
 import { findHeading } from '@penmoss/core/line-symbols';
-import { Icon } from '@penmoss/ui/icons';
 import {
   useCallback,
   useContext,
@@ -40,8 +39,6 @@ import { useNoteList, useNotes } from './hooks';
 import { useDirectory } from './directory-hooks';
 import { markdownDoc, noteMarkdown } from './markdown';
 import { MarkdownSource } from './MarkdownSource';
-import { NoteBarButtonView } from './NoteBarButton';
-import { useNoteBar } from './note-bar';
 import { rememberOpened } from './recent';
 import { pastedTitle } from '@penmoss/model/title';
 import { caretOnLastLine, fitHeight, isLineBreak } from './title-field';
@@ -54,9 +51,11 @@ import { deviceStorage } from '../shell/device-pref';
 import { useNarrowWindow } from '../shell/media';
 import { TitleBarLead } from '../shell/title-lead';
 import { NoteActions, type NotePanelTab } from './NoteActions';
+import { NoteTopBar } from './NoteTopBar';
 import { NoteSidePanel } from './NoteSidePanel';
 import { panelTabPref } from './panel-tabs';
-import { useNotePanelMode, usePaneWidth } from './panel-mode';
+import { useNotePanelInTab } from './panel-in-tab';
+import { usePaneWidth } from './panel-mode';
 import { usePaneSize } from '../shell/pane-widths';
 import { useQuickAccess } from './quick-access';
 import { MAX_QUICK_ACCESS } from '@penmoss/core/quick-access';
@@ -66,6 +65,9 @@ import { PhoneFormatBar } from './PhoneFormatBar';
 import { useShowTag } from '../search/show-tag';
 import { useFullWidth } from './width';
 import { trashedNote } from '../trash/trashed';
+import { useStripEnd } from '../tabs/hooks';
+import { useTabScroll } from '../tabs/page';
+import { closeTabsOfTrashed } from '../tabs/trash';
 import { openNoteWindow } from '../window/open';
 import { symbolSource } from './symbols';
 import { useWorkspace } from '../workspace/hooks';
@@ -122,7 +124,12 @@ export function NoteView({
   // The pane's width as the note opened (measured before the first paint), for the default.
   const [startedWide, setStartedWide] = useState<boolean | null>(null);
   if (pane.measured && startedWide === null) setStartedWide(pane.wide);
-  const [panelMode, setPanelMode] = useNotePanelMode(id, startedWide ?? true);
+  // In a tab (PEN-140, A1500): its own panel and scroll position, seeded from this note's and
+  // this device's memory the first time the note shows in it, and written back to both.
+  const { tabPage, panelMode, setPanelMode, panelTab, setPanelTab } = useNotePanelInTab(
+    id,
+    startedWide ?? true,
+  );
   const showPanel = panelMode === 'open';
   /** The open panel lies over the note's text: a narrow pane has no room beside it. */
   const panelOver = showPanel && !wide;
@@ -135,8 +142,10 @@ export function NoteView({
     laidOut.current = layoutKey;
     noteLayoutChanged();
   }, [layoutKey]);
-  // Seeded from this device's choice; each note view keeps its own while it is open.
-  const [panelTab, setPanelTab] = useState<NotePanelTab>(panelTabPref.read);
+  /** The note's text, scrolled on its own: its place is kept by the tab. */
+  const scrollRef = useRef<HTMLDivElement>(null);
+  /** Where the note's bar buttons go in the main window: the tab strip's end (A1505). */
+  const stripEnd = useStripEnd();
   /** The thread picked in the panel or the note (T48). */
   const [activeThread, setActiveThread] = useState<string | null>(null);
   /**
@@ -154,7 +163,6 @@ export function NoteView({
   /** Quick Access (T51, A946): whether this note is pinned, and the ⋯ menu's Pin or Unpin. */
   const quickAccess = useQuickAccess();
   const pinned = quickAccess.pinned(id);
-  const noteBar = useNoteBar();
   const sourceKeys = useKeys('note.toggleSource');
   const [fullWidth] = useFullWidth();
   /** `note.addTag` asked for the tag field (in the Info panel, T41). */
@@ -296,6 +304,9 @@ export function NoteView({
     if (!ready || !collab) return;
     return stats.attach(collab.editor);
   }, [ready, stats, editorRef]);
+
+  // The tab's place in the note, unless a heading was asked for (PEN-140, A1500).
+  useTabScroll(tabPage, scrollRef, ready, heading !== null);
 
   // A link to a heading (`[[Note#Heading]]`) scrolls to it once the note shows.
   useEffect(() => {
@@ -477,7 +488,8 @@ export function NoteView({
     dontKeep();
     const done = notes.deleteNote(id);
     if (onDeleted) onDeleted();
-    else navigate('/');
+    // Its tabs close (PEN-140, A1501); with none (no tabs here), the app goes home.
+    else if (!closeTabsOfTrashed([id])) navigate('/');
     // With Undo, and focus on it (A524); Undo waits for the move to finish.
     trashedNote.set({
       notes: [{ id, title: titleRef.current?.value ?? title }],
@@ -618,68 +630,18 @@ export function NoteView({
         {actions}
         <NoteActions source={showSource} tab={shownTab} pinned={pinned} />
       </AppBar>
-      <header className="note-top">
-        {/* Back, Forward and the pin, beside the rail (PEN-135 item 6). */}
-        {lead ? (
-          <div className="note-top-lead" data-testid="note-top-lead">
-            {lead}
-          </div>
-        ) : null}
-        {nav ?? (
-          <nav className="crumbs" aria-label="Breadcrumb">
-            <ol>
-              {sourceCrumb !== null ? (
-                <li className="crumb-notebook" data-testid="note-source-crumb">
-                  <Icon name="notebook" size={12} />
-                  {sourceCrumb}
-                  <Icon name="chevR" size={12} />
-                </li>
-              ) : null}
-              {trail.map((name, index) => (
-                <li key={index}>
-                  {name}
-                  <Icon name="chevR" size={12} />
-                </li>
-              ))}
-              <li aria-current="page">{title || 'Untitled'}</li>
-            </ol>
-          </nav>
-        )}
-        <div className="note-actions">
-          {actions}
-          {/* The buttons chosen in Settings → Display, each also in ⋯ (A1134). */}
-          {noteBar.shown.map((button) => (
-            <NoteBarButtonView
-              key={button}
-              button={button}
-              pressed={
-                button === 'fullWidth'
-                  ? fullWidth
-                  : button === 'toggleSource'
-                    ? showSource
-                    : button === 'pinQuickAccess'
-                      ? pinned
-                      : undefined
-              }
-              label={
-                button === 'fullWidth' && fullWidth
-                  ? 'Back to the Theme’s Width'
-                  : button === 'pinQuickAccess' && pinned
-                    ? 'Unpin from Quick Access'
-                    : undefined
-              }
-            />
-          ))}
-          {/* Comments is a tab of the panel alone since T53 (item 9): no button here. */}
-          <NoteActions
-            source={showSource}
-            tab={shownTab}
-            pinned={pinned}
-            fullWidth={fullWidth}
-            variant="bar"
-          />
-        </div>
-      </header>
+      <NoteTopBar
+        lead={lead}
+        nav={nav}
+        sourceCrumb={sourceCrumb}
+        trail={trail}
+        title={title}
+        actions={actions}
+        showSource={showSource}
+        shownTab={shownTab}
+        pinned={pinned}
+        fullWidth={fullWidth}
+      />
       {error ? (
         <p className="error" role="alert">
           {error}
@@ -700,7 +662,7 @@ export function NoteView({
       >
         {/* The note's text scrolls on its own, its scrollbar at the text's edge, left of the
             panel and its tabs (Quanta feedback 3, item 1; A1132). */}
-        <div className="note-scroll" data-testid="note-scroll">
+        <div ref={scrollRef} className="note-scroll" data-testid="note-scroll">
           {showSource ? (
             <div className="doc note-source">
               {/* The body is edited here; the frontmatter is the note's fields (A1133). */}
@@ -813,7 +775,19 @@ export function NoteView({
         />
       </div>
       {phone ? null : (
-        <StatusBar noteId={id} note={shownNote} replica={replica} folder={trail} stats={stats} />
+        <StatusBar
+          noteId={id}
+          note={shownNote}
+          replica={replica}
+          folder={trail}
+          stats={stats}
+          // The folder path, where the title row showed it (A1505): a click reveals the note.
+          place={
+            stripEnd && noteSource
+              ? { source: sourceCrumb, folders: trail, notebook: noteSource.name }
+              : null
+          }
+        />
       )}
       {phone && ready && !unsupported && !showSource ? <PhoneFormatBar /> : null}
     </article>

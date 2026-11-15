@@ -5,6 +5,7 @@ import {
   dropEditor,
   keepEditor,
   keptNotes,
+  setTabNotes,
   takeEditor,
   viewMounted,
   type NoteEditor,
@@ -61,11 +62,13 @@ describe('kept editors (T31)', () => {
   it('keeps the notes shown last, at most KEEP, closing the oldest', () => {
     const { notes } = fakeNotes();
     const unmount = viewMounted(notes);
-    const made = ['a', 'b', 'c'].map((id) => editor(id));
+    // Eight since PEN-140 (A1500): a handful of tabs switch at once.
+    const ids = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'];
+    const made = ids.map((id) => editor(id));
     for (const { editor: each } of made) keepEditor(notes, each);
 
-    expect(KEEP).toBe(2);
-    expect(keptNotes(notes)).toEqual(['c', 'b']);
+    expect(KEEP).toBe(8);
+    expect(keptNotes(notes)).toEqual(['i', 'h', 'g', 'f', 'e', 'd', 'c', 'b']);
     expect(made[0]!.disposed).toHaveBeenCalledOnce();
     expect(made[1]!.disposed).not.toHaveBeenCalled();
     // Taken out of the page while kept, and stored with its text and links as they are now.
@@ -148,5 +151,37 @@ describe('kept editors (T31)', () => {
     vi.runAllTimers();
     expect(a.disposed).toHaveBeenCalledOnce();
     expect(keptNotes(notes)).toEqual([]);
+  });
+
+  describe('with the main window’s tabs (PEN-140, A1500)', () => {
+    afterEach(() => setTabNotes(() => null));
+
+    it('keeps the notes tabs hold while no note view shows, and closes the rest', () => {
+      const { notes } = fakeNotes();
+      setTabNotes(() => ['a']);
+      const view = viewMounted(notes);
+      const a = editor('a');
+      const b = editor('b');
+      keepEditor(notes, a.editor);
+      keepEditor(notes, b.editor);
+      // Home shows in the tab: no note view.
+      view();
+      vi.runAllTimers();
+      expect(keptNotes(notes)).toEqual(['a']);
+      expect(a.disposed).not.toHaveBeenCalled();
+      expect(b.disposed).toHaveBeenCalledOnce();
+    });
+
+    it('past KEEP, closes the notes no tab holds first', () => {
+      const { notes } = fakeNotes();
+      const unmount = viewMounted(notes);
+      setTabNotes(() => ['a']);
+      const made = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'].map((id) => editor(id));
+      for (const { editor: each } of made) keepEditor(notes, each);
+      // `a`, the oldest, stays: a tab holds it. `b`, the oldest of the rest, goes.
+      expect(keptNotes(notes)).toEqual(['i', 'h', 'g', 'f', 'e', 'd', 'c', 'a']);
+      expect(made[1]!.disposed).toHaveBeenCalledOnce();
+      unmount();
+    });
   });
 });

@@ -70,7 +70,9 @@ export async function readRemote(host: GitHost, remote: string): Promise<RemoteN
       },
       setting: (
         key,
-        map = key === 'timeZone' || key.startsWith('template.') ? 'notebook' : 'device',
+        map = key === 'timeZone' || key.startsWith('template.') || key.startsWith('badge.')
+          ? 'notebook'
+          : 'device',
       ) => readSettings(ops.workspace, map)[key],
     };
   } finally {

@@ -1,6 +1,7 @@
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useRef, useState } from 'react';
 import { navigate, notePath } from '../router';
+import { reopenTabsOfRestored } from '../tabs/trash';
 import {
   TRASHED_MS,
   trashedNote,
@@ -78,7 +79,8 @@ export function TrashedToast() {
     if (trashed.notes.length === 1 && first) {
       // The toast held focus and is gone: the note's body takes it, as when it was open.
       source.requestBodyFocus(first);
-      navigate(notePath(first));
+      // Its tabs come back where they were (PEN-140); with none, it shows here.
+      if (!reopenTabsOfRestored(first)) navigate(notePath(first));
     } else {
       // Several, from the tree: they are back in it; focus goes to the main column.
       document.querySelector<HTMLElement>('.note-main')?.focus();

@@ -308,16 +308,19 @@ test.describe('in Quanta, with notes of links, lists and headings', () => {
     const errors = collectErrors(page);
     await page.goto('/');
     await openNote(page, 'Links');
-    // One notebook: no notebook in the breadcrumb.
+    // One notebook: no notebook in the breadcrumb. Since PEN-140 (A1505) it is the status bar's
+    // place, the title being the tab's.
     await expect(page.getByTestId('note-source-crumb')).toHaveCount(0);
     await host.seed({ name: 'Work', notes: [{ title: 'Parser' }] });
     await expect(section(page, 'Work')).toBeVisible({ timeout: 40_000 });
-    const crumbs = page.getByRole('navigation', { name: 'Breadcrumb' });
+    const crumbs = page.getByTestId('status-place');
     await expect(crumbs.getByTestId('note-source-crumb')).toHaveText('Quanta');
     await openNote(page, 'Parser', 'Work');
     await expect(crumbs.getByTestId('note-source-crumb')).toHaveText('Work');
-    await expect(crumbs.locator('li').last()).toHaveText('Parser');
-    if (SHOTS) await page.locator('.note-top').screenshot({ path: `${SHOTS}/breadcrumb.png` });
+    await expect(
+      page.locator('.tab-strip').getByRole('tab', { selected: true }),
+    ).toHaveAccessibleName(/^Parser/);
+    if (SHOTS) await page.locator('.status-bar').screenshot({ path: `${SHOTS}/breadcrumb.png` });
     expect(errors).toEqual([]);
   });
 });

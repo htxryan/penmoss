@@ -122,7 +122,8 @@ test('the rail starts at the top, square; Today and This Week show when their no
   const sidebar = (await page.locator('#app-sidebar').boundingBox())!;
   const first = (await page.getByTestId('toggle-sidebar').boundingBox())!;
   expect(first.y - sidebar.y).toBeLessThan(1);
-  await expect(page.locator('.note-top').getByTestId('app-back')).toBeVisible();
+  // At the tab strip's start since PEN-140 (A1505).
+  await expect(page.locator('.tab-strip').getByTestId('app-back')).toBeVisible();
   await expect(week).toHaveAttribute('aria-current', 'page');
   for (const selector of [
     '.history-pair',

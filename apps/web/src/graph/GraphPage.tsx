@@ -7,7 +7,7 @@ import { GraphView } from '@penmoss/ui/graph/GraphView';
 import { useMemo, useState } from 'react';
 import { useNoteList, useNotes } from '../notes/hooks';
 import { displayTitle } from '../notes/list';
-import { navigate, notePath } from '../router';
+import { hasTabs, navigate, notePath, openPath } from '../router';
 import { useWorkspaceState } from '../workspace/hooks';
 import { GraphInputCache } from './data';
 import { graphPath } from './path';
@@ -50,7 +50,9 @@ export function GraphPage({ note, local }: GraphPageProps) {
         local={local && known}
         onLocalChange={(next) => navigate(graphPath(note, next), { replace: true })}
         onOpen={(id, newTab) => {
-          if (newTab) window.open(notePath(id), '_blank', 'noopener');
+          // ⌘-click: a tab behind this one in the main window (PEN-140), else the browser's.
+          if (newTab && hasTabs()) openPath(notePath(id), 'background');
+          else if (newTab) window.open(notePath(id), '_blank', 'noopener');
           else navigate(notePath(id));
         }}
       />

@@ -1,4 +1,5 @@
 import { Icon } from '@penmoss/ui/icons';
+import { tabIntentOf, type TabIntent } from '../commands/tab-intent';
 import { DialogClose } from '../shell/DialogClose';
 import { Select } from '@penmoss/ui/controls/Select';
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
@@ -114,7 +115,8 @@ const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
 export interface SearchOverlayProps {
   /** One source's search, or every source's (T50, A826). */
   readonly service: Searcher;
-  readonly onOpenNote: (id: string, heading: string | null) => void;
+  /** `where`: a new tab, behind (⌘↩) or in front (⇧⌘↩), PEN-140; else this one. */
+  readonly onOpenNote: (id: string, heading: string | null, where?: TabIntent) => void;
   readonly onClose: () => void;
   /** A tag's notes: its Tag filter set, on its notebook, and no words (finding 9, #192 review). */
   readonly initial?: TagSearch | null;
@@ -257,8 +259,10 @@ export function SearchOverlay({
   const answered = answer?.key === requestKey;
   const searching = asking && !(answered && answer.final);
   const hits = useMemo(() => outcome?.hits ?? [], [outcome]);
-  const choose = (hit: SearchHit | undefined) => {
-    if (hit) onOpenNote(hit.id, hit.heading);
+  const choose = (hit: SearchHit | undefined, where?: TabIntent) => {
+    if (!hit) return;
+    if (where) onOpenNote(hit.id, hit.heading, where);
+    else onOpenNote(hit.id, hit.heading);
   };
 
   const picker = usePickerList({
@@ -266,8 +270,8 @@ export function SearchOverlay({
     active,
     setActive,
     // Answered: Enter opens; before the answer, it asks for one at once.
-    onChoose: (index) => {
-      if (answered && answer.final) choose(hits[index]);
+    onChoose: (index, event) => {
+      if (answered && answer.final) choose(hits[index], tabIntentOf(event));
       else if (asking) setSubmitted(requestKey);
     },
     onClose,
@@ -436,7 +440,7 @@ export function SearchOverlay({
             className="opt search-hit"
             data-sources={hit.sources.join(' ')}
             data-note-id={hit.id}
-            onClick={() => choose(hit)}
+            onClick={(event) => choose(hit, tabIntentOf(event))}
           >
             <span className="search-hit-title">
               {hit.titleHighlighted ? (

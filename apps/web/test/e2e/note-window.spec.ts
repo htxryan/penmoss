@@ -118,8 +118,10 @@ test('every entry point opens a note window: the note, its menu, Info and status
       async () => {
         await row.click({ button: 'right' });
         const menu = page.getByRole('menu', { name: `“${title}”` });
-        // New Note Here and New Folder Here lead it (T53 item 12), then Open in New Window.
-        await expect(menu.getByRole('menuitem').nth(2)).toHaveText('Open in New Window');
+        // New Note Here and New Folder Here lead it (T53 item 12), then the open group: Open in
+        // New Tab (PEN-140) and Open in New Window, each with its click.
+        await expect(menu.getByRole('menuitem').nth(2)).toHaveAccessibleName('Open in New Tab');
+        await expect(menu.getByRole('menuitem').nth(3)).toHaveAccessibleName('Open in New Window');
         await menu.getByRole('menuitem', { name: 'Open in New Window' }).click();
       },
       title,

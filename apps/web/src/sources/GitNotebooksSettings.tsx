@@ -49,6 +49,8 @@ import { GitHubSignIn } from './GitHubSignIn';
 import { RepoFolderStep, type FolderChoice } from './RepoFolderStep';
 import { RepoPicker } from './RepoPicker';
 import { gitNotebookPath, linkHandler, navigate, useLocation } from '../router';
+import { BadgeSettings } from './BadgeSettings';
+import { NotebookBadge } from './NotebookBadge';
 import { repositoryLink } from './repository-link';
 import { onGitControl, takeGitControl, type GitControl } from './git-commands';
 import {
@@ -470,6 +472,8 @@ function GitNotebookRow({ source }: { source: GitSource }) {
         data-phase={status.phase}
         onClick={linkHandler(path)}
       >
+        {/* Its badge (PEN-140), its sync dot beside it; the name after them says it aloud. */}
+        <NotebookBadge source={source} size={16} decorative />
         <span className="nset-dot" data-state={dotState(status)} aria-hidden="true" />
         <span className="git-notebook-row-text">
           <span className="git-notebook-row-name">
@@ -835,6 +839,7 @@ function GitNotebookCard({
       {/* A page on the settings' own background (T62 item 1), its header over three tabs. */}
       <header className="git-notebook-head">
         <h2 id={headingId} className="git-notebook-title">
+          <NotebookBadge source={source} size={26} decorative />
           {info.name}
         </h2>
         {primary ? (
@@ -995,6 +1000,8 @@ function OverviewTab({
     <>
       <div className="lf-group nset-first-group">
         <NotebookName source={source} />
+        {/* Its badge (PEN-140, ac17), right after its name. */}
+        <BadgeSettings source={source} />
         <SettingRow
           setting="repository"
           label="Repository"

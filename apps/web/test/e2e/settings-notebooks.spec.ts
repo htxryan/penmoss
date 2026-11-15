@@ -136,6 +136,17 @@ test.describe('in Quanta, with two folders and two notes', () => {
       'rgba(0, 0, 0, 0)',
     );
     expect(await page1.evaluate((element) => getComputedStyle(element).borderTopWidth)).toBe('0px');
+    // Its badge (PEN-140, A1504): in its heading, and on Overview right after its name.
+    await expect(
+      page1.getByRole('heading', { level: 2 }).getByTestId('notebook-badge'),
+    ).toBeVisible();
+    const overview = page1.getByTestId('git-panel-overview').locator('.lf-group').first();
+    await expect(overview.locator('> .lf-row').nth(0)).toHaveAttribute(
+      'data-setting',
+      'notebook-name',
+    );
+    await expect(overview.locator('> .lf-row').nth(1)).toHaveAttribute('data-setting', 'badge');
+    await expect(overview.getByTestId('badge-row').locator('.lf-row-label')).toHaveText('Badge');
     // Three tabs (PEN-146); the commit name and email are on Git, one width, one under the other.
     await expect(page1.getByRole('tab')).toHaveText(['Overview', 'Sync', 'Git']);
     await page1.getByRole('tab', { name: 'Git' }).click();

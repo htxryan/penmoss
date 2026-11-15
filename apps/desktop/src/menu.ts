@@ -84,6 +84,9 @@ export interface TemplateOptions {
   readonly onShowMain?: () => void;
 }
 
+/** The page's Close Tab (PEN-140): a File menu with it belongs to a window with tabs. */
+export const CLOSE_TAB_ID = 'tab.close';
+
 /** Window → Penmoss's id (T45). */
 export const SHOW_MAIN_ID = 'window.main';
 
@@ -203,11 +206,30 @@ export function menuTemplate(
       ),
     });
   }
+  // A window with tabs (the main window, PEN-140, A1503): ⌘W is the page's Close Tab, and
+  // Close Window takes ⇧⌘W, as in every tabbed Mac app. A note window keeps ⌘W.
+  const tabbed = groupsOf('File').some((group) => group.some((item) => item.id === CLOSE_TAB_ID));
+  const close: MenuItemConstructorOptions = tabbed
+    ? { role: 'close', label: 'Close Window', accelerator: 'Shift+CommandOrControl+W' }
+    : { role: 'close' };
+  // With tabs, Close Window ends the group Close Tab is in (Close Tab, Close Other Tabs, Close
+  // Window), as in other tabbed Mac apps; without, it is a group of its own.
+  const fileGroups = groupsOf('File');
+  const closing = tabbed
+    ? fileGroups.findIndex((group) => group.some((item) => item.id === CLOSE_TAB_ID))
+    : -1;
+  const fileItems: MenuItemConstructorOptions[] = [];
+  for (const [index, group] of fileGroups.entries()) {
+    if (group.length === 0) continue;
+    if (fileItems.length > 0) fileItems.push(separator);
+    fileItems.push(...commandItems(group, options));
+    if (mac && index === closing) fileItems.push(close);
+  }
   template.push({
     label: 'File',
     submenu: join(
-      items('File'),
-      mac ? [{ role: 'close' }] : [...items('Penmoss'), { role: 'quit' }],
+      fileItems,
+      mac ? (closing >= 0 ? [] : [close]) : [...items('Penmoss'), { role: 'quit' }],
     ),
   });
   const edit = groupsOf('Edit');
@@ -246,7 +268,9 @@ export function menuTemplate(
     label: 'Window',
     role: 'window',
     submenu: join(
-      mac ? [{ role: 'minimize' }, { role: 'zoom' }] : [{ role: 'minimize' }, { role: 'close' }],
+      mac ? [{ role: 'minimize' }, { role: 'zoom' }] : [{ role: 'minimize' }, close],
+      // Moving between tabs and the tab's own commands (PEN-140), in the main window.
+      items('Window'),
       showMain,
       mac ? [{ role: 'front' }] : [],
     ),

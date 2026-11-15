@@ -16,6 +16,8 @@
 @import './history/history.css'; /* History */
 @import './trash/trash.css'; /* Trash */
 @import './tags/merge.css'; /* the Merge dialog, who moved a note to Trash, loading */
+@import './sources/badge.css'; /* notebook badges: the sidebar, tabs and Settings */
+@import './tabs/tabs.css'; /* the tab strip, All Tabs and the narrow window's tabs sheet */
 @import './shell/narrow.css'; /* the phone layout */
 @import './shell/touch.css'; /* touch targets */
 @import './capture/capture.css'; /* quick capture */

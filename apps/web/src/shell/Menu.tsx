@@ -142,17 +142,19 @@ export function Menu({
 }
 
 /**
- * One item of a menu (`Menu`, `ContextMenu`): its icon and label, `danger` for a destructive one.
- * Its other props (an `onClick`, a `data-testid`, `disabled`) go on the button as they are.
+ * One item of a menu (`Menu`, `ContextMenu`): its icon and label, `danger` for a destructive one,
+ * and a `hint` after the label where keycaps go (a click gesture, `ClickHint`). Its other props (an `onClick`, a `data-testid`, `disabled`) go on the button as they are.
  */
 export function MenuItem({
   icon,
   danger = false,
+  hint,
   children,
   ...button
 }: {
   readonly icon: IconName;
   readonly danger?: boolean;
+  readonly hint?: ReactNode;
   readonly children: ReactNode;
 } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type' | 'role' | 'className' | 'children'> & {
     readonly 'data-testid'?: string | undefined;
@@ -170,6 +172,7 @@ export function MenuItem({
     >
       <Icon name={icon} />
       <span className="menu-label">{children}</span>
+      {hint}
     </button>
   );
 }

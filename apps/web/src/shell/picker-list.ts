@@ -12,8 +12,11 @@ export interface PickerListOptions {
   /** The active row (kept by the picker, which resets it as its query changes). */
   readonly active: number;
   readonly setActive: (index: number) => void;
-  /** Return on the active row; it is the picker's to check the row exists. */
-  readonly onChoose: (index: number) => void;
+  /**
+   * Return on the active row; it is the picker's to check the row exists. The key's event says
+   * whether ⌘ or ⇧⌘ was held (a new tab, PEN-140).
+   */
+  readonly onChoose: (index: number, event: KeyboardEvent<HTMLElement>) => void;
   readonly onClose: () => void;
   /** What the rows' ids are called, after the picker's id (`option`, `result`, `recent`). */
   readonly optionName?: string;
@@ -67,7 +70,7 @@ export function usePickerList({
         break;
       case 'Enter':
         event.preventDefault();
-        onChoose(current);
+        onChoose(current, event);
         break;
       case 'Escape':
         event.preventDefault();

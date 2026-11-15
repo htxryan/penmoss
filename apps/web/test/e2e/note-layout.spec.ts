@@ -314,7 +314,9 @@ test.describe('in Quanta, with a folder, a long note and a source', () => {
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/scroll.png` });
 
     // Item 6: an arrow over the title bar and the status bar, not the I-beam.
-    for (const selector of ['.note-top', '.note-top .crumbs', '.status-bar']) {
+    // The main window's title bar is its tab strip since PEN-140 (A1505), the tab's words where
+    // the breadcrumb's were.
+    for (const selector of ['.tab-strip', '.tab-strip .tab-title', '.status-bar']) {
       expect(
         await page
           .locator(selector)

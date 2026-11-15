@@ -6,6 +6,7 @@
  * the other notebook, and links between notes that cross together pointed at the copies. A move
  * then puts the originals in Trash in the notebook they came from, where they can be restored.
  */
+import { mainTabs } from '../tabs/controller';
 import { ulid } from '@penmoss/core/ids';
 import type { FolderNode, WorkspaceTree } from '@penmoss/core/workspace';
 import { copyNote, noteAttachmentPaths } from '@penmoss/model/records';
@@ -216,6 +217,11 @@ export async function transfer(options: {
   }
 
   if (mode === 'move') {
+    // Their tabs follow them to their copies first (PEN-140, A1501), so none closes.
+    const tabs = mainTabs();
+    if (tabs) {
+      for (const note of notes) if (copied.includes(note.id)) tabs.retarget(note.id, note.copyId);
+    }
     // The originals to Trash: each note that was copied, then each folder (its notes gone, only
     // a note with nothing to copy would move up out of it).
     for (const id of copied) await from.notes.deleteNote(id);

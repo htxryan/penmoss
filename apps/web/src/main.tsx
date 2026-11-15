@@ -15,6 +15,9 @@ import { errorRing } from './feedback/errors';
 import { FeedbackContext, FeedbackService } from './feedback/service';
 import { deviceStorage } from './shell/device-pref';
 import { installModalFocusTrap } from './shell/focus-trap';
+import { installMainTabs } from './tabs/controller';
+import { shownNotes } from './tabs/state';
+import { setTabNotes } from './notes/kept-editors';
 import './theme/defaults.css';
 import './styles.css';
 import './blocks.css';
@@ -22,7 +25,7 @@ import './links.css';
 import './search/search.css';
 import './feedback/feedback.css';
 import './theme/theme.css';
-import { isNoteWindowPath, navigate, startHistory } from './router';
+import { hasTabs, isNoteWindowPath, navigate, openPath, startHistory } from './router';
 import { openNoteWindow } from './window/open';
 import { StorePuller, storeSync } from './window/store-sync';
 import { browserThemeEnvironment, ThemeController } from './theme/controller';
@@ -70,7 +73,12 @@ const makeDirectory = (notes: Notes, workspace: Workspace) =>
       workspace.getState().snapshot.notes.find((entry) => entry.id === id)?.path ?? null,
     register: (id, folderId) => workspace.registerNote(id, folderId),
     navigate,
-    openTab: (path) => window.open(path, '_blank', 'noopener'),
+    // ⌘-click on a wikilink: a tab behind this one in the main window (PEN-140), else the
+    // browser's own new tab.
+    openTab: (path) => {
+      if (hasTabs()) openPath(path, 'background');
+      else window.open(path, '_blank', 'noopener');
+    },
     // ⌥-click (T45, A710).
     openWindow: (id, heading) => openNoteWindow(id, heading),
   });
@@ -103,6 +111,8 @@ window.addEventListener('pagehide', () => windows.flush());
 // notebook has synced once if it can (A825). Main asks for `flush` before the capture window
 // reads the store or a title bar change: then nothing syncs (#174 review).
 bridge?.onBeforeClose(async (reason) => {
+  // The tabs as they are, for the next launch (A228, A626).
+  tabs?.flush();
   await sources.store(reason);
   // The other windows hear this window's last writes before it goes (before `saved`).
   windows.flush();
@@ -129,6 +139,17 @@ const feedback = new FeedbackService({
 if (bridge?.window !== 'capture') feedback.start(window);
 
 const capture = bridge?.window === 'capture';
+// The main window's note tabs (PEN-140, A1496): its history, restored from the last launch.
+// A note window and the capture window have none (D37).
+const tabs =
+  noteWindow || capture
+    ? null
+    : installMainTabs({
+        storage: deviceStorage(),
+        location: window.location.pathname + window.location.search,
+      });
+// The kept editors favour the notes in tabs (A1500).
+if (tabs) setTabNotes(() => shownNotes(tabs.getState()));
 createRoot(container).render(
   <StrictMode>
     <SourcesProvider sources={sources}>

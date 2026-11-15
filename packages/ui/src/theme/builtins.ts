@@ -872,3 +872,24 @@ export const BUILT_IN_THEMES: readonly Theme[] = [
   ROSE_PINE,
   HIGH_CONTRAST,
 ];
+
+/**
+ * Notebook badges' colours (PEN-140): the ten presets a notebook's badge picks from, and the
+ * glyph's two inks. A badge names its notebook, so its colour is the same in every theme and
+ * mode; each preset holds 4.5:1 with the white ink (apps/web/test/unit/notebook-badge.test.ts).
+ */
+export const NOTEBOOK_BADGE_COLOURS = {
+  moss: '#3c7a4b',
+  teal: '#1f7a7a',
+  blue: '#2f5d8a',
+  indigo: '#4a4fa3',
+  violet: '#7448a0',
+  rose: '#a8436b',
+  red: '#b23a3a',
+  orange: '#a8541a',
+  ochre: '#8a6d12',
+  slate: '#4f5966',
+} as const;
+
+/** A badge's glyph: white, or near-black on a light custom colour. */
+export const NOTEBOOK_BADGE_INK = { light: '#ffffff', dark: '#1b1d1f' } as const;

@@ -8,6 +8,7 @@ import { TIME_MACHINE_PATH, timeMachinePath } from '../time-machine/path';
 import { FolderTree } from '../workspace/FolderTree';
 import { TreeActions } from '../workspace/TreeActions';
 import type { GitSyncStatus } from './engine-host';
+import { NotebookBadge } from './NotebookBadge';
 import type { GitSource } from './git-source';
 import { useShownGitStatus } from './hooks';
 import { NameClash } from './NameClash';
@@ -169,6 +170,7 @@ export function SourceSection({
         {renaming ? (
           <div className="sb-section-rename">
             <Icon name={collapsed ? 'chevR' : 'chevD'} size={12} />
+            <NotebookBadge source={source} size={18} decorative className="sb-source-badge" />
             <NotebookNameInput
               label={`Rename Notebook ${source.name}`}
               initial={source.name}
@@ -191,6 +193,8 @@ export function SourceSection({
             }}
           >
             <Icon name={collapsed ? 'chevR' : 'chevD'} size={12} />
+            {/* Its badge before its name (PEN-140); the name beside it says the same aloud. */}
+            <NotebookBadge source={source} size={18} decorative className="sb-source-badge" />
             <span id={`${id}-name`} className="sb-section-name">
               {source.name}
             </span>

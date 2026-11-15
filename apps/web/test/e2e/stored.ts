@@ -107,6 +107,9 @@ export async function storedSetting(
   key: string,
   notebookId?: string,
 ): Promise<unknown> {
-  const map = key === 'timeZone' || key.startsWith('template.') ? 'notebook' : 'device';
+  const map =
+    key === 'timeZone' || key.startsWith('template.') || key.startsWith('badge.')
+      ? 'notebook'
+      : 'device';
   return storedWorkspace(page, (replica) => readSettings(replica.doc, map)[key], notebookId);
 }

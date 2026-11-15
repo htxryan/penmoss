@@ -241,7 +241,7 @@ function overLights(page: Page): Promise<string[]> {
         bottom: lights.y + lights.height + margin,
       };
       const shown = document.querySelectorAll<HTMLElement>(
-        'button, a[href], input, textarea, select, [role="button"], [contenteditable="true"], .brand, .crumbs li, .app-bar-title, .doc-title, h1, h2',
+        'button, a[href], input, textarea, select, [role="button"], [contenteditable="true"], .brand, .crumbs li, [role="tab"], .app-bar-title, .doc-title, h1, h2',
       );
       const over: string[] = [];
       for (const element of shown) {
@@ -563,8 +563,8 @@ test('the compact title bar: room for the lights in every layout, rows that drag
   // The sidebar open: its header is the first row, as tall as the note's top bar.
   const head = page.locator('.sb-head');
   expect((await head.boundingBox())!.height).toBe(TITLE_BAR_ROW);
-  // The note's top bar: the row, and its 1 px border below.
-  expect((await page.locator('.note-top').boundingBox())!.height).toBe(TITLE_BAR_ROW + 1);
+  // The note's top bar, its tab strip since PEN-140 (A1505): the row, and its 1 px border.
+  expect((await page.locator('.tab-strip').boundingBox())!.height).toBe(TITLE_BAR_ROW + 1);
   expect((await page.locator('.sb-head .brand').boundingBox())!.x).toBeGreaterThanOrEqual(
     TITLE_BAR_INSET,
   );
@@ -575,7 +575,7 @@ test('the compact title bar: room for the lights in every layout, rows that drag
   expect(await overLights(page)).toEqual([]);
   // The rows drag; every control in them still clicks.
   expect(await region(page, '.sb-head')).toBe('drag');
-  expect(await region(page, '.note-top')).toBe('drag');
+  expect(await region(page, '.tab-strip')).toBe('drag');
   // No strip behind the page: only the rows drag (A723).
   await expect(page.locator('.window-drag')).toHaveCount(0);
   await clicksEverywhere(page, 'main window');
@@ -609,27 +609,27 @@ test('the compact title bar: room for the lights in every layout, rows that drag
     (await page.getByTestId('sidebar-settings').boundingBox())!.y +
       (await page.getByTestId('sidebar-settings').boundingBox())!.height,
   ).toBeCloseTo(rail.y + rail.height, 0);
-  // The note's title row starts at the rail's edge, under the lights (the row drags, as the
-  // sidebar's head does); what it holds starts after their inset: Back, Forward and the pin, then
-  // the crumbs (PEN-135 item 6). The rail keeps none of them beside a note.
-  const top = (await page.locator('.note-top').boundingBox())!;
+  // The tab strip (the note's title row before PEN-140) starts at the rail's edge, under the
+  // lights (the row drags, as the sidebar's head does); what it holds starts after their inset:
+  // Back, Forward and the pin, then the tabs (PEN-135 item 6). The rail keeps none of them.
+  const top = (await page.locator('.tab-strip').boundingBox())!;
   expect(top.x).toBe(rail.width);
   expect(top.height).toBe(TITLE_BAR_ROW + 1);
-  const back = (await page.locator('.note-top').getByTestId('app-back').boundingBox())!;
-  const pin = (await page.locator('.note-top').getByTestId('keep-on-top').boundingBox())!;
+  const back = (await page.locator('.tab-strip').getByTestId('app-back').boundingBox())!;
+  const pin = (await page.locator('.tab-strip').getByTestId('keep-on-top').boundingBox())!;
   expect(back.x).toBeGreaterThanOrEqual(TITLE_BAR_INSET);
   expect(back.y).toBeLessThan(TITLE_BAR_ROW);
   expect(pin.x).toBeGreaterThan(back.x);
   await expect(page.locator('.sidebar').getByTestId('app-back')).toHaveCount(0);
   await expect(page.locator('.sidebar').getByTestId('keep-on-top')).toHaveCount(0);
-  expect((await page.locator('.note-top .crumbs').boundingBox())!.x).toBeGreaterThan(
+  expect((await page.locator('.tab-strip .tab-list').boundingBox())!.x).toBeGreaterThan(
     pin.x + pin.width,
   );
   expect(await overLights(page)).toEqual([]);
-  expect(await region(page, '.note-top')).toBe('drag');
+  expect(await region(page, '.tab-strip')).toBe('drag');
   await clicksEverywhere(page, 'main window');
-  // Home, Trash and the graph beside the rail: no note's title bar, so the rail keeps Back and
-  // Forward, one pair as wide as the rail, below the row.
+  // Home, Trash and the graph beside the rail: under the tab strip too since PEN-140, so Back,
+  // Forward and the pin stay at its start, after the lights, and the rail keeps none of them.
   for (const [command, ready] of [
     ['app.home', '.home'],
     ['app.trash', '[data-testid="trash"]'],
@@ -637,17 +637,16 @@ test('the compact title bar: room for the lights in every layout, rows that drag
   ] as const) {
     await chooseMenu(app, command);
     await expect(page.locator(ready)).toBeVisible();
-    const railBack = (await page.locator('.sidebar').getByTestId('app-back').boundingBox())!;
-    const railForward = (await page.locator('.sidebar').getByTestId('app-forward').boundingBox())!;
-    expect(railBack.y, command).toBeGreaterThanOrEqual(TITLE_BAR_ROW);
-    expect(railBack.x, command).toBe(0);
-    expect(railForward.x + railForward.width, command).toBe(toggle.width);
+    const stripBack = (await page.locator('.tab-strip').getByTestId('app-back').boundingBox())!;
+    expect(stripBack.x, command).toBeGreaterThanOrEqual(TITLE_BAR_INSET);
+    expect(stripBack.y, command).toBeLessThan(TITLE_BAR_ROW);
+    await expect(page.locator('.sidebar').getByTestId('app-back')).toHaveCount(0);
     expect(await overLights(page), command).toEqual([]);
     expect((await page.locator('.note-main').boundingBox())!.x, command).toBe(rail.width);
     await clicksEverywhere(page, command);
   }
   expect(await region(page, '.pm-graph-bar')).toBe('drag');
-  // The graph's bar is the title row there: as tall as the note's, its controls after the lights.
+  // The graph's bar, under the strip: as tall as the strip, its controls after the lights' room.
   expect((await page.locator('.pm-graph-bar').boundingBox())!.height).toBeGreaterThanOrEqual(
     TITLE_BAR_ROW + 1,
   );
@@ -668,20 +667,42 @@ test('the compact title bar: room for the lights in every layout, rows that drag
   await mainBounds(app, { x: 0, y: 0, width: 600, height: 760 });
   await expect(page.locator('.settings-bar')).toBeVisible();
   expect(await overLights(page)).toEqual([]);
+  // Notes goes back to the tabs as they were (PEN-140): the active tab still shows the graph.
   await page.getByRole('link', { name: 'Notes', exact: true }).click();
   await expect(page.getByTestId('app-bar')).toBeVisible();
+  await expect(page.locator('.graph-page')).toBeVisible();
   expect(await overLights(page)).toEqual([]);
   expect(await region(page, '.app-bar')).toBe('drag');
-  await page.getByRole('button', { name: 'Open Navigation' }).click();
-  await expect(page.locator('.notes-app')).toHaveAttribute('data-drawer', 'open');
-  await page.waitForTimeout(300); // The drawer slides in.
-  expect(await overLights(page)).toEqual([]);
+  expect(await region(page, '.pm-graph-bar')).toBe('drag');
+  const drawerOpen = async () => {
+    await page.getByRole('button', { name: 'Open Navigation' }).click();
+    await expect(page.locator('.notes-app')).toHaveAttribute('data-drawer', 'open');
+    await page.waitForTimeout(300); // The drawer slides in.
+    expect(await overLights(page)).toEqual([]);
+  };
   // The drawer comes before the app bar in the DOM, so the app bar stops dragging under it, and
-  // so does the empty home, with no note open (Ryan's review of #192, finding 6).
-  await clicksEverywhere(page, 'narrow window, drawer open', { stopped: ['.app-bar', '.home'] });
+  // so does the graph's bar below it.
+  await drawerOpen();
+  await clicksEverywhere(page, 'narrow window, drawer open over the graph', {
+    stopped: ['.app-bar', '.pm-graph-bar'],
+  });
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.notes-app')).not.toHaveAttribute('data-drawer', 'open');
+  // And so does the empty home, with no note open (Ryan's review of #192, finding 6).
+  await chooseMenu(app, 'app.home');
+  await expect(page.locator('.home')).toBeVisible();
+  expect(await region(page, '.home')).toBe('drag');
+  await drawerOpen();
+  await clicksEverywhere(page, 'narrow window, drawer open over the home', {
+    stopped: ['.app-bar', '.home'],
+  });
   await page.keyboard.press('Escape');
   await mainBounds(app, { x: 0, y: 0, width: 1100, height: 760 });
-  await expect(page.locator('.note-top')).toBeVisible();
+  await expect(page.locator('.tab-strip')).toBeVisible();
+  // The tab shows Home now (PEN-140 keeps the page each tab was on), so open the note in it
+  // again: Open in New Window below opens the note the main window shows.
+  await page.getByRole('treeitem', { name: new RegExp(title) }).click();
+  await expect(page.getByTestId('note-view')).toHaveAttribute('data-ready', 'true');
 
   // Full screen hides the lights, and the room for them goes too.
   await emit(app, 'main', 'enter-full-screen');
@@ -886,12 +907,13 @@ test('nothing that clicks drags the window: Version history, scrolled Settings a
     Array.from({ length: 60 }, (_, n) => `Line ${n + 1} of a long note.`).join('\n'),
   );
   expect(await scrollAround(page, '.note-scroll', 900)).toBeGreaterThan(0);
-  const bar = (await page.locator('.note-top').boundingBox())!;
-  const actions = (await page.locator('.note-top .note-actions').boundingBox())!;
+  // The tab strip since PEN-140 (A1505), the note's buttons at its end.
+  const bar = (await page.locator('.tab-strip').boundingBox())!;
+  const actions = (await page.locator('.tab-strip-end .note-actions').boundingBox())!;
   const empty = { x: actions.x - 40, y: bar.y + bar.height / 2 };
   expect(await regionAt(page, empty.x, empty.y)).toBe('drag');
-  // Over the breadcrumb's words too, as a Mac title drags; a button in the bar still clicks.
-  expect(await regionAt(page, bar.x + 30, empty.y)).toBe('drag');
+  // A tab clicks (where the breadcrumb's words dragged); a button in the bar still clicks.
+  expect(await regionAt(page, bar.x + 30, empty.y)).toBe('no-drag');
   expect(await regionAt(page, actions.x + 10, empty.y)).toBe('no-drag');
   await clicksEverywhere(page, 'note scrolled');
 
@@ -924,7 +946,7 @@ test('nothing that clicks drags the window: Version history, scrolled Settings a
   const row = page.getByRole('treeitem', { name: new RegExp(`Kept ${RUN}`) });
   // Beside the note, so a menu opened at the top reaches over its top bar.
   await row.click();
-  await expect(page.locator('.note-top')).toBeVisible();
+  await expect(page.locator('.tab-strip')).toBeVisible();
   const menuAt = (clientY: number) =>
     row.evaluate(
       (element, y) =>
@@ -943,7 +965,7 @@ test('nothing that clicks drags the window: Version history, scrolled Settings a
   await expect(menu).toBeVisible();
   expect((await menu.boundingBox())!.y).toBeLessThan(340 - 100);
   // The menu is in the sidebar, before the note's top bar in the DOM: that stops dragging.
-  await clicksEverywhere(page, 'context menu flipped up', { stopped: ['.note-top'] });
+  await clicksEverywhere(page, 'context menu flipped up', { stopped: ['.tab-strip'] });
   expect(await draggable(page, false), 'flipped menu').toEqual([]);
   await page.keyboard.press('Escape');
   await expect(menu).toBeHidden();
@@ -953,13 +975,13 @@ test('nothing that clicks drags the window: Version history, scrolled Settings a
   // Out of the sidebar and over the note's top bar too.
   const menuBox = (await menu.boundingBox())!;
   expect(menuBox.x + menuBox.width).toBeGreaterThan(
-    (await page.locator('.note-top').boundingBox())!.x,
+    (await page.locator('.tab-strip').boundingBox())!.x,
   );
-  await clicksEverywhere(page, 'context menu over the first row', { stopped: ['.note-top'] });
+  await clicksEverywhere(page, 'context menu over the first row', { stopped: ['.tab-strip'] });
   expect(await draggable(page, false), 'menu over the first row').toEqual([]);
   await page.keyboard.press('Escape');
   await expect(menu).toBeHidden();
-  expect(await region(page, '.note-top')).toBe('drag');
+  expect(await region(page, '.tab-strip')).toBe('drag');
   expect(launched.errors).toEqual([]);
 });
 

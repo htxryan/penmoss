@@ -4,6 +4,7 @@ import {
   isPlainLeftClick,
   notebookAgentsPath,
   notePath,
+  openIntent,
   parseRoute,
   settingsRedirect,
 } from '../../src/router';
@@ -125,5 +126,33 @@ describe('isPlainLeftClick', () => {
     expect(isPlainLeftClick({ ...click, shiftKey: true })).toBe(false);
     expect(isPlainLeftClick({ ...click, button: 1 })).toBe(false);
     expect(isPlainLeftClick({ ...click, defaultPrevented: true })).toBe(false);
+  });
+});
+
+describe('where a click opens a page (PEN-140, A1498)', () => {
+  const click = (extra: Partial<Parameters<typeof openIntent>[0]> = {}) => ({
+    button: 0,
+    metaKey: false,
+    ctrlKey: false,
+    shiftKey: false,
+    altKey: false,
+    defaultPrevented: false,
+    ...extra,
+  });
+
+  it('opens a plain click here, ⌘-click behind, ⇧⌘-click in front and ⌥-click in a window', () => {
+    expect(openIntent(click())).toBe('current');
+    expect(openIntent(click({ metaKey: true }))).toBe('background');
+    expect(openIntent(click({ ctrlKey: true }))).toBe('background');
+    expect(openIntent(click({ metaKey: true, shiftKey: true }))).toBe('foreground');
+    expect(openIntent(click({ altKey: true }))).toBe('window');
+    expect(openIntent(click({ button: 1 }))).toBe('background');
+  });
+
+  it('leaves alone a right click, one already handled, and other modifiers', () => {
+    expect(openIntent(click({ button: 2 }))).toBeNull();
+    expect(openIntent(click({ defaultPrevented: true }))).toBeNull();
+    expect(openIntent(click({ shiftKey: true }))).toBeNull();
+    expect(openIntent(click({ altKey: true, metaKey: true }))).toBeNull();
   });
 });

@@ -79,7 +79,7 @@ if [ "${1:-}" = --check ]; then
     echo "[vm] $VM isn't made yet: run task desktop:test:vm once (docs/ci.md §8)" >&2
     exit "$TEMPFAIL"
   fi
-  if ! lockf -s -t 0 "$LOCK" true 2>/dev/null; then
+  if ! lockf -k -s -t 0 "$LOCK" true 2>/dev/null; then
     echo "[vm] $VM is busy with another run" >&2
     exit "$TEMPFAIL"
   fi
@@ -93,8 +93,10 @@ fi
 
 # One run at a time: every agent and worktree shares the one VM, and a run starts by stopping it.
 # Others wait here for the lock (lockf, held until this run ends) instead of stopping a run.
+# Every lockf keeps the file (-k): a probe that removed it could leave a waiting run holding the
+# lock on a removed file while the next run locks a new one, and both would use the VM.
 if [ -z "${PENMOSS_VM_LOCKED:-}" ]; then
-  if ! lockf -s -t 0 "$LOCK" true 2>/dev/null; then
+  if ! lockf -k -s -t 0 "$LOCK" true 2>/dev/null; then
     echo "[vm] $VM is busy with another run; waiting for it to finish"
   fi
   PENMOSS_VM_LOCKED=1 exec lockf -k "$LOCK" sh "$0" "$@"

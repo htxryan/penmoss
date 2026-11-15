@@ -138,10 +138,14 @@ export function JournalCommands() {
   const notes = useNotes();
   const workspace = useWorkspace();
   useCommand('journal.today', () => {
-    void openPeriodic(notes, workspace, 'daily', today(workspace.settings()).toString());
+    void openPeriodic(notes, workspace, 'daily', today(workspace.settings()).toString(), {
+      inTab: true,
+    });
   });
   useCommand('journal.thisWeek', () => {
-    void openPeriodic(notes, workspace, 'weekly', thisWeek(workspace.settings()));
+    void openPeriodic(notes, workspace, 'weekly', thisWeek(workspace.settings()), {
+      inTab: true,
+    });
   });
   return null;
 }

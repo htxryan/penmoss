@@ -43,6 +43,20 @@ import {
   type QueuedEnter,
 } from './title-field';
 
+/**
+ * Focuses the body at the caret just placed in it (the title's ↓ or Enter, a note opened for its
+ * body). For 200 ms after any focus, ProseMirror takes a caret at the note's very start for the
+ * browser resetting it, and puts the old one back. Here the caret was placed before focusing, so
+ * nothing was reset: without this, a quick ↓ then ↑ from the title back to the first line's
+ * start was undone, the caret left on the line below. (`input` is ProseMirror's own; without it,
+ * nothing changes.)
+ */
+function focusPlacedCaret(view: CollabEditor['editor']['view']): void {
+  view.focus();
+  const input = (view as unknown as { input?: { lastFocus?: number } }).input;
+  if (input && typeof input.lastFocus === 'number') input.lastFocus = 0;
+}
+
 /** A note's editor as its view shows it. */
 export interface NoteEditorView {
   /** The title field: bound to the note's replica once it opens. */
@@ -190,12 +204,15 @@ export function useNoteEditor({
       queueMicrotask(() => {
         if (!showing) return;
         if (queued) {
-          view.focus();
+          focusPlacedCaret(view);
           return;
         }
         if (!notes.takeBodyFocus(id)) return;
+        // Not from a dialog opened while the note was being read (Search again, the palette):
+        // what is typed there stays there.
+        if (view.dom.ownerDocument.activeElement?.closest('[role="dialog"]')) return;
         collab.editor.commands.setTextSelection(1);
-        view.focus();
+        focusPlacedCaret(view);
       });
       teardown = () => {
         showing = false;
@@ -379,7 +396,7 @@ export function useNoteEditor({
     }
     // Synchronously: TipTap's focus command waits a frame, and keys typed meanwhile would land in the title.
     editor.commands.setTextSelection(0);
-    editor.view.focus();
+    focusPlacedCaret(editor.view);
   }, []);
 
   const dontKeep = useCallback(() => {

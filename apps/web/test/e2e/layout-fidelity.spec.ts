@@ -619,9 +619,10 @@ test.describe('in Quanta, with a folder, a long note and a source', () => {
     expect(Math.round(first.x)).toBe(Math.round(sidebar.x));
     expect(Math.round(first.y)).toBe(Math.round(sbHead.y + sbHead.height));
     expect(Math.round(last.x + last.width)).toBe(Math.round(sidebar.x + sidebar.width) - 1);
-    // The note's title bar: its buttons as tall as the bar, the last at the window's edge.
-    const top = await box(page, '.note-top');
-    const menu = await box(page, '.note-top [data-testid="note-menu"]');
+    // The note's title bar, the tab strip since PEN-140 (A1505): its buttons as tall as the
+    // bar, the last at the window's edge.
+    const top = await box(page, '.tab-strip');
+    const menu = await box(page, '.tab-strip [data-testid="note-menu"]');
     expect(Math.round(menu.x + menu.width)).toBe(Math.round(top.x + top.width));
     expect(Math.round(menu.height)).toBe(Math.round(top.height) - 1);
     // The panel's tabs: from the top of their strip, no gap between them.

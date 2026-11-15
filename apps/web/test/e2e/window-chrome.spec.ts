@@ -453,15 +453,20 @@ test.describe('in Quanta, with a folder and a long note', () => {
     await openNote(page, 'Long');
     // The Mac app's compact title bar, as mac-window.ts sets it.
     await page.evaluate(() => (document.documentElement.dataset['titlebar'] = 'compact'));
-    const bar = await box(page, '.note-top');
-    const actions = await box(page, '.note-top .note-actions');
-    const crumbs = await box(page, '.note-top .crumbs li[aria-current="page"]');
+    // The main window's top bar is its tab strip since PEN-140 (A1505): the note's tab where
+    // the breadcrumb was, its buttons at the end.
+    const bar = await box(page, '.tab-strip');
+    const actions = await box(page, '.tab-strip-end .note-actions');
+    const crumbs = await box(page, '.tab-strip [role="tab"][aria-selected="true"]');
+    const add = await box(page, '.tab-strip [data-testid="tab-new"]');
     const text = await box(page, '.note-body');
-    // Over the text's column, past the breadcrumb's words and short of the buttons: the bar's
-    // empty part, where the title and the text pass under it.
+    // Over the text's column, past the tab and + and short of the buttons: the bar's empty part,
+    // where the title and the text pass under it.
     const empty = { x: text.x + text.width / 2, y: bar.y + bar.height / 2 };
     expect(empty.x).toBeGreaterThan(crumbs.x + crumbs.width);
+    expect(empty.x).toBeGreaterThan(add.x + add.width);
     expect(empty.x).toBeLessThan(actions.x);
+    // The tab is a control, which clicks (the breadcrumb's words dragged).
     const words = { x: crumbs.x + 4, y: empty.y };
     expect(await regionAt(page, empty.x, empty.y)).toBe('drag');
 
@@ -470,13 +475,13 @@ test.describe('in Quanta, with a folder and a long note', () => {
     const scroller = page.getByTestId('note-scroll');
     await scroller.evaluate((element) => (element.scrollTop = 900));
     await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBe(900);
-    expect(await box(page, '.note-top')).toEqual(bar);
+    expect(await box(page, '.tab-strip')).toEqual(bar);
     const under = await box(page, '.note-body .ProseMirror');
     expect(under.y).toBeLessThan(bar.y);
     expect(under.x).toBeLessThan(empty.x);
     expect(under.x + under.width).toBeGreaterThan(empty.x);
     expect(await regionAt(page, empty.x, empty.y)).toBe('drag');
-    expect(await regionAt(page, words.x, words.y)).toBe('drag');
+    expect(await regionAt(page, words.x, words.y)).toBe('no-drag');
     expect(await regionAt(page, actions.x + 10, empty.y)).toBe('no-drag');
     // The editor's own surfaces stay clickable over the bar: the selection toolbar is one.
     expect(
@@ -553,7 +558,8 @@ test.describe('in the Mac window, in Quanta with two notes', () => {
     await expect(head.getByTestId('keep-on-top')).toBeVisible();
 
     await collapse(page);
-    const lead = page.locator('.note-top > .note-top-lead');
+    // At the tab strip's start since PEN-140 (A1505): the main window's first row.
+    const lead = page.locator('.tab-strip > .tab-strip-lead');
     for (const id of ['app-back', 'app-forward', 'keep-on-top']) {
       await expect(lead.getByTestId(id), id).toBeVisible();
       await expect(page.locator('.sidebar').getByTestId(id), id).toHaveCount(0);
@@ -561,12 +567,12 @@ test.describe('in the Mac window, in Quanta with two notes', () => {
     // The rail keeps the toggle, below the lights' row.
     const toggle = await box(page, '[data-testid="toggle-sidebar"]');
     expect(toggle.y).toBeGreaterThanOrEqual(48);
-    // At the bar's start, after the lights' room, then the crumbs.
-    const back = await box(page, '.note-top [data-testid="app-back"]');
-    const forward = await box(page, '.note-top [data-testid="app-forward"]');
-    const pin = await box(page, '.note-top [data-testid="keep-on-top"]');
-    const crumbs = await box(page, '.note-top .crumbs');
-    const bar = await box(page, '.note-top');
+    // At the bar's start, after the lights' room, then the tabs.
+    const back = await box(page, '.tab-strip [data-testid="app-back"]');
+    const forward = await box(page, '.tab-strip [data-testid="app-forward"]');
+    const pin = await box(page, '.tab-strip [data-testid="keep-on-top"]');
+    const crumbs = await box(page, '.tab-strip .tab-list');
+    const bar = await box(page, '.tab-strip');
     expect(back.x).toBeGreaterThanOrEqual(INSET);
     expect(back.x).toBeLessThan(INSET + 4);
     expect(forward.x).toBeGreaterThan(back.x);
@@ -579,11 +585,11 @@ test.describe('in the Mac window, in Quanta with two notes', () => {
     }
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/pen-135-6-compact.png` });
     // They work there: Back to Alpha, Forward to Bravo, the pin pins the window.
-    await page.locator('.note-top').getByTestId('app-back').click();
+    await page.locator('.tab-strip').getByTestId('app-back').click();
     await expect(page.getByTestId('note-title')).toHaveValue('Alpha');
-    await page.locator('.note-top').getByTestId('app-forward').click();
+    await page.locator('.tab-strip').getByTestId('app-forward').click();
     await expect(page.getByTestId('note-title')).toHaveValue('Bravo');
-    const pinButton = page.locator('.note-top').getByTestId('keep-on-top');
+    const pinButton = page.locator('.tab-strip').getByTestId('keep-on-top');
     await pinButton.click();
     await expect(pinButton).toHaveAttribute('aria-pressed', 'true');
     await pinButton.click();
@@ -593,19 +599,19 @@ test.describe('in the Mac window, in Quanta with two notes', () => {
     // rail's edge.
     await page.evaluate(() => delete document.documentElement.dataset['titlebar']);
     const rail = await box(page, '.sidebar');
-    const flush = await box(page, '.note-top [data-testid="app-back"]');
+    const flush = await box(page, '.tab-strip [data-testid="app-back"]');
     expect(flush.x).toBeCloseTo(rail.x + rail.width, 0);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/pen-135-6-browser.png` });
 
-    // The graph (as Home and Trash) has no note's title bar: there the rail keeps them.
+    // The graph (as Home and Trash) shows under the tab strip too since PEN-140: they stay there.
     await page.locator('.sidebar [data-command="app.graph"]').click();
     await expect(page.locator('.graph-page')).toBeVisible();
-    await expect(page.locator('.sidebar').getByTestId('app-back')).toBeVisible();
-    await expect(page.locator('.note-top')).toHaveCount(0);
-    // A note that is not there still has the bar, with them.
+    await expect(page.locator('.tab-strip').getByTestId('app-back')).toBeVisible();
+    await expect(page.locator('.sidebar').getByTestId('app-back')).toHaveCount(0);
+    // A note that is not there has the strip, with them.
     await page.goto('/notes/01ZZZZZZZZZZZZZZZZZZZZZZZZ');
     await expect(page.getByTestId('note-not-found')).toBeVisible({ timeout: 30_000 });
-    await expect(page.locator('.note-top').getByTestId('app-back')).toBeVisible();
+    await expect(page.locator('.tab-strip').getByTestId('app-back')).toBeVisible();
     await expect(page.locator('.sidebar').getByTestId('app-back')).toHaveCount(0);
     await expand(page);
     await expect(head.getByTestId('app-back')).toBeVisible();
@@ -622,7 +628,8 @@ test.describe('in the Mac window, in Quanta with two notes', () => {
       await chooseMode(page, mode);
       await openNote(page, 'Alpha');
       const sidebar = await background(page, '.sidebar');
-      expect(await background(page, '.note-top')).toBe(sidebar);
+      // The tab strip, the main window's first row since PEN-140 (A1505).
+      expect(await background(page, '.tab-strip')).toBe(sidebar);
       expect(await background(page, 'body')).not.toBe(sidebar);
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/pen-135-7-${mode.toLowerCase()}.png` });
       // Beside the rail in the compact window, the row over the rail's column takes it too.

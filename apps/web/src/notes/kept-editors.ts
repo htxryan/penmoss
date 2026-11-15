@@ -39,9 +39,19 @@ export interface NoteEditor {
  * which is most of opening a long note. A kept note stays open as the shown
  * one is: synced over its socket and saved as it changes, so its editor is
  * current when shown again. Kept only while a note view shows another note:
- * a page without one (Trash, Settings, the graph) closes them.
+ * a page without one (Trash, Settings, the graph) closes them, except the notes the main
+ * window's tabs hold (PEN-140, A1500): up to eight, so switching between a handful of tabs is
+ * instant and keeps each note's undo history. Past eight, notes no tab holds go first.
  */
-export const KEEP = 2;
+export const KEEP = 8;
+
+/** The notes the main window's tabs hold, most recently active first; null without tabs. */
+let heldByTabs: () => readonly string[] | null = () => null;
+
+/** Tells the shelf which notes the tabs hold (the main window's tabs, main.tsx). */
+export function setTabNotes(held: () => readonly string[] | null): void {
+  heldByTabs = held;
+}
 
 interface Shelf {
   /** Most recently shown first. */
@@ -79,7 +89,14 @@ export function viewMounted(notes: Notes): () => void {
     // Checked once the commit is over: the next note's view mounts right after this one goes.
     shelf.sweep ??= setTimeout(() => {
       shelf.sweep = null;
-      if (shelf.views === 0) for (const editor of shelf.kept.splice(0)) discard(editor);
+      if (shelf.views !== 0) return;
+      // No note shows: only the tabs' notes stay (none without tabs).
+      const held = new Set(heldByTabs() ?? []);
+      for (const editor of [...shelf.kept]) {
+        if (held.has(editor.id)) continue;
+        shelf.kept.splice(shelf.kept.indexOf(editor), 1);
+        discard(editor);
+      }
     }, 0);
   };
 }
@@ -113,6 +130,19 @@ export function keepEditor(notes: Notes, editor: NoteEditor): void {
     if (isDeleted(replica.doc)) dropEditor(notes, editor);
   });
   unwatch.set(editor, offUpdate);
+  trim(shelf);
+}
+
+/** Down to `KEEP`: the oldest of the notes no tab holds go first, then the oldest of the rest. */
+function trim(shelf: Shelf): void {
+  if (shelf.kept.length <= KEEP) return;
+  const held = new Set(heldByTabs() ?? []);
+  for (let index = shelf.kept.length - 1; index >= 0 && shelf.kept.length > KEEP; index--) {
+    const editor = shelf.kept[index]!;
+    if (held.has(editor.id)) continue;
+    shelf.kept.splice(index, 1);
+    discard(editor);
+  }
   for (const old of shelf.kept.splice(KEEP)) discard(old);
 }
 

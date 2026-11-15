@@ -86,9 +86,9 @@ test('Back and Forward step through the app’s pages, greyed out at either end 
   await expect(page).toHaveURL(/\/settings$|\/settings\/appearance$/);
   await expect(forward).toBeEnabled();
 
-  // Each button names itself with its keys.
+  // Each button names itself, the active tab's page it goes to, and its keys (AC6).
   await back.hover();
-  await expect(page.getByTestId('tooltip')).toHaveText(/^Back \(.+\)$/);
+  await expect(page.getByTestId('tooltip')).toHaveText(/^Back to .+ \(this tab\) \(.+\)$/);
   expect(errors).toEqual([]);
 });
 
