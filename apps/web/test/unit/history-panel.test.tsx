@@ -509,6 +509,10 @@ describe('Version History as a list over a docked preview (Ryan’s review of #1
       'Revert',
       'Copy',
     ]);
+    // Close is the app's × for a dialog (DialogClose), with no words of its own.
+    expect(actions[3]!.textContent).toBe('');
+    expect(actions[3]!.querySelector('svg[data-icon="close"]')).not.toBeNull();
+    expect(actions[3]!.dataset['tip']).toBe('Close (Esc)');
 
     // Another version from the list: only the left side changes. A phone's can be reverted too
     // (A1575).

@@ -36,7 +36,7 @@ Your repository's git history keeps every version, so you can also read it with 
 
 - Pick another version in History, or move with ↑ and ↓, and the left side shows that one instead.
 - **Restore**, **Revert** and **Copy** are at the top too. Restore and Revert close the view and show the result in the note.
-- **Close** or Esc goes back to History.
+- **×** (Close) or Esc goes back to History.
 
 View is not there in a narrow window, which has no room for two sides.
 

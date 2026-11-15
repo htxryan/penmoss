@@ -583,11 +583,6 @@ html:root[data-resizing='rows'] * {
   flex: none;
 }
 
-/* Close's Esc at full strength: a button's key is faded, which falls under 4.5:1 here. */
-.history-view-head kbd {
-  opacity: 1;
-}
-
 .history-view-sep {
   flex: none;
   width: 1px;

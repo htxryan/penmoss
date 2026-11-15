@@ -40,5 +40,6 @@ These are the rules every screen follows, on the Mac/web app and on Android. The
 ## Interaction
 
 - Esc closes the topmost dialog, drawer or popover, and focus goes back to what opened it.
+- A dialog's close is the shared × (`DialogClose`), never a text button such as **Close**. Its accessible name says what it closes, and its tooltip adds (Esc).
 - Hover and keyboard focus both show the same affordance (an overlay or a highlight). A focus ring shows only for keyboard use.
 - Motion is brief, and Reduce Motion replaces it with a static state.

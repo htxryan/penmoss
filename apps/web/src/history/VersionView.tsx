@@ -16,6 +16,7 @@ import { editorSchema } from '@penmoss/editor/schema';
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { DialogClose } from '../shell/DialogClose';
 import {
   blocksOf,
   compareRows,
@@ -350,18 +351,8 @@ export function VersionView({
             Copy
           </button>
           <span className="history-view-sep" aria-hidden="true" />
-          <button
-            type="button"
-            className="btn quiet"
-            data-ui="dismiss"
-            aria-label="Close"
-            data-tip="Close (Esc)"
-            onClick={onClose}
-            data-testid="history-view-close"
-          >
-            Close
-            <kbd aria-hidden="true">Esc</kbd>
-          </button>
+          {/* The app's × for a dialog (Ryan): Close, its tooltip Close (Esc). */}
+          <DialogClose label="Close" onClose={onClose} />
         </div>
         <div className="history-view-sides-head" aria-hidden="true">
           <div>

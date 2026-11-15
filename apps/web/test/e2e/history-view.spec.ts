@@ -108,7 +108,11 @@ test('View shows a version beside the note as it is now, and restores it', async
   ).not.toHaveAttribute('data-change');
   // The top actions: short names, full ones as their names; Revert on every version (A1575).
   const actions = view(page).locator('.history-view-head > button');
-  await expect(actions).toHaveText(['Restore', 'Revert', 'Copy', /^Close/]);
+  await expect(actions).toHaveText(['Restore', 'Revert', 'Copy', '']);
+  // Close is the app's × for a dialog, its name and tooltip in words.
+  const close = view(page).getByRole('button', { name: 'Close', exact: true });
+  await expect(close.locator('svg[data-icon="close"]')).toBeVisible();
+  await expect(close).toHaveAttribute('data-tip', 'Close (Esc)');
   await expect(view(page).getByRole('button', { name: 'Restore This Version' })).toBeVisible();
   await expect(view(page).getByRole('button', { name: 'Revert This Edit' })).toBeVisible();
   await expect(view(page).getByRole('button', { name: 'Copy Text' })).toBeVisible();
