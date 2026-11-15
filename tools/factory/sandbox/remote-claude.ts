@@ -45,6 +45,10 @@ const TERMINAL_CODES = new RegExp(`${ESC}\\[[0-9;?]*[ -/]*[@-~]|${ESC}\\][^${BEL
 const START_MS = 120_000;
 /** How long a turn that ended on a background command waits for the next (a server never ends). */
 export const BACKGROUND_WAIT_MS = Number(process.env['FACTORY_RC_BACKGROUND_MS'] ?? 30 * 60_000);
+/** How often the runner looks at the hooks, the transcript and the debug log. */
+const POLL_MS = Number(process.env['FACTORY_RC_POLL_MS'] ?? 500);
+/** How long after a turn's last hook the runner waits for the transcript's last lines. */
+const SETTLE_MS = Number(process.env['FACTORY_RC_SETTLE_MS'] ?? 1000);
 
 type Json = Record<string, unknown>;
 
@@ -290,7 +294,7 @@ async function run(name: string, command: readonly string[]): Promise<number> {
     for (const line of lines) if (line.startsWith('{')) out(line);
   };
   for (;;) {
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, POLL_MS));
     const start = readJson(join(dir, 'SessionStart.json'));
     const path = typeof start?.['transcript_path'] === 'string' ? start['transcript_path'] : '';
     if (path && path !== transcript) {
@@ -313,7 +317,7 @@ async function run(name: string, command: readonly string[]): Promise<number> {
       (held && Date.now() > held.until ? held.hook : null);
     if (ended) {
       // The transcript's last lines can land just after the hook.
-      await new Promise((r) => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, SETTLE_MS));
       pump();
       const text = transcript && existsSync(transcript) ? readFileSync(transcript, 'utf8') : '';
       // A turn that waits on its own background command goes on when the command ends.

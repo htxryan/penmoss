@@ -55,13 +55,14 @@ cleanup() {
   stop_watcher
   "$ADB" -s "$ANDROID_SERIAL" emu kill >/dev/null 2>&1 || true
   if [ -n "$emulator_pid" ]; then
-    sleep 2
+    pause 2
     kill "$emulator_pid" 2>/dev/null || true
   fi
 }
 trap cleanup EXIT INT TERM
 
-# Settling the emulator, and answering "isn't responding" dialogs (settle.sh).
+# Settling the emulator, answering "isn't responding" dialogs, and `pause`, every fixed wait
+# here, in PENMOSS_EMULATOR_TICK's seconds (settle.sh).
 # shellcheck disable=SC2034 # read by settle.sh
 SETTLE_TAG='[proof]'
 # shellcheck source=apps/android/scripts/settle.sh
@@ -84,7 +85,7 @@ until [ "$("$ADB" -s "$ANDROID_SERIAL" shell getprop sys.boot_completed 2>/dev/n
     echo "[proof] the emulator didn't boot in ${BOOT_SECONDS}s; see $OUT/emulator.log" >&2
     exit 1
   fi
-  sleep 3
+  pause 3
   waited=$((waited + 3))
 done
 echo "[proof] booted in ${waited}s"
@@ -112,7 +113,7 @@ for spec in "$@"; do
   started="$("$ADB" -s "$ANDROID_SERIAL" shell cat /proc/uptime 2>/dev/null | awk '{ print $1 }')"
   "$ADB" -s "$ANDROID_SERIAL" shell screenrecord --time-limit "$TEST_SECONDS" /sdcard/proof.mp4 &
   rec=$!
-  sleep 1
+  pause 1
   echo "[proof] $spec"
   watch_dialogs "$spec" &
   watcher=$!
@@ -144,7 +145,7 @@ for spec in "$@"; do
   # screenrecord finishes its file on SIGINT.
   "$ADB" -s "$ANDROID_SERIAL" shell pkill -INT screenrecord >/dev/null 2>&1 || true
   wait "$rec" 2>/dev/null || true
-  sleep 2
+  pause 2
   "$ADB" -s "$ANDROID_SERIAL" pull /sdcard/proof.mp4 "$OUT/$video" >/dev/null 2>&1 || true
   # A video that ran on after the test closed the app ends on the launcher (PEN-91): cut it
   # HOLD_SECONDS after the test's last ProofShot.take(), which logs its device time.
