@@ -3,6 +3,7 @@ import {
   body,
   gitNotebook,
   go,
+  holdForProof,
   launch,
   mainBounds,
   notebookSection,
@@ -114,7 +115,7 @@ test('the Tags page lists each notebook’s tags and keeps what each means', asy
 
   // Held on the page for the recording.
   await field.scrollIntoViewIfNeeded();
-  await page.waitForTimeout(2000);
+  await holdForProof(page);
   await expect(field).toBeVisible();
   expect(errors).toEqual([]);
 });

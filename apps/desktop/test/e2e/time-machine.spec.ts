@@ -11,6 +11,7 @@ import {
   gitConfig,
   gitNotebook,
   go,
+  holdForProof,
   launch,
   notebookSynced,
   removeDataDirs,
@@ -112,5 +113,5 @@ test('the Time Machine shows the notebook on a past date and what changed that w
     moved.locator('[data-op="add"] ins', { hasText: 'Agent added replay' }),
   ).toBeVisible();
   await moved.scrollIntoViewIfNeeded();
-  await page.waitForTimeout(2_000);
+  await holdForProof(page);
 });

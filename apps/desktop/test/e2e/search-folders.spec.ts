@@ -3,6 +3,7 @@ import {
   body,
   gitNotebook,
   go,
+  holdForProof,
   launch,
   mainBounds,
   notebookSection,
@@ -141,7 +142,7 @@ test('search: Folder lists both notebooks’ folders by notebook; a pick switche
   await expect.poll(() => groupsOf(folder)).toEqual([]);
   await folder.focus();
   // Held on the result for the recording.
-  await page.waitForTimeout(2000);
+  await holdForProof(page);
   await expect.poll(() => shown(notebook)).toBe('Work');
   await expect(hits.first()).toContainText('Work Moss');
   expect(errors).toEqual([]);

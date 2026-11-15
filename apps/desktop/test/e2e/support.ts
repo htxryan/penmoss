@@ -165,6 +165,15 @@ async function recordWindow(app: ElectronApplication, page: Page): Promise<void>
   };
 }
 
+/**
+ * Holds what is on screen for a Mac proof's recording (`task proof:mac`, F7), so its video shows
+ * it. A routine run waits for nothing: no assertion may depend on this wait. One that does (a
+ * check that something didn't happen) keeps its own `waitForTimeout` (A1520).
+ */
+export async function holdForProof(page: Page, ms = 2_000): Promise<void> {
+  if (process.env['PENMOSS_PROOF'] === '1') await page.waitForTimeout(ms);
+}
+
 /** How the stand-in owner check answers from now on: as the owner confirming, or not. */
 export function answerChecks(
   { authDir }: Pick<Launched, 'authDir'>,
