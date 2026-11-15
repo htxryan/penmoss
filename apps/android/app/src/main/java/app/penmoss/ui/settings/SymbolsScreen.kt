@@ -50,6 +50,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import app.penmoss.engine.settings.ColourLock
 import app.penmoss.engine.settings.LineSymbol
 import app.penmoss.engine.settings.LineSymbols
 import app.penmoss.ui.common.LocalSymbolColours
@@ -110,11 +111,18 @@ fun SymbolsScreen(
                             Modifier.size(40.dp).border(1.dp, MaterialTheme.colorScheme.outlineVariant).testTag("symbol-glyph-$index"),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(symbol.glyph, color = symbolColour(symbol.colour), style = MaterialTheme.typography.titleLarge, maxLines = 1)
+                            // An emoji keeps its own colours (A1588).
+                            val ink = if (ColourLock.isLocked(symbol.glyph)) Color.Unspecified else symbolColour(symbol.colour)
+                            Text(symbol.glyph, color = ink, style = MaterialTheme.typography.titleLarge, maxLines = 1)
                         }
                     }
                 },
-                headlineContent = { Text(LineSymbols.colourLabel(symbol.colour)) },
+                headlineContent = {
+                    Text(
+                        if (ColourLock.isLocked(symbol.glyph)) OWN_COLOURS else LineSymbols.colourLabel(symbol.colour),
+                        Modifier.testTag("symbol-colour-label-$index"),
+                    )
+                },
                 supportingContent = { Text(keys.getOrNull(index) ?: "No key", Modifier.testTag("symbol-key-$index")) },
                 trailingContent = {
                     IconButton(
@@ -187,6 +195,9 @@ fun SymbolsScreen(
     }
 }
 
+/** What a symbol's row says in place of its colour for an emoji, in its own colours (A1588). */
+internal const val OWN_COLOURS = "Its own colours"
+
 /** The colour chips' value for "any colour", until one is picked. */
 private const val CUSTOM = "custom"
 
@@ -218,6 +229,8 @@ private fun SymbolDialog(
     val taken = others.map { LineSymbols.glyphKey(it.glyph) }.toSet()
     val glyphProblem = LineSymbols.glyphProblem(glyph)
         ?: if (LineSymbols.glyphKey(glyph) in taken) "$glyph is already in the list" else null
+    // An emoji comes in its own colours (A1588): no colour to choose, and the one it had is kept.
+    val locked = ColourLock.isLocked(glyph)
     if (picking) {
         CharacterPicker(
             current = glyph,
@@ -248,7 +261,7 @@ private fun SymbolDialog(
                             .clearAndSetSemantics {},
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(glyph.ifEmpty { "●" }, style = MaterialTheme.typography.titleLarge, color = symbolColour(colour))
+                        Text(glyph.ifEmpty { "●" }, style = MaterialTheme.typography.titleLarge, color = if (locked) Color.Unspecified else symbolColour(colour))
                     }
                     OutlinedButton(onClick = { picking = true }, modifier = Modifier.testTag("symbol-choose")) {
                         Text("Choose Symbol…")
@@ -269,6 +282,7 @@ private fun SymbolDialog(
                         FilterChip(
                             selected = key == colour,
                             onClick = { colour = key },
+                            enabled = !locked,
                             label = { Text(label) },
                             leadingIcon = {
                                 Text(glyph.ifEmpty { "●" }, color = colours[key] ?: Color.Unspecified, modifier = Modifier.clearAndSetSemantics {})
@@ -280,6 +294,7 @@ private fun SymbolDialog(
                     FilterChip(
                         selected = custom,
                         onClick = { colour = customColour },
+                        enabled = !locked,
                         label = { Text(if (custom) "Custom: ${LineSymbols.colourLabel(colour)}" else "Custom Colour") },
                         leadingIcon = {
                             Text(glyph.ifEmpty { "●" }, color = HexColours.color(customColour), modifier = Modifier.clearAndSetSemantics {})
@@ -287,7 +302,9 @@ private fun SymbolDialog(
                         modifier = Modifier.testTag("symbol-colour-$CUSTOM"),
                     )
                 }
-                if (LineSymbols.isHexColour(colour)) {
+                if (locked) {
+                    Help(ColourLock.NOTE, Modifier.testTag("symbol-colour-locked"))
+                } else if (LineSymbols.isHexColour(colour)) {
                     ColourPicker(
                         hex = colour,
                         onChange = {

@@ -25,6 +25,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.penmoss.engine.settings.ColourLock
 import app.penmoss.engine.settings.LineSymbol
 import app.penmoss.engine.settings.LineSymbols
 import app.penmoss.engine.settings.SettingKeys
@@ -129,6 +130,31 @@ class SymbolsScreenTest {
         assertEquals(LineSymbol("⁇", "⁇", "calloutNote"), stored.last()[1])
         assertEquals(5, stored.last().size)
         compose.onNodeWithTag("symbols-notice").assertTextContains("Saved ⁇.")
+    }
+
+    /**
+     * An emoji keeps its own colours (A1588): its row says so in place of a colour, its colours are
+     * disabled with the note, and its colour is kept for a glyph that takes one.
+     */
+    @Test
+    fun anEmojisColourCannotBeChangedAndIsKept() {
+        screen()
+        // 💡, a default: its row names no colour; ★'s does.
+        compose.onNodeWithTag("symbol-colour-label-3", useUnmergedTree = true).assertTextEquals(OWN_COLOURS)
+        compose.onNodeWithTag("symbol-colour-label-0", useUnmergedTree = true).assertTextEquals("Orange")
+        compose.onNodeWithTag("symbol-row-3").performScrollTo().performClick()
+        compose.onNodeWithTag("symbol-colour-calloutTip").performScrollTo().assertIsNotEnabled().assertIsSelected()
+        compose.onNodeWithTag("symbol-colour-custom").assertIsNotEnabled()
+        compose.onNodeWithTag("symbol-colour-locked").performScrollTo().assertTextEquals(ColourLock.NOTE)
+        // A glyph that takes a colour: the colours are back, the one it had still chosen.
+        compose.onNodeWithTag("symbol-glyph").performTextReplacement("⚑")
+        compose.onNodeWithTag("symbol-colour-locked").assertDoesNotExist()
+        compose.onNodeWithTag("symbol-colour-calloutTip").performScrollTo().assertIsEnabled().assertIsSelected()
+        // An emoji again, and saved: the colour is kept.
+        compose.onNodeWithTag("symbol-glyph").performTextReplacement("🔥")
+        compose.onNodeWithTag("symbol-colour-calloutTip").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("symbol-save").performClick()
+        assertEquals(LineSymbol("🔥", "🔥", "calloutTip"), stored.last()[3])
     }
 
     /**
