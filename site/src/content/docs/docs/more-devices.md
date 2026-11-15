@@ -10,9 +10,10 @@ A notebook lives in its repository, so every device that can reach the repositor
 ## Another Mac
 
 1. [Install Penmoss](/docs/install/mac/) and open it.
-2. Choose **Open a notebook you already have**. (With a notebook open already: **Settings → Notebooks → Add a Git Notebook…**.)
-3. Pick the repository, then the folder that holds the notebook (Penmoss shows its name), or choose **Type an Address** and paste the repository's address.
-4. Choose **Open Notebook**.
+2. Choose **Get Started**, then **Open an Existing Notebook** and **Continue**.
+3. Penmoss lists your GitHub repositories with the notebooks in each beneath it. Choose **Open** beside the notebook. To use a repository on another host, choose **Paste a URL Instead** and paste its address.
+
+With a notebook open already, use **Settings → Notebooks → Add a Git Notebook…** instead: pick the repository, then the folder that holds the notebook (Penmoss shows its name), or choose **Type an Address**, and choose **Add**.
 
 The second Mac needs its own git sign-in for the repository, as the first did: see [Your first notebook](/docs/first-notebook/#before-you-start).
 

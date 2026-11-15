@@ -68,22 +68,26 @@ function hasXdotool(): boolean {
   }
 }
 
+/** An accelerator in xdotool's names: ctrl, alt, shift; letters and space in lower case. */
+function xdotoolKeys(accelerator: string): string {
+  const names: Record<string, string> = {
+    Control: 'ctrl',
+    Alt: 'alt',
+    Shift: 'shift',
+    Space: 'space',
+  };
+  return accelerator
+    .split('+')
+    .map((part) => names[part] ?? (part.length === 1 ? part.toLowerCase() : part))
+    .join('+');
+}
+
 /** Presses the capture hotkey (or shows the window as the hotkey does) and waits for it. */
 async function openCapture(app: ElectronApplication): Promise<Page> {
   const { accelerator, registered } = await hooks(app);
-  if (registered && !mac && hasXdotool()) {
-    // xdotool's names: ctrl, alt, shift; letters and space in lower case, F-keys as F9.
-    const names: Record<string, string> = {
-      Control: 'ctrl',
-      Alt: 'alt',
-      Shift: 'shift',
-      Space: 'space',
-    };
-    const keys = accelerator
-      .split('+')
-      .map((part) => names[part] ?? (part.length === 1 ? part.toLowerCase() : part))
-      .join('+');
-    execFileSync('xdotool', ['key', keys]);
+  const pressed = registered && !mac && hasXdotool();
+  if (pressed) {
+    execFileSync('xdotool', ['key', xdotoolKeys(accelerator)]);
   } else {
     await app.evaluate(() => (globalThis as unknown as MainHooks).penmossDesktop.showCapture());
   }
@@ -109,7 +113,19 @@ async function openCapture(app: ElectronApplication): Promise<Page> {
           : null,
       };
     });
-    throw new Error(`The capture window did not show: ${JSON.stringify(known)}`, { cause: error });
+    // Pressed on the X display: the keys xdotool sent, and whether Electron still holds them.
+    const x = pressed
+      ? {
+          pressed: xdotoolKeys(accelerator),
+          held: await app.evaluate(
+            ({ globalShortcut }, each) => globalShortcut.isRegistered(each),
+            accelerator,
+          ),
+        }
+      : null;
+    throw new Error(`The capture window did not show: ${JSON.stringify({ ...known, x })}`, {
+      cause: error,
+    });
   }
   const page = await capturePage(app);
   await expect(page.getByTestId('capture-text')).toBeFocused();
@@ -462,17 +478,24 @@ test('the capture hotkey changes only from Settings, and only to one A90 allows'
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form.getByRole('status')).toContainText('Penmoss keeps it free');
   expect((await hooks(app)).accelerator).toBe(original);
-  // A free one: taken.
+  // A free one with an F-key (A90 allows them): taken.
   await field.fill('Control+Shift+F9');
   await form.getByRole('button', { name: 'Save' }).click();
   await expect(form.getByRole('status')).toContainText('Control+Shift+F9');
   expect(await hooks(app)).toMatchObject({ accelerator: 'Control+Shift+F9', registered: true });
+  // And a free one with a letter, the one pressed below: xvfb on ubuntu-26.04 never hands an
+  // F-key that xdotool presses to the hotkey's grab (Control+Shift+F8 and F9 never fired there,
+  // Control+Shift+K and Space did, all registered the same way), so the real press is a letter's.
+  await field.fill('Control+Shift+J');
+  await form.getByRole('button', { name: 'Save' }).click();
+  await expect(form.getByRole('status')).toContainText('Control+Shift+J');
+  expect(await hooks(app)).toMatchObject({ accelerator: 'Control+Shift+J', registered: true });
 
   // Nor can the capture window, gesture or not.
   const capture = await openCapture(app);
   expect(
     await capture.evaluate(() => window.penmossDesktop!.capture.setHotkey('Control+Shift+F11')),
   ).toBeNull();
-  expect((await hooks(app)).accelerator).toBe('Control+Shift+F9');
+  expect((await hooks(app)).accelerator).toBe('Control+Shift+J');
   expect(launched.errors).toEqual([]);
 });

@@ -10,7 +10,7 @@ Everything here comes from your notebook's git history, already on your Mac. Not
 ## Open it
 
 - **Time Machine** in the command palette (⌘K) opens it for the notebook of the note you have open, or for your Primary Notebook.
-- The **Time Machine** button on a notebook's name row in the sidebar (it shows when the pointer is over the row) opens it for that notebook.
+- **Time Machine**, in the ⋯ menu on a notebook's name row in the sidebar (it shows when the pointer is over the row), opens it for that notebook.
 - If you have more than one notebook, the **Notebook** list at the top of the page switches between them.
 
 ## Notebook Then

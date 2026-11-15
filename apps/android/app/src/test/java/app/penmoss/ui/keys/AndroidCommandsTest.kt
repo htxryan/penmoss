@@ -113,7 +113,6 @@ class AndroidCommandsTest {
                 RootCommands(rootActions(ran), inbox)
                 NoteCommandSet(ready = true, editable = true, nav = nav, focusTitle = { ran += "title" }, actions = noteActions(ran))
                 RecentSwitcherKeys(switch, count = { 3 }) { ran += "recent:$it" }
-                TaggedCommands(clear = { ran += "all notes" })
             }
         }
         compose.waitForIdle()
@@ -134,7 +133,6 @@ class AndroidCommandsTest {
                 RootCommands(rootActions(ran), inbox)
                 NoteCommandSet(ready = true, editable = true, nav = nav, focusTitle = { ran += "title" }, actions = noteActions(ran))
                 RecentSwitcherKeys(switch, count = { 3 }) { ran += "recent:$it" }
-                TaggedCommands(clear = { ran += "all notes" })
             }
         }
         compose.waitForIdle()
@@ -182,7 +180,6 @@ class AndroidCommandsTest {
             "journal.previous" to "daily:2026-10-20",
             "journal.next" to "daily:2026-10-22",
             "journal.week" to "weekly:2026-10-19",
-            "tags.clearFilter" to "all notes",
         )
         for ((id, outcome) in expected) {
             ran.clear()

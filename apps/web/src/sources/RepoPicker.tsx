@@ -1,11 +1,10 @@
 /**
  * Add a Git Notebook's repository step (T81, #229; A1166, B1–B3, B7–B10): the GitHub
  * repositories git's credential reaches, most recently pushed first, searchable, each labelled
- * Private, Public or Internal. Read-only ones are greyed and can't be picked. Start New lists
- * empty repositories first and can create a private one. Main asks git for the credential on
- * each call; the page never sees it.
+ * Private, Public or Internal. Read-only ones are greyed and can't be picked. Main asks git for
+ * the credential on each call; the page never sees it. (The first run's Create New Repo and its
+ * tree of repositories are FirstRunRepos.tsx, Ryan's review of #192.)
  */
-import { defaultRepoName } from '@penmoss/git-notebook/github-browse';
 import { Icon } from '@penmoss/ui/icons';
 import { useEffect, useEffectEvent, useId, useMemo, useRef, useState } from 'react';
 import { fuzzy } from '../commands/fuzzy';
@@ -13,7 +12,6 @@ import { listKeys, pushedWords, SIGNED_OUT } from './repo-words';
 import type {
   BrowseError,
   DesktopGitHubBrowse,
-  GitHubOwner,
   GitHubRepo,
   GitHubVia,
   RepoList,
@@ -51,22 +49,16 @@ function failureWords(error: BrowseError): { title: string; hint: string | null 
 
 export function RepoPicker({
   github,
-  startNew,
   picked,
   onPick,
-  onCreated,
   onTypeAddress,
   onSignedOut,
 }: {
   github: DesktopGitHubBrowse;
-  /** Start New (B7): empty repositories first, and Create Private Repository. */
-  startNew: boolean;
   /** The repository picked already, marked in the list. */
   picked: string | null;
   /** The repository, and the sign-in it was listed with (Penmoss's gives the notebook its token). */
   onPick: (repo: GitHubRepo, via: GitHubVia) => void;
-  /** A repository Create just made, and the notebook name given for it. */
-  onCreated: (repo: GitHubRepo, notebookName: string, via: GitHubVia) => void;
   onTypeAddress: () => void;
   /**
    * No credential, or one GitHub refuses (B8): the form goes to Type an Address with the
@@ -141,10 +133,8 @@ export function RepoPicker({
       .map((repo, index) => ({ repo, index, match: fuzzy(q, repo.fullName) }))
       .filter((each) => each.match !== null);
     if (q) matched.sort((a, b) => b.match!.score - a.match!.score || a.index - b.index);
-    else if (startNew)
-      matched.sort((a, b) => Number(b.repo.empty) - Number(a.repo.empty) || a.index - b.index);
     return matched.map((each) => each.repo);
-  }, [load, query, startNew]);
+  }, [load, query]);
 
   if (load.state === 'loading') {
     return (
@@ -214,14 +204,8 @@ export function RepoPicker({
           Refresh
         </button>
       </p>
-      {startNew ? (
-        <CreateRepository
-          github={github}
-          onCreated={(repo, notebookName) => onCreated(repo, notebookName, load.via)}
-        />
-      ) : null}
       <label className="settings-field">
-        <span>{startNew ? 'Or pick an empty repository you made' : 'Pick the repository'}</span>
+        <span>Pick the repository</span>
         <input
           type="search"
           className="input"
@@ -293,137 +277,9 @@ export function RepoPicker({
         )}
       </div>
       <p className="muted repo-list-note">
-        Most recently pushed first{startNew ? ', empty repositories on top' : ''}.
+        Most recently pushed first.
         {load.list.more ? ' Showing the 300 most recently pushed; type an address for others.' : ''}
       </p>
     </div>
-  );
-}
-
-/** Create Private Repository (B7): the notebook's name, the repository's name and an owner. */
-function CreateRepository({
-  github,
-  onCreated,
-}: {
-  github: DesktopGitHubBrowse;
-  onCreated: (repo: GitHubRepo, notebookName: string) => void;
-}) {
-  const [notebook, setNotebook] = useState('');
-  const [repoName, setRepoName] = useState('notes');
-  const [edited, setEdited] = useState(false);
-  const [owners, setOwners] = useState<readonly GitHubOwner[] | null>(null);
-  const [owner, setOwner] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    let live = true;
-    void github.owners().then((answer) => {
-      if (!live || !answer?.ok) return;
-      setOwners(answer.value);
-      setOwner((now) => now || answer.value[0]?.login || '');
-    });
-    return () => {
-      live = false;
-    };
-  }, [github]);
-
-  const create = async () => {
-    const chosen = owners?.find((each) => each.login === owner);
-    if (!chosen) return;
-    setBusy(true);
-    setMessage(null);
-    try {
-      const answer = await github.create(chosen, repoName.trim());
-      if (!answer) {
-        setMessage('This window cannot create repositories.');
-        return;
-      }
-      if (!answer.ok) {
-        setMessage(answer.error.message);
-        return;
-      }
-      onCreated(answer.value, notebook.trim());
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <fieldset className="repo-create" data-testid="repo-create">
-      <legend>Create a private repository on GitHub</legend>
-      <div className="settings-row">
-        <label className="settings-field">
-          <span>
-            Notebook name <span className="muted">(shown in the sidebar)</span>
-          </span>
-          <input
-            className="input"
-            maxLength={80}
-            placeholder="Field Notes"
-            value={notebook}
-            data-testid="repo-create-notebook"
-            onChange={(event) => {
-              setNotebook(event.target.value);
-              if (!edited) setRepoName(defaultRepoName(event.target.value));
-            }}
-          />
-        </label>
-        <label className="settings-field">
-          <span>Repository name</span>
-          <input
-            className="input"
-            maxLength={100}
-            spellCheck={false}
-            value={repoName}
-            data-testid="repo-create-name"
-            onChange={(event) => {
-              setRepoName(event.target.value);
-              setEdited(true);
-            }}
-          />
-        </label>
-        <label className="settings-field">
-          <span>Owner</span>
-          <select
-            className="input"
-            value={owner}
-            disabled={!owners}
-            data-testid="repo-create-owner"
-            onChange={(event) => setOwner(event.target.value)}
-          >
-            {(owners ?? []).map((each) => (
-              <option key={each.login} value={each.login}>
-                {each.kind === 'user' ? `${each.login} (you)` : each.login}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <p className="muted">
-        Private, empty, no README.{' '}
-        {edited
-          ? 'Name kept as you typed it.'
-          : 'The name follows the notebook’s until you edit it.'}
-      </p>
-      <div className="settings-actions">
-        <button
-          type="button"
-          className="btn primary"
-          data-ui="submit"
-          data-testid="repo-create-submit"
-          disabled={busy || !owners || notebook.trim() === '' || repoName.trim() === ''}
-          onClick={() => void create()}
-        >
-          <Icon name="plus" size={14} />
-          {busy
-            ? 'Creating…'
-            : `Create ${owner ? `${owner}/` : ''}${repoName.trim() || '…'} and Add`}
-        </button>
-        <span role="status" className="muted" data-testid="repo-create-message">
-          {message ?? (notebook.trim() === '' ? 'Name the notebook first.' : null)}
-        </span>
-      </div>
-    </fieldset>
   );
 }

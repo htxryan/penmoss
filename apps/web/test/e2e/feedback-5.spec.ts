@@ -71,7 +71,9 @@ test('1, 9: a notebook’s page reads on the page’s own background; the Primar
     'rgba(0, 0, 0, 0)',
   );
   expect(await page1.evaluate((element) => getComputedStyle(element).borderTopWidth)).toBe('0px');
+  // Name is the first group since a notebook can be renamed there (A1383).
   await expect(page1.getByRole('heading', { level: 3 })).toHaveText([
+    'Name',
     'About',
     'Primary Notebook',
     'Sync',

@@ -96,6 +96,20 @@ export function useGitStatus(source: GitSource): GitSyncStatus {
   );
 }
 
+/**
+ * A git notebook's sync status as the app shows it (Ryan's R2-7, `shownStatus`): once a sync
+ * stopped, Sync Stopped through its retries until one lands or gets further. The sidebar's
+ * notebook row and anything else that shows the state use this; `useGitStatus` is the status as
+ * it is (Settings → Notebooks' details, what waits for a sync).
+ */
+export function useShownGitStatus(source: GitSource): GitSyncStatus {
+  return useSyncExternalStore(
+    source.feed.subscribe,
+    () => source.feed.shown,
+    () => source.feed.shown,
+  );
+}
+
 /** A git notebook's facts (name, repository, settings), as they change. */
 export function useGitInfo(source: GitSource): GitNotebookInfo {
   return useSyncExternalStore(

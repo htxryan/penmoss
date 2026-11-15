@@ -5,7 +5,7 @@
  * Revert (A81) are ordinary changes to the note: this window makes them, and they sync as any
  * other edit does, so an agent's change stays undoable on the Mac too.
  */
-import { Layout, NotebookHistory } from '@penmoss/git-notebook';
+import { Layout, NotebookHistory, type GitVersion } from '@penmoss/git-notebook';
 import { revertChange } from '@penmoss/editor/revert';
 import { restoreContent } from '@penmoss/sync-client/history';
 import type { Notes } from '../notes/service';
@@ -31,6 +31,12 @@ export interface HistoryList {
 export interface DiffOp {
   readonly op: 'same' | 'add' | 'del';
   readonly line: string;
+}
+/** What a version changed: `+1 −0 line` (or `Title changed`), and a few words on it. */
+export interface HistorySummary {
+  readonly summary: string;
+  /** `Added “Buy milk”`, the headings touched, or '' (no line of the body changed). */
+  readonly gist: string;
 }
 export interface HistoryDetail {
   readonly id: number;
@@ -65,7 +71,19 @@ export interface HistorySource {
   readonly automatic: string;
   /** The Save button's words. */
   readonly saveLabel: string;
+  /**
+   * The versions, fast (Ryan's review of #192): when and who from the log alone. A version's
+   * `summary` is '' until `summaries` has read it.
+   */
   list(): Promise<HistoryList>;
+  /** What each of these versions (ids from `list`) changed, read together, by id. */
+  summaries(versions: readonly number[]): Promise<ReadonlyMap<number, HistorySummary>>;
+  /**
+   * Calls `listener` when the list may have changed: the note's changes waiting to sync, or a
+   * sync that may have made a version (Ryan's review of #192, finding 13: the Now row is live).
+   * Returns the way to stop.
+   */
+  watch?(listener: () => void): () => void;
   detail(version: number): Promise<HistoryDetail | null>;
   /** Makes a version of the note as it is now. */
   save(): Promise<void>;
@@ -81,12 +99,17 @@ export function noHistory(): HistorySource {
     automatic: 'Versions are the git notebook’s commits.',
     saveLabel: 'Sync Now',
     list: refused,
+    summaries: () => Promise.resolve(new Map()),
     detail: () => Promise.resolve(null),
     save: refused,
     restore: refused,
     revert: refused,
   };
 }
+
+/** How a git notebook's versions are made, as History's ⓘ and Sync Now's description say it. */
+export const GIT_VERSIONS =
+  'Each sync with git is a version: this Mac commits its changes when it pushes, and every agent’s commit is a version of its own.';
 
 /** How long Save waits for the engine's sync (its own limit is 90 s). */
 const SAVE_WAIT_MS = 95_000;
@@ -121,13 +144,15 @@ export function gitHistory(source: GitSource, notes: Notes, noteId: string): His
   const pushNote = () => pushNoteOf(source, notes, noteId);
   const saveCurrentFirst = () => saveFirst(source, notes, noteId);
   const ownerFirst = (revert: boolean) => ownerCheck(source, noteId, revert);
+  /** The versions `list` gave last, by id: their commits, for `summaries`. */
+  let listed = new Map<number, GitVersion>();
   return {
     offline: `Version history could not read ${source.name}’s git history.`,
-    automatic:
-      'Each sync with git is a version: this Mac commits its changes when it pushes, and every agent’s commit is a version of its own.',
+    automatic: GIT_VERSIONS,
     saveLabel: 'Sync Now',
     list: async () => {
-      const history = await reader().history(noteId, { limit: 100 });
+      const history = await reader().versions(noteId, { limit: 100 });
+      listed = new Map(history.versions.map((version) => [version.id, version]));
       const pending = source.feed.status.pending.includes(noteId);
       const since = notes.list().find((entry) => entry.id === noteId)?.updatedAt ?? Date.now();
       return {
@@ -135,6 +160,27 @@ export function gitHistory(source: GitSource, notes: Notes, noteId: string): His
         unversioned: pending ? { authors: [THIS_MAC], since } : null,
       };
     },
+    watch: (listener) => {
+      const state = () => {
+        const status = source.feed.status;
+        return `${status.pending.includes(noteId)}:${status.lastSyncAt ?? 0}`;
+      };
+      let last = state();
+      return source.feed.subscribe(() => {
+        const next = state();
+        if (next === last) return;
+        last = next;
+        listener();
+      });
+    },
+    summaries: (ids) =>
+      reader().descriptions(
+        noteId,
+        ids.flatMap((id) => {
+          const version = listed.get(id);
+          return version ? [version] : [];
+        }),
+      ),
     detail: (version) => reader().detail(noteId, version),
     save: pushNote,
     restore: async (version) => {

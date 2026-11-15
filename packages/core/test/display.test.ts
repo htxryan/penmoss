@@ -9,8 +9,9 @@ import {
 
 describe('Display settings (T42, A576)', () => {
   it('names a setting for each shortcut that may be hidden, never Search', () => {
-    expect(SIDEBAR_ITEMS).toEqual(['today', 'thisWeek', 'graph', 'commands']);
+    expect(SIDEBAR_ITEMS).toEqual(['tags', 'today', 'thisWeek', 'graph', 'commands']);
     expect(DISPLAY_SETTING_KEYS).toEqual([
+      'sidebar.tags',
       'sidebar.today',
       'sidebar.thisWeek',
       'sidebar.graph',

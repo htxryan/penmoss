@@ -49,7 +49,7 @@ Links between notes are written by file name, as `[[Garden plan]]`, or `[[File n
 
 ### Attachments
 
-Pictures and files go in `attachments/`, named by the SHA-256 of their content, so the same picture added twice is stored once. Notes link to them by a relative path, such as `![Seedlings](../attachments/3f2a…c9.png)`. A [drawing](/docs/editor/#drawings) is two of them, its Excalidraw scene and an SVG picture of it, written as the picture linked to the scene: `[![Drawing](../attachments/9c1e…b2.svg)](../attachments/41d7…0a.excalidraw)`.
+Pictures and files go in `attachments/`, named by the SHA-256 of their content, so the same picture added twice is stored once. Notes link to them by a relative path, such as `![Seedlings](../attachments/3f2a…c9.png)`. A [drawing](/docs/editor/#excalidraw-diagrams) is two of them, its Excalidraw scene and an SVG picture of it, written as the picture linked to the scene: `[![Drawing](../attachments/9c1e…b2.svg)](../attachments/41d7…0a.excalidraw)`.
 
 ## The `.penmoss` folder
 

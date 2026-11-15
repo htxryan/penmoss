@@ -3,36 +3,13 @@
  * writer (✦ for an agent), and a line diff with the added and removed lines marked.
  */
 import type { DiffOp } from '@penmoss/core/diff';
+import { Icon } from '@penmoss/ui/icons';
+import type { CSSProperties } from 'react';
+import { diffRows } from './diff-rows';
+import { authorName } from './format';
 import type { HistoryAuthor } from './source';
 
 type Author = HistoryAuthor;
-
-/** Unchanged lines kept around each change in the diff. */
-const CONTEXT = 2;
-
-/** The diff with long unchanged runs folded, as rows to render. */
-function diffRows(diff: readonly DiffOp[]): Array<DiffOp | { op: 'fold'; count: number }> {
-  const rows: Array<DiffOp | { op: 'fold'; count: number }> = [];
-  const changed = diff.map((op) => op.op !== 'same');
-  const near = (i: number) => {
-    for (let j = Math.max(0, i - CONTEXT); j <= Math.min(diff.length - 1, i + CONTEXT); j++) {
-      if (changed[j]) return true;
-    }
-    return false;
-  };
-  let folded = 0;
-  diff.forEach((op, i) => {
-    if (op.op === 'same' && !near(i)) {
-      folded++;
-      return;
-    }
-    if (folded > 0) rows.push({ op: 'fold', count: folded });
-    folded = 0;
-    rows.push(op);
-  });
-  if (folded > 0) rows.push({ op: 'fold', count: folded });
-  return rows;
-}
 
 export function Authors({ authors }: { authors: readonly Author[] }) {
   return (
@@ -57,31 +34,97 @@ export function Authors({ authors }: { authors: readonly Author[] }) {
   );
 }
 
+/** The icon for a writer: ✦ for an agent, a phone for an Android device, else a laptop. */
+const authorIcon = (author: Author | undefined) =>
+  author?.kind === 'agent'
+    ? 'agentRef'
+    : /android|phone/i.test(author?.label ?? '')
+      ? 'phone'
+      : 'laptop';
+
+/**
+ * Who made a version, as History's one-line rows show it (Ryan's review of #192, finding 13): the
+ * first writer's icon, their names in a tooltip on hover, and in words for screen readers.
+ */
+export function AuthorMark({ authors }: { authors: readonly Author[] }) {
+  const names = authors.map(authorName).join(', ');
+  const first = authors[0];
+  return (
+    <span
+      className="history-who"
+      data-kind={first?.kind ?? 'device'}
+      data-tip={names || undefined}
+      data-tip-on="hover"
+    >
+      <Icon name={authorIcon(first)} size={14} />
+      <span className="sr-only">{names}</span>
+    </span>
+  );
+}
+
+/** A diff line's mark (`+`, `−` or a space) and its text. */
+function Line({ row }: { row: DiffOp }) {
+  return (
+    <>
+      <span className="diff-sign" aria-hidden="true">
+        {row.op === 'add' ? '+' : row.op === 'del' ? '−' : ' '}
+      </span>
+      {row.op === 'add' ? (
+        <ins>{row.line}</ins>
+      ) : row.op === 'del' ? (
+        <del>{row.line}</del>
+      ) : (
+        row.line
+      )}
+    </>
+  );
+}
+
 /**
  * A line diff as History shows it: `+` and `−` on the added and removed lines. Long unchanged runs
- * are folded unless `whole` (Replay shows the whole text, its changes marked).
+ * are folded. `numbered` adds a gutter of line numbers (History's docked preview, R2-13), drawn by
+ * CSS from `data-n`: never selected or copied with the text, and not read out.
  */
-export function DiffLines({ diff, whole = false }: { diff: readonly DiffOp[]; whole?: boolean }) {
-  const rows = whole ? diff : diffRows(diff);
+export function DiffLines({
+  diff,
+  numbered = false,
+}: {
+  diff: readonly DiffOp[];
+  numbered?: boolean;
+}) {
+  const rows = diffRows(diff);
+  // The gutter is as wide as the longest number, in either version.
+  const digits = String(Math.max(1, diff.length)).length;
   return (
-    <pre>
+    <pre
+      data-numbered={numbered ? '' : undefined}
+      style={numbered ? ({ '--diff-digits': digits } as CSSProperties) : undefined}
+    >
       {rows.map((row, i) =>
         row.op === 'fold' ? (
           <span key={i} className="diff-fold">
             ⋯ {row.count} unchanged {row.count === 1 ? 'line' : 'lines'}
+            {numbered ? (
+              <span
+                className="diff-fold-lines"
+                aria-hidden="true"
+                data-n={row.from === row.to ? `${row.from}` : `${row.from}–${row.to}`}
+              />
+            ) : null}
             {'\n'}
           </span>
         ) : (
           <span key={i} className={`diff-${row.op}`} data-op={row.op}>
-            <span className="diff-sign" aria-hidden="true">
-              {row.op === 'add' ? '+' : row.op === 'del' ? '−' : ' '}
-            </span>
-            {row.op === 'add' ? (
-              <ins>{row.line}</ins>
-            ) : row.op === 'del' ? (
-              <del>{row.line}</del>
+            {numbered ? (
+              <>
+                <span className="diff-num" aria-hidden="true" data-n={row.n} />
+                {/* The mark and the text in one cell, so a selection copies them as one line. */}
+                <span className="diff-line">
+                  <Line row={row} />
+                </span>
+              </>
             ) : (
-              row.line
+              <Line row={row} />
             )}
             {'\n'}
           </span>

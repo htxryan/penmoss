@@ -1194,6 +1194,98 @@ describe('penmoss mcp --notebook', () => {
     expect(two.stderr).toContain('quanta-ryan');
   });
 
+  it('still takes a renamed notebook’s old name, and a notebook named that now comes first (Ryan’s review of PR #192)', async () => {
+    const remote = bare('renamed');
+    expect(
+      (await machine('mac')(['notebook', 'add', `file://${remote}`, '--name', 'Quanta'])).code,
+    ).toBe(0);
+    const cli = machine('m');
+    await cli([
+      'notebook',
+      'add',
+      `file://${remote}`,
+      '--name',
+      'quanta-agent',
+      '--agent',
+      'Agent',
+    ]);
+    // Renamed on another device: notebook.json's name, pushed like any change.
+    const work = join(root, 'work');
+    git(root, ['clone', '--quiet', remote, work]);
+    const infoPath = join(work, '.penmoss', 'notebook.json');
+    const info = JSON.parse(readFileSync(infoPath, 'utf8')) as Record<string, unknown>;
+    writeFileSync(infoPath, `${JSON.stringify({ ...info, name: 'Quanta (old)' }, null, 2)}\n`);
+    git(work, [
+      '-c',
+      'user.name=T',
+      '-c',
+      'user.email=t@example.invalid',
+      'commit',
+      '-qam',
+      'rename',
+    ]);
+    git(work, ['push', '--quiet', 'origin', 'HEAD:main']);
+    expect((await cli(['notebook', 'sync', 'quanta-agent'])).code).toBe(0);
+    const listed = (await cli(['notebook', 'ls', '--json'])).json() as {
+      notebooks: Array<Record<string, unknown>>;
+    };
+    expect(listed.notebooks.find((each) => each['name'] === 'quanta-agent')).toMatchObject({
+      notebookName: 'Quanta (old)',
+      formerNames: ['Quanta'],
+    });
+    // The new name and the old one, any case, both find it: an agent's MCP config keeps working.
+    expect((await cli(['notebook', 'status', 'quanta (OLD)', '--json'])).json()).toMatchObject({
+      name: 'quanta-agent',
+    });
+    expect((await cli(['notebook', 'status', 'Quanta', '--json'])).json()).toMatchObject({
+      name: 'quanta-agent',
+    });
+    // Another notebook named Quanta now: the current name wins over the former one.
+    await machine('mac2')(['notebook', 'add', `file://${bare('new-quanta')}`, '--name', 'Quanta']);
+    await cli([
+      'notebook',
+      'add',
+      `file://${join(root, 'new-quanta.git')}`,
+      '--name',
+      'new-quanta',
+    ]);
+    expect((await cli(['notebook', 'status', 'Quanta', '--json'])).json()).toMatchObject({
+      name: 'new-quanta',
+    });
+  });
+
+  it('a clone told its notebook’s new name by the Mac app keeps the old one too (Ryan’s review of PR #192)', async () => {
+    const remote = bare('told');
+    expect(
+      (await machine('mac')(['notebook', 'add', `file://${remote}`, '--name', 'Personal'])).code,
+    ).toBe(0);
+    const cli = machine('m');
+    await cli([
+      'notebook',
+      'add',
+      `file://${remote}`,
+      '--name',
+      'personal-agent',
+      '--agent',
+      'Agent',
+    ]);
+    const notebooks = nodeNotebooks({
+      home: join(root, 'm'),
+      env: {},
+      platform: process.platform,
+      secrets: memoryTokenStore(),
+      gitEnv: GIT_ENV,
+    });
+    await notebooks.set('personal-agent', { notebookName: 'Personal (2)' });
+    const entry = (await notebooks.list()).find((each) => each.name === 'personal-agent');
+    expect(entry).toMatchObject({ notebookName: 'Personal (2)', formerNames: ['Personal'] });
+    for (const name of ['Personal (2)', 'Personal', 'personal-agent']) {
+      expect((await cli(['notebook', 'status', name, '--json'])).json()).toMatchObject({
+        name: 'personal-agent',
+      });
+    }
+  });
+
   it('adds only a notebook the target holds already when asked to (D52)', async () => {
     const remote = bare('empty');
     const notebooks = nodeNotebooks({

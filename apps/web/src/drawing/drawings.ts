@@ -10,6 +10,8 @@
  * those files (font-faces.ts), never its CDN.
  */
 import type { DrawingFiles, DrawingServices } from '@penmoss/editor';
+import { desktop } from '../desktop/bridge';
+import type { DrawingStep } from './editor';
 import { keepFontFacesLocal } from './font-faces';
 
 /** Where the drawing's files are kept: this device's attachment store (A1032). */
@@ -36,14 +38,45 @@ export function loadDrawingEditor(): Promise<DrawingEditorModule> {
     // The `source` a scene file names: Penmoss, not the app's own origin.
     target.EXCALIDRAW_EXPORT_SOURCE = 'https://penmoss.app';
     keepFontFacesLocal();
-    loading = import('./editor');
+    loading = withoutFilePickers(() => import('./editor'));
     loading.catch(() => (loading = null));
   }
   return loading;
 }
 
+/** The File System Access pickers, which Excalidraw's file library uses where they exist. */
+const PICKERS = ['showOpenFilePicker', 'showSaveFilePicker', 'showDirectoryPicker'] as const;
+
+/**
+ * Loads Excalidraw with the File System Access pickers hidden in the Mac app (R2-19), so its Save
+ * To… and Export Image… save through a download, which the main process asks where to put (a
+ * save dialog, `will-download`), rather than through Chromium's own picker, whose file access
+ * the app's permission handler would have to allow (security.ts). Its file library chooses how
+ * to save as it loads; the pickers are back for the rest of the page once it has.
+ */
+async function withoutFilePickers<T>(load: () => Promise<T>): Promise<T> {
+  if (!desktop()) return load();
+  const target = window as unknown as Record<string, unknown>;
+  const hidden = PICKERS.flatMap((name) => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, name);
+    if (!descriptor?.configurable) return [];
+    delete target[name];
+    return [[name, descriptor] as const];
+  });
+  try {
+    return await load();
+  } finally {
+    for (const [name, descriptor] of hidden) Object.defineProperty(window, name, descriptor);
+  }
+}
+
 /** Whether a drawing editor is open in this window (one at a time). */
 let open = false;
+
+/** Whether the drawing editor is open in this window now (it holds the window's history). */
+export function drawingEditorOpen(): boolean {
+  return open;
+}
 
 export interface DrawingServicesOptions {
   /** Shows a message about a drawing that couldn't be opened or saved. */
@@ -53,16 +86,20 @@ export interface DrawingServicesOptions {
    * Undo, are the drawing's); returns the call that gives them back.
    */
   readonly suspendShortcuts?: () => () => void;
+  /** The app's commands, which the editor's bar runs as the title bar does (its pin, R2-18). */
+  readonly commands?: { run(id: string): unknown };
 }
 
 export function drawingServices(
   store: DrawingStore,
-  { onError, suspendShortcuts }: DrawingServicesOptions,
+  { onError, suspendShortcuts, commands }: DrawingServicesOptions,
 ): DrawingServices {
   return {
     async edit(scene): Promise<DrawingFiles | null> {
       if (open) return null;
       open = true;
+      /** The bar's Back or Forward, if one closed the editor. */
+      let step: DrawingStep | null = null;
       try {
         let text: string | null = null;
         if (scene) {
@@ -81,12 +118,18 @@ export function drawingServices(
           return null;
         }
         const resume = suspendShortcuts?.();
-        let drawn;
+        let outcome;
         try {
-          drawn = await editor.openDrawingEditor({ scene: text, onError });
+          outcome = await editor.openDrawingEditor({
+            scene: text,
+            onError,
+            ...(commands ? { commands } : {}),
+          });
         } finally {
           resume?.();
         }
+        step = outcome.step;
+        const { drawn } = outcome;
         if (!drawn) return null;
         const encoder = new TextEncoder();
         const saved = await store.addFile(encoder.encode(drawn.scene), 'drawing.excalidraw');
@@ -99,6 +142,12 @@ export function drawingServices(
         return null;
       } finally {
         open = false;
+        // The window goes once the note has the drawing: the note's editor puts the files in as
+        // soon as this resolves, before a timer's turn (R2-18).
+        if (step) {
+          const go = step;
+          setTimeout(() => window.history[go](), 0);
+        }
       }
     },
   };

@@ -19,6 +19,7 @@ import { useWorkspaceState } from '../workspace/hooks';
 import {
   APP_SEARCH_MODE,
   NO_FILTERS,
+  browsable,
   type SearchFilters,
   type SearchHit,
   type SearchOutcome,
@@ -34,6 +35,7 @@ import {
   type FilterNotebook,
 } from './filter-options';
 import type { Source } from '../sources/registry';
+import type { TagSearch } from './show-tag';
 
 /** This device's words answer each keystroke at once (A111); Enter answers without waiting. */
 const TYPING_MS = 60;
@@ -86,6 +88,24 @@ function useFilterNotebooks(sources: readonly Source[]): FilterNotebook[] {
     [sources, revision],
   );
 }
+/** Bumped when any notebook's notes change (or the notes in context, without a registry). */
+function useNotesChanges(sources: readonly Source[], list: unknown): number {
+  const [revision, bump] = useReducer((count: number) => count + 1, 0);
+  useEffect(() => {
+    const offs = sources.map((source) => source.notes.subscribe(bump));
+    return () => {
+      for (const off of offs) off();
+    };
+  }, [sources]);
+  // The notes in context are one of `sources`, or the only ones: their list counts too.
+  const [seen, setSeen] = useState(list);
+  if (seen !== list) {
+    setSeen(list);
+    bump();
+  }
+  return revision;
+}
+
 function Marked({ text }: { text: string }) {
   return (
     <>
@@ -103,20 +123,30 @@ export interface SearchOverlayProps {
   readonly service: Searcher;
   readonly onOpenNote: (id: string, heading: string | null) => void;
   readonly onClose: () => void;
+  /** A tag's notes: its Tag filter set, on its notebook, and no words (finding 9, #192 review). */
+  readonly initial?: TagSearch | null;
 }
 
 /**
  * Search across every note (T22, T23): one search with folder, tag and date filters (T42, A571:
  * no type picker). Each notebook's full-text index on this device answers as the user types
  * (A111). A WAI-ARIA combobox like the palette: the input keeps focus, ↑/↓ move through results,
- * Enter opens one, Esc closes.
+ * Enter opens one, Esc closes. With no words, a tag, folder or date filter lists every note it
+ * passes, newest first (`browsable`): choosing a tag elsewhere opens it so.
  */
-export function SearchOverlay({ service, onOpenNote, onClose }: SearchOverlayProps) {
+export function SearchOverlay({
+  service,
+  onOpenNote,
+  onClose,
+  initial = null,
+}: SearchOverlayProps) {
   const list = useNoteList();
   const workspace = useWorkspaceState();
   const [query, setQuery] = useState('');
   const mode = APP_SEARCH_MODE;
-  const [filters, setFilters] = useState<SearchFilters>(NO_FILTERS);
+  const [filters, setFilters] = useState<SearchFilters>(() =>
+    initial ? { ...NO_FILTERS, notebookId: initial.notebookId, tag: initial.tag } : NO_FILTERS,
+  );
   const [range, setRange] = useState(0);
   /**
    * The latest answer, with the request it answers (searching while that is not the current
@@ -140,6 +170,7 @@ export function SearchOverlay({ service, onOpenNote, onClose }: SearchOverlayPro
   // notebook's tags; with one chosen, that notebook's (PEN-71, A1290).
   const sourcesState = useSourcesState();
   const sources = useMemo(() => sourcesState?.all ?? NO_SOURCES, [sourcesState]);
+  const changes = useNotesChanges(sources, list);
   const several = sources.length > 1;
   const notebooks = useFilterNotebooks(several ? sources : NO_SOURCES);
   const notebook = notebooks.find((each) => each.id === filters.notebookId) ?? null;
@@ -156,10 +187,13 @@ export function SearchOverlay({ service, onOpenNote, onClose }: SearchOverlayPro
     const chosen = notebooks.find((each) => each.id === notebookId);
     return notebookTags(chosen ? [chosen] : notebooks);
   };
-  const tags = useMemo(
+  const listedTags = useMemo(
     () => (several ? notebookTags(notebook ? [notebook] : notebooks) : ownTags),
     [several, notebook, notebooks, ownTags],
   );
+  // The tag chosen stays an option while its notes load, or after its last note lost it.
+  const tags =
+    filters.tag && !listedTags.includes(filters.tag) ? [filters.tag, ...listedTags] : listedTags;
   /** Notebook changed: Folder to All Folders (or the folder picked), Tag to Any Tag if gone. */
   const chooseNotebook = (notebookId: string | null, folderId: string | null = null) => {
     const tag = filters.tag && tagsFor(notebookId).includes(filters.tag) ? filters.tag : null;
@@ -175,9 +209,12 @@ export function SearchOverlay({ service, onOpenNote, onClose }: SearchOverlayPro
     });
   }, [service]);
 
+  /** No words, but a filter that lists notes on its own. */
+  const browsing = !query.trim() && browsable(filters);
+  const asking = Boolean(query.trim()) || browsing;
   const requestKey = JSON.stringify([query, mode, filters]);
   useEffect(() => {
-    if (!query.trim()) return;
+    if (!query.trim() && !browsable(filters)) return;
     const controller = new AbortController();
     const request = { input: query, mode, filters, submitted: submitted === requestKey };
     let final = false;
@@ -222,15 +259,17 @@ export function SearchOverlay({ service, onOpenNote, onClose }: SearchOverlayPro
       clearTimeout(pause);
       controller.abort();
     };
-  }, [service, query, mode, filters, requestKey, submitted]);
+    // `changes`: notes changed while Search is open (a note just tagged, one synced in) are
+    // found again, so a tag's notes stay whole without a keystroke.
+  }, [service, query, mode, filters, requestKey, submitted, changes]);
 
   useLayoutEffect(() => {
     input.current?.focus();
   }, []);
 
-  const outcome = query.trim() ? (answer?.outcome ?? null) : null;
+  const outcome = asking ? (answer?.outcome ?? null) : null;
   const answered = answer?.key === requestKey;
-  const searching = Boolean(query.trim()) && !(answered && answer.final);
+  const searching = asking && !(answered && answer.final);
   const hits = useMemo(() => outcome?.hits ?? [], [outcome]);
   const current = Math.min(active, Math.max(0, hits.length - 1));
 
@@ -261,7 +300,7 @@ export function SearchOverlay({ service, onOpenNote, onClose }: SearchOverlayPro
         // Answered: Enter opens; before the answer, it asks for one at once.
         if (answered && answer.final) {
           choose(hits[current]);
-        } else if (query.trim()) {
+        } else if (asking) {
           setSubmitted(requestKey);
         }
         break;
@@ -274,15 +313,19 @@ export function SearchOverlay({ service, onOpenNote, onClose }: SearchOverlayPro
   };
 
   const option = (index: number) => `${id}-result-${index}`;
-  const status = !query.trim()
+  const status = !asking
     ? 'Type to search every note.'
     : searching && !outcome
       ? 'Searching…'
-      : outcome
-        ? `${hits.length === 0 ? 'No results' : `${hits.length} ${hits.length === 1 ? 'result' : 'results'}`}${
-            outcome.preview ? '' : ' on this device'
+      : outcome && browsing
+        ? `${hits.length} ${hits.length === 1 ? 'note' : 'notes'}${
+            filters.tag ? ` tagged #${filters.tag}` : ''
           }`
-        : '';
+        : outcome
+          ? `${hits.length === 0 ? 'No results' : `${hits.length} ${hits.length === 1 ? 'result' : 'results'}`}${
+              outcome.preview ? '' : ' on this device'
+            }`
+          : '';
 
   return (
     <div
@@ -499,9 +542,9 @@ export function SearchOverlay({ service, onOpenNote, onClose }: SearchOverlayPro
           ))}
         </div>
         {/* The list's empty state, as the palette's (T39 pass 2); the status line counts. */}
-        {query.trim() && outcome && !searching && hits.length === 0 ? (
+        {asking && outcome && !searching && hits.length === 0 ? (
           <p className="dlg-empty" data-testid="search-empty">
-            No notes match “{query.trim()}”
+            {browsing ? 'No notes match these filters' : `No notes match “${query.trim()}”`}
           </p>
         ) : null}
         <div className="dlg-foot" aria-hidden="true">

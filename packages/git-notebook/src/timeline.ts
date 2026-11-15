@@ -23,6 +23,7 @@ import * as Y from '@y/y';
 import { parseActor } from './actors';
 import { commitAuthor, type HistoryAuthor } from './history';
 import { Layout } from './layout';
+import { Lru } from './lru';
 import type { CommitInfo, GitTransport } from './transport';
 import { isUpdate } from './yjs';
 
@@ -135,27 +136,6 @@ function keyOf(files: ReadonlyArray<readonly [string, string]>): string {
     .map(([path, blob]) => `${path}=${blob}`)
     .sort()
     .join('\n');
-}
-
-/** A small map that forgets the entry used least recently once it holds `size`. */
-class Lru<K, V> {
-  private readonly entries = new Map<K, V>();
-  constructor(private readonly size: number) {}
-  get(key: K): V | undefined {
-    const value = this.entries.get(key);
-    if (value !== undefined) {
-      this.entries.delete(key);
-      this.entries.set(key, value);
-    }
-    return value;
-  }
-  set(key: K, value: V): void {
-    this.entries.delete(key);
-    this.entries.set(key, value);
-    if (this.entries.size > this.size) {
-      this.entries.delete(this.entries.keys().next().value as K);
-    }
-  }
 }
 
 /** The last commit (in history's order) at or before `at`; null before the first. */

@@ -1,7 +1,7 @@
 import { anotherMac, expect, seeded, test, type Page } from './fixtures';
 import { NEW_NOTE, DOC_END, LINE_START } from './keys';
 import { noteAction } from './note-menu';
-import { notebookAction } from './notebook-actions';
+import { notebookMenuItem } from './notebook-actions';
 import { asAgent, carried, syncNow } from './support/sync';
 
 // T31: the editors of the notes shown last are kept (apps/web/src/notes/kept-editors.ts), so
@@ -225,8 +225,8 @@ test('at most two notes are kept, and none for a note gone from the list', async
     await carried(device, page, () =>
       expect(tree(page).getByRole('link', { name: a, exact: true })).toHaveCount(0),
     );
-    // The notebook's Trash, on its name's row (T53 item 4).
-    await (await notebookAction(device, 'Trash', { role: 'link' })).click();
+    // The notebook's Trash, in its row's ⋯ (T53 item 4, R2-21).
+    await (await notebookMenuItem(device, 'Trash')).click();
     const entry = device.getByTestId('trash').locator(`[data-note-id="${ids[0]}"]`);
     await entry.getByRole('button', { name: `Restore ${a}` }).click();
     await expect(device).toHaveURL(new RegExp(`/notes/${ids[0]}$`));

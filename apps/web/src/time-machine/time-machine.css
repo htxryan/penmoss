@@ -79,8 +79,7 @@
   gap: 0.35rem;
 }
 
-.tm-scrubber,
-.replay-scrubber {
+.tm-scrubber {
   flex: 1;
   min-width: 8rem;
   accent-color: var(--pm-accent);
@@ -282,54 +281,6 @@
 
 .week-changes a:hover {
   color: var(--pm-link);
-}
-
-/* History's Replay (PEN-21). */
-.history-replay-start {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.history-replay {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding-top: 0.5rem;
-}
-
-.replay-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.replay-speeds {
-  display: flex;
-  gap: 0.15rem;
-}
-
-.replay-speeds .btn[aria-pressed='true'] {
-  background: color-mix(in oklab, var(--pm-accent) 16%, transparent);
-  font-weight: 600;
-}
-
-.replay-close {
-  margin-inline-start: auto;
-}
-
-.replay-place {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0;
-  font-size: 0.85rem;
-}
-
-.replay-count {
-  color: var(--pm-muted);
 }
 
 @media (width <= 700px) {

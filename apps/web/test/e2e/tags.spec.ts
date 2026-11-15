@@ -3,7 +3,7 @@ import { NEW_NOTE } from './keys';
 import { carried, syncNow } from './support/sync';
 
 // T18: tags from text (#inline, nested a/b) and from the chips under the title (frontmatter),
-// the tag pane and its filter, rename and merge through each note's document (offline too),
+// the tag pane and Search on a tag's notes, rename and merge through each note's document (offline too),
 // and another Mac's tag pane following a change once git carries it (T59: a git notebook
 // pushes 12 s after edits settle and pulls every minute, A1013, so the server's 5 s is gone;
 // Sync Now on both sides carries it here).
@@ -47,7 +47,7 @@ async function newNote(page: Page, title: string, text: string): Promise<string>
   return ULID.exec(new URL(page.url()).pathname)![1]!;
 }
 
-test('the tag pane filters notes by inline and frontmatter tags, nested levels included', async ({
+test('a tag opens Search on its notes, inline and frontmatter tags, nested levels included', async ({
   page,
 }) => {
   const errors = collectErrors(page);
@@ -76,30 +76,67 @@ test('the tag pane filters notes by inline and frontmatter tags, nested levels i
 
   await newNote(page, `Untagged ${RUN}`, 'Nothing here');
 
-  // The pane counts each note once per level; choosing a tag filters the sidebar.
+  // The pane counts each note once per level; choosing a tag opens Search with its Tag filter
+  // and no words, listing every note with it (finding 9 of the #192 review). The sidebar's
+  // Notes section stays as it was.
   const top = tagButton(page, garden, 2);
   await expect(top).toBeVisible();
   await top.click();
-  await expect(top).toHaveAttribute('aria-pressed', 'true');
-  const tagged = page.getByTestId('tagged-notes');
-  // Exactly these two, in either order: the list mixes this device's edit times with the
-  // server index's (A16), and catch-up runs at once (A75), so either can come first.
-  const links = tagged.getByRole('link');
-  await expect(links).toHaveCount(2);
-  await expect(links.filter({ hasText: new RegExp(`Beds ${RUN}`) })).toHaveCount(1);
-  await expect(links.filter({ hasText: new RegExp(`Herbs ${RUN}`) })).toHaveCount(1);
-  await expect(tagged).not.toContainText(`Untagged ${RUN}`);
+  const search = page.getByTestId('search');
+  await expect(search.getByRole('combobox', { name: 'Search notes' })).toHaveValue('');
+  await expect(search.getByRole('combobox', { name: 'Tag' })).toHaveValue(garden);
+  const hits = search.locator('.search-hit');
+  await expect(hits).toHaveCount(2);
+  await expect(hits.filter({ hasText: new RegExp(`Beds ${RUN}`) })).toHaveCount(1);
+  await expect(hits.filter({ hasText: new RegExp(`Herbs ${RUN}`) })).toHaveCount(1);
+  await expect(search).not.toContainText(`Untagged ${RUN}`);
+  await expect(search.getByTestId('search-status')).toHaveText(`2 notes tagged #${garden}`);
+  await expect(page.getByRole('tree', { name: 'Folders and notes' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(search).toHaveCount(0);
 
-  // A nested level filters to its notes only.
+  // ⌘-click (Ctrl-click) on an inline #tag in the text opens Search on it too.
+  await top.click();
+  await search
+    .locator('.search-hit')
+    .filter({ hasText: `Herbs ${RUN}` })
+    .click();
+  await expect(page.getByTestId('note-title')).toHaveValue(`Herbs ${RUN}`);
+  await body(page)
+    .locator('.pm-tag')
+    .first()
+    .click({ modifiers: ['ControlOrMeta'] });
+  await expect(search.getByRole('combobox', { name: 'Tag' })).toHaveValue(`${garden}/herbs`);
+  await expect(search.locator('.search-hit')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+
+  // A nested level lists its notes only.
   await pane(page)
     .getByRole('button', { name: `Expand #${garden}` })
     .click();
   await tagButton(page, `${garden}/herbs`, 1).click();
-  await expect(tagged.getByRole('link')).toHaveCount(1);
-  await expect(tagged.getByRole('link')).toContainText(`Herbs ${RUN}`);
+  await expect(search.locator('.search-hit')).toHaveCount(1);
+  await expect(search.locator('.search-hit')).toContainText(`Herbs ${RUN}`);
+  // Words narrow the tag's notes; Enter opens one.
+  await search.getByRole('combobox', { name: 'Search notes' }).fill('basil');
+  await expect(search.getByTestId('search-status')).toContainText('1 result');
+  await page.keyboard.press('Escape');
 
-  await tagged.getByRole('button', { name: 'All Notes' }).click();
-  await expect(page.getByRole('tree', { name: 'Folders and notes' })).toBeVisible();
+  // A hit opens its note; that note's tag chip opens Search on its tag too.
+  await top.click();
+  await search
+    .locator('.search-hit')
+    .filter({ hasText: `Beds ${RUN}` })
+    .click();
+  await expect(search).toHaveCount(0);
+  await expect(page.getByTestId('note-title')).toHaveValue(`Beds ${RUN}`);
+  await page
+    .getByTestId('note-tags')
+    .getByRole('button', { name: `#${garden}`, exact: true })
+    .click();
+  await expect(search.getByRole('combobox', { name: 'Tag' })).toHaveValue(garden);
+  await expect(search.locator('.search-hit')).toHaveCount(2);
+  await page.keyboard.press('Escape');
   expect(errors).toEqual([]);
 });
 

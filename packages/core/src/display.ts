@@ -1,6 +1,7 @@
 /**
  * Settings → Display (T42, #104 item 7, A576): which shortcuts the sidebar and its collapsed
- * rail show. Today, This week, Graph and Commands may each be hidden; Search never can. One
+ * rail show. Tags (Ryan's review of #193, R2-9), Today, This week, Graph and Commands may each be
+ * hidden; Search never can. One
  * synced per-user setting each (`sidebar.<item>`, true or false; unset shows it), so a choice
  * follows the user to every device like the theme, and two devices hiding different items
  * never overwrite each other. The web app writes them in the WorkspaceDoc; the Android app
@@ -8,7 +9,7 @@
  */
 
 /** The sidebar shortcuts that may be hidden, in the sidebar's order. Search is not one. */
-export const SIDEBAR_ITEMS = ['today', 'thisWeek', 'graph', 'commands'] as const;
+export const SIDEBAR_ITEMS = ['tags', 'today', 'thisWeek', 'graph', 'commands'] as const;
 export type SidebarItem = (typeof SIDEBAR_ITEMS)[number];
 
 /** The setting that holds whether `item` shows. */

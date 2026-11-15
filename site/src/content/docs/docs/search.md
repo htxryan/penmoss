@@ -25,6 +25,8 @@ Type words to find the notes that have all of them. The last word matches the st
 
 Under the search box you can narrow the results by **Notebook** (with more than one), **Folder**, **Tag**, and when the note was **Updated**: Any Time, Past Day, Past Week, Past Month or Past Year.
 
+With the search box empty, a **Folder**, **Tag** or **Updated** filter lists every note it matches, newest first. Choosing a tag elsewhere in Penmoss (the sidebar's **Tags** section, a note's tags, the Tags page) opens Search this way, with **Tag** set.
+
 With more than one notebook and Notebook on **All Notebooks**, Folder lists every notebook's folders under the notebook's name, and picking one switches Notebook to that folder's notebook; Tag lists the tags of every notebook.
 
 With one notebook chosen, Folder lists that notebook's folders after two choices: **All Folders (This Notebook)** searches every folder of the chosen notebook, and **All Folders (All Notebooks)** puts Notebook back to All Notebooks and searches every folder of every notebook.

@@ -130,10 +130,8 @@ describe('the repository step', () => {
     const root = await mount(
       <RepoPicker
         github={browse}
-        startNew={false}
         picked={null}
         onPick={(each) => picked.push(each.fullName)}
-        onCreated={() => undefined}
         onTypeAddress={() => undefined}
       />,
     );
@@ -157,10 +155,8 @@ describe('the repository step', () => {
     const root = await mount(
       <RepoPicker
         github={browse}
-        startNew={false}
         picked={null}
         onPick={() => undefined}
-        onCreated={() => undefined}
         onTypeAddress={() => undefined}
       />,
     );
@@ -178,28 +174,6 @@ describe('the repository step', () => {
     expect(document.activeElement?.getAttribute('data-repo')).toBe('ryan/fresh');
   });
 
-  it('lists empty repositories first in Start New, and names a new one after the notebook', async () => {
-    const { browse, calls } = github({ repos: list });
-    const created: string[] = [];
-    const root = await mount(
-      <RepoPicker
-        github={browse}
-        startNew
-        picked={null}
-        onPick={() => undefined}
-        onCreated={(each, name) => created.push(`${each.fullName} as ${name}`)}
-        onTypeAddress={() => undefined}
-      />,
-    );
-    expect(all(root, 'repo-row')[0]!.dataset['repo']).toBe('ryan/fresh');
-    await type(find(root, 'repo-create-notebook'), 'Work Log');
-    expect((find(root, 'repo-create-name') as HTMLInputElement).value).toBe('work-log-notes');
-    act(() => find(root, 'repo-create-submit')!.click());
-    await settle();
-    expect(calls).toContainEqual(['create', { login: 'ryan', kind: 'user' }, 'work-log-notes']);
-    expect(created).toEqual(['ryan/work-log-notes as Work Log']);
-  });
-
   it('hands a missing sign-in to the form, and says offline itself', async () => {
     const signedOut: string[] = [];
     const none = github({
@@ -208,10 +182,8 @@ describe('the repository step', () => {
     await mount(
       <RepoPicker
         github={none.browse}
-        startNew={false}
         picked={null}
         onPick={() => undefined}
-        onCreated={() => undefined}
         onTypeAddress={() => undefined}
         onSignedOut={(error) => signedOut.push(error.reason)}
       />,
@@ -225,10 +197,8 @@ describe('the repository step', () => {
     const root = await mount(
       <RepoPicker
         github={offline.browse}
-        startNew={false}
         picked={null}
         onPick={() => undefined}
-        onCreated={() => undefined}
         onTypeAddress={() => undefined}
         onSignedOut={() => signedOut.push('again')}
       />,

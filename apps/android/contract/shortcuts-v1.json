@@ -330,13 +330,6 @@
       "keys": []
     },
     {
-      "id": "tags.clearFilter",
-      "title": "Show All Notes (Clear the Tag Filter)",
-      "area": "Tags",
-      "scope": "global",
-      "keys": []
-    },
-    {
       "id": "folder.new",
       "title": "New Folder",
       "area": "Folders",
@@ -962,7 +955,14 @@
     },
     {
       "id": "editor.insert.mermaid",
-      "title": "Insert: Mermaid Diagram",
+      "title": "Insert: Diagram: Mermaid",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.drawing",
+      "title": "Insert: Diagram: Excalidraw",
       "area": "Insert",
       "scope": "editor",
       "keys": []
@@ -1005,13 +1005,6 @@
     {
       "id": "editor.insert.file",
       "title": "Insert: File",
-      "area": "Insert",
-      "scope": "editor",
-      "keys": []
-    },
-    {
-      "id": "editor.insert.drawing",
-      "title": "Insert: Drawing",
       "area": "Insert",
       "scope": "editor",
       "keys": []

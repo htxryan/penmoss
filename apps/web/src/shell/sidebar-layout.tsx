@@ -121,7 +121,7 @@ function SectionTools({
   const name = SIDEBAR_SECTION_NAMES[id];
   if (!layout.canChange) {
     return lead ? (
-      <span className="sb-part-tools" data-testid="section-tools">
+      <span className="sb-part-tools row-end" data-testid="section-tools">
         {lead}
       </span>
     ) : null;
@@ -151,7 +151,7 @@ function SectionTools({
     });
   };
   return (
-    <span className="sb-part-tools" data-testid="section-tools">
+    <span className="sb-part-tools row-end" data-testid="section-tools">
       {lead}
       <button
         type="button"

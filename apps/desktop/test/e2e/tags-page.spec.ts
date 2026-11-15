@@ -11,9 +11,10 @@ import {
   type Launched,
 } from './support';
 
-// PEN-68 in the Mac app: the Tags page opens from the sidebar's Tags title row, lists each
-// notebook's tags as a tree with their counts, one section per notebook, and keeps each tag's
-// description as it is typed. The web suite's tags-page.spec.ts covers the palette, the sidebar's
+// PEN-68 in the Mac app (and finding 8 of Ryan's review of #192, design "Tags D"): the Tags page
+// opens from the sidebar's Tags title row, lists each notebook's tags in a table with their
+// counts, one table per notebook, and keeps each tag's description as it is typed. The web
+// suite's tags-page.spec.ts covers renaming, merging and deleting tags. The web suite's tags-page.spec.ts covers the palette, the sidebar's
 // tag filter and an agent reading the descriptions (describe_tags).
 
 const opened: Launched[] = [];
@@ -46,8 +47,14 @@ async function newNote(page: Page, notebook: string, title: string, text: string
 const tagsPage = (page: Page) => page.getByTestId('tags-page');
 const region = (page: Page, name: string) =>
   tagsPage(page).getByRole('region', { name, exact: true });
-const description = (scope: Locator, tag: string) =>
-  scope.getByRole('textbox', { name: `Description of #${tag}`, exact: true });
+const row = (scope: Locator, tag: string) => scope.locator(`.tags-row[data-tag="${tag}"]`);
+/** A tag's description field, opened for editing (it shows one line until chosen). */
+async function description(scope: Locator, tag: string): Promise<Locator> {
+  const field = row(scope, tag).getByRole('textbox', { name: `Description of #${tag}` });
+  if ((await field.count()) === 0) await row(scope, tag).locator('.tags-desc-view').click();
+  await expect(field).toBeFocused();
+  return field;
+}
 
 test('the Tags page lists each notebook’s tags and keeps what each means', async () => {
   test.setTimeout(180_000);
@@ -72,36 +79,38 @@ test('the Tags page lists each notebook’s tags and keeps what each means', asy
   await pane.getByRole('link', { name: 'Open the Tags Page' }).click();
   await expect(page).toHaveURL(/\/tags$/);
 
-  // One section per notebook, each a tree of its tags with counts.
+  // One table per notebook, a row per tag (and per level above one) with its count.
   const notes = region(page, 'Notes');
   const work = region(page, 'Work');
-  await expect(notes.getByRole('button', { name: '#reading, 1 note', exact: true })).toBeVisible({
-    timeout: 30_000,
-  });
-  await expect(work.getByRole('button', { name: '#project, 2 notes', exact: true })).toBeVisible();
-  await expect(
-    work.locator(
-      '[data-tag="project"] [data-tag="project/penmoss"] [data-tag="project/penmoss/android"]',
-    ),
-  ).toHaveCount(1);
+  await expect(row(notes, 'reading')).toBeVisible({ timeout: 30_000 });
+  await expect(row(work, 'project').locator('.tags-count-cell')).toHaveText('2');
+  await expect(work.locator('.tags-row[data-tag] .tags-name')).toHaveText([
+    '#project',
+    '#project/penmoss',
+    '#project/penmoss/android',
+  ]);
 
-  // Descriptions save as they are typed, and are there when the page opens again.
-  await description(work, 'project').click();
+  // Descriptions save as they are typed, say so, and are there when the page opens again.
+  await description(work, 'project');
   await page.keyboard.type('Work with an end.');
-  await description(work, 'project/penmoss').click();
+  await description(work, 'project/penmoss');
   await page.keyboard.type('The notes app itself.');
   await page.keyboard.press('Enter');
   await page.keyboard.type('Ship notes for it go here.');
-  await description(notes, 'reading').fill('Books to read, and what I thought of them.');
+  await expect(row(work, 'project/penmoss').getByTestId('tags-save')).toHaveText('Saved');
+  await (await description(notes, 'reading')).fill('Books to read, and what I thought of them.');
+  await page.keyboard.press('Escape');
   await go(page, '/');
   await expect(tagsPage(page)).toHaveCount(0);
   await go(page, '/tags');
-  const field = description(region(page, 'Work'), 'project/penmoss');
+  await expect(
+    row(region(page, 'Work'), 'project').locator('.tags-desc-view .tags-desc-line'),
+  ).toHaveText('Work with an end.');
+  await expect(
+    row(region(page, 'Notes'), 'reading').locator('.tags-desc-view .tags-desc-line'),
+  ).toHaveText('Books to read, and what I thought of them.');
+  const field = await description(region(page, 'Work'), 'project/penmoss');
   await expect(field).toHaveValue('The notes app itself.\nShip notes for it go here.');
-  await expect(description(region(page, 'Work'), 'project')).toHaveValue('Work with an end.');
-  await expect(description(region(page, 'Notes'), 'reading')).toHaveValue(
-    'Books to read, and what I thought of them.',
-  );
 
   // Held on the page for the recording.
   await field.scrollIntoViewIfNeeded();

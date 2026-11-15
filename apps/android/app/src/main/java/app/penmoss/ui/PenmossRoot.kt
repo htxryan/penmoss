@@ -520,7 +520,6 @@ private fun Screens(graph: AppGraph, deepLinks: DeepLinkInbox) {
             composable("tags") { entry -> TagsRoute(graph, onBack = { nav.leave(entry) }, onOpenTag = openTag) }
             composable("tag/{tag}", arguments = listOf(navArgument("tag") { type = NavType.StringType })) { entry ->
                 val tag = entry.arguments?.getString("tag") ?: return@composable
-                app.penmoss.ui.keys.TaggedCommands(clear = { nav.leave(entry) })
                 TaggedRoute(graph, tag, onBack = { nav.leave(entry) }, onOpen = openNote, onNoteLongPress = noteActions)
             }
             composable(TrashRoutes.TRASH) { entry ->

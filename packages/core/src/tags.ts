@@ -76,17 +76,18 @@ export function tagMatches(tag: string, filter: string): boolean {
 
 /**
  * The tag after renaming `from` to `to` (descendants move along:
- * `a/b` → `x/b` when renaming `a` to `x`), or null when `tag` is not affected.
+ * `a/b` → `x/b` when renaming `a` to `x`, unless `nested` is false), or null
+ * when `tag` is not affected.
  */
-export function renamedTag(tag: string, from: string, to: string): string | null {
+export function renamedTag(tag: string, from: string, to: string, nested = true): string | null {
   if (tag === from) return to;
-  if (tag.startsWith(`${from}/`)) return to + tag.slice(from.length);
+  if (nested && tag.startsWith(`${from}/`)) return to + tag.slice(from.length);
   return null;
 }
 
 /**
- * Rewrites the inline tags in a run of text for a rename (`#from` and
- * `#from/…`), keeping everything else. Returns the edits as
+ * Rewrites the inline tags in a run of text for a rename (`#from` and, unless
+ * `nested` is false, `#from/…`), keeping everything else. Returns the edits as
  * `{ index, length, text }` (offsets into `text`, in order), so a caller can
  * apply them to a CRDT without replacing the whole run.
  */
@@ -94,13 +95,14 @@ export function inlineTagEdits(
   text: string,
   from: string,
   to: string,
+  nested = true,
 ): Array<{ readonly index: number; readonly length: number; readonly text: string }> {
   const edits: Array<{ index: number; length: number; text: string }> = [];
   for (const match of text.matchAll(INLINE_TAG)) {
     const raw = match[2]!;
     const tag = normaliseTag(raw);
     if (!tag) continue;
-    const renamed = renamedTag(tag, from, to);
+    const renamed = renamedTag(tag, from, to, nested);
     if (renamed === null || renamed === tag) continue;
     // `#` sits after the lead character (if any).
     const index = match.index + match[1]!.length + 1;

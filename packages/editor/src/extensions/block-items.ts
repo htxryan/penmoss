@@ -310,11 +310,27 @@ export const BLOCK_ITEMS: readonly BlockItem[] = [
   },
   {
     id: 'mermaid',
-    label: 'Mermaid Diagram',
-    keywords: ['diagram', 'flowchart', 'chart', 'graph', 'sequence'],
+    label: 'Diagram: Mermaid',
+    keywords: ['flowchart', 'chart', 'graph', 'sequence'],
     icon: '⧉',
     hint: '```mermaid',
     insert: (context) => start(context).setNode('codeBlock', { language: 'mermaid' }).run(),
+  },
+  {
+    // PEN-28: a new drawing, in the drawing editor at once; it goes in the note on Done. The two
+    // diagrams are "Diagram: …" and sit together (R2-15); "draw" and "drawing" still find it.
+    id: 'drawing',
+    label: 'Diagram: Excalidraw',
+    keywords: ['draw', 'drawing', 'sketch', 'whiteboard', 'canvas'],
+    icon: '✎',
+    needsDrawings: true,
+    insert: (context) => {
+      const { editor } = context;
+      if (!drawingServicesOf(editor)) return false;
+      const ok = start(context).run();
+      if (ok) void insertDrawing(editor, editor.state.selection.from);
+      return ok;
+    },
   },
   {
     id: 'blockMath',
@@ -405,21 +421,6 @@ export const BLOCK_ITEMS: readonly BlockItem[] = [
           void insertFiles(editor.view, files, chosen, target);
         });
       }
-      return ok;
-    },
-  },
-  {
-    // PEN-28: a new drawing, in the drawing editor at once; it goes in the note on Done.
-    id: 'drawing',
-    label: 'Drawing',
-    keywords: ['excalidraw', 'sketch', 'whiteboard', 'diagram', 'draw', 'canvas'],
-    icon: '✎',
-    needsDrawings: true,
-    insert: (context) => {
-      const { editor } = context;
-      if (!drawingServicesOf(editor)) return false;
-      const ok = start(context).run();
-      if (ok) void insertDrawing(editor, editor.state.selection.from);
       return ok;
     },
   },

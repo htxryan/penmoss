@@ -29,7 +29,7 @@ On a machine without the app, build the CLI from the [repository](https://github
 
 Add a notebook once with `penmoss notebook add <remote>` ([below](#git-notebooks)), or let the Mac app add yours. Then every note command runs on a notebook:
 
-- **`--notebook <name>`** names it: a clone's own name, or the notebook's name as the Mac app shows it (`--notebook "Notes"`), ignoring case. Of several clones of one notebook, `penmoss mcp` picks an agent's and the other commands a person's.
+- **`--notebook <name>`** names it: a clone's own name, or the notebook's name as the Mac app shows it (`--notebook "Notes"`), ignoring case. A notebook that was renamed is still found by its old names, unless another notebook has that name now. Of several clones of one notebook, `penmoss mcp` picks an agent's and the other commands a person's.
 - **Without `--notebook`**, it runs on the only notebook on this machine.
 - **With none, or several,** it exits 2 and says so: with none, add one with `penmoss notebook add`; with several, it names them all.
 

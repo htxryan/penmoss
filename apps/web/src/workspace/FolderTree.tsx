@@ -971,7 +971,7 @@ export function FolderTree({
             <span className="sort-badge">{SORT_LABELS[row.sortMode]}</span>
           ) : null}
           {renaming ? null : (
-            <span className="row-actions">
+            <span className="row-actions row-end">
               {/* A new note in it (T53 item 5), as its menu's New Note Here. Rename and Delete are
                   in its menu only (Quanta feedback 2, A1120). */}
               <button

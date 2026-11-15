@@ -1,10 +1,10 @@
 import { Icon } from '@penmoss/ui/icons';
-import { normaliseTag, tagAncestors, tagTree, type TagNode } from '@penmoss/core/tags';
+import { normaliseTag, tagTree, type TagNode } from '@penmoss/core/tags';
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useNotes } from '../notes/hooks';
 import { useStoredCollapse } from '../shell/collapsed';
 import { useOpenNoteList } from '../workspace/notebooks';
-import { tagFilter, useTagFilter } from './filter';
+import { useShowTag } from '../search/show-tag';
 import { SectionHead } from '../shell/SectionHead';
 import { linkHandler } from '../router';
 
@@ -13,8 +13,8 @@ export const TAGS_COLLAPSED_KEY = 'penmoss.sidebar.tags';
 
 /**
  * The tag pane (T18): every tag in the notes on this device, nested by `/`,
- * with how many notes carry it (or a tag under it). Choosing a tag filters
- * the sidebar; Rename changes the tag in every note that has it, and merges
+ * with how many notes carry it (or a tag under it). Choosing a tag opens
+ * Search on its notes (finding 9 of Ryan's review of #192); Rename changes the tag in every note that has it, and merges
  * when the new name is already a tag. Built from the local replica, so it
  * works offline, and it follows other devices as catch-up sync brings their
  * changes in.
@@ -22,7 +22,7 @@ export const TAGS_COLLAPSED_KEY = 'penmoss.sidebar.tags';
 export function TagPane({ tools }: { readonly tools?: ReactNode } = {}) {
   // Tags of the open notebooks only (T43, A752).
   const list = useOpenNoteList();
-  const filter = useTagFilter();
+  const showTag = useShowTag();
   const tree = useMemo(() => tagTree(list.map((entry) => entry.tags)), [list]);
   const known = useMemo(() => new Set(list.flatMap((entry) => entry.tags)), [list]);
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
@@ -30,9 +30,7 @@ export function TagPane({ tools }: { readonly tools?: ReactNode } = {}) {
   const [status, setStatus] = useState<string | null>(null);
   const [collapsed, toggleCollapsed] = useStoredCollapse(TAGS_COLLAPSED_KEY);
 
-  // The filtered tag's parents stay open, so it is visible.
-  const expanded = (tag: string) =>
-    open.has(tag) || (filter !== null && filter !== tag && tagAncestors(filter).includes(tag));
+  const expanded = (tag: string) => open.has(tag);
 
   const toggle = (tag: string) =>
     setOpen((current) => {
@@ -65,10 +63,9 @@ export function TagPane({ tools }: { readonly tools?: ReactNode } = {}) {
             type="button"
             className="tag-name"
             data-ui="item"
-            aria-pressed={filter === node.tag}
             aria-label={`#${node.tag}, ${node.count} ${node.count === 1 ? 'note' : 'notes'}`}
             data-tip={`Show Notes Tagged #${node.tag}`}
-            onClick={() => tagFilter.set(filter === node.tag ? null : node.tag)}
+            onClick={() => showTag(node.tag)}
           >
             <span className="tag-hash" aria-hidden="true">
               #
@@ -178,7 +175,6 @@ function RenameTag({
       .renameTag(from, to)
       .then((changed) => {
         const count = `${changed.length} ${changed.length === 1 ? 'note' : 'notes'}`;
-        if (tagFilter.get() === from) tagFilter.set(to);
         onDone(
           merge
             ? `Merged #${from} into #${to} in ${count}`

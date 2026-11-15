@@ -14,6 +14,7 @@
     "./purge-check": "./src/purge-check.ts",
     "./timeline": "./src/timeline.ts",
     "./identity": "./src/identity.ts",
+    "./layout": "./src/layout.ts",
     "./github": "./src/github.ts",
     "./github-browse": "./src/github-browse.ts"
   },

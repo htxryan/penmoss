@@ -165,7 +165,6 @@ export const APP_COMMANDS: readonly CommandDefinition[] = [
   global('journal.calendar', 'Show the Calendar', 'Daily notes'),
   global('journal.settings', 'Time Zone and Templates', 'Daily notes'),
   global('note.addTag', 'Add a Tag to This Note', 'Tags'),
-  global('tags.clearFilter', 'Show All Notes (Clear the Tag Filter)', 'Tags'),
   global('folder.new', 'New Folder', 'Folders', [
     applePlatformOr('Mod+Alt+Shift+N', 'Alt+Shift+N'),
   ]),

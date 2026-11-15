@@ -19,7 +19,13 @@ import {
 } from '../notes/service';
 import { Workspace, type RestorePlace } from '../workspace/service';
 import { EngineStorage, engineDbName, idbEngineKv, type EngineKv } from './engine-store';
-import { GitEngineHost, MAC_WRITER_LABEL, STARTING, type GitSyncStatus } from './engine-host';
+import {
+  GitEngineHost,
+  MAC_WRITER_LABEL,
+  STARTING,
+  shownStatus,
+  type GitSyncStatus,
+} from './engine-host';
 import { IpcGitTransport } from './ipc-transport';
 
 /** The notes store of a git notebook (A860). */
@@ -56,6 +62,7 @@ const HEAD_WAIT_MS = 10_000;
 /** A notebook's sync status in this window: the engine's here, or its window's (A860). */
 export class GitStatusFeed {
   private current: GitSyncStatus = STARTING;
+  private shownNow: GitSyncStatus = STARTING;
   private localState: LocalSyncState = { phase: 'syncing', detail: null, pending: new Set() };
   private readonly listeners = new Set<() => void>();
   private host: GitEngineHost | null = null;
@@ -72,8 +79,17 @@ export class GitStatusFeed {
     this.post({ notebookId, command: 'hello' });
   }
 
+  /** The status as it is: what waits for a sync, and Settings → Notebooks, read this. */
   get status(): GitSyncStatus {
     return this.current;
+  }
+
+  /**
+   * The status as the app shows it (Ryan's R2-7, `shownStatus`): a stopped sync stays stopped
+   * through its retries. The note's status bar and the sidebar's notebook row show this.
+   */
+  get shown(): GitSyncStatus {
+    return this.shownNow;
   }
 
   /** As the notes service shows it (a stable reference between changes). */
@@ -196,15 +212,13 @@ export class GitStatusFeed {
 
   private set(status: GitSyncStatus): void {
     this.current = status;
+    // As shown (R2-7): a stopped sync's retries stay stopped until one gets somewhere.
+    const shown = shownStatus(status);
+    this.shownNow = shown;
     this.localState = {
-      phase:
-        status.phase === 'starting'
-          ? 'syncing'
-          : status.phase === 'syncing'
-            ? 'syncing'
-            : status.phase,
-      detail: status.detail,
-      pending: new Set(status.pending),
+      phase: shown.phase === 'starting' ? 'syncing' : shown.phase,
+      detail: shown.detail,
+      pending: new Set(shown.pending),
     };
     for (const listener of this.listeners) listener();
   }
@@ -397,8 +411,9 @@ export class GitSource {
   /** Main listed it again (cadence, token, settings changed). */
   setInfo(info: GitNotebookInfo): void {
     this.infoNow = info;
-    // The running engine follows a new Push after or Pull every at once.
+    // The running engine follows a new Push after or Pull every at once, and a Rename.
     this.host?.setCadence(info.pushDelayS, info.pullEveryMin);
+    if (info.pendingName) this.host?.rename(info.pendingName);
     for (const listener of this.infoListeners) listener();
   }
 
@@ -455,6 +470,14 @@ export class GitSource {
       pushDelayS: info.pushDelayS,
       pullEveryMin: info.pullEveryMin,
       ...(this.deps.log ? { log: this.deps.log } : {}),
+      // What notebook.json is called after a sync: main follows another device's rename, and
+      // knows this Mac's landed.
+      onName: (name) => {
+        if (name === this.infoNow.name && !this.infoNow.pendingName) return;
+        void this.deps.git
+          .update(this.infoNow.localId, { branchName: name })
+          .catch((error: unknown) => this.deps.log?.('could not record the name', error));
+      },
     });
     this.host = host;
     const detach = this.feed.attach(host);
@@ -462,6 +485,8 @@ export class GitSource {
     const offStored = this.notes.onStored((ids) => host.changed(ids));
     try {
       await host.start();
+      // A Rename main still holds (asked while no engine ran here, or never pushed).
+      if (this.infoNow.pendingName) host.rename(this.infoNow.pendingName);
       await new Promise<void>((resolve) => {
         this.release = resolve;
         this.abort.signal.addEventListener('abort', () => resolve(), { once: true });
@@ -487,6 +512,19 @@ export class GitSource {
 
   syncNow(): void {
     this.feed.syncNow();
+  }
+
+  /**
+   * Rename (Ryan's review of PR #192): main keeps the new name for this Mac at once, and the
+   * engine's window, here or another, writes it to `notebook.json` and pushes it, so every device
+   * and agent follows. Returns why not, or null when done.
+   */
+  async rename(name: string): Promise<string | null> {
+    const answer = await this.deps.git.update(this.infoNow.localId, { name });
+    if (!answer) return 'This window cannot rename notebooks.';
+    if (!answer.ok) return answer.error.message;
+    this.setInfo(answer.value);
+    return null;
   }
 
   /**

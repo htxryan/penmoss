@@ -25,7 +25,7 @@ import { checkoutPortBase } from '../../../../packages/core/test/support/checkou
 import { parseBlock } from '../../../../scripts/ports.mjs';
 import { cliScript } from '../../src/local-agents';
 import { inVirtualMachine, refuseOnMacHost } from './host-guard';
-import { bareRepository, dataDir, DESKTOP, go, removeDataDirs } from './support';
+import { bareRepository, dataDir, DESKTOP, firstRunPasteUrl, go, removeDataDirs } from './support';
 
 refuseOnMacHost('The packaged app’s spec');
 test.skip(process.platform !== 'darwin', 'Needs a packaged Mac app and LaunchServices');
@@ -397,7 +397,7 @@ function mcpServer(words: readonly string[], env: NodeJS.ProcessEnv) {
 
 /**
  * A git notebook in the app, on a new bare repository the CLI bundle made the notebook in first,
- * opened from the first-run screen's "Open a notebook you already have". The remote holds the
+ * opened from the first run's Paste a URL (First Run C). The remote holds the
  * notebook from the start, so the app makes the agents' copy from it (D52) without waiting for
  * the app's own first push, which this spec isn't about.
  */
@@ -405,11 +405,8 @@ async function addNotebook(page: Page, w: ReturnType<typeof world>, name: string
   const remote = bareRepository();
   const seeded = w.cli(CLI_EXE, ['notebook', 'add', `file://${remote}`, '--name', name]);
   expect(seeded.status, seeded.stderr).toBe(0);
-  await expect(page.getByTestId('first-run')).toBeVisible({ timeout: 30_000 });
-  await page.getByTestId('first-run-existing').click();
-  const form = page.getByTestId('git-add');
-  await form.getByTestId('git-add-remote').fill(`file://${remote}`);
-  await form.locator('button[type="submit"]').click();
+  // First Run C: Paste a URL; the remote holds the notebook, so it opens with no name asked.
+  await firstRunPasteUrl(page, `file://${remote}`);
   await expect(page.locator('#app-sidebar').getByText(name, { exact: true }).first()).toBeVisible({
     timeout: 30_000,
   });

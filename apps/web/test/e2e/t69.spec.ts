@@ -1,10 +1,10 @@
 import { expect, test, type Page } from './fixtures';
 
-// T69 (D58, #228, A1146): the first run with no git notebook is a short guide. A welcome says
-// what Penmoss keeps and where, with two ways on: start a new notebook (an empty private
-// repository, named at once) or open one that exists (named only if it holds none). Back
-// returns; branch and folder wait under More Options; how git is reached is a click away. A
-// notebook made here starts with a welcome note, which opens.
+// T69 (D58, #228, A1146) as First Run C (Ryan's review of #192, findings 2–4): the first run with
+// no git notebook is one step per screen. A short welcome, Create or Open Notebook, Pick
+// Repository, then Name Your Notebook when a new one is made, each with the "Step n of 3" bar and
+// Back. Branch and folder wait under More Options. A notebook made here starts with a welcome
+// note, which opens; one that exists opens with no name asked.
 
 test.use({ seed: null });
 
@@ -27,43 +27,58 @@ test('the welcome, then a new notebook made in an empty repository, with its wel
   const errors = collectErrors(page);
   await page.goto('/');
   const firstRun = page.getByTestId('first-run');
+  // The welcome is a line, not a page (finding 2), with Learn More to the user docs.
   await expect(firstRun.getByRole('heading', { name: 'Welcome to Penmoss' })).toBeFocused();
-  await expect(firstRun).toContainText('a private repository you own');
-  await expect(page.getByTestId('git-add')).toHaveCount(0);
-  // How git is reached, a click away.
-  const access = page.getByTestId('first-run-access');
-  await access.getByText('How Penmoss signs in to git').click();
-  await expect(access).toContainText('SSH key');
+  await expect(firstRun.getByTestId('first-run-welcome')).toContainText(
+    'Notes in a git repository you own. Three short steps and you’re writing.',
+  );
+  await expect(firstRun.getByRole('link', { name: 'Learn More' })).toHaveAttribute(
+    'href',
+    'https://penmoss.app/docs/first-notebook/',
+  );
+  await expect(firstRun.getByTestId('first-run-back')).toHaveCount(0);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/welcome.png` });
 
-  // Start a new notebook: the steps, GitHub's new-repository page, Back and in again.
-  await page.getByTestId('first-run-new').click();
-  await expect(page.getByTestId('first-run-back')).toBeFocused();
-  await expect(page.getByRole('heading', { name: 'Start a new notebook' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'create one on GitHub' })).toHaveAttribute(
-    'href',
-    'https://github.com/new',
-  );
-  await page.getByTestId('first-run-back').click();
-  await expect(page.getByRole('heading', { name: 'Welcome to Penmoss' })).toBeVisible();
-  await page.getByTestId('first-run-new').click();
+  // Create or Open Notebook: Step 1 of 3, Start a New Notebook picked; Back and on again.
+  await firstRun.getByTestId('first-run-start').click();
+  await expect(firstRun.getByRole('heading', { name: 'Create or Open Notebook' })).toBeFocused();
+  await expect(firstRun).toContainText('Step 1 of 3');
+  await expect(firstRun.getByRole('radio', { name: /Start a New Notebook/ })).toBeChecked();
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/create-or-open.png` });
+  await firstRun.getByTestId('first-run-back').click();
+  await expect(firstRun.getByRole('heading', { name: 'Welcome to Penmoss' })).toBeVisible();
+  await firstRun.getByTestId('first-run-start').click();
+  await firstRun.getByTestId('first-run-continue').click();
 
-  const form = page.getByTestId('git-add');
-  const make = form.getByRole('button', { name: 'Make Notebook', exact: true });
-  // The name is asked at once, before the address; Make waits for both.
-  await expect(form.getByTestId('git-add-name')).toBeVisible();
-  await expect(form.getByTestId('git-add-branch')).toBeHidden();
-  await form.getByTestId('git-add-remote').fill(host.bare('fresh'));
-  await expect(make).toBeDisabled();
-  await form.getByTestId('git-add-name').fill('Field Notes');
-  // Branch and folder under More Options, filled in already.
-  await form.getByTestId('git-add-more').getByText('More Options').click();
-  await expect(form.getByTestId('git-add-branch')).toHaveValue('main');
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/new-notebook.png` });
-  await make.click();
+  // Pick Repository: Create New Repo (Recommended), Use Existing Repo, Paste a URL.
+  await expect(firstRun.getByRole('heading', { name: 'Pick Repository' })).toBeVisible();
+  await expect(firstRun).toContainText('Step 2 of 3');
+  await expect(firstRun.getByTestId('first-run-way-create')).toContainText('Recommended');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/pick-repository.png` });
+  await firstRun.getByTestId('first-run-way-url').click();
+  await firstRun.getByTestId('first-run-continue').click();
 
-  // The app opens on the new notebook's welcome note.
-  await expect(page.getByTestId('first-run')).toHaveCount(0, { timeout: 20_000 });
+  // Paste a URL, branch and folder under More Options, filled in already.
+  await expect(firstRun.getByRole('heading', { name: 'Paste a URL' })).toBeVisible();
+  await expect(firstRun.getByTestId('first-run-branch')).toBeHidden();
+  await firstRun.getByTestId('first-run-more').getByText('More Options').click();
+  await expect(firstRun.getByTestId('first-run-branch')).toHaveValue('main');
+  await firstRun.getByTestId('first-run-url-input').fill(host.bare('fresh'));
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/paste-url.png` });
+  await firstRun.getByTestId('first-run-continue').click();
+
+  // Name Your Notebook: offered from the repository's name, Make Notebook waits for one.
+  await expect(firstRun.getByRole('heading', { name: 'Name Your Notebook' })).toBeVisible();
+  const name = firstRun.getByTestId('first-run-name-input');
+  await expect(name).toHaveValue('Fresh');
+  await name.fill('');
+  await expect(firstRun.getByTestId('first-run-make')).toBeDisabled();
+  await name.fill('Field Notes');
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/name.png` });
+  await firstRun.getByTestId('first-run-make').click();
+
+  // The app opens on the new notebook's welcome note, once the first sync is done.
+  await expect(page.getByTestId('first-run')).toHaveCount(0, { timeout: 30_000 });
   await expect(page.getByTestId('note-title')).toHaveValue('Welcome to Penmoss', {
     timeout: 20_000,
   });
@@ -97,14 +112,17 @@ test('opening a notebook that exists asks for no name, and adds no welcome note'
   });
   await host.notebooks.remove(other.info.localId);
   await page.goto('/');
-  await page.getByTestId('first-run-existing').click();
-  await expect(
-    page.getByRole('heading', { name: 'Open a notebook you already have' }),
-  ).toBeVisible();
-  const form = page.getByTestId('git-add');
-  await expect(form.getByTestId('git-add-name')).toHaveCount(0);
-  await form.getByTestId('git-add-remote').fill(remote);
-  await form.getByRole('button', { name: 'Open Notebook', exact: true }).click();
+  const firstRun = page.getByTestId('first-run');
+  await firstRun.getByTestId('first-run-start').click();
+  await firstRun.getByTestId('first-run-existing').click();
+  await firstRun.getByTestId('first-run-continue').click();
+  // No GitHub sign-in in git: Sign In to GitHub, or Paste a URL Instead.
+  await expect(firstRun.getByRole('heading', { name: 'Sign In to GitHub' })).toBeVisible();
+  await expect(firstRun.getByTestId('first-run-gh-hint')).toContainText('gh auth login');
+  await firstRun.getByTestId('first-run-url-instead').click();
+  await firstRun.getByTestId('first-run-url-input').fill(remote);
+  await firstRun.getByTestId('first-run-continue').click();
+  await expect(firstRun.getByTestId('first-run-name-input')).toHaveCount(0);
   const tree = page.getByRole('tree', { name: 'Folders and notes' });
   await expect(tree.getByRole('treeitem', { name: 'Already here', exact: true })).toBeVisible({
     timeout: 30_000,

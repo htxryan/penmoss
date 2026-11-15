@@ -27,6 +27,7 @@ import {
   remoteParts,
 } from '@penmoss/git-notebook/system-git';
 import { validCommitEmail, validCommitName } from '@penmoss/git-notebook/identity';
+import { cleanNotebookName, NOTEBOOK_NAME_MAX } from '@penmoss/git-notebook/layout';
 import { commitPurges, commitWriter, purgedAt, titlesAt } from '@penmoss/git-notebook/purge-check';
 
 import { isolatedTitle } from '@penmoss/core/titles';
@@ -39,8 +40,14 @@ export interface GitNotebookEntry {
   readonly notebookId: string;
   /** `notebook.json`'s salt for derived ids, when it has one (`''`: the imported workspace, A1021). */
   readonly salt?: string;
-  /** Its name as `notebook.json` has it (or as given for a new one). */
+  /** Its name as `notebook.json` has it (or as given for a new one, or as renamed here). */
   readonly name: string;
+  /**
+   * Renamed on this Mac (Ryan's review of PR #192): the name the engine's window writes to
+   * `notebook.json` at its next sync. Goes once a sync reports that name at the branch; until
+   * then, a name another device pushed does not replace it.
+   */
+  readonly pendingName?: string;
   /** True when this Mac makes the notebook (the target held none when it was added). */
   readonly create: boolean;
   readonly remote: string;
@@ -82,6 +89,8 @@ export interface GitNotebookView {
   readonly notebookId: string;
   readonly salt?: string;
   readonly name: string;
+  /** Renamed here and not yet in `notebook.json` (Ryan's review of PR #192); null: none. */
+  readonly pendingName: string | null;
   readonly create: boolean;
   /** Credentials in a remote are refused at add, so this is the remote as given. */
   readonly remote: string;
@@ -120,6 +129,7 @@ export const TRANSPORT_OPS = [
   'push',
   'log',
   'readAt',
+  'readDir',
   'maintain',
 ] as const;
 export type TransportOp = (typeof TRANSPORT_OPS)[number];
@@ -170,7 +180,7 @@ const MAX_PURGES = 1000;
  */
 export const PURGE_TTL_MS = 10 * 60_000;
 /** How long a notebook may be named (the sidebar shows it). */
-export const MAX_NAME = 80;
+export const MAX_NAME = NOTEBOOK_NAME_MAX;
 
 /** A refusal from main's own checks inside a transport call (not git's). */
 class Refused extends Error {
@@ -460,6 +470,7 @@ export class GitNotebooks {
       notebookId: entry.notebookId,
       ...(entry.salt !== undefined ? { salt: entry.salt } : {}),
       name: entry.name,
+      pendingName: entry.pendingName ?? null,
       create: entry.create,
       remote: redactRemote(entry.remote),
       repository: repositoryName(entry.remote),
@@ -862,14 +873,62 @@ export class GitNotebooks {
     };
   }
 
-  /** The cadence and signing, per notebook on this Mac (A825). */
+  /**
+   * The cadence and signing, per notebook on this Mac (A825), and its name (Ryan's review of PR
+   * #192): `name` is Rename's (written to `notebook.json` by the engine's window at its next
+   * sync), `branchName` what a sync found there (another device's rename, or this Mac's landing).
+   */
   async update(localId: unknown, patch: unknown): Promise<GitAnswer<GitNotebookView>> {
-    const entry = await this.entry(localId);
-    if (!entry || typeof patch !== 'object' || patch === null) {
+    if (typeof localId !== 'string' || !LOCAL_ID.test(localId)) {
       return { ok: false, error: refuse('invalid_request', 'No such git notebook.') };
     }
-    const value = patch as Record<string, unknown>;
+    // Read and written in one turn: a sync's name report never undoes a change made meanwhile.
+    const answer = await this.serial(async (): Promise<GitAnswer<GitNotebookEntry>> => {
+      const registry = await this.readRegistry();
+      const entry = registry.notebooks.find((each) => each.localId === localId);
+      if (!entry || typeof patch !== 'object' || patch === null) {
+        return { ok: false, error: refuse('invalid_request', 'No such git notebook.') };
+      }
+      const patched = this.patched(entry, patch as Record<string, unknown>);
+      // Nothing changed (a sync reporting the name it had): no write, and no list sent again.
+      if (patched.ok && JSON.stringify(patched.value) !== JSON.stringify(entry)) {
+        await this.writeJson(this.registryPath, {
+          version: 1,
+          notebooks: registry.notebooks.map((each) =>
+            each.localId === entry.localId ? patched.value : each,
+          ),
+        });
+        this.options.onChange?.();
+      }
+      return patched;
+    });
+    if (!answer.ok) return answer;
+    const secrets = await this.readSecrets();
+    return { ok: true, value: this.view(answer.value, `token:${answer.value.localId}` in secrets) };
+  }
+
+  /** `update`'s patch on one entry, or why not. */
+  private patched(
+    entry: GitNotebookEntry,
+    value: Record<string, unknown>,
+  ): GitAnswer<GitNotebookEntry> {
     const next: { -readonly [K in keyof GitNotebookEntry]: GitNotebookEntry[K] } = { ...entry };
+    if (value['name'] !== undefined) {
+      const name = cleanNotebookName(value['name']);
+      if (name === null) {
+        return { ok: false, error: refuse('invalid_request', 'A notebook needs a name.') };
+      }
+      next.name = name;
+      next.pendingName = name;
+    }
+    if (value['branchName'] !== undefined) {
+      const name = cleanNotebookName(value['branchName']);
+      if (name === null) {
+        return { ok: false, error: refuse('invalid_request', 'Not a notebook name.') };
+      }
+      if (next.pendingName === undefined) next.name = name;
+      else if (next.pendingName === name) delete next.pendingName;
+    }
     if (value['pushDelayS'] !== undefined) {
       const seconds = Number(value['pushDelayS']);
       if (!Number.isInteger(seconds) || seconds < 5 || seconds > 3600) {
@@ -918,12 +977,7 @@ export class GitNotebooks {
       else next.tokenUser = user;
       this.transports.delete(entry.localId);
     }
-    await this.change((registry) => ({
-      version: 1,
-      notebooks: registry.notebooks.map((each) => (each.localId === entry.localId ? next : each)),
-    }));
-    const secrets = await this.readSecrets();
-    return { ok: true, value: this.view(next, `token:${next.localId}` in secrets) };
+    return { ok: true, value: next };
   }
 
   /**
@@ -1228,6 +1282,19 @@ export class GitNotebooks {
       case 'readAt': {
         const [path] = paths([args[1]]);
         return transport.readAt(sha(args[0]), path!);
+      }
+      case 'readDir': {
+        // History's reads: a note's directory at many commits (Ryan's review of #192). The
+        // transport refuses a directory outside the notebook.
+        if (!Array.isArray(args[0]) || args[0].length > 2_000) {
+          throw new GitTransportError('git', 'Not a list of commits.');
+        }
+        const [dir] = paths([args[1]]);
+        const read = await transport.readDir(args[0].map(sha), dir!);
+        return {
+          files: [...read.files].map(([commit, listed]) => [commit, [...listed]]),
+          blobs: [...read.blobs],
+        };
       }
       case 'maintain':
         await transport.maintain();
