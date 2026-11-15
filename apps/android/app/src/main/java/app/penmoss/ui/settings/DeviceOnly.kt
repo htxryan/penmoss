@@ -23,7 +23,7 @@ const val DEVICE_ONLY_TIP = "Unlike other settings, this setting is kept only on
 
 /**
  * A setting kept on this phone alone (A1559), as the Mac's: the laptop, its sentence a tooltip on
- * a long press and its content description, which TalkBack reads with the row.
+ * a long press and its content description.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

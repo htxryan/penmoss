@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -50,7 +51,8 @@ class SettingsHeaderTest {
     fun theTitleBarCollapsesAsTheScreenScrolls() {
         screen()
         val before = compose.onNodeWithTag("sectionTopBar").getUnclippedBoundsInRoot().let { it.bottom - it.top }
-        compose.onNodeWithTag("firstRow").performTouchInput { swipeUp() }
+        // A finger dragging the content up, as far as the screen goes.
+        compose.onNode(hasScrollAction()).performTouchInput { swipeUp(startY = bottom - 10f, endY = top + 10f, durationMillis = 600) }
         compose.waitForIdle()
         val after = compose.onNodeWithTag("sectionTopBar").getUnclippedBoundsInRoot().let { it.bottom - it.top }
         assertTrue("the large bar shrinks: $before → $after", after < before)

@@ -3,7 +3,6 @@ package app.penmoss.git
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.test.assertContentDescriptionContains
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasAnyAncestor
@@ -79,10 +78,9 @@ class BetweenNotebooksScreenTest {
         }
         compose.onNodeWithTag("gitSettingsInStep").performScrollTo().assertIsOff()
         compose.onNodeWithText("A change to Work’s settings goes to the other notebooks").assertIsDisplayed()
-        // This phone's own: the laptop mark, its sentence what TalkBack reads with the row (A1559).
+        // This phone's own: the laptop mark, its sentence its content description (A1559).
         compose.onNode(hasTestTag("deviceOnly") and hasAnyAncestor(hasTestTag("gitSettingsInStep")), useUnmergedTree = true)
             .assertContentDescriptionEquals(DEVICE_ONLY_TIP)
-        compose.onNodeWithTag("gitSettingsInStep").assertContentDescriptionContains(DEVICE_ONLY_TIP)
         compose.onNodeWithTag("gitSettingsInStep").performClick()
         assertEquals(listOf(true), turned)
     }

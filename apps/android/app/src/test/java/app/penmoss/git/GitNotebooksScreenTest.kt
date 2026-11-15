@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -519,7 +520,7 @@ class GitNotebooksScreenTest {
             }
         }
         // One scrolling column holds the whole screen, so every row has its place, shown or not.
-        fun top(node: androidx.compose.ui.test.SemanticsNodeInteraction) = node.fetchSemanticsNode().boundsInRoot.top
+        fun top(node: androidx.compose.ui.test.SemanticsNodeInteraction) = node.getUnclippedBoundsInRoot().top
         val group = top(compose.onNodeWithText("Between Notebooks"))
         val primary = top(compose.onNodeWithTag("gitPrimary"))
         val inStep = top(compose.onNodeWithTag("gitSettingsInStep"))

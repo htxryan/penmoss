@@ -40,8 +40,9 @@ class WhatsNewScreenTest {
         compose.onNodeWithText(VERSION_UPDATES).assertIsDisplayed()
         compose.onNodeWithTag("whatsNewCurrent").assertIsDisplayed()
         compose.onNodeWithText("In This Version").assertIsDisplayed()
-        compose.onNodeWithText("• Release notes in the app.").assertIsDisplayed()
-        compose.onNodeWithText("• The keyboard stays down.").assertIsDisplayed()
+        // Under the large top app bar (A1560) the list may start below the screen's fold.
+        compose.onNodeWithText("• Release notes in the app.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("• The keyboard stays down.").performScrollTo().assertIsDisplayed()
         assertEquals(0, compose.onAllNodesWithText("• Mac only.").fetchSemanticsNodes().size)
         // Earlier Versions open from their button.
         compose.onNodeWithTag("whatsNewEarlier").assertDoesNotExist()
