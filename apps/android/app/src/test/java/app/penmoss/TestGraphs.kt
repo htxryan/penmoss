@@ -3,7 +3,6 @@ package app.penmoss
 import android.content.Context
 import android.content.Intent
 import androidx.work.WorkManager
-import app.penmoss.auth.SecretBox
 import app.penmoss.data.PenmossDatabase
 import app.penmoss.editor.NotePages
 import app.penmoss.engine.api.HttpPenmossApi
@@ -14,6 +13,7 @@ import app.penmoss.engine.git.OwnerConfirm
 import app.penmoss.git.GitNotebookActivity
 import app.penmoss.git.GitNotebookHub
 import app.penmoss.git.GitScheduler
+import app.penmoss.security.SecretBox
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals

@@ -1,16 +1,16 @@
 package app.penmoss
 
 import android.content.Context
-import app.penmoss.auth.KeystoreSecretBox
-import app.penmoss.auth.PhoneOwnerCheck
-import app.penmoss.auth.ResumedActivity
-import app.penmoss.auth.SecretBox
 import app.penmoss.data.PenmossDatabase
 import app.penmoss.data.SettingsStore
 import app.penmoss.editor.NotePages
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.ThemeCatalogue
 import app.penmoss.engine.settings.ThemeEdits
+import app.penmoss.security.KeystoreSecretBox
+import app.penmoss.security.PhoneOwnerCheck
+import app.penmoss.security.ResumedActivity
+import app.penmoss.security.SecretBox
 import app.penmoss.ui.Appearance
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -68,8 +68,8 @@ class DeviceGraph(
 
             // The request's own check, as late as the prompt allows (A887).
             override suspend fun confirm(words: String, live: () -> Boolean) = when (val answer = check.confirmWords(words, live)) {
-                app.penmoss.auth.OwnerCheckResult.Confirmed -> app.penmoss.engine.git.OwnerAnswer.Confirmed
-                is app.penmoss.auth.OwnerCheckResult.Refused -> app.penmoss.engine.git.OwnerAnswer.Refused(answer.reason)
+                app.penmoss.security.OwnerCheckResult.Confirmed -> app.penmoss.engine.git.OwnerAnswer.Confirmed
+                is app.penmoss.security.OwnerCheckResult.Refused -> app.penmoss.engine.git.OwnerAnswer.Refused(answer.reason)
             }
         }
     },

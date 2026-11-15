@@ -1,6 +1,6 @@
-package app.penmoss.auth
+package app.penmoss.security
 
-import app.penmoss.auth.PhoneOwnerCheck.Availability
+import app.penmoss.security.PhoneOwnerCheck.Availability
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking

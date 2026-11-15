@@ -5,7 +5,6 @@ import android.content.SharedPreferences
 import android.os.Build
 import androidx.core.content.edit
 import app.penmoss.NotebookGraph
-import app.penmoss.auth.SecretBox
 import app.penmoss.data.PenmossDatabase
 import app.penmoss.engine.git.AddResult
 import app.penmoss.engine.git.CommitPurges
@@ -23,6 +22,7 @@ import app.penmoss.engine.git.OwnerConfirm
 import app.penmoss.engine.git.PageGuard
 import app.penmoss.engine.git.PendingPurge
 import app.penmoss.engine.git.SecretSeal
+import app.penmoss.security.SecretBox
 import app.penmoss.sync.PassOutcome
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

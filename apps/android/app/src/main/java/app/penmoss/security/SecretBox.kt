@@ -1,4 +1,4 @@
-package app.penmoss.auth
+package app.penmoss.security
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties

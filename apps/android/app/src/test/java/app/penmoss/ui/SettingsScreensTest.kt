@@ -31,7 +31,7 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.NotebookGraph
-import app.penmoss.auth.SecretBox
+import app.penmoss.security.SecretBox
 import app.penmoss.data.NoteStore
 import app.penmoss.data.PenmossDatabase
 import app.penmoss.engine.api.SyncTree

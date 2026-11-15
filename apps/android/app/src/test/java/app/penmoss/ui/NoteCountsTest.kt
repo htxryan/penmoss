@@ -5,13 +5,13 @@ import android.os.Looper
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.penmoss.NotebookGraph
-import app.penmoss.auth.SecretBox
 import app.penmoss.data.AttachmentEntity
 import app.penmoss.data.CaptureEntity
 import app.penmoss.data.FolderEntity
 import app.penmoss.data.NoteEntity
 import app.penmoss.data.PenmossDatabase
 import app.penmoss.data.UpdateEntity
+import app.penmoss.security.SecretBox
 import app.penmoss.stopMainScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first

@@ -1,4 +1,4 @@
-package app.penmoss.auth
+package app.penmoss.security
 
 import android.content.Context
 import android.content.pm.PackageManager
