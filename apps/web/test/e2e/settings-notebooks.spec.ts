@@ -61,7 +61,7 @@ test.describe('in Quanta, with two notes', () => {
     await expect(page).toHaveURL(/\/settings\/git-notebooks$/);
     await expect(rows).toHaveCount(2);
 
-    // Settings → Agents: each notebook, with the name agents reach it by.
+    // Settings → Agents: one table, each notebook's Any Agent a row (A1578, amending A1125).
     await card.waitFor({ state: 'detached' });
     await page
       .getByRole('navigation', { name: 'Settings sections' })
@@ -69,27 +69,22 @@ test.describe('in Quanta, with two notes', () => {
       .click();
     await expect(page).toHaveURL(/\/settings\/agents$/);
     const agents = page.getByTestId('agents-settings');
-    // A list of the notebooks, folded (PEN-146: one page, amending A1125)…
-    const agentRows = agents.getByTestId('agents-notebook-row');
+    const agentRows = agents.getByTestId('agents-row');
     await expect(agentRows).toHaveCount(2);
-    await expect(agents.getByTestId('git-local-agents')).toHaveCount(0);
+    await expect(agents.getByTestId('agents-drawer')).toHaveCount(0);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/agents.png` });
-    // …each unfolding in place to its agents and the name agents reach it by.
+    // A row opens its drawer, with the name agents reach the notebook by.
     const work = agentRows.filter({ hasText: 'Work' });
-    await work.getByTestId('agents-notebook-fold').click();
+    await work.click();
     await expect(page).toHaveURL(/\/settings\/agents$/);
-    await expect(agents.getByTestId('notebook-agents')).toHaveCount(1);
-    await expect(agents.getByTestId('notebook-agents')).toContainText(
-      'penmoss mcp --notebook Work',
-    );
-    await expect(agents.getByTestId('git-local-agents')).toHaveCount(1);
-    await work.getByTestId('agents-notebook-fold').click();
-    await expect(agents.getByTestId('notebook-agents')).toHaveCount(0);
-    // Its own address opens the page with it unfolded.
+    const drawer = agents.getByTestId('agents-drawer');
+    await expect(drawer).toHaveAttribute('aria-label', 'Any Agent on Work');
+    await expect(drawer).toContainText('penmoss mcp --notebook Work');
+    await drawer.getByTestId('agents-drawer-close').click();
+    await expect(drawer).toHaveCount(0);
+    // Its own address opens the page with it in the drawer.
     await page.goto((await work.getAttribute('data-path'))!);
-    await expect(agents.getByTestId('notebook-agents')).toContainText(
-      'penmoss mcp --notebook Work',
-    );
+    await expect(drawer).toContainText('penmoss mcp --notebook Work');
     await expect(agentRows).toHaveCount(2);
     // A page that is not a notebook here says so.
     await page.goto('/settings/git-notebooks/01M6AAAAAAAAAAAAAAAAAAAAAA');
@@ -192,7 +187,7 @@ test.describe('in Quanta, with a folder and a long note', () => {
   });
 
   // T65, item 5.
-  test('Settings → Agents shows the command’s card at once, and its notebooks as a list', async ({
+  test('Settings → Agents shows the command’s card at once, and its agents in a table', async ({
     page,
     host,
   }) => {
@@ -203,7 +198,7 @@ test.describe('in Quanta, with a folder and a long note', () => {
     // At once, though the login shell takes 3 s to say its PATH the first time.
     await expect(card).toBeVisible({ timeout: 1000 });
     await expect(card.getByRole('heading', { name: 'The penmoss Command' })).toBeVisible();
-    await expect(agents.getByTestId('agents-notebook-row')).toHaveCount(1);
+    await expect(agents.getByTestId('agents-row')).toHaveCount(1);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/agents-list.png` });
     await expect(card.getByTestId('git-cli-state')).toHaveText(/^Not installed\./, {
       timeout: SLOW_SHELL_MS + 5000,
@@ -214,18 +209,18 @@ test.describe('in Quanta, with a folder and a long note', () => {
       timeout: 1000,
     });
 
-    // A notebook's agents, unfolded in place (PEN-146: one page, folded, amending A1125).
-    const row = agents.getByTestId('agents-notebook-row');
-    await row.getByTestId('agents-notebook-fold').click();
-    await expect(row.getByTestId('agents-notebook-fold')).toHaveAttribute('aria-expanded', 'true');
-    const notebook = agents.getByTestId('notebook-agents');
+    // The notebook's Any Agent, in its drawer (A1578, amending A1125).
+    const row = agents.getByTestId('agents-row');
+    await row.click();
+    await expect(row).toHaveAttribute('aria-expanded', 'true');
+    const drawer = agents.getByTestId('agents-drawer');
     await expect(row).toContainText('Quanta');
-    await expect(notebook).toContainText('penmoss mcp --notebook Quanta');
-    await expect(notebook.getByTestId('git-local-agents')).toBeVisible();
+    await expect(drawer).toContainText('penmoss mcp --notebook Quanta');
+    await expect(drawer.getByTestId('git-local-agent')).toBeVisible();
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/agents-notebook.png` });
-    // Its address opens the page with it unfolded; Agent Activity is the page beside it.
+    // Its address opens the page with it in the drawer; Agent Activity is the page beside it.
     await page.goto((await row.getAttribute('data-path'))!);
-    await expect(notebook.getByTestId('git-local-agents')).toBeVisible();
+    await expect(drawer.getByTestId('git-local-agent')).toBeVisible();
     await agents.getByTestId('agents-activity-link').click();
     await expect(page).toHaveURL(/\/settings\/agent-activity$/);
     await expect(page.getByTestId('agent-activity-settings')).toBeVisible();

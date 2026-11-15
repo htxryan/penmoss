@@ -109,7 +109,7 @@ On All Notebooks, under **Between Notebooks**, with **Primary Notebook** first:
 
 ### Agents
 
-For each notebook, the agents connected to it, **Connect an Agent** and **Disconnect**, and the commands to give each agent ([How agents work](/docs/agents/)). **The penmoss Command** installs the CLI ([Install](/docs/reference/cli/#install)).
+Every agent on this Mac in one table, a row per agent and notebook (each notebook's shared **Any Agent** too), with **Connect an Agent…** at the top. A row opens its panel: the commands to give the agent, for Claude Code, Codex or another client, **Receive Comments Sent to It**, and **Disconnect…** ([How agents work](/docs/agents/)). **The penmoss Command** installs the CLI ([Install](/docs/reference/cli/#install)).
 
 ### Agent Activity
 

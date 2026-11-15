@@ -137,26 +137,29 @@ test('no account: connect an agent on this Mac; its MCP server writes the notebo
 
   // Settings → Agents (A1098): every notebook has an agent copy the app made by itself (D52),
   // which no Disconnect removes, and `penmoss mcp --notebook <the notebook's name>` serves it.
-  // The page lists the notebooks, each folding open in place to its agents (PEN-146), and
-  // `/settings/agents/<id>` opens with that one unfolded.
-  await go(page, '/settings/agents');
-  const row = page.getByTestId('agents-notebook-row').filter({ hasText: name });
-  await expect(row).toHaveAttribute('data-path', `/settings/agents/${notebookId}`);
-  await row.getByTestId('agents-notebook-fold').click();
+  // The page lists every agent in one table (A1578): the copy is the notebook's "Any Agent" row,
+  // which opens its drawer, and `/settings/agents/<id>` opens with that one in the drawer.
   const agentsPage = page.getByTestId('agents-settings');
-  const notebookAgents = agentsPage.getByTestId('notebook-agents').filter({ hasText: name });
-  const agents = notebookAgents.getByTestId('git-local-agents');
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  const automatic = agents.locator(`[data-testid="git-local-agent"][data-name="${slug}-agent"]`);
+  const shared = agentsPage.locator(`[data-testid="agents-row"][data-name="${slug}-agent"]`);
   await expect(async () => {
     // The list is read when the page opens: open it again until the copy is made.
     await go(page, '/settings/git-notebooks');
-    await go(page, `/settings/agents/${notebookId}`);
-    await expect(automatic).toBeVisible({ timeout: 2_000 });
+    await go(page, '/settings/agents');
+    await expect(shared).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 60_000 });
+  await expect(shared).toHaveAttribute('data-path', `/settings/agents/${notebookId}`);
+  await expect(shared).toContainText('Any Agent');
+  await expect(shared).toContainText(name);
+  await shared.click();
+  const drawer = agentsPage.getByTestId('agents-drawer');
+  const automatic = drawer.locator(`[data-testid="git-local-agent"][data-name="${slug}-agent"]`);
   await expect(automatic.getByTestId('git-local-agent-automatic')).toBeVisible();
   await expect(automatic.getByTestId('git-local-agent-disconnect')).toHaveCount(0);
-  await expect(notebookAgents).toContainText(`penmoss mcp --notebook "${name}"`);
+  await expect(drawer).toContainText(`penmoss mcp --notebook "${name}"`);
+  await page.keyboard.press('Escape');
+  await expect(drawer).toHaveCount(0);
+  await expect(shared).toBeFocused();
 
   // The penmoss command, on the same page: written under the suite's home, running this app.
   const command = agentsPage.getByTestId('git-cli');
@@ -174,23 +177,34 @@ test('no account: connect an agent on this Mac; its MCP server writes the notebo
   expect(byName.status, byName.stderr).toBe(0);
   expect(JSON.parse(byName.stdout)).toMatchObject({ name: `${slug}-agent` });
 
-  // Connect an Agent…, on the notebook's row: Touch ID, then its own clone, and the commands to
-  // give it the server.
-  await row.getByTestId('agents-connect-open').click();
-  await expect(agents.getByTestId('git-local-agent-label')).toBeFocused();
-  await agents.getByTestId('git-local-agent-label').fill('Codex');
-  await agents.getByTestId('git-local-agent-connect').click();
-  await expect(agents.getByTestId('git-local-agent-message')).toContainText('Connected “Codex”');
+  // + Connect an Agent…, by the title: the form in the drawer, then Touch ID, its own clone, and
+  // its drawer with the commands to give it the server.
+  await agentsPage.getByTestId('agents-connect-open').click();
+  const form = drawer.getByTestId('agents-connect');
+  await expect(form.getByTestId('git-local-agent-label')).toBeFocused();
+  await expect(form.getByTestId('agents-connect-notebook')).toHaveText(name);
+  await form.getByTestId('git-local-agent-label').fill('Codex');
+  await form.getByTestId('git-local-agent-connect').click();
+  await expect(drawer.getByTestId('git-local-agent-message')).toContainText('Connected “Codex”');
   const clone = `notes-${RUN}-codex`;
-  const codex = agents.locator(`[data-testid="git-local-agent"][data-name="${clone}"]`);
+  const codex = drawer.locator(`[data-testid="git-local-agent"][data-name="${clone}"]`);
   const claude = await codex.getByTestId('git-local-agent-claude').locator('code').textContent();
   expect(claude).toBe(
     `claude mcp add penmoss-${clone} -- ${ELECTRON} ${DESKTOP.replace(/\/$/, '')} --penmoss-cli mcp --notebook ${clone}`,
   );
+  await codex.getByTestId('agent-tab-codex').click();
   await expect(codex.getByTestId('git-local-agent-codex')).toContainText(
     `[mcp_servers."penmoss-${clone}"]`,
   );
-  // Receive comments sent to this agent (T60, A1073): the channel, and how to start Claude Code.
+  await codex.getByTestId('agent-tab-other').click();
+  await expect(codex.getByTestId('git-local-agent-other').locator('code')).toHaveText(
+    claude!.split(' -- ')[1]!,
+  );
+  await codex.getByTestId('agent-tab-claude').click();
+  await expect(agentsPage.locator(`[data-testid="agents-row"][data-name="${clone}"]`)).toHaveText(
+    /^Codex/,
+  );
+  // Receive Comments Sent to It (T60, A1073): the channel, and how to start Claude Code.
   await codex.getByTestId('git-local-agent-channel').check();
   await expect(codex.getByTestId('git-local-agent-claude').locator('code')).toHaveText(
     `${claude} --channel`,
@@ -257,11 +271,15 @@ test('no account: connect an agent on this Mac; its MCP server writes the notebo
   await expect(section.getByText('From Codex')).toBeVisible({ timeout: 15_000 });
   await go(page, `/settings/agents/${notebookId}`);
 
-  // Disconnect removes the agent's clone, and only that: the automatic copy stays.
+  // Disconnect… asks, then removes the agent's clone, and only that: the automatic copy stays.
+  const codexRow = agentsPage.locator(`[data-testid="agents-row"][data-name="${clone}"]`);
+  await codexRow.click();
   await codex.getByTestId('git-local-agent-disconnect').click();
-  await expect(agents.getByTestId('git-local-agent-message')).toContainText('Disconnected “Codex”');
-  await expect(codex).toHaveCount(0);
-  await expect(automatic).toBeVisible();
+  await page.getByTestId('git-local-agent-disconnect-confirm').click();
+  await expect(agentsPage.getByTestId('agents-notice')).toContainText('Disconnected “Codex”');
+  await expect(codexRow).toHaveCount(0);
+  await expect(drawer).toHaveCount(0);
+  await expect(shared).toBeVisible();
   expect(existsSync(join(w.home, '.penmoss', 'git'))).toBe(true);
   const after = spawnSync(script, ['notebook', 'ls'], { env: w.env, encoding: 'utf8' });
   expect(after.stdout).not.toContain(clone);
