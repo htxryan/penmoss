@@ -94,16 +94,13 @@ class FeedbackContextTest {
         assertEquals("n1", note["Id"])
         assertEquals("Shopping list", note["Title"])
         assertEquals("Projects", note["Folder"])
-        // Right after Folder (T43): the default notebook's name, as no notebook holds it.
-        assertEquals("Personal", note["Notebook"])
-        assertEquals("Notebook", groups.getValue("note").rows.map { it[0] }.let { it[it.indexOf("Folder") + 1] })
-        // With no notebook selected, Where has no Notebook row.
+        // No notebook inside a git notebook (A912), and no epoch, a server-era field: neither row.
+        assertFalse(groups.getValue("note").rows.any { it[0] == "Notebook" || it[0] == "Epoch" })
         assertFalse(groups.getValue("where").rows.any { it[0] == "Notebook" })
         assertEquals("#home", note["Tags"])
         assertEquals("17", note["Words"])
         assertEquals("${body.length}", note["Characters"])
         assertEquals("yjs14", note["Engine"])
-        assertEquals("e2", note["Epoch"])
         assertEquals("1", note["Backlinks"])
         assertEquals("1", note["Outgoing links"])
         assertEquals("2026-10-27T15:00:00.000Z", note["Updated"])
@@ -144,7 +141,7 @@ class FeedbackContextTest {
             db, errors, names = { listOf("Secret merger plan", "Acme Work", "Clients Zeta") }, app = { app },
             sync = { sync.copy(lastError = "Can't sign in to github.com/htxryan/acme-notes") }, gitNotebook = true,
         )
-        val gitWhere = WhereFacts("/note/$id", "note", null, "the note's ⋮ menu", "Acme Work / Clients Zeta", notebook = "Acme Work")
+        val gitWhere = WhereFacts("/note/$id", "note", null, "the note's ⋮ menu", "Acme Work / Clients Zeta")
         val context = collector.collect(gitWhere, id, NoteExtras(created = "2026-10-01T09:00:00-05:00", words = 2, tags = listOf("confidential-tag")))
         val json = Json.encodeToString(FeedbackContextData.serializer(), context)
         val markdown = FeedbackMarkdown.context(context)
@@ -167,23 +164,6 @@ class FeedbackContextTest {
         assertEquals(setOf("Source", "Words", "Characters", "Attachments", "Size in bytes", "Unsynced", "In Trash", "Backlinks", "Outgoing links"), note.keys)
         assertEquals("2", note["Words"])
         assertEquals("yes (not sent from a git notebook)", groups.getValue("sync").rows.associate { it[0] to it[1] }["Last sync error"])
-    }
-
-    /** A note in a notebook names it (T43), in the note's facts and, when selected, in Where. */
-    @Test
-    fun aNoteInANotebookNamesItInTheNoteAndWhere() = runTest {
-        db.folders().put(FolderEntity("w", "Work", null, "a0", "manual", notebook = true))
-        db.folders().put(FolderEntity("c", "Clients", "w", "a0", "manual"))
-        db.notes().insert(NoteEntity("n2", title = "Acme", folderId = "c"))
-        val collector = FeedbackCollector(db, RecentErrors(), names = { emptyList() }, app = { app }, sync = { sync })
-        assertEquals("Work", collector.notebookName("c"))
-        assertEquals(null, collector.notebookName(null))
-        val context = collector.collect(where.copy(folderPath = "Work / Clients", notebook = collector.notebookName("c")), "n2")
-        val note = context.groups.first { it.id == "note" }.rows.associate { it[0] to it[1] }
-        assertEquals("Work / Clients", note["Folder"])
-        assertEquals("Work", note["Notebook"])
-        val whereRows = context.groups.first { it.id == "where" }.rows.map { it[0] }
-        assertEquals("Notebook", whereRows[whereRows.indexOf("Selected folder") + 1])
     }
 
     @Test

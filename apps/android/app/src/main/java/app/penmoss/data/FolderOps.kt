@@ -10,13 +10,11 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 
 /**
- * Folders (T40 P4, NT2–NT7, A443) and notebooks (T43, A750–A756): every change shows at once and
- * waits in the folder-op queue to send, offline too, and is laid over each tree read until sent.
+ * Folders (T40 P4, NT2–NT7, A443): every change shows at once and waits in the folder-op queue to
+ * send, offline too, and is laid over each tree read until sent.
  */
 class FolderOps(
     private val db: PenmossDatabase,
-    private val now: () -> Long,
-    private val placement: NotePlacement,
 ) {
     private val notes = db.notes()
     private val settings = db.settings()
@@ -24,34 +22,6 @@ class FolderOps(
     fun observeFolders(): Flow<List<FolderEntity>> = db.folders().observeAll()
 
     fun observeRootSortMode(): Flow<String> = settings.observe(ROOT_SORT_MODE).map { it ?: "manual" }
-
-    // --- notebooks (T43, A750–A756) ---
-
-    /** What [setNotebook] did: [refusal] says why not, in the server's words. */
-    data class NotebookFlag(val changed: Boolean, val refusal: String? = null)
-
-    /**
-     * Turns a top-level folder into a notebook ([on]) or a notebook back into a folder (A756):
-     * shown at once, queued as `PATCH /api/folders/:id { notebook }`. Refused, as the server
-     * refuses, for a folder inside another or one holding Journal or the Inbox.
-     */
-    suspend fun setNotebook(id: String, on: Boolean): NotebookFlag = db.withTransaction {
-        val folders = db.folders().all()
-        val folder = folders.firstOrNull { it.id == id } ?: return@withTransaction NotebookFlag(false, "That folder isn't on this phone anymore")
-        if (folder.notebook == on) return@withTransaction NotebookFlag(false)
-        Notebooks.flagRefusal(folders, id, on)?.let { return@withTransaction NotebookFlag(false, it) }
-        db.folders().put(folder.copy(notebook = on))
-        // Undoing a change never tried cancels it: the server still has the folder as it was.
-        val waiting = db.folderOps().all().lastOrNull { it.folderId == id && it.kind == FolderOpEntity.NOTEBOOK }
-        if (waiting != null && !waiting.tried) {
-            db.folderOps().delete(waiting.rowId)
-        } else {
-            db.folderOps().insert(FolderOpEntity(folderId = id, kind = FolderOpEntity.NOTEBOOK, notebook = on, label = folder.name))
-        }
-        NotebookFlag(true)
-    }
-
-    // --- folders (T40 P4, NT2–NT7, A443) ---
 
     /** Folder changes made here and not sent yet, oldest first. */
     suspend fun folderOpsDue(): List<FolderOpEntity> = db.folderOps().all()
@@ -90,8 +60,8 @@ class FolderOps(
         true
     }
 
-    /** What [moveFolder] did; [NOTEBOOK_RULE]: a notebook into a folder, or Journal or the Inbox into a notebook (T43). */
-    enum class FolderMove { MOVED, ALREADY_THERE, REFUSED, NOTEBOOK_RULE }
+    /** What [moveFolder] did. */
+    enum class FolderMove { MOVED, ALREADY_THERE, REFUSED }
 
     /**
      * Moves a folder here (NT4, NT5): shown at once at its new parent's end, queued with the
@@ -103,15 +73,11 @@ class FolderOps(
         if (parentId != null && db.folders().get(parentId) == null) return@withTransaction FolderMove.REFUSED
         if (parentId != null && isWithin(id, parentId)) return@withTransaction FolderMove.REFUSED
         if (folder.parentId == parentId) return@withTransaction FolderMove.ALREADY_THERE
-        if (Notebooks.moveRefusal(db.folders().all(), id, parentId) != null) return@withTransaction FolderMove.NOTEBOOK_RULE
-        // The notebook the phone sees it in before the move, sent with it (T43, A766).
-        val fromNotebook = placement.notebookOfFolder(id)
         db.folders().move(id, parentId, endFolderPosition(parentId, exclude = id))
         db.folderOps().insert(
             FolderOpEntity(
                 folderId = id, kind = FolderOpEntity.MOVE, parentId = parentId,
                 fromParentId = folder.parentId, checkParent = true, label = folder.name,
-                fromNotebook = fromNotebook,
             ),
         )
         FolderMove.MOVED
@@ -136,8 +102,6 @@ class FolderOps(
         val notes: Int,
         val subfolders: Int,
         val destination: String?,
-        /** A notebook (T43, A755): its notes go to Trash with it, never up. */
-        val notebook: Boolean = false,
     )
 
     suspend fun folderDeleteSummary(id: String): FolderDeleteSummary? = db.withTransaction {
@@ -149,7 +113,6 @@ class FolderOps(
             notes = notes,
             subfolders = subtree.size - 1,
             destination = all.firstOrNull { it.id == folder.parentId }?.name,
-            notebook = folder.notebook,
         )
     }
 
@@ -174,15 +137,6 @@ class FolderOps(
             db.folderOps().insert(FolderOpEntity(folderId = id, kind = FolderOpEntity.DELETE, label = folder.name))
         }
         val notes = db.notes().inFolders(subtree.toList())
-        if (folder.notebook) {
-            // A notebook goes to Trash with its notes (T43, A755), as the server's delete does:
-            // never up into the default notebook, whose mirror would publish them. Notes made here
-            // and not filed yet are not the server's to trash: they are filed at the top level,
-            // as for a folder gone (A352).
-            db.notes().trashWithNotebook(notes.filter { !it.toFile }.map { it.id }, now())
-            for (fid in subtree) db.folders().delete(fid)
-            return@withTransaction true
-        }
         // Their notes move up to the deleted folder's parent (null when it has gone), at its end.
         val destination = folder.parentId?.takeIf { pid -> all.any { it.id == pid } }
         var last = lastNotePosition(destination)
@@ -245,8 +199,8 @@ class FolderOps(
     suspend fun markFolderOpTried(rowId: Long) = db.folderOps().markTried(rowId)
 
     /**
-     * Drops one sent folder change the server refused for good, and says why once (T43, A757): a
-     * move into a parent gone since with no safe place for it. The folder's other changes go on.
+     * Drops one sent folder change refused for good, and says why once (A757): a move into a
+     * parent gone since with no safe place for it. The folder's other changes go on.
      */
     suspend fun dropFolderOp(rowId: Long, label: String?, reason: FolderDropReason) = db.withTransaction {
         db.folderOps().delete(rowId)
@@ -263,29 +217,18 @@ class FolderOps(
         folderId: String,
         label: String?,
         reason: FolderDropReason = FolderDropReason.DELETED,
-        /** The notebook it went to Trash with ([FolderDropReason.IN_TRASH]), when the server named it. */
-        notebook: String? = null,
     ) {
         val ops = db.folderOps().all().filter { it.folderId == folderId }
         if (ops.isEmpty()) return
         db.withTransaction {
             db.folderOps().deleteFor(folderId)
             if (ops.any { it.kind != FolderOpEntity.DELETE }) {
-                noticeFolderChange(folderDropText(label, reason, notebook))
+                noticeFolderChange(folderDropText(label, reason))
             }
         }
     }
 
-    /**
-     * The server refused a folder's change under the notebook rules (422 `notebook_rule`, T43):
-     * its queued changes are dropped and [message], the server's, is said once.
-     */
-    suspend fun refuseFolderOpsFor(folderId: String, message: String) = db.withTransaction {
-        db.folderOps().deleteFor(folderId)
-        noticeFolderChange(message.trim().removeSuffix(".") + ".")
-    }
-
-    private fun folderDropText(label: String?, reason: FolderDropReason, notebook: String? = null): String {
+    private fun folderDropText(label: String?, reason: FolderDropReason): String {
         val named = "“${label ?: "Untitled folder"}”"
         return when (reason) {
             FolderDropReason.DELETED -> "$named was deleted on another device, so the change was dropped."
@@ -293,18 +236,15 @@ class FolderOps(
             FolderDropReason.MOVED -> "$named was moved on another device, so the change was dropped."
             FolderDropReason.PARENT_GONE ->
                 "The folder $named was going into was deleted on another device, and nowhere else in its notebook is safe, so the change was dropped."
-            FolderDropReason.IN_TRASH -> notebook?.trim()?.takeIf { it.isNotEmpty() }?.let { name ->
-                "$named went to Trash with the notebook “$name”, which was deleted on another device. Restore “$name” from Trash to get it back."
-            } ?: "$named went to Trash with its notebook, which was deleted on another device. Restore the notebook from Trash to get it back."
         }
     }
 
     /**
      * How a folder change was dropped: gone on another device, or overtaken by a rename or move
-     * there; or (T43, A757) its parent gone with no safe place for it ([PARENT_GONE]), or made in
-     * Trash with its notebook, deleted elsewhere ([IN_TRASH]). Never sent again at the top level.
+     * there; or (A757) its parent gone with no safe place for it ([PARENT_GONE]). Never sent again
+     * at the top level.
      */
-    enum class FolderDropReason { DELETED, RENAMED, MOVED, PARENT_GONE, IN_TRASH }
+    enum class FolderDropReason { DELETED, RENAMED, MOVED, PARENT_GONE }
 
     /** Folder changes the server refused, not said yet, oldest first. */
     fun observeFolderNotices(): Flow<List<String>> = settings.observe(FOLDER_NOTICES).map(::folderNoticesOf)
@@ -322,8 +262,8 @@ class FolderOps(
     /**
      * Folder changes made here, laid over a tree just read (T40 P4, A443). Runs inside
      * [RoomSyncStore.saveTree]'s transaction: creates reappear with their parent (listed at the
-     * top level on this phone only while it has gone: the server places it, never there for a
-     * notebook's folder, A757), renames, moves, sorts and reorders apply again, and
+     * top level on this phone only while it has gone: the server places it, A757), renames,
+     * moves, sorts and reorders apply again, and
      * changes for folders the tree no longer has are dropped with a notice (deleted elsewhere).
      * The top level's sort, which lives in settings, is applied last.
      */
@@ -335,12 +275,7 @@ class FolderOps(
                     val id = op.folderId ?: continue
                     if (db.folders().get(id) == null) {
                         val parent = op.parentId?.takeIf { it in known }
-                        db.folders().put(
-                            FolderEntity(
-                                id, op.name ?: "Untitled folder", parent, endFolderPosition(parent), FolderTree.MANUAL,
-                                notebook = op.notebook && parent == null,
-                            ),
-                        )
+                        db.folders().put(FolderEntity(id, op.name ?: "Untitled folder", parent, endFolderPosition(parent), FolderTree.MANUAL))
                     }
                     known += id
                 }
@@ -373,12 +308,6 @@ class FolderOps(
                     if (op.folderId != null && db.folders().get(op.folderId) == null) db.folderOps().delete(op.rowId)
                 }
                 FolderOpEntity.ROOT_SORT -> settings.put(SettingEntity(ROOT_SORT_MODE, op.sortMode ?: FolderTree.MANUAL))
-                // T43 (A756): the flag as asked here; a folder gone elsewhere drops it with a notice.
-                FolderOpEntity.NOTEBOOK -> {
-                    val folder = op.folderId?.let { db.folders().get(it) }
-                    if (folder == null) dropFolderOpsFor(op.folderId!!, op.label)
-                    else db.folders().put(folder.copy(notebook = op.notebook))
-                }
             }
         }
     }

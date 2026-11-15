@@ -83,7 +83,7 @@ class PeriodicNotes(
      */
     suspend fun addLocalNote(note: PageNote, fileIn: String?): Boolean = db.withTransaction {
         if (notes.note(note.id) != null) return@withTransaction false
-        notes.insert(NoteEntity(note.id, title = note.title, updatedAt = now(), toFile = true, fileIn = fileIn, moveNotebook = placement.notebookOfFolder(fileIn)))
+        notes.insert(NoteEntity(note.id, title = note.title, updatedAt = now(), toFile = true, fileIn = fileIn))
         updates.insert(UpdateEntity(noteId = note.id, state = UpdateEntity.PENDING, update = note.update))
         // Listed in its folder at once, offline too (T38); the tree says so once it is filed.
         placement.placeAtEnd(note.id, fileIn?.takeIf { placement.folderExists(it) })

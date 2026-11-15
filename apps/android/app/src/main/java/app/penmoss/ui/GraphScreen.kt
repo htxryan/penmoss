@@ -157,7 +157,6 @@ internal const val GRAPH_BATCH_MS = 250L
 @Composable
 fun GraphRoute(graph: NotebookGraph, note: String?, onBack: () -> Unit, onOpen: (String) -> Unit) {
     val model by remember {
-        // Open notebooks only (T43, A752).
         graph.store.observeGraph().atMostEvery(GRAPH_BATCH_MS).map(GraphInput::model).distinctUntilChanged().flowOn(Dispatchers.Default)
     }.collectAsStateWithLifecycle(null)
     val appearance by graph.appearance.collectAsStateWithLifecycle()

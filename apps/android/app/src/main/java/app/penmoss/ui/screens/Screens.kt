@@ -138,12 +138,8 @@ data class HomeUi(
     val shortcuts: HomeShortcuts = HomeShortcuts(),
     /** Sync has stopped (T42 on Android, AC12, A651): the status line is a link to what resolves it. */
     val stopped: Boolean = false,
-    /**
-     * The folders flagged notebooks, at the top (T43, A750); [folders] are then the default
-     * notebook's, under its name ([defaultNotebook]).
-     */
-    val notebooks: List<FolderItem> = emptyList(),
-    val defaultNotebook: String = "Personal",
+    /** The name on the heading over [folders] and under Quick Access's notes ([HOME_NOTEBOOK_NAME]). */
+    val defaultNotebook: String = HOME_NOTEBOOK_NAME,
     /** The top bar's title: Penmoss, or a git notebook's name (T50 G7, A880). */
     val title: String = "Penmoss",
     /** The notes pinned to Quick Access (T51, A946); the section shows with none too, saying No Notes. */
@@ -153,6 +149,9 @@ data class HomeUi(
     /** Each Quick Access note's notebook, by note id, when Settings shows it (T53 item 10). */
     val quickAccessNotebooks: Map<String, String> = emptyMap(),
 )
+
+/** The name Home's notebook heading shows (A1463: the default notebook is always called Personal). */
+const val HOME_NOTEBOOK_NAME = "Personal"
 
 /** What Home's taps, presses and pulls do (A6). */
 class HomeActions(
@@ -497,11 +496,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                 }
                                 SidebarLayout.NOTEBOOKS -> {
                                     item(key = "notebooksTitle", contentType = "title") { sectionTitle(section, Modifier.testTag("homeNotebooksTitle")) }
-                                    count += 1 + ui.notebooks.size + 1 + ui.folders.size
-                                    // The open notebooks first (T43, A750): each opens its folder's screen.
-                                    items(ui.notebooks, key = { "notebook:${it.id}" }, contentType = { "folder" }) { notebook ->
-                                        FolderRowView(notebook, actions.onFolder, onLongPress = actions.onFolderLongPress, enabled = !choosing)
-                                    }
+                                    count += 1 + 1 + ui.folders.size
                                     // The notebook's heading with its sync dot (T51, A933), as the web's
                                     // Personal heading: its actions on a long press (T53 item 4).
                                     item(key = "foldersTitle", contentType = "title") {
@@ -520,7 +515,7 @@ fun HomeScreen(ui: HomeUi, actions: HomeActions) {
                                 }
                             }
                         }
-                        if (ui.folders.isEmpty() && ui.recent.isEmpty() && ui.notebooks.isEmpty()) {
+                        if (ui.folders.isEmpty() && ui.recent.isEmpty()) {
                             item(key = "empty") { EmptyMessage("No notes yet. They appear here once the phone has synced.") }
                         }
                     },
@@ -718,12 +713,6 @@ fun FolderScreen(
     onReorder: (Boolean) -> Unit = {},
     onMoveFolder: (id: String, before: String?, after: String?) -> Unit = { _, _, _ -> },
     onMoveNote: (id: String, before: String?, after: String?) -> Unit = { _, _, _ -> },
-    /**
-     * Notebooks (T43, A750, A756): this folder is a notebook ([notebook]: Rename, Turn back into a
-     * folder and Delete notebook, never Move to…). No folder becomes one here (A912).
-     */
-    notebook: Boolean = false,
-    onTurnBack: () -> Unit = {},
 ) {
     var menu by remember { mutableStateOf(false) }
     var sorting by remember { mutableStateOf(false) }
@@ -782,34 +771,21 @@ fun FolderScreen(
                                     modifier = Modifier.testTag("folderNew"),
                                 )
                                 DropdownMenuItem(
-                                    text = { Text(if (notebook) "Rename Notebook" else "Rename Folder") },
+                                    text = { Text("Rename Folder") },
                                     onClick = {
                                         menu = false
                                         onRenameFolder()
                                     },
                                     modifier = Modifier.testTag("folderRename"),
                                 )
-                                // A notebook stays at the top level (A750).
-                                if (!notebook) {
-                                    DropdownMenuItem(
-                                        text = { Text("Move to…") },
-                                        onClick = {
-                                            menu = false
-                                            onMoveFolderTo()
-                                        },
-                                        modifier = Modifier.testTag("folderMoveTo"),
-                                    )
-                                }
-                                if (notebook) {
-                                    DropdownMenuItem(
-                                        text = { Text("Turn Back into a Folder…") },
-                                        onClick = {
-                                            menu = false
-                                            onTurnBack()
-                                        },
-                                        modifier = Modifier.testTag("folderTurnBack"),
-                                    )
-                                }
+                                DropdownMenuItem(
+                                    text = { Text("Move to…") },
+                                    onClick = {
+                                        menu = false
+                                        onMoveFolderTo()
+                                    },
+                                    modifier = Modifier.testTag("folderMoveTo"),
+                                )
                                 if (sortMode == "manual") {
                                     DropdownMenuItem(
                                         text = { Text("Reorder") },
@@ -821,7 +797,7 @@ fun FolderScreen(
                                     )
                                 }
                                 DropdownMenuItem(
-                                    text = { Text(if (notebook) "Delete Notebook…" else "Delete Folder…") },
+                                    text = { Text("Delete Folder…") },
                                     onClick = {
                                         menu = false
                                         onDeleteFolder()
@@ -850,7 +826,7 @@ fun FolderScreen(
                     modifier = Modifier.fillMaxSize(),
                 )
             } else if (folders.isEmpty() && notes.isEmpty()) {
-                EmptyMessage(if (notebook) "This notebook is empty." else "This folder is empty.")
+                EmptyMessage("This folder is empty.")
             } else {
                 NoteList(
                     notes = notes,

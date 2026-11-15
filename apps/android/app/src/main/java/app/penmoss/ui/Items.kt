@@ -18,14 +18,13 @@ import java.util.Locale
 @Immutable
 data class NoteItem(val id: String, val title: String, val excerpt: String, val date: String)
 
-/** A folder as the lists show it. [notebook]: a notebook's own folder (T43, A750). */
+/** A folder as the lists show it. */
 @Immutable
-data class FolderItem(val id: String, val name: String, val notebook: Boolean = false)
+data class FolderItem(val id: String, val name: String)
 
 /**
  * A row of the folder picker (T38): the top level (null id), or a folder at its depth in the tree,
- * with its parent's name ([parent], null for a top-level folder) for TalkBack. With notebooks
- * (T43), [group] names the notebook the row is in, and [notebook] marks a notebook's own folder.
+ * with its parent's name ([parent], null for a top-level folder) for TalkBack.
  */
 @Immutable
 data class FolderChoice(
@@ -33,8 +32,6 @@ data class FolderChoice(
     val name: String,
     val depth: Int,
     val parent: String? = null,
-    val group: String? = null,
-    val notebook: Boolean = false,
 )
 
 object Items {
@@ -81,49 +78,18 @@ object Items {
     fun pathText(names: List<String>): String =
         if (names.isEmpty()) TOP_LEVEL else names.joinToString(" › ") { "\u2068${it.ifBlank { "Untitled folder" }}\u2069" }
 
-    /** A folder's row, marked when it is a notebook (T43). */
-    fun item(folder: FolderEntity): FolderItem = FolderItem(folder.id, folder.name.ifBlank { "Untitled folder" }, notebook = folder.notebook)
+    /** A folder's row. */
+    fun item(folder: FolderEntity): FolderItem = FolderItem(folder.id, folder.name.ifBlank { "Untitled folder" })
 
-    /**
-     * Home's top (T43, A750): the notebooks, in the top level's order, and the default notebook's
-     * top-level folders.
-     */
-    fun home(rootSortMode: String, folders: List<FolderEntity>, now: Long): Pair<List<FolderItem>, List<FolderItem>> {
-        val (top, _) = folder(null, rootSortMode, folders, emptyList(), now)
-        return top.filter { it.notebook } to top.filterNot { it.notebook }
-    }
+    /** Home's top-level folders, in the top level's order. */
+    fun home(rootSortMode: String, folders: List<FolderEntity>, now: Long): List<FolderItem> =
+        folder(null, rootSortMode, folders, emptyList(), now).first
 
     /**
      * Every folder as the picker shows it (T38): the top level first, then the tree depth first,
      * each folder's subfolders in that folder's own order, as the lists show them (A17).
      */
-    fun folderChoices(
-        rootSortMode: String,
-        folders: List<FolderEntity>,
-        /** The default notebook's name, which heads its group once there are notebooks (T43). */
-        defaultNotebook: String = app.penmoss.data.Notebooks.DEFAULT_NAME,
-    ): List<FolderChoice> {
-        if (folders.none { it.notebook && it.parentId == null }) return plainChoices(rootSortMode, folders)
-        // Grouped by notebook (T43, A750): the default notebook's top level and folders, then
-        // each notebook, its own folder the root of its group.
-        val plain = plainChoices(rootSortMode, folders)
-        val notebooks = plain.filter { it.depth == 0 && it.id != null && folders.any { f -> f.id == it.id && f.notebook } }.map { it.id }.toSet()
-        val out = mutableListOf<FolderChoice>()
-        var current: String? = null
-        val inNotebook = mutableListOf<FolderChoice>()
-        for (choice in plain) {
-            if (choice.depth == 0) current = choice.id?.takeIf { it in notebooks }
-            if (current == null) {
-                out += choice.copy(group = defaultNotebook)
-            } else {
-                val root = choice.id == current
-                inNotebook += choice.copy(group = plain.first { it.id == current }.name, notebook = root)
-            }
-        }
-        return out + inNotebook
-    }
-
-    private fun plainChoices(rootSortMode: String, folders: List<FolderEntity>): List<FolderChoice> {
+    fun folderChoices(rootSortMode: String, folders: List<FolderEntity>): List<FolderChoice> {
         val out = mutableListOf(FolderChoice(null, TOP_LEVEL, 0))
         val seen = HashSet<String>()
         fun visit(parentId: String?, parentName: String?, depth: Int) {
@@ -154,29 +120,16 @@ object Items {
      * below it: a folder cannot move into itself or one of its subfolders (the server refuses
      * those too). The top level stays, as every folder may move there.
      */
-    fun folderChoicesExcluding(
-        rootSortMode: String,
-        folders: List<FolderEntity>,
-        exclude: String,
-        defaultNotebook: String = app.penmoss.data.Notebooks.DEFAULT_NAME,
-    ): List<FolderChoice> {
+    fun folderChoicesExcluding(rootSortMode: String, folders: List<FolderEntity>, exclude: String): List<FolderChoice> {
         val doomed = HashSet<String>()
         val queue = ArrayDeque<String>()
         queue += exclude
-        // A notebook stays at the top level; Journal and the Inbox, and every folder in them at any
-        // depth, never go into a notebook (T43, A750, review S4).
-        val moving = folders.firstOrNull { it.id == exclude }
-        if (moving?.notebook == true) return listOf(FolderChoice(null, TOP_LEVEL, 0))
-        if (app.penmoss.data.Notebooks.staysInDefault(folders, exclude)) {
-            val index = app.penmoss.data.Notebooks.index(folders)
-            folders.filter { index.ofFolder(it.id) != null }.forEach { doomed += it.id }
-        }
         while (queue.isNotEmpty()) {
             val id = queue.removeFirst()
             if (!doomed.add(id)) continue
             for (child in folders.filter { it.parentId == id }) queue += child.id
         }
-        return folderChoices(rootSortMode, folders.filter { it.id !in doomed }, defaultNotebook)
+        return folderChoices(rootSortMode, folders.filter { it.id !in doomed })
     }
 
     /**

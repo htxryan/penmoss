@@ -21,10 +21,10 @@ import kotlinx.serialization.json.JsonObject
 class NoteStore private constructor(
     db: PenmossDatabase,
     now: () -> Long,
-    /** Where the lists show each note, and the notebook it is in. */
+    /** Where the lists show each note. */
     val placement: NotePlacement = NotePlacement(db),
-    /** Folders, notebooks and the folder-op queue. */
-    val folders: FolderOps = FolderOps(db, now, placement),
+    /** Folders and the folder-op queue. */
+    val folders: FolderOps = FolderOps(db),
     /** The offline index's text and tags, the tag list, and links. */
     val index: NoteIndex = NoteIndex(db, now, folders),
     /** Synced settings, quick capture's destination and a git notebook's device map. */
@@ -49,7 +49,6 @@ class NoteStore private constructor(
     // The parts' own types, by the names callers already use.
     typealias EditorContent = EditorStore.EditorContent
     typealias Move = NotePlacement.Move
-    typealias NotebookFlag = FolderOps.NotebookFlag
     typealias FolderMove = FolderOps.FolderMove
     typealias FolderDeleteSummary = FolderOps.FolderDeleteSummary
     typealias FolderDropReason = FolderOps.FolderDropReason
@@ -106,20 +105,16 @@ class NoteStore private constructor(
     suspend fun rememberTag(tag: String) = index.rememberTag(tag)
 
     // NotePlacement
-    suspend fun notebookOf(noteId: String): FolderEntity? = placement.notebookOf(noteId)
     suspend fun moveNote(noteId: String, folderId: String?): Move = placement.moveNote(noteId, folderId)
     suspend fun folderOf(noteId: String): String? = placement.folderOf(noteId)
     suspend fun readyToFile(): List<NoteEntity> = placement.readyToFile()
     suspend fun markFiled(noteId: String, fileIn: String?, landed: String? = fileIn) = placement.markFiled(noteId, fileIn, landed)
     suspend fun dropMove(noteId: String, fileIn: String?) = placement.dropMove(noteId, fileIn)
-    suspend fun notebookOfFolder(folderId: String?): String = placement.notebookOfFolder(folderId)
-    suspend fun notebookOfNote(noteId: String): String = placement.notebookOfNote(noteId)
     suspend fun reorderNote(id: String, before: String?, after: String?): Boolean = placement.reorderNote(id, before, after)
 
     // FolderOps
     fun observeFolders(): Flow<List<FolderEntity>> = folders.observeFolders()
     fun observeRootSortMode(): Flow<String> = folders.observeRootSortMode()
-    suspend fun setNotebook(id: String, on: Boolean): NotebookFlag = folders.setNotebook(id, on)
     suspend fun folderOpsDue(): List<FolderOpEntity> = folders.folderOpsDue()
     suspend fun folderOpsWaiting(): Int = folders.folderOpsWaiting()
     suspend fun createFolder(name: String, parentId: String?): String? = folders.createFolder(name, parentId)
@@ -132,8 +127,7 @@ class NoteStore private constructor(
     suspend fun dropFolderOp(rowId: Long) = folders.dropFolderOp(rowId)
     suspend fun markFolderOpTried(rowId: Long) = folders.markFolderOpTried(rowId)
     suspend fun dropFolderOp(rowId: Long, label: String?, reason: FolderDropReason) = folders.dropFolderOp(rowId, label, reason)
-    suspend fun dropFolderOpsFor(folderId: String, label: String?, reason: FolderDropReason = FolderDropReason.DELETED, notebook: String? = null) = folders.dropFolderOpsFor(folderId, label, reason, notebook)
-    suspend fun refuseFolderOpsFor(folderId: String, message: String) = folders.refuseFolderOpsFor(folderId, message)
+    suspend fun dropFolderOpsFor(folderId: String, label: String?, reason: FolderDropReason = FolderDropReason.DELETED) = folders.dropFolderOpsFor(folderId, label, reason)
     fun observeFolderNotices(): Flow<List<String>> = folders.observeFolderNotices()
     suspend fun dismissFolderNotice(text: String) = folders.dismissFolderNotice(text)
 
@@ -152,10 +146,6 @@ class NoteStore private constructor(
     fun observeTrashNotices(): Flow<List<TrashNotice>> = trash.observeTrashNotices()
     suspend fun trashNoticeShown(noteId: String) = trash.trashNoticeShown(noteId)
     suspend fun restoreSent(noteId: String, folderId: String?, restored: Boolean, seq: Long) = trash.restoreSent(noteId, folderId, restored, seq)
-    suspend fun restoreNeedsFolder(noteId: String, notebookId: String?, notebookName: String?, message: String) = trash.restoreNeedsFolder(noteId, notebookId, notebookName, message)
-    fun observeRestoreQuestions(): Flow<List<RestoreQuestion>> = trash.observeRestoreQuestions()
-    suspend fun restoreQuestionAnswered(noteId: String) = trash.restoreQuestionAnswered(noteId)
-    suspend fun restoredInto(noteId: String, folderId: String?, restored: Boolean, seq: Long) = trash.restoredInto(noteId, folderId, restored, seq)
     suspend fun trashGone(noteId: String) = trash.trashGone(noteId)
     fun observeTrash(): Flow<List<TrashRow>> = trash.observeTrash()
     suspend fun trashChangesWaiting(): Int = trash.trashChangesWaiting()

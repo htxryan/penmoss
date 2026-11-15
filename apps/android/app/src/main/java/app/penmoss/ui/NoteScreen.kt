@@ -195,16 +195,13 @@ fun NoteRoute(
                     if (note.makingPeriodic) {
                         Text(periodicTitle(periodic))
                     } else {
-                        androidx.compose.foundation.layout.Column {
-                            // A top-level note names its notebook (T52, as the web's phone app bar):
-                            // the git notebook's.
-                            BreadcrumbBar(
-                                path = note.crumbs,
-                                onOpenFolder = onOpenFolder,
-                                notebook = graph.name,
-                            )
-                            note.notebookName?.let { NoteNotebookLine(it) }
-                        }
+                        // A top-level note names its notebook (T52, as the web's phone app bar):
+                        // the git notebook's.
+                        BreadcrumbBar(
+                            path = note.crumbs,
+                            onOpenFolder = onOpenFolder,
+                            notebook = graph.name,
+                        )
                     }
                 },
                 navigationIcon = {

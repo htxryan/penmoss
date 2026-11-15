@@ -79,8 +79,7 @@ class ConflictCopies(
     /**
      * Stores the conflict copy the editor made of a [ConflictSet] (A306, A309), in one
      * transaction: a new note to upload and file beside its original, in the original's folder
-     * (T43, A757: never the top level by default, which is the default notebook and may publish
-     * elsewhere than the original's notebook), or, when [merged], an edit of
+     * (A757: never the top level by default), or, when [merged], an edit of
      * the copy [ConflictSet.into] named. The edits it holds are marked as copied, never deleted:
      * a later edit of the same copy may build on them. Refused (false) when a replaced edit is no
      * longer kept apart, or the copy is not where it should be.
@@ -97,7 +96,7 @@ class ConflictCopies(
                 // Beside its original: where a move not filed yet takes it, else where the tree has it.
                 val original = notes.note(noteId)
                 val beside = original?.let { if (it.toFile) it.fileIn else it.folderId }
-                notes.insert(NoteEntity(copy.id, title = copy.title, updatedAt = now(), toFile = true, fileIn = beside, moveNotebook = placement.notebookOfFolder(beside)))
+                notes.insert(NoteEntity(copy.id, title = copy.title, updatedAt = now(), toFile = true, fileIn = beside))
                 updates.insert(UpdateEntity(noteId = copy.id, state = UpdateEntity.PENDING, update = copy.update))
                 // Listed there at once, as a note made here is (T38).
                 if (beside != null) placement.placeAtEnd(copy.id, beside.takeIf { placement.folderExists(it) })

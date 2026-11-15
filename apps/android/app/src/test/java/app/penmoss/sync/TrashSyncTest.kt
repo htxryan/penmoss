@@ -220,40 +220,6 @@ class TrashSyncTest {
         assertTrue(penmoss.inTree("soup"))
     }
 
-    /**
-     * A restore with no safe place (T43, A757: fail closed; Trash forgot the folder the note was
-     * deleted from): the server restores nothing, the note goes back to Trash here, Trash asks
-     * where it goes, and nothing is sent again by itself.
-     */
-    @Test
-    fun aRestoreWithNoSafePlaceRestoresNothingAndAsksWhereItGoes() {
-        soupInGarden()
-        runBlocking { store.moveToTrash("soup") }
-        assertEquals(PassOutcome.SYNCED, pass())
-        penmoss.forgetFolder("garden")
-        penmoss.purgeFolderRecord("garden")
-        assertEquals(PassOutcome.SYNCED, pass())
-        runBlocking { store.restoreFromTrash("soup") }
-        assertTrue(listed("soup"))
-        assertEquals(PassOutcome.SYNCED, pass())
-        assertTrue(penmoss.inTrash("soup"))
-        assertFalse(listed("soup"))
-        assertTrue(inTrashHere("soup"))
-        val asked = runBlocking { store.observeRestoreQuestions().first() }
-        assertEquals(listOf("soup"), asked.map { it.noteId })
-        assertEquals("Soup", asked[0].title)
-        assertEquals("The folder the note was deleted from is gone", asked[0].message)
-        assertNull(asked[0].notebookId)
-        runBlocking {
-            assertEquals(NoteEntity.TRASH_SENT, store.note("soup")!!.trashChange)
-            assertEquals(0, store.trashChangesWaiting())
-        }
-        // Never sent again by a later pass, nor filed anywhere.
-        assertEquals(PassOutcome.SYNCED, pass())
-        assertEquals(listOf("trash:soup", "restore:soup"), penmoss.trashCalls.toList())
-        assertTrue(penmoss.inTrash("soup"))
-    }
-
     @Test
     fun aRestoreMadeElsewhereAfterThisPhonesMoveToTrashWins() {
         soupInGarden()

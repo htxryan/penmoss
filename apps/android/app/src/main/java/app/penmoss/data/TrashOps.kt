@@ -1,15 +1,12 @@
 package app.penmoss.data
 
 import androidx.room.withTransaction
-import app.penmoss.engine.api.PenmossJson
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-import kotlinx.serialization.builtins.ListSerializer
 
 /**
  * Trash (T40 P3a, NT12–NT15, A430): moves to Trash and restores made here, held until the server
- * and then its index agree; restores it could not place (T43, A757); and notes deleted for good,
- * their unsent edits kept apart for a conflict copy (A306, A310).
+ * and then its index agree; and notes deleted for good, their unsent edits kept apart for a
+ * conflict copy (A306, A310).
  */
 class TrashOps(
     private val db: PenmossDatabase,
@@ -18,7 +15,6 @@ class TrashOps(
 ) {
     private val notes = db.notes()
     private val updates = db.updates()
-    private val settings = db.settings()
     private val search = db.search()
 
     // --- Trash (T40 P3a, NT12–NT15, A430) ---
@@ -75,8 +71,7 @@ class TrashOps(
     internal suspend fun settleTrashChange(id: String, deleted: Boolean, seq: Long) {
         val note = notes.note(id) ?: return
         val asked = when (note.trashChange) {
-            // Trashed with a notebook deleted here (T43): the server's delete does it.
-            NoteEntity.TRASH_SENT, NoteEntity.TRASH_WITH_NOTEBOOK -> true
+            NoteEntity.TRASH_SENT -> true
             NoteEntity.RESTORE_SENT -> false
             else -> return
         }
@@ -149,52 +144,8 @@ class TrashOps(
         // Trash is never refused over it (A431).
         if (seq + 1 > row.seq) notes.seenSeq(noteId, seq + 1)
         if (!restored) return@withTransaction
-        notes.fileRestored(noteId, folderId, placement.notebookOfFolder(folderId))
+        notes.fileRestored(noteId, folderId)
         if (!row.deleted) placement.placeAtEnd(noteId, folderId?.takeIf { placement.folderExists(it) })
-    }
-
-    /**
-     * The server restored nothing (409 `restore_needs_folder`, T43 A757: fail closed): the folder
-     * the note was deleted from is gone and its way up passes a deleted notebook ([notebookId],
-     * [notebookName]; null when Trash forgot it). The note goes back to Trash here, and the
-     * question is kept (in the database, so one a background pass met is asked when Trash is next
-     * open): restore that notebook first, choose a folder, or leave it in Trash.
-     */
-    suspend fun restoreNeedsFolder(noteId: String, notebookId: String?, notebookName: String?, message: String) = db.withTransaction {
-        if (notes.restoreRefused(noteId) == 0) return@withTransaction
-        val title = notes.note(noteId)?.title.orEmpty()
-        val asked = restoreQuestionsOf(settings.get(RESTORE_QUESTIONS)).filter { it.noteId != noteId } +
-            RestoreQuestion(noteId, title, notebookId, notebookName.orEmpty(), message)
-        settings.put(SettingEntity(RESTORE_QUESTIONS, PenmossJson.encodeToString(RESTORE_QUESTION_LIST, asked)))
-    }
-
-    /** Restores waiting for the person to say where the note goes (T43, A757), oldest first. */
-    fun observeRestoreQuestions(): Flow<List<RestoreQuestion>> = settings.observe(RESTORE_QUESTIONS).map(::restoreQuestionsOf)
-
-    /** The person answered (or cancelled) the question for [noteId]. */
-    suspend fun restoreQuestionAnswered(noteId: String) = db.withTransaction {
-        val kept = restoreQuestionsOf(settings.get(RESTORE_QUESTIONS)).filter { it.noteId != noteId }
-        if (kept.isEmpty()) settings.delete(RESTORE_QUESTIONS)
-        else settings.put(SettingEntity(RESTORE_QUESTIONS, PenmossJson.encodeToString(RESTORE_QUESTION_LIST, kept)))
-    }
-
-    private fun restoreQuestionsOf(json: String?): List<RestoreQuestion> =
-        json?.let { runCatching { PenmossJson.decodeFromString(RESTORE_QUESTION_LIST, it) }.getOrNull() }.orEmpty()
-
-    /**
-     * The server restored the note into the folder the person chose (T43, A757: `{ folderId }`):
-     * out of Trash here, and filed there by the next pass, as any restore is ([restoreSent]). The
-     * question goes.
-     */
-    suspend fun restoredInto(noteId: String, folderId: String?, restored: Boolean, seq: Long) = db.withTransaction {
-        restoreQuestionAnswered(noteId)
-        val note = notes.note(noteId) ?: return@withTransaction
-        if (note.gone) return@withTransaction
-        if (note.deleted) notes.restoreHere(noteId, now())
-        // Settled as this phone's own restore: in flight, then answered.
-        val row = notes.note(noteId) ?: return@withTransaction
-        notes.trashChanged(noteId, row.trashChange, NoteEntity.RESTORE_SENDING)
-        restoreSent(noteId, folderId, restored, seq)
     }
 
     /**
@@ -251,24 +202,5 @@ class TrashOps(
             notes.markGone(noteId)
         }
     }
-
-    private companion object {
-        /** Restores the server could not place, waiting for the person's answer (T43, A757). */
-        const val RESTORE_QUESTIONS = "restoreQuestions"
-        val RESTORE_QUESTION_LIST = ListSerializer(RestoreQuestion.serializer())
-    }
 }
 
-/**
- * A restore the server could not place (409 `restore_needs_folder`, T43 A757), asked of the
- * person in Trash: the note, the deleted notebook it was in when Trash still knows it, and the
- * server's words.
- */
-@kotlinx.serialization.Serializable
-data class RestoreQuestion(
-    val noteId: String,
-    val title: String = "",
-    val notebookId: String? = null,
-    val notebookName: String = "",
-    val message: String = "",
-)

@@ -770,11 +770,7 @@ class NoteEditorController(
     }
 
     private fun requestCreate() {
-        jobs += scope.launch {
-            // The note records the notebook of the folder it is made in (T43, A766).
-            val notebook = store.notebookOfFolder(create?.folderId)
-            send(BridgeProtocol.encode(ToEditor.Create(noteId, notebook)))
-        }
+        jobs += scope.launch { send(BridgeProtocol.encode(ToEditor.Create(noteId))) }
     }
 
     /** Asks the page for the period's note with the synced time zone and template (T40 P5). */
@@ -854,9 +850,7 @@ class NoteEditorController(
             // Toggles open as this phone left them (T40 P8, ED8): the page reads them as it opens.
             tools.sendFolds()
             files.beforeOpen()
-            // Where the phone sees it (T43, A766): a link's new note made in it records that notebook.
-            val notebook = store.notebookOfNote(noteId)
-            send(BridgeProtocol.encode(ToEditor.Open(noteId, content.synced, content.pending, editable = true, notebook = notebook)))
+            send(BridgeProtocol.encode(ToEditor.Open(noteId, content.synced, content.pending, editable = true)))
             // What the server sent while the content was read may not be in it: the page gets
             // it now. An update it already holds changes nothing (Yjs merges are idempotent).
             heldRemotes.forEach { send(BridgeProtocol.encode(ToEditor.Remote(noteId, it))) }

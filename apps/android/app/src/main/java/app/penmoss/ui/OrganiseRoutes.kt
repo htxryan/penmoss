@@ -83,8 +83,6 @@ suspend fun moveFolderAndSay(graph: NotebookGraph, id: String, parentId: String?
         NoteStore.FolderMove.MOVED -> "Moved to $name"
         NoteStore.FolderMove.ALREADY_THERE -> "Already in $name"
         NoteStore.FolderMove.REFUSED -> "That folder can't move there"
-        NoteStore.FolderMove.NOTEBOOK_RULE -> graph.store.observeFolders().first().firstOrNull { it.id == id }
-            ?.let { if (it.notebook) app.penmoss.data.Notebooks.STAYS_AT_TOP else app.penmoss.data.Notebooks.JOURNAL_STAYS } ?: "That folder can't move there"
     }
 }
 
@@ -92,14 +90,10 @@ suspend fun moveFolderAndSay(graph: NotebookGraph, id: String, parentId: String?
 internal fun folderDeletedMessage(name: String?): String =
     "Moved ${name?.let { "“${it.ifBlank { "Untitled folder" }}”" } ?: "the folder"} to Trash. Its notes moved up."
 
-/** What a notebook's delete says (T43, A755): its notes went to Trash with it. */
-internal fun notebookDeletedMessage(name: String?): String =
-    "Moved the notebook ${name?.let { "“${it.ifBlank { "Untitled folder" }}”" } ?: ""} and its notes to Trash.".replace("  ", " ")
-
-suspend fun deleteFolderAndSay(graph: NotebookGraph, id: String, name: String? = null, notebook: Boolean = false): String {
+suspend fun deleteFolderAndSay(graph: NotebookGraph, id: String, name: String? = null): String {
     val ok = graph.store.deleteFolder(id)
     if (ok) graph.sync.requestSync()
-    return if (!ok) "That folder isn't on this phone anymore" else if (notebook) notebookDeletedMessage(name) else folderDeletedMessage(name)
+    return if (!ok) "That folder isn't on this phone anymore" else folderDeletedMessage(name)
 }
 
 suspend fun sortFolderAndSay(graph: NotebookGraph, id: String?, mode: String): String {

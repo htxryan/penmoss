@@ -248,6 +248,8 @@ class NoteRouteWiringTest {
         compose.onNodeWithTag("infoRow-Notebook").assertDoesNotExist()
         runBlocking { graph.database.notes().place(garden, "01JD2Z7Q8R4T6Y8W0E2R4T6YN1", "a") }
         compose.onNodeWithTag("infoRow-Notebook").assertDoesNotExist()
+        // Nor a notebook line under the folder path.
+        compose.onNodeWithTag("noteNotebook").assertDoesNotExist()
     }
 
     /**

@@ -178,8 +178,6 @@ data class TreeFolder(
     val parentId: String? = null,
     val position: String = "",
     val sortMode: String = "manual",
-    /** A notebook's own folder (T43, A750): only ever at the top level; absent otherwise. */
-    val notebook: Boolean = false,
 )
 
 @Serializable
@@ -223,22 +221,10 @@ data class FolderRef(
     val name: String,
     val parentId: String? = null,
     val sortMode: String = "manual",
-    /** Made in Trash with its deleted notebook: its parent was gone (T43, A757). */
-    val inTrash: Boolean = false,
-    /** The notebook the folder is in (T43): with [inTrash], the deleted one it went to Trash with. */
-    val notebook: FolderNotebook? = null,
 )
 
-/** A folder reply's notebook (T43): its name, and its id unless the token may not see it. */
-@Serializable
-data class FolderNotebook(val id: String? = null, val name: String = "")
-
-/** Where `POST /api/notes/:id/move` filed the note (T43, A757): the folder the server used. */
+/** Where `POST /api/notes/:id/move` filed the note (A757): the folder the server used. */
 data class FiledNote(val folderId: String?)
-
-/** A notebook as a refusal names it (T43, A757): `{ id, name }`. */
-@Serializable
-data class NotebookRef(val id: String, val name: String = "")
 
 /** A manual-order anchor among notes or folders (NT7): immediately before or after the sibling. */
 data class NotePlace(val before: String? = null, val after: String? = null)
@@ -262,14 +248,6 @@ data class FolderPatch(
     val checkParent: Boolean = false,
     val sortMode: String? = null,
     val place: FolderPlace? = null,
-    /** Turn into a notebook (true) or back into a folder (false), T43 (A756); null leaves it. */
-    val notebook: Boolean? = null,
-    /**
-     * With a move ([changeParent]): the notebook the phone saw the folder in when the move was
-     * made, `default` for the default notebook (T43, A766). Sent as `fromNotebook`; the server
-     * records the notebook in its notes' own documents only when it agrees.
-     */
-    val fromNotebook: String? = null,
 )
 
 @Serializable
@@ -308,11 +286,6 @@ data class TrashListed(
     /** Who moved it there (T42, #113, A574; T40 NT30, A655): absent when no one is recorded. */
     @Serializable(with = DeletedBySerializer::class)
     val deletedBy: FolderDeleter? = null,
-    /**
-     * It went to Trash with a deleted notebook (T43, A755): it comes back when the notebook is
-     * restored, so Trash lists it with the notebook rather than on its own.
-     */
-    val withNotebook: Boolean = false,
 )
 
 @Serializable
@@ -360,8 +333,6 @@ data class TrashedFolderListed(
     val deletedBy: FolderDeleter? = null,
     val folders: Int = 0,
     val notes: Int = 0,
-    /** A deleted notebook, with its notes (T43, A755). */
-    val notebook: Boolean = false,
 )
 
 @Serializable
@@ -369,7 +340,7 @@ data class FolderTrashList(val folders: List<TrashedFolderListed> = emptyList())
 
 /**
  * `POST /api/folders/:id/restore` (T40 P9, NT25): whether it was in Trash, whether the folder it
- * was in is gone (it then comes back in the nearest folder above within its notebook, T43 A757,
+ * was in is gone (it then comes back in the nearest folder above that still exists, A757,
  * named by [RestoredFolder.parentId]), the notes put back, and those left where they were moved since.
  */
 @Serializable
@@ -379,9 +350,7 @@ data class RestoredFolder(
     val parentGone: Boolean = false,
     val notes: Int = 0,
     val skipped: List<String> = emptyList(),
-    /** A notebook brought back with its notes (T43, A755). */
-    val notebook: Boolean = false,
-    /** Where it came back (T43, A757): a folder's id, or null for the top level. */
+    /** Where it came back (A757): a folder's id, or null for the top level. */
     val parentId: String? = null,
 )
 

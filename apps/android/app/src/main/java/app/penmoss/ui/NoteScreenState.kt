@@ -166,9 +166,6 @@ internal class NoteScreenState(
     /** The note's folder path (T40 P4, NT11): from the folders in Room, root first. */
     val crumbs: List<FolderItem> by derivedStateOf { Items.folderPath(folders.value, placedState.value?.folderId) }
 
-    /** Its notebook's name when not the default (T43, A752): a link into a closed one still opens it. */
-    val notebookName: String? by derivedStateOf { noteNotebookName(folders.value, placedState.value?.folderId) }
-
     /** The notes linking here, offline from Room (LK5): the Info button's badge. */
     val linkingHere: List<BacklinkSource> get() = linkingHereState.value
 

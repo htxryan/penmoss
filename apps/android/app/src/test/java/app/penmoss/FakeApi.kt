@@ -49,16 +49,12 @@ open class FakeApi : PenmossApi {
     /** Each move's reorder anchor (T40 P4, NT7), in order: null when none was sent. */
     val places = CopyOnWriteArrayList<NotePlace?>()
 
-    /** Where the server files each move (T43, A757): where asked, unless the test says otherwise. */
+    /** Where the server files each move (A757): where asked, unless the test says otherwise. */
     var filedIn: (String, String?) -> String? = { _, folderId -> folderId }
 
-    /** Each move's `fromNotebook` (T43, A766), in order. */
-    val fromNotebooks = CopyOnWriteArrayList<String?>()
-
-    override suspend fun moveNote(noteId: String, folderId: String?, from: InFolder?, place: NotePlace?, fromNotebook: String?): app.penmoss.engine.api.FiledNote {
+    override suspend fun moveNote(noteId: String, folderId: String?, from: InFolder?, place: NotePlace?): app.penmoss.engine.api.FiledNote {
         moves += noteId to folderId
         froms += from
-        fromNotebooks += fromNotebook
         places += place
         onMove(noteId, folderId)
         return app.penmoss.engine.api.FiledNote(filedIn(noteId, folderId))
@@ -115,12 +111,8 @@ open class FakeApi : PenmossApi {
     val restored = CopyOnWriteArrayList<String>()
     var onRestore: (String) -> RestoredNote = { throw java.io.IOException("offline") }
 
-    /** The folder each restore named (T43, A757): null when it named none. */
-    val restoredInto = CopyOnWriteArrayList<InFolder?>()
-
-    override suspend fun restoreNote(noteId: String, into: InFolder?): RestoredNote {
+    override suspend fun restoreNote(noteId: String): RestoredNote {
         restored += noteId
-        restoredInto += into
         return onRestore(noteId)
     }
 
@@ -202,12 +194,8 @@ open class FakeApi : PenmossApi {
     val deletedFolders = CopyOnWriteArrayList<String>()
     var onDeleteFolder: (String) -> Boolean = { true }
 
-    /** The notebooks made (T43): their ids. */
-    val createdNotebooks = CopyOnWriteArrayList<String>()
-
-    override suspend fun createFolder(id: String, name: String, parentId: String?, notebook: Boolean): FolderRef {
+    override suspend fun createFolder(id: String, name: String, parentId: String?): FolderRef {
         createdFolders += Triple(id, name, parentId)
-        if (notebook) createdNotebooks += id
         return onCreateFolder(id, name, parentId)
     }
 

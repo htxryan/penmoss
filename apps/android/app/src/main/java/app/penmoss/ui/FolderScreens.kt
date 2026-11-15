@@ -76,11 +76,9 @@ import androidx.compose.ui.zIndex
 
 /**
  * What a long press on a folder row offers (T40 P4, NT3–NT5): make a folder inside it (New Folder
- * Here, T53 item 12), rename it, move it, or delete it (with what moves up). For a notebook (T43,
- * A750, A756): New Folder Here, Rename, Turn back into a folder and Delete notebook, never Move. No
- * folder is turned into a notebook here, and none is closed (A912). New Note Here comes first
- * ([onNewNoteHere], T52 item 1), as the sidebar's right-click menu has it: a note made in this
- * folder (or at this notebook's top), opened at once.
+ * Here, T53 item 12), rename it, move it, or delete it (with what moves up). New Note Here comes
+ * first ([onNewNoteHere], T52 item 1), as the sidebar's right-click menu has it: a note made in
+ * this folder, opened at once.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,8 +89,6 @@ fun FolderSheet(
     onMove: () -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
-    notebook: Boolean = false,
-    onTurnBack: () -> Unit = {},
     /** Makes a note in this folder and opens it (T52 item 1); none offered when null. */
     onNewNoteHere: (() -> Unit)? = null,
 ) {
@@ -111,14 +107,9 @@ fun FolderSheet(
                 // The web's name for it, beside New Note Here (T53 item 12).
                 FolderSheetAction("New Folder Here", "folderAction-subfolder", onNewSubfolder)
                 FolderSheetAction("Rename", "folderAction-rename", onRename)
-                if (notebook) {
-                    FolderSheetAction("Turn Back into a Folder…", "folderAction-turnBack", onTurnBack)
-                    FolderSheetAction("Delete Notebook…", "folderAction-delete", onDelete)
-                } else {
-                    FolderSheetAction("Move to…", "folderAction-move", onMove)
-                    // The web's names, with "…" for what asks first (T39 pass 3, A891).
-                    FolderSheetAction("Delete Folder…", "folderAction-delete", onDelete)
-                }
+                FolderSheetAction("Move to…", "folderAction-move", onMove)
+                // The web's names, with "…" for what asks first (T39 pass 3, A891).
+                FolderSheetAction("Delete Folder…", "folderAction-delete", onDelete)
             }
         }
     }
@@ -532,15 +523,12 @@ internal fun NavGraphBuilder.folderRoutes(root: RootUi) {
                 val name = folder?.name ?: "Folder"
                 val (subfolders, filed) = Items.folder(folderId, mode, folders, notes, System.currentTimeMillis())
                 val above = Items.folderPath(folders, folder?.parentId)
-                val item = folder?.let(Items::item)
                 FolderView(
                     name = name,
                     folders = subfolders,
                     notes = filed,
                     sortMode = folder?.sortMode ?: "manual",
-                    subtitle = Items.pathText(above.map { it.name }).takeIf { above.isNotEmpty() }
-                        ?: "Notebook".takeIf { item?.notebook == true },
-                    notebook = item?.notebook == true,
+                    subtitle = Items.pathText(above.map { it.name }).takeIf { above.isNotEmpty() },
                 )
             }.distinctUntilChanged().flowOn(Dispatchers.Default)
         }.collectAsStateWithLifecycle(FolderView("", emptyList(), emptyList(), "manual", null))
@@ -558,12 +546,9 @@ internal fun NavGraphBuilder.folderRoutes(root: RootUi) {
             sortMode = contents.sortMode,
             onSort = { if (folderId != null) root.sortFolder(folderId, it) },
             onNewFolder = { root.folderNaming = FolderNaming.Create(folderId) },
-            onRenameFolder = { if (folderId != null) root.folderNaming = FolderNaming.Rename(folderId, contents.name, contents.notebook) },
+            onRenameFolder = { if (folderId != null) root.folderNaming = FolderNaming.Rename(folderId, contents.name) },
             onMoveFolderTo = { if (folderId != null) root.choosing = Choosing.MoveFolder(folderId, contents.name) },
             onDeleteFolder = { if (folderId != null) root.askDeleteFolder(folderId) },
-            // Notebooks (T43, A750, A756).
-            notebook = contents.notebook,
-            onTurnBack = { if (folderId != null) root.notebookTurningBack = FolderItem(folderId, contents.name, notebook = true) },
             onFolderLongPress = { root.folderActing = it },
             reordering = root.folderReordering == folderId,
             onReorder = { root.folderReordering = if (it) folderId else null },
@@ -580,6 +565,5 @@ private data class FolderView(
     val notes: List<NoteItem>,
     val sortMode: String,
     val subtitle: String?,
-    val notebook: Boolean = false,
 )
 

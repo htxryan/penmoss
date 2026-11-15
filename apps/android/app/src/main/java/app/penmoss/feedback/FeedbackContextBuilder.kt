@@ -30,8 +30,6 @@ data class WhereFacts(
     val panel: String?,
     val openedFrom: String,
     val folderPath: String?,
-    /** The selected folder's notebook (T43), when it is in one; null otherwise. */
-    val notebook: String? = null,
 )
 
 /** Group 3: sync as the phone sees it. */
@@ -52,8 +50,6 @@ data class NoteFacts(
     val title: String,
     val folderPath: String,
     val tags: List<String>,
-    /** The note's notebook by name (T43): the default notebook's when it is in none. */
-    val notebook: String? = null,
     val created: String?,
     val updated: Long?,
     val words: Int?,
@@ -61,7 +57,6 @@ data class NoteFacts(
     val attachments: Int?,
     val sizeBytes: Long?,
     val engine: String?,
-    val epoch: String?,
     val unsynced: Boolean,
     val inTrash: Boolean,
     val backlinks: Int?,
@@ -153,7 +148,6 @@ object FeedbackContextBuilder {
                     "Open panel" to (where.panel ?: "none"),
                     "Opened from" to where.openedFrom,
                     "Selected folder" to where.folderPath,
-                    "Notebook" to where.notebook,
                 ),
             ),
             fieldGroup(
@@ -177,7 +171,6 @@ object FeedbackContextBuilder {
                     "Id" to note.id,
                     "Title" to note.title,
                     "Folder" to note.folderPath,
-                    "Notebook" to note.notebook,
                     "Tags" to note.tags.joinToString(", ") { "#$it" }.ifEmpty { "none" },
                     "Created" to note.created,
                     "Updated" to note.updated?.takeIf { it > 0 }?.let(::iso),
@@ -186,7 +179,6 @@ object FeedbackContextBuilder {
                     "Attachments" to note.attachments,
                     "Size in bytes" to note.sizeBytes,
                     "Engine" to note.engine,
-                    "Epoch" to note.epoch,
                     "Unsynced" to note.unsynced,
                     "In Trash" to note.inTrash,
                     "Backlinks" to note.backlinks,

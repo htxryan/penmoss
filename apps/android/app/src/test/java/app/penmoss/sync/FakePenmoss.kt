@@ -282,10 +282,9 @@ internal class FakePenmoss : Dispatcher() {
     }
 
     /**
-     * The real server's place for something meant for a folder gone since (T43, A757, core's
-     * `notebookLineage().fallback`): the nearest live folder above it through Trash's records, or
-     * the top level when the way up ends (this fake has no notebooks). [REFUSED] when Trash no
-     * longer knows a folder on the way up: no safe place.
+     * The notes server's place for something meant for a folder gone since (A757, `fallbackFolder`):
+     * the nearest live folder above it through Trash's records, or the top level when the way up
+     * ends. [REFUSED] when Trash no longer knows a folder on the way up: no safe place.
      */
     private fun safePlace(folderId: String?): String? {
         var at = folderId
@@ -851,16 +850,9 @@ internal class FakePenmoss : Dispatcher() {
         trashCalls += "restore:$id"
         // As a server from before `note_not_found` answers: the phone still knows it (A431).
         val note = notes[id] ?: return json(JSONObject().put("error", JSONObject().put("code", "not_found").put("message", "No such note")), 404)
-        // Where it goes (T43, A757): the folder it was deleted from, or the nearest live one above;
-        // with no safe place nothing is restored (409 `restore_needs_folder`).
-        val restoredTo = if (note.deleted) safePlace(note.deletedFrom) else note.deletedFrom
-        if (restoredTo == REFUSED) {
-            return json(
-                JSONObject().put("error", JSONObject().put("code", "restore_needs_folder").put("message", "The folder the note was deleted from is gone"))
-                    .put("notebook", JSONObject.NULL),
-                409,
-            )
-        }
+        // Where it goes (A757): the folder it was deleted from, or the nearest live one above; the
+        // top level with no safe place, as a git notebook restores (NotebookOps.restore).
+        val restoredTo = if (note.deleted) safePlace(note.deletedFrom).takeIf { it != REFUSED } else note.deletedFrom
         val restored = note.deleted
         var seq = note.clock
         if (restored) {

@@ -51,7 +51,6 @@ import androidx.compose.ui.unit.dp
 import app.penmoss.data.BacklinkSource
 import app.penmoss.data.FolderEntity
 import app.penmoss.data.NoteStore
-import app.penmoss.data.Notebooks
 import app.penmoss.editor.NoteCounts
 import app.penmoss.engine.api.ApiException
 import app.penmoss.engine.api.BacklinksReply

@@ -31,8 +31,7 @@ interface NoteDao {
         "UPDATE notes SET title = :title, excerpt = :excerpt, updatedAt = :updatedAt, clock = :clock, " +
             "kind = :kind, period = :period, " +
             "seq = CASE WHEN :seq > seq THEN :seq ELSE seq END, " +
-            // 7: in Trash with a notebook deleted here (T43, A755), held as a sent move (2) is.
-            "deleted = CASE WHEN trashChange IN (1, 2, 5, 7) THEN 1 WHEN trashChange IN (3, 4, 6) THEN 0 ELSE :deleted END " +
+            "deleted = CASE WHEN trashChange IN (1, 2, 5) THEN 1 WHEN trashChange IN (3, 4, 6) THEN 0 ELSE :deleted END " +
             "WHERE id = :id AND clock <= :clock",
     )
     suspend fun updateMetadata(id: String, title: String, excerpt: String, updatedAt: Long, clock: Long, deleted: Boolean, seq: Long, kind: String, period: String?)
@@ -109,17 +108,6 @@ interface NoteDao {
     )
     fun observeRecent(limit: Int): Flow<List<NoteListRow>>
 
-    /**
-     * Notes that went to Trash with a notebook deleted here (T43, A755): out of every list at once,
-     * with nothing to send (the server's delete trashes them), held as a sent move is until an
-     * index row after what this phone had seen says so ([NoteEntity.TRASH_WITH_NOTEBOOK]).
-     */
-    @Query(
-        "UPDATE notes SET deleted = 1, trashChange = 7, trashChangeAt = :at, trashSeq = seq " +
-            "WHERE id IN (:ids) AND deleted = 0 AND gone = 0",
-    )
-    suspend fun trashWithNotebook(ids: List<String>, at: Long)
-
     /** Live notes this device has never fetched, newest first. */
     @Query("SELECT * FROM notes WHERE contentClock < 0 AND deleted = 0 AND gone = 0 ORDER BY updatedAt DESC LIMIT :limit")
     suspend fun missing(limit: Int): List<NoteEntity>
@@ -185,16 +173,14 @@ interface NoteDao {
     /**
      * Files a note in [folderId] (null: the top level) once the server can be asked (T38). The
      * first move remembers where the tree showed the note (A359); a later one, made before that
-     * was filed, keeps it, as does a note made here (nothing to check). [notebook] is the
-     * notebook the phone sees it in now (T43, A766), kept the same way for the move's `fromNotebook`.
+     * was filed, keeps it, as does a note made here (nothing to check).
      */
     @Query(
         "UPDATE notes SET checkFrom = CASE WHEN toFile = 1 THEN checkFrom ELSE 1 END, " +
             "movedFrom = CASE WHEN toFile = 1 THEN movedFrom ELSE folderId END, " +
-            "moveNotebook = CASE WHEN toFile = 1 AND moveNotebook IS NOT NULL THEN moveNotebook ELSE :notebook END, " +
             "toFile = 1, fileIn = :folderId, fileKind = NULL, fileDate = NULL, filePlaceBefore = NULL, filePlaceAfter = NULL WHERE id = :id",
     )
-    suspend fun fileLater(id: String, folderId: String?, notebook: String?)
+    suspend fun fileLater(id: String, folderId: String?)
 
     /**
      * Files a periodic note made here through `POST /api/daily` (T40 P5): [fileKind] is `daily`
@@ -308,14 +294,6 @@ interface NoteDao {
     )
     suspend fun trashRefused(id: String): Int
 
-    /**
-     * The server restored nothing (409 `restore_needs_folder`, T43 A757): the note's folder is gone
-     * and no place for it is safe. It is back in Trash as the server has it, sent, nothing to send;
-     * only if nothing was asked while the restore was in flight (a move to Trash then is sent).
-     */
-    @Query("UPDATE notes SET deleted = 1, trashChange = 2, trashTried = 0 WHERE id = :id AND trashChange = 6")
-    suspend fun restoreRefused(id: String): Int
-
     /** Moves to Trash refused since they were last said, oldest first. */
     @Query("SELECT id, title FROM notes WHERE trashNotice = 1 AND gone = 0 ORDER BY trashChangeAt, id")
     fun observeTrashNotices(): Flow<List<TrashNotice>>
@@ -327,8 +305,8 @@ interface NoteDao {
      * Restored by the server: back in the tree once filed where it was deleted from (A430), with
      * nothing to check (the tree no longer has it anywhere), and listed there meanwhile.
      */
-    @Query("UPDATE notes SET toFile = 1, fileIn = :folderId, checkFrom = 0, movedFrom = NULL, moveNotebook = :notebook WHERE id = :id")
-    suspend fun fileRestored(id: String, folderId: String?, notebook: String?)
+    @Query("UPDATE notes SET toFile = 1, fileIn = :folderId, checkFrom = 0, movedFrom = NULL WHERE id = :id")
+    suspend fun fileRestored(id: String, folderId: String?)
 
     /** Moves to Trash and restores asked here and not sent yet: signing out keeps them. */
     @Query("SELECT COUNT(*) FROM notes WHERE trashChange IN (1, 3, 5, 6) AND gone = 0")

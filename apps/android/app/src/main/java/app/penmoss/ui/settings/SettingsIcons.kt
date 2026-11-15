@@ -30,8 +30,6 @@ object SettingsIcons {
     )
     /** Display (T42, A650): the web's `panelL`, a window with its sidebar. */
     val PanelLeft = icon("Display", rect(3.5f, 4.5f, 17f, 15f, 2f) + "M9.5 4.5v15")
-    /** A notebook (T43, A750): the web's `notebook`, a bound book with a label, apart from the Journal's. */
-    val Notebook = icon("Notebook", "M7 3.5h10.5A1.5 1.5 0 0 1 19 5v14a1.5 1.5 0 0 1-1.5 1.5H7zM7 3.5v17M4.5 7.5h5M4.5 12h5M4.5 16.5h5M11.5 8h4.5v3h-4.5z")
     /** Symbols (T44, A747): the web's `star`. */
     val Star = icon("Symbols", "m12 3.8 2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8z")
     val Sun = icon(

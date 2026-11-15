@@ -152,74 +152,7 @@ class TrashFoldersTest {
     }
 
     /**
-     * A folder whose way up passes a deleted notebook (409 `restore_needs_folder`, T43 A757: fail
-     * closed) is not restored at the top level: Trash offers to restore that notebook first, then
-     * the folder, or to leave it.
-     */
-    @Test
-    fun aFolderWhoseNotebookIsInTrashOffersToRestoreTheNotebookFirst() = withModel { model ->
-        val work = TrashedFolderListed("w", "Work", deletedAt = now - day, notebook = true, notes = 2)
-        api.folderTrashList = { listOf(projects, work) }
-        var notebookBack = false
-        api.onRestoreFolder = { id ->
-            when {
-                id == "w" -> RestoredFolder("w", restored = true, notebook = true, notes = 2).also { notebookBack = true }
-                !notebookBack -> throw ApiException(
-                    409, "restore_needs_folder", "The folder was in the notebook “Work”, which is in Trash; restore the notebook first",
-                    notebook = app.penmoss.engine.api.NotebookRef("w", "Work"),
-                )
-                else -> RestoredFolder(id, restored = true, notes = 3)
-            }
-        }
-        model.load()
-        val listed = model.until { it.folders.size == 2 }
-        model.restore(listed.folders.first { it.id == "projects" })
-        val asked = model.until { it.asking != null }.asking!!
-        assertEquals(NotebookInTrash("w", "Work"), asked.notebook)
-        assertEquals("“Projects” was in the notebook “Work”, which is in Trash. Restore the notebook first to bring “Projects” back into it.", asked.text)
-        // Nothing restored, nothing to sync yet.
-        assertEquals(0, syncs)
-        assertEquals(2, model.ui.value.folders.size)
-
-        model.restoreNotebookFirst(asked)
-        val done = model.until { it.message != null }
-        assertEquals("Restored the notebook “Work”. Restored “Projects”.", done.message)
-        assertEquals(null, done.asking)
-        assertEquals(listOf("projects", "w", "projects"), api.restoredFolders.toList())
-        assertEquals(emptyList<TrashFolderUi>(), done.folders)
-        assertEquals(1, syncs)
-    }
-
-    @Test
-    fun aFolderRefusedForWantOfASafePlaceCanBeLeftInTrash() = withModel { model ->
-        api.folderTrashList = { listOf(projects) }
-        api.onRestoreFolder = { throw ApiException(409, "restore_needs_folder", "The folder it was in is gone, and so is the notebook it was in") }
-        model.load()
-        val listed = model.until { it.folders.isNotEmpty() }
-        model.restore(listed.folders[0])
-        val asked = model.until { it.asking != null }.asking!!
-        // Trash no longer knows the notebook: nothing to restore first.
-        assertEquals(null, asked.notebook)
-        model.leaveInTrash(asked)
-        assertEquals("“Projects” stays in Trash.", model.until { it.message != null }.message)
-        assertEquals(listOf("projects"), api.restoredFolders.toList())
-        assertEquals(1, model.ui.value.folders.size)
-        assertEquals(0, syncs)
-    }
-
-    @Test
-    fun theFolderRestoreQuestionOffersTheNotebookAndCancel() {
-        val ask = FolderRestoreAsk(TrashFolderUi("projects", "Projects", ""), NotebookInTrash("w", "Work"), folderRestoreAskText("Projects", "Work"))
-        val ran = mutableListOf<String>()
-        compose.setContent { PenmossTheme { FolderRestoreAskDialog(ask, busy = false, onRestoreNotebook = { ran += "notebook" }, onCancel = { ran += "cancel" }) } }
-        compose.onNodeWithTag("folderRestoreAskText").assertIsDisplayed()
-        compose.onNodeWithText("Restore the notebook “Work”").performClick()
-        compose.onNodeWithTag("folderRestoreCancel").performClick()
-        assertEquals(listOf("notebook", "cancel"), ran)
-    }
-
-    /**
-     * A folder back with its parent gone says where it came back (T43, A757): that folder's name
+     * A folder back with its parent gone says where it came back (A757): that folder's name
      * as this phone has it, the top level, or "the nearest folder above it" when unknown here.
      */
     @Test
@@ -237,26 +170,6 @@ class TrashFoldersTest {
         val listed = model.until { it.folders.isNotEmpty() }
         model.restore(listed.folders[0])
         assertEquals("Restored “Projects”. The folder it was in is gone, so it is in “Home”.", model.until { it.message != null }.message)
-    }
-
-    /** A note's restore with no safe place asks (T43, A757): its notebook first, a folder, or Cancel. */
-    @Test
-    fun theNoteRestoreQuestionOffersItsNotebookAFolderAndCancel() {
-        val question = app.penmoss.data.RestoreQuestion("soup", "Soup", "w", "Work", "The note was in the notebook “Work”, which is in Trash")
-        var ask by androidx.compose.runtime.mutableStateOf(restoreAsk(question, foldersInTrash = setOf("w")))
-        val ran = mutableListOf<String>()
-        compose.setContent {
-            PenmossTheme { RestoreNeedsFolderDialog(ask, onRestoreNotebook = { ran += "notebook" }, onChooseFolder = { ran += "folder" }, onCancel = { ran += "cancel" }) }
-        }
-        compose.onNodeWithText("Where should “Soup” go?").assertIsDisplayed()
-        compose.onNodeWithText("Restore the notebook “Work”").performClick()
-        compose.onNodeWithText("Choose a Folder…").performClick()
-        compose.onNodeWithTag("restoreLeaveInTrash").performClick()
-        assertEquals(listOf("notebook", "folder", "cancel"), ran)
-        // The notebook is offered only while Penmoss lists it in Trash.
-        ask = restoreAsk(question, foldersInTrash = emptySet())
-        compose.onNodeWithTag("restoreNotebookFirst").assertDoesNotExist()
-        compose.onNodeWithTag("restoreChooseFolder").assertIsDisplayed()
     }
 
     @Test

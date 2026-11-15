@@ -292,13 +292,13 @@ class NoteStoreTest {
     }
 
     /**
-     * A conflict copy is filed beside its original (T43, A757: fail closed): in the original's
-     * folder, a notebook's included, never the top level by default, which is the default notebook.
+     * A conflict copy is filed beside its original (A757): in the original's folder, never the top
+     * level by default.
      */
     @Test
     fun aConflictCopyIsFiledBesideItsOriginalNeverAtTheTopLevel() = runTest {
         store.saveTree(
-            SyncTree("h1", folders = listOf(TreeFolder("w", "Work", position = "a0", notebook = true), TreeFolder("plans", "Plans", "w")), notes = listOf(TreeNote("n", "plans", "a0"))),
+            SyncTree("h1", folders = listOf(TreeFolder("w", "Work", position = "a0"), TreeFolder("plans", "Plans", "w")), notes = listOf(TreeNote("n", "plans", "a0"))),
         )
         syncedAt("n", "e1", "OLD")
         store.addPending("n", "EDIT", "e1")
@@ -309,8 +309,6 @@ class NoteStoreTest {
         val copy = store.note("c")!!
         assertTrue(copy.toFile)
         assertEquals("plans", copy.fileIn)
-        // Its move names the notebook its folder is in (T43, fix c).
-        assertEquals("w", copy.moveNotebook)
         // Listed there at once, offline too.
         assertEquals("plans", store.folderOf("c"))
 

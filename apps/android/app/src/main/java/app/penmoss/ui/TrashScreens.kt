@@ -69,8 +69,6 @@ data class TrashFoldersUi(
     val folders: List<TrashFolderUi> = emptyList(),
     val busy: Boolean = false,
     val message: String? = null,
-    /** A restore Penmoss refused for want of a safe place (T43, A757): asked of the person. */
-    val asking: FolderRestoreAsk? = null,
 )
 
 data class TrashUi(
@@ -284,56 +282,3 @@ private fun SheetAction(text: String, tag: String, onClick: () -> Unit) {
 /** A row's detail read out as [spoken] where it differs from what the row shows (A701). */
 private fun spokenAs(shown: String, spoken: String): Modifier =
     if (spoken == shown) Modifier else Modifier.semantics { contentDescription = spoken }
-
-/**
- * A note's restore Penmoss could not place (T43, A757: fail closed): its folder is gone and its
- * way up passes a deleted notebook, so nothing was restored. Restore that notebook first (while
- * Penmoss has it in Trash), choose a folder for the note, or leave it in Trash.
- */
-@Composable
-fun RestoreNeedsFolderDialog(ask: RestoreAskUi, onRestoreNotebook: () -> Unit, onChooseFolder: () -> Unit, onCancel: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onCancel,
-        title = { Text("Where should “${ask.title}” go?") },
-        text = {
-            Text(
-                "${ask.message} Penmoss won’t put it in another notebook on its own.",
-                Modifier.testTag("restoreNeedsFolderText"),
-            )
-        },
-        confirmButton = {
-            Column(horizontalAlignment = Alignment.End) {
-                ask.notebook?.let { notebook ->
-                    TextButton(onClick = onRestoreNotebook, enabled = !ask.busy, modifier = Modifier.testTag("restoreNotebookFirst")) {
-                        Text("Restore the notebook “${notebook.name}”")
-                    }
-                }
-                TextButton(onClick = onChooseFolder, enabled = !ask.busy, modifier = Modifier.testTag("restoreChooseFolder")) { Text("Choose a Folder…") }
-                TextButton(onClick = onCancel, modifier = Modifier.testTag("restoreLeaveInTrash")) { Text("Cancel") }
-            }
-        },
-    )
-}
-
-/**
- * A folder's restore Penmoss refused (T43, A757): it was in a notebook that is in Trash. Restore
- * that notebook first, then the folder, or leave it in Trash.
- */
-@Composable
-fun FolderRestoreAskDialog(ask: FolderRestoreAsk, busy: Boolean, onRestoreNotebook: () -> Unit, onCancel: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onCancel,
-        title = { Text("Restore “${ask.folder.name}”?") },
-        text = { Text(ask.text, Modifier.testTag("folderRestoreAskText")) },
-        confirmButton = {
-            Column(horizontalAlignment = Alignment.End) {
-                ask.notebook?.let { notebook ->
-                    TextButton(onClick = onRestoreNotebook, enabled = !busy, modifier = Modifier.testTag("folderRestoreNotebookFirst")) {
-                        Text("Restore the notebook “${notebook.name}”")
-                    }
-                }
-                TextButton(onClick = onCancel, modifier = Modifier.testTag("folderRestoreCancel")) { Text("Cancel") }
-            }
-        },
-    )
-}

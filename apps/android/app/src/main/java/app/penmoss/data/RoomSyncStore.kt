@@ -37,7 +37,7 @@ class RoomSyncStore(
             .associate { it.id to it.position }
         db.folders().clear()
         db.folders().insertAll(
-            tree.folders.map { FolderEntity(it.id, it.name, it.parentId, it.position, it.sortMode, notebook = it.notebook) },
+            tree.folders.map { FolderEntity(it.id, it.name, it.parentId, it.position, it.sortMode) },
         )
         notes.clearPlacements()
         for (placement in tree.notes) {

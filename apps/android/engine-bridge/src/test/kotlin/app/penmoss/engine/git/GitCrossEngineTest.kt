@@ -165,7 +165,7 @@ class GitCrossEngineTest {
         val thrown = "01JBN0000000000000000000P4"
         store.addPending(thrown, NodeGitRunner.note(thrown, "Old plan", "Thrown away and pushed"))
         sync.sync()
-        for (id in listOf(pushed, untouched, thrown)) api.moveNote(id, null, null, null, null)
+        for (id in listOf(pushed, untouched, thrown)) api.moveNote(id, null, null, null)
         api.trashNote(thrown, 0)
         assertEquals("synced", engine.sync().phase)
         sync.sync()
@@ -176,7 +176,7 @@ class GitCrossEngineTest {
         val scratch = "01JBN0000000000000000000P5"
         store.addPending(scratch, NodeGitRunner.note(scratch, "Scratch", "Thrown away here"))
         sync.sync()
-        api.moveNote(scratch, null, null, null, null)
+        api.moveNote(scratch, null, null, null)
         api.trashNote(scratch, 0)
         sync.sync()
         assertTrue("the page took them in", store.rows.none { it.state == InMemorySyncStore.State.PENDING })
@@ -257,7 +257,7 @@ class GitCrossEngineTest {
         val roadmap = "01JBN0000000000000000000T1"
         store.addPending(roadmap, NodeGitRunner.note(roadmap, "Roadmap", "Plans for #project/penmoss"))
         sync.sync()
-        api.moveNote(roadmap, null, null, null, null)
+        api.moveNote(roadmap, null, null, null)
         assertEquals("synced", engine.sync().phase)
 
         // The Mac describes two tags and pushes.
@@ -269,7 +269,7 @@ class GitCrossEngineTest {
         val phoneNote = "01JBN0000000000000000000T2"
         store.addPending(phoneNote, NodeGitRunner.note(phoneNote, "Phone build", "The #project/penmoss/android build"))
         sync.sync()
-        api.moveNote(phoneNote, folder.id, null, null, null)
+        api.moveNote(phoneNote, folder.id, null, null)
         assertEquals("synced", engine.sync().phase)
         assertTrue("the phone pushed its change", GitTestRepos.paths(remote, "main").any { it.contains("Phone build") })
 
@@ -304,7 +304,7 @@ class GitCrossEngineTest {
         val secret = "01JBN0000000000000000000S1"
         store.addPending(secret, NodeGitRunner.note(secret, "Passwords", "hunter2"))
         sync.sync()
-        api.moveNote(secret, null, null, null, null)
+        api.moveNote(secret, null, null, null)
         assertEquals("synced", engine.sync().phase)
         api.purgeNote(secret)
         assertEquals("synced", engine.sync().phase)
@@ -356,7 +356,7 @@ class GitCrossEngineTest {
         val broken = "01JBN0000000000000000000L3"
         store.addPending(broken, NodeGitRunner.note(broken, "Broken", "Half of it reads"))
         sync.sync()
-        for (id in listOf(long, slow, broken)) api.moveNote(id, null, null, null, null)
+        for (id in listOf(long, slow, broken)) api.moveNote(id, null, null, null)
         assertEquals("synced", engine.sync().phase)
         for ((id, title) in listOf(long to "Long notes, edited", slow to "Slow one, edited", broken to "Broken, edited")) {
             store.addPending(id, NodeGitRunner.retitle(id, title, store.updates(id, InMemorySyncStore.State.SYNCED)))
@@ -440,7 +440,7 @@ class GitCrossEngineTest {
         val note = "01JBN0000000000000000000S1"
         store.addPending(note, NodeGitRunner.note(note, "Signed", "From a signing phone"))
         sync.sync()
-        api.moveNote(note, null, null, null, null)
+        api.moveNote(note, null, null, null)
         assertEquals("synced", engine.sync().phase)
         val commits = GitTestRepos.parentCounts(remote, "main").size
         assertTrue("the notebook's commits", commits >= 1)
@@ -623,7 +623,7 @@ class GitCrossEngineTest {
         store.addPending(note, NodeGitRunner.note(note, "Plan", "From the phone"))
         sync.sync()
         assertTrue("uploaded and confirmed", store.updates(note, InMemorySyncStore.State.PENDING).isEmpty())
-        api.moveNote(note, null, null, null, null)
+        api.moveNote(note, null, null, null)
         assertEquals("synced", engine.sync().phase)
         val counts = GitTestRepos.parentCounts(remote, "main")
         assertTrue("never a merge", counts.all { it <= 1 })

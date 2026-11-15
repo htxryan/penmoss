@@ -4,21 +4,13 @@ import androidx.room.withTransaction
 import app.penmoss.engine.tree.FolderTree
 
 /**
- * Where the lists show each note (T38, NT7, T43): moves and reorders made here, the queue that
- * files them, and the notebook a note or folder is in as this phone's tree has it.
+ * Where the lists show each note (T38, NT7): moves and reorders made here, and the queue that
+ * files them.
  */
 class NotePlacement(
     private val db: PenmossDatabase,
 ) {
     private val notes = db.notes()
-
-    /** The notebook a note is in, by name (A752): null for the default notebook or a note not held. */
-    suspend fun notebookOf(noteId: String): FolderEntity? {
-        val folderId = notes.note(noteId)?.folderId ?: return null
-        val folders = db.folders().all()
-        val notebook = Notebooks.index(folders).ofFolder(folderId) ?: return null
-        return folders.firstOrNull { it.id == notebook }
-    }
 
     /**
      * Moves a note to [folderId] (null: the top level) on this phone (T38). The lists show it
@@ -33,8 +25,7 @@ class NotePlacement(
         if (note.deleted || note.gone) return@withTransaction Move.REFUSED
         val current = if (note.toFile) note.fileIn else note.folderId
         if (current == folderId && note.folderId == folderId) return@withTransaction Move.ALREADY_THERE
-        // Where the phone sees it now, sent with the move (T43, A766).
-        notes.fileLater(noteId, folderId, notebookOfFolder(current))
+        notes.fileLater(noteId, folderId)
         placeAtEnd(noteId, folderId)
         Move.MOVED
     }
@@ -51,8 +42,9 @@ class NotePlacement(
     suspend fun readyToFile(): List<NoteEntity> = notes.readyToFile()
 
     /**
-     * Filed in [fileIn] (the server put it in [landed]: the nearest folder above within its
-     * notebook when that folder had gone, T43 A757), or that move dropped. A later move made meanwhile stays to file, checked against [landed].
+     * Filed in [fileIn] (the server put it in [landed]: the nearest folder above when that folder
+     * had gone, A757), or that move dropped. A later move made meanwhile stays to file, checked
+     * against [landed].
      */
     suspend fun markFiled(noteId: String, fileIn: String?, landed: String? = fileIn) = db.withTransaction {
         notes.filed(noteId, fileIn)
@@ -63,20 +55,6 @@ class NotePlacement(
     suspend fun dropMove(noteId: String, fileIn: String?) = notes.filed(noteId, fileIn)
 
     internal suspend fun folderExists(folderId: String): Boolean = db.folders().exists(folderId)
-
-    /**
-     * The notebook [folderId] is in as this phone's tree has it (T43, A766): a notebook's folder id,
-     * or `default` for the default notebook, the top level and a folder the phone does not know
-     * (the server compares, and holds the note when they differ: fail closed).
-     */
-    suspend fun notebookOfFolder(folderId: String?): String =
-        Notebooks.index(db.folders().all()).ofFolder(folderId) ?: Notebooks.DEFAULT
-
-    /** The notebook a note is in as this phone shows it: where a move not filed yet takes it, else the tree's. */
-    suspend fun notebookOfNote(noteId: String): String {
-        val note = notes.note(noteId) ?: return Notebooks.DEFAULT
-        return notebookOfFolder(if (note.toFile) note.fileIn else note.folderId)
-    }
 
     /** Shows a note at the end of a folder (A17's order keys compare as strings; any longer key sorts after). */
     internal suspend fun placeAtEnd(noteId: String, folderId: String?) {
@@ -92,14 +70,14 @@ class NotePlacement(
     suspend fun reorderNote(id: String, before: String?, after: String?): Boolean = db.withTransaction {
         val note = notes.note(id) ?: return@withTransaction false
         if (note.deleted || note.gone) return@withTransaction false
-        // A note the tree does not place (the server's registry lacks it) and this phone did not
-        // make: listed, never written into the tree here, as a reorder would file it (T43, A766).
+        // A note the tree does not place (the registry lacks it) and this phone did not make:
+        // listed, never written into the tree here, as a reorder would file it (A766).
         if (!note.toFile && note.folderId == null && note.position.isEmpty()) return@withTransaction false
         val folderId = if (note.toFile) note.fileIn else note.folderId
         val siblings = notes.inFolder(folderId).map { FolderTree.ReorderSibling(it.id, it.position) }
         val key = FolderTree.reorderKey(siblings, id, before, after)
         notes.place(id, folderId, key.position)
-        if (!note.toFile) notes.fileLater(id, folderId, notebookOfFolder(folderId))
+        if (!note.toFile) notes.fileLater(id, folderId)
         notes.setPlace(id, key.before, key.after)
         true
     }

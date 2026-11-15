@@ -79,11 +79,7 @@ fun FolderPickerSheet(
             overflow = TextOverflow.Ellipsis,
         )
         LazyColumn(Modifier.fillMaxWidth().testTag("folderPicker"), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)) {
-            // Grouped by notebook once there are notebooks (T43, A750): each group under its name.
-            choices.forEachIndexed { at, choice ->
-                if (choice.group != null && choices.getOrNull(at - 1)?.group != choice.group) {
-                    item(key = "group:$at", contentType = "group") { SectionTitle(choice.group, Modifier.testTag("folderGroup:${choice.group}")) }
-                }
+            for (choice in choices) {
                 item(key = choice.id ?: "", contentType = "choice") {
                     FolderChoiceRow(choice, chosen = choice.id == current, onPick = onPick)
                 }
@@ -115,11 +111,7 @@ private fun FolderChoiceRow(choice: FolderChoice, chosen: Boolean, onPick: (Stri
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Icon(
-            when {
-                top -> Icons.Default.Home
-                choice.notebook -> NotebookIcon
-                else -> FolderIcon
-            },
+            if (top) Icons.Default.Home else FolderIcon,
             contentDescription = null,
             Modifier.size(20.dp),
             tint = MaterialTheme.colorScheme.primary,

@@ -176,8 +176,8 @@ fun FolderRowView(
             .combinedClickable(
                 enabled = enabled,
                 role = Role.Button,
-                onClickLabel = if (item.notebook) "Open Notebook" else "Open Folder",
-                onLongClickLabel = if (onLongPress != null) (if (item.notebook) "Notebook Actions" else "Folder Actions") else null,
+                onClickLabel = "Open Folder",
+                onLongClickLabel = if (onLongPress != null) "Folder Actions" else null,
                 onLongClick = onLongPress?.let { press ->
                     {
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -189,8 +189,7 @@ fun FolderRowView(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // A notebook's own icon, apart from a folder's (T43, A750).
-        Icon(if (item.notebook) NotebookIcon else FolderIcon, contentDescription = null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+        Icon(FolderIcon, contentDescription = null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
         Text(item.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

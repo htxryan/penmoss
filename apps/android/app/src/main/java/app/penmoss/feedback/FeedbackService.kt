@@ -10,7 +10,6 @@ import android.os.Looper
 import android.view.PixelCopy
 import android.view.Window
 import androidx.webkit.WebViewCompat
-import app.penmoss.data.Notebooks
 import app.penmoss.data.PenmossDatabase
 import app.penmoss.engine.api.HistoryAuthor
 import app.penmoss.engine.api.NoteHistory
@@ -68,7 +67,6 @@ class FeedbackCollector(
                 title = it.title,
                 folderPath = folderPath(it.folderId) ?: "Top level",
                 tags = extras?.tags ?: dao.tags(it.id),
-                notebook = notebookName(it.folderId) ?: Notebooks.DEFAULT_NAME,
                 created = extras?.created,
                 updated = it.updatedAt,
                 words = extras?.words ?: text.split(Regex("\\s+")).count(String::isNotEmpty),
@@ -76,7 +74,6 @@ class FeedbackCollector(
                 attachments = dao.attachments(it.id),
                 sizeBytes = text.toByteArray(Charsets.UTF_8).size.toLong(),
                 engine = ENGINE,
-                epoch = it.epoch,
                 unsynced = dao.pendingOf(it.id) > 0,
                 inTrash = it.deleted,
                 backlinks = dao.backlinks(it.id),
@@ -86,14 +83,6 @@ class FeedbackCollector(
         val edits = note?.let { edits(it.id) }.orEmpty()
         val known = runCatching { names() }.getOrNull()
         FeedbackContextBuilder.build(app(), where, sync(), facts, if (gitNotebook) emptyList() else edits, recent.all(), text, known, gitNotebook)
-    }
-
-    /** The notebook a folder is in, by name (T43); null for the default notebook. */
-    suspend fun notebookName(folderId: String?): String? {
-        folderId ?: return null
-        val folders = db.folders().all()
-        val notebook = Notebooks.index(folders).ofFolder(folderId) ?: return null
-        return folders.firstOrNull { it.id == notebook }?.name?.ifBlank { "Untitled folder" }
     }
 
     /** The folder's path, top first, as Info shows it; null at the top level. */

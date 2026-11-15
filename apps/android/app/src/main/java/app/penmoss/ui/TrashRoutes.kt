@@ -1,14 +1,10 @@
 package app.penmoss.ui
 
-import kotlinx.coroutines.Dispatchers
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -19,7 +15,6 @@ import androidx.compose.material3.SnackbarResult
 import app.penmoss.NotebookGraph
 import app.penmoss.data.NoteEntity
 import app.penmoss.data.NoteStore
-import app.penmoss.data.RestoreQuestion
 import app.penmoss.data.TrashRow
 import app.penmoss.engine.api.ApiException
 import app.penmoss.engine.api.FolderDeleter
@@ -35,7 +30,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -76,12 +70,8 @@ internal fun trashEntries(
     remote: List<TrashListed>,
     now: Long,
 ): List<TrashEntryUi> {
-    // Notes that went to Trash with a notebook come back with it (T43, A755): the folder list
-    // shows the notebook, so they are not listed here on their own.
-    val withNotebook = remote.filter { it.withNotebook }.mapTo(HashSet()) { it.id } +
-        local.filter { it.trashChange == NoteEntity.TRASH_WITH_NOTEBOOK }.map { it.id }
-    val listed = remote.filterNot { it.id in withNotebook }.associateBy { it.id }
-    val ours = local.filterNot { it.id in withNotebook }.map { row ->
+    val listed = remote.associateBy { it.id }
+    val ours = local.map { row ->
         val waiting = row.trashChange == NoteEntity.TRASH_QUEUED || row.trashChange == NoteEntity.TRASH_SENDING
         val deletedAt = listed[row.id]?.deletedAt?.takeIf { it > 0 } ?: when {
             waiting || row.trashChange == NoteEntity.TRASH_SENT -> row.trashChangeAt
@@ -90,7 +80,7 @@ internal fun trashEntries(
         entry(row.id, row.title.ifBlank { listed[row.id]?.title.orEmpty() }, deletedAt, waiting, now, listed[row.id]?.deletedBy)
     }
     val known = local.mapTo(HashSet()) { it.id }
-    val theirs = remote.filter { it.id !in known && it.id !in withNotebook }.map { entry(it.id, it.title, it.deletedAt, waiting = false, now, it.deletedBy) }
+    val theirs = remote.filter { it.id !in known }.map { entry(it.id, it.title, it.deletedAt, waiting = false, now, it.deletedBy) }
     return (ours + theirs).sortedWith(compareByDescending<TrashEntryUi> { it.deletedAt }.thenBy { it.id })
 }
 
@@ -226,105 +216,6 @@ class TrashModel(
     }
 
     fun messageShown() = state.update { it.copy(message = null, restored = null) }
-
-    // --- a restore the server could not place (T43, A757: fail closed) ---
-
-    /** Deleted folders' ids in Trash, read when a question names a notebook; null: not read. */
-    private val foldersInTrash = MutableStateFlow<Set<String>?>(null)
-    private val answering = MutableStateFlow(false)
-
-    /**
-     * The first restore waiting for the person (409 `restore_needs_folder`): its notebook is
-     * offered to restore first only while Penmoss lists it in Trash.
-     */
-    val asking: StateFlow<RestoreAskUi?> = combine(store.observeRestoreQuestions(), foldersInTrash, answering) { questions, trashed, busy ->
-        questions.firstOrNull()?.let { restoreAsk(it, trashed, busy) }
-    }.stateIn(work, SharingStarted.Eagerly, null)
-
-    init {
-        work.launch {
-            store.observeRestoreQuestions().map { list -> list.firstOrNull()?.notebookId }.distinctUntilChanged().collect { notebook ->
-                if (notebook != null) readFoldersInTrash()
-            }
-        }
-    }
-
-    private suspend fun readFoldersInTrash() {
-        foldersInTrash.value = try {
-            api.folderTrash().mapTo(HashSet()) { it.id }
-        } catch (error: ApiException) {
-            emptySet()
-        } catch (error: IOException) {
-            // Offline: the notebook is not offered; choosing a folder needs Penmoss too.
-            emptySet()
-        }
-    }
-
-    /**
-     * (a) Restores the notebook the note was in (`POST /api/folders/:id/restore`), then the note
-     * again: queued as any restore, so the next pass files it where it was deleted from.
-     */
-    fun restoreNotebookFirst(ask: RestoreAskUi) {
-        val notebook = ask.notebook ?: return
-        if (answering.value) return
-        answering.value = true
-        work.launch {
-            val said = try {
-                api.restoreFolder(notebook.id)
-                store.restoreQuestionAnswered(ask.noteId)
-                store.restoreFromTrash(ask.noteId, ask.title)
-                requestSync()
-                "Restored the notebook “${notebook.name}”. “${ask.title}” goes back where it was with the next sync."
-            } catch (error: ApiException) {
-                "Penmoss couldn’t restore the notebook “${notebook.name}”: ${error.message?.trimEnd('.')}."
-            } catch (error: IOException) {
-                "Offline: restoring the notebook “${notebook.name}” needs Penmoss. Try again once the phone is online."
-            } finally {
-                answering.value = false
-            }
-            state.update { it.copy(message = said) }
-        }
-    }
-
-    /**
-     * (b) Restores the note into the folder the person chose ([folderId]; null: the top level),
-     * sent as `{ folderId }`: the server restores it there, and the next pass files it.
-     */
-    fun restoreInto(ask: RestoreAskUi, folderId: String?, folderName: String) {
-        if (answering.value) return
-        answering.value = true
-        work.launch {
-            val said = try {
-                val restored = api.restoreNote(ask.noteId, app.penmoss.engine.api.InFolder(folderId))
-                store.restoredInto(ask.noteId, restored.folderId, restored.restored, restored.seq)
-                requestSync()
-                remote.update { list -> list.filterNot { it.id == ask.noteId } }
-                "Restored “${ask.title}” to $folderName."
-            } catch (error: ApiException) {
-                when {
-                    error.noSuchNote -> {
-                        store.restoreQuestionAnswered(ask.noteId)
-                        store.trashGone(ask.noteId)
-                        "“${ask.title}” is not in Trash any more."
-                    }
-                    else -> "Penmoss couldn’t restore “${ask.title}”: ${error.message?.trimEnd('.')}."
-                }
-            } catch (error: IOException) {
-                "Offline: restoring “${ask.title}” needs Penmoss. Try again once the phone is online."
-            } finally {
-                answering.value = false
-            }
-            state.update { it.copy(message = said) }
-        }
-    }
-
-    /** (c) Cancel: the note stays in Trash, and is not asked about again. */
-    fun leaveInTrash(ask: RestoreAskUi) {
-        work.launch {
-            store.restoreQuestionAnswered(ask.noteId)
-            state.update { it.copy(message = "“${ask.title}” stays in Trash.") }
-        }
-    }
 }
 
 /**
@@ -337,29 +228,6 @@ internal fun deletedForGoodMessage(title: String, git: Boolean): String {
     val shown = OwnerWords.title(title)?.let { "“$it”" } ?: "an untitled note"
     return "Deleted $shown for good. The repository’s git history still keeps it."
 }
-
-/** A restore the server could not place, as Trash asks it (T43, A757). */
-data class RestoreAskUi(
-    val noteId: String,
-    val title: String,
-    /** Why, in the server's words. */
-    val message: String,
-    /** The deleted notebook to restore first, while Penmoss has it in Trash; else null. */
-    val notebook: NotebookInTrash?,
-    val busy: Boolean = false,
-)
-
-/** A deleted notebook a restore can bring back first (T43, A757). */
-data class NotebookInTrash(val id: String, val name: String)
-
-internal fun restoreAsk(question: RestoreQuestion, foldersInTrash: Set<String>?, busy: Boolean = false): RestoreAskUi = RestoreAskUi(
-    noteId = question.noteId,
-    title = titleOf(question.title),
-    message = question.message.trim().ifEmpty { "The folder it was deleted from is gone" }.trimEnd('.') + ".",
-    notebook = question.notebookId?.takeIf { foldersInTrash?.contains(it) == true }
-        ?.let { NotebookInTrash(it, question.notebookName.ifBlank { "Untitled folder" }) },
-    busy = busy,
-)
 
 /** What to say when a note was not deleted for good: the notebook's reason, or offline. */
 internal fun purgeFailure(error: Exception): String = when (error) {
@@ -388,9 +256,6 @@ internal fun TrashRoute(graph: NotebookGraph, onOpen: (String) -> Unit, onBack: 
     }
     val ui by model.ui.collectAsStateWithLifecycle()
     val folderUi by folders.ui.collectAsStateWithLifecycle()
-    val asking by model.asking.collectAsStateWithLifecycle()
-    /** Choosing a folder for a restore Penmoss could not place (T43, A757). */
-    var choosingFor by remember { mutableStateOf<RestoreAskUi?>(null) }
     TrashScreen(
         ui = ui,
         folders = folderUi,
@@ -406,41 +271,6 @@ internal fun TrashRoute(graph: NotebookGraph, onOpen: (String) -> Unit, onBack: 
         },
         onBack = onBack,
     )
-    val ask = asking
-    if (ask != null && choosingFor == null) {
-        RestoreNeedsFolderDialog(
-            ask,
-            onRestoreNotebook = { model.restoreNotebookFirst(ask) },
-            onChooseFolder = { choosingFor = ask },
-            onCancel = { model.leaveInTrash(ask) },
-        )
-    }
-    choosingFor?.let { picking ->
-        // The Move sheet's picker, over the phone's tree (T38).
-        FolderPickerFor(
-            graph,
-            title = "Restore “${picking.title}” to…",
-            current = null,
-            onPick = { folder ->
-                choosingFor = null
-                // Outlives the screen: a restore the person asked for.
-                graph.launchReporting(Dispatchers.Main.immediate) {
-                    val name = folder?.let { id -> graph.store.observeFolders().first().firstOrNull { it.id == id }?.name?.ifBlank { null } }
-                        ?: if (folder == null) Items.TOP_LEVEL else "the folder"
-                    model.restoreInto(picking, folder, name)
-                }
-            },
-            onDismiss = { choosingFor = null },
-        )
-    }
-    folderUi.asking?.let { folderAsk ->
-        FolderRestoreAskDialog(
-            folderAsk,
-            busy = folderUi.busy,
-            onRestoreNotebook = { folders.restoreNotebookFirst(folderAsk) },
-            onCancel = { folders.leaveInTrash(folderAsk) },
-        )
-    }
 }
 
 /**
@@ -492,8 +322,7 @@ private fun counted(count: Int, one: String, many: String) = "$count ${if (count
 internal fun folderContents(folder: TrashedFolderListed): String {
     val held = listOfNotNull(counted(folder.notes, "note", "notes"), folder.folders.takeIf { it > 0 }?.let { counted(it, "subfolder", "subfolders") })
         .joinToString(", ")
-    // A notebook went with its notes, which come back with it (T43, A755).
-    return if (folder.notebook) "Notebook · $held" else held
+    return held
 }
 
 /**
@@ -515,25 +344,15 @@ internal fun trashFolders(listed: List<TrashedFolderListed>, folderName: (String
         )
     }
 
-/** A folder's restore the server refused for want of a safe place (T43, A757), as Trash asks it. */
-data class FolderRestoreAsk(val folder: TrashFolderUi, val notebook: NotebookInTrash?, val text: String)
-
-/** Why a folder's Restore waits (409 `restore_needs_folder`): its notebook is in Trash, or gone. */
-internal fun folderRestoreAskText(name: String, notebook: String?): String =
-    if (notebook != null) "“$name” was in the notebook “${notebook.ifBlank { "Untitled folder" }}”, which is in Trash. Restore the notebook first to bring “$name” back into it."
-    else "The folder “$name” was in is gone, and so is the notebook it was in, so Penmoss won’t guess where it goes."
-
 /**
  * What a folder's Restore says, in the web's words (`restoredMessage`). Its parent gone, it says
- * where it came back (T43, A757): [folderName] names that folder as this phone has it; the top
+ * where it came back (A757): [folderName] names that folder as this phone has it; the top
  * level; or, unknown here, "the nearest folder above it".
  */
 internal fun restoredFolderMessage(name: String, result: RestoredFolder, folderName: (String) -> String? = { null }): String {
     if (!result.restored) return "“$name” is not in Trash any more."
-    // A notebook comes back with its notes (T43, A755), at the top level, where notebooks live.
-    if (result.notebook) return "Restored the notebook “$name” and ${counted(result.notes, "note", "notes")}."
     val parts = mutableListOf("Restored “$name”.")
-    // Its parent gone, it came back in the nearest folder above it within its notebook (A757).
+    // Its parent gone, it came back in the nearest folder above it (A757).
     if (result.parentGone) {
         val where = when {
             result.parentId == null -> "at the top level"
@@ -581,30 +400,19 @@ class TrashFoldersModel(
         }
     }
 
-    /**
-     * Restores [folder] with its subfolders and the notes still where its delete left them. Its
-     * parent gone and its way up through a deleted notebook (409 `restore_needs_folder`, T43
-     * A757), nothing is restored: Trash asks to restore that notebook first, or to leave it.
-     */
+    /** Restores [folder] with its subfolders and the notes still where its delete left them. */
     fun restore(folder: TrashFolderUi) {
         if (state.value.busy) return
-        state.update { it.copy(busy = true, message = null, asking = null) }
+        state.update { it.copy(busy = true, message = null) }
         work.launch {
-            var asking: FolderRestoreAsk? = null
             val said = try {
                 restoreAndSay(folder)
             } catch (error: ApiException) {
-                if (error.code == "restore_needs_folder") {
-                    val notebook = error.notebook?.takeIf { nb -> listed.value.any { it.id == nb.id } }
-                    asking = FolderRestoreAsk(folder, notebook?.let { NotebookInTrash(it.id, it.name.ifBlank { "Untitled folder" }) }, folderRestoreAskText(folder.name, error.notebook?.name))
-                    null
-                } else {
-                    "Penmoss couldn’t restore “${folder.name}”: ${error.message?.trimEnd('.')}."
-                }
+                "Penmoss couldn’t restore “${folder.name}”: ${error.message?.trimEnd('.')}."
             } catch (error: IOException) {
                 "Offline: restoring “${folder.name}” needs Penmoss. Try again once the phone is online."
             }
-            state.update { it.copy(busy = false, message = said, asking = asking) }
+            state.update { it.copy(busy = false, message = said) }
         }
     }
 
@@ -613,32 +421,10 @@ class TrashFoldersModel(
         listed.update { list -> list.filterNot { it.id == folder.id } }
         // The tree comes from the server: the folder and its notes show after this sync.
         requestSync()
-        // Where it came back, named as this phone's tree has that folder (T43, A757).
+        // Where it came back, named as this phone's tree has that folder (A757).
         val names = store.observeFolders().first().associate { it.id to it.name }
         return restoredFolderMessage(folder.name, result) { id -> names[id] }
     }
-
-    /** Restores the notebook a folder was in (T43, A757), then the folder again. */
-    fun restoreNotebookFirst(ask: FolderRestoreAsk) {
-        val notebook = ask.notebook ?: return
-        if (state.value.busy) return
-        state.update { it.copy(busy = true, message = null, asking = null) }
-        work.launch {
-            val said = try {
-                api.restoreFolder(notebook.id)
-                listed.update { list -> list.filterNot { it.id == notebook.id } }
-                "Restored the notebook “${notebook.name}”. " + restoreAndSay(ask.folder)
-            } catch (error: ApiException) {
-                "Penmoss couldn’t restore “${notebook.name}”: ${error.message?.trimEnd('.')}."
-            } catch (error: IOException) {
-                "Offline: restoring “${notebook.name}” needs Penmoss. Try again once the phone is online."
-            }
-            state.update { it.copy(busy = false, message = said) }
-        }
-    }
-
-    /** Cancel: the folder stays in Trash. */
-    fun leaveInTrash(ask: FolderRestoreAsk) = state.update { it.copy(asking = null, message = "“${ask.folder.name}” stays in Trash.") }
 
     fun messageShown() = state.update { it.copy(message = null) }
 }

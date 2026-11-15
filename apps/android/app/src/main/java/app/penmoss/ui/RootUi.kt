@@ -74,9 +74,6 @@ internal class RootUi(
     /** Deleting a folder (T40 P4, NT4): counts what moves up. */
     var folderDeleting by mutableStateOf<FolderItem?>(null)
 
-    /** Turning a notebook back into a folder (T43, A756): asked first. */
-    var notebookTurningBack by mutableStateOf<FolderItem?>(null)
-
     /** Reordering the top level's folders (T40 P4, NT7). */
     var homeReordering by mutableStateOf(false)
 
@@ -158,11 +155,6 @@ internal class RootUi(
     /** Says what a folder action did, over every screen. */
     fun toast(message: String) = Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 
-    fun turnBack(folder: FolderItem) {
-        // Outlives the screen: a folder write the person asked for.
-        keep { toast(setNotebookAndSay(graph, folder.id, folder.name, on = false)) }
-    }
-
     fun createFolder(name: String, parent: String?) {
         // Outlives the screen: a folder write the person asked for.
         keep { toast(createFolderAndSay(graph, name, parent)) }
@@ -193,10 +185,10 @@ internal class RootUi(
         keep { reorderNoteAndSay(graph, id, before, after) }
     }
 
-    /** Deletes [folder] once the person has confirmed it (T40 P4, NT4): a notebook goes to Trash with its notes (T43, A755). */
-    fun deleteFolder(folder: FolderItem, notebook: Boolean) {
+    /** Deletes [folder] once the person has confirmed it (T40 P4, NT4). */
+    fun deleteFolder(folder: FolderItem) {
         // Outlives the screen: a delete the person confirmed.
-        keep { toast(if (notebook) deleteFolderAndSay(graph, folder.id, folder.name, notebook = true) else deleteFolderAndSay(graph, folder.id, folder.name)) }
+        keep { toast(deleteFolderAndSay(graph, folder.id, folder.name)) }
     }
 
     /** Moves one note to [folder] (null: the top level), and says so. */
@@ -220,7 +212,7 @@ internal class RootUi(
         screenScope.launch {
             folderDeleting = graph.store.observeFolders().first()
                 .firstOrNull { it.id == folderId }
-                ?.let { FolderItem(it.id, it.name, notebook = it.notebook) }
+                ?.let { FolderItem(it.id, it.name) }
         }
     }
 
@@ -242,7 +234,6 @@ internal class RootUi(
                 panel = panel,
                 openedFrom = from,
                 folderPath = graph.feedback.collector.folderPath(folderId),
-                notebook = graph.feedback.collector.notebookName(folderId),
             )
             graph.feedback.open(where, noteId, extras, window) { nav.open(FeedbackRoutes.FORM) }
         }
@@ -284,8 +275,8 @@ internal sealed interface FolderNaming {
     /** A folder under [parentId] (null: the top level). */
     data class Create(val parentId: String?) : FolderNaming
 
-    /** A new name for [id], starting from [current]; [notebook]: a notebook's (T43). */
-    data class Rename(val id: String, val current: String, val notebook: Boolean = false) : FolderNaming
+    /** A new name for [id], starting from [current]. */
+    data class Rename(val id: String, val current: String) : FolderNaming
 }
 
 /**
@@ -419,7 +410,7 @@ internal fun RootDialogs(root: RootUi) {
         FolderSheet(
             name = folder.name,
             onRename = {
-                root.folderNaming = FolderNaming.Rename(folder.id, folder.name, folder.notebook)
+                root.folderNaming = FolderNaming.Rename(folder.id, folder.name)
                 root.folderActing = null
             },
             onNewSubfolder = {
@@ -440,23 +431,6 @@ internal fun RootDialogs(root: RootUi) {
                 root.folderActing = null
                 root.newNote(folder.id)
             },
-            notebook = folder.notebook,
-            onTurnBack = {
-                root.notebookTurningBack = folder
-                root.folderActing = null
-            },
-        )
-    }
-
-    root.notebookTurningBack?.let { folder ->
-        NotebookTurnBackDialog(
-            name = folder.name,
-            defaultName = app.penmoss.data.Notebooks.DEFAULT_NAME,
-            onConfirm = {
-                root.turnBack(folder)
-                root.notebookTurningBack = null
-            },
-            onDismiss = { root.notebookTurningBack = null },
         )
     }
 
@@ -470,7 +444,7 @@ internal fun RootDialogs(root: RootUi) {
                 onDismiss = { root.folderNaming = null },
             )
             is FolderNaming.Rename -> FolderNameDialog(
-                title = if (naming.notebook) "Rename Notebook" else "Rename Folder",
+                title = "Rename Folder",
                 initial = naming.current,
                 onConfirm = { name ->
                     root.renameFolder(naming.id, name)
@@ -545,26 +519,13 @@ private fun FolderDeleteHost(root: RootUi, folder: FolderItem, onDone: () -> Uni
         value = root.graph.store.folderDeleteSummary(folder.id)
     }
     val counted = summary ?: return
-    if (counted.notebook) {
-        // A notebook goes to Trash with its notes (T43, A755).
-        NotebookDeleteDialog(
-            name = folder.name,
-            notes = counted.notes,
-            onConfirm = {
-                root.deleteFolder(folder, notebook = true)
-                onDone()
-            },
-            onDismiss = onDone,
-        )
-        return
-    }
     FolderDeleteDialog(
         name = folder.name,
         notes = counted.notes,
         subfolders = counted.subfolders,
         destination = counted.destination,
         onConfirm = {
-            root.deleteFolder(folder, notebook = false)
+            root.deleteFolder(folder)
             onDone()
         },
         onDismiss = onDone,

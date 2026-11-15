@@ -191,7 +191,6 @@ internal const val RECENT_SWITCHER_NOTES = 9
 internal fun RecentSwitcherHost(graph: app.penmoss.NotebookGraph, currentNote: String?, openNote: (String) -> Unit) {
     val switch = androidx.compose.runtime.remember { RecentSwitch() }
     val recent by androidx.compose.runtime.remember(graph) {
-        // Open notebooks only (T43, A752).
         graph.store.observeRecent(RECENT_SWITCHER_NOTES + 1)
             .map { Items.notes(it, System.currentTimeMillis()) }
             .distinctUntilChanged()

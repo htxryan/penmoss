@@ -21,7 +21,6 @@ import mockwebserver3.MockWebServer
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -332,88 +331,5 @@ class TrashModelTest {
         assertTrue(entries[0].detail, entries[0].detail.endsWith("goes for good in 28 days"))
         assertTrue(entries[1].detail, entries[1].detail.endsWith("goes for good today"))
         assertEquals("Untitled", trashEntries(listOf(app.penmoss.data.TrashRow("c", "", 0, 0, 0)), emptyList(), now).single().title)
-    }
-
-    // --- a restore the server could not place (T43, A757: fail closed) ---
-
-    /** A restore the server answered 409 `restore_needs_folder`: back in Trash here, the question kept. */
-    private suspend fun refusedRestore(id: String, title: String, notebook: String?) {
-        inTrash(id, now - day, title)
-        store.restoreFromTrash(id)
-        assertTrue(store.restoreSending(id))
-        store.restoreNeedsFolder(id, notebook, notebook?.let { "Work" }, "The note was in the notebook “Work”, which is in Trash")
-    }
-
-    private suspend fun Scope.asked(what: (RestoreAskUi?) -> Boolean): RestoreAskUi? = withTimeout(5_000) { model.asking.first(what) }
-
-    @Test
-    fun aRestoreWithNoSafePlaceOffersToRestoreItsNotebookFirst() {
-        runBlocking { refusedRestore("soup", "Soup", "w") }
-        // Trash's folders, read once the question names a notebook; then the notebook's restore.
-        respond("""{"folders":[{"id":"w","name":"Work","notebook":true,"notes":2,"deletedAt":${now - day}}]}""")
-        respond("""{"id":"w","restored":true,"notebook":true,"notes":2}""")
-        withModel {
-            val ask = asked { it?.notebook != null }!!
-            assertEquals("Soup", ask.title)
-            assertEquals(NotebookInTrash("w", "Work"), ask.notebook)
-            assertEquals("The note was in the notebook “Work”, which is in Trash.", ask.message)
-            assertEquals("/api/folders/trash", server.takeRequest().target)
-            model.restoreNotebookFirst(ask)
-            val ui = until { it.message != null }
-            assertEquals("Restored the notebook “Work”. “Soup” goes back where it was with the next sync.", ui.message)
-            assertEquals("/api/folders/w/restore", server.takeRequest().url.encodedPath)
-            asked { it == null }
-            // The note's restore is queued again, sent with the next pass (no folder named).
-            assertEquals(app.penmoss.data.NoteEntity.RESTORE_QUEUED, store.note("soup")!!.trashChange)
-            assertTrue(listedHere("soup"))
-            assertEquals(1, syncs)
-        }
-    }
-
-    @Test
-    fun aRestoreWithNoSafePlaceGoesToTheFolderThePersonChooses() {
-        runBlocking {
-            store.saveTree(app.penmoss.engine.api.SyncTree("h1", folders = listOf(app.penmoss.engine.api.TreeFolder("p", "Projects"))))
-            refusedRestore("soup", "Soup", null)
-        }
-        respond("""{"folderId":"p","restored":true,"seq":7}""")
-        withModel {
-            val ask = asked { it != null }!!
-            // Trash no longer knows its notebook: nothing to restore first, and nothing read for it.
-            assertNull(ask.notebook)
-            assertFalse(listedHere("soup"))
-            model.restoreInto(ask, "p", "Projects")
-            assertEquals("Restored “Soup” to Projects.", until { it.message != null }.message)
-            val sent = server.takeRequest()
-            assertEquals("/api/notes/soup/restore", sent.url.encodedPath)
-            assertEquals("""{"folderId":"p"}""", sent.body!!.utf8())
-            asked { it == null }
-            val note = store.note("soup")!!
-            assertFalse(note.deleted)
-            // Filed there by the next pass, as any restore is.
-            assertTrue(note.toFile)
-            assertEquals("p", note.fileIn)
-            assertEquals(app.penmoss.data.NoteEntity.RESTORE_SENT, note.trashChange)
-            assertEquals(1, syncs)
-        }
-    }
-
-    @Test
-    fun aRestoreWithNoSafePlaceCanBeLeftInTrashAndOfflineTheQuestionStays() {
-        runBlocking { refusedRestore("soup", "Soup", null) }
-        withModel {
-            val ask = asked { it != null }!!
-            // Offline: nothing changes, and it is still asked.
-            server.close()
-            model.restoreInto(ask, null, Items.TOP_LEVEL)
-            assertEquals("Offline: restoring “Soup” needs Penmoss. Try again once the phone is online.", until { it.message != null }.message)
-            shown()
-            assertEquals("soup", model.asking.value?.noteId)
-            model.leaveInTrash(ask)
-            assertEquals("“Soup” stays in Trash.", until { it.message != null }.message)
-            asked { it == null }
-            assertTrue(store.note("soup")!!.deleted)
-            assertEquals(0, syncs)
-        }
     }
 }

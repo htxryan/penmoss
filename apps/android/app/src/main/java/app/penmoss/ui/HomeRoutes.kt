@@ -45,18 +45,16 @@ internal data class SyncLine(
     val stopped: Boolean = false,
 )
 
-/** Home (T32; T43, T51, T53), All Notes, and the captures Penmoss refused (A345). */
+/** Home (T32; T51, T53), All Notes, and the captures Penmoss refused (A345). */
 internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
     val graph = root.graph
     val nav = root.nav
     composable("home") {
         val home by remember {
             // Recent: opened here or edited anywhere, whichever is later (T40 P6, FD7).
-            // The notebooks at the top (T43, A750).
             combine(graph.store.observeRecent(RECENT), graph.store.observeFolders(), graph.store.observeRootSortMode()) { notes, folders, mode ->
                 val now = System.currentTimeMillis()
-                val (notebooks, topFolders) = Items.home(mode, folders, now)
-                HomeView(Items.notes(notes, now), notebooks, topFolders)
+                HomeView(Items.notes(notes, now), Items.home(mode, folders, now))
             }.distinctUntilChanged().flowOn(Dispatchers.Default)
         }.collectAsStateWithLifecycle(HomeView())
         val rootSort by remember { graph.store.observeRootSortMode().distinctUntilChanged() }.collectAsStateWithLifecycle("manual")
@@ -69,14 +67,6 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
             // The device's pins (A1014), this notebook's notes.
             graph.store.observeQuickAccess(graph.device.settings.map { it.settings.quickAccess }).map { Items.notes(it, System.currentTimeMillis()) }.distinctUntilChanged().flowOn(Dispatchers.Default)
         }.collectAsStateWithLifecycle(emptyList())
-        // Each pinned note's notebook, for Quick Access's notebook names (T53 item 10).
-        val quickAccessNotebooks by remember {
-            combine(graph.store.observeQuickAccess(graph.device.settings.map { it.settings.quickAccess }), graph.store.observeFolders()) { pins, folders ->
-                val index = app.penmoss.data.Notebooks.index(folders)
-                val names = folders.associate { it.id to it.name }
-                pins.associate { pin -> pin.id to (index.ofFolder(pin.folderId)?.let(names::get) ?: app.penmoss.data.Notebooks.DEFAULT_NAME) }
-            }.distinctUntilChanged().flowOn(Dispatchers.Default)
-        }.collectAsStateWithLifecycle(emptyMap())
         val layout = HomeLayout.of(settingsNow.settings)
         /** A change to the sidebar's layout, once the phone knows the settings (A411). */
         val changeLayout = { key: String, value: kotlinx.serialization.json.JsonElement ->
@@ -88,10 +78,10 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
                 quickAccess = quickAccess,
                 // The sidebar's sections and Quick Access (T53 items 8 and 10), synced settings.
                 layout = layout,
-                quickAccessNotebooks = quickAccessNotebooks,
+                // Every pin is this notebook's note, named as its heading is (T53 item 10).
+                quickAccessNotebooks = quickAccess.associate { it.id to app.penmoss.ui.screens.HOME_NOTEBOOK_NAME },
                 recent = home.recent,
                 folders = home.folders,
-                notebooks = home.notebooks,
                 status = sync.text,
                 statusAlert = sync.alert,
                 syncing = sync.syncing,
@@ -180,10 +170,9 @@ internal fun NavGraphBuilder.homeRoutes(root: RootUi, sync: SyncLine) {
     }
 }
 
-/** Home's lists (T43): Recent, the notebooks, and the default notebook's top-level folders. */
+/** Home's lists: Recent and the top-level folders. */
 private data class HomeView(
     val recent: List<NoteItem> = emptyList(),
-    val notebooks: List<FolderItem> = emptyList(),
     val folders: List<FolderItem> = emptyList(),
 )
 
