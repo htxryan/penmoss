@@ -262,11 +262,12 @@ internal fun SectionScreen(
     }
 }
 
+/** A group's title; the full width, so Search Settings' mark (settingRow) spans the row as it does a ListItem's. */
 @Composable
 internal fun GroupTitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
-        modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp).semantics { heading() },
+        modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp).semantics { heading() },
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
     )
