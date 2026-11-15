@@ -999,7 +999,12 @@ async function openView(app: ElectronApplication, page: Page): Promise<void> {
   await version.click();
   await panel.getByRole('button', { name: 'View This Version' }).click();
   await expect(page.getByTestId('history-view')).toBeVisible();
-  await expect(page.getByTestId('history-view-left')).toBeVisible();
+  // The newest version is the note as it is now, so Diff (the default, A1597) may show no sides,
+  // only "No changes from now": what this test needs is the view's head.
+  await expect(page.locator('.history-view-head')).toBeVisible();
+  await expect(
+    page.getByTestId('history-view-left').or(page.getByTestId('history-view-no-changes')),
+  ).toBeVisible();
 }
 
 test('View This Version: its head drags the window as the title bar does, its buttons click (A1572)', async () => {
