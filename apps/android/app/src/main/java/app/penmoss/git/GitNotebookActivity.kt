@@ -93,7 +93,8 @@ class GitNotebookActivity : ComponentActivity() {
             val id = localId
             // A pause for the file picker or the share sheet is not a leave (#174 delta review).
             val leaving = isFinishing
-            graph.scope.launch { runCatching { hub.source(id).front(false, leaving) } }
+            // The process scope, not the activity's: leaving closes the page after the activity is gone.
+            graph.launchReporting(kotlinx.coroutines.Dispatchers.Main.immediate) { hub.source(id).front(false, leaving) }
         }
     }
 

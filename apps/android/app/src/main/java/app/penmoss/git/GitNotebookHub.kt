@@ -86,7 +86,16 @@ class GitNotebookHub(
      * threw) is logged and stays there: the supervisor keeps the others, and the handler keeps it
      * from the thread's uncaught handler, which would end the app.
      */
-    private val io = CoroutineScope(SupervisorJob() + Dispatchers.IO + LOGGED)
+    /**
+     * The hub's own work (syncs it starts, recovery reads): a failure is logged and reported to the
+     * app's errors, which feedback's context lists (A791, review A11), and ends no other task.
+     */
+    private val io = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO + kotlinx.coroutines.CoroutineExceptionHandler { context, error ->
+            LOGGED.handleException(context, error)
+            runCatching { main().reportUnlessOffline(error) }
+        },
+    )
     val label: String = deviceLabel(Build.MODEL ?: "")
 
     /** The token and writer secrets, sealed with a Keystore key of their own (A857). */
@@ -193,7 +202,7 @@ class GitNotebookHub(
         // The page has it whole now: Room's rows of it go, and Room lists it afresh.
         RoomOldCopies(source.graph.database).drop(noteId)
         readWithheld(localId)
-        io.launch { runCatching { source.syncNow() } }
+        io.launch { source.syncNow() }
     }
 
     private fun readRecoveries(): Map<String, GitRecoveryNotice> =
@@ -354,7 +363,7 @@ class GitNotebookHub(
         val result = notebooks.add(remote, branch, dir, name, token)
         refresh()
         if (result is AddResult.Added) {
-            io.launch { runCatching { source(result.notebook.localId).syncNow() } }
+            io.launch { source(result.notebook.localId).syncNow() }
             scheduleWork()
         }
         return result
@@ -389,7 +398,7 @@ class GitNotebookHub(
     /** Confirm Delete for good again (only notes confirmed here once; A855), then sync. */
     suspend fun confirmPurgesAgain(localId: String, ids: List<String>) {
         notebooks.confirmPurgesAgain(localId, ids)
-        io.launch { runCatching { source(localId).syncNow() } }
+        io.launch { source(localId).syncNow() }
     }
 
     /**
@@ -398,7 +407,7 @@ class GitNotebookHub(
      */
     suspend fun confirmPurge(localId: String, noteId: String) {
         notebooks.confirmPurge(localId, noteId)
-        io.launch { runCatching { source(localId).syncNow() } }
+        io.launch { source(localId).syncNow() }
     }
 
     /**
@@ -410,7 +419,7 @@ class GitNotebookHub(
             return "This note is already deleted for good in the repository, so Keep note did nothing."
         }
         source(localId).engine().keep(noteId, keep)
-        io.launch { runCatching { source(localId).syncNow() } }
+        io.launch { source(localId).syncNow() }
         return null
     }
 
@@ -629,7 +638,7 @@ class GitNotebookHub(
             current = engine to port
             recoveryDue = true
             recovery.soon()
-            io.launch { runCatching { readWithheld(localId) } }
+            io.launch { readWithheld(localId) }
             engine
         }
 

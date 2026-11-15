@@ -145,10 +145,10 @@ class HistoryModel(
     fun load() {
         work.launch {
             state.update { it.copy(loading = true) }
-            val cached = runCatching { store.cachedHistory(noteId)?.let { decode(it.json) to it.fetchedAt } }.getOrNull()
+            val cached = app.penmoss.engine.attempt { store.cachedHistory(noteId)?.let { decode(it.json) to it.fetchedAt } }.getOrNull()
             try {
                 val history = api.history(noteId)
-                runCatching { store.cacheHistory(noteId, PenmossJson.encodeToString(NoteHistory.serializer(), history)) }
+                app.penmoss.engine.attempt { store.cacheHistory(noteId, PenmossJson.encodeToString(NoteHistory.serializer(), history)) }
                 state.update {
                     it.copy(
                         loading = false,

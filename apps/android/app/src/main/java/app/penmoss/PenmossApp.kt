@@ -299,9 +299,23 @@ class AppGraph(
         onRetry = { sync.requestSync(); sendFeedbackSoon() },
     )
 
+    /**
+     * Starts work no screen owns (a sync, an outbox's send) on the process scope, and reports a
+     * failure to [errors], which feedback's context lists (A791, review A11). Cancellation is not a
+     * failure, and nor is being offline. Work a screen starts for itself belongs on the screen's
+     * own scope.
+     */
+    fun launchReporting(context: kotlin.coroutines.CoroutineContext = Dispatchers.IO, block: suspend CoroutineScope.() -> Unit): kotlinx.coroutines.Job =
+        scope.launch(context) { app.penmoss.engine.attempt { block() }.onFailure(::reportUnlessOffline) }
+
+    /** A failure for [errors], unless it is only the network being away (A791 leaves those out). */
+    fun reportUnlessOffline(error: Throwable) {
+        if (error !is java.io.IOException) errors.report(error)
+    }
+
     /** Sends what feedback is due now, outside a sync pass (the app's own graph has none). */
     private fun sendFeedbackSoon() {
-        scope.launch(Dispatchers.IO) { runCatching { feedbackOutbox.sendDue() } }
+        launchReporting { feedbackOutbox.sendDue() }
     }
 
     /**
@@ -310,7 +324,8 @@ class AppGraph(
      */
     private fun githubTokenSaved() {
         val graphs = listOf(this) + (gitIfAny?.madeGraphs().orEmpty())
-        scope.launch(Dispatchers.IO) { for (graph in graphs) runCatching { graph.feedbackOutbox.tokenSaved() } }
+        // One outbox that fails does not keep the others from sending.
+        for (graph in graphs) launchReporting { graph.feedbackOutbox.tokenSaved() }
     }
 
     private val work = PassWork(store, attachments, filer, openEditors, captures, SettingsSender(store, api), FolderSender(store, api), TrashSender(store, api), feedback = feedbackOutbox)
@@ -443,7 +458,7 @@ class AppGraph(
         // device's change shows (the notebook's own screens pull it every minute while open).
         val hub = gitIfAny
         val id = hub?.journal()
-        if (hub != null && id != null) scope.launch(Dispatchers.IO) { runCatching { hub.syncNow(id) } }
+        if (hub != null && id != null) launchReporting { hub.syncNow(id) }
     }
 
     /**
@@ -453,7 +468,7 @@ class AppGraph(
     fun syncNotebookNow() {
         val notebook = source as? app.penmoss.git.GraphSource.Git ?: return
         val hub = main?.git ?: return
-        scope.launch(Dispatchers.IO) { runCatching { hub.syncNow(notebook.localId) } }
+        launchReporting { hub.syncNow(notebook.localId) }
     }
 
     /** The app left the screen: git notebooks sync what waits once, and a run follows soon for the rest (A825, G8). */

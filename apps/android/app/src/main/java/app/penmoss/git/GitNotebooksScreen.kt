@@ -790,7 +790,7 @@ fun GitNotebooksRoute(
             }
         },
         onCadence = { id, push, pull -> run(id) { hub.update(id, pushDelayS = push, pullEveryMin = pull) } },
-        onShowPurges = { id -> scope.launch { purges[id] = runCatching { hub.purgesToConfirm(id) }.getOrDefault(emptyList()) } },
+        onShowPurges = { id -> scope.launch { purges[id] = app.penmoss.engine.attempt { hub.purgesToConfirm(id) }.getOrDefault(emptyList()) } },
         onConfirmPurges = { id, ids -> run(id) { hub.confirmPurgesAgain(id, ids); purges.remove(id) } },
         onDismissRecovery = hub::dismissRecovery,
         onSaveUnrecovered = saveUnrecovered,

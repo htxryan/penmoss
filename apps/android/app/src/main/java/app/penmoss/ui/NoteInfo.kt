@@ -236,14 +236,14 @@ class BacklinksModel(
             state.update { it.copy(loading = true) }
             try {
                 val reply = api.backlinks(noteId, title)
-                runCatching { store.cacheBacklinks(noteId, PenmossJson.encodeToString(BacklinksReply.serializer(), reply)) }
+                app.penmoss.engine.attempt { store.cacheBacklinks(noteId, PenmossJson.encodeToString(BacklinksReply.serializer(), reply)) }
                 server = Backlinks.lists(reply) to BacklinksSource.SERVER
                 readAt = null
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
                 if (error !is IOException && error !is ApiException) throw error
-                val cached = runCatching { store.cachedBacklinks(noteId) }.getOrNull()
+                val cached = app.penmoss.engine.attempt { store.cachedBacklinks(noteId) }.getOrNull()
                 val reply = cached?.let { row ->
                     runCatching { PenmossJson.decodeFromString(BacklinksReply.serializer(), row.json) }.getOrNull()
                 }
