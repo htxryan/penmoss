@@ -101,6 +101,7 @@
   background: none;
   color: var(--pm-muted);
   font: inherit;
+  font-size: var(--pm-text-item);
   cursor: pointer;
 }
 
@@ -111,7 +112,7 @@
 .nset-tab[aria-selected='true'] {
   border-bottom-color: var(--pm-accent);
   color: var(--pm-fg);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .nset-tab:focus-visible {
@@ -183,7 +184,8 @@
 
 .nset-foot-note {
   margin: 0.4rem 0 0;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-help);
 }
 
 /* Sync's diagnostics, closed until wanted. */
@@ -221,7 +223,7 @@
   align-items: center;
   gap: 0.35rem;
   color: var(--pm-success);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .nset-okline > .btn {
@@ -259,6 +261,7 @@
   background: none;
   color: var(--pm-fg);
   font: inherit;
+  font-size: var(--pm-text-row-label);
   text-align: left;
   cursor: pointer;
 }
@@ -280,12 +283,12 @@
 }
 
 .nset-fold-name {
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .nset-fold-count {
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-meta);
 }
 
 .nset-fold-body {

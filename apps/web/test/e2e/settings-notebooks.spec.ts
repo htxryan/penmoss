@@ -1,5 +1,5 @@
 // Settings → Notebooks and Agents: the list, a notebook’s page, the primary notebook.
-import { expect, type Page, test } from './fixtures';
+import { expect, type Locator, type Page, test } from './fixtures';
 import { collectErrors, ULID } from './support/app';
 import { SLOW_SHELL_MS } from './support/git-host';
 
@@ -29,10 +29,13 @@ test.describe('in Quanta, with two notes', () => {
     await expect(settings.getByTestId('git-notebook')).toHaveCount(0);
     await expect(settings.getByTestId('git-sync-now')).toHaveCount(0);
     await expect(page.getByTestId('git-local-agents')).toHaveCount(0);
-    await expect(page.getByTestId('git-add')).toHaveCount(0);
+    await expect(page.getByTestId('add-notebook')).toHaveCount(0);
     if (SHOTS) await page.screenshot({ path: `${SHOTS}/git-notebooks.png` });
+    // Add Notebook… is the first run's own screens, in a sheet (A1562); Cancel closes it.
     await settings.getByTestId('git-add-open').click();
-    await expect(page.getByTestId('git-add')).toBeVisible();
+    await expect(page.getByTestId('add-notebook')).toBeVisible();
+    await page.getByTestId('first-run-cancel').click();
+    await expect(page.getByTestId('add-notebook')).toHaveCount(0);
 
     // A row opens that notebook's page, at its own address, in three tabs (PEN-146); All
     // Notebooks in the nav returns to the list.
@@ -286,6 +289,21 @@ test.describe('in Quanta, with a folder, a long note and a source', () => {
     const copy = page.getByTestId('git-settings-copy');
     await expect(copy.getByTestId('git-copy-from').locator('option:checked')).toHaveText('Quanta');
     await expect(copy.getByTestId('git-copy-to').locator('option:checked')).toHaveText('Work');
+    // Its note is help text, as a row's is (A1561): it took the page's body size, larger than
+    // the rows' help above it (Ryan's finding 4).
+    const type = (locator: Locator) =>
+      locator.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return [style.fontSize, style.fontWeight, style.lineHeight, style.color].join(' ');
+      });
+    const note = copy.getByText(/^Replaces Work’s settings with Quanta’s/);
+    const help = page.locator('.settings-content .lf-row-help').first();
+    await expect(help).toBeVisible();
+    expect(await type(note)).toBe(await type(help));
+    const label = page.locator('.settings-content .lf-row-label').first();
+    const px = async (locator: Locator) =>
+      parseFloat(await locator.evaluate((element) => getComputedStyle(element).fontSize));
+    expect(await px(note)).toBeLessThan(await px(label));
     await copy.getByTestId('git-copy-settings').click();
     await expect(copy.getByTestId('git-copy-settings-done')).toHaveText(
       'Copied Quanta’s settings to Work.',

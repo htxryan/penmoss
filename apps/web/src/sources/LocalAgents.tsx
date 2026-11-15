@@ -204,7 +204,7 @@ export function GitLocalAgents({
                     text={agent.claudeLaunch}
                     testId="git-local-agent-launch"
                   />
-                  <p className="muted" data-testid="git-local-agent-channel-note">
+                  <p className="t-help" data-testid="git-local-agent-channel-note">
                     Comments you send to its session with Send to… arrive in it. Added{' '}
                     <code>{agent.server}</code> before? Run{' '}
                     <code>claude mcp remove {agent.server}</code> first.
@@ -283,7 +283,7 @@ export function GitLocalAgents({
           Connect
         </button>
       </form>
-      <p role="status" className="muted" data-testid="git-local-agent-message">
+      <p role="status" className="t-help" data-testid="git-local-agent-message">
         {message}
       </p>
     </section>
@@ -364,7 +364,7 @@ export function CommandLine({ git }: { git: DesktopGit }) {
         data-testid="git-cli"
       >
         {head}
-        <p className="muted" data-testid="git-cli-state">
+        <p className="t-help" data-testid="git-cli-state">
           Checking…
         </p>
       </section>
@@ -418,7 +418,7 @@ export function CommandLine({ git }: { git: DesktopGit }) {
       </p>
       {mine && cli.onPath === false ? (
         <div data-testid="git-cli-path">
-          <p className="muted">
+          <p className="t-help">
             Its folder is not on your terminal’s PATH yet. Add this line to {cli.profile}, then open
             a new terminal:
           </p>
@@ -470,7 +470,7 @@ export function CommandLine({ git }: { git: DesktopGit }) {
         <summary>Without the command</summary>
         <CopyBlock label="Run the CLI as" text={cli.direct} testId="git-cli-direct" />
       </details>
-      <p role="status" className="muted" data-testid="git-cli-message">
+      <p role="status" className="t-help" data-testid="git-cli-message">
         {message}
       </p>
     </section>

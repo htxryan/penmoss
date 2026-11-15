@@ -30,14 +30,14 @@
 
 .feedback-intro {
   margin: 0;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-body);
 }
 
 /* Waiting to Send (PEN-146): the reports not sent yet, over the form that writes new ones. */
 .feedback-outbox h3 {
   margin: 0 0 0.35rem;
-  font-size: var(--pm-text-md);
-  font-weight: 600;
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
 }
 
 .feedback-outbox .list {
@@ -61,8 +61,8 @@
   display: block;
   margin-bottom: 0.35rem;
   padding: 0;
-  font-weight: 600;
-  font-size: var(--pm-text-sm);
+  font-weight: var(--pm-weight-row-label);
+  font-size: var(--pm-text-row-label);
 }
 
 /* A segmented control from real radio buttons: arrows move, Space picks, the reader says which. */
@@ -100,7 +100,7 @@
   border-radius: 0;
   background: var(--pm-bg);
   color: var(--pm-fg);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 .segment span::after {
@@ -108,13 +108,13 @@
   overflow: hidden;
   visibility: hidden;
   content: attr(data-label);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .segment input:checked + span {
   border-color: var(--pm-accent);
   background: var(--pm-accent-soft);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .segment input:focus-visible + span {
@@ -129,7 +129,7 @@
 .field-error {
   margin: 0.3rem 0 0;
   color: var(--pm-danger);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-help);
 }
 
 .feedback-field {
@@ -164,7 +164,7 @@
   position: absolute;
   top: 0;
   right: 0;
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
 }
 
 .feedback-toolbar {
@@ -184,7 +184,10 @@
 }
 
 .feedback-format-glyph {
-  font: 600 0.8rem/1 var(--pm-mono);
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-sm);
+  font-weight: var(--pm-weight-semibold);
+  line-height: var(--pm-leading-none);
 }
 
 .feedback-link {
@@ -219,7 +222,7 @@
   overflow: auto;
   padding: 0.5rem 0.7rem;
   outline: none;
-  line-height: 1.5;
+  line-height: var(--pm-leading-relaxed);
 }
 
 .feedback-description-editor p {
@@ -242,7 +245,7 @@
   border-radius: 0;
   background: var(--pm-hover);
   font-family: var(--pm-mono);
-  font-size: 0.9em;
+  font-size: var(--pm-text-code-inline);
 }
 
 .feedback-description-editor pre {
@@ -256,7 +259,7 @@
 
 .feedback-hint {
   margin: 0.3rem 0 0;
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-help);
 }
 
 .feedback-shots {
@@ -289,7 +292,7 @@
   display: flex;
   gap: 0.35rem;
   align-items: center;
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-help);
 }
 
 .feedback-shot-actions {
@@ -298,8 +301,8 @@
 }
 
 .feedback-context summary {
-  font-weight: 600;
-  font-size: var(--pm-text-sm);
+  font-weight: var(--pm-weight-row-label);
+  font-size: var(--pm-text-row-label);
   cursor: pointer;
 }
 
@@ -310,7 +313,7 @@
   margin: 0.5rem 0;
   padding: 0;
   border: 0;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 .feedback-groups label {
@@ -328,7 +331,10 @@
   border: 1px solid var(--pm-border);
   border-radius: 0;
   background: var(--pm-bg);
-  font: 0.75rem/1.45 var(--pm-mono);
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-code);
+  font-weight: var(--pm-weight-regular);
+  line-height: var(--pm-leading-code);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

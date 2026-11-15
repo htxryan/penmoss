@@ -38,12 +38,11 @@ body {
   font-family: var(--pm-font-body, var(--pm-font));
   /*
    * A step above a first heading (1.6em of the note's text), as on the web (T39 pass 3, A554),
-   * scaling with Note Font Size (T51, A944); 1.85rem where the variable is not read.
+   * scaling with Note Font Size (T51, A944): the note scale's title (type.css, A1561).
    */
-  font-size: 1.85rem;
-  font-size: calc(var(--pm-note-size, 16px) * 1.85);
-  font-weight: 700;
-  line-height: 1.25;
+  font-size: var(--pm-note-title-size);
+  font-weight: var(--pm-note-title-weight);
+  line-height: var(--pm-leading-tight);
   /* A long title wraps and the field grows with it (T39; host.ts sizes it where this is missing). */
   resize: none;
   field-sizing: content;
@@ -84,7 +83,7 @@ body {
   background: var(--pm-bg);
   color: var(--pm-fg);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--pm-text-item);
 }
 
 .note-body .pm-image-load[hidden] {

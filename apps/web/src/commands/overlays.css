@@ -26,7 +26,7 @@
   overflow: hidden;
   visibility: hidden;
   content: attr(data-label);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .keys {
@@ -44,7 +44,10 @@
   border-radius: 0;
   background: var(--pm-raised);
   color: var(--pm-muted);
-  font: 500 0.72rem/1.2 var(--pm-font);
+  font-family: var(--pm-font);
+  font-size: var(--pm-text-badge);
+  font-weight: var(--pm-weight-medium);
+  line-height: var(--pm-leading-tight);
   text-align: center;
 }
 
@@ -95,7 +98,7 @@
   background: transparent;
   color: var(--pm-fg);
   font: inherit;
-  font-size: 0.95rem;
+  font-size: var(--pm-text-lg);
 }
 
 .dlg-title {
@@ -110,14 +113,15 @@
 
 .dlg-title h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--pm-text-dialog-title);
+  font-weight: var(--pm-weight-dialog-title);
 }
 
 .dlg-title .muted {
   display: inline-flex;
   gap: 0.35rem;
   align-items: center;
-  font-size: 0.78rem;
+  font-size: var(--pm-text-meta);
 }
 
 .dlg-list {
@@ -144,7 +148,7 @@
   padding: 0 0.9rem;
   border-top: 1px solid var(--pm-border);
   color: var(--pm-muted);
-  font-size: 0.72rem;
+  font-size: var(--pm-text-meta);
 }
 
 .dlg-foot .grow {
@@ -162,7 +166,7 @@
 
 .dlg-options .display-toggle {
   min-height: 2rem;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 /* Move to folder… (T39): indented by depth as in the tree, up to twelve levels. */
@@ -173,8 +177,8 @@
 .grp-h {
   padding: 0.55rem 0.6rem 0.25rem;
   color: var(--pm-muted);
-  font-size: 0.68rem;
-  font-weight: 600;
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -186,7 +190,7 @@
   min-height: 2.2rem;
   padding: 0.35rem 0.6rem;
   border-radius: 0;
-  font-size: 0.86rem;
+  font-size: var(--pm-text-item);
   cursor: pointer;
 }
 
@@ -218,7 +222,7 @@
 
 .opt .ot b {
   color: var(--pm-accent);
-  font-weight: 650;
+  font-weight: var(--pm-weight-semibold);
 }
 
 /* On the selected option's accent tint, matched letters stay text-coloured for contrast (T28). */
@@ -229,12 +233,12 @@
 .opt .ot .p {
   margin-left: 0.4rem;
   color: var(--pm-muted);
-  font-size: 0.75rem;
+  font-size: var(--pm-text-meta);
 }
 
 .opt .os {
   color: var(--pm-muted);
-  font-size: 0.75rem;
+  font-size: var(--pm-text-meta);
   white-space: nowrap;
 }
 
@@ -249,7 +253,7 @@
 .mru-num {
   width: 1.2rem;
   color: var(--pm-muted);
-  font-size: 0.75rem;
+  font-size: var(--pm-text-meta);
   text-align: center;
 }
 
@@ -261,14 +265,14 @@
 
 .mru .two .t {
   overflow: hidden;
-  font-weight: 550;
+  font-weight: var(--pm-weight-medium);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .mru .two .s {
   color: var(--pm-muted);
-  font-size: 0.72rem;
+  font-size: var(--pm-text-meta);
 }
 
 .cheat-dlg {
@@ -286,8 +290,8 @@
 .cheat h3 {
   margin: 1rem 0 0.35rem;
   color: var(--pm-muted);
-  font-size: 0.68rem;
-  font-weight: 600;
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -295,7 +299,7 @@
 .cheat .cheat-note {
   margin: 0 0 0.3rem;
   color: var(--pm-muted);
-  font-size: 0.75rem;
+  font-size: var(--pm-text-help);
 }
 
 .cheat .cr {
@@ -304,5 +308,5 @@
   gap: 0.6rem;
   padding: 0.3rem 0;
   border-bottom: 1px solid var(--pm-border);
-  font-size: 0.82rem;
+  font-size: var(--pm-text-item);
 }

@@ -7,6 +7,7 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 import { httpHost } from '../../../../packages/git-notebook/test/support/git';
 import { FakeGitHubBrowse } from '../../../../packages/git-notebook/test/support/fake-github-browse';
 import {
+  addNotebookPasteUrl,
   answerChecks,
   body,
   capturePage,
@@ -163,20 +164,6 @@ function recordOutsideTraffic(page: Page, into: string[]): void {
       into.push(typeof payload === 'string' ? payload : payload.toString('latin1'));
     });
   });
-}
-
-/** Adds a git notebook in Settings → Git notebooks; returns its card. */
-async function addNotebook(page: Page, input: { remote: string; name?: string }) {
-  // The first notebook is added on the first run (T59, A1030; firstRunPasteUrl); later ones in
-  // Settings, whose form opens from Add a Git Notebook… under the list (A1098).
-  const settings = page.getByTestId('git-notebooks-settings');
-  await expect(settings).toBeVisible();
-  await settings.getByTestId('git-add-open').click();
-  const form = settings.getByTestId('git-add');
-  await form.getByTestId('git-add-remote').fill(input.remote);
-  if (input.name) await form.getByTestId('git-add-name').fill(input.name);
-  await form.locator('button[type="submit"]').click();
-  return settings;
 }
 
 async function newNote(page: Page, title: string, text: string): Promise<string> {
@@ -422,10 +409,10 @@ test('a notebook made on the Mac, notes and the Journal in it, synced on quit, n
   execFileSync('git', ['init', '--bare', '--quiet', '--initial-branch=main', otherRemote]);
   const otherName = `Other ${RUN}`;
   await go(page, '/settings/git-notebooks');
-  await addNotebook(page, { remote: `file://${otherRemote}`, name: otherName });
-  await expect(settings.getByTestId('git-add-message')).toContainText(
-    `Made the notebook “${otherName}”`,
-  );
+  await addNotebookPasteUrl(page, `file://${otherRemote}`, otherName);
+  await expect(
+    settings.getByTestId('git-notebook').getByRole('heading', { name: otherName }),
+  ).toBeVisible();
   await chooseMenu(app, 'app.home');
   const other = section(page, otherName);
   await other.getByTestId('tree-root-drop').click();
@@ -555,10 +542,9 @@ test('two git notebooks side by side, one over HTTP; two windows, History, a tag
   answerChecks(launched, 'refuse');
   await go(page, '/settings/git-notebooks');
   const remote = `${host.origin}/notes.git`;
-  const settings = await addNotebook(page, { remote });
-  await expect(settings.getByTestId('git-add-message')).toContainText('Added “team”');
+  // It holds the notebook "team": Add Notebook asks no name and ends on its page (A1562).
+  const settings = await addNotebookPasteUrl(page, remote);
   expect(checksAsked(launched)).toEqual([]);
-  await settings.getByTestId('git-notebook-row').filter({ hasText: 'team' }).click();
   const card = settings.getByTestId('git-notebook').filter({ hasText: 'team' });
   // A1128: no Private row; the repository is shown instead.
   await expect(card.getByTestId('git-privacy')).toHaveCount(0);
@@ -570,8 +556,8 @@ test('two git notebooks side by side, one over HTTP; two windows, History, a tag
 
   // A script in the page, as an agent driving it would be, cannot remove the notebook: main
   // wants a click or a key press, then the owner check (Touch ID), which only a person can give
-  // (A855). Here nobody answers it. The click on Add a moment ago still
-  // counts as a person's for a few seconds (transient activation): the script runs after it.
+  // (A855). Here nobody answers it. The click on Continue a moment ago
+  // may still count as a person's for a few seconds (transient activation): the script runs after it.
   answerChecks(launched, 'refuse');
   await expect
     .poll(() => runInMainPage(app, 'navigator.userActivation.isActive', false), {

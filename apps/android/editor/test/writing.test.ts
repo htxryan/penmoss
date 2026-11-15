@@ -934,15 +934,23 @@ describe('the title against a first heading (T39 pass 3, A554)', () => {
   const size = (sheet: string, rule: RegExp) => Number(rule.exec(sheet)?.[1] ?? Number.NaN);
 
   it('sets the title a step above a first heading on the phone and on a narrow web page', () => {
+    // The note's scale lives in type.css (A1561): the heading in em of the text, the title as a
+    // multiple of the Note Font Size, and a narrow page's (the phone's) title in its media block.
     const web = webCss();
     const phone = css('../src/android.css');
-    const heading = size(web, /\.note-body h1 \{\s*font-size: ([\d.]+)em;/);
-    const wide = size(web, /\.doc-title \{[^}]*font: 700 ([\d.]+)rem/);
-    const narrow = size(web, /\n {2}\.doc-title \{\s*font-size: ([\d.]+)rem;/);
-    const android = size(phone, /\.android-note \.doc-title \{[^}]*font-size: ([\d.]+)rem;/);
+    expect(web).toMatch(/\.note-body h1 \{\s*font-size: var\(--pm-note-h1-size\);/);
+    expect(web).toMatch(/\n\.doc-title \{[^}]*font-size: var\(--pm-note-title-size\);/);
+    expect(phone).toMatch(
+      /\.android-note \.doc-title \{[^}]*font-size: var\(--pm-note-title-size\);/,
+    );
+    const heading = size(web, /--pm-note-h1-size: ([\d.]+)em;/);
+    const title = /--pm-note-title-size: calc\(var\(--pm-note-size, 16px\) \* ([\d.]+)\);/g;
+    const [wide, narrow] = [...web.matchAll(title)].map((match) => Number(match[1]));
+    expect(web).toMatch(
+      /@media \(max-width: 700px\) \{\s*:root \{[^}]*--pm-note-title-size: calc\(var\(--pm-note-size, 16px\) \* [\d.]+\);/,
+    );
     expect(heading).toBe(1.6);
-    for (const title of [wide, narrow, android])
-      expect(title).toBeGreaterThanOrEqual(heading * 1.15);
+    for (const each of [wide, narrow]) expect(each).toBeGreaterThanOrEqual(heading * 1.15);
   });
 
   it('gives a picture its own line with no empty line under it, as the web does (PEN-66, A1283)', () => {
@@ -984,7 +992,7 @@ describe('the title against a first heading (T39 pass 3, A554)', () => {
     const web = webCss();
     const phone = css('../src/android.css');
     const family = (sheet: string, rule: RegExp) => rule.exec(sheet)?.[1]?.trim();
-    const webTitle = family(web, /\.doc-title \{[^}]*font: 700 [\d.]+rem\/[\d.]+ ([^;]+);/);
+    const webTitle = family(web, /\n\.doc-title \{[^}]*font-family: ([^;]+);/);
     const phoneTitle = family(phone, /\.android-note \.doc-title \{[^}]*font-family: ([^;]+);/);
     expect(webTitle).toBe('var(--pm-font-body, var(--pm-font))');
     expect(phoneTitle).toBe(webTitle);

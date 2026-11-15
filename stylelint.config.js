@@ -1,4 +1,6 @@
 // @ts-check
+import { typeTokens } from './scripts/stylelint-type.mjs';
+
 /**
  * Stylesheets take every colour from a theme token (T28, A244): no hex
  * colours, no named colours, no colour functions. `transparent`,
@@ -6,10 +8,16 @@
  * `color-mix()` over tokens is how derived colours are made. The colours
  * themselves live in packages/ui/src/theme/builtins.ts.
  *
+ * And every text size, weight and line height from a type role or step
+ * (A1561, scripts/stylelint-type.mjs): the values live in
+ * apps/web/src/shell/type.css.
+ *
  * @type {import('stylelint').Config}
  */
 export default {
+  plugins: [typeTokens],
   rules: {
+    'penmoss/type-tokens': true,
     'color-no-hex': true,
     'color-named': 'never',
     'function-disallowed-list': [
@@ -37,6 +45,16 @@ export default {
       // penmoss.app's own palette (P13): the site is not themed by the app's tokens.
       files: ['site/src/styles/tokens.css'],
       rules: { 'color-no-hex': null },
+    },
+    {
+      // Where the type scale and its roles are written (A1561).
+      files: ['apps/web/src/shell/type.css'],
+      rules: { 'penmoss/type-tokens': null },
+    },
+    {
+      // penmoss.app has its own type, as it has its own palette (P13).
+      files: ['site/**/*.css'],
+      rules: { 'penmoss/type-tokens': null },
     },
   ],
   ignoreFiles: [

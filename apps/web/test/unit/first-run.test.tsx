@@ -19,11 +19,18 @@ import type {
   RepoList,
 } from '../../src/desktop/bridge';
 import type { GitSyncStatus } from '../../src/sources/engine-host';
-import { FirstRunGate } from '../../src/sources/FirstRun';
+import { AddNotebook, FirstRunGate } from '../../src/sources/FirstRun';
 import { nameFromRepo, repoNameOf } from '../../src/sources/first-run-flow';
 import { SourcesProvider } from '../../src/sources/context';
 import { useSourcesState } from '../../src/sources/hooks';
 import { Sources, type Source } from '../../src/sources/registry';
+import { addWelcomeNote } from '../../src/sources/welcome-note';
+
+// The welcome note, watched: the first run writes it, Add Notebook (A1562) never does.
+vi.mock(import('../../src/sources/welcome-note'), async (original) => {
+  const real = await original();
+  return { ...real, addWelcomeNote: vi.fn(real.addWelcomeNote) };
+});
 
 const info = (notebookId: string): GitNotebookInfo => ({
   localId: `${notebookId}-local`,
@@ -241,6 +248,7 @@ let root: Root;
 beforeEach(() => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   near = () => true;
+  vi.mocked(addWelcomeNote).mockClear();
   vi.stubGlobal('IntersectionObserver', SeeingObserver);
   host = document.createElement('div');
   document.body.append(host);
@@ -361,7 +369,8 @@ describe('the first run (A1030, First Run C)', () => {
     expect($('first-run')).toBeNull();
     expect(add).toHaveBeenLastCalledWith(
       expect.objectContaining({ remote: 'git@github.com:me/field-notes.git', name: 'Journal' }),
-    );
+    ); // A notebook made on the first run starts with the welcome note.
+    expect(addWelcomeNote).toHaveBeenCalledTimes(1);
   });
 
   it('says what git refused, in place, and Try Again asks again', async () => {
@@ -789,6 +798,192 @@ describe('the first run (A1030, First Run C)', () => {
     render(sources);
     expect($('the-app')?.textContent).toBe('NB1');
     expect($('first-run')).toBeNull();
+  });
+});
+
+describe('Add Notebook from Settings: the same screens (A1562)', () => {
+  /** The Mac's git with one notebook on it already (NB1, "Work"), and Add Notebook open. */
+  async function openAdd(browse?: DesktopGitHubBrowse) {
+    const made = macGit(browse);
+    await made.add({ remote: 'x', dir: '', name: 'Work' });
+    made.add.mockClear();
+    Object.assign(window, { penmossDesktop: { git: made.git } as unknown as PenmossDesktop });
+    const sources = new Sources({ git: made.git, makeGit: fakeSource() });
+    await sources.load();
+    const onClose = vi.fn();
+    act(() =>
+      root.render(
+        <SourcesProvider sources={sources}>
+          <AddNotebook git={made.git} onClose={onClose} />
+        </SourcesProvider>,
+      ),
+    );
+    await settle();
+    return { ...made, onClose };
+  }
+
+  it('starts at Create or Open Notebook, with Cancel in place of Back; Cancel and Escape close it', async () => {
+    const { onClose } = await openAdd();
+    expect($('add-notebook')).not.toBeNull();
+    expect(host.querySelector('[role="dialog"]')?.getAttribute('aria-label')).toBe('Add Notebook');
+    // No welcome: the first screen is the first run's step 1, its words for a later notebook.
+    expect(screen()).toBe('goal');
+    expect(host.textContent).toContain('Step 1 of 3');
+    expect(host.querySelector('h2')?.textContent).toBe('Create or Open Notebook');
+    expect($('first-run-new')?.textContent).toContain('A new, empty notebook');
+    expect(host.textContent).not.toContain('Your first Penmoss notebook');
+    expect($('first-run-back')).toBeNull();
+    await press('first-run-cancel');
+    expect(onClose).toHaveBeenCalledTimes(1);
+    // Past the first screen it is Back, as on the first run.
+    await press('first-run-continue');
+    expect(screen()).toBe('way');
+    expect($('first-run-cancel')).toBeNull();
+    await press('first-run-back');
+    expect(screen()).toBe('goal');
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('ends on the new notebook’s page in Settings, with no welcome note', async () => {
+    const { add, onClose } = await openAdd();
+    window.history.replaceState(null, '', '/settings/git-notebooks');
+    await press('first-run-continue');
+    await choose('first-run-way-url');
+    await press('first-run-continue');
+    await type('first-run-url-input', 'git@github.com:me/field-notes.git');
+    await press('first-run-continue');
+    expect(screen()).toBe('name');
+    await press('first-run-make');
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(add).toHaveBeenLastCalledWith(
+      expect.objectContaining({ remote: 'git@github.com:me/field-notes.git', name: 'Field Notes' }),
+    );
+    expect(window.location.pathname).toBe('/settings/git-notebooks/NB1');
+    expect(addWelcomeNote).not.toHaveBeenCalled();
+  });
+
+  it('marks the notebooks on this Mac Already Added, in the list and in a picked repository', async () => {
+    const { browse } = github({
+      repos: {
+        ok: true,
+        via: 'git',
+        value: { more: false, repos: [repo('kept'), repo('solo')] },
+      },
+      folders: {
+        'ryan/kept': {
+          empty: false,
+          truncated: false,
+          folders: [
+            { path: '', notebook: null },
+            { path: 'work', notebook: { id: 'NB1', name: 'Work' } },
+            { path: 'home', notebook: { id: '01JBNOTEBOOK00000000000002', name: 'Home' } },
+          ],
+        },
+        'ryan/solo': {
+          empty: false,
+          truncated: false,
+          folders: [{ path: '', notebook: { id: 'NB1', name: 'Work' } }],
+        },
+      },
+    });
+    const { add } = await openAdd(browse);
+    await choose('first-run-existing');
+    await press('first-run-continue');
+    await vi.waitFor(() => expect(screen()).toBe('list'));
+    await settle();
+    const notebook = (dir: string) =>
+      host.querySelector<HTMLElement>(`[data-testid="first-run-notebook"][data-dir="${dir}"]`)!;
+    expect(notebook('work').getAttribute('aria-disabled')).toBe('true');
+    expect(notebook('work').textContent).toContain('Already Added');
+    expect(notebook('work').querySelector('[data-testid="first-run-notebook-open"]')).toBeNull();
+    // Home is not on this Mac: it opens.
+    expect(
+      notebook('home').querySelector('[data-testid="first-run-notebook-open"]'),
+    ).not.toBeNull();
+    // A picked repository holding several: the one on this Mac can't be picked.
+    await press($$('first-run-repo-pick')[0]!);
+    expect(screen()).toBe('repo');
+    const radios = [...host.querySelectorAll<HTMLInputElement>('input[type="radio"]')];
+    expect(radios.map((each) => each.disabled)).toEqual([true, false]);
+    expect(radios[1]!.checked).toBe(true);
+    expect($('first-run-open')).toHaveProperty('disabled', false);
+    await press('first-run-back');
+    // A picked repository holding only that one: it says so, with no Open.
+    await press($$('first-run-repo-pick')[1]!);
+    expect($('first-run-already-added')?.textContent).toContain('Already Added');
+    expect($('first-run-open')).toBeNull();
+    expect(add).not.toHaveBeenCalled();
+  });
+
+  it('says when it can’t reach GitHub, with Try Again and Paste a URL Instead', async () => {
+    const { browse, calls } = github({
+      repos: { ok: true, via: 'git', value: { more: false, repos: [repo('notes')] } },
+    });
+    const reachable = browse.repos.bind(browse);
+    let offline = true;
+    browse.repos = () =>
+      offline
+        ? Promise.resolve({
+            ok: false,
+            error: { reason: 'offline', message: 'Can’t reach github.com.' },
+          })
+        : reachable();
+    await openAdd(browse);
+    await choose('first-run-existing');
+    await press('first-run-continue');
+    await vi.waitFor(() => expect($('first-run-github')?.dataset['state']).toBe('unreachable'));
+    expect(host.querySelector('h2')?.textContent).toBe('Can’t Reach GitHub');
+    expect($('first-run-github-problem')?.textContent).toBe(
+      'Check the connection, then try again.',
+    );
+    expect($('first-run-url-instead')).not.toBeNull();
+    // Back on line, Try Again lists the repositories.
+    offline = false;
+    await press('first-run-retry');
+    await vi.waitFor(() => expect(screen()).toBe('list'));
+    expect($$('first-run-tree-repo').map((each) => each.dataset['repo'])).toEqual(['ryan/notes']);
+    expect(calls).toContainEqual(['repos']);
+  });
+
+  it('says when GitHub cut the folder list short, and only then', async () => {
+    const folders = (truncated: boolean) => ({
+      empty: false,
+      truncated,
+      folders: [
+        { path: '', notebook: null },
+        { path: 'docs', notebook: null },
+      ],
+    });
+    const { browse } = github({
+      repos: {
+        ok: true,
+        via: 'git',
+        value: { more: false, repos: [repo('big'), repo('small')] },
+      },
+      folders: { 'ryan/big': folders(true), 'ryan/small': folders(false) },
+    });
+    await openAdd(browse);
+    await press('first-run-continue');
+    await choose('first-run-way-existing');
+    await press('first-run-continue');
+    await vi.waitFor(() => expect(screen()).toBe('list'));
+    const pick = (fullName: string) =>
+      host.querySelector<HTMLElement>(
+        `[data-repo="${fullName}"] [data-testid="first-run-repo-pick"]`,
+      )!;
+    // A repository too big for GitHub's whole tree: Pick Folder says some aren't shown.
+    await press(pick('ryan/big'));
+    expect(host.querySelector('h2')?.textContent).toBe('Pick Folder');
+    expect(host.textContent).toContain(
+      'Some folders aren’t shown: Paste a URL to give the folder.',
+    );
+    await press('first-run-back');
+    await press(pick('ryan/small'));
+    expect(host.querySelector('h2')?.textContent).toBe('Pick Folder');
+    expect(host.textContent).not.toContain('Some folders aren’t shown');
   });
 });
 

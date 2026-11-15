@@ -1,14 +1,14 @@
 /**
  * Settings → Notebooks (T50 G5, #153; A853–A857; rebuilt in PEN-146), in the Mac app: notebooks
- * kept in a git repository and synced by this Mac's own git. The first run (A1030) has its own
- * screens.
+ * kept in a git repository and synced by this Mac's own git. Adding one is the first run's flow
+ * (A1030, A1562).
  *
  * - **All Notebooks** (`/settings/git-notebooks`): the notebooks, each a row with its sync dot,
  *   name, Primary chip, and its repository and last sync (or what stopped it), opening its page;
- *   Add Notebook…, which opens the form (open at once with none: any repository, D61, and git
- *   follows its own configuration, D62); Between Notebooks (the one Primary Notebook picker, this
- *   Mac's choice, then Keep Settings in Step, Copy Tags When Copying Notes, Copy Settings…); and
- *   Commit Identity, this Mac's git identity.
+ *   Add Notebook…, which opens the first run's own screens in a sheet (FirstRun.tsx's
+ *   `AddNotebook`, A1562); Between Notebooks (the one Primary Notebook picker, this Mac's choice,
+ *   then Keep Settings in Step, Copy Tags When Copying Notes, Copy Settings…); and Commit
+ *   Identity, this Mac's git identity.
  * - **A notebook's page** (`/settings/git-notebooks/<id>`, each notebook also an entry in the
  *   nav, NotebookNavEntries.tsx): a header with its name, the Primary chip, the sync dot and
  *   time, and Sync Now; a stopped sync's words under it on every tab; then three tabs, kept in
@@ -27,6 +27,7 @@
 import { Icon } from '@penmoss/ui/icons';
 import { Select } from '@penmoss/ui/controls/Select';
 import {
+  useCallback,
   useEffect,
   useId,
   useRef,
@@ -34,20 +35,14 @@ import {
   useSyncExternalStore,
   type FormEvent,
   type KeyboardEvent,
-  type ReactNode,
 } from 'react';
 import {
   desktop,
   type DesktopGit,
-  type BrowseError,
-  type GitHubRepo,
-  type GitHubVia,
   type GitNotebookInfo,
   type GitPendingPurge,
 } from '../desktop/bridge';
-import { GitHubSignIn } from './GitHubSignIn';
-import { RepoFolderStep, type FolderChoice } from './RepoFolderStep';
-import { RepoPicker } from './RepoPicker';
+import { AddNotebook } from './FirstRun';
 import { gitNotebookPath, linkHandler, navigate, useLocation } from '../router';
 import { BadgeSettings } from './BadgeSettings';
 import { NotebookBadge } from './NotebookBadge';
@@ -67,7 +62,7 @@ import { copySettings } from './copy-settings';
 import { setSettingsInStep, useSettingsInStepChoice } from './settings-in-step';
 import { useCopyTagsDefault } from '../workspace/copy-tags-state';
 import { NameClash } from './NameClash';
-import { freeName, nameClash, useNotebookRename, useOtherNotebookNames } from './notebook-names';
+import { useNotebookRename } from './notebook-names';
 import { GroupHead, SettingRow, Switch } from '../theme/look-rows';
 import {
   PHASE_WORDS,
@@ -390,11 +385,7 @@ function AllNotebooks({
   const state = useAllSources();
   const sources = state.all;
   const [adding, setAdding] = useState(false);
-  const form = useRef<HTMLDivElement>(null);
-  const open = adding || sources.length === 0;
-  useEffect(() => {
-    if (adding) form.current?.scrollIntoView({ block: 'nearest' });
-  }, [adding]);
+  const close = useCallback(() => setAdding(false), []);
   return (
     <section
       className="settings-section nset-page"
@@ -406,19 +397,17 @@ function AllNotebooks({
         title="All Notebooks"
         intro="The notebooks on this Mac, and what goes between them."
         actions={
-          open ? null : (
-            <button
-              data-ui="item"
-              type="button"
-              className="btn primary"
-              data-testid="git-add-open"
-              data-setting="add-notebook"
-              onClick={() => setAdding(true)}
-            >
-              <Icon name="plus" size={14} />
-              Add Notebook…
-            </button>
-          )
+          <button
+            data-ui="item"
+            type="button"
+            className="btn primary"
+            data-testid="git-add-open"
+            data-setting="add-notebook"
+            onClick={() => setAdding(true)}
+          >
+            <Icon name="plus" size={14} />
+            Add Notebook…
+          </button>
         }
       />
       {sources.length === 0 ? (
@@ -430,11 +419,8 @@ function AllNotebooks({
           ))}
         </ul>
       )}
-      {open ? (
-        <div ref={form}>
-          <AddGitNotebook git={git} onCancel={sources.length > 0 ? () => setAdding(false) : null} />
-        </div>
-      ) : null}
+      {/* The first run's own screens, in a sheet over Settings (A1562). */}
+      {adding ? <AddNotebook git={git} onClose={close} /> : null}
       {sources.length > 0 ? (
         <>
           <BetweenNotebooks />
@@ -706,7 +692,7 @@ function CopySettingsPanel({
           ))}
         </Select>
       </div>
-      <p className="muted nset-panel-note">
+      <p className="t-help nset-panel-note">
         Replaces {target ? `${target.name}’s` : 'their'} settings with {source.name}’s: the theme,
         the sidebar, shortcuts and the rest. Quick Access stays as it is.
       </p>
@@ -727,7 +713,7 @@ function CopySettingsPanel({
         </button>
       </div>
       {done ? (
-        <p className="muted" role="status" data-testid="git-copy-settings-done">
+        <p className="t-help" role="status" data-testid="git-copy-settings-done">
           {done}
         </p>
       ) : null}
@@ -1588,402 +1574,6 @@ function CommitIdentity({
           {info.author ? ', this notebook’s own.' : ', from git’s own configuration.'}
         </p>
       ) : null}
-    </form>
-  );
-}
-
-/**
- * Adds a git notebook, or makes one (Settings → All Notebooks → Add Notebook…, A1030). The first run has screens of
- * its own (FirstRun.tsx, Ryan's review of #192, findings 2–4) on the same bridge.
- */
-export function AddGitNotebook({
-  git,
-  onCancel = null,
-}: {
-  git: DesktopGit;
-  /** Closes the form (none when there is no notebook yet: the form is all there is). */
-  onCancel?: (() => void) | null;
-}) {
-  const registry = useSourcesRegistry();
-  const others = useOtherNotebookNames();
-  const github = git.github;
-  const [remote, setRemote] = useState('');
-  const [branch, setBranch] = useState('main');
-  const [dir, setDir] = useState('');
-  const [name, setName] = useState('');
-  const [needsName, setNeedsName] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  // T81 (B9): the repository step opens on Your Repositories.
-  const [way, setWay] = useState<'browse' | 'type'>('browse');
-  const [picked, setPicked] = useState<GitHubRepo | null>(null);
-  /** The sign-in the pick was listed with (T82): Penmoss's gives the notebook its token. */
-  const [pickedVia, setPickedVia] = useState<GitHubVia | null>(null);
-  const [folder, setFolder] = useState<FolderChoice>({ dir: '', notebook: null });
-  const [known, setKnown] = useState<ReadonlySet<string>>(() => new Set());
-  /** No GitHub sign-in git can use (B8): typing, with the hint and Try Again. */
-  const [signedOut, setSignedOut] = useState<BrowseError | null>(null);
-  const id = useId();
-
-  const readKnown = () =>
-    void git
-      .list()
-      .then((list) => setKnown(new Set(list.map((each) => each.notebookId))))
-      .catch(() => undefined);
-  useEffect(readKnown, [git]);
-
-  const add = async (
-    fields: {
-      remote: string;
-      branch: string;
-      dir: string;
-      name: string;
-      githubSignIn?: boolean;
-    } = {
-      remote,
-      branch,
-      dir,
-      name,
-    },
-  ) => {
-    setBusy(true);
-    setMessage(null);
-    const githubSignIn = fields.githubSignIn ?? (picked !== null && pickedVia === 'penmoss');
-    try {
-      const result = await git.add({
-        remote: fields.remote.trim(),
-        branch: fields.branch.trim() || 'main',
-        dir: fields.dir.trim(),
-        ...(fields.name.trim() ? { name: fields.name.trim() } : {}),
-        ...(githubSignIn ? { githubSignIn: true } : {}),
-      });
-      if (!result) {
-        setMessage('This window cannot add git notebooks.');
-        return;
-      }
-      if (!result.ok) {
-        setMessage(
-          result.error.hostMessage
-            ? `${result.error.message} The host said: ${result.error.hostMessage}`
-            : result.error.message,
-        );
-        return;
-      }
-      const value = result.value;
-      if (value.kind === 'needs-name') {
-        setNeedsName(true);
-        setMessage('The repository holds no notebook there yet: name the new one.');
-        return;
-      }
-      setNeedsName(false);
-      setRemote('');
-      setDir('');
-      setName('');
-      setPicked(null);
-      setFolder({ dir: '', notebook: null });
-      readKnown();
-      // A name another notebook here has (Ryan's review of PR #192): agents can't tell them
-      // apart, so say how to rename one.
-      const twin = nameClash(value.notebook.name, others);
-      setMessage(
-        (value.created
-          ? `Made the notebook “${value.notebook.name}”. It is pushed at its first sync.`
-          : `Added “${value.notebook.name}”.`) +
-          (twin
-            ? ` Another notebook on this Mac is named “${twin}” too: rename one in its settings (such as to “${freeName(value.notebook.name, others)}”), so agents can tell them apart.`
-            : ''),
-      );
-      await registry.refresh();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  /** A repository picked from the list (B3): its HTTPS address and default branch, at its root. */
-  const pick = (repo: GitHubRepo, via: GitHubVia) => {
-    setPicked(repo);
-    setPickedVia(via);
-    setRemote(repo.cloneUrl);
-    setBranch(repo.defaultBranch || 'main');
-    setDir('');
-    setFolder({ dir: '', notebook: null });
-    setNeedsName(false);
-    setMessage(null);
-  };
-
-  const placeFields = (
-    <div className="settings-row">
-      <label className="settings-field">
-        <span>Branch</span>
-        <input
-          className="input"
-          value={branch}
-          data-testid="git-add-branch"
-          onChange={(event) => {
-            setBranch(event.target.value);
-            // A folder chosen on another branch may hold no notebook here: start at the root.
-            if (picked !== null) {
-              setFolder({ dir: '', notebook: null });
-              setDir('');
-              setNeedsName(false);
-            }
-          }}
-        />
-      </label>
-      <label className="settings-field">
-        <span>
-          Directory <span className="muted">(optional, such as docs/notes)</span>
-        </span>
-        <input
-          className="input"
-          value={dir}
-          data-testid="git-add-dir"
-          onChange={(event) => {
-            setDir(event.target.value);
-            setFolder({ dir: event.target.value.trim(), notebook: null });
-          }}
-        />
-      </label>
-    </div>
-  );
-  const twin = nameClash(name, others);
-  const nameField = (
-    <>
-      <label className="settings-field">
-        <span>
-          Name{' '}
-          <span className="muted">
-            {needsName ? '(the repository holds none: name it)' : '(for a new notebook)'}
-          </span>
-        </span>
-        <input
-          className="input"
-          required={needsName}
-          maxLength={80}
-          value={name}
-          data-testid="git-add-name"
-          onChange={(event) => setName(event.target.value)}
-        />
-      </label>
-      {twin ? (
-        <NameClash
-          name={name.trim()}
-          other={twin}
-          suggestion={freeName(name, others)}
-          onUse={setName}
-        />
-      ) : null}
-    </>
-  );
-  const moreOptions = placeFields;
-  const status = (
-    <span role="status" className="muted" data-testid="git-add-message">
-      {message}
-    </span>
-  );
-
-  const browsing = way === 'browse';
-  const opensNotebook = browsing && picked !== null && folder.notebook !== null;
-
-  let body: ReactNode;
-  if (browsing && picked === null) {
-    body = (
-      <>
-        <RepoPicker
-          github={github}
-          picked={null}
-          onPick={pick}
-          onTypeAddress={() => setWay('type')}
-          onSignedOut={(error) => {
-            setSignedOut(error);
-            setWay('type');
-          }}
-        />
-        {message ? <div className="settings-actions">{status}</div> : null}
-      </>
-    );
-  } else if (browsing && picked !== null) {
-    body = (
-      <>
-        <div className="repo-picked">
-          <button
-            type="button"
-            className="btn"
-            data-ui="item"
-            data-testid="git-add-repos"
-            onClick={() => {
-              setPicked(null);
-              setMessage(null);
-            }}
-          >
-            <Icon name="chevL" size={14} />
-            Repositories
-          </button>
-          <span data-testid="git-add-picked">
-            <strong>{picked.fullName}</strong> <span className="muted">· {branch}</span>
-          </span>
-        </div>
-        <RepoFolderStep
-          github={github}
-          repo={picked}
-          branch={branch.trim() || picked.defaultBranch}
-          added={known}
-          chosen={folder}
-          onChoose={(choice) => {
-            setFolder(choice);
-            setDir(choice.dir);
-            setNeedsName(false);
-            setMessage(null);
-          }}
-        />
-        {moreOptions}
-        {opensNotebook ? (
-          <p data-testid="git-add-opens">
-            This folder holds “{folder.notebook?.name}”, so this opens the existing notebook.
-          </p>
-        ) : (
-          nameField
-        )}
-        <div className="settings-actions">
-          <button
-            type="submit"
-            className="btn primary"
-            data-ui="submit"
-            disabled={busy || remote.trim() === '' || (!opensNotebook && name.trim() === '')}
-          >
-            <Icon name="plus" size={14} />
-            {busy ? 'Adding…' : opensNotebook ? 'Open Notebook' : 'Make Notebook'}
-          </button>
-          {status}
-        </div>
-      </>
-    );
-  } else {
-    body = (
-      <>
-        {signedOut ? (
-          <div
-            className="repo-signed-out"
-            data-testid="git-add-signin"
-            data-reason={signedOut.reason}
-          >
-            <p>
-              {signedOut.reason === 'no_credential'
-                ? 'Git on this Mac isn’t signed in to GitHub. Type the repository’s address below, or sign in to pick it from your repositories.'
-                : `${signedOut.message} Type the repository’s address instead.`}
-            </p>
-            <GitHubSignIn
-              signIn={github.signIn}
-              again={signedOut.reason === 'unauthorized'}
-              onSignedIn={() => {
-                setSignedOut(null);
-                setWay('browse');
-              }}
-            />
-            <p className="muted">
-              To pick from your repositories, run <code>gh auth login</code> in Terminal, then{' '}
-              <code>gh auth setup-git</code>, then Try Again.
-            </p>
-            <div className="settings-actions">
-              <button
-                type="button"
-                className="btn"
-                data-ui="item"
-                data-testid="git-add-signin-retry"
-                onClick={() => {
-                  setSignedOut(null);
-                  setWay('browse');
-                }}
-              >
-                <Icon name="refresh" size={14} />
-                Try Again
-              </button>
-            </div>
-          </div>
-        ) : null}
-        <label className="settings-field">
-          <span>Remote</span>
-          <input
-            className="input"
-            required
-            placeholder="git@github.com:you/notes.git"
-            value={remote}
-            data-testid="git-add-remote"
-            onChange={(event) => {
-              setRemote(event.target.value);
-              setPicked(null);
-              setNeedsName(false);
-            }}
-          />
-        </label>
-        {moreOptions}
-        {nameField}
-        <div className="settings-actions">
-          <button
-            type="submit"
-            className="btn primary"
-            data-ui="submit"
-            disabled={busy || remote.trim() === ''}
-          >
-            <Icon name="plus" size={14} />
-            Add
-          </button>
-          {status}
-        </div>
-      </>
-    );
-  }
-
-  return (
-    <form
-      className="settings-card"
-      aria-labelledby={`${id}-h`}
-      data-testid="git-add"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void add(opensNotebook ? { remote, branch, dir, name: '' } : undefined);
-      }}
-    >
-      <div className="nset-title">
-        <h3 id={`${id}-h`}>Add a Notebook</h3>
-        {onCancel ? (
-          <button
-            type="button"
-            className="btn"
-            data-ui="item"
-            data-testid="git-add-cancel"
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-        ) : null}
-      </div>
-      <div className="repo-way" role="group" aria-label="How to choose the repository">
-        <button
-          type="button"
-          className="btn"
-          data-ui="item"
-          aria-pressed={way === 'browse'}
-          data-testid="git-add-way-browse"
-          onClick={() => {
-            setSignedOut(null);
-            setWay('browse');
-          }}
-        >
-          Your Repositories
-        </button>
-        <button
-          type="button"
-          className="btn"
-          data-ui="item"
-          aria-pressed={way === 'type'}
-          data-testid="git-add-way-type"
-          onClick={() => setWay('type')}
-        >
-          Type an Address
-        </button>
-      </div>
-      {body}
     </form>
   );
 }

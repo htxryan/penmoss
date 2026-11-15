@@ -205,7 +205,7 @@ function NotebookAgentsRow({
           data-testid="notebook-agents"
           data-notebook-id={source.id}
         >
-          <p className="muted">
+          <p className="t-help">
             Agents reach it as <code>penmoss mcp --notebook {mcpName(info.name)}</code>
           </p>
           <GitLocalAgents

@@ -12,7 +12,7 @@
 /* Wikilinks in the editor. */
 .note-body a.pm-wikilink {
   color: var(--pm-link);
-  font-weight: 500;
+  font-weight: var(--pm-weight-medium);
   text-decoration: none;
   border-bottom: 1px solid var(--pm-link-line);
   border-radius: 0;
@@ -145,8 +145,8 @@
   min-width: 0;
   margin: 0;
   color: var(--pm-muted);
-  font-size: 0.8rem;
-  font-weight: 650;
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -221,7 +221,7 @@
 .backlinks {
   border-top: 1px solid var(--pm-border);
   padding-top: 1rem;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 @media (min-width: 78rem) {
@@ -237,8 +237,8 @@
   align-items: center;
   gap: 0.4rem;
   margin: 0 0 0.5rem;
-  font-size: 0.8rem;
-  font-weight: 650;
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--pm-muted);
@@ -249,8 +249,8 @@
   align-items: center;
   gap: 0.4rem;
   margin: 1rem 0 0.4rem;
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
   color: var(--pm-fg);
 }
 
@@ -259,15 +259,15 @@
   border-radius: 0;
   background: var(--pm-hover);
   color: var(--pm-muted);
-  font-size: 0.7rem;
-  font-weight: 500;
+  font-size: var(--pm-text-meta);
+  font-weight: var(--pm-weight-medium);
   letter-spacing: 0;
 }
 
 .bl-note {
   margin: 0 0 0.5rem;
   color: var(--pm-muted);
-  font-size: 0.75rem;
+  font-size: var(--pm-text-meta);
 }
 
 .bl-empty {
@@ -295,7 +295,7 @@
   display: block;
   overflow: hidden;
   color: var(--pm-fg);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
   text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -309,7 +309,7 @@
 .bl-context {
   margin: 0.25rem 0 0;
   color: var(--pm-muted);
-  line-height: 1.45;
+  line-height: var(--pm-leading-snug);
   overflow-wrap: anywhere;
 }
 
@@ -348,7 +348,7 @@
   align-items: center;
   gap: 0.4rem;
   margin-bottom: 0.25rem;
-  font-size: 0.78rem;
+  font-size: var(--pm-text-meta);
   color: var(--pm-muted);
 }
 
@@ -358,7 +358,7 @@
 
 .note-body .pm-embed-title {
   color: var(--pm-link);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
   text-decoration: none;
   cursor: pointer;
 }
@@ -387,7 +387,7 @@
 .note-body .pm-embed-notice {
   margin: 0.25rem 0;
   color: var(--pm-muted);
-  font-size: 0.9rem;
+  font-size: var(--pm-text-help);
   font-style: italic;
 }
 
@@ -413,8 +413,8 @@
   border: 1px solid var(--pm-border);
   border-radius: 0;
   background: var(--pm-raised);
-  font-size: 0.85rem;
-  line-height: 1.5;
+  font-size: var(--pm-text-item);
+  line-height: var(--pm-leading-relaxed);
   vertical-align: baseline;
 }
 
@@ -428,21 +428,24 @@
   border-radius: 0;
   background: var(--pm-link-soft);
   color: var(--pm-fg);
-  font: 600 0.68rem/1.5 var(--pm-mono);
+  font-family: var(--pm-mono);
+  font-size: var(--pm-text-badge);
+  font-weight: var(--pm-weight-semibold);
+  line-height: var(--pm-leading-relaxed);
   letter-spacing: 0.02em;
 }
 
 .note-body .pm-attachment-name {
   overflow: hidden;
   max-width: 22rem;
-  font-weight: 500;
+  font-weight: var(--pm-weight-medium);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .note-body .pm-attachment-size {
   color: var(--pm-muted);
-  font-size: 0.78rem;
+  font-size: var(--pm-text-meta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -457,7 +460,7 @@
   background: transparent;
   color: var(--pm-link);
   font: inherit;
-  font-size: 0.78rem;
+  font-size: var(--pm-text-meta);
   cursor: pointer;
 }
 

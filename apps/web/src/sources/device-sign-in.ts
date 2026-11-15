@@ -1,6 +1,7 @@
 /**
- * GitHub's device sign-in as a page shows it (T82, D63, A1170): Settings' Add form
- * (GitHubSignIn.tsx) and the first run's GitHub Access screens (FirstRunGitHub.tsx) share it.
+ * GitHub's device sign-in as a page shows it (T82, D63, A1170): Settings → GitHub
+ * (GitHubSignIn.tsx) and the notebook steps' GitHub Access screens (FirstRunGitHub.tsx, on the
+ * first run and in Add Notebook, A1562) share it.
  */
 import { copyText } from '@penmoss/editor';
 import { useEffect, useEffectEvent, useState } from 'react';

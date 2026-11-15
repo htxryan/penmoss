@@ -105,6 +105,7 @@ import app.penmoss.ui.common.OutlinedButton
 import app.penmoss.ui.common.SQUARE
 import app.penmoss.ui.common.TextButton
 import app.penmoss.ui.common.mark
+import app.penmoss.ui.common.roles
 import app.penmoss.ui.home.HomeShortcutRow
 import kotlinx.coroutines.delay
 import java.time.LocalDate
@@ -303,7 +304,8 @@ internal fun GroupTitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
         modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp).semantics { heading() },
-        style = MaterialTheme.typography.titleSmall,
+        // At least the size of the rows under it (A1561): titleSmall was smaller than their names.
+        style = MaterialTheme.roles.groupHead,
         color = MaterialTheme.colorScheme.primary,
     )
 }
@@ -313,7 +315,7 @@ internal fun Help(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
         modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        style = MaterialTheme.typography.bodyMedium,
+        style = MaterialTheme.roles.help,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
@@ -482,7 +484,7 @@ private fun AppearancePreview(shortcuts: HomeShortcuts, note: (@Composable (Modi
         Text(
             "Preview: redraws as you change these.",
             Modifier.padding(top = 4.dp),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.roles.help,
             color = colours.onSurfaceVariant,
         )
     }

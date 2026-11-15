@@ -33,7 +33,7 @@
   padding: 0 0.6rem;
   border-radius: 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
   text-decoration: none;
 }
 
@@ -45,7 +45,7 @@
 .settings-nav a[aria-current='page'] {
   background: var(--pm-active);
   color: var(--pm-fg);
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
 }
 
 .settings-nav a[aria-current='page'] .i {
@@ -95,12 +95,12 @@
   margin: 0 0 0.15rem;
   padding: 0 0.6rem;
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
-  font-weight: 600;
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
 }
 
 .settings-nav-scope {
-  font-weight: 400;
+  font-weight: var(--pm-weight-regular);
 }
 
 /* The results while there is a query: each a label (its match marked) over its place. */
@@ -135,8 +135,8 @@
 }
 
 .setting-result-label {
-  font-size: var(--pm-text-md);
-  font-weight: 600;
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
 }
 
 .setting-result-label mark {
@@ -145,7 +145,7 @@
 }
 
 .setting-result-place {
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-meta);
 }
 
 /* The setting a result opened, marked for a moment on its page. */
@@ -195,7 +195,7 @@
 
 .settings-progress-value {
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-meta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -214,7 +214,8 @@
 }
 
 .updates-card-name {
-  font-size: var(--pm-text-lg);
+  font-size: var(--pm-text-group-head);
+  font-weight: var(--pm-weight-group-head);
 }
 
 .updates-card-actions {
@@ -227,7 +228,7 @@
 .updates-card-line,
 .updates-card .updates-status {
   margin: 0.35rem 0 0;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-meta);
 }
 
 /* A segmented control's group inside a row: no frame of its own. */
@@ -338,8 +339,8 @@
  */
 .settings-head,
 .settings-head-bar {
-  --settings-page-title: var(--pm-text-page-title, calc(var(--pm-text-lg) * 2));
-  --settings-bar-title: var(--pm-text-bar-title, calc(var(--pm-text-lg) * 1.125));
+  --settings-page-title: var(--pm-text-page-title);
+  --settings-bar-title: var(--pm-text-bar-title);
 }
 
 .settings-head-bar {
@@ -375,7 +376,7 @@
   overflow: hidden;
   color: var(--pm-fg);
   font-size: var(--settings-bar-title);
-  font-weight: 700;
+  font-weight: var(--pm-weight-bar-title);
   white-space: nowrap;
   text-overflow: ellipsis;
   visibility: hidden;
@@ -399,7 +400,7 @@
 
 .settings-head-slash {
   color: var(--pm-border-strong);
-  font-weight: 400;
+  font-weight: var(--pm-weight-regular);
 }
 
 .settings-head {
@@ -421,8 +422,8 @@
   margin: 0.15rem 0 0;
   color: var(--pm-fg);
   font-size: var(--settings-page-title);
-  font-weight: 700;
-  line-height: 1.15;
+  font-weight: var(--pm-weight-page-title);
+  line-height: var(--pm-leading-page-title);
   letter-spacing: -0.02em;
 }
 
@@ -437,8 +438,8 @@
 .settings-head-intro {
   margin: 0.35rem 0 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-md);
-  line-height: 1.5;
+  font-size: var(--pm-text-body);
+  line-height: var(--pm-leading-body);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -474,7 +475,10 @@
   background: var(--pm-fg);
   box-shadow: var(--pm-popover-shadow);
   color: var(--pm-bg);
-  font: 500 var(--pm-text-sm) / 1.45 var(--pm-font);
+  font-family: var(--pm-font);
+  font-size: var(--pm-text-sm);
+  font-weight: var(--pm-weight-tooltip);
+  line-height: var(--pm-leading-tooltip);
   animation: pm-fade var(--pm-fast) var(--pm-ease);
 }
 
@@ -484,7 +488,7 @@
 
 .settings-info-tip a {
   color: inherit;
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -503,7 +507,9 @@
 .settings-section h2,
 .settings > h2 {
   margin: 0 0 0.35rem;
-  font-size: 1.15rem;
+  font-size: var(--pm-text-section-head);
+  font-weight: var(--pm-weight-section-head);
+  line-height: var(--pm-leading-section-head);
 }
 
 .settings-section > p {
@@ -513,8 +519,8 @@
 /* A section's explanations read the same in every section (T36). */
 .settings-content :is(.settings, .settings-section) > p {
   color: var(--pm-muted);
-  font-size: var(--pm-text-md);
-  line-height: 1.55;
+  font-size: var(--pm-text-body);
+  line-height: var(--pm-leading-body);
 }
 
 /*
@@ -531,8 +537,8 @@
 
 .settings-content :is(.settings, .settings-section) > p.settings-help {
   margin: 0.5rem 0 0;
-  font-size: var(--pm-text-sm);
-  line-height: 1.5;
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-help);
 }
 
 /* Sections stacked on one page (Status, Devices) stand as far apart; one touched the next. */
@@ -551,8 +557,8 @@
   background: var(--pm-raised);
   color: var(--pm-fg);
   font: inherit;
-  font-size: var(--pm-text-sm);
-  font-weight: 400;
+  font-size: var(--pm-text-field);
+  font-weight: var(--pm-weight-regular);
   transition:
     border-color var(--pm-fast),
     box-shadow var(--pm-fast);
@@ -607,8 +613,8 @@
   background-repeat: no-repeat;
   color: var(--pm-fg);
   font: inherit;
-  font-size: var(--pm-text-sm);
-  font-weight: 400;
+  font-size: var(--pm-text-field);
+  font-weight: var(--pm-weight-regular);
   line-height: normal;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -683,8 +689,8 @@
   border-radius: 0;
   background: var(--pm-accent-softer);
   color: var(--pm-fg);
-  font-size: var(--pm-text-xs);
-  font-weight: 500;
+  font-size: var(--pm-text-badge);
+  font-weight: var(--pm-weight-medium);
 }
 
 .kb-conflict,
@@ -695,8 +701,8 @@
   align-items: center;
   gap: 0.4rem;
   margin-top: 0.35rem;
-  font-size: 0.8rem;
-  font-weight: 400;
+  font-size: var(--pm-text-help);
+  font-weight: var(--pm-weight-regular);
 }
 
 .kb-conflict,

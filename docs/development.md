@@ -48,6 +48,41 @@ export function dailyNotePath(date: PlainDate): string {
 - Every user action goes through the command registry, and every colour through a theme token.
 - Errors are typed results across module boundaries; no silent catches.
 
+### Styling text
+
+Text takes its size, weight and line height from the role it plays, never from a number
+(A1561). The roles and the scale under them are in `apps/web/src/shell/type.css`:
+
+| Role                         | Size, weight, line height    | For                                                            |
+| ---------------------------- | ---------------------------- | -------------------------------------------------------------- |
+| `page-title`                 | 32 px bold, 1.25 (24 narrow) | A page's title: Settings, Trash, Tags, the Time Machine        |
+| `bar-title`                  | 18 px bold, 1.25             | The page's title in a bar pinned over it once it scrolls       |
+| `section-head`               | 18 px bold, 1.25             | A section of a page (a Settings page's own title)              |
+| `group-head`, `dialog-title` | 16 px semibold, 1.25         | A group of rows, a card's title; a dialog's or a sheet's title |
+| `body`                       | 14 px, 1.5                   | Paragraphs; text that names no role of its own                 |
+| `row-label`                  | 13 px semibold               | A setting's or a field's name                                  |
+| `item`                       | 13 px                        | Menu items, buttons, list and table rows, tabs, toasts         |
+| `sidebar-item`, `field`      | 13 px (14 and 16 on touch)   | The sidebar's rows; inputs and selects                         |
+| `help`                       | 11.5 px, 1.4, muted          | What a row, a group or a panel means: help, notes, hints       |
+| `meta`                       | 11.5 px, muted               | A time, a count, a path, a status                              |
+| `list-head`                  | 11.5 px semibold, muted      | A list's heading: a sidebar section, a menu group, a panel's   |
+| `badge`, `micro`             | 11.5 px semibold; 10.4 px    | Chips, key caps, scope markers; counts on icons and miniatures |
+| `code`, `display`            | 13 px mono, 1.5; 28 px mono  | Diffs, sources, commands; a code to type somewhere else        |
+
+- In a stylesheet, use the role's tokens: `font-size: var(--pm-text-help)`, with
+  `--pm-weight-help`, `--pm-leading-help` and `--pm-color-help` where the role has them. In
+  markup with nothing else to style, use its class: `<p className="t-help">`. `SettingRow`,
+  `GroupHead`, menus, dialogs and toasts already do, so a new screen built from them is right.
+- A one-off (a glyph, a miniature in a preview) may use a step of the scale
+  (`--pm-text-xs` … `--pm-text-5xl`, `--pm-weight-semibold`, `--pm-leading-snug`).
+- The note's own text (title, headings, code, the margin's symbols) uses the note scale at the end
+  of `type.css` (`--pm-note-h1-size` and so on), which follows Note Font Size.
+- `task lint` refuses a written-out `font-size`, `font-weight`, `line-height` or sized `font`
+  shorthand outside `type.css` (stylelint's `penmoss/type-tokens`). A child is never larger or
+  heavier than the heading it sits under.
+- On Android, name a role from `TextRoles` (`MaterialTheme.roles.help`), the same roles on
+  Material's scale; `TextRolesTest` refuses a `fontSize = N.sp`.
+
 ## Testing
 
 | Level             | What                                                                | Where                                                  |

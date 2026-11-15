@@ -45,7 +45,7 @@
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  font-weight: 600;
+  font-weight: var(--pm-weight-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }

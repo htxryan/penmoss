@@ -12,9 +12,9 @@
   border-radius: 0;
   background: var(--nb-badge-bg);
   color: var(--nb-badge-ink);
-  font-size: calc(var(--nb-badge-size, 1rem) * 0.62);
-  font-weight: 700;
-  line-height: 1;
+  font-size: calc(var(--nb-badge-size, 1rem) * var(--pm-badge-glyph-ratio));
+  font-weight: var(--pm-weight-bold);
+  line-height: var(--pm-leading-none);
   font-variant-numeric: tabular-nums;
   overflow: hidden;
   user-select: none;
@@ -30,7 +30,7 @@
 }
 
 .nb-badge[data-size='26'] {
-  font-size: 0.95rem;
+  font-size: var(--pm-text-md);
 }
 
 /* Two digits fit a small square. */

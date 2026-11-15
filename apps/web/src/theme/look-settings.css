@@ -32,8 +32,8 @@
   gap: 0.35rem 0.5rem;
   margin: 1.5rem 0 0.5rem;
   color: var(--pm-fg);
-  font-size: var(--pm-text-sm);
-  font-weight: 600;
+  font-size: var(--pm-text-group-head);
+  font-weight: var(--pm-weight-group-head);
 }
 
 .lf-sub::after {
@@ -63,8 +63,8 @@
 
 .lf-sub-hint {
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
-  font-weight: 400;
+  font-size: var(--pm-text-help);
+  font-weight: var(--pm-weight-help);
 }
 
 /*
@@ -169,8 +169,8 @@
   align-items: center;
   gap: 0.4rem;
   color: var(--pm-fg);
-  font-size: var(--pm-text-sm);
-  font-weight: 600;
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
 }
 
 .lf-row-label .i {
@@ -179,8 +179,8 @@
 
 .lf-row-help {
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
-  line-height: 1.45;
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-help);
 }
 
 .lf-row-control {
@@ -202,7 +202,8 @@
 .lf-row-note {
   margin: 0.2rem 0 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-help);
 }
 
 .lf-row-note[role='alert'] {
@@ -212,7 +213,7 @@
 /* A control's empty value (no hotkey). */
 .lf-none {
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
 }
 
 /* A choice that fills its row (Quick Capture's Saves To): the whole row is the radio's label. */
@@ -238,8 +239,8 @@
 .lf-help {
   margin: 0.5rem 0 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
-  line-height: 1.5;
+  font-size: var(--pm-text-help);
+  line-height: var(--pm-leading-help);
 }
 
 .lf-actions {
@@ -325,7 +326,7 @@
 
 .lf-stepper-value {
   min-width: 1.75rem;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
@@ -347,7 +348,7 @@
   border: 1px solid var(--pm-border);
   background: var(--pm-raised);
   color: var(--pm-muted);
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
   transition:
     background var(--pm-fast),
     border-color var(--pm-fast),
@@ -431,13 +432,13 @@
 .lf-label {
   margin: 0;
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
-  font-weight: 600;
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
 }
 
 .lf-preview-col > .lf-help {
   margin: 0;
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-help);
 }
 
 .lf-preview-col .app-preview,

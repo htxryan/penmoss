@@ -1,10 +1,10 @@
 /**
- * Sign in with GitHub (T82, #229; D63, A1170): when git on this Mac has no GitHub sign-in, Add a
- * Git Notebook offers Penmoss's own. Main asks GitHub for a short code and opens
- * github.com/login/device; the person enters the code there and approves, and main keeps the
- * token. This shows the code (with Copy), waits, and says how it ended. Nothing shows in a build
- * without Penmoss's OAuth app. The first run draws the same sign-in (`useDeviceSignIn`) as
- * screens of its own (Ryan's review of #192, findings 3 and 4).
+ * Sign in with GitHub (T82, #229; D63, A1170), as Settings → GitHub shows it: main asks GitHub
+ * for a short code and opens github.com/login/device; the person enters the code there and
+ * approves, and main keeps the token. This shows the code (with Copy), waits, and says how it
+ * ended. Nothing shows in a build without Penmoss's OAuth app. The notebook steps (the first run
+ * and Add Notebook, A1562) draw the same sign-in (`useDeviceSignIn`) as screens of their own
+ * (Ryan's review of #192, findings 3 and 4).
  */
 import { Icon } from '@penmoss/ui/icons';
 import type { DesktopGitHubSignIn } from '../desktop/bridge';

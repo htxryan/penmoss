@@ -15,19 +15,19 @@
 .tags-merge-label {
   padding-top: 0.4rem;
   color: var(--pm-muted);
-  font-size: var(--pm-text-xs);
-  font-weight: 600;
+  font-size: var(--pm-text-list-head);
+  font-weight: var(--pm-weight-list-head);
 }
 
 .tags-merge-source {
   padding-top: 0.35rem;
-  font-size: var(--pm-text-sm);
-  font-weight: 600;
+  font-size: var(--pm-text-row-label);
+  font-weight: var(--pm-weight-row-label);
 }
 
 .tags-merge-source .muted {
-  font-size: var(--pm-text-xs);
-  font-weight: 400;
+  font-size: var(--pm-text-meta);
+  font-weight: var(--pm-weight-meta);
 }
 
 .tags-merge-pick {
@@ -56,7 +56,7 @@
   gap: 0.5rem;
   min-height: var(--pm-control);
   padding: 0 0.5rem;
-  font-size: var(--pm-text-sm);
+  font-size: var(--pm-text-item);
   cursor: pointer;
 }
 
@@ -75,7 +75,7 @@
 }
 
 .tags-merge-option .muted {
-  font-size: var(--pm-text-xs);
+  font-size: var(--pm-text-help);
 }
 
 .tags-merge-option > .input {
@@ -153,7 +153,7 @@
   grid-template-columns: 1rem minmax(0, 1fr);
   gap: 0.15rem 0.6rem;
   min-width: 0;
-  font-size: 0.85rem;
+  font-size: var(--pm-text-meta);
 }
 
 .trash-info > .i {
@@ -166,8 +166,8 @@
 }
 
 .trash-title {
-  font-weight: 600;
-  font-size: 0.95rem;
+  font-weight: var(--pm-weight-row-label);
+  font-size: var(--pm-text-row-label);
 }
 
 /* Who moved it to Trash (T42, A574): an agent's name carries ✦ on the accent tint, as in History. */
@@ -194,7 +194,7 @@
 
 .trash-warning {
   color: var(--pm-danger);
-  font-size: 0.8rem;
+  font-size: var(--pm-text-help);
 }
 
 .app-shell .row .btn {

@@ -31,6 +31,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.em
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.penmoss.DeviceGraph
+import app.penmoss.ui.common.roles
 
 /** The primary notebook's name, which Settings' (i) names (A1560); null with no notebook yet. */
 val LocalPrimaryNotebookName = compositionLocalOf<String?> { null }
@@ -90,7 +91,7 @@ internal fun SettingsInfoButton() {
                 Text(
                     words,
                     inlineContent = laptop,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.roles.body,
                     // Read aloud with the laptop named, as the Mac's says "with a laptop".
                     modifier = Modifier.testTag("settingsInfoText").semantics {
                         contentDescription = "$before with a laptop$after".replace("  ", " ")

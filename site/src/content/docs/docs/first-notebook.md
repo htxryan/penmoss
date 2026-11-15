@@ -41,6 +41,16 @@ When you use an empty repository or paste a URL, **More Options** lets you set:
 - **Branch:** `main` unless you say otherwise. A branch that does not exist yet is made by the first push.
 - **Folder:** a folder of the repository to keep the notebook in, such as `docs/notes` in a code repository. Penmoss then writes only inside that folder.
 
+## More notebooks on this Mac
+
+To add another notebook, choose **Settings → All Notebooks → Add Notebook…**. It shows the same steps as above, from **Create or Open Notebook**, over Settings:
+
+- **Cancel** on the first screen, or Esc on any, goes back to **All Notebooks**.
+- A notebook that is on this Mac already shows **Already Added**, and can't be opened a second time.
+- A new notebook made here has no **Welcome to Penmoss** note.
+
+When the notebook is set up, Penmoss shows its page in Settings.
+
 ## Sign in with GitHub
 
 Penmoss first tries git's own GitHub sign-in on your Mac (GitHub Desktop's, the GitHub CLI's or the Keychain's). If there is none, **Sign In to GitHub** offers Penmoss's own:
