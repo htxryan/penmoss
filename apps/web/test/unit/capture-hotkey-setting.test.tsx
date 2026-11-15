@@ -50,7 +50,7 @@ const settle = (step: () => void) =>
 
 const row = () => host.querySelector<HTMLElement>('[data-testid="capture-hotkey"]');
 const change = () => row()!.querySelector<HTMLButtonElement>('button')!;
-const note = () => row()!.querySelector('.wr-row-note');
+const note = () => row()!.querySelector('.lf-row-note');
 /** A key press as a browser sends it (the tests' platform is not a Mac: Ctrl is Mod). */
 const press = (init: KeyboardEventInit) =>
   window.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init }));

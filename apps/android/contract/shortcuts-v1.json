@@ -58,14 +58,14 @@
     },
     {
       "id": "app.gitNotebooks",
-      "title": "Notebooks",
+      "title": "Notebook Settings",
       "area": "General",
       "scope": "global",
       "keys": []
     },
     {
       "id": "app.status",
-      "title": "Feedback Status and GitHub Token",
+      "title": "GitHub Settings",
       "area": "General",
       "scope": "global",
       "keys": []
@@ -468,7 +468,7 @@
     },
     {
       "id": "app.display",
-      "title": "Sidebar Display Settings",
+      "title": "Sidebar Settings",
       "area": "Appearance",
       "scope": "global",
       "keys": []

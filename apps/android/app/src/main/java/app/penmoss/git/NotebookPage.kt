@@ -49,6 +49,13 @@ object NotebookTab {
     val ALL = listOf(OVERVIEW to "Overview", SYNC to "Sync", GIT to "Git")
 }
 
+/** The Notes row's words (PEN-148): how many, or that they are not read yet. */
+internal fun noteCountWords(count: Int?): String = when (count) {
+    null -> "Not read yet"
+    1 -> "1 note"
+    else -> String.format(java.util.Locale.US, "%,d notes", count)
+}
+
 /** The repository as a line: `github.com/me/notes · branch · dir/`. */
 internal fun repositoryLine(view: app.penmoss.engine.git.GitNotebookView): String =
     view.repository + (if (view.branch != "main") " · ${view.branch}" else "") + (if (view.dir.isNotEmpty()) " · ${view.dir}/" else "")
@@ -70,6 +77,8 @@ fun NotebookPage(
     onBack: () -> Unit,
     /** The notebook's own Room sync line, when Settings opened over its screens. */
     passText: String? = null,
+    /** How many notes it has on this phone; null before they are read (PEN-148). */
+    notes: Int? = null,
 ) {
     val id = row.view.localId
     var shown by rememberSaveable(id) { mutableStateOf(tab) }
@@ -100,7 +109,7 @@ fun NotebookPage(
                         Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("gitPushFirstSaid").semantics { liveRegion = LiveRegionMode.Polite },
                     )
                 }
-                OverviewTab(row, ui, actions, onRemove = { removing = true })
+                OverviewTab(row, ui, actions, notes, onRemove = { removing = true })
             }
         }
     }
@@ -146,9 +155,10 @@ private fun StatusRow(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksActi
 }
 
 @Composable
-private fun OverviewTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksActions, onRemove: () -> Unit) {
+private fun OverviewTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksActions, notes: Int?, onRemove: () -> Unit) {
     val view = row.view
     val id = view.localId
+    var copying by rememberSaveable(id) { mutableStateOf(false) }
     StatusRow(row, ui, actions)
     Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
         Button(onClick = { actions.onOpen(id) }, Modifier.testTag("gitOpen-$id")) { Text("Open Notebook") }
@@ -158,6 +168,28 @@ private fun OverviewTab(row: GitRow, ui: GitNotebooksUi, actions: GitNotebooksAc
         supportingContent = { Text(view.name) },
     )
     val primary = ui.journal == id
+    // Its notes and Copy Settings…, as the Mac's Overview has them (PEN-148).
+    ListItem(
+        headlineContent = { Text("Notes") },
+        supportingContent = { Text(noteCountWords(notes), Modifier.testTag("gitNoteCount-$id")) },
+    )
+    if (ui.rows.size > 1) {
+        ListItem(
+            headlineContent = { Text("Settings") },
+            supportingContent = { Text("Copy from or to other notebooks") },
+            trailingContent = { TextButton(onClick = { copying = true }, Modifier.testTag("gitCopySettingsOpen-$id")) { Text("Copy Settings…") } },
+        )
+    }
+    if (copying && ui.rows.size > 1) {
+        // The primary's page copies to the others; another's copies the primary's into it, as the Mac's.
+        val journal = ui.journal ?: ui.rows.first().view.localId
+        CopySettingsDialog(
+            ui.rows,
+            from = if (primary) id else journal,
+            to = if (primary) null else id,
+            onCopy = actions.onCopySettings,
+        ) { copying = false }
+    }
     ListItem(
         headlineContent = { Text("Primary Notebook") },
         supportingContent = { Text(if (primary) "Journal and captures go here" else "Journal and captures go to another notebook") },

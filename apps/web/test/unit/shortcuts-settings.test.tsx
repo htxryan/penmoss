@@ -85,7 +85,7 @@ const press = (init: KeyboardEventInit) =>
 describe('Settings → Keyboard Shortcuts', () => {
   it('groups the commands by area, under Title Case subheads, without the capture hotkey', () => {
     render();
-    expect([...host.querySelectorAll('.wr-sub')].map((sub) => sub.textContent)).toEqual([
+    expect([...host.querySelectorAll('.lf-sub')].map((sub) => sub.textContent)).toEqual([
       'General',
       'Navigation',
       'Daily Notes',

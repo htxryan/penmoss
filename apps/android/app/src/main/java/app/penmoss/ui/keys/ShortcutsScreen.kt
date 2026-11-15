@@ -1,5 +1,6 @@
 package app.penmoss.ui.keys
 
+import app.penmoss.ui.settings.settingRow
 import android.content.res.Configuration
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.foundation.focusable
@@ -215,7 +216,7 @@ fun ShortcutsScreen(
     ) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding).imePadding().testTag("shortcutList")) {
             item(key = "intro") {
-                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.settingRow("keyboard-shortcuts").padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         "For a hardware keyboard. Changes sync to your other devices. Shortcuts need Ctrl or Alt so typing never runs a command. " +
                             "Meta+/ lists the ones that work where you are.",

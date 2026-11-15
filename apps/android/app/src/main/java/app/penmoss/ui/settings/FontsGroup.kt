@@ -58,17 +58,18 @@ internal fun FontsGroup(fonts: FontsUi, enabled: Boolean) {
     ListItem(
         headlineContent = { Text("Interface Font") },
         supportingContent = { Text(FontSettings.label(fonts.interfaceFont)) },
-        modifier = Modifier.testTag("font-interface").clickable(enabled = enabled, role = Role.Button) { choosing = INTERFACE },
+        modifier = Modifier.settingRow("interface-font").testTag("font-interface").clickable(enabled = enabled, role = Role.Button) { choosing = INTERFACE },
     )
     ListItem(
         headlineContent = { Text("Note Font") },
         supportingContent = { Text(FontSettings.label(fonts.noteFont)) },
-        modifier = Modifier.testTag("font-note").clickable(enabled = enabled, role = Role.Button) { choosing = NOTE },
+        modifier = Modifier.settingRow("note-font").testTag("font-note").clickable(enabled = enabled, role = Role.Button) { choosing = NOTE },
     )
     // The size moves as it is dragged and is stored once let go, so a drag sends one change.
     var size by rememberSaveable { mutableFloatStateOf(fonts.noteSize.toFloat()) }
     LaunchedEffect(fonts.noteSize) { size = fonts.noteSize.toFloat() }
     ListItem(
+        modifier = Modifier.settingRow("note-font-size"),
         headlineContent = { Text("Note Font Size") },
         supportingContent = {
             Column {

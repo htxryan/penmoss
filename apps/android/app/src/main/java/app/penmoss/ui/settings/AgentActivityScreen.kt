@@ -81,7 +81,8 @@ fun AgentActivityScreen(
             item {
                 if (ui.loading || ui.busy != null) LinearProgressIndicator(Modifier.fillMaxWidth().testTag("activityLoading"))
                 Help(
-                    "What agents (a CLI or MCP clone added with --agent) changed in your notebooks in the last 30 days: folders, where notes are and settings, " +
+                    modifier = Modifier.settingRow("agent-activity"),
+                    text = "What agents (a CLI or MCP clone added with --agent) changed in your notebooks in the last 30 days: folders, where notes are and settings, " +
                         "read from each notebook’s branch. Undo puts it back as your own change, pushed with the next sync, unless it was changed again since. " +
                         "An agent’s edits to a note and its tags are in the note’s History, and the notes and folders it deleted are in Trash.",
                 )

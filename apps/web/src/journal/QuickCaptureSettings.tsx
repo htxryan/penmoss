@@ -12,7 +12,8 @@ import { gitNotebookPath, linkHandler } from '../router';
 import { SourcesContext } from '../sources/hooks';
 import type { SourcesState } from '../sources/registry';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
-import { WritingGroup, WritingRow, WritingSubhead } from './writing-rows';
+import { GroupHead, SettingRow } from '../theme/look-rows';
+import './writing.css';
 
 /** Where Quick Capture saves (T51 item 19, A947), in the order Settings offers them. */
 const DESTINATIONS: ReadonlyArray<{
@@ -62,8 +63,9 @@ export function QuickCaptureSettings() {
         Jot something down from anywhere without opening a note. The capture window can choose the
         other place for a single capture.
       </p>
-      <WritingSubhead id={`${id}-saves`}>Saves To</WritingSubhead>
-      <WritingGroup
+      <GroupHead id={`${id}-saves`}>Saves To</GroupHead>
+      <div
+        className="lf-group"
         role="radiogroup"
         aria-labelledby={`${id}-saves`}
         data-testid="capture-default-setting"
@@ -71,7 +73,7 @@ export function QuickCaptureSettings() {
         {DESTINATIONS.map((item) => (
           <label
             key={item.value}
-            className="wr-row wr-choice"
+            className="lf-row lf-choice"
             data-setting={item.setting}
             htmlFor={`${id}-${item.value}`}
           >
@@ -85,25 +87,25 @@ export function QuickCaptureSettings() {
               aria-describedby={`${id}-${item.value}-help`}
               onChange={() => workspace.setSetting(CAPTURE_DESTINATION_SETTING, item.value)}
             />
-            <span className="wr-row-text">
-              <span className="wr-row-label" id={`${id}-${item.value}-label`}>
+            <span className="lf-row-text">
+              <span className="lf-row-label" id={`${id}-${item.value}-label`}>
                 {item.label}
               </span>
-              <span className="wr-row-help" id={`${id}-${item.value}-help`}>
+              <span className="lf-row-help" id={`${id}-${item.value}-help`}>
                 {item.help}
               </span>
             </span>
           </label>
         ))}
-      </WritingGroup>
+      </div>
       <PrimaryNotebookRow />
       {desktop() ? (
         <>
-          <WritingSubhead>This Mac</WritingSubhead>
-          <WritingGroup data-testid="capture-this-mac">
+          <GroupHead>This Mac</GroupHead>
+          <div className="lf-group" data-testid="capture-this-mac">
             <CaptureHotkeySetting />
             <MenuBarIconSetting />
-          </WritingGroup>
+          </div>
         </>
       ) : null}
     </section>
@@ -121,8 +123,8 @@ function PrimaryNotebookRow() {
   );
   const journal = state.journal;
   return (
-    <WritingGroup>
-      <WritingRow
+    <div className="lf-group">
+      <SettingRow
         setting="notebook"
         label="Notebook"
         help="Your Primary Notebook. Make another one primary on its page."
@@ -139,7 +141,7 @@ function PrimaryNotebookRow() {
             <Icon name="chevR" size={12} />
           </a>
         ) : null}
-      </WritingRow>
-    </WritingGroup>
+      </SettingRow>
+    </div>
   );
 }

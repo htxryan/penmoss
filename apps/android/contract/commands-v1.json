@@ -67,7 +67,7 @@
     },
     {
       "id": "app.gitNotebooks",
-      "title": "Notebooks",
+      "title": "Notebook Settings",
       "area": "General",
       "scope": "global",
       "android": {
@@ -76,7 +76,7 @@
     },
     {
       "id": "app.status",
-      "title": "Feedback Status and GitHub Token",
+      "title": "GitHub Settings",
       "area": "General",
       "scope": "global",
       "android": {
@@ -589,7 +589,7 @@
     },
     {
       "id": "app.display",
-      "title": "Sidebar Display Settings",
+      "title": "Sidebar Settings",
       "area": "Appearance",
       "scope": "global",
       "android": {
@@ -1489,7 +1489,14 @@
     },
     {
       "query": "set",
-      "ids": ["app.settings", "app.display", "app.home", "journal.thisWeek"]
+      "ids": [
+        "app.settings",
+        "app.status",
+        "app.gitNotebooks",
+        "app.display",
+        "app.home",
+        "journal.thisWeek"
+      ]
     },
     {
       "query": "tr",

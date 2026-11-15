@@ -56,6 +56,7 @@ import app.penmoss.ui.settings.ChoiceRow
 import app.penmoss.ui.settings.GroupTitle
 import app.penmoss.ui.settings.Help
 import app.penmoss.ui.settings.SectionScreen
+import app.penmoss.ui.settings.settingRow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -161,6 +162,8 @@ data class GitNotebooksUi(
     val signingKey: String? = null,
     /** Copy Tags When Copying Notes (A1353), synced; null where it is not offered (the app's home). */
     val copyTags: Boolean? = null,
+    /** Keep Settings in Step (A1137; PEN-148): this phone's choice. */
+    val inStep: Boolean = false,
 )
 
 data class AddForm(val remote: String, val branch: String, val dir: String, val name: String, val token: String)
@@ -203,6 +206,13 @@ class GitNotebooksActions(
     val onCopyTags: (Boolean) -> Unit = {},
     /** Opens a notebook's own page in Settings (PEN-146). */
     val onPage: (String) -> Unit = {},
+    /** Keep Settings in Step (A1137; PEN-148), this phone's choice. */
+    val onInStep: (Boolean) -> Unit = {},
+    /**
+     * Copy Settings… (A1137; PEN-148): one notebook's settings into another's, or every other's
+     * when the second is null, once. Answers what to say of it.
+     */
+    val onCopySettings: suspend (from: String, to: String?) -> String = { _, _ -> "" },
 )
 
 /**
@@ -250,13 +260,13 @@ fun GitNotebooksScreen(ui: GitNotebooksUi, actions: GitNotebooksActions, onBack:
                 style = MaterialTheme.typography.titleMedium,
             )
         }
-        for (row in ui.rows) NotebookRow(row, primary = ui.journal == row.view.localId) {
+        for ((at, row) in ui.rows.withIndex()) NotebookRow(row, primary = ui.journal == row.view.localId, if (at == 0) Modifier.settingRow("all-notebooks") else Modifier) {
             if (ui.home) actions.onOpen(row.view.localId) else actions.onPage(row.view.localId)
         }
         if (adding || ui.rows.isEmpty()) {
             AddForm(ui, actions, onCancel = if (ui.rows.isEmpty()) null else ({ adding = false }))
         } else {
-            Button(onClick = { adding = true }, Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("gitAddOpen")) { Text("+ Add Notebook") }
+            Button(onClick = { adding = true }, Modifier.settingRow("add-notebook").padding(horizontal = 16.dp, vertical = 8.dp).testTag("gitAddOpen")) { Text("+ Add Notebook") }
         }
         if (ui.home) return@SectionScreen
         if (ui.rows.isNotEmpty()) {
@@ -265,21 +275,13 @@ fun GitNotebooksScreen(ui: GitNotebooksUi, actions: GitNotebooksActions, onBack:
                 headlineContent = { Text("Primary Notebook") },
                 supportingContent = { Text("Holds your journal, Inbox and these settings") },
                 trailingContent = { Text("${primary?.view?.name ?: "None"} ›", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                modifier = Modifier.testTag("gitPrimary").clickable(role = Role.Button) { picking = true },
+                modifier = Modifier.settingRow("primary-notebook").testTag("gitPrimary").clickable(role = Role.Button) { picking = true },
             )
         }
-        if (ui.copyTags != null) {
-            GroupTitle("Between Notebooks")
-            ListItem(
-                headlineContent = { Text("Copy Tags When Copying Notes") },
-                supportingContent = { Text("Copy to Notebook on the Mac starts with this; it syncs from here.") },
-                trailingContent = { Switch(checked = ui.copyTags, onCheckedChange = null) },
-                modifier = Modifier.testTag("gitCopyTags").toggleable(value = ui.copyTags, role = Role.Switch, onValueChange = actions.onCopyTags),
-            )
-        }
+        BetweenNotebooks(ui, actions)
         CommitsFromThisPhone(ui, actions)
         if (ui.rows.isNotEmpty()) {
-            GroupTitle("Background Sync")
+            GroupTitle("Background Sync", Modifier.settingRow("background-sync"))
             Help(
                 "Notebooks sync about every 15 minutes while the app is closed (Android's least; it may wait longer in Doze or battery saver), " +
                     "and soon after you leave the app with changes not pushed." +
@@ -310,9 +312,137 @@ fun GitNotebooksScreen(ui: GitNotebooksUi, actions: GitNotebooksActions, onBack:
     }
 }
 
+/**
+ * Between Notebooks (A1137, A1353, A1550; PEN-148), as the Mac's: Keep Settings in Step (this
+ * phone's choice: each change to the primary notebook's settings goes to the others), Copy Tags
+ * When Copying Notes (synced) and Copy Settings… (from one notebook to another, once). Keep
+ * Settings in Step and Copy Settings… show only with two notebooks or more.
+ */
+@Composable
+private fun BetweenNotebooks(ui: GitNotebooksUi, actions: GitNotebooksActions) {
+    val several = ui.rows.size > 1
+    if (ui.copyTags == null && !several) return
+    var copying by rememberSaveable { mutableStateOf(false) }
+    GroupTitle("Between Notebooks")
+    if (several) {
+        val primary = ui.rows.firstOrNull { it.view.localId == ui.journal } ?: ui.rows.first()
+        ListItem(
+            headlineContent = { Text("Keep Settings in Step") },
+            supportingContent = { Text("A change to ${primary.view.name}’s settings goes to the other notebooks. This phone’s choice.") },
+            trailingContent = { Switch(checked = ui.inStep, onCheckedChange = null) },
+            modifier = Modifier.settingRow("keep-settings-in-step").testTag("gitSettingsInStep")
+                .toggleable(value = ui.inStep, role = Role.Switch, onValueChange = actions.onInStep),
+        )
+    }
+    if (ui.copyTags != null) {
+        ListItem(
+            headlineContent = { Text("Copy Tags When Copying Notes") },
+            supportingContent = { Text("Copy to Notebook on the Mac starts with this; it syncs from here.") },
+            trailingContent = { Switch(checked = ui.copyTags, onCheckedChange = null) },
+            modifier = Modifier.settingRow("copy-tags-when-copying-notes").testTag("gitCopyTags")
+                .toggleable(value = ui.copyTags, role = Role.Switch, onValueChange = actions.onCopyTags),
+        )
+    }
+    if (several) {
+        ListItem(
+            headlineContent = { Text("Copy Settings…") },
+            supportingContent = { Text("From one notebook to another, once") },
+            modifier = Modifier.settingRow("copy-settings").testTag("gitCopySettingsOpen").clickable(role = Role.Button) { copying = true },
+        )
+    }
+    if (several && copying) {
+        CopySettingsDialog(ui.rows, from = ui.journal ?: ui.rows.first().view.localId, to = null, onCopy = actions.onCopySettings) { copying = false }
+    }
+}
+
+/**
+ * Copy Settings… (A1137; PEN-148), as the Mac's panel: From and To (Every Other Notebook too, with
+ * three or more), what it replaces, and Copy Settings, which replaces the other notebook's settings
+ * with the first's, once. Quick Access stays as it is. [to] null starts on every other notebook.
+ */
+@Composable
+internal fun CopySettingsDialog(rows: List<GitRow>, from: String, to: String?, onCopy: suspend (String, String?) -> String, onDismiss: () -> Unit) {
+    var source by rememberSaveable { mutableStateOf(from) }
+    var chosen by rememberSaveable { mutableStateOf(to) }
+    var done by remember { mutableStateOf<String?>(null) }
+    var copying by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val sourceRow = rows.firstOrNull { it.view.localId == source } ?: rows.first()
+    val others = rows.filter { it.view.localId != sourceRow.view.localId }
+    // Every other notebook, or one: the only other one when there is one, the first when the one
+    // chosen became From.
+    val target = if (chosen == null) others.singleOrNull() else others.firstOrNull { it.view.localId == chosen } ?: others.firstOrNull()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Copy Settings") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Picker("From", sourceRow.view.name, rows.map { it.view.localId to it.view.name }, "gitCopyFrom") {
+                    source = it ?: source
+                    done = null
+                }
+                val every = if (others.size > 1) listOf(null to "Every Other Notebook") else emptyList()
+                Picker("To", target?.view?.name ?: "Every Other Notebook", every + others.map { it.view.localId to it.view.name }, "gitCopyTo") {
+                    chosen = it
+                    done = null
+                }
+                Text(
+                    "Replaces ${target?.let { "${it.view.name}’s" } ?: "their"} settings with ${sourceRow.view.name}’s: the theme, Home, shortcuts and the rest. Quick Access stays as it is.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                done?.let {
+                    Text(it, Modifier.testTag("gitCopySettingsDone").semantics { liveRegion = LiveRegionMode.Polite }, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    copying = true
+                    scope.launch {
+                        try {
+                            done = onCopy(sourceRow.view.localId, target?.view?.localId)
+                        } finally {
+                            copying = false
+                        }
+                    }
+                },
+                enabled = others.isNotEmpty() && !copying,
+                modifier = Modifier.testTag("gitCopySettings"),
+            ) { Text(if (copying) "Copying…" else "Copy Settings") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, Modifier.testTag("gitCopySettingsClose")) { Text(if (done != null) "Done" else "Cancel") } },
+    )
+}
+
+/** A choice in a dialog: its label, what is chosen, and a menu of the [options] (an id, null for every other, and a name). */
+@Composable
+private fun Picker(label: String, shown: String, options: List<Pair<String?, String>>, tag: String, onPick: (String?) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        ListItem(
+            headlineContent = { Text(label) },
+            trailingContent = { Text("$shown ›", Modifier.testTag("$tag-shown"), color = MaterialTheme.colorScheme.onSurfaceVariant) },
+            modifier = Modifier.testTag(tag).clickable(role = Role.Button) { open = true },
+        )
+        androidx.compose.material3.DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            for ((id, name) in options) {
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(name) },
+                    onClick = {
+                        open = false
+                        onPick(id)
+                    },
+                    modifier = Modifier.testTag("$tag-${id ?: "every"}"),
+                )
+            }
+        }
+    }
+}
+
 /** A notebook's row (PEN-146): its dot, its name (Primary when it is), its repository and sync. */
 @Composable
-private fun NotebookRow(row: GitRow, primary: Boolean, onClick: () -> Unit) {
+private fun NotebookRow(row: GitRow, primary: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val view = row.view
     ListItem(
         leadingContent = { Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) { DotMarkOf(dotOf(row.status)) } },
@@ -330,7 +460,7 @@ private fun NotebookRow(row: GitRow, primary: Boolean, onClick: () -> Unit) {
             )
         },
         trailingContent = { Text("›", style = MaterialTheme.typography.titleMedium) },
-        modifier = Modifier.testTag("gitNotebook-${view.localId}").clickable(role = Role.Button, onClick = onClick),
+        modifier = modifier.testTag("gitNotebook-${view.localId}").clickable(role = Role.Button, onClick = onClick),
     )
 }
 
@@ -579,7 +709,7 @@ private fun CommitsFromThisPhone(ui: GitNotebooksUi, actions: GitNotebooksAction
     var open by rememberSaveable { mutableStateOf(false) }
     var name by rememberSaveable(ui.identityName) { mutableStateOf(ui.identityName) }
     var email by rememberSaveable(ui.identityEmail) { mutableStateOf(ui.identityEmail) }
-    GroupTitle("Commits From This Phone")
+    GroupTitle("Commits From This Phone", Modifier.settingRow("commits-from-this-phone"))
     ListItem(
         headlineContent = { Text(ui.identityName.ifBlank { "No name set" }) },
         supportingContent = {
@@ -643,6 +773,7 @@ internal fun rememberGitNotebooks(
     onCopyTags: (Boolean) -> Unit = {},
 ): Pair<GitNotebooksUi, GitNotebooksActions> {
     val views by hub.list.collectAsStateWithLifecycle()
+    val inStep by hub.settingsInStep.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var busy by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -699,6 +830,7 @@ internal fun rememberGitNotebooks(
         needsName = needsName,
         signingKey = remember(tick, views) { runCatching { hub.signingKey() }.getOrNull() },
         copyTags = copyTags,
+        inStep = inStep,
     )
     val clipboard = androidx.compose.ui.platform.LocalContext.current.getSystemService(android.content.ClipboardManager::class.java)
     val actions = GitNotebooksActions(
@@ -779,6 +911,17 @@ internal fun rememberGitNotebooks(
         onDismissMessage = { message = null },
         onCopyTags = onCopyTags,
         onPage = onPage,
+        onInStep = hub::setSettingsInStep,
+        onCopySettings = { from, to ->
+            fun name(id: String) = views.firstOrNull { it.localId == id }?.name ?: "the notebook"
+            try {
+                copiedWords(name(from), to?.let(::name), hub.copySettings(from, to))
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                error.message ?: "Penmoss could not copy the settings."
+            }
+        },
     )
     return ui to actions
 }
@@ -819,8 +962,16 @@ fun NotebookPageRoute(
     // Removed: nothing to show, so the page goes.
     val row = ui.rows.firstOrNull { it.view.localId == localId }
     LaunchedEffect(row == null, ui.rows.isEmpty()) { if (row == null && hub.list.value.none { it.localId == localId }) onBack() }
+    // Its notes on this phone (PEN-148), counted again every few seconds while shown.
+    var notes by remember(localId) { mutableStateOf<Int?>(null) }
+    LaunchedEffect(localId) {
+        while (true) {
+            notes = hub.noteCount(localId)
+            delay(5_000)
+        }
+    }
     if (row == null) return
-    NotebookPage(row, ui, actions, tab ?: NotebookTab.OVERVIEW, onBack, passText = passText)
+    NotebookPage(row, ui, actions, tab ?: NotebookTab.OVERVIEW, onBack, passText = passText, notes = notes)
 }
 
 /**

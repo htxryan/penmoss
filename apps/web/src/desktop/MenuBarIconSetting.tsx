@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from 'react';
-import { WritingRow, WritingSwitch } from '../journal/writing-rows';
+import { SettingRow, Switch } from '../theme/look-rows';
 import { desktop } from './bridge';
 
 /**
@@ -37,7 +37,7 @@ export function MenuBarIconSetting() {
     setBusy(false);
   };
   return (
-    <WritingRow
+    <SettingRow
       setting="show-in-the-menu-bar"
       label="Show in the Menu Bar"
       labelFor={id}
@@ -45,7 +45,7 @@ export function MenuBarIconSetting() {
       helpId={`${id}-help`}
       testId="menu-bar-icon-setting"
     >
-      <WritingSwitch
+      <Switch
         id={id}
         checked={shown === true}
         disabled={busy || shown === null}
@@ -53,6 +53,6 @@ export function MenuBarIconSetting() {
         data-testid="menu-bar-icon"
         onChange={(event) => void change(event.target.checked)}
       />
-    </WritingRow>
+    </SettingRow>
   );
 }

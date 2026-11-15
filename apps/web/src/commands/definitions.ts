@@ -79,11 +79,13 @@ export const APP_COMMANDS: readonly CommandDefinition[] = [
   global('app.cheatsheet', 'Keyboard Shortcuts', 'General', ['Mod+/']),
   global('app.settings', 'Settings', 'General', ['Mod+,']),
   global('app.shortcuts', 'Customise Keyboard Shortcuts', 'General'),
-  // T50 (A856): Settings → Notebooks, in the Mac app. No default keys.
-  global('app.gitNotebooks', 'Notebooks', 'General'),
+  // T50 (A856): Settings → All Notebooks, in the Mac app. No default keys. Each settings command
+  // is titled for the page it opens (PEN-148); the ids are the Android contract's
+  // (commands-v1.json), so bindings made for them still work.
+  global('app.gitNotebooks', 'Notebook Settings', 'General'),
   // Settings → GitHub (Status until PEN-146): the GitHub sign-in Send Feedback files with (T57,
-  // T59 A1036). The id and title are the Android contract's (commands-v1.json).
-  global('app.status', 'Feedback Status and GitHub Token', 'General'),
+  // T59 A1036).
+  global('app.status', 'GitHub Settings', 'General'),
   // T64 item 2 (A1112): Settings → Updates, checking now. The Mac app only.
   global('app.checkForUpdates', 'Check for Updates…', 'General'),
   // T49 (D41, A797): a bug report or feature request to the Penmoss board. No default keys.
@@ -197,7 +199,7 @@ export const APP_COMMANDS: readonly CommandDefinition[] = [
   // T28. No default keys: users bind them in Settings → Keyboard Shortcuts (A70, A90).
   global('app.appearance', 'Appearance and Themes', 'Appearance'),
   // T42 (A576): which shortcuts the sidebar shows; Settings → Sidebar since PEN-146.
-  global('app.display', 'Sidebar Display Settings', 'Appearance'),
+  global('app.display', 'Sidebar Settings', 'Appearance'),
   // T44 (A743): the line symbols, their names, colours and order. The picker's "Edit symbols…".
   global('app.symbols', 'Edit Line Symbols', 'Symbols'),
   global('theme.switch', 'Switch Theme…', 'Appearance'),

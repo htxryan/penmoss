@@ -1,9 +1,9 @@
 /**
- * The rows the Look and Feel pages are built from (PEN-146): a group's subhead, with a scope
- * marker when what it holds is this device's own; a bordered group of rows, each a label (and a
- * line of help) on the left and its control on the right; and a switch, a native checkbox drawn
- * as on and off. Every row carries `data-setting`, its label in kebab case, which Search Settings
- * scrolls to.
+ * The rows every Settings page is built from (PEN-146; one set since PEN-148, Writing's too): a
+ * group's subhead, with a scope marker when what it holds is this device's own; a bordered group
+ * of rows (`lf-group`), each a label (and a line of help) on the left and its control on the
+ * right; and a switch, a native checkbox drawn as on and off. Every row carries `data-setting`,
+ * its label in kebab case, which Search Settings scrolls to.
  */
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { desktop } from '../desktop/bridge';
@@ -53,7 +53,9 @@ export function SettingRow({
   lead,
   testId,
   scope,
+  extra,
   children,
+  ...data
 }: {
   /** The row's id for Search Settings: its label in kebab case. */
   readonly setting: string;
@@ -68,8 +70,10 @@ export function SettingRow({
   readonly testId?: string | undefined;
   /** The row alone is this device's own. */
   readonly scope?: boolean | undefined;
+  /** Under the help: a status line or an alert about the row (`lf-row-note`). */
+  readonly extra?: ReactNode | undefined;
   readonly children?: ReactNode | undefined;
-}) {
+} & { readonly [key: `data-${string}`]: string | undefined }) {
   const name = (
     <>
       {label}
@@ -77,7 +81,7 @@ export function SettingRow({
     </>
   );
   return (
-    <div className="lf-row" data-setting={setting} data-testid={testId}>
+    <div className="lf-row" data-setting={setting} data-testid={testId} {...data}>
       {lead}
       <div className="lf-row-text">
         {labelFor ? (
@@ -94,6 +98,7 @@ export function SettingRow({
             {help}
           </span>
         ) : null}
+        {extra}
       </div>
       {children !== undefined ? <div className="lf-row-control">{children}</div> : null}
     </div>

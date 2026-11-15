@@ -160,7 +160,8 @@ class DeviceGraph(
 
     /**
      * Follows the Journal notebook's device map (A1014): read again when the Journal notebook is
-     * switched or a notebook is added or removed; pulled when the app comes to the front.
+     * switched or a notebook is added or removed; pulled when the app comes to the front. While
+     * Keep Settings in Step is on, its changes are copied to the other notebooks too (A1137).
      */
     fun followJournalSettings() {
         scope.launch {
@@ -175,7 +176,11 @@ class DeviceGraph(
                 journalSettings.value = follower
                 // Its tree carries the device map: a pass now reads it.
                 journal.sync.requestSync()
-                follower.follow()
+                kotlinx.coroutines.coroutineScope {
+                    // Keep Settings in Step (A1137; PEN-148): the primary's changes go to the others.
+                    launch { hub.keepInStep(journal) }
+                    follower.follow()
+                }
             }
         }
     }

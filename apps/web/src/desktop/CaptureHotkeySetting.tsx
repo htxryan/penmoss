@@ -2,7 +2,7 @@ import { formatCombo } from '@penmoss/editor/keys';
 import { useEffect, useId, useState } from 'react';
 import { Kbd } from '../commands/Kbd';
 import { useKeyRecorder } from '../commands/recorder';
-import { WritingRow } from '../journal/writing-rows';
+import { SettingRow } from '../theme/look-rows';
 import { desktop, type CaptureHotkey } from './bridge';
 import { acceleratorToCombo, comboToAccelerator } from './hotkey-keys';
 
@@ -64,7 +64,7 @@ export function CaptureHotkeySetting() {
         : ' If nothing happens when you press it, another app may have it: choose another.'
       : ' Another app has this one, so it does nothing now.';
   return (
-    <WritingRow
+    <SettingRow
       setting="shortcut-from-any-app"
       label="Shortcut From Any App"
       labelId={`${id}-label`}
@@ -74,7 +74,7 @@ export function CaptureHotkeySetting() {
       data-accelerator={current.accelerator}
       extra={
         message ? (
-          <p className="wr-row-note" role={message.error ? 'alert' : 'status'}>
+          <p className="lf-row-note" role={message.error ? 'alert' : 'status'}>
             {message.text}
           </p>
         ) : null
@@ -87,7 +87,7 @@ export function CaptureHotkeySetting() {
       ) : (
         <span data-testid="capture-hotkey-keys">
           {unset ? (
-            <span className="wr-none">None</span>
+            <span className="lf-none">None</span>
           ) : (
             <Kbd combo={acceleratorToCombo(current.accelerator)} />
           )}
@@ -105,6 +105,6 @@ export function CaptureHotkeySetting() {
       >
         {recording ? 'Cancel' : 'Change'}
       </button>
-    </WritingRow>
+    </SettingRow>
   );
 }

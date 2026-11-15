@@ -9,7 +9,8 @@ import { thisWeek, today } from './journal';
 import { PLACEHOLDERS, previewLines } from './template-preview';
 import { utcOffset, zoneName } from './time-zones';
 import { TimeZonePicker } from './TimeZonePicker';
-import { WritingGroup, WritingRow } from './writing-rows';
+import { SettingRow } from '../theme/look-rows';
+import './writing.css';
 
 /** Half a second after the last key, as the theme editor saves (A417). */
 const SAVE_DELAY_MS = 500;
@@ -55,9 +56,9 @@ export function JournalSettings() {
         templates are kept in your Primary Notebook, chosen in Settings → All Notebooks, and sync to
         your other devices.
       </p>
-      <WritingGroup>
+      <div className="lf-group">
         <TimeZoneRow settings={settings} />
-      </WritingGroup>
+      </div>
       <TemplateEditor settings={settings} />
     </section>
   );
@@ -76,7 +77,7 @@ function TimeZoneRow({ settings }: { readonly settings: Record<string, unknown> 
   };
   const offset = utcOffset(zone);
   return (
-    <WritingRow
+    <SettingRow
       setting="time-zone"
       label="Time Zone"
       labelId={`${id}-label`}
@@ -114,7 +115,7 @@ function TimeZoneRow({ settings }: { readonly settings: Record<string, unknown> 
           }}
         />
       ) : null}
-    </WritingRow>
+    </SettingRow>
   );
 }
 
