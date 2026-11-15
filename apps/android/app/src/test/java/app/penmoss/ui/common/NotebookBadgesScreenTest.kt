@@ -150,6 +150,8 @@ class NotebookBadgesScreenTest {
         // Drawn: each square in its colour (the proof's pictures).
         shot(compose.onRoot().captureToImage().asAndroidBitmap(), "notebooks-home.png")
         for ((at, row) in rows.withIndex()) {
+            // The large title bar (A1560) leaves the last row below the fold: bring each into view.
+            badges[at].performScrollTo()
             val bitmap = badges[at].captureToImage().asAndroidBitmap()
             shot(bitmap, "badge-${row.view.name.lowercase()}.png")
             assertTrue("${row.view.name}'s badge is ${row.badge.color}", pixelOf(bitmap, row.badge.color))
