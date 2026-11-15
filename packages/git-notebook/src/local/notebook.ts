@@ -9,7 +9,8 @@
  * Search is by words unless the caller gives meaning (an embedder, a cache and an index, A1156); `baseVersion` is the note's local change counter, and a base this process never read is
  * `base_unknown`; agent limits, folder scopes and T43 notebooks do not exist here.
  */
-import { isUlid, type LinkResolver } from '@penmoss/core';
+import { type LinkResolver } from '@penmoss/core';
+import { isUlid } from '@penmoss/core/ids';
 import { attachmentPath, filePath, isImageType, sniffFileType } from '@penmoss/core/attachments';
 import { findSection } from '@penmoss/core/diff-apply';
 import { summarise } from '@penmoss/core/diff';

@@ -13,7 +13,8 @@
 import { HYBRID_DEPTH, fuseHybrid, parseQuery, type NoteSection } from '@penmoss/core/search';
 import { tagMatches } from '@penmoss/core/tags';
 import { folderSubtree, type FolderRecord } from '@penmoss/core/workspace';
-import type { NoteMeta, NoteRecord, NoteText } from '@penmoss/sync-client';
+import type { NoteText } from '../store/idb';
+import type { NoteMeta, NoteRecord } from '@penmoss/sync-client/record';
 import {
   LocalSearchIndex,
   type LocalSearchDocument,

@@ -5,7 +5,7 @@
  * pictures through the app (A304), the theme (A305), conflict copies
  * (A306), and the IME and caret care (A307).
  */
-import { NOTE_ROOT } from '@penmoss/sync-client';
+import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import type { JSONContent } from '@tiptap/core';
 import {
   initNote,

@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import * as Y from '@y/y';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { StoredAttachment } from '../src/attachment-store';
+import type { StoredAttachment } from '../../../src/store/attachment-store';
 import {
   ATTACHMENT_BYTES_STORE,
   ATTACHMENTS_STORE,
@@ -13,12 +13,13 @@ import {
   toMeta,
   type NoteRecord,
   type UnloadWrite,
-} from '../src/idb';
-import { recordFromDoc } from '../src/records';
-import { UNLOAD_MAX_CHARS } from '../src/unload';
-import { setDeleted } from '../src/note';
-import { setFrontmatterTag } from '../src/tags';
-import { createFolder, renameFolder, WORKSPACE_RECORD_KEY } from '../src/workspace';
+} from '../../../src/store/idb';
+import { recordFromDoc } from '@penmoss/sync-client/records';
+import { UNLOAD_MAX_CHARS } from '../../../src/store/unload';
+import { setDeleted } from '@penmoss/sync-client/note';
+import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { setFrontmatterTag } from '@penmoss/sync-client/tags';
+import { createFolder, renameFolder, WORKSPACE_RECORD_KEY } from '@penmoss/sync-client/workspace';
 import { appendParagraph, createReplica } from './support/editing';
 import { seedRecords } from './support/seed';
 import { MemoryStorage } from './support/storage';
@@ -866,5 +867,37 @@ describe('NoteStore', () => {
       expect(await next.takeUnloadDrops(WORKSPACE_RECORD_KEY)).toBe(0);
       expect(await next.takeUnloadDrops('gone')).toBe(0);
     });
+  });
+});
+
+describe('search fields in records (T22)', () => {
+  it('stores the headings with each record, and lists them with the text and tags', async () => {
+    const doc = new Y.Doc();
+    const root = doc.get(NOTE_ROOT);
+    const heading = new Y.Node('heading');
+    heading.setAttr('level', 2);
+    const paragraph = new Y.Node('paragraph');
+    root.push([heading, paragraph]);
+    heading.insert(0, 'Restoring');
+    paragraph.insert(0, 'Clone the #backup repository');
+    const record = recordFromDoc('n1', doc, { unsynced: false, updatedAt: 5 });
+    expect(record.headings).toBe('Restoring');
+    const store = await NoteStore.open(`penmoss-search-${Date.now()}`);
+    try {
+      await store.put(record);
+      expect(await store.listTexts()).toEqual([
+        {
+          noteId: 'n1',
+          title: '',
+          text: 'Restoring\nClone the #backup repository',
+          headings: 'Restoring',
+          tags: ['backup'],
+          updatedAt: 5,
+          deleted: false,
+        },
+      ]);
+    } finally {
+      store.close();
+    }
   });
 });

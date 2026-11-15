@@ -3,7 +3,7 @@
  * points drawn from them through typing, remote edits and block moves, and the same text lit
  * up for a thread the server anchored from a quote.
  */
-import { NOTE_ROOT } from '@penmoss/sync-client';
+import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import {
   anchorForQuote,
   createThread,

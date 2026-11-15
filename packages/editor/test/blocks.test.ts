@@ -1,4 +1,5 @@
-import { parseMarkdown, schema as coreSchema, serializeMarkdown } from '@penmoss/core';
+import { parseMarkdown, serializeMarkdown } from '@penmoss/core';
+import { schema as coreSchema } from '@penmoss/core/schema';
 import type { JSONContent } from '@tiptap/core';
 // Imported with the file, not inside the test: loading it took 7 s under load, past the test's 5 s.
 import { GapCursor } from '@tiptap/pm/gapcursor';

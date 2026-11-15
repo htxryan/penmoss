@@ -4,7 +4,7 @@
  * CLI's credential store): a copied profile (a restored backup, a cloned data folder) has the
  * docs but not the secret, so it gets a new id and never writes into another writer's files.
  */
-import { ulid } from '@penmoss/core';
+import { ulid } from '@penmoss/core/ids';
 
 export type WriterKind = 'device' | 'agent';
 

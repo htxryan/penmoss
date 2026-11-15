@@ -7,6 +7,7 @@ import {
   periodicNoteId,
   todayIn,
   type PeriodKind,
+  plainDate,
 } from '@penmoss/core/periodic';
 import { readIdentity, readTitle } from '@penmoss/sync-client/note';
 import { NOTE_ROOT } from '@penmoss/sync-client/replica';
@@ -79,7 +80,7 @@ describe('periodic notes from templates (T19, A4)', () => {
     const note = periodicNote(
       core,
       'weekly',
-      isoWeek(core.plainDate(2026, 10, 21)).toString(),
+      isoWeek(plainDate(2026, 10, 21)).toString(),
       ['# Week {{week}}', DEFAULT_WEEKLY_TEMPLATE].join('\n\n'),
     );
     expect(note.body).toContain('# Week 2026-W43');

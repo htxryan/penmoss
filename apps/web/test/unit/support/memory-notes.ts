@@ -1,4 +1,6 @@
-import { toMeta, type NoteRecord, type StoredAttachment } from '@penmoss/sync-client';
+import { type StoredAttachment } from '../../../src/store/attachment-store';
+import { type NoteRecord } from '@penmoss/sync-client/record';
+import { toMeta } from '@penmoss/sync-client/records';
 import type { LocalNotes } from '../../../src/notes/service';
 
 /** An in-memory stand-in for NoteStore (IndexedDB), attachments included (T10). */

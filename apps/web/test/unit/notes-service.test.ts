@@ -12,7 +12,7 @@ import {
   type LocalSyncState,
   type NoteRegistry,
 } from '../../src/notes/service';
-import type { UnloadWrite } from '@penmoss/sync-client';
+import type { UnloadWrite } from '@penmoss/sync-client/record';
 import { appendParagraph } from '../../../../packages/sync-client/test/support/editing';
 import { TEST_NOTEBOOK } from './support/local-sources';
 import { memoryNotes } from './support/memory-notes';

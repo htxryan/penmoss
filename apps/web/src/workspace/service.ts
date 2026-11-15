@@ -8,8 +8,8 @@
 import { ulid } from '@penmoss/core/ids';
 import { journalFolderId, type PeriodKind } from '@penmoss/core/periodic';
 import { type SortMode } from '@penmoss/core/workspace';
-import type { ReplicaStore } from '@penmoss/sync-client';
-import { ReplicaKeeper } from '@penmoss/sync-client/keeper';
+import type { ReplicaStore } from '@penmoss/sync-client/record';
+import { ReplicaKeeper } from '../store/keeper';
 import { mergeRecords } from '@penmoss/sync-client/records';
 import {
   createFolder,

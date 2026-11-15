@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Replica } from '@penmoss/sync-client';
+import type { Replica } from '@penmoss/sync-client/replica';
 import { blockDragKey } from '../src/extensions/block-move';
 import {
   blockAtY,

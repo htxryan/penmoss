@@ -27,7 +27,7 @@ import {
 import { failGoneDeliveries, type AgentSession } from '@penmoss/sync-client/agent-sessions';
 import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
 import type { SelectionAnchor } from '@penmoss/editor';
-import { ulid } from '@penmoss/core';
+import { ulid } from '@penmoss/core/ids';
 import { useEffect, useState } from 'react';
 
 /** How long a change to the body waits before the list is placed again (typing moves anchors). */

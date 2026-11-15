@@ -1,4 +1,5 @@
-import { parseMarkdown, schema as coreSchema, serializeMarkdown } from '@penmoss/core';
+import { parseMarkdown, serializeMarkdown } from '@penmoss/core';
+import { schema as coreSchema } from '@penmoss/core/schema';
 import type { JSONContent } from '@tiptap/core';
 import { CellSelection } from '@tiptap/pm/tables';
 import { TextSelection } from '@tiptap/pm/state';

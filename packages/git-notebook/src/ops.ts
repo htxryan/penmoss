@@ -4,7 +4,8 @@
  * carries it. The rules are the apps': the same WorkspaceDoc and note helpers, ids from
  * `@penmoss/core`, and the notebook's own settings (A827: the `notebook/` keys).
  */
-import { parseMarkdown, ulid } from '@penmoss/core';
+import { parseMarkdown } from '@penmoss/core';
+import { ulid } from '@penmoss/core/ids';
 import { isSha256 } from '@penmoss/core/attachments';
 import {
   DEFAULT_DAILY_TEMPLATE,

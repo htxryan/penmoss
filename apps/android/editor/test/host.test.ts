@@ -3,7 +3,7 @@
  * from the app's stored bytes, sends every local edit back as bytes, never
  * echoes what the app gave it, and merges the synced updates for the app.
  */
-import { NOTE_ROOT } from '@penmoss/sync-client';
+import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import { initNote, readTitle, setTitle } from '@penmoss/sync-client/note';
 import { createYjs14Replica, type Yjs14Replica } from '@penmoss/sync-client/yjs14';
 import * as Y from '@y/y';

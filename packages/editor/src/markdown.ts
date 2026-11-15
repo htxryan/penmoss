@@ -5,10 +5,10 @@
 import {
   createFrontmatter,
   parseMarkdown,
-  schema,
   serializeMarkdown,
   type LinkResolver,
 } from '@penmoss/core';
+import { schema } from '@penmoss/core/schema';
 import { parseAttachmentPath } from '@penmoss/core/attachments';
 import { blocksOf, reuseBlocks } from '@penmoss/core/diff-apply';
 import type { DocJson } from '@penmoss/core/links';

@@ -14,17 +14,17 @@
  */
 import { ulid } from '@penmoss/core/ids';
 import type { DocJson, NoteLink } from '@penmoss/core/links';
+import { type AttachmentStore } from '../store/attachment-store';
+import { type NoteText } from '../store/idb';
 import {
-  type AttachmentStore,
-  toMeta,
   type NoteMeta,
   type NoteRecord,
-  type NoteText,
   type RecordUpdater,
   type ReplicaStore,
-} from '@penmoss/sync-client';
-import { Attachments, type AttachmentsElsewhere } from '@penmoss/sync-client/attachments';
-import { ReplicaKeeper, type ReplicaSnapshot } from '@penmoss/sync-client/keeper';
+} from '@penmoss/sync-client/record';
+import { toMeta } from '@penmoss/sync-client/records';
+import { Attachments, type AttachmentsElsewhere } from '../store/attachments';
+import { ReplicaKeeper, type ReplicaSnapshot } from '../store/keeper';
 import {
   initNote,
   isDeleted,

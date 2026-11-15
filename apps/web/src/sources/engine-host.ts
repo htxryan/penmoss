@@ -17,7 +17,7 @@
 import { readThread } from '@penmoss/sync-client/comments';
 import { WORKSPACE_RECORD_KEY } from '@penmoss/sync-client/workspace';
 import { recordFromDoc } from '@penmoss/sync-client/records';
-import type { NoteRecord } from '@penmoss/sync-client';
+import type { NoteRecord } from '@penmoss/sync-client/record';
 import {
   GitNotebookEngine,
   GitTransportError,

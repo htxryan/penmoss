@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Node as PMNode } from 'prosemirror-model';
-import { parseMarkdown, schema, serializeMarkdown, type LinkResolver } from '../src';
+import { parseMarkdown, serializeMarkdown, type LinkResolver } from '../src';
+import { schema } from '../src/schema';
 import {
   blockMarkdown,
   blocksOf,

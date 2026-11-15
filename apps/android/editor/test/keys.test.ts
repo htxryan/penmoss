@@ -5,7 +5,7 @@
  * binding A90 forbids is never taken, and nothing without Ctrl, Alt or an F-key is considered.
  */
 import { EDITOR_COMMANDS } from '@penmoss/editor';
-import { NOTE_ROOT } from '@penmoss/sync-client';
+import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import { initNote } from '@penmoss/sync-client/note';
 import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
 import * as Y from '@y/y';

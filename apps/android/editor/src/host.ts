@@ -100,7 +100,7 @@ import { formatCombo } from '@penmoss/editor/keys';
 import { noteFields } from '@penmoss/editor/note-fields';
 import { docText, textStats } from '@penmoss/editor/stats';
 import { bindTitleField, oneLineTitle } from '@penmoss/editor/title';
-import { NOTE_ROOT } from '@penmoss/sync-client';
+import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import {
   initNote,
   isoWithOffset,

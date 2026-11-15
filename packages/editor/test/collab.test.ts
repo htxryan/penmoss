@@ -1,4 +1,4 @@
-import type { Replica } from '@penmoss/sync-client';
+import type { Replica } from '@penmoss/sync-client/replica';
 import { Plugin } from '@tiptap/pm/state';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createCollabEditor, type CollabEditor } from '../src/collab';

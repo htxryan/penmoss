@@ -1,4 +1,4 @@
-import { META_STORE, NOTES_STORE, toMeta, type NoteRecord } from '../../src/idb';
+import { META_STORE, NOTES_STORE, toMeta, type NoteRecord } from '../../../../src/store/idb';
 
 /**
  * Writes `records` and their list metadata straight into a closed NoteStore database, in one

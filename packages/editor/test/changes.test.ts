@@ -1,4 +1,4 @@
-import { schema } from '@penmoss/core';
+import { schema } from '@penmoss/core/schema';
 import { EditorState, type Transaction } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { changedNodes, changedRanges } from '../src/extensions/changes';

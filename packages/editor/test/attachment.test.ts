@@ -1,4 +1,5 @@
-import { schema as coreSchema, serializeMarkdown } from '@penmoss/core';
+import { serializeMarkdown } from '@penmoss/core';
+import { schema as coreSchema } from '@penmoss/core/schema';
 import { DOMParser as PMDOMParser, DOMSerializer } from '@tiptap/pm/model';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { insertFiles, openFile, type FileServices } from '../src/extensions/attachment';

@@ -4,7 +4,7 @@
  * step; the bar's state says which the selection has; the picker a hardware keyboard opens
  * closes with Back, and its Edit symbols… asks the app for Settings → Symbols.
  */
-import { NOTE_ROOT } from '@penmoss/sync-client';
+import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import { initNote } from '@penmoss/sync-client/note';
 import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
 import { openSymbolPicker } from '@penmoss/editor';

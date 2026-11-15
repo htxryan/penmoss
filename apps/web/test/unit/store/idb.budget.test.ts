@@ -2,7 +2,7 @@
 // `task check`. That the store opens and lists 5,000 notes is a unit test (idb.test.ts).
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
-import { NoteStore, type NoteRecord } from '../src/idb';
+import { NoteStore, type NoteRecord } from '../../../src/store/idb';
 import { seedRecords } from './support/seed';
 
 function record(noteId: string, update: Uint8Array): NoteRecord {

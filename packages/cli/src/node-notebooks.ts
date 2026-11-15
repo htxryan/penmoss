@@ -8,7 +8,7 @@
  * anyone whether the repository is private (D61), and git follows its own configuration,
  * rewrites (`insteadOf`, `pushInsteadOf`) included (D62).
  */
-import { ulid } from '@penmoss/core';
+import { ulid } from '@penmoss/core/ids';
 import { notebookTag } from '@penmoss/core/note-ref';
 import { LEASE_RETRY_MS, LeaseKeeper, MeaningIndex } from '@penmoss/core/search';
 import {

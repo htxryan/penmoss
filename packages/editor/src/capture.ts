@@ -16,7 +16,8 @@
  * Loaded lazily with the markdown codec, like daily-note templates.
  */
 import { isEmptyBody, findSection, replaceBlocks } from '@penmoss/core/diff-apply';
-import { parseMarkdown, schema } from '@penmoss/core';
+import { parseMarkdown } from '@penmoss/core';
+import { schema } from '@penmoss/core/schema';
 import { setBody } from '@penmoss/sync-client/history';
 import { NOTE_ROOT } from '@penmoss/sync-client/replica';
 import { pmnodeToDelta, ynodeToPmnode } from '@y/prosemirror';

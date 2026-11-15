@@ -6,8 +6,8 @@
  * closes, the next window in line takes the lock and runs it, picking up everything stored.
  */
 import { AgentActivity, Layout, type ActivityEntry, type UndoResult } from '@penmoss/git-notebook';
-import type { AttachmentsElsewhere } from '@penmoss/sync-client/attachments';
-import { NoteStore } from '@penmoss/sync-client';
+import type { AttachmentsElsewhere } from '../store/attachments';
+import { NoteStore } from '../store/idb';
 import { WORKSPACE_RECORD_KEY } from '@penmoss/sync-client/workspace';
 import type { DesktopGit, GitNotebookInfo, GitPendingPurge } from '../desktop/bridge';
 import type { NoteDirectory } from '../notes/directory';

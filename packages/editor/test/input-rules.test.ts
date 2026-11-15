@@ -1,4 +1,5 @@
-import { schema as coreSchema, serializeMarkdown } from '@penmoss/core';
+import { serializeMarkdown } from '@penmoss/core';
+import { schema as coreSchema } from '@penmoss/core/schema';
 import { describe, expect, it } from 'vitest';
 import { openEditor, press, type } from './support/editor';
 
