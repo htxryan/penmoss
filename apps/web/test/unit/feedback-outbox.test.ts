@@ -169,6 +169,16 @@ describe('the feedback outbox', () => {
     expect(sent).toEqual(['a']);
   });
 
+  it('refresh finds what another window queued, and sends nothing', async () => {
+    const { store, outbox, sent } = harness([]);
+    await outbox.start();
+    expect(outbox.entries()).toEqual([]);
+    await store.putOutbox(entry('other'));
+    await outbox.refresh();
+    expect(outbox.entries().map((item) => item.id)).toEqual(['other']);
+    expect(sent).toEqual([]);
+  });
+
   it('a thrown send is a network failure', async () => {
     const { outbox } = harness([]);
     const attempt = await outbox.enqueue(entry('a'));

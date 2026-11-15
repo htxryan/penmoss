@@ -296,6 +296,10 @@ function FeedbackUse() {
 function FeedbackRow({ feedback }: { feedback: FeedbackService }) {
   const waiting = useOutbox(feedback).length;
   const commands = useCommands();
+  // A note window's report waits in the shared store; read it again when the page opens.
+  useEffect(() => {
+    void feedback.outbox.refresh();
+  }, [feedback]);
   return (
     <SettingRow
       setting="send-feedback"

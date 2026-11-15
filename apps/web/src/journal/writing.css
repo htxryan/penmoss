@@ -78,6 +78,11 @@
   font-size: var(--pm-text-sm);
 }
 
+.wr-none {
+  color: var(--pm-muted);
+  font-size: var(--pm-text-sm);
+}
+
 .wr-row-note[role='alert'] {
   color: var(--pm-danger);
 }

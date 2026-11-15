@@ -55,11 +55,14 @@ export function CaptureHotkeySetting() {
   });
 
   if (!bridge || !current) return null;
-  const help = current.registered
-    ? current.certain
-      ? null
-      : ' If nothing happens when you press it, another app may have it: choose another.'
-    : ' Another app has this one, so it does nothing now.';
+  const unset = !current.accelerator;
+  const help = unset
+    ? ' None is set.'
+    : current.registered
+      ? current.certain
+        ? null
+        : ' If nothing happens when you press it, another app may have it: choose another.'
+      : ' Another app has this one, so it does nothing now.';
   return (
     <WritingRow
       setting="shortcut-from-any-app"
@@ -83,7 +86,11 @@ export function CaptureHotkeySetting() {
         </span>
       ) : (
         <span data-testid="capture-hotkey-keys">
-          <Kbd combo={acceleratorToCombo(current.accelerator)} />
+          {unset ? (
+            <span className="wr-none">None</span>
+          ) : (
+            <Kbd combo={acceleratorToCombo(current.accelerator)} />
+          )}
         </span>
       )}
       <button

@@ -159,6 +159,20 @@ export class FeedbackOutbox {
     void this.flush();
   }
 
+  /**
+   * Reads the store again for what other windows queued since this one started (Settings →
+   * GitHub counts them, PEN-146). An entry this window is sending keeps its state; nothing sends.
+   */
+  async refresh(): Promise<void> {
+    const stored = await this.options.store.listOutbox();
+    const mine = new Map(this.list.map((entry) => [entry.id, entry]));
+    this.list = stored.map((entry) => {
+      const own = mine.get(entry.id);
+      return own?.state === 'sending' ? own : entry;
+    });
+    this.changed();
+  }
+
   private async reload(): Promise<void> {
     const stored = await this.options.store.listOutbox();
     // An entry left `sending` by a window that went away is queued again.

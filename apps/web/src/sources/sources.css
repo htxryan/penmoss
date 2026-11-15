@@ -218,6 +218,17 @@
   margin-top: 0;
 }
 
+/* A card's title with its icon (Agents → The penmoss Command), and its words at the rows' size. */
+.settings-card > h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.settings-card > p {
+  font-size: var(--pm-text-md);
+}
+
 .settings-facts {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);

@@ -52,7 +52,7 @@ export function JournalSettings() {
       <h2 id={`${id}-h`}>Daily Notes</h2>
       <p>
         A note for each day and each week, made from these templates. The time zone and the
-        templates are kept in your Primary Notebook, chosen in Settings → Notebooks, and sync to
+        templates are kept in your Primary Notebook, chosen in Settings → All Notebooks, and sync to
         your other devices.
       </p>
       <WritingGroup>

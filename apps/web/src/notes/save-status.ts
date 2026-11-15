@@ -61,7 +61,7 @@ export function gitSaveStatus(
     return status(
       'stopped',
       'Sync Stopped',
-      `Saved on this device. ${sync.detail ?? 'The notebook’s git sync stopped.'} Settings → Notebooks says why.`,
+      `Saved on this device. ${sync.detail ?? 'The notebook’s git sync stopped.'} Its page in Settings says why.`,
     );
   }
   if (sync.phase === 'offline') {
