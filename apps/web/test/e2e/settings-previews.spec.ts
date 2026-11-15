@@ -92,3 +92,60 @@ test('Settings → Appearance previews the app, and a theme shows in it', async 
   await expect.poll(background).not.toBe(before);
   expect(errors).toEqual([]);
 });
+
+// A1582: beside the shrunk window, the fonts at the size the app draws them, each labelled.
+test('Settings → Appearance shows the fonts at their real size, and a size change shows in it', async ({
+  page,
+}) => {
+  const errors = collectErrors(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/settings/appearance');
+  const panel = page.getByTestId('type-specimen');
+  await expect(panel).toBeVisible();
+  const text = panel.locator('[data-specimen="Text"]');
+  const label = (role: string) => panel.locator(`[data-specimen="${role}"] [data-specimen-label]`);
+  // The note's own text at the Note Font Size, labelled with its family and size.
+  await expect(text.locator('[data-specimen-text]')).toHaveCSS('font-size', '16px');
+  await expect(label('Text')).toHaveText(/^Text · .+ · 16 px$/);
+  await expect(label('Heading 1')).toHaveText(/ · 25\.6 px$/);
+  await expect(label('Setting')).toHaveText(/^Setting · .+ · 13 px$/);
+
+  const fonts = page.getByTestId('font-settings');
+  for (let step = 0; step < 4; step++) {
+    await fonts.getByRole('button', { name: 'Larger' }).click();
+  }
+  await expect(fonts.getByTestId('note-size-value')).toHaveText('20 px');
+  await expect(text.locator('[data-specimen-text]')).toHaveCSS('font-size', '20px');
+  await expect(label('Text')).toHaveText(/ · 20 px$/);
+  await expect(label('Heading 1')).toHaveText(/ · 32 px$/);
+  // The interface's text keeps its size; its font follows Interface Font.
+  await expect(label('Setting')).toHaveText(/ · 13 px$/);
+  const before = await label('Body').textContent();
+  await fonts.getByLabel('Interface Font', { exact: true }).selectOption('mono');
+  await expect(label('Body')).not.toHaveText(before ?? '');
+  await expect(panel.locator('[data-specimen="Body"] [data-specimen-text]')).toHaveCSS(
+    'font-family',
+    /mono/i,
+  );
+
+  // Back as it was, for the next test.
+  await fonts.getByLabel('Interface Font', { exact: true }).selectOption('theme');
+  for (let step = 0; step < 4; step++) {
+    await fonts.getByRole('button', { name: 'Smaller' }).click();
+  }
+  await expect(fonts.getByTestId('note-size-value')).toHaveText('16 px');
+  expect(errors).toEqual([]);
+});
+
+test('Settings → Note shows the note’s text at its real size', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/settings/note');
+  const panel = page.getByTestId('note-type-specimen');
+  await expect(panel.locator('[data-specimen="Title"] [data-specimen-label]')).toHaveText(
+    /^Title · .+ · 30\.4 px$/,
+  );
+  await expect(panel.locator('[data-specimen="Code"] [data-specimen-label]')).toHaveText(
+    /^Code · /,
+  );
+  await expect(panel.locator('[data-specimen="Setting"]')).toHaveCount(0);
+});

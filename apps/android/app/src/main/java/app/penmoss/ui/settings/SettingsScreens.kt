@@ -426,6 +426,8 @@ fun AppearanceScreen(
 ) {
     SectionScreen("Appearance", onBack, notice = SETTINGS_WAIT.takeIf { !enabled }) {
         AppearancePreview(homeShortcuts, notePreview)
+        // The interface's text at its real size, beside the preview (A1582).
+        if (fonts != null) FontsAtSize(fonts)
         GroupTitle("Theme", Modifier.settingRow("theme"))
         Segments(MODES, mode, enabled, "themeMode", Modifier.settingRow("mode"), icons = MODE_ICONS, itemTag = { "mode-$it" }, onChoose = onMode)
         Help(

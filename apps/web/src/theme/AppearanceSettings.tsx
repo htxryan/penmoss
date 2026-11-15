@@ -16,6 +16,7 @@ import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import { AppPreview } from './AppPreview';
 import { useThemeState } from './hooks';
 import { FontSettings } from './FontSettings';
+import { TypeSpecimen } from './TypeSpecimen';
 import { GroupHead, SettingRow } from './look-rows';
 import { ThemeEditor } from './ThemeEditor';
 import { SettingsHeader } from '../pages/SettingsHeader';
@@ -195,6 +196,8 @@ export function AppearanceSettings() {
           <p className="lf-label">Preview</p>
           <AppPreview style={previewStyle} />
           <p className="lf-help">Redraws as you change the mode, theme, fonts or size.</p>
+          {/* The fonts at the size the app draws them, beside the shrunk window (A1582). */}
+          <TypeSpecimen style={previewStyle} />
         </aside>
       </div>
     </section>

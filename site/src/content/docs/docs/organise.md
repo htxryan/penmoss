@@ -105,7 +105,7 @@ Quick Access is not the same as a pinned [tab](/docs/install/mac/#tabs): Quick A
 
 ## The note in Settings
 
-**Settings → Note** shows the note you opened last, made small, beside its settings, and it changes as you change them:
+**Settings → Note** shows the note you opened last, made small, beside its settings, and under it **Fonts at Real Size**: a note's title, headings, text and code at the size Penmoss draws them, each with its font and size. The preview changes as you change these settings:
 
 - **Layout**: **Note Width**, the theme's width or **Full Window**, and **Note Panel**, whether a note's panel starts **Closed** or **Open** (marked **This Mac**, as it is kept on each device). Each note then remembers its own.
 - **Title Bar Buttons**: which of Full Width, Markdown Source, the two copies, Copy Agent Reference, Pin to Quick Access, Open in New Window, Move to Folder and Move to Trash have a button at the end of the tab strip (beside the title in a note window). Each is also in the note's ⋯ menu.

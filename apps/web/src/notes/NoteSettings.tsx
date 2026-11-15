@@ -8,6 +8,7 @@ import { useId } from 'react';
 import { useKeys } from '../commands/hooks';
 import { Kbd } from '../commands/Kbd';
 import { AppPreview } from '../theme/AppPreview';
+import { TypeSpecimen } from '../theme/TypeSpecimen';
 import { GroupHead, SettingRow, Switch } from '../theme/look-rows';
 import { useThemeState } from '../theme/hooks';
 import { useNoteMetadataSettings } from './metadata-state';
@@ -131,6 +132,8 @@ export function NoteSettings() {
           {/* The note itself (A1564): its title bar, the details under its title, its width,
               its panel as it starts and its status bar, as these settings make them. */}
           <AppPreview sidebar={false} testId="note-preview" />
+          {/* The note's text at its real size: its title, headings, text and code (A1582). */}
+          <TypeSpecimen interfaceText={false} testId="note-type-specimen" />
         </aside>
       </div>
     </section>

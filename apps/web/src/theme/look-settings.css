@@ -576,3 +576,67 @@
     min-height: var(--pm-hit);
   }
 }
+
+/*
+ * The fonts at their real size (A1582), under a preview: each sample is the app's own text (a
+ * type role's class, or the note's `.note-body .ProseMirror` and `.doc-title`), its label under
+ * it. Nothing here sets a size: the samples take theirs from the roles and the note's scale.
+ */
+.type-specimen {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--pm-border-soft);
+  background: var(--pm-bg);
+  color: var(--pm-fg);
+}
+
+.type-specimen-group {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.type-specimen-row {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.type-specimen-row > :first-child {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.type-specimen-row [data-specimen-label] {
+  color: var(--pm-muted);
+}
+
+/* The sidebar's rows' size (the touch layout's step larger, A1561). */
+.type-specimen-sidebar {
+  font-size: var(--pm-text-sidebar-item);
+}
+
+/* The note's samples in the note's own rules, without a note's height or margins. */
+.type-specimen-note .ProseMirror {
+  display: grid;
+  gap: 0.5rem;
+  min-height: 0;
+}
+
+.type-specimen-note .ProseMirror > .type-specimen-row {
+  margin: 0;
+}
+
+.type-specimen-note .ProseMirror > .type-specimen-row > :first-child,
+.type-specimen-note .ProseMirror p {
+  margin: 0;
+}
+
+.type-specimen-note .doc-title {
+  field-sizing: initial;
+}

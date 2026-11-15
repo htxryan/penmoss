@@ -20,6 +20,7 @@ import { Select } from '@penmoss/ui/controls/Select';
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { useWorkspace } from '../workspace/hooks';
 import { AppPreview } from './AppPreview';
+import { TypeSpecimen } from './TypeSpecimen';
 import { useThemeController, useThemeState } from './hooks';
 
 /** Edits are saved (and synced) once they pause this long; the page shows them at once. */
@@ -309,6 +310,8 @@ function CustomThemeEditor({ theme, themes }: { theme: Theme; themes: readonly T
       <aside className="lf-preview-col" aria-label="Preview">
         <p className="lf-label">Preview</p>
         <AppPreview style={previewVars} testId="theme-preview" />
+        {/* The variant's fonts at their real size, in its colours (A1582). */}
+        <TypeSpecimen style={previewVars} testId="theme-type-specimen" />
         <p
           className={problems.length ? 'theme-contrast warn' : 'theme-contrast'}
           role="status"

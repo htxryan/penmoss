@@ -196,6 +196,27 @@ class SettingsScreensTest {
         compose.onNodeWithText("Always light, whatever the phone’s setting.").assertIsDisplayed()
     }
 
+    /** A1582: beside the preview, the interface's text at its real size, labelled, and the note's font and size. */
+    @Test
+    fun appearanceShowsTheFontsAtTheirRealSizeAndFollowsAChange() {
+        var fonts by mutableStateOf(FontsUi("theme", "theme", 16, {}, {}, {}))
+        compose.setContent {
+            PenmossTheme {
+                AppearanceScreen(
+                    "system", systemDark = false, themes = cards, chosen = "penmoss", fullWidth = false, editorWidth = 52,
+                    enabled = true, onMode = {}, onTheme = {}, onFullWidth = {}, onBack = {}, fonts = fonts,
+                )
+            }
+        }
+        compose.onNodeWithTag("fontsAtSize").assertIsDisplayed()
+        compose.onNodeWithText("Setting · Theme Default · 16 sp").assertExists()
+        compose.onNodeWithText("Page Title · Theme Default · 24 sp").assertExists()
+        compose.onNodeWithText("Note · Theme Default · 16 px: the note in the preview is at its real size.").assertExists()
+        fonts = FontsUi("serif", "mono", 20, {}, {}, {})
+        compose.onNodeWithText("Setting · Serif · 16 sp").assertExists()
+        compose.onNodeWithText("Note · Monospace · 20 px: the note in the preview is at its real size.").assertExists()
+    }
+
     /** A1564: the preview is the app itself (Home's own shortcut row and the note page), inert. */
     @Test
     fun thePreviewIsTheAppItselfAndTakesNoTouchOrFocus() {
