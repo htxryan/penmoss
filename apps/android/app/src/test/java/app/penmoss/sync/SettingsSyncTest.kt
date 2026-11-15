@@ -424,7 +424,8 @@ class SettingsSyncTest {
         release()
         release()
         val sent = penmoss.settingsChanges.size
-        assertTrue(change(SettingKeys.TIME_ZONE, "America/Chicago"))
+        val home = "America/Chicago"
+        assertTrue(change(SettingKeys.TIME_ZONE, home))
         sync.requestSync()
         assertFalse(within(500) { penmoss.settingsChanges.size > sent })
         assertEquals(setOf(SettingKeys.TIME_ZONE), shown().unsent)
