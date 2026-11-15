@@ -24,7 +24,7 @@ import {
 } from '@penmoss/core/periodic';
 import { toBase64 } from 'lib0/buffer';
 import { describe, expect, it } from 'vitest';
-import { periodicNote } from '@penmoss/sync-client/periodic';
+import { periodicNote } from '@penmoss/model/periodic';
 import fixture from '../../contract/periodic-fixture.json';
 
 interface FixtureCase {

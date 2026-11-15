@@ -298,7 +298,7 @@ tasks:
   budgets:run:
     cmds:
       - pnpm -r --workspace-concurrency=1 --if-present budgets
-      - pnpm --filter @penmoss/sync-client perf
+      - pnpm --filter @penmoss/model perf
 
   proof:web:
     desc: "The software factory's web proof (F5): the given specs recorded on video with a final screenshot, `task proof:web -- comments.spec.ts`"

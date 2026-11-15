@@ -8,11 +8,11 @@
  */
 import { parseFrontmatter, readNoteMeta } from '@penmoss/core';
 import { nameKey, noteName } from '@penmoss/core/mirror';
-import { bodyMarkdown, noteBody } from '@penmoss/sync-client/markdown';
-import { isDeleted, readTitle, setTitle } from '@penmoss/sync-client/note';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
-import { setFrontmatterTag } from '@penmoss/sync-client/tags';
-import { readFolderTrash, readWorkspace, WorkspaceError } from '@penmoss/sync-client/workspace';
+import { bodyMarkdown, noteBody } from '@penmoss/model/markdown';
+import { isDeleted, readTitle, setTitle } from '@penmoss/model/note';
+import { NOTE_ROOT } from '@penmoss/model/replica';
+import { setFrontmatterTag } from '@penmoss/model/tags';
+import { readFolderTrash, readWorkspace, WorkspaceError } from '@penmoss/model/workspace';
 import * as Y from '@y/y';
 import {
   GitNotebookEngine,

@@ -33,7 +33,7 @@
  * passage, listed first and never orphaned.
  */
 
-import { MAX_COMMENT_CHARS } from '@penmoss/sync-client/comments';
+import { MAX_COMMENT_CHARS } from '@penmoss/model/comments';
 
 export { MAX_COMMENT_CHARS };
 

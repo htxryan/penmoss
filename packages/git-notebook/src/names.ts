@@ -25,8 +25,8 @@ import {
   type FolderName,
   type MirrorFolder,
 } from '@penmoss/core/mirror';
-import { isDeleted, readTitle } from '@penmoss/sync-client/note';
-import { readWorkspace, WORKSPACE_FOLDERS, WORKSPACE_NOTES } from '@penmoss/sync-client/workspace';
+import { isDeleted, readTitle } from '@penmoss/model/note';
+import { readWorkspace, WORKSPACE_FOLDERS, WORKSPACE_NOTES } from '@penmoss/model/workspace';
 import * as Y from '@y/y';
 import { ATTACHMENTS_DIR, PENMOSS_DIR } from './layout';
 

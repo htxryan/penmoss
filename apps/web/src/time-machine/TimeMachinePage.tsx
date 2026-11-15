@@ -20,7 +20,7 @@ import {
   type TimelineNoteText,
   type TimelineTree,
 } from '@penmoss/git-notebook';
-import { copyNote } from '@penmoss/sync-client/records';
+import { copyNote } from '@penmoss/model/records';
 import { Icon } from '@penmoss/ui/icons';
 import type { FolderNode, NoteEntry } from '@penmoss/core/workspace';
 import { useEffect, useId, useMemo, useState } from 'react';

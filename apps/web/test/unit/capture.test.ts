@@ -1,7 +1,7 @@
 import type { DocJson } from '@penmoss/core/links';
 import { journalFolderId, periodicNoteId } from '@penmoss/core/periodic';
-import { readWorkspace } from '@penmoss/sync-client/workspace';
-import { bodyJson, createYjs14Replica } from '@penmoss/sync-client/yjs14';
+import { readWorkspace } from '@penmoss/model/workspace';
+import { bodyJson, createYjs14Replica } from '@penmoss/model/yjs14';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CAPTURE_DESTINATION_SETTING, captureDestinationOf } from '@penmoss/core/settings';
 import { saveCapture } from '../../src/capture/save';

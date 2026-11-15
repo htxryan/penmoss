@@ -1,5 +1,5 @@
 import { Icon } from '@penmoss/ui/icons';
-import { FOLDER_TRASH_DAYS, type TrashedFolder } from '@penmoss/sync-client/workspace';
+import { FOLDER_TRASH_DAYS, type TrashedFolder } from '@penmoss/model/workspace';
 import { useState } from 'react';
 import { useWorkspace, useWorkspaceState } from '../workspace/hooks';
 import { folderContents, restoredMessage } from './deleted-folders';

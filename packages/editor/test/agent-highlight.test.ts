@@ -1,6 +1,6 @@
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
-import { setTitle } from '@penmoss/sync-client/note';
-import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
+import { NOTE_ROOT } from '@penmoss/model/replica';
+import { setTitle } from '@penmoss/model/note';
+import { createYjs14Replica } from '@penmoss/model/yjs14';
 import * as Y from '@y/y';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AGENT_HIGHLIGHT_MS, highlightAgentEdit } from '../src/extensions/agent-highlight';

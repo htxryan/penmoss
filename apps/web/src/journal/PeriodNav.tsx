@@ -8,7 +8,7 @@ import {
   parsePlainDate,
   weekDays,
 } from '@penmoss/core/periodic';
-import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import type { Yjs14Replica } from '@penmoss/model/yjs14';
 import { useCommand, useCommands } from '../commands/hooks';
 import { useNoteList, useNotes } from '../notes/hooks';
 import { useWorkspace } from '../workspace/hooks';

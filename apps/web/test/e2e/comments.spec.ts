@@ -1,4 +1,4 @@
-import { readThreads } from '@penmoss/sync-client/comments';
+import { readThreads } from '@penmoss/model/comments';
 import { expect, seeded, test, type Page } from './fixtures';
 import { COMMENT } from './keys';
 import { readRemote, remoteMarkdown } from './support/remote';

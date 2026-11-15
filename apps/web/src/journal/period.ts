@@ -2,8 +2,8 @@
  * The period of an open daily or weekly note (T19): PeriodNav above it, and the Time Machine's
  * link under a weekly note's title (PEN-21).
  */
-import { readIdentity } from '@penmoss/sync-client/note';
-import type { Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import { readIdentity } from '@penmoss/model/note';
+import type { Yjs14Replica } from '@penmoss/model/yjs14';
 import { useEffect, useState } from 'react';
 
 export type Period = { readonly kind: 'daily' | 'weekly'; readonly period: string } | null;

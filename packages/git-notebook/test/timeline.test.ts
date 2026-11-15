@@ -3,8 +3,8 @@
  * and an agent; the tree and a note's text at a past date, and what changed in a week, with who
  * changed it. Over the real engine and the in-memory transport.
  */
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
-import { setTitle } from '@penmoss/sync-client/note';
+import { NOTE_ROOT } from '@penmoss/model/replica';
+import { setTitle } from '@penmoss/model/note';
 import * as Y from '@y/y';
 import { describe, expect, it } from 'vitest';
 import { commitAt, Layout, liveTree, NotebookTimeline } from '../src';

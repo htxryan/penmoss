@@ -14,12 +14,12 @@ import {
   type NoteRecord,
   type UnloadWrite,
 } from '../../../src/store/idb';
-import { recordFromDoc } from '@penmoss/sync-client/records';
+import { recordFromDoc } from '@penmoss/model/records';
 import { UNLOAD_MAX_CHARS } from '../../../src/store/unload';
-import { setDeleted } from '@penmoss/sync-client/note';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
-import { setFrontmatterTag } from '@penmoss/sync-client/tags';
-import { createFolder, renameFolder, WORKSPACE_RECORD_KEY } from '@penmoss/sync-client/workspace';
+import { setDeleted } from '@penmoss/model/note';
+import { NOTE_ROOT } from '@penmoss/model/replica';
+import { setFrontmatterTag } from '@penmoss/model/tags';
+import { createFolder, renameFolder, WORKSPACE_RECORD_KEY } from '@penmoss/model/workspace';
 import { appendParagraph, createReplica } from './support/editing';
 import { seedRecords } from './support/seed';
 import { MemoryStorage } from './support/storage';

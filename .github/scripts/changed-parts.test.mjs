@@ -93,6 +93,7 @@ describe('what ships', () => {
       'apps/web/src/App.tsx',
       'apps/web/package.json',
       'packages/editor/src/lists.ts',
+      'packages/model/src/note.ts',
       'packages/ui/src/toast.css',
       'packages/cli/src/cli.ts',
       'packages/embed/src/manifest.ts',
@@ -149,6 +150,16 @@ describe('what ships', () => {
       site: true,
       factory: false,
       ships: false,
+    });
+    // The model (A1537), like core, is in the web app, Android's page and the Mac app.
+    assert.deepEqual(parts(['packages/model/src/note.ts']), {
+      check: true,
+      web: true,
+      android: true,
+      desktop: true,
+      site: false,
+      factory: false,
+      ships: true,
     });
     assert.deepEqual(parts(['packages/cli/src/cli.ts']), {
       check: true,

@@ -10,7 +10,7 @@ import {
   DEVICE_MAP,
   NOTEBOOK_MAP,
   WORKSPACE_RECORD_KEY,
-} from '@penmoss/sync-client/workspace';
+} from '@penmoss/model/workspace';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { planDrop } from '../../src/workspace/model';
 import { Workspace, type WorkspaceOptions } from '../../src/workspace/service';

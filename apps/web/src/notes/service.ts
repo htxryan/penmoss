@@ -21,8 +21,8 @@ import {
   type NoteRecord,
   type RecordUpdater,
   type ReplicaStore,
-} from '@penmoss/sync-client/record';
-import { toMeta } from '@penmoss/sync-client/records';
+} from '@penmoss/model/record';
+import { toMeta } from '@penmoss/model/records';
 import { Attachments, type AttachmentsElsewhere } from '../store/attachments';
 import { ReplicaKeeper, type ReplicaSnapshot } from '../store/keeper';
 import {
@@ -32,7 +32,7 @@ import {
   isoWithOffset,
   readTitle,
   setDeleted,
-} from '@penmoss/sync-client/note';
+} from '@penmoss/model/note';
 import { periodicNoteId, type PeriodKind } from '@penmoss/core/periodic';
 import {
   deleteRecord,
@@ -42,10 +42,10 @@ import {
   newRev,
   recordFromUpdates,
   withLinks,
-} from '@penmoss/sync-client/records';
-import { noteTags, type TagChange } from '@penmoss/sync-client/tags';
-import { WORKSPACE_RECORD_KEY } from '@penmoss/sync-client/workspace';
-import { bodyJson, createYjs14Replica, type Yjs14Replica } from '@penmoss/sync-client/yjs14';
+} from '@penmoss/model/records';
+import { noteTags, type TagChange } from '@penmoss/model/tags';
+import { WORKSPACE_RECORD_KEY } from '@penmoss/model/workspace';
+import { bodyJson, createYjs14Replica, type Yjs14Replica } from '@penmoss/model/yjs14';
 import { applyLive, mergeNotes, type LiveNote, type NoteListEntry } from './list';
 import { TagChanges } from './tag-changes';
 
@@ -1125,7 +1125,7 @@ export class Notes {
       return id;
     }
     const [{ periodicNote }, codec] = await Promise.all([
-      import('@penmoss/sync-client/periodic'),
+      import('@penmoss/model/periodic'),
       import('@penmoss/core'),
     ]);
     const note = periodicNote(codec, kind, period, template, salt);

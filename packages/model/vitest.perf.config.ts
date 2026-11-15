@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config';
 
-// Performance measurements, not part of `task check`: `pnpm --filter @penmoss/sync-client perf`.
+// Performance measurements, not part of `task check`: `pnpm --filter @penmoss/model perf`.
 export default defineConfig({
   test: {
     include: ['perf/**/*.perf.ts'],

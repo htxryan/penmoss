@@ -1,4 +1,4 @@
-import { isDeleted } from '@penmoss/sync-client/note';
+import { isDeleted } from '@penmoss/model/note';
 import { createHash } from 'node:crypto';
 import { expect, type Page, test } from './fixtures';
 import { collectErrors, ULID } from './support/app';

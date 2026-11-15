@@ -8,7 +8,7 @@
  * `apps/android/contract/settings-v1.json` lists the keys a phone reads, with their defaults.
  *
  * Which settings are the notebook's own and which a device's is `isNotebookSetting`, here; where
- * each is kept is sync-client's (`NOTEBOOK_MAP`, `DEVICE_MAP`, `mergedSettings`).
+ * each is kept is `@penmoss/model`'s (`NOTEBOOK_MAP`, `DEVICE_MAP`, `mergedSettings`).
  */
 import {
   DEFAULT_DAILY_TEMPLATE,

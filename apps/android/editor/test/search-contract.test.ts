@@ -31,7 +31,7 @@ import {
   stemTerm,
   tokenize,
 } from '@penmoss/core/search';
-import { LocalSearchIndex, type LocalSearchDocument } from '@penmoss/sync-client/local-index';
+import { LocalSearchIndex, type LocalSearchDocument } from '@penmoss/model/local-index';
 import { describe, expect, it } from 'vitest';
 import foldContract from '../../contract/search-fold-v1.json';
 import rankingContract from '../../contract/search-ranking-v1.json';

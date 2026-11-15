@@ -11,7 +11,7 @@ import type {
   RecordUpdater,
   ReplicaStore,
   UnloadWrite,
-} from '@penmoss/sync-client/record';
+} from '@penmoss/model/record';
 import {
   decodeUnloadWrite,
   encodeUnloadWrite,
@@ -20,10 +20,10 @@ import {
   withUnloadWrite,
   type UnloadOutcome,
 } from './unload';
-import { toMeta } from '@penmoss/sync-client/records';
-import { WORKSPACE_RECORD_KEY } from '@penmoss/sync-client/workspace';
+import { toMeta } from '@penmoss/model/records';
+import { WORKSPACE_RECORD_KEY } from '@penmoss/model/workspace';
 
-export type { NoteMeta, NoteRecord, UnloadWrite } from '@penmoss/sync-client/record';
+export type { NoteMeta, NoteRecord, UnloadWrite } from '@penmoss/model/record';
 
 export const NOTES_STORE = 'notes';
 /** Small key-value state next to the notes, e.g. the tag-rename journal (T18). */

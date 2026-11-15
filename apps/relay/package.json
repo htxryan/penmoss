@@ -19,7 +19,7 @@
   "devDependencies": {
     "@cloudflare/vitest-plugin": "1.4.6",
     "@penmoss/core": "workspace:*",
-    "@penmoss/sync-client": "workspace:*",
+    "@penmoss/model": "workspace:*",
     "@types/node": "24.19.2",
     "vitest": "5.0.5",
     "wrangler": "4.151.3"

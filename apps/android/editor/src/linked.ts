@@ -14,7 +14,7 @@
  * from this phone or from a sync, so the embed renders again.
  */
 import { headingsOf, type DocJson } from '@penmoss/core/links';
-import { bodyJson } from '@penmoss/sync-client/yjs14';
+import { bodyJson } from '@penmoss/model/yjs14';
 import * as Y from '@y/y';
 import { fromBase64 } from 'lib0/buffer';
 import { BRIDGE_VERSION, type FromEditor, type StoredUpdate, type ToEditor } from './protocol';

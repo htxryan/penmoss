@@ -3,7 +3,7 @@
  * points drawn from them through typing, remote edits and block moves, and the same text lit
  * up for a thread the server anchored from a quote.
  */
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { NOTE_ROOT } from '@penmoss/model/replica';
 import {
   anchorForQuote,
   createThread,
@@ -11,8 +11,8 @@ import {
   resolveAnchor,
   anchoredText,
   type CommentAnchor,
-} from '@penmoss/sync-client/comments';
-import { createYjs14Replica } from '@penmoss/sync-client/yjs14';
+} from '@penmoss/model/comments';
+import { createYjs14Replica } from '@penmoss/model/yjs14';
 import * as Y from '@y/y';
 import { yUndoPluginKey } from '@y/prosemirror';
 import { describe, expect, it } from 'vitest';

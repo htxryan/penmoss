@@ -13,9 +13,9 @@ import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseMarkdown, type LinkResolver } from '@penmoss/core';
-import { initNote } from '@penmoss/sync-client/note';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
-import { setFrontmatterTag } from '@penmoss/sync-client/tags';
+import { initNote } from '@penmoss/model/note';
+import { NOTE_ROOT } from '@penmoss/model/replica';
+import { setFrontmatterTag } from '@penmoss/model/tags';
 import { docToDelta } from '@y/prosemirror';
 import * as Y from '@y/y';
 

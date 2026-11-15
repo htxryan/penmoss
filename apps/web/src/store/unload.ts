@@ -4,9 +4,9 @@
  */
 import * as Y from '@y/y';
 import { fromBase64, toBase64 } from 'lib0/buffer';
-import type { NoteRecord, UnloadWrite } from '@penmoss/sync-client/record';
-import { conflictCopy, recordFromDoc, recordFromUpdates } from '@penmoss/sync-client/records';
-import { WORKSPACE_RECORD_KEY } from '@penmoss/sync-client/workspace';
+import type { NoteRecord, UnloadWrite } from '@penmoss/model/record';
+import { conflictCopy, recordFromDoc, recordFromUpdates } from '@penmoss/model/records';
+import { WORKSPACE_RECORD_KEY } from '@penmoss/model/workspace';
 
 /**
  * The largest entry kept (characters of JSON; about 0.75 MB of Yjs update). Local storage holds

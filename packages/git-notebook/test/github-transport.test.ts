@@ -4,7 +4,7 @@
  * a rebuild, a new branch, nothing outside the notebook's directory), and the engine end to end,
  * with a relay over GitHub and a Mac over git writing the same notebook and converging.
  */
-import { readTitle } from '@penmoss/sync-client/note';
+import { readTitle } from '@penmoss/model/note';
 import { describe, expect, it } from 'vitest';
 import {
   GitNotebookEngine,

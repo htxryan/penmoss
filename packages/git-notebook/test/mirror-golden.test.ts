@@ -3,7 +3,7 @@
  * (T50 G1, #149; A832). `fixtures/mirror-golden.json` was recorded by running the corpus against
  * the server's own modules (`apps/server/src/do/markdown.ts`, `mirror/paths.ts`, `tree.ts` and
  * `workspace-tree.ts`) before they moved; the same corpus over `@penmoss/core/mirror` and
- * `@penmoss/sync-client/markdown` must give every path, name, id and byte again. The mirror's own
+ * `@penmoss/model/markdown` must give every path, name, id and byte again. The mirror's own
  * render (`mirrorMarkdown`, which the NoteDoc and git notebooks both call) must agree too.
  * (The workerd suite's `mirror-default-paths.test.ts` runs the real mirror against its fixture.)
  */
@@ -30,8 +30,8 @@ import {
   noteStamp,
   readNoteState,
   renderNote,
-} from '@penmoss/sync-client/markdown';
-import { periodicNote } from '@penmoss/sync-client/periodic';
+} from '@penmoss/model/markdown';
+import { periodicNote } from '@penmoss/model/periodic';
 import { describe, expect, it } from 'vitest';
 import { mirrorCorpus, type MirrorCode, type MirrorGolden } from './support/mirror-corpus';
 

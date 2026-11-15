@@ -6,9 +6,9 @@
  * `noteChanged`; a link followed to a heading opens there; and the open
  * note's details go to the app at most every 300 ms.
  */
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
-import { initNote } from '@penmoss/sync-client/note';
-import { createYjs14Replica, type Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import { NOTE_ROOT } from '@penmoss/model/replica';
+import { initNote } from '@penmoss/model/note';
+import { createYjs14Replica, type Yjs14Replica } from '@penmoss/model/yjs14';
 import * as Y from '@y/y';
 import { toBase64 } from 'lib0/buffer';
 import { afterEach, describe, expect, it, vi } from 'vitest';

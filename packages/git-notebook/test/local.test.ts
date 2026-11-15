@@ -14,7 +14,7 @@ import {
   localFetch,
   LOCAL_ORIGIN,
 } from '../src/local';
-import { setTagDescription } from '@penmoss/sync-client/workspace';
+import { setTagDescription } from '@penmoss/model/workspace';
 import { NOTEBOOK_ID, testNotebook } from './support/notebooks';
 
 /** A route's JSON reply: the fields these tests read past `toMatchObject` are typed. */

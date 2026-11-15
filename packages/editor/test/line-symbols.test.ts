@@ -1,7 +1,7 @@
 import { parseMarkdown, serializeMarkdown } from '@penmoss/core';
 import { schema as coreSchema } from '@penmoss/core/schema';
 import { DEFAULT_SYMBOLS, type LineSymbol } from '@penmoss/core/line-symbols';
-import { NOTE_ROOT } from '@penmoss/sync-client/replica';
+import { NOTE_ROOT } from '@penmoss/model/replica';
 import type { JSONContent } from '@tiptap/core';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';

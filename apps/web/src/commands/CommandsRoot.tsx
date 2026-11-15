@@ -5,7 +5,7 @@ import { openLightboxNow, setLightboxHooks } from '@penmoss/editor';
 import { TrashedToast } from '../trash/TrashedToast';
 import { showToast } from '../toasts/toasts';
 import { chooseTheme, resolveThemeSettings, toggleDarkMode } from '@penmoss/ui/theme';
-import { WorkspaceError } from '@penmoss/sync-client/workspace';
+import { WorkspaceError } from '@penmoss/model/workspace';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CaptureDialog } from '../capture/CaptureDialog';
 import { FeedbackDialog, type FeedbackSnapshot } from '../feedback/FeedbackDialog';

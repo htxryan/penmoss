@@ -10,7 +10,7 @@ import {
   type FolderRecord,
   type SortMode,
 } from '@penmoss/core/workspace';
-import { readWorkspace, setSortMode } from '@penmoss/sync-client/workspace';
+import { readWorkspace, setSortMode } from '@penmoss/model/workspace';
 import { LocalError, type NoteCatalog } from './catalog';
 
 /** The most notes one folder listing returns. */

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
-import { readThreads, orderThreads } from '@penmoss/sync-client/comments';
-import { createYjs14Replica, type Yjs14Replica } from '@penmoss/sync-client/yjs14';
+import { readThreads, orderThreads } from '@penmoss/model/comments';
+import { createYjs14Replica, type Yjs14Replica } from '@penmoss/model/yjs14';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';

@@ -1,5 +1,5 @@
 import type { CollabEditor, FileServices } from '@penmoss/editor';
-import { isDeleted } from '@penmoss/sync-client/note';
+import { isDeleted } from '@penmoss/model/note';
 import type { NoteDirectory } from './directory';
 import type { Notes, OpenNote } from './service';
 
