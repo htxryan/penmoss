@@ -765,7 +765,10 @@ export class LocalMcpServer {
               ? notebooksInstructions(
                   await this.router.notebooks(),
                   this.presentation.meaning === true,
-                )
+                ) +
+                (this.presentation.channel
+                  ? `\n${CHANNEL_INSTRUCTIONS}\nEach event also says which notebook its thread is in (notebook="…"); the note_id finds it, so pass no notebook.`
+                  : '')
               : this.presentation.meaning
                 ? LOCAL_MEANING_INSTRUCTIONS
                 : LOCAL_INSTRUCTIONS),
