@@ -409,10 +409,4 @@ export class GitHubTransport implements GitTransport {
     }
     return [...seen.values()].sort((a, b) => b.at - a.at).slice(0, limit);
   }
-
-  /** Whether GitHub says the repository is private (A841: a public one is never written to). */
-  async isPrivate(): Promise<boolean> {
-    const data = await this.json<{ private?: unknown }>('');
-    return data.private === true;
-  }
 }

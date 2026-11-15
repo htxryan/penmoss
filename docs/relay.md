@@ -16,12 +16,12 @@ The relay lets Claude on the web, desktop and mobile apps use a [git notebook](h
 - **Before a call** it pulls, when its last sync is 15 seconds old or more, so Claude sees what the Mac pushed (A998).
 - **A write** is saved at once and pushed to GitHub 5 seconds after writes settle. `save_version` pushes right away. A failed push is tried again every minute.
 - **Edits are an agent's**: the writer `claude.ai`, shown in History and agent activity, where they can be reverted.
-- **The repository must be private** (A841). The relay checks with GitHub, trusts “private” for an hour, and refuses every call while the repository is public.
+- **Any repository**: public and private repositories sync alike; the relay asks GitHub nothing about privacy (D61, A1530).
 - **One copy, one call at a time**: a Durable Object holds the copy, as the clone lock does on a Mac (A996).
 
 ## Set it up
 
-You need the notes repository (a private GitHub repository holding a git notebook), a Cloudflare account with `penmoss.app`, and Wrangler (`pnpm --filter @penmoss/relay exec wrangler login`).
+You need the notes repository (a GitHub repository holding a git notebook), a Cloudflare account with `penmoss.app`, and Wrangler (`pnpm --filter @penmoss/relay exec wrangler login`).
 
 ### 1. Create the GitHub App
 
@@ -80,7 +80,6 @@ pnpm exec wrangler deploy
 
 - **“This relay is not yours”**: you signed in to GitHub as another account than `ALLOWED_GITHUB_LOGIN`.
 - **“This app cannot connect”**: the connector's redirect is not on `ALLOWED_REDIRECT_HOSTS` (claude.ai and claude.com by default).
-- **“… is public”**: make the notes repository private on GitHub. The relay never syncs a public repository.
 - **“The relay is not set up”** or a 503 from `/mcp`: a setting or secret is missing; the message names it.
 - **GitHub refused the App's installation token**: the App is not installed on the notes repository, or the key, App id or installation id is wrong.
 - Logs: `pnpm exec wrangler tail` in `apps/relay`.
