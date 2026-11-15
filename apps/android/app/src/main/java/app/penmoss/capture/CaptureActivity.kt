@@ -179,6 +179,9 @@ class CaptureActivity : ComponentActivity() {
             val unread = saved.refusedPictures
             val pictures = if (unread > 0) " ${if (unread == 1) "A picture" else "$unread pictures"} could not be read." else ""
             val cut = if (saved.cut) " It was too long, so its end was cut." else ""
+            // The one Toast left (A1535): the sheet closes once this is saved, and Penmoss may not be
+            // open at all (a share from Chrome, the tile, the widget), so no screen of ours is
+            // there to hold a snackbar. A Toast shows over whatever app is in front.
             Toast.makeText(app, "$where.$pictures$cut", Toast.LENGTH_SHORT).show()
         }
     }
