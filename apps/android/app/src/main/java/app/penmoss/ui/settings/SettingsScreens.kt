@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -94,7 +95,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import app.penmoss.engine.settings.SettingKeys
 import app.penmoss.engine.settings.SettingLimits
 import app.penmoss.ui.common.DotState
@@ -495,24 +499,72 @@ fun AppearanceScreen(
 @Composable
 private fun AppearancePreview(shortcuts: HomeShortcuts, note: (@Composable (Modifier) -> Unit)?) {
     val colours = MaterialTheme.colorScheme
+    // Tapped, it opens full screen (A1589). Only one editor page lives at a time (A418), so the
+    // page's own note waits while the dialog shows it.
+    var enlarged by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("appearancePreview")) {
-        Column(Modifier.testTag("appearancePreviewApp").fillMaxWidth().border(1.dp, colours.outlineVariant).inert()) {
-            Box(Modifier.fillMaxWidth().background(colours.surface)) {
-                HomeShortcutRow(shortcuts, onSearch = {}, onToday = {}, onThisWeek = {}, onGraph = {}, onCommands = {})
-            }
-            if (note != null) {
-                HorizontalDivider(color = colours.outlineVariant)
-                Box(Modifier.fillMaxWidth().height(168.dp).background(colours.surface)) {
-                    note(Modifier.fillMaxSize())
-                }
+        Box(Modifier.fillMaxWidth()) {
+            PreviewApp(shortcuts, note.takeIf { !enlarged }, Modifier.testTag("appearancePreviewApp").fillMaxWidth(), noteHeight = 168.dp, noteArea = note != null)
+            // One button over it: the whole preview opens larger, with a magnifying glass to say so.
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .clickable(role = Role.Button, onClickLabel = "Enlarge") { enlarged = true }
+                    .semantics { contentDescription = "Enlarge Appearance Preview" }
+                    .testTag("appearancePreviewEnlarge"),
+                contentAlignment = Alignment.BottomEnd,
+            ) {
+                Icon(
+                    SettingsIcons.Search,
+                    contentDescription = null,
+                    Modifier.padding(8.dp).background(colours.surfaceContainerHigh).border(1.dp, colours.outlineVariant).padding(6.dp).size(20.dp),
+                    tint = colours.onSurface,
+                )
             }
         }
         Text(
-            "Preview: redraws as you change these.",
+            "Preview: redraws as you change these. Tap to see it larger.",
             Modifier.padding(top = 4.dp),
             style = MaterialTheme.roles.help,
             color = colours.onSurfaceVariant,
         )
+    }
+    if (enlarged) {
+        Dialog(onDismissRequest = { enlarged = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Surface(Modifier.fillMaxSize().testTag("appearancePreviewDialog"), color = colours.surface) {
+                Column(Modifier.fillMaxSize().systemBarsPadding()) {
+                    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "Appearance Preview",
+                            Modifier.weight(1f).semantics { heading() },
+                            style = MaterialTheme.roles.barTitle,
+                        )
+                        IconButton(onClick = { enlarged = false }, modifier = Modifier.testTag("appearancePreviewClose")) {
+                            Icon(Icons.Default.Close, contentDescription = "Close")
+                        }
+                    }
+                    HorizontalDivider(color = colours.outlineVariant)
+                    PreviewApp(shortcuts, note, Modifier.testTag("appearancePreviewLarge").fillMaxWidth().weight(1f), noteHeight = null, noteArea = true)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Home's own shortcut row above the editor page, inert (A1564); the note [noteHeight] high, or the
+ * rest. [noteArea] keeps the note's room while the dialog has the note (one editor page at a time).
+ */
+@Composable
+private fun PreviewApp(shortcuts: HomeShortcuts, note: (@Composable (Modifier) -> Unit)?, modifier: Modifier, noteHeight: Dp?, noteArea: Boolean) {
+    val colours = MaterialTheme.colorScheme
+    Column(modifier.border(1.dp, colours.outlineVariant).background(colours.surface).inert()) {
+        HomeShortcutRow(shortcuts, onSearch = {}, onToday = {}, onThisWeek = {}, onGraph = {}, onCommands = {})
+        if (noteArea) {
+            HorizontalDivider(color = colours.outlineVariant)
+            val area = if (noteHeight != null) Modifier.fillMaxWidth().height(noteHeight) else Modifier.fillMaxWidth().weight(1f)
+            Box(area) { if (note != null) note(Modifier.fillMaxSize()) }
+        }
     }
 }
 

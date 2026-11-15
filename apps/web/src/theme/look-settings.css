@@ -640,3 +640,92 @@
 .type-specimen-note .doc-title {
   field-sizing: initial;
 }
+
+/*
+ * A preview that opens larger (A1589): one button over the inert preview, the magnifying glass
+ * over a soft dim on hover and on keyboard focus; the dialog draws the preview as large as the
+ * window leaves room for (`--preview-zoom-height`), at its real size at most.
+ */
+.preview-zoom {
+  position: relative;
+  min-width: 0;
+}
+
+.preview-zoom-button {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--pm-fg);
+  cursor: zoom-in;
+  transition: background-color var(--pm-fast) var(--pm-ease);
+}
+
+.preview-zoom-icon {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--pm-border);
+  background: var(--pm-raised);
+  box-shadow: var(--pm-shadow);
+  opacity: 0;
+  transform: scale(0.92);
+  transition:
+    opacity var(--pm-fast) var(--pm-ease),
+    transform var(--pm-fast) var(--pm-ease);
+}
+
+.preview-zoom-button:hover,
+.preview-zoom-button:focus-visible {
+  background: color-mix(in oklab, var(--pm-scrim) 55%, transparent);
+}
+
+.preview-zoom-button:hover .preview-zoom-icon,
+.preview-zoom-button:focus-visible .preview-zoom-icon {
+  opacity: 1;
+  transform: none;
+}
+
+.preview-zoom-overlay {
+  align-items: center;
+  padding: 1rem;
+}
+
+.dialog.preview-zoom-dialog {
+  width: min(100%, 68rem);
+  max-height: calc(100vh - 2rem);
+}
+
+.preview-zoom-body {
+  --preview-zoom-height: calc(100vh - 8rem);
+
+  min-height: 0;
+  padding: 1rem;
+  overflow: auto;
+  background: var(--pm-bg);
+}
+
+.lf-sidebar-preview.large {
+  width: max-content;
+  max-height: none;
+  margin-inline: auto;
+  mask-image: none;
+}
+
+.badge-preview-places.large {
+  display: flex;
+  justify-content: center;
+  zoom: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preview-zoom-button,
+  .preview-zoom-icon {
+    transition: none;
+  }
+}

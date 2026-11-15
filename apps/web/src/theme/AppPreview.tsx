@@ -39,12 +39,18 @@ export function AppPreview({
   style,
   testId = 'app-preview',
   sidebar = true,
+  enlarged = false,
 }: {
   /** Variables laid over the page's: the theme being edited, or a size being dragged. */
   readonly style?: CSSProperties | undefined;
   readonly testId?: string | undefined;
   /** The sidebar beside the note; Settings → Note draws the note alone. */
   readonly sidebar?: boolean | undefined;
+  /**
+   * In the larger preview's dialog (A1589): as wide as the dialog, and no taller than the window
+   * leaves it, so the whole window shows; at its real size when there is room.
+   */
+  readonly enlarged?: boolean | undefined;
 }) {
   const frame = useRef<HTMLDivElement>(null);
   const phone = useNarrowWindow();
@@ -59,7 +65,16 @@ export function AppPreview({
       <div
         ref={frame}
         className="app-preview"
-        style={{ ...style, height: `${size.height * zoom}rem` }}
+        style={{
+          ...style,
+          height: `${size.height * zoom}rem`,
+          ...(enlarged
+            ? {
+                width: `min(100%, ${size.width}rem, calc(var(--preview-zoom-height) * ${size.width / size.height}))`,
+                marginInline: 'auto',
+              }
+            : {}),
+        }}
         data-testid={testId}
         inert
         aria-hidden="true"

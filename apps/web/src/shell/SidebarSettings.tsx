@@ -10,6 +10,7 @@ import { useId, type CSSProperties } from 'react';
 import { PreviewCommands } from '../commands/CommandsRoot';
 import { useSourcesState } from '../sources/hooks';
 import { GroupHead, SettingRow, Switch } from '../theme/look-rows';
+import { PreviewZoom } from '../theme/PreviewZoom';
 import { useSidebarDisplay } from './display';
 import { usePaneSize } from './pane-widths';
 import { useReorder } from './reorder';
@@ -115,7 +116,9 @@ export function SidebarSettings() {
 
         <aside className="lf-preview-col" aria-label="Preview">
           <p className="lf-label">Preview</p>
-          <SidebarPreview layout={layout} />
+          <PreviewZoom name="Sidebar" testId="sidebar-preview-zoom">
+            {(enlarged) => <SidebarPreview layout={layout} enlarged={enlarged} />}
+          </PreviewZoom>
         </aside>
       </div>
     </section>
@@ -264,20 +267,29 @@ const PREVIEW_REM = 16;
  * show it, at the sidebar's own width, scaled to the column. Inert: nothing in it can be clicked,
  * focused or read out, and its commands are registered apart (`PreviewCommands`).
  */
-function SidebarPreview({ layout }: { readonly layout: SidebarLayout }) {
+function SidebarPreview({
+  layout,
+  enlarged = false,
+}: {
+  readonly layout: SidebarLayout;
+  /** In the larger preview's dialog (A1589): at the sidebar's real size. */
+  readonly enlarged?: boolean;
+}) {
   const sources = useSourcesState();
   const [width] = usePaneSize('sidebar');
   return (
     <PreviewCommands>
       <div
-        className="lf-preview lf-sidebar-preview"
-        data-testid="sidebar-preview"
+        className={
+          enlarged ? 'lf-preview lf-sidebar-preview large' : 'lf-preview lf-sidebar-preview'
+        }
+        data-testid={enlarged ? 'sidebar-preview-large' : 'sidebar-preview'}
         style={{ '--lf-sidebar-width': `${width}rem` } as CSSProperties}
         inert
         aria-hidden="true"
       >
         {/* Its own width, scaled to the 16rem column: the shortcuts fit as they do there. */}
-        <div className="sidebar" style={{ zoom: Math.min(1, PREVIEW_REM / width) }}>
+        <div className="sidebar" style={{ zoom: enlarged ? 1 : Math.min(1, PREVIEW_REM / width) }}>
           <SidebarBody
             layout={layout}
             place={NOWHERE}

@@ -20,6 +20,7 @@ import { Select } from '@penmoss/ui/controls/Select';
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { useWorkspace } from '../workspace/hooks';
 import { AppPreview } from './AppPreview';
+import { PreviewZoom } from './PreviewZoom';
 import { TypeSpecimen } from './TypeSpecimen';
 import { useThemeController, useThemeState } from './hooks';
 
@@ -309,7 +310,15 @@ function CustomThemeEditor({ theme, themes }: { theme: Theme; themes: readonly T
       </div>
       <aside className="lf-preview-col" aria-label="Preview">
         <p className="lf-label">Preview</p>
-        <AppPreview style={previewVars} testId="theme-preview" />
+        <PreviewZoom name="Theme" testId="theme-preview-zoom">
+          {(enlarged) => (
+            <AppPreview
+              style={previewVars}
+              enlarged={enlarged}
+              testId={enlarged ? 'theme-preview-large' : 'theme-preview'}
+            />
+          )}
+        </PreviewZoom>
         {/* The variant's fonts at their real size, in its colours (A1582). */}
         <TypeSpecimen style={previewVars} testId="theme-type-specimen" />
         <p
