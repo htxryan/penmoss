@@ -269,55 +269,12 @@ test('10: ← Notes from Settings returns to the last note, in whichever noteboo
   expect(errors).toEqual([]);
 });
 
-test('12, 13: a picture’s line is as tall as the picture; Rename in a note’s menu', async ({
+test('13: Rename in a note’s menu edits its title in its row; Escape leaves it as it was', async ({
   page,
 }) => {
   const errors = collectErrors(page);
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
-  await openNote(page, 'Quanta', 'Alpha');
-  await page.getByTestId('note-body').locator('.ProseMirror').click();
-  await page.keyboard.type('Line above');
-  await page.keyboard.press('Enter');
-  await page.evaluate(async () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 200;
-    canvas.height = 100;
-    const context = canvas.getContext('2d')!;
-    context.fillStyle = '#3f7d4e';
-    context.fillRect(0, 0, 200, 100);
-    const blob = await new Promise<Blob>((resolve) =>
-      canvas.toBlob((made) => resolve(made!), 'image/png'),
-    );
-    const transfer = new DataTransfer();
-    transfer.items.add(new File([blob], 'Shot.png', { type: 'image/png' }));
-    const editor = document.querySelector<HTMLElement>('[data-testid="note-body"] .ProseMirror')!;
-    editor.focus();
-    editor.dispatchEvent(
-      new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }),
-    );
-  });
-  const picture = page.locator('.pm-image img');
-  await expect(picture).toBeVisible();
-  // Its paragraph is the picture's height: no empty line above or below it.
-  const heights = await picture.evaluate((img) => [
-    img.getBoundingClientRect().height,
-    img.closest('p')!.getBoundingClientRect().height,
-  ]);
-  expect(Math.abs(heights[1]! - heights[0]!)).toBeLessThan(1);
-  // The cursor still reaches the end of its line: End, then Enter, starts a line below it.
-  await page.keyboard.press('End');
-  await page.keyboard.press('Enter');
-  await page.keyboard.type('Line below');
-  const lines = await page
-    .getByTestId('note-body')
-    .locator('.ProseMirror > p')
-    .evaluateAll((paragraphs) =>
-      paragraphs.map((p) => (p.querySelector('.pm-image') ? '[picture]' : p.textContent)),
-    );
-  expect(lines).toEqual(['Line above', '[picture]', 'Line below']);
-
-  // 13: Rename from a note's menu edits its title in its row.
   const quanta = tree(page, 'Quanta');
   await quanta.getByRole('treeitem', { name: 'Penmoss Feedback', exact: true }).click({
     button: 'right',

@@ -1,4 +1,6 @@
 import { expect, test, type Page } from './fixtures';
+import { NEW_NOTE } from './keys';
+import { pushedUntil } from './support/sync';
 
 // T69 (D58, #228, A1146) as First Run C (Ryan's review of #192, findings 2–4): the first run with
 // no git notebook is one step per screen. A short welcome, Create or Open Notebook, Pick
@@ -37,6 +39,9 @@ test('the welcome, then a new notebook made in an empty repository, with its wel
     'https://penmoss.app/docs/first-notebook/',
   );
   await expect(firstRun.getByTestId('first-run-back')).toHaveCount(0);
+  // No notebook to show yet: no notes tree, no sign-in.
+  await expect(page.getByRole('tree', { name: 'Folders and notes' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /sign in/i })).toHaveCount(0);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/welcome.png` });
 
   // Create or Open Notebook: Step 1 of 3, Start a New Notebook picked; Back and on again.
@@ -63,7 +68,8 @@ test('the welcome, then a new notebook made in an empty repository, with its wel
   await expect(firstRun.getByTestId('first-run-branch')).toBeHidden();
   await firstRun.getByTestId('first-run-more').getByText('More Options').click();
   await expect(firstRun.getByTestId('first-run-branch')).toHaveValue('main');
-  await firstRun.getByTestId('first-run-url-input').fill(host.bare('fresh'));
+  const remote = host.bare('fresh');
+  await firstRun.getByTestId('first-run-url-input').fill(remote);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/paste-url.png` });
   await firstRun.getByTestId('first-run-continue').click();
 
@@ -94,6 +100,15 @@ test('the welcome, then a new notebook made in an empty repository, with its wel
   await expect(page.getByTestId('note-view').locator('code', { hasText: '#ideas' })).toBeVisible();
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/welcome-note.png` });
   expect((await host.notebooks.list()).map((notebook) => notebook.name)).toEqual(['Field Notes']);
+
+  // A note made in it reaches the repository.
+  await page.keyboard.press(NEW_NOTE);
+  await expect(page).toHaveURL(/\/notes\/[0-9A-HJKMNP-TV-Z]{26}$/);
+  await page.keyboard.type('First of many');
+  const bare = remote.replace('file://', '');
+  await pushedUntil(page, () =>
+    expect(host.git(bare, ['ls-tree', '-r', '--name-only', 'main'])).toContain('First of many.md'),
+  );
   expect(errors).toEqual([]);
 });
 

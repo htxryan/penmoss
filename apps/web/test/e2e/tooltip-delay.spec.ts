@@ -104,14 +104,11 @@ test('Show Tooltips After sets how long a hover waits, Never stops it, focus sho
   expect(half).toBeGreaterThanOrEqual(495);
   expect(half).toBeLessThan(1000);
 
-  // AC5: Never shows no tooltip on hover, however long the pointer rests.
+  // AC5: Never is stored as the setting the tooltip layer reads; that it then shows no tooltip
+  // however long the pointer rests is tooltip-delay.test.tsx's, on a fake clock.
   await page.mouse.move(900, 700);
   await field.selectOption({ label: 'Never' });
   await expect.poll(() => storedSetting(page, 'tooltip.delay')).toBe('never');
-  await back.hover();
-  await page.waitForTimeout(2500);
-  await expect(tooltip).toBeHidden();
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/tooltip-delay-never.png` });
 
   // AC6: keyboard focus still shows it at once.
   await page.mouse.move(900, 700);

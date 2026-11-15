@@ -97,6 +97,7 @@ test('searches every note online and offline, with highlights, filters and modes
   // One search, with no type picker (T42, A571). Without search by meaning, Words only says so
   // quietly, with why in its tooltip, and there is no notice (A1156).
   await expect(overlay(page).getByRole('radiogroup')).toHaveCount(0);
+  await expect(overlay(page).getByRole('radio')).toHaveCount(0);
   await expect(overlay(page).getByTestId('search-words-only')).toHaveAttribute(
     'data-tip',
     MEANING_ELSEWHERE.wordsOnly,

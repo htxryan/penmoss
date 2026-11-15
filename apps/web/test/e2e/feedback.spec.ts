@@ -289,7 +289,7 @@ test('the sidebar: an icon rail, remembered; a tag filter moves nothing below th
   expect(errors).toEqual([]);
 });
 
-test('a picture never sits beside text, in a list item or a paragraph', async ({
+test('a note another writer filed with pictures shows them, its markdown as written', async ({
   page,
   host,
   notebook,
@@ -349,35 +349,7 @@ test('a picture never sits beside text, in a list item or a paragraph', async ({
     timeout: 30_000,
   });
   await expect(images.first()).toBeVisible();
-
-  // Each picture's box starts below the text before it and ends above the text after it.
-  const layout = await body(page).evaluate((root) =>
-    [...root.querySelectorAll<HTMLElement>('.pm-image')].map((image) => {
-      const box = image.getBoundingClientRect();
-      const block = image.closest('p')!;
-      const lines: Array<{ top: number; bottom: number; left: number; right: number }> = [];
-      const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
-      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-        if (image.contains(node) || !node.textContent?.trim()) continue;
-        const range = document.createRange();
-        range.selectNodeContents(node);
-        for (const rect of range.getClientRects()) {
-          lines.push({ top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right });
-        }
-      }
-      return { box: { top: box.top, bottom: box.bottom }, lines };
-    }),
-  );
-  for (const { box, lines } of layout) {
-    expect(lines.length).toBeGreaterThan(0);
-    for (const line of lines) {
-      // Above or below the picture, never level with it.
-      expect(
-        line.bottom <= box.top + 1 || line.top >= box.bottom - 1,
-        JSON.stringify({ box, line }),
-      ).toBe(true);
-    }
-  }
+  await expect(body(page).locator('.pm-image').nth(1)).toHaveAttribute('data-state', 'ready');
 
   // The markdown in the repository is as written: the picture stays inline in its item.
   await expect

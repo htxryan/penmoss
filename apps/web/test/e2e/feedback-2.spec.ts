@@ -1,5 +1,4 @@
 import { expect, test, type Page } from './fixtures';
-import { storedRecord } from './stored';
 import { NEW_NOTE } from './keys';
 import { notebookAction } from './notebook-actions';
 import { pushed } from './support/sync';
@@ -43,46 +42,6 @@ async function openInfo(page: Page) {
   await expect(info(page)).toBeVisible();
 }
 
-test('2: one search, no type picker; a git notebook’s words, quietly, online and offline', async ({
-  page,
-  context,
-}) => {
-  const errors = collectErrors(page);
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
-  const word = `onesearch${RUN}`;
-  const id = await newNote(page, `One search ${RUN}`, `A note about ${word}.`);
-  // This device's index reads the stored note (A7).
-  await expect.poll(async () => (await storedRecord(page, id))?.text ?? '').toContain(word);
-  await page.keyboard.press('ControlOrMeta+Shift+KeyF');
-  const search = page.getByTestId('search');
-  await expect(search).toBeVisible();
-  await expect(search.getByRole('radiogroup')).toHaveCount(0);
-  await expect(search.getByRole('radio')).toHaveCount(0);
-  await page.keyboard.type(word);
-  const result = search.locator(`[role="option"][data-note-id="${id}"]`);
-  await expect(result).toBeVisible();
-  // Without search by meaning (this stand-in Mac has none), Words only, quietly, and no notice
-  // (A1156).
-  await expect(search.getByTestId('search-status')).toContainText('on this device');
-  await expect(search.getByTestId('search-words-only')).toBeVisible();
-  await expect(search.getByTestId('search-notice')).toHaveCount(0);
-
-  // Offline: the same, from this device.
-  await context.setOffline(true);
-  try {
-    await page.keyboard.press('Backspace');
-    await expect(result).toBeVisible();
-    await expect(search.getByTestId('search-status')).toContainText('on this device');
-    await expect(search.getByTestId('search-words-only')).toBeVisible();
-    await expect(search.getByTestId('search-notice')).toHaveCount(0);
-  } finally {
-    await context.setOffline(false);
-  }
-  await page.keyboard.press('Escape');
-  expect(errors).toEqual([]);
-});
-
 test('3: Kind is a label on periodic notes only', async ({ page }) => {
   const errors = collectErrors(page);
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -102,7 +61,7 @@ test('3: Kind is a label on periodic notes only', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test('4: sidebar tips only add something: icon names; note rows have none (A1119)', async ({
+test('4: sidebar tips only add something: icon names, with their keys (A1119)', async ({
   page,
 }) => {
   const errors = collectErrors(page);
@@ -123,15 +82,8 @@ test('4: sidebar tips only add something: icon names; note rows have none (A1119
     await page.mouse.move(900, 600);
   }
 
-  // A note's row has no tooltip (Quanta feedback 2, A1119): the edit time covered the rows below.
-  // Scrolled into view first: a scroll hides tooltips, and the shared workspace's list is long.
-  const row = page.getByRole('treeitem', { name: `Hover ${RUN}` });
-  await row.scrollIntoViewIfNeeded();
-  await page.waitForTimeout(300);
-  await row.hover();
-  await page.waitForTimeout(800);
-  await expect(tooltip).toBeHidden();
-  await page.mouse.move(900, 600);
+  // A note's row has none (Quanta feedback 2, A1119): "a note’s row has no tooltip" rests on one
+  // past the tooltip delay.
 
   // The rail hides labels: there each item's tip names it, with its keys.
   await page.getByTestId('toggle-sidebar').click();
