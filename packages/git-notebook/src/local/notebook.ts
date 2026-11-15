@@ -49,10 +49,18 @@ import {
   planCreate,
   planEdit,
   unknownProperties,
+  unsupportedContent,
+  unsupportedNotice,
   type EditFailure,
   type EditOp,
 } from '@penmoss/editor/edit-engine';
-import { bodyDelta, readNoteState, renderNote, versionMarkdown } from '@penmoss/editor/markdown';
+import {
+  bodyDelta,
+  readNoteState,
+  renderNote,
+  UnsupportedContentError,
+  versionMarkdown,
+} from '@penmoss/editor/markdown';
 import {
   readThread,
   readThreads,
@@ -120,6 +128,11 @@ export interface LocalNoteContent {
   readonly headings: string[];
   readonly baseVersion: number;
   readonly deleted: boolean;
+  /**
+   * Set when the note holds content from a newer Penmoss (A1493): `markdown` and `body` are
+   * then only its text, and edits to its body are refused.
+   */
+  readonly notice?: string;
 }
 
 /** What one note looks like to listings, search and links. */
@@ -476,6 +489,8 @@ export class LocalNotebook {
       headings: headingRefs(state.body),
       baseVersion: this.remember(id, doc),
       deleted: info.deleted,
+      // Only the text of a body this build cannot read, and said so (A1493).
+      ...(state.unsupported ? { notice: unsupportedNotice(state.unsupported) } : {}),
     };
   }
 
@@ -489,6 +504,15 @@ export class LocalNotebook {
     const links = this.resolver(doc);
     let text = bodyText(state.body, links);
     let heading: string | undefined;
+    if (options.heading !== undefined && state.unsupported) {
+      // Its text has no sections to find; only its whole text can be read (A1493).
+      throw new LocalError(
+        409,
+        'unsupported_content',
+        'This note holds content from a newer Penmoss; update Penmoss to read it by section. Read it without a heading for its text.',
+        { nodeTypes: state.unsupported },
+      );
+    }
     if (options.heading !== undefined) {
       const lookup = findSection(state.body, options.heading);
       if (!lookup.ok) {
@@ -533,6 +557,7 @@ export class LocalNotebook {
       offset,
       length: text.length,
       nextOffset: part.nextOffset,
+      ...(state.unsupported ? { notice: unsupportedNotice(state.unsupported) } : {}),
     };
   }
 
@@ -1451,9 +1476,15 @@ export class LocalNotebook {
     try {
       const rev = this.engine.replica.rev(id);
       let conflicts: ReturnType<typeof revertChange>['conflicts'] = [];
-      doc.transact(() => {
-        conflicts = revertChange(doc, pair.before, pair.after).conflicts;
-      });
+      try {
+        doc.transact(() => {
+          conflicts = revertChange(doc, pair.before, pair.after).conflicts;
+        });
+      } catch (error) {
+        // A body to merge that this build cannot read: thrown before anything is written (A1493).
+        if (error instanceof UnsupportedContentError) fail(unsupportedContent(doc));
+        throw error;
+      }
       const changed = this.engine.replica.rev(id) !== rev;
       if (changed) this.remember(id, doc);
       return { id, version: null, changed, conflicts };

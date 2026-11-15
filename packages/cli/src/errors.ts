@@ -15,7 +15,7 @@ export const EXIT = {
   AUTH: 3,
   /** No such note, folder, heading, text or version. */
   NOT_FOUND: 4,
-  /** The note changed since the version the edit is based on, or it is in Trash (409). */
+  /** The note changed since the edit's base version, is in Trash, or holds newer content (409). */
   CONFLICT: 5,
   /** A title, heading or text matches more than once. */
   AMBIGUOUS: 6,

@@ -13,7 +13,7 @@
  *
  * Platform-free: the CLI reads the server and runs git (`penmoss export-personal`).
  */
-import { attachmentFiles, noteBody } from '@penmoss/editor/markdown';
+import { attachmentFiles, noteBodyForDisplay } from '@penmoss/editor/markdown';
 import { effectiveParents, folderPath, type FolderRecord } from '@penmoss/core/workspace';
 import { GIT_MAX_ATTACHMENT_BYTES } from '@penmoss/core/attachments';
 import {
@@ -145,7 +145,7 @@ export function noteAttachments(update: Uint8Array): string[] {
   const doc = new Y.Doc();
   try {
     Y.applyUpdate(doc, update);
-    return attachmentFiles(noteBody(doc)).map((file) => `${file.sha256}.${file.ext}`);
+    return attachmentFiles(noteBodyForDisplay(doc)).map((file) => `${file.sha256}.${file.ext}`);
   } finally {
     doc.destroy();
   }
@@ -771,8 +771,8 @@ export async function verifyPersonal(
       add({ id: note.id, field: 'comments', server: threadsHere, notebook: threadsThere });
     }
     const files = new Set([
-      ...attachmentFiles(noteBody(doc)).map((f) => `${f.sha256}.${f.ext}`),
-      ...attachmentFiles(noteBody(gitDoc)).map((f) => `${f.sha256}.${f.ext}`),
+      ...attachmentFiles(noteBodyForDisplay(doc)).map((f) => `${f.sha256}.${f.ext}`),
+      ...attachmentFiles(noteBodyForDisplay(gitDoc)).map((f) => `${f.sha256}.${f.ext}`),
     ]);
     for (const file of [...files].sort()) {
       attachments++;

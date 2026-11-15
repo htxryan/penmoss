@@ -57,7 +57,7 @@ const markdownOf = (collab: CollabEditor) =>
 const replicaMarkdown = (collab: CollabEditor) =>
   serializeMarkdown({
     frontmatter: null,
-    doc: noteBody((collab.replica as unknown as { doc: Parameters<typeof noteBody>[0] }).doc),
+    doc: noteBody((collab.replica as unknown as { doc: Parameters<typeof noteBody>[0] }).doc)!,
   });
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
