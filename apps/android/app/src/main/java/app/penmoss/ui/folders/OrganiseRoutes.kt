@@ -8,6 +8,8 @@ import app.penmoss.NotebookGraph
 import app.penmoss.data.NoteStore
 import app.penmoss.ui.common.FolderChoice
 import app.penmoss.ui.common.Items
+import app.penmoss.ui.common.Said
+import app.penmoss.ui.common.SnackbarTone
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -41,7 +43,7 @@ fun FolderPickerForMove(graph: NotebookGraph, title: String, current: String?, e
  * Moves a note on this phone and has it filed on the server when it can be (T38): at once
  * online, after the next pass that reaches Penmoss offline. Returns what to tell the person.
  */
-suspend fun moveNoteAndSay(graph: NotebookGraph, noteId: String, folderId: String?): String {
+suspend fun moveNoteAndSay(graph: NotebookGraph, noteId: String, folderId: String?): Said {
     val result = graph.store.moveNote(noteId, folderId)
     if (result == NoteStore.Move.MOVED) graph.sync.requestSync()
     val name = folderId?.let { id -> graph.store.observeFolders().first().firstOrNull { it.id == id }?.name?.ifBlank { null } }
@@ -53,38 +55,41 @@ suspend fun moveNoteAndSay(graph: NotebookGraph, noteId: String, folderId: Strin
  * What one note's move says (T38), with [name] for where it went. A folder gone from the phone is
  * said as that (#137, A658); its name went with it.
  */
-internal fun oneMoveSaid(result: NoteStore.Move, name: String): String = when (result) {
-    NoteStore.Move.MOVED -> "Moved to $name"
-    NoteStore.Move.ALREADY_THERE -> "Already in $name"
-    NoteStore.Move.REFUSED -> "This note can't be moved"
-    NoteStore.Move.NO_FOLDER -> "That folder isn't on this phone any more"
+internal fun oneMoveSaid(result: NoteStore.Move, name: String): Said = when (result) {
+    NoteStore.Move.MOVED -> Said("Moved to $name.", SnackbarTone.Done)
+    NoteStore.Move.ALREADY_THERE -> Said("Already in $name.", SnackbarTone.Info)
+    NoteStore.Move.REFUSED -> Said("This note can't be moved.", SnackbarTone.Error)
+    NoteStore.Move.NO_FOLDER -> Said(FOLDER_GONE, SnackbarTone.Error)
 }
+
+/** What a folder action says when the folder has gone from the phone meanwhile. */
+private const val FOLDER_GONE = "That folder isn't on this phone any more."
 
 /**
  * Folder actions on this phone (T40 P4, NT2–NT7): each shows at once and is queued to the
  * server, offline too; the pass is asked for now. Returns what to tell the person.
  */
-suspend fun createFolderAndSay(graph: NotebookGraph, name: String, parentId: String?): String {
+suspend fun createFolderAndSay(graph: NotebookGraph, name: String, parentId: String?): Said {
     val id = graph.store.createFolder(name, parentId)
     if (id != null) graph.sync.requestSync()
-    return if (id == null) "That folder isn't on this phone yet" else "Made “$name”"
+    return if (id == null) Said("That folder isn't on this phone yet.", SnackbarTone.Error) else Said("Made the folder “$name”.", SnackbarTone.Done)
 }
 
-suspend fun renameFolderAndSay(graph: NotebookGraph, id: String, name: String): String {
+suspend fun renameFolderAndSay(graph: NotebookGraph, id: String, name: String): Said {
     val ok = graph.store.renameFolder(id, name)
     if (ok) graph.sync.requestSync()
-    return if (ok) "Renamed to “$name”" else "That folder isn't on this phone anymore"
+    return if (ok) Said("Renamed to “$name”.", SnackbarTone.Done) else Said(FOLDER_GONE, SnackbarTone.Error)
 }
 
-suspend fun moveFolderAndSay(graph: NotebookGraph, id: String, parentId: String?): String {
+suspend fun moveFolderAndSay(graph: NotebookGraph, id: String, parentId: String?): Said {
     val result = graph.store.moveFolder(id, parentId)
     if (result == NoteStore.FolderMove.MOVED) graph.sync.requestSync()
     val name = parentId?.let { pid -> graph.store.observeFolders().first().firstOrNull { it.id == pid }?.name?.ifBlank { null } }
         ?: if (parentId == null) Items.TOP_LEVEL else "the folder"
     return when (result) {
-        NoteStore.FolderMove.MOVED -> "Moved to $name"
-        NoteStore.FolderMove.ALREADY_THERE -> "Already in $name"
-        NoteStore.FolderMove.REFUSED -> "That folder can't move there"
+        NoteStore.FolderMove.MOVED -> Said("Moved to $name.", SnackbarTone.Done)
+        NoteStore.FolderMove.ALREADY_THERE -> Said("Already in $name.", SnackbarTone.Info)
+        NoteStore.FolderMove.REFUSED -> Said("That folder can't move there.", SnackbarTone.Error)
     }
 }
 
@@ -92,21 +97,22 @@ suspend fun moveFolderAndSay(graph: NotebookGraph, id: String, parentId: String?
 internal fun folderDeletedMessage(name: String?): String =
     "Moved ${name?.let { "“${it.ifBlank { "Untitled folder" }}”" } ?: "the folder"} to Trash. Its notes moved up."
 
-suspend fun deleteFolderAndSay(graph: NotebookGraph, id: String, name: String? = null): String {
+suspend fun deleteFolderAndSay(graph: NotebookGraph, id: String, name: String? = null): Said {
     val ok = graph.store.deleteFolder(id)
     if (ok) graph.sync.requestSync()
-    return if (!ok) "That folder isn't on this phone anymore" else folderDeletedMessage(name)
+    return if (!ok) Said(FOLDER_GONE, SnackbarTone.Error) else Said(folderDeletedMessage(name), SnackbarTone.Trash)
 }
 
-suspend fun sortFolderAndSay(graph: NotebookGraph, id: String?, mode: String): String {
+suspend fun sortFolderAndSay(graph: NotebookGraph, id: String?, mode: String): Said {
     val ok = graph.store.setSortMode(id, mode)
     if (ok) graph.sync.requestSync()
-    if (!ok) return "That folder isn't on this phone anymore"
-    return when (mode) {
-        "alpha" -> "Sorted A–Z"
-        "modified" -> "Sorted by last modified"
-        else -> "Sorted by hand"
+    if (!ok) return Said(FOLDER_GONE, SnackbarTone.Error)
+    val sorted = when (mode) {
+        "alpha" -> "Sorted A–Z."
+        "modified" -> "Sorted by last modified."
+        else -> "Sorted by hand."
     }
+    return Said(sorted, SnackbarTone.Done)
 }
 
 suspend fun reorderFolderAndSay(graph: NotebookGraph, id: String, before: String?, after: String?) {

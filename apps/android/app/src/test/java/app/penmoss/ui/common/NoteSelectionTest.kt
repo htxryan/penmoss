@@ -182,28 +182,28 @@ class NoteSelectionTest {
     fun moveSendsEveryNoteToTheOneFolderPickedInTheOrderChosen() = runBlocking {
         filed()
         var syncs = 0
-        assertEquals("Moved 3 notes to Garden", moveNotesAndSay(store, listOf("c", "a", "b"), "garden", "Garden") { syncs++ })
+        assertEquals(Said("Moved 3 notes to Garden.", SnackbarTone.Done), moveNotesAndSay(store, listOf("c", "a", "b"), "garden", "Garden") { syncs++ })
         assertEquals(1, syncs)
         val garden = store.observeList().first().filter { it.folderId == "garden" }.sortedBy { it.position }.map { it.id }
         assertEquals(listOf("c", "a", "b"), garden)
-        assertEquals("Already in Garden", moveNotesAndSay(store, listOf("a", "b"), "garden", "Garden") {})
+        assertEquals(Said("Already in Garden.", SnackbarTone.Info), moveNotesAndSay(store, listOf("a", "b"), "garden", "Garden") {})
         // One the phone no longer lists stops none of the others.
         assertEquals(
-            "Moved 2 of 3 notes to Kitchen; 1 could not move: it isn't on this phone any more",
+            Said("Moved 2 of 3 notes to Kitchen; 1 could not move: it isn't on this phone any more.", SnackbarTone.Error),
             moveNotesAndSay(store, listOf("a", "gone", "b"), "kitchen", "Kitchen") {},
         )
-        assertEquals("None of the 2 notes could move to Kitchen", moveNotesAndSay(store, listOf("x", "y"), "kitchen", "Kitchen") {})
+        assertEquals(Said("None of the 2 notes could move to Kitchen.", SnackbarTone.Error), moveNotesAndSay(store, listOf("x", "y"), "kitchen", "Kitchen") {})
         // Notes already there count as neither moved nor refused, as the web's moveSummary (review N1).
         assertEquals(
-            "Moved 1 of 3 notes to Kitchen; 1 could not move: it isn't on this phone any more",
+            Said("Moved 1 of 3 notes to Kitchen; 1 could not move: it isn't on this phone any more.", SnackbarTone.Error),
             moveNotesAndSay(store, listOf("c", "gone", "a"), "kitchen", "Kitchen") {},
         )
         assertEquals(
-            "1 already in Kitchen; 1 could not move: it isn't on this phone any more",
+            Said("1 already in Kitchen; 1 could not move: it isn't on this phone any more.", SnackbarTone.Error),
             moveNotesAndSay(store, listOf("a", "gone"), "kitchen", "Kitchen") {},
         )
-        assertEquals("Moved 1 note to Garden", moveNotesAndSay(store, listOf("b"), "garden", "Garden") {})
-        assertEquals("Moved 1 note to Kitchen", moveNotesAndSay(store, listOf("c", "b"), "kitchen", "Kitchen") {})
+        assertEquals(Said("Moved 1 note to Garden.", SnackbarTone.Done), moveNotesAndSay(store, listOf("b"), "garden", "Garden") {})
+        assertEquals(Said("Moved 1 note to Kitchen.", SnackbarTone.Done), moveNotesAndSay(store, listOf("c", "b"), "kitchen", "Kitchen") {})
     }
 
     /** Review S2: a chosen note a sync pass takes out of the list is no longer chosen. */
@@ -319,13 +319,13 @@ class NoteSelectionTest {
     @Test
     fun aMoveToAFolderNoLongerOnThePhoneSaysTheFolderIsGone() = runBlocking {
         filed()
-        assertEquals("Kitchen isn't on this phone any more", moveNotesAndSay(store, listOf("a", "b"), "nowhere", "Kitchen") {})
-        assertEquals("Kitchen isn't on this phone any more", moveNotesAndSay(store, listOf("b"), "nowhere", "Kitchen") {})
+        assertEquals(Said("Kitchen isn't on this phone any more.", SnackbarTone.Error), moveNotesAndSay(store, listOf("a", "b"), "nowhere", "Kitchen") {})
+        assertEquals(Said("Kitchen isn't on this phone any more.", SnackbarTone.Error), moveNotesAndSay(store, listOf("b"), "nowhere", "Kitchen") {})
         // One note's move, from its sheet: the folder's name is gone with it.
-        assertEquals("That folder isn't on this phone any more", oneMoveSaid(NoteStore.Move.NO_FOLDER, "the folder"))
-        assertEquals("Moved to Kitchen", oneMoveSaid(NoteStore.Move.MOVED, "Kitchen"))
-        assertEquals("Already in Kitchen", oneMoveSaid(NoteStore.Move.ALREADY_THERE, "Kitchen"))
-        assertEquals("This note can't be moved", oneMoveSaid(NoteStore.Move.REFUSED, "Kitchen"))
+        assertEquals(Said("That folder isn't on this phone any more.", SnackbarTone.Error), oneMoveSaid(NoteStore.Move.NO_FOLDER, "the folder"))
+        assertEquals(Said("Moved to Kitchen.", SnackbarTone.Done), oneMoveSaid(NoteStore.Move.MOVED, "Kitchen"))
+        assertEquals(Said("Already in Kitchen.", SnackbarTone.Info), oneMoveSaid(NoteStore.Move.ALREADY_THERE, "Kitchen"))
+        assertEquals(Said("This note can't be moved.", SnackbarTone.Error), oneMoveSaid(NoteStore.Move.REFUSED, "Kitchen"))
     }
 
     /** #137 (review N1): when no note can go to Trash, it says so instead of nothing. */

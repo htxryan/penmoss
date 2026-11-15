@@ -22,10 +22,7 @@ import kotlinx.serialization.json.JsonPrimitive
  * over it, the queue that sends them, where quick capture goes (A336), and a git notebook's
  * device map (A1014).
  */
-class SettingsStore(
-    private val db: PenmossDatabase,
-    private val now: () -> Long = System::currentTimeMillis,
-) {
+class SettingsStore(private val db: PenmossDatabase) {
     private val settings = db.settings()
     private val pendingSettings = db.pendingSettings()
 
@@ -154,7 +151,7 @@ class SettingsStore(
         if (wanted == base && row?.sent == null) {
             if (row != null) pendingSettings.delete(key)
         } else {
-            pendingSettings.put(PendingSettingEntity(key, wanted?.toString(), base?.toString(), now(), row?.sent))
+            pendingSettings.put(PendingSettingEntity(key, wanted?.toString(), base?.toString(), row?.sent))
         }
         // The capture sheet starts on the destination chosen here (A336), and captures still
         // waiting no longer change it when sent: the choice made here is the later one (A411).

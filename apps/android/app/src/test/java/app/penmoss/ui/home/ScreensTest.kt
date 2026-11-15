@@ -129,6 +129,7 @@ class ScreensTest {
                         folders = listOf(FolderItem("f1", "Projects")),
                         status = "Synced at 3:42 PM",
                         syncing = false,
+                        notebook = "Garden",
                     ),
                     HomeActions(
                         onSearch = { events += "search" },
@@ -146,10 +147,10 @@ class ScreensTest {
                 )
             }
         }
-        // The status line is a dot on the personal notes' heading, its words its name (T51, A933),
-        // which is named as the web's: Personal, the default notebook, even with no notebooks.
+        // The status line is a dot on the notebook's heading, its words its name (T51, A933),
+        // which is named as the web's: the notebook's name (A1538).
         compose.onNodeWithTag("syncDot").assertIsDisplayed().assertContentDescriptionEquals("Synced at 3:42 PM")
-        compose.onNodeWithTag("homeFoldersTitle", useUnmergedTree = true).onChildren().filter(hasText("Personal")).assertCountEquals(1)
+        compose.onNodeWithTag("homeFoldersTitle", useUnmergedTree = true).onChildren().filter(hasText("Garden")).assertCountEquals(1)
         compose.onNodeWithText("eggs, milk").assertIsDisplayed()
         compose.onNodeWithText("Groceries").performClick()
         compose.onNodeWithText("Projects").performClick()

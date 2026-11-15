@@ -3,9 +3,10 @@ package app.penmoss.ui
 import kotlinx.coroutines.CoroutineScope
 import androidx.compose.runtime.rememberCoroutineScope
 import android.content.Context
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.net.Uri
 import android.view.Window
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
@@ -23,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import app.penmoss.NotebookGraph
+import app.penmoss.capture.Captures
 import app.penmoss.data.NoteStore
 import app.penmoss.engine.bridge.ToEditor
 import app.penmoss.feedback.FeedbackRoutes
@@ -40,6 +42,7 @@ import app.penmoss.ui.common.NoteItem
 import app.penmoss.ui.common.NoteSelection
 import app.penmoss.ui.common.Picked
 import app.penmoss.ui.common.SelectionBar
+import app.penmoss.ui.common.Said
 import app.penmoss.ui.common.SnackbarTone
 import app.penmoss.ui.common.moveNotesAndSay
 import app.penmoss.ui.common.moveNotesToTrashWithUndo
@@ -116,8 +119,8 @@ internal class RootUi(
 
     /**
      * A write the person asked for, which finishes even if they leave the screen meanwhile: on
-     * the notebook's process scope with its failure reported (A1467), on the main thread as
-     * before, so its Toast shows.
+     * the notebook's process scope with its failure reported (A1467), on the main thread. What
+     * it did is said on the screens' snackbar ([say]).
      */
     private fun keep(block: suspend CoroutineScope.() -> Unit) = graph.launchReporting(Dispatchers.Main.immediate, block)
 
@@ -186,27 +189,43 @@ internal class RootUi(
         screenScope.launch { folderNaming = FolderNaming.Create(graph.store.folderOf(noteId)) }
     }
 
-    /** Says what a folder action did, over every screen. */
-    fun toast(message: String) = Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    /**
+     * Says what an action did on the snackbar over every screen (A1535), in place of the one
+     * showing, as the web's toasts replace each other. On the screens' scope: with the screens
+     * gone there is no snackbar to show, and nothing waits on one.
+     */
+    fun say(said: Said) {
+        screenScope.launch {
+            snackbar.currentSnackbarData?.dismiss()
+            snackbar.say(said.text, said.tone)
+        }
+    }
+
+    /** Puts refused captures' text on the clipboard, one after another (A345), and says so. */
+    fun copyCaptures(captures: List<Captures.Refused>) {
+        val text = captures.joinToString("\n\n---\n\n") { it.text }
+        context.getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText("Penmoss captures", text))
+        say(Said(if (captures.size == 1) "Copied the capture." else "Copied ${captures.size} captures.", SnackbarTone.Done))
+    }
 
     fun createFolder(name: String, parent: String?) {
         // Outlives the screen: a folder write the person asked for.
-        keep { toast(createFolderAndSay(graph, name, parent)) }
+        keep { say(createFolderAndSay(graph, name, parent)) }
     }
 
     fun renameFolder(id: String, name: String) {
         // Outlives the screen: a folder write the person asked for.
-        keep { toast(renameFolderAndSay(graph, id, name)) }
+        keep { say(renameFolderAndSay(graph, id, name)) }
     }
 
     fun moveFolder(id: String, parent: String?) {
         // Outlives the screen: a folder write the person asked for.
-        keep { toast(moveFolderAndSay(graph, id, parent)) }
+        keep { say(moveFolderAndSay(graph, id, parent)) }
     }
 
     fun sortFolder(id: String?, mode: String) {
         // Outlives the screen: a folder's sort order, written for the person.
-        keep { toast(sortFolderAndSay(graph, id, mode)) }
+        keep { say(sortFolderAndSay(graph, id, mode)) }
     }
 
     fun reorderFolder(id: String, before: String?, after: String?) {
@@ -222,13 +241,13 @@ internal class RootUi(
     /** Deletes [folder] once the person has confirmed it (T40 P4, NT4). */
     fun deleteFolder(folder: FolderItem) {
         // Outlives the screen: a delete the person confirmed.
-        keep { toast(deleteFolderAndSay(graph, folder.id, folder.name)) }
+        keep { say(deleteFolderAndSay(graph, folder.id, folder.name)) }
     }
 
     /** Moves one note to [folder] (null: the top level), and says so. */
     fun moveNote(noteId: String, folder: String?) {
         // Outlives the screen: a move the person asked for.
-        keep { toast(moveNoteAndSay(graph, noteId, folder)) }
+        keep { say(moveNoteAndSay(graph, noteId, folder)) }
     }
 
     /** Moves the notes chosen to [folder] (null: the top level) in one pick (A652), and says so. */
@@ -237,7 +256,7 @@ internal class RootUi(
         keep {
             val name = folder?.let { id -> graph.store.observeFolders().first().firstOrNull { it.id == id }?.name?.ifBlank { null } }
                 ?: if (folder == null) Items.TOP_LEVEL else "the folder"
-            toast(moveNotesAndSay(graph.store, picked.map { it.id }, folder, name) { graph.sync.requestSync() })
+            say(moveNotesAndSay(graph.store, picked.map { it.id }, folder, name) { graph.sync.requestSync() })
         }
     }
 
