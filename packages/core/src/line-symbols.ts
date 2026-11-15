@@ -11,7 +11,7 @@
  * its WorkspaceDoc; the Android app through `PUT /api/settings`, which checks it with
  * `symbolListProblem`.
  */
-import { isColourLocked } from './colour-lock';
+import { isColourLocked } from './colour-lock.js';
 
 /** The synced setting that holds the list (A743). */
 export const SYMBOLS_SETTING = 'symbols.list';
