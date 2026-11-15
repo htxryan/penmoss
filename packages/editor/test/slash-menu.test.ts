@@ -60,13 +60,13 @@ describe('filterBlockItems', () => {
       'callout',
       'toggle',
       'mermaid',
+      'drawing',
       'blockMath',
       'inlineMath',
       'wikilink',
       'embed',
       'image',
       'file',
-      'drawing',
       'symbol',
     ]);
     expect(filterBlockItems(BLOCK_ITEMS, '   ')).toEqual(all);

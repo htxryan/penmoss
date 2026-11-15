@@ -1,7 +1,7 @@
 /*
- * The drawing editor (PEN-28): Excalidraw over the whole window, under a bar with Done and Cancel.
- * Loaded with the editor's chunk, the first time a drawing opens. Above the lightbox and menus,
- * below tooltips.
+ * The drawing editor (PEN-28): Excalidraw over the whole window, under a bar that is the window's
+ * title bar while it is open (R2-17, R2-18). Loaded with the editor's chunk, the first time a
+ * drawing opens. Above the lightbox and menus, below tooltips.
  */
 .drawing-editor {
   position: fixed;
@@ -13,26 +13,41 @@
   color: var(--pm-fg);
 }
 
+/*
+ * As a note's title bar is (`.note-top`): 48 px, the sidebar's colour, Back, Forward and the pin
+ * flush at its start (`.note-top-lead`), then the title; Cancel and Done at its end. In the Mac
+ * app it is a title-bar row (TITLE_BAR_ROWS, styles.css): it drags the window, its buttons click.
+ * It is after the canvas in the page, over Excalidraw's window-wide SVG layer (DrawingDialog).
+ */
 .drawing-editor-bar {
   display: flex;
+  grid-row: 1;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  min-height: 3rem;
+  gap: 0.75rem;
+  height: 3rem;
   box-sizing: border-box;
-  padding: 0.5rem 1rem;
-  border-bottom: 1px solid var(--pm-border);
+  padding: 0 0.5rem 0 0;
+  border-bottom: 1px solid var(--pm-border-soft);
   background: var(--pm-sidebar);
 }
 
-/* The Mac app's compact title bar: the traffic lights keep their room (A722). */
+/* The Mac app's compact title bar: the traffic lights keep their room (A722), a hairline after. */
 :root[data-titlebar='compact'] .drawing-editor-bar {
-  min-height: var(--pm-titlebar-row);
+  height: var(--pm-titlebar-row);
   padding-left: var(--pm-titlebar-inset);
 }
 
+:root[data-titlebar='compact'] .drawing-editor-lead {
+  border-left: 1px solid var(--pm-border-soft);
+}
+
 .drawing-editor-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .drawing-editor-actions {
@@ -52,6 +67,7 @@
 
 .drawing-editor-canvas {
   position: relative;
+  grid-row: 2;
   min-height: 0;
 }
 

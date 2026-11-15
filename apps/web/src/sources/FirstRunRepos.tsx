@@ -8,7 +8,7 @@
 import { defaultRepoName } from '@penmoss/git-notebook/github-browse';
 import { Icon } from '@penmoss/ui/icons';
 import { Select } from '@penmoss/ui/controls/Select';
-import { useEffect, useId, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { fuzzy, highlightRuns } from '../commands/fuzzy';
 import type {
   DesktopGitHubBrowse,
@@ -278,13 +278,23 @@ const notebooksIn = (folders: RepoFolders) =>
       folder.notebook !== null,
   );
 
-/** How many repositories the tree reads by itself, most recently pushed first. */
-const READ_AHEAD = 8;
+/** How many repositories the tree reads at once, as they come near the list's view. */
+const READ_AT_ONCE = 3;
+
+/** Whether this window can tell which rows are near the view; without it, every row is near. */
+const seeing = typeof IntersectionObserver !== 'undefined';
+
+/** Whether `row` shows, even in part, in `box` (the tree's visible box). */
+const inView = (row: Element, box: DOMRect) => {
+  const at = row.getBoundingClientRect();
+  return at.bottom > box.top && at.top < box.bottom;
+};
 
 /**
  * Use Existing Repo (4.1–4.4): each repository with the notebooks in it beneath (Notebook List A).
- * The most recently pushed ones are read at once; another is read when it is opened. A notebook
- * opens; a repository goes on to what it holds.
+ * A repository is read as it comes near the list's view, a few at a time, and opens by itself
+ * when it holds a notebook; one with none (empty, or read and found none) stays closed until it
+ * is opened (Ryan's review of #193). A notebook opens; a repository goes on to what it holds.
  */
 export function RepoTree({
   hub,
@@ -315,25 +325,60 @@ export function RepoTree({
     if (goal === 'new') all.sort((a, b) => Number(b.empty) - Number(a.empty));
     return all;
   }, [hub, goal]);
-  const ahead = useMemo(
-    () => repos.filter((repo) => repo.canPush && !repo.empty).slice(0, READ_AHEAD),
-    [repos],
-  );
-  const [open, setOpen] = useState<ReadonlySet<string>>(
-    () =>
-      new Set([
-        ...ahead.map((repo) => repo.fullName),
-        ...repos.filter((repo) => repo.empty && repo.canPush).map((repo) => repo.fullName),
-      ]),
-  );
+  /** Opened or closed by hand: the tree never changes these itself. */
+  const [toggled, setToggled] = useState<ReadonlyMap<string, boolean>>(() => new Map());
+  /** Opened by the tree, once read and found to hold a notebook. */
+  const [found, setFound] = useState<ReadonlySet<string>>(() => new Set());
+  /** The repositories in or near the list's view: the ones to read. */
+  const [near, setNear] = useState<ReadonlySet<string>>(() => new Set());
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
+  const [tree, setTree] = useState<HTMLUListElement | null>(null);
+  const watch = useRef<IntersectionObserver | null>(null);
+  const pointerIn = useRef(false);
+  /** Bumped when a row held closed may open now: the pointer left the list, or it scrolled. */
+  const [retry, setRetry] = useState(0);
+  /**
+   * The list's height when a filter was first typed: the list keeps at least that while filtered,
+   * so the centred card doesn't shrink and move as matches go (Ryan's review of #193).
+   */
+  const [floor, setFloor] = useState<number | null>(null);
+  const filter = (next: string) => {
+    if (!next.trim()) setFloor(null);
+    else if (!query.trim() && tree) setFloor(tree.getBoundingClientRect().height);
+    setQuery(next);
+  };
 
+  // Which rows are in or near the view. Those up to a list's height above or below it count, so
+  // most are read, and open, before they scroll in.
   useEffect(() => {
-    for (const repo of ahead) if (!reads.has(repo.fullName)) read(repo);
-    // Once, for what the list first shows; Refresh reads again.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ahead]);
+    if (!tree || !seeing) return;
+    const observer = new IntersectionObserver(
+      (entries) =>
+        setNear((now) => {
+          const next = new Set(now);
+          for (const entry of entries) {
+            const name = (entry.target as HTMLElement).dataset['repo'];
+            if (!name) continue;
+            if (entry.isIntersecting) next.add(name);
+            else next.delete(name);
+          }
+          return next.size === now.size && [...next].every((name) => now.has(name)) ? now : next;
+        }),
+      { root: tree, rootMargin: '100% 0px' },
+    );
+    watch.current = observer;
+    for (const row of tree.children) observer.observe(row);
+    return () => {
+      observer.disconnect();
+      watch.current = null;
+    };
+  }, [tree, repos]);
+  /** Each row, watched while it is in the list. */
+  const watchRow = useCallback((row: HTMLLIElement) => {
+    watch.current?.observe(row);
+    return () => watch.current?.unobserve(row);
+  }, []);
 
   const q = query.trim();
   const shown = useMemo(() => {
@@ -347,6 +392,52 @@ export function RepoTree({
       return [{ repo, notebooks: repoMatch ? notebooks : matching }];
     });
   }, [repos, reads, q]);
+
+  // Read what is near the view, a few at a time, in the list's order.
+  useEffect(() => {
+    let reading = [...reads.values()].filter((each) => each.state === 'loading').length;
+    for (const { repo } of shown) {
+      if (reading >= READ_AT_ONCE) break;
+      const isNear = !seeing || near.has(repo.fullName);
+      if (!isNear || !repo.canPush || repo.empty || reads.has(repo.fullName)) continue;
+      read(repo);
+      reading += 1;
+    }
+  }, [shown, near, reads, read]);
+
+  /** Read and found to hold a notebook, but not yet opened by the tree. */
+  const waiting = useMemo(
+    () =>
+      repos
+        .filter((repo) => {
+          const loaded = reads.get(repo.fullName);
+          return (
+            !found.has(repo.fullName) &&
+            loaded?.state === 'ready' &&
+            notebooksIn(loaded.folders).length > 0
+          );
+        })
+        .map((repo) => repo.fullName),
+    [repos, reads, found],
+  );
+  // Each opens as it is found, except a row in view while the pointer is over the list: opening it
+  // would move the rows under the pointer, so it waits until the pointer leaves or it scrolls out
+  // of view. A row above the view opens at once, since the browser keeps what is in view in place.
+  useEffect(() => {
+    if (waiting.length === 0) return;
+    const box = pointerIn.current && tree ? tree.getBoundingClientRect() : null;
+    const rows = new Map<string | undefined, Element>();
+    for (const row of tree?.children ?? []) rows.set((row as HTMLElement).dataset['repo'], row);
+    const now = waiting.filter((name) => {
+      const row = rows.get(name);
+      return !box || !row || !inView(row, box);
+    });
+    if (now.length > 0) setFound((was) => new Set([...was, ...now]));
+  }, [waiting, tree, retry]);
+  const tryHeld = () => {
+    if (waiting.length > 0) setRetry((now) => now + 1);
+  };
+
   const firstNotebook = shown.find((each) => each.notebooks.length > 0);
   const chosen =
     selected ??
@@ -396,15 +487,12 @@ export function RepoTree({
     );
   }
 
+  /** Open when opened by hand, or, unless closed by hand, once found to hold a notebook. */
+  const isOpen = (name: string) => toggled.get(name) ?? found.has(name);
   const toggle = (repo: GitHubRepo) => {
-    const isOpen = open.has(repo.fullName);
-    setOpen((now) => {
-      const next = new Set(now);
-      if (isOpen) next.delete(repo.fullName);
-      else next.add(repo.fullName);
-      return next;
-    });
-    if (!isOpen && !repo.empty && !reads.has(repo.fullName)) read(repo);
+    const opening = !isOpen(repo.fullName);
+    setToggled((now) => new Map(now).set(repo.fullName, opening));
+    if (opening && !repo.empty && !reads.has(repo.fullName)) read(repo);
   };
 
   return (
@@ -418,28 +506,49 @@ export function RepoTree({
           placeholder="Filter repositories and notebooks"
           value={query}
           data-testid="first-run-filter"
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => filter(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Escape' && query) {
               event.preventDefault();
               event.stopPropagation();
-              setQuery('');
+              filter('');
             }
           }}
         />
       </label>
-      {q ? (
-        <p className="fr-lead fr-small" role="status" data-testid="first-run-filter-count">
-          {shown.length} of {repos.length} match.
-        </p>
-      ) : null}
-      <ul className="fr-tree" aria-label="Repositories and notebooks" data-testid="first-run-tree">
+      {/* Always there, so the list never moves when the filter is typed in (Ryan's review of #193).
+          A live region speaks only when its words change: as the filter is typed or cleared. */}
+      <p className="fr-lead fr-small fr-count" role="status" data-testid="first-run-filter-count">
+        {q
+          ? `${shown.length} of ${repos.length} match.`
+          : `${repos.length} ${repos.length === 1 ? 'repository' : 'repositories'}.`}
+      </p>
+      <ul
+        ref={setTree}
+        className="fr-tree"
+        style={floor === null ? undefined : { minHeight: floor }}
+        aria-label="Repositories and notebooks"
+        data-testid="first-run-tree"
+        onPointerEnter={() => {
+          pointerIn.current = true;
+        }}
+        onPointerLeave={() => {
+          pointerIn.current = false;
+          tryHeld();
+        }}
+        onScroll={tryHeld}
+      >
         {shown.map(({ repo, notebooks }) => {
           // A filter shows what matched inside, opened or not.
-          const expanded = open.has(repo.fullName) || (q !== '' && notebooks.length > 0);
+          const expanded = isOpen(repo.fullName) || (q !== '' && notebooks.length > 0);
           const loaded = reads.get(repo.fullName);
           return (
-            <li key={repo.fullName} data-testid="first-run-tree-repo" data-repo={repo.fullName}>
+            <li
+              key={repo.fullName}
+              ref={watchRow}
+              data-testid="first-run-tree-repo"
+              data-repo={repo.fullName}
+            >
               <div className="fr-tree-repo">
                 <button
                   type="button"

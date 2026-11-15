@@ -84,6 +84,7 @@ import {
   ALLOWED_PERMISSIONS,
   appPath,
   ClipboardGate,
+  downloadDialog,
   isAppFrame,
   isAppUrl,
   isAppWindowFrame,
@@ -1585,6 +1586,11 @@ if (!app.requestSingleInstanceLock()) {
     session.defaultSession.setPermissionCheckHandler((_contents, permission) =>
       allowed(permission),
     );
+    // A download (the drawing editor's Save To… and Export Image…) asks where to save it (R2-19):
+    // Electron shows the save dialog itself when no path is set, with these options.
+    session.defaultSession.on('will-download', (_event, item) => {
+      item.setSaveDialogOptions(downloadDialog(item.getFilename(), app.getPath('downloads')));
+    });
     // What a crashed run left running is killed first; every git from here on is recorded (A853).
     gitProcesses.cleanUp();
     // Every agent on this Mac reaches every notebook in the app (D52), after the launch settles.

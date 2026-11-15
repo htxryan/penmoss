@@ -1,7 +1,7 @@
 import { anotherMac, expect, seeded, test, type GitHost, type Page } from './fixtures';
 import { NEW_FOLDER, NEW_NOTE, VERSION_HISTORY, LINE_END } from './keys';
 import { noteAction } from './note-menu';
-import { notebookAction } from './notebook-actions';
+import { notebookMenuItem } from './notebook-actions';
 import { asAgent, syncNow } from './support/sync';
 import { readRemote, remoteFiles, remoteMarkdown } from './support/remote';
 
@@ -192,8 +192,8 @@ test('Trash restores a note into its folder, and deletes it for good', async ({
 
   await noteAction(page, 'delete-note');
   await expect(row).toHaveCount(0);
-  // The notebook's Trash, on its name's row (T53 item 4).
-  await (await notebookAction(page, 'Trash', { role: 'link' })).click();
+  // The notebook's Trash, in its row's ⋯ (T53 item 4, R2-21).
+  await (await notebookMenuItem(page, 'Trash')).click();
   const entry = page.getByTestId('trash').locator(`[data-note-id="${id}"]`);
   await expect(entry).toContainText(title);
   await expect(entry).toContainText(`from ${folder}`);
@@ -207,8 +207,8 @@ test('Trash restores a note into its folder, and deletes it for good', async ({
 
   // Again, then for good.
   await noteAction(page, 'delete-note');
-  // The notebook's Trash, on its name's row (T53 item 4).
-  await (await notebookAction(page, 'Trash', { role: 'link' })).click();
+  // The notebook's Trash, in its row's ⋯ (T53 item 4, R2-21).
+  await (await notebookMenuItem(page, 'Trash')).click();
   await expect(entry).toBeVisible();
   await entry.getByRole('button', { name: `Delete ${title} for Good` }).click();
   await entry.getByRole('button', { name: 'Delete for Good' }).click();
@@ -230,4 +230,134 @@ test('Trash restores a note into its folder, and deletes it for good', async ({
   expect(read.workspace.notes.map((note) => note.id)).not.toContain(id);
   expect(read.ops.note(id)).toBeUndefined();
   expect(errors).toEqual([]);
+});
+
+test.describe('a note with many versions (Ryan’s review of #193)', () => {
+  /** A long note: 120 paragraphs, 239 lines of markdown. */
+  const LONG = Array.from({ length: 120 }, (_, i) => `Paragraph ${i + 1} of a long note.`).join(
+    '\n\n',
+  );
+  test.use({ seed: { name: 'Notes', notes: [{ title: 'Long', markdown: LONG }] } });
+
+  test('History stays in the window, numbers the diff’s lines, and keeps its actions on one row', async ({
+    page,
+    host,
+    notebook,
+  }) => {
+    test.setTimeout(180_000);
+    const errors = collectErrors(page);
+    const { remote, noteIds } = seeded(notebook);
+    const id = noteIds[0]!;
+    // Versions enough to fill the list well past the window: an agent's edits, one a commit.
+    for (let i = 1; i <= 24; i++) {
+      await asAgent(host, remote, 'Claude', (local) => {
+        local.edit(id, { op: 'append', markdown: `Edit ${i}` }, null);
+      });
+    }
+    await page.setViewportSize({ width: 1440, height: 800 });
+    await page.goto(`/notes/${id}`);
+    await expect(async () => {
+      await syncNow(page);
+      await expect(body(page)).toContainText('Edit 24', { timeout: 2_000 });
+    }).toPass({ timeout: 40_000 });
+    await page.getByTestId('note-tab-history').click();
+    const rows = panel(page).getByRole('list', { name: 'Versions' }).locator('.history-entry');
+    await expect(rows).toHaveCount(25);
+    const diff = panel(page).getByTestId('history-diff');
+    await expect(diff.locator('[data-op="add"]')).toContainText(['Edit 24']);
+
+    // R2-10: nothing around the panel can scroll. Its rows' screen reader names (`.sr-only`,
+    // placed absolutely) hung below the list, down to the last version, and the note's pane
+    // scrolled the whole view up to reach them, leaving an empty band under the window.
+    const overflowing = () =>
+      page.evaluate(() => {
+        const out: string[] = [];
+        for (
+          let el = document.querySelector('[data-testid="history-panel"]')?.parentElement ?? null;
+          el;
+          el = el.parentElement
+        ) {
+          if (el.scrollHeight > el.clientHeight + 1 || el.scrollTop > 0) {
+            out.push(`${el.tagName}.${el.className}: ${el.scrollHeight} > ${el.clientHeight}`);
+          }
+        }
+        return out;
+      });
+    expect(await overflowing()).toEqual([]);
+    const top = async () => (await panel(page).boundingBox())!.y;
+    const before = await top();
+    await rows.nth(3).hover();
+    await page.mouse.wheel(0, 2_000);
+    await page.mouse.wheel(0, 2_000);
+    // The list scrolled, not the view around it.
+    await expect
+      .poll(() => rows.last().evaluate((row) => row.getBoundingClientRect().bottom))
+      .toBeLessThan(800);
+    expect(await top()).toBe(before);
+    expect(await overflowing()).toEqual([]);
+
+    // R2-13: a gutter with this version's line numbers, running on across the fold.
+    const numbers = await diff
+      .locator('pre[data-numbered] > span')
+      .evaluateAll((spans) =>
+        spans.map((span) =>
+          span.classList.contains('diff-fold')
+            ? `fold ${(span.querySelector('.diff-fold-lines') as HTMLElement).dataset['n']}`
+            : `${span.getAttribute('data-op')} ${(span.querySelector('.diff-num') as HTMLElement).dataset['n']}`,
+        ),
+      );
+    // The note file's lines: its front matter (4), its 239 and 23 edits' (a blank line and the
+    // edit each: 46), then the 24th's two.
+    expect(numbers).toEqual(['fold 1–287', 'same 288', 'same 289', 'add 290', 'add 291']);
+    // Drawn by CSS: the diff's selected text has the lines, never their numbers.
+    const selected = await diff.locator('pre').evaluate((pre) => {
+      const range = document.createRange();
+      range.selectNodeContents(pre);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return selection.toString();
+    });
+    expect(selected).toContain('\n Edit 23\n+\n+Edit 24');
+    expect(selected).not.toMatch(/28[89]|29[01]/);
+    const gutter = diff.locator('.diff-num').first();
+    expect(await gutter.evaluate((el) => getComputedStyle(el).userSelect)).toBe('none');
+
+    // R2-11 and R2-12: Restore, Revert and Copy in one row, words and icons, no ↑/↓ hint.
+    const actions = panel(page).locator('.history-actions');
+    const buttons = actions.getByRole('button');
+    await expect(buttons).toHaveText(['Restore', 'Revert', 'Copy']);
+    await expect(actions.locator('kbd')).toHaveCount(0);
+    const oneRow = () =>
+      buttons.evaluateAll(
+        (all) => new Set(all.map((button) => Math.round(button.getBoundingClientRect().top))).size,
+      );
+    expect(await oneRow()).toBe(1);
+    await buttons.first().hover();
+    await expect(page.getByTestId('tooltip')).toHaveText('Restore This Version');
+    // A narrower panel: the words go, Revert's and Copy's first, then Restore's; still one row,
+    // each button still named in full.
+    const width = (rem: number) =>
+      page
+        .locator('.note-columns')
+        .evaluate(
+          (el, w) => (el as HTMLElement).style.setProperty('--pm-panel-width', `${w}rem`),
+          rem,
+        );
+    const words = actions.locator('.history-action-word:visible');
+    await width(13);
+    await expect(actions).toHaveAttribute('data-fit', '1');
+    await expect(words).toHaveText(['Restore']);
+    expect(await oneRow()).toBe(1);
+    await width(7);
+    await expect(actions).toHaveAttribute('data-fit', '2');
+    await expect(words).toHaveCount(0);
+    expect(await oneRow()).toBe(1);
+    await expect(actions.getByRole('button', { name: 'Restore This Version' })).toBeVisible();
+    await expect(actions.getByRole('button', { name: 'Copy Text' })).toBeVisible();
+    await width(26);
+    await expect(actions).not.toHaveAttribute('data-fit');
+    await expect(buttons).toHaveText(['Restore', 'Revert', 'Copy']);
+    expect(errors).toEqual([]);
+  });
 });

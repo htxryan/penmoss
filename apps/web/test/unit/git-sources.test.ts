@@ -1145,3 +1145,68 @@ describe('Delete for good confirmed again from Settings (A855)', () => {
     expect(source.workspace.isPurged(keep)).toBe(true);
   }, 90_000);
 });
+
+describe('Sync Stopped through main’s git, in every window (Ryan’s R2-7)', () => {
+  it('stays stopped while main’s git retries a refused push, in the engine’s window and the others', async () => {
+    const { window, git, first } = await world();
+    // Main refuses the push (a protected branch); a gate holds a call of `op` while it is set.
+    let refuse = true;
+    let gate: { op: string; held: Promise<void> } | null = null;
+    const op = git.op.bind(git);
+    git.op = async (localId, name, args) => {
+      if (gate?.op === name) await gate.held;
+      if (refuse && name === 'push') {
+        return { ok: false, error: { code: 'protected', message: 'GH006: Protected branch' } };
+      }
+      return op(localId, name, args);
+    };
+    const hold = (name: string) => {
+      let open = () => undefined as void;
+      gate = { op: name, held: new Promise<void>((resolve) => (open = resolve)) };
+      return () => {
+        gate = null;
+        open();
+      };
+    };
+    const a = window('A');
+    const b = window('B');
+    announce(b, a);
+    a.start();
+    b.start();
+    await vi.waitFor(() => expect(a.hostsEngine).toBe(true));
+    await vi.waitFor(() => expect(b.feed.status.phase).toBe('synced'));
+    // What the note's status bar and the sidebar's row read, in both windows.
+    const shown = () =>
+      [a, b].map((source) => [source.feed.shown.phase, source.notes.localSync().phase]).flat();
+    // An edit in B, refused at its push.
+    const open = b.notes.openNote(first);
+    await open.ready;
+    retitle(open.replica.doc, 'refused for now');
+    await open.saveNow();
+    a.syncNow();
+    await vi.waitFor(() => expect(shown()).toEqual(['stopped', 'stopped', 'stopped', 'stopped']), {
+      timeout: 5000,
+    });
+    // The retry fetches, as the stopped one did, and is held before its push: still stopped.
+    let release = hold('push');
+    a.syncNow();
+    await vi.waitFor(() =>
+      expect(a.feed.status).toMatchObject({ phase: 'syncing', reached: 'fetch' }),
+    );
+    await vi.waitFor(() => expect(b.feed.status.phase).toBe('syncing'));
+    expect(shown()).toEqual(['stopped', 'stopped', 'stopped', 'stopped']);
+    // Refused again: stopped.
+    release();
+    await vi.waitFor(() => expect(b.feed.status.phase).toBe('stopped'));
+    expect(shown()).toEqual(['stopped', 'stopped', 'stopped', 'stopped']);
+    // Main lets it through: the push lands, and every window is back to normal.
+    refuse = false;
+    release = hold('push');
+    a.syncNow();
+    await vi.waitFor(() => expect(a.feed.status.phase).toBe('syncing'));
+    expect(shown()).toEqual(['stopped', 'stopped', 'stopped', 'stopped']);
+    release();
+    await vi.waitFor(() => expect(shown()).toEqual(['synced', 'synced', 'synced', 'synced']));
+    open.close();
+  });
+});

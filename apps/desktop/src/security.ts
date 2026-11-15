@@ -3,8 +3,10 @@
  * context isolation and no Node; they may only be the bundled app
  * (`app://penmoss/`). A link to anywhere else opens in the default browser
  * (http, https and mailto only), never in the app; new windows, webviews
- * and permission prompts are refused, except writing to the clipboard.
+ * and permission prompts are refused, except writing to the clipboard. A
+ * download asks where to save it (R2-19).
  */
+import { extname, join } from 'node:path';
 import { PAGE_ORIGIN } from './config';
 
 export const isAppUrl = (url: string): boolean => url.startsWith(`${PAGE_ORIGIN}/`);
@@ -38,6 +40,36 @@ export const ALLOWED_PERMISSIONS: ReadonlySet<string> = new Set([
   'fullscreen',
   'persistent-storage',
 ]);
+
+/** What a download's save dialog shows (Electron's `SaveDialogOptions`, the parts used here). */
+export interface DownloadDialog {
+  readonly title: string;
+  readonly defaultPath: string;
+  readonly filters?: { name: string; extensions: string[] }[];
+}
+
+/** The kinds of file a page saves (the drawing editor's Save To… and Export Image…). */
+const DOWNLOAD_KINDS: Readonly<Record<string, string>> = {
+  excalidraw: 'Excalidraw Scene',
+  png: 'PNG Image',
+  svg: 'SVG Image',
+};
+
+/**
+ * A page's download (R2-19: the drawing editor's Save To… and Export Image…, which save through
+ * the browser's download in the Mac app) always asks where to save it, in the Downloads folder by
+ * default, never saving there unasked; its kind of file is the dialog's filter.
+ */
+export function downloadDialog(fileName: string, downloads: string): DownloadDialog {
+  const name = fileName.trim() || 'Untitled';
+  const extension = extname(name).slice(1).toLowerCase();
+  const kind = DOWNLOAD_KINDS[extension];
+  return {
+    title: 'Save',
+    defaultPath: join(downloads, name),
+    ...(kind ? { filters: [{ name: kind, extensions: [extension] }] } : {}),
+  };
+}
 
 /** The parts of an IPC event that say where it came from. */
 export interface IpcSource {

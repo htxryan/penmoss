@@ -40,7 +40,7 @@ Agents are careful in one more way: an agent's edit is refused if the part of th
 
 ## When sync stops
 
-If the host refuses a push, the notebook says **Sync Stopped** with the host's own words, and your changes wait on the device. Nothing is lost. The open note's status bar shows **Sync Stopped** in red; click it to open the notebook's page in **Settings → Notebooks**, which says why and has **Sync Now**. Common reasons:
+If the host refuses a push, the notebook says **Sync Stopped** with the host's own words, and your changes wait on the device. Nothing is lost. The notebook's row in the sidebar turns red, with a (!) at its end, and the open note's status bar shows **Sync Stopped** in red; click either to open the notebook's page in **Settings → Notebooks**, which says why and has **Sync Now**. Penmoss keeps trying, and the status bar and the notebook's row in the sidebar stay **Sync Stopped** while it does: they go back to normal only once a sync gets further than the one that stopped, or lands. The notebook's page shows each try as **Syncing**. Common reasons:
 
 - **The token expired or was revoked.** Save a new one in **Settings → Notebooks**.
 - **GitHub refused your email (GH007).** Set the notebook's **Commit email** to your GitHub no-reply address. See [Commits and your email](/docs/first-notebook/#commits-and-your-email).

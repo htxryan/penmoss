@@ -1,4 +1,4 @@
-import { expect, seeded, test, type Page } from './fixtures';
+import { expect, seeded, test, type Locator, type Page } from './fixtures';
 import { readAsAgent, syncNow } from './support/sync';
 
 // PEN-68 and finding 8 of Ryan's review of #192 (design "Tags D"): the Tags page. One compact
@@ -319,6 +319,108 @@ test.describe('managing tags', () => {
     const search = page.getByTestId('search');
     await expect(search.locator('.search-hit')).toContainText('Beds');
     await page.keyboard.press('Escape');
+    expect(errors).toEqual([]);
+  });
+});
+
+// R2-4 of Ryan's review of #193: only the tables scroll. The title and the filter stay put above
+// one region that holds every notebook's table; a notebook's heading row (with the selection's
+// buttons) and its table's header row stick at the region's top while its rows pass under them,
+// until the next notebook's push them off.
+test.describe('a long list of tags', () => {
+  const topics = Array.from({ length: 24 }, (_, n) => `topic-${String(n + 1).padStart(2, '0')}`);
+  test.use({
+    seed: {
+      name: 'Work',
+      notes: topics.map((topic) => ({ title: `About ${topic}`, markdown: `Notes on #${topic}` })),
+    },
+  });
+
+  test('only the tables scroll: the title, filter, heading and header rows stay in view', async ({
+    page,
+    host,
+  }) => {
+    test.setTimeout(120_000);
+    const errors = collectErrors(page);
+    await host.seed({
+      name: 'Personal',
+      notes: Array.from({ length: 12 }, (_, n) => ({
+        title: `Day ${n + 1}`,
+        markdown: `A day #day-${String(n + 1).padStart(2, '0')}`,
+      })),
+    });
+    await page.setViewportSize({ width: 1100, height: 560 });
+    await page.goto('/tags');
+    const work = section(page, 'Work');
+    const personal = section(page, 'Personal');
+    await expect(tagNames(work)).toHaveCount(24, { timeout: 30_000 });
+    await expect(tagNames(personal)).toHaveCount(12);
+
+    const scroller = page.getByTestId('tags-page-scroll');
+    const heading = tagsPage(page).getByRole('heading', { name: 'Tags', level: 2 });
+    const filter = page.getByTestId('tags-filter');
+    const top = async (locator: Locator) => (await locator.boundingBox())!.y;
+    const bottom = async (locator: Locator) => {
+      const box = (await locator.boundingBox())!;
+      return box.y + box.height;
+    };
+    const fixed = async () => [await top(heading), await top(filter)];
+    const before = await fixed();
+    const scrollTop = () => scroller.evaluate((element) => element.scrollTop);
+    // Neither the pane nor the page scrolls; the region does.
+    const outerScroll = () =>
+      page.evaluate(() => [
+        document.scrollingElement!.scrollTop,
+        document.querySelector('.note-main')!.scrollTop,
+      ]);
+
+    // The wheel over the tables scrolls them, under Work's heading and header rows.
+    const box = (await row(work, 'topic-05').boundingBox())!;
+    await page.mouse.move(box.x + 40, box.y + box.height / 2);
+    await page.mouse.wheel(0, 240);
+    await expect.poll(scrollTop).toBeGreaterThan(100);
+    expect(await fixed()).toEqual(before);
+    expect(await outerScroll()).toEqual([0, 0]);
+    const workHead = work.locator('.tags-page-notebook-head');
+    const workHeader = work.locator('.tags-head');
+    expect(await top(workHead)).toBeCloseTo(await top(scroller), 0);
+    expect(await top(workHeader)).toBeCloseTo(await bottom(workHead), 0);
+    // Painted over the rows passing under them.
+    const atHeader = await workHeader.evaluate((element) => {
+      const { x, y, width, height } = element.getBoundingClientRect();
+      return element.contains(document.elementFromPoint(x + width / 2, y + height / 2));
+    });
+    expect(atHeader).toBe(true);
+    await expect(row(work, 'topic-01')).not.toBeInViewport();
+
+    // The selection's buttons are in the heading row, so they stay in view too.
+    await row(work, 'topic-20').getByRole('checkbox').check();
+    await expect(work.getByRole('button', { name: 'Delete…' })).toBeInViewport();
+    expect(await top(workHead)).toBeCloseTo(await top(scroller), 0);
+
+    // The wheel over the title does nothing: there is nothing there to scroll.
+    const title = (await heading.boundingBox())!;
+    await page.mouse.move(title.x + title.width + 200, title.y + 5);
+    const held = await scrollTop();
+    await page.mouse.wheel(0, 300);
+    await page.waitForTimeout(200);
+    expect(await scrollTop()).toBe(held);
+    expect(await outerScroll()).toEqual([0, 0]);
+
+    // Down in Personal's table, its rows stick, and Work's have gone up with Work's table.
+    await scroller.evaluate((element) => {
+      const next = element.querySelectorAll('.tags-page-notebook')[1]!;
+      element.scrollTop +=
+        next.getBoundingClientRect().top - element.getBoundingClientRect().top + 120;
+    });
+    const personalHead = personal.locator('.tags-page-notebook-head');
+    await expect
+      .poll(async () => Math.round(await top(personalHead)))
+      .toBe(Math.round(await top(scroller)));
+    expect(await top(personal.locator('.tags-head'))).toBeCloseTo(await bottom(personalHead), 0);
+    await expect(workHead).not.toBeInViewport();
+    expect(await fixed()).toEqual(before);
+    expect(await outerScroll()).toEqual([0, 0]);
     expect(errors).toEqual([]);
   });
 });

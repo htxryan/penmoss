@@ -70,6 +70,39 @@ export interface GitSyncStatus {
   readonly storageKept?: boolean | null;
   /** The app is quitting and waits for this push (#170 F8): "Pushing…". */
   readonly closing?: boolean;
+  /** How far the sync running now, or the last one, got (Ryan's R2-7): see `SyncReach`. */
+  readonly reached?: SyncReach;
+  /**
+   * The last sync stopped and none has landed since: how far that one got (R2-7). Its retries
+   * show as Sync Stopped until one gets further than that (`shownStatus`). Null otherwise.
+   */
+  readonly stoppedAt?: SyncReach | null;
+}
+
+/**
+ * How far a sync got (Ryan's R2-7): nothing yet, its fetch answered, or its push landed. A retry
+ * of a stopped sync is progress only once it gets further than the stopped one did.
+ */
+export type SyncReach = 'nothing' | 'fetch' | 'push';
+
+const REACH: Readonly<Record<SyncReach, number>> = { nothing: 0, fetch: 1, push: 2 };
+
+/** Whether `reached` is further than `than`. */
+export const further = (reached: SyncReach | undefined, than: SyncReach): boolean =>
+  REACH[reached ?? 'nothing'] > REACH[than];
+
+/**
+ * A notebook's sync status as the app shows it (Ryan's R2-7): once a sync has stopped, its
+ * retries stay Sync Stopped, saying why it stopped, until one lands or gets further than the
+ * stopped one did (its fetch answered where that one's did not, or its push landed). Starting
+ * a new attempt is not progress. The note's status bar and the sidebar's notebook row show this
+ * (`GitStatusFeed.shown`, `useShownGitStatus`); what waits for a sync reads the status as it is.
+ */
+export function shownStatus(status: GitSyncStatus): GitSyncStatus {
+  const stoppedAt = status.stoppedAt ?? null;
+  if (status.phase !== 'syncing' || stoppedAt === null) return status;
+  if (further(status.reached, stoppedAt)) return status;
+  return { ...status, phase: 'stopped' };
 }
 
 /** This Mac's writer, as commits and History name it (A825). */
@@ -166,6 +199,8 @@ export class GitEngineHost {
   /** Records that could not be taken in (A886), by id. */
   private readonly unreadable = new Set<string>();
   private current: GitSyncStatus = { ...STARTING, here: true };
+  /** The options' transport, telling `reached` how far each sync gets (R2-7). */
+  private readonly transport: GitTransport;
   private readonly listeners = new Set<(status: GitSyncStatus) => void>();
   private pushTimer: ReturnType<typeof setTimeout> | null = null;
   private firstChangeAt: number | null = null;
@@ -201,6 +236,7 @@ export class GitEngineHost {
   private renaming: string | null = null;
 
   constructor(private readonly options: EngineHostOptions) {
+    this.transport = this.watch(options.transport);
     this.storage = new EngineStorage(options.kv);
     this.now = options.now ?? Date.now;
     this.pushDelayS = options.pushDelayS;
@@ -234,6 +270,49 @@ export class GitEngineHost {
     return this.current;
   }
 
+  /**
+   * The transport as the engine uses it: as given, and noting each fetch that answered and each
+   * push that landed in the sync running then (R2-7), so a retry shows when it gets somewhere.
+   */
+  private watch(transport: GitTransport): GitTransport {
+    const step = async <T>(
+      reach: SyncReach,
+      call: () => Promise<T>,
+      landed: (result: T) => boolean,
+    ) => {
+      const generation = this.generation;
+      const result = await call();
+      if (landed(result)) this.progressed(reach, generation);
+      return result;
+    };
+    const fetch = () =>
+      step(
+        'fetch',
+        () => transport.fetch(),
+        () => true,
+      );
+    const push = (commit: string) =>
+      step(
+        'push',
+        () => transport.push(commit),
+        (outcome) => outcome === 'pushed',
+      );
+    return new Proxy(transport, {
+      get: (target, key): unknown => {
+        if (key === 'fetch') return fetch;
+        if (key === 'push') return push;
+        const value: unknown = Reflect.get(target, key, target);
+        return typeof value === 'function' ? (value as () => unknown).bind(target) : value;
+      },
+    });
+  }
+
+  /** The sync running got this far (R2-7); a late answer from an earlier one says nothing. */
+  private progressed(reach: SyncReach, generation: number): void {
+    if (generation !== this.generation || this.current.phase !== 'syncing') return;
+    if (further(reach, this.current.reached ?? 'nothing')) this.set({ reached: reach });
+  }
+
   onStatus(listener: (status: GitSyncStatus) => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -251,7 +330,7 @@ export class GitEngineHost {
    */
   async start(): Promise<void> {
     const engine = await GitNotebookEngine.open({
-      transport: this.options.transport,
+      transport: this.transport,
       storage: this.storage,
       secrets: this.options.secrets,
       writer: { kind: 'device', label: this.options.label ?? MAC_WRITER_LABEL },
@@ -438,6 +517,7 @@ export class GitEngineHost {
   private offlineStatus(): Partial<GitSyncStatus> {
     return {
       phase: 'offline',
+      stoppedAt: null,
       code: 'network',
       detail: `This Mac is offline. Changes stay on this device and go once it is back online.`,
       hostMessage: null,
@@ -589,7 +669,8 @@ export class GitEngineHost {
     this.retryTimer = null;
     this.lastPullAt = this.now();
     const generation = ++this.generation;
-    this.set({ phase: 'syncing' });
+    // What the last failure said stays until this one lands; `stoppedAt` stays too (R2-7).
+    this.set({ phase: 'syncing', reached: 'nothing' });
     let timer: ReturnType<typeof setTimeout> | undefined;
     let sync: Promise<SyncReport> | null = null;
     const stop = new AbortController();
@@ -646,6 +727,7 @@ export class GitEngineHost {
       void this.options.kv.write([], [OWED_KEY]).catch(() => undefined);
     this.set({
       phase: 'synced',
+      stoppedAt: null,
       detail: null,
       hostMessage: null,
       code: null,
@@ -720,7 +802,10 @@ export class GitEngineHost {
     }, delay);
     const described = describe(error, this.options.host);
     if (described.log) this.options.log?.('git sync failed', error);
-    this.set({ ...described.status, nextRetryAt });
+    // A stop holds through its retries until one gets further (R2-7); offline is a newer word.
+    const stoppedAt =
+      described.status.phase === 'stopped' ? (this.current.reached ?? 'nothing') : null;
+    this.set({ ...described.status, nextRetryAt, stoppedAt });
   }
 
   /**

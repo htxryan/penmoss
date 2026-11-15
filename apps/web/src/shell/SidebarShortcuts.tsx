@@ -22,6 +22,8 @@ interface Shortcut {
 
 const SHORTCUTS: readonly Shortcut[] = [
   { item: null, command: 'app.search', label: 'Search', icon: 'search', testId: 'open-search' },
+  // The Tags page (Ryan's review of #193, R2-9), its icon the page's own.
+  { item: 'tags', command: 'app.tags', label: 'Tags', icon: 'hash', testId: 'open-tags' },
   { item: 'today', command: 'journal.today', label: 'Today', icon: 'today' },
   { item: 'thisWeek', command: 'journal.thisWeek', label: 'This Week', icon: 'week' },
   { item: 'graph', command: 'app.graph', label: 'Graph', icon: 'graph', testId: 'open-graph' },
@@ -36,23 +38,25 @@ const SHORTCUTS: readonly Shortcut[] = [
 
 /**
  * The sidebar's top row (T36; the icon rail's items, T41, A508): New Note, filled with the
- * accent so it stands out (T52), then Search, Today, This Week, Graph and Commands, as one
- * row of
- * icon buttons (T51, A932), each named by its `aria-label` and its tooltip with its keys; the
- * rail has them as a column. Settings → Display hides any but New Note and Search, on the
- * sidebar and the rail alike (A576); a hidden one's command, keys and palette entry still work.
- * Today and This Week show as the page while today's or this week's note is open (T53 item 1),
- * as Graph does on the graph.
+ * accent so it stands out (T52), then Search, Tags (R2-9), Today, This Week, Graph and Commands,
+ * as one row of icon buttons (T51, A932), each named by its `aria-label` and its tooltip with its
+ * keys; the rail has them as a column. Settings → Display hides any but New Note and Search, on
+ * the sidebar and the rail alike (A576); a hidden one's command, keys and palette entry still
+ * work. Today and This Week show as the page while today's or this week's note is open (T53
+ * item 1), as Graph does on the graph and Tags on the Tags page.
  */
 export function SidebarShortcuts({
   openNote,
   graphOpen,
+  tagsOpen = false,
   shownNote,
 }: {
   /** The note the graph opens around (T17). */
   readonly openNote: string | null;
   /** The graph is the page showing. */
   readonly graphOpen: boolean;
+  /** The Tags page is the page showing. */
+  readonly tagsOpen?: boolean;
   /** The note the page shows, if it shows one. */
   readonly shownNote: string | null;
 }) {
@@ -68,7 +72,11 @@ export function SidebarShortcuts({
           <ShortcutButton
             key={shortcut.command}
             shortcut={shortcut}
-            current={shownNote !== null && current[shortcut.command] === shownNote}
+            current={
+              shortcut.command === 'app.tags'
+                ? tagsOpen
+                : shownNote !== null && current[shortcut.command] === shownNote
+            }
           />
         ),
       )}

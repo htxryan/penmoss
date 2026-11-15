@@ -168,6 +168,37 @@
   outline-offset: 1.5px;
 }
 
+/*
+ * Sync stopped (Ryan's review of #193, R2-5): the notebook's row is a band in the danger colour
+ * with the page's colour as its text and icons, as the status bar's Sync Stopped (A1396), so it
+ * is as legible as danger text on the page, which every theme's contrast checks hold to AA. The
+ * dot is the status bar's (!). The band keeps its colour under the pointer; a button on it
+ * shades with the text colour, which moves it away from the page colour in light and dark alike.
+ */
+.sb-source > .sb-section-head[data-sync='stopped'],
+.sb-source > .sb-section-head[data-sync='stopped']:hover {
+  --pm-notebook-name: var(--pm-bg);
+  background: var(--pm-danger);
+  color: var(--pm-bg);
+}
+
+.sb-source > .sb-section-head[data-sync='stopped'] :is(.icon-btn, .sync-dot),
+.sb-source > .sb-section-head[data-sync='stopped'] .icon-btn[aria-expanded='true'] {
+  color: var(--pm-bg);
+}
+
+.sb-source > .sb-section-head[data-sync='stopped'] .icon-btn[aria-expanded='true'] {
+  background: color-mix(in oklab, var(--pm-fg) 13%, transparent);
+}
+
+.sb-source > .sb-section-head[data-sync='stopped'] :is(.sb-section-toggle, .icon-btn, .sync-dot) {
+  outline-color: var(--pm-bg);
+}
+
+.sync-dot[data-state='stopped'] .i {
+  color: currentColor;
+}
+
 .sb-section {
   flex: none;
   min-width: 0;
@@ -934,6 +965,18 @@
   box-sizing: border-box;
 }
 
+/*
+ * The card is the raised colour, as a field is, so a field on it read as none (Ryan's review of
+ * #193): every field on the card takes the page's colour and a stronger edge, in either theme.
+ */
+.fr-screen :is(.input, .pm-select) {
+  background-color: var(--pm-bg);
+}
+
+.fr-screen :is(.input, .pm-select):not(:focus, .fr-invalid) {
+  border-color: var(--pm-border-strong);
+}
+
 .fr-repo-name {
   display: flex;
   align-items: center;
@@ -1076,7 +1119,13 @@
   list-style: none;
 }
 
+/* The count above the tree keeps its line whatever it says, so the tree never moves under it. */
+.fr-count {
+  min-height: 1lh;
+}
+
 .fr-tree {
+  box-sizing: border-box;
   max-height: 22rem;
   overflow-y: auto;
   border: 1px solid var(--pm-border);

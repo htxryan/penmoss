@@ -213,7 +213,7 @@ async function checkSidebar(page: Page, label: string, dark: boolean): Promise<v
   const targets = await page
     .locator(`${notebook} :is(.tree-actions .icon-btn, .sync-dot)`)
     .evaluateAll((all) =>
-      // Those shown: ⋯ only shows in a narrow row (Ryan's review of #192, finding 19).
+      // Those shown: New Note, New Folder and ⋯ at any width (R2-21), then the dot.
       all
         .filter((element) => element.getClientRects().length > 0)
         .map((element) => {

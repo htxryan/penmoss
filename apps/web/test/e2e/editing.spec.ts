@@ -131,7 +131,7 @@ test('T14: a note built with only the keyboard, through the slash menu and short
   await press('Enter');
   await type('Headlamp');
   await press('Enter', 2);
-  await slash(page, 'mermaid', 'Mermaid Diagram');
+  await slash(page, 'mermaid', 'Diagram: Mermaid');
   await type('graph TD\n  A[Pack] --> B[Go]');
   await expect(editor.locator('.pm-diagram-output svg')).toBeVisible({ timeout: 15_000 });
   await press('Enter', 3);

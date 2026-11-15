@@ -66,17 +66,9 @@ export function TagsPage({ onShowTag }: { readonly onShowTag: ShowTag }) {
   );
   return (
     <section className="tags-page" aria-labelledby="tags-page-heading" data-testid="tags-page">
-      <h2 id="tags-page-heading">Tags</h2>
-      {anyTags === false ? (
-        <div className="empty-state compact" data-testid="tags-page-empty">
-          <span className="empty-icon" aria-hidden="true">
-            <Icon name="hash" size={28} />
-          </span>
-          <h3>No tags yet</h3>
-          <p>Tag a note, with #name in its text or under its title, and the tag shows here.</p>
-        </div>
-      ) : (
-        <>
+      <div className="tags-page-top" data-testid="tags-page-top">
+        <h2 id="tags-page-heading">Tags</h2>
+        {anyTags === false ? null : (
           <label className="tags-filter tags-page-filter">
             <Icon name="search" size={14} />
             <input
@@ -95,15 +87,27 @@ export function TagsPage({ onShowTag }: { readonly onShowTag: ShowTag }) {
               }}
             />
           </label>
-          {sources === null
-            ? section(null)
-            : sources.map((source) => (
-                <SourceScope key={source.id} source={source}>
-                  {section(source)}
-                </SourceScope>
-              ))}
-        </>
-      )}
+        )}
+      </div>
+      <div className="tags-page-scroll" data-testid="tags-page-scroll">
+        {anyTags === false ? (
+          <div className="empty-state compact" data-testid="tags-page-empty">
+            <span className="empty-icon" aria-hidden="true">
+              <Icon name="hash" size={28} />
+            </span>
+            <h3>No tags yet</h3>
+            <p>Tag a note, with #name in its text or under its title, and the tag shows here.</p>
+          </div>
+        ) : sources === null ? (
+          section(null)
+        ) : (
+          sources.map((source) => (
+            <SourceScope key={source.id} source={source}>
+              {section(source)}
+            </SourceScope>
+          ))
+        )}
+      </div>
       <TagDoneToast done={done} onClose={closeDone} />
     </section>
   );
@@ -157,6 +161,9 @@ function NotebookTags({
     readonly target: string | null;
   } | null>(null);
   const [deleting, setDeleting] = useState<readonly string[] | null>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const headRef = useRef<HTMLDivElement>(null);
+  useStickyHeadHeight(sectionRef, headRef);
 
   const key = filterKey(query);
   const shown = useMemo(() => {
@@ -234,12 +241,13 @@ function NotebookTags({
   const count = `${key ? `${shown.length} of ` : ''}${rows.length} ${rows.length === 1 ? 'Tag' : 'Tags'}`;
   return (
     <section
+      ref={sectionRef}
       className="tags-page-notebook"
       aria-labelledby={name ? headingId : undefined}
       aria-label={name ? undefined : 'Tags'}
       data-testid="tags-page-notebook"
     >
-      <div className="tags-page-notebook-head">
+      <div ref={headRef} className="tags-page-notebook-head">
         {name ? (
           <h3 id={headingId} className="tags-page-notebook-name">
             <Icon name="notebook" size={16} />
@@ -379,6 +387,28 @@ function NotebookTags({
 }
 
 /** A checkbox with an accessible name, and its mixed state set on the element. */
+/**
+ * The notebook's heading row's height, as `--tags-head-h` on its section (R2-4): the table's
+ * header row sticks just under it while the rows scroll, and the heading wraps in a narrow window
+ * or when the selection's buttons show.
+ */
+function useStickyHeadHeight(
+  sectionRef: { readonly current: HTMLElement | null },
+  headRef: { readonly current: HTMLElement | null },
+): void {
+  useLayoutEffect(() => {
+    const section = sectionRef.current;
+    const head = headRef.current;
+    if (!section || !head) return;
+    const set = () => section.style.setProperty('--tags-head-h', `${head.offsetHeight}px`);
+    set();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(set);
+    observer.observe(head);
+    return () => observer.disconnect();
+  }, [sectionRef, headRef]);
+}
+
 function Checkbox({
   label,
   checked,

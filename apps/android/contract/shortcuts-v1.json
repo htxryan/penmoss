@@ -955,7 +955,14 @@
     },
     {
       "id": "editor.insert.mermaid",
-      "title": "Insert: Mermaid Diagram",
+      "title": "Insert: Diagram: Mermaid",
+      "area": "Insert",
+      "scope": "editor",
+      "keys": []
+    },
+    {
+      "id": "editor.insert.drawing",
+      "title": "Insert: Diagram: Excalidraw",
       "area": "Insert",
       "scope": "editor",
       "keys": []
@@ -998,13 +1005,6 @@
     {
       "id": "editor.insert.file",
       "title": "Insert: File",
-      "area": "Insert",
-      "scope": "editor",
-      "keys": []
-    },
-    {
-      "id": "editor.insert.drawing",
-      "title": "Insert: Excalidraw Diagram",
       "area": "Insert",
       "scope": "editor",
       "keys": []

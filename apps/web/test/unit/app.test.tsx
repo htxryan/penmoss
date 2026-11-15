@@ -121,9 +121,9 @@ describe('App', () => {
       expect(html, path).toContain('aria-expanded="false" aria-controls="app-sidebar"');
       expect(html, path).toContain('id="app-sidebar"');
       expect(html, path).toContain('aria-label="Close Navigation"');
-      // Settings and Trash are in the drawer.
+      // Settings is in the drawer, and the notebook's ⋯, which holds Trash (R2-21).
       expect(html, path).toContain('href="/settings"');
-      expect(html, path).toContain('href="/trash"');
+      expect(html, path).toContain('aria-label="More Notebook Actions"');
     }
   });
 

@@ -25,6 +25,8 @@ const ITEMS: ReadonlyArray<{
   readonly label: string;
   readonly icon: IconName;
 }> = [
+  // The Tags page, after Search (Ryan's review of #193, R2-9).
+  { item: 'tags', label: 'Tags', icon: 'hash' },
   { item: 'today', label: 'Today', icon: 'today' },
   { item: 'thisWeek', label: 'This Week', icon: 'week' },
   { item: 'graph', label: 'Graph', icon: 'graph' },
@@ -33,7 +35,7 @@ const ITEMS: ReadonlyArray<{
 
 /**
  * Settings → Display (T42, #104 item 7, A576): which shortcuts the sidebar and its collapsed
- * rail show. Today, This week, Graph and Commands may each be hidden; Search always shows.
+ * rail show. Tags, Today, This week, Graph and Commands may each be hidden; Search always shows.
  * Synced like the theme, so the choice follows Ryan to every device.
  */
 export function DisplaySettings() {

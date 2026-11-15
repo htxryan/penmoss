@@ -17,28 +17,28 @@ Type `/` at the start of a line or after a space to open the slash menu. Keep ty
 
 In the Mac app and on the web you can also right-click in a note, with no text selected, to open the same menu at that spot without typing `/`, or press the context-menu key or Shift+F10 to open it at the caret. Type to filter it as before; what you type shows at the top of the menu, not in the note. A right-click with text selected, or on a link, a picture, a drawing, a table, code or a comment, works as it did.
 
-| Item               | Also found by                      | In markdown      |
-| ------------------ | ---------------------------------- | ---------------- |
-| Text               | paragraph, plain                   |                  |
-| Heading 1, 2, 3    | h1, h2, h3, title, section         | `#`, `##`, `###` |
-| Bulleted List      | bullet, ul                         | `-`              |
-| Numbered List      | ordered, number, ol                | `1.`             |
-| Checklist          | todo, task, checkbox               | `- [ ]`          |
-| Quote              | blockquote, citation               | `>`              |
-| Divider            | rule, hr, line, separator          | `---`            |
-| Code Block         | snippet, fence, pre                | ` ``` `          |
-| Table              | grid, columns, rows                | `\| a \| b \|`   |
-| Callout            | admonition, note, info, aside      | `> [!note]`      |
-| Toggle             | collapse, fold, details, expand    | `> [!note]-`     |
-| Mermaid Diagram    | diagram, flowchart, chart, graph   | ` ```mermaid `   |
-| Math Block         | equation, formula, latex, katex    | `$$`             |
-| Inline Math        |                                    | `$x$`            |
-| Link to Note       | wikilink, reference, backlink      | `[[`             |
-| Embed Note         | transclude, include, section       | `![[`            |
-| Image              | picture, photo, upload, screenshot |                  |
-| File               | attachment, pdf, document          |                  |
-| Excalidraw Diagram | draw, drawing, sketch, whiteboard  |                  |
-| Symbol             | signifier, important, idea, star   |                  |
+| Item                | Also found by                      | In markdown      |
+| ------------------- | ---------------------------------- | ---------------- |
+| Text                | paragraph, plain                   |                  |
+| Heading 1, 2, 3     | h1, h2, h3, title, section         | `#`, `##`, `###` |
+| Bulleted List       | bullet, ul                         | `-`              |
+| Numbered List       | ordered, number, ol                | `1.`             |
+| Checklist           | todo, task, checkbox               | `- [ ]`          |
+| Quote               | blockquote, citation               | `>`              |
+| Divider             | rule, hr, line, separator          | `---`            |
+| Code Block          | snippet, fence, pre                | ` ``` `          |
+| Table               | grid, columns, rows                | `\| a \| b \|`   |
+| Callout             | admonition, note, info, aside      | `> [!note]`      |
+| Toggle              | collapse, fold, details, expand    | `> [!note]-`     |
+| Diagram: Mermaid    | diagram, mermaid, flowchart, chart | ` ```mermaid `   |
+| Diagram: Excalidraw | excalidraw, draw, drawing, sketch  |                  |
+| Math Block          | equation, formula, latex, katex    | `$$`             |
+| Inline Math         |                                    | `$x$`            |
+| Link to Note        | wikilink, reference, backlink      | `[[`             |
+| Embed Note          | transclude, include, section       | `![[`            |
+| Image               | picture, photo, upload, screenshot |                  |
+| File                | attachment, pdf, document          |                  |
+| Symbol              | signifier, important, idea, star   |                  |
 
 Each item is also in the [command palette](/docs/shortcuts/#the-command-palette) as **Insert: …**. In a table cell the menu offers only Inline Math, Link to Note, Image, File and Symbol.
 
@@ -109,7 +109,16 @@ Pictures and files are saved on the device first, so this works offline, and go 
 
 ## Excalidraw Diagrams
 
-Choose **Excalidraw Diagram** in the slash menu to sketch in [Excalidraw](https://excalidraw.com), a hand-drawn style drawing editor, which opens over the whole window. Draw with its shapes, arrows, lines, pen and text, then press **Done** to put the drawing in the note, or **Cancel** to leave the note as it was. The editor follows your light or dark mode, and works offline.
+Choose **Diagram: Excalidraw** in the slash menu to sketch in [Excalidraw](https://excalidraw.com), a hand-drawn style drawing editor, which opens over the whole window. Draw with its shapes, arrows, lines, pen and text, then press **Done** to put the drawing in the note, or **Cancel** to leave the note as it was. The editor follows your light or dark mode, and works offline.
+
+While the editor is open, its bar is the window's title bar. In the Mac app you drag the window by its empty part, as you do the app's own, and it starts with **Back**, **Forward** and the pin (**Keep on Top**), then the editor's title, with **Cancel** and **Done** at the end. Back and Forward keep the drawing in the note, as Done does, then go.
+
+To keep a copy of a drawing outside the note, open Excalidraw's menu (☰) in the editor's top-left corner:
+
+- **Save to...** saves the drawing as an `.excalidraw` file, which Excalidraw, or excalidraw.com, opens again.
+- **Export image...** saves it as a PNG or SVG picture, with or without its background, light or dark, at 1×, 2× or 3× size, and optionally with the scene embedded so Excalidraw can open the picture again. **Copy to clipboard** copies the PNG instead.
+
+The Mac app asks where to save each file, in your Downloads folder unless you choose another. Nothing in the menu opens a file into the drawing.
 
 The drawing shows in the note as a picture, as wide as you drew it. Click it to select it. Point at it, or select it, and two buttons show in its top-right corner: **Edit Excalidraw Diagram** (the pencil) opens it in Excalidraw again, and **Delete Excalidraw Diagram** (the bin) removes it from the note. With the drawing selected, Enter edits it too, and Backspace or Delete removes it. Undo (⌘Z, or Ctrl+Z) brings a removed drawing back. A read-only note, such as an older version in History, shows the drawing without the buttons.
 

@@ -11,11 +11,15 @@ This page shows you how to see a note's earlier versions, bring one back, undo o
 
 The **Now** row at the top says whether the note has changes that are not synced yet. **Sync Now** beside it syncs, which saves a version now; otherwise each sync makes one. The **ⓘ** beside the panel's Close button says how versions are made, with a link to this page.
 
-Select a version, or move through them with ↑ and ↓, to see what it changed under the list. Drag the handle between the list and the changes to give either more room (or focus it and press ↑ or ↓); Penmoss remembers the split. Under the changes:
+Select a version, or move through them with ↑ and ↓, to see what it changed under the list. Drag the handle between the list and the changes to give either more room (or focus it and press ↑ or ↓); Penmoss remembers the split.
 
-- **Restore This Version** brings back the whole note as it was then, as a new change. Nothing is lost: the versions after it stay in the history.
-- **Revert This Edit**, on an agent's version, undoes only what that version changed and keeps every edit made since. If a later edit changed the same lines, it says so.
-- **Copy Text** copies the note's text as it was in that version.
+The changes have line numbers down the left: the line's number in that version, or, on a removed line, its number in the version before, dimmed. Long runs of unchanged lines are folded, and a fold shows which lines it holds, so the numbers carry on after it. Selecting the changes, or **Copy Text**, never copies the numbers.
+
+Under the changes are three buttons. Each shows an icon and one word, and its full name when you hover over it. In a narrow panel the words drop to keep the buttons on one line, Revert's and Copy's first.
+
+- **Restore** (Restore This Version) brings back the whole note as it was then, as a new change. Nothing is lost: the versions after it stay in the history.
+- **Revert** (Revert This Edit), on an agent's version, undoes only what that version changed and keeps every edit made since. If a later edit changed the same lines, it says so.
+- **Copy** (Copy Text) copies the note's text as it was in that version.
 
 On Android, History is a screen of its own that lists the same versions, with Restore and Revert.
 
@@ -27,7 +31,7 @@ Your repository's git history keeps every version, so you can also read it with 
 
 ## Trash
 
-**Move to Trash**, in the note's ⋯ menu, moves a note to its notebook's Trash, with **Undo** for a few seconds. **Trash** at the foot of the sidebar lists what is there.
+**Move to Trash**, in the note's ⋯ menu, moves a note to its notebook's Trash, with **Undo** for a few seconds. **Trash**, in the ⋯ menu on the notebook's row in the sidebar, lists what is there.
 
 - **Restore** puts the note back in the folder it came from (or the top level, if that folder has gone).
 - **Delete for Good** removes the note's files from the notebook. It asks first, then for Touch ID or your password (on Android, your fingerprint, face or screen lock). The repository's git history still keeps it.
