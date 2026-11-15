@@ -1028,8 +1028,10 @@ function OverviewTab({
           }
         >
           {link ? (
+            // The help keeps the remote's own words (an SSH alias stays the alias); the link
+            // goes to the host's real name (A1565).
             <a
-              href={link}
+              href={link.url}
               target="_blank"
               rel="noopener noreferrer"
               className="btn"
@@ -1037,7 +1039,7 @@ function OverviewTab({
               data-testid="git-repository-link"
             >
               <Icon name="globe" size={14} />
-              {info.host === 'github.com' ? 'Open on GitHub' : 'Open in Browser'}
+              {link.github ? 'Open on GitHub' : 'Open in Browser'}
             </a>
           ) : null}
         </SettingRow>

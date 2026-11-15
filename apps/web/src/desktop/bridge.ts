@@ -150,7 +150,10 @@ export interface GitNotebookInfo {
   readonly remote: string;
   /** `github.com/owner/repo`, or the host and path. */
   readonly repository: string;
+  /** The host as the remote names it: an SSH alias stays the alias. */
   readonly host: string;
+  /** The host's real name (A1565): an SSH alias resolved as SSH resolves it. Absent: `host`. */
+  readonly webHost?: string;
   readonly branch: string;
   readonly dir: string;
   readonly pushDelayS: number;

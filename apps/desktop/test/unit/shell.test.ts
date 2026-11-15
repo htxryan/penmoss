@@ -30,6 +30,7 @@ import {
   isAppFrame,
   isExternalUrl,
   isAppUrl,
+  openedLink,
 } from '../../src/security';
 import { DEFAULT_WINDOW, fitToDisplays, parseWindowState } from '../../src/window-state';
 
@@ -455,6 +456,21 @@ describe('links and navigation', () => {
     expect(isExternalUrl('mailto:a@b.c')).toBe(true);
     for (const url of ['file:///etc/passwd', 'javascript:alert(1)', 'smb://x/y', 'penmoss://x']) {
       expect(isExternalUrl(url)).toBe(false);
+    }
+  });
+
+  it('opens a link a page opens in a new window in the browser, or an app page in the main window (A1565)', () => {
+    // Settings → a notebook → Open on GitHub: `<a target="_blank">` to the repository.
+    expect(
+      openedLink('https://github.com/quantaservices/ryan-henderson-scratch/tree/dev/penmoss'),
+    ).toEqual({ kind: 'browser' });
+    expect(openedLink('http://git.example.com/me/notes')).toEqual({ kind: 'browser' });
+    expect(openedLink(`app://penmoss/notes/${ID}`)).toEqual({
+      kind: 'app',
+      path: `/notes/${ID}`,
+    });
+    for (const url of ['file:///etc/passwd', 'javascript:alert(1)', 'app://penmoss.evil/x']) {
+      expect(openedLink(url)).toBeNull();
     }
   });
 });

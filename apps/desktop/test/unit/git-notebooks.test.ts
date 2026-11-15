@@ -446,6 +446,47 @@ describe.concurrent('tokens, removing, and the engine’s calls', { timeout: 30_
     expect(withCadence(own)).toMatchObject({ pushDelayS: 30, pullEveryMin: 2, cadence: 2 });
   });
 
+  it('names an SSH alias’s real host for the web, and keeps the alias as the remote says it (A1565)', async ({
+    dir,
+  }) => {
+    const asked: string[] = [];
+    const notebooks = service(dir, {
+      resolveSshHost: (host) => {
+        asked.push(host);
+        return Promise.resolve(host === 'github-quanta' ? 'github.com' : host);
+      },
+    });
+    await added(dir, notebooks);
+    const path = join(dir, 'userData', 'git-notebooks.json');
+    const registry = JSON.parse(readFileSync(path, 'utf8')) as { notebooks: GitNotebookEntry[] };
+    const first = registry.notebooks[0]!;
+    // Two more entries, each with an id of its own (the last letter changed).
+    const id = (last: string) => `${first.localId.slice(0, 25)}${last}`;
+    const quanta = {
+      ...first,
+      localId: id(first.localId.endsWith('Q') ? 'R' : 'Q'),
+      remote: 'git@github-quanta:quantaservices/ryan-henderson-scratch.git',
+    };
+    const plain = {
+      ...first,
+      localId: id(first.localId.endsWith('G') ? 'H' : 'G'),
+      remote: 'git@github.com:me/notes.git',
+    };
+    writeFileSync(path, JSON.stringify({ version: 1, notebooks: [first, quanta, plain] }));
+    const [local, alias, github] = await notebooks.list();
+    // A repository on this Mac has no web host, and SSH is never asked about it.
+    expect(local).toMatchObject({ host: 'this Mac', webHost: '' });
+    expect(alias).toMatchObject({
+      repository: 'github-quanta/quantaservices/ryan-henderson-scratch',
+      host: 'github-quanta',
+      webHost: 'github.com',
+    });
+    expect(github).toMatchObject({ host: 'github.com', webHost: 'github.com' });
+    // Each host is asked about once, however often the list is read.
+    await notebooks.list();
+    expect(asked.sort()).toEqual(['github-quanta', 'github.com']);
+  });
+
   it('renames a notebook here, until a sync reports that name at the branch (Ryan’s review of PR #192)', async ({
     dir,
   }) => {

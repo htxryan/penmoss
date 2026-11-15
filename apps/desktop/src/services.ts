@@ -21,6 +21,7 @@ import { chromiumInit, GitHubToken } from './github-token';
 import { cliCommand, keptLoginPath, LocalAgents, loginShellPath } from './local-agents';
 import { ReleaseNotes } from './release-notes';
 import { encryptionUsable } from './sealing';
+import { sshHostResolver } from './ssh-host';
 import { Updates, updateMode } from './updater';
 
 /**
@@ -62,6 +63,8 @@ export const gitNotebooks = new GitNotebooks({
   },
   ownerCheck: (words) => adminCheck.confirmOwn(words),
   platform: process.platform,
+  // An SSH alias's real host, for Open on GitHub (A1565).
+  resolveSshHost: sshHostResolver(),
   ...(config.gitEnv ? { gitEnv: config.gitEnv } : {}),
   log,
   onChange: () => {
